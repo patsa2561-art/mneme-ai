@@ -113,4 +113,17 @@ CREATE TABLE IF NOT EXISTS graph_snapshots (
   taken_at TEXT NOT NULL,
   payload BLOB NOT NULL
 );
+
+-- WILD #1: AI-synthesized notes for commits with poor messages.
+-- The original commit is never modified. The synthesized note is searched
+-- alongside the original chunks but always marked as kind='synthesized'
+-- so users can verify against the underlying diff.
+CREATE TABLE IF NOT EXISTS synthesized_notes (
+  commit_hash TEXT PRIMARY KEY,
+  note TEXT NOT NULL,
+  model TEXT NOT NULL,
+  diff_chars INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (commit_hash) REFERENCES commits(hash) ON DELETE CASCADE
+);
 `;

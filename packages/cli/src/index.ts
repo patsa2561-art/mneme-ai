@@ -8,13 +8,14 @@ import { correlateCommand } from "./commands/correlate.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { wisdomCommand, manifestoCommand } from "./commands/wisdom.js";
 import { entitiesCommand, clonesCommand } from "./commands/clones.js";
+import { healCommand } from "./commands/heal.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.2.0");
+    .version("0.4.0");
 
   program
     .command("init")
@@ -76,9 +77,35 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("correlate")
-    .description("Correlate incidents with commits (phase 3)")
-    .action(async () => {
-      process.exit(await correlateCommand());
+    .description("Correlate incidents with commits (Sentry / manual JSON)")
+    .option("--source <kind>", "incident source: sentry | manual")
+    .option("--org <slug>", "Sentry org slug (with --source sentry)")
+    .option("--project <slug>", "Sentry project slug (with --source sentry)")
+    .option("--base-url <url>", "Sentry base URL for self-hosted")
+    .option("--file <path>", "JSON file path (with --source manual)")
+    .option("--since <iso>", "only incidents/commits since this date")
+    .option("--until <iso>", "only incidents/commits until this date")
+    .option("--window-days <n>", "correlation window in days", (v) => Number(v), 7)
+    .option("--threshold <n>", "minimum confidence (0..1)", (v) => Number(v), 0.3)
+    .option("--top <n>", "top-N rows", (v) => Number(v), 20)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await correlateCommand({
+          cwd: process.cwd(),
+          source: opts.source,
+          org: opts.org,
+          project: opts.project,
+          baseUrl: opts.baseUrl,
+          file: opts.file,
+          since: opts.since,
+          until: opts.until,
+          windowDays: opts.windowDays,
+          threshold: opts.threshold,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      );
     });
 
   program
@@ -108,6 +135,29 @@ export async function run(argv: string[]): Promise<void> {
           threshold: opts.threshold,
           topN: opts.top,
           json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("heal")
+    .description("Synthesize WHY notes for commits with poor messages (turns bad history into searchable memory)")
+    .option("--max <n>", "max commits to heal in this run", (v) => Number(v), 100)
+    .option("--subject-min-len <n>", "subjects shorter than this are candidates", (v) => Number(v), 20)
+    .option("--dry-run", "list candidates without calling the LLM", false)
+    .option("--provider <kind>", "auto | ollama | openai", "auto")
+    .option("--model <name>", "override model name (e.g. llama3.2:1b, gpt-4o-mini)")
+    .option("--force", "re-heal commits that already have a synthesized note", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await healCommand({
+          cwd: process.cwd(),
+          max: opts.max,
+          subjectMinLen: opts.subjectMinLen,
+          dryRun: opts.dryRun,
+          provider: opts.provider,
+          model: opts.model,
+          force: opts.force,
         }),
       );
     });

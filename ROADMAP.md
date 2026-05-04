@@ -6,8 +6,10 @@ Built bottom-up: every phase is shippable on its own, every phase plugs into the
 |---|---|---|---|
 | 1 — Archaeologist core | 4 | ✅ scaffolded | `mneme ask`, `mneme why`, MCP server |
 | 2 — Semantic similarity | 2 | ✅ shipped (v0.3.0) | `mneme entities`, `mneme clones`, TS/JS parser, cosine clones |
-| 3 — Error correlation 🏆 | 4 | 🚧 stub (engine done, adapters pending) | `mneme correlate` with Sentry/Datadog |
-| 4 — Temporal viz | 6 | 🚧 placeholder UI | `mneme web` — D3 graph animated over git history |
+| 3 — Error correlation 🏆 | 4 | ✅ wired (v0.4.0) | `mneme correlate --source sentry --org X --project Y` |
+| 4 — Temporal viz | 6 | ✅ shipped (v0.4.0) | `mneme web` — live D3 graph + timeline scrubber |
+| WILD #1 — `mneme heal` | 1 | ✅ shipped (v0.4.0) | LLM synthesizes WHY for poor commit messages |
+| WILD #2-15 — see [WILD_IDEAS.md](./WILD_IDEAS.md) | varies | sketches | `echo`, `ledger`, `oracle`, `palimpsest`, `conscience`, `prophecy`, … |
 
 ---
 

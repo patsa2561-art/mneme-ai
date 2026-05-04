@@ -204,15 +204,23 @@ npx -y mneme-ai ask "..."
 
 ### Where it shines vs. where it struggles
 
-| Repo profile | Quality |
-|---|---|
-| Long history, real PR descriptions, descriptive commits | ⭐⭐⭐⭐⭐ killer |
-| Decent commits, no PRs | ⭐⭐⭐⭐ |
-| Mostly squash-merges with rich PR bodies | ⭐⭐⭐⭐ |
-| Mostly `fix` / `wip` / `update` messages | ⭐⭐ honest "no context found" beats hallucination |
-| < 50 commits | ⭐ not enough signal — wait for more history |
+| Repo profile | Quality | Mitigation |
+|---|---|---|
+| Long history, real PR descriptions, descriptive commits | ⭐⭐⭐⭐⭐ killer | — |
+| Decent commits, no PRs | ⭐⭐⭐⭐ | enable GitHub PR fetcher (env: `GITHUB_TOKEN`) |
+| Mostly squash-merges with rich PR bodies | ⭐⭐⭐⭐ | — |
+| Mostly `fix` / `wip` / `update` messages | ⭐⭐ honest "no context found" instead of hallucination | **`mneme heal`** synthesizes a WHY note from the diff itself |
+| < 50 commits | ⭐ not enough signal yet | wait for more history, or run `mneme heal` once you have one |
 
-If your history is poor, Mneme tells you so. **It does not invent reasons.**
+**`mneme heal` turns a stated weakness into a feature.** If your repo has anaemic commit messages, point an LLM (Ollama by default — local, free) at the commits that lack signal. The diff is the truth; the synthesized note is its plain-language summary, stored alongside the original (never replacing it) and searched as `kind='synthesized'` so you can always tell synthesized from authored.
+
+```bash
+mneme heal --dry-run         # show which commits would be synthesized
+mneme heal                   # actually synthesize (uses Ollama by default)
+mneme ask "why does X exist?"  # the synthesized notes show up in answers
+```
+
+If your history is poor and you don't run `mneme heal`, Mneme tells you so. **It does not invent reasons.**
 
 ---
 

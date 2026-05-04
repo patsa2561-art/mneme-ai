@@ -46,7 +46,7 @@ export interface CommitChunk {
   id: string;
   commitHash: string;
   text: string;
-  kind: "subject" | "body" | "pr_title" | "pr_body" | "diff_hunk";
+  kind: "subject" | "body" | "pr_title" | "pr_body" | "diff_hunk" | "synthesized";
   embedding?: Float32Array;
 }
 

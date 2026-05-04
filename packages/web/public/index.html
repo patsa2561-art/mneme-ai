@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Mneme · the memory graph</title>
+<title>μνήμη · Mneme — temporal graph</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>
   :root {
@@ -17,31 +17,43 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-    font: 14px/1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif; }
-  header { padding: 18px 24px; border-bottom: 1px solid #20204020; display: flex; align-items: center; gap: 14px; }
-  header h1 { font-size: 16px; margin: 0; letter-spacing: 0.04em; }
-  header .greek { font-family: "Times New Roman", serif; color: var(--accent); font-size: 22px; margin-right: 4px; }
-  header .tag { color: var(--mute); font-size: 12px; }
-  main { display: grid; grid-template-columns: 280px 1fr; height: calc(100vh - 60px); }
-  aside { padding: 18px; border-right: 1px solid #20204020; overflow: auto; }
-  aside h2 { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mute); margin: 18px 0 8px; }
-  aside .legend { display: flex; flex-direction: column; gap: 6px; }
-  aside .legend span { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    font: 13px/1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 14px 20px; border-bottom: 1px solid #20204020; display: flex; align-items: center; gap: 14px; }
+  header .greek { font-family: "Times New Roman", serif; color: var(--accent); font-size: 22px; }
+  header h1 { font-size: 14px; margin: 0; letter-spacing: 0.04em; }
+  header .tag { color: var(--mute); font-size: 11px; }
+  header .stats { margin-left: auto; color: var(--mute); font-size: 11px; }
+  main { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 50px); }
+  aside { padding: 16px; border-right: 1px solid #20204020; overflow: auto; }
+  aside h2 { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mute); margin: 16px 0 6px; }
+  aside .legend span { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 4px 0; }
   aside .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  #canvas { width: 100%; height: 100%; }
-  .node-commit { fill: var(--commit); }
-  .node-incident { fill: var(--incident); }
-  .node-entity { fill: var(--entity); }
+  aside .detail { margin-top: 10px; font-size: 11px; color: var(--mute); white-space: pre-wrap; word-break: break-word; }
+  aside .detail b { color: var(--ink); }
+  .canvas-wrap { position: relative; }
+  #canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+  #canvas:active { cursor: grabbing; }
+  .timeline {
+    position: absolute; left: 16px; right: 16px; bottom: 12px;
+    background: rgba(20,20,43,0.85); border: 1px solid #20204050;
+    border-radius: 8px; padding: 10px 14px;
+    backdrop-filter: blur(6px);
+  }
+  .timeline label { display: block; color: var(--mute); font-size: 10px; margin-bottom: 4px; }
+  .timeline input[type=range] { width: 100%; accent-color: var(--accent); }
+  .timeline .at { color: var(--ink); font-variant-numeric: tabular-nums; font-size: 11px; }
+  text { fill: var(--ink); font-size: 10px; pointer-events: none; }
+  .node { stroke: #00000040; stroke-width: 1; cursor: pointer; }
   .link { stroke: #ffffff20; }
-  .label { fill: var(--ink); font-size: 11px; }
-  .placeholder { color: var(--mute); padding: 24px; }
+  .link.highlight { stroke: var(--accent); stroke-opacity: 0.9; }
 </style>
 </head>
 <body>
 <header>
   <span class="greek">μνήμη</span>
-  <h1>Mneme</h1>
-  <span class="tag">temporal graph viewer · phase 4 preview</span>
+  <h1>Mneme · temporal graph</h1>
+  <span class="tag">commits ⟷ incidents ⟷ correlations</span>
+  <span class="stats" id="stats"></span>
 </header>
 <main>
   <aside>
@@ -49,61 +61,194 @@
     <div class="legend">
       <span><i style="background: var(--commit)"></i> commit</span>
       <span><i style="background: var(--incident)"></i> incident</span>
-      <span><i style="background: var(--entity)"></i> entity</span>
+      <span><i style="background: var(--entity)"></i> entity (Phase 2)</span>
     </div>
-    <h2>Phase 4 plan</h2>
-    <div style="color: var(--mute); font-size: 12px;">
-      Animate the graph through git timeline. Hover to see WHY (PRs, commits).
-      Click an incident to walk back to the commits that likely caused it.
-    </div>
-    <h2>API</h2>
-    <div style="color: var(--mute); font-size: 12px;">
-      <code>GET /api/graph</code> — returns nodes + links.<br/>
-      Currently stubbed; phase 4 fills it from the SQLite store.
-    </div>
+    <h2>Selected</h2>
+    <div class="detail" id="detail">Click a node to inspect.</div>
+    <h2>Source</h2>
+    <div class="detail" id="source">…</div>
   </aside>
-  <svg id="canvas"></svg>
+  <div class="canvas-wrap">
+    <svg id="canvas"></svg>
+    <div class="timeline">
+      <label>Time scrubber — slide back through git history</label>
+      <input type="range" id="scrubber" min="0" max="100" value="100" step="1" />
+      <div class="at" id="at">latest</div>
+    </div>
+  </div>
 </main>
-<script>
-async function main() {
-  const res = await fetch('/api/graph');
-  const data = await res.json();
-  const svg = document.getElementById('canvas');
-  const w = svg.clientWidth;
-  const h = svg.clientHeight;
-  // Tiny hand-rolled placeholder layout (no D3 yet). Phase 4 swaps in d3-force.
-  const cx = w / 2;
-  const cy = h / 2;
-  const nodes = data.nodes.map((n, i) => {
-    const angle = (i / data.nodes.length) * Math.PI * 2;
-    const r = 180;
-    return { ...n, x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
-  });
-  const idx = new Map(nodes.map(n => [n.id, n]));
-  for (const link of data.links) {
-    const a = idx.get(link.source);
-    const b = idx.get(link.target);
-    if (!a || !b) continue;
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
-    line.setAttribute('class', 'link');
-    line.setAttribute('stroke-width', String(1 + (link.weight ?? 0.5) * 3));
-    svg.appendChild(line);
-  }
-  for (const n of nodes) {
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('cx', n.x); c.setAttribute('cy', n.y); c.setAttribute('r', 14);
-    c.setAttribute('class', `node-${n.kind}`);
-    svg.appendChild(c);
-    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    t.setAttribute('x', n.x + 18); t.setAttribute('y', n.y + 4);
-    t.setAttribute('class', 'label');
-    t.textContent = n.label ?? n.id;
-    svg.appendChild(t);
-  }
+
+<script type="module">
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+const svg = d3.select("#canvas");
+const colorMap = { commit: "#6ee7b7", incident: "#f87171", entity: "#93c5fd" };
+
+let timeline = [];
+let simulation = null;
+let nodeSel = null;
+let linkSel = null;
+let labelSel = null;
+
+async function loadTimeline() {
+  const r = await fetch("/api/timeline");
+  const j = await r.json();
+  timeline = j.timestamps || [];
+  const scrub = document.getElementById("scrubber");
+  scrub.max = String(Math.max(0, timeline.length - 1));
+  scrub.value = scrub.max;
+  document.getElementById("at").textContent = timeline.length ? "latest" : "(no data)";
 }
-main();
+
+async function loadGraph(at) {
+  const url = at ? `/api/graph?at=${encodeURIComponent(at)}` : "/api/graph";
+  const r = await fetch(url);
+  return r.json();
+}
+
+function render(graph) {
+  document.getElementById("stats").textContent =
+    `${graph.counts?.nodes ?? graph.nodes.length} nodes · ${graph.counts?.links ?? graph.links.length} links`;
+  document.getElementById("source").textContent =
+    graph.mode === "live"
+      ? `live · at ${graph.at?.slice(0, 19) ?? ""}`
+      : `${graph.mode} — ${graph.note ?? ""}`;
+
+  svg.selectAll("*").remove();
+
+  const w = svg.node().clientWidth;
+  const h = svg.node().clientHeight;
+  const g = svg.append("g");
+
+  // Pan & zoom.
+  svg.call(
+    d3
+      .zoom()
+      .scaleExtent([0.25, 4])
+      .on("zoom", (e) => g.attr("transform", e.transform)),
+  );
+
+  if (simulation) simulation.stop();
+  simulation = d3
+    .forceSimulation(graph.nodes)
+    .force(
+      "link",
+      d3
+        .forceLink(graph.links)
+        .id((d) => d.id)
+        .distance(80)
+        .strength((l) => 0.3 + 0.4 * (l.weight ?? 0.5)),
+    )
+    .force("charge", d3.forceManyBody().strength(-180))
+    .force("center", d3.forceCenter(w / 2, h / 2))
+    .force("collide", d3.forceCollide().radius(16));
+
+  linkSel = g
+    .append("g")
+    .attr("stroke-linecap", "round")
+    .selectAll("line")
+    .data(graph.links)
+    .enter()
+    .append("line")
+    .attr("class", "link")
+    .attr("stroke-width", (l) => 1 + (l.weight ?? 0.5) * 3);
+
+  nodeSel = g
+    .append("g")
+    .selectAll("circle")
+    .data(graph.nodes)
+    .enter()
+    .append("circle")
+    .attr("class", "node")
+    .attr("r", (d) => (d.kind === "incident" ? 8 : 6))
+    .attr("fill", (d) => colorMap[d.kind] || "#888")
+    .on("click", (_e, d) => showDetail(d, graph))
+    .call(
+      d3
+        .drag()
+        .on("start", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on("drag", (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on("end", (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        }),
+    );
+
+  labelSel = g
+    .append("g")
+    .selectAll("text")
+    .data(graph.nodes)
+    .enter()
+    .append("text")
+    .attr("dx", 10)
+    .attr("dy", 3)
+    .text((d) => (d.label ?? d.id).slice(0, 40));
+
+  simulation.on("tick", () => {
+    linkSel
+      .attr("x1", (l) => (typeof l.source === "object" ? l.source.x : 0))
+      .attr("y1", (l) => (typeof l.source === "object" ? l.source.y : 0))
+      .attr("x2", (l) => (typeof l.target === "object" ? l.target.x : 0))
+      .attr("y2", (l) => (typeof l.target === "object" ? l.target.y : 0));
+    nodeSel.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+    labelSel.attr("x", (d) => d.x).attr("y", (d) => d.y);
+  });
+}
+
+function showDetail(node, graph) {
+  const lines = [];
+  lines.push(`kind: ${node.kind}`);
+  if (node.kind === "commit") {
+    lines.push(`hash: ${node.hash || node.id}`);
+    if (node.author) lines.push(`author: ${node.author}`);
+    if (node.date) lines.push(`date: ${node.date.slice(0, 19)}`);
+    if (node.prNumber) lines.push(`PR: #${node.prNumber}`);
+    lines.push(`subject:\n  ${node.label}`);
+  } else if (node.kind === "incident") {
+    lines.push(`source: ${node.source ?? "?"}`);
+    lines.push(`severity: ${node.severity ?? "?"}`);
+    if (node.date) lines.push(`occurred: ${node.date.slice(0, 19)}`);
+    if (node.affectedFiles?.length) {
+      lines.push(`files:\n  ${node.affectedFiles.slice(0, 5).join("\n  ")}`);
+    }
+    lines.push(`title:\n  ${node.label}`);
+  }
+  // Highlight links touching this node.
+  linkSel.classed(
+    "highlight",
+    (l) => sameId(l.source, node.id) || sameId(l.target, node.id),
+  );
+  document.getElementById("detail").innerHTML =
+    lines.map((l) => l.replace("<", "&lt;")).join("\n");
+}
+
+function sameId(a, b) {
+  if (typeof a === "string") return a === b;
+  return a?.id === b;
+}
+
+document.getElementById("scrubber").addEventListener("input", async (e) => {
+  const idx = Number(e.target.value);
+  if (!timeline.length) return;
+  const at = timeline[Math.min(idx, timeline.length - 1)];
+  document.getElementById("at").textContent = at?.slice(0, 19) ?? "?";
+  const graph = await loadGraph(at);
+  render(graph);
+});
+
+(async () => {
+  await loadTimeline();
+  const graph = await loadGraph();
+  render(graph);
+})();
 </script>
 </body>
 </html>

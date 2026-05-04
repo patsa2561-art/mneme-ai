@@ -1,10 +1,20 @@
 #!/usr/bin/env node
-// Tiny zero-dep HTTP server for the Mneme web UI.
-// Serves /public/* and a stubbed /api/graph endpoint.
-// Replace with the real graph builder in phase 4.
+/**
+ * Mneme web — zero-dep HTTP server that exposes the indexed memory as a graph.
+ *
+ *   GET /                    → static UI (index.html + d3 from CDN)
+ *   GET /api/graph           → nodes + links from .mneme/mneme.db
+ *   GET /api/graph?at=<iso>  → graph state at that point in git history
+ *   GET /api/timeline        → ordered list of commit timestamps for the scrubber
+ *
+ *   MNEME_DB=/abs/path/to/.mneme/mneme.db node server.js
+ *
+ * If MNEME_DB is unset, the server walks up from the cwd looking for .mneme/mneme.db.
+ */
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
-import { extname, join, dirname } from "node:path";
+import { readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { extname, join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -19,15 +29,172 @@ const MIME = {
   ".svg": "image/svg+xml",
 };
 
+const dbPath = resolveDbPath();
+const Database = dbPath ? await loadSqlite() : null;
+const db = dbPath && Database ? new Database(dbPath, { readonly: true }) : null;
+
+function resolveDbPath() {
+  if (process.env.MNEME_DB && existsSync(process.env.MNEME_DB)) {
+    return process.env.MNEME_DB;
+  }
+  let dir = process.cwd();
+  for (let i = 0; i < 10; i++) {
+    const candidate = join(dir, ".mneme", "mneme.db");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+async function loadSqlite() {
+  try {
+    const mod = await import("better-sqlite3");
+    return mod.default;
+  } catch {
+    return null;
+  }
+}
+
+function jsonResponse(payload, status = 200) {
+  return {
+    status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    body: JSON.stringify(payload),
+  };
+}
+
+function buildGraph(atIso) {
+  if (!db) {
+    return {
+      mode: "stub",
+      note: "No .mneme/mneme.db found. Set MNEME_DB env var or run from a directory under an indexed repo.",
+      nodes: [
+        { id: "demo:1", kind: "commit", label: "demo", date: new Date().toISOString() },
+      ],
+      links: [],
+    };
+  }
+
+  const cutoff = atIso || new Date().toISOString();
+
+  const commits = db
+    .prepare(
+      `SELECT hash, short_hash, author_name, author_date, subject, pr_number
+       FROM commits
+       WHERE author_date <= ?
+       ORDER BY author_date DESC
+       LIMIT 200`,
+    )
+    .all(cutoff);
+
+  const incidents = db
+    .prepare(
+      `SELECT id, source, title, occurred_at, severity, affected_files
+       FROM incidents
+       WHERE occurred_at <= ?
+       ORDER BY occurred_at DESC
+       LIMIT 100`,
+    )
+    .all(cutoff);
+
+  const correlations = db
+    .prepare(
+      `SELECT id, from_kind, from_id, to_kind, to_id, weight, reason
+       FROM correlations
+       WHERE weight >= 0.3
+       LIMIT 500`,
+    )
+    .all();
+
+  const nodes = [];
+  const seen = new Set();
+
+  for (const c of commits) {
+    const id = `commit:${c.hash}`;
+    seen.add(id);
+    nodes.push({
+      id,
+      kind: "commit",
+      label: c.subject.slice(0, 80),
+      hash: c.short_hash,
+      author: c.author_name,
+      date: c.author_date,
+      prNumber: c.pr_number ?? null,
+    });
+  }
+
+  for (const i of incidents) {
+    const id = `incident:${i.id}`;
+    seen.add(id);
+    nodes.push({
+      id,
+      kind: "incident",
+      label: i.title?.slice(0, 80) ?? i.id,
+      severity: i.severity,
+      source: i.source,
+      date: i.occurred_at,
+      affectedFiles: i.affected_files ? JSON.parse(i.affected_files) : [],
+    });
+  }
+
+  const links = [];
+  for (const c of correlations) {
+    const source = `${c.from_kind}:${c.from_id}`;
+    const target = `${c.to_kind}:${c.to_id}`;
+    if (!seen.has(source) || !seen.has(target)) continue;
+    links.push({ source, target, weight: c.weight, reason: c.reason });
+  }
+
+  return {
+    mode: "live",
+    at: cutoff,
+    counts: { nodes: nodes.length, links: links.length },
+    nodes,
+    links,
+  };
+}
+
+function buildTimeline() {
+  if (!db) return [];
+  const rows = db
+    .prepare(
+      `SELECT author_date AS date FROM commits
+       UNION ALL SELECT occurred_at AS date FROM incidents
+       ORDER BY date ASC`,
+    )
+    .all();
+  return rows.map((r) => r.date);
+}
+
 const server = createServer(async (req, res) => {
   try {
-    if (req.url === "/api/graph") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(stubGraph(), null, 2));
+    const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+
+    if (url.pathname === "/api/graph") {
+      const at = url.searchParams.get("at");
+      const out = jsonResponse(buildGraph(at));
+      res.writeHead(out.status, out.headers);
+      res.end(out.body);
       return;
     }
-    let path = req.url === "/" ? "/index.html" : req.url ?? "/index.html";
-    path = path.split("?")[0];
+
+    if (url.pathname === "/api/timeline") {
+      const out = jsonResponse({ timestamps: buildTimeline() });
+      res.writeHead(out.status, out.headers);
+      res.end(out.body);
+      return;
+    }
+
+    if (url.pathname === "/api/healthz") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ ok: true, db: dbPath ?? null }));
+      return;
+    }
+
+    // Static files.
+    let path = url.pathname === "/" ? "/index.html" : url.pathname;
     const file = join(PUBLIC_DIR, path);
     const data = await readFile(file);
     const mime = MIME[extname(file)] ?? "application/octet-stream";
@@ -41,19 +208,6 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   process.stdout.write(`mneme web → http://localhost:${PORT}\n`);
+  if (dbPath) process.stdout.write(`            db = ${dbPath}\n`);
+  else process.stdout.write(`            db = (none — graph will be a stub)\n`);
 });
-
-function stubGraph() {
-  return {
-    note: "phase 4 stub — replace with output of the real graph builder",
-    nodes: [
-      { id: "commit:a1b2c3", kind: "commit", label: "Refactor payment flow" },
-      { id: "incident:SENTRY-1287", kind: "incident", label: "Stripe webhook 500" },
-      { id: "entity:PaymentService.charge", kind: "entity", label: "PaymentService.charge" },
-    ],
-    links: [
-      { source: "commit:a1b2c3", target: "incident:SENTRY-1287", weight: 0.82 },
-      { source: "commit:a1b2c3", target: "entity:PaymentService.charge", weight: 1 },
-    ],
-  };
-}

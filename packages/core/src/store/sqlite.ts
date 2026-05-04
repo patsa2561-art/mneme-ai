@@ -287,6 +287,33 @@ export class MnemeStore {
     tx(incidents);
   }
 
+  upsertSynthesizedNote(commitHash: string, note: string, model: string, diffChars: number): void {
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO synthesized_notes
+           (commit_hash, note, model, diff_chars, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(commitHash, note, model, diffChars, new Date().toISOString());
+  }
+
+  getSynthesizedNote(
+    commitHash: string,
+  ): { note: string; model: string; createdAt: string } | undefined {
+    const row = this.db
+      .prepare("SELECT note, model, created_at FROM synthesized_notes WHERE commit_hash = ?")
+      .get(commitHash) as { note: string; model: string; created_at: string } | undefined;
+    if (!row) return undefined;
+    return { note: row.note, model: row.model, createdAt: row.created_at };
+  }
+
+  countSynthesizedNotes(): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM synthesized_notes")
+      .get() as { n: number };
+    return row.n;
+  }
+
   upsertCorrelations(correlations: Correlation[]): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO correlations
