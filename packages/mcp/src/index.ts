@@ -60,6 +60,46 @@ const TOOLS: Tool[] = [
     description: "Report what's indexed, the embedder, and DB stats.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "mneme_list_entities",
+    description:
+      "List indexed source-code entities (functions, classes, types, exported variables) with optional filtering by language/kind/path-prefix.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", description: "function | class | type | variable | module" },
+        language: { type: "string", description: "typescript | tsx | javascript | jsx" },
+        pathPrefix: { type: "string", description: "Only entities under this path" },
+        limit: { type: "number", description: "Max rows (default 100)" },
+      },
+    },
+  },
+  {
+    name: "mneme_find_similar",
+    description:
+      "Given an entity id (from mneme_list_entities) OR a code snippet, return the top-K most semantically similar entities in the repo.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        entityId: { type: "string", description: "Existing entity id" },
+        snippet: { type: "string", description: "Or a code snippet to compare against" },
+        topK: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "mneme_blast",
+    description:
+      "Predict the blast radius of shipping a commit: which past incidents share its file footprint, plus a base-rate verdict (LOW/MED/HIGH).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        commit: { type: "string", description: "Commit hash, short hash, or HEAD-relative ref" },
+        windowHours: { type: "number" },
+      },
+      required: ["commit"],
+    },
+  },
 ];
 
 export async function startMcpServer(opts: McpOptions): Promise<void> {
@@ -125,12 +165,114 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
             commits: s.countCommits(),
             chunks: s.countChunks(),
             embedded: s.countChunksWithEmbedding(),
+            entities: s.countEntities(),
+            entitiesEmbedded: s.countEntitiesWithEmbedding(),
+            synthesizedNotes: s.countSynthesizedNotes(),
             embedder: s.getMeta("embedder"),
             repoRoot: meta.rootPath,
             host: meta.host,
             owner: meta.owner,
             repo: meta.repo,
           });
+        }
+        case "mneme_list_entities": {
+          const where: string[] = [];
+          const params: unknown[] = [];
+          if (args["kind"]) {
+            where.push("kind = ?");
+            params.push(String(args["kind"]));
+          }
+          if (args["language"]) {
+            where.push("language = ?");
+            params.push(String(args["language"]));
+          }
+          if (args["pathPrefix"]) {
+            where.push("file_path LIKE ?");
+            params.push(`${String(args["pathPrefix"])}%`);
+          }
+          const limit = typeof args["limit"] === "number" ? Math.min(500, args["limit"]) : 100;
+          const sql =
+            "SELECT id, kind, name, file_path, start_line, end_line, signature, language FROM entities" +
+            (where.length ? " WHERE " + where.join(" AND ") : "") +
+            " ORDER BY file_path, start_line LIMIT ?";
+          const rows = s.db.prepare(sql).all(...params, limit);
+          return jsonResult({ entities: rows, count: (rows as unknown[]).length });
+        }
+        case "mneme_find_similar": {
+          const topK = typeof args["topK"] === "number" ? args["topK"] : 5;
+          const entityId = args["entityId"] ? String(args["entityId"]) : undefined;
+          const snippet = args["snippet"] ? String(args["snippet"]) : undefined;
+          let queryVec: Float32Array | null = null;
+          if (entityId) {
+            // Use the stored embedding directly.
+            const row = s.db
+              .prepare("SELECT embedding FROM entities WHERE id = ?")
+              .get(entityId) as { embedding: Buffer | null } | undefined;
+            if (!row?.embedding) {
+              return errorResult(`No embedding for entity ${entityId}. Run \`mneme entities\` first.`);
+            }
+            queryVec = new Float32Array(
+              row.embedding.buffer,
+              row.embedding.byteOffset,
+              row.embedding.length / 4,
+            );
+          } else if (snippet) {
+            const [v] = await embedder.embed([snippet]);
+            queryVec = v ?? null;
+          } else {
+            return errorResult("mneme_find_similar requires either entityId or snippet.");
+          }
+          if (!queryVec) return jsonResult({ matches: [] });
+          const candidates: Array<{ entity: unknown; score: number }> = [];
+          for (const e of s.iterEmbeddedEntities()) {
+            if (!e.embedding) continue;
+            if (entityId && e.id === entityId) continue;
+            if (e.embedding.length !== queryVec.length) continue;
+            let dot = 0;
+            let na = 0;
+            let nb = 0;
+            for (let i = 0; i < queryVec.length; i++) {
+              const av = queryVec[i]!;
+              const bv = e.embedding[i]!;
+              dot += av * bv;
+              na += av * av;
+              nb += bv * bv;
+            }
+            const denom = Math.sqrt(na) * Math.sqrt(nb);
+            const sim = denom === 0 ? 0 : dot / denom;
+            candidates.push({ entity: { ...e, embedding: undefined }, score: sim });
+          }
+          candidates.sort((a, b) => b.score - a.score);
+          return jsonResult({ matches: candidates.slice(0, topK) });
+        }
+        case "mneme_blast": {
+          const ref = String(args["commit"] ?? "");
+          if (!ref) return errorResult("mneme_blast requires `commit`.");
+          const r = await git.execGit(["rev-parse", ref], { cwd: meta.rootPath });
+          if (r.code !== 0) return errorResult(`Cannot resolve commit "${ref}".`);
+          const hash = r.stdout.trim();
+          const c = s.getCommit(hash);
+          if (!c) return errorResult(`Commit ${hash.slice(0, 8)} not indexed.`);
+          const incidents = s.db
+            .prepare("SELECT * FROM incidents")
+            .all() as Array<Record<string, unknown>>;
+          const cFiles = new Set(c.files.map((p) => p.replace(/\\/g, "/").toLowerCase()));
+          const matches = incidents
+            .map((i) => {
+              const inc = {
+                id: String(i.id),
+                title: String(i.title),
+                affected: i.affected_files
+                  ? (JSON.parse(String(i.affected_files)) as string[])
+                  : [],
+              };
+              const overlap = inc.affected.filter((f) =>
+                cFiles.has(f.replace(/\\/g, "/").toLowerCase()),
+              );
+              return overlap.length > 0 ? { incident: inc, overlap } : null;
+            })
+            .filter((x): x is NonNullable<typeof x> => x !== null);
+          return jsonResult({ commit: c.shortHash, fileCount: c.files.length, matches });
         }
         default:
           return errorResult(`unknown tool: ${req.params.name}`);

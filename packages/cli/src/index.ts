@@ -26,13 +26,15 @@ import {
 } from "./commands/wild-stubs.js";
 import { conscienceCommand } from "./commands/conscience.js";
 import { teachCommand } from "./commands/teach.js";
+import { blastCommand } from "./commands/blast.js";
+import { adaptCommand } from "./commands/adapt.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.6.1");
+    .version("0.7.0");
 
   program
     .command("init")
@@ -338,6 +340,30 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
         }),
       );
+    });
+
+  program
+    .command("blast <commit>")
+    .description("Predict incidents likely to follow shipping <commit> (blast radius)")
+    .option("--window-hours <n>", "post-deploy window for base rate", (v) => Number(v), 48)
+    .option("--json", "machine-readable output", false)
+    .action(async (commit: string, opts: any) => {
+      process.exit(
+        await blastCommand({
+          cwd: process.cwd(),
+          commit,
+          windowHours: opts.windowHours,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("adapt")
+    .description("Mutant mode — inspect this repo and recommend the next 1-3 commands")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(await adaptCommand({ cwd: process.cwd(), json: opts.json }));
     });
 
   program
