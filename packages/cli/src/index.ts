@@ -6,6 +6,7 @@ import { whyCommand } from "./commands/why.js";
 import { statusCommand } from "./commands/status.js";
 import { correlateCommand } from "./commands/correlate.js";
 import { mcpCommand } from "./commands/mcp.js";
+import { wisdomCommand, manifestoCommand } from "./commands/wisdom.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -84,6 +85,24 @@ export async function run(argv: string[]): Promise<void> {
     .description("Run as an MCP server (for Claude Code, Cursor, Continue, etc.)")
     .action(async () => {
       process.exit(await mcpCommand({ cwd: process.cwd() }));
+    });
+
+  program
+    .command("wisdom")
+    .description("Print a meditation from the Mneme manifesto (rotates daily)")
+    .option("-n, --index <n>", "show a specific meditation by number", (v) => Number(v))
+    .option("--all", "print every meditation", false)
+    .option("--json", "machine-readable JSON output", false)
+    .action(async (opts: { index?: number; all?: boolean; json?: boolean }) => {
+      process.exit(await wisdomCommand(opts));
+    });
+
+  program
+    .command("manifesto")
+    .description("Print the full Mneme manifesto — every meditation, in order")
+    .option("--json", "machine-readable JSON output", false)
+    .action(async (opts: { json?: boolean }) => {
+      process.exit(await manifestoCommand(opts));
     });
 
   program.exitOverride((err) => {

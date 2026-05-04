@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / Discussion
+    url: https://github.com/patsa2561-art/mneme-ai/discussions
+    about: For open-ended questions, ideas, or feature discussion. Please open a discussion before a feature-request issue.
+  - name: Read the manifesto
+    url: https://github.com/patsa2561-art/mneme-ai/blob/main/MEDITATIONS.md
+    about: Thirteen short meditations on memory, code, and how Mneme thinks about retrieval.

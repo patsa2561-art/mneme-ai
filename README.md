@@ -11,10 +11,11 @@
 [![license](https://img.shields.io/badge/license-MIT-22d3ee)](./LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A520-22c55e)](https://nodejs.org)
 [![mcp](https://img.shields.io/badge/MCP-server-c084fc)](https://modelcontextprotocol.io)
-[![tests](https://img.shields.io/badge/tests-98%2F98%20passing-22c55e)](./STATUS.md)
+[![tests](https://img.shields.io/badge/tests-passing-22c55e)](./STATUS.md)
 [![recall@3](https://img.shields.io/badge/recall%403-86.7%25-22c55e)](./STATUS.md)
 [![MRR](https://img.shields.io/badge/MRR-90.0%25-22c55e)](./STATUS.md)
 [![local-first](https://img.shields.io/badge/local--first-yes-f59e0b)]()
+[![GitHub stars](https://img.shields.io/github/stars/patsa2561-art/mneme-ai?style=social)](https://github.com/patsa2561-art/mneme-ai)
 
 ```
    ╭──────────────────────────────────╮
@@ -193,7 +194,9 @@ npx -y mneme-ai ask "..."
 | Any language (TS, Go, Rust, Python, Java, COBOL, …) | ✅ |
 | Public, private, self-hosted | ✅ |
 | Local-only (no remote) | ✅ |
-| GitHub / GitLab / Bitbucket / Gitea | ✅ (auto-detected for citation URLs) |
+| GitHub | ✅ host detection + PR/issue body hydration |
+| GitLab (gitlab.com + self-hosted) | ✅ host detection + MR hydration via REST v4 |
+| Bitbucket / Gitea | ✅ host detection (PR hydration coming) |
 | Squash-merge workflows | ✅ (per-PR context preserved) |
 | Monorepos & forks | ✅ |
 | Air-gapped / offline | ✅ (Ollama default — no internet) |
@@ -308,6 +311,16 @@ Full plan: [ROADMAP.md](./ROADMAP.md).
 ---
 
 ## Wisdom
+
+The full canon — thirteen meditations on memory, code, and the absence of both — lives in [MEDITATIONS.md](./MEDITATIONS.md). The CLI ships them too:
+
+```bash
+mneme wisdom            # today's meditation (rotates daily)
+mneme wisdom --n 7      # a specific one (1..13)
+mneme manifesto         # the entire canon, in order
+```
+
+A few:
 
 > **Code answers _what_. Git answers _why_.**
 > They were never one — until Mneme.
@@ -424,9 +437,21 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full guide and [STATUS.md](./ST
 
 ---
 
+## Show your support
+
+If Mneme saved you a 30-minute git archaeology session today:
+
+```bash
+mneme wisdom    # accept a meditation as payment
+```
+
+Or — give the project a ⭐ on [GitHub](https://github.com/patsa2561-art/mneme-ai). Stars are how solo maintainers know what to keep building.
+
 ## License
 
 [MIT](./LICENSE) — use it, fork it, ship it.
+
+`Copyright (c) 2026 Mneme AI contributors`
 
 ---
 

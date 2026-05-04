@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a new capability or a substantial change to an existing one.
+title: "feat: <short summary>"
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening this, consider opening a [Discussion](https://github.com/patsa2561-art/mneme-ai/discussions) instead — that is the right place for "should we?" conversations. Issues are for "we should, here is how."
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation you found yourself in, and why the current behavior wasn't enough. Concrete > abstract.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would the new behavior look like? CLI shape, MCP tool name, config keys — sketch it out.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you ruled out, and why.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Which phase does this belong to?
+      description: See ROADMAP.md.
+      options:
+        - "Phase 1 — Archaeologist core"
+        - "Phase 2 — Semantic similarity / clones"
+        - "Phase 3 — Error correlation"
+        - "Phase 4 — Temporal viz"
+        - "Cross-cutting / meta"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Are you willing to help?
+      options:
+        - label: I can write the implementation
+        - label: I can write tests
+        - label: I can review a PR
+        - label: I would like someone else to take this on

@@ -1,0 +1,84 @@
+name: Bug report
+description: Something is broken or behaving incorrectly.
+title: "bug: <short summary>"
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The more specific, the faster the fix.
+
+  - type: input
+    id: version
+    attributes:
+      label: Mneme version
+      description: Output of `mneme --version`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: Output of `node --version`
+      placeholder: "v22.x.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: embedder
+    attributes:
+      label: Embedder in use
+      options:
+        - Ollama (default)
+        - OpenAI
+        - hash fallback
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: status
+    attributes:
+      label: "`mneme status` output"
+      description: Run `mneme status` in the affected repo and paste the output (redact any private paths).
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal commands or a public repo we can test against. A failing test is the most valuable bug report.
+      placeholder: |
+        1. cd /path/to/repo
+        2. mneme init
+        3. mneme index
+        4. mneme ask "..."
+        5. observed: ...
+        6. expected: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Stack traces, terminal output, anything you have.
+      render: shell
+    validations:
+      required: false
