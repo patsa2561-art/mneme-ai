@@ -13,3 +13,46 @@
 {"id":"Q13","question":"on call runbook","expectedTags":["docs-runbook"],"category":"keyword"}
 {"id":"Q14","question":"how is checkout processed in the background?","expectedTags":["add-order-queue","fix-order-race"],"category":"why-question"}
 {"id":"Q15","question":"completely unrelated meaningless gibberish xyzzyplugh","expectedTags":[],"category":"negative"}
+
+{"id":"Q16","question":"why was Number() chosen for amount parsing?","expectedTags":["fix-bigint"],"category":"why-question"}
+{"id":"Q17","question":"why do we deduplicate stripe events?","expectedTags":["idempotency"],"category":"why-question"}
+{"id":"Q18","question":"why do auth tokens expire so quickly?","expectedTags":["auth-tokens"],"category":"why-question"}
+{"id":"Q19","question":"why did we add a queue for orders?","expectedTags":["add-order-queue"],"category":"why-question"}
+{"id":"Q20","question":"why did the Stripe SDK get bumped?","expectedTags":["bump-stripe"],"category":"why-question"}
+
+{"id":"Q21","question":"BigInt RangeError webhook crash","expectedTags":["fix-bigint"],"category":"keyword"}
+{"id":"Q22","question":"event id deduplication redis","expectedTags":["idempotency"],"category":"keyword"}
+{"id":"Q23","question":"passport replacement custom auth","expectedTags":["auth-middleware"],"category":"keyword"}
+{"id":"Q24","question":"jwt signing key rotation","expectedTags":["auth-tokens"],"category":"keyword"}
+{"id":"Q25","question":"queue concurrency burst load","expectedTags":["fix-order-race"],"category":"keyword"}
+{"id":"Q26","question":"GDPR email log scrubbing","expectedTags":["log-redact"],"category":"keyword"}
+{"id":"Q27","question":"@stripe/stripe-node v17 changelog","expectedTags":["bump-stripe"],"category":"keyword"}
+{"id":"Q28","question":"oncall pager handbook","expectedTags":["docs-runbook"],"category":"keyword"}
+
+{"id":"Q29","question":"who wrote the on-call runbook?","expectedTags":["docs-runbook"],"category":"who-when"}
+{"id":"Q30","question":"who introduced JWT short-lived tokens?","expectedTags":["auth-tokens"],"category":"who-when"}
+{"id":"Q31","question":"who fixed the BigInt overflow bug?","expectedTags":["fix-bigint"],"category":"who-when"}
+{"id":"Q32","question":"when did we replace passport with custom middleware?","expectedTags":["auth-middleware"],"category":"who-when"}
+
+{"id":"Q33","question":"asdfqwerlkjh quux flibberty random nonsense","expectedTags":[],"category":"negative"}
+{"id":"Q34","question":"unrelated topic about cooking pasta and italian recipes","expectedTags":[],"category":"negative"}
+{"id":"Q35","question":"weather forecast tomorrow rainfall percentage","expectedTags":[],"category":"negative"}
+
+{"id":"Q36","question":"webhook","expectedTags":["add-webhook","idempotency"],"category":"short-query"}
+{"id":"Q37","question":"stripe","expectedTags":["fix-bigint","bump-stripe","add-payment","add-webhook","idempotency"],"category":"short-query"}
+{"id":"Q38","question":"queue","expectedTags":["add-order-queue","fix-order-race"],"category":"short-query"}
+{"id":"Q39","question":"auth","expectedTags":["auth-middleware","auth-tokens"],"category":"short-query"}
+{"id":"Q40","question":"PR #42","expectedTags":["fix-bigint"],"category":"specific-ref"}
+
+{"id":"Q41","question":"what changes did we make for fintech compliance reasons?","expectedTags":["auth-middleware","log-redact"],"category":"multi-tag"}
+{"id":"Q42","question":"all changes related to Stripe in this codebase","expectedTags":["add-payment","add-webhook","fix-bigint","idempotency","bump-stripe"],"category":"multi-tag"}
+{"id":"Q43","question":"every commit that touched authentication or authorization","expectedTags":["auth-middleware","auth-tokens"],"category":"multi-tag"}
+
+{"id":"Q44","question":"what did the very first commit add?","expectedTags":["init"],"category":"who-when"}
+{"id":"Q45","question":"initial scaffolding of the project","expectedTags":["init"],"category":"keyword"}
+{"id":"Q46","question":"why does charge() exist?","expectedTags":["add-payment"],"category":"why-question"}
+{"id":"Q47","question":"payment entry point implementation","expectedTags":["add-payment"],"category":"keyword"}
+{"id":"Q48","question":"webhook handler scaffolding","expectedTags":["add-webhook"],"category":"keyword"}
+
+{"id":"Q49","question":"why does charge() handle bigint?","expectedTags":["fix-bigint","add-payment"],"category":"multi-tag"}
+{"id":"Q50","question":"all production-incident-driven fixes","expectedTags":["fix-bigint","fix-order-race","log-redact"],"category":"multi-tag"}

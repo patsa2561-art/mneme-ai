@@ -7,6 +7,7 @@ import type {
 } from "../types.js";
 import { readCommits, readFileChanges } from "../git/log.js";
 import { MnemeStore } from "../store/sqlite.js";
+import { redact, mergeHits, type RedactOptions } from "../util/redact.js";
 
 export interface IndexerOptions {
   cwd: string;
@@ -16,12 +17,22 @@ export interface IndexerOptions {
   maxCount?: number;
   embedBatchSize?: number;
   onProgress?: (p: IndexerProgress) => void;
+  /**
+   * Strip secrets from chunk text before storage and embedding.
+   *   true | undefined → built-in rules with default settings
+   *   false            → no redaction (kept as escape hatch for trusted repos)
+   *   { ... }          → forwarded to redact()
+   *
+   * Default: ON (true). Honest "no secret should ever leave the machine"
+   * is more important than slightly more readable indexed text.
+   */
+  redact?: boolean | RedactOptions;
 }
 
 export class Indexer {
   constructor(private opts: IndexerOptions) {}
 
-  async run(): Promise<{ commits: number; chunks: number }> {
+  async run(): Promise<{ commits: number; chunks: number; redactionHits: Record<string, number> }> {
     const report = (p: IndexerProgress) => this.opts.onProgress?.(p);
 
     report({ phase: "git_log", current: 0, total: 0, message: "reading git history" });
@@ -55,6 +66,29 @@ export class Indexer {
 
     const chunks = buildChunks(commits);
 
+    // Redaction runs BEFORE embedding so secrets never reach a remote provider.
+    // Default ON; opt out only on trusted internal repos with no secret history.
+    let redactionHits: Record<string, number> = {};
+    if (this.opts.redact !== false) {
+      const ropts: RedactOptions = typeof this.opts.redact === "object" ? this.opts.redact : {};
+      for (const chunk of chunks) {
+        const r = redact(chunk.text, ropts);
+        if (Object.keys(r.hits).length > 0) {
+          chunk.text = r.text;
+          redactionHits = mergeHits(redactionHits, r.hits);
+        }
+      }
+      const totalHits = Object.values(redactionHits).reduce((a, b) => a + b, 0);
+      if (totalHits > 0) {
+        report({
+          phase: "writing",
+          current: totalHits,
+          total: chunks.length,
+          message: `redacted ${totalHits} secret(s) across ${Object.keys(redactionHits).length} rule(s)`,
+        });
+      }
+    }
+
     if (this.opts.embedder) {
       const model = this.opts.embedder.name;
       const batchSize = this.opts.embedBatchSize ?? 32;
@@ -75,7 +109,11 @@ export class Indexer {
     }
 
     report({ phase: "done", current: chunks.length, total: chunks.length });
-    return { commits: commits.length, chunks: chunks.length };
+    return {
+      commits: commits.length,
+      chunks: chunks.length,
+      redactionHits,
+    };
   }
 }
 

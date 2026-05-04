@@ -5,6 +5,8 @@
 import type { Commit } from "../types.js";
 import type { MnemeStore } from "../store/sqlite.js";
 
+export * from "./redact.js";
+
 /** Load every commit from the store, oldest first, with its file list. */
 export function loadAllCommits(s: MnemeStore): Commit[] {
   const rows = s.db

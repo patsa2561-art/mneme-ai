@@ -6,7 +6,7 @@
  * Phase 3 — incidents, correlations
  * Phase 4 — graph_snapshots (for temporal viz)
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -126,4 +126,58 @@ CREATE TABLE IF NOT EXISTS synthesized_notes (
   created_at TEXT NOT NULL,
   FOREIGN KEY (commit_hash) REFERENCES commits(hash) ON DELETE CASCADE
 );
+
+-- Phase 4 - Wisdom Mutant Engine
+-- The "always-learning" loop. Three append-only tables that record what the
+-- system saw, what it tried, and how well it worked. Per-repo, never leaves
+-- the machine. Honest contract: every recommendation in mneme adapt and
+-- every threshold in mneme ask is traceable back to a row here.
+
+-- Every query records its result-set fingerprint. was_helpful is set later,
+-- either by the user (--feedback up/down) or by an implicit signal (the
+-- query was not re-run with a refined version within 60s, or one of the
+-- returned commits was navigated to via mneme why).
+CREATE TABLE IF NOT EXISTS wisdom_feedback (
+  id TEXT PRIMARY KEY,
+  query TEXT NOT NULL,
+  result_hashes TEXT NOT NULL,        -- JSON array of commit hashes returned
+  top_score REAL,                     -- top RRF score at query time
+  was_helpful INTEGER,                -- 1=yes, 0=no, NULL=unknown
+  source TEXT NOT NULL,               -- 'explicit' | 'implicit-reuse' | 'implicit-revisit'
+  semantic_weight REAL,               -- the search config that produced this result
+  min_sem_cosine REAL,
+  rrf_k INTEGER,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON wisdom_feedback(created_at);
+CREATE INDEX IF NOT EXISTS idx_feedback_helpful ON wisdom_feedback(was_helpful);
+
+-- The current calibration of search/retrieval knobs. One row per knob.
+-- Updated by the auto-calibrator after evaluating against the feedback set.
+CREATE TABLE IF NOT EXISTS wisdom_calibration (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,                -- JSON
+  metric_value REAL,                  -- the metric this calibration achieved
+  metric_name TEXT,                   -- e.g. "hit_rate", "recall_at_3"
+  calibrated_at TEXT NOT NULL,
+  notes TEXT
+);
+
+-- Append-only history of self-eval runs. Lets the user (and any auditor)
+-- see whether quality is trending up or down over time.
+CREATE TABLE IF NOT EXISTS wisdom_eval_run (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ran_at TEXT NOT NULL,
+  variant TEXT NOT NULL,              -- 'baseline' | 'reranked' | 'calibrated' | ...
+  recall_at_3 REAL NOT NULL,
+  mrr REAL NOT NULL,
+  ndcg_at_10 REAL,
+  hit_rate REAL NOT NULL,
+  semantic_weight REAL,
+  min_sem_cosine REAL,
+  rrf_k INTEGER,
+  num_queries INTEGER NOT NULL,
+  notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_eval_ran_at ON wisdom_eval_run(ran_at);
 `;

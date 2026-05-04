@@ -78,4 +78,5 @@ export const DEFAULT_MAX_CLUSTER_SIZE = 12;
 
 export { TypeScriptParser, entityEmbeddingText } from "./typescript-parser.js";
 export { PythonParser } from "./python-parser.js";
+export { GoParser, findGoEntities } from "./go-parser.js";
 export { CosineCloneDetector } from "./cosine-clones.js";

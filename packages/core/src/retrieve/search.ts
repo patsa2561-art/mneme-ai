@@ -16,7 +16,23 @@ export interface SearchOptions {
   topK?: number;
   /** Weight for semantic vs lexical (0 = pure lexical, 1 = pure semantic). */
   semanticWeight?: number;
+  /**
+   * Confidence floor — return [] instead of low-confidence guesses when the
+   * query has no real signal in the corpus. Critical for honest "no context
+   * found" answers on gibberish/out-of-distribution queries.
+   *
+   *   "auto" (default) — empty if (no FTS hits) AND (top semantic cosine < 0.4)
+   *   "off"            — never filter; return whatever fusion produced
+   *   { ... }          — explicit thresholds
+   */
+  confidenceFloor?: "auto" | "off" | { minFtsHits: number; minSemCosine: number };
 }
+
+/** Thresholds used when confidenceFloor === "auto". Calibrated from the eval set. */
+export const DEFAULT_CONFIDENCE: { minFtsHits: number; minSemCosine: number } = {
+  minFtsHits: 1,
+  minSemCosine: 0.4,
+};
 
 /**
  * Hybrid retrieval: combine FTS (BM25) with vector cosine, fuse with weighted RRF.
@@ -34,6 +50,7 @@ export async function search(query: string, opts: SearchOptions): Promise<Search
   }));
 
   let semanticScored: Array<{ chunk: CommitChunk; rank: number; raw: number }> = [];
+  let topSemCosine = 0;
   if (opts.embedder && opts.store.countChunksWithEmbedding() > 0) {
     try {
       const [qvec] = await opts.embedder.embed([query]);
@@ -52,6 +69,7 @@ export async function search(query: string, opts: SearchOptions): Promise<Search
           });
         }
         sims.sort((a, b) => b.sim - a.sim);
+        topSemCosine = sims[0]?.sim ?? 0;
         semanticScored = sims.slice(0, topK * 4).map((s, i) => ({ chunk: s.chunk, rank: i + 1, raw: s.sim }));
       }
     } catch {
@@ -59,6 +77,16 @@ export async function search(query: string, opts: SearchOptions): Promise<Search
       // lexical-only retrieval — better than crashing the whole query.
       semanticScored = [];
     }
+  }
+
+  // Honest "no context found" — block low-confidence guesses on gibberish queries.
+  // This is the difference between an AI tool and a slot machine.
+  const floor = opts.confidenceFloor ?? "auto";
+  if (floor !== "off") {
+    const cfg = floor === "auto" ? DEFAULT_CONFIDENCE : floor;
+    const noLex = ftsScored.length < cfg.minFtsHits;
+    const noSem = topSemCosine < cfg.minSemCosine;
+    if (noLex && noSem) return [];
   }
 
   const fused = reciprocalRankFusion(ftsScored, semanticScored, {
