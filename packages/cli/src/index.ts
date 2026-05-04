@@ -20,18 +20,19 @@ import {
 } from "./commands/wild-features.js";
 import {
   oracleCommand,
-  conscienceCommand,
   genomeCommand,
   dialogueCommand,
   tributeCommand,
 } from "./commands/wild-stubs.js";
+import { conscienceCommand } from "./commands/conscience.js";
+import { teachCommand } from "./commands/teach.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.5.0");
+    .version("0.6.0");
 
   program
     .command("init")
@@ -318,10 +319,43 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("conscience")
-    .description("WILD #6 — review co-pilot from history (planned)")
-    .action(async () => {
-      process.exit(await conscienceCommand());
+    .command("conscience [files...]")
+    .description("WILD #6 — review co-pilot: risk-score a PR against your repo's own history")
+    .option("--diff-file <path>", "read a unified diff from this file")
+    .option("--stdin", "read a unified diff from stdin", false)
+    .option("--recency-days <n>", "consider commits within this window", (v) => Number(v), 365)
+    .option("--top <n>", "top-N similar past commits", (v) => Number(v), 8)
+    .option("--json", "machine-readable output", false)
+    .action(async (files: string[], opts: any) => {
+      process.exit(
+        await conscienceCommand({
+          cwd: process.cwd(),
+          files,
+          diffFile: opts.diffFile,
+          stdin: opts.stdin,
+          recencyDays: opts.recencyDays,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("teach <target>")
+    .description("Explain a folder or file in plain language (layer classification + LLM summary)")
+    .option("--provider <kind>", "auto | ollama | openai", "auto")
+    .option("--model <name>", "override model name")
+    .option("--json", "machine-readable output", false)
+    .action(async (target: string, opts: any) => {
+      process.exit(
+        await teachCommand({
+          cwd: process.cwd(),
+          target,
+          provider: opts.provider,
+          model: opts.model,
+          json: opts.json,
+        }),
+      );
     });
 
   program

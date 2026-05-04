@@ -28,6 +28,12 @@
 
 ---
 
+<!--
+   Demo GIF goes here. Recorded with `vhs demo.tape` (see docs/DEMO.md).
+   Uncomment the line below once `assets/demo.gif` exists.
+-->
+<!-- <p align="center"><img src="./assets/demo.gif" alt="Mneme — ask, why, clones, runaway, heal, palimpsest, wisdom" width="900"></p> -->
+
 ## What it does, in 12 seconds
 
 ```bash
