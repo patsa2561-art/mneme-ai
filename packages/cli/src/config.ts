@@ -18,6 +18,12 @@ export interface MnemeConfig {
     datadog?: { site: string };
   };
   webPort?: number;
+  /**
+   * Deterministic mode — when true, every LLM-touching command refuses or
+   * falls back to a non-LLM path. For air-gapped, regulated, or strictly
+   * reproducible environments. See docs/SECURITY.md.
+   */
+  deterministic?: boolean;
 }
 
 export const DEFAULT_CONFIG: MnemeConfig = {
