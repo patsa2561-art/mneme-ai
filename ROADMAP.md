@@ -5,7 +5,7 @@ Built bottom-up: every phase is shippable on its own, every phase plugs into the
 | Phase | Weeks | Status | Output |
 |---|---|---|---|
 | 1 — Archaeologist core | 4 | ✅ scaffolded | `mneme ask`, `mneme why`, MCP server |
-| 2 — Semantic similarity | 2 | 🚧 stub | `entities` table + cluster commands |
+| 2 — Semantic similarity | 2 | ✅ shipped (v0.3.0) | `mneme entities`, `mneme clones`, TS/JS parser, cosine clones |
 | 3 — Error correlation 🏆 | 4 | 🚧 stub (engine done, adapters pending) | `mneme correlate` with Sentry/Datadog |
 | 4 — Temporal viz | 6 | 🚧 placeholder UI | `mneme web` — D3 graph animated over git history |
 

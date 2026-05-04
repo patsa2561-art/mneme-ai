@@ -7,13 +7,14 @@ import { statusCommand } from "./commands/status.js";
 import { correlateCommand } from "./commands/correlate.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { wisdomCommand, manifestoCommand } from "./commands/wisdom.js";
+import { entitiesCommand, clonesCommand } from "./commands/clones.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.1.0");
+    .version("0.2.0");
 
   program
     .command("init")
@@ -88,13 +89,37 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
+    .command("entities")
+    .description("Phase 2 — parse and embed every function/class/type in tracked TS/JS files")
+    .action(async () => {
+      process.exit(await entitiesCommand({ cwd: process.cwd() }));
+    });
+
+  program
+    .command("clones")
+    .description("Phase 2 — find semantic clones (functions doing the same thing)")
+    .option("-t, --threshold <n>", "cosine threshold (0..1), default 0.85", (v) => Number(v))
+    .option("-N, --top <n>", "show top-N clusters, default 20", (v) => Number(v), 20)
+    .option("--json", "machine-readable JSON output", false)
+    .action(async (opts: { threshold?: number; top?: number; json?: boolean }) => {
+      process.exit(
+        await clonesCommand({
+          cwd: process.cwd(),
+          threshold: opts.threshold,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
     .command("wisdom")
     .description("Print a meditation from the Mneme manifesto (rotates daily)")
-    .option("-n, --index <n>", "show a specific meditation by number", (v) => Number(v))
+    .option("-n, --num <n>", "show a specific meditation by number (1..13)", (v) => Number(v))
     .option("--all", "print every meditation", false)
     .option("--json", "machine-readable JSON output", false)
-    .action(async (opts: { index?: number; all?: boolean; json?: boolean }) => {
-      process.exit(await wisdomCommand(opts));
+    .action(async (opts: { num?: number; all?: boolean; json?: boolean }) => {
+      process.exit(await wisdomCommand({ index: opts.num, all: opts.all, json: opts.json }));
     });
 
   program

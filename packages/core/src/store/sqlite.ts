@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type {
   Commit,
   CommitChunk,
+  Entity,
   FileChange,
   Incident,
   Correlation,
@@ -181,6 +182,82 @@ export class MnemeStore {
       bm25: number;
     }>;
     return rows;
+  }
+
+  upsertEntities(entities: Entity[], embeddingModel?: string): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO entities
+        (id, kind, name, file_path, start_line, end_line, signature, language, embedding)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const tx = this.db.transaction((batch: Entity[]) => {
+      for (const e of batch) {
+        const buf = e.embedding ? Buffer.from(e.embedding.buffer.slice(0)) : null;
+        stmt.run(
+          e.id,
+          e.kind,
+          e.name,
+          e.filePath,
+          e.startLine,
+          e.endLine,
+          e.signature ?? null,
+          e.language,
+          buf,
+        );
+      }
+    });
+    tx(entities);
+    if (embeddingModel) this.setMeta("entity_embedder", embeddingModel);
+  }
+
+  countEntities(): number {
+    const row = this.db.prepare("SELECT COUNT(*) AS n FROM entities").get() as { n: number };
+    return row.n;
+  }
+
+  countEntitiesWithEmbedding(): number {
+    const row = this.db
+      .prepare("SELECT COUNT(*) AS n FROM entities WHERE embedding IS NOT NULL")
+      .get() as { n: number };
+    return row.n;
+  }
+
+  countEntitiesByLanguage(): Array<{ language: string; n: number }> {
+    return this.db
+      .prepare("SELECT language, COUNT(*) AS n FROM entities GROUP BY language ORDER BY n DESC")
+      .all() as Array<{ language: string; n: number }>;
+  }
+
+  *iterEmbeddedEntities(): Generator<Entity> {
+    const rows = this.db
+      .prepare(
+        `SELECT id, kind, name, file_path, start_line, end_line, signature, language, embedding
+         FROM entities WHERE embedding IS NOT NULL`,
+      )
+      .iterate() as IterableIterator<{
+      id: string;
+      kind: Entity["kind"];
+      name: string;
+      file_path: string;
+      start_line: number;
+      end_line: number;
+      signature: string | null;
+      language: string;
+      embedding: Buffer;
+    }>;
+    for (const r of rows) {
+      yield {
+        id: r.id,
+        kind: r.kind,
+        name: r.name,
+        filePath: r.file_path,
+        startLine: r.start_line,
+        endLine: r.end_line,
+        signature: r.signature ?? undefined,
+        language: r.language,
+        embedding: bufToFloat32(r.embedding),
+      };
+    }
   }
 
   upsertIncidents(incidents: Incident[]): void {

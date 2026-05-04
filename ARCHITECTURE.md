@@ -101,7 +101,7 @@ Schema lives in [`packages/core/src/store/schema.ts`](packages/core/src/store/sc
 | `better-sqlite3` | synchronous = simple; works on Win/Mac/Linux without daemon |
 | FTS5 + BLOB vectors | one file, no Qdrant/Pinecone deps; can swap to `sqlite-vec` later |
 | Spawn `git` directly | no `libgit2` native binding; matches user's installed git |
-| Ollama default | local-first, no API key, same UX as SocratiCode |
+| Ollama default | local-first, no API key, no telemetry |
 
 ## Extending Mneme
 

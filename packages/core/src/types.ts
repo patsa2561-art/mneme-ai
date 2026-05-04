@@ -38,6 +38,8 @@ export interface Entity {
   endLine: number;
   signature?: string;
   language: string;
+  /** Optional vector embedding (Phase 2). */
+  embedding?: Float32Array;
 }
 
 export interface CommitChunk {

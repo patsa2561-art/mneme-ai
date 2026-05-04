@@ -53,8 +53,8 @@ Alternative titles:
 If someone says **"this is just RAG"**:
 > Yes, it's RAG. The interesting part is the corpus — git history + PR bodies + incident reports — not the retriever. Most RAG-on-code projects index source files and miss the WHY entirely.
 
-If someone says **"Sourcegraph already does this"**:
-> Sourcegraph indexes source. It doesn't index PR/issue bodies as first-class objects, doesn't fuse with git blame, and doesn't speak MCP. Different layer of the stack.
+If someone says **"this already exists in [some tool]"**:
+> Acknowledge the overlap honestly. Describe what Mneme actually does — indexes git history (commits + PR/issue bodies as first-class objects), fuses with git blame, speaks MCP — and let the reader compare. Do not make claims about other tools. People who care will check for themselves.
 
 If someone says **"why not just grep git log?"**:
 > Because semantic queries fail there. `git log --grep "stripe"` finds commits mentioning Stripe. It doesn't find the commit that fixed a bug *caused by* Stripe behavior, in a body that doesn't include the word "stripe." That's what embeddings are for.

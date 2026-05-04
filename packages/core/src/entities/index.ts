@@ -75,3 +75,6 @@ export interface EntityCluster {
  */
 export const DEFAULT_CLONE_THRESHOLD = 0.85;
 export const DEFAULT_MAX_CLUSTER_SIZE = 12;
+
+export { TypeScriptParser, entityEmbeddingText } from "./typescript-parser.js";
+export { CosineCloneDetector } from "./cosine-clones.js";

@@ -1,7 +1,27 @@
 # Phase 2 — Semantic similarity & clone detection
 
-> **Status:** designed, contracts shipped, implementation pending.
-> Tracked toward v0.2.0.
+> **Status as of v0.3.0:** ✅ TypeScriptParser + CosineCloneDetector shipped.
+> CLI commands `mneme entities` and `mneme clones` work end-to-end.
+> Multi-language parsing (Python/Go/Rust) + golden-set evaluation are next.
+
+## What works today (v0.3.0)
+
+```bash
+mneme entities                        # parse + embed all tracked TS/JS files
+mneme clones --threshold 0.85         # find semantic clones
+mneme clones --threshold 0.95 --top 5 # only the tightest matches
+mneme clones --json                   # machine-readable
+```
+
+**Dogfooded on the Mneme repo itself, threshold 0.85** — found real duplication:
+
+| Cluster | Cohesion | Refactor opportunity |
+|---|---|---|
+| `PullRequestInfo` ≈ `IssueInfo` ≈ `MergeRequestInfo` ≈ `GitLabIssueInfo` | 0.867 | extract shared shape |
+| `sleep(ms)` in github.ts / gitlab.ts / sentry.ts | 1.000 | move to shared util |
+| `truncate(s, n)` in 2 places | 1.000 | move to shared util |
+
+That is the kind of output Phase 2 was designed to produce. The proof is the dogfood.
 
 ## What this phase adds
 

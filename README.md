@@ -242,19 +242,22 @@ For the deep dive, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 
-## Comparison
+## What Mneme does
 
-| | **Mneme** | Sourcegraph | gitingest / repomix | CodeScene | Sentry |
-|---|---|---|---|---|---|
-| Indexes git history | ✅ | partial | ❌ | ✅ | ❌ |
-| PR / issue body in retrieval | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Hybrid search (BM25 + vector) | ✅ | ✅ | ❌ | ❌ | ❌ |
-| MCP server for AI assistants | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Error ↔ commit correlation** | ✅ *(phase 3)* | ❌ | ❌ | partial | ❌ |
-| Local-first / air-gapped | ✅ | ❌ | ✅ | ❌ | ❌ |
-| Open source, free | ✅ | partial | ✅ | ❌ | ❌ |
+A single tool, three layers of memory:
 
-> The row that nobody else has: **error correlation**. That's the moat. See the [roadmap](./ROADMAP.md).
+1. **The WHY** — indexes commit messages, PR descriptions, issue bodies, blame.
+   Ask: *"why does this code use a retry?"* → real PR #482 from 8 months ago, with a clickable citation.
+
+2. **The WHAT** — parses every TypeScript / JavaScript symbol (function, class, type) and embeds them.
+   Ask: *"which functions in this repo do roughly the same thing?"* → semantic clone clusters with cohesion scores.
+
+3. **The WHERE-IT-BREAKS** *(Phase 3)* — joins commits with incidents from Sentry / Datadog / manual logs.
+   Ask: *"which commit likely caused SENTRY-1287?"* → ranked candidates by file overlap + temporal proximity.
+
+All three are reachable from a single CLI and from any AI assistant that speaks **MCP** (Model Context Protocol) — Claude Code, Cursor, Continue, Copilot, etc.
+
+Everything runs locally by default. No API key required. No code leaves your machine. MIT-licensed.
 
 ---
 

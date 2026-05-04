@@ -53,7 +53,7 @@ export async function wisdomCommand(opts: WisdomOptions): Promise<number> {
   process.stdout.write(
     "\n" +
       kleur.gray(
-        `  see also:  mneme wisdom --all     ·     mneme wisdom --n <1..${MEDITATIONS.length}>     ·     mneme manifesto`,
+        `  see also:  mneme wisdom --all     ·     mneme wisdom -n <1..${MEDITATIONS.length}>     ·     mneme manifesto`,
       ) +
       "\n",
   );
