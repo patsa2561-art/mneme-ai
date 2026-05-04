@@ -2,7 +2,9 @@ import kleur from "kleur";
 import { git, store, enrich, type Commit } from "@mneme-ai/core";
 import { resolveEnricher } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
+import { readConfig } from "../config.js";
 import { ui, formatProgress } from "../ui.js";
+import { isNoLlm, refuseLlm } from "../no-llm.js";
 
 export interface HealCommandOptions {
   cwd: string;
@@ -15,6 +17,8 @@ export interface HealCommandOptions {
   model?: string;
   /** Re-heal commits that already have a synthesized note. */
   force?: boolean;
+  /** Refuse to run if any LLM would be called. */
+  noLlm?: boolean;
 }
 
 /**
@@ -32,6 +36,16 @@ export async function healCommand(opts: HealCommandOptions): Promise<number> {
     return 1;
   }
   const meta = await git.getRepoMeta(opts.cwd);
+  const cfg = readConfig(meta.rootPath);
+
+  if (isNoLlm(opts.noLlm, cfg)) {
+    return refuseLlm(
+      "heal",
+      "ship better commit messages, or `mneme ask` works on existing text alone",
+      ui,
+    );
+  }
+
   const s = new store.MnemeStore(dbPath(meta.rootPath));
 
   if (s.countCommits() === 0) {

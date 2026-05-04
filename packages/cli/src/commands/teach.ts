@@ -23,7 +23,9 @@ import kleur from "kleur";
 import { git, store, type Entity } from "@mneme-ai/core";
 import { resolveEnricher } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
+import { readConfig } from "../config.js";
 import { ui } from "../ui.js";
+import { isNoLlm } from "../no-llm.js";
 
 export interface TeachCommandOptions {
   cwd: string;
@@ -31,6 +33,8 @@ export interface TeachCommandOptions {
   provider?: "auto" | "ollama" | "openai";
   model?: string;
   json?: boolean;
+  /** Skip the LLM summary step (prints classification only). */
+  noLlm?: boolean;
 }
 
 type Layer = "api" | "service" | "data" | "ui" | "utility" | "test" | "config" | "unknown";
@@ -94,7 +98,23 @@ export async function teachCommand(opts: TeachCommandOptions): Promise<number> {
   }
   process.stdout.write("\n");
 
-  // 3. SUMMARIZE — call the enricher.
+  // 3. SUMMARIZE — call the enricher (skipped under deterministic mode).
+  const cfg = readConfig(meta.rootPath);
+  if (isNoLlm(opts.noLlm, cfg)) {
+    ui.dim("Deterministic mode — skipping LLM summary, printing classification only.");
+    if (opts.json) {
+      process.stdout.write(
+        JSON.stringify(
+          { target: opts.target, layers: Object.fromEntries(layerCounts), summary: null },
+          null,
+          2,
+        ) + "\n",
+      );
+    }
+    s.close();
+    return 0;
+  }
+
   let enricher;
   try {
     enricher = await resolveEnricher({

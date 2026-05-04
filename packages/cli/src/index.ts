@@ -29,6 +29,7 @@ import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
 import { geniusCommand } from "./commands/genius.js";
+import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -39,10 +40,11 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("init")
-    .description("Initialize Mneme in the current repo")
+    .description("Initialize Mneme in the current repo (probes environment to recommend the best embedder)")
     .option("--force", "overwrite existing config", false)
-    .action(async (opts: { force?: boolean }) => {
-      process.exit(await initCommand({ cwd: process.cwd(), force: opts.force }));
+    .option("--skip-probe", "skip environment probe (useful in scripts)", false)
+    .action(async (opts: { force?: boolean; skipProbe?: boolean }) => {
+      process.exit(await initCommand({ cwd: process.cwd(), force: opts.force, skipProbe: opts.skipProbe }));
     });
 
   program
@@ -52,7 +54,10 @@ export async function run(argv: string[]): Promise<void> {
     .option("--max <n>", "maximum number of commits", (v) => Number(v))
     .option("--embedder <kind>", "auto | ollama | openai | hash", "auto")
     .option("--model <name>", "embedding model name override")
-    .action(async (opts: { since?: string; max?: number; embedder?: "auto"|"ollama"|"openai"|"hash"; model?: string }) => {
+    .option("--no-redact", "disable built-in secret redaction (default: on)")
+    .option("--aggressive-redact", "enable lower-confidence redaction patterns (password=, hex blobs)", false)
+    .option("--no-llm", "deterministic mode — force hash embedder, never call Ollama/OpenAI")
+    .action(async (opts: { since?: string; max?: number; embedder?: "auto"|"ollama"|"openai"|"hash"; model?: string; redact?: boolean; aggressiveRedact?: boolean; llm?: boolean }) => {
       process.exit(
         await indexCommand({
           cwd: process.cwd(),
@@ -60,6 +65,10 @@ export async function run(argv: string[]): Promise<void> {
           maxCount: opts.max,
           embedder: opts.embedder,
           model: opts.model,
+          // commander turns --no-redact into opts.redact === false; we pass that as noRedact
+          noRedact: opts.redact === false,
+          aggressiveRedact: opts.aggressiveRedact,
+          noLlm: opts.llm === false,
         }),
       );
     });
@@ -93,6 +102,33 @@ export async function run(argv: string[]): Promise<void> {
     .description("Show memory + repo status")
     .action(async () => {
       process.exit(await statusCommand({ cwd: process.cwd() }));
+    });
+
+  program
+    .command("doctor")
+    .description("Probe the environment (Ollama, OpenAI, hardware) and recommend the best embedder")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { json?: boolean }) => {
+      const { runFullProbe } = await import("./probe.js");
+      const probe = await runFullProbe();
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(probe, null, 2) + "\n");
+        process.exit(0);
+      }
+      const kleur = (await import("kleur")).default;
+      const stars = "★".repeat(probe.recommendation.qualityStars) + "☆".repeat(5 - probe.recommendation.qualityStars);
+      ui.banner();
+      process.stdout.write(`  ${kleur.bold().cyan("Environment probe")}\n`);
+      process.stdout.write(`    ${kleur.gray("hardware ")}  ${probe.hardware.ramGB}GB RAM · ${probe.hardware.cpuCount} cpus · ${probe.hardware.platform}/${probe.hardware.arch} (${probe.hardware.tier})\n`);
+      process.stdout.write(`    ${kleur.gray("ollama   ")}  ${probe.ollama.reachable ? kleur.green("reachable") : kleur.gray("not running")}${probe.ollama.hasEmbedModel ? kleur.green(" · embed model pulled") : probe.ollama.reachable ? kleur.yellow(" · embed model NOT pulled") : ""}\n`);
+      process.stdout.write(`    ${kleur.gray("openai   ")}  ${probe.openai.hasKey ? kleur.green(`key set …${probe.openai.keyTail}`) : kleur.gray("no key")}\n`);
+      process.stdout.write(`\n  ${kleur.bold().magenta("Recommendation")} ${kleur.bold(probe.recommendation.pick)} ${kleur.gray(stars)}\n`);
+      process.stdout.write(`    ${probe.recommendation.reason}\n`);
+      if (probe.recommendation.action) {
+        process.stdout.write(`    ${kleur.cyan("→")} ${kleur.bold(probe.recommendation.action)}\n`);
+      }
+      process.stdout.write("\n");
+      process.exit(0);
     });
 
   program
@@ -168,6 +204,7 @@ export async function run(argv: string[]): Promise<void> {
     .option("--provider <kind>", "auto | ollama | openai", "auto")
     .option("--model <name>", "override model name (e.g. llama3.2:1b, gpt-4o-mini)")
     .option("--force", "re-heal commits that already have a synthesized note", false)
+    .option("--no-llm", "deterministic mode — refuse to run (heal needs an LLM)")
     .action(async (opts: any) => {
       process.exit(
         await healCommand({
@@ -178,6 +215,7 @@ export async function run(argv: string[]): Promise<void> {
           provider: opts.provider,
           model: opts.model,
           force: opts.force,
+          noLlm: opts.llm === false,
         }),
       );
     });
@@ -315,7 +353,7 @@ export async function run(argv: string[]): Promise<void> {
   // ─── Stubs (planned features — print design when invoked) ───
 
   program
-    .command("oracle")
+    .command("oracle", { hidden: true })
     .description("WILD #4 — historical risk analysis on a snippet (planned)")
     .action(async () => {
       process.exit(await oracleCommand());
@@ -367,6 +405,43 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await adaptCommand({ cwd: process.cwd(), json: opts.json }));
     });
 
+  // ─── Wisdom Mutant Engine (Phase 4) ───
+  program
+    .command("feedback <id-or-prefix> <vote>")
+    .description("Wisdom Mutant — record feedback on a previous `mneme ask` (vote: up | down)")
+    .action(async (idOrPrefix: string, vote: string) => {
+      if (vote !== "up" && vote !== "down") {
+        ui.error("vote must be 'up' or 'down'");
+        process.exit(1);
+      }
+      process.exit(await feedbackCommand({ cwd: process.cwd(), idOrPrefix, vote }));
+    });
+
+  program
+    .command("calibrate")
+    .description("Wisdom Mutant — re-tune search knobs against accumulated feedback")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(await calibrateCommand({ cwd: process.cwd(), json: opts.json }));
+    });
+
+  program
+    .command("watch")
+    .description("Wisdom Mutant — 24/7 daemon: re-index on commit, calibrate hourly, self-eval daily")
+    .option("--calibrate-ms <n>", "override calibrate interval", (v) => Number(v))
+    .option("--self-eval-ms <n>", "override self-eval interval", (v) => Number(v))
+    .option("--quiet", "only print errors", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await watchCommand({
+          cwd: process.cwd(),
+          calibrateMs: opts.calibrateMs,
+          selfEvalMs: opts.selfEvalMs,
+          quiet: opts.quiet,
+        }),
+      );
+    });
+
   program
     .command("genius <question...>")
     .description("AI agent — plans and runs multi-step Mneme workflows to answer hard questions")
@@ -375,6 +450,7 @@ export async function run(argv: string[]): Promise<void> {
     .option("--model <name>", "override LLM model name")
     .option("--trace", "print raw tool outputs while running", false)
     .option("--json", "machine-readable output", false)
+    .option("--no-llm", "deterministic mode — refuse and suggest a non-LLM alternative")
     .action(async (qParts: string[], opts: any) => {
       process.exit(
         await geniusCommand({
@@ -385,6 +461,7 @@ export async function run(argv: string[]): Promise<void> {
           model: opts.model,
           trace: opts.trace,
           json: opts.json,
+          noLlm: opts.llm === false,
         }),
       );
     });
@@ -395,6 +472,7 @@ export async function run(argv: string[]): Promise<void> {
     .option("--provider <kind>", "auto | ollama | openai", "auto")
     .option("--model <name>", "override model name")
     .option("--json", "machine-readable output", false)
+    .option("--no-llm", "deterministic mode — print classification only, skip the LLM summary")
     .action(async (target: string, opts: any) => {
       process.exit(
         await teachCommand({
@@ -403,29 +481,50 @@ export async function run(argv: string[]): Promise<void> {
           provider: opts.provider,
           model: opts.model,
           json: opts.json,
+          noLlm: opts.llm === false,
         }),
       );
     });
 
   program
-    .command("genome")
+    .command("genome", { hidden: true })
     .description("WILD #9 — codebase fingerprint + ancestry (planned)")
     .action(async () => {
       process.exit(await genomeCommand());
     });
 
   program
-    .command("dialogue")
+    .command("dialogue", { hidden: true })
     .description("WILD #11 — conversational chat over your repo (planned)")
     .action(async () => {
       process.exit(await dialogueCommand());
     });
 
   program
-    .command("tribute")
+    .command("tribute", { hidden: true })
     .description("WILD #15 — your codebase as a 60-sec movie (planned)")
     .action(async () => {
       process.exit(await tributeCommand());
+    });
+
+  program
+    .command("planned", { hidden: true })
+    .description("List planned-but-unshipped commands (oracle, genome, dialogue, tribute)")
+    .action(async () => {
+      process.stdout.write([
+        "",
+        "  Planned commands (design pages, not yet implemented):",
+        "",
+        "    oracle    — historical risk analysis on a snippet",
+        "    genome    — codebase fingerprint + ancestry",
+        "    dialogue  — conversational chat over your repo",
+        "    tribute   — your codebase as a 60-second movie",
+        "",
+        "  Run any of them to see the full design page.",
+        "  See WILD_IDEAS.md for the catalog of 17+ ideas (11 shipped).",
+        "",
+      ].join("\n"));
+      process.exit(0);
     });
 
   program.exitOverride((err) => {

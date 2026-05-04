@@ -3,6 +3,7 @@ import { resolveEmbedder } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig, writeConfig } from "../config.js";
 import { ui, formatProgress } from "../ui.js";
+import { isNoLlm } from "../no-llm.js";
 import kleur from "kleur";
 
 export interface IndexCommandOptions {
@@ -11,6 +12,12 @@ export interface IndexCommandOptions {
   maxCount?: number;
   embedder?: "auto" | "ollama" | "openai" | "hash";
   model?: string;
+  /** Disable secret redaction (default: ON). */
+  noRedact?: boolean;
+  /** Enable lower-confidence patterns (generic password=, hex blobs). */
+  aggressiveRedact?: boolean;
+  /** Force hash embedder; refuse Ollama/OpenAI even if requested. */
+  noLlm?: boolean;
 }
 
 export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
@@ -24,9 +31,16 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   const meta = await git.getRepoMeta(opts.cwd);
   const cfg = readConfig(meta.rootPath);
 
+  // Deterministic mode forces the hash embedder regardless of what was asked.
+  // Honest "no LLM, no remote" beats failing because Ollama isn't reachable.
+  const noLlm = isNoLlm(opts.noLlm, cfg);
+  if (noLlm && (opts.embedder === "ollama" || opts.embedder === "openai")) {
+    ui.warn(`Deterministic mode — ignoring --embedder ${opts.embedder} and using hash fallback.`);
+  }
+
   const embedder = await resolveEmbedder({
-    provider: opts.embedder ?? cfg.embeddings.provider,
-    model: opts.model ?? cfg.embeddings.model,
+    provider: noLlm ? "hash" : (opts.embedder ?? cfg.embeddings.provider),
+    model: noLlm ? undefined : (opts.model ?? cfg.embeddings.model),
     baseUrl: cfg.embeddings.baseUrl,
   });
 
@@ -40,6 +54,12 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   s.setMeta("repo_root", meta.rootPath);
   s.setMeta("embedder", embedder.name);
 
+  const redactConfig = opts.noRedact
+    ? false
+    : opts.aggressiveRedact
+      ? { aggressive: true }
+      : true;
+
   let last = 0;
   const idx = new indexer.Indexer({
     cwd: meta.rootPath,
@@ -47,6 +67,7 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
     embedder,
     since: opts.since ?? cfg.index.since,
     maxCount: opts.maxCount ?? cfg.index.maxCount,
+    redact: redactConfig,
     onProgress: (p) => {
       const now = Date.now();
       if (now - last < 80 && p.phase !== "done") return;
@@ -85,6 +106,18 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   ui.dim("");
   ui.success(`Indexed ${result.commits} commits → ${result.chunks} chunks in ${elapsed}s`);
   ui.dim(`DB: ${dbPath(meta.rootPath)}`);
+
+  const totalRedacted = Object.values(result.redactionHits).reduce((a, b) => a + b, 0);
+  if (totalRedacted > 0) {
+    ui.warn(`Redacted ${totalRedacted} secret(s) before indexing:`);
+    for (const [rule, count] of Object.entries(result.redactionHits)) {
+      ui.dim(`    ${rule.padEnd(28)} ${count}`);
+    }
+    ui.dim("    (pass --no-redact to disable; see docs/SECURITY.md)");
+  } else if (opts.noRedact) {
+    ui.dim("Redaction: disabled (--no-redact)");
+  }
+
   s.close();
   return 0;
 }

@@ -1,4 +1,4 @@
-import { git, retrieve, store } from "@mneme-ai/core";
+import { git, retrieve, store, wisdom } from "@mneme-ai/core";
 import { resolveEmbedder } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig } from "../config.js";
@@ -10,6 +10,12 @@ export interface AskCommandOptions {
   question: string;
   topK?: number;
   json?: boolean;
+}
+
+export interface AskCommandResult {
+  exitCode: number;
+  /** ID of the wisdom_feedback row recorded for this query, if any. */
+  feedbackId?: string;
 }
 
 export async function askCommand(opts: AskCommandOptions): Promise<number> {
@@ -33,21 +39,43 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     baseUrl: cfg.embeddings.baseUrl,
   });
 
+  // Wisdom Mutant: read the calibrated config (defaults if not yet calibrated).
+  const calib = wisdom.readCalibration(s);
+
   const result = await retrieve.ask(opts.question, {
     store: s,
     embedder,
     repo: meta,
     topK: opts.topK ?? 8,
+    semanticWeight: calib.semanticWeight,
   });
+
+  // Wisdom Mutant: record this query as a pending-feedback row.
+  let feedbackId: string | undefined;
+  try {
+    feedbackId = wisdom.recordQuery(s, {
+      query: opts.question,
+      resultHashes: result.searchResults.map((r) => r.commit.hash),
+      topScore: result.searchResults[0]?.score,
+      semanticWeight: calib.semanticWeight,
+      minSemCosine: calib.minSemCosine,
+      rrfK: calib.rrfK,
+    });
+  } catch {
+    // Don't break ask if wisdom recording fails (e.g., older DB schema).
+  }
 
   s.close();
 
   if (opts.json) {
-    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ ...result, feedbackId }, null, 2) + "\n");
     return 0;
   }
 
   printAskResult(result);
+  if (feedbackId && result.searchResults.length > 0) {
+    process.stdout.write(`\n${kleur.gray("Was this useful?")} ${kleur.bold("mneme feedback")} ${kleur.cyan(feedbackId.slice(0, 8))} ${kleur.green("up")}${kleur.gray(" | ")}${kleur.red("down")}\n`);
+  }
   return 0;
 }
 

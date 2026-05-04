@@ -1,4 +1,4 @@
-import { git, retrieve, store } from "@mneme-ai/core";
+import { git, retrieve, store, wisdom } from "@mneme-ai/core";
 import { resolveEmbedder } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig } from "../config.js";
@@ -47,6 +47,15 @@ export async function whyCommand(opts: WhyOptions): Promise<number> {
 
   process.stdout.write(`${kleur.bold().magenta("Originating commits")}\n`);
   const s = new store.MnemeStore(dbPath(meta.rootPath));
+
+  // Wisdom Mutant — implicit positive signal: looking up `why` on a commit
+  // that recently appeared in an `ask` result means the user found it useful.
+  try {
+    for (const [hash] of ranked) wisdom.recordImplicitRevisit(s, hash);
+  } catch {
+    // ignore — wisdom recording is never load-bearing
+  }
+
   for (const [hash, { count }] of ranked) {
     const c = s.getCommit(hash);
     if (!c) {

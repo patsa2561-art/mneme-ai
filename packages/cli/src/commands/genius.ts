@@ -28,7 +28,10 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import kleur from "kleur";
 import { resolveEnricher } from "@mneme-ai/embeddings";
+import { git } from "@mneme-ai/core";
 import { ui } from "../ui.js";
+import { readConfig } from "../config.js";
+import { isNoLlm, refuseLlm } from "../no-llm.js";
 
 export interface GeniusCommandOptions {
   cwd: string;
@@ -40,6 +43,8 @@ export interface GeniusCommandOptions {
   /** Print every plan step + raw output (verbose mode). */
   trace?: boolean;
   json?: boolean;
+  /** Refuse to run if any LLM would be called. */
+  noLlm?: boolean;
 }
 
 interface PlanStep {
@@ -86,6 +91,20 @@ export async function geniusCommand(opts: GeniusCommandOptions): Promise<number>
     `${kleur.bold().cyan("genius")}  ${kleur.gray("(AI agent — plans, runs, synthesizes)")}\n\n`,
   );
   process.stdout.write(`${kleur.bold("Q")} ${opts.question}\n\n`);
+
+  if (await git.isGitRepo(opts.cwd)) {
+    const meta = await git.getRepoMeta(opts.cwd);
+    const cfg = readConfig(meta.rootPath);
+    if (isNoLlm(opts.noLlm, cfg)) {
+      return refuseLlm(
+        "genius",
+        `mneme adapt && mneme ask "${opts.question}"`,
+        ui,
+      );
+    }
+  } else if (isNoLlm(opts.noLlm, {})) {
+    return refuseLlm("genius", `mneme ask "${opts.question}" (after running mneme init && mneme index)`, ui);
+  }
 
   // 1. Resolve the LLM (same enricher used by `heal` / `teach`).
   let enricher;
