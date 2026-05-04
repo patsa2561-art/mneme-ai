@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Configure git
+        run: |
+          git config --global user.email "ci@mneme.dev"
+          git config --global user.name "Mneme CI"
+          git config --global core.autocrlf false
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run eval -- --variant baseline --quiet
+
+      # Publish in dependency order so workspace deps resolve.
+      - name: Publish @mneme-ai/core
+        working-directory: packages/core
+        run: npm publish --access public --provenance
+        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
+      - name: Publish @mneme-ai/embeddings
+        working-directory: packages/embeddings
+        run: npm publish --access public --provenance
+        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
+      - name: Publish @mneme-ai/correlator
+        working-directory: packages/correlator
+        run: npm publish --access public --provenance
+        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
+      - name: Publish @mneme-ai/mcp
+        working-directory: packages/mcp
+        run: npm publish --access public --provenance
+        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
+      - name: Publish mneme-ai (CLI)
+        working-directory: packages/cli
+        run: npm publish --access public --provenance
+        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }

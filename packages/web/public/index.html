@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mneme · the memory graph</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root {
+    --bg: #0b0b14;
+    --panel: #14142b;
+    --ink: #e7e7ff;
+    --mute: #7878a0;
+    --commit: #6ee7b7;
+    --incident: #f87171;
+    --entity: #93c5fd;
+    --accent: #c084fc;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 18px 24px; border-bottom: 1px solid #20204020; display: flex; align-items: center; gap: 14px; }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: 0.04em; }
+  header .greek { font-family: "Times New Roman", serif; color: var(--accent); font-size: 22px; margin-right: 4px; }
+  header .tag { color: var(--mute); font-size: 12px; }
+  main { display: grid; grid-template-columns: 280px 1fr; height: calc(100vh - 60px); }
+  aside { padding: 18px; border-right: 1px solid #20204020; overflow: auto; }
+  aside h2 { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mute); margin: 18px 0 8px; }
+  aside .legend { display: flex; flex-direction: column; gap: 6px; }
+  aside .legend span { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  aside .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  #canvas { width: 100%; height: 100%; }
+  .node-commit { fill: var(--commit); }
+  .node-incident { fill: var(--incident); }
+  .node-entity { fill: var(--entity); }
+  .link { stroke: #ffffff20; }
+  .label { fill: var(--ink); font-size: 11px; }
+  .placeholder { color: var(--mute); padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="greek">μνήμη</span>
+  <h1>Mneme</h1>
+  <span class="tag">temporal graph viewer · phase 4 preview</span>
+</header>
+<main>
+  <aside>
+    <h2>Legend</h2>
+    <div class="legend">
+      <span><i style="background: var(--commit)"></i> commit</span>
+      <span><i style="background: var(--incident)"></i> incident</span>
+      <span><i style="background: var(--entity)"></i> entity</span>
+    </div>
+    <h2>Phase 4 plan</h2>
+    <div style="color: var(--mute); font-size: 12px;">
+      Animate the graph through git timeline. Hover to see WHY (PRs, commits).
+      Click an incident to walk back to the commits that likely caused it.
+    </div>
+    <h2>API</h2>
+    <div style="color: var(--mute); font-size: 12px;">
+      <code>GET /api/graph</code> — returns nodes + links.<br/>
+      Currently stubbed; phase 4 fills it from the SQLite store.
+    </div>
+  </aside>
+  <svg id="canvas"></svg>
+</main>
+<script>
+async function main() {
+  const res = await fetch('/api/graph');
+  const data = await res.json();
+  const svg = document.getElementById('canvas');
+  const w = svg.clientWidth;
+  const h = svg.clientHeight;
+  // Tiny hand-rolled placeholder layout (no D3 yet). Phase 4 swaps in d3-force.
+  const cx = w / 2;
+  const cy = h / 2;
+  const nodes = data.nodes.map((n, i) => {
+    const angle = (i / data.nodes.length) * Math.PI * 2;
+    const r = 180;
+    return { ...n, x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
+  });
+  const idx = new Map(nodes.map(n => [n.id, n]));
+  for (const link of data.links) {
+    const a = idx.get(link.source);
+    const b = idx.get(link.target);
+    if (!a || !b) continue;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+    line.setAttribute('class', 'link');
+    line.setAttribute('stroke-width', String(1 + (link.weight ?? 0.5) * 3));
+    svg.appendChild(line);
+  }
+  for (const n of nodes) {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', n.x); c.setAttribute('cy', n.y); c.setAttribute('r', 14);
+    c.setAttribute('class', `node-${n.kind}`);
+    svg.appendChild(c);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', n.x + 18); t.setAttribute('y', n.y + 4);
+    t.setAttribute('class', 'label');
+    t.textContent = n.label ?? n.id;
+    svg.appendChild(t);
+  }
+}
+main();
+</script>
+</body>
+</html>

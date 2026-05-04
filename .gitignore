@@ -1,0 +1,34 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.env.local
+.env.*.local
+.mneme/
+*.tsbuildinfo
+coverage/
+.vscode/
+.idea/
+tests/.tmp/
+
+# AI tooling — keep private
+.claude/
+.claude.json
+.claudeignore
+CLAUDE.md
+.cursor/
+.cursorrules
+.cursorignore
+.aider*
+.continue/
+.windsurfrules
+.codeium/
+.github/copilot-instructions.md
+
+# OS / temp
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.~lock.*

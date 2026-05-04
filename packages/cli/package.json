@@ -1,0 +1,45 @@
+{
+  "name": "mneme-ai",
+  "version": "0.1.0",
+  "description": "Mneme — the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mneme": "./bin/mneme.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patsa2561-art/mneme-ai.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/patsa2561-art/mneme-ai#readme",
+  "bugs": {
+    "url": "https://github.com/patsa2561-art/mneme-ai/issues"
+  },
+  "license": "MIT",
+  "files": ["dist", "bin", "README.md"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@mneme-ai/core": "0.1.0",
+    "@mneme-ai/embeddings": "0.1.0",
+    "@mneme-ai/mcp": "0.1.0",
+    "commander": "^12.1.0",
+    "kleur": "^4.1.5"
+  },
+  "keywords": [
+    "git",
+    "ai",
+    "rag",
+    "code-archaeology",
+    "mcp",
+    "vector-search",
+    "incident-correlation"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

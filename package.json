@@ -1,0 +1,47 @@
+{
+  "name": "mneme-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mneme — the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS, all in one graph.",
+  "workspaces": [
+    "packages/core",
+    "packages/embeddings",
+    "packages/cli",
+    "packages/mcp",
+    "packages/correlator",
+    "packages/web"
+  ],
+  "scripts": {
+    "build": "tsc -b packages/core packages/embeddings packages/mcp packages/cli packages/correlator",
+    "build:watch": "tsc -b -w packages/core packages/embeddings packages/mcp packages/cli packages/correlator",
+    "clean": "tsc -b --clean packages/core packages/embeddings packages/mcp packages/cli packages/correlator && rimraf packages/*/dist coverage tests/.tmp",
+    "dev": "node packages/cli/bin/mneme.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc -b --noEmit packages/core packages/embeddings packages/mcp packages/cli packages/correlator",
+    "eval": "node --import tsx tests/eval/run-eval.ts",
+    "bench": "node --import tsx bench/run-bench.ts",
+    "status": "node --import tsx tests/status/generate-status.ts",
+    "format": "prettier --write \"packages/**/*.{ts,js,json,md}\" \"tests/**/*.ts\" \"bench/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "prettier": "^3.3.3",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patsa2561-art/mneme-ai.git"
+  }
+}

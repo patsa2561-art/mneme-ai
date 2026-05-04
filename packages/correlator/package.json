@@ -1,0 +1,32 @@
+{
+  "name": "@mneme-ai/correlator",
+  "version": "0.1.0",
+  "description": "Phase 3 — error/incident correlation engine. The moat: connect git + code + errors + time.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patsa2561-art/mneme-ai.git",
+    "directory": "packages/correlator"
+  },
+  "homepage": "https://github.com/patsa2561-art/mneme-ai#readme",
+  "bugs": {
+    "url": "https://github.com/patsa2561-art/mneme-ai/issues"
+  },
+  "license": "MIT",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "@mneme-ai/core": "0.1.0"
+  }
+}

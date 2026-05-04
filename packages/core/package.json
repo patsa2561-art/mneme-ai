@@ -1,0 +1,55 @@
+{
+  "name": "@mneme-ai/core",
+  "version": "0.1.0",
+  "description": "Core indexing, retrieval, and graph engine for Mneme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./git": {
+      "import": "./dist/git/index.js",
+      "types": "./dist/git/index.d.ts"
+    },
+    "./store": {
+      "import": "./dist/store/index.js",
+      "types": "./dist/store/index.d.ts"
+    },
+    "./indexer": {
+      "import": "./dist/indexer/index.js",
+      "types": "./dist/indexer/index.d.ts"
+    },
+    "./retrieve": {
+      "import": "./dist/retrieve/index.js",
+      "types": "./dist/retrieve/index.d.ts"
+    },
+    "./correlate": {
+      "import": "./dist/correlate/index.js",
+      "types": "./dist/correlate/index.d.ts"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patsa2561-art/mneme-ai.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/patsa2561-art/mneme-ai#readme",
+  "bugs": {
+    "url": "https://github.com/patsa2561-art/mneme-ai/issues"
+  },
+  "license": "MIT",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11"
+  }
+}

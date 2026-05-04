@@ -1,0 +1,15 @@
+{"id":"Q1","question":"why does the payment module use try/catch around toString?","expectedTags":["fix-bigint"],"category":"why-question"}
+{"id":"Q2","question":"Stripe BigInt amount overflow","expectedTags":["fix-bigint","bump-stripe"],"category":"keyword"}
+{"id":"Q3","question":"why are webhooks deduped by id?","expectedTags":["idempotency"],"category":"why-question"}
+{"id":"Q4","question":"webhook retry idempotency","expectedTags":["idempotency"],"category":"keyword"}
+{"id":"Q5","question":"why did we replace passport?","expectedTags":["auth-middleware","auth-tokens"],"category":"why-question"}
+{"id":"Q6","question":"compliance legal session token storage","expectedTags":["auth-middleware"],"category":"keyword"}
+{"id":"Q7","question":"jwt short-lived authentication","expectedTags":["auth-tokens"],"category":"keyword"}
+{"id":"Q8","question":"OrderQueue race condition burst","expectedTags":["fix-order-race"],"category":"keyword"}
+{"id":"Q9","question":"PII customer email leak in logs","expectedTags":["log-redact"],"category":"keyword"}
+{"id":"Q10","question":"why is there PII redaction in the logger?","expectedTags":["log-redact"],"category":"why-question"}
+{"id":"Q11","question":"who created the OrderQueue worker?","expectedTags":["add-order-queue"],"category":"who-when"}
+{"id":"Q12","question":"Stripe SDK upgrade","expectedTags":["bump-stripe"],"category":"keyword"}
+{"id":"Q13","question":"on call runbook","expectedTags":["docs-runbook"],"category":"keyword"}
+{"id":"Q14","question":"how is checkout processed in the background?","expectedTags":["add-order-queue","fix-order-race"],"category":"why-question"}
+{"id":"Q15","question":"completely unrelated meaningless gibberish xyzzyplugh","expectedTags":[],"category":"negative"}
