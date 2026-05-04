@@ -167,27 +167,95 @@ The AI now has tools:
 
 ---
 
-## Quick start (60 seconds)
+## Install
 
-```bash
-# install once (no API key, no account, no config)
-npm install -g mneme-ai
+Three ways to get Mneme on your machine. Pick the one that matches what you want to do.
 
-# point it at any git repo
-cd /path/to/your/repo
-mneme init
-mneme index            # 5,000 commits ≈ 90 sec on Ollama
+### Option 1 — `npx` (zero install, run anything once)
 
-# ask anything
-mneme ask "why does the webhook handler retry idempotently?"
-```
-
-Or run **without installing**:
+Best for: trying Mneme on a repo, one-off questions, demos.
 
 ```bash
 npx -y mneme-ai init
 npx -y mneme-ai index
-npx -y mneme-ai ask "..."
+npx -y mneme-ai ask "why does the webhook retry?"
+```
+
+`npx -y` downloads `mneme-ai` to a temp cache, runs once, then evicts. Nothing global, nothing persistent.
+
+### Option 2 — Global install (recommended for daily use)
+
+Best for: anyone who runs `mneme` more than once a week.
+
+```bash
+npm install -g mneme-ai
+```
+
+Then from **any git repo**:
+
+```bash
+cd /path/to/your/repo
+mneme init
+mneme index
+mneme ask "..."
+mneme --help        # see all 23 commands
+```
+
+To upgrade later: `npm install -g mneme-ai@latest`
+
+To remove: `npm uninstall -g mneme-ai`
+
+### Option 3 — Clone the repo (for contributors / customizers)
+
+Best for: reading the source, modifying behavior, contributing back, or running cutting-edge code that isn't published yet.
+
+```bash
+# 1. clone
+git clone https://github.com/patsa2561-art/mneme-ai.git
+cd mneme-ai
+
+# 2. install dependencies (uses npm workspaces — installs all 6 packages at once)
+npm install
+
+# 3. compile TypeScript → JavaScript
+npm run build
+
+# 4. run the CLI from source
+node packages/cli/bin/mneme.js --help
+
+# (optional) make `mneme` available globally from this checkout
+cd packages/cli
+npm link
+mneme --help                    # now works from any folder
+```
+
+To pull future updates:
+
+```bash
+git pull
+npm install
+npm run build
+```
+
+To run the test suite:
+
+```bash
+npm test           # 167 tests
+npm run eval       # retrieval quality benchmark
+npm run bench      # performance benchmark
+```
+
+---
+
+## After install, the same 60-second flow
+
+Whichever option you picked above, the daily usage is identical:
+
+```bash
+cd /path/to/any/git/repo
+mneme init                       # creates .mneme/ inside the repo
+mneme index                      # ~90 seconds for 5,000 commits with Ollama
+mneme ask "why does X exist?"    # query the memory
 ```
 
 ---
