@@ -26,7 +26,7 @@ export async function oracleCommand(): Promise<number> {
       `  ${kleur.gray("Three other PRs that shipped this pattern were reverted within 24h.")}`,
       "",
       "Implementation requires:",
-      "  • An incident corpus (run `mneme correlate --source sentry` first)",
+      "  • An incident corpus (run `mneme correlate --source pager` first)",
       "  • Pattern fingerprinting (AST-shape hashes — uses tree-sitter)",
       "  • Risk scoring model (regression on your own history)",
     ],

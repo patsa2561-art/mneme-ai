@@ -23,15 +23,29 @@ export async function entitiesCommand(opts: IndexEntitiesOptions): Promise<numbe
   const cfg = readConfig(meta.rootPath);
   const s = new store.MnemeStore(dbPath(meta.rootPath));
 
-  ui.step("parser", "TypeScript / JavaScript (compiler API)");
-  const parser = new entities.TypeScriptParser();
+  // Set up TS/JS parser (always — it's the primary supported language).
+  const tsParser = new entities.TypeScriptParser();
   try {
-    await parser.preload();
+    await tsParser.preload();
   } catch (err) {
     ui.error((err as Error).message);
     s.close();
     return 1;
   }
+
+  // Set up Python parser if `python3` (or `python`) is on PATH.
+  let pyParser: entities.PythonParser | null = null;
+  try {
+    const p = new entities.PythonParser();
+    await p.preload();
+    pyParser = p;
+  } catch {
+    // Python not available — skip silently. We're not adding a hard dep.
+  }
+
+  const supported = ["TypeScript / JavaScript (compiler API)"];
+  if (pyParser) supported.push("Python (ast)");
+  ui.step("parsers", supported.join(" + "));
 
   ui.step("embedder", "resolving …");
   const embedder = await resolveEmbedder({
@@ -41,23 +55,38 @@ export async function entitiesCommand(opts: IndexEntitiesOptions): Promise<numbe
   });
   ui.dim(`            using ${embedder.name} (${embedder.dimensions} dims)`);
 
-  ui.step("walking", "tracked .ts / .tsx / .js / .jsx files");
+  ui.step("walking", `tracked .ts / .tsx / .js / .jsx${pyParser ? " / .py" : ""} files`);
   const collected: Entity[] = [];
   let filesParsed = 0;
-  for await (const e of parser.parseRepo({
+  let tsFiles = 0;
+  let pyFiles = 0;
+  for await (const e of tsParser.parseRepo({
     cwd: meta.rootPath,
     onProgress: (n) => {
       filesParsed = n;
-      if (n % 25 === 0) ui.raw(`\r${kleur.gray("›")} parsed ${n} files     `);
+      tsFiles = n;
+      if (n % 25 === 0) ui.raw(`\r${kleur.gray("›")} parsed ${n} TS/JS files     `);
     },
   })) {
     collected.push(e);
   }
+  if (pyParser) {
+    for await (const e of pyParser.parseRepo({
+      cwd: meta.rootPath,
+      onProgress: (n) => {
+        pyFiles = n;
+        if (n % 25 === 0) ui.raw(`\r${kleur.gray("›")} parsed ${tsFiles} TS/JS + ${n} Python files     `);
+      },
+    })) {
+      collected.push(e);
+    }
+  }
   ui.raw("\n");
-  ui.success(`Parsed ${filesParsed} files → ${collected.length} entities`);
+  filesParsed = tsFiles + pyFiles;
+  ui.success(`Parsed ${filesParsed} files (${tsFiles} TS/JS, ${pyFiles} Python) → ${collected.length} entities`);
 
   if (collected.length === 0) {
-    ui.warn("No entities extracted. Either no TS/JS files are tracked, or all are .d.ts/test files.");
+    ui.warn("No entities extracted. Either no source files are tracked, or all are tests/declarations.");
     s.close();
     return 0;
   }

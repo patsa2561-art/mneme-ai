@@ -65,7 +65,7 @@ function jsonResponse(payload, status = 200) {
   };
 }
 
-function buildGraph(atIso) {
+function buildGraph(atIso, { collapseAfter = 200, bucketDays = 7 } = {}) {
   if (!db) {
     return {
       mode: "stub",
@@ -79,13 +79,15 @@ function buildGraph(atIso) {
 
   const cutoff = atIso || new Date().toISOString();
 
+  // Pull a wider window if we'll collapse later — the supercluster code
+  // needs the full population to compute weekly buckets.
   const commits = db
     .prepare(
       `SELECT hash, short_hash, author_name, author_date, subject, pr_number
        FROM commits
        WHERE author_date <= ?
        ORDER BY author_date DESC
-       LIMIT 200`,
+       LIMIT 5000`,
     )
     .all(cutoff);
 
@@ -110,19 +112,58 @@ function buildGraph(atIso) {
 
   const nodes = [];
   const seen = new Set();
+  const collapsing = commits.length > collapseAfter;
 
-  for (const c of commits) {
-    const id = `commit:${c.hash}`;
-    seen.add(id);
-    nodes.push({
-      id,
-      kind: "commit",
-      label: c.subject.slice(0, 80),
-      hash: c.short_hash,
-      author: c.author_name,
-      date: c.author_date,
-      prNumber: c.pr_number ?? null,
-    });
+  if (collapsing) {
+    // Group commits into N-day buckets (default 7 days).
+    const buckets = new Map(); // key=YYYY-MM-DD-of-bucket-start → { count, dateStart, dateEnd, authors:Set, hashes:[] }
+    const ms = bucketDays * 24 * 60 * 60 * 1000;
+    for (const c of commits) {
+      const t = Date.parse(c.author_date);
+      if (!Number.isFinite(t)) continue;
+      const bucketStart = Math.floor(t / ms) * ms;
+      const key = new Date(bucketStart).toISOString().slice(0, 10);
+      let b = buckets.get(key);
+      if (!b) {
+        b = { count: 0, dateStart: new Date(bucketStart).toISOString(), dateEnd: new Date(bucketStart + ms).toISOString(), authors: new Set(), hashes: [], prCount: 0, lastSubject: c.subject };
+        buckets.set(key, b);
+      }
+      b.count++;
+      b.authors.add(c.author_name);
+      b.hashes.push(c.hash);
+      if (c.pr_number) b.prCount++;
+    }
+    for (const [key, b] of buckets) {
+      const id = `cluster:${key}`;
+      seen.add(id);
+      // Mark every member commit as belonging to this cluster (so links can rewire).
+      for (const h of b.hashes) seen.add(`commit:${h}`);
+      nodes.push({
+        id,
+        kind: "cluster",
+        label: `${b.count} commits · ${b.authors.size} author(s)`,
+        date: b.dateStart,
+        dateRange: { start: b.dateStart, end: b.dateEnd },
+        commitCount: b.count,
+        authorCount: b.authors.size,
+        prCount: b.prCount,
+        memberHashes: b.hashes.slice(0, 50), // cap for transport size
+      });
+    }
+  } else {
+    for (const c of commits) {
+      const id = `commit:${c.hash}`;
+      seen.add(id);
+      nodes.push({
+        id,
+        kind: "commit",
+        label: c.subject.slice(0, 80),
+        hash: c.short_hash,
+        author: c.author_name,
+        date: c.author_date,
+        prNumber: c.pr_number ?? null,
+      });
+    }
   }
 
   for (const i of incidents) {
@@ -140,17 +181,44 @@ function buildGraph(atIso) {
   }
 
   const links = [];
-  for (const c of correlations) {
-    const source = `${c.from_kind}:${c.from_id}`;
-    const target = `${c.to_kind}:${c.to_id}`;
-    if (!seen.has(source) || !seen.has(target)) continue;
-    links.push({ source, target, weight: c.weight, reason: c.reason });
+  if (collapsing) {
+    // Re-target correlations from individual commits to the cluster they live in.
+    const hashToCluster = new Map();
+    for (const n of nodes) {
+      if (n.kind === "cluster" && Array.isArray(n.memberHashes)) {
+        for (const h of n.memberHashes) hashToCluster.set(h, n.id);
+      }
+    }
+    const seenLink = new Set();
+    for (const c of correlations) {
+      let source = `${c.from_kind}:${c.from_id}`;
+      const target = `${c.to_kind}:${c.to_id}`;
+      if (c.from_kind === "commit") {
+        const cluster = hashToCluster.get(c.from_id);
+        if (cluster) source = cluster;
+        else continue;
+      }
+      const key = `${source}|${target}`;
+      if (seenLink.has(key)) continue;
+      seenLink.add(key);
+      if (!seen.has(source) || !seen.has(target)) continue;
+      links.push({ source, target, weight: c.weight, reason: c.reason });
+    }
+  } else {
+    for (const c of correlations) {
+      const source = `${c.from_kind}:${c.from_id}`;
+      const target = `${c.to_kind}:${c.to_id}`;
+      if (!seen.has(source) || !seen.has(target)) continue;
+      links.push({ source, target, weight: c.weight, reason: c.reason });
+    }
   }
 
   return {
     mode: "live",
     at: cutoff,
-    counts: { nodes: nodes.length, links: links.length },
+    collapsed: collapsing,
+    bucketDays: collapsing ? bucketDays : null,
+    counts: { nodes: nodes.length, links: links.length, sourceCommits: commits.length },
     nodes,
     links,
   };
@@ -174,7 +242,9 @@ const server = createServer(async (req, res) => {
 
     if (url.pathname === "/api/graph") {
       const at = url.searchParams.get("at");
-      const out = jsonResponse(buildGraph(at));
+      const collapseAfter = Number(url.searchParams.get("collapseAfter") ?? 200);
+      const bucketDays = Number(url.searchParams.get("bucketDays") ?? 7);
+      const out = jsonResponse(buildGraph(at, { collapseAfter, bucketDays }));
       res.writeHead(out.status, out.headers);
       res.end(out.body);
       return;

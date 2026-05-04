@@ -28,13 +28,14 @@ import { conscienceCommand } from "./commands/conscience.js";
 import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
+import { geniusCommand } from "./commands/genius.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.7.0");
+    .version("0.8.0");
 
   program
     .command("init")
@@ -364,6 +365,28 @@ export async function run(argv: string[]): Promise<void> {
     .option("--json", "machine-readable output", false)
     .action(async (opts: any) => {
       process.exit(await adaptCommand({ cwd: process.cwd(), json: opts.json }));
+    });
+
+  program
+    .command("genius <question...>")
+    .description("AI agent — plans and runs multi-step Mneme workflows to answer hard questions")
+    .option("--max-steps <n>", "cap on tool steps in the plan", (v) => Number(v), 4)
+    .option("--provider <kind>", "auto | ollama | openai", "auto")
+    .option("--model <name>", "override LLM model name")
+    .option("--trace", "print raw tool outputs while running", false)
+    .option("--json", "machine-readable output", false)
+    .action(async (qParts: string[], opts: any) => {
+      process.exit(
+        await geniusCommand({
+          cwd: process.cwd(),
+          question: qParts.join(" "),
+          maxSteps: opts.maxSteps,
+          provider: opts.provider,
+          model: opts.model,
+          trace: opts.trace,
+          json: opts.json,
+        }),
+      );
     });
 
   program
