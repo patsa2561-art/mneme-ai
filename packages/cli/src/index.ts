@@ -9,13 +9,29 @@ import { mcpCommand } from "./commands/mcp.js";
 import { wisdomCommand, manifestoCommand } from "./commands/wisdom.js";
 import { entitiesCommand, clonesCommand } from "./commands/clones.js";
 import { healCommand } from "./commands/heal.js";
+import { echoCommand } from "./commands/echo.js";
+import { palimpsestCommand } from "./commands/palimpsest.js";
+import {
+  runawayCommand,
+  mirrorCommand,
+  rumorCommand,
+  fossilCommand,
+  ledgerCommand,
+} from "./commands/wild-features.js";
+import {
+  oracleCommand,
+  conscienceCommand,
+  genomeCommand,
+  dialogueCommand,
+  tributeCommand,
+} from "./commands/wild-stubs.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.4.0");
+    .version("0.5.0");
 
   program
     .command("init")
@@ -178,6 +194,155 @@ export async function run(argv: string[]): Promise<void> {
     .option("--json", "machine-readable JSON output", false)
     .action(async (opts: { json?: boolean }) => {
       process.exit(await manifestoCommand(opts));
+    });
+
+  // ─── WILD ideas — see WILD_IDEAS.md ───
+
+  program
+    .command("echo")
+    .description("WILD #2 — find past incidents that resemble the current one")
+    .option("--id <id>", "stored incident id (e.g. \"sentry:12345\")")
+    .option("--query <text>", "freeform incident description")
+    .option("--top <n>", "top-N most similar", (v) => Number(v), 5)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await echoCommand({
+          cwd: process.cwd(),
+          id: opts.id,
+          query: opts.query,
+          topK: opts.top,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("palimpsest <target>")
+    .description("WILD #5 — render the causal chain of a single line of code")
+    .option("--max-depth <n>", "how deep to walk the chain", (v) => Number(v), 8)
+    .option("--json", "machine-readable output", false)
+    .action(async (target: string, opts: any) => {
+      process.exit(
+        await palimpsestCommand({
+          cwd: process.cwd(),
+          target,
+          maxDepth: opts.maxDepth,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("runaway")
+    .description("WILD #14 — files that have grown silently across many commits")
+    .option("--top <n>", "show top-N", (v) => Number(v), 15)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await runawayCommand({ cwd: process.cwd(), topN: opts.top, json: opts.json }),
+      );
+    });
+
+  program
+    .command("mirror")
+    .description("WILD #13 — onboarding dossier (5 PRs, 3 people, 2 incidents)")
+    .option("--top-prs <n>", "top PRs", (v) => Number(v), 5)
+    .option("--top-people <n>", "top contributors", (v) => Number(v), 3)
+    .option("--top-incidents <n>", "top incidents", (v) => Number(v), 2)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await mirrorCommand({
+          cwd: process.cwd(),
+          topPrs: opts.topPrs,
+          topPeople: opts.topPeople,
+          topIncidents: opts.topIncidents,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("rumor")
+    .description("WILD #12 — tribal phrases mentioned in commits but no doc explains")
+    .option("--min-mentions <n>", "phrase must appear in this many commits", (v) => Number(v), 4)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await rumorCommand({
+          cwd: process.cwd(),
+          minMentions: opts.minMentions,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("fossil")
+    .description("WILD #10 — files deleted from HEAD but still alive in git history")
+    .option("--top <n>", "show top-N", (v) => Number(v), 20)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await fossilCommand({ cwd: process.cwd(), topN: opts.top, json: opts.json }),
+      );
+    });
+
+  program
+    .command("ledger")
+    .description("WILD #3 — tamper-evident audit log for compliance (SOX/SOC2)")
+    .option("--since <iso>", "start date")
+    .option("--until <iso>", "end date")
+    .option("--format <kind>", "json | csv", "json")
+    .option("--out <path>", "write to file instead of stdout")
+    .action(async (opts: any) => {
+      process.exit(
+        await ledgerCommand({
+          cwd: process.cwd(),
+          since: opts.since,
+          until: opts.until,
+          format: opts.format,
+          out: opts.out,
+        }),
+      );
+    });
+
+  // ─── Stubs (planned features — print design when invoked) ───
+
+  program
+    .command("oracle")
+    .description("WILD #4 — historical risk analysis on a snippet (planned)")
+    .action(async () => {
+      process.exit(await oracleCommand());
+    });
+
+  program
+    .command("conscience")
+    .description("WILD #6 — review co-pilot from history (planned)")
+    .action(async () => {
+      process.exit(await conscienceCommand());
+    });
+
+  program
+    .command("genome")
+    .description("WILD #9 — codebase fingerprint + ancestry (planned)")
+    .action(async () => {
+      process.exit(await genomeCommand());
+    });
+
+  program
+    .command("dialogue")
+    .description("WILD #11 — conversational chat over your repo (planned)")
+    .action(async () => {
+      process.exit(await dialogueCommand());
+    });
+
+  program
+    .command("tribute")
+    .description("WILD #15 — your codebase as a 60-sec movie (planned)")
+    .action(async () => {
+      process.exit(await tributeCommand());
     });
 
   program.exitOverride((err) => {

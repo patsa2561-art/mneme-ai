@@ -6,3 +6,4 @@ export * as retrieve from "./retrieve/index.js";
 export * as correlate from "./correlate/index.js";
 export * as entities from "./entities/index.js";
 export * as enrich from "./enrich/index.js";
+export * as util from "./util/index.js";

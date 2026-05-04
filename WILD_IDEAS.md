@@ -19,6 +19,30 @@ The number after each idea is its scoping pessimism: 1 = ships next sprint, 5 = 
 
 ---
 
+## Status snapshot (v0.5.0)
+
+| # | Command | Status |
+|---|---|---|
+| 1 | `mneme heal` | ✅ shipped (v0.4) |
+| 2 | `mneme echo` | ✅ shipped (v0.5) |
+| 3 | `mneme ledger` | ✅ shipped (v0.5) — hash-chained audit log |
+| 4 | `mneme oracle` | 🚧 design only |
+| 5 | `mneme palimpsest` | ✅ shipped (v0.5) |
+| 6 | `mneme conscience` | 🚧 design only |
+| 7 | `mneme prophecy` | 🔬 research |
+| 8 | `mneme constellation` | 🔬 research (needs hosted) |
+| 9 | `mneme genome` | 🚧 design only |
+| 10 | `mneme fossil` | ✅ shipped (v0.5) |
+| 11 | `mneme dialogue` | 🚧 design only |
+| 12 | `mneme rumor` | ✅ shipped (v0.5) |
+| 13 | `mneme mirror` | ✅ shipped (v0.5) |
+| 14 | `mneme runaway` | ✅ shipped (v0.5) |
+| 15 | `mneme tribute` | 🚧 design only |
+
+**Eight of fifteen ideas are now real working CLI commands.** The five marked 🚧 print thoughtful design pages when invoked — not lorem-ipsum stubs. Two are research-grade (need ML models or hosted infrastructure).
+
+---
+
 ## 1. `mneme heal` — turn garbage commits into queryable memory ✅ **shipped**
 
 The single most-stated weakness of any "git memory" tool is *"my commit messages are bad."* `mneme heal` reads the actual diff and asks an LLM (Ollama by default — local + free) to synthesize a 2-4 sentence WHY. Originals are never modified. Synthesized notes are stored separately, marked as such, and searched alongside real context.
