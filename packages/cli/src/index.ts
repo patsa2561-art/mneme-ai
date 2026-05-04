@@ -35,7 +35,7 @@ export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.8.3");
+    .version("0.8.4");
 
   program
     .command("init")
