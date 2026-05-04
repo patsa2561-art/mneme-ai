@@ -24,7 +24,8 @@
     "eval": "node --import tsx tests/eval/run-eval.ts",
     "bench": "node --import tsx bench/run-bench.ts",
     "status": "node --import tsx tests/status/generate-status.ts",
-    "format": "prettier --write \"packages/**/*.{ts,js,json,md}\" \"tests/**/*.ts\" \"bench/**/*.ts\""
+    "format": "prettier --write \"packages/**/*.{ts,js,json,md}\" \"tests/**/*.ts\" \"bench/**/*.ts\"",
+    "sbom": "npx --yes @cyclonedx/cyclonedx-npm --output-format JSON --output-file sbom.json && echo \"wrote sbom.json (CycloneDX)\""
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

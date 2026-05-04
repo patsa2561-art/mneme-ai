@@ -4,6 +4,8 @@
 
 ### *The memory layer of your codebase.*
 
+*Pronounced **`NEE-meh`** · μνήμη · Greek for "memory" — sister of Lethe (forgetting), mother of the muses.*
+
 **Code knows _what_. Git knows _why_. The pager knows _what broke_.**
 **Until Mneme, nothing connected them.**
 
@@ -240,7 +242,7 @@ npm run build
 To run the test suite:
 
 ```bash
-npm test           # 167 tests
+npm test           # 244 tests
 npm run eval       # retrieval quality benchmark
 npm run bench      # performance benchmark
 ```
@@ -352,7 +354,13 @@ We treat retrieval quality as a regression metric, not a marketing claim. Every 
 |---|---|---|
 | Skeleton / Architecture | ✅ | 6 packages, schema-versioned store |
 | Working MVP | ✅ | `init / index / ask / why / status / mcp` |
-| Unit tests | ✅ | **98/98 passing**, 12 test files |
+| Unit tests | ✅ | **244/244 passing**, 24 test files |
+| Eval golden set | ✅ | 50 questions across 7 categories (was 15) |
+| Confidence floor | ✅ | honest "no context found" on out-of-distribution queries |
+| Redaction layer | ✅ | strips AWS/GH/Stripe/JWT/PEM secrets before any embedding |
+| Deterministic mode | ✅ | `--no-llm` / MNEME_NO_LLM — for air-gapped + regulated industries |
+| Wisdom Mutant Engine | ✅ | feedback collector + auto-calibrator + 24/7 watch daemon |
+| Multi-language | ✅ | TS/JS · Python (AST) · Go (regex v1) |
 | Eval harness (A/B) | ✅ | 5 variants compared, 15-question golden set |
 | Benchmarks | ✅ | index 50 c/s, query p50 = 1.2 ms |
 | CI/CD | ✅ | GitHub Actions on Ubuntu/macOS/Windows × Node 20/22 |
@@ -513,7 +521,7 @@ git clone <this-repo>
 cd mneme
 npm install
 npm run build
-npm test               # 98/98 should pass
+npm test               # 244/244 should pass
 npm run eval           # see retrieval quality numbers
 npm run bench -- --only small
 node packages/cli/bin/mneme.js --help

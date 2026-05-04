@@ -12,6 +12,9 @@ coverage/
 .idea/
 tests/.tmp/
 
+# Build artifacts
+sbom.json
+
 # AI tooling — keep private
 .claude/
 .claude.json
