@@ -2,18 +2,24 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
   workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   publish:
+    name: Build, test, and publish to npm
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
@@ -24,30 +30,46 @@ jobs:
           git config --global user.email "ci@mneme.dev"
           git config --global user.name "Mneme CI"
           git config --global core.autocrlf false
+          git config --global init.defaultBranch main
 
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
-      - run: npm run eval -- --variant baseline --quiet
+      - name: Install
+        run: npm ci
 
-      # Publish in dependency order so workspace deps resolve.
-      - name: Publish @mneme-ai/core
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Eval (regression gate)
+        run: npm run eval -- --variant baseline --quiet
+
+      - name: Publish core
         working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
-        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
-      - name: Publish @mneme-ai/embeddings
+
+      - name: Publish embeddings
         working-directory: packages/embeddings
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
-        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
-      - name: Publish @mneme-ai/correlator
+
+      - name: Publish correlator
         working-directory: packages/correlator
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
-        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
-      - name: Publish @mneme-ai/mcp
+
+      - name: Publish mcp
         working-directory: packages/mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
-        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
-      - name: Publish mneme-ai (CLI)
+
+      - name: Publish cli
         working-directory: packages/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
-        env: { NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} }
