@@ -43,7 +43,7 @@ Adding a new file? Place it inside the relevant package's `src/` and re-run `npm
 
 | Area | Why it matters |
 |---|---|
-| **Phase 3 adapters** — Sentry, Datadog, GitHub Actions, custom logs | This is the moat — error correlation. Every adapter unlocks a new market. |
+| **Phase 3 incident adapters** (pluggable; observability, CI, custom logs) | This is the moat — error correlation. Every adapter unlocks a new market. |
 | **`gh` / GitHub REST adapter for PR & issue bodies** | The single biggest quality jump for `ask` quality. |
 | **Tree-sitter entity parser** (phase 2) | Unlocks semantic clone detection. |
 | **`sqlite-vec` integration** | Lets Mneme scale past 1M chunks. |
@@ -64,7 +64,7 @@ We're a tool that reads commit messages. We try to write good ones.
 ```
 phase3(sentry): map issue.firstSeen to Incident.occurredAt
 
-Sentry's `firstSeen` is the first event timestamp; `dateCreated` is the
+The pager's `firstSeen` is the first event timestamp; `dateCreated` is the
 issue creation time. The former is what we want for temporal correlation.
 Refs #42.
 ```

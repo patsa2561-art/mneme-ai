@@ -75,7 +75,7 @@ const stmt = db.prepare(`
 `);
 ```
 
-BM25 is the unsung hero of code search. Code uses specific tokens — function names, error types, ticket IDs, library names — that dense embeddings systematically under-weight. A query like `"SENTRY-1287"` will get perfect results from BM25 and disappointing results from a vanilla cosine search.
+BM25 is the unsung hero of code search. Code uses specific tokens — function names, error types, ticket IDs, library names — that dense embeddings systematically under-weight. A query like `"INC-1287"` will get perfect results from BM25 and disappointing results from a vanilla cosine search.
 
 ### Stage 2: Semantic (vector cosine)
 
@@ -179,7 +179,7 @@ This is the kind of bug that is invisible without tests. Most retrieval failures
 
 ## What's next
 
-Phase 1 (archaeology) is shipped. Phase 2 (semantic clones) and Phase 3 (incident correlation — joining commits with Sentry/Datadog) have engine code in place; the adapters land in v0.2. Phase 4 (D3 temporal graph) is sketched.
+Phase 1 (archaeology) is shipped. Phase 2 (semantic clones) and Phase 3 (incident correlation — joining commits with your observability platform) have engine code in place; the adapters land in v0.2. Phase 4 (D3 temporal graph) is sketched.
 
 Repo, code, eval methodology, all metrics: **https://github.com/patsa2561-art/mneme-ai**
 

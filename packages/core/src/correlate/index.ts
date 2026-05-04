@@ -3,7 +3,7 @@
  *
  * The differentiator. Given:
  *   - commits (from git)
- *   - incidents (from Sentry/Datadog/manual)
+ *   - incidents (from pager / manual JSON)
  *   - entities (phase 2)
  *
  * produce Correlation rows that answer:

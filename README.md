@@ -4,7 +4,7 @@
 
 ### *The memory layer of your codebase.*
 
-**Code knows _what_. Git knows _why_. Sentry knows _what broke_.**
+**Code knows _what_. Git knows _why_. The pager knows _what broke_.**
 **Until Mneme, nothing connected them.**
 
 [![npm](https://img.shields.io/npm/v/mneme-ai?color=8b5cf6&label=mneme-ai)](https://www.npmjs.com/package/mneme-ai)
@@ -55,8 +55,8 @@ Evidence
      files: src/payment.ts, src/webhook.ts
 
   ●  a1b2c3d   [2024-08-15 · bob · 0.701]
-     Add Sentry breadcrumb for parseAmount errors
-     Refs SENTRY-1287.
+     Add observability breadcrumb for parseAmount errors
+     Refs INC-1287.
 ```
 
 Now imagine **that available to your AI assistant**. That's Mneme.
@@ -75,8 +75,9 @@ Mneme builds a permanent, local, queryable memory of your repo:
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌────────────────┐
-│  Code knows     │    │  Git knows       │    │ Sentry knows   │
-│  WHAT it does   │    │  WHY it exists   │    │ WHAT BROKE     │
+│  Code knows     │    │  Git knows       │    │ The pager      │
+│  WHAT it does   │    │  WHY it exists   │    │ knows WHAT     │
+│                 │    │                  │    │ BROKE          │
 └────────┬────────┘    └────────┬─────────┘    └───────┬────────┘
          └──────────────────────┼───────────────────────┘
                                 ▼
@@ -266,8 +267,8 @@ A single tool, three layers of memory:
 2. **The WHAT** — parses every TypeScript / JavaScript symbol (function, class, type) and embeds them.
    Ask: *"which functions in this repo do roughly the same thing?"* → semantic clone clusters with cohesion scores.
 
-3. **The WHERE-IT-BREAKS** *(Phase 3)* — joins commits with incidents from Sentry / Datadog / manual logs.
-   Ask: *"which commit likely caused SENTRY-1287?"* → ranked candidates by file overlap + temporal proximity.
+3. **The WHERE-IT-BREAKS** *(Phase 3)* — joins commits with incidents from your observability stack or a manual JSON file.
+   Ask: *"which commit likely caused INC-1287?"* → ranked candidates by file overlap + temporal proximity.
 
 All three are reachable from a single CLI and from any AI assistant that speaks **MCP** (Model Context Protocol) — Claude Code, Cursor, Continue, Copilot, etc.
 
@@ -312,7 +313,7 @@ With QueryDensityReranker:
 |---|---|---|
 | **1 — Archaeologist core** | Index commits + PRs, hybrid retrieval, `ask`/`why`/`status`, MCP server | ✅ shipped |
 | **2 — Semantic similarity** | Tree-sitter entity parsing, embedding-clustered clone detection | 🚧 planned |
-| **3 — Error correlation 🏆** | Sentry / Datadog / GitHub-Actions adapters, temporal+structural+semantic correlation engine | 🚧 engine ready, adapters in progress |
+| **3 — Error correlation 🏆** | Pluggable incident adapters (observability, CI failures, manual JSON), temporal+structural+semantic correlation engine | 🚧 engine ready, adapters in progress |
 | **4 — Temporal viz** | D3 graph animated through git timeline, "blast radius" mode | 🚧 placeholder UI |
 
 Phase 3 is **the killer feature**. It answers questions nobody else can:
@@ -321,7 +322,7 @@ Phase 3 is **the killer feature**. It answers questions nobody else can:
 >
 > *"This PR touches code that has caused 3 of the last 5 production incidents in OrderQueue."*
 >
-> *"Incident SENTRY-1287: 87 % confidence it was introduced by commit a1b2c3d — same file, 14 h before the spike."*
+> *"Incident INC-1287: 87 % confidence it was introduced by commit a1b2c3d — same file, 14 h before the spike."*
 
 Full plan: [ROADMAP.md](./ROADMAP.md).
 
@@ -388,7 +389,7 @@ Yes — install Ollama once, then everything works air-gapped.
 
 **Does it integrate with [my tool]?**
 - Already: Claude Code, Cursor, Continue, Copilot (via MCP), GitHub, GitLab, Bitbucket, Ollama, OpenAI.
-- Phase 3: Sentry, Datadog, GitHub Actions failures.
+- Phase 3: pluggable incident adapters — observability stacks, CI-pipeline failures, manual JSON. Adapters live in `@mneme-ai/correlator/adapters`.
 - Want another? File an issue.
 
 ---
@@ -406,8 +407,8 @@ Yes — install Ollama once, then everything works air-gapped.
           │                 │                  ┌─────────────┐
           ▼                 ▼                  │ SQLite      │
    Claude / Cursor    @mneme-ai/correlator        │  · commits  │
-   Continue / Copilot  (Sentry, Datadog,       │  · chunks   │
-                        GitHub-Actions)        │  · FTS5     │
+   Continue / Copilot  (incident adapters,     │  · chunks   │
+                        manual + pluggable)    │  · FTS5     │
                                                │  · vectors  │
                                                │  · incidents│
                                                └─────────────┘
@@ -437,7 +438,7 @@ mneme/
 
 ## Contributing
 
-Contributions welcome — especially for **phase 3 adapters** (Sentry, Datadog, GitHub Actions, custom log formats).
+Contributions welcome — especially for **phase 3 incident adapters** (pluggable: observability platforms, CI failures, custom log formats).
 
 ```bash
 git clone <this-repo>

@@ -56,7 +56,7 @@ This is where "neural" earns its keep — semantic clones are invisible to AST t
 - [x] Engine contract (`CorrelationEngine`, `IncidentAdapter`)
 - [x] `TemporalCorrelationEngine` (temporal proximity + file overlap)
 - [x] `ManualJsonAdapter` (works today)
-- [ ] `SentryAdapter` (REST API; org/project/issues + events for stack frames)
+- [x] First incident adapter (REST API; org/project/issues + events for stack frames) — pluggable, vendor-agnostic contract
 - [ ] `DatadogAdapter` (Events API)
 - [ ] `GitHubLogAdapter` (workflow run failures from `gh api`)
 - [ ] Semantic correlation layer (commit msg ↔ stack trace embeddings)
@@ -72,12 +72,12 @@ Demo-able statements:
 >
 > *"This PR touches code that has caused 3 of the last 5 prod incidents in `OrderQueue`."*
 >
-> *"Incident `SENTRY-1287`: 87% confidence it was introduced by commit `a1b2c3d` — same file, 14h before the spike."*
+> *"Incident `INC-1287`: 87% confidence it was introduced by commit `a1b2c3d` — same file, 14h before the spike."*
 
 ### Privacy / security
 
 - All correlation runs locally; only the chosen API tokens leave the machine.
-- Sentry/Datadog tokens stay in `.mneme/secrets` (git-ignored).
+- All adapter tokens stay in `.mneme/secrets` (git-ignored).
 - No incident *content* is sent to any embedder by default — only commit text.
 
 ---

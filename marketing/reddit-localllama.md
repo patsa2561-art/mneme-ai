@@ -55,7 +55,7 @@
 > Repo: https://github.com/patsa2561-art/mneme-ai
 > MIT, TypeScript, Node 20+, works offline.
 >
-> Phase 3 (incident correlation — joining commits with Sentry/Datadog incident timelines) is engine-complete; adapters land in v0.2.
+> Phase 3 (incident correlation — joining commits with your observability platform incident timelines) is engine-complete; adapters land in v0.2.
 >
 > Honest limit: needs a git repo with non-trivial history. Repos full of `wip`/`update`/`fix` get poor results — and the tool tells you so instead of hallucinating.
 >

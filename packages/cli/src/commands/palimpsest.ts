@@ -26,7 +26,7 @@ interface ChainStep {
  *
  *   line 47 of payment.ts
  *     ↑ added by    a1b2c3d (PR #482, fix Stripe BigInt)
- *     ↑ correlated with incident SENTRY-1287
+ *     ↑ correlated with incident INC-1287
  *     ↑ which followed commit f8e7d6c (introduce idempotency)
  *     ↑ approved by alice + bob
  *

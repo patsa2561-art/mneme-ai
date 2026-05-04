@@ -8,12 +8,12 @@ The differentiator. Joins commits + incidents + time into one graph, so you can 
 >
 > *"This PR touches code that has caused 3 of the last 5 incidents in OrderQueue."*
 >
-> *"Incident SENTRY-1287 was likely introduced by commit a1b2c3d (87% confidence — same file, 14h before the spike)."*
+> *"Incident INC-1287 was likely introduced by commit a1b2c3d (87% confidence — same file, 14h before the spike)."*
 
 ## What's in here
 
 - `temporal.ts` — `TemporalCorrelationEngine` (temporal proximity + file overlap)
-- `adapters/sentry.ts` — Sentry REST API adapter (live)
+- `adapters/sentry.ts` — first pager adapter (REST API; live)
 - `adapters/datadog.ts` — Datadog adapter (stub, in progress)
 - `adapters/manual.ts` — JSON file input (works today, useful for testing)
 

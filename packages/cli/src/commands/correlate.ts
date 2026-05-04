@@ -9,12 +9,12 @@ import { dbPath } from "../paths.js";
 import { readConfig } from "../config.js";
 import { ui } from "../ui.js";
 
-type CorrelateSource = "sentry" | "manual";
+type CorrelateSource = "pager" | "manual";
 
 export interface CorrelateCommandOptions {
   cwd: string;
   source?: CorrelateSource;
-  // Sentry options
+  // Pager (observability platform) options
   org?: string;
   project?: string;
   baseUrl?: string;
@@ -63,16 +63,16 @@ export async function correlateCommand(opts: CorrelateCommandOptions): Promise<n
 
   // 2. Fetch incidents from the chosen source.
   let incidents: Incident[] = [];
-  if (opts.source === "sentry") {
+  if (opts.source === "pager") {
     if (!opts.org || !opts.project) {
-      ui.error("`--source sentry` requires `--org <slug>` and `--project <slug>`.");
+      ui.error("`--source pager` requires `--org <slug>` and `--project <slug>`.");
       s.close();
       return 1;
     }
-    const token = process.env["SENTRY_AUTH_TOKEN"] ?? cfg.incidents?.sentry ? "" : "";
-    const apiToken = process.env["SENTRY_AUTH_TOKEN"];
+    const apiToken = process.env["MNEME_PAGER_TOKEN"] ?? process.env["SENTRY_AUTH_TOKEN"];
     if (!apiToken) {
-      ui.error("Set SENTRY_AUTH_TOKEN in your environment.");
+      ui.error("Set MNEME_PAGER_TOKEN in your environment.");
+      ui.dim("(Currently the pager adapter speaks the Sentry REST API; SENTRY_AUTH_TOKEN also works.)");
       s.close();
       return 1;
     }
@@ -82,7 +82,7 @@ export async function correlateCommand(opts: CorrelateCommandOptions): Promise<n
       apiToken,
       baseUrl: opts.baseUrl,
     });
-    ui.step("sentry", `fetching issues from ${opts.org}/${opts.project} …`);
+    ui.step("pager", `fetching incidents from ${opts.org}/${opts.project} …`);
     incidents = await adapter.fetch({ since: sinceIso, until: opts.until });
   } else if (opts.source === "manual") {
     if (!opts.file) {
@@ -205,7 +205,7 @@ async function printPlanned(): Promise<number> {
       "that likely caused it.",
       "",
       kleur.bold("Sources available now:"),
-      "  mneme correlate --source sentry --org <slug> --project <slug>",
+      "  mneme correlate --source pager  --org <slug> --project <slug>",
       "  mneme correlate --source manual --file ./incidents.json",
       "",
       kleur.bold("Common options:"),
@@ -216,12 +216,12 @@ async function printPlanned(): Promise<number> {
       "  --json               machine-readable output",
       "",
       kleur.bold("Auth:"),
-      "  Sentry:    set SENTRY_AUTH_TOKEN in your environment",
+      "  Pager:     set MNEME_PAGER_TOKEN in your environment",
       "",
       kleur.bold("Output (sample):"),
       "  ● a1b2c3d [2025-09-01 · alice]",
       "    Refactor payment flow",
-      "    → incident: SENTRY-1287 [error] Stripe webhook 500",
+      "    → incident: INC-1287 [error] Stripe webhook 500",
       "    confidence: 87%  reason: file overlap + temporal proximity",
       "",
       kleur.gray("Track progress in ROADMAP.md → Phase 3."),

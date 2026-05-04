@@ -188,7 +188,7 @@ function generate(vitest: VitestSummary, evalRep: EvalReport[], bench: BenchResu
   lines.push("- [ ] Migrate to `sqlite-vec` for repos > 100 k chunks");
   lines.push("- [ ] Multilingual tokenization (Thai / CJK)");
   lines.push("- [ ] Expand golden set from 15 → 100+ questions");
-  lines.push("- [ ] Wire real Sentry / Datadog adapters\n");
+  lines.push("- [ ] Wire more pager adapters (observability, CI failures)\n");
 
   lines.push("---\n");
   lines.push("*Re-generate this file: `npm run status`*\n");

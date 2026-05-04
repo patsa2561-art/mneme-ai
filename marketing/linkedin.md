@@ -79,7 +79,7 @@ Three things I learned building this:
 
 github.com/patsa2561-art/mneme-ai
 
-Looking for collaborators on phase 3 — incident correlation (joining commits with Sentry/Datadog timelines).
+Looking for collaborators on phase 3 — incident correlation (joining commits with your observability platform timelines).
 
 #opensource #ai #developertools #mcp #anthropic #claude
 ```

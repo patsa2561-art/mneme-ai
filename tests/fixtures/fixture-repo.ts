@@ -57,7 +57,7 @@ export const FIXTURE_COMMITS: FixtureCommit[] = [
     body:
       "Stripe occasionally sends amounts as bigint strings. JSON.parse returns " +
       "a Number that overflows past 2^53. We fall back to String() coercion when " +
-      "toString() throws RangeError. Refs SENTRY-1287.",
+      "toString() throws RangeError. Refs INC-1287.",
     daysFromBase: 7,
   },
   {
@@ -101,7 +101,7 @@ export const FIXTURE_COMMITS: FixtureCommit[] = [
     file: "src/order-queue.ts",
     content: "export class OrderQueue { private busy = false; enqueue() {} }\n",
     subject: "fix(orders): race condition under burst load",
-    body: "Two concurrent calls were dequeueing the same item. Refs SENTRY-1294.",
+    body: "Two concurrent calls were dequeueing the same item. Refs INC-1294.",
     daysFromBase: 28,
   },
   {

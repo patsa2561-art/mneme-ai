@@ -55,7 +55,7 @@ Pessimism: ✅ already in v0.4.0.
 
 ## 2. `mneme echo` — "this incident looks like one from 14 months ago" — 2
 
-When a new incident lands in Sentry, Mneme searches the historical incident corpus + their resolution commits. *"SENTRY-9421 today is 92 % similar to INC-2024-08, which was resolved by PR #482."*
+When a new incident lands in Sentry, Mneme searches the historical incident corpus + their resolution commits. *"INC-9421 today is 92 % similar to INC-2024-08, which was resolved by PR #482."*
 
 Saves the postmortem. Beats every on-call's first hour of forensics. Sells itself to fintech.
 
@@ -89,7 +89,7 @@ Hover any line of code. Mneme renders the full ancestry:
 ```
 line 47 of payment.ts:
   added by    a1b2c3d   PR #482  fix Stripe BigInt
-  prompted by SENTRY-1287  webhook 500
+  prompted by INC-1287  webhook 500
   caused by   PR #98 (introduce idempotency) bug
   reverted by PR #142 (rollback after another regression)
   approved by alice + bob + claudia
@@ -104,7 +104,7 @@ The most beautiful demo Mneme can give. Insanely shareable.
 
 When reviewing a PR, Mneme finds the historically *most-similar* PRs to it and reports their fate.
 
-> *"This PR changes 4 of the same files as PR #98 (reverted within 48 h after SENTRY-1287). 87 % file overlap. Recommend caution."*
+> *"This PR changes 4 of the same files as PR #98 (reverted within 48 h after INC-1287). 87 % file overlap. Recommend caution."*
 
 Becomes a GitHub Action check. Becomes a Cursor side-panel. Becomes the thing senior engineers wish they had.
 
@@ -154,7 +154,7 @@ Persistent multi-turn chat. State across queries.
 
 ```
 > what broke last quarter?
-   3 incidents: SENTRY-1287, INC-2025-04, GH-Actions-failure-03
+   3 incidents: INC-1287, INC-2025-04, GH-Actions-failure-03
 
 > show me the rollbacks
    2 reverts: PR #501, PR #523. Both within 36 h of incident.

@@ -42,7 +42,7 @@ This space is for everyone who finds that bet interesting. Three things I would 
 
 2. **Hard cases.** If you tried Mneme on a repo and it returned nothing useful, that is also worth posting. Mneme is supposed to honestly say *"no relevant context"* when the data is bad. If it lied to you instead, that is a bug. If it stayed silent, the lesson might be about your team's commit hygiene — also useful.
 
-3. **Phase 3 collaborators.** The *moat* of this project is connecting commits to incidents (Sentry, Datadog, GitHub Actions failures). The Sentry adapter is in `main`; the Datadog adapter is next. If you have a production codebase + a Sentry account + a willingness to dogfood, please open a thread.
+3. **Phase 3 collaborators.** The *moat* of this project is connecting commits to incidents (your observability platform, CI failures). The first pager adapter is in `main`; more are next. If you have a production codebase + an observability account + a willingness to dogfood, please open a thread.
 
 Things to know:
 

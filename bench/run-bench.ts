@@ -72,8 +72,8 @@ function buildSyntheticRepo(opts: Sizes): string {
     "fix(auth): session expiration",
   ];
   const bodies = [
-    "Stripe sometimes sends bigint amounts. Refs SENTRY-1287.",
-    "OrderQueue race condition under burst load. SENTRY-1294.",
+    "Stripe sometimes sends bigint amounts. Refs INC-1287.",
+    "OrderQueue race condition under burst load. INC-1294.",
     "PII customer email leak. INC-2025-04.",
     "Compliance-driven session token storage rewrite. LEGAL-12.",
     "JWT 15-minute TTL. Webhook idempotency dedup.",

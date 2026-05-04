@@ -24,7 +24,7 @@ https://github.com/patsa2561-art/mneme-ai
 >
 > - A CLI for humans (`mneme ask "..."`)
 > - An MCP server for AI clients (Claude Code, Cursor, Continue, Copilot)
-> - A correlation engine (phase 3) that joins commits with errors from Sentry/Datadog/manual JSON — *that* is the moat: nobody else does this
+> - A correlation engine (phase 3) that joins commits with errors from your observability platform/manual JSON — *that* is the moat: nobody else does this
 >
 > **Quality is measured, not claimed.** I built an eval harness with a golden-set + recall@k/MRR/nDCG metrics and a benchmark suite. The numbers in the README and STATUS.md are real (`npm run status` regenerates them). On the canonical eval set: recall@3 = 86.7%, MRR = 90% with the reranker, query p50 = 1.2 ms.
 >
@@ -32,7 +32,7 @@ https://github.com/patsa2561-art/mneme-ai
 >
 > Stack: TypeScript monorepo (npm workspaces), better-sqlite3 with FTS5 + BLOB vectors, hybrid retrieval (BM25 + cosine fused via Reciprocal Rank Fusion). MCP via the official SDK. CI on Win/macOS/Linux × Node 20/22.
 >
-> Honest limitations: needs a git repo with non-trivial history. Repos with `wip`/`fix`/`update` commit messages get poor results — and Mneme tells you so instead of hallucinating. Phase 3 (incident correlation) is engine-complete but adapters for Sentry/Datadog are still being wired.
+> Honest limitations: needs a git repo with non-trivial history. Repos with `wip`/`fix`/`update` commit messages get poor results — and Mneme tells you so instead of hallucinating. Phase 3 (incident correlation) is engine-complete but adapters for your observability platform are still being wired.
 >
 > MIT-licensed. Happy to answer questions about the retrieval pipeline, the RRF tuning, or anything else.
 

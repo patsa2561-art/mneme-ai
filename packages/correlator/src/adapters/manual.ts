@@ -10,7 +10,7 @@ import type { Incident, correlate as CorrelateNS } from "@mneme-ai/core";
  *       "severity": "error", "affectedFiles": ["src/payment.ts"], "url": "https://..." }
  *   ]
  *
- * Useful for: bootstrapping a customer that doesn't have Sentry/Datadog yet, or
+ * Useful for: bootstrapping a customer that doesn't have an observability platform yet, or
  * importing from CSV/spreadsheet exports.
  */
 export class ManualJsonAdapter implements CorrelateNS.IncidentAdapter {

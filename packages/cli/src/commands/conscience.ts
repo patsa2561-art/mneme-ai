@@ -12,7 +12,7 @@
  *
  *   ●  PR #98  (3 of 4 files match)  RISK: 0.78
  *      "introduce idempotency"
- *      → 1 incident within 48h: SENTRY-1287
+ *      → 1 incident within 48h: INC-1287
  *
  * Phase-2 hook: when entity-level diffs are available, similarity becomes
  * semantic instead of file-overlap. The contract here doesn't change.

@@ -32,7 +32,7 @@ export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.6.0");
+    .version("0.6.1");
 
   program
     .command("init")
@@ -94,11 +94,11 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("correlate")
-    .description("Correlate incidents with commits (Sentry / manual JSON)")
-    .option("--source <kind>", "incident source: sentry | manual")
-    .option("--org <slug>", "Sentry org slug (with --source sentry)")
-    .option("--project <slug>", "Sentry project slug (with --source sentry)")
-    .option("--base-url <url>", "Sentry base URL for self-hosted")
+    .description("Correlate incidents with commits (pager / manual JSON)")
+    .option("--source <kind>", "incident source: pager | manual")
+    .option("--org <slug>", "org slug (with --source pager)")
+    .option("--project <slug>", "project slug (with --source pager)")
+    .option("--base-url <url>", "base URL for self-hosted observability")
     .option("--file <path>", "JSON file path (with --source manual)")
     .option("--since <iso>", "only incidents/commits since this date")
     .option("--until <iso>", "only incidents/commits until this date")

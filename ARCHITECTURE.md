@@ -87,7 +87,7 @@ Persisted as `correlations(from_kind, from_id, to_kind, to_id, weight, reason, e
 | `chunks` | 1 | text + embedding BLOB + model name |
 | `chunks_fts` | 1 | FTS5 virtual table over chunks.text |
 | `entities` | 2 | functions, classes, modules — with embeddings |
-| `incidents` | 3 | imported from Sentry/Datadog/manual |
+| `incidents` | 3 | imported via pluggable adapters (manual JSON + observability) |
 | `correlations` | 3 | the (commit ↔ incident) edges |
 | `graph_snapshots` | 4 | serialized graph at points in time |
 

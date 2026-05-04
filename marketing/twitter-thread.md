@@ -10,7 +10,7 @@
 ```
 Code knows what it does.
 Git knows why.
-Sentry knows what broke.
+The pager knows what broke.
 
 Until Mneme, nothing connected them.
 
