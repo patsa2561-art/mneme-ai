@@ -29,6 +29,8 @@ import {
   decisionsCommand,
   stackTraceCommand,
   storyCommand,
+  dreamCommand,
+  chatCommand,
 } from "./commands/insights-cli.js";
 import { ui } from "./ui.js";
 
@@ -555,6 +557,31 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
+    .command("dream", { hidden: true })
+    .description("Speculative ideas grounded in your codebase patterns")
+    .option("-n, --count <n>", "how many ideas to generate", (v) => Number(v), 5)
+    .option("--json", "machine-readable output", false)
+    .option("--no-llm", "use deterministic heuristic ideas instead of LLM")
+    .action(async (opts: any) => {
+      process.exit(
+        await dreamCommand({
+          cwd: process.cwd(),
+          count: opts.count,
+          json: opts.json,
+          noLlm: opts.llm === false,
+        }),
+      );
+    });
+
+  program
+    .command("chat", { hidden: true })
+    .description("Multi-turn conversational REPL over your repo's history")
+    .option("--no-llm", "skip LLM synthesis (extractive answers only)")
+    .action(async (opts: any) => {
+      process.exit(await chatCommand({ cwd: process.cwd(), noLlm: opts.llm === false }));
+    });
+
+  program
     .command("advanced")
     .description("Show advanced commands grouped by phase (hidden from main --help)")
     .action(() => {
@@ -601,6 +628,8 @@ function renderAdvancedHelp(): string {
     "    decisions                 auto-extract ADRs from commit messages",
     "    stack-trace [--from F]    paste an error, get historical context per frame",
     "    story <topic>             narrate the evolution of <topic> across acts",
+    "    dream                     speculative ideas grounded in your patterns",
+    "    chat                      multi-turn REPL over your repo's history",
     "",
     "  WILD — opinionated extras",
     "    heal [--dry-run]          synthesize WHY notes for poor commit messages",

@@ -6,6 +6,7 @@
  */
 
 import kleur from "kleur";
+import { insights } from "@mneme-ai/core";
 import type { SearchResult, RepoMeta, retrieve } from "@mneme-ai/core";
 
 type ConfidenceLabel = retrieve.ConfidenceLabel;
@@ -128,6 +129,17 @@ export function renderAnswer(input: AskRenderInput): string {
     out.push(`  ${kleur.bold().magenta("⊕ Files")}  ${kleur.gray(`(${allFiles.length} unique)`)}`);
     for (const c of clusters) {
       out.push(`    ${kleur.cyan(c.name.padEnd(22))} ${kleur.gray(`(${c.count})`)}  ${kleur.gray(c.sample.join(", "))}`);
+    }
+    out.push("");
+  }
+
+  // ── Smart suggestions — what to run next ─────────────────────────────
+  const suggestions = insights.suggestFollowUps(question, results);
+  if (suggestions.length > 0) {
+    out.push(`  ${kleur.bold().magenta("→ Try next")}`);
+    for (const s of suggestions) {
+      out.push(`    ${kleur.cyan("$")} ${kleur.bold(s.command)}`);
+      out.push(`      ${kleur.gray(s.reason)}`);
     }
     out.push("");
   }

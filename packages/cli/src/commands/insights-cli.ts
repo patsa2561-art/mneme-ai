@@ -14,6 +14,7 @@ import {
   insights,
   util,
   retrieve,
+  wisdom,
   type Commit,
 } from "@mneme-ai/core";
 import { resolveEnricher } from "@mneme-ai/embeddings";
@@ -396,6 +397,225 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
     process.stdout.write("\n");
   }
 
+  return 0;
+}
+
+// ─── dream ──────────────────────────────────────────────────────────────
+
+export interface DreamOptions {
+  cwd: string;
+  count?: number;
+  json?: boolean;
+  noLlm?: boolean;
+}
+
+export async function dreamCommand(opts: DreamOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const signals = insights.gatherRepoSignals(s);
+    return signals;
+  });
+  if (typeof result === "number") return result;
+  const signals = result;
+
+  const n = opts.count ?? 5;
+  const cfg = readConfig(opts.cwd);
+  const useLlm = !isNoLlm(opts.noLlm, cfg);
+
+  let ideas = insights.heuristicDream(signals, n);
+  let source: "llm" | "heuristic" = "heuristic";
+
+  if (useLlm) {
+    try {
+      const enricher = await resolveEnricher({
+        provider: cfg.embeddings.provider === "openai" ? "openai" : "ollama",
+        model: cfg.embeddings.model,
+      });
+      const prompt = insights.buildDreamPrompt(signals, n);
+      const out = await enricher.enrich({
+        system: "You are a senior staff engineer brainstorming small, high-leverage features that would fit an existing codebase's style. Output JSON only.",
+        user: prompt,
+        temperature: 0.6,
+        maxTokens: 800,
+      });
+      const parsed = insights.parseDreamIdeas(out.text);
+      if (parsed.length > 0) {
+        ideas = parsed.slice(0, n);
+        source = "llm";
+      }
+    } catch {
+      // fall through to heuristics
+    }
+  }
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({ source, signals, ideas }, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Speculative ideas based on your codebase patterns")}  ${kleur.gray(`(source: ${source})`)}\n\n`);
+  process.stdout.write(`  ${kleur.gray(`Signals: ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`)}\n\n`);
+
+  if (ideas.length === 0) {
+    process.stdout.write(`  ${kleur.gray("No ideas generated. Index more commits + entities first.")}\n\n`);
+    return 0;
+  }
+
+  ideas.forEach((idea, i) => {
+    process.stdout.write(`  ${kleur.bold().magenta(`${i + 1}. ${idea.title}`)}  ${effortRiskTag(idea.effort, idea.risk)}\n`);
+    for (const line of wrap(idea.pitch, 88, "    ")) process.stdout.write(`${line}\n`);
+    if (idea.precedents.length > 0) {
+      process.stdout.write(
+        `    ${kleur.gray("Precedents:")} ${kleur.cyan(idea.precedents.join(", "))}\n`,
+      );
+    }
+    process.stdout.write("\n");
+  });
+
+  return 0;
+}
+
+function effortRiskTag(effort: string, risk: string): string {
+  const e = effort === "small" ? kleur.green("small") : effort === "large" ? kleur.red("large") : kleur.yellow("medium");
+  const r = risk === "low" ? kleur.green("low") : risk === "high" ? kleur.red("high") : kleur.yellow("medium");
+  return `${kleur.gray("[effort:")} ${e} ${kleur.gray("· risk:")} ${r}${kleur.gray("]")}`;
+}
+
+// ─── chat ───────────────────────────────────────────────────────────────
+
+import { createInterface } from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
+import { resolveEmbedder } from "@mneme-ai/embeddings";
+import { renderAnswer } from "../render-answer.js";
+
+export interface ChatOptions {
+  cwd: string;
+  noLlm?: boolean;
+}
+
+export async function chatCommand(opts: ChatOptions): Promise<number> {
+  if (!(await git.isGitRepo(opts.cwd))) {
+    ui.error("Not in a git repo. Run `mneme init` first.");
+    return 1;
+  }
+  const meta = await git.getRepoMeta(opts.cwd);
+  const cfg = readConfig(opts.cwd);
+  const s = new store.MnemeStore(dbPath(meta.rootPath));
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("💬  Mneme chat")}  ${kleur.gray("(multi-turn over your repo's history)")}\n`);
+  process.stdout.write(`  ${kleur.gray("type your question · /exit to quit · /clear to wipe history · /save <file>")}\n\n`);
+
+  const embedder = await resolveEmbedder({
+    provider: cfg.embeddings.provider,
+    model: cfg.embeddings.model,
+    baseUrl: cfg.embeddings.baseUrl,
+  });
+
+  let enricher: retrieve.SynthesisEnricher | undefined;
+  if (!isNoLlm(opts.noLlm, cfg)) {
+    try {
+      enricher = await resolveEnricher({
+        provider: cfg.embeddings.provider === "openai" ? "openai" : "ollama",
+        model: cfg.embeddings.model,
+      });
+    } catch {
+      enricher = undefined;
+    }
+  }
+
+  const transcript: Array<{ q: string; a: string }> = [];
+  const rl = createInterface({ input, output });
+
+  try {
+    while (true) {
+      let line: string;
+      try {
+        line = (await rl.question(`${kleur.cyan("›")} `)).trim();
+      } catch {
+        break; // Ctrl-D / Ctrl-C
+      }
+      if (!line) continue;
+
+      // Slash commands.
+      if (line === "/exit" || line === "/quit") break;
+      if (line === "/clear") {
+        transcript.length = 0;
+        process.stdout.write(`  ${kleur.gray("(history cleared)")}\n`);
+        continue;
+      }
+      if (line.startsWith("/save ")) {
+        const path = line.slice(6).trim();
+        try {
+          writeFileSync(
+            path,
+            transcript.map((t, i) => `### Turn ${i + 1}\n\n**Q:** ${t.q}\n\n**A:** ${t.a}`).join("\n\n"),
+          );
+          process.stdout.write(`  ${kleur.green("✓")} saved transcript to ${path}\n`);
+        } catch (err) {
+          process.stdout.write(`  ${kleur.red("✗")} ${(err as Error).message}\n`);
+        }
+        continue;
+      }
+      if (line === "/history") {
+        if (transcript.length === 0) process.stdout.write(`  ${kleur.gray("(empty)")}\n`);
+        for (let i = 0; i < transcript.length; i++) {
+          const t = transcript[i]!;
+          process.stdout.write(`  ${kleur.gray(`#${i + 1}`)} ${kleur.cyan(t.q)} → ${t.a.slice(0, 80)}…\n`);
+        }
+        continue;
+      }
+
+      // Real query — classify, retrieve, synthesize.
+      const intent = retrieve.classifyIntent(line);
+      if (intent.intent === "vague") {
+        process.stdout.write(`  ${kleur.yellow("⚠")} ${intent.reason}\n`);
+        process.stdout.write(`  ${kleur.gray("Try a more specific question.")}\n\n`);
+        continue;
+      }
+
+      // Augment query with last turn's context (helpful for follow-ups).
+      const augmented = transcript.length > 0
+        ? `${transcript[transcript.length - 1]!.q} → ${line}`
+        : line;
+
+      const calib = wisdom.readCalibration(s);
+      const results = await retrieve.search(augmented, {
+        store: s,
+        embedder,
+        repo: meta,
+        topK: 8,
+        semanticWeight: calib.semanticWeight,
+      });
+      const confidence = retrieve.classifyConfidence(results);
+      const synth = await retrieve.synthesize(line, results, confidence, enricher);
+
+      let feedbackId: string | undefined;
+      try {
+        feedbackId = wisdom.recordQuery(s, {
+          query: line,
+          resultHashes: results.map((r) => r.commit.hash),
+          topScore: results[0]?.score,
+          semanticWeight: calib.semanticWeight,
+          minSemCosine: calib.minSemCosine,
+          rrfK: calib.rrfK,
+        });
+      } catch {
+        /* ignore */
+      }
+
+      process.stdout.write(
+        renderAnswer({ question: line, synthesized: synth, results, repo: meta, feedbackId }),
+      );
+
+      transcript.push({ q: line, a: synth.answer });
+    }
+  } finally {
+    rl.close();
+    s.close();
+  }
+
+  process.stdout.write(`\n  ${kleur.gray(`bye — ${transcript.length} turn(s) recorded`)}\n\n`);
   return 0;
 }
 
