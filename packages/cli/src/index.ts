@@ -37,13 +37,25 @@ import {
   commitCoachCommand,
   crystalBallCommand,
 } from "./commands/insights-cli.js";
+import {
+  drawdownCommand,
+  alphaCommand,
+  backtestCommand,
+  blackSwanCommand,
+  insiderTradingCommand,
+  moneyballCommand,
+  greekCommand,
+  correlationMatrixCommand,
+  impliedVolatilityCommand,
+  taxLossHarvestCommand,
+} from "./commands/quant-cli.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.9.0")
+    .version("0.10.0")
     .addHelpText(
       "after",
       "\n" +
@@ -667,6 +679,124 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
+  // ─── Sprint 5: Wall Street meets Git ─────────────────────────────────
+  program
+    .command("drawdown", { hidden: true })
+    .description("Worst losing streaks — periods of pure firefighting")
+    .option("--min-length <n>", "minimum streak length", (v) => Number(v), 3)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(await drawdownCommand({ cwd: process.cwd(), minLength: opts.minLength, json: opts.json })),
+    );
+
+  program
+    .command("alpha", { hidden: true })
+    .description("Kelly-criterion allocation across technical-debt items")
+    .option("--items <file>", "JSON file: array of { id, name, edge, variance, effortDays }")
+    .option("--budget-days <n>", "sprint budget in dev-days", (v) => Number(v), 25)
+    .option("--multiplier <n>", "fractional Kelly multiplier (0..1)", (v) => Number(v), 0.25)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await alphaCommand({
+          cwd: process.cwd(),
+          itemsFile: opts.items,
+          budgetDays: opts.budgetDays,
+          multiplier: opts.multiplier,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("backtest", { hidden: true })
+    .description("Validate any binary predictor against historical outcomes")
+    .option("--samples <file>", "JSON file: array of { id, predicted, actual }")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(await backtestCommand({ cwd: process.cwd(), samplesFile: opts.samples, json: opts.json })),
+    );
+
+  program
+    .command("black-swan", { hidden: true })
+    .description("Rare-but-catastrophic file patterns (tail risk)")
+    .option("-n, --top <n>", "top-N candidates", (v) => Number(v), 10)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(await blackSwanCommand({ cwd: process.cwd(), topN: opts.top, json: opts.json })),
+    );
+
+  program
+    .command("insider-trading", { hidden: true })
+    .description("Authors who repeatedly fix bugs they introduced themselves")
+    .option("--window-days <n>", "max days from ship to fix", (v) => Number(v), 14)
+    .option("--min-patterns <n>", "minimum patterns to flag", (v) => Number(v), 2)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await insiderTradingCommand({
+          cwd: process.cwd(),
+          windowDays: opts.windowDays,
+          minPatterns: opts.minPatterns,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("moneyball", { hidden: true })
+    .description("Undervalued contributors — high impact, low LOC volume")
+    .option("-n, --top <n>", "top-N", (v) => Number(v), 20)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(await moneyballCommand({ cwd: process.cwd(), topN: opts.top, json: opts.json })),
+    );
+
+  program
+    .command("greek", { hidden: true })
+    .description("Codebase Greeks (Δ Γ Θ) — sensitivity analysis")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(await greekCommand({ cwd: process.cwd(), json: opts.json })),
+    );
+
+  program
+    .command("correlation-matrix", { hidden: true })
+    .description("Hidden behavioral coupling between files (no static deps needed)")
+    .option("-n, --top <n>", "top-N pairs", (v) => Number(v), 20)
+    .option("--min-lift <n>", "minimum lift over random", (v) => Number(v), 1.5)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await correlationMatrixCommand({ cwd: process.cwd(), topN: opts.top, minLift: opts.minLift, json: opts.json }),
+      ),
+    );
+
+  program
+    .command("implied-volatility", { hidden: true })
+    .description("Project chaos predicted from commit message tone")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(await impliedVolatilityCommand({ cwd: process.cwd(), json: opts.json })),
+    );
+
+  program
+    .command("tax-loss-harvest", { hidden: true })
+    .description("Dead-code candidates — delete to offset technical debt")
+    .option("--min-stale-days <n>", "minimum days since last touch", (v) => Number(v), 180)
+    .option("-n, --top <n>", "top-N candidates", (v) => Number(v), 20)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await taxLossHarvestCommand({
+          cwd: process.cwd(),
+          minStaleDays: opts.minStaleDays,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      ),
+    );
+
   program
     .command("advanced")
     .description("Show advanced commands grouped by phase (hidden from main --help)")
@@ -723,6 +853,18 @@ function renderAdvancedHelp(): string {
     "    paradox                   architectural flip-flops (A → B → A patterns)",
     "    commit-coach [--stdin]    pre-commit review: message + reviewers + warnings",
     "    crystal-ball [--stdin]    predict CI/follow-up failure probability for staged diff",
+    "",
+    "  Quant (Sprint 5) — Wall Street meets Git",
+    "    drawdown                  worst losing streaks (firefighting periods)",
+    "    alpha --items F           Kelly-criterion allocation for technical debt",
+    "    backtest --samples F      validate any predictor against history",
+    "    black-swan                rare-but-catastrophic file patterns",
+    "    insider-trading           authors who fix bugs they introduced",
+    "    moneyball                 undervalued contributors (high ROI, low LOC)",
+    "    greek                     codebase Greeks (Δ Γ Θ) sensitivity",
+    "    correlation-matrix        hidden behavioral coupling between files",
+    "    implied-volatility        chaos predicted from commit message tone",
+    "    tax-loss-harvest          dead-code deletion candidates",
     "",
     "  WILD — opinionated extras",
     "    heal [--dry-run]          synthesize WHY notes for poor commit messages",
