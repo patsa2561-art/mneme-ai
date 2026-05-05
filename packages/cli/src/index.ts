@@ -24,6 +24,12 @@ import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
+import {
+  whoKnowsCommand,
+  decisionsCommand,
+  stackTraceCommand,
+  storyCommand,
+} from "./commands/insights-cli.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -481,6 +487,73 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
+  // ─── Insights (Sprint 2 — killer commands) ───
+  program
+    .command("who-knows <topic...>", { hidden: true })
+    .description("Surface the people most likely to know about a topic (commit history)")
+    .option("-n, --top <n>", "top-N candidates", (v) => Number(v), 5)
+    .option("--json", "machine-readable output", false)
+    .action(async (topicParts: string[], opts: any) => {
+      process.exit(
+        await whoKnowsCommand({
+          cwd: process.cwd(),
+          topic: topicParts.join(" "),
+          topN: opts.top,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("decisions", { hidden: true })
+    .description("Auto-extract architectural decisions (ADRs) from commit history")
+    .option("--format <kind>", "table | markdown | json", "table")
+    .option("--out <path>", "write to file instead of stdout")
+    .option("--since <iso>", "only commits since this date")
+    .option("--min-confidence <n>", "drop matches below this confidence", (v) => Number(v), 0.6)
+    .action(async (opts: any) => {
+      process.exit(
+        await decisionsCommand({
+          cwd: process.cwd(),
+          format: opts.format,
+          out: opts.out,
+          since: opts.since,
+          minConfidence: opts.minConfidence,
+        }),
+      );
+    });
+
+  program
+    .command("stack-trace", { hidden: true })
+    .description("Parse an error / stack trace and find historical context for each frame")
+    .option("--from <file>", "read trace from file (otherwise stdin)")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await stackTraceCommand({
+          cwd: process.cwd(),
+          fromFile: opts.from,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("story <topic...>", { hidden: true })
+    .description("Narrate the evolution of a topic across acts (with optional LLM polish)")
+    .option("--json", "machine-readable output", false)
+    .option("--no-llm", "skip LLM act narration", false)
+    .action(async (topicParts: string[], opts: any) => {
+      process.exit(
+        await storyCommand({
+          cwd: process.cwd(),
+          topic: topicParts.join(" "),
+          json: opts.json,
+          noLlm: opts.llm === false,
+        }),
+      );
+    });
+
   program
     .command("advanced")
     .description("Show advanced commands grouped by phase (hidden from main --help)")
@@ -522,6 +595,12 @@ function renderAdvancedHelp(): string {
     "  Wisdom Mutant Engine (Phase 4)",
     "    feedback <id> up|down     record explicit feedback on a query",
     "    calibrate                 re-tune search knobs against feedback set",
+    "",
+    "  Insights — the killer commands",
+    "    who-knows <topic>         surface humans most likely to know about <topic>",
+    "    decisions                 auto-extract ADRs from commit messages",
+    "    stack-trace [--from F]    paste an error, get historical context per frame",
+    "    story <topic>             narrate the evolution of <topic> across acts",
     "",
     "  WILD — opinionated extras",
     "    heal [--dry-run]          synthesize WHY notes for poor commit messages",

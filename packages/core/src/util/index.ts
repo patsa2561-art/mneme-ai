@@ -36,7 +36,7 @@ export function loadCommitsBetween(
   return rows.map((r) => rowToCommit(r, s));
 }
 
-function rowToCommit(r: Record<string, unknown>, s: MnemeStore): Commit {
+export function rowToCommit(r: Record<string, unknown>, s: MnemeStore): Commit {
   const hash = String(r.hash);
   return {
     hash,
