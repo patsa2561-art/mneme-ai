@@ -34,6 +34,39 @@ export const DEFAULT_CONFIDENCE: { minFtsHits: number; minSemCosine: number } = 
   minSemCosine: 0.4,
 };
 
+/** Confidence label assigned to a result set based on score distribution. */
+export type ConfidenceLabel = "high" | "medium" | "low" | "none";
+
+/**
+ * Adaptive confidence — looks at the score gap between top-1 and top-3 in
+ * addition to the absolute top score. Hard thresholds alone are misleading:
+ *   - "stripe bigint" returns one strong match (top=0.025, second=0.005) → high
+ *   - "how to improve code" returns 8 ties (all ≈ 0.016) → low
+ *
+ * Calibrated empirically on the 50-question eval set + the production query
+ * "how to improve my code" that exposed the original regression.
+ */
+export function classifyConfidence(results: SearchResult[]): ConfidenceLabel {
+  if (results.length === 0) return "none";
+  const top = results[0]!.score;
+
+  // Absolute floor — anything below this is noise regardless of gap.
+  if (top < 0.005) return "none";
+
+  // Gap-based: if top is much higher than the average of the next 2-4
+  // results, the system has a clear winner. If results are tied (small gap),
+  // confidence drops even when top is decent.
+  const tail = results.slice(1, 5);
+  const tailMean = tail.length > 0 ? tail.reduce((s, r) => s + r.score, 0) / tail.length : 0;
+  const gap = top - tailMean;
+  const ratio = tailMean === 0 ? Infinity : top / tailMean;
+
+  if (top >= 0.025 && (ratio >= 1.4 || gap >= 0.005)) return "high";
+  if (top >= 0.012 && (ratio >= 1.2 || gap >= 0.002)) return "medium";
+  if (top >= 0.005) return "low";
+  return "none";
+}
+
 /**
  * Hybrid retrieval: combine FTS (BM25) with vector cosine, fuse with weighted RRF.
  * Falls back to FTS-only if no embedder is configured or no embeddings exist.

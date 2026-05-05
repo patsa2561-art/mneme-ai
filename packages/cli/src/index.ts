@@ -78,13 +78,17 @@ export async function run(argv: string[]): Promise<void> {
     .description("Ask the memory: \"why does payment.ts use try/catch?\"")
     .option("-k, --top-k <n>", "number of results", (v) => Number(v), 8)
     .option("--json", "machine-readable JSON output", false)
-    .action(async (qParts: string[], opts: { topK: number; json: boolean }) => {
+    .option("--no-llm", "skip LLM synthesis — extractive answer only")
+    .option("--debug", "show intent classification + raw scores", false)
+    .action(async (qParts: string[], opts: { topK: number; json: boolean; llm?: boolean; debug?: boolean }) => {
       process.exit(
         await askCommand({
           cwd: process.cwd(),
           question: qParts.join(" "),
           topK: opts.topK,
           json: opts.json,
+          noLlm: opts.llm === false,
+          debug: opts.debug,
         }),
       );
     });
