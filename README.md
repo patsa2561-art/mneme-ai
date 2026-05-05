@@ -242,7 +242,7 @@ npm run build
 To run the test suite:
 
 ```bash
-npm test           # 244 tests
+npm test           # 379 tests
 npm run eval       # retrieval quality benchmark
 npm run bench      # performance benchmark
 ```
@@ -354,13 +354,17 @@ We treat retrieval quality as a regression metric, not a marketing claim. Every 
 |---|---|---|
 | Skeleton / Architecture | ✅ | 6 packages, schema-versioned store |
 | Working MVP | ✅ | `init / index / ask / why / status / mcp` |
-| Unit tests | ✅ | **244/244 passing**, 24 test files |
+| Unit tests | ✅ | **379/379 passing**, 33 test files |
 | Eval golden set | ✅ | 50 questions across 7 categories (was 15) |
-| Confidence floor | ✅ | honest "no context found" on out-of-distribution queries |
+| Intent classifier | ✅ | vague queries get redirected, not low-confidence guesses |
+| Confidence floor | ✅ | adaptive (gap-based) — honest 🟢🟡🔴 / "no context found" |
+| LLM synthesis | ✅ | `mneme ask` answers in 2-4 sentences with citations (Ollama) |
+| Smart suggestions | ✅ | every answer includes 3 follow-up commands to copy-paste |
 | Redaction layer | ✅ | strips AWS/GH/Stripe/JWT/PEM secrets before any embedding |
 | Deterministic mode | ✅ | `--no-llm` / MNEME_NO_LLM — for air-gapped + regulated industries |
 | Wisdom Mutant Engine | ✅ | feedback collector + auto-calibrator + 24/7 watch daemon |
 | Multi-language | ✅ | TS/JS · Python (AST) · Go (regex v1) |
+| Killer commands | ✅ | `who-knows`, `decisions`, `stack-trace`, `story`, `dream`, `chat` |
 | Eval harness (A/B) | ✅ | 5 variants compared, 15-question golden set |
 | Benchmarks | ✅ | index 50 c/s, query p50 = 1.2 ms |
 | CI/CD | ✅ | GitHub Actions on Ubuntu/macOS/Windows × Node 20/22 |
@@ -521,7 +525,7 @@ git clone <this-repo>
 cd mneme
 npm install
 npm run build
-npm test               # 244/244 should pass
+npm test               # 379/379 should pass
 npm run eval           # see retrieval quality numbers
 npm run bench -- --only small
 node packages/cli/bin/mneme.js --help

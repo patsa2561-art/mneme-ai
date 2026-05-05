@@ -48,12 +48,44 @@
 
 # ตัวเลขจริง (ไม่ใช่ marketing)
 
-  - 244 unit tests ผ่านหมด, regression-gate ใน CI
+  - 379 unit tests ผ่านหมด, regression-gate ใน CI
   - Eval set 50 คำถาม, recall@3 ≈ 87%, MRR ≈ 88%
   - Hit rate 96% (negative case = 100% — ตอบ "ไม่เจอ" แทนที่จะเดามั่ว)
   - Query latency p50 = 1.3 ms
+  - 8 commands หลัก, 26 ขั้นสูง (พิมพ์ mneme advanced ดูได้)
 
-ทุกตัวเลข reproduce ได้ — `npm run status` regenerate STATUS.md
+ทุกตัวเลข reproduce ได้ — npm run status regenerate STATUS.md
+
+# Killer commands ที่ "ไม่มี tool ไหนทำ"
+
+  mneme ask "why does X exist?"
+    → AI สังเคราะห์ตอบเป็น paragraph + อ้างอิง commit + แนะนำ
+      command ต่อไปอัตโนมัติ (Try next)
+
+  mneme who-knows "stripe"
+    → ใครเป็น expert บน topic นี้? tier definitive/active/stale
+
+  mneme decisions
+    → auto-extract ADRs จาก commit history (decided to /
+      switched from A to B / replaced X with Y / 9 patterns)
+
+  mneme stack-trace < error.log
+    → paste error → ดู commit ที่แก้ไข + incident ในอดีตแต่ละ frame
+
+  mneme story "authentication"
+    → เล่าเรื่องว่า feature นั้น evolve ยังไง ผ่าน acts:
+      Initial → Refactor → Incidents → Stable
+
+  mneme dream
+    → AI speculate ฟีเจอร์ที่ "fit ลุค" ของ codebase คุณ +
+      cite pattern เดิมที่มีอยู่
+
+  mneme chat
+    → multi-turn REPL — ถามต่อเนื่อง, /save บันทึก transcript
+
+  mneme watch
+    → 24/7 daemon: re-index ทุก commit, calibrate ทุกชม.,
+      self-eval ทุกวัน — Wisdom Mutant Engine
 
 # จุดที่อยากให้ลองจริง ๆ
 
@@ -61,6 +93,8 @@
   - มี --no-llm mode สำหรับองค์กรที่ห้าม LLM call
   - มี secret redaction ตัด AWS / GitHub PAT / Stripe key อัตโนมัติ
     ก่อน embed (สำคัญสำหรับ private repo)
+  - Honest "no context found" — ไม่ใช่ AI ที่เดาเก่ง แต่ AI ที่ยอม
+    บอกตรง ๆ ว่า "ไม่รู้"
   - ใช้ฟรีตลอดไป (MIT)
 
 # วิธีลอง 60 วินาที
