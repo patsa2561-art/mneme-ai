@@ -15,6 +15,41 @@ export function loadAllCommits(s: MnemeStore): Commit[] {
   return rows.map((r) => rowToCommit(r, s));
 }
 
+/** Load every file change in the repo (across all commits). */
+export function loadAllFileChanges(s: MnemeStore): import("../types.js").FileChange[] {
+  const rows = s.db
+    .prepare(
+      "SELECT commit_hash, path, change_kind, insertions, deletions FROM file_changes",
+    )
+    .all() as Array<Record<string, unknown>>;
+  return rows.map((r) => ({
+    commitHash: String(r.commit_hash),
+    path: String(r.path),
+    changeKind: String(r.change_kind) as "A" | "M" | "D" | "R" | "C",
+    insertions: Number(r.insertions ?? 0),
+    deletions: Number(r.deletions ?? 0),
+  }));
+}
+
+/** Load file changes for a specific path (across all commits). */
+export function loadFileChangesForPath(
+  s: MnemeStore,
+  path: string,
+): import("../types.js").FileChange[] {
+  const rows = s.db
+    .prepare(
+      "SELECT commit_hash, path, change_kind, insertions, deletions FROM file_changes WHERE path = ?",
+    )
+    .all(path) as Array<Record<string, unknown>>;
+  return rows.map((r) => ({
+    commitHash: String(r.commit_hash),
+    path: String(r.path),
+    changeKind: String(r.change_kind) as "A" | "M" | "D" | "R" | "C",
+    insertions: Number(r.insertions ?? 0),
+    deletions: Number(r.deletions ?? 0),
+  }));
+}
+
 /** Load commits within a date range. */
 export function loadCommitsBetween(
   s: MnemeStore,

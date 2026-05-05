@@ -36,6 +36,9 @@ import {
   paradoxCommand,
   commitCoachCommand,
   crystalBallCommand,
+  timeMachineCommand,
+  premortemCommand,
+  ghostCommand,
 } from "./commands/insights-cli.js";
 import {
   drawdownCommand,
@@ -678,6 +681,59 @@ export async function run(argv: string[]): Promise<void> {
         }),
       );
     });
+
+  // ─── v0.11.0: Time Machine, Pre-mortem, Ghost ────────────────────────
+  program
+    .command("time-machine <file>")
+    .description("Narrate a file's evolution as eras (birth, rewrite, firefight, plateau)")
+    .option("--plateau-days <n>", "minimum gap to mark a plateau", (v) => Number(v), 60)
+    .option("--json", "machine-readable output", false)
+    .action(async (filePath: string, opts: any) => {
+      process.exit(
+        await timeMachineCommand({
+          cwd: process.cwd(),
+          filePath,
+          plateauDays: opts.plateauDays,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("premortem <intent...>")
+    .description("Predict regret risk for a proposed change, grounded in your repo's failure history")
+    .option("--similarity <n>", "min similarity score 0..1", (v) => Number(v), 0.25)
+    .option("--window-days <n>", "follow-up window for regret detection", (v) => Number(v), 14)
+    .option("--json", "machine-readable output", false)
+    .action(async (intentParts: string[], opts: any) => {
+      const intent = intentParts.join(" ");
+      process.exit(
+        await premortemCommand({
+          cwd: process.cwd(),
+          intent,
+          similarityFloor: opts.similarity,
+          windowDays: opts.windowDays,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("ghost")
+    .description("Surface ghost code — half-finished features, stale TODOs, files born and forgotten")
+    .option("--top <n>", "show N most haunted files", (v) => Number(v), 10)
+    .option("--stale-days <n>", "stale threshold in days", (v) => Number(v), 180)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await ghostCommand({
+          cwd: process.cwd(),
+          topN: opts.top,
+          staleDays: opts.staleDays,
+          json: opts.json,
+        }),
+      ),
+    );
 
   // ─── Sprint 5: Wall Street meets Git ─────────────────────────────────
   program

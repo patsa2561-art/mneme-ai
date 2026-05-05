@@ -8,6 +8,57 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.11.0] — 2026-05-05
+
+The "Time Loops & Ghosts" release. Three new world-first commands that
+lean on the same indexed memory but answer different questions:
+
+> *Where has this file been?*
+> *What is my repo's history saying about this idea?*
+> *What is haunting my codebase?*
+
+### Added — three new insights
+
+- **`mneme time-machine <file>`** — narrate a file's evolution as discrete
+  eras (birth, rewrite, evolution, firefight, polish, plateau, twilight).
+  Emits a per-era label ("rewrite — 'switched to streams' (412 lines)"),
+  a per-era churn count, and a "health" tri-ratio (rewrite vs firefight
+  vs polish). Uses commit-message keywords + churn thresholds to classify.
+  10 tests.
+- **`mneme premortem <intent>`** — given a proposed change, mine the repo
+  for similar past attempts (token-overlap similarity + path hint), then
+  walk forward in a window for revert/hotfix/incident/rewrite signals.
+  Produces a regret probability, a verdict tier (low/medium/high/very_high),
+  and the top three risks with citations to the actual commits that
+  exhibited them. **Predictive analysis grounded in YOUR repo's failure
+  history**, not generic AI advice. 11 tests.
+- **`mneme ghost`** — surfaces "ghost code": files that haunt the repo
+  without doing anything. Combines staleness (recency-decay), low-touch
+  ratio (born and forgotten), and TODO density into a single ghostliness
+  score. Also detects stale TODOs — markers added long ago and ignored
+  through later edits. 10 tests.
+
+### Added — auto-discovery + SEO
+
+- **`keywords`** in npm package.json expanded to cover memory, MCP, AI
+  coding assistant, codebase intelligence — improves npm search ranking
+  without changing the user-facing description.
+- **GitHub topics** added to repo: `mcp`, `mcp-server`,
+  `ai-coding-assistant`, `codebase-memory`, `git-archaeology`,
+  `local-first`, `typescript`. Topic search → Mneme.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| Time machine | 10 |
+| Pre-mortem | 11 |
+| Ghost | 10 |
+| **Total new** | **31** |
+| Repo total | 644 |
+
+Build green. All 644 tests pass.
+
 ## [0.9.0] — 2026-05-05
 
 The "Super Saiyan" release. v0.9.0 ships in three sprints on top of the

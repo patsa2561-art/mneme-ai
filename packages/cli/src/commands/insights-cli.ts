@@ -1121,3 +1121,232 @@ function wrap(text: string, width: number, indent: string): string[] {
   if (line.trim()) out.push(line);
   return out;
 }
+
+// ─── time-machine ───────────────────────────────────────────────────────
+
+export interface TimeMachineOptions {
+  cwd: string;
+  filePath: string;
+  plateauDays?: number;
+  json?: boolean;
+}
+
+export async function timeMachineCommand(opts: TimeMachineOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const allCommits = util.loadAllCommits(s);
+    // Filter to commits that touched the target file
+    const target = opts.filePath;
+    const filtered = allCommits.filter((c) => c.files.includes(target));
+    const fileChanges = util.loadFileChangesForPath(s, target);
+    const changeMap = new Map<string, (typeof fileChanges)[number]>();
+    for (const ch of fileChanges) changeMap.set(ch.commitHash, ch);
+    return insights.buildTimeMachine(target, filtered, changeMap, {
+      plateauDays: opts.plateauDays ?? 60,
+    });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🕰  Time Machine — life of a file")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(opts.filePath)}\n`);
+  if (result.totalCommits === 0) {
+    process.stdout.write(`\n  ${kleur.yellow("✗")} No commits found for this path. Check the file exists in history.\n\n`);
+    return 0;
+  }
+  process.stdout.write(
+    `  ${kleur.gray(String(result.totalCommits) + " commits across " + result.totalSpanDays + " days")}\n\n`,
+  );
+
+  // Health line
+  const h = result.health;
+  const pct = (n: number) => Math.round(n * 100);
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Health")}\n\n`);
+  process.stdout.write(
+    `    rewrite ${kleur.bold(pct(h.rewriteRatio) + "%")}  ·  firefight ${kleur.bold(pct(h.firefightRatio) + "%")}  ·  polish/plateau ${kleur.bold(pct(h.polishRatio) + "%")}\n\n`,
+  );
+
+  // Epochs timeline
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Epochs")}\n\n`);
+  for (const e of result.epochs) {
+    const badge = renderEpochKind(e.kind);
+    const range = e.fromDate === e.toDate ? e.fromDate : `${e.fromDate} → ${e.toDate}`;
+    process.stdout.write(`    ${badge}  ${kleur.gray(range)}  ${kleur.gray(`(${e.spanDays}d)`)}\n`);
+    process.stdout.write(`        ${e.label}\n`);
+    if (e.commits.length > 0) {
+      const churn = e.insertions + e.deletions;
+      process.stdout.write(
+        `        ${kleur.gray(`${e.commits.length} commits · +${e.insertions}/-${e.deletions} (${churn} lines)`)}\n`,
+      );
+    }
+    process.stdout.write("\n");
+  }
+  return 0;
+}
+
+function renderEpochKind(kind: string): string {
+  switch (kind) {
+    case "birth":
+      return kleur.green().bold("BIRTH    ");
+    case "rewrite":
+      return kleur.magenta().bold("REWRITE  ");
+    case "evolution":
+      return kleur.cyan().bold("EVOLVE   ");
+    case "firefight":
+      return kleur.red().bold("FIREFIGHT");
+    case "polish":
+      return kleur.blue().bold("POLISH   ");
+    case "plateau":
+      return kleur.gray().bold("PLATEAU  ");
+    case "twilight":
+      return kleur.gray().bold("TWILIGHT ");
+    default:
+      return kleur.gray().bold(kind.padEnd(9));
+  }
+}
+
+// ─── premortem ──────────────────────────────────────────────────────────
+
+export interface PremortemOptions {
+  cwd: string;
+  intent: string;
+  similarityFloor?: number;
+  windowDays?: number;
+  json?: boolean;
+}
+
+export async function premortemCommand(opts: PremortemOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildPremortem(opts.intent, commits, {
+      similarityFloor: opts.similarityFloor ?? 0.25,
+      windowDays: opts.windowDays ?? 14,
+    });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Pre-mortem — what your repo's history says about this")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.gray("intent:")}  ${kleur.bold(opts.intent)}\n\n`);
+
+  const verdictColor = (() => {
+    switch (result.verdict) {
+      case "very_high": return kleur.red().bold;
+      case "high": return kleur.yellow().bold;
+      case "medium": return kleur.cyan().bold;
+      case "low": return kleur.green().bold;
+    }
+  })();
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
+  process.stdout.write(`    risk: ${verdictColor(result.verdict.toUpperCase().replace("_", " "))}  ${kleur.gray(`(P(regret) = ${(result.regretProbability * 100).toFixed(0)}%)`)}\n\n`);
+  for (const line of wrap(result.summary, 76, "    ")) {
+    process.stdout.write(line + "\n");
+  }
+
+  if (result.topRisks.length > 0) {
+    process.stdout.write(`\n  ${kleur.bold().magenta("◆ Top risks")}\n\n`);
+    for (const r of result.topRisks) {
+      process.stdout.write(`    ${kleur.bold("•")} ${r.label}\n`);
+      for (const ev of r.evidence.slice(0, 3)) {
+        const hash = ev.shortHash || ev.hash.slice(0, 7);
+        process.stdout.write(`      ${kleur.gray(hash + "  " + ev.subject)}\n`);
+      }
+    }
+  }
+
+  if (result.pastAttempts.length > 0) {
+    const sample = result.pastAttempts.slice(0, 5);
+    process.stdout.write(`\n  ${kleur.bold().magenta("◇ Similar past attempts")}  ${kleur.gray(`(${result.pastAttempts.length} found)`)}\n\n`);
+    for (const a of sample) {
+      const hash = a.attempt.shortHash || a.attempt.hash.slice(0, 7);
+      const status =
+        a.riskKind === "none"
+          ? kleur.green("ok")
+          : kleur.red(a.riskKind);
+      process.stdout.write(`    ${kleur.gray(a.attempt.authorDate.slice(0, 10))}  ${kleur.cyan(hash)}  [${status}]  ${a.attempt.subject}\n`);
+    }
+  }
+  process.stdout.write("\n");
+  return 0;
+}
+
+// ─── ghost ──────────────────────────────────────────────────────────────
+
+export interface GhostOptions {
+  cwd: string;
+  topN?: number;
+  staleDays?: number;
+  json?: boolean;
+}
+
+export async function ghostCommand(opts: GhostOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    const changes = util.loadAllFileChanges(s);
+    return insights.buildGhostReport(commits, changes, {
+      staleDays: opts.staleDays ?? 180,
+      minGhostliness: 0.4,
+    });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("👻  Ghost Code — what's haunting your repo")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(String(result.totalFiles))} files analyzed  ·  ${kleur.bold(result.ghostFiles.length + " ghosts")} surfaced  ·  avg ghostliness ${kleur.bold((result.averageGhostliness * 100).toFixed(0) + "%")}\n\n`);
+
+  if (result.ghostFiles.length === 0) {
+    process.stdout.write(`  ${kleur.green("✓")} Repo looks active — no significant ghost code detected.\n\n`);
+    return 0;
+  }
+
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Ghost files")}  ${kleur.gray(`(top ${Math.min(opts.topN ?? 10, result.ghostFiles.length)})`)}\n\n`);
+  for (const g of result.ghostFiles.slice(0, opts.topN ?? 10)) {
+    const score = (g.ghostliness * 100).toFixed(0) + "%";
+    const meter = renderMeter(g.ghostliness);
+    process.stdout.write(`    ${kleur.bold(g.path)}\n`);
+    process.stdout.write(`      ${meter}  ${kleur.bold(score)}  ${kleur.gray(g.reason)}\n`);
+    process.stdout.write(`      ${kleur.gray(`${g.totalCommits} commits · ${g.daysSinceLastTouch}d quiet · last: "${truncateOneLine(g.lastCommitSubject, 60)}"`)}\n\n`);
+  }
+
+  if (result.staleTodos.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("◇ Stale TODOs")}  ${kleur.gray(`(${result.staleTodos.length} ignored markers)`)}\n\n`);
+    for (const t of result.staleTodos.slice(0, 5)) {
+      process.stdout.write(`    ${kleur.bold(t.filePath)}\n`);
+      process.stdout.write(`      ${kleur.gray(`${t.ageDays}d old · ignored ${t.ignoredCount}× since`)}\n`);
+      process.stdout.write(`      ${kleur.gray("↳ " + truncateOneLine(t.hint, 70))}\n\n`);
+    }
+  }
+  return 0;
+}
+
+function renderMeter(value: number): string {
+  const blocks = Math.round(value * 10);
+  const filled = "█".repeat(blocks);
+  const empty = "░".repeat(10 - blocks);
+  if (value >= 0.7) return kleur.red(filled) + kleur.gray(empty);
+  if (value >= 0.4) return kleur.yellow(filled) + kleur.gray(empty);
+  return kleur.green(filled) + kleur.gray(empty);
+}
+
+function truncateOneLine(s: string, n: number): string {
+  const oneLine = s.replace(/\s+/g, " ").trim();
+  return oneLine.length <= n ? oneLine : oneLine.slice(0, n - 1).trimEnd() + "…";
+}

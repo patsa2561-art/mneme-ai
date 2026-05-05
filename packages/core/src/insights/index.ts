@@ -19,3 +19,6 @@ export * from "./bus-factor.js";
 export * from "./paradox.js";
 export * from "./commit-coach.js";
 export * from "./crystal-ball.js";
+export * from "./time-machine.js";
+export * from "./premortem.js";
+export * from "./ghost.js";
