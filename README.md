@@ -197,11 +197,10 @@ mneme init
 mneme index
 mneme ask "..."
 mneme --help        # 8 essentials. `mneme advanced` for the rest.
+mneme --version     # confirm what version you have
 ```
 
-To upgrade later: `npm install -g mneme-ai@latest`
-
-To remove: `npm uninstall -g mneme-ai`
+(See the **Upgrade** section below for keeping up with new releases.)
 
 ### Option 3 — Clone the repo (for contributors / customizers)
 
@@ -242,6 +241,41 @@ npm test           # 379 tests
 npm run eval       # retrieval quality benchmark
 npm run bench      # performance benchmark
 ```
+
+---
+
+## 🔄 Upgrade
+
+Already running an older Mneme? Upgrade in 30 seconds.
+
+```bash
+# 1. See what version you have right now
+mneme --version
+
+# 2. Pull the latest from npm
+npm install -g mneme-ai@latest
+
+# 3. Verify the upgrade landed
+mneme --version
+```
+
+**Latest stable:** `v0.9.0` — *Wisdom Mutant Engine + 7 killer commands + Obsidian export*. See [CHANGELOG.md](./CHANGELOG.md) for what's new.
+
+> **Heads-up.** If `mneme --version` doesn't change after step 2, open a fresh terminal — your shell is caching the old binary path. On Windows, `npm install -g` writes to `%APPDATA%\npm\` which the parent shell only re-reads on launch.
+
+**Pin a specific version** (for reproducible setups):
+
+```bash
+npm install -g mneme-ai@0.9.0
+```
+
+**Uninstall:**
+
+```bash
+npm uninstall -g mneme-ai
+```
+
+**npx users** (Option 1 above): nothing to upgrade — `npx -y mneme-ai@latest <cmd>` always pulls the freshest.
 
 ---
 
