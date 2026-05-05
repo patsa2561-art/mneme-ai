@@ -4,7 +4,11 @@
 - [[Installation]]
 - [[Configuration]]
 
+### ✨ Innovations
+- [[Innovations]]
+
 ### 📚 Commands
+- [[Command-Tour]]
 - [[Commands-Tier-1]]
 - [[Commands-Tier-2-Quant]]
 

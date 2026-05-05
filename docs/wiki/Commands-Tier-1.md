@@ -187,6 +187,7 @@ Run it in a tmux/screen/systemd session and forget it.
 
 ## See also
 
-- **[Commands-Tier-2-Insights](Commands-Tier-2-Insights)** — who-knows, decisions, story, dream, chat, …
-- **[Commands-Tier-2-Quant](Commands-Tier-2-Quant)** — drawdown, alpha, black-swan, Greeks, …
-- **[Recipes](Recipes)** — practical use cases combining multiple commands
+- **[[Innovations]]** — five world-first commands ✨ (`time-machine`, `premortem`, `ghost`, `channel`, `echo`)
+- **[[Command-Tour]]** — every command, told as a workflow story
+- **[[Commands-Tier-2-Quant]]** — drawdown, alpha, black-swan, Greeks, …
+- **[[Recipes]]** — practical use cases combining multiple commands

@@ -46,10 +46,167 @@ Mneme builds a permanent, queryable **memory** of your repo (commits + PR/issue 
 
 - **CLI for humans** — `mneme ask "why does X exist?"`
 - **MCP server for AI clients** — Claude Code, Cursor, Continue, Copilot
-- **Insights engine** — 11 "killer" commands that turn raw history into actionable answers
+- **Insights engine** — 14 "killer" commands that turn raw history into actionable answers
 - **Wisdom Mutant Engine** — 24/7 daemon that gets better with every query
 
 Local-first by default. Nothing leaves your machine unless you ask.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## L2.5 · Five things **only Mneme** can do
+
+Other tools show diffs, blame, and search. Mneme answers questions about your repo's *past*, *present*, and *future*. These five commands have no equivalent elsewhere:
+
+---
+
+### 1 · 🕰️  `mneme time-machine <file>` — narrate a file's life as eras, not a flat log
+
+Instead of dumping `git log file.ts`, Mneme groups commits into **eras** (birth, rewrite, evolution, firefight, polish, plateau, twilight) and labels each with the WHY.
+
+```text
+🕰  Time Machine — life of a file
+═══════════════════════════════════════════════════════════════
+src/auth/session.ts
+57 commits across 412 days
+
+✦ Health
+   rewrite 18%  ·  firefight 12%  ·  polish/plateau 70%
+
+◆ Epochs
+   BIRTH      2024-03-12  (0d)
+       born — "scaffold session middleware"
+       1 commits · +84/-0 (84 lines)
+
+   REWRITE    2024-08-14 → 2024-08-21  (7d)
+       rewrite — "switch from sessions to JWT after rate-limit incident #482" (412 lines)
+       3 commits · +298/-218 (516 lines)
+
+   FIREFIGHT  2024-08-22 → 2024-08-25  (3d)
+       firefight — "hotfix: token refresh race"
+       4 commits · +47/-12 (59 lines)
+
+   PLATEAU    2024-08-26 → 2025-04-01
+       quiet stretch — 218 days untouched
+
+   EVOLUTION  2025-04-02 → today  (32d)
+       evolution — "add MFA hooks"
+       11 commits · +203/-44 (247 lines)
+```
+
+> **Unique because:** every other tool gives you a flat list. Mneme gives you the *story*.
+
+---
+
+### 2 · 🔮  `mneme premortem "<intent>"` — predict regret *before* you write the code
+
+Mines your repo's history for similar past attempts, then walks forward in time looking for revert / hotfix / incident / rewrite signals. Returns a regret probability grounded in **your** failure history — not generic AI advice.
+
+```text
+🔮  Pre-mortem — what your repo's history says about this
+═══════════════════════════════════════════════════════════════
+intent:  add caching layer to api responses
+
+✦ Verdict
+   risk: VERY HIGH  (P(regret) = 78%)
+
+   7 of 9 similar past attempts ended badly (78%). This pattern has burned
+   this repo before — slow down, write tests first, and review the cited
+   commits.
+
+◆ Top risks
+   • cache invalidation regression (3× before)
+       b2e1f04  fix: stale cache served to logged-in users
+       9c3593c  hotfix: invalidation skipped on PATCH
+   • memory leak (2× before)
+       7f4a821  revert "add LRU cache" — heap grew 8x in 2 hours
+   • stale-data races on writes (2× before)
+       f9a2c30  incident: orders showed wrong totals after concurrent writes
+
+◇ Similar past attempts  (9 found)
+   2024-05-14  b933a2f  [revert]    add response cache to user endpoints
+   2024-09-02  9c3593c  [incident]  cache user permissions in middleware
+   2025-01-08  6e9a846  [hotfix]    introduce read-through cache for /search
+```
+
+> **Unique because:** generic AI tools say *"watch out for cache invalidation."*  Mneme cites the **specific commits** in your repo where that exact thing went wrong.
+
+---
+
+### 3 · 👻  `mneme ghost` — surface "ghost code" haunting your repo
+
+Combines staleness, low-touch ratio, and TODO density into a single **ghostliness score**. Also detects stale TODOs — markers added long ago and ignored through every later edit of the file.
+
+```text
+👻  Ghost Code — what's haunting your repo
+═══════════════════════════════════════════════════════════════
+247 files analyzed  ·  5 ghosts surfaced  ·  avg ghostliness 31%
+
+◆ Ghost files  (top 5)
+   src/exporter.ts
+     ████████░░  87%   born and forgotten — 412d untouched, only 2 commits ever
+     2 commits · 412d quiet · last: "scaffold csv exporter (TODO finish)"
+
+   src/integrations/zendesk.ts
+     ███████░░░  74%   one-shot file — added once, never revisited
+     1 commits · 287d quiet · last: "stub zendesk webhook handler"
+
+   src/payments/legacy.ts
+     ██████░░░░  62%   long-untouched — 198d since last edit
+     14 commits · 198d quiet · last: "freeze legacy provider behavior"
+
+◇ Stale TODOs  (3 ignored markers)
+   src/payments/charge.ts
+     312d old · ignored 47× since
+     ↳ "TODO: handle 3DS callback failure path"
+```
+
+> **Unique because:** the "haunted code" framing is new. No other tool combines staleness + low-touch + TODO-density into one score.
+
+---
+
+### 4 · 🪞  `mneme channel @<author>` *(coming v0.12.0)* — preserve knowledge when key people leave
+
+Analyzes a contributor's commit patterns to learn their style, then "channels" them when you ask: *"How would Alice have done this?"*
+
+```text
+🪞  Channeling @alice
+═══════════════════════════════════════════════════════════════
+  847 commits · 6 months of data
+
+  Q: "How would you handle this auth flow?"
+
+  Alice's pattern suggests:
+    • Functional approach           (98% of her code)
+    • Pino for logging              (her go-to logger)
+    • Skip class wrappers           (zero classes in her commits)
+    • Prefers small composable fns  (median fn = 14 LOC)
+
+  Cited from: a3f9b21, 2c4d8e0, 9f1a440, …
+```
+
+> **Unique because:** when a key contributor leaves, their knowledge usually leaves with them. Channel preserves their voice in the codebase.
+
+---
+
+### 5 · 📡  `mneme echo "<idea>"` *(coming v0.12.0)* — déjà vu detector for rewrites
+
+Catches the moment you start re-attempting the same kind of change you've tried before — and tells you what happened the previous times.
+
+```text
+📡  Echo — you've tried this before
+═══════════════════════════════════════════════════════════════
+  query: "rewriting auth"
+
+  📡 You've echoed this 3 times:
+     • 2024-05  rewrote auth, reverted after 2 weeks   [reverted]
+     • 2024-09  partial rewrite, abandoned mid-way     [abandoned]
+     • 2025-01  done, but caused 3 prod incidents      [shipped+regret]
+
+  Verdict: 67% historical regret rate.
+  Consider: the smaller incremental change in commit 9f1a440 worked.
+```
+
+> **Unique because:** pattern recurrence detection — the moment you're about to repeat a mistake, Mneme catches it.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -289,10 +446,30 @@ Reproducible: `npm test`, `npm run eval`, `npm run bench`. Live numbers regenera
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## L11 · MCP integration (drop-in for any AI client)
+## L11 · MCP integration — make your AI coding assistant smarter
+
+Mneme exposes its memory through the **Model Context Protocol** (MCP) — the open standard supported by Claude Code, Cursor, Continue, Codex CLI, Cline, Zed, and any other MCP-aware client. Once attached, your AI gains tools it can call directly: `mneme_ask`, `mneme_why`, `mneme_search_commits`, `mneme_status`, `mneme_list_entities`, `mneme_find_similar`, `mneme_blast`.
+
+**Effect:** the assistant stops guessing about your history. It reads it.
+
+### Just tell your AI to install it (recommended)
+
+Paste this into Claude Code / Cursor / Codex / any AI agent that can edit files and run shell commands:
+
+> *Install Mneme as an MCP server for this repository so you can query my git history and codebase memory.*
+>
+> *Steps:*
+> 1. *Run `npx -y mneme-ai init` to set up the local index, then `npx -y mneme-ai index` to populate it.*
+> 2. *Add an MCP server entry pointing to `npx -y mneme-ai mcp` with `cwd` set to this repo's absolute path. Use the right config file for the tool you are running in (`~/.claude/settings.json` for Claude Code, `~/.cursor/mcp.json` for Cursor, `~/.codex/config.json` for Codex CLI, etc.).*
+> 3. *Reload the MCP servers and confirm the `mneme_ask`, `mneme_why`, `mneme_search_commits` tools appear.*
+> 4. *From now on, before answering any question about why this code exists or how it evolved, call `mneme_ask` first instead of guessing from the open files.*
+
+That's it. The agent will install, configure, and start using Mneme as part of its reasoning loop.
+
+### Manual config (if you prefer to do it yourself)
 
 ```jsonc
-// claude_desktop_config.json or cursor / continue / etc.
+// claude_desktop_config.json · cursor / continue / codex / cline / zed / etc.
 {
   "mcpServers": {
     "mneme": {
@@ -304,7 +481,26 @@ Reproducible: `npm test`, `npm run eval`, `npm run bench`. Live numbers regenera
 }
 ```
 
-The AI now has tools: `mneme_ask`, `mneme_why`, `mneme_search_commits`, `mneme_status`, `mneme_list_entities`, `mneme_find_similar`, `mneme_blast`. **Result: the AI stops guessing about history. It reads it.**
+| Client | Config file |
+|--------|-------------|
+| Claude Code | `~/.claude/settings.json` (or `.claude/settings.json` per repo) |
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) · `%APPDATA%\Claude\claude_desktop_config.json` (Windows) |
+| Cursor | `~/.cursor/mcp.json` |
+| Codex CLI | `~/.codex/config.json` |
+| Continue | `~/.continue/config.yaml` (mcpServers section) |
+| Cline | VSCode settings → Cline → MCP Servers |
+| Zed | `~/.config/zed/settings.json` (context_servers) |
+
+### What changes after install
+
+Before:
+> AI: *"This auth flow probably uses JWT because that's common."*
+
+After:
+> AI: *(calls `mneme_ask "why this auth flow"`)*
+> AI: *"Per commit a3f9b21 from 2024-08, you switched from sessions to JWT after the rate-limit incident referenced in #482. The retry logic in line 47 was added in the hotfix that followed."*
+
+Same model, same prompt — different reasoning, because it now has memory.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
