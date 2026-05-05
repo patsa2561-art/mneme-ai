@@ -3,12 +3,13 @@
 ## Title (under 80 chars, optimized for HN front page)
 
 ```
-Show HN: Mneme – codebase memory layer for AI assistants (recall@3 = 87%)
+Show HN: Mneme – self-improving codebase memory for AI assistants (MCP, MIT)
 ```
 
 Alternative titles, in order of preference:
-1. `Show HN: Mneme – local-first git memory for Claude/Cursor (MCP, MIT)`
-2. `Show HN: Mneme – ask your repo "why does this exist?" via MCP`
+1. `Show HN: Mneme – local-first git memory + 24/7 mutant engine (Ollama)`
+2. `Show HN: Mneme – the memory layer your AI assistant doesn't have`
+3. `Show HN: Mneme – ask your repo "why does this exist?" via MCP`
 
 ## URL
 
@@ -18,23 +19,24 @@ https://github.com/patsa2561-art/mneme-ai
 
 ## First comment (post immediately after submission)
 
-> Hi HN — I built this because every AI coding assistant I use is brilliant within its context window and amnesiac outside it. Ask Claude or Cursor "why does this code use a retry?" and it looks at the current file and *guesses*. It doesn't read the PR description from 8 months ago that explains the Stripe bug. It hallucinates a plausible reason — and you ship it.
+> Hi HN — every AI coding assistant I use is brilliant within its context window and amnesiac outside it. Ask "why does this code use a retry?" and it looks at the current file and *guesses* — it can't read the PR from 8 months ago that explains the Stripe bug. It hallucinates a plausible reason and you ship it.
 >
-> Mneme builds a permanent, queryable memory of your repo (commits + PR/issue bodies + blame + file changes) and exposes it through:
+> Mneme builds a permanent, queryable memory of your repo (commits + PR/issue bodies + blame) and exposes it via:
 >
-> - A CLI for humans (`mneme ask "..."`)
-> - An MCP server for AI clients (Claude Code, Cursor, Continue, Copilot)
-> - A correlation engine (phase 3) that joins commits with errors from your observability platform/manual JSON — *that* is the moat: nobody else does this
+> - CLI for humans (`mneme ask "..."`)
+> - MCP server for AI clients (Claude Code, Cursor, Continue, Copilot)
+> - **Wisdom Mutant Engine** — 24/7 daemon that re-indexes on every commit, learns from your feedback (every `mneme ask` records, every `mneme why` is a positive signal), and auto-tunes search knobs against that feedback. Honest "no context found" instead of low-confidence guesses.
+> - Phase 3 incident correlation — joins commits with errors from your observability platform / manual JSON. That's the moat.
 >
-> **Quality is measured, not claimed.** I built an eval harness with a golden-set + recall@k/MRR/nDCG metrics and a benchmark suite. The numbers in the README and STATUS.md are real (`npm run status` regenerates them). On the canonical eval set: recall@3 = 86.7%, MRR = 90% with the reranker, query p50 = 1.2 ms.
+> **Quality is measured, not claimed.** Eval harness with a 50-question golden set, recall@k/MRR/nDCG metrics, regression-gate in CI. Real numbers in STATUS.md (`npm run status` regenerates them). On the canonical eval set: recall@3 ≈ 87%, hit rate 96%, query p50 ≈ 1.3 ms. Negative-case recall is 100% — the system says "no context found" instead of inventing answers.
 >
-> **Local-first by default.** Ollama is the default embedder; nothing leaves your machine. OpenAI is opt-in for higher quality (~$0.05 to index a 5k-commit repo). Hash fallback works with zero deps.
+> **Local-first.** Ollama is the default; nothing leaves your machine. OpenAI optional (~$0.05 for 5k commits). Hash fallback for zero-deps. **`--no-llm` deterministic mode** for air-gapped or regulated environments. **Built-in secret redaction** scrubs AWS/GitHub/Stripe/OpenAI/Anthropic/JWT/PEM patterns before any text reaches a remote embedder.
 >
-> Stack: TypeScript monorepo (npm workspaces), better-sqlite3 with FTS5 + BLOB vectors, hybrid retrieval (BM25 + cosine fused via Reciprocal Rank Fusion). MCP via the official SDK. CI on Win/macOS/Linux × Node 20/22.
+> Stack: TypeScript monorepo, better-sqlite3 with FTS5 + BLOB vectors, hybrid retrieval (BM25 + cosine fused via RRF). 244 tests, CI on Win/macOS/Linux × Node 20/22. Multi-language entity parsing: TS/JS, Python (AST), Go (regex v1).
 >
-> Honest limitations: needs a git repo with non-trivial history. Repos with `wip`/`fix`/`update` commit messages get poor results — and Mneme tells you so instead of hallucinating. Phase 3 (incident correlation) is engine-complete but adapters for your observability platform are still being wired.
+> Honest limitations: needs git history with real commit messages OR run `mneme heal` to synthesize WHY notes from diffs. < 50 commits = preview-quality (the tool tells you so). Phase 3 adapters for big observability vendors are real (Sentry, Datadog, GitHub Actions) but have been load-tested only on small fixtures.
 >
-> MIT-licensed. Happy to answer questions about the retrieval pipeline, the RRF tuning, or anything else.
+> MIT. Threat model + privacy doc in `docs/`. Happy to answer questions about the RRF tuning, the auto-calibrator's grid search, or anything else.
 
 ## Why this title works on HN
 
@@ -45,13 +47,16 @@ https://github.com/patsa2561-art/mneme-ai
 
 ## Pre-flight checklist before submitting
 
-- [ ] Repo has at least 1 demo GIF or screenshot in README
-- [ ] STATUS.md is up to date (run `npm run status`)
-- [ ] All tests passing (`npm test`)
-- [ ] LICENSE file present
-- [ ] `npm install -g mneme-ai` works (or instructions to clone + build are bulletproof)
-- [ ] Demo video / asciinema embedded somewhere reachable in 1 click
-- [ ] You have time to reply to comments for the next 4 hours
+- [ ] v0.9.0 LIVE on npm (`npm view mneme-ai version`)
+- [ ] Demo GIF embedded in README (uncomment line 35)
+- [ ] STATUS.md up to date (`npm run status`)
+- [ ] All 244+ tests passing (`npm test`)
+- [ ] `docs/SECURITY.md` and `docs/PRIVACY.md` linked from README
+- [ ] LICENSE file present (MIT)
+- [ ] `npm install -g mneme-ai` works on a fresh machine (test on 2nd device!)
+- [ ] CHANGELOG.md has v0.9.0 entry
+- [ ] At least 1 ⭐ on the repo (avoid empty social proof)
+- [ ] You have 4 uninterrupted hours after submission for replies
 
 ## What to do after submitting
 
