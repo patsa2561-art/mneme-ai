@@ -44,6 +44,10 @@ import {
   chronicleCommand,
   oracleCommand,
   constellationCommand,
+  clusterCommand,
+  networkCommand,
+  manageCommand,
+  exportBundleCommand,
 } from "./commands/insights-cli.js";
 import {
   drawdownCommand,
@@ -819,6 +823,72 @@ export async function run(argv: string[]): Promise<void> {
           cwd: process.cwd(),
           output: opts.output,
           json: opts.json,
+        }),
+      ),
+    );
+
+  // ─── v0.13.0: Black Sheep — cluster / network / manage / export ──────
+  program
+    .command("cluster")
+    .description("Semantic clustering of commit messages — find topic islands across history")
+    .option("--similarity <n>", "join threshold 0..1", (v) => Number(v), 0.15)
+    .option("--min-size <n>", "minimum cluster size", (v) => Number(v), 3)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await clusterCommand({
+          cwd: process.cwd(),
+          similarity: opts.similarity,
+          minSize: opts.minSize,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("network")
+    .description("Author network — semantic collaboration graph with co-edit + co-time + co-topic edges")
+    .option("--window-days <n>", "co-time window", (v) => Number(v), 7)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await networkCommand({
+          cwd: process.cwd(),
+          windowDays: opts.windowDays,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("manage")
+    .description("Engineering management dashboard — health, succession, skill matrix, trajectory")
+    .option("--window-days <n>", "rolling window in days", (v) => Number(v), 90)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await manageCommand({
+          cwd: process.cwd(),
+          windowDays: opts.windowDays,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("export-bundle")
+    .alias("bundle")
+    .description("Export the universal bundle — DNA + drift + chronicle + oracle + constellation + clusters + network + manage + ghost")
+    .option("-o, --output <file>", "output filename base (no extension)", "mneme-bundle")
+    .option("--format <json|markdown|both>", "output format", "both")
+    .option("--top-authors <n>", "DNA strands to include", (v) => Number(v), 5)
+    .action(async (opts: any) =>
+      process.exit(
+        await exportBundleCommand({
+          cwd: process.cwd(),
+          output: opts.output,
+          format: opts.format,
+          topAuthors: opts.topAuthors,
         }),
       ),
     );

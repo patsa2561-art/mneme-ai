@@ -1655,3 +1655,212 @@ export async function constellationCommand(opts: ConstellationOptions): Promise<
   process.stdout.write("\n");
   return 0;
 }
+
+// ─── v0.13 BLACK SHEEP — cluster / network / manage / export ─────────────
+
+// cluster ────────────────────────────────────────────────────────────────
+export interface ClusterOptions {
+  cwd: string;
+  similarity?: number;
+  minSize?: number;
+  json?: boolean;
+}
+
+export async function clusterCommand(opts: ClusterOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildClusters(commits, {
+      similarityFloor: opts.similarity ?? 0.15,
+      minClusterSize: opts.minSize ?? 3,
+    });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🧠  Semantic Commit Clusters")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(String(result.totalCommits))} commits  ·  ${kleur.bold(String(result.clusters.length))} clusters  ·  ${kleur.bold(String(result.outliers.length))} outliers\n\n`);
+  for (const c of result.clusters.slice(0, 10)) {
+    process.stdout.write(`  ${kleur.bold().magenta("◆ Cluster " + c.id)}  ${kleur.gray(c.size + " commits · cohesion " + pctV12(c.cohesion))}\n`);
+    process.stdout.write(`    ${kleur.gray("terms:")} ${c.topTerms.map((t) => kleur.cyan(t)).join("  ")}\n`);
+    process.stdout.write(`    ${kleur.gray("range:")} ${c.fromDate} → ${c.toDate}\n`);
+    for (const sample of c.samples.slice(0, 2)) {
+      const hash = sample.shortHash || sample.hash.slice(0, 7);
+      process.stdout.write(`    ${kleur.gray("↳ " + hash + "  " + sample.subject)}\n`);
+    }
+    process.stdout.write("\n");
+  }
+  return 0;
+}
+
+// network ────────────────────────────────────────────────────────────────
+export interface NetworkOptions {
+  cwd: string;
+  windowDays?: number;
+  json?: boolean;
+}
+
+export async function networkCommand(opts: NetworkOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildNetwork(commits, {
+      coTimeWindowDays: opts.windowDays ?? 7,
+    });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🕸  Author Network — semantic collaboration graph")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(String(result.windowCommits))} commits  ·  ${kleur.bold(String(result.nodes.length))} authors  ·  ${kleur.bold(String(result.edges.length))} edges  ·  ${kleur.bold(String(result.silos.length))} silos  ·  ${kleur.bold(String(result.bridges.length))} bridges\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Top collaborators (by centrality)")}\n\n`);
+  for (const n of result.nodes.slice(0, 8)) {
+    const meter = "█".repeat(Math.round(n.centrality * 8)) + "░".repeat(8 - Math.round(n.centrality * 8));
+    process.stdout.write(`    ${kleur.cyan(meter)}  ${kleur.bold(n.author.padEnd(28))}  ${kleur.gray(n.commits + " commits · " + n.collaborators + " edges")}\n`);
+  }
+
+  if (result.edges.length > 0) {
+    process.stdout.write(`\n  ${kleur.bold().magenta("◇ Strongest semantic edges")}\n\n`);
+    for (const e of result.edges.slice(0, 6)) {
+      const terms = e.sharedTerms.slice(0, 3).map((t) => kleur.cyan(t)).join(", ");
+      process.stdout.write(`    ${kleur.bold(pctV12(e.weight))}  ${e.authorA} ⟷ ${e.authorB}\n`);
+      process.stdout.write(`         ${kleur.gray("co-edit " + pctV12(e.axes.coEdit) + " · co-time " + pctV12(e.axes.coTime) + " · co-topic " + pctV12(e.axes.coTopic))}\n`);
+      if (terms) process.stdout.write(`         ${kleur.gray("shared: ")}${terms}\n`);
+      process.stdout.write("\n");
+    }
+  }
+
+  if (result.bridges.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("⚡ Bridges")}  ${kleur.gray("(authors connecting silos)")}\n`);
+    for (const b of result.bridges) {
+      process.stdout.write(`    ${kleur.cyan(b)}\n`);
+    }
+    process.stdout.write("\n");
+  }
+  return 0;
+}
+
+// manage ─────────────────────────────────────────────────────────────────
+export interface ManageOptions {
+  cwd: string;
+  windowDays?: number;
+  json?: boolean;
+}
+
+export async function manageCommand(opts: ManageOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildManage(commits, { windowDays: opts.windowDays ?? 90 });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("👑  Manage — engineering management dashboard")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+
+  const overall = result.health.overall;
+  const overallColor = overall > 0.6 ? kleur.green : overall > 0.4 ? kleur.yellow : kleur.red;
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Team Health")}\n`);
+  process.stdout.write(`    overall ............. ${overallColor().bold(pctV12(overall))}\n`);
+  process.stdout.write(`    trajectory .......... ${kleur.bold(result.health.trajectory.dominant)} (${result.health.trajectory.label})\n`);
+  process.stdout.write(`    predicted collisions  ${kleur.bold(String(result.health.predictedCollisions))}\n`);
+  process.stdout.write(`    max succession risk . ${kleur.bold(pctV12(result.health.maxSuccessionRisk))}\n`);
+  process.stdout.write(`    window commits ...... ${kleur.bold(String(result.health.windowCommits))}\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Notes")}\n`);
+  for (const note of result.health.notes) {
+    process.stdout.write(`    ${kleur.gray("•")} ${note}\n`);
+  }
+  process.stdout.write("\n");
+
+  if (result.succession.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("◆ Succession plan")}  ${kleur.gray("(highest risk first)")}\n\n`);
+    for (const sp of result.succession.slice(0, 8)) {
+      const riskColor = sp.risk > 0.6 ? kleur.red : sp.risk > 0.3 ? kleur.yellow : kleur.green;
+      process.stdout.write(`    ${riskColor().bold(pctV12(sp.risk).padStart(4))}  ${kleur.bold(sp.area.padEnd(30))}  primary: ${kleur.cyan("@" + sp.primary)}\n`);
+      if (sp.understudy) {
+        process.stdout.write(`              ${kleur.gray("understudy: @" + sp.understudy + " (confidence " + pctV12(sp.confidence) + ")")}\n`);
+      } else {
+        process.stdout.write(`              ${kleur.red("⚠ no understudy detected")}\n`);
+      }
+      process.stdout.write("\n");
+    }
+  }
+  return 0;
+}
+
+// export ─────────────────────────────────────────────────────────────────
+export interface ExportBundleOptions {
+  cwd: string;
+  output?: string;
+  format?: "json" | "markdown" | "both";
+  topAuthors?: number;
+}
+
+export async function exportBundleCommand(opts: ExportBundleOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    const fileChanges = util.loadAllFileChanges(s);
+    return insights.buildExportBundle(commits, {
+      topAuthors: opts.topAuthors ?? 5,
+      fileChanges,
+    });
+  });
+  if (typeof result === "number") return result;
+
+  const format = opts.format ?? "both";
+  const outputBase = opts.output ?? "mneme-bundle";
+
+  if (format === "json" || format === "both") {
+    writeFileSync(outputBase + ".json", JSON.stringify(result, null, 2));
+  }
+  if (format === "markdown" || format === "both") {
+    const md = insights.renderExportMarkdown(result);
+    writeFileSync(outputBase + ".md", md);
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("📦  Export Bundle — universal codebase artifact")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  Generated:    ${kleur.gray(result.generatedAt)}\n`);
+  process.stdout.write(`  Mneme:        ${kleur.bold(result.version)}\n`);
+  process.stdout.write(`  Commits:      ${kleur.bold(String(result.repo.totalCommits))}\n`);
+  process.stdout.write(`  Authors:      ${kleur.bold(String(result.repo.totalAuthors))}\n`);
+  process.stdout.write(`  Range:        ${kleur.gray(result.repo.fromDate + " → " + result.repo.toDate)}\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Sections included")}\n`);
+  process.stdout.write(`    🧬  ${kleur.bold(String(result.topAuthorsDna.length))} top-author DNA strands\n`);
+  process.stdout.write(`    📈  drift trajectory across ${kleur.bold(String(result.drift.buckets.length))} buckets\n`);
+  process.stdout.write(`    📖  chronicle with ${kleur.bold(String(result.chronicle.chapters.length))} chapters\n`);
+  process.stdout.write(`    🔮  oracle: ${kleur.bold(String(result.oracle.collisions.length))} collisions, ${kleur.bold(String(result.oracle.predictions.length))} predictions\n`);
+  process.stdout.write(`    🌌  constellation: ${kleur.bold(String(result.constellation.fileStars.length))} file-stars, ${kleur.bold(String(result.constellation.fileEdges.length))} co-edit edges\n`);
+  process.stdout.write(`    🧠  ${kleur.bold(String(result.clusters.clusters.length))} semantic clusters\n`);
+  process.stdout.write(`    🕸  network: ${kleur.bold(String(result.network.nodes.length))} authors, ${kleur.bold(String(result.network.edges.length))} edges\n`);
+  process.stdout.write(`    👑  team health: ${kleur.bold(pctV12(result.manage.health.overall))}\n`);
+  process.stdout.write(`    👻  ${kleur.bold(String(result.ghost.ghostFiles.length))} ghost files\n\n`);
+
+  if (format === "json" || format === "both") {
+    process.stdout.write(`  ${kleur.green("✓")} JSON written to ${kleur.cyan(outputBase + ".json")}\n`);
+  }
+  if (format === "markdown" || format === "both") {
+    process.stdout.write(`  ${kleur.green("✓")} Markdown written to ${kleur.cyan(outputBase + ".md")}\n`);
+  }
+  process.stdout.write("\n");
+  return 0;
+}

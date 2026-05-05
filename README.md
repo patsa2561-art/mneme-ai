@@ -53,11 +53,32 @@ Local-first by default. Nothing leaves your machine unless you ask.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## L2.5 · Ten things **only Mneme** can do
+## L2.5 · Fourteen things **only Mneme** can do — *the Black Sheep position*
 
-Other tools show diffs, blame, and search. Mneme answers questions about your repo's *past*, *present*, and *future*. We surveyed the whole landscape (Gource, code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT) before shipping these — every one of them occupies real whitespace.
+Other tools show diffs, blame, and search. Mneme answers questions about your repo's *past*, *present*, and *future*, and ships the only **OSS, local-first, end-to-end management surface** for git history we are aware of.
 
-The first five (v0.11) tell you what *was*. The next five (v0.12 — *King of Git*) tell you who *is* and what's coming *next*.
+We surveyed the whole landscape — Gource, code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT — and confirmed every command below occupies real whitespace.
+
+| Gap in the landscape | Closest existing | What was missing | Mneme answer |
+|---|---|---|---|
+| Author network with semantic edges | Unblocked.com (closed, paid, PR-only) | open-source | **`mneme network`** |
+| Semantic commit clustering | arxiv 2110.00697 | research-only | **`mneme cluster`** |
+| Predictive co-edit | MergeBERT (research) | productized | **`mneme oracle`** |
+| Exportable developer fingerprint | HowYouCode (snapshot only) | history-derived, comparable | **`mneme dna`** |
+| Engineering management dashboard | — | combined health + succession | **`mneme manage`** |
+| Universal codebase export | — | bundled artifact | **`mneme bundle`** |
+| Codebase narrative | — | novel-format storytelling | **`mneme chronicle`** |
+| File evolution as eras | git log | grouped, labeled | **`mneme time-machine`** |
+| Topical drift over time | git log | labelled trajectory | **`mneme drift`** |
+| Predictive risk grounded in your repo | generic AI tools | repo-specific | **`mneme premortem`** |
+| Ghost-code detection | — | combined score | **`mneme ghost`** |
+| Codebase graph | Gource (dead, 2.5D) | maintained, exportable | **`mneme constellation`** |
+
+Three tiers of commands:
+
+- **v0.11 — *Memory*** (5 commands): tell you what *was*
+- **v0.12 — *King of Git*** (5 commands): tell you who *is* and what's coming *next*
+- **v0.13 — *Black Sheep*** (4 commands): close every remaining landscape gap
 
 ---
 
@@ -363,6 +384,127 @@ Build a graph where files are stars (size = touches), authors are orbital bodies
 ```
 
 > **Unique because:** Gource is animated 2.5D but post-hoc and dead. 3ource (its three.js clone) was abandoned in 2014. Mneme ships the data layer first; the WebGL viewer comes next.
+
+---
+
+### 11 · 🧠  `mneme cluster` — *semantic clustering of commit messages*  ✨ v0.13.0
+
+Groups similar commits into topic islands using token-overlap similarity (or embeddings when present). Surfaces shared vocabulary per cluster + sample commits + cohesion score.
+
+```text
+🧠  Semantic Commit Clusters
+═══════════════════════════════════════════════════════════════
+  847 commits  ·  23 clusters  ·  142 outliers
+
+  ◆ Cluster 1   132 commits · cohesion 47%
+    terms: caching  layer  api  invalidation
+    range: 2024-05-12 → 2026-04-30
+    ↳ b2e1f04  add response cache to user endpoints
+    ↳ 9c3593c  cache user permissions in middleware
+
+  ◆ Cluster 2   87 commits · cohesion 52%
+    terms: auth  jwt  session  refresh
+```
+
+> **Unique because:** academic papers cluster commits semantically but never ship. Mneme is the first CLI that does it.
+
+---
+
+### 12 · 🕸  `mneme network` — *author social graph with semantic edges*  ✨ v0.13.0
+
+Edges aren't just "edited same file" — they're weighted by **co-edit + co-time + co-topic** and labeled with the shared vocabulary. Detects silos and bridges automatically.
+
+```text
+🕸  Author Network — semantic collaboration graph
+═══════════════════════════════════════════════════════════════
+  847 commits  ·  6 authors  ·  9 edges  ·  2 silos  ·  1 bridges
+
+  ◆ Top collaborators (by centrality)
+    ████████  alice                 412 commits · 5 edges
+    ██████░░  bob                   287 commits · 4 edges
+    ████░░░░  charlie               148 commits · 3 edges
+
+  ◇ Strongest semantic edges
+    72%  alice ⟷ bob
+         co-edit 81% · co-time 64% · co-topic 71%
+         shared: auth, jwt, session
+
+  ⚡ Bridges
+    charlie    (connects auth-cluster ⟷ payments-cluster)
+```
+
+> **Unique because:** Unblocked.com is closed-source and paid. Mneme is the first OSS author-social-graph tool with semantic edges.
+
+---
+
+### 13 · 👑  `mneme manage` — *engineering management dashboard*  ✨ v0.13.0
+
+The single CTO/EM-friendly view: team health composite, succession plan per area (primary, understudy, risk), trajectory, and action notes.
+
+```text
+👑  Manage — engineering management dashboard
+═══════════════════════════════════════════════════════════════
+
+  ✦ Team Health
+    overall ............. 73%
+    trajectory .......... feature (2026-04)
+    predicted collisions  3
+    max succession risk . 64%
+    window commits ...... 187
+
+  ✦ Notes
+    • 3 predicted collisions in next window — schedule a sync.
+    • Highest succession risk: src/payments (primary @charlie, no understudy).
+
+  ◆ Succession plan  (highest risk first)
+     64%  src/payments                  primary: @charlie
+              ⚠ no understudy detected
+     38%  src/auth                      primary: @alice
+              understudy: @bob (confidence 67%)
+     12%  src/api                       primary: @alice
+              understudy: @bob (confidence 84%)
+```
+
+> **Unique because:** no tool combines team-health composite + succession + trajectory + notes into a single CTO frame.
+
+---
+
+### 14 · 📦  `mneme bundle` — *universal codebase export*  ✨ v0.13.0
+
+Run once, ship to collaborators or attach to release notes. Bundles **every** Mneme analysis — DNA × top contributors, drift, chronicle, oracle, constellation, clusters, network, manage, ghost — into a single JSON + Markdown artifact.
+
+```bash
+mneme bundle                                       # → mneme-bundle.json + mneme-bundle.md
+mneme bundle -o release-2026-q2 --format markdown  # markdown only
+mneme bundle --top-authors 10                      # 10 DNA strands
+```
+
+```text
+📦  Export Bundle — universal codebase artifact
+═══════════════════════════════════════════════════════════════
+
+  Generated:    2026-05-05T10:00:00Z
+  Mneme:        0.13.0
+  Commits:      847
+  Authors:      6
+  Range:        2024-03-12 → 2026-05-05
+
+  ✦ Sections included
+    🧬  5 top-author DNA strands
+    📈  drift trajectory across 9 buckets
+    📖  chronicle with 6 chapters
+    🔮  oracle: 3 collisions, 87 predictions
+    🌌  constellation: 247 file-stars, 142 co-edit edges
+    🧠  23 semantic clusters
+    🕸  network: 6 authors, 9 edges
+    👑  team health: 73%
+    👻  5 ghost files
+
+  ✓ JSON written to mneme-bundle.json
+  ✓ Markdown written to mneme-bundle.md
+```
+
+> **Unique because:** no other tool ships a single shareable artifact this complete.
 
 ═══════════════════════════════════════════════════════════════════════════════
 

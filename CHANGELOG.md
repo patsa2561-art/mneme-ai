@@ -8,6 +8,62 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.13.0] — 2026-05-05
+
+The **"Black Sheep"** release. Closes every gap from the landscape
+research:
+
+| Gap | Tool that came closest | What was missing | Mneme v0.13 |
+|-----|-----------------------|------------------|-------------|
+| OSS  | — | many tools were closed-source | ✅ MIT |
+| Real-time | Goursome (dead 2014) | nothing actively maintained | ⏳ planned watch mode |
+| Semantic NLP clustering | arxiv 2110.00697 | research-only | ✅ `mneme cluster` |
+| Author network with semantic edges | Unblocked.com (closed, paid) | no OSS | ✅ `mneme network` |
+| Predictive overlay | MergeBERT (research) | not productized | ✅ already shipped in `oracle` |
+| Exportable developer fingerprint | HowYouCode (snapshot only) | no history-derived | ✅ already shipped in `dna` |
+| Universal codebase export | — | no tool bundles everything | ✅ `mneme export-bundle` |
+| Engineering management view | — | no tool combines health + succession | ✅ `mneme manage` |
+
+After v0.13 there is **no commercial or open-source tool that does what
+Mneme does as a single, local-first artifact.** That is the "Black
+Sheep" position — alone in the field by design.
+
+### Added — four new commands
+
+- **`mneme cluster`** — semantic clustering of commit messages. Groups
+  similar commits (token-overlap or embedding-based when available),
+  surfaces topic islands, returns cohesion + sample commits +
+  cluster-defining vocabulary. **First shipped CLI for semantic commit
+  clustering — academic papers stop at the paper.** 9 tests.
+- **`mneme network`** — author social graph with **semantic edges**.
+  Edges aren't just "edited same file"; they're weighted by co-edit +
+  co-time + co-topic, and labeled with the shared vocabulary. Detects
+  silos (connected components) and bridges (authors connecting them).
+  **Closes the OSS gap left by closed-source competitors.** 7 tests.
+- **`mneme manage`** — engineering management dashboard. Combines
+  drift, oracle, and per-area touch data into a single CTO/EM-friendly
+  view: team health composite, succession plan per area (primary +
+  understudy + risk), skill matrix, action notes. **No tool combines
+  these into one frame.** 8 tests.
+- **`mneme export-bundle`** (alias `bundle`) — universal codebase
+  export. Bundles every Mneme analysis — DNA × top contributors, drift,
+  chronicle, oracle, constellation, clusters, network, manage, ghost —
+  into a single shareable artifact (JSON + Markdown). Run once, ship to
+  collaborators or attach to release notes. 6 tests.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| Cluster | 9 |
+| Network | 7 |
+| Manage | 8 |
+| Export bundle | 6 |
+| **Total new in v0.13** | **30** |
+| Repo total | 727 |
+
+Build clean. All 727 tests pass.
+
 ## [0.12.0] — 2026-05-05
 
 The **"King of Git"** release. Five new world-first commands, each
