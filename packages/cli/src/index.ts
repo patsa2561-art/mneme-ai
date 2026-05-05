@@ -509,8 +509,8 @@ export async function run(argv: string[]): Promise<void> {
   program
     .command("decisions", { hidden: true })
     .description("Auto-extract architectural decisions (ADRs) from commit history")
-    .option("--format <kind>", "table | markdown | json", "table")
-    .option("--out <path>", "write to file instead of stdout")
+    .option("--format <kind>", "table | markdown | json | obsidian", "table")
+    .option("--out <path>", "write to file (markdown/json) or vault folder (obsidian)")
     .option("--since <iso>", "only commits since this date")
     .option("--min-confidence <n>", "drop matches below this confidence", (v) => Number(v), 0.6)
     .action(async (opts: any) => {
@@ -545,6 +545,7 @@ export async function run(argv: string[]): Promise<void> {
     .description("Narrate the evolution of a topic across acts (with optional LLM polish)")
     .option("--json", "machine-readable output", false)
     .option("--no-llm", "skip LLM act narration", false)
+    .option("--obsidian-out <path>", "write the story to an Obsidian vault folder")
     .action(async (topicParts: string[], opts: any) => {
       process.exit(
         await storyCommand({
@@ -552,6 +553,7 @@ export async function run(argv: string[]): Promise<void> {
           topic: topicParts.join(" "),
           json: opts.json,
           noLlm: opts.llm === false,
+          obsidianOut: opts.obsidianOut,
         }),
       );
     });

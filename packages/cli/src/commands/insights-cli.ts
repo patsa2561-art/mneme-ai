@@ -5,8 +5,8 @@
  * argument parsing, store lifecycle, beautiful rendering, optional LLM narration.
  */
 
-import { readFileSync } from "node:fs";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import kleur from "kleur";
 import {
   git,
@@ -24,6 +24,15 @@ import { ui } from "../ui.js";
 import { isNoLlm } from "../no-llm.js";
 
 // ─── shared helpers ─────────────────────────────────────────────────────
+
+/** Write a vault (array of {path, content}) to disk under `vaultRoot`. */
+function writeVault(vaultRoot: string, files: Array<{ path: string; content: string }>): void {
+  for (const f of files) {
+    const full = join(vaultRoot, f.path);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, f.content);
+  }
+}
 
 async function withStore<T>(cwd: string, f: (s: store.MnemeStore, meta: any) => Promise<T> | T): Promise<T | number> {
   if (!(await git.isGitRepo(cwd))) {
@@ -110,7 +119,7 @@ function daysAgoFromIso(iso: string): string {
 
 export interface DecisionsOptions {
   cwd: string;
-  format?: "table" | "markdown" | "json";
+  format?: "table" | "markdown" | "json" | "obsidian";
   out?: string;
   since?: string;
   minConfidence?: number;
@@ -147,6 +156,17 @@ export async function decisionsCommand(opts: DecisionsOptions): Promise<number> 
     } else {
       process.stdout.write(md);
     }
+    return 0;
+  }
+
+  if (opts.format === "obsidian") {
+    const vaultPath = opts.out ?? "./mneme-vault";
+    const files = insights.decisionsToVault(decisions);
+    writeVault(vaultPath, files);
+    ui.success(
+      `Wrote Obsidian vault to ${vaultPath} — ${files.length} notes (${decisions.length} decisions)`,
+    );
+    ui.dim(`    open in Obsidian:  File → Open vault as folder → ${vaultPath}`);
     return 0;
   }
 
@@ -323,6 +343,8 @@ export interface StoryOptions {
   topic: string;
   json?: boolean;
   noLlm?: boolean;
+  /** When set, write the story to an Obsidian vault folder instead of stdout. */
+  obsidianOut?: string;
 }
 
 export async function storyCommand(opts: StoryOptions): Promise<number> {
@@ -343,6 +365,38 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
 
   if (opts.json) {
     process.stdout.write(JSON.stringify(story, null, 2) + "\n");
+    return 0;
+  }
+
+  // Obsidian vault export — write a single .md note instead of terminal render.
+  if (opts.obsidianOut) {
+    // Optional: pass LLM summaries when LLM is available + we have content.
+    const cfg = readConfig(opts.cwd);
+    let summaries: Map<number, string> | undefined;
+    if (!isNoLlm(opts.noLlm, cfg) && story.totalCommits >= 2) {
+      try {
+        const enricher = await resolveEnricher({
+          provider: cfg.embeddings.provider === "openai" ? "openai" : "ollama",
+          model: cfg.embeddings.model,
+        });
+        summaries = new Map();
+        for (let i = 0; i < story.acts.length; i++) {
+          try {
+            const s = await narrateAct(enricher, opts.topic, story.acts[i]!.commits);
+            if (s) summaries.set(i, s);
+          } catch {
+            /* skip act */
+          }
+        }
+      } catch {
+        summaries = undefined;
+      }
+    }
+    const files = insights.storyToVault(story, summaries);
+    writeVault(opts.obsidianOut, files);
+    ui.success(
+      `Wrote story "${opts.topic}" to ${opts.obsidianOut} — ${files.length} note(s)`,
+    );
     return 0;
   }
 

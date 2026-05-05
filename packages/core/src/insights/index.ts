@@ -13,3 +13,4 @@ export * from "./stack-trace.js";
 export * from "./story.js";
 export * from "./dream.js";
 export * from "./suggest.js";
+export * from "./obsidian.js";
