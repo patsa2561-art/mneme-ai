@@ -53,9 +53,11 @@ Local-first by default. Nothing leaves your machine unless you ask.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## L2.5 · Five things **only Mneme** can do
+## L2.5 · Ten things **only Mneme** can do
 
-Other tools show diffs, blame, and search. Mneme answers questions about your repo's *past*, *present*, and *future*. These five commands have no equivalent elsewhere:
+Other tools show diffs, blame, and search. Mneme answers questions about your repo's *past*, *present*, and *future*. We surveyed the whole landscape (Gource, code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT) before shipping these — every one of them occupies real whitespace.
+
+The first five (v0.11) tell you what *was*. The next five (v0.12 — *King of Git*) tell you who *is* and what's coming *next*.
 
 ---
 
@@ -188,7 +190,7 @@ Analyzes a contributor's commit patterns to learn their style, then "channels" t
 
 ---
 
-### 5 · 📡  `mneme echo "<idea>"` *(coming v0.12.0)* — déjà vu detector for rewrites
+### 5 · 📡  `mneme echo "<idea>"` *(roadmap)* — déjà vu detector for rewrites
 
 Catches the moment you start re-attempting the same kind of change you've tried before — and tells you what happened the previous times.
 
@@ -207,6 +209,160 @@ Catches the moment you start re-attempting the same kind of change you've tried 
 ```
 
 > **Unique because:** pattern recurrence detection — the moment you're about to repeat a mistake, Mneme catches it.
+
+---
+
+### 6 · 🧬  `mneme dna [author]` — *exportable fingerprint of a contributor's style*  ✨ v0.12.0
+
+Other tools show snapshots ("here's their code style today"). DNA extracts a portable signature from *history* — style, hours, message DNA, file affinity — and packages it as JSON you can share or compare.
+
+```text
+🧬  Codebase DNA — alice@example.com
+═══════════════════════════════════════════════════════════════
+  847 commits  ·  2024-03-12 → 2026-05-05  ·  hash a3f9b21
+
+  ✦ Style genome
+    files/commit ........ 3
+    test ratio .......... 67%
+    conventional commits  92%
+
+  ✦ Message DNA
+    avg subject length .. 47 chars
+    imperative ratio .... 94%
+    top verbs ........... add×312  fix×87  refactor×54
+
+  ✦ Working hours (UTC)
+    peak window ......... 14:00–18:00
+    weekend ratio ....... 6%
+
+  ✦ File affinity
+    38%  src/payments
+    21%  src/auth
+    14%  src/api
+
+  ✦ Compatibility vs bob@example.com
+    overall ............. 74%
+    style ............... 81%
+    message ............. 79%
+    hours ............... 65%
+    files ............... 70%
+```
+
+> **Unique because:** HowYouCode is snapshot-only. Hercules tracks ownership churn but no fingerprint export. **Nobody ships portable, history-derived, comparable per-developer DNA.**
+
+---
+
+### 7 · 📈  `mneme drift` — *topical evolution of a repo over time*  ✨ v0.12.0
+
+Buckets every commit into quarters (or months), classifies each as feature / refactor / firefight / polish / docs, then plots the trajectory as a colored sparkline. Auto-detects burnout, recovery, and rewrite clusters.
+
+```text
+📈  Commit Drift — topical evolution
+═══════════════════════════════════════════════════════════════
+
+  ◆ Trajectory  (quarter)
+
+    2024-Q1   ████████░░   62 commits  FEATURE
+    2024-Q2   ███████░░░   48 commits  FEATURE
+    2024-Q3   ░░▓▓▓▓▓▓▓░   31 commits  FIREFIGHT  ⚠
+    2024-Q4   ░░░▓▓▓▓▓▓▓   28 commits  FIREFIGHT
+    2025-Q1   █▓▓▓▓░░░░░   42 commits  REFACTOR
+    2025-Q2   ████████░░   58 commits  FEATURE
+
+  ✦ Insights
+    • 2024-Q2 → 2024-Q3   firefight ratio jumped 12% → 71% — burnout signal.
+    • 2024-Q4 → 2025-Q1   recovery — fires fell 71% → 18%.
+```
+
+> **Unique because:** academic papers cluster commits semantically but never ship. Mneme is the first CLI that does it.
+
+---
+
+### 8 · 📖  `mneme chronicle` — *narrative documentary of your codebase*  ✨ v0.12.0
+
+Auto-detects significant epochs, names each chapter ("The Founding", "The Great Refactor", "The Reckoning"), identifies the protagonist, emits Markdown ready for PDF/EPUB export.
+
+```text
+📖  Chronicles of Your Codebase
+═══════════════════════════════════════════════════════════════
+  847 commits  ·  792 days  ·  6 chapters
+
+  Chapter 1 · The Founding
+    2024-03-12 → 2024-05-04  (53d, 87 commits)  protagonist: @alice
+    subtitle: scaffold session middleware
+
+  Chapter 2 · The Great Refactor
+    2024-08-14 → 2024-10-22  (69d, 142 commits)  protagonist: @alice
+    subtitle: switch from sessions to JWT after rate-limit incident #482
+
+  Chapter 3 · The Reckoning
+    2024-10-23 → 2024-11-30  (38d, 67 commits)  protagonist: @bob
+    subtitle: hotfix: token refresh race condition
+
+  ✓ Markdown chronicle written to CHRONICLE.md
+```
+
+`mneme chronicle --output CHRONICLE.md` exports the full narrative as markdown. Convert to PDF or EPUB to print/share.
+
+> **Unique because:** no tool generates novel-format codebase histories. Documentation tools describe code; chronicles describe its *journey*.
+
+---
+
+### 9 · 🔮  `mneme oracle` — *predict next-window co-edits + collisions*  ✨ v0.12.0
+
+From recent commits, builds a recency-weighted author × file affinity matrix and projects probabilities for the next window. Surfaces predicted *collisions* — two authors both likely to touch the same file — so teams can sync before merge-conflicting.
+
+```text
+🔮  Oracle — predicted next-window co-edits
+═══════════════════════════════════════════════════════════════
+  283 commits in window
+
+  ⚠ Predicted collisions
+
+    src/auth/session.ts
+      alice ⨯ bob   joint P = 56%
+      last joint touch: 4d ago
+
+    src/payments/charge.ts
+      bob ⨯ charlie   joint P = 38%
+
+  ◆ Top file predictions
+
+    src/api/handler.ts
+      alice                 67%
+      bob                   23%
+      charlie               10%
+```
+
+> **Unique because:** Microsoft's MergeBERT (research) predicts conflicts but isn't shipped. Mneme ships it as a CLI today.
+
+---
+
+### 10 · 🌌  `mneme constellation` — *graph view of your codebase*  ✨ v0.12.0
+
+Build a graph where files are stars (size = touches), authors are orbital bodies, and commits are edges. Co-edit edges connect files committed together. JSON exportable; **WebGL viewer is on the v1.0 roadmap.**
+
+```text
+🌌  Codebase Constellation — graph view of your repo
+═══════════════════════════════════════════════════════════════
+  247 file-stars  ·  8 orbitals  ·  142 co-edit edges  ·  6 clusters
+
+  ◆ Brightest stars (most-touched files)
+    ████████  src/payments/charge.ts  (87×)
+    ███████░  src/auth/session.ts  (62×)
+    ██████░░  src/api/handler.ts  (54×)
+
+  ◆ Closest orbitals (most-active authors)
+    ████████  alice  (412 commits)
+    ██████░░  bob  (287 commits)
+    ████░░░░  charlie  (148 commits)
+
+  ◆ Strongest co-edit edges (files often committed together)
+    34×  src/auth/session.ts ⟷ src/auth/jwt.ts
+    28×  src/payments/charge.ts ⟷ src/payments/refund.ts
+```
+
+> **Unique because:** Gource is animated 2.5D but post-hoc and dead. 3ource (its three.js clone) was abandoned in 2014. Mneme ships the data layer first; the WebGL viewer comes next.
 
 ═══════════════════════════════════════════════════════════════════════════════
 

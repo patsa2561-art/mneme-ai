@@ -8,6 +8,86 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.12.0] — 2026-05-05
+
+The **"King of Git"** release. Five new world-first commands, each
+addressing a question that no other tool can answer about your
+codebase's past, present, or future. After landscape research (Gource,
+code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT) confirmed each
+one occupies whitespace.
+
+### Added — five killer commands
+
+- **`mneme dna [author]`** — extract a portable, exportable **Codebase
+  DNA** fingerprint of any contributor: their style genome (file-per-
+  commit, test ratio, conventional commit ratio), message DNA (subject
+  length, imperative ratio, top verbs), working hours (UTC histogram,
+  peak window, weekend ratio), and file affinity (top dirs, top
+  extensions). Includes `--compare <author>` for two-way DNA similarity
+  scoring and `--output <file>` for JSON export. **No other tool ships
+  history-derived, comparable, exportable per-developer fingerprints.**
+  13 tests.
+- **`mneme drift`** — visualize **topical drift** of a repo over time
+  (default: quarter buckets). Classifies each commit as feature /
+  refactor / firefight / polish / docs / other, then plots the per-
+  bucket distribution as a colored sparkline. Detects burnout signals,
+  recovery, rewrite clusters, and polish streaks. **NLP-grade commit
+  classification has been published in academic papers but never
+  shipped as a CLI before.** 13 tests.
+- **`mneme chronicle`** — auto-generate a **chaptered narrative
+  documentary** of your codebase. Detects natural epochs, names each
+  chapter ("The Founding", "The Great Refactor", "The Reckoning"),
+  identifies the protagonist (top contributor), and emits Markdown
+  ready to convert to PDF / EPUB. `--output CHRONICLE.md` writes the
+  novel. 10 tests.
+- **`mneme oracle`** — **predictive co-edit oracle**. From the recent
+  window of commits, builds a recency-weighted author × file affinity
+  matrix, then projects probabilities for the next window. Surfaces
+  predicted *collisions* (two authors both likely to touch the same
+  file) so teams can sync before they merge-conflict. **MergeBERT
+  research stopped at the paper; Mneme ships the productized version.**
+  8 tests.
+- **`mneme constellation`** — build a **graph view of the repo** as a
+  living map: files are stars (size = touches), authors are orbital
+  bodies, commits are edges. Includes co-edit edges between files
+  committed together and authorship edges between authors and the files
+  they orbit. JSON exportable for the planned WebGL viewer
+  (`mneme constellation --serve` in v1.0). 9 tests.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| DNA | 13 |
+| Drift | 13 |
+| Chronicle | 10 |
+| Oracle | 8 |
+| Constellation | 9 |
+| **Total new in v0.12** | **53** |
+| Repo total | 697 |
+
+Build clean. All 697 tests pass.
+
+### Numbers — what's now in Mneme
+
+| Surface | Count |
+|---------|-------|
+| Tier-1 essentials | 8 |
+| Insight commands | 16 |
+| Quant commands | 10 |
+| WILD commands | 11 |
+| MCP tools | 7 |
+
+## [0.11.1] — 2026-05-05
+
+Maintenance release for MCP Registry publish:
+
+- Added `mcpName` field to `mneme-ai` package.json
+  (`io.github.patsa2561-art/mneme-ai`) for npm verification.
+- Added `server.json` manifest at repo root for `mcp-publisher`.
+- **Mneme is now live in the official MCP Registry**:
+  https://registry.modelcontextprotocol.io/
+
 ## [0.11.0] — 2026-05-05
 
 The "Time Loops & Ghosts" release. Three new world-first commands that

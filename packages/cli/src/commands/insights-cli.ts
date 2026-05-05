@@ -1350,3 +1350,308 @@ function truncateOneLine(s: string, n: number): string {
   const oneLine = s.replace(/\s+/g, " ").trim();
   return oneLine.length <= n ? oneLine : oneLine.slice(0, n - 1).trimEnd() + "…";
 }
+
+// ─── v0.12 KING OF GIT — DNA / Drift / Chronicle / Oracle / Constellation ─
+
+function pctV12(r: number): string {
+  return `${Math.round(r * 100)}%`;
+}
+
+function topAuthorOf(commits: Commit[]): string | null {
+  const counts = new Map<string, number>();
+  for (const c of commits) {
+    const k = c.authorEmail || c.authorName;
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let bestN = -1;
+  for (const [k, n] of counts) {
+    if (n > bestN) { bestN = n; best = k; }
+  }
+  return best;
+}
+
+// dna ────────────────────────────────────────────────────────────────────
+export interface DnaOptions {
+  cwd: string;
+  author?: string;
+  compare?: string;
+  output?: string;
+  json?: boolean;
+}
+
+export async function dnaCommand(opts: DnaOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    const author = opts.author ?? topAuthorOf(commits);
+    if (!author) return null;
+    const dna = insights.extractDna(commits, author);
+    let comparison: ReturnType<typeof insights.compareDna> | null = null;
+    if (opts.compare) {
+      const other = insights.extractDna(commits, opts.compare);
+      comparison = insights.compareDna(dna, other);
+    }
+    return { author, dna, comparison };
+  });
+  if (typeof result === "number") return result;
+  if (!result) {
+    ui.error("No commits found in this repo. Run `mneme index` first.");
+    return 1;
+  }
+  const { author, dna, comparison } = result;
+
+  if (opts.output) {
+    writeFileSync(opts.output, JSON.stringify(dna, null, 2));
+  }
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({ dna, comparison }, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🧬  Codebase DNA — " + author)}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(String(dna.commitCount))} commits  ·  ${kleur.gray(dna.fromDate + " → " + dna.toDate)}  ·  hash ${kleur.cyan(dna.hash)}\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Style genome")}\n`);
+  process.stdout.write(`    files/commit ........ ${kleur.bold(String(dna.style.filesPerCommit))}\n`);
+  process.stdout.write(`    test ratio .......... ${kleur.bold(pctV12(dna.style.testRatio))}\n`);
+  process.stdout.write(`    issue refs .......... ${kleur.bold(pctV12(dna.style.issueRefRatio))}\n`);
+  process.stdout.write(`    conventional commits  ${kleur.bold(pctV12(dna.style.conventionalRatio))}\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Message DNA")}\n`);
+  process.stdout.write(`    avg subject length .. ${kleur.bold(String(dna.message.avgSubjectLength))} chars\n`);
+  process.stdout.write(`    imperative ratio .... ${kleur.bold(pctV12(dna.message.imperativeRatio))}\n`);
+  process.stdout.write(`    body provided ....... ${kleur.bold(pctV12(dna.message.bodyRatio))}\n`);
+  if (dna.message.topVerbs.length > 0) {
+    process.stdout.write(`    top verbs ........... ${dna.message.topVerbs.map((v) => kleur.cyan(v.verb) + kleur.gray("×" + v.count)).join("  ")}\n`);
+  }
+  process.stdout.write("\n");
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Working hours (UTC)")}\n`);
+  process.stdout.write(`    peak window ......... ${kleur.bold(dna.hours.peakWindow)}\n`);
+  process.stdout.write(`    weekend ratio ....... ${kleur.bold(pctV12(dna.hours.weekendRatio))}\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ File affinity")}\n`);
+  for (const d of dna.files.topDirs.slice(0, 3)) {
+    process.stdout.write(`    ${kleur.gray(pctV12(d.share).padStart(5))}  ${d.dir}\n`);
+  }
+  process.stdout.write("\n");
+
+  if (comparison) {
+    process.stdout.write(`  ${kleur.bold().magenta("✦ Compatibility vs " + (opts.compare || "?"))}\n`);
+    process.stdout.write(`    overall ............. ${kleur.bold(pctV12(comparison.similarity))}\n`);
+    for (const a of comparison.axes) {
+      process.stdout.write(`    ${a.axis.padEnd(18, ".")} ${kleur.gray(pctV12(a.similarity))}\n`);
+    }
+    process.stdout.write("\n");
+  }
+  if (opts.output) {
+    process.stdout.write(`  ${kleur.green("✓")} DNA strand written to ${kleur.cyan(opts.output)}\n\n`);
+  }
+  return 0;
+}
+
+// drift ──────────────────────────────────────────────────────────────────
+export interface DriftOptions {
+  cwd: string;
+  granularity?: "quarter" | "month";
+  json?: boolean;
+}
+
+export async function driftCommand(opts: DriftOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildDrift(commits, { granularity: opts.granularity ?? "quarter" });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("📈  Commit Drift — topical evolution")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  if (result.buckets.length === 0) {
+    process.stdout.write(`  ${kleur.yellow("✗")} No commits to analyze.\n\n`);
+    return 0;
+  }
+
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Trajectory")}  ${kleur.gray("(" + result.granularity + ")")}\n\n`);
+  for (const b of result.buckets) {
+    const dom = renderDriftKind(b.dominant);
+    const meter = renderDriftMeter(b);
+    process.stdout.write(`    ${kleur.gray(b.label.padEnd(8))}  ${meter}  ${kleur.bold(String(b.total).padStart(3))} commits  ${dom}\n`);
+  }
+  process.stdout.write("\n");
+
+  if (result.insights.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("✦ Insights")}\n`);
+    for (const ins of result.insights) {
+      process.stdout.write(`    ${kleur.bold("•")} ${kleur.gray(ins.fromBucket + " → " + ins.toBucket)}  ${ins.description}\n`);
+    }
+    process.stdout.write("\n");
+  }
+  return 0;
+}
+
+function renderDriftKind(kind: string): string {
+  switch (kind) {
+    case "feature": return kleur.green("FEATURE  ");
+    case "refactor": return kleur.magenta("REFACTOR ");
+    case "firefight": return kleur.red("FIREFIGHT");
+    case "polish": return kleur.blue("POLISH   ");
+    case "docs": return kleur.cyan("DOCS     ");
+    default: return kleur.gray("OTHER    ");
+  }
+}
+
+function renderDriftMeter(b: { byKind: Record<string, number>; total: number }): string {
+  const w = 10;
+  const order = ["feature", "refactor", "firefight", "polish", "docs", "other"];
+  const colors: Record<string, (s: string) => string> = {
+    feature: kleur.green,
+    refactor: kleur.magenta,
+    firefight: kleur.red,
+    polish: kleur.blue,
+    docs: kleur.cyan,
+    other: kleur.gray,
+  };
+  let out = "";
+  let visible = 0;
+  for (const k of order) {
+    const n = b.byKind[k] ?? 0;
+    const blocks = Math.round((n / Math.max(1, b.total)) * w);
+    if (blocks > 0) {
+      out += colors[k]!("█".repeat(blocks));
+      visible += blocks;
+    }
+  }
+  out += "░".repeat(Math.max(0, w - visible));
+  return out;
+}
+
+// chronicle ──────────────────────────────────────────────────────────────
+export interface ChronicleOptions {
+  cwd: string;
+  output?: string;
+  gapDays?: number;
+  json?: boolean;
+}
+
+export async function chronicleCommand(opts: ChronicleOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildChronicle(commits, { gapDays: opts.gapDays ?? 30 });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  if (opts.output) {
+    const md = insights.renderChronicle(result);
+    writeFileSync(opts.output, md);
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("📖  Chronicles of Your Codebase")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(String(result.totalCommits))} commits  ·  ${kleur.bold(String(result.totalDays))} days  ·  ${kleur.bold(String(result.chapters.length))} chapters\n\n`);
+  for (const ch of result.chapters) {
+    process.stdout.write(`  ${kleur.bold().magenta("Chapter " + ch.number + " · " + ch.title)}\n`);
+    process.stdout.write(`    ${kleur.gray(ch.fromDate + " → " + ch.toDate)}  ${kleur.gray("(" + ch.spanDays + "d, " + ch.commits.length + " commits)")}  protagonist: ${kleur.cyan("@" + ch.protagonist)}\n`);
+    process.stdout.write(`    ${kleur.gray("subtitle:")} ${ch.subtitle}\n\n`);
+  }
+  if (opts.output) {
+    process.stdout.write(`  ${kleur.green("✓")} Markdown chronicle written to ${kleur.cyan(opts.output)}\n\n`);
+  }
+  return 0;
+}
+
+// oracle ─────────────────────────────────────────────────────────────────
+export interface OracleOptions {
+  cwd: string;
+  windowDays?: number;
+  topN?: number;
+  json?: boolean;
+}
+
+export async function oracleCommand(opts: OracleOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildOracle(commits, { windowDays: opts.windowDays ?? 90 });
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Oracle — predicted next-window co-edits")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(`  ${kleur.bold(String(result.windowCommits))} commits in window\n\n`);
+
+  if (result.collisions.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("⚠ Predicted collisions")}\n\n`);
+    for (const c of result.collisions.slice(0, opts.topN ?? 5)) {
+      process.stdout.write(`    ${kleur.bold(c.filePath)}\n`);
+      process.stdout.write(`      ${kleur.cyan(c.authorA)} ⨯ ${kleur.cyan(c.authorB)}  joint P = ${kleur.bold(pctV12(c.jointProbability))}\n`);
+      if (c.daysSinceLastJointTouch >= 0) {
+        process.stdout.write(`      ${kleur.gray("last joint touch: " + c.daysSinceLastJointTouch + "d ago")}\n`);
+      }
+      process.stdout.write("\n");
+    }
+  } else {
+    process.stdout.write(`  ${kleur.gray("(no high-probability collisions detected)")}\n\n`);
+  }
+
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Top file predictions")}\n\n`);
+  for (const p of result.predictions.slice(0, opts.topN ?? 8)) {
+    process.stdout.write(`    ${kleur.bold(p.filePath)}\n`);
+    for (const cand of p.candidates) {
+      process.stdout.write(`      ${kleur.cyan(cand.author.padEnd(20))}  ${pctV12(cand.probability)}\n`);
+    }
+    process.stdout.write("\n");
+  }
+  return 0;
+}
+
+// constellation ──────────────────────────────────────────────────────────
+export interface ConstellationOptions {
+  cwd: string;
+  output?: string;
+  json?: boolean;
+}
+
+export async function constellationCommand(opts: ConstellationOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    return insights.buildConstellation(commits);
+  });
+  if (typeof result === "number") return result;
+
+  if (opts.output) {
+    writeFileSync(opts.output, JSON.stringify(result, null, 2));
+  }
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🌌  Codebase Constellation — graph view of your repo")}\n`);
+  process.stdout.write(`  ${divider()}\n`);
+  process.stdout.write(insights.renderConstellationAscii(result) + "\n");
+  if (opts.output) {
+    process.stdout.write(`\n  ${kleur.green("✓")} Graph JSON written to ${kleur.cyan(opts.output)}\n`);
+  }
+  process.stdout.write("\n");
+  return 0;
+}

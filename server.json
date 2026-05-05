@@ -2,17 +2,17 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.patsa2561-art/mneme-ai",
   "title": "Mneme",
-  "description": "The memory layer of your codebase. Indexes git history + code + decisions, exposes them via MCP so AI coding assistants can answer 'why does this code exist?' with real context. Hybrid retrieval (BM25 + cosine + RRF), local-first SQLite, optional Ollama or OpenAI embeddings. MIT licensed.",
+  "description": "Memory layer for AI coding assistants. Indexes git history + code, exposes via MCP.",
   "repository": {
     "url": "https://github.com/patsa2561-art/mneme-ai",
     "source": "github"
   },
-  "version": "0.11.1",
+  "version": "0.12.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mneme-ai",
-      "version": "0.11.1",
+      "version": "0.12.0",
       "transport": {
         "type": "stdio"
       },

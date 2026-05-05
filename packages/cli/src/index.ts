@@ -39,6 +39,11 @@ import {
   timeMachineCommand,
   premortemCommand,
   ghostCommand,
+  dnaCommand,
+  driftCommand,
+  chronicleCommand,
+  oracleCommand,
+  constellationCommand,
 } from "./commands/insights-cli.js";
 import {
   drawdownCommand,
@@ -730,6 +735,89 @@ export async function run(argv: string[]): Promise<void> {
           cwd: process.cwd(),
           topN: opts.top,
           staleDays: opts.staleDays,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  // ─── v0.12.0: King of Git ─ DNA / Drift / Chronicle / Oracle / Constellation
+  program
+    .command("dna [author]")
+    .description("Extract Codebase DNA — a portable fingerprint of a contributor's style, hours, and file affinity")
+    .option("--compare <author>", "compare DNA against another author")
+    .option("-o, --output <file>", "write DNA strand to JSON file")
+    .option("--json", "machine-readable output", false)
+    .action(async (author: string | undefined, opts: any) => {
+      process.exit(
+        await dnaCommand({
+          cwd: process.cwd(),
+          author,
+          compare: opts.compare,
+          output: opts.output,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("drift")
+    .description("Visualize topical drift — features → refactors → firefights → polish over time")
+    .option("--granularity <quarter|month>", "bucket size", "quarter")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await driftCommand({
+          cwd: process.cwd(),
+          granularity: opts.granularity,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("chronicle")
+    .description("Auto-generate a chaptered narrative documentary of your codebase")
+    .option("-o, --output <file>", "write Markdown chronicle to file (e.g. CHRONICLE.md)")
+    .option("--gap-days <n>", "minimum gap to start a new chapter", (v) => Number(v), 30)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await chronicleCommand({
+          cwd: process.cwd(),
+          output: opts.output,
+          gapDays: opts.gapDays,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("oracle")
+    .description("Predict next-window co-edits and surface likely author collisions on the same file")
+    .option("--window-days <n>", "lookback window in days", (v) => Number(v), 90)
+    .option("--top <n>", "show N predictions/collisions", (v) => Number(v), 8)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await oracleCommand({
+          cwd: process.cwd(),
+          windowDays: opts.windowDays,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  program
+    .command("constellation")
+    .description("Build a graph view of the repo — files as stars, authors as orbitals, commits as edges")
+    .option("-o, --output <file>", "write graph JSON to file")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await constellationCommand({
+          cwd: process.cwd(),
+          output: opts.output,
           json: opts.json,
         }),
       ),
