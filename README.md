@@ -165,6 +165,155 @@ The AI now has tools:
 
 ---
 
+## More you can do — what each command actually outputs
+
+The 12-second teaser at the top showed `mneme ask`. Here's what the other six killer commands do, with real output recorded against this very repo.
+
+### `mneme doctor` — smart environment probe
+
+Answers *"Do I need to install Ollama on this laptop?"* in 2 seconds. Detects what's there, recommends the best embedder for your hardware.
+
+```
+  Environment probe
+    hardware   95GB RAM · 24 cpus · win32/x64 (strong)
+    ollama     reachable · embed model NOT pulled
+    openai     no key
+
+  Recommendation ollama ★★★★☆
+    Ollama is running but the embedding model is not pulled.
+    → ollama pull nomic-embed-text
+```
+
+### `mneme who-knows <topic>` — find the human expert
+
+Surfaces the people most likely to know about a topic, ranked by `log(commits) × recency`. Onboarding gold.
+
+```
+  👤  Top experts on  "stripe"
+
+  ⭐ definitive   alice@example.com
+      23 commits · 47 files · last touch 8d ago · score 4.21
+  ●  active      bob@example.com
+      8 commits · 12 files · last touch 3w ago · score 2.10
+  ◐  stale       charlie@example.com
+      14 commits · 22 files · last touch 7mo ago · score 1.04
+```
+
+### `mneme decisions` — auto-extract architectural decisions (ADRs)
+
+Regex-extracts decisions from commit messages — *"decided to X because Y"*, *"switched from A to B"*, *"replaced X with Y"*, and 6 more patterns. Captures the *rationale* clause too. Drop straight into `docs/ADR.md`.
+
+```
+  📜  Architecture Decisions  (extracted from 12 commits)
+
+  ● 2024-09-12  alice         switched from passport to custom JWT middleware
+      → compliance flagged session token storage
+      [switched, conf=0.90, a1b2c3d]
+
+  ● 2024-08-12  bob           decided to handle BigInt amounts as strings
+      → Stripe occasionally sends bigint, Number() overflows past 2^53
+      [decided-to, conf=0.95, e4f5g6h]
+```
+
+Export as Markdown for any docs site:
+
+```bash
+mneme decisions --format markdown --out docs/ADR.md
+```
+
+…or as a wiki-linked **Obsidian vault** (frontmatter + tags + author hubs):
+
+```bash
+mneme decisions --format obsidian --out my-vault/
+```
+
+### `mneme story <topic>` — narrate the evolution across acts
+
+Groups every commit on a topic into acts (initial · refactor · incident · evolution · stable) with date ranges. Optional Ollama narration adds a 1-2 sentence prose summary per act.
+
+```
+  📖  The auth Story  (4 acts, 14 commits, 387 days)
+
+  Act I — The Beginning  (2024-03-04 → 2024-03-04)
+    ● a1b2c3d 2024-03-04  feat(auth): scaffold passport.js OAuth flow
+
+  Act II — The Refactor  (2024-09-12 → 2024-11-08)
+    ● f4e5d6c 2024-09-12  refactor: switch from passport to custom middleware
+    ● 9b8a7c6 2024-10-15  refactor: short-lived JWT + refresh rotation
+    ● ...
+
+  Act III — Incidents Strike  (2024-11-15 → 2024-11-22)
+    ● 2d3e4f5 2024-11-15  hotfix: missing CSRF in new auth flow (INC-1287)
+
+  Act IV — Steady Evolution  (2024-12-01 → 2025-04-15)
+    ● 1a2b3c4 2024-12-01  feat: audit log on every login
+    ● ...
+```
+
+### `mneme dream` — speculative ideas grounded in your codebase patterns
+
+Reads your repo's signals (entity count, pattern suffixes like *Service / Adapter*, top modules) and proposes features that would fit your style. Each idea cites the existing pattern it would mirror.
+
+```
+  🔮  Speculative ideas based on your codebase patterns  (source: heuristic)
+
+  Signals: 18 commits · 409 entities · 2 languages
+
+  1. OptionsRegistry  [effort: small · risk: low]
+    You have 47 entities ending in "Options". A central registry would
+    make discovery and DI cleaner; the pattern is already pervasive.
+    Precedents: Options entities (47×)
+
+  2. PackagesCliHealthCheck  [effort: small · risk: low]
+    Your largest module (packages/cli, 166 entities) has no central
+    health check. A small module-level diagnostic would catch silent
+    regressions early.
+    Precedents: packages/cli
+```
+
+### `mneme stack-trace` — paste an error, get historical context
+
+Pipe a stack trace in. Mneme parses each frame (JS/TS/Python/Go/Java) and reports the recent commits + past incidents at each location.
+
+```bash
+echo "TypeError: Cannot read property 'amount' of undefined
+    at parseAmount (src/payment.ts:42:15)
+    at processCharge (src/payment.ts:78:9)" | mneme stack-trace
+```
+
+```
+  🎯  Stack analysis  (js, 2 frames)
+
+  Frame 1: src/payment.ts:42 (parseAmount)
+    Last commits:
+      ● a1b2c3d [2024-08-12 · alice]  Fix Stripe webhook crash on amount=BigInt
+      ● f8e7d6c [2024-03-04 · bob]    Initial Stripe integration
+    ⚠  2 past incident(s) affected this file.
+
+  Likely root cause: check the most recent commit at the top frame.
+  For a deeper walk: mneme palimpsest src/payment.ts:42
+```
+
+### `mneme chat` — multi-turn REPL over your repo
+
+Conversational mode. Each turn carries the previous question's context, so follow-ups work naturally. `/save <file>` saves the transcript as Markdown.
+
+```
+  💬  Mneme chat  (multi-turn over your repo's history)
+  type your question · /exit to quit · /clear to wipe history · /save <file>
+
+  › why does the webhook handler retry?
+  [renders full ask answer with evidence]
+
+  › who wrote that retry logic?
+  [augmented query — uses prior turn for context]
+
+  › /save chat.md
+    ✓ saved transcript to chat.md
+```
+
+---
+
 ## Install
 
 Three ways to get Mneme on your machine. Pick the one that matches what you want to do.
