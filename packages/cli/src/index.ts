@@ -18,12 +18,6 @@ import {
   fossilCommand,
   ledgerCommand,
 } from "./commands/wild-features.js";
-import {
-  oracleCommand,
-  genomeCommand,
-  dialogueCommand,
-  tributeCommand,
-} from "./commands/wild-stubs.js";
 import { conscienceCommand } from "./commands/conscience.js";
 import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
@@ -36,7 +30,13 @@ export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.8.4");
+    .version("0.9.0")
+    .addHelpText(
+      "after",
+      "\n" +
+        "Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.\n" +
+        "Run `mneme advanced` to see them.\n",
+    );
 
   program
     .command("init")
@@ -132,7 +132,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("correlate")
+    .command("correlate", { hidden: true })
     .description("Correlate incidents with commits (pager / manual JSON)")
     .option("--source <kind>", "incident source: pager | manual")
     .option("--org <slug>", "org slug (with --source pager)")
@@ -172,14 +172,14 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("entities")
+    .command("entities", { hidden: true })
     .description("Phase 2 — parse and embed every function/class/type in tracked TS/JS files")
     .action(async () => {
       process.exit(await entitiesCommand({ cwd: process.cwd() }));
     });
 
   program
-    .command("clones")
+    .command("clones", { hidden: true })
     .description("Phase 2 — find semantic clones (functions doing the same thing)")
     .option("-t, --threshold <n>", "cosine threshold (0..1), default 0.85", (v) => Number(v))
     .option("-N, --top <n>", "show top-N clusters, default 20", (v) => Number(v), 20)
@@ -196,7 +196,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("heal")
+    .command("heal", { hidden: true })
     .description("Synthesize WHY notes for commits with poor messages (turns bad history into searchable memory)")
     .option("--max <n>", "max commits to heal in this run", (v) => Number(v), 100)
     .option("--subject-min-len <n>", "subjects shorter than this are candidates", (v) => Number(v), 20)
@@ -221,7 +221,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("wisdom")
+    .command("wisdom", { hidden: true })
     .description("Print a meditation from the Mneme manifesto (rotates daily)")
     .option("-n, --num <n>", "show a specific meditation by number (1..13)", (v) => Number(v))
     .option("--all", "print every meditation", false)
@@ -231,7 +231,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("manifesto")
+    .command("manifesto", { hidden: true })
     .description("Print the full Mneme manifesto — every meditation, in order")
     .option("--json", "machine-readable JSON output", false)
     .action(async (opts: { json?: boolean }) => {
@@ -241,7 +241,7 @@ export async function run(argv: string[]): Promise<void> {
   // ─── WILD ideas — see WILD_IDEAS.md ───
 
   program
-    .command("echo")
+    .command("echo", { hidden: true })
     .description("WILD #2 — find past incidents that resemble the current one")
     .option("--id <id>", "stored incident id (e.g. \"sentry:12345\")")
     .option("--query <text>", "freeform incident description")
@@ -260,7 +260,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("palimpsest <target>")
+    .command("palimpsest <target>", { hidden: true })
     .description("WILD #5 — render the causal chain of a single line of code")
     .option("--max-depth <n>", "how deep to walk the chain", (v) => Number(v), 8)
     .option("--json", "machine-readable output", false)
@@ -276,7 +276,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("runaway")
+    .command("runaway", { hidden: true })
     .description("WILD #14 — files that have grown silently across many commits")
     .option("--top <n>", "show top-N", (v) => Number(v), 15)
     .option("--json", "machine-readable output", false)
@@ -287,7 +287,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("mirror")
+    .command("mirror", { hidden: true })
     .description("WILD #13 — onboarding dossier (5 PRs, 3 people, 2 incidents)")
     .option("--top-prs <n>", "top PRs", (v) => Number(v), 5)
     .option("--top-people <n>", "top contributors", (v) => Number(v), 3)
@@ -306,7 +306,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("rumor")
+    .command("rumor", { hidden: true })
     .description("WILD #12 — tribal phrases mentioned in commits but no doc explains")
     .option("--min-mentions <n>", "phrase must appear in this many commits", (v) => Number(v), 4)
     .option("--json", "machine-readable output", false)
@@ -321,7 +321,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("fossil")
+    .command("fossil", { hidden: true })
     .description("WILD #10 — files deleted from HEAD but still alive in git history")
     .option("--top <n>", "show top-N", (v) => Number(v), 20)
     .option("--json", "machine-readable output", false)
@@ -332,7 +332,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("ledger")
+    .command("ledger", { hidden: true })
     .description("WILD #3 — tamper-evident audit log for compliance (SOX/SOC2)")
     .option("--since <iso>", "start date")
     .option("--until <iso>", "end date")
@@ -350,17 +350,8 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
-  // ─── Stubs (planned features — print design when invoked) ───
-
   program
-    .command("oracle", { hidden: true })
-    .description("WILD #4 — historical risk analysis on a snippet (planned)")
-    .action(async () => {
-      process.exit(await oracleCommand());
-    });
-
-  program
-    .command("conscience [files...]")
+    .command("conscience [files...]", { hidden: true })
     .description("WILD #6 — review co-pilot: risk-score a PR against your repo's own history")
     .option("--diff-file <path>", "read a unified diff from this file")
     .option("--stdin", "read a unified diff from stdin", false)
@@ -382,7 +373,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("blast <commit>")
+    .command("blast <commit>", { hidden: true })
     .description("Predict incidents likely to follow shipping <commit> (blast radius)")
     .option("--window-hours <n>", "post-deploy window for base rate", (v) => Number(v), 48)
     .option("--json", "machine-readable output", false)
@@ -398,7 +389,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("adapt")
+    .command("adapt", { hidden: true })
     .description("Mutant mode — inspect this repo and recommend the next 1-3 commands")
     .option("--json", "machine-readable output", false)
     .action(async (opts: any) => {
@@ -407,7 +398,7 @@ export async function run(argv: string[]): Promise<void> {
 
   // ─── Wisdom Mutant Engine (Phase 4) ───
   program
-    .command("feedback <id-or-prefix> <vote>")
+    .command("feedback <id-or-prefix> <vote>", { hidden: true })
     .description("Wisdom Mutant — record feedback on a previous `mneme ask` (vote: up | down)")
     .action(async (idOrPrefix: string, vote: string) => {
       if (vote !== "up" && vote !== "down") {
@@ -418,7 +409,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("calibrate")
+    .command("calibrate", { hidden: true })
     .description("Wisdom Mutant — re-tune search knobs against accumulated feedback")
     .option("--json", "machine-readable output", false)
     .action(async (opts: any) => {
@@ -443,7 +434,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("genius <question...>")
+    .command("genius <question...>", { hidden: true })
     .description("AI agent — plans and runs multi-step Mneme workflows to answer hard questions")
     .option("--max-steps <n>", "cap on tool steps in the plan", (v) => Number(v), 4)
     .option("--provider <kind>", "auto | ollama | openai", "auto")
@@ -467,7 +458,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("teach <target>")
+    .command("teach <target>", { hidden: true })
     .description("Explain a folder or file in plain language (layer classification + LLM summary)")
     .option("--provider <kind>", "auto | ollama | openai", "auto")
     .option("--model <name>", "override model name")
@@ -487,43 +478,10 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   program
-    .command("genome", { hidden: true })
-    .description("WILD #9 — codebase fingerprint + ancestry (planned)")
-    .action(async () => {
-      process.exit(await genomeCommand());
-    });
-
-  program
-    .command("dialogue", { hidden: true })
-    .description("WILD #11 — conversational chat over your repo (planned)")
-    .action(async () => {
-      process.exit(await dialogueCommand());
-    });
-
-  program
-    .command("tribute", { hidden: true })
-    .description("WILD #15 — your codebase as a 60-sec movie (planned)")
-    .action(async () => {
-      process.exit(await tributeCommand());
-    });
-
-  program
-    .command("planned", { hidden: true })
-    .description("List planned-but-unshipped commands (oracle, genome, dialogue, tribute)")
-    .action(async () => {
-      process.stdout.write([
-        "",
-        "  Planned commands (design pages, not yet implemented):",
-        "",
-        "    oracle    — historical risk analysis on a snippet",
-        "    genome    — codebase fingerprint + ancestry",
-        "    dialogue  — conversational chat over your repo",
-        "    tribute   — your codebase as a 60-second movie",
-        "",
-        "  Run any of them to see the full design page.",
-        "  See WILD_IDEAS.md for the catalog of 17+ ideas (11 shipped).",
-        "",
-      ].join("\n"));
+    .command("advanced")
+    .description("Show advanced commands grouped by phase (hidden from main --help)")
+    .action(() => {
+      process.stdout.write(renderAdvancedHelp());
       process.exit(0);
     });
 
@@ -539,4 +497,46 @@ export async function run(argv: string[]): Promise<void> {
     ui.error((err as Error).message);
     process.exit(1);
   }
+}
+
+function renderAdvancedHelp(): string {
+  return [
+    "",
+    "  μνήμη  ·  Mneme — advanced commands",
+    "  ─────────────────────────────────────────────────────────────",
+    "",
+    "  Phase 2 — semantic similarity",
+    "    entities                  parse + embed every TS/JS/Python/Go symbol",
+    "    clones [--threshold]      surface near-duplicate functions",
+    "",
+    "  Phase 3 — incident correlation",
+    "    correlate --source ...    join commits with incidents (pager / manual)",
+    "    blast <commit>            predict incidents likely to follow a commit",
+    "    palimpsest <file>:<line>  walk the causal chain of a single line",
+    "    conscience [files...]     risk-score a PR against history",
+    "",
+    "  Wisdom Mutant Engine (Phase 4)",
+    "    feedback <id> up|down     record explicit feedback on a query",
+    "    calibrate                 re-tune search knobs against feedback set",
+    "",
+    "  WILD — opinionated extras",
+    "    heal [--dry-run]          synthesize WHY notes for poor commit messages",
+    "    echo [--id|--query]       find past incidents resembling current",
+    "    runaway                   files growing silently across many commits",
+    "    mirror                    onboarding dossier (5 PRs, 3 people, 2 incidents)",
+    "    rumor                     tribal phrases mentioned but never documented",
+    "    fossil                    files deleted from HEAD but alive in history",
+    "    ledger --since ...        tamper-evident audit log (SOX/SOC2)",
+    "    adapt                     mutant detector — recommend next 1-3 commands",
+    "    teach <target>            explain a folder/file in plain language",
+    "    genius <question>         multi-step LLM agent over Mneme commands",
+    "",
+    "  Brand",
+    "    wisdom [-n <1..13>]       a meditation from the Mneme manifesto",
+    "    manifesto                 the full canon",
+    "",
+    "  Each command has its own --help with options and examples.",
+    "  Full design notes: WILD_IDEAS.md, ROADMAP.md.",
+    "",
+  ].join("\n");
 }

@@ -200,7 +200,7 @@ cd /path/to/your/repo
 mneme init
 mneme index
 mneme ask "..."
-mneme --help        # see all 23 commands
+mneme --help        # 8 essentials. `mneme advanced` for the rest.
 ```
 
 To upgrade later: `npm install -g mneme-ai@latest`

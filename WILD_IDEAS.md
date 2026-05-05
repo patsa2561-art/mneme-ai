@@ -26,20 +26,22 @@ The number after each idea is its scoping pessimism: 1 = ships next sprint, 5 = 
 | 1 | `mneme heal` | ✅ shipped (v0.4) |
 | 2 | `mneme echo` | ✅ shipped (v0.5) |
 | 3 | `mneme ledger` | ✅ shipped (v0.5) — hash-chained audit log |
-| 4 | `mneme oracle` | 🚧 design only |
+| 4 | ~~`mneme oracle`~~ | ❌ removed in v0.9 (was a design page; no real impl planned) |
 | 5 | `mneme palimpsest` | ✅ shipped (v0.5) |
 | 6 | `mneme conscience` | ✅ shipped (v0.6) |
 | 7 | `mneme prophecy` | 🔬 research |
 | 8 | `mneme constellation` | 🔬 research (needs hosted) |
-| 9 | `mneme genome` | 🚧 design only |
+| 9 | ~~`mneme genome`~~ | ❌ removed in v0.9 |
 | 10 | `mneme fossil` | ✅ shipped (v0.5) |
-| 11 | `mneme dialogue` | 🚧 design only |
+| 11 | ~~`mneme dialogue`~~ | ❌ removed in v0.9 |
 | 12 | `mneme rumor` | ✅ shipped (v0.5) |
 | 13 | `mneme mirror` | ✅ shipped (v0.5) |
 | 14 | `mneme runaway` | ✅ shipped (v0.5) |
-| 15 | `mneme tribute` | 🚧 design only |
+| 15 | ~~`mneme tribute`~~ | ❌ removed in v0.9 |
 
-**Nine of fifteen ideas are now real working CLI commands.** The four marked 🚧 print thoughtful design pages when invoked — not lorem-ipsum stubs. Two are research-grade (need ML models or hosted infrastructure). Plus two bonus ideas shipped beyond the original list: ⭐ `mneme teach` and ⭐ `mneme adapt` (the mutant detector).
+**Nine of eleven shippable ideas are now real working CLI commands** (the other 2 are research-grade — needs ML models or hosted infra). Plus two bonus ideas shipped beyond the original list: ⭐ `mneme teach` and ⭐ `mneme adapt` (the mutant detector). Plus the entire ⭐ Wisdom Mutant Engine (`feedback`, `calibrate`, `watch`).
+
+**Removed in v0.9:** four stub commands (`oracle`, `genome`, `dialogue`, `tribute`) were design pages with no near-term implementation. Maintaining "coming soon" stubs is dead code; they're gone. If they ship later, they ship as new commands.
 
 ---
 

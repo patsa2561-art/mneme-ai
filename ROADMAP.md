@@ -47,7 +47,7 @@ Real codebases are not uniform. Mneme is honest about that:
 | **2 — Semantic similarity** | `entities`, `clones`, TS/JS entity parser, cosine clone detector | ✅ shipped |
 | **3 — Error correlation** | `correlate`, `blast`, `palimpsest`; pager / Datadog / GitHub-Actions / manual adapters | ✅ shipped |
 | **4 — Temporal viz** | `mneme web` — live D3 force layout, timeline scrubber, click-to-inspect, SQLite-backed `/api/graph` | ✅ shipped |
-| **WILD ideas** | `heal`, `echo`, `mirror`, `rumor`, `runaway`, `fossil`, `ledger`, `teach`, `conscience` | ✅ 9 of 15 shipped — see [WILD_IDEAS.md](./WILD_IDEAS.md) |
+| **WILD ideas** | `heal`, `echo`, `mirror`, `rumor`, `runaway`, `fossil`, `ledger`, `teach`, `conscience`, `palimpsest` | ✅ 9 of 11 shippable shipped (4 stubs removed in v0.9) — see [WILD_IDEAS.md](./WILD_IDEAS.md) |
 | **Mutant** | `adapt` — repo profile + recommendations | ✅ shipped |
 
 **Beyond v0.7:** team-shared cache, IDE extensions, and a few research-grade ideas — all detailed below.
@@ -175,22 +175,23 @@ Detailed in [WILD_IDEAS.md](./WILD_IDEAS.md). Status as of v0.7.0:
 | 1 | `mneme heal` | ✅ shipped |
 | 2 | `mneme echo` | ✅ shipped |
 | 3 | `mneme ledger` | ✅ shipped — hash-chained audit log |
-| 4 | `mneme oracle` | 🚧 design page |
+| 4 | ~~`mneme oracle`~~ | ❌ removed in v0.9 |
 | 5 | `mneme palimpsest` | ✅ shipped |
 | 6 | `mneme conscience` | ✅ shipped |
 | 7 | `mneme prophecy` | 🔬 research (needs ML model) |
 | 8 | `mneme constellation` | 🔬 research (needs hosted infra) |
-| 9 | `mneme genome` | 🚧 design page |
+| 9 | ~~`mneme genome`~~ | ❌ removed in v0.9 |
 | 10 | `mneme fossil` | ✅ shipped |
-| 11 | `mneme dialogue` | 🚧 design page |
+| 11 | ~~`mneme dialogue`~~ | ❌ removed in v0.9 |
 | 12 | `mneme rumor` | ✅ shipped |
 | 13 | `mneme mirror` | ✅ shipped |
 | 14 | `mneme runaway` | ✅ shipped |
-| 15 | `mneme tribute` | 🚧 design page |
-| ⭐ | `mneme teach` (UA-inspired) | ✅ shipped |
+| 15 | ~~`mneme tribute`~~ | ❌ removed in v0.9 |
+| ⭐ | `mneme teach` | ✅ shipped |
 | ⭐ | `mneme adapt` (mutant) | ✅ shipped |
+| ⭐ | `mneme feedback` / `calibrate` / `watch` (Wisdom Mutant) | ✅ shipped v0.9 |
 
-**11 of 17 ideas now shipped as real CLI commands.** The 4 marked 🚧 print thoughtful design pages with implementation plans, not lorem-ipsum stubs. Two are research-grade.
+**11 of 13 active ideas shipped + 3 bonus ideas (Wisdom Mutant family).** Two are research-grade and would need new infrastructure. Four "coming soon" stubs were removed in v0.9 — maintaining dead code is not honest. If they ship later, they ship for real.
 
 ---
 
