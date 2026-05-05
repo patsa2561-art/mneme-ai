@@ -130,3 +130,50 @@ export function tierOf(commitCount: number, lastTouchIso: string, now: Date): Ex
   if (daysAgo > STALE_DAYS) return "stale";
   return "occasional";
 }
+
+/**
+ * Verdict-shaped summary built from the full candidate list. Surfaces the
+ * single most likely person to ask + a confidence percentage + a fallback
+ * recommendation, instead of letting the user scan a list of names.
+ */
+export interface ExpertVerdict {
+  /** The single most likely expert (or undefined when no candidates). */
+  topExpert?: ExpertCandidate;
+  /** Confidence percentage 0..100 — share of total commits attributed to the top. */
+  confidencePct: number;
+  /** Backup expert if the top is stale or has insufficient share. */
+  backup?: ExpertCandidate;
+  /** A 1-line risk note when the top expert is stale or shares too thinly. */
+  risk?: string;
+  /** Total commits matched across all candidates (sum of commitCount). */
+  totalCommits: number;
+}
+
+export function whoKnowsVerdict(candidates: ExpertCandidate[]): ExpertVerdict {
+  if (candidates.length === 0) {
+    return { confidencePct: 0, totalCommits: 0 };
+  }
+  const sorted = [...candidates].sort((a, b) => b.score - a.score);
+  const top = sorted[0]!;
+  const total = candidates.reduce((s, c) => s + c.commitCount, 0);
+  const pct = total === 0 ? 0 : Math.round((top.commitCount / total) * 100);
+  const backup = sorted[1];
+
+  let risk: string | undefined;
+  if (top.tier === "stale") {
+    risk = `Top expert is STALE — last touched ${formatDaysAgo(top.lastTouch)} ago. Consider asking ${backup?.name ?? "someone with recent activity"} instead.`;
+  } else if (pct < 30 && candidates.length >= 3) {
+    risk = `No single dominant expert — ${candidates.length} people share the work. Knowledge is well-distributed but no one will know everything.`;
+  } else if (top.commitCount === 1) {
+    risk = "Top expert touched the topic only once — treat as weak signal.";
+  }
+
+  return { topExpert: top, confidencePct: pct, backup, risk, totalCommits: total };
+}
+
+function formatDaysAgo(iso: string): string {
+  const d = (Date.now() - new Date(iso).getTime()) / 86_400_000;
+  if (d < 30) return `${Math.round(d)}d`;
+  if (d < 365) return `${Math.round(d / 30)}mo`;
+  return `${(d / 365).toFixed(1)}y`;
+}

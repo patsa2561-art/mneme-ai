@@ -75,21 +75,55 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("👤  Top experts on")}  ${kleur.bold(`"${opts.topic}"`)}\n\n`);
+  const verdict = insights.whoKnowsVerdict(candidates);
 
-  if (candidates.length === 0) {
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({ topic: opts.topic, verdict, candidates }, null, 2) + "\n");
+    return 0;
+  }
+
+  // ─── Header ────────────────────────────────────────────────────────────
+  process.stdout.write(`\n  ${kleur.bold().cyan("👤  Who knows about")}  ${kleur.bold(`"${opts.topic}"`)}\n`);
+  process.stdout.write(`  ${kleur.gray("══════════════════════════════════════════════════════════")}\n\n`);
+
+  if (candidates.length === 0 || !verdict.topExpert) {
     process.stdout.write(`  ${kleur.gray(`No commits matched "${opts.topic}". Try a broader topic.`)}\n\n`);
     return 0;
   }
 
-  for (const c of candidates) {
-    const tier = renderTier(c.tier);
-    const lastTouchAge = daysAgoFromIso(c.lastTouch);
-    process.stdout.write(`  ${tier}  ${kleur.bold(c.name)}  ${kleur.gray(`<${c.email}>`)}\n`);
+  // ─── VERDICT (the answer the user is here for) ─────────────────────────
+  const top = verdict.topExpert;
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
+  process.stdout.write(
+    `    ${kleur.bold(top.name)}  ${kleur.gray(`<${top.email}>`)}\n`,
+  );
+  process.stdout.write(
+    `    ${kleur.cyan(verdict.confidencePct + "%")} confidence — ${top.commitCount} of ${verdict.totalCommits} relevant commits\n`,
+  );
+  process.stdout.write(
+    `    last touch ${kleur.bold(daysAgoFromIso(top.lastTouch))} ago · ${top.filesTouched} files · ${renderTier(top.tier)}\n`,
+  );
+  if (verdict.risk) {
+    process.stdout.write(`\n    ${kleur.yellow("⚠ ")}${kleur.yellow(verdict.risk)}\n`);
+  }
+  if (verdict.backup) {
     process.stdout.write(
-      `      ${kleur.gray(`${c.commitCount} commits · ${c.filesTouched} files · last touch ${lastTouchAge} ago · score ${c.score.toFixed(2)}`)}\n\n`,
+      `\n    ${kleur.gray("backup:")} ${kleur.bold(verdict.backup.name)} ${kleur.gray(`(${verdict.backup.commitCount} commits, last touch ${daysAgoFromIso(verdict.backup.lastTouch)} ago)`)}\n`,
     );
   }
+
+  // ─── All candidates ───────────────────────────────────────────────────
+  if (candidates.length > 1) {
+    process.stdout.write(`\n  ${kleur.bold().magenta("◆ All candidates")}  ${kleur.gray(`(${candidates.length})`)}\n\n`);
+    for (const c of candidates) {
+      const tier = renderTier(c.tier);
+      process.stdout.write(`    ${tier}  ${kleur.bold(c.name)}  ${kleur.gray(`<${c.email}>`)}\n`);
+      process.stdout.write(
+        `        ${kleur.gray(`${c.commitCount} commits · ${c.filesTouched} files · last touch ${daysAgoFromIso(c.lastTouch)} ago · score ${c.score.toFixed(2)}`)}\n`,
+      );
+    }
+  }
+  process.stdout.write("\n");
   return 0;
 }
 
@@ -671,6 +705,380 @@ export async function chatCommand(opts: ChatOptions): Promise<number> {
 
   process.stdout.write(`\n  ${kleur.gray(`bye — ${transcript.length} turn(s) recorded`)}\n\n`);
   return 0;
+}
+
+// ─── divider helper — used across all insights output ─────────────────
+
+const DIV_WIDTH = 64;
+function divider(label = ""): string {
+  if (!label) return kleur.gray("═".repeat(DIV_WIDTH));
+  const padded = `═══ ${label} `;
+  const tail = "═".repeat(Math.max(4, DIV_WIDTH - padded.length));
+  return kleur.gray(padded + tail);
+}
+
+// ─── regret ─────────────────────────────────────────────────────────────
+
+export interface RegretOptions {
+  cwd: string;
+  windowDays?: number;
+  json?: boolean;
+}
+
+export async function regretCommand(opts: RegretOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    const regrets = insights.detectRegrets(commits, { windowDays: opts.windowDays ?? 7 });
+    const summary = insights.summarizeRegrets(commits, regrets);
+    return { regrets, summary };
+  });
+  if (typeof result === "number") return result;
+  const { regrets, summary } = result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({ regrets, summary }, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("😬  Regrets — what we shipped and immediately fixed")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+
+  // Verdict
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(
+    `    ${kleur.bold(String(summary.totalRegrets))} regrets across ${kleur.bold(String(summary.totalShipped))} shipped commits  ${kleur.gray(`(rate: ${(summary.regretRate * 100).toFixed(1)}%)`)}\n`,
+  );
+  if (summary.totalRegrets > 0) {
+    process.stdout.write(`    average days-to-fix: ${kleur.bold(summary.averageDaysToFix.toFixed(1))}\n`);
+    const breakdown = Object.entries(summary.byKind)
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${k}: ${n}`)
+      .join(" · ");
+    if (breakdown) process.stdout.write(`    ${kleur.gray("breakdown: " + breakdown)}\n`);
+  }
+
+  if (regrets.length === 0) {
+    process.stdout.write(`\n  ${kleur.green("✓")} No regrets detected — clean shipping history.\n\n`);
+    return 0;
+  }
+
+  // Listing
+  process.stdout.write(`\n  ${kleur.bold().magenta("◆ Recent regrets")}  ${kleur.gray(`(showing ${Math.min(20, regrets.length)} of ${regrets.length})`)}\n\n`);
+  for (const r of regrets.slice(0, 20)) {
+    const kindBadge = renderRegretKind(r.kind);
+    const shippedHash = r.shipped.shortHash || r.shipped.hash.slice(0, 7);
+    const followupHash = r.followup.shortHash || r.followup.hash.slice(0, 7);
+    process.stdout.write(`    ${kindBadge}  shipped ${kleur.bold(r.shipped.authorDate.slice(0, 10))}  ${kleur.gray("→ fixed in " + r.daysToFix + "d")}\n`);
+    process.stdout.write(`        ${kleur.cyan(shippedHash)}  ${kleur.bold(r.shipped.subject)}\n`);
+    process.stdout.write(`        ${kleur.gray("↳ " + followupHash + "  " + r.followup.subject)}\n`);
+    if (r.lesson) process.stdout.write(`        ${kleur.gray("lesson: " + r.lesson)}\n`);
+    process.stdout.write("\n");
+  }
+  return 0;
+}
+
+function renderRegretKind(kind: string): string {
+  switch (kind) {
+    case "revert":
+      return kleur.red().bold("REVERT  ");
+    case "hotfix":
+      return kleur.yellow().bold("HOTFIX  ");
+    case "fix":
+      return kleur.cyan().bold("FIX     ");
+    default:
+      return kleur.gray().bold("similar ");
+  }
+}
+
+// ─── bus-factor ─────────────────────────────────────────────────────────
+
+export interface BusFactorOptions {
+  cwd: string;
+  topN?: number;
+  minTouches?: number;
+  json?: boolean;
+}
+
+export async function busFactorCommand(opts: BusFactorOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    return insights.busFactor(s, { topN: opts.topN ?? 20, minTouches: opts.minTouches ?? 3 });
+  });
+  if (typeof result === "number") return result;
+  const risks = result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({ risks }, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🚨  Bus-factor risks — knowledge fragility")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+
+  if (risks.length === 0) {
+    process.stdout.write(`  ${kleur.green("✓")} No high-risk files detected — knowledge is well distributed.\n\n`);
+    return 0;
+  }
+
+  const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+  for (const r of risks) counts[r.tier] += 1;
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(
+    `    ${kleur.red().bold(String(counts.critical))} critical  ·  ${kleur.yellow().bold(String(counts.high))} high  ·  ${kleur.cyan().bold(String(counts.medium))} medium  ·  ${kleur.gray(counts.low + " low")}\n\n`,
+  );
+
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Files at risk")}  ${kleur.gray(`(top ${risks.length})`)}\n\n`);
+  for (const r of risks) {
+    const tier = renderBusFactorTier(r.tier);
+    process.stdout.write(`    ${tier}  ${kleur.bold(r.filePath)}\n`);
+    process.stdout.write(
+      `        ${kleur.bold(r.topOwner.name)} ${kleur.gray(`<${r.topOwner.email}>`)}  ${kleur.cyan(r.topOwner.sharePct + "%")}  ${kleur.gray(`(${r.topOwner.touches} of ${r.totalTouches} commits)`)}\n`,
+    );
+    if (r.backup) {
+      process.stdout.write(`        ${kleur.gray(`backup: ${r.backup.name} (${r.backup.touches} commits)`)}\n`);
+    }
+    process.stdout.write(`        ${kleur.gray("→ " + r.recommendation)}\n\n`);
+  }
+  return 0;
+}
+
+function renderBusFactorTier(tier: string): string {
+  switch (tier) {
+    case "critical":
+      return kleur.red().bold("CRITICAL");
+    case "high":
+      return kleur.yellow().bold("HIGH    ");
+    case "medium":
+      return kleur.cyan().bold("MEDIUM  ");
+    default:
+      return kleur.gray().bold("LOW     ");
+  }
+}
+
+// ─── paradox ────────────────────────────────────────────────────────────
+
+export interface ParadoxOptions {
+  cwd: string;
+  json?: boolean;
+}
+
+export async function paradoxCommand(opts: ParadoxOptions): Promise<number> {
+  const result = await withStore(opts.cwd, (s) => {
+    const commits = util.loadAllCommits(s);
+    const decisions = commits.flatMap(insights.extractDecisions);
+    return insights.detectParadoxes(decisions);
+  });
+  if (typeof result === "number") return result;
+  const flipFlops = result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({ flipFlops }, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🌀  Paradoxes — architectural flip-flops")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+
+  if (flipFlops.length === 0) {
+    process.stdout.write(`  ${kleur.green("✓")} No flip-flops detected. Either the team is consistent, or commit messages are too thin to extract decisions.\n\n`);
+    return 0;
+  }
+
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(`    ${kleur.bold(String(flipFlops.length))} topic(s) flip-flopped over time\n\n`);
+
+  for (const f of flipFlops) {
+    process.stdout.write(`  ${divider("topic: " + f.topic)}\n`);
+    process.stdout.write(
+      `    ${kleur.bold(String(f.flips))} reversal${f.flips === 1 ? "" : "s"}  ${kleur.gray(`over ${f.spanMonths} months · ${f.chain.length} decisions`)}\n\n`,
+    );
+    for (const d of f.chain) {
+      process.stdout.write(
+        `    ${kleur.gray("●")} ${kleur.bold(d.date)}  ${kleur.cyan(d.shortHash)}  ${d.summary}  ${kleur.gray(`(${d.author})`)}\n`,
+      );
+    }
+    process.stdout.write(`\n    ${kleur.yellow("→ ")}${kleur.yellow(f.question)}\n\n`);
+  }
+  return 0;
+}
+
+// ─── commit-coach ───────────────────────────────────────────────────────
+
+export interface CommitCoachOptions {
+  cwd: string;
+  diffFile?: string;
+  fromStdin?: boolean;
+  json?: boolean;
+  noLlm?: boolean;
+}
+
+export async function commitCoachCommand(opts: CommitCoachOptions): Promise<number> {
+  // Read the diff: from file, stdin, or `git diff --staged`.
+  let diffText = "";
+  if (opts.diffFile) {
+    try {
+      diffText = readFileSync(opts.diffFile, "utf8");
+    } catch (err) {
+      ui.error(`Cannot read ${opts.diffFile}: ${(err as Error).message}`);
+      return 1;
+    }
+  } else if (opts.fromStdin) {
+    diffText = await readStdin();
+  } else {
+    // Default: shell out to git diff --staged
+    try {
+      const { spawnSync } = await import("node:child_process");
+      const r = spawnSync("git", ["diff", "--staged"], { cwd: opts.cwd, encoding: "utf8" });
+      if (r.status === 0) diffText = r.stdout;
+    } catch {
+      // git not available — let user know
+    }
+  }
+  if (!diffText.trim()) {
+    ui.error("No staged diff. Pass --from <file>, --stdin, or `git add` something first.");
+    return 1;
+  }
+
+  const result = await withStore(opts.cwd, (s) => insights.coach(s, diffText));
+  if (typeof result === "number") return result;
+  const advice = result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(advice, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🪶  Commit coach — pre-commit review")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+
+  // Diff section
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Diff")}\n\n`);
+  process.stdout.write(
+    `    ${kleur.bold(String(advice.diff.files.length))} file(s)  ·  ${kleur.green("+" + advice.diff.added)} ${kleur.red("-" + advice.diff.removed)}  ·  shape: ${kleur.cyan(advice.diff.shape)}\n`,
+  );
+  for (const m of advice.diff.modules.slice(0, 5)) process.stdout.write(`    ${kleur.gray("·")} ${m}\n`);
+  process.stdout.write("\n");
+
+  // Suggested message
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Suggested commit message")}\n\n`);
+  process.stdout.write(`    ${kleur.bold(advice.suggestedSubject)}\n\n`);
+
+  // Reviewers
+  if (advice.reviewers.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("◆ Reviewers")}  ${kleur.gray("(top experts on touched files)")}\n\n`);
+    for (const r of advice.reviewers) {
+      process.stdout.write(
+        `    ${kleur.cyan("●")} ${kleur.bold(r.name)} ${kleur.gray(`<${r.email}>`)}  ${kleur.cyan(r.ownership + "%")}  ${kleur.gray(`(${r.ownedFiles.length} owned files)`)}\n`,
+      );
+    }
+    process.stdout.write("\n");
+  }
+
+  // Scope
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Scope")}\n\n`);
+  process.stdout.write(`    ${advice.scopeOK ? kleur.green("✓") : kleur.yellow("⚠")} ${advice.scopeMessage}\n\n`);
+
+  // Warnings
+  if (advice.warnings.length > 0) {
+    process.stdout.write(`  ${kleur.bold().magenta("⚠ Past warnings")}\n\n`);
+    for (const w of advice.warnings) {
+      process.stdout.write(`    ${kleur.yellow("⚠ ")}${kleur.yellow(w.pattern)}\n`);
+      process.stdout.write(`        ${kleur.gray(`${w.pastDate} · ${w.pastCommitHash} · ${w.outcome}`)}\n\n`);
+    }
+  } else {
+    process.stdout.write(`  ${kleur.green("✓")} ${kleur.gray("No past-regret warnings for these files.")}\n\n`);
+  }
+  return 0;
+}
+
+// ─── crystal-ball ───────────────────────────────────────────────────────
+
+export interface CrystalBallOptions {
+  cwd: string;
+  diffFile?: string;
+  fromStdin?: boolean;
+  windowDays?: number;
+  json?: boolean;
+}
+
+export async function crystalBallCommand(opts: CrystalBallOptions): Promise<number> {
+  // Same diff-acquisition pattern as commit-coach.
+  let diffText = "";
+  if (opts.diffFile) {
+    try {
+      diffText = readFileSync(opts.diffFile, "utf8");
+    } catch (err) {
+      ui.error(`Cannot read ${opts.diffFile}: ${(err as Error).message}`);
+      return 1;
+    }
+  } else if (opts.fromStdin) {
+    diffText = await readStdin();
+  } else {
+    try {
+      const { spawnSync } = await import("node:child_process");
+      const r = spawnSync("git", ["diff", "--staged"], { cwd: opts.cwd, encoding: "utf8" });
+      if (r.status === 0) diffText = r.stdout;
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!diffText.trim()) {
+    ui.error("No staged diff. Pass --from <file>, --stdin, or `git add` something first.");
+    return 1;
+  }
+
+  const result = await withStore(opts.cwd, (s) =>
+    insights.predict(s, diffText, opts.windowDays ?? 14),
+  );
+  if (typeof result === "number") return result;
+  const p = result;
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(p, null, 2) + "\n");
+    return 0;
+  }
+
+  ui.banner();
+  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Crystal ball — CI / follow-up failure prediction")}\n`);
+  process.stdout.write(`  ${divider()}\n\n`);
+
+  // Verdict
+  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
+  process.stdout.write(`    ${renderCrystalBallVerdict(p.verdict)}  ${kleur.cyan((p.pClean * 100).toFixed(0) + "%")} clean rate  ${kleur.gray(`(${p.cleanN}/${p.similarN} similar past changes)`)}\n\n`);
+
+  // Fingerprint
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Diff fingerprint")}\n\n`);
+  process.stdout.write(`    modules:  ${p.fingerprint.modules.join(", ") || kleur.gray("(none)")}\n`);
+  process.stdout.write(`    extensions: ${p.fingerprint.extensions.join(", ") || kleur.gray("(none)")}\n`);
+  process.stdout.write(`    shape:    ${kleur.cyan(p.fingerprint.shape)} · ${p.fingerprint.size} · tests ${p.fingerprint.hasTests ? "yes" : "no"}\n\n`);
+
+  // Most-similar
+  if (p.mostSimilar) {
+    const outcome = p.mostSimilar.outcome === "clean" ? kleur.green("clean") : kleur.red("trouble");
+    process.stdout.write(`  ${kleur.bold().magenta("◆ Most similar past change")}\n\n`);
+    process.stdout.write(`    ${kleur.bold(p.mostSimilar.hash)}  ${kleur.gray(p.mostSimilar.date)}  ${p.mostSimilar.subject}\n`);
+    process.stdout.write(`    outcome: ${outcome}\n\n`);
+  }
+
+  process.stdout.write(`  ${kleur.bold().magenta("→ Recommendation")}\n\n`);
+  process.stdout.write(`    ${p.recommendation}\n\n`);
+  return 0;
+}
+
+function renderCrystalBallVerdict(v: string): string {
+  switch (v) {
+    case "clear":
+      return kleur.green().bold("● CLEAR    ");
+    case "moderate":
+      return kleur.yellow().bold("● MODERATE ");
+    case "risky":
+      return kleur.red().bold("● RISKY    ");
+    default:
+      return kleur.gray().bold("○ UNKNOWN  ");
+  }
 }
 
 async function narrateAct(

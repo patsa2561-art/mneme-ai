@@ -47,13 +47,19 @@ export interface SynthesizedAnswer {
 
 const SYNTH_SYSTEM_PROMPT = [
   "You are a senior engineer answering a question about a code repository's history.",
-  "You are given a question and the top-K commits retrieved from the repo's git history.",
-  "Write a 2-4 sentence answer that:",
-  "  • Cites at least one commit hash (short form, 7 chars) using inline backticks.",
-  "  • Says only what the evidence supports — never invent a claim.",
-  "  • If the evidence is thin or contradicts itself, say so plainly.",
-  "  • Avoids filler ('the codebase shows', 'as we can see') and lists.",
-  "Output the answer as plain text, no markdown lists, no headings, no preamble.",
+  "You receive the user's question and the top-K commits retrieved from git.",
+  "",
+  "Write a VERDICT-SHAPED answer:",
+  "  Line 1: A single declarative sentence stating the verdict.",
+  "  Line 2-3: 1-2 sentences of supporting evidence, citing at least one",
+  "            commit hash using `inline backticks`.",
+  "  Optionally line 4: A 1-line caveat IF the evidence is thin.",
+  "",
+  "Strict rules:",
+  "  • Never invent claims. If evidence is contradictory, say \"the evidence is mixed\".",
+  "  • No lists, no markdown headings, no preamble like \"Based on the commits...\".",
+  "  • Don't hedge with \"Possibly\", \"Likely\", \"It seems\" in line 1 — STATE the verdict.",
+  "  • The user already sees the evidence cards below. Don't repeat them.",
 ].join("\n");
 
 /**
@@ -174,29 +180,60 @@ function cleanLlmOutput(text: string): string {
 }
 
 /**
- * Template-based answer — used when no LLM is configured or LLM fails.
- * Honest and short: "Top X matches: PR #N (author, date) — subject."
+ * Template-based VERDICT answer — used when no LLM is configured or LLM fails.
+ * Aggregates results into an actionable summary, not a list of evidence rows.
+ *
+ * Shape:
+ *   Line 1 — verdict ("X did 73% of the work" / "Most relevant commit is `abc`")
+ *   Line 2 — supporting context (date range or top file)
+ *   (Caveat if confidence is low.)
  */
 function extractiveAnswer(
   _question: string,
   results: SearchResult[],
   confidence: ConfidenceLabel,
 ): string {
-  const top = results.slice(0, 3);
-  const parts = top.map((r) => {
-    const hash = r.commit.shortHash || r.commit.hash.slice(0, 7);
-    const date = r.commit.authorDate.slice(0, 10);
-    return `\`${hash}\` (${date}): ${r.commit.subject}`;
-  });
-  const prefix =
-    confidence === "high"
-      ? "The most likely answer is in"
-      : confidence === "medium"
-        ? "Possibly relevant"
-        : "Weakly relevant — please verify";
-  if (top.length === 1) return `${prefix} ${parts[0]}.`;
-  if (top.length === 2) return `${prefix} ${parts[0]} and ${parts[1]}.`;
-  return `${prefix} ${parts[0]}; also ${parts[1]} and ${parts[2]}.`;
+  if (results.length === 0) return "No matching commits found.";
+
+  const top = results[0]!;
+  const topHash = top.commit.shortHash || top.commit.hash.slice(0, 7);
+
+  // Aggregate author distribution.
+  const authors = new Map<string, number>();
+  for (const r of results) {
+    const a = r.commit.authorName;
+    authors.set(a, (authors.get(a) ?? 0) + 1);
+  }
+  const sortedAuthors = [...authors.entries()].sort((a, b) => b[1] - a[1]);
+  const topAuthor = sortedAuthors[0]!;
+  const topAuthorPct = Math.round((topAuthor[1] / results.length) * 100);
+
+  // Date range.
+  const dates = results.map((r) => r.commit.authorDate.slice(0, 10)).sort();
+  const fromDate = dates[0]!;
+  const toDate = dates[dates.length - 1]!;
+  const dateRange = fromDate === toDate ? fromDate : `${fromDate} → ${toDate}`;
+
+  // Verdict line — author-aggregated when one dominates, otherwise commit-first.
+  let verdict: string;
+  if (topAuthorPct >= 60 && results.length >= 3) {
+    verdict = `${topAuthor[0]} authored ${topAuthor[1]} of ${results.length} relevant commits (${topAuthorPct}%) — likely the person to ask.`;
+  } else if (results.length === 1) {
+    verdict = `The single relevant commit is \`${topHash}\` — ${top.commit.subject}.`;
+  } else {
+    verdict = `${results.length} relevant commits across ${sortedAuthors.length} author(s); the strongest match is \`${topHash}\` (${top.commit.authorName}).`;
+  }
+
+  // Supporting line — date range + top commit subject (if not already in verdict).
+  const support = `Range: ${dateRange}. Top: \`${topHash}\` — ${top.commit.subject}.`;
+
+  // Caveat for thin evidence.
+  const caveat =
+    confidence === "low"
+      ? " The evidence is thin — verify before trusting this answer."
+      : "";
+
+  return `${verdict}\n${support}${caveat}`;
 }
 
 /** Honest "no context found" — never returns a result. */

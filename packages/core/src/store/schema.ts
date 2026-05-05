@@ -6,7 +6,7 @@
  * Phase 3 — incidents, correlations
  * Phase 4 — graph_snapshots (for temporal viz)
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -55,11 +55,15 @@ CREATE TABLE IF NOT EXISTS chunks (
 CREATE INDEX IF NOT EXISTS idx_chunks_commit ON chunks(commit_hash);
 CREATE INDEX IF NOT EXISTS idx_chunks_kind ON chunks(kind);
 
+-- FTS5 with trigram tokenizer — works for Thai, CJK, Arabic, and any
+-- non-space-separated language. The tradeoff vs porter is that BM25 is
+-- slightly less precise for English, but the gain in cross-language
+-- coverage is enormous. Also: trigram makes substring search free.
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
   id UNINDEXED,
   commit_hash UNINDEXED,
   text,
-  tokenize = 'porter unicode61'
+  tokenize = 'trigram'
 );
 
 -- Phase 2: entity graph

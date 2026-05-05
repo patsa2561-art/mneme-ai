@@ -38,7 +38,7 @@ const sampleCommit = (over: Partial<Commit> = {}): Commit => ({
 
 describe("MnemeStore — schema + roundtrip", () => {
   it("initializes with schema_version meta key", () => {
-    expect(store.getMeta("schema_version")).toBe("2");
+    expect(store.getMeta("schema_version")).toBe("3");
   });
 
   it("upserts and retrieves a commit losslessly", () => {

@@ -48,31 +48,48 @@ describe("synthesize — no LLM (extractive fallback)", () => {
     expect(r.evidenceCommitHashes).toEqual(["abc1234", "def5678"]);
   });
 
-  it("extractive answer uses different phrasing per confidence level", async () => {
+  it("extractive answer adds a caveat ONLY for low confidence", async () => {
     const high = await synthesize("q", [result("abc1234", 0.05, "subject")], "high");
-    const medium = await synthesize("q", [result("abc1234", 0.05, "subject")], "medium");
     const low = await synthesize("q", [result("abc1234", 0.05, "subject")], "low");
-    expect(high.answer).toContain("most likely");
-    expect(medium.answer.toLowerCase()).toContain("possibly");
     expect(low.answer.toLowerCase()).toContain("verify");
+    expect(high.answer.toLowerCase()).not.toContain("verify");
   });
 
-  it("extractive answer adapts to result count (1, 2, 3+)", async () => {
-    const one = await synthesize("q", [result("abc1234", 0.05, "s1")], "high");
-    const two = await synthesize("q", [result("abc1234", 0.05, "s1"), result("def5678", 0.04, "s2")], "high");
-    const three = await synthesize(
+  it("extractive verdict aggregates by dominant author when ≥60%", async () => {
+    // 3 commits by alice, 1 by bob → alice dominates at 75%
+    const r = await synthesize(
       "q",
       [
-        result("abc1234", 0.05, "s1"),
-        result("def5678", 0.04, "s2"),
-        result("ghi9012", 0.03, "s3"),
+        { commit: { ...sampleCommit("a1", "s1", "", "alice") }, score: 0.05, matchedChunks: [] },
+        { commit: { ...sampleCommit("a2", "s2", "", "alice") }, score: 0.04, matchedChunks: [] },
+        { commit: { ...sampleCommit("a3", "s3", "", "alice") }, score: 0.03, matchedChunks: [] },
+        { commit: { ...sampleCommit("b1", "s4", "", "bob") }, score: 0.02, matchedChunks: [] },
       ],
       "high",
     );
-    expect(one.answer).toContain("abc1234");
-    expect(one.answer).not.toContain("and");
-    expect(two.answer).toContain("and");
-    expect(three.answer).toContain("also");
+    // verdict line names the dominant author + percentage
+    expect(r.answer).toContain("alice");
+    expect(r.answer).toMatch(/75%|75 percent/);
+    expect(r.answer).toContain("likely the person to ask");
+  });
+
+  it("extractive verdict adapts to single-result case", async () => {
+    const r = await synthesize("q", [result("abc1234", 0.05, "subject")], "high");
+    expect(r.answer.toLowerCase()).toContain("single");
+    expect(r.answer).toContain("abc1234");
+  });
+
+  it("extractive verdict reports range when authors are mixed", async () => {
+    const r = await synthesize(
+      "q",
+      [
+        { commit: { ...sampleCommit("a1", "s1", "", "alice") }, score: 0.05, matchedChunks: [] },
+        { commit: { ...sampleCommit("b1", "s2", "", "bob") }, score: 0.04, matchedChunks: [] },
+      ],
+      "high",
+    );
+    // Mixed authors at 2/2 → no dominant majority (≥60% but n<3 short-circuits)
+    expect(r.answer.toLowerCase()).toContain("strongest match");
   });
 });
 

@@ -31,6 +31,11 @@ import {
   storyCommand,
   dreamCommand,
   chatCommand,
+  regretCommand,
+  busFactorCommand,
+  paradoxCommand,
+  commitCoachCommand,
+  crystalBallCommand,
 } from "./commands/insights-cli.js";
 import { ui } from "./ui.js";
 
@@ -583,6 +588,85 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await chatCommand({ cwd: process.cwd(), noLlm: opts.llm === false }));
     });
 
+  // ─── Sprint 4 killer commands ────────────────────────────────────────
+  program
+    .command("regret", { hidden: true })
+    .description("Surface commits that were shipped and immediately fixed/reverted")
+    .option("--window-days <n>", "follow-up window", (v) => Number(v), 7)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await regretCommand({
+          cwd: process.cwd(),
+          windowDays: opts.windowDays,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("bus-factor", { hidden: true })
+    .description("Identify single-source-of-truth knowledge holders + pairing recommendations")
+    .option("-n, --top <n>", "top-N risky files", (v) => Number(v), 20)
+    .option("--min-touches <n>", "ignore files with fewer touches", (v) => Number(v), 3)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await busFactorCommand({
+          cwd: process.cwd(),
+          topN: opts.top,
+          minTouches: opts.minTouches,
+          json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("paradox", { hidden: true })
+    .description("Detect architectural flip-flops (decisions reversed over time)")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(await paradoxCommand({ cwd: process.cwd(), json: opts.json }));
+    });
+
+  program
+    .command("commit-coach", { hidden: true })
+    .description("Pre-commit AI partner — message, reviewers, scope, past warnings")
+    .option("--from <file>", "read diff from file (default: git diff --staged)")
+    .option("--stdin", "read diff from stdin", false)
+    .option("--json", "machine-readable output", false)
+    .option("--no-llm", "skip LLM polish on the suggested message")
+    .action(async (opts: any) => {
+      process.exit(
+        await commitCoachCommand({
+          cwd: process.cwd(),
+          diffFile: opts.from,
+          fromStdin: opts.stdin,
+          json: opts.json,
+          noLlm: opts.llm === false,
+        }),
+      );
+    });
+
+  program
+    .command("crystal-ball", { hidden: true })
+    .description("Predict CI / follow-up failure probability before you push")
+    .option("--from <file>", "read diff from file (default: git diff --staged)")
+    .option("--stdin", "read diff from stdin", false)
+    .option("--window-days <n>", "follow-up window for past failures", (v) => Number(v), 14)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await crystalBallCommand({
+          cwd: process.cwd(),
+          diffFile: opts.from,
+          fromStdin: opts.stdin,
+          windowDays: opts.windowDays,
+          json: opts.json,
+        }),
+      );
+    });
+
   program
     .command("advanced")
     .description("Show advanced commands grouped by phase (hidden from main --help)")
@@ -626,12 +710,19 @@ function renderAdvancedHelp(): string {
     "    calibrate                 re-tune search knobs against feedback set",
     "",
     "  Insights — the killer commands",
-    "    who-knows <topic>         surface humans most likely to know about <topic>",
+    "    who-knows <topic>         verdict on who knows X (% confidence + backup + risk)",
     "    decisions                 auto-extract ADRs from commit messages",
     "    stack-trace [--from F]    paste an error, get historical context per frame",
     "    story <topic>             narrate the evolution of <topic> across acts",
     "    dream                     speculative ideas grounded in your patterns",
     "    chat                      multi-turn REPL over your repo's history",
+    "",
+    "  Innovations (Sprint 4) — wisdom + world-class + uniqueness",
+    "    regret                    commits shipped + immediately fixed/reverted (regret rate)",
+    "    bus-factor                files where one author owns ≥75% — fragility map",
+    "    paradox                   architectural flip-flops (A → B → A patterns)",
+    "    commit-coach [--stdin]    pre-commit review: message + reviewers + warnings",
+    "    crystal-ball [--stdin]    predict CI/follow-up failure probability for staged diff",
     "",
     "  WILD — opinionated extras",
     "    heal [--dry-run]          synthesize WHY notes for poor commit messages",

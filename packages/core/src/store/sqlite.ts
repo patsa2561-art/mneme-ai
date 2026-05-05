@@ -21,7 +21,34 @@ export class MnemeStore {
     this.db.pragma("synchronous = NORMAL");
     this.db.pragma("foreign_keys = ON");
     this.db.exec(SCHEMA_SQL);
+
+    // v2 → v3 migration: FTS5 tokenizer changed from `porter unicode61` to
+    // `trigram` for cross-language support (Thai, CJK, Arabic). Re-create the
+    // FTS table and let the next `mneme index` re-populate from chunks.
+    const previousVersion = Number(this.getMeta("schema_version") ?? "0");
+    if (previousVersion > 0 && previousVersion < 3) {
+      this.migrateFtsToTrigram();
+    }
+
     this.setMeta("schema_version", String(SCHEMA_VERSION));
+  }
+
+  /** Drop + recreate chunks_fts with the new trigram tokenizer, then rebuild from chunks. */
+  private migrateFtsToTrigram(): void {
+    this.db.exec("DROP TABLE IF EXISTS chunks_fts");
+    this.db.exec(`
+      CREATE VIRTUAL TABLE chunks_fts USING fts5(
+        id UNINDEXED,
+        commit_hash UNINDEXED,
+        text,
+        tokenize = 'trigram'
+      );
+    `);
+    // Re-populate from existing chunks rows (no re-embedding needed).
+    this.db.exec(`
+      INSERT INTO chunks_fts (id, commit_hash, text)
+      SELECT id, commit_hash, text FROM chunks
+    `);
   }
 
   close(): void {
