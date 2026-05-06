@@ -21,15 +21,29 @@
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🚀 30-Second Install
+## 🚀 Install — three ways, pick by use case
 
 ```bash
-npx mneme-ai init      # detect best embedder for your hardware
-npx mneme-ai index     # build memory from git history
-npx mneme-ai ask "why does this code exist?"
+# Try once — zero install
+npx -y mneme-ai init
+
+# Daily use — global install (recommended)
+npm install -g mneme-ai
+
+# Contributing / cutting edge
+git clone https://github.com/patsa2561-art/mneme-ai.git
+cd mneme-ai && npm install && npm run build
 ```
 
-That's it. Local SQLite, no signup, no telemetry, MIT licensed.
+After install, the same 60-second flow on any git repo:
+
+```bash
+mneme init                       # creates .mneme/ inside the repo
+mneme index                      # ~90s for 5k commits with Ollama
+mneme ask "why does X exist?"    # query the memory
+```
+
+Local SQLite, no signup, no telemetry, MIT licensed.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -171,12 +185,18 @@ We surveyed every adjacent tool in the landscape:
 ## 🔧 Upgrade
 
 ```bash
-npm i -g mneme-ai@latest    # global install
-# or
-npx mneme-ai@latest <cmd>   # always-fresh
+mneme --version                       # 1. see what you have
+npm install -g mneme-ai@latest        # 2. pull latest
+mneme --version                       # 3. verify
 ```
 
-Re-index after upgrading: `mneme index` (schema migrations are idempotent — your data is safe).
+> If the version doesn't change, open a fresh terminal — your shell is caching the old binary path. On Windows, `npm install -g` writes to `%APPDATA%\npm\` which the parent shell only re-reads on launch.
+
+- **Pin a version** (for reproducible setups): `npm install -g mneme-ai@0.14.0`
+- **Uninstall:** `npm uninstall -g mneme-ai`
+- **npx users:** nothing to upgrade — `npx -y mneme-ai@latest <cmd>` always pulls fresh.
+
+Re-index after upgrading: `mneme index` — schema migrations are idempotent so your data is safe.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
