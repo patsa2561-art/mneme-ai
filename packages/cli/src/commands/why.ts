@@ -41,6 +41,14 @@ export async function whyCommand(opts: WhyOptions): Promise<number> {
     `${kleur.bold(file)}${lineRange}`,
     "Find out who wrote each line + why — combines git blame with semantic search across PRs and commit messages.") + "\n\n");
 
+  // ─── Plain-English reading guide ────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.bold("Originating commits")} ${kleur.gray("= the people who LITERALLY wrote these lines, taken from")} ${kleur.cyan("git blame")}${kleur.gray(".")}\n`);
+  process.stdout.write(`    ${kleur.bold("Semantically related")} ${kleur.gray("= other commits across the WHOLE repo that talk about the same things")}\n`);
+  process.stdout.write(`        ${kleur.gray("(found by Mneme's vector search — useful for backstory, design docs, related fixes).")}\n`);
+  process.stdout.write(`    ${kleur.green("● green dot")}  ${kleur.gray("= commit is in Mneme's index, full message available.")}\n`);
+  process.stdout.write(`    ${kleur.yellow("● yellow dot")} ${kleur.gray("= commit not yet indexed; we showed you what")} ${kleur.cyan("git")} ${kleur.gray("knows. Run")} ${kleur.bold("mneme index")} ${kleur.gray("to fill in.")}\n\n`);
+
   const blamed = await git.blame(meta.rootPath, file, startLine, endLine);
   if (!blamed.length) {
     process.stdout.write(emptyState(
@@ -119,7 +127,7 @@ export async function whyCommand(opts: WhyOptions): Promise<number> {
         };
       } catch {
         // git lookup failed too — render the bare fallback we had before.
-        process.stdout.write(`    ${kleur.yellow("○")} ${kleur.bold(hash.slice(0, 8))}  ${kleur.gray("(unreadable — run `mneme index`)")}\n`);
+        process.stdout.write(`    ${kleur.yellow("○")} ${kleur.bold(hash.slice(0, 8))}  ${kleur.gray("(this commit isn't in Mneme's memory yet — run ")}${kleur.bold("mneme index")}${kleur.gray(" to see its details)")}\n`);
         continue;
       }
     }

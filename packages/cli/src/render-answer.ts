@@ -113,11 +113,15 @@ export function renderAnswer(input: AskRenderInput): string {
   out.push(`  ${kleur.bold().cyan("Q")}  ${kleur.bold(question)}`);
   out.push("");
   out.push(`  ${confidenceBadge(synthesized.confidence)}  ${trustBadge(synthesized.trustScore)}`);
+  out.push(`  ${kleur.gray(humanizeTrustScore(synthesized.trustScore))}`);
   if (synthesized.source === "llm") {
     out.push(`  ${kleur.gray(`synthesized in ${synthesized.durationMs}ms`)}`);
   }
   if (synthesized.source === "audit-refused") {
     out.push(`  ${kleur.red().bold("⊘ AUDIT REFUSED")}`);
+    out.push(`  ${kleur.gray("Mneme is in audit mode and the evidence wasn't strong enough to answer safely.")}`);
+    out.push(`  ${kleur.gray("Refusing here is a feature — it prevents an unverifiable answer from leaking into a CI gate or another agent.")}`);
+    out.push(`  ${kleur.gray("Try again without")} ${kleur.bold("--audit")} ${kleur.gray("to see the best-effort answer with full evidence.")}`);
   }
   // Hallucination warning: cited hashes not in evidence
   if (
@@ -188,6 +192,24 @@ export function renderAnswer(input: AskRenderInput): string {
 }
 
 /** Pure helpers used above and tested directly. */
+
+/** Translate a 0..1 trust score into a one-line plain-English explanation. */
+export function humanizeTrustScore(score: number): string {
+  const pct = Math.round(score * 100);
+  if (score >= 0.85) {
+    return `Mneme has ${pct}% confidence the answer is grounded in the evidence below — safe to act on.`;
+  }
+  if (score >= 0.6) {
+    return `Mneme has ${pct}% confidence the answer is grounded in the evidence below — usually reliable, double-check the citations.`;
+  }
+  if (score >= 0.5) {
+    return `Mneme has ${pct}% confidence — borderline. Read the cited commits before acting on this.`;
+  }
+  if (score >= 0.3) {
+    return `Mneme has only ${pct}% confidence — treat the answer as a hint, not a fact.`;
+  }
+  return `Mneme has ${pct}% confidence — too low to trust. The evidence below is what was actually found; ignore the synthesized answer if it doesn't match.`;
+}
 
 export function truncate(s: string, n: number): string {
   if (s.length <= n) return s;

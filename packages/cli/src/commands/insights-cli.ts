@@ -95,7 +95,7 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
 
   // ─── Header ────────────────────────────────────────────────────────────
   process.stdout.write(header("👤", `Who knows about "${opts.topic}"?`,
-    `Bus-factor analysis · ranked by recency × frequency × file footprint`,
+    `Ranked by recency × frequency × file footprint  (more recent + more touches + more files = higher rank)`,
     `Find the person to ask — and the bus-factor risk if they leave. Use before assigning code reviews or scoping a refactor.`) + "\n\n");
 
   if (candidates.length === 0 || !verdict.topExpert) {
@@ -103,7 +103,7 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
       `No commits matched "${opts.topic}".`,
       [
         "Try a broader topic ('auth' instead of 'auth-token-rotation').",
-        "Check spelling — Mneme matches via FTS5, not fuzzy.",
+        "Check spelling — Mneme matches via full-text search, not fuzzy.",
         "Run `mneme index` if you've added relevant commits since the last index.",
       ],
     ));
@@ -116,11 +116,12 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
   process.stdout.write(
     `    ${kleur.bold(top.name)}  ${kleur.gray(`<${top.email}>`)}  ${renderTier(top.tier)}\n`,
   );
+  const confLabel = verdict.confidencePct >= 80 ? "high" : verdict.confidencePct >= 50 ? "medium" : "low";
   process.stdout.write(
-    `    ${meter(verdict.confidencePct / 100, { width: 12 })}  ${kleur.cyan(verdict.confidencePct + "%")} confidence  ${kleur.gray(`(${top.commitCount}/${verdict.totalCommits} relevant commits)`)}\n`,
+    `    ${meter(verdict.confidencePct / 100, { width: 12 })}  ${kleur.cyan(verdict.confidencePct + "%")} confidence ${kleur.gray("(" + confLabel + ")")}  ${kleur.gray(`— this person owns ${top.commitCount} of ${verdict.totalCommits} matching commits`)}\n`,
   );
   process.stdout.write(
-    `    ${kleur.gray(`last touch ${daysAgoFromIso(top.lastTouch)} ago · ${top.filesTouched} files`)}\n`,
+    `    ${kleur.gray(`last touch ${daysAgoFromIso(top.lastTouch)} ago · ${top.filesTouched} files in their footprint`)}\n`,
   );
   if (verdict.risk) {
     process.stdout.write(`\n    ${pill("RISK", "warn")}  ${kleur.yellow(verdict.risk)}\n`);
@@ -131,6 +132,12 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
     );
   }
   process.stdout.write("\n");
+
+  // ─── Plain-English reading guide ─────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("tier")} ${kleur.gray("ranks expertise:")} ${kleur.green("⭐ definitive")} ${kleur.gray("(top 5% — clear owner) ›")} ${kleur.cyan("● active")} ${kleur.gray("(currently working) ›")} ${kleur.yellow("◐ stale")} ${kleur.gray("(knows it, hasn't touched recently) ›")} ${kleur.gray("○ occasional")} ${kleur.gray("(touched a few times)")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("confidence")} ${kleur.gray("= how dominant the top person is vs the rest. 80%+ means a clear single owner; <50% means the work is spread out.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Always sanity-check with")} ${kleur.cyan("mneme story \"" + opts.topic + "\"")} ${kleur.gray("before reassigning work.")}\n\n`);
 
   // ─── All candidates ───────────────────────────────────────────────────
   if (candidates.length > 1) {
@@ -238,20 +245,27 @@ export async function decisionsCommand(opts: DecisionsOptions): Promise<number> 
   // Default: pretty table
   ui.banner();
   process.stdout.write(header("📜", "Architecture Decisions",
-    `extracted across ${decisions.length} commit(s) · regex + heuristics`,
+    `${decisions.length} decision(s) extracted via regex + heuristics — minimum confidence ${(opts.minConfidence ?? 0.6).toFixed(2)}`,
     `Auto-generate ADR drafts from your commit history — every "decided to X", "switched from A to B", "deprecated Y" surfaced and exportable to Markdown / Obsidian.`) + "\n\n");
 
   if (decisions.length === 0) {
     process.stdout.write(emptyState(
       "No decisions extracted from commit history.",
       [
-        `Decisions are matched by patterns: "decided to X", "switched from A to B",`,
-        `   "replaced X with Y", "deprecated Z".`,
+        `Decisions are matched by patterns like "decided to X", "switched from A to B", "replaced X with Y", "deprecated Z".`,
         `Encourage richer commit messages, then re-run \`mneme index\`.`,
+        `Lower the bar with --min-confidence 0.4 to surface borderline matches.`,
       ],
     ));
     return 0;
   }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each row is one architecture decision auto-extracted from a commit message.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("kind")} ${kleur.gray("tells you the decision type (added, removed, switched, deprecated, replaced).")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("confidence")} ${kleur.gray("= how sure the regex is this is a decision: 0.85+ strong · 0.70+ likely · <0.70 borderline.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Treat this as a")} ${kleur.bold("draft")} ${kleur.gray("— always review before committing the export.")}\n\n`);
 
   // Decision-kind tally
   const byKind = new Map<string, number>();
@@ -268,11 +282,12 @@ export async function decisionsCommand(opts: DecisionsOptions): Promise<number> 
   process.stdout.write(section("◆ Latest decisions", "(top 30 by date)") + "\n\n");
   for (const d of decisions.slice(0, 30)) {
     const lvl = d.confidence >= 0.85 ? "ok" : d.confidence >= 0.7 ? "low" : "medium";
+    const confLabel = d.confidence >= 0.85 ? "strong" : d.confidence >= 0.7 ? "likely" : "borderline";
     process.stdout.write(
       `    ${pill(d.kind, lvl)}  ${kleur.gray(d.date)}  ${kleur.cyan(d.author.padEnd(16))}  ${kleur.bold(d.summary)}\n`,
     );
     if (d.rationale) process.stdout.write(`        ${kleur.gray("→ " + d.rationale)}\n`);
-    process.stdout.write(`        ${kleur.gray(`conf=${d.confidence.toFixed(2)} · ${d.shortHash}`)}\n\n`);
+    process.stdout.write(`        ${kleur.gray(`confidence ${(d.confidence * 100).toFixed(0)}% (${confLabel}) · ${d.shortHash}`)}\n\n`);
   }
   if (decisions.length > 30) {
     process.stdout.write(`  ${kleur.gray(`...and ${decisions.length - 30} more.`)}\n\n`);
@@ -364,7 +379,17 @@ export async function stackTraceCommand(opts: StackTraceOptions): Promise<number
     process.stdout.write(
       `  ${kleur.red("⚠")}  ${kleur.bold(hottest.frame.file)} has ${kleur.red().bold(`${hottest.pastIncidents} past incident(s)`)} — start there.\n\n`,
     );
+  } else {
+    process.stdout.write(
+      `  ${kleur.green("✓")}  No file in this trace has a known incident history — likely a fresh bug.\n\n`,
+    );
   }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Frames are listed top-down (innermost first) — the first frame is usually the bug.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("recent commits")} ${kleur.gray("= the last 3 commits that touched this file. The newest one is the prime suspect.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("INCIDENTS")} ${kleur.gray("= past failures recorded against this file (regrets, hotfixes, reverts) — high count means a fragile area.")}\n\n`);
 
   analyses.forEach((a, i) => {
     const frameLabel = `Frame ${i + 1}`;
@@ -375,11 +400,11 @@ export async function stackTraceCommand(opts: StackTraceOptions): Promise<number
     process.stdout.write("\n");
 
     if (a.lastCommits.length === 0) {
-      process.stdout.write(`    ${kleur.gray("(no commits indexed for this file)")}\n\n`);
+      process.stdout.write(`    ${kleur.gray("(no commits indexed for this file — may be a generated or vendored file)")}\n\n`);
       return;
     }
 
-    process.stdout.write(`    ${kleur.gray("recent commits touching this file:")}\n`);
+    process.stdout.write(`    ${kleur.gray("recent commits touching this file (newest first — prime suspect on top):")}\n`);
     for (const c of a.lastCommits) {
       const date = c.authorDate.slice(0, 10);
       process.stdout.write(
@@ -387,8 +412,9 @@ export async function stackTraceCommand(opts: StackTraceOptions): Promise<number
       );
     }
     if (a.pastIncidents > 0) {
+      const verdict = a.pastIncidents >= 5 ? "fragile area — consider a refactor" : a.pastIncidents >= 2 ? "repeat offender" : "has been broken before";
       process.stdout.write(
-        `    ${pill("INCIDENTS", "warn")}  ${kleur.yellow(`${a.pastIncidents} past incident(s) affected this file`)}\n`,
+        `    ${pill("INCIDENTS", "warn")}  ${kleur.yellow(`${a.pastIncidents} past incident(s) affected this file — ${verdict}`)}\n`,
       );
     }
     process.stdout.write("\n");
@@ -525,12 +551,19 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
     process.stdout.write(emptyState(
       `No commits matched "${opts.topic}".`,
       [
-        "Try a broader topic.",
+        "Try a broader topic ('auth' instead of 'auth-token-rotation').",
         "Run `mneme index` if you've added relevant commits since the last index.",
+        `Cross-check with: mneme who-knows "${opts.topic}" — the search uses the same matcher.`,
       ],
     ));
     return 0;
   }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• An")} ${kleur.bold("act")} ${kleur.gray("is a contiguous burst of work — gaps longer than a few weeks split the story into a new act.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• The activity sparkline below shows commit volume per act — peaks reveal where the real work happened.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Each act lists up to 5 representative commits; rerun with --obsidian-out for the full archive.")}\n\n`);
 
   // Optional LLM act-summary.
   const cfg = readConfig(opts.cwd);
@@ -647,8 +680,9 @@ export async function dreamCommand(opts: DreamOptions): Promise<number> {
   }
 
   ui.banner();
+  const sourceLabel = source === "llm" ? "LLM-narrated (creative)" : "heuristic (deterministic)";
   process.stdout.write(header("🔮", `Speculative ideas based on YOUR codebase patterns`,
-    `source: ${source} · ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`,
+    `source: ${sourceLabel} · ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`,
     `Brainstorm small, high-leverage features that would fit your codebase's actual style — not generic best-practices.`) + "\n\n");
 
   if (ideas.length === 0) {
@@ -656,11 +690,17 @@ export async function dreamCommand(opts: DreamOptions): Promise<number> {
       "No ideas generated.",
       [
         "Index more commits and entities first: `mneme index`.",
-        "Then re-run `mneme dream`.",
+        "Then re-run `mneme dream` (or try --no-llm for the deterministic heuristic).",
       ],
     ));
     return 0;
   }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• These are")} ${kleur.bold("speculative")} ${kleur.gray("— not validated. Treat each idea as a brainstorm seed, not a roadmap entry.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("(small effort, low risk)")} ${kleur.gray("= a weekend project; ")}${kleur.bold("(large effort, high risk)")} ${kleur.gray("= a quarter+ with unknowns.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("Precedents")} ${kleur.gray("are existing files/modules in YOUR repo that the idea would extend.")}\n\n`);
 
   ideas.forEach((idea, i) => {
     process.stdout.write(`  ${kleur.bold().magenta(`${i + 1}. ${idea.title}`)}  ${effortRiskTag(idea.effort, idea.risk)}\n`);
@@ -677,9 +717,9 @@ export async function dreamCommand(opts: DreamOptions): Promise<number> {
 }
 
 function effortRiskTag(effort: string, risk: string): string {
-  const e = effort === "small" ? kleur.green("small") : effort === "large" ? kleur.red("large") : kleur.yellow("medium");
-  const r = risk === "low" ? kleur.green("low") : risk === "high" ? kleur.red("high") : kleur.yellow("medium");
-  return `${kleur.gray("[effort:")} ${e} ${kleur.gray("· risk:")} ${r}${kleur.gray("]")}`;
+  const e = effort === "small" ? kleur.green("small effort") : effort === "large" ? kleur.red("large effort") : kleur.yellow("medium effort");
+  const r = risk === "low" ? kleur.green("low risk") : risk === "high" ? kleur.red("high risk") : kleur.yellow("medium risk");
+  return `${kleur.gray("(")}${e}${kleur.gray(", ")}${r}${kleur.gray(")")}`;
 }
 
 // ─── chat ───────────────────────────────────────────────────────────────
@@ -704,8 +744,9 @@ export async function chatCommand(opts: ChatOptions): Promise<number> {
   const s = new store.MnemeStore(dbPath(meta.rootPath));
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("💬  Mneme chat")}  ${kleur.gray("(multi-turn over your repo's history)")}\n`);
-  process.stdout.write(`  ${kleur.gray("type your question · /exit to quit · /clear to wipe history · /save <file>")}\n\n`);
+  process.stdout.write(`\n  ${kleur.bold().cyan("💬  Mneme chat")}  ${kleur.gray("— multi-turn Q&A over your repo's history")}\n`);
+  process.stdout.write(`  ${kleur.gray("Each answer cites the commits it pulled from; vague questions are flagged before searching.")}\n`);
+  process.stdout.write(`  ${kleur.gray("Slash commands:")} ${kleur.cyan("/exit")} ${kleur.gray("quit ·")} ${kleur.cyan("/clear")} ${kleur.gray("wipe history ·")} ${kleur.cyan("/save <file>")} ${kleur.gray("dump transcript ·")} ${kleur.cyan("/history")} ${kleur.gray("show turns")}\n\n`);
 
   const embedder = await resolveEmbedder({
     provider: cfg.embeddings.provider,
@@ -854,16 +895,19 @@ export async function regretCommand(opts: RegretOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("😬  Regrets — what we shipped and immediately fixed")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("😬", "Regrets — what we shipped and immediately fixed",
+    `paired commits within ${opts.windowDays ?? 7} days · revert + hotfix + fix patterns`,
+    `Find work that was rushed: shipped, then immediately reverted/hotfixed/fixed. Use to identify fragile workflows or inadequate review.`) + "\n\n");
 
   // Verdict
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  const ratePct = summary.regretRate * 100;
+  const rateLabel = ratePct >= 20 ? "high — process gap likely" : ratePct >= 10 ? "elevated" : ratePct >= 5 ? "normal" : "very clean";
+  process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(
-    `    ${kleur.bold(String(summary.totalRegrets))} regrets across ${kleur.bold(String(summary.totalShipped))} shipped commits  ${kleur.gray(`(rate: ${(summary.regretRate * 100).toFixed(1)}%)`)}\n`,
+    `    ${kleur.bold(String(summary.totalRegrets))} regrets across ${kleur.bold(String(summary.totalShipped))} shipped commits  ${kleur.gray(`(rate: ${ratePct.toFixed(1)}% — ${rateLabel})`)}\n`,
   );
   if (summary.totalRegrets > 0) {
-    process.stdout.write(`    average days-to-fix: ${kleur.bold(summary.averageDaysToFix.toFixed(1))}\n`);
+    process.stdout.write(`    average days-to-fix: ${kleur.bold(summary.averageDaysToFix.toFixed(1))} ${kleur.gray("(lower = caught quickly)")}\n`);
     const breakdown = Object.entries(summary.byKind)
       .filter(([, n]) => n > 0)
       .map(([k, n]) => `${k}: ${n}`)
@@ -872,9 +916,21 @@ export async function regretCommand(opts: RegretOptions): Promise<number> {
   }
 
   if (regrets.length === 0) {
-    process.stdout.write(`\n  ${kleur.green("✓")} No regrets detected — clean shipping history.\n\n`);
+    process.stdout.write(emptyState(
+      "Clean shipping history — no rushed work detected.",
+      [
+        `Loosen the window with --window-days 30 to catch slower-burning regrets.`,
+        `Re-run after the next release to track over time.`,
+      ],
+    ));
     return 0;
   }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write("\n" + section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("REVERT")} ${kleur.gray("= explicit `git revert`. ")}${kleur.bold("HOTFIX")} ${kleur.gray("= rapid follow-up touching the same files. ")}${kleur.bold("FIX")} ${kleur.gray("= conventional commit `fix:` shortly after the original.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("rate")} ${kleur.gray("under 5% is healthy; 10%+ suggests review or testing gaps; 20%+ is a process problem.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("days-to-fix")} ${kleur.gray("close to 0 means caught immediately — that's good. Multi-day gaps mean the bug shipped to users.")}\n`);
 
   // Listing
   process.stdout.write(`\n  ${kleur.bold().magenta("◆ Recent regrets")}  ${kleur.gray(`(showing ${Math.min(20, regrets.length)} of ${regrets.length})`)}\n\n`);
@@ -926,30 +982,46 @@ export async function busFactorCommand(opts: BusFactorOptions): Promise<number> 
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🚨  Bus-factor risks — knowledge fragility")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("🚨", "Bus-factor risks — knowledge fragility",
+    `top ${opts.topN ?? 20} files · ownership ≥ ${opts.minTouches ?? 3} touches`,
+    `Spot files that depend on a single person — if they leave or take leave, this is what stalls. Use before vacations, reorgs, or hiring decisions.`) + "\n\n");
 
   if (risks.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} No high-risk files detected — knowledge is well distributed.\n\n`);
+    process.stdout.write(emptyState(
+      "Knowledge is well distributed — no bus-factor hotspots.",
+      [
+        `Lower the floor with --min-touches 1 to surface borderline files.`,
+        `Run after the next big change to track ownership drift over time.`,
+      ],
+    ));
     return 0;
   }
 
   const counts = { critical: 0, high: 0, medium: 0, low: 0 };
   for (const r of risks) counts[r.tier] += 1;
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(
     `    ${kleur.red().bold(String(counts.critical))} critical  ·  ${kleur.yellow().bold(String(counts.high))} high  ·  ${kleur.cyan().bold(String(counts.medium))} medium  ·  ${kleur.gray(counts.low + " low")}\n\n`,
   );
 
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Files at risk")}  ${kleur.gray(`(top ${risks.length})`)}\n\n`);
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("share %")} ${kleur.gray("= what fraction of commits to that file came from one person. 80%+ = single owner; 50–80% = primary owner.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("CRITICAL")} ${kleur.gray("= one person owns nearly everything AND no backup exists. Pair-program before they take leave.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("backup")} ${kleur.gray("= second-most-active contributor. Empty = nobody else has touched it.")}\n\n`);
+
+  process.stdout.write(`  ${kleur.bold().magenta("◆ Files at risk")}  ${kleur.gray(`(top ${risks.length} — most fragile first)`)}\n\n`);
   for (const r of risks) {
     const tier = renderBusFactorTier(r.tier);
+    const dominanceLabel = r.topOwner.sharePct >= 80 ? "sole owner" : r.topOwner.sharePct >= 50 ? "primary owner" : "lead contributor";
     process.stdout.write(`    ${tier}  ${kleur.bold(r.filePath)}\n`);
     process.stdout.write(
-      `        ${kleur.bold(r.topOwner.name)} ${kleur.gray(`<${r.topOwner.email}>`)}  ${kleur.cyan(r.topOwner.sharePct + "%")}  ${kleur.gray(`(${r.topOwner.touches} of ${r.totalTouches} commits)`)}\n`,
+      `        ${kleur.bold(r.topOwner.name)} ${kleur.gray(`<${r.topOwner.email}>`)}  ${kleur.cyan(r.topOwner.sharePct + "%")} ${kleur.gray("(" + dominanceLabel + ")")}  ${kleur.gray(`— ${r.topOwner.touches} of ${r.totalTouches} commits`)}\n`,
     );
     if (r.backup) {
-      process.stdout.write(`        ${kleur.gray(`backup: ${r.backup.name} (${r.backup.touches} commits)`)}\n`);
+      process.stdout.write(`        ${kleur.gray(`backup: ${r.backup.name} (${r.backup.touches} commits — needs more reps to be a true second)`)}\n`);
+    } else {
+      process.stdout.write(`        ${kleur.red("⚠ no backup contributor — single point of failure")}\n`);
     }
     process.stdout.write(`        ${kleur.gray("→ " + r.recommendation)}\n\n`);
   }
@@ -991,16 +1063,29 @@ export async function paradoxCommand(opts: ParadoxOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🌀  Paradoxes — architectural flip-flops")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("🌀", "Paradoxes — architectural flip-flops",
+    `topics where the team adopted, abandoned, then re-adopted (or vice versa) the same approach`,
+    `Surface decisions the team has reversed. Useful for retros — "why did we keep going back and forth on X?"`) + "\n\n");
 
   if (flipFlops.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} No flip-flops detected. Either the team is consistent, or commit messages are too thin to extract decisions.\n\n`);
+    process.stdout.write(emptyState(
+      "No flip-flops detected.",
+      [
+        `Either the team is consistent — or commit messages are too thin to extract decisions.`,
+        `Run \`mneme decisions --min-confidence 0.4\` first to see what the extractor found.`,
+      ],
+    ));
     return 0;
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(`    ${kleur.bold(String(flipFlops.length))} topic(s) flip-flopped over time\n\n`);
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• A")} ${kleur.bold("paradox")} ${kleur.gray("is a topic where the team adopted approach A, switched to B, and later flipped back to A (or any A→B→A→…  pattern).")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("reversals")} ${kleur.gray("= the number of direction changes in the chain. 1 = adopted then abandoned. 2+ = real flip-flop.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• The")} ${kleur.yellow("→ question")} ${kleur.gray("is a starter prompt for the retro: ask it to whoever was around for the chain.")}\n\n`);
 
   for (const f of flipFlops) {
     process.stdout.write(`  ${divider("topic: " + f.topic)}\n`);
@@ -1064,11 +1149,18 @@ export async function commitCoachCommand(opts: CommitCoachOptions): Promise<numb
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🪶  Commit coach — pre-commit review")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("🪶", "Commit coach — pre-commit review",
+    `${advice.diff.files.length} file(s) · +${advice.diff.added}/-${advice.diff.removed} · shape: ${advice.diff.shape}`,
+    `Run before \`git commit\` — get a suggested message, reviewer suggestions, and warnings if these files have a regret history.`) + "\n\n");
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("shape")} ${kleur.gray("describes the diff geometry: ")}${kleur.cyan("focused")} ${kleur.gray("(few files, tight) ›")} ${kleur.cyan("scattered")} ${kleur.gray("(many modules at once — split it).")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("Reviewers")} ${kleur.gray("are sorted by ownership % — the people most likely to spot issues in the touched files.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("Past warnings")} ${kleur.gray("come from the regrets database — files in this diff that broke before.")}\n\n`);
 
   // Diff section
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Diff")}\n\n`);
+  process.stdout.write(section("✦ Diff") + "\n\n");
   process.stdout.write(
     `    ${kleur.bold(String(advice.diff.files.length))} file(s)  ·  ${kleur.green("+" + advice.diff.added)} ${kleur.red("-" + advice.diff.removed)}  ·  shape: ${kleur.cyan(advice.diff.shape)}\n`,
   );
@@ -1076,33 +1168,34 @@ export async function commitCoachCommand(opts: CommitCoachOptions): Promise<numb
   process.stdout.write("\n");
 
   // Suggested message
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Suggested commit message")}\n\n`);
+  process.stdout.write(section("✦ Suggested commit message") + "\n\n");
   process.stdout.write(`    ${kleur.bold(advice.suggestedSubject)}\n\n`);
 
   // Reviewers
   if (advice.reviewers.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("◆ Reviewers")}  ${kleur.gray("(top experts on touched files)")}\n\n`);
+    process.stdout.write(section("◆ Reviewers", "(top experts on touched files — % = file-ownership share)") + "\n\n");
     for (const r of advice.reviewers) {
+      const ownLabel = r.ownership >= 60 ? "primary owner" : r.ownership >= 30 ? "frequent contributor" : "occasional contributor";
       process.stdout.write(
-        `    ${kleur.cyan("●")} ${kleur.bold(r.name)} ${kleur.gray(`<${r.email}>`)}  ${kleur.cyan(r.ownership + "%")}  ${kleur.gray(`(${r.ownedFiles.length} owned files)`)}\n`,
+        `    ${kleur.cyan("●")} ${kleur.bold(r.name)} ${kleur.gray(`<${r.email}>`)}  ${kleur.cyan(r.ownership + "%")} ${kleur.gray("(" + ownLabel + ")")}  ${kleur.gray(`— ${r.ownedFiles.length} owned files`)}\n`,
       );
     }
     process.stdout.write("\n");
   }
 
   // Scope
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Scope")}\n\n`);
+  process.stdout.write(section("◆ Scope") + "\n\n");
   process.stdout.write(`    ${advice.scopeOK ? kleur.green("✓") : kleur.yellow("⚠")} ${advice.scopeMessage}\n\n`);
 
   // Warnings
   if (advice.warnings.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("⚠ Past warnings")}\n\n`);
+    process.stdout.write(section("⚠ Past warnings", "(these files were involved in past regrets — read before merging)") + "\n\n");
     for (const w of advice.warnings) {
       process.stdout.write(`    ${kleur.yellow("⚠ ")}${kleur.yellow(w.pattern)}\n`);
-      process.stdout.write(`        ${kleur.gray(`${w.pastDate} · ${w.pastCommitHash} · ${w.outcome}`)}\n\n`);
+      process.stdout.write(`        ${kleur.gray(`${w.pastDate} · ${w.pastCommitHash} · outcome: ${w.outcome}`)}\n\n`);
     }
   } else {
-    process.stdout.write(`  ${kleur.green("✓")} ${kleur.gray("No past-regret warnings for these files.")}\n\n`);
+    process.stdout.write(`  ${kleur.green("✓")} ${kleur.gray("No past-regret warnings for these files — they have a clean track record.")}\n\n`);
   }
   return 0;
 }
@@ -1155,28 +1248,39 @@ export async function crystalBallCommand(opts: CrystalBallOptions): Promise<numb
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Crystal ball — CI / follow-up failure prediction")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("🔮", "Crystal ball — CI / follow-up failure prediction",
+    `compares your staged diff against ${p.similarN} similar past changes (window ${opts.windowDays ?? 14} days)`,
+    `Run before pushing — get an outcome prediction based on what happened to similar diffs in the past.`) + "\n\n");
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  if (p.similarN > 0) {
+    process.stdout.write(section("📘 How to read this report") + "\n");
+    process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("clean rate")} ${kleur.gray("= fraction of past, similar diffs that did NOT trigger a follow-up regret within ${" + (opts.windowDays ?? 14) + "} days.")}\n`);
+    const reliability = p.similarN >= 20 ? "high — broad evidence base" : p.similarN >= 5 ? "medium — directional only" : "LOW — too few similar past changes, treat as a hint not a verdict";
+    process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("reliability:")} ${kleur.gray(reliability + " (" + p.similarN + " neighbors)")}\n`);
+    process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("verdicts:")} ${kleur.green("CLEAR")} ${kleur.gray("≥80% clean ›")} ${kleur.yellow("MODERATE")} ${kleur.gray("50–80% ›")} ${kleur.red("RISKY")} ${kleur.gray("<50%.")}\n\n`);
+  }
 
   // Verdict
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
-  process.stdout.write(`    ${renderCrystalBallVerdict(p.verdict)}  ${kleur.cyan((p.pClean * 100).toFixed(0) + "%")} clean rate  ${kleur.gray(`(${p.cleanN}/${p.similarN} similar past changes)`)}\n\n`);
+  const cleanPct = p.pClean * 100;
+  process.stdout.write(section("✦ Verdict") + "\n\n");
+  process.stdout.write(`    ${renderCrystalBallVerdict(p.verdict)}  ${kleur.cyan(cleanPct.toFixed(0) + "%")} clean rate  ${kleur.gray(`(${p.cleanN} of ${p.similarN} similar past changes shipped without follow-up)`)}\n\n`);
 
   // Fingerprint
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Diff fingerprint")}\n\n`);
-  process.stdout.write(`    modules:  ${p.fingerprint.modules.join(", ") || kleur.gray("(none)")}\n`);
+  process.stdout.write(section("◆ Diff fingerprint", "(what your staged diff looks like to the matcher)") + "\n\n");
+  process.stdout.write(`    modules:    ${p.fingerprint.modules.join(", ") || kleur.gray("(none)")}\n`);
   process.stdout.write(`    extensions: ${p.fingerprint.extensions.join(", ") || kleur.gray("(none)")}\n`);
-  process.stdout.write(`    shape:    ${kleur.cyan(p.fingerprint.shape)} · ${p.fingerprint.size} · tests ${p.fingerprint.hasTests ? "yes" : "no"}\n\n`);
+  process.stdout.write(`    shape:      ${kleur.cyan(p.fingerprint.shape)} · ${p.fingerprint.size} · tests ${p.fingerprint.hasTests ? kleur.green("yes") : kleur.yellow("no")}\n\n`);
 
   // Most-similar
   if (p.mostSimilar) {
-    const outcome = p.mostSimilar.outcome === "clean" ? kleur.green("clean") : kleur.red("trouble");
-    process.stdout.write(`  ${kleur.bold().magenta("◆ Most similar past change")}\n\n`);
+    const outcome = p.mostSimilar.outcome === "clean" ? kleur.green("clean (no follow-up needed)") : kleur.red("trouble (regret/hotfix followed)");
+    process.stdout.write(section("◆ Most similar past change", "(your closest historical analogue)") + "\n\n");
     process.stdout.write(`    ${kleur.bold(p.mostSimilar.hash)}  ${kleur.gray(p.mostSimilar.date)}  ${p.mostSimilar.subject}\n`);
     process.stdout.write(`    outcome: ${outcome}\n\n`);
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("→ Recommendation")}\n\n`);
+  process.stdout.write(section("→ Recommendation") + "\n\n");
   process.stdout.write(`    ${p.recommendation}\n\n`);
   return 0;
 }
@@ -1265,27 +1369,43 @@ export async function timeMachineCommand(opts: TimeMachineOptions): Promise<numb
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🕰  Time Machine — life of a file")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(opts.filePath)}\n`);
+  process.stdout.write(header("🕰", "Time Machine — life of a file",
+    `${opts.filePath}`,
+    `Walk through a file's history split into eras (birth, evolution, firefighting, polish, plateau, twilight). Useful before refactoring legacy code.`) + "\n\n");
+
   if (result.totalCommits === 0) {
-    process.stdout.write(`\n  ${kleur.yellow("✗")} No commits found for this path. Check the file exists in history.\n\n`);
+    process.stdout.write(emptyState(
+      "No commits found for this path.",
+      [
+        `Check the file exists in git history (was it renamed?).`,
+        `Run \`mneme index\` if you've added recent commits.`,
+        `Try a parent directory, or use \`mneme story\` for topic-based history.`,
+      ],
+    ));
     return 0;
   }
   process.stdout.write(
     `  ${kleur.gray(String(result.totalCommits) + " commits across " + result.totalSpanDays + " days")}\n\n`,
   );
 
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each")} ${kleur.bold("era")} ${kleur.gray("is a contiguous chapter of the file's life — labels: ")}${kleur.green("BIRTH")}${kleur.gray(", ")}${kleur.cyan("EVOLVE")}${kleur.gray(", ")}${kleur.magenta("REWRITE")}${kleur.gray(", ")}${kleur.red("FIREFIGHT")}${kleur.gray(", ")}${kleur.blue("POLISH")}${kleur.gray(", ")}${kleur.gray("PLATEAU/TWILIGHT")}${kleur.gray(".")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("rewrite %")} ${kleur.gray("high = unstable. ")}${kleur.bold("firefight %")} ${kleur.gray("high = bug-prone. ")}${kleur.bold("polish/plateau %")} ${kleur.gray("high = mature.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• A healthy mature file: low rewrite, low firefight, high polish/plateau. The opposite = candidate for rewrite.")}\n\n`);
+
   // Health line
   const h = result.health;
   const pct = (n: number) => Math.round(n * 100);
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Health")}\n\n`);
+  const verdict = h.firefightRatio >= 0.3 ? kleur.red("bug-prone — consider a rewrite") : h.rewriteRatio >= 0.3 ? kleur.yellow("still in flux — design hasn't settled") : h.polishRatio >= 0.5 ? kleur.green("mature & stable") : kleur.cyan("active development");
+  process.stdout.write(section("✦ Health") + "\n\n");
   process.stdout.write(
-    `    rewrite ${kleur.bold(pct(h.rewriteRatio) + "%")}  ·  firefight ${kleur.bold(pct(h.firefightRatio) + "%")}  ·  polish/plateau ${kleur.bold(pct(h.polishRatio) + "%")}\n\n`,
+    `    rewrite ${kleur.bold(pct(h.rewriteRatio) + "%")}  ·  firefight ${kleur.bold(pct(h.firefightRatio) + "%")}  ·  polish/plateau ${kleur.bold(pct(h.polishRatio) + "%")}\n`,
   );
+  process.stdout.write(`    ${kleur.gray("verdict:")} ${verdict}\n\n`);
 
-  // Epochs timeline
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Epochs")}\n\n`);
+  // Eras timeline
+  process.stdout.write(section("◆ Eras", "(chronological — newest at the bottom)") + "\n\n");
   for (const e of result.epochs) {
     const badge = renderEpochKind(e.kind);
     const range = e.fromDate === e.toDate ? e.fromDate : `${e.fromDate} → ${e.toDate}`;
@@ -1294,7 +1414,7 @@ export async function timeMachineCommand(opts: TimeMachineOptions): Promise<numb
     if (e.commits.length > 0) {
       const churn = e.insertions + e.deletions;
       process.stdout.write(
-        `        ${kleur.gray(`${e.commits.length} commits · +${e.insertions}/-${e.deletions} (${churn} lines)`)}\n`,
+        `        ${kleur.gray(`${e.commits.length} commits · +${e.insertions}/-${e.deletions} (${churn} lines of churn)`)}\n`,
       );
     }
     process.stdout.write("\n");
@@ -1349,9 +1469,9 @@ export async function premortemCommand(opts: PremortemOptions): Promise<number> 
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Pre-mortem — what your repo's history says about this")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.gray("intent:")}  ${kleur.bold(opts.intent)}\n\n`);
+  process.stdout.write(header("🔮", "Pre-mortem — what your repo's history says about this",
+    `intent: ${opts.intent}`,
+    `Before you start: surface past attempts at similar work, what went wrong, and the historical regret rate.`) + "\n\n");
 
   const verdictColor = (() => {
     switch (result.verdict) {
@@ -1362,14 +1482,23 @@ export async function premortemCommand(opts: PremortemOptions): Promise<number> 
     }
   })();
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
-  process.stdout.write(`    risk: ${verdictColor(result.verdict.toUpperCase().replace("_", " "))}  ${kleur.gray(`(P(regret) = ${(result.regretProbability * 100).toFixed(0)}%)`)}\n\n`);
+  // ─── How to read ─────────────────────────────────────────────────────
+  const sampleN = result.pastAttempts.length;
+  const reliability = sampleN >= 10 ? "strong evidence" : sampleN >= 3 ? "directional only" : "very weak — consider this a hint, not a verdict";
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("P(regret)")} ${kleur.gray("= the historical fraction of similar past attempts that led to a regret/hotfix/revert within ${" + (opts.windowDays ?? 14) + "} days.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("evidence base:")} ${kleur.gray(sampleN + " similar past attempts (" + reliability + ").")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Top risks come from past failures matching this intent — read the cited commits before deciding.")}\n\n`);
+
+  process.stdout.write(section("✦ Verdict") + "\n\n");
+  const pct = (result.regretProbability * 100).toFixed(0);
+  process.stdout.write(`    risk: ${verdictColor(result.verdict.toUpperCase().replace("_", " "))}  ${kleur.gray(`(${pct}% of similar past attempts led to a regret)`)}\n\n`);
   for (const line of wrap(result.summary, 76, "    ")) {
     process.stdout.write(line + "\n");
   }
 
   if (result.topRisks.length > 0) {
-    process.stdout.write(`\n  ${kleur.bold().magenta("◆ Top risks")}\n\n`);
+    process.stdout.write("\n" + section("◆ Top risks", "(patterns from past failures — click through to the cited commits)") + "\n\n");
     for (const r of result.topRisks) {
       process.stdout.write(`    ${kleur.bold("•")} ${r.label}\n`);
       for (const ev of r.evidence.slice(0, 3)) {
@@ -1381,15 +1510,23 @@ export async function premortemCommand(opts: PremortemOptions): Promise<number> 
 
   if (result.pastAttempts.length > 0) {
     const sample = result.pastAttempts.slice(0, 5);
-    process.stdout.write(`\n  ${kleur.bold().magenta("◇ Similar past attempts")}  ${kleur.gray(`(${result.pastAttempts.length} found)`)}\n\n`);
+    process.stdout.write("\n" + section("◇ Similar past attempts", `(${result.pastAttempts.length} found · status = what happened within ${opts.windowDays ?? 14} days)`) + "\n\n");
     for (const a of sample) {
       const hash = a.attempt.shortHash || a.attempt.hash.slice(0, 7);
       const status =
         a.riskKind === "none"
-          ? kleur.green("ok")
-          : kleur.red(a.riskKind);
+          ? kleur.green("ok — no follow-up")
+          : kleur.red(a.riskKind + " followed");
       process.stdout.write(`    ${kleur.gray(a.attempt.authorDate.slice(0, 10))}  ${kleur.cyan(hash)}  [${status}]  ${a.attempt.subject}\n`);
     }
+  } else {
+    process.stdout.write("\n" + emptyState(
+      "No similar past attempts in the index.",
+      [
+        `Lower the matching bar: --similarity-floor 0.15`,
+        `Verdict above is heuristic-only — treat as low confidence.`,
+      ],
+    ));
   }
   process.stdout.write("\n");
   return 0;
@@ -1421,29 +1558,42 @@ export async function ghostCommand(opts: GhostOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("👻  Ghost Code — what's haunting your repo")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(String(result.totalFiles))} files analyzed  ·  ${kleur.bold(result.ghostFiles.length + " ghosts")} surfaced  ·  avg ghostliness ${kleur.bold((result.averageGhostliness * 100).toFixed(0) + "%")}\n\n`);
+  process.stdout.write(header("👻", "Files that changed silently (no commit explanation)",
+    `${result.totalFiles} files analyzed · ${result.ghostFiles.length} ghosts · avg ghostliness ${(result.averageGhostliness * 100).toFixed(0)}%`,
+    `Spot files that changed without leaving a trace — terse commit messages, ignored TODOs, mystery edits. Useful before audits or onboarding.`) + "\n\n");
 
   if (result.ghostFiles.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} Repo looks active — no significant ghost code detected.\n\n`);
+    process.stdout.write(emptyState(
+      "Repo looks active and well-documented — no ghost code detected.",
+      [
+        `Loosen the threshold to surface borderline files.`,
+        `Re-run after the next sprint to catch slow-decaying areas early.`,
+      ],
+    ));
     return 0;
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Ghost files")}  ${kleur.gray(`(top ${Math.min(opts.topN ?? 10, result.ghostFiles.length)})`)}\n\n`);
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("ghostliness %")} ${kleur.gray("= how poorly explained recent changes are. 70%+ is silent; 40–70% is borderline.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("days quiet")} ${kleur.gray("= time since the last commit touched this file. Ghosts often show 180+ days.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("Stale TODOs")} ${kleur.gray("= comment markers that have been ignored across N subsequent edits.")}\n\n`);
+
+  process.stdout.write(section("◆ Ghost files", `(top ${Math.min(opts.topN ?? 10, result.ghostFiles.length)} — most haunted first)`) + "\n\n");
   for (const g of result.ghostFiles.slice(0, opts.topN ?? 10)) {
     const score = (g.ghostliness * 100).toFixed(0) + "%";
     const meter = renderMeter(g.ghostliness);
+    const ghostLabel = g.ghostliness >= 0.7 ? "silent" : g.ghostliness >= 0.4 ? "thinly explained" : "lightly opaque";
     process.stdout.write(`    ${kleur.bold(g.path)}\n`);
-    process.stdout.write(`      ${meter}  ${kleur.bold(score)}  ${kleur.gray(g.reason)}\n`);
+    process.stdout.write(`      ${meter}  ${kleur.bold(score)} ${kleur.gray("(" + ghostLabel + ")")}  ${kleur.gray(g.reason)}\n`);
     process.stdout.write(`      ${kleur.gray(`${g.totalCommits} commits · ${g.daysSinceLastTouch}d quiet · last: "${truncateOneLine(g.lastCommitSubject, 60)}"`)}\n\n`);
   }
 
   if (result.staleTodos.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("◇ Stale TODOs")}  ${kleur.gray(`(${result.staleTodos.length} ignored markers)`)}\n\n`);
+    process.stdout.write(section("◇ Stale TODOs", `(${result.staleTodos.length} markers ignored across subsequent edits)`) + "\n\n");
     for (const t of result.staleTodos.slice(0, 5)) {
       process.stdout.write(`    ${kleur.bold(t.filePath)}\n`);
-      process.stdout.write(`      ${kleur.gray(`${t.ageDays}d old · ignored ${t.ignoredCount}× since`)}\n`);
+      process.stdout.write(`      ${kleur.gray(`${t.ageDays}d old · ignored ${t.ignoredCount}× since (${t.ignoredCount === 1 ? "once" : "repeatedly"} edited around without addressing)`)}\n`);
       process.stdout.write(`      ${kleur.gray("↳ " + truncateOneLine(t.hint, 70))}\n\n`);
     }
   }
@@ -1522,38 +1672,49 @@ export async function dnaCommand(opts: DnaOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🧬  Codebase DNA — " + author)}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(String(dna.commitCount))} commits  ·  ${kleur.gray(dna.fromDate + " → " + dna.toDate)}  ·  hash ${kleur.cyan(dna.hash)}\n\n`);
+  process.stdout.write(header("🧬", "Codebase DNA — " + author,
+    `${dna.commitCount} commits · ${dna.fromDate} → ${dna.toDate} · fingerprint ${dna.hash}`,
+    `Extract this author's coding fingerprint — message style, working hours, file affinity. Useful for onboarding, succession planning, or comparing two engineers.`) + "\n\n");
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Style genome")}\n`);
-  process.stdout.write(`    files/commit ........ ${kleur.bold(String(dna.style.filesPerCommit))}\n`);
-  process.stdout.write(`    test ratio .......... ${kleur.bold(pctV12(dna.style.testRatio))}\n`);
-  process.stdout.write(`    issue refs .......... ${kleur.bold(pctV12(dna.style.issueRefRatio))}\n`);
-  process.stdout.write(`    conventional commits  ${kleur.bold(pctV12(dna.style.conventionalRatio))}\n\n`);
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each percentage is")} ${kleur.bold("this author's behaviour")}${kleur.gray(" — not a benchmark. Compare across people with --compare to find compatibility.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("conventional commits %")} ${kleur.gray("near 100 = strict feat:/fix: prefixes; near 0 = freeform.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("imperative ratio")} ${kleur.gray("near 100 = \"add\", \"fix\", \"refactor\"; low = past-tense or noun-style messages.")}\n\n`);
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Message DNA")}\n`);
-  process.stdout.write(`    avg subject length .. ${kleur.bold(String(dna.message.avgSubjectLength))} chars\n`);
-  process.stdout.write(`    imperative ratio .... ${kleur.bold(pctV12(dna.message.imperativeRatio))}\n`);
-  process.stdout.write(`    body provided ....... ${kleur.bold(pctV12(dna.message.bodyRatio))}\n`);
+  process.stdout.write(section("✦ Style genome", "(how this author shapes commits)") + "\n");
+  process.stdout.write(`    files/commit ........ ${kleur.bold(String(dna.style.filesPerCommit))} ${kleur.gray("(lower = more focused diffs)")}\n`);
+  process.stdout.write(`    test ratio .......... ${kleur.bold(pctV12(dna.style.testRatio))} ${kleur.gray("(commits that touch test files)")}\n`);
+  process.stdout.write(`    issue refs .......... ${kleur.bold(pctV12(dna.style.issueRefRatio))} ${kleur.gray("(commits citing #123 / JIRA-456)")}\n`);
+  process.stdout.write(`    conventional commits  ${kleur.bold(pctV12(dna.style.conventionalRatio))} ${kleur.gray("(feat:/fix:/chore: prefix usage)")}\n\n`);
+
+  process.stdout.write(section("✦ Message DNA", "(how this author writes commits)") + "\n");
+  process.stdout.write(`    avg subject length .. ${kleur.bold(String(dna.message.avgSubjectLength))} chars ${kleur.gray("(target ≤ 72 — terse is good)")}\n`);
+  process.stdout.write(`    imperative ratio .... ${kleur.bold(pctV12(dna.message.imperativeRatio))} ${kleur.gray("(\"add X\" vs \"added X\")")}\n`);
+  process.stdout.write(`    body provided ....... ${kleur.bold(pctV12(dna.message.bodyRatio))} ${kleur.gray("(% of commits with explanatory body, not just subject)")}\n`);
   if (dna.message.topVerbs.length > 0) {
     process.stdout.write(`    top verbs ........... ${dna.message.topVerbs.map((v) => kleur.cyan(v.verb) + kleur.gray("×" + v.count)).join("  ")}\n`);
   }
   process.stdout.write("\n");
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Working hours (UTC)")}\n`);
-  process.stdout.write(`    peak window ......... ${kleur.bold(dna.hours.peakWindow)}\n`);
-  process.stdout.write(`    weekend ratio ....... ${kleur.bold(pctV12(dna.hours.weekendRatio))}\n\n`);
+  // Decode the peakWindow ("HH:00–HH:00") into a friendly label
+  const wkPct = Math.round(dna.hours.weekendRatio * 100);
+  const weekendLabel = wkPct === 0 ? "weekdays only" : wkPct >= 30 ? "frequent weekend work" : wkPct >= 15 ? "some weekend work" : "occasional weekend work";
+  process.stdout.write(section("✦ Working hours", "(when this author commits — all times UTC)") + "\n");
+  process.stdout.write(`    most active ......... ${kleur.bold(dna.hours.peakWindow)} UTC ${kleur.gray("(4-hour band — convert to local time for context)")}\n`);
+  process.stdout.write(`    weekend ratio ....... ${kleur.bold(pctV12(dna.hours.weekendRatio))} ${kleur.gray("(" + wkPct + "% of commits land Sat/Sun — " + weekendLabel + ")")}\n\n`);
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ File affinity")}\n`);
+  process.stdout.write(section("✦ File affinity", "(top directories by commit share)") + "\n");
   for (const d of dna.files.topDirs.slice(0, 3)) {
     process.stdout.write(`    ${kleur.gray(pctV12(d.share).padStart(5))}  ${d.dir}\n`);
   }
   process.stdout.write("\n");
 
   if (comparison) {
-    process.stdout.write(`  ${kleur.bold().magenta("✦ Compatibility vs " + (opts.compare || "?"))}\n`);
-    process.stdout.write(`    overall ............. ${kleur.bold(pctV12(comparison.similarity))}\n`);
+    const overallPct = Math.round(comparison.similarity * 100);
+    const compatLabel = overallPct >= 80 ? "very similar styles" : overallPct >= 60 ? "broadly compatible" : overallPct >= 40 ? "partial overlap" : "very different styles";
+    process.stdout.write(section("✦ Compatibility vs " + (opts.compare || "?"), "(higher = more similar coding personalities)") + "\n");
+    process.stdout.write(`    overall ............. ${kleur.bold(pctV12(comparison.similarity))} ${kleur.gray("(" + compatLabel + ")")}\n`);
     for (const a of comparison.axes) {
       process.stdout.write(`    ${a.axis.padEnd(18, ".")} ${kleur.gray(pctV12(a.similarity))}\n`);
     }
@@ -1585,14 +1746,28 @@ export async function driftCommand(opts: DriftOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📈  Commit Drift — topical evolution")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("📈", "Commit Drift — topical evolution",
+    `bucketed by ${result.granularity} · ${result.buckets.length} bucket(s)`,
+    `See how the dominant kind of work shifted over time — feature-heavy quarters vs. firefight quarters vs. polish phases.`) + "\n\n");
+
   if (result.buckets.length === 0) {
-    process.stdout.write(`  ${kleur.yellow("✗")} No commits to analyze.\n\n`);
+    process.stdout.write(emptyState(
+      "No commits to analyze.",
+      [
+        `Run \`mneme index\` first.`,
+        `If small repo, try --granularity month for finer buckets.`,
+      ],
+    ));
     return 0;
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Trajectory")}  ${kleur.gray("(" + result.granularity + ")")}\n\n`);
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each row is a")} ${kleur.bold(result.granularity)}${kleur.gray(". The colored bar shows the mix of work types in that period.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.green("FEATURE")} ${kleur.gray("= adds ›")} ${kleur.magenta("REFACTOR")} ${kleur.gray("= rework ›")} ${kleur.red("FIREFIGHT")} ${kleur.gray("= bugs/hotfixes ›")} ${kleur.blue("POLISH")} ${kleur.gray("= cleanup ›")} ${kleur.cyan("DOCS")} ${kleur.gray(".")}\n`);
+  process.stdout.write(`    ${kleur.gray("• A healthy repo cycles through phases. All-firefight or all-refactor for many buckets in a row is a smell.")}\n\n`);
+
+  process.stdout.write(section("◆ Trajectory", `(per ${result.granularity})`) + "\n\n");
   for (const b of result.buckets) {
     const dom = renderDriftKind(b.dominant);
     const meter = renderDriftMeter(b);
@@ -1601,7 +1776,7 @@ export async function driftCommand(opts: DriftOptions): Promise<number> {
   process.stdout.write("\n");
 
   if (result.insights.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("✦ Insights")}\n`);
+    process.stdout.write(section("✦ Notable shifts", "(transitions worth talking about)") + "\n");
     for (const ins of result.insights) {
       process.stdout.write(`    ${kleur.bold("•")} ${kleur.gray(ins.fromBucket + " → " + ins.toBucket)}  ${ins.description}\n`);
     }
@@ -1672,9 +1847,27 @@ export async function chronicleCommand(opts: ChronicleOptions): Promise<number> 
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📖  Chronicles of Your Codebase")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(String(result.totalCommits))} commits  ·  ${kleur.bold(String(result.totalDays))} days  ·  ${kleur.bold(String(result.chapters.length))} chapters\n\n`);
+  process.stdout.write(header("📖", "Chronicles of Your Codebase",
+    `${result.totalCommits} commits · ${result.totalDays} days · ${result.chapters.length} chapters`,
+    `Tell the story of your repo as a book — chapters split where work paused for ${opts.gapDays ?? 30}+ days. Great for retros, all-hands, or release notes.`) + "\n\n");
+
+  if (result.chapters.length === 0) {
+    process.stdout.write(emptyState(
+      "No chapters could be formed.",
+      [
+        `Try a smaller --gap-days (e.g. 14) on short-lived repos.`,
+        `Run \`mneme index\` if you've added recent commits.`,
+      ],
+    ));
+    return 0;
+  }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each")} ${kleur.bold("chapter")} ${kleur.gray("is a contiguous era — gaps of ${" + (opts.gapDays ?? 30) + "} days or more start a new chapter.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("protagonist")} ${kleur.gray("= the author with the most commits in that chapter.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Use --output chronicle.md to export as Markdown for sharing.")}\n\n`);
+
   for (const ch of result.chapters) {
     process.stdout.write(`  ${kleur.bold().magenta("Chapter " + ch.number + " · " + ch.title)}\n`);
     process.stdout.write(`    ${kleur.gray(ch.fromDate + " → " + ch.toDate)}  ${kleur.gray("(" + ch.spanDays + "d, " + ch.commits.length + " commits)")}  protagonist: ${kleur.cyan("@" + ch.protagonist)}\n`);
@@ -1707,29 +1900,51 @@ export async function oracleCommand(opts: OracleOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Oracle — predicted next-window co-edits")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(String(result.windowCommits))} commits in window\n\n`);
+  process.stdout.write(header("🔮", "Oracle — predicted next-window co-edits",
+    `${result.windowCommits} commits analyzed (last ${opts.windowDays ?? 90}d) · projects who's likely to touch what next`,
+    `Predict near-term collisions before they happen. Use to plan code-freeze coordination, branch ownership, or pairing assignments.`) + "\n\n");
+
+  if (result.windowCommits === 0) {
+    process.stdout.write(emptyState(
+      "No commits in the analysis window.",
+      [
+        `Widen the window: --window-days 180.`,
+        `Run \`mneme index\` if you've added recent commits.`,
+      ],
+    ));
+    return 0;
+  }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  const reliability = result.windowCommits >= 100 ? "strong evidence base" : result.windowCommits >= 30 ? "directional only — small sample" : "low confidence — too few commits in window";
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("joint P")} ${kleur.gray("= probability that BOTH authors touch the file in the next window. 60%+ likely · 30–60% possible · <30% noisy.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("per-author %")} ${kleur.gray("= relative likelihood each candidate is the next to edit that file.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("evidence:")} ${kleur.gray(result.windowCommits + " commits in window — " + reliability + ".")}\n\n`);
 
   if (result.collisions.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("⚠ Predicted collisions")}\n\n`);
+    process.stdout.write(section("⚠ Predicted collisions", "(two authors likely to edit the same file simultaneously)") + "\n\n");
     for (const c of result.collisions.slice(0, opts.topN ?? 5)) {
+      const jointPct = Math.round(c.jointProbability * 100);
+      const jointLabel = jointPct >= 60 ? "likely conflict" : jointPct >= 30 ? "possible conflict" : "low chance";
       process.stdout.write(`    ${kleur.bold(c.filePath)}\n`);
-      process.stdout.write(`      ${kleur.cyan(c.authorA)} ⨯ ${kleur.cyan(c.authorB)}  joint P = ${kleur.bold(pctV12(c.jointProbability))}\n`);
+      process.stdout.write(`      ${kleur.cyan(c.authorA)} ⨯ ${kleur.cyan(c.authorB)}  joint P = ${kleur.bold(pctV12(c.jointProbability))} ${kleur.gray("(" + jointLabel + ")")}\n`);
       if (c.daysSinceLastJointTouch >= 0) {
         process.stdout.write(`      ${kleur.gray("last joint touch: " + c.daysSinceLastJointTouch + "d ago")}\n`);
       }
       process.stdout.write("\n");
     }
   } else {
-    process.stdout.write(`  ${kleur.gray("(no high-probability collisions detected)")}\n\n`);
+    process.stdout.write(`  ${kleur.green("✓")} ${kleur.gray("No high-probability author collisions detected in the window.")}\n\n`);
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Top file predictions")}\n\n`);
+  process.stdout.write(section("◆ Top file predictions", "(who's most likely to touch each file next)") + "\n\n");
   for (const p of result.predictions.slice(0, opts.topN ?? 8)) {
     process.stdout.write(`    ${kleur.bold(p.filePath)}\n`);
     for (const cand of p.candidates) {
-      process.stdout.write(`      ${kleur.cyan(cand.author.padEnd(20))}  ${pctV12(cand.probability)}\n`);
+      const pct = Math.round(cand.probability * 100);
+      const tag = pct >= 50 ? kleur.green("likely") : pct >= 25 ? kleur.cyan("possible") : kleur.gray("long-shot");
+      process.stdout.write(`      ${kleur.cyan(cand.author.padEnd(20))}  ${pctV12(cand.probability)}  ${tag}\n`);
     }
     process.stdout.write("\n");
   }
@@ -1759,8 +1974,15 @@ export async function constellationCommand(opts: ConstellationOptions): Promise<
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🌌  Codebase Constellation — graph view of your repo")}\n`);
-  process.stdout.write(`  ${divider()}\n`);
+  process.stdout.write(header("🌌", "Codebase Constellation — graph view of your repo",
+    `file-stars sized by activity · edges = files commonly edited together`,
+    `Visualize your repo as a star map — large stars are heavily-edited files, edges show coupling. Useful for architecture reviews.`) + "\n\n");
+
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("star size")} ${kleur.gray("= commit volume on that file. Bigger = more active.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("edges")} ${kleur.gray("connect files that get edited together — strong edges = tight coupling.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Use --output graph.json to feed the data into a graph visualizer (D3, Gephi, Cytoscape).")}\n\n`);
+
   process.stdout.write(insights.renderConstellationAscii(result) + "\n");
   if (opts.output) {
     process.stdout.write(`\n  ${kleur.green("✓")} Graph JSON written to ${kleur.cyan(opts.output)}\n`);
@@ -1795,22 +2017,41 @@ export async function clusterCommand(opts: ClusterOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🧠  Semantic Commit Clusters")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(String(result.totalCommits))} commits  ·  ${kleur.bold(String(result.clusters.length))} clusters  ·  ${kleur.bold(String(result.outliers.length))} outliers\n\n`);
+  process.stdout.write(header("🧠", "Semantic Commit Clusters",
+    `${result.totalCommits} commits · ${result.clusters.length} clusters · ${result.outliers.length} outliers`,
+    `Group commits by shared vocabulary — surface the recurring themes in your codebase. Useful for retrospectives and roadmap reviews.`) + "\n\n");
+
   if (result.clusters.length === 0) {
     if (result.totalCommits < 30) {
-      process.stdout.write(`  ${kleur.yellow("ℹ")}  Too few commits (${result.totalCommits}) to form meaningful clusters.\n`);
-      process.stdout.write(`     Clusters emerge once a repo has ~30+ commits with shared vocabulary.\n`);
-      process.stdout.write(`     Try ${kleur.cyan("--similarity 0.05 --min-size 2")} to surface tight pairs even on small repos.\n\n`);
+      process.stdout.write(emptyState(
+        `Too few commits (${result.totalCommits}) to form meaningful clusters.`,
+        [
+          `Clusters emerge once a repo has ~30+ commits with shared vocabulary.`,
+          `Surface tight pairs anyway: --similarity 0.05 --min-size 2`,
+        ],
+      ));
     } else {
-      process.stdout.write(`  ${kleur.yellow("ℹ")}  No clusters above the similarity floor.\n`);
-      process.stdout.write(`     Lower the threshold: ${kleur.cyan("--similarity 0.10 --min-size 2")}\n\n`);
+      process.stdout.write(emptyState(
+        "No clusters above the similarity floor.",
+        [
+          `Lower the threshold: --similarity 0.10 --min-size 2`,
+          `If commit messages are short/generic, the matcher has little to grip — encourage richer subjects.`,
+        ],
+      ));
     }
     return 0;
   }
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("cohesion %")} ${kleur.gray("= how tightly the commits in a cluster share vocabulary. 80%+ very tight · 50–80% loose theme · <50% noisy.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("terms")} ${kleur.gray("are the top distinguishing words for the cluster — gives the theme away.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("outliers")} ${kleur.gray("(${" + result.outliers.length + "}) are commits that didn't fit any cluster — often unique or generic messages.")}\n\n`);
+
   for (const c of result.clusters.slice(0, 10)) {
-    process.stdout.write(`  ${kleur.bold().magenta("◆ Cluster " + c.id)}  ${kleur.gray(c.size + " commits · cohesion " + pctV12(c.cohesion))}\n`);
+    const cohPct = Math.round(c.cohesion * 100);
+    const cohLabel = cohPct >= 80 ? "very tight" : cohPct >= 50 ? "loose theme" : "noisy";
+    process.stdout.write(`  ${kleur.bold().magenta("◆ Cluster " + c.id)}  ${kleur.gray(c.size + " commits · cohesion " + pctV12(c.cohesion) + " (" + cohLabel + ")")}\n`);
     process.stdout.write(`    ${kleur.gray("terms:")} ${c.topTerms.map((t) => kleur.cyan(t)).join("  ")}\n`);
     process.stdout.write(`    ${kleur.gray("range:")} ${c.fromDate} → ${c.toDate}\n`);
     for (const sample of c.samples.slice(0, 2)) {
@@ -1844,36 +2085,50 @@ export async function networkCommand(opts: NetworkOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🕸  Author Network — semantic collaboration graph")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold(String(result.windowCommits))} commits  ·  ${kleur.bold(String(result.nodes.length))} authors  ·  ${kleur.bold(String(result.edges.length))} edges  ·  ${kleur.bold(String(result.silos.length))} silos  ·  ${kleur.bold(String(result.bridges.length))} bridges\n\n`);
+  process.stdout.write(header("🕸", "Author Network — collaboration graph",
+    `${result.windowCommits} commits · ${result.nodes.length} authors · ${result.edges.length} edges · ${result.silos.length} silos · ${result.bridges.length} bridges`,
+    `Map who collaborates with whom on what — surfaces silos (groups that don't share work) and bridges (people who connect them).`) + "\n\n");
 
   if (result.nodes.length <= 1) {
-    process.stdout.write(`  ${kleur.yellow("ℹ")}  Solo-author repository — no collaboration network to map.\n`);
-    process.stdout.write(`     This command shines on team repos with 2+ active contributors.\n`);
-    process.stdout.write(`     Try ${kleur.cyan("mneme dna")} to extract this author's coding fingerprint instead.\n\n`);
+    process.stdout.write(emptyState(
+      "Solo-author repository — no collaboration network to map.",
+      [
+        `This command shines on team repos with 2+ active contributors.`,
+        `Try \`mneme dna\` to extract this author's coding fingerprint instead.`,
+      ],
+    ));
     return 0;
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Top collaborators (by centrality)")}\n\n`);
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("centrality")} ${kleur.gray("= how connected an author is. High = touches many areas with many people. Low = focused on one corner.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("edge weight %")} ${kleur.gray("= overall collaboration strength, blending three axes: co-edit (same files), co-time (same week), co-topic (same vocabulary).")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("silos")} ${kleur.gray("are author groups with no cross-edges. ")}${kleur.bold("bridges")} ${kleur.gray("are individuals connecting them — losing a bridge fragments the team.")}\n\n`);
+
+  process.stdout.write(section("◆ Top collaborators", "(ranked by centrality — most connected first)") + "\n\n");
   for (const n of result.nodes.slice(0, 8)) {
     const meter = "█".repeat(Math.round(n.centrality * 8)) + "░".repeat(8 - Math.round(n.centrality * 8));
-    process.stdout.write(`    ${kleur.cyan(meter)}  ${kleur.bold(n.author.padEnd(28))}  ${kleur.gray(n.commits + " commits · " + n.collaborators + " edges")}\n`);
+    const centPct = Math.round(n.centrality * 100);
+    const centLabel = centPct >= 70 ? "hub" : centPct >= 40 ? "well-connected" : centPct >= 15 ? "peripheral" : "isolated";
+    process.stdout.write(`    ${kleur.cyan(meter)}  ${kleur.bold(n.author.padEnd(28))}  ${kleur.gray(n.commits + " commits · " + n.collaborators + " edges (" + centLabel + ")")}\n`);
   }
 
   if (result.edges.length > 0) {
-    process.stdout.write(`\n  ${kleur.bold().magenta("◇ Strongest semantic edges")}\n\n`);
+    process.stdout.write("\n" + section("◇ Strongest collaboration edges", "(weight % blends co-edit + co-time + co-topic)") + "\n\n");
     for (const e of result.edges.slice(0, 6)) {
       const terms = e.sharedTerms.slice(0, 3).map((t) => kleur.cyan(t)).join(", ");
-      process.stdout.write(`    ${kleur.bold(pctV12(e.weight))}  ${e.authorA} ⟷ ${e.authorB}\n`);
-      process.stdout.write(`         ${kleur.gray("co-edit " + pctV12(e.axes.coEdit) + " · co-time " + pctV12(e.axes.coTime) + " · co-topic " + pctV12(e.axes.coTopic))}\n`);
-      if (terms) process.stdout.write(`         ${kleur.gray("shared: ")}${terms}\n`);
+      const wPct = Math.round(e.weight * 100);
+      const wLabel = wPct >= 60 ? "tight pair" : wPct >= 30 ? "regular collaborators" : "occasional overlap";
+      process.stdout.write(`    ${kleur.bold(pctV12(e.weight))} ${kleur.gray("(" + wLabel + ")")}  ${e.authorA} ⟷ ${e.authorB}\n`);
+      process.stdout.write(`         ${kleur.gray("co-edit " + pctV12(e.axes.coEdit) + " (same files) · co-time " + pctV12(e.axes.coTime) + " (same week) · co-topic " + pctV12(e.axes.coTopic) + " (same vocabulary)")}\n`);
+      if (terms) process.stdout.write(`         ${kleur.gray("shared topics: ")}${terms}\n`);
       process.stdout.write("\n");
     }
   }
 
   if (result.bridges.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("⚡ Bridges")}  ${kleur.gray("(authors connecting silos)")}\n`);
+    process.stdout.write(section("⚡ Bridges", "(authors connecting otherwise-disjoint silos — high bus-factor cost if they leave)") + "\n");
     for (const b of result.bridges) {
       process.stdout.write(`    ${kleur.cyan(b)}\n`);
     }
@@ -1902,33 +2157,58 @@ export async function manageCommand(opts: ManageOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("👑  Manage — engineering management dashboard")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
+  process.stdout.write(header("👑", "Manage — engineering management dashboard",
+    `${result.health.windowCommits} commits in last ${opts.windowDays ?? 90}d · team health, succession plan, predicted collisions`,
+    `One-shot manager view: how is the team doing, who's at risk of being a single point of failure, and what's coming next.`) + "\n\n");
+
+  if (result.health.windowCommits === 0) {
+    process.stdout.write(emptyState(
+      "No commits in the analysis window.",
+      [
+        `Widen the window: --window-days 180.`,
+        `Run \`mneme index\` if you've added recent commits.`,
+      ],
+    ));
+    return 0;
+  }
 
   const overall = result.health.overall;
   const overallColor = overall > 0.6 ? kleur.green : overall > 0.4 ? kleur.yellow : kleur.red;
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Team Health")}\n`);
-  process.stdout.write(`    overall ............. ${overallColor().bold(pctV12(overall))}\n`);
-  process.stdout.write(`    trajectory .......... ${kleur.bold(result.health.trajectory.dominant)} (${result.health.trajectory.label})\n`);
-  process.stdout.write(`    predicted collisions  ${kleur.bold(String(result.health.predictedCollisions))}\n`);
-  process.stdout.write(`    max succession risk . ${kleur.bold(pctV12(result.health.maxSuccessionRisk))}\n`);
+  const overallLabel = overall > 0.6 ? "healthy" : overall > 0.4 ? "watch" : "concerning";
+
+  // ─── How to read ─────────────────────────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("overall health %")} ${kleur.gray("blends trajectory, succession risk, and collision pressure. >60% healthy · 40–60% watch · <40% concerning.")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("succession risk %")} ${kleur.gray("per area = how exposed the team is if the primary owner leaves. >60% = critical (no real backup).")}\n`);
+  process.stdout.write(`    ${kleur.gray("•")} ${kleur.bold("understudy confidence %")} ${kleur.gray("= how good a fit the second-place contributor is. <50% means they need ramp-up time.")}\n\n`);
+
+  process.stdout.write(section("✦ Team Health") + "\n");
+  process.stdout.write(`    overall ............. ${overallColor().bold(pctV12(overall))} ${kleur.gray("(" + overallLabel + ")")}\n`);
+  process.stdout.write(`    trajectory .......... ${kleur.bold(result.health.trajectory.dominant)} ${kleur.gray("(" + result.health.trajectory.label + ")")}\n`);
+  process.stdout.write(`    predicted collisions  ${kleur.bold(String(result.health.predictedCollisions))} ${kleur.gray("(author×file pairs likely to clash next window)")}\n`);
+  process.stdout.write(`    max succession risk . ${kleur.bold(pctV12(result.health.maxSuccessionRisk))} ${kleur.gray("(worst-case area — see plan below)")}\n`);
   process.stdout.write(`    window commits ...... ${kleur.bold(String(result.health.windowCommits))}\n\n`);
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Notes")}\n`);
-  for (const note of result.health.notes) {
-    process.stdout.write(`    ${kleur.gray("•")} ${note}\n`);
+  if (result.health.notes.length > 0) {
+    process.stdout.write(section("✦ Notes") + "\n");
+    for (const note of result.health.notes) {
+      process.stdout.write(`    ${kleur.gray("•")} ${note}\n`);
+    }
+    process.stdout.write("\n");
   }
-  process.stdout.write("\n");
 
   if (result.succession.length > 0) {
-    process.stdout.write(`  ${kleur.bold().magenta("◆ Succession plan")}  ${kleur.gray("(highest risk first)")}\n\n`);
+    process.stdout.write(section("◆ Succession plan", "(highest risk first — pair-program these areas before vacations)") + "\n\n");
     for (const sp of result.succession.slice(0, 8)) {
       const riskColor = sp.risk > 0.6 ? kleur.red : sp.risk > 0.3 ? kleur.yellow : kleur.green;
-      process.stdout.write(`    ${riskColor().bold(pctV12(sp.risk).padStart(4))}  ${kleur.bold(sp.area.padEnd(30))}  primary: ${kleur.cyan("@" + sp.primary)}\n`);
+      const riskLabel = sp.risk > 0.6 ? "critical" : sp.risk > 0.3 ? "watch" : "ok";
+      process.stdout.write(`    ${riskColor().bold(pctV12(sp.risk).padStart(4))} ${kleur.gray("(" + riskLabel + ")")}  ${kleur.bold(sp.area.padEnd(30))}  primary: ${kleur.cyan("@" + sp.primary)}\n`);
       if (sp.understudy) {
-        process.stdout.write(`              ${kleur.gray("understudy: @" + sp.understudy + " (confidence " + pctV12(sp.confidence) + ")")}\n`);
+        const confPct = Math.round(sp.confidence * 100);
+        const confLabel = confPct >= 70 ? "strong fit" : confPct >= 50 ? "viable" : "needs ramp-up";
+        process.stdout.write(`              ${kleur.gray("understudy: @" + sp.understudy + " — confidence " + pctV12(sp.confidence) + " (" + confLabel + ")")}\n`);
       } else {
-        process.stdout.write(`              ${kleur.red("⚠ no understudy detected")}\n`);
+        process.stdout.write(`              ${kleur.red("⚠ no understudy detected — single point of failure")}\n`);
       }
       process.stdout.write("\n");
     }
@@ -1968,24 +2248,23 @@ export async function exportBundleCommand(opts: ExportBundleOptions): Promise<nu
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📦  Export Bundle — universal codebase artifact")}\n`);
-  process.stdout.write(`  ${divider()}\n\n`);
-  process.stdout.write(`  Generated:    ${kleur.gray(result.generatedAt)}\n`);
-  process.stdout.write(`  Mneme:        ${kleur.bold(result.version)}\n`);
-  process.stdout.write(`  Commits:      ${kleur.bold(String(result.repo.totalCommits))}\n`);
-  process.stdout.write(`  Authors:      ${kleur.bold(String(result.repo.totalAuthors))}\n`);
-  process.stdout.write(`  Range:        ${kleur.gray(result.repo.fromDate + " → " + result.repo.toDate)}\n\n`);
+  process.stdout.write(header("📦", "Export Bundle — universal codebase artifact",
+    `Mneme ${result.version} · ${result.repo.totalCommits} commits · ${result.repo.totalAuthors} authors · ${result.repo.fromDate} → ${result.repo.toDate}`,
+    `One file containing every insight (DNA, drift, chronicle, oracle, constellation, clusters, network, team health, ghosts). Hand to LLMs, share with new hires, or archive.`) + "\n\n");
 
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Sections included")}\n`);
-  process.stdout.write(`    🧬  ${kleur.bold(String(result.topAuthorsDna.length))} top-author DNA strands\n`);
-  process.stdout.write(`    📈  drift trajectory across ${kleur.bold(String(result.drift.buckets.length))} buckets\n`);
-  process.stdout.write(`    📖  chronicle with ${kleur.bold(String(result.chronicle.chapters.length))} chapters\n`);
-  process.stdout.write(`    🔮  oracle: ${kleur.bold(String(result.oracle.collisions.length))} collisions, ${kleur.bold(String(result.oracle.predictions.length))} predictions\n`);
+  process.stdout.write(kv("Generated", kleur.gray(result.generatedAt)) + "\n");
+  process.stdout.write(kv("Range", kleur.gray(result.repo.fromDate + " → " + result.repo.toDate)) + "\n\n");
+
+  process.stdout.write(section("✦ Sections included") + "\n");
+  process.stdout.write(`    🧬  ${kleur.bold(String(result.topAuthorsDna.length))} top-author DNA strands ${kleur.gray("(coding fingerprints)")}\n`);
+  process.stdout.write(`    📈  drift trajectory across ${kleur.bold(String(result.drift.buckets.length))} buckets ${kleur.gray("(work-type evolution)")}\n`);
+  process.stdout.write(`    📖  chronicle with ${kleur.bold(String(result.chronicle.chapters.length))} chapters ${kleur.gray("(history as a book)")}\n`);
+  process.stdout.write(`    🔮  oracle: ${kleur.bold(String(result.oracle.collisions.length))} predicted collisions, ${kleur.bold(String(result.oracle.predictions.length))} file predictions\n`);
   process.stdout.write(`    🌌  constellation: ${kleur.bold(String(result.constellation.fileStars.length))} file-stars, ${kleur.bold(String(result.constellation.fileEdges.length))} co-edit edges\n`);
-  process.stdout.write(`    🧠  ${kleur.bold(String(result.clusters.clusters.length))} semantic clusters\n`);
-  process.stdout.write(`    🕸  network: ${kleur.bold(String(result.network.nodes.length))} authors, ${kleur.bold(String(result.network.edges.length))} edges\n`);
-  process.stdout.write(`    👑  team health: ${kleur.bold(pctV12(result.manage.health.overall))}\n`);
-  process.stdout.write(`    👻  ${kleur.bold(String(result.ghost.ghostFiles.length))} ghost files\n\n`);
+  process.stdout.write(`    🧠  ${kleur.bold(String(result.clusters.clusters.length))} semantic clusters ${kleur.gray("(recurring themes)")}\n`);
+  process.stdout.write(`    🕸  network: ${kleur.bold(String(result.network.nodes.length))} authors, ${kleur.bold(String(result.network.edges.length))} collaboration edges\n`);
+  process.stdout.write(`    👑  team health: ${kleur.bold(pctV12(result.manage.health.overall))} ${kleur.gray("(>60% healthy · 40-60% watch · <40% concerning)")}\n`);
+  process.stdout.write(`    👻  ${kleur.bold(String(result.ghost.ghostFiles.length))} ghost files ${kleur.gray("(silently changed)")}\n\n`);
 
   if (format === "json" || format === "both") {
     process.stdout.write(`  ${kleur.green("✓")} JSON written to ${kleur.cyan(outputBase + ".json")}\n`);

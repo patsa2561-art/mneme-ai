@@ -8,6 +8,68 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.21.0] — 2026-05-06
+
+The **"Plain English Everything"** release. **32 commands** systematically
+humanized so a non-statistician can read every output in one pass — no
+more `σ`, `robust z`, `MAD`, `peak window`, `LR=3.87e-13` jargon without
+translation.
+
+### What changed
+
+Every report now follows the same readable structure:
+
+1. **Plain-English header** — what the command does + when to use it (green)
+2. **Top-line summary** in human language ("3 commits look unusual" not "deviation > threshold")
+3. **📘 How to read this report** — 3-5 line explainer of the metrics + tiers
+4. **Baseline-reliability warnings** — "HEADS UP: single-author repo / fewer than 3 candidates / fewer than 30 commits — treat as directional"
+5. **Verifiable numbers** — every raw stat now shows "(N units — interpretation)" inline:
+   - `LR = 3.87e-13` → `(~1 in 2.6 trillion — overwhelming AGAINST)`
+   - `+465 lines vs median 50 (robust z = 9.9)` → `465 lines — 9.3× larger than this author's typical commit (~50 lines)`
+   - `commit hour 04:00 UTC is 11h from peak` → `committed at 04:00 UTC (your local time: 11:00). This author normally commits 15:00–19:00 UTC — 11h gap.`
+   - `confidence 0.78` → `78% confident — high`
+   - `lift 5.2×` → `(these files change together 5.2× more often than random)`
+
+### Commands humanized — all 32
+
+**Forensics (4):** match, attribute, vulns, anomaly *(anomaly was v0.20.2)*
+**Core (3):** ask, why, render-answer (TRUST badge + audit-refused)
+**Quant (10):** drawdown, alpha, backtest, black-swan, insider-trading, moneyball, greek (Δ Γ Θ now self-documenting), correlation-matrix, vix (implied-volatility), tax-loss-harvest
+**Insights (22):** who-knows, decisions, stack-trace, story, dream, chat, regret, bus-factor, paradox, commit-coach, crystal-ball, time-machine, premortem, ghost, dna, drift, chronicle, oracle, constellation, cluster, network, manage, export-bundle
+
+### Best-improvement examples
+
+**`mneme dna`** — `peakHour: 14, weekendRatio: 0.18` → `most active 14:00–18:00 UTC (4-hour band — convert to local time for context); weekend ratio 18% (some weekend work)`. Same data, but a manager skimming it now knows the band is in UTC, knows it's 4 hours wide, and knows what 18% means.
+
+**`mneme greek`** — `Δ DELTA / Γ GAMMA / Θ THETA` headers now self-document inline:
+- DELTA — *knowledge concentration: how much breaks if the top contributor leaves*
+- GAMMA — *risk acceleration: is concentration getting worse over time?*
+- THETA — *time decay: how fast does this knowledge become stale?*
+- Slope `0.034` → `(growing at 3.4% per week, over 12 weeks)`
+
+**`mneme forensics match`** — combined LR now reads: `LR = 3.87e-13 (~1 in 2.6 trillion chance of seeing this if they wrote it — overwhelming evidence AGAINST authorship)`.
+
+### Bug fixes
+
+- **`forensics match HEAD <author>` and `forensics attribute HEAD`** now work. Prior bug: "HEAD" was passed verbatim to `c.hash.startsWith(...)` and never matched a real hash. Now resolved via `git rev-parse` first; falls back to actionable `commitNotFoundMessage()` if unresolvable.
+- Single-author repo warning surfaces in **anomaly + match + attribute** so users understand why findings appear.
+- Tiny-team warning (fewer than 3 authors with ≥5 commits) added to **attribute**.
+
+### Internal
+
+- `humanizeAxisNote` (anomaly), `humanizeLR` + `humanizeLocusNote` (match/attribute), `humanizeTrustScore` (ask) — small pure helpers, easy to test.
+- All 880 tests still pass, zero regressions.
+- 3 files materially expanded: `forensics.ts` (+~145 lines), `quant-cli.ts` (+~190), `insights-cli.ts` (+~280).
+
+### User-visible flow
+
+Every command's first line is now actionable plain English. The user no
+longer needs to know what "σ", "robust z", or "ENFSI verbal scale" mean
+to act on the output. Statisticians still get the raw numbers — they're
+just no longer required reading.
+
+—
+
 ## [0.20.0] — 2026-05-06
 
 The **"Agentic + Always-On"** release. Two major additions:

@@ -19,6 +19,7 @@ import {
   type Commit,
 } from "@mneme-ai/core";
 import { dbPath } from "../paths.js";
+import { resolveCommitRef, commitNotFoundMessage } from "../utils/args.js";
 import {
   ui,
   header,
@@ -78,11 +79,19 @@ export interface ForensicsMatchOptions {
 }
 
 export async function forensicsMatchCommand(opts: ForensicsMatchOptions): Promise<number> {
+  // Resolve HEAD / HEAD~3 / branch / short-hash to a full hash via git rev-parse.
+  // Without this, opts.commitHash="HEAD" never matches because no real hash starts with "HEAD".
+  const fullHash = resolveCommitRef(opts.cwd, opts.commitHash);
+  if (!fullHash) {
+    ui.error(commitNotFoundMessage(opts.commitHash));
+    return 1;
+  }
+
   const result = await withStore(opts.cwd, (s) => {
     const allCommits = util.loadAllCommits(s);
     const evidenceCommit =
-      allCommits.find((c) => c.hash.startsWith(opts.commitHash)) ?? null;
-    if (!evidenceCommit) return { error: `Commit ${opts.commitHash} not found in index.` };
+      allCommits.find((c) => c.hash === fullHash || c.hash.startsWith(opts.commitHash)) ?? null;
+    if (!evidenceCommit) return { error: `Commit ${opts.commitHash} resolved to ${fullHash.slice(0, 8)} but is not in the index. Run 'mneme index' to refresh.` };
 
     const byAuthor = new Map<string, Commit[]>();
     for (const c of allCommits) {
@@ -127,11 +136,29 @@ export async function forensicsMatchCommand(opts: ForensicsMatchOptions): Promis
 
   const lr = result.report.combinedLR;
   process.stdout.write(section("✦ Combined Likelihood Ratio") + "\n");
-  process.stdout.write(`    ${kleur.bold("LR")} = ${kleur.bold(lr.toExponential(2))}  ${kleur.gray(`log10 = ${result.report.log10LR}`)}\n`);
+  process.stdout.write(`    ${kleur.bold("LR")} = ${kleur.bold(lr.toExponential(2))}  ${kleur.gray(`(${humanizeLR(lr)})`)}\n`);
+  process.stdout.write(`    ${kleur.gray(`log10(LR) = ${result.report.log10LR}  — bigger absolute value = stronger evidence either way`)}\n`);
   process.stdout.write(`    ${verdictBadge(result.report.verdict)}\n`);
   process.stdout.write(`    ${kleur.gray(verdictPlainEnglish(result.report.verdict, result.suspect))}\n\n`);
 
-  process.stdout.write(section("◆ Per-locus contribution", "(12 STR loci · meter shows log-LR)") + "\n\n");
+  // ─── Plain-English reading guide ────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Mneme compares")} ${kleur.bold("12 STR loci")} ${kleur.gray("— think of them as 12 distinct fingerprint traits")}\n`);
+  process.stdout.write(`        ${kleur.gray("(commit hour, file affinity, message style, weekend ratio, verb diversity, etc.).")}\n`);
+  process.stdout.write(`    ${kleur.gray("• For each locus we compute an")} ${kleur.bold("LR (likelihood ratio)")}${kleur.gray(":")}\n`);
+  process.stdout.write(`        ${kleur.green("LR > 1")}  ${kleur.gray("→ evidence FAVORS the suspect being the author.")}\n`);
+  process.stdout.write(`        ${kleur.red("LR < 1")}  ${kleur.gray("→ evidence AGAINST.")}\n`);
+  process.stdout.write(`        ${kleur.gray("LR = 1")}  ${kleur.gray("→ neutral — locus tells us nothing either way.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• The 12 LRs are multiplied together to get the")} ${kleur.bold("combined LR")} ${kleur.gray("above.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Verdict uses the")} ${kleur.bold("ENFSI 2015 verbal scale")} ${kleur.gray("(forensic-science standard for")}\n`);
+  process.stdout.write(`        ${kleur.gray("translating LR magnitudes into plain-English support levels).")}\n\n`);
+
+  // ─── Baseline-reliability warning ───────────────────────────────
+  if (result.suspectCommits < 30) {
+    process.stdout.write(`  ${pill("HEADS UP", "warn")} ${kleur.yellow(`Suspect baseline is small (${result.suspectCommits} commits)`)} ${kleur.gray("— LR loses calibration below ~30 commits. Treat extreme values as directional, not definitive.")}\n\n`);
+  }
+
+  process.stdout.write(section("◆ Per-locus contribution", "(12 STR loci · meter shows log-LR · most-informative first)") + "\n\n");
   // Sort: largest |log-LR| first — drives the eye to the most informative loci.
   const sortedLoci = [...result.report.perLocus].sort(
     (a, b) => Math.abs(Math.log10(b.lr)) - Math.abs(Math.log10(a.lr)),
@@ -141,6 +168,10 @@ export async function forensicsMatchCommand(opts: ForensicsMatchOptions): Promis
       `    ${logMeter(l.lr)}  ${kleur.bold(l.name.padEnd(20))} ${kleur.gray("LR=")}${formatLR(l.lr).padStart(9)}\n`,
     );
     process.stdout.write(`        ${kleur.gray(l.note)}\n`);
+    const friendly = humanizeLocusNote(l.name, l.note, l.lr);
+    if (friendly) {
+      process.stdout.write(`        ${kleur.cyan("→ ")}${kleur.gray(friendly)}\n`);
+    }
   }
   process.stdout.write("\n");
 
@@ -179,11 +210,18 @@ export interface ForensicsAttributeOptions {
 export async function forensicsAttributeCommand(
   opts: ForensicsAttributeOptions,
 ): Promise<number> {
+  // Resolve HEAD / HEAD~3 / branch / short-hash to a full hash via git rev-parse.
+  const fullHash = resolveCommitRef(opts.cwd, opts.commitHash);
+  if (!fullHash) {
+    ui.error(commitNotFoundMessage(opts.commitHash));
+    return 1;
+  }
+
   const result = await withStore(opts.cwd, (s) => {
     const allCommits = util.loadAllCommits(s);
     const evidenceCommit =
-      allCommits.find((c) => c.hash.startsWith(opts.commitHash)) ?? null;
-    if (!evidenceCommit) return { error: `Commit ${opts.commitHash} not found in index.` };
+      allCommits.find((c) => c.hash === fullHash || c.hash.startsWith(opts.commitHash)) ?? null;
+    if (!evidenceCommit) return { error: `Commit ${opts.commitHash} resolved to ${fullHash.slice(0, 8)} but is not in the index. Run 'mneme index' to refresh.` };
 
     const byAuthor = new Map<string, Commit[]>();
     for (const c of allCommits) {
@@ -257,6 +295,19 @@ export async function forensicsAttributeCommand(
   })();
   process.stdout.write(`  ${insightStr}\n\n`);
 
+  // ─── Plain-English reading guide ────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each candidate is an author with ≥5 prior commits, ranked by")} ${kleur.bold("likelihood ratio")} ${kleur.gray("(LR).")}\n`);
+  process.stdout.write(`    ${kleur.gray("• The")} ${kleur.bold("top candidate")} ${kleur.gray("is the one whose past coding fingerprint best matches this commit.")}\n`);
+  process.stdout.write(`    ${kleur.green("LR > 1")}  ${kleur.gray("→ evidence FOR this person being the author.")}\n`);
+  process.stdout.write(`    ${kleur.red("LR < 1")}  ${kleur.gray("→ evidence AGAINST.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Big gap between #1 and #2 = confident attribution. Small gap = treat as a shortlist.")}\n\n`);
+
+  // ─── Baseline-reliability warning ───────────────────────────────
+  if (result.candidates.length < 3) {
+    process.stdout.write(`  ${pill("HEADS UP", "warn")} ${kleur.yellow("Single-author or tiny-team repo")} ${kleur.gray(`— attribution needs ≥3 authors with ≥5 commits each to be meaningful. Found ${result.candidates.length}.`)}\n\n`);
+  }
+
   process.stdout.write(section("◆ Ranked candidates") + "\n\n");
   const showN = Math.min(opts.topN ?? 5, result.candidates.length);
   for (let i = 0; i < showN; i++) {
@@ -267,7 +318,10 @@ export async function forensicsAttributeCommand(
       `    ${kleur.bold(rank.padStart(3))}  ${kleur.bold(c.author.padEnd(32))}  ${kleur.gray("LR=")}${formatLR(lr).padStart(10)}  ${verdictBadge(c.report.verdict)}\n`,
     );
     process.stdout.write(
-      `         ${logMeter(lr)}  ${kleur.gray(`${c.commitCount} prior commits · log10(LR)=${c.report.log10LR}`)}\n\n`,
+      `         ${logMeter(lr)}  ${kleur.gray(`${c.commitCount} prior commits · log10(LR)=${c.report.log10LR}`)}\n`,
+    );
+    process.stdout.write(
+      `         ${kleur.cyan("→ ")}${kleur.gray(humanizeLR(lr))}\n\n`,
     );
   }
 
@@ -346,8 +400,8 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
 
   ui.banner();
   process.stdout.write(header("🛡", "Vulnerability Hunt — pattern-matched security findings",
-    "11 CWE-aligned classes · scans full diff bodies, additions only",
-    "Find security holes hidden in years of git history (SQL injection, weak crypto, leaked tokens, etc.).") + "\n\n");
+    "Scans for 11 known security-bug patterns (SQL injection, hardcoded secrets, weak crypto, etc.) — additions-only, full diff bodies.",
+    "Find security holes hidden in years of git history before an attacker does.") + "\n\n");
 
   // ─── Scan summary ─────────────────────────────────────────────────
   const totalSev = report.bySeverity.critical + report.bySeverity.high;
@@ -361,6 +415,17 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
     return `${kleur.yellow("!")}  ${kleur.bold(String(report.hits.length))} candidate(s) found across ${kleur.bold(String(report.scanned))} commits — review before action.`;
   })();
   process.stdout.write(`  ${summaryLine}\n\n`);
+
+  // ─── Plain-English reading guide ────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Mneme grepped through git history looking for")} ${kleur.bold("11 known security-bug patterns")}${kleur.gray(":")}\n`);
+  process.stdout.write(`        ${kleur.gray("SQL injection, hardcoded secrets, weak crypto (MD5/SHA1), command injection,")}\n`);
+  process.stdout.write(`        ${kleur.gray("path traversal, unsafe deserialization, eval, regex DoS, XSS, weak random, leaked tokens.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Each finding shows the")} ${kleur.bold("commit + the exact code line")} ${kleur.gray("that matched the pattern.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• The")} ${kleur.green("✓ already-fixed")} ${kleur.gray("tag means a later commit appears to have removed/replaced this pattern —")}\n`);
+  process.stdout.write(`        ${kleur.gray("still worth eyeballing, but not necessarily live in HEAD.")}\n`);
+  process.stdout.write(`    ${kleur.gray("• ")}${kleur.cyan("CWE-XX")}${kleur.gray(" is the public catalog ID for the bug class — Google it for full details.")}\n`);
+  process.stdout.write(`    ${kleur.yellow("• Heads-up: pattern matching has false positives. Always verify before filing a CVE.")}\n\n`);
 
   if (report.hits.length === 0) {
     if (report.silentFixes.length > 0) {
@@ -413,7 +478,7 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
     return b.commit.authorDate.localeCompare(a.commit.authorDate);
   });
   for (const h of sortedHits.slice(0, 20)) {
-    const fix = h.looksLikeFix ? `  ${pill("fixed", "ok")}` : "";
+    const fix = h.looksLikeFix ? `  ${kleur.green("✓ already-fixed")}` : "";
     process.stdout.write(
       `    ${severityBadge(sevToLevel[h.severity] ?? "info")}  ${kleur.bold(h.commit.shortHash)} ${kleur.gray(h.commit.authorDate.slice(0, 10))} ${kleur.cyan(h.reference)}${fix}\n`,
     );
@@ -648,6 +713,63 @@ function humanizeAxisNote(axis: string, note: string, commitDate: string): strin
     return note;
   }
   return note;
+}
+
+/** Translate a likelihood ratio into a "1 in N" sentence non-statisticians can grok.
+ *  LR = P(evidence | suspect-is-author) / P(evidence | random-author).
+ *  LR = 100 means "100x more likely if suspect wrote it"; LR = 1e-12 means
+ *  "1 trillion times more likely random author wrote it". */
+function humanizeLR(lr: number): string {
+  if (!Number.isFinite(lr) || lr <= 0) return "no signal";
+  if (lr >= 1) {
+    const factor = formatBigNumber(lr);
+    return `evidence is ~${factor} more likely if this person wrote it — supports authorship`;
+  }
+  // LR < 1: invert for the "1 in N" reading.
+  const inv = 1 / lr;
+  const factor = formatBigNumber(inv);
+  return `~1 in ${factor} chance of seeing this if they wrote it — overwhelming evidence AGAINST authorship`;
+}
+
+function formatBigNumber(n: number): string {
+  if (!Number.isFinite(n)) return "∞";
+  if (n < 10) return n.toFixed(2);
+  if (n < 1000) return Math.round(n).toLocaleString("en-US");
+  if (n < 1e6) return `${(n / 1e3).toFixed(1)} thousand`;
+  if (n < 1e9) return `${(n / 1e6).toFixed(1)} million`;
+  if (n < 1e12) return `${(n / 1e9).toFixed(1)} billion`;
+  if (n < 1e15) return `${(n / 1e12).toFixed(1)} trillion`;
+  if (n < 1e18) return `${(n / 1e15).toFixed(1)} quadrillion`;
+  // Beyond quadrillion — fall back to scientific.
+  const exp = Math.floor(Math.log10(n));
+  const mant = n / Math.pow(10, exp);
+  return `${mant.toFixed(1)} × 10^${exp}`;
+}
+
+/** Translate a per-locus note into plain English. The raw note format is:
+ *    "evidence=13 · suspect=2 · pop μ=2 σ=0.001 · |Δ|=11"
+ *  We turn that into:
+ *    "evidence has 13×, this author normally has 2 (others avg 2). Difference: 11."
+ */
+function humanizeLocusNote(name: string, note: string, lr: number): string {
+  const m = note.match(/evidence=([-\d.]+) · suspect=([-\d.]+) · pop μ=([-\d.]+) σ=([-\d.]+) · \|Δ\|=([-\d.]+)/);
+  if (!m) {
+    // Other notes (e.g. timezone, weekday) — pass through with a small hint.
+    if (lr >= 5) return `strong agreement with this author's pattern`;
+    if (lr <= 0.2) return `clear mismatch with this author's pattern`;
+    return "";
+  }
+  const evidence = Number(m[1]);
+  const suspect = Number(m[2]);
+  const popMean = Number(m[3]);
+  const delta = Number(m[5]);
+  const direction = lr >= 1 ? "matches" : "disagrees with";
+  return `evidence shows ${fmtNum(evidence)}, this author typically does ${fmtNum(suspect)} (others average ${fmtNum(popMean)}). Gap: ${fmtNum(delta)} — ${direction} the suspect's profile.`;
+}
+
+function fmtNum(n: number): string {
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(3);
 }
 
 function verdictPlainEnglish(verdict: string, suspect: string): string {
