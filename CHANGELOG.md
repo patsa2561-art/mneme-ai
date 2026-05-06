@@ -8,6 +8,83 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.17.0] — 2026-05-06
+
+The **"Forensic Code Science"** release. Real forensic-science
+methodology — likelihood ratios, ENFSI verbal scale, vulnerability
+pattern hunting, insider-threat anomaly detection — applied to git
+history. **First system to do so.**
+
+### Added — `mneme forensics` (4 subcommands)
+
+```bash
+mneme forensics match <commit> <author>   # STR-loci LR matching
+mneme forensics attribute <commit>        # anonymous attribution
+mneme forensics vulns                     # CWE-aligned vuln hunt
+mneme forensics anomaly                   # insider-threat detection
+```
+
+### `match` / `attribute` — STR-Loci Author Attribution
+
+12 novel "code STR loci" extracted per author, then likelihood ratio:
+
+```
+LR_total = ∏ LR_i           (Bayesian, product over independent loci)
+          i=1..12
+```
+
+Combined LR mapped to the **ENFSI 2015 verbal scale** (real forensic
+standard): "extremely strong support" / "very strong support" /
+"strong support" / "moderate support" / "weak support" /
+"uninformative" / "weak support against" / etc.
+
+Continuous loci: Gaussian likelihood. Discrete loci (peakHour,
+messageStyleHash): direct frequency matching. Per-locus LR capped at
+[0.001, 1000] so a single weird locus can't dominate — multi-locus
+agreement is what gives forensic certainty.
+
+### `vulns` — CWE-aligned Vulnerability Hunt
+
+Pattern-match across commit + diff history. **11 vulnerability classes**
+mapped to CWE identifiers:
+
+- crypto-weakness (CWE-327, 330, 321)
+- injection-sql/shell/xss (CWE-89, 78, 79, 95)
+- auth-flaw (CWE-287, 798, 347, 942)
+- financial-logic (CWE-190, 682, 840) — bank/finance grade
+- supply-chain (CWE-1357)
+- info-leakage (CWE-209)
+- race-condition (CWE-362)
+- privilege (CWE-269)
+
+Surfaces silent-fix commits (subject mentions security but no rule
+hits) for compliance review.
+
+### `anomaly` — Insider-Threat Detection
+
+Per-author baseline + four-axis deviation scoring for compromised-
+credential detection (the bank/finance scenario):
+
+| Axis | What it measures |
+|------|------------------|
+| TIME | Distance from author's UTC peak window |
+| FILES | Fraction of touched files the author has never touched |
+| STYLE | Verb-novelty + leading-verb match |
+| SIZE | Robust z-score (MAD) of insertions+deletions vs median |
+
+Composite score → severity bands (low/medium/high/critical) with
+specific recommendation per band. Requires ≥5 commits to baseline an
+author.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| Forensics (loci + LR + vulnhunt + anomaly) | 24 |
+| Repo total | **804** (was 780) |
+
+Build clean. All 804 tests pass.
+
 ## [0.16.0] — 2026-05-06
 
 The **"Giant Slayer"** release. Two world-firsts that no shipped tool we

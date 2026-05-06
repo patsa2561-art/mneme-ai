@@ -3,6 +3,12 @@ import { initCommand } from "./commands/init.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
 import { guardianCommand } from "./commands/guardian.js";
+import {
+  forensicsMatchCommand,
+  forensicsAttributeCommand,
+  forensicsVulnsCommand,
+  forensicsAnomalyCommand,
+} from "./commands/forensics.js";
 import { whyCommand } from "./commands/why.js";
 import { statusCommand } from "./commands/status.js";
 import { correlateCommand } from "./commands/correlate.js";
@@ -831,6 +837,76 @@ export async function run(argv: string[]): Promise<void> {
         await constellationCommand({
           cwd: process.cwd(),
           output: opts.output,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  // ─── v0.17.0: Forensics — applied forensic science for code ──────────
+  const forensicsCmd = program
+    .command("forensics")
+    .description("Applied forensic science for code: STR-loci attribution, vulnerability hunt, anomaly detection");
+
+  forensicsCmd
+    .command("match <commit> <author>")
+    .description("STR-loci likelihood-ratio match: did this author write this commit?")
+    .option("--json", "structured output", false)
+    .action(async (commit: string, author: string, opts: any) =>
+      process.exit(
+        await forensicsMatchCommand({
+          cwd: process.cwd(),
+          commitHash: commit,
+          authorEmail: author,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  forensicsCmd
+    .command("attribute <commit>")
+    .description("Anonymous attribution: rank candidate authors by likelihood ratio")
+    .option("--top <n>", "show N candidates", (v) => Number(v), 5)
+    .option("--json", "structured output", false)
+    .action(async (commit: string, opts: any) =>
+      process.exit(
+        await forensicsAttributeCommand({
+          cwd: process.cwd(),
+          commitHash: commit,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  forensicsCmd
+    .command("vulns")
+    .description("Hunt vulnerability patterns across commit history (CWE-aligned)")
+    .option("--since <date>", "only scan commits since this date")
+    .option("--top <n>", "scan up to N commits", (v) => Number(v), 500)
+    .option("--json", "structured output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await forensicsVulnsCommand({
+          cwd: process.cwd(),
+          since: opts.since,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      ),
+    );
+
+  forensicsCmd
+    .command("anomaly")
+    .description("Detect insider-threat / compromised-credential commits via per-author baselines")
+    .option("--threshold <n>", "deviation threshold to surface (0..4)", (v) => Number(v), 0.9)
+    .option("--top <n>", "show N findings", (v) => Number(v), 10)
+    .option("--json", "structured output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await forensicsAnomalyCommand({
+          cwd: process.cwd(),
+          threshold: opts.threshold,
+          topN: opts.top,
           json: opts.json,
         }),
       ),

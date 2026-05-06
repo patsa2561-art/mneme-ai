@@ -8,6 +8,7 @@
 - [[Innovations]]
 - [[Novel-Algorithms]]
 - [[Guardian]]
+- [[Forensic-Code-Science]]
 
 ### 📚 Commands
 - [[Command-Tour]]
