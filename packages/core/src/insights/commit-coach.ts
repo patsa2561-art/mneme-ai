@@ -15,6 +15,7 @@
 import type { MnemeStore } from "../store/sqlite.js";
 import type { Commit } from "../types.js";
 import { detectRegrets } from "./regret.js";
+import { isNoiseFile } from "../util/noise.js";
 
 export interface ParsedDiff {
   files: string[];
@@ -35,6 +36,10 @@ export interface Reviewer {
   ownership: number;
   /** Files this reviewer is the primary owner of (within touched set). */
   ownedFiles: string[];
+  /** This reviewer's broader territory — top 5 files they author across
+   *  the whole repo (noise-filtered). Lets the user judge whether the
+   *  coaching note about them applies broadly. */
+  topFiles?: Array<{ path: string; count: number }>;
 }
 
 export interface RegretWarning {
@@ -167,7 +172,7 @@ export function recommendReviewers(store: MnemeStore, files: string[], topN = 3)
     b.ownershipScore += share;
   }
 
-  return [...byAuthor.values()]
+  const top = [...byAuthor.values()]
     .map((b) => ({
       name: b.name,
       email: b.email,
@@ -176,6 +181,28 @@ export function recommendReviewers(store: MnemeStore, files: string[], topN = 3)
     }))
     .sort((a, b) => b.ownership - a.ownership)
     .slice(0, topN);
+
+  // For each top reviewer, look up their broader "territory" — top 5 files
+  // they author repo-wide. Helps the user judge whether the coaching note
+  // (e.g. "ask alice for review") fits this reviewer's actual focus area.
+  return top.map((r) => {
+    const rows = store.db
+      .prepare(
+        `SELECT fc.path AS path, COUNT(*) AS touches
+         FROM file_changes fc
+         JOIN commits c ON c.hash = fc.commit_hash
+         WHERE c.author_email = ?
+         GROUP BY fc.path
+         ORDER BY touches DESC
+         LIMIT 50`,
+      )
+      .all(r.email) as Array<{ path: string; touches: number }>;
+    const topFiles = rows
+      .filter((row) => !isNoiseFile(row.path))
+      .slice(0, 5)
+      .map((row) => ({ path: row.path, count: Number(row.touches) }));
+    return { ...r, topFiles };
+  });
 }
 
 /**

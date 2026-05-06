@@ -95,7 +95,20 @@ export async function drawdownCommand(opts: { cwd: string; minLength?: number; j
     process.stdout.write(
       `        ${kleur.bold(d.startDate)} → ${kleur.bold(d.endDate)}  ${kleur.gray(`(${d.length} consecutive fix/revert commits over ${d.durationDays} day${d.durationDays === 1 ? "" : "s"})`)}\n`,
     );
-    for (const fix of d.sampleFixes) process.stdout.write(`        ${kleur.gray("·")} ${fix}\n`);
+    // Hot files — most-touched files in this streak. Answers "WHERE was
+    // the firefighting?" — more actionable than the commit subjects alone.
+    if (d.hotFiles && d.hotFiles.length > 0) {
+      process.stdout.write(`        ${kleur.cyan("hot files (the area that kept breaking):")}\n`);
+      for (const hf of d.hotFiles) {
+        process.stdout.write(
+          `          ${kleur.bold(String(hf.count).padStart(3))}× ${kleur.white(hf.path)}\n`,
+        );
+      }
+    }
+    if (d.sampleFixes.length > 0) {
+      process.stdout.write(`        ${kleur.gray("sample fixes:")}\n`);
+      for (const fix of d.sampleFixes) process.stdout.write(`          ${kleur.gray("·")} ${fix}\n`);
+    }
     process.stdout.write("\n");
   }
 
@@ -388,6 +401,14 @@ export async function insiderTradingCommand(opts: { cwd: string; windowDays?: nu
     if (p.pairSuggestion) {
       process.stdout.write(`      ${kleur.cyan("→")} Pair with ${kleur.bold(p.pairSuggestion)} — they touch the same files without insider patterns.\n`);
     }
+    if (p.hotFiles && p.hotFiles.length > 0) {
+      process.stdout.write(`      ${kleur.cyan("hot files (where the pattern keeps recurring):")}\n`);
+      for (const hf of p.hotFiles) {
+        process.stdout.write(
+          `        ${kleur.bold(String(hf.count).padStart(3))}× ${kleur.white(hf.path)}\n`,
+        );
+      }
+    }
     for (const s of p.samples) {
       process.stdout.write(
         `        ${kleur.gray("·")} ${kleur.cyan(s.shipped.shortHash)} → ${kleur.cyan(s.fixed.shortHash)} ${kleur.gray(`(self-fixed ${s.daysToFix}d later)`)}: ${s.fixed.subject}\n`,
@@ -449,6 +470,14 @@ export async function moneyballCommand(opts: { cwd: string; topN?: number; json?
     process.stdout.write(
       `      ${kleur.gray("ROI:")} ${kleur.cyan(s.perCommitROI.toFixed(2))} ${kleur.gray(`(${s.perCommitROI.toFixed(1)}× return on commit effort — ${roiBlurb})`)}\n`,
     );
+    if (s.hotFiles && s.hotFiles.length > 0) {
+      process.stdout.write(`      ${kleur.cyan("hot files (their territory):")}\n`);
+      for (const hf of s.hotFiles) {
+        process.stdout.write(
+          `        ${kleur.bold(String(hf.count).padStart(3))}× ${kleur.white(hf.path)}\n`,
+        );
+      }
+    }
     process.stdout.write(`      ${kleur.gray("→ " + s.interpretation)}\n\n`);
   }
   return 0;

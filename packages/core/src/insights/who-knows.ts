@@ -14,6 +14,7 @@
  */
 
 import type { MnemeStore } from "../store/sqlite.js";
+import { isNoiseFile } from "../util/noise.js";
 
 export interface ExpertCandidate {
   /** Author name as it appears in git. */
@@ -25,6 +26,10 @@ export interface ExpertCandidate {
   lastTouch: string;
   /** Distinct files touched (capped at 1000 for memory hygiene). */
   filesTouched: number;
+  /** Top files (top 5, noise-filtered, by touch count) the candidate
+   *  worked on for this topic. Lets the asker verify "yes, they own
+   *  src/auth/*". */
+  topFiles?: string[];
   /** Score: log(commits + 1) × recency bonus. Higher = more authoritative. */
   score: number;
   /** Tier label derived from score + recency. */
@@ -65,6 +70,8 @@ export function whoKnows(store: MnemeStore, opts: WhoKnowsOptions): ExpertCandid
     commitCount: number;
     lastTouch: string;
     files: Set<string>;
+    /** Per-file touch counts (noise-filtered) for the topFiles ranking. */
+    fileCounts: Map<string, number>;
   };
   const buckets = new Map<string, Bucket>();
 
@@ -80,12 +87,18 @@ export function whoKnows(store: MnemeStore, opts: WhoKnowsOptions): ExpertCandid
         commitCount: 0,
         lastTouch: c.authorDate,
         files: new Set(),
+        fileCounts: new Map(),
       });
     }
     const b = buckets.get(key)!;
     b.commitCount += 1;
     if (c.authorDate > b.lastTouch) b.lastTouch = c.authorDate;
-    for (const f of (c.files ?? []).slice(0, 50)) b.files.add(f);
+    for (const f of (c.files ?? []).slice(0, 50)) {
+      b.files.add(f);
+      if (!isNoiseFile(f)) {
+        b.fileCounts.set(f, (b.fileCounts.get(f) ?? 0) + 1);
+      }
+    }
     if (b.files.size > 1000) {
       // Hygiene cap — extremely active authors on huge repos.
       const arr = [...b.files];
@@ -96,12 +109,17 @@ export function whoKnows(store: MnemeStore, opts: WhoKnowsOptions): ExpertCandid
   const candidates: ExpertCandidate[] = [];
   for (const b of buckets.values()) {
     const score = scoreCandidate(b.commitCount, b.lastTouch, now);
+    const topFiles = [...b.fileCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([path]) => path);
     candidates.push({
       name: b.name,
       email: b.email,
       commitCount: b.commitCount,
       lastTouch: b.lastTouch,
       filesTouched: b.files.size,
+      topFiles,
       score,
       tier: tierOf(b.commitCount, b.lastTouch, now),
     });

@@ -26,6 +26,10 @@ export interface FlipFlop {
   spanMonths: number;
   /** A 1-line interpretation. */
   question: string;
+  /** Files involved across the flip-flop chain (top 5, noise-filtered).
+   *  Lets the reader jump straight to the code area where the team kept
+   *  reversing direction. */
+  hotFiles?: Array<{ path: string; count: number }>;
 }
 
 /**
@@ -198,12 +202,25 @@ export function detectParadoxes(decisions: ExtractedDecision[]): FlipFlop[] {
     const toDate = new Date(chain[chain.length - 1]!.date);
     const spanMonths = (toDate.getTime() - fromDate.getTime()) / (30 * 86_400_000);
 
+    // Aggregate filesAffected across every decision in the chain to
+    // surface the code area where the flip-flop happened.
+    const fileCounts = new Map<string, number>();
+    for (const d of chain) {
+      for (const f of d.filesAffected ?? []) {
+        fileCounts.set(f, (fileCounts.get(f) ?? 0) + 1);
+      }
+    }
+    const hotFiles = [...fileCounts.entries()]
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
     flipFlops.push({
       topic,
       chain,
       flips,
       spanMonths: Math.round(spanMonths * 10) / 10,
       question: buildQuestion(topic, chain, flips),
+      hotFiles: hotFiles.length > 0 ? hotFiles : undefined,
     });
   }
 

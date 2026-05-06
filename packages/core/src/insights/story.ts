@@ -9,6 +9,7 @@
  */
 
 import type { Commit } from "../types.js";
+import { topHotFiles } from "../util/noise.js";
 
 export interface StoryAct {
   /** Stable id used for the section header. */
@@ -20,6 +21,10 @@ export interface StoryAct {
   /** Date range of the act. */
   fromDate: string;
   toDate: string;
+  /** Top files (top 5, noise-filtered) most-touched during the act. Lets the
+   *  reader see the spatial trajectory of the story — "Act I worked on
+   *  src/auth/, Act II shifted to src/payments/". */
+  hotFiles?: Array<{ path: string; count: number }>;
 }
 
 export interface Story {
@@ -53,6 +58,7 @@ export function buildStory(topic: string, commits: Commit[]): Story {
     commits: [initial],
     fromDate: initial.authorDate.slice(0, 10),
     toDate: initial.authorDate.slice(0, 10),
+    hotFiles: topHotFiles([initial]),
   });
 
   // Walk the rest, grouping consecutive commits with the same flavor.
@@ -69,6 +75,7 @@ export function buildStory(topic: string, commits: Commit[]): Story {
       commits: [...currentBucket],
       fromDate: currentBucket[0]!.authorDate.slice(0, 10),
       toDate: currentBucket[currentBucket.length - 1]!.authorDate.slice(0, 10),
+      hotFiles: topHotFiles(currentBucket),
     });
     currentBucket = [];
     currentFlavor = null;
@@ -93,6 +100,7 @@ export function buildStory(topic: string, commits: Commit[]): Story {
       commits: [last],
       fromDate: last.authorDate.slice(0, 10),
       toDate: new Date().toISOString().slice(0, 10),
+      hotFiles: topHotFiles([last]),
     });
   }
 

@@ -11,6 +11,7 @@
  */
 
 import type { Commit } from "../types.js";
+import { isNoiseFile } from "../util/noise.js";
 
 export interface Drawdown {
   /** Start commit (peak — last feat before the drawdown). */
@@ -27,6 +28,10 @@ export interface Drawdown {
   sampleFixes: string[];
   /** Severity tier from length × duration. */
   tier: "minor" | "moderate" | "severe" | "critical";
+  /** Most-touched files across all commits in the streak (top 5 by count).
+   *  Answers "which area of the codebase kept breaking?" — far more
+   *  actionable than the commit subjects alone. */
+  hotFiles: Array<{ path: string; count: number }>;
 }
 
 const FEAT_RE = /^feat[(:]/i;
@@ -75,7 +80,22 @@ export function detectDrawdowns(
       const start = sorted[i]!;
       const end = sorted[j - 1]!;
       const dur = (new Date(end.authorDate).getTime() - new Date(start.authorDate).getTime()) / 86_400_000;
-      const samples = sorted.slice(i, j).filter(isFixCommit).slice(0, 3).map((c) => c.subject);
+      const streak = sorted.slice(i, j);
+      const samples = streak.filter(isFixCommit).slice(0, 3).map((c) => c.subject);
+      // Aggregate file touches across the whole streak — answers "which
+      // module kept breaking?" Lock-files / generated junk are filtered
+      // because they pollute every drawdown without being actionable.
+      const fileCounts = new Map<string, number>();
+      for (const c of streak) {
+        for (const f of c.files ?? []) {
+          if (isNoiseFile(f)) continue;
+          fileCounts.set(f, (fileCounts.get(f) ?? 0) + 1);
+        }
+      }
+      const hotFiles = [...fileCounts.entries()]
+        .map(([path, count]) => ({ path, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
       out.push({
         startHash: start.shortHash || start.hash.slice(0, 7),
         startDate: start.authorDate.slice(0, 10),
@@ -85,6 +105,7 @@ export function detectDrawdowns(
         durationDays: Math.round(dur * 10) / 10,
         sampleFixes: samples,
         tier: classifyDrawdown(length, dur),
+        hotFiles,
       });
     }
     i = j === i ? i + 1 : j;

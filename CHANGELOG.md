@@ -8,6 +8,46 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.21.1] — 2026-05-06
+
+The **"Where in the codebase?"** patch. Every command that operates on
+commits now surfaces **file paths** alongside the data — answering the
+question every reader has when they see "5 anomalous commits" or
+"3-week firefighting streak": *"WHERE in the codebase?"*
+
+### Added — file paths surface in 9 commands
+
+| Command | What you see now |
+|---|---|
+| `drawdown` | `hot files (the area that kept breaking): 25× src/payments/processor.ts` |
+| `insider-trading` | Per author: `hot files (where the pattern keeps recurring): 5× src/api/checkout.ts` |
+| `moneyball` | Per contributor: their top-touched files |
+| `who-knows` | Per expert: `their territory: src/auth/, src/session/, …` |
+| `decisions` | Each decision: `files affected: src/api/v2/router.ts, src/index.ts` |
+| `story` | Per act: `hot files in this chapter: …` |
+| `paradox` | Per flip-flop chain: file list per decision + aggregated |
+| `regret` | Each regret: `affected files: …` (intersection of shipped + followup) |
+| `commit-coach` | Per reviewer: `their territory: …` |
+
+### Internal refactor
+
+- New `packages/core/src/util/noise.ts` — `isNoiseFile()` filters lock files,
+  `dist/`, `build/`, `node_modules/`, `.min.*`, `CHANGELOG.md`, etc. so they
+  don't pollute hotspot lists. Plus `topHotFiles(commits, n)` helper that
+  does aggregate-sort-slice in one call.
+- `Drawdown.hotFiles`, `InsiderProfile.hotFiles`, `ContributorScore.hotFiles`,
+  `ExpertCandidate.topFiles?`, `ExtractedDecision.filesAffected?`,
+  `StoryAct.hotFiles?`, `FlipFlop.hotFiles?`, `Regret.affectedFiles?`,
+  `Reviewer.topFiles?` — new fields on the data structs (all optional where
+  needed for backwards-test-compat).
+
+### Testing
+
+880/880 tests still pass — the new fields are optional / additive. Touched
+13 files (4 CLI, 8 core, 1 new util).
+
+—
+
 ## [0.21.0] — 2026-05-06
 
 The **"Plain English Everything"** release. **32 commands** systematically

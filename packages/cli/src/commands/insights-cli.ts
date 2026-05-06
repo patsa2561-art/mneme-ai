@@ -123,6 +123,9 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
   process.stdout.write(
     `    ${kleur.gray(`last touch ${daysAgoFromIso(top.lastTouch)} ago · ${top.filesTouched} files in their footprint`)}\n`,
   );
+  if (top.topFiles && top.topFiles.length > 0) {
+    process.stdout.write(`    ${kleur.cyan("their territory:")} ${kleur.gray(top.topFiles.join(", "))}\n`);
+  }
   if (verdict.risk) {
     process.stdout.write(`\n    ${pill("RISK", "warn")}  ${kleur.yellow(verdict.risk)}\n`);
   }
@@ -148,6 +151,9 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
       process.stdout.write(
         `    ${tier}  ${kleur.bold(c.name.padEnd(22))}  ${meter(c.commitCount / Math.max(1, maxCount), { width: 8 })}  ${kleur.gray(`${c.commitCount} commits · ${c.filesTouched} files · ${daysAgoFromIso(c.lastTouch)}`)}\n`,
       );
+      if (c.topFiles && c.topFiles.length > 0) {
+        process.stdout.write(`        ${kleur.gray("↳ " + c.topFiles.slice(0, 3).join(", "))}\n`);
+      }
     }
     process.stdout.write("\n");
   }
@@ -287,6 +293,9 @@ export async function decisionsCommand(opts: DecisionsOptions): Promise<number> 
       `    ${pill(d.kind, lvl)}  ${kleur.gray(d.date)}  ${kleur.cyan(d.author.padEnd(16))}  ${kleur.bold(d.summary)}\n`,
     );
     if (d.rationale) process.stdout.write(`        ${kleur.gray("→ " + d.rationale)}\n`);
+    if (d.filesAffected && d.filesAffected.length > 0) {
+      process.stdout.write(`        ${kleur.gray("files: " + d.filesAffected.join(", "))}\n`);
+    }
     process.stdout.write(`        ${kleur.gray(`confidence ${(d.confidence * 100).toFixed(0)}% (${confLabel}) · ${d.shortHash}`)}\n\n`);
   }
   if (decisions.length > 30) {
@@ -609,6 +618,14 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
     }
     if (act.commits.length > 5) {
       process.stdout.write(`    ${kleur.gray(`...and ${act.commits.length - 5} more`)}\n`);
+    }
+    if (act.hotFiles && act.hotFiles.length > 0) {
+      process.stdout.write(`    ${kleur.cyan("hot files (where this act took place):")}\n`);
+      for (const hf of act.hotFiles) {
+        process.stdout.write(
+          `        ${kleur.bold(String(hf.count).padStart(3))}× ${kleur.white(hf.path)}\n`,
+        );
+      }
     }
     process.stdout.write("\n");
   }
@@ -941,6 +958,9 @@ export async function regretCommand(opts: RegretOptions): Promise<number> {
     process.stdout.write(`    ${kindBadge}  shipped ${kleur.bold(r.shipped.authorDate.slice(0, 10))}  ${kleur.gray("→ fixed in " + r.daysToFix + "d")}\n`);
     process.stdout.write(`        ${kleur.cyan(shippedHash)}  ${kleur.bold(r.shipped.subject)}\n`);
     process.stdout.write(`        ${kleur.gray("↳ " + followupHash + "  " + r.followup.subject)}\n`);
+    if (r.affectedFiles && r.affectedFiles.length > 0) {
+      process.stdout.write(`        ${kleur.cyan("files affected:")} ${kleur.gray(r.affectedFiles.join(", "))}\n`);
+    }
     if (r.lesson) process.stdout.write(`        ${kleur.gray("lesson: " + r.lesson)}\n`);
     process.stdout.write("\n");
   }
@@ -1096,6 +1116,17 @@ export async function paradoxCommand(opts: ParadoxOptions): Promise<number> {
       process.stdout.write(
         `    ${kleur.gray("●")} ${kleur.bold(d.date)}  ${kleur.cyan(d.shortHash)}  ${d.summary}  ${kleur.gray(`(${d.author})`)}\n`,
       );
+      if (d.filesAffected && d.filesAffected.length > 0) {
+        process.stdout.write(`        ${kleur.gray("↳ files: " + d.filesAffected.join(", "))}\n`);
+      }
+    }
+    if (f.hotFiles && f.hotFiles.length > 0) {
+      process.stdout.write(`\n    ${kleur.cyan("hot files (where the flip-flop happened):")}\n`);
+      for (const hf of f.hotFiles) {
+        process.stdout.write(
+          `        ${kleur.bold(String(hf.count).padStart(3))}× ${kleur.white(hf.path)}\n`,
+        );
+      }
     }
     process.stdout.write(`\n    ${kleur.yellow("→ ")}${kleur.yellow(f.question)}\n\n`);
   }
@@ -1179,6 +1210,11 @@ export async function commitCoachCommand(opts: CommitCoachOptions): Promise<numb
       process.stdout.write(
         `    ${kleur.cyan("●")} ${kleur.bold(r.name)} ${kleur.gray(`<${r.email}>`)}  ${kleur.cyan(r.ownership + "%")} ${kleur.gray("(" + ownLabel + ")")}  ${kleur.gray(`— ${r.ownedFiles.length} owned files`)}\n`,
       );
+      if (r.topFiles && r.topFiles.length > 0) {
+        process.stdout.write(
+          `        ${kleur.gray("territory: " + r.topFiles.map((tf) => tf.path).join(", "))}\n`,
+        );
+      }
     }
     process.stdout.write("\n");
   }

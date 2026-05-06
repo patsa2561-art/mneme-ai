@@ -11,6 +11,7 @@
  */
 
 import type { Commit } from "../types.js";
+import { isNoiseFile } from "../util/noise.js";
 
 export interface ExtractedDecision {
   /** Commit hash where the decision was recorded. */
@@ -35,6 +36,9 @@ export interface ExtractedDecision {
     | "rejected";
   /** Confidence score in [0, 1]; calibrated from pattern specificity. */
   confidence: number;
+  /** Files affected by the underlying commit (top 3, noise-filtered). Lets
+   *  the reader jump directly to where the decision landed. */
+  filesAffected?: string[];
 }
 
 interface Pattern {
@@ -107,6 +111,9 @@ export function extractDecisions(commit: Commit): ExtractedDecision[] {
       const ratMatch = RATIONALE_RE.exec(tail);
       const rationale = ratMatch?.groups?.rationale?.trim();
 
+      const filesAffected = (commit.files ?? [])
+        .filter((f) => !isNoiseFile(f))
+        .slice(0, 3);
       found.push({
         commitHash: commit.hash,
         shortHash: commit.shortHash || commit.hash.slice(0, 7),
@@ -116,6 +123,7 @@ export function extractDecisions(commit: Commit): ExtractedDecision[] {
         rationale: rationale || undefined,
         kind: p.kind,
         confidence: p.confidence,
+        filesAffected,
       });
     }
   }
@@ -164,7 +172,13 @@ export function renderDecisionsAsMarkdown(decisions: ExtractedDecision[]): strin
   for (const d of decisions) {
     const decision = d.summary.replace(/\|/g, "\\|");
     const rationale = (d.rationale ?? "").replace(/\|/g, "\\|");
-    lines.push(`| ${d.date} | ${d.author} | ${decision} | ${rationale} | \`${d.shortHash}\` |`);
+    const files = (d.filesAffected ?? []).join(", ");
+    // Inline files into the Source cell so the Markdown table column
+    // structure stays compatible with anyone post-processing it.
+    const source = files
+      ? `\`${d.shortHash}\` <br/>files: ${files.replace(/\|/g, "\\|")}`
+      : `\`${d.shortHash}\``;
+    lines.push(`| ${d.date} | ${d.author} | ${decision} | ${rationale} | ${source} |`);
   }
   lines.push("");
   return lines.join("\n");

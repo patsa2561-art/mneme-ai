@@ -18,6 +18,7 @@
  */
 
 import type { Commit } from "../types.js";
+import { isNoiseFile } from "../util/noise.js";
 
 export interface ContributorScore {
   authorName: string;
@@ -36,6 +37,10 @@ export interface ContributorScore {
   tier: "moneyball" | "balanced" | "loud" | "passive";
   /** A 1-line interpretation. */
   interpretation: string;
+  /** Top files (top 5, noise-filtered) this contributor touches most across
+   *  their commits — answers "which area of the codebase is this person's
+   *  bus-factor for?" */
+  hotFiles: Array<{ path: string; count: number }>;
 }
 
 export interface MoneyballOptions {
@@ -106,6 +111,19 @@ export function moneyball(commits: Commit[], opts: MoneyballOptions = {}): Contr
     const valueScore = Math.log2(b.downstream + 1) * b.collaboratorSet.size;
     const perCommitROI = b.commits.length === 0 ? 0 : valueScore / b.commits.length;
     const tier = classifyMoneyballTier(b.commits.length, valueScore, perCommitROI);
+    // Top-5 hot files for this author — useful as a "what's their territory"
+    // hint next to the ROI score.
+    const fileCounts = new Map<string, number>();
+    for (const c of b.commits) {
+      for (const f of c.files ?? []) {
+        if (isNoiseFile(f)) continue;
+        fileCounts.set(f, (fileCounts.get(f) ?? 0) + 1);
+      }
+    }
+    const hotFiles = [...fileCounts.entries()]
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
     scores.push({
       authorName: b.authorName,
       authorEmail: b.authorEmail,
@@ -116,6 +134,7 @@ export function moneyball(commits: Commit[], opts: MoneyballOptions = {}): Contr
       perCommitROI,
       tier,
       interpretation: buildInterpretation(tier, b.commits.length, b.downstream, b.collaboratorSet.size),
+      hotFiles,
     });
   }
 

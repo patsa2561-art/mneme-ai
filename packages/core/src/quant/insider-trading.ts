@@ -16,6 +16,7 @@
  */
 
 import type { Commit } from "../types.js";
+import { isNoiseFile } from "../util/noise.js";
 
 const FIX_RE = /\b(fix(?:es|ed)?|hotfix|bug|crashed?|broken|regression)\b/i;
 
@@ -43,6 +44,10 @@ export interface InsiderProfile {
   tier: "high-pattern" | "elevated" | "watch" | "low";
   /** Suggested pairing partner from another author (if any). */
   pairSuggestion?: string;
+  /** Top files (by combined ship+fix touch count) where this author's
+   *  insider pattern keeps recurring — top 5, noise-filtered. Answers
+   *  "where in the codebase do they keep breaking + fixing?" */
+  hotFiles: Array<{ path: string; count: number }>;
 }
 
 export interface InsiderTradingOptions {
@@ -130,6 +135,19 @@ export function detectInsiderTrading(
     if (b.patterns.length < minPatterns) continue;
     const tier = classifyInsiderTier(b.patterns.length);
     const pairSuggestion = findPairPartner(commits, b.authorName, [...b.files]);
+    // Aggregate touches across each pattern's shipped + fixed commits to
+    // surface the file(s) the author keeps cycling on.
+    const fileCounts = new Map<string, number>();
+    for (const p of b.patterns) {
+      for (const f of [...(p.shipped.files ?? []), ...(p.fixed.files ?? [])]) {
+        if (isNoiseFile(f)) continue;
+        fileCounts.set(f, (fileCounts.get(f) ?? 0) + 1);
+      }
+    }
+    const hotFiles = [...fileCounts.entries()]
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
     profiles.push({
       authorName: b.authorName,
       authorEmail: b.authorEmail,
@@ -138,6 +156,7 @@ export function detectInsiderTrading(
       samples: b.patterns.slice(0, 3),
       tier,
       pairSuggestion,
+      hotFiles,
     });
   }
 

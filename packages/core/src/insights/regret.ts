@@ -16,6 +16,7 @@
  */
 
 import type { Commit } from "../types.js";
+import { isNoiseFile } from "../util/noise.js";
 
 export interface Regret {
   shipped: Commit;
@@ -31,6 +32,10 @@ export interface Regret {
   kind: "revert" | "hotfix" | "fix" | "sameFiles";
   /** A 1-line lesson when one is extractable from the follow-up message. */
   lesson?: string;
+  /** Files that link the shipped commit to its follow-up — top 5,
+   *  noise-filtered. Lets the reader jump to where the regret actually
+   *  lives in the codebase. */
+  affectedFiles?: string[];
 }
 
 const REVERT_RE = /\b(revert|reverts|reverted)\b/i;
@@ -88,12 +93,23 @@ export function detectRegrets(
       }
 
       if (kind) {
+        // Files that connect ship → fix. Prefer the intersection (true
+        // shared files) but fall back to the shipped commit's files when
+        // the link came from a hash/issue reference (no shared files
+        // required for revert-by-hash).
+        const shippedSet = new Set(shipped.files ?? []);
+        const sharedSet = new Set(
+          (followup.files ?? []).filter((f) => shippedSet.has(f) && !isNoiseFile(f)),
+        );
+        const fallback = (shipped.files ?? []).filter((f) => !isNoiseFile(f));
+        const affectedFiles = (sharedSet.size > 0 ? [...sharedSet] : fallback).slice(0, 5);
         out.push({
           shipped,
           followup,
           daysToFix: Number(days.toFixed(1)),
           kind,
           lesson: extractLesson(fuText, kind),
+          affectedFiles: affectedFiles.length > 0 ? affectedFiles : undefined,
         });
         break; // one regret per shipped commit (the first follow-up)
       }
