@@ -19,13 +19,12 @@
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
 </p>
 
-<h3>3:47 AM. Stolen credentials push a commit.<br/>
-Style differs. File set is new. Hour is wrong.<br/>
-<i>Mneme catches it before merge — with proof.</i></h3>
+<h3>The bug came back.<br/>
+The fix from 2022 is in a commit nobody remembers.<br/>
+<i>The author left.</i></h3>
 
 <p>
-  Your git log is a 6-year decision archive.<br/>
-  AI agents read it linearly. Mneme indexes it semantically — locally, in 2 seconds.<br/>
+  Mneme finds it in 50ms — with the diff, the rationale, and the related commits.<br/>
   <b>The same memory feeds your AI through MCP. With citations.</b>
 </p>
 
