@@ -121,37 +121,89 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
     ui.warn(`Deterministic mode — ignoring --embedder ${opts.embedder} and using hash fallback.`);
   }
 
+  // Bundled-model download progress hook — keeps the user informed during
+  // the one-time ~25MB ONNX fetch on first run.
+  let lastDl = 0;
   const embedder = await resolveEmbedder({
     provider: noLlm ? "hash" : (opts.embedder ?? cfg.embeddings.provider),
     model: noLlm ? undefined : (opts.model ?? cfg.embeddings.model),
     baseUrl: cfg.embeddings.baseUrl,
+    onBundledProgress: (info) => {
+      const now = Date.now();
+      if (now - lastDl < 250 && info.status !== "done") return;
+      lastDl = now;
+      const file = info.file ? ` ${info.file}` : "";
+      if (info.status === "progress" && info.loaded != null && info.total != null && info.total > 0) {
+        const pct = Math.round((info.loaded / info.total) * 100);
+        const mb = (info.loaded / 1024 / 1024).toFixed(1);
+        const tot = (info.total / 1024 / 1024).toFixed(1);
+        ui.raw(`\r${kleur.gray("›")} ${kleur.bold("downloading".padEnd(10))} ${pct}% ${kleur.gray(`(${mb}/${tot} MB${file})`)}     `);
+      } else if (info.status === "done" || info.status === "ready") {
+        ui.raw(`\r${kleur.gray("›")} ${kleur.bold("downloading".padEnd(10))} ${kleur.green("done")}${file ? kleur.gray(` (${file})`) : ""}     \n`);
+      }
+    },
   });
 
-  ui.step("embedder", `${kleur.bold(embedder.name)} ${kleur.gray(`(${embedder.dimensions} dims)`)}`);
-  if (embedder.name.startsWith("hash:")) {
+  let activeEmbedder = embedder;
+  ui.step("embedder", `${kleur.bold(activeEmbedder.name)} ${kleur.gray(`(${activeEmbedder.dimensions} dims)`)}`);
+  if (activeEmbedder.name.startsWith("hash:")) {
     ui.warn("Using hash-trick fallback. For real semantic quality install Ollama:");
     ui.dim("    ollama pull nomic-embed-text  &&  ollama serve");
   }
 
-  // Pre-flight: catch Ollama / model issues in seconds, BEFORE the long
-  // git read + redaction pass. Prevents the "hung at 0% for minutes" trap.
-  if (typeof (embedder as { verify?: unknown }).verify === "function") {
-    ui.step("verify", "checking Ollama + model is ready");
-    const ver = await (embedder as unknown as {
+  // Pre-flight verify. If the chosen embedder is unhealthy, AUTO-FALL-BACK
+  // to the bundled WASM model — never block the user with a hard error.
+  // Hard errors only happen if user EXPLICITLY chose `--embedder ollama`.
+  const userPickedExplicit = !!opts.embedder && opts.embedder !== "auto";
+  if (typeof (activeEmbedder as { verify?: unknown }).verify === "function") {
+    ui.step("verify", `${activeEmbedder.name} is ready?`);
+    const ver = await (activeEmbedder as unknown as {
       verify: () => Promise<{ ok: true } | { ok: false; reason: string; remedy: string }>;
     }).verify();
     if (!ver.ok) {
+      if (userPickedExplicit) {
+        // User asked for this provider specifically — show error and exit.
+        process.stdout.write("\n");
+        ui.error(`Embedder not ready: ${ver.reason}`);
+        process.stdout.write(`  ${kleur.yellow().bold("👉 Fix:")}  ${kleur.bold().white(ver.remedy)}\n`);
+        process.stdout.write(`  ${kleur.gray("Or use auto-fallback:  mneme index --embedder bundled")}\n\n`);
+        return 1;
+      }
+      // Auto mode — degrade silently to bundled WASM.
       process.stdout.write("\n");
-      ui.error(`Embedder not ready: ${ver.reason}`);
-      process.stdout.write(`  ${kleur.yellow().bold("👉 Fix:")}  ${kleur.bold().white(ver.remedy)}\n`);
-      process.stdout.write(`  ${kleur.gray("Once fixed, re-run:  mneme index")}\n\n`);
-      return 1;
+      ui.warn(`${activeEmbedder.name} is unhealthy: ${ver.reason}`);
+      ui.dim(`  → falling back to bundled WASM model (no setup needed).`);
+      const { BundledEmbedder } = await import("@mneme-ai/embeddings");
+      activeEmbedder = new BundledEmbedder({
+        onProgress: (info: { status: string; loaded?: number; total?: number; file?: string }) => {
+          const fileLabel = info.file ? ` ${info.file}` : "";
+          if (info.status === "progress" && info.loaded != null && info.total != null && info.total > 0) {
+            const pct = Math.round((info.loaded / info.total) * 100);
+            const mb = (info.loaded / 1024 / 1024).toFixed(1);
+            const tot = (info.total / 1024 / 1024).toFixed(1);
+            ui.raw(`\r${kleur.gray("›")} ${kleur.bold("downloading".padEnd(10))} ${pct}% ${kleur.gray(`(${mb}/${tot} MB${fileLabel})`)}     `);
+          } else if (info.status === "done" || info.status === "ready") {
+            ui.raw(`\r${kleur.gray("›")} ${kleur.bold("downloading".padEnd(10))} ${kleur.green("done")}${fileLabel ? kleur.gray(` (${fileLabel})`) : ""}     \n`);
+          }
+        },
+      });
+      ui.step("embedder", `${kleur.bold(activeEmbedder.name)} ${kleur.gray(`(${activeEmbedder.dimensions} dims, fallback)`)}`);
+      const ver2 = await (activeEmbedder as unknown as {
+        verify: () => Promise<{ ok: true } | { ok: false; reason: string; remedy: string }>;
+      }).verify();
+      if (!ver2.ok) {
+        // Even bundled failed (e.g., offline, no cached model) — fall to hash.
+        ui.warn(`Bundled WASM also unhealthy: ${ver2.reason}`);
+        ui.dim(`  → falling back to hash embedder (★★ deterministic, always works).`);
+        const { HashEmbedder } = await import("@mneme-ai/embeddings");
+        activeEmbedder = new HashEmbedder();
+      }
     }
   }
 
   const s = new store.MnemeStore(dbPath(meta.rootPath));
   s.setMeta("repo_root", meta.rootPath);
-  s.setMeta("embedder", embedder.name);
+  s.setMeta("embedder", activeEmbedder.name);
 
   const redactConfig = opts.noRedact
     ? false
@@ -163,7 +215,7 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   const idx = new indexer.Indexer({
     cwd: meta.rootPath,
     store: s,
-    embedder,
+    embedder: activeEmbedder,
     since: opts.since ?? cfg.index.since,
     maxCount: opts.maxCount ?? cfg.index.maxCount,
     redact: redactConfig,
@@ -185,13 +237,15 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   // Pin the resolved embedder into config so subsequent `ask` uses the same
   // vector space (otherwise auto-detect could pick a different provider whose
   // embeddings are incompatible with what's stored).
-  const resolvedKind: "ollama" | "openai" | "hash" = embedder.name.startsWith("ollama:")
+  const resolvedKind: "ollama" | "openai" | "bundled" | "hash" = activeEmbedder.name.startsWith("ollama:")
     ? "ollama"
-    : embedder.name.startsWith("openai:")
+    : activeEmbedder.name.startsWith("openai:")
       ? "openai"
-      : "hash";
-  const resolvedModel = embedder.name.includes(":")
-    ? embedder.name.split(":").slice(1).join(":")
+      : activeEmbedder.name.startsWith("bundled:")
+        ? "bundled"
+        : "hash";
+  const resolvedModel = activeEmbedder.name.includes(":")
+    ? activeEmbedder.name.split(":").slice(1).join(":")
     : undefined;
   if (
     cfg.embeddings.provider !== resolvedKind ||

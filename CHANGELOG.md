@@ -8,6 +8,75 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.19.0] — 2026-05-06
+
+The **"Zero-Install — Just Works"** release. Mneme now ships a built-in
+WASM embedding model so `npm i -g mneme-ai && mneme index` works on any
+machine without installing Ollama, configuring API keys, or running any
+external service. Auto-detect walks a 4-step fallback ladder and gracefully
+degrades — the user is NEVER blocked by an unhealthy provider.
+
+### Added — Bundled WASM embedder (the killer feature)
+
+- New `BundledEmbedder` (`packages/embeddings/src/bundled.ts`) — wraps
+  `@xenova/transformers` with `Xenova/all-MiniLM-L6-v2` (~25MB, 384-dim).
+  Pure JS+WASM, no native deps, runs on Windows / Mac / Linux.
+- Model is **lazy-downloaded** on first use to `~/.cache/mneme/models/`.
+  Indexer streams download progress so the user never sees a frozen bar.
+- Includes a `verify()` pre-flight: instantiates the pipeline + runs a
+  1-token sanity embed BEFORE the long indexer loop.
+
+### Auto-detect ladder (graceful degradation, never blocks)
+
+```
+1. OpenAI (★★★★★ paid)        — if OPENAI_API_KEY is set
+2. Ollama (★★★★ free local)   — only if ping AND a SHORT sanity embed succeed
+3. Bundled WASM (★★★)         — zero setup, ~25MB lazy download
+4. Hash (★★ deterministic)    — final escape hatch, always works
+```
+
+If any step fails — even mid-run (e.g., Ollama becomes unresponsive after
+ping) — the next step takes over silently. Auto mode NEVER errors out.
+
+### Auto-fallback at the CLI layer
+
+`mneme index` (auto mode) now does its own pre-flight verify:
+
+- If the chosen embedder fails → falls back to bundled WASM with a
+  friendly note ("Ollama is unhealthy: <reason> → falling back to bundled").
+- If bundled also fails (e.g., offline + no cached model) → falls to
+  hash. The user gets a working index either way.
+- Explicit `--embedder ollama` still errors hard, with a clear remedy
+  + the suggested fallback (`--embedder bundled`).
+
+### `mneme init` recommendation now reflects bundled
+
+Default recommendation changed: when no Ollama and no OpenAI key, the
+probe now suggests `bundled` (★★★, zero-setup) instead of `hash` (★★).
+The action callout explains: "No setup needed — Mneme will use a built-in
+25MB model. For ★★★★ install Ollama (optional)."
+
+### Internal
+
+- `OllamaEmbedder` `auto`-mode now uses a 10s timeout for the auto-detect
+  probe (vs 180s for the real workload) so a hung Ollama doesn't make
+  `mneme init` feel slow.
+- `MnemeConfig.embeddings.provider` now includes `"bundled"`.
+- All 834 tests pass (probe tests updated to reflect new bundled-default).
+
+### User-visible flow on a fresh install
+
+```bash
+npm i -g mneme-ai
+cd <any-git-repo>
+mneme index    # downloads 25MB model on first run, then indexes — zero setup
+mneme ask "..."
+```
+
+No Ollama install. No API key. No localhost vs 127.0.0.1 gotcha. Just works.
+
+—
+
 ## [0.18.0] — 2026-05-06
 
 The **"Polished — Output from the Future"** release. Every command now

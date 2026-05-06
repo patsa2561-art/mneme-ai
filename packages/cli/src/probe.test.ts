@@ -37,24 +37,25 @@ describe("recommendEmbedder — picks the best path for THIS user", () => {
     expect(r.qualityStars).toBe(5);
   });
 
-  it("recommends installing Ollama on capable hardware with no embedder available", () => {
+  it("recommends bundled WASM on capable hardware with no embedder available (zero-install path)", () => {
     const r = recommendEmbedder(
       { reachable: false, baseUrl: "x" },
       { hasKey: false },
       goodHw,
     );
-    expect(r.pick).toBe("hash");
-    expect(r.action).toContain("ollama");
+    expect(r.pick).toBe("bundled");
+    expect(r.qualityStars).toBe(3);
+    expect(r.reason.toLowerCase()).toContain("no setup");
   });
 
-  it("does NOT recommend Ollama install on weak hardware (would be slow)", () => {
+  it("still picks bundled on weak hardware (works anywhere) — user can opt into hash explicitly", () => {
     const r = recommendEmbedder(
       { reachable: false, baseUrl: "x" },
       { hasKey: false },
       weakHw,
     );
-    expect(r.pick).toBe("hash");
-    expect(r.action).toBeUndefined(); // no action — hash is genuinely the right call
+    expect(r.pick).toBe("bundled");
+    expect(r.reason.toLowerCase()).toContain("hash");
   });
 
   it("OpenAI key trumps ollama-not-running on weak hardware", () => {
