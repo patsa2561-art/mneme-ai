@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-848%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-880%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -79,8 +79,52 @@ After install, run the same 60-second flow on any git repo:
 
 ```bash
 mneme init                       # creates .mneme/ inside the repo
-mneme index                      # ~90s for 5k commits with Ollama
+mneme index                      # ~90s for 5k commits, zero-setup since v0.19
 mneme ask "why does X exist?"    # query the memory
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🧠 New in v0.20 — talk to Mneme like a human
+
+You don't need to memorize 50 commands. Just describe what you want:
+
+```bash
+mneme do "find security issues"        # → vulns + anomaly + secret scan
+mneme do "is the codebase healthy"      # → status + guardian + drawdown + vix
+mneme do "who knows about auth"          # → who-knows + story
+mneme do "blast radius of abc1234"       # → blast + correlation matrix
+mneme do "should we ship today"          # → guardian + anomaly + recent vulns
+mneme do "onboarding tour"               # → constellation + decisions + experts
+```
+
+Mneme classifies your intent, picks the right sub-engines, runs them in
+sequence, and prints one synthesized report. Routing is deterministic
+regex — sub-millisecond, no LLM call to dispatch.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🛡 Always-on protection — `mneme guard`
+
+Install the pre-commit hook **once** and forget it exists:
+
+```bash
+mneme guard --install
+```
+
+Now every `git commit` auto-runs in <300ms against your staged changes:
+
+- 🔐 **Hardcoded secrets** — AWS keys, JWTs, passwords, tokens (uses redact rules)
+- 🛡 **Vulnerability patterns** — `Math.random` for security, MD5/SHA1 crypto, SQL string concat, JWT no-verify (CWE-aligned)
+- ⚠ **Blocks** the commit if HIGH/CRITICAL findings — bypass with `git commit --no-verify`
+
+The killer property: **the next leaked AWS key gets caught before it reaches GitHub** — instead of asking the user to remember to run a security command.
+
+```bash
+mneme guard --install     # one-time setup
+mneme guard --check       # manual run against currently-staged changes
+mneme guard --strict      # also block on MEDIUM-severity findings
+mneme guard --uninstall   # remove the hook
 ```
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -268,6 +312,8 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 | `status` | Is the index up to date with HEAD? | `mneme status` |
 | `ask "<q>"` | **The flagship** — verdict-shaped answer with citations | `mneme ask "why does X exist?"` |
 | `why <file>:<line>` | Walk blame + PRs for any file or line | `mneme why src/auth.ts:47` |
+| `do "<intent>"` | **v0.20 dispatcher** — describe what you want, Mneme picks tools | `mneme do "find security issues"` |
+| `guard` | **v0.20 always-on** — pre-commit hook blocks secrets + vulns | `mneme guard --install` |
 | `mcp` | Run as an MCP server for your AI assistant | *(used by AI clients)* |
 | `wisdom` | A meditation from the Mneme manifesto | `mneme wisdom` |
 
