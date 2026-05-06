@@ -56,17 +56,48 @@ export async function whyCommand(opts: WhyOptions): Promise<number> {
     // ignore — wisdom recording is never load-bearing
   }
 
+  let needsReindex = false;
   for (const [hash, { count }] of ranked) {
-    const c = s.getCommit(hash);
+    let c = s.getCommit(hash);
+    // Fallback: if commit isn't in the index yet, ask git directly so the
+    // user always sees subject + author + date instead of a bare "(not indexed)".
     if (!c) {
-      process.stdout.write(`  ${kleur.gray("●")} ${hash.slice(0, 8)}  ${kleur.gray("(not indexed)")}\n`);
-      continue;
+      needsReindex = true;
+      try {
+        const raw = await git.execGitOk(
+          ["show", "--no-patch", "--format=%H%n%h%n%an%n%aI%n%s", hash],
+          { cwd: opts.cwd },
+        );
+        const [fullHash, shortHash, authorName, authorDate, ...subjectParts] = raw.trim().split("\n");
+        c = {
+          hash: fullHash || hash,
+          shortHash: shortHash || hash.slice(0, 7),
+          authorName: authorName || "unknown",
+          authorEmail: "",
+          authorDate: authorDate || "",
+          committerDate: authorDate || "",
+          subject: subjectParts.join("\n") || "(no subject)",
+          body: "",
+          files: [],
+          parents: [],
+        };
+      } catch {
+        // git lookup failed too — render the bare fallback we had before.
+        process.stdout.write(`  ${kleur.gray("●")} ${hash.slice(0, 8)}  ${kleur.gray("(not in index — run `mneme index`)")}\n`);
+        continue;
+      }
     }
     const date = c.authorDate.slice(0, 10);
+    const dot = s.getCommit(hash) ? kleur.green("●") : kleur.yellow("●");
     process.stdout.write(
-      `  ${kleur.green("●")} ${kleur.bold(c.shortHash)} ${kleur.gray(`[${date} · ${c.authorName} · ${count} lines]`)}\n`,
+      `  ${dot} ${kleur.bold(c.shortHash)} ${kleur.gray(`[${date} · ${c.authorName} · ${count} lines]`)}\n`,
     );
     process.stdout.write(`    ${c.subject}\n`);
+  }
+  if (needsReindex) {
+    process.stdout.write(
+      `\n  ${kleur.gray("⚠ some commits aren't in the index yet — run `mneme index` to enable full retrieval features")}\n`,
+    );
   }
 
   if (s.countChunks() > 0) {
