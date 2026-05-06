@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/core",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "Core indexing, retrieval, and graph engine for Mneme",
   "type": "module",
   "main": "./dist/index.js",
@@ -41,7 +41,10 @@
     "url": "https://github.com/patsa2561-art/mneme-ai/issues"
   },
   "license": "MIT",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean"
@@ -53,7 +56,9 @@
     "typescript": ">=5.0"
   },
   "peerDependenciesMeta": {
-    "typescript": { "optional": true }
+    "typescript": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",

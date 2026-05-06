@@ -1,10 +1,13 @@
 {
   "name": "@mneme-ai/web",
-  "version": "0.8.4",
+  "version": "0.18.1",
   "description": "Phase 4 — D3 temporal graph UI for Mneme",
   "type": "module",
   "private": true,
-  "files": ["public", "server.js"],
+  "files": [
+    "public",
+    "server.js"
+  ],
   "scripts": {
     "dev": "node server.js"
   }

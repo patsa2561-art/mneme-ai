@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/mcp",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "MCP server that exposes Mneme to Claude Code, Cursor, Continue, and other AI clients",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,14 +21,17 @@
     "url": "https://github.com/patsa2561-art/mneme-ai/issues"
   },
   "license": "MIT",
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@mneme-ai/core": "0.18.0",
-    "@mneme-ai/embeddings": "0.18.0",
+    "@mneme-ai/core": "0.18.1",
+    "@mneme-ai/embeddings": "0.18.1",
     "@modelcontextprotocol/sdk": "^1.0.4"
   }
 }
