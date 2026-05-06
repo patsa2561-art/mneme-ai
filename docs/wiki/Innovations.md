@@ -1,4 +1,4 @@
-# Innovations — Fourteen Things Only Mneme Does
+# Innovations — Fifteen Things Only Mneme Does
 
 > Other tools show diffs, blame, and search.
 > Mneme is the only **OSS, local-first, end-to-end management surface** for git history we are aware of.
@@ -6,11 +6,12 @@
 
 We surveyed the whole landscape — Gource, code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT, GitHub's Network graph — before shipping these. **Every one of them occupies real whitespace.**
 
-Three tiers of commands:
+Four tiers of commands:
 
 - **v0.11 — *Memory*** (5): tell you what *was*
 - **v0.12 — *King of Git*** (5): tell you who *is* and what's coming *next*
 - **v0.13 — *Black Sheep*** (4): close every remaining landscape gap
+- **v0.14 — *Untouchable*** (1): the quality moat — zero hallucination guarantee
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -476,7 +477,79 @@ mneme bundle --top-authors 10
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## A typical Mneme session — using all 14
+## Part IV — Untouchable *(v0.14 · the quality moat)*
+
+## 15 · 🛡  Audit-grade Q&A — *zero-hallucination guarantee*
+
+**Command:**
+```bash
+mneme ask --audit "why does the webhook handler retry?"
+mneme ask --audit --audit-floor high "..."   # tighten the floor
+```
+
+**The problem it solves:** AI Q&A tools all *answer*. None *refuse* on principle. When the cost of a wrong answer is a CI gate failing or an agent committing bad code, "best-effort" is the wrong default.
+
+**What Mneme does in audit mode:**
+
+1. **Refuses below confidence floor.** If the retrieval signal isn't strong enough (default floor: medium), Mneme returns a refusal instead of best-effort prose.
+2. **Refuses on unverified citations.** Every backtick-quoted commit hash in the LLM's answer is checked against the retrieved evidence (prefix-match, case-insensitive). If *any* hash doesn't match, the answer is refused.
+3. **Returns a trust score 0–100%** combining confidence + citation validity, surfaced as a colored badge in the CLI:
+   - `◉ TRUST 95%` (green) — high confidence, all citations verified
+   - `◉ TRUST 70%` (cyan) — solid extractive answer
+   - `◉ TRUST 40%` (yellow) — degraded by unverified citations
+   - `◉ TRUST 0%` (red) — refused
+
+**Output (refused case):**
+
+```text
+Q  why does the webhook retry?
+
+  ● LOW CONFIDENCE — verify  ◉ TRUST 0%
+  ⊘ AUDIT REFUSED
+
+  ✦ Answer
+    Audit mode refused this answer. Confidence is "low" (audit floor:
+    "medium"). Not enough grounded evidence to commit to a verdict.
+    Re-phrase the query, narrow the scope, or run with --no-audit to
+    see best-effort prose.
+```
+
+**Output (verified case):**
+
+```text
+Q  why does the webhook retry?
+
+  ● HIGH CONFIDENCE  ◉ TRUST 95%
+
+  ✦ Answer
+    The retry was added in `a3f9b21` after a 2024-08 incident where
+    Stripe's API returned 502s and we lost charge events. 3 retries
+    with exponential backoff matches Stripe's recommended client
+    behavior.
+```
+
+**Output (degraded case — LLM cited a hash not in evidence):**
+
+```text
+Q  why does the webhook retry?
+
+  ● HIGH CONFIDENCE  ◉ TRUST 60%
+  ⚠ HALLUCINATION RISK  cited 1 hash(es) not in evidence: deadbeef
+  → re-run with --audit to refuse on unverified citations
+```
+
+**Use cases:**
+
+- **CI gate** — fail the pipeline when a security-critical change can't be defended from history
+- **Agentic tool result** — when an MCP-aware agent calls `mneme_ask`, returning audit-refused tells the agent to ask a human, not invent
+- **Code review** — paste a question into audit mode; if it refuses, the change probably needs more context
+- **Compliance** — pair with `mneme ledger` for a tamper-evident audit trail of every refused-vs-answered question
+
+**Whitespace check:** no shipped tool we surveyed (Cody, Greptile, Unblocked, Copilot Workspace, Continue) refuses on principle when the model would hallucinate. Most tools optimize for "always have an answer." Mneme inverts the default for audit-grade callers.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## A typical Mneme session — using all 15
 
 ```bash
 # Monday — onboarding to a new file
