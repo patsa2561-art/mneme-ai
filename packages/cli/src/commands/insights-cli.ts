@@ -1685,6 +1685,17 @@ export async function clusterCommand(opts: ClusterOptions): Promise<number> {
   process.stdout.write(`\n  ${kleur.bold().cyan("🧠  Semantic Commit Clusters")}\n`);
   process.stdout.write(`  ${divider()}\n\n`);
   process.stdout.write(`  ${kleur.bold(String(result.totalCommits))} commits  ·  ${kleur.bold(String(result.clusters.length))} clusters  ·  ${kleur.bold(String(result.outliers.length))} outliers\n\n`);
+  if (result.clusters.length === 0) {
+    if (result.totalCommits < 30) {
+      process.stdout.write(`  ${kleur.yellow("ℹ")}  Too few commits (${result.totalCommits}) to form meaningful clusters.\n`);
+      process.stdout.write(`     Clusters emerge once a repo has ~30+ commits with shared vocabulary.\n`);
+      process.stdout.write(`     Try ${kleur.cyan("--similarity 0.05 --min-size 2")} to surface tight pairs even on small repos.\n\n`);
+    } else {
+      process.stdout.write(`  ${kleur.yellow("ℹ")}  No clusters above the similarity floor.\n`);
+      process.stdout.write(`     Lower the threshold: ${kleur.cyan("--similarity 0.10 --min-size 2")}\n\n`);
+    }
+    return 0;
+  }
   for (const c of result.clusters.slice(0, 10)) {
     process.stdout.write(`  ${kleur.bold().magenta("◆ Cluster " + c.id)}  ${kleur.gray(c.size + " commits · cohesion " + pctV12(c.cohesion))}\n`);
     process.stdout.write(`    ${kleur.gray("terms:")} ${c.topTerms.map((t) => kleur.cyan(t)).join("  ")}\n`);
@@ -1723,6 +1734,13 @@ export async function networkCommand(opts: NetworkOptions): Promise<number> {
   process.stdout.write(`\n  ${kleur.bold().cyan("🕸  Author Network — semantic collaboration graph")}\n`);
   process.stdout.write(`  ${divider()}\n\n`);
   process.stdout.write(`  ${kleur.bold(String(result.windowCommits))} commits  ·  ${kleur.bold(String(result.nodes.length))} authors  ·  ${kleur.bold(String(result.edges.length))} edges  ·  ${kleur.bold(String(result.silos.length))} silos  ·  ${kleur.bold(String(result.bridges.length))} bridges\n\n`);
+
+  if (result.nodes.length <= 1) {
+    process.stdout.write(`  ${kleur.yellow("ℹ")}  Solo-author repository — no collaboration network to map.\n`);
+    process.stdout.write(`     This command shines on team repos with 2+ active contributors.\n`);
+    process.stdout.write(`     Try ${kleur.cyan("mneme dna")} to extract this author's coding fingerprint instead.\n\n`);
+    return 0;
+  }
 
   process.stdout.write(`  ${kleur.bold().magenta("◆ Top collaborators (by centrality)")}\n\n`);
   for (const n of result.nodes.slice(0, 8)) {

@@ -389,12 +389,14 @@ export async function fossilCommand(opts: FossilCommandOptions): Promise<number>
   let cur: { hash: string; date: string; author: string; subject: string } | null = null;
   for (const line of r.stdout.split("\n")) {
     if (line.startsWith("::commit::")) {
+      // Format: `::commit::<hash>::<aI-date>::<author>::<subject>`
+      // After split("::"): ["", "commit", hash, date, author, ...subjectParts]
       const parts = line.split("::");
       cur = {
-        hash: parts[3] ?? "",
-        date: parts[4] ?? "",
-        author: parts[5] ?? "",
-        subject: parts.slice(6).join("::"),
+        hash: parts[2] ?? "",
+        date: parts[3] ?? "",
+        author: parts[4] ?? "",
+        subject: parts.slice(5).join("::"),
       };
     } else if (line.trim() && cur) {
       fossils.push({

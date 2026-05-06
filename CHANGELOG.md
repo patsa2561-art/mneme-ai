@@ -8,6 +8,69 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.15.0] — 2026-05-06
+
+The **"Polish + Quality"** release. Lifts every command to production-grade
+finish AND introduces a built-in index quality auditor.
+
+### Added — `mneme index --analyze`
+
+A full-throated index quality report. Computes 8 per-metric scores
+(chunk density, embedding ratio, subject quality, body ratio, PR ratio,
+issue-ref ratio, duplicate ratio, tokenizer health), produces an
+overall A–F grade, and surfaces concrete recommendations:
+
+```
+📊  Index Quality — health check
+─────────────────────────────────────────
+✦ Overall grade
+   A  (85/100)
+
+◆ Per-metric breakdown
+   █████████░   88%  chunk density
+   ██████████  100%  embedding ratio
+   ██████████  100%  subject quality
+   ██████████  100%  body ratio
+   █░░░░░░░░░   11%  PR ratio
+   ██░░░░░░░░   17%  issue ref ratio
+   ██████████    0%  duplicate ratio
+   ██████████  100%  tokenizer health
+
+✦ Recommendations
+   • Only 11% of commits reference a PR. Configure the
+     GitHub adapter to ingest PR descriptions — highest
+     signal source.
+```
+
+JSON output via `--json` for CI gates. 8 new tests.
+
+### Fixed — production polish across the suite
+
+- **`mneme why`** now falls back to `git show` when a commit isn't
+  indexed yet — shows real subject + author + date instead of a bare
+  `(not indexed)` placeholder, with a hint to run `mneme index`.
+- **`mneme fossil`** off-by-one parser fix — `deleted <date> by <author>
+  in <hash>` renders correctly instead of being scrambled.
+- **`mneme status`** clarified ambiguous labels:
+  - `embedder (unknown)` → `embedder not recorded — re-run \`mneme index\``
+  - `provider hash` → `provider hash (deterministic, dep-free fallback)`
+  - never-indexed shows `indexed never — run \`mneme index\` to build the memory`
+- **`mneme cluster`** small-repo null-state — explains threshold + suggests
+  `--similarity 0.05 --min-size 2` instead of showing "0 clusters".
+- **`mneme network`** solo-author null-state — explains why it's empty +
+  suggests `mneme dna` for solo repos.
+- **`mneme black-swan`** null-state — points users to
+  `mneme correlate --source pager` to ingest incidents.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| Index quality | 8 |
+| Repo total | **750** (was 742) |
+
+Build clean. All 750 tests pass.
+
 ## [0.14.0] — 2026-05-06
 
 The **"Untouchable"** release. One world-first quality moat + a journalist-style README rewrite.

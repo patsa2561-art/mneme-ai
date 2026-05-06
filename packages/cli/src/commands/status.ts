@@ -37,7 +37,7 @@ export async function statusCommand(opts: { cwd: string }): Promise<number> {
   const commits = s.countCommits();
   const chunks = s.countChunks();
   const embedded = s.countChunksWithEmbedding();
-  const embedder = s.getMeta("embedder") ?? "(unknown)";
+  const embedderRaw = s.getMeta("embedder");
   const indexedAt = s.getMeta("indexed_at");
 
   const sizeBytes = statSync(path).size;
@@ -48,13 +48,34 @@ export async function statusCommand(opts: { cwd: string }): Promise<number> {
   process.stdout.write(
     `  ${kleur.gray("chunks  ")} ${kleur.bold(String(chunks))} ${kleur.gray(`(${embedded} with embeddings)`)}\n`,
   );
-  process.stdout.write(`  ${kleur.gray("embedder")} ${embedder}\n`);
-  if (indexedAt) process.stdout.write(`  ${kleur.gray("indexed ")} ${indexedAt}\n`);
+  if (embedderRaw) {
+    process.stdout.write(`  ${kleur.gray("embedder")} ${kleur.bold(embedderRaw)}\n`);
+  } else {
+    process.stdout.write(
+      `  ${kleur.gray("embedder")} ${kleur.yellow("not recorded")} ${kleur.gray("— re-run `mneme index` to populate")}\n`,
+    );
+  }
+  if (indexedAt) {
+    process.stdout.write(`  ${kleur.gray("indexed ")} ${indexedAt}\n`);
+  } else {
+    process.stdout.write(
+      `  ${kleur.gray("indexed ")} ${kleur.yellow("never")} ${kleur.gray("— run `mneme index` to build the memory")}\n`,
+    );
+  }
 
   process.stdout.write(`\n${kleur.bold().magenta("Config")}\n`);
-  process.stdout.write(`  ${kleur.gray("provider")} ${cfg.embeddings.provider}\n`);
-  if (cfg.embeddings.model)
+  const providerLabel =
+    cfg.embeddings.provider === "hash"
+      ? `${cfg.embeddings.provider} ${kleur.gray("(deterministic, dep-free fallback)")}`
+      : cfg.embeddings.provider;
+  process.stdout.write(`  ${kleur.gray("provider")} ${providerLabel}\n`);
+  if (cfg.embeddings.model) {
     process.stdout.write(`  ${kleur.gray("model   ")} ${cfg.embeddings.model}\n`);
+  } else if (cfg.embeddings.provider === "hash") {
+    process.stdout.write(
+      `  ${kleur.gray("model   ")} ${kleur.gray("n/a")}  ${kleur.gray("— hash embedder needs no model. Pull `nomic-embed-text` via Ollama for higher quality.")}\n`,
+    );
+  }
 
   s.close();
   return 0;

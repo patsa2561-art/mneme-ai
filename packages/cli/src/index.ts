@@ -86,7 +86,7 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("index")
-    .description("Index commits, PRs, and embeddings")
+    .description("Index commits, PRs, and embeddings — or analyze the existing index")
     .option("--since <date>", "only index commits since this date (e.g. 2024-01-01)")
     .option("--max <n>", "maximum number of commits", (v) => Number(v))
     .option("--embedder <kind>", "auto | ollama | openai | hash", "auto")
@@ -94,7 +94,9 @@ export async function run(argv: string[]): Promise<void> {
     .option("--no-redact", "disable built-in secret redaction (default: on)")
     .option("--aggressive-redact", "enable lower-confidence redaction patterns (password=, hex blobs)", false)
     .option("--no-llm", "deterministic mode — force hash embedder, never call Ollama/OpenAI")
-    .action(async (opts: { since?: string; max?: number; embedder?: "auto"|"ollama"|"openai"|"hash"; model?: string; redact?: boolean; aggressiveRedact?: boolean; llm?: boolean }) => {
+    .option("--analyze", "skip indexing — print quality report on the existing index", false)
+    .option("--json", "machine-readable output (only with --analyze)", false)
+    .action(async (opts: { since?: string; max?: number; embedder?: "auto"|"ollama"|"openai"|"hash"; model?: string; redact?: boolean; aggressiveRedact?: boolean; llm?: boolean; analyze?: boolean; json?: boolean }) => {
       process.exit(
         await indexCommand({
           cwd: process.cwd(),
@@ -106,6 +108,8 @@ export async function run(argv: string[]): Promise<void> {
           noRedact: opts.redact === false,
           aggressiveRedact: opts.aggressiveRedact,
           noLlm: opts.llm === false,
+          analyze: opts.analyze,
+          json: opts.json,
         }),
       );
     });

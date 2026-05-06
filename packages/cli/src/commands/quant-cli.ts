@@ -206,7 +206,10 @@ export async function blackSwanCommand(opts: { cwd: string; topN?: number; json?
   process.stdout.write(`\n  ${kleur.bold().cyan("🦢  Black Swans — rare-but-catastrophic file patterns")}\n  ${divider()}\n\n`);
 
   if (candidates.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} No black-swan candidates — either no incidents are linked to files, or no files are silently dangerous.\n\n`);
+    process.stdout.write(`  ${kleur.green("✓")} No black-swan candidates detected.\n\n`);
+    process.stdout.write(`  ${kleur.gray("Black swans need linked incident data to surface.")}\n`);
+    process.stdout.write(`  ${kleur.gray("Run ")} ${kleur.cyan("mneme correlate --source pager --org <your-org>")} ${kleur.gray("to ingest incidents")}\n`);
+    process.stdout.write(`  ${kleur.gray("or ")} ${kleur.cyan("mneme correlate --source manual --file incidents.json")} ${kleur.gray("for a one-shot import.")}\n\n`);
     return 0;
   }
 
