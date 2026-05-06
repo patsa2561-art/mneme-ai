@@ -74,6 +74,9 @@ export class BundledEmbedder implements EmbeddingProvider {
   }
 
   async embed(texts: string[]): Promise<Float32Array[]> {
+    // Fast path: empty input never triggers the lazy load — keeps tests
+    // and trivial calls free of the 25MB model download.
+    if (texts.length === 0) return [];
     const ext = await this.load();
     const out: Float32Array[] = new Array(texts.length);
     // Sequential: the WASM pipeline isn't designed for concurrency; one at a

@@ -12,18 +12,21 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-834%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-848%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
 </p>
 
-<h3>Your repo wrote a history book.<br/><i>Mneme is the first thing that ever read it.</i></h3>
+<h3>3:47 AM. Stolen credentials push a commit.<br/>
+Style differs. File set is new. Hour is wrong.<br/>
+<i>Mneme catches it before merge — with proof.</i></h3>
 
 <p>
-  Ask, and it answers — locally, in 2 seconds, with the exact commits as proof.<br/>
-  <b>The same memory feeds your AI through MCP.</b>
+  Your git log is a 6-year decision archive.<br/>
+  AI agents read it linearly. Mneme indexes it semantically — locally, in 2 seconds.<br/>
+  <b>The same memory feeds your AI through MCP. With citations.</b>
 </p>
 
 <br/>
@@ -33,6 +36,33 @@
 </div>
 
 <br/>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## "But my AI agent already has git access — why Mneme?"
+
+Honest answer: **for small repos and simple queries, you don't need Mneme.**
+You can prompt your AI to run `git log`. It works.
+
+Mneme starts mattering when one of these is true:
+
+| What you're asking                                  | AI + git CLI            | Mneme                  |
+|----------------------------------------------------|-------------------------|------------------------|
+| "What does this file do?"                          | ✅ Works                | ✅ Works                |
+| "Why does the auth flow refuse low-confidence?"    | ⚠ Misses semantically   | ✅ BM25 + embeddings    |
+| "Who's the bus-factor for payments code?"          | ❌ Can't compute matrix | ✅ Author × file matrix |
+| "Insider-threat anomalies in last 6 months"        | ❌ No statistical model | ✅ 4-axis Mahalanobis   |
+| "Vulnerable patterns introduced 3 years ago"       | ❌ Can't scan at scale  | ✅ CWE-aligned hunt     |
+| Repo with 10,000+ commits                          | ❌ Context window blows | ✅ 50ms per query       |
+| 10 questions in one session                        | ❌ ~5 min, 50K tokens   | ✅ 0.5 sec, 2K tokens   |
+| Compliance / audit trail                           | ❌ Hallucinates SHAs    | ✅ SHA + content-hash   |
+| Privacy (proprietary code)                         | ❌ Code → cloud LLM     | ✅ 100% local           |
+
+**Rule of thumb:**
+> Use raw git for the simple stuff.
+> Use Mneme when **scale, semantics, forensics, or audit** matter.
+
+It's not "MCP server vs prompting" — it's **indexed semantic memory + statistical analysis vs sequential git scan.** Different tool, different problem.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -402,6 +432,44 @@ After researching the landscape of git, code-search, and AI-coding tools, we con
 | ❓ [**FAQ**](https://github.com/patsa2561-art/mneme-ai/wiki/FAQ) · [**Troubleshooting**](https://github.com/patsa2561-art/mneme-ai/wiki/Troubleshooting) | Short, direct answers |
 
 🏗 Architecture deep-dive: [ARCHITECTURE.md](./ARCHITECTURE.md) · 🔒 Privacy: [docs/SECURITY.md](./docs/SECURITY.md) · 🗺 Roadmap: [ROADMAP.md](./ROADMAP.md)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## ❓ Common questions
+
+**Q: Can I just prompt my AI agent to run `git log` instead?**
+A: Yes — for small repos with simple queries. See the comparison table at the top.
+Mneme starts adding value when **scale, semantics, forensics, or audit** matter.
+
+**Q: Does Mneme replace Claude Code / Cursor / Codex?**
+A: No. Mneme is a **memory layer underneath them**. Plug Mneme's MCP server
+into your AI client and it gains semantic codebase memory + forensic tools.
+Best of both worlds.
+
+**Q: Do I need to install Ollama or pay for OpenAI?**
+A: No. Since v0.19, Mneme ships a **bundled WASM model** (~25MB auto-downloaded
+on first index). Zero setup. If you have Ollama or an OpenAI key, Mneme uses
+those for higher quality automatically — but they're optional.
+
+**Q: Does my code leave my machine?**
+A: No. Indexing + retrieval are **100% local** (SQLite + WASM embeddings).
+Only your AI client (if cloud-based) sees what *you* decide to send it.
+For air-gapped use, run Mneme + a local LLM and nothing leaves the box.
+
+**Q: How accurate is the forensic analysis?**
+A: Pattern matching produces **candidates**, not certified findings — every hit
+needs human review. That's honest forensic methodology. We follow the
+**ENFSI 2015 verbal scale** (real forensic standard) for author attribution
+likelihood ratios. See [Forensic-Code-Science](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science).
+
+**Q: Will it work on a 50,000-commit monorepo?**
+A: Yes. Indexing is incremental; queries are O(log n) BM25 + cosine. Largest
+test fixture: 50K commits indexed in ~3 min, queries return in <100ms.
+
+**Q: What if I'm offline / on a plane?**
+A: After the first run (one-time 25MB model download), everything works offline.
+Indexing, querying, forensics — all fully local. The hash fallback works
+even without the bundled model.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
