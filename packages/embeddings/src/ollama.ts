@@ -12,8 +12,11 @@ export interface OllamaOptions {
 
 const DEFAULT_MODEL = "nomic-embed-text";
 const DEFAULT_DIMS = 768;
-const DEFAULT_URL = "http://localhost:11434";
+// Use 127.0.0.1 (NOT localhost) — Node 18+/undici prefers IPv6 (::1) which
+// Ollama doesn't listen on by default. Causes silent "fetch failed" on Windows.
+const DEFAULT_URL = "http://127.0.0.1:11434";
 const DEFAULT_TIMEOUT_MS = 180_000;
+const RETRYABLE_FETCH = ["fetch failed", "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "EAI_AGAIN", "socket hang up"];
 
 interface BatchResp {
   embeddings?: number[][];
@@ -35,11 +38,47 @@ export class OllamaEmbedder implements EmbeddingProvider {
 
   constructor(opts: OllamaOptions = {}) {
     this.model = opts.model ?? DEFAULT_MODEL;
-    this.baseUrl = (opts.baseUrl ?? DEFAULT_URL).replace(/\/$/, "");
+    // Auto-rewrite localhost → 127.0.0.1 so users who pass their own URL
+    // don't trip the same IPv6 trap that bit us with the default.
+    const raw = (opts.baseUrl ?? DEFAULT_URL).replace(/\/$/, "");
+    this.baseUrl = raw.replace(/^http:\/\/localhost(:|$|\/)/i, "http://127.0.0.1$1");
     this.dimensions = opts.dimensions ?? DEFAULT_DIMS;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.onItemDone = opts.onItemDone;
     this.name = `ollama:${this.model}`;
+  }
+
+  /** Cheap pre-flight: verify Ollama is reachable AND the model is available
+   *  AND a 1-token embed actually returns a vector. Run this BEFORE the
+   *  long-running indexer loop so failures surface in seconds, not after
+   *  minutes of redaction work. */
+  async verify(): Promise<{ ok: true } | { ok: false; reason: string; remedy: string }> {
+    try {
+      const tags = await this.fetchWithTimeout(`${this.baseUrl}/api/tags`, { method: "GET" });
+      if (!tags.ok) {
+        return {
+          ok: false,
+          reason: `Ollama responded with HTTP ${tags.status} on /api/tags.`,
+          remedy: "Restart Ollama: `ollama serve` in a new terminal.",
+        };
+      }
+      const list = (await tags.json()) as { models?: Array<{ name: string }> };
+      const have = (list.models ?? []).map((m) => m.name);
+      const matches = have.some((n) => n === this.model || n.startsWith(this.model + ":"));
+      if (!matches) {
+        return {
+          ok: false,
+          reason: `Model '${this.model}' is not pulled. Available: ${have.join(", ") || "(none)"}.`,
+          remedy: `Run:  ollama pull ${this.model}`,
+        };
+      }
+      // One-token sanity embed — proves the model is loaded + responds.
+      await this.embedOne("ok");
+      return { ok: true };
+    } catch (err) {
+      const msg = friendlyError(err, this.baseUrl, this.model);
+      return { ok: false, reason: msg.reason, remedy: msg.remedy };
+    }
   }
 
   async embed(texts: string[]): Promise<Float32Array[]> {
@@ -108,19 +147,38 @@ export class OllamaEmbedder implements EmbeddingProvider {
     return Float32Array.from(json.embedding);
   }
 
-  private async fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  private async fetchWithTimeout(url: string, init: RequestInit, attempt = 0): Promise<Response> {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
     try {
       return await fetch(url, { ...init, signal: ctrl.signal });
     } catch (err) {
+      const e = err as { name?: string; message?: string; cause?: { code?: string; message?: string } };
       // Surface a clearer message than "AbortError: This operation was aborted"
-      if ((err as { name?: string })?.name === "AbortError") {
+      if (e?.name === "AbortError") {
         throw new Error(
-          `Ollama did not respond within ${this.timeoutMs}ms — check that \`ollama serve\` is running and the model is loaded (\`ollama list\`). First request after a fresh pull can take longer; consider re-running.`,
+          `Ollama did not respond within ${this.timeoutMs}ms at ${this.baseUrl}.\n` +
+            `   Check that 'ollama serve' is running and the model is loaded ('ollama list').`,
         );
       }
-      throw err;
+      // Retry once on transient network errors — covers cold-start socket churn.
+      const code = e?.cause?.code ?? "";
+      const msg = e?.message ?? "";
+      const transient = RETRYABLE_FETCH.some((s) => code.includes(s) || msg.includes(s));
+      if (transient && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 500));
+        return this.fetchWithTimeout(url, init, 1);
+      }
+      // Re-throw with the underlying cause stitched in so users see WHY it failed.
+      const why = e?.cause?.code ?? e?.cause?.message ?? "";
+      const detail = why ? `${msg} (${why})` : msg || String(err);
+      throw new Error(
+        `Cannot reach Ollama at ${this.baseUrl}: ${detail}.\n` +
+          `   Fixes:\n` +
+          `     1. Start Ollama:  ollama serve\n` +
+          `     2. Verify model:  ollama list  (must show ${this.model})\n` +
+          `     3. If 'localhost' was used, switch to 127.0.0.1 (Node prefers IPv6 on Windows).`,
+      );
     } finally {
       clearTimeout(timer);
     }
@@ -138,3 +196,36 @@ export class OllamaEmbedder implements EmbeddingProvider {
 
 /** Internal sentinel for "server doesn't support /api/embed yet". */
 class OllamaNotFoundError extends Error {}
+
+/** Translate any fetch/server error into a (reason, remedy) pair the CLI can show.
+ *  Decoupled from CLI rendering so we can also use it in MCP / programmatic callers. */
+function friendlyError(
+  err: unknown,
+  baseUrl: string,
+  model: string,
+): { reason: string; remedy: string } {
+  const e = err as { message?: string; cause?: { code?: string; message?: string } };
+  const code = e?.cause?.code ?? "";
+  if (code === "ECONNREFUSED") {
+    return {
+      reason: `Ollama isn't running at ${baseUrl}.`,
+      remedy: "Open a new terminal and run:  ollama serve",
+    };
+  }
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") {
+    return {
+      reason: `Cannot resolve host in ${baseUrl}.`,
+      remedy: "Check the URL — for local Ollama use http://127.0.0.1:11434.",
+    };
+  }
+  if (e?.message?.includes("did not respond within")) {
+    return {
+      reason: e.message,
+      remedy: `First call may load the model into memory. Try:  ollama run ${model} 'hi'  to warm it up, then re-run.`,
+    };
+  }
+  return {
+    reason: e?.message ?? String(err),
+    remedy: `Verify Ollama is up:  ollama list   ·   if ${model} is missing:  ollama pull ${model}`,
+  };
+}

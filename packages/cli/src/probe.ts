@@ -48,24 +48,28 @@ export interface EmbedderRecommendation {
   qualityStars: 2 | 3 | 4 | 5;
 }
 
-const OLLAMA_DEFAULT = "http://localhost:11434";
+// 127.0.0.1 (NOT localhost) — Node 18+/undici prefers IPv6 (::1) which
+// Ollama doesn't listen on by default. Causes silent fetch failures on Windows.
+const OLLAMA_DEFAULT = "http://127.0.0.1:11434";
 const RECOMMENDED_EMBED_MODEL = "nomic-embed-text";
 
 export async function probeOllama(baseUrl: string = OLLAMA_DEFAULT): Promise<OllamaProbe> {
+  // Auto-rewrite localhost → 127.0.0.1 if the caller passes their own URL.
+  const url = baseUrl.replace(/^http:\/\/localhost(:|$|\/)/i, "http://127.0.0.1$1");
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 1500);
-    const res = await fetch(`${baseUrl}/api/tags`, { signal: ctrl.signal });
+    const res = await fetch(`${url}/api/tags`, { signal: ctrl.signal });
     clearTimeout(t);
-    if (!res.ok) return { reachable: false, baseUrl, error: `HTTP ${res.status}` };
+    if (!res.ok) return { reachable: false, baseUrl: url, error: `HTTP ${res.status}` };
     const data = (await res.json()) as { models?: { name: string }[] };
     const models = (data.models ?? []).map((m) => m.name);
     const hasEmbedModel = models.some((n) => n.startsWith(RECOMMENDED_EMBED_MODEL));
-    return { reachable: true, baseUrl, models, hasEmbedModel };
+    return { reachable: true, baseUrl: url, models, hasEmbedModel };
   } catch (err) {
     return {
       reachable: false,
-      baseUrl,
+      baseUrl: url,
       error: (err as Error).message ?? "unknown error",
     };
   }

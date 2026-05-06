@@ -24,7 +24,7 @@ export async function resolveEmbedder(opts: ResolveOptions = {}): Promise<Embedd
     if (await ollama.ping()) return ollama;
     if (provider === "ollama") {
       throw new Error(
-        `Ollama not reachable at ${opts.baseUrl ?? "http://localhost:11434"}. Start it with: ollama serve`,
+        `Ollama not reachable at ${opts.baseUrl ?? "http://127.0.0.1:11434"}. Start it with: ollama serve`,
       );
     }
   }

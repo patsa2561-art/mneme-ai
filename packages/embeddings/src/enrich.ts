@@ -43,7 +43,9 @@ export interface OllamaEnricherOptions {
 }
 
 const OLLAMA_DEFAULT_MODEL = "llama3.2:1b";
-const OLLAMA_DEFAULT_URL = "http://localhost:11434";
+// 127.0.0.1 (not localhost) — Node 18+/undici prefers IPv6 (::1) but Ollama
+// only listens on IPv4 by default. localhost causes silent fetch failures on Windows.
+const OLLAMA_DEFAULT_URL = "http://127.0.0.1:11434";
 
 export class OllamaEnricher implements EnricherProvider {
   readonly name: string;
@@ -53,7 +55,9 @@ export class OllamaEnricher implements EnricherProvider {
 
   constructor(opts: OllamaEnricherOptions = {}) {
     this.model = opts.model ?? OLLAMA_DEFAULT_MODEL;
-    this.baseUrl = (opts.baseUrl ?? OLLAMA_DEFAULT_URL).replace(/\/$/, "");
+    const raw = (opts.baseUrl ?? OLLAMA_DEFAULT_URL).replace(/\/$/, "");
+    // Auto-rewrite localhost → 127.0.0.1 (see comment on OLLAMA_DEFAULT_URL)
+    this.baseUrl = raw.replace(/^http:\/\/localhost(:|$|\/)/i, "http://127.0.0.1$1");
     this.timeoutMs = opts.timeoutMs ?? 60_000;
     this.name = `ollama:${this.model}`;
   }

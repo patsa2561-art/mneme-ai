@@ -133,6 +133,22 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
     ui.dim("    ollama pull nomic-embed-text  &&  ollama serve");
   }
 
+  // Pre-flight: catch Ollama / model issues in seconds, BEFORE the long
+  // git read + redaction pass. Prevents the "hung at 0% for minutes" trap.
+  if (typeof (embedder as { verify?: unknown }).verify === "function") {
+    ui.step("verify", "checking Ollama + model is ready");
+    const ver = await (embedder as unknown as {
+      verify: () => Promise<{ ok: true } | { ok: false; reason: string; remedy: string }>;
+    }).verify();
+    if (!ver.ok) {
+      process.stdout.write("\n");
+      ui.error(`Embedder not ready: ${ver.reason}`);
+      process.stdout.write(`  ${kleur.yellow().bold("👉 Fix:")}  ${kleur.bold().white(ver.remedy)}\n`);
+      process.stdout.write(`  ${kleur.gray("Once fixed, re-run:  mneme index")}\n\n`);
+      return 1;
+    }
+  }
+
   const s = new store.MnemeStore(dbPath(meta.rootPath));
   s.setMeta("repo_root", meta.rootPath);
   s.setMeta("embedder", embedder.name);
