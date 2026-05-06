@@ -2,7 +2,7 @@
 
 <h1>μνήμη · Mneme</h1>
 
-<p><i>The memory layer of your codebase.</i></p>
+<p><b><i>The memory layer of your codebase.</i></b></p>
 
 <p>
   Pronounced <code>NEE-meh</code> · Greek for "memory"<br/>
@@ -19,8 +19,17 @@
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
 </p>
 
-<p><b>Code knows <i>what</i>. Git knows <i>why</i>. The pager knows <i>what broke</i>.</b><br/>
-Until Mneme, nothing connected them.</p>
+<h3>Your codebase remembers everything. Your AI assistant remembers nothing.<br/><i>Mneme is the bridge.</i></h3>
+
+<p>
+  Every commit, every PR, every late-night fix is recorded in your git history.<br/>
+  But your AI assistant can't see any of it — so it guesses.<br/>
+  <b>Mneme indexes that history and gives it back to you, and to your AI, in 2 seconds.</b>
+</p>
+
+<br/>
+
+<img src="./assets/demo.gif" alt="Mneme — doctor, ask, story, dream, calibrate" width="900">
 
 </div>
 
@@ -28,23 +37,23 @@ Until Mneme, nothing connected them.</p>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🚀 Install — three ways, pick by use case
+## 🚀 Install — pick **one** of three ways
 
-| Use case | Command |
+> 💡 **You only need one of these.** Pick the row that fits you, run that one command — done.
+
+| Pick this if you… | Command |
 |---|---|
-| 🔬 **Try once** *(zero install)* | `npx -y mneme-ai init` |
-| 💼 **Daily use** *(recommended)* | `npm install -g mneme-ai` |
-| 🛠 **Contributing / cutting edge** | `git clone …/mneme-ai && cd mneme-ai && npm install && npm run build` |
+| 🔬 want to **try without installing** anything | `npx -y mneme-ai init` |
+| 💼 plan to **use it daily** *(recommended)* | `npm install -g mneme-ai` |
+| 🛠 want to **contribute or run the latest code** | `git clone …/mneme-ai && cd mneme-ai && npm install && npm run build` |
 
-After install, the same 60-second flow on any git repo:
+After install, run the same 60-second flow on any git repo:
 
 ```bash
 mneme init                       # creates .mneme/ inside the repo
 mneme index                      # ~90s for 5k commits with Ollama
 mneme ask "why does X exist?"    # query the memory
 ```
-
-> 📌 Local SQLite · no signup · no telemetry · MIT licensed.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -67,6 +76,93 @@ mneme --version                       # 3. verify
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## ✨ Try these 5 commands first
+
+The fastest way to "get it" is to copy-paste any of these on your repo right now:
+
+### 1️⃣  Ask anything about your code
+
+```bash
+mneme ask "why does the webhook handler retry?"
+```
+
+<details>
+<summary>📺 Sample output</summary>
+
+```text
+Q  why does the webhook handler retry?
+
+  ● HIGH CONFIDENCE  ◉ TRUST 95%
+  synthesized in 240ms
+
+  ✦ Answer
+    Per commit a3f9b21 from 2024-08, the team switched from sessions to
+    token-based auth after the rate-limit incident referenced in #482.
+    The 3-retry backoff was added in the hotfix that followed, matching
+    a third-party API provider's recommended client behavior.
+
+  ◆ Evidence  (showing 3 of 8)
+  ● a3f9b21  [2024-08-14 · Alice · 0.045]
+    fix: retry webhook on 502 (closes #482)
+  ● 2c4d8e0  [2024-08-15 · Alice · 0.039]
+    pr#503: tune retry backoff to match upstream guidance
+```
+
+</details>
+
+### 2️⃣  Understand any line in 2 seconds
+
+```bash
+mneme why src/auth/session.ts:47
+```
+
+Walks the blame, mines the PRs, returns the actual reason — with citations.
+
+### 3️⃣  Predict regret before you commit
+
+```bash
+mneme premortem "rewrite the auth flow"
+```
+
+<details>
+<summary>📺 Sample output</summary>
+
+```text
+🔮  Pre-mortem
+═══════════════════════════════════════════════════════════════
+intent:  rewrite the auth flow
+
+✦ Verdict
+   risk: VERY HIGH  (P(regret) = 78%)
+   7 of 9 similar past attempts ended badly.
+
+◆ Top risks
+   • token race condition (3× before)
+       b2e1f04  fix: stale token served to logged-in users
+   • breaking external integrations (2× before)
+       9c3593c  hotfix: oauth callback dropped on PATCH
+```
+
+</details>
+
+### 4️⃣  See your file's life as a story
+
+```bash
+mneme time-machine src/payments/charge.ts
+```
+
+Groups commits into eras: birth → rewrite → firefight → plateau. You read 8 epochs and you understand the file's life.
+
+### 5️⃣  Ship audit-grade answers (zero hallucination)
+
+```bash
+mneme ask --audit "is this safe to merge?"
+```
+
+Refuses to answer below confidence threshold. Refuses if any cited commit hash isn't real. Returns trust score 0–100%. **Use this for CI gates and AI agent tool calls.**
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🎯 Why people use Mneme
 
 > 💬 *"I gave my AI assistant a memory of my repo. It stopped guessing."*
@@ -82,7 +178,7 @@ Plug Mneme into Claude Code · Cursor · Codex · Continue · Cline via **MCP** 
 <td width="50%" valign="top">
 
 ### 🔎 Find the WHY in 2 seconds
-`mneme why src/auth.ts:47` walks blame, mines PRs, tells you the actual reason — with citations to the commit that introduced it.
+`mneme why src/auth.ts:47` walks the blame, mines PRs, tells you the actual reason — with citations to the commit that introduced it.
 
 </td>
 </tr>
@@ -90,8 +186,8 @@ Plug Mneme into Claude Code · Cursor · Codex · Continue · Cline via **MCP** 
 <td valign="top">
 
 ### 🔮 Predict regret before you commit
-`mneme premortem "rewrite auth"` mines past attempts:
-> *"7 of 9 similar attempts ended in revert/hotfix. Top risk: token race condition (`b2e1f04`)."*
+`mneme premortem "rewrite auth"` mines past attempts and warns:
+> *"7 of 9 similar attempts ended in revert/hotfix. Top risk: token race condition."*
 
 </td>
 <td valign="top">
@@ -132,70 +228,65 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 
 ## ⚡ All Commands
 
+> 💡 Every command supports `--help` for usage notes. Examples below show what each does in plain English.
+
 ### 🟢 Tier 1 — Essentials *(always visible in `mneme --help`)*
 
-| Command | What it does |
-|---|---|
-| `init` | Initialize Mneme + auto-detect best embedder |
-| `doctor` | Smart environment probe |
-| `index` | Build memory from git history *(with secret redaction)* |
-| `status` | Is the index up to date? |
-| `ask "<q>"` | The flagship — verdict-shaped answer with citations |
-| `why <file>:<line>` | Git archaeology + RAG for any file/line |
-| `mcp` | Run as an MCP server for AI clients |
-| `wisdom` | A meditation from the Mneme manifesto |
+| Command | Plain-English use | Example |
+|---|---|---|
+| `init` | First-time setup — picks the best embedder for your machine | `mneme init` |
+| `doctor` | "Is everything ok?" — checks Ollama, OpenAI, hardware | `mneme doctor` |
+| `index` | Build the memory from your git history *(secrets auto-redacted)* | `mneme index` |
+| `status` | Is the index up to date with HEAD? | `mneme status` |
+| `ask "<q>"` | **The flagship** — verdict-shaped answer with citations | `mneme ask "why does X exist?"` |
+| `why <file>:<line>` | Walk blame + PRs for any file or line | `mneme why src/auth.ts:47` |
+| `mcp` | Run as an MCP server for your AI assistant | *(used by AI clients)* |
+| `wisdom` | A meditation from the Mneme manifesto | `mneme wisdom` |
 
 ### 🌟 Insights — *world-firsts in this category*
 
-| Command | Unique because |
-|---|---|
-| `who-knows <topic>` | Verdict on who's the expert — *active / definitive / stale* tiers |
-| `decisions` | Auto-extract ADRs from commit messages *(9 patterns)* |
-| `stack-trace [--from F]` | Paste an error → historical context per frame |
-| `story <topic>` | Narrate evolution as acts *(initial / refactor / incidents)* |
-| `dream` | Speculative ideas grounded in **YOUR** patterns |
-| `chat` | Multi-turn REPL over your repo's history |
-| `regret [--window N]` | Commits shipped + immediately fixed |
-| `bus-factor` | Files where one author owns ≥75% — fragility map |
-| `paradox` | Architectural flip-flops *(A → B → A patterns)* |
-| `commit-coach` | Pre-commit AI partner |
-| `crystal-ball` | Predict CI/follow-up failure for staged diff |
-| ✨ **`time-machine <file>`** | Narrate a file's life as eras *(birth/rewrite/firefight/plateau)* |
-| ✨ **`premortem "<intent>"`** | Predict regret % grounded in YOUR repo's failures |
-| ✨ **`ghost`** | Surface haunted code — half-finished features + stale TODOs |
-| ✨ **`dna [@author]`** | Exportable developer fingerprint *(style, hours, file affinity)* |
-| ✨ **`drift`** | Topical evolution *(feature/refactor/firefight ratios)* |
-| ✨ **`chronicle`** | Auto-generate chaptered narrative documentary |
-| ✨ **`oracle`** | Predict next-window co-edits and author collisions |
-| ✨ **`constellation`** | Graph view: files=stars, authors=orbitals, commits=edges |
-| ✨ **`cluster`** | Semantic clustering of commit messages *(NLP)* |
-| ✨ **`network`** | Author social graph: co-edit + co-time + co-topic edges |
-| ✨ **`manage`** | Engineering management dashboard *(succession + skill matrix)* |
-| ✨ **`bundle`** | Universal codebase export *(every analysis → JSON + Markdown)* |
+| Command | Plain-English use | Example |
+|---|---|---|
+| `who-knows <topic>` | Who's the expert? *(active / definitive / stale)* | `mneme who-knows stripe` |
+| `decisions` | Auto-extract architecture decisions from commits | `mneme decisions` |
+| `stack-trace` | Paste an error → historical context per stack frame | `mneme stack-trace --from error.log` |
+| `story <topic>` | Narrate evolution as acts | `mneme story stripe` |
+| `dream` | Speculative ideas grounded in YOUR patterns | `mneme dream` |
+| `chat` | Multi-turn REPL over your repo's history | `mneme chat` |
+| `regret` | Commits shipped + immediately fixed | `mneme regret --window 7` |
+| `bus-factor` | Files where one author owns ≥75% — fragility map | `mneme bus-factor` |
+| `paradox` | Architectural flip-flops *(A → B → A)* | `mneme paradox` |
+| `commit-coach` | Pre-commit AI partner | `mneme commit-coach --stdin` |
+| `crystal-ball` | Predict CI failure for staged diff | `mneme crystal-ball --stdin` |
+| ✨ `time-machine <file>` | Narrate a file's life as eras | `mneme time-machine src/auth.ts` |
+| ✨ `premortem "<intent>"` | Predict regret % from YOUR repo's failures | `mneme premortem "add caching"` |
+| ✨ `ghost` | Surface haunted code + stale TODOs | `mneme ghost --top 10` |
+| ✨ `dna [@author]` | Exportable developer fingerprint | `mneme dna alice@example.com` |
+| ✨ `drift` | Topical evolution over time | `mneme drift --granularity month` |
+| ✨ `chronicle` | Auto-generate chaptered narrative | `mneme chronicle --output STORY.md` |
+| ✨ `oracle` | Predict next-window co-edits + collisions | `mneme oracle --window-days 30` |
+| ✨ `constellation` | Graph view: stars/orbitals/edges | `mneme constellation --output graph.json` |
+| ✨ `cluster` | Semantic clustering of commit messages | `mneme cluster` |
+| ✨ `network` | Author social graph w/ semantic edges | `mneme network` |
+| ✨ `manage` | Engineering management dashboard | `mneme manage` |
+| ✨ `bundle` | Universal codebase export | `mneme bundle -o release-q2` |
 
 ### 💰 Quant — *Wall-Street-inspired engineering intelligence*
 
-| Command | What it tells you |
-|---|---|
-| `drawdown` | Worst losing streaks *(firefighting periods)* |
-| `alpha --items F` | Kelly-criterion allocation across tech-debt items |
-| `backtest --samples F` | Validate any predictor against historical outcomes |
-| `black-swan` | Rare-but-catastrophic file patterns |
-| `insider-trading` | Authors who fix bugs they introduced |
-| `moneyball` | Undervalued contributors *(high ROI, low LOC)* |
-| `greek` | Δ knowledge loss · Γ risk acceleration · Θ file decay |
-| `correlation-matrix` | Hidden behavioral coupling between files |
-| `implied-volatility` | Chaos predicted from commit message tone |
-| `tax-loss-harvest` | Dead-code deletion candidates |
+| Command | Plain-English use | Example |
+|---|---|---|
+| `drawdown` | Worst losing streaks *(firefighting periods)* | `mneme drawdown` |
+| `alpha` | Kelly-criterion allocation across tech debt | `mneme alpha --items debt.json` |
+| `backtest` | Validate any predictor against history | `mneme backtest --samples s.json` |
+| `black-swan` | Rare-but-catastrophic file patterns | `mneme black-swan` |
+| `insider-trading` | Authors who fix bugs they introduced | `mneme insider-trading` |
+| `moneyball` | Undervalued contributors *(high ROI, low LOC)* | `mneme moneyball` |
+| `greek` | Δ knowledge loss · Γ risk · Θ file decay | `mneme greek` |
+| `correlation-matrix` | Hidden coupling between files | `mneme correlation-matrix` |
+| `implied-volatility` | Chaos predicted from commit message tone | `mneme implied-volatility` |
+| `tax-loss-harvest` | Dead-code deletion candidates | `mneme tax-loss-harvest` |
 
-### 🔧 Phase 2-3 + WILD + Wisdom
-
-| Command | What it does |
-|---|---|
-| `entities` · `clones` | Phase 2 — semantic similarity over symbols |
-| `correlate` · `blast` · `palimpsest` · `conscience` | Phase 3 — incident correlation |
-| `heal` · `echo` · `runaway` · `mirror` · `rumor` · `fossil` · `ledger` | WILD: opinionated extras |
-| `feedback` · `calibrate` · `adapt` · `teach` · `genius` | Wisdom Mutant Engine *(self-improving)* |
+> 🧰 **More commands available** — entity-level similarity, incident correlation, the Wisdom Mutant Engine (self-improving), and several specialized tools live in the [Command Tour wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour). Run `mneme advanced` to list them all.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -203,40 +294,43 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 
 ```bash
 mneme ask --audit "why does the webhook retry?"
+mneme ask --audit --audit-floor high "..."   # tighten the threshold
 ```
 
 In audit mode, Mneme:
 
 - ✅ **Refuses below confidence floor** *(default: medium · `--audit-floor low|medium|high`)*
-- ✅ **Refuses on unverified citations** — every backtick-hash in the answer is checked against the retrieved evidence
-- ✅ **Returns trust score 0–100%** with every answer *(green / cyan / yellow / red badge)*
+- ✅ **Refuses on unverified citations** — every backtick-hash is checked against retrieved evidence
+- ✅ **Returns trust score 0–100%** with every answer *(green / cyan / yellow / red)*
 - ✅ **JSON output** usable as a CI gate or MCP tool result
 
-> 🐑 *This is the only tool we know of that ships an explicit hallucination guard for git Q&A. The new moat.*
+> 🌌 *This is the only tool we know of that ships an explicit hallucination guard for git Q&A. The new moat.*
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🐑 The Black Sheep position
+## 🌌 The Frontier — what makes Mneme one of a kind
 
-We surveyed every adjacent tool — **Gource · code_swarm · Hercules · Unblocked · HowYouCode · MergeBERT · Cody · Greptile · Copilot Workspace** — and confirmed every command below occupies real whitespace.
+After researching the landscape of git, code-search, and AI-coding tools, we confirmed every command below occupies whitespace where no maintained, open-source, local-first tool ships this capability today.
 
-| # | Capability | Closest existing | Mneme |
-|---|---|---|---|
-| 1 | Author social graph w/ semantic edges | Unblocked *(closed, paid)* | ✅ `network` |
-| 2 | Semantic commit clustering | arxiv 2110.00697 *(research only)* | ✅ `cluster` |
-| 3 | Predictive co-edit | MergeBERT *(research only)* | ✅ `oracle` |
-| 4 | Exportable developer DNA | HowYouCode *(snapshot only)* | ✅ `dna` |
-| 5 | Engineering management | — *(no tool)* | ✅ `manage` |
-| 6 | Universal codebase export | — *(no tool)* | ✅ `bundle` |
-| 7 | File evolution as eras | git log *(flat list)* | ✅ `time-machine` |
-| 8 | Codebase narrative | — *(no tool)* | ✅ `chronicle` |
-| 9 | Predictive risk grounded in your repo | generic AI tools | ✅ `premortem` |
-| 10 | Ghost-code detection | — *(no tool)* | ✅ `ghost` |
-| 11 | Codebase graph | Gource *(dead, 2014)* | ✅ `constellation` |
-| 12 | Topical drift over time | — *(no tool)* | ✅ `drift` |
-| 13 | **Audit-grade no-hallucination Q&A** | — *(no tool ships this)* | ✅ `ask --audit` |
+| # | Capability | Mneme |
+|---|---|---|
+| 1 | Author social graph with semantic edges | ✅ `network` |
+| 2 | Semantic clustering of commit messages *(NLP)* | ✅ `cluster` |
+| 3 | Predictive co-edit detection | ✅ `oracle` |
+| 4 | Exportable, history-derived developer fingerprint | ✅ `dna` |
+| 5 | Engineering management dashboard | ✅ `manage` |
+| 6 | Universal codebase export *(bundled artifact)* | ✅ `bundle` |
+| 7 | File evolution narrated as eras | ✅ `time-machine` |
+| 8 | Codebase narrative documentary | ✅ `chronicle` |
+| 9 | Predictive regret risk grounded in YOUR repo | ✅ `premortem` |
+| 10 | Multi-signal ghost-code detection | ✅ `ghost` |
+| 11 | Maintained codebase graph data layer | ✅ `constellation` |
+| 12 | Topical drift over time *(feature/refactor/firefight)* | ✅ `drift` |
+| 13 | **Audit-grade Q&A — explicit hallucination guard** | ✅ `ask --audit` |
 
-**13 world-firsts.** Local-first by design. Alone in the field. **The black sheep.**
+**13 world-firsts. Local-first by design. One of a kind. The frontier.**
+
+> 🛡 *Built to complement existing AI coding assistants — not to replace them.*
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -306,6 +400,6 @@ We surveyed every adjacent tool — **Gource · code_swarm · Hercules · Unbloc
 
 *"Until Mneme, your code knew **what** but not **why**."*
 
-**μνήμη — the memory layer of your codebase.** 🐑
+**μνήμη — the memory layer of your codebase.**
 
 </div>

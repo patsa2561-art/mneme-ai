@@ -4,7 +4,7 @@
 > Mneme is the only **OSS, local-first, end-to-end management surface** for git history we are aware of.
 > The Black Sheep position — alone in the field by design.
 
-We surveyed the whole landscape — Gource, code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT, GitHub's Network graph — before shipping these. **Every one of them occupies real whitespace.**
+After researching adjacent tools across git visualization, code search, AI coding assistants, and engineering analytics, we confirmed each command below occupies real whitespace — capabilities not shipped by any maintained, open-source, local-first tool we found.
 
 Four tiers of commands:
 
@@ -132,7 +132,7 @@ mneme dna alice@example.com --output .mneme/dna/alice.json
 - Self-tracking — diff your own DNA hash quarter to quarter
 - Pre-hire — compare candidate's open-source DNA to your team baseline
 
-**Whitespace check:** HowYouCode is snapshot-only. Hercules tracks ownership but no fingerprint export. **Nobody ships portable, history-derived, comparable per-developer DNA.**
+**Whitespace check:** existing developer-style tools we surveyed are snapshot-based — they read your *current* code, not your *history*. None ship a portable, history-derived, comparable per-developer fingerprint as an artifact you can export, share, and diff over time.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -173,7 +173,7 @@ mneme drift --granularity month
 - Detecting burnout — early warning when fires creep up
 - Capacity planning — distinguish fire seasons from feature seasons
 
-**Whitespace check:** academic papers (arxiv 2110.00697) cluster commits semantically but stop at the paper. Nothing has been productized as a CLI. Mneme is first.
+**Whitespace check:** academic literature explores semantic commit clustering, but we found no maintained, productized CLI that ships it. Mneme brings it from research to shell.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -270,7 +270,7 @@ mneme oracle --window-days 30 --top 10
 - Async-team coordination — surface invisible overlap weekly
 - Pre-PR — check who else is likely to touch the same code
 
-**Whitespace check:** Microsoft's MergeBERT research stopped at a paper. Mneme ships the productized version.
+**Whitespace check:** predictive co-edit detection has been explored in academic research but, to our knowledge, isn't shipped as a CLI in any maintained open-source tool. Mneme ships it.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -319,7 +319,7 @@ mneme constellation --json | jq '.fileEdges'
 - Onboarding — show newcomers the *real* dependency clusters
 - Refactor planning — identify the bridge files that connect modules
 
-**Whitespace check:** Gource is dead, 2.5D, post-hoc. 3ource (its three.js clone) was abandoned in 2014. No actively maintained browser-native real-time WebGL git viewer with author overlay exists.
+**Whitespace check:** existing codebase visualizers we found are either unmaintained, post-hoc only, or lack an author overlay. Mneme ships the data layer first; the WebGL viewer is on the v1.0 roadmap.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -351,7 +351,7 @@ mneme cluster --similarity 0.2 --min-size 5
     terms: auth  jwt  session  refresh
 ```
 
-**Whitespace check:** arxiv 2110.00697 et al. cluster commits semantically but never ship. Mneme is the first CLI.
+**Whitespace check:** semantic commit clustering exists in academic research but, to our knowledge, hasn't been shipped as a CLI before. Mneme brings it from paper to shell.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -386,7 +386,7 @@ mneme network --window-days 14
     charlie  (connects auth-cluster ⟷ payments-cluster)
 ```
 
-**Whitespace check:** Unblocked.com is closed-source, paid, PR-only. Mneme is the first OSS author-network tool with semantic edges.
+**Whitespace check:** commercial alternatives we've seen are typically closed-source, paid, and PR-focused. Mneme appears to be the first open-source author-network tool with semantic edges weighted by co-edit + co-time + co-topic.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -545,7 +545,7 @@ Q  why does the webhook retry?
 - **Code review** — paste a question into audit mode; if it refuses, the change probably needs more context
 - **Compliance** — pair with `mneme ledger` for a tamper-evident audit trail of every refused-vs-answered question
 
-**Whitespace check:** no shipped tool we surveyed (Cody, Greptile, Unblocked, Copilot Workspace, Continue) refuses on principle when the model would hallucinate. Most tools optimize for "always have an answer." Mneme inverts the default for audit-grade callers.
+**Whitespace check:** to our knowledge, no shipped AI Q&A tool for git history refuses on principle when the model would hallucinate. Most tools optimize for "always have an answer." Mneme inverts the default for audit-grade callers — refusal is a feature, not a bug.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -581,20 +581,24 @@ mneme bundle -o q2-2026                         # 14 — ship the entire artifac
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Why these are unique — the table
+## Why these are unique — capability summary
 
-| Capability | Mneme | git log | GitHub Insights | Gource | Hercules | Unblocked | MergeBERT |
-|---|---|---|---|---|---|---|---|
-| Narrate file life as eras | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Predict risk from your failure history | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | partial |
-| Detect ghost code by score | ✅ | ❌ | ❌ | ❌ | partial | ❌ | ❌ |
-| **Exportable developer DNA** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Topical drift over time** | ✅ | ❌ | partial | ❌ | partial | ❌ | ❌ |
-| **Codebase chronicle** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Co-edit prediction** | ✅ | ❌ | ❌ | ❌ | ❌ | partial | research |
-| **File-star + author-orbital graph** | ✅ data | ❌ | ❌ | viz only | ❌ | partial | ❌ |
-| Local-first | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| MCP-callable | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Capability | Mneme |
+|---|---|
+| Narrate file life as eras | ✅ |
+| Predict risk from your failure history | ✅ |
+| Detect ghost code by score | ✅ |
+| **Exportable developer DNA** | ✅ |
+| **Topical drift over time** | ✅ |
+| **Codebase chronicle** | ✅ |
+| **Co-edit prediction** | ✅ |
+| **File-star + author-orbital graph** | ✅ |
+| **Audit-grade hallucination guard** | ✅ |
+| Local-first | ✅ |
+| MCP-callable | ✅ |
+| Open-source · MIT | ✅ |
+
+Each row above represents capability where, to our knowledge, no maintained, open-source, local-first tool ships an equivalent today.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
