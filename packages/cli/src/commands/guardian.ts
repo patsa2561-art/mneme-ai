@@ -68,7 +68,8 @@ export async function guardianCommand(
   if (!opts.json) {
     ui.banner();
     process.stdout.write(header("🛡", "Guardian — 24/7 self-healing daemon",
-      "diagnose → fix → learn loop · safe by default") + "\n\n");
+      "diagnose → fix → learn loop · safe by default",
+      "Set-and-forget — keeps your index fresh, calibrated, and audit-ready while you sleep. Run with --watch for continuous oversight.") + "\n\n");
     process.stdout.write(kv("mode", watch ? pill("WATCH", "ok") : pill("ONCE", "low")) + "\n");
     process.stdout.write(
       kv("apply", apply ? pill("AUTO-FIX", "ok") : pill("OBSERVE-ONLY", "warn")) + "\n",

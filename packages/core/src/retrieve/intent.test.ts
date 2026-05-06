@@ -107,6 +107,36 @@ describe("classifyIntent — concrete-hint override (vague pattern + concrete id
   });
 });
 
+describe("classifyIntent — security audit / discovery queries (v0.19.2 fix)", () => {
+  it('classifies "what aws keys appear in our history" as specific (the bug)', () => {
+    const r = classifyIntent("what aws keys appear in our history?");
+    expect(r.intent).toBe("specific");
+  });
+
+  it('classifies other "what X appear / exist" discovery questions as specific', () => {
+    expect(classifyIntent("what passwords appear in commit messages").intent).toBe("specific");
+    expect(classifyIntent("what tokens exist in the codebase").intent).toBe("specific");
+    expect(classifyIntent("what secrets show up in the diffs").intent).toBe("specific");
+  });
+
+  it('classifies "where" location questions as specific', () => {
+    expect(classifyIntent("where are aws credentials stored").intent).toBe("specific");
+    expect(classifyIntent("where did we add the api key").intent).toBe("specific");
+    expect(classifyIntent("where do we use environment variables").intent).toBe("specific");
+  });
+
+  it('classifies imperative "find / show / list X in Y" queries as specific', () => {
+    expect(classifyIntent("find all hardcoded secrets in the repo").intent).toBe("specific");
+    expect(classifyIntent("list every commit that touched src/auth").intent).toBe("specific");
+  });
+
+  it("security keywords count as concrete hints (not vague)", () => {
+    // "how to" is a vague trigger — but with security context, it's a real audit question.
+    expect(classifyIntent("how to find leaked aws access keys").intent).toBe("specific");
+    expect(classifyIntent("how to detect hardcoded passwords").intent).toBe("specific");
+  });
+});
+
 describe("classifyIntent — every result has a non-empty reason for transparency", () => {
   it("returns a reason string for every intent class", () => {
     const samples = [

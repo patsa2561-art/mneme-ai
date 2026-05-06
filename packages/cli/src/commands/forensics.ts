@@ -119,7 +119,8 @@ export async function forensicsMatchCommand(opts: ForensicsMatchOptions): Promis
 
   ui.banner();
   process.stdout.write(header("🧬", "Forensic Match — STR-loci likelihood ratio",
-    "Bayesian author attribution · ENFSI 2015 verbal scale") + "\n\n");
+    "Bayesian author attribution · ENFSI 2015 verbal scale",
+    "Verify if a specific person wrote a commit. Use when credentials may be compromised or an insider planted a change.") + "\n\n");
 
   process.stdout.write(kv("commit", `${kleur.bold(result.evidenceCommit.shortHash)}  ${kleur.gray(result.evidenceCommit.subject)}`) + "\n");
   process.stdout.write(kv("suspect", `${kleur.bold(result.suspect)}  ${kleur.gray(`(${result.suspectCommits} prior commits)`)}`) + "\n\n");
@@ -222,7 +223,8 @@ export async function forensicsAttributeCommand(
 
   ui.banner();
   process.stdout.write(header("🧬", "Forensic Attribution — anonymous commit → most likely author",
-    "Bayesian ranking across ALL authors with ≥5 prior commits") + "\n\n");
+    "Bayesian ranking across ALL authors with ≥5 prior commits",
+    "Find out who most-likely wrote a mystery commit. Use when authorship is disputed or an account was hijacked.") + "\n\n");
 
   process.stdout.write(kv("commit", `${kleur.bold(result.evidenceCommit.shortHash)}  ${kleur.gray(result.evidenceCommit.subject)}`) + "\n\n");
 
@@ -344,7 +346,8 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
 
   ui.banner();
   process.stdout.write(header("🛡", "Vulnerability Hunt — pattern-matched security findings",
-    "11 CWE-aligned classes · scans full diff bodies, additions only") + "\n\n");
+    "11 CWE-aligned classes · scans full diff bodies, additions only",
+    "Find security holes hidden in years of git history (SQL injection, weak crypto, leaked tokens, etc.).") + "\n\n");
 
   // ─── Scan summary ─────────────────────────────────────────────────
   const totalSev = report.bySeverity.critical + report.bySeverity.high;
@@ -474,7 +477,8 @@ export async function forensicsAnomalyCommand(
 
   ui.banner();
   process.stdout.write(header("🕵", "Anomaly Detection — insider-threat / credential-compromise hunt",
-    "Per-author baselines · 4-axis deviation: TIME · FILES · STYLE · SIZE") + "\n\n");
+    "Per-author baselines · 4-axis deviation: TIME · FILES · STYLE · SIZE",
+    "Catch suspicious commits before merge — wrong hour, unfamiliar files, off vocabulary, abnormal size.") + "\n\n");
 
   const counts = countBySeverity(result.findings);
   const topLine = (() => {

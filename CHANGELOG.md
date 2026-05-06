@@ -8,6 +8,112 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.20.0] — 2026-05-06
+
+The **"Agentic + Always-On"** release. Two major additions:
+
+1. **`mneme do <natural-language>`** — smart dispatcher. State intent in plain
+   English, Mneme classifies it and runs the right multi-step flow.
+2. **`mneme guard`** — pre-commit hook. Install once → catches leaked secrets
+   and known-vulnerable patterns BEFORE every commit. Always-on protection.
+
+Plus the v0.19.x audit fixes: strict arg validation, green useCase taglines on
+every command header, intent classifier accepts security audit queries.
+
+### Added — `mneme do` smart dispatcher
+
+```bash
+mneme do "find security issues"        # → vulns + anomaly
+mneme do "is the codebase healthy"      # → status + guardian + drawdown + vix
+mneme do "who knows about auth"          # → who-knows + story
+mneme do "blast radius of abc1234"       # → blast + correlation-matrix
+mneme do "what decisions did we make"   # → decisions + ask
+mneme do "onboarding tour"               # → constellation + decisions + who-knows
+mneme do "should we ship today"          # → guardian + anomaly + recent vulns
+```
+
+Routing is deterministic regex-based — sub-millisecond, no LLM. 7 flows
+shipped at v0.20, designed to be additive: each new flow is one entry in
+the catalog mapping intent → sub-commands.
+
+### Added — `mneme guard` pre-commit hook
+
+```bash
+mneme guard --install     # one-time setup → installs .git/hooks/pre-commit
+mneme guard --check       # manual run against currently-staged changes
+mneme guard --uninstall   # removes the hook
+```
+
+What it blocks **before the commit lands**:
+- Hardcoded secrets (AWS keys, JWTs, passwords, tokens — uses redact rules)
+- Known-vulnerable patterns (CWE-aligned: Math.random for security, MD5/SHA1
+  for crypto, SQL string concat, JWT no-verify, etc.)
+- Configurable strictness: default blocks HIGH/CRITICAL only; `--strict`
+  also blocks MEDIUM-severity findings
+- Bypass when legitimate: `git commit --no-verify`
+
+Reuses the existing forensics + redact engines — `guard` is pure orchestration
+over what already works. The killer property: install once, forget it exists,
+catches the next leaked AWS key before it reaches GitHub.
+
+### Improvements — strict arg validation across the CLI
+
+Every numeric / date flag now validates via `packages/cli/src/utils/args.ts`:
+
+- `parseIntStrict("--top")` rejects NaN with a clear error (no more
+  `fatal: 'NaN': not an integer` leaking from internal `git log`)
+- `parseFloatStrict("--threshold")` rejects negatives + non-numeric
+- `parseSinceDate` rejects garbage like `--since notadate`, accepts ISO dates,
+  git-style relatives (`7d`, `2.weeks.ago`), and named relatives (`yesterday`)
+- `commitNotFoundMessage` provides 3 concrete remedies (run `git log`, run
+  `mneme index`, try `mneme forensics attribute HEAD`)
+
+Applied to: `index`, `forensics attribute|vulns|anomaly`. `attribute` now
+accepts an OPTIONAL commit (defaults to HEAD).
+
+### Improvements — intent classifier accepts security audit queries
+
+v0.19.2 fix from a real user: asking *"what aws keys appear in our history?"*
+was wrongly classified as vague. Fixed by:
+- New SPECIFIC patterns: `what X appear/exist/live`, `where ...`, imperative
+  retrieval verbs (`find/show/list X in Y`)
+- New CONCRETE_HINTS_SECURITY regex: security/credential nouns count as
+  concreteness anchors so audit queries don't fall through
+
+### Improvements — green useCase tagline on every command
+
+The `header()` primitive in `ui.ts` now takes a 4th optional `useCase`
+argument rendered in green above the gray subtitle:
+
+```
+🛡  Vulnerability Hunt — pattern-matched security findings
+✓ Find security holes hidden in years of git history.
+   11 CWE-aligned classes · scans full diff bodies, additions only
+```
+
+Applied to all 22 `header()` call sites: forensics (4), insights (5),
+guardian, why, status, quant (10).
+
+### Tests
+
+880 tests passing (was 853). +27 new:
+- `do.test.ts` — 16 routing tests covering all 7 flows + placeholder expansion
+- `args.test.ts` — 11 validator tests covering NaN, negatives, garbage dates,
+  commit-not-found template
+
+### User-visible flow on a fresh install
+
+```bash
+npm i -g mneme-ai
+cd <any-git-repo>
+mneme init           # picks bundled WASM, zero setup
+mneme index          # ~25MB lazy download on first run
+mneme do "find security issues"   # ← single command, agentic dispatch
+mneme guard --install              # ← always-on protection from now on
+```
+
+—
+
 ## [0.19.0] — 2026-05-06
 
 The **"Zero-Install — Just Works"** release. Mneme now ships a built-in

@@ -59,7 +59,8 @@ export async function drawdownCommand(opts: { cwd: string; minLength?: number; j
 
   ui.banner();
   process.stdout.write(header("📉", "Drawdowns — periods of pure firefighting",
-    "consecutive `fix:`/revert windows that drained shipping velocity") + "\n\n");
+    "consecutive `fix:`/revert windows that drained shipping velocity",
+    "Find the worst weeks — when the team only fixed bugs instead of shipping. Reveals capacity drains before quarter planning.") + "\n\n");
 
   process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(
@@ -149,7 +150,8 @@ export async function alphaCommand(opts: {
 
   ui.banner();
   process.stdout.write(header("💰", "Technical Debt Portfolio (Kelly-optimal)",
-    `budget ${result.budgetDays}d · ${result.kellyMultiplier}× Kelly · reserve ${result.reserveDays}d`) + "\n\n");
+    `budget ${result.budgetDays}d · ${result.kellyMultiplier}× Kelly · reserve ${result.reserveDays}d`,
+    "Allocate dev-days to debt items by edge × variance — math says: don't bet everything on one big refactor.") + "\n\n");
   process.stdout.write(`  ${kleur.gray("Item".padEnd(40) + "Edge".padStart(8) + " " + "Var".padStart(7) + " " + "Kelly%".padStart(8) + " " + "Days".padStart(7))}\n`);
   process.stdout.write(`  ${kleur.gray("─".repeat(72))}\n`);
   for (const a of result.items) {
@@ -184,7 +186,8 @@ export async function backtestCommand(opts: { cwd: string; samplesFile?: string;
   }
 
   ui.banner();
-  process.stdout.write(header("🔬", "Backtest report", "did the predictions match reality?") + "\n\n");
+  process.stdout.write(header("🔬", "Backtest report", "did the predictions match reality?",
+    "Score how well a forecast (e.g. who'll review which PR) matched what actually happened. Validates your retrieval edge.") + "\n\n");
   process.stdout.write(`  ${section("✦ Verdict")}  ${verdictBadge(result.verdict)}\n\n`);
   process.stdout.write(`    ${result.conclusion}\n\n`);
   process.stdout.write(section("◆ Metrics") + "\n\n");
@@ -223,7 +226,8 @@ export async function blackSwanCommand(opts: { cwd: string; topN?: number; json?
 
   ui.banner();
   process.stdout.write(header("🦢", "Black Swans — rare-but-catastrophic file patterns",
-    "files that touch many incidents per change · prioritize for hardening") + "\n\n");
+    "files that touch many incidents per change · prioritize for hardening",
+    "Spot the few files that quietly cause most outages — touch them rarely but blow up production. Harden these first.") + "\n\n");
 
   if (candidates.length === 0) {
     process.stdout.write(emptyState(
@@ -276,7 +280,8 @@ export async function insiderTradingCommand(opts: { cwd: string; windowDays?: nu
 
   ui.banner();
   process.stdout.write(header("🎯", "Insider trading — authors who fix their own bugs",
-    "shipped → fix-by-same-author within window · proxy for missing review") + "\n\n");
+    "shipped → fix-by-same-author within window · proxy for missing review",
+    "See who keeps shipping then fixing their own code — a quiet sign that PR review is being skipped.") + "\n\n");
 
   if (profiles.length === 0) {
     process.stdout.write(emptyState(
@@ -322,7 +327,8 @@ export async function moneyballCommand(opts: { cwd: string; topN?: number; json?
 
   ui.banner();
   process.stdout.write(header("⚾", "Moneyball — undervalued contributors",
-    "downstream reach × collaborator network × per-commit ROI") + "\n\n");
+    "downstream reach × collaborator network × per-commit ROI",
+    "Find quiet teammates whose small commits punch above their weight — great for promotion-time fairness checks.") + "\n\n");
   if (scores.length === 0) {
     process.stdout.write(emptyState(
       "No contributors yet.",
@@ -354,7 +360,8 @@ export async function greekCommand(opts: { cwd: string; json?: boolean }): Promi
 
   ui.banner();
   process.stdout.write(header("📐", "Codebase Greeks (Δ Γ Θ)",
-    "Delta · Gamma · Theta — risk derivatives of your codebase") + "\n\n");
+    "Delta · Gamma · Theta — risk derivatives of your codebase",
+    "Know who you can't afford to lose, where the codebase is accelerating into chaos, and what's quietly rotting.") + "\n\n");
 
   // Δ Delta
   process.stdout.write(`  ${kleur.bold().magenta("Δ DELTA")}  ${kleur.gray("sensitivity to top contributor")}\n`);
@@ -396,7 +403,8 @@ export async function correlationMatrixCommand(opts: { cwd: string; topN?: numbe
 
   ui.banner();
   process.stdout.write(header("🔗", "Correlation matrix — hidden file coupling",
-    "co-occurrence × jaccard × lift · find files that change together but shouldn't") + "\n\n");
+    "co-occurrence × jaccard × lift · find files that change together but shouldn't",
+    "Find files that always change together — a sign of hidden coupling that's making refactors painful.") + "\n\n");
   if (pairs.length === 0) {
     process.stdout.write(emptyState(
       "No coupling above lift threshold.",
@@ -434,7 +442,8 @@ export async function impliedVolatilityCommand(opts: { cwd: string; json?: boole
 
   ui.banner();
   process.stdout.write(header("📊", "Implied volatility — chaos from commit message tone",
-    "infer 'how stressful is the codebase right now?' from word choice") + "\n\n");
+    "infer 'how stressful is the codebase right now?' from word choice",
+    "Read the team's stress level from commit messages — rising panic words mean burnout or a release going sideways.") + "\n\n");
   process.stdout.write(section("✦ Verdict") + "\n\n");
   process.stdout.write(
     `    IV = ${kleur.bold(String(summary.latestIV))}/100  ${kleur.gray(`(trend: ${summary.trend})`)}\n`,
@@ -483,7 +492,8 @@ export async function taxLossHarvestCommand(opts: { cwd: string; minStaleDays?: 
 
   ui.banner();
   process.stdout.write(header("🌾", "Tax-loss harvest — dead code candidates",
-    "files / dirs nobody has touched in months · ripe for deletion") + "\n\n");
+    "files / dirs nobody has touched in months · ripe for deletion",
+    "Find code nobody has touched in months — safe to delete and shrink your maintenance surface area.") + "\n\n");
   process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(`    ${summary.summary}\n\n`);
 

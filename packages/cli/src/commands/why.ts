@@ -38,7 +38,8 @@ export async function whyCommand(opts: WhyOptions): Promise<number> {
   const lineRange = startLine ? `:${startLine}${endLine && endLine !== startLine ? `-${endLine}` : ""}` : "";
   ui.banner();
   process.stdout.write(header("◆", `Why does this exist?`,
-    `${kleur.bold(file)}${lineRange}`) + "\n\n");
+    `${kleur.bold(file)}${lineRange}`,
+    "Find out who wrote each line + why — combines git blame with semantic search across PRs and commit messages.") + "\n\n");
 
   const blamed = await git.blame(meta.rootPath, file, startLine, endLine);
   if (!blamed.length) {

@@ -57,15 +57,35 @@ const TEMPORAL_PATTERNS: Array<{ re: RegExp; reason: string }> = [
   { re: /\b(20\d{2})-(0[1-9]|1[0-2])\b/, reason: 'absolute date reference (YYYY-MM)' },
 ];
 
-/** Specific: WHY/WHAT/HOW questions about a concrete thing. */
+/** Specific: WHY/WHAT/HOW/WHERE questions about a concrete thing. */
 const SPECIFIC_PATTERNS: Array<{ re: RegExp; reason: string }> = [
   { re: /\bwhy\s+(does|did|do|is|are|was|were)\b/i, reason: 'why-question with concrete subject' },
   { re: /\bwhat\s+(does|did|do|is|are)\b/i, reason: 'what-question (concrete)' },
   { re: /\bhow\s+(does|did|do|is|are)\b/i, reason: 'how-question (about behavior, not advice)' },
+  // "what X appear / exist / live / hide / show up" — discovery questions, especially for security audits.
+  { re: /\bwhat\s+\w+(?:\s+\w+)?\s+(appear|exist|live|hide|show\s+up|are\s+there|come\s+from)\b/i, reason: 'discovery question (what X exists in the repo)' },
+  // "where ..." — location questions across history.
+  { re: /\bwhere\s+(is|are|does|did|do|was|were|in|do\s+we|did\s+we)\b/i, reason: 'where-question — location across history' },
+  // "find X" / "show X" / "list X" — direct retrieval verbs over history.
+  { re: /\b(find|show|list)\s+(all\s+)?\w+(\s+\w+)?\s+(in|across|from|that|with)\b/i, reason: 'imperative retrieval verb (find/show/list X in Y)' },
 ];
 
-/** Words that, if PRESENT, suggest concreteness even for "how to" patterns. */
-const CONCRETE_HINTS: RegExp = /(\.[a-z]+\b|::|\bsrc\/|\b[A-Z][a-zA-Z]{2,}[A-Z][a-z]|\bfunction\s+\w+|\bclass\s+\w+|\bmodule\s+\w+|\bPR\s*#?\d+)/;
+/**
+ * Words that, if PRESENT, suggest concreteness even for "how to" patterns.
+ * Two regexes — case-sensitive for code (so CamelCase detection works) and
+ * case-insensitive for plain-English security/credential nouns.
+ *
+ * v0.19.2 fix: a real user got blocked asking about an AWS key Mneme had
+ * just redacted. Security audits ("where are aws keys?") are legitimate
+ * enumeration queries even though the noun phrase looks generic.
+ */
+const CONCRETE_HINTS_CODE: RegExp =
+  /(\.[a-z]+\b|::|\bsrc\/|\b[A-Z][a-zA-Z]{2,}[A-Z][a-z]|\bfunction\s+\w+|\bclass\s+\w+|\bmodule\s+\w+|\bPR\s*#?\d+)/;
+const CONCRETE_HINTS_SECURITY: RegExp =
+  /\b(secret|password|credential|token|api[\s-]?key|aws|access[\s-]?key|private[\s-]?key|env\s+var|environment\s+variable|hardcoded\s+\w+|leaked\s+\w+)s?\b/i;
+function hasConcreteHint(q: string): boolean {
+  return CONCRETE_HINTS_CODE.test(q) || CONCRETE_HINTS_SECURITY.test(q);
+}
 
 const VAGUE_REDIRECT_TEMPLATE = [
   'I work best with specific questions about your repo\'s history.',
@@ -104,7 +124,7 @@ export function classifyIntent(query: string): IntentResult {
 
   // 3. Vague patterns — but only fire if the query has NO concrete hint.
   for (const p of VAGUE_PATTERNS) {
-    if (p.re.test(q) && !CONCRETE_HINTS.test(q)) {
+    if (p.re.test(q) && !hasConcreteHint(q)) {
       return { intent: "vague", reason: p.reason, redirect: VAGUE_REDIRECT_TEMPLATE };
     }
   }
@@ -118,7 +138,7 @@ export function classifyIntent(query: string): IntentResult {
   //    long unstructured queries → vague.
   const wordCount = q.split(/\s+/).length;
   if (wordCount <= 6) return { intent: "specific", reason: "short keyword-style query" };
-  if (CONCRETE_HINTS.test(q)) return { intent: "specific", reason: "contains concrete identifier (file, class, PR)" };
+  if (hasConcreteHint(q)) return { intent: "specific", reason: "contains concrete identifier (file, class, PR, or security noun)" };
 
   return {
     intent: "vague",

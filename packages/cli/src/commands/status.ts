@@ -34,7 +34,8 @@ export async function statusCommand(opts: { cwd: string }): Promise<number> {
   const cfg = readConfig(meta.rootPath);
 
   process.stdout.write(header("◉", "Mneme Status",
-    "memory layer health · config · indexing freshness") + "\n\n");
+    "memory layer health · config · indexing freshness",
+    "Check if your codebase memory is up-to-date and ready to answer questions.") + "\n\n");
 
   // ── Repo
   process.stdout.write(section("◆ Repo") + "\n");

@@ -51,11 +51,19 @@ export const ui = {
 
 const RULE = "═".repeat(64);
 
-/** Page-level header: leading icon + title + double-rule. */
-export function header(icon: string, title: string, subtitle?: string): string {
+/** Page-level header: leading icon + title + double-rule.
+ *  `useCase` (green) explains in plain English when/why to run the command —
+ *  rendered ABOVE the technical subtitle so users see the value first. */
+export function header(
+  icon: string,
+  title: string,
+  subtitle?: string,
+  useCase?: string,
+): string {
   const out: string[] = [];
   out.push("");
   out.push(`  ${kleur.bold().cyan(`${icon}  ${title}`)}`);
+  if (useCase) out.push(`  ${kleur.green(`✓ ${useCase}`)}`);
   if (subtitle) out.push(`  ${kleur.gray(subtitle)}`);
   out.push(`  ${kleur.gray(RULE)}`);
   return out.join("\n");

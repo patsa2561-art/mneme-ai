@@ -95,7 +95,8 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
 
   // ─── Header ────────────────────────────────────────────────────────────
   process.stdout.write(header("👤", `Who knows about "${opts.topic}"?`,
-    `Bus-factor analysis · ranked by recency × frequency × file footprint`) + "\n\n");
+    `Bus-factor analysis · ranked by recency × frequency × file footprint`,
+    `Find the person to ask — and the bus-factor risk if they leave. Use before assigning code reviews or scoping a refactor.`) + "\n\n");
 
   if (candidates.length === 0 || !verdict.topExpert) {
     process.stdout.write(emptyState(
@@ -237,7 +238,8 @@ export async function decisionsCommand(opts: DecisionsOptions): Promise<number> 
   // Default: pretty table
   ui.banner();
   process.stdout.write(header("📜", "Architecture Decisions",
-    `extracted across ${decisions.length} commit(s) · regex + heuristics`) + "\n\n");
+    `extracted across ${decisions.length} commit(s) · regex + heuristics`,
+    `Auto-generate ADR drafts from your commit history — every "decided to X", "switched from A to B", "deprecated Y" surfaced and exportable to Markdown / Obsidian.`) + "\n\n");
 
   if (decisions.length === 0) {
     process.stdout.write(emptyState(
@@ -353,7 +355,8 @@ export async function stackTraceCommand(opts: StackTraceOptions): Promise<number
   // 4. Render.
   ui.banner();
   process.stdout.write(header("🎯", "Stack analysis",
-    `${language} · ${frames.length} frame(s) parsed · history-aware root-cause hints`) + "\n\n");
+    `${language} · ${frames.length} frame(s) parsed · history-aware root-cause hints`,
+    `Pipe a stack trace in — get the most-likely commit that broke it + which files have a history of incidents.`) + "\n\n");
 
   // Smart top-line: most-incident-prone frame
   const hottest = [...analyses].sort((a, b) => b.pastIncidents - a.pastIncidents)[0];
@@ -515,7 +518,8 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
 
   ui.banner();
   process.stdout.write(header("📖", `The "${opts.topic}" Story`,
-    `${story.acts.length} act(s) · ${story.totalCommits} commit(s) · ${story.spanDays} day(s)`) + "\n\n");
+    `${story.acts.length} act(s) · ${story.totalCommits} commit(s) · ${story.spanDays} day(s)`,
+    `See how a feature evolved — chaptered narrative across all relevant commits. Great for onboarding or post-mortems.`) + "\n\n");
 
   if (story.acts.length === 0) {
     process.stdout.write(emptyState(
@@ -644,7 +648,8 @@ export async function dreamCommand(opts: DreamOptions): Promise<number> {
 
   ui.banner();
   process.stdout.write(header("🔮", `Speculative ideas based on YOUR codebase patterns`,
-    `source: ${source} · ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`) + "\n\n");
+    `source: ${source} · ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`,
+    `Brainstorm small, high-leverage features that would fit your codebase's actual style — not generic best-practices.`) + "\n\n");
 
   if (ideas.length === 0) {
     process.stdout.write(emptyState(

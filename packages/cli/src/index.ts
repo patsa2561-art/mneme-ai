@@ -1,6 +1,9 @@
 import { Command } from "commander";
 import { getVersion } from "./version.js";
+import { parseIntStrict, parseFloatStrict, parseSinceDate } from "./utils/args.js";
 import { initCommand } from "./commands/init.js";
+import { doCommand } from "./commands/do.js";
+import { guardCommand } from "./commands/guard.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
 import { guardianCommand } from "./commands/guardian.js";
@@ -83,6 +86,41 @@ export async function run(argv: string[]): Promise<void> {
         "Run `mneme advanced` to see them.\n",
     );
 
+  // ─── v0.20.0: smart dispatcher — one command, world-class routing ────
+  program
+    .command("do <query...>")
+    .description("Smart dispatcher — describe what you want, Mneme picks tools and runs them ('do find security issues' / 'do is the codebase healthy')")
+    .option("--json", "structured output", false)
+    .action(async (query: string[], opts: { json?: boolean }) => {
+      process.exit(
+        await doCommand({
+          cwd: process.cwd(),
+          query: query.join(" "),
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── v0.20.0: pre-commit hook — install once, always-on protection ───
+  program
+    .command("guard")
+    .description("Pre-commit hook — auto-runs anomaly + vuln + secret-redaction checks on every commit (install once, forget it exists)")
+    .option("--install", "install the pre-commit hook in this repo", false)
+    .option("--uninstall", "remove the pre-commit hook from this repo", false)
+    .option("--check", "run the checks against currently-staged changes (used by the hook itself)", false)
+    .option("--strict", "fail commit on MEDIUM-or-higher findings (default: only HIGH/CRITICAL)", false)
+    .action(async (opts: { install?: boolean; uninstall?: boolean; check?: boolean; strict?: boolean }) => {
+      process.exit(
+        await guardCommand({
+          cwd: process.cwd(),
+          install: opts.install,
+          uninstall: opts.uninstall,
+          check: opts.check,
+          strict: opts.strict,
+        }),
+      );
+    });
+
   program
     .command("init")
     .description("Initialize Mneme in the current repo (probes environment to recommend the best embedder)")
@@ -95,8 +133,8 @@ export async function run(argv: string[]): Promise<void> {
   program
     .command("index")
     .description("Index commits, PRs, and embeddings — or analyze the existing index")
-    .option("--since <date>", "only index commits since this date (e.g. 2024-01-01)")
-    .option("--max <n>", "maximum number of commits", (v) => Number(v))
+    .option("--since <date>", "only index commits since this date (e.g. 2024-01-01, 7d)", parseSinceDate)
+    .option("--max <n>", "maximum number of commits", parseIntStrict("--max"))
     .option("--embedder <kind>", "auto | ollama | openai | hash", "auto")
     .option("--model <name>", "embedding model name override")
     .option("--no-redact", "disable built-in secret redaction (default: on)")
@@ -867,15 +905,15 @@ export async function run(argv: string[]): Promise<void> {
     );
 
   forensicsCmd
-    .command("attribute <commit>")
-    .description("Anonymous attribution: rank candidate authors by likelihood ratio")
-    .option("--top <n>", "show N candidates", (v) => Number(v), 5)
+    .command("attribute [commit]")
+    .description("Who most-likely wrote this commit? (defaults to HEAD if omitted)")
+    .option("--top <n>", "show N candidates", parseIntStrict("--top"), 5)
     .option("--json", "structured output", false)
-    .action(async (commit: string, opts: any) =>
+    .action(async (commit: string | undefined, opts: any) =>
       process.exit(
         await forensicsAttributeCommand({
           cwd: process.cwd(),
-          commitHash: commit,
+          commitHash: commit ?? "HEAD",
           topN: opts.top,
           json: opts.json,
         }),
@@ -884,9 +922,9 @@ export async function run(argv: string[]): Promise<void> {
 
   forensicsCmd
     .command("vulns")
-    .description("Hunt vulnerability patterns across commit history (CWE-aligned)")
-    .option("--since <date>", "only scan commits since this date")
-    .option("--top <n>", "scan up to N commits", (v) => Number(v), 500)
+    .description("Find security holes in your git history (CWE-aligned scanner)")
+    .option("--since <date>", "only scan commits since this date (e.g. 2024-01-01, 7d)", parseSinceDate)
+    .option("--top <n>", "scan up to N commits", parseIntStrict("--top"), 500)
     .option("--json", "structured output", false)
     .action(async (opts: any) =>
       process.exit(
@@ -901,9 +939,9 @@ export async function run(argv: string[]): Promise<void> {
 
   forensicsCmd
     .command("anomaly")
-    .description("Detect insider-threat / compromised-credential commits via per-author baselines")
-    .option("--threshold <n>", "deviation threshold to surface (0..4)", (v) => Number(v), 0.9)
-    .option("--top <n>", "show N findings", (v) => Number(v), 10)
+    .description("Catch suspicious commits before merge (insider-threat / credential-compromise)")
+    .option("--threshold <n>", "deviation threshold to surface (0..4)", parseFloatStrict("--threshold"), 0.9)
+    .option("--top <n>", "show N findings", parseIntStrict("--top"), 10)
     .option("--json", "structured output", false)
     .action(async (opts: any) =>
       process.exit(
