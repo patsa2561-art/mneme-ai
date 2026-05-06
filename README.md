@@ -271,6 +271,15 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 | ✨ `manage` | Engineering management dashboard | `mneme manage` |
 | ✨ `bundle` | Universal codebase export | `mneme bundle -o release-q2` |
 
+### 🔬 Forensics — *applied forensic science for code* ✨ v0.17
+
+| Command | Plain-English use | Example |
+|---|---|---|
+| ✨ `forensics match` | "Did this author really write this commit?" *(STR-loci LR + ENFSI verbal scale)* | `mneme forensics match abc1234 alice@x.com` |
+| ✨ `forensics attribute` | "Who most likely wrote this anonymous commit?" *(ranks all authors)* | `mneme forensics attribute abc1234` |
+| ✨ `forensics vulns` | "What security holes are hiding in our history?" *(CWE-aligned)* | `mneme forensics vulns --since 2024-01-01` |
+| ✨ `forensics anomaly` | "Is any commit suspicious?" *(insider-threat / compromised credential)* | `mneme forensics anomaly --threshold 1.5` |
+
 ### 💰 Quant — *Wall-Street-inspired engineering intelligence*
 
 | Command | Plain-English use | Example |
@@ -287,6 +296,46 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 | `tax-loss-harvest` | Dead-code deletion candidates | `mneme tax-loss-harvest` |
 
 > 🧰 **More commands available** — entity-level similarity, incident correlation, the Wisdom Mutant Engine (self-improving), and several specialized tools live in the [Command Tour wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour). Run `mneme advanced` to list them all.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🔬 Forensic mode — *find vulnerabilities + verify authors like a crime scene*
+
+The same way detectives use DNA + crime-scene patterns to identify suspects, Mneme can scan your git history for **security weaknesses** and **suspicious commits**. Plain-English use cases:
+
+### "Did Alice really write this commit?" → `forensics match`
+
+```bash
+mneme forensics match <commit-hash> alice@company.com
+```
+
+Returns a verdict like *"very strong support"* / *"moderate support against"* — same wording forensic scientists use in court. Useful when a commit's authorship is disputed (compromised account? insider threat?).
+
+### "Who wrote this anonymous commit?" → `forensics attribute`
+
+```bash
+mneme forensics attribute <commit-hash>
+```
+
+Ranks every author in your repo by likelihood. The top result is your most probable author — backed by 12 statistical "fingerprint" signals (working hours, file affinity, vocabulary, etc.).
+
+### "What security holes are hiding in our history?" → `forensics vulns`
+
+```bash
+mneme forensics vulns --since 2024-01-01
+```
+
+Scans every commit for **11 known vulnerability classes** *(SQL injection, weak crypto, hardcoded tokens, JWT flaws, money-precision bugs, supply-chain risks, XSS, race conditions, info leakage, privilege escalation, missing CORS guards)* and tags each with its **CWE ID**.
+
+### "Is any commit suspicious?" → `forensics anomaly`
+
+```bash
+mneme forensics anomaly --threshold 1.5
+```
+
+Builds a baseline for every author *(when they normally commit, what files they touch, what words they use, how big their commits are)* and flags any commit that deviates dramatically. The bank-grade scenario: **"Alice never commits at 3 AM, but this one is at 3:47 AM and touches files she's never touched."** Caught **before** review.
+
+> 🐑 *No other tool ships forensic-grade Bayesian author attribution + CWE-aligned vuln hunt + insider-threat detection together. See [Forensic-Code-Science wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science) for the math.*
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -327,8 +376,12 @@ After researching the landscape of git, code-search, and AI-coding tools, we con
 | 11 | Maintained codebase graph data layer | ✅ `constellation` |
 | 12 | Topical drift over time *(feature/refactor/firefight)* | ✅ `drift` |
 | 13 | **Audit-grade Q&A — explicit hallucination guard** | ✅ `ask --audit` |
+| 14 | **Bayesian author attribution with ENFSI verbal scale** | ✅ `forensics match/attribute` |
+| 15 | **CWE-aligned vulnerability hunt across history** | ✅ `forensics vulns` |
+| 16 | **Insider-threat anomaly detection per author baseline** | ✅ `forensics anomaly` |
+| 17 | **24/7 self-healing daemon with auto-fix policy** | ✅ `guardian` |
 
-**13 world-firsts. Local-first by design. One of a kind. The frontier.**
+**17 world-firsts. Local-first by design. One of a kind. The frontier.**
 
 > 🛡 *Built to complement existing AI coding assistants — not to replace them.*
 
@@ -338,7 +391,10 @@ After researching the landscape of git, code-search, and AI-coding tools, we con
 
 | Page | What's there |
 |---|---|
-| 🌟 [**Innovations**](https://github.com/patsa2561-art/mneme-ai/wiki/Innovations) | 15 unique commands deep-dive *(with output samples)* |
+| 🌟 [**Innovations**](https://github.com/patsa2561-art/mneme-ai/wiki/Innovations) | 17 unique commands deep-dive *(with output samples)* |
+| 🔬 [**Forensic-Code-Science**](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science) | The math: STR loci · likelihood ratio · ENFSI verbal scale · CWE classes |
+| 📐 [**Novel-Algorithms**](https://github.com/patsa2561-art/mneme-ai/wiki/Novel-Algorithms) | TDWE · RACB · ADS · CGAR scoring formulas |
+| 🛡 [**Guardian**](https://github.com/patsa2561-art/mneme-ai/wiki/Guardian) | The 24/7 self-healing daemon — diagnose + auto-fix loop |
 | 🗺 [**Command-Tour**](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour) | Story-driven walkthrough — every command, told as workflow |
 | 🤖 [**MCP-Integration**](https://github.com/patsa2561-art/mneme-ai/wiki/MCP-Integration) | Drop into Claude Code · Cursor · Codex · Continue · Cline · Zed |
 | 🚀 [**Quickstart**](https://github.com/patsa2561-art/mneme-ai/wiki/Quickstart) · [**Installation**](https://github.com/patsa2561-art/mneme-ai/wiki/Installation) · [**Configuration**](https://github.com/patsa2561-art/mneme-ai/wiki/Configuration) | First 5 minutes, in detail |
