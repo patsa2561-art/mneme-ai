@@ -15,8 +15,8 @@
  * run `mneme forensics`. "tool you must remember" → "infrastructure that
  * just works."
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, unlinkSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, unlinkSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
 import kleur from "kleur";
 import {
@@ -80,7 +80,10 @@ function hookPath(cwd: string): string {
 
 function installHook(cwd: string): number {
   const path = hookPath(cwd);
-  const dir = path.substring(0, path.lastIndexOf("/"));
+  // dirname() handles BOTH Unix (/) and Windows (\) separators.
+  // The previous lastIndexOf("/") returned -1 on Windows (where join() uses \),
+  // so substring(0, -1) became "" → ENOENT mkdir "".
+  const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
   // Check if a hook already exists
