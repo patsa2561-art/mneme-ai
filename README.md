@@ -334,18 +334,6 @@ After researching the landscape of git, code-search, and AI-coding tools, we con
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🔒 Privacy in 60 seconds
-
-| Concern | Default behavior |
-|---|---|
-| 📂 Where does my code go? | **Nowhere.** SQLite stays in `.mneme/` *(gitignored)* |
-| 🤖 LLM calls? | Off by default. Opt in with Ollama *(local)* or OpenAI *(your key)* |
-| 🔑 Secrets in commits? | Auto-redacted: 12 patterns *(AWS · GitHub PAT · Stripe · Slack · JWT · …)* |
-| 📡 Telemetry? | **Zero.** No phone home. No analytics. |
-| 📜 Tamper-evident audit log? | `mneme ledger --since 2025-01-01` *(SOX/SOC2-friendly)* |
-
-═══════════════════════════════════════════════════════════════════════════════
-
 ## 📚 Want more? → [Wiki](https://github.com/patsa2561-art/mneme-ai/wiki)
 
 | Page | What's there |
@@ -355,6 +343,7 @@ After researching the landscape of git, code-search, and AI-coding tools, we con
 | 🤖 [**MCP-Integration**](https://github.com/patsa2561-art/mneme-ai/wiki/MCP-Integration) | Drop into Claude Code · Cursor · Codex · Continue · Cline · Zed |
 | 🚀 [**Quickstart**](https://github.com/patsa2561-art/mneme-ai/wiki/Quickstart) · [**Installation**](https://github.com/patsa2561-art/mneme-ai/wiki/Installation) · [**Configuration**](https://github.com/patsa2561-art/mneme-ai/wiki/Configuration) | First 5 minutes, in detail |
 | 🍳 [**Recipes**](https://github.com/patsa2561-art/mneme-ai/wiki/Recipes) | Multi-command workflows for real engineering scenarios |
+| 🔒 [**Privacy**](https://github.com/patsa2561-art/mneme-ai/wiki/Privacy) | Where data lives · secret redaction · LLM data flow · audit log |
 | ❓ [**FAQ**](https://github.com/patsa2561-art/mneme-ai/wiki/FAQ) · [**Troubleshooting**](https://github.com/patsa2561-art/mneme-ai/wiki/Troubleshooting) | Short, direct answers |
 
 🏗 Architecture deep-dive: [ARCHITECTURE.md](./ARCHITECTURE.md) · 🔒 Privacy: [docs/SECURITY.md](./docs/SECURITY.md) · 🗺 Roadmap: [ROADMAP.md](./ROADMAP.md)

@@ -17,6 +17,7 @@
 - [[MCP-Integration]]
 
 ### 🛠 Reference
+- [[Privacy]]
 - [[FAQ]]
 - [[Troubleshooting]]
 
