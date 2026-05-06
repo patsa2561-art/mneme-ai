@@ -10,3 +10,4 @@ export * as util from "./util/index.js";
 export * as wisdom from "./wisdom/index.js";
 export * as insights from "./insights/index.js";
 export * as quant from "./quant/index.js";
+export * as guardian from "./guardian/index.js";

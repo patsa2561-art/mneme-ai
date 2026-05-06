@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { initCommand } from "./commands/init.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
+import { guardianCommand } from "./commands/guardian.js";
 import { whyCommand } from "./commands/why.js";
 import { statusCommand } from "./commands/status.js";
 import { correlateCommand } from "./commands/correlate.js";
@@ -831,6 +832,29 @@ export async function run(argv: string[]): Promise<void> {
           cwd: process.cwd(),
           output: opts.output,
           json: opts.json,
+        }),
+      ),
+    );
+
+  // ─── v0.16.0: Guardian — 24/7 self-healing daemon ────────────────────
+  program
+    .command("guardian")
+    .description("24/7 self-healing engine — diagnose weaknesses + auto-fix safe actions")
+    .option("--watch", "run forever, polling every --interval seconds", false)
+    .option("--once", "run a single pass and exit (default if --watch is absent)", false)
+    .option("--interval <seconds>", "poll interval in seconds (--watch only)", (v) => Number(v), 300)
+    .option("--apply", "actually apply auto-policy actions (otherwise observe-only)", false)
+    .option("--max-iterations <n>", "stop after N ticks (testing / cron-style)", (v) => Number(v))
+    .option("--json", "structured JSON output", false)
+    .action(async (opts: any) =>
+      process.exit(
+        await guardianCommand({
+          cwd: process.cwd(),
+          watch: opts.watch,
+          intervalSeconds: opts.interval,
+          apply: opts.apply,
+          json: opts.json,
+          maxIterations: opts.maxIterations,
         }),
       ),
     );

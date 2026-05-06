@@ -6,6 +6,8 @@
 
 ### ✨ Innovations
 - [[Innovations]]
+- [[Novel-Algorithms]]
+- [[Guardian]]
 
 ### 📚 Commands
 - [[Command-Tour]]

@@ -8,6 +8,105 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.16.0] — 2026-05-06
+
+The **"Giant Slayer"** release. Two world-firsts that no shipped tool we
+surveyed has: (1) a 24/7 self-healing engine that auto-fixes weaknesses
+as they emerge, and (2) four novel retrieval-scoring algorithms built on
+formulas designed to outperform single-signal embedding search.
+
+### Added — `mneme guardian` (the 24/7 self-healing engine)
+
+```bash
+mneme guardian --watch --apply --interval 300
+```
+
+A long-running diagnostic + auto-remediation loop:
+
+```
+while (true) {
+  diagnose();        // detect weaknesses + threats
+  fix();             // apply safe auto-actions
+  learn();           // record findings to .mneme/guardian.jsonl
+  sleep(interval);
+}
+```
+
+Detects six classes of weakness and four classes of threat:
+
+**Weaknesses**: index drift, missing embeddings, low quality grade,
+quality regression, stale calibration, schema drift, redaction gap.
+
+**Threats**: tamper signal, secret leak, outlier author, deletion storm.
+
+Each finding gets a policy: `auto` (safe — apply automatically),
+`recommended` (suggest, await human), or `observe` (log only). Safe
+actions like incremental re-indexing and calibration are automatic;
+risky actions are suggested. 10 tests.
+
+### Added — Four Novel Retrieval-Scoring Algorithms
+
+These run as post-processors over base BM25 + cosine search.
+20 tests across the four algorithms.
+
+#### TDWE — Time-Decay Weighted Embedding scoring
+> *"Yesterday's wisdom matters more than last decade's."*
+
+Formula:
+```
+w(c) = exp(-λ × age_days / half_life)
+adjusted_score = base_score × w(c)
+```
+A commit at half-life age (default 365 days) gets weight 0.5. Older
+commits decay further; newer commits stay near 1.0.
+
+#### RACB — Regret-Aware Chunk Boosting
+> *"The bug fix carries more wisdom than the feature."*
+
+Formula:
+```
+boost(c) = 1 + ln(1 + days_to_followup × severity_factor)
+```
+Severity map: revert=3, hotfix=2, fix=1, sameFiles=0.5. Logarithmic
+growth captures diminishing returns on age — a 1-day-to-fix is highly
+informative; 30-day-to-fix is more, but not 30× more.
+
+#### ADS — Author Diversity Score re-ranking
+> *"Don't return three answers from the same person."*
+
+Formula:
+```
+penalty(i) = α × (same_author_above / total)
+final(i)  = base(i) × (1 - penalty(i))
+```
+Then re-sort. Surfaces the second-most-knowledgeable contributor when
+one author dominates a topic.
+
+#### CGAR — Causal Graph Augmented Retrieval (light)
+> *"Walk the narrative, not just the bag of chunks."*
+
+Builds a graph of commit-to-commit causal references (PR #N, fixes #N,
+revert hashes). Boosts results that are causally connected to other
+results within `maxHops` (default 2):
+
+```
+boost = initial × decay^(hops - 1)   // initial=1.3, decay=0.85
+```
+
+#### Ensemble — `applyNovelScoring(results, ensemble)`
+Composes all four: TDWE → RACB → CGAR → ADS, each pure and tested
+independently.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| Novel scoring (TDWE/RACB/ADS/CGAR/ensemble) | 20 |
+| Guardian (diagnose + selectAutoActions) | 10 |
+| Repo total | **780** (was 750) |
+
+Build clean. All 780 tests pass.
+
 ## [0.15.0] — 2026-05-06
 
 The **"Polish + Quality"** release. Lifts every command to production-grade
