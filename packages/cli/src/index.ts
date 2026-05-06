@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { getVersion } from "./version.js";
 import { initCommand } from "./commands/init.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
@@ -74,7 +75,7 @@ export async function run(argv: string[]): Promise<void> {
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
-    .version("0.10.0")
+    .version(getVersion())
     .addHelpText(
       "after",
       "\n" +

@@ -32,6 +32,7 @@ import {
   kv,
 } from "../ui.js";
 import { isNoLlm } from "../no-llm.js";
+import { getVersion } from "../version.js";
 
 // ─── shared helpers ─────────────────────────────────────────────────────
 
@@ -1943,6 +1944,7 @@ export async function exportBundleCommand(opts: ExportBundleOptions): Promise<nu
     const commits = util.loadAllCommits(s);
     const fileChanges = util.loadAllFileChanges(s);
     return insights.buildExportBundle(commits, {
+      version: getVersion(),
       topAuthors: opts.topAuthors ?? 5,
       fileChanges,
     });

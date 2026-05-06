@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -13,6 +14,21 @@ import { resolveEmbedder } from "@mneme-ai/embeddings";
 
 export interface McpOptions {
   cwd: string;
+}
+
+/** Resolve the published package version from package.json — single source of truth.
+ *  Never hardcode versions in source: they drift silently across releases. */
+function resolveVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    // dist/index.js → ../package.json (sits beside dist/)
+    const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as {
+      version?: string;
+    };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
 }
 
 const TOOLS: Tool[] = [
@@ -115,7 +131,7 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const embedder = await resolveEmbedder({ provider: "auto" });
 
   const server = new Server(
-    { name: "mneme", version: "0.1.0" },
+    { name: "mneme", version: resolveVersion() },
     { capabilities: { tools: {} } },
   );
 

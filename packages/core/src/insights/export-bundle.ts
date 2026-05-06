@@ -74,7 +74,9 @@ export function buildExportBundle(
 
   return {
     generatedAt: new Date(opts.nowMs ?? Date.now()).toISOString(),
-    version: opts.version ?? "0.13.0",
+    // Version is the caller's responsibility — pass it from the host package's
+    // package.json. Never hardcode here: it drifts silently across releases.
+    version: opts.version ?? "",
     repo: {
       totalCommits: commits.length,
       totalAuthors: authors.size,
