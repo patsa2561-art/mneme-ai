@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/embeddings",
-  "version": "0.18.2",
+  "version": "0.18.3",
   "description": "Embedding providers (Ollama, OpenAI, hash-fallback) for Mneme",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,6 +30,6 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@mneme-ai/core": "0.18.2"
+    "@mneme-ai/core": "0.18.3"
   }
 }
