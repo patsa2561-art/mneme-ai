@@ -92,6 +92,15 @@ export class Indexer {
     if (this.opts.embedder) {
       const model = this.opts.embedder.name;
       const batchSize = this.opts.embedBatchSize ?? 32;
+
+      // Tell the user the first batch may take longer (cold-start model load).
+      report({
+        phase: "embedding",
+        current: 0,
+        total: chunks.length,
+        message: `warming up ${model} (first batch may take ~30s)`,
+      });
+
       for (let i = 0; i < chunks.length; i += batchSize) {
         const batch = chunks.slice(i, i + batchSize);
         const vecs = await this.opts.embedder.embed(batch.map((c) => c.text));

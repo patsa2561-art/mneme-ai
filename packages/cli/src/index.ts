@@ -182,7 +182,10 @@ export async function run(argv: string[]): Promise<void> {
       process.stdout.write(`\n  ${kleur.bold().magenta("Recommendation")} ${kleur.bold(probe.recommendation.pick)} ${kleur.gray(stars)}\n`);
       process.stdout.write(`    ${probe.recommendation.reason}\n`);
       if (probe.recommendation.action) {
-        process.stdout.write(`    ${kleur.cyan("→")} ${kleur.bold(probe.recommendation.action)}\n`);
+        process.stdout.write("\n");
+        process.stdout.write(`    ${kleur.yellow().bold("👉 Run this in your terminal:")}\n`);
+        process.stdout.write(`       ${kleur.cyan().bold("$")} ${kleur.bold().white(probe.recommendation.action)}\n`);
+        process.stdout.write(`    ${kleur.gray("(takes ~1 min, then run `mneme index`)")}\n`);
       }
       process.stdout.write("\n");
       process.exit(0);
