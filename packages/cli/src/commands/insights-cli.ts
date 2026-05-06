@@ -20,7 +20,17 @@ import {
 import { resolveEnricher } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig } from "../config.js";
-import { ui } from "../ui.js";
+import {
+  ui,
+  header,
+  section,
+  citation,
+  emptyState,
+  nextSteps,
+  pill,
+  meter,
+  kv,
+} from "../ui.js";
 import { isNoLlm } from "../no-llm.js";
 
 // ─── shared helpers ─────────────────────────────────────────────────────
@@ -83,47 +93,66 @@ export async function whoKnowsCommand(opts: WhoKnowsOptions): Promise<number> {
   }
 
   // ─── Header ────────────────────────────────────────────────────────────
-  process.stdout.write(`\n  ${kleur.bold().cyan("👤  Who knows about")}  ${kleur.bold(`"${opts.topic}"`)}\n`);
-  process.stdout.write(`  ${kleur.gray("══════════════════════════════════════════════════════════")}\n\n`);
+  process.stdout.write(header("👤", `Who knows about "${opts.topic}"?`,
+    `Bus-factor analysis · ranked by recency × frequency × file footprint`) + "\n\n");
 
   if (candidates.length === 0 || !verdict.topExpert) {
-    process.stdout.write(`  ${kleur.gray(`No commits matched "${opts.topic}". Try a broader topic.`)}\n\n`);
+    process.stdout.write(emptyState(
+      `No commits matched "${opts.topic}".`,
+      [
+        "Try a broader topic ('auth' instead of 'auth-token-rotation').",
+        "Check spelling — Mneme matches via FTS5, not fuzzy.",
+        "Run `mneme index` if you've added relevant commits since the last index.",
+      ],
+    ));
     return 0;
   }
 
   // ─── VERDICT (the answer the user is here for) ─────────────────────────
   const top = verdict.topExpert;
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
+  process.stdout.write(section("✦ Verdict") + "\n\n");
   process.stdout.write(
-    `    ${kleur.bold(top.name)}  ${kleur.gray(`<${top.email}>`)}\n`,
+    `    ${kleur.bold(top.name)}  ${kleur.gray(`<${top.email}>`)}  ${renderTier(top.tier)}\n`,
   );
   process.stdout.write(
-    `    ${kleur.cyan(verdict.confidencePct + "%")} confidence — ${top.commitCount} of ${verdict.totalCommits} relevant commits\n`,
+    `    ${meter(verdict.confidencePct / 100, { width: 12 })}  ${kleur.cyan(verdict.confidencePct + "%")} confidence  ${kleur.gray(`(${top.commitCount}/${verdict.totalCommits} relevant commits)`)}\n`,
   );
   process.stdout.write(
-    `    last touch ${kleur.bold(daysAgoFromIso(top.lastTouch))} ago · ${top.filesTouched} files · ${renderTier(top.tier)}\n`,
+    `    ${kleur.gray(`last touch ${daysAgoFromIso(top.lastTouch)} ago · ${top.filesTouched} files`)}\n`,
   );
   if (verdict.risk) {
-    process.stdout.write(`\n    ${kleur.yellow("⚠ ")}${kleur.yellow(verdict.risk)}\n`);
+    process.stdout.write(`\n    ${pill("RISK", "warn")}  ${kleur.yellow(verdict.risk)}\n`);
   }
   if (verdict.backup) {
     process.stdout.write(
       `\n    ${kleur.gray("backup:")} ${kleur.bold(verdict.backup.name)} ${kleur.gray(`(${verdict.backup.commitCount} commits, last touch ${daysAgoFromIso(verdict.backup.lastTouch)} ago)`)}\n`,
     );
   }
+  process.stdout.write("\n");
 
   // ─── All candidates ───────────────────────────────────────────────────
   if (candidates.length > 1) {
-    process.stdout.write(`\n  ${kleur.bold().magenta("◆ All candidates")}  ${kleur.gray(`(${candidates.length})`)}\n\n`);
+    process.stdout.write(section("◆ All candidates", `(${candidates.length} total)`) + "\n\n");
+    const maxCount = Math.max(...candidates.map((c) => c.commitCount));
     for (const c of candidates) {
       const tier = renderTier(c.tier);
-      process.stdout.write(`    ${tier}  ${kleur.bold(c.name)}  ${kleur.gray(`<${c.email}>`)}\n`);
       process.stdout.write(
-        `        ${kleur.gray(`${c.commitCount} commits · ${c.filesTouched} files · last touch ${daysAgoFromIso(c.lastTouch)} ago · score ${c.score.toFixed(2)}`)}\n`,
+        `    ${tier}  ${kleur.bold(c.name.padEnd(22))}  ${meter(c.commitCount / Math.max(1, maxCount), { width: 8 })}  ${kleur.gray(`${c.commitCount} commits · ${c.filesTouched} files · ${daysAgoFromIso(c.lastTouch)}`)}\n`,
       );
     }
+    process.stdout.write("\n");
   }
-  process.stdout.write("\n");
+
+  process.stdout.write(nextSteps([
+    {
+      cmd: `mneme story "${opts.topic}"`,
+      why: `Read the full narrative of how "${opts.topic}" evolved.`,
+    },
+    {
+      cmd: `mneme dna ${top.email}`,
+      why: `Inspect the top expert's coding fingerprint.`,
+    },
+  ]) + "\n\n");
   return 0;
 }
 
@@ -206,22 +235,54 @@ export async function decisionsCommand(opts: DecisionsOptions): Promise<number> 
 
   // Default: pretty table
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📜  Architecture Decisions  ")}${kleur.gray(`(extracted from ${decisions.length} commits)`)}\n\n`);
+  process.stdout.write(header("📜", "Architecture Decisions",
+    `extracted across ${decisions.length} commit(s) · regex + heuristics`) + "\n\n");
 
   if (decisions.length === 0) {
-    process.stdout.write(`  ${kleur.gray("No decisions extracted. Try richer commit messages — patterns are:")}\n`);
-    process.stdout.write(`  ${kleur.gray('  "decided to X", "switched from A to B", "replaced X with Y", "deprecated Z"')}\n\n`);
+    process.stdout.write(emptyState(
+      "No decisions extracted from commit history.",
+      [
+        `Decisions are matched by patterns: "decided to X", "switched from A to B",`,
+        `   "replaced X with Y", "deprecated Z".`,
+        `Encourage richer commit messages, then re-run \`mneme index\`.`,
+      ],
+    ));
     return 0;
   }
 
+  // Decision-kind tally
+  const byKind = new Map<string, number>();
+  for (const d of decisions) byKind.set(d.kind, (byKind.get(d.kind) ?? 0) + 1);
+  if (byKind.size > 0) {
+    process.stdout.write(section("◇ By kind") + "\n");
+    const maxK = Math.max(...byKind.values());
+    for (const [k, n] of [...byKind.entries()].sort((a, b) => b[1] - a[1])) {
+      process.stdout.write(`    ${kleur.cyan(k.padEnd(14))} ${meter(n / maxK, { width: 12 })}  ${kleur.bold(String(n).padStart(3))}\n`);
+    }
+    process.stdout.write("\n");
+  }
+
+  process.stdout.write(section("◆ Latest decisions", "(top 30 by date)") + "\n\n");
   for (const d of decisions.slice(0, 30)) {
-    const conf = d.confidence >= 0.85 ? kleur.green("●") : kleur.yellow("●");
-    process.stdout.write(`  ${conf} ${kleur.gray(d.date)}  ${kleur.cyan(d.author.padEnd(16))}  ${kleur.bold(d.summary)}\n`);
-    if (d.rationale) process.stdout.write(`      ${kleur.gray("→ " + d.rationale)}\n`);
-    process.stdout.write(`      ${kleur.gray(`[${d.kind}, conf=${d.confidence.toFixed(2)}, ${d.shortHash}]`)}\n\n`);
+    const lvl = d.confidence >= 0.85 ? "ok" : d.confidence >= 0.7 ? "low" : "medium";
+    process.stdout.write(
+      `    ${pill(d.kind, lvl)}  ${kleur.gray(d.date)}  ${kleur.cyan(d.author.padEnd(16))}  ${kleur.bold(d.summary)}\n`,
+    );
+    if (d.rationale) process.stdout.write(`        ${kleur.gray("→ " + d.rationale)}\n`);
+    process.stdout.write(`        ${kleur.gray(`conf=${d.confidence.toFixed(2)} · ${d.shortHash}`)}\n\n`);
   }
   if (decisions.length > 30) {
-    process.stdout.write(`  ${kleur.gray(`... and ${decisions.length - 30} more. Use --format markdown --out docs/ADR.md for the full list.`)}\n\n`);
+    process.stdout.write(`  ${kleur.gray(`...and ${decisions.length - 30} more.`)}\n\n`);
+    process.stdout.write(nextSteps([
+      {
+        cmd: `mneme decisions --format markdown --out docs/ADR.md`,
+        why: `Export the full ADR list as committable Markdown.`,
+      },
+      {
+        cmd: `mneme decisions --format obsidian --out ./mneme-vault`,
+        why: `Open the decision graph in Obsidian as a knowledge vault.`,
+      },
+    ]) + "\n");
   }
   return 0;
 }
@@ -290,11 +351,23 @@ export async function stackTraceCommand(opts: StackTraceOptions): Promise<number
 
   // 4. Render.
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🎯  Stack analysis")}  ${kleur.gray(`(${language}, ${frames.length} frames)`)}\n\n`);
+  process.stdout.write(header("🎯", "Stack analysis",
+    `${language} · ${frames.length} frame(s) parsed · history-aware root-cause hints`) + "\n\n");
+
+  // Smart top-line: most-incident-prone frame
+  const hottest = [...analyses].sort((a, b) => b.pastIncidents - a.pastIncidents)[0];
+  if (hottest && hottest.pastIncidents > 0) {
+    process.stdout.write(
+      `  ${kleur.red("⚠")}  ${kleur.bold(hottest.frame.file)} has ${kleur.red().bold(`${hottest.pastIncidents} past incident(s)`)} — start there.\n\n`,
+    );
+  }
 
   analyses.forEach((a, i) => {
-    process.stdout.write(`  ${kleur.bold(`Frame ${i + 1}:`)} ${kleur.cyan(a.frame.file)}:${kleur.bold(String(a.frame.line))}`);
-    if (a.frame.function) process.stdout.write(` ${kleur.gray(`(${a.frame.function})`)}`);
+    const frameLabel = `Frame ${i + 1}`;
+    process.stdout.write(
+      `  ${kleur.bold(frameLabel)}  ${kleur.cyan(a.frame.file)}:${kleur.bold(String(a.frame.line))}`,
+    );
+    if (a.frame.function) process.stdout.write(`  ${kleur.gray(`(${a.frame.function})`)}`);
     process.stdout.write("\n");
 
     if (a.lastCommits.length === 0) {
@@ -302,26 +375,31 @@ export async function stackTraceCommand(opts: StackTraceOptions): Promise<number
       return;
     }
 
-    process.stdout.write(`    ${kleur.gray("Last commits:")}\n`);
+    process.stdout.write(`    ${kleur.gray("recent commits touching this file:")}\n`);
     for (const c of a.lastCommits) {
       const date = c.authorDate.slice(0, 10);
-      process.stdout.write(`      ${kleur.green("●")} ${kleur.bold(c.shortHash)} ${kleur.gray(`[${date} · ${c.authorName}]`)} ${c.subject}\n`);
+      process.stdout.write(
+        `      ${kleur.green("●")} ${kleur.bold(c.shortHash)}  ${kleur.gray(`[${date} · ${c.authorName}]`)}  ${c.subject}\n`,
+      );
     }
     if (a.pastIncidents > 0) {
       process.stdout.write(
-        `    ${kleur.red("⚠")}  ${kleur.red().bold(`${a.pastIncidents} past incident(s)`)} affected this file.\n`,
+        `    ${pill("INCIDENTS", "warn")}  ${kleur.yellow(`${a.pastIncidents} past incident(s) affected this file`)}\n`,
       );
     }
     process.stdout.write("\n");
   });
 
-  // 5. Hint.
-  process.stdout.write(
-    `  ${kleur.gray("Likely root cause: check the most recent commit at the top frame.")}\n`,
-  );
-  process.stdout.write(
-    `  ${kleur.gray("For a deeper walk: ")}${kleur.bold("mneme palimpsest")} ${kleur.cyan(`${analyses[0]?.frame.file}:${analyses[0]?.frame.line}`)}\n\n`,
-  );
+  process.stdout.write(nextSteps([
+    {
+      cmd: `mneme palimpsest ${analyses[0]?.frame.file}:${analyses[0]?.frame.line}`,
+      why: `Walk the layered edit history of the top frame.`,
+    },
+    {
+      cmd: `mneme why ${analyses[0]?.frame.file}:${analyses[0]?.frame.line}`,
+      why: `Get the originating commits + semantically related work.`,
+    },
+  ]) + "\n\n");
 
   return 0;
 }
@@ -435,15 +513,17 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📖  The")} ${kleur.bold(opts.topic)} ${kleur.bold().cyan("Story")}  `);
-  process.stdout.write(
-    `${kleur.gray(`(${story.acts.length} acts, ${story.totalCommits} commits, ${story.spanDays} days)`)}\n\n`,
-  );
+  process.stdout.write(header("📖", `The "${opts.topic}" Story`,
+    `${story.acts.length} act(s) · ${story.totalCommits} commit(s) · ${story.spanDays} day(s)`) + "\n\n");
 
   if (story.acts.length === 0) {
-    process.stdout.write(
-      `  ${kleur.gray(`No commits matched "${opts.topic}". Try a broader topic or check that you've indexed the repo.`)}\n\n`,
-    );
+    process.stdout.write(emptyState(
+      `No commits matched "${opts.topic}".`,
+      [
+        "Try a broader topic.",
+        "Run `mneme index` if you've added relevant commits since the last index.",
+      ],
+    ));
     return 0;
   }
 
@@ -461,15 +541,23 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
     }
   }
 
+  // Sparkline of commit volume across acts
+  if (story.acts.length >= 3) {
+    const counts = story.acts.map((a) => a.commits.length);
+    const { sparkline } = await import("../ui.js");
+    process.stdout.write(`  ${kleur.gray("activity:")} ${sparkline(counts)}  ${kleur.gray(`(min ${Math.min(...counts)} · max ${Math.max(...counts)} commits per act)`)}\n\n`);
+  }
+
   for (const act of story.acts) {
-    process.stdout.write(`  ${kleur.bold().magenta(act.title)}  ${kleur.gray(`(${act.fromDate} → ${act.toDate})`)}\n`);
+    process.stdout.write(section(act.title, `(${act.fromDate} → ${act.toDate} · ${act.commits.length} commits)`) + "\n");
 
     if (enricher) {
       // Brief LLM-narrated summary of the act.
       try {
         const summary = await narrateAct(enricher, opts.topic, act.commits);
         if (summary) {
-          for (const line of wrap(summary, 90, "    ")) process.stdout.write(`${line}\n`);
+          for (const line of wrap(summary, 90, "      ")) process.stdout.write(`${line}\n`);
+          process.stdout.write("\n");
         }
       } catch {
         // Fall through to commit list
@@ -477,13 +565,26 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
     }
 
     for (const c of act.commits.slice(0, 5)) {
-      process.stdout.write(`    ${kleur.green("●")} ${kleur.bold(c.shortHash)} ${kleur.gray(c.authorDate.slice(0, 10))}  ${c.subject}\n`);
+      process.stdout.write(
+        `    ${kleur.green("●")} ${kleur.bold(c.shortHash)}  ${kleur.gray(c.authorDate.slice(0, 10))}  ${c.subject}\n`,
+      );
     }
     if (act.commits.length > 5) {
-      process.stdout.write(`    ${kleur.gray(`... and ${act.commits.length - 5} more`)}\n`);
+      process.stdout.write(`    ${kleur.gray(`...and ${act.commits.length - 5} more`)}\n`);
     }
     process.stdout.write("\n");
   }
+
+  process.stdout.write(nextSteps([
+    {
+      cmd: `mneme story "${opts.topic}" --obsidian-out ./mneme-vault`,
+      why: `Export the full story as a navigable Obsidian vault.`,
+    },
+    {
+      cmd: `mneme who-knows "${opts.topic}"`,
+      why: `Find the bus-factor author for this topic.`,
+    },
+  ]) + "\n\n");
 
   return 0;
 }
@@ -541,20 +642,26 @@ export async function dreamCommand(opts: DreamOptions): Promise<number> {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🔮  Speculative ideas based on your codebase patterns")}  ${kleur.gray(`(source: ${source})`)}\n\n`);
-  process.stdout.write(`  ${kleur.gray(`Signals: ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`)}\n\n`);
+  process.stdout.write(header("🔮", `Speculative ideas based on YOUR codebase patterns`,
+    `source: ${source} · ${signals.totalCommits} commits · ${signals.totalEntities} entities · ${signals.languages.length} languages`) + "\n\n");
 
   if (ideas.length === 0) {
-    process.stdout.write(`  ${kleur.gray("No ideas generated. Index more commits + entities first.")}\n\n`);
+    process.stdout.write(emptyState(
+      "No ideas generated.",
+      [
+        "Index more commits and entities first: `mneme index`.",
+        "Then re-run `mneme dream`.",
+      ],
+    ));
     return 0;
   }
 
   ideas.forEach((idea, i) => {
     process.stdout.write(`  ${kleur.bold().magenta(`${i + 1}. ${idea.title}`)}  ${effortRiskTag(idea.effort, idea.risk)}\n`);
-    for (const line of wrap(idea.pitch, 88, "    ")) process.stdout.write(`${line}\n`);
+    for (const line of wrap(idea.pitch, 88, "      ")) process.stdout.write(`${line}\n`);
     if (idea.precedents.length > 0) {
       process.stdout.write(
-        `    ${kleur.gray("Precedents:")} ${kleur.cyan(idea.precedents.join(", "))}\n`,
+        `      ${kleur.gray("Precedents:")} ${kleur.cyan(idea.precedents.join(", "))}\n`,
       );
     }
     process.stdout.write("\n");

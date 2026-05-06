@@ -31,7 +31,15 @@ import {
   type CommitChunk,
 } from "@mneme-ai/core";
 import { dbPath } from "../paths.js";
-import { ui } from "../ui.js";
+import {
+  ui,
+  header,
+  kv,
+  pill,
+  section,
+  severityBadge,
+  type Level,
+} from "../ui.js";
 
 export interface GuardianCommandOptions {
   cwd: string;
@@ -59,12 +67,14 @@ export async function guardianCommand(
 
   if (!opts.json) {
     ui.banner();
-    process.stdout.write(`\n  ${kleur.bold().cyan("🛡  Guardian — 24/7 self-healing daemon")}\n`);
-    process.stdout.write(`  ${kleur.gray("─".repeat(64))}\n\n`);
-    process.stdout.write(`  ${kleur.gray("mode    ")}  ${watch ? kleur.green("watch") : kleur.cyan("once")}\n`);
-    process.stdout.write(`  ${kleur.gray("apply   ")}  ${apply ? kleur.green("yes (auto-fix enabled)") : kleur.yellow("no (observe-only)")}\n`);
+    process.stdout.write(header("🛡", "Guardian — 24/7 self-healing daemon",
+      "diagnose → fix → learn loop · safe by default") + "\n\n");
+    process.stdout.write(kv("mode", watch ? pill("WATCH", "ok") : pill("ONCE", "low")) + "\n");
+    process.stdout.write(
+      kv("apply", apply ? pill("AUTO-FIX", "ok") : pill("OBSERVE-ONLY", "warn")) + "\n",
+    );
     if (watch) {
-      process.stdout.write(`  ${kleur.gray("interval")}  ${opts.intervalSeconds ?? 300}s\n`);
+      process.stdout.write(kv("interval", `${opts.intervalSeconds ?? 300}s`) + "\n");
     }
     process.stdout.write("\n");
   }
@@ -220,53 +230,43 @@ async function collectInput(
 
 function renderTick(iteration: number, report: import("@mneme-ai/core").guardian.GuardianReport): void {
   const ts = report.generatedAt.replace("T", " ").slice(0, 19);
-  process.stdout.write(`  ${kleur.gray("┄┄┄ tick #" + iteration + " · " + ts)}\n`);
+  const tickLabel = `tick #${iteration}`;
+  process.stdout.write(`  ${kleur.gray(`┄┄┄ ${tickLabel} · ${ts} ┄┄┄`)}\n`);
 
   if (report.findings.length === 0) {
-    process.stdout.write(`    ${kleur.green("✓")} ${kleur.gray("all systems healthy — no findings")}\n`);
+    process.stdout.write(`    ${kleur.green("✓")}  ${kleur.green("All systems healthy — no findings.")}\n\n`);
     return;
   }
 
   for (const f of report.findings) {
-    const sev = severityColor(f.severity);
+    const sev: Level = (f.severity in { critical: 0, high: 0, medium: 0, low: 0, info: 0 }
+      ? f.severity
+      : "info") as Level;
     const policy = policyLabel(f.policy);
-    process.stdout.write(`    ${sev}  ${policy}  ${f.message}\n`);
+    process.stdout.write(`    ${severityBadge(sev)}  ${policy}  ${f.message}\n`);
     if (f.suggestedAction) {
       process.stdout.write(`        ${kleur.gray("→")} ${kleur.cyan(f.suggestedAction)}\n`);
     }
   }
   process.stdout.write(
-    `    ${kleur.gray(`(${report.summary.findings} findings · ${report.summary.autoActions} auto · ${report.summary.recommendations} suggested)`)}\n`,
+    `\n    ${kleur.gray(`summary: ${report.summary.findings} findings · ${report.summary.autoActions} auto · ${report.summary.recommendations} suggested`)}\n\n`,
   );
-}
-
-function severityColor(sev: string): string {
-  switch (sev) {
-    case "critical":
-      return kleur.red().bold("CRIT");
-    case "high":
-      return kleur.red("HIGH");
-    case "medium":
-      return kleur.yellow("MED ");
-    case "low":
-      return kleur.cyan("LOW ");
-    default:
-      return kleur.gray(sev);
-  }
 }
 
 function policyLabel(policy: string): string {
   switch (policy) {
     case "auto":
-      return kleur.green().bold("[AUTO]   ");
+      return pill("AUTO", "ok");
     case "recommended":
-      return kleur.cyan().bold("[SUGGEST]");
+      return pill("SUGGEST", "low");
     case "observe":
-      return kleur.gray("[OBSERVE]");
+      return pill("OBSERVE", "info");
     default:
-      return kleur.gray(`[${policy}]`);
+      return pill(policy, "info");
   }
 }
+
+void section;
 
 function appendLog(rootPath: string, entry: unknown): void {
   const logDir = `${rootPath}/.mneme`;

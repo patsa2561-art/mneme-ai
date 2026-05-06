@@ -2,7 +2,7 @@
 
 <h1>μνήμη · Mneme</h1>
 
-<p><b><i>The memory layer of your codebase.</i></b></p>
+<p><b><i>What your codebase already knows.</i></b></p>
 
 <p>
   Pronounced <code>NEE-meh</code> · Greek for "memory"<br/>
@@ -19,12 +19,11 @@
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
 </p>
 
-<h3>Your codebase remembers everything. Your AI assistant remembers nothing.<br/><i>Mneme is the bridge.</i></h3>
+<h3>Your repo wrote a history book.<br/><i>Mneme is the first thing that ever read it.</i></h3>
 
 <p>
-  Every commit, every PR, every late-night fix is recorded in your git history.<br/>
-  But your AI assistant can't see any of it — so it guesses.<br/>
-  <b>Mneme indexes that history and gives it back to you, and to your AI, in 2 seconds.</b>
+  Ask, and it answers — locally, in 2 seconds, with the exact commits as proof.<br/>
+  <b>The same memory feeds your AI through MCP.</b>
 </p>
 
 <br/>

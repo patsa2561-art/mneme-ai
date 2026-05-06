@@ -10,15 +10,16 @@ import { readFileSync } from "node:fs";
 import kleur from "kleur";
 import { git, store, util, quant } from "@mneme-ai/core";
 import { dbPath } from "../paths.js";
-import { ui } from "../ui.js";
-
-const DIV = "═".repeat(64);
-
-function divider(label = ""): string {
-  if (!label) return kleur.gray(DIV);
-  const padded = `═══ ${label} `;
-  return kleur.gray(padded + "═".repeat(Math.max(4, 64 - padded.length)));
-}
+import {
+  ui,
+  header,
+  section,
+  pill,
+  meter,
+  emptyState,
+  nextSteps,
+  sparkline,
+} from "../ui.js";
 
 async function withStore<T>(cwd: string, f: (s: store.MnemeStore) => Promise<T> | T): Promise<T | number> {
   if (!(await git.isGitRepo(cwd))) {
@@ -57,41 +58,59 @@ export async function drawdownCommand(opts: { cwd: string; minLength?: number; j
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📉  Drawdowns — periods of pure firefighting")}\n  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(header("📉", "Drawdowns — periods of pure firefighting",
+    "consecutive `fix:`/revert windows that drained shipping velocity") + "\n\n");
+
+  process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(
-    `    ${kleur.bold(String(summary.total))} drawdowns · longest streak: ${kleur.bold(String(summary.longestStreak))} commits · ${kleur.bold(summary.totalFixingDays + "d")} total firefighting\n`,
+    `    ${kleur.bold(String(summary.total))} drawdowns  ·  longest streak ${kleur.bold(String(summary.longestStreak))} commits  ·  ${kleur.bold(summary.totalFixingDays + "d")} firefighting\n`,
   );
   process.stdout.write(
-    `    Drawdown fraction of repo lifespan: ${kleur.cyan((summary.drawdownFraction * 100).toFixed(1) + "%")}\n\n`,
+    `    ${meter(Math.min(1, summary.drawdownFraction), { width: 16 })}  ${kleur.cyan((summary.drawdownFraction * 100).toFixed(1) + "%")} of repo lifespan was a drawdown\n\n`,
   );
 
   if (drawdowns.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} Clean shipping history — no drawdowns detected.\n\n`);
+    process.stdout.write(emptyState(
+      "Clean shipping history — no drawdowns detected.",
+      [
+        "Lower the threshold to surface borderline streaks: --min-length 2",
+      ],
+    ));
     return 0;
   }
 
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Worst streaks")}\n\n`);
+  process.stdout.write(section("◆ Worst streaks", "(top 10 by length)") + "\n\n");
   for (const d of drawdowns.slice(0, 10)) {
     process.stdout.write(
-      `    ${tierBadge(d.tier)}  ${kleur.bold(d.startDate)} → ${kleur.bold(d.endDate)}  ${kleur.gray(`(${d.length} commits, ${d.durationDays}d)`)}\n`,
+      `    ${tierBadge(d.tier)}  ${kleur.bold(d.startDate)} → ${kleur.bold(d.endDate)}  ${kleur.gray(`(${d.length} commits · ${d.durationDays}d)`)}\n`,
     );
     for (const fix of d.sampleFixes) process.stdout.write(`        ${kleur.gray("·")} ${fix}\n`);
     process.stdout.write("\n");
   }
+
+  process.stdout.write(nextSteps([
+    {
+      cmd: `mneme alpha-rank --top 10`,
+      why: `Find the people who consistently SHIP value vs the firefighters.`,
+    },
+    {
+      cmd: `mneme vix`,
+      why: `Measure the volatility of recent shipping cadence.`,
+    },
+  ]) + "\n\n");
   return 0;
 }
 
 function tierBadge(tier: string): string {
   switch (tier) {
     case "critical":
-      return kleur.red().bold("CRITICAL");
+      return pill("CRITICAL", "critical");
     case "severe":
-      return kleur.yellow().bold("SEVERE  ");
+      return pill("SEVERE  ", "warn");
     case "moderate":
-      return kleur.cyan().bold("MODERATE");
+      return pill("MODERATE", "low");
     default:
-      return kleur.gray().bold("MINOR   ");
+      return pill("MINOR   ", "info");
   }
 }
 
@@ -129,8 +148,8 @@ export async function alphaCommand(opts: {
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("💰  Technical Debt Portfolio (Kelly-optimal)")}\n  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold("Budget:")} ${result.budgetDays} dev-days  ${kleur.gray(`(multiplier: ${result.kellyMultiplier}× Kelly, reserve: ${result.reserveDays}d)`)}\n\n`);
+  process.stdout.write(header("💰", "Technical Debt Portfolio (Kelly-optimal)",
+    `budget ${result.budgetDays}d · ${result.kellyMultiplier}× Kelly · reserve ${result.reserveDays}d`) + "\n\n");
   process.stdout.write(`  ${kleur.gray("Item".padEnd(40) + "Edge".padStart(8) + " " + "Var".padStart(7) + " " + "Kelly%".padStart(8) + " " + "Days".padStart(7))}\n`);
   process.stdout.write(`  ${kleur.gray("─".repeat(72))}\n`);
   for (const a of result.items) {
@@ -165,10 +184,10 @@ export async function backtestCommand(opts: { cwd: string; samplesFile?: string;
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🔬  Backtest report")}\n  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}  ${verdictBadge(result.verdict)}\n\n`);
+  process.stdout.write(header("🔬", "Backtest report", "did the predictions match reality?") + "\n\n");
+  process.stdout.write(`  ${section("✦ Verdict")}  ${verdictBadge(result.verdict)}\n\n`);
   process.stdout.write(`    ${result.conclusion}\n\n`);
-  process.stdout.write(`  ${kleur.bold().magenta("◆ Metrics")}\n\n`);
+  process.stdout.write(section("◆ Metrics") + "\n\n");
   process.stdout.write(`    n         = ${kleur.bold(String(result.n))}\n`);
   process.stdout.write(`    precision = ${kleur.bold((result.precision * 100).toFixed(1) + "%")}\n`);
   process.stdout.write(`    recall    = ${kleur.bold((result.recall * 100).toFixed(1) + "%")}\n`);
@@ -203,13 +222,18 @@ export async function blackSwanCommand(opts: { cwd: string; topN?: number; json?
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🦢  Black Swans — rare-but-catastrophic file patterns")}\n  ${divider()}\n\n`);
+  process.stdout.write(header("🦢", "Black Swans — rare-but-catastrophic file patterns",
+    "files that touch many incidents per change · prioritize for hardening") + "\n\n");
 
   if (candidates.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} No black-swan candidates detected.\n\n`);
-    process.stdout.write(`  ${kleur.gray("Black swans need linked incident data to surface.")}\n`);
-    process.stdout.write(`  ${kleur.gray("Run ")} ${kleur.cyan("mneme correlate --source pager --org <your-org>")} ${kleur.gray("to ingest incidents")}\n`);
-    process.stdout.write(`  ${kleur.gray("or ")} ${kleur.cyan("mneme correlate --source manual --file incidents.json")} ${kleur.gray("for a one-shot import.")}\n\n`);
+    process.stdout.write(emptyState(
+      "No black-swan candidates detected.",
+      [
+        "Black swans need linked incident data to surface.",
+        "Ingest incidents: `mneme correlate --source pager --org <your-org>`",
+        "Or one-shot import: `mneme correlate --source manual --file incidents.json`",
+      ],
+    ));
     return 0;
   }
 
@@ -251,10 +275,17 @@ export async function insiderTradingCommand(opts: { cwd: string; windowDays?: nu
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🎯  Insider trading — authors who fix their own bugs")}\n  ${divider()}\n\n`);
+  process.stdout.write(header("🎯", "Insider trading — authors who fix their own bugs",
+    "shipped → fix-by-same-author within window · proxy for missing review") + "\n\n");
 
   if (profiles.length === 0) {
-    process.stdout.write(`  ${kleur.green("✓")} No insider patterns detected — bugs are caught by reviewers, not by their authors.\n\n`);
+    process.stdout.write(emptyState(
+      "No insider patterns detected.",
+      [
+        "Bugs are caught by reviewers, not authored fixes — healthy.",
+        "Lower window: --window-days 14 to surface tighter loops.",
+      ],
+    ));
     return 0;
   }
 
@@ -290,9 +321,13 @@ export async function moneyballCommand(opts: { cwd: string; topN?: number; json?
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("⚾  Moneyball — undervalued contributors")}\n  ${divider()}\n\n`);
+  process.stdout.write(header("⚾", "Moneyball — undervalued contributors",
+    "downstream reach × collaborator network × per-commit ROI") + "\n\n");
   if (scores.length === 0) {
-    process.stdout.write(`  ${kleur.gray("No contributors yet.")}\n\n`);
+    process.stdout.write(emptyState(
+      "No contributors yet.",
+      ["Run `mneme index` after adding commits."],
+    ));
     return 0;
   }
   for (const s of scores) {
@@ -318,10 +353,11 @@ export async function greekCommand(opts: { cwd: string; json?: boolean }): Promi
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📐  Codebase Greeks (Δ Γ Θ)")}\n  ${divider()}\n\n`);
+  process.stdout.write(header("📐", "Codebase Greeks (Δ Γ Θ)",
+    "Delta · Gamma · Theta — risk derivatives of your codebase") + "\n\n");
 
   // Δ Delta
-  process.stdout.write(`  ${kleur.bold().magenta("Δ DELTA")}  sensitivity to top contributor\n`);
+  process.stdout.write(`  ${kleur.bold().magenta("Δ DELTA")}  ${kleur.gray("sensitivity to top contributor")}\n`);
   if (report.delta.length === 0) {
     process.stdout.write(`    ${kleur.gray("(no author dominates ≥ 75% of any file)")}\n`);
   } else {
@@ -333,12 +369,12 @@ export async function greekCommand(opts: { cwd: string; json?: boolean }): Promi
   process.stdout.write("\n");
 
   // Γ Gamma
-  process.stdout.write(`  ${kleur.bold().magenta("Γ GAMMA")}  acceleration of risk\n`);
+  process.stdout.write(`  ${kleur.bold().magenta("Γ GAMMA")}  ${kleur.gray("acceleration of risk")}\n`);
   process.stdout.write(`    ${report.gamma.interpretation}\n`);
   process.stdout.write(`    ${kleur.gray("slope: " + report.gamma.riskAcceleration + "  ·  weeks: " + report.gamma.weeks)}\n\n`);
 
   // Θ Theta
-  process.stdout.write(`  ${kleur.bold().magenta("Θ THETA")}  time decay\n`);
+  process.stdout.write(`  ${kleur.bold().magenta("Θ THETA")}  ${kleur.gray("time decay")}\n`);
   process.stdout.write(`    ${report.theta.interpretation}\n\n`);
 
   return 0;
@@ -359,9 +395,16 @@ export async function correlationMatrixCommand(opts: { cwd: string; topN?: numbe
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🔗  Correlation matrix — hidden file coupling")}\n  ${divider()}\n\n`);
+  process.stdout.write(header("🔗", "Correlation matrix — hidden file coupling",
+    "co-occurrence × jaccard × lift · find files that change together but shouldn't") + "\n\n");
   if (pairs.length === 0) {
-    process.stdout.write(`  ${kleur.gray("No coupling above lift threshold. Either files are well-decoupled, or commits don't touch enough files together to detect patterns.")}\n\n`);
+    process.stdout.write(emptyState(
+      "No coupling above lift threshold.",
+      [
+        "Files may be well-decoupled — that's good.",
+        "Lower threshold: --min-lift 1.5 to surface weaker patterns.",
+      ],
+    ));
     return 0;
   }
   for (const p of pairs) {
@@ -390,22 +433,37 @@ export async function impliedVolatilityCommand(opts: { cwd: string; json?: boole
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("📊  Implied volatility — chaos predicted from commit message tone")}\n  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Verdict")}\n\n`);
-  process.stdout.write(`    IV = ${kleur.bold(String(summary.latestIV))}/100  ${kleur.gray(`(trend: ${summary.trend})`)}\n`);
+  process.stdout.write(header("📊", "Implied volatility — chaos from commit message tone",
+    "infer 'how stressful is the codebase right now?' from word choice") + "\n\n");
+  process.stdout.write(section("✦ Verdict") + "\n\n");
+  process.stdout.write(
+    `    IV = ${kleur.bold(String(summary.latestIV))}/100  ${kleur.gray(`(trend: ${summary.trend})`)}\n`,
+  );
+  process.stdout.write(
+    `    ${meter(summary.latestIV / 100, { width: 16 })}  ${ivLabel(summary.latestIV)}\n`,
+  );
   process.stdout.write(`    ${summary.interpretation}\n\n`);
 
   if (summary.windows.length > 1) {
-    process.stdout.write(`  ${kleur.bold().magenta("◆ Weekly history")}  ${kleur.gray(`(last ${Math.min(12, summary.windows.length)} weeks)`)}\n\n`);
     const recent = summary.windows.slice(-12);
+    process.stdout.write(section("◆ Weekly history", `(last ${recent.length} weeks)`) + "\n\n");
+    process.stdout.write(`    ${kleur.gray("trend:")}  ${sparkline(recent.map((w) => w.iv))}\n\n`);
     for (const w of recent) {
-      const bar = "█".repeat(Math.max(1, Math.round(w.iv / 5)));
-      const color = w.iv >= 50 ? kleur.red : w.iv >= 25 ? kleur.yellow : kleur.green;
-      process.stdout.write(`    ${kleur.gray(w.week)}  ${color(bar.padEnd(20))} ${kleur.bold(String(w.iv).padStart(3))}\n`);
+      const ratio = Math.min(1, w.iv / 100);
+      process.stdout.write(
+        `    ${kleur.gray(w.week)}  ${meter(ratio, { width: 16 })}  ${kleur.bold(String(w.iv).padStart(3))}\n`,
+      );
     }
     process.stdout.write("\n");
   }
   return 0;
+}
+
+function ivLabel(iv: number): string {
+  if (iv >= 70) return pill("CRISIS", "critical");
+  if (iv >= 50) return pill("HIGH STRESS", "warn");
+  if (iv >= 30) return pill("ELEVATED", "low");
+  return pill("CALM", "ok");
 }
 
 // ─── 10. tax-loss-harvest ───────────────────────────────────────────────
@@ -424,8 +482,9 @@ export async function taxLossHarvestCommand(opts: { cwd: string; minStaleDays?: 
   }
 
   ui.banner();
-  process.stdout.write(`\n  ${kleur.bold().cyan("🌾  Tax-loss harvest — dead code candidates")}\n  ${divider()}\n\n`);
-  process.stdout.write(`  ${kleur.bold().magenta("✦ Summary")}\n\n`);
+  process.stdout.write(header("🌾", "Tax-loss harvest — dead code candidates",
+    "files / dirs nobody has touched in months · ripe for deletion") + "\n\n");
+  process.stdout.write(section("✦ Summary") + "\n\n");
   process.stdout.write(`    ${summary.summary}\n\n`);
 
   if (candidates.length === 0) return 0;

@@ -8,6 +8,62 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.18.0] — 2026-05-06
+
+The **"Polished — Output from the Future"** release. Every command now
+renders through a unified design system (panels, pills, meters,
+sparklines, citations, OSC 8 hyperlinks) and ships a smarter
+intelligence layer (top-line insights, plain-English verdicts, smart
+next-step suggestions). The CLI shines on first impression and stays
+useful through deep workflows.
+
+### Added — Unified UI primitives (`packages/cli/src/ui.ts`)
+
+Single design system used by every command:
+
+- `header(icon, title, subtitle?)` — page-level header with double-rule.
+- `section(title, hint?)` — section heading.
+- `divider(label?)` — horizontal rule, optionally with inline label.
+- `severityBadge(level)` — fixed-width colored badges (CRIT / HIGH / MEDIUM / LOW / INFO / OK / WARN).
+- `pill(label, level)` — free-form colored chip ([ FRESH ], [ STALE ], [ AUTO ]).
+- `meter(value, opts)` — linear 0..1 meter with auto-coloring or explicit level.
+- `logMeter(lr, opts)` — log-LR meter for forensic data.
+- `sparkline(values)` — Unicode trend chart (▁▂▃▄▅▆▇█).
+- `citation({shortHash, date, author, subject, url})` — consistent commit row, OSC 8 clickable.
+- `osc8(url, text)` — terminal hyperlink, auto-degrades on dumb terminals.
+- `kv(label, value)` — aligned key-value row.
+- `emptyState(headline, hints[])` — null-state with helpful suggestions.
+- `nextSteps(actions[])` — call-to-action box at end of every command.
+- `verdictBadge(verdict)` — ENFSI verdict coloring.
+- `commitTypePill(subject)` — pill from conventional-commit prefix.
+
+### Refactored — every high-visibility command shines now
+
+- **`mneme forensics match | attribute | vulns | anomaly`** — top-line insights ("🎯 X is the overwhelming match…"), plain-English verdicts ("In plain English: overwhelming evidence Y wrote this commit"), severity bars + meters, smart next-step suggestions tailored to the result, log-LR per-locus meters sorted by signal strength.
+- **`mneme why <file>:<line>`** — smart authorship insight ("70% of these lines come from a single commit"), aligned originating-commit citations with meters, semantically-related section, contextual next steps.
+- **`mneme status`** — pill-based health badges (FRESH / STALE / NEVER), embedding-coverage meter, freshness hints (`5d old`), smart next-step suggestions based on index health.
+- **`mneme who-knows <topic>`** — confidence meter, candidate ranking with frequency bars, risk pill, contextual next steps (story, dna).
+- **`mneme decisions`** — by-kind histogram with meters, color-coded confidence pills, export-format next steps.
+- **`mneme stack-trace`** — incident-prone-frame top-line, frame-by-frame breakdown, palimpsest/why next steps.
+- **`mneme story <topic>`** — sparkline of activity across acts, smart export next steps.
+- **`mneme dream`** — empty-state with hints when no ideas generated.
+- **`mneme guardian`** — pill-based mode/apply badges, severity-aligned tick rows, policy pills.
+- **`mneme drawdown / alpha / backtest / black-swan / insider-trading / moneyball / greek / correlation-matrix / vix / tax-loss-harvest`** — every quant command now uses the unified header/section/pill/meter pattern. `vix` gets a sparkline + meter for the trend.
+
+### Smart intelligence layer
+
+- **Top-line insights** — every report leads with the punchline. "🎯 alice@bank.com is the overwhelming match" or "⚠ 3 critical/high finding(s) — investigate immediately."
+- **Plain-English verdicts** — forensic LRs translated: "In plain English: overwhelming evidence Bob did NOT write this commit."
+- **Smart next steps** — every command ends with 1–3 contextual `mneme …` commands tied to what was just shown ("Hunt for OTHER suspicious commits" / "Cross-reference vulnerabilities introduced around the anomalous window" / "Inspect the top expert's coding fingerprint").
+- **Empty states with hints** — when there's no data, every command tells you exactly what to do next instead of a bare "no results."
+
+### Internal
+
+- Added 30 new unit tests for UI primitives (`packages/cli/src/ui.test.ts`).
+- All 834 tests pass (was 804); zero regressions.
+
+—
+
 ## [0.17.0] — 2026-05-06
 
 The **"Forensic Code Science"** release. Real forensic-science
