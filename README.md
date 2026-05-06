@@ -93,7 +93,7 @@ You don't need to memorize 50 commands. Just describe what you want:
 mneme do "find security issues"        # → vulns + anomaly + secret scan
 mneme do "is the codebase healthy"      # → status + guardian + drawdown + vix
 mneme do "who knows about auth"          # → who-knows + story
-mneme do "blast radius of abc1234"       # → blast + correlation matrix
+mneme do "blast radius of HEAD"          # → blast + correlation matrix (any ref works: HEAD, branch, hash)
 mneme do "should we ship today"          # → guardian + anomaly + recent vulns
 mneme do "onboarding tour"               # → constellation + decisions + experts
 ```
@@ -347,12 +347,16 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 
 ### 🔬 Forensics — *applied forensic science for code* ✨ v0.17
 
-| Command | Plain-English use | Example |
+> 💡 **Where do I get a commit hash?** Run `git log --oneline | head` to see the latest 10. Or use `HEAD` (the most recent commit), `HEAD~3` (3 commits ago), or any branch name (`main`, `feature/x`). All forensics commands accept any of these.
+
+| Command | Plain-English use | Example you can run **right now** |
 |---|---|---|
-| ✨ `forensics match` | "Did this author really write this commit?" *(STR-loci LR + ENFSI verbal scale)* | `mneme forensics match abc1234 alice@x.com` |
-| ✨ `forensics attribute` | "Who most likely wrote this anonymous commit?" *(ranks all authors)* | `mneme forensics attribute abc1234` |
-| ✨ `forensics vulns` | "What security holes are hiding in our history?" *(CWE-aligned)* | `mneme forensics vulns --since 2024-01-01` |
-| ✨ `forensics anomaly` | "Is any commit suspicious?" *(insider-threat / compromised credential)* | `mneme forensics anomaly --threshold 1.5` |
+| ✨ `forensics match` | "Did this author really write this commit?" *(STR-loci LR + ENFSI verbal scale)* | `mneme forensics match HEAD alice@example.com` |
+| ✨ `forensics attribute` | "Who most likely wrote this commit?" *(ranks all authors)* | `mneme forensics attribute` *(no args = HEAD)* |
+| ✨ `forensics vulns` | "What security holes are hiding in our history?" *(CWE-aligned)* | `mneme forensics vulns` *(scans last 500 commits)* |
+| ✨ `forensics anomaly` | "Is any commit suspicious?" *(insider-threat / compromised credential)* | `mneme forensics anomaly` *(no args = full history)* |
+
+> ⚡ **Just want the security report? One command:** `mneme do "find security issues"` — runs vulns + anomaly together.
 
 ### 💰 Quant — *Wall-Street-inspired engineering intelligence*
 
@@ -377,18 +381,34 @@ The agent will install, configure, and start using Mneme as a tool in its reason
 
 The same way detectives use DNA + crime-scene patterns to identify suspects, Mneme can scan your git history for **security weaknesses** and **suspicious commits**. Plain-English use cases:
 
+> 🎯 **Don't have a commit hash handy?** Every forensics command accepts:
+> - `HEAD` — the most recent commit
+> - `HEAD~3` — 3 commits ago
+> - `main` / any branch name
+> - Or get a real hash:  `git log --oneline | head`
+
 ### "Did Alice really write this commit?" → `forensics match`
 
 ```bash
-mneme forensics match <commit-hash> alice@company.com
+# The most recent commit, against suspect Alice:
+mneme forensics match HEAD alice@example.com
+
+# A specific commit (find one with `git log --oneline`):
+mneme forensics match a3f9b21 alice@example.com
 ```
 
 Returns a verdict like *"very strong support"* / *"moderate support against"* — same wording forensic scientists use in court. Useful when a commit's authorship is disputed (compromised account? insider threat?).
 
-### "Who wrote this anonymous commit?" → `forensics attribute`
+### "Who wrote this commit?" → `forensics attribute`
 
 ```bash
-mneme forensics attribute <commit-hash>
+# No args = analyze the latest commit (HEAD):
+mneme forensics attribute
+
+# Or pick any commit / branch / ref:
+mneme forensics attribute HEAD~5
+mneme forensics attribute main
+mneme forensics attribute a3f9b21
 ```
 
 Ranks every author in your repo by likelihood. The top result is your most probable author — backed by 12 statistical "fingerprint" signals (working hours, file affinity, vocabulary, etc.).

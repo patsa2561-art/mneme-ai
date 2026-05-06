@@ -40,15 +40,18 @@ export interface GuardOptions {
 }
 
 const HOOK_MARKER = "# mneme-guard-hook v1";
-const HOOK_BODY = `#!/bin/sh
-${HOOK_MARKER}
+function buildHookBody(strict: boolean): string {
+  const flag = strict ? " --strict" : "";
+  return `#!/bin/sh
+${HOOK_MARKER}${strict ? " (strict)" : ""}
 # Pre-commit guard. Blocks commits with leaked secrets or known-vulnerable
 # patterns. Bypass with: git commit --no-verify
 # Uninstall with: mneme guard --uninstall
 
-mneme guard --check
+mneme guard --check${flag}
 exit $?
 `;
+}
 
 export async function guardCommand(opts: GuardOptions): Promise<number> {
   if (!(await git.isGitRepo(opts.cwd))) {
@@ -56,9 +59,10 @@ export async function guardCommand(opts: GuardOptions): Promise<number> {
     return 1;
   }
 
-  if (opts.install) return installHook(opts.cwd);
+  if (opts.install) return installHook(opts.cwd, !!opts.strict);
   if (opts.uninstall) return uninstallHook(opts.cwd);
-  if (opts.check) return runCheck(opts.cwd, !!opts.strict);
+  // --strict alone implies --check in strict mode (the most useful intent)
+  if (opts.check || opts.strict) return runCheck(opts.cwd, !!opts.strict);
 
   // Default: show status + how to install
   return showStatus(opts.cwd);
@@ -78,50 +82,66 @@ function hookPath(cwd: string): string {
   return join(cwd, hooksDir, "pre-commit");
 }
 
-function installHook(cwd: string): number {
+function installHook(cwd: string, strict: boolean): number {
   const path = hookPath(cwd);
   // dirname() handles BOTH Unix (/) and Windows (\) separators.
-  // The previous lastIndexOf("/") returned -1 on Windows (where join() uses \),
-  // so substring(0, -1) became "" → ENOENT mkdir "".
   const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+  const body = buildHookBody(strict);
+  const modeLabel = strict ? "strict (also blocks MEDIUM)" : "default (blocks HIGH/CRITICAL)";
 
   // Check if a hook already exists
   if (existsSync(path)) {
     const existing = readFileSync(path, "utf8");
     if (existing.includes(HOOK_MARKER)) {
-      ui.success(`Mneme guard already installed at ${path}`);
+      // Re-install — overwrite our own block (preserves any third-party hook)
+      const lines = existing.split("\n");
+      const start = lines.findIndex((l) => l.includes(HOOK_MARKER));
+      const before = lines.slice(0, Math.max(0, start - 1)).join("\n").trimEnd();
+      const merged = before
+        ? before + "\n\n" + body.split("\n").slice(1).join("\n")
+        : body;
+      writeFileSync(path, merged);
+      chmodSync(path, 0o755);
+      ui.banner();
+      process.stdout.write(header("🛡", "Guard re-installed",
+        `${path} · mode: ${modeLabel}`,
+        "Mneme guard hook updated.") + "\n\n");
       return 0;
     }
     // Other hook present — append to it instead of overwriting
-    const merged = existing.trimEnd() + "\n\n" + HOOK_BODY.split("\n").slice(1).join("\n");
+    const merged = existing.trimEnd() + "\n\n" + body.split("\n").slice(1).join("\n");
     writeFileSync(path, merged);
     chmodSync(path, 0o755);
     ui.banner();
     process.stdout.write(header("🛡", "Guard installed (appended to existing hook)",
-      `${path}`,
+      `${path} · mode: ${modeLabel}`,
       "Pre-commit hook now runs your existing checks AND Mneme guard.") + "\n\n");
     return 0;
   }
 
-  writeFileSync(path, HOOK_BODY);
+  writeFileSync(path, body);
   chmodSync(path, 0o755);
 
   ui.banner();
   process.stdout.write(header("🛡", "Guard installed",
-    `pre-commit hook → ${path}`,
+    `pre-commit hook → ${path} · mode: ${modeLabel}`,
     "Mneme will now scan every commit for leaked secrets + known-vulnerable patterns BEFORE the commit lands.") + "\n\n");
 
   process.stdout.write(section("✦ What happens next") + "\n\n");
-  process.stdout.write(`  ${kleur.green("●")} Every \`git commit\` now triggers \`mneme guard --check\`\n`);
+  process.stdout.write(`  ${kleur.green("●")} Every \`git commit\` now triggers \`mneme guard --check${strict ? " --strict" : ""}\`\n`);
   process.stdout.write(`  ${kleur.green("●")} Runs in <300ms against staged changes only\n`);
-  process.stdout.write(`  ${kleur.green("●")} Blocks the commit if HIGH/CRITICAL findings (configurable with --strict)\n`);
+  process.stdout.write(`  ${kleur.green("●")} Blocks the commit if ${strict ? "MEDIUM/HIGH/CRITICAL" : "HIGH/CRITICAL"} findings\n`);
+  if (!strict) {
+    process.stdout.write(`  ${kleur.gray("●")} ${kleur.gray("Want stricter blocking? Re-install with --strict:")} ${kleur.cyan("mneme guard --install --strict")}\n`);
+  }
   process.stdout.write(`  ${kleur.green("●")} Bypass when you really need to:  ${kleur.cyan("git commit --no-verify")}\n\n`);
 
   process.stdout.write(nextSteps([
     {
-      cmd: `git commit -am "test"`,
-      why: `The next commit will be guard-checked. Try it.`,
+      cmd: `mneme guard --check`,
+      why: `Manually run a scan against currently-staged changes (no commit needed).`,
     },
     {
       cmd: `mneme guard --uninstall`,
@@ -144,7 +164,7 @@ function uninstallHook(cwd: string): number {
     return 1;
   }
   // If we appended to an existing hook, surgically remove our block
-  if (content.split("\n").length > HOOK_BODY.split("\n").length + 1) {
+  if (content.split("\n").length > buildHookBody(false).split("\n").length + 1) {
     const lines = content.split("\n");
     const start = lines.findIndex((l) => l.includes(HOOK_MARKER));
     const filtered = lines.slice(0, start - 1); // strip blank line + marker block
@@ -201,7 +221,17 @@ function runCheck(cwd: string, strict: boolean): number {
   }
 
   if (!stagedDiff.trim()) {
-    // Nothing staged — let the commit through (could be amend or hooks running on empty)
+    // Manual run with nothing staged — give the user a clear "ok, nothing to scan"
+    // instead of silent exit. The pre-commit hook itself never reaches this branch
+    // because git only fires the hook when there ARE staged changes.
+    ui.banner();
+    process.stdout.write(header("🛡", "Mneme Guard — pre-commit check",
+      "no files currently staged",
+      "Stage some changes (`git add ...`) then re-run, or just `git commit` to fire the hook.") + "\n\n");
+    process.stdout.write(emptyState("Nothing to scan.", [
+      `Run \`git status\` to see what's not yet staged.`,
+      `Or run \`mneme forensics anomaly\` to scan committed history instead.`,
+    ]));
     return 0;
   }
 

@@ -476,27 +476,41 @@ export async function forensicsAnomalyCommand(
   }
 
   ui.banner();
-  process.stdout.write(header("🕵", "Anomaly Detection — insider-threat / credential-compromise hunt",
-    "Per-author baselines · 4-axis deviation: TIME · FILES · STYLE · SIZE",
-    "Catch suspicious commits before merge — wrong hour, unfamiliar files, off vocabulary, abnormal size.") + "\n\n");
+  process.stdout.write(header("🕵", "Anomaly Detection",
+    "is anyone behaving differently from their normal pattern?",
+    "Catches commits that look 'off' for the author — wrong hour, new files, unusual vocabulary, or unusual size.") + "\n\n");
 
   const counts = countBySeverity(result.findings);
   const topLine = (() => {
     if (result.findings.length === 0) {
-      return `${kleur.green("✓")}  No anomalous commits detected at threshold ${kleur.bold((opts.threshold ?? 0.9).toFixed(2))} across ${kleur.bold(String(result.scanned))} commits.`;
+      return `${kleur.green("✓")}  All commits look normal for their authors. (${kleur.bold(String(result.scanned))} commits scanned, ${kleur.bold(String(result.baselines))} authors profiled)`;
     }
     if (counts.critical > 0) {
-      return `${kleur.red("⚠")}  ${kleur.red().bold(String(counts.critical))} CRITICAL anomalies across ${kleur.bold(String(result.baselines))} authors — verify identities out-of-band.`;
+      return `${kleur.red("⚠")}  ${kleur.red().bold(String(counts.critical))} commits look VERY different from how that author normally commits — verify the author manually.`;
     }
-    return `${kleur.yellow("!")}  ${kleur.bold(String(result.findings.length))} anomalous commit(s) — review before merge.`;
+    return `${kleur.yellow("!")}  ${kleur.bold(String(result.findings.length))} commit(s) look unusual for their author — review before merging.`;
   })();
   process.stdout.write(`  ${topLine}\n\n`);
 
+  // ─── Plain-English reading guide ────────────────────────────────
+  process.stdout.write(section("📘 How to read this report") + "\n");
+  process.stdout.write(`    ${kleur.gray("• Each commit gets a")} ${kleur.bold("risk score")} ${kleur.gray("(0–4) based on 4 signals:")}\n`);
+  process.stdout.write(`        ${kleur.cyan("time")}  ${kleur.gray("— did they commit at an unusual hour?")}\n`);
+  process.stdout.write(`        ${kleur.cyan("files")} ${kleur.gray("— did they touch files they normally don't?")}\n`);
+  process.stdout.write(`        ${kleur.cyan("style")} ${kleur.gray("— did they use words they never use?")}\n`);
+  process.stdout.write(`        ${kleur.cyan("size")}  ${kleur.gray("— is the commit much bigger/smaller than usual?")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Severity:  ≥2.5 critical · ≥1.7 high · ≥0.9 medium · else ignored")}\n\n`);
+
+  // ─── Single-author repo warning ────────────────────────────────
+  if (result.baselines === 1) {
+    process.stdout.write(`  ${pill("HEADS UP", "warn")} ${kleur.yellow("Single-author repo")} ${kleur.gray("— anomaly detection is most useful when you have multiple authors to compare. Findings here just mean 'unusual vs your own past commits' (e.g. a 1000-line commit when you usually do 50-line commits).")}\n\n`);
+  }
+
   if (result.findings.length === 0) {
     process.stdout.write(emptyState(
-      "Clean — no commits exceeded the deviation threshold.",
+      "Clean — no commits look unusual.",
       [
-        `Lower threshold to investigate borderline cases: --threshold 0.5`,
+        `Lower the threshold to see borderline cases: --threshold 0.5`,
         `Run after every push as part of CI for continuous oversight.`,
       ],
     ));
@@ -504,40 +518,41 @@ export async function forensicsAnomalyCommand(
   }
 
   // Severity tally
-  process.stdout.write(section("✦ By severity") + "\n");
-  const sevs: Array<{ key: keyof typeof counts; level: Level }> = [
-    { key: "critical", level: "critical" },
-    { key: "high", level: "high" },
-    { key: "medium", level: "medium" },
-    { key: "low", level: "low" },
+  process.stdout.write(section("✦ By risk level") + "\n");
+  const sevs: Array<{ key: keyof typeof counts; level: Level; label: string }> = [
+    { key: "critical", level: "critical", label: "CRITICAL — verify author identity out-of-band" },
+    { key: "high", level: "high", label: "HIGH     — needs a second-engineer approval" },
+    { key: "medium", level: "medium", label: "MEDIUM   — flag during normal review" },
+    { key: "low", level: "low", label: "LOW      — informational" },
   ];
   const maxC = Math.max(counts.critical, counts.high, counts.medium, counts.low, 1);
-  for (const { key, level } of sevs) {
+  for (const { key, level, label } of sevs) {
     const n = counts[key];
     if (n === 0) continue;
     process.stdout.write(
-      `    ${severityBadge(level)}  ${meter(n / maxC, { width: 12, level })}  ${kleur.bold(String(n).padStart(4))}\n`,
+      `    ${meter(n / maxC, { width: 10, level })}  ${kleur.bold(String(n).padStart(3))}  ${kleur.gray(label)}\n`,
     );
   }
   process.stdout.write("\n");
 
-  process.stdout.write(section("⚠ Anomalous commits", "(sorted by deviation)") + "\n\n");
+  process.stdout.write(section("⚠ Unusual commits", `(top ${Math.min(result.findings.length, opts.topN ?? 10)} by risk score)`) + "\n\n");
   for (const f of result.findings.slice(0, opts.topN ?? 10)) {
     const c = f.commit;
     const sevLevel: Level = sevToLevel[f.severity] ?? "info";
     process.stdout.write(
-      `    ${severityBadge(sevLevel)}  ${kleur.bold(c.shortHash)} ${kleur.gray(c.authorDate.slice(0, 16) + " · " + c.authorName)}\n`,
+      `    ${severityBadge(sevLevel)}  ${kleur.bold(c.shortHash)} ${kleur.gray(c.authorDate.slice(0, 16) + " UTC · " + c.authorName)}\n`,
     );
     process.stdout.write(
-      `        ${kleur.bold(`deviation = ${f.totalDeviation.toFixed(2)}`)}  ${kleur.gray(`(≈ ${f.approxSigma}σ)`)}\n`,
+      `        ${kleur.bold(`risk score: ${f.totalDeviation.toFixed(2)}`)} ${kleur.gray(`/ 4.0 max`)}\n`,
     );
     process.stdout.write(`        ${kleur.white(c.subject)}\n`);
     for (const a of f.axes) {
       if (a.score < 0.1) continue;
-      // Each axis maps 0..1 onto the meter directly with auto color.
       const axisLevel: Level = a.score >= 0.8 ? "critical" : a.score >= 0.5 ? "high" : a.score >= 0.3 ? "medium" : "low";
+      // Translate the technical note into plain English
+      const friendly = humanizeAxisNote(a.axis, a.note, c.authorDate);
       process.stdout.write(
-        `          ${meter(a.score, { width: 10, level: axisLevel })}  ${kleur.cyan(a.axis.padEnd(6))} ${kleur.gray(a.note)}\n`,
+        `          ${meter(a.score, { width: 10, level: axisLevel })}  ${kleur.cyan(a.axis.padEnd(6))} ${kleur.gray(friendly)}\n`,
       );
     }
     process.stdout.write(`        ${kleur.yellow("→ " + f.recommendation)}\n\n`);
@@ -579,6 +594,60 @@ function truncateOneLine(s: string, n: number): string {
   const oneLine = s.replace(/\s+/g, " ").trim();
   if (oneLine.length <= n) return oneLine;
   return oneLine.slice(0, n - 1) + "…";
+}
+
+/** Translate a technical axis note into plain English the user can verify.
+ *  Removes "robust z", "peak window", "MAD", and other jargon. */
+function humanizeAxisNote(axis: string, note: string, commitDate: string): string {
+  if (axis === "time") {
+    // Original example:
+    //   "commit hour 04:00 UTC is 11h from author's peak window 15:00–19:00"
+    const m = note.match(/commit hour (\d{2}):00 UTC is (\d+)h from author's peak window (\d{2}):00.(\d{2}):00/);
+    if (m) {
+      const utcHour = m[1];
+      const gap = m[2];
+      const peakStart = m[3];
+      const peakEnd = m[4];
+      // Add user's local time for verification
+      const local = (() => {
+        try {
+          const d = new Date(commitDate);
+          return d.toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+        } catch {
+          return null;
+        }
+      })();
+      const localHint = local ? ` (your local time: ${local})` : "";
+      return `committed at ${utcHour}:00 UTC${localHint}. This author normally commits between ${peakStart}:00–${peakEnd}:00 UTC — ${gap}h gap.`;
+    }
+    return note;
+  }
+  if (axis === "files") {
+    // Original: "3/3 files are new for this author (e.g. src/auth.ts, src/db.ts)"
+    return note.replace(/are new for this author/, "have never been touched by this author");
+  }
+  if (axis === "style") {
+    // Original: "verb \"exfiltrate\" not in author's vocabulary (47 verbs across 1247 commits)"
+    const m = note.match(/verb "(\w+)" not in author's vocabulary \((\d+) verbs across (\d+) commits\)/);
+    if (m) {
+      return `commit message starts with "${m[1]}" — a word this author has never used in ${m[3]} prior commits.`;
+    }
+    return note;
+  }
+  if (axis === "size") {
+    // Original: "+465 lines vs author's median 50 (robust z = 9.9)"
+    const m = note.match(/\+(\d+) lines vs author's median (\d+) \(robust z = ([\d.]+)\)/);
+    if (m) {
+      const churn = Number(m[1]);
+      const median = Number(m[2]);
+      const z = Number(m[3]);
+      const ratio = median > 0 ? (churn / median).toFixed(1) : "much";
+      const direction = churn > median ? "larger" : "smaller";
+      return `this commit is ${churn} lines — about ${ratio}× ${direction} than this author's typical commit (~${median} lines).`;
+    }
+    return note;
+  }
+  return note;
 }
 
 function verdictPlainEnglish(verdict: string, suspect: string): string {
