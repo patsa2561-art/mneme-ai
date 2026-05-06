@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/mcp",
-  "version": "0.19.0",
+  "version": "0.19.1",
   "description": "MCP server that exposes Mneme to Claude Code, Cursor, Continue, and other AI clients",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,8 +30,8 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@mneme-ai/core": "0.19.0",
-    "@mneme-ai/embeddings": "0.19.0",
+    "@mneme-ai/core": "0.19.1",
+    "@mneme-ai/embeddings": "0.19.1",
     "@modelcontextprotocol/sdk": "^1.0.4"
   }
 }
