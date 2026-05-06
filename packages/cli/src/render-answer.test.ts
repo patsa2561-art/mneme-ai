@@ -169,6 +169,8 @@ describe("renderAnswer — full top-level rendering", () => {
         confidence: "high",
         evidenceCommitHashes: ["abc1234"],
         durationMs: 200,
+        unverifiedCitations: [],
+        trustScore: 0.95,
       },
       results: [sampleResult("abc1234", 0.05, "Fix X")],
     });
@@ -189,6 +191,8 @@ describe("renderAnswer — full top-level rendering", () => {
         confidence: "none",
         evidenceCommitHashes: [],
         durationMs: 0,
+        unverifiedCitations: [],
+        trustScore: 0.8,
       },
       results: [],
     });
@@ -207,6 +211,8 @@ describe("renderAnswer — full top-level rendering", () => {
         confidence: "high",
         evidenceCommitHashes: ["abc1234"],
         durationMs: 0,
+        unverifiedCitations: [],
+        trustScore: 0.8,
       },
       results: [sampleResult("abc1234", 0.05, "Fix BigInt", ["src/payment/svc.ts", "src/payment/types.ts"])],
     });
@@ -223,6 +229,8 @@ describe("renderAnswer — full top-level rendering", () => {
         confidence: "high",
         evidenceCommitHashes: ["abc1234"],
         durationMs: 0,
+        unverifiedCitations: [],
+        trustScore: 0.8,
       },
       results: [sampleResult("abc1234", 0.05, "subj")],
       feedbackId: "12345678-aaaa-bbbb-cccc-dddddddddddd",
@@ -243,6 +251,8 @@ describe("renderAnswer — full top-level rendering", () => {
         confidence: "high",
         evidenceCommitHashes: results.map((r) => r.commit.hash).slice(0, 3),
         durationMs: 0,
+        unverifiedCitations: [],
+        trustScore: 0.8,
       },
       results,
     });

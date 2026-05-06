@@ -8,6 +8,57 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.14.0] — 2026-05-06
+
+The **"Untouchable"** release. One world-first quality moat + a journalist-style README rewrite.
+
+### Added — Hallucination Guard *(no other tool ships this for git Q&A)*
+
+- **`mneme ask --audit`** — audit-grade Q&A mode. Refuses to answer below
+  a confidence floor (`--audit-floor low|medium|high`, default medium)
+  AND refuses if any LLM-cited backtick-hash isn't present in the
+  retrieved evidence. Use this for CI gates or any surface where AI
+  hallucination is unacceptable. Returns `source: "audit-refused"` with
+  trustScore = 0 instead of best-effort prose.
+- **Trust score 0..1** on every `synthesize()` result. Combines confidence
+  label and citation validity:
+  - `audit-refused` / `no-context` → 0
+  - `extractive` → 0.5–0.7
+  - `llm` clean → 0.8–0.95
+  - `llm` with N unverified citations → base − N × 0.2 (capped at 0.5 penalty)
+- **`unverifiedCitations`** field — every backtick-hex token in the
+  answer is checked against the evidence set (prefix-match, case-insensitive).
+  Hashes that don't match are surfaced in the field and rendered as a
+  "⚠ HALLUCINATION RISK" banner in the CLI, with a `--audit` hint.
+- **Trust badge UI** in `mneme ask` output — color-coded (green/cyan/yellow/red)
+  next to the existing confidence badge.
+- **`findUnverifiedCitations()`** exported as a pure helper for callers who
+  want to validate LLM output against arbitrary evidence sets.
+
+### Test count
+
+| Category | Tests |
+|----------|-------|
+| Hallucination guard | 15 |
+| Repo total | **742** (was 727) |
+
+Build clean. All 742 tests pass.
+
+### Changed — README rewrite
+
+The README went from **834 lines to 227 lines** (73% reduction):
+
+- **Journalist inverted pyramid** — most important first
+- **30-second install** above the fold
+- **Why people use it** — 4 bullets, story-shaped
+- **All commands in 3 colored tables** (Tier 1 / Insights / Quant)
+- **Audit-grade section** — explicit hallucination-guard guarantee
+- **Black Sheep table** — 12 world-firsts vs adjacent tools
+- **Wiki links** for everything that used to live in the README
+
+The old long-form content is intact in the wiki — see Innovations and
+Command-Tour.
+
 ## [0.13.0] — 2026-05-05
 
 The **"Black Sheep"** release. Closes every gap from the landscape

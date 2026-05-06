@@ -36,13 +36,44 @@ export interface SynthesizedAnswer {
   /** The paragraph the user reads at the top of `mneme ask` output. */
   answer: string;
   /** Provenance: where the answer came from. */
-  source: "llm" | "extractive" | "no-context";
+  source: "llm" | "extractive" | "no-context" | "audit-refused";
   /** The same confidence label that was passed in (echoed for caller convenience). */
   confidence: ConfidenceLabel;
   /** Hashes of the commits the answer is grounded in. */
   evidenceCommitHashes: string[];
+  /**
+   * Hallucination guard — list of inline backtick-hashes the LLM cited that
+   * are NOT present in the retrieved evidence. Empty array means audit-clean.
+   */
+  unverifiedCitations: string[];
+  /**
+   * Trust score 0..1 — combines confidence label + citation validity.
+   *   - "audit-refused" → 0
+   *   - "no-context" → 0
+   *   - extractive → 0.5–0.7 (no LLM risk)
+   *   - LLM clean (no unverified citations) → 0.8–1.0
+   *   - LLM with unverified citations → < 0.5 (risk of hallucination)
+   */
+  trustScore: number;
   /** Per-call latency for telemetry / "how slow is this?" calibration. */
   durationMs: number;
+}
+
+/** Options for the synthesizer. */
+export interface SynthesizeOptions {
+  /** Top-K to ground the answer in (default 5). */
+  maxResults?: number;
+  /**
+   * Audit mode — refuse to answer below a confidence floor instead of
+   * returning best-effort prose. Use this when the consumer is an audit
+   * surface (CI gate, MCP tool result, security review).
+   */
+  auditMode?: boolean;
+  /**
+   * Minimum confidence label that audit mode allows. Defaults to "medium".
+   * Anything below is refused with a "audit-refused" source.
+   */
+  auditFloor?: ConfidenceLabel;
 }
 
 const SYNTH_SYSTEM_PROMPT = [
@@ -77,9 +108,13 @@ export async function synthesize(
   results: SearchResult[],
   confidence: ConfidenceLabel,
   enricher?: SynthesisEnricher,
-  maxResults = 5,
+  optsOrMax: number | SynthesizeOptions = 5,
 ): Promise<SynthesizedAnswer> {
   const t0 = Date.now();
+  const opts: SynthesizeOptions =
+    typeof optsOrMax === "number" ? { maxResults: optsOrMax } : optsOrMax;
+  const maxResults = opts.maxResults ?? 5;
+  const auditFloor = opts.auditFloor ?? "medium";
 
   if (confidence === "none" || results.length === 0) {
     return {
@@ -87,6 +122,22 @@ export async function synthesize(
       source: "no-context",
       confidence,
       evidenceCommitHashes: [],
+      unverifiedCitations: [],
+      trustScore: 0,
+      durationMs: Date.now() - t0,
+    };
+  }
+
+  // Audit mode — refuse below floor (audit-grade caller doesn't want
+  // best-effort prose; they want either an answer or a refusal).
+  if (opts.auditMode && !meetsConfidenceFloor(confidence, auditFloor)) {
+    return {
+      answer: auditRefusedAnswer(question, confidence, auditFloor),
+      source: "audit-refused",
+      confidence,
+      evidenceCommitHashes: [],
+      unverifiedCitations: [],
+      trustScore: 0,
       durationMs: Date.now() - t0,
     };
   }
@@ -95,11 +146,14 @@ export async function synthesize(
   const evidenceHashes = top.map((r) => r.commit.hash);
 
   if (!enricher) {
+    const ans = extractiveAnswer(question, top, confidence);
     return {
-      answer: extractiveAnswer(question, top, confidence),
+      answer: ans,
       source: "extractive",
       confidence,
       evidenceCommitHashes: evidenceHashes,
+      unverifiedCitations: [],
+      trustScore: extractiveTrust(confidence),
       durationMs: Date.now() - t0,
     };
   }
@@ -113,23 +167,152 @@ export async function synthesize(
       maxTokens: 250,
     });
     const cleaned = cleanLlmOutput(out.text);
+    if (!cleaned) {
+      // empty LLM output → extractive fallback
+      const ans = extractiveAnswer(question, top, confidence);
+      return {
+        answer: ans,
+        source: "extractive",
+        confidence,
+        evidenceCommitHashes: evidenceHashes,
+        unverifiedCitations: [],
+        trustScore: extractiveTrust(confidence),
+        durationMs: Date.now() - t0,
+      };
+    }
+
+    // Hallucination guard — verify all backtick-hashes in the answer
+    // appear in the evidence set. If unverified citations are present, we
+    // still return the LLM answer (caller can choose to surface or refuse)
+    // but mark the offending hashes so audit-grade consumers can hard-fail.
+    const unverified = findUnverifiedCitations(cleaned, evidenceHashes);
+
+    // In audit mode, ANY unverified citation = refuse.
+    if (opts.auditMode && unverified.length > 0) {
+      return {
+        answer: auditRefusedAnswer(question, confidence, auditFloor, unverified),
+        source: "audit-refused",
+        confidence,
+        evidenceCommitHashes: evidenceHashes,
+        unverifiedCitations: unverified,
+        trustScore: 0,
+        durationMs: Date.now() - t0,
+      };
+    }
+
     return {
-      answer: cleaned || extractiveAnswer(question, top, confidence),
-      source: cleaned ? "llm" : "extractive",
+      answer: cleaned,
+      source: "llm",
       confidence,
       evidenceCommitHashes: evidenceHashes,
+      unverifiedCitations: unverified,
+      trustScore: llmTrust(confidence, unverified.length),
       durationMs: Date.now() - t0,
     };
   } catch {
     // LLM failed (timeout, model not pulled, network) — extractive fallback.
+    const ans = extractiveAnswer(question, top, confidence);
     return {
-      answer: extractiveAnswer(question, top, confidence),
+      answer: ans,
       source: "extractive",
       confidence,
       evidenceCommitHashes: evidenceHashes,
+      unverifiedCitations: [],
+      trustScore: extractiveTrust(confidence),
       durationMs: Date.now() - t0,
     };
   }
+}
+
+/**
+ * Extract every backtick-quoted token from the answer that LOOKS like a
+ * commit hash (≥4 hex chars), then return the subset that is NOT present
+ * (as prefix) in any evidence hash. These are candidate hallucinations.
+ */
+export function findUnverifiedCitations(
+  answer: string,
+  evidenceHashes: string[],
+): string[] {
+  const tokens = answer.matchAll(/`([0-9a-f]{4,40})`/gi);
+  const evSet = evidenceHashes.map((h) => h.toLowerCase());
+  const unverified: string[] = [];
+  const seen = new Set<string>();
+  for (const m of tokens) {
+    const cited = m[1]!.toLowerCase();
+    if (seen.has(cited)) continue;
+    seen.add(cited);
+    const matches = evSet.some((h) => h.startsWith(cited) || cited.startsWith(h));
+    if (!matches) unverified.push(cited);
+  }
+  return unverified;
+}
+
+function meetsConfidenceFloor(
+  confidence: ConfidenceLabel,
+  floor: ConfidenceLabel,
+): boolean {
+  const order: Record<ConfidenceLabel, number> = {
+    none: 0,
+    low: 1,
+    medium: 2,
+    high: 3,
+  };
+  return (order[confidence] ?? 0) >= (order[floor] ?? 0);
+}
+
+function extractiveTrust(confidence: ConfidenceLabel): number {
+  // Extractive = template-based, no LLM hallucination risk.
+  switch (confidence) {
+    case "high":
+      return 0.7;
+    case "medium":
+      return 0.6;
+    case "low":
+      return 0.5;
+    default:
+      return 0;
+  }
+}
+
+function llmTrust(confidence: ConfidenceLabel, unverifiedCount: number): number {
+  let base: number;
+  switch (confidence) {
+    case "high":
+      base = 0.95;
+      break;
+    case "medium":
+      base = 0.8;
+      break;
+    case "low":
+      base = 0.6;
+      break;
+    default:
+      return 0;
+  }
+  // Each unverified citation cuts trust significantly.
+  const penalty = Math.min(0.5, unverifiedCount * 0.2);
+  return Number(Math.max(0, base - penalty).toFixed(2));
+}
+
+function auditRefusedAnswer(
+  question: string,
+  confidence: ConfidenceLabel,
+  auditFloor: ConfidenceLabel,
+  unverified?: string[],
+): string {
+  const lines: string[] = [];
+  lines.push("Audit mode refused this answer.");
+  if (unverified && unverified.length > 0) {
+    lines.push(
+      `The model cited ${unverified.length} hash${unverified.length === 1 ? "" : "es"} (${unverified.slice(0, 3).join(", ")}…) that don't appear in the retrieved evidence.`,
+    );
+  } else {
+    lines.push(
+      `Confidence is "${confidence}" (audit floor: "${auditFloor}"). Not enough grounded evidence to commit to a verdict.`,
+    );
+  }
+  lines.push(`Re-phrase the query, narrow the scope, or run with --no-audit to see best-effort prose.`);
+  return lines.join("\n");
 }
 
 /**

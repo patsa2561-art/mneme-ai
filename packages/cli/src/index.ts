@@ -117,7 +117,9 @@ export async function run(argv: string[]): Promise<void> {
     .option("--json", "machine-readable JSON output", false)
     .option("--no-llm", "skip LLM synthesis — extractive answer only")
     .option("--debug", "show intent classification + raw scores", false)
-    .action(async (qParts: string[], opts: { topK: number; json: boolean; llm?: boolean; debug?: boolean }) => {
+    .option("--audit", "refuse to answer below confidence floor or with unverified citations", false)
+    .option("--audit-floor <level>", "audit confidence floor: low | medium | high", "medium")
+    .action(async (qParts: string[], opts: { topK: number; json: boolean; llm?: boolean; debug?: boolean; audit?: boolean; auditFloor?: "low" | "medium" | "high" }) => {
       process.exit(
         await askCommand({
           cwd: process.cwd(),
@@ -126,6 +128,8 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
           noLlm: opts.llm === false,
           debug: opts.debug,
+          audit: opts.audit,
+          auditFloor: opts.auditFloor,
         }),
       );
     });

@@ -22,6 +22,22 @@ export function osc8(url: string | undefined, text: string): string {
 }
 
 /** Confidence → colored emoji + label. */
+/**
+ * Render a trust score 0..1 as a colored badge.
+ *   ≥ 0.85  → green TRUST 95%
+ *   ≥ 0.6   → cyan TRUST 70%
+ *   ≥ 0.3   → yellow TRUST 40%
+ *   else    → red TRUST 0%
+ */
+export function trustBadge(score: number): string {
+  const pct = Math.round(score * 100);
+  const label = `TRUST ${pct}%`;
+  if (score >= 0.85) return `${kleur.green("◉")} ${kleur.green().bold(label)}`;
+  if (score >= 0.6) return `${kleur.cyan("◉")} ${kleur.cyan().bold(label)}`;
+  if (score >= 0.3) return `${kleur.yellow("◉")} ${kleur.yellow().bold(label)}`;
+  return `${kleur.red("◉")} ${kleur.red().bold(label)}`;
+}
+
 export function confidenceBadge(c: ConfidenceLabel): string {
   switch (c) {
     case "high":
@@ -92,13 +108,28 @@ export function renderAnswer(input: AskRenderInput): string {
   const out: string[] = [];
   const { question, synthesized, results, repo, feedbackId } = input;
 
-  // ── Header: question + confidence badge ──────────────────────────────
+  // ── Header: question + confidence badge + trust score ────────────────
   out.push("");
   out.push(`  ${kleur.bold().cyan("Q")}  ${kleur.bold(question)}`);
   out.push("");
-  out.push(`  ${confidenceBadge(synthesized.confidence)}`);
+  out.push(`  ${confidenceBadge(synthesized.confidence)}  ${trustBadge(synthesized.trustScore)}`);
   if (synthesized.source === "llm") {
     out.push(`  ${kleur.gray(`synthesized in ${synthesized.durationMs}ms`)}`);
+  }
+  if (synthesized.source === "audit-refused") {
+    out.push(`  ${kleur.red().bold("⊘ AUDIT REFUSED")}`);
+  }
+  // Hallucination warning: cited hashes not in evidence
+  if (
+    synthesized.unverifiedCitations &&
+    synthesized.unverifiedCitations.length > 0 &&
+    synthesized.source !== "audit-refused"
+  ) {
+    const list = synthesized.unverifiedCitations.slice(0, 3).join(", ");
+    out.push(
+      `  ${kleur.yellow().bold("⚠ HALLUCINATION RISK")}  ${kleur.gray(`cited ${synthesized.unverifiedCitations.length} hash(es) not in evidence: ${list}${synthesized.unverifiedCitations.length > 3 ? "…" : ""}`)}`,
+    );
+    out.push(`  ${kleur.gray("→ re-run with --audit to refuse on unverified citations")}`);
   }
   out.push("");
 

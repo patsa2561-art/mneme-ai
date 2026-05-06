@@ -17,6 +17,15 @@ export interface AskCommandOptions {
   noLlm?: boolean;
   /** Show classification reason + raw scores; useful for debugging. */
   debug?: boolean;
+  /**
+   * Audit mode — refuse to answer below confidence floor and refuse if any
+   * LLM-cited hash is not in the retrieved evidence. Use this when the
+   * caller is a CI gate, an MCP tool result going to another agent, or any
+   * surface that requires "no hallucination" semantics.
+   */
+  audit?: boolean;
+  /** Confidence floor for audit mode. Defaults to "medium". */
+  auditFloor?: "low" | "medium" | "high";
 }
 
 export async function askCommand(opts: AskCommandOptions): Promise<number> {
@@ -109,6 +118,10 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     results,
     confidence,
     enricher,
+    {
+      auditMode: opts.audit ?? false,
+      auditFloor: opts.auditFloor ?? "medium",
+    },
   );
 
   spinner.stop();
