@@ -2,7 +2,7 @@
 
 > Other tools show diffs, blame, and search.
 > Mneme is the only **OSS, local-first, end-to-end management surface** for git history we are aware of.
-> The Black Sheep position — alone in the field by design.
+> The Frontier — alone in the field by design.
 
 After researching adjacent tools across git visualization, code search, AI coding assistants, and engineering analytics, we confirmed each command below occupies real whitespace — capabilities not shipped by any maintained, open-source, local-first tool we found.
 
@@ -10,7 +10,7 @@ Four tiers of commands:
 
 - **v0.11 — *Memory*** (5): tell you what *was*
 - **v0.12 — *King of Git*** (5): tell you who *is* and what's coming *next*
-- **v0.13 — *Black Sheep*** (4): close every remaining landscape gap
+- **v0.13 — *The Frontier*** (4): close every remaining landscape gap
 - **v0.14 — *Untouchable*** (1): the quality moat — zero hallucination guarantee
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -323,7 +323,7 @@ mneme constellation --json | jq '.fileEdges'
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-# Part III — Black Sheep *(v0.13 · close every remaining gap)*
+# Part III — The Frontier *(v0.13 · close every remaining gap)*
 
 ## 11 · 🧠  Semantic Commit Clusters — *find topic islands across history*
 
@@ -572,7 +572,7 @@ mneme decisions                                 # surface ADRs
 mneme chronicle --output CHRONICLE.md           # 8 — generate the novel
 pandoc CHRONICLE.md -o chronicle.pdf            # ship as PDF with the release
 
-# End of quarter — black sheep moves
+# End of quarter — frontier moves
 mneme cluster                                   # 11 — find what we worked on
 mneme network                                   # 12 — see how the team collaborates
 mneme manage                                    # 13 — single CTO frame

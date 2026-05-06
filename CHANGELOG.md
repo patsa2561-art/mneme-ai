@@ -53,7 +53,7 @@ The README went from **834 lines to 227 lines** (73% reduction):
 - **Why people use it** — 4 bullets, story-shaped
 - **All commands in 3 colored tables** (Tier 1 / Insights / Quant)
 - **Audit-grade section** — explicit hallucination-guard guarantee
-- **Black Sheep table** — 12 world-firsts vs adjacent tools
+- **The Frontier table** — 12 world-firsts vs adjacent tools
 - **Wiki links** for everything that used to live in the README
 
 The old long-form content is intact in the wiki — see Innovations and
@@ -61,7 +61,7 @@ Command-Tour.
 
 ## [0.13.0] — 2026-05-05
 
-The **"Black Sheep"** release. Closes every gap from the landscape
+The **"Frontier"** release. Closes every gap from the landscape
 research:
 
 | Gap | Tool that came closest | What was missing | Mneme v0.13 |
