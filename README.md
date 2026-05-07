@@ -44,7 +44,7 @@ You ship code with an AI assistant. The AI is brilliant — it reads syntax, inf
 2. 🔍 **Verify its own claims.** AI confidently says "no change to db.ts" — the diff shows three lines in db.ts. You merge. Production breaks.
 3. 🛡 **Tell you when *another* AI is gaslighting you.** With Cursor + Claude Code + Codex all touching `git log`, **who is grading the homework?**
 
-**Mneme is the layer underneath.** It's what gives your AI a memory. It's what verifies citations. And starting in **v0.27**, it's what audits every AI-driven commit with a vendor-neutral 5-axis trust certificate.
+**Mneme is the layer underneath.** It's what gives your AI a memory. It's what verifies citations. And it's what audits every AI-driven commit with a vendor-neutral 5-axis trust certificate.
 
 ```bash
 npm install -g mneme-ai             # zero-setup, bundled WASM, no API key
@@ -53,7 +53,7 @@ mneme index                         # ~90s for 5k commits — one time
 
 mneme ask "why does parseAmount use try/catch?"   # cited answer · refuses if unverifiable
 mneme do "find security issues"                   # smart dispatcher · multi-step
-mneme audit --certify                             # NEW v0.27 — grades the AI's homework
+mneme audit --certify                             # grades the AI's homework
 ```
 
 **The result your AI tools didn't know they were missing.** When Mneme is plugged in via MCP, your AI's answers get *measurably more grounded* — every claim cited, every contradiction caught, every AI commit certified before it merges.
@@ -74,7 +74,7 @@ mneme audit --certify                             # NEW v0.27 — grades the AI'
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🌟 v0.27 spotlight — `mneme audit`
+## 🌟 Spotlight — `mneme audit`
 
 > **The feature your AI tools wish they had.** *Vendor-neutral. Works with any AI that ends up in `git log`.*
 
@@ -188,7 +188,7 @@ Output streams events in real time:
 ✓ done      in 312ms
 ```
 
-**Five primitives ship together (v0.23):**
+**Five primitives ship together:**
 1. Streaming events — `consider / accept / prune / contradict / verify`
 2. **Leviathan citation verifier** — adapted from the speculative-decoding paper. Every claim's hash + sentence verified against evidence. Unverified claims wrapped `[unverified: ...]`.
 3. **DDTree commit-tree search** — best-first ancestor exploration with budget + depth caps
@@ -202,7 +202,7 @@ Output streams events in real time:
 <details>
 <summary><b>⚡ Super Pipeline + MPE math</b> — deeply-pipelined-superscalar engine · 1.56× throughput · novel formula</summary>
 
-Modern CPUs combine deep pipelining (~20 stages, fast clock) with superscalar (multiple parallel pipelines). Mneme v0.26 brings the same architecture to its retrieval flow — and adds a self-tuning trust eigenvector no other CLI tool ships.
+Modern CPUs combine deep pipelining (~20 stages, fast clock) with superscalar (multiple parallel pipelines). Mneme brings the same architecture to its retrieval flow — and adds a self-tuning trust eigenvector no other CLI tool ships.
 
 **The novel math (MPE — Multi-stage Pipelined Eigentrust):**
 
@@ -230,21 +230,21 @@ speedup                        = 1.56×
 </details>
 
 <details>
-<summary><b>🛡 Guardian + AI Audit</b> — 24/7 self-healing · always-on pre-commit hook · vendor-neutral AI session audit (NEW v0.27)</summary>
+<summary><b>🛡 Guardian + AI Audit</b> — 24/7 self-healing · always-on pre-commit hook · vendor-neutral AI session audit</summary>
 
 **Three layers of "always-on" protection:**
 
-1. **Guardian** (v0.16) — 24/7 self-healing daemon. Diagnoses index drift, weak embeddings, schema staleness; auto-fixes safe items, recommends the rest.
+1. **Guardian** — 24/7 self-healing daemon. Diagnoses index drift, weak embeddings, schema staleness; auto-fixes safe items, recommends the rest.
    ```bash
    mneme guardian --watch --apply --interval 300
    ```
 
-2. **`mneme guard`** (v0.20) — pre-commit hook. Install once → blocks commits with hardcoded secrets or CWE-aligned vulnerability patterns. <300ms per commit. Bypass with `git commit --no-verify`.
+2. **`mneme guard`** — pre-commit hook. Install once → blocks commits with hardcoded secrets or CWE-aligned vulnerability patterns. <300ms per commit. Bypass with `git commit --no-verify`.
    ```bash
    mneme guard --install
    ```
 
-3. **`mneme audit`** (v0.27, NEW) — AI Session Audit. **Vendor-neutral** trust certificate for every AI-driven commit. Works with Claude Code · Cursor · Codex · Sweep · Aider · any tool ending up in `git log`.
+3. **`mneme audit`** — AI Session Audit. **Vendor-neutral** trust certificate for every AI-driven commit. Works with Claude Code · Cursor · Codex · Sweep · Aider · any tool ending up in `git log`.
    ```bash
    mneme audit --baseline      # snapshot before AI works
    #  → AI does its thing →
@@ -312,14 +312,14 @@ After install, the same 60-second flow on any git repo:
 
 ```bash
 mneme init                       # creates .mneme/ inside the repo
-mneme index                      # ~90s for 5k commits, zero-setup since v0.19
+mneme index                      # ~90s for 5k commits, zero-setup
 mneme ask "why does X exist?"    # query the memory
 ```
 
 **Upgrade:**
 
 ```bash
-mneme upgrade                       # v0.22.2+ — bulletproof self-update
+mneme upgrade                       # bulletproof self-update
                                     # bypasses npm cache + diagnoses PATH conflicts
 ```
 
@@ -384,7 +384,7 @@ mneme ask --audit "..."
 
 ### 📚 The full command browser — **50+ commands, every one with examples**
 
-<sub>Tier 1 essentials · Forensics · Quant · Insights · MCP · v0.27 Audit</sub>
+<sub>Tier 1 essentials · Forensics · Quant · Insights · MCP · Audit</sub>
 
 <br/>
 
@@ -438,7 +438,7 @@ A: No. Indexing + retrieval are **100% local**. Only your AI client (if cloud-ba
 A: Pattern matching produces **candidates**, not certified findings — every hit needs human review. Forensic methodology follows the **ENFSI 2015 verbal scale** (real forensic standard). See [Forensic-Code-Science](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science).
 
 **Q: Will it work on a 50,000-commit monorepo?**
-A: Yes. Indexing is incremental. With `mneme htc-build` (v0.24) the entire history fits in one Claude prompt as compressed abstracts.
+A: Yes. Indexing is incremental. With `mneme htc-build` the entire history fits in one Claude prompt as compressed abstracts.
 
 **Q: What if I'm offline / on a plane?**
 A: After the first run (one-time 25MB model download), everything works offline. Hash fallback works even without the bundled model.
