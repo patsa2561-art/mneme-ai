@@ -82,7 +82,7 @@ You ship code with an AI assistant. The AI is brilliant — it reads syntax, inf
 
 1. 🧠 **Remember why the code exists.** Six years of decisions, deprecations, and "we tried that, it broke X" — none of it is in the AI's context window.
 2. 🔍 **Verify its own claims.** AI confidently says "no change to db.ts" — the diff shows three lines in db.ts. You merge. Production breaks.
-3. 🛡 **Tell you when *another* AI is gaslighting you.** With Cursor + Claude Code + Codex all touching `git log`, **who is grading the homework?**
+3. 🛡 **Tell you when *another* AI is gaslighting you.** With multiple AI assistants all touching `git log`, **who is grading the homework?**
 
 **Mneme is the layer underneath.** It's what gives your AI a memory. It's what verifies citations. And it's what audits every AI-driven commit with a vendor-neutral 5-axis trust certificate.
 
@@ -98,7 +98,7 @@ mneme audit --certify                             # grades the AI's homework
 
 **The result your AI tools didn't know they were missing.** When Mneme is plugged in via MCP, your AI's answers get *measurably more grounded* — every claim cited, every contradiction caught, every AI commit certified before it merges.
 
-> 🎯 **Mneme isn't a competitor to Claude Code, Cursor, or Codex.** It's the **teacher and the grader** they've been waiting for. Use whatever AI you love — Mneme makes it better.
+> 🎯 **Mneme isn't another AI assistant.** It's the **memory layer underneath** whatever AI you already use. Plug it in once via MCP; every tool that talks to it gets measurably more grounded.
 
 ### Before / With — what changes the moment Mneme is in your repo
 
@@ -123,7 +123,7 @@ Your AI commits: *"I refactored the handler. **No changes to db.ts.**"* The diff
 <details>
 <summary><b>📖 See the full story — 30-second example, 5 axes, 6 modes</b></summary>
 
-When two or three AI assistants are all editing the same repo, **someone has to grade the homework.** Mneme is that someone. Not a competitor to Claude Code or Cursor — the layer they answer to.
+When two or three AI assistants are all editing the same repo, **someone has to grade the homework.** Mneme is that someone. Not a competitor to your AI assistant — the layer it answers to.
 
 ### 30-second story
 
@@ -151,7 +151,7 @@ OVERALL: ⊘ FAIL  (exit code 1 → CI gate refuses the PR)
 | 4 | ⚡ Perf regression | Median latency vs baseline *(>25% slower → fail)* |
 | 5 | 📰 AI narrative | Commit-message claims vs actual diff |
 
-Plus forensic axes (TIME / FILES / STYLE / SIZE) — same anomaly engine Mneme runs on humans, applied to **every AI vendor auto-detected**: Claude Code · Cursor · Codex · Devin · Sweep · Aider · Copilot.
+Plus forensic axes (TIME / FILES / STYLE / SIZE) — same anomaly engine Mneme runs on humans, applied to **every AI vendor auto-detected from `git log`**. Adding a new vendor is one regex line in the audit module.
 
 ### Six modes — copy-paste flow
 
@@ -280,7 +280,7 @@ Mneme's intelligence is split into 5 cognitive modules. Each is independently us
 <details>
 <summary><b>📦 Hierarchical Memory (HTC)</b> — compress 50,000 commits into one Claude prompt · <i>world-first compression-as-storage</i></summary>
 
-Every AI codebase tool today (Cody, Greptile, Cursor, Sweep, Aider) is **retrieval-only**. They search your repo at query time and dump raw text into the LLM. That breaks at scale.
+Every AI codebase tool today is **retrieval-only**. They search your repo at query time and dump raw text into the LLM. That breaks at scale.
 
 Mneme inverts the model: at index time, **free LLMs (Groq Gemma 2B / Ollama Qwen) walk every commit** and produce three layers of compression:
 
@@ -387,7 +387,7 @@ speedup                        = 1.56×
    mneme guard --install
    ```
 
-3. **`mneme audit`** — AI Session Audit. **Vendor-neutral** trust certificate for every AI-driven commit. Works with Claude Code · Cursor · Codex · Sweep · Aider · any tool ending up in `git log`.
+3. **`mneme audit`** — AI Session Audit. **Vendor-neutral** trust certificate for every AI-driven commit. Works with any AI tool whose commits end up in `git log`.
    ```bash
    mneme audit --baseline      # snapshot before AI works
    #  → AI does its thing →
@@ -436,7 +436,7 @@ Practical consequence: every Mneme release makes **every AI tool that plugs in**
 
 ## 💎 The Frontier — 23 capabilities no other tool ships
 
-After researching the landscape (Sourcegraph Cody, Greptile, Cursor, Continue, Sweep, Aider, Copilot Workspace), every command in this list occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
+After researching the landscape, every command in this list occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
 
 → 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
 
@@ -548,7 +548,7 @@ mneme ask --audit "..."
 <details>
 <summary><b>🤖 Tell your AI to install it (one prompt)</b></summary>
 
-Copy-paste this into Claude Code / Cursor / Codex / Continue / Cline:
+Copy-paste this into any AI client that supports MCP:
 
 ```
 Install mneme-ai globally with npm, then run `mneme init` and `mneme index`
@@ -572,7 +572,7 @@ The AI will figure out the rest (npm install, MCP config edits, smoke-test). Wor
 **Q: Can I just prompt my AI agent to run `git log` instead?**
 A: Yes — for small repos with simple queries. Mneme starts adding value when **scale, semantics, forensics, or audit** matter — see [the comparison table](https://github.com/patsa2561-art/mneme-ai/wiki/Innovations#vs-ai--git-cli) for the 9 cases.
 
-**Q: Does Mneme replace Claude Code / Cursor / Codex?**
+**Q: Does Mneme replace my AI coding assistant?**
 A: No. Mneme is a **memory layer underneath them**. Plug Mneme's MCP server into your AI client and it gains semantic codebase memory + forensic tools.
 
 **Q: Do I need Ollama or an OpenAI key?**
