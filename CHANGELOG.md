@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.27.1] — 2026-05-07
+
+README + audit-spotlight polish for instant comprehension.
+
+- **Tests badge** updated `1331 → 1422 passing` (was stale across the
+  Iris + SuperPipeline + audit releases).
+- **Before / With Mneme table** added near the top of the README — five
+  concrete scenarios showing what changes the moment Mneme is in your
+  repo. Designed to be graspable in 10 seconds.
+- **Audit spotlight restructured** into clear sections: 30-second story
+  → five axes → six modes → "why even AIs respect this". The
+  AI-respect framing makes the vendor-neutral / composable / falsifiable
+  / honest principles visible at a glance, without bloat.
+
+No code changes — pure docs polish.
+
 ## [0.27.0] — 2026-05-07
 
 The **"AI Session Audit"** release. `mneme audit` ships — every AI-driven

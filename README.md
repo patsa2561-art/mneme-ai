@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1331%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1422%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -60,17 +60,32 @@ mneme audit --certify                             # NEW v0.27 — grades the AI'
 
 > 🎯 **Mneme isn't a competitor to Claude Code, Cursor, or Codex.** It's the **teacher and the grader** they've been waiting for. Use whatever AI you love — Mneme makes it better.
 
+### Before / With — what changes the moment Mneme is in your repo
+
+| Scenario | Without Mneme | With Mneme |
+|---|---|---|
+| 🔍 *"Why does this code exist?"* | AI guesses from syntax | Cited answer with the original PR + rationale |
+| 🤖 *AI says "no change to db.ts"* but diff edits db.ts | Merges silently | `mneme audit --certify` blocks the PR (exit 1) |
+| 🛡 *AI commits 400 lines at 04:00 UTC* | Reviewed like any other PR | Forensic axes flag time + size anomaly |
+| 📦 *50,000-commit monorepo + Sonnet 1M* | "context window exceeded" | HTC compresses to ~1.5M tokens, fits comfortably |
+| 🆓 *No OpenAI/Anthropic key* | Tool refuses to work | Bundled WASM + free Ollama/Groq path runs full Q&A |
+
 📅 [Full release history](https://github.com/patsa2561-art/mneme-ai/wiki/Releases) · [CHANGELOG](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## 🌟 v0.27 spotlight — `mneme audit`
 
-> **The feature that makes AI tools say "wow."** *Vendor-neutral. Works with any AI that ends up in `git log`.*
+> **The feature your AI tools wish they had.** *Vendor-neutral. Works with any AI that ends up in `git log`.*
 
-Your AI commits something. It claims: *"I refactored the handler. **No changes to db.ts.**"* The diff actually touches `db.ts`. Tests pass. You almost merge.
+When two or three AI assistants are all editing the same repo, **someone has to grade the homework.** Mneme is that someone. Not a competitor to Claude Code or Cursor — the layer they answer to.
 
-`mneme audit --certify` catches that gap **before** merge:
+### 30-second story
+
+Your AI commits: *"I refactored the handler. **No changes to db.ts.**"*<br/>
+The diff actually touches `db.ts`. Tests pass. You almost merge.
+
+`mneme audit --certify` catches it **before** merge:
 
 ```
 ⚠ ai-narrative-mismatch  1 contradiction
@@ -81,25 +96,37 @@ Your AI commits something. It claims: *"I refactored the handler. **No changes t
 OVERALL: ⊘ FAIL  (exit code 1 → CI gate refuses the PR)
 ```
 
-**Five axes, scored in parallel:**
+### Five axes, scored in parallel
 
-| Axis | Question |
-|---|---|
-| 🎯 Behavioral parity | Did `mneme status / npm test` produce the same output? |
-| 📐 API contract drift | Did exported types disappear? |
-| ✅ Test pass rate | Anything that passed before now fails? |
-| ⚡ Perf regression | Median latency vs baseline (>25% slower → fail) |
-| 📰 AI narrative | Commit-message claims vs actual diff |
+| # | Axis | What it asks |
+|---|---|---|
+| 1 | 🎯 Behavioral parity | Did `mneme status / npm test` produce the same output? |
+| 2 | 📐 API contract drift | Did exported types disappear? |
+| 3 | ✅ Test pass rate | Anything that passed before now fails? |
+| 4 | ⚡ Perf regression | Median latency vs baseline *(>25% slower → fail)* |
+| 5 | 📰 AI narrative | Commit-message claims vs actual diff |
 
-Plus forensic axes (TIME / FILES / STYLE / SIZE) — the same anomaly engine Mneme runs on humans, applied to **every AI vendor it auto-detects**: Claude Code · Cursor · Codex · Devin · Sweep · Aider · Copilot.
+Plus forensic axes (TIME / FILES / STYLE / SIZE) — same anomaly engine Mneme runs on humans, applied to **every AI vendor auto-detected**: Claude Code · Cursor · Codex · Devin · Sweep · Aider · Copilot.
+
+### Six modes — copy-paste flow
 
 ```bash
-mneme audit --baseline      # snapshot before AI works
+mneme audit --baseline      # snapshot behavior BEFORE the AI works
+mneme audit --trace         # diff + AI-vendor detection
+mneme audit --verify        # narrative vs reality (Leviathan-style)
 mneme audit --certify       # 5-axis trust cert · CI-friendly exit code
-mneme audit --report        # markdown audit trail (compliance: SOX / SOC2)
+mneme audit --watch         # continuous CI gate
+mneme audit --report        # markdown audit trail (SOX / SOC2)
 ```
 
-→ **[Read the full positioning →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
+### Why even AIs respect this
+
+- **Vendor-neutral.** Adding a new AI = one regex line. We audit whatever the AI claims it is.
+- **Composable.** Reuses HTC compressed memory + Leviathan verifier + forensic anomaly engine + Iris pyramid renderer + SuperPipeline + MPE — primitives no other tool ships together.
+- **Falsifiable.** Pure rule-based + statistical primitives. **No "AI grading AI" loops.**
+- **Honest.** "No change to db.ts" is parseable. "Improved overall reliability" is `unverifiable` — we say so, don't pretend.
+
+→ **[Full positioning · 6 modes · CI integration · compliance →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
