@@ -43,43 +43,38 @@ The fix from 2022 is in a commit nobody remembers.<br/>
 
 ```mermaid
 mindmap
-  root((Mneme))
-    Memory
-      indexes git history
-      compresses 50K commits
-      survives author turnover
-    Q & A
-      cited answers
-      refuses if unverifiable
-      streams reasoning
-    AI Audit
-      vendor-neutral
-      5-axis trust cert
-      CI gate ready
-    People
-      passport per engineer
-      latent collaborators
-      knowledge atrophy
-      cultural alphas
-    Forensics
-      Bayesian attribution
-      CWE vuln scan
-      insider-threat anomaly
-    Free path
-      bundled WASM
-      Ollama Groq fallback
-      no API key required
-    Dashboard
-      time-scrubber playback
-      force-directed nervous system
-      atrophy heatmap
-      influence ladder
-    Editor
-      VS Code extension
-      atrophy lens above functions
-      audit verdict badge
-      sidebar tree view
+  root((μνήμη<br/>Mneme))
+    📦 Memory
+      Cited Q&A over your repo
+      Streams its reasoning
+      HTC compresses 50K commits
+      Survives team turnover
+    🛡 AI Trust
+      5-axis trust certificate
+      Vendor-neutral by design
+      CI-gate ready · exit codes
+      Catches AI gaslighting
+    👥 People insights
+      Engineer passports
+      Knowledge-atrophy clock
+      Latent collaborators
+      Cultural-alpha PageRank
+      Promise-debt ledger
+    🎨 Surfaces
+      CLI · 75+ commands
+      MCP server for any AI
+      Live web dashboard
+      Time-scrubber playback
+      VS Code · Atrophy Lens
+    🆓 Free · Local · Open
+      Bundled WASM embedder
+      Ollama · Groq fallback
+      Docker image (ghcr.io)
+      No API key required
+      MIT-licensed
 ```
+
+> *Five pillars · one center · everything you read below is one of these branches told in detail.*
 
 ═══════════════════════════════════════════════════════════════════════════════
 
