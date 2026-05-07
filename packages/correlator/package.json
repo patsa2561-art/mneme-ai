@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/correlator",
-  "version": "0.27.1",
+  "version": "0.28.0",
   "description": "Phase 3 — error/incident correlation engine. The moat: connect git + code + errors + time.",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,6 +30,6 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@mneme-ai/core": "0.27.1"
+    "@mneme-ai/core": "0.28.0"
   }
 }
