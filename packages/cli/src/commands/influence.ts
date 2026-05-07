@@ -235,7 +235,10 @@ function renderAuthorDetail(
 
 function plainEnglishRow(r: AuthorRanking): string {
   if (r.adoptionsByOthers === 0 && r.originatedShapesTotal === 0) {
-    return "no originated patterns above the floor — likely a copy-paster";
+    // NEVER call anyone "a copy-paster" — that's a personal-quality
+    // judgement from a heuristic that only walks TS/JS/Python/Go AST
+    // shapes; it is blind to docs, infra, configs, design work.
+    return "no team-adopted patterns above the floor yet (metric is blind to non-code work — configs, docs, infra)";
   }
   if (r.adoptionsByOthers === 0) {
     return `originated ${r.originatedShapesTotal} pattern${r.originatedShapesTotal === 1 ? "" : "s"} but none crossed the adoption floor yet`;

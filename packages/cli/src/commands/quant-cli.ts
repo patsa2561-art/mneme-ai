@@ -368,9 +368,14 @@ export async function insiderTradingCommand(opts: { cwd: string; windowDays?: nu
   }
 
   ui.banner();
-  process.stdout.write(header("🎯", "Insider trading — authors who fix their own bugs",
-    "shipped → fix-by-same-author within window · proxy for missing review",
-    "See who keeps shipping then fixing their own code — a quiet sign that PR review is being skipped.") + "\n\n");
+  // The internal name "insider-trading" is a SQL-loose pun on the
+  // self-fix loop pattern — but the rendered heading must NOT use it
+  // (the term is a US federal crime; pinning a name under that header
+  // is defamation-grade). User-facing wording is workflow-neutral.
+  process.stdout.write(header("🎯", "Self-fix loops — ship-then-patch within a tight window",
+    "shipped → fix-by-same-author within window · workflow heuristic, not a verdict",
+    "See ship-then-patch patterns — could be missing review, flaky tests, or intentional iteration. Verify before acting.") + "\n\n");
+  process.stdout.write(`    ${kleur.gray("⚠")} ${kleur.gray("FRAMING: this is a workflow heuristic, not an accusation. Use for retro / process review, never for HR.")}\n\n`);
 
   if (profiles.length === 0) {
     process.stdout.write(emptyState(
@@ -387,7 +392,7 @@ export async function insiderTradingCommand(opts: { cwd: string; windowDays?: nu
   process.stdout.write(section("📘 How to read this report") + "\n");
   process.stdout.write(`    ${kleur.gray("• A")} ${kleur.bold("pattern")} ${kleur.gray("= a developer ships a commit, then fixes it themselves shortly after.")}\n`);
   process.stdout.write(`    ${kleur.gray("• Could mean: (a) lack of code review, (b) flaky test catching it later, or (c) intentional iteration.")}\n`);
-  process.stdout.write(`    ${kleur.gray("• Tiers:")} ${kleur.red("HIGH PATTERN")} ${kleur.gray("(strong signal — review process likely broken)  ·")} ${kleur.yellow("ELEVATED")} ${kleur.gray("(noticeable habit)  ·")} ${kleur.cyan("WATCH")} ${kleur.gray("(early signal)")}\n\n`);
+  process.stdout.write(`    ${kleur.gray("• Tiers:")} ${kleur.red("HIGH PATTERN")} ${kleur.gray("(strong signal — could be review gaps, flaky tests, or intentional iteration; verify before acting)  ·")} ${kleur.yellow("ELEVATED")} ${kleur.gray("(noticeable habit)  ·")} ${kleur.cyan("WATCH")} ${kleur.gray("(early signal)")}\n\n`);
 
   for (const p of profiles) {
     const tier = p.tier === "high-pattern" ? kleur.red().bold("HIGH PATTERN") : p.tier === "elevated" ? kleur.yellow().bold("ELEVATED    ") : kleur.cyan().bold("WATCH       ");
@@ -451,13 +456,17 @@ export async function moneyballCommand(opts: { cwd: string; topN?: number; json?
   process.stdout.write(`    ${kleur.gray("• Tiers:")}\n`);
   process.stdout.write(`        ${kleur.green("⭐ MONEYBALL")} ${kleur.gray("— low commit count, high downstream impact (the bargain hire)")}\n`);
   process.stdout.write(`        ${kleur.cyan("● BALANCED")}  ${kleur.gray("— commit count and impact roughly match (steady contributor)")}\n`);
-  process.stdout.write(`        ${kleur.yellow("◐ LOUD")}      ${kleur.gray("— many commits, modest impact (loud but not landing)")}\n`);
-  process.stdout.write(`        ${kleur.gray("○ PASSIVE   — low activity overall (informational)")}\n\n`);
+  process.stdout.write(`        ${kleur.yellow("◐ HIGH-VOLUME")} ${kleur.gray("— many commits relative to indexed downstream reach (metric is blind to docs / infra / configs)")}\n`);
+  process.stdout.write(`        ${kleur.gray("○ PASSIVE   — low activity overall (informational)")}\n`);
+  process.stdout.write(`    ${kleur.gray("⚠ FRAMING: per-commit reach heuristic — never use as a productivity ranking or for HR / performance review.")}\n\n`);
 
   for (const s of scores) {
-    const tierLabel = s.tier === "moneyball" ? kleur.green().bold("⭐ MONEYBALL") : s.tier === "balanced" ? kleur.cyan().bold("●  BALANCED ") : s.tier === "loud" ? kleur.yellow().bold("◐  LOUD     ") : kleur.gray().bold("○  PASSIVE  ");
+    const tierLabel = s.tier === "moneyball" ? kleur.green().bold("⭐ MONEYBALL  ") : s.tier === "balanced" ? kleur.cyan().bold("●  BALANCED  ") : s.tier === "loud" ? kleur.yellow().bold("◐  HIGH-VOL  ") : kleur.gray().bold("○  PASSIVE   ");
     process.stdout.write(`  ${tierLabel}  ${kleur.bold(s.authorName)}  ${kleur.gray(`<${s.authorEmail}>`)}\n`);
-    const roiBlurb = s.perCommitROI >= 2 ? "punches above their weight" : s.perCommitROI >= 1 ? "carrying their weight" : "below-average impact per commit";
+    // Neutral wording — no personal-quality judgements. The metric only
+    // sees indexed downstream reach (TS/JS/Python/Go AST shapes); docs,
+    // infra, configs, design work are invisible to it.
+    const roiBlurb = s.perCommitROI >= 2 ? "high downstream reach per commit" : s.perCommitROI >= 1 ? "average downstream reach per commit" : "low per-commit reach in the index (metric is blind to non-code work)";
     process.stdout.write(
       `      ${kleur.gray("commits:")} ${s.commitCount} ${kleur.gray("(total commits authored)")}\n`,
     );
