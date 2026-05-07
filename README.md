@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1932%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1959%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -22,13 +22,15 @@
   <a href="https://github.com/patsa2561-art/mneme-ai/pkgs/container/mneme-ai"><img src="https://img.shields.io/badge/ghcr.io-mneme--ai-2496ed?logo=docker&logoColor=white" alt="docker"></a>
 </p>
 
-<h3>The bug came back.<br/>
-The fix from 2022 is in a commit nobody remembers.<br/>
-<i>The author left.</i></h3>
+<h2><i>Code outlives its authors.<br/>Memory should too.</i></h2>
 
 <p>
-  Mneme finds it in 50ms — with the diff, the rationale, and the related commits.<br/>
-  <b>The same memory feeds your AI through MCP. With citations.</b>
+  The bug came back. The fix is buried in a commit from 2022. <i>The author left.</i><br/>
+  <b>Mneme finds it in 50ms</b> — with the diff, the rationale, and the related commits.
+</p>
+
+<p>
+  <i>The same memory feeds your AI through MCP. With citations.</i>
 </p>
 
 <br/>
