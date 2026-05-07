@@ -8,6 +8,79 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.22.2] — 2026-05-06
+
+The **"Bulletproof self-update"** patch. Root-cause fix for *"I ran
+`npm install -g mneme-ai@latest` but `mneme --version` still shows the
+old version."*
+
+### Three real failure modes (now all handled)
+
+1. **npm metadata cache** — npm reads "latest" from local cache and
+   skips the network. The cache says everything's fresh; nothing's
+   actually fetched.
+2. **Multiple `mneme` binaries on PATH** — npx cache + `npm install -g`
+   leave separate copies. Shell PATH order picks the older one.
+3. **CI publish lag** — user installs within ~2 min of `git push --tags`,
+   before `npm publish` has finished.
+
+### Added — `mneme upgrade` command
+
+```bash
+mneme upgrade            # bulletproof self-update
+mneme upgrade --force    # re-install even if versions match
+```
+
+Six-step automation that solves all three failure modes:
+
+1. Reads local version from this binary's `package.json` (the truth).
+2. Queries npm registry **directly** with `npm view mneme-ai version --json`
+   — bypasses local metadata cache.
+3. Runs `npm install -g --force mneme-ai@<exact-version>` — `--force`
+   bypasses cache, `@<exact>` bypasses `latest` tag staleness.
+4. **Diagnoses PATH** with `where mneme` (Win) or `which -a mneme` —
+   lists every `mneme` binary so shadowing is visible.
+5. Re-runs `mneme --version` in a fresh subprocess to verify.
+6. If versions still mismatch, prints concrete remediation:
+   - clear npx cache (`npx clear-npx-cache`)
+   - check Node version manager conflicts (`which node && npm root -g`)
+   - show shadowing PATH entries from step 4
+   - suggest shell restart
+
+### User-visible flow
+
+```
+$ mneme upgrade
+🔄  Mneme Upgrade — bulletproof self-update
+
+  currently installed   0.22.0
+  npm registry latest   0.22.2
+
+  [ OUTDATED ]  local 0.22.0 → npm has 0.22.2
+
+  ✦ Installing
+    npm install -g --force mneme-ai@0.22.2
+    (--force bypasses metadata cache; @<exact> bypasses 'latest' staleness)
+
+  ✦ Diagnosing PATH
+    ✓  Single binary on PATH:  C:\Users\…\npm\mneme.cmd
+
+  ✦ Verifying installed version
+    [ SUCCESS ]  mneme --version → 0.22.2
+```
+
+Or if shadowing detected:
+
+```
+  ✦ Diagnosing PATH
+    ⚠  Multiple `mneme` binaries on PATH — older ones may run first:
+      [active]  C:\Users\…\npm\mneme.cmd
+      [shadowed]  C:\Users\…\AppData\Local\npm-cache\_npx\…\mneme.js
+    → remove the shadowed entries to ensure the global install runs.
+```
+
+—
+
 ## [0.22.1] — 2026-05-06
 
 The **"Self-Healing Free LLM"** patch. Root-cause fix: free-tier providers

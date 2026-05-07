@@ -5,6 +5,7 @@ import { initCommand } from "./commands/init.js";
 import { doCommand } from "./commands/do.js";
 import { guardCommand } from "./commands/guard.js";
 import { setupFreeCommand } from "./commands/setup-free.js";
+import { upgradeCommand } from "./commands/upgrade.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
 import { guardianCommand } from "./commands/guardian.js";
@@ -99,6 +100,17 @@ export async function run(argv: string[]): Promise<void> {
           query: query.join(" "),
           json: opts.json,
         }),
+      );
+    });
+
+  // ─── v0.22.2: bulletproof self-update ────────────────────────────────
+  program
+    .command("upgrade")
+    .description("Update Mneme to latest — bypasses npm cache + diagnoses PATH conflicts (more reliable than `npm install -g mneme-ai@latest`)")
+    .option("--force", "force re-install even if versions match", false)
+    .action(async (opts: { force?: boolean }) => {
+      process.exit(
+        await upgradeCommand({ cwd: process.cwd(), force: opts.force }),
       );
     });
 
