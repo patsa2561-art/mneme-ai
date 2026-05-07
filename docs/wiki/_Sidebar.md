@@ -32,7 +32,8 @@
 - [[VS-Code-Extension]] · *Atrophy Lens · sidebar · audit badge*
 
 ### 💎 The Frontier
-- [[The-Frontier]] · *23 world-firsts*
+- [[The-Frontier]] · *28 world-firsts*
+- [[Originals]] · *🆕 the five v0.36 Originals*
 - [[Innovations]] · *deep-dive every command*
 - [[Novel-Algorithms]] · *TDWE / RACB / ADS / CGAR*
 

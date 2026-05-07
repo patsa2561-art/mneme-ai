@@ -511,11 +511,23 @@ Practical consequence: every Mneme release makes **every AI tool that plugs in**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 💎 The Frontier — 23 capabilities no other tool ships
+## 💎 The Frontier — 28 capabilities no other tool ships
 
 After researching the landscape, every command in this list occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
 
 → 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
+
+### 🆕 v0.36 — five new Originals
+
+| Command | One-line summary |
+|---|---|
+| [`mneme karma`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#1%EF%B8%8F%E2%83%A3-karma--todo-debt-as-a-flow) | TODO debt as a per-author flow ledger — incurred minus settled, age-compounded |
+| [`mneme repo-mri`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#2%EF%B8%8F%E2%83%A3-repo-mri--the-one-page-diagnostic) | 20-axis health diagnostic with z-scores against typical OSS — outliers in one glance |
+| [`mneme palimpsest --counterfactual`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#3%EF%B8%8F%E2%83%A3-counterfactual-palimpsest--what-did-this-line-lock-in) | What did this single line lock in downstream? |
+| [`mneme cognitive-twin`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#4%EF%B8%8F%E2%83%A3-cognitive-twin--the-author-voice-fingerprint) | Author-voice fingerprint + voice-templating rewriter (deterministic, no LLM) |
+| [`mneme conscience --dual-jury`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#5%EF%B8%8F%E2%83%A3-dual-jury--adversarial-review-from-real-history) | Adversarial PR review — prosecution + defense + verdict, all from real history |
+
+→ 🆕 **[Deep-dive each Original → Wiki: Originals](https://github.com/patsa2561-art/mneme-ai/wiki/Originals)**
 
 > 🛡 *Built to complement existing AI coding assistants — not to replace them.*
 

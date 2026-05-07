@@ -1,6 +1,8 @@
 # The Frontier — what makes Mneme one of a kind
 
 > After researching the landscape of git, code-search, and AI-coding tools, every capability below occupies whitespace where **no maintained, open-source, local-first tool ships it today.**
+>
+> **v0.36 update — five new Originals push the count from 23 to 28.** See the dedicated [[Originals]] page for deep-dives + sample output.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -41,6 +43,18 @@
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 5 Originals shipped in v0.36 — see [[Originals]] for deep-dive
+
+| # | Capability | Mneme command |
+|---|---|---|
+| 24 | **TODO debt as a per-author flow ledger** — incurred minus settled, age-compounded | ✅ `karma` |
+| 25 | **20-axis repo MRI with z-scores against typical OSS** — outliers surface in one glance | ✅ `repo-mri` (alias `mri`) |
+| 26 | **Counterfactual line palimpsest** — what did this single line lock in downstream? | ✅ `palimpsest --counterfactual` |
+| 27 | **Author-voice fingerprint + voice-templating rewriter** — stylometric, deterministic | ✅ `cognitive-twin` (alias `twin`) |
+| 28 | **Dual-jury PR review** — prosecution + defense + verdict, all grounded in real history | ✅ `conscience --dual-jury` |
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## How we know it's still whitespace
 
 For every row above, we cross-checked against the most plausible competitors:
@@ -69,6 +83,7 @@ Pair it with Claude Code / Cursor / Codex / Continue / Cline / Zed — those too
 
 ## Related
 
+- 🆕 [[Originals]] — the five world-firsts shipped in v0.36
 - 🌟 [[Innovations]] — deep-dive each command with output samples
 - 📐 [[Novel-Algorithms]] — TDWE / RACB / ADS / CGAR scoring math
 - 🔬 [[Forensic-Code-Science]] — STR loci, likelihood ratio, ENFSI verbal scale

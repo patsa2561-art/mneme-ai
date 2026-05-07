@@ -10,9 +10,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [0.36.0] — 2026-05-08
 
-The **"Five Nuclear-Wisdom Innovations"** release. Five never-before-shipped
-capabilities added in one release plus four foundation-level bug fixes from
-v0.35's recheck.
+The **"Originals"** release. Five never-before-shipped capabilities added
+in one release plus four foundation-level bug fixes from the v0.35
+recheck. Each Original is a world-first — no maintained, open-source,
+local-first tool ships any of them today.
 
 ### Five new commands — every one reproducible, no LLM required by default
 
