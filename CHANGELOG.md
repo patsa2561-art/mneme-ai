@@ -8,6 +8,134 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.23.0] — 2026-05-06
+
+The **"Speculative Reasoning"** release. Five techniques borrowed from
+speculative-decoding research (KAT-0B / Leviathan Algorithm 1 / DDTree)
+applied to memory retrieval. **+69 new tests, 962 total passing.**
+
+Mneme now THINKS out loud. You see every commit considered, every claim
+verified, every prune explained. The wisdom layer auto-adapts to what
+works on YOUR machine without any explicit configuration.
+
+### Added — 1. Streaming reasoning events (`--stream`)
+
+```bash
+mneme ask "why was JWT chosen?" --stream
+```
+
+Output during retrieval:
+```text
+⚙ consider abc1234  "auth: switch session → JWT"        score 0.84
+✓ accept   abc1234  above score floor
+⚙ consider def5678  "auth: add CSRF guard"               score 0.41
+✗ prune    def5678  below topK cut
+✦ synthesize from 2 verified citations…
+✓ done     in 312ms
+```
+
+New module `packages/core/src/retrieve/stream.ts`:
+- `StreamEvent` union: `consider | accept | prune | contradict | backtrack | synthesize | verify | done`
+- `EventSink` interface + `NullSink` / `InMemorySink` / `CallbackSink` impls
+- `retrieve.search()` now takes optional `events?: EventSink` (zero overhead when absent)
+
+### Added — 2. Leviathan citation verifier
+
+New module `packages/core/src/retrieve/leviathan.ts` — adapts Leviathan
+Algorithm 1 from the speculative-decoding paper to retrieval-grounded
+synthesis. Per-claim verification of LLM answers:
+
+- Extracts backticked hashes from each claim
+- Verifies hash exists in evidence pool
+- Verifies sentence text matches commit subject (token-overlap + prefix)
+- Returns per-claim verdict: `verified | hash-not-in-evidence | claim-not-supported | no-citation`
+- Computes `trustScore` and `degraded` flag
+- Wraps unverified claims as `[unverified: ...]` so user sees what was filtered
+
+`synthesize()` now calls into `verifyAnswerLeviathan` when audit-mode flagged hashes.
+
+### Added — 3. DDTree best-first commit-tree search
+
+New module `packages/core/src/retrieve/ddtree.ts` — best-first search through
+git ancestor tree, mirrors KAT-0B's BinaryHeap-based exploration:
+
+- Tunable budget (default 32), max-depth (6), score floor (0.05)
+- Custom max-heap implementation (Node 18+ portable, no v22 priority queue)
+- Cycle protection via visited Set (handles merge commits)
+- Returns `visited` (every node + verdict) + `accepted` (top by score)
+
+### Added — 4. ConstraintPruner trait
+
+New module `packages/core/src/util/constraint-pruner.ts` — Strategy pattern
+borrowed from KAT-0B. Single trait for every pluggable validator Mneme has:
+
+```ts
+interface ConstraintPruner<C, P> {
+  readonly name: string;
+  readonly description: string;
+  validate(input: { candidate: C; pathState: P }): {
+    verdict: "accept" | "reject" | "uncertain";
+    reason: string;
+    severity?: "info" | "low" | "medium" | "high" | "critical";
+  };
+}
+```
+
+`CompositePruner` chains many — first reject wins, uncertain doesn't short-circuit.
+Future work: refactor existing CWE/ENFSI/anomaly validators onto this trait.
+
+### Added — 5. Path-aware sessions
+
+New module `packages/core/src/wisdom/session.ts` — accumulates Q/A turns
+across `mneme ask` invocations:
+
+- `.mneme/session.json` — atomic temp-file rename writes
+- 1-hour idle expiry, 20-turn rolling cap
+- `buildSessionContext()` returns recent hashes + files + topic frequencies
+  for the next ask to use as bias
+
+`mneme ask` now appends a turn after each successful answer. (Future: search.ts will read SessionContext to bias retrieval.)
+
+### Added — 6. Wisdom-Mutant auto-adapt
+
+New module `packages/core/src/wisdom/mutant-adapt.ts` — tracks per-axis
+success/failure over time. Auto-evolves Mneme's behavior:
+
+- `recordSuccess(axis, latencyMs)` / `recordFailure(axis, reason)`
+- `recommend(state, "provider:")` returns best-performing axis in group
+- `decayState()` halves counts older than 7 days (recency bias)
+- Stored in `.mneme/mutant.json`
+
+`mneme ask` now records `provider:llm` success/failure on every call. Over
+~10–20 invocations, the resilient enricher chain order **evolves toward
+what's actually working on the user's machine** — without any explicit
+configuration.
+
+### CLI integration
+
+- `mneme ask --stream` — real-time event rendering
+- `mneme ask` always records to mutant-adapt + appends to session (silent)
+- New flag `--stream` documented in `mneme --help`
+
+### Tests
+
++69 new tests, total 962 passing (was 893):
+- stream.test.ts (7) — sinks + integration
+- leviathan.test.ts (14) — verdict types, trust math, prefix match, events
+- ddtree.test.ts (10) — heap, decay, budget, cycles
+- constraint-pruner.test.ts (9) — composite + uncertainty handling
+- session.test.ts (15) — round-trip, expiry, cap, atomic writes
+- mutant-adapt.test.ts (14) — record/recommend/decay paths
+
+### Origin
+
+Inspired by KAT-0B (microGPT in Rust with speculative decoding, DDTree,
+Computable LoRA, Leviathan Algorithm 1) that solves Arto Inkala's "world's
+hardest Sudoku" in 36.4ms with no GPU. Five of its six core ideas transfer
+cleanly to retrieval-grounded generation. Mneme v0.23 is the result.
+
+—
+
 ## [0.22.2] — 2026-05-06
 
 The **"Bulletproof self-update"** patch. Root-cause fix for *"I ran

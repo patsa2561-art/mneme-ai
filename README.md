@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-880%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-962%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -33,6 +33,41 @@ The fix from 2022 is in a commit nobody remembers.<br/>
 <img src="./assets/demo.gif" alt="Mneme — doctor, ask, story, dream, calibrate" width="900">
 
 </div>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## ⏱ Mneme in 60 seconds
+
+> **What it is:** A memory layer that makes your codebase's git history searchable, queryable, and AI-ready — locally, with citations.
+>
+> **Who it's for:** Solo devs and teams who don't want to forget why code exists, miss security issues, or pay for cloud AI to understand their own repo.
+>
+> **Why it matters:** Your AI agent reads code. It does not read your 6 years of decisions. Mneme bridges that gap.
+
+```bash
+npm install -g mneme-ai          # zero-setup since v0.19 (bundled WASM model)
+cd <any git repo>
+mneme index                       # ~25MB lazy download, ~90s for 5k commits
+mneme do "find security issues"   # smart dispatcher — multi-step in one command
+mneme ask "why does X exist?"     # synthesized answer with verifiable citations
+mneme guard --install             # always-on pre-commit hook (secrets + vulns)
+mneme upgrade                     # bulletproof self-update (npm cache + PATH conflicts)
+```
+
+**No API key required.** Embeddings via bundled WASM, synthesis via local Ollama / Groq free tier / OpenRouter free tier — `mneme setup-free` walks you through in 30 seconds. If everything fails, retrieval-only fallback always answers.
+
+**Recent releases**
+
+| Version | Headline |
+|---|---|
+| **v0.23.0** | **Speculative Reasoning** — streaming thought events · Leviathan citation verifier · DDTree commit-tree search · ConstraintPruner trait · path-aware sessions · wisdom auto-adapt |
+| v0.22.2 | `mneme upgrade` — bulletproof self-update (bypasses npm cache + PATH conflicts) |
+| v0.22.1 | ResilientEnricher — self-healing free-LLM fallback chain (Ollama → Groq → OpenRouter → OpenAI) |
+| v0.22.0 | Free Forever — `mneme setup-free` wizard, multi-provider auto-detect, Qwen / Gemma / Llama curated |
+| v0.21.1 | File paths in 9 commands — "where in the codebase?" |
+| v0.21.0 | Plain English Everything — 32 commands humanized |
+| v0.20.0 | `mneme do` smart dispatcher + `mneme guard` pre-commit hook |
+| v0.19.0 | Zero-Install — bundled WASM model + 4-tier auto-fallback ladder |
 
 <br/>
 

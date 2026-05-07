@@ -13,3 +13,5 @@
 export * from "./types.js";
 export * from "./feedback.js";
 export * from "./calibrator.js";
+export * from "./session.js";
+export * from "./mutant-adapt.js";

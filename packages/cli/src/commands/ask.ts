@@ -13,6 +13,8 @@ export interface AskCommandOptions {
   question: string;
   topK?: number;
   json?: boolean;
+  /** v0.23: emit speculative-reasoning events (consider/accept/prune/verify) in real-time. */
+  stream?: boolean;
   /** Skip LLM synthesis (use extractive answer only). */
   noLlm?: boolean;
   /** Show classification reason + raw scores; useful for debugging. */
@@ -75,15 +77,21 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     return 1;
   }
 
-  // ── Step 2. Retrieval (with spinner). ────────────────────────────────
+  // ── Step 2. Retrieval (with spinner + streaming events when --stream). ─
   const spinner = new Spinner();
-  if (!opts.json) spinner.start("Searching commit history...");
+  if (!opts.json && !opts.stream) spinner.start("Searching commit history...");
 
   const embedder = await resolveEmbedder({
     provider: cfg.embeddings.provider,
     model: cfg.embeddings.model,
     baseUrl: cfg.embeddings.baseUrl,
   });
+
+  // v0.23: streaming events. When --stream, render each consider/accept/prune
+  // event in real-time so the user sees Mneme reason. Otherwise NullSink (zero overhead).
+  const eventSink = opts.stream && !opts.json
+    ? new retrieve.CallbackSink((ev) => renderStreamEvent(ev))
+    : new retrieve.NullSink();
 
   const calib = wisdom.readCalibration(s);
   const results = await retrieve.search(opts.question, {
@@ -92,10 +100,11 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     repo: meta,
     topK: opts.topK ?? 8,
     semanticWeight: calib.semanticWeight,
+    events: eventSink,
   });
   const confidence = retrieve.classifyConfidence(results);
 
-  if (!opts.json) spinner.update(`Found ${results.length} candidates · confidence: ${confidence}`);
+  if (!opts.json && !opts.stream) spinner.update(`Found ${results.length} candidates · confidence: ${confidence}`);
 
   // ── Step 3. LLM synthesis with self-healing fallback chain. ──────────
   //
@@ -159,6 +168,37 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     // Don't break ask if wisdom recording fails.
   }
 
+  // v0.23: record provider success/failure for mutant-adapt evolution.
+  // Over time, the resilient enricher chain reorders by what's actually
+  // working on the user's machine — without any explicit configuration.
+  try {
+    const providerAxis =
+      synthesized.source === "llm" ? "provider:llm" : "provider:extractive-fallback";
+    if (enricherError) {
+      wisdom.recordFailure(meta.rootPath, providerAxis, enricherError.slice(0, 100));
+    } else {
+      wisdom.recordSuccess(meta.rootPath, providerAxis, synthesized.durationMs);
+    }
+  } catch {
+    // mutant-adapt is best-effort
+  }
+
+  // v0.23: append turn to path-aware session (for next ask to use as context).
+  try {
+    const topFiles = Array.from(
+      new Set(results.slice(0, 5).flatMap((r) => r.commit.files ?? [])),
+    ).slice(0, 8);
+    wisdom.appendTurn(meta.rootPath, {
+      at: new Date().toISOString(),
+      question: opts.question,
+      topHashes: results.slice(0, 5).map((r) => r.commit.hash),
+      topFiles,
+      confidence,
+    });
+  } catch {
+    // session is best-effort
+  }
+
   s.close();
 
   // ── Step 5. Output. ──────────────────────────────────────────────────
@@ -199,4 +239,55 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     process.stdout.write(`     ${kleur.cyan().bold("mneme setup-free")}  ${kleur.gray("(30-second guided wizard — Ollama / Groq / OpenRouter — all free)")}\n\n`);
   }
   return 0;
+}
+
+/**
+ * v0.23: render a speculative-reasoning event in real-time. The look and
+ * feel echoes KAT-0B's Try/Accept/Contradiction trace. User sees Mneme
+ * reason commit-by-commit instead of staring at a spinner.
+ */
+function renderStreamEvent(ev: retrieve.StreamEvent): void {
+  switch (ev.kind) {
+    case "consider":
+      process.stdout.write(
+        `  ${kleur.gray("⚙")} ${kleur.cyan("consider".padEnd(10))} ${kleur.bold(ev.commit.shortHash)}  ${kleur.gray(truncate(ev.commit.subject, 50))}  ${kleur.gray(`score ${ev.score.toFixed(2)}`)}\n`,
+      );
+      break;
+    case "accept":
+      process.stdout.write(
+        `  ${kleur.green("✓")} ${kleur.green("accept".padEnd(10))}   ${kleur.bold(ev.commit.shortHash)}  ${kleur.gray(ev.reason)}\n`,
+      );
+      break;
+    case "prune":
+      process.stdout.write(
+        `  ${kleur.red("✗")} ${kleur.red("prune".padEnd(10))}    ${kleur.bold(ev.commit.shortHash)}  ${kleur.gray(ev.reason)}\n`,
+      );
+      break;
+    case "contradict":
+      process.stdout.write(
+        `  ${kleur.yellow("⚠")} ${kleur.yellow("contradict".padEnd(10))} ${kleur.bold(ev.commit.shortHash)}  ${kleur.gray("against " + ev.against)}\n`,
+      );
+      break;
+    case "synthesize":
+      process.stdout.write(
+        `  ${kleur.cyan("✦")} ${kleur.cyan("synthesize".padEnd(10))} ${kleur.gray(`from ${ev.citationsCount} verified citation(s)…`)}\n`,
+      );
+      break;
+    case "verify": {
+      const tag = ev.ok ? kleur.green("✓ verified  ") : kleur.red("✗ unverified");
+      process.stdout.write(`  ${tag} ${kleur.gray(truncate(ev.claim, 70))}${ev.reason ? kleur.gray(" — " + ev.reason) : ""}\n`);
+      break;
+    }
+    case "done":
+      process.stdout.write(`  ${kleur.green("✓")} ${kleur.green("done".padEnd(10))}      ${kleur.gray(`in ${ev.durationMs}ms`)}\n\n`);
+      break;
+    default:
+      // Future event kinds — render minimally
+      break;
+  }
+}
+
+function truncate(s: string, n: number): string {
+  if (s.length <= n) return s;
+  return s.slice(0, n - 1) + "…";
 }

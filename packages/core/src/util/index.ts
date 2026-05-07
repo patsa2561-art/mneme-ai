@@ -7,6 +7,7 @@ import type { MnemeStore } from "../store/sqlite.js";
 
 export * from "./redact.js";
 export * from "./noise.js";
+export * from "./constraint-pruner.js";
 
 /** Load every commit from the store, oldest first, with its file list. */
 export function loadAllCommits(s: MnemeStore): Commit[] {

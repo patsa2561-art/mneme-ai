@@ -7,6 +7,7 @@
 ### ✨ Innovations
 - [[Innovations]]
 - [[Novel-Algorithms]]
+- [[Speculative-Reasoning]]
 - [[Guardian]]
 - [[Forensic-Code-Science]]
 

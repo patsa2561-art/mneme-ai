@@ -17,6 +17,7 @@
 
 import type { SearchResult } from "../types.js";
 import type { ConfidenceLabel } from "./search.js";
+import { verifyAnswerLeviathan } from "./leviathan.js";
 
 /**
  * Subset of EnricherProvider needed here. We avoid a hard dependency on
@@ -200,8 +201,24 @@ export async function synthesize(
       };
     }
 
+    // Leviathan pass — Algorithm 1 style draft/target verification. We use it
+    // to wrap fabricated-hash spans inline (`[unverified: ...]`) so the user
+    // sees what was filtered. We only rewrite the answer when the simpler
+    // hash-presence check (`findUnverifiedCitations`) already flagged a
+    // problem; otherwise legitimate paraphrases get noisy markers.
+    let finalAnswer = cleaned;
+    if (unverified.length > 0) {
+      const evidenceForLev = top.map((r) => ({
+        hash: r.commit.hash,
+        shortHash: r.commit.shortHash || r.commit.hash.slice(0, 7),
+        subject: r.commit.subject,
+      }));
+      const lev = verifyAnswerLeviathan({ answer: cleaned, evidence: evidenceForLev });
+      finalAnswer = lev.cleanedAnswer;
+    }
+
     return {
-      answer: cleaned,
+      answer: finalAnswer,
       source: "llm",
       confidence,
       evidenceCommitHashes: evidenceHashes,

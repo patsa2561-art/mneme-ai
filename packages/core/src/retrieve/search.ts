@@ -8,6 +8,7 @@ import type {
   SearchResult,
 } from "../types.js";
 import type { MnemeStore } from "../store/sqlite.js";
+import type { EventSink } from "./stream.js";
 
 export interface SearchOptions {
   store: MnemeStore;
@@ -26,6 +27,12 @@ export interface SearchOptions {
    *   { ... }          — explicit thresholds
    */
   confidenceFloor?: "auto" | "off" | { minFtsHits: number; minSemCosine: number };
+  /**
+   * Speculative-reasoning event sink. When provided, search emits
+   * `consider` / `accept` / `prune` events as it scores candidates so callers
+   * can render a live trace. Defaults to a no-op sink — zero cost when unused.
+   */
+  events?: EventSink;
 }
 
 /** Thresholds used when confidenceFloor === "auto". Calibrated from the eval set. */
@@ -145,9 +152,39 @@ export async function search(query: string, opts: SearchOptions): Promise<Search
     }
   }
 
-  return Array.from(byCommit.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
+  const ranked = Array.from(byCommit.values()).sort((a, b) => b.score - a.score);
+
+  // Speculative-reasoning trace: every candidate emits `consider`; the topK
+  // emit `accept` and the rest emit `prune` so the caller can render the
+  // model's elimination process. Cheap when no sink is attached.
+  if (opts.events) {
+    const sink = opts.events;
+    const accepted = ranked.slice(0, topK);
+    const pruned = ranked.slice(topK);
+    for (const r of ranked) {
+      sink.emit({
+        kind: "consider",
+        commit: { shortHash: r.commit.shortHash, subject: r.commit.subject },
+        score: r.score,
+      });
+    }
+    for (const r of accepted) {
+      sink.emit({
+        kind: "accept",
+        commit: { shortHash: r.commit.shortHash, subject: r.commit.subject },
+        reason: "above score floor",
+      });
+    }
+    for (const r of pruned) {
+      sink.emit({
+        kind: "prune",
+        commit: { shortHash: r.commit.shortHash, subject: r.commit.subject },
+        reason: "below topK cut",
+      });
+    }
+  }
+
+  return ranked.slice(0, topK);
 }
 
 export async function ask(
