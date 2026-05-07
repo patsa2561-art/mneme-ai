@@ -20,6 +20,7 @@
 ### 👥 People analytics
 - [[People-Analytics]] · *what GitHub cannot see*
 - [[Mneme-Nervous-System]] · *the flagship PDF report*
+- [[Web-Dashboard]] · *🌐 live demo + drop-zone*
 
 ### 🔌 Integrations
 - [[Integrations]] · *GitHub · GitLab · Bitbucket · CircleCI · Jenkins*

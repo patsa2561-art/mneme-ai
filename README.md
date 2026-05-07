@@ -259,6 +259,36 @@ The PDF a CTO prints for the board meeting. **Privacy-first**: all data is local
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+<div align="center">
+
+<table>
+<tr>
+<td align="center" width="100%">
+
+### 🌐 Try the Live Dashboard — *no install required*
+
+<sub>Interactive · time-scrubbable · 100% local-first · zero backend</sub>
+
+<br/>
+
+<a href="https://patsa2561-art.github.io/mneme-ai/">
+  <img src="https://img.shields.io/badge/open%20live%20demo-mneme.dev-7c3aed?style=for-the-badge&logo=react&logoColor=white" alt="Open the live demo"/>
+</a>
+
+<br/><br/>
+
+**🎬 Click "Try the demo"** to load a 7-author synthetic team · **📥 drop your own JSON** to see your repo (parsed in browser, never uploaded) · **🎞 drag the time scrubber** to watch your team's invisible network form across years.
+
+<sub>📖 [How it works · install · usage · privacy → Web Dashboard wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Web-Dashboard)</sub>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🌐 Spotlight — The Live Dashboard
 
 > **Drag the time scrubber. Watch your codebase grow.** *No git tool has temporal nervous-system playback. Mneme does.*
