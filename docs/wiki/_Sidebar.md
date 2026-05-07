@@ -5,12 +5,16 @@
 - [[Configuration]]
 
 ### ✨ Innovations
+- [[The-Frontier]]
 - [[Innovations]]
 - [[Novel-Algorithms]]
 - [[Hierarchical-Memory]]
 - [[Speculative-Reasoning]]
 - [[Guardian]]
 - [[Forensic-Code-Science]]
+
+### 📅 History
+- [[Releases]]
 
 ### 📚 Commands
 - [[Command-Tour]]

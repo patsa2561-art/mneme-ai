@@ -56,19 +56,9 @@ mneme upgrade                     # bulletproof self-update (npm cache + PATH co
 
 **No API key required.** Embeddings via bundled WASM, synthesis via local Ollama / Groq free tier / OpenRouter free tier — `mneme setup-free` walks you through in 30 seconds. If everything fails, retrieval-only fallback always answers.
 
-**Recent releases**
+**Latest:** **v0.24 Hierarchical Memory** — world-first compression-as-storage. 50K commits fit in one Claude prompt. → [Wiki: Hierarchical-Memory](https://github.com/patsa2561-art/mneme-ai/wiki/Hierarchical-Memory)
 
-| Version | Headline |
-|---|---|
-| **v0.24.0** | **Hierarchical Memory** — world-first compression-as-storage. 50K commits fit in one Claude prompt. `mneme htc-build` + `htc-stats`. 10× fewer tokens per query. Compressed MCP responses. |
-| v0.23.0 | Speculative Reasoning — streaming thought events · Leviathan citation verifier · DDTree commit-tree search · ConstraintPruner trait · path-aware sessions · wisdom auto-adapt |
-| v0.22.2 | `mneme upgrade` — bulletproof self-update (bypasses npm cache + PATH conflicts) |
-| v0.22.1 | ResilientEnricher — self-healing free-LLM fallback chain (Ollama → Groq → OpenRouter → OpenAI) |
-| v0.22.0 | Free Forever — `mneme setup-free` wizard, multi-provider auto-detect, Qwen / Gemma / Llama curated |
-| v0.21.1 | File paths in 9 commands — "where in the codebase?" |
-| v0.21.0 | Plain English Everything — 32 commands humanized |
-| v0.20.0 | `mneme do` smart dispatcher + `mneme guard` pre-commit hook |
-| v0.19.0 | Zero-Install — bundled WASM model + 4-tier auto-fallback ladder |
+📅 [**Full release history → Wiki: Releases**](https://github.com/patsa2561-art/mneme-ai/wiki/Releases) · [CHANGELOG](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
 
 <br/>
 
@@ -513,29 +503,11 @@ In audit mode, Mneme:
 
 ## 🌌 The Frontier — what makes Mneme one of a kind
 
-After researching the landscape of git, code-search, and AI-coding tools, we confirmed every command below occupies whitespace where no maintained, open-source, local-first tool ships this capability today.
+**23 capabilities** that no maintained, open-source, local-first tool ships today —
+author DNA fingerprints, ENFSI-grade forensic attribution, CWE-aligned vulnerability hunts,
+hierarchical compression-as-storage, streaming reasoning events, and more.
 
-| # | Capability | Mneme |
-|---|---|---|
-| 1 | Author social graph with semantic edges | ✅ `network` |
-| 2 | Semantic clustering of commit messages *(NLP)* | ✅ `cluster` |
-| 3 | Predictive co-edit detection | ✅ `oracle` |
-| 4 | Exportable, history-derived developer fingerprint | ✅ `dna` |
-| 5 | Engineering management dashboard | ✅ `manage` |
-| 6 | Universal codebase export *(bundled artifact)* | ✅ `bundle` |
-| 7 | File evolution narrated as eras | ✅ `time-machine` |
-| 8 | Codebase narrative documentary | ✅ `chronicle` |
-| 9 | Predictive regret risk grounded in YOUR repo | ✅ `premortem` |
-| 10 | Multi-signal ghost-code detection | ✅ `ghost` |
-| 11 | Maintained codebase graph data layer | ✅ `constellation` |
-| 12 | Topical drift over time *(feature/refactor/firefight)* | ✅ `drift` |
-| 13 | **Audit-grade Q&A — explicit hallucination guard** | ✅ `ask --audit` |
-| 14 | **Bayesian author attribution with ENFSI verbal scale** | ✅ `forensics match/attribute` |
-| 15 | **CWE-aligned vulnerability hunt across history** | ✅ `forensics vulns` |
-| 16 | **Insider-threat anomaly detection per author baseline** | ✅ `forensics anomaly` |
-| 17 | **24/7 self-healing daemon with auto-fix policy** | ✅ `guardian` |
-
-**17 world-firsts. Local-first by design. One of a kind. The frontier.**
+→ 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
 
 > 🛡 *Built to complement existing AI coding assistants — not to replace them.*
 
