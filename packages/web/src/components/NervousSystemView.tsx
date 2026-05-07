@@ -111,20 +111,24 @@ export function NervousSystemView({ data, selectedEmail, onSelect }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const simRef = useRef<Simulation<GraphNode, GraphLink> | null>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
-  const [size, setSize] = useState({ w: 800, h: 600 });
+  const [size, setSize] = useState({ w: 1024, h: 640 });
 
   // Build nodes/links once per data.
   const graph = useMemo(() => buildGraph(data), [data]);
 
-  // Watch container for size changes.
+  // Watch container for size changes — read its actual rect, not a guess.
   useEffect(() => {
     if (!containerRef.current) return;
     const el = containerRef.current;
-    const ro = new ResizeObserver((entries) => {
-      const r = entries[0]?.contentRect;
-      if (!r) return;
-      setSize({ w: Math.max(320, r.width), h: Math.max(280, r.height) });
-    });
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setSize({
+        w: Math.max(360, Math.round(r.width)),
+        h: Math.max(360, Math.round(r.height)),
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -166,35 +170,43 @@ export function NervousSystemView({ data, selectedEmail, onSelect }: Props) {
     const linkLayer = root.append("g").attr("class", "link-layer");
     const nodeLayer = root.append("g").attr("class", "node-layer");
 
-    // Initialize node positions: cluster around the centre to avoid the
-    // "shotgun-blast" look every D3 tutorial ships with.
+    // Initialize node positions: spread across the full canvas using a
+    // golden-angle spiral so the first tick already looks distributed
+    // instead of clumped at centre.
     const cx = size.w / 2;
     const cy = size.h / 2;
-    for (const n of graph.nodes) {
-      if (n.x === undefined) {
-        const r = 40 + Math.random() * 80;
-        const a = Math.random() * Math.PI * 2;
+    const spreadR = Math.min(size.w, size.h) * 0.42;
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    graph.nodes.forEach((n, i) => {
+      if (n.x === undefined || n.y === undefined) {
+        const t = (i + 0.5) / Math.max(1, graph.nodes.length);
+        const r = spreadR * Math.sqrt(t);
+        const a = i * golden;
         n.x = cx + Math.cos(a) * r;
         n.y = cy + Math.sin(a) * r;
       }
-    }
+    });
+
+    // Stronger repulsion + bigger link distance so clusters breathe and
+    // fill the available canvas instead of huddling in the middle.
+    const chargeStrength = -320 - Math.min(220, graph.nodes.length * 8);
 
     const sim = forceSimulation<GraphNode, GraphLink>(graph.nodes)
       .force(
         "link",
         forceLink<GraphNode, GraphLink>(graph.links)
           .id((d) => d.id)
-          .distance((l) => 80 + 60 * (1 - Math.min(1, l.score)))
-          .strength((l) => 0.2 + 0.6 * Math.min(1, l.score)),
+          .distance((l) => 120 + 80 * (1 - Math.min(1, l.score)))
+          .strength((l) => 0.2 + 0.5 * Math.min(1, l.score)),
       )
-      .force("charge", forceManyBody().strength(-360))
-      .force("center", forceCenter(cx, cy).strength(0.05))
+      .force("charge", forceManyBody().strength(chargeStrength).distanceMax(size.w))
+      .force("center", forceCenter(cx, cy).strength(0.04))
       .force(
         "collide",
-        forceCollide<GraphNode>().radius((d) => radiusFor(d) + 6).strength(0.9),
+        forceCollide<GraphNode>().radius((d) => radiusFor(d) + 10).strength(0.95),
       )
-      .alpha(0.9)
-      .alphaDecay(0.03);
+      .alpha(0.95)
+      .alphaDecay(0.025);
 
     simRef.current = sim;
 
@@ -279,12 +291,44 @@ export function NervousSystemView({ data, selectedEmail, onSelect }: Props) {
 
     // Zoom + pan.
     const zoomBehavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.3, 3])
+      .scaleExtent([0.25, 3])
       .on("zoom", (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
         root.attr("transform", event.transform.toString());
       });
     svg.call(zoomBehavior as never);
     svg.call(zoomBehavior.transform as never, zoomIdentity);
+
+    // Auto-fit-to-canvas once after the sim has had time to spread out.
+    let fitDone = false;
+    const fitToCanvas = () => {
+      if (fitDone) return;
+      fitDone = true;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const n of graph.nodes) {
+        const r = radiusFor(n);
+        const nx = n.x ?? cx;
+        const ny = n.y ?? cy;
+        if (nx - r < minX) minX = nx - r;
+        if (ny - r < minY) minY = ny - r;
+        if (nx + r > maxX) maxX = nx + r;
+        if (ny + r > maxY) maxY = ny + r;
+      }
+      if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return;
+      const bw = Math.max(1, maxX - minX);
+      const bh = Math.max(1, maxY - minY);
+      const pad = 60;
+      const k = Math.min(
+        (size.w - pad * 2) / bw,
+        (size.h - pad * 2) / bh,
+        1.1, // never zoom in past slight magnification
+      );
+      const tx = size.w / 2 - ((minX + maxX) / 2) * k;
+      const ty = size.h / 2 - ((minY + maxY) / 2) * k;
+      svg.call(
+        zoomBehavior.transform as never,
+        zoomIdentity.translate(tx, ty).scale(k),
+      );
+    };
 
     sim.on("tick", () => {
       linkSel
@@ -293,7 +337,11 @@ export function NervousSystemView({ data, selectedEmail, onSelect }: Props) {
         .attr("x2", (d) => (typeof d.target === "string" ? 0 : d.target.x ?? 0))
         .attr("y2", (d) => (typeof d.target === "string" ? 0 : d.target.y ?? 0));
       nodeSel.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
+      // Once the sim has lost most of its energy, zoom to fit.
+      if (!fitDone && sim.alpha() < 0.18) fitToCanvas();
     });
+    // Safety net: if alpha never drops in time, fit anyway.
+    sim.on("end", fitToCanvas);
 
     return () => {
       sim.stop();
@@ -329,6 +377,8 @@ export function NervousSystemView({ data, selectedEmail, onSelect }: Props) {
       <svg
         ref={svgRef}
         className="graph-svg"
+        width={size.w}
+        height={size.h}
         viewBox={`0 0 ${size.w} ${size.h}`}
         preserveAspectRatio="xMidYMid meet"
       />

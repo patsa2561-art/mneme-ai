@@ -7,6 +7,7 @@ interface HeaderProps {
   view: ViewMode;
   onViewChange: (v: ViewMode) => void;
   onLoadClick: () => void;
+  onHelpClick: () => void;
   synthetic: boolean;
 }
 
@@ -22,6 +23,7 @@ export function Header({
   view,
   onViewChange,
   onLoadClick,
+  onHelpClick,
   synthetic,
 }: HeaderProps) {
   return (
@@ -60,11 +62,23 @@ export function Header({
       </nav>
 
       <div className="header-actions">
-        <button className="btn-ghost" onClick={onLoadClick} title="Load demo, drop a file, or paste a URL">
-          Load
+        <button
+          className="btn-primary load-cta"
+          onClick={onLoadClick}
+          title="Load demo, drop a file, or paste a URL"
+        >
+          <span aria-hidden>📥</span> Load my repo
+        </button>
+        <button
+          className="btn-ghost help-btn"
+          onClick={onHelpClick}
+          title="What is this? — show the welcome guide"
+          aria-label="Show welcome guide"
+        >
+          ?
         </button>
         <a
-          className="btn-ghost"
+          className="btn-ghost github-btn"
           href="https://github.com/patsa2561-art/mneme-ai"
           target="_blank"
           rel="noopener"

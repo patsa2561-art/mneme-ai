@@ -8,10 +8,19 @@ import { InfluenceLadder } from "./components/InfluenceLadder";
 import { DetailPanel } from "./components/DetailPanel";
 import { LimitsPanel } from "./components/LimitsPanel";
 import { LoadDialog } from "./components/LoadDialog";
+import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
 import { computeTimeBounds, scrubData } from "./lib/scrub";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") + "/";
+
+function readOnboarded(): boolean {
+  try {
+    return window.localStorage.getItem("mneme-onboarded") === "true";
+  } catch {
+    return false;
+  }
+}
 
 export function App() {
   const [raw, setRaw] = useState<NervousSystemData | null>(null);
@@ -19,6 +28,7 @@ export function App() {
   const [view, setView] = useState<ViewMode>("graph");
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState<boolean>(() => !readOnboarded());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [highlightFile, setHighlightFile] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -123,6 +133,7 @@ export function App() {
         view={view}
         onViewChange={setView}
         onLoadClick={() => setLoadOpen(true)}
+        onHelpClick={() => setWelcomeOpen(true)}
         synthetic={!!raw?._demo_synthetic}
       />
 
@@ -180,6 +191,17 @@ export function App() {
         />
       )}
 
+      {welcomeOpen && (
+        <WelcomeOverlay
+          onDemo={() => setWelcomeOpen(false)}
+          onDropFile={() => {
+            setWelcomeOpen(false);
+            setLoadOpen(true);
+          }}
+          onClose={() => setWelcomeOpen(false)}
+        />
+      )}
+
       <ToastStack toasts={toasts} onDismiss={(id) => removeToast(setToasts, id)} />
     </div>
   );
@@ -207,13 +229,14 @@ function EmptyState({ onLoadClick }: { onLoadClick: () => void }) {
   return (
     <div className="empty-state">
       <div className="empty-glyph">μ</div>
-      <h2>Drop a nervous-system JSON to begin</h2>
+      <h2>Pick a way in.</h2>
       <p>
-        Run <code>mneme nervous-system --json</code> in any repo Mneme has
-        indexed, then drop the file here. Nothing leaves your browser.
+        Try the synthetic demo, drop a file from{" "}
+        <code>mneme nervous-system --json</code>, or paste a JSON URL.
+        Everything is parsed in your browser — nothing is uploaded.
       </p>
       <button className="btn-primary" onClick={onLoadClick}>
-        Load data
+        📥 Load my repo
       </button>
     </div>
   );

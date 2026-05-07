@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { NervousSystemData } from "../types";
 
 interface Props {
@@ -12,7 +12,37 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+
+  // ESC to close + simple focus trap.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button,[href],input,[tabindex]:not([tabindex="-1"])',
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0]!;
+        const last = focusables[focusables.length - 1]!;
+        const active = document.activeElement;
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const loadDemo = useCallback(async () => {
     setBusy(true);
@@ -72,24 +102,45 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="dialog-panel">
+      <div className="dialog-panel load-dialog" ref={dialogRef}>
         <div className="dialog-head">
-          <h2>Load nervous-system data</h2>
+          <div>
+            <h2>Load data</h2>
+            <p className="dialog-blurb">
+              Three ways in. Pick whichever fits.
+            </p>
+          </div>
           <button className="dialog-close" onClick={onClose} aria-label="Close">×</button>
         </div>
-        <p className="dialog-blurb">
-          100% local. Files stay in your browser — no upload, no telemetry.
-        </p>
 
         <div className="load-grid">
-          <button className="load-card" onClick={loadDemo} disabled={busy}>
-            <div className="load-card-glyph">▶</div>
-            <div className="load-card-title">Try the demo</div>
-            <div className="load-card-blurb">Pre-computed dataset. No setup.</div>
+          {/* Tile 1 — demo */}
+          <button
+            type="button"
+            className="load-tile"
+            onClick={loadDemo}
+            disabled={busy}
+          >
+            <div className="load-tile-glyph" aria-hidden>🎬</div>
+            <div className="load-tile-title">Try the demo</div>
+            <div className="load-tile-desc">
+              Synthetic 7-author team. See what the dashboard can do — no setup.
+            </div>
+            <div className="load-tile-cta">Show demo →</div>
           </button>
 
+          {/* Tile 2 — drop file */}
           <div
-            className={`load-card drop ${dragging ? "drag-over" : ""}`}
+            className={`load-tile drop ${dragging ? "drag-over" : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => fileRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                fileRef.current?.click();
+              }
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               setDragging(true);
@@ -101,7 +152,6 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
               const f = e.dataTransfer.files[0];
               if (f) void loadFile(f);
             }}
-            onClick={() => fileRef.current?.click()}
           >
             <input
               type="file"
@@ -113,30 +163,64 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
                 if (f) void loadFile(f);
               }}
             />
-            <div className="load-card-glyph">⤓</div>
-            <div className="load-card-title">Drop a file</div>
-            <div className="load-card-blurb">
-              <code>mneme nervous-system --json</code>
+            <div className="load-tile-glyph" aria-hidden>📥</div>
+            <div className="load-tile-title">Drop my JSON file</div>
+            <div className="load-tile-desc">
+              From <code>mneme nervous-system --json</code> on YOUR repo.
+            </div>
+            <div className="load-tile-cta">
+              {dragging ? "Drop to load…" : "Browse files…"}
             </div>
           </div>
 
-          <div className="load-card url">
-            <div className="load-card-glyph">⌘</div>
-            <div className="load-card-title">From URL</div>
-            <input
-              className="load-url-input"
-              placeholder="https://…/nervous-system.json"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void loadUrl();
-              }}
-            />
-            <button className="btn-primary small" onClick={loadUrl} disabled={!url || busy}>
-              fetch
-            </button>
+          {/* Tile 3 — url */}
+          <div
+            className={`load-tile url ${showUrl ? "expanded" : ""}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowUrl(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setShowUrl(true);
+              }
+            }}
+          >
+            <div className="load-tile-glyph" aria-hidden>🔗</div>
+            <div className="load-tile-title">Load from URL</div>
+            <div className="load-tile-desc">
+              Paste a publicly hosted JSON URL.
+            </div>
+            {showUrl ? (
+              <div className="load-tile-urlrow" onClick={(e) => e.stopPropagation()}>
+                <input
+                  className="load-url-input"
+                  placeholder="https://…/nervous-system.json"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void loadUrl();
+                  }}
+                  autoFocus
+                />
+                <button
+                  className="btn-primary small"
+                  onClick={loadUrl}
+                  disabled={!url || busy}
+                >
+                  Load
+                </button>
+              </div>
+            ) : (
+              <div className="load-tile-cta">Paste URL →</div>
+            )}
           </div>
         </div>
+
+        <p className="load-privacy">
+          🔒 Your file is parsed in this browser tab.{" "}
+          <b>Mneme never receives, stores, or transmits it.</b>
+        </p>
       </div>
     </div>
   );
