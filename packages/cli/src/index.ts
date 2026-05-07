@@ -140,10 +140,11 @@ export async function run(argv: string[]): Promise<void> {
     .option("--interval <seconds>", "poll interval for --watch", (v) => Number(v), 60)
     .option("--json", "machine-readable output", false)
     .option("--explain", "prepend a plain-English narrative summary on --certify (uses your free LLM)", false)
+    .option("--strict", "treat skipped axes (insufficient data) as fail — for compliance environments", false)
     .action(async (opts: {
       baseline?: boolean; trace?: boolean; verify?: boolean; certify?: boolean;
       watch?: boolean; report?: boolean; out?: string; interval?: number; json?: boolean;
-      explain?: boolean;
+      explain?: boolean; strict?: boolean;
     }) => {
       const mode: "baseline" | "trace" | "verify" | "certify" | "watch" | "report" =
         opts.baseline ? "baseline" :
@@ -161,6 +162,7 @@ export async function run(argv: string[]): Promise<void> {
           out: opts.out,
           interval: opts.interval,
           explain: opts.explain,
+          strict: opts.strict,
         }),
       );
     });

@@ -8,6 +8,116 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.35.0] — 2026-05-08
+
+The **"Sniper Accuracy + Plain Wisdom"** release. Every command output
+audited for accuracy. `mneme audit --certify` rewritten to forensic
+grade — every "pass" now backed by evidence the user can verify.
+Three lawsuit-grade defamation phrases scrubbed.
+
+### `mneme audit --certify` — full rewrite to forensic grade
+
+The v0.34 audit produced output like:
+
+```
+| Test pass rate | pass | no new test failures (0 passed / 0 failed (0 files)) |
+| AI narrative   | pass | no commits with diffs to verify                      |
+| size  | pass |  (no reasoning shown)
+```
+
+Every "pass" was rubber-stamped without evidence. v0.35 fixes the
+class of issue:
+
+- Every axis now returns `verdict + evidence[] + confidence + caveat`.
+- `compareTestPassRate` returns `skipped` (not `pass`) when no tests
+  ran. Diagnosis line + remediation hint included.
+- `evaluateNarrativeAxis` returns `skipped` when zero AI commits
+  exist. Old behavior (false `pass`) is now impossible.
+- `comparePerf` returns `skipped` when no overlapping samples;
+  when it passes, evidence shows per-command median deltas + sample
+  size + noise floor caveat.
+- `compareApiSurface` always emits surface hash + export count so
+  "identical" is provable, not asserted.
+- `compareBehavioralParity` emits per-sample exit/lines/sha evidence.
+  Explicit `Sampling: N of ~12` caveat.
+- `classifyForensicAxis` no longer reports `pass` on empty inputs.
+- Pre-flight tripwire — zero AI commits + identical baselines →
+  `INSUFFICIENT DATA` warning instead of fake `pass`.
+- Headline now reflects coverage:
+  `PASS · 5/5 axes verified · high confidence` —
+  not the old `PASS (exit 0)` that hid skipped axes.
+- `--strict` flag promotes `skipped` → `fail` for compliance
+  environments where missing data IS a failure.
+
+`packages/core/src/audit/certify.ts` rewritten (+624 / −82). Markdown
+report writer (`packages/cli/src/commands/audit.ts`) replaced
+(+189 / −66). 19 new forensic-grade test assertions.
+
+### Three lawsuit-grade phrases scrubbed
+
+A comprehensive command audit found three personal-quality
+judgements that a heuristic metric should never make:
+
+1. `mneme influence` printed *"likely a copy-paster"* under engineers
+   whose patterns weren't adopted yet. The metric only walks
+   TS/JS/Python/Go AST shapes — blind to docs, infra, configs,
+   design work. Replaced with neutral *"no team-adopted patterns
+   above the floor yet (metric is blind to non-code work — configs,
+   docs, infra)"*.
+
+2. `mneme insider-trading` heading was literally *"Insider trading —
+   authors who fix their own bugs"*. The term is a US federal crime;
+   pinning a name under it is defamation-grade. Renamed to *"Self-fix
+   loops — ship-then-patch within a tight window"*. Tier blurb
+   *"review process likely broken"* softened to *"could be review
+   gaps, flaky tests, or intentional iteration; verify before
+   acting"*. Added explicit FRAMING line: *"workflow heuristic, not
+   an accusation — use for retro / process review, never for HR"*.
+
+3. `mneme moneyball` had a tier called *"LOUD — many commits, modest
+   impact (loud but not landing)"*. Personal-quality judgement on a
+   per-commit-ROI heuristic that's blind to non-code work. Tier
+   renamed `HIGH-VOLUME`. Per-row blurb *"below-average impact per
+   commit"* replaced with *"low per-commit reach in the index
+   (metric is blind to non-code work)"*. Added FRAMING line: *"never
+   use as a productivity ranking or for HR / performance review"*.
+
+### Spotlight section rewritten
+
+The README's `mneme audit` Spotlight had 4 nested sections + walls
+of bullets. Rewrote as a 1-paragraph story (AI lies in the commit
+message, audit catches it before merge), then 3-line copy-paste,
+then collapsible details for those who want depth.
+
+### Auto-tweet workflow off until X API secrets configured
+
+The `noweh/post-tweet-v2-action` errors before our skip-guard fires
+when the four `X_*` secrets aren't set, marking every release red.
+Tag-push trigger commented out. Re-enable by uncommenting the
+`push:` block once secrets land. Manual workflow_dispatch still
+works.
+
+**Tests:** 1962 → 1978 passing (+16 forensic-grade audit tests).
+Build clean. Honest framing throughout — every claim now backs
+itself with verifiable evidence the user can `git show`.
+
+### Honest caveats
+
+- **Behavioral-parity** is still 2-3-sample. The new caveat
+  surfaces this honestly; the `--thorough` flag that would expand
+  to all 12 commands is a v0.36 follow-up.
+- **Perf axis** still uses 3 trials at baseline-capture. Caveat
+  surfaces noise floor (treat <10% deltas as inconclusive). Real
+  p50/p95 pipeline = v0.36.
+- **Forensic axes (size/files/style/time)** emit `skipped` until
+  the wiring from `mneme forensics anomaly` per-commit z-scores
+  into `buildCertificate.forensicScores` is finished. Honest
+  `skipped · no anomaly-detector data supplied` is better than
+  the v0.34 fake `pass`. v0.36 closes the loop.
+- **P1 weaknesses still on the list**: `conscience` / `blast` /
+  `palimpsest` / WILDs / `clones` need `📘 How to read` blocks
+  per the audit findings. v0.35.1.
+
 ## [0.34.0] — 2026-05-08
 
 The "Zero Native Deps" release. `npm install -g mneme-ai` now works on

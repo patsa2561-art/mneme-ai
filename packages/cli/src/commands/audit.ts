@@ -34,6 +34,12 @@ export interface AuditOptions {
   explain?: boolean;
   /** Test seam: inject an enricher factory so unit tests don't hit the network. */
   explainEnricherFactory?: ExplainRequest["enricherFactory"];
+  /**
+   * --strict: treat `skipped` axes as `fail`.  For compliance environments
+   * where missing data IS a failure (e.g. no test command defined =
+   * cannot ship).
+   */
+  strict?: boolean;
 }
 
 /** Top-level dispatcher. */
@@ -281,7 +287,7 @@ function renderVerify(trace: audit.SessionTrace, checks: audit.NarrativeCheck[])
 
 async function runCertify(opts: AuditOptions): Promise<number> {
   const meta = await git.getRepoMeta(opts.cwd);
-  const cert = await runFullCertifyPipeline(meta.rootPath);
+  const cert = await runFullCertifyPipeline(meta.rootPath, { strict: opts.strict });
   if (!cert) {
     ui.error("No baseline.  Run `mneme audit --baseline` first.");
     return 1;
@@ -346,7 +352,10 @@ function certificateToExplainPrompt(cert: audit.AuditCertificate): string {
   return JSON.stringify(compact, null, 2);
 }
 
-async function runFullCertifyPipeline(repoRoot: string) {
+async function runFullCertifyPipeline(
+  repoRoot: string,
+  opts: { strict?: boolean } = {},
+) {
   const baseline = audit.loadBaseline(repoRoot);
   if (!baseline) return null;
   const trace = await audit.traceSession(repoRoot, baseline.headHash);
@@ -361,6 +370,7 @@ async function runFullCertifyPipeline(repoRoot: string) {
     afterBaseline: after,
     trace,
     diffs,
+    strict: opts.strict,
   });
 }
 
@@ -375,50 +385,98 @@ function renderCertificate(
       ? pill("WARN", "warn")
       : pill("PASS", "ok");
 
+  // Confidence pill — high (4+ axes verified) / medium (3) / low (≤2).
+  const confBadge = (() => {
+    switch (cert.coverage.confidence) {
+      case "high": return kleur.green("high confidence");
+      case "medium": return kleur.yellow("medium confidence");
+      case "low": return kleur.red("low confidence");
+    }
+  })();
+
+  // Headline carries the coverage summary so the user sees verified/skipped
+  // up front — never just "PASS · exit 0".
   const headline = (() => {
+    if (cert.insufficientData) {
+      return `🔍 AI Audit · INSUFFICIENT DATA · refusing to certify`;
+    }
+    const cov = `${cert.coverage.verified}/${cert.coverage.total} axes verified`;
+    const skip = cert.coverage.skipped > 0
+      ? ` · ${cert.coverage.skipped} skipped (insufficient data)`
+      : "";
     if (cert.overallVerdict === "fail") {
-      return `🔍 AI Audit · FAIL · review before merging`;
+      return `🔍 AI Audit · FAIL · ${cov}${skip} · review evidence below`;
     }
     if (cert.overallVerdict === "warn") {
-      return `🔍 AI Audit · warn · 1 or more axes drifted`;
+      return `🔍 AI Audit · WARN · ${cov}${skip} · review evidence below`;
     }
-    return `🔍 AI Audit · PASS · trust certificate issued`;
+    return `🔍 AI Audit · PASS · ${cov}${skip} · ${cert.coverage.confidence} confidence`;
   })();
 
   const ledeLines: string[] = [
-    `  ${kleur.gray("session:")}  ${kleur.bold(cert.sessionId)}`,
-    `  ${kleur.gray("captured:")} ${cert.capturedAt}`,
-    `  ${kleur.gray("verdict:")}  ${verdictBadge}`,
+    `  ${kleur.gray("session:")}    ${kleur.bold(cert.sessionId)}`,
+    `  ${kleur.gray("captured:")}   ${cert.capturedAt}`,
+    `  ${kleur.gray("verdict:")}    ${verdictBadge}`,
+    `  ${kleur.gray("coverage:")}   ${kleur.bold(`${cert.coverage.verified}/${cert.coverage.total}`)} axes verified · ${confBadge}`,
   ];
+  if (cert.insufficientData) {
+    ledeLines.push(
+      `  ${kleur.gray("reason:")}     ${kleur.yellow(cert.insufficientData.reason)}`,
+      `  ${kleur.gray("hint:")}       ${kleur.cyan(cert.insufficientData.hint)}`,
+    );
+  }
 
-  const axisRow = (name: string, v: { verdict: string; reason: string }): string => {
-    const mark =
-      v.verdict === "pass" ? kleur.green("✓") : v.verdict === "warn" ? kleur.yellow("!") : kleur.red("✗");
-    return `    ${mark} ${kleur.bold(name.padEnd(20))} ${kleur.gray(v.reason)}`;
+  const mark = (v: string): string =>
+    v === "pass" ? kleur.green("✓")
+    : v === "warn" ? kleur.yellow("!")
+    : v === "skipped" ? kleur.gray("⊘")
+    : kleur.red("✗");
+
+  const axisLines = (
+    name: string,
+    a: { verdict: string; reason: string; evidence: audit.Evidence[]; caveat?: string; confidence: string },
+  ): string[] => {
+    const out: string[] = [];
+    out.push(
+      `    ${mark(a.verdict)} ${kleur.bold(name.padEnd(22))} ${kleur.gray(a.reason)} ${kleur.gray(`[${a.confidence} conf.]`)}`,
+    );
+    for (const e of a.evidence) {
+      const m = e.ok === true ? kleur.green("✓")
+        : e.ok === false ? kleur.red("✗")
+        : kleur.gray("·");
+      out.push(`        ${m} ${kleur.gray(e.label.padEnd(22))} ${e.value}`);
+    }
+    if (a.caveat) {
+      out.push(`        ${kleur.gray("ⓘ " + a.caveat)}`);
+    }
+    return out;
   };
 
-  const factLines: string[] = [
-    axisRow("behavioral parity", cert.axes.behavioralParity),
-    axisRow("API contract drift", cert.axes.apiContractDrift),
-    axisRow("test pass rate", { verdict: cert.axes.testPassRate.verdict, reason: cert.axes.testPassRate.reason }),
-    axisRow("perf regression", { verdict: cert.axes.perfRegression.verdict, reason: cert.axes.perfRegression.reason }),
-    axisRow("AI narrative", cert.axes.aiNarrative),
-  ];
+  const evidenceLines: string[] = [];
+  evidenceLines.push(...axisLines("behavioral parity", cert.axes.behavioralParity));
+  evidenceLines.push(...axisLines("API contract drift", cert.axes.apiContractDrift));
+  evidenceLines.push(...axisLines("test pass rate", cert.axes.testPassRate));
+  evidenceLines.push(...axisLines("perf regression", cert.axes.perfRegression));
+  evidenceLines.push(...axisLines("AI narrative", cert.axes.aiNarrative));
 
-  const forensicLines: string[] = [
-    `    ${formatForensic("size", cert.forensicAxes.size)}`,
-    `    ${formatForensic("files", cert.forensicAxes.files)}`,
-    `    ${formatForensic("style", cert.forensicAxes.style)}`,
-    `    ${formatForensic("time", cert.forensicAxes.time)}`,
-  ];
-
-  const detailLines: string[] = [];
-  for (const [axis, info] of Object.entries(cert.axes)) {
-    const det = (info as { details?: string[] }).details;
-    if (Array.isArray(det) && det.length > 0) {
-      detailLines.push(`    ${kleur.bold(axis)}`);
-      for (const d of det) detailLines.push(`        ${kleur.gray(d)}`);
+  const forensicAxisLines = (name: string, a: audit.ForensicAxisResult): string[] => {
+    const out: string[] = [];
+    out.push(
+      `    ${mark(a.verdict)} ${kleur.bold(name.padEnd(8))} ${kleur.gray(a.reason)}`,
+    );
+    for (const e of a.evidence) {
+      out.push(`        ${kleur.gray("·")} ${kleur.gray(e.label.padEnd(8))} ${e.value}`);
     }
+    return out;
+  };
+
+  const forensicLines: string[] = [];
+  forensicLines.push(...forensicAxisLines("size", cert.forensicAxes.size));
+  forensicLines.push(...forensicAxisLines("files", cert.forensicAxes.files));
+  forensicLines.push(...forensicAxisLines("style", cert.forensicAxes.style));
+  forensicLines.push(...forensicAxisLines("time", cert.forensicAxes.time));
+  if (cert.forensicAxes.size.caveat) {
+    forensicLines.push(`        ${kleur.gray("ⓘ " + cert.forensicAxes.size.caveat)}`);
   }
 
   const sections: PyramidSection[] = [];
@@ -429,16 +487,14 @@ function renderCertificate(
     sections.push({ tier: "lede", lines: [`  ${explainHeadsUp}`] });
   }
   sections.push({ tier: "lede", title: "✦ Certificate", lines: ledeLines });
-  sections.push({ tier: "key-facts", title: "◆ 5-axis verdict", lines: factLines });
+  sections.push({ tier: "key-facts", title: "◆ 5-axis verdict (with evidence)", lines: evidenceLines });
   sections.push({ tier: "body", title: "◆ Forensic axes (insider-threat reuse)", lines: forensicLines });
-  if (detailLines.length > 0) {
-    sections.push({ tier: "details", title: "◆ Per-axis details", lines: detailLines });
-  }
   sections.push({
     tier: "sources",
     title: "→ Try next",
     lines: [
       `    ${kleur.cyan("$")} ${kleur.bold("mneme audit --report --out audit.md")} ${kleur.gray("(markdown for compliance)")}`,
+      `    ${kleur.cyan("$")} ${kleur.bold("mneme audit --certify --strict")} ${kleur.gray("(treat skipped axes as fail)")}`,
       `    ${kleur.cyan("$")} ${kleur.bold("mneme audit --watch")} ${kleur.gray("(CI gate — re-run automatically)")}`,
     ],
   });
@@ -446,11 +502,6 @@ function renderCertificate(
   ui.banner();
   process.stdout.write(iris.render({ headline, sections }));
   process.stdout.write("\n");
-}
-
-function formatForensic(name: string, v: "pass" | "warn" | "fail"): string {
-  const mark = v === "pass" ? kleur.green("✓") : v === "warn" ? kleur.yellow("!") : kleur.red("✗");
-  return `${mark} ${kleur.gray(name.padEnd(8))} ${v}`;
 }
 
 // ─── --watch ─────────────────────────────────────────────────────────
@@ -500,7 +551,7 @@ async function runWatch(opts: AuditOptions): Promise<number> {
 
 async function runReport(opts: AuditOptions): Promise<number> {
   const meta = await git.getRepoMeta(opts.cwd);
-  const cert = await runFullCertifyPipeline(meta.rootPath);
+  const cert = await runFullCertifyPipeline(meta.rootPath, { strict: opts.strict });
   if (!cert) {
     ui.error("No baseline.  Run `mneme audit --baseline` first.");
     return 1;
@@ -515,31 +566,125 @@ async function runReport(opts: AuditOptions): Promise<number> {
   return cert.exitCode;
 }
 
+/**
+ * Render a forensic-grade markdown report.
+ *
+ * Every axis surfaces:
+ *   • verdict (pass / warn / fail / skipped)
+ *   • reason (one-liner)
+ *   • confidence rating
+ *   • structured evidence bullets (the FACTS — counts, hashes, paths,
+ *     deltas — that back the verdict)
+ *   • caveat (the "ⓘ" line declaring what this axis does NOT check)
+ *
+ * The headline carries coverage (X/5 axes verified) so the user
+ * immediately sees how trustworthy the verdict is.  Sniper-accuracy:
+ * a "PASS · 2/5 verified · low confidence" report is a yellow flag,
+ * not a green light.
+ */
 export function renderMarkdownReport(cert: audit.AuditCertificate): string {
   const lines: string[] = [];
+
+  // ── Header ────────────────────────────────────────────────────────
   lines.push(`# AI Audit Trust Certificate`);
   lines.push(``);
   lines.push(`- **Session**: \`${cert.sessionId}\``);
   lines.push(`- **Captured**: ${cert.capturedAt}`);
-  lines.push(`- **Overall verdict**: **${cert.overallVerdict.toUpperCase()}** (exit ${cert.exitCode})`);
+  lines.push(
+    `- **Overall verdict**: **${cert.overallVerdict.toUpperCase()}** ` +
+    `· ${cert.coverage.verified}/${cert.coverage.total} axes verified` +
+    (cert.coverage.skipped > 0 ? ` · ${cert.coverage.skipped} skipped` : "") +
+    ` · ${cert.coverage.confidence} confidence (exit ${cert.exitCode})`,
+  );
+  if (cert.insufficientData) {
+    lines.push(``);
+    lines.push(`> **INSUFFICIENT DATA** — ${cert.insufficientData.reason}`);
+    lines.push(`>`);
+    lines.push(`> ${cert.insufficientData.hint}`);
+  }
   lines.push(``);
+
+  // ── 5-axis verdict (with evidence) ────────────────────────────────
   lines.push(`## 5-Axis Verdict`);
   lines.push(``);
-  lines.push(`| Axis | Verdict | Reason |`);
-  lines.push(`| ---- | ------- | ------ |`);
-  lines.push(`| Behavioral parity | ${cert.axes.behavioralParity.verdict} | ${cert.axes.behavioralParity.reason} |`);
-  lines.push(`| API contract drift | ${cert.axes.apiContractDrift.verdict} | ${cert.axes.apiContractDrift.reason} |`);
-  lines.push(`| Test pass rate | ${cert.axes.testPassRate.verdict} | ${cert.axes.testPassRate.reason} (${cert.axes.testPassRate.before} → ${cert.axes.testPassRate.after}) |`);
-  lines.push(`| Perf regression | ${cert.axes.perfRegression.verdict} | ${cert.axes.perfRegression.reason} (${cert.axes.perfRegression.deltaPercent}%) |`);
-  lines.push(`| AI narrative | ${cert.axes.aiNarrative.verdict} | ${cert.axes.aiNarrative.reason} |`);
+  lines.push(`| Axis | Verdict | Confidence | Reason |`);
+  lines.push(`| ---- | ------- | ---------- | ------ |`);
+  const tableRow = (
+    name: string,
+    a: { verdict: string; reason: string; confidence: string },
+  ) => `| ${name} | ${a.verdict} | ${a.confidence} | ${a.reason} |`;
+  lines.push(tableRow("Behavioral parity", cert.axes.behavioralParity));
+  lines.push(tableRow("API contract drift", cert.axes.apiContractDrift));
+  lines.push(tableRow("Test pass rate", cert.axes.testPassRate));
+  lines.push(tableRow("Perf regression", cert.axes.perfRegression));
+  lines.push(tableRow("AI narrative", cert.axes.aiNarrative));
   lines.push(``);
+
+  // ── Per-axis evidence ─────────────────────────────────────────────
+  lines.push(`## Per-Axis Evidence`);
+  lines.push(``);
+  const renderAxis = (
+    name: string,
+    a: {
+      verdict: string;
+      reason: string;
+      evidence: audit.Evidence[];
+      caveat?: string;
+      confidence: string;
+    },
+  ) => {
+    const icon =
+      a.verdict === "pass" ? "✓"
+      : a.verdict === "warn" ? "!"
+      : a.verdict === "skipped" ? "⊘"
+      : "✗";
+    lines.push(`### ${icon} ${name} — \`${a.verdict}\` (${a.confidence} confidence)`);
+    lines.push(``);
+    lines.push(`> ${a.reason}`);
+    lines.push(``);
+    if (a.evidence.length > 0) {
+      for (const e of a.evidence) {
+        const m = e.ok === true ? "✓" : e.ok === false ? "✗" : "·";
+        lines.push(`- ${m} **${e.label}** — ${e.value}`);
+      }
+      lines.push(``);
+    }
+    if (a.caveat) {
+      lines.push(`*ⓘ ${a.caveat}*`);
+      lines.push(``);
+    }
+  };
+  renderAxis("Behavioral parity", cert.axes.behavioralParity);
+  renderAxis("API contract drift", cert.axes.apiContractDrift);
+  renderAxis("Test pass rate", cert.axes.testPassRate);
+  renderAxis("Perf regression", cert.axes.perfRegression);
+  renderAxis("AI narrative", cert.axes.aiNarrative);
+
+  // ── Forensic axes ─────────────────────────────────────────────────
   lines.push(`## Forensic Axes`);
   lines.push(``);
-  lines.push(`- size: ${cert.forensicAxes.size}`);
-  lines.push(`- files: ${cert.forensicAxes.files}`);
-  lines.push(`- style: ${cert.forensicAxes.style}`);
-  lines.push(`- time: ${cert.forensicAxes.time}`);
+  const renderForensic = (name: string, a: audit.ForensicAxisResult) => {
+    const icon =
+      a.verdict === "pass" ? "✓"
+      : a.verdict === "warn" ? "!"
+      : a.verdict === "skipped" ? "⊘"
+      : "✗";
+    lines.push(`- ${icon} **${name}** (\`${a.verdict}\`) — ${a.reason}`);
+    for (const e of a.evidence) {
+      lines.push(`  - ${e.label}: ${e.value}`);
+    }
+  };
+  renderForensic("size", cert.forensicAxes.size);
+  renderForensic("files", cert.forensicAxes.files);
+  renderForensic("style", cert.forensicAxes.style);
+  renderForensic("time", cert.forensicAxes.time);
+  if (cert.forensicAxes.size.caveat) {
+    lines.push(``);
+    lines.push(`*ⓘ ${cert.forensicAxes.size.caveat}*`);
+  }
   lines.push(``);
+
+  // ── Per-commit narrative checks (full detail when available) ─────
   if (cert.axes.aiNarrative.checks.length > 0) {
     lines.push(`## Per-Commit Narrative Checks`);
     lines.push(``);

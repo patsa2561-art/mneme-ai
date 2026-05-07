@@ -74,6 +74,7 @@ const VERDICT_ICON: Record<AxisVerdict, string> = {
   pass: "✅",
   warn: "⚠️",
   fail: "❌",
+  skipped: "⊘",
 };
 
 /**
@@ -140,10 +141,10 @@ function countGreen(audit: AuditCertificate): number {
   if (audit.axes.testPassRate.verdict === "pass") n++;
   if (audit.axes.perfRegression.verdict === "pass") n++;
   if (audit.axes.aiNarrative.verdict === "pass") n++;
-  if (audit.forensicAxes.size === "pass") n++;
-  if (audit.forensicAxes.files === "pass") n++;
-  if (audit.forensicAxes.style === "pass") n++;
-  if (audit.forensicAxes.time === "pass") n++;
+  if (audit.forensicAxes.size.verdict === "pass") n++;
+  if (audit.forensicAxes.files.verdict === "pass") n++;
+  if (audit.forensicAxes.style.verdict === "pass") n++;
+  if (audit.forensicAxes.time.verdict === "pass") n++;
   return n;
 }
 

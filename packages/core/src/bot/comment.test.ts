@@ -12,23 +12,64 @@ import {
 import type { AuditCertificate } from "../audit/certify.js";
 
 function makeCert(overrides: Partial<AuditCertificate> = {}): AuditCertificate {
+  const passForensic = (label: string) => ({
+    verdict: "pass" as const,
+    score: 0.1,
+    reason: `${label} within band`,
+    evidence: [{ label: "score", value: "0.10" }],
+  });
   return {
     sessionId: "abc1234",
     capturedAt: "2026-05-07T12:00:00.000Z",
     axes: {
-      behavioralParity: { verdict: "pass", reason: "all sample commands match", details: [] },
-      apiContractDrift: { verdict: "pass", reason: "API surface identical", details: [] },
+      behavioralParity: {
+        verdict: "pass",
+        reason: "all sample commands match",
+        details: [],
+        evidence: [],
+        confidence: "medium",
+      },
+      apiContractDrift: {
+        verdict: "pass",
+        reason: "API surface identical",
+        details: [],
+        evidence: [],
+        confidence: "high",
+      },
       testPassRate: {
         verdict: "pass",
         reason: "no new test failures",
         before: "1645 passed / 0 failed (12 files)",
         after: "1645 passed / 0 failed (12 files)",
+        details: [],
+        evidence: [],
+        confidence: "high",
       },
-      perfRegression: { verdict: "pass", reason: "worst-case +2.1%", deltaPercent: 2.1 },
-      aiNarrative: { verdict: "pass", reason: "trust 1.00", checks: [] },
+      perfRegression: {
+        verdict: "pass",
+        reason: "worst-case +2.1%",
+        deltaPercent: 2.1,
+        details: [],
+        evidence: [],
+        confidence: "medium",
+      },
+      aiNarrative: {
+        verdict: "pass",
+        reason: "trust 1.00",
+        checks: [],
+        details: [],
+        evidence: [],
+        confidence: "high",
+      },
     },
-    forensicAxes: { size: "pass", files: "pass", style: "pass", time: "pass" },
+    forensicAxes: {
+      size: passForensic("size"),
+      files: passForensic("files"),
+      style: passForensic("style"),
+      time: passForensic("time"),
+    },
     overallVerdict: "pass",
+    coverage: { verified: 5, skipped: 0, total: 5, confidence: "high" },
     exitCode: 0,
     ...overrides,
   };
@@ -50,6 +91,9 @@ describe("formatComment — header", () => {
       reason: "3 new failures",
       before: "1645 / 0",
       after: "1642 / 3",
+      details: [],
+      evidence: [],
+      confidence: "high",
     };
     const out = formatComment({ audit: cert });
     expect(out).toContain("**Verdict: ❌ fail**");
@@ -58,7 +102,14 @@ describe("formatComment — header", () => {
 
   it("uses ⚠️ for warn verdict", () => {
     const cert = makeCert({ overallVerdict: "warn" });
-    cert.axes.perfRegression = { verdict: "warn", reason: "12% slower", deltaPercent: 12 };
+    cert.axes.perfRegression = {
+      verdict: "warn",
+      reason: "12% slower",
+      deltaPercent: 12,
+      details: [],
+      evidence: [],
+      confidence: "medium",
+    };
     const out = formatComment({ audit: cert });
     expect(out).toContain("**Verdict: ⚠️ warn**");
   });
@@ -87,7 +138,14 @@ describe("formatComment — 5-axis table", () => {
 
   it("includes the perf delta percentage", () => {
     const cert = makeCert();
-    cert.axes.perfRegression = { verdict: "warn", reason: "ask 14% slower", deltaPercent: 14 };
+    cert.axes.perfRegression = {
+      verdict: "warn",
+      reason: "ask 14% slower",
+      deltaPercent: 14,
+      details: [],
+      evidence: [],
+      confidence: "medium",
+    };
     const out = formatComment({ audit: cert });
     expect(out).toContain("(14%)");
   });
@@ -99,6 +157,9 @@ describe("formatComment — 5-axis table", () => {
       reason: "passing test count dropped",
       before: "100 passed / 0 failed (5 files)",
       after: "98 passed / 0 failed (5 files)",
+      details: [],
+      evidence: [],
+      confidence: "high",
     };
     const out = formatComment({ audit: cert });
     expect(out).toContain("100 passed / 0 failed (5 files) → 98 passed / 0 failed (5 files)");

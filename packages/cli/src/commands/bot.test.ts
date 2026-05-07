@@ -41,14 +41,23 @@ const PASS_CERT = {
   sessionId: "abc1234",
   capturedAt: "2026-05-07T00:00:00.000Z",
   axes: {
-    behavioralParity: { verdict: "pass", reason: "match", details: [] },
-    apiContractDrift: { verdict: "pass", reason: "same", details: [] },
-    testPassRate: { verdict: "pass", reason: "no new failures", before: "1645/0", after: "1645/0" },
-    perfRegression: { verdict: "pass", reason: "+2%", deltaPercent: 2 },
-    aiNarrative: { verdict: "pass", reason: "trust 1.00", checks: [] },
+    behavioralParity: { verdict: "pass", reason: "match", details: [], evidence: [], confidence: "medium" },
+    apiContractDrift: { verdict: "pass", reason: "same", details: [], evidence: [], confidence: "high" },
+    testPassRate: {
+      verdict: "pass", reason: "no new failures", before: "1645/0", after: "1645/0",
+      details: [], evidence: [], confidence: "high",
+    },
+    perfRegression: { verdict: "pass", reason: "+2%", deltaPercent: 2, details: [], evidence: [], confidence: "medium" },
+    aiNarrative: { verdict: "pass", reason: "trust 1.00", checks: [], details: [], evidence: [], confidence: "high" },
   },
-  forensicAxes: { size: "pass", files: "pass", style: "pass", time: "pass" },
+  forensicAxes: {
+    size: { verdict: "pass", score: 0.1, reason: "ok", evidence: [] },
+    files: { verdict: "pass", score: 0.1, reason: "ok", evidence: [] },
+    style: { verdict: "pass", score: 0.1, reason: "ok", evidence: [] },
+    time: { verdict: "pass", score: 0.1, reason: "ok", evidence: [] },
+  },
   overallVerdict: "pass",
+  coverage: { verified: 5, skipped: 0, total: 5, confidence: "high" },
   exitCode: 0,
 };
 
