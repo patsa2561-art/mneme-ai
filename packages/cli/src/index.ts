@@ -20,6 +20,7 @@ import {
 import { whyCommand } from "./commands/why.js";
 import { statusCommand } from "./commands/status.js";
 import { correlateCommand } from "./commands/correlate.js";
+import { dashboardCommand } from "./commands/dashboard.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { wisdomCommand, manifestoCommand } from "./commands/wisdom.js";
 import { entitiesCommand, clonesCommand } from "./commands/clones.js";
@@ -583,6 +584,23 @@ export async function run(argv: string[]): Promise<void> {
           threshold: opts.threshold,
           topN: opts.top,
           json: opts.json,
+        }),
+      );
+    });
+
+  program
+    .command("dashboard")
+    .description("Open the Mneme Web Dashboard for the current repo (local-first; no upload).")
+    .option("--port <n>", "preferred starting port (auto-finds next free)", (v) => Number(v), 3737)
+    .option("--no-open", "do not launch the browser", false)
+    .option("--data <path>", "use an existing nervous-system JSON instead of recomputing")
+    .action(async (opts: { port?: number; open?: boolean; data?: string }) => {
+      process.exit(
+        await dashboardCommand({
+          cwd: process.cwd(),
+          port: opts.port,
+          noOpen: opts.open === false,
+          data: opts.data,
         }),
       );
     });

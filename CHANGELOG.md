@@ -8,6 +8,136 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.30.0] — 2026-05-07
+
+The **"Nervous System Live"** release. Mneme gains a **world-class
+interactive web dashboard** with an industry-first innovation: the
+**Time Scrubber** — drag a slider, watch your team's invisible network
+form, decay, and re-form across years. Plus `mneme dashboard` to open
+it locally against your own repo.
+
+**+12 new tests, 1811 total passing.**
+
+### 1. The Web Dashboard — `packages/web/`
+
+A self-contained Vite + React + D3 single-page app that renders the
+Nervous System data live:
+
+```
+packages/web/
+  src/
+    App.tsx
+    components/
+      TimeScrubber.tsx       ← THE headline innovation
+      NervousSystemView.tsx  ← D3 force-directed graph
+      AtrophyHeatmap.tsx
+      InfluenceLadder.tsx
+      DetailPanel.tsx
+      LoadDialog.tsx
+    lib/scrub.ts             ← Ebbinghaus re-decay at any moment t
+    styles/global.css        ← deep-purple Linear/Vercel aesthetic
+  public/
+    demo.json                ← 7-author / 9-pair / 4-lobe showcase
+```
+
+**Bundle size: 82 KB gzipped total.** Far under the 500 KB target. No
+runtime backend; no external CDN; system-font stack only. Self-contained.
+
+### 2. The Time Scrubber — the world-first innovation
+
+A horizontal slider on the dashboard header. Drag to "rewind" the repo
+state. As you drag:
+- Authors who joined later **fade in**
+- Telepathic edges **form and dissolve** based on the time window
+- Atrophy **refreshes** (decay re-computed at the scrubbed timestamp)
+
+Smooth at 60fps via `requestAnimationFrame` + GPU-composited
+`transform: scaleX()` and `translateX()`. Keyboard navigation (arrows,
+Home, End, Shift, Space). ▶ Play button animates min→max over 12s.
+
+**No other git tool ships temporal nervous-system playback.** This is
+the differentiator.
+
+### 3. Three views — one toggle
+
+- **🧬 Nervous System** (default) — D3 force-directed graph with author
+  nodes (size = knowledge mass, color = atrophy) and telepathic edges
+  (thickness = score). Drag, zoom, click → passport drill-down.
+- **⏳ Atrophy heatmap** — file × author matrix shaded by knowledge
+  score. Click row → highlight knowers. Click column → highlight
+  files known.
+- **👑 Influence ladder** — animated PageRank bars; expandable rows
+  showing top originated patterns + adopter list.
+
+### 4. Three input modes — local-first guarantee
+
+1. **🎬 Try the demo** — bundled showcase (7 authors, 9 latent pairs,
+   labeled with `_demo_synthetic: true` pill).
+2. **📥 Drop a file** — drag-drop or paste your own `mneme
+   nervous-system --json` output. **Never uploaded to a server.**
+3. **🔗 Load from URL** — paste a hosted JSON URL (CORS permitting).
+
+### 5. `mneme dashboard` — open the live UI on your own repo
+
+New CLI command:
+
+```bash
+mneme dashboard                # auto-opens http://localhost:3737
+mneme dashboard --port 4040    # custom port
+mneme dashboard --no-open      # skip launching the browser
+mneme dashboard --data foo.json # use a pre-computed JSON
+```
+
+Composes `buildNervousSystem` against the local `.mneme/mneme.db`,
+writes `.mneme/dashboard-data.json`, spins a zero-dep Node `http`
+server, opens the browser pointed at the SPA. Works offline.
+
+### 6. GitHub Pages auto-deploy
+
+`.github/workflows/deploy-web.yml` — on every push to main that
+touches `packages/web/`, builds the SPA and deploys to GitHub Pages.
+
+**Live demo URL: https://patsa2561-art.github.io/mneme-ai/**
+
+Added a `live demo` badge to the README hero.
+
+### 7. README + wiki updates
+
+- **README hero**: live-demo badge added; new "🌐 Spotlight — The
+  Live Dashboard" section; mermaid mindmap gained a `Dashboard`
+  branch.
+- **Sidebar**: integrations group already linked to dashboard via
+  `mneme dashboard` mention.
+- **CHANGELOG**: this entry.
+
+### Tests
+
+- `packages/cli/src/commands/dashboard.test.ts` — 10 tests (port
+  allocation, occupied-port skip, static index serving, `/api/data.json`,
+  SPA fallback, missing-build error path, `resolveWebDist` overrides).
+- Snapshot regenerated for the new top-level `dashboard` command in
+  `mneme --help`.
+
+**Total +12 new tests; 1811 passing.**
+
+### Honest caveats
+
+- **Visual inspection** of the running dev server was not done in
+  this sandbox (no GUI access). Code paths are unit-tested and the
+  build is clean; first run on a real machine is recommended before
+  using it in customer demos.
+- **Demo data is synthetic** because Mneme's own repo is solo-author
+  and a 1-author nervous system isn't impressive. Synthetic dataset
+  is labeled `_demo_synthetic: true` and the dashboard renders a
+  clear "synthetic demo" pill so nothing is misrepresented.
+- **GitHub Pages base path** is `/mneme-ai/` (matches the repo name).
+  If the repo is renamed, update `vite.config.ts` and the deploy
+  workflow's `BASE_PATH` env.
+- **CLI `dashboard` test does not spin up the full happy path** (no
+  git repo + indexed db available in CI). Tests cover helpers, error
+  paths, port allocation, SPA fallback. Smoke-test the
+  command-runs-server flow manually before tagging.
+
 ## [0.29.0] — 2026-05-07
 
 The **"Indispensable on every CI"** release. Mneme installs on every

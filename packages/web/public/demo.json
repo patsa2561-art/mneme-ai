@@ -1,0 +1,311 @@
+{
+  "meta": {
+    "repoName": "open-banking",
+    "generatedAt": "2026-05-07T09:00:00.000Z",
+    "totalCommits": 4287,
+    "totalAuthors": 7,
+    "halfLifeDays": 180,
+    "rankedAuthorCount": 7
+  },
+  "_demo_synthetic": true,
+  "hero": {
+    "headline": "3 cultural alphas · 9 invisible teams · 4 critical files at knowledge risk",
+    "metrics": [
+      {
+        "label": "Commits (12 weeks)",
+        "value": "612",
+        "subtitle": "4287 total in repo",
+        "sparkline": [38, 41, 52, 47, 50, 58, 49, 53, 61, 55, 49, 59]
+      },
+      {
+        "label": "Active authors",
+        "value": "7",
+        "subtitle": "3 originate reused patterns",
+        "sparkline": [4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 7, 7]
+      },
+      {
+        "label": "Files with live expert",
+        "value": "412 / 638",
+        "subtitle": "9 deep ghost files",
+        "sparkline": [388, 392, 401, 403, 405, 407, 409, 411, 412, 412, 412, 412]
+      },
+      {
+        "label": "Latent pairs",
+        "value": "9",
+        "subtitle": "21 evaluated",
+        "sparkline": [3, 4, 5, 6, 7, 7, 8, 8, 9, 9, 9, 9]
+      }
+    ]
+  },
+  "alphas": [
+    {
+      "rank": 1,
+      "name": "Alice Chen",
+      "email": "alice@open-banking.dev",
+      "pageRank": 1.0,
+      "originatedShapesAdopted": 47,
+      "adoptionsByOthers": 121,
+      "uniqueAdopters": 6,
+      "topShape": { "kind": "function", "name": "Result<T,E>", "arity": 2, "adoptions": 38 }
+    },
+    {
+      "rank": 2,
+      "name": "Bob Kowalski",
+      "email": "bob@open-banking.dev",
+      "pageRank": 0.74,
+      "originatedShapesAdopted": 22,
+      "adoptionsByOthers": 64,
+      "uniqueAdopters": 5,
+      "topShape": { "kind": "function", "name": "retryWithBackoff", "arity": 3, "adoptions": 19 }
+    },
+    {
+      "rank": 3,
+      "name": "Carol Tan",
+      "email": "carol@open-banking.dev",
+      "pageRank": 0.41,
+      "originatedShapesAdopted": 11,
+      "adoptionsByOthers": 27,
+      "uniqueAdopters": 4,
+      "topShape": { "kind": "class", "name": "EventEnvelope", "arity": 0, "adoptions": 12 }
+    },
+    {
+      "rank": 4,
+      "name": "Dave Patel",
+      "email": "dave@open-banking.dev",
+      "pageRank": 0.21,
+      "originatedShapesAdopted": 4,
+      "adoptionsByOthers": 9,
+      "uniqueAdopters": 3,
+      "topShape": { "kind": "function", "name": "withTrace", "arity": 1, "adoptions": 5 }
+    },
+    {
+      "rank": 5,
+      "name": "Eve Rosenblum",
+      "email": "eve@open-banking.dev",
+      "pageRank": 0.13,
+      "originatedShapesAdopted": 2,
+      "adoptionsByOthers": 4,
+      "uniqueAdopters": 2,
+      "topShape": null
+    }
+  ],
+  "telepathy": {
+    "pairsEvaluated": 21,
+    "distinctAuthorsInGrid": 7,
+    "pairs": [
+      {
+        "authorA": { "name": "Alice Chen", "email": "alice@open-banking.dev" },
+        "authorB": { "name": "Bob Kowalski", "email": "bob@open-banking.dev" },
+        "events": 47,
+        "opportunities": 138,
+        "score": 3.4,
+        "topTopic": { "topic": "src/payments/", "count": 23 },
+        "lastSeenAt": "2026-05-04T14:11:08.000Z",
+        "recentEvents": [
+          { "date": "2026-05-04", "topic": "src/payments/checkout.ts" },
+          { "date": "2026-04-29", "topic": "src/payments/refund.ts" },
+          { "date": "2026-04-22", "topic": "src/billing/invoice.ts" }
+        ]
+      },
+      {
+        "authorA": { "name": "Carol Tan", "email": "carol@open-banking.dev" },
+        "authorB": { "name": "Frank Müller", "email": "frank@open-banking.dev" },
+        "events": 32,
+        "opportunities": 98,
+        "score": 2.7,
+        "topTopic": { "topic": "src/auth/", "count": 18 },
+        "lastSeenAt": "2026-05-03T09:43:21.000Z"
+      },
+      {
+        "authorA": { "name": "Bob Kowalski", "email": "bob@open-banking.dev" },
+        "authorB": { "name": "Grace Park", "email": "grace@open-banking.dev" },
+        "events": 24,
+        "opportunities": 72,
+        "score": 2.2,
+        "topTopic": { "topic": "src/ingest/", "count": 12 },
+        "lastSeenAt": "2026-04-28T17:22:15.000Z"
+      },
+      {
+        "authorA": { "name": "Alice Chen", "email": "alice@open-banking.dev" },
+        "authorB": { "name": "Carol Tan", "email": "carol@open-banking.dev" },
+        "events": 19,
+        "opportunities": 84,
+        "score": 1.9,
+        "topTopic": { "topic": "src/auth/", "count": 9 },
+        "lastSeenAt": "2026-04-27T11:08:42.000Z"
+      },
+      {
+        "authorA": { "name": "Dave Patel", "email": "dave@open-banking.dev" },
+        "authorB": { "name": "Eve Rosenblum", "email": "eve@open-banking.dev" },
+        "events": 17,
+        "opportunities": 51,
+        "score": 1.8,
+        "topTopic": { "topic": "src/observability/", "count": 11 },
+        "lastSeenAt": "2026-04-25T08:55:03.000Z"
+      },
+      {
+        "authorA": { "name": "Frank Müller", "email": "frank@open-banking.dev" },
+        "authorB": { "name": "Grace Park", "email": "grace@open-banking.dev" },
+        "events": 14,
+        "opportunities": 49,
+        "score": 1.5,
+        "topTopic": { "topic": "infra/k8s/", "count": 8 },
+        "lastSeenAt": "2026-04-21T13:14:50.000Z"
+      },
+      {
+        "authorA": { "name": "Alice Chen", "email": "alice@open-banking.dev" },
+        "authorB": { "name": "Dave Patel", "email": "dave@open-banking.dev" },
+        "events": 11,
+        "opportunities": 47,
+        "score": 1.2,
+        "topTopic": { "topic": "src/payments/", "count": 6 },
+        "lastSeenAt": "2026-04-19T15:39:11.000Z"
+      },
+      {
+        "authorA": { "name": "Carol Tan", "email": "carol@open-banking.dev" },
+        "authorB": { "name": "Grace Park", "email": "grace@open-banking.dev" },
+        "events": 8,
+        "opportunities": 38,
+        "score": 0.9,
+        "topTopic": { "topic": "src/auth/", "count": 5 },
+        "lastSeenAt": "2026-04-15T10:21:33.000Z"
+      },
+      {
+        "authorA": { "name": "Bob Kowalski", "email": "bob@open-banking.dev" },
+        "authorB": { "name": "Eve Rosenblum", "email": "eve@open-banking.dev" },
+        "events": 5,
+        "opportunities": 26,
+        "score": 0.6,
+        "topTopic": { "topic": "src/observability/", "count": 4 },
+        "lastSeenAt": "2026-04-09T18:02:47.000Z"
+      }
+    ]
+  },
+  "atrophy": {
+    "halfLifeDays": 180,
+    "fileCount": 638,
+    "filesWithLiveExpert": 412,
+    "ghostedDeepFiles": 9,
+    "criticalFiles": [
+      { "filePath": "src/payments/checkout.ts", "totalTouches": 89, "tier": "warn", "freshestKnowledge": 0.82, "liveExpertCount": 2, "topKnower": { "name": "Alice Chen", "email": "alice@open-banking.dev", "knowledge": 0.82 } },
+      { "filePath": "src/auth/jwt.ts", "totalTouches": 64, "tier": "at-risk", "freshestKnowledge": 0.41, "liveExpertCount": 1, "topKnower": { "name": "Carol Tan", "email": "carol@open-banking.dev", "knowledge": 0.41 } },
+      { "filePath": "src/billing/invoice.ts", "totalTouches": 58, "tier": "at-risk", "freshestKnowledge": 0.38, "liveExpertCount": 1, "topKnower": { "name": "Alice Chen", "email": "alice@open-banking.dev", "knowledge": 0.38 } },
+      { "filePath": "src/ingest/kafka.ts", "totalTouches": 52, "tier": "warn", "freshestKnowledge": 0.71, "liveExpertCount": 2, "topKnower": { "name": "Bob Kowalski", "email": "bob@open-banking.dev", "knowledge": 0.71 } },
+      { "filePath": "src/observability/tracer.ts", "totalTouches": 47, "tier": "safe", "freshestKnowledge": 0.91, "liveExpertCount": 3, "topKnower": { "name": "Dave Patel", "email": "dave@open-banking.dev", "knowledge": 0.91 } },
+      { "filePath": "src/payments/refund.ts", "totalTouches": 41, "tier": "warn", "freshestKnowledge": 0.69, "liveExpertCount": 2, "topKnower": { "name": "Bob Kowalski", "email": "bob@open-banking.dev", "knowledge": 0.69 } },
+      { "filePath": "src/auth/oauth.ts", "totalTouches": 38, "tier": "at-risk", "freshestKnowledge": 0.34, "liveExpertCount": 1, "topKnower": { "name": "Frank Müller", "email": "frank@open-banking.dev", "knowledge": 0.34 } },
+      { "filePath": "infra/k8s/payments.yaml", "totalTouches": 34, "tier": "safe", "freshestKnowledge": 0.86, "liveExpertCount": 2, "topKnower": { "name": "Grace Park", "email": "grace@open-banking.dev", "knowledge": 0.86 } },
+      { "filePath": "src/billing/tax.ts", "totalTouches": 31, "tier": "warn", "freshestKnowledge": 0.62, "liveExpertCount": 1, "topKnower": { "name": "Alice Chen", "email": "alice@open-banking.dev", "knowledge": 0.62 } },
+      { "filePath": "src/ingest/pubsub.ts", "totalTouches": 28, "tier": "safe", "freshestKnowledge": 0.78, "liveExpertCount": 2, "topKnower": { "name": "Bob Kowalski", "email": "bob@open-banking.dev", "knowledge": 0.78 } }
+    ]
+  },
+  "passports": [
+    {
+      "meta": { "repoName": "open-banking", "generatedAt": "2026-05-07T09:00:00.000Z", "totalCommits": 4287, "repoAuthorCount": 7, "notes": [] },
+      "identity": { "name": "Alice Chen", "email": "alice@open-banking.dev", "dnaHash": "a47c019", "commitCount": 1247, "fromDate": "2024-09-12", "toDate": "2026-05-04", "activeDays": 412, "repoCommitShare": 0.291 },
+      "expertise": {
+        "knowledgeMass": 142.6,
+        "filesKnown": 187,
+        "filesStillFresh": 89,
+        "lastActiveAt": "2026-05-04T14:11:08.000Z",
+        "topFiles": [
+          { "filePath": "src/payments/checkout.ts", "knowledge": 0.82, "lastTouchDaysAgo": 3, "touchCount": 41, "band": "fresh", "refreshHint": "still strong" },
+          { "filePath": "src/payments/refund.ts", "knowledge": 0.78, "lastTouchDaysAgo": 8, "touchCount": 27, "band": "fresh", "refreshHint": "still strong" },
+          { "filePath": "src/billing/invoice.ts", "knowledge": 0.38, "lastTouchDaysAgo": 198, "touchCount": 22, "band": "fading", "refreshHint": "needs review before next change" },
+          { "filePath": "src/billing/tax.ts", "knowledge": 0.62, "lastTouchDaysAgo": 89, "touchCount": 18, "band": "warm", "refreshHint": "still recent enough" },
+          { "filePath": "src/auth/middleware.ts", "knowledge": 0.71, "lastTouchDaysAgo": 41, "touchCount": 14, "band": "warm", "refreshHint": "still recent enough" }
+        ]
+      },
+      "influenceSlot": { "rank": 1, "pageRank": 1.0, "rankedOf": 7, "originatedShapesAdopted": 47, "adoptionsByOthers": 121, "uniqueAdopters": 6 },
+      "telepathySlot": { "pairsEvaluated": 6, "pairs": [] },
+      "voice": [
+        { "phrase": "refactor", "weight": 8.2, "count": 47 },
+        { "phrase": "isolate", "weight": 7.4, "count": 31 },
+        { "phrase": "boundary", "weight": 6.9, "count": 24 },
+        { "phrase": "contract", "weight": 6.1, "count": 22 },
+        { "phrase": "regress", "weight": 5.7, "count": 18 }
+      ]
+    },
+    {
+      "meta": { "repoName": "open-banking", "generatedAt": "2026-05-07T09:00:00.000Z", "totalCommits": 4287, "repoAuthorCount": 7, "notes": [] },
+      "identity": { "name": "Bob Kowalski", "email": "bob@open-banking.dev", "dnaHash": "b91e2d4", "commitCount": 892, "fromDate": "2024-11-04", "toDate": "2026-05-03", "activeDays": 318, "repoCommitShare": 0.208 },
+      "expertise": {
+        "knowledgeMass": 98.4,
+        "filesKnown": 124,
+        "filesStillFresh": 71,
+        "lastActiveAt": "2026-05-03T16:42:52.000Z",
+        "topFiles": [
+          { "filePath": "src/ingest/kafka.ts", "knowledge": 0.71, "lastTouchDaysAgo": 14, "touchCount": 38, "band": "fresh", "refreshHint": "still strong" },
+          { "filePath": "src/ingest/pubsub.ts", "knowledge": 0.78, "lastTouchDaysAgo": 9, "touchCount": 31, "band": "fresh", "refreshHint": "still strong" },
+          { "filePath": "src/payments/refund.ts", "knowledge": 0.69, "lastTouchDaysAgo": 22, "touchCount": 18, "band": "warm", "refreshHint": "still recent enough" }
+        ]
+      },
+      "influenceSlot": { "rank": 2, "pageRank": 0.74, "rankedOf": 7, "originatedShapesAdopted": 22, "adoptionsByOthers": 64, "uniqueAdopters": 5 },
+      "telepathySlot": { "pairsEvaluated": 6, "pairs": [] },
+      "voice": [
+        { "phrase": "stream", "weight": 9.1, "count": 52 },
+        { "phrase": "backpressure", "weight": 7.8, "count": 28 },
+        { "phrase": "queue", "weight": 6.4, "count": 24 }
+      ]
+    },
+    {
+      "meta": { "repoName": "open-banking", "generatedAt": "2026-05-07T09:00:00.000Z", "totalCommits": 4287, "repoAuthorCount": 7, "notes": [] },
+      "identity": { "name": "Carol Tan", "email": "carol@open-banking.dev", "dnaHash": "c3a7b18", "commitCount": 614, "fromDate": "2025-02-18", "toDate": "2026-05-03", "activeDays": 241, "repoCommitShare": 0.143 },
+      "expertise": {
+        "knowledgeMass": 71.2,
+        "filesKnown": 92,
+        "filesStillFresh": 54,
+        "lastActiveAt": "2026-05-03T09:43:21.000Z",
+        "topFiles": [
+          { "filePath": "src/auth/jwt.ts", "knowledge": 0.41, "lastTouchDaysAgo": 168, "touchCount": 22, "band": "fading", "refreshHint": "needs review before next change" },
+          { "filePath": "src/auth/middleware.ts", "knowledge": 0.81, "lastTouchDaysAgo": 7, "touchCount": 18, "band": "fresh", "refreshHint": "still strong" }
+        ]
+      },
+      "influenceSlot": { "rank": 3, "pageRank": 0.41, "rankedOf": 7, "originatedShapesAdopted": 11, "adoptionsByOthers": 27, "uniqueAdopters": 4 },
+      "telepathySlot": { "pairsEvaluated": 6, "pairs": [] },
+      "voice": []
+    },
+    {
+      "meta": { "repoName": "open-banking", "generatedAt": "2026-05-07T09:00:00.000Z", "totalCommits": 4287, "repoAuthorCount": 7, "notes": [] },
+      "identity": { "name": "Dave Patel", "email": "dave@open-banking.dev", "dnaHash": "d8f1c92", "commitCount": 487, "fromDate": "2025-04-22", "toDate": "2026-05-01", "activeDays": 198, "repoCommitShare": 0.114 },
+      "expertise": {
+        "knowledgeMass": 52.8,
+        "filesKnown": 68,
+        "filesStillFresh": 41,
+        "lastActiveAt": "2026-05-01T08:14:33.000Z",
+        "topFiles": [
+          { "filePath": "src/observability/tracer.ts", "knowledge": 0.91, "lastTouchDaysAgo": 6, "touchCount": 24, "band": "fresh", "refreshHint": "still strong" }
+        ]
+      },
+      "influenceSlot": { "rank": 4, "pageRank": 0.21, "rankedOf": 7, "originatedShapesAdopted": 4, "adoptionsByOthers": 9, "uniqueAdopters": 3 },
+      "telepathySlot": { "pairsEvaluated": 6, "pairs": [] },
+      "voice": []
+    },
+    {
+      "meta": { "repoName": "open-banking", "generatedAt": "2026-05-07T09:00:00.000Z", "totalCommits": 4287, "repoAuthorCount": 7, "notes": [] },
+      "identity": { "name": "Eve Rosenblum", "email": "eve@open-banking.dev", "dnaHash": "e21a6f7", "commitCount": 312, "fromDate": "2025-07-08", "toDate": "2026-04-29", "activeDays": 142, "repoCommitShare": 0.073 },
+      "expertise": { "knowledgeMass": 31.4, "filesKnown": 41, "filesStillFresh": 26, "lastActiveAt": "2026-04-29T19:02:11.000Z", "topFiles": [] },
+      "influenceSlot": { "rank": 5, "pageRank": 0.13, "rankedOf": 7, "originatedShapesAdopted": 2, "adoptionsByOthers": 4, "uniqueAdopters": 2 },
+      "telepathySlot": { "pairsEvaluated": 6, "pairs": [] },
+      "voice": []
+    }
+  ],
+  "lobes": [
+    { "lobe": "src/payments", "fileCount": 142, "totalTouches": 412, "topOwner": { "name": "Alice Chen", "email": "alice@open-banking.dev", "touches": 168 }, "freshestFile": { "filePath": "src/payments/checkout.ts", "knowledge": 0.82 }, "ghostFile": null, "concentrationPct": 41 },
+    { "lobe": "src/auth", "fileCount": 87, "totalTouches": 251, "topOwner": { "name": "Carol Tan", "email": "carol@open-banking.dev", "touches": 102 }, "freshestFile": { "filePath": "src/auth/middleware.ts", "knowledge": 0.81 }, "ghostFile": { "filePath": "src/auth/legacy/sso.ts", "daysIdle": 421, "touches": 12 }, "concentrationPct": 41 },
+    { "lobe": "src/ingest", "fileCount": 64, "totalTouches": 198, "topOwner": { "name": "Bob Kowalski", "email": "bob@open-banking.dev", "touches": 119 }, "freshestFile": { "filePath": "src/ingest/kafka.ts", "knowledge": 0.71 }, "ghostFile": null, "concentrationPct": 60 },
+    { "lobe": "src/observability", "fileCount": 38, "totalTouches": 117, "topOwner": { "name": "Dave Patel", "email": "dave@open-banking.dev", "touches": 71 }, "freshestFile": { "filePath": "src/observability/tracer.ts", "knowledge": 0.91 }, "ghostFile": null, "concentrationPct": 61 }
+  ],
+  "promises": { "open": 14, "kept": 89, "stale": 7, "keepRate": 0.93 },
+  "surprising": [
+    "Alice's Result<T,E> pattern propagated to 47 files via 6 different adopters — she is the cultural alpha of this codebase.",
+    "Carol + Frank: 32 telepathic events across src/auth/ but they have never co-authored a commit.",
+    "src/auth/legacy/sso.ts — last edited 421 days ago, 12 historical touches, no live expert: a ghost-code candidate."
+  ],
+  "limits": [
+    "Telepathy treats commits within a 48-hour rolling window as potentially-coupled. Wider windows trade specificity for sensitivity.",
+    "Influence is a regex-based shape extractor across TypeScript, JavaScript, Python, and Go. Other languages are not analyzed.",
+    "Knowledge atrophy uses a single half-life (default 180 days). Active codebases may want shorter; mature codebases may want longer.",
+    "All findings are heuristic starting points for a conversation, not verdicts."
+  ]
+}

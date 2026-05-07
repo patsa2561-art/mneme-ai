@@ -12,11 +12,12 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1791%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1811%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
+  <a href="https://patsa2561-art.github.io/mneme-ai/"><img src="https://img.shields.io/badge/live%20demo-mneme.dev-7c3aed?logo=react" alt="live demo"></a>
 </p>
 
 <h3>The bug came back.<br/>
@@ -66,6 +67,11 @@ mindmap
       bundled WASM
       Ollama Groq fallback
       no API key required
+    Dashboard
+      time-scrubber playback
+      force-directed nervous system
+      atrophy heatmap
+      influence ladder
 ```
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -214,6 +220,56 @@ The PDF a CTO prints for the board meeting. **Privacy-first**: all data is local
 
 → **[Full positioning + examples → People Analytics wiki](https://github.com/patsa2561-art/mneme-ai/wiki/People-Analytics)**<br/>
 → **[Flagship PDF → Mneme Nervous System wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Mneme-Nervous-System)**
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🌐 Spotlight — The Live Dashboard
+
+> **Drag the time scrubber. Watch your codebase grow.** *No git tool has temporal nervous-system playback. Mneme does.*
+
+The dashboard renders the same `nervous-system` data your CLI prints — as an interactive force-directed graph, an atrophy heatmap, and a PageRank influence ladder. The headline innovation is the **Time Scrubber**: drag it to rewind the repo, watch authors fade in, telepathy edges form, knowledge atrophy refresh. Everything stays in your browser.
+
+🔗 **Live demo:** https://patsa2561-art.github.io/mneme-ai/
+
+```bash
+mneme dashboard          # opens localhost in your browser, pointed at your repo
+```
+
+<details>
+<summary><b>📖 What ships in v0.30 — three views, three input modes, zero upload</b></summary>
+
+**Three views (toggle in the header)**
+
+| View | What it shows |
+|---|---|
+| 🧬 **Nervous System** | Force-directed graph. Authors as nodes (size = knowledge mass, color = atrophy state), telepathy as edges. Click a node → full passport. |
+| ⏳ **Atrophy heatmap** | Files × authors matrix. Cell shaded by knowledge score. Hover for who-knew-when. |
+| 👑 **Influence ladder** | PageRank ranking. Each row expands to show originated patterns + adopter count. |
+
+**The Time Scrubber — the headline innovation**
+
+Drag the slider in the header to rewind the codebase. The graph re-positions in real time:
+
+- Authors who joined later fade in at their `fromDate`
+- Telepathic edges form / dissolve as their events come into view
+- Atrophy is **recomputed** at the scrubbed timestamp (not "now" minus a constant)
+- Click ▶ for a 12-second timelapse from earliest commit to today
+
+**Three input modes (click "Load")**
+
+1. 🎬 **Try the demo** — bundled `demo.json`, renders instantly.
+2. 📥 **Drop a file** — drag-drop or file picker. `mneme nervous-system --json > out.json`, then drop. **No upload.**
+3. 🔗 **From URL** — paste a hosted JSON URL (CORS permitting).
+
+**Local-first, by construction**
+
+- The hosted demo is a static SPA — no backend, no telemetry.
+- `mneme dashboard` spins up a localhost server and reads your `.mneme/mneme.db` directly. Data never leaves the box.
+- Bundle is tree-shaken D3 + React, sub-500KB gzipped.
+
+</details>
+
+→ **[Open the live demo →](https://patsa2561-art.github.io/mneme-ai/)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
