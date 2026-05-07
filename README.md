@@ -17,6 +17,7 @@
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
+[![SafeSkill 20/100](https://img.shields.io/badge/SafeSkill-20%2F100_Blocked-red)](https://safeskill.dev/scan/patsa2561-art-mneme-ai)
 </p>
 
 <h3>The bug came back.<br/>
