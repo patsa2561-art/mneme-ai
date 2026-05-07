@@ -8,6 +8,70 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.32.0] — 2026-05-07
+
+The **"Docker Edition"**. Mneme now ships as a multi-arch Docker
+image on GitHub Container Registry. Targets the cases npm cannot
+serve: CI runners without a Node toolchain, air-gapped enterprise
+environments, and one-line demo runs.
+
+No code changes — pure distribution layer.
+
+### What's new
+
+- **`Dockerfile`** at the repo root. Multi-stage build on
+  `node:22-alpine`. Final image ~90 MB:
+  - `apk add git ca-certificates` (Mneme reads `.git/`; HTTPS roots
+    enable optional free-LLM providers)
+  - `npm install --omit=dev mneme-ai` from the npm registry
+  - `mneme` symlinked to `/usr/local/bin`, `WORKDIR /repo`,
+    `ENTRYPOINT ["mneme"]`, `CMD ["--help"]`
+- **`.dockerignore`** allowlists only `Dockerfile` itself — keeps the
+  build context under 10 KB.
+- **`.github/workflows/docker-publish.yml`** — multi-arch
+  (`linux/amd64` + `linux/arm64`) build via `docker/buildx-action`,
+  push to `ghcr.io/patsa2561-art/mneme-ai`. Runs on every release tag
+  and on every push to `main` (as `:edge`).
+- Tag scheme: `latest` (newest stable) · `0.32.0` / `0.32` / `0`
+  (pinned) · `edge` (main HEAD).
+- Tag-triggered builds wait ~120 s after `release.yml` so npm has
+  time to finish publishing before the Dockerfile's `npm install`
+  step runs.
+
+### README + wiki updates
+
+- Hero gains a `ghcr.io` badge linking to the Packages page.
+- Install section gains a fourth option: **🐳 Node-free CI /
+  air-gapped install** with the `docker pull` command.
+- Sidebar gains `Docker` under the **🔌 Integrations** group.
+- New **`docs/wiki/Docker.md`** — full positioning, pull / run
+  examples, CI snippets for GitHub Actions / GitLab / Bitbucket,
+  image layout breakdown, troubleshooting, privacy posture.
+
+### Why this matters for marketing
+
+Most npm-distributed CLIs ship npm-only — and so they're invisible
+to the (large, growing) population of teams running pure-Docker CI
+pipelines. With this release Mneme is one `docker pull` away on every
+major CI platform. Plus: the Packages section on the GitHub repo
+page is now populated, which signals professional polish to anyone
+auditing the project.
+
+### Honest caveats
+
+- **First publish lag.** The very first time the Docker workflow
+  runs against a release tag, the `:latest` symbol may take a couple
+  of minutes after the `release.yml` npm publish settles. The 120 s
+  sleep in the workflow buffers most cases; rare delayed npm propagation
+  may still cause a re-run.
+- **Image size could be smaller.** Future loop: switch to `node:22-alpine-slim`
+  base + `npm install mneme-ai` with explicit `--ignore-scripts` to
+  skip `better-sqlite3`'s post-install rebuild. Current 90 MB is
+  fine for CI; not optimal for embedded-device deploys.
+- **No SBOM yet.** The image LABELS include OCI provenance metadata
+  but a full SPDX SBOM attached to the image (via `cosign attest`)
+  is a follow-up loop.
+
 ## [0.31.1] — 2026-05-07
 
 Cleanup of the v0.31.0 ship:

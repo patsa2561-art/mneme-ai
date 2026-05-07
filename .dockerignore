@@ -1,0 +1,10 @@
+# Mneme builds the runtime image from `mneme-ai` on npm — we don't need
+# any of the source from this monorepo in the build context. Excluding
+# everything except what `Dockerfile` explicitly relies on keeps the
+# context tiny (<10 KB) and speeds up CI builds significantly.
+
+*
+
+# Allowlist — only what the Dockerfile reads from the build context.
+!Dockerfile
+!.dockerignore

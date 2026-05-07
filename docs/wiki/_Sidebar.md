@@ -24,6 +24,7 @@
 
 ### 🔌 Integrations
 - [[Integrations]] · *GitHub · GitLab · Bitbucket · CircleCI · Jenkins*
+- [[Docker]] · *🐳 ghcr.io image — no Node toolchain needed*
 - [[Public-API]] · *@mneme-ai/core/public — the stable surface*
 
 ### 📝 Editors

@@ -19,6 +19,7 @@
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
   <a href="https://patsa2561-art.github.io/mneme-ai/"><img src="https://img.shields.io/badge/live%20demo-mneme.dev-7c3aed?logo=react" alt="live demo"></a>
   <img src="https://img.shields.io/badge/vscode--marketplace-pre--publish-7c3aed?logo=visualstudiocode" alt="vscode-marketplace">
+  <a href="https://github.com/patsa2561-art/mneme-ai/pkgs/container/mneme-ai"><img src="https://img.shields.io/badge/ghcr.io-mneme--ai-2496ed?logo=docker&logoColor=white" alt="docker"></a>
 </p>
 
 <h3>The bug came back.<br/>
@@ -513,13 +514,16 @@ After researching the landscape, every command in this list occupies whitespace 
 ## 🚀 Install
 
 <details>
-<summary><b>Pick one of three ways</b></summary>
+<summary><b>Pick one of four ways</b></summary>
 
 | Pick this if you… | Command |
 |---|---|
 | 🔬 want to **try without installing** anything | `npx -y mneme-ai init` |
 | 💼 plan to **use it daily** *(recommended)* | `npm install -g mneme-ai` |
+| 🐳 want a **Node-free CI / air-gapped install** | `docker pull ghcr.io/patsa2561-art/mneme-ai:latest` |
 | 🛠 want to **contribute or run latest code** | `git clone …/mneme-ai && cd mneme-ai && npm install && npm run build` |
+
+The Docker path is a multi-arch ~90 MB image — see **[Docker wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Docker)** for CI snippets across GitHub Actions / GitLab / Bitbucket.
 
 After install, the same 60-second flow on any git repo:
 
