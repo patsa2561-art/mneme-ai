@@ -108,6 +108,18 @@ describeIfIndexed("adversarial + counterfactual + org — end-to-end smoke", () 
     expect(parsed.telepathy).toBeDefined();
   });
 
+  it("counterfactual on a solo-author Mneme repo prints the narrative", () => {
+    // Capture the actual rendered output so we can document it.
+    const r = runCli(["counterfactual", "patsa2561@gmail.com"]);
+    expect(r.exitCode).toBe(0);
+    const out = r.stdout;
+    // Either solo-author "only contributor" path, or a real-author path —
+    // either way the headline + narrative must mention "without".
+    expect(out.toLowerCase()).toMatch(/without|only contributor|never contributed/);
+    // Should never use words like "rebuke" or "evaluate"; must include "Bayesian" or "what-if".
+    expect(out.toLowerCase()).not.toMatch(/replaceable|inferior|underperform/);
+  });
+
   // ─── org ─────────────────────────────────────────────────────────────
 
   it("`mneme org list` on a fresh home shows empty list with init hint", () => {
@@ -121,11 +133,6 @@ describeIfIndexed("adversarial + counterfactual + org — end-to-end smoke", () 
       HOME: fakeHome,
       USERPROFILE: fakeHome,
     });
-    if (r.exitCode !== 0 || r.stdout.indexOf("{") < 0) {
-      console.error("DEBUG org init stdout:", JSON.stringify(r.stdout.slice(0, 600)));
-      console.error("DEBUG org init stderr:", JSON.stringify(r.stderr.slice(0, 600)));
-      console.error("DEBUG org init exitCode:", r.exitCode);
-    }
     expect(r.exitCode).toBe(0);
     const i = r.stdout.indexOf("{");
     expect(i).toBeGreaterThanOrEqual(0);

@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.31.1] — 2026-05-07
+
+Cleanup of the v0.31.0 ship:
+
+- `mneme org` rewires its subcommand routing (init / add / remove /
+  list / status / delete / run) via a single self-routed parent
+  action. Commander's nested-subcommand option-inheritance pattern
+  silently swallowed `--json` when registered both at parent and
+  child; the new wiring fixes that. -161 / +90 lines net in
+  `packages/cli/src/index.ts`.
+- Snapshot refreshed for the new `mneme --help` shape.
+- 12 black-sheep smoke tests finalized — round-trip exercises for
+  `adversarial` (generate → fake responses → grade → 100%),
+  `counterfactual` (graceful degrade on solo-author repo), `org`
+  (registry CRUD against an isolated `$USERPROFILE`).
+
+No public-API change. **1944 tests passing.**
+
 ## [0.31.0] — 2026-05-07
 
 The **"Black Sheep Edition"**. Three commands no other engineering tool

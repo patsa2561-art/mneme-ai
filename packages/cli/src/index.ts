@@ -603,101 +603,33 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   // ─── org — cross-repo nervous system ───────────────────────────────
-  // Two top-level entry points:
-  //   `mneme org` (no args)         → run cross-repo analysis on first org
-  //   `mneme org <name>`             → run cross-repo analysis on <name>
-  //   `mneme org-<sub> ...`          → handled below as proper subcommands
-  // Commander routes a bare `mneme org` without subcommands to the default action.
-  const orgRoot = program
-    .command("org [name]")
-    .description("Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Default action runs cross-repo analysis on the first registered org (or pass a name).")
+  // Single command with manual subcommand routing — sidesteps commander's
+  // parent/child option-inheritance quirks. Forms:
+  //
+  //   mneme org                              → run on first org
+  //   mneme org <orgname>                    → run on <orgname>
+  //   mneme org init <name>                  → create registry
+  //   mneme org add <name> <path>            → register a repo
+  //   mneme org remove <name> <path>         → unregister
+  //   mneme org list                         → list every org
+  //   mneme org status [name]                → indexed-or-missing report
+  //   mneme org delete <name>                → delete a registry file
+  program
+    .command("org [args...]")
+    .description(
+      "Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Subcommands: init <name> | add <name> <path> | remove <name> <path> | list | status [name] | delete <name>. Default (no subcommand) runs cross-repo analysis on the first registered org.",
+    )
     .option("--json", "machine-readable output", false)
-    .action(async (name: string | undefined, opts: { json?: boolean }) => {
-      const sub: OrgSubcommand = { kind: "run", name };
-      process.exit(await orgCommand({ cwd: process.cwd(), sub, json: opts.json }));
-    });
-
-  orgRoot
-    .command("init <name>")
-    .description("Create a new org registry at ~/.mneme/orgs/<name>.json")
-    .option("--json", "machine-readable output", false)
-    .action(async (name: string, opts: { json?: boolean }) => {
+    .action(async (args: string[], opts: { json?: boolean }) => {
+      const sub = parseOrgSub(args);
+      if (!sub) {
+        ui.error(
+          "Unknown `org` invocation. Run `mneme org list` or `mneme org init <name>` to get started.",
+        );
+        process.exit(1);
+      }
       process.exit(
-        await orgCommand({
-          cwd: process.cwd(),
-          sub: { kind: "init", name },
-          json: opts.json,
-        }),
-      );
-    });
-
-  orgRoot
-    .command("add <name> <path>")
-    .description("Register a repo path under the given org")
-    .option("--json", "machine-readable output", false)
-    .action(async (name: string, path: string, opts: { json?: boolean }) => {
-      process.exit(
-        await orgCommand({
-          cwd: process.cwd(),
-          sub: { kind: "add", name, path },
-          json: opts.json,
-        }),
-      );
-    });
-
-  orgRoot
-    .command("remove <name> <path>")
-    .description("Unregister a repo path from the given org")
-    .option("--json", "machine-readable output", false)
-    .action(async (name: string, path: string, opts: { json?: boolean }) => {
-      process.exit(
-        await orgCommand({
-          cwd: process.cwd(),
-          sub: { kind: "remove", name, path },
-          json: opts.json,
-        }),
-      );
-    });
-
-  orgRoot
-    .command("list")
-    .description("List every registered org and its repos")
-    .option("--json", "machine-readable output", false)
-    .action(async (opts: { json?: boolean }) => {
-      process.exit(
-        await orgCommand({
-          cwd: process.cwd(),
-          sub: { kind: "list" },
-          json: opts.json,
-        }),
-      );
-    });
-
-  orgRoot
-    .command("status [name]")
-    .description("Show whether each repo in the org has been indexed")
-    .option("--json", "machine-readable output", false)
-    .action(async (name: string | undefined, opts: { json?: boolean }) => {
-      process.exit(
-        await orgCommand({
-          cwd: process.cwd(),
-          sub: { kind: "status", name },
-          json: opts.json,
-        }),
-      );
-    });
-
-  orgRoot
-    .command("delete <name>")
-    .description("Delete an org registry file")
-    .option("--json", "machine-readable output", false)
-    .action(async (name: string, opts: { json?: boolean }) => {
-      process.exit(
-        await orgCommand({
-          cwd: process.cwd(),
-          sub: { kind: "delete", name },
-          json: opts.json,
-        }),
+        await orgCommand({ cwd: process.cwd(), sub, json: opts.json }),
       );
     });
 
@@ -1669,6 +1601,49 @@ export async function run(argv: string[]): Promise<void> {
   } catch (err) {
     ui.error((err as Error).message);
     process.exit(1);
+  }
+}
+
+/**
+ * Parse `mneme org [args...]` into a structured subcommand. Returns null
+ * when the invocation is plainly invalid — the caller surfaces a friendly
+ * error.
+ */
+function parseOrgSub(args: string[]): OrgSubcommand | null {
+  // No args → run cross-repo on the first registered org.
+  if (args.length === 0) return { kind: "run" };
+  const head = args[0]!;
+  switch (head) {
+    case "init": {
+      if (args.length !== 2) return null;
+      return { kind: "init", name: args[1]! };
+    }
+    case "add": {
+      if (args.length !== 3) return null;
+      return { kind: "add", name: args[1]!, path: args[2]! };
+    }
+    case "remove": {
+      if (args.length !== 3) return null;
+      return { kind: "remove", name: args[1]!, path: args[2]! };
+    }
+    case "list": {
+      if (args.length !== 1) return null;
+      return { kind: "list" };
+    }
+    case "status": {
+      if (args.length === 1) return { kind: "status" };
+      if (args.length === 2) return { kind: "status", name: args[1]! };
+      return null;
+    }
+    case "delete": {
+      if (args.length !== 2) return null;
+      return { kind: "delete", name: args[1]! };
+    }
+    default: {
+      // Treat the first arg as an org name → run on that org.
+      if (args.length === 1) return { kind: "run", name: head };
+      return null;
+    }
   }
 }
 

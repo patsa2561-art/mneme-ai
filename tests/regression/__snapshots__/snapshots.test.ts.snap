@@ -36,7 +36,7 @@ Commands:
   status                                   Show memory + repo status
   doctor [options]                         Probe the environment (Ollama, OpenAI, hardware) and recommend the best embedder
   counterfactual [options] <author-email>  Bayesian what-if simulation — drop one author's commits and re-compute atrophy + telepathy. Surfaces which files lose their last live expert and which latent pairs disappear. Bayesian, NOT a prediction; never use to evaluate a real person.
-  org [options] [name]                     Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Default action runs cross-repo analysis on the first registered org (or pass a name).
+  org [options] [args...]                  Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Subcommands: init <name> | add <name> <path> | remove <name> <path> | list | status [name] | delete <name>. Default (no subcommand) runs cross-repo analysis on the first registered org.
   dashboard [options]                      Open the Mneme Web Dashboard for the current repo (local-first; no upload).
   mcp                                      Run as an MCP server (for Claude Code, Cursor, Continue, etc.)
   watch [options]                          Wisdom Mutant — 24/7 daemon: re-index on commit, calibrate hourly, self-eval daily
