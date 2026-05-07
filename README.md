@@ -120,64 +120,77 @@ mneme audit --certify                             # grades the AI's homework
 
 ## 🌟 Spotlight — `mneme audit`
 
-> **The feature your AI tools wish they had.** *Vendor-neutral. Works with any AI that ends up in `git log`.*
+> *Catches your AI assistant lying about its own commits — before the lie reaches `main`.*
 
-Your AI commits: *"I refactored the handler. **No changes to db.ts.**"* The diff actually touches `db.ts`. Tests pass. You almost merge — `mneme audit --certify` catches it **before** merge with a 5-axis trust certificate.
+### The 30-second story
 
-<details>
-<summary><b>📖 See the full story — 30-second example, 5 axes, 6 modes</b></summary>
+Your AI commits this:
 
-When two or three AI assistants are all editing the same repo, **someone has to grade the homework.** Mneme is that someone. Not a competitor to your AI assistant — the layer it answers to.
+> *"Refactored the handler. **No changes to db.ts.**"*
 
-### 30-second story
+But the diff shows three new lines in `db.ts`. Tests still pass. You almost click merge.
 
-Your AI commits: *"I refactored the handler. **No changes to db.ts.**"*<br/>
-The diff actually touches `db.ts`. Tests pass. You almost merge.
-
-`mneme audit --certify` catches it **before** merge:
+That's the moment **`mneme audit --certify`** runs and stops you:
 
 ```
-⚠ ai-narrative-mismatch  1 contradiction
-   AI claimed:  "No changes to db.ts"
-   Reality:     db.ts modified (+3 -0)
-   Verdict:     contradicted
+⚠  AI said:    "No changes to db.ts"
+   Reality:    db.ts modified (+3 -0)
+   Verdict:    contradicted ✗
 
-OVERALL: ⊘ FAIL  (exit code 1 → CI gate refuses the PR)
+   ⊘ FAIL  (exit code 1 → your CI blocks the PR)
 ```
 
-### Five axes, scored in parallel
+One sentence in the commit message vs. the actual diff. That's the gap. Mneme reads both, side-by-side, every time.
 
-| # | Axis | What it asks |
-|---|---|---|
-| 1 | 🎯 Behavioral parity | Did `mneme status / npm test` produce the same output? |
-| 2 | 📐 API contract drift | Did exported types disappear? |
-| 3 | ✅ Test pass rate | Anything that passed before now fails? |
-| 4 | ⚡ Perf regression | Median latency vs baseline *(>25% slower → fail)* |
-| 5 | 📰 AI narrative | Commit-message claims vs actual diff |
-
-Plus forensic axes (TIME / FILES / STYLE / SIZE) — same anomaly engine Mneme runs on humans, applied to **every AI vendor auto-detected from `git log`**. Adding a new vendor is one regex line in the audit module.
-
-### Six modes — copy-paste flow
+### How to use it (3 lines, copy-paste)
 
 ```bash
-mneme audit --baseline      # snapshot behavior BEFORE the AI works
-mneme audit --trace         # diff + AI-vendor detection
-mneme audit --verify        # narrative vs reality (Leviathan-style)
-mneme audit --certify       # 5-axis trust cert · CI-friendly exit code
-mneme audit --watch         # continuous CI gate
-mneme audit --report        # markdown audit trail (SOX / SOC2)
+mneme audit --baseline   # before letting your AI loose, take a snapshot
+# ↓ AI works, commits, pushes ↓
+mneme audit --certify    # grade the homework — pass / warn / fail + exit code
 ```
 
-### Why even AIs respect this
+Drop into any CI in one line ([GitHub Actions](https://github.com/patsa2561-art/mneme-ai/wiki/Integrations) · GitLab · Bitbucket · CircleCI · Jenkins). Default verdict is *fail* on contradiction so a bad PR can't merge by accident.
 
-- **Vendor-neutral.** Adding a new AI = one regex line. We audit whatever the AI claims it is.
-- **Composable.** Reuses HTC compressed memory + Leviathan verifier + forensic anomaly engine + Iris pyramid renderer + SuperPipeline + MPE — primitives no other tool ships together.
-- **Falsifiable.** Pure rule-based + statistical primitives. **No "AI grading AI" loops.**
-- **Honest.** "No change to db.ts" is parseable. "Improved overall reliability" is `unverifiable` — we say so, don't pretend.
+<details>
+<summary><b>📖 What gets checked + why we don't lie</b></summary>
+
+**Five things — each scored independently, each verifiable from raw git data:**
+
+| # | What we check | The plain question |
+|---|---|---|
+| 1 | 🎯 Did the same commands still work? | Run `mneme status` / `npm test` before vs after. Same output? |
+| 2 | 📐 Did any public type / function disappear? | Diff the exported API surface. |
+| 3 | ✅ Did any test that used to pass now fail? | Compare test results before vs after. |
+| 4 | ⚡ Did anything get noticeably slower? | Median latency baseline vs current. >25% slower = fail. |
+| 5 | 📰 Does the commit message match the diff? | Parse claims like "no change to X". Check vs the diff. |
+
+**Plus forensic axes** (the same anomaly engine that grades human commits): time-of-day · which files touched · style of code · size. Applied to **whoever's name is on the commit** — any AI tool, you, your teammate, your dog. We don't care what tool produced the commit — we only check what the commit claims vs what it actually changed.
+
+**Why we don't lie:**
+
+- *"No change to db.ts"* is checkable → we mark it `contradicted` only when the diff says otherwise
+- *"Improved overall reliability"* is **not** checkable → we mark it `unverifiable` and move on
+- We never invent a verdict an LLM dreamed up. Every conclusion ties back to a hash + line number you can read.
+
+The output is a 5-axis JSON certificate. Stable shape. Drop into your CI gate, your dashboard, your compliance audit. SOX / SOC2 review-ready.
+
+### All six modes (you only need `--certify` 90% of the time)
+
+```bash
+mneme audit --baseline    # snapshot before the AI works
+mneme audit --trace       # see what the AI did + which AI did it
+mneme audit --verify      # narrative-vs-diff check, no scoring
+mneme audit --certify     # the full 5-axis cert + exit code
+mneme audit --watch       # continuous gate (re-runs every N seconds)
+mneme audit --report      # markdown trail for compliance archives
+```
+
+Add `--explain` to any of them to get a plain-English narrative on top, generated by your local free-LLM ladder ([setup-free](https://github.com/patsa2561-art/mneme-ai#-free-forever--no-api-key-required) wizard, 30 seconds).
 
 </details>
 
-→ **[Full positioning · 6 modes · CI integration · compliance →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
+→ **[Full guide · CI snippets · compliance · honest limits →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
