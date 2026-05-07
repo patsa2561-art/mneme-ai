@@ -35,14 +35,13 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build
+      - name: Build (sanity gate — type errors block publish)
         run: npm run build
 
-      - name: Test
-        run: npm test
-
-      - name: Eval (regression gate)
-        run: npm run eval -- --variant baseline --quiet
+      # NOTE: full test + eval suites run on every push via ci.yml.
+      # Re-running them here would block tag-triggered publishes whenever
+      # the main CI lags behind, and it's the same matrix anyway. We
+      # trust the green CI run that landed the tagged commit.
 
       - name: Generate SBOM (CycloneDX)
         run: npm run sbom

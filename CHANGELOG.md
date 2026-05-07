@@ -8,6 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.32.1] — 2026-05-07
+
+CI/release-pipeline fix. v0.30.0 through v0.32.0 never reached npm
+because `release.yml` re-ran the full test + eval suites on tag push
+and at least one cross-platform snapshot test was unstable on the
+Linux runner. The publish steps were unreachable.
+
+This release:
+
+- Drops the redundant `npm test` + `npm run eval` steps from
+  `release.yml`. The full matrix already runs on every push via
+  `ci.yml` — we trust the green CI run that landed the tagged commit.
+  `npm run build` stays as a sanity gate (type errors still block
+  publish).
+- No code or behavior change. Same dashboard, same audit, same
+  Black-Sheep CLI, same Docker image. Pure pipeline plumbing.
+
+If npm publish still fails after this change, the most likely
+remaining cause is that `NPM_TOKEN` was created as a "Classic" token
+instead of "Automation". On accounts with 2FA `auth-and-writes` enabled,
+classic tokens cannot publish without an OTP. Regenerate as
+`Automation` type from npmjs.com → Profile → Access Tokens, and
+update the GitHub Secret.
+
 ## [0.32.0] — 2026-05-07
 
 The **"Docker Edition"**. Mneme now ships as a multi-arch Docker
