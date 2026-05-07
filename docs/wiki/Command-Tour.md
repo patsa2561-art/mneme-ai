@@ -1,9 +1,41 @@
-# The Mneme Command Tour — every command, told as a story
+# 📚 The Mneme Command Tour — every command, told as a story
 
-> Mneme has **40+ commands**. Memorizing a list is exhausting.
+<div align="center">
+
+<table>
+<tr>
+<td align="center" width="33%">
+
+### 🚪 Browse by category
+*Tier 1 · Forensics · Quant · Insights · Audit · MCP*<br/>
+[Jump to at-a-glance reference ↓](#all-commands--at-a-glance-reference)
+
+</td>
+<td align="center" width="34%">
+
+### 🗺 Browse by user journey
+*Day 0 → Day 12 — what you'd reach for and when*<br/>
+[Start at Day 0 ↓](#day-0--how-do-i-start)
+
+</td>
+<td align="center" width="33%">
+
+### 🌟 Latest — v0.27
+**`mneme audit`** — the AI-session trust certificate<br/>
+[Jump to Day 11 ↓](#day-11--compliance--ai-session-audit)
+
+</td>
+</tr>
+</table>
+
+</div>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+> Mneme has **50+ commands**. Memorizing a list is exhausting.
 > Reading them as workflows is not.
 >
-> This page walks you through every command in the order you'd actually reach for them, organized by the question you're trying to answer.
+> This page walks you through every command in the order you'd actually reach for them, organized by the question you're trying to answer. Every example is copy-paste ready.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -266,12 +298,31 @@ mneme genius "how does our auth work?"  # multi-step LLM agent
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## Day 11 — *"Compliance + audit"*
+## Day 11 — *"Compliance + AI Session Audit"*  ✨ v0.27
+
+> **The day the AI commits start arriving — and you need the homework graded.**
 
 ```bash
+# ─── v0.27 — vendor-neutral AI Session Audit ──────────────────────────
+#  Works with Claude Code · Cursor · Codex · Devin · Sweep · Aider · Copilot
+#  Every AI-driven commit gets a 5-axis trust certificate.
+
+mneme audit --baseline                # snapshot behavior BEFORE letting an AI loose
+#   → AI does its work →
+mneme audit --trace                   # diff + AI vendor detection
+mneme audit --verify                  # narrative vs reality (Leviathan-style)
+mneme audit --certify                 # 5-axis pass/warn/fail · CI-friendly exit code
+mneme audit --watch --interval 60     # continuous CI gate
+mneme audit --report --out audit.md   # markdown audit trail (SOX / SOC2)
+
+# ─── classic compliance primitives ─────────────────────────────────────
 mneme ledger --since 2025-01-01       # tamper-evident audit log (SOX/SOC2)
 mneme conscience packages/payments    # risk-score a PR against history
 ```
+
+**The five axes `--certify` checks:** behavioral parity · API contract drift · test pass rate · perf regression · AI narrative match. Plus forensic axes (TIME / FILES / STYLE / SIZE).
+
+→ **[Full positioning + 6 modes + CI integration → AI-Session-Audit](AI-Session-Audit)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -307,23 +358,86 @@ mneme manifesto                        # the full canon
 
 ## All commands — at-a-glance reference
 
-### Tier 1 — Essentials (always visible)
-`init` · `doctor` · `index` · `status` · `ask` · `why` · `mcp` · `wisdom`
+> 💡 Every command supports `--help` for usage notes. Copy-paste any cell from the tables below.
 
-### Insights — the killer commands
-`who-knows` · `decisions` · `stack-trace` · `story` · `dream` · `chat` · `regret` · `bus-factor` · `paradox` · `commit-coach` · `crystal-ball` · **`time-machine`** ✨ · **`premortem`** ✨ · **`ghost`** ✨
+### 🟢 Tier 1 — Essentials *(always visible in `mneme --help`)*
 
-### Phase 2-3 — Semantic + correlation
-`entities` · `clones` · `correlate` · `blast` · `palimpsest` · `conscience`
+| Command | Plain-English use | Example |
+|---|---|---|
+| `init` | First-time setup — picks the best embedder for your machine | `mneme init` |
+| `doctor` | "Is everything ok?" — checks Ollama / OpenAI / hardware | `mneme doctor` |
+| `index` | Build memory from your git history *(secrets auto-redacted)* | `mneme index` |
+| `status` | Is the index up to date with HEAD? | `mneme status` |
+| `ask` | Cited Q&A over your repo | `mneme ask "why does X exist?"` |
+| `why` | Who wrote each line + why · semantically related commits | `mneme why src/auth.ts:47` |
+| `do` | Smart dispatcher — describe what you want, Mneme picks tools | `mneme do "find security issues"` |
+| `guard` | Pre-commit hook — block secrets + CWE patterns | `mneme guard --install` |
+| **`audit`** ✨ v0.27 | **AI Session Audit — every AI commit gets a trust certificate** | `mneme audit --certify` |
+| `mcp` | Run as MCP server (Claude Code / Cursor / Codex consume this) | `mneme mcp` |
+| `wisdom` | Meditation from the manifesto | `mneme wisdom -n 5` |
+| `setup-free` | 30-second wizard for free LLM provider | `mneme setup-free` |
+| `upgrade` | Bulletproof self-update | `mneme upgrade` |
+| `htc-build` | Compress every commit + cluster + memoir for LLM-ready cache | `mneme htc-build` |
+| `htc-stats` | Show HTC compression coverage + ratio | `mneme htc-stats` |
 
-### Sprint 5 — Quant
-`drawdown` · `alpha` · `backtest` · `black-swan` · `insider-trading` · `moneyball` · `greek` · `correlation-matrix` · `implied-volatility` · `tax-loss-harvest`
+### 🔬 Forensics — *applied forensic science for code*
 
-### Wisdom Mutant Engine
-`feedback` · `calibrate` · `adapt` · `teach` · `genius`
+| Command | Plain-English use | Example |
+|---|---|---|
+| `forensics match` | "Did Alice really write this commit?" *(Bayesian LR + ENFSI scale)* | `mneme forensics match HEAD alice@bank.com` |
+| `forensics attribute` | "Who most-likely wrote this commit?" | `mneme forensics attribute` |
+| `forensics vulns` | "What security holes are hiding in our history?" *(CWE-aligned)* | `mneme forensics vulns` |
+| `forensics anomaly` | "Is any commit suspicious?" *(insider-threat / 4-axis baseline)* | `mneme forensics anomaly` |
 
-### WILD
-`heal` · `echo` · `runaway` · `mirror` · `rumor` · `fossil` · `ledger`
+### 💎 Insights — *world-firsts in this category*
+
+| Command | Plain-English use |
+|---|---|
+| `who-knows <area>` | Bus-factor: who actually owns this code |
+| `decisions` | Surface every architectural decision Mneme can detect |
+| `story <topic>` | Narrative across all commits touching the topic |
+| `dream <topic>` | Speculative ideas grounded in your patterns |
+| `dna <commit>` | Author fingerprint for a specific commit |
+| `drift` | Detect concept-drift between docs and code |
+| `chronicle` | Long-form repo memoir (powered by HTC Layer 3) |
+| `oracle` | Predict what will need refactoring next |
+| `constellation` | Visualize the file-cluster graph |
+| `ghost` ✨ | Recover knowledge from departed authors |
+| `paradox` | Find self-contradictory commits |
+| `regret` | Surface past patterns flagged as regrets |
+| `bus-factor` | Quantify single-point-of-knowledge risk |
+| `commit-coach` | AI commit-message coach |
+| `crystal-ball` | Forecast incident likelihood |
+| `time-machine` ✨ | Replay code state at any past date |
+| `premortem` ✨ | Predict regret risk for a proposed change |
+| `cluster` / `network` | Topic clustering + correlation graph |
+| `manage` / `export-bundle` | Knowledge-pack export for onboarding |
+| `stack-trace <error>` | Map a stack trace back through history |
+
+### 📊 Quant — *Wall-Street-inspired engineering intelligence*
+
+| Command | Plain-English use |
+|---|---|
+| `drawdown` | Repo-equivalent of max drawdown — biggest engineering setbacks |
+| `alpha` | Per-author "alpha" vs the team baseline |
+| `backtest` | Replay refactor decisions against the past |
+| `black-swan` | Tail-risk scan — rare but catastrophic patterns |
+| `insider-trading` | Suspicious-knowledge detection in commit timing |
+| `moneyball` | Undervalued contributors (commits that paid off later) |
+| `greek` | Risk Greeks (delta / gamma / theta / vega) for engineering |
+| `correlation-matrix` | Which files / authors / topics co-move |
+| `vix` | Volatility index of your repo's churn |
+| `tax-loss-harvest` | Identify tech debt to amortize |
+
+### 🛡 Compliance & Wisdom
+
+| Command | Plain-English use |
+|---|---|
+| `ledger` | WILD #3 — tamper-evident audit log (SOX / SOC2) |
+| `conscience <area>` | Risk-score a PR against history |
+| `feedback / calibrate / adapt` | Wisdom Mutant Engine — Mneme gets better with usage |
+| `heal / echo / runaway / mirror / rumor / fossil` | Specialty WILDs — niche but powerful |
+| `manifesto` | The full canonical text |
 
 ═══════════════════════════════════════════════════════════════════════════════
 

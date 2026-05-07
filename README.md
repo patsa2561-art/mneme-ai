@@ -36,457 +36,233 @@ The fix from 2022 is in a commit nobody remembers.<br/>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## ⏱ Mneme in 60 seconds
+## ⏱ The 60-second story
 
-> **What it is:** A memory layer that makes your codebase's git history searchable, queryable, and AI-ready — locally, with citations.
->
-> **Who it's for:** Solo devs and teams who don't want to forget why code exists, miss security issues, or pay for cloud AI to understand their own repo.
->
-> **Why it matters:** Your AI agent reads code. It does not read your 6 years of decisions. Mneme bridges that gap.
+You ship code with an AI assistant. The AI is brilliant — it reads syntax, infers types, autocompletes whole files. But there are **three things even the best AI cannot do**:
+
+1. 🧠 **Remember why the code exists.** Six years of decisions, deprecations, and "we tried that, it broke X" — none of it is in the AI's context window.
+2. 🔍 **Verify its own claims.** AI confidently says "no change to db.ts" — the diff shows three lines in db.ts. You merge. Production breaks.
+3. 🛡 **Tell you when *another* AI is gaslighting you.** With Cursor + Claude Code + Codex all touching `git log`, **who is grading the homework?**
+
+**Mneme is the layer underneath.** It's what gives your AI a memory. It's what verifies citations. And starting in **v0.27**, it's what audits every AI-driven commit with a vendor-neutral 5-axis trust certificate.
 
 ```bash
-npm install -g mneme-ai          # zero-setup since v0.19 (bundled WASM model)
+npm install -g mneme-ai             # zero-setup, bundled WASM, no API key
 cd <any git repo>
-mneme index                       # ~25MB lazy download, ~90s for 5k commits
-mneme do "find security issues"   # smart dispatcher — multi-step in one command
-mneme ask "why does X exist?"     # synthesized answer with verifiable citations
-mneme guard --install             # always-on pre-commit hook (secrets + vulns)
-mneme upgrade                     # bulletproof self-update (npm cache + PATH conflicts)
+mneme index                         # ~90s for 5k commits — one time
+
+mneme ask "why does parseAmount use try/catch?"   # cited answer · refuses if unverifiable
+mneme do "find security issues"                   # smart dispatcher · multi-step
+mneme audit --certify                             # NEW v0.27 — grades the AI's homework
 ```
 
-**No API key required.** Embeddings via bundled WASM, synthesis via local Ollama / Groq free tier / OpenRouter free tier — `mneme setup-free` walks you through in 30 seconds. If everything fails, retrieval-only fallback always answers.
+**The result your AI tools didn't know they were missing.** When Mneme is plugged in via MCP, your AI's answers get *measurably more grounded* — every claim cited, every contradiction caught, every AI commit certified before it merges.
 
-**Latest:** **v0.26 Super Pipeline + Iris Adoption + AI Teacher** — deeply-pipelined-superscalar engine with MPE eigentrust math (world-first) · 5 commands migrated to Iris (1.56× pipeline throughput · journalist-pyramid output) · Mneme positioned as the teacher of AI (every MCP-integrated AI gets measurably better). **1331 tests passing.** → [Wiki: Releases](https://github.com/patsa2561-art/mneme-ai/wiki/Releases)
+> 🎯 **Mneme isn't a competitor to Claude Code, Cursor, or Codex.** It's the **teacher and the grader** they've been waiting for. Use whatever AI you love — Mneme makes it better.
 
-📅 [**Full release history → Wiki: Releases**](https://github.com/patsa2561-art/mneme-ai/wiki/Releases) · [CHANGELOG](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
-
-<br/>
+📅 [Full release history](https://github.com/patsa2561-art/mneme-ai/wiki/Releases) · [CHANGELOG](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## "But my AI agent already has git access — why Mneme?"
+## 🌟 v0.27 spotlight — `mneme audit`
 
-Honest answer: **for small repos and simple queries, you don't need Mneme.**
-You can prompt your AI to run `git log`. It works.
+> **The feature that makes AI tools say "wow."** *Vendor-neutral. Works with any AI that ends up in `git log`.*
 
-Mneme starts mattering when one of these is true:
+Your AI commits something. It claims: *"I refactored the handler. **No changes to db.ts.**"* The diff actually touches `db.ts`. Tests pass. You almost merge.
 
-| What you're asking                                  | AI + git CLI            | Mneme                  |
-|----------------------------------------------------|-------------------------|------------------------|
-| "What does this file do?"                          | ✅ Works                | ✅ Works                |
-| "Why does the auth flow refuse low-confidence?"    | ⚠ Misses semantically   | ✅ BM25 + embeddings    |
-| "Who's the bus-factor for payments code?"          | ❌ Can't compute matrix | ✅ Author × file matrix |
-| "Insider-threat anomalies in last 6 months"        | ❌ No statistical model | ✅ 4-axis Mahalanobis   |
-| "Vulnerable patterns introduced 3 years ago"       | ❌ Can't scan at scale  | ✅ CWE-aligned hunt     |
-| Repo with 10,000+ commits                          | ❌ Context window blows | ✅ 50ms per query       |
-| 10 questions in one session                        | ❌ ~5 min, 50K tokens   | ✅ 0.5 sec, 2K tokens   |
-| Compliance / audit trail                           | ❌ Hallucinates SHAs    | ✅ SHA + content-hash   |
-| Privacy (proprietary code)                         | ❌ Code → cloud LLM     | ✅ 100% local           |
+`mneme audit --certify` catches that gap **before** merge:
 
-**Rule of thumb:**
-> Use raw git for the simple stuff.
-> Use Mneme when **scale, semantics, forensics, or audit** matter.
+```
+⚠ ai-narrative-mismatch  1 contradiction
+   AI claimed:  "No changes to db.ts"
+   Reality:     db.ts modified (+3 -0)
+   Verdict:     contradicted
 
-It's not "MCP server vs prompting" — it's **indexed semantic memory + statistical analysis vs sequential git scan.** Different tool, different problem.
+OVERALL: ⊘ FAIL  (exit code 1 → CI gate refuses the PR)
+```
 
-═══════════════════════════════════════════════════════════════════════════════
+**Five axes, scored in parallel:**
 
-## 🚀 Install — pick **one** of three ways
-
-> 💡 **You only need one of these.** Pick the row that fits you, run that one command — done.
-
-| Pick this if you… | Command |
+| Axis | Question |
 |---|---|
-| 🔬 want to **try without installing** anything | `npx -y mneme-ai init` |
-| 💼 plan to **use it daily** *(recommended)* | `npm install -g mneme-ai` |
-| 🛠 want to **contribute or run the latest code** | `git clone …/mneme-ai && cd mneme-ai && npm install && npm run build` |
+| 🎯 Behavioral parity | Did `mneme status / npm test` produce the same output? |
+| 📐 API contract drift | Did exported types disappear? |
+| ✅ Test pass rate | Anything that passed before now fails? |
+| ⚡ Perf regression | Median latency vs baseline (>25% slower → fail) |
+| 📰 AI narrative | Commit-message claims vs actual diff |
 
-After install, run the same 60-second flow on any git repo:
+Plus forensic axes (TIME / FILES / STYLE / SIZE) — the same anomaly engine Mneme runs on humans, applied to **every AI vendor it auto-detects**: Claude Code · Cursor · Codex · Devin · Sweep · Aider · Copilot.
 
 ```bash
-mneme init                       # creates .mneme/ inside the repo
-mneme index                      # ~90s for 5k commits, zero-setup since v0.19
-mneme ask "why does X exist?"    # query the memory
+mneme audit --baseline      # snapshot before AI works
+mneme audit --certify       # 5-axis trust cert · CI-friendly exit code
+mneme audit --report        # markdown audit trail (compliance: SOX / SOC2)
 ```
+
+→ **[Read the full positioning →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🆓 Free forever — no API key required (v0.22)
+## 🧠 The brain — five lobes (click any to expand)
 
-**Indexing works zero-config out of the box** (bundled WASM model, ~25MB auto-download).
-
-**For full Q&A synthesis (`mneme ask`)**, run the **30-second wizard** that picks the easiest path for your machine:
-
-```bash
-mneme setup-free
-```
-
-It walks you through 3 free paths and tells you exactly which fits your setup:
-
-| Path | What you get | Setup time |
-|---|---|---|
-| 🏠 **Local Ollama** | 100% private, free forever, ~3GB one-time | ~3 min |
-| ⚡ **Groq free tier** | 500 tok/s cloud (fastest), generous free quota | ~30 sec |
-| 🌐 **OpenRouter free** | Model variety: Qwen, Gemma, Llama 3.3 | ~30 sec |
-
-Mneme **auto-detects** any of these — set `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TOGETHER_API_KEY`, or run local `ollama serve`. No config file edits needed.
-
-**Models known to work free:** Llama 3.3 70B · Qwen 2.5 (3B/7B/72B) · Qwen QwQ 32B · Gemma 2 (2B/9B) · Llama 3.1/3.2.
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🛡 Always-on protection — `mneme guard`
-
-Install the pre-commit hook **once** and forget it exists:
-
-```bash
-mneme guard --install
-```
-
-Now every `git commit` auto-runs in <300ms against your staged changes:
-
-- 🔐 **Hardcoded secrets** — AWS keys, JWTs, passwords, tokens (uses redact rules)
-- 🛡 **Vulnerability patterns** — `Math.random` for security, MD5/SHA1 crypto, SQL string concat, JWT no-verify (CWE-aligned)
-- ⚠ **Blocks** the commit if HIGH/CRITICAL findings — bypass with `git commit --no-verify`
-
-The killer property: **the next leaked AWS key gets caught before it reaches GitHub** — instead of asking the user to remember to run a security command.
-
-```bash
-mneme guard --install     # one-time setup
-mneme guard --check       # manual run against currently-staged changes
-mneme guard --strict      # also block on MEDIUM-severity findings
-mneme guard --uninstall   # remove the hook
-```
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🔧 Upgrade
-
-```bash
-mneme --version                       # 1. see what you have
-npm install -g mneme-ai@latest        # 2. pull latest
-mneme --version                       # 3. verify
-```
-
-> 💡 If the version doesn't change, open a fresh terminal — your shell caches the old binary path. On Windows, `npm install -g` writes to `%APPDATA%\npm\` which the parent shell only re-reads on launch.
-
-| Action | Command |
-|---|---|
-| 📌 Pin a version *(reproducible setups)* | `npm install -g mneme-ai@0.14.0` |
-| 🗑 Uninstall | `npm uninstall -g mneme-ai` |
-| 🔄 Re-index after upgrade | `mneme index` *(idempotent — your data is safe)* |
-| ⚡ npx users | nothing to upgrade — `npx -y mneme-ai@latest <cmd>` always pulls fresh |
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## ✨ Try these 5 commands first
-
-The fastest way to "get it" is to copy-paste any of these on your repo right now:
-
-### 1️⃣  Ask anything about your code
-
-```bash
-mneme ask "why does the webhook handler retry?"
-```
+Mneme's intelligence is split into 5 cognitive modules. Each is independently useful and composable. **Click a lobe to see how it thinks.**
 
 <details>
-<summary>📺 Sample output</summary>
+<summary><b>📦 Hierarchical Memory (HTC)</b> — compress 50,000 commits into one Claude prompt · <i>world-first compression-as-storage</i></summary>
 
-```text
-Q  why does the webhook handler retry?
+Every AI codebase tool today (Cody, Greptile, Cursor, Sweep, Aider) is **retrieval-only**. They search your repo at query time and dump raw text into the LLM. That breaks at scale.
 
-  ● HIGH CONFIDENCE  ◉ TRUST 95%
-  synthesized in 240ms
+Mneme inverts the model: at index time, **free LLMs (Groq Gemma 2B / Ollama Qwen) walk every commit** and produce three layers of compression:
 
-  ✦ Answer
-    Per commit a3f9b21 from 2024-08, the team switched from sessions to
-    token-based auth after the rate-limit incident referenced in #482.
-    The 3-retry backoff was added in the hotfix that followed, matching
-    a third-party API provider's recommended client behavior.
+| Layer | Size per unit | What it stores |
+|---|---|---|
+| Layer 1 — abstracts | ~30 tok / commit | per-commit "WHAT changed + WHY" |
+| Layer 2 — clusters | ~100 tok / cluster | topic-level summaries |
+| Layer 3 — memoir | ~500 tok | repo-evolution narrative |
 
-  ◆ Evidence  (showing 3 of 8)
-  ● a3f9b21  [2024-08-14 · Alice · 0.045]
-    fix: retry webhook on 502 (closes #482)
-  ● 2c4d8e0  [2024-08-15 · Alice · 0.039]
-    pr#503: tune retry backoff to match upstream guidance
+Token math on a 50K-commit repo:
+
 ```
+raw commit text     ~50M tokens   (won't fit anywhere)
+compressed cache    ~1.5M tokens  (fits in Sonnet 1M context, comfortably)
+compression ratio   ~33×
+```
+
+```bash
+mneme htc-build        # one-time compression (~10 min for 5k commits, free LLM)
+mneme htc-stats        # see coverage + compression ratio
+```
+
+**Used automatically by `mneme ask` when cache is built.** AI clients via MCP get compressed responses by default — `compress: false` to opt back into raw. ~10× fewer tokens per session.
+
+→ [[Wiki: Hierarchical-Memory]](https://github.com/patsa2561-art/mneme-ai/wiki/Hierarchical-Memory)
 
 </details>
 
-### 2️⃣  Understand any line in 2 seconds
-
-```bash
-mneme why src/auth/session.ts:47
-```
-
-Walks the blame, mines the PRs, returns the actual reason — with citations.
-
-### 3️⃣  Predict regret before you commit
-
-```bash
-mneme premortem "rewrite the auth flow"
-```
-
 <details>
-<summary>📺 Sample output</summary>
+<summary><b>🔬 Speculative Reasoning</b> — see Mneme think · verify every claim · DDTree commit-tree search</summary>
 
-```text
-🔮  Pre-mortem
-═══════════════════════════════════════════════════════════════
-intent:  rewrite the auth flow
+Most "AI codebase tools" are black boxes — input goes in, answer comes out, you trust the output. Mneme inverts this: every commit considered, every claim verified, every prune explained.
 
-✦ Verdict
-   risk: VERY HIGH  (P(regret) = 78%)
-   7 of 9 similar past attempts ended badly.
-
-◆ Top risks
-   • token race condition (3× before)
-       b2e1f04  fix: stale token served to logged-in users
-   • breaking external integrations (2× before)
-       9c3593c  hotfix: oauth callback dropped on PATCH
+```bash
+mneme ask "why was JWT chosen?" --stream
 ```
+
+Output streams events in real time:
+
+```
+⚙ consider abc1234  "auth: switch session → JWT"        score 0.84
+✓ accept   abc1234  above score floor
+⚙ consider def5678  "auth: add CSRF guard"               score 0.41
+✗ prune    def5678  below topK cut
+✦ synthesize from 2 verified citations…
+✓ verify    "JWT was chosen for stateless tokens"   ✓ matches PR #482 body
+✗ verify    "session storage caused issues at scale" ⚠ unverifiable claim
+✓ done      in 312ms
+```
+
+**Five primitives ship together (v0.23):**
+1. Streaming events — `consider / accept / prune / contradict / verify`
+2. **Leviathan citation verifier** — adapted from the speculative-decoding paper. Every claim's hash + sentence verified against evidence. Unverified claims wrapped `[unverified: ...]`.
+3. **DDTree commit-tree search** — best-first ancestor exploration with budget + depth caps
+4. **ConstraintPruner trait** — pluggable validators (CWE / ENFSI / 4-axis / custom)
+5. **Path-aware sessions + wisdom-mutant** — Q2 search constrained by Q1's commits; provider success rates auto-evolve
+
+→ [[Wiki: Speculative-Reasoning]](https://github.com/patsa2561-art/mneme-ai/wiki/Speculative-Reasoning)
 
 </details>
 
-### 4️⃣  See your file's life as a story
+<details>
+<summary><b>⚡ Super Pipeline + MPE math</b> — deeply-pipelined-superscalar engine · 1.56× throughput · novel formula</summary>
 
-```bash
-mneme time-machine src/payments/charge.ts
+Modern CPUs combine deep pipelining (~20 stages, fast clock) with superscalar (multiple parallel pipelines). Mneme v0.26 brings the same architecture to its retrieval flow — and adds a self-tuning trust eigenvector no other CLI tool ships.
+
+**The novel math (MPE — Multi-stage Pipelined Eigentrust):**
+
+```
+T_n = α × E_n × T_{n-1} + (1-α) × prior
+
+  E_n[s] = exp(-latency / target)   on success
+  E_n[s] = 0                         on failure
+  α      = 0.85   (PageRank decay)
+  prior  = 1/N    (uniform exploration)
 ```
 
-Groups commits into eras: birth → rewrite → firefight → plateau. You read 8 epochs and you understand the file's life.
+Combines **Eigentrust** (Kamvar et al. 2003) + **PageRank decay** + **Bayesian online updates** + **pipeline scheduling**. After ~20 production calls, T converges to a stable per-stage trust ranking. Pipeline auto-allocates more workers to high-trust slow stages, fewer to low-trust ones, disables speculative pre-fetch when trust is unsafe.
 
-### 5️⃣  Ship audit-grade answers (zero hallucination)
+**Throughput benchmark** (4-stage pipeline, 8 inputs, 12ms/stage):
 
-```bash
-mneme ask --audit "is this safe to merge?"
+```
+sequential (width=1, buffer=1) = 168 ms
+pipelined  (width=2, buffer=4) = 108 ms
+speedup                        = 1.56×
 ```
 
-Refuses to answer below confidence threshold. Refuses if any cited commit hash isn't real. Returns trust score 0–100%. **Use this for CI gates and AI agent tool calls.**
+→ [[Wiki: Super-Pipeline]](https://github.com/patsa2561-art/mneme-ai/wiki/Super-Pipeline)
+
+</details>
+
+<details>
+<summary><b>🛡 Guardian + AI Audit</b> — 24/7 self-healing · always-on pre-commit hook · vendor-neutral AI session audit (NEW v0.27)</summary>
+
+**Three layers of "always-on" protection:**
+
+1. **Guardian** (v0.16) — 24/7 self-healing daemon. Diagnoses index drift, weak embeddings, schema staleness; auto-fixes safe items, recommends the rest.
+   ```bash
+   mneme guardian --watch --apply --interval 300
+   ```
+
+2. **`mneme guard`** (v0.20) — pre-commit hook. Install once → blocks commits with hardcoded secrets or CWE-aligned vulnerability patterns. <300ms per commit. Bypass with `git commit --no-verify`.
+   ```bash
+   mneme guard --install
+   ```
+
+3. **`mneme audit`** (v0.27, NEW) — AI Session Audit. **Vendor-neutral** trust certificate for every AI-driven commit. Works with Claude Code · Cursor · Codex · Sweep · Aider · any tool ending up in `git log`.
+   ```bash
+   mneme audit --baseline      # snapshot before AI works
+   #  → AI does its thing →
+   mneme audit --certify       # 5-axis pass/warn/fail · CI-friendly exit code
+   ```
+
+   The 5 axes: **behavioral parity · API contract drift · test pass rate · perf regression · AI narrative match**. Plus reuses Mneme's forensic anomaly engine (TIME / FILES / STYLE / SIZE) on AI commits.
+
+→ [[Wiki: Guardian]](https://github.com/patsa2561-art/mneme-ai/wiki/Guardian) · [[Wiki: AI-Session-Audit]](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)
+
+</details>
+
+<details>
+<summary><b>🔬 Forensic Code Science</b> — Bayesian author attribution · ENFSI verbal scale · CWE vuln hunt · insider-threat anomaly</summary>
+
+Real forensic-science methodology applied to git history — not a metaphor. **Bayesian likelihood ratios** (Did Alice really write this commit?). **ENFSI 2015 verbal scale** (the same standard used in court). **11 CWE-aligned** vulnerability classes. **4-axis insider-threat detection** (TIME × FILES × STYLE × SIZE). Built for bank / finance / regulated-industry engineering oversight.
+
+```
+LR = 3.87e-13   (~1 in 2.6 trillion — overwhelming AGAINST authorship)
+                 EXTREMELY STRONG SUPPORT AGAINST
+```
+
+Every output is plain-English with a `HEADS UP` warning when the repo is too small / single-author for statistically meaningful forensics — no false-positive theater.
+
+→ **[Full forensic toolkit + CWE classes + ENFSI scale → Wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science)**
+
+</details>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🎯 Why people use Mneme
+## 🎓 Manifesto — Mneme is the teacher of AI
 
-> 💬 *"I gave my AI assistant a memory of my repo. It stopped guessing."*
+> AI is genius. Mneme is the master that teaches the genius.
 
-<table>
-<tr>
-<td width="50%" valign="top">
+Most AI tools position themselves as **better students** — better-trained models, bigger contexts. They compete on the same axis. **Mneme positions on a different axis: quality of teaching.** We don't compete with the AI; we make whatever AI you choose **measurably better** via MCP.
 
-### 🤖 AI assistants stop guessing
-Plug Mneme into Claude Code · Cursor · Codex · Continue · Cline via **MCP** — the AI answers from your real history, not generic advice.
+Practical consequence: every Mneme release **lifts every AI tool** that integrates. We're a force multiplier across the entire ecosystem, not a participant in any one tool's competition.
 
-</td>
-<td width="50%" valign="top">
-
-### 🔎 Find the WHY in 2 seconds
-`mneme why src/auth.ts:47` walks the blame, mines PRs, tells you the actual reason — with citations to the commit that introduced it.
-
-</td>
-</tr>
-<tr>
-<td valign="top">
-
-### 🔮 Predict regret before you commit
-`mneme premortem "rewrite auth"` mines past attempts and warns:
-> *"7 of 9 similar attempts ended in revert/hotfix. Top risk: token race condition."*
-
-</td>
-<td valign="top">
-
-### 🛡 Audit-grade — zero hallucination
-`mneme ask --audit` refuses below confidence floor **and** refuses if any LLM-cited hash isn't in the evidence. ✨ **No other tool ships this.** ✨
-
-</td>
-</tr>
-</table>
+→ [[Wiki: AI-Teacher]](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Teacher) — five teaching mechanisms documented.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🤖 Tell your AI to install it (one prompt)
+## 💎 The Frontier — 23 capabilities no other tool ships
 
-Paste this into Claude Code, Cursor, Codex CLI, or any agent that can edit files & run shell:
-
-```
-Install Mneme as an MCP server for this repo so you can query my git history
-and codebase memory.
-
-Steps:
-  1. Run `npx -y mneme-ai init` then `npx -y mneme-ai index`.
-  2. Add an MCP server entry pointing to `npx -y mneme-ai mcp` (cwd = this
-     repo's absolute path) in the right config file:
-       - Claude Code:  ~/.claude/settings.json
-       - Cursor:       ~/.cursor/mcp.json
-       - Codex CLI:    ~/.codex/config.json
-  3. Reload MCP and confirm `mneme_ask`, `mneme_why`, `mneme_search_commits`
-     appear.
-  4. From now on, before answering "why" questions about this code, call
-     `mneme_ask` first.
-```
-
-The agent will install, configure, and start using Mneme as a tool in its reasoning loop.
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## ⚡ All Commands
-
-> 💡 Every command supports `--help` for usage notes. Examples below show what each does in plain English.
-
-### 🟢 Tier 1 — Essentials *(always visible in `mneme --help`)*
-
-| Command | Plain-English use | Example |
-|---|---|---|
-| `init` | First-time setup — picks the best embedder for your machine | `mneme init` |
-| `doctor` | "Is everything ok?" — checks Ollama, OpenAI, hardware | `mneme doctor` |
-| `index` | Build the memory from your git history *(secrets auto-redacted)* | `mneme index` |
-| `status` | Is the index up to date with HEAD? | `mneme status` |
-| `ask "<q>"` | **The flagship** — verdict-shaped answer with citations | `mneme ask "why does X exist?"` |
-| `why <file>:<line>` | Walk blame + PRs for any file or line | `mneme why src/auth.ts:47` |
-| `do "<intent>"` | **v0.20 dispatcher** — describe what you want, Mneme picks tools | `mneme do "find security issues"` |
-| `guard` | **v0.20 always-on** — pre-commit hook blocks secrets + vulns | `mneme guard --install` |
-| `mcp` | Run as an MCP server for your AI assistant | *(used by AI clients)* |
-| `wisdom` | A meditation from the Mneme manifesto | `mneme wisdom` |
-
-### 🌟 Insights — *world-firsts in this category*
-
-| Command | Plain-English use | Example |
-|---|---|---|
-| `who-knows <topic>` | Who's the expert? *(active / definitive / stale)* | `mneme who-knows stripe` |
-| `decisions` | Auto-extract architecture decisions from commits | `mneme decisions` |
-| `stack-trace` | Paste an error → historical context per stack frame | `mneme stack-trace --from error.log` |
-| `story <topic>` | Narrate evolution as acts | `mneme story stripe` |
-| `dream` | Speculative ideas grounded in YOUR patterns | `mneme dream` |
-| `chat` | Multi-turn REPL over your repo's history | `mneme chat` |
-| `regret` | Commits shipped + immediately fixed | `mneme regret --window 7` |
-| `bus-factor` | Files where one author owns ≥75% — fragility map | `mneme bus-factor` |
-| `paradox` | Architectural flip-flops *(A → B → A)* | `mneme paradox` |
-| `commit-coach` | Pre-commit AI partner | `mneme commit-coach --stdin` |
-| `crystal-ball` | Predict CI failure for staged diff | `mneme crystal-ball --stdin` |
-| ✨ `time-machine <file>` | Narrate a file's life as eras | `mneme time-machine src/auth.ts` |
-| ✨ `premortem "<intent>"` | Predict regret % from YOUR repo's failures | `mneme premortem "add caching"` |
-| ✨ `ghost` | Surface haunted code + stale TODOs | `mneme ghost --top 10` |
-| ✨ `dna [@author]` | Exportable developer fingerprint | `mneme dna alice@example.com` |
-| ✨ `drift` | Topical evolution over time | `mneme drift --granularity month` |
-| ✨ `chronicle` | Auto-generate chaptered narrative | `mneme chronicle --output STORY.md` |
-| ✨ `oracle` | Predict next-window co-edits + collisions | `mneme oracle --window-days 30` |
-| ✨ `constellation` | Graph view: stars/orbitals/edges | `mneme constellation --output graph.json` |
-| ✨ `cluster` | Semantic clustering of commit messages | `mneme cluster` |
-| ✨ `network` | Author social graph w/ semantic edges | `mneme network` |
-| ✨ `manage` | Engineering management dashboard | `mneme manage` |
-| ✨ `bundle` | Universal codebase export | `mneme bundle -o release-q2` |
-
-### 🔬 Forensics — *applied forensic science for code* ✨ v0.17
-
-> 💡 **Where do I get a commit hash?** Run `git log --oneline | head` to see the latest 10. Or use `HEAD` (the most recent commit), `HEAD~3` (3 commits ago), or any branch name (`main`, `feature/x`). All forensics commands accept any of these.
-
-| Command | Plain-English use | Example you can run **right now** |
-|---|---|---|
-| ✨ `forensics match` | "Did this author really write this commit?" *(STR-loci LR + ENFSI verbal scale)* | `mneme forensics match HEAD alice@example.com` |
-| ✨ `forensics attribute` | "Who most likely wrote this commit?" *(ranks all authors)* | `mneme forensics attribute` *(no args = HEAD)* |
-| ✨ `forensics vulns` | "What security holes are hiding in our history?" *(CWE-aligned)* | `mneme forensics vulns` *(scans last 500 commits)* |
-| ✨ `forensics anomaly` | "Is any commit suspicious?" *(insider-threat / compromised credential)* | `mneme forensics anomaly` *(no args = full history)* |
-
-> ⚡ **Just want the security report? One command:** `mneme do "find security issues"` — runs vulns + anomaly together.
-
-### 💰 Quant — *Wall-Street-inspired engineering intelligence*
-
-| Command | Plain-English use | Example |
-|---|---|---|
-| `drawdown` | Worst losing streaks *(firefighting periods)* | `mneme drawdown` |
-| `alpha` | Kelly-criterion allocation across tech debt | `mneme alpha --items debt.json` |
-| `backtest` | Validate any predictor against history | `mneme backtest --samples s.json` |
-| `black-swan` | Rare-but-catastrophic file patterns | `mneme black-swan` |
-| `insider-trading` | Authors who fix bugs they introduced | `mneme insider-trading` |
-| `moneyball` | Undervalued contributors *(high ROI, low LOC)* | `mneme moneyball` |
-| `greek` | Δ knowledge loss · Γ risk · Θ file decay | `mneme greek` |
-| `correlation-matrix` | Hidden coupling between files | `mneme correlation-matrix` |
-| `implied-volatility` | Chaos predicted from commit message tone | `mneme implied-volatility` |
-| `tax-loss-harvest` | Dead-code deletion candidates | `mneme tax-loss-harvest` |
-
-> 🧰 **More commands available** — entity-level similarity, incident correlation, the Wisdom Mutant Engine (self-improving), and several specialized tools live in the [Command Tour wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour). Run `mneme advanced` to list them all.
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🔬 Forensic mode — *find vulnerabilities + verify authors like a crime scene*
-
-The same way detectives use DNA + crime-scene patterns to identify suspects, Mneme can scan your git history for **security weaknesses** and **suspicious commits**. Plain-English use cases:
-
-> 🎯 **Don't have a commit hash handy?** Every forensics command accepts:
-> - `HEAD` — the most recent commit
-> - `HEAD~3` — 3 commits ago
-> - `main` / any branch name
-> - Or get a real hash:  `git log --oneline | head`
-
-### "Did Alice really write this commit?" → `forensics match`
-
-```bash
-# The most recent commit, against suspect Alice:
-mneme forensics match HEAD alice@example.com
-
-# A specific commit (find one with `git log --oneline`):
-mneme forensics match a3f9b21 alice@example.com
-```
-
-Returns a verdict like *"very strong support"* / *"moderate support against"* — same wording forensic scientists use in court. Useful when a commit's authorship is disputed (compromised account? insider threat?).
-
-### "Who wrote this commit?" → `forensics attribute`
-
-```bash
-# No args = analyze the latest commit (HEAD):
-mneme forensics attribute
-
-# Or pick any commit / branch / ref:
-mneme forensics attribute HEAD~5
-mneme forensics attribute main
-mneme forensics attribute a3f9b21
-```
-
-Ranks every author in your repo by likelihood. The top result is your most probable author — backed by 12 statistical "fingerprint" signals (working hours, file affinity, vocabulary, etc.).
-
-### "What security holes are hiding in our history?" → `forensics vulns`
-
-```bash
-mneme forensics vulns --since 2024-01-01
-```
-
-Scans every commit for **11 known vulnerability classes** *(SQL injection, weak crypto, hardcoded tokens, JWT flaws, money-precision bugs, supply-chain risks, XSS, race conditions, info leakage, privilege escalation, missing CORS guards)* and tags each with its **CWE ID**.
-
-### "Is any commit suspicious?" → `forensics anomaly`
-
-```bash
-mneme forensics anomaly --threshold 1.5
-```
-
-Builds a baseline for every author *(when they normally commit, what files they touch, what words they use, how big their commits are)* and flags any commit that deviates dramatically. The bank-grade scenario: **"Alice never commits at 3 AM, but this one is at 3:47 AM and touches files she's never touched."** Caught **before** review.
-
-> 🐑 *No other tool ships forensic-grade Bayesian author attribution + CWE-aligned vuln hunt + insider-threat detection together. See [Forensic-Code-Science wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science) for the math.*
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🛡 Audit-grade mode — *zero hallucination guarantee*
-
-```bash
-mneme ask --audit "why does the webhook retry?"
-mneme ask --audit --audit-floor high "..."   # tighten the threshold
-```
-
-In audit mode, Mneme:
-
-- ✅ **Refuses below confidence floor** *(default: medium · `--audit-floor low|medium|high`)*
-- ✅ **Refuses on unverified citations** — every backtick-hash is checked against retrieved evidence
-- ✅ **Returns trust score 0–100%** with every answer *(green / cyan / yellow / red)*
-- ✅ **JSON output** usable as a CI gate or MCP tool result
-
-> 🌌 *This is the only tool we know of that ships an explicit hallucination guard for git Q&A. The new moat.*
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🌌 The Frontier — what makes Mneme one of a kind
-
-**23 capabilities** that no maintained, open-source, local-first tool ships today —
-author DNA fingerprints, ENFSI-grade forensic attribution, CWE-aligned vulnerability hunts,
-hierarchical compression-as-storage, streaming reasoning events, and more.
+After researching the landscape (Sourcegraph Cody, Greptile, Cursor, Continue, Sweep, Aider, Copilot Workspace), every command in this list occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
 
 → 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
 
@@ -494,102 +270,173 @@ hierarchical compression-as-storage, streaming reasoning events, and more.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 📚 Want more? → [Wiki](https://github.com/patsa2561-art/mneme-ai/wiki)
+## 🚀 Install
 
-| Page | What's there |
+<details>
+<summary><b>Pick one of three ways</b></summary>
+
+| Pick this if you… | Command |
 |---|---|
-| 🌟 [**Innovations**](https://github.com/patsa2561-art/mneme-ai/wiki/Innovations) | 17 unique commands deep-dive *(with output samples)* |
-| 🔬 [**Forensic-Code-Science**](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science) | The math: STR loci · likelihood ratio · ENFSI verbal scale · CWE classes |
-| 📐 [**Novel-Algorithms**](https://github.com/patsa2561-art/mneme-ai/wiki/Novel-Algorithms) | TDWE · RACB · ADS · CGAR scoring formulas |
-| 🛡 [**Guardian**](https://github.com/patsa2561-art/mneme-ai/wiki/Guardian) | The 24/7 self-healing daemon — diagnose + auto-fix loop |
-| 🗺 [**Command-Tour**](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour) | Story-driven walkthrough — every command, told as workflow |
-| 🤖 [**MCP-Integration**](https://github.com/patsa2561-art/mneme-ai/wiki/MCP-Integration) | Drop into Claude Code · Cursor · Codex · Continue · Cline · Zed |
-| 🚀 [**Quickstart**](https://github.com/patsa2561-art/mneme-ai/wiki/Quickstart) · [**Installation**](https://github.com/patsa2561-art/mneme-ai/wiki/Installation) · [**Configuration**](https://github.com/patsa2561-art/mneme-ai/wiki/Configuration) | First 5 minutes, in detail |
-| 🍳 [**Recipes**](https://github.com/patsa2561-art/mneme-ai/wiki/Recipes) | Multi-command workflows for real engineering scenarios |
-| 🔒 [**Privacy**](https://github.com/patsa2561-art/mneme-ai/wiki/Privacy) | Where data lives · secret redaction · LLM data flow · audit log |
-| ❓ [**FAQ**](https://github.com/patsa2561-art/mneme-ai/wiki/FAQ) · [**Troubleshooting**](https://github.com/patsa2561-art/mneme-ai/wiki/Troubleshooting) | Short, direct answers |
+| 🔬 want to **try without installing** anything | `npx -y mneme-ai init` |
+| 💼 plan to **use it daily** *(recommended)* | `npm install -g mneme-ai` |
+| 🛠 want to **contribute or run latest code** | `git clone …/mneme-ai && cd mneme-ai && npm install && npm run build` |
 
-🏗 Architecture deep-dive: [ARCHITECTURE.md](./ARCHITECTURE.md) · 🔒 Privacy: [docs/SECURITY.md](./docs/SECURITY.md) · 🗺 Roadmap: [ROADMAP.md](./ROADMAP.md)
+After install, the same 60-second flow on any git repo:
+
+```bash
+mneme init                       # creates .mneme/ inside the repo
+mneme index                      # ~90s for 5k commits, zero-setup since v0.19
+mneme ask "why does X exist?"    # query the memory
+```
+
+**Upgrade:**
+
+```bash
+mneme upgrade                       # v0.22.2+ — bulletproof self-update
+                                    # bypasses npm cache + diagnoses PATH conflicts
+```
+
+</details>
+
+<details>
+<summary><b>🆓 Free Forever — no API key required</b></summary>
+
+Indexing works zero-config (bundled WASM, ~25MB auto-download).
+
+For full Q&A synthesis, run the 30-second wizard:
+
+```bash
+mneme setup-free
+```
+
+Three free paths:
+
+| Path | What you get | Setup time |
+|---|---|---|
+| 🏠 **Local Ollama** | 100% private, free forever, ~3GB one-time | ~3 min |
+| ⚡ **Groq free tier** | 500 tok/s cloud (fastest), generous free quota | ~30 sec |
+| 🌐 **OpenRouter free** | Model variety: Qwen, Gemma, Llama 3.3 | ~30 sec |
+
+**Auto-detected.** Set `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TOGETHER_API_KEY`, or run local `ollama serve` — Mneme picks the right path. **Models known to work free:** Llama 3.3 70B · Qwen 2.5 (3B/7B/72B) · Qwen QwQ 32B · Gemma 2 (2B/9B) · Llama 3.1/3.2.
+
+If everything fails, retrieval-only fallback still answers — never a hard error.
+
+</details>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## ❓ Common questions
+## ⚡ Try it
+
+<details>
+<summary><b>Five commands to start</b></summary>
+
+```bash
+mneme ask "why does parseAmount use try/catch?"
+#  → verdict-shaped answer, citation-grade
+
+mneme why src/auth.ts:47
+#  → who wrote each line + why · semantically related commits
+
+mneme premortem "swap event-bus library"
+#  → predict regret risk grounded in YOUR repo (not generic best-practices)
+
+mneme story "rate-limiting"
+#  → narrative across all commits touching the topic
+
+mneme ask --audit "..."
+#  → zero-hallucination mode · refuses if confidence below floor
+```
+
+</details>
+
+<div align="center">
+
+<table>
+<tr>
+<td align="center" width="100%">
+
+### 📚 The full command browser — **50+ commands, every one with examples**
+
+<sub>Tier 1 essentials · Forensics · Quant · Insights · MCP · v0.27 Audit</sub>
+
+<br/>
+
+[**🔍 Browse all commands in the wiki →**](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour)
+
+<sub>plain-English use case · copy-paste examples · graphics · grouped by category</sub>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+<details>
+<summary><b>🤖 Tell your AI to install it (one prompt)</b></summary>
+
+Copy-paste this into Claude Code / Cursor / Codex / Continue / Cline:
+
+```
+Install mneme-ai globally with npm, then run `mneme init` and `mneme index`
+in this repo. Then add the Mneme MCP server to your config so you can call
+`mneme_ask`, `mneme_search_commits`, `mneme_why`, and `mneme_status` as
+tools. The MCP transport is stdio; the command is `mneme mcp` from this
+repo's root.
+```
+
+The AI will figure out the rest (npm install, MCP config edits, smoke-test). Works because Mneme is **registered in the official MCP Registry**.
+
+</details>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## ❓ FAQ
+
+<details>
+<summary><b>Common questions (click to expand)</b></summary>
 
 **Q: Can I just prompt my AI agent to run `git log` instead?**
-A: Yes — for small repos with simple queries. See the comparison table at the top.
-Mneme starts adding value when **scale, semantics, forensics, or audit** matter.
+A: Yes — for small repos with simple queries. Mneme starts adding value when **scale, semantics, forensics, or audit** matter — see [the comparison table](https://github.com/patsa2561-art/mneme-ai/wiki/Innovations#vs-ai--git-cli) for the 9 cases.
 
 **Q: Does Mneme replace Claude Code / Cursor / Codex?**
-A: No. Mneme is a **memory layer underneath them**. Plug Mneme's MCP server
-into your AI client and it gains semantic codebase memory + forensic tools.
-Best of both worlds.
+A: No. Mneme is a **memory layer underneath them**. Plug Mneme's MCP server into your AI client and it gains semantic codebase memory + forensic tools.
 
-**Q: Do I need to install Ollama or pay for OpenAI?**
-A: No. Since v0.19, Mneme ships a **bundled WASM model** (~25MB auto-downloaded
-on first index). Zero setup. If you have Ollama or an OpenAI key, Mneme uses
-those for higher quality automatically — but they're optional.
+**Q: Do I need Ollama or an OpenAI key?**
+A: No. Bundled WASM model handles indexing zero-config. For full Q&A synthesis, `mneme setup-free` walks you through 3 free paths in 30 seconds.
 
 **Q: Does my code leave my machine?**
-A: No. Indexing + retrieval are **100% local** (SQLite + WASM embeddings).
-Only your AI client (if cloud-based) sees what *you* decide to send it.
-For air-gapped use, run Mneme + a local LLM and nothing leaves the box.
+A: No. Indexing + retrieval are **100% local**. Only your AI client (if cloud-based) sees what *you* decide to send it.
 
 **Q: How accurate is the forensic analysis?**
-A: Pattern matching produces **candidates**, not certified findings — every hit
-needs human review. That's honest forensic methodology. We follow the
-**ENFSI 2015 verbal scale** (real forensic standard) for author attribution
-likelihood ratios. See [Forensic-Code-Science](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science).
+A: Pattern matching produces **candidates**, not certified findings — every hit needs human review. Forensic methodology follows the **ENFSI 2015 verbal scale** (real forensic standard). See [Forensic-Code-Science](https://github.com/patsa2561-art/mneme-ai/wiki/Forensic-Code-Science).
 
 **Q: Will it work on a 50,000-commit monorepo?**
-A: Yes. Indexing is incremental; queries are O(log n) BM25 + cosine. Largest
-test fixture: 50K commits indexed in ~3 min, queries return in <100ms.
+A: Yes. Indexing is incremental. With `mneme htc-build` (v0.24) the entire history fits in one Claude prompt as compressed abstracts.
 
 **Q: What if I'm offline / on a plane?**
-A: After the first run (one-time 25MB model download), everything works offline.
-Indexing, querying, forensics — all fully local. The hash fallback works
-even without the bundled model.
+A: After the first run (one-time 25MB model download), everything works offline. Hash fallback works even without the bundled model.
+
+</details>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## 📦 Project links
 
 <table>
-<tr>
-<td>📦 <b>npm</b></td>
-<td><a href="https://www.npmjs.com/package/mneme-ai">https://www.npmjs.com/package/mneme-ai</a></td>
-</tr>
-<tr>
-<td>🌐 <b>MCP Registry</b></td>
-<td><code>io.github.patsa2561-art/mneme-ai</code> at <a href="https://registry.modelcontextprotocol.io/">registry.modelcontextprotocol.io</a></td>
-</tr>
-<tr>
-<td>💻 <b>GitHub</b></td>
-<td><a href="https://github.com/patsa2561-art/mneme-ai">github.com/patsa2561-art/mneme-ai</a></td>
-</tr>
-<tr>
-<td>📚 <b>Wiki</b></td>
-<td><a href="https://github.com/patsa2561-art/mneme-ai/wiki">github.com/patsa2561-art/mneme-ai/wiki</a></td>
-</tr>
-<tr>
-<td>📋 <b>CHANGELOG</b></td>
-<td><a href="./CHANGELOG.md">./CHANGELOG.md</a></td>
-</tr>
+<tr><td>📦 <b>npm</b></td><td><a href="https://www.npmjs.com/package/mneme-ai">npmjs.com/package/mneme-ai</a></td></tr>
+<tr><td>💻 <b>GitHub</b></td><td><a href="https://github.com/patsa2561-art/mneme-ai">github.com/patsa2561-art/mneme-ai</a></td></tr>
+<tr><td>📚 <b>Wiki</b></td><td><a href="https://github.com/patsa2561-art/mneme-ai/wiki">Mneme's brain map</a></td></tr>
+<tr><td>📋 <b>CHANGELOG</b></td><td><a href="https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md">version-by-version detail</a></td></tr>
+<tr><td>🔌 <b>MCP Registry</b></td><td><code>io.github.patsa2561-art/mneme-ai</code></td></tr>
 </table>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 📜 License & support
+## 📜 License
 
-[**MIT**](./LICENSE) — use it, fork it, ship it.
+MIT. Use it. Fork it. Ship it.
+Quoting [Christensen](https://www.harvardbusiness.org/its-easier-to-hold-to-your-principles-100-of-the-time-than-it-is-to-hold-to-them-98-of-the-time/):
 
-> 🧑‍💻 Solo developer. I read every issue. PRs welcome. Be kind.
+> *"It's easier to hold your principles 100% of the time than it is to hold them 98% of the time."*
 
-<div align="center">
-
-<br/>
-
-*"Until Mneme, your code knew **what** but not **why**."*
-
-**μνήμη — the memory layer of your codebase.**
-
-</div>
+Mneme's principles are non-negotiable: local-first · free path always works · verifiable-or-refuse · plain English everywhere · **AI is the student; we are the teacher.**

@@ -29,6 +29,32 @@ describe("classifyIntent — vague queries (the regression we are fixing)", () =
     expect(classifyIntent("    ").intent).toBe("vague");
   });
 
+  it("classifies trivial-content queries as vague (the 0% confidence cliff fix)", () => {
+    // Real user pain: `mneme ask --audit "..."` returned "TRUST 0%" / "0 citations".
+    // Looked like a system failure; was really an empty input. Now returns a
+    // friendly redirect instead.
+    expect(classifyIntent("...").intent).toBe("vague");
+    expect(classifyIntent("?").intent).toBe("vague");
+    expect(classifyIntent("???").intent).toBe("vague");
+    expect(classifyIntent("—").intent).toBe("vague");
+    expect(classifyIntent(".").intent).toBe("vague");
+    expect(classifyIntent("a").intent).toBe("vague"); // single letter
+    expect(classifyIntent("  ...  ").intent).toBe("vague");
+  });
+
+  it("trivial-content queries get a helpful reason, not a system-error vibe", () => {
+    expect(classifyIntent("...").reason).toMatch(/no real query content|too short/);
+    expect(classifyIntent("a").reason).toMatch(/too short|no real query content/);
+  });
+
+  it("does NOT misclassify real 2+ char identifiers as trivial", () => {
+    // 2 alphanum chars = enough to retrieve; e.g. tickers, codes, bug ids.
+    expect(classifyIntent("DB").intent).toBe("specific");
+    expect(classifyIntent("WAL").intent).toBe("specific");
+    expect(classifyIntent("JWT").intent).toBe("specific");
+    expect(classifyIntent("v1").intent).toBe("specific");
+  });
+
   it("vague results include a redirect message that mentions specific question forms", () => {
     const r = classifyIntent("how to write good code");
     expect(r.redirect).toMatch(/why does/);

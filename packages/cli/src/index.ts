@@ -36,6 +36,7 @@ import { conscienceCommand } from "./commands/conscience.js";
 import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
+import { auditCommand } from "./commands/audit.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -88,6 +89,42 @@ export async function run(argv: string[]): Promise<void> {
         "Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.\n" +
         "Run `mneme advanced` to see them.\n",
     );
+
+  // ─── v0.27.0: AI Session Audit — every AI-driven commit gets a trust certificate ───
+  program
+    .command("audit")
+    .description("AI Session Audit — every AI-driven commit gets a trust certificate (vendor-neutral; works with Claude Code / Cursor / Codex / Sweep / etc.)")
+    .option("--baseline", "snapshot current behavior + types + perf", false)
+    .option("--trace", "diff capture + AI session detection", false)
+    .option("--verify", "Leviathan-style narrative vs diff check", false)
+    .option("--certify", "5-axis trust certificate (CI-friendly exit code)", false)
+    .option("--watch", "long-running CI gate mode", false)
+    .option("--report", "produce markdown report", false)
+    .option("--out <file>", "output path for --report")
+    .option("--interval <seconds>", "poll interval for --watch", (v) => Number(v), 60)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: {
+      baseline?: boolean; trace?: boolean; verify?: boolean; certify?: boolean;
+      watch?: boolean; report?: boolean; out?: string; interval?: number; json?: boolean;
+    }) => {
+      const mode: "baseline" | "trace" | "verify" | "certify" | "watch" | "report" =
+        opts.baseline ? "baseline" :
+        opts.trace ? "trace" :
+        opts.verify ? "verify" :
+        opts.certify ? "certify" :
+        opts.watch ? "watch" :
+        opts.report ? "report" :
+        "certify"; // default
+      process.exit(
+        await auditCommand({
+          cwd: process.cwd(),
+          mode,
+          json: opts.json,
+          out: opts.out,
+          interval: opts.interval,
+        }),
+      );
+    });
 
   // ─── v0.20.0: smart dispatcher — one command, world-class routing ────
   program

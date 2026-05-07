@@ -15,6 +15,7 @@
 
 ### 🎓 Manifesto
 - [[AI-Teacher]] · *Mneme as the teacher of AI*
+- [[AI-Session-Audit]] · *every AI commit gets a trust certificate*
 
 ### 💎 The Frontier
 - [[The-Frontier]] · *23 world-firsts*

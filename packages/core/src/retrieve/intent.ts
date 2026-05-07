@@ -111,6 +111,23 @@ export function classifyIntent(query: string): IntentResult {
     return { intent: "vague", reason: "empty query", redirect: VAGUE_REDIRECT_TEMPLATE };
   }
 
+  // 0. Trivial-content guard. Queries that are pure punctuation ("...", "?",
+  //    "—"), single characters, or whitespace+symbols slip past every
+  //    pattern below and end up at retrieval with literally nothing to
+  //    match — producing the dreaded "0% confidence" output that looks
+  //    like a system failure when it's really a user-input gap. Catch
+  //    them here with a kind message.
+  const alphanumOnly = q.replace(/[^a-zA-Z0-9]/g, "");
+  if (alphanumOnly.length < 2) {
+    return {
+      intent: "vague",
+      reason: alphanumOnly.length === 0
+        ? "no real query content (only punctuation or whitespace)"
+        : "query too short to match anything meaningful",
+      redirect: VAGUE_REDIRECT_TEMPLATE,
+    };
+  }
+
   // 1. Lookup patterns win — questions about a specific person/hash/PR are
   //    always specific enough to retrieve.
   for (const p of LOOKUP_PATTERNS) {

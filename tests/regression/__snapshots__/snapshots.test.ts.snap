@@ -11,6 +11,10 @@ Options:
   -h, --help                       display help for command
 
 Commands:
+  audit [options]                  AI Session Audit — every AI-driven commit
+                                   gets a trust certificate (vendor-neutral;
+                                   works with Claude Code / Cursor / Codex /
+                                   Sweep / etc.)
   do [options] <query...>          Smart dispatcher — describe what you want,
                                    Mneme picks tools and runs them ('do find
                                    security issues' / 'do is the codebase
