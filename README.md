@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1010%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1291%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -56,7 +56,7 @@ mneme upgrade                     # bulletproof self-update (npm cache + PATH co
 
 **No API key required.** Embeddings via bundled WASM, synthesis via local Ollama / Groq free tier / OpenRouter free tier — `mneme setup-free` walks you through in 30 seconds. If everything fails, retrieval-only fallback always answers.
 
-**Latest:** **v0.24 Hierarchical Memory** — world-first compression-as-storage. 50K commits fit in one Claude prompt. → [Wiki: Hierarchical-Memory](https://github.com/patsa2561-art/mneme-ai/wiki/Hierarchical-Memory)
+**Latest:** **v0.25 Iris + Regression Wall** — journalist-grade output engine + 179 new regression tests. **1291 tests passing.** → [Wiki: Releases](https://github.com/patsa2561-art/mneme-ai/wiki/Releases)
 
 📅 [**Full release history → Wiki: Releases**](https://github.com/patsa2561-art/mneme-ai/wiki/Releases) · [CHANGELOG](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
 

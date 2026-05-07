@@ -8,7 +8,8 @@
 
 | Version | Headline | Wiki page |
 |---|---|---|
-| **v0.24.0** | **Hierarchical Memory** — world-first compression-as-storage. 50K commits fit in one Claude prompt. `mneme htc-build` + `htc-stats`. 10× fewer tokens per query. Compressed MCP responses. | [[Hierarchical-Memory]] |
+| **v0.25.0** | **Iris + Regression Wall** — journalist-grade output engine (pyramid + AI headline + visual continuity + adaptive verbosity + 30-sec contract) + 179 new regression tests (help/no-throw/shape/snapshots). 1291 tests passing. | — |
+| v0.24.0 | **Hierarchical Memory** — world-first compression-as-storage. 50K commits fit in one Claude prompt. `mneme htc-build` + `htc-stats`. 10× fewer tokens per query. Compressed MCP responses. | [[Hierarchical-Memory]] |
 | v0.23.0 | **Speculative Reasoning** — streaming thought events (`--stream`) · Leviathan citation verifier · DDTree commit-tree search · ConstraintPruner trait · path-aware sessions · wisdom auto-adapt | [[Speculative-Reasoning]] |
 | v0.22.2 | `mneme upgrade` — bulletproof self-update (bypasses npm cache + PATH conflicts) | — |
 | v0.22.1 | **ResilientEnricher** — self-healing free-LLM fallback chain (Ollama → Groq → Together → OpenRouter → OpenAI). Per-provider health tracking + cooldown windows. | — |

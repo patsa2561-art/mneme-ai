@@ -1,0 +1,261 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CLI regression — output structure snapshots > \`mneme --help\` snapshot 1`] = `
+"Usage: mneme [options] [command]
+
+μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the
+WHERE-IT-BREAKS.
+
+Options:
+  -V, --version                    output the version number
+  -h, --help                       display help for command
+
+Commands:
+  do [options] <query...>          Smart dispatcher — describe what you want,
+                                   Mneme picks tools and runs them ('do find
+                                   security issues' / 'do is the codebase
+                                   healthy')
+  htc-build [options]              Compress every commit + cluster + memoir
+                                   into LLM-ready cache (10× smaller, paid
+                                   once, free LLM ladder auto-detected)
+  htc-stats [options]              Inspect HTC coverage + compression ratio
+                                   (raw vs cached tokens)
+  upgrade [options]                Update Mneme to latest — bypasses npm cache
+                                   + diagnoses PATH conflicts (more reliable
+                                   than \`npm install -g mneme-ai@latest\`)
+  setup-free                       30-second guided setup for full Q&A
+                                   synthesis without paying — Ollama / Groq /
+                                   OpenRouter free paths
+  guard [options]                  Pre-commit hook — auto-runs anomaly + vuln +
+                                   secret-redaction checks on every commit
+                                   (install once, forget it exists)
+  init [options]                   Initialize Mneme in the current repo (probes
+                                   environment to recommend the best embedder)
+  index [options]                  Index commits, PRs, and embeddings — or
+                                   analyze the existing index
+  ask [options] <question...>      Ask the memory: "why does payment.ts use
+                                   try/catch?"
+  why [options] <target>           Why does this exist? Pass file:line,
+                                   file:start-end, or just file
+  status                           Show memory + repo status
+  doctor [options]                 Probe the environment (Ollama, OpenAI,
+                                   hardware) and recommend the best embedder
+  mcp                              Run as an MCP server (for Claude Code,
+                                   Cursor, Continue, etc.)
+  watch [options]                  Wisdom Mutant — 24/7 daemon: re-index on
+                                   commit, calibrate hourly, self-eval daily
+  time-machine [options] <file>    Narrate a file's evolution as eras (birth,
+                                   rewrite, firefight, plateau)
+  premortem [options] <intent...>  Predict regret risk for a proposed change,
+                                   grounded in your repo's failure history
+  ghost [options]                  Surface ghost code — half-finished features,
+                                   stale TODOs, files born and forgotten
+  dna [options] [author]           Extract Codebase DNA — a portable
+                                   fingerprint of a contributor's style, hours,
+                                   and file affinity
+  drift [options]                  Visualize topical drift — features →
+                                   refactors → firefights → polish over time
+  chronicle [options]              Auto-generate a chaptered narrative
+                                   documentary of your codebase
+  oracle [options]                 Predict next-window co-edits and surface
+                                   likely author collisions on the same file
+  constellation [options]          Build a graph view of the repo — files as
+                                   stars, authors as orbitals, commits as edges
+  forensics                        Applied forensic science for code: STR-loci
+                                   attribution, vulnerability hunt, anomaly
+                                   detection
+  guardian [options]               24/7 self-healing engine — diagnose
+                                   weaknesses + auto-fix safe actions
+  cluster [options]                Semantic clustering of commit messages —
+                                   find topic islands across history
+  network [options]                Author network — semantic collaboration
+                                   graph with co-edit + co-time + co-topic
+                                   edges
+  manage [options]                 Engineering management dashboard — health,
+                                   succession, skill matrix, trajectory
+  export-bundle|bundle [options]   Export the universal bundle — DNA + drift +
+                                   chronicle + oracle + constellation +
+                                   clusters + network + manage + ghost
+  advanced                         Show advanced commands grouped by phase
+                                   (hidden from main --help)
+  help [command]                   display help for command
+
+Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.
+Run \`mneme advanced\` to see them.
+
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme advanced\` snapshot 1`] = `
+"
+  μνήμη  ·  Mneme — advanced commands
+  ─────────────────────────────────────────────────────────────
+
+  Phase 2 — semantic similarity
+    entities                  parse + embed every TS/JS/Python/Go symbol
+    clones [--threshold]      surface near-duplicate functions
+
+  Phase 3 — incident correlation
+    correlate --source ...    join commits with incidents (pager / manual)
+    blast <commit>            predict incidents likely to follow a commit
+    palimpsest <file>:<line>  walk the causal chain of a single line
+    conscience [files...]     risk-score a PR against history
+
+  Wisdom Mutant Engine (Phase 4)
+    feedback <id> up|down     record explicit feedback on a query
+    calibrate                 re-tune search knobs against feedback set
+
+  Insights — the killer commands
+    who-knows <topic>         verdict on who knows X (% confidence + backup + risk)
+    decisions                 auto-extract ADRs from commit messages
+    stack-trace [--from F]    paste an error, get historical context per frame
+    story <topic>             narrate the evolution of <topic> across acts
+    dream                     speculative ideas grounded in your patterns
+    chat                      multi-turn REPL over your repo's history
+
+  Innovations (Sprint 4) — wisdom + world-class + uniqueness
+    regret                    commits shipped + immediately fixed/reverted (regret rate)
+    bus-factor                files where one author owns ≥75% — fragility map
+    paradox                   architectural flip-flops (A → B → A patterns)
+    commit-coach [--stdin]    pre-commit review: message + reviewers + warnings
+    crystal-ball [--stdin]    predict CI/follow-up failure probability for staged diff
+
+  Quant (Sprint 5) — Wall Street meets Git
+    drawdown                  worst losing streaks (firefighting periods)
+    alpha --items F           Kelly-criterion allocation for technical debt
+    backtest --samples F      validate any predictor against history
+    black-swan                rare-but-catastrophic file patterns
+    insider-trading           authors who fix bugs they introduced
+    moneyball                 undervalued contributors (high ROI, low LOC)
+    greek                     codebase Greeks (Δ Γ Θ) sensitivity
+    correlation-matrix        hidden behavioral coupling between files
+    implied-volatility        chaos predicted from commit message tone
+    tax-loss-harvest          dead-code deletion candidates
+
+  WILD — opinionated extras
+    heal [--dry-run]          synthesize WHY notes for poor commit messages
+    echo [--id|--query]       find past incidents resembling current
+    runaway                   files growing silently across many commits
+    mirror                    onboarding dossier (5 PRs, 3 people, 2 incidents)
+    rumor                     tribal phrases mentioned but never documented
+    fossil                    files deleted from HEAD but alive in history
+    ledger --since ...        tamper-evident audit log (SOX/SOC2)
+    adapt                     mutant detector — recommend next 1-3 commands
+    teach <target>            explain a folder/file in plain language
+    genius <question>         multi-step LLM agent over Mneme commands
+
+  Brand
+    wisdom [-n <1..13>]       a meditation from the Mneme manifesto
+    manifesto                 the full canon
+
+  Each command has its own --help with options and examples.
+  Full design notes: WILD_IDEAS.md, ROADMAP.md.
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme ask --help\` snapshot 1`] = `
+"Usage: mneme ask [options] <question...>
+
+Ask the memory: "why does payment.ts use try/catch?"
+
+Options:
+  -k, --top-k <n>        number of results (default: 8)
+  --json                 machine-readable JSON output (default: false)
+  --no-llm               skip LLM synthesis — extractive answer only
+  --debug                show intent classification + raw scores (default:
+                         false)
+  --audit                refuse to answer below confidence floor or with
+                         unverified citations (default: false)
+  --audit-floor <level>  audit confidence floor: low | medium | high (default:
+                         "medium")
+  --stream               v0.23: emit speculative-reasoning events in real-time
+                         (consider/accept/prune/verify) (default: false)
+  -h, --help             display help for command
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme do --help\` snapshot 1`] = `
+"Usage: mneme do [options] <query...>
+
+Smart dispatcher — describe what you want, Mneme picks tools and runs them ('do
+find security issues' / 'do is the codebase healthy')
+
+Options:
+  --json      structured output (default: false)
+  -h, --help  display help for command
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme forensics anomaly --help\` snapshot 1`] = `
+"Usage: mneme forensics anomaly [options]
+
+Catch suspicious commits before merge (insider-threat / credential-compromise)
+
+Options:
+  --threshold <n>  deviation threshold to surface (0..4) (default: 0.9)
+  --top <n>        show N findings (default: 10)
+  --json           structured output (default: false)
+  -h, --help       display help for command
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme guardian --help\` snapshot 1`] = `
+"Usage: mneme guardian [options]
+
+24/7 self-healing engine — diagnose weaknesses + auto-fix safe actions
+
+Options:
+  --watch               run forever, polling every --interval seconds (default:
+                        false)
+  --once                run a single pass and exit (default if --watch is
+                        absent) (default: false)
+  --interval <seconds>  poll interval in seconds (--watch only) (default: 300)
+  --apply               actually apply auto-policy actions (otherwise
+                        observe-only) (default: false)
+  --max-iterations <n>  stop after N ticks (testing / cron-style)
+  --json                structured JSON output (default: false)
+  -h, --help            display help for command
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme htc-stats --help\` snapshot 1`] = `
+"Usage: mneme htc-stats [options]
+
+Inspect HTC coverage + compression ratio (raw vs cached tokens)
+
+Options:
+  --json      machine-readable output (default: false)
+  -h, --help  display help for command
+"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme status\` structure (sections only) 1`] = `
+"  ◉  Mneme Status
+  ◆ Repo
+  ◆ Memory
+  ◆ Config"
+`;
+
+exports[`CLI regression — output structure snapshots > \`mneme wisdom -n 1\` snapshot 1`] = `
+"
+  ╭───────────────────────────────────────────╮
+  │  meditation 1 of 13                                │
+  ╰───────────────────────────────────────────╯
+
+  On Memory and Intelligence
+
+  An intelligence without memory is just guessing in a loop. The
+  Greeks knew this — they made μνήμη the mother of the muses, not
+  their student.
+  Every AI assistant you use today is a Mnemosyne with amnesia.
+
+  — Intelligence is the spark; memory is the fuel.
+
+  see also:  mneme wisdom --all     ·     mneme wisdom -n <1..13>     ·     mneme manifesto
+"
+`;
+
+exports[`CLI regression — output structure snapshots > unknown-command error snapshot 1`] = `
+"error: unknown command 'nope-not-real'
+"
+`;

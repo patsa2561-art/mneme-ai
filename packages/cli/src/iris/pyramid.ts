@@ -83,15 +83,42 @@ function visibleLength(s: string): number {
  */
 function wrapLine(line: string, width: number, indent = ""): string[] {
   if (visibleLength(line) <= width) return [line];
-  // Crude but effective: split on spaces, rebuild greedily.
+  // Split on spaces, rebuild greedily; hard-cut any single token that exceeds width.
   const out: string[] = [];
   const words = line.split(/(\s+)/); // keep separators so we can re-emit them
   let current = "";
   let currentVisible = 0;
+
+  const hardCut = (token: string): string[] => {
+    const pieces: string[] = [];
+    let remaining = token;
+    while (visibleLength(remaining) > width) {
+      pieces.push(remaining.slice(0, width));
+      remaining = remaining.slice(width);
+    }
+    if (remaining.length > 0) pieces.push(remaining);
+    return pieces;
+  };
+
+  const flush = () => {
+    if (current.trim().length > 0) out.push(current.trimEnd());
+    current = "";
+    currentVisible = 0;
+  };
+
   for (const w of words) {
     const wv = visibleLength(w);
+    // Single token longer than the budget — flush, hard-cut, push pieces.
+    if (wv > width) {
+      flush();
+      const pieces = hardCut(w);
+      for (let i = 0; i < pieces.length - 1; i++) out.push(pieces[i]!);
+      current = indent + pieces[pieces.length - 1]!;
+      currentVisible = visibleLength(current);
+      continue;
+    }
     if (currentVisible + wv > width && current.trim().length > 0) {
-      out.push(current.trimEnd());
+      flush();
       current = indent + (w.trim() ? w : "");
       currentVisible = visibleLength(current);
       continue;

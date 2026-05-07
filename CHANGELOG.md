@@ -8,6 +8,120 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.25.0] — 2026-05-06
+
+The **"Iris + Regression Wall"** release. Two parallel additions that
+strengthen the foundation: a **journalist-grade output engine** and a
+**regression test wall** that locks current CLI behavior before any
+output refactor lands. **+281 new tests, 1291 total passing.**
+
+### Added — Iris journalist output engine
+
+A unified rendering pipeline so every `mneme xxx` command can produce
+output a non-engineer scans in 30 seconds. Named after Iris (Greek:
+messenger between gods and humans) — pairs with Mneme (memory).
+
+Five novelty pillars, all implemented:
+
+1. **Inverted-pyramid auto-renderer** — most-important first (journalist style)
+2. **AI-summarized headline** — 1-line TL;DR via FREE LLM (Groq Gemma 2B / Ollama), with extractive fallback when no LLM is reachable
+3. **Visual entity continuity** — same commit / author / file always renders identically across every command (deterministic colors, no randomness)
+4. **Adaptive verbosity** — repeat users get terse; first-timers get verbose. State in `.mneme/iris-state.json`
+5. **30-second contract** — validator that any output must lead with headline + actionable in first 5 lines
+
+New modules in `packages/cli/src/iris/`:
+
+| Module | Purpose | Lines |
+|---|---|---|
+| `pyramid.ts` | Inverted-pyramid renderer (tier sort, width-aware wrap, details collapse) | 223 |
+| `headline.ts` | LLM-or-extractive headline + 7-day SHA-1 cache | 349 |
+| `entity.ts` | Deterministic commit / author / file / hash renderers | 151 |
+| `flash.ts` | 3-line summary for list / table / verdict / metric / narrative | 136 |
+| `adaptive.ts` | Per-user state, 5-use threshold for terse-mode | 146 |
+| `contract.ts` | 30-second contract validator (5 checks) | 108 |
+| `index.ts` | Barrel + `iris.render()` convenience | 71 |
+
++102 new tests for Iris alone (6 test files).
+
+Sample output (forensics-anomaly through Iris):
+
+```
+🛡  3 critical anomalies — verify alice@bank.com identity
+
+✦ Findings
+    ● abc1234  feat: add payment retry  [2024-08-12 · alice]
+    Suspect: alice <alice@bank.com>
+    Run mneme why abc1234 to inspect.
+
+Key facts
+    3 critical / 2 high / 0 medium
+    Window: last 30 days
+
+📘 How to read
+    CRIT entries are likely fraud-style anomalies.
+    Try mneme guard next to set up a CI gate.
+
+▼ 6 more lines (run with --verbose)
+
+ⓘ → Try next: mneme why abc1234
+```
+
+### Why ship Iris as engine first (no command migration in this release)
+
+Migrating each command's renderer to use Iris would invalidate the
+regression snapshots we just landed. That's the wrong sequencing.
+
+v0.25 ships:
+- ✅ Iris engine — built, tested, importable
+- ✅ Regression wall — current CLI output locked in snapshots
+
+v0.26+ will:
+- Migrate top commands (ask, do, why, forensics anomaly, htc-stats) one
+  by one, regenerating each snapshot **intentionally** as part of the
+  refactor PR. The regression wall stays meaningful.
+
+This is the wisdom path: build the engine → lock the floor → migrate
+deliberately. Not "rewrite everything and pray nothing broke."
+
+### Added — Regression test wall
+
+Catches future output regressions before users see them. **+179 new tests
+across 4 files** in `tests/regression/`:
+
+1. **`help.test.ts`** — every CLI command (75+) exits 0 on `--help`. Catches "broke a command's wiring" bugs.
+2. **`no-throw.test.ts`** — every non-daemon command runs in a fresh `git init` repo without crashing or leaking a stack trace. Daemon commands (`watch`, `chat`, `mcp`, `guardian`) tested via `--help` only.
+3. **`output-shape.test.ts`** — universal properties on real output: <1MB, no `[object Object]`, no bare `undefined`, no stack traces, no malformed ANSI escapes. 11 real-data targets + 5 `--json` parseability tests.
+4. **`snapshots.test.ts`** — 10 normalized snapshots of the most-visible commands (status, htc-stats, ask --help, forensics anomaly --help, wisdom, do --help, guardian --help, unknown-command error). Volatile bits (timestamps, hashes, dates, sizes) normalized before snapshot comparison.
+
+Helpers in `tests/regression/helpers.ts`:
+- `ALL_COMMANDS` — single source of truth, parsed from `packages/cli/src/index.ts` at test load time
+- `mkTempRepo()` / `rmTempRepo()` — isolated temp git repos
+- `strip()` — ANSI stripper for stable assertions
+- `normalize()` — replaces timestamps / hashes / dates / sizes / paths for snapshot stability
+
+### Documentation refactor
+
+User feedback: README had outdated `🧠 New in v0.20 — talk to Mneme like
+a human` section while we're already on v0.24. Removed; content moved
+to a dedicated wiki page.
+
+- `docs/wiki/Smart-Dispatcher.md` — full feature page for `mneme do`
+- `docs/wiki/Home.md` — restructured as **Mneme's brain map** (5 cognitive
+  lobes: memory layer, HTC, speculative reasoning, guardian, forensics)
+  with clear "pick the room you need" navigation
+- `docs/wiki/_Sidebar.md` — 7 groups: Start · 5 lobes · Frontier · Commands
+  · Practical · Reference · Project
+
+Wiki is now scan-in-30-sec navigable. README is leaner.
+
+### Tests
+
++281 new tests, total 1291 passing (was 1010):
+- Regression wall: +179 (help, no-throw, output-shape, snapshots)
+- Iris engine: +102 (pyramid, headline, entity, flash, adaptive, contract, integration)
+
+—
+
 ## [0.24.0] — 2026-05-06
 
 The **"Hierarchical Memory"** release. World-first feature:
