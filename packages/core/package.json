@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/core",
-  "version": "0.35.0",
+  "version": "0.36.0",
   "description": "Core indexing, retrieval, and graph engine for Mneme",
   "type": "module",
   "main": "./dist/index.js",
@@ -53,18 +53,10 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean"
   },
-  "peerDependencies": {
-    "typescript": ">=5.0"
-  },
-  "peerDependenciesMeta": {
-    "typescript": {
-      "optional": true
-    }
+  "dependencies": {
+    "typescript": "^5.6.3"
   },
   "engines": {
     "node": ">=22.13.0 <25.0.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.6.3"
   }
 }

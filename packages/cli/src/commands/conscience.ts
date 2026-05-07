@@ -35,6 +35,8 @@ export interface ConscienceCommandOptions {
   recencyDays?: number;
   topN?: number;
   json?: boolean;
+  /** Switch to dual-jury mode — show prosecution + defense views from real history. */
+  dualJury?: boolean;
 }
 
 interface RelatedCommit {
@@ -110,6 +112,18 @@ export async function conscienceCommand(opts: ConscienceCommandOptions): Promise
   related.sort((a, b) => b.riskScore - a.riskScore);
   const top = related.slice(0, opts.topN ?? 8);
 
+  if (opts.dualJury) {
+    const jury = buildDualJury(related);
+    if (opts.json) {
+      process.stdout.write(JSON.stringify({ files, jury }, null, 2) + "\n");
+      s.close();
+      return 0;
+    }
+    printDualJury(files, jury);
+    s.close();
+    return 0;
+  }
+
   if (opts.json) {
     process.stdout.write(JSON.stringify({ files, top }, null, 2) + "\n");
     s.close();
@@ -119,6 +133,109 @@ export async function conscienceCommand(opts: ConscienceCommandOptions): Promise
   printConscience(files, top, s);
   s.close();
   return 0;
+}
+
+interface DualJury {
+  prosecution: RelatedCommit[];
+  defense: RelatedCommit[];
+  /** Net verdict: prosecution_strength - defense_strength, normalized to [-1, 1]. */
+  verdictScore: number;
+  /** Verbal verdict: "block" | "caution" | "clear". */
+  verdict: "block" | "caution" | "clear";
+  /** Total commits considered. */
+  totalCommits: number;
+}
+
+function buildDualJury(related: RelatedCommit[]): DualJury {
+  // Prosecution: commits with the same files that DID cause incidents.
+  const prosecution = related
+    .filter((r) => r.incidentCount > 0)
+    .sort((a, b) => b.riskScore - a.riskScore)
+    .slice(0, 3);
+  // Defense: commits with the same files that did NOT cause incidents.
+  const defense = related
+    .filter((r) => r.incidentCount === 0)
+    .sort((a, b) => b.fileOverlapRatio - a.fileOverlapRatio)
+    .slice(0, 3);
+
+  const prosStrength = prosecution.reduce((s, r) => s + r.riskScore, 0);
+  const defStrength = defense.reduce((s, r) => s + r.fileOverlapRatio, 0);
+  const total = prosStrength + defStrength;
+  const verdictScore = total > 0 ? (prosStrength - defStrength) / total : 0;
+
+  let verdict: DualJury["verdict"];
+  if (verdictScore > 0.4) verdict = "block";
+  else if (verdictScore > -0.1) verdict = "caution";
+  else verdict = "clear";
+
+  return {
+    prosecution,
+    defense,
+    verdictScore,
+    verdict,
+    totalCommits: related.length,
+  };
+}
+
+function printDualJury(files: string[], jury: DualJury): void {
+  ui.banner();
+  process.stdout.write(`${kleur.bold().cyan("⚖  Conscience — dual jury")}  ${kleur.gray(`(${files.length} file${files.length === 1 ? "" : "s"} changing)`)}\n`);
+  process.stdout.write(`  ${kleur.gray("Two arguments from your repo's REAL history. The verdict is yours.")}\n\n`);
+
+  // Prosecution
+  process.stdout.write(`  ${kleur.red().bold("✗ Prosecution")}  ${kleur.gray("— precedents where similar changes caused incidents")}\n\n`);
+  if (jury.prosecution.length === 0) {
+    process.stdout.write(`    ${kleur.gray("(none — no similar change has caused a tracked incident)")}\n\n`);
+  } else {
+    for (const r of jury.prosecution) {
+      const c = r.commit;
+      process.stdout.write(
+        `    ${kleur.red("●")} ${kleur.bold((c.shortHash || c.hash.slice(0, 7)).slice(0, 7))}  ${kleur.gray(`[${c.authorDate.slice(0, 10)}]`)}\n` +
+          `        ${kleur.white(c.subject)}\n` +
+          `        ${kleur.red(`→ ${r.incidentCount} incident${r.incidentCount === 1 ? "" : "s"} followed: ${r.incidentIds.join(", ")}`)}\n` +
+          `        ${kleur.gray(`overlap ${(r.fileOverlapRatio * 100).toFixed(0)}% · risk ${r.riskScore.toFixed(2)}`)}\n\n`,
+      );
+    }
+  }
+
+  // Defense
+  process.stdout.write(`  ${kleur.green().bold("✓ Defense")}  ${kleur.gray("— precedents where the same files shipped without incident")}\n\n`);
+  if (jury.defense.length === 0) {
+    process.stdout.write(`    ${kleur.gray("(none — no clean precedent in the recency window)")}\n\n`);
+  } else {
+    for (const r of jury.defense) {
+      const c = r.commit;
+      process.stdout.write(
+        `    ${kleur.green("●")} ${kleur.bold((c.shortHash || c.hash.slice(0, 7)).slice(0, 7))}  ${kleur.gray(`[${c.authorDate.slice(0, 10)}]`)}\n` +
+          `        ${kleur.white(c.subject)}\n` +
+          `        ${kleur.green(`→ shipped clean — no incidents traced back`)}\n` +
+          `        ${kleur.gray(`overlap ${(r.fileOverlapRatio * 100).toFixed(0)}%`)}\n\n`,
+      );
+    }
+  }
+
+  // Verdict
+  const verdictColor =
+    jury.verdict === "block" ? kleur.red().bold : jury.verdict === "caution" ? kleur.yellow().bold : kleur.green().bold;
+  const verdictWord =
+    jury.verdict === "block" ? "BLOCK" : jury.verdict === "caution" ? "CAUTION" : "CLEAR";
+  process.stdout.write(`  ${kleur.bold().magenta("⚖  Verdict")}  ${verdictColor(`[${verdictWord}]`)}\n`);
+  process.stdout.write(
+    `    ${kleur.gray(
+      `prosecution strength: ${jury.prosecution.length} cases · defense strength: ${jury.defense.length} cases · ` +
+        `weighted score: ${jury.verdictScore >= 0 ? "+" : ""}${jury.verdictScore.toFixed(2)}`,
+    )}\n\n`,
+  );
+
+  // How to read
+  process.stdout.write(
+    `  ${kleur.gray("─".repeat(64))}\n` +
+      `  ${kleur.gray(
+        "📘 How to read: prosecution and defense are pulled from REAL history — every\n" +
+          "  precedent shown actually shipped. Verdict is heuristic; you are the final judge.\n" +
+          "  CLEAR ≠ safe; BLOCK ≠ veto. Use this as the strongest counter-argument check.",
+      )}\n`,
+  );
 }
 
 function findCorrelatedIncidents(

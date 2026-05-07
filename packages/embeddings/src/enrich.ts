@@ -112,6 +112,63 @@ export class OllamaEnricher implements EnricherProvider {
       return false;
     }
   }
+
+  /** List installed model names (filters out pure embedding models). */
+  async listChatModels(): Promise<string[]> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/tags`, { signal: AbortSignal.timeout(2000) });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { models?: Array<{ name: string }> };
+      const names = (data.models ?? []).map((m) => m.name);
+      return names.filter((n) => !/^(nomic-embed|bge-|e5-|all-minilm|paraphrase-|gte-|jina-)/i.test(n));
+    } catch {
+      return [];
+    }
+  }
+
+  /** Stream a model pull. Calls onProgress with human-readable status lines.
+   *  Returns true on success, false on failure. */
+  async pullModel(
+    modelName: string,
+    onProgress?: (line: string) => void,
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/pull`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: modelName, stream: true }),
+      });
+      if (!res.ok || !res.body) return false;
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      let lastStatus = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (!line) continue;
+          try {
+            const obj = JSON.parse(line) as { status?: string; error?: string };
+            if (obj.error) return false;
+            if (obj.status && obj.status !== lastStatus && onProgress) {
+              onProgress(obj.status);
+              lastStatus = obj.status;
+            }
+          } catch {
+            // tolerate partial lines
+          }
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 /* ──────────────────────────  OpenAI  ─────────────────────────── */
@@ -190,6 +247,29 @@ export interface ResolveEnricherOptions {
   model?: string;
   apiKey?: string;
   baseUrl?: string;
+  /** When true and Ollama is reachable but the requested/default model isn't
+   *  installed, automatically pull it (~1.3 GB for llama3.2:1b). Off by default
+   *  so we never block a CLI command on a long download without consent.
+   *  Callers (CLI commands) opt in via --auto-pull or MNEME_OLLAMA_AUTO_PULL=1. */
+  autoPull?: boolean;
+  /** Streamed pull progress lines, when autoPull triggers. */
+  onPullProgress?: (line: string) => void;
+}
+
+/** Thrown when Ollama is reachable but no chat model is installed.
+ *  The CLI catches this specifically to offer a clean "run `ollama pull
+ *  qwen2.5:3b`" message instead of a generic 404. */
+export class OllamaNoModelError extends Error {
+  readonly suggested: string;
+  constructor(suggested = "qwen2.5:3b") {
+    super(
+      `Ollama is running but no chat model is installed. Pull one (one-time, ~2 GB):\n` +
+        `  ollama pull ${suggested}\n` +
+        `Or re-run this command with --auto-pull (or MNEME_OLLAMA_AUTO_PULL=1) to do it now.`,
+    );
+    this.name = "OllamaNoModelError";
+    this.suggested = suggested;
+  }
 }
 
 /**
@@ -288,12 +368,14 @@ export async function resolveEnricher(
   // Explicit picks
   if (provider === "ollama") {
     const ollama = new OllamaEnricher({ model: opts.model, baseUrl: opts.baseUrl });
-    if (await ollama.ping()) return ollama;
-    throw new Error(
-      "Ollama not reachable at " +
-        (opts.baseUrl ?? "http://127.0.0.1:11434") +
-        ". Start it:  ollama serve\nThen pull a chat model:  ollama pull llama3.2:1b",
-    );
+    if (!(await ollama.ping())) {
+      throw new Error(
+        "Ollama not reachable at " +
+          (opts.baseUrl ?? "http://127.0.0.1:11434") +
+          ". Start it:  ollama serve\nThen pull a chat model:  ollama pull qwen2.5:3b",
+      );
+    }
+    return resolveOllamaWithModel(ollama, opts);
   }
   if (provider === "openai" || provider === "groq" || provider === "together" || provider === "openrouter") {
     const cfg = PROVIDERS.find((p) => p.id === provider)!;
@@ -314,7 +396,15 @@ export async function resolveEnricher(
   // auto: privacy-first ladder. Ollama local first (free + private), then any
   // free-tier cloud provider whose key is in the env, then OpenAI as last resort.
   const ollama = new OllamaEnricher({ model: opts.model, baseUrl: opts.baseUrl });
-  if (await ollama.ping()) return ollama;
+  if (await ollama.ping()) {
+    try {
+      return await resolveOllamaWithModel(ollama, opts);
+    } catch (err) {
+      // Fall through to cloud providers if Ollama has no model installed —
+      // unless the user explicitly picked --provider=ollama (handled above).
+      if (!(err instanceof OllamaNoModelError)) throw err;
+    }
+  }
 
   // Try env-var providers in order
   for (const cfg of PROVIDERS) {
@@ -351,6 +441,76 @@ export class NoEnricherAvailableError extends Error {
 /** Catalog exposed for `mneme setup-free` and CLI hints. */
 export function listProviders(): typeof PROVIDERS {
   return PROVIDERS;
+}
+
+/** Common model-name aliases. We treat `llama3.2:1b` and `llama3.2-1b` as the
+ *  same; we also accept the bare family name (`llama3.2`) and pick the
+ *  smallest installed variant. */
+function ollamaModelMatches(installed: string, requested: string): boolean {
+  if (installed === requested) return true;
+  const a = installed.replace(/[-:]/g, "-").toLowerCase();
+  const b = requested.replace(/[-:]/g, "-").toLowerCase();
+  if (a === b) return true;
+  // bare family request like "llama3.2" matches any "llama3.2:*"
+  if (!requested.includes(":") && !requested.includes("-")) {
+    return installed.toLowerCase().startsWith(requested.toLowerCase() + ":");
+  }
+  return false;
+}
+
+/**
+ * Given a reachable Ollama server, return an enricher whose model is actually
+ * installed locally. Order:
+ *   1. If user named a model and it's installed → use it.
+ *   2. If user named a model and autoPull=true → pull it, then use it.
+ *   3. If user did not name a model → pick the first installed chat model
+ *      preferring our recommended list.
+ *   4. If nothing is installed and autoPull=true → pull qwen2.5:3b.
+ *   5. Otherwise → OllamaNoModelError (caught by CLI for friendly message).
+ */
+async function resolveOllamaWithModel(
+  ollama: OllamaEnricher,
+  opts: ResolveEnricherOptions,
+): Promise<OllamaEnricher> {
+  const installed = await ollama.listChatModels();
+  const requested = opts.model;
+  const wantAutoPull =
+    opts.autoPull === true ||
+    (process.env.MNEME_OLLAMA_AUTO_PULL && process.env.MNEME_OLLAMA_AUTO_PULL !== "0");
+
+  // Case 1+2: user named a specific model
+  if (requested) {
+    const hit = installed.find((m) => ollamaModelMatches(m, requested));
+    if (hit) {
+      return new OllamaEnricher({ model: hit, baseUrl: opts.baseUrl });
+    }
+    if (wantAutoPull) {
+      const ok = await ollama.pullModel(requested, opts.onPullProgress);
+      if (ok) return new OllamaEnricher({ model: requested, baseUrl: opts.baseUrl });
+    }
+    throw new OllamaNoModelError(requested);
+  }
+
+  // Case 3: no model named → pick smartest installed
+  const preferred = ["qwen2.5:3b", "gemma2:2b", "llama3.2:1b", "llama3.2:3b", "qwen2.5:7b", "qwen2.5:1.5b"];
+  for (const want of preferred) {
+    const hit = installed.find((m) => ollamaModelMatches(m, want));
+    if (hit) return new OllamaEnricher({ model: hit, baseUrl: opts.baseUrl });
+  }
+  if (installed.length > 0) {
+    // Any chat model the user has — better than failing.
+    return new OllamaEnricher({ model: installed[0]!, baseUrl: opts.baseUrl });
+  }
+
+  // Case 4: nothing installed, auto-pull a sensible default
+  if (wantAutoPull) {
+    const target = "qwen2.5:3b";
+    const ok = await ollama.pullModel(target, opts.onPullProgress);
+    if (ok) return new OllamaEnricher({ model: target, baseUrl: opts.baseUrl });
+  }
+
+  // Case 5
+  throw new OllamaNoModelError("qwen2.5:3b");
 }
 
 /* ──────────────────────────  Fallback chain  ─────────────────────── */

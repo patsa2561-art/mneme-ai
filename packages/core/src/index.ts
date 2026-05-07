@@ -19,4 +19,8 @@ export * as people from "./people/index.js";
 export * as bot from "./bot/index.js";
 export * as adversarial from "./adversarial/index.js";
 export * as counterfactual from "./counterfactual/index.js";
+export * as karma from "./karma/index.js";
+export * as mri from "./mri/index.js";
+export * as palimpsest from "./palimpsest/index.js";
+export * as twin from "./twin/index.js";
 export * as org from "./org/index.js";

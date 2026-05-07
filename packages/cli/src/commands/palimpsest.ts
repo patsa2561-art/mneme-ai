@@ -1,7 +1,7 @@
 import kleur from "kleur";
-import { git, store } from "@mneme-ai/core";
+import { git, store, palimpsest as palimpsestCore } from "@mneme-ai/core";
 import { dbPath } from "../paths.js";
-import { ui } from "../ui.js";
+import { ui, header, section, divider, nextSteps } from "../ui.js";
 
 export interface PalimpsestCommandOptions {
   cwd: string;
@@ -9,6 +9,9 @@ export interface PalimpsestCommandOptions {
   /** How deep to walk the chain. */
   maxDepth?: number;
   json?: boolean;
+  /** Switch to counterfactual mode — walk forward from this line and
+   *  show what would have changed if it had been written differently. */
+  counterfactual?: boolean;
 }
 
 interface ChainStep {
@@ -39,8 +42,35 @@ export async function palimpsestCommand(opts: PalimpsestCommandOptions): Promise
     return 1;
   }
   const meta = await git.getRepoMeta(opts.cwd);
-  const s = new store.MnemeStore(dbPath(meta.rootPath));
 
+  // Counterfactual mode — runs without the index (pure git-history walk).
+  if (opts.counterfactual) {
+    const { file, startLine } = parseTarget(opts.target);
+    if (!startLine) {
+      ui.error("--counterfactual requires file:line (a single line number).");
+      return 1;
+    }
+    let report;
+    try {
+      report = await palimpsestCore.counterfactualPalimpsest({
+        cwd: meta.rootPath,
+        file,
+        line: startLine,
+        maxDownstream: opts.maxDepth ?? 30,
+      });
+    } catch (err) {
+      ui.error(`Counterfactual scan failed: ${(err as Error).message}`);
+      return 1;
+    }
+    if (opts.json) {
+      process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+      return 0;
+    }
+    renderCounterfactual(report);
+    return 0;
+  }
+
+  const s = new store.MnemeStore(dbPath(meta.rootPath));
   const { file, startLine, endLine } = parseTarget(opts.target);
 
   // Step 1: blame to find the originating commit(s) for the target line range.
@@ -66,6 +96,85 @@ export async function palimpsestCommand(opts: PalimpsestCommandOptions): Promise
   printChain(opts.target, chain);
   s.close();
   return 0;
+}
+
+function renderCounterfactual(r: import("@mneme-ai/core").palimpsest.CounterfactualReport): void {
+  ui.banner();
+  process.stdout.write(
+    header(
+      "🌀",
+      `Counterfactual — ${r.file}:${r.line}`,
+      "what if this line had been written differently?",
+      "see what your original choice locked in — downstream commits + a flipped-line sketch",
+    ) + "\n\n",
+  );
+
+  process.stdout.write(section("Line at HEAD") + "\n");
+  process.stdout.write(`  ${kleur.gray("│")} ${kleur.white(r.originalLine || "(empty / file gone)")}\n\n`);
+
+  if (r.origin) {
+    process.stdout.write(section("Origin") + "\n");
+    process.stdout.write(
+      `  ${kleur.green("●")} ${kleur.bold(r.origin.shortHash)}  ${kleur.gray(`[${r.origin.date}]`)}  ${kleur.gray(r.origin.authorName)}\n` +
+        `      ${kleur.white(r.origin.subject)}\n\n`,
+    );
+  }
+
+  // Alt-history flips
+  process.stdout.write(section("Alternate-history sketches") + " " + kleur.gray("(speculative — heuristic inversions)") + "\n\n");
+  for (const a of r.alts) {
+    const conf = a.confidence;
+    const dot = conf >= 0.8 ? kleur.green("●") : conf >= 0.5 ? kleur.cyan("●") : kleur.gray("●");
+    process.stdout.write(
+      `  ${dot} ${kleur.bold(a.rule)}  ${kleur.gray(`(confidence ${(conf * 100).toFixed(0)}%)`)}\n` +
+        `      ${kleur.gray("→")} ${kleur.cyan(a.flipped.trim())}\n`,
+    );
+  }
+  process.stdout.write("\n");
+
+  // Downstream commits — ground truth
+  process.stdout.write(section("Downstream commits that touched this line") + "\n\n");
+  if (r.downstream.length === 0) {
+    process.stdout.write("  " + kleur.gray("(no downstream edits — this line has been stable since origin)") + "\n\n");
+  } else {
+    for (const d of r.downstream) {
+      process.stdout.write(
+        `  ${kleur.gray("●")} ${kleur.bold(d.shortHash)}  ${kleur.gray(`[${d.date}]`)}  ${kleur.gray(d.authorName)}\n` +
+          `      ${kleur.white(d.subject)}\n` +
+          `      ${kleur.gray("removed:")} ${kleur.red("- " + (d.removed[0] ?? "").trim().slice(0, 70))}\n` +
+          `      ${kleur.gray("added:  ")} ${kleur.green("+ " + (d.added[0] ?? "").trim().slice(0, 70))}\n\n`,
+      );
+    }
+  }
+
+  // Cross-references — files that mention this line's identifier
+  if (r.referencingFiles.length > 0) {
+    process.stdout.write(section("Files referencing the strongest identifier on this line") + "\n\n");
+    for (const f of r.referencingFiles) {
+      process.stdout.write(`  ${kleur.cyan(f)}\n`);
+    }
+    process.stdout.write("\n");
+  }
+
+  process.stdout.write(divider("📘 How to read") + "\n");
+  process.stdout.write(
+    "  " +
+      kleur.gray(
+        "Origin + downstream commits are GROUND TRUTH — exact git history.\n" +
+          "  Alt-history sketches are HEURISTIC inversions (negate ===, flip return true/false, etc.).\n" +
+          "  Cross-references use a single-identifier word search — false positives possible.\n" +
+          "  Use this to think hard about a line you're about to change. NEVER for blame attribution.",
+      ) +
+      "\n\n",
+  );
+
+  process.stdout.write(
+    nextSteps([
+      { cmd: `mneme palimpsest ${r.file}:${r.line}`, why: "default mode — walk backward to root-cause incident" },
+      { cmd: `mneme blast <commit>`, why: "pick a downstream commit and predict its incident risk" },
+      { cmd: `mneme why ${r.file}:${r.line}`, why: "the why-does-this-exist version of the same question" },
+    ]) + "\n",
+  );
 }
 
 function walkChain(s: store.MnemeStore, seedHash: string, maxDepth: number): ChainStep[] {

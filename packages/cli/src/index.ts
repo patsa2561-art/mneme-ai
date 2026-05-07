@@ -51,6 +51,9 @@ import { nemesisCommand } from "./commands/nemesis.js";
 import { nervousSystemCommand } from "./commands/nervous-system.js";
 import { passportCommand } from "./commands/passport.js";
 import { promiseCommand } from "./commands/promise.js";
+import { karmaCommand } from "./commands/karma.js";
+import { repoMriCommand } from "./commands/repo-mri.js";
+import { cognitiveTwinCommand } from "./commands/cognitive-twin.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -374,6 +377,67 @@ export async function run(argv: string[]): Promise<void> {
           topN: opts.top,
           json: opts.json,
           verbose: opts.verbose,
+        }),
+      );
+    });
+
+  // ─── karma — TODO/FIXME debt ledger (compounds with age) ────────────
+  program
+    .command("karma")
+    .description("TODO/FIXME debt ledger — every TODO added is a debit, every one removed is a credit. Open balance compounds with age.")
+    .option("--top <n>", "rows in the leaderboard", (v) => Number(v), 10)
+    .option("--author <email>", "drill into one engineer's open debt")
+    .option("--path <prefix>", "restrict scan to a path prefix (e.g. packages/core/)")
+    .option("--max-commits <n>", "scan only the most-recent N commits (0 = unlimited)", (v) => Number(v), 0)
+    .option("--since <date>", "only consider commits since (e.g. '1 year ago' or 2024-01-01)")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { top?: number; author?: string; path?: string; maxCommits?: number; since?: string; json?: boolean }) => {
+      process.exit(
+        await karmaCommand({
+          cwd: process.cwd(),
+          topN: opts.top,
+          authorEmail: opts.author,
+          pathPrefix: opts.path,
+          maxCommits: opts.maxCommits,
+          since: opts.since,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── cognitive-twin — stylometric author voice fingerprint ──────────
+  program
+    .command("cognitive-twin <email>")
+    .alias("twin")
+    .description("Author-voice fingerprint — stylometric profile of how a contributor writes commits. Optional --rewrite '<subject>' rewrites in their voice. (Heuristic, no LLM.)")
+    .option("--max-commits <n>", "scan only the most-recent N commits (0 = unlimited)", (v) => Number(v), 0)
+    .option("--rewrite <subject>", "rewrite a generic commit subject in this author's voice")
+    .option("--json", "machine-readable output", false)
+    .action(async (email: string, opts: { maxCommits?: number; rewrite?: string; json?: boolean }) => {
+      process.exit(
+        await cognitiveTwinCommand({
+          cwd: process.cwd(),
+          email,
+          maxCommits: opts.maxCommits,
+          rewrite: opts.rewrite,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── repo-mri — 20-axis health diagnostic with z-scores ─────────────
+  program
+    .command("repo-mri")
+    .alias("mri")
+    .description("Repo MRI — 20-axis health diagnostic with z-scores against typical OSS repos. The fast 'what's weird about this repo' answer.")
+    .option("--max-commits <n>", "scan only the most-recent N commits (0 = unlimited)", (v) => Number(v), 0)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { maxCommits?: number; json?: boolean }) => {
+      process.exit(
+        await repoMriCommand({
+          cwd: process.cwd(),
+          maxCommits: opts.maxCommits,
+          json: opts.json,
         }),
       );
     });
@@ -789,8 +853,9 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("palimpsest <target>", { hidden: true })
-    .description("WILD #5 — render the causal chain of a single line of code")
+    .description("WILD #5 — render the causal chain of a single line of code (default: backward to root cause; --counterfactual: forward to consequences)")
     .option("--max-depth <n>", "how deep to walk the chain", (v) => Number(v), 8)
+    .option("--counterfactual", "switch to forward mode — show downstream commits + heuristic flipped-line sketches", false)
     .option("--json", "machine-readable output", false)
     .action(async (target: string, opts: any) => {
       process.exit(
@@ -798,6 +863,7 @@ export async function run(argv: string[]): Promise<void> {
           cwd: process.cwd(),
           target,
           maxDepth: opts.maxDepth,
+          counterfactual: opts.counterfactual,
           json: opts.json,
         }),
       );
@@ -880,11 +946,12 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("conscience [files...]", { hidden: true })
-    .description("WILD #6 — review co-pilot: risk-score a PR against your repo's own history")
+    .description("WILD #6 — review co-pilot: risk-score a PR against your repo's own history. --dual-jury renders prosecution + defense + verdict.")
     .option("--diff-file <path>", "read a unified diff from this file")
     .option("--stdin", "read a unified diff from stdin", false)
     .option("--recency-days <n>", "consider commits within this window", (v) => Number(v), 365)
     .option("--top <n>", "top-N similar past commits", (v) => Number(v), 8)
+    .option("--dual-jury", "show prosecution + defense + verdict from real history", false)
     .option("--json", "machine-readable output", false)
     .action(async (files: string[], opts: any) => {
       process.exit(
@@ -895,6 +962,7 @@ export async function run(argv: string[]): Promise<void> {
           stdin: opts.stdin,
           recencyDays: opts.recencyDays,
           topN: opts.top,
+          dualJury: opts.dualJury,
           json: opts.json,
         }),
       );
@@ -970,6 +1038,7 @@ export async function run(argv: string[]): Promise<void> {
     .option("--trace", "print raw tool outputs while running", false)
     .option("--json", "machine-readable output", false)
     .option("--no-llm", "deterministic mode — refuse and suggest a non-LLM alternative")
+    .option("--auto-pull", "auto-download the default Ollama model if it isn't installed (~2 GB, one-time)", false)
     .action(async (qParts: string[], opts: any) => {
       process.exit(
         await geniusCommand({
@@ -981,6 +1050,7 @@ export async function run(argv: string[]): Promise<void> {
           trace: opts.trace,
           json: opts.json,
           noLlm: opts.llm === false,
+          autoPull: opts.autoPull,
         }),
       );
     });
@@ -992,6 +1062,7 @@ export async function run(argv: string[]): Promise<void> {
     .option("--model <name>", "override model name")
     .option("--json", "machine-readable output", false)
     .option("--no-llm", "deterministic mode — print classification only, skip the LLM summary")
+    .option("--auto-pull", "auto-download the default Ollama model if it isn't installed (~2 GB, one-time)", false)
     .action(async (target: string, opts: any) => {
       process.exit(
         await teachCommand({
@@ -1001,6 +1072,7 @@ export async function run(argv: string[]): Promise<void> {
           model: opts.model,
           json: opts.json,
           noLlm: opts.llm === false,
+          autoPull: opts.autoPull,
         }),
       );
     });

@@ -35,6 +35,8 @@ export interface TeachCommandOptions {
   json?: boolean;
   /** Skip the LLM summary step (prints classification only). */
   noLlm?: boolean;
+  /** Auto-pull the Ollama model if it isn't installed (one-time download). */
+  autoPull?: boolean;
 }
 
 type Layer = "api" | "service" | "data" | "ui" | "utility" | "test" | "config" | "unknown";
@@ -120,11 +122,12 @@ export async function teachCommand(opts: TeachCommandOptions): Promise<number> {
     enricher = await resolveEnricher({
       provider: opts.provider ?? "auto",
       model: opts.model,
+      autoPull: opts.autoPull,
+      onPullProgress: (line) => ui.step("ollama-pull", line),
     });
   } catch (err) {
     ui.warn(`No enricher available: ${(err as Error).message}`);
-    ui.dim("Install Ollama (recommended): https://ollama.com");
-    ui.dim("Then pull a small chat model: ollama pull llama3.2:1b");
+    if (!opts.autoPull) ui.dim("Tip: re-run with --auto-pull to download the default model now.");
     if (opts.json) {
       process.stdout.write(JSON.stringify({ target: opts.target, layers: Object.fromEntries(layerCounts) }, null, 2) + "\n");
     }

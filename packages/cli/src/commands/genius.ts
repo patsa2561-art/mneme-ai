@@ -45,6 +45,8 @@ export interface GeniusCommandOptions {
   json?: boolean;
   /** Refuse to run if any LLM would be called. */
   noLlm?: boolean;
+  /** Auto-pull the Ollama model if it isn't installed (one-time download). */
+  autoPull?: boolean;
 }
 
 interface PlanStep {
@@ -112,10 +114,12 @@ export async function geniusCommand(opts: GeniusCommandOptions): Promise<number>
     enricher = await resolveEnricher({
       provider: opts.provider ?? "auto",
       model: opts.model,
+      autoPull: opts.autoPull,
+      onPullProgress: (line) => ui.step("ollama-pull", line),
     });
   } catch (err) {
     ui.error(`No LLM available: ${(err as Error).message}`);
-    ui.dim("Install Ollama: https://ollama.com  →  ollama pull llama3.2:3b");
+    if (!opts.autoPull) ui.dim("Tip: re-run with --auto-pull to download the default model now.");
     return 1;
   }
   ui.step("llm", enricher.name);

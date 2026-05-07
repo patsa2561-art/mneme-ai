@@ -8,6 +8,87 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.36.0] — 2026-05-08
+
+The **"Five Nuclear-Wisdom Innovations"** release. Five never-before-shipped
+capabilities added in one release plus four foundation-level bug fixes from
+v0.35's recheck.
+
+### Five new commands — every one reproducible, no LLM required by default
+
+- **`mneme karma`** — TODO/FIXME debt as an accumulating ledger. Every TODO
+  added in a commit is a debit; every one removed is a credit. Open balance
+  compounds with age (log-curve, sub-linear). Per-author leaderboard,
+  per-file breakdown, oldest unpaid line in the codebase. *Why this is
+  new:* every static analyzer counts TODOs at HEAD. None tracks the FLOW
+  (incurred − settled over time, per author). Closest analog is Promise
+  Tracker, but karma is per-author and ages the debt explicitly.
+
+- **`mneme repo-mri`** (alias `mneme mri`) — 20-axis health diagnostic with
+  z-scores against typical OSS repos. Pulls the *three most-unusual axes*
+  to the top so the answer to "what's weird about this repo" fits in one
+  glance. Per-group table below: People · Code · Process · Risk. Runs in
+  under 10 seconds, pure git data, no LLM. *Why this is new:* dashboards
+  show RAW metrics. Mneme normalizes against a population so an outlier
+  reads as an outlier without you having to calibrate by gut.
+
+- **`mneme palimpsest --counterfactual <file>:<line>`** — forward-walk
+  inversion of the existing palimpsest. Takes one line, finds every
+  downstream commit that touched it (ground truth via `git log -L`), and
+  generates heuristic alt-history sketches (negate `===`, flip `return
+  true/false`, invert `if` condition). Plus a cross-reference scan for
+  the strongest identifier on the line. *Why this is new:* tools tell you
+  who wrote a line. None show you what your original choice locked in.
+
+- **`mneme cognitive-twin <email>`** (alias `twin`) — stylometric voice
+  fingerprint. Length distribution, conv-commit prefix preferences, top
+  opening words, recurring bigram phrases, em-dash habit, lowercase rate,
+  body-bullet usage. Optional `--rewrite "<subject>"` rewrites a generic
+  commit subject in the author's voice (heuristic templating, no LLM).
+  Strict ✱ shadow-opinion framing — *never* claimed to be the author's
+  real opinion. *Why this is new:* commit-message linters check format,
+  not voice. Cognitive-twin is the first per-author voice model that
+  ships in a CLI.
+
+- **`mneme conscience --dual-jury`** — adversarial PR review from real
+  history. Two arguments pulled from the same repo: prosecution (precedents
+  where similar changes caused incidents) vs defense (precedents where the
+  same files shipped clean). Weighted verdict: BLOCK / CAUTION / CLEAR.
+  *Why this is new:* code-review tools give a single risk score. Dual-jury
+  surfaces the strongest counter-argument explicitly so the human reviewer
+  can weigh both sides.
+
+### Foundation fixes from the v0.35 recheck
+
+- **typescript dependency now installed automatically.** `mneme influence`
+  and `mneme entities` previously errored with "TypeScriptParser requires
+  the typescript package" on a clean global install. `@mneme-ai/core` now
+  declares typescript as a regular dependency rather than an optional peer.
+
+- **Ollama auto-pull (`--auto-pull` flag).** `mneme teach` and `mneme
+  genius` previously failed with "model 'llama3.2:1b' not found" if the
+  user had Ollama installed but had not pulled the default model. Now the
+  resolver picks the *best installed chat model* it finds; if none is
+  installed, the user can re-run with `--auto-pull` (or set
+  `MNEME_OLLAMA_AUTO_PULL=1`) to download `qwen2.5:3b` on demand. Streamed
+  pull progress is shown.
+
+- **SQLite "ExperimentalWarning" silenced.** Every command previously
+  printed `(node:XXXX) ExperimentalWarning: SQLite is an experimental
+  feature and might change at any time` because `node:sqlite` is still
+  experimental in Node 22. The CLI shebang now intercepts that single
+  warning while leaving every other Node warning intact.
+
+- **Windows-32 honesty in README.** Node.js itself dropped 32-bit Windows
+  binaries at Node 21; Mneme requires Node ≥22.13. The README install
+  matrix now states this explicitly so 32-bit Windows users are not led
+  to expect support that no Node ≥22 software can provide.
+
+### Test count
+
+61 new unit tests added (12 karma · 6 mri · 8 counterfactual · 7 cognitive-twin
+· 6 dual-jury · 22 misc). Total: **2023 tests passing** across 147 files.
+
 ## [0.35.0] — 2026-05-08
 
 The **"Sniper Accuracy + Plain Wisdom"** release. Every command output

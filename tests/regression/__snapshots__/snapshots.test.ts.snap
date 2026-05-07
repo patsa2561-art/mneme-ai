@@ -22,6 +22,9 @@ Commands:
   nervous-system [options]  >  Mneme Nervous System — combined people-analytics report (cultural alphas + latent teams + atrophy heatmap + brain lobes + mini-passports). Terminal-renderable; --html / --pdf for the printable dossier.
   passport [options] [author]  >  Engineer passport — DNA + expertise + telepathic teammates + influence + atrophy in one dossier. Pass an author email or omit to auto-pick the top contributor.
   promise [options]  >  Promise-debt tracker — every "I'll fix later" / TODO / follow-up parsed into a ledger and verified against history (heuristic; treat as a starting list)
+  karma [options]  >  TODO/FIXME debt ledger — every TODO added is a debit, every one removed is a credit. Open balance compounds with age.
+  cognitive-twin|twin [options] <email>  >  Author-voice fingerprint — stylometric profile of how a contributor writes commits. Optional --rewrite '<subject>' rewrites in their voice. (Heuristic, no LLM.)
+  repo-mri|mri [options]  >  Repo MRI — 20-axis health diagnostic with z-scores against typical OSS repos. The fast 'what's weird about this repo' answer.
   completion <shell>  >  Print a shell-completion script for bash, zsh, fish, or powershell. Pipe to your completion file to enable tab-completion across every Mneme command.
   do [options] <query...>  >  Smart dispatcher — describe what you want, Mneme picks tools and runs them ('do find security issues' / 'do is the codebase healthy')
   htc-build [options]  >  Compress every commit + cluster + memoir into LLM-ready cache (10× smaller, paid once, free LLM ladder auto-detected)
