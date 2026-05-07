@@ -8,9 +8,13 @@
 ### 🧠 The brain (5 lobes)
 - [[Hierarchical-Memory]] · *compression-as-storage*
 - [[Speculative-Reasoning]] · *streaming + verify + DDTree*
+- [[Super-Pipeline]] · *MPE eigentrust + superscalar*
 - [[Guardian]] · *self-healing daemon*
 - [[Forensic-Code-Science]] · *Bayesian + CWE*
 - [[Smart-Dispatcher]] · *talk to Mneme*
+
+### 🎓 Manifesto
+- [[AI-Teacher]] · *Mneme as the teacher of AI*
 
 ### 💎 The Frontier
 - [[The-Frontier]] · *23 world-firsts*

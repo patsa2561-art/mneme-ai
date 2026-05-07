@@ -18,6 +18,7 @@ import {
   util,
   type Commit,
 } from "@mneme-ai/core";
+import { resolveAllEnrichers, ResilientEnricher } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { resolveCommitRef, commitNotFoundMessage } from "../utils/args.js";
 import {
@@ -36,6 +37,14 @@ import {
   pill,
   type Level,
 } from "../ui.js";
+import {
+  iris,
+  generateHeadline,
+  readIrisState,
+  recordCommandRun,
+  shouldShowVerboseGuide,
+  type PyramidSection,
+} from "../iris/index.js";
 
 // Shared withStore wrapper inline (mirrors insights-cli pattern)
 async function withStore<T>(
@@ -516,11 +525,14 @@ export interface ForensicsAnomalyOptions {
   threshold?: number;
   topN?: number;
   json?: boolean;
+  verbose?: boolean;
 }
 
 export async function forensicsAnomalyCommand(
   opts: ForensicsAnomalyOptions,
 ): Promise<number> {
+  const meta = await git.getRepoMeta(opts.cwd).catch(() => null);
+
   const result = await withStore(opts.cwd, (s) => {
     const allCommits = util.loadAllCommits(s);
     const fileChanges = util.loadAllFileChanges(s);
@@ -536,105 +548,227 @@ export async function forensicsAnomalyCommand(
   if (typeof result === "number") return result;
 
   if (opts.json) {
+    // JSON byte-stable contract — must not change.
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
     return 0;
   }
 
-  ui.banner();
-  process.stdout.write(header("🕵", "Anomaly Detection",
-    "is anyone behaving differently from their normal pattern?",
-    "Catches commits that look 'off' for the author — wrong hour, new files, unusual vocabulary, or unusual size.") + "\n\n");
-
   const counts = countBySeverity(result.findings);
-  const topLine = (() => {
-    if (result.findings.length === 0) {
-      return `${kleur.green("✓")}  All commits look normal for their authors. (${kleur.bold(String(result.scanned))} commits scanned, ${kleur.bold(String(result.baselines))} authors profiled)`;
-    }
-    if (counts.critical > 0) {
-      return `${kleur.red("⚠")}  ${kleur.red().bold(String(counts.critical))} commits look VERY different from how that author normally commits — verify the author manually.`;
-    }
-    return `${kleur.yellow("!")}  ${kleur.bold(String(result.findings.length))} commit(s) look unusual for their author — review before merging.`;
-  })();
-  process.stdout.write(`  ${topLine}\n\n`);
+  const threshold = opts.threshold ?? 0.9;
 
-  // ─── Plain-English reading guide ────────────────────────────────
-  process.stdout.write(section("📘 How to read this report") + "\n");
-  process.stdout.write(`    ${kleur.gray("• Each commit gets a")} ${kleur.bold("risk score")} ${kleur.gray("(0–4) based on 4 signals:")}\n`);
-  process.stdout.write(`        ${kleur.cyan("time")}  ${kleur.gray("— did they commit at an unusual hour?")}\n`);
-  process.stdout.write(`        ${kleur.cyan("files")} ${kleur.gray("— did they touch files they normally don't?")}\n`);
-  process.stdout.write(`        ${kleur.cyan("style")} ${kleur.gray("— did they use words they never use?")}\n`);
-  process.stdout.write(`        ${kleur.cyan("size")}  ${kleur.gray("— is the commit much bigger/smaller than usual?")}\n`);
-  process.stdout.write(`    ${kleur.gray("• Severity:  ≥2.5 critical · ≥1.7 high · ≥0.9 medium · else ignored")}\n\n`);
+  // ─── Headline: try LLM (800ms timeout), fall back to extractive ───────
+  const topFinding = result.findings[0];
+  const topAuthor = topFinding?.commit.authorName ?? topFinding?.commit.authorEmail ?? "";
+  const headlineData: Record<string, unknown> = {
+    criticalCount: counts.critical,
+    highCount: counts.high,
+    totalCount: result.findings.length,
+    threshold,
+    topSubject: topAuthor ? `verify ${topAuthor} identity` : undefined,
+  };
 
-  // ─── Single-author repo warning ────────────────────────────────
-  if (result.baselines === 1) {
-    process.stdout.write(`  ${pill("HEADS UP", "warn")} ${kleur.yellow("Single-author repo")} ${kleur.gray("— anomaly detection is most useful when you have multiple authors to compare. Findings here just mean 'unusual vs your own past commits' (e.g. a 1000-line commit when you usually do 50-line commits).")}\n\n`);
+  // Try to resolve an LLM enricher for the headline (best-effort, never blocks).
+  let enricher: ResilientEnricher | undefined;
+  try {
+    const chain = await resolveAllEnrichers({});
+    if (chain.length > 0) enricher = new ResilientEnricher(chain);
+  } catch {
+    // No LLM available — extractive fallback below is fine.
   }
 
+  let headlineText: string;
   if (result.findings.length === 0) {
-    process.stdout.write(emptyState(
-      "Clean — no commits look unusual.",
-      [
-        `Lower the threshold to see borderline cases: --threshold 0.5`,
-        `Run after every push as part of CI for continuous oversight.`,
-      ],
-    ));
-    return 0;
+    headlineText = `🕵 Clean — no commits look unusual at threshold ${threshold}`;
+  } else {
+    const hl = await generateHeadline({
+      commandType: "forensics",
+      data: headlineData,
+      enricher,
+      timeoutMs: 800,
+      repoRoot: meta?.rootPath,
+    });
+    // Iris headlines come back without our icon — prepend it.
+    headlineText = `🕵 ${hl}`;
   }
 
-  // Severity tally
-  process.stdout.write(section("✦ By risk level") + "\n");
-  const sevs: Array<{ key: keyof typeof counts; level: Level; label: string }> = [
-    { key: "critical", level: "critical", label: "CRITICAL — verify author identity out-of-band" },
-    { key: "high", level: "high", label: "HIGH     — needs a second-engineer approval" },
-    { key: "medium", level: "medium", label: "MEDIUM   — flag during normal review" },
-    { key: "low", level: "low", label: "LOW      — informational" },
-  ];
-  const maxC = Math.max(counts.critical, counts.high, counts.medium, counts.low, 1);
-  for (const { key, level, label } of sevs) {
-    const n = counts[key];
-    if (n === 0) continue;
-    process.stdout.write(
-      `    ${meter(n / maxC, { width: 10, level })}  ${kleur.bold(String(n).padStart(3))}  ${kleur.gray(label)}\n`,
+  // ─── Lede: top 3 anomalies (one line each) ────────────────────────────
+  const ledeLines: string[] = [];
+  if (result.findings.length === 0) {
+    ledeLines.push(
+      `${kleur.green("✓")}  ${kleur.bold(String(result.scanned))} ${kleur.gray("commits scanned across")} ${kleur.bold(String(result.baselines))} ${kleur.gray("author profile" + (result.baselines === 1 ? "" : "s") + " — nothing flagged.")}`,
     );
-  }
-  process.stdout.write("\n");
-
-  process.stdout.write(section("⚠ Unusual commits", `(top ${Math.min(result.findings.length, opts.topN ?? 10)} by risk score)`) + "\n\n");
-  for (const f of result.findings.slice(0, opts.topN ?? 10)) {
-    const c = f.commit;
-    const sevLevel: Level = sevToLevel[f.severity] ?? "info";
-    process.stdout.write(
-      `    ${severityBadge(sevLevel)}  ${kleur.bold(c.shortHash)} ${kleur.gray(c.authorDate.slice(0, 16) + " UTC · " + c.authorName)}\n`,
+    ledeLines.push(
+      `   ${kleur.gray("Lower the threshold to see borderline cases: --threshold 0.5")}`,
     );
-    process.stdout.write(
-      `        ${kleur.bold(`risk score: ${f.totalDeviation.toFixed(2)}`)} ${kleur.gray(`/ 4.0 max`)}\n`,
-    );
-    process.stdout.write(`        ${kleur.white(c.subject)}\n`);
-    for (const a of f.axes) {
-      if (a.score < 0.1) continue;
-      const axisLevel: Level = a.score >= 0.8 ? "critical" : a.score >= 0.5 ? "high" : a.score >= 0.3 ? "medium" : "low";
-      // Translate the technical note into plain English
-      const friendly = humanizeAxisNote(a.axis, a.note, c.authorDate);
-      process.stdout.write(
-        `          ${meter(a.score, { width: 10, level: axisLevel })}  ${kleur.cyan(a.axis.padEnd(6))} ${kleur.gray(friendly)}\n`,
+  } else {
+    if (counts.critical > 0) {
+      ledeLines.push(
+        `${kleur.red("⚠")}  ${kleur.red().bold(String(counts.critical))} ${kleur.gray("commit" + (counts.critical === 1 ? "" : "s") + " look VERY different from how that author normally commits — verify out-of-band.")}`,
+      );
+    } else {
+      ledeLines.push(
+        `${kleur.yellow("!")}  ${kleur.bold(String(result.findings.length))} ${kleur.gray("commit" + (result.findings.length === 1 ? "" : "s") + " look unusual for their author — review before merging.")}`,
       );
     }
-    process.stdout.write(`        ${kleur.yellow("→ " + f.recommendation)}\n\n`);
+    for (const f of result.findings.slice(0, 3)) {
+      const sevLevel: Level = sevToLevel[f.severity] ?? "info";
+      ledeLines.push(
+        `   ${severityBadge(sevLevel)}  ${kleur.bold(f.commit.shortHash)} ${kleur.gray(f.commit.authorDate.slice(0, 10) + " · " + f.commit.authorName)} — ${kleur.white(truncateOneLine(f.commit.subject, 60))}`,
+      );
+    }
   }
 
-  // Smart next steps based on top finding
-  const topFinding = result.findings[0]!;
-  process.stdout.write(nextSteps([
-    {
-      cmd: `mneme forensics match ${topFinding.commit.shortHash} ${topFinding.commit.authorEmail}`,
-      why: `Verify the top anomaly's author with STR-loci LR matching.`,
-    },
-    {
-      cmd: `mneme forensics vulns --since ${topFinding.commit.authorDate.slice(0, 10)}`,
-      why: `Cross-reference vulnerabilities introduced around the anomalous window.`,
-    },
-  ]) + "\n\n");
+  // ─── Key facts: severity tally with meters + warnings ─────────────────
+  const keyFactLines: string[] = [];
+  if (result.findings.length > 0) {
+    const sevs: Array<{ key: keyof typeof counts; level: Level; label: string }> = [
+      {
+        key: "critical",
+        level: "critical",
+        label: "CRITICAL — verify author identity out-of-band",
+      },
+      { key: "high", level: "high", label: "HIGH     — needs a second-engineer approval" },
+      { key: "medium", level: "medium", label: "MEDIUM   — flag during normal review" },
+      { key: "low", level: "low", label: "LOW      — informational" },
+    ];
+    const maxC = Math.max(counts.critical, counts.high, counts.medium, counts.low, 1);
+    for (const { key, level, label } of sevs) {
+      const n = counts[key];
+      if (n === 0) continue;
+      keyFactLines.push(
+        `${meter(n / maxC, { width: 10, level })}  ${kleur.bold(String(n).padStart(3))}  ${kleur.gray(label)}`,
+      );
+    }
+  }
+  if (result.baselines === 1) {
+    keyFactLines.push(
+      `${pill("HEADS UP", "warn")} ${kleur.yellow("Single-author repo")} ${kleur.gray("— findings just mean 'unusual vs your own past commits'.")}`,
+    );
+  }
+
+  // ─── Body: per-finding axis breakdown (preserve humanized notes) ──────
+  const bodyLines: string[] = [];
+  const detailLines: string[] = [];
+  const showN = opts.topN ?? 10;
+  // Bucket: top showN go in "body"; the rest (lower severity) go to "details".
+  const findingsToShow = result.findings.slice(0, showN);
+  const findingsHidden = result.findings.slice(showN);
+
+  for (const f of findingsToShow) {
+    const c = f.commit;
+    const sevLevel: Level = sevToLevel[f.severity] ?? "info";
+    bodyLines.push(
+      `${severityBadge(sevLevel)}  ${kleur.bold(c.shortHash)} ${kleur.gray(c.authorDate.slice(0, 16) + " UTC · " + c.authorName)}`,
+    );
+    bodyLines.push(
+      `   ${kleur.bold(`risk score: ${f.totalDeviation.toFixed(2)}`)} ${kleur.gray("/ 4.0 max")}`,
+    );
+    bodyLines.push(`   ${kleur.white(c.subject)}`);
+    for (const a of f.axes) {
+      if (a.score < 0.1) continue;
+      const axisLevel: Level =
+        a.score >= 0.8 ? "critical" : a.score >= 0.5 ? "high" : a.score >= 0.3 ? "medium" : "low";
+      const friendly = humanizeAxisNote(a.axis, a.note, c.authorDate);
+      bodyLines.push(
+        `     ${meter(a.score, { width: 10, level: axisLevel })}  ${kleur.cyan(a.axis.padEnd(6))} ${kleur.gray(friendly)}`,
+      );
+    }
+    bodyLines.push(`   ${kleur.yellow("→ " + f.recommendation)}`);
+    bodyLines.push("");
+  }
+
+  for (const f of findingsHidden) {
+    const c = f.commit;
+    const sevLevel: Level = sevToLevel[f.severity] ?? "info";
+    detailLines.push(
+      `${severityBadge(sevLevel)}  ${kleur.bold(c.shortHash)} ${kleur.gray(c.authorDate.slice(0, 10) + " · " + c.authorName)} — ${kleur.gray(truncateOneLine(c.subject, 60))} ${kleur.gray(`(risk ${f.totalDeviation.toFixed(2)})`)}`,
+    );
+  }
+
+  // ─── Sources (try-next + adaptive how-to-read) ────────────────────────
+  const sourceLines: string[] = [];
+  if (topFinding) {
+    sourceLines.push(
+      `${kleur.cyan("$")} ${kleur.bold(`mneme forensics match ${topFinding.commit.shortHash} ${topFinding.commit.authorEmail}`)}`,
+    );
+    sourceLines.push(
+      `   ${kleur.gray("Verify the top anomaly's author with STR-loci LR matching.")}`,
+    );
+    sourceLines.push(
+      `${kleur.cyan("$")} ${kleur.bold(`mneme forensics vulns --since ${topFinding.commit.authorDate.slice(0, 10)}`)}`,
+    );
+    sourceLines.push(
+      `   ${kleur.gray("Cross-reference vulnerabilities introduced around the anomalous window.")}`,
+    );
+  } else {
+    sourceLines.push(`${kleur.cyan("$")} ${kleur.bold("mneme forensics anomaly --threshold 0.5")}`);
+    sourceLines.push(`   ${kleur.gray("Lower the threshold to see borderline cases.")}`);
+  }
+
+  // Adaptive how-to-read: only show on first ~5 runs.
+  const irisState = (() => {
+    try {
+      return meta?.rootPath ? readIrisState(meta.rootPath) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const showGuide = irisState ? shouldShowVerboseGuide(irisState, "forensics-anomaly") : true;
+  if (showGuide) {
+    sourceLines.push("");
+    sourceLines.push(`${kleur.gray("📘 How to read:")} ${kleur.bold("risk score")} ${kleur.gray("(0–4) combines 4 signals:")} ${kleur.cyan("time")} ${kleur.gray("/")} ${kleur.cyan("files")} ${kleur.gray("/")} ${kleur.cyan("style")} ${kleur.gray("/")} ${kleur.cyan("size")}${kleur.gray(".")}`);
+    sourceLines.push(
+      `   ${kleur.gray("Severity: ≥2.5 critical · ≥1.7 high · ≥0.9 medium · else ignored.")}`,
+    );
+  }
+
+  // ─── Compose pyramid ──────────────────────────────────────────────────
+  const sections: PyramidSection[] = [{ tier: "lede", lines: ledeLines }];
+  if (keyFactLines.length > 0) {
+    sections.push({
+      tier: "key-facts",
+      title: "✦ By risk level",
+      lines: keyFactLines,
+    });
+  }
+  if (bodyLines.length > 0) {
+    sections.push({
+      tier: "body",
+      title: `⚠ Unusual commits (top ${findingsToShow.length} by risk score)`,
+      lines: bodyLines,
+    });
+  }
+  if (detailLines.length > 0) {
+    sections.push({
+      tier: "details",
+      title: `◇ Lower-severity findings (${detailLines.length})`,
+      lines: detailLines,
+    });
+  }
+  if (sourceLines.length > 0) {
+    sections.push({
+      tier: "sources",
+      title: "→ Try next",
+      lines: sourceLines,
+    });
+  }
+
+  ui.banner();
+  process.stdout.write(
+    iris.render({
+      headline: headlineText,
+      sections,
+      verbose: opts.verbose,
+    }) + "\n",
+  );
+
+  if (meta?.rootPath) {
+    try {
+      recordCommandRun(meta.rootPath, "forensics-anomaly");
+    } catch {
+      // best-effort
+    }
+  }
   return 0;
 }
 

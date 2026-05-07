@@ -25,8 +25,14 @@ import {
   section,
   pill,
   emptyState,
-  nextSteps,
 } from "../ui.js";
+import {
+  iris,
+  generateHeadline,
+  recordCommandRun,
+  flash,
+  type PyramidSection,
+} from "../iris/index.js";
 
 export interface DoOptions {
   cwd: string;
@@ -243,22 +249,55 @@ export async function doCommand(opts: DoOptions): Promise<number> {
     return 1;
   }
 
-  process.stdout.write(
-    header(
-      "🧠",
-      `do — ${flow.label}`,
-      `query: ${kleur.italic(opts.query)} · flow: ${flow.id}`,
-      flow.description,
-    ) + "\n\n",
-  );
+  // ── Iris pillar #2: AI-summarized headline. Always finishes (extractive
+  // fallback if no LLM is configured). Hard 800ms ceiling.
+  const expandedSteps = flow.steps.map((s) => ({
+    cmd: expandStep(s.cmd, opts.query),
+    rationale: s.rationale,
+  }));
+  const headline = await generateHeadline({
+    commandType: "do",
+    data: {
+      action: flow.label,
+      query: opts.query,
+      flowId: flow.id,
+      stepCount: flow.steps.length,
+      result: `${flow.steps.length} step${flow.steps.length === 1 ? "" : "s"} planned`,
+    },
+    timeoutMs: 800,
+    repoRoot: opts.cwd,
+  });
 
-  process.stdout.write(section(`◆ Plan`, `${flow.steps.length} step(s) — Mneme will run these for you`) + "\n\n");
-  for (let i = 0; i < flow.steps.length; i++) {
-    const s = flow.steps[i]!;
-    const rendered = expandStep(s.cmd, opts.query);
-    process.stdout.write(`    ${pill(`step ${i + 1}`, "low")}  ${kleur.cyan(`mneme ${rendered}`)}\n`);
-    process.stdout.write(`           ${kleur.gray(s.rationale)}\n\n`);
+  // ── Build the upfront pyramid: lede (what + why), key-facts (the plan),
+  // sources (alternative phrasings the user can try later).
+  const ledeLines: string[] = [
+    `  ${kleur.gray("query:")} ${kleur.italic(opts.query)}`,
+    `  ${kleur.gray("flow:")}  ${kleur.bold(flow.id)} — ${flow.label}`,
+    "",
+    `    ${flow.description}`,
+  ];
+  const planLines: string[] = [];
+  for (let i = 0; i < expandedSteps.length; i++) {
+    const s = expandedSteps[i]!;
+    planLines.push(`    ${pill(`step ${i + 1}`, "low")}  ${kleur.cyan(`mneme ${s.cmd}`)}`);
+    planLines.push(`           ${kleur.gray(s.rationale)}`);
   }
+  const upfrontSections: PyramidSection[] = [
+    { tier: "lede", title: "🧠 Plan", lines: ledeLines },
+    {
+      tier: "key-facts",
+      title: `◆ Steps  ${kleur.gray(`(${flow.steps.length})`)}`,
+      lines: planLines,
+    },
+  ];
+  process.stdout.write(
+    iris.render({
+      headline,
+      sections: upfrontSections,
+      whyShown: `Routed to "${flow.id}" because the query matched ${flow.label.toLowerCase()} patterns`,
+    }),
+  );
+  process.stdout.write("\n\n");
 
   // Execution: spawn each as a child process — keeps the engines independent
   // and respects flag validation at each layer. We could short-circuit by
@@ -271,6 +310,7 @@ export async function doCommand(opts: DoOptions): Promise<number> {
 
   process.stdout.write(section(`▶ Executing`, `live output below`) + "\n\n");
 
+  const stepStatuses: Array<{ cmd: string; ok: boolean }> = [];
   for (let i = 0; i < flow.steps.length; i++) {
     const s = flow.steps[i]!;
     const rendered = expandStep(s.cmd, opts.query);
@@ -279,33 +319,66 @@ export async function doCommand(opts: DoOptions): Promise<number> {
     process.stdout.write(`  ${kleur.bold().magenta(`Step ${i + 1}/${flow.steps.length}:`)} ${kleur.cyan(`mneme ${rendered}`)}\n`);
     process.stdout.write(`  ${kleur.gray("─".repeat(64))}\n\n`);
 
-    await new Promise<void>((resolve) => {
+    const exitCode = await new Promise<number>((resolve) => {
       const proc = spawn("node", [cliPath, ...args], {
         cwd: opts.cwd,
         stdio: "inherit",
       });
-      proc.on("exit", () => resolve());
-      proc.on("error", () => resolve());
+      proc.on("exit", (code) => resolve(typeof code === "number" ? code : 0));
+      proc.on("error", () => resolve(1));
     });
+    stepStatuses.push({ cmd: rendered, ok: exitCode === 0 });
   }
 
-  // Roll-up summary
-  process.stdout.write("\n" + section(`✦ Synthesis`) + "\n\n");
+  // ── Iris roll-up: lede flash + key-facts (per-step verdict) + sources.
+  const okCount = stepStatuses.filter((s) => s.ok).length;
+  const flashLines = flash({
+    type: "verdict",
+    data: {
+      headline: `${flow.label} complete`,
+      severity: okCount === stepStatuses.length ? "ok" : "warn",
+      next: `Read each section above; re-run any step solo if you want detail`,
+    },
+  });
+  const stepLines: string[] = [];
+  for (const s of stepStatuses) {
+    const mark = s.ok ? kleur.green("✓") : kleur.red("✗");
+    stepLines.push(`    ${mark}  ${kleur.cyan(`mneme ${s.cmd}`)}`);
+  }
+  const synthSections: PyramidSection[] = [
+    {
+      tier: "lede",
+      title: "✦ Synthesis",
+      lines: flashLines.map((l) => `    ${l}`),
+    },
+    {
+      tier: "key-facts",
+      title: `◆ Steps run  ${kleur.gray(`(${okCount}/${stepStatuses.length} ok)`)}`,
+      lines: stepLines,
+    },
+    {
+      tier: "sources",
+      title: "→ Try next",
+      lines: [
+        `    ${kleur.cyan("$")} ${kleur.bold('mneme do "<another question>"')}`,
+        `      ${kleur.gray('Try "blast radius of <hash>" or "should we ship today".')}`,
+      ],
+    },
+  ];
   process.stdout.write(
-    `  ${kleur.green("✓")} Ran ${flow.steps.length} sub-commands. Read each section above.\n`,
+    iris.render({
+      headline: `${flow.label} — ${okCount}/${stepStatuses.length} steps ok`,
+      sections: synthSections,
+    }),
   );
-  process.stdout.write(
-    `  ${kleur.gray("This was a")} ${kleur.bold(flow.label)}${kleur.gray(" — ")}${flow.description}\n\n`,
-  );
+  process.stdout.write("\n");
 
-  process.stdout.write(
-    nextSteps([
-      {
-        cmd: `mneme do "<another question>"`,
-        why: `Same dispatcher, different intent. Try "blast radius of <hash>" or "should we ship today".`,
-      },
-    ]) + "\n\n",
-  );
+  // Iris pillar #4: adaptive verbosity — record this run.
+  try {
+    recordCommandRun(opts.cwd, "do");
+  } catch {
+    // best-effort
+  }
 
   return 0;
 }

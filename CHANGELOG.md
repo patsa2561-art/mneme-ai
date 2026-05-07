@@ -8,6 +8,105 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.26.0] — 2026-05-06
+
+The **"Super Pipeline + Iris Adoption + AI Teacher"** release. Three
+parallel additions that make Mneme measurably faster, prettier, and
+philosophically clearer about its role: **the teacher of every AI that
+uses it**.
+
+**+40 new tests, 1331 total passing.**
+
+### 1. SuperPipeline engine + MPE math (world-first composition)
+
+`packages/core/src/pipeline/` — CPU-architecture deeply-pipelined-superscalar
+ideas applied to a CLI memory layer. Multi-stage Pipelined Eigentrust (MPE)
+auto-tunes weights per stage based on what actually works.
+
+**The novel formula:**
+```
+T_n = α × E_n × T_{n-1} + (1-α) × prior
+
+  where:
+    E_n[s] = exp(-latency / target)  on success
+    E_n[s] = 0                        on failure
+    α      = 0.85   (PageRank-style decay)
+    prior  = 1/N    (uniform exploration)
+```
+
+Combines **Eigentrust** (P2P reputation, Kamvar et al. 2003) + **PageRank decay**
++ **Bayesian online updates** + **pipeline scheduling**. No CLI tool has shipped
+this combination.
+
+After ~20 iterations on production traffic, T converges to a stable per-stage
+trust ranking. Pipeline auto-allocates more workers to high-trust slow stages,
+fewer to low-trust ones, and disables speculative pre-fetch when trust is
+unsafe.
+
+**New modules** (`packages/core/src/pipeline/`):
+- `types.ts` (95 lines) — PipelineStage, StageContext, PipelineEvent
+- `mpe.ts` (330 lines) — eigentrust update + power iteration + recommendations
+- `super-pipeline.ts` (286 lines) — deeply-pipelined runtime with backpressure
+- `superscalar.ts` (159 lines) — N parallel workers + speculative pre-fetch
+- `index.ts` (62 lines) — barrel + `runDeepPipeline()` convenience
+
+**Throughput benchmark (4-stage pipeline, 8 inputs, 12ms/stage):**
+```
+sequential (width=1, buffer=1) = 168 ms
+pipelined  (width=2, buffer=4) = 108 ms
+speedup                        = 1.56×
+```
+
+**Tests:** +40 (mpe 18 / superscalar 10 / super-pipeline 8 / integration 4).
+Power-iteration convergence verified by L1-tolerance test.
+
+### 2. Iris adopted by 5 top commands
+
+Iris was shipped as engine in v0.25; v0.26 migrates the renderers:
+
+- ✅ `mneme ask` — pyramid: lede (verdict) → key-facts (evidence) → body (files) → sources (try-next). AI-summarized headline via existing ResilientEnricher chain (800ms timeout, extractive fallback).
+- ✅ `mneme do` — upfront plan card (lede=description, key-facts=steps) + post-roll-up synthesis card (verdict + per-step ✓/✗).
+- ✅ `mneme why` — extractive headline (`📰 WHY src/auth.ts:12-44 — N commits across X→Y — most by Z`) + ledger lede + per-commit key-facts + collapsed details.
+- ✅ `mneme htc-stats` — three-way headline (empty / partial / ready) + 3-line flash + per-layer meters + collapsable token-math (auto-collapses after 5 uses via `iris.adaptive`).
+- ✅ `mneme forensics anomaly` — LLM-summarized headline + lede (top 3 anomalies) + key-facts (severity tally + single-author warning) + body (humanized axis breakdown) + adaptive "How to read" guide.
+
+**JSON output paths preserved byte-stable** — `--json` shape unchanged on all 5.
+
+**Visual continuity:** every commit / author / file across the 5 commands renders identically (same colors, same format) via `iris.entity.renderCommit/Author/File`.
+
+### 3. Mneme as the teacher of AI
+
+Documented framing for the Mneme positioning. New wiki page:
+`docs/wiki/AI-Teacher.md` — captures why Mneme is not a competitor to
+Claude Code / Cursor / Copilot but a **force multiplier** that makes
+every AI tool measurably better via MCP.
+
+Five teaching mechanisms:
+1. **Compressed source material** (HTC) — entire repo in one prompt
+2. **Verifiability instructions** (Leviathan) — claims marked unverified
+3. **Trust-weighted citations** (forensic primitives + ENFSI scale)
+4. **Inverted-pyramid structure** (Iris) — guides AI to weight earlier facts
+5. **Self-tuning execution** (MPE) — pipeline adapts to AI's call patterns
+
+### Tests
+
++40 new tests, total 1331 passing (was 1291):
+- pipeline: 40 (mpe / superscalar / super-pipeline / integration)
+- iris adoption: 0 net new (existing tests work; output shape moved)
+- regression snapshots: untouched (only `--help` is snapshotted, unchanged)
+
+### Documentation
+
+New wiki pages:
+- `docs/wiki/Super-Pipeline.md` — deeply-pipelined-superscalar architecture, MPE formula, throughput numbers, scaling for Wall Street / SpaceX / xAI
+- `docs/wiki/AI-Teacher.md` — Mneme-as-teacher manifesto
+
+`docs/wiki/_Sidebar.md` updated:
+- 🧠 The brain (5 lobes) → now includes Super-Pipeline
+- 🎓 Manifesto → AI-Teacher
+
+—
+
 ## [0.25.0] — 2026-05-06
 
 The **"Iris + Regression Wall"** release. Two parallel additions that

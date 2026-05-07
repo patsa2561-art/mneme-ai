@@ -6,6 +6,7 @@ import { ui } from "../ui.js";
 import { Spinner } from "../spinner.js";
 import { renderAnswer } from "../render-answer.js";
 import { isNoLlm } from "../no-llm.js";
+import { generateHeadline, recordCommandRun, type HeadlineEnricher } from "../iris/index.js";
 import kleur from "kleur";
 
 export interface AskCommandOptions {
@@ -241,6 +242,32 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
   }
 
   ui.banner();
+
+  // Iris pillar #2: AI-summarized headline. The LLM call has a hard 800ms
+  // timeout and silently falls back to an extractive headline — never blocks
+  // the user. Reuses the same enricher chain we already built for synthesis.
+  const headlineEnricher: HeadlineEnricher | undefined = enricher
+    ? {
+        name: "ask-enricher",
+        async enrich(input) {
+          return enricher!.enrich(input);
+        },
+      }
+    : undefined;
+  const headline = await generateHeadline({
+    commandType: "ask",
+    data: {
+      question: opts.question,
+      confidence: synthesized.confidence,
+      citationCount: synthesized.evidenceCommitHashes.length,
+      trustScore: synthesized.trustScore,
+      evidenceCount: synthesized.evidenceCommitHashes.length,
+    },
+    enricher: headlineEnricher,
+    timeoutMs: 800,
+    repoRoot: meta.rootPath,
+  });
+
   process.stdout.write(
     renderAnswer({
       question: opts.question,
@@ -248,8 +275,10 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
       results,
       repo: meta,
       feedbackId,
+      headline,
     }),
   );
+  process.stdout.write("\n");
 
   // If we fell back to retrieval-only because no LLM was available, tell
   // the user how to upgrade for free. Once-per-run friendly nudge — never
@@ -257,6 +286,13 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
   if (enricherError && useLlm && confidence !== "none") {
     process.stdout.write(`\n  ${kleur.yellow("ℹ")}  ${kleur.gray("This was retrieval-only. For full Q&A synthesis, set up a free LLM:")}\n`);
     process.stdout.write(`     ${kleur.cyan().bold("mneme setup-free")}  ${kleur.gray("(30-second guided wizard — Ollama / Groq / OpenRouter — all free)")}\n\n`);
+  }
+
+  // Iris pillar #4: adaptive verbosity — track that the user ran `ask`.
+  try {
+    recordCommandRun(meta.rootPath, "ask");
+  } catch {
+    // best-effort; never breaks the command
   }
   return 0;
 }

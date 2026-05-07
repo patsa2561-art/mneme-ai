@@ -1,13 +1,22 @@
 /**
- * Render helpers for `mneme ask` — the "AI from the future" look.
+ * Render helpers for `mneme ask` — now routed through Iris.
  *
- * Pure functions; no I/O. The ask command composes these with side-effects.
- * Tested independently — see render-answer.test.ts.
+ * The top-level `renderAnswer` builds a structured `PyramidInput` and lets
+ * the journalist engine handle wrapping, ordering, and the 30-second
+ * contract.  Every helper below stays exported for backwards compat —
+ * tests + callers in core/insights still reference them.
+ *
+ * Pure functions; no I/O.
  */
 
 import kleur from "kleur";
 import { insights } from "@mneme-ai/core";
 import type { SearchResult, RepoMeta, retrieve } from "@mneme-ai/core";
+import {
+  iris,
+  renderCommit as irisRenderCommit,
+  type PyramidSection,
+} from "./iris/index.js";
 
 type ConfidenceLabel = retrieve.ConfidenceLabel;
 type SynthesizedAnswer = retrieve.SynthesizedAnswer;
@@ -75,7 +84,7 @@ export function commitUrl(hash: string, repo?: RepoMeta): string | undefined {
   return undefined;
 }
 
-/** Render a single evidence row. */
+/** Render a single evidence row (legacy helper — kept for downstream consumers). */
 export function renderEvidence(r: SearchResult, repo?: RepoMeta): string[] {
   const c = r.commit;
   const date = c.authorDate.slice(0, 10);
@@ -102,93 +111,168 @@ export interface AskRenderInput {
   results: SearchResult[];
   repo?: RepoMeta;
   feedbackId?: string;
+  /** Pre-built headline (Iris pillar 2). When omitted, an extractive one is used. */
+  headline?: string;
 }
 
-export function renderAnswer(input: AskRenderInput): string {
-  const out: string[] = [];
+/**
+ * Build the structured pyramid input for `mneme ask` — separated so the
+ * caller can either render directly via Iris or inspect the structure in
+ * tests.
+ */
+export function buildAskPyramid(input: AskRenderInput): {
+  headline: string;
+  sections: PyramidSection[];
+  whyShown: string;
+} {
   const { question, synthesized, results, repo, feedbackId } = input;
 
-  // ── Header: question + confidence badge + trust score ────────────────
-  out.push("");
-  out.push(`  ${kleur.bold().cyan("Q")}  ${kleur.bold(question)}`);
-  out.push("");
-  out.push(`  ${confidenceBadge(synthesized.confidence)}  ${trustBadge(synthesized.trustScore)}`);
-  out.push(`  ${kleur.gray(humanizeTrustScore(synthesized.trustScore))}`);
+  // ── Headline (lede stand-in) — short, scannable.
+  const ev = synthesized.evidenceCommitHashes.length;
+  const headline =
+    input.headline ??
+    `Q: ${truncate(question, 60)} — ${synthesized.confidence} confidence, ${ev} citation${ev === 1 ? "" : "s"}`;
+
+  const sections: PyramidSection[] = [];
+
+  // ── Lede: confidence badge, trust score, then the answer prose.
+  const ledeLines: string[] = [];
+  ledeLines.push(`  ${kleur.bold().cyan("Q")}  ${kleur.bold(question)}`);
+  ledeLines.push("");
+  ledeLines.push(
+    `  ${confidenceBadge(synthesized.confidence)}  ${trustBadge(synthesized.trustScore)}`,
+  );
+  ledeLines.push(`  ${kleur.gray(humanizeTrustScore(synthesized.trustScore))}`);
   if (synthesized.source === "llm") {
-    out.push(`  ${kleur.gray(`synthesized in ${synthesized.durationMs}ms`)}`);
+    ledeLines.push(`  ${kleur.gray(`synthesized in ${synthesized.durationMs}ms`)}`);
   }
   if (synthesized.source === "audit-refused") {
-    out.push(`  ${kleur.red().bold("⊘ AUDIT REFUSED")}`);
-    out.push(`  ${kleur.gray("Mneme is in audit mode and the evidence wasn't strong enough to answer safely.")}`);
-    out.push(`  ${kleur.gray("Refusing here is a feature — it prevents an unverifiable answer from leaking into a CI gate or another agent.")}`);
-    out.push(`  ${kleur.gray("Try again without")} ${kleur.bold("--audit")} ${kleur.gray("to see the best-effort answer with full evidence.")}`);
+    ledeLines.push(`  ${kleur.red().bold("⊘ AUDIT REFUSED")}`);
+    ledeLines.push(
+      `  ${kleur.gray("Mneme is in audit mode and the evidence wasn't strong enough to answer safely.")}`,
+    );
+    ledeLines.push(
+      `  ${kleur.gray("Refusing here is a feature — it prevents an unverifiable answer from leaking into a CI gate or another agent.")}`,
+    );
+    ledeLines.push(
+      `  ${kleur.gray("Try again without")} ${kleur.bold("--audit")} ${kleur.gray("to see the best-effort answer with full evidence.")}`,
+    );
   }
-  // Hallucination warning: cited hashes not in evidence
   if (
     synthesized.unverifiedCitations &&
     synthesized.unverifiedCitations.length > 0 &&
     synthesized.source !== "audit-refused"
   ) {
     const list = synthesized.unverifiedCitations.slice(0, 3).join(", ");
-    out.push(
+    ledeLines.push(
       `  ${kleur.yellow().bold("⚠ HALLUCINATION RISK")}  ${kleur.gray(`cited ${synthesized.unverifiedCitations.length} hash(es) not in evidence: ${list}${synthesized.unverifiedCitations.length > 3 ? "…" : ""}`)}`,
     );
-    out.push(`  ${kleur.gray("→ re-run with --audit to refuse on unverified citations")}`);
+    ledeLines.push(`  ${kleur.gray("→ re-run with --audit to refuse on unverified citations")}`);
   }
-  out.push("");
-
-  // ── Answer section ───────────────────────────────────────────────────
-  out.push(`  ${kleur.bold().magenta("✦ Answer")}`);
-  out.push("");
-  for (const line of wrapText(synthesized.answer, 92, "    ")) out.push(line);
-  out.push("");
-
-  // No-context case ends here.
-  if (synthesized.confidence === "none" || results.length === 0) {
-    out.push("");
-    return out.join("\n");
+  ledeLines.push("");
+  // The answer paragraph (already humanly-readable). Iris wrap-aware.
+  for (const para of synthesized.answer.split(/\n\n+/)) {
+    for (const line of para.split("\n")) ledeLines.push(`    ${line}`);
+    ledeLines.push("");
   }
+  sections.push({ tier: "lede", title: "✦ Answer", lines: ledeLines });
 
-  // ── Evidence (top 3) ─────────────────────────────────────────────────
-  out.push(`  ${kleur.bold().magenta("◆ Evidence")}  ${kleur.gray(`(showing ${Math.min(3, results.length)} of ${results.length})`)}`);
-  out.push("");
-  for (const r of results.slice(0, 3)) {
-    for (const line of renderEvidence(r, repo)) out.push(line);
-    out.push("");
-  }
-
-  // ── Files (clustered) ────────────────────────────────────────────────
-  const allFiles = unique(results.slice(0, 3).flatMap((r) => r.commit.files ?? []));
-  if (allFiles.length > 0) {
-    const clusters = clusterFiles(allFiles).slice(0, 5);
-    out.push(`  ${kleur.bold().magenta("⊕ Files")}  ${kleur.gray(`(${allFiles.length} unique)`)}`);
-    for (const c of clusters) {
-      out.push(`    ${kleur.cyan(c.name.padEnd(22))} ${kleur.gray(`(${c.count})`)}  ${kleur.gray(c.sample.join(", "))}`);
+  // ── No-context case: stop here. Evidence/Files/Try-next are all empty.
+  if (synthesized.confidence !== "none" && results.length > 0) {
+    // ── Key-facts: top-3 evidence cards.
+    const evidenceLines: string[] = [];
+    for (const r of results.slice(0, 3)) {
+      const url = commitUrl(r.commit.hash, repo);
+      evidenceLines.push(
+        irisRenderCommit(
+          {
+            hash: r.commit.hash,
+            shortHash: r.commit.shortHash,
+            subject: r.commit.subject,
+            authorName: r.commit.authorName,
+            authorDate: r.commit.authorDate,
+          },
+          { emphasized: true, url },
+        ),
+      );
+      evidenceLines.push(`    ${kleur.gray(`score ${r.score.toFixed(3)}`)}`);
+      evidenceLines.push("");
     }
-    out.push("");
-  }
+    sections.push({
+      tier: "key-facts",
+      title: `◆ Evidence  ${kleur.gray(`(showing ${Math.min(3, results.length)} of ${results.length})`)}`,
+      lines: evidenceLines,
+    });
 
-  // ── Smart suggestions — what to run next ─────────────────────────────
-  const suggestions = insights.suggestFollowUps(question, results);
-  if (suggestions.length > 0) {
-    out.push(`  ${kleur.bold().magenta("→ Try next")}`);
+    // ── Body: file clusters.
+    const allFiles = unique(results.slice(0, 3).flatMap((r) => r.commit.files ?? []));
+    if (allFiles.length > 0) {
+      const clusters = clusterFiles(allFiles).slice(0, 5);
+      const fileLines: string[] = [];
+      for (const c of clusters) {
+        fileLines.push(
+          `    ${kleur.cyan(c.name.padEnd(22))} ${kleur.gray(`(${c.count})`)}  ${kleur.gray(c.sample.join(", "))}`,
+        );
+      }
+      sections.push({
+        tier: "body",
+        title: `⊕ Files  ${kleur.gray(`(${allFiles.length} unique)`)}`,
+        lines: fileLines,
+      });
+    }
+
+    // ── Details: remaining evidence beyond top-3 (collapsed).
+    if (results.length > 3) {
+      const moreLines: string[] = [];
+      for (const r of results.slice(3)) {
+        const url = commitUrl(r.commit.hash, repo);
+        moreLines.push(
+          irisRenderCommit(
+            {
+              hash: r.commit.hash,
+              shortHash: r.commit.shortHash,
+              subject: r.commit.subject,
+              authorName: r.commit.authorName,
+              authorDate: r.commit.authorDate,
+            },
+            { compact: true, url },
+          ),
+        );
+      }
+      sections.push({
+        tier: "details",
+        title: "All evidence",
+        lines: moreLines,
+      });
+    }
+
+    // ── Sources: smart "try next" + feedback CTA.
+    const suggestions = insights.suggestFollowUps(question, results);
+    const trySources: string[] = [];
     for (const s of suggestions) {
-      out.push(`    ${kleur.cyan("$")} ${kleur.bold(s.command)}`);
-      out.push(`      ${kleur.gray(s.reason)}`);
+      trySources.push(`    ${kleur.cyan("$")} ${kleur.bold(s.command)}`);
+      trySources.push(`      ${kleur.gray(s.reason)}`);
     }
-    out.push("");
+    if (feedbackId) {
+      const id8 = feedbackId.slice(0, 8);
+      trySources.push("");
+      trySources.push(
+        `    ${kleur.gray("Was this useful?")}  ${kleur.bold("mneme feedback")} ${kleur.cyan(id8)} ${kleur.green("up")}${kleur.gray(" | ")}${kleur.red("down")}`,
+      );
+    }
+    if (trySources.length > 0) {
+      sections.push({ tier: "sources", title: "→ Try next", lines: trySources });
+    }
   }
 
-  // ── Feedback CTA ─────────────────────────────────────────────────────
-  if (feedbackId) {
-    const id8 = feedbackId.slice(0, 8);
-    out.push(
-      `  ${kleur.gray("Was this useful?")}  ${kleur.bold("mneme feedback")} ${kleur.cyan(id8)} ${kleur.green("up")}${kleur.gray(" | ")}${kleur.red("down")}`,
-    );
-    out.push("");
-  }
+  const whyShown = `Because the question matched ${synthesized.confidence} confidence retrieval`;
+  return { headline, sections, whyShown };
+}
 
-  return out.join("\n");
+/** Render the answer using Iris (the journalist engine). */
+export function renderAnswer(input: AskRenderInput): string {
+  const { headline, sections, whyShown } = buildAskPyramid(input);
+  return iris.render({ headline, sections, whyShown });
 }
 
 /** Pure helpers used above and tested directly. */
