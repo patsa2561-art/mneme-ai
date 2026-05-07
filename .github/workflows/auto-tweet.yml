@@ -1,0 +1,174 @@
+name: Auto-tweet on release
+
+# Auto-posts a release announcement to X (Twitter) on every tag push.
+# Composes the tweet from the matching CHANGELOG entry (first
+# paragraph after the version header) + canonical project links.
+#
+# Setup (one-time):
+#   1. Sign up for an X developer account: https://developer.x.com
+#   2. Create a Project + App; enable "Read and Write" permissions
+#   3. Generate the 4 keys (consumer key/secret + access token/secret)
+#   4. Add them as repo secrets at:
+#      https://github.com/patsa2561-art/mneme-ai/settings/secrets/actions
+#      Names: X_CONSUMER_KEY, X_CONSUMER_SECRET,
+#             X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+#   5. Push a new tag → workflow auto-posts.
+#
+# Skips silently when secrets are missing — never blocks a release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to announce (e.g. v0.33.0). Defaults to latest tag.'
+        required: false
+        type: string
+      dry-run:
+        description: 'Compose only, do not post.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-tweet-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # ── 1. Resolve which tag we are announcing ───────────────────────
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag }}" ]]; then
+            TAG="${{ inputs.tag }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="$(git describe --tags --abbrev=0)"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Announcing $TAG (version=$VERSION)"
+
+      # ── 2. Pull the headline from CHANGELOG.md for this version ──────
+      - name: Extract CHANGELOG headline
+        id: headline
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os, re, sys
+          version = os.environ["VERSION"]
+          with open("CHANGELOG.md", encoding="utf-8") as f:
+              src = f.read()
+
+          # Find the section: starts at "## [VERSION]" and ends at next "## "
+          m = re.search(
+              rf"^## \[{re.escape(version)}\][^\n]*\n+(.*?)(?=^## |\Z)",
+              src,
+              re.M | re.S,
+          )
+          body = (m.group(1).strip() if m else "").strip()
+
+          # First paragraph (until blank line)
+          first_para = body.split("\n\n", 1)[0].strip() if body else ""
+
+          # Strip markdown punctuation we don't want in a tweet
+          first_para = re.sub(r"[*_`]", "", first_para)
+          first_para = re.sub(r"\s+", " ", first_para)
+
+          # Cap length so we have room for the link block (target ~150 chars).
+          MAX = 150
+          if len(first_para) > MAX:
+              first_para = first_para[:MAX].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
+
+          # Fallback if we couldn't find anything
+          if not first_para:
+              first_para = "A new release is live."
+
+          # Pipe to GITHUB_OUTPUT — escape newlines per heredoc protocol
+          delimiter = "EOF_HEADLINE_a47c019"
+          print(f"headline<<{delimiter}")
+          print(first_para)
+          print(delimiter)
+          PY
+
+      # ── 3. Compose the tweet text ────────────────────────────────────
+      - name: Compose tweet
+        id: compose
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+          HEADLINE: ${{ steps.headline.outputs.headline }}
+        run: |
+          set -euo pipefail
+          # X auto-shortens every URL to 23 chars in its char count, so
+          # the budget below is conservative.
+          TEXT=$(cat <<EOF_TWEET
+          🚀 Mneme v${VERSION} — ${HEADLINE}
+
+          📦 https://www.npmjs.com/package/mneme-ai
+          🎬 https://patsa2561-art.github.io/mneme-ai
+          📋 https://github.com/patsa2561-art/mneme-ai/releases/tag/v${VERSION}
+          EOF_TWEET
+          )
+          # GitHub Actions multi-line output protocol
+          {
+            echo "text<<EOF_COMPOSE"
+            echo "$TEXT"
+            echo "EOF_COMPOSE"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "── Composed tweet ──────────────────────────────────────"
+          echo "$TEXT"
+          echo "─────────────────────────────────────────────────────────"
+
+      # ── 4. Sanity-check that secrets exist (skip silently otherwise) ──
+      - name: Verify X credentials are present
+        id: creds
+        env:
+          K1: ${{ secrets.X_CONSUMER_KEY }}
+          K2: ${{ secrets.X_CONSUMER_SECRET }}
+          T1: ${{ secrets.X_ACCESS_TOKEN }}
+          T2: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$K1" || -z "$K2" || -z "$T1" || -z "$T2" ]]; then
+            echo "::warning::X API secrets not configured. Skipping post."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 5. Dry-run short-circuit ─────────────────────────────────────
+      - name: Dry-run notice
+        if: ${{ inputs.dry-run == true }}
+        run: echo "::notice::Dry-run mode — tweet was composed but not posted."
+
+      # ── 6. Post to X ──────────────────────────────────────────────────
+      - name: Post to X
+        if: ${{ steps.creds.outputs.configured == 'true' && inputs.dry-run != true }}
+        uses: noweh/post-tweet-v2-action@v1.5
+        with:
+          message: ${{ steps.compose.outputs.text }}
+          consumer-key: ${{ secrets.X_CONSUMER_KEY }}
+          consumer-secret: ${{ secrets.X_CONSUMER_SECRET }}
+          access-token: ${{ secrets.X_ACCESS_TOKEN }}
+          access-token-secret: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+
+      - name: Done
+        if: ${{ steps.creds.outputs.configured == 'true' && inputs.dry-run != true }}
+        run: echo "::notice::Tweet posted for v${{ steps.tag.outputs.version }}."

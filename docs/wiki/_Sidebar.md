@@ -26,6 +26,7 @@
 - [[Integrations]] · *GitHub · GitLab · Bitbucket · CircleCI · Jenkins*
 - [[Docker]] · *🐳 ghcr.io image — no Node toolchain needed*
 - [[Public-API]] · *@mneme-ai/core/public — the stable surface*
+- [[Auto-tweet-Setup]] · *🐦 X auto-post on every release*
 
 ### 📝 Editors
 - [[VS-Code-Extension]] · *Atrophy Lens · sidebar · audit badge*
