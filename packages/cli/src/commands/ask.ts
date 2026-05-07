@@ -1,5 +1,5 @@
 import { git, retrieve, store, wisdom } from "@mneme-ai/core";
-import { resolveEmbedder, resolveEnricher } from "@mneme-ai/embeddings";
+import { resolveEmbedder, resolveAllEnrichers, ResilientEnricher } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig } from "../config.js";
 import { ui } from "../ui.js";
@@ -97,21 +97,34 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
 
   if (!opts.json) spinner.update(`Found ${results.length} candidates · confidence: ${confidence}`);
 
-  // ── Step 3. LLM synthesis (when available + not --no-llm). ───────────
-  // resolveEnricher uses 'auto' which walks the free-first ladder:
-  //   local Ollama → Groq (free) → Together → OpenRouter → OpenAI (paid).
-  // If none available, throws NoEnricherAvailableError and we fall through
-  // to extractive (retrieval-only) mode without breaking the user.
+  // ── Step 3. LLM synthesis with self-healing fallback chain. ──────────
+  //
+  // Free-first ladder, tried in order on EVERY call (not just startup):
+  //   1. local Ollama (with auto-picked chat model)
+  //   2. GROQ_API_KEY → Groq cloud (free tier, fastest)
+  //   3. TOGETHER_API_KEY → Together (free tier)
+  //   4. OPENROUTER_API_KEY → OpenRouter free models
+  //   5. OPENAI_API_KEY → OpenAI (paid, last resort)
+  //
+  // ResilientEnricher tracks per-provider health: a 429 from Groq puts it
+  // in 5-min cooldown; a 5xx → 60s; auth/model-not-found → 1hr. Next call
+  // skips the bad provider transparently. If EVERY provider fails, we
+  // catch AllProvidersFailedError and degrade to extractive synthesis.
+  // The user always gets an answer; never sees a hard error.
   const useLlm = !isNoLlm(opts.noLlm, cfg);
   let enricher: retrieve.SynthesisEnricher | undefined;
   let enricherError: string | undefined;
   if (useLlm && confidence !== "none") {
     if (!opts.json) spinner.update("Synthesizing answer...");
     try {
-      enricher = await resolveEnricher({
-        provider: "auto",
-        model: cfg.embeddings.model,
-      });
+      const chain = await resolveAllEnrichers({ model: cfg.embeddings.model });
+      if (chain.length > 0) {
+        enricher = new ResilientEnricher(chain, (ev) => {
+          if (!opts.json) {
+            spinner.update(`${ev.from} ${ev.reason} — switching to ${ev.to}…`);
+          }
+        });
+      }
     } catch (err) {
       enricher = undefined;
       enricherError = (err as Error).message ?? "no LLM available";

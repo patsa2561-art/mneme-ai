@@ -352,3 +352,227 @@ export class NoEnricherAvailableError extends Error {
 export function listProviders(): typeof PROVIDERS {
   return PROVIDERS;
 }
+
+/* ──────────────────────────  Fallback chain  ─────────────────────── */
+
+/* ──────────  Error classification + per-provider health tracking  ────── */
+
+/**
+ * Classify a thrown error into a category that determines retry behavior.
+ * Used by ResilientEnricher to set per-provider cooldown durations: a 429
+ * (quota exhausted) merits a longer cooldown than a transient 503.
+ */
+export type FailureKind =
+  | "timeout"        // network / abort / ETIMEDOUT — retry quickly
+  | "network"        // ECONNREFUSED / ENOTFOUND / fetch failed — short cooldown
+  | "rate-limit"     // 429 / quota exceeded — long cooldown (5 min)
+  | "server"         // 5xx — medium cooldown (60s)
+  | "auth"           // 401 / 403 — permanent skip until env changes
+  | "model-missing"  // 404 model-not-found / "no such model" — permanent for that model
+  | "empty"          // provider returned blank answer — soft retry
+  | "unknown";       // anything else — short cooldown
+
+export function classifyFailure(err: unknown): FailureKind {
+  const msg = (err as Error)?.message ?? String(err);
+  if (/no\s+such\s+model|model.+(not\s+found|not\s+pulled)|404/i.test(msg)) return "model-missing";
+  if (/401|403|invalid.*key|unauthor|forbidden/i.test(msg)) return "auth";
+  if (/429|rate.?limit|quota|too\s+many/i.test(msg)) return "rate-limit";
+  if (/5\d\d|server\s+error|unavailable|bad\s+gateway/i.test(msg)) return "server";
+  if (/timeout|aborted|ETIMEDOUT/i.test(msg)) return "timeout";
+  if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch\s+failed|socket\s+hang/i.test(msg)) return "network";
+  return "unknown";
+}
+
+/** Cooldown in ms per failure kind. Tuned so a flaky provider self-heals
+ *  without thrashing, but a permanently-broken one is skipped for hours. */
+const COOLDOWN_MS: Record<FailureKind, number> = {
+  timeout: 30_000,
+  network: 30_000,
+  "rate-limit": 5 * 60_000,
+  server: 60_000,
+  auth: 60 * 60_000,         // 1 hr — auth issues require user fix
+  "model-missing": 60 * 60_000,
+  empty: 5_000,
+  unknown: 30_000,
+};
+
+interface ProviderHealth {
+  lastFailure?: { kind: FailureKind; at: number; reason: string };
+  lastSuccess?: number;
+  cooldownUntil?: number;
+}
+
+/**
+ * Self-healing enricher. Wraps an ordered list of providers and:
+ *
+ *   1. Tracks per-provider health state (lastSuccess / lastFailure / cooldownUntil)
+ *   2. Skips providers in cooldown — different durations per failure type
+ *   3. On call: tries providers in order, returns first success
+ *   4. On every failure: classifies + sets cooldown so the next call avoids
+ *      the bad provider without thrashing
+ *   5. Surfaces switches via onSwitch() so the CLI can show "Ollama timed
+ *      out (cooldown 30s), trying Groq..."
+ *
+ * The key UX win: a flaky cloud call NEVER kills `mneme ask`. The user
+ * always gets an answer (or a final extractive fallback) — Mneme silently
+ * adapts.
+ */
+export class ResilientEnricher implements EnricherProvider {
+  readonly name: string;
+  private readonly chain: EnricherProvider[];
+  private readonly health: Map<string, ProviderHealth> = new Map();
+  private readonly onSwitch?: (event: { from: string; to: string; reason: string; kind: FailureKind }) => void;
+
+  constructor(
+    chain: EnricherProvider[],
+    onSwitch?: (event: { from: string; to: string; reason: string; kind: FailureKind }) => void,
+  ) {
+    if (chain.length === 0) throw new Error("ResilientEnricher requires at least one provider");
+    this.chain = chain;
+    this.onSwitch = onSwitch;
+    this.name = `resilient:[${chain.map((p) => p.name).join(", ")}]`;
+  }
+
+  /** Inspect health for testing / debugging. */
+  inspectHealth(): Record<string, ProviderHealth> {
+    return Object.fromEntries(this.health);
+  }
+
+  async enrich(input: EnrichInput): Promise<EnrichResult> {
+    const now = Date.now();
+    const errors: Array<{ name: string; kind: FailureKind; reason: string }> = [];
+    let lastTried = -1;
+
+    for (let i = 0; i < this.chain.length; i++) {
+      const p = this.chain[i]!;
+      const h = this.health.get(p.name) ?? {};
+
+      // Skip if in cooldown
+      if (h.cooldownUntil && h.cooldownUntil > now) {
+        errors.push({
+          name: p.name,
+          kind: h.lastFailure?.kind ?? "unknown",
+          reason: `in cooldown for ${Math.ceil((h.cooldownUntil - now) / 1000)}s (${h.lastFailure?.reason ?? "?"})`,
+        });
+        continue;
+      }
+
+      // Notify CLI if we're switching
+      if (lastTried >= 0 && this.onSwitch) {
+        const prev = errors[errors.length - 1]!;
+        this.onSwitch({ from: this.chain[lastTried]!.name, to: p.name, reason: prev.reason, kind: prev.kind });
+      }
+      lastTried = i;
+
+      try {
+        const result = await p.enrich(input);
+        if (!result.text || result.text.trim().length === 0) {
+          // Empty answer = soft failure → short cooldown, try next
+          this.health.set(p.name, {
+            ...h,
+            lastFailure: { kind: "empty", at: now, reason: "empty answer" },
+            cooldownUntil: now + COOLDOWN_MS.empty,
+          });
+          errors.push({ name: p.name, kind: "empty", reason: "empty answer" });
+          continue;
+        }
+        // Success — clear cooldown, record timestamp
+        this.health.set(p.name, { ...h, lastSuccess: now, cooldownUntil: undefined });
+        return result;
+      } catch (err) {
+        const kind = classifyFailure(err);
+        const msg = (err as Error).message ?? String(err);
+        this.health.set(p.name, {
+          ...h,
+          lastFailure: { kind, at: now, reason: msg.slice(0, 200) },
+          cooldownUntil: now + COOLDOWN_MS[kind],
+        });
+        errors.push({ name: p.name, kind, reason: msg.slice(0, 120) });
+      }
+    }
+
+    // Every provider failed (or all in cooldown). Throw a descriptive error
+    // so the caller can fall back to extractive synthesis.
+    const summary = errors
+      .map((e) => `  • ${e.name} (${e.kind}): ${e.reason}`)
+      .join("\n");
+    throw new AllProvidersFailedError(
+      `All ${this.chain.length} provider(s) failed or in cooldown:\n${summary}\n` +
+        `→ Run \`mneme setup-free\` if no providers are configured.`,
+    );
+  }
+}
+
+export class AllProvidersFailedError extends Error {
+  constructor(msg: string) {
+    super(msg);
+    this.name = "AllProvidersFailedError";
+  }
+}
+
+/**
+ * Build the FULL ladder of enrichers available to this user, in
+ * preference order. Used by callers that want runtime fallback (e.g.
+ * `mneme ask`) — try Ollama first, fall back to Groq, fall back to
+ * OpenRouter, etc., on EVERY call rather than just at startup.
+ *
+ * Returns [] if the user has nothing configured. Caller decides what
+ * to do (typically: degrade to extractive answer).
+ */
+export async function resolveAllEnrichers(
+  opts: ResolveEnricherOptions = {},
+): Promise<EnricherProvider[]> {
+  const out: EnricherProvider[] = [];
+
+  // 1. Local Ollama — only add if reachable, AND auto-pick the first
+  //    available chat model so we don't pass a wrong/embedder name.
+  const ollama = new OllamaEnricher({ model: opts.model, baseUrl: opts.baseUrl });
+  if (await ollama.ping()) {
+    const chatModel = opts.model ?? (await pickOllamaChatModel(ollama));
+    if (chatModel) {
+      out.push(new OllamaEnricher({ model: chatModel, baseUrl: opts.baseUrl }));
+    }
+  }
+
+  // 2. Free-tier cloud providers (env-var detection)
+  for (const cfg of PROVIDERS) {
+    const key = process.env[cfg.envKey];
+    if (key) {
+      out.push(
+        new OpenAIEnricher({
+          apiKey: key,
+          model: opts.model ?? cfg.defaultModel,
+          baseUrl: opts.baseUrl ?? cfg.baseUrl,
+        }),
+      );
+    }
+  }
+
+  return out;
+}
+
+/** Probe Ollama's installed models and pick the first viable chat model.
+ *  Skips embedders (nomic-embed-*, bge-*, e5-*, minilm-*). */
+async function pickOllamaChatModel(probe: OllamaEnricher): Promise<string | undefined> {
+  try {
+    const res = await fetch(`${(probe as unknown as { baseUrl: string }).baseUrl}/api/tags`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { models?: Array<{ name: string }> };
+    const names = (data.models ?? []).map((m) => m.name);
+    // Filter out embedding-only models that would crash chat API
+    const chatModels = names.filter(
+      (n) => !/^(nomic-embed|bge-|e5-|all-minilm|paraphrase-|gte-|jina-)/i.test(n),
+    );
+    // Prefer modern small models in this order
+    const preferred = ["qwen2.5:3b", "gemma2:2b", "llama3.2:1b", "llama3.2:3b", "qwen2.5:7b"];
+    for (const want of preferred) {
+      const hit = chatModels.find((n) => n === want || n.startsWith(want.split(":")[0] + ":"));
+      if (hit) return hit;
+    }
+    return chatModels[0];
+  } catch {
+    return undefined;
+  }
+}

@@ -8,6 +8,69 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.22.1] — 2026-05-06
+
+The **"Self-Healing Free LLM"** patch. Root-cause fix: free-tier providers
+fail occasionally (rate limits, 503s, network blips, model not pulled).
+v0.22.0 chose ONE provider at startup and died if it failed mid-call.
+v0.22.1 builds the **full chain** at startup and self-heals on every call.
+
+### `ResilientEnricher` — never lets a flaky provider kill `mneme ask`
+
+Wraps the ordered free-first chain (Ollama → Groq → Together → OpenRouter
+→ OpenAI) and tracks **per-provider health**:
+
+| Failure kind | Cooldown | Detected from |
+|---|---|---|
+| `model-missing` | 1 hr | "no such model", 404 |
+| `auth` | 1 hr | 401, 403, "invalid key" |
+| `rate-limit` | 5 min | 429, "quota", "rate limit" |
+| `server` | 60 sec | 5xx, "service unavailable" |
+| `timeout` | 30 sec | abort, ETIMEDOUT |
+| `network` | 30 sec | ECONNREFUSED, ENOTFOUND, "fetch failed" |
+| `empty` | 5 sec | provider returned blank text |
+| `unknown` | 30 sec | anything else |
+
+**Behavior on every `mneme ask`:**
+1. Try Ollama first — if 503, mark cooldown (60s), try Groq
+2. If Groq returns 429 (free quota exhausted), mark cooldown (5 min), try OpenRouter
+3. If OpenRouter empty answer, try OpenAI
+4. If ALL fail → throw `AllProvidersFailedError` → `ask` falls back to extractive synthesis (still gives the user top commits + heuristic answer)
+
+**The user never sees a hard error.** Live status shows in spinner: *"Ollama timed out — switching to Groq…"*.
+
+### Auto-pick Ollama chat model
+
+`resolveAllEnrichers` now probes `/api/tags` and picks the BEST chat model
+from what's installed:
+1. `qwen2.5:3b` (preferred — best small/quality balance)
+2. `gemma2:2b`
+3. `llama3.2:1b`
+4. `llama3.2:3b`
+5. `qwen2.5:7b`
+
+Skips embedders (`nomic-embed-*`, `bge-*`, `e5-*`, `all-minilm-*`) so we
+never pass an embedding model to the chat API by mistake.
+
+### Public API
+
+- `ResilientEnricher` (class) + `AllProvidersFailedError`
+- `classifyFailure(err)` returns one of 8 `FailureKind` categories
+- `resolveAllEnrichers(opts)` returns `EnricherProvider[]` in fallback order
+
+### Tests
+
++13 new tests (893 total, was 880):
+- Each `FailureKind` classifier path
+- Chain returns first success
+- Empty answers → soft fail → next provider
+- Hard failure → cooldown → next call skips
+- Rate-limit cools longer than server error
+- All-fail throws sentinel error
+- onSwitch event surfaces correct kind
+
+—
+
 ## [0.22.0] — 2026-05-06
 
 The **"Free Forever"** release. **Mneme now defaults to assuming the user has
