@@ -29,16 +29,11 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install root + workspace deps
+      - name: Install (root, workspaces)
         run: npm ci
 
-      - name: Install web package deps
-        working-directory: packages/web
-        run: npm install
-
       - name: Build dashboard
-        working-directory: packages/web
-        run: npm run build
+        run: npm run build --workspace=@mneme-ai/web
         env:
           BASE_PATH: /mneme-ai/
 
