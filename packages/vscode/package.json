@@ -8,7 +8,11 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other", "Education", "Visualization"],
+  "categories": [
+    "Other",
+    "Education",
+    "Visualization"
+  ],
   "keywords": [
     "mneme",
     "git",
@@ -20,6 +24,7 @@
     "passport",
     "code-archaeology"
   ],
+  "icon": "media/icon.png",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,7 +35,9 @@
   "bugs": {
     "url": "https://github.com/patsa2561-art/mneme-ai/issues"
   },
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -91,12 +98,24 @@
         }
       ],
       "commandPalette": [
-        { "command": "mneme.ask" },
-        { "command": "mneme.why" },
-        { "command": "mneme.audit" },
-        { "command": "mneme.nervousSystem" },
-        { "command": "mneme.refresh" },
-        { "command": "mneme.openAtrophyDetail" }
+        {
+          "command": "mneme.ask"
+        },
+        {
+          "command": "mneme.why"
+        },
+        {
+          "command": "mneme.audit"
+        },
+        {
+          "command": "mneme.nervousSystem"
+        },
+        {
+          "command": "mneme.refresh"
+        },
+        {
+          "command": "mneme.openAtrophyDetail"
+        }
       ]
     },
     "configuration": {
@@ -128,7 +147,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mneme-ai/core": "*"
+    "@mneme-ai/core": "0.31.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
