@@ -5,6 +5,27 @@ name: Sync Wiki
 # git repository at <repo>.wiki.git — we clone it, mirror docs/wiki/
 # verbatim (filename = page name; _Sidebar.md / _Footer.md special), and
 # push.
+#
+# Authentication notes:
+#   - GitHub's default `GITHUB_TOKEN` cannot push to the wiki repo
+#     reliably. Wiki repos sit in a separate permission scope; even with
+#     `permissions: contents: write` declared here, GitHub's token policy
+#     blocks pushes to *.wiki.git from `github-actions[bot]`.
+#   - The reliable fix: create a fine-grained personal access token
+#     (or classic PAT with `repo` scope), save it as the repo secret
+#     `WIKI_PUSH_TOKEN`, and the workflow uses it for the push.
+#   - If `WIKI_PUSH_TOKEN` is not set, the workflow falls back to
+#     `GITHUB_TOKEN` (works on some accounts; fails 403 on most).
+#
+# How to create the PAT:
+#   1. Open https://github.com/settings/personal-access-tokens/new
+#      (or https://github.com/settings/tokens/new for classic).
+#   2. Fine-grained: Repository = patsa2561-art/mneme-ai · Permissions:
+#      "Contents: Read and write" (Wiki sub-scope inherited).
+#      Classic: scope `repo` (full).
+#   3. Copy the token, then add it as a repo secret named
+#      `WIKI_PUSH_TOKEN` at:
+#      https://github.com/patsa2561-art/mneme-ai/settings/secrets/actions
 
 on:
   push:
@@ -15,7 +36,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: wiki-sync
@@ -30,12 +51,24 @@ jobs:
 
       - name: Sync docs/wiki to GitHub wiki
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # WIKI_PUSH_TOKEN is preferred; falls back to GITHUB_TOKEN.
+          WIKI_TOKEN: ${{ secrets.WIKI_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
 
           repo="${GITHUB_REPOSITORY}"
-          wiki_url="https://x-access-token:${GH_TOKEN}@github.com/${repo}.wiki.git"
+
+          # PAT auth uses owner:token; GITHUB_TOKEN uses x-access-token.
+          # Detect by length: PATs are 40+ chars classic / 93 chars
+          # fine-grained; GITHUB_TOKEN is ~76 chars and starts with ghs_.
+          if [[ "${WIKI_TOKEN}" == ghp_* || "${WIKI_TOKEN}" == github_pat_* ]]; then
+            wiki_url="https://${GITHUB_ACTOR}:${WIKI_TOKEN}@github.com/${repo}.wiki.git"
+            echo "Using personal access token for wiki push."
+          else
+            wiki_url="https://x-access-token:${WIKI_TOKEN}@github.com/${repo}.wiki.git"
+            echo "::warning::Using GITHUB_TOKEN for wiki push — may 403 on wiki repos. If this run fails, set WIKI_PUSH_TOKEN repo secret per the workflow header docs."
+          fi
 
           tmp_dir="$(mktemp -d)"
           echo "Cloning wiki into $tmp_dir"
