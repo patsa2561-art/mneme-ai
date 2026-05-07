@@ -38,9 +38,12 @@ import { conscienceCommand } from "./commands/conscience.js";
 import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
+import { adversarialCommand } from "./commands/adversarial.js";
 import { auditCommand } from "./commands/audit.js";
 import { botCommand } from "./commands/bot.js";
 import { atrophyCommand } from "./commands/atrophy.js";
+import { counterfactualCommand } from "./commands/counterfactual.js";
+import { orgCommand, type OrgSubcommand } from "./commands/org.js";
 import { telepathyCommand } from "./commands/telepathy.js";
 import { influenceCommand } from "./commands/influence.js";
 import { lineageCommand } from "./commands/lineage.js";
@@ -100,6 +103,28 @@ export async function run(argv: string[]): Promise<void> {
         "Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.\n" +
         "Run `mneme advanced` to see them.\n",
     );
+
+  // ─── adversarial — meta-evaluate AI clients against repo memory ───
+  program
+    .command("adversarial")
+    .description("Meta-evaluate any AI client — Mneme generates probes mixing real history with subtle + wholesale lies; you paste them into your AI; we compute a trust grade based on which contradictions the AI catches.")
+    .option("--probes <n>", "number of probes (rounded down to a multiple of 3)", (v) => Number(v), 12)
+    .option("--out <path>", "output markdown path (default .mneme/adversarial-probes.md)")
+    .option("--grade <file>", "JSON responses file — switches to grading mode")
+    .option("--seed <s>", "deterministic seed", "default")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { probes?: number; out?: string; grade?: string; seed?: string; json?: boolean }) => {
+      process.exit(
+        await adversarialCommand({
+          cwd: process.cwd(),
+          probes: opts.probes,
+          out: opts.out,
+          grade: opts.grade,
+          seed: opts.seed,
+          json: opts.json,
+        }),
+      );
+    });
 
   // ─── v0.27.0: AI Session Audit — every AI-driven commit gets a trust certificate ───
   program
@@ -553,6 +578,127 @@ export async function run(argv: string[]): Promise<void> {
       }
       process.stdout.write("\n");
       process.exit(0);
+    });
+
+  // ─── counterfactual — Bayesian what-if: drop one author, re-simulate ───
+  program
+    .command("counterfactual <author-email>")
+    .description("Bayesian what-if simulation — drop one author's commits and re-compute atrophy + telepathy. Surfaces which files lose their last live expert and which latent pairs disappear. Bayesian, NOT a prediction; never use to evaluate a real person.")
+    .option("--top-files <n>", "max files / pairs per delta", (v) => Number(v), 10)
+    .option("--no-telepathy", "skip telepathy diff (faster on huge repos)", false)
+    .option("--json", "machine-readable output", false)
+    .action(async (
+      authorEmail: string,
+      opts: { topFiles?: number; telepathy?: boolean; json?: boolean },
+    ) => {
+      process.exit(
+        await counterfactualCommand({
+          cwd: process.cwd(),
+          authorEmail,
+          topFiles: opts.topFiles,
+          includeTelepathy: opts.telepathy !== false,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── org — cross-repo nervous system ───────────────────────────────
+  // Two top-level entry points:
+  //   `mneme org` (no args)         → run cross-repo analysis on first org
+  //   `mneme org <name>`             → run cross-repo analysis on <name>
+  //   `mneme org-<sub> ...`          → handled below as proper subcommands
+  // Commander routes a bare `mneme org` without subcommands to the default action.
+  const orgRoot = program
+    .command("org [name]")
+    .description("Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Default action runs cross-repo analysis on the first registered org (or pass a name).")
+    .option("--json", "machine-readable output", false)
+    .action(async (name: string | undefined, opts: { json?: boolean }) => {
+      const sub: OrgSubcommand = { kind: "run", name };
+      process.exit(await orgCommand({ cwd: process.cwd(), sub, json: opts.json }));
+    });
+
+  orgRoot
+    .command("init <name>")
+    .description("Create a new org registry at ~/.mneme/orgs/<name>.json")
+    .option("--json", "machine-readable output", false)
+    .action(async (name: string, opts: { json?: boolean }) => {
+      process.exit(
+        await orgCommand({
+          cwd: process.cwd(),
+          sub: { kind: "init", name },
+          json: opts.json,
+        }),
+      );
+    });
+
+  orgRoot
+    .command("add <name> <path>")
+    .description("Register a repo path under the given org")
+    .option("--json", "machine-readable output", false)
+    .action(async (name: string, path: string, opts: { json?: boolean }) => {
+      process.exit(
+        await orgCommand({
+          cwd: process.cwd(),
+          sub: { kind: "add", name, path },
+          json: opts.json,
+        }),
+      );
+    });
+
+  orgRoot
+    .command("remove <name> <path>")
+    .description("Unregister a repo path from the given org")
+    .option("--json", "machine-readable output", false)
+    .action(async (name: string, path: string, opts: { json?: boolean }) => {
+      process.exit(
+        await orgCommand({
+          cwd: process.cwd(),
+          sub: { kind: "remove", name, path },
+          json: opts.json,
+        }),
+      );
+    });
+
+  orgRoot
+    .command("list")
+    .description("List every registered org and its repos")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { json?: boolean }) => {
+      process.exit(
+        await orgCommand({
+          cwd: process.cwd(),
+          sub: { kind: "list" },
+          json: opts.json,
+        }),
+      );
+    });
+
+  orgRoot
+    .command("status [name]")
+    .description("Show whether each repo in the org has been indexed")
+    .option("--json", "machine-readable output", false)
+    .action(async (name: string | undefined, opts: { json?: boolean }) => {
+      process.exit(
+        await orgCommand({
+          cwd: process.cwd(),
+          sub: { kind: "status", name },
+          json: opts.json,
+        }),
+      );
+    });
+
+  orgRoot
+    .command("delete <name>")
+    .description("Delete an org registry file")
+    .option("--json", "machine-readable output", false)
+    .action(async (name: string, opts: { json?: boolean }) => {
+      process.exit(
+        await orgCommand({
+          cwd: process.cwd(),
+          sub: { kind: "delete", name },
+          json: opts.json,
+        }),
+      );
     });
 
   program

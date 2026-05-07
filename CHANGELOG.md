@@ -8,6 +8,144 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.31.0] — 2026-05-07
+
+The **"Black Sheep Edition"**. Three commands no other engineering tool
+ships, plus a VS Code extension whose headline feature — **the Atrophy
+Lens** — surfaces knowledge decay inline above every function as you
+read code.
+
+**+121 new tests, 1932 total passing.**
+
+### 1. `mneme adversarial` — meta-evaluation of AI clients
+
+Mneme generates carefully-crafted contradictions about your repo's
+history and feeds them to your AI client through MCP. Measures whether
+the AI catches the lies. Outputs a trust grade.
+
+```bash
+mneme adversarial --probes 12          # generate adversarial-probes.md
+# pipe into your AI / paste into MCP, capture responses
+mneme adversarial --grade responses.json   # 92% — caught 11/12
+```
+
+Three probe variants per query: **truth** (the actual abstract),
+**subtle-lie** (one critical word flipped), **wholesale-lie**
+(fabricated description). The AI's job is to say *"I cannot verify
+this from the evidence."* Your AI's score = how often it does.
+
+**World-first.** No engineering analytics tool tests AI clients via
+repo memory.
+
+### 2. `mneme counterfactual <author>` — Bayesian re-simulation
+
+Drops one author's commits and re-runs atrophy + telepathy against the
+shadow store. Outputs the delta:
+
+```
+🌀 Counterfactual: without alice@example.com
+   knowledge mass redistributes: -142.6 → +0
+   files lose live expert: 12  (src/payments/checkout.ts, …)
+   cultural alpha shifts: rank #1 Alice → rank #1 Bob (PR 0.74)
+```
+
+Influence is **not** re-simulated (it walks the live tree, not the
+SQLite store). Surfaced as an honest scope cap. Honest framing front
+and center: **never use this to evaluate a real person.**
+
+### 3. `mneme org` — cross-repo nervous system
+
+Register multiple indexed repos under one org name; run the nervous-
+system across all of them.
+
+```bash
+mneme org init open-banking --repos /work/payments,/work/billing,/work/auth
+mneme org list
+mneme org status open-banking
+mneme org                        # cross-repo nervous-system
+```
+
+Storage in `~/.mneme/orgs/<name>.json`. Cross-repo telepathy detects
+authors who pair across repos; cross-repo influence detects patterns
+that propagate org-wide.
+
+### 4. VS Code extension — `packages/vscode/`
+
+The Mneme VS Code extension. Marketplace-ready package: `mneme-vscode`.
+
+**Headline: the Atrophy Lens.** A `vscode.CodeLensProvider` that
+emits a code lens above every function/class declaration in the
+active document showing how decayed the team's knowledge of it is:
+
+```
+🟢 fresh — last expert touched 6 days ago (98%)
+🟡 fading — top knower 41% fresh, last touched 198 days ago — refresh recommended
+🔴 ghost — no live expert, deep history lost (4 prior touches)
+```
+
+Plus four palette commands (`Mneme: Ask…` / `Why this line` / `Audit
+current PR` / `Open Nervous System` webview), a sidebar tree view
+(audit verdict + at-risk files + my passport), a status bar item
+showing the current audit verdict, and a hover provider.
+
+Performance: per-file LRU cache for atrophy results, debounced 1s.
+
+Bundle: `dist/extension.js` produced via esbuild.
+
+### 5. Stable public API surface — extended
+
+`@mneme-ai/core/public` gains the three Black Sheep entry points:
+
+```ts
+import {
+  generateProbes, gradeResponses,                  // adversarial
+  runCounterfactual, buildShadowStore,             // counterfactual
+  addRepoToOrg, createOrg, runOrgNervousSystem,    // org
+  type Probe, type GradeReport,
+  type CounterfactualReport, type FileExpertChange,
+  // …
+} from "@mneme-ai/core/public";
+```
+
+### 6. README + wiki updates
+
+- **Hero** gains a vscode-marketplace badge.
+- **Mindmap** gains an `Editor` branch with `VS Code extension`,
+  `atrophy lens above functions`, `audit verdict badge`, `sidebar
+  tree view`.
+- **Sidebar** gains a "📝 Editors" group containing `VS-Code-Extension`.
+- All AI-vendor names removed from README per maintainer rule
+  (Claude Code, Cursor, Codex, Cody, Greptile, Sweep, Aider, Devin,
+  Copilot, Continue, Cline). CHANGELOG remains the historical record;
+  `mneme audit`'s vendor regex still detects them all.
+
+### Tests
+
+- adversarial — 18 tests (probe generation + grading)
+- counterfactual — 12 tests (shadow store + delta)
+- org — 18 tests (registry CRUD + cross-repo)
+- VS Code extension — ~20 tests (atrophy lens parser, sidebar
+  provider, status bar formatter, findDb)
+- Various integration tests + snapshot regenerated for new commands
+
+**Total +121 new tests; 1932 passing.**
+
+### Honest caveats
+
+- **`adversarial` is heuristic.** Subtle-lie generation flips one
+  word; sometimes the flipped word is still plausible. Generated
+  probes are a starting set; the user should review before sending
+  to their AI.
+- **`counterfactual` does not re-simulate influence.** Walking the
+  live git tree without the author's commits would require a
+  synthetic branch. Documented as an honest scope cap.
+- **VS Code extension `dist/extension.js` is ~10 MB** because it
+  bundles `@mneme-ai/core`. Marketplace publish will be slower; size
+  optimization deferred to a follow-up loop.
+- **VS Code Marketplace not yet published.** The `.vsix` packaging
+  works locally; the Marketplace publish step requires a manual
+  PAT-authenticated `vsce publish` from a developer account.
+
 ## [0.30.1] — 2026-05-07
 
 CI fix. The v0.30.0 web sub-agent committed

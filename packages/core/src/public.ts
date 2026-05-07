@@ -199,3 +199,79 @@ export type { InfluenceReport, AuthorRanking } from "./people/influence.js";
  * @public
  */
 export type { LineageReport, OwnershipShare, TimelineEntry } from "./people/lineage.js";
+
+// ─── 5. Black Sheep Edition — adversarial / counterfactual / org ─────
+/**
+ * Generate adversarial probes that test whether an AI client catches
+ * deliberate contradictions about your repo's history.
+ * @public
+ */
+export {
+  generateProbes,
+  gradeResponses,
+  renderProbeMarkdown,
+  serializeAnswerKey,
+  deserializeAnswerKey,
+} from "./adversarial/index.js";
+
+/**
+ * Adversarial probe + report shapes.
+ * @public
+ */
+export type {
+  Probe,
+  ProbeBundle,
+  ProbeVariant,
+  ExpectedVerdict,
+  ResponseVerdict,
+  ResponseRecord,
+  ResponsesFile,
+  GradeReport,
+} from "./adversarial/index.js";
+
+/**
+ * Run a Bayesian what-if simulation: drop a single author's commits and
+ * re-compute atrophy + telepathy. Honest framing — never use this to
+ * evaluate a real person.
+ * @public
+ */
+export { runCounterfactual, buildShadowStore } from "./counterfactual/index.js";
+
+/**
+ * Counterfactual report shapes.
+ * @public
+ */
+export type {
+  CounterfactualReport,
+  CounterfactualOptions,
+  FileExpertChange,
+  PairChange,
+} from "./counterfactual/index.js";
+
+/**
+ * Cross-repo nervous-system registry + analysis. Each repo MUST be indexed
+ * (`mneme index`) before being added to an org.
+ * @public
+ */
+export {
+  addRepo as addRepoToOrg,
+  createOrg,
+  deleteOrg,
+  listOrgs,
+  readRegistry as readOrgRegistry,
+  removeRepo as removeRepoFromOrg,
+  runOrgNervousSystem,
+} from "./org/index.js";
+
+/**
+ * Org registry + cross-repo analysis shapes.
+ * @public
+ */
+export type {
+  OrgRegistry,
+  OrgRepo,
+  OrgNervousSystem,
+  CrossRepoPair,
+  CrossRepoAtrophyRow,
+  RepoHandle,
+} from "./org/index.js";

@@ -25,6 +25,9 @@
 - [[Integrations]] · *GitHub · GitLab · Bitbucket · CircleCI · Jenkins*
 - [[Public-API]] · *@mneme-ai/core/public — the stable surface*
 
+### 📝 Editors
+- [[VS-Code-Extension]] · *Atrophy Lens · sidebar · audit badge*
+
 ### 💎 The Frontier
 - [[The-Frontier]] · *23 world-firsts*
 - [[Innovations]] · *deep-dive every command*

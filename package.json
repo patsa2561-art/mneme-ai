@@ -10,7 +10,8 @@
     "packages/cli",
     "packages/mcp",
     "packages/correlator",
-    "packages/web"
+    "packages/web",
+    "packages/vscode"
   ],
   "scripts": {
     "build": "tsc -b packages/core packages/embeddings packages/mcp packages/correlator packages/cli",

@@ -12,12 +12,13 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1811%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1932%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
   <a href="https://github.com/patsa2561-art/mneme-ai/stargazers"><img src="https://img.shields.io/github/stars/patsa2561-art/mneme-ai?logo=github&color=fbbf24" alt="stars"></a>
   <a href="https://patsa2561-art.github.io/mneme-ai/"><img src="https://img.shields.io/badge/live%20demo-mneme.dev-7c3aed?logo=react" alt="live demo"></a>
+  <img src="https://img.shields.io/badge/vscode--marketplace-pre--publish-7c3aed?logo=visualstudiocode" alt="vscode-marketplace">
 </p>
 
 <h3>The bug came back.<br/>
@@ -72,6 +73,11 @@ mindmap
       force-directed nervous system
       atrophy heatmap
       influence ladder
+    Editor
+      VS Code extension
+      atrophy lens above functions
+      audit verdict badge
+      sidebar tree view
 ```
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -174,6 +180,36 @@ mneme audit --report        # markdown audit trail (SOX / SOC2)
 </details>
 
 → **[Full positioning · 6 modes · CI integration · compliance →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 📝 Spotlight — VS Code extension
+
+> **The codebase whispers; the editor listens.** *No competitor ships this signal inline.*
+
+The headline is the **Atrophy Lens** — a one-line plain-English code lens above every function and class:
+
+```
+🟢 fresh — last expert touched 6 days ago (98%)
+export function buildPassport(store, opts) { … }
+
+🟡 fading — top knower 41% fresh, last touched 198 days ago — refresh recommended
+export class TokenBucket { … }
+
+🔴 ghost — no live expert, deep history lost (4 prior touches)
+function legacyMigrationStep() { … }
+```
+
+You scroll a file and **instantly know** which functions still live in someone's head. No charts. No dashboards. Just the truth, inline.
+
+The extension also surfaces:
+
+- **Sidebar tree** — last audit verdict, top 5 at-risk files, your own author passport.
+- **Status-bar badge** — `pass / warn / fail / idle` from the latest 5-axis audit.
+- **Palette commands** — `Mneme: Ask…`, `Mneme: Why this line`, `Mneme: Audit current PR`, `Mneme: Open Nervous System`.
+- **Hover provider** — top-knower preview as you mouse over symbols.
+
+→ **[Install · settings · privacy →](https://github.com/patsa2561-art/mneme-ai/wiki/VS-Code-Extension)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 

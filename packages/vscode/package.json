@@ -1,0 +1,141 @@
+{
+  "name": "mneme-vscode",
+  "publisher": "patsa2561-art",
+  "displayName": "Mneme — Memory layer for your codebase",
+  "description": "What your codebase already knows — atrophy lens, AI session audit, nervous system dashboard.",
+  "version": "0.31.0",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other", "Education", "Visualization"],
+  "keywords": [
+    "mneme",
+    "git",
+    "memory",
+    "atrophy",
+    "audit",
+    "AI",
+    "knowledge",
+    "passport",
+    "code-archaeology"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patsa2561-art/mneme-ai.git",
+    "directory": "packages/vscode"
+  },
+  "homepage": "https://github.com/patsa2561-art/mneme-ai#readme",
+  "bugs": {
+    "url": "https://github.com/patsa2561-art/mneme-ai/issues"
+  },
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mneme.ask",
+        "title": "Mneme: Ask…",
+        "category": "Mneme"
+      },
+      {
+        "command": "mneme.why",
+        "title": "Mneme: Why this line",
+        "category": "Mneme"
+      },
+      {
+        "command": "mneme.audit",
+        "title": "Mneme: Audit current PR",
+        "category": "Mneme"
+      },
+      {
+        "command": "mneme.nervousSystem",
+        "title": "Mneme: Open Nervous System",
+        "category": "Mneme"
+      },
+      {
+        "command": "mneme.refresh",
+        "title": "Mneme: Refresh",
+        "category": "Mneme",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mneme.openAtrophyDetail",
+        "title": "Mneme: Atrophy detail for current file",
+        "category": "Mneme"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "mneme.sidebar",
+          "name": "Mneme",
+          "contextualTitle": "Mneme — Memory layer"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "mneme.refresh",
+          "when": "view == mneme.sidebar",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "mneme.why",
+          "group": "navigation@1",
+          "when": "editorTextFocus"
+        }
+      ],
+      "commandPalette": [
+        { "command": "mneme.ask" },
+        { "command": "mneme.why" },
+        { "command": "mneme.audit" },
+        { "command": "mneme.nervousSystem" },
+        { "command": "mneme.refresh" },
+        { "command": "mneme.openAtrophyDetail" }
+      ]
+    },
+    "configuration": {
+      "title": "Mneme",
+      "properties": {
+        "mneme.cliPath": {
+          "type": "string",
+          "default": "mneme",
+          "description": "Path to the `mneme` CLI binary. Leave as `mneme` if installed globally on PATH."
+        },
+        "mneme.atrophyLens.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Atrophy Lens above functions and classes."
+        },
+        "mneme.atrophyLens.halfLifeDays": {
+          "type": "number",
+          "default": 180,
+          "description": "Half-life in days for the knowledge-decay curve. After this many days, knowledge decays to ~50%."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "make-icon": "node scripts/make-icon.cjs",
+    "build": "node scripts/make-icon.cjs && esbuild src/extension.ts --bundle --platform=node --target=node20 --external:vscode --external:better-sqlite3 --external:@mneme-ai/core --outfile=dist/extension.js --format=cjs",
+    "build:watch": "npm run build -- --watch",
+    "package": "vsce package --no-dependencies",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mneme-ai/core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}

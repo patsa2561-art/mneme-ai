@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist-tsc",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": false,
+    "types": ["node", "vscode"]
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist", "dist-tsc"]
+}

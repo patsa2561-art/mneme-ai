@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     include: [
       "packages/*/src/**/*.test.ts",
+      "packages/*/tests/**/*.test.ts",
       "tests/**/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**", "tests/.tmp/**"],
@@ -34,6 +35,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@mneme-ai/core/public": resolve(ROOT, "packages/core/src/public.ts"),
       "@mneme-ai/core": resolve(ROOT, "packages/core/src/index.ts"),
       "@mneme-ai/embeddings": resolve(ROOT, "packages/embeddings/src/index.ts"),
       "@mneme-ai/mcp": resolve(ROOT, "packages/mcp/src/index.ts"),

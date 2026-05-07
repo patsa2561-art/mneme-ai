@@ -512,6 +512,7 @@ mneme manifesto                        # the full canon
 |---|---|
 | `advanced` | List every command grouped by phase (the hidden ones too) |
 | `--help` after any command | Show options + flags for that one command |
+| **VS Code extension** | You'd rather see Mneme inline above the function — Atrophy Lens, sidebar, audit badge. See [[VS-Code-Extension]]. |
 
 ═══════════════════════════════════════════════════════════════════════════════
 
