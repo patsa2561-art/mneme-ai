@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1422%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1645%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -33,6 +33,40 @@ The fix from 2022 is in a commit nobody remembers.<br/>
 <img src="./assets/demo.gif" alt="Mneme — doctor, ask, story, dream, calibrate" width="900">
 
 </div>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🗺 What Mneme is, in one picture
+
+```mermaid
+mindmap
+  root((Mneme))
+    Memory
+      indexes git history
+      compresses 50K commits
+      survives author turnover
+    Q & A
+      cited answers
+      refuses if unverifiable
+      streams reasoning
+    AI Audit
+      vendor-neutral
+      5-axis trust cert
+      CI gate ready
+    People
+      passport per engineer
+      latent collaborators
+      knowledge atrophy
+      cultural alphas
+    Forensics
+      Bayesian attribution
+      CWE vuln scan
+      insider-threat anomaly
+    Free path
+      bundled WASM
+      Ollama Groq fallback
+      no API key required
+```
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -77,6 +111,11 @@ mneme audit --certify                             # grades the AI's homework
 ## 🌟 Spotlight — `mneme audit`
 
 > **The feature your AI tools wish they had.** *Vendor-neutral. Works with any AI that ends up in `git log`.*
+
+Your AI commits: *"I refactored the handler. **No changes to db.ts.**"* The diff actually touches `db.ts`. Tests pass. You almost merge — `mneme audit --certify` catches it **before** merge with a 5-axis trust certificate.
+
+<details>
+<summary><b>📖 See the full story — 30-second example, 5 axes, 6 modes</b></summary>
 
 When two or three AI assistants are all editing the same repo, **someone has to grade the homework.** Mneme is that someone. Not a competitor to Claude Code or Cursor — the layer they answer to.
 
@@ -126,7 +165,55 @@ mneme audit --report        # markdown audit trail (SOX / SOC2)
 - **Falsifiable.** Pure rule-based + statistical primitives. **No "AI grading AI" loops.**
 - **Honest.** "No change to db.ts" is parseable. "Improved overall reliability" is `unverifiable` — we say so, don't pretend.
 
+</details>
+
 → **[Full positioning · 6 modes · CI integration · compliance →](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit)**
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🧬 Spotlight — People analytics (the flagship)
+
+> **Six commands for what GitHub cannot see — plus one PDF a CTO frames.** *Local. Private. Honest about its own limits.*
+
+Your contributors view counts commits. It cannot show you:
+
+- 🧠 **Latent collaborators** — pairs who never co-author but rhyme behaviorally
+- ⏳ **Knowledge atrophy** — who still remembers what (Ebbinghaus decay)
+- 👑 **Cultural alphas** — whose patterns spread (PageRank, volume-independent)
+- 📜 **Promise debt** — every "I'll fix this later" tracked + verified
+- 🌳 **Semantic ownership** — whose interpretation lives in this code now
+
+```bash
+mneme telepathy             # invisible teams
+mneme atrophy               # knowledge half-life heatmap
+mneme influence             # cultural alphas (PageRank)
+mneme promise               # promise-debt ledger
+mneme lineage src/auth.ts   # semantic ownership of a function
+mneme passport alice@       # one engineer's full dossier
+mneme nervous-system --pdf  # FLAGSHIP — combined PDF report
+```
+
+<details>
+<summary><b>📖 The flagship — `mneme nervous-system`</b></summary>
+
+Combines **passport** of top contributors + **telepathy** heatmap + **atrophy** heatmap + **influence** ladder + repo neuroanatomy + an honest limits panel. Outputs:
+
+- **Terminal** — punchy summary; always works.
+- **HTML** — self-contained file; opens in any browser; print-to-PDF works everywhere.
+- **PDF** — opt-in via `--pdf`; lazy-loads `puppeteer-core`; friendly fallback to HTML if not installed.
+
+```bash
+mneme nervous-system                       # terminal summary
+mneme nervous-system --html report.html    # beautiful HTML
+mneme nervous-system --pdf report.pdf      # pro PDF (puppeteer-core)
+```
+
+The PDF a CTO prints for the board meeting. **Privacy-first**: all data is local. Defamation-safe: nemesis section is opt-in only via `--include-friction`.
+
+</details>
+
+→ **[Full positioning + examples → People Analytics wiki](https://github.com/patsa2561-art/mneme-ai/wiki/People-Analytics)**<br/>
+→ **[Flagship PDF → Mneme Nervous System wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Mneme-Nervous-System)**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -275,15 +362,19 @@ Every output is plain-English with a `HEADS UP` warning when the repo is too sma
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🎓 Manifesto — Mneme is the teacher of AI
+## 📖 The library, not the librarian
 
-> AI is genius. Mneme is the master that teaches the genius.
+> Every great library has two kinds of people: brilliant minds who borrow books, and a quiet archive that remembers everything.
 
-Most AI tools position themselves as **better students** — better-trained models, bigger contexts. They compete on the same axis. **Mneme positions on a different axis: quality of teaching.** We don't compete with the AI; we make whatever AI you choose **measurably better** via MCP.
+Most coding AIs position themselves as the brilliant mind — bigger model, faster inference, longer context. They compete on the same axis: who is the smartest student in the room.
 
-Practical consequence: every Mneme release **lifts every AI tool** that integrates. We're a force multiplier across the entire ecosystem, not a participant in any one tool's competition.
+**Mneme isn't another student. Mneme is the archive.**
 
-→ [[Wiki: AI-Teacher]](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Teacher) — five teaching mechanisms documented.
+We don't compete with the AI in your editor. We give it the **memory layer** it never had — every decision, every deprecation, every "we tried that, it broke X" — fed back through MCP, with citations.
+
+Practical consequence: every Mneme release makes **every AI tool that plugs in** measurably more grounded. Lift the floor across the whole ecosystem instead of fighting for one chair.
+
+→ [How the memory layer works → Wiki](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Teacher)
 
 ═══════════════════════════════════════════════════════════════════════════════
 

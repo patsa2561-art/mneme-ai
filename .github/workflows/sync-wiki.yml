@@ -1,0 +1,83 @@
+name: Sync Wiki
+
+# Auto-publish the docs/wiki/ markdown files to the project's GitHub wiki
+# on every push to main that touches them. The wiki repo is a separate
+# git repository at <repo>.wiki.git — we clone it, mirror docs/wiki/
+# verbatim (filename = page name; _Sidebar.md / _Footer.md special), and
+# push.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/wiki/**"
+      - ".github/workflows/sync-wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Sync docs/wiki to GitHub wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          repo="${GITHUB_REPOSITORY}"
+          wiki_url="https://x-access-token:${GH_TOKEN}@github.com/${repo}.wiki.git"
+
+          tmp_dir="$(mktemp -d)"
+          echo "Cloning wiki into $tmp_dir"
+
+          # Try cloning. If the wiki has never been initialized, this fails;
+          # we initialize it ourselves with an initial Home.md.
+          if ! git clone --depth 1 "$wiki_url" "$tmp_dir" 2>/dev/null; then
+            echo "::warning::Wiki repo not yet initialized. Bootstrapping it."
+            mkdir -p "$tmp_dir"
+            cd "$tmp_dir"
+            git init -b master
+            echo "# ${repo##*/}" > Home.md
+            git add Home.md
+            git -c user.name="github-actions[bot]" \
+                -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+                commit -m "init wiki"
+            git remote add origin "$wiki_url"
+            git push -u origin master
+            cd -
+          fi
+
+          # Mirror docs/wiki -> wiki repo (excluding non-wiki files)
+          rsync -a --delete \
+            --exclude=".git" \
+            --include="*.md" \
+            --include="_Sidebar.md" \
+            --include="_Footer.md" \
+            --exclude="*" \
+            "docs/wiki/" "$tmp_dir/"
+
+          cd "$tmp_dir"
+
+          # Diff check — bail early if no change
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No wiki changes to publish."
+            exit 0
+          fi
+
+          git add -A
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "sync from main: ${GITHUB_SHA::7}"
+          git push origin HEAD
+
+          echo "::notice::Wiki synced from docs/wiki/ at ${GITHUB_SHA::7}"

@@ -8,6 +8,139 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.28.0] — 2026-05-07
+
+The **"Mneme Nervous System"** release. Eight new commands surfacing
+what GitHub and GitLab structurally cannot see — the dark corners of
+team behavior hiding underneath the contributors view.
+
+**+223 new tests, 1645 total passing.**
+
+### The thesis
+
+Git platforms show *explicit* collaboration: who committed, who
+reviewed, who replied. Team behavior runs on *implicit* signals their
+UIs cannot capture: latent collaboration, knowledge atrophy, cultural
+influence, promise debt. Mneme computes all of these locally from your
+git history and makes them browsable, exportable, and PDF-printable.
+
+### Six new commands — people analytics
+
+1. **`mneme telepathy`** — latent collaboration network. Pairs of
+   authors who never co-authored a commit but whose changes are
+   behaviorally coupled (Alice edits X, Bob edits Y within N hours,
+   repeatedly). 327 lines core + 20 tests.
+
+2. **`mneme atrophy`** — knowledge half-life clock. Models the
+   Ebbinghaus forgetting curve over (author × file) pairs. Three modes:
+   repo heatmap, per-author detail, per-file knowers. 524 lines core +
+   22 tests.
+
+3. **`mneme nemesis`** — engineering-friction detector. Pairs whose
+   commits consistently rewrite each other. Defamation-safe by design:
+   findings explicitly labeled as engineering friction, never personal
+   conflict. 412 lines core + 17 tests.
+
+4. **`mneme promise`** — promise-debt ledger. Scans commit + PR text
+   for "I'll fix this later" / TODO / follow-up patterns. Verifies
+   against subsequent commits. Honest framing: heuristic, starting
+   list not verdict. 447 lines core + 24 tests.
+
+5. **`mneme influence`** — cultural alphas via PageRank on code
+   patterns. Volume-independent: a 5-commit pattern-setter outranks a
+   500-commit copy-paster. TS/JS only in v1, labeled accordingly. 510
+   lines core + 23 tests.
+
+6. **`mneme lineage <target>`** — semantic ownership of a function or
+   file. Walks the commit chain forward, distributing intent
+   continuity weights. "70% Alice's design as interpreted by Bob's
+   refactor, then preserved through Carol's extension." 542 lines
+   core + 31 tests.
+
+### Two new commands — composition + flagship
+
+7. **`mneme passport [author]`** — engineer dossier. Combines DNA +
+   expertise map + telepathic teammates + cultural footprint + atrophy
+   clock + voice fingerprint + (opt-in) friction. Outputs terminal,
+   self-contained HTML, or PDF.
+
+8. **`mneme nervous-system`** — **THE FLAGSHIP.** A single report
+   combining top-N passports + telepathy heatmap + atrophy heatmap +
+   influence ladder + repo neuroanatomy + honest-limits panel.
+   Multi-page A4 print-ready HTML with inline CSS. Optional PDF via
+   lazy-loaded `puppeteer-core`.
+
+### PDF rendering — the optional path
+
+`packages/core/src/people/pdf.ts` lazy-loads `puppeteer-core` when
+`--pdf` is requested. **HTML always works** (self-contained, opens in
+any browser, print-to-PDF is universal). PDF is opt-in; if
+puppeteer-core isn't installed the user gets a friendly install
+message and HTML is written anyway. Strictly a peer-optional dep —
+not in package.json `dependencies`.
+
+### UX polish
+
+- **README rebuilt as a story.** Added a mermaid mindmap of every
+  module after the hero. Audit spotlight now collapsible. New People
+  Analytics spotlight section before the brain lobes.
+- **Manifesto reworded.** "Mneme is the teacher of AI" → *"the
+  library, not the librarian"*. Less smug, more elegant. The library
+  metaphor scales: brilliant minds borrow books, the archive
+  remembers everything.
+- **AI-Teacher.md wiki rewritten** to match the new framing.
+  Competitor comparison table removed (per maintainer rule against
+  competitor compares).
+- **GitHub Action added** (`.github/workflows/sync-wiki.yml`) — auto-syncs
+  `docs/wiki/` to the GitHub wiki repo on every push to main. Fixes
+  broken wiki links.
+
+### New wiki pages
+
+- **`People-Analytics.md`** — overview of the six dark-corner commands
+  with sample outputs.
+- **`Mneme-Nervous-System.md`** — flagship feature page with full
+  HTML / PDF positioning, when-to-use scenarios, privacy posture.
+- **`Command-Tour.md`** — added new "👥 People analytics" section
+  spotlighting all eight new commands.
+- **`_Sidebar.md`** — added People Analytics group.
+
+### Tests
+
+- 207 tests across `packages/core/src/people/`:
+  - telepathy (20) · atrophy (22) · nemesis (17) · promise (24)
+  - influence (23) · lineage (31)
+  - passport (24) · nervous-system (20)
+  - render-html · pdf
+- Regression wall: every new command added to `no-throw` (passes empty
+  repo gracefully) and `--help` snapshot.
+
+**Total +223 new tests; 1645 passing.**
+
+### Privacy posture
+
+- **All data local.** Mneme reads `.git/` + the SQLite cache.
+  Nothing is sent to any server.
+- **Defamation-safe nemesis.** `--include-friction` opt-in default
+  OFF on `passport`. Section header explicitly labels findings as
+  engineering friction (style / architecture), not personal conflict.
+- **No grading of humans.** These commands surface patterns. They are
+  starting points for a conversation, not verdicts. Every output
+  ships with an honest-limits panel.
+
+### Honest limits
+
+- **Telepathy** needs ≥2 distinct authors and ≥100 commits to produce
+  meaningful pairs. Single-author repos get a clear `HEADS UP` pill.
+- **Influence** is TS/JS only in v1 — labeled when other languages
+  exist in the repo.
+- **Lineage** falls back to commit-message similarity when HTC
+  abstracts aren't built; recommends running `mneme htc-build` first.
+- **Promise** is heuristic — "I'll fix" can be ironic. We label as
+  starting list, not verdict.
+- **Atrophy half-life** is a single tunable (default 180d). Active
+  codebases may want shorter; mature codebases may want longer.
+
 ## [0.27.1] — 2026-05-07
 
 README + audit-spotlight polish for instant comprehension.

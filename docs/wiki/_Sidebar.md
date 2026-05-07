@@ -14,8 +14,12 @@
 - [[Smart-Dispatcher]] · *talk to Mneme*
 
 ### 🎓 Manifesto
-- [[AI-Teacher]] · *Mneme as the teacher of AI*
+- [[AI-Teacher]] · *the library, not the librarian*
 - [[AI-Session-Audit]] · *every AI commit gets a trust certificate*
+
+### 👥 People analytics
+- [[People-Analytics]] · *what GitHub cannot see*
+- [[Mneme-Nervous-System]] · *the flagship PDF report*
 
 ### 💎 The Frontier
 - [[The-Frontier]] · *23 world-firsts*

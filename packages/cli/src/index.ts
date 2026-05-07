@@ -37,6 +37,14 @@ import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
 import { auditCommand } from "./commands/audit.js";
+import { atrophyCommand } from "./commands/atrophy.js";
+import { telepathyCommand } from "./commands/telepathy.js";
+import { influenceCommand } from "./commands/influence.js";
+import { lineageCommand } from "./commands/lineage.js";
+import { nemesisCommand } from "./commands/nemesis.js";
+import { nervousSystemCommand } from "./commands/nervous-system.js";
+import { passportCommand } from "./commands/passport.js";
+import { promiseCommand } from "./commands/promise.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -122,6 +130,186 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
           out: opts.out,
           interval: opts.interval,
+        }),
+      );
+    });
+
+  // ─── atrophy — knowledge half-life clock ────────────────────────────
+  program
+    .command("atrophy [author]")
+    .description("Knowledge half-life clock — Ebbinghaus forgetting curve over (author × file) pairs. Shows who still remembers what, and where ghost-code risk is concentrated. Pass an author email to drill in, --file <path> for a per-file view.")
+    .option("--file <path>", "show every author who ever knew this file (with current freshness)")
+    .option("--half-life <days>", "decay half-life in days (default 180 ≈ 6 months)", (v) => Number(v), 180)
+    .option("--top <n>", "rows per section", (v) => Number(v), 10)
+    .option("--json", "machine-readable output", false)
+    .action(async (
+      author: string | undefined,
+      opts: { file?: string; halfLife?: number; top?: number; json?: boolean },
+    ) => {
+      process.exit(
+        await atrophyCommand({
+          cwd: process.cwd(),
+          author,
+          file: opts.file,
+          halfLifeDays: opts.halfLife,
+          topN: opts.top,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── telepathy — latent collaboration network ────────────────────────
+  program
+    .command("telepathy")
+    .description("Latent collaboration network — pairs of authors who never co-author a commit but whose changes rhyme (Alice edits one part of a topic; Bob edits the other within hours; pattern repeats). Surfaces invisible teams that GitHub can't see.")
+    .option("--window <hours>", "time window for rhyming commits (default 48h)", (v) => Number(v), 48)
+    .option("--top <n>", "show top-N pairs", (v) => Number(v), 10)
+    .option("--author <email>", "filter to pairs containing this author")
+    .option("--min-events <n>", "drop pairs with fewer rhymes than this (default 3)", (v) => Number(v), 3)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { window?: number; top?: number; author?: string; minEvents?: number; json?: boolean }) => {
+      process.exit(
+        await telepathyCommand({
+          cwd: process.cwd(),
+          windowHours: opts.window,
+          topN: opts.top,
+          authorEmail: opts.author,
+          minEvents: opts.minEvents,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── influence — code-pattern PageRank (cultural alphas) ────────────
+  program
+    .command("influence")
+    .description("Cultural-alpha ranking — who writes the patterns everyone else copies (volume-independent: a 5-commit pattern-setter outranks a 500-commit copy-paster; TS/JS only)")
+    .option("--top <n>", "rows to show", (v) => Number(v), 10)
+    .option("--pattern-min-uses <n>", "only count patterns adopted at least this many times", (v) => Number(v), 3)
+    .option("--author <email>", "deep-dive on a single author's originated patterns + adopters")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { top?: number; patternMinUses?: number; author?: string; json?: boolean }) => {
+      process.exit(
+        await influenceCommand({
+          cwd: process.cwd(),
+          topN: opts.top,
+          patternMinUses: opts.patternMinUses,
+          authorEmail: opts.author,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── lineage — semantic ownership of code over time ─────────────────
+  program
+    .command("lineage <target>")
+    .description("Semantic ownership of code over time — whose interpretation of whose intent currently lives in this code (NOT git blame; use for review assignment + onboarding, NOT performance reviews). Pass a file path or file:funcName.")
+    .option("--depth <n>", "max commits to walk (most-recent-first slice)", (v) => Number(v), 20)
+    .option("--json", "machine-readable output", false)
+    .action(async (target: string, opts: { depth?: number; json?: boolean }) => {
+      process.exit(
+        await lineageCommand({
+          cwd: process.cwd(),
+          target,
+          depth: opts.depth,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── nemesis — engineering friction detector ────────────────────────
+  program
+    .command("nemesis")
+    .description("Engineering friction detector — pairs of authors who consistently revert/rewrite each other's work (use for team formation, NOT performance reviews)")
+    .option("--top <n>", "show top-N friction pairs", (v) => Number(v), 5)
+    .option("--window <days>", "consider only events within N days", (v) => Number(v), 365)
+    .option("--author <email>", "filter pairs containing this author")
+    .option("--json", "machine-readable output", false)
+    .option("--verbose", "expand the details tier", false)
+    .action(async (opts: { top?: number; window?: number; author?: string; json?: boolean; verbose?: boolean }) => {
+      process.exit(
+        await nemesisCommand({
+          cwd: process.cwd(),
+          topN: opts.top,
+          windowDays: opts.window,
+          authorFilter: opts.author,
+          json: opts.json,
+          verbose: opts.verbose,
+        }),
+      );
+    });
+
+  // ─── nervous-system — repo-level neural map ─────────────────────────
+  program
+    .command("nervous-system")
+    .description("Mneme Nervous System — combined people-analytics report (cultural alphas + latent teams + atrophy heatmap + brain lobes + mini-passports). Terminal-renderable; --html / --pdf for the printable dossier.")
+    .option("--html <path>", "write a self-contained HTML report")
+    .option("--pdf <path>", "write a PDF report (requires puppeteer-core)")
+    .option("--top-people <n>", "number of contributors to feature", (v) => Number(v), 5)
+    .option("--top-files <n>", "number of critical files to analyze", (v) => Number(v), 30)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { html?: string; pdf?: string; topPeople?: number; topFiles?: number; json?: boolean }) => {
+      process.exit(
+        await nervousSystemCommand({
+          cwd: process.cwd(),
+          html: opts.html,
+          pdf: opts.pdf,
+          topPeople: opts.topPeople,
+          topFiles: opts.topFiles,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── passport — per-engineer dossier ────────────────────────────────
+  program
+    .command("passport [author]")
+    .description("Engineer passport — DNA + expertise + telepathic teammates + influence + atrophy in one dossier. Pass an author email or omit to auto-pick the top contributor.")
+    .option("--html <path>", "write a self-contained HTML dossier")
+    .option("--pdf <path>", "write a PDF dossier (requires puppeteer-core)")
+    .option("--include-friction", "include nemesis/friction section (default off)", false)
+    .option("--top-files <n>", "files to include in expertise map", (v) => Number(v), 12)
+    .option("--json", "machine-readable output", false)
+    .action(async (
+      author: string | undefined,
+      opts: { html?: string; pdf?: string; includeFriction?: boolean; topFiles?: number; json?: boolean },
+    ) => {
+      process.exit(
+        await passportCommand({
+          cwd: process.cwd(),
+          author,
+          html: opts.html,
+          pdf: opts.pdf,
+          includeFriction: opts.includeFriction,
+          topFiles: opts.topFiles,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── promise — promise-debt tracker ─────────────────────────────────
+  program
+    .command("promise")
+    .description("Promise-debt tracker — every \"I'll fix later\" / TODO / follow-up parsed into a ledger and verified against history (heuristic; treat as a starting list)")
+    .option("--author <email>", "limit to one author")
+    .option("--status <state>", "filter: open | kept | stale")
+    .option("--top <n>", "rows to show", (v) => Number(v), 10)
+    .option("--json", "machine-readable output", false)
+    .option("--verbose", "expand the details tier", false)
+    .action(async (opts: { author?: string; status?: string; top?: number; json?: boolean; verbose?: boolean }) => {
+      const status = opts.status as "open" | "kept" | "stale" | undefined;
+      if (status && status !== "open" && status !== "kept" && status !== "stale") {
+        ui.error("--status must be one of: open | kept | stale");
+        process.exit(1);
+      }
+      process.exit(
+        await promiseCommand({
+          cwd: process.cwd(),
+          authorFilter: opts.author,
+          status,
+          topN: opts.top,
+          json: opts.json,
+          verbose: opts.verbose,
         }),
       );
     });

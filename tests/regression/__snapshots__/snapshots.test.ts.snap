@@ -15,6 +15,46 @@ Commands:
                                    gets a trust certificate (vendor-neutral;
                                    works with Claude Code / Cursor / Codex /
                                    Sweep / etc.)
+  atrophy [options] [author]       Knowledge half-life clock — Ebbinghaus
+                                   forgetting curve over (author × file) pairs.
+                                   Shows who still remembers what, and where
+                                   ghost-code risk is concentrated. Pass an
+                                   author email to drill in, --file <path> for
+                                   a per-file view.
+  telepathy [options]              Latent collaboration network — pairs of
+                                   authors who never co-author a commit but
+                                   whose changes rhyme (Alice edits one part of
+                                   a topic; Bob edits the other within hours;
+                                   pattern repeats). Surfaces invisible teams
+                                   that GitHub can't see.
+  influence [options]              Cultural-alpha ranking — who writes the
+                                   patterns everyone else copies
+                                   (volume-independent: a 5-commit
+                                   pattern-setter outranks a 500-commit
+                                   copy-paster; TS/JS only)
+  lineage [options] <target>       Semantic ownership of code over time — whose
+                                   interpretation of whose intent currently
+                                   lives in this code (NOT git blame; use for
+                                   review assignment + onboarding, NOT
+                                   performance reviews). Pass a file path or
+                                   file:funcName.
+  nemesis [options]                Engineering friction detector — pairs of
+                                   authors who consistently revert/rewrite each
+                                   other's work (use for team formation, NOT
+                                   performance reviews)
+  nervous-system [options]         Mneme Nervous System — combined
+                                   people-analytics report (cultural alphas +
+                                   latent teams + atrophy heatmap + brain lobes
+                                   + mini-passports). Terminal-renderable;
+                                   --html / --pdf for the printable dossier.
+  passport [options] [author]      Engineer passport — DNA + expertise +
+                                   telepathic teammates + influence + atrophy
+                                   in one dossier. Pass an author email or omit
+                                   to auto-pick the top contributor.
+  promise [options]                Promise-debt tracker — every "I'll fix
+                                   later" / TODO / follow-up parsed into a
+                                   ledger and verified against history
+                                   (heuristic; treat as a starting list)
   do [options] <query...>          Smart dispatcher — describe what you want,
                                    Mneme picks tools and runs them ('do find
                                    security issues' / 'do is the codebase

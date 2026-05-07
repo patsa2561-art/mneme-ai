@@ -387,6 +387,22 @@ mneme manifesto                        # the full canon
 | `htc-build` | One-time: compress every commit + cluster + memoir into LLM-ready cache (~10× smaller) | `mneme htc-build` |
 | `htc-stats` | Check coverage + how much you compressed (raw vs cached tokens) | `mneme htc-stats` |
 
+### 👥 People analytics — *what GitHub cannot see*
+
+> Six commands that surface patterns hiding under your contributors view. Plus the flagship `nervous-system` PDF report combining them all.<br/>
+> → **[Full positioning → People-Analytics](People-Analytics)** · **[Flagship PDF → Mneme-Nervous-System](Mneme-Nervous-System)**
+
+| Command | Use this when… | Example |
+|---|---|---|
+| `telepathy` | Find author pairs who never co-author but rhyme behaviorally — *invisible teams* | `mneme telepathy --top 10` |
+| `atrophy` | Knowledge-half-life clock — who still remembers what? *(Ebbinghaus decay)* | `mneme atrophy alice@bank.com` |
+| `nemesis` | Pairs whose work consistently rewrites each other's *(engineering friction, defamation-safe framing)* | `mneme nemesis` |
+| `promise` | Promise-debt ledger — every "I'll fix this later" / TODO across commits + PRs | `mneme promise --status stale` |
+| `influence` | Cultural alphas — PageRank of pattern adoption *(volume-independent)* | `mneme influence --top 10` |
+| `lineage <target>` | Semantic ownership — whose interpretation of whose intent is in this code now? | `mneme lineage src/auth.ts` |
+| `passport [author]` | One engineer's full dossier — DNA + expertise + telepathic teammates + influence + atrophy. Outputs HTML / PDF. | `mneme passport alice@ --html report.html` |
+| **`nervous-system`** | **The flagship.** Combined report: passports + telepathy + atrophy + influence + neuroanatomy. HTML or PDF. | `mneme nervous-system --pdf board.pdf` |
+
 ### 🛡 AI Session Audit — *the trust certificate for every AI-driven commit*
 
 > Vendor-neutral. Works with Claude Code · Cursor · Codex · Devin · Sweep · Aider · Copilot — any AI ending up in `git log`.
