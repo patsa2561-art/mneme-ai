@@ -129,7 +129,7 @@ export async function run(argv: string[]): Promise<void> {
   // ─── v0.27.0: AI Session Audit — every AI-driven commit gets a trust certificate ───
   program
     .command("audit")
-    .description("AI Session Audit — every AI-driven commit gets a trust certificate (vendor-neutral; works with Claude Code / Cursor / Codex / Sweep / etc.)")
+    .description("AI Session Audit — every AI-driven commit gets a trust certificate (vendor-neutral; works with any AI tool whose commits end up in `git log`)")
     .option("--baseline", "snapshot current behavior + types + perf", false)
     .option("--trace", "diff capture + AI session detection", false)
     .option("--verify", "Leviathan-style narrative vs diff check", false)
@@ -139,9 +139,11 @@ export async function run(argv: string[]): Promise<void> {
     .option("--out <file>", "output path for --report")
     .option("--interval <seconds>", "poll interval for --watch", (v) => Number(v), 60)
     .option("--json", "machine-readable output", false)
+    .option("--explain", "prepend a plain-English narrative summary on --certify (uses your free LLM)", false)
     .action(async (opts: {
       baseline?: boolean; trace?: boolean; verify?: boolean; certify?: boolean;
       watch?: boolean; report?: boolean; out?: string; interval?: number; json?: boolean;
+      explain?: boolean;
     }) => {
       const mode: "baseline" | "trace" | "verify" | "certify" | "watch" | "report" =
         opts.baseline ? "baseline" :
@@ -158,6 +160,7 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
           out: opts.out,
           interval: opts.interval,
+          explain: opts.explain,
         }),
       );
     });
@@ -197,9 +200,10 @@ export async function run(argv: string[]): Promise<void> {
     .option("--half-life <days>", "decay half-life in days (default 180 ≈ 6 months)", (v) => Number(v), 180)
     .option("--top <n>", "rows per section", (v) => Number(v), 10)
     .option("--json", "machine-readable output", false)
+    .option("--explain", "prepend a plain-English narrative summary (uses your free LLM)", false)
     .action(async (
       author: string | undefined,
-      opts: { file?: string; halfLife?: number; top?: number; json?: boolean },
+      opts: { file?: string; halfLife?: number; top?: number; json?: boolean; explain?: boolean },
     ) => {
       process.exit(
         await atrophyCommand({
@@ -209,6 +213,7 @@ export async function run(argv: string[]): Promise<void> {
           halfLifeDays: opts.halfLife,
           topN: opts.top,
           json: opts.json,
+          explain: opts.explain,
         }),
       );
     });
@@ -303,7 +308,8 @@ export async function run(argv: string[]): Promise<void> {
     .option("--top-people <n>", "number of contributors to feature", (v) => Number(v), 5)
     .option("--top-files <n>", "number of critical files to analyze", (v) => Number(v), 30)
     .option("--json", "machine-readable output", false)
-    .action(async (opts: { html?: string; pdf?: string; topPeople?: number; topFiles?: number; json?: boolean }) => {
+    .option("--explain", "prepend a plain-English narrative summary (uses your free LLM)", false)
+    .action(async (opts: { html?: string; pdf?: string; topPeople?: number; topFiles?: number; json?: boolean; explain?: boolean }) => {
       process.exit(
         await nervousSystemCommand({
           cwd: process.cwd(),
@@ -312,6 +318,7 @@ export async function run(argv: string[]): Promise<void> {
           topPeople: opts.topPeople,
           topFiles: opts.topFiles,
           json: opts.json,
+          explain: opts.explain,
         }),
       );
     });
@@ -685,7 +692,7 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("mcp")
-    .description("Run as an MCP server (for Claude Code, Cursor, Continue, etc.)")
+    .description("Run as an MCP server (for any AI tool that supports MCP)")
     .action(async () => {
       process.exit(await mcpCommand({ cwd: process.cwd() }));
     });

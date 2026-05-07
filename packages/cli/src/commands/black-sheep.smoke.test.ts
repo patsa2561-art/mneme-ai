@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir, homedir } from "node:os";
 
@@ -17,7 +17,19 @@ const REPO = process.cwd().replace(/\\/g, "/");
 const CLI = join(REPO, "packages/cli/bin/mneme.js");
 const DB = join(REPO, ".mneme/mneme.db");
 
-const hasIndex = existsSync(DB) && existsSync(CLI);
+// CI runners never have a populated index. Empty SQLite ~16 KB; a real
+// indexed Mneme repo is multi-MB. Require >= 200 KB plus an env-var
+// bail-out so any CI run cleanly skips these end-to-end smokes.
+const REAL_INDEX_MIN_BYTES = 200_000;
+const hasIndex = (() => {
+  if (process.env.CI === "true") return false;
+  if (!existsSync(DB) || !existsSync(CLI)) return false;
+  try {
+    return statSync(DB).size >= REAL_INDEX_MIN_BYTES;
+  } catch {
+    return false;
+  }
+})();
 const describeIfIndexed = hasIndex ? describe : describe.skip;
 
 function runCli(args: string[], extraEnv: Record<string, string> = {}): {

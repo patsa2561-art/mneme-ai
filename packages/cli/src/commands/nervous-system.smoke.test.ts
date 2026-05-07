@@ -9,6 +9,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
 import { existsSync, statSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
+
+// Guard threshold: a real Mneme index is multi-MB. An empty SQLite created
+// by an upstream test is ~12-20 KB. We require >= 200 KB to be confident
+// the DB has real commit data — that's only true on a dev machine that
+// has run `mneme index`. CI never hits this.
+const REAL_INDEX_MIN_BYTES = 200_000;
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -17,7 +23,19 @@ const REPO = process.cwd().replace(/\\/g, "/");
 const CLI = join(REPO, "packages/cli/bin/mneme.js");
 const DB = join(REPO, ".mneme/mneme.db");
 
-const hasIndex = existsSync(DB) && existsSync(CLI);
+// CI runners never have a populated index — `.mneme/` is gitignored.
+// An upstream test may create an empty SQLite at the repo root, so we
+// also require the DB file to be at least 200 KB before declaring it
+// "real-indexed". Plus an explicit env-var bail-out so any CI run skips.
+const hasIndex = (() => {
+  if (process.env.CI === "true") return false;
+  if (!existsSync(DB) || !existsSync(CLI)) return false;
+  try {
+    return statSync(DB).size >= REAL_INDEX_MIN_BYTES;
+  } catch {
+    return false;
+  }
+})();
 
 const describeIfIndexed = hasIndex ? describe : describe.skip;
 

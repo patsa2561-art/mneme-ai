@@ -22,7 +22,22 @@ export const REPO_ROOT = resolve(HERE, "..", "..");
 export const CLI_BIN = resolve(REPO_ROOT, "packages", "cli", "bin", "mneme.js");
 
 // ── ANSI strip + snapshot normalization ─────────────────────────────────
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
+//
+// Why this is finicky: commander renders `--help` using the terminal's column
+// width, and Linux runners + Windows + macOS all report different widths in
+// their TTY-less defaults. CRLF vs LF line endings, trailing whitespace from
+// padding, and the OSC 8 / cursor-positioning escape sequences all sneak in
+// and rot snapshots.
+//
+// The matcher is "match by SHAPE, not by glyph": we drop ANSI, normalize line
+// endings, strip trailing whitespace, mask all volatile fields, and collapse
+// any wrap-driven inner whitespace inside two-column command rows (those are
+// the lines containing the commander " > " arrow).
+
+// All ESC[…] sequences (color, cursor moves, OSC, scrollback) — not just
+// SGR (the older `\x1b\[[0-9;]*m`).  Some terminals emit cursor position
+// queries (`\x1b\[6n`) and column resets (`\x1b\[\d+D`) that snuck through.
+const ANSI_RE = /\x1b(?:\[[0-9;?]*[A-Za-z]|\][^\x07\x1b]*(?:\x07|\x1b\\))/g;
 
 export function strip(s: string): string {
   return s.replace(ANSI_RE, "");
@@ -34,7 +49,17 @@ export function strip(s: string): string {
  * across runs. Order matters — mask before count regex collapses spaces.
  */
 export function normalize(out: string): string {
-  return strip(out)
+  // 1. Line endings + trailing whitespace + ANSI: do these FIRST so every
+  //    later regex sees a canonical \n-separated, right-trimmed string.
+  let s = out.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  s = strip(s);
+  s = s
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+$/g, ""))
+    .join("\n");
+
+  // 2. Mask volatile content.
+  s = s
     // ISO-ish timestamps "2024-01-01T12:34:56.789Z" → <TS>
     .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, "<TS>")
     // durations: "12.3 ms", "4s", "2 d"
@@ -50,6 +75,33 @@ export function normalize(out: string): string {
     // absolute Windows / POSIX paths inside output (to avoid CI vs local diffs)
     .replace(/[A-Za-z]:\\[^\s]+/g, "<PATH>")
     .replace(/\/(?:tmp|var|home|Users)\/[^\s]+/g, "<PATH>");
+
+  // 3. Collapse pty-width-dependent column wrapping in commander's
+  //    two-column help layout. These are the lines that look like:
+  //        audit [options]                          AI Session Audit — …
+  //    The exact gap between "[options]" and "AI" depends on the longest
+  //    command name AND the terminal width — neither is portable. We
+  //    detect them by the multi-space gap and collapse to a single " > ".
+  //    We only touch lines that BEGIN with whitespace + a word followed
+  //    by 2+ spaces, so prose lines and code blocks are untouched.
+  s = s
+    .split("\n")
+    .map((line) => {
+      // Match: leading indent, command-ish token, 2+ spaces, then the
+      // description. This is the commander layout; collapse the gap.
+      const m = line.match(/^(\s+)([^\s>][^\n]*?[^\s])(\s{2,})(\S.*)$/);
+      if (!m) return line;
+      // Avoid touching any line that looks like a code block (starts with
+      // `$ `, `>>>`, or has indented bullets like "•" / "·" or pipes).
+      if (/^\s*(?:[\$>•·│┃|]|\d+\.\s|-\s|\*\s)/.test(line)) return line;
+      // Heuristic: only collapse when the description side does NOT start
+      // with a column-aligned punctuation glyph (those are tables we want
+      // to keep as-is, e.g. "  ┃ key   ┃ value ┃").
+      return `${m[1]}${m[2]}  >  ${m[4]}`;
+    })
+    .join("\n");
+
+  return s;
 }
 
 // ── subprocess helpers ──────────────────────────────────────────────────

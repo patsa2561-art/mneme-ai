@@ -20,6 +20,7 @@ import kleur from "kleur";
 import { audit, git } from "@mneme-ai/core";
 import { ui, header, section, kv, pill, nextSteps } from "../ui.js";
 import { iris, type PyramidSection } from "../iris/index.js";
+import { explain, type ExplainRequest } from "../utils/explain.js";
 
 export interface AuditOptions {
   cwd: string;
@@ -29,6 +30,10 @@ export interface AuditOptions {
   out?: string;
   /** For --watch: poll interval in seconds. */
   interval?: number;
+  /** When set on --certify: prepend a plain-English narrative summary. */
+  explain?: boolean;
+  /** Test seam: inject an enricher factory so unit tests don't hit the network. */
+  explainEnricherFactory?: ExplainRequest["enricherFactory"];
 }
 
 /** Top-level dispatcher. */
@@ -105,7 +110,7 @@ async function runBaseline(opts: AuditOptions): Promise<number> {
 
   process.stdout.write(
     nextSteps([
-      { cmd: "<let your AI tool work>", why: "Claude Code / Cursor / Codex / etc. — Mneme is vendor-neutral." },
+      { cmd: "<let your AI tool work>", why: "Mneme is vendor-neutral; works with any AI tool whose commits end up in `git log`." },
       { cmd: "mneme audit --certify", why: "Compare reality to this baseline; emit a trust certificate." },
     ]) + "\n",
   );
@@ -287,8 +292,58 @@ async function runCertify(opts: AuditOptions): Promise<number> {
     return cert.exitCode;
   }
 
-  renderCertificate(cert);
+  // Optional --explain: ask the user's free LLM for a plain-English summary
+  // of the certificate. Falls back to a HEADS UP line if no provider works,
+  // so the command's data path is never blocked on the LLM.
+  let explainSection: PyramidSection | null = null;
+  let explainHeadsUp: string | null = null;
+  if (opts.explain) {
+    const result = await explain({
+      enabled: true,
+      enricherFactory: opts.explainEnricherFactory,
+      system:
+        "You are a senior reviewer briefing a release manager. " +
+        "Given a JSON AI-audit certificate (5 axes plus 4 forensic axes), " +
+        "write 3-4 sentences in plain English: " +
+        "(1) the verdict and why, " +
+        "(2) which axis was the closest call (best or worst margin), " +
+        "(3) one concrete next step. " +
+        "Be honest, no hype, no emoji.",
+      user: certificateToExplainPrompt(cert),
+      maxTokens: 220,
+    });
+    explainSection = result.section;
+    explainHeadsUp = result.headsUp;
+  }
+
+  renderCertificate(cert, explainSection, explainHeadsUp);
   return cert.exitCode;
+}
+
+/** Compact JSON-ish summary of the certificate, kept short to control prompt cost. */
+function certificateToExplainPrompt(cert: audit.AuditCertificate): string {
+  const compact = {
+    overallVerdict: cert.overallVerdict,
+    sessionId: cert.sessionId,
+    axes: {
+      behavioralParity: { verdict: cert.axes.behavioralParity.verdict, reason: cert.axes.behavioralParity.reason },
+      apiContractDrift: { verdict: cert.axes.apiContractDrift.verdict, reason: cert.axes.apiContractDrift.reason },
+      testPassRate: {
+        verdict: cert.axes.testPassRate.verdict,
+        reason: cert.axes.testPassRate.reason,
+        before: cert.axes.testPassRate.before,
+        after: cert.axes.testPassRate.after,
+      },
+      perfRegression: {
+        verdict: cert.axes.perfRegression.verdict,
+        reason: cert.axes.perfRegression.reason,
+        deltaPercent: cert.axes.perfRegression.deltaPercent,
+      },
+      aiNarrative: { verdict: cert.axes.aiNarrative.verdict, reason: cert.axes.aiNarrative.reason },
+    },
+    forensicAxes: cert.forensicAxes,
+  };
+  return JSON.stringify(compact, null, 2);
 }
 
 async function runFullCertifyPipeline(repoRoot: string) {
@@ -309,7 +364,11 @@ async function runFullCertifyPipeline(repoRoot: string) {
   });
 }
 
-function renderCertificate(cert: audit.AuditCertificate): void {
+function renderCertificate(
+  cert: audit.AuditCertificate,
+  explainSection: PyramidSection | null = null,
+  explainHeadsUp: string | null = null,
+): void {
   const verdictBadge = cert.overallVerdict === "fail"
     ? pill("FAIL", "high")
     : cert.overallVerdict === "warn"
@@ -362,11 +421,16 @@ function renderCertificate(cert: audit.AuditCertificate): void {
     }
   }
 
-  const sections: PyramidSection[] = [
-    { tier: "lede", title: "✦ Certificate", lines: ledeLines },
-    { tier: "key-facts", title: "◆ 5-axis verdict", lines: factLines },
-    { tier: "body", title: "◆ Forensic axes (insider-threat reuse)", lines: forensicLines },
-  ];
+  const sections: PyramidSection[] = [];
+  // --explain narrative goes ABOVE the certificate so a release manager
+  // reads the plain-English summary first, then drills into the axes.
+  if (explainSection) sections.push(explainSection);
+  if (explainHeadsUp) {
+    sections.push({ tier: "lede", lines: [`  ${explainHeadsUp}`] });
+  }
+  sections.push({ tier: "lede", title: "✦ Certificate", lines: ledeLines });
+  sections.push({ tier: "key-facts", title: "◆ 5-axis verdict", lines: factLines });
+  sections.push({ tier: "body", title: "◆ Forensic axes (insider-threat reuse)", lines: forensicLines });
   if (detailLines.length > 0) {
     sections.push({ tier: "details", title: "◆ Per-axis details", lines: detailLines });
   }

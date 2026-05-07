@@ -63,7 +63,7 @@ export async function initCommand(opts: InitOptions): Promise<number> {
   ui.dim("");
   ui.dim("Next:  mneme index            (build the memory)");
   ui.dim("       mneme ask \"...\"        (query the memory)");
-  ui.dim("       mneme mcp              (serve to Claude/Cursor/etc.)");
+  ui.dim("       mneme mcp              (serve any AI tool that speaks MCP)");
   return 0;
 }
 

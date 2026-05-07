@@ -51,6 +51,7 @@ import {
   shouldShowVerboseGuide,
   type PyramidSection,
 } from "../iris/index.js";
+import { explain, type ExplainRequest } from "../utils/explain.js";
 
 const COMMAND_ID = "atrophy";
 
@@ -63,6 +64,10 @@ export interface AtrophyOptions {
   halfLifeDays?: number;
   topN?: number;
   json?: boolean;
+  /** When set: prepend a plain-English narrative summary (LLM-generated). */
+  explain?: boolean;
+  /** Test seam: inject an enricher factory so unit tests don't hit the network. */
+  explainEnricherFactory?: ExplainRequest["enricherFactory"];
 }
 
 export async function atrophyCommand(opts: AtrophyOptions): Promise<number> {
@@ -81,7 +86,7 @@ export async function atrophyCommand(opts: AtrophyOptions): Promise<number> {
   try {
     if (opts.file) return runFileMode(s, opts, meta.rootPath);
     if (opts.author) return runAuthorMode(s, opts, meta.rootPath);
-    return runRepoMode(s, opts, meta.rootPath);
+    return await runRepoMode(s, opts, meta.rootPath);
   } finally {
     s.close();
   }
@@ -89,11 +94,11 @@ export async function atrophyCommand(opts: AtrophyOptions): Promise<number> {
 
 // ─── Mode 1 — repo-wide ───────────────────────────────────────────────
 
-function runRepoMode(
+async function runRepoMode(
   s: store.MnemeStore,
   opts: AtrophyOptions,
   repoRoot: string,
-): number {
+): Promise<number> {
   const report = people.atrophy(s, {
     halfLifeDays: opts.halfLifeDays,
     topN: opts.topN ?? 10,
@@ -102,6 +107,29 @@ function runRepoMode(
   if (opts.json) {
     process.stdout.write(JSON.stringify({ mode: "repo", ...report }, null, 2) + "\n");
     return 0;
+  }
+
+  // Optional --explain narrative — runs in parallel with the table render
+  // to keep wall-clock latency low. If the LLM call fails we just skip it.
+  let explainSection: PyramidSection | null = null;
+  let explainHeadsUp: string | null = null;
+  if (opts.explain) {
+    const result = await explain({
+      enabled: true,
+      enricherFactory: opts.explainEnricherFactory,
+      system:
+        "You are a staff engineer briefing a team lead on knowledge-decay risk. " +
+        "Given a JSON snapshot of authors and at-risk files (Ebbinghaus half-life model), " +
+        "write 3-4 sentences in plain English: " +
+        "(1) the headline knowledge-risk story, " +
+        "(2) the 1-2 specific files most worth refreshing first and why, " +
+        "(3) one concrete recommendation. " +
+        "Be honest about uncertainty when commit count is low. No emoji.",
+      user: atrophyToExplainPrompt(report),
+      maxTokens: 240,
+    });
+    explainSection = result.section;
+    explainHeadsUp = result.headsUp;
   }
 
   const showGuide = readShouldShowGuide(repoRoot);
@@ -213,6 +241,10 @@ function runRepoMode(
 
   // ─── Compose ────────────────────────────────────────────────────────
   const sections: PyramidSection[] = [];
+  if (explainSection) sections.push(explainSection);
+  if (explainHeadsUp) {
+    sections.push({ tier: "lede", lines: [`  ${explainHeadsUp}`] });
+  }
   if (dataPills.length > 0) {
     sections.push({ tier: "lede", lines: dataPills.map((l) => `  ${l}`) });
   }
@@ -509,4 +541,30 @@ function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Trim the atrophy report down to the bits a narrative LLM actually needs.
+ * Keeps prompt cost predictable: top-5 authors + top-8 at-risk files, stats.
+ */
+function atrophyToExplainPrompt(report: ReturnType<typeof people.atrophy>): string {
+  const compact = {
+    stats: report.stats,
+    topAuthors: report.authors.slice(0, 5).map((a) => ({
+      name: a.name,
+      knowledgeMass: Number(a.knowledgeMass.toFixed(2)),
+      filesKnown: a.filesKnown,
+      filesStillFresh: a.filesStillFresh,
+    })),
+    atRiskFiles: report.atRiskFiles.slice(0, 8).map((f) => ({
+      path: f.filePath,
+      tier: f.tier,
+      freshestKnowledgePct: Math.round(f.freshestKnowledge * 100),
+      totalTouches: f.totalTouches,
+      topKnower: f.allKnowers[0]
+        ? { name: f.allKnowers[0].name, lastTouchDaysAgo: f.allKnowers[0].lastTouchDaysAgo }
+        : null,
+    })),
+  };
+  return JSON.stringify(compact, null, 2);
 }

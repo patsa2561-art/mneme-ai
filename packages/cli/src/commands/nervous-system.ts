@@ -23,6 +23,7 @@ import {
   shouldShowVerboseGuide,
   type PyramidSection,
 } from "../iris/index.js";
+import { explain, type ExplainRequest } from "../utils/explain.js";
 
 const COMMAND_ID = "nervous-system";
 
@@ -35,6 +36,10 @@ export interface NervousSystemCommandOptions {
   /** Path to write PDF to. */
   pdf?: string;
   json?: boolean;
+  /** When set: prepend a plain-English narrative summary (LLM-generated). */
+  explain?: boolean;
+  /** Test seam: inject an enricher factory so unit tests don't hit the network. */
+  explainEnricherFactory?: ExplainRequest["enricherFactory"];
 }
 
 export async function nervousSystemCommand(
@@ -122,7 +127,72 @@ export async function nervousSystemCommand(
     }
   }
 
-  return renderTerminal(data, artifactNotes, meta.rootPath);
+  // Optional --explain narrative — fetch BEFORE we render so the prose lives
+  // at the top of the inverted-pyramid output (lede tier).
+  let explainSection: PyramidSection | null = null;
+  let explainHeadsUp: string | null = null;
+  if (opts.explain) {
+    const result = await explain({
+      enabled: true,
+      enricherFactory: opts.explainEnricherFactory,
+      system:
+        "You are a CTO briefing the founders on the engineering org's neural map. " +
+        "Given a JSON snapshot of cultural alphas, latent pairs, atrophy, and brain lobes, " +
+        "write 3-4 sentences in plain English: " +
+        "(1) who's the alpha and why, " +
+        "(2) where atrophy is concentrated, " +
+        "(3) the one most surprising finding. " +
+        "Be honest about uncertainty when commit count or author count is low. No emoji.",
+      user: nervousSystemToExplainPrompt(data),
+      maxTokens: 240,
+    });
+    explainSection = result.section;
+    explainHeadsUp = result.headsUp;
+  }
+
+  return renderTerminal(data, artifactNotes, meta.rootPath, explainSection, explainHeadsUp);
+}
+
+/** Trim the data down to the bits a narrative LLM actually needs. */
+function nervousSystemToExplainPrompt(data: people.NervousSystemData): string {
+  const compact = {
+    repo: data.meta.repoName,
+    totalCommits: data.meta.totalCommits,
+    totalAuthors: data.meta.totalAuthors,
+    halfLifeDays: data.meta.halfLifeDays,
+    hero: data.hero.headline,
+    topAlphas: data.alphas.slice(0, 5).map((a) => ({
+      name: a.name || a.email,
+      pageRank: Number(a.pageRank.toFixed(4)),
+      adoptionsByOthers: a.adoptionsByOthers,
+      uniqueAdopters: a.uniqueAdopters,
+    })),
+    latentPairs: data.telepathy.pairs.slice(0, 3).map((p) => ({
+      a: p.authorA.name || p.authorA.email,
+      b: p.authorB.name || p.authorB.email,
+      score: Number(p.score.toFixed(2)),
+      events: p.events,
+      topic: p.topTopic.topic,
+    })),
+    atrophy: {
+      filesWithLiveExpert: data.atrophy.filesWithLiveExpert,
+      fileCount: data.atrophy.fileCount,
+      ghostedDeepFiles: data.atrophy.ghostedDeepFiles,
+      criticalFiles: data.atrophy.criticalFiles.slice(0, 5).map((f) => ({
+        path: f.filePath,
+        tier: f.tier,
+        freshestKnowledgePct: Math.round(f.freshestKnowledge * 100),
+      })),
+    },
+    lobes: data.lobes.slice(0, 5).map((l) => ({
+      lobe: l.lobe,
+      fileCount: l.fileCount,
+      topOwner: l.topOwner?.name ?? null,
+    })),
+    surprising: data.surprising.slice(0, 5),
+    promises: data.promises,
+  };
+  return JSON.stringify(compact, null, 2);
 }
 
 // ─── Terminal rendering ───────────────────────────────────────────────
@@ -131,6 +201,8 @@ function renderTerminal(
   data: people.NervousSystemData,
   artifactNotes: string[],
   repoRoot: string,
+  explainSection: PyramidSection | null = null,
+  explainHeadsUp: string | null = null,
 ): number {
   const showGuide = readShouldShowGuide(repoRoot);
 
@@ -252,6 +324,10 @@ function renderTerminal(
 
   // ─── Compose Iris pyramid ───────────────────────────────────────────
   const sections: PyramidSection[] = [];
+  if (explainSection) sections.push(explainSection);
+  if (explainHeadsUp) {
+    sections.push({ tier: "lede", lines: [`  ${explainHeadsUp}`] });
+  }
   if (dataPills.length > 0) {
     sections.push({ tier: "lede", lines: dataPills.map((l) => `  ${l}`) });
   }

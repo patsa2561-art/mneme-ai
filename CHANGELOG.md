@@ -8,6 +8,90 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.33.0] — 2026-05-07
+
+Production hardening + intelligence upgrade. Three changes that ship together:
+
+### Vendor-neutral CLI surface
+
+- `mneme audit`'s description no longer enumerates "Claude Code / Cursor /
+  Codex / Sweep / etc." — replaced with `"works with any AI tool whose
+  commits end up in 'git log'"`. Same vendor-neutral substance, no public
+  endorsement of any specific AI tool.
+- `mneme mcp`'s description swapped from "for Claude Code, Cursor,
+  Continue, etc." to "for any AI tool that supports MCP".
+- `mneme audit --baseline` next-step copy + `mneme init` post-install hint
+  similarly cleaned up.
+- The CHANGELOG is the only file allowed to record AI vendor names; all
+  user-facing CLI strings now respect that rule.
+- Snapshot regenerated; `tests/regression/__snapshots__/` no longer
+  contains any banned vendor name.
+
+### Cross-platform snapshot stability + test gate re-enabled in `release.yml`
+
+- `tests/regression/helpers.ts` `normalize()` now:
+  - Normalizes CRLF → LF *before* any other pass (Windows runners stop
+    diffing against POSIX baselines).
+  - Strips trailing whitespace on every line.
+  - Strips a broader ANSI grammar (CSI + OSC), not just SGR — picks up
+    cursor moves and column resets that occasionally leaked through.
+  - Collapses pty-width-dependent column gaps in commander's two-column
+    help layout to a single ` > ` separator. Code blocks and tables
+    are excluded by a leading-glyph heuristic.
+- `release.yml` re-enables the test gate **and** the eval gate that v0.32.1
+  had to drop to unblock npm publish. Belt-and-braces: `ci.yml` still
+  validates on every push, but the tag-triggered publish now also runs
+  the full suite as a final guard.
+
+### Smart-up — `--explain` narrative on three flagship commands
+
+- `mneme audit --certify --explain` — narrates verdict + closest-call axis
+  + a concrete next step.
+- `mneme atrophy --explain` — narrates the knowledge-decay risk in human
+  terms and recommends 1-2 specific files to refresh first.
+- `mneme nervous-system --explain` — narrates the cross-cutting story:
+  who's the alpha, where's atrophy concentrated, what's surprising.
+
+Implementation:
+
+- New shared helper at `packages/cli/src/utils/explain.ts`. Wraps the
+  existing `ResilientEnricher` from `@mneme-ai/embeddings` — same
+  free-LLM ladder (local Ollama → Groq → Together → OpenRouter →
+  OpenAI) that `mneme ask` uses.
+- `--explain` is **opt-in** and **off by default**. Existing JSON shape
+  is unchanged; the narrative renders **above** the existing tables in
+  the terminal output only.
+- Honest framing: the narrative section is titled
+  `💡 Plain-English read (LLM)` so a reader never confuses the
+  synthesized prose with the raw data.
+- If no LLM provider is reachable, the command prints a single
+  `HEADS UP: --explain needs a free LLM provider; run 'mneme setup-free'
+  once.` line and falls back to the normal data-only output. Never throws.
+- 15 new tests (3 per command + 6 helper-level) cover the OFF /
+  ON-with-LLM / ON-without-LLM control flow.
+
+### Smoke-test guards — strengthened so re-enabled test gate doesn't break CI
+
+The dev-only smoke tests in `nervous-system.smoke.test.ts` and
+`black-sheep.smoke.test.ts` previously gated on `existsSync(.mneme/mneme.db)`
+alone. Some upstream test was creating an empty SQLite at the repo root
+(via `MnemeStore` constructor's mkdir+open behavior), which made the
+guard return `true` on CI and caused the smokes to run against an empty
+index — exit code 1 — which would have blocked the freshly re-enabled
+test gate in `release.yml`.
+
+Fix:
+- Bail out early if `process.env.CI === "true"` — covers GitHub Actions,
+  GitLab CI, CircleCI, Bitbucket Pipelines (all set this var).
+- Plus require `statSync(DB).size >= 200_000` — an empty SQLite is ~16 KB,
+  a real Mneme index is multi-MB. Belt-and-braces against any future
+  test-ordering quirk.
+
+Result: on CI, both smoke files report **18/18 skipped** cleanly.
+Locally on a dev machine with a real index, all 18 still run and pass.
+
+Test count: 1944 → **1959 passing**.
+
 ## [0.32.1] — 2026-05-07
 
 CI/release-pipeline fix. v0.30.0 through v0.32.0 never reached npm
