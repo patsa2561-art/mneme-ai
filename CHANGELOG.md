@@ -8,6 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.30.1] — 2026-05-07
+
+CI fix. The v0.30.0 web sub-agent committed
+`packages/web/package-lock.json` after running `npm install --no-workspaces`
+to bypass a transient npm bug. That standalone lockfile conflicts with
+the root lockfile in a workspaces setup, breaking `npm ci` on
+Linux/macOS — which broke CI matrix, the Release workflow's npm
+publish, and the GitHub Pages Deploy build. v0.30.0 never reached npm
+as a result.
+
+This release:
+- Deletes `packages/web/package-lock.json`. Root lockfile already
+  registers every web dependency.
+- Simplifies `.github/workflows/deploy-web.yml`: drops the redundant
+  `cd packages/web && npm install` step; builds via
+  `npm run build --workspace=@mneme-ai/web` from root.
+
+No code or behavior change. Functionally identical to v0.30.0.
+
 ## [0.30.0] — 2026-05-07
 
 The **"Nervous System Live"** release. Mneme gains a **world-class
