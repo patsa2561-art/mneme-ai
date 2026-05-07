@@ -511,30 +511,102 @@ After researching the landscape, every command in this list occupies whitespace 
 ## 🚀 Install
 
 <details>
-<summary><b>Pick one of four ways</b></summary>
+<summary><b>Pick the path that matches your machine</b></summary>
 
-| Pick this if you… | Command |
-|---|---|
-| 🔬 want to **try without installing** anything | `npx -y mneme-ai init` |
-| 💼 plan to **use it daily** *(recommended)* | `npm install -g mneme-ai` |
-| 🐳 want a **Node-free CI / air-gapped install** | `docker pull ghcr.io/patsa2561-art/mneme-ai:latest` |
-| 🛠 want to **contribute or run latest code** | `git clone …/mneme-ai && cd mneme-ai && npm install && npm run build` |
-
-The Docker path is a multi-arch ~90 MB image — see **[Docker wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Docker)** for CI snippets across GitHub Actions / GitLab / Bitbucket.
-
-After install, the same 60-second flow on any git repo:
+### 🟢 The happy path — works on Mac (Intel + Apple Silicon), Linux x64/arm64, Windows x64
 
 ```bash
-mneme init                       # creates .mneme/ inside the repo
-mneme index                      # ~90s for 5k commits, zero-setup
-mneme ask "why does X exist?"    # query the memory
+# Need Node 22 LTS first. If you don't have it: https://nodejs.org/en/download
+node --version          # → must be v22.x or later
+npm install -g mneme-ai
 ```
 
-**Upgrade:**
+Then on any git repo:
 
 ```bash
-mneme upgrade                       # bulletproof self-update
-                                    # bypasses npm cache + diagnoses PATH conflicts
+cd <any git repo>
+mneme init
+mneme index             # ~90s for 5k commits, zero-setup (bundled WASM)
+mneme ask "why does X exist?"
+```
+
+### 🐳 The universal path — works *everywhere*, no Node toolchain needed
+
+If `npm install -g mneme-ai` fails on your machine (Windows ARM, Node 24, missing Python / Visual Studio Build Tools, corporate proxy, etc.) — use Docker. Same Mneme, ~90 MB image, multi-arch:
+
+```bash
+docker pull ghcr.io/patsa2561-art/mneme-ai:latest
+
+# index + query in one shot:
+docker run --rm -v "$PWD:/repo" ghcr.io/patsa2561-art/mneme-ai:latest mneme index
+docker run --rm -v "$PWD:/repo" ghcr.io/patsa2561-art/mneme-ai:latest mneme ask "why does X exist?"
+```
+
+Make a shell alias if you'll use it daily:
+
+```bash
+# Mac / Linux
+alias mneme='docker run --rm -v "$PWD:/repo" ghcr.io/patsa2561-art/mneme-ai:latest mneme'
+```
+
+```powershell
+# Windows PowerShell
+function mneme { docker run --rm -v "${PWD}:/repo" ghcr.io/patsa2561-art/mneme-ai:latest mneme @args }
+```
+
+→ **[Full Docker guide → Wiki](https://github.com/patsa2561-art/mneme-ai/wiki/Docker)**
+
+### 🔬 The zero-install preview — see the dashboard before you commit to anything
+
+Open the live demo (no install, no signup, no upload):
+
+**[https://patsa2561-art.github.io/mneme-ai](https://patsa2561-art.github.io/mneme-ai)**
+
+Drag-drop your repo's `mneme nervous-system --json` output onto the page — parsed in your browser, never sent to a server.
+
+### 🛠 The contributor path
+
+```bash
+git clone https://github.com/patsa2561-art/mneme-ai.git
+cd mneme-ai
+npm install
+npm run build
+node packages/cli/bin/mneme.js --help
+```
+
+### 📋 Compatibility matrix
+
+| Your setup | Recommended path | Why |
+|---|---|---|
+| 🍎 macOS (Intel or Apple Silicon) + Node ≥ 22 | `npm install -g mneme-ai` | prebuilt binaries cover this |
+| 🐧 Linux x64 / arm64 + Node ≥ 22 | `npm install -g mneme-ai` | prebuilt binaries cover this |
+| 🪟 Windows x64 + Node 22 LTS | `npm install -g mneme-ai` | prebuilt binaries cover this |
+| 🪟 Windows ARM64 *(Surface, Copilot+ PCs)* | **🐳 Docker** | `better-sqlite3` has no win32-arm64 prebuild yet |
+| ⚠ Node 24+ on any OS | **🐳 Docker** *(or downgrade to Node 22)* | native deps haven't shipped Node 24 prebuilds yet |
+| 🏢 Corporate / air-gapped CI | **🐳 Docker** | no npm reachability needed once image pulled |
+| 🆕 Just want to look around | **Live demo URL** | zero commitment |
+
+### 🔧 Common install errors — what to do
+
+<table>
+<tr><th>Error</th><th>Why it happens</th><th>Fix</th></tr>
+<tr><td><code>gyp ERR! find Python</code> · <code>node-gyp rebuild</code> failures</td><td>Your Node version doesn't have a prebuilt <code>better-sqlite3</code> binary, so npm tries to compile from source — needs Python + C++ build tools</td><td>Use the 🐳 Docker path. Or: install Node 22 LTS (most prebuilts cover it) and retry.</td></tr>
+<tr><td><code>EBUSY: resource busy or locked, rmdir 'node_modules\sharp'</code></td><td>An earlier install left files locked by an editor / antivirus</td><td>Close VS Code + file explorer in <code>%AppData%\npm</code>. Retry. If it persists, <code>rm -rf $(npm root -g)/mneme-ai</code> and try Docker.</td></tr>
+<tr><td><code>prebuild-install warn install No prebuilt binaries found (target=24.x …)</code></td><td>Native deps haven't shipped Node 24 prebuilts yet (it's brand new)</td><td>🐳 Docker is the cleanest fix. Or <code>nvm install 22.11.0 &amp;&amp; nvm use 22.11.0</code> then retry.</td></tr>
+<tr><td><code>EACCES: permission denied</code> on global install</td><td>Default npm prefix points at a system path</td><td>Either set up <a href="https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally">a user-owned npm prefix</a> or use <code>sudo npm install -g mneme-ai</code> (Mac/Linux).</td></tr>
+<tr><td>Stuck in "compiling…" for 5+ minutes</td><td>node-gyp is compiling from source — slow and fragile</td><td>Cancel (<kbd>Ctrl-C</kbd>) and use 🐳 Docker.</td></tr>
+</table>
+
+### 🔄 Upgrade
+
+```bash
+mneme upgrade            # bulletproof self-update — bypasses npm cache + PATH conflicts
+```
+
+For Docker:
+
+```bash
+docker pull ghcr.io/patsa2561-art/mneme-ai:latest
 ```
 
 </details>
