@@ -85,6 +85,30 @@ mneme ask "why does X exist?"    # query the memory
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🆓 Free forever — no API key required (v0.22)
+
+**Indexing works zero-config out of the box** (bundled WASM model, ~25MB auto-download).
+
+**For full Q&A synthesis (`mneme ask`)**, run the **30-second wizard** that picks the easiest path for your machine:
+
+```bash
+mneme setup-free
+```
+
+It walks you through 3 free paths and tells you exactly which fits your setup:
+
+| Path | What you get | Setup time |
+|---|---|---|
+| 🏠 **Local Ollama** | 100% private, free forever, ~3GB one-time | ~3 min |
+| ⚡ **Groq free tier** | 500 tok/s cloud (fastest), generous free quota | ~30 sec |
+| 🌐 **OpenRouter free** | Model variety: Qwen, Gemma, Llama 3.3 | ~30 sec |
+
+Mneme **auto-detects** any of these — set `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TOGETHER_API_KEY`, or run local `ollama serve`. No config file edits needed.
+
+**Models known to work free:** Llama 3.3 70B · Qwen 2.5 (3B/7B/72B) · Qwen QwQ 32B · Gemma 2 (2B/9B) · Llama 3.1/3.2.
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🧠 New in v0.20 — talk to Mneme like a human
 
 You don't need to memorize 50 commands. Just describe what you want:

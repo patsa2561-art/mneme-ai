@@ -8,6 +8,99 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.22.0] — 2026-05-06
+
+The **"Free Forever"** release. **Mneme now defaults to assuming the user has
+no API key** — every feature that was previously gated by a paid OpenAI key
+now has a fully-functional free path, with a **30-second guided wizard**
+(`mneme setup-free`) that picks the easiest path per machine.
+
+### Added — `mneme setup-free` wizard
+
+Probes the local environment, then renders a 3-path recipe with copy-pastable
+commands and per-step verification. Three free paths:
+
+1. **🏠 Local Ollama** — 100% private, free forever, ~3GB one-time install
+   - Recommends Qwen 2.5 (3B/7B), Gemma 2 (2B/9B), Llama 3.2 — picks a default
+     based on RAM tier
+2. **⚡ Groq free tier** — 500 tok/s cloud, generous free quota, no install
+   - Llama 3.3 70B, Qwen QwQ 32B, Gemma 2 9B, Llama 3.1 8B
+3. **🌐 OpenRouter free** — variety: Qwen 2.5 72B, Gemma 2 9B, Llama 3.3 70B (all `:free` tier)
+
+If the user already has Ollama running with a chat model OR any provider key
+in their env, the wizard short-circuits with `✓ You're already set up`.
+
+### Added — multi-provider auto-detect ladder
+
+`resolveEnricher` now walks a free-first auto ladder:
+
+```
+1. Local Ollama (ping /api/tags)         — totally free + private
+2. GROQ_API_KEY                          — free tier, fastest
+3. TOGETHER_API_KEY                      — free tier
+4. OPENROUTER_API_KEY                    — free tier
+5. OPENAI_API_KEY                        — paid (last resort)
+```
+
+Set ANY ONE of these env vars and Mneme uses it automatically — no config
+edits, no flag plumbing. Each provider has a curated default + free model
+list (Qwen, Gemma, Llama family).
+
+### Added — graceful degradation in `mneme ask`
+
+If no LLM is available (no Ollama running, no env keys), `mneme ask` now:
+- Still runs full retrieval (BM25 + embeddings + RRF)
+- Shows top-K commits with citations
+- Falls back to extractive synthesis (heuristic answer from commit subjects)
+- Prints a friendly nudge: `mneme setup-free` for full Q&A
+
+The user **never sees a hard error** — only a clear path to upgrade.
+
+### Added — `OLLAMA_FREE_CHAT_MODELS` curated list
+
+Exported from `@mneme-ai/embeddings`:
+
+```ts
+qwen2.5:3b   1.9GB   recommended default
+gemma2:2b    1.6GB   fastest tiny
+llama3.2:1b  1.3GB   smallest
+qwen2.5:7b   4.7GB   smarter, needs ~6GB RAM
+gemma2:9b    5.4GB   strong reasoning
+```
+
+Used by the setup wizard + auto-detect.
+
+### Added — `NoEnricherAvailableError` sentinel
+
+Distinct error type for "no LLM at all" so callers can distinguish it from
+provider misconfiguration. CLI catches it and routes to degraded mode.
+
+### Added — `listProviders()` API
+
+Public catalog of provider configs (id, baseUrl, defaultModel, freeModels,
+signupUrl) — used by setup-free + future plugins.
+
+### Internal — provider catalog
+
+New `PROVIDERS` array in `packages/embeddings/src/enrich.ts` makes adding
+a new OpenAI-compatible provider a single-row addition. No new class,
+no new resolver branch.
+
+### User-visible flow on a fresh install (with NO API key)
+
+```bash
+npm i -g mneme-ai
+cd <any repo>
+mneme init           # zero-setup, picks bundled WASM
+mneme index          # works without keys
+mneme setup-free     # 30-sec wizard for the LLM step
+mneme ask "..."      # full Q&A using whatever the wizard configured
+```
+
+880 tests still pass. No regressions.
+
+—
+
 ## [0.21.1] — 2026-05-06
 
 The **"Where in the codebase?"** patch. Every command that operates on

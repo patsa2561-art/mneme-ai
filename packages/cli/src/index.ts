@@ -4,6 +4,7 @@ import { parseIntStrict, parseFloatStrict, parseSinceDate } from "./utils/args.j
 import { initCommand } from "./commands/init.js";
 import { doCommand } from "./commands/do.js";
 import { guardCommand } from "./commands/guard.js";
+import { setupFreeCommand } from "./commands/setup-free.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
 import { guardianCommand } from "./commands/guardian.js";
@@ -99,6 +100,14 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
         }),
       );
+    });
+
+  // ─── v0.22.0: free-LLM setup wizard (assume no API key) ─────────────
+  program
+    .command("setup-free")
+    .description("30-second guided setup for full Q&A synthesis without paying — Ollama / Groq / OpenRouter free paths")
+    .action(async () => {
+      process.exit(await setupFreeCommand({ cwd: process.cwd() }));
     });
 
   // ─── v0.20.0: pre-commit hook — install once, always-on protection ───

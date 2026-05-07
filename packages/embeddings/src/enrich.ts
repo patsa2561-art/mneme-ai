@@ -186,28 +186,169 @@ export class OpenAIEnricher implements EnricherProvider {
 /* ──────────────────────────  Resolver  ─────────────────────────── */
 
 export interface ResolveEnricherOptions {
-  provider?: "auto" | "ollama" | "openai";
+  provider?: "auto" | "ollama" | "openai" | "groq" | "together" | "openrouter";
   model?: string;
   apiKey?: string;
   baseUrl?: string;
 }
 
+/**
+ * Provider catalog — every entry uses an OpenAI-compatible /chat/completions
+ * endpoint, so they all share `OpenAIEnricher`. New providers = one row here.
+ *
+ * Ordered by free-tier-friendliness:
+ *   ollama (local, totally free)
+ *   groq         — generous free tier, fast (500 tok/s), signup required
+ *   together     — modest free tier
+ *   openrouter   — pay-per-token but exposes free models too
+ *   openai       — paid, premium quality
+ */
+export interface ProviderEntry {
+  id: "groq" | "together" | "openrouter" | "openai";
+  envKey: string;
+  baseUrl: string;
+  defaultModel: string;
+  /** Other free models the user can opt into (Qwen / Gemma / Llama family). */
+  freeModels: string[];
+  freeTier: boolean;
+  signupUrl: string;
+}
+
+const PROVIDERS: ProviderEntry[] = [
+  {
+    id: "groq",
+    envKey: "GROQ_API_KEY",
+    baseUrl: "https://api.groq.com/openai/v1",
+    defaultModel: "llama-3.3-70b-versatile",
+    freeModels: [
+      "llama-3.3-70b-versatile",
+      "qwen-qwq-32b",
+      "gemma2-9b-it",
+      "llama-3.1-8b-instant",
+    ],
+    freeTier: true,
+    signupUrl: "https://console.groq.com/keys",
+  },
+  {
+    id: "together",
+    envKey: "TOGETHER_API_KEY",
+    baseUrl: "https://api.together.xyz/v1",
+    defaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+    freeModels: [
+      "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "Qwen/Qwen2.5-72B-Instruct-Turbo",
+      "google/gemma-2-9b-it",
+    ],
+    freeTier: true,
+    signupUrl: "https://api.together.xyz/settings/api-keys",
+  },
+  {
+    id: "openrouter",
+    envKey: "OPENROUTER_API_KEY",
+    baseUrl: "https://openrouter.ai/api/v1",
+    defaultModel: "meta-llama/llama-3.3-70b-instruct:free",
+    freeModels: [
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "qwen/qwen-2.5-72b-instruct:free",
+      "google/gemma-2-9b-it:free",
+      "qwen/qwq-32b:free",
+    ],
+    freeTier: true,
+    signupUrl: "https://openrouter.ai/keys",
+  },
+  {
+    id: "openai",
+    envKey: "OPENAI_API_KEY",
+    baseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-4o-mini",
+    freeModels: [], // no free models on OpenAI
+    freeTier: false,
+    signupUrl: "https://platform.openai.com/api-keys",
+  },
+];
+
+/**
+ * Recommended local Ollama models for the chat path. Order: balance of
+ * size / quality / speed. User picks one in the setup wizard or just runs
+ * `ollama pull <name>` manually.
+ */
+export const OLLAMA_FREE_CHAT_MODELS: Array<{ name: string; size: string; note: string }> = [
+  { name: "qwen2.5:3b", size: "1.9GB", note: "best small/quality balance — recommended default" },
+  { name: "gemma2:2b",  size: "1.6GB", note: "Google Gemma 2 — fastest tiny" },
+  { name: "llama3.2:1b", size: "1.3GB", note: "smallest, decent for short answers" },
+  { name: "qwen2.5:7b",  size: "4.7GB", note: "much smarter — needs ~6GB free RAM" },
+  { name: "gemma2:9b",   size: "5.4GB", note: "Gemma 2 mid — strong reasoning" },
+];
+
 export async function resolveEnricher(
   opts: ResolveEnricherOptions = {},
 ): Promise<EnricherProvider> {
   const provider = opts.provider ?? "auto";
-  if (provider === "ollama" || provider === "auto") {
+
+  // Explicit picks
+  if (provider === "ollama") {
     const ollama = new OllamaEnricher({ model: opts.model, baseUrl: opts.baseUrl });
     if (await ollama.ping()) return ollama;
-    if (provider === "ollama") {
-      throw new Error("Ollama not reachable. Start it: ollama serve");
+    throw new Error(
+      "Ollama not reachable at " +
+        (opts.baseUrl ?? "http://127.0.0.1:11434") +
+        ". Start it:  ollama serve\nThen pull a chat model:  ollama pull llama3.2:1b",
+    );
+  }
+  if (provider === "openai" || provider === "groq" || provider === "together" || provider === "openrouter") {
+    const cfg = PROVIDERS.find((p) => p.id === provider)!;
+    const key = opts.apiKey ?? process.env[cfg.envKey];
+    if (!key) {
+      throw new Error(
+        `No ${provider} key found. Set ${cfg.envKey} or pass --api-key.\n` +
+          `Sign up (free tier): ${cfg.signupUrl}`,
+      );
+    }
+    return new OpenAIEnricher({
+      apiKey: key,
+      model: opts.model ?? cfg.defaultModel,
+      baseUrl: opts.baseUrl ?? cfg.baseUrl,
+    });
+  }
+
+  // auto: privacy-first ladder. Ollama local first (free + private), then any
+  // free-tier cloud provider whose key is in the env, then OpenAI as last resort.
+  const ollama = new OllamaEnricher({ model: opts.model, baseUrl: opts.baseUrl });
+  if (await ollama.ping()) return ollama;
+
+  // Try env-var providers in order
+  for (const cfg of PROVIDERS) {
+    const key = process.env[cfg.envKey];
+    if (key) {
+      return new OpenAIEnricher({
+        apiKey: key,
+        model: opts.model ?? cfg.defaultModel,
+        baseUrl: opts.baseUrl ?? cfg.baseUrl,
+      });
     }
   }
-  const apiKey = opts.apiKey ?? process.env["OPENAI_API_KEY"];
-  if ((provider === "openai" || provider === "auto") && apiKey) {
-    return new OpenAIEnricher({ apiKey, model: opts.model, baseUrl: opts.baseUrl });
+
+  throw new NoEnricherAvailableError();
+}
+
+/**
+ * Sentinel error for the "no LLM available" case. The CLI catches this
+ * specifically and switches `ask` to retrieval-only mode instead of
+ * showing a hard error.
+ */
+export class NoEnricherAvailableError extends Error {
+  constructor() {
+    super(
+      "No LLM available — set up the free path:\n" +
+        "  Local + private (recommended):  ollama pull llama3.2:1b\n" +
+        "  Free cloud (fastest):           Get a free Groq key at https://console.groq.com/keys, then export GROQ_API_KEY=...\n" +
+        "  Or run 'mneme setup-free' for a guided 30-second setup.",
+    );
+    this.name = "NoEnricherAvailableError";
   }
-  throw new Error(
-    "No enricher available. Install Ollama (recommended) or set OPENAI_API_KEY.",
-  );
+}
+
+/** Catalog exposed for `mneme setup-free` and CLI hints. */
+export function listProviders(): typeof PROVIDERS {
+  return PROVIDERS;
 }

@@ -98,18 +98,23 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
   if (!opts.json) spinner.update(`Found ${results.length} candidates · confidence: ${confidence}`);
 
   // ── Step 3. LLM synthesis (when available + not --no-llm). ───────────
+  // resolveEnricher uses 'auto' which walks the free-first ladder:
+  //   local Ollama → Groq (free) → Together → OpenRouter → OpenAI (paid).
+  // If none available, throws NoEnricherAvailableError and we fall through
+  // to extractive (retrieval-only) mode without breaking the user.
   const useLlm = !isNoLlm(opts.noLlm, cfg);
   let enricher: retrieve.SynthesisEnricher | undefined;
+  let enricherError: string | undefined;
   if (useLlm && confidence !== "none") {
     if (!opts.json) spinner.update("Synthesizing answer...");
     try {
       enricher = await resolveEnricher({
-        provider: cfg.embeddings.provider === "openai" ? "openai" : "ollama",
+        provider: "auto",
         model: cfg.embeddings.model,
       });
-    } catch {
-      // No LLM available — extractive fallback in synthesize().
+    } catch (err) {
       enricher = undefined;
+      enricherError = (err as Error).message ?? "no LLM available";
     }
   }
 
@@ -172,5 +177,13 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
       feedbackId,
     }),
   );
+
+  // If we fell back to retrieval-only because no LLM was available, tell
+  // the user how to upgrade for free. Once-per-run friendly nudge — never
+  // a hard error.
+  if (enricherError && useLlm && confidence !== "none") {
+    process.stdout.write(`\n  ${kleur.yellow("ℹ")}  ${kleur.gray("This was retrieval-only. For full Q&A synthesis, set up a free LLM:")}\n`);
+    process.stdout.write(`     ${kleur.cyan().bold("mneme setup-free")}  ${kleur.gray("(30-second guided wizard — Ollama / Groq / OpenRouter — all free)")}\n\n`);
+  }
   return 0;
 }
