@@ -1,20 +1,21 @@
-### 🚀 Start
+### 🚪 Start here
 - [[Home]]
 - [[Quickstart]]
 - [[Installation]]
 - [[Configuration]]
+- [[MCP-Integration]]
 
-### ✨ Innovations
-- [[The-Frontier]]
-- [[Innovations]]
-- [[Novel-Algorithms]]
-- [[Hierarchical-Memory]]
-- [[Speculative-Reasoning]]
-- [[Guardian]]
-- [[Forensic-Code-Science]]
+### 🧠 The brain (5 lobes)
+- [[Hierarchical-Memory]] · *compression-as-storage*
+- [[Speculative-Reasoning]] · *streaming + verify + DDTree*
+- [[Guardian]] · *self-healing daemon*
+- [[Forensic-Code-Science]] · *Bayesian + CWE*
+- [[Smart-Dispatcher]] · *talk to Mneme*
 
-### 📅 History
-- [[Releases]]
+### 💎 The Frontier
+- [[The-Frontier]] · *23 world-firsts*
+- [[Innovations]] · *deep-dive every command*
+- [[Novel-Algorithms]] · *TDWE / RACB / ADS / CGAR*
 
 ### 📚 Commands
 - [[Command-Tour]]
@@ -23,12 +24,12 @@
 
 ### 🍳 Practical
 - [[Recipes]]
-- [[MCP-Integration]]
 
 ### 🛠 Reference
 - [[Privacy]]
 - [[FAQ]]
 - [[Troubleshooting]]
+- [[Releases]]
 
 ### 🌐 Project
 - [GitHub](https://github.com/patsa2561-art/mneme-ai)

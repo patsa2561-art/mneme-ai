@@ -135,25 +135,6 @@ Mneme **auto-detects** any of these — set `GROQ_API_KEY`, `OPENROUTER_API_KEY`
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🧠 New in v0.20 — talk to Mneme like a human
-
-You don't need to memorize 50 commands. Just describe what you want:
-
-```bash
-mneme do "find security issues"        # → vulns + anomaly + secret scan
-mneme do "is the codebase healthy"      # → status + guardian + drawdown + vix
-mneme do "who knows about auth"          # → who-knows + story
-mneme do "blast radius of HEAD"          # → blast + correlation matrix (any ref works: HEAD, branch, hash)
-mneme do "should we ship today"          # → guardian + anomaly + recent vulns
-mneme do "onboarding tour"               # → constellation + decisions + experts
-```
-
-Mneme classifies your intent, picks the right sub-engines, runs them in
-sequence, and prints one synthesized report. Routing is deterministic
-regex — sub-millisecond, no LLM call to dispatch.
-
-═══════════════════════════════════════════════════════════════════════════════
-
 ## 🛡 Always-on protection — `mneme guard`
 
 Install the pre-commit hook **once** and forget it exists:

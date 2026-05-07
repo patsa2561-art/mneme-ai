@@ -1,58 +1,110 @@
-# Welcome to the Mneme Wiki
+# 🧠 Mneme — the AI brain for your codebase
 
 > *μνήμη — pronounced **NEE-meh** — Greek for "memory"*
 
-Mneme is the **memory layer of your codebase**. It indexes your git history, PRs, and incidents into a queryable local memory, then exposes it through a CLI and an MCP server. Your AI assistants stop guessing about history — they read it.
+Mneme indexes your **git history, PRs, and decisions** into a queryable local memory layer — then exposes it through a CLI and an MCP server. Your AI assistant stops guessing about your repo's past; it reads it.
 
-This wiki is the **comprehensive reference**. Quick links:
+This wiki is **Mneme's brain map**. Pick the room you need.
 
-## 🚀 Start here
+═══════════════════════════════════════════════════════════════════════════════
 
-- **[Quickstart](Quickstart)** — install + first query in 60 seconds
-- **[Installation](Installation)** — every install path explained
-- **[Configuration](Configuration)** — `.mneme/config.json`, env vars, embedder choice
-- **[MCP Integration](MCP-Integration)** — wire Mneme into Claude Code, Cursor, Continue, Copilot
+## 🚪 First time here?
 
-## 📚 Command reference
+| If you want to… | Go to |
+|---|---|
+| Install + try in 60 seconds | **[[Quickstart]]** |
+| See the 1-minute pitch | [README on GitHub](https://github.com/patsa2561-art/mneme-ai#readme) |
+| Use without paying for any LLM | **[[Quickstart]]** → "the free path" |
+| Plug into Claude Code / Cursor / Codex | **[[MCP-Integration]]** |
+| Browse every command in plain English | **[[Command-Tour]]** |
 
-- **[Tier 1 — Essentials](Commands-Tier-1)** — the 8 commands every user needs
-- **[Tier 2 — Insights](Commands-Tier-2-Insights)** — 11 commands that turn history into actionable answers
-- **[Tier 2 — Quant](Commands-Tier-2-Quant)** — 10 commands applying Wall Street formulas to git
-- **[Tier 2 — WILD ideas](Commands-Tier-2-WILD)** — opinionated extras (heal, palimpsest, mirror, …)
+═══════════════════════════════════════════════════════════════════════════════
 
-## 🍳 Practical guides
+## 🧠 The brain (5 lobes)
 
-- **[Recipes](Recipes)** — real-world use cases (onboarding, retros, security review, …)
-- **[Performance & scale](Performance)** — large repos, indexing speed, memory tuning
-- **[Privacy & security](Privacy-and-Security)** — what leaves the machine, what doesn't
+Mneme's intelligence is split into 5 modules. Each is independently useful and composable.
+
+| Lobe | What it does | Wiki page |
+|---|---|---|
+| **🗂 Memory layer** | Index → SQLite → retrieval (BM25 + embeddings + RRF). The substrate everything else builds on. | [[Innovations]] |
+| **📦 Hierarchical Memory (HTC)** | World-first compression-as-storage. 50K commits fit in one Claude prompt. | [[Hierarchical-Memory]] |
+| **🔬 Speculative Reasoning** | Streaming events · Leviathan citation verifier · DDTree · ConstraintPruner · sessions · wisdom-mutant | [[Speculative-Reasoning]] |
+| **🛡 Guardian** | 24/7 self-healing daemon — diagnose + auto-fix policy | [[Guardian]] |
+| **🔬 Forensic Code Science** | Bayesian author attribution · ENFSI verbal scale · CWE vuln hunt · insider-threat anomaly | [[Forensic-Code-Science]] |
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 💎 What makes Mneme one of a kind
+
+23 capabilities no maintained, open-source, local-first tool ships today.
+
+→ 🌌 **[[The-Frontier]]** — the full whitespace map (vs. Cody, Greptile, Cursor, Continue, Sweep, Aider, Copilot Workspace)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## ⚡ Talk to Mneme like a human
+
+Don't memorize 50 commands. Just describe what you want:
+
+```bash
+mneme do "find security issues"
+mneme do "is the codebase healthy"
+mneme do "who knows about auth"
+mneme do "should we ship today"
+```
+
+→ 🧠 **[[Smart-Dispatcher]]** — how `mneme do` routes intent to the right sub-engines
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 📚 Command catalog
+
+| Tier | Where | What's there |
+|---|---|---|
+| **Tier 1** — essentials | [[Commands-Tier-1]] | `init`, `index`, `status`, `ask`, `why`, `do`, `guard`, `mcp` |
+| **Tier 2** — Quant | [[Commands-Tier-2-Quant]] | drawdown · alpha · vix · greeks · black-swan · moneyball · 10 more |
+| **Innovations** | [[Innovations]] | 17+ world-firsts, deep-dive each command with output samples |
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🔬 The math (for the curious)
+
+| Topic | Wiki page |
+|---|---|
+| TDWE · RACB · ADS · CGAR scoring formulas | [[Novel-Algorithms]] |
+| STR loci · likelihood ratio · ENFSI verbal scale · CWE class taxonomy | [[Forensic-Code-Science]] |
+| HTC compression layers · token math · prompt templates | [[Hierarchical-Memory]] |
+| Speculative reasoning trace · streaming events · DDTree heap algorithm | [[Speculative-Reasoning]] |
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🍳 Practical workflows
+
+→ 🧑‍🍳 **[[Recipes]]** — multi-command workflows for: onboarding, retros, security review, dependency audit, hot-file hunt, deploy gate, post-mortem
+
+═══════════════════════════════════════════════════════════════════════════════
 
 ## 🛠 Reference
 
-- **[FAQ](FAQ)** — extended answers to common questions
-- **[Troubleshooting](Troubleshooting)** — error messages, common fixes
-- **[Architecture](Architecture)** — system diagram + schema
-- **[Contributing](Contributing)** — how to file issues, PRs, ideas
-
-## 📊 Project state
-
-| | |
+| Page | What's there |
 |---|---|
-| **Latest** | v0.10.0 |
-| **License** | MIT |
-| **Tests** | 613 unit + 160k property-based cases |
-| **Eval** | recall@3 ≈ 87%, 50-question golden set |
-| **CLI commands** | 8 essentials + 47 advanced |
-| **Languages parsed** | TS/JS · Python · Go |
-| **MCP** | native (Claude Code, Cursor, Continue, Copilot) |
+| [[Installation]] | Every install path explained (npm, npx, source, Docker) |
+| [[Configuration]] | `.mneme/config.json`, env vars, embedder choice |
+| [[Privacy]] | Where data lives · secret redaction · LLM data flow · audit log |
+| [[FAQ]] | Extended answers to common questions |
+| [[Troubleshooting]] | Error messages + concrete fixes |
+| [[Releases]] | Full version history (v0.8 → latest) |
 
-## 🌐 Links
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🌐 Outside this wiki
 
 - 📦 [npm package](https://www.npmjs.com/package/mneme-ai)
 - 💻 [GitHub repo](https://github.com/patsa2561-art/mneme-ai)
-- 📋 [Changelog](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
-- 🗺 [Roadmap](https://github.com/patsa2561-art/mneme-ai/blob/main/ROADMAP.md)
-- 🦢 [WILD ideas catalog](https://github.com/patsa2561-art/mneme-ai/blob/main/WILD_IDEAS.md)
+- 📋 [CHANGELOG](https://github.com/patsa2561-art/mneme-ai/blob/main/CHANGELOG.md)
+- 🗺 [ROADMAP](https://github.com/patsa2561-art/mneme-ai/blob/main/ROADMAP.md)
+- 🐛 [Open an issue](https://github.com/patsa2561-art/mneme-ai/issues/new)
 
----
+═══════════════════════════════════════════════════════════════════════════════
 
 > *"AI assistants don't get smarter. They get better context. Mneme is the filter."*
