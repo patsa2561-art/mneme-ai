@@ -1,0 +1,41 @@
+// Mneme — Jenkins (Declarative Pipeline) integration template.
+//
+// Drop this into a `Jenkinsfile` at the repo root.  Required:
+//  - Node 20+ on the agent
+//  - A GitHub PAT stored as a Jenkins credential called "github-pat"
+//    with `pull-requests: write` scope.
+//
+// Adjust CHANGE_ID detection if you use the GitLab/Bitbucket Branch
+// Source plugin (env.CHANGE_ID is GitHub-flavored).
+
+pipeline {
+    agent any
+    options { timeout(time: 20, unit: 'MINUTES') }
+
+    environment {
+        GITHUB_TOKEN = credentials('github-pat')
+        GITHUB_REPOSITORY = "${env.GIT_URL.replaceAll('.*github.com[:/]', '').replaceAll('.git$', '')}"
+    }
+
+    stages {
+        stage('Install Mneme') {
+            steps {
+                sh 'npm install -g mneme-ai'
+            }
+        }
+
+        stage('Index + baseline') {
+            steps {
+                sh 'mneme index --quiet || mneme index || true'
+                sh 'mneme audit --baseline || true'
+            }
+        }
+
+        stage('Mneme bot') {
+            when { expression { return env.CHANGE_ID != null } }
+            steps {
+                sh "mneme bot --platform github --pr ${env.CHANGE_ID} --include audit,atrophy"
+            }
+        }
+    }
+}

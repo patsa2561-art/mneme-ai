@@ -8,6 +8,174 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.29.0] — 2026-05-07
+
+The **"Indispensable on every CI"** release. Mneme installs on every
+CI/CD platform with a one-line drop-in, comments on every PR with a
+trust verdict, and exposes a stable public API for downstream tooling.
+Plus shell completion across bash / zsh / fish / PowerShell, and
+cross-language `influence` (Python + Go).
+
+**+146 new tests, 1791 total passing.**
+
+### 1. GitHub Action — `.github/actions/mneme-audit/`
+
+Composite action so any GitHub user can drop Mneme into a PR workflow
+in one line:
+
+```yaml
+- uses: patsa2561-art/mneme-ai/.github/actions/mneme-audit@main
+  with:
+    mode: certify
+    fail-on: fail
+    comment: true
+```
+
+Inputs: `mode` (certify/verify/trace/report/watch) · `baseline`
+(true/false) · `fail-on` (fail/warn/never) · `comment` (auto-comment
+on the PR).
+
+Marketplace-quality `README.md` lives next to `action.yml`. Designed
+so the listing description, screenshots, and copy-paste examples
+appear directly on the GitHub Marketplace page when the action is
+published.
+
+### 2. `mneme bot` — auto-comment audit verdicts on PRs
+
+New top-level command. Runs your selected analyzers (audit + atrophy +
+ghost code by default) and posts a structured GitHub-Flavored Markdown
+comment to the PR / MR.
+
+```bash
+mneme bot                              # auto-detects platform + PR
+mneme bot --platform github --pr 123   # explicit
+mneme bot --include audit,atrophy      # pick analyzers
+mneme bot --dry-run                    # print, don't post
+```
+
+Auto-detects platform from environment:
+- `GITHUB_ACTIONS` → GitHub API + `GITHUB_TOKEN`
+- `GITLAB_CI` → GitLab API + `GITLAB_TOKEN`
+- `BITBUCKET_BUILD_NUMBER` → Bitbucket API + `BITBUCKET_TOKEN`
+
+Each platform integration uses Node 18+ built-in `fetch` — no extra
+dependencies. `--dry-run` works without any token.
+
+### 3. Multi-platform CI templates — `docs/integrations/`
+
+Drop-in CI templates for every major platform:
+
+```
+docs/integrations/
+  github-actions.yml        # GitHub Actions (uses ./.github/actions/mneme-audit)
+  gitlab-ci.yml             # GitLab CI/CD
+  bitbucket-pipelines.yml   # Bitbucket Pipelines
+  circleci.yml              # CircleCI
+  jenkinsfile               # Jenkins (Groovy)
+  README.md                 # index + copy-paste instructions
+```
+
+Plus a new wiki page **`Integrations.md`** with hero ("Mneme works on
+every CI you already use"), section per platform, copy-paste snippets.
+Sidebar gains a "🔌 Integrations" group.
+
+### 4. Shell completion — `mneme completion <shell>`
+
+Tab-complete 83 commands across every major shell:
+
+```bash
+mneme completion bash       > ~/.local/share/bash-completion/completions/mneme
+mneme completion zsh        > "${fpath[1]}/_mneme"
+mneme completion fish       > ~/.config/fish/completions/mneme.fish
+mneme completion powershell >> $PROFILE
+```
+
+Self-contained scripts (no external dependencies). Discovers the
+command list from commander itself, so new commands are
+auto-completable without code change.
+
+### 5. Cross-language `mneme influence` — Python + Go
+
+`mneme influence` previously analyzed only TypeScript / JavaScript;
+extended to **Python + Go** via lightweight regex-based shape
+extractors. PageRank now ranks cultural alphas across multi-language
+repos.
+
+Files:
+- `packages/core/src/people/lang-parsers/python.ts` — Python `def` /
+  `class` / decorator extractor
+- `packages/core/src/people/lang-parsers/go.ts` — Go `func` + method
+  receiver extractor
+- Honest scope panel updated to reflect the new languages; the regex
+  approach is documented in the `📘 How to read` block.
+
+End-to-end test (`influence.crosslang.test.ts`) creates a real git
+temp repo with `.py` + `.go` + `.ts` files, commits them, runs
+`buildInfluenceReport`, and asserts the language mix is non-zero
+across all three.
+
+### 6. Stable public API — `@mneme-ai/core/public`
+
+New entry point for downstream tooling: bots, IDE extensions,
+dashboards, GitHub Apps. Curated semver-stable surface — anything
+NOT exposed here is internal and may change between minor versions.
+
+```ts
+import {
+  // Audit pipeline
+  captureBaseline,
+  traceSession,
+  certifySession,
+  type AuditCertificate,
+
+  // People analytics
+  telepathy,
+  atrophy,
+  buildPassport,
+  buildNervousSystem,
+  renderNervousSystemHtml,
+  htmlToPdf,
+} from "@mneme-ai/core/public";
+```
+
+Files:
+- `packages/core/src/public.ts` — the curated surface (~210 lines)
+- `packages/core/package.json` — `exports["./public"]` subpath added
+- `docs/wiki/Public-API.md` — full API reference + usage patterns
+- Sidebar gains a "Public-API" entry
+
+### Tests
+
+- `packages/core/src/bot/comment.test.ts` (~10 tests)
+- `packages/core/src/bot/platforms/platforms.test.ts` (~8 tests)
+- `packages/cli/src/commands/bot.test.ts` (~6 tests)
+- `packages/cli/src/commands/completion.test.ts` (24 tests)
+- `packages/cli/src/commands/completion.smoke.test.ts` (5 tests)
+- `packages/core/src/people/lang-parsers/python.test.ts` (13 tests)
+- `packages/core/src/people/lang-parsers/go.test.ts` (13 tests)
+- `packages/core/src/people/lang-parsers/dispatcher.test.ts` (5 tests)
+- `packages/core/src/people/lang-parsers/sample-output.test.ts` (3 tests)
+- `packages/core/src/people/influence.crosslang.test.ts` (2 tests)
+- `packages/core/src/people/influence.test.ts` (+5 cross-language)
+
+**Total: +146 new tests; 1791 passing.**
+
+### Honest limits / known caveats
+
+- **Bot platform integrations** are unit-tested but the live HTTP path
+  has not been exercised against real GitHub / GitLab / Bitbucket
+  instances. Use `--dry-run` first, then watch your first PR comment
+  carefully.
+- **GitHub Action** is shipped in-repo. To list it on the GitHub
+  Marketplace, the `marketplace.yml` metadata + a tagged release of
+  the action subdirectory is still required (manual one-time step).
+- **Python / Go regex parsers** are deliberately lightweight. They
+  miss multi-line signatures, generic-receiver edge cases, and
+  string-literal false positives. Documented in the parser's HEADS UP.
+- **Public API** is declared stable but real consumers will surface
+  shape mismatches when they integrate. We commit to additive minor
+  releases and major-only breaking changes.
+
 ## [0.28.0] — 2026-05-07
 
 The **"Mneme Nervous System"** release. Eight new commands surfacing

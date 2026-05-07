@@ -15,6 +15,9 @@ Commands:
                                    gets a trust certificate (vendor-neutral;
                                    works with Claude Code / Cursor / Codex /
                                    Sweep / etc.)
+  bot [options]                    Auto-comment Mneme audit + atrophy + ghost
+                                   results on PRs / MRs (GitHub · GitLab ·
+                                   Bitbucket — auto-detects CI environment).
   atrophy [options] [author]       Knowledge half-life clock — Ebbinghaus
                                    forgetting curve over (author × file) pairs.
                                    Shows who still remembers what, and where
@@ -31,7 +34,8 @@ Commands:
                                    patterns everyone else copies
                                    (volume-independent: a 5-commit
                                    pattern-setter outranks a 500-commit
-                                   copy-paster; TS/JS only)
+                                   copy-paster; analyzes TypeScript /
+                                   JavaScript / Python / Go)
   lineage [options] <target>       Semantic ownership of code over time — whose
                                    interpretation of whose intent currently
                                    lives in this code (NOT git blame; use for
@@ -55,6 +59,10 @@ Commands:
                                    later" / TODO / follow-up parsed into a
                                    ledger and verified against history
                                    (heuristic; treat as a starting list)
+  completion <shell>               Print a shell-completion script for bash,
+                                   zsh, fish, or powershell. Pipe to your
+                                   completion file to enable tab-completion
+                                   across every Mneme command.
   do [options] <query...>          Smart dispatcher — describe what you want,
                                    Mneme picks tools and runs them ('do find
                                    security issues' / 'do is the codebase

@@ -21,6 +21,10 @@
 - [[People-Analytics]] · *what GitHub cannot see*
 - [[Mneme-Nervous-System]] · *the flagship PDF report*
 
+### 🔌 Integrations
+- [[Integrations]] · *GitHub · GitLab · Bitbucket · CircleCI · Jenkins*
+- [[Public-API]] · *@mneme-ai/core/public — the stable surface*
+
 ### 💎 The Frontier
 - [[The-Frontier]] · *23 world-firsts*
 - [[Innovations]] · *deep-dive every command*

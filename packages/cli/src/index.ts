@@ -5,6 +5,7 @@ import { initCommand } from "./commands/init.js";
 import { doCommand } from "./commands/do.js";
 import { guardCommand } from "./commands/guard.js";
 import { setupFreeCommand } from "./commands/setup-free.js";
+import { completionCommand } from "./commands/completion.js";
 import { upgradeCommand } from "./commands/upgrade.js";
 import { htcBuildCommand, htcStatsCommand } from "./commands/htc.js";
 import { indexCommand } from "./commands/index-cmd.js";
@@ -37,6 +38,7 @@ import { teachCommand } from "./commands/teach.js";
 import { blastCommand } from "./commands/blast.js";
 import { adaptCommand } from "./commands/adapt.js";
 import { auditCommand } from "./commands/audit.js";
+import { botCommand } from "./commands/bot.js";
 import { atrophyCommand } from "./commands/atrophy.js";
 import { telepathyCommand } from "./commands/telepathy.js";
 import { influenceCommand } from "./commands/influence.js";
@@ -134,6 +136,33 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
+  // ─── bot — auto-comment on PRs / MRs across CI platforms ─────────────
+  program
+    .command("bot")
+    .description("Auto-comment Mneme audit + atrophy + ghost results on PRs / MRs (GitHub · GitLab · Bitbucket — auto-detects CI environment).")
+    .option("--pr <number>", "override PR / MR number (auto-detected from CI env by default)", (v) => Number(v))
+    .option("--platform <name>", "github | gitlab | bitbucket (auto-detect default)")
+    .option("--include <list>", "comma-separated analyzers: audit,atrophy,ghost,promise", "audit,atrophy")
+    .option("--dry-run", "print the rendered comment without posting", false)
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { pr?: number; platform?: string; include?: string; dryRun?: boolean; json?: boolean }) => {
+      const platform = opts.platform as "github" | "gitlab" | "bitbucket" | undefined;
+      if (platform && platform !== "github" && platform !== "gitlab" && platform !== "bitbucket") {
+        ui.error("--platform must be one of: github | gitlab | bitbucket");
+        process.exit(1);
+      }
+      process.exit(
+        await botCommand({
+          cwd: process.cwd(),
+          pr: opts.pr,
+          platform,
+          include: opts.include,
+          dryRun: opts.dryRun,
+          json: opts.json,
+        }),
+      );
+    });
+
   // ─── atrophy — knowledge half-life clock ────────────────────────────
   program
     .command("atrophy [author]")
@@ -183,7 +212,7 @@ export async function run(argv: string[]): Promise<void> {
   // ─── influence — code-pattern PageRank (cultural alphas) ────────────
   program
     .command("influence")
-    .description("Cultural-alpha ranking — who writes the patterns everyone else copies (volume-independent: a 5-commit pattern-setter outranks a 500-commit copy-paster; TS/JS only)")
+    .description("Cultural-alpha ranking — who writes the patterns everyone else copies (volume-independent: a 5-commit pattern-setter outranks a 500-commit copy-paster; analyzes TypeScript / JavaScript / Python / Go)")
     .option("--top <n>", "rows to show", (v) => Number(v), 10)
     .option("--pattern-min-uses <n>", "only count patterns adopted at least this many times", (v) => Number(v), 3)
     .option("--author <email>", "deep-dive on a single author's originated patterns + adopters")
@@ -312,6 +341,27 @@ export async function run(argv: string[]): Promise<void> {
           verbose: opts.verbose,
         }),
       );
+    });
+
+  // ─── completion — emit a shell-completion script (bash/zsh/fish/powershell)
+  program
+    .command("completion <shell>")
+    .description(
+      "Print a shell-completion script for bash, zsh, fish, or powershell. Pipe to your completion file to enable tab-completion across every Mneme command.",
+    )
+    .action((shell: string) => {
+      const allowed: ReadonlyArray<"bash" | "zsh" | "fish" | "powershell"> = [
+        "bash",
+        "zsh",
+        "fish",
+        "powershell",
+      ];
+      const requested = shell.toLowerCase() as (typeof allowed)[number];
+      if (!allowed.includes(requested)) {
+        ui.error(`Unsupported shell: ${shell}. Supported: ${allowed.join(", ")}`);
+        process.exit(1);
+      }
+      process.exit(completionCommand({ program, shell: requested }));
     });
 
   // ─── v0.20.0: smart dispatcher — one command, world-class routing ────

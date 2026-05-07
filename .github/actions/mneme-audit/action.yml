@@ -1,0 +1,153 @@
+name: "Mneme — AI Session Audit"
+description: "Audit AI-driven commits with a 5-axis trust certificate. Vendor-neutral; works with Claude Code · Cursor · Codex · Sweep · Aider."
+author: "patsa2561-art"
+branding:
+  icon: "shield"
+  color: "purple"
+
+inputs:
+  mode:
+    description: "audit mode: certify | verify | trace | report | watch"
+    required: false
+    default: "certify"
+  baseline:
+    description: "build a baseline before running (true | false)"
+    required: false
+    default: "true"
+  fail-on:
+    description: "behavior on FAIL verdict: fail | warn | never"
+    required: false
+    default: "fail"
+  comment:
+    description: "auto-comment results on the PR (true | false)"
+    required: false
+    default: "true"
+  pr-number:
+    description: "PR number (auto-detected from event by default)"
+    required: false
+    default: ""
+  include:
+    description: "comma-separated analyzers for the PR comment (audit,atrophy,ghost,promise)"
+    required: false
+    default: "audit,atrophy"
+  node-version:
+    description: "Node version to install Mneme on"
+    required: false
+    default: "20"
+
+outputs:
+  verdict:
+    description: "Overall audit verdict: pass | warn | fail"
+    value: ${{ steps.audit.outputs.verdict }}
+  exit-code:
+    description: "0 if the audit passed/warned, 1 if it failed"
+    value: ${{ steps.audit.outputs.exit-code }}
+  certificate-path:
+    description: "Filesystem path to the JSON certificate produced by the audit"
+    value: ${{ steps.audit.outputs.certificate-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install Mneme
+      shell: bash
+      run: npm install -g mneme-ai
+
+    - name: Index repo
+      shell: bash
+      run: mneme index --quiet || mneme index || true
+
+    - name: Build baseline (if requested)
+      if: inputs.baseline == 'true'
+      shell: bash
+      run: mneme audit --baseline || true
+
+    - name: Run audit
+      id: audit
+      shell: bash
+      run: |
+        set +e
+        mneme audit --${{ inputs.mode }} --json > "${RUNNER_TEMP:-/tmp}/mneme-audit.json"
+        rc=$?
+        echo "certificate-path=${RUNNER_TEMP:-/tmp}/mneme-audit.json" >> "$GITHUB_OUTPUT"
+        verdict=$(node -e "try { const c = require('${RUNNER_TEMP:-/tmp}/mneme-audit.json'); process.stdout.write(c.overallVerdict || 'pass'); } catch (e) { process.stdout.write('pass'); }")
+        echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$rc" >> "$GITHUB_OUTPUT"
+        if [ "${{ inputs.fail-on }}" = "fail" ] && [ "$verdict" = "fail" ]; then
+          exit "$rc"
+        fi
+        if [ "${{ inputs.fail-on }}" = "warn" ] && { [ "$verdict" = "fail" ] || [ "$verdict" = "warn" ]; }; then
+          exit 1
+        fi
+        exit 0
+
+    - name: Comment on PR
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const certPath = process.env.RUNNER_TEMP
+            ? path.join(process.env.RUNNER_TEMP, 'mneme-audit.json')
+            : '/tmp/mneme-audit.json';
+          let cert;
+          try {
+            cert = JSON.parse(fs.readFileSync(certPath, 'utf8'));
+          } catch (err) {
+            core.warning(`Mneme audit JSON not readable at ${certPath} — ${err.message}`);
+            return;
+          }
+
+          const verdictIcon = (v) => v === 'pass' ? '✅' : v === 'warn' ? '⚠️' : '❌';
+          const axisRow = (name, info) => {
+            const v = info && info.verdict ? info.verdict : 'pass';
+            const reason = (info && info.reason) || '';
+            return `| ${name} | ${verdictIcon(v)} ${v} | ${reason} |`;
+          };
+
+          const overall = cert.overallVerdict || 'pass';
+          const axes = cert.axes || {};
+          const lines = [];
+          lines.push(`## 🤖 Mneme audit · \`mneme audit --${{ inputs.mode }}\``);
+          lines.push('');
+          lines.push(`**Verdict: ${verdictIcon(overall)} ${overall}** · session \`${cert.sessionId || '?'}\``);
+          lines.push('');
+          lines.push('<details>');
+          lines.push('<summary><b>📊 5-axis breakdown</b></summary>');
+          lines.push('');
+          lines.push('| Axis | Verdict | Detail |');
+          lines.push('|---|---|---|');
+          lines.push(axisRow('🎯 Behavioral parity', axes.behavioralParity));
+          lines.push(axisRow('📐 API contract drift', axes.apiContractDrift));
+          if (axes.testPassRate) {
+            const t = axes.testPassRate;
+            lines.push(`| ✅ Test pass rate | ${verdictIcon(t.verdict)} ${t.verdict} | ${t.reason} (${t.before || ''} → ${t.after || ''}) |`);
+          }
+          if (axes.perfRegression) {
+            const p = axes.perfRegression;
+            lines.push(`| ⚡ Perf regression | ${verdictIcon(p.verdict)} ${p.verdict} | ${p.reason} (${p.deltaPercent ?? 0}%) |`);
+          }
+          lines.push(axisRow('📰 AI narrative', axes.aiNarrative));
+          lines.push('');
+          lines.push('</details>');
+          lines.push('');
+          lines.push('<sub>Generated by [Mneme](https://github.com/patsa2561-art/mneme-ai) · all data computed locally.</sub>');
+
+          const body = lines.join('\n');
+          const prNumber = '${{ inputs.pr-number }}' || (context.payload.pull_request && context.payload.pull_request.number);
+          if (!prNumber) {
+            core.info('No PR number resolved — skipping comment.');
+            return;
+          }
+          await github.rest.issues.createComment({
+            issue_number: Number(prNumber),
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body,
+          });

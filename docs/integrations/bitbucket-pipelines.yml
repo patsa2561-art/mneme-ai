@@ -1,0 +1,25 @@
+# Mneme — Bitbucket Pipelines integration template
+#
+# Copy the `mneme-bot` step into your `bitbucket-pipelines.yml`.
+# Required Repository variables (Settings → Repository variables):
+#   - BITBUCKET_TOKEN           OAuth bearer (preferred), OR
+#   - BITBUCKET_USERNAME + BITBUCKET_APP_PASSWORD (Basic auth)
+#
+# Bitbucket exposes BITBUCKET_PR_ID, BITBUCKET_WORKSPACE, and
+# BITBUCKET_REPO_SLUG automatically — Mneme reads them.
+
+image: node:20
+
+pipelines:
+  pull-requests:
+    "**":
+      - step:
+          name: "mneme · audit + atrophy"
+          caches:
+            - node
+          script:
+            - npm install -g mneme-ai
+            # `--quiet` keeps logs short; remove for verbose indexing.
+            - mneme index --quiet || mneme index || true
+            - mneme audit --baseline || true
+            - mneme bot --include audit,atrophy

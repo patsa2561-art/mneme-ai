@@ -137,6 +137,7 @@ function renderInfluence(report: InfluenceReport, opts: InfluenceCommandOptions)
     `    ${kleur.gray("•")} ${kleur.bold("adopt")} ${kleur.gray("= total times someone else copied this person's shape (function name + arity).")}`,
     `    ${kleur.gray("•")} ${kleur.bold("uniq")} ${kleur.gray("= distinct adopters. 8 unique adopters means a real cultural pattern, not one fan.")}`,
     `    ${kleur.gray("•")} ${kleur.bold("origin")} ${kleur.gray("= patterns this person originated that ≥3 (or your --pattern-min-uses) others adopted.")}`,
+    `    ${kleur.gray("•")} ${kleur.gray("Languages walked: TypeScript / JavaScript (full-fidelity AST), Python / Go (regex shape extractor — multi-line signatures may be missed). Other languages are not analyzed yet.")}`,
     `    ${kleur.gray("•")} ${kleur.gray("This is")} ${kleur.bold("not")} ${kleur.gray("a productivity ranking. It's a cultural-influence ranking — who shapes how the team writes code.")}`,
   ];
 

@@ -1,0 +1,48 @@
+# Mneme — GitHub Actions integration template
+#
+# Copy this file to `.github/workflows/mneme-bot.yml` in your repo.
+# Mneme will post a Markdown PR comment with the audit + atrophy results
+# every time a pull request opens or updates.
+#
+# Required permissions: `contents: read` and `pull-requests: write`.
+# Required token: the default `GITHUB_TOKEN` works — no extra secrets.
+
+name: Mneme bot
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  mneme:
+    name: mneme · audit + atrophy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50  # Mneme needs commit history; 50 is usually enough.
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # 1. Install Mneme.
+      - name: Install Mneme
+        run: npm install -g mneme-ai
+
+      # 2. Index the repo into Mneme's local memory.
+      - name: Index
+        run: mneme index --quiet || mneme index || true
+
+      # 3. Take a baseline (so `mneme audit --certify` has something to compare to).
+      - name: Baseline
+        run: mneme audit --baseline || true
+
+      # 4. Comment on the PR.  Auto-detects GITHUB_TOKEN + PR number.
+      - name: Mneme bot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mneme bot --include audit,atrophy

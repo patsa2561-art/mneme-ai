@@ -218,3 +218,39 @@ describe("pageRank — weight semantics on adoption pattern", () => {
 
 const _ShapeKeyExportSanity: ShapeKey = { key: "function:f/0", kind: "function", name: "f", arity: 0 };
 void _ShapeKeyExportSanity;
+
+describe("entityShape — cross-language grouping (TS / Python / Go)", () => {
+  // Using bare entities here mimics what the Python/Go regex extractors emit:
+  // signatures look like "def foo(a, b)" or "func Foo(a int, b int)".
+  it("Python def + TS function with same name+arity share the same shape key", () => {
+    const ts = entityShape(e({ name: "process", signature: "function process(a, b)", filePath: "x.ts", language: "typescript" }));
+    const py = entityShape(e({ name: "process", signature: "def process(a, b)", filePath: "x.py", language: "python" }));
+    expect(ts.key).toBe(py.key);
+  });
+
+  it("Go func with same name+arity as TS shares the same shape key", () => {
+    const ts = entityShape(e({ name: "Add", signature: "function Add(a, b)", filePath: "x.ts", language: "typescript" }));
+    const go = entityShape(e({ name: "Add", signature: "func Add(a int, b int)", filePath: "x.go", language: "go" }));
+    expect(ts.key).toBe(go.key);
+  });
+
+  it("Go method `Cache.Get` is distinct from a free fn `Get`", () => {
+    const free = entityShape(e({ name: "Get", signature: "func Get(k)", filePath: "a.go", language: "go" }));
+    const meth = entityShape(e({ name: "Cache.Get", signature: "func (Cache) Get(k)", filePath: "a.go", language: "go" }));
+    expect(free.key).not.toBe(meth.key);
+  });
+
+  it("Python class declaration has a different shape kind than a same-named function", () => {
+    const cls = entityShape(e({ name: "Cache", kind: "class", signature: "class Cache", filePath: "a.py", language: "python" }));
+    const fn = entityShape(e({ name: "Cache", kind: "function", signature: "def Cache()", filePath: "a.py", language: "python" }));
+    expect(cls.key).not.toBe(fn.key);
+  });
+
+  it("language differences alone do NOT change the shape key (cultural propagation crosses languages)", () => {
+    const ts = entityShape(e({ name: "validate", signature: "function validate(x)", filePath: "v.ts", language: "typescript" }));
+    const py = entityShape(e({ name: "validate", signature: "def validate(x)", filePath: "v.py", language: "python" }));
+    const go = entityShape(e({ name: "validate", signature: "func validate(x int)", filePath: "v.go", language: "go" }));
+    expect(ts.key).toBe(py.key);
+    expect(ts.key).toBe(go.key);
+  });
+});

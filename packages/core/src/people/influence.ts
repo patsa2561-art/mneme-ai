@@ -5,10 +5,13 @@
  * people by *pattern propagation* — who writes the patterns that everyone
  * else copies?
  *
- * Algorithm (v1, TS/JS only, intentionally bounded):
+ * Algorithm (TypeScript / JavaScript / Python / Go, intentionally bounded):
  *
- *   1. Parse current HEAD with the existing TypeScriptParser → list of
- *      (name, signature, filePath) function/class/type entities.
+ *   1. Parse current HEAD:
+ *        • TS/JS via the TypeScript compiler API (full-fidelity).
+ *        • Python + Go via cheap regex extractors in ./lang-parsers
+ *          (no native deps — name + arity is all we need).
+ *      → list of (name, signature, filePath) function entities.
  *   2. Derive a "shape signature" per entity: `kind + name + arity`.
  *      Multiple entities across files with the same shape → one shape group.
  *   3. For each unique file in the workspace, ask git for the commit that
@@ -25,9 +28,13 @@
  *      rank = "cultural alpha".
  *
  * Honest scope cap:
- *   - TS/JS only (uses TypeScriptParser).  If a repo is mostly other
- *     languages, render `HEADS UP: only TypeScript / JavaScript files
- *     analyzed; influence rank may not reflect full team`.
+ *   - Languages analyzed: TS / TSX / JS / JSX / Python / Go. Other languages
+ *     (Rust, Java, C#, …) are NOT walked yet — render a HEADS UP so the
+ *     reader knows their teammates may be undercounted.
+ *   - Python + Go shapes are extracted with regex, not a real parser.
+ *     Multi-line signatures or strings that look like declarations may be
+ *     under- or over-counted. That noise washes out across the graph as
+ *     long as the `--pattern-min-uses` floor is sane.
  *   - Single git repo.  We don't try to merge identities across repos.
  *   - Renames are deliberately ignored.  A file `git mv`'d still counts
  *     its first-add commit as the originator's; that's a feature, not a
@@ -48,15 +55,18 @@
  *     ],
  *     "totalShapesAnalyzed": 423,
  *     "shapesWithAdoption": 64,
- *     "languageMix": { "typescript": 88, "javascript": 12 },
- *     "headsUp": "TS/JS only — non-TS/JS files were not analyzed."
+ *     "languageMix": { "typescript": 88, "javascript": 12, "python": 23, "go": 4 },
+ *     "headsUp": "Mneme analyzes TypeScript / JavaScript / Python / Go..."
  *   }
  *
  * Pure data extraction. CLI rendering lives in
  * `packages/cli/src/commands/influence.ts`.
  */
+import { readFile } from "node:fs/promises";
+import { join, extname } from "node:path";
 import { execGit } from "../git/exec.js";
 import { TypeScriptParser } from "../entities/typescript-parser.js";
+import { parseShapesByExtension, SUPPORTED_EXTENSIONS as LANG_PARSER_EXTS } from "./lang-parsers/index.js";
 import type { Entity } from "../types.js";
 
 /** A single (name, kind, arity) signature derived from an entity. */
@@ -299,7 +309,10 @@ export async function readFirstAddPerFile(cwd: string): Promise<Map<string, Firs
 export async function buildInfluenceReport(opts: InfluenceOptions): Promise<InfluenceReport> {
   const minUses = Math.max(1, opts.patternMinUses ?? 3);
 
-  // 1 — parse HEAD entities (TS/JS only).
+  // 1 — parse HEAD entities.
+  //   • TS/JS via the TypeScript compiler API (high-fidelity).
+  //   • Python / Go via the cheap regex shape extractors in ./lang-parsers
+  //     (good enough for name+arity propagation, no native deps).
   const parser = new TypeScriptParser();
   await parser.preload();
   const entities: Entity[] = [];
@@ -307,6 +320,11 @@ export async function buildInfluenceReport(opts: InfluenceOptions): Promise<Infl
     // Restrict to function-shaped entities — they're what people copy.
     // Classes / types / variables would inflate pattern counts with
     // structural ceremony (PropTypes, TypeMaps, etc.).
+    if (e.kind === "function") entities.push(e);
+  }
+
+  // Python + Go pass — list git-tracked files, read, run regex extractors.
+  for (const e of await parseNonTsShapes(opts.cwd)) {
     if (e.kind === "function") entities.push(e);
   }
 
@@ -484,15 +502,15 @@ export async function buildInfluenceReport(opts: InfluenceOptions): Promise<Infl
     };
   }
 
-  // 9 — heads-up message if non-TS/JS dominance suspected.
-  const tsLikeKinds = ["typescript", "tsx", "javascript", "jsx"];
-  const tsLikeCount = tsLikeKinds.reduce((s, k) => s + (languageMix[k] ?? 0), 0);
+  // 9 — heads-up message describing language coverage honestly.
+  const supportedKinds = ["typescript", "tsx", "javascript", "jsx", "python", "go"];
+  const supportedCount = supportedKinds.reduce((s, k) => s + (languageMix[k] ?? 0), 0);
   const headsUp =
     entities.length === 0
-      ? "No TypeScript / JavaScript functions found at HEAD — `mneme influence` is currently TS/JS-only."
-      : tsLikeCount === entities.length
-        ? undefined
-        : "TS/JS only — non-TS/JS files were not analyzed; influence rank may not reflect full team.";
+      ? "No analyzable functions found at HEAD — Mneme analyzes TypeScript / JavaScript / Python / Go."
+      : supportedCount === entities.length
+        ? "Mneme analyzes TypeScript / JavaScript / Python / Go. Other languages (Rust, Java, etc.) were not analyzed and may underweight some authors."
+        : "Mneme analyzes TypeScript / JavaScript / Python / Go. Other languages were not analyzed; influence rank may not reflect full team.";
 
   return {
     rankings,
@@ -507,4 +525,42 @@ export async function buildInfluenceReport(opts: InfluenceOptions): Promise<Infl
 function round(n: number, places: number): number {
   const f = Math.pow(10, places);
   return Math.round(n * f) / f;
+}
+
+/**
+ * Walk git-tracked Python + Go files and run the regex shape extractors.
+ * Honest scope: regex-based, so multi-line signatures and string-literals
+ * that look like declarations may be missed or false-positive. That noise
+ * washes out across the PageRank graph — adoption that doesn't repeat
+ * across multiple files never crosses the `--pattern-min-uses` floor.
+ */
+async function parseNonTsShapes(cwd: string): Promise<Entity[]> {
+  const r = await execGit(["ls-files"], { cwd });
+  if (r.code !== 0) return [];
+  const tracked = r.stdout
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .filter((p) => LANG_PARSER_EXTS.has(extname(p).toLowerCase()))
+    .filter((p) => !/(^|\/)tests?\//.test(p))
+    .filter((p) => !/_test\.(py|go)$|\/test_/.test(p))
+    .filter((p) => !/(^|\/)(\.venv|venv|__pycache__|vendor|testdata|dist|build|node_modules)\//.test(p));
+
+  const out: Entity[] = [];
+  for (const rel of tracked) {
+    let source: string;
+    try {
+      source = await readFile(join(cwd, rel), "utf8");
+    } catch {
+      continue;
+    }
+    try {
+      for (const e of parseShapesByExtension(rel, source)) {
+        out.push(e);
+      }
+    } catch {
+      // best-effort — keep going on bad files
+    }
+  }
+  return out;
 }

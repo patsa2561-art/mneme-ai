@@ -1,0 +1,44 @@
+# Mneme — CircleCI integration template
+#
+# Copy this snippet into your `.circleci/config.yml`.  CircleCI does not
+# itself host PRs, so we use the GitHub API path: set the
+# `MNEME_GITHUB_TOKEN` context with a PAT that has `pull-requests: write`.
+#
+# Mneme infers the GitHub repo from the CircleCI env vars
+# (`CIRCLE_PROJECT_USERNAME` + `CIRCLE_PROJECT_REPONAME`) and the PR
+# number from `CIRCLE_PULL_REQUEST`.
+
+version: 2.1
+
+jobs:
+  mneme-bot:
+    docker:
+      - image: cimg/node:20.0
+    steps:
+      - checkout
+      - run:
+          name: Install Mneme
+          command: npm install -g mneme-ai
+      - run:
+          name: Index
+          command: mneme index --quiet || mneme index || true
+      - run:
+          name: Baseline
+          command: mneme audit --baseline || true
+      - run:
+          name: Mneme bot
+          environment:
+            # Mneme expects standard GitHub env names — bridge from Circle's.
+            GITHUB_REPOSITORY: ${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+          command: |
+            export GITHUB_TOKEN="$MNEME_GITHUB_TOKEN"
+            PR_NUM=$(echo "$CIRCLE_PULL_REQUEST" | sed -E 's,.*/pull/([0-9]+).*,\1,')
+            mneme bot --platform github --pr "$PR_NUM" --include audit,atrophy
+
+workflows:
+  pr:
+    jobs:
+      - mneme-bot:
+          filters:
+            branches:
+              ignore: main  # only on PR branches

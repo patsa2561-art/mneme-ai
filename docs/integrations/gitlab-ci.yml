@@ -1,0 +1,23 @@
+# Mneme — GitLab CI integration template
+#
+# Copy the `mneme-bot` job into your `.gitlab-ci.yml`.  It runs only on
+# Merge Request pipelines.  Provide a `GITLAB_TOKEN` CI/CD variable with
+# `api` scope (a project-access token works); CI_JOB_TOKEN cannot post
+# MR comments on most setups.
+
+mneme-bot:
+  image: node:20
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    # Mneme picks these up automatically via env vars below — listed for clarity.
+    CI_PROJECT_ID: $CI_PROJECT_ID
+    CI_MERGE_REQUEST_IID: $CI_MERGE_REQUEST_IID
+    GITLAB_TOKEN: $GITLAB_TOKEN  # set this in CI/CD settings
+  script:
+    - npm install -g mneme-ai
+    - mneme index --quiet || mneme index || true
+    - mneme audit --baseline || true
+    - mneme bot --include audit,atrophy
+  allow_failure: true  # set to false once you trust the gate.

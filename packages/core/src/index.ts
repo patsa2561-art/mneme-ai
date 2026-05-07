@@ -16,3 +16,4 @@ export * as htc from "./htc/index.js";
 export * as pipeline from "./pipeline/index.js";
 export * as audit from "./audit/index.js";
 export * as people from "./people/index.js";
+export * as bot from "./bot/index.js";
