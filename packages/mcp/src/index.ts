@@ -9,7 +9,7 @@ import {
   type CallToolResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { git, retrieve, store, type AskResult, type SearchResult } from "@mneme-ai/core";
+import { git, retrieve, store, htc, type AskResult, type SearchResult } from "@mneme-ai/core";
 import { resolveEmbedder } from "@mneme-ai/embeddings";
 
 export interface McpOptions {
@@ -139,6 +139,24 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
 
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+    // v0.24 HTC: default to compressed responses when Layer-1 abstracts exist.
+    // Caller opts out with `compress=false` to get raw bodies.
+    const compressOptOut = args["compress"] === false;
+    function htcCompressedFor(results: SearchResult[]): Map<string, string> | undefined {
+      if (compressOptOut) return undefined;
+      try {
+        const cached = htc.getAllAbstracts(s);
+        if (cached.size === 0) return undefined;
+        const out = new Map<string, string>();
+        for (const r of results) {
+          const hit = cached.get(r.commit.hash);
+          if (hit) out.set(r.commit.hash, hit.abstract);
+        }
+        return out.size > 0 ? out : undefined;
+      } catch {
+        return undefined;
+      }
+    }
     try {
       switch (req.params.name) {
         case "mneme_ask": {
@@ -148,7 +166,7 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
             repo: meta,
             topK: typeof args["topK"] === "number" ? args["topK"] : 8,
           });
-          return jsonResult(toAskPayload(result));
+          return jsonResult(toAskPayload(result, htcCompressedFor(result.searchResults)));
         }
         case "mneme_search_commits": {
           const results = await retrieve.search(String(args["query"] ?? ""), {
@@ -157,7 +175,8 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
             repo: meta,
             topK: typeof args["topK"] === "number" ? args["topK"] : 8,
           });
-          return jsonResult(results.map(toSearchPayload));
+          const compressed = htcCompressedFor(results);
+          return jsonResult(results.map((sr) => toSearchPayload(sr, compressed)));
         }
         case "mneme_why": {
           const file = String(args["file"] ?? "");
@@ -302,16 +321,40 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   await server.connect(transport);
 }
 
-function toAskPayload(r: AskResult): unknown {
+function toAskPayload(r: AskResult, compressedAbstracts?: Map<string, string>): unknown {
   return {
     question: r.question,
     summary: r.summary,
     citations: r.citations,
-    results: r.searchResults.map(toSearchPayload),
+    results: r.searchResults.map((s) => toSearchPayload(s, compressedAbstracts)),
   };
 }
 
-function toSearchPayload(s: SearchResult): unknown {
+/**
+ * v0.24 HTC: when an abstracts map is provided, emit the compressed payload
+ * (abstract, hash, subject only — drops raw body + full file list). MCP
+ * clients (Claude Code, Cursor, Codex) consume ~10× fewer tokens.
+ *
+ * Caller can opt back into raw with `compress=false` in tool args.
+ */
+function toSearchPayload(s: SearchResult, compressedAbstracts?: Map<string, string>): unknown {
+  if (compressedAbstracts && compressedAbstracts.has(s.commit.hash)) {
+    return {
+      score: s.score,
+      commit: {
+        hash: s.commit.hash,
+        shortHash: s.commit.shortHash,
+        date: s.commit.authorDate.slice(0, 10),
+        author: s.commit.authorName,
+        // Compressed abstract takes the place of subject + body
+        abstract: compressedAbstracts.get(s.commit.hash),
+        // Keep prNumber as a lightweight cross-ref
+        prNumber: s.commit.prNumber,
+      },
+      compressed: true,
+      matchedKinds: Array.from(new Set(s.matchedChunks.map((c) => c.kind))),
+    };
+  }
   return {
     score: s.score,
     commit: {

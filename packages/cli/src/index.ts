@@ -6,6 +6,7 @@ import { doCommand } from "./commands/do.js";
 import { guardCommand } from "./commands/guard.js";
 import { setupFreeCommand } from "./commands/setup-free.js";
 import { upgradeCommand } from "./commands/upgrade.js";
+import { htcBuildCommand, htcStatsCommand } from "./commands/htc.js";
 import { indexCommand } from "./commands/index-cmd.js";
 import { askCommand } from "./commands/ask.js";
 import { guardianCommand } from "./commands/guardian.js";
@@ -101,6 +102,32 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
         }),
       );
+    });
+
+  // ─── v0.24.0: HTC — Hierarchical Token Cache (compress codebase for LLM) ─
+  program
+    .command("htc-build")
+    .description("Compress every commit + cluster + memoir into LLM-ready cache (10× smaller, paid once, free LLM ladder auto-detected)")
+    .option("--abstracts-only", "skip Layer 2 + 3", false)
+    .option("--refresh-memoir", "regenerate Layer 3 even if recent", false)
+    .option("--concurrency <n>", "parallel LLM calls (default 3)", (v) => Number(v), 3)
+    .action(async (opts: { abstractsOnly?: boolean; refreshMemoir?: boolean; concurrency?: number }) => {
+      process.exit(
+        await htcBuildCommand({
+          cwd: process.cwd(),
+          abstractsOnly: opts.abstractsOnly,
+          refreshMemoir: opts.refreshMemoir,
+          concurrency: opts.concurrency,
+        }),
+      );
+    });
+
+  program
+    .command("htc-stats")
+    .description("Inspect HTC coverage + compression ratio (raw vs cached tokens)")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { json?: boolean }) => {
+      process.exit(await htcStatsCommand({ cwd: process.cwd(), json: opts.json }));
     });
 
   // ─── v0.22.2: bulletproof self-update ────────────────────────────────

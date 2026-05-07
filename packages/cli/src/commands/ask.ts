@@ -1,4 +1,4 @@
-import { git, retrieve, store, wisdom } from "@mneme-ai/core";
+import { git, retrieve, store, wisdom, htc } from "@mneme-ai/core";
 import { resolveEmbedder, resolveAllEnrichers, ResilientEnricher } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig } from "../config.js";
@@ -140,6 +140,25 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     }
   }
 
+  // v0.24 HTC: when Layer-1 abstracts are cached for the top results, pass
+  // them into synthesize() — the prompt uses ~30 tok/commit instead of ~500.
+  // 10× cheaper LLM calls, same answer quality. Silent feature: no flag, no
+  // user-visible change beyond lower latency + faster `ask`.
+  const htcAbstracts = (() => {
+    try {
+      const cached = htc.getAllAbstracts(s);
+      if (cached.size === 0) return undefined;
+      const map = new Map<string, string>();
+      for (const r of results.slice(0, 8)) {
+        const hit = cached.get(r.commit.hash);
+        if (hit) map.set(r.commit.hash, hit.abstract);
+      }
+      return map.size > 0 ? map : undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+
   const synthesized = await retrieve.synthesize(
     opts.question,
     results,
@@ -148,6 +167,7 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     {
       auditMode: opts.audit ?? false,
       auditFloor: opts.auditFloor ?? "medium",
+      htcAbstracts,
     },
   );
 

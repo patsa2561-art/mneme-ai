@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-962%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1010%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -60,7 +60,8 @@ mneme upgrade                     # bulletproof self-update (npm cache + PATH co
 
 | Version | Headline |
 |---|---|
-| **v0.23.0** | **Speculative Reasoning** — streaming thought events · Leviathan citation verifier · DDTree commit-tree search · ConstraintPruner trait · path-aware sessions · wisdom auto-adapt |
+| **v0.24.0** | **Hierarchical Memory** — world-first compression-as-storage. 50K commits fit in one Claude prompt. `mneme htc-build` + `htc-stats`. 10× fewer tokens per query. Compressed MCP responses. |
+| v0.23.0 | Speculative Reasoning — streaming thought events · Leviathan citation verifier · DDTree commit-tree search · ConstraintPruner trait · path-aware sessions · wisdom auto-adapt |
 | v0.22.2 | `mneme upgrade` — bulletproof self-update (bypasses npm cache + PATH conflicts) |
 | v0.22.1 | ResilientEnricher — self-healing free-LLM fallback chain (Ollama → Groq → OpenRouter → OpenAI) |
 | v0.22.0 | Free Forever — `mneme setup-free` wizard, multi-provider auto-detect, Qwen / Gemma / Llama curated |

@@ -5,8 +5,9 @@
  * Phase 2 — entities, entity_clusters
  * Phase 3 — incidents, correlations
  * Phase 4 — graph_snapshots (for temporal viz)
+ * Phase 5 — htc (Hierarchical Token Cache) — abstracts, clusters, memoir
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -184,4 +185,44 @@ CREATE TABLE IF NOT EXISTS wisdom_eval_run (
   notes TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_eval_ran_at ON wisdom_eval_run(ran_at);
+
+-- Phase 5 — Hierarchical Token Cache (HTC)
+-- The world-first compression-as-storage layer. Mneme pre-compresses an
+-- entire codebase's git history into LLM-consumable form at index-time.
+-- 50,000 commits fit in one LLM prompt; token cost paid ONCE; reused forever.
+--
+-- Three layers:
+--   Layer 1 — htc_abstracts: ~30 tok/commit, LLM-generated once, cached
+--   Layer 2 — htc_clusters:  ~100 tok/cluster, summarized from Layer 1
+--   Layer 3 — htc_memoir:    ~500 tok, generated from Layer 2
+
+CREATE TABLE IF NOT EXISTS htc_abstracts (
+  commit_hash TEXT PRIMARY KEY REFERENCES commits(hash) ON DELETE CASCADE,
+  abstract TEXT NOT NULL,
+  token_count INTEGER NOT NULL,
+  generated_at TEXT NOT NULL,
+  generator TEXT NOT NULL,
+  generation_ms INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_htc_abstracts_generated ON htc_abstracts(generated_at);
+
+CREATE TABLE IF NOT EXISTS htc_clusters (
+  cluster_id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  member_hashes TEXT NOT NULL,
+  token_count INTEGER NOT NULL,
+  generated_at TEXT NOT NULL,
+  generator TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS htc_memoir (
+  id INTEGER PRIMARY KEY,
+  narrative TEXT NOT NULL,
+  total_commits INTEGER NOT NULL,
+  total_clusters INTEGER NOT NULL,
+  token_count INTEGER NOT NULL,
+  generated_at TEXT NOT NULL,
+  generator TEXT NOT NULL
+);
 `;

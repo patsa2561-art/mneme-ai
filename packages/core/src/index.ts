@@ -12,3 +12,4 @@ export * as insights from "./insights/index.js";
 export * as quant from "./quant/index.js";
 export * as guardian from "./guardian/index.js";
 export * as forensics from "./forensics/index.js";
+export * as htc from "./htc/index.js";

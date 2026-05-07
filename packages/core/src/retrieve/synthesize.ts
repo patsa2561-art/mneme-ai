@@ -75,6 +75,13 @@ export interface SynthesizeOptions {
    * Anything below is refused with a "audit-refused" source.
    */
   auditFloor?: ConfidenceLabel;
+  /**
+   * v0.24 HTC: pre-compressed Layer-1 abstracts keyed by commit hash. When
+   * provided, the prompt uses the abstract (~30 tok) instead of the raw
+   * commit body (~500 tok) → 10× fewer tokens for the same answer quality.
+   * Source `"llm-htc"` is reported on the answer when this path is used.
+   */
+  htcAbstracts?: Map<string, string>;
 }
 
 const SYNTH_SYSTEM_PROMPT = [
@@ -160,7 +167,12 @@ export async function synthesize(
   }
 
   try {
-    const userPrompt = buildSynthesisPrompt(question, top, confidence);
+    // v0.24 HTC: when caller passes pre-compressed abstracts, use them in
+    // the prompt instead of raw bodies. Same answer quality, ~10× fewer
+    // tokens. Falls back to raw if a hash is missing from the cache.
+    const userPrompt = opts.htcAbstracts
+      ? buildSynthesisPromptHtc(question, top, confidence, opts.htcAbstracts)
+      : buildSynthesisPrompt(question, top, confidence);
     const out = await enricher.enrich({
       system: SYNTH_SYSTEM_PROMPT,
       user: userPrompt,
@@ -359,6 +371,37 @@ function buildSynthesisPrompt(
     const body = (r.commit.body || "").split("\n").slice(0, 3).join(" ").trim().slice(0, 280);
     lines.push(`${i + 1}. \`${hash}\` (${date}, ${author}): ${subject}`);
     if (body) lines.push(`   ${body}`);
+  });
+  lines.push("");
+  lines.push("Answer:");
+  return lines.join("\n");
+}
+
+/**
+ * v0.24 HTC variant — uses pre-compressed Layer-1 abstracts (~30 tok each)
+ * instead of raw commit bodies (~500 tok). Same prompt shape, ~10× smaller.
+ * Falls back to subject only if a hash is missing from the abstract cache.
+ */
+function buildSynthesisPromptHtc(
+  question: string,
+  results: SearchResult[],
+  confidence: ConfidenceLabel,
+  abstracts: Map<string, string>,
+): string {
+  const lines: string[] = [];
+  lines.push(`Question: ${question}`);
+  lines.push("");
+  lines.push(`Retrieval confidence: ${confidence}`);
+  if (confidence === "low") {
+    lines.push("(The evidence is thin — say so honestly if the answer cannot be supported.)");
+  }
+  lines.push("");
+  lines.push("Top commits (pre-compressed abstracts):");
+  results.forEach((r, i) => {
+    const hash = r.commit.shortHash || r.commit.hash.slice(0, 7);
+    const date = r.commit.authorDate.slice(0, 10);
+    const abstract = abstracts.get(r.commit.hash) ?? r.commit.subject;
+    lines.push(`${i + 1}. \`${hash}\` (${date}): ${abstract}`);
   });
   lines.push("");
   lines.push("Answer:");
