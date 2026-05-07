@@ -1,8 +1,10 @@
 /**
  * BundledEmbedder — zero-install WASM embeddings.
  *
- * Uses @xenova/transformers (pure JS + ONNX-WASM, no native deps) so the
- * tool runs on Windows / Mac / Linux out of the box. The model file is
+ * Uses @huggingface/transformers (the maintained successor to
+ * @xenova/transformers from the same author, WASM-first by default,
+ * onnxruntime-web — zero native deps). The tool runs on Windows / Mac /
+ * Linux out of the box, including ARM64 + Node 24. The model file is
  * lazy-downloaded on first use (~25MB to a local cache), giving users a
  * "★★★ semantic quality" path without installing Ollama.
  *
@@ -27,8 +29,8 @@ export interface BundledOptions {
 const DEFAULT_MODEL = "Xenova/all-MiniLM-L6-v2";
 const DEFAULT_DIMS = 384;
 
-// We type the @xenova/transformers pipeline result loosely — its public types
-// are large and we only need .data (Float32Array-like).
+// We type the @huggingface/transformers pipeline result loosely — its public
+// types are large and we only need .data (Float32Array-like).
 interface PipelineResult {
   data: ArrayLike<number>;
 }
@@ -109,20 +111,32 @@ export class BundledEmbedder implements EmbeddingProvider {
 
     // Dynamic import — keeps the heavy WASM init out of cold-start path
     // for users who never touch this provider.
-    const transformers = (await import("@xenova/transformers")) as unknown as {
+    const transformers = (await import("@huggingface/transformers")) as unknown as {
       pipeline: (
         task: string,
         model: string,
         opts: Record<string, unknown>,
       ) => Promise<FeatureExtractor>;
-      env: { cacheDir: string; allowRemoteModels: boolean; localModelPath?: string };
+      env: {
+        cacheDir?: string;
+        // @huggingface/transformers v3 added a separate "useFSCache" knob for
+        // node and renamed the cache root used at runtime. Both paths still
+        // exist for back-compat; assigning is a no-op when unsupported.
+        useFSCache?: boolean;
+        allowRemoteModels: boolean;
+        localModelPath?: string;
+      };
     };
 
     transformers.env.cacheDir = this.cacheDir;
     transformers.env.allowRemoteModels = true;
 
+    // Force the WASM execution provider so we never touch onnxruntime-node
+    // (the native ONNX backend has no Windows-ARM64 binary; WASM ships in
+    // the package itself and runs on every Node platform).
     const onProgress = this.onProgress;
     return await transformers.pipeline("feature-extraction", this.model, {
+      device: "wasm",
       progress_callback: onProgress
         ? (info: Record<string, unknown>) =>
             onProgress({

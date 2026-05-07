@@ -59,7 +59,9 @@ export function setHelpful(
   const result = store.db
     .prepare(`UPDATE wisdom_feedback SET was_helpful = ?, source = ? WHERE id = ?`)
     .run(wasHelpful ? 1 : 0, source, id);
-  return result.changes > 0;
+  // node:sqlite types `.changes` as `number | bigint`; coerce for the
+  // boolean comparison so TS doesn't trip on the bigint branch.
+  return Number(result.changes) > 0;
 }
 
 /**
@@ -92,7 +94,7 @@ export function recordImplicitRevisit(store: MnemeStore, commitHash: string): nu
 
 export function listFeedback(store: MnemeStore, opts: { since?: string; limit?: number } = {}): FeedbackRow[] {
   const where: string[] = [];
-  const params: unknown[] = [];
+  const params: Array<string | number | null> = [];
   if (opts.since) {
     where.push("created_at >= ?");
     params.push(opts.since);
@@ -141,7 +143,7 @@ export interface FeedbackSummary {
 }
 
 export function summarizeFeedback(store: MnemeStore, since?: string): FeedbackSummary {
-  const params: unknown[] = [];
+  const params: Array<string | number | null> = [];
   let where = "";
   if (since) {
     where = "WHERE created_at >= ?";

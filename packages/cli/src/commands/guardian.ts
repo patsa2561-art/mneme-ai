@@ -200,12 +200,17 @@ async function collectInput(
           | "diff_hunk"
           | "synthesized",
         embedding:
-          r.embedding instanceof Buffer && r.embedding.length > 0
-            ? new Float32Array(
-                r.embedding.buffer,
-                r.embedding.byteOffset,
-                r.embedding.byteLength / 4,
-              )
+          // node:sqlite returns BLOBs as Uint8Array; better-sqlite3 returned
+          // Buffer (a Uint8Array subclass). `instanceof Uint8Array` covers
+          // both cases. We copy out of the row's storage so the Float32Array
+          // view doesn't alias the underlying SQLite buffer.
+          r.embedding instanceof Uint8Array && r.embedding.byteLength > 0
+            ? (() => {
+                const blob = r.embedding as Uint8Array;
+                const copy = new Uint8Array(blob.byteLength);
+                copy.set(blob);
+                return new Float32Array(copy.buffer, 0, copy.byteLength / 4);
+              })()
             : undefined,
       }));
       storeSchemaVersion = Number(s.getMeta("schema_version") ?? 3);

@@ -32,14 +32,37 @@ export default defineConfig({
     hookTimeout: 30_000,
     pool: "forks",
     reporters: ["default"],
+    server: {
+      // Vite's pre-bundler tries to resolve every import including Node
+      // built-ins. Newer builtins like `node:sqlite` (Node 22.5+) aren't
+      // in its built-in list, so it fails with "Failed to load url sqlite".
+      // The fix is to mark them as external so Node's own loader handles
+      // them at runtime.
+      deps: {
+        external: ["node:sqlite", /^node:/],
+      },
+    },
+  },
+  optimizeDeps: {
+    exclude: ["node:sqlite"],
   },
   resolve: {
-    alias: {
-      "@mneme-ai/core/public": resolve(ROOT, "packages/core/src/public.ts"),
-      "@mneme-ai/core": resolve(ROOT, "packages/core/src/index.ts"),
-      "@mneme-ai/embeddings": resolve(ROOT, "packages/embeddings/src/index.ts"),
-      "@mneme-ai/mcp": resolve(ROOT, "packages/mcp/src/index.ts"),
-      "@mneme-ai/correlator": resolve(ROOT, "packages/correlator/src/index.ts"),
-    },
+    alias: [
+      // Vite strips `node:` from `node:sqlite` and then can't find a
+      // package called "sqlite". Map the bare name back to the builtin
+      // so Node's native loader handles it.
+      { find: /^sqlite$/, replacement: "node:sqlite" },
+      { find: "@mneme-ai/core/public", replacement: resolve(ROOT, "packages/core/src/public.ts") },
+      { find: "@mneme-ai/core", replacement: resolve(ROOT, "packages/core/src/index.ts") },
+      { find: "@mneme-ai/embeddings", replacement: resolve(ROOT, "packages/embeddings/src/index.ts") },
+      { find: "@mneme-ai/mcp", replacement: resolve(ROOT, "packages/mcp/src/index.ts") },
+      { find: "@mneme-ai/correlator", replacement: resolve(ROOT, "packages/correlator/src/index.ts") },
+    ],
+  },
+  ssr: {
+    // Belt-and-braces alongside `test.server.deps.external` — covers SSR
+    // transform path that vitest uses when test files cross the package
+    // boundary.
+    external: ["node:sqlite"],
   },
 });

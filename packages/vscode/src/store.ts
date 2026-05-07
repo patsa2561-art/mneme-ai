@@ -1,7 +1,7 @@
 /**
  * Store bridge — owns a single MnemeStore handle for the active workspace.
  *
- * Why a singleton: better-sqlite3 connections are cheap to open but we
+ * Why a singleton: node:sqlite connections are cheap to open but we
  * don't want to thrash on every code-lens computation. We open once per
  * workspace, refresh on the user-driven `mneme.refresh` command, and
  * close on extension deactivation.

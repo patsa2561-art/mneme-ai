@@ -52,9 +52,26 @@ export interface RedactionResult {
  * stateful between matches; reusing them across inputs corrupts state).
  */
 const BUILTIN_RULES: RedactionRule[] = [
-  // AWS — keys are stable, well-formed, and unambiguous.
+  // AWS — keys are stable + well-formed.
+  // Access key ID: AKIA / ASIA prefix → unambiguous, no context needed.
   { name: "aws-access-key-id", pattern: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/g },
-  { name: "aws-secret-access-key", pattern: /\b(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{40}(?![A-Za-z0-9+/])\b/g },
+  // Secret access key: a bare 40-char base64-ish string is INDISTINGUISHABLE
+  // from a git SHA1, npm integrity hash, or any random 40-char ID — every
+  // repo with > a few commits gets dozens of false positives. Real AWS
+  // secrets practically always appear next to a key-name token (env var,
+  // YAML key, or config-file label), so we anchor on that context.
+  // Examples that match (real positives):
+  //   AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  //   aws_secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  //   secretAccessKey = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  // Bare 40-char strings (git SHAs, hashes) are intentionally NOT matched.
+  {
+    name: "aws-secret-access-key",
+    // Lookbehind anchors on the env-var name so we redact the SECRET only,
+    // keeping the AWS_SECRET_ACCESS_KEY token searchable.
+    pattern:
+      /(?<=(?:aws[_-]?secret[_-]?access[_-]?key|secret[_-]?access[_-]?key|secretAccessKey)\s*[:=]\s*["']?)[A-Za-z0-9+/]{40}(?=["']?)/gi,
+  },
 
   // GitHub — modern format, all variants. github_pat_ is the new fine-grained one.
   { name: "github-pat", pattern: /\bgh[pousr]_[A-Za-z0-9]{36,255}\b/g },

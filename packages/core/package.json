@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/core",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "description": "Core indexing, retrieval, and graph engine for Mneme",
   "type": "module",
   "main": "./dist/index.js",
@@ -53,9 +53,6 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean"
   },
-  "dependencies": {
-    "better-sqlite3": "^11.5.0"
-  },
   "peerDependencies": {
     "typescript": ">=5.0"
   },
@@ -64,8 +61,10 @@
       "optional": true
     }
   },
+  "engines": {
+    "node": ">=22.13.0 <25.0.0"
+  },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11",
     "typescript": "^5.6.3"
   }
 }

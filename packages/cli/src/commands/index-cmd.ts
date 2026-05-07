@@ -55,12 +55,15 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
         | "diff_hunk"
         | "synthesized",
       embedding:
-        r.embedding instanceof Buffer && r.embedding.length > 0
-          ? new Float32Array(
-              r.embedding.buffer,
-              r.embedding.byteOffset,
-              r.embedding.byteLength / 4,
-            )
+        // node:sqlite returns BLOBs as Uint8Array; Buffer also extends
+        // Uint8Array, so this single check covers both store implementations.
+        r.embedding instanceof Uint8Array && r.embedding.byteLength > 0
+          ? (() => {
+              const blob = r.embedding as Uint8Array;
+              const copy = new Uint8Array(blob.byteLength);
+              copy.set(blob);
+              return new Float32Array(copy.buffer, 0, copy.byteLength / 4);
+            })()
           : undefined,
     }));
     const report = indexer.analyzeIndexQuality(commits, chunks);

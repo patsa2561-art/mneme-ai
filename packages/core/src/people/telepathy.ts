@@ -173,7 +173,7 @@ export function telepathy(store: MnemeStore, opts: TelepathyOptions = {}): Telep
          FROM commits
         ORDER BY author_date ASC`,
     )
-    .all() as CommitRow[];
+    .all() as unknown as CommitRow[];
 
   const fileRows = store.db
     .prepare("SELECT commit_hash, path FROM file_changes")

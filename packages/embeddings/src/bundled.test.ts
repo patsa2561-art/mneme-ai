@@ -35,7 +35,7 @@ describe("BundledEmbedder — shape + defaults (no network)", () => {
     expect(dir.length).toBeGreaterThan(5);
   });
 
-  it("constructor never throws even if @xenova/transformers can't be loaded", () => {
+  it("constructor never throws even if @huggingface/transformers can't be loaded", () => {
     // The lazy-import is in load(), not the constructor — so creating the
     // instance is always safe (a deliberate design choice for resolveEmbedder).
     expect(() => new BundledEmbedder()).not.toThrow();

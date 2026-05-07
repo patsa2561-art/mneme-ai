@@ -212,7 +212,7 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
         }
         case "mneme_list_entities": {
           const where: string[] = [];
-          const params: unknown[] = [];
+          const params: Array<string | number> = [];
           if (args["kind"]) {
             where.push("kind = ?");
             params.push(String(args["kind"]));
@@ -239,18 +239,20 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
           const snippet = args["snippet"] ? String(args["snippet"]) : undefined;
           let queryVec: Float32Array | null = null;
           if (entityId) {
-            // Use the stored embedding directly.
+            // Use the stored embedding directly. node:sqlite returns BLOBs as
+            // Uint8Array; better-sqlite3 used to return Buffer. Both expose
+            // the same .buffer / .byteOffset / .byteLength shape, so the
+            // copy-out works identically.
             const row = s.db
               .prepare("SELECT embedding FROM entities WHERE id = ?")
-              .get(entityId) as { embedding: Buffer | null } | undefined;
+              .get(entityId) as { embedding: Uint8Array | null } | undefined;
             if (!row?.embedding) {
               return errorResult(`No embedding for entity ${entityId}. Run \`mneme entities\` first.`);
             }
-            queryVec = new Float32Array(
-              row.embedding.buffer,
-              row.embedding.byteOffset,
-              row.embedding.length / 4,
-            );
+            const blob = row.embedding;
+            const copy = new Uint8Array(blob.byteLength);
+            copy.set(blob);
+            queryVec = new Float32Array(copy.buffer, 0, copy.byteLength / 4);
           } else if (snippet) {
             const [v] = await embedder.embed([snippet]);
             queryVec = v ?? null;

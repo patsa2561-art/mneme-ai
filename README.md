@@ -581,8 +581,8 @@ node packages/cli/bin/mneme.js --help
 | 🍎 macOS (Intel or Apple Silicon) + Node ≥ 22 | `npm install -g mneme-ai` | prebuilt binaries cover this |
 | 🐧 Linux x64 / arm64 + Node ≥ 22 | `npm install -g mneme-ai` | prebuilt binaries cover this |
 | 🪟 Windows x64 + Node 22 LTS | `npm install -g mneme-ai` | prebuilt binaries cover this |
-| 🪟 Windows ARM64 *(Surface, Copilot+ PCs)* | **🐳 Docker** | `better-sqlite3` has no win32-arm64 prebuild yet |
-| ⚠ Node 24+ on any OS | **🐳 Docker** *(or downgrade to Node 22)* | native deps haven't shipped Node 24 prebuilds yet |
+| 🪟 **Windows ARM64** *(Surface, Copilot+ PCs)* | `npm install -g mneme-ai` | ✅ *(fixed in v0.34 — zero native compile)* |
+| 🪟 **Node 24+ on any OS** | `npm install -g mneme-ai` | ✅ *(fixed in v0.34 — node:sqlite ships with Node)* |
 | 🏢 Corporate / air-gapped CI | **🐳 Docker** | no npm reachability needed once image pulled |
 | 🆕 Just want to look around | **Live demo URL** | zero commitment |
 

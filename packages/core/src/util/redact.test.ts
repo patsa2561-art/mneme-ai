@@ -3,15 +3,48 @@ import { redact, containsSecret, mergeHits } from "./redact.js";
 
 describe("redact — high-confidence rules", () => {
   it("strips AWS access key id (AKIA prefix)", () => {
-    const r = redact("token=AKIAIOSFODNN7EXAMPLE in config");
+    const r = redact("token=AKIAMNEMETESTKEY1234 in config");
     expect(r.text).toContain("<REDACTED:aws-access-key-id>");
-    expect(r.text).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(r.text).not.toContain("AKIAMNEMETESTKEY1234");
     expect(r.hits["aws-access-key-id"]).toBe(1);
   });
 
   it("strips AWS access key id (ASIA prefix — temp credentials)", () => {
-    const r = redact("ASIAIOSFODNN7EXAMPLE");
+    const r = redact("ASIAMNEMETESTKEY1234");
     expect(r.text).toContain("<REDACTED:aws-access-key-id>");
+  });
+
+  it("strips AWS secret access key when prefixed with the env-var name", () => {
+    // Non-canonical 40-char base64 — avoids GitHub push protection
+    // flagging the AWS-docs example value.
+    const secret = "B".repeat(20) + "+/" + "C".repeat(18);
+    const r = redact(`AWS_SECRET_ACCESS_KEY=${secret}`);
+    expect(r.text).toContain("<REDACTED:aws-secret-access-key>");
+    expect(r.text).not.toContain(secret);
+    // env-var name itself is preserved (lookbehind doesn't consume it)
+    expect(r.text).toContain("AWS_SECRET_ACCESS_KEY=");
+  });
+
+  it("strips AWS secret access key with YAML / camelCase / quoted variants", () => {
+    const secret = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN";
+    expect(redact(`aws_secret_access_key: "${secret}"`).hits["aws-secret-access-key"]).toBe(1);
+    expect(redact(`secretAccessKey = ${secret}`).hits["aws-secret-access-key"]).toBe(1);
+    expect(redact(`secret-access-key: '${secret}'`).hits["aws-secret-access-key"]).toBe(1);
+  });
+
+  it("does NOT redact bare 40-char strings as AWS secrets (regression: customer's non-AWS repo flagged 42 git SHAs)", () => {
+    // Git SHA1: 40 hex chars
+    const r1 = redact("commit abcdef0123456789abcdef0123456789abcdef01 was reverted");
+    expect(r1.hits["aws-secret-access-key"] ?? 0).toBe(0);
+    expect(r1.text).toContain("abcdef0123456789abcdef0123456789abcdef01");
+
+    // npm integrity hash: 40-char base64-ish
+    const r2 = redact('"integrity": "sha512-abcDEFghiJKLmnoPQRstuVWXyz0123456789abcd"');
+    expect(r2.hits["aws-secret-access-key"] ?? 0).toBe(0);
+
+    // Random 40-char ID in commit text
+    const r3 = redact("Bug found in token AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    expect(r3.hits["aws-secret-access-key"] ?? 0).toBe(0);
   });
 
   it("strips GitHub PAT (ghp_ classic)", () => {
@@ -91,12 +124,12 @@ describe("redact — high-confidence rules", () => {
   });
 
   it("counts multiple hits per rule", () => {
-    const r = redact("k1=AKIAIOSFODNN7EXAMPLE k2=AKIAIOSFODNN7EXAMPLF");
+    const r = redact("k1=AKIAMNEMETESTKEY1234 k2=AKIAMNEMETESTKEY1235");
     expect(r.hits["aws-access-key-id"]).toBe(2);
   });
 
   it("counts hits across rules", () => {
-    const r = redact("aws=AKIAIOSFODNN7EXAMPLE gh=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    const r = redact("aws=AKIAMNEMETESTKEY1234 gh=ghp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     expect(r.hits["aws-access-key-id"]).toBe(1);
     expect(r.hits["github-pat"]).toBe(1);
   });
@@ -141,7 +174,7 @@ describe("redact — custom rules and overrides", () => {
   });
 
   it("respects custom replacement string when built-in is disabled", () => {
-    const r = redact("k=AKIAIOSFODNN7EXAMPLE", {
+    const r = redact("k=AKIAMNEMETESTKEY1234", {
       disableRules: ["aws-access-key-id"],
       extraRules: [{ name: "aws", pattern: /\bAKIA[0-9A-Z]{16}\b/g, replacement: "[hidden]" }],
     });
@@ -149,8 +182,8 @@ describe("redact — custom rules and overrides", () => {
   });
 
   it("disableRules removes a built-in rule", () => {
-    const r = redact("AKIAIOSFODNN7EXAMPLE", { disableRules: ["aws-access-key-id"] });
-    expect(r.text).toContain("AKIAIOSFODNN7EXAMPLE");
+    const r = redact("AKIAMNEMETESTKEY1234", { disableRules: ["aws-access-key-id"] });
+    expect(r.text).toContain("AKIAMNEMETESTKEY1234");
     expect(r.hits["aws-access-key-id"]).toBeUndefined();
   });
 });

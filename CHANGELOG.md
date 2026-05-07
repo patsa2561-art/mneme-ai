@@ -8,6 +8,65 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.34.0] — 2026-05-08
+
+The "Zero Native Deps" release. `npm install -g mneme-ai` now works on
+every (OS × arch × Node major) combination Node itself supports —
+including Windows ARM64 + Node 24, the case that broke v0.33.
+
+### Migrations
+
+- `better-sqlite3` → `node:sqlite` (Node 22.13+ built-in). Zero native
+  compile, ships with Node, FTS5 + WAL still supported. Loaded via
+  `createRequire` so vitest's static analyzer doesn't choke on the
+  `node:` builtin scheme.
+- `@xenova/transformers` → `@huggingface/transformers` v3 with
+  `device: "wasm"` forced at pipeline-create time so `onnxruntime-node`
+  is never loaded even when present in node_modules.
+- `engines.node` bumped to `">=22.13.0 <25.0.0"` so users on Node 20
+  get a clear unsupported-engine warning instead of the cryptic
+  gyp / prebuild-install error chain. 22.13 is the exact release where
+  `node:sqlite` graduated from experimental to stable.
+
+### Bug fix — secret-redactor false positives
+
+A real customer test on a non-AWS repo flagged **42 git-SHA strings
+as `aws-secret-access-key` matches**. The rule was a context-free
+regex that matched any 40-char base64-ish string — every git SHA,
+npm integrity hash, random ID in the repo got falsely flagged.
+
+Replaced with a lookbehind that anchors on the env-var name
+(`AWS_SECRET_ACCESS_KEY=`, `secret_access_key:`, `secretAccessKey =`)
+so the value is redacted only when the *name* token confirms it's a
+key. Bare 40-char strings are intentionally NOT matched. 3 new
+regression tests cover both positives + negatives.
+
+### Why
+
+A customer on Windows ARM64 + Node 24 hit a cascade of native-build
+failures because better-sqlite3 has no win32-arm64 prebuild yet and
+sharp transitive from @xenova/transformers also failed. Native deps
+in a CLI tool are a tax every user pays; eliminating them is the
+permanent fix.
+
+### Honest caveats
+
+- Drops Node 20 support. ~1% of npm-tracked Node installs are still
+  on Node 20; they'll need to upgrade.
+- Floor is Node 22.13 (not 22.0) — that's the Node release where
+  `node:sqlite` graduated from `--experimental-sqlite` to stable. The
+  task spec called for `>=22.0.0` but anything below 22.13 would crash
+  on import; we picked the stricter floor for a clean error message.
+- node:sqlite throughput is ~5-15% slower than better-sqlite3 in
+  pathological microbenchmarks; for Mneme's read-mostly workload the
+  difference is unmeasurable.
+- @huggingface/transformers WASM is ~10% slower than the native
+  onnxruntime-node path on indexing; for one-time index it's
+  acceptable. Subsequent retrievals don't use the embedder.
+- `MnemeStore.db.transaction(fn)` (a `better-sqlite3`-only convenience)
+  is now `MnemeStore.transaction(fn)` — same shape, lifted up to the
+  store class. Internal consumers (htc/storage, counterfactual) updated.
+
 ## [0.33.0] — 2026-05-07
 
 Production hardening + intelligence upgrade. Three changes that ship together:

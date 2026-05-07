@@ -35,7 +35,7 @@ export function upsertAbstracts(store: MnemeStore, batch: AbstractResult[]): voi
        (commit_hash, abstract, token_count, generated_at, generator, generation_ms)
      VALUES (?, ?, ?, ?, ?, ?)`,
   );
-  const tx = store.db.transaction((items: AbstractResult[]) => {
+  const tx = store.transaction((items: AbstractResult[]) => {
     for (const a of items) {
       const generatedAt = a.generatedAt ?? new Date().toISOString();
       stmt.run(a.hash, a.abstract, a.tokenCount, generatedAt, a.generator, a.generationMs);
@@ -105,7 +105,9 @@ export function deleteOldAbstracts(store: MnemeStore, olderThanDays: number): nu
   const info = store.db
     .prepare("DELETE FROM htc_abstracts WHERE generated_at < ?")
     .run(cutoff);
-  return info.changes;
+  // node:sqlite types `.changes` as `number | bigint`; coerce so the public
+  // function signature stays a plain `number`.
+  return Number(info.changes);
 }
 
 /* ───────────────────────  Layer 2 — clusters  ──────────────────────── */

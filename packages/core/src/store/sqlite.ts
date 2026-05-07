@@ -1,6 +1,30 @@
-import Database from "better-sqlite3";
+/**
+ * MnemeStore — SQLite-backed persistence layer.
+ *
+ * Why `node:sqlite` and not `better-sqlite3`?
+ *   - Zero native compile. Ships with Node itself (stable in 22.13+).
+ *   - No prebuild lottery — works on every (OS × arch) Node supports,
+ *     including Windows ARM64 + Node 24 (the case that broke v0.33).
+ *   - FTS5 + WAL still supported (built into Node's bundled SQLite).
+ *
+ * API differences vs better-sqlite3 we work around here:
+ *   - No `.pragma()` — use `exec("PRAGMA …")`.
+ *   - No `.transaction(fn)` — we expose `MnemeStore.transaction(fn)` that
+ *     wraps the callback in BEGIN / COMMIT / ROLLBACK.
+ *   - BLOB rows come back as `Uint8Array`, not `Buffer` — `bufToFloat32`
+ *     handles both.
+ */
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { createRequire } from "node:module";
+import type { DatabaseSync as DatabaseSyncType, StatementSync } from "node:sqlite";
+
+// Vite/vitest's static analyser doesn't recognise the `node:sqlite` builtin
+// (added in Node 22.5, stable in 22.13). Loading it via createRequire keeps
+// the resolution at runtime, where Node's loader handles it natively. The
+// type import above is erased at compile time so it doesn't trigger Vite.
+const req = createRequire(import.meta.url);
+const { DatabaseSync } = req("node:sqlite") as typeof import("node:sqlite");
 import type {
   Commit,
   CommitChunk,
@@ -11,15 +35,25 @@ import type {
 } from "../types.js";
 import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
 
+/**
+ * Loose alias for the Node sqlite Database handle. We keep it `any`-like
+ * via `unknown` so consumer modules (htc/storage.ts, counterfactual/index.ts,
+ * etc.) only need to call methods we expose; we don't leak the Node-version-
+ * specific `StatementSync` shape across module boundaries.
+ */
+export type MnemeDb = DatabaseSyncType;
+
 export class MnemeStore {
-  readonly db: Database.Database;
+  readonly db: MnemeDb;
 
   constructor(public readonly dbPath: string) {
-    if (!existsSync(dirname(dbPath))) mkdirSync(dirname(dbPath), { recursive: true });
-    this.db = new Database(dbPath);
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("synchronous = NORMAL");
-    this.db.pragma("foreign_keys = ON");
+    if (dbPath !== ":memory:" && !existsSync(dirname(dbPath))) {
+      mkdirSync(dirname(dbPath), { recursive: true });
+    }
+    this.db = new DatabaseSync(dbPath);
+    this.db.exec("PRAGMA journal_mode = WAL");
+    this.db.exec("PRAGMA synchronous = NORMAL");
+    this.db.exec("PRAGMA foreign_keys = ON");
     this.db.exec(SCHEMA_SQL);
 
     // v2 → v3 migration: FTS5 tokenizer changed from `porter unicode61` to
@@ -55,6 +89,34 @@ export class MnemeStore {
     this.db.close();
   }
 
+  /**
+   * Run `fn` inside a single transaction. Mirrors better-sqlite3's
+   * `db.transaction(fn)` API: returns a function you call with the
+   * batch payload. Auto-commits on return; rolls back on throw.
+   *
+   * Why this shape: every existing caller already expects
+   * `const tx = store.transaction((items) => {...}); tx(items)`.
+   * Keeping the API stable means consumer modules don't change.
+   */
+  transaction<T extends unknown[], R>(fn: (...args: T) => R): (...args: T) => R {
+    const db = this.db;
+    return (...args: T): R => {
+      db.exec("BEGIN");
+      try {
+        const result = fn(...args);
+        db.exec("COMMIT");
+        return result;
+      } catch (err) {
+        try {
+          db.exec("ROLLBACK");
+        } catch {
+          /* rollback may fail if the connection is already in a bad state */
+        }
+        throw err;
+      }
+    };
+  }
+
   setMeta(key: string, value: string): void {
     this.db
       .prepare("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)")
@@ -75,7 +137,7 @@ export class MnemeStore {
          subject, body, parents, pr_number, pr_title, pr_body, issue_refs)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const tx = this.db.transaction((batch: Commit[]) => {
+    const tx = this.transaction((batch: Commit[]) => {
       for (const c of batch) {
         stmt.run(
           c.hash,
@@ -103,7 +165,7 @@ export class MnemeStore {
         (commit_hash, path, change_kind, insertions, deletions)
       VALUES (?, ?, ?, ?, ?)
     `);
-    const tx = this.db.transaction((batch: FileChange[]) => {
+    const tx = this.transaction((batch: FileChange[]) => {
       for (const c of batch) {
         stmt.run(c.commitHash, c.path, c.changeKind, c.insertions, c.deletions);
       }
@@ -121,9 +183,9 @@ export class MnemeStore {
     const ftsIns = this.db.prepare(
       "INSERT INTO chunks_fts (id, commit_hash, text) VALUES (?, ?, ?)",
     );
-    const tx = this.db.transaction((batch: CommitChunk[]) => {
+    const tx = this.transaction((batch: CommitChunk[]) => {
       for (const c of batch) {
-        const buf = c.embedding ? Buffer.from(c.embedding.buffer.slice(0)) : null;
+        const buf = c.embedding ? float32ToUint8(c.embedding) : null;
         stmt.run(c.id, c.commitHash, c.kind, c.text, buf, embeddingModel ?? null);
         ftsDel.run(c.id);
         ftsIns.run(c.id, c.commitHash, c.text);
@@ -164,18 +226,25 @@ export class MnemeStore {
     return row.n;
   }
 
-  /** Iterate every chunk that has an embedding. Used for in-memory cosine search. */
+  /**
+   * Iterate every chunk that has an embedding. Used for in-memory cosine search.
+   *
+   * We use `.all()` (not `.iterate()`) for portability across all Node 22.13+
+   * versions — `StatementSync.iterate()` only landed in 22.18. The memory
+   * cost is bounded: a 50k-chunk repo is ~75MB of Float32 vectors, which is
+   * well within process budget for the read-once cosine sweep.
+   */
   *iterEmbeddedChunks(): Generator<{ id: string; commitHash: string; text: string; kind: string; vec: Float32Array }> {
     const rows = this.db
       .prepare(
         "SELECT id, commit_hash, kind, text, embedding FROM chunks WHERE embedding IS NOT NULL",
       )
-      .iterate() as IterableIterator<{
+      .all() as Array<{
       id: string;
       commit_hash: string;
       kind: string;
       text: string;
-      embedding: Buffer;
+      embedding: BlobLike;
     }>;
     for (const r of rows) {
       yield {
@@ -217,9 +286,9 @@ export class MnemeStore {
         (id, kind, name, file_path, start_line, end_line, signature, language, embedding)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const tx = this.db.transaction((batch: Entity[]) => {
+    const tx = this.transaction((batch: Entity[]) => {
       for (const e of batch) {
-        const buf = e.embedding ? Buffer.from(e.embedding.buffer.slice(0)) : null;
+        const buf = e.embedding ? float32ToUint8(e.embedding) : null;
         stmt.run(
           e.id,
           e.kind,
@@ -261,7 +330,7 @@ export class MnemeStore {
         `SELECT id, kind, name, file_path, start_line, end_line, signature, language, embedding
          FROM entities WHERE embedding IS NOT NULL`,
       )
-      .iterate() as IterableIterator<{
+      .all() as Array<{
       id: string;
       kind: Entity["kind"];
       name: string;
@@ -270,7 +339,7 @@ export class MnemeStore {
       end_line: number;
       signature: string | null;
       language: string;
-      embedding: Buffer;
+      embedding: BlobLike;
     }>;
     for (const r of rows) {
       yield {
@@ -294,7 +363,7 @@ export class MnemeStore {
          affected_files, stack_frames, url, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const tx = this.db.transaction((batch: Incident[]) => {
+    const tx = this.transaction((batch: Incident[]) => {
       for (const i of batch) {
         stmt.run(
           i.id,
@@ -347,7 +416,7 @@ export class MnemeStore {
         (id, from_kind, from_id, to_kind, to_id, weight, reason, evidence)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const tx = this.db.transaction((batch: Correlation[]) => {
+    const tx = this.transaction((batch: Correlation[]) => {
       for (const c of batch) {
         stmt.run(
           c.id,
@@ -400,8 +469,32 @@ function rawToCommit(r: RawCommit, files: string[]): Commit {
   };
 }
 
-function bufToFloat32(buf: Buffer): Float32Array {
-  return new Float32Array(buf.buffer, buf.byteOffset, buf.length / 4);
+/**
+ * BLOB rows from `node:sqlite` are `Uint8Array`; from `better-sqlite3` they
+ * were `Buffer` (which is also a Uint8Array). We accept either to keep
+ * round-tripping with old DB files transparent.
+ */
+type BlobLike = Uint8Array | Buffer;
+
+function bufToFloat32(buf: BlobLike): Float32Array {
+  // Make a fresh ArrayBuffer-backed Float32Array view. Both Buffer and the
+  // Uint8Array returned by node:sqlite carry .buffer / .byteOffset; we copy
+  // out of it to decouple the lifetime of the view from the underlying blob.
+  const copy = new Uint8Array(buf.byteLength);
+  copy.set(buf);
+  return new Float32Array(copy.buffer, 0, copy.byteLength / 4);
+}
+
+/**
+ * Convert a Float32Array embedding into a Uint8Array for storage. We use
+ * `Uint8Array` (not `Buffer`) because `node:sqlite` accepts the standard
+ * typed-array as a BLOB parameter — and we want code that works under any
+ * Node 22.13+ install without leaning on Buffer-specific APIs.
+ */
+function float32ToUint8(vec: Float32Array): Uint8Array {
+  const bytes = new Uint8Array(vec.byteLength);
+  bytes.set(new Uint8Array(vec.buffer, vec.byteOffset, vec.byteLength));
+  return bytes;
 }
 
 function sanitizeFts(query: string): string {
@@ -413,3 +506,7 @@ function sanitizeFts(query: string): string {
   if (!tokens.length) return "";
   return tokens.map((t) => `"${t}"`).join(" OR ");
 }
+
+// Re-export the prepared-statement type so consumer modules can annotate
+// without re-importing from `node:sqlite` directly.
+export type { StatementSync };

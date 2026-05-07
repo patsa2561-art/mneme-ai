@@ -18,8 +18,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node: ['20', '22']
+        # Cover every (OS × arch) combination we promise in the README
+        # install matrix. macOS-14 is Apple Silicon (arm64); macOS-13
+        # is Intel (x64). windows-latest covers x64; windows-11-arm
+        # covers Surface / Copilot+ PCs (the case that broke v0.33).
+        # ubuntu-latest covers x64; ubuntu-24.04-arm covers ARM Linux
+        # servers (Graviton, etc.).
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - windows-latest
+          - windows-11-arm
+          - macos-13
+          - macos-14
+        # Node 22 LTS and Node 24 (the brand-new release that broke
+        # v0.33's better-sqlite3 prebuild). v0.34's node:sqlite
+        # migration removes that fragility.
+        node: ['22', '24']
+        # Skip combinations GitHub doesn't host runners for.
+        exclude:
+          - os: windows-11-arm
+            node: '24'   # windows-11-arm runner doesn't ship Node 24 yet — re-add when available
     steps:
       - uses: actions/checkout@v4
         with:

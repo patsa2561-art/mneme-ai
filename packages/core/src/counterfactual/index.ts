@@ -176,7 +176,7 @@ export function buildShadowStore(
               pr_number, pr_title, pr_body, issue_refs
        FROM commits`,
     )
-    .all() as CommitRow[];
+    .all() as unknown as CommitRow[];
 
   const insertCommit = shadow.db.prepare(
     `INSERT OR REPLACE INTO commits
@@ -186,7 +186,7 @@ export function buildShadowStore(
   );
 
   const keptHashes = new Set<string>();
-  const tx = shadow.db.transaction((rows: CommitRow[]) => {
+  const tx = shadow.transaction((rows: CommitRow[]) => {
     for (const r of rows) {
       if ((r.author_email ?? "").toLowerCase() === target) continue;
       // Strip the target's co-author trailer if present.
@@ -213,13 +213,13 @@ export function buildShadowStore(
 
   const fileRows = source.db
     .prepare("SELECT commit_hash, path, change_kind, insertions, deletions FROM file_changes")
-    .all() as FileRow[];
+    .all() as unknown as FileRow[];
   const insertFile = shadow.db.prepare(
     `INSERT OR REPLACE INTO file_changes
        (commit_hash, path, change_kind, insertions, deletions)
      VALUES (?, ?, ?, ?, ?)`,
   );
-  const fileTx = shadow.db.transaction((rows: FileRow[]) => {
+  const fileTx = shadow.transaction((rows: FileRow[]) => {
     for (const r of rows) {
       if (!keptHashes.has(r.commit_hash)) continue;
       insertFile.run(r.commit_hash, r.path, r.change_kind, r.insertions, r.deletions);
