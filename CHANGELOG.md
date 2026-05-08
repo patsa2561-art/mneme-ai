@@ -47,7 +47,7 @@ reintroduce a literal NUL into argv:
 - `the --pretty argv element uses %x00 placeholder, not literal NUL`
 - `argv with all options set still has no NUL bytes`
 
-Total tests: 2,339 (was 2,336) across 172 files.
+Total tests: 2,339 (was 2,336) across 171 files.
 
 ### End-to-end verification
 

@@ -106,8 +106,8 @@ The first platform to ship "compliance-grade AI commit audit" wins that RFP cycl
 
 ## Proof — what's already shipping
 
-- **npm:** [`mneme-ai@1.1.0`](https://www.npmjs.com/package/mneme-ai) — LIVE
-- **2336 tests** passing across 171 files
+- **npm:** [`mneme-ai@1.1.1`](https://www.npmjs.com/package/mneme-ai) — LIVE
+- **2339 tests** passing across 171 files
 - **MIT license** — permissive enough for any partnership shape
 - **MCP-registered** — Claude Code, Cursor, Codex can call Mneme today
 - **Vendor-neutral** — works against any AI tool whose commits land in `git log`

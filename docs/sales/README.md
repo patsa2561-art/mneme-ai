@@ -19,7 +19,7 @@ deliverable that maps to one specific audience.
 
 ## 📊 Numbers, all in one place
 
-- **2,336 tests** passing across 171 files (v1.1.0)
+- **2,339 tests** passing across 171 files (v1.1.1)
 - **51 security rules** across 8 categories (v0.50.0 + v1.1 add)
 - **6 ecosystems**: Node, Python, Go, Rust, Ruby, PHP
 - **6 QSAC techniques**: Verdict Superposition · Causal Claim Graph · Multi-Verifier Consensus (now 4 verifiers) · Cryptographic Merkle Chain (HMAC + Ed25519) · Mutation-Test Counterfactual + harness · Wisdom Drill-Through

@@ -174,7 +174,7 @@ The system flags the contradiction automatically. Human review is then required 
 
 1. **Run a 1-hour evaluation:**
    ```bash
-   npm install -g mneme-ai@1.1.0
+   npm install -g mneme-ai@1.1.1
    cd <one-of-your-repos>
    mneme init && mneme index
    mneme audit --baseline
