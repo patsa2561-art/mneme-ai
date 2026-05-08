@@ -72,6 +72,28 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🤝 v1.5.0 — Mneme is now a git extension
+
+Type `git mneme <anything>` and it works — like git's secretary that knows your AI:
+
+```bash
+git mneme why src/auth.ts:47       # who wrote this line + why
+git mneme audit --certify           # 5-axis trust certificate
+git mneme briefing                  # what changed while you were away
+```
+
+Plus optional git hooks (pre-commit / pre-push gate / post-merge briefing) installed in one command:
+
+```bash
+mneme git-install                   # wires Mneme into your git workflow
+```
+
+**This means:** anyone using git on any platform — GitHub, GitLab, Bitbucket, self-hosted — has a reason to install Mneme. Not just users of Claude Code or Cursor.
+
+> 📋 **CI/CD templates ready**: drop-in workflows for [GitHub Actions](docs/ci-templates/github-actions.yml) · [GitLab CI](docs/ci-templates/gitlab-ci.yml) · [Bitbucket Pipelines](docs/ci-templates/bitbucket-pipelines.yml). Every PR gets a 5-axis Mneme audit comment with PASS/WARN/FAIL verdict.
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🚀 Install in 30 seconds
 
 > **The fastest path:** copy this URL into your AI coding tool — Claude Code, Cursor, Codex, Continue — and ask it to install Mneme. The AI will do the rest.

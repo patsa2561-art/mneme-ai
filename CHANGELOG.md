@@ -8,6 +8,136 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.5.0] — 2026-05-08
+
+**The "STAND BESIDE GIT" release.** Mneme is no longer just an MCP plugin
+for AI coding tools — it's now a **native git extension** that any
+developer using git, on any platform (GitHub · GitLab · Bitbucket ·
+Gitea · self-hosted), can install and benefit from. Plus drop-in CI/CD
+templates for the three biggest git platforms.
+
+Strategic intent: while every other AI tool is fighting for the
+"smartest assistant" crown, Mneme positions itself one layer below — as
+the *secretary* that stands beside git itself. That's the lone-black-sheep
+seat no one else is occupying.
+
+### What's new
+
+#### 1. `git mneme <subcommand>` — native git integration
+
+```bash
+git mneme why src/auth.ts:47       # who wrote this line + why
+git mneme audit --certify          # 5-axis trust certificate
+git mneme briefing                 # what changed while you were away
+```
+
+`git-mneme` is a binary that ships alongside `mneme` in the `bin/`
+directory. Once `mneme-ai` is on PATH, git automatically resolves
+`git mneme <cmd>` as the subcommand. Every existing command works
+identically — there's no separate command set to learn.
+
+#### 2. `mneme git-install` — wires Mneme into your git workflow
+
+```bash
+mneme git-install                  # install all 4 hooks (default)
+mneme git-install --no-hooks       # install just the wrapper
+mneme git-install --hooks pre-push # install only the pre-push gate
+mneme git-install --dry-run        # preview without writing
+```
+
+Installs four optional git hooks:
+
+- **pre-commit** — anomaly + secret-redaction guard before each commit
+- **post-commit** — synthesizes a WHY note for the just-made commit (heals poor messages into searchable memory)
+- **pre-push** — `audit --certify` gate; FAIL blocks push (configurable)
+- **post-merge** — briefing of what changed while you were away
+
+Hook escape hatches:
+
+- `git commit --no-verify` / `git push --no-verify` — bypass once
+- `MNEME_AUDIT_DISABLE=1 git push` — disable pre-push gate per push
+- `MNEME_AUDIT_STRICT=1 git push` — treat WARN as FAIL (compliance mode)
+- Existing user-customized hooks are NEVER overwritten (safety property
+  enforced + tested).
+
+14 unit tests verify: happy path, idempotency, non-overwrite of user
+hooks, --dry-run, --no-hooks, --hooks subset, error path, hook content
+correctness, JSON output shape. **All 14 pass.**
+
+#### 3. CI/CD templates for GitHub, GitLab, Bitbucket
+
+Drop-in workflow files in `docs/ci-templates/`:
+
+- `github-actions.yml` → `.github/workflows/mneme.yml`
+- `gitlab-ci.yml` → `.gitlab-ci.yml`
+- `bitbucket-pipelines.yml` → `bitbucket-pipelines.yml`
+
+Each template:
+1. Indexes the repo on the runner
+2. Snapshots baseline behavior (PR target branch)
+3. Runs `mneme audit --certify` + `forensics vulns` + `deps audit`
+4. Posts the verdict as a PR/MR comment with PASS/WARN/FAIL emoji
+5. Fails the build on FAIL (override via label/env var)
+
+Cost per run: ~30-60 seconds. Zero external API calls (bundled WASM
+embedder). Plus full README explaining secrets, customization, and
+troubleshooting.
+
+#### 4. Phases 3-7 architecture spec
+
+Strategic roadmap for next ~5 months captured in
+`ROADMAP_PHASES_3_TO_6.md`:
+
+- **Phase 3 — Daemon mode** (predictive context pre-fetch · 2-3 weeks)
+- **Phase 4 — Mneme Court** (12-jury arbitration with cryptographic ruling PDF · 2 weeks)
+- **Phase 5 — Cross-repo Wisdom Federation** (privacy-preserving signal sharing · 4-5 weeks)
+- **Phase 6 — SaaS dashboard** (cross-org rollups · 9-11 weeks)
+- **Phase 7 — Time Capsule** (handover artifact for new hires · 1 week)
+
+Each phase has a full architecture diagram, implementation plan, effort
+estimate, and risk analysis.
+
+### README repositioning
+
+Hero now leads with the v1.5.0 git-extension framing:
+
+> *"v1.5.0 — Mneme is now a git extension. Type `git mneme <anything>`
+> and it works — like git's secretary that knows your AI."*
+
+This means: **anyone using git on any platform has a reason to install
+Mneme**, not just users of Claude Code / Cursor. Distribution piggybacks
+on git itself.
+
+### Files added
+
+- `packages/cli/bin/git-mneme.js` — git subcommand wrapper
+- `packages/cli/src/commands/git-install.ts` — installer
+- `packages/cli/src/commands/git-install.test.ts` — 14 unit tests
+- `docs/ci-templates/github-actions.yml`
+- `docs/ci-templates/gitlab-ci.yml`
+- `docs/ci-templates/bitbucket-pipelines.yml`
+- `docs/ci-templates/README.md`
+- `ROADMAP_PHASES_3_TO_6.md`
+
+### Files updated
+
+- `packages/cli/package.json` — adds `git-mneme` to `bin`
+- `packages/cli/src/index.ts` — registers `git-install` command
+- `README.md` — v1.5.0 git-extension section
+
+### Backward compatibility
+
+Zero breaking changes. All v1.4.0 functionality (94 MCP tools + Second
+Brain + Super Sonic Engine + 20 molecules) is preserved unchanged. The
+git extension is purely additive.
+
+### Numbers
+
+- 14 new unit tests, **14/14 passing**
+- 0 breaking changes
+- Lockfile: 113 platform entries preserved
+- 4 git hooks · 3 CI templates · 1 git subcommand wrapper
+
 ## [1.4.0] — 2026-05-08
 
 **The SUPER SONIC ENGINE release.** Mneme is now the only MCP server in

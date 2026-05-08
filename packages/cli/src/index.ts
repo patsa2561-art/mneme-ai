@@ -1023,6 +1023,33 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await mcpCommand({ cwd: process.cwd() }));
     });
 
+  // ── v1.5.0 — git extension: install git-mneme wrapper + git hooks ──
+  program
+    .command("git-install")
+    .description("Install Mneme as a native git extension — enables `git mneme <cmd>` + optional hooks")
+    .option("--no-hooks", "Only install the git-mneme wrapper, skip hooks")
+    .option(
+      "--hooks <names>",
+      "Comma-separated subset of hooks (pre-commit,post-commit,pre-push,post-merge)",
+    )
+    .option("--dry-run", "Print what would change, don't write")
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { noHooks?: boolean; hooks?: string; dryRun?: boolean; json?: boolean }) => {
+      const { gitInstallCommand } = await import("./commands/git-install.js");
+      const hooks = opts.hooks
+        ? (opts.hooks.split(",").map((s) => s.trim()) as Array<"pre-commit" | "post-commit" | "pre-push" | "post-merge">)
+        : undefined;
+      process.exit(
+        await gitInstallCommand({
+          cwd: process.cwd(),
+          noHooks: opts.noHooks,
+          hooks,
+          dryRun: opts.dryRun,
+          json: opts.json,
+        }),
+      );
+    });
+
   program
     .command("entities", { hidden: true })
     .description("Phase 2 — parse and embed every function/class/type in tracked TS/JS files")
