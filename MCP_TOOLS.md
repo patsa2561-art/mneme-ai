@@ -2,7 +2,7 @@
 
 _Auto-generated from the live tool registry. Do not edit by hand — run_ `npx tsx packages/mcp/scripts/gen-tools-md.ts` _to refresh._
 
-**115 tools** across **9 categories** · catalog hash `78f111bbbc3b3a9e` · generated 2026-05-08 21:14:11 UTC
+**131 tools** across **9 categories** · catalog hash `2015f12804ed98a6` · generated 2026-05-08 21:37:06 UTC
 
 ## What is this
 
@@ -12,7 +12,7 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 
 ## Categories
 
-- [**meta**](#meta) (28 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
+- [**meta**](#meta) (44 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
 - [**memory**](#memory) (7 tools) — Q&A, semantic search, citations — answers grounded in the repo's commit history.
 - [**people**](#people) (10 tools) — Contributors, knowledge atrophy, telepathic teammates, cultural alphas, semantic ownership.
 - [**audit**](#audit) (8 tools) — AI Session Audit — trust certificate for AI commits. Vendor-neutral.
@@ -49,6 +49,22 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 | `mneme.timetravel.activate` | meta | You want every subsequent Mneme call to operate AS IF today were a specific past commit — counterfactual / hindsight analysis. |
 | `mneme.timetravel.status` | meta | You want to check whether the current MCP session has time-travel activated and what ref it's frozen at. |
 | `mneme.timetravel.deactivate` | meta | You finished time-traveling and want subsequent tool calls to see live HEAD again. |
+| `mneme.genome.publish` | meta | You want to export your team's accumulated Mneme wisdom as a portable, signed, PII-scrubbed file. |
+| `mneme.genome.install` | meta | You received a .mneme-genome.json file and want to apply its conventions to your current repo. |
+| `mneme.genome.list` | meta | You want to audit which external genomes this repo has installed. |
+| `mneme.aletheia.lint` | meta | You're about to forward user-or-AI-supplied arguments to a downstream tool and want a defense-in-depth scan first. |
+| `mneme.aletheia.immune.scan` | meta | You want to detect novel / anomalous argument shapes against a trained baseline of normal calls. |
+| `mneme.aletheia.immune.train` | meta | You want to train the anomaly scanner by recording known-good argument shapes. |
+| `mneme.aletheia.immune.alerts` | meta | You want to review every attack probe / anomaly Mneme has caught. |
+| `mneme.aletheia.karma` | meta | You want a tool's reputation score before invoking it (or to audit which tools have failed your repo's checks). |
+| `mneme.aletheia.fuzz` | meta | You want to audit a Mneme tool's robustness against OWASP attack patterns without leaving the MCP surface. |
+| `mneme.admin.delete_all` | meta | Never. This is a security honeypot. |
+| `mneme.system.exec` | meta | Never. This is a security honeypot. |
+| `mneme.secrets.dump` | meta | Never. This is a security honeypot. |
+| `mneme.users.list` | meta | Never. This is a security honeypot. |
+| `mneme.config.set` | meta | Never. This is a security honeypot. |
+| `mneme.mesh.peers` | meta | You want to enumerate the federation peers configured for this repo. |
+| `mneme.mesh.federate` | meta | You want to broadcast a tool query to every configured Mneme peer + aggregate responses. |
 | `mneme.smart_do` | meta | Fallback dispatcher — give it a NATURAL-LANGUAGE intent, it routes to the appropriate Mneme command and runs it |
 | `mneme.memory.ask` | memory | User asks WHY code exists or WHEN something was added — answers grounded in cited commits, not generated prose. |
 | `mneme.memory.why` | memory | Explain why a specific FILE (or line range within it) exists by combining git blame with related commits |
@@ -1500,6 +1516,834 @@ Return the AI agent's view to live HEAD — undoes a previous mneme.timetravel.a
 - Doesn't unwind any side effects from time-traveled tools — only resets the time-travel marker.
 
 **Compose with:** `mneme.timetravel.activate` · `mneme.timetravel.status`
+
+</details>
+
+### `mneme.genome.publish`
+
+Pack the team's .mneme/ wisdom (constitution + custom packs + tribal knowledge + voice fingerprint) into a portable, PII-scrubbed, content-hashed `.mneme-genome.json` file. Other teams can install it via mneme.genome.install to inherit your conventions. Email addresses are auto-scrubbed; runtime state (mneme.db / replay.jsonl / scoreboard) is excluded. Use WHEN your team has accumulated patterns worth sharing — open-source it, send to a sister team, or vendor it across repos.
+
+**When to use:** You want to export your team's accumulated Mneme wisdom as a portable, signed, PII-scrubbed file.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "outputPath": {
+      "type": "string",
+      "description": "Where to write the genome file. Default: .mneme/genomes/{repo}-{date}.mneme-genome.json."
+    },
+    "title": {
+      "type": "string",
+      "description": "Short title for the genome (default: 'Wisdom from {repo}')."
+    },
+    "description": {
+      "type": "string",
+      "description": "Plain-English description of what the genome teaches."
+    },
+    "publishedBy": {
+      "type": "string",
+      "description": "Free-text identifier for who published (org / handle / 'anonymous')."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Where the genome file was written."
+    },
+    "id": {
+      "type": "string"
+    },
+    "contentHash": {
+      "type": "string"
+    },
+    "fileCount": {
+      "type": "number"
+    },
+    "bytes": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Pack our team's Mneme wisdom into a portable file"*
+  - args: `{"title":"Acme Corp engineering wisdom","publishedBy":"acme-eng"}`
+  - returns: Returns { path, id, contentHash, fileCount, bytes }. Sends the file to .mneme/genomes/{id}.mneme-genome.json.
+
+**Pitfalls:**
+- PII scrubbing only handles email addresses — review the genome before sharing publicly to catch other secrets (API keys, server URLs).
+- Runtime state (mneme.db, replay.jsonl, confess-scoreboard.json) is intentionally excluded — install will NOT restore it.
+- Conflicts with absolute paths and `..` in filenames are rejected at install — keep your portable files inside .mneme/.
+
+**Compose with:** `mneme.genome.install` · `mneme.genome.list` · `mneme.constitution.get`
+
+</details>
+
+### `mneme.genome.install`
+
+Install a `.mneme-genome.json` packed by another team — applies their constitution / packs / tribal knowledge to the current repo's .mneme/. Verifies the content hash before applying. By default, refuses to overwrite existing files (returns conflicts list); pass force=true to override. Use WHEN you want to adopt another team's Mneme conventions.
+
+**When to use:** You received a .mneme-genome.json file and want to apply its conventions to your current repo.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "genomeFile": {
+      "type": "string",
+      "description": "Path to a .mneme-genome.json file."
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Overwrite existing .mneme/ files. Default false."
+    }
+  },
+  "required": [
+    "genomeFile"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "installed": {
+      "type": "number"
+    },
+    "skipped": {
+      "type": "number"
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "installedFiles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "genome": {
+      "type": "object"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Install acme-eng's Mneme genome"*
+  - args: `{"genomeFile":"./acme-eng-2026-05-09.mneme-genome.json"}`
+  - returns: Returns { installed, skipped, conflicts, installedFiles, genome }. If a file already exists, it appears in `conflicts`; pass force=true to overwrite.
+
+**Pitfalls:**
+- Refused if the genome's contentHash doesn't match its files — corrupt or hand-edited genomes are rejected.
+- Path-traversal attempts (../, absolute paths) are blocked individually — those files appear in `conflicts` with reason 'unsafe path'.
+- force=true OVERWRITES your existing .mneme/ files — diff your repo first if unsure.
+
+**Compose with:** `mneme.genome.publish` · `mneme.genome.list` · `mneme.constitution.get`
+
+</details>
+
+### `mneme.genome.list`
+
+List every Mneme genome installed locally to this repo, with installation timestamp + source + content hash. Use WHEN you want to know which external wisdom packs are currently shaping this repo's behavior.
+
+**When to use:** You want to audit which external genomes this repo has installed.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "total": {
+      "type": "number"
+    },
+    "genomes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Which Mneme genomes have we installed?"*
+  - returns: Returns { total, genomes: [{ id, installedAt, source, contentHash }] }. Empty array if none.
+
+**Pitfalls:**
+- Lists records — not the genome FILES themselves. To re-install, you need the original .mneme-genome.json.
+
+**Compose with:** `mneme.genome.publish` · `mneme.genome.install`
+
+</details>
+
+### `mneme.aletheia.lint`
+
+Active vulnerability scan of an arbitrary argument value — checks for command-injection patterns (shell metacharacters), SSRF (private IPs / non-HTTP schemes / cloud-metadata hosts), path traversal ('..'), and secret leakage (AWS / GitHub / Slack / Google / Stripe key shapes). Returns findings without blocking — defense in depth, not a replacement for tool-side input validation. Use WHEN you want to scan an arg blob for known attack patterns BEFORE forwarding it to a downstream tool.
+
+**When to use:** You're about to forward user-or-AI-supplied arguments to a downstream tool and want a defense-in-depth scan first.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": "string",
+      "description": "Tool name being checked (for context)."
+    },
+    "args": {
+      "description": "The argument blob to scan (any JSON-serializable value)."
+    }
+  },
+  "required": [
+    "args"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "total": {
+      "type": "number"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "clean",
+        "suspicious",
+        "blocked"
+      ]
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Scan these args for vulns before I forward them"*
+  - args: `{"target":"mneme.memory.ask","args":{"question":"what about https://169.254.169.254/latest/meta-data/?"}}`
+  - returns: Returns { total: 1, findings: [{kind:'ssrf', severity:'high', match:'169.254.169.254...', remediation:...}], verdict: 'suspicious' }.
+
+**Pitfalls:**
+- Pattern-based — sophisticated attackers use encoding tricks (URL-encoded, base64, unicode) to evade. This tool is one layer; combine with input validation and least-privilege.
+- False positives possible — a legitimate question MENTIONING '127.0.0.1' would flag SSRF. Read the finding context.
+- verdict='blocked' is informational — this tool doesn't actually block, it surfaces. Wire it into your dispatch path if you want enforcement.
+
+**Compose with:** `mneme.aletheia.immune.scan` · `mneme.audit.conscience`
+
+</details>
+
+### `mneme.aletheia.immune.scan`
+
+Bayesian anomaly detection — scan an argument shape against the trained profile of normal calls. Returns posterior P(legit | shape) using Laplace smoothing. Posterior < 0.05 ⇒ ALERT. Use WHEN you want to detect novel argument shapes that don't match any historical pattern (a leading indicator of probing or attack). Pair with mneme.aletheia.lint for pattern-based detection.
+
+**When to use:** You want to detect novel / anomalous argument shapes against a trained baseline of normal calls.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string",
+      "description": "Tool name being checked."
+    },
+    "args": {
+      "description": "Argument blob to fingerprint + score."
+    }
+  },
+  "required": [
+    "tool"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string"
+    },
+    "fingerprint": {
+      "type": "string"
+    },
+    "posteriorLegit": {
+      "type": "number",
+      "description": "P(legit | shape) — 0 to 1."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "novel",
+        "anomalous"
+      ]
+    },
+    "observationCount": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Is this call to mneme.memory.ask anomalous?"*
+  - args: `{"tool":"mneme.memory.ask","args":{"question":"why X?"}}`
+  - returns: Returns { fingerprint, posteriorLegit, verdict, observationCount }. If verdict='anomalous' (posterior < 0.05) — investigate.
+
+**Pitfalls:**
+- Cold-start: until you've trained the profile, every call returns posterior=0.5 (neutral). Train via repeated normal usage or mneme.aletheia.immune.train.
+- Profile is stored in .mneme/aletheia/profile.json — don't commit if you don't want the call shape leaked.
+- Detects shape novelty, not malice — a legitimate-but-rare call shape will flag.
+
+**Compose with:** `mneme.aletheia.lint` · `mneme.aletheia.immune.train`
+
+</details>
+
+### `mneme.aletheia.immune.train`
+
+Record the shape of a normal call in the immune-system profile, so future calls can be scored against it. Use WHEN you want to whitelist a known-good argument pattern before relying on the anomaly scanner. Counterpart to mneme.aletheia.immune.scan.
+
+**When to use:** You want to train the anomaly scanner by recording known-good argument shapes.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string"
+    },
+    "args": {}
+  },
+  "required": [
+    "tool"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string"
+    },
+    "fingerprint": {
+      "type": "string"
+    },
+    "observationCount": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Whitelist this normal call shape for mneme.memory.ask"*
+  - args: `{"tool":"mneme.memory.ask","args":{"question":"string","topK":8}}`
+  - returns: Returns { tool, fingerprint, observationCount } after recording the shape.
+
+**Pitfalls:**
+- Trains on YOUR examples — don't whitelist sketchy shapes accidentally.
+- Profile is local to this repo; not shared with peers (yet — see MCP Mesh).
+
+**Compose with:** `mneme.aletheia.immune.scan`
+
+</details>
+
+### `mneme.aletheia.immune.alerts`
+
+Read the recent honeypot + anomaly alerts log (.mneme/immune/alerts.jsonl). Each entry: timestamp, kind (honeypot | anomaly), tool, and forensic detail. Use WHEN you want to audit attack attempts that hit Mneme's defenses, or feed the alerts into a downstream SIEM.
+
+**When to use:** You want to review every attack probe / anomaly Mneme has caught.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "limit": {
+      "type": "number",
+      "description": "Max entries (most-recent N). Default 100."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "total": {
+      "type": "number"
+    },
+    "alerts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Show me the recent attack probes"*
+  - args: `{"limit":100}`
+  - returns: Returns up to 100 most-recent alert entries.
+
+**Pitfalls:**
+- Alerts log grows indefinitely — rotate manually if needed.
+
+**Compose with:** `mneme.aletheia.immune.scan` · `mneme.aletheia.lint`
+
+</details>
+
+### `mneme.aletheia.karma`
+
+ALETHEIA Karma — public, auditable reputation score per Mneme tool. Tools earn karma on verified responses (confess), lose karma on hallucinations + fuzz-test hits. Tools with karma < 0 enter 'quarantine' — agents see a warning before invoking. Use WHEN you want to know which Mneme tools have the strongest track record, or to surface quarantined tools that need investigation. Pass `tool` to query a single tool, omit for the full ledger.
+
+**When to use:** You want a tool's reputation score before invoking it (or to audit which tools have failed your repo's checks).
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string",
+      "description": "Optional — tool name to query. Omit for the full ledger."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "quarantined": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What's the karma of mneme.memory.ask?"*
+  - args: `{"tool":"mneme.memory.ask"}`
+  - returns: Returns { tools: [{ tool, karma, verified, hallucinations, fuzzHits, invocations }], quarantined: [...] }.
+- *"Show me every quarantined tool"*
+  - returns: Returns the full ledger; `quarantined` lists names with karma < 0.
+
+**Pitfalls:**
+- Karma is local to this repo — there's no global aggregation (yet, planned for ALETHEIA mesh). Don't compare across repos directly.
+- Cold start: a tool with 0 karma + 0 invocations is unrated, not quarantined.
+- Karma is a heuristic — a single fuzz hit drops 2 points; a wave of hallucinations drops fast. Read the breakdown before trusting the score blindly.
+
+**Compose with:** `mneme.confess` · `mneme.aletheia.fuzz` · `mneme.aletheia.immune.alerts`
+
+</details>
+
+### `mneme.aletheia.fuzz`
+
+ALETHEIA Adversarial Self-Fuzz — generate ~12 OWASP-derived attack inputs for each string field of a target tool's input schema, then run each through mneme.aletheia.lint to see whether the tool would have ACCEPTED it. Returns per-case outcome (accepted-clean | accepted-dangerous | rejected-by-lint | threw). Each accepted-dangerous outcome proposes a karma delta of -2. First MCP server with built-in self-fuzzing. Use WHEN you want to audit a tool's robustness against the OWASP top patterns without wiring up a separate fuzzer.
+
+**When to use:** You want to audit a Mneme tool's robustness against OWASP attack patterns without leaving the MCP surface.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string",
+      "description": "Tool name to fuzz."
+    },
+    "maxCases": {
+      "type": "number",
+      "description": "Cap on number of fuzz cases (default 60). Each adds ~10ms."
+    }
+  },
+  "required": [
+    "tool"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string"
+    },
+    "total": {
+      "type": "number"
+    },
+    "acceptedClean": {
+      "type": "number"
+    },
+    "acceptedDangerous": {
+      "type": "number"
+    },
+    "rejectedByLint": {
+      "type": "number"
+    },
+    "threw": {
+      "type": "number"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "proposedKarmaDelta": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Fuzz mneme.memory.ask for OWASP attack patterns"*
+  - args: `{"tool":"mneme.memory.ask","maxCases":50}`
+  - returns: Returns per-case results + summary counts. acceptedDangerous count + proposedKarmaDelta tell you how robust the tool is.
+
+**Pitfalls:**
+- We DO NOT actually invoke the target tool — we just lint its inputs. This is a STATIC fuzzer, not a runtime one. Pair with `mneme.security.audit` (planned) for runtime fuzzing in a sandbox.
+- Karma deltas are PROPOSED — not auto-applied. The agent / human decides whether to record them via mneme.aletheia.karma.record (planned).
+- OWASP coverage is 12 patterns × N string fields. A real attacker can craft fresh patterns; treat this as a baseline, not a pass certificate.
+
+**Compose with:** `mneme.aletheia.lint` · `mneme.aletheia.karma`
+
+</details>
+
+### `mneme.admin.delete_all`
+
+[HONEYPOT — DO NOT CALL] This tool name looks like an admin/dangerous operation but is a Mneme decoy. Any call is logged as an attacker probe. If you are a legitimate AI agent, you should never call this tool — use the catalog from mneme.capabilities instead.
+
+**When to use:** Never. This is a security honeypot.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Pitfalls:**
+- This is a honeypot — calling it logs you as an attacker.
+
+</details>
+
+### `mneme.system.exec`
+
+[HONEYPOT — DO NOT CALL] This tool name looks like an admin/dangerous operation but is a Mneme decoy. Any call is logged as an attacker probe. If you are a legitimate AI agent, you should never call this tool — use the catalog from mneme.capabilities instead.
+
+**When to use:** Never. This is a security honeypot.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Pitfalls:**
+- This is a honeypot — calling it logs you as an attacker.
+
+</details>
+
+### `mneme.secrets.dump`
+
+[HONEYPOT — DO NOT CALL] This tool name looks like an admin/dangerous operation but is a Mneme decoy. Any call is logged as an attacker probe. If you are a legitimate AI agent, you should never call this tool — use the catalog from mneme.capabilities instead.
+
+**When to use:** Never. This is a security honeypot.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Pitfalls:**
+- This is a honeypot — calling it logs you as an attacker.
+
+</details>
+
+### `mneme.users.list`
+
+[HONEYPOT — DO NOT CALL] This tool name looks like an admin/dangerous operation but is a Mneme decoy. Any call is logged as an attacker probe. If you are a legitimate AI agent, you should never call this tool — use the catalog from mneme.capabilities instead.
+
+**When to use:** Never. This is a security honeypot.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Pitfalls:**
+- This is a honeypot — calling it logs you as an attacker.
+
+</details>
+
+### `mneme.config.set`
+
+[HONEYPOT — DO NOT CALL] This tool name looks like an admin/dangerous operation but is a Mneme decoy. Any call is logged as an attacker probe. If you are a legitimate AI agent, you should never call this tool — use the catalog from mneme.capabilities instead.
+
+**When to use:** Never. This is a security honeypot.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Pitfalls:**
+- This is a honeypot — calling it logs you as an attacker.
+
+</details>
+
+### `mneme.mesh.peers`
+
+List every peer Mneme instance configured for federation in `.mneme/mesh.json`. Use WHEN you want to know which other repos / teams this Mneme instance can broadcast queries to. Returns an empty list when mesh.json is absent — that means peer transport is not enabled in this repo.
+
+**When to use:** You want to enumerate the federation peers configured for this repo.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "configured": {
+      "type": "boolean"
+    },
+    "peers": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What Mneme instances am I federated with?"*
+  - returns: Returns { configured: true|false, peers: [{ name, url, note }] }. Empty when mesh.json is absent.
+
+**Pitfalls:**
+- Returns the configuration AS WRITTEN — does not check liveness. A peer URL may be unreachable.
+- v1.18.0 ships the API surface; actual peer transport lands in v1.19.
+
+**Compose with:** `mneme.mesh.federate`
+
+</details>
+
+### `mneme.mesh.federate`
+
+Broadcast a query to every configured Mneme peer + aggregate the responses. Privacy: the query string + tool-name go over the wire; source code does NOT. Each peer's data.* response is preserved (no re-shaping); aggregator merges by relevance score. Use WHEN you want cross-repo expertise discovery, security broadcasts ("has any sister repo seen this CVE?"), or onboarding rehearsals across multiple codebases. v1.18.0: SCAFFOLDING ONLY — returns 'no peer transport' until v1.19 ships the actual HTTP / stdio bridge.
+
+**When to use:** You want to broadcast a tool query to every configured Mneme peer + aggregate responses.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string",
+      "description": "Tool name to broadcast (e.g. 'mneme.memory.ask')."
+    },
+    "args": {
+      "description": "Arguments forwarded to each peer's tool call."
+    }
+  },
+  "required": [
+    "tool",
+    "args"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "total": {
+      "type": "number",
+      "description": "Peers contacted."
+    },
+    "responses": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "aggregated": {
+      "type": "object"
+    },
+    "transportReady": {
+      "type": "boolean",
+      "description": "false in v1.18.0 — true once v1.19 ships transport."
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Ask every peer Mneme: 'has anyone seen a CVE matching this commit?'"*
+  - args: `{"tool":"mneme.memory.ask","args":{"question":"any commits referencing CVE-2024-XXXXX?"}}`
+  - returns: v1.18.0: returns transportReady=false + scaffolding response. v1.19+: per-peer responses + aggregated answer.
+
+**Pitfalls:**
+- v1.18.0 — peer transport NOT YET WIRED. Returns scaffolding response so AI agents can code against the API surface.
+- Once transport ships (v1.19): peers are unauthenticated unless mesh.json provides an hmacSecret per peer. Unsigned responses get dropped.
+- Federated queries are slower than local — 1× round-trip per peer. Use sparingly.
+
+**Compose with:** `mneme.mesh.peers` · `mneme.help`
 
 </details>
 

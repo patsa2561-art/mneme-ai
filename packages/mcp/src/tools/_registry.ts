@@ -30,6 +30,9 @@ import { adversaryTool } from "./_court.js";
 import { confessTool } from "./_confess.js";
 import { replayTools } from "./_replay.js";
 import { timeTravelTools } from "./_timetravel.js";
+import { genomeMarketplaceTools } from "./_genome_marketplace.js";
+import { aletheiaTools, honeypotTools } from "./_aletheia.js";
+import { meshTools } from "./_mesh.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
@@ -47,6 +50,10 @@ export function buildAllTools(): MnemeTool[] {
     confessTool,
     ...replayTools,
     ...timeTravelTools,
+    ...genomeMarketplaceTools,
+    ...aletheiaTools,
+    ...honeypotTools,
+    ...meshTools,
     smartDoTool,
     ...memoryTools,
     ...peopleTools,

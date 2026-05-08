@@ -23,6 +23,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+  CompleteRequestSchema,
   type CallToolResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -33,6 +38,11 @@ import { toCallResult, toErrorResult, type MnemeTool, type ToolResponse, type To
 import { moleculesContaining } from "./tools/_molecules.js";
 import { recordInvocation } from "./tools/_lifecycle.js";
 import { homeworkForCategory } from "./tools/_homework.js";
+import { recordReplay } from "./tools/_replay.js";
+import { recordObservation, recordKarmaEvent } from "./tools/_aletheia.js";
+import { listResources, readResource } from "./mcp_primitives/resources.js";
+import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
+import { completeArgument } from "./mcp_primitives/completion.js";
 
 export interface McpOptions {
   cwd: string;
@@ -227,7 +237,20 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
 
   const server = new Server(
     { name: "mneme", version: resolveVersion() },
-    { capabilities: { tools: {} } },
+    {
+      capabilities: {
+        tools: {},
+        // v1.18.0 — Mneme advertises 4 MCP primitives + tools (was: tools only).
+        // resources    — read-only views of constitution / catalog / karma
+        // prompts      — pre-baked workflow templates (slash commands)
+        // completions  — tab-complete tool / category / arg values
+        // logging      — sink for forensic + lifecycle events
+        resources: { subscribe: false, listChanged: true },
+        prompts: { listChanged: false },
+        completions: {},
+        logging: {},
+      },
+    },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -241,13 +264,53 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     ],
   }));
 
+  // ─── MCP primitives — resources / prompts / completion ──────────────
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: listResources(runtime),
+  }));
+  server.setRequestHandler(ReadResourceRequestSchema, async (req) => ({
+    contents: [readResource(runtime, req.params.uri)],
+  }));
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+    prompts: listPrompts(),
+  }));
+  server.setRequestHandler(GetPromptRequestSchema, async (req) => {
+    const args: Record<string, string> = {};
+    if (req.params.arguments) {
+      for (const [k, v] of Object.entries(req.params.arguments)) {
+        args[k] = String(v);
+      }
+    }
+    // SDK type unions GetPromptResult with a task-bearing variant; our
+    // shape matches GetPromptResult exactly. Cast to satisfy the union.
+    return getPrompt(req.params.name, args) as never;
+  });
+  server.setRequestHandler(CompleteRequestSchema, async (req) => {
+    const ref = req.params.ref;
+    const argName = req.params.argument.name;
+    const partial = String(req.params.argument.value ?? "");
+    const toolName = ref.type === "ref/prompt" ? ref.name : "";
+    const values = completeArgument(toolName, argName, partial);
+    return {
+      completion: { values, total: values.length, hasMore: false },
+    };
+  });
+
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
     const tool = toolMap.get(req.params.name);
     if (tool) {
       try {
         const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+        // v1.18.0 — record observation for ALETHEIA immune profile (best-effort).
+        recordObservation(runtime.meta.rootPath, tool.name, args);
         const response = await tool.handler(runtime, args);
         const enriched = enrichWithSecondBrain(response, tool, runtime.meta.rootPath);
+        // v1.18.0 — record HMAC-chained replay entry for audit (best-effort).
+        recordReplay(runtime.meta.rootPath, tool.name, args, enriched);
+        // v1.18.0 — increment karma invocations (no verdict-based delta yet
+        // unless response.data.verdict is present; tools that pair with confess
+        // call recordKarmaEvent themselves).
+        recordKarmaEvent(runtime.meta.rootPath, tool.name, "invocation");
         return toCallResult(enriched);
       } catch (err) {
         return toErrorResult(

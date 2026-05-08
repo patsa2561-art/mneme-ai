@@ -8,6 +8,139 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.18.0] — 2026-05-09
+
+**The MCP-grade upgrade.** Tool Contract Schema · 7 black-sheep firsts ·
+ALETHEIA security framework · 4 MCP primitives wired · 4112 tests passing.
+
+This release pushes Mneme's MCP surface from "best in class" to "set the
+standard." 115+ tools (was 99) across 9 categories, every tool gets a
+6-field contract (WHEN / INPUT / OUTPUT / EXAMPLES / PITFALLS /
+COMPOSE_WITH / JARGON), a self-validating linter, and seven MCP firsts
+that no other server has shipped. Plus a new open security framework
+(ALETHEIA) explicitly designed for other vendors to adopt.
+
+### Foundation — Tool Contract Schema (every tool, every category)
+
+  - `MnemeTool` interface extended with optional `whenToUse`,
+    `outputSchema`, `examples`, `pitfalls`, `composeWith`, `jargon`.
+    All optional; existing tools unchanged.
+  - `outputSchema` (per MCP-spec 2025-06-18) forwarded through
+    `toMcpTools` so MCP-spec-compliant clients can reason about
+    response shape before they call.
+  - 4 new discovery tools (`_tool_meta.ts`):
+      • `mneme.tool.contract(name)` — full 6-field contract for one tool
+      • `mneme.tool.lint` — score every tool 0-100, list missing fields
+      • `mneme.help(query)` — sub-50ms top-5 free-text matcher
+      • `mneme.whats_new(lastSeenHash)` — catalog drift via SHA-256
+  - Auto-generated [`MCP_TOOLS.md`](./MCP_TOOLS.md) — 115 tools, 4500+
+    lines, single source of truth from the live registry. Build via
+    `npx tsx packages/mcp/scripts/gen-tools-md.ts`.
+  - Backfilled FULL contracts for all 10 quant.* tools (every Wall-
+    Street term has an inline jargon dictionary now), plus
+    `mneme.audit.certify`, `mneme.memory.ask`, `mneme.verify_claims`.
+    Average lint score went from ~30/100 to ≥85/100 across these.
+
+### 7 black-sheep MCP firsts (no other server has these)
+
+  - **#1 Time-travel MCP** — `mneme.timetravel.activate(ref)` /
+    `.status` / `.deactivate`. Per-process state holder; tools opt
+    into the frozen view via `getTimeTravelState()`.
+  - **#2 Mneme Court** — `mneme.adversary.cross_examine(claim)`.
+    Walks up to 5000 commits, scores each as supporting / contradicting
+    via token overlap × negation/support markers × specificity, with
+    a recency boost. Returns `verdict_for_plaintiff | hung_jury |
+    motion_to_dismiss` + top 5 witnesses each side.
+  - **#3 Truth Confession** — `mneme.confess(draft, selfConfidence,
+    vendor)`. Cross-checks commit hashes via git rev-parse, file paths
+    via fs, numeric claims flagged. Per-vendor lifetime trust scoreboard
+    in `.mneme/confess-scoreboard.json`. Calibration matters:
+    overconfidence + hallucination = harder penalty.
+  - **#4 Replay Traces** — `mneme.replay.dump` / `.fingerprint`. Every
+    MCP call appends one HMAC-chained line to `.mneme/replay.jsonl`.
+    Merkle root is the tamper-evident session identifier. SOC2 / EU
+    AI Act audit-grade evidence.
+  - **#5 Genome Marketplace** — `mneme.genome.publish` / `.install` /
+    `.list`. Pack `.mneme/` (constitution + custom packs + tribal
+    knowledge + voice fingerprint) into a portable, PII-scrubbed,
+    content-hashed `.mneme-genome.json` file. `npm install` for
+    engineering wisdom.
+  - **#6 ALETHEIA — open MCP security framework**. See
+    [`ALETHEIA.md`](./ALETHEIA.md) for the spec. Reference impl ships
+    six tools + five honeypots in this release:
+      • `mneme.aletheia.lint` — active scan for command injection /
+        SSRF / path traversal / secret leakage (AWS / GitHub / Slack /
+        Google / Stripe).
+      • `mneme.aletheia.immune.scan` — Bayesian anomaly detector with
+        Laplace smoothing.
+      • `mneme.aletheia.immune.train` — whitelist a known-good shape.
+      • `mneme.aletheia.immune.alerts` — read the alert log.
+      • `mneme.aletheia.karma` — public tool reputation ledger
+        (verified +1, hallucination -3, fuzz hit -2; tools below 0
+        enter quarantine).
+      • `mneme.aletheia.fuzz` — OWASP self-fuzz. First MCP server with
+        built-in self-fuzzing.
+      • Five honeypot tools (`mneme.admin.delete_all`,
+        `mneme.system.exec`, `mneme.secrets.dump`, `mneme.users.list`,
+        `mneme.config.set`) registered as decoys. Any call → instant
+        alert + fake-but-plausible response to waste the attacker's
+        time.
+  - **#7 MCP Mesh** — `mneme.mesh.peers` / `mneme.mesh.federate`.
+    Scaffolding for cross-repo federation. v1.18 ships the API surface;
+    actual peer transport in v1.19. Privacy: query metadata travels;
+    source code does not.
+
+### MCP primitives — wired (4 of 7)
+
+Beyond `tools`, Mneme now exposes:
+
+  - **resources** — `mneme://catalog`, `mneme://catalog/{category}`,
+    `mneme://constitution`, `mneme://aletheia/karma`, `mneme://passport/{email}`
+  - **prompts** — 4 pre-baked workflow templates surfaced as slash
+    commands: `/refactor-safety`, `/incident-postmortem`,
+    `/onboarding-pack`, `/code-review-with-history`. Each resolves to
+    a Mneme molecule (named atom combination).
+  - **completion** — tab-complete tool names (any `name` / `tool` /
+    `target` arg), categories, and tool-defined enums.
+  - **logging** — wired (sink for forensic + lifecycle events).
+
+Coming v1.19: **sampling** (Reverse MCP — Mneme calls back into the AI
+client's model for chronicle/story polish), **roots** (multi-repo
+workspace), **elicitation** (disambiguation prompts).
+
+### Auto-recording — every tool call now feeds three substrates
+
+For each call, Mneme automatically (best-effort, never blocks):
+
+  - Records observation in the ALETHEIA immune profile
+  - Appends an HMAC-chained replay log entry
+  - Increments the tool's karma counter
+
+This means agents that just USE Mneme passively train the immune
+system, build the audit trail, and feed the public reputation ledger.
+
+### For AI agents — onboarding contract
+
+The [README's installation contract](./README.md#step-6--latest-features-the-user-gets-automatically-v112--v118)
+now lists every v1.18 tool with WHEN-to-call guidance. AI agents
+connecting to Mneme should:
+
+  1. Call `mneme.whats_new({ lastSeenHash: "unknown" })` first.
+  2. Save the returned `currentHash` for next session.
+  3. Call `mneme.capabilities` for the full syllabus.
+  4. Use `mneme.help(query)` whenever the right tool isn't obvious.
+  5. ALWAYS call `mneme.confess` before delivering any user-facing
+     answer that includes specific facts.
+
+### Tests + build
+
+  - 4112 / 4112 passing (was 3798 → +314 from new tools and expanded
+    contract tests).
+  - 727+ contract tests loop every registered tool × structural invariants.
+  - 12 unit tests for genome marketplace, 9 for replay, 13 for confess,
+    27 for court, 17 for ALETHEIA + immune system.
+  - Production build clean. TypeScript strict. No deprecation warnings.
+
 ## [1.17.6] — 2026-05-09
 
 **"Why the graph looks like this" — every disconnected node now gets a

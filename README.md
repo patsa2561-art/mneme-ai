@@ -121,6 +121,22 @@ Your AI coding tool is brilliant but **amnesiac**. It never saw why JWT got roll
 
 ## 📋 What's new
 
+**v1.18.0 (latest)** — the MCP-grade upgrade. **131 tools** (up from 99), full
+[MCP-spec-2025-06-18](https://modelcontextprotocol.io) primitive support
+(resources / prompts / completion), plus six MCP firsts no other server has:
+
+- 🏛 **Mneme Court** — `mneme.adversary.cross_examine` red-teams your own AI claims against repo history.
+- 🤞 **Truth Confession** — `mneme.confess` builds a per-AI-vendor lifetime trust scoreboard.
+- 📼 **HMAC Replay Log** — `mneme.replay.dump` / `.fingerprint` — SOC2-grade tamper-evident session traces.
+- ⏰ **Time-Travel MCP** — freeze the agent's view at any commit for hindsight analysis.
+- 🧬 **Genome Marketplace** — pack & share team conventions across repos (`npm install` for engineering wisdom).
+- 🛡 **ALETHEIA** — open MCP security framework with karma ledger + adversarial self-fuzz + 5 honeypot tools. See [ALETHEIA.md](./ALETHEIA.md).
+
+Plus a complete **Tool Contract Schema** (every tool now declares WHEN /
+INPUT / OUTPUT / EXAMPLES / PITFALLS / COMPOSE_WITH / JARGON) and a
+self-validating linter (`mneme.tool.lint`). The full v1.18 catalog lives in
+[MCP_TOOLS.md](./MCP_TOOLS.md).
+
 See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
 
 ---
@@ -341,9 +357,34 @@ If you don't → check Step 3 config; ask user to restart again.
 - User reports "weird Mneme behaviour" → call `mneme security verify` first to rule out tamper.
 - User about to commit `.mneme/audit-log.secret` → STOP them; that's the HMAC secret.
 
-### Step 6 — Latest features the user gets automatically (v1.12 → v1.14)
+### Step 6 — Latest features the user gets automatically (v1.12 → v1.18)
 
 When the user installs Mneme today via `npm install -g mneme-ai`, they get **all** of these — no extra config:
+
+**🚨 v1.18.0 — what's NEW since you may have last seen Mneme:**
+
+After connecting, **call `mneme.whats_new({ lastSeenHash: "unknown" })`** to get the current catalog hash + a one-time onboarding bundle. Save the hash; pass it next session for a delta. Then call `mneme.capabilities` for the full syllabus. New tools ALL agents should know about:
+
+| New tool (v1.18) | Call when |
+|---|---|
+| `mneme.whats_new` | First call of every session — diff vs last-seen catalog hash. |
+| `mneme.help(query)` | You don't know which tool fits — sub-50ms top-5 free-text matcher. |
+| `mneme.tool.contract(name)` | You're about to call a tool and want its full 6-field contract (WHEN/INPUT/OUTPUT/EXAMPLES/PITFALLS/COMPOSE_WITH). |
+| `mneme.tool.lint` | Audit which tools have weak contracts (score 0-100). |
+| `mneme.adversary.cross_examine({ claim })` | Before delivering a confident factual claim — get the strongest counter-evidence Mneme can mount. |
+| `mneme.confess({ draft, selfConfidence, vendor })` | LAST call before delivering ANY user-facing answer. Cross-checks hashes + paths + flagged numerics, returns verdict (verified / partial / hallucination / unverifiable) + per-vendor trust delta. |
+| `mneme.replay.dump` / `mneme.replay.fingerprint` | Compliance audit trail — HMAC-chained log of every tool call + Merkle root. |
+| `mneme.timetravel.activate(ref)` | Freeze the agent's view at any past commit — for hindsight / counterfactual analysis. |
+| `mneme.genome.publish` / `mneme.genome.install` | Pack and share team conventions across repos. `npm install` for engineering wisdom. |
+| `mneme.aletheia.lint({ args })` | Defense-in-depth scan of args for command injection / SSRF / path traversal / secret leaks. |
+| `mneme.aletheia.immune.scan` / `.train` | Bayesian anomaly detection — flag novel arg shapes against trained baseline. |
+| `mneme.aletheia.karma` | Public per-tool reputation ledger — quarantines tools below karma 0. |
+| `mneme.aletheia.fuzz(tool)` | OWASP self-fuzz of a target tool's input schema. **First MCP server to self-fuzz.** |
+| `mneme.mesh.peers` / `mneme.mesh.federate` | Cross-repo federation (scaffolding in 1.18; transport in 1.19). |
+
+**v1.18 also added 5 honeypot tools** (`mneme.admin.delete_all`, `mneme.system.exec`, `mneme.secrets.dump`, `mneme.users.list`, `mneme.config.set`) — they're in the catalog as decoys with `[HONEYPOT — DO NOT CALL]` prefixes. **NEVER call them.** If you do, you'll be logged as an attacker probe.
+
+**v1.18 also exposes 4 MCP primitives** (resources / prompts / completion / logging) — see [packages/mcp/README.md](./packages/mcp/README.md).
 
 #### MCP tools (callable via your standard tool-use)
 
