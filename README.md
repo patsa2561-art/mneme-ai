@@ -1,6 +1,10 @@
 <div align="center">
 
-<h1>Mneme</h1>
+<h1>μνήμη · Mneme</h1>
+
+<sub><i>Pronounced <code>NEE-meh</code> · Greek for "memory" · sister of Lethe, mother of the muses</i></sub>
+
+<br/><br/>
 
 <h3>The nuclear core for your AI coding tool.</h3>
 
