@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.46.0] — 2026-05-09
+
+The **"QSAC Tech 4 — Multi-Verifier Consensus"** release. Third of seven
+on the road to v1.0. Three independent verifiers (Bayesian + Stylometric
++ Entropy) vote; weighted product-of-experts gives the consensus; Jensen-
+Shannon divergence flags disagreement. The financial-audit precedent
+(PwC, EY, KPMG independently sign-off) applied to AI commits.
+
+Adds: `verifyBayesian` · `verifyStylometry` · `verifyEntropy` ·
+`consensusVote(votes, opts?)` returning `{ consensus, votes, maxJsd,
+disagreement, disagreeingPair? }`.
+
+Tests: 14 new (stylometric anomaly detection, entropy mismatch detection,
+consensus + disagreement metric). Total: **2239 tests** across 164 files.
+
 ## [0.45.0] — 2026-05-09
 
 The **"QSAC Tech 2 — Causal Claim Graph"** release. Second of seven on

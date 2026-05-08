@@ -14,3 +14,4 @@ export * from "./certify.js";
 export * from "./head-verify.js";
 export * from "./superposition.js";
 export * from "./claim-graph.js";
+export * from "./multi-verifier.js";
