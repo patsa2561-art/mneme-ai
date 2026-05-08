@@ -8,6 +8,83 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.13.1] — 2026-05-09
+
+**The "Mneme DNA" foundation release.** P1 of a 10-phase roadmap to ship
+the first AI-agent-native code-search engine: **8 algorithms × 8 math
+formulas = 16-strand DNA** that no other code-search tool can compose
+(because the inputs are uniquely Mneme's product).
+
+═══════════════════════════════════════════════════════════════════════
+P1 — 8 math formulas (shipped, 48 unit tests)
+═══════════════════════════════════════════════════════════════════════
+
+  Pure functions. Deterministic. Same inputs → same output. Every
+  formula has unit tests for happy path + boundary + invariants.
+
+   F1 · QRS — Quantum Resonance Score (quadratic form ψ^T H ψ)
+   F2 · HWC — Hebbian-Weighted Cosine (cos × log(1+h))
+   F3 · ADB — Atrophy-Decay Boost (R × (1 - A/100)^α)
+   F4 · TBP — Tribal Bayesian Posterior (Beta-Binomial conjugate)
+   F5 · RED — Regret Echo Distance (Euclidean min)
+   F6 · TPS — Time-Phase Score (Gaussian log-age resonance)
+   F7 · CC  — Compositional Confidence (Wilson LB × Hebbian)
+   F8 · MF  — Mutant Fitness (CTR ÷ TTUR genetic fitness)
+
+  Source: packages/core/src/dna/formulas.ts (48 unit tests)
+
+═══════════════════════════════════════════════════════════════════════
+P2-P10 — 8 algorithms (roadmap, one per minor version)
+═══════════════════════════════════════════════════════════════════════
+
+   P2 (v1.14.0): A4 Echo-Locator — SONAR for code patterns
+   P3 (v1.15.0): A2 Phantom-Path Search — what code "should" be
+   P4 (v1.15.x): A6 Anti-Pattern Repulsion — F5-driven downrank
+   P5 (v1.16.0): A1 Mutant Index Evolution — genetic-algorithm fitness
+   P6 (v1.17.0): A3 Quantum Superposition Rank — 3-tensor decomp
+   P7 (v1.18.0): A5 Time-Travel Search — historical-state index
+   P8 (v1.18.x): A7 Tribal Voting — federation-driven rerank
+   P9 (v1.19.0): A8 Ghost-Sniper Verifier — strict-mode killer
+   P10 (v1.20.0): wire DNA into MCP Dynamic + bench numbers
+
+  Full roadmap: docs/dna/README.md
+
+═══════════════════════════════════════════════════════════════════════
+The "ghost sniper" guarantee (P9 target)
+═══════════════════════════════════════════════════════════════════════
+
+  Strict mode (default): every result must pass:
+    1. AST verify (file + symbol exist)
+    2. Semantic verify (embedding similarity ≥ threshold)
+    3. F7 (CC) ≥ 0.6 confidence
+
+  Otherwise → REJECTED, not "shown with low confidence."
+  We prefer empty answers to lies. Ghost sniper. One shot.
+
+═══════════════════════════════════════════════════════════════════════
+Why this moat is defensible
+═══════════════════════════════════════════════════════════════════════
+
+  The 6 inputs DNA needs:
+    1. HMAC-chained audit log of AI tool calls (Mneme v1.11.0)
+    2. Regret + decision extraction from git (Mneme v1.10.0)
+    3. Constitutional Gate at runtime (Mneme v1.12.0)
+    4. Atrophy time-series per file (Mneme always)
+    5. Federation envelope protocol (Mneme v1.7.0)
+    6. Reproducible AI-memory benchmark (Mneme v1.12.0)
+
+  No competitor (Cursor / Copilot / Sourcegraph / OpenAI internal) has
+  any 2 of these 6, let alone all 6 + DNA composition on top.
+
+═══════════════════════════════════════════════════════════════════════
+Tests
+═══════════════════════════════════════════════════════════════════════
+
+  +48 new unit tests (formulas only, P1).
+  Total: 2881 tests passing.
+
+  P2-P10 will add roughly 100-200 more tests (algorithms + integration).
+
 ## [1.13.0] — 2026-05-08
 
 **The "TRIBAL KNOWLEDGE MCP" release.** What was a static surface in v1.12.0

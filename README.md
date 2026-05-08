@@ -457,6 +457,137 @@ All 4 combined       = self-defending AI memory at the runtime layer
 ═══════════════════════════════════════════════════════════════════════════════
 
 <details>
+<summary><h2 style="display:inline">🧬 Mneme DNA &mdash; the 16-strand code search engine &nbsp;&nbsp;<sub><i>(the black-sheep moat)</i></sub></h2></summary>
+
+```
+   ╔═══════════════════════════════════════════════════════════════════╗
+   ║   Sourcegraph spent $200M.  GitHub spent more.                    ║
+   ║   We built a different shape: search engineered for AI agents.    ║
+   ║                                                                   ║
+   ║   16 strands of DNA — 8 algorithms × 8 math formulas — that no    ║
+   ║   other code-search tool composes, because they DON'T have the    ║
+   ║   inputs (HMAC-chained AI audit log, regret extraction, runtime   ║
+   ║   Constitutional Gate, atrophy time-series, federation, bench).   ║
+   ╚═══════════════════════════════════════════════════════════════════╝
+
+                        ╭───────────────╮
+              ┌─────────│  YOUR QUERY   │─────────┐
+              │         ╰───────────────╯         │
+              ▼                                   ▼
+    ┌──────────────────┐                ┌──────────────────┐
+    │  8 ALGORITHMS    │                │  8 MATH FORMULAS │
+    │  (orchestration) │   ─compose─▶   │  (scoring)       │
+    └──────────────────┘                └──────────────────┘
+              │                                   │
+              ▼                                   ▼
+    A1 Mutant Index Evolution            F1 Quantum Resonance Score
+    A2 Phantom-Path Search               F2 Hebbian-Weighted Cosine
+    A3 Quantum Superposition Rank        F3 Atrophy-Decay Boost
+    A4 Echo-Locator (SONAR for code)     F4 Tribal Bayesian Posterior
+    A5 Time-Travel Search                F5 Regret Echo Distance
+    A6 Anti-Pattern Repulsion            F6 Time-Phase Score
+    A7 Tribal Voting (Federation)        F7 Compositional Confidence
+    A8 Ghost-Sniper Verifier             F8 Mutant Fitness
+              │                                   │
+              └────────────┬──────────────────────┘
+                           ▼
+              ┌──────────────────────────────┐
+              │  STRICT MODE (default):      │
+              │   0% hallucination           │
+              │   F7 ≥ 0.6 confidence        │
+              │   Or return empty + reasons. │
+              │   Ghost sniper. One shot.    │
+              └──────────────────────────────┘
+```
+
+> **The "ghost sniper" guarantee** — Strict mode (default): any result that fails AST verify + semantic verify + Wilson 95% lower-bound on confidence is **rejected**, not "shown with low confidence." We prefer empty answers to lies.
+
+---
+
+### Why no one else can build this (the 6-input moat)
+
+| Input that DNA needs | Mneme has | Cursor | Copilot | Sourcegraph | OpenAI internal |
+|---|:---:|:---:|:---:|:---:|:---:|
+| HMAC-chained audit log of AI tool calls | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Regret + decision extraction from git | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Constitutional Gate at runtime | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Atrophy time-series per file | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Federation envelope protocol (k-anon) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Reproducible AI-memory benchmark | ✅ | ❌ | ❌ | ❌ | partial |
+| **Can compose 16-strand DNA** | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+### 🧮 The 8 math formulas — *shipped* in v1.13.0+
+
+> Pure functions. Deterministic. **48 unit tests** verifying every formula's edge cases, invariants, and boundary conditions. Source: [`packages/core/src/dna/formulas.ts`](./packages/core/src/dna/formulas.ts).
+
+#### F1 · Quantum Resonance Score (QRS)
+`QRS(f, q) = ψ_f^T · H_q · ψ_f`
+Quadratic form. Operator H_q encodes cross-feature interactions (e.g. "files where embedding similarity AND ast-proximity are jointly high") that linear scoring functions cannot express.
+
+#### F2 · Hebbian-Weighted Cosine (HWC)
+`HWC(q, c) = cos(q, c) × (1 + log(1 + h))`
+Cosine similarity boosted by Hebbian co-activation count `h` from past successful searches. Pairs that worked before strengthen over time — Hebb's law applied to IR.
+
+#### F3 · Atrophy-Decay Boost (ADB)
+`ADB(f) = R(f) × (1 − A(f)/100)^α`
+Stale code (high atrophy) gets exponentially downranked. α tunable per workspace.
+
+#### F4 · Tribal Bayesian Posterior (TBP)
+`TBP = local_likelihood × Beta(α+1, β+1)_mean`
+Local relevance × federation-derived prior. K-anonymous cross-repo upvotes shift the prior; Beta-Binomial conjugate is well-behaved at small sample sizes.
+
+#### F5 · Regret Echo Distance (RED)
+`RED(f) = min_{r ∈ regrets} dist(emb(f), emb(r))`
+Distance to nearest known regret pattern. Lower RED = closer to past mistake = penalty multiplier closer to floor.
+
+#### F6 · Time-Phase Score (TPS)
+`TPS(f, q) = R(f) × exp(−((log(1+age_f) − log(1+age_q))/σ)²)`
+Gaussian resonance between file age and query age in log-space. "Recent query for recent code" resonates; mismatched phases cancel.
+
+#### F7 · Compositional Confidence (CC)
+`CC = WilsonLB(success, total) × HebbianStrength(q, r)`
+Calibrated final score. Strict mode threshold `CC ≥ 0.6` — anything lower is rejected.
+
+#### F8 · Mutant Fitness (MF)
+`MF = mean over samples of (CTR / TTUR)`
+Genetic-algorithm fitness for index strategies. High click-through-rate ÷ time-to-useful-result wins. Survives into next generation; low fitness gets pruned.
+
+---
+
+### 🤖 The 8 algorithms — *roadmap* P2-P10 (one shipping per minor version)
+
+| # | Algorithm | Atoms it composes | Phase |
+|---|---|---|---|
+| **A1** | Mutant Index Evolution | F8 + audit log + click-through | P5 |
+| **A2** | Phantom-Path Search | regret + decision + Hebbian | P3 |
+| **A3** | Quantum Superposition Rank | F1 + intent classifier + HMRA | P6 |
+| **A4** | Echo-Locator (SONAR for code) | regret patterns + Hebbian + embeddings | P2 |
+| **A5** | Time-Travel Search | git history + delta encoding + F6 | P7 |
+| **A6** | Anti-Pattern Repulsion | F5 + REI metric | P4 |
+| **A7** | Tribal Voting (Federation) | F4 + federation envelopes | P8 |
+| **A8** | Ghost-Sniper Verifier (strict-mode killer) | F7 + Constitutional Gate + audit log | P9 |
+
+> **Full roadmap:** [`docs/dna/README.md`](./docs/dna/README.md) — phase-by-phase scope, atoms, modules, deferred-to-which-version.
+
+---
+
+### What this means for the buyer in the room
+
+| When the question is… | Mneme DNA answers with… |
+|---|---|
+| *"How do I find the canonical pricing logic in this 500k-LOC repo?"* | Phantom-Path Search (A2) — finds it AND lists deprecated alternatives, with citations |
+| *"Is this AI hallucinating file paths?"* | Ghost-Sniper Verifier (A8) — every result AST-verified, never fictitious |
+| *"Can my AI agent learn what's relevant in MY codebase over time?"* | Mutant Index Evolution (A1) — index strategies evolve via genetic fitness |
+| *"How do I avoid recommending code that echoes a past regret?"* | Anti-Pattern Repulsion (A6) — F5 distance to regret pattern downranks |
+| *"Why do I get the same generic results as everyone else?"* | Tribal Voting (A7) — federation up/downvotes from k-anon community shape your local rank |
+
+</details>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+<details>
 <summary><h2 style="display:inline">📊 The 7 metrics no other dev tool can compute &nbsp;&nbsp;<sub><i>(Mneme-only science)</i></sub></h2></summary>
 
 ```
