@@ -29,3 +29,5 @@ export * as holy from "./holy/index.js";
 export * as hmra from "./hmra/index.js";
 export * as learning from "./learning/index.js";
 export * as security from "./security/index.js";
+export * as bench from "./bench/index.js";
+export * as dynamic from "./dynamic/index.js";

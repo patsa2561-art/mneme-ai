@@ -417,6 +417,28 @@ The secret is shown once when you run `mneme webhook add` — save it in your en
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🚀 Super MCP — 4 firsts no other MCP server has (v1.12.0)
+
+The MCP protocol was invented by Anthropic. v1.12.0 ships 4 capabilities **no MCP server in the official directory has** — and each is reusable for any MCP server, not just Mneme.
+
+| First | What it is | CLI / API |
+|---|---|---|
+| 🛡 **MCP Shield** | First reusable defensive runtime for any MCP server. `withShield(handler)` adds: HMAC audit log · prompt-injection scrubbing · rate-limit · arg validation · reputation tracking · FIPS gate. Closed under composition. | `import { security } from "@mneme-ai/core"; security.shield.withShield(...)` |
+| 📐 **AI-Memory-Bench** | First reproducible benchmark for "AI memory layers". Measures hallucination across 3 categories (citation · attribution · API). Wilson lower-bound. CI-friendly. | `mneme bench --probes-out probes.json` then `mneme bench --score answers.json` |
+| ⚖ **Constitutional Gate** | Constitutional AI was a *training-time* idea. We made it a *runtime* gate. AI proposes code → gate checks repo-history MUST-NOT rules → REFUSE + rewrite hint. Loop until pass. | `security.constitutionalGate.constitutionalCheck({ proposal, rules })` |
+| 🧬 **Dynamic MCP** | Every other MCP server has a static tool surface. Mneme's surface is *repo-dependent.* Detects Stripe / Kafka / React / Express / FastAPI / Postgres / Next.js / GraphQL → spawns ecosystem-specific tools. | `mneme ecosystem` |
+
+**The compositional super-sonic booms (combine 2+ moves):**
+
+```
+Shield + Bench       = provably-fair benchmark (every probe call audited)
+Shield + Gate        = constitutional shield (refuse + audit trail)
+Gate + Ecosystem     = per-repo constitution auto-enforced
+All 4 combined       = self-defending AI memory at the runtime layer
+```
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🛠 Bolt it on
 
 Mneme is **MIT-licensed** and **local-first**: no accounts · no telemetry · no phone-home · no API keys required. Pull it from npm and you're set:

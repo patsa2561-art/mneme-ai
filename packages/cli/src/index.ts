@@ -1119,6 +1119,44 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
+  // ── v1.12.0 — Dynamic MCP: per-repo ecosystem-specific tool surface ──
+  program
+    .command("ecosystem")
+    .description("Dynamic MCP — detect ecosystems in your repo (Stripe, React, Postgres, etc.) and show which ecosystem-specific tools Mneme will spawn for this repo.")
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { json?: boolean }) => {
+      const { ecosystemCommand } = await import("./commands/ecosystem.js");
+      process.exit(
+        await ecosystemCommand({
+          cwd: process.cwd(),
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.12.0 — AI-Memory-Bench: reproducible hallucination benchmark ──
+  program
+    .command("bench")
+    .description("AI-Memory-Bench — the first reproducible benchmark for 'AI memory layers'. Emit probes, score AI answers, render leaderboard.")
+    .option("--probes-out <file>", "Emit probe questions as JSON for the AI to answer")
+    .option("--score <answers>", "Score AI's answers JSON file → render leaderboard")
+    .option("--label <name>", "Label for the run (e.g. 'claude-code-with-mneme')")
+    .option("--category <c>", "Filter to one category: citation | api | attribution | regret | decision")
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { probesOut?: string; score?: string; label?: string; category?: string; json?: boolean }) => {
+      const { benchCommand } = await import("./commands/bench.js");
+      process.exit(
+        await benchCommand({
+          cwd: process.cwd(),
+          probesOut: opts.probesOut,
+          score: opts.score,
+          label: opts.label,
+          category: opts.category as import("@mneme-ai/core").bench.ProbeCategory | undefined,
+          json: opts.json,
+        }),
+      );
+    });
+
   // ── v1.11.1 — One-screen security dashboard for the user ──
   program
     .command("security [action]")
