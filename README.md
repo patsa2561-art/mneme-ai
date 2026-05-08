@@ -151,7 +151,8 @@ mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 
 ---
 
-## 👥 Who is this for
+<details>
+<summary><h2 style="display:inline">👥 Who is this for</h2></summary>
 
 <details>
 <summary><b>🧑‍💻 Solo dev / vibe coder using AI tools</b></summary>
@@ -186,11 +187,16 @@ You need a tamper-evident audit trail of every AI-driven commit, with cryptograp
 
 </details>
 
+</details>
+
 ---
 
-## 🤖 For AI agents — installation contract
+<details>
+<summary><h2 style="display:inline">🤖 For AI agents — installation contract</h2></summary>
 
 > **You are an AI tool (Claude Code · Cursor · Codex CLI · Continue · Cline · Zed · Aider · or any MCP-aware client) and a user asked you to install Mneme. Follow this contract verbatim. Do NOT improvise.**
+>
+> *(GitHub renders this collapsed. Raw markdown is fully readable to AI agents — no information loss.)*
 
 ### Step 0 — Detect environment
 
@@ -407,6 +413,8 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 - Quote `wisdom` to the user; cite `data` when they want details; suggest `followUp` tools for deeper analysis.
 - Read `secondBrain.compose` for natural molecule combinations; fire suggested atoms in parallel.
 - Read `secondBrain.homework` — it contains the rubric your draft must satisfy. **Call `mneme.grade.answer` with your draft BEFORE delivering to the user.** On FAIL, rewrite using `rewriteHints` and call grade.answer again with `retryCount++`. Stop only when verdict is PASS or `giveUp` is true.
+
+</details>
 
 ---
 
