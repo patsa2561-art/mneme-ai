@@ -363,6 +363,31 @@ Mneme is a **standard MCP server**. It works with any AI tool that supports MCP.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🛡 The four moats (why Mneme is hard to copy)
+
+These four advantages don't show up in a feature checklist — but they're what make Mneme defensible against any well-funded clone, any AI vendor's native memory, any editor's bundled feature.
+
+| Moat | Why no one else can copy it |
+|---|---|
+| **Vendor neutrality** | Anthropic can't be the auditor of Anthropic's memory. OpenAI can't be neutral about OpenAI. **Mneme is the only one no AI vendor controls** — and the only one that can publish a fair benchmark across all of them. |
+| **Audit-chain network effects** | Every signed `audit certify` certificate strengthens Mneme's chain. A YC-funded fork starts at zero certificates. Code is replicable. **Network effects are not.** |
+| **Local-first as premium** | Every other AI tool defaults to cloud + charges less for local. Mneme's **Enterprise tier IS local-first** — because that's what regulated industries (defense, fintech, healthcare, EU AI Act subjects) actually require. Inverse pricing. |
+| **Solo-craftsman trust** | Built by one engineer who reads every line. Not a venture-backed feature factory. In security/compliance markets where buyers distrust corporate AI tools, **the lone wolf is the trust signal**. |
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 💰 Pricing — three tiers, free is forever
+
+| Tier | Price | For |
+|---|---|---|
+| **Free** | $0 forever | solo dev · open source · vibe coders. Full CLI + 94 tools + Super Sonic Engine. |
+| **Pro** | $20/mo/dev | small teams. Adds hosted audit chain, Ed25519-signed certificates, Wisdom Federation network. |
+| **Air-gapped Enterprise** | $50K-200K/yr | defense · fintech · healthcare · EU AI Act subjects. On-premise, air-gapped, custom rubrics, 4-hour SLA. |
+
+→ **[Full pricing details](docs/PRICING.md)** — including the FAQ on why Enterprise costs more than SaaS.
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 📚 Going deeper
 
 | Want to… | Where |

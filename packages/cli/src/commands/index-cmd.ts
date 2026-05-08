@@ -215,6 +215,10 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
       : true;
 
   let last = 0;
+  // Wisdom theater — emit progressive discoveries while indexing runs.
+  // Strategic intent: turn the 90s indexing wait into value-creation theatre.
+  const { WisdomTheater } = await import("./wisdom-theater.js");
+  const theater = new WisdomTheater({ store: s });
   const idx = new indexer.Indexer({
     cwd: meta.rootPath,
     store: s,
@@ -229,6 +233,9 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
       const bar = p.total > 0 ? formatProgress(p.current, p.total) : "";
       ui.raw(`\r${kleur.gray("›")} ${kleur.bold(p.phase.padEnd(10))} ${bar}  ${kleur.gray(p.message ?? "")}     `);
       if (p.phase === "done") ui.raw("\n");
+      // Wisdom theater — surface a discovery as data flows in. Best-effort.
+      const wisdom = theater.maybeEmit({ phase: p.phase, current: p.current, total: p.total });
+      if (wisdom) ui.raw(`\n  ${wisdom}\n`);
     },
   });
 
