@@ -45,6 +45,12 @@
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+> ### 🤖 AI agent reading this for the first time?
+>
+> If a user shared this repo with you and asked you to install Mneme — **jump to [§ For AI agents](#-for-ai-agents--installation-contract) below and follow the contract verbatim.** Don't improvise the steps. Mneme has a specific install order + auto-config command (`mneme mcp --install`) that's safer than editing JSON manually.
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## ⚙ Why Mneme exists
 
 You're already using **Claude Code** — or **Cursor**, **Codex**, **Gemini**, **Continue**. Your AI writes fresh code beautifully. Fast. Fluent. Mostly correct.
@@ -191,51 +197,147 @@ You need a tamper-evident audit trail of every AI-driven commit, with cryptograp
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🤖 For AI agents reading this
+## 🤖 For AI agents — installation contract
 
-If a user has shared this repo with you and asked you to install Mneme, here's the contract:
+> **You are an AI tool (Claude Code · Cursor · Codex CLI · Continue · Cline · Zed · Aider · or any MCP-aware client) and a user asked you to install Mneme. Follow this contract verbatim. Do NOT improvise.**
 
-### Step 1 — Install globally
+### Step 0 — Detect environment
+
+Determine the user's OS and whether `npm` is callable:
+
+| Check | If yes → | If no → |
+|---|---|---|
+| `npm --version` exits 0 | proceed to Step 1A | use Step 1B (Docker) |
+| `process.platform === 'win32'` | use Windows config paths | use POSIX paths |
+| User is in a sandboxed agent (no shell write access) | tell user to run Steps 1-3 themselves | proceed normally |
+
+### Step 1A — Install globally (preferred)
+
 ```bash
 npm install -g mneme-ai
 ```
 
-### Step 2 — Initialize in the user's repo
+### Step 1B — Docker fallback (sandbox-safe, no Node.js needed)
+
+If `npm install -g` is blocked or unavailable, use Docker:
+
 ```bash
+docker pull ghcr.io/patsa2561-art/mneme-ai
+```
+
+Then alias `mneme` to the container:
+
+```bash
+# POSIX (macOS / Linux)
+alias mneme='docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme'
+
+# Windows PowerShell
+function mneme { docker run --rm -v "${PWD}:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme @args }
+```
+
+### Step 2 — Initialize in the user's repo
+
+```bash
+cd <user's repo>
 mneme init
 mneme index
 ```
-*(Index takes ~90s for ~5k commits. Use `--cap 1000` to limit.)*
 
-### Step 3 — Auto-configure yourself as an MCP client
+*Index takes ~90s for ~5k commits. Use `--cap 1000` to limit on huge repos.*
+
+### Step 3 — Auto-configure yourself as MCP client
+
 ```bash
 mneme mcp --install
 ```
-This detects which AI tool environment you're running in (Claude Code · Cursor · Continue) and writes the appropriate config. For Codex CLI, run `codex mcp add mneme mneme mcp` instead.
+
+This **auto-detects** which AI tool you're running in (Claude Code · Cursor · Continue) and writes the appropriate config — handles all 3 OSes. **Always prefer this over editing JSON manually.**
+
+If `mneme mcp --install` returns "no AI tools detected", fall back to manual config:
+
+| Your AI tool | Config path | Cross-OS notes |
+|---|---|---|
+| **Claude Code / Desktop** | `~/.claude/config.json` (or per-OS Claude Desktop path) | Windows: `%APPDATA%\Claude\claude_desktop_config.json` · macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` · Linux: `~/.config/Claude/claude_desktop_config.json` |
+| **Cursor** | `~/.cursor/mcp.json` | same path on all OS |
+| **Continue** (VS Code) | `~/.continue/config.json` | same path on all OS |
+| **Codex CLI** (OpenAI) | run `codex mcp add mneme mneme mcp` | no manual edit needed |
+| **Cline · Zed** | tool's MCP settings UI | accept the prompt |
+
+In each JSON config, add this MCP server entry:
+
+```json
+{ "mcpServers": { "mneme": { "command": "mneme", "args": ["mcp"] } } }
+```
 
 ### Step 4 — Ask the user to restart their AI tool, then verify
+
+After they restart, call:
+
 ```
-Tool to call: mneme.capabilities
-Expected: a JSON catalog of 93 tools across 9 categories
+Tool: mneme.capabilities
+Expected: a JSON catalog of 94 tools across 9 categories
 ```
+
+If you see the catalog → integration is live. Tell the user.
+If you don't → check Step 3 config; ask user to restart again.
+
+### Step 5 — When the user later asks to upgrade
+
+```bash
+mneme upgrade
+```
+
+This handles npm-cache headaches automatically. After it finishes, ask the user to restart their AI tool.
 
 ### Discovery — call `mneme.capabilities` first
-The capabilities tool returns the full catalog grouped by category, with a "use this when..." description for each tool. Read it before answering the user's first non-trivial repo question. Match user intent to the tool descriptions.
+
+The capabilities tool returns the full catalog grouped by category, with a "use this when..." description for each tool. Read it before answering the user's first non-trivial repo question. Match user intent to tool descriptions.
 
 ### Tool naming
-Every tool follows `mneme.<category>.<verb>`:
-- `mneme.memory.*` — Q&A, search, citations, blast-radius
-- `mneme.people.*` — atrophy, telepathy, passport, who-knows, bus-factor
-- `mneme.audit.*` — baseline, trace, verify, certify, deps, conscience, ledger
-- `mneme.forensics.*` — vulns, anomaly, match, attribute, suppress
-- `mneme.insights.*` — ghost, regret, premortem, oracle, time-machine, story
-- `mneme.quality.*` — karma, repo-mri, palimpsest, dna, heartbeat
-- `mneme.quant.*` — drawdown, alpha, moneyball, black-swan, greeks
-- `mneme.lab.*` — periodic-table, compose, run, library, calibrate
-- `mneme.meta.*` — capabilities, smart-do, doctor, wisdom, manifesto
 
-### Wisdom envelope
-Every response is `{data, wisdom, followUp, confidence}`. Quote `wisdom` to the user; cite `data` when they want details; suggest `followUp` tools for deeper analysis.
+Every tool follows `mneme.<category>.<verb>`:
+
+- `mneme.memory.*` — Q&A, search, citations, blast-radius (7 tools)
+- `mneme.people.*` — atrophy, telepathy, passport, who-knows, bus-factor (10 tools)
+- `mneme.audit.*` — baseline, trace, verify, certify, deps, conscience, ledger (8 tools)
+- `mneme.forensics.*` — vulns, anomaly, match, attribute, suppress (6 tools)
+- `mneme.insights.*` — ghost, regret, premortem, oracle, time-machine, story (24 tools)
+- `mneme.quality.*` — karma, repo-mri, palimpsest, dna, heartbeat (14 tools)
+- `mneme.quant.*` — drawdown, alpha, moneyball, black-swan, greeks (10 tools)
+- `mneme.lab.*` — periodic-table, compose, run, library, calibrate (8 tools)
+- `mneme.meta.*` — capabilities, smart-do, doctor, wisdom, manifesto (6 tools)
+- `mneme.grade.answer` — the universal homework grader (call this before delivering any user-facing answer)
+
+### Wisdom envelope + grader loop
+
+Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
+
+- Quote `wisdom` to the user; cite `data` when they want details; suggest `followUp` tools for deeper analysis.
+- Read `secondBrain.compose` for natural molecule combinations; fire suggested atoms in parallel.
+- Read `secondBrain.homework` — it contains the rubric your draft must satisfy. **Call `mneme.grade.answer` with your draft BEFORE delivering to the user.** On FAIL, rewrite using `rewriteHints` and call grade.answer again with `retryCount++`. Stop only when verdict is PASS or `giveUp` is true.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🔌 AI tool compatibility — what works, what doesn't
+
+Mneme is a **standard MCP server**. It works with any AI tool that supports MCP. Here's the honest matrix:
+
+| AI tool | MCP support | Install via URL | Full feature set | Notes |
+|---|:---:|:---:|:---:|---|
+| **Claude Code** (CLI/Desktop) | ✅ Full | ✅ | ✅ All 94 tools + Second Brain + Super Sonic Engine | flagship target |
+| **Cursor** | ✅ Full | ✅ | ✅ | uses GPT-4 / Claude / Gemini engines internally — Mneme works regardless |
+| **Codex CLI** (OpenAI) | ✅ Full | ✅ | ✅ | OpenAI's official terminal coding agent — the ChatGPT-equivalent of Claude Code |
+| **Continue** (VS Code) | ✅ Full | ✅ | ✅ | multi-LLM (GPT-4, Claude, Gemini) |
+| **Cline · Zed** | ✅ Full | ✅ | ✅ | |
+| **Aider** | ⚠️ Partial | ⚠️ Manual config | ⚠️ | most tools work; some require manual MCP wiring |
+| **Gemini Code Assist** | ⚠️ Rolling out | ⚠️ Version-dependent | ⚠️ | check your installed version |
+| **ChatGPT** (chat.openai.com / mobile app) | ❌ No MCP, no shell | ❌ **cannot install** | ❌ | use **Codex CLI** instead — it's OpenAI's coding agent that DOES support MCP |
+| **GitHub Copilot** | ❌ No MCP yet | ❌ | ❌ | waiting on Microsoft to ship MCP support |
+| **Tabnine** | ❌ No MCP | ❌ | ❌ | |
+
+> **About OpenAI products:** "ChatGPT" the chat app cannot install Mneme (no shell access). But **Codex** — OpenAI's terminal coding agent — supports MCP fully. If you're an OpenAI user wanting Mneme, install Codex CLI. Tools like Cursor / Continue that use GPT-4 as their *engine* also work, because the MCP integration lives in Cursor / Continue (not in OpenAI directly).
+
+> **My AI tool isn't in the list?** If it supports the [MCP protocol](https://modelcontextprotocol.io/), Mneme just works — paste this repo's URL and ask it to install. If it doesn't support MCP yet, you can still use Mneme as a CLI directly (see the [Cheatsheet](https://github.com/patsa2561-art/mneme-ai/wiki/Cheatsheet)).
 
 ═══════════════════════════════════════════════════════════════════════════════
 
