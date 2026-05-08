@@ -83,7 +83,7 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
                   98+ tools         every commit · every regret · every decision
 ```
 
-**v1.12.0 just shipped 4 firsts the MCP ecosystem has never seen:**
+**The latest release ships 4 firsts the MCP ecosystem has never seen:**
 
 |  | First | What it actually does |
 |---|---|---|
@@ -441,9 +441,10 @@ The secret is shown once when you run `mneme webhook add` — save it in your en
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🚀 Super MCP — 4 firsts no other MCP server has (v1.12.0)
+<details>
+<summary><h2 style="display:inline">🚀 Super MCP — 4 firsts no other MCP server has</h2></summary>
 
-The MCP protocol was invented by Anthropic. v1.12.0 ships 4 capabilities **no MCP server in the official directory has** — and each is reusable for any MCP server, not just Mneme.
+The MCP protocol was invented by Anthropic. The latest release ships 4 capabilities **no MCP server in the official directory has** — and each is reusable for any MCP server, not just Mneme.
 
 | First | What it is | CLI / API |
 |---|---|---|
@@ -461,6 +462,8 @@ Gate + Ecosystem     = per-repo constitution auto-enforced
 All 4 combined       = self-defending AI memory at the runtime layer
 ```
 
+</details>
+
 ═══════════════════════════════════════════════════════════════════════════════
 
 ## 🛠 Bolt it on
@@ -475,7 +478,8 @@ That's the whole onboarding right now.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🔒 Built for the most paranoid environment in the room (Security) — **on by default**
+<details>
+<summary><h2 style="display:inline">🔒 Built for the most paranoid environment in the room (Security) — on by default</h2></summary>
 
 *Banking · fintech · healthcare · government — Mneme runs where the policies are strictest, with cryptography that auditors recognise on sight. **You don't even type a security command. Your AI agent installs Mneme; security comes pre-armed.***
 
@@ -526,6 +530,8 @@ That's the whole onboarding right now.
 [SOC 2](./docs/compliance/SOC2.md) · [PCI-DSS v4.0](./docs/compliance/PCI-DSS.md) · [GDPR](./docs/compliance/GDPR.md) · [NIST 800-53 Rev 5](./docs/compliance/NIST-800-53.md) · [Banking runbook](./docs/compliance/BANKING.md) · [SECURITY.md](./docs/SECURITY.md)
 
 > *Every cryptographic primitive Mneme uses is FIPS-approved. No homegrown crypto. Nothing fancy. Just the same primitives Git, npm, AWS, and Bitcoin block headers use — assembled with paranoia.*
+
+</details>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
