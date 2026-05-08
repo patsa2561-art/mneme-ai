@@ -24,6 +24,9 @@ Commands:
   promise [options]  >  Promise-debt tracker — every "I'll fix later" / TODO / follow-up parsed into a ledger and verified against history (heuristic; treat as a starting list)
   karma [options]  >  TODO/FIXME debt ledger — every TODO added is a debit, every one removed is a credit. Open balance compounds with age.
   cognitive-twin|twin [options] <email>  >  Author-voice fingerprint — stylometric profile of how a contributor writes commits. Optional --rewrite '<subject>' rewrites in their voice. (Heuristic, no LLM.)
+  heartbeat [options]  >  Codebase pulse — 20-axis MRI snapshot vs rolling 7-day baseline; flag any axis ≥ 2σ. Cron daily for continuous health observation. (v0.43 Holy Grail #1.)
+  rewind [options] <ref>  >  Time-travel debug — reconstruct the working context of a single commit (surrounding commits, time-of-day, voice deviation, sandwich-mode markers). ✱ inferences are speculative. (v0.43 Holy Grail #2.)
+  dna-fold [options]  >  Fold individual author DNAs into a team-DNA. Surfaces consensus / polarised / outliered features across the team. (v0.43 Holy Grail #3.)
   library|lib [options]  >  Manage the per-repo molecule library (.mneme/library.json) — the v0.42 Second-Brain. List entries, promote frequent plans to named aliases, annotate, prune.
   run [options] <alias-or-id>  >  Execute a molecule plan from the library by alias or 16-char id. Default --dry-run; pass --execute to actually run. Use --forbid-* flags for sandboxed runs.
   compose [options] <intent...>  >  Compile a natural-language intent into a runnable pipeline of registered atoms / molecules. v0.41 plans, v0.42 also feeds the library. See Wiki: Compose-And-Compiler.

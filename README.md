@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-2167%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-2186%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -525,7 +525,7 @@ arc:
 - **v0.40 — [Periodic Table](https://github.com/patsa2561-art/mneme-ai/wiki/Periodic-Table)** — 15 elements + 5 atoms + 2 molecules + browsable catalog at `mneme periodic-table` ✅
 - **v0.41 — [Compose & Compiler](https://github.com/patsa2561-art/mneme-ai/wiki/Compose-And-Compiler)** — `mneme compose "<intent>"` plans a custom pipeline from the periodic table. Rule-based by default, `--llm` for refinement, plans cached for reuse ✅
 - **v0.42 — [Second Brain](https://github.com/patsa2561-art/mneme-ai/wiki/Second-Brain)** — `mneme library` records every composed plan, frequent ones auto-promote to named aliases, `mneme run <alias>` executes via a sandbox-aware executor ✅
-- **v0.43 — Holy Grails** — self-aware, rewind, dna-fold, adversarial-twin, heartbeat (coming)
+- **v0.43 — [Holy Grails](https://github.com/patsa2561-art/mneme-ai/wiki/Holy-Grails)** — `mneme heartbeat` (codebase as living being), `mneme rewind <commit>` (time-travel debug), `mneme dna-fold` (team-DNA emerges) ✅ — adversarial-twin + self-aware deferred to v0.44 with proper opt-in design
 
 ### 🆕 v0.37 — Bayesian-filtered security scanner + 6 new rules
 

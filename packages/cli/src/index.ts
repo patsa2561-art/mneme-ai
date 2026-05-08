@@ -62,6 +62,7 @@ import { periodicTableCommand } from "./commands/periodic-table.js";
 import { composeCommand } from "./commands/compose.js";
 import { libraryCommand } from "./commands/library.js";
 import { runCommand } from "./commands/run.js";
+import { heartbeatCommand, rewindCommand, dnaFoldCommand } from "./commands/holy.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -435,6 +436,59 @@ export async function run(argv: string[]): Promise<void> {
           maxCommits: opts.maxCommits,
           rewrite: opts.rewrite,
           json: opts.json,
+        }),
+      );
+    });
+
+  // ─── v0.43 Holy Grails ────────────────────────────────────────────
+  program
+    .command("heartbeat")
+    .description("Codebase pulse — 20-axis MRI snapshot vs rolling 7-day baseline; flag any axis ≥ 2σ. Cron daily for continuous health observation. (v0.43 Holy Grail #1.)")
+    .option("--json", "machine-readable for Slack / email / dashboards", false)
+    .option("--quiet", "no banner, no decorative chars", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await heartbeatCommand({
+          cwd: process.cwd(),
+          json: opts.json,
+          quiet: opts.quiet,
+        }),
+      );
+    });
+
+  program
+    .command("rewind <ref>")
+    .description("Time-travel debug — reconstruct the working context of a single commit (surrounding commits, time-of-day, voice deviation, sandwich-mode markers). ✱ inferences are speculative. (v0.43 Holy Grail #2.)")
+    .option("--window <n>", "context window size each side (default 5)", (v) => Number(v), 5)
+    .option("--json", "machine-readable", false)
+    .option("--quiet", "no banner", false)
+    .action(async (ref: string, opts: any) => {
+      process.exit(
+        await rewindCommand({
+          cwd: process.cwd(),
+          ref,
+          windowSize: opts.window,
+          json: opts.json,
+          quiet: opts.quiet,
+        }),
+      );
+    });
+
+  program
+    .command("dna-fold")
+    .description("Fold individual author DNAs into a team-DNA. Surfaces consensus / polarised / outliered features across the team. (v0.43 Holy Grail #3.)")
+    .option("--email <emails...>", "explicit email list (defaults to top contributors by commit count)")
+    .option("--top <n>", "if no --email given, use top-N contributors (default 8)", (v) => Number(v), 8)
+    .option("--json", "machine-readable", false)
+    .option("--quiet", "no banner", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await dnaFoldCommand({
+          cwd: process.cwd(),
+          emails: opts.email,
+          topN: opts.top,
+          json: opts.json,
+          quiet: opts.quiet,
         }),
       );
     });

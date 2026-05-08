@@ -8,6 +8,119 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.43.0] — 2026-05-08
+
+The **"Holy Grails"** release. Last of four shipping the
+Element/Atom/Molecule architecture. Three world-firsts that the
+v0.40-v0.42 architecture made feasible.
+
+### `mneme heartbeat` — codebase as living being
+
+```
+mneme heartbeat              # take a pulse + compare to rolling baseline
+mneme heartbeat --json       # for cron + Slack + email
+```
+
+Treats the repo as a patient under continuous observation. Each tick:
+
+1. Takes a pulse — the 20-axis MRI snapshot from `repo-mri`.
+2. Compares against the rolling baseline (mean ± stdev from prior
+   pulses; needs ≥ 3 to stabilise).
+3. Emits any axis ≥ 2σ as an "outlier" anomaly; ≥ 1σ as "notable".
+4. Persists the snapshot for tomorrow's baseline (capped at 90 entries
+   ≈ 3 months).
+
+Verdicts: ALL-QUIET / WATCHING / ALARMING. Exit code 1 on ALARMING for
+CI-friendly cron.
+
+**Why novel:** every existing health tool computes metrics REACTIVELY
+("here's the state when you ran me"). Heartbeat computes them
+PROACTIVELY ("here's what changed and which change is statistically
+significant").
+
+### `mneme rewind <ref>` — time-travel debug
+
+```
+mneme rewind <commit-hash>
+mneme rewind HEAD~3
+mneme rewind <hash> --json
+```
+
+Materialises the working context of a single commit by composing four
+ground-truth signals:
+
+1. Cognitive-twin voice profile of the author (v0.36 Originals).
+2. Surrounding commits by the same author (5 each side) — sustained
+   push vs one-off?
+3. Time-of-day + day-of-week in the author's local TZ (parsed from
+   the ISO offset).
+4. Subject + body tonality — sandwich-mode markers ("WIP", "trying
+   to", trailing "...").
+
+Plus: was this commit reverted by the next on HEAD? Subject length
+deviation from the author's usual?
+
+**Honest framing:** ✱ inferences are speculative — outside-observer
+reading, never substituted for asking the author. Facts (commit
+metadata, surrounding commits, tz offset) are not prefixed.
+
+### `mneme dna-fold` — team-DNA emerges from individuals
+
+```
+mneme dna-fold               # top-8 contributors auto
+mneme dna-fold --top 5
+mneme dna-fold --email alice@x bob@y carol@z
+```
+
+Per-person DNA already exists. dna-fold computes the EMERGENT
+properties when individuals are stacked into a team:
+
+| Verdict | Meaning |
+|---|---|
+| consensus  | low CV — team aligned |
+| polarised  | CV ≥ 0.6 with no single outlier — team has split |
+| outliered  | exactly one author ≥ 2σ from the mean |
+
+Eight features folded today: avg subject length, conv-commit usage,
+lowercase content, em-dash, ends-with-period, paren-scope, body-bullet
+usage, avg body lines.
+
+### Architecture: how they stack
+
+```
+heartbeat   ← computeMri + persistent .mneme/heartbeat.json
+              → SECOND-BRAIN PATTERN (pulses-as-library)
+
+rewind      ← git.log (HPC v0.39) + twin.profile (v0.36 Originals)
+              → COMPOSITION PATTERN (chemistry metaphor)
+
+dna-fold    ← twin.profile × N authors (parallel via concurrency.pmap)
+              → AGGREGATION PATTERN (atom × atom × atom = molecule)
+```
+
+Every Holy Grail composes pieces already in the periodic table. That's
+the proof the architecture works: new capabilities cost an order of
+magnitude less code to ship.
+
+### Honest scope — deferred
+
+Originally proposed five Holy Grails. Three shipped:
+
+| | v0.43 |
+|---|---|
+| `mneme heartbeat` | ✅ |
+| `mneme rewind <commit>` | ✅ |
+| `mneme dna-fold` | ✅ |
+| `mneme adversarial-twin --evil` | deferred → v0.44 (needs opt-in CTF runner UX) |
+| `mneme self-aware` | deferred → v0.44 (needs permission model — Mneme reading its own code) |
+
+### Tests
+
+13 new Holy-Grail tests (heartbeat baseline computation · rewind
+inference shape · weekend / late-night / sustained-push / sandwich-mode
+/ blast-radius / surgical / one-off / no-unusual signals).
+Total: **2188 tests passing** across 162 files.
+
 ## [0.42.0] — 2026-05-08
 
 The **"Second Brain"** release. Third of four shipping the
