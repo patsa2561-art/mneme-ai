@@ -47,10 +47,12 @@ describe("CLI regression — no command throws on an empty repo", () => {
           : argvFor(cmd);
 
         // Most commands should finish in well under 10s on an empty repo.
-        // If it hangs, the timeout fires and `signal === "SIGTERM"`, which
-        // we report as a regression (means the command needs to be added
-        // to INTERACTIVE_OR_DAEMON).
-        const r = runCli(argv, { cwd: dir, timeoutMs: 15_000 });
+        // 30s budget — comfortable on Windows-latest Node 24 cold-start
+        // (node:sqlite first-load + git subprocess + dist parse). If it
+        // hangs past that, the timeout fires and `signal === "SIGTERM"`,
+        // which we report as a regression (means the command needs to be
+        // added to INTERACTIVE_OR_DAEMON).
+        const r = runCli(argv, { cwd: dir, timeoutMs: 30_000 });
 
         expect(
           r.signal,
@@ -77,7 +79,7 @@ describe("CLI regression — no command throws on an empty repo", () => {
       } finally {
         rmTempRepo(dir);
       }
-    }, 20_000);
+    }, 45_000);
   }
 });
 

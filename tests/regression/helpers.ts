@@ -120,9 +120,13 @@ export interface RunResult {
  * accidentally inherit a hung shell stdin.
  */
 export function runCli(args: string[], opts: { cwd?: string; timeoutMs?: number } = {}): RunResult {
+  // 30s default — generous enough for Windows + Node 24 cold-start
+  // (node:sqlite first-load + git subprocess + dist/index.js parse). The
+  // test value is catching genuine hangs (daemons, infinite loops), not
+  // enforcing wall-clock perf — runaway commands still trip the limit.
   const spawnOpts: SpawnSyncOptions = {
     encoding: "utf8",
-    timeout: opts.timeoutMs ?? 15_000,
+    timeout: opts.timeoutMs ?? 30_000,
     cwd: opts.cwd ?? REPO_ROOT,
     // Hand the child an empty stdin so anything that calls `await readline`
     // gets EOF instead of blocking. NO_COLOR keeps snapshots stable.
