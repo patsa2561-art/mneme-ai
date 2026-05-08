@@ -53,7 +53,8 @@
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## ⚙ Why Mneme exists
+<details>
+<summary><h2 style="display:inline">⚙ Why Mneme exists</h2></summary>
 
 You're already using **Claude Code** — or **Cursor**, **Codex**, **Gemini**, **Continue**. Your AI writes fresh code beautifully. Fast. Fluent. Mostly correct.
 
@@ -72,9 +73,12 @@ Think of your AI tool as a **stock car off the showroom floor** — fast, reliab
 
 Same AI. Same hands on the keyboard. The difference is **what your AI knows** — and **whether anyone is grading its work**.
 
+</details>
+
 ═══════════════════════════════════════════════════════════════════════════════
 
-## ⚡ The 4-second pitch
+<details>
+<summary><h2 style="display:inline">⚡ The 4-second pitch</h2></summary>
 
 > Your AI coding tool is brilliant but **amnesiac** — it never saw your repo's history. Why JWT got rolled back in 2024. Why the auth refactor went sideways. Who you should pair with on `payments.ts`. Mneme is the **memory layer** that fixes that.
 
@@ -95,6 +99,8 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 > **Bank-grade by default.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Audit log auto-on. Prompt-injection scrubber auto-on. WASM model checksums auto-pinned. Zero typing for the user — your AI agent installs Mneme; security comes pre-armed.
 
 > **2692 tests passing · 98+ MCP tools · MIT · zero telemetry · works offline.**
+
+</details>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -157,22 +163,6 @@ mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 ```
 
 </details>
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## ⚡ Before & after, in one glance
-
-You keep talking to your AI normally — same chat box, same questions. Mneme just changes what comes back.
-
-| You ask your AI | 🚗 Stock AI | 🏎 Tuned with Mneme |
-|---|---|---|
-| *"why does parseAmount use try/catch?"* | guesses from syntax | quotes `a3f9b21` (2024-08): *"added after Stripe 502s during us-east outage"* |
-| *"is this refactor risky?"* | "should be fine" | *"78% regret risk — 3 prior incidents in this file footprint"* |
-| *"who's the auth expert?"* | "I don't know your team" | *"@alice (78%), backup @bob — Alice's atrophy is 28%, pair with Bob"* |
-| *"did the AI lie about its diff?"* | doesn't even check | *"yes — db.ts changed 3 lines despite the 'no change' claim"* |
-| *"grade this AI commit before I merge"* | (no concept) | 5-axis trust certificate · PASS / WARN / FAIL · CI-friendly exit code |
-
-Same conversation. Different power band. **Your AI just knows.**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
