@@ -74,7 +74,7 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 ## 📋 What's new
 
-Latest release: **v1.9.0** · See the full release history in [CHANGELOG.md](./CHANGELOG.md).
+See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
