@@ -4,3 +4,4 @@ export * from "./bundled.js";
 export * from "./hash.js";
 export * from "./resolve.js";
 export * from "./enrich.js";
+export * from "./checksum.js";

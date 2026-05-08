@@ -389,6 +389,45 @@ That's the whole onboarding right now.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🔒 Built for the most paranoid environment in the room
+
+*Banking · fintech · healthcare · government — Mneme runs where the policies are strictest, with cryptography that auditors recognise on sight.*
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  Default mode:  100% offline  ·  no telemetry  ·  no keys    │
+   └──────────────────────────────────────────────────────────────┘
+                                ▼
+   ┌──────────────────────────────────────────────────────────────┐
+   │  Opt-in compliance mode:                                     │
+   │     mneme --compliance fips140 …                             │
+   │                                                              │
+   │  •  AES-256-GCM at rest          (FIPS 197 · SP 800-38D)     │
+   │  •  HMAC-SHA-256 audit chain     (FIPS 198-1 · SOC2 / PCI)   │
+   │  •  Ed25519 federation envelopes (FIPS 186-5)                │
+   │  •  scrypt KDF                   (RFC 7914 · SP 800-132)     │
+   │  •  SHA-256 model checksum       (NIST 800-218 supply chain) │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+| What banks/fintech ask | What Mneme provides |
+|---|---|
+| Tamper-evident audit log | `mneme audit-log enable` — HMAC-SHA-256 chained log of every state-changing action; `verify` exits 1 on any modification. |
+| Atomic key rotation | `mneme key rotate --confirm` — re-signs the entire audit chain under a fresh secret; old log archived for evidence. |
+| At-rest encryption | AES-256-GCM with scrypt KDF (N=2^17). Nonce-per-encrypt enforced. Auth-tag verified before decrypt returns data. |
+| FIPS posture enforcement | `--compliance fips140` global flag; refuses to start if Node is not on FIPS-validated OpenSSL. |
+| Supply-chain integrity | `MNEME_PINNED_MODEL_CHECKSUMS` — SHA-256 verification of bundled WASM model files at runtime. |
+| Prompt-injection resistance | Built-in scrubber strips `<system>`, `[INST]`, jailbreak preludes from data flowing into AI prompts (OWASP LLM01). |
+| Cross-user isolation | Daemon refuses PID files owned by a different OS user; PID and audit secret files written mode 0600. |
+| No shell injection surface | Every subprocess call is argv-only; MCP-supplied args validated against shell metacharacters. |
+
+**Compliance mappings (control-by-control):**
+[SOC 2](./docs/compliance/SOC2.md) · [PCI-DSS v4.0](./docs/compliance/PCI-DSS.md) · [GDPR](./docs/compliance/GDPR.md) · [NIST 800-53 Rev 5](./docs/compliance/NIST-800-53.md) · [Banking runbook](./docs/compliance/BANKING.md) · [SECURITY.md](./docs/SECURITY.md)
+
+> *Every cryptographic primitive Mneme uses is FIPS-approved. No homegrown crypto. Nothing fancy. Just the same primitives Git, npm, AWS, and Bitcoin block headers use — assembled with paranoia.*
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 📚 Going deeper
 
 | Want to… | Where |

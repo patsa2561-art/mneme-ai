@@ -16,6 +16,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import type { EmbeddingProvider } from "@mneme-ai/core";
+import { verifyAgainstPin } from "./checksum.js";
 
 export interface BundledOptions {
   /** HuggingFace repo id. all-MiniLM-L6-v2 = 25MB / 384-dim — best size/quality. */
@@ -130,6 +131,16 @@ export class BundledEmbedder implements EmbeddingProvider {
 
     transformers.env.cacheDir = this.cacheDir;
     transformers.env.allowRemoteModels = true;
+
+    // v1.11.0 security hardening: if MNEME_PINNED_MODEL_CHECKSUMS is set,
+    // verify cached model files match the pinned SHA-256s. No-op otherwise
+    // (default users keep prior behaviour). This runs BEFORE the pipeline
+    // is constructed so we never exec a tampered model. Note: on a fresh
+    // download we'll verify after the pipeline writes files — call this
+    // again post-pipeline-init if you want pre-execution guarantees.
+    try { verifyAgainstPin(this.cacheDir); } catch (err) {
+      throw err; // surface clearly — don't swallow integrity violations
+    }
 
     // Force the WASM execution provider so we never touch onnxruntime-node
     // (the native ONNX backend has no Windows-ARM64 binary; WASM ships in

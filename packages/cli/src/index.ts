@@ -109,6 +109,21 @@ export async function run(argv: string[]): Promise<void> {
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
     .version(getVersion())
+    .option("--compliance <profile>", "Cryptographic compliance profile (none | fips140). Refuses to start if profile not satisfied.", "none")
+    .hook("preAction", async (thisCommand) => {
+      const opts = thisCommand.opts() as { compliance?: string };
+      const profile = (opts.compliance ?? "none") as "none" | "fips140";
+      if (profile !== "none" && profile !== "fips140") {
+        ui.error(`Unknown --compliance profile "${profile}". Use: none | fips140`);
+        process.exit(1);
+      }
+      const { security } = await import("@mneme-ai/core");
+      const check = security.compliance.enforceCompliance(profile);
+      if (!check.ok) {
+        ui.error(check.reason ?? "Compliance check failed.");
+        process.exit(1);
+      }
+    })
     .addHelpText(
       "after",
       "\n" +
@@ -1099,6 +1114,56 @@ export async function run(argv: string[]): Promise<void> {
         await constitutionCommand({
           cwd: process.cwd(),
           out: opts.out,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.11.0 — HMAC-chained tamper-evident audit log (banking/SOC2/PCI-DSS) ──
+  program
+    .command("audit-log <action>")
+    .description("HMAC-SHA-256 tamper-evident audit log: enable · disable · status · verify · rotate · show. Compliance-grade (SOC2 / PCI-DSS / banking).")
+    .option("--actor <name>", "Actor name to record in the log (default: cli)")
+    .option("--limit <n>", "Limit show output to last N entries", (v) => Number(v))
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { actor?: string; limit?: number; json?: boolean }) => {
+      const { auditLogCommand } = await import("./commands/audit-log-cmd.js");
+      const allowed = ["enable", "disable", "status", "verify", "rotate", "show"];
+      if (!allowed.includes(action)) {
+        ui.error(`Unknown audit-log action "${action}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await auditLogCommand({
+          cwd: process.cwd(),
+          action: action as "enable" | "disable" | "status" | "verify" | "rotate" | "show",
+          actor: opts.actor,
+          limit: opts.limit,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.11.0 — HMAC secret rotation for audit log ──
+  program
+    .command("key <action>")
+    .description("Cryptographic key management: rotate (re-sign HMAC audit chain under fresh secret).")
+    .option("--confirm", "Actually rotate (default is dry-run)", false)
+    .option("--actor <name>", "Actor name to record (default: cli)")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { confirm?: boolean; actor?: string; json?: boolean }) => {
+      const { keyCommand } = await import("./commands/key.js");
+      const allowed = ["rotate"];
+      if (!allowed.includes(action)) {
+        ui.error(`Unknown key action "${action}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await keyCommand({
+          cwd: process.cwd(),
+          action: action as "rotate",
+          confirm: opts.confirm,
+          actor: opts.actor,
           json: opts.json,
         }),
       );

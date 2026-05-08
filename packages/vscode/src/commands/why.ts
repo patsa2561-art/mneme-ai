@@ -46,7 +46,10 @@ export async function runWhy(repoRoot: string | null, cliPath: string): Promise<
 
 function runCli(cli: string, args: string[], cwd: string): Promise<string> {
   return new Promise((resolve) => {
-    const child = spawn(cli, args, { cwd, shell: process.platform === "win32" });
+    // v1.11.0 security hardening: argv-only invocation. Resolve to
+    // platform-specific .cmd on Windows so we don't need shell:true.
+    const exe = process.platform === "win32" && !cli.endsWith(".cmd") ? `${cli}.cmd` : cli;
+    const child = spawn(exe, args, { cwd, shell: false });
     const out: Buffer[] = [];
     const err: Buffer[] = [];
     child.stdout.on("data", (b: Buffer) => out.push(b));

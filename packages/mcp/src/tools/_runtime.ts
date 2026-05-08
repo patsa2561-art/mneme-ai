@@ -59,10 +59,21 @@ export async function runCliJson(
   opts: { timeoutMs?: number } = {},
 ): Promise<unknown> {
   const { spawn } = await import("node:child_process");
+  // Security hardening (v1.11.0): refuse any cliArg or command that looks
+  // like shell-metacharacter injection. MCP args come from AI clients —
+  // we treat them as untrusted input.
+  const SHELL_META = /[;&|`$<>()\\\n\r"']/;
+  for (const a of [command, ...cliArgs]) {
+    if (typeof a !== "string" || SHELL_META.test(a)) {
+      throw new Error(`Refusing to spawn: argument contains shell metacharacters or is non-string: ${JSON.stringify(a).slice(0, 80)}`);
+    }
+  }
+  // Windows: resolve to .cmd explicitly so we don't need shell:true
+  const exe = process.platform === "win32" ? "mneme.cmd" : "mneme";
   return await new Promise((resolve, reject) => {
-    const child = spawn("mneme", [command, ...cliArgs, "--json"], {
+    const child = spawn(exe, [command, ...cliArgs, "--json"], {
       cwd,
-      shell: process.platform === "win32",
+      shell: false,
     });
     let stdout = "";
     let stderr = "";

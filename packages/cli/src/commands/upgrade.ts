@@ -80,12 +80,22 @@ export async function upgradeCommand(opts: UpgradeOptions): Promise<number> {
 
   // ── 3. Force-fresh install bypassing npm metadata cache ──────────
   process.stdout.write(section("✦ Installing") + "\n\n");
+  // Security hardening (v1.11.0): validate the version from npm registry against
+  // strict semver before passing it to spawn. Refuse anything that looks like
+  // shell metacharacter injection.
+  if (!/^\d+\.\d+\.\d+([.\-+][a-zA-Z0-9.\-]+)?$/.test(remote)) {
+    ui.error(`Refusing to install: remote version "${remote}" is not a clean semver string.`);
+    return 1;
+  }
   const cmd = `npm install -g --force mneme-ai@${remote}`;
   process.stdout.write(`    ${kleur.cyan().bold(cmd)}\n`);
   process.stdout.write(`    ${kleur.gray("(--force bypasses npm metadata cache; @<exact> bypasses 'latest' tag staleness)")}\n\n`);
 
-  const installed = spawnSync(cmd, {
-    shell: true,
+  // Security hardening (v1.11.0): argv-only invocation. No `shell: true` —
+  // npm.cmd is resolved via PATH, args passed as separate argv tokens so
+  // the OS shell never interprets them. Eliminates command-injection surface.
+  const npmExe = process.platform === "win32" ? "npm.cmd" : "npm";
+  const installed = spawnSync(npmExe, ["install", "-g", "--force", `mneme-ai@${remote}`], {
     stdio: "inherit",
     timeout: 180000,
   });

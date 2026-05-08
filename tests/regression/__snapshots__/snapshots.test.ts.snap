@@ -8,6 +8,7 @@ WHERE-IT-BREAKS.
 
 Options:
   -V, --version  >  output the version number
+  --compliance <profile>  >  Cryptographic compliance profile (none | fips140). Refuses to start if profile not satisfied. (default: "none")
   -h, --help  >  display help for command
 
 Commands:
@@ -56,6 +57,8 @@ Commands:
   webhook [options] <action>  >  Outgoing webhooks: add · list · remove · test · fire (events: audit.fail · forensics.cwe.high · atrophy.spike · court.guilty · federation.match)
   session [options] <action>  >  Persistent cross-AI session: save · resume · list · remove. Context follows you across Claude Code / Cursor / ChatGPT / Codex.
   constitution [options]  >  Synthesize the repo's living constitution (regret patterns · atrophy pairing · forensics rules · ADRs). AI tools auto-prepend via mneme.constitution.get MCP tool.
+  audit-log [options] <action>  >  HMAC-SHA-256 tamper-evident audit log: enable · disable · status · verify · rotate · show. Compliance-grade (SOC2 / PCI-DSS / banking).
+  key [options] <action>  >  Cryptographic key management: rotate (re-sign HMAC audit chain under fresh secret).
   learn [options] <action>  >  Self-learning engine: tick (run a learning cycle now) · status (show learned-state + audit trail)
   adapter [options] <vendor>  >  Export Mneme's tool catalog as OpenAI / Anthropic / Gemini / MCP function-calling format
   benchmark [options]  >  Run the vendor-neutral AI Memory Benchmark — grades any AI memory implementation across 24 standardized probes

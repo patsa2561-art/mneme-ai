@@ -64,6 +64,21 @@ function isAlive(pid: number): boolean {
   }
 }
 
+/** v1.11.0 security: verify the PID file is owned by the current user.
+ *  On Windows, file UID is not meaningful — we trust the per-user repo
+ *  path (typically under %USERPROFILE%) instead. */
+function isPidFileOwnedByMe(pidPath: string): boolean {
+  try {
+    if (process.platform === "win32") return true; // POSIX-only check
+    const st = statSync(pidPath);
+    const me = process.getuid?.();
+    if (typeof me !== "number") return true; // can't check, fail open
+    return st.uid === me;
+  } catch {
+    return true; // missing → not a security issue, fail open for the caller
+  }
+}
+
 function readStatus(repoRoot: string): DaemonStatus | null {
   const p = paths(repoRoot);
   if (!existsSync(p.status)) return null;
@@ -204,6 +219,19 @@ async function startDaemon(opts: DaemonOptions): Promise<number> {
   const p = paths(meta.rootPath);
   if (!existsSync(p.dir)) mkdirSync(p.dir, { recursive: true });
 
+  // v1.11.0 security hardening: refuse to read/trust a PID file that's
+  // not owned by the current user. Mitigates the "another user / attacker
+  // plants a PID file in a shared workspace, hijacks our daemon control"
+  // attack on multi-user POSIX boxes.
+  if (existsSync(p.pid) && !isPidFileOwnedByMe(p.pid)) {
+    if (opts.json) {
+      process.stdout.write(JSON.stringify({ started: false, error: "pid-file-owned-by-other-user", path: p.pid }, null, 2) + "\n");
+      return 1;
+    }
+    ui.error(`Refusing to start: ${p.pid} is owned by a different user. Investigate before removing.`);
+    return 1;
+  }
+
   // Already running?
   if (existsSync(p.pid)) {
     const existing = parseInt(readFileSync(p.pid, "utf8").trim(), 10);
@@ -222,8 +250,9 @@ async function startDaemon(opts: DaemonOptions): Promise<number> {
   }
 
   if (opts.attached) {
-    // We ARE the daemon — write PID file and run loop
-    writeFileSync(p.pid, String(process.pid), "utf8");
+    // We ARE the daemon — write PID file and run loop. Restrictive perms
+    // (0600) so other users on a shared box can't read/forge.
+    writeFileSync(p.pid, String(process.pid), { encoding: "utf8", mode: 0o600 });
     await runDaemonLoop(meta.rootPath);
     return 0;
   }
@@ -267,6 +296,12 @@ async function stopDaemon(opts: DaemonOptions): Promise<number> {
     if (opts.json) process.stdout.write(JSON.stringify({ stopped: false, reason: "no-daemon-running" }, null, 2) + "\n");
     else ui.warn("No daemon running.");
     return 0;
+  }
+  // v1.11.0 security hardening: refuse to act on a foreign PID file.
+  if (!isPidFileOwnedByMe(p.pid)) {
+    if (opts.json) process.stdout.write(JSON.stringify({ stopped: false, error: "pid-file-owned-by-other-user", path: p.pid }, null, 2) + "\n");
+    else ui.error(`Refusing to stop: ${p.pid} is owned by a different user.`);
+    return 1;
   }
   const pid = parseInt(readFileSync(p.pid, "utf8").trim(), 10);
   if (!isAlive(pid)) {
