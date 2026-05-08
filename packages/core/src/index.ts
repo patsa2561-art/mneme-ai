@@ -24,3 +24,4 @@ export * as mri from "./mri/index.js";
 export * as palimpsest from "./palimpsest/index.js";
 export * as twin from "./twin/index.js";
 export * as org from "./org/index.js";
+export * as periodic from "./periodic/index.js";

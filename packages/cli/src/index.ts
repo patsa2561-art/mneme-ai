@@ -58,6 +58,7 @@ import { suppressCommand } from "./commands/suppress.js";
 import { showFindingCommand } from "./commands/show-finding.js";
 import { depsAuditCommand } from "./commands/deps-audit.js";
 import { groupsCommand } from "./commands/groups.js";
+import { periodicTableCommand } from "./commands/periodic-table.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -431,6 +432,27 @@ export async function run(argv: string[]): Promise<void> {
           maxCommits: opts.maxCommits,
           rewrite: opts.rewrite,
           json: opts.json,
+        }),
+      );
+    });
+
+  // ─── periodic-table — Element / Atom / Molecule catalog ───────────
+  program
+    .command("periodic-table [id]")
+    .alias("table")
+    .description("Browse Mneme's Element/Atom/Molecule catalog. Pass an id (e.g. `mneme periodic-table git.log`) for full detail. v0.40 MVP — see Wiki: Periodic-Table.")
+    .option("--kind <kind>", "filter: element | atom | molecule | compound")
+    .option("--tag <tag>", "filter by tag (e.g. security, history, vector)")
+    .option("--json", "machine-readable output (for AI / MCP)", false)
+    .option("--quiet", "no banner, no decorative chars", false)
+    .action(async (id: string | undefined, opts: any) => {
+      process.exit(
+        await periodicTableCommand({
+          id,
+          kind: opts.kind,
+          tag: opts.tag,
+          json: opts.json,
+          quiet: opts.quiet,
         }),
       );
     });

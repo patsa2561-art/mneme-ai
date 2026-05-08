@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-2100%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-2120%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -516,6 +516,15 @@ Practical consequence: every Mneme release makes **every AI tool that plugs in**
 After researching the landscape, every command in this list occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
 
 → 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
+
+### 🆕 v0.40 — Periodic Table (Element / Atom / Molecule architecture)
+
+A chemistry-inspired layer **under** the 75 existing commands. v0.40 ships
+the MVP: 15 elements + 5 atoms + 2 refactored molecules + a browsable
+catalog at `mneme periodic-table`. v0.41-v0.43 add the compiler, the
+second-brain learning loop, and the holy-grail features.
+
+→ 🧪 **[Deep-dive → Wiki: Periodic Table](https://github.com/patsa2561-art/mneme-ai/wiki/Periodic-Table)**
 
 ### 🆕 v0.37 — Bayesian-filtered security scanner + 6 new rules
 

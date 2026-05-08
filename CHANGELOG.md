@@ -8,6 +8,89 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.40.0] — 2026-05-08
+
+The **"Periodic Table"** release — first of four shipping the
+Element/Atom/Molecule architecture (v0.40 MVP → v0.41 compiler → v0.42
+second-brain → v0.43 holy grails). Additive: every existing command
+keeps working as-is.
+
+### Why this exists
+
+Mneme has 75 commands. Most share the same primitive operations
+(git.log, embed, vector.cosine, regex match, AST parse, Bayesian score).
+Encoding those primitives once, with manifests, means:
+
+1. **AI tools through MCP can discover the periodic table at runtime**
+   and assemble their own queries — no need to memorise a flat
+   command bag.
+2. **Cost-aware planning becomes possible** — the v0.41 compiler picks
+   the cheapest composition for an intent.
+3. **The system explains itself** — `mneme periodic-table` lists
+   everything humans need to read.
+4. **Tests validate every primitive** against its declared contract.
+
+### The chemistry metaphor (mapped exactly)
+
+| Chemistry | Mneme |
+|---|---|
+| Element  | Primitive operation (one git command, one regex match) |
+| Atom     | An element with bound parameters |
+| Molecule | Atoms bonded — today's commands |
+| Compound | Multi-domain molecule (people + history + security) |
+| Catalyst | Config / model context that shapes a reaction without being consumed |
+| Reaction | Transformation rule applied to a molecule |
+
+### v0.40 catalog
+
+15 elements + 5 atoms + 2 refactored molecules.
+
+- **Elements:** `git.log`, `git.blame`, `git.grep`, `embed.text`,
+  `vector.cosine`, `vector.dot-normalised`, `vector.normalise`,
+  `pattern.regex`, `ast.evidence`, `stack.profile`, `score.bayesian`,
+  `redact.secrets`, `concurrency.pmap`, `karma.scan`, `twin.profile`
+- **Atoms:** `git.log.recent`, `git.log.author`, `embed.batch`,
+  `score.bayesian.tech-aware`, `vector.search`
+- **Molecules:** `molecule.karma`, `molecule.repo-mri`
+
+### `mneme periodic-table` — browse the catalog
+
+```
+mneme periodic-table                    # full catalog grouped by kind
+mneme periodic-table git.log            # detail for one primitive
+mneme periodic-table --kind atom        # filter by kind
+mneme periodic-table --tag security     # filter by tag
+mneme periodic-table --json             # machine-readable for AI / MCP
+```
+
+The detail view shows: inputs/outputs, cost model (io class · cpu class
+· ms_p50), determinism, side-effect class, tags, and the implementation
+module + export name. AI tools through MCP read the JSON form to
+assemble their own queries.
+
+### Tests
+
+18 new periodic-table tests (manifest validation · registry isolation ·
+catalog cross-reference resolution · ID uniqueness · tag-index correctness).
+Total: **2118 tests passing** across 158 files.
+
+### Architectural promise
+
+The catalog is **additive**. Every existing Mneme command keeps working
+exactly as it did. The molecule architecture is a *new layer* under the
+commands, not a replacement. We will refactor more commands as molecules
+over the v0.41/v0.42 releases — but always behind a backwards-compatible
+flat-name façade.
+
+### What's next
+
+- **v0.41 — Compiler.** `mneme compose "<natural-language intent>"`. The
+  LLM planner uses the periodic table to assemble a custom molecule.
+- **v0.42 — Second Brain.** Frequent dynamic molecules get promoted to
+  named commands automatically. Per-user, per-repo `.mneme/library.json`.
+- **v0.43 — Holy Grails.** Five world-firsts: `self-aware`, `rewind`,
+  `dna-fold`, `adversarial-twin --evil`, `heartbeat`.
+
 ## [0.39.0] — 2026-05-08
 
 The **"HPC Pass"** release. Every hot path audited and optimised — by an
