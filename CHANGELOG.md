@@ -8,6 +8,74 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.45.0] — 2026-05-09
+
+The **"QSAC Tech 2 — Causal Claim Graph"** release. Second of seven on
+the road to v1.0.
+
+### Why it matters
+
+v0.43 audit treats every axis as INDEPENDENT. Real-world: API change
+correlates with test failures + behavioral mismatch + perf regression
++ narrative claims. The system needs to model the joint distribution.
+
+### What v0.45 adds
+
+A small Bayesian network per commit:
+- **Nodes**: 5 axis verdicts + N narrative claims + 1 composite gate
+- **Edges**: `supports` / `contradicts` / `implies`, weighted in [0,1]
+- **Inference**: loopy belief propagation (LBP), converges in <20 iters
+
+### The "AI lied" detection
+
+Concrete example: AI's commit message claims "no public API change", but
+the api-drift axis says FAIL. The graph has edge:
+
+```
+axis_api ──contradicts──> nar_no_api  (weight 0.85)
+```
+
+Belief propagation collapses the narrative claim's posterior toward
+fail. The cert prints both the original prior (what the AI said) AND
+the posterior (what the network believes), so compliance teams can
+audit the discrepancy.
+
+### Public API
+
+```ts
+import {
+  ClaimGraphBuilder,
+  buildStandardAuditGraph,
+  propagateBeliefs,
+  getPosterior,
+} from "@mneme-ai/core/audit";
+
+const graph = buildStandardAuditGraph({
+  axes: { behavioralParity, apiContractDrift, testPassRate, perfRegression, aiNarrative },
+  narrative: { claimsNoApiChange: distribution(...) },
+});
+propagateBeliefs(graph);  // → mutates posteriors
+const overall = getPosterior(graph, "gate_overall");
+```
+
+### Why this is novel
+
+Existing audit tools score independent rules. LLM-as-judge papers exist
+but always single-shot. Mneme is the first production tool to ship
+joint-distribution belief propagation for commit audits.
+
+### Tests
+
+9 new claim-graph tests:
+- Builder + edge wiring
+- LBP convergence on no-edge graph (priors preserved)
+- Standard graph convergence < 20 iters
+- API-fail propagates support → tests posterior shifts
+- Contradiction detection (narrative lies caught)
+- Gate aggregation (all-pass / one-fail / all-skipped)
+
+Total: **2225 tests passing** across 163 files.
+
 ## [0.44.0] — 2026-05-09
 
 The **"QSAC Tech 1 — Verdict Superposition"** release. First of seven on
