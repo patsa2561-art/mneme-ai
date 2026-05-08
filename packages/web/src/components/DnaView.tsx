@@ -140,10 +140,15 @@ export function DnaView() {
       <div className="dna-intro">
         <h2>🎯 Code Search · Ghost-Sniper Verifier</h2>
         <p>
-          Mneme DNA's <strong>strict-mode firewall</strong>. Every candidate AI proposes runs through
-          3 gates: AST existence → semantic similarity ≥ 0.6 → Compositional Confidence (Wilson 95%
-          LB × Hebbian) ≥ 0.6. <strong>Failures are REJECTED.</strong> No "show with low confidence"
-          fallback. <strong>Empty answer is honest; lying is not.</strong>
+          Mneme DNA's <strong>strict-mode firewall</strong>. Every candidate the AI proposes runs through
+          3 gates: <strong>AST existence</strong> → semantic similarity ≥ 0.6 → Compositional Confidence
+          (Wilson 95% lower-bound × Hebbian co-activation) ≥ 0.6. Failures are <strong>rejected outright</strong> —
+          no "show with low confidence" fallback.
+        </p>
+        <p className="dna-byline">
+          <strong>One shot. Empty answer is honest; lying is not.</strong> 16 strands of DNA — 8
+          algorithms × 8 math formulas — composed from a stack only Mneme has (HMAC-chained AI audit log,
+          regret extraction, runtime Constitutional Gate, atrophy time-series, federation, bench).
         </p>
       </div>
 

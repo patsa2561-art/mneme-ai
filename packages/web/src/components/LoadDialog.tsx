@@ -113,6 +113,31 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
           <button className="dialog-close" onClick={onClose} aria-label="Close">×</button>
         </div>
 
+        <div className="load-howto">
+          <details>
+            <summary>🤔 First time here? — how to get a JSON of your own repo</summary>
+            <div className="load-howto-body">
+              <p>From your repo (one-time setup):</p>
+              <pre>{`# 1. Install Mneme globally
+npm install -g mneme-ai
+
+# 2. In your repo
+cd /path/to/your-repo
+mneme init
+mneme index   # ~90s for a 5k-commit repo
+
+# 3. Export the dashboard data as JSON
+mneme nervous-system --json > my-repo.json
+
+# 4. Drop my-repo.json into the tile below`}</pre>
+              <p className="load-howto-note">
+                <strong>Privacy:</strong> the JSON is generated locally — nothing is uploaded.
+                When you drop it here, it's parsed in this browser tab and never leaves your machine.
+              </p>
+            </div>
+          </details>
+        </div>
+
         <div className="load-grid">
           {/* Tile 1 — demo */}
           <button
@@ -166,7 +191,9 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
             <div className="load-tile-glyph" aria-hidden>📥</div>
             <div className="load-tile-title">Drop my JSON file</div>
             <div className="load-tile-desc">
-              From <code>mneme nervous-system --json</code> on YOUR repo.
+              JSON exported from <code>mneme nervous-system --json</code>.
+              <br/>
+              <span className="load-tile-hint">↑ Don't have one? Open the help above.</span>
             </div>
             <div className="load-tile-cta">
               {dragging ? "Drop to load…" : "Browse files…"}

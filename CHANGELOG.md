@@ -8,6 +8,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.1] — 2026-05-09
+
+**Polish pass — web demo + README readability.**
+
+  Web demo:
+    • DnaView — removed competitor name-drops; reframed around the 6 inputs
+      uniquely Mneme's product (HMAC-chained AI audit log, regret extraction,
+      runtime Constitutional Gate, atrophy time-series, federation, bench).
+    • Nervous System — TimeScrubber now hidden on non-graph tabs so the play
+      button doesn't leak into views where it has no effect.
+    • TimeScrubber — max bound is always `Date.now()` (current date) instead
+      of the last commit date, so the scrubber's right edge is "today."
+    • LoadDialog — added a "How to get JSON of your own repo" disclosure
+      with the exact CLI commands (`npm install -g mneme-ai` → `mneme init`
+      → `mneme index` → `mneme nervous-system --json`).
+
+  README:
+    • Replaced every `═══════` Unicode separator (which wraps to 2 lines on
+      narrow GitHub renders) with clean markdown `---` horizontal rules.
+    • Moved the maintainer contact table out of the README body into
+      `docs/CONTACT.md`; README now links to it as one bullet under
+      "📋 Project links" — matches how other professional OSS repos handle it.
+
 ## [1.17.0] — 2026-05-09
 
 **The "Genome / Genetic Engineering for MCP" release.** Five entirely new

@@ -140,13 +140,15 @@ export function App() {
         synthetic={!!raw?._demo_synthetic}
       />
 
-      <TimeScrubber
-        bounds={bounds}
-        value={scrubT}
-        onChange={setScrubT}
-        playing={playing}
-        onPlayToggle={() => setPlaying((p) => !p)}
-      />
+      {view === "graph" && (
+        <TimeScrubber
+          bounds={bounds}
+          value={scrubT}
+          onChange={setScrubT}
+          playing={playing}
+          onPlayToggle={() => setPlaying((p) => !p)}
+        />
+      )}
 
       <main className="app-main">
         <section className="app-canvas" aria-label={`${view} view`}>

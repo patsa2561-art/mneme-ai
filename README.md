@@ -45,13 +45,13 @@
 
 </div>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 > ### 🤖 AI agent reading this for the first time?
 >
 > If a user shared this repo with you and asked you to install Mneme — **jump to [§ For AI agents](#-for-ai-agents--installation-contract) below and follow the contract verbatim.** Don't improvise the steps. Mneme has a specific install order + auto-config command (`mneme mcp --install`) that's safer than editing JSON manually.
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">⚙ Why Mneme exists</h2></summary>
@@ -75,7 +75,7 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">⚡ The 4-second pitch</h2></summary>
@@ -102,13 +102,13 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 📋 What's new
 
 See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 🚀 Install in 30 seconds
 
@@ -164,7 +164,7 @@ mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 👥 Who is this for
 
@@ -201,7 +201,7 @@ You need a tamper-evident audit trail of every AI-driven commit, with cryptograp
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 🤖 For AI agents — installation contract
 
@@ -341,8 +341,14 @@ When the user installs Mneme today via `npm install -g mneme-ai`, they get **all
 | `mneme.grade.answer` | **MANDATORY** — call before delivering any user-facing answer |
 | `mneme.verify_claims` | Pre-delivery hash verification. Catches hallucinated commit hashes. |
 | `mneme.constitution.get` | Returns auto-synthesized rules. **Prepend to your system prompt.** |
-| `mneme.dna.search` | **NEW (v1.14)** — Run the full 16-strand DNA pipeline (8 algorithms × 8 formulas). Strict-mode default = 0% hallucination. Returns only AST-verified, semantically-similar, Wilson-LB-confident results. |
-| `mneme.<ecosystem>.<tool>` | **NEW (v1.13)** — Repo-detected dynamic tools (e.g. `mneme.stripe.find_pricing_logic`). Activate automatically when the repo uses that ecosystem. |
+| `mneme.dna.search` | **v1.14+** — Run the full 16-strand DNA pipeline (8 algorithms × 8 formulas). Strict-mode default = 0% hallucination. Returns only AST-verified, semantically-similar, Wilson-LB-confident results. |
+| `mneme.<ecosystem>.<tool>` | **v1.13+** — Repo-detected dynamic tools (e.g. `mneme.stripe.find_pricing_logic`). Activate automatically when the repo uses that ecosystem. |
+| `mneme.genome.annotate` | **NEW (v1.17)** — Tag tools by functional domain (search/mutate/verify/compose/regulate/augment/observe/synthesize). Returns genus/species + sub-domains + mutability for every tool you pass in. |
+| `mneme.genome.phylogeny` | **NEW (v1.17)** — Build the ancestry tree of a tool catalog. Queries: ancestors, cousins (k-level), tree distance via LCA, closest-relative search, speciation events, ASCII tree. **Use when AI needs "what's the tool most-related to X."** |
+| `mneme.genome.circuit` | **NEW (v1.17)** — Run AND/OR/NOT/toggle/oscillator gates declaratively. Compose Boolean tool-execution logic. |
+| `mneme.genome.operon_resolve` | **NEW (v1.17)** — Resolve which co-regulated cluster governs a tool, and what behavior modifier (gate/sniper/confidence) applies at the current regulator level (PCI / compliance / governance). |
+| `mneme.genome.crispr_edit` | **NEW (v1.17)** — Apply CRISPR-style precise edit to a pack (delete/replace/add/patch-detection). Re-validates against schema; SHA-256 hashes before/after; fail-closed on invalid result. |
+| `mneme.genome.synthesize` | **NEW (v1.17)** — De novo tool synthesis from a recipe (intent + searchPatterns + verifiers + augmenters). Returns a cryptographically-named ToolDefinition with deterministic DNA hash. **The wild card — runtime gene synthesis.** |
 
 #### CLI commands the user can run (and you can suggest)
 
@@ -372,6 +378,10 @@ When the user installs Mneme today via `npm install -g mneme-ai`, they get **all
 | *"Verify these candidates are real, not made up"* | `mneme.dna.search` (Ghost-Sniper Verifier rejects hallucinations) |
 | *"Banking / fintech / SOC2 / FedRAMP"* | `mneme --compliance fips140` + share [`docs/compliance/BANKING.md`](./docs/compliance/BANKING.md) |
 | *"Did anyone change X recently?"* | `mneme audit-log show --json --limit 50` |
+| *"What tool is most related to X?"* | `mneme.genome.phylogeny` with kind=closest |
+| *"I need a tool that does Y but doesn't exist"* | `mneme.genome.synthesize` with the recipe (de novo synthesis) |
+| *"Hot-patch this pack with a fix"* | `mneme.genome.crispr_edit` (validates schema before commit) |
+| *"In banking mode, tighten Stripe tools"* | `mneme.genome.operon_resolve` to read current behavior modifier |
 | *"Who is the expert on this file?"* | `mneme.people.who_knows` + `mneme.people.atrophy` |
 | *"Will this PR repeat a past mistake?"* | `mneme.insights.regret` + check the REI metric |
 
@@ -413,7 +423,7 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 - Read `secondBrain.compose` for natural molecule combinations; fire suggested atoms in parallel.
 - Read `secondBrain.homework` — it contains the rubric your draft must satisfy. **Call `mneme.grade.answer` with your draft BEFORE delivering to the user.** On FAIL, rewrite using `rewriteHints` and call grade.answer again with `retryCount++`. Stop only when verdict is PASS or `giveUp` is true.
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">🔌 AI tool compatibility — what works, what doesn't</h2></summary>
@@ -439,7 +449,7 @@ Mneme is a **standard MCP server**. It works with any AI tool that supports MCP.
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">🪝 Pipe Mneme events into your stack</h2></summary>
@@ -486,7 +496,7 @@ The secret is shown once when you run `mneme webhook add` — save it in your en
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">🧬 Mneme DNA &mdash; the 16-strand code search engine &nbsp;&nbsp;<sub><i>(the black-sheep moat)</i></sub></h2></summary>
@@ -616,7 +626,7 @@ Genetic-algorithm fitness for index strategies. High click-through-rate ÷ time-
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">📊 The 7 metrics no other dev tool can compute &nbsp;&nbsp;<sub><i>(Mneme-only science)</i></sub></h2></summary>
@@ -748,9 +758,7 @@ Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor d
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
-
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <details>
 <summary><h2 style="display:inline">🔒 Built for the most paranoid environment in the room (Security) — on by default</h2></summary>
@@ -807,7 +815,7 @@ Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor d
 
 </details>
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 📚 Going deeper
 
@@ -823,7 +831,7 @@ Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor d
 | **See AI Session Audit (the trust certificate)** | [AI-Session-Audit](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit) |
 | **Browse all wiki pages** | [Wiki Home](https://github.com/patsa2561-art/mneme-ai/wiki) |
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 🌐 Live demo (no install)
 
@@ -833,7 +841,7 @@ Try the people-analytics web dashboard right now in your browser:
 
 Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON to see your repo (parsed in browser, never uploaded) · drag the time-scrubber to watch your team's invisible network form across years.
 
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 ## 📋 Project links
 
@@ -841,25 +849,10 @@ Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON t
 - 📋 [CHANGELOG](./CHANGELOG.md)
 - 🗺 [ROADMAP](./ROADMAP.md)
 - 🐛 [Open an issue](https://github.com/patsa2561-art/mneme-ai/issues/new)
+- 🤝 [Partnership / Contact](./docs/CONTACT.md)
 - 📜 [License — MIT](./LICENSE)
 
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🤝 Partnership / Contact
-
-*For partnership, integration, acquihire conversation, or research collaboration — reach out directly:*
-
-| | |
-|---|---|
-| **Maintainer** | Shinnapat Phunsriphatchalakul |
-| **Email** | [patsa2561@gmail.com](mailto:patsa2561@gmail.com) |
-| **Phone / WhatsApp / LINE** | +66 939455645 |
-| **GitHub** | [@patsa2561-art](https://github.com/patsa2561-art) |
-| **Time zone** | Asia/Bangkok (UTC+7) |
-
-> *Mneme is built and maintained by one engineer. If you're at a place where AI-coding-tool infrastructure matters — and you see something here worth a real conversation — that's the contact.*
-
-═══════════════════════════════════════════════════════════════════════════════
+---
 
 <div align="center">
 

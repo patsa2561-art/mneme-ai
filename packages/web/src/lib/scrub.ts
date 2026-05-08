@@ -39,6 +39,9 @@ export function computeTimeBounds(data: NervousSystemData | null): TimeBounds | 
   const generated = parseTime(data.meta.generatedAt);
   if (generated !== null) samples.push(generated);
 
+  // v1.17.1: max bound always extends to "now" so the scrubber's right edge
+  // shows the current date (not a stale generatedAt). Keeps the timeline fresh.
+  samples.push(Date.now());
   if (samples.length === 0) return null;
   let min = Infinity;
   let max = -Infinity;

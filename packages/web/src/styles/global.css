@@ -2275,3 +2275,70 @@ body::before {
   .eco-grid { grid-template-columns: 1fr; }
   .scrub-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── v1.17.1 — Load dialog howto + UX fixes ─────────────────────────────── */
+.load-howto {
+  margin-bottom: 16px;
+  background: rgba(192,132,252,0.06);
+  border: 1px solid rgba(192,132,252,0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.load-howto summary {
+  cursor: pointer;
+  font-size: 0.94rem;
+  color: var(--accent, #c084fc);
+  font-weight: 500;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.load-howto summary::-webkit-details-marker { display: none; }
+.load-howto summary::before {
+  content: "▸";
+  display: inline-block;
+  transition: transform 0.15s;
+  color: var(--accent, #c084fc);
+}
+.load-howto details[open] summary::before { transform: rotate(90deg); }
+.load-howto-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(192,132,252,0.12);
+}
+.load-howto-body p { margin: 6px 0; font-size: 0.88rem; line-height: 1.55; opacity: 0.9; }
+.load-howto-body pre {
+  background: rgba(0,0,0,0.4);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.83rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 8px 0;
+}
+.load-howto-note {
+  font-size: 0.82rem;
+  opacity: 0.78;
+  font-style: italic;
+}
+.load-tile-hint {
+  font-size: 0.78rem;
+  opacity: 0.65;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* DNA byline */
+.dna-byline {
+  font-size: 0.92rem;
+  opacity: 0.92;
+  padding-left: 12px;
+  border-left: 2px solid var(--accent, #c084fc);
+  margin-top: 8px !important;
+}
+
+/* Hide the playback area when not on graph view — handled by App.tsx
+   conditional rendering, but we also tighten the surrounding layout. */
