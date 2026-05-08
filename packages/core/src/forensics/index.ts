@@ -6,3 +6,5 @@ export * from "./stack-priors.js";
 export * from "./ast-evidence.js";
 export * from "./sarif.js";
 export * from "./suppressions.js";
+export * from "./auto-fix.js";
+export * from "./deps-audit.js";

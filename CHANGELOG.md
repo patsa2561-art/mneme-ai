@@ -8,6 +8,122 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.38.0] — 2026-05-08
+
+The **"Customer-Backlog Closeout"** release. The four items deferred from
+v0.37 (#6, #10, #12, #15) are all in. Plus a privacy fix.
+
+### Item #12 — auto-fix suggestions per rule
+
+`mneme show <finding-id>` now prints a **template patch sketch** + rationale
++ recommended hardened API per finding. 21 of the 24 rules have curated
+suggestions; the remaining three (`dependency-changed`, `amount-zero-comparison`,
+`logged-secret`) are *advisory only* — the right answer is contextual.
+
+Each suggestion has a *confidence* tag (`high` / `medium` / `low`) so users
+know whether to apply directly or human-review first. Examples:
+
+- `weak-rng` → `crypto.randomBytes(16).toString('hex')` (high)
+- `mass-assignment` → DTO with class-validator (high)
+- `weak-webhook-signature` → `stripe.webhooks.constructEvent(rawBody, sig, secret)` (high)
+- `prototype-pollution` → `pick(req.body, [...])` then assign (high)
+- `idor-no-ownership-check` → `if (resource.userId !== req.user.id) throw ForbiddenException` (high)
+
+Strict template framing — no LLM, no network. Fully deterministic and
+reviewable.
+
+### Item #15 — `mneme deps audit` (CVE / GHSA / OSV.dev)
+
+```
+mneme deps audit                   # network query
+mneme deps audit --json            # machine-readable
+mneme deps audit --offline         # airgapped envs (returns 0 findings)
+```
+
+Reads `package-lock.json`, batch-queries **OSV.dev** (Google-maintained,
+public, free, no auth), and reports vulnerable transitive deps. Severity
+mapping: `database_specific.severity` first, falls back to CVSS-3 base
+score (≥9 critical, ≥7 high, ≥4 medium, otherwise low).
+
+Why OSV.dev rather than `npm audit`:
+- No `npm` binary required (works in lean CI containers)
+- Aggregates GitHub Security Advisories + CVE/NVD + ecosystem feeds in one place
+- Multi-ecosystem ready (PyPI / Go / Rust / Maven / etc.) for future expansion
+
+### Item #10 — `mneme groups` (non-breaking discoverability)
+
+```
+mneme groups                       # all 5 groups
+mneme groups --only security       # focus one
+mneme groups --json                # machine-readable
+```
+
+Customer feedback (v0.36): "หลาย command ผมก็ไม่รู้ว่าใช้ทำอะไร". The
+flat `mneme --help` listed 30+ commands with no thematic structure.
+
+Five groups, intentionally non-breaking — every existing command name
+keeps its flat namespace + MCP wiring:
+
+- 🛡 **Security** — `forensics vulns`, `deps audit`, `show`, `suppress`, `audit --certify`, `audit --verify-head`, `guard`, `guardian`, `forensics anomaly`, `adversarial`
+- 👥 **People analytics** — `atrophy`, `telepathy`, `influence`, `lineage`, `nemesis`, `passport`, `dna`, `bus-factor`, `nervous-system`, `counterfactual`
+- 📜 **History + archaeology** — `time-machine`, `chronicle`, `drift`, `ghost`, `fossil`, `rumor`, `runaway`, `palimpsest`, `palimpsest --counterfactual`, `why`, `blast`, `premortem`
+- 📦 **Memory layer** — `ask`, `status`, `doctor`, `init`, `index`, `htc-build`, `htc-stats`, `watch`, `mcp`, `do`, `genius`
+- 🆕 **The Originals (v0.36)** — `karma`, `repo-mri`, `palimpsest --counterfactual`, `cognitive-twin`, `conscience --dual-jury`
+
+### Item #6 — official GitHub Action
+
+```yaml
+- uses: patsa2561-art/mneme-ai/.github/actions/mneme@main
+  with:
+    scan: 'vulns,deps,audit-certify,verify-head'
+    min-posterior: '0.5'
+    upload-sarif: 'true'
+    fail-on: 'high'
+    comment-pr: 'true'
+```
+
+Composite action at `.github/actions/mneme/action.yml`. Wraps all the
+v0.37 SARIF + dep-audit + claim-drift work into one drop-in step. Posts
+a sticky PR comment, uploads SARIF to GitHub Code Scanning, fails the
+check on configurable severity. Example workflow at
+`.github/workflows/example-mneme.yml.example` for users to copy.
+
+### Privacy fix — no `Co-Authored-By: Claude …` trailer in commits
+
+The user's auto-memory says AI-tool fingerprints stay private; v0.36 +
+v0.37 commits accidentally carried a `Co-Authored-By: Claude` trailer
+that GitHub's UI rendered as a contributor avatar. From v0.38 onward,
+commits do NOT include the trailer. (Old commits keep theirs — rewriting
+history would force-push main and break every existing fork.)
+
+### Test count
+
+17 new unit tests added (auto-fix · deps-audit). Total: **2071 tests
+passing** across 152 files.
+
+### Customer issues — final status
+
+All 16 from the v0.36 feedback report are now addressed:
+
+| # | Issue | Status |
+|---|---|---|
+| 1 | False positives 80%+ | ✅ v0.37 Bayesian + AST |
+| 2 | Coverage gaps | ✅ v0.37 6 new rules |
+| 3 | Doesn't read HEAD | ✅ v0.37 `--verify-head` |
+| 4 | Hash embedder default | ✅ v0.37 verified auto-fallthrough |
+| 5 | Verbose output | ✅ v0.37 `--quiet` + SARIF |
+| 6 | No CI integration | ✅ **v0.38** GitHub Action |
+| 7 | Stale index | ✅ v0.37 `warnIfStale` |
+| 8 | No framework awareness | ✅ v0.37 Bayesian stack |
+| 9 | No FP management | ✅ v0.37 `.mneme/suppressions.json` |
+| 10 | Too many commands | ✅ **v0.38** `mneme groups` |
+| 11 | Bad citations | ✅ v0.37 file:line + posterior |
+| 12 | No auto-fix | ✅ **v0.38** template suggestions |
+| 13 | No vuln lifecycle | partial — suppressions cover ignore; opened/triaged tracking is roadmap |
+| 14 | Setup friction | ✅ v0.36+ Ollama auto-pull, MiniLM default |
+| 15 | No CVE/npm-audit | ✅ **v0.38** `mneme deps audit` (OSV.dev) |
+| 16 | UI too decorative | ✅ v0.37 `--quiet` |
+
 ## [0.37.0] — 2026-05-08
 
 The **"Bayesian Filter"** release. Customer-driven — every issue from the

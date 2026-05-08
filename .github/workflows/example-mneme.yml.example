@@ -1,0 +1,45 @@
+###########################################################################
+# Example workflow — copy this into your own repo's `.github/workflows/`  #
+# directory as `mneme.yml` (drop the `.example` suffix).                  #
+#                                                                         #
+# What it does on every PR:                                               #
+#   1. Installs Mneme                                                     #
+#   2. Runs Bayesian-filtered vuln scan + dep audit + AI-commit audit     #
+#   3. Uploads SARIF to GitHub Code Scanning                              #
+#   4. Posts a sticky PR comment with the audit verdict                   #
+#   5. Fails the check if any HIGH-or-above finding lands                 #
+#                                                                         #
+# All scans are local + free — no API keys, no SaaS account, no telemetry.#
+###########################################################################
+name: Mneme
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write   # for SARIF upload to Code Scanning
+  pull-requests: write     # for the PR comment
+  issues: write            # mneme bot uses issues API for comments
+
+jobs:
+  mneme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Mneme needs full history for forensics
+
+      - name: Run Mneme
+        uses: patsa2561-art/mneme-ai/.github/actions/mneme@main
+        with:
+          mneme-version: 'latest'
+          scan: 'vulns,deps,audit-certify,verify-head'
+          min-posterior: '0.5'
+          upload-sarif: 'true'
+          fail-on: 'high'
+          comment-pr: 'true'

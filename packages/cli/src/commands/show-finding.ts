@@ -108,6 +108,26 @@ export async function showFindingCommand(opts: ShowFindingOptions): Promise<numb
     process.stdout.write(`    ${kleur.cyan(hit.reference)}  ${kleur.gray(`https://cwe.mitre.org/data/definitions/${num}.html`)}\n\n`);
   }
 
+  // ── v0.38: auto-fix suggestion ─────────────────────────────────────
+  const fix = forensics.autoFixFor(hit.rule);
+  if (fix) {
+    const conf = fix.confidence === "high" ? kleur.green("HIGH") : fix.confidence === "medium" ? kleur.yellow("MEDIUM") : kleur.gray("LOW");
+    process.stdout.write(`  ${kleur.bold().magenta("✱ Suggested fix")}  ${kleur.gray(`(template, confidence ${conf}${kleur.gray(")")}`)}\n`);
+    process.stdout.write(`    ${kleur.bold(fix.title)}\n`);
+    process.stdout.write(`    ${kleur.gray("patch sketch:")}\n`);
+    for (const line of fix.patchHint.split("\n")) {
+      process.stdout.write(`      ${kleur.green(line)}\n`);
+    }
+    if (fix.recommendedApi) {
+      process.stdout.write(`    ${kleur.gray("recommended:")} ${kleur.cyan(fix.recommendedApi)}\n`);
+    }
+    process.stdout.write(`    ${kleur.gray("rationale:")}\n`);
+    for (const line of wrapText(fix.rationale, 78)) {
+      process.stdout.write(`      ${kleur.gray(line)}\n`);
+    }
+    process.stdout.write("\n");
+  }
+
   // Suggested action
   process.stdout.write(`  ${kleur.bold().magenta("If false positive — suppress")}\n`);
   process.stdout.write(`    ${kleur.cyan("$")} ${kleur.bold(`mneme suppress ${hit.id} --reason "<one-line justification>"`)}\n\n`);
@@ -121,4 +141,19 @@ export async function showFindingCommand(opts: ShowFindingOptions): Promise<numb
   process.stdout.write("\n");
 
   return 0;
+}
+
+function wrapText(s: string, width: number): string[] {
+  const out: string[] = [];
+  let line = "";
+  for (const word of s.split(/\s+/)) {
+    if ((line + " " + word).trim().length > width && line) {
+      out.push(line);
+      line = word;
+    } else {
+      line += (line ? " " : "") + word;
+    }
+  }
+  if (line.trim()) out.push(line);
+  return out;
 }

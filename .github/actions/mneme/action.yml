@@ -1,0 +1,123 @@
+name: Mneme — security + audit
+description: >
+  Run Mneme's Bayesian-filtered vulnerability scan + dependency audit + AI-commit
+  audit on every PR. Emits SARIF for GitHub Code Scanning + posts a PR comment
+  with audit verdict.
+author: patsa2561-art
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  mneme-version:
+    description: 'Mneme version to install (e.g. 0.38.0). Default: latest published.'
+    required: false
+    default: 'latest'
+  scan:
+    description: 'Comma-separated scans to run. Choose from: vulns,deps,audit-certify,verify-head'
+    required: false
+    default: 'vulns,deps,audit-certify'
+  min-posterior:
+    description: 'Drop vuln findings whose Bayesian posterior is below this. Default 0.5 in CI.'
+    required: false
+    default: '0.5'
+  upload-sarif:
+    description: 'When "true", upload SARIF to GitHub Code Scanning (requires `security-events: write`).'
+    required: false
+    default: 'true'
+  fail-on:
+    description: 'Exit non-zero when any finding meets/exceeds this severity. Choose: critical | high | medium | none'
+    required: false
+    default: 'high'
+  comment-pr:
+    description: 'Post a sticky PR comment with audit verdict. Set to "false" to disable.'
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node 22
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install Mneme
+      shell: bash
+      run: npm install -g mneme-ai@${{ inputs.mneme-version }}
+
+    - name: Initialise + index repo
+      shell: bash
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        mneme init || true
+        mneme index --quiet
+
+    - name: Vulnerability scan (SARIF)
+      if: contains(inputs.scan, 'vulns')
+      shell: bash
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        mneme forensics vulns --sarif mneme-vulns.sarif --min-posterior ${{ inputs.min-posterior }} --quiet
+
+    - name: Dependency audit
+      if: contains(inputs.scan, 'deps')
+      shell: bash
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        mneme deps audit --json > mneme-deps.json || true
+
+    - name: HEAD claim drift
+      if: contains(inputs.scan, 'verify-head')
+      shell: bash
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        mneme audit --verify-head --max-commits 200 --quiet || true
+
+    - name: AI Audit certify
+      if: contains(inputs.scan, 'audit-certify')
+      shell: bash
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        mneme audit --certify --json > mneme-audit.json || true
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: ${{ inputs.upload-sarif == 'true' && contains(inputs.scan, 'vulns') }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: mneme-vulns.sarif
+        category: mneme-ai
+
+    - name: Post PR comment
+      if: ${{ inputs.comment-pr == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        mneme bot --platform github --include audit,atrophy --dry-run > mneme-comment.md || true
+        if [ -s mneme-comment.md ]; then
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file mneme-comment.md
+        fi
+
+    - name: Fail on severity threshold
+      if: ${{ inputs.fail-on != 'none' }}
+      shell: bash
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        node -e "
+          const fs = require('fs');
+          let bad = 0;
+          try {
+            const sarif = JSON.parse(fs.readFileSync('mneme-vulns.sarif', 'utf8'));
+            const want = '${{ inputs.fail-on }}';
+            const order = { critical: 4, error: 4, high: 3, warning: 3, medium: 2, low: 1, note: 1, none: 0 };
+            const min = order[want] || 3;
+            for (const r of (sarif.runs || [])) {
+              for (const res of (r.results || [])) {
+                if ((order[res.level] || 0) >= min) bad++;
+              }
+            }
+          } catch {}
+          if (bad > 0) { console.log('::error::' + bad + ' finding(s) at or above severity ${{ inputs.fail-on }}'); process.exit(1); }
+        "

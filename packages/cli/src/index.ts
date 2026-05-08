@@ -56,6 +56,8 @@ import { repoMriCommand } from "./commands/repo-mri.js";
 import { cognitiveTwinCommand } from "./commands/cognitive-twin.js";
 import { suppressCommand } from "./commands/suppress.js";
 import { showFindingCommand } from "./commands/show-finding.js";
+import { depsAuditCommand } from "./commands/deps-audit.js";
+import { groupsCommand } from "./commands/groups.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -429,6 +431,41 @@ export async function run(argv: string[]): Promise<void> {
           maxCommits: opts.maxCommits,
           rewrite: opts.rewrite,
           json: opts.json,
+        }),
+      );
+    });
+
+  // ─── groups — command discoverability index ─────────────────────
+  program
+    .command("groups")
+    .description("Browse Mneme's 40+ commands grouped by intent (security / people / history / memory / originals).")
+    .option("--only <id>", "focus on one group: security | people | history | memory | originals")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await groupsCommand({ only: opts.only, json: opts.json }),
+      );
+    });
+
+  // ─── deps audit — vulnerability scan over installed deps via OSV.dev
+  const depsCmd = program
+    .command("deps")
+    .description("Dependency-level security commands (OSV.dev / CVE / GHSA cross-reference).");
+  depsCmd
+    .command("audit")
+    .description("Scan installed dependencies for known vulnerabilities (via OSV.dev — Google-maintained, free, no auth)")
+    .option("--json", "machine-readable output", false)
+    .option("--max <n>", "cap inventory queried (default 5000)", (v) => Number(v))
+    .option("--offline", "skip the network call (returns empty findings — for airgapped envs)", false)
+    .option("--quiet", "no banner, no decorative chars", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await depsAuditCommand({
+          cwd: process.cwd(),
+          json: opts.json,
+          maxPackages: opts.max,
+          offline: opts.offline,
+          quiet: opts.quiet,
         }),
       );
     });
