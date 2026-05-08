@@ -29,38 +29,26 @@ export async function showFindingCommand(opts: ShowFindingOptions): Promise<numb
   const stack = await forensics.detectStackProfile(meta.rootPath);
   // Don't filter by suppressions — we want to find the id even if it's
   // already suppressed (so `mneme show <id>` keeps working as a triage tool).
-  const log = await git.execGitOk(
-    ["log", "-n", String(opts.topN ?? 500), "--no-color", "--pretty=format:::commit::%H::%aI::%an::%ae::%s"],
-    { cwd: meta.rootPath },
-  );
-  const inputs: Array<{ commit: Commit; diff?: string }> = [];
-  for (const line of log.split("\n")) {
-    if (!line.startsWith("::commit::")) continue;
-    const parts = line.split("::");
-    const hash = parts[2] ?? "";
-    if (!hash) continue;
-    const commit: Commit = {
-      hash,
-      shortHash: hash.slice(0, 7),
-      authorName: parts[4] ?? "",
-      authorEmail: parts[5] ?? "",
-      authorDate: parts[3] ?? "",
-      committerDate: parts[3] ?? "",
-      subject: parts.slice(6).join("::"),
-      body: "",
+  // v0.39 HPC: single `git log -p` instead of N × `git show`.
+  const records = await git.loadCommitsWithDiffs({
+    cwd: meta.rootPath,
+    maxCommits: opts.topN ?? 500,
+  });
+  const inputs: Array<{ commit: Commit; diff?: string }> = records.map((r) => ({
+    commit: {
+      hash: r.hash,
+      shortHash: r.hash.slice(0, 7),
+      authorName: r.authorName,
+      authorEmail: r.authorEmail,
+      authorDate: r.authorDate,
+      committerDate: r.authorDate,
+      subject: r.subject,
+      body: r.body,
       files: [],
       parents: [],
-    };
-    let diff = "";
-    try {
-      diff = await git.execGitOk(["show", "--no-color", "--pretty=format:", hash], {
-        cwd: meta.rootPath,
-      });
-    } catch {
-      // ignore
-    }
-    inputs.push({ commit, diff });
-  }
+    },
+    diff: r.diff,
+  }));
   const report = forensics.huntVulnerabilities(inputs, { stack, minPosterior: 0 });
 
   const hit = report.hits.find((h) => h.id === opts.id);

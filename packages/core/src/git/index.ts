@@ -4,3 +4,4 @@ export * from "./log.js";
 export * from "./blame.js";
 export * from "./github.js";
 export * from "./gitlab.js";
+export * from "./batch-log.js";
