@@ -15,6 +15,9 @@ const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string }
   { id: "graph", label: "Nervous System", symbol: "✦", hint: "Force-directed graph of authors and latent collaboration" },
   { id: "atrophy", label: "Atrophy", symbol: "⏳", hint: "Files × authors knowledge heatmap" },
   { id: "influence", label: "Influence", symbol: "♛", hint: "PageRank ladder of cultural alphas" },
+  { id: "ecosystems", label: "Ecosystems", symbol: "🧬", hint: "Per-repo MCP tools spawned by ecosystem detection" },
+  { id: "dna", label: "Code Search (DNA)", symbol: "🎯", hint: "Ghost-Sniper Verifier — strict-mode 16-strand search" },
+  { id: "scrubber", label: "Scrubber", symbol: "🧼", hint: "Live prompt-injection defence — paste hostile text, see scrubbed" },
 ];
 
 export function Header({

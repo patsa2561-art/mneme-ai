@@ -193,4 +193,25 @@ export interface GraphLink {
   lastSeen: number;
 }
 
-export type ViewMode = "graph" | "atrophy" | "influence";
+export type ViewMode = "graph" | "atrophy" | "influence" | "ecosystems" | "dna" | "scrubber";
+
+// ─── v1.16 demo data shapes for the new tabs ─────────────────────────
+
+export interface EcosystemDemoSignal {
+  id: string;
+  displayName: string;
+  confidence: number;
+  evidence: string[];
+  tools: Array<{ name: string; description: string }>;
+  augmentedExample?: string;
+}
+
+export interface DnaDemoCandidate {
+  id: string;
+  reference: string;
+  existsInRepo: boolean;
+  semanticSimilarity: number;
+  verdict: "accepted" | "rejected-ast" | "rejected-semantic" | "rejected-confidence";
+  reason: string;
+  snippet?: string;
+}

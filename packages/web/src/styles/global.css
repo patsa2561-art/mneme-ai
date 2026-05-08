@@ -1941,3 +1941,337 @@ body::before {
   .load-tile { min-height: 0; padding: 16px; }
   .load-dialog { padding: 20px; }
 }
+
+/* ─── v1.16 — Ecosystems / DNA / Scrubber views ──────────────────────────── */
+
+.ecosystems-view, .dna-view, .scrubber-view {
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  color: var(--text);
+}
+.eco-intro, .dna-intro, .scrub-intro {
+  margin-bottom: 24px;
+  max-width: 900px;
+}
+.eco-intro h2, .dna-intro h2, .scrub-intro h2 {
+  font-size: 1.6rem;
+  margin: 0 0 12px;
+  color: var(--accent, #c084fc);
+}
+.eco-intro p, .dna-intro p, .scrub-intro p {
+  line-height: 1.6;
+  margin: 8px 0;
+  opacity: 0.92;
+}
+.eco-intro-meta { font-size: 0.9rem; opacity: 0.7; }
+
+.eco-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.eco-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.eco-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+  text-align: left;
+}
+.eco-card:hover { background: rgba(192,132,252,0.08); border-color: rgba(192,132,252,0.3); }
+.eco-card.active {
+  background: rgba(192,132,252,0.15);
+  border-color: var(--accent, #c084fc);
+}
+.eco-emoji { font-size: 1.3rem; }
+.eco-name { font-weight: 500; }
+.eco-tools-count { font-size: 0.78rem; opacity: 0.6; }
+
+.eco-detail {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 24px;
+}
+.eco-detail-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.eco-emoji-large { font-size: 2.5rem; }
+.eco-detail h3 { margin: 0 0 4px; font-size: 1.4rem; }
+.eco-detection {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.65;
+  font-family: var(--font-mono, monospace);
+}
+.eco-tools-section, .eco-augmentation-section { margin-bottom: 24px; }
+.eco-tools-section h4, .eco-augmentation-section h4 {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  color: var(--accent, #c084fc);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.eco-aug-hint {
+  font-size: 0.85rem;
+  opacity: 0.75;
+  margin: 0 0 12px;
+}
+.eco-tool-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.eco-tool {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.eco-tool-name {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.88rem;
+  color: var(--accent, #c084fc);
+}
+.eco-tool-desc { font-size: 0.85rem; opacity: 0.85; line-height: 1.45; }
+.eco-aug-example {
+  background: rgba(0,0,0,0.35);
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin: 0;
+  border-left: 3px solid var(--accent, #c084fc);
+}
+
+/* DNA view */
+.dna-scenarios {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.dna-scenario {
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.dna-scenario:hover { background: rgba(192,132,252,0.08); }
+.dna-scenario.active {
+  background: rgba(192,132,252,0.15);
+  border-color: var(--accent, #c084fc);
+}
+.dna-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.dna-stat-accepted { color: #4ade80; }
+.dna-stat-rej { color: #f87171; }
+.dna-stat-total { opacity: 0.85; }
+
+.dna-guarantee {
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: rgba(74,222,128,0.08);
+  border: 1px solid rgba(74,222,128,0.3);
+  border-radius: 8px;
+  color: #86efac;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.dna-verdicts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dna-verdict {
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-left-width: 4px;
+  border-radius: 8px;
+}
+.dna-verdict-accepted { border-left-color: #4ade80; }
+.dna-verdict-rejected { border-left-color: #f87171; opacity: 0.85; }
+.dna-verdict-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.dna-verdict-icon { font-size: 1.1rem; }
+.dna-verdict-ref {
+  flex: 1;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.88rem;
+}
+.dna-verdict-tag {
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.dna-verdict-reason { font-size: 0.85rem; opacity: 0.8; margin-bottom: 6px; }
+.dna-verdict-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.78rem;
+  opacity: 0.65;
+  font-family: var(--font-mono, monospace);
+}
+.dna-verdict-snippet {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono, monospace);
+  white-space: pre-wrap;
+  margin-bottom: 0;
+}
+.dna-footer-note, .scrub-footer-note, .eco-footer-note {
+  margin-top: 24px;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-size: 0.83rem;
+  opacity: 0.78;
+  line-height: 1.55;
+}
+
+/* Scrubber view */
+.scrub-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.scrub-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.scrub-preset {
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.88rem;
+  flex: 1;
+  min-width: 280px;
+}
+.scrub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.scrub-pane {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.scrub-pane-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.25);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.scrub-pane-head h3 { margin: 0; font-size: 0.92rem; font-weight: 500; }
+.scrub-pane-icon { font-size: 1.05rem; }
+.scrub-input-display, .scrub-output-display {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.84rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.scrub-pane-output .scrub-output-display { color: #4ade80; }
+.scrub-textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 14px 16px;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.scrub-textarea:focus { outline: 2px solid var(--accent, #c084fc); outline-offset: -2px; }
+.scrub-hits {
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+}
+.scrub-no-hits { color: #4ade80; font-size: 0.9rem; }
+.scrub-hits h4 { margin: 0 0 10px; font-size: 0.92rem; color: #fbbf24; }
+.scrub-hit-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.scrub-hit {
+  display: grid;
+  grid-template-columns: 180px auto 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 0.83rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.scrub-hit:last-child { border-bottom: 0; }
+.scrub-hit-name { font-family: var(--font-mono, monospace); color: #fbbf24; }
+.scrub-hit-count { opacity: 0.7; font-family: var(--font-mono, monospace); }
+.scrub-hit-desc { opacity: 0.85; }
+
+@media (max-width: 900px) {
+  .eco-grid { grid-template-columns: 1fr; }
+  .scrub-grid { grid-template-columns: 1fr; }
+}

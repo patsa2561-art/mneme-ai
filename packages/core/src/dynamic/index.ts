@@ -5,6 +5,8 @@ export * from "./query-engine.js";
 export * from "./augmentation.js";
 export * from "./tribal-fetcher.js";
 export * from "./tool-builder.js";
+export * from "./tiered-descriptions.js";
+export * from "./schema-negotiation.js";
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

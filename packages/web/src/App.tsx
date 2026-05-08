@@ -5,6 +5,9 @@ import { TimeScrubber } from "./components/TimeScrubber";
 import { NervousSystemView } from "./components/NervousSystemView";
 import { AtrophyHeatmap } from "./components/AtrophyHeatmap";
 import { InfluenceLadder } from "./components/InfluenceLadder";
+import { EcosystemsView } from "./components/EcosystemsView";
+import { DnaView } from "./components/DnaView";
+import { ScrubberView } from "./components/ScrubberView";
 import { DetailPanel } from "./components/DetailPanel";
 import { LimitsPanel } from "./components/LimitsPanel";
 import { LoadDialog } from "./components/LoadDialog";
@@ -147,7 +150,13 @@ export function App() {
 
       <main className="app-main">
         <section className="app-canvas" aria-label={`${view} view`}>
-          {!scrubbed ? (
+          {view === "ecosystems" ? (
+            <EcosystemsView />
+          ) : view === "dna" ? (
+            <DnaView />
+          ) : view === "scrubber" ? (
+            <ScrubberView />
+          ) : !scrubbed ? (
             <EmptyState onLoadClick={() => setLoadOpen(true)} />
           ) : view === "graph" ? (
             <NervousSystemView
