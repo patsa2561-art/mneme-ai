@@ -457,23 +457,146 @@ All 4 combined       = self-defending AI memory at the runtime layer
 ═══════════════════════════════════════════════════════════════════════════════
 
 <details>
-<summary><h2 style="display:inline">📊 7 metrics that <i>only</i> Mneme can compute (Mneme-only science)</h2></summary>
+<summary><h2 style="display:inline">📊 The 7 metrics no other dev tool can compute &nbsp;&nbsp;<sub><i>(Mneme-only science)</i></sub></h2></summary>
 
-*Cursor / Copilot / Sourcegraph / GitHub Code Search — even OpenAI's internal tools — cannot compute these.* Each of the 7 metrics combines Mneme atoms (capabilities) into a NEW molecule that requires the full Mneme stack (git history × atrophy × forensics × Constitutional Gate × audit chain × bench harness) to evaluate.
+```
+   ╔══════════════════════════════════════════════════════════════════╗
+   ║   "AI memory" is a vibe.   Mneme makes it a number.              ║
+   ╚══════════════════════════════════════════════════════════════════╝
 
-| # | Code | Metric | What it measures | Why nobody else can compute it |
-|---|---|---|---|---|
-| 1 | **HKD** | Hidden Knowledge Density | % of code lines whose understanding is concentrated in ≤2 authors AND not touched >180 days. The "bus factor of 1" risk surface, quantified. | Requires per-file atrophy time-series + author-distinct-count — neither indexed by other dev tools |
-| 2 | **TWS** | Tribal Wisdom Score | Of AI tool calls, what fraction cite a real commit hash whose surrounding decisions/regrets corroborate the citation? | Requires hash verification × Mneme's correlator neighborhood × audit-log of AI tool calls |
-| 3 | **CVR** | Constitution Violation Rate | Constitutional-Gate refusals per 100 commits. Lower = AI has internalised your repo's lessons. | Only computable because Mneme has runtime constitutional enforcement (no other tool does) |
-| 4 | **HRR** | Hallucination Reduction Ratio | Hallucination rate (with Mneme) / (without Mneme), via AI-Memory-Bench. Numerical proof of value. | Requires the bench harness AND a controlled-comparison protocol |
-| 5 | **REI** | Regret Echo Index | % of new commits echoing a past regret pattern WITHOUT referencing it. Detects "we're about to repeat history" before merge. | Requires regret-pattern extraction + Hebbian similarity + commit-message scanner — none integrated elsewhere |
-| 6 | **KAH** | Knowledge Atrophy Halflife | Models expertise decay as exponential — weeks until 50% of expert understanding fades. Halflife framing makes atrophy as concrete as radioactive decay. | Requires multi-snapshot atrophy time-series + log-space regression — Mneme's atrophy index uniquely supports this |
-| 7 | **PCS** | Provenance Chain Strength | % of commits with unbroken AI → audit-log → git tamper-evident chain. The compliance graph. | Requires HMAC-chained audit log + AI-commit attribution + git verification — Mneme's stack uniquely supports all 3 |
+           atoms                molecules                metrics
+   ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐
+   │ git-blame        │   │                  │   │                  │
+   │ atrophy curves   │ ⟶ │  combine atoms   │ ⟶ │  HKD TWS CVR     │
+   │ forensics        │   │  Mneme uniquely  │   │  HRR REI KAH PCS │
+   │ const. gate      │   │  has all of      │   │                  │
+   │ audit log chain  │   │                  │   │                  │
+   │ bench harness    │   │                  │   │                  │
+   └──────────────────┘   └──────────────────┘   └──────────────────┘
+        building blocks       composition           measurable output
+```
 
-**Each metric is a pure deterministic function** of pre-aggregated Mneme atoms. Test coverage: 27/27 unit tests verifying every formula, edge case, and boundary condition. See [`packages/core/src/metrics/mneme-metrics.ts`](./packages/core/src/metrics/mneme-metrics.ts).
+> **Cursor · Copilot · Sourcegraph · GitHub Code Search · even OpenAI's internal tools** — none of them can compute the 7 metrics below. Not because they aren't smart enough. Because **the inputs themselves are uniquely Mneme's product.**
 
-**Why this matters for the industry:** when a banking customer asks "is your AI memory layer actually reducing hallucination?", *we have a number*. When a CTO asks "is our AI learning our codebase over time?", *we have CVR + TWS over a window*. When a CISO asks "what's our bus-factor risk?", *we have HKD on the codebase*. **Numbers, not vibes.**
+---
+
+### 🩻 1. HKD — Hidden Knowledge Density
+
+> *How much of your codebase is one resignation away from disaster?*
+
+`HKD = Σ(LOC where authors ≤ 2 AND last_touch > 180d) / total_LOC`
+
+What it answers · *"Where's our bus-factor-of-1 risk?"*
+Atoms used · git-blame × atrophy × line-count
+Why no one else has it · No other tool indexes per-file atrophy + author distinct-count
+
+---
+
+### 🧠 2. TWS — Tribal Wisdom Score
+
+> *Is your AI just memorising surface, or absorbing your team's institutional knowledge?*
+
+`TWS = corroborated_citations / total_citations`
+*(corroborated = the cited commit's neighborhood contains a related decision/regret)*
+
+What it answers · *"Is the AI quoting tribal wisdom or just facts?"*
+Atoms used · commit-hash verification × Mneme's correlator neighborhood × audit log of AI calls
+Why no one else has it · Requires HMAC-chained audit log + decision extraction in one stack
+
+---
+
+### ⚖ 3. CVR — Constitution Violation Rate
+
+> *Is your AI getting smarter about <b>your</b> codebase over time?*
+
+`CVR = (Constitutional-Gate refusals / commits in window) × 100`
+
+What it answers · *"How often does the AI try to violate this repo's lessons?"* Lower = AI has internalised the rules.
+Atoms used · Constitutional Gate (v1.12.0) × commit log × audit log
+Why no one else has it · No other tool ships a runtime constitutional gate. Period.
+
+---
+
+### 🎯 4. HRR — Hallucination Reduction Ratio
+
+> *The number that ends the "does AI memory actually help?" debate.*
+
+`HRR = halluc_rate(with_Mneme) / halluc_rate(without_Mneme)`
+`reduction = 1 - HRR`
+
+What it answers · *"By how much does Mneme actually reduce AI hallucination — in numbers?"*
+Atoms used · AI-Memory-Bench harness (v1.12.0) × controlled A/B protocol
+Why no one else has it · No published reproducible AI-memory benchmark exists in the MCP ecosystem
+
+---
+
+### 🪞 5. REI — Regret Echo Index
+
+> *"We're about to repeat history" — detected before merge.*
+
+`REI = silent_echoes / new_commits`
+*(silent_echo = commit matches a past regret AND doesn't reference it)*
+
+What it answers · *"What % of our recent commits are blindly walking into past mistakes?"*
+Atoms used · regret extraction × Hebbian similarity × commit-message scanner
+Why no one else has it · Requires Mneme's regret-pattern engine — there is no equivalent
+
+---
+
+### ☢ 6. KAH — Knowledge Atrophy Halflife
+
+> *Expertise decays like radioactive material. We measure the halflife.*
+
+`expertise(t) = e^(−λ·t)`
+`KAH = ln(2) / λ` *(expressed in weeks)*
+
+What it answers · *"How many weeks until 50% of our experts' understanding fades?"*
+Atoms used · multi-snapshot atrophy time-series × log-space linear regression
+Why no one else has it · No other tool tracks atrophy as a continuous time-series — they sample once
+
+---
+
+### 🔗 7. PCS — Provenance Chain Strength
+
+> *The compliance graph — every commit, cryptographically traceable.*
+
+`PCS = unbroken_chains / total_commits`
+*(unbroken = AI tool call → audit-log entry → git commit, all HMAC-verified)*
+
+What it answers · *"What % of our AI-influenced commits have an unbroken tamper-evident chain?"*
+Atoms used · HMAC-chained audit log × AI-commit attribution × git rev-parse verify
+Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor does.
+
+---
+
+### Comparison — who can compute what
+
+| Capability | **Mneme** | Cursor | GitHub Copilot | Sourcegraph | OpenAI internal |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Code search + LLM context | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Atrophy time-series per file | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Runtime Constitutional Gate | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Reproducible hallucination bench | ✅ | ❌ | ❌ | ❌ | partial |
+| HMAC-chained audit of AI calls | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Regret pattern extraction | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Can compute HKD/TWS/CVR/HRR/REI/KAH/PCS** | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+### What this means for the buyer in the room
+
+| When the question is… | Mneme answers with… |
+|---|---|
+| *"Is our AI hallucinating less?"* (CTO) | **HRR** — a percentage from a reproducible benchmark |
+| *"Is our AI learning our codebase over time?"* (Engineering VP) | **CVR + TWS** trended over windows |
+| *"What's our bus-factor risk?"* (CISO / engineering manager) | **HKD** — % of codebase with ≤2 authors, stale |
+| *"Are we cryptographically auditable?"* (Compliance / SOC2) | **PCS** — % of commits with unbroken HMAC chain |
+| *"Are we about to repeat past mistakes?"* (Tech Lead reviewing PR) | **REI** — flagged silent echoes per PR |
+| *"How fast does our team's expertise fade?"* (HR / CFO) | **KAH** — halflife in weeks |
+
+> **27 unit tests** verify every formula, edge case, and boundary condition. Pure deterministic — same inputs, same output. See [`packages/core/src/metrics/mneme-metrics.ts`](./packages/core/src/metrics/mneme-metrics.ts).
+
+> **Numbers, not vibes.**
 
 </details>
 
