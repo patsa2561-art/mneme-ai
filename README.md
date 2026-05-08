@@ -74,6 +74,30 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## ⚡ The 4-second pitch
+
+> Your AI coding tool is brilliant but **amnesiac** — it never saw your repo's history. Why JWT got rolled back in 2024. Why the auth refactor went sideways. Who you should pair with on `payments.ts`. Mneme is the **memory layer** that fixes that.
+
+```
+   STOCK AI ──→  Mneme MCP  ──→  AI that knows your repo's history
+                  98+ tools         every commit · every regret · every decision
+```
+
+**v1.12.0 just shipped 4 firsts the MCP ecosystem has never seen:**
+
+|  | First | What it actually does |
+|---|---|---|
+| 🛡 | **MCP Shield** | The first reusable defensive runtime for *any* MCP server. Add `withShield(handler)` and get HMAC-chained audit log + prompt-injection scrubber + rate-limit + reputation tracking — for free. |
+| 📐 | **AI-Memory-Bench** | The first reproducible benchmark for "AI memory layers". *Numbers, not vibes.* Measures hallucination rate across citation / attribution / API categories with Wilson 95% lower-bound. |
+| ⚖ | **Constitutional Gate** | Constitutional AI was a *training-time* idea. We made it a *runtime* gate. AI proposes code → Mneme checks repo-history MUST-NOT rules → REFUSE + rewrite hint. The AI literally cannot suggest things contradicting your repo's lessons. |
+| 🧬 | **Dynamic MCP** | Every other MCP server has a static tool surface. Mneme's surface is **repo-dependent.** Detects Stripe / Kafka / React / Postgres / Express / FastAPI / Next / GraphQL → spawns ecosystem-specific tools tailored to *your* code. |
+
+> **Bank-grade by default.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Audit log auto-on. Prompt-injection scrubber auto-on. WASM model checksums auto-pinned. Zero typing for the user — your AI agent installs Mneme; security comes pre-armed.
+
+> **2692 tests passing · 98+ MCP tools · MIT · zero telemetry · works offline.**
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 📋 What's new
 
 See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
