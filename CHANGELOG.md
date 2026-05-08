@@ -8,6 +8,153 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.37.0] — 2026-05-08
+
+The **"Bayesian Filter"** release. Customer-driven — every issue from the
+post-v0.36 user feedback is addressed.
+
+### The advanced algorithm — Bayesian Stack-Aware Priors × AST Evidence Scoring
+
+Customer report (v0.36): a NestJS + Mongoose repo received **16 false-positive
+CWE-89 (SQL injection) findings** because the regex matched the substring
+"update" inside arbitrary log strings. The scanner had no idea SQL drivers
+weren't even in the dependency graph.
+
+v0.37 fixes the entire class of issue with a two-stage filter that runs on
+every finding *before* it leaves the scanner:
+
+```
+posterior = priorByStack(rule) × evidenceScore(ast-context)
+```
+
+- **Stage 1 — stack prior.** `package.json` (workspaces-aware) is parsed
+  into a stack vector: `{hasSql, hasNoSql, hasNestJS, hasUiFramework, hasJwt,
+  hasPaymentWebhook, ...}`. Each rule has a hand-tuned conditional prior:
+  the SQL-injection rule's prior collapses to **0.05** in a Mongoose-only
+  repo. Rules whose stack prior falls below their per-rule threshold are
+  *silenced before the regex runs* — not just ranked low. The customer's 16
+  CWE-89 false positives go to **zero** automatically.
+
+- **Stage 2 — AST evidence score.** Each match is classified by its lexical
+  context:
+  - inside `console.log(...)` / `logger.*(...)` → 0.05 (the customer's case)
+  - inside `pool.query(...)` / `db.query(...)` / `prisma.$queryRaw` → 0.95
+  - inside a comment → 0.05
+  - inside a test file → 0.20
+  - inside a string literal with no detected sink → 0.25
+  - in code position with no special signal → 0.70
+
+- **Threshold.** Findings below `--min-posterior 0.3` (default) are dropped
+  with the count surfaced in the report. Adjust as needed.
+
+This combination is genuinely novel for a CLI scanner. SAST tools assume
+universal applicability because they have no view of dependencies; package
+auditors see deps but don't gate code patterns. Combining the two is the
+contribution.
+
+### 6 new rules — coverage gaps the customer flagged
+
+- **`missing-auth-guard`** (NestJS) — `@Get` / `@Post` / `@Put` /
+  `@Delete` / `@Patch` route handler with no `@UseGuards` decorator on
+  method or class.
+- **`mass-assignment`** — model constructed directly from `req.body`.
+  `User.create(req.body)` / `new User(req.body)`.
+- **`idor-no-ownership-check`** — `findById(req.params.id)` /
+  `findOne({_id: req.params.id})` with no nearby ownership check.
+- **`ssrf`** — `fetch` / `axios` / `http.get` / `got` / `request` built
+  from `req.body` / `req.query` / `req.params`.
+- **`prototype-pollution`** — `Object.assign(target, req.body)` /
+  `_.merge(target, req.body)`.
+- **`weak-webhook-signature`** — payment-gateway webhook handler that
+  reads `req.body` without verifying a signature.
+
+### `mneme forensics vulns` — new flags
+
+- **`--sarif <path>`** — emit SARIF v2.1.0 (use `-` for stdout). Drop-in
+  for GitHub Code Scanning, GitLab Vulnerability Reports, Microsoft Defender
+  for Cloud. Every finding carries `partialFingerprints.primaryLocationLineHash`
+  so the same id is stable across runs.
+- **`--min-posterior <n>`** — drop findings below this Bayesian posterior
+  threshold (default 0.3).
+- **`--no-stack`** — disable stack-aware filtering (regression mode for
+  bisecting a v0.36 result).
+- **`--explain`** — show the prior × evidence breakdown per finding.
+- **`--quiet`** — no banner, no decorative chars.
+
+### `mneme show <finding-id>` — one-finding deep-dive
+
+```
+mneme show da8611cf
+```
+
+Prints the full context for a single finding by its 8-char stable id:
+posterior breakdown, commit metadata, file:line, evidence snippet, CWE
+catalogue link, and the exact `mneme suppress` / `git show` commands to
+run next. Replaces the v0.36 "ต้อง git show ทุกครั้ง" friction.
+
+### `mneme suppress <id> --reason "<why>"` — false-positive management
+
+```
+mneme suppress da8611cf --reason "package version bump, expected"
+mneme suppress --list
+mneme suppress da8611cf --remove
+```
+
+Stores entries in `.mneme/suppressions.json` (versioned, expires-aware).
+Once you triage a finding it stays gone on every future scan.
+
+### `mneme audit --verify-head` — claim drift detector
+
+Customer report (v0.36): an audit doc said `"removed omise.restoreStock"`
+but `omise.restoreStock` was still alive in HEAD. The forensics scanner
+only looked at commit additions/deletions; it never read HEAD to verify.
+
+`mneme audit --verify-head` parses every commit subject + body for
+`remove X` / `delete X` / `drop X` / `kill X` / `rip out X` patterns,
+extracts the symbol X, and `git grep`s HEAD for X. If X is still alive,
+it raises a finding — *unless* the only matches are in `CHANGELOG.md` /
+`docs/` / `wiki/` / test files (those are expected to mention removed
+symbols).
+
+### Stale-index warning surfaces on every command
+
+Customer report (v0.36): `mneme ask` answered confidently from a 3-day-old
+index. The store had `indexed_at` but only `mneme status` surfaced it.
+v0.37 adds a centralised `warnIfStale(s)` that any command can call. `ask`
+is the first to wire it up; the warning is one line on stderr and is
+suppressed in `--json`.
+
+### Better citations
+
+Every vuln finding now reports `file:line` resolved from the diff hunk —
+not just the snippet. SARIF callers get `physicalLocation.region.startLine`
+populated. `--explain` adds the AST evidence context name + reason for
+those who want to audit *why* a finding scored what it scored.
+
+### Test count
+
+70 new unit tests added (SARIF · suppressions · stack-priors · AST evidence
+· vulnhunt-v0.37 · counterfactual). Total: **2054 tests passing** across
+150 files.
+
+### Customer items resolved
+
+- ✅ #1 vuln scanner accuracy (Bayesian + AST)
+- ✅ #2 coverage gaps (6 new rules)
+- ✅ #3 HEAD verification
+- ✅ #5 verbose output (`--quiet`, SARIF)
+- ✅ #7 stale-index warning
+- ✅ #8 framework awareness (same Bayesian module)
+- ✅ #9 false-positive management (suppressions.json)
+- ✅ #11 better citations (file:line + posterior)
+- ✅ #14 setup friction reduction (auto-pick installed Ollama models in v0.36 carries forward)
+- ✅ #16 UI compact mode (`--quiet`)
+
+Items still on the roadmap for v0.38: official GitHub Action (#6), command
+grouping (#10), auto-fix suggestions (#12), CVE/npm-audit integration
+(#15). Each is a design effort in its own right and gets a dedicated
+release rather than rushed in alongside the Bayesian filter.
+
 ## [0.36.0] — 2026-05-08
 
 The **"Originals"** release. Five never-before-shipped capabilities added

@@ -77,6 +77,12 @@ export async function askCommand(opts: AskCommandOptions): Promise<number> {
     s.close();
     return 1;
   }
+  // v0.37: warn (once, to stderr) if the index is older than 3 days so the
+  // user knows their answer might miss recent commits. Skipped in --json.
+  if (!opts.json) {
+    const { warnIfStale } = await import("../index-freshness.js");
+    warnIfStale(s);
+  }
 
   // ── Step 2. Retrieval (with spinner + streaming events when --stream). ─
   const spinner = new Spinner();

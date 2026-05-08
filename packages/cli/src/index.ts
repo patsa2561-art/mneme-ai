@@ -54,6 +54,8 @@ import { promiseCommand } from "./commands/promise.js";
 import { karmaCommand } from "./commands/karma.js";
 import { repoMriCommand } from "./commands/repo-mri.js";
 import { cognitiveTwinCommand } from "./commands/cognitive-twin.js";
+import { suppressCommand } from "./commands/suppress.js";
+import { showFindingCommand } from "./commands/show-finding.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -136,23 +138,27 @@ export async function run(argv: string[]): Promise<void> {
     .option("--baseline", "snapshot current behavior + types + perf", false)
     .option("--trace", "diff capture + AI session detection", false)
     .option("--verify", "Leviathan-style narrative vs diff check", false)
+    .option("--verify-head", "claim-drift detector — flag commits whose 'remove X' claim isn't actually true in HEAD", false)
     .option("--certify", "5-axis trust certificate (CI-friendly exit code)", false)
     .option("--watch", "long-running CI gate mode", false)
     .option("--report", "produce markdown report", false)
     .option("--out <file>", "output path for --report")
     .option("--interval <seconds>", "poll interval for --watch", (v) => Number(v), 60)
+    .option("--max-commits <n>", "cap commits scanned in --verify-head", (v) => Number(v), 200)
     .option("--json", "machine-readable output", false)
+    .option("--quiet", "no banner, no decorative chars", false)
     .option("--explain", "prepend a plain-English narrative summary on --certify (uses your free LLM)", false)
     .option("--strict", "treat skipped axes (insufficient data) as fail — for compliance environments", false)
     .action(async (opts: {
-      baseline?: boolean; trace?: boolean; verify?: boolean; certify?: boolean;
-      watch?: boolean; report?: boolean; out?: string; interval?: number; json?: boolean;
-      explain?: boolean; strict?: boolean;
+      baseline?: boolean; trace?: boolean; verify?: boolean; verifyHead?: boolean; certify?: boolean;
+      watch?: boolean; report?: boolean; out?: string; interval?: number; maxCommits?: number;
+      json?: boolean; quiet?: boolean; explain?: boolean; strict?: boolean;
     }) => {
-      const mode: "baseline" | "trace" | "verify" | "certify" | "watch" | "report" =
+      const mode: "baseline" | "trace" | "verify" | "verify-head" | "certify" | "watch" | "report" =
         opts.baseline ? "baseline" :
         opts.trace ? "trace" :
         opts.verify ? "verify" :
+        opts.verifyHead ? "verify-head" :
         opts.certify ? "certify" :
         opts.watch ? "watch" :
         opts.report ? "report" :
@@ -164,8 +170,10 @@ export async function run(argv: string[]): Promise<void> {
           json: opts.json,
           out: opts.out,
           interval: opts.interval,
+          maxCommits: opts.maxCommits,
           explain: opts.explain,
           strict: opts.strict,
+          quiet: opts.quiet,
         }),
       );
     });
@@ -420,6 +428,46 @@ export async function run(argv: string[]): Promise<void> {
           email,
           maxCommits: opts.maxCommits,
           rewrite: opts.rewrite,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── suppress — manage .mneme/suppressions.json ──────────────────
+  program
+    .command("suppress [id]")
+    .description("Suppress a vulnerability finding by id (.mneme/suppressions.json). Pass --list to see all, --remove to remove.")
+    .option("--reason <text>", "why this is a false positive (required when adding)")
+    .option("--expires <iso>", "optional expiry timestamp (e.g. 2026-12-31)")
+    .option("--remove", "remove the suppression with this id", false)
+    .option("--list", "list all active suppressions", false)
+    .option("--json", "machine-readable output", false)
+    .action(async (id: string | undefined, opts: any) => {
+      process.exit(
+        await suppressCommand({
+          cwd: process.cwd(),
+          id,
+          reason: opts.reason,
+          expiresAt: opts.expires,
+          remove: opts.remove,
+          list: opts.list,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ─── show — print full context for one vulnerability finding ─────
+  program
+    .command("show <id>")
+    .description("Print full context for a vulnerability finding by its 8-char id (commit + diff + posterior breakdown + suggested actions).")
+    .option("--top <n>", "scan up to N commits looking for the id (default 500)", parseIntStrict("--top"), 500)
+    .option("--json", "machine-readable output", false)
+    .action(async (id: string, opts: any) => {
+      process.exit(
+        await showFindingCommand({
+          cwd: process.cwd(),
+          id,
+          topN: opts.top,
           json: opts.json,
         }),
       );
@@ -1424,10 +1472,15 @@ export async function run(argv: string[]): Promise<void> {
 
   forensicsCmd
     .command("vulns")
-    .description("Find security holes in your git history (CWE-aligned scanner)")
+    .description("Find security holes in your git history (CWE-aligned scanner — Bayesian-filtered)")
     .option("--since <date>", "only scan commits since this date (e.g. 2024-01-01, 7d)", parseSinceDate)
     .option("--top <n>", "scan up to N commits", parseIntStrict("--top"), 500)
     .option("--json", "structured output", false)
+    .option("--sarif <path>", "emit SARIF v2.1.0 to <path> (use \"-\" for stdout) — feeds GitHub Code Scanning")
+    .option("--min-posterior <n>", "drop findings whose Bayesian posterior is below this (default 0.3)", parseFloatStrict("--min-posterior"))
+    .option("--no-stack", "disable stack-aware filtering — run every rule (regression mode)", false)
+    .option("--explain", "show the why-I-flagged-this evidence trail per finding", false)
+    .option("--quiet", "no banner, no decorative chars", false)
     .action(async (opts: any) =>
       process.exit(
         await forensicsVulnsCommand({
@@ -1435,6 +1488,11 @@ export async function run(argv: string[]): Promise<void> {
           since: opts.since,
           topN: opts.top,
           json: opts.json,
+          sarif: opts.sarif,
+          minPosterior: opts.minPosterior,
+          noStack: opts.stack === false,
+          explain: opts.explain,
+          quiet: opts.quiet,
         }),
       ),
     );

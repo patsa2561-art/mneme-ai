@@ -83,14 +83,19 @@ export async function resolveEmbedder(opts: ResolveOptions = {}): Promise<Embedd
     // We swallow the reason: the user picked auto, they want it to JUST WORK.
   }
 
-  // 3. Bundled WASM — ★★★, ~25MB auto-download. Doesn't need a "ping" — the
-  //    module is in the npm install. We instantiate eagerly; the actual model
-  //    download happens lazily on first embed (or via verify()).
+  // 3. Bundled WASM (MiniLM) — ★★★, ~25MB auto-download. Doesn't need a
+  //    "ping" — the module is in the npm install. We instantiate eagerly;
+  //    the actual model download happens lazily on first embed (or via
+  //    verify()). Returned unconditionally because:
+  //      - verify() forces the 25MB download before any work, blowing
+  //        first-run time budget.
+  //      - if verify fails later (offline run on a fresh machine), the
+  //        index command surfaces a clear error + suggests --embedder hash.
   return new BundledEmbedder({ model: opts.model, onProgress: opts.onBundledProgress });
 
-  // 4. Hash is the FINAL escape hatch — only chosen by explicit `--embedder hash`
-  //    or by callers that don't want network/download. Auto-detect prefers
-  //    bundled because it returns true semantic vectors with no setup.
+  // 4. Hash is the FINAL escape hatch — only chosen by explicit `--embedder
+  //    hash` or by callers that don't want network/download. Auto-detect
+  //    prefers bundled because it returns true semantic vectors with no setup.
 }
 
 /** Helper for callers that explicitly want the deterministic offline path. */

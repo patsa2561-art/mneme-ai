@@ -354,6 +354,16 @@ export interface ForensicsVulnsOptions {
   since?: string;
   topN?: number;
   json?: boolean;
+  /** Emit SARIF v2.1.0 to this path (or stdout if "-"). */
+  sarif?: string;
+  /** Drop findings whose Bayesian posterior is below this. Default 0.3. */
+  minPosterior?: number;
+  /** Disable stack-aware filtering (force every rule to run). */
+  noStack?: boolean;
+  /** Show the why-I-flagged-this evidence trail per finding. */
+  explain?: boolean;
+  /** Quiet mode — no banners, no decorative chars. */
+  quiet?: boolean;
 }
 
 export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promise<number> {
@@ -362,6 +372,12 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
     return 1;
   }
   const meta = await git.getRepoMeta(opts.cwd);
+
+  // ── v0.37: auto-detect stack profile + load suppressions ──
+  const stackProfile = opts.noStack
+    ? undefined
+    : await forensics.detectStackProfile(meta.rootPath);
+  const suppressedIds = await forensics.loadSuppressedIds(meta.rootPath);
 
   // Use git directly so we don't require an index — vulnerability
   // hunting works on raw commit history.
@@ -400,41 +416,81 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
     inputs.push({ commit, diff });
   }
 
-  const report = forensics.huntVulnerabilities(inputs);
+  const report = forensics.huntVulnerabilities(inputs, {
+    stack: stackProfile,
+    minPosterior: opts.minPosterior,
+    suppressedIds,
+  });
+
+  // ── v0.37: SARIF output ──
+  if (opts.sarif) {
+    const sarif = forensics.buildSarif(report, { toolVersion: "0.37.0" });
+    const text = JSON.stringify(sarif, null, 2);
+    if (opts.sarif === "-") {
+      process.stdout.write(text + "\n");
+    } else {
+      const fs = await import("node:fs/promises");
+      await fs.writeFile(opts.sarif, text, "utf8");
+      if (!opts.quiet) ui.success(`SARIF report written to ${opts.sarif}`);
+    }
+    return 0;
+  }
 
   if (opts.json) {
     process.stdout.write(JSON.stringify(report, null, 2) + "\n");
     return 0;
   }
 
-  ui.banner();
-  process.stdout.write(header("🛡", "Vulnerability Hunt — pattern-matched security findings",
-    "Scans for 11 known security-bug patterns (SQL injection, hardcoded secrets, weak crypto, etc.) — additions-only, full diff bodies.",
-    "Find security holes hidden in years of git history before an attacker does.") + "\n\n");
+  if (!opts.quiet) ui.banner();
+  process.stdout.write(header("🛡", "Vulnerability Hunt — Bayesian-filtered security findings",
+    "Scans for 18 security-bug patterns. Each finding scored by stack-prior × AST-evidence; sub-threshold ones dropped before they leave the scanner.",
+    "Find live security risks in your repo's history without drowning in false positives.") + "\n\n");
+
+  // ── v0.37: Stack profile summary ──────────────────────────────────
+  process.stdout.write(section("🧬 Stack profile (Bayesian priors)") + "\n");
+  const stackBits: string[] = [];
+  if (report.stack.hasSql) stackBits.push("SQL");
+  if (report.stack.hasNoSql) stackBits.push("NoSQL");
+  if (report.stack.hasNestJS) stackBits.push("NestJS");
+  else if (report.stack.hasWebFramework) stackBits.push("web");
+  if (report.stack.hasUiFramework) stackBits.push("UI");
+  if (report.stack.hasJwt) stackBits.push("JWT");
+  if (report.stack.hasPaymentWebhook) stackBits.push("payment");
+  process.stdout.write(`    ${kleur.gray("detected:")} ${stackBits.length > 0 ? stackBits.map((b) => kleur.cyan(b)).join(" · ") : kleur.gray("(no stack signal)")} ${kleur.gray(`from ${report.stack.detectedDeps} deps across ${report.stack.sources.length} package.json file(s)`)}\n`);
+  if (report.silenced.length > 0) {
+    process.stdout.write(`    ${kleur.gray("silenced rules:")}\n`);
+    for (const s of report.silenced) {
+      process.stdout.write(`      ${kleur.gray("·")} ${kleur.bold(s.rule.padEnd(30))} ${kleur.gray(s.reason)}\n`);
+    }
+  }
+  process.stdout.write("\n");
 
   // ─── Scan summary ─────────────────────────────────────────────────
   const totalSev = report.bySeverity.critical + report.bySeverity.high;
   const summaryLine = (() => {
     if (report.hits.length === 0) {
-      return `${kleur.green("✓")}  No vulnerable patterns detected in ${kleur.bold(String(report.scanned))} commits.`;
+      const dropMsg = report.dropped > 0 ? ` (${report.dropped} candidate${report.dropped === 1 ? "" : "s"} dropped below posterior threshold ${report.minPosterior})` : "";
+      return `${kleur.green("✓")}  No vulnerable patterns detected in ${kleur.bold(String(report.scanned))} commits${dropMsg}.`;
     }
     if (totalSev > 0) {
       return `${kleur.red("⚠")}  ${kleur.red().bold(String(totalSev))} critical/high finding(s) across ${kleur.bold(String(report.scanned))} commits — investigate immediately.`;
     }
     return `${kleur.yellow("!")}  ${kleur.bold(String(report.hits.length))} candidate(s) found across ${kleur.bold(String(report.scanned))} commits — review before action.`;
   })();
-  process.stdout.write(`  ${summaryLine}\n\n`);
+  process.stdout.write(`  ${summaryLine}\n`);
+  if (suppressedIds.size > 0) {
+    process.stdout.write(`  ${kleur.gray(`(${suppressedIds.size} entries in .mneme/suppressions.json honored — use \`mneme show <id>\` to inspect.)`)}\n`);
+  }
+  process.stdout.write("\n");
 
   // ─── Plain-English reading guide ────────────────────────────────
   process.stdout.write(section("📘 How to read this report") + "\n");
-  process.stdout.write(`    ${kleur.gray("• Mneme grepped through git history looking for")} ${kleur.bold("11 known security-bug patterns")}${kleur.gray(":")}\n`);
-  process.stdout.write(`        ${kleur.gray("SQL injection, hardcoded secrets, weak crypto (MD5/SHA1), command injection,")}\n`);
-  process.stdout.write(`        ${kleur.gray("path traversal, unsafe deserialization, eval, regex DoS, XSS, weak random, leaked tokens.")}\n`);
-  process.stdout.write(`    ${kleur.gray("• Each finding shows the")} ${kleur.bold("commit + the exact code line")} ${kleur.gray("that matched the pattern.")}\n`);
-  process.stdout.write(`    ${kleur.gray("• The")} ${kleur.green("✓ already-fixed")} ${kleur.gray("tag means a later commit appears to have removed/replaced this pattern —")}\n`);
-  process.stdout.write(`        ${kleur.gray("still worth eyeballing, but not necessarily live in HEAD.")}\n`);
-  process.stdout.write(`    ${kleur.gray("• ")}${kleur.cyan("CWE-XX")}${kleur.gray(" is the public catalog ID for the bug class — Google it for full details.")}\n`);
-  process.stdout.write(`    ${kleur.yellow("• Heads-up: pattern matching has false positives. Always verify before filing a CVE.")}\n\n`);
+  process.stdout.write(`    ${kleur.gray("• Mneme grepped through git history looking for")} ${kleur.bold("18 known security-bug patterns")}${kleur.gray(".")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Each finding gets a")} ${kleur.bold("posterior")} ${kleur.gray("=")} ${kleur.bold("prior")} ${kleur.gray("(does this rule even apply to your stack?) ×")} ${kleur.bold("evidence")} ${kleur.gray("(real DB sink? log string? comment?).")}\n`);
+  process.stdout.write(`    ${kleur.gray("• Findings below the posterior threshold (default 0.3) are dropped.")} ${kleur.gray("Adjust with")} ${kleur.cyan("--min-posterior 0.5")}${kleur.gray(".")}\n`);
+  process.stdout.write(`    ${kleur.gray("• To suppress a single finding once and forever:")} ${kleur.cyan("mneme suppress <finding-id> --reason \"<why>\"")}${kleur.gray(".")}\n`);
+  process.stdout.write(`    ${kleur.gray("• ")}${kleur.cyan("CWE-XX")}${kleur.gray(" is the public catalog ID for the bug class.")}\n`);
+  process.stdout.write(`    ${kleur.yellow("• Heads-up: every finding is a CANDIDATE for human review — verify before action.")}\n\n`);
 
   if (report.hits.length === 0) {
     if (report.silentFixes.length > 0) {
@@ -476,23 +532,26 @@ export async function forensicsVulnsCommand(opts: ForensicsVulnsOptions): Promis
     process.stdout.write("\n");
   }
 
-  // Top hits
-  process.stdout.write(section("◆ Top findings") + "\n\n");
-  const sevWeight: Record<typeof report.hits[number]["severity"], number> = {
-    critical: 0, high: 1, medium: 2, low: 3, info: 4,
-  };
-  const sortedHits = [...report.hits].sort((a, b) => {
-    const w = sevWeight[a.severity] - sevWeight[b.severity];
-    if (w !== 0) return w;
-    return b.commit.authorDate.localeCompare(a.commit.authorDate);
-  });
-  for (const h of sortedHits.slice(0, 20)) {
+  // Top hits — sorted by posterior (most-likely-real first)
+  process.stdout.write(section("◆ Top findings", "(sorted by posterior, most-likely-real first)") + "\n\n");
+  for (const h of report.hits.slice(0, 20)) {
     const fix = h.looksLikeFix ? `  ${kleur.green("✓ already-fixed")}` : "";
+    const where = h.filePath
+      ? `${kleur.cyan(h.filePath)}${h.line ? kleur.gray(`:${h.line}`) : ""}`
+      : kleur.gray("(no file path)");
+    const posteriorColor =
+      h.posterior >= 0.7 ? kleur.red().bold : h.posterior >= 0.5 ? kleur.yellow : kleur.gray;
     process.stdout.write(
       `    ${severityBadge(sevToLevel[h.severity] ?? "info")}  ${kleur.bold(h.commit.shortHash)} ${kleur.gray(h.commit.authorDate.slice(0, 10))} ${kleur.cyan(h.reference)}${fix}\n`,
     );
-    process.stdout.write(`        ${h.summary}\n`);
-    process.stdout.write(`        ${kleur.gray("evidence: " + truncateOneLine(h.evidence, 100))}\n\n`);
+    process.stdout.write(`        ${kleur.gray("id:")} ${kleur.bold(h.id)}  ${kleur.gray("posterior:")} ${posteriorColor(h.posterior.toFixed(2))} ${kleur.gray(`(prior ${h.prior.toFixed(2)} × evidence ${h.evidenceScore.toFixed(2)})`)}\n`);
+    process.stdout.write(`        ${kleur.bold(h.summary)}\n`);
+    process.stdout.write(`        ${kleur.gray("at:      ")} ${where}\n`);
+    process.stdout.write(`        ${kleur.gray("evidence:")} ${kleur.gray(truncateOneLine(h.evidence, 90))}\n`);
+    if (opts.explain) {
+      process.stdout.write(`        ${kleur.gray("why:     ")} ${kleur.gray(`${h.evidenceContext} — ${h.evidenceReason}`)}\n`);
+    }
+    process.stdout.write("\n");
   }
 
   // Silent fixes (security-keyword commits without hits)

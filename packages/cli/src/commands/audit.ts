@@ -24,7 +24,7 @@ import { explain, type ExplainRequest } from "../utils/explain.js";
 
 export interface AuditOptions {
   cwd: string;
-  mode: "baseline" | "trace" | "verify" | "certify" | "watch" | "report";
+  mode: "baseline" | "trace" | "verify" | "certify" | "watch" | "report" | "verify-head";
   json?: boolean;
   /** For --report: file path to write markdown to. */
   out?: string;
@@ -40,6 +40,10 @@ export interface AuditOptions {
    * cannot ship).
    */
   strict?: boolean;
+  /** Cap commits scanned in --verify-head mode. */
+  maxCommits?: number;
+  /** Quiet: no banners, no decorative chars. */
+  quiet?: boolean;
 }
 
 /** Top-level dispatcher. */
@@ -55,6 +59,8 @@ export async function auditCommand(opts: AuditOptions): Promise<number> {
       return runTrace(opts);
     case "verify":
       return runVerify(opts);
+    case "verify-head":
+      return runVerifyHead(opts);
     case "certify":
       return runCertify(opts);
     case "watch":
@@ -62,6 +68,72 @@ export async function auditCommand(opts: AuditOptions): Promise<number> {
     case "report":
       return runReport(opts);
   }
+}
+
+// ─── --verify-head — claim drift detector ───────────────────────────
+// Cross-check "intended state from commit message" vs "actual state in HEAD".
+// Catches the customer-reported case: a commit that claimed to remove
+// `omise.restoreStock` but didn't actually remove it from HEAD.
+async function runVerifyHead(opts: AuditOptions): Promise<number> {
+  const meta = await git.getRepoMeta(opts.cwd);
+  const report = await audit.verifyHeadAgainstHistory({
+    cwd: meta.rootPath,
+    maxCommits: opts.maxCommits ?? 200,
+  });
+
+  if (opts.json) {
+    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+    return report.findings.length === 0 ? 0 : 1;
+  }
+
+  if (!opts.quiet) ui.banner();
+  process.stdout.write(
+    header(
+      "🔎",
+      "AI Audit — claim drift",
+      `cross-check "intended state from commit message" vs "actual state in HEAD"`,
+      "Catches commits that claim to remove/delete code but didn't actually do so.",
+    ) + "\n\n",
+  );
+
+  process.stdout.write(
+    kv("scanned", `${report.scanned} commits`) +
+      "\n" +
+      kv("candidate claims", String(report.candidates)) +
+      "\n" +
+      kv("drift findings", String(report.findings.length)) +
+      "\n\n",
+  );
+
+  if (report.findings.length === 0) {
+    process.stdout.write(
+      `  ${kleur.green("✓")} No claim drift detected — every commit's "remove/delete X" claim was honored in HEAD.\n\n`,
+    );
+    return 0;
+  }
+
+  process.stdout.write(section("Findings — claim says removed, but HEAD still has it") + "\n\n");
+  for (const f of report.findings.slice(0, 30)) {
+    process.stdout.write(
+      `  ${kleur.red("●")} ${kleur.bold(f.shortHash)}  ${kleur.gray(`[${f.authorDate.slice(0, 10)}]`)}  ${kleur.gray(f.verb)} ${kleur.bold(f.symbol)}\n` +
+        `      ${kleur.white(f.subject)}\n`,
+    );
+    for (const occ of f.occurrences.slice(0, 3)) {
+      process.stdout.write(
+        `      ${kleur.gray("↳")} ${kleur.cyan(occ.filePath)}:${kleur.gray(String(occ.line))}  ${kleur.gray(occ.preview)}\n`,
+      );
+    }
+    process.stdout.write("\n");
+  }
+
+  process.stdout.write(
+    `  ${kleur.gray("─".repeat(64))}\n` +
+      `  ${kleur.gray("📘 How to read: each finding is a commit whose subject/body said it removed a")}\n` +
+      `  ${kleur.gray("symbol — but `git grep` of HEAD found the symbol still alive. Heuristic:")}\n` +
+      `  ${kleur.gray("CHANGELOG / docs / wiki / test-file mentions are excluded. Verify before action.")}\n\n`,
+  );
+
+  return 1;
 }
 
 // ─── --baseline ──────────────────────────────────────────────────────

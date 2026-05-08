@@ -2,3 +2,7 @@ export * from "./loci.js";
 export * from "./likelihood.js";
 export * from "./vulnhunt.js";
 export * from "./anomaly.js";
+export * from "./stack-priors.js";
+export * from "./ast-evidence.js";
+export * from "./sarif.js";
+export * from "./suppressions.js";

@@ -11,3 +11,4 @@ export * from "./baseline.js";
 export * from "./trace.js";
 export * from "./verify.js";
 export * from "./certify.js";
+export * from "./head-verify.js";

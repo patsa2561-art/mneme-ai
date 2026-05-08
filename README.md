@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-1959%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-2054%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -517,7 +517,20 @@ After researching the landscape, every command in this list occupies whitespace 
 
 → 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
 
-### 🆕 v0.36 — five new Originals
+### 🆕 v0.37 — Bayesian-filtered security scanner + 6 new rules
+
+The vulnerability scanner was rewritten around a **stack-aware Bayesian prior × AST evidence score**. Each finding's posterior `= prior(rule applies on your stack) × evidence(real DB sink? log line? comment?)`. Sub-threshold candidates are dropped before they leave the scanner — the customer-reported "16 false-positive CWE-89 in a NestJS+Mongoose repo" goes to **zero** automatically because the SQL prior collapses on a NoSQL stack.
+
+| New | What |
+|---|---|
+| `mneme forensics vulns --sarif report.sarif` | SARIF v2.1.0 output — drop-in for GitHub Code Scanning, GitLab Vulnerability Reports |
+| `mneme forensics vulns --explain` | Show the prior × evidence breakdown per finding |
+| `mneme show <finding-id>` | Full context for one finding — commit + diff + posterior + suggested actions |
+| `mneme suppress <id> --reason "<why>"` | Manage `.mneme/suppressions.json` — a finding ignored once stays ignored |
+| `mneme audit --verify-head` | Claim drift — flag commits that say "remove X" but X still lives in HEAD |
+| 6 new rules | missing-auth-guard (NestJS) · mass-assignment · IDOR · SSRF · prototype-pollution · weak-webhook-signature |
+
+### 🆕 v0.36 — five Originals (memory + people analytics)
 
 | Command | One-line summary |
 |---|---|
@@ -528,6 +541,10 @@ After researching the landscape, every command in this list occupies whitespace 
 | [`mneme conscience --dual-jury`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#5%EF%B8%8F%E2%83%A3-dual-jury--adversarial-review-from-real-history) | Adversarial PR review — prosecution + defense + verdict, all from real history |
 
 → 🆕 **[Deep-dive each Original → Wiki: Originals](https://github.com/patsa2561-art/mneme-ai/wiki/Originals)**
+
+### 🛡 What Mneme is NOT
+
+Mneme is **a memory layer**, not a SAST replacement. The vulnerability scanner is a high-precision *secondary* check — it catches what an attacker would find by reading 5 years of history (silent fixes, claim drift, framework-specific blind spots) — and the Bayesian filter keeps false-positive noise low enough that you can run it on every PR without rage. **Pair it with CodeQL / Semgrep / Snyk; don't replace them.**
 
 > 🛡 *Built to complement existing AI coding assistants — not to replace them.*
 
