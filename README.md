@@ -341,15 +341,6 @@ Mneme is a **standard MCP server**. It works with any AI tool that supports MCP.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🎯 Tier 0 — fundamentals you should know
-
-- **Local-first.** Memory lives in `.mneme/mneme.db` (SQLite). No data leaves your machine unless YOU configure an LLM.
-- **Free path.** Bundled WASM embedder works offline, no API key. Optional: Ollama (local), Groq, OpenRouter, OpenAI.
-- **Vendor-neutral.** Audit certificates work against ANY AI tool whose commits land in `git log`.
-- **MIT licensed.** Bring it into commercial work freely.
-
-═══════════════════════════════════════════════════════════════════════════════
-
 ## 📚 Going deeper
 
 | Want to… | Where |

@@ -1,23 +1,145 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="160" viewBox="0 0 900 160">
+<svg xmlns='http://www.w3.org/2000/svg' width='1022' height='154' viewBox='0 0 1022 154' shape-rendering='crispEdges'>
   <defs>
-    <linearGradient id="mneme-rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#ff0844"/>
-      <stop offset="18%" stop-color="#ff7a00"/>
-      <stop offset="35%" stop-color="#ffe600"/>
-      <stop offset="55%" stop-color="#00d26a"/>
-      <stop offset="75%" stop-color="#00b4ff"/>
-      <stop offset="100%" stop-color="#c041ff"/>
-    </linearGradient>
-    <filter id="mneme-shadow" x="-5%" y="-5%" width="110%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
+    <filter id='pixel-glow' x='-5%' y='-10%' width='110%' height='120%'>
+      <feDropShadow dx='0' dy='3' stdDeviation='3' flood-color='#000' flood-opacity='0.18'/>
     </filter>
   </defs>
-  <text x="450" y="110"
-        font-family="ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'Courier New', monospace"
-        font-size="92"
-        font-weight="900"
-        fill="url(#mneme-rainbow)"
-        text-anchor="middle"
-        letter-spacing="3"
-        filter="url(#mneme-shadow)">μνήμη · Mneme</text>
+  <g filter='url(#pixel-glow)'>
+<rect x='14' y='56' width='14' height='14' fill='#ff0844'/>
+    <rect x='56' y='56' width='14' height='14' fill='#ff2334'/>
+    <rect x='14' y='70' width='14' height='14' fill='#ff0844'/>
+    <rect x='56' y='70' width='14' height='14' fill='#ff2334'/>
+    <rect x='14' y='84' width='14' height='14' fill='#ff0844'/>
+    <rect x='56' y='84' width='14' height='14' fill='#ff2334'/>
+    <rect x='14' y='98' width='14' height='14' fill='#ff0844'/>
+    <rect x='28' y='98' width='14' height='14' fill='#ff113f'/>
+    <rect x='56' y='98' width='14' height='14' fill='#ff2334'/>
+    <rect x='14' y='112' width='14' height='14' fill='#ff0844'/>
+    <rect x='70' y='112' width='14' height='14' fill='#ff2c2f'/>
+    <rect x='14' y='126' width='14' height='14' fill='#ff0844'/>
+    <rect x='98' y='56' width='14' height='14' fill='#ff3e24'/>
+    <rect x='154' y='56' width='14' height='14' fill='#ff610f'/>
+    <rect x='98' y='70' width='14' height='14' fill='#ff3e24'/>
+    <rect x='154' y='70' width='14' height='14' fill='#ff610f'/>
+    <rect x='112' y='84' width='14' height='14' fill='#ff461f'/>
+    <rect x='140' y='84' width='14' height='14' fill='#ff5814'/>
+    <rect x='112' y='98' width='14' height='14' fill='#ff461f'/>
+    <rect x='140' y='98' width='14' height='14' fill='#ff5814'/>
+    <rect x='126' y='112' width='14' height='14' fill='#ff4f19'/>
+    <rect x='196' y='14' width='14' height='14' fill='#ff7c00'/>
+    <rect x='182' y='56' width='14' height='14' fill='#ff7304'/>
+    <rect x='210' y='56' width='14' height='14' fill='#ff8500'/>
+    <rect x='224' y='56' width='14' height='14' fill='#ff8e00'/>
+    <rect x='182' y='70' width='14' height='14' fill='#ff7304'/>
+    <rect x='196' y='70' width='14' height='14' fill='#ff7c00'/>
+    <rect x='238' y='70' width='14' height='14' fill='#ff9700'/>
+    <rect x='182' y='84' width='14' height='14' fill='#ff7304'/>
+    <rect x='238' y='84' width='14' height='14' fill='#ff9700'/>
+    <rect x='182' y='98' width='14' height='14' fill='#ff7304'/>
+    <rect x='238' y='98' width='14' height='14' fill='#ff9700'/>
+    <rect x='182' y='112' width='14' height='14' fill='#ff7304'/>
+    <rect x='238' y='112' width='14' height='14' fill='#ff9700'/>
+    <rect x='182' y='126' width='14' height='14' fill='#ff7304'/>
+    <rect x='238' y='126' width='14' height='14' fill='#ff9700'/>
+    <rect x='266' y='56' width='14' height='14' fill='#ffa900'/>
+    <rect x='308' y='56' width='14' height='14' fill='#ffc400'/>
+    <rect x='266' y='70' width='14' height='14' fill='#ffa900'/>
+    <rect x='308' y='70' width='14' height='14' fill='#ffc400'/>
+    <rect x='266' y='84' width='14' height='14' fill='#ffa900'/>
+    <rect x='308' y='84' width='14' height='14' fill='#ffc400'/>
+    <rect x='266' y='98' width='14' height='14' fill='#ffa900'/>
+    <rect x='280' y='98' width='14' height='14' fill='#ffb200'/>
+    <rect x='308' y='98' width='14' height='14' fill='#ffc400'/>
+    <rect x='266' y='112' width='14' height='14' fill='#ffa900'/>
+    <rect x='322' y='112' width='14' height='14' fill='#ffcc00'/>
+    <rect x='266' y='126' width='14' height='14' fill='#ffa900'/>
+    <rect x='350' y='56' width='14' height='14' fill='#ffde00'/>
+    <rect x='378' y='56' width='14' height='14' fill='#eae409'/>
+    <rect x='392' y='56' width='14' height='14' fill='#d8e310'/>
+    <rect x='350' y='70' width='14' height='14' fill='#ffde00'/>
+    <rect x='364' y='70' width='14' height='14' fill='#fce601'/>
+    <rect x='406' y='70' width='14' height='14' fill='#c6e218'/>
+    <rect x='350' y='84' width='14' height='14' fill='#ffde00'/>
+    <rect x='406' y='84' width='14' height='14' fill='#c6e218'/>
+    <rect x='350' y='98' width='14' height='14' fill='#ffde00'/>
+    <rect x='406' y='98' width='14' height='14' fill='#c6e218'/>
+    <rect x='350' y='112' width='14' height='14' fill='#ffde00'/>
+    <rect x='406' y='112' width='14' height='14' fill='#c6e218'/>
+    <rect x='350' y='126' width='14' height='14' fill='#ffde00'/>
+    <rect x='406' y='126' width='14' height='14' fill='#c6e218'/>
+    <rect x='504' y='70' width='14' height='14' fill='#49d84c'/>
+    <rect x='602' y='42' width='14' height='14' fill='#00cc89'/>
+    <rect x='658' y='42' width='14' height='14' fill='#00c3b3'/>
+    <rect x='602' y='56' width='14' height='14' fill='#00cc89'/>
+    <rect x='616' y='56' width='14' height='14' fill='#00ca93'/>
+    <rect x='644' y='56' width='14' height='14' fill='#00c5a8'/>
+    <rect x='658' y='56' width='14' height='14' fill='#00c3b3'/>
+    <rect x='602' y='70' width='14' height='14' fill='#00cc89'/>
+    <rect x='630' y='70' width='14' height='14' fill='#00c89e'/>
+    <rect x='658' y='70' width='14' height='14' fill='#00c3b3'/>
+    <rect x='602' y='84' width='14' height='14' fill='#00cc89'/>
+    <rect x='658' y='84' width='14' height='14' fill='#00c3b3'/>
+    <rect x='602' y='98' width='14' height='14' fill='#00cc89'/>
+    <rect x='658' y='98' width='14' height='14' fill='#00c3b3'/>
+    <rect x='602' y='112' width='14' height='14' fill='#00cc89'/>
+    <rect x='658' y='112' width='14' height='14' fill='#00c3b3'/>
+    <rect x='686' y='56' width='14' height='14' fill='#00bfc8'/>
+    <rect x='714' y='56' width='14' height='14' fill='#00bbdd'/>
+    <rect x='728' y='56' width='14' height='14' fill='#00b9e7'/>
+    <rect x='686' y='70' width='14' height='14' fill='#00bfc8'/>
+    <rect x='700' y='70' width='14' height='14' fill='#00bdd2'/>
+    <rect x='742' y='70' width='14' height='14' fill='#00b7f2'/>
+    <rect x='686' y='84' width='14' height='14' fill='#00bfc8'/>
+    <rect x='742' y='84' width='14' height='14' fill='#00b7f2'/>
+    <rect x='686' y='98' width='14' height='14' fill='#00bfc8'/>
+    <rect x='742' y='98' width='14' height='14' fill='#00b7f2'/>
+    <rect x='686' y='112' width='14' height='14' fill='#00bfc8'/>
+    <rect x='742' y='112' width='14' height='14' fill='#00b7f2'/>
+    <rect x='784' y='56' width='14' height='14' fill='#13a9ff'/>
+    <rect x='798' y='56' width='14' height='14' fill='#1ea2ff'/>
+    <rect x='812' y='56' width='14' height='14' fill='#299cff'/>
+    <rect x='770' y='70' width='14' height='14' fill='#08afff'/>
+    <rect x='826' y='70' width='14' height='14' fill='#3395ff'/>
+    <rect x='770' y='84' width='14' height='14' fill='#08afff'/>
+    <rect x='784' y='84' width='14' height='14' fill='#13a9ff'/>
+    <rect x='798' y='84' width='14' height='14' fill='#1ea2ff'/>
+    <rect x='812' y='84' width='14' height='14' fill='#299cff'/>
+    <rect x='826' y='84' width='14' height='14' fill='#3395ff'/>
+    <rect x='770' y='98' width='14' height='14' fill='#08afff'/>
+    <rect x='784' y='112' width='14' height='14' fill='#13a9ff'/>
+    <rect x='798' y='112' width='14' height='14' fill='#1ea2ff'/>
+    <rect x='812' y='112' width='14' height='14' fill='#299cff'/>
+    <rect x='826' y='112' width='14' height='14' fill='#3395ff'/>
+    <rect x='854' y='56' width='14' height='14' fill='#4988ff'/>
+    <rect x='868' y='56' width='14' height='14' fill='#5482ff'/>
+    <rect x='896' y='56' width='14' height='14' fill='#6975ff'/>
+    <rect x='910' y='56' width='14' height='14' fill='#746eff'/>
+    <rect x='854' y='70' width='14' height='14' fill='#4988ff'/>
+    <rect x='882' y='70' width='14' height='14' fill='#5f7bff'/>
+    <rect x='910' y='70' width='14' height='14' fill='#746eff'/>
+    <rect x='854' y='84' width='14' height='14' fill='#4988ff'/>
+    <rect x='882' y='84' width='14' height='14' fill='#5f7bff'/>
+    <rect x='910' y='84' width='14' height='14' fill='#746eff'/>
+    <rect x='854' y='98' width='14' height='14' fill='#4988ff'/>
+    <rect x='882' y='98' width='14' height='14' fill='#5f7bff'/>
+    <rect x='910' y='98' width='14' height='14' fill='#746eff'/>
+    <rect x='854' y='112' width='14' height='14' fill='#4988ff'/>
+    <rect x='882' y='112' width='14' height='14' fill='#5f7bff'/>
+    <rect x='910' y='112' width='14' height='14' fill='#746eff'/>
+    <rect x='952' y='56' width='14' height='14' fill='#955bff'/>
+    <rect x='966' y='56' width='14' height='14' fill='#a054ff'/>
+    <rect x='980' y='56' width='14' height='14' fill='#aa4eff'/>
+    <rect x='938' y='70' width='14' height='14' fill='#8a61ff'/>
+    <rect x='994' y='70' width='14' height='14' fill='#b547ff'/>
+    <rect x='938' y='84' width='14' height='14' fill='#8a61ff'/>
+    <rect x='952' y='84' width='14' height='14' fill='#955bff'/>
+    <rect x='966' y='84' width='14' height='14' fill='#a054ff'/>
+    <rect x='980' y='84' width='14' height='14' fill='#aa4eff'/>
+    <rect x='994' y='84' width='14' height='14' fill='#b547ff'/>
+    <rect x='938' y='98' width='14' height='14' fill='#8a61ff'/>
+    <rect x='952' y='112' width='14' height='14' fill='#955bff'/>
+    <rect x='966' y='112' width='14' height='14' fill='#a054ff'/>
+    <rect x='980' y='112' width='14' height='14' fill='#aa4eff'/>
+    <rect x='994' y='112' width='14' height='14' fill='#b547ff'/>
+  </g>
 </svg>
