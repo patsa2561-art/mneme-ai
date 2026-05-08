@@ -19,7 +19,25 @@
 
 <br/>
 
-<img src="./assets/demo.gif" alt="Mneme — your AI's memory layer" width="800">
+```
+                       ╔═════════════════════════════╗
+       ┌────────┐      ║     🏎  SUPER GENIUS         ║
+       │   AI   │ ──→  ║   Claude Code · Cursor       ║
+       │  tool  │      ║   Codex · Gemini · Continue  ║
+       └────┬───┘      ║   Aider · any MCP client     ║
+            │          ╚═════════════════════════════╝
+            │  bolt on              ▲
+            ▼                       │  93 tools across 9 categories:
+       ╔═════════════╗              │
+       ║   μνήμη     ║──────────────┘   memory · people · audit
+       ║   Mneme MCP ║                  forensics · insights · quality
+       ║  (the       ║                  quant · lab · meta
+       ║   tuning    ║
+       ║   kit)      ║   ✓ knows your repo's full history
+       ║             ║   ✓ cites every claim with commit hashes
+       ║             ║   ✓ catches AI gaslighting before merge
+       ╚═════════════╝
+```
 
 </div>
 
