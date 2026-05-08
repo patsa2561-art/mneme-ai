@@ -8,6 +8,67 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.47.0] — 2026-05-09
+
+The **"QSAC Tech 5 — Cryptographic Merkle Audit Chain"** release. Fourth
+of seven on the road to v1.0.
+
+### Why
+
+EU AI Act 2026, SEC AI disclosure, ISO 42001 (AI governance) all want
+**immutable audit logs** for AI-driven decisions. Mneme is now the only
+audit tool to ship this out of the box.
+
+### What v0.47 adds
+
+- **Hash-chained certificates.** Every cert is SHA-256-hashed over
+  `(commit, axes, overall, evidenceHash, issuedAt, issuedBy, index, prevHash)`
+  with deterministic canonical JSON. Tampering with any cert breaks
+  every subsequent link's hash check.
+- **Optional HMAC-SHA-256 signatures.** Pass `hmacKey` and every cert is
+  signed; verification fails on tampered signatures.
+- **Off-chain evidence + on-chain hash.** Big evidence blobs stay off-chain
+  (the JSON cert), but their hash is in the chain — tampering with the
+  off-chain blob is detectable via hash mismatch.
+- **`verifyChain(rootPath, opts?)`** — walks every cert, recomputes
+  hashes, checks chain pointers + signatures. Returns `{ok, verified,
+  total, issues}`.
+
+### Public API
+
+```ts
+import { appendCertificate, verifyChain, generateHmacKey } from "@mneme-ai/core/audit";
+
+const key = generateHmacKey();          // one-time setup
+const cert = await appendCertificate(payload, { rootPath, hmacKey: key });
+const result = await verifyChain(rootPath, { hmacKey: key });
+// result.ok / result.verified / result.issues
+```
+
+### Tests
+
+16 new merkle-chain tests:
+- canonicalise() determinism (sort keys, recurse, primitives)
+- append: chain creation, link to prev hash, evidence hash, HMAC signing
+- verify: clean chain pass, hash tampering detected, signature tampering
+  detected, missing-key flag, empty-chain ok
+- generateHmacKey: 64-hex output + uniqueness
+
+Total: **2255 tests** across 165 files.
+
+### Roadmap
+
+```
+v0.44 Tech 1: Verdict Superposition          done
+v0.45 Tech 2: Causal Claim Graph             done
+v0.46 Tech 4: Multi-Verifier Consensus       done
+v0.47 Tech 5: Cryptographic Merkle Chain     done
+v0.48 Tech 3: Mutation-Test Counterfactual   next
+v0.49 Tech 6: Wisdom Drill-Through Output
+v0.50 Tier 1.2: Bayesian Filter MAX
+v1.0.0 Bundle release
+```
+
 ## [0.46.0] — 2026-05-09
 
 The **"QSAC Tech 4 — Multi-Verifier Consensus"** release. Third of seven
