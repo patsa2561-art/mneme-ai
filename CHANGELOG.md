@@ -8,6 +8,126 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.6.0] — 2026-05-08
+
+**The "ORCHESTRA" release.** Five killer ideas + four phase scaffolds shipped
+in one orchestrated batch. Plus a strategic positioning shift: hide pricing,
+focus on free-first growth toward 100K users.
+
+### #1 — AI Memory Benchmark (the Lighthouse-of-AI-memory)
+
+`mneme benchmark` runs **24 standardized memory probes across 6 categories**
+on any AI memory implementation, scored by deterministic regex rubrics.
+
+The strategic move: when every AI vendor ships native repo memory (Claude,
+OpenAI, Cursor, Continue) — **Mneme is the only memory implementation
+maintained by no AI vendor, and the only one that can publish a fair
+public leaderboard.**
+
+Categories:
+- **Factual recall** — author count, oldest commit, file existence
+- **Causal explanation** — must cite + use causal language
+- **Lineage trace** — multi-author code archaeology
+- **Regression prediction** — historical-data-grounded risk estimation
+- **Cited rationale** — must include real commit hashes / PRs
+- **Uncertainty honesty** — refuses to fabricate when asked about non-existent data
+
+```bash
+mneme benchmark --out leaderboard.md
+```
+
+11/11 unit tests passing on the rubric scoring + leaderboard rendering.
+Full methodology + future targets in `docs/benchmarks/README.md`.
+
+### #2 — Pricing strategy: hidden, free-first toward 100K users
+
+Strategic pivot: showing 3-tier pricing on README at this adoption stage
+signals "we want money before product-market fit". Better to keep Mneme
+fully free until the user base hits 100K, THEN introduce paid tiers.
+
+Changes:
+- README: replaced pricing block with simple "🆓 Free, forever" message
+- `docs/PRICING.md` → `docs/internal-PRICING.md` (kept for internal planning, unlinked from public surface)
+
+### #3 — Wisdom theater (turn 90s indexing into value-creation)
+
+`mneme index` no longer shows a silent progress bar. Instead, it surfaces
+real findings as commits stream in:
+
+```
+[indexing... 10%]   ✦ 23 distinct authors so far — preparing telepathy + influence map
+[indexing... 25%]   ✦ 1,247 commits indexed · oldest is from 2018 (2,189d ago) — your AI now has 6.0y of memory
+[indexing... 50%]   ✦ hot-zone detected: src/auth/session.ts (412 edits)
+[indexing... 75%]   ✦ 89 TODO/FIXME/HACK markers found — karma + promise will surface oldest
+```
+
+User watches value form before their eyes. Most tools hide loading; Mneme uses it to teach.
+
+### #4 — The four moats positioning (in README)
+
+Added strategic positioning section explaining why Mneme is hard to copy:
+
+| Moat | Why no one else can copy it |
+|---|---|
+| Vendor neutrality | Anthropic can't be the auditor of Anthropic. Mneme is the only one no AI vendor controls. |
+| Audit-chain network effects | Every signed cert strengthens the chain. YC-funded forks start at zero. Network ≠ code. |
+| Local-first as premium | Inverse pricing of every other AI tool. The hard product is the moat. |
+| Solo-craftsman trust | In security/compliance markets that distrust corporate AI, the lone wolf IS the trust signal. |
+
+These properties no MIT-licensed clone, well-funded competitor, or AI-vendor's
+native memory can replicate.
+
+### Phase 7 — Time Capsule (full implementation)
+
+`mneme time-capsule --export <path>` — single-tarball handover artifact for
+new-hire onboarding. Bundles:
+
+- `nervous-system.json` — full team neuroanatomy snapshot
+- `atrophy.json` — knowledge-decay heatmap
+- `promise-debt.json` — TODO/FIXME ledger
+- `replay.md` — chronological narrative for AI consumption
+- `manifest.json` — capsule metadata + Mneme version + repo hash
+- `README.md` — capsule self-documentation
+
+```bash
+mneme time-capsule --export q2-2026.tgz --quarter 2026-Q2
+mneme time-capsule --import q2-2026.tgz   # restores into .mneme/capsule-imported/
+```
+
+5/5 unit tests passing on the export/import smoke + safety paths.
+
+### Phases 3, 4, 5 — preview stubs
+
+Three new commands ship as **API previews** so users can explore the surface
+ahead of full v1.7.0 implementation:
+
+- `mneme daemon <action>` — preview of predictive context pre-fetch (Phase 3)
+- `mneme court [commit] --jurors 12` — preview of 12-jury arbitration (Phase 4)
+- `mneme federation <action>` — preview of privacy-preserving cross-repo network (Phase 5)
+
+Each stub returns structured `--json` output explaining what's coming +
+linking to the full architecture spec in `ROADMAP_PHASES_3_TO_6.md`.
+
+### Files added (v1.6.0)
+
+- `packages/cli/src/commands/wisdom-theater.ts`
+- `packages/cli/src/commands/benchmark.ts`
+- `packages/cli/src/commands/benchmark.test.ts`
+- `packages/cli/src/commands/time-capsule.ts`
+- `packages/cli/src/commands/time-capsule.test.ts`
+- `packages/cli/src/commands/daemon.ts`
+- `packages/cli/src/commands/court.ts`
+- `packages/cli/src/commands/federation.ts`
+- `docs/benchmarks/README.md`
+- `docs/internal-PRICING.md` (renamed from PRICING.md)
+
+### Numbers
+
+- 16 new unit tests (11 benchmark + 5 time-capsule), **16/16 passing**
+- 0 breaking changes from v1.5.0
+- Lockfile: 113 platform entries preserved
+- 5 new commands · 4 phases scaffolded · 4 strategic moats documented
+
 ## [1.5.0] — 2026-05-08
 
 **The "STAND BESIDE GIT" release.** Mneme is no longer just an MCP plugin

@@ -72,6 +72,19 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🆕 v1.6.0 — orchestra release
+
+| What | Why it matters | Try it |
+|---|---|---|
+| 🏁 [**AI Memory Benchmark**](docs/benchmarks/) | Vendor-neutral grading of AI memory implementations. Lighthouse-of-AI-memory positioning. | `mneme benchmark --out leaderboard.md` |
+| 📦 [**Time Capsule**](ROADMAP_PHASES_3_TO_6.md#phase-7--mneme-time-capsule) | Single-tarball handover artifact. New hire = repo expert in 30 min. | `mneme time-capsule --export q2.tgz` |
+| ✦ **Wisdom theater** | The 90s indexing wait now surfaces real findings as it runs. | `mneme index` (just run it) |
+| ⚙ **Daemon preview** | Background context pre-fetch (full impl in v1.7.0). | `mneme daemon status` |
+| ⚖ **Court preview** | 12-jury arbitration with cryptographic ruling PDF (full impl in v1.7.0). | `mneme court HEAD` |
+| 🌐 **Federation preview** | Privacy-preserving cross-repo signal sharing (full impl in v1.7.0). | `mneme federation status` |
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🤝 v1.5.0 — Mneme is now a git extension
 
 Type `git mneme <anything>` and it works — like git's secretary that knows your AI:

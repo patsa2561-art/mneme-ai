@@ -1023,6 +1023,115 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await mcpCommand({ cwd: process.cwd() }));
     });
 
+  // ── v1.6.0 — AI Memory Benchmark (Lighthouse-of-AI-memory) ──
+  program
+    .command("benchmark")
+    .description("Run the vendor-neutral AI Memory Benchmark — grades any AI memory implementation across 24 standardized probes")
+    .option("--targets <names>", "Comma-separated implementations to benchmark (default: mneme-self)")
+    .option("--probes <n>", "Number of probes to run (default: all 24)", (v) => Number(v))
+    .option("--out <path>", "Write the markdown leaderboard to this path")
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { targets?: string; probes?: number; out?: string; json?: boolean }) => {
+      const { benchmarkCommand } = await import("./commands/benchmark.js");
+      const targets = opts.targets ? opts.targets.split(",").map((s) => s.trim()) : undefined;
+      process.exit(
+        await benchmarkCommand({
+          cwd: process.cwd(),
+          targets,
+          probes: opts.probes,
+          out: opts.out,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.6.0 — Phase 7: Time Capsule (handover artifact) ──
+  program
+    .command("time-capsule")
+    .description("Export a single-tarball snapshot of the repo's nervous system for handovers / new-hire onboarding")
+    .option("--export <path>", "Write the time capsule tarball to this path")
+    .option("--import <path>", "Restore from a time capsule tarball")
+    .option("--quarter <yyyy-q>", "Tag the capsule with a quarter (e.g. 2026-Q2)")
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { export?: string; import?: string; quarter?: string; json?: boolean }) => {
+      const { timeCapsuleCommand } = await import("./commands/time-capsule.js");
+      process.exit(
+        await timeCapsuleCommand({
+          cwd: process.cwd(),
+          exportPath: opts.export,
+          importPath: opts.import,
+          quarter: opts.quarter,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.6.0 — Phase 3 stub: daemon mode preview ──
+  program
+    .command("daemon <action>")
+    .description("Mneme daemon — predictive context pre-fetch (preview, full implementation in v1.7.0)")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { json?: boolean }) => {
+      const { daemonCommand } = await import("./commands/daemon.js");
+      const allowedActions = ["start", "stop", "status", "logs"];
+      if (!allowedActions.includes(action)) {
+        ui.error(`Unknown daemon action "${action}". Try: ${allowedActions.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await daemonCommand({
+          cwd: process.cwd(),
+          action: action as "start" | "stop" | "status" | "logs",
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.6.0 — Phase 4 stub: 12-jury court preview ──
+  program
+    .command("court [commit]")
+    .description("Mneme Court — 12-jury arbitration with cryptographic ruling PDF (preview, full implementation in v1.7.0)")
+    .option("--jurors <n>", "Jury size (default 12)", (v) => Number(v))
+    .option("--out <path>", "Write ruling PDF/JSON to this path")
+    .option("--json", "Machine-readable output", false)
+    .action(async (commit: string | undefined, opts: { jurors?: number; out?: string; json?: boolean }) => {
+      const { courtCommand } = await import("./commands/court.js");
+      process.exit(
+        await courtCommand({
+          cwd: process.cwd(),
+          commit,
+          jurors: opts.jurors,
+          out: opts.out,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.6.0 — Phase 5 stub: Wisdom Federation preview ──
+  program
+    .command("federation <action>")
+    .description("Cross-repo Wisdom Federation — privacy-preserving signal sharing (preview, full implementation in v1.7.0)")
+    .option("--hub <url>", "Federation hub URL (required for `join`)")
+    .option("--pattern <q>", "Pattern to query (required for `query`)")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { hub?: string; pattern?: string; json?: boolean }) => {
+      const { federationCommand } = await import("./commands/federation.js");
+      const allowedActions = ["join", "leave", "status", "query"];
+      if (!allowedActions.includes(action)) {
+        ui.error(`Unknown federation action "${action}". Try: ${allowedActions.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await federationCommand({
+          cwd: process.cwd(),
+          action: action as "join" | "leave" | "status" | "query",
+          hub: opts.hub,
+          pattern: opts.pattern,
+          json: opts.json,
+        }),
+      );
+    });
+
   // ── v1.5.0 — git extension: install git-mneme wrapper + git hooks ──
   program
     .command("git-install")
