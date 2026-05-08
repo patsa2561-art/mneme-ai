@@ -2428,6 +2428,29 @@ body::before {
   opacity: 1 !important;
 }
 
+/* Version pill in the header — links to the matching GitHub release */
+.version-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  font-family: var(--font-mono, monospace);
+  color: rgba(232, 232, 255, 0.78);
+  background: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.32);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.version-pill:hover {
+  color: rgba(232, 232, 255, 0.96);
+  border-color: rgba(192, 132, 252, 0.65);
+  background: rgba(192, 132, 252, 0.16);
+}
+
 /* ─── v1.17.4 — Atrophy intro + wisdom callouts + live wisdom panel ── */
 
 .atrophy-intro {

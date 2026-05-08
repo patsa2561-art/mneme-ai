@@ -77,6 +77,15 @@ export function Header({
       </nav>
 
       <div className="header-actions">
+        <a
+          className="version-pill"
+          href={`https://github.com/patsa2561-art/mneme-ai/releases/tag/v${__APP_VERSION__}`}
+          target="_blank"
+          rel="noopener"
+          title={`Mneme dashboard v${__APP_VERSION__} — open release notes on GitHub`}
+        >
+          v{__APP_VERSION__}
+        </a>
         <button
           className="btn-primary load-cta"
           onClick={onLoadClick}
