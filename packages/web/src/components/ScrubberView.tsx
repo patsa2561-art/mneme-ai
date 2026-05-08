@@ -102,12 +102,13 @@ export function ScrubberView() {
     <div className="scrubber-view">
       <div className="scrub-intro">
         <h2>🧼 Prompt-injection Scrubber · live demo</h2>
-        <p>
-          Mneme's MCP runtime auto-scrubs every <code>wisdom</code> string it returns to the AI
-          agent. Untrusted commit messages, PR descriptions, and federation-fed text can NOT
-          smuggle <code>&lt;system&gt;</code>, <code>[INST]</code>, or jailbreak preludes into
-          the AI's context. The exact scrubber that ships in production is what this demo runs
-          (mirror of <code>core/security/scrubber.ts</code>).
+        <p className="livecheck-banner">
+          <span className="livecheck-pill">● LIVE · runs on text you paste</span>{" "}
+          This tab is <b>actually interactive</b> — paste any hostile text below and
+          the scrubber runs against it in your browser <em>right now</em>. It's the
+          exact same regex set Mneme MCP uses in production (mirror of{" "}
+          <code>core/security/scrubber.ts</code>) — try it on a real attack vector
+          and watch what gets stripped before reaching the AI's context.
         </p>
       </div>
 

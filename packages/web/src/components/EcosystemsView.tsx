@@ -8,7 +8,13 @@
  * No network. No state — just declarative.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import type { NervousSystemData } from "../types";
+import { detectEcosystems } from "../lib/detectEcosystems";
+
+interface Props {
+  data: NervousSystemData | null;
+}
 
 interface PackTool {
   name: string;
@@ -125,20 +131,52 @@ const PACKS: Pack[] = [
   },
 ];
 
-export function EcosystemsView() {
+export function EcosystemsView({ data }: Props) {
   const [openId, setOpenId] = useState<string>("stripe");
   const open = PACKS.find((p) => p.id === openId);
+
+  // Live detection — runs against the user's real repo file paths if we
+  // have them (live-mode only). Empty array otherwise.
+  const detected = useMemo(
+    () => (data ? detectEcosystems(data) : []),
+    [data],
+  );
+  const detectedIds = useMemo(() => new Set(detected.map((d) => d.id)), [detected]);
+  const isLiveDetection = detected.length > 0;
 
   return (
     <div className="ecosystems-view">
       <div className="eco-intro">
         <h2>🧬 Dynamic MCP — every other server is static. Mneme is repo-shaped.</h2>
-        <p className="showcase-banner">
-          📖 <b>Feature showcase</b> — this tab demos the 8 bundled ecosystem packs in
-          v1.15.0+ regardless of which repo you loaded. The actual detection +
-          tool-spawning runs server-side at MCP startup; ask your AI agent
-          "<code>mneme ecosystem</code>" to see which packs activate for <em>your</em> repo.
-        </p>
+        {isLiveDetection ? (
+          <p className="livecheck-banner">
+            <span className="livecheck-pill">● LIVE DETECTION</span>{" "}
+            We ran the detector across the {data?._liveDataWindow?.commits ?? "fetched"}-commit
+            file corpus from your real repo and found{" "}
+            <b>{detected.length} ecosystem{detected.length === 1 ? "" : "s"}</b>:{" "}
+            {detected.map((d, i) => {
+              const pack = PACKS.find((p) => p.id === d.id);
+              return (
+                <span key={d.id}>
+                  {i > 0 && " · "}
+                  <span className="livecheck-hit">
+                    {pack?.emoji} <b>{pack?.displayName ?? d.id}</b>{" "}
+                    <small>{Math.round(d.confidence * 100)}%</small>
+                  </span>
+                </span>
+              );
+            })}
+            . Click them below to see the MCP tools your AI agent would receive.
+          </p>
+        ) : (
+          <p className="showcase-banner">
+            <span className="showcase-pill">DEMO DATA · NOT YOUR REPO</span> This tab
+            shows the <b>8 bundled ecosystem packs Mneme ships with (v1.15.0+)</b>.
+            Detection here is hardcoded for the demo — when you load a real repo via
+            the URL paste path or run <code>mneme ecosystem</code> via your AI agent,
+            Mneme detects the packs <em>your</em> repo actually triggers.
+          </p>
+        )}
         <p>
           Mneme detects which ecosystems your repo actually uses, then spawns ecosystem-specific
           MCP tools. <strong>Auto-on at startup. No config.</strong> Click an ecosystem to see
@@ -158,12 +196,15 @@ export function EcosystemsView() {
               key={p.id}
               role="tab"
               aria-selected={p.id === openId}
-              className={`eco-card ${p.id === openId ? "active" : ""}`}
+              className={`eco-card ${p.id === openId ? "active" : ""} ${detectedIds.has(p.id) ? "detected" : ""}`}
               onClick={() => setOpenId(p.id)}
             >
               <span className="eco-emoji" aria-hidden>{p.emoji}</span>
               <span className="eco-name">{p.displayName}</span>
               <span className="eco-tools-count">{p.tools.length} tool{p.tools.length === 1 ? "" : "s"}</span>
+              {detectedIds.has(p.id) && (
+                <span className="eco-detected-badge" title="Detected in your real repo">● live</span>
+              )}
             </button>
           ))}
         </div>

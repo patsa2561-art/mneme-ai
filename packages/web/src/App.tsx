@@ -156,9 +156,9 @@ export function App() {
       <main className="app-main">
         <section className="app-canvas" aria-label={`${view} view`}>
           {view === "ecosystems" ? (
-            <EcosystemsView />
+            <EcosystemsView data={raw ?? null} />
           ) : view === "dna" ? (
-            <DnaView />
+            <DnaView data={raw ?? null} />
           ) : view === "scrubber" ? (
             <ScrubberView />
           ) : !scrubbed ? (

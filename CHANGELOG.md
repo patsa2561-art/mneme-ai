@@ -8,6 +8,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.5] — 2026-05-09
+
+**Tab clarity — every tab now tells you whether it's running on YOUR
+git or canned data, plus Ecosystems gets real-time detection.**
+
+  Honest status pills:
+    • Ecosystems · DNA — "DEMO DATA · NOT YOUR REPO" pill (yellow)
+      when no live data is detectable.
+    • Scrubber — "● LIVE · runs on text you paste" pill (green) so
+      users know this tab actually executes the production regex set
+      against their input.
+    • Header LIVE pill (v1.17.3) + new tab pills give a coherent
+      visual language across the dashboard.
+
+  Real-time ecosystem detection (the new winner):
+    • New `lib/detectEcosystems.ts` — runs the 8-pack detection rules
+      against every file path Mneme fetched from the user's real repo
+      (the 30-commit detail window). Confidence = log-curve over
+      signal count, threshold 0.3.
+    • EcosystemsView now shows a green "● LIVE DETECTION" banner
+      when matches are found: lists the detected packs with
+      confidence percentages, and individual ecosystem cards in the
+      list get a "● live" badge so the user sees immediately which
+      packs match THEIR repo.
+    • Cards still show all 8 packs (the catalog is intact) — the
+      `live` badge differentiates "your repo triggers this one" from
+      "for reference only."
+
+  Honest framing for DNA:
+    • DnaView now opens with a clear "DEMO DATA" pill + an in-context
+      explanation that browser-side DNA isn't possible (needs
+      embeddings model + AST parsers + full repo content) so the tab
+      shows the verifier pipeline on canned scenarios. The real DNA
+      runs against the user's repo via `mneme.dna.search` over MCP.
+
+  3117 / 3117 tests passing.
+
 ## [1.17.4] — 2026-05-09
 
 **Live mode now renders the full atrophy heatmap + 5 metric proxies + the

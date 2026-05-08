@@ -10,6 +10,11 @@
  */
 
 import { useState, useMemo } from "react";
+import type { NervousSystemData } from "../types";
+
+interface Props {
+  data: NervousSystemData | null;
+}
 
 interface Candidate {
   id: string;
@@ -121,7 +126,7 @@ function runGhostSniper(c: Candidate): Verdict {
   };
 }
 
-export function DnaView() {
+export function DnaView({ data }: Props) {
   const [scenarioId, setScenarioId] = useState<string>("stripe-typical");
   const scenario = SCENARIOS.find((s) => s.id === scenarioId)!;
   const verdicts = useMemo(() => scenario.candidates.map(runGhostSniper), [scenario]);
@@ -140,9 +145,22 @@ export function DnaView() {
       <div className="dna-intro">
         <h2>🎯 Code Search · Ghost-Sniper Verifier</h2>
         <p className="showcase-banner">
-          📖 <b>Feature showcase</b> — runs the verifier on canned scenarios so you can
-          see the strict-mode pipeline in action. The actual DNA search runs against
-          <em>your</em> repo when your AI agent calls <code>mneme.dna.search</code> via MCP.
+          <span className="showcase-pill">DEMO DATA · NOT YOUR REPO</span>{" "}
+          {data?._liveMode ? (
+            <>
+              We can't run the full DNA search in-browser (needs embeddings model
+              + AST parsers + full repo content), so this tab demos the
+              <b> Ghost-Sniper Verifier pipeline</b> on canned scenarios. The real
+              DNA search runs against <em>your</em> repo when your AI agent calls{" "}
+              <code>mneme.dna.search</code> via MCP.
+            </>
+          ) : (
+            <>
+              This tab demos Mneme DNA's <b>Ghost-Sniper Verifier</b> on 4 canned
+              scenarios. The real DNA search runs against <em>your</em> repo when
+              your AI agent calls <code>mneme.dna.search</code> via MCP.
+            </>
+          )}
         </p>
         <p>
           Mneme DNA's <strong>strict-mode firewall</strong>. Every candidate the AI proposes runs through
