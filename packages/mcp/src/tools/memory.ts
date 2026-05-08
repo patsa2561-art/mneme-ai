@@ -18,6 +18,8 @@ export const memoryTools: MnemeTool[] = [
       "Returns a synthesized verdict with 5-15 cited commits/PRs that justify the answer. " +
       "Use this WHEN the user asks: 'why does X exist?', 'when did we add Y?', 'what was the reason for Z?', " +
       "'how does this work?', or any other curiosity about WHY code looks the way it does.",
+    whenToUse:
+      "User asks WHY code exists or WHEN something was added — answers grounded in cited commits, not generated prose.",
     triggers: [
       "ทำไม parseAmount ใช้ try/catch?",
       "why does the webhook handler retry 3 times?",
@@ -32,6 +34,29 @@ export const memoryTools: MnemeTool[] = [
       },
       required: ["question"],
     },
+    outputSchema: {
+      type: "object",
+      properties: {
+        question: { type: "string" },
+        summary: { type: "string", description: "1-2 sentence synthesized answer." },
+        citations: { type: "array", items: { type: "string" }, description: "Commit hashes that justify the answer." },
+        results: { type: "array", items: { type: "object" }, description: "Per-result detail with score + abstract." },
+      },
+    },
+    examples: [
+      {
+        userQuery: "Why does the auth middleware reject tokens older than 7 days?",
+        args: { question: "Why does the auth middleware reject tokens older than 7 days?", topK: 8 },
+        expectedOutput:
+          "Returns { summary: '...', citations: ['a3f9b21', 'c0e2d5f', ...], results: [...] }. The wisdom field carries the cited verdict; quote it directly to the user.",
+      },
+    ],
+    pitfalls: [
+      "Requires the index to be built — run `mneme index` first or this returns 'no commits found'.",
+      "If citations < 3, the verdict is best-effort. Surface the low confidence to the user instead of overstating.",
+      "Doesn't read CURRENT code — only commits + their diffs. For 'how does this work today' questions, pair with a code-read tool.",
+    ],
+    composeWith: ["mneme.memory.why", "mneme.insights.story", "mneme.people.who_knows"],
     handler: async (rt, args) => {
       const question = String(args["question"] ?? "");
       const topK = typeof args["topK"] === "number" ? (args["topK"] as number) : 8;

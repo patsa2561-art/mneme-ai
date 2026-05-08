@@ -184,12 +184,19 @@ export interface ToolRuntime {
 
 /** A Mneme tool definition — one per CLI command we expose via MCP.
  *
- *  description: write it like a good lesson title — *include WHEN to use + examples*.
- *  AI tool selection is mostly description-matching; vague descriptions = wrong picks.
+ *  v1.18 introduces the **Tool Contract Schema** — every tool can carry a
+ *  6-field contract that gives AI agents zero-doubt grounding:
+ *      WHEN, INPUT (inputSchema), OUTPUT (outputSchema), EXAMPLE, PITFALLS, COMPOSE_WITH
+ *  Plus a `jargon` map that translates domain terms inline. The new
+ *  `mneme.tool.lint` tool flags any tool that's missing fields, and
+ *  `mneme.tool.contract` returns the full contract on demand.
  *
- *  triggers: example user phrases that should fire this tool. The AI doesn't
- *  see triggers directly, but we use them in the syllabus + as anchor for
- *  description quality reviews. */
+ *  All new fields are OPTIONAL so existing tools continue to work unchanged.
+ *  New tools (and refactors of weak existing ones — quant.*, etc.) should
+ *  fill them in. The build-time linter sets the bar.
+ *
+ *  description: write it like a good lesson title — *include WHEN to use + examples*.
+ *  AI tool selection is mostly description-matching; vague descriptions = wrong picks. */
 export interface MnemeTool<TArgs = Record<string, unknown>, TData = unknown> {
   /** MCP tool name — must match `^mneme\.[a-z_]+\.[a-z_]+$` for grouping */
   name: string;
@@ -206,6 +213,44 @@ export interface MnemeTool<TArgs = Record<string, unknown>, TData = unknown> {
   inputSchema: Tool["inputSchema"];
   /** Async handler — receives runtime + parsed args */
   handler: (runtime: ToolRuntime, args: TArgs) => Promise<ToolResponse<TData>>;
+
+  // ─── Tool Contract Schema (v1.18.0) — optional, surfaced by lint + contract ───
+
+  /** Crisp 1-sentence "WHEN should I call this tool?" — surfaced separately
+   *  from the description so cold-start agents can scan a list of WHENs. */
+  whenToUse?: string;
+  /** JSON Schema for the response.data field. Lets agents reason about the
+   *  shape of what they'll receive BEFORE making a call. Per MCP spec
+   *  2025-06-18 (now relayed through MCP SDK if the client supports it). */
+  outputSchema?: Tool["inputSchema"];
+  /** 1-3 worked examples — what a real agent invocation looks like end-to-end.
+   *  Each example is self-contained (input → expected output sketch). */
+  examples?: ToolExample[];
+  /** Failure modes / known caveats. Tells the agent when NOT to trust the
+   *  output, and how to recover. Each pitfall is one short sentence. */
+  pitfalls?: string[];
+  /** Other Mneme tools that pair well with this one. Different from
+   *  `followUp` (which lives in the response and is dynamic) — this is the
+   *  static "natural neighbor" list surfaced in the contract. */
+  composeWith?: string[];
+  /** Domain-jargon dictionary: term → plain-English explanation.
+   *  Critical for quant.* / forensics.* / dna.* tools where the description
+   *  uses words like "Greeks", "Kelly", "ENFSI" that a cold-start AI agent
+   *  may not understand. The lint tool scans descriptions for known jargon
+   *  and FAILS if an unexplained term appears. */
+  jargon?: Record<string, string>;
+}
+
+/** A worked example for a tool — surfaced in the contract so AI agents
+ *  can pattern-match real invocations rather than guess from the schema. */
+export interface ToolExample {
+  /** What the user asked, in plain English. */
+  userQuery: string;
+  /** Concrete arguments the agent would pass. */
+  args?: Record<string, unknown>;
+  /** Sketch of the response shape — not the full response, just enough
+   *  to teach the agent what to expect. */
+  expectedOutput?: string;
 }
 
 /** Convert a wrapped tool response into MCP's expected CallToolResult.

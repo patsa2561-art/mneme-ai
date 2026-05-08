@@ -85,6 +85,8 @@ export const auditTools: MnemeTool[] = [
       "Plus forensic axes (TIME / FILES / STYLE / SIZE). Returns PASS / WARN / FAIL with structured findings. " +
       "Use this WHEN user asks: 'is this commit safe?', 'grade the AI's homework', 'CI gate the AI commit', " +
       "'final trust certificate', 'should I merge this?'.",
+    whenToUse:
+      "Final gate before merging an AI-written commit — get a 5-axis trust verdict with structured findings.",
     triggers: [
       "grade the AI commit",
       "is this commit safe to merge?",
@@ -98,6 +100,43 @@ export const auditTools: MnemeTool[] = [
         strict: { type: "boolean", description: "Treat skipped axes as fail (compliance mode)" },
       },
     },
+    outputSchema: {
+      type: "object",
+      properties: {
+        verdict: { type: "string", enum: ["PASS", "WARN", "FAIL"] },
+        score: { type: "number", description: "Composite score 0-100 across all axes." },
+        axes: {
+          type: "object",
+          description: "Per-axis verdicts (behavioral, contract, tests, perf, narrative + forensic axes).",
+        },
+        findings: { type: "array", items: { type: "object" } },
+      },
+    },
+    examples: [
+      {
+        userQuery: "Should I merge this AI-written commit?",
+        args: { explain: true },
+        expectedOutput:
+          "Returns { verdict: 'PASS' | 'WARN' | 'FAIL', score: 0-100, axes: { behavioral, contract, tests, perf, narrative, time, files, style, size }, findings: [...] }. With explain=true, also includes a plain-English narrative.",
+      },
+      {
+        userQuery: "Strict CI gate for our compliance pipeline",
+        args: { strict: true },
+        expectedOutput: "Same as above but ANY skipped axis (e.g., perf if no perf baseline) flips the verdict to FAIL.",
+      },
+    ],
+    pitfalls: [
+      "Requires a baseline snapshot — run mneme.audit.baseline BEFORE the AI starts working, or behavioral/perf axes will be SKIPPED.",
+      "strict=true is recommended for CI; in interactive use, prefer explain=true and read the narrative.",
+      "FAIL verdicts are not vetoes — they're hypotheses. The forensic axes (TIME/FILES/STYLE) can produce false positives on legitimate refactors.",
+    ],
+    composeWith: [
+      "mneme.audit.baseline",
+      "mneme.audit.trace",
+      "mneme.audit.verify",
+      "mneme.audit.report",
+      "mneme.audit.conscience",
+    ],
     handler: async (rt, args) => {
       const cliArgs = ["--certify"];
       if (args["explain"]) cliArgs.push("--explain");

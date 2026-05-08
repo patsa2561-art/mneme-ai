@@ -51,13 +51,24 @@ function resolveVersion(): string {
 }
 
 /** Convert MnemeTool[] to MCP's Tool[] shape (drops handler + triggers, keeps the
- *  rich description so AI tool-selection has full WHEN-to-use guidance). */
+ *  rich description so AI tool-selection has full WHEN-to-use guidance).
+ *
+ *  v1.18.0 — when a tool defines `outputSchema`, we pass it through to the
+ *  MCP SDK so MCP-spec-2025-06-18-compliant clients can reason about response
+ *  shape before they call. The SDK type accepts the field as `outputSchema`
+ *  on the Tool spec; we cast to keep the SDK boundary loose. */
 function toMcpTools(all: MnemeTool[]): Tool[] {
-  return all.map((t) => ({
-    name: t.name,
-    description: t.description,
-    inputSchema: t.inputSchema,
-  }));
+  return all.map((t) => {
+    const base: Tool = {
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    };
+    if (t.outputSchema) {
+      (base as Tool & { outputSchema?: unknown }).outputSchema = t.outputSchema;
+    }
+    return base;
+  });
 }
 
 /** Auto-enrich a tool response with Second Brain layer:

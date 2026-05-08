@@ -25,6 +25,11 @@ import { constitutionTool } from "./_constitution_tool.js";
 import { verifyClaimsTool } from "./_verify_claims_tool.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
+import { toolMetaTools } from "./_tool_meta.js";
+import { adversaryTool } from "./_court.js";
+import { confessTool } from "./_confess.js";
+import { replayTools } from "./_replay.js";
+import { timeTravelTools } from "./_timetravel.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
@@ -37,6 +42,11 @@ export function buildAllTools(): MnemeTool[] {
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
+    ...toolMetaTools,
+    adversaryTool,
+    confessTool,
+    ...replayTools,
+    ...timeTravelTools,
     smartDoTool,
     ...memoryTools,
     ...peopleTools,

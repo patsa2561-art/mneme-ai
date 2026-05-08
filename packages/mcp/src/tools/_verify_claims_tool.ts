@@ -33,6 +33,8 @@ export const verifyClaimsTool: MnemeTool = {
     "AI client MUST call this AFTER drafting and BEFORE delivering ANY answer that includes commit hashes — " +
     "if hallucinated hashes are found, rewrite the answer using only the ones in `resolved` (or remove the " +
     "claim entirely). This is the post-draft pre-delivery citation gate.",
+  whenToUse:
+    "You drafted a user-facing answer that cites commit hashes — you MUST verify them before delivery.",
   triggers: [
     "verify the commit hashes in this draft",
     "check for hallucinated citations",
@@ -45,6 +47,29 @@ export const verifyClaimsTool: MnemeTool = {
     },
     required: ["draft"],
   },
+  outputSchema: {
+    type: "object",
+    properties: {
+      total: { type: "number", description: "Number of hash-shaped strings found in the draft." },
+      resolved: { type: "array", items: { type: "string" }, description: "Hashes that exist in this repo (safe to cite)." },
+      hallucinated: { type: "array", items: { type: "string" }, description: "Hashes that DO NOT exist (must be removed or replaced)." },
+      recommendedRewrite: { type: "boolean", description: "True if any hallucinated hashes were found." },
+    },
+  },
+  examples: [
+    {
+      userQuery: "(internal — agent calls between draft and delivery)",
+      args: { draft: "The auth refactor in commit a3f9b21 introduced the 7-day token TTL (see also c0e2d5f)." },
+      expectedOutput:
+        "Returns { total: 2, resolved: [...], hallucinated: [...] }. If hallucinated.length > 0, the wisdom field says STOP and the secondBrain instructs rewrite — DO NOT deliver the draft as-is.",
+    },
+  ],
+  pitfalls: [
+    "Catches commit-hash hallucinations only — does NOT verify URLs, file paths, or numeric claims (use mneme.grade.answer for those).",
+    "A 7-char hex string is interpreted as a possible hash; very rare false positives on UUIDs / random IDs that happen to be all-hex.",
+    "Requires the working directory to be a git repo with the relevant history fetched.",
+  ],
+  composeWith: ["mneme.grade.answer", "mneme.memory.search_commits"],
   handler: async (rt, args) => {
     const draft = String(args["draft"] ?? "");
     const hashes = Array.from(new Set(draft.match(/\b[a-f0-9]{7,40}\b/gi) ?? []));
