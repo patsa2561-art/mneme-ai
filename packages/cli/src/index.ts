@@ -1003,8 +1003,23 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("mcp")
-    .description("Run as an MCP server (for any AI tool that supports MCP)")
-    .action(async () => {
+    .description("Run as an MCP server, OR --install to auto-config Claude Code / Cursor / Continue")
+    .option("--install", "Auto-detect AI coding tools and add Mneme to their MCP config", false)
+    .option("--tool <name>", "Force a specific tool: claude-code | cursor | continue")
+    .option("--dry-run", "Print what would change, don't write", false)
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { install?: boolean; tool?: string; dryRun?: boolean; json?: boolean }) => {
+      if (opts.install) {
+        const { mcpInstallCommand } = await import("./commands/mcp-install.js");
+        process.exit(
+          await mcpInstallCommand({
+            cwd: process.cwd(),
+            tool: opts.tool,
+            dryRun: opts.dryRun,
+            json: opts.json,
+          }),
+        );
+      }
       process.exit(await mcpCommand({ cwd: process.cwd() }));
     });
 
