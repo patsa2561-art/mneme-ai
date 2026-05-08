@@ -8,6 +8,90 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.1.0] — 2026-05-09
+
+The **"v1.0 polish"** release. Fills the three honest-scope gaps from
+v1.0:
+
+### 1. Mutation Harness (`packages/core/src/audit/mutation-harness.ts`)
+
+The driver that v0.48 deferred. `runMutationCampaign(opts)` actually
+applies each mutant to disk, invokes the user's test command, and
+collects kill/survive results.
+
+```ts
+import { runMutationAndScore } from "@mneme-ai/core/audit";
+const { harness, score } = await runMutationAndScore({
+  sourceFile: "src/auth.ts",
+  testCommand: ["npm", "test", "--", "auth"],
+  cwd: process.cwd(),
+  cap: 16,
+  timeoutMs: 60_000,
+});
+// score.distribution → folds straight into composeQsacCertificate
+```
+
+Safety: SIGINT-safe restore, per-mutant timeout, spawn-with-array
+(no shell injection), bounded output buffer. Concurrency=1 by default
+(test runners assume serial fs); `--concurrency` opts in.
+
+### 2. Ed25519 Signatures (`packages/core/src/audit/ed25519.ts`)
+
+v0.47 shipped HMAC-SHA-256 (symmetric); v1.1 adds Ed25519 (asymmetric)
+which is the EU-AI-Act-compatible shape — **org private key signs;
+auditor public key verifies offline**.
+
+```ts
+import { generateEd25519KeyPair, signObjectEd25519, verifyObjectEd25519 } from "@mneme-ai/core/audit";
+
+const kp = generateEd25519KeyPair();
+// kp.privateKeyPem  → store in Vault / SSM
+// kp.publicKeyPem   → commit to .mneme/audit-pubkey.pem
+
+const sig = await signObjectEd25519(certPayload, kp.privateKeyPem);
+const ok = await verifyObjectEd25519(certPayload, sig, kp.publicKeyPem);
+```
+
+Native `node:crypto` Ed25519 — no extra deps. `compactPem` /
+`restorePem` for compact JSON storage.
+
+### 3. LLM-as-judge (`packages/core/src/audit/llm-judge.ts`)
+
+The 4th QSAC verifier. v0.46 shipped 3; this adds a JSON-constrained
+LLM that reads commit + diff + claims and emits its own
+VerdictDistribution.
+
+```ts
+import { verifyLlmJudge } from "@mneme-ai/core/audit";
+import { resolveAllEnrichers, ResilientEnricher } from "@mneme-ai/embeddings";
+
+const enrichers = await resolveAllEnrichers();
+const llm = new ResilientEnricher(enrichers);
+const vote = await verifyLlmJudge({
+  commitHash, commitSubject, commitBody,
+  addedLines, removedLines,
+  bayesianPosteriors,    // optional — gives the LLM context
+}, { adapter: llm });
+// → vote slots into consensusVote([bayesian, stylometric, entropy, llmVote])
+```
+
+Honest framing: temperature 0, structured JSON output, refuse-to-judge
+fallback when output is malformed (returns skipped vote so consensus
+isn't poisoned). Adversarial mode (default) explicitly looks for lies;
+neutral mode weighs symmetrically.
+
+### Tests
+
+**31 new tests** (12 ed25519 · 13 llm-judge · 6 mutation-harness end-
+to-end with a real spawn). Total: **2336 tests** across 171 files.
+
+### What's still ahead (v1.2+)
+
+- Per-rule auto-fix coverage extending from 21 → 50 rules
+- Web dashboard (cross-org rollups; v2 territory)
+- HSM-backed Ed25519 key storage
+- Provenance-tracking 5th verifier
+
 ## [1.0.0] — 2026-05-09
 
 The **"License-Grade Trust Layer"** release. The first stable major.

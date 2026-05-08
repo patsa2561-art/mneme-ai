@@ -34,7 +34,7 @@
 import type { VerdictDistribution } from "./superposition.js";
 import { distribution, combineDistributions } from "./superposition.js";
 
-export type VerifierId = "bayesian" | "stylometric" | "entropy";
+export type VerifierId = "bayesian" | "stylometric" | "entropy" | "llm-judge";
 
 export interface VerifierVote {
   verifier: VerifierId;

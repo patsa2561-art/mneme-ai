@@ -18,3 +18,6 @@ export * from "./multi-verifier.js";
 export * from "./merkle-chain.js";
 export * from "./mutation-counterfactual.js";
 export * from "./qsac.js";
+export * from "./mutation-harness.js";
+export * from "./ed25519.js";
+export * from "./llm-judge.js";
