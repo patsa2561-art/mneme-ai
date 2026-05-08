@@ -17,3 +17,4 @@ export * from "./claim-graph.js";
 export * from "./multi-verifier.js";
 export * from "./merkle-chain.js";
 export * from "./mutation-counterfactual.js";
+export * from "./qsac.js";

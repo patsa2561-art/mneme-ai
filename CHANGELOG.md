@@ -8,6 +8,77 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.49.0] — 2026-05-09
+
+The **"QSAC Tech 6 — Wisdom Drill-Through"** release. Sixth of seven on
+the road to v1.0. Composes Techs 1-5 into one auditable certificate.
+
+### What
+
+`composeQsacCertificate(input)` runs the full QSAC pipeline:
+
+1. Tech 1 priors (per-axis distributions)
+2. Tech 2 belief propagation (causal claim graph)
+3. Tech 4 multi-verifier consensus (bayesian + stylometric + entropy)
+4. Tech 3 mutation score (when caller supplies it)
+5. Tech 5 cryptographic chain (when chain config given)
+
+Returns one `QsacCertificate` with priors, posteriors, consensus,
+mutation, overall, and (optionally) the chained record.
+
+`renderWisdom(cert)` produces the drill-through output — multi-line
+text with per-axis posteriors, consensus + JSD, mutation score, chain
+info. Plain text so it pipes into Slack / email / PR comments / file.
+
+### Sample output
+
+```
+⚖  QSAC Certificate · a1b2c3d · 2026-05-09T12:00:00Z
+
+  PASS  (97% confidence)
+  📜 chain index 47 · hash 0xa3f2b81c…
+
+  Per-axis posterior (Tech 2 belief-propagated):
+    behavioralParity       pass     93%   ████████████████████████░░░░░░
+    apiContractDrift       pass     97%   ██████████████████████████░░░░
+    testPassRate           pass     94%   █████████████████████████░░░░░
+    perfRegression         pass     91%   ███████████████████████░░░░░░░
+    aiNarrative            pass     95%   ██████████████████████████░░░░
+
+  Multi-verifier consensus (Tech 4):  JSD=0.04
+    bayesian       pass     97%   QSAC superposition + claim-graph
+    stylometric    pass     85%   single-voice diff (consistent style)
+    entropy        pass     88%   narrative + diff entropy aligned (1.1×)
+
+  Belief propagation: 4 iterations · converged
+  Chain: index 47 · prev=def5678abc12… · hash=a3f2b81c0044…
+```
+
+### Tests
+
+13 new QSAC tests:
+- happy path (all-pass composes correctly)
+- stylometric/entropy votes added when input provided
+- failure detection (api-fail propagates, narrative contradiction caught,
+  weak-mutation pulls confidence down)
+- chain integration (genesis cert, link via prevHash, HMAC-signed cert)
+- wisdom render (multi-line output, disagreement flagged, chain info)
+
+Total: **2289 tests** across 167 files.
+
+### Roadmap
+
+```
+v0.44 Tech 1: Verdict Superposition          done
+v0.45 Tech 2: Causal Claim Graph             done
+v0.46 Tech 4: Multi-Verifier Consensus       done
+v0.47 Tech 5: Cryptographic Merkle Chain     done
+v0.48 Tech 3: Mutation-Test Counterfactual   done
+v0.49 Tech 6: Wisdom Drill-Through Output    done
+v0.50 Tier 1.2: Bayesian Filter MAX (50+ rules)  next
+v1.0.0 Bundle release
+```
+
 ## [0.48.0] — 2026-05-09
 
 The **"QSAC Tech 3 — Mutation-Test Counterfactual"** release. Fifth of
