@@ -8,6 +8,122 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.14.0] — 2026-05-09
+
+**The "Mneme DNA — Super Nova + Super Sonic" release.** All 8 algorithms
+(A1-A8) ship at once on top of the 8 formulas (F1-F8). The full 16-strand
+DNA code-search engine is now production-grade — pure functional, fully
+tested, deterministic, with the Ghost-Sniper strict-mode firewall as the
+final gate. **+83 unit tests, 2964/2964 passing.**
+
+═══════════════════════════════════════════════════════════════════════
+8 algorithms shipped (one module per algorithm, all pure functions)
+═══════════════════════════════════════════════════════════════════════
+
+  A4 — Echo-Locator (P2, 7 tests)
+       echo-locator.ts. Per-file echo signatures + signature-similarity
+       match. SONAR for code patterns.
+
+  A2 — Phantom-Path Search (P3, 6 tests)
+       phantom-path.ts. Suggests "where this should live" based on
+       canonical patterns + federation prior.
+
+  A6 — Anti-Pattern Repulsion (P4, 6 tests)
+       repulsion.ts. F5-driven penalty downranks results near regret
+       patterns. Final-stage rerank before sniper gate.
+
+  A1 — Mutant Index Evolution (P5, 14 tests)
+       mutant-index.ts. Genetic-algorithm fitness loop (uniform
+       crossover + Gaussian mutation + tournament selection +
+       deterministic Mulberry32 RNG). Strategies that produce high
+       F8 fitness reproduce; low-fitness strategies prune.
+
+  A3 — Quantum Superposition Rank (P6, 8 tests)
+       quantum-rank.ts. 3-tensor (file × feature × intent) decomposition.
+       Same files appear in different ranks for different query intents.
+       Optional F1 (QRS) operator overlay.
+
+  A5 — Time-Travel Search (P7, 9 tests)
+       time-travel.ts. Phase-resonance ranking across historical
+       snapshots using F6 (TPS). Plus groupByPath for narrative arcs.
+
+  A7 — Tribal Voting Federation (P8, 8 tests)
+       tribal-voting.ts. K-anonymous federation up/down-votes per
+       pattern signature. Quorum threshold prevents thin-data noise.
+       F4 (TBP) drives the rerank.
+
+  A8 — Ghost-Sniper Verifier (P9, 14 tests)
+       ghost-sniper.ts. THE STRICT-MODE KILLER. Three gates:
+         1. AST existence
+         2. Semantic match ≥ semanticThreshold
+         3. F7 (CC) ≥ confidenceThreshold
+       Strict mode (default): rejection rather than degraded answer.
+       0% hallucination guarantee. Empty answer is honest; lying is not.
+       One shot. Ghost sniper.
+
+═══════════════════════════════════════════════════════════════════════
+Orchestrator (P10, 11 tests)
+═══════════════════════════════════════════════════════════════════════
+
+  orchestrator.ts wires all 8 algorithms in canonical order:
+
+    QUERY
+      ↓
+    Echo-Locator  →  enrich candidates with echo signatures
+      ↓
+    Anti-Pattern Repulsion  →  F5-driven downrank
+      ↓
+    Quantum Rank (optional)  →  intent-conditional rerank
+      ↓
+    Tribal Voting  →  federation prior
+      ↓
+    Time-Travel (optional)  →  historical resonance
+      ↓
+    GHOST-SNIPER  →  3-gate strict verification
+      ↓
+    Accepted only (or empty if nothing passes)
+
+  Pure function. dnaSearch(input) → output with full trace + stats.
+
+═══════════════════════════════════════════════════════════════════════
+The "ghost sniper" guarantee — operational
+═══════════════════════════════════════════════════════════════════════
+
+  • 50 hallucinated references in input → 0 accepted in output (test
+    `ghost-sniper.test.ts → never accepts a non-existent reference`).
+  • Hallucinated reference even with semanticSimilarity=0.99 → REJECTED
+    (existsInRepo gate fires first).
+  • If 0 candidates pass all 3 gates → accepted=[] returned. We never
+    fallback to "best of the bad."
+  • Full transparency: every rejected candidate appears in decisions[]
+    with the failed gate + human reason.
+
+═══════════════════════════════════════════════════════════════════════
+Tests
+═══════════════════════════════════════════════════════════════════════
+
+  +83 new unit tests (P2-P10). Total: 2964 / 2964 passing.
+
+  Per algorithm:
+    Echo-Locator        7
+    Phantom-Path        6
+    Anti-Repulsion      6
+    Mutant Index       14
+    Quantum Rank        8
+    Time-Travel         9
+    Tribal Voting       8
+    Ghost-Sniper       14
+    Orchestrator       11
+
+═══════════════════════════════════════════════════════════════════════
+What's next
+═══════════════════════════════════════════════════════════════════════
+
+  v1.14.x and beyond: wire the orchestrator into MCP `tools/call` so
+  the dynamic packs can power tools with the DNA pipeline directly,
+  and run AI-Memory-Bench (v1.12.0) with/without DNA enabled to publish
+  HRR (Hallucination Reduction Ratio) numbers.
+
 ## [1.13.1] — 2026-05-09
 
 **The "Mneme DNA" foundation release.** P1 of a 10-phase roadmap to ship
