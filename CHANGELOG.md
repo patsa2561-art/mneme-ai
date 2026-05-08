@@ -8,6 +8,134 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.2.0] — 2026-05-08
+
+**The TUNING-KIT release.** Mneme is now positioned as the bolt-on memory
+layer for AI coding tools — Claude Code, Cursor, Codex, Gemini, Continue,
+Aider. The CLI surface is still there for power users; the headline path
+is "give your AI coding tool the tuning kit".
+
+### MCP server: 7 → 93 tools
+
+Previous MCP exposure was 7 tools (ask, why, search_commits, status,
+list_entities, find_similar, blast). The remaining 80+ commands needed
+the CLI. v1.2.0 expands to 93 tools across 9 categories:
+
+| Category | Tools | Examples |
+|---|---|---|
+| `memory` | 7 | ask · why · search_commits · status · list_entities · find_similar · blast |
+| `people` | 10 | atrophy · telepathy · nemesis · influence · lineage · passport · who_knows · bus_factor · nervous_system · promise |
+| `audit` | 8 | baseline · trace · verify · certify · report · deps · conscience · ledger |
+| `forensics` | 6 | vulns · anomaly · match · attribute · show · suppress |
+| `insights` | 24 | ghost · regret · paradox · oracle · premortem · time_machine · story · decisions · mirror · rumor · fossil · runaway · drift · chronicle · constellation · cluster · network · manage · export_bundle · dream · echo · stack_trace · commit_coach · crystal_ball |
+| `quality` | 14 | karma · repo_mri · heartbeat · cognitive_twin · counterfactual · palimpsest · dna · dna_fold · rewind · teach · heal · entities · clones · guardian |
+| `quant` | 10 | drawdown · alpha · backtest · black_swan · insider_trading · moneyball · greek · correlation_matrix · implied_volatility · tax_loss_harvest |
+| `lab` | 8 | periodic_table · compose · run · library · adapt · feedback · calibrate · htc_stats |
+| `meta` | 6 | capabilities (the syllabus) · smart_do (NL dispatcher) · doctor · wisdom · manifesto · advanced |
+
+Total: **93 tools.** Naming convention: `mneme.<category>.<verb>`.
+
+### The wisdom envelope
+
+Every MCP tool now returns a structured envelope, not just raw JSON:
+
+```ts
+{
+  data:      <command's structured output>,
+  wisdom:    <1-3 sentences in plain English explaining the data>,
+  followUp:  ["mneme.related_tool_1", "mneme.related_tool_2"],
+  confidence: { level: "high" | "medium" | "low", notes?: string }
+}
+```
+
+The AI client quotes `wisdom` directly to the user; uses `data` for
+detail; suggests `followUp` for deeper analysis. AI doesn't have to
+interpret raw JSON anymore.
+
+### `mneme.capabilities` — the syllabus tool
+
+A new MCP tool that returns the entire catalog organized by category,
+with WHEN-to-use guidance for each. AI clients call this FIRST when they
+connect, learn the curriculum, then pick specific tools by matching
+user intent to descriptions.
+
+### `mneme.smart_do` — the NL fallback dispatcher
+
+When no specific tool matches the user's request, AI hands the
+natural-language intent to `mneme.smart_do`, which routes through
+Mneme's existing smart-dispatcher. Net effect: 100% command coverage,
+even for niche use cases.
+
+### `mneme mcp --install` — auto-config any AI tool
+
+```bash
+mneme mcp --install
+```
+
+Detects which AI coding tools are present (Claude Code, Cursor,
+Continue) and writes the appropriate MCP server entry into each tool's
+config file. Idempotent. Per-OS path resolution. `--dry-run` to
+preview, `--tool <name>` to force-target.
+
+For Codex CLI: prints the `codex mcp add` command (Codex doesn't expose
+an editable config file).
+
+The user never opens a JSON file. Run one command, restart their AI
+tool, done.
+
+### README rewrite
+
+Cut from 790 lines to ~190. Hero is now the tuning-kit metaphor: bolt
+Mneme onto Claude Code / Cursor / Codex / Gemini / Continue / Aider →
+your AI becomes a super-genius that knows your repo. The "AI installs
+it for you" path is the headline; manual CLI is collapsed under
+`<details>`. Three role-based sections (solo dev / team lead / security)
+let each audience see only what's relevant.
+
+A new "🤖 For AI agents reading this" section gives the AI a clear
+contract: what to install, how to call `mneme.capabilities`, the
+naming convention, the wisdom envelope.
+
+Old README backed up at `docs/legacy/README.v1.1.x.md`.
+
+### Architecture (file-level)
+
+```
+packages/mcp/src/
+├── index.ts                  (uses registry — 90% smaller than v1.1.x)
+└── tools/
+    ├── _types.ts             (MnemeTool + ToolResponse + wisdom envelope)
+    ├── _runtime.ts           (buildRuntime + passthroughHandler + runCliJson)
+    ├── _registry.ts          (buildAllTools merges every category)
+    ├── _capabilities.ts      (the syllabus)
+    ├── _smart_do.ts          (NL fallback dispatcher)
+    ├── memory.ts             (7 tools, direct core API)
+    ├── people.ts             (10 tools, passthrough CLI)
+    ├── audit.ts              (8 tools, passthrough)
+    ├── forensics.ts          (6 tools, passthrough)
+    ├── insights.ts           (24 tools, passthrough)
+    ├── quality.ts            (14 tools, passthrough)
+    ├── quant.ts              (10 tools, passthrough)
+    ├── lab.ts                (8 tools, passthrough)
+    └── meta.ts               (6 tools)
+
+packages/cli/src/commands/
+└── mcp-install.ts            (NEW — auto-config Claude/Cursor/Continue)
+```
+
+### Breaking changes
+
+None. Existing 7 MCP tools (mneme_ask, mneme_why, etc.) still work
+under their old names AND under their new namespaced names. Nothing
+that was working in v1.1.x stops working.
+
+### Numbers
+
+- MCP tools: 7 → 93 (13× increase)
+- README: 790 lines → 190 lines
+- Tests: 2,339 still passing across 171 files
+- Lockfile: 113 platform entries preserved (no Windows-only regression this time)
+
 ## [1.1.1] — 2026-05-08
 
 **Patch:** Windows null-byte argv crash in `mneme forensics vulns` /
