@@ -19,40 +19,69 @@
 import type { promises as fsPromises } from "node:fs";
 
 export type RuleId =
-  // Crypto
+  // Crypto (4)
   | "weak-hash"
   | "weak-cipher"
   | "weak-rng"
   | "hardcoded-secret"
-  // Injection
+  | "insecure-tls-version"
+  | "timing-attack"
+  // Injection (10)
   | "sql-injection"
   | "shell-injection"
   | "xss-innerhtml"
   | "xss-eval"
-  // Auth
+  | "xxe-external-entity"
+  | "xpath-injection"
+  | "ldap-injection"
+  | "command-substitution"
+  | "null-byte-injection"
+  | "format-string"
+  // Auth (5)
   | "hardcoded-token"
   | "jwt-no-verify"
   | "cors-wildcard-credentials"
   | "missing-auth-guard"
   | "weak-webhook-signature"
-  // Financial
+  | "csrf-missing"
+  | "session-fixation"
+  // Financial (3)
   | "money-arithmetic"
   | "money-as-number"
   | "amount-zero-comparison"
-  // Web
+  | "integer-overflow"
+  // Web (8)
   | "ssrf"
   | "prototype-pollution"
   | "mass-assignment"
   | "idor-no-ownership-check"
-  // Supply chain
+  | "path-traversal"
+  | "open-redirect"
+  | "unrestricted-file-upload"
+  | "graphql-introspection-enabled"
+  // Cookies / sessions (2)
+  | "insecure-cookie-flags"
+  | "hsts-missing"
+  // Deserialisation (2)
+  | "insecure-deserialization"
+  | "unsafe-yaml-load"
+  // Supply chain (1)
   | "dependency-changed"
-  // Info leak
+  // Info leak (3)
   | "logged-secret"
   | "exposed-stack-trace"
-  // Concurrency
+  | "sensitive-data-in-url"
+  // Concurrency (2)
   | "toctou-race"
-  // Privilege
-  | "setuid-root";
+  | "race-double-fetch"
+  // Privilege (1)
+  | "setuid-root"
+  // Operational (3)
+  | "debug-mode-in-prod"
+  | "unsafe-temp-file"
+  | "unsafe-regex-dos"
+  // CSP (1)
+  | "disabled-content-security-policy";
 
 export interface StackProfile {
   /** Sources scanned (package.json paths or "<inline>"). */
@@ -73,40 +102,97 @@ export interface StackProfile {
   hasJwt: boolean;
   /** Has a templating engine where SSTI matters. */
   hasTemplating: boolean;
+  /** Has an XML parser (xxe rules). */
+  hasXmlParser: boolean;
+  /** Has a YAML parser (deserialization rules). */
+  hasYamlParser: boolean;
+  /** Has a GraphQL server (introspection rules). */
+  hasGraphQL: boolean;
+  /** Has cookie-session middleware. */
+  hasSession: boolean;
+  /** Has a multipart/file-upload library. */
+  hasFileUpload: boolean;
+  // ── Multi-ecosystem detection (v0.50) ──────────────────────────────
+  /** Detected from package.json. */
+  ecosystemNode: boolean;
+  /** Detected from requirements.txt / pyproject.toml / Pipfile. */
+  ecosystemPython: boolean;
+  /** Detected from go.mod. */
+  ecosystemGo: boolean;
+  /** Detected from Cargo.toml. */
+  ecosystemRust: boolean;
+  /** Detected from Gemfile. */
+  ecosystemRuby: boolean;
+  /** Detected from composer.json. */
+  ecosystemPhp: boolean;
   /** All raw dependency names found, lowercased. */
   allDeps: Set<string>;
 }
 
 /** Hand-tuned priors. Format: P(rule fires legitimately | this stack signal). */
 const RULE_PRIORS: Record<RuleId, (s: StackProfile) => number> = {
-  // SQL injection only matters with a SQL driver. Without one, even "real"
-  // matches are almost certainly false positives (string templating in logs,
-  // ORM query helpers, NoSQL filter objects that happen to spell "select").
-  "sql-injection": (s) => (s.hasSql ? 0.95 : 0.05),
-  "shell-injection": () => 0.85, // shell exec is universal
-  "xss-innerhtml": (s) => (s.hasUiFramework ? 0.9 : 0.4),
-  "xss-eval": () => 0.75,
+  // ── Crypto ────────────────────────────────────────────────────────
   "weak-hash": () => 0.85,
   "weak-cipher": () => 0.85,
   "weak-rng": () => 0.7,
   "hardcoded-secret": () => 0.9,
+  "insecure-tls-version": () => 0.85,
+  "timing-attack": (s) => (s.hasJwt || s.hasWebFramework ? 0.7 : 0.4),
+  // ── Injection ─────────────────────────────────────────────────────
+  "sql-injection": (s) => (s.hasSql ? 0.95 : 0.05),
+  "shell-injection": () => 0.85,
+  "xss-innerhtml": (s) => (s.hasUiFramework ? 0.9 : 0.4),
+  "xss-eval": () => 0.75,
+  "xxe-external-entity": (s) => (s.hasXmlParser ? 0.9 : 0.15),
+  "xpath-injection": (s) => (s.hasXmlParser ? 0.85 : 0.1),
+  "ldap-injection": () => 0.6,
+  "command-substitution": () => 0.8,
+  "null-byte-injection": () => 0.5,
+  "format-string": () => 0.5,
+  // ── Auth ──────────────────────────────────────────────────────────
   "hardcoded-token": () => 0.85,
   "jwt-no-verify": (s) => (s.hasJwt ? 0.95 : 0.4),
   "cors-wildcard-credentials": (s) => (s.hasWebFramework ? 0.9 : 0.5),
   "missing-auth-guard": (s) => (s.hasNestJS ? 0.85 : 0.0),
   "weak-webhook-signature": (s) => (s.hasPaymentWebhook ? 0.9 : 0.1),
+  "csrf-missing": (s) => (s.hasWebFramework ? 0.8 : 0.1),
+  "session-fixation": (s) => (s.hasSession ? 0.85 : 0.1),
+  // ── Financial ─────────────────────────────────────────────────────
   "money-arithmetic": () => 0.7,
   "money-as-number": () => 0.7,
   "amount-zero-comparison": () => 0.45,
+  "integer-overflow": () => 0.5,
+  // ── Web ───────────────────────────────────────────────────────────
   ssrf: (s) => (s.hasWebFramework ? 0.85 : 0.4),
   "prototype-pollution": () => 0.75,
   "mass-assignment": (s) => (s.hasWebFramework ? 0.85 : 0.3),
   "idor-no-ownership-check": (s) => (s.hasWebFramework ? 0.7 : 0.1),
+  "path-traversal": () => 0.85,
+  "open-redirect": (s) => (s.hasWebFramework ? 0.85 : 0.2),
+  "unrestricted-file-upload": (s) => (s.hasFileUpload ? 0.9 : 0.2),
+  "graphql-introspection-enabled": (s) => (s.hasGraphQL ? 0.9 : 0.05),
+  // ── Cookies / sessions ────────────────────────────────────────────
+  "insecure-cookie-flags": (s) => (s.hasWebFramework ? 0.85 : 0.3),
+  "hsts-missing": (s) => (s.hasWebFramework ? 0.65 : 0.1),
+  // ── Deserialisation ───────────────────────────────────────────────
+  "insecure-deserialization": () => 0.75,
+  "unsafe-yaml-load": (s) => (s.hasYamlParser ? 0.9 : 0.15),
+  // ── Supply chain ──────────────────────────────────────────────────
   "dependency-changed": () => 0.55,
+  // ── Info leak ─────────────────────────────────────────────────────
   "logged-secret": () => 0.75,
   "exposed-stack-trace": () => 0.7,
+  "sensitive-data-in-url": (s) => (s.hasWebFramework ? 0.8 : 0.3),
+  // ── Concurrency ───────────────────────────────────────────────────
   "toctou-race": () => 0.5,
+  "race-double-fetch": () => 0.5,
+  // ── Privilege ─────────────────────────────────────────────────────
   "setuid-root": () => 0.95,
+  // ── Operational ───────────────────────────────────────────────────
+  "debug-mode-in-prod": () => 0.7,
+  "unsafe-temp-file": () => 0.6,
+  "unsafe-regex-dos": () => 0.65,
+  "disabled-content-security-policy": (s) => (s.hasUiFramework || s.hasWebFramework ? 0.85 : 0.2),
 };
 
 const SQL_DEPS = new Set([
@@ -138,6 +224,25 @@ const JWT_DEPS = new Set([
 const TEMPLATING_DEPS = new Set([
   "ejs", "pug", "nunjucks", "handlebars", "mustache", "dot", "twig",
 ]);
+const XML_PARSER_DEPS = new Set([
+  "xml2js", "fast-xml-parser", "libxmljs", "libxmljs2", "xmldom",
+  "@xmldom/xmldom", "xmlbuilder", "sax",
+]);
+const YAML_PARSER_DEPS = new Set([
+  "js-yaml", "yaml", "@iarna/toml", "toml-eslint-parser",
+]);
+const GRAPHQL_DEPS = new Set([
+  "graphql", "apollo-server", "@apollo/server", "@nestjs/graphql",
+  "graphql-yoga", "mercurius",
+]);
+const SESSION_DEPS = new Set([
+  "express-session", "cookie-session", "iron-session", "next-session",
+  "fastify-session", "@fastify/session",
+]);
+const FILE_UPLOAD_DEPS = new Set([
+  "multer", "busboy", "@fastify/multipart", "formidable",
+  "express-fileupload", "@nestjs/platform-express",
+]);
 
 /**
  * Read every package.json under a path (workspaces-aware) and build the
@@ -148,29 +253,19 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
 
-  const profile: StackProfile = {
-    sources: [],
-    hasSql: false,
-    hasNoSql: false,
-    hasWebFramework: false,
-    hasNestJS: false,
-    hasUiFramework: false,
-    hasPaymentWebhook: false,
-    hasJwt: false,
-    hasTemplating: false,
-    allDeps: new Set(),
-  };
+  const profile: StackProfile = freshProfile([]);
 
+  // Node.js — package.json (workspaces-aware)
   const candidates = [
     path.join(rootPath, "package.json"),
     ...(await glob(rootPath, fs, ["packages", "apps", "services"], "package.json", 3)),
   ];
-
   for (const p of candidates) {
     try {
       const txt = await fs.readFile(p, "utf8");
       const pkg = JSON.parse(txt) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; peerDependencies?: Record<string, string> };
       profile.sources.push(p);
+      profile.ecosystemNode = true;
       mergeDeps(profile, pkg.dependencies);
       mergeDeps(profile, pkg.devDependencies);
       mergeDeps(profile, pkg.peerDependencies);
@@ -178,16 +273,61 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
       // file missing or invalid JSON — skip silently
     }
   }
+
+  // Python — pyproject.toml / requirements.txt / Pipfile
+  for (const f of ["pyproject.toml", "requirements.txt", "Pipfile"]) {
+    try {
+      const txt = await fs.readFile(path.join(rootPath, f), "utf8");
+      profile.sources.push(path.join(rootPath, f));
+      profile.ecosystemPython = true;
+      // Cheap parser: scan for known package names
+      mergeRawText(profile, txt);
+    } catch { /* skip */ }
+  }
+
+  // Go — go.mod
+  try {
+    const txt = await fs.readFile(path.join(rootPath, "go.mod"), "utf8");
+    profile.sources.push(path.join(rootPath, "go.mod"));
+    profile.ecosystemGo = true;
+    mergeRawText(profile, txt);
+  } catch { /* skip */ }
+
+  // Rust — Cargo.toml
+  try {
+    const txt = await fs.readFile(path.join(rootPath, "Cargo.toml"), "utf8");
+    profile.sources.push(path.join(rootPath, "Cargo.toml"));
+    profile.ecosystemRust = true;
+    mergeRawText(profile, txt);
+  } catch { /* skip */ }
+
+  // Ruby — Gemfile
+  try {
+    const txt = await fs.readFile(path.join(rootPath, "Gemfile"), "utf8");
+    profile.sources.push(path.join(rootPath, "Gemfile"));
+    profile.ecosystemRuby = true;
+    mergeRawText(profile, txt);
+  } catch { /* skip */ }
+
+  // PHP — composer.json
+  try {
+    const txt = await fs.readFile(path.join(rootPath, "composer.json"), "utf8");
+    const pkg = JSON.parse(txt) as { require?: Record<string, string>; "require-dev"?: Record<string, string> };
+    profile.sources.push(path.join(rootPath, "composer.json"));
+    profile.ecosystemPhp = true;
+    mergeDeps(profile, pkg.require);
+    mergeDeps(profile, pkg["require-dev"]);
+    // Also scan raw text so vendor/package combos like laravel/framework
+    // and symfony/* fire the framework signal via name match.
+    mergeRawText(profile, txt);
+  } catch { /* skip */ }
+
   return profile;
 }
 
-/**
- * Build a profile from an inline dependency list. Used for tests +
- * for callers (CLI `--stack`) that pass deps directly.
- */
-export function buildStackProfile(deps: string[]): StackProfile {
-  const profile: StackProfile = {
-    sources: ["<inline>"],
+function freshProfile(sources: string[]): StackProfile {
+  return {
+    sources,
     hasSql: false,
     hasNoSql: false,
     hasWebFramework: false,
@@ -196,12 +336,87 @@ export function buildStackProfile(deps: string[]): StackProfile {
     hasPaymentWebhook: false,
     hasJwt: false,
     hasTemplating: false,
+    hasXmlParser: false,
+    hasYamlParser: false,
+    hasGraphQL: false,
+    hasSession: false,
+    hasFileUpload: false,
+    ecosystemNode: false,
+    ecosystemPython: false,
+    ecosystemGo: false,
+    ecosystemRust: false,
+    ecosystemRuby: false,
+    ecosystemPhp: false,
     allDeps: new Set(),
   };
+}
+
+/**
+ * Build a profile from an inline dependency list. Used for tests +
+ * for callers (CLI `--stack`) that pass deps directly.
+ */
+export function buildStackProfile(deps: string[]): StackProfile {
+  const profile = freshProfile(["<inline>"]);
   const obj: Record<string, string> = {};
   for (const d of deps) obj[d] = "*";
   mergeDeps(profile, obj);
   return profile;
+}
+
+/** Cheap text scan for known package names (Python/Go/Rust/Ruby manifests). */
+function mergeRawText(profile: StackProfile, text: string): void {
+  const lc = text.toLowerCase();
+  // Common high-signal packages across ecosystems
+  const TEXT_SIGNALS: Array<{ needle: string; flag: keyof StackProfile }> = [
+    // Web frameworks
+    { needle: "fastapi", flag: "hasWebFramework" },
+    { needle: "flask", flag: "hasWebFramework" },
+    { needle: "django", flag: "hasWebFramework" },
+    { needle: "starlette", flag: "hasWebFramework" },
+    { needle: "tornado", flag: "hasWebFramework" },
+    { needle: "gin-gonic/gin", flag: "hasWebFramework" },
+    { needle: "echo", flag: "hasWebFramework" },
+    { needle: "actix-web", flag: "hasWebFramework" },
+    { needle: "rocket", flag: "hasWebFramework" },
+    { needle: "rails", flag: "hasWebFramework" },
+    { needle: "sinatra", flag: "hasWebFramework" },
+    { needle: "laravel", flag: "hasWebFramework" },
+    { needle: "symfony", flag: "hasWebFramework" },
+    // SQL drivers
+    { needle: "psycopg2", flag: "hasSql" },
+    { needle: "psycopg", flag: "hasSql" },
+    { needle: "sqlalchemy", flag: "hasSql" },
+    { needle: "mysql-connector", flag: "hasSql" },
+    { needle: "pymysql", flag: "hasSql" },
+    { needle: "lib/pq", flag: "hasSql" },
+    { needle: "diesel", flag: "hasSql" },
+    { needle: "sqlx", flag: "hasSql" },
+    { needle: "activerecord", flag: "hasSql" },
+    // NoSQL
+    { needle: "pymongo", flag: "hasNoSql" },
+    { needle: "motor", flag: "hasNoSql" },
+    { needle: "mongoid", flag: "hasNoSql" },
+    // JWT
+    { needle: "pyjwt", flag: "hasJwt" },
+    { needle: "golang-jwt", flag: "hasJwt" },
+    { needle: "jsonwebtoken", flag: "hasJwt" },
+    // XML
+    { needle: "lxml", flag: "hasXmlParser" },
+    { needle: "xml.etree", flag: "hasXmlParser" },
+    { needle: "encoding/xml", flag: "hasXmlParser" },
+    { needle: "nokogiri", flag: "hasXmlParser" },
+    // YAML
+    { needle: "pyyaml", flag: "hasYamlParser" },
+    { needle: "gopkg.in/yaml", flag: "hasYamlParser" },
+    { needle: "serde_yaml", flag: "hasYamlParser" },
+    // GraphQL
+    { needle: "graphql", flag: "hasGraphQL" },
+    { needle: "graphene", flag: "hasGraphQL" },
+    { needle: "strawberry", flag: "hasGraphQL" },
+  ];
+  for (const { needle, flag } of TEXT_SIGNALS) {
+    if (lc.includes(needle)) (profile as unknown as Record<string, unknown>)[flag] = true;
+  }
 }
 
 function mergeDeps(profile: StackProfile, deps?: Record<string, string>): void {
@@ -220,6 +435,11 @@ function mergeDeps(profile: StackProfile, deps?: Record<string, string>): void {
     if (PAYMENT_WEBHOOK_DEPS.has(lc)) profile.hasPaymentWebhook = true;
     if (JWT_DEPS.has(lc)) profile.hasJwt = true;
     if (TEMPLATING_DEPS.has(lc)) profile.hasTemplating = true;
+    if (XML_PARSER_DEPS.has(lc)) profile.hasXmlParser = true;
+    if (YAML_PARSER_DEPS.has(lc)) profile.hasYamlParser = true;
+    if (GRAPHQL_DEPS.has(lc)) profile.hasGraphQL = true;
+    if (SESSION_DEPS.has(lc)) profile.hasSession = true;
+    if (FILE_UPLOAD_DEPS.has(lc)) profile.hasFileUpload = true;
   }
 }
 

@@ -8,6 +8,62 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.50.0] — 2026-05-09
+
+The **"Bayesian Filter MAX"** release. Last gate before v1.0.
+
+### What
+
+- **Rule catalogue 24 → 50**. Added 26 new rules across 8 categories:
+  insecure-tls-version, timing-attack, xxe-external-entity,
+  xpath-injection, ldap-injection, command-substitution,
+  null-byte-injection, format-string, csrf-missing, session-fixation,
+  integer-overflow, path-traversal, open-redirect,
+  unrestricted-file-upload, graphql-introspection-enabled,
+  insecure-cookie-flags, hsts-missing, insecure-deserialization,
+  unsafe-yaml-load, sensitive-data-in-url, race-double-fetch,
+  debug-mode-in-prod, unsafe-temp-file, unsafe-regex-dos,
+  disabled-content-security-policy. Plus the 25 from v0.37 = 50.
+- **Multi-ecosystem stack detection**. Now reads `package.json` (Node),
+  `pyproject.toml` / `requirements.txt` / `Pipfile` (Python),
+  `go.mod` (Go), `Cargo.toml` (Rust), `Gemfile` (Ruby),
+  `composer.json` (PHP). Sets `ecosystem*` flags for routing.
+- **5 new stack flags**: `hasXmlParser`, `hasYamlParser`, `hasGraphQL`,
+  `hasSession`, `hasFileUpload` — gate XXE / YAML deserialisation /
+  GraphQL introspection / session-fixation / unrestricted-upload rules.
+
+### Rule-prior calibration examples
+
+- `xxe-external-entity` prior: 0.9 with XML parser dep, 0.15 without
+- `unsafe-yaml-load` prior: 0.9 with YAML parser dep, 0.15 without
+- `graphql-introspection-enabled`: 0.9 with GraphQL dep, 0.05 without
+- `unrestricted-file-upload`: 0.9 with multer/busboy/etc, 0.2 without
+- `path-traversal`: 0.85 universal (rare false-positive shape)
+
+### Tests
+
+16 new v0.50 tests:
+- Rule count ≥ 50 + every rule has prior + non-empty pattern
+- Stack-specific priors (XXE silenced without XML parser, GraphQL
+  introspection silenced without GraphQL dep)
+- 7 ecosystem detection cases (Node / Python pyproject / Python
+  requirements / Go / Rust / Ruby / PHP)
+
+Total: **2305 tests** across 168 files.
+
+### Roadmap
+
+```
+v0.44 Tech 1: Verdict Superposition          done
+v0.45 Tech 2: Causal Claim Graph             done
+v0.46 Tech 4: Multi-Verifier Consensus       done
+v0.47 Tech 5: Cryptographic Merkle Chain     done
+v0.48 Tech 3: Mutation-Test Counterfactual   done
+v0.49 Tech 6: Wisdom Drill-Through Output    done
+v0.50 Tier 1.2: Bayesian Filter MAX          done
+v1.0.0 Bundle release                         next
+```
+
 ## [0.49.0] — 2026-05-09
 
 The **"QSAC Tech 6 — Wisdom Drill-Through"** release. Sixth of seven on

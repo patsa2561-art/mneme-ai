@@ -254,6 +254,103 @@ const RULES: Rule[] = [
   { id: "setuid-root", class: "privilege", severity: "high", reference: "CWE-269",
     pattern: /\bsetuid\s*\(\s*0\s*\)|\bos\.setuid\s*\(/,
     summary: "Privilege escalation to root via setuid" },
+
+  // ─── v0.50 — 26 NEW RULES (Bayesian Filter MAX) ─────────────────────
+  // ── More crypto ───────────────────────────────────────────────────
+  { id: "insecure-tls-version", class: "crypto-weakness", severity: "high", reference: "CWE-326",
+    pattern: /(?:tls(?:Min)?Version|secureProtocol|ssl_version)\s*[:=]\s*["']?(?:TLSv1\.0|TLSv1\.1|SSLv[23])/,
+    summary: "Explicitly downgrades TLS to a deprecated version (1.0 / 1.1 / SSLv2/3)" },
+  { id: "timing-attack", class: "auth-flaw", severity: "medium", reference: "CWE-208",
+    pattern: /(?:if\s*\(\s*\w+\s*===?\s*(?:token|secret|password|api[_-]?key|signature)\s*\))|(?:(?:token|secret|password|signature)\s*===?\s*\w+)/i,
+    summary: "Plain `===` on auth secrets — vulnerable to timing attack; use crypto.timingSafeEqual" },
+
+  // ── More injection ────────────────────────────────────────────────
+  { id: "xxe-external-entity", class: "injection-xss", severity: "high", reference: "CWE-611",
+    pattern: /(?:libxmljs|xml2js|@xmldom).*?\bnoent\s*[:=]\s*true|parseXML\s*\([^,)]+,\s*\{[^}]*resolveEntities\s*[:=]\s*true/i,
+    summary: "XML parser configured to resolve external entities — XXE risk" },
+  { id: "xpath-injection", class: "injection-xss", severity: "high", reference: "CWE-643",
+    pattern: /\.evaluate\s*\(\s*[`"'][^`"']*\$\{[^}]+\}|xpath\s*\(\s*[`"'][^`"']*['"]\s*\+/,
+    summary: "XPath query built from user input via concatenation / template literal" },
+  { id: "ldap-injection", class: "injection-xss", severity: "high", reference: "CWE-90",
+    pattern: /ldap.*?\.search\s*\(\s*[^,]*\$\{|ldap.*?\.bind\s*\(\s*[`"'][^`"']*\$\{/i,
+    summary: "LDAP query built from user input — escape or use parameterised bind" },
+  { id: "command-substitution", class: "injection-shell", severity: "critical", reference: "CWE-78",
+    pattern: /(?:exec|spawn)\s*\(\s*[`"'][^`"']*\$\([^)]+\)[^`"']*[`"']|`[^`]*\$\([^)]+\)[^`]*`/,
+    summary: "Backtick / $() command substitution with potentially-controlled input" },
+  { id: "null-byte-injection", class: "injection-xss", severity: "medium", reference: "CWE-158",
+    pattern: /\\x00|\\u0000|String\.fromCharCode\(\s*0\s*\)/,
+    summary: "Explicit null byte handling — verify it's not used to bypass extension/path filters" },
+  { id: "format-string", class: "injection-xss", severity: "medium", reference: "CWE-134",
+    pattern: /(?:console\.log|printf|sprintf|process\.stdout\.write)\s*\(\s*(?:req\.|input\.|argv|process\.env\.\w+)/,
+    summary: "Format-string-style call with raw user input as the format" },
+
+  // ── Auth additions ────────────────────────────────────────────────
+  { id: "csrf-missing", class: "auth-flaw", severity: "high", reference: "CWE-352",
+    pattern: /app\.(?:post|put|delete|patch)\s*\(\s*[`"']\/[^,]*,\s*(?:async\s+)?\(\s*req/,
+    summary: "Mutating route registered without visible CSRF middleware — verify protection",
+    silenceUnderPrior: 0.4 },
+  { id: "session-fixation", class: "auth-flaw", severity: "high", reference: "CWE-384",
+    pattern: /(?:req\.session\.id\s*=|session\.regenerate\b)\s*\([^)]*req\./,
+    summary: "Session id assigned from request input — session fixation risk" },
+
+  // ── Financial ─────────────────────────────────────────────────────
+  { id: "integer-overflow", class: "financial-logic", severity: "medium", reference: "CWE-190",
+    pattern: /(?:amount|balance|total|count|qty)\s*\*\s*(?:amount|balance|total|count|qty|\d+)|\b(?:amount|balance|total)\s*<<\s*\d+/i,
+    summary: "Integer multiplication / shift on money/count — verify overflow handling" },
+
+  // ── Web additions ────────────────────────────────────────────────
+  { id: "path-traversal", class: "broken-access-control", severity: "high", reference: "CWE-22",
+    pattern: /(?:fs\.(?:readFile|createReadStream|stat)|readFileSync|sendFile)\s*\(\s*(?:[`"']\$?\.{0,2}\/?[^`"']*['"]?\s*\+|[`"'][^`"']*\$\{[^}]+\}|req\.|input\.|params\.)/,
+    summary: "File-system call built from user input — path-traversal risk; canonicalise + allowlist" },
+  { id: "open-redirect", class: "broken-access-control", severity: "high", reference: "CWE-601",
+    pattern: /res\.redirect\s*\(\s*(?:req\.(?:body|query|params)\.|req\.headers\.referer)/,
+    summary: "res.redirect() with raw user input — open-redirect risk" },
+  { id: "unrestricted-file-upload", class: "broken-access-control", severity: "high", reference: "CWE-434",
+    pattern: /multer\s*\(\s*\{[^}]*(?!fileFilter)[^}]*\}\s*\)|formidable\s*\(\s*\)/,
+    summary: "File upload without `fileFilter` / extension allowlist" },
+  { id: "graphql-introspection-enabled", class: "info-leakage", severity: "medium", reference: "CWE-200",
+    pattern: /(?:apollo|graphql).*?\bintrospection\s*[:=]\s*true|(?:apollo|graphql).*?\bplayground\s*[:=]\s*true/i,
+    summary: "GraphQL introspection / playground enabled — disable in production" },
+
+  // ── Cookies / sessions ────────────────────────────────────────────
+  { id: "insecure-cookie-flags", class: "auth-flaw", severity: "medium", reference: "CWE-614",
+    pattern: /res\.cookie\s*\([^,]+,\s*[^,]+,\s*\{[^}]*(?!secure)[^}]*\}\s*\)|setHeader\s*\(\s*['"]Set-Cookie['"]/,
+    summary: "Cookie set without Secure / HttpOnly / SameSite flags — verify cookie options" },
+  { id: "hsts-missing", class: "info-leakage", severity: "low", reference: "CWE-319",
+    pattern: /helmet\(\s*\{[^}]*hsts\s*[:=]\s*false/,
+    summary: "HSTS explicitly disabled — TLS downgrade attack risk" },
+
+  // ── Deserialisation ──────────────────────────────────────────────
+  { id: "insecure-deserialization", class: "injection-xss", severity: "critical", reference: "CWE-502",
+    pattern: /(?:pickle\.loads|JSON\.parse\s*\(\s*(?:input|req\.body|req\.query)|node-serialize\.unserialize|eval\s*\(\s*JSON)/,
+    summary: "Deserialising untrusted input — RCE risk" },
+  { id: "unsafe-yaml-load", class: "injection-xss", severity: "high", reference: "CWE-502",
+    pattern: /(?:yaml\.load\s*\([^,)]*\)(?!\s*\{[^}]*schema)|yaml\.unsafe_load\b)/,
+    summary: "yaml.load() without SafeLoader / schema option — RCE risk on untrusted YAML" },
+
+  // ── Info leak ────────────────────────────────────────────────────
+  { id: "sensitive-data-in-url", class: "info-leakage", severity: "high", reference: "CWE-598",
+    pattern: /[?&](?:token|password|api[_-]?key|secret|jwt|access[_-]?token)=/i,
+    summary: "Sensitive data in URL query string — leaked via referer / logs / browser history" },
+
+  // ── Concurrency ──────────────────────────────────────────────────
+  { id: "race-double-fetch", class: "race-condition", severity: "medium", reference: "CWE-367",
+    pattern: /await\s+\w+\.(?:findById|findOne|get)\([^)]+\)[\s\S]{0,200}?await\s+\w+\.(?:findById|findOne|get)\(/,
+    summary: "Same record fetched twice across an await — TOCTOU; use atomic update" },
+
+  // ── Operational ──────────────────────────────────────────────────
+  { id: "debug-mode-in-prod", class: "info-leakage", severity: "high", reference: "CWE-489",
+    pattern: /(?:DEBUG\s*=\s*True|app\.set\s*\(\s*['"]env['"]\s*,\s*['"]development['"]|NODE_ENV.*?['"]development['"])/,
+    summary: "Hard-coded debug / development mode" },
+  { id: "unsafe-temp-file", class: "broken-access-control", severity: "medium", reference: "CWE-377",
+    pattern: /\/tmp\/[a-zA-Z]+\.(?:log|txt|json|xml)|os\.tmpdir\(\)\s*\+\s*['"]\/[a-zA-Z]+/,
+    summary: "Predictable temp file path — race / overwrite risk; use mkdtemp / mkstemp" },
+  { id: "unsafe-regex-dos", class: "race-condition", severity: "medium", reference: "CWE-1333",
+    pattern: /\([^)]*\+\)[+*]|\([^)]*\*\)[+*]|\(\?:[^)]*[*+]\)[*+]/,
+    summary: "Nested quantifier in regex — catastrophic backtracking / ReDoS risk" },
+  { id: "disabled-content-security-policy", class: "info-leakage", severity: "medium", reference: "CWE-1021",
+    pattern: /helmet\(\s*\{[^}]*contentSecurityPolicy\s*[:=]\s*false|res\.removeHeader\(\s*['"]Content-Security-Policy['"]/,
+    summary: "Content-Security-Policy header disabled — XSS protection lost" },
 ];
 
 const FIX_KEYWORDS =
