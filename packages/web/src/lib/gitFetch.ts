@@ -43,7 +43,7 @@ export function classifyUrl(input: string):
   | { kind: "gitlab"; project: string }
   | { kind: "json"; url: string }
   | { kind: "unknown" } {
-  const trimmed = input.trim();
+  const trimmed = input.trim().replace(/\/+$/, "");
   try {
     const u = new URL(trimmed);
     if (u.hostname === "github.com" || u.hostname === "www.github.com") {
