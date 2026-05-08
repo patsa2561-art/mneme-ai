@@ -8,6 +8,75 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.44.0] — 2026-05-09
+
+The **"QSAC Tech 1 — Verdict Superposition"** release. First of seven on
+the road to v1.0 ("Quantum-Superposed Audit Certificate" — the
+production-grade audit layer that GitHub/GitLab will license).
+
+### Why it matters
+
+The current `mneme audit --certify` collapses every axis to a single
+verdict (`pass | warn | fail | skipped`). That throws away information:
+"PASS at 60% confidence" and "PASS at 99% confidence" both render as
+just "PASS". Compliance teams cannot drill into uncertainty; risk-aware
+CI gating is impossible.
+
+### What v0.44 adds
+
+A **probability distribution over all four verdicts** alongside the
+collapsed verdict — calibrated soft-scoring functions per axis turn raw
+evidence into amplitudes that sum to 1.
+
+```
+ψ = α·|pass⟩ + β·|warn⟩ + γ·|fail⟩ + δ·|skipped⟩
+    where α + β + γ + δ = 1
+```
+
+Five soft-scorers (one per existing axis):
+- `scoreBehavioralParity` — sigmoid on mismatch ratio + critical-mismatch heavy fail
+- `scoreApiContractDrift` — break ratio thresholds smoothed
+- `scoreTestPassRate` — newly-failing tests dominate; test-count shrink → warn
+- `scorePerfRegression` — sigmoid centred at 17.5% (between 10% warn / 25% fail)
+- `scoreAiNarrative` — contradictions weighted heavily; confirmation ratio gradates
+
+Plus:
+- `combineDistributions(dists, weights?)` — product-of-experts geometric
+  mean. One fail-heavy axis pulls the overall verdict down even if other
+  axes are clean.
+- `confidencePill(d)` → `high | medium | low` from confidence + entropy.
+- `formatDistribution(d)` → wisdom-output line `0.95·|pass⟩ + 0.04·|warn⟩`.
+
+### Why this is novel
+
+Existing SAST + AI-audit tools were built when regulators wanted YES/NO.
+EU AI Act 2026 + SEC AI disclosure want **uncertainty quantification**.
+Mneme is the first production tool to ship calibrated verdict distributions
+in the certificate.
+
+### Tests
+
+30 new superposition tests:
+- PMF invariants (sums to 1, non-negative, argmax + entropy correctness)
+- Per-axis soft-scorer boundary cases (skipped / pass / warn / fail edges)
+- Combiner: product-of-experts pulls confidence down on disagreement
+- Confidence pill + format helpers
+
+Total: **2216 tests passing** across 162 files.
+
+### Roadmap to v1.0
+
+```
+v0.44  Tech 1: Verdict Superposition          ✅
+v0.45  Tech 2: Causal Claim Graph             (next)
+v0.46  Tech 4: Multi-Verifier Consensus
+v0.47  Tech 5: Cryptographic Merkle Chain
+v0.48  Tech 3: Mutation-Test Counterfactual
+v0.49  Tech 6: Wisdom Drill-Through Output
+v0.50  Tier 1.2: Bayesian Filter MAX (50+ rules)
+v1.0.0 Bundle release — license-ready trust layer
+```
+
 ## [0.43.0] — 2026-05-08
 
 The **"Holy Grails"** release. Last of four shipping the
