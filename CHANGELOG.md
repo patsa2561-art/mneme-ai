@@ -8,6 +8,75 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.11.1] — 2026-05-08
+
+**The "SECURITY ON BY DEFAULT" release.** Zero-config, world-class auto-bootstrap.
+`npm install -g mneme-ai` is now everything the user has to do — every
+v1.11.0 capability that can be safely auto-enabled is auto-enabled.
+
+═══════════════════════════════════════════════════════════════════════
+Auto-bootstrap (world-class · no flags · no config)
+═══════════════════════════════════════════════════════════════════════
+
+  1. **Audit log auto-on**
+     - `mneme init` and `mneme index` lazy-bootstrap the HMAC chain
+     - Genesis entry recorded with `actor: "mneme:auto"` for provenance
+     - Idempotent — never re-enables a user who explicitly opted out
+     - `core/security/auto.ts` — 7/7 unit tests
+
+  2. **TOFU (Trust On First Use) for bundled WASM model**
+     - First download → `.mneme/model-checksums.json` records SHA-256
+     - Subsequent loads → verify; refuse if any file changed
+     - User can intentionally re-pin by deleting the manifest
+     - Same approach SSH uses for host keys
+     - `embeddings/checksum.tofuVerifyOrPin` — 6/6 new TOFU tests
+       (fresh-pin, verify, tampered, missing, no-files, corrupt-manifest)
+
+  3. **Prompt-injection scrubber wired into MCP runtime**
+     - Every wisdom + secondBrain.presentation field auto-scrubbed
+     - `<system>`, `[INST]`, jailbreak preludes stripped before delivery
+     - Untrusted commit/PR text cannot inject into AI context
+     - Zero perf cost (regex over short strings)
+
+  4. **`mneme security` dashboard**
+     - One-screen status: audit log · TOFU · scrubber · FIPS posture
+     - `mneme security on/off/verify` for explicit control
+     - JSON output for CI/SIEM ingestion
+     - 10/10 unit tests
+
+  5. **`.mneme/.gitignore` auto-write**
+     - On `init`, exclude `audit-log.secret` + `*.tmp` from accidental commit
+
+═══════════════════════════════════════════════════════════════════════
+Escape hatch
+═══════════════════════════════════════════════════════════════════════
+
+  Set `MNEME_NO_AUTO_SECURITY=1` to disable the auto-bootstrap entirely.
+  We document it but don't recommend it — security defaults exist because
+  security that requires manual enablement is security nobody enables.
+
+═══════════════════════════════════════════════════════════════════════
+Tests
+═══════════════════════════════════════════════════════════════════════
+
+  +25 new unit tests:
+   - core/security/auto                7 (auto-bootstrap idempotence + safety)
+   - core/security/audit-log           1 (ensureAutoEnabled honoring user choice)
+   - embeddings/checksum (TOFU)        6 (fresh-pin / verify / tampered / etc.)
+   - cli/security command             10 (status / on / off / verify / display)
+   - cli/init                          1 (auto-bootstrap on init)
+
+  Total: **2642/2642 tests passing.**
+
+═══════════════════════════════════════════════════════════════════════
+Honest about what we DON'T auto-enable
+═══════════════════════════════════════════════════════════════════════
+
+  • Vault encryption — needs a passphrase from the user, can't be auto.
+  • FIPS enforcement — we DETECT FIPS posture (informational), but only
+    --compliance fips140 enforces it (refusing to start without FIPS).
+  • Federation — opt-in to `mneme federation join` only. No auto-join.
+
 ## [1.11.0] — 2026-05-08
 
 **The "BANK-GRADE" release.** Mneme's first dedicated security-hardening

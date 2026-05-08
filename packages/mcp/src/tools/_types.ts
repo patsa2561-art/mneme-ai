@@ -9,6 +9,7 @@
 
 import type { Tool, CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { git, store, EmbeddingProvider } from "@mneme-ai/core";
+import { security } from "@mneme-ai/core";
 
 /** Categories for the syllabus tool — AI student reads this index first
  *  and learns what kind of question goes to which group of tools. */
@@ -209,8 +210,30 @@ export interface MnemeTool<TArgs = Record<string, unknown>, TData = unknown> {
 
 /** Convert a wrapped tool response into MCP's expected CallToolResult.
  *  We serialise the entire envelope (data + wisdom + followUp + confidence)
- *  so the AI sees the full picture in one shot. */
+ *  so the AI sees the full picture in one shot.
+ *
+ *  v1.11.1 — by default, every wisdom + secondBrain.presentation field
+ *  is run through the prompt-injection scrubber. Untrusted content
+ *  (commit messages, PR text, issue text from federation) cannot smuggle
+ *  control tokens like `<system>`, `[INST]`, or "ignore prior instructions"
+ *  into the AI's context. Set MNEME_NO_AUTO_SECURITY=1 to disable. */
 export function toCallResult(r: ToolResponse): CallToolResult {
+  // v1.11.1 — auto-scrub the human-language fields. We intentionally do
+  // NOT scrub `data` (which is structured JSON the AI client should treat
+  // as data, not as instruction).
+  const skipScrub = process.env["MNEME_NO_AUTO_SECURITY"] === "1";
+  let wisdom = r.wisdom;
+  let secondBrain = (r as unknown as { secondBrain?: { presentation?: string } }).secondBrain;
+  if (!skipScrub) {
+    try {
+      if (typeof wisdom === "string") wisdom = security.scrubber.scrubForPrompt(wisdom).scrubbed;
+      if (secondBrain && typeof secondBrain.presentation === "string") {
+        secondBrain = { ...secondBrain, presentation: security.scrubber.scrubForPrompt(secondBrain.presentation).scrubbed };
+      }
+    } catch {
+      // best-effort — never block a tool result on scrubber failure
+    }
+  }
   return {
     content: [
       {
@@ -218,9 +241,10 @@ export function toCallResult(r: ToolResponse): CallToolResult {
         text: JSON.stringify(
           {
             data: r.data,
-            wisdom: r.wisdom,
+            wisdom,
             followUp: r.followUp ?? [],
             confidence: r.confidence ?? { level: "medium" },
+            ...(secondBrain ? { secondBrain } : {}),
           },
           null,
           2,

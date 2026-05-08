@@ -166,6 +166,39 @@ export function disable(repoRoot: string): void {
   writeConfig(repoRoot, { enabled: false });
 }
 
+/**
+ * v1.11.1 — Auto-enable on first mutating action.
+ *
+ * Wisdom check: world-class to enable a tamper-evident audit log by
+ * default without asking? YES, because:
+ *   - Cost is near-zero (best-effort async append, file mode 0600).
+ *   - Privacy is preserved (log never leaves the machine).
+ *   - User can `mneme security off` if they really want to.
+ *   - The alternative ("opt-in") = security nobody enables = no security.
+ *
+ * Returns true if we just auto-enabled (so caller can log a one-time
+ * notice). Returns false if already configured (user previously
+ * enabled, or explicitly disabled — we never silently re-enable a
+ * user who said no).
+ */
+export function ensureAutoEnabled(repoRoot: string): boolean {
+  const p = paths(repoRoot).config;
+  if (existsSync(p)) return false; // user already chose (yes or no)
+  // First-touch: auto-on, record that this was an auto decision so
+  // `mneme security` can show the provenance.
+  writeConfig(repoRoot, { enabled: true });
+  appendEntry(repoRoot, {
+    actor: "mneme:auto",
+    action: "audit-log-enable",
+    details: {
+      reason: "auto-enabled on first run by Mneme v1.11.1 (security-on-by-default). Disable with `mneme security off`.",
+      autoEnabled: true,
+      enabledAt: new Date().toISOString(),
+    },
+  });
+  return true;
+}
+
 /** Append an entry to the audit log. Best-effort: failures are caught
  *  + suppressed so we never block the actual operation being logged.
  *  Returns the entry's hmac (or null if logging disabled / errored). */

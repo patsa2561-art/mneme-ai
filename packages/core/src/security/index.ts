@@ -11,3 +11,4 @@ export * as auditLog from "./audit-log.js";
 export * as keyRotate from "./key-rotate.js";
 export * as scrubber from "./scrubber.js";
 export * as compliance from "./compliance.js";
+export * from "./auto.js";

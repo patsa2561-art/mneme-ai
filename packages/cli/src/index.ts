@@ -1119,6 +1119,28 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
+  // ── v1.11.1 — One-screen security dashboard for the user ──
+  program
+    .command("security [action]")
+    .description("Security dashboard: status (default) · on · off · verify. Shows audit log, model checksums (TOFU), scrubber, and FIPS posture in one screen.")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string | undefined, opts: { json?: boolean }) => {
+      const { securityCommand } = await import("./commands/security.js");
+      const allowed = ["status", "on", "off", "verify"];
+      const a = action ?? "status";
+      if (!allowed.includes(a)) {
+        ui.error(`Unknown security action "${a}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await securityCommand({
+          cwd: process.cwd(),
+          action: a as "status" | "on" | "off" | "verify",
+          json: opts.json,
+        }),
+      );
+    });
+
   // ── v1.11.0 — HMAC-chained tamper-evident audit log (banking/SOC2/PCI-DSS) ──
   program
     .command("audit-log <action>")

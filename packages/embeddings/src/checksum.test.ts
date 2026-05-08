@@ -3,11 +3,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { sha256File, listFiles, verifyCache, readPinnedChecksums, verifyAgainstPin } from "./checksum.js";
+import { sha256File, listFiles, verifyCache, readPinnedChecksums, verifyAgainstPin, tofuVerifyOrPin } from "./checksum.js";
 
 let tmp: string;
 
@@ -96,6 +96,71 @@ describe("checksum — readPinnedChecksums", () => {
   it("returns null for malformed JSON", () => {
     process.env["MNEME_PINNED_MODEL_CHECKSUMS"] = "not json";
     expect(readPinnedChecksums()).toBeNull();
+  });
+});
+
+describe("checksum — TOFU (Trust On First Use)", () => {
+  it("first call snapshots all cache files into the manifest", () => {
+    writeFileSync(join(tmp, "model.onnx"), "REAL");
+    writeFileSync(join(tmp, "tokenizer.json"), "{}");
+    const manifest = join(tmp, ".manifest.json");
+    const r = tofuVerifyOrPin(tmp, manifest);
+    expect(r.status).toBe("fresh-pin");
+    expect(r.filesPinned).toBe(2);
+    expect(r.mismatches).toEqual([]);
+
+    // Manifest persists with v:1 schema
+    const m = JSON.parse(readFileSync(manifest, "utf8"));
+    expect(m.v).toBe(1);
+    expect(m.files["model.onnx"].hash).toBeDefined();
+    expect(m.files["tokenizer.json"].hash).toBeDefined();
+    expect(m.pinnedByMnemeVersion).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it("second call verifies (status=verified) when files unchanged", () => {
+    writeFileSync(join(tmp, "model.onnx"), "REAL");
+    const manifest = join(tmp, ".manifest.json");
+    tofuVerifyOrPin(tmp, manifest);
+    const r2 = tofuVerifyOrPin(tmp, manifest);
+    expect(r2.status).toBe("verified");
+    expect(r2.filesPinned).toBe(1);
+    expect(r2.mismatches).toEqual([]);
+  });
+
+  it("detects tampered file as status=tampered (no silent re-pin)", () => {
+    writeFileSync(join(tmp, "model.onnx"), "REAL");
+    const manifest = join(tmp, ".manifest.json");
+    tofuVerifyOrPin(tmp, manifest);
+    // Tamper after pinning
+    writeFileSync(join(tmp, "model.onnx"), "FAKE");
+    const r2 = tofuVerifyOrPin(tmp, manifest);
+    expect(r2.status).toBe("tampered");
+    expect(r2.mismatches.length).toBe(1);
+    expect(r2.mismatches[0].path).toBe("model.onnx");
+  });
+
+  it("detects missing pinned file", () => {
+    writeFileSync(join(tmp, "model.onnx"), "REAL");
+    const manifest = join(tmp, ".manifest.json");
+    tofuVerifyOrPin(tmp, manifest);
+    rmSync(join(tmp, "model.onnx"));
+    const r2 = tofuVerifyOrPin(tmp, manifest);
+    expect(r2.status).toBe("tampered");
+    expect(r2.mismatches[0].actual).toBe("(missing)");
+  });
+
+  it("returns no-files for empty cache", () => {
+    const r = tofuVerifyOrPin(tmp, join(tmp, ".manifest.json"));
+    expect(r.status).toBe("no-files");
+    expect(r.filesPinned).toBe(0);
+  });
+
+  it("treats corrupt manifest as tampered (refuses silent re-pin)", () => {
+    writeFileSync(join(tmp, "model.onnx"), "REAL");
+    const manifest = join(tmp, ".manifest.json");
+    writeFileSync(manifest, "this is not json");
+    const r = tofuVerifyOrPin(tmp, manifest);
+    expect(r.status).toBe("tampered");
   });
 });
 

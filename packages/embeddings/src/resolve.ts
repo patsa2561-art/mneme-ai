@@ -25,6 +25,9 @@ export interface ResolveOptions {
   onBundledProgress?: NonNullable<
     ConstructorParameters<typeof BundledEmbedder>[0]
   >["onProgress"];
+  /** v1.11.1 — TOFU manifest path (per-repo, e.g. `<repo>/.mneme/model-checksums.json`).
+   *  When provided, the bundled embedder pins/verifies the cache. */
+  tofuManifestPath?: string;
 }
 
 export async function resolveEmbedder(opts: ResolveOptions = {}): Promise<EmbeddingProvider> {
@@ -48,7 +51,7 @@ export async function resolveEmbedder(opts: ResolveOptions = {}): Promise<Embedd
   }
 
   if (provider === "bundled") {
-    return new BundledEmbedder({ model: opts.model, onProgress: opts.onBundledProgress });
+    return new BundledEmbedder({ model: opts.model, onProgress: opts.onBundledProgress, tofuManifestPath: opts.tofuManifestPath });
   }
 
   if (provider === "hash") {
@@ -91,7 +94,7 @@ export async function resolveEmbedder(opts: ResolveOptions = {}): Promise<Embedd
   //        first-run time budget.
   //      - if verify fails later (offline run on a fresh machine), the
   //        index command surfaces a clear error + suggests --embedder hash.
-  return new BundledEmbedder({ model: opts.model, onProgress: opts.onBundledProgress });
+  return new BundledEmbedder({ model: opts.model, onProgress: opts.onBundledProgress, tofuManifestPath: opts.tofuManifestPath });
 
   // 4. Hash is the FINAL escape hatch — only chosen by explicit `--embedder
   //    hash` or by callers that don't want network/download. Auto-detect

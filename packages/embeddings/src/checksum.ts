@@ -106,6 +106,130 @@ export function readPinnedChecksums(): ChecksumExpectation | null {
   }
 }
 
+/**
+ * v1.11.1 — Trust-On-First-Use (TOFU) auto-pin.
+ *
+ * Reads/writes a SHA-256 checksum manifest at `<repoRoot>/.mneme/model-checksums.json`.
+ * Same model SSH host keys use: first time we see the file, we trust + record;
+ * every subsequent load verifies against the recorded hash.
+ *
+ * Wisdom check: world-class default? YES.
+ *   - We don't ship hardcoded hashes (they'd go stale on every model upgrade).
+ *   - We don't trust the CDN forever (typical naive default).
+ *   - TOFU = trust the first download, refuse silent post-install changes.
+ *   - User can re-pin by deleting `.mneme/model-checksums.json` (intentional act).
+ */
+
+import { dirname } from "node:path";
+import { mkdirSync } from "node:fs";
+
+interface ManifestRecord {
+  /** sha256 hex, lowercase */
+  hash: string;
+  /** ISO-8601 of first observation */
+  pinnedAt: string;
+}
+
+interface ManifestFile {
+  /** Manifest schema version */
+  v: 1;
+  /** Map relative-cache-path → record */
+  files: Record<string, ManifestRecord>;
+  /** Source for audit purposes — which Mneme version pinned these */
+  pinnedByMnemeVersion: string;
+}
+
+export interface TofuResult {
+  /** "fresh-pin" = first observation, manifest written now.
+   *  "verified" = previously-pinned hashes all match.
+   *  "tampered" = previously-pinned hash mismatch (DO NOT load model). */
+  status: "fresh-pin" | "verified" | "tampered" | "no-files";
+  manifestPath: string;
+  filesPinned: number;
+  mismatches: Array<{ path: string; expected: string; actual: string }>;
+}
+
+const MNEME_VERSION_FOR_MANIFEST = "1.11.1";
+
+/**
+ * Verify or pin the cache directory contents into a TOFU manifest.
+ * Pure logic — no env-var reading, no exceptions for "tampered" case
+ * (caller decides whether to throw).
+ */
+export function tofuVerifyOrPin(
+  cacheRoot: string,
+  manifestPath: string,
+): TofuResult {
+  const files = listFiles(cacheRoot);
+  if (files.length === 0) {
+    return { status: "no-files", manifestPath, filesPinned: 0, mismatches: [] };
+  }
+
+  if (existsSync(manifestPath)) {
+    // Verify mode
+    let manifest: ManifestFile;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ManifestFile;
+    } catch {
+      // Corrupt manifest — refuse to silently re-pin (could mask tampering).
+      return {
+        status: "tampered",
+        manifestPath,
+        filesPinned: 0,
+        mismatches: [{ path: manifestPath, expected: "(valid JSON manifest)", actual: "(corrupt)" }],
+      };
+    }
+    const mismatches: TofuResult["mismatches"] = [];
+    for (const [relPath, record] of Object.entries(manifest.files)) {
+      const full = `${cacheRoot.replace(/[\\/]+$/, "")}/${relPath}`;
+      if (!existsSync(full)) {
+        mismatches.push({ path: relPath, expected: record.hash, actual: "(missing)" });
+        continue;
+      }
+      const actual = sha256File(full).toLowerCase();
+      if (actual !== record.hash.toLowerCase()) {
+        mismatches.push({ path: relPath, expected: record.hash, actual });
+      }
+    }
+    if (mismatches.length > 0) {
+      return { status: "tampered", manifestPath, filesPinned: 0, mismatches };
+    }
+    return {
+      status: "verified",
+      manifestPath,
+      filesPinned: Object.keys(manifest.files).length,
+      mismatches: [],
+    };
+  }
+
+  // Fresh-pin mode: snap every cache file's hash + write manifest atomically.
+  const records: Record<string, ManifestRecord> = {};
+  const now = new Date().toISOString();
+  for (const rel of files) {
+    const full = `${cacheRoot.replace(/[\\/]+$/, "")}/${rel}`;
+    records[rel] = { hash: sha256File(full).toLowerCase(), pinnedAt: now };
+  }
+  const manifest: ManifestFile = {
+    v: 1,
+    files: records,
+    pinnedByMnemeVersion: MNEME_VERSION_FOR_MANIFEST,
+  };
+  if (!existsSync(dirname(manifestPath))) {
+    mkdirSync(dirname(manifestPath), { recursive: true });
+  }
+  // Atomic temp+rename so a partial write can't poison the manifest.
+  const { renameSync, writeFileSync } = require("node:fs") as typeof import("node:fs");
+  const tmp = `${manifestPath}.tmp`;
+  writeFileSync(tmp, JSON.stringify(manifest, null, 2), { encoding: "utf8", mode: 0o600 });
+  renameSync(tmp, manifestPath);
+  return {
+    status: "fresh-pin",
+    manifestPath,
+    filesPinned: Object.keys(records).length,
+    mismatches: [],
+  };
+}
+
 /** All-in-one helper: check the cache root against pinned checksums, if
  *  the user has set them. Throws on mismatch. No-op when unset. */
 export function verifyAgainstPin(cacheRoot: string): void {

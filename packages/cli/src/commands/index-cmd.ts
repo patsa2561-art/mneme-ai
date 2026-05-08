@@ -1,4 +1,4 @@
-import { git, indexer, store, util } from "@mneme-ai/core";
+import { git, indexer, store, util, security } from "@mneme-ai/core";
 import { resolveEmbedder } from "@mneme-ai/embeddings";
 import { dbPath } from "../paths.js";
 import { readConfig, writeConfig } from "../config.js";
@@ -32,6 +32,19 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
 
   const meta = await git.getRepoMeta(opts.cwd);
   const cfg = readConfig(meta.rootPath);
+
+  // v1.11.1 — lazy auto-bootstrap for users upgrading from v1.10.0 who
+  // never re-ran `mneme init`. Idempotent + best-effort.
+  if (process.env["MNEME_NO_AUTO_SECURITY"] !== "1") {
+    try {
+      const boot = security.autoBootstrap(meta.rootPath);
+      if (boot.auditLogAutoEnabled) {
+        ui.dim("");
+        ui.success(`Security on by default · audit log auto-enabled (HMAC-SHA-256${boot.fipsActive ? " · FIPS-validated" : ""})`);
+        ui.dim("  See `mneme security status` · disable with `mneme security off`.");
+      }
+    } catch { /* best-effort */ }
+  }
 
   // ── --analyze: don't re-index. Inspect what we already have. ──────────
   if (opts.analyze) {
@@ -127,10 +140,16 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   // Bundled-model download progress hook — keeps the user informed during
   // the one-time ~25MB ONNX fetch on first run.
   let lastDl = 0;
+  // v1.11.1 — TOFU manifest path is per-repo so different projects can pin
+  // different models independently. Auto-on unless user opts out.
+  const tofuManifestPath = process.env["MNEME_NO_AUTO_SECURITY"] === "1"
+    ? undefined
+    : `${meta.rootPath}/.mneme/model-checksums.json`;
   const embedder = await resolveEmbedder({
     provider: noLlm ? "hash" : (opts.embedder ?? cfg.embeddings.provider),
     model: noLlm ? undefined : (opts.model ?? cfg.embeddings.model),
     baseUrl: cfg.embeddings.baseUrl,
+    tofuManifestPath,
     onBundledProgress: (info) => {
       const now = Date.now();
       if (now - lastDl < 250 && info.status !== "done") return;
@@ -178,6 +197,7 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
       ui.dim(`  → falling back to bundled WASM model (no setup needed).`);
       const { BundledEmbedder } = await import("@mneme-ai/embeddings");
       activeEmbedder = new BundledEmbedder({
+        tofuManifestPath,
         onProgress: (info: { status: string; loaded?: number; total?: number; file?: string }) => {
           const fileLabel = info.file ? ` ${info.file}` : "";
           if (info.status === "progress" && info.loaded != null && info.total != null && info.total > 0) {

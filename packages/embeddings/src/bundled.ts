@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import type { EmbeddingProvider } from "@mneme-ai/core";
-import { verifyAgainstPin } from "./checksum.js";
+import { verifyAgainstPin, tofuVerifyOrPin } from "./checksum.js";
 
 export interface BundledOptions {
   /** HuggingFace repo id. all-MiniLM-L6-v2 = 25MB / 384-dim — best size/quality. */
@@ -25,6 +25,10 @@ export interface BundledOptions {
   cacheDir?: string;
   /** Hook for download/load progress (lazy load can take ~5–60s on cold start). */
   onProgress?: (info: { status: string; loaded?: number; total?: number; file?: string }) => void;
+  /** v1.11.1 — TOFU manifest path (per-repo). When provided, the cache is
+   *  pinned on first load and verified on subsequent loads. Tampered cache
+   *  → throws. Disabled if undefined. */
+  tofuManifestPath?: string;
 }
 
 const DEFAULT_MODEL = "Xenova/all-MiniLM-L6-v2";
@@ -46,6 +50,7 @@ export class BundledEmbedder implements EmbeddingProvider {
   private readonly model: string;
   private readonly cacheDir: string;
   private readonly onProgress?: BundledOptions["onProgress"];
+  private readonly tofuManifestPath?: string;
   private extractor: FeatureExtractor | null = null;
   private loadPromise: Promise<FeatureExtractor> | null = null;
 
@@ -54,6 +59,7 @@ export class BundledEmbedder implements EmbeddingProvider {
     this.dimensions = DEFAULT_DIMS;
     this.cacheDir = opts.cacheDir ?? defaultCacheDir();
     this.onProgress = opts.onProgress;
+    this.tofuManifestPath = opts.tofuManifestPath;
     this.name = `bundled:${this.model}`;
   }
 
@@ -132,21 +138,34 @@ export class BundledEmbedder implements EmbeddingProvider {
     transformers.env.cacheDir = this.cacheDir;
     transformers.env.allowRemoteModels = true;
 
-    // v1.11.0 security hardening: if MNEME_PINNED_MODEL_CHECKSUMS is set,
-    // verify cached model files match the pinned SHA-256s. No-op otherwise
-    // (default users keep prior behaviour). This runs BEFORE the pipeline
-    // is constructed so we never exec a tampered model. Note: on a fresh
-    // download we'll verify after the pipeline writes files — call this
-    // again post-pipeline-init if you want pre-execution guarantees.
+    // v1.11.0 — explicit env-pinned checksums (compliance environments).
     try { verifyAgainstPin(this.cacheDir); } catch (err) {
       throw err; // surface clearly — don't swallow integrity violations
+    }
+
+    // v1.11.1 — TOFU pre-pipeline check. If the cache already exists from
+    // a prior run, verify against our recorded manifest BEFORE the
+    // pipeline executes any model code. (Fresh download is pinned post-
+    // pipeline below — once the cache is on disk.)
+    if (this.tofuManifestPath) {
+      const pre = tofuVerifyOrPin(this.cacheDir, this.tofuManifestPath);
+      if (pre.status === "tampered") {
+        const lines = pre.mismatches
+          .slice(0, 3)
+          .map((m) => `  ${m.path}: expected ${m.expected.slice(0, 12)}…, actual ${m.actual.slice(0, 12)}…`)
+          .join("\n");
+        throw new Error(
+          `Bundled-model TOFU verification FAILED — model files changed since first install.\n${lines}\n` +
+            `Refusing to load possibly-tampered model. To intentionally re-pin, delete: ${this.tofuManifestPath}`,
+        );
+      }
     }
 
     // Force the WASM execution provider so we never touch onnxruntime-node
     // (the native ONNX backend has no Windows-ARM64 binary; WASM ships in
     // the package itself and runs on every Node platform).
     const onProgress = this.onProgress;
-    return await transformers.pipeline("feature-extraction", this.model, {
+    const pipeline = await transformers.pipeline("feature-extraction", this.model, {
       device: "wasm",
       progress_callback: onProgress
         ? (info: Record<string, unknown>) =>
@@ -158,6 +177,16 @@ export class BundledEmbedder implements EmbeddingProvider {
             })
         : undefined,
     });
+
+    // v1.11.1 — TOFU post-pipeline pin. After the pipeline downloaded any
+    // missing files, snapshot hashes if no manifest existed yet. Best-effort:
+    // a failure here doesn't break embedding (the user's already past the
+    // download), but the next load will get a stronger guarantee.
+    if (this.tofuManifestPath) {
+      try { tofuVerifyOrPin(this.cacheDir, this.tofuManifestPath); } catch { /* best-effort */ }
+    }
+
+    return pipeline;
   }
 }
 
