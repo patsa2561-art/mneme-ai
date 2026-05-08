@@ -24,7 +24,13 @@ export type ToolCategory =
   | "meta";      // wisdom, manifesto, capabilities, advanced
 
 /** Wrapped response — every tool returns this shape so AI gets data + wisdom
- *  + cross-references in one consistent envelope. */
+ *  + cross-references + Second-Brain teaching in one consistent envelope.
+ *
+ *  Architectural intent: the AI tool is the BASE REACTOR. Mneme is the
+ *  NUCLEAR CORE. Every tool call doesn't just return data — it teaches the
+ *  AI how to interpret + present + COMPOSE the result with other atoms,
+ *  triggering a chain reaction of wisdom across the AI's session.
+ */
 export interface ToolResponse<TData = unknown> {
   /** Structured data the AI parses + uses */
   data: TData;
@@ -39,6 +45,51 @@ export interface ToolResponse<TData = unknown> {
     level: "high" | "medium" | "low";
     notes?: string;
   };
+  /** Second Brain layer — teaches the AI HOW to use this result.
+   *  This is what triggers the chain reaction of wisdom. */
+  secondBrain?: SecondBrain;
+}
+
+/** Second Brain — meta-instructions embedded in every tool response.
+ *  Sets off the chain reaction: AI sees compose hints, fires more tool
+ *  calls, those compositions become molecules, frequent molecules promote
+ *  to compounds. The system gets smarter with every interaction. */
+export interface SecondBrain {
+  /** How the AI should PRESENT this result to the user.
+   *  Example: "Render top-5 fading areas as a horizontal bar chart with
+   *  scores 0-100. Color scores < 30 in red. Don't show raw JSON." */
+  presentation?: string;
+  /** Suggested molecules — atom combinations that yield deeper insight.
+   *  AI student can fire these in parallel for richer answers. */
+  compose?: ComposeSuggestion[];
+  /** Lifecycle metadata — for tracking new combinations and auto-promoting
+   *  frequent ones into named compounds. */
+  lifecycle?: ToolLifecycle;
+}
+
+/** A suggested composition — "if you ran THIS atom, the natural next step
+ *  is to fire THESE atoms together to form THIS molecule." */
+export interface ComposeSuggestion {
+  /** Name for the resulting molecule, e.g. "succession_plan" */
+  molecule: string;
+  /** The atoms (other Mneme tool names) that form this molecule together */
+  atoms: string[];
+  /** When the AI should suggest / auto-fire this composition */
+  when: string;
+  /** Optional: a sample answer template the AI can adapt */
+  example?: string;
+}
+
+/** Lifecycle data for tracking new combinations + promoting them. */
+export interface ToolLifecycle {
+  /** True if this combination is novel for the current repo's library */
+  isNewCombination?: boolean;
+  /** If non-null, the AI should ASK the user whether to save this
+   *  combination as a named compound under this alias */
+  suggestSaveAs?: string;
+  /** How many times the user has run this exact combination —
+   *  used by auto-promotion logic (≥3 = promote to compound) */
+  invocationCount?: number;
 }
 
 /** Runtime context passed to every handler — single source of truth.

@@ -61,6 +61,11 @@ export const memoryTools: MnemeTool[] = [
             ? ["mneme.memory.why", "mneme.insights.story", "mneme.people.who_knows"]
             : ["mneme.memory.search_commits"],
         confidence: { level: confidence },
+        secondBrain: {
+          presentation:
+            "Quote `wisdom` directly. Cite each commit hash inline like `(per a3f9b21)` — never invent hashes. " +
+            "If citations are < 3, tell the user the answer is best-effort and offer to widen the search.",
+        },
       };
     },
   },
@@ -113,6 +118,11 @@ export const memoryTools: MnemeTool[] = [
           ? ["mneme.people.atrophy", "mneme.people.lineage", "mneme.insights.time_machine"]
           : [],
         confidence: { level: top.length ? "high" : "low" },
+        secondBrain: {
+          presentation:
+            "Lead with the dominant author + commit hash. Then list the top 3 originating commits as bullet points. " +
+            "If the user asks 'why is this the way it is?' — proactively offer file_archaeology composition.",
+        },
       };
     },
   },
@@ -401,6 +411,11 @@ export const memoryTools: MnemeTool[] = [
         wisdom,
         followUp: matches.length ? ["mneme.insights.premortem", "mneme.audit.certify"] : [],
         confidence: { level: "medium" },
+        secondBrain: {
+          presentation:
+            "Open with the verdict (LOW/MED/HIGH) in bold. If matches > 0, list each historical incident with its date " +
+            "and the overlapping files. If verdict is HIGH, explicitly recommend extra review before merge.",
+        },
       };
     },
   },

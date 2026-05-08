@@ -29,7 +29,9 @@ import {
 
 import { buildRuntime } from "./tools/_runtime.js";
 import { buildAllTools, buildToolMap } from "./tools/_registry.js";
-import { toCallResult, toErrorResult, type MnemeTool } from "./tools/_types.js";
+import { toCallResult, toErrorResult, type MnemeTool, type ToolResponse, type ToolLifecycle } from "./tools/_types.js";
+import { moleculesContaining } from "./tools/_molecules.js";
+import { recordInvocation } from "./tools/_lifecycle.js";
 
 export interface McpOptions {
   cwd: string;
@@ -57,6 +59,36 @@ function toMcpTools(all: MnemeTool[]): Tool[] {
   }));
 }
 
+/** Auto-enrich a tool response with Second Brain layer:
+ *    - compose: which molecules this atom participates in
+ *    - lifecycle: is this a new combination? should we suggest saving?
+ *
+ *  If the handler already populated `secondBrain`, we MERGE — handler's
+ *  presentation hint wins, and we add compose/lifecycle if missing. */
+function enrichWithSecondBrain(
+  response: ToolResponse,
+  toolName: string,
+  repoRoot: string,
+): ToolResponse {
+  const compose = moleculesContaining(toolName);
+  let lifecycle: ToolLifecycle | undefined;
+  try {
+    lifecycle = recordInvocation(repoRoot, toolName);
+  } catch {
+    // Lifecycle is best-effort — never fail a tool call because of it.
+    lifecycle = undefined;
+  }
+  const existing = response.secondBrain;
+  return {
+    ...response,
+    secondBrain: {
+      presentation: existing?.presentation,
+      compose: existing?.compose && existing.compose.length > 0 ? existing.compose : compose,
+      lifecycle: existing?.lifecycle ?? lifecycle,
+    },
+  };
+}
+
 export async function startMcpServer(opts: McpOptions): Promise<void> {
   const runtime = await buildRuntime(opts.cwd);
   const allTools = buildAllTools();
@@ -81,7 +113,10 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     try {
       const args = (req.params.arguments ?? {}) as Record<string, unknown>;
       const response = await tool.handler(runtime, args);
-      return toCallResult(response);
+      // Second Brain — auto-enrich every response with composition hints
+      // + lifecycle tracking. The chain reaction starts here.
+      const enriched = enrichWithSecondBrain(response, tool.name, runtime.meta.rootPath);
+      return toCallResult(enriched);
     } catch (err) {
       return toErrorResult(
         `${req.params.name} failed: ${(err as Error).message}. ` +

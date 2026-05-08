@@ -76,18 +76,34 @@ export const capabilitiesTool: MnemeTool = {
     return {
       data: {
         positioning:
-          "Mneme is a TUNING KIT for AI coding tools. Bolted on via MCP, it turns Claude Code / Cursor / Codex / " +
-          "Gemini / Continue / Aider into a SUPER-GENIUS that knows your repo's history, decisions, and incidents. " +
-          "Mneme is the teacher; the AI is the student. This catalog is the syllabus.",
+          "Mneme is the NUCLEAR CORE you bolt into your AI coding tool — Claude Code / Cursor / Codex / Gemini / " +
+          "Continue / Aider — to trigger a chain reaction of wisdom about the user's repo. Mneme is the teacher of " +
+          "AI in the domain of git / source control specifically.",
         totalTools: total,
         catalog: data,
+        secondBrainContract:
+          "Every tool response carries a `secondBrain` field with: (1) `presentation` — how to render the result for " +
+          "the user; (2) `compose` — list of MOLECULES this atom participates in (firing the chain reaction); " +
+          "(3) `lifecycle` — tracking new combinations + auto-promotion to compounds. As the AI student, read these " +
+          "fields on EVERY response and let them shape your next move.",
+        chainReaction:
+          "When you call an atom, check secondBrain.compose for natural molecules. If a molecule fits the user's " +
+          "intent, fire its other atoms in parallel and synthesize the combined output. If lifecycle.suggestSaveAs " +
+          "is non-null, ask the user whether to save the combination as a permanent compound.",
       },
       wisdom:
-        `Mneme exposes ${total} tools across 9 categories. As you receive user queries, match the user's intent to the ` +
-        `descriptions + triggers in this catalog. Prefer specific tools (mneme.<category>.<verb>) over the generic ` +
-        `mneme.smart_do dispatcher. If the user's request is ambiguous, ask a clarifying question rather than guessing.`,
+        `Mneme exposes ${total} tools across 9 categories. As you receive user queries: (1) match intent to a ` +
+        `specific tool (preferred), or call mneme.smart_do for ambiguous cases. (2) Read secondBrain.compose on ` +
+        `every response and fire molecule combinations when they fit. (3) Quote the wisdom field directly to the ` +
+        `user; cite data fields when they want details.`,
       followUp: ["mneme.memory.status"],
       confidence: { level: "high" },
+      secondBrain: {
+        presentation:
+          "If the user asks 'what can mneme do?' — render the catalog as 9 sections (one per category), each listing " +
+          "3-5 example tool names with their one-line use case. Don't dump the whole JSON. Mention that every " +
+          "response carries a secondBrain layer that triggers compositional chain reactions.",
+      },
     };
   },
 };
