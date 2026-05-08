@@ -39,6 +39,7 @@
 - [[Compose-And-Compiler]] · *v0.41 NL → plan*
 - [[Second-Brain]] · *v0.42 library + executor*
 - [[Holy-Grails]] · *v0.43 heartbeat · rewind · dna-fold*
+- [[QSAC]] · *🆕 v0.44-v0.50 license-grade audit certificate*
 - [[Innovations]] · *deep-dive every command*
 - [[Novel-Algorithms]] · *TDWE / RACB / ADS / CGAR*
 
