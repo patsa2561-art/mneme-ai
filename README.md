@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>μνήμη · Mneme</h1>
+<img src="./assets/title.svg" alt="μνήμη · Mneme" width="700">
 
 <p>
   <img src="https://img.shields.io/badge/%F0%9F%94%8A%20Pronounced-NEE--meh-c084fc?style=for-the-badge&labelColor=4c1d95" alt="🔊 Pronounced NEE-meh" height="32">
@@ -79,7 +79,11 @@ https://github.com/patsa2561-art/mneme-ai
 Your AI will run the install, configure its own MCP wiring, and tell you when it's ready. You don't open a JSON file. You don't memorize a single command.
 
 <details>
-<summary><b>Prefer to install it yourself?</b> (3 commands)</summary>
+<summary><b>Prefer to install it yourself?</b> (pick your favorite path)</summary>
+
+<br/>
+
+**🟢 Option 1 — npm global (most common)**
 
 ```bash
 npm install -g mneme-ai
@@ -87,7 +91,32 @@ cd <your-repo> && mneme init && mneme index    # ~90s for 5k commits
 mneme mcp --install                             # auto-detects Claude Code / Cursor / Continue
 ```
 
-Then restart your AI tool. Done.
+**🟡 Option 2 — npx (no install, runs once)**
+
+```bash
+cd <your-repo>
+npx mneme-ai init && npx mneme-ai index
+npx mneme-ai mcp --install
+```
+
+**🔵 Option 3 — Docker (no Node.js needed)**
+
+```bash
+cd <your-repo>
+docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme init
+docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme index
+docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme mcp --install
+```
+
+After any of the three options: **restart your AI tool once.** Done.
+
+---
+
+**Update later (no npm-cache headaches):**
+
+```bash
+mneme upgrade        # one command, replaces npm uninstall + reinstall dance
+```
 
 </details>
 
