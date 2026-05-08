@@ -33,6 +33,6 @@
     "node": ">=22.13.0 <25.0.0"
   },
   "dependencies": {
-    "@mneme-ai/core": "1.1.0"
+    "@mneme-ai/core": "1.1.1"
   }
 }

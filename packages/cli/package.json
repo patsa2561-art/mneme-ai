@@ -29,10 +29,10 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@mneme-ai/core": "1.1.0",
-    "@mneme-ai/correlator": "1.1.0",
-    "@mneme-ai/embeddings": "1.1.0",
-    "@mneme-ai/mcp": "1.1.0",
+    "@mneme-ai/core": "1.1.1",
+    "@mneme-ai/correlator": "1.1.1",
+    "@mneme-ai/embeddings": "1.1.1",
+    "@mneme-ai/mcp": "1.1.1",
     "commander": "^12.1.0",
     "kleur": "^4.1.5"
   },
