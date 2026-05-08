@@ -19,9 +19,9 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/MCP%20tools-93-c084fc" alt="93 MCP tools">
+  <img src="https://img.shields.io/badge/MCP%20tools-99-c084fc" alt="99 MCP tools">
   <img src="https://img.shields.io/badge/molecules-20-fbbf24" alt="20 molecules">
-  <img src="https://img.shields.io/badge/tests-2339%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-3096%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
 </p>
 
@@ -54,51 +54,36 @@
 ---
 
 <details>
-<summary><h2 style="display:inline">⚙ Why Mneme exists</h2></summary>
+<summary><h2 style="display:inline">⚡ Why Mneme exists</h2></summary>
 
-You're already using **Claude Code** — or **Cursor**, **Codex**, **Gemini**, **Continue**. Your AI writes fresh code beautifully. Fast. Fluent. Mostly correct.
+Your AI coding tool is brilliant but **amnesiac**. It never saw why JWT got rolled back in 2024, why the auth refactor went sideways, or who to pair with on `payments.ts`. So it guesses — fluently, plausibly, wrongly.
 
-Then you ask it: *"Why does `auth.ts` use JWT? Didn't we try that in 2024 and roll it back?"* — and watch it shrug. Your AI never saw your past. It guesses.
-
-That's the gap Mneme fills.
-
-Think of your AI tool as a **stock car off the showroom floor** — fast, reliable, generic. Mneme is the **Stage-3 tune** you bolt onto it. Same engine. Same body. Different power band entirely.
-
-| 🚗 Stock AI (no Mneme) | 🏎 Tuned AI (Mneme bolted on) |
-|---|---|
-| Invents *plausible-sounding* answers from syntax alone | Cites `commit a3f9b21` from 2024-08 — verbatim |
-| Says *"no change to db.ts"* — the diff has 3 lines in db.ts. You merge. Production breaks. | Catches its own gaslighting before you ever see it |
-| Multiple AIs touch `git log`. Nobody grades the homework. | **Mneme grades every AI commit on 5 axes**. PASS · WARN · FAIL. |
-| Onboarding = interview the senior engineers | History is now in the AI's hands, instantly |
-
-Same AI. Same hands on the keyboard. The difference is **what your AI knows** — and **whether anyone is grading its work**.
-
-</details>
-
----
-
-<details>
-<summary><h2 style="display:inline">⚡ The 4-second pitch</h2></summary>
-
-> Your AI coding tool is brilliant but **amnesiac** — it never saw your repo's history. Why JWT got rolled back in 2024. Why the auth refactor went sideways. Who you should pair with on `payments.ts`. Mneme is the **memory layer** that fixes that.
+**Mneme is the memory layer that fixes that.**
 
 ```
    STOCK AI ──→  Mneme MCP  ──→  AI that knows your repo's history
-                  98+ tools         every commit · every regret · every decision
+                  99+ tools         every commit · every regret · every decision
 ```
+
+| 🚗 Stock AI | 🏎 With Mneme |
+|---|---|
+| Invents plausible answers from syntax | Cites `commit a3f9b21` from 2024-08 — verbatim |
+| *"No change to db.ts"* — actually 3 lines changed → prod breaks | Catches its own gaslighting before you see it |
+| Many AIs touch `git log`. Nobody grades the homework. | Grades every AI commit on 5 axes — PASS · WARN · FAIL |
+| Onboarding = interview senior engineers | History lives in the AI's hands, instantly |
 
 **The latest release ships 4 firsts the MCP ecosystem has never seen:**
 
-|  | First | What it actually does |
+|  | First | What it does |
 |---|---|---|
-| 🛡 | **MCP Shield** | The first reusable defensive runtime for *any* MCP server. Add `withShield(handler)` and get HMAC-chained audit log + prompt-injection scrubber + rate-limit + reputation tracking — for free. |
-| 📐 | **AI-Memory-Bench** | The first reproducible benchmark for "AI memory layers". *Numbers, not vibes.* Measures hallucination rate across citation / attribution / API categories with Wilson 95% lower-bound. |
-| ⚖ | **Constitutional Gate** | Constitutional AI was a *training-time* idea. We made it a *runtime* gate. AI proposes code → Mneme checks repo-history MUST-NOT rules → REFUSE + rewrite hint. The AI literally cannot suggest things contradicting your repo's lessons. |
-| 🧬 | **Dynamic MCP** | Every other MCP server has a static tool surface. Mneme's surface is **repo-dependent.** Detects Stripe / Kafka / React / Postgres / Express / FastAPI / Next / GraphQL → spawns ecosystem-specific tools tailored to *your* code, with descriptions augmented by **tribal knowledge** from your repo's git history (canonical paths · deprecated paths · expert authors · past incidents · constitution rules). |
+| 🛡 | **MCP Shield** | A reusable defensive runtime for *any* MCP server — `withShield(handler)` adds HMAC audit log, prompt-injection scrubber, rate-limit, reputation tracking. |
+| 📐 | **AI-Memory-Bench** | Reproducible benchmark for AI memory layers — measures hallucination across citation / attribution / API with Wilson 95% lower-bound. *Numbers, not vibes.* |
+| ⚖ | **Constitutional Gate** | Constitutional AI as a *runtime* gate, not training-time. AI proposes code → Mneme checks repo-history MUST-NOTs → REFUSE + rewrite hint. |
+| 🧬 | **Dynamic MCP** | Every other MCP server has a static tool surface; Mneme's is **repo-dependent**. Detects Stripe / Kafka / React / Postgres / FastAPI / Next / GraphQL → spawns ecosystem-specific tools augmented with your repo's tribal knowledge. |
 
-> **Bank-grade by default.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Audit log auto-on. Prompt-injection scrubber auto-on. WASM model checksums auto-pinned. Zero typing for the user — your AI agent installs Mneme; security comes pre-armed.
+> **Bank-grade, on by default.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Audit log, prompt-injection scrubber, and WASM checksums auto-on. Your AI agent installs Mneme; security comes pre-armed.
 
-> **2833 tests passing · 98+ MCP tools · MIT · zero telemetry · works offline.**
+> **3096 tests passing · 99+ MCP tools · MIT · zero telemetry · works offline.**
 
 </details>
 
