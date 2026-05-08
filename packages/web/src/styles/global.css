@@ -2421,6 +2421,121 @@ body::before {
   opacity: 1 !important;
 }
 
+/* ─── v1.17.3 — Live-mode UX (GitHub/GitLab fetch path) ────────────── */
+
+/* Header LIVE pill — green dot + monospace, distinct from yellow synthetic-demo */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  font-family: var(--font-mono, monospace);
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.10);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.live-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.7);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* "—" placeholder for fields we deliberately can't compute in live mode */
+.detail-na {
+  color: rgba(232, 232, 255, 0.4);
+  font-weight: 600;
+  cursor: help;
+  border-bottom: 1px dotted rgba(232, 232, 255, 0.3);
+}
+.detail-na small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  opacity: 0.75;
+  margin-left: 4px;
+}
+
+/* Live-mode note inside the influence ladder */
+.ladder-livenote {
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+  background: rgba(52, 211, 153, 0.07);
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  border-radius: 8px;
+  color: rgba(232, 232, 255, 0.82);
+  line-height: 1.55;
+}
+.ladder-livenote b { color: #34d399; }
+.ladder-livenote code {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.84em;
+}
+
+/* Banner above Ecosystems / DNA tabs — clarifies they're showcases */
+.showcase-banner {
+  margin: -2px 0 14px !important;
+  padding: 11px 14px;
+  font-size: 0.86rem !important;
+  background: rgba(96, 165, 250, 0.07);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 8px;
+  color: rgba(232, 232, 255, 0.85) !important;
+  line-height: 1.55 !important;
+}
+.showcase-banner b { color: #60a5fa; }
+.showcase-banner code {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.86em;
+}
+
+/* Heatmap empty state — bigger / friendlier in live mode */
+.heatmap-empty {
+  text-align: center;
+  padding: 60px 30px;
+  max-width: 580px;
+  margin: 60px auto;
+}
+.heatmap-empty h3 {
+  color: rgba(232, 232, 255, 0.92);
+  margin-bottom: 14px;
+}
+.heatmap-empty p {
+  margin: 8px 0;
+  line-height: 1.6;
+  color: rgba(232, 232, 255, 0.72);
+}
+.heatmap-empty-cta {
+  margin-top: 16px !important;
+  padding: 14px;
+  background: rgba(192, 132, 252, 0.07);
+  border: 1px solid rgba(192, 132, 252, 0.22);
+  border-radius: 8px;
+}
+.heatmap-empty code {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.86em;
+}
+
 /* DNA byline */
 .dna-byline {
   font-size: 0.92rem;

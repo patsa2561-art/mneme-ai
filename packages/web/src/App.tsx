@@ -138,6 +138,8 @@ export function App() {
         onLoadClick={() => setLoadOpen(true)}
         onHelpClick={() => setWelcomeOpen(true)}
         synthetic={!!raw?._demo_synthetic}
+        liveMode={!!raw?._liveMode}
+        liveSource={raw?._liveSource}
       />
 
       {view === "graph" && (

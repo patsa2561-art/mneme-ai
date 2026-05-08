@@ -70,6 +70,24 @@ export function AtrophyHeatmap({
 }: Props) {
   const heat = useMemo(() => buildHeat(data), [data]);
   if (heat.files.length === 0 || heat.authors.length === 0) {
+    if (data._liveMode) {
+      return (
+        <div className="heatmap-empty">
+          <h3>Atrophy heatmap needs file-level data.</h3>
+          <p>
+            The {data._liveSource ?? "git"} REST API doesn't expose per-commit
+            file diffs cheaply, so we don't fetch them in live preview (would
+            burn the unauthenticated rate limit on a single repo).
+          </p>
+          <p className="heatmap-empty-cta">
+            For the full heatmap on this repo, ask your AI agent: <em>"install
+            Mneme, run <code>mneme index</code>, then dump <code>nervous-system
+            --json</code>"</em>, and drop the resulting file via{" "}
+            <b>Load my repo</b>.
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="heatmap-empty">
         <p>Not enough overlap between authors and files at this moment.</p>

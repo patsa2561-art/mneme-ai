@@ -9,6 +9,8 @@ interface HeaderProps {
   onLoadClick: () => void;
   onHelpClick: () => void;
   synthetic: boolean;
+  liveMode?: boolean;
+  liveSource?: string;
 }
 
 const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string }> = [
@@ -28,6 +30,8 @@ export function Header({
   onLoadClick,
   onHelpClick,
   synthetic,
+  liveMode,
+  liveSource,
 }: HeaderProps) {
   return (
     <header className="app-header">
@@ -46,6 +50,14 @@ export function Header({
           </span>
         )}
         {synthetic && <span className="synthetic-pill">synthetic demo</span>}
+        {liveMode && (
+          <span
+            className="live-pill"
+            title={`Data fetched in-browser from the ${liveSource ?? "git"} REST API. File-level expertise + atrophy heatmap require the local CLI for full insight.`}
+          >
+            ● LIVE · {liveSource ?? "git"} API
+          </span>
+        )}
       </div>
 
       <nav className="view-tabs" role="tablist" aria-label="Views">

@@ -158,6 +158,16 @@ export interface NervousSystemData {
    * case so nothing is misrepresented.
    */
   _demo_synthetic?: boolean;
+  /**
+   * Truthy when the data was synthesized in-browser from the GitHub/GitLab
+   * REST API (no file-level diffs were fetched, to stay inside the unauth
+   * rate-limit). Views use this to render the "LIVE" header badge and
+   * gracefully degrade unavailable sections (file-level expertise, atrophy
+   * heatmap, shape adoption) instead of showing 0.00 / 0/0 zeros.
+   */
+  _liveMode?: boolean;
+  /** Origin host label for the LIVE badge: e.g. "GitHub" or "GitLab". */
+  _liveSource?: string;
 }
 
 /** A node placed by the force layout (after we transform NervousSystemData). */

@@ -37,6 +37,13 @@ export function InfluenceLadder({ data, selectedEmail, onSelect }: Props) {
         adopted by 12 others outranks a 500-commit author whose code never
         gets re-used.
       </p>
+      {data._liveMode && (
+        <p className="ladder-livenote">
+          <b>Live preview:</b> ranking falls back to commit-share because
+          shape-adoption analysis runs locally on file contents (not available
+          without <code>mneme index</code>). Run the CLI for the real PageRank.
+        </p>
+      )}
       <div className="ladder-list">
         {ladder.map((a) => {
           const sel = a.email.toLowerCase() === (selectedEmail ?? "").toLowerCase();

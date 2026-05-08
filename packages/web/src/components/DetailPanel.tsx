@@ -41,15 +41,25 @@ export function DetailPanel({ passport, fallbackData, onClose }: Props) {
         <div className="detail-row">
           <span>files known</span>
           <b>
-            {passport.expertise.filesStillFresh} fresh /{" "}
-            {passport.expertise.filesKnown} total
+            {passport.expertise.filesKnown === 0 ? (
+              <span className="detail-na" title="File-level data is not fetched in live mode (would burn the API rate limit). Run mneme index locally for the full picture.">—</span>
+            ) : (
+              <>
+                {passport.expertise.filesStillFresh} fresh /{" "}
+                {passport.expertise.filesKnown} total
+              </>
+            )}
           </b>
         </div>
       </Section>
 
       <Section title="Top expertise">
         {passport.expertise.topFiles.length === 0 ? (
-          <div className="detail-empty">no expertise files at this point in time</div>
+          <div className="detail-empty">
+            {passport.expertise.filesKnown === 0
+              ? "Live mode — file-level expertise needs the local CLI. Ask your AI: \"run mneme index, then dump nervous-system JSON.\""
+              : "no expertise files at this point in time"}
+          </div>
         ) : (
           <ul className="detail-files">
             {passport.expertise.topFiles.slice(0, 8).map((f) => (
@@ -80,8 +90,17 @@ export function DetailPanel({ passport, fallbackData, onClose }: Props) {
           <div className="detail-row">
             <span>adoptions by others</span>
             <b>
-              {passport.influenceSlot.adoptionsByOthers} ·{" "}
-              {passport.influenceSlot.uniqueAdopters} adopters
+              {passport.influenceSlot.adoptionsByOthers === 0 &&
+              passport.influenceSlot.uniqueAdopters === 0 ? (
+                <span className="detail-na" title="Shape-adoption analysis runs locally on file contents. Not available in the GitHub/GitLab live-fetch path.">
+                  — <small>(local-only)</small>
+                </span>
+              ) : (
+                <>
+                  {passport.influenceSlot.adoptionsByOthers} ·{" "}
+                  {passport.influenceSlot.uniqueAdopters} adopters
+                </>
+              )}
             </b>
           </div>
         </Section>

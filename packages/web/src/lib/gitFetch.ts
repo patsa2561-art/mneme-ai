@@ -381,7 +381,15 @@ function synthesize({
       repoCommitShare: a.count / totalCommits,
     },
     expertise: {
-      knowledgeMass: a.count, // proxy
+      // Live-mode proxy for knowledge mass: combines volume (commits) and
+      // activity duration (active days). Roughly: a 100-commit / 200-day
+      // contributor lands around 60–80, matching the ~140 we see for
+      // top alphas in the synthetic demo. Bounded so single-commit drive-bys
+      // don't dominate.
+      knowledgeMass: round1(
+        Math.sqrt(a.count) * 4 +
+          Math.sqrt(Math.max(1, (a.lastDate - a.firstDate) / 86_400_000)) * 1.5,
+      ),
       filesKnown: 0,
       filesStillFresh: 0,
       lastActiveAt: new Date(a.lastDate).toISOString(),
@@ -403,6 +411,7 @@ function synthesize({
     limits: ["File-level expertise unavailable — run `mneme index` for the full nervous system."],
   }));
 
+  const liveSource = sourceLabel.includes("github") ? "GitHub" : "GitLab";
   const data: NervousSystemData = {
     meta: {
       repoName,
@@ -412,6 +421,8 @@ function synthesize({
       halfLifeDays: 90, // placeholder
       rankedAuthorCount: alphas.length,
     },
+    _liveMode: true,
+    _liveSource: liveSource,
     hero: {
       headline: `${repoName} — live from ${sourceLabel.includes("github") ? "GitHub" : "GitLab"} API`,
       metrics: heroMetrics,
@@ -460,6 +471,10 @@ function buildSparkline(commits: RawCommit[], buckets: number): number[] {
     out[i]!++;
   }
   return out;
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
 }
 
 function hashStr(s: string): string {

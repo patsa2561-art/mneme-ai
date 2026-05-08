@@ -133,11 +133,17 @@ export function EcosystemsView() {
     <div className="ecosystems-view">
       <div className="eco-intro">
         <h2>🧬 Dynamic MCP — every other server is static. Mneme is repo-shaped.</h2>
+        <p className="showcase-banner">
+          📖 <b>Feature showcase</b> — this tab demos the 8 bundled ecosystem packs in
+          v1.15.0+ regardless of which repo you loaded. The actual detection +
+          tool-spawning runs server-side at MCP startup; ask your AI agent
+          "<code>mneme ecosystem</code>" to see which packs activate for <em>your</em> repo.
+        </p>
         <p>
           Mneme detects which ecosystems your repo actually uses, then spawns ecosystem-specific
-          MCP tools. <strong>Auto-on at startup. No config.</strong> The 8 packs below ship
-          bundled in v1.15.0+. Click an ecosystem to see the tools your AI agent gets — and
-          how each tool description gets <em>auto-augmented with this repo's tribal knowledge</em>.
+          MCP tools. <strong>Auto-on at startup. No config.</strong> Click an ecosystem to see
+          the tools your AI agent gets — and how each tool description gets{" "}
+          <em>auto-augmented with this repo's tribal knowledge</em>.
         </p>
         <p className="eco-intro-meta">
           <strong>Detection signals:</strong> 3-way triangulation (npm/python deps + import statements + file patterns).

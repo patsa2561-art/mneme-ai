@@ -8,6 +8,60 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.3] — 2026-05-09
+
+**Web demo: live-mode UX is now world-class.**
+
+Loaded a real GitHub/GitLab repo via the paste-URL path? The dashboard
+now degrades gracefully across every view instead of flashing zeros at
+you. Reported by user testing on an actual GitLab repo where the panel
+showed "knowledge mass: 0.00 / files known: 0 fresh / 0 total" — that
+was scrubData clobbering synthesized values when topFiles was empty,
+plus a handful of views that didn't know to render placeholders for
+data the API doesn't expose.
+
+  Root-cause fixes:
+    • lib/scrub.ts — decayPassport now preserves the input
+      knowledgeMass + filesStillFresh when topFiles is empty
+      (live-mode case) instead of recomputing them to 0.
+    • types.ts — new `_liveMode` + `_liveSource` flags on
+      NervousSystemData so views can render mode-aware UX.
+    • lib/gitFetch.ts — sets `_liveMode: true` and a realistic
+      knowledgeMass proxy (sqrt(commits)*4 + sqrt(activeDays)*1.5)
+      instead of raw commit count.
+
+  Per-view UX:
+    • Header — pulsing green "● LIVE · GitHub API" pill alongside
+      the repo name when in live mode (vs the existing yellow
+      "synthetic demo" pill).
+    • DetailPanel — renders "—" with a tooltip for fields the live
+      API can't give us (files known, adoptions by others). Top
+      Expertise shows a friendly "ask your AI to run mneme index"
+      hint instead of "no expertise files at this point in time".
+    • AtrophyHeatmap — full-page empty state explaining why the
+      heatmap is unavailable in live mode + the exact one-line ask
+      for the user's AI agent.
+    • InfluenceLadder — inline live-mode note that PageRank falls
+      back to commit-share because shape-adoption analysis runs
+      locally on file contents.
+    • EcosystemsView + DnaView — "📖 Feature showcase" banners
+      clarify these tabs demo the bundled packs / DNA pipeline
+      regardless of which repo is loaded; the actual MCP runs
+      against the user's repo via their AI agent.
+
+  Tests:
+    • +21 unit tests under packages/web/src/lib/
+      (gitFetch.classifyUrl exhaustive: trailing slashes, .git
+      suffixes, GitLab subgroups, raw JSON URLs, malformed inputs)
+      (scrub: empty-topFiles preservation, scrub-time author
+      dropoff, computeTimeBounds always extends to now).
+    • Total: 3117 / 3117 passing.
+
+  Real fix that surfaced: classifyUrl now strips trailing slashes
+  before parsing — pasting `https://github.com/foo/bar/` (the
+  address-bar copy) was classifying as 'unknown' because the path
+  split produced an extra empty segment.
+
 ## [1.17.2] — 2026-05-09
 
 **Web demo: real-repo path + honest demo data.**

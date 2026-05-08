@@ -139,6 +139,11 @@ export function DnaView() {
     <div className="dna-view">
       <div className="dna-intro">
         <h2>🎯 Code Search · Ghost-Sniper Verifier</h2>
+        <p className="showcase-banner">
+          📖 <b>Feature showcase</b> — runs the verifier on canned scenarios so you can
+          see the strict-mode pipeline in action. The actual DNA search runs against
+          <em>your</em> repo when your AI agent calls <code>mneme.dna.search</code> via MCP.
+        </p>
         <p>
           Mneme DNA's <strong>strict-mode firewall</strong>. Every candidate the AI proposes runs through
           3 gates: <strong>AST existence</strong> → semantic similarity ≥ 0.6 → Compositional Confidence

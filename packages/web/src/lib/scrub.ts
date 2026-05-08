@@ -162,13 +162,29 @@ function decayPassport(p: PassportData, t: number, halfLifeDays: number): Passpo
       band: bandFor(k),
     } as PassportData["expertise"]["topFiles"][number];
   });
-  // Total knowledge mass = sum of file knowledge × (1 + log(touches))
-  let mass = 0;
-  for (const f of top) mass += f.knowledge * (1 + Math.log(1 + f.touchCount));
   const lastActiveAt = new Date(
     Math.min(t, parseTime(p.expertise.lastActiveAt) ?? t),
   ).toISOString();
   void halfMs; // exposed for tooling, used implicitly via halfLifeDays
+
+  // When topFiles is empty (live-mode synthesis from GitHub/GitLab — no
+  // file-level data is fetched to stay inside the API rate limit), we cannot
+  // derive a knowledge mass from per-file decay. Preserve the synthesized
+  // values from gitFetch (commit-count proxy) instead of clobbering to 0.
+  if (p.expertise.topFiles.length === 0) {
+    return {
+      ...p,
+      expertise: {
+        ...p.expertise,
+        topFiles: top,
+        lastActiveAt,
+      },
+    };
+  }
+
+  // Total knowledge mass = sum of file knowledge × (1 + log(touches))
+  let mass = 0;
+  for (const f of top) mass += f.knowledge * (1 + Math.log(1 + f.touchCount));
   return {
     ...p,
     expertise: {
