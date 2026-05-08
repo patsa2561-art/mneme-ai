@@ -2,6 +2,8 @@
 
 <img src="./assets/title.svg" alt="μνήμη · Mneme" width="700">
 
+<h2><i>After enough use, Mneme knows your repo better than you do.</i></h2>
+
 <p>
   <img src="https://img.shields.io/badge/%F0%9F%94%8A%20Pronounced-NEE--meh-c084fc?style=for-the-badge&labelColor=4c1d95" alt="🔊 Pronounced NEE-meh" height="32">
 </p>
