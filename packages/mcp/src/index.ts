@@ -32,6 +32,7 @@ import { buildAllTools, buildToolMap } from "./tools/_registry.js";
 import { toCallResult, toErrorResult, type MnemeTool, type ToolResponse, type ToolLifecycle } from "./tools/_types.js";
 import { moleculesContaining } from "./tools/_molecules.js";
 import { recordInvocation } from "./tools/_lifecycle.js";
+import { homeworkForCategory } from "./tools/_homework.js";
 
 export interface McpOptions {
   cwd: string;
@@ -67,17 +68,21 @@ function toMcpTools(all: MnemeTool[]): Tool[] {
  *  presentation hint wins, and we add compose/lifecycle if missing. */
 function enrichWithSecondBrain(
   response: ToolResponse,
-  toolName: string,
+  tool: MnemeTool,
   repoRoot: string,
 ): ToolResponse {
-  const compose = moleculesContaining(toolName);
+  const compose = moleculesContaining(tool.name);
   let lifecycle: ToolLifecycle | undefined;
   try {
-    lifecycle = recordInvocation(repoRoot, toolName);
+    lifecycle = recordInvocation(repoRoot, tool.name);
   } catch {
     // Lifecycle is best-effort — never fail a tool call because of it.
     lifecycle = undefined;
   }
+  // Homework — auto-attach the category's default rubric. The grader
+  // tool itself doesn't need homework (it IS the grader); skip those.
+  const isGraderItself = tool.name === "mneme.grade.answer" || tool.name === "mneme.capabilities";
+  const homework = isGraderItself ? undefined : homeworkForCategory(tool.category);
   const existing = response.secondBrain;
   return {
     ...response,
@@ -85,6 +90,7 @@ function enrichWithSecondBrain(
       presentation: existing?.presentation,
       compose: existing?.compose && existing.compose.length > 0 ? existing.compose : compose,
       lifecycle: existing?.lifecycle ?? lifecycle,
+      homework: existing?.homework ?? homework,
     },
   };
 }
@@ -114,8 +120,9 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
       const args = (req.params.arguments ?? {}) as Record<string, unknown>;
       const response = await tool.handler(runtime, args);
       // Second Brain — auto-enrich every response with composition hints
-      // + lifecycle tracking. The chain reaction starts here.
-      const enriched = enrichWithSecondBrain(response, tool.name, runtime.meta.rootPath);
+      // + lifecycle tracking + homework rubric. The chain reaction +
+      // teacher-student loop start here.
+      const enriched = enrichWithSecondBrain(response, tool, runtime.meta.rootPath);
       return toCallResult(enriched);
     } catch (err) {
       return toErrorResult(

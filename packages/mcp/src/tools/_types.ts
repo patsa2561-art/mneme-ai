@@ -65,6 +65,86 @@ export interface SecondBrain {
   /** Lifecycle metadata — for tracking new combinations and auto-promoting
    *  frequent ones into named compounds. */
   lifecycle?: ToolLifecycle;
+  /** Homework — the rubric the AI's draft answer must satisfy before
+   *  delivery to the user. Triggers the teacher-student grading loop:
+   *  AI drafts → calls mneme.grade.answer → on FAIL, AI rewrites → repeat
+   *  until PASS or maxRetries. The Super Sonic Engine that makes Mneme
+   *  the only MCP server in the world that grades the AI's work. */
+  homework?: Homework;
+}
+
+/** Homework — the rubric a tool's answer must satisfy.
+ *  Embedded in secondBrain so the AI student knows the bar before it
+ *  drafts the user-facing answer. */
+export interface Homework {
+  /** Plain-English rubric describing what a good answer looks like */
+  rubric: string;
+  /** Specific testable requirements — each scored 0-1, weighted */
+  requirements: Requirement[];
+  /** The MCP tool name to call for grading. Default: mneme.grade.answer */
+  grader: string;
+  /** Maximum rewrite attempts before the AI gives up + tells the user
+   *  about the grader failures. Default 3. */
+  maxRetries: number;
+  /** Which novel grading algorithms to apply (top-class — no other MCP
+   *  server runs these). */
+  algorithms: GradingAlgorithm[];
+}
+
+export interface Requirement {
+  /** Stable id, e.g. "citation-density" */
+  id: string;
+  /** Human-readable description of what this requirement enforces */
+  description: string;
+  /** Importance weight 0-1 — used in scoring */
+  weight: number;
+}
+
+/** Five novel grading algorithms — none of these run in any other MCP
+ *  server today. Together they form the Super Sonic Engine. */
+export type GradingAlgorithm =
+  /** Inject a subtle false claim into the original query and re-ask the AI's
+   *  draft. If the draft repeats the false claim, FAIL ("AI accepted false
+   *  premise"). */
+  | "adversarial-probe"
+  /** Mutate one node in the AI's claim graph (flip "added" → "removed").
+   *  Re-grade. If verdict unchanged, the original claim was non-load-bearing.
+   *  FAIL ("fluff detected"). */
+  | "claim-graph-mutation"
+  /** For every commit hash AI cited, compute cosine similarity between
+   *  (the claim it supports) and (commit message + diff). If avg < 0.6,
+   *  citations are decorative not semantic. FAIL ("citations not load-bearing"). */
+  | "semantic-citation"
+  /** Run AI's draft through 4 verifiers (Bayesian / Stylometric / Entropy /
+   *  LLM-judge). Use Jensen-Shannon divergence to measure consensus. High
+   *  divergence = WARN ("verifiers disagreed"). */
+  | "multi-verifier-consensus"
+  /** Take AI's PASSING draft. Mutate one key fact (flip recommended action
+   *  / flip a number / negate a verdict). Re-grade. If still PASS, the
+   *  rubric is too lenient — rubric mutation FAIL ("rubric brittle"). */
+  | "mutation-counterfactual";
+
+/** What the grader returns. AI student reads this and either delivers the
+ *  draft (PASS) or rewrites and tries again (WARN/FAIL). */
+export interface GraderResult {
+  /** Final verdict */
+  verdict: "PASS" | "WARN" | "FAIL";
+  /** Composite score 0-100 */
+  score: number;
+  /** Human-readable feedback for the AI to act on */
+  feedback: string[];
+  /** IDs of requirements that passed */
+  passedRequirements: string[];
+  /** IDs of requirements that failed (with one-line reason each) */
+  failedRequirements: Array<{ id: string; reason: string }>;
+  /** Concrete instructions for the AI's rewrite */
+  rewriteHints: string[];
+  /** Per-algorithm verdicts (for transparency / debugging) */
+  algorithmResults: Array<{ algorithm: GradingAlgorithm; verdict: "PASS" | "WARN" | "FAIL"; detail: string }>;
+  /** Retry counter (the AI sets this when calling the grader) */
+  retryCount: number;
+  /** If true, AI should stop retrying and surface the issue to the user */
+  giveUp: boolean;
 }
 
 /** A suggested composition — "if you ran THIS atom, the natural next step

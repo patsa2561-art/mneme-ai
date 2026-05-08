@@ -6,12 +6,12 @@
   <img src="https://img.shields.io/badge/%F0%9F%94%8A%20Pronounced-NEE--meh-c084fc?style=for-the-badge&labelColor=4c1d95" alt="🔊 Pronounced NEE-meh" height="32">
 </p>
 
-<h3>The nuclear core for your AI coding tool.</h3>
+<h3>The Stage-3 tune for your AI coding tool.</h3>
 
 <p>
-  <i>Your AI is the reactor. Mneme is the core you slot in.<br/>
-  Triggers a <b>chain reaction of wisdom</b> about your codebase that compounds with every interaction.<br/>
-  The teacher of AI — for the <b>git / source-control</b> domain specifically.</i>
+  <i>Bolted onto your <b>Claude Code</b> · <b>Cursor</b> · <b>Codex</b> · <b>Gemini</b> · <b>Continue</b> · <b>Aider</b>,<br/>
+  Mneme turns a stock AI into one that <b>knows your repo's history</b> — every commit, every regret, every decision.<br/>
+  The teacher · the mentor · for the <b>git / source-control</b> domain.</i>
 </p>
 
 <p>
@@ -26,43 +26,43 @@
 <br/>
 
 ```
-   ┌────────┐                       ⚛  CHAIN REACTION OF WISDOM
-   │   AI   │     ╔══════════════╗     │
-   │  tool  │ ──→ ║  Mneme MCP   ║ ────┴──→  1 question
-   │  base  │     ║  nuclear     ║         ↓ AI fires 3 atoms
-   │ reactor│     ║  core        ║         ↓ atoms compose into a molecule
-   └────────┘     ╚══════════════╝         ↓ molecule used 3× → compound
-                                           ↓ compound persisted in library
-   Claude Code                              ↓ next session → instant recall
-   Cursor                              Result: AI gets smarter every time
-   Codex
-   Gemini      ───── 9 categories of atoms ─────────────────────────────
-   Continue       memory · people · audit · forensics · insights
-   Aider          quality · quant · lab · meta
-   any MCP client
-                ───── 20 pre-defined molecules ──────────────────────────
-                   succession_plan · ai_commit_check · refactor_safety
-                   security_review · release_readiness · expert_finder
-                   knowledge_health_check · regret_pattern_review · …
+   ┌──────────┐                                  ⚙  STAGE-3 TUNE
+   │ STOCK AI │     ╔════════════════╗      ┌──────────────────────┐
+   │  (any    │ ──→ ║   Mneme MCP    ║ ──→  │  knows your repo     │
+   │   coder) │     ║  bolt-on       ║      │  history             │
+   └──────────┘     ║  93 atoms      ║      │  cites every claim   │
+                    ║  20 molecules  ║      │  grades AI's work    │
+   Claude Code      ║                ║      │  while(true) loop    │
+   Cursor           ║  ┌──────────┐  ║      └──────────────────────┘
+   Codex            ║  │ TEACHER  │  ║
+   Gemini           ║  │  ↕       │  ║       Same engine.
+   Continue         ║  │ STUDENT  │  ║       Different power band.
+   Aider            ║  └──────────┘  ║
+   any MCP client   ╚════════════════╝
 ```
 
 </div>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## ⚛ The 30-second pitch
+## ⚙ Why Mneme exists
 
-Your AI coding tool is already brilliant — it reads syntax, infers types, autocompletes whole files. But there are three things even the best AI cannot do alone:
+You're already using **Claude Code** — or **Cursor**, **Codex**, **Gemini**, **Continue**. Your AI writes fresh code beautifully. Fast. Fluent. Mostly correct.
 
-1. **Remember why your code exists.** Six years of decisions, deprecations, and "we tried that, it broke X" — none of it is in the AI's context window.
-2. **Verify its own claims.** AI confidently says *"no change to db.ts"* — the diff shows three lines in db.ts. You merge. Production breaks.
-3. **Spot when *another* AI is gaslighting you.** With multiple AI assistants all touching `git log`, **who is grading the homework?**
+Then you ask it: *"Why does `auth.ts` use JWT? Didn't we try that in 2024 and roll it back?"* — and watch it shrug. Your AI never saw your past. It guesses.
 
-**Mneme is the nuclear core you slot into your AI** — think of your AI tool as the *reactor* and Mneme as the *fuel rod*. Bolted in, it doesn't just make your AI faster — it triggers a **chain reaction of wisdom** that compounds with every interaction:
+That's the gap Mneme fills.
 
-> One question → AI calls 3 Mneme atoms → atoms compose into a molecule → molecule used 3× → auto-promotes to a permanent compound. **Your AI gets smarter every time it talks to Mneme.**
+Think of your AI tool as a **stock car off the showroom floor** — fast, reliable, generic. Mneme is the **Stage-3 tune** you bolt onto it. Same engine. Same body. Different power band entirely.
 
-Surface metaphor (easier on-ramp): *bolt-on tuning kit*. Architectural truth: *nuclear catalyst that triggers compositional wisdom*. Both are correct.
+| 🚗 Stock AI (no Mneme) | 🏎 Tuned AI (Mneme bolted on) |
+|---|---|
+| Invents *plausible-sounding* answers from syntax alone | Cites `commit a3f9b21` from 2024-08 — verbatim |
+| Says *"no change to db.ts"* — the diff has 3 lines in db.ts. You merge. Production breaks. | Catches its own gaslighting before you ever see it |
+| Multiple AIs touch `git log`. Nobody grades the homework. | **Mneme grades every AI commit on 5 axes**. PASS · WARN · FAIL. |
+| Onboarding = interview the senior engineers | History is now in the AI's hands, instantly |
+
+Same AI. Same hands on the keyboard. The difference is **what your AI knows** — and **whether anyone is grading its work**.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -257,6 +257,6 @@ Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON t
 
 <div align="center">
 
-> *"AI assistants don't get smarter. They get better context.<br/>**Mneme is the nuclear core that turns context into a chain reaction of wisdom.**"*
+> *"AI assistants don't get smarter. They get better context.<br/>**Mneme is the Stage-3 tune that gives your AI that context — and grades its work, every time.**"*
 
 </div>
