@@ -2,17 +2,19 @@
 
 <h1>Mneme</h1>
 
-<h3>The tuning kit for your AI coding tool.</h3>
+<h3>The nuclear core for your AI coding tool.</h3>
 
 <p>
-  <i>Bolt it on. Your <b>Claude Code</b> · <b>Cursor</b> · <b>Codex</b> · <b>Gemini</b> · <b>Continue</b> · <b>Aider</b><br/>
-  becomes a super-genius that knows your repo's history, decisions, and incidents.</i>
+  <i>Your AI is the reactor. Mneme is the core you slot in.<br/>
+  Triggers a <b>chain reaction of wisdom</b> about your codebase that compounds with every interaction.<br/>
+  The teacher of AI — for the <b>git / source-control</b> domain specifically.</i>
 </p>
 
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
   <img src="https://img.shields.io/badge/MCP%20tools-93-c084fc" alt="93 MCP tools">
+  <img src="https://img.shields.io/badge/molecules-20-fbbf24" alt="20 molecules">
   <img src="https://img.shields.io/badge/tests-2339%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
 </p>
@@ -20,30 +22,31 @@
 <br/>
 
 ```
-                       ╔═════════════════════════════╗
-       ┌────────┐      ║     🏎  SUPER GENIUS         ║
-       │   AI   │ ──→  ║   Claude Code · Cursor       ║
-       │  tool  │      ║   Codex · Gemini · Continue  ║
-       └────┬───┘      ║   Aider · any MCP client     ║
-            │          ╚═════════════════════════════╝
-            │  bolt on              ▲
-            ▼                       │  93 tools across 9 categories:
-       ╔═════════════╗              │
-       ║   μνήμη     ║──────────────┘   memory · people · audit
-       ║   Mneme MCP ║                  forensics · insights · quality
-       ║  (the       ║                  quant · lab · meta
-       ║   tuning    ║
-       ║   kit)      ║   ✓ knows your repo's full history
-       ║             ║   ✓ cites every claim with commit hashes
-       ║             ║   ✓ catches AI gaslighting before merge
-       ╚═════════════╝
+   ┌────────┐                       ⚛  CHAIN REACTION OF WISDOM
+   │   AI   │     ╔══════════════╗     │
+   │  tool  │ ──→ ║  Mneme MCP   ║ ────┴──→  1 question
+   │  base  │     ║  nuclear     ║         ↓ AI fires 3 atoms
+   │ reactor│     ║  core        ║         ↓ atoms compose into a molecule
+   └────────┘     ╚══════════════╝         ↓ molecule used 3× → compound
+                                           ↓ compound persisted in library
+   Claude Code                              ↓ next session → instant recall
+   Cursor                              Result: AI gets smarter every time
+   Codex
+   Gemini      ───── 9 categories of atoms ─────────────────────────────
+   Continue       memory · people · audit · forensics · insights
+   Aider          quality · quant · lab · meta
+   any MCP client
+                ───── 20 pre-defined molecules ──────────────────────────
+                   succession_plan · ai_commit_check · refactor_safety
+                   security_review · release_readiness · expert_finder
+                   knowledge_health_check · regret_pattern_review · …
 ```
 
 </div>
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🏎 The 30-second pitch
+## ⚛ The 30-second pitch
 
 Your AI coding tool is already brilliant — it reads syntax, infers types, autocompletes whole files. But there are three things even the best AI cannot do alone:
 
@@ -51,7 +54,11 @@ Your AI coding tool is already brilliant — it reads syntax, infers types, auto
 2. **Verify its own claims.** AI confidently says *"no change to db.ts"* — the diff shows three lines in db.ts. You merge. Production breaks.
 3. **Spot when *another* AI is gaslighting you.** With multiple AI assistants all touching `git log`, **who is grading the homework?**
 
-**Mneme is the tuning kit you bolt onto your AI** — like a body kit + ECU remap for a car. The AI stays the AI you already trust; Mneme just makes it **vastly more aware** of your specific codebase.
+**Mneme is the nuclear core you slot into your AI** — think of your AI tool as the *reactor* and Mneme as the *fuel rod*. Bolted in, it doesn't just make your AI faster — it triggers a **chain reaction of wisdom** that compounds with every interaction:
+
+> One question → AI calls 3 Mneme atoms → atoms compose into a molecule → molecule used 3× → auto-promotes to a permanent compound. **Your AI gets smarter every time it talks to Mneme.**
+
+Surface metaphor (easier on-ramp): *bolt-on tuning kit*. Architectural truth: *nuclear catalyst that triggers compositional wisdom*. Both are correct.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -108,7 +115,9 @@ After install, you don't learn new commands. You just ask your AI questions you 
 | *"is the AI's commit message lying about its diff?"* | `mneme.audit.verify` |
 | *"grade this AI commit before I merge"* | `mneme.audit.certify` |
 
-**93 MCP tools across 9 categories.** Your AI picks the right one. You never type a Mneme command unless you want to.
+**93 atoms across 9 categories + 20 pre-defined molecules.** Your AI picks the right ones, fires them in chain reactions, and synthesizes the answer for you. You never type a Mneme command unless you want to.
+
+> 🆕 **v1.3.0 — the Second Brain layer.** Every Mneme response now teaches the AI *how* to compose with other atoms. New combinations are tracked; frequent ones auto-promote into permanent **compounds** in your library. Translation: the more you use Mneme, the smarter your AI gets in this specific repo.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -244,6 +253,6 @@ Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON t
 
 <div align="center">
 
-> *"AI assistants don't get smarter. They get better context.<br/>**Mneme is the tuning kit that gives your AI that context.**"*
+> *"AI assistants don't get smarter. They get better context.<br/>**Mneme is the nuclear core that turns context into a chain reaction of wisdom.**"*
 
 </div>

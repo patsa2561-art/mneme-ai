@@ -8,6 +8,145 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.3.0] — 2026-05-08
+
+**The SECOND BRAIN release.** v1.2.0 made Mneme accessible to any AI tool
+via 93 MCP atoms. v1.3.0 turns those atoms into a *chain reaction*:
+every response now teaches the AI which OTHER atoms to fire next, tracks
+new combinations, and auto-promotes frequent compositions into permanent
+**compounds** in the library.
+
+The architectural truth behind the slogan *"Mneme is the teacher of AI
+in the git/source-control domain"*: every interaction makes the AI
+smarter in this specific repo.
+
+### Positioning shift
+
+Surface (entry-level): "Mneme is the **tuning kit** for your AI."
+Architectural truth (pro-level): "Mneme is the **nuclear core** you slot
+into your AI tool. Triggers a chain reaction of wisdom."
+
+Both metaphors are accurate — README hero leads with nuclear, body uses
+tuning kit as the easier on-ramp.
+
+### What's new technically
+
+#### 1. Second Brain envelope
+
+Every MCP tool response now carries a `secondBrain` field:
+
+```ts
+secondBrain: {
+  presentation: "How to render this for the user",
+  compose: [
+    {
+      molecule: "succession_plan",
+      atoms: ["mneme.people.atrophy", "mneme.people.bus_factor", "mneme.people.telepathy"],
+      when: "User asks about org-risk / handover / who can backup X",
+      example: "..."
+    },
+    ...
+  ],
+  lifecycle: {
+    isNewCombination: false,
+    invocationCount: 7,
+    suggestSaveAs: "compound_atrophy_3atoms"
+  }
+}
+```
+
+The AI student reads `compose` and fires the suggested atoms in parallel,
+yielding a synthesized multi-atom answer instead of a single tool result.
+
+#### 2. 20 pre-defined molecules
+
+`packages/mcp/src/tools/_molecules.ts` ships with 20 named compositions:
+
+| Molecule | Atoms |
+|---|---|
+| `succession_plan` | atrophy + bus_factor + telepathy |
+| `knowledge_health_check` | atrophy + passport + repo_mri |
+| `ai_commit_check` | trace + verify + certify |
+| `compliance_evidence_pack` | report + ledger + deps + vulns |
+| `refactor_safety_check` | premortem + blast + atrophy |
+| `regret_pattern_review` | regret + paradox + crystal_ball |
+| `deploy_gate` | certify + vulns + deps + crystal_ball |
+| `security_review` | vulns + deps + anomaly |
+| `incident_attribution` | match + attribute + anomaly |
+| `vulnerability_triage` | vulns + show + conscience |
+| `decision_archaeology` | ask + decisions + story |
+| `file_archaeology` | why + time_machine + palimpsest + lineage |
+| `expert_finder` | who_knows + passport + atrophy |
+| `tech_debt_audit` | karma + promise + ghost + fossil |
+| `code_quality_dashboard` | repo_mri + heartbeat + runaway + drift |
+| `release_readiness` | certify + crystal_ball + blast + vulns |
+| `next_quarter_risk_map` | atrophy + oracle + black_swan + heartbeat |
+| `moneyball_review` | moneyball + influence + passport |
+| `onboarding_dossier` | mirror + who_knows + story + passport |
+| `team_friction_diagnosis` | nemesis + regret + lineage |
+
+Each molecule lists its atoms + a WHEN-to-use guidance + an example
+synthesized output. The AI picks the right molecule when the user's
+question is higher-order (covers multiple atoms).
+
+#### 3. Lifecycle tracking + auto-promotion
+
+`packages/mcp/src/tools/_lifecycle.ts` records every tool call into a
+session window (5 min). When ≥2 atoms appear together, a molecule
+*signature* is logged. ≥3 invocations → `lifecycle.suggestSaveAs` fires,
+prompting the AI to ask the user whether to promote the combination
+into a permanent named compound.
+
+Storage: `.mneme/mcp-lifecycle.json` (atomic temp-file rename, single
+small JSON, race-condition safe).
+
+Promotion path: lifecycle suggests an alias → user/AI accepts → existing
+`mneme.lab.library --promote` machinery writes the compound to
+`library.json` → from then on the compound is callable as a single unit.
+
+#### 4. Auto-enrichment in the MCP request handler
+
+`packages/mcp/src/index.ts` wraps every tool's response through
+`enrichWithSecondBrain()`. Tools opt into custom presentation hints; the
+auto-enricher fills `compose` (from `moleculesContaining(toolName)`) and
+`lifecycle` (from `recordInvocation()`) on every call. Tools that
+already populate `secondBrain` keep their values.
+
+### Updated capabilities syllabus
+
+`mneme.capabilities` (the AI's first call) now advertises the Second
+Brain contract explicitly: it tells the AI student to read
+`secondBrain.compose` on every response and fire molecule combinations
+when they fit the user's intent.
+
+### Backward compatibility
+
+Zero breaking changes. AI clients that don't read `secondBrain` still get
+`{data, wisdom, followUp, confidence}` exactly as in v1.2.0. The
+chain-reaction is opt-in by the AI's prompt-following behavior, not
+forced.
+
+### Numbers
+
+- 93 MCP atoms (unchanged)
+- **20 pre-defined molecules**
+- **Each atom appears in 1-5 molecules** (avg ~2.3)
+- 0 breaking changes
+- Lockfile: 113 platform entries preserved (surgical patch only)
+
+### Files added
+
+- `packages/mcp/src/tools/_molecules.ts`
+- `packages/mcp/src/tools/_lifecycle.ts`
+
+### Files updated
+
+- `packages/mcp/src/tools/_types.ts` — `SecondBrain` + `ComposeSuggestion` + `ToolLifecycle` types
+- `packages/mcp/src/tools/_capabilities.ts` — syllabus advertises the contract
+- `packages/mcp/src/tools/memory.ts` — presentation hints on ask/why/blast
+- `packages/mcp/src/index.ts` — auto-enrichment wired into request handler
+- `README.md` — hero now uses nuclear-core/chain-reaction metaphor
+
 ## [1.2.0] — 2026-05-08
 
 **The TUNING-KIT release.** Mneme is now positioned as the bolt-on memory
