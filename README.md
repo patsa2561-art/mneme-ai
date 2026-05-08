@@ -198,6 +198,9 @@ Add `--explain` to any of them to get a plain-English narrative on top, generate
 
 > **The codebase whispers; the editor listens.** *No competitor ships this signal inline.*
 
+<details>
+<summary><b>📖 Atrophy Lens — knows which functions still live in someone's head, inline</b></summary>
+
 The headline is the **Atrophy Lens** — a one-line plain-English code lens above every function and class:
 
 ```
@@ -220,6 +223,8 @@ The extension also surfaces:
 - **Palette commands** — `Mneme: Ask…`, `Mneme: Why this line`, `Mneme: Audit current PR`, `Mneme: Open Nervous System`.
 - **Hover provider** — top-knower preview as you mouse over symbols.
 
+</details>
+
 → **[Install · settings · privacy →](https://github.com/patsa2561-art/mneme-ai/wiki/VS-Code-Extension)**
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -228,7 +233,8 @@ The extension also surfaces:
 
 > **Six commands for what GitHub cannot see — plus one PDF a CTO frames.** *Local. Private. Honest about its own limits.*
 
-Your contributors view counts commits. It cannot show you:
+<details>
+<summary><b>📖 What GitHub's contributor count cannot see</b></summary>
 
 - 🧠 **Latent collaborators** — pairs who never co-author but rhyme behaviorally
 - ⏳ **Knowledge atrophy** — who still remembers what (Ebbinghaus decay)
@@ -246,22 +252,7 @@ mneme passport alice@       # one engineer's full dossier
 mneme nervous-system --pdf  # FLAGSHIP — combined PDF report
 ```
 
-<details>
-<summary><b>📖 The flagship — `mneme nervous-system`</b></summary>
-
-Combines **passport** of top contributors + **telepathy** heatmap + **atrophy** heatmap + **influence** ladder + repo neuroanatomy + an honest limits panel. Outputs:
-
-- **Terminal** — punchy summary; always works.
-- **HTML** — self-contained file; opens in any browser; print-to-PDF works everywhere.
-- **PDF** — opt-in via `--pdf`; lazy-loads `puppeteer-core`; friendly fallback to HTML if not installed.
-
-```bash
-mneme nervous-system                       # terminal summary
-mneme nervous-system --html report.html    # beautiful HTML
-mneme nervous-system --pdf report.pdf      # pro PDF (puppeteer-core)
-```
-
-The PDF a CTO prints for the board meeting. **Privacy-first**: all data is local. Defamation-safe: nemesis section is opt-in only via `--include-friction`.
+**The flagship — `mneme nervous-system`.** Combines passport + telepathy + atrophy + influence + repo neuroanatomy + an honest limits panel. Outputs: terminal summary, self-contained HTML, opt-in PDF (`--pdf`, lazy-loads puppeteer-core). The PDF a CTO prints for the board meeting. **Privacy-first**: all data is local. Defamation-safe: nemesis section is opt-in only via `--include-friction`.
 
 </details>
 
@@ -511,50 +502,41 @@ Practical consequence: every Mneme release makes **every AI tool that plugs in**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 💎 The Frontier — 28 capabilities no other tool ships
+## 💎 The Frontier — 28+ capabilities no other tool ships
 
-After researching the landscape, every command in this list occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
+After researching the landscape, every command in our Frontier table occupies whitespace where **no maintained, open-source, local-first tool ships this capability today.**
 
-→ 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
+→ 🗺 **[5-min Architecture Overview](https://github.com/patsa2561-art/mneme-ai/wiki/Architecture-Overview)** *(start here)* · 📋 **[Full table of world-firsts](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
 
-### 🆕 v0.40-v0.43 — Element / Atom / Molecule architecture
+<details>
+<summary><b>🆕 What shipped in v0.36 → v0.43</b> — click to expand</summary>
 
-A chemistry-inspired layer **under** the 75 existing commands. Four-release
-arc:
+### v0.40-v0.43 — Element / Atom / Molecule architecture
 
-- **v0.40 — [Periodic Table](https://github.com/patsa2561-art/mneme-ai/wiki/Periodic-Table)** — 15 elements + 5 atoms + 2 molecules + browsable catalog at `mneme periodic-table` ✅
-- **v0.41 — [Compose & Compiler](https://github.com/patsa2561-art/mneme-ai/wiki/Compose-And-Compiler)** — `mneme compose "<intent>"` plans a custom pipeline from the periodic table. Rule-based by default, `--llm` for refinement, plans cached for reuse ✅
-- **v0.42 — [Second Brain](https://github.com/patsa2561-art/mneme-ai/wiki/Second-Brain)** — `mneme library` records every composed plan, frequent ones auto-promote to named aliases, `mneme run <alias>` executes via a sandbox-aware executor ✅
-- **v0.43 — [Holy Grails](https://github.com/patsa2561-art/mneme-ai/wiki/Holy-Grails)** — `mneme heartbeat` (codebase as living being), `mneme rewind <commit>` (time-travel debug), `mneme dna-fold` (team-DNA emerges) ✅ — adversarial-twin + self-aware deferred to v0.44 with proper opt-in design
+A chemistry-inspired layer **under** the 75 existing commands.
 
-### 🆕 v0.37 — Bayesian-filtered security scanner + 6 new rules
+- **v0.40 — [Periodic Table](https://github.com/patsa2561-art/mneme-ai/wiki/Periodic-Table)** — 15 elements + 5 atoms + 2 molecules + browsable catalog at `mneme periodic-table`
+- **v0.41 — [Compose & Compiler](https://github.com/patsa2561-art/mneme-ai/wiki/Compose-And-Compiler)** — `mneme compose "<intent>"` plans a custom pipeline; rule-based by default, `--llm` for refinement
+- **v0.42 — [Second Brain](https://github.com/patsa2561-art/mneme-ai/wiki/Second-Brain)** — `mneme library` records every plan; frequent ones auto-promote to named aliases; `mneme run <alias>` executes via sandbox-aware executor
+- **v0.43 — [Holy Grails](https://github.com/patsa2561-art/mneme-ai/wiki/Holy-Grails)** — `mneme heartbeat` (codebase as living being), `mneme rewind <commit>` (time-travel debug), `mneme dna-fold` (team-DNA emerges)
 
-The vulnerability scanner was rewritten around a **stack-aware Bayesian prior × AST evidence score**. Each finding's posterior `= prior(rule applies on your stack) × evidence(real DB sink? log line? comment?)`. Sub-threshold candidates are dropped before they leave the scanner — the customer-reported "16 false-positive CWE-89 in a NestJS+Mongoose repo" goes to **zero** automatically because the SQL prior collapses on a NoSQL stack.
+### v0.37 — Bayesian-filtered security scanner + 6 new rules
 
-| New | What |
-|---|---|
-| `mneme forensics vulns --sarif report.sarif` | SARIF v2.1.0 output — drop-in for GitHub Code Scanning, GitLab Vulnerability Reports |
-| `mneme forensics vulns --explain` | Show the prior × evidence breakdown per finding |
-| `mneme show <finding-id>` | Full context for one finding — commit + diff + posterior + suggested actions |
-| `mneme suppress <id> --reason "<why>"` | Manage `.mneme/suppressions.json` — a finding ignored once stays ignored |
-| `mneme audit --verify-head` | Claim drift — flag commits that say "remove X" but X still lives in HEAD |
-| 6 new rules | missing-auth-guard (NestJS) · mass-assignment · IDOR · SSRF · prototype-pollution · weak-webhook-signature |
+Vulnerability scanner rewritten around a **stack-aware Bayesian prior × AST evidence score**. Findings whose `posterior = prior × evidence` falls below threshold are dropped before they leave the scanner — the "16 false-positive CWE-89 in a NestJS+Mongoose repo" goes to **zero** because the SQL prior collapses on a NoSQL stack.
 
-### 🆕 v0.36 — five Originals (memory + people analytics)
+New: `mneme forensics vulns --sarif` (GitHub Code Scanning) · `--explain` · `mneme show <finding-id>` · `mneme suppress <id>` · `mneme audit --verify-head` · 6 new rules (missing-auth-guard / mass-assignment / IDOR / SSRF / prototype-pollution / weak-webhook-signature).
 
-| Command | One-line summary |
-|---|---|
-| [`mneme karma`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#1%EF%B8%8F%E2%83%A3-karma--todo-debt-as-a-flow) | TODO debt as a per-author flow ledger — incurred minus settled, age-compounded |
-| [`mneme repo-mri`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#2%EF%B8%8F%E2%83%A3-repo-mri--the-one-page-diagnostic) | 20-axis health diagnostic with z-scores against typical OSS — outliers in one glance |
-| [`mneme palimpsest --counterfactual`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#3%EF%B8%8F%E2%83%A3-counterfactual-palimpsest--what-did-this-line-lock-in) | What did this single line lock in downstream? |
-| [`mneme cognitive-twin`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#4%EF%B8%8F%E2%83%A3-cognitive-twin--the-author-voice-fingerprint) | Author-voice fingerprint + voice-templating rewriter (deterministic, no LLM) |
-| [`mneme conscience --dual-jury`](https://github.com/patsa2561-art/mneme-ai/wiki/Originals#5%EF%B8%8F%E2%83%A3-dual-jury--adversarial-review-from-real-history) | Adversarial PR review — prosecution + defense + verdict, all from real history |
+### v0.36 — five Originals
 
-→ 🆕 **[Deep-dive each Original → Wiki: Originals](https://github.com/patsa2561-art/mneme-ai/wiki/Originals)**
+`mneme karma` (TODO debt as flow ledger) · `mneme repo-mri` (20-axis z-scored health) · `mneme palimpsest --counterfactual` (what did this line lock in?) · `mneme cognitive-twin` (stylometric voice + rewriter) · `mneme conscience --dual-jury` (prosecution + defense + verdict).
+
+→ **[Deep-dive each Original](https://github.com/patsa2561-art/mneme-ai/wiki/Originals)**
+
+</details>
 
 ### 🛡 What Mneme is NOT
 
-Mneme is **a memory layer**, not a SAST replacement. The vulnerability scanner is a high-precision *secondary* check — it catches what an attacker would find by reading 5 years of history (silent fixes, claim drift, framework-specific blind spots) — and the Bayesian filter keeps false-positive noise low enough that you can run it on every PR without rage. **Pair it with CodeQL / Semgrep / Snyk; don't replace them.**
+Mneme is **a memory layer**, not a SAST replacement. The vulnerability scanner is a high-precision *secondary* check — it catches what an attacker would find by reading 5 years of history. **Pair it with CodeQL / Semgrep / Snyk; don't replace them.**
 
 > 🛡 *Built to complement existing AI coding assistants — not to replace them.*
 
