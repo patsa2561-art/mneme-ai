@@ -2,9 +2,9 @@
 
 <h1>μνήμη · Mneme</h1>
 
-<sub><i>Pronounced <code>NEE-meh</code> · Greek for "memory" · sister of Lethe, mother of the muses</i></sub>
-
-<br/><br/>
+<p>
+  <img src="https://img.shields.io/badge/%F0%9F%94%8A%20Pronounced-NEE--meh-c084fc?style=for-the-badge&labelColor=4c1d95" alt="🔊 Pronounced NEE-meh" height="32">
+</p>
 
 <h3>The nuclear core for your AI coding tool.</h3>
 
