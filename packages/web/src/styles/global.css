@@ -2331,6 +2331,96 @@ body::before {
   margin-top: 4px;
 }
 
+/* ─── Load dialog v1.17.2 — primary URL row + grid-2 + ask copy ──── */
+.load-primary {
+  margin-bottom: 18px;
+  padding: 18px 18px 16px;
+  background: linear-gradient(135deg, rgba(192,132,252,0.10), rgba(96,165,250,0.06));
+  border: 1px solid rgba(192,132,252,0.32);
+  border-radius: 14px;
+}
+.load-primary-label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--accent, #c084fc);
+  letter-spacing: 0.2px;
+}
+.load-primary-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.load-primary-input {
+  flex: 1;
+  padding: 11px 13px;
+  font-size: 0.92rem;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.35);
+  color: inherit;
+  font-family: var(--font-mono, monospace);
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.load-primary-input:focus {
+  border-color: rgba(192,132,252,0.55);
+  background: rgba(0,0,0,0.5);
+}
+.load-primary-row .btn-primary {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.load-primary-hint {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  font-family: var(--font-mono, monospace);
+}
+.load-primary-hint.ok { color: #34d399; }
+.load-primary-hint.warn { color: rgba(251,191,36,0.85); }
+.load-primary-busy {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--accent, #c084fc);
+}
+
+.load-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 14px 4px;
+  opacity: 0.5;
+}
+.load-divider::before,
+.load-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+}
+.load-divider span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  opacity: 0.7;
+}
+
+.load-grid.load-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (max-width: 720px) {
+  .load-grid.load-grid-2 { grid-template-columns: 1fr; }
+  .load-primary-row { flex-direction: column; }
+  .load-primary-row .btn-primary { width: 100%; }
+}
+
+.load-howto-ask {
+  font-weight: 600;
+  margin-top: 10px !important;
+  opacity: 1 !important;
+}
+
 /* DNA byline */
 .dna-byline {
   font-size: 0.92rem;

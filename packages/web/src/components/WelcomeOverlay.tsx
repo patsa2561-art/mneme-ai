@@ -162,27 +162,31 @@ export function WelcomeOverlay({ onDemo, onDropFile, onClose }: Props) {
         {panel === "yours" && (
           <div className="welcome-pane">
             <div className="welcome-eyebrow">Your repo</div>
-            <h2 className="welcome-title">Use your own data.</h2>
-            <p className="welcome-lead">
-              In any repo Mneme has indexed, run:
-            </p>
-            <pre className="welcome-code">
-              <code>mneme nervous-system --json &gt; my-team.json</code>
-            </pre>
-            <p className="welcome-lead">
-              Then <b>drag-drop <code>my-team.json</code> onto this page</b> —
-              or click <b>Load my repo</b> in the header. Your file is parsed
-              in this browser tab.{" "}
-              <span className="welcome-strong">
-                Mneme never receives, stores, or transmits it.
-              </span>
-            </p>
+            <h2 className="welcome-title">Two ways to load yours.</h2>
+            <ol className="welcome-steps">
+              <li>
+                <span className="welcome-step-num">A</span>
+                <div>
+                  <b>Paste any public GitHub or GitLab URL</b> — the dashboard
+                  fetches commits live in your browser. Fast, zero-setup.
+                  Degraded fidelity (no file-level data).
+                </div>
+              </li>
+              <li>
+                <span className="welcome-step-num">B</span>
+                <div>
+                  <b>Ask your AI agent</b>: <em>"install Mneme and dump
+                  nervous-system JSON for this repo"</em> — your AI handles the
+                  install, you drop the JSON here. Full fidelity, works on
+                  private repos.
+                </div>
+              </li>
+            </ol>
             <div className="welcome-tip">
-              <span aria-hidden>💡</span>
+              <span aria-hidden>🔒</span>
               <span>
-                Don't have Mneme yet?{" "}
-                <code>npm install -g mneme-ai &amp;&amp; mneme index</code> —
-                90 seconds for a 5K-commit repo.
+                Your data is parsed in this browser tab. <b>Mneme never receives,
+                stores, or transmits it.</b>
               </span>
             </div>
           </div>

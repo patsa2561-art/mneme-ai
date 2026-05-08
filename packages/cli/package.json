@@ -1,6 +1,6 @@
 {
   "name": "mneme-ai",
-  "version": "1.17.1",
+  "version": "1.17.2",
   "mcpName": "io.github.patsa2561-art/mneme-ai",
   "description": "Mneme — the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.",
   "type": "module",

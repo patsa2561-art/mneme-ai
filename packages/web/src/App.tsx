@@ -242,12 +242,12 @@ function EmptyState({ onLoadClick }: { onLoadClick: () => void }) {
       <div className="empty-glyph">μ</div>
       <h2>Pick a way in.</h2>
       <p>
-        Try the synthetic demo, drop a file from{" "}
-        <code>mneme nervous-system --json</code>, or paste a JSON URL.
-        Everything is parsed in your browser — nothing is uploaded.
+        Paste a public GitHub or GitLab repo URL · try the synthetic demo · or
+        drop a <code>nervous-system.json</code> dumped by your AI agent. Everything
+        is parsed in your browser — nothing is uploaded.
       </p>
       <button className="btn-primary" onClick={onLoadClick}>
-        📥 Load my repo
+        📥 Load a repo
       </button>
     </div>
   );

@@ -8,6 +8,45 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.2] — 2026-05-09
+
+**Web demo: real-repo path + honest demo data.**
+
+  Real repo, zero install:
+    • LoadDialog now leads with a single big input — paste a public GitHub or
+      GitLab repo URL and the dashboard fetches commits live (browser → API,
+      no Mneme proxy) and renders a real nervous system with the user's
+      actual top contributors and time span.
+    • New `lib/gitFetch.ts` — synthesizes `NervousSystemData` from
+      GitHub/GitLab commit lists. Caps at 5 pages × 100 commits = 500 commits
+      to stay safely inside unauthenticated rate limits.
+    • Live mode is degraded by design (no file-level data — would burn the
+      rate limit on per-commit detail fetches). `limits[]` surfaces the
+      tradeoff and points the user at the full-fidelity path.
+
+  Full-fidelity path, AI-agent-led:
+    • Dialog copy stops telling the user to type `npm install` themselves.
+      Instead: "Ask your AI agent: install Mneme and dump nervous-system
+      JSON for this repo." The AI handles the install path. User just drops
+      the resulting JSON.
+    • Welcome overlay step 3 rewritten to mirror this — two paths
+      (paste GitHub/GitLab URL · or ask your AI), neither asks the user to
+      install anything by hand.
+
+  Demo data — every number is now self-consistent:
+    • Added the 2 missing authors (Frank Müller rank 6, Grace Park rank 7).
+      Previously they were referenced in telepathy pairs and critical-file
+      topKnowers but had no passport, so the dashboard showed "rank #4 of
+      7" while only 5 nodes were on the graph.
+    • Passport commit counts now sum to exactly `meta.totalCommits` (4287);
+      `repoCommitShare` values sum to ~1.0; every author referenced anywhere
+      in the data has a backing passport.
+    • Hero headline corrected from "4 critical files at knowledge risk" to
+      "3 critical files" — matches the actual count of `tier:"at-risk"`
+      entries in `atrophy.criticalFiles`.
+    • Added a 5th lobe (`infra/k8s` with Grace as topOwner) so all 7 authors
+      have a domain in the lobe layer.
+
 ## [1.17.1] — 2026-05-09
 
 **Polish pass — web demo + README readability.**
