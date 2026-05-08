@@ -1,0 +1,87 @@
+# Next.js — reference Mneme pack
+schemaVersion: 1
+id: next
+displayName: Next.js
+description: |
+  Detects Next.js (Pages Router or App Router) and exposes tools for page
+  inventory + data-fetching auditing.
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  packageDeps:
+    - next
+  importPatterns:
+    - "from\\s+['\"]next"
+  filePatterns:
+    - "^pages\\/.*"
+    - "^app\\/.*"
+    - "next\\.config\\.[mc]?js$"
+    - "next\\.config\\.ts$"
+  minConfidence: 0.5
+
+tools:
+  - id: list_pages
+    description: |
+      Inventory of every Next.js page (Pages Router pages/* or App Router
+      app/*). Includes route path + first-commit history + current author
+      (atrophy-aware) + applicable repo constitution rules.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "export\\s+default\\s+function\\s+[A-Z]"
+        - "export\\s+default\\s+async\\s+function\\s+[A-Z]"
+        - "export\\s+const\\s+metadata"
+      fileExtensions: [tsx, jsx, ts, js, mdx]
+      maxResults: 200
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: audit_data_fetching
+    description: |
+      Find data-fetching patterns: getServerSideProps, getStaticProps,
+      generateStaticParams, fetch() in server components, useSWR, useQuery.
+      Cross-references performance + security incidents.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "getServerSideProps"
+        - "getStaticProps"
+        - "generateStaticParams"
+        - "useSWR\\s*\\("
+        - "useQuery\\s*\\("
+        - "useMutation\\s*\\("
+      fileExtensions: [tsx, jsx, ts, js]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

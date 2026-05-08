@@ -1,0 +1,82 @@
+# FastAPI — reference Mneme pack
+schemaVersion: 1
+id: fastapi
+displayName: FastAPI
+description: |
+  Detects FastAPI usage and exposes tools for endpoint inventory + dependency
+  injection chain tracing.
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  pythonDeps:
+    - fastapi
+  importPatterns:
+    - "from\\s+fastapi\\s+import"
+    - "import\\s+fastapi"
+  filePatterns:
+    - ".*main\\.py$"
+    - ".*app\\.py$"
+    - ".*routers?\\/.*\\.py$"
+  minConfidence: 0.5
+
+tools:
+  - id: list_endpoints
+    description: |
+      Inventory of every FastAPI endpoint declared via @app.get/@router.post
+      decorators. Includes path + HTTP method + handler function name +
+      first-commit history + current maintainer (atrophy-aware).
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "@(?:app|router)\\.(get|post|put|patch|delete)\\s*\\("
+        - "APIRouter\\s*\\("
+      fileExtensions: [py]
+      maxResults: 200
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: find_dependency_chains
+    description: |
+      Trace FastAPI Depends() chains — what dependencies each endpoint pulls
+      in. Cross-references security incidents to flag endpoints whose deps
+      have past authn/authz issues.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "Depends\\s*\\("
+        - "Security\\s*\\("
+      fileExtensions: [py]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

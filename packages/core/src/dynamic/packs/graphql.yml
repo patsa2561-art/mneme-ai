@@ -1,0 +1,96 @@
+# GraphQL — reference Mneme pack
+schemaVersion: 1
+id: graphql
+displayName: GraphQL
+description: |
+  Detects GraphQL usage (Apollo, GraphQL Yoga, urql, etc.) and exposes
+  tools for resolver inventory + N+1 query risk detection.
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  packageDeps:
+    - graphql
+    - apollo-server
+    - "@apollo/client"
+    - "@apollo/server"
+    - graphql-yoga
+    - urql
+    - "@urql/core"
+  importPatterns:
+    - "from\\s+['\"]graphql['\"]"
+    - "from\\s+['\"]apollo-server"
+    - "from\\s+['\"]@apollo"
+    - "from\\s+['\"]graphql-yoga"
+  filePatterns:
+    - ".*\\.graphql$"
+    - ".*\\.gql$"
+    - ".*resolvers?\\/.*"
+    - ".*schema\\.[tj]s$"
+  minConfidence: 0.5
+
+tools:
+  - id: list_resolvers
+    description: |
+      Inventory of GraphQL resolvers (Query, Mutation, Subscription, Type).
+      Includes which schema field each resolves + first-commit history +
+      current expert author (atrophy-aware).
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "Query\\s*:\\s*\\{"
+        - "Mutation\\s*:\\s*\\{"
+        - "Subscription\\s*:\\s*\\{"
+        - "@Resolver\\s*\\("
+        - "@FieldResolver"
+      fileExtensions: [ts, tsx, js, jsx, mjs]
+      maxResults: 200
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: find_n_plus_one_risks
+    description: |
+      Find GraphQL resolvers that fetch one item per call (likely N+1 risk
+      when batched by parent resolver). Suggests DataLoader patterns from
+      this repo's history of successful refactors.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "resolve\\s*:\\s*async\\s+\\([^)]*\\)\\s*=>"
+        - "@Resolver"
+        - "DataLoader"
+        - "findUnique\\s*\\(\\s*\\{\\s*where"
+      fileExtensions: [ts, tsx, js, jsx, mjs]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

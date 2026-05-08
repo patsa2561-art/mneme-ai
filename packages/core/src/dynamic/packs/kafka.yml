@@ -1,0 +1,89 @@
+# Kafka — reference Mneme pack
+schemaVersion: 1
+id: kafka
+displayName: Apache Kafka
+description: |
+  Detects Kafka usage (KafkaJS, node-rdkafka, kafka-python) and exposes
+  tools for consumer + topic inventory.
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  packageDeps:
+    - kafkajs
+    - node-rdkafka
+    - "@confluentinc/kafka-javascript"
+  pythonDeps:
+    - kafka-python
+    - confluent-kafka
+  importPatterns:
+    - "from\\s+['\"]kafkajs['\"]"
+    - "from\\s+kafka\\s+import"
+    - "Kafka\\s*\\("
+  filePatterns:
+    - ".*kafka.*\\.(ts|js|py)$"
+    - ".*consumers?\\/.*\\.(ts|js|py)$"
+    - ".*producers?\\/.*\\.(ts|js|py)$"
+  minConfidence: 0.5
+
+tools:
+  - id: list_consumers
+    description: |
+      Inventory of Kafka consumer groups in the codebase. Includes the
+      topic each subscribes to + the handler function + first-commit history.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "consumer\\.subscribe\\s*\\("
+        - "consumer\\.run\\s*\\("
+        - "@KafkaListener"
+        - "KafkaConsumer\\s*\\("
+      fileExtensions: [ts, tsx, js, jsx, py]
+      maxResults: 100
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: list_topics_used
+    description: |
+      Find every Kafka topic name referenced in the codebase. Useful for
+      "is this topic still used?" / "who produces vs consumes". Augmented
+      with incident history per topic.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "topic\\s*:\\s*['\"][a-zA-Z0-9._-]+['\"]"
+        - "subscribe\\s*\\(\\s*\\{[^}]*topic"
+        - "producer\\.send\\s*\\(\\s*\\{[^}]*topic"
+      fileExtensions: [ts, tsx, js, jsx, py, yaml, yml]
+      maxResults: 200
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - incident-cross-reference
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

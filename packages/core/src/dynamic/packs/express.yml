@@ -1,0 +1,80 @@
+# Express — reference Mneme pack
+schemaVersion: 1
+id: express
+displayName: Express.js
+description: |
+  Detects Express.js usage and exposes tools for route inventory + finding
+  unprotected endpoints (no auth middleware).
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  packageDeps:
+    - express
+    - "@types/express"
+  importPatterns:
+    - "from\\s+['\"]express['\"]"
+    - "require\\(['\"]express['\"]\\)"
+  filePatterns:
+    - ".*router\\.[tj]s$"
+    - ".*routes?\\.[tj]s$"
+  minConfidence: 0.5
+
+tools:
+  - id: list_routes
+    description: |
+      Inventory of every Express route handler in the codebase (HTTP method,
+      path, handler function). Augmented with first-commit history per route
+      and the current expert maintainer.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "(?:app|router)\\.(get|post|put|patch|delete|all|use)\\s*\\("
+      fileExtensions: [ts, tsx, js, jsx, mjs, cjs]
+      maxResults: 200
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: find_unprotected_endpoints
+    description: |
+      Find Express routes whose handler chain has no obvious auth middleware
+      (no .use(authenticate) / @UseGuards / requireAuth). Cross-references
+      past auth-related incidents.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "(?:app|router)\\.(post|put|patch|delete)\\s*\\("
+      fileExtensions: [ts, tsx, js, jsx, mjs, cjs]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

@@ -174,8 +174,16 @@ async function dispatchDynamicTool(
     };
   }
 
-  // Build augmented description for the response so AI sees tribal knowledge.
-  const aug = dynamic.augmentDescription(found.tool.description, found.tool.augmentation, dynamic.EMPTY_AUGMENTATION_INPUT);
+  // v1.15.0: Build REAL augmentation input from Mneme stores
+  // (atrophy, forensics, constitution, deprecations, git-blame).
+  const hits = queryResult.result.kind === "code-search" ? queryResult.result.hits : [];
+  let augInput: ReturnType<typeof dynamic.buildAugmentationInput>;
+  try {
+    augInput = dynamic.buildAugmentationInput({ hits, repoRoot });
+  } catch {
+    augInput = dynamic.EMPTY_AUGMENTATION_INPUT;
+  }
+  const aug = dynamic.augmentDescription(found.tool.description, found.tool.augmentation, augInput);
 
   return {
     ok: true,

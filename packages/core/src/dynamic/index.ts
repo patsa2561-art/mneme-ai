@@ -3,6 +3,7 @@ export * from "./pack-schema.js";
 export * from "./pack-loader.js";
 export * from "./query-engine.js";
 export * from "./augmentation.js";
+export * from "./tribal-fetcher.js";
 export * from "./tool-builder.js";
 
 import { dirname, join } from "node:path";

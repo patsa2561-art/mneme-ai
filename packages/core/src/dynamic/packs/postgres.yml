@@ -1,0 +1,124 @@
+# Postgres — reference Mneme pack
+schemaVersion: 1
+id: postgres
+displayName: Postgres
+description: |
+  Detects Postgres usage (raw pg, Prisma, Drizzle, Knex, Postgres.js) and
+  exposes tools for migration history, index audits, and N+1 query detection.
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  packageDeps:
+    - pg
+    - postgres
+    - knex
+    - prisma
+    - "@prisma/client"
+    - drizzle-orm
+    - typeorm
+  importPatterns:
+    - "from\\s+['\"]pg['\"]"
+    - "from\\s+['\"]postgres['\"]"
+    - "from\\s+['\"]@prisma"
+    - "from\\s+['\"]drizzle-orm"
+  filePatterns:
+    - ".*migrations?\\/.*"
+    - ".*\\.sql$"
+    - ".*schema\\.prisma$"
+  minConfidence: 0.5
+
+tools:
+  - id: show_migrations
+    description: |
+      List database migrations in chronological order. Includes when each
+      was introduced (first-commit) and current expert author. Useful for
+      "is this column safe to drop?" / "when did we add this index?"
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "CREATE\\s+TABLE"
+        - "ALTER\\s+TABLE"
+        - "CREATE\\s+INDEX"
+        - "DROP\\s+(TABLE|COLUMN|INDEX)"
+        - "exports\\.up\\s*="
+        - "export\\s+async\\s+function\\s+up"
+      fileExtensions: [sql, ts, js, mjs]
+      maxResults: 200
+      ranking: alphabetical
+    enrichWith:
+      - first-commit-introduced
+      - git-blame
+      - atrophy-author
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: audit_indexes
+    description: |
+      Find tables/queries that may need indexes — frequent WHERE/JOIN columns
+      without matching CREATE INDEX. Cross-references performance incidents.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "WHERE\\s+[a-z_]+\\s*="
+        - "JOIN\\s+[a-z_]+\\s+ON"
+        - "ORDER\\s+BY"
+        - "CREATE\\s+(?:UNIQUE\\s+)?INDEX"
+      fileExtensions: [sql, ts, js]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - first-commit-introduced
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: find_n_plus_one
+    description: |
+      Detect potential N+1 query patterns — loops/maps that issue DB calls
+      inside iterators. Augmented with the canonical "batch-loaded" pattern
+      from this repo's history.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "\\.map\\s*\\(.*await\\s+.*\\.(findUnique|findFirst|findMany|query)"
+        - "for\\s*\\(.*\\.(findUnique|findFirst|query)"
+        - "Promise\\.all\\(.*\\.map\\("
+      fileExtensions: [ts, tsx, js, jsx, mjs]
+      maxResults: 50
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

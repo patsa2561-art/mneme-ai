@@ -1,0 +1,111 @@
+# React — reference Mneme pack
+schemaVersion: 1
+id: react
+displayName: React
+description: |
+  Detects React usage and exposes tools for hooks, state patterns,
+  re-render hot spots, and effect-dependency audits.
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+license: MIT
+
+detection:
+  packageDeps:
+    - react
+    - react-dom
+    - "@types/react"
+  importPatterns:
+    - "from\\s+['\"]react['\"]"
+    - "import\\s+React"
+  filePatterns:
+    - ".*\\.(tsx|jsx)$"
+  minConfidence: 0.5
+
+tools:
+  - id: list_unused_hooks
+    description: |
+      List custom hooks (useXxx) declared in the codebase that have zero callers.
+      Description augmented with author atrophy and incident history per file.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "(?:export\\s+)?(?:const|function)\\s+use[A-Z][A-Za-z0-9_]*\\s*[=(]"
+      fileExtensions: [ts, tsx, js, jsx]
+      maxResults: 100
+      ranking: alphabetical
+    enrichWith:
+      - git-blame
+      - first-commit-introduced
+      - atrophy-author
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: audit_use_effect_deps
+    description: |
+      Find useEffect hooks with potentially unsafe dependency arrays — empty
+      array, missing values, or non-stable references. Cross-references
+      past incidents related to stale closures or infinite re-renders.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "useEffect\\s*\\("
+        - "useLayoutEffect\\s*\\("
+      fileExtensions: [ts, tsx, js, jsx]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: find_state_pattern_drift
+    description: |
+      Detect inconsistent state-management patterns: useState mixed with
+      Redux/Zustand/Context in the same module. Surfaces "drift" where
+      conventions diverge and pairs with this codebase's expert authors.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "useState\\s*\\("
+        - "useReducer\\s*\\("
+        - "useContext\\s*\\("
+        - "createSlice\\s*\\("
+        - "create\\(\\(set"
+      fileExtensions: [ts, tsx, js, jsx]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
