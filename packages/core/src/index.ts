@@ -31,3 +31,4 @@ export * as learning from "./learning/index.js";
 export * as security from "./security/index.js";
 export * as bench from "./bench/index.js";
 export * as dynamic from "./dynamic/index.js";
+export * as metrics from "./metrics/index.js";

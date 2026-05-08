@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/core",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Core indexing, retrieval, and graph engine for Mneme",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,6 +33,14 @@
     "./correlate": {
       "import": "./dist/correlate/index.js",
       "types": "./dist/correlate/index.d.ts"
+    },
+    "./dynamic": {
+      "import": "./dist/dynamic/index.js",
+      "types": "./dist/dynamic/index.d.ts"
+    },
+    "./metrics": {
+      "import": "./dist/metrics/index.js",
+      "types": "./dist/metrics/index.d.ts"
     }
   },
   "repository": {
@@ -47,6 +55,7 @@
   "license": "MIT",
   "files": [
     "dist",
+    "src/dynamic/packs/*.yml",
     "README.md"
   ],
   "scripts": {
@@ -54,7 +63,9 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "yaml": "^2.6.1",
+    "zod": "^3.23.8"
   },
   "engines": {
     "node": ">=22.13.0 <25.0.0"

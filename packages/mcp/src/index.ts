@@ -95,10 +95,116 @@ function enrichWithSecondBrain(
   };
 }
 
+// ─── v1.13.0 — Dynamic MCP wiring ────────────────────────────────────
+//
+// At server start we:
+//   1. Detect ecosystems in the repo
+//   2. Load all packs (bundled + user + repo)
+//   3. Compile active tool catalog (only packs whose detection passes)
+//   4. Merge dynamic tools INTO the static catalog (no name collisions
+//      possible — dynamic tools are namespaced mneme.<pack>.<tool>)
+//
+// Tool-call dispatch checks dynamic tools AFTER static — so static wins
+// on the rare collision (defensive).
+import { dynamic } from "@mneme-ai/core";
+type BuiltMcpTool = ReturnType<typeof dynamic.buildActiveToolCatalog>[number];
+type Pack = ReturnType<typeof dynamic.loadAllPacks>["packs"][number];
+
+interface DynamicState {
+  /** Built tool catalog (compiled at boot). */
+  catalog: BuiltMcpTool[];
+  /** All loaded packs (used at dispatch time to look up tool definitions). */
+  packs: Pack[];
+}
+
+function loadDynamicState(repoRoot: string): DynamicState {
+  if (process.env["MNEME_NO_DYNAMIC_MCP"] === "1") {
+    return { catalog: [], packs: [] };
+  }
+  try {
+    const detection = dynamic.detectEcosystems(repoRoot);
+    const paths = dynamic.getDefaultPackSearchPaths(repoRoot, dynamic.getBundledPacksDir());
+    const loaded = dynamic.loadAllPacks(paths);
+    // Pack failures are best-effort — don't block startup
+    const catalog = dynamic.buildActiveToolCatalog({
+      detection,
+      packs: loaded.packs,
+      // For Phase 1 we attach minimal augmentation (only base description).
+      // Phase 2 will pre-fetch tribal-knowledge facts and pass them here.
+      augmentDescription: (base, tool) => {
+        const a = dynamic.augmentDescription(base, tool.augmentation, dynamic.EMPTY_AUGMENTATION_INPUT);
+        return a.full;
+      },
+    });
+    return { catalog, packs: loaded.packs };
+  } catch {
+    // Never fail MCP startup because of dynamic-tool issues
+    return { catalog: [], packs: [] };
+  }
+}
+
+async function dispatchDynamicTool(
+  toolName: string,
+  args: Record<string, unknown>,
+  repoRoot: string,
+  packs: Pack[],
+): Promise<{ ok: true; result: CallToolResult } | { ok: false }> {
+  const found = dynamic.lookupTool(toolName, packs);
+  if (!found) return { ok: false };
+
+  // Execute query + format
+  const queryResult = dynamic.executeQuery(found.tool.query, repoRoot);
+  if (!queryResult.ok) {
+    return {
+      ok: true,
+      result: {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            data: null,
+            error: {
+              kind: queryResult.error.kind,
+              stage: queryResult.error.stage,
+              message: queryResult.error.message,
+            },
+            wisdom: `Dynamic tool ${toolName} could not execute: ${queryResult.error.message}`,
+          }, null, 2),
+        }],
+      },
+    };
+  }
+
+  // Build augmented description for the response so AI sees tribal knowledge.
+  const aug = dynamic.augmentDescription(found.tool.description, found.tool.augmentation, dynamic.EMPTY_AUGMENTATION_INPUT);
+
+  return {
+    ok: true,
+    result: {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          data: queryResult.result,
+          wisdom: aug.full,
+          followUp: [],
+          confidence: { level: "medium" },
+          provenance: {
+            packId: found.pack.id,
+            toolId: found.tool.id,
+            packVersion: found.pack.version,
+            schemaVersion: found.pack.schemaVersion,
+            args,
+          },
+        }, null, 2),
+      }],
+    },
+  };
+}
+
 export async function startMcpServer(opts: McpOptions): Promise<void> {
   const runtime = await buildRuntime(opts.cwd);
   const allTools = buildAllTools();
   const toolMap = buildToolMap();
+  const dynamic = loadDynamicState(runtime.meta.rootPath);
 
   const server = new Server(
     { name: "mneme", version: resolveVersion() },
@@ -106,30 +212,39 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: toMcpTools(allTools),
+    tools: [
+      ...toMcpTools(allTools),
+      ...dynamic.catalog.map((t) => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema as Tool["inputSchema"],
+      })),
+    ],
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
     const tool = toolMap.get(req.params.name);
-    if (!tool) {
-      return toErrorResult(
-        `unknown tool: ${req.params.name}. Call mneme.capabilities to list available tools.`,
-      );
+    if (tool) {
+      try {
+        const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+        const response = await tool.handler(runtime, args);
+        const enriched = enrichWithSecondBrain(response, tool, runtime.meta.rootPath);
+        return toCallResult(enriched);
+      } catch (err) {
+        return toErrorResult(
+          `${req.params.name} failed: ${(err as Error).message}. ` +
+            `If this tool requires the index, ask the user to run \`mneme index\`.`,
+        );
+      }
     }
-    try {
-      const args = (req.params.arguments ?? {}) as Record<string, unknown>;
-      const response = await tool.handler(runtime, args);
-      // Second Brain — auto-enrich every response with composition hints
-      // + lifecycle tracking + homework rubric. The chain reaction +
-      // teacher-student loop start here.
-      const enriched = enrichWithSecondBrain(response, tool, runtime.meta.rootPath);
-      return toCallResult(enriched);
-    } catch (err) {
-      return toErrorResult(
-        `${req.params.name} failed: ${(err as Error).message}. ` +
-          `If this tool requires the index, ask the user to run \`mneme index\`.`,
-      );
-    }
+    // Dynamic-tool dispatch (only if static didn't claim this name)
+    const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+    const dyn = await dispatchDynamicTool(req.params.name, args, runtime.meta.rootPath, dynamic.packs);
+    if (dyn.ok) return dyn.result;
+
+    return toErrorResult(
+      `unknown tool: ${req.params.name}. Call mneme.capabilities to list available tools.`,
+    );
   });
 
   const transport = new StdioServerTransport();

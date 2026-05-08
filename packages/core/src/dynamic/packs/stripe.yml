@@ -1,0 +1,150 @@
+# Stripe Payments — reference Mneme pack
+#
+# Activates when this repo uses Stripe SDK (Node, Python, or both).
+# All 3 detection signals must triangulate to >= 0.5 confidence before
+# the tools below appear in the MCP tools/list. This is intentionally
+# conservative — false positives cost user trust more than false negatives.
+
+schemaVersion: 1
+id: stripe
+displayName: Stripe Payments
+description: |
+  Detects Stripe SDK usage in the repo and exposes ecosystem-specific
+  MCP tools for finding pricing logic, auditing PII handlers, and
+  verifying webhook security. Tool descriptions encode tribal knowledge
+  from this repo's git history (canonical/deprecated paths, expert authors,
+  past incidents, applicable constitution rules).
+
+version: 1.0.0
+mnemeMinVersion: "1.13.0"
+
+maintainer:
+  name: Mneme Core
+  url: https://github.com/patsa2561-art/mneme-ai
+
+license: MIT
+
+# ─── Detection signals ────────────────────────────────────────────────
+detection:
+  packageDeps:
+    - stripe
+    - "@stripe/stripe-js"
+    - "@stripe/react-stripe-js"
+    - "@stripe/connect-js"
+  pythonDeps:
+    - stripe
+  importPatterns:
+    - "from\\s+['\"]stripe['\"]"
+    - "require\\(['\"]stripe['\"]\\)"
+    - "import\\s+stripe(?!_)"
+  filePatterns:
+    - ".*stripe.*\\.(ts|tsx|js|jsx|mjs|cjs|py)$"
+  minConfidence: 0.5
+
+# ─── Tools exposed when detection passes ──────────────────────────────
+tools:
+  - id: find_pricing_logic
+    description: |
+      Find Stripe pricing/subscription/product/payment-intent logic in this
+      codebase. Returns code locations + git history + introducing commits.
+      Description is automatically augmented with this repo's tribal
+      knowledge: canonical vs deprecated paths, current expert authors,
+      past incidents, and applicable constitution rules.
+    inputSchema:
+      type: object
+      properties:
+        topic:
+          type: string
+          enum: [pricing, subscriptions, products, payment-intents, all]
+          default: all
+          description: Which Stripe primitive to focus on
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "stripe\\.prices\\.(create|update|retrieve|list|search)"
+        - "stripe\\.subscriptions\\.(create|update|cancel|retrieve|list)"
+        - "stripe\\.products\\.(create|update|retrieve|list)"
+        - "stripe\\.paymentIntents\\.(create|update|capture|cancel|retrieve)"
+        - "createPaymentIntent"
+        - "Stripe\\.(prices|subscriptions|products|paymentIntents)"
+      fileExtensions: [ts, tsx, js, jsx, mjs, cjs, py]
+      maxResults: 50
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - first-commit-introduced
+      - centrality-rank
+      - incident-cross-reference
+      - atrophy-author
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: audit_pii_handlers
+    description: |
+      Audit code paths that handle Stripe-bound personally identifiable
+      information (customer email, name, phone, billing address, IP). Useful
+      for PCI-DSS scope review and GDPR audits. Description augmented with
+      past incidents in PII handling and applicable security rules.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "customer\\.email"
+        - "customer\\.name"
+        - "customer\\.phone"
+        - "billing_details\\.(name|email|phone|address)"
+        - "shipping\\.(name|address|phone)"
+        - "PaymentMethod\\..*billing_details"
+      fileExtensions: [ts, tsx, js, jsx, mjs, cjs, py]
+      maxResults: 100
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true
+
+  - id: list_webhook_handlers
+    description: |
+      List Stripe webhook handler endpoints in this repo + flag ones missing
+      signature verification (security risk). Description augmented with past
+      webhook-related incidents and constitution rules about webhook security.
+    inputSchema:
+      type: object
+      properties: {}
+      additionalProperties: false
+    query:
+      kind: code-search
+      patterns:
+        - "app\\.post\\(['\"]\\/.*webhook"
+        - "router\\.post\\(['\"]\\/.*webhook"
+        - "stripe\\.webhooks\\.constructEvent"
+        - "Stripe\\.Webhook\\.constructEvent"
+      fileExtensions: [ts, tsx, js, jsx, mjs, cjs, py]
+      maxResults: 50
+      ranking: centrality-desc
+    enrichWith:
+      - git-blame
+      - first-commit-introduced
+      - incident-cross-reference
+      - constitution-rules
+    augmentation:
+      includeCanonicalPath: true
+      includeDeprecatedPaths: true
+      includeExpertAuthors: true
+      includeRecentIncidents: true
+      includeApplicableRules: true

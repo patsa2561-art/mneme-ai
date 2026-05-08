@@ -94,11 +94,11 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 | 🛡 | **MCP Shield** | The first reusable defensive runtime for *any* MCP server. Add `withShield(handler)` and get HMAC-chained audit log + prompt-injection scrubber + rate-limit + reputation tracking — for free. |
 | 📐 | **AI-Memory-Bench** | The first reproducible benchmark for "AI memory layers". *Numbers, not vibes.* Measures hallucination rate across citation / attribution / API categories with Wilson 95% lower-bound. |
 | ⚖ | **Constitutional Gate** | Constitutional AI was a *training-time* idea. We made it a *runtime* gate. AI proposes code → Mneme checks repo-history MUST-NOT rules → REFUSE + rewrite hint. The AI literally cannot suggest things contradicting your repo's lessons. |
-| 🧬 | **Dynamic MCP** | Every other MCP server has a static tool surface. Mneme's surface is **repo-dependent.** Detects Stripe / Kafka / React / Postgres / Express / FastAPI / Next / GraphQL → spawns ecosystem-specific tools tailored to *your* code. |
+| 🧬 | **Dynamic MCP** | Every other MCP server has a static tool surface. Mneme's surface is **repo-dependent.** Detects Stripe / Kafka / React / Postgres / Express / FastAPI / Next / GraphQL → spawns ecosystem-specific tools tailored to *your* code, with descriptions augmented by **tribal knowledge** from your repo's git history (canonical paths · deprecated paths · expert authors · past incidents · constitution rules). |
 
 > **Bank-grade by default.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Audit log auto-on. Prompt-injection scrubber auto-on. WASM model checksums auto-pinned. Zero typing for the user — your AI agent installs Mneme; security comes pre-armed.
 
-> **2692 tests passing · 98+ MCP tools · MIT · zero telemetry · works offline.**
+> **2833 tests passing · 98+ MCP tools · MIT · zero telemetry · works offline.**
 
 </details>
 
@@ -451,6 +451,29 @@ Shield + Gate        = constitutional shield (refuse + audit trail)
 Gate + Ecosystem     = per-repo constitution auto-enforced
 All 4 combined       = self-defending AI memory at the runtime layer
 ```
+
+</details>
+
+═══════════════════════════════════════════════════════════════════════════════
+
+<details>
+<summary><h2 style="display:inline">📊 7 metrics that <i>only</i> Mneme can compute (Mneme-only science)</h2></summary>
+
+*Cursor / Copilot / Sourcegraph / GitHub Code Search — even OpenAI's internal tools — cannot compute these.* Each of the 7 metrics combines Mneme atoms (capabilities) into a NEW molecule that requires the full Mneme stack (git history × atrophy × forensics × Constitutional Gate × audit chain × bench harness) to evaluate.
+
+| # | Code | Metric | What it measures | Why nobody else can compute it |
+|---|---|---|---|---|
+| 1 | **HKD** | Hidden Knowledge Density | % of code lines whose understanding is concentrated in ≤2 authors AND not touched >180 days. The "bus factor of 1" risk surface, quantified. | Requires per-file atrophy time-series + author-distinct-count — neither indexed by other dev tools |
+| 2 | **TWS** | Tribal Wisdom Score | Of AI tool calls, what fraction cite a real commit hash whose surrounding decisions/regrets corroborate the citation? | Requires hash verification × Mneme's correlator neighborhood × audit-log of AI tool calls |
+| 3 | **CVR** | Constitution Violation Rate | Constitutional-Gate refusals per 100 commits. Lower = AI has internalised your repo's lessons. | Only computable because Mneme has runtime constitutional enforcement (no other tool does) |
+| 4 | **HRR** | Hallucination Reduction Ratio | Hallucination rate (with Mneme) / (without Mneme), via AI-Memory-Bench. Numerical proof of value. | Requires the bench harness AND a controlled-comparison protocol |
+| 5 | **REI** | Regret Echo Index | % of new commits echoing a past regret pattern WITHOUT referencing it. Detects "we're about to repeat history" before merge. | Requires regret-pattern extraction + Hebbian similarity + commit-message scanner — none integrated elsewhere |
+| 6 | **KAH** | Knowledge Atrophy Halflife | Models expertise decay as exponential — weeks until 50% of expert understanding fades. Halflife framing makes atrophy as concrete as radioactive decay. | Requires multi-snapshot atrophy time-series + log-space regression — Mneme's atrophy index uniquely supports this |
+| 7 | **PCS** | Provenance Chain Strength | % of commits with unbroken AI → audit-log → git tamper-evident chain. The compliance graph. | Requires HMAC-chained audit log + AI-commit attribution + git verification — Mneme's stack uniquely supports all 3 |
+
+**Each metric is a pure deterministic function** of pre-aggregated Mneme atoms. Test coverage: 27/27 unit tests verifying every formula, edge case, and boundary condition. See [`packages/core/src/metrics/mneme-metrics.ts`](./packages/core/src/metrics/mneme-metrics.ts).
+
+**Why this matters for the industry:** when a banking customer asks "is your AI memory layer actually reducing hallucination?", *we have a number*. When a CTO asks "is our AI learning our codebase over time?", *we have CVR + TWS over a window*. When a CISO asks "what's our bus-factor risk?", *we have HKD on the codebase*. **Numbers, not vibes.**
 
 </details>
 

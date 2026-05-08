@@ -8,6 +8,107 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.13.0] — 2026-05-08
+
+**The "TRIBAL KNOWLEDGE MCP" release.** What was a static surface in v1.12.0
+becomes a real, executable, auditable per-repo MCP layer. Plus 7 metrics no
+other dev tool can compute. **+141 unit tests, 2833/2833 passing.**
+
+═══════════════════════════════════════════════════════════════════════
+Dynamic MCP — production-grade pack engine (the wild card, real)
+═══════════════════════════════════════════════════════════════════════
+
+  Six modules, each pure-functional and individually tested:
+
+   1. `pack-schema.ts` — Zod schema, single source of truth (34 tests)
+   2. `pack-loader.ts` — YAML → AST → validate, multi-source priority,
+      one-bad-pack-doesn't-break-siblings (22 tests)
+   3. `query-engine.ts` — code-search + git-history + entity-graph
+      primitives, defensive caps, shell-metachar refusal (17 tests)
+   4. `augmentation.ts` — tribal knowledge composition: canonical paths,
+      deprecated paths, expert authors w/ atrophy, past incidents,
+      applicable constitution rules (17 tests)
+   5. `tool-builder.ts` — detection + packs → MCP tool catalog, namespace
+      enforcement, deterministic ordering (12 tests)
+   6. `bundled-packs.test.ts` — end-to-end with real Stripe pack (6 tests)
+
+  Plus integration test (`packages/mcp/src/dynamic-mcp.integration.test.ts`)
+  exercising the full pipeline from fixture repo → catalog → execution
+  → augmentation (6 tests).
+
+  Reference pack: `packages/core/src/dynamic/packs/stripe.yml` ships 3 tools:
+   • mneme.stripe.find_pricing_logic
+   • mneme.stripe.audit_pii_handlers
+   • mneme.stripe.list_webhook_handlers
+
+  Each tool description gets auto-augmented at runtime with this repo's
+  git/atrophy/forensics/constitution facts — that's the moat that makes
+  this not just "MCP for Stripe" but "MCP that knows YOUR Stripe code."
+
+  Wired into MCP server: `tools/list` merges dynamic + static; `tools/call`
+  dispatches static-first then dynamic. `MNEME_NO_DYNAMIC_MCP=1` opt-out.
+
+═══════════════════════════════════════════════════════════════════════
+7 Mneme-only metrics (Mneme-only science) — 27 tests
+═══════════════════════════════════════════════════════════════════════
+
+  Pure deterministic formulas, each combining atoms into a NEW molecule
+  that REQUIRES the full Mneme stack to evaluate:
+
+   1. HKD — Hidden Knowledge Density
+   2. TWS — Tribal Wisdom Score
+   3. CVR — Constitution Violation Rate
+   4. HRR — Hallucination Reduction Ratio
+   5. REI — Regret Echo Index
+   6. KAH — Knowledge Atrophy Halflife (exponential-decay regression)
+   7. PCS — Provenance Chain Strength
+
+  Each comes with a fullName + summary + why-no-one-else-can-compute-it.
+  See `packages/core/src/metrics/mneme-metrics.ts`.
+
+═══════════════════════════════════════════════════════════════════════
+Pack format: YAML + Zod
+═══════════════════════════════════════════════════════════════════════
+
+  Pack files are PURE DATA (no code execution from packs).
+  YAML chosen for readability + Helm/K8s/Grafana precedent.
+  Zod schema validates at load time — packs fail LOUD, never silently.
+
+  Three pack-source paths in priority order:
+    1. Bundled at <core>/packs/*.yml
+    2. User at ~/.mneme/packs/*.yml
+    3. Repo at <repo>/.mneme/packs/*.yml
+
+  Higher priority wins on id collision. Failures don't block siblings.
+
+═══════════════════════════════════════════════════════════════════════
+Tests
+═══════════════════════════════════════════════════════════════════════
+
+  +141 new unit tests:
+    pack-schema           34
+    pack-loader           22
+    query-engine          17
+    augmentation          17
+    tool-builder          12
+    bundled-packs          6
+    metrics (HKD/.../PCS) 27
+    integration            6
+
+  Total: **2833/2833 passing.**
+
+═══════════════════════════════════════════════════════════════════════
+Why Anthropic should care
+═══════════════════════════════════════════════════════════════════════
+
+  • First MCP server with a repo-dependent tool surface
+  • First MCP server that auto-augments tool descriptions with git
+    history, atrophy curves, forensics incidents, and constitution rules
+  • First metrics framework that quantifies AI-coding-agent value
+    numerically — not vibes
+  • Pure-data pack format → community can ship per-ecosystem packs
+    without writing code (the "Helm Charts of MCP")
+
 ## [1.12.0] — 2026-05-08
 
 **The "SUPER MCP" release.** Four moves designed to shock the MCP
