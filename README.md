@@ -376,15 +376,15 @@ These four advantages don't show up in a feature checklist — but they're what 
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 💰 Pricing — three tiers, free is forever
+## 🆓 Free, forever
 
-| Tier | Price | For |
-|---|---|---|
-| **Free** | $0 forever | solo dev · open source · vibe coders. Full CLI + 94 tools + Super Sonic Engine. |
-| **Pro** | $20/mo/dev | small teams. Adds hosted audit chain, Ed25519-signed certificates, Wisdom Federation network. |
-| **Air-gapped Enterprise** | $50K-200K/yr | defense · fintech · healthcare · EU AI Act subjects. On-premise, air-gapped, custom rubrics, 4-hour SLA. |
+Mneme is **MIT-licensed**, **local-first**, and **free for everyone** — solo devs, open source maintainers, vibe coders, teams, agencies. Everything you see in this README. Every command. Every feature. No accounts. No telemetry. No phone-home.
 
-→ **[Full pricing details](docs/PRICING.md)** — including the FAQ on why Enterprise costs more than SaaS.
+```bash
+npm install -g mneme-ai
+```
+
+That's the whole pricing page right now.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
