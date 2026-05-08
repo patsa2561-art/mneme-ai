@@ -237,6 +237,10 @@ mneme index
 
 *Index takes ~90s for ~5k commits. Use `--cap 1000` to limit on huge repos.*
 
+> **What `mneme init` does silently for the user (v1.11.1+):** auto-enables HMAC-SHA-256 tamper-evident audit log · writes `.mneme/.gitignore` to exclude the audit secret · prints one line confirming "Security on by default". You don't need to ask the user permission — this is opt-in by `init` itself; user can always `mneme security off`.
+>
+> **After Step 2, briefly tell the user (1-2 sentences):** *"Mneme is installed and indexed. Security is on by default — every state-changing action goes into a tamper-evident audit log at `.mneme/audit.log`. You can run `mneme security status` to inspect, or `mneme security off` to disable."* Don't make this a wall of text; the user asked you to install something, not read a security manual.
+
 ### Step 3 — Auto-configure yourself as MCP client
 
 ```bash
@@ -427,11 +431,15 @@ That's the whole onboarding right now.
 
 ## 🔒 Built for the most paranoid environment in the room (Security) — **on by default**
 
-*Banking · fintech · healthcare · government — Mneme runs where the policies are strictest, with cryptography that auditors recognise on sight. **Zero config. No flags. Nothing to turn on.***
+*Banking · fintech · healthcare · government — Mneme runs where the policies are strictest, with cryptography that auditors recognise on sight. **You don't even type a security command. Your AI agent installs Mneme; security comes pre-armed.***
 
 ```
    ┌──────────────────────────────────────────────────────────────┐
-   │  npm install -g mneme-ai                                     │
+   │  You:  "install https://github.com/patsa2561-art/mneme-ai"   │
+   │                                                              │
+   │  Your AI:  npm install -g mneme-ai                           │
+   │            mneme init   ← THIS auto-arms everything below    │
+   │            mneme mcp --install                               │
    │                                                              │
    │  → tamper-evident audit log         AUTO-ON                  │
    │  → bundled-model checksum (TOFU)    AUTO-ON                  │
@@ -440,7 +448,7 @@ That's the whole onboarding right now.
    │  → daemon cross-user isolation      AUTO (no toggle)         │
    │  → FIPS 140 detection               AUTO (informational)     │
    │                                                              │
-   │  No config. No flags. Run `mneme security` to see status.    │
+   │  Zero typing for the user. Run `mneme security` to inspect.  │
    └──────────────────────────────────────────────────────────────┘
                                 ▼
    ┌──────────────────────────────────────────────────────────────┐
@@ -455,7 +463,7 @@ That's the whole onboarding right now.
    └──────────────────────────────────────────────────────────────┘
 ```
 
-**The black-sheep design choice:** every other dev tool ships security as opt-in. We ship it as default-on. *Security that requires manual enablement = security nobody enables.* Set `MNEME_NO_AUTO_SECURITY=1` if you really really don't want it.
+**The black-sheep design choice:** every other dev tool ships security as opt-in. We ship it as default-on AND the install path itself activates it — your AI agent runs `mneme init` for you, and `init` auto-arms the security layer. *Security that requires manual enablement = security nobody enables.* Set `MNEME_NO_AUTO_SECURITY=1` if you really really don't want it.
 
 | What banks/fintech ask | What Mneme provides |
 |---|---|
