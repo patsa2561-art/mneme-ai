@@ -72,6 +72,30 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🆕 v1.8.0 — universal AI compatibility
+
+Two new tools that solve the *"how does my AI tool know which Mneme function to call?"* problem:
+
+| Tool | Solves |
+|---|---|
+| `mneme.understand_intent` (MCP) | AI hands Mneme a user query → gets top-3 tools + suggested args + execution plan. Drops cognitive load from "pick from 94 tools" to "follow this plan". |
+| `mneme adapter <vendor>` (CLI) | Export the full tool catalog in **OpenAI / Anthropic / Gemini** function-calling format. Even AI tools that don't speak MCP can use Mneme. |
+
+```bash
+# Export for ChatGPT / GPT-4 / Codex / o-series
+mneme adapter openai > openai-tools.json
+
+# Export for Claude (any version)
+mneme adapter anthropic > claude-tools.json
+
+# Export for Gemini / Vertex AI
+mneme adapter gemini > gemini-tools.json
+```
+
+Plus completed Phase 4-5: real LLM judges in `mneme court` (env-key detection · graceful fallback) and real HTTP query in `mneme federation query`.
+
+═══════════════════════════════════════════════════════════════════════════════
+
 ## 🆕 v1.6.0 — orchestra release
 
 | What | Why it matters | Try it |

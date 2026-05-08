@@ -20,12 +20,14 @@ import { metaTools } from "./meta.js";
 import { capabilitiesTool } from "./_capabilities.js";
 import { smartDoTool } from "./_smart_do.js";
 import { graderTool } from "./_grader_tool.js";
+import { understandIntentTool } from "./_intent_tool.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
 export function buildAllTools(): MnemeTool[] {
   return [
     capabilitiesTool,
+    understandIntentTool,
     graderTool,
     smartDoTool,
     ...memoryTools,

@@ -9,7 +9,8 @@
  * because Mneme is a TEACHER, not a tool catalog. The teacher must grade.
  */
 
-import { execGit } from "@mneme-ai/core/git";
+import { git } from "@mneme-ai/core";
+const { execGit } = git;
 import type {
   GradingAlgorithm,
   GraderResult,

@@ -1023,6 +1023,29 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await mcpCommand({ cwd: process.cwd() }));
     });
 
+  // ── v1.8.0 — Cross-AI Adapter (export tool catalog for any vendor) ──
+  program
+    .command("adapter <vendor>")
+    .description("Export Mneme's tool catalog as OpenAI / Anthropic / Gemini / MCP function-calling format")
+    .option("--out <path>", "Write JSON to this path (default: stdout)")
+    .option("--json", "Always emit JSON (default for stdout)", false)
+    .action(async (vendor: string, opts: { out?: string; json?: boolean }) => {
+      const allowed = ["openai", "anthropic", "gemini", "mcp"];
+      if (!allowed.includes(vendor)) {
+        ui.error(`Unknown vendor "${vendor}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      const { adapterCommand } = await import("./commands/adapter.js");
+      process.exit(
+        await adapterCommand({
+          cwd: process.cwd(),
+          vendor: vendor as "openai" | "anthropic" | "gemini" | "mcp",
+          out: opts.out,
+          json: opts.json,
+        }),
+      );
+    });
+
   // ── v1.6.0 — AI Memory Benchmark (Lighthouse-of-AI-memory) ──
   program
     .command("benchmark")

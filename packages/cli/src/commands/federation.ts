@@ -304,23 +304,51 @@ async function queryHub(opts: FederationOptions): Promise<number> {
     ui.error("Not joined to a hub. Run `mneme federation join --hub <url>` first.");
     return 1;
   }
+  // v1.8.0: real HTTP query against the hub
+  const url = `${cfg.hubUrl.replace(/\/$/, "")}/api/aggregate?pattern=${encodeURIComponent(opts.pattern)}`;
+  let body: { ok?: boolean; aggregate?: Record<string, number>; contributorCount?: number; reason?: string; kAnonymityFloor?: number; error?: string } = {};
+  let statusCode = 0;
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Accept": "application/json", "User-Agent": `mneme/${process.env["npm_package_version"] ?? "1.8.0"}` },
+    });
+    statusCode = res.status;
+    body = await res.json() as typeof body;
+  } catch (err) {
+    if (opts.json) {
+      process.stdout.write(JSON.stringify({ ok: false, error: (err as Error).message, hubUrl: cfg.hubUrl }, null, 2) + "\n");
+      return 1;
+    }
+    ui.error(`Failed to query hub ${cfg.hubUrl}: ${(err as Error).message}`);
+    return 1;
+  }
   if (opts.json) {
+    process.stdout.write(JSON.stringify({ statusCode, hubUrl: cfg.hubUrl, pattern: opts.pattern, ...body }, null, 2) + "\n");
+    return statusCode === 200 ? 0 : 1;
+  }
+  ui.banner();
+  if (!body.ok) {
+    ui.error(`Hub query failed (HTTP ${statusCode}): ${body.error ?? body.reason ?? "unknown error"}`);
+    return 1;
+  }
+  if (!body.aggregate) {
     process.stdout.write(
-      JSON.stringify(
-        {
-          status: "v1.7.0-mvp",
-          hint: "v1.7.0 ships the protocol + local client. Live HTTP query against the hub lands in v1.8.0 — for now, run `mneme federation contribute` to generate a signed envelope and POST it manually.",
-          hubUrl: cfg.hubUrl,
-          pattern: opts.pattern,
-        },
-        null,
-        2,
-      ) + "\n",
+      kleur.bold("\n  🌐 Federation query — k-anonymity floor not met\n\n") +
+        `  Pattern:           ${opts.pattern}\n` +
+        `  Contributors:      ${body.contributorCount ?? 0}\n` +
+        `  k-anonymity floor: ${body.kAnonymityFloor ?? 20}\n` +
+        kleur.dim("  Hub will release aggregates only when ≥k contributors have submitted.\n\n"),
     );
     return 0;
   }
-  ui.warn("v1.7.0 ships the federation protocol + local client. Live HTTP query against the hub lands in v1.8.0.");
-  ui.dim(`To contribute a signal manually: \`mneme federation contribute --pattern "${opts.pattern}"\``);
+  process.stdout.write(
+    kleur.bold("\n  🌐 Federation query — aggregate result\n\n") +
+      `  Pattern:           ${opts.pattern}\n` +
+      `  Contributors:      ${body.contributorCount}\n` +
+      `  Aggregate:         ${JSON.stringify(body.aggregate, null, 2)}\n\n` +
+      kleur.dim(`  Source: ${cfg.hubUrl}\n\n`),
+  );
   return 0;
 }
 
