@@ -32,12 +32,13 @@
 - [[VS-Code-Extension]] · *Atrophy Lens · sidebar · audit badge*
 
 ### 💎 The Frontier
-- [[The-Frontier]] · *28 world-firsts*
-- [[Originals]] · *the five v0.36 Originals*
-- [[Periodic-Table]] · *v0.40 Element/Atom/Molecule architecture*
-- [[Compose-And-Compiler]] · *v0.41 natural-language → plan*
-- [[Second-Brain]] · *v0.42 library + promotion + executor*
-- [[Holy-Grails]] · *🆕 v0.43 heartbeat · rewind · dna-fold*
+- [[Architecture-Overview]] · *🆕 read first — 5-min v0.40-v0.43 tour*
+- [[The-Frontier]] · *28+ world-firsts*
+- [[Originals]] · *v0.36 Originals*
+- [[Periodic-Table]] · *v0.40 Element/Atom/Molecule*
+- [[Compose-And-Compiler]] · *v0.41 NL → plan*
+- [[Second-Brain]] · *v0.42 library + executor*
+- [[Holy-Grails]] · *v0.43 heartbeat · rewind · dna-fold*
 - [[Innovations]] · *deep-dive every command*
 - [[Novel-Algorithms]] · *TDWE / RACB / ADS / CGAR*
 
