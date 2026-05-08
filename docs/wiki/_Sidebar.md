@@ -34,7 +34,8 @@
 ### 💎 The Frontier
 - [[The-Frontier]] · *28 world-firsts*
 - [[Originals]] · *the five v0.36 Originals*
-- [[Periodic-Table]] · *🆕 v0.40 Element/Atom/Molecule architecture*
+- [[Periodic-Table]] · *v0.40 Element/Atom/Molecule architecture*
+- [[Compose-And-Compiler]] · *🆕 v0.41 natural-language → plan*
 - [[Innovations]] · *deep-dive every command*
 - [[Novel-Algorithms]] · *TDWE / RACB / ADS / CGAR*
 

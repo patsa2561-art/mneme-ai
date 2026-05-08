@@ -59,6 +59,7 @@ import { showFindingCommand } from "./commands/show-finding.js";
 import { depsAuditCommand } from "./commands/deps-audit.js";
 import { groupsCommand } from "./commands/groups.js";
 import { periodicTableCommand } from "./commands/periodic-table.js";
+import { composeCommand } from "./commands/compose.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -432,6 +433,29 @@ export async function run(argv: string[]): Promise<void> {
           maxCommits: opts.maxCommits,
           rewrite: opts.rewrite,
           json: opts.json,
+        }),
+      );
+    });
+
+  // ─── compose — natural-language → molecule plan ───────────────────
+  program
+    .command("compose <intent...>")
+    .description("Compile a natural-language intent into a runnable pipeline of registered atoms / molecules. v0.41 ships the planner; execution lands in v0.42. See Wiki: Compose-And-Compiler.")
+    .option("--max-steps <n>", "cap on plan length (default 6)", (v) => Number(v), 6)
+    .option("--llm", "ask the configured LLM to refine the rule-based seed plan", false)
+    .option("--no-cache", "ignore the molecule cache for this run", false)
+    .option("--json", "machine-readable plan output (for AI / MCP)", false)
+    .option("--quiet", "no banner, no decorative chars", false)
+    .action(async (parts: string[], opts: any) => {
+      process.exit(
+        await composeCommand({
+          cwd: process.cwd(),
+          intent: parts.join(" "),
+          maxSteps: opts.maxSteps,
+          useLlm: opts.llm,
+          noCache: opts.cache === false,
+          json: opts.json,
+          quiet: opts.quiet,
         }),
       );
     });

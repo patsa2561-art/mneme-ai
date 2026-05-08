@@ -12,7 +12,7 @@
 <p>
   <a href="https://www.npmjs.com/package/mneme-ai"><img src="https://img.shields.io/npm/v/mneme-ai?label=mneme-ai&color=cb3837&logo=npm" alt="npm"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="license">
-  <img src="https://img.shields.io/badge/tests-2120%20passing-2da44e" alt="tests">
+  <img src="https://img.shields.io/badge/tests-2137%20passing-2da44e" alt="tests">
   <img src="https://img.shields.io/badge/recall%401-87%25-2da44e" alt="recall">
   <img src="https://img.shields.io/badge/local--first-yes-blue" alt="local">
   <a href="https://registry.modelcontextprotocol.io/"><img src="https://img.shields.io/badge/MCP-registered-c084fc" alt="mcp"></a>
@@ -517,14 +517,15 @@ After researching the landscape, every command in this list occupies whitespace 
 
 → 📋 **[Full table → Wiki: The Frontier](https://github.com/patsa2561-art/mneme-ai/wiki/The-Frontier)**
 
-### 🆕 v0.40 — Periodic Table (Element / Atom / Molecule architecture)
+### 🆕 v0.40-v0.43 — Element / Atom / Molecule architecture
 
-A chemistry-inspired layer **under** the 75 existing commands. v0.40 ships
-the MVP: 15 elements + 5 atoms + 2 refactored molecules + a browsable
-catalog at `mneme periodic-table`. v0.41-v0.43 add the compiler, the
-second-brain learning loop, and the holy-grail features.
+A chemistry-inspired layer **under** the 75 existing commands. Four-release
+arc:
 
-→ 🧪 **[Deep-dive → Wiki: Periodic Table](https://github.com/patsa2561-art/mneme-ai/wiki/Periodic-Table)**
+- **v0.40 — [Periodic Table](https://github.com/patsa2561-art/mneme-ai/wiki/Periodic-Table)** — 15 elements + 5 atoms + 2 molecules + browsable catalog at `mneme periodic-table` ✅
+- **v0.41 — [Compose & Compiler](https://github.com/patsa2561-art/mneme-ai/wiki/Compose-And-Compiler)** — `mneme compose "<intent>"` plans a custom pipeline from the periodic table. Rule-based by default, `--llm` for refinement, plans cached for reuse ✅
+- **v0.42 — Second Brain** — frequent plans auto-promote into named commands; `.mneme/library.json` per repo (coming)
+- **v0.43 — Holy Grails** — self-aware, rewind, dna-fold, adversarial-twin, heartbeat (coming)
 
 ### 🆕 v0.37 — Bayesian-filtered security scanner + 6 new rules
 

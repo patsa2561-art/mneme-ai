@@ -24,6 +24,7 @@ Commands:
   promise [options]  >  Promise-debt tracker — every "I'll fix later" / TODO / follow-up parsed into a ledger and verified against history (heuristic; treat as a starting list)
   karma [options]  >  TODO/FIXME debt ledger — every TODO added is a debit, every one removed is a credit. Open balance compounds with age.
   cognitive-twin|twin [options] <email>  >  Author-voice fingerprint — stylometric profile of how a contributor writes commits. Optional --rewrite '<subject>' rewrites in their voice. (Heuristic, no LLM.)
+  compose [options] <intent...>  >  Compile a natural-language intent into a runnable pipeline of registered atoms / molecules. v0.41 ships the planner; execution lands in v0.42. See Wiki: Compose-And-Compiler.
   periodic-table|table [options] [id]  >  Browse Mneme's Element/Atom/Molecule catalog. Pass an id (e.g. \`mneme periodic-table git.log\`) for full detail. v0.40 MVP — see Wiki: Periodic-Table.
   groups [options]  >  Browse Mneme's 40+ commands grouped by intent (security / people / history / memory / originals).
   deps  >  Dependency-level security commands (OSV.dev / CVE / GHSA cross-reference).

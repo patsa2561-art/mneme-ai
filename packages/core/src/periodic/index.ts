@@ -6,4 +6,5 @@
  */
 export * from "./manifest.js";
 export * from "./registry.js";
+export * from "./compiler.js";
 import "./catalog.js";

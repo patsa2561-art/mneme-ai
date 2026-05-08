@@ -8,6 +8,60 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.41.0] — 2026-05-08
+
+The **"Compiler"** release. Second of four shipping the
+Element/Atom/Molecule architecture.
+
+### `mneme compose "<intent>"`
+
+Natural-language intent → concrete pipeline of registered atoms / molecules
+from the v0.40 periodic table. Two modes:
+
+- **Rule-based (default).** Tokenises intent, extracts verb + domain
+  signals, scores every catalog manifest by tag overlap × token overlap
+  with a kind-bias (molecules > atoms > elements). Sub-millisecond plans,
+  works offline.
+- **LLM-augmented (`--llm`).** Uses the rule-based plan as a seed; the
+  configured enricher refines it. Falls back to seed if LLM is
+  unavailable or returns malformed JSON.
+
+### Plan output
+
+```json
+{
+  "intent": "find SQL injection in payment files",
+  "steps": [{ "id": "stack.profile", "args": {}, "why": "..." }, ...],
+  "estimatedMsP50": 70.0,
+  "source": "rule-based",
+  "trace": ["trunk: stack.profile (score 5.0)", ...]
+}
+```
+
+Every step references a registered manifest id from the periodic table.
+The estimated cost is `sum(ms_p50)` across steps — used by the cost
+optimiser when multiple plans tie on relevance.
+
+### Molecule cache
+
+`.mneme/molecule-cache.json` stores every (canonicalised intent → plan)
+mapping with hit counts + first/last seen timestamps. Re-running the same
+intent skips the planning step entirely. v0.42 will read this file to
+auto-promote frequent plans into named commands.
+
+### Honest scope
+
+- v0.41 ships the **planner only**. `mneme compose` shows the plan but
+  does NOT yet execute it.
+- v0.42 ships execution + promotion + Second-Brain learning loop.
+
+### Tests
+
+15 new compiler tests (signal extraction · seed scoring · plan
+assembly · maxSteps cap · trace shape · manifest-id resolution ·
+estimatedMsP50 sum-correctness). Total: **2135 tests passing** across
+158 files.
+
 ## [0.40.0] — 2026-05-08
 
 The **"Periodic Table"** release — first of four shipping the
