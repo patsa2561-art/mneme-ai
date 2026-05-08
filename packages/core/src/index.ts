@@ -26,3 +26,5 @@ export * as twin from "./twin/index.js";
 export * as org from "./org/index.js";
 export * as periodic from "./periodic/index.js";
 export * as holy from "./holy/index.js";
+export * as hmra from "./hmra/index.js";
+export * as learning from "./learning/index.js";

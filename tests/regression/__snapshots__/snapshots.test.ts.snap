@@ -53,6 +53,10 @@ Commands:
   org [options] [args...]  >  Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Subcommands: init <name> | add <name> <path> | remove <name> <path> | list | status [name] | delete <name>. Default (no subcommand) runs cross-repo analysis on the first registered org.
   dashboard [options]  >  Open the Mneme Web Dashboard for the current repo (local-first; no upload).
   mcp [options]  >  Run as an MCP server, OR --install to auto-config Claude Code / Cursor / Continue
+  webhook [options] <action>  >  Outgoing webhooks: add · list · remove · test · fire (events: audit.fail · forensics.cwe.high · atrophy.spike · court.guilty · federation.match)
+  session [options] <action>  >  Persistent cross-AI session: save · resume · list · remove. Context follows you across Claude Code / Cursor / ChatGPT / Codex.
+  constitution [options]  >  Synthesize the repo's living constitution (regret patterns · atrophy pairing · forensics rules · ADRs). AI tools auto-prepend via mneme.constitution.get MCP tool.
+  learn [options] <action>  >  Self-learning engine: tick (run a learning cycle now) · status (show learned-state + audit trail)
   adapter [options] <vendor>  >  Export Mneme's tool catalog as OpenAI / Anthropic / Gemini / MCP function-calling format
   benchmark [options]  >  Run the vendor-neutral AI Memory Benchmark — grades any AI memory implementation across 24 standardized probes
   time-capsule [options]  >  Export a single-tarball snapshot of the repo's nervous system for handovers / new-hire onboarding

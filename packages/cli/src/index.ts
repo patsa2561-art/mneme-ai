@@ -1023,6 +1023,139 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await mcpCommand({ cwd: process.cwd() }));
     });
 
+  // ── v1.10.0 — Webhooks (audit.fail / forensics.cwe.high / etc) ──
+  program
+    .command("webhook <action>")
+    .description("Outgoing webhooks: add · list · remove · test · fire (events: audit.fail · forensics.cwe.high · atrophy.spike · court.guilty · federation.match)")
+    .option("--event <name>", "Event name for add/fire")
+    .option("--url <url>", "Webhook endpoint URL for add")
+    .option("--id <id>", "Webhook id for remove/test")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { event?: string; url?: string; id?: string; json?: boolean }) => {
+      const { webhookCommand } = await import("./commands/webhook.js");
+      const allowed = ["add", "list", "remove", "test", "fire"];
+      if (!allowed.includes(action)) {
+        ui.error(`Unknown webhook action "${action}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await webhookCommand({
+          cwd: process.cwd(),
+          action: action as "add" | "list" | "remove" | "test" | "fire",
+          event: opts.event as import("./commands/webhook.js").WebhookEvent | undefined,
+          url: opts.url,
+          id: opts.id,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.10.0 — Persistent Cross-AI Brain (session save/resume) ──
+  program
+    .command("session <action>")
+    .description("Persistent cross-AI session: save · resume · list · remove. Context follows you across Claude Code / Cursor / ChatGPT / Codex.")
+    .option("--id <id>", "Session id")
+    .option("--intent <text>", "What the user is trying to accomplish")
+    .option("--ai-tool <name>", "Which AI tool is calling (e.g. claude-code, chatgpt, cursor)")
+    .option("--log-entry <text>", "Append a log entry describing what just happened")
+    .option("--outcome <verdict>", "Outcome: PASS | WARN | FAIL | INFO")
+    .option("--files <list>", "Comma-separated list of files to anchor")
+    .option("--commits <list>", "Comma-separated list of commit hashes to anchor")
+    .option("--topics <list>", "Comma-separated list of topics")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { id?: string; intent?: string; aiTool?: string; logEntry?: string; outcome?: string; files?: string; commits?: string; topics?: string; json?: boolean }) => {
+      const { sessionCommand } = await import("./commands/session.js");
+      const allowed = ["save", "resume", "list", "remove"];
+      if (!allowed.includes(action)) {
+        ui.error(`Unknown session action "${action}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      process.exit(
+        await sessionCommand({
+          cwd: process.cwd(),
+          action: action as "save" | "resume" | "list" | "remove",
+          id: opts.id,
+          intent: opts.intent,
+          aiTool: opts.aiTool,
+          logEntry: opts.logEntry,
+          outcome: opts.outcome as "PASS" | "WARN" | "FAIL" | "INFO" | undefined,
+          files: opts.files?.split(",").map((s) => s.trim()),
+          commits: opts.commits?.split(",").map((s) => s.trim()),
+          topics: opts.topics?.split(",").map((s) => s.trim()),
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.10.0 — Codebase Constitution ──
+  program
+    .command("constitution")
+    .description("Synthesize the repo's living constitution (regret patterns · atrophy pairing · forensics rules · ADRs). AI tools auto-prepend via mneme.constitution.get MCP tool.")
+    .option("--out <path>", "Write the markdown to this path (also caches at .mneme/constitution.md)")
+    .option("--json", "Machine-readable output", false)
+    .action(async (opts: { out?: string; json?: boolean }) => {
+      const { constitutionCommand } = await import("./commands/constitution.js");
+      process.exit(
+        await constitutionCommand({
+          cwd: process.cwd(),
+          out: opts.out,
+          json: opts.json,
+        }),
+      );
+    });
+
+  // ── v1.10.0 — Self-learning loop manual tick + status ──
+  program
+    .command("learn <action>")
+    .description("Self-learning engine: tick (run a learning cycle now) · status (show learned-state + audit trail)")
+    .option("--json", "Machine-readable output", false)
+    .action(async (action: string, opts: { json?: boolean }) => {
+      const allowed = ["tick", "status"];
+      if (!allowed.includes(action)) {
+        ui.error(`Unknown learn action "${action}". Try: ${allowed.join(" | ")}`);
+        process.exit(1);
+      }
+      const { learning, git: gitMod } = await import("@mneme-ai/core");
+      const cwd = process.cwd();
+      if (!(await gitMod.isGitRepo(cwd))) {
+        ui.error("Not in a git repo. Run `mneme init` first.");
+        process.exit(1);
+      }
+      const meta = await gitMod.getRepoMeta(cwd);
+      if (action === "tick") {
+        const next = learning.runLearningTick(meta.rootPath);
+        if (opts.json) process.stdout.write(JSON.stringify(next, null, 2) + "\n");
+        else ui.success(`Learning tick ${next.tickCount} complete · ${next.observationsLastTick} observations processed · ${next.auditTrail.length} audit entries`);
+        process.exit(0);
+      }
+      // status
+      const state = learning.readState(meta.rootPath);
+      if (!state) {
+        if (opts.json) process.stdout.write(JSON.stringify({ initialized: false }) + "\n");
+        else ui.dim("No learned state yet. Run `mneme learn tick` to seed it.");
+        process.exit(0);
+      }
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(state, null, 2) + "\n");
+        process.exit(0);
+      }
+      process.stdout.write(
+        `\n  🧠 Mneme self-learning state\n` +
+          `  Tick count:    ${state.tickCount}\n` +
+          `  Last tick:     ${state.lastTickAt}\n` +
+          `  Observations:  ${state.observationsLastTick} in last tick\n` +
+          `  HMRA weights:  α=${state.hmraWeights.alpha.toFixed(3)} β=${state.hmraWeights.beta.toFixed(3)} γ=${state.hmraWeights.gamma.toFixed(3)} δ=${state.hmraWeights.delta.toFixed(3)} ε=${state.hmraWeights.epsilon.toFixed(3)}\n` +
+          `  Tools tracked: ${Object.keys(state.toolSuccessRates).length}\n` +
+          `  Rule priors:   ${Object.keys(state.rulePriors).length}\n` +
+          `  Molecules:     ${Object.keys(state.moleculeStats).length}\n\n  Recent audit trail:\n`,
+      );
+      for (const a of state.auditTrail.slice(-5)) {
+        process.stdout.write(`    [${a.channel}] ${a.detail}\n`);
+      }
+      process.stdout.write("\n");
+      process.exit(0);
+    });
+
   // ── v1.8.0 — Cross-AI Adapter (export tool catalog for any vendor) ──
   program
     .command("adapter <vendor>")
