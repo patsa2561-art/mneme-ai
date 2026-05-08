@@ -99,9 +99,13 @@ export function AtrophyHeatmap({
   const cellH = 26;
   const gap = 3;
   const labelW = 360;
-  const headerH = 140;
+  // headerH = vertical space reserved above the cells for the rotated
+  // author labels. At 14pt + -45° rotation, a 22-char label occupies
+  // ~150px diagonally — we reserve 200 to keep the longest names from
+  // being clipped at the SVG top edge.
+  const headerH = 200;
   const width = labelW + heat.authors.length * (cellW + gap);
-  const height = headerH + heat.files.length * (cellH + gap);
+  const height = headerH + heat.files.length * (cellH + gap) + 8;
 
   // ─── Wisdom callouts: derive insights from the data ─────────────────
   const atRiskCount = data.atrophy.criticalFiles.filter((f) => f.tier === "at-risk").length;
@@ -169,16 +173,16 @@ export function AtrophyHeatmap({
       <div className="heatmap-scroll">
         <svg width={width} height={height} role="img" aria-label="Atrophy heatmap">
           {heat.authors.map((a, i) => (
-            <g key={a.email} transform={`translate(${labelW + i * (cellW + gap) + cellW / 2}, ${headerH - 6})`}>
+            <g key={a.email} transform={`translate(${labelW + i * (cellW + gap) + cellW / 2 + 2}, ${headerH - 8})`}>
               <text
-                transform={`rotate(-50)`}
+                transform={`rotate(-45)`}
                 fill="rgba(232,232,255,0.92)"
                 fontSize="14"
                 fontWeight="500"
                 style={{ cursor: "pointer" }}
                 onClick={() => onSelectAuthor(a.email)}
               >
-                {a.name.length > 22 ? a.name.slice(0, 21) + "…" : a.name}
+                {a.name.length > 20 ? a.name.slice(0, 19) + "…" : a.name}
               </text>
             </g>
           ))}
