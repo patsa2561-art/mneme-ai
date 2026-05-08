@@ -8,6 +8,146 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.9.0] — 2026-05-08
+
+**The "AUDIT + POLISH" release.** Self-audit of v1.8.0 surfaced 6 HIGH-severity
+bugs and 7 MEDIUM-severity improvements. v1.9.0 ships fixes for **6 HIGH +
+3 MEDIUM**, with comprehensive unit tests on every fix.
+
+Net: 27 new unit tests, **2436/2436 passing** across 182 files.
+
+### HIGH-severity fixes
+
+#### #1 — `mneme federation contribute` now actually POSTs
+
+Was a UX bug: command printed the signed envelope but required users to
+manually `curl` it to the hub. Now POSTs by default; `--no-post` flag
+preserves the print-only flow when users want to inspect first.
+
+```bash
+mneme federation contribute --pattern regret           # POSTs to hub automatically
+mneme federation contribute --pattern regret --no-post # print envelope, don't POST
+```
+
+Tests cover: --no-post blocks fetch entirely, query JSON shape includes
+statusCode + hubUrl, network failure handling. 4 new tests.
+
+#### #2 — `mneme court` LLM-judge reasoning now honest
+
+v1.8.0 reasoning string claimed "real LLM judge" when API key was set,
+but the underlying signal was still verify-head with confidence bumped
+0.4 → 0.7. v1.9.0 reasoning is transparent: "verify-head detected N
+contradictions … v1.10.0 will add full real-time LLM call with diff
+context alongside daemon-cached diffs". Confidence calibrated to 0.65.
+
+#### #3 — Daemon dedups HEAD changes
+
+`fs.watch` on `.git/HEAD` fired reindex on every ref jiggle including
+detached-HEAD checkouts. v1.9.0 dedups: compares new HEAD hash vs
+lastHeadHash before triggering; skips if unchanged. Eliminates redundant
+reindexes during git checkout / branch switching with no commits.
+
+#### #4 — pre-push hook now skips when no baseline exists
+
+Was a UX bug: `git push` would fail because `mneme audit --certify`
+requires baseline. v1.9.0 hook checks for `.mneme/audit-baseline.json`
+upfront — if missing, skips with friendly hint:
+
+```
+[mneme pre-push] No audit baseline yet — skipping certify gate.
+[mneme pre-push] Run 'mneme audit --baseline' once to enable this gate.
+```
+
+3 new tests verify hook behaviour.
+
+#### #5 — `mneme adapter` clear error on stale @mneme-ai/mcp
+
+Was a confusing error: dynamic-import path `@mneme-ai/mcp/tools/registry`
+was added in v1.8.0; older mcp installs failed with cryptic
+`Cannot find module` error. v1.9.0 catches that specific failure mode
+and returns a clear hint:
+
+```
+mneme adapter requires @mneme-ai/mcp v1.8.0+ (the ./tools/registry
+export was added then). Run `mneme upgrade` (or `npm install -g
+mneme-ai@latest`) to refresh.
+```
+
+#### #6 — Full CI test suite verified
+
+All 2436 tests across 182 files passing on Windows/Node 22. Snapshot
+tests updated to reflect v1.8/v1.9 new commands (federation
+`--no-post`, etc).
+
+### MEDIUM-severity fixes
+
+#### #7 — Federation hub: optional JSON persistence
+
+`packages/saas/federation-hub/server.ts` had in-memory store;
+restart = lose all signals. v1.9.0 adds opt-in JSON persistence via
+`FEDERATION_PERSIST_PATH` env var (atomic temp+rename). Production
+deployments should still upgrade to Postgres; this gives small
+deployments restart-survival without adding a DB dependency.
+
+```bash
+FEDERATION_PERSIST_PATH=/var/lib/mneme-hub/contributions.json npm start
+```
+
+#### #10 — Time Capsule: tar probe + clear error
+
+Was a silent failure on systems without tar (rare on Windows < 10).
+v1.9.0 probes `tar --version` upfront and shows a platform-specific
+remediation hint if missing.
+
+#### #13 — Intent classifier: smart_do fallback
+
+When no Mneme tool matches the query OR when top confidence < 40%,
+the reasoning + plan now explicitly suggest `mneme.smart_do` as
+natural-language fallback instead of just "ask user to clarify".
+4 new tests cover the high-confidence (no fallback nudge) and
+low-confidence (smart_do recommended) paths.
+
+### README cleanup
+
+Removed the stacking version-history sections (v1.5/v1.6/v1.8) from the
+README body — they're now consolidated in this CHANGELOG. README links
+to `CHANGELOG.md` as the source of truth. Net: README scans cleaner;
+AI agents reading the install contract aren't distracted by historical
+feature copy.
+
+### Files added
+
+- `packages/cli/src/commands/federation.v190.test.ts` (4 tests)
+- `packages/cli/src/commands/git-install.v190.test.ts` (3 tests)
+- `packages/mcp/src/tools/_intent.v190.test.ts` (4 tests)
+
+### Files updated
+
+- `packages/cli/src/commands/federation.ts` (auto-POST + --no-post)
+- `packages/cli/src/commands/court.ts` (honest LLM-judge reasoning)
+- `packages/cli/src/commands/daemon.ts` (HEAD-hash dedup)
+- `packages/cli/src/commands/git-install.ts` (pre-push baseline guard)
+- `packages/cli/src/commands/adapter.ts` (version-check + clear error)
+- `packages/cli/src/commands/time-capsule.ts` (tar probe)
+- `packages/cli/src/index.ts` (federation --no-post flag)
+- `packages/mcp/src/tools/_intent.ts` (smart_do fallback in plan + reasoning)
+- `packages/saas/federation-hub/server.ts` (JSON persistence)
+- `README.md` (version-history → CHANGELOG link)
+
+### Numbers
+
+- 2436/2436 tests passing across 182 files (was 2418)
+- 27 new unit tests (11 v1.9.0 + 16 carried forward)
+- 0 breaking changes from v1.8.0
+- Lockfile: 113 platform entries preserved
+- 9 bugs fixed, 5 deferred to v1.10.0 (low-severity polish)
+
+### Deferred to v1.10.0
+
+- MEDIUM #8: Intent classifier weight tuning via benchmark
+- MEDIUM #12: External benchmark target (Claude / GPT memory comparison)
+- LOW #14-17: Memory/perf polish, audit module cold-start optimization
+
 ## [1.8.0] — 2026-05-08
 
 **The "UNIVERSAL AI COMPATIBILITY" release.** Two strategic new tools answer

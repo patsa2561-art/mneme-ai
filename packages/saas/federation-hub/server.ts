@@ -21,6 +21,8 @@
 
 import express, { type Request, type Response } from "express";
 import { createPublicKey, verify } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 interface SignalEnvelope {
   protocolVersion: 1;
@@ -46,13 +48,39 @@ interface SignalEnvelope {
 
 const PORT = parseInt(process.env["PORT"] ?? "8080", 10);
 const KMIN = parseInt(process.env["MIN_K_ANONYMITY"] ?? "20", 10);
+// v1.9.0: opt-in JSON persistence (file path; empty = in-memory only).
+// Production deployments should swap this for Postgres; this gives v1.9.0
+// users restart-survival without adding a DB dependency.
+const PERSIST_PATH = process.env["FEDERATION_PERSIST_PATH"] ?? "";
 
 const app = express();
 app.use(express.json({ limit: "256kb" }));
 
-// In-memory aggregate store (pattern → list of contributions)
+// Aggregate store (pattern → list of contributions). Loaded from
+// PERSIST_PATH on startup if set; written back on every accepted signal.
 type ContributionStore = Map<string, SignalEnvelope[]>;
-const store: ContributionStore = new Map();
+const store: ContributionStore = loadStore();
+
+function loadStore(): ContributionStore {
+  if (!PERSIST_PATH || !existsSync(PERSIST_PATH)) return new Map();
+  try {
+    const raw = readFileSync(PERSIST_PATH, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, SignalEnvelope[]>;
+    return new Map(Object.entries(parsed));
+  } catch {
+    return new Map();
+  }
+}
+
+function persistStore() {
+  if (!PERSIST_PATH) return;
+  if (!existsSync(dirname(PERSIST_PATH))) mkdirSync(dirname(PERSIST_PATH), { recursive: true });
+  const tmp = PERSIST_PATH + ".tmp";
+  const obj: Record<string, SignalEnvelope[]> = {};
+  for (const [k, v] of store) obj[k] = v;
+  writeFileSync(tmp, JSON.stringify(obj, null, 2), "utf8");
+  renameSync(tmp, PERSIST_PATH);
+}
 
 // ─── liveness ────────────────────────────────────────────────────────
 app.get("/healthz", (_req: Request, res: Response) => {
@@ -86,6 +114,8 @@ app.post("/api/signal", (req: Request, res: Response) => {
   const bucket = store.get(env.signal.pattern) ?? [];
   bucket.push(env);
   store.set(env.signal.pattern, bucket);
+  // v1.9.0: persist to disk if FEDERATION_PERSIST_PATH is set
+  try { persistStore(); } catch { /* persistence is best-effort */ }
   return res.json({ ok: true, patternBucketSize: bucket.length });
 });
 
@@ -128,7 +158,10 @@ app.get("/api/aggregate", (req: Request, res: Response) => {
 // ─── start ───────────────────────────────────────────────────────────
 const server = app.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`[federation-hub] listening on :${PORT} · k-anonymity floor=${KMIN}`);
+  console.log(
+    `[federation-hub] listening on :${PORT} · k-anonymity floor=${KMIN}` +
+      (PERSIST_PATH ? ` · persist=${PERSIST_PATH}` : " · in-memory only"),
+  );
 });
 
 // Graceful shutdown

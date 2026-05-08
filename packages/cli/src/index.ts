@@ -1138,8 +1138,9 @@ export async function run(argv: string[]): Promise<void> {
     .description("Cross-repo Wisdom Federation — DP/k-anonymity signed signals (join · leave · status · contribute · query)")
     .option("--hub <url>", "Federation hub URL (required for `join`)")
     .option("--pattern <q>", "Pattern to contribute or query (required for those actions)")
+    .option("--no-post", "For contribute: print the envelope without POSTing to the hub")
     .option("--json", "Machine-readable output", false)
-    .action(async (action: string, opts: { hub?: string; pattern?: string; json?: boolean }) => {
+    .action(async (action: string, opts: { hub?: string; pattern?: string; noPost?: boolean; json?: boolean }) => {
       const { federationCommand } = await import("./commands/federation.js");
       const allowedActions = ["join", "leave", "status", "contribute", "query"];
       if (!allowedActions.includes(action)) {
@@ -1152,6 +1153,7 @@ export async function run(argv: string[]): Promise<void> {
           action: action as "join" | "leave" | "status" | "contribute" | "query",
           hub: opts.hub,
           pattern: opts.pattern,
+          noPost: opts.noPost,
           json: opts.json,
         }),
       );

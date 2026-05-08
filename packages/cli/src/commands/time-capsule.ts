@@ -173,8 +173,19 @@ async function exportCapsule(opts: TimeCapsuleOptions): Promise<number> {
   };
   writeFileSync(join(stageDir, "manifest.json"), JSON.stringify(manifest, null, 2));
 
-  // 7 — bundle as gzipped tar via system tar (POSIX) or PowerShell (Windows fallback to plain tgz via tar.exe present in Windows 10+)
+  // 7 — bundle as gzipped tar. Win10+ ships tar.exe; macOS/Linux always have it.
+  // v1.9.0 adds an upfront probe + clear error if tar is missing.
   if (!existsSync(dirname(outPath))) mkdirSync(dirname(outPath), { recursive: true });
+  const tarProbe = spawnSync("tar", ["--version"], { stdio: "pipe" });
+  if (tarProbe.status !== 0) {
+    ui.error(
+      "Time capsule export requires `tar` on PATH. " +
+        (process.platform === "win32"
+          ? "Win10+ ships tar.exe; if you're on an older Windows, install Git for Windows or 7-Zip."
+          : "Most macOS/Linux systems have tar pre-installed; install via your package manager."),
+    );
+    return 1;
+  }
   const tarRes = spawnSync("tar", ["-czf", outPath, "-C", stageDir, "."], {
     cwd: meta.rootPath,
     stdio: "pipe",

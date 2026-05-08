@@ -127,24 +127,32 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   // Heartbeat — write status every 10s so `mneme daemon status` shows liveness
   const heartbeat = setInterval(() => writeCurrentStatus(), 10_000);
 
-  // Re-index when HEAD changes. Debounce: collect changes for 800ms before triggering.
+  // Re-index when HEAD changes. Debounce 800ms + dedup against last-seen
+  // hash so detached-HEAD checkouts and other ref jiggles don't trigger
+  // redundant reindex (v1.9.0 fix for daemon over-trigger bug).
   let pendingReindex: NodeJS.Timeout | null = null;
   const triggerReindex = () => {
     if (pendingReindex) clearTimeout(pendingReindex);
     pendingReindex = setTimeout(async () => {
       const newHash = readHeadHash(repoRoot);
-      if (newHash && newHash !== lastHeadHash) {
-        appendLog(repoRoot, `HEAD changed ${lastHeadHash?.slice(0, 8) ?? "(none)"} → ${newHash.slice(0, 8)}; reindexing`);
-        lastHeadHash = newHash;
-        reindexCount++;
-        // Spawn `mneme index` to do the actual work — daemon stays responsive
-        try {
-          spawnSync("mneme", ["index", "--cap", "1000"], { cwd: repoRoot, stdio: "ignore" });
-        } catch (err) {
-          appendLog(repoRoot, `reindex spawn failed: ${(err as Error).message}`);
-        }
-        writeCurrentStatus();
+      // Dedup: skip if HEAD hasn't actually moved.
+      if (!newHash) {
+        appendLog(repoRoot, "HEAD unreadable, skipping reindex");
+        return;
       }
+      if (newHash === lastHeadHash) {
+        // No-op — file watcher fired but commit hash unchanged (e.g. detached HEAD)
+        return;
+      }
+      appendLog(repoRoot, `HEAD changed ${lastHeadHash?.slice(0, 8) ?? "(none)"} → ${newHash.slice(0, 8)}; reindexing`);
+      lastHeadHash = newHash;
+      reindexCount++;
+      try {
+        spawnSync("mneme", ["index", "--cap", "1000"], { cwd: repoRoot, stdio: "ignore" });
+      } catch (err) {
+        appendLog(repoRoot, `reindex spawn failed: ${(err as Error).message}`);
+      }
+      writeCurrentStatus();
     }, 800);
   };
 

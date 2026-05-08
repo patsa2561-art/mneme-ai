@@ -310,12 +310,12 @@ async function llmJudgeStub(
     };
   }
 
-  // Key is set — escalate confidence on the verify-head signal. Real
-  // verifyLlmJudge wiring requires constructing LlmJudgeInput (commit
-  // metadata + adapter). Court convenes a 12-juror simple ballot, so we
-  // amplify the verify-head signal with the LLM-API-key signal here.
-  // The full LlmJudgeInput → LlmJudgeOptions integration lands in v1.9.0
-  // when the daemon caches commit diffs in memory for fast LLM access.
+  // v1.9.0 honesty fix: be transparent about what the LLM judge actually
+  // does. With the API key set we still rely on `mneme audit --verify-head`
+  // for the underlying narrative-vs-diff signal — that's deterministic,
+  // fast, and reproducible. The "key configured" part means the user
+  // intends to opt into LLM judging; full LlmJudgeInput integration with
+  // commit-diff caching lands in v1.10.0 alongside daemon mode v2.
   const r = spawnSync("mneme", ["audit", "--verify-head", "--max-commits", "1", "--json"], {
     cwd,
     stdio: "pipe",
@@ -326,7 +326,7 @@ async function llmJudgeStub(
       jurorRole: role,
       verdict: "ABSTAIN",
       confidence: 0.3,
-      reasoning: `${role} could not retrieve verify-head signal (exit ${r.status}). API key set but LLM analysis unavailable.`,
+      reasoning: `${role} could not retrieve verify-head signal (exit ${r.status}). API key set but verify-head returned non-zero.`,
     };
   }
   let parsed: { contradictions?: number; verdict?: string } = {};
@@ -339,8 +339,11 @@ async function llmJudgeStub(
     jurorId: id,
     jurorRole: role,
     verdict,
-    confidence: 0.7, // higher because key is configured
-    reasoning: `${role} (key configured): ${contradictions} narrative-vs-diff contradiction(s). v1.9.0 will use the daemon's diff cache for full LLM-grade reasoning.`,
+    confidence: 0.65, // narrative-vs-diff signal + key opt-in
+    reasoning:
+      `${role}: verify-head detected ${contradictions} narrative-vs-diff contradiction(s). ` +
+      `(Note: v1.9.0 uses verify-head as the underlying signal even when API keys are set; ` +
+      `full real-time LLM call with diff context lands in v1.10.0 alongside daemon-cached diffs.)`,
   };
 }
 

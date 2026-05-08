@@ -45,23 +45,35 @@ interface MnemeToolForExport {
 
 async function loadCatalog(): Promise<MnemeToolForExport[]> {
   // Import the registry from @mneme-ai/mcp at runtime so we don't drag
-  // its build into the CLI bundle.
-  const reg = (await import("@mneme-ai/mcp/tools/registry")) as {
-    buildAllTools: () => Array<{
-      name: string;
-      description: string;
-      inputSchema: unknown;
-      category: string;
-      triggers?: string[];
-    }>;
-  };
-  return reg.buildAllTools().map((t) => ({
-    name: t.name,
-    description: t.description,
-    inputSchema: t.inputSchema,
-    category: t.category,
-    triggers: t.triggers,
-  }));
+  // its build into the CLI bundle. The `./tools/registry` subpath was
+  // added in @mneme-ai/mcp v1.8.0 — older versions don't expose it.
+  try {
+    const reg = (await import("@mneme-ai/mcp/tools/registry")) as {
+      buildAllTools: () => Array<{
+        name: string;
+        description: string;
+        inputSchema: unknown;
+        category: string;
+        triggers?: string[];
+      }>;
+    };
+    return reg.buildAllTools().map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+      category: t.category,
+      triggers: t.triggers,
+    }));
+  } catch (err) {
+    const msg = (err as Error).message ?? "";
+    if (msg.includes("Cannot find module") || msg.includes("ERR_PACKAGE_PATH_NOT_EXPORTED")) {
+      throw new Error(
+        "mneme adapter requires @mneme-ai/mcp v1.8.0+ (the ./tools/registry export was added then). " +
+          "Run `mneme upgrade` (or `npm install -g mneme-ai@latest`) to refresh.",
+      );
+    }
+    throw err;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────

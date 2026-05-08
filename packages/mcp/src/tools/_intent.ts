@@ -196,7 +196,12 @@ function extractArgs(tool: MnemeTool, query: string): Record<string, string> {
  *  v1.8.0: simple linear plan. v1.9.0 will use the Second Brain compose
  *  graph to pick MULTI-step molecules instead of single-tool plans. */
 function buildPlan(matches: IntentMatch[]): string[] {
-  if (matches.length === 0) return ["No tool matched the query — ask the user to clarify."];
+  if (matches.length === 0) {
+    return [
+      "1. No specific tool matched. Fall back to `mneme.smart_do` with the original query — it handles natural-language routing.",
+      "2. If smart_do also returns nothing useful, ask the user to clarify which area their question is about.",
+    ];
+  }
   const plan: string[] = [];
   const top = matches[0]!;
   plan.push(`1. Call \`${top.toolName}\` (confidence ${(top.score / 10).toFixed(1)}) with args ${JSON.stringify(top.suggestedArgs)}`);
@@ -238,9 +243,9 @@ export function understandIntent(query: string, allTools: MnemeTool[]): IntentRe
 
   const reasoning =
     matches.length === 0
-      ? `No tool matched the query "${query}". Ask the user to clarify which area: memory · people · audit · forensics · insights · quality · quant · lab.`
+      ? `No specific Mneme tool matched the query "${query}". Recommended fallback: call \`mneme.smart_do\` with the same query — it routes through Mneme's natural-language dispatcher and can handle ambiguous intents that don't keyword-match any single tool.`
       : topConfidence < 0.4
-      ? `Top match has low confidence (${(topConfidence * 100).toFixed(0)}%). Consider asking the user to clarify between the top-${matches.length} candidates before calling any tool.`
+      ? `Top match has low confidence (${(topConfidence * 100).toFixed(0)}%). Consider asking the user to clarify between the top-${matches.length} candidates, OR fall back to \`mneme.smart_do\` with the original query for natural-language routing.`
       : `Top match: ${matches[0]!.toolName} with confidence ${(topConfidence * 100).toFixed(0)}% (${matches[0]!.why}).`;
 
   return {

@@ -31,6 +31,9 @@ export interface FederationOptions {
   action: "join" | "leave" | "status" | "query" | "contribute";
   hub?: string;
   pattern?: string;
+  /** When true, contribute prints the envelope without POSTing.
+   *  Default: false → contribute POSTs to the joined hub. */
+  noPost?: boolean;
   json?: boolean;
 }
 
@@ -274,10 +277,34 @@ async function contributeSignal(opts: FederationOptions): Promise<number> {
     signatureAlgorithm: "ed25519",
   };
 
-  // v1.7.0: just print the envelope (the actual HTTP submission is done by
-  // the user against their own hub; reference hub at packages/saas/federation-hub).
+  // v1.9.0: auto-POST to hub by default; --no-post prints envelope only
+  let postResult: { ok?: boolean; statusCode?: number; error?: string; responseBody?: unknown } | null = null;
+  if (!opts.noPost) {
+    const url = `${cfg.hubUrl.replace(/\/$/, "")}/api/signal`;
+    try {
+      // Hub also wants the public key inline so it can verify the signature
+      // without prior contributor registration (v1.8 protocol).
+      const wirePayload = { ...envelope, publicKeyPem: cfg.publicKeyPem };
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": `mneme/${process.env["npm_package_version"] ?? "1.9.0"}` },
+        body: JSON.stringify(wirePayload),
+      });
+      const responseBody = await res.json().catch(() => ({}));
+      postResult = { ok: res.ok, statusCode: res.status, responseBody };
+    } catch (err) {
+      postResult = { ok: false, error: (err as Error).message };
+    }
+  }
+
   if (opts.json) {
-    process.stdout.write(JSON.stringify({ contributed: true, envelope }, null, 2) + "\n");
+    process.stdout.write(
+      JSON.stringify(
+        { contributed: !opts.noPost && postResult?.ok === true, envelope, postResult },
+        null,
+        2,
+      ) + "\n",
+    );
     return 0;
   }
   ui.banner();
@@ -286,11 +313,26 @@ async function contributeSignal(opts: FederationOptions): Promise<number> {
       `  Pattern:       ${opts.pattern}\n` +
       `  Aggregate:     ${JSON.stringify(envelope.signal.aggregate)}\n` +
       `  Privacy:       ε=${envelope.privacy.differentialPrivacyEpsilon} · k=${envelope.privacy.kAnonymityFloor} · noise=${envelope.privacy.noiseSeed}\n` +
-      `  Signature:     ${signature.slice(0, 32)}…\n\n` +
-      kleur.dim("  Submit this envelope to your hub:\n") +
-      kleur.dim(`    curl -X POST ${cfg.hubUrl}/api/signal -H 'Content-Type: application/json' -d <envelope>\n\n`),
+      `  Signature:     ${signature.slice(0, 32)}…\n\n`,
   );
-  return 0;
+  if (opts.noPost) {
+    process.stdout.write(
+      kleur.dim("  --no-post: envelope NOT sent. To submit later:\n") +
+        kleur.dim(`    curl -X POST ${cfg.hubUrl}/api/signal -H 'Content-Type: application/json' -d <envelope>\n\n`),
+    );
+  } else if (postResult?.ok) {
+    process.stdout.write(
+      kleur.green("  ✓ Posted to hub: ") + cfg.hubUrl + "\n" +
+        kleur.dim(`    HTTP ${postResult.statusCode} — accepted\n\n`),
+    );
+  } else {
+    process.stdout.write(
+      kleur.red(`  ✗ Hub POST failed: ${postResult?.error ?? `HTTP ${postResult?.statusCode}`}\n`) +
+        kleur.dim("  Envelope is still valid — you can retry with `mneme federation contribute` again,\n") +
+        kleur.dim("  or use --no-post to inspect the envelope without submitting.\n\n"),
+    );
+  }
+  return postResult?.ok === false ? 1 : 0;
 }
 
 async function queryHub(opts: FederationOptions): Promise<number> {

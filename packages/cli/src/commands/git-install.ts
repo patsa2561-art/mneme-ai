@@ -77,6 +77,13 @@ if command -v mneme >/dev/null 2>&1; then
   if [ "\${MNEME_AUDIT_DISABLE:-}" = "1" ]; then
     exit 0
   fi
+  # v1.9.0: skip if no baseline exists yet — certify needs baseline to compare.
+  # Show a friendly hint instead of failing the push.
+  if [ ! -f .mneme/audit-baseline.json ]; then
+    echo "[mneme pre-push] No audit baseline yet — skipping certify gate." >&2
+    echo "[mneme pre-push] Run 'mneme audit --baseline' once to enable this gate." >&2
+    exit 0
+  fi
   STRICT_FLAG=""
   if [ "\${MNEME_AUDIT_STRICT:-}" = "1" ]; then
     STRICT_FLAG="--strict"

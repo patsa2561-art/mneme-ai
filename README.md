@@ -72,62 +72,9 @@ Same AI. Same hands on the keyboard. The difference is **what your AI knows** �
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🆕 v1.8.0 — universal AI compatibility
+## 📋 What's new
 
-Two new tools that solve the *"how does my AI tool know which Mneme function to call?"* problem:
-
-| Tool | Solves |
-|---|---|
-| `mneme.understand_intent` (MCP) | AI hands Mneme a user query → gets top-3 tools + suggested args + execution plan. Drops cognitive load from "pick from 94 tools" to "follow this plan". |
-| `mneme adapter <vendor>` (CLI) | Export the full tool catalog in **OpenAI / Anthropic / Gemini** function-calling format. Even AI tools that don't speak MCP can use Mneme. |
-
-```bash
-# Export for ChatGPT / GPT-4 / Codex / o-series
-mneme adapter openai > openai-tools.json
-
-# Export for Claude (any version)
-mneme adapter anthropic > claude-tools.json
-
-# Export for Gemini / Vertex AI
-mneme adapter gemini > gemini-tools.json
-```
-
-Plus completed Phase 4-5: real LLM judges in `mneme court` (env-key detection · graceful fallback) and real HTTP query in `mneme federation query`.
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🆕 v1.6.0 — orchestra release
-
-| What | Why it matters | Try it |
-|---|---|---|
-| 🏁 [**AI Memory Benchmark**](docs/benchmarks/) | Vendor-neutral grading of AI memory implementations. Lighthouse-of-AI-memory positioning. | `mneme benchmark --out leaderboard.md` |
-| 📦 [**Time Capsule**](ROADMAP_PHASES_3_TO_6.md#phase-7--mneme-time-capsule) | Single-tarball handover artifact. New hire = repo expert in 30 min. | `mneme time-capsule --export q2.tgz` |
-| ✦ **Wisdom theater** | The 90s indexing wait now surfaces real findings as it runs. | `mneme index` (just run it) |
-| ⚙ **Daemon preview** | Background context pre-fetch (full impl in v1.7.0). | `mneme daemon status` |
-| ⚖ **Court preview** | 12-jury arbitration with cryptographic ruling PDF (full impl in v1.7.0). | `mneme court HEAD` |
-| 🌐 **Federation preview** | Privacy-preserving cross-repo signal sharing (full impl in v1.7.0). | `mneme federation status` |
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🤝 v1.5.0 — Mneme is now a git extension
-
-Type `git mneme <anything>` and it works — like git's secretary that knows your AI:
-
-```bash
-git mneme why src/auth.ts:47       # who wrote this line + why
-git mneme audit --certify           # 5-axis trust certificate
-git mneme briefing                  # what changed while you were away
-```
-
-Plus optional git hooks (pre-commit / pre-push gate / post-merge briefing) installed in one command:
-
-```bash
-mneme git-install                   # wires Mneme into your git workflow
-```
-
-**This means:** anyone using git on any platform — GitHub, GitLab, Bitbucket, self-hosted — has a reason to install Mneme. Not just users of Claude Code or Cursor.
-
-> 📋 **CI/CD templates ready**: drop-in workflows for [GitHub Actions](docs/ci-templates/github-actions.yml) · [GitLab CI](docs/ci-templates/gitlab-ci.yml) · [Bitbucket Pipelines](docs/ci-templates/bitbucket-pipelines.yml). Every PR gets a 5-axis Mneme audit comment with PASS/WARN/FAIL verdict.
+Latest release: **v1.9.0** · See the full release history in [CHANGELOG.md](./CHANGELOG.md).
 
 ═══════════════════════════════════════════════════════════════════════════════
 
