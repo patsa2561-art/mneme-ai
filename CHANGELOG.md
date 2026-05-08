@@ -8,6 +8,46 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.48.0] — 2026-05-09
+
+The **"QSAC Tech 3 — Mutation-Test Counterfactual"** release. Fifth of
+seven on the road to v1.0.
+
+### Why
+
+"Tests pass" is binary. v0.48 adds the missing signal: **mutation
+testing INVERTED into a trust score**. High mutation score = tests
+genuinely cover the diff. Low score = tests are weak; AI's "pass"
+claim is suspect.
+
+### What
+
+8 mutation operators on the diff (negate-equality, flip-comparison,
+invert-boolean, negate-return-bool, off-by-one, remove-throw,
+constant-zero, constant-empty-string), `planMutants(lines, cap=16)`
+selects applicable mutants, and `scoreMutationVerdict({totalMutants,
+killedMutants, haveBaseline})` maps score → VerdictDistribution:
+
+  <0.4   → fail (weak tests; AI's pass not strongly supported)
+  0.4-0.6 → warn (mediocre coverage)
+  0.6-0.8 → pass (strong)
+  ≥0.8   → strong pass (exceptional)
+
+### Why novel
+
+Mutation testing (Pitest / Stryker / Mutmut) is used as a manual
+code-quality metric. Mneme is the first to fold mutation score into
+the COMMIT-AUDIT certificate as a continuous AI-trust signal.
+
+### Honest scope
+
+v0.48 ships the operator library + score function. The harness that
+actually applies + runs each mutant against the test command lands in
+v0.49 with the wisdom drill-through. Score function fully unit-tested
+(21 tests).
+
+Total: **2276 tests** across 166 files.
+
 ## [0.47.0] — 2026-05-09
 
 The **"QSAC Tech 5 — Cryptographic Merkle Audit Chain"** release. Fourth
