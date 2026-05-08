@@ -8,6 +8,64 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [0.42.0] — 2026-05-08
+
+The **"Second Brain"** release. Third of four shipping the
+Element/Atom/Molecule architecture. Closes the loop: every plan you've
+composed gets recorded; frequent plans auto-promote to named aliases;
+plans become executable via a new sandbox-aware molecule executor.
+
+### Three new pieces
+
+- **Executor** (`packages/core/src/periodic/executor.ts`).
+  Resolves a MoleculePlan's manifests, dynamically imports each
+  implementation module, invokes them in order, captures outputs in a
+  shared scratchpad, surfaces a per-step result trail. Side-effect
+  classes (network / filesystem / git / subprocess) can be forbidden
+  per run for sandboxed audits. Failed steps are captured rather than
+  killing the run, so the user always gets the full picture.
+
+- **Library** (`packages/core/src/periodic/library.ts`).
+  Per-repo persistent store at `.mneme/library.json`. Tracks
+  `hits`, `firstSeen`, `lastSeen`, optional `alias`, free-form `note`.
+  Whitespace + casing variants of the same intent collapse to one
+  entry (canonicalised by SHA-256 of the normalised intent).
+
+- **CLI surface.** `mneme library` (list / annotate / promote /
+  forget). `mneme run <alias-or-id>` (dry-run by default; `--execute`
+  to run; `--forbid-*` flags for sandboxed runs).
+
+### Promotion algorithm (precise)
+
+An entry is **eligible for promotion** when EITHER `hits >= 5` OR
+`firstSeen >= 7 days ago AND hits >= 2` ("cooled" — a plan you've
+come back to a few times over a week). Already-promoted entries are
+excluded. Promoting auto-derives an alias from the intent (or accepts
+`--alias <name>`).
+
+An entry is **archived** when `lastSeen >= 30 days ago` — surfaced via
+`mneme library --archived`, removed via `mneme library --forget <id>`.
+
+### `mneme compose` now feeds the library
+
+Every `mneme compose "<intent>"` invocation also calls
+`recordInvocation()` against the library, so the second-brain layer
+has data to work with from day one.
+
+### Tests
+
+37 new tests (executor: 7 · library: 19 · plus existing periodic 11).
+Total: **2174 tests passing** across 160 files.
+
+### Honest scope
+
+- Frequency-based promotion is in. **Semantic** promotion (two intents
+  that describe the same plan with different words) needs embedding-based
+  matching — lands in v0.43+ once that wiring is needed elsewhere.
+- The executor's `bindArgs` heuristic auto-detects object-parameter
+  functions vs Float32Array-positional functions. Catalog primitives
+  with unusual signatures need a small adapter when registered.
+
 ## [0.41.0] — 2026-05-08
 
 The **"Compiler"** release. Second of four shipping the

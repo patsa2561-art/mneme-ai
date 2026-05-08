@@ -35,7 +35,8 @@
 - [[The-Frontier]] · *28 world-firsts*
 - [[Originals]] · *the five v0.36 Originals*
 - [[Periodic-Table]] · *v0.40 Element/Atom/Molecule architecture*
-- [[Compose-And-Compiler]] · *🆕 v0.41 natural-language → plan*
+- [[Compose-And-Compiler]] · *v0.41 natural-language → plan*
+- [[Second-Brain]] · *🆕 v0.42 library + promotion + executor*
 - [[Innovations]] · *deep-dive every command*
 - [[Novel-Algorithms]] · *TDWE / RACB / ADS / CGAR*
 

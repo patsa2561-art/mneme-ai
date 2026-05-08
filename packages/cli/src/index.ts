@@ -60,6 +60,8 @@ import { depsAuditCommand } from "./commands/deps-audit.js";
 import { groupsCommand } from "./commands/groups.js";
 import { periodicTableCommand } from "./commands/periodic-table.js";
 import { composeCommand } from "./commands/compose.js";
+import { libraryCommand } from "./commands/library.js";
+import { runCommand } from "./commands/run.js";
 import { geniusCommand } from "./commands/genius.js";
 import { feedbackCommand, calibrateCommand, watchCommand } from "./commands/wisdom-cli.js";
 import {
@@ -437,10 +439,68 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
+  // ─── library — manage the per-repo molecule library ──────────────
+  program
+    .command("library")
+    .alias("lib")
+    .description("Manage the per-repo molecule library (.mneme/library.json) — the v0.42 Second-Brain. List entries, promote frequent plans to named aliases, annotate, prune.")
+    .option("--promote <id>", "promote an entry to a named alias")
+    .option("--alias <name>", "explicit alias for --promote (auto-derived from intent otherwise)")
+    .option("--eligible", "show entries that meet promotion criteria", false)
+    .option("--archived", "show entries unused for 30+ days", false)
+    .option("--annotate <id>", "add a free-form note to an entry (use with --note)")
+    .option("--note <text>", "free-form note for --annotate")
+    .option("--forget <id>", "remove an entry from the library")
+    .option("--json", "machine-readable output", false)
+    .option("--quiet", "no banner, no decorative chars", false)
+    .action(async (opts: any) => {
+      process.exit(
+        await libraryCommand({
+          cwd: process.cwd(),
+          promote: opts.promote,
+          alias: opts.alias,
+          eligible: opts.eligible,
+          archived: opts.archived,
+          annotate: opts.annotate,
+          note: opts.note,
+          forget: opts.forget,
+          json: opts.json,
+          quiet: opts.quiet,
+        }),
+      );
+    });
+
+  // ─── run — execute a stored library molecule ─────────────────────
+  program
+    .command("run <alias-or-id>")
+    .description("Execute a molecule plan from the library by alias or 16-char id. Default --dry-run; pass --execute to actually run. Use --forbid-* flags for sandboxed runs.")
+    .option("--execute", "actually run the plan (default is dry-run)", false)
+    .option("--forbid-network", "fail-loud if a step has network side effect", false)
+    .option("--forbid-filesystem", "fail-loud if a step writes to disk", false)
+    .option("--forbid-git", "fail-loud if a step spawns git", false)
+    .option("--forbid-subprocess", "fail-loud if a step spawns any subprocess", false)
+    .option("--json", "machine-readable output", false)
+    .option("--quiet", "no banner, no decorative chars", false)
+    .action(async (needle: string, opts: any) => {
+      process.exit(
+        await runCommand({
+          cwd: process.cwd(),
+          needle,
+          execute: opts.execute,
+          forbidNetwork: opts.forbidNetwork,
+          forbidFilesystem: opts.forbidFilesystem,
+          forbidGit: opts.forbidGit,
+          forbidSubprocess: opts.forbidSubprocess,
+          json: opts.json,
+          quiet: opts.quiet,
+        }),
+      );
+    });
+
   // ─── compose — natural-language → molecule plan ───────────────────
   program
     .command("compose <intent...>")
-    .description("Compile a natural-language intent into a runnable pipeline of registered atoms / molecules. v0.41 ships the planner; execution lands in v0.42. See Wiki: Compose-And-Compiler.")
+    .description("Compile a natural-language intent into a runnable pipeline of registered atoms / molecules. v0.41 plans, v0.42 also feeds the library. See Wiki: Compose-And-Compiler.")
     .option("--max-steps <n>", "cap on plan length (default 6)", (v) => Number(v), 6)
     .option("--llm", "ask the configured LLM to refine the rule-based seed plan", false)
     .option("--no-cache", "ignore the molecule cache for this run", false)

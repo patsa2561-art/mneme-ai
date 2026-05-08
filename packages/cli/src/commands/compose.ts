@@ -19,6 +19,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { git, periodic } from "@mneme-ai/core";
+// v0.42: every compose invocation also writes to the library so the
+// Second-Brain promotion loop has data to work with.
 import { resolveAllEnrichers, ResilientEnricher } from "@mneme-ai/embeddings";
 import { ui, header, section, kv, divider, nextSteps } from "../ui.js";
 
@@ -32,6 +34,8 @@ export interface ComposeOptions {
   quiet?: boolean;
   /** Skip cache reads (for benchmarking / debugging). */
   noCache?: boolean;
+  /** v0.42: execute the plan after compiling it. */
+  execute?: boolean;
 }
 
 const CACHE_FILE = "molecule-cache.json";
@@ -82,6 +86,9 @@ export async function composeCommand(opts: ComposeOptions): Promise<number> {
     }
     await writeCache(meta.rootPath, cacheKey, intent, plan);
   }
+
+  // v0.42: feed the library so frequency-based promotion can work.
+  await periodic.recordInvocation(meta.rootPath, intent, plan);
 
   // 3. Render / json
   if (opts.json) {
