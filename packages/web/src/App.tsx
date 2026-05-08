@@ -37,8 +37,11 @@ export function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [highlightFile, setHighlightFile] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
-  const playStartedRef = useRef<number>(0);
-  const playOriginRef = useRef<number>(0);
+  // scrubTRef mirrors scrubT — read by the play loop so resume can start
+  // from the current pause position without listing scrubT in the effect's
+  // deps (which would re-run the loop on every tick).
+  const scrubTRef = useRef<number>(scrubT);
+  scrubTRef.current = scrubT;
 
   // ─── load demo on first render ────────────────────────────────────────
   useEffect(() => {
@@ -77,17 +80,27 @@ export function App() {
   }, [bounds?.min, bounds?.max]);
 
   // ─── play / animate ───────────────────────────────────────────────────
+  // 12-second timelapse spans the FULL repo window. When the user pauses
+  // mid-play and presses ▶ again, resume from the current scrub position
+  // and play out only the remaining slice — preserving the same overall
+  // pace so a quick pause+resume looks continuous, and a resume from 80%
+  // through finishes in 2.4s (not another full 12s).
   useEffect(() => {
     if (!playing || !bounds) return;
-    let frame = 0;
-    const total = 12_000;
+    const span = bounds.max - bounds.min;
+    if (span <= 0) return;
+    const FULL_DURATION_MS = 12_000;
+    const origin = scrubTRef.current;
+    // If we paused at (or past) the end, restart from the beginning.
+    const fromMs = origin >= bounds.max ? bounds.min : origin;
+    const remaining = bounds.max - fromMs;
+    const duration = FULL_DURATION_MS * (remaining / span);
     const start = performance.now();
-    playStartedRef.current = start;
-    playOriginRef.current = bounds.min;
+    let frame = 0;
     const tick = (now: number) => {
       const elapsed = now - start;
-      const pct = Math.min(1, elapsed / total);
-      const t = bounds.min + (bounds.max - bounds.min) * pct;
+      const pct = Math.min(1, elapsed / duration);
+      const t = fromMs + remaining * pct;
       setScrubT(t);
       if (pct < 1) {
         frame = requestAnimationFrame(tick);
