@@ -136,33 +136,19 @@ mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🧠 What changes after you bolt it on
+## ⚡ Before & after, in one glance
 
-| Before Mneme | After Mneme |
-|---|---|
-| AI sees current code | AI sees + every commit, PR, decision, incident since day 1 |
-| AI guesses from syntax | AI quotes commits — *"per a3f9b21 (2024-08-22): the retry was added because Stripe returned 502s during us-east outage"* |
-| AI confidently lies | AI refuses to answer if it can't find supporting commits |
-| AI doesn't see your team | AI knows who wrote what, who's forgetting what, who's the expert on auth |
-| AI ships and you pray | Mneme audits each AI commit with a 5-axis trust certificate |
+You keep talking to your AI normally — same chat box, same questions. Mneme just changes what comes back.
 
-═══════════════════════════════════════════════════════════════════════════════
+| You ask your AI | 🚗 Stock AI | 🏎 Tuned with Mneme |
+|---|---|---|
+| *"why does parseAmount use try/catch?"* | guesses from syntax | quotes `a3f9b21` (2024-08): *"added after Stripe 502s during us-east outage"* |
+| *"is this refactor risky?"* | "should be fine" | *"78% regret risk — 3 prior incidents in this file footprint"* |
+| *"who's the auth expert?"* | "I don't know your team" | *"@alice (78%), backup @bob — Alice's atrophy is 28%, pair with Bob"* |
+| *"did the AI lie about its diff?"* | doesn't even check | *"yes — db.ts changed 3 lines despite the 'no change' claim"* |
+| *"grade this AI commit before I merge"* | (no concept) | 5-axis trust certificate · PASS / WARN / FAIL · CI-friendly exit code |
 
-## 💬 Just talk to your AI normally
-
-After install, you don't learn new commands. You just ask your AI questions you couldn't ask before:
-
-| You ask your AI | Your AI quietly calls |
-|---|---|
-| *"why does parseAmount use try/catch?"* | `mneme.memory.ask` |
-| *"is this refactor risky? have we tried it before?"* | `mneme.insights.premortem` + `mneme.memory.blast` |
-| *"who knows about rate limiting?"* | `mneme.people.who_knows` |
-| *"is Alice still on top of auth?"* | `mneme.people.atrophy` |
-| *"any security issues hiding in our history?"* | `mneme.forensics.vulns` |
-| *"is the AI's commit message lying about its diff?"* | `mneme.audit.verify` |
-| *"grade this AI commit before I merge"* | `mneme.audit.certify` |
-
-Every tool Mneme exposes is grouped into 9 categories with pre-defined molecule combinations. Your AI picks the right ones, fires them in chain reactions, and synthesizes the answer for you. You never type a Mneme command unless you want to.
+Same conversation. Different power band. **Your AI just knows.**
 
 ═══════════════════════════════════════════════════════════════════════════════
 
