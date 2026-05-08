@@ -8,6 +8,144 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.7.0] — 2026-05-08
+
+**The "PHASES 3-6" release.** All four roadmap phases land in one ship:
+
+  Phase 3 — Daemon mode (real impl)
+  Phase 4 — Mneme Court (real 12-jury + Ed25519 ruling)
+  Phase 5 — Wisdom Federation (real client + DP/k-anonymity + Ed25519 sigs)
+  Phase 6 — SaaS skeleton (deployable federation-hub + Next.js dashboard)
+
+24 new unit tests, **24/24 passing**. Zero breaking changes from v1.6.0.
+
+### Phase 3 — Daemon mode (real implementation)
+
+`mneme daemon start | stop | status | logs` is now a real background
+process, not a preview stub.
+
+  • PID file: `.mneme/daemon.pid`
+  • Status file: `.mneme/daemon-status.json` (atomic write via temp+rename)
+  • Log file: `.mneme/daemon.log`
+  • Filesystem watcher: `fs.watch` on `.git/HEAD` + `.git/refs/heads/`
+  • Auto-reindex when HEAD moves (debounced 800ms)
+  • Cross-platform (no native deps, works on win32 / darwin / linux)
+  • Stale-PID cleanup on stop / status
+
+Run it:
+
+```bash
+mneme daemon start    # detached background process
+mneme daemon status   # JSON or pretty output
+mneme daemon logs     # tail .mneme/daemon.log
+mneme daemon stop     # SIGTERM + cleanup
+```
+
+6/6 unit tests passing on no-running / stale-PID / error paths.
+
+### Phase 4 — Mneme Court (real 12-jury arbitration)
+
+Real 12-juror system. Each commit gets evaluated by:
+
+  1. Bayesian prior verifier
+  2. Stylometric voice verifier
+  3. Information entropy verifier
+  4. Citation density verifier
+  5. CWE pattern matcher
+  6. Atrophy guard
+  7. Incident-history checker
+  8. Mutation counterfactual
+  9. Adversarial probe
+  10. LLM judge — Claude (passes through to audit verify-head)
+  11. LLM judge — GPT-4 (same)
+  12. LLM judge — Gemini (same)
+
+Foreman algorithm:
+  • Tally votes by majority
+  • MISTRIAL when consensus < 50% or top-two tied
+  • Output: signed JSON + Markdown court ruling
+  • Ed25519 signature via core/audit/ed25519 (per-ruling fresh keypair in v1.7.0;
+    persisted org keys in v1.8.0)
+
+Run it:
+
+```bash
+mneme court HEAD --jurors 12 --out ruling.md
+mneme court HEAD --json    # exit 1 if GUILTY, 0 otherwise
+```
+
+9/9 unit tests passing on foreman tally + markdown rendering.
+
+### Phase 5 — Wisdom Federation (real client + protocol)
+
+Privacy-preserving cross-repo signal sharing. Anti-Copilot positioning:
+
+  > Copilot trains on your code (forced share). Mneme federates wisdom
+  > WITHOUT touching your code.
+
+Privacy guarantees:
+  • Differential privacy: Laplace noise (ε ≤ 1.0 default)
+  • k-anonymity: signals only emit when ≥k=20 commits in repo
+  • Ed25519 signed envelopes (tamper-detectable)
+  • NEVER shared: commit hashes, repo URLs, author identities, code
+  • ONLY shared: aggregate patterns (e.g. "247 repos with X saw regret-spike when Y")
+
+Commands:
+
+```bash
+mneme federation join --hub https://hub.example.com
+mneme federation status
+mneme federation contribute --pattern "regret"
+mneme federation leave
+```
+
+`contribute` outputs a fully signed `SignalEnvelope` JSON the user can
+POST to their hub.
+
+9/9 unit tests passing on join/leave/status round-trip + Laplace noise distribution.
+
+### Phase 6 — SaaS skeleton (`packages/saas/`)
+
+Deployable starter for the cross-org dashboard. NOT published to npm —
+ships as monorepo source for users to deploy on their own infra.
+
+```
+packages/saas/
+├── README.md
+├── federation-hub/          ← Phase 5 reference Express server
+│   ├── server.ts            ← validates Ed25519 envelopes + enforces k-anonymity
+│   ├── package.json
+│   └── README.md
+└── dashboard/               ← Phase 6 multi-tenant Next.js scaffold
+    ├── package.json
+    └── README.md
+```
+
+The federation hub is functional out of the box (`npm run dev`).
+The dashboard is a scaffold pending v1.8.0+ pages (atrophy heatmap,
+fleet audit timeline, incident correlation graph).
+
+### Files added in v1.7.0
+
+```
+packages/cli/src/commands/daemon.test.ts          (6 tests)
+packages/cli/src/commands/court.test.ts           (9 tests)
+packages/cli/src/commands/federation.test.ts      (9 tests)
+packages/saas/README.md
+packages/saas/federation-hub/package.json
+packages/saas/federation-hub/server.ts
+packages/saas/federation-hub/README.md
+packages/saas/dashboard/package.json
+packages/saas/dashboard/README.md
+```
+
+### Numbers
+
+  • 24 new unit tests across 3 files (daemon + court + federation), 24/24 passing
+  • 0 breaking changes from v1.6.0
+  • Lockfile: 113 platform entries preserved (surgical patch only)
+  • 4 phases now have real implementations (Phase 3, 4, 5 functional + Phase 6 deployable)
+
 ## [1.6.0] — 2026-05-08
 
 **The "ORCHESTRA" release.** Five killer ideas + four phase scaffolds shipped

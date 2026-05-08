@@ -1066,12 +1066,13 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
-  // ── v1.6.0 — Phase 3 stub: daemon mode preview ──
+  // ── v1.7.0 — Phase 3: real daemon (predictive context pre-fetch) ──
   program
     .command("daemon <action>")
-    .description("Mneme daemon — predictive context pre-fetch (preview, full implementation in v1.7.0)")
+    .description("Mneme daemon — background process that watches git activity + auto-reindexes")
+    .option("--attached", "Run in foreground (used internally by `start` to spawn a detached child)", false)
     .option("--json", "Machine-readable output", false)
-    .action(async (action: string, opts: { json?: boolean }) => {
+    .action(async (action: string, opts: { attached?: boolean; json?: boolean }) => {
       const { daemonCommand } = await import("./commands/daemon.js");
       const allowedActions = ["start", "stop", "status", "logs"];
       if (!allowedActions.includes(action)) {
@@ -1082,6 +1083,7 @@ export async function run(argv: string[]): Promise<void> {
         await daemonCommand({
           cwd: process.cwd(),
           action: action as "start" | "stop" | "status" | "logs",
+          attached: opts.attached,
           json: opts.json,
         }),
       );
@@ -1107,16 +1109,16 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
-  // ── v1.6.0 — Phase 5 stub: Wisdom Federation preview ──
+  // ── v1.7.0 — Phase 5: Wisdom Federation (privacy-preserving cross-repo) ──
   program
     .command("federation <action>")
-    .description("Cross-repo Wisdom Federation — privacy-preserving signal sharing (preview, full implementation in v1.7.0)")
+    .description("Cross-repo Wisdom Federation — DP/k-anonymity signed signals (join · leave · status · contribute · query)")
     .option("--hub <url>", "Federation hub URL (required for `join`)")
-    .option("--pattern <q>", "Pattern to query (required for `query`)")
+    .option("--pattern <q>", "Pattern to contribute or query (required for those actions)")
     .option("--json", "Machine-readable output", false)
     .action(async (action: string, opts: { hub?: string; pattern?: string; json?: boolean }) => {
       const { federationCommand } = await import("./commands/federation.js");
-      const allowedActions = ["join", "leave", "status", "query"];
+      const allowedActions = ["join", "leave", "status", "contribute", "query"];
       if (!allowedActions.includes(action)) {
         ui.error(`Unknown federation action "${action}". Try: ${allowedActions.join(" | ")}`);
         process.exit(1);
@@ -1124,7 +1126,7 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(
         await federationCommand({
           cwd: process.cwd(),
-          action: action as "join" | "leave" | "status" | "query",
+          action: action as "join" | "leave" | "status" | "contribute" | "query",
           hub: opts.hub,
           pattern: opts.pattern,
           json: opts.json,

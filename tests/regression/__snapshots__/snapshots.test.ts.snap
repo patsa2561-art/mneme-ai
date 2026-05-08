@@ -55,9 +55,9 @@ Commands:
   mcp [options]  >  Run as an MCP server, OR --install to auto-config Claude Code / Cursor / Continue
   benchmark [options]  >  Run the vendor-neutral AI Memory Benchmark — grades any AI memory implementation across 24 standardized probes
   time-capsule [options]  >  Export a single-tarball snapshot of the repo's nervous system for handovers / new-hire onboarding
-  daemon [options] <action>  >  Mneme daemon — predictive context pre-fetch (preview, full implementation in v1.7.0)
+  daemon [options] <action>  >  Mneme daemon — background process that watches git activity + auto-reindexes
   court [options] [commit]  >  Mneme Court — 12-jury arbitration with cryptographic ruling PDF (preview, full implementation in v1.7.0)
-  federation [options] <action>  >  Cross-repo Wisdom Federation — privacy-preserving signal sharing (preview, full implementation in v1.7.0)
+  federation [options] <action>  >  Cross-repo Wisdom Federation — DP/k-anonymity signed signals (join · leave · status · contribute · query)
   git-install [options]  >  Install Mneme as a native git extension — enables \`git mneme <cmd>\` + optional hooks
   watch [options]  >  Wisdom Mutant — 24/7 daemon: re-index on commit, calibrate hourly, self-eval daily
   time-machine [options] <file>  >  Narrate a file's evolution as eras (birth, rewrite, firefight, plateau)
