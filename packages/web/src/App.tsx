@@ -11,6 +11,7 @@ import { ScrubberView } from "./components/ScrubberView";
 import { DetailPanel } from "./components/DetailPanel";
 import { LimitsPanel } from "./components/LimitsPanel";
 import { LiveWisdomPanel } from "./components/LiveWisdomPanel";
+import { GraphWisdomPanel } from "./components/GraphWisdomPanel";
 import { LoadDialog } from "./components/LoadDialog";
 import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
@@ -194,6 +195,7 @@ export function App() {
         </aside>
       </main>
 
+      {view === "graph" && scrubbed && <GraphWisdomPanel data={scrubbed} />}
       {raw?._liveMode && <LiveWisdomPanel data={raw} />}
       <LimitsPanel limits={scrubbed?.limits ?? raw?.limits ?? []} />
 

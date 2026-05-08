@@ -2897,3 +2897,216 @@ body::before {
 
 /* Hide the playback area when not on graph view — handled by App.tsx
    conditional rendering, but we also tighten the surrounding layout. */
+
+/* ─── Graph wisdom panel — explains why the graph looks the way it does ─── */
+.graph-wisdom {
+  margin: 0 22px 12px;
+  padding: 20px 22px 18px;
+  background: linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(124,58,237,0.06) 60%, rgba(0,0,0,0.18) 100%);
+  border: 1px solid rgba(56,189,248,0.32);
+  border-radius: 14px;
+}
+
+.graph-wisdom-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.graph-wisdom-head h3 {
+  font-size: 1.05rem;
+  margin: 0;
+  font-weight: 700;
+  background: linear-gradient(135deg, #38bdf8 0%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.graph-wisdom-glyph { font-size: 1.25em; -webkit-text-fill-color: initial; color: #38bdf8; margin-right: 4px; }
+.graph-wisdom-window {
+  font-size: 0.78rem;
+  color: rgba(232,232,255,0.75);
+  font-family: var(--font-mono, monospace);
+}
+.graph-wisdom-window b { color: rgba(232,232,255,0.96); }
+.graph-wisdom-range { color: #38bdf8; }
+
+.graph-wisdom-headline {
+  font-size: 1.0rem;
+  line-height: 1.55;
+  color: rgba(232,232,255,0.92);
+  margin: 4px 0 14px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.28);
+  border-left: 3px solid #38bdf8;
+  border-radius: 6px;
+}
+
+/* Disconnected component summary row */
+.graph-wisdom-components {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.graph-wisdom-component {
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.32);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+.graph-wisdom-comp-size {
+  font-size: 0.7rem;
+  letter-spacing: 1.2px;
+  color: #c084fc;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+}
+.graph-wisdom-comp-count {
+  font-size: 0.85rem;
+  color: rgba(232,232,255,0.85);
+  margin: 4px 0 6px;
+}
+.graph-wisdom-comp-members {
+  font-size: 0.78rem;
+  color: rgba(232,232,255,0.7);
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.graph-wisdom-comp-bridge {
+  font-size: 0.78rem;
+  color: rgba(232,232,255,0.85);
+  border-top: 1px dashed rgba(255,255,255,0.1);
+  padding-top: 6px;
+}
+
+/* Big per-isolated-node cards — the main payload */
+.graph-wisdom-isolated {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 14px;
+}
+.graph-wisdom-card {
+  background: rgba(0,0,0,0.34);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 16px 18px 14px;
+  position: relative;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.graph-wisdom-card:hover {
+  border-color: rgba(56,189,248,0.5);
+  transform: translateY(-1px);
+}
+.graph-wisdom-card.tone-warn { border-left: 4px solid #f59e0b; }
+.graph-wisdom-card.tone-info { border-left: 4px solid #38bdf8; }
+.graph-wisdom-card.tone-muted { border-left: 4px solid rgba(255,255,255,0.18); opacity: 0.86; }
+
+.graph-wisdom-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.graph-wisdom-card-glyph {
+  font-size: 1.6rem;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.4);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.graph-wisdom-card-id { flex: 1; min-width: 0; }
+.graph-wisdom-card-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: rgba(232,232,255,0.96);
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.graph-wisdom-card-email {
+  font-size: 0.74rem;
+  font-family: var(--font-mono, monospace);
+  color: rgba(232,232,255,0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.graph-wisdom-chip {
+  font-size: 0.68rem;
+  letter-spacing: 1.4px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.chip-warn  { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4); }
+.chip-info  { background: rgba(56,189,248,0.16); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.4); }
+.chip-muted { background: rgba(255,255,255,0.06); color: rgba(232,232,255,0.7); border: 1px solid rgba(255,255,255,0.16); }
+
+.graph-wisdom-card-explain {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(232,232,255,0.9);
+  margin: 0 0 10px;
+}
+
+.graph-wisdom-card-evidence {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.graph-wisdom-card-evidence li {
+  font-size: 0.78rem;
+  font-family: var(--font-mono, monospace);
+  color: rgba(232,232,255,0.7);
+  padding-left: 14px;
+  position: relative;
+}
+.graph-wisdom-card-evidence li::before {
+  content: "›";
+  position: absolute;
+  left: 0;
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.graph-wisdom-card-window {
+  font-size: 0.76rem;
+  color: rgba(232,232,255,0.65);
+  border-top: 1px dashed rgba(255,255,255,0.1);
+  padding-top: 8px;
+  font-family: var(--font-mono, monospace);
+}
+.graph-wisdom-card-window b { color: rgba(232,232,255,0.92); }
+
+.graph-wisdom-foot {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgba(232,232,255,0.62);
+}
+.graph-wisdom-foot code {
+  background: rgba(0,0,0,0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.86em;
+  color: var(--accent, #c084fc);
+}
+@media (max-width: 720px) {
+  .graph-wisdom-isolated { grid-template-columns: 1fr; }
+  .graph-wisdom-components { grid-template-columns: 1fr; }
+}

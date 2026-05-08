@@ -8,6 +8,50 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.6] — 2026-05-09
+
+**"Why the graph looks like this" — every disconnected node now gets a
+big, plain-English explanation rooted in the user's real git data, not
+generic prose.**
+
+  New GraphWisdomPanel (web) — appears below the Nervous System graph
+  whenever there are isolated nodes or disconnected clusters:
+    • Header surfaces the **real repo span** — first push and latest
+      push computed from `min(fromDate)` / `max(toDate)` across every
+      passport (actual commit timestamps, not the API-fetched window).
+    • One large card per isolated node, with reason chip, big name,
+      one-paragraph explain, and concrete evidence rendered as
+      mono-text bullets.
+    • Component summary row when the graph splits into multiple
+      clusters — shows size, top topic, and the bridge node (the
+      author whose removal would split the cluster).
+
+  6-reason classifier — every isolation grounded in the author's
+  real numbers (not generic strings):
+    • 🔑 TOOL ACCOUNT — service-account / TOKEN suffix
+    • 🤖 BOT — renovate / dependabot / github-actions cadence
+      mismatch (commits on different days than humans, by design)
+    • ✈ DRIVE-BY — exactly 1 commit · cites the actual commit date
+      and the file touched
+    • 📍 SOLO DAY — N commits all on a single day · cites the day
+    • ⏳ TIME ISLAND — author window doesn't overlap any other
+      author's window · cites "0 of N peers' windows overlap"
+    • 🗺 FILE ISLAND — overlaps in time but works in a corner of
+      the repo no one else touches · cites the actual file paths
+
+  Each card footer:
+  `active {fromDate} → {toDate} · N commits · M active days` —
+  pulled straight from per-author git data so the user can verify
+  against `git log --author=<email>` if they want to.
+
+  `lib/graphWisdom.ts` — pure deterministic function. Same data ⇒
+  same wisdom. 12 unit tests cover empty/trivial cases, repo-span
+  computation, all 6 reasons, bridge detection, component sorting,
+  and isolated-node ordering (file-islands first, tool-accounts
+  last — most-actionable on top).
+
+  All 33 web tests passing. Production build clean.
+
 ## [1.17.5] — 2026-05-09
 
 **Tab clarity — every tab now tells you whether it's running on YOUR
