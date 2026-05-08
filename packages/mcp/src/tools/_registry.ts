@@ -24,6 +24,7 @@ import { understandIntentTool } from "./_intent_tool.js";
 import { constitutionTool } from "./_constitution_tool.js";
 import { verifyClaimsTool } from "./_verify_claims_tool.js";
 import { dnaSearchTool } from "./_dna_tool.js";
+import { genomeTools } from "./_genome_tools.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
@@ -35,6 +36,7 @@ export function buildAllTools(): MnemeTool[] {
     verifyClaimsTool,
     constitutionTool,
     dnaSearchTool,
+    ...genomeTools,
     smartDoTool,
     ...memoryTools,
     ...peopleTools,

@@ -845,6 +845,22 @@ Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON t
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+## 🤝 Partnership / Contact
+
+*For partnership, integration, acquihire conversation, or research collaboration — reach out directly:*
+
+| | |
+|---|---|
+| **Maintainer** | Shinnapat Phunsriphatchalakul |
+| **Email** | [patsa2561@gmail.com](mailto:patsa2561@gmail.com) |
+| **Phone / WhatsApp / LINE** | +66 939455645 |
+| **GitHub** | [@patsa2561-art](https://github.com/patsa2561-art) |
+| **Time zone** | Asia/Bangkok (UTC+7) |
+
+> *Mneme is built and maintained by one engineer. If you're at a place where AI-coding-tool infrastructure matters — and you see something here worth a real conversation — that's the contact.*
+
+═══════════════════════════════════════════════════════════════════════════════
+
 <div align="center">
 
 > *"AI assistants don't get smarter. They get better context.<br/>**Mneme is the Stage-3 tune that gives your AI that context — and grades its work, every time.**"*

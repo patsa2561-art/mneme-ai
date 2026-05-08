@@ -8,6 +8,131 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.0] — 2026-05-09
+
+**The "Genome / Genetic Engineering for MCP" release.** Five entirely new
+genome modules (G1-G5) ship at once + 6 new MCP tools so AI agents
+discover the primitives automatically. **+62 unit tests, ~3096+ tests total.**
+
+═══════════════════════════════════════════════════════════════════════
+G1 · Annotator + Phylogeny — functional taxonomy + ancestry tree
+═══════════════════════════════════════════════════════════════════════
+
+  core/genome/annotator.ts:
+    Tag every tool with: domain (search/mutate/verify/compose/regulate/
+    augment/observe/synthesize), sub-domains, mutability, genus, species.
+
+  core/genome/phylogeny.ts:
+    Build the phylogenetic tree of the tool catalog. Queries:
+      • findAncestors(name)
+      • findCousins(name, k)
+      • treeDistance(a, b) via lowest common ancestor
+      • findClosestRelative(name, candidatePool)
+      • speciationEvents() — branch points
+      • renderAsciiTree() — debug / docs
+    Cycle defense + dedupe + deterministic sort.
+
+═══════════════════════════════════════════════════════════════════════
+G2 · Genetic Circuits — toggle/AND/OR/NOT/oscillator
+═══════════════════════════════════════════════════════════════════════
+
+  core/genome/circuits.ts:
+    Pure-function biological logic gates. Compose declaratively via
+    runCircuit(network, input) — chain of steps; first failure halts.
+    Toggle state caller-managed (pure-function contract preserved).
+
+═══════════════════════════════════════════════════════════════════════
+G3 · Operons — co-regulated tool clusters
+═══════════════════════════════════════════════════════════════════════
+
+  core/genome/operons.ts:
+    OperonDefinition: regulator + tools + per-level BehaviorModifier
+    (5 levels: off/low/medium/high/max).
+    resolveOperonForTool() — per-tool current modifier.
+    cascade() — what changes when a regulator level changes.
+    stripeBuiltinOperon() — bundled stripe-PCI operon factory.
+
+═══════════════════════════════════════════════════════════════════════
+G4 · CRISPR — pack surgery
+═══════════════════════════════════════════════════════════════════════
+
+  core/genome/crispr.ts:
+    crisprEdit(pack, edit) — delete by id/pattern, replace-tool,
+    add-tool, patch-detection. Re-validates against pack schema after
+    edit; on failure, returns ok=false with structured Zod errors.
+    SHA-256 hashes before/after for audit. Fail-closed default.
+    crisprEditChain() — sequential edits, halts at first failure.
+
+═══════════════════════════════════════════════════════════════════════
+G5 · Synthesizer — de novo MCP tool synthesis
+═══════════════════════════════════════════════════════════════════════
+
+  core/genome/synthesizer.ts:
+    User describes a NEW capability via SynthesisRecipe (intent +
+    searchPatterns + verifiers + augmenters + authoredBy). System
+    composes a brand new ToolDefinition with cryptographic name
+    `mneme.synth.s_<sha256-prefix>`. Identical recipe → identical
+    name + DNA hash (deterministic).
+
+    Validates against pack schema BEFORE returning (fail-closed).
+    Refuses recipes with 0 verifiers (would leak hallucinations) +
+    refuses invalid regexes + refuses too-short intent.
+
+    SpeciesRegistry: dedupes by DNA hash. lookupByHash + lookupByName.
+
+═══════════════════════════════════════════════════════════════════════
+6 new MCP tools (mneme.genome.*)
+═══════════════════════════════════════════════════════════════════════
+
+  Exposed to AI agents via tools/list:
+    mneme.genome.annotate       — tag tools by functional domain
+    mneme.genome.phylogeny      — ancestry queries + ASCII tree
+    mneme.genome.circuit        — run AND/OR/NOT/toggle/oscillator
+    mneme.genome.operon_resolve — what behavior modifier governs this tool
+    mneme.genome.crispr_edit    — apply pack surgery
+    mneme.genome.synthesize     — create new tool from recipe
+
+═══════════════════════════════════════════════════════════════════════
+Tests
+═══════════════════════════════════════════════════════════════════════
+
+  +62 new unit tests in genome.test.ts covering all 5 modules:
+    Annotator (10), Phylogeny (8), Circuits (12), Operons (6),
+    CRISPR (8), Synthesizer (12), with deterministic hashing +
+    cycle defense + fail-closed validation.
+
+═══════════════════════════════════════════════════════════════════════
+README · Partnership / Contact section added
+═══════════════════════════════════════════════════════════════════════
+
+  Per maintainer's explicit request — direct contact info for
+  partnership / integration / acquihire conversation:
+
+    Email:    patsa2561@gmail.com
+    Phone:    +66 939455645  (Asia/Bangkok)
+    GitHub:   @patsa2561-art
+
+═══════════════════════════════════════════════════════════════════════
+Why this matters (genuine biology→MCP isomorphism)
+═══════════════════════════════════════════════════════════════════════
+
+  This is NOT metaphor — every concept maps to a real algorithmic
+  equivalent:
+
+    Bio                          MCP
+    ─────────────────────────────────────────────────────
+    Gene (promoter+code+stop)  ↔ Tool (schema+handler+augmentation)
+    Operon                     ↔ Tool cluster + regulator
+    Plasmid                    ↔ Pack
+    CRISPR-Cas9                ↔ crisprEdit
+    Phylogenetic tree          ↔ Tool ancestry tree
+    Codon optimization         ↔ Per-AI-client description tiering
+    De novo gene synthesis     ↔ runtime tool synthesis
+    Synthetic biology circuits ↔ AND/OR/NOT/toggle gates as tools
+
+  No other MCP server in the official directory composes these
+  primitives. Mneme is the first.
+
 ## [1.16.0] — 2026-05-09
 
 **The "weakness pass" release.** Closes the 5 highest-priority gaps from
