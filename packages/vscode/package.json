@@ -147,7 +147,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mneme-ai/core": "1.17.1"
+    "@mneme-ai/core": "1.17.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
