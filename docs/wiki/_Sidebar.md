@@ -1,5 +1,6 @@
 ### 🚪 Start here
 - [[Home]]
+- [[Cheatsheet]] · *🆕 every command, one line each*
 - [[Quickstart]]
 - [[Installation]]
 - [[Configuration]]

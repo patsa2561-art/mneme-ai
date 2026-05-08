@@ -8,6 +8,52 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.1.1] — 2026-05-08
+
+**Patch:** Windows null-byte argv crash in `mneme forensics vulns` /
+`mneme show` (the two callers of `loadCommitsWithDiffs`).
+
+### Bug
+
+On Windows, `node:child_process.spawn` rejects argv strings that contain
+a literal `\x00` (Windows' `CreateProcess` takes a single command-line
+STRING — a NUL terminates it):
+
+```
+✗ The argument 'args[3]' must be a string without null bytes.
+  Received '--pretty=tformat:<<<MNEME-COMMIT>>>\x00%H\x00%aI\x00%an\x00%ae\x00%s\x00%b\x00'
+```
+
+POSIX systems pass argv as a real array and never hit this. Linux/macOS
+users were unaffected. The bug surfaced for Windows users running
+`mneme forensics vulns` against any non-trivial repo.
+
+### Fix (`packages/core/src/git/batch-log.ts`)
+
+Replace the literal NUL byte (`"\x00"`) in argv with git's `%x00`
+pretty-format placeholder. Git substitutes `%x00` to a real NUL byte in
+its OUTPUT, so the wire format is unchanged — the parser stays
+identical. Same NUL separator in the stream we parse, no NUL in argv.
+
+Documented in `man git-log` under PRETTY FORMATS — `%xNN` emits one byte
+from a hex code.
+
+### Regression test
+
+Three new assertions in `batch-log.test.ts` ensure no future commit can
+reintroduce a literal NUL into argv:
+
+- `argv contains zero literal NUL bytes`
+- `the --pretty argv element uses %x00 placeholder, not literal NUL`
+- `argv with all options set still has no NUL bytes`
+
+Total tests: 2,339 (was 2,336) across 172 files.
+
+### End-to-end verification
+
+`mneme forensics vulns --top 3` runs cleanly on Windows 11 + Node 22.22
+against this repo — Bayesian-filtered output renders, no crash.
+
 ## [1.1.0] — 2026-05-09
 
 The **"v1.0 polish"** release. Fills the three honest-scope gaps from

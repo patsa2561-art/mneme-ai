@@ -708,6 +708,7 @@ mneme ask --audit "..."
 
 <br/>
 
+[**🎯 Cheatsheet — every command, one line each →**](https://github.com/patsa2561-art/mneme-ai/wiki/Cheatsheet)
 [**🔍 Browse all commands in the wiki →**](https://github.com/patsa2561-art/mneme-ai/wiki/Command-Tour)
 
 <sub>plain-English use case · copy-paste examples · graphics · grouped by category</sub>

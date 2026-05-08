@@ -21,9 +21,27 @@
  *   - File paths in `diff --git a/X b/Y` headers are quoted if they
  *     contain control bytes
  *
- * → A literal NUL (`%x00`) in the pretty format header is bulletproof.
- *   We pair it with a multi-byte sentinel (`<<<MNEME-COMMIT>>>`) at
- *   format-start so we can also re-sync if we ever miss a NUL boundary.
+ * → A NUL byte in the OUTPUT is bulletproof as a field separator. We
+ *   ask git to emit it via the `%x00` pretty-format placeholder (NOT a
+ *   literal `\x00` in argv — see the Windows note below). We pair it
+ *   with a multi-byte sentinel (`<<<MNEME-COMMIT>>>`) at format-start
+ *   so we can re-sync if we ever miss a NUL boundary.
+ *
+ * ── Why `%x00` instead of a literal NUL in argv ───────────────────────
+ * Node's child_process.spawn on Windows rejects argv strings that contain
+ * a literal NUL byte:
+ *
+ *   ✗ The argument 'args[3]' must be a string without null bytes.
+ *
+ * Cause: Windows' CreateProcess takes a single command-line STRING (not
+ * an argv array) and a NUL terminates that string. Node enforces the
+ * constraint up-front to avoid silent argv truncation. POSIX systems
+ * (Linux/macOS) pass argv as a real array and don't have this problem,
+ * but the bug surfaced for Windows users running `mneme forensics vulns`.
+ *
+ * The fix: pass `%x00` (literal four ASCII characters) in argv, and let
+ * git substitute it to a real NUL byte in its OUTPUT. Same wire format,
+ * no NUL in argv. Documented in `man git-log` under PRETTY FORMATS.
  *
  * ── Output format we emit ─────────────────────────────────────────────
  *   <<<MNEME-COMMIT>>>\x00<hash>\x00<authorISO>\x00<authorName>\x00<authorEmail>\x00<subject>\x00<body>\x00\n
@@ -64,25 +82,33 @@ export interface LoadOptions {
 
 const SENTINEL = "<<<MNEME-COMMIT>>>";
 const NUL = "\x00";
+/** Git's pretty-format placeholder for a NUL byte. We use this in argv —
+ *  NOT a literal NUL — so Windows' CreateProcess accepts the command line.
+ *  Git substitutes it for a real NUL in its OUTPUT, which the parser then
+ *  splits on. */
+const NUL_FMT = "%x00";
 
-/**
- * One subprocess. All commits + all diffs. Sub-linear in commit count
- * because git reuses its open packfile cursor.
- */
-export async function loadCommitsWithDiffs(opts: LoadOptions): Promise<CommitWithDiff[]> {
+function buildArgs(opts: LoadOptions): string[] {
   const args: string[] = [
     "log",
     "-p",
     "-z", // null-byte file-path terminators in diff headers (extra paranoia)
-    `--pretty=tformat:${SENTINEL}${NUL}%H${NUL}%aI${NUL}%an${NUL}%ae${NUL}%s${NUL}%b${NUL}`,
+    `--pretty=tformat:${SENTINEL}${NUL_FMT}%H${NUL_FMT}%aI${NUL_FMT}%an${NUL_FMT}%ae${NUL_FMT}%s${NUL_FMT}%b${NUL_FMT}`,
     "--no-color",
   ];
   if (opts.noMerges !== false) args.push("--no-merges");
   if (opts.maxCommits && opts.maxCommits > 0) args.push("-n", String(opts.maxCommits));
   if (opts.since) args.push(`--since=${opts.since}`);
   if (opts.pathPrefix) args.push("--", opts.pathPrefix);
+  return args;
+}
 
-  const out = await execGitOk(args, {
+/**
+ * One subprocess. All commits + all diffs. Sub-linear in commit count
+ * because git reuses its open packfile cursor.
+ */
+export async function loadCommitsWithDiffs(opts: LoadOptions): Promise<CommitWithDiff[]> {
+  const out = await execGitOk(buildArgs(opts), {
     cwd: opts.cwd,
     maxBuffer: opts.maxBuffer ?? 1024 * 1024 * 1024, // 1 GB
   });
@@ -153,3 +179,6 @@ export function parseLogStream(raw: string): CommitWithDiff[] {
 }
 
 export const _SENTINEL_FOR_TESTS = SENTINEL;
+/** Exported for the regression test that asserts argv contains no literal
+ *  NUL bytes (Windows CreateProcess rejects them — bug fixed in v1.1.1). */
+export const _buildArgsForTests = buildArgs;

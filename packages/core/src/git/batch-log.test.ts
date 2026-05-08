@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseLogStream, _SENTINEL_FOR_TESTS } from "./batch-log.js";
+import { parseLogStream, _SENTINEL_FOR_TESTS, _buildArgsForTests } from "./batch-log.js";
 
 const S = _SENTINEL_FOR_TESTS;
 const NUL = "\x00";
@@ -97,5 +97,50 @@ describe("git/batch-log — parseLogStream", () => {
     const out = parseLogStream(raw);
     expect(out).toHaveLength(1);
     expect(out[0]!.body).toHaveLength(1024 * 1024);
+  });
+});
+
+/**
+ * Regression: `git log` argv must NOT contain literal NUL bytes —
+ * Windows' CreateProcess rejects them and Node throws
+ * `ERR_INVALID_ARG_VALUE: must be a string without null bytes`.
+ *
+ * Git interprets `%x00` in --pretty as "emit one NUL byte in OUTPUT",
+ * which is what we actually want — same wire format, no NUL in argv.
+ *
+ * Bug surfaced in v1.1.0 on Windows: `mneme forensics vulns` crashed.
+ * Fixed in v1.1.1 by replacing the literal NUL constant with `%x00`.
+ */
+describe("git/batch-log — argv null-byte safety (Windows regression)", () => {
+  it("argv contains zero literal NUL bytes", () => {
+    const args = _buildArgsForTests({ cwd: "." });
+    for (const a of args) {
+      expect(a.includes("\x00"), `argv "${a}" contains a literal NUL`).toBe(false);
+    }
+  });
+
+  it("the --pretty argv element uses %x00 placeholder, not literal NUL", () => {
+    const args = _buildArgsForTests({ cwd: "." });
+    const pretty = args.find((a) => a.startsWith("--pretty="));
+    expect(pretty).toBeTruthy();
+    expect(pretty!).toContain("%x00");
+    expect(pretty!.includes("\x00")).toBe(false);
+  });
+
+  it("argv with all options set still has no NUL bytes", () => {
+    const args = _buildArgsForTests({
+      cwd: ".",
+      maxCommits: 500,
+      since: "2026-01-01",
+      pathPrefix: "src/",
+      noMerges: true,
+    });
+    for (const a of args) {
+      expect(a.includes("\x00")).toBe(false);
+    }
+    expect(args).toContain("--no-merges");
+    expect(args).toContain("-n");
+    expect(args).toContain("500");
+    expect(args).toContain("--since=2026-01-01");
   });
 });

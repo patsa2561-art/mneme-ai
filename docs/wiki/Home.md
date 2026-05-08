@@ -12,11 +12,12 @@ This wiki is **Mneme's brain map**. Pick the room you need.
 
 | If you want to… | Go to |
 |---|---|
+| **Stressed by the long command list?** | **[[Cheatsheet]]** — every command, 1 line each |
 | Install + try in 60 seconds | **[[Quickstart]]** |
 | See the 1-minute pitch | [README on GitHub](https://github.com/patsa2561-art/mneme-ai#readme) |
 | Use without paying for any LLM | **[[Quickstart]]** → "the free path" |
 | Plug into Claude Code / Cursor / Codex | **[[MCP-Integration]]** |
-| Browse every command in plain English | **[[Command-Tour]]** |
+| Browse every command as a story | **[[Command-Tour]]** |
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -61,6 +62,7 @@ mneme do "should we ship today"
 
 | Tier | Where | What's there |
 |---|---|---|
+| **🆕 Cheatsheet** | [[Cheatsheet]] | **every command, one line each — read this first if it's overwhelming** |
 | **Tier 1** — essentials | [[Commands-Tier-1]] | `init`, `index`, `status`, `ask`, `why`, `do`, `guard`, `mcp` |
 | **Tier 2** — Quant | [[Commands-Tier-2-Quant]] | drawdown · alpha · vix · greeks · black-swan · moneyball · 10 more |
 | **Innovations** | [[Innovations]] | 17+ world-firsts, deep-dive each command with output samples |

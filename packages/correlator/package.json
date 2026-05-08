@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/correlator",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Phase 3 — error/incident correlation engine. The moat: connect git + code + errors + time.",
   "type": "module",
   "main": "./dist/index.js",
