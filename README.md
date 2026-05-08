@@ -27,21 +27,51 @@
 
 <br/>
 
-```
-   ┌──────────┐                                  ⚙  STAGE-3 TUNE
-   │ STOCK AI │     ╔════════════════╗      ┌──────────────────────┐
-   │  (any    │ ──→ ║   Mneme MCP    ║ ──→  │  knows your repo     │
-   │   coder) │     ║  bolt-on       ║      │  history             │
-   └──────────┘     ║  93 atoms      ║      │  cites every claim   │
-                    ║  20 molecules  ║      │  grades AI's work    │
-   Claude Code      ║                ║      │  while(true) loop    │
-   Cursor           ║  ┌──────────┐  ║      └──────────────────────┘
-   Codex            ║  │ TEACHER  │  ║
-   Gemini           ║  │  ↕       │  ║       Same engine.
-   Continue         ║  │ STUDENT  │  ║       Different power band.
-   Aider            ║  └──────────┘  ║
-   any MCP client   ╚════════════════╝
-```
+<table align="center" width="100%">
+  <tr>
+    <td align="center" width="32%" valign="top">
+      <h3>🚗 Stock AI</h3>
+      <p><i>Claude Code · Cursor · Codex<br/>Gemini · Continue · Aider</i></p>
+      <p><sub>Brilliant. <b>Amnesiac.</b><br/>Never saw your repo's past.</sub></p>
+    </td>
+    <td align="center" width="4%" valign="middle">
+      <h2>→</h2>
+    </td>
+    <td align="center" width="28%" valign="top">
+      <h3>⚙ + Mneme MCP</h3>
+      <p><b>99 tools · 20 molecules<br/>3 117 tests · MIT · local-first</b></p>
+      <p><sub>HMAC audit log · prompt-injection scrubber<br/>Constitutional Gate · DNA search · Genome</sub></p>
+    </td>
+    <td align="center" width="4%" valign="middle">
+      <h2>→</h2>
+    </td>
+    <td align="center" width="32%" valign="top">
+      <h3>🏎 Tuned AI</h3>
+      <p><b>Knows your repo's history.</b></p>
+      <p><sub>Cites every commit. Grades its own work.<br/>Refuses to repeat past mistakes.</sub></p>
+    </td>
+  </tr>
+</table>
+
+<p align="center"><sub><b>Same engine. Different power band.</b></sub></p>
+
+<br/>
+
+<table align="center">
+  <tr><td align="center"><b>📜 1-minute summary — what changes the moment you bolt on Mneme</b></td></tr>
+  <tr>
+    <td>
+      <table>
+        <tr>
+          <td align="center" width="25%">🩻<br/><b>Grounded answers</b><br/><sub>Cites <code>commit a3f9b21</code><br/>not "I think it's..."</sub></td>
+          <td align="center" width="25%">⚖<br/><b>Constitutional Gate</b><br/><sub>AI cannot suggest code that<br/>contradicts your repo's lessons</sub></td>
+          <td align="center" width="25%">📐<br/><b>5-axis grading</b><br/><sub>Every AI commit graded<br/>PASS · WARN · FAIL</sub></td>
+          <td align="center" width="25%">☢<br/><b>Atrophy radar</b><br/><sub>Knows which files<br/>only one person remembers</sub></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
 </div>
 
