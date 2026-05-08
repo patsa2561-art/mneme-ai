@@ -8,6 +8,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.17.4] — 2026-05-09
+
+**Live mode now renders the full atrophy heatmap + 5 metric proxies + the
+data-window users keep asking for.** Plus a layout fix so the dashboard
+no longer page-scrolls.
+
+  Real git data, not zeros:
+    • `lib/gitFetch.ts` — second pass after the commit list fetches
+      file diffs for the most-recent 30 commits (1 API call each,
+      capped to stay safely inside the 60/hr unauth budget). Per-file
+      touches roll up into per-author topFiles + atrophy.criticalFiles
+      + the lobe map. The old empty-state ("File-level data is empty
+      in live mode") is gone — replaced with the actual heatmap +
+      derived insights.
+    • `_liveDataWindow` — new field on NervousSystemData carrying
+      `{from, to, commits, totalFetched}` so views can show "computed
+      from 30 commits, Apr 12 → May 9, 2026" honestly.
+
+  AtrophyHeatmap overhaul:
+    • Centered SVG (was left-aligned in lots of empty space).
+    • Cells 32×26 (was 22×18). Labels 13.5–14pt monospace (was 11pt).
+    • New 3-card wisdom callout row above the grid:
+        🔥 files at-risk (count + worst file)
+        🧍 bus-factor of 1 (1-expert files — resignation risk)
+        👑 top owner (author + count of critical files they own)
+    • New plain-English intro: "who knows what, how fresh, who's
+      leaving you alone with it" so a first-time visitor knows what
+      they're looking at.
+
+  LiveWisdomPanel — 5 Mneme-metric proxies computed in-browser:
+    • HKD · Hidden Knowledge Density (bus-factor concentration)
+    • REI · Regret Echo Index (drive-by author share)
+    • KAH · Knowledge Atrophy Halflife (median last-touch in weeks)
+    • TWS · Tribal Wisdom Score (file co-ownership rate)
+    • PCS · Provenance Chain Strength — always "—" in live mode
+      (needs HMAC audit chain — local CLI only); honest framing.
+    • Renders below the time scrubber when `_liveMode` is true.
+      Each card carries a tooltip caveat ("proxy of the full metric")
+      so live numbers are never confused for full-CLI numbers.
+
+  Layout fix:
+    • `app-root` is now `height: 100vh` + `overflow: hidden` instead
+      of `min-height: 100vh`. Page no longer scrolls when the canvas
+      + LimitsPanel + LiveWisdomPanel exceed viewport — the canvas
+      shrinks to fit.
+    • `app-canvas` `min-height: 600px` → `min-height: 0` so flex math
+      distributes remaining vertical space.
+    • `LimitsPanel` is now `flex-shrink: 0` with `max-height: 30vh`
+      and internal scroll when expanded.
+
 ## [1.17.3] — 2026-05-09
 
 **Web demo: live-mode UX is now world-class.**

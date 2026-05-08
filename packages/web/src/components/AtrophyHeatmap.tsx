@@ -95,28 +95,90 @@ export function AtrophyHeatmap({
     );
   }
 
-  const cellW = 22;
-  const cellH = 18;
-  const gap = 2;
-  const labelW = 280;
-  const headerH = 110;
+  const cellW = 32;
+  const cellH = 26;
+  const gap = 3;
+  const labelW = 360;
+  const headerH = 140;
   const width = labelW + heat.authors.length * (cellW + gap);
   const height = headerH + heat.files.length * (cellH + gap);
 
+  // ─── Wisdom callouts: derive insights from the data ─────────────────
+  const atRiskCount = data.atrophy.criticalFiles.filter((f) => f.tier === "at-risk").length;
+  const totalCritical = data.atrophy.criticalFiles.length;
+  const busFactorOne = data.atrophy.criticalFiles.filter((f) => f.liveExpertCount === 1).length;
+
+  // Top knower: author with the most "topKnower" appearances across critical files.
+  const ownership = new Map<string, { name: string; count: number }>();
+  for (const f of data.atrophy.criticalFiles) {
+    if (!f.topKnower) continue;
+    const cur = ownership.get(f.topKnower.email);
+    if (cur) cur.count++;
+    else ownership.set(f.topKnower.email, { name: f.topKnower.name, count: 1 });
+  }
+  const topOwner = Array.from(ownership.entries()).sort((a, b) => b[1].count - a[1].count)[0];
+
+  // Most-at-risk file: highest atrophy among at-risk tier
+  const mostAtRisk = data.atrophy.criticalFiles
+    .filter((f) => f.tier === "at-risk")
+    .sort((a, b) => a.freshestKnowledge - b.freshestKnowledge)[0];
+
   return (
     <div className="heatmap-container">
+      <header className="atrophy-intro">
+        <h2>⏳ Knowledge Atrophy — who knows what, how fresh, who's leaving you alone with it</h2>
+        <p>
+          Each row is a file Mneme is tracking. Each column is an author.
+          <b> Cell color = how fresh that author's knowledge is right now</b>{" "}
+          (purple = live · green/teal = warm · gray = decaying ghost-code).
+          Below: the 3 questions an engineering leader asks <i>tomorrow morning</i>.
+        </p>
+      </header>
+
+      <div className="atrophy-callouts">
+        <div className={`atrophy-callout ${atRiskCount > 0 ? "warn" : "ok"}`}>
+          <div className="atrophy-callout-glyph">🔥</div>
+          <div className="atrophy-callout-num">
+            {atRiskCount}<span className="atrophy-callout-denom">/{totalCritical}</span>
+          </div>
+          <div className="atrophy-callout-label">files at-risk</div>
+          <div className="atrophy-callout-explain">
+            Knowledge decayed past the 40% threshold. {mostAtRisk ? <>Worst: <code>{mostAtRisk.filePath}</code></> : "—"}
+          </div>
+        </div>
+
+        <div className={`atrophy-callout ${busFactorOne > 0 ? "warn" : "ok"}`}>
+          <div className="atrophy-callout-glyph">🧍</div>
+          <div className="atrophy-callout-num">{busFactorOne}</div>
+          <div className="atrophy-callout-label">bus-factor of 1</div>
+          <div className="atrophy-callout-explain">
+            Files with exactly one live expert. One resignation away from disaster.
+          </div>
+        </div>
+
+        <div className="atrophy-callout">
+          <div className="atrophy-callout-glyph">👑</div>
+          <div className="atrophy-callout-num">{topOwner ? topOwner[1].count : 0}</div>
+          <div className="atrophy-callout-label">{topOwner ? `${topOwner[1].name} owns` : "no top owner yet"}</div>
+          <div className="atrophy-callout-explain">
+            of the {totalCritical} critical files. Pair before they leave.
+          </div>
+        </div>
+      </div>
+
       <div className="heatmap-scroll">
         <svg width={width} height={height} role="img" aria-label="Atrophy heatmap">
           {heat.authors.map((a, i) => (
-            <g key={a.email} transform={`translate(${labelW + i * (cellW + gap)}, ${headerH - 4})`}>
+            <g key={a.email} transform={`translate(${labelW + i * (cellW + gap) + cellW / 2}, ${headerH - 6})`}>
               <text
-                transform={`rotate(-55)`}
-                fill="rgba(232,232,255,0.85)"
-                fontSize="11"
+                transform={`rotate(-50)`}
+                fill="rgba(232,232,255,0.92)"
+                fontSize="14"
+                fontWeight="500"
                 style={{ cursor: "pointer" }}
                 onClick={() => onSelectAuthor(a.email)}
               >
-                {a.name.length > 18 ? a.name.slice(0, 17) + "…" : a.name}
+                {a.name.length > 22 ? a.name.slice(0, 21) + "…" : a.name}
               </text>
             </g>
           ))}
@@ -127,20 +189,21 @@ export function AtrophyHeatmap({
                 <rect
                   x={0}
                   y={0}
-                  width={labelW - 6}
+                  width={labelW - 8}
                   height={cellH}
-                  fill={isHighlight ? "rgba(124,58,237,0.18)" : "transparent"}
-                  rx={4}
+                  fill={isHighlight ? "rgba(124,58,237,0.22)" : "transparent"}
+                  rx={5}
                 />
                 <text
-                  x={6}
-                  y={cellH - 4}
-                  fill="rgba(232,232,255,0.78)"
-                  fontSize="11"
+                  x={10}
+                  y={cellH - 7}
+                  fill="rgba(232,232,255,0.88)"
+                  fontSize="13.5"
+                  fontFamily="var(--font-mono, monospace)"
                   style={{ cursor: "pointer" }}
                   onClick={() => onHighlightFile(isHighlight ? null : f)}
                 >
-                  {f.length > 38 ? "…" + f.slice(-37) : f}
+                  {f.length > 44 ? "…" + f.slice(-43) : f}
                 </text>
               </g>
             );
@@ -156,9 +219,9 @@ export function AtrophyHeatmap({
               <rect
                 width={cellW}
                 height={cellH}
-                rx={3}
+                rx={4}
                 fill={knowColor(c.knowledge)}
-                opacity={0.35 + 0.65 * Math.max(0.05, c.knowledge)}
+                opacity={0.4 + 0.6 * Math.max(0.05, c.knowledge)}
               />
             </g>
           ))}

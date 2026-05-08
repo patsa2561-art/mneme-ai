@@ -160,14 +160,27 @@ export interface NervousSystemData {
   _demo_synthetic?: boolean;
   /**
    * Truthy when the data was synthesized in-browser from the GitHub/GitLab
-   * REST API (no file-level diffs were fetched, to stay inside the unauth
-   * rate-limit). Views use this to render the "LIVE" header badge and
-   * gracefully degrade unavailable sections (file-level expertise, atrophy
-   * heatmap, shape adoption) instead of showing 0.00 / 0/0 zeros.
+   * REST API. Views use this to render the "LIVE" header badge and
+   * gracefully degrade sections that need full-fidelity local data.
    */
   _liveMode?: boolean;
   /** Origin host label for the LIVE badge: e.g. "GitHub" or "GitLab". */
   _liveSource?: string;
+  /**
+   * Window of commits whose file diffs were fetched in detail (a separate
+   * pass after the commit list, capped to stay inside the unauth rate
+   * limit). Atrophy heatmap + per-author topFiles are computed from this
+   * subset; the rest of the data spans all fetched commits.
+   *
+   * `from` / `to` are ISO timestamps of the oldest + newest commit in the
+   * detail window. `commits` is the count.
+   */
+  _liveDataWindow?: {
+    from: string;
+    to: string;
+    commits: number;
+    totalFetched: number;
+  };
 }
 
 /** A node placed by the force layout (after we transform NervousSystemData). */

@@ -10,6 +10,7 @@ import { DnaView } from "./components/DnaView";
 import { ScrubberView } from "./components/ScrubberView";
 import { DetailPanel } from "./components/DetailPanel";
 import { LimitsPanel } from "./components/LimitsPanel";
+import { LiveWisdomPanel } from "./components/LiveWisdomPanel";
 import { LoadDialog } from "./components/LoadDialog";
 import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
@@ -193,6 +194,7 @@ export function App() {
         </aside>
       </main>
 
+      {raw?._liveMode && <LiveWisdomPanel data={raw} />}
       <LimitsPanel limits={scrubbed?.limits ?? raw?.limits ?? []} />
 
       {loadOpen && (

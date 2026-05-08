@@ -522,107 +522,91 @@ The secret is shown once when you run `mneme webhook add` — save it in your en
 ---
 
 <details>
-<summary><h2 style="display:inline">🧬 Mneme DNA &mdash; the 16-strand code search engine &nbsp;&nbsp;<sub><i>(the black-sheep moat)</i></sub></h2></summary>
+<summary><h2 style="display:inline">🧬 The Mneme moat &nbsp;—&nbsp; math no other dev tool can compute &nbsp;&nbsp;<sub><i>(why an AI partnership matters)</i></sub></h2></summary>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/THE%20THESIS-Sourcegraph%20has%20more%20search.%20We%20have%20better%20inputs.-c084fc?style=for-the-badge&labelColor=4c1d95" alt="thesis"/>
+</p>
+
+<p align="center"><i>From <b>6 inputs nobody else captures</b> we compose <b>16 strands of DNA</b> (8 algorithms × 8 math formulas) and produce <b>7 measurable truths</b> nobody else can produce. Every number is reproducible, deterministic, unit-tested. <b>AI memory becomes a variable you can act on.</b></i></p>
+
+<br/>
+
+### ⚛ The 6 inputs — uniquely Mneme's product
+
+<p align="center">
+  <img src="https://img.shields.io/badge/1-HMAC%20audit%20log%20of%20AI%20calls-7c3aed?style=for-the-badge&labelColor=2e1065" alt="audit"/>
+  <img src="https://img.shields.io/badge/2-Regret%20%26%20decision%20extraction-7c3aed?style=for-the-badge&labelColor=2e1065" alt="regret"/>
+  <img src="https://img.shields.io/badge/3-Runtime%20Constitutional%20Gate-7c3aed?style=for-the-badge&labelColor=2e1065" alt="gate"/>
+  <br/>
+  <img src="https://img.shields.io/badge/4-Atrophy%20time--series%20per%20file-7c3aed?style=for-the-badge&labelColor=2e1065" alt="atrophy"/>
+  <img src="https://img.shields.io/badge/5-Federation%20envelope%20%28k--anon%29-7c3aed?style=for-the-badge&labelColor=2e1065" alt="federation"/>
+  <img src="https://img.shields.io/badge/6-AI--Memory--Bench%20harness-7c3aed?style=for-the-badge&labelColor=2e1065" alt="bench"/>
+</p>
+
+<p align="center"><sub><b>All 6 in one stack → composition becomes possible. No competitor has even 3.</b></sub></p>
+
+<br/>
+
+---
+
+### 🧬 Strand A · Search built FOR an AI — the 16-strand DNA engine
+
+<table>
+<tr><td>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/8%20math%20formulas-SHIPPED-2da44e?style=flat-square&logo=checkmarx&logoColor=white"/>
+  <img src="https://img.shields.io/badge/48%20unit%20tests-PASSING-2da44e?style=flat-square"/>
+  <img src="https://img.shields.io/badge/8%20algorithms-roadmap%20P2--P10-fbbf24?style=flat-square"/>
+</p>
 
 ```
-   ╔═══════════════════════════════════════════════════════════════════╗
-   ║   Sourcegraph spent $200M.  GitHub spent more.                    ║
-   ║   We built a different shape: search engineered for AI agents.    ║
-   ║                                                                   ║
-   ║   16 strands of DNA — 8 algorithms × 8 math formulas — that no    ║
-   ║   other code-search tool composes, because they DON'T have the    ║
-   ║   inputs (HMAC-chained AI audit log, regret extraction, runtime   ║
-   ║   Constitutional Gate, atrophy time-series, federation, bench).   ║
-   ╚═══════════════════════════════════════════════════════════════════╝
-
-                        ╭───────────────╮
-              ┌─────────│  YOUR QUERY   │─────────┐
-              │         ╰───────────────╯         │
-              ▼                                   ▼
-    ┌──────────────────┐                ┌──────────────────┐
-    │  8 ALGORITHMS    │                │  8 MATH FORMULAS │
-    │  (orchestration) │   ─compose─▶   │  (scoring)       │
-    └──────────────────┘                └──────────────────┘
-              │                                   │
-              ▼                                   ▼
-    A1 Mutant Index Evolution            F1 Quantum Resonance Score
-    A2 Phantom-Path Search               F2 Hebbian-Weighted Cosine
-    A3 Quantum Superposition Rank        F3 Atrophy-Decay Boost
-    A4 Echo-Locator (SONAR for code)     F4 Tribal Bayesian Posterior
-    A5 Time-Travel Search                F5 Regret Echo Distance
-    A6 Anti-Pattern Repulsion            F6 Time-Phase Score
-    A7 Tribal Voting (Federation)        F7 Compositional Confidence
-    A8 Ghost-Sniper Verifier             F8 Mutant Fitness
-              │                                   │
-              └────────────┬──────────────────────┘
-                           ▼
-              ┌──────────────────────────────┐
-              │  STRICT MODE (default):      │
-              │   0% hallucination           │
-              │   F7 ≥ 0.6 confidence        │
-              │   Or return empty + reasons. │
-              │   Ghost sniper. One shot.    │
-              └──────────────────────────────┘
+            ╭──────────────╮
+       ┌────│  YOUR QUERY  │────┐
+       ▼    ╰──────────────╯    ▼
+  ┌──────────┐            ┌──────────┐
+  │   8 A    │ ─ compose ─│   8 F    │
+  │  algos   │            │ formulas │
+  └──────────┘            └──────────┘
+       │                       │
+       └──────────┬────────────┘
+                  ▼
+   ┌──────────────────────────────┐
+   │  STRICT MODE (default):      │
+   │  Wilson 95% LB · F7 ≥ 0.6    │
+   │  AST-verified · or empty.    │
+   │  Ghost sniper. One shot.     │
+   └──────────────────────────────┘
 ```
 
-> **The "ghost sniper" guarantee** — Strict mode (default): any result that fails AST verify + semantic verify + Wilson 95% lower-bound on confidence is **rejected**, not "shown with low confidence." We prefer empty answers to lies.
+> **🎯 Ghost-sniper guarantee:** any candidate that fails AST verify + semantic verify + confidence threshold is **rejected**, never "shown with low confidence." Empty answer is honest; a lie is not.
 
----
+</td></tr>
+</table>
 
-### The 6 inputs DNA needs (uniquely Mneme's product)
+<details>
+<summary><b>📐 The 8 math formulas (click to see every formula + invariant)</b></summary>
 
-- HMAC-chained audit log of AI tool calls (v1.11.0)
-- Regret + decision extraction from git (v1.10.0)
-- Constitutional Gate at runtime (v1.12.0)
-- Atrophy time-series per file (always)
-- Federation envelope protocol with k-anonymity (v1.7.0)
-- Reproducible AI-memory benchmark harness (v1.12.0)
+> Pure functions · deterministic · 48 unit tests cover every edge case + boundary. Source: [`packages/core/src/dna/formulas.ts`](./packages/core/src/dna/formulas.ts).
 
-All 6 inputs in one tool → DNA composition becomes possible.
+| # | Name | Formula | What's special |
+|---|---|---|---|
+| **F1** | Quantum Resonance Score | `QRS(f,q) = ψ_f^T · H_q · ψ_f` | Quadratic form — captures cross-feature interaction (embedding × ast-proximity *jointly high*) that linear scorers can't express. |
+| **F2** | Hebbian-Weighted Cosine | `HWC(q,c) = cos(q,c) · (1+log(1+h))` | Hebb's law applied to IR. Pairs that worked before strengthen over time. |
+| **F3** | Atrophy-Decay Boost | `ADB(f) = R(f) · (1 − A(f)/100)^α` | Stale code is exponentially downranked. α tunable per workspace. |
+| **F4** | Tribal Bayesian Posterior | `TBP = local · Beta(α+1, β+1)_mean` | K-anonymous federation upvotes shift a Beta-Binomial prior. Well-behaved at small N. |
+| **F5** | Regret Echo Distance | `RED(f) = min_{r ∈ regrets} dist(emb(f), emb(r))` | Distance to the nearest known regret. Lower = closer to a past mistake → penalty. |
+| **F6** | Time-Phase Score | `TPS(f,q) = R(f) · exp(−((log(1+age_f) − log(1+age_q))/σ)²)` | Gaussian resonance between file age and query age in log-space. |
+| **F7** | Compositional Confidence | `CC = WilsonLB(success, total) · HebbianStrength(q, r)` | The strict-mode threshold. CC < 0.6 ⇒ rejected. |
+| **F8** | Mutant Fitness | `MF = mean(CTR / TTUR)` | Genetic-algorithm fitness for index strategies. Low fitness gets pruned next generation. |
 
----
+</details>
 
-### 🧮 The 8 math formulas — *shipped* in v1.13.0+
+<details>
+<summary><b>🤖 The 8 algorithms — roadmap P2-P10</b></summary>
 
-> Pure functions. Deterministic. **48 unit tests** verifying every formula's edge cases, invariants, and boundary conditions. Source: [`packages/core/src/dna/formulas.ts`](./packages/core/src/dna/formulas.ts).
-
-#### F1 · Quantum Resonance Score (QRS)
-`QRS(f, q) = ψ_f^T · H_q · ψ_f`
-Quadratic form. Operator H_q encodes cross-feature interactions (e.g. "files where embedding similarity AND ast-proximity are jointly high") that linear scoring functions cannot express.
-
-#### F2 · Hebbian-Weighted Cosine (HWC)
-`HWC(q, c) = cos(q, c) × (1 + log(1 + h))`
-Cosine similarity boosted by Hebbian co-activation count `h` from past successful searches. Pairs that worked before strengthen over time — Hebb's law applied to IR.
-
-#### F3 · Atrophy-Decay Boost (ADB)
-`ADB(f) = R(f) × (1 − A(f)/100)^α`
-Stale code (high atrophy) gets exponentially downranked. α tunable per workspace.
-
-#### F4 · Tribal Bayesian Posterior (TBP)
-`TBP = local_likelihood × Beta(α+1, β+1)_mean`
-Local relevance × federation-derived prior. K-anonymous cross-repo upvotes shift the prior; Beta-Binomial conjugate is well-behaved at small sample sizes.
-
-#### F5 · Regret Echo Distance (RED)
-`RED(f) = min_{r ∈ regrets} dist(emb(f), emb(r))`
-Distance to nearest known regret pattern. Lower RED = closer to past mistake = penalty multiplier closer to floor.
-
-#### F6 · Time-Phase Score (TPS)
-`TPS(f, q) = R(f) × exp(−((log(1+age_f) − log(1+age_q))/σ)²)`
-Gaussian resonance between file age and query age in log-space. "Recent query for recent code" resonates; mismatched phases cancel.
-
-#### F7 · Compositional Confidence (CC)
-`CC = WilsonLB(success, total) × HebbianStrength(q, r)`
-Calibrated final score. Strict mode threshold `CC ≥ 0.6` — anything lower is rejected.
-
-#### F8 · Mutant Fitness (MF)
-`MF = mean over samples of (CTR / TTUR)`
-Genetic-algorithm fitness for index strategies. High click-through-rate ÷ time-to-useful-result wins. Survives into next generation; low fitness gets pruned.
-
----
-
-### 🤖 The 8 algorithms — *roadmap* P2-P10 (one shipping per minor version)
-
-| # | Algorithm | Atoms it composes | Phase |
+| # | Algorithm | Composes | Phase |
 |---|---|---|---|
 | **A1** | Mutant Index Evolution | F8 + audit log + click-through | P5 |
 | **A2** | Phantom-Path Search | regret + decision + Hebbian | P3 |
@@ -631,153 +615,62 @@ Genetic-algorithm fitness for index strategies. High click-through-rate ÷ time-
 | **A5** | Time-Travel Search | git history + delta encoding + F6 | P7 |
 | **A6** | Anti-Pattern Repulsion | F5 + REI metric | P4 |
 | **A7** | Tribal Voting (Federation) | F4 + federation envelopes | P8 |
-| **A8** | Ghost-Sniper Verifier (strict-mode killer) | F7 + Constitutional Gate + audit log | P9 |
+| **A8** | Ghost-Sniper Verifier | F7 + Constitutional Gate + audit log | P9 |
 
-> **Full roadmap:** [`docs/dna/README.md`](./docs/dna/README.md) — phase-by-phase scope, atoms, modules, deferred-to-which-version.
-
----
-
-### What this means for the buyer in the room
-
-| When the question is… | Mneme DNA answers with… |
-|---|---|
-| *"How do I find the canonical pricing logic in this 500k-LOC repo?"* | Phantom-Path Search (A2) — finds it AND lists deprecated alternatives, with citations |
-| *"Is this AI hallucinating file paths?"* | Ghost-Sniper Verifier (A8) — every result AST-verified, never fictitious |
-| *"Can my AI agent learn what's relevant in MY codebase over time?"* | Mutant Index Evolution (A1) — index strategies evolve via genetic fitness |
-| *"How do I avoid recommending code that echoes a past regret?"* | Anti-Pattern Repulsion (A6) — F5 distance to regret pattern downranks |
-| *"Why do I get the same generic results as everyone else?"* | Tribal Voting (A7) — federation up/downvotes from k-anon community shape your local rank |
+Full phase-by-phase roadmap: [`docs/dna/README.md`](./docs/dna/README.md).
 
 </details>
 
----
-
-<details>
-<summary><h2 style="display:inline">📊 The 7 metrics no other dev tool can compute &nbsp;&nbsp;<sub><i>(Mneme-only science)</i></sub></h2></summary>
-
-```
-   ╔══════════════════════════════════════════════════════════════════╗
-   ║   "AI memory" is a vibe.   Mneme makes it a number.              ║
-   ╚══════════════════════════════════════════════════════════════════╝
-
-           atoms                molecules                metrics
-   ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-   │ git-blame        │   │                  │   │                  │
-   │ atrophy curves   │ ⟶ │  combine atoms   │ ⟶ │  HKD TWS CVR     │
-   │ forensics        │   │  Mneme uniquely  │   │  HRR REI KAH PCS │
-   │ const. gate      │   │  has all of      │   │                  │
-   │ audit log chain  │   │                  │   │                  │
-   │ bench harness    │   │                  │   │                  │
-   └──────────────────┘   └──────────────────┘   └──────────────────┘
-        building blocks       composition           measurable output
-```
-
-> **Cursor · Copilot · Sourcegraph · GitHub Code Search · even OpenAI's internal tools** — none of them can compute the 7 metrics below. Not because they aren't smart enough. Because **the inputs themselves are uniquely Mneme's product.**
+<br/>
 
 ---
 
-### 🩻 1. HKD — Hidden Knowledge Density
+### 📊 Strand B · The 7 numeric truths nobody else can produce
 
-> *How much of your codebase is one resignation away from disaster?*
+<p align="center">
+  <img src="https://img.shields.io/badge/27%20unit%20tests-PASSING-2da44e?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Pure%20deterministic-same%20input%20%E2%86%92%20same%20output-c084fc?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Source-packages%2Fcore%2Fsrc%2Fmetrics%2F-blue?style=flat-square"/>
+</p>
 
-`HKD = Σ(LOC where authors ≤ 2 AND last_touch > 180d) / total_LOC`
+| | Metric | The question it answers | Formula | Why nobody else has it |
+|---|---|---|---|---|
+| 🩻 | **HKD** · Hidden Knowledge Density | *Where's our bus-factor-of-1 risk?* | `Σ(LOC: authors≤2 ∧ idle>180d) / total_LOC` | Needs per-file atrophy × author distinct-count in one index. |
+| 🧠 | **TWS** · Tribal Wisdom Score | *Is the AI quoting wisdom, or just facts?* | `corroborated_citations / total_citations` | Needs HMAC-audit-log × decision extraction in one stack. |
+| ⚖ | **CVR** · Constitution Violation Rate | *Is the AI internalising our repo's lessons?* | `(Const-Gate refusals / commits) × 100` | No other tool ships a runtime Constitutional Gate. Period. |
+| 🎯 | **HRR** · Hallucination Reduction Ratio | *Does Mneme actually reduce hallucination — in numbers?* | `halluc(with) / halluc(without)` | No published reproducible AI-memory benchmark exists in MCP. |
+| 🪞 | **REI** · Regret Echo Index | *Are we silently repeating past mistakes?* | `silent_echoes / new_commits` | Needs Mneme's regret-pattern engine — no equivalent elsewhere. |
+| ☢ | **KAH** · Knowledge Atrophy Halflife | *Weeks until 50% of expert understanding fades?* | `KAH = ln(2)/λ` from `e^(−λt)` regression | Needs continuous atrophy time-series — others sample once. |
+| 🔗 | **PCS** · Provenance Chain Strength | *What % of commits have an unbroken tamper-evident chain?* | `unbroken / total_commits` | Needs HMAC audit + AI-commit attribution + git verify — *together*. |
 
-What it answers · *"Where's our bus-factor-of-1 risk?"*
-Atoms used · git-blame × atrophy × line-count
-Why no one else has it · No other tool indexes per-file atrophy + author distinct-count
-
----
-
-### 🧠 2. TWS — Tribal Wisdom Score
-
-> *Is your AI just memorising surface, or absorbing your team's institutional knowledge?*
-
-`TWS = corroborated_citations / total_citations`
-*(corroborated = the cited commit's neighborhood contains a related decision/regret)*
-
-What it answers · *"Is the AI quoting tribal wisdom or just facts?"*
-Atoms used · commit-hash verification × Mneme's correlator neighborhood × audit log of AI calls
-Why no one else has it · Requires HMAC-chained audit log + decision extraction in one stack
+<br/>
 
 ---
 
-### ⚖ 3. CVR — Constitution Violation Rate
+### 🧭 The buyer-in-the-room cheatsheet
 
-> *Is your AI getting smarter about <b>your</b> codebase over time?*
+<table>
+<tr>
+  <th align="left">When the question is…</th>
+  <th align="left">Mneme answers with…</th>
+  <th align="center">Who asks</th>
+</tr>
+<tr><td><i>"Is our AI hallucinating less?"</i></td><td><b>HRR</b> — a % from a reproducible benchmark</td><td align="center">CTO</td></tr>
+<tr><td><i>"Is our AI learning our codebase over time?"</i></td><td><b>CVR + TWS</b> trended over windows</td><td align="center">Eng VP</td></tr>
+<tr><td><i>"What's our bus-factor risk?"</i></td><td><b>HKD</b> — % of code with ≤2 authors, stale</td><td align="center">CISO</td></tr>
+<tr><td><i>"Are we cryptographically auditable?"</i></td><td><b>PCS</b> — % of commits with unbroken HMAC chain</td><td align="center">Compliance · SOC2</td></tr>
+<tr><td><i>"Are we about to repeat past mistakes?"</i></td><td><b>REI</b> — flagged silent echoes per PR</td><td align="center">Tech Lead</td></tr>
+<tr><td><i>"How fast does our team's expertise fade?"</i></td><td><b>KAH</b> — halflife in weeks</td><td align="center">HR · CFO</td></tr>
+<tr><td><i>"Find canonical pricing logic in this 500k-LOC repo"</i></td><td><b>Phantom-Path Search (A2)</b> — finds it AND lists deprecated alternatives, with citations</td><td align="center">AI agent</td></tr>
+<tr><td><i>"Is this candidate hallucinated?"</i></td><td><b>Ghost-Sniper Verifier (A8)</b> — every result AST-verified, never fictitious</td><td align="center">AI agent</td></tr>
+</table>
 
-`CVR = (Constitutional-Gate refusals / commits in window) × 100`
+<br/>
 
-What it answers · *"How often does the AI try to violate this repo's lessons?"* Lower = AI has internalised the rules.
-Atoms used · Constitutional Gate (v1.12.0) × commit log × audit log
-Why no one else has it · No other tool ships a runtime constitutional gate. Period.
-
----
-
-### 🎯 4. HRR — Hallucination Reduction Ratio
-
-> *The number that ends the "does AI memory actually help?" debate.*
-
-`HRR = halluc_rate(with_Mneme) / halluc_rate(without_Mneme)`
-`reduction = 1 - HRR`
-
-What it answers · *"By how much does Mneme actually reduce AI hallucination — in numbers?"*
-Atoms used · AI-Memory-Bench harness (v1.12.0) × controlled A/B protocol
-Why no one else has it · No published reproducible AI-memory benchmark exists in the MCP ecosystem
-
----
-
-### 🪞 5. REI — Regret Echo Index
-
-> *"We're about to repeat history" — detected before merge.*
-
-`REI = silent_echoes / new_commits`
-*(silent_echo = commit matches a past regret AND doesn't reference it)*
-
-What it answers · *"What % of our recent commits are blindly walking into past mistakes?"*
-Atoms used · regret extraction × Hebbian similarity × commit-message scanner
-Why no one else has it · Requires Mneme's regret-pattern engine — there is no equivalent
-
----
-
-### ☢ 6. KAH — Knowledge Atrophy Halflife
-
-> *Expertise decays like radioactive material. We measure the halflife.*
-
-`expertise(t) = e^(−λ·t)`
-`KAH = ln(2) / λ` *(expressed in weeks)*
-
-What it answers · *"How many weeks until 50% of our experts' understanding fades?"*
-Atoms used · multi-snapshot atrophy time-series × log-space linear regression
-Why no one else has it · No other tool tracks atrophy as a continuous time-series — they sample once
-
----
-
-### 🔗 7. PCS — Provenance Chain Strength
-
-> *The compliance graph — every commit, cryptographically traceable.*
-
-`PCS = unbroken_chains / total_commits`
-*(unbroken = AI tool call → audit-log entry → git commit, all HMAC-verified)*
-
-What it answers · *"What % of our AI-influenced commits have an unbroken tamper-evident chain?"*
-Atoms used · HMAC-chained audit log × AI-commit attribution × git rev-parse verify
-Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor does.
-
----
-
-### What this means for the buyer in the room
-
-| When the question is… | Mneme answers with… |
-|---|---|
-| *"Is our AI hallucinating less?"* (CTO) | **HRR** — a percentage from a reproducible benchmark |
-| *"Is our AI learning our codebase over time?"* (Engineering VP) | **CVR + TWS** trended over windows |
-| *"What's our bus-factor risk?"* (CISO / engineering manager) | **HKD** — % of codebase with ≤2 authors, stale |
-| *"Are we cryptographically auditable?"* (Compliance / SOC2) | **PCS** — % of commits with unbroken HMAC chain |
-| *"Are we about to repeat past mistakes?"* (Tech Lead reviewing PR) | **REI** — flagged silent echoes per PR |
-| *"How fast does our team's expertise fade?"* (HR / CFO) | **KAH** — halflife in weeks |
-
-> **27 unit tests** verify every formula, edge case, and boundary condition. Pure deterministic — same inputs, same output. See [`packages/core/src/metrics/mneme-metrics.ts`](./packages/core/src/metrics/mneme-metrics.ts).
-
-> **Numbers, not vibes.**
+<p align="center">
+  <img src="https://img.shields.io/badge/AI%20memory%20is%20a%20vibe.-c084fc?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Mneme%20makes%20it%20a%20number.-2da44e?style=for-the-badge"/>
+</p>
 
 </details>
 

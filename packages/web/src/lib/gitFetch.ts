@@ -23,6 +23,12 @@ import type {
 
 const PAGE_SIZE = 100;
 const MAX_PAGES = 5;
+/**
+ * Cap on per-commit file-detail fetches. Each detail = 1 API call.
+ * GitHub unauth limit = 60/hr/IP; we reserve headroom for the list-fetch +
+ * meta-fetch + a couple of follow-on user actions.
+ */
+const FILE_DETAIL_CAP = 30;
 
 interface RawCommit {
   sha: string;
@@ -30,6 +36,7 @@ interface RawCommit {
   authorEmail: string;
   date: number; // ms
   message: string;
+  files?: string[];
 }
 
 export interface FetchResult {
@@ -149,6 +156,32 @@ async function synthFromGitHub(
     if (arr.length < PAGE_SIZE) break;
   }
 
+  // Second pass: fetch file lists for the most-recent N commits so the
+  // Atrophy heatmap + per-author topFiles have something to render. Each
+  // detail fetch = 1 API call; we cap to stay inside the unauth budget.
+  const detailTarget = commits.slice(0, FILE_DETAIL_CAP);
+  for (let i = 0; i < detailTarget.length; i++) {
+    const c = detailTarget[i]!;
+    if (i % 5 === 0) {
+      onProgress?.(`Fetching file detail ${i + 1}/${detailTarget.length}…`);
+    }
+    try {
+      const dRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/commits/${c.sha}`,
+      );
+      if (!dRes.ok) {
+        if (dRes.status === 403) break; // rate-limited — stop here, keep what we have
+        continue;
+      }
+      const detail = (await dRes.json()) as { files?: Array<{ filename?: string }> };
+      c.files = (detail.files ?? [])
+        .map((f) => f.filename)
+        .filter((f): f is string => typeof f === "string");
+    } catch {
+      // network blip — skip this commit, keep going
+    }
+  }
+
   return synthesize({
     repoName: repoMeta.full_name,
     sourceLabel: `github.com/${owner}/${repo} (live · ${commits.length} commits)`,
@@ -211,6 +244,33 @@ async function synthFromGitLab(
     if (arr.length < PAGE_SIZE) break;
   }
 
+  // Second pass: fetch file diffs for the most-recent N commits.
+  const detailTarget = commits.slice(0, FILE_DETAIL_CAP);
+  for (let i = 0; i < detailTarget.length; i++) {
+    const c = detailTarget[i]!;
+    if (i % 5 === 0) {
+      onProgress?.(`Fetching file detail ${i + 1}/${detailTarget.length}…`);
+    }
+    try {
+      const dRes = await fetch(
+        `https://gitlab.com/api/v4/projects/${encoded}/repository/commits/${c.sha}/diff`,
+      );
+      if (!dRes.ok) {
+        if (dRes.status === 403 || dRes.status === 429) break;
+        continue;
+      }
+      const diff = (await dRes.json()) as Array<{ new_path?: string; old_path?: string }>;
+      const paths = new Set<string>();
+      for (const d of diff) {
+        if (d.new_path) paths.add(d.new_path);
+        else if (d.old_path) paths.add(d.old_path);
+      }
+      c.files = [...paths];
+    } catch {
+      // network blip — skip
+    }
+  }
+
   return synthesize({
     repoName: repoMeta.path_with_namespace,
     sourceLabel: `gitlab.com/${project} (live · ${commits.length} commits)`,
@@ -268,6 +328,57 @@ function synthesize({
   const authorList = Array.from(byAuthor.values()).sort(
     (a, b) => b.count - a.count,
   );
+
+  // ─── File-level data, derived from the detail-fetch subset ────────────
+  // For commits whose `files` field is populated (the most-recent
+  // FILE_DETAIL_CAP), accumulate per-file touches per author.
+  const detailedCommits = commits.filter((c) => Array.isArray(c.files) && c.files.length > 0);
+  const fileWindow =
+    detailedCommits.length === 0
+      ? null
+      : {
+          from: Math.min(...detailedCommits.map((c) => c.date)),
+          to: Math.max(...detailedCommits.map((c) => c.date)),
+          commits: detailedCommits.length,
+        };
+
+  // touches[email][file] = { count, lastTouchMs }
+  const touches = new Map<string, Map<string, { count: number; lastMs: number }>>();
+  // fileTotalTouches[file] = aggregate count
+  const fileTotalTouches = new Map<string, number>();
+  // fileLastTouch[file] = ms
+  const fileLastTouch = new Map<string, number>();
+  // fileTopAuthor[file] = email of the author with the most touches
+  const fileTouchByAuthor = new Map<string, Map<string, number>>();
+
+  for (const c of detailedCommits) {
+    let perAuthor = touches.get(c.authorEmail);
+    if (!perAuthor) {
+      perAuthor = new Map();
+      touches.set(c.authorEmail, perAuthor);
+    }
+    for (const f of c.files!) {
+      const cur = perAuthor.get(f);
+      if (cur) {
+        cur.count++;
+        if (c.date > cur.lastMs) cur.lastMs = c.date;
+      } else {
+        perAuthor.set(f, { count: 1, lastMs: c.date });
+      }
+      fileTotalTouches.set(f, (fileTotalTouches.get(f) ?? 0) + 1);
+      const lastSeen = fileLastTouch.get(f) ?? 0;
+      if (c.date > lastSeen) fileLastTouch.set(f, c.date);
+      let perFileAuthors = fileTouchByAuthor.get(f);
+      if (!perFileAuthors) {
+        perFileAuthors = new Map();
+        fileTouchByAuthor.set(f, perFileAuthors);
+      }
+      perFileAuthors.set(
+        c.authorEmail,
+        (perFileAuthors.get(c.authorEmail) ?? 0) + 1,
+      );
+    }
+  }
 
   // Telepathy: synthesize from same-day co-commits. Two authors who pushed on
   // the same calendar day are treated as a "weak signal" pair. Real telepathy
@@ -357,59 +468,135 @@ function synthesize({
   ];
 
   // Passports — minimal per-author profile.
-  const passports: PassportData[] = authorList.slice(0, 25).map((a) => ({
-    meta: {
-      repoName,
-      generatedAt,
-      totalCommits,
-      repoAuthorCount: totalAuthors,
-      notes: [
-        "Live data via GitHub/GitLab API. File-level expertise needs `mneme index` locally.",
-      ],
-    },
-    identity: {
-      name: a.name,
-      email: a.email,
-      dnaHash: hashStr(`${a.email}|${a.firstDate}`),
-      commitCount: a.count,
-      fromDate: new Date(a.firstDate).toISOString(),
-      toDate: new Date(a.lastDate).toISOString(),
-      activeDays: Math.max(
-        1,
-        Math.round((a.lastDate - a.firstDate) / 86_400_000),
-      ),
-      repoCommitShare: a.count / totalCommits,
-    },
-    expertise: {
-      // Live-mode proxy for knowledge mass: combines volume (commits) and
-      // activity duration (active days). Roughly: a 100-commit / 200-day
-      // contributor lands around 60–80, matching the ~140 we see for
-      // top alphas in the synthetic demo. Bounded so single-commit drive-bys
-      // don't dominate.
-      knowledgeMass: round1(
-        Math.sqrt(a.count) * 4 +
-          Math.sqrt(Math.max(1, (a.lastDate - a.firstDate) / 86_400_000)) * 1.5,
-      ),
-      filesKnown: 0,
-      filesStillFresh: 0,
-      lastActiveAt: new Date(a.lastDate).toISOString(),
-      topFiles: [],
-    },
-    influenceSlot: {
-      rank: authorList.indexOf(a) + 1,
-      pageRank: a.count / totalCommits,
-      rankedOf: totalAuthors,
-      originatedShapesAdopted: 0,
-      adoptionsByOthers: 0,
-      uniqueAdopters: 0,
-    },
-    telepathySlot: {
-      pairs: [],
-      pairsEvaluated: telepathyPairs.length,
-    },
-    voice: [],
-    limits: ["File-level expertise unavailable — run `mneme index` for the full nervous system."],
-  }));
+  const halfLifeDays = 90;
+  const refDate = fileWindow ? fileWindow.to : Date.now();
+  const passports: PassportData[] = authorList.slice(0, 25).map((a) => {
+    const perAuthor = touches.get(a.email);
+    const topFiles: PassportData["expertise"]["topFiles"] = perAuthor
+      ? Array.from(perAuthor.entries())
+          .sort((x, y) => y[1].count - x[1].count)
+          .slice(0, 8)
+          .map(([filePath, info]) => {
+            const daysAgo = Math.max(0, Math.round((refDate - info.lastMs) / 86_400_000));
+            const decay = Math.exp((-daysAgo * Math.LN2) / halfLifeDays);
+            const fam = 1 - Math.exp(-info.count / 5);
+            const knowledge = round3(Math.max(0, Math.min(1, decay * fam)));
+            return {
+              filePath,
+              knowledge,
+              lastTouchDaysAgo: daysAgo,
+              touchCount: info.count,
+              band:
+                knowledge >= 0.7
+                  ? "fresh"
+                  : knowledge >= 0.4
+                  ? "warm"
+                  : knowledge >= 0.15
+                  ? "fading"
+                  : "ghosted",
+              refreshHint:
+                knowledge >= 0.7
+                  ? "still strong"
+                  : knowledge >= 0.4
+                  ? "still recent enough"
+                  : "needs review before next change",
+            } as PassportData["expertise"]["topFiles"][number];
+          })
+      : [];
+    const filesKnown = perAuthor ? perAuthor.size : 0;
+    const filesStillFresh = topFiles.filter((f) => f.knowledge >= 0.5).length;
+    const knowledgeMass = topFiles.length > 0
+      ? round1(topFiles.reduce((s, f) => s + f.knowledge * (1 + Math.log(1 + f.touchCount)), 0))
+      : round1(
+          Math.sqrt(a.count) * 4 +
+            Math.sqrt(Math.max(1, (a.lastDate - a.firstDate) / 86_400_000)) * 1.5,
+        );
+
+    return {
+      meta: {
+        repoName,
+        generatedAt,
+        totalCommits,
+        repoAuthorCount: totalAuthors,
+        notes: [
+          fileWindow
+            ? `Live data — file-level facts derived from the most-recent ${fileWindow.commits} commits (${new Date(fileWindow.from).toISOString().slice(0, 10)} → ${new Date(fileWindow.to).toISOString().slice(0, 10)}).`
+            : "Live data via GitHub/GitLab API. File-level expertise needs `mneme index` locally for full coverage.",
+        ],
+      },
+      identity: {
+        name: a.name,
+        email: a.email,
+        dnaHash: hashStr(`${a.email}|${a.firstDate}`),
+        commitCount: a.count,
+        fromDate: new Date(a.firstDate).toISOString(),
+        toDate: new Date(a.lastDate).toISOString(),
+        activeDays: Math.max(
+          1,
+          Math.round((a.lastDate - a.firstDate) / 86_400_000),
+        ),
+        repoCommitShare: a.count / totalCommits,
+      },
+      expertise: {
+        knowledgeMass,
+        filesKnown,
+        filesStillFresh,
+        lastActiveAt: new Date(a.lastDate).toISOString(),
+        topFiles,
+      },
+      influenceSlot: {
+        rank: authorList.indexOf(a) + 1,
+        pageRank: a.count / totalCommits,
+        rankedOf: totalAuthors,
+        originatedShapesAdopted: 0,
+        adoptionsByOthers: 0,
+        uniqueAdopters: 0,
+      },
+      telepathySlot: {
+        pairs: [],
+        pairsEvaluated: telepathyPairs.length,
+      },
+      voice: [],
+      limits: filesKnown === 0
+        ? ["File-level expertise unavailable for this author in the detail window."]
+        : [],
+    };
+  });
+
+  // Build atrophy.criticalFiles = top files by total touches across all
+  // detailed commits. Tier them by recency + author concentration.
+  const criticalFiles = Array.from(fileTotalTouches.entries())
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, 12)
+    .map(([filePath, totalTouchesAcrossAuthors]) => {
+      const lastMs = fileLastTouch.get(filePath) ?? refDate;
+      const daysAgo = Math.max(0, Math.round((refDate - lastMs) / 86_400_000));
+      const decay = Math.exp((-daysAgo * Math.LN2) / halfLifeDays);
+      const fam = 1 - Math.exp(-totalTouchesAcrossAuthors / 5);
+      const freshestKnowledge = round3(Math.max(0, Math.min(1, decay * fam)));
+      const tier: "safe" | "warn" | "at-risk" =
+        freshestKnowledge >= 0.7 ? "safe" : freshestKnowledge >= 0.4 ? "warn" : "at-risk";
+
+      const perFileAuthors = fileTouchByAuthor.get(filePath) ?? new Map<string, number>();
+      const topAuthorEntry = Array.from(perFileAuthors.entries()).sort((x, y) => y[1] - x[1])[0];
+      const topKnowerEmail = topAuthorEntry ? topAuthorEntry[0] : null;
+      const topKnowerInfo = topKnowerEmail ? byAuthor.get(topKnowerEmail) : null;
+
+      return {
+        filePath,
+        totalTouches: totalTouchesAcrossAuthors,
+        tier,
+        freshestKnowledge,
+        liveExpertCount: perFileAuthors.size,
+        topKnower: topKnowerInfo
+          ? {
+              name: topKnowerInfo.name,
+              email: topKnowerInfo.email,
+              knowledge: freshestKnowledge,
+            }
+          : null,
+      };
+    });
 
   const liveSource = sourceLabel.includes("github") ? "GitHub" : "GitLab";
   const data: NervousSystemData = {
@@ -423,6 +610,14 @@ function synthesize({
     },
     _liveMode: true,
     _liveSource: liveSource,
+    _liveDataWindow: fileWindow
+      ? {
+          from: new Date(fileWindow.from).toISOString(),
+          to: new Date(fileWindow.to).toISOString(),
+          commits: fileWindow.commits,
+          totalFetched: commits.length,
+        }
+      : undefined,
     hero: {
       headline: `${repoName} — live from ${sourceLabel.includes("github") ? "GitHub" : "GitLab"} API`,
       metrics: heroMetrics,
@@ -434,11 +629,11 @@ function synthesize({
       distinctAuthorsInGrid: totalAuthors,
     },
     atrophy: {
-      halfLifeDays: 90,
-      criticalFiles: [],
-      ghostedDeepFiles: 0,
-      filesWithLiveExpert: 0,
-      fileCount: 0,
+      halfLifeDays,
+      criticalFiles,
+      ghostedDeepFiles: criticalFiles.filter((c) => c.tier === "at-risk").length,
+      filesWithLiveExpert: criticalFiles.filter((c) => c.liveExpertCount >= 1).length,
+      fileCount: fileTotalTouches.size,
     },
     passports,
     lobes: [],
@@ -446,8 +641,10 @@ function synthesize({
       truncated
         ? `Showing the most-recent ${totalCommits} commits (API cap). Full history needs CLI: ask your AI agent to run \`mneme index && mneme nervous-system --json\`.`
         : `Live from ${sourceLabel}. ${totalCommits} commits read.`,
-      "File-level data (atrophy heatmap, critical files, lobes) is empty in live mode — the GitHub/GitLab API doesn't expose per-commit file diffs without burning the rate limit. For the full nervous system, ask your AI agent to run `mneme index && mneme nervous-system --json` and drop the file here.",
-      "Telepathy in live mode is co-active-day proxy, not co-edited-file. The full version needs `mneme index`.",
+      fileWindow
+        ? `File-level data (atrophy, critical files, per-author topFiles) was computed from the most-recent ${fileWindow.commits} commits (${new Date(fileWindow.from).toISOString().slice(0, 10)} → ${new Date(fileWindow.to).toISOString().slice(0, 10)}). Older commits in this window contributed authorship counts but no file diffs (kept inside the unauth API rate limit). For full coverage of every commit, ask your AI agent to run \`mneme index && mneme nervous-system --json\` and drop the file here.`
+        : "File-level data (atrophy, critical files) is empty in this fetch — the per-commit detail step was rate-limited or returned no diffs. For the full nervous system, ask your AI agent to run `mneme index && mneme nervous-system --json` and drop the file here.",
+      "Telepathy in live mode is a co-active-day proxy, not co-edited-file. The full version needs `mneme index`.",
     ],
     surprising: [
       `${authorList[0]!.name} authored ${authorList[0]!.count} of ${totalCommits} commits (${Math.round((authorList[0]!.count / totalCommits) * 100)}%).`,
@@ -475,6 +672,10 @@ function buildSparkline(commits: RawCommit[], buckets: number): number[] {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
 }
 
 function hashStr(s: string): string {
