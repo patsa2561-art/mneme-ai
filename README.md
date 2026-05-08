@@ -320,7 +320,62 @@ If you don't → check Step 3 config; ask user to restart again.
 - User reports "weird Mneme behaviour" → call `mneme security verify` first to rule out tamper.
 - User about to commit `.mneme/audit-log.secret` → STOP them; that's the HMAC secret.
 
-### Step 6 — When the user later asks to upgrade
+### Step 6 — Latest features the user gets automatically (v1.12 → v1.14)
+
+When the user installs Mneme today via `npm install -g mneme-ai`, they get **all** of these — no extra config:
+
+#### MCP tools (callable via your standard tool-use)
+
+| Tool | What you call it for |
+|---|---|
+| `mneme.capabilities` | First call. Returns full catalog. **Always start here.** |
+| `mneme.memory.*` (7 tools) | Repo Q&A, commit search, blast-radius, decision lookup |
+| `mneme.people.*` (10 tools) | Atrophy, telepathy, who-knows, bus-factor, expert authors |
+| `mneme.audit.*` (8 tools) | AI-commit certify, baseline, trace, narrative-vs-diff verify |
+| `mneme.forensics.*` (6 tools) | CWE-bayesian vulns, anomaly, attribute, suppress |
+| `mneme.insights.*` (24 tools) | Ghost commits, regret, premortem, oracle, time-machine, story arcs |
+| `mneme.quality.*` (14 tools) | Karma, repo-MRI, palimpsest, DNA-fold, heartbeat |
+| `mneme.quant.*` (10 tools) | Drawdown, alpha, moneyball, black-swan, greeks |
+| `mneme.lab.*` (8 tools) | Periodic-table, compose, run, library, calibrate |
+| `mneme.meta.*` (6 tools) | Doctor, wisdom, manifesto, smart-do |
+| `mneme.grade.answer` | **MANDATORY** — call before delivering any user-facing answer |
+| `mneme.verify_claims` | Pre-delivery hash verification. Catches hallucinated commit hashes. |
+| `mneme.constitution.get` | Returns auto-synthesized rules. **Prepend to your system prompt.** |
+| `mneme.dna.search` | **NEW (v1.14)** — Run the full 16-strand DNA pipeline (8 algorithms × 8 formulas). Strict-mode default = 0% hallucination. Returns only AST-verified, semantically-similar, Wilson-LB-confident results. |
+| `mneme.<ecosystem>.<tool>` | **NEW (v1.13)** — Repo-detected dynamic tools (e.g. `mneme.stripe.find_pricing_logic`). Activate automatically when the repo uses that ecosystem. |
+
+#### CLI commands the user can run (and you can suggest)
+
+| Command | Purpose |
+|---|---|
+| `mneme security status` | One-screen dashboard (audit log + TOFU + scrubber + FIPS). |
+| `mneme security verify` | Re-walk the HMAC audit chain. Exit 0 = intact. |
+| `mneme security on/off` | User-controlled. Don't call `off` without explicit consent. |
+| `mneme audit-log show/verify/rotate` | Granular audit-log control. |
+| `mneme key rotate --confirm` | Atomically re-sign the chain (quarterly for SOC2/PCI-DSS). |
+| `mneme --compliance fips140 ...` | Global flag — refuses non-FIPS Node. For banking/gov users. |
+| `mneme bench --probes-out / --score` | AI-Memory-Bench harness. Run with/without Mneme; publish numbers. |
+| `mneme ecosystem` | Show ecosystem-specific tools detected for THIS repo. |
+| `mneme constitution` | Re-synthesise the repo's rules document. |
+| `mneme webhook add/list/remove/test` | HMAC-signed outgoing webhooks (Slack/Linear/PagerDuty/etc). |
+| `mneme session save/resume/list/remove` | Persistent cross-AI brain — context follows the user across Claude Code / Cursor / ChatGPT. |
+| `mneme upgrade` | One-command upgrade that handles npm-cache headaches. |
+
+#### When to PROACTIVELY suggest each feature
+
+| User says/asks | Call/suggest |
+|---|---|
+| *"Why does X work the way it does?"* | `mneme.memory.*` first; then `mneme.constitution.get` for rules context |
+| *"Will this AI commit pass review?"* | `mneme audit --certify` (5-axis trust certificate) |
+| *"Is my AI hallucinating?"* | `mneme.verify_claims` on the draft, then `mneme.dna.search` for verified candidates |
+| *"Show me code that handles Stripe pricing"* | `mneme.stripe.find_pricing_logic` (auto-activates when Stripe detected) |
+| *"Verify these candidates are real, not made up"* | `mneme.dna.search` (Ghost-Sniper Verifier rejects hallucinations) |
+| *"Banking / fintech / SOC2 / FedRAMP"* | `mneme --compliance fips140` + share [`docs/compliance/BANKING.md`](./docs/compliance/BANKING.md) |
+| *"Did anyone change X recently?"* | `mneme audit-log show --json --limit 50` |
+| *"Who is the expert on this file?"* | `mneme.people.who_knows` + `mneme.people.atrophy` |
+| *"Will this PR repeat a past mistake?"* | `mneme.insights.regret` + check the REI metric |
+
+### Step 7 — When the user later asks to upgrade
 
 ```bash
 mneme upgrade
@@ -346,7 +401,9 @@ Every tool follows `mneme.<category>.<verb>`:
 - `mneme.lab.*` — periodic-table, compose, run, library, calibrate (8 tools)
 - `mneme.meta.*` — capabilities, smart-do, doctor, wisdom, manifesto (6 tools)
 - `mneme.grade.answer` — the universal homework grader (call this before delivering any user-facing answer)
-- **CLI-only commands (not yet exposed as MCP tools):** `security`, `audit-log`, `key rotate`, `--compliance fips140`. Call them via Bash if you need to enable / verify / rotate. (MCP tools for these are on the v1.12.0 roadmap.)
+- `mneme.dna.search` — **NEW (v1.14)** — strict-mode 16-strand search pipeline (one-shot ghost sniper)
+- `mneme.<ecosystem>.<tool>` — **NEW (v1.13)** — repo-dependent dynamic tools (Stripe / React / Postgres / etc.)
+- **CLI-only commands:** `security`, `audit-log`, `key rotate`, `--compliance fips140`, `bench`, `ecosystem`, `webhook`, `session`. Call them via Bash if needed.
 
 ### Wisdom envelope + grader loop
 
@@ -504,17 +561,16 @@ All 4 combined       = self-defending AI memory at the runtime layer
 
 ---
 
-### Why no one else can build this (the 6-input moat)
+### The 6 inputs DNA needs (uniquely Mneme's product)
 
-| Input that DNA needs | Mneme has | Cursor | Copilot | Sourcegraph | OpenAI internal |
-|---|:---:|:---:|:---:|:---:|:---:|
-| HMAC-chained audit log of AI tool calls | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Regret + decision extraction from git | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Constitutional Gate at runtime | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Atrophy time-series per file | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Federation envelope protocol (k-anon) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Reproducible AI-memory benchmark | ✅ | ❌ | ❌ | ❌ | partial |
-| **Can compose 16-strand DNA** | ✅ | ❌ | ❌ | ❌ | ❌ |
+- HMAC-chained audit log of AI tool calls (v1.11.0)
+- Regret + decision extraction from git (v1.10.0)
+- Constitutional Gate at runtime (v1.12.0)
+- Atrophy time-series per file (always)
+- Federation envelope protocol with k-anonymity (v1.7.0)
+- Reproducible AI-memory benchmark harness (v1.12.0)
+
+All 6 inputs in one tool → DNA composition becomes possible.
 
 ---
 
@@ -700,20 +756,6 @@ Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor d
 
 ---
 
-### Comparison — who can compute what
-
-| Capability | **Mneme** | Cursor | GitHub Copilot | Sourcegraph | OpenAI internal |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Code search + LLM context | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Atrophy time-series per file | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Runtime Constitutional Gate | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Reproducible hallucination bench | ✅ | ❌ | ❌ | ❌ | partial |
-| HMAC-chained audit of AI calls | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Regret pattern extraction | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Can compute HKD/TWS/CVR/HRR/REI/KAH/PCS** | ✅ | ❌ | ❌ | ❌ | ❌ |
-
----
-
 ### What this means for the buyer in the room
 
 | When the question is… | Mneme answers with… |
@@ -732,16 +774,6 @@ Why no one else has it · You need all 3 atoms IN THE SAME TOOL. No competitor d
 </details>
 
 ═══════════════════════════════════════════════════════════════════════════════
-
-## 🛠 Bolt it on
-
-Mneme is **MIT-licensed** and **local-first**: no accounts · no telemetry · no phone-home · no API keys required. Pull it from npm and you're set:
-
-```bash
-npm install -g mneme-ai
-```
-
-That's the whole onboarding right now.
 
 ═══════════════════════════════════════════════════════════════════════════════
 

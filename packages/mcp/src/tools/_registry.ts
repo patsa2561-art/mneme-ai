@@ -23,6 +23,7 @@ import { graderTool } from "./_grader_tool.js";
 import { understandIntentTool } from "./_intent_tool.js";
 import { constitutionTool } from "./_constitution_tool.js";
 import { verifyClaimsTool } from "./_verify_claims_tool.js";
+import { dnaSearchTool } from "./_dna_tool.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
@@ -33,6 +34,7 @@ export function buildAllTools(): MnemeTool[] {
     graderTool,
     verifyClaimsTool,
     constitutionTool,
+    dnaSearchTool,
     smartDoTool,
     ...memoryTools,
     ...peopleTools,
