@@ -160,9 +160,7 @@ After install, you don't learn new commands. You just ask your AI questions you 
 | *"is the AI's commit message lying about its diff?"* | `mneme.audit.verify` |
 | *"grade this AI commit before I merge"* | `mneme.audit.certify` |
 
-**93 atoms across 9 categories + 20 pre-defined molecules.** Your AI picks the right ones, fires them in chain reactions, and synthesizes the answer for you. You never type a Mneme command unless you want to.
-
-> 🆕 **v1.3.0 — the Second Brain layer.** Every Mneme response now teaches the AI *how* to compose with other atoms. New combinations are tracked; frequent ones auto-promote into permanent **compounds** in your library. Translation: the more you use Mneme, the smarter your AI gets in this specific repo.
+Every tool Mneme exposes is grouped into 9 categories with pre-defined molecule combinations. Your AI picks the right ones, fires them in chain reactions, and synthesizes the answer for you. You never type a Mneme command unless you want to.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -344,6 +342,50 @@ Mneme is a **standard MCP server**. It works with any AI tool that supports MCP.
 > **About OpenAI products:** "ChatGPT" the chat app cannot install Mneme (no shell access). But **Codex** — OpenAI's terminal coding agent — supports MCP fully. If you're an OpenAI user wanting Mneme, install Codex CLI. Tools like Cursor / Continue that use GPT-4 as their *engine* also work, because the MCP integration lives in Cursor / Continue (not in OpenAI directly).
 
 > **My AI tool isn't in the list?** If it supports the [MCP protocol](https://modelcontextprotocol.io/), Mneme just works — paste this repo's URL and ask it to install. If it doesn't support MCP yet, you can still use Mneme as a CLI directly (see the [Cheatsheet](https://github.com/patsa2561-art/mneme-ai/wiki/Cheatsheet)).
+
+═══════════════════════════════════════════════════════════════════════════════
+
+## 🪝 Pipe Mneme events into your stack
+
+When something important happens in your repo — an AI commit fails audit, a security vuln surfaces, knowledge atrophy spikes — Mneme can fire **HMAC-signed webhooks** to Slack / Linear / PagerDuty / Discord / GitHub status checks · anything with a webhook URL.
+
+**3 commands** to get any event into your tool of choice:
+
+```bash
+# 1. Add a webhook (Mneme generates a signing secret automatically)
+mneme webhook add --event audit.fail --url https://hooks.slack.com/services/...
+
+# 2. Test it works
+mneme webhook test --id <id-shown-after-add>
+
+# 3. Manage them later
+mneme webhook list
+mneme webhook remove --id <id>
+```
+
+**Events you can subscribe to:**
+
+| Event | Fires when… |
+|---|---|
+| `audit.fail` | `mneme audit --certify` returned FAIL — an AI commit failed the 5-axis trust gate |
+| `forensics.cwe.high` | High-severity CWE detected by the security scanner |
+| `atrophy.spike` | Knowledge atrophy jumped > 30% week-over-week |
+| `court.guilty` | `mneme court` 12-jury verdict was GUILTY |
+| `federation.match` | The federation hub returned a matching cross-repo signal |
+
+**Verify the signature on your endpoint** (so only real Mneme events get accepted):
+
+```js
+const crypto = require('node:crypto');
+const expected = 'sha256=' + crypto.createHmac('sha256', YOUR_SECRET)
+                                   .update(rawBody).digest('hex');
+const provided = req.header('X-Mneme-Signature');
+if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(provided))) {
+  return res.status(401).send('invalid signature');
+}
+```
+
+The secret is shown once when you run `mneme webhook add` — save it in your endpoint's env vars. You'll never see it again from the CLI (`webhook list` redacts it).
 
 ═══════════════════════════════════════════════════════════════════════════════
 
