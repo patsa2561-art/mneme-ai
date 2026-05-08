@@ -68,32 +68,73 @@ jobs:
           fi
           npm whoami || { echo "::error::npm whoami failed — token may be invalid or expired."; exit 1; }
 
+      # Each publish step is idempotent: if the version is already on npm
+      # (e.g. tag re-pushed, manual pre-publish, retry after a partial
+      # failure), the step skips with a notice instead of failing. This
+      # avoids the 403 "cannot publish over previously published versions"
+      # error from a duplicate tag-triggered run.
+
       - name: Publish core
         working-directory: packages/core
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VER already on npm — skipping publish"
+          else
+            npm publish --access public
+          fi
 
       - name: Publish embeddings
         working-directory: packages/embeddings
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VER already on npm — skipping publish"
+          else
+            npm publish --access public
+          fi
 
       - name: Publish correlator
         working-directory: packages/correlator
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VER already on npm — skipping publish"
+          else
+            npm publish --access public
+          fi
 
       - name: Publish mcp
         working-directory: packages/mcp
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VER already on npm — skipping publish"
+          else
+            npm publish --access public
+          fi
 
       - name: Publish cli
         working-directory: packages/cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VER already on npm — skipping publish"
+          else
+            npm publish --access public
+          fi
