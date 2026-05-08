@@ -347,28 +347,15 @@ Mneme is a **standard MCP server**. It works with any AI tool that supports MCP.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
-## 🛡 The four moats (why Mneme is hard to copy)
+## 🛠 Bolt it on
 
-These four advantages don't show up in a feature checklist — but they're what make Mneme defensible against any well-funded clone, any AI vendor's native memory, any editor's bundled feature.
-
-| Moat | Why no one else can copy it |
-|---|---|
-| **Vendor neutrality** | Anthropic can't be the auditor of Anthropic's memory. OpenAI can't be neutral about OpenAI. **Mneme is the only one no AI vendor controls** — and the only one that can publish a fair benchmark across all of them. |
-| **Audit-chain network effects** | Every signed `audit certify` certificate strengthens Mneme's chain. A YC-funded fork starts at zero certificates. Code is replicable. **Network effects are not.** |
-| **Local-first as premium** | Every other AI tool defaults to cloud + charges less for local. Mneme's **Enterprise tier IS local-first** — because that's what regulated industries (defense, fintech, healthcare, EU AI Act subjects) actually require. Inverse pricing. |
-| **Solo-craftsman trust** | Built by one engineer who reads every line. Not a venture-backed feature factory. In security/compliance markets where buyers distrust corporate AI tools, **the lone wolf is the trust signal**. |
-
-═══════════════════════════════════════════════════════════════════════════════
-
-## 🆓 Free, forever
-
-Mneme is **MIT-licensed**, **local-first**, and **free for everyone** — solo devs, open source maintainers, vibe coders, teams, agencies. Everything you see in this README. Every command. Every feature. No accounts. No telemetry. No phone-home.
+Mneme is **MIT-licensed** and **local-first**: no accounts · no telemetry · no phone-home · no API keys required. Pull it from npm and you're set:
 
 ```bash
 npm install -g mneme-ai
 ```
 
-That's the whole pricing page right now.
+That's the whole onboarding right now.
 
 ═══════════════════════════════════════════════════════════════════════════════
 
