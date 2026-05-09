@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { NervousSystemData } from "../types";
+import { AtrophyIntelligenceStrip } from "./AtrophyIntelligenceStrip";
 
 interface Props {
   data: NervousSystemData;
@@ -99,11 +100,12 @@ export function AtrophyHeatmap({
   const cellH = 26;
   const gap = 3;
   const labelW = 360;
-  // headerH = vertical space reserved above the cells for the rotated
-  // author labels. At 14pt + -45° rotation, a 22-char label occupies
-  // ~150px diagonally — we reserve 200 to keep the longest names from
-  // being clipped at the SVG top edge.
-  const headerH = 200;
+  // headerH derives from the LONGEST author name so labels never clip.
+  // 14pt char ≈ 8.5px; rotated -45° → projected vertical = chars × 8.5 × sin(45°).
+  // Add 24px padding for breathing room. Floor at 200px (looks balanced
+  // even when names are short).
+  const longestName = heat.authors.reduce((max, a) => Math.max(max, a.name.length), 0);
+  const headerH = Math.max(200, Math.ceil(longestName * 8.5 * 0.7071) + 24);
   const width = labelW + heat.authors.length * (cellW + gap);
   const height = headerH + heat.files.length * (cellH + gap) + 8;
 
@@ -138,6 +140,11 @@ export function AtrophyHeatmap({
           Below: the 3 questions an engineering leader asks <i>tomorrow morning</i>.
         </p>
       </header>
+
+      {/* v1.19.3 — Nuclear intelligence strip: connects atrophy data to
+          Mneme's full metric stack (HKD/KAH/3am-files/heroes/orphans/talent-years)
+          + actionable insight cards. */}
+      <AtrophyIntelligenceStrip data={data} />
 
       <div className="atrophy-callouts">
         <div className={`atrophy-callout ${atRiskCount > 0 ? "warn" : "ok"}`}>
@@ -182,7 +189,7 @@ export function AtrophyHeatmap({
                 style={{ cursor: "pointer" }}
                 onClick={() => onSelectAuthor(a.email)}
               >
-                {a.name.length > 20 ? a.name.slice(0, 19) + "…" : a.name}
+                {a.name}
               </text>
             </g>
           ))}

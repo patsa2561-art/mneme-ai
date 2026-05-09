@@ -491,9 +491,238 @@ body::before {
   gap: 16px;
   padding: 14px 22px 18px;
   min-height: 0;
-  /* Guarantee the graph canvas always has room to breathe. */
-  height: calc(100vh - 180px);
+  /* Guarantee the graph canvas always has room to breathe.
+     v1.19.3: tighter calc since MetricsTopBar took 60-90px of header space. */
+  height: calc(100vh - 240px);
+  min-height: 480px;
 }
+
+/* ─── AtrophyIntelligenceStrip (v1.19.3) — nuclear panel on Atrophy view ──── */
+.atrophy-intel {
+  margin: 8px 22px 18px;
+  padding: 16px 18px 14px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.10), rgba(245,158,11,0.06) 60%, rgba(0,0,0,0.20));
+  border: 1px solid rgba(192,132,252,0.32);
+  border-radius: 14px;
+}
+.atrophy-intel-head h3 {
+  margin: 0 0 12px;
+  font-size: 1.0rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #c084fc 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.atrophy-intel-glyph {
+  font-size: 1.2em;
+  -webkit-text-fill-color: initial;
+  color: #c084fc;
+  margin-right: 6px;
+}
+.atrophy-intel-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (max-width: 1280px) { .atrophy-intel-metrics { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 720px)  { .atrophy-intel-metrics { grid-template-columns: repeat(2, 1fr); } }
+
+.atrophy-intel-metric {
+  position: relative;
+  padding: 10px 12px 9px;
+  background: rgba(0,0,0,0.32);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  cursor: help;
+  transition: border-color 140ms, transform 140ms;
+}
+.atrophy-intel-metric:hover { transform: translateY(-1px); }
+.atrophy-intel-metric.tone-ok       { border-left: 3px solid #34d399; }
+.atrophy-intel-metric.tone-warn     { border-left: 3px solid #fbbf24; }
+.atrophy-intel-metric.tone-critical { border-left: 3px solid #f87171; }
+
+.atrophy-intel-metric-glyph {
+  font-size: 1.15rem;
+  margin-bottom: 4px;
+  opacity: 0.9;
+}
+.atrophy-intel-metric-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: -0.5px;
+  color: rgba(232,232,255,0.96);
+  line-height: 1;
+}
+.atrophy-intel-metric-suffix {
+  font-size: 0.86rem;
+  font-weight: 500;
+  opacity: 0.65;
+  margin-left: 2px;
+}
+.atrophy-intel-metric-code {
+  font-size: 0.66rem;
+  letter-spacing: 1.5px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: #c084fc;
+  margin-top: 6px;
+}
+.atrophy-intel-metric-label {
+  font-size: 0.74rem;
+  color: rgba(232,232,255,0.7);
+  margin-top: 2px;
+}
+
+.atrophy-intel-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.atrophy-intel-insight {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  align-items: flex-start;
+}
+.atrophy-intel-insight.tone-ok       { border-left: 3px solid #34d399; }
+.atrophy-intel-insight.tone-warn     { border-left: 3px solid #fbbf24; }
+.atrophy-intel-insight.tone-critical { border-left: 3px solid #f87171; }
+.atrophy-intel-insight-glyph {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+.atrophy-intel-insight-body { flex: 1; min-width: 0; }
+.atrophy-intel-insight-head {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(232,232,255,0.96);
+  margin-bottom: 3px;
+}
+.atrophy-intel-insight-detail {
+  font-size: 0.82rem;
+  color: rgba(232,232,255,0.72);
+  line-height: 1.5;
+}
+
+.atrophy-intel-foot {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.74rem;
+  color: rgba(232,232,255,0.55);
+  line-height: 1.5;
+}
+.atrophy-intel-foot code {
+  background: rgba(0,0,0,0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.92em;
+  color: #c084fc;
+}
+
+/* ─── MetricsTopBar (v1.19.3) — horizontal strip above the canvas ──── */
+.metrics-topbar {
+  margin: 0 22px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.metrics-topbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(52,211,153,0.05));
+  border: 1px solid rgba(124,58,237,0.32);
+  border-radius: 12px;
+}
+.metrics-topbar-glyph {
+  font-size: 1.1rem;
+  color: #c084fc;
+  margin-right: 2px;
+}
+.metrics-topbar-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(232,232,255,0.85);
+  margin-right: 8px;
+}
+.metrics-topbar-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(0,0,0,0.36);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  cursor: help;
+  transition: border-color 140ms;
+}
+.metrics-topbar-chip:hover { border-color: rgba(192,132,252,0.55); }
+.metrics-topbar-chip.is-na { opacity: 0.55; }
+.metrics-topbar-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #c084fc;
+}
+.metrics-topbar-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(232,232,255,0.96);
+}
+.metrics-topbar-suffix {
+  font-size: 0.78rem;
+  opacity: 0.65;
+  margin-left: 1px;
+}
+.metrics-topbar-name {
+  font-size: 0.74rem;
+  color: rgba(232,232,255,0.7);
+  font-family: inherit;
+}
+.metrics-topbar-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 14px;
+}
+.metrics-topbar-limits-toggle {
+  align-self: flex-start;
+  background: rgba(251,191,36,0.10);
+  border: 1px solid rgba(251,191,36,0.32);
+  color: #fbbf24;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-mono, monospace);
+  transition: background 140ms;
+}
+.metrics-topbar-limits-toggle:hover { background: rgba(251,191,36,0.20); }
+.metrics-topbar-limits-list {
+  margin: 0;
+  padding: 8px 14px 4px 30px;
+  font-size: 0.78rem;
+  color: rgba(232,232,255,0.78);
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+}
+.metrics-topbar-limits-list li { line-height: 1.55; margin-bottom: 4px; }
 
 /* ─── Wisdom drawer (v1.19.1) — left-edge collapsible accordion ───── */
 .wisdom-drawer {
@@ -655,6 +884,7 @@ body::before {
 
 .wisdom-accordion-body {
   padding: 4px 4px 8px;
+  min-width: 0;
 }
 /* Tighten the embedded panels so they fit comfortably inside the drawer */
 .wisdom-accordion-body .graph-wisdom,
@@ -663,11 +893,26 @@ body::before {
   margin: 0;
   border-radius: 8px;
   padding: 12px;
+  min-width: 0;
 }
 .wisdom-accordion-body .graph-wisdom-isolated,
 .wisdom-accordion-body .graph-wisdom-components,
 .wisdom-accordion-body .live-wisdom-grid {
   grid-template-columns: 1fr;
+}
+/* Force ALL text inside the drawer to wrap — never overflow the column.
+   Long file paths / monospace strings / commit hashes were clipping at
+   the right edge before this rule. */
+.wisdom-drawer-body,
+.wisdom-drawer-body * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.wisdom-drawer-body .graph-wisdom-card-evidence li,
+.wisdom-drawer-body .graph-wisdom-card-window,
+.wisdom-drawer-body code {
+  white-space: normal;
 }
 
 .app-canvas {

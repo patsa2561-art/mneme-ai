@@ -9,10 +9,10 @@ import { EcosystemsView } from "./components/EcosystemsView";
 import { DnaView } from "./components/DnaView";
 import { ScrubberView } from "./components/ScrubberView";
 import { DetailPanel } from "./components/DetailPanel";
-import { LimitsPanel } from "./components/LimitsPanel";
-import { LiveWisdomPanel } from "./components/LiveWisdomPanel";
+// LimitsPanel + LiveWisdomPanel moved into MetricsTopBar (v1.19.3).
 import { GraphWisdomPanel } from "./components/GraphWisdomPanel";
 import { WisdomDrawer, WisdomAccordion } from "./components/WisdomDrawer";
+import { MetricsTopBar } from "./components/MetricsTopBar";
 import { LoadDialog } from "./components/LoadDialog";
 import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
@@ -168,33 +168,26 @@ export function App() {
         />
       )}
 
+      {/* v1.19.3 — Live metrics + caveats in a horizontal strip ABOVE the
+          main content. Always visible, no scroll, no drawer to open. */}
+      {raw && (
+        <MetricsTopBar
+          data={raw}
+          limits={scrubbed?.limits ?? raw.limits ?? []}
+        />
+      )}
+
       <main className="app-main">
-        {/* v1.19.1 — wisdom panels live in a left-side collapsible drawer
-            (was: scrolled below the canvas, users missed them). */}
+        {/* v1.19.1 — wisdom panel for the GRAPH lives in a left-side drawer
+            (graph-only; live metrics + limits moved to MetricsTopBar above). */}
         {(() => {
           const showGraphWisdom = view === "graph" && scrubbed;
-          const showLiveWisdom = !!raw?._liveMode;
-          const limitsList = scrubbed?.limits ?? raw?.limits ?? [];
-          const showLimits = limitsList.length > 0;
-          const panelCount = (showGraphWisdom ? 1 : 0) + (showLiveWisdom ? 1 : 0) + (showLimits ? 1 : 0);
-          if (panelCount === 0) return null;
+          if (!showGraphWisdom) return null;
           return (
-            <WisdomDrawer panelCount={panelCount} defaultOpen={view === "graph"}>
-              {showGraphWisdom && (
-                <WisdomAccordion title="Why the graph looks like this" glyph="⌬" defaultOpen>
-                  <GraphWisdomPanel data={scrubbed} />
-                </WisdomAccordion>
-              )}
-              {showLiveWisdom && (
-                <WisdomAccordion title="Live wisdom — Mneme metrics" glyph="⚛" defaultOpen={!showGraphWisdom}>
-                  <LiveWisdomPanel data={raw} />
-                </WisdomAccordion>
-              )}
-              {showLimits && (
-                <WisdomAccordion title="Honest limits" glyph="ⓘ" defaultOpen={false}>
-                  <LimitsPanel limits={limitsList} />
-                </WisdomAccordion>
-              )}
+            <WisdomDrawer panelCount={1} defaultOpen>
+              <WisdomAccordion title="Why the graph looks like this" glyph="⌬" defaultOpen>
+                <GraphWisdomPanel data={scrubbed} />
+              </WisdomAccordion>
             </WisdomDrawer>
           );
         })()}
