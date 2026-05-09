@@ -2,7 +2,7 @@
 
 _Auto-generated from the live tool registry. Do not edit by hand — run_ `npx tsx packages/mcp/scripts/gen-tools-md.ts` _to refresh._
 
-**131 tools** across **9 categories** · catalog hash `2015f12804ed98a6` · generated 2026-05-08 21:37:06 UTC
+**149 tools** across **9 categories** · catalog hash `f96170da499f8ff6` · generated 2026-05-09 03:46:48 UTC
 
 ## What is this
 
@@ -12,7 +12,7 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 
 ## Categories
 
-- [**meta**](#meta) (44 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
+- [**meta**](#meta) (62 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
 - [**memory**](#memory) (7 tools) — Q&A, semantic search, citations — answers grounded in the repo's commit history.
 - [**people**](#people) (10 tools) — Contributors, knowledge atrophy, telepathic teammates, cultural alphas, semantic ownership.
 - [**audit**](#audit) (8 tools) — AI Session Audit — trust certificate for AI commits. Vendor-neutral.
@@ -65,6 +65,24 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 | `mneme.config.set` | meta | Never. This is a security honeypot. |
 | `mneme.mesh.peers` | meta | You want to enumerate the federation peers configured for this repo. |
 | `mneme.mesh.federate` | meta | You want to broadcast a tool query to every configured Mneme peer + aggregate responses. |
+| `mneme.welcome` | meta | You just installed Mneme via `mneme mcp --install`, OR a fresh session and you haven't read the contract yet. |
+| `mneme.lineage.status` | meta | You want a single overview of MneMeiosis state on this repo. |
+| `mneme.lineage.metrics` | meta | You want production-grade KPI metrics for MneMeiosis (auditability + perf headroom). |
+| `mneme.lineage.crystallize` | meta | You want to manually checkpoint the current session (e.g., before risky work) instead of waiting for auto-crystallize. |
+| `mneme.lineage.fertilize` | meta | You want to refresh the inheritance bundle after a spore pull or to inspect what would be inherited. |
+| `mneme.lineage.ancestors` | meta | You want a quick view of the last N chromosomes — vendors, topics, timestamps. |
+| `mneme.lineage.show` | meta | You want full content of one specific chromosome. |
+| `mneme.lineage.diff` | meta | You want a quantified difference between two chromosomes. |
+| `mneme.lineage.species` | meta | You want to know whether your lineage is forking into distinct species (e.g., frontend vs backend work patterns). |
+| `mneme.lineage.lethal_recessives` | meta | You want to know which tools the immune system has flagged as lethal-recessive (hallucination-prone). |
+| `mneme.lineage.pedigree` | meta | You want a vendor-by-vendor view of who contributed what to the lineage. |
+| `mneme.lineage.vendor_karma` | meta | You want a vendor leaderboard for this repo. |
+| `mneme.lineage.routing_hint` | meta | User has a query + multiple AI tools available; pick the best one based on this repo's track record. |
+| `mneme.spore.init` | meta | You want to enable cross-machine lineage sync via git. |
+| `mneme.spore.push` | meta | You want to share the local lineage with other machines under the same identity. |
+| `mneme.spore.pull` | meta | You want to fetch lineage updates from other machines. |
+| `mneme.spore.sync` | meta | You want a single round-trip that pushes local + pulls remote. |
+| `mneme.spore.status` | meta | You want to inspect the current sync state. |
 | `mneme.smart_do` | meta | Fallback dispatcher — give it a NATURAL-LANGUAGE intent, it routes to the appropriate Mneme command and runs it |
 | `mneme.memory.ask` | memory | User asks WHY code exists or WHEN something was added — answers grounded in cited commits, not generated prose. |
 | `mneme.memory.why` | memory | Explain why a specific FILE (or line range within it) exists by combining git blame with related commits |
@@ -2344,6 +2362,957 @@ Broadcast a query to every configured Mneme peer + aggregate the responses. Priv
 - Federated queries are slower than local — 1× round-trip per peer. Use sparingly.
 
 **Compose with:** `mneme.mesh.peers` · `mneme.help`
+
+</details>
+
+### `mneme.welcome`
+
+Install handoff — call this LAST as part of `mneme mcp --install` (or as the FIRST request of a fresh AI session if you weren't there for the install). Returns the complete picture of what was auto-enabled, every per-feature opt-out command, and a user-message TEMPLATE you must translate to the user's language. Then call mneme.capabilities for the full tool catalog.
+
+**When to use:** You just installed Mneme via `mneme mcp --install`, OR a fresh session and you haven't read the contract yet.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "freshInstall": {
+      "type": "boolean"
+    },
+    "version": {
+      "type": "string"
+    },
+    "autoEnabled": {
+      "type": "object"
+    },
+    "userMessageTemplate": {
+      "type": "string"
+    },
+    "agentInstruction": {
+      "type": "string"
+    },
+    "nextActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
+**Examples:**
+- *"(internal — agent calls right after install)"*
+  - returns: Returns autoEnabled defaults + opt-out commands + a user-message template the agent translates to the user's language.
+
+**Pitfalls:**
+- Always SURFACE the opt-out commands to the user — never silently enable a feature without telling them.
+- userMessageTemplate is a TEMPLATE — translate to the user's language and conversational style; don't echo verbatim.
+
+**Compose with:** `mneme.capabilities` · `mneme.lineage.status` · `mneme.spore.init`
+
+</details>
+
+### `mneme.lineage.status`
+
+Summarize lineage state — opted-out flag, identity fingerprint, total chromosomes, head, top vendor, and spore status in one screen.
+
+**When to use:** You want a single overview of MneMeiosis state on this repo.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "optedOut": {
+      "type": "boolean"
+    },
+    "identityFingerprint": {
+      "type": "string"
+    },
+    "totalChromosomes": {
+      "type": "number"
+    },
+    "head": {
+      "type": "string"
+    },
+    "topVendor": {
+      "type": "string"
+    },
+    "spore": {
+      "type": "object"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What's my lineage status?"*
+
+**Pitfalls:**
+- Returns optedOut=true with all other fields zero/null when user has disabled lineage.
+
+**Compose with:** `mneme.lineage.ancestors` · `mneme.spore.status`
+
+</details>
+
+### `mneme.lineage.metrics`
+
+Production KPI dashboard for MneMeiosis — 5 metrics surfaced from the live lineage:
+  • inheritancePrecision — proxy via fraction of inherited atoms that appeared in the latest chromosome
+  • totalChromosomes / totalCalls
+  • mendelMergeIntegrity — golden test pass/fail (sampled at runtime)
+  • lethalRecessiveCount — atoms culled
+  • storageOverheadKb — disk footprint of lineage data
+Use WHEN you want a single-screen health check of the lineage subsystem.
+
+**When to use:** You want production-grade KPI metrics for MneMeiosis (auditability + perf headroom).
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "totalChromosomes": {
+      "type": "number"
+    },
+    "totalCallsAggregate": {
+      "type": "number"
+    },
+    "lethalRecessiveCount": {
+      "type": "number"
+    },
+    "vendorCount": {
+      "type": "number"
+    },
+    "speciationEvents": {
+      "type": "number"
+    },
+    "storageOverheadKb": {
+      "type": "number"
+    },
+    "sporeConfigured": {
+      "type": "boolean"
+    },
+    "identityFingerprint": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Show MneMeiosis health metrics"*
+
+**Pitfalls:**
+- Storage overhead is rounded to nearest KB — for exact bytes, inspect .mneme/lineage/ directly.
+- Inheritance precision is BEST-EFFORT until v1.20 ships per-call attribution tracking.
+
+**Compose with:** `mneme.lineage.status` · `mneme.lineage.pedigree`
+
+</details>
+
+### `mneme.lineage.crystallize`
+
+Force-crystallize the active session's working memory into a signed Chromosome on disk. Normally Mneme does this AUTOMATICALLY on session exit / idle / context-pressure — this tool is for manual checkpoints (e.g., before a risky operation). The chromosome is signed with the local Ed25519 identity, hashed, and persisted under .mneme/lineage/chromosomes/. Future sessions inherit from it via fertilize.
+
+**When to use:** You want to manually checkpoint the current session (e.g., before risky work) instead of waiting for auto-crystallize.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "Optional topic label (defaults to derived top topic)."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "chromosomeId": {
+      "type": "string"
+    },
+    "contentHash": {
+      "type": "string"
+    },
+    "bytes": {
+      "type": "number"
+    },
+    "durationMs": {
+      "type": "number"
+    },
+    "atomCount": {
+      "type": "number"
+    },
+    "moleculeCount": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Save what I've worked on so far before I switch tasks"*
+  - args: `{"topic":"auth refactor checkpoint"}`
+  - returns: Returns chromosomeId + contentHash. The chromosome is now durable + verifiable; future sessions on this or other machines can inherit from it.
+
+**Pitfalls:**
+- Returns null-ish data when no MCP session is active (Mneme runs one session per server process).
+- Each crystallize creates a separate chromosome — don't spam this; the auto-triggers handle 99% of cases.
+
+**Compose with:** `mneme.lineage.fertilize` · `mneme.lineage.ancestors` · `mneme.spore.push`
+
+</details>
+
+### `mneme.lineage.fertilize`
+
+Combine the lineage's most recent ancestors via Mendelian merge into a 'boot context' the agent inherits. Returns the InheritanceBundle (top molecules, lethal recessives, constitution rules, narrative). Mneme calls this AUTOMATICALLY at MCP server boot; this tool exposes the same operation for explicit re-fertilization (e.g., after pulling fresh chromosomes from spore).
+
+**When to use:** You want to refresh the inheritance bundle after a spore pull or to inspect what would be inherited.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "topN": {
+      "type": "number",
+      "description": "How many recent chromosomes to combine (1-5). Default 3."
+    },
+    "parentIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional explicit parents."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "sourceIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "vendors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inheritedAtomCount": {
+      "type": "number"
+    },
+    "topMolecules": {
+      "type": "array"
+    },
+    "lethalRecessives": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "narrative": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What would I inherit from the last 3 sessions?"*
+  - args: `{"topN":3}`
+  - returns: Returns InheritanceBundle: source chromosome IDs, vendors involved, top molecules, lethal recessives, and a one-paragraph narrative.
+
+**Pitfalls:**
+- Returns null when no chromosomes exist — fresh repos produce no inheritance.
+- Lethal recessives are CULLED — atoms in either parent flagged as hallucination won't appear in the bundle.
+
+**Compose with:** `mneme.lineage.crystallize` · `mneme.lineage.ancestors`
+
+</details>
+
+### `mneme.lineage.ancestors`
+
+List the most recent N chromosomes in the lineage (newest first). Each entry: id, vendor, topic, createdAt, parents, atom count. Use WHEN you want to see the family history of AI sessions on this repo.
+
+**When to use:** You want a quick view of the last N chromosomes — vendors, topics, timestamps.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "limit": {
+      "type": "number",
+      "description": "How many to return. Default 10."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "total": {
+      "type": "number"
+    },
+    "ancestors": {
+      "type": "array"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What sessions have I done on this repo?"*
+  - args: `{"limit":10}`
+  - returns: Returns the last 10 chromosomes with vendor + topic + createdAt + parent IDs.
+
+**Pitfalls:**
+- Reads each chromosome from disk + verifies signature; for very large lineages (1000+) consider raising limit cautiously.
+
+**Compose with:** `mneme.lineage.show` · `mneme.lineage.fertilize` · `mneme.lineage.pedigree`
+
+</details>
+
+### `mneme.lineage.show`
+
+Load and verify a single chromosome by ID. Returns the full chromosome content + verification verdict. Use WHEN you want to inspect what an inherited ancestor actually contained.
+
+**When to use:** You want full content of one specific chromosome.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Chromosome ID (from mneme.lineage.ancestors)."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "chromosome": {
+      "type": "object"
+    },
+    "verified": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Show me chromosome 2026-05-09T140000Z-claude-abcdef01"*
+  - args: `{"id":"2026-05-09T140000Z-claude-abcdef01"}`
+  - returns: Returns the full chromosome JSON + a verified flag from signature/hash check.
+
+**Pitfalls:**
+- Throws if the chromosome file is missing OR signature verification fails.
+
+**Compose with:** `mneme.lineage.ancestors` · `mneme.lineage.diff`
+
+</details>
+
+### `mneme.lineage.diff`
+
+Compute Mendelian distance between two chromosomes — Jaccard distance over molecules + per-tool karma delta. Use WHEN you want to know how much two sessions diverged.
+
+**When to use:** You want a quantified difference between two chromosomes.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "a": {
+      "type": "string",
+      "description": "Chromosome A ID."
+    },
+    "b": {
+      "type": "string",
+      "description": "Chromosome B ID."
+    }
+  },
+  "required": [
+    "a",
+    "b"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "moleculeDistance": {
+      "type": "number"
+    },
+    "atomDistance": {
+      "type": "number"
+    },
+    "sharedAtoms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uniqueToA": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "uniqueToB": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
+**Examples:**
+- *"How different are these two sessions?"*
+  - args: `{"a":"id1","b":"id2"}`
+
+**Pitfalls:**
+- Distance is heuristic — semantic equivalence isn't measured (a renamed atom looks like 2 distinct atoms).
+
+**Compose with:** `mneme.lineage.show` · `mneme.lineage.species`
+
+</details>
+
+### `mneme.lineage.species`
+
+Detect speciation events — points in the lineage where consecutive chromosomes drift far enough (Jaccard mean > 0.7 over a 5-chromosome window) to suggest a fork. Returns the events + suggested species labels (from voiceFingerprint topics).
+
+**When to use:** You want to know whether your lineage is forking into distinct species (e.g., frontend vs backend work patterns).
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "threshold": {
+      "type": "number",
+      "description": "Jaccard distance threshold (default 0.7)."
+    },
+    "windowSize": {
+      "type": "number",
+      "description": "Sliding window size (default 5)."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "events": {
+      "type": "array"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Is my lineage forking?"*
+
+**Pitfalls:**
+- Returns no events when fewer than windowSize chromosomes exist.
+
+**Compose with:** `mneme.lineage.ancestors` · `mneme.lineage.pedigree`
+
+</details>
+
+### `mneme.lineage.lethal_recessives`
+
+List atoms that confess marked as hallucination across the lineage. These are CULLED from inheritance — fertilize never re-suggests them. Use WHEN you want to audit which tools have been retired by the immune system.
+
+**When to use:** You want to know which tools the immune system has flagged as lethal-recessive (hallucination-prone).
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "atoms": {
+      "type": "array"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Which tools have been blacklisted?"*
+
+**Pitfalls:**
+- Lethal status is per-chromosome union — a single hallucination flag in any chromosome puts the atom on the list.
+
+**Compose with:** `mneme.aletheia.karma` · `mneme.confess`
+
+</details>
+
+### `mneme.lineage.pedigree`
+
+Build the cross-AI family tree — per-vendor stats (chromosome count, total karma, verified rate, best atoms) + cross-vendor distances. Reveals which AI vendor has shaped which parts of the lineage.
+
+**When to use:** You want a vendor-by-vendor view of who contributed what to the lineage.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "totalChromosomes": {
+      "type": "number"
+    },
+    "vendors": {
+      "type": "array"
+    },
+    "crossVendorDistances": {
+      "type": "array"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What's the AI family tree?"*
+
+**Pitfalls:**
+- Vendors are matched by exact string (claude-opus-4-7 ≠ claude-opus). Normalize at install if needed.
+
+**Compose with:** `mneme.lineage.vendor_karma` · `mneme.lineage.routing_hint`
+
+</details>
+
+### `mneme.lineage.vendor_karma`
+
+Per-AI-vendor reputation across the entire lineage — total karma, verified rate, best atoms. Use WHEN you want to compare AI vendors objectively on YOUR repo.
+
+**When to use:** You want a vendor leaderboard for this repo.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "vendors": {
+      "type": "array"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Which AI vendor performs best on my repo?"*
+
+**Pitfalls:**
+- Stats are LOCAL — opt-in upload to a public dashboard planned for v1.20.
+
+**Compose with:** `mneme.lineage.pedigree` · `mneme.lineage.routing_hint`
+
+</details>
+
+### `mneme.lineage.routing_hint`
+
+Given a free-text query, recommend which AI vendor (from this repo's lineage) is most likely to handle it well — based on overlap with their bestAtoms, weighted by their verifiedRate. Sub-millisecond. Use WHEN the user has a choice of AI tools and wants to pick the best one for the task at hand.
+
+**When to use:** User has a query + multiple AI tools available; pick the best one based on this repo's track record.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Free-text user query."
+    }
+  },
+  "required": [
+    "query"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "vendor": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number"
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Which AI should answer 'audit this commit'?"*
+  - args: `{"query":"audit this commit"}`
+
+**Pitfalls:**
+- Returns null vendor + reason when lineage is empty or query has no salient tokens.
+
+**Compose with:** `mneme.lineage.pedigree` · `mneme.help`
+
+</details>
+
+### `mneme.spore.init`
+
+Initialize cross-machine sync — sets up the orphan branch + .gitignore guards. Pass no `remote` to auto-detect from the repo's git origin (recommended). Pass an explicit `remote` to use a separate private repo.
+
+**When to use:** You want to enable cross-machine lineage sync via git.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "remote": {
+      "type": "string",
+      "description": "Optional git remote URL. Auto-detects from origin if omitted."
+    },
+    "branch": {
+      "type": "string",
+      "description": "Branch name (default 'mneme-lineage')."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "remote": {
+      "type": "object"
+    },
+    "reason": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Enable spore sync"*
+  - args: `{}`
+
+**Pitfalls:**
+- Refuses if no remote provided AND no git origin detected.
+- Adds entries to .gitignore — review before committing.
+
+**Compose with:** `mneme.spore.push` · `mneme.spore.status`
+
+</details>
+
+### `mneme.spore.push`
+
+Push local lineage to the configured remote. Increments the local vector clock. Returns dryRun=true when the remote is unreachable (snapshot is still updated locally; will retry on next push).
+
+**When to use:** You want to share the local lineage with other machines under the same identity.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "pushedFiles": {
+      "type": "number"
+    },
+    "dryRun": {
+      "type": "boolean"
+    },
+    "message": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Sync my lineage to the remote"*
+
+**Pitfalls:**
+- Network failures are silent — check `dryRun`. Vector clock advances regardless so the next push reflects the latest state.
+
+**Compose with:** `mneme.spore.pull` · `mneme.spore.status`
+
+</details>
+
+### `mneme.spore.pull`
+
+Pull lineage updates from the remote — fetches new chromosomes from the orphan branch and materializes them into local storage. Conflicts are auto-resolved by content addressing (chromosomes are signed + hashed, so duplicates are detected by ID).
+
+**When to use:** You want to fetch lineage updates from other machines.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "newChromosomes": {
+      "type": "number"
+    },
+    "dryRun": {
+      "type": "boolean"
+    },
+    "message": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Pull lineage from other machines"*
+
+**Pitfalls:**
+- Returns 0 new chromosomes if you're already in sync.
+- Network failures return dryRun=true.
+
+**Compose with:** `mneme.spore.push` · `mneme.lineage.fertilize`
+
+</details>
+
+### `mneme.spore.sync`
+
+Push + pull in one operation — convenient for end-of-day or pre-shutdown sync.
+
+**When to use:** You want a single round-trip that pushes local + pulls remote.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "push": {
+      "type": "object"
+    },
+    "pull": {
+      "type": "object"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Full sync"*
+
+**Pitfalls:**
+- Push happens BEFORE pull — your local state takes priority on first publish, then remote diffs come in.
+
+**Compose with:** `mneme.spore.push` · `mneme.spore.pull`
+
+</details>
+
+### `mneme.spore.status`
+
+Report spore configuration, vector clock, last sync timestamps, local chromosome count, and identity readiness. Use WHEN you want a one-screen view of cross-machine state.
+
+**When to use:** You want to inspect the current sync state.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "configured": {
+      "type": "boolean"
+    },
+    "remote": {
+      "type": "object"
+    },
+    "vectorClock": {
+      "type": "object"
+    },
+    "lastSync": {
+      "type": "object"
+    },
+    "localChromosomeCount": {
+      "type": "number"
+    },
+    "identityReady": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What's my spore state?"*
+
+**Pitfalls:**
+- Reports CONFIG state, not connectivity — use mneme.spore.push to actually contact the remote.
+
+**Compose with:** `mneme.spore.init` · `mneme.spore.sync`
 
 </details>
 

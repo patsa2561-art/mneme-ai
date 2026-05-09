@@ -8,6 +8,189 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.19.0] — 2026-05-09
+
+**MneMeiosis Protocol — AI session inheritance across machines, AI vendors,
+and time.** When you close your laptop, your AI agent's context dies. v1.19
+fixes that — silently. Every session compresses into a signed Chromosome,
+and the next session inherits via Mendelian merge from up to 3 ancestors.
+Cross-machine sync uses your repo's existing git remote on an orphan branch.
+No Mneme cloud, no vendor login, no extra credentials. Full spec:
+[`MNEMEIOSIS.md`](./MNEMEIOSIS.md). **18 new MCP tools + 13 CLI commands.
+4383 / 4383 tests passing.**
+
+### The four layers (all shipped, all autonomous)
+
+#### Layer 1 — Chromosome (compressed session)
+
+`packages/core/src/lineage/`:
+  - **identity.ts** — Ed25519 keypair, generated lazily on first use.
+    Public PEM is the user's "account ID" (no Mneme cloud, no vendor
+    login). Private key lives at `.mneme/lineage/identity/private.pem`
+    (mode 0600, .gitignored, NEVER pushed).
+  - **chromosome.ts** — canonical-JSON content-hash + Ed25519 signature
+    over every chromosome. Atomic write (tmp + rename). Cross-machine
+    verification works via the public key embedded in `signedBy`.
+  - **working_memory.ts** — process-local accumulator that records every
+    tool dispatch (atom + Hebbian co-fires + court verdicts + confess
+    outcomes + topical drift). Flushes to disk every 25 records for
+    crash recovery.
+  - **pii_scrub.ts** — strips emails (preserving domain), absolute paths,
+    AWS / GitHub / Slack / Google / Stripe keys, UUIDs from human-language
+    fields BEFORE crystallize. Idempotent.
+  - **crystallize.ts** — turns working memory → signed Chromosome on disk.
+    Auto-derived constitution candidates from "always co-fire" patterns.
+    Performance: 1000 atoms in < 500ms (perf guard test).
+
+#### Layer 2 — Lineage Tree (DAG)
+
+`packages/core/src/lineage/tree.ts`:
+  - parents ↔ children DAG persisted at `.mneme/lineage/tree.json`
+  - `ancestors(N)` BFS, `findCommonAncestor(a, b)` for pedigree distance
+  - `rebuildTreeFromDisk()` recovery path
+
+#### Layer 3 — DNA Spore (cross-machine sync)
+
+`packages/core/src/lineage/spore.ts`:
+  - **Auto-detect git origin** — `mneme spore init` reads the repo's
+    own remote, configures an orphan branch (`mneme-lineage`) — zero
+    user setup if you already have a git remote.
+  - Push uses `git worktree add --orphan` to commit + push without
+    polluting working tree.
+  - Pull uses `git fetch + git ls-tree + git show` to materialize
+    incoming chromosomes.
+  - **Vector clock** (Lamport-style) per machine.
+  - Network failures → silent dry-run (snapshot still updated locally,
+    retry next push).
+
+#### Layer 4 — Mendelian inheritance
+
+`packages/core/src/lineage/mendel.ts`:
+  - 3-way merge with biological rules:
+      • atoms: both-positive → max · both-negative → min · mixed → mean · one-sided → additive
+      • counters → sum
+      • lethal recessives → intersection (child-inherits) ∪ union (cull-set)
+      • molecules → name dedupe, fireCount=max, karma=sum
+      • vector clock → Lamport max
+      • topic → longest wins
+  - **Properties guaranteed** (covered by tests):
+      • Commutative: `mendelMerge(A, B) === mendelMerge(B, A)`
+      • Counters additive (no double-count, no loss)
+      • Lethal in BOTH parents stays lethal in child + culled from karma
+      • Lethal in ONE parent → atom dropped from karma but NOT inherited as lethal
+      • Bounded: child cannot have an atom both parents flagged
+
+### MCP tools shipped (18 in `mneme.lineage.*` + `mneme.spore.*` + `mneme.welcome`)
+
+```
+mneme.welcome                          install handoff for AI agent (FIRST call after install)
+mneme.lineage.status                   identity, chromosome count, head, top vendor, spore
+mneme.lineage.metrics                  5 production KPIs
+mneme.lineage.crystallize              manual checkpoint (auto on exit/idle/pressure)
+mneme.lineage.fertilize                compute boot inheritance from top-N ancestors
+mneme.lineage.ancestors                last N chromosomes
+mneme.lineage.show                     full content + signature verify
+mneme.lineage.diff                     Mendelian distance + per-atom delta
+mneme.lineage.species                  speciation events (Jaccard sliding window)
+mneme.lineage.lethal_recessives        atoms culled from inheritance
+mneme.lineage.pedigree                 cross-AI family tree
+mneme.lineage.vendor_karma             per-vendor leaderboard
+mneme.lineage.routing_hint             vendor recommendation for free-text query
+mneme.spore.init                       set up sync (auto-detects git origin)
+mneme.spore.push                       push lineage to remote
+mneme.spore.pull                       pull + materialize new chromosomes
+mneme.spore.sync                       push + pull
+mneme.spore.status                     vector clock + last sync + remote
+```
+
+Plus new MCP resource: `mneme://lineage/inheritance` — auto-fertilized at
+boot; agent reads it as the FIRST resource of every session.
+
+### CLI commands shipped (13, parallel to MCP tools)
+
+```
+mneme welcome                          mirror of mneme.welcome
+mneme spore [init|push|pull|sync|status]
+mneme lin status / on / off
+mneme lin crystallize [--topic <s>]
+mneme lin fertilize [--top <N>]
+mneme lin ancestors [--limit <N>]
+mneme lin show <id>
+mneme lin diff <a> <b>
+mneme lin species [--threshold <n>] [--window <n>]
+mneme lin pedigree
+mneme lin routing-hint <query...>
+mneme lin lethal
+mneme lin purge --confirm
+```
+
+All accept `--json` for scripting parity.
+
+### Auto-triggers wired into MCP server bootstrap
+
+In `startMcpServer()`:
+  - **Boot fertilize** — top-3 ancestors merged into `globalThis.__mnemeInheritanceBundle`,
+    surfaced as `mneme://lineage/inheritance` resource.
+  - **Atom recording in dispatch** — every tool call updates working memory + resets
+    idle timer (no duplicate code path for instrumentation).
+  - **Auto-crystallize on SIGTERM / SIGINT / beforeExit** — final chromosome
+    written before process exits.
+  - **Idle timeout (45 min)** — auto-crystallize + start fresh session.
+  - **Lineage opt-out respected** — when `settings.optedOut === true`, none of
+    the above triggers fire.
+
+### Two-mode UX (parallel, not competing)
+
+  - **Mode 1 (Auto-magic)**: User pastes Mneme repo URL → AI agent runs
+    `mneme mcp --install` → mneme detects non-TTY → applies SAFE DEFAULTS
+    silently → AI agent calls `mneme.welcome` → translates handoff template
+    to user's language. **Zero typing after the first sentence.**
+  - **Mode 2 (Manual control)**: Power user / debugger types CLI commands
+    directly. Same backend, parallel surface.
+
+### Privacy + security
+
+  - Identity private key NEVER leaves machine (mode 0600, .gitignored on init).
+  - PII scrub on chromosomes BEFORE persistence (idempotent).
+  - Spore sync sends only signed + content-hashed chromosomes — no source code,
+    no secrets.
+  - TOFU prompt skipped on AI-driven (non-TTY) install — agents apply defaults
+    + must surface opt-outs via `mneme.welcome`.
+
+### Tests + perf
+
+  - **4383 / 4383 tests passing** (was 4112 in v1.18 → +271 from lineage 91 +
+    contract tests expanding for 18 new tools).
+  - Lineage subsystem: 91 unit + golden + property-based tests:
+      identity (3) · chromosome (19) · pii_scrub (2) · crystallize (13) ·
+      mendel (21) · tree (7) · fertilize (8) · pedigree (10) · speciation (3) ·
+      spore (13)
+  - Performance guard tests: crystallize 1000 atoms < 500ms · fertilize 5
+    ancestors < 300ms.
+  - All Mendel laws covered by property-based tests (commutativity,
+    additivity, lethal handling, vector clock, parents sorted).
+  - Production build clean. TypeScript strict.
+
+### How AI agents discover v1.19 features
+
+  - Updated [README install contract Step 6](./README.md#step-6) lists every
+    v1.19 tool with WHEN-to-call guidance.
+  - First MCP request of any session: agent calls `mneme.welcome` → gets
+    auto-enabled defaults + opt-outs + user-message template.
+  - Second call (any tool): boot inheritance bundle visible at
+    `mneme://lineage/inheritance` resource — agent reads what prior sessions
+    left for it.
+
+### What's NOT shipped in v1.19 (deferred)
+
+  - Encryption-at-rest for chromosome files (target: v1.20)
+  - MCP `sampling` primitive (Reverse MCP — Mneme calls back into agent's
+    model for chronicle / story polish) (target: v1.20)
+  - MCP `roots` primitive (multi-repo workspaces) (target: v1.20)
+  - MCP `elicitation` primitive (disambiguation prompts) (target: v1.20)
+  - Vaccine federation across MCP Mesh peers (target: v1.21)
+  - Public AI-vendor trust dashboard at `lineage.mneme.dev` (target: v1.22)
+
 ## [1.18.0] — 2026-05-09
 
 **The MCP-grade upgrade.** Tool Contract Schema · 7 black-sheep firsts ·

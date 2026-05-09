@@ -121,7 +121,9 @@ Your AI coding tool is brilliant but **amnesiac**. It never saw why JWT got roll
 
 ## 📋 What's new
 
-**v1.18.0 (latest)** — the MCP-grade upgrade. **131 tools** (up from 99), full
+**v1.19.0 (latest)** — **MneMeiosis Protocol**. AI session inheritance across machines, AI vendors, and time. When you close your laptop, your AI agent's context dies — UNTIL Mneme. v1.19 adds 18 new MCP tools + 13 CLI commands that silently crystallize each session into a signed Chromosome, then fertilize the next session with Mendelian inheritance from up to 3 ancestors. Cross-machine sync via git (auto-detected origin, orphan branch). Cross-AI pedigree shows which vendor (Claude / Cursor / Codex) contributed which molecules. Full spec: [MNEMEIOSIS.md](./MNEMEIOSIS.md). **150+ tools total.** **4383 tests passing.**
+
+**v1.18.0** — the MCP-grade upgrade. **131 tools** (up from 99), full
 [MCP-spec-2025-06-18](https://modelcontextprotocol.io) primitive support
 (resources / prompts / completion), plus six MCP firsts no other server has:
 
@@ -360,6 +362,25 @@ If you don't → check Step 3 config; ask user to restart again.
 ### Step 6 — Latest features the user gets automatically (v1.12 → v1.18)
 
 When the user installs Mneme today via `npm install -g mneme-ai`, they get **all** of these — no extra config:
+
+**🚨 v1.19.0 — MneMeiosis Lineage (THE big change):**
+
+After connecting, **call `mneme.welcome` FIRST** — it returns the install handoff: what's auto-enabled (Lineage, ALETHEIA, Replay), the user-message template you must translate, and the opt-out commands. Then call `mneme.capabilities` for the full syllabus.
+
+**New v1.19 tools (call them — they're auto-active in the background already):**
+
+| New tool (v1.19) | Call when |
+|---|---|
+| `mneme.welcome` | FIRST request after install — gets the handoff contract. Always surface opt-outs to user. |
+| `mneme.lineage.status` | Show the user their lineage health (chromosomes count, top vendor, spore state). |
+| `mneme.lineage.fertilize` | See what the current session inherited at boot (Mendelian merge of top-3 ancestors). |
+| `mneme.lineage.ancestors` | View past sessions on this repo. |
+| `mneme.lineage.crystallize` | Manual checkpoint (Mneme auto-crystallizes on exit/idle/context-pressure). |
+| `mneme.lineage.pedigree` | Cross-AI family tree — Claude vs Cursor vs Codex track records. |
+| `mneme.lineage.routing_hint` | Recommend best AI vendor for a query, based on this repo's history. |
+| `mneme.spore.status` / `init` / `push` / `pull` / `sync` | Cross-machine sync via git (auto-detects origin). |
+| `mneme.lineage.metrics` | 5 production KPIs for lineage health. |
+| Resource: `mneme://lineage/inheritance` | Read this on session start — auto-fertilized boot context. |
 
 **🚨 v1.18.0 — what's NEW since you may have last seen Mneme:**
 

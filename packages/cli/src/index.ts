@@ -102,6 +102,7 @@ import {
   impliedVolatilityCommand,
   taxLossHarvestCommand,
 } from "./commands/quant-cli.js";
+import { registerWelcomeCommand, registerSporeCommands, registerLinCommands } from "./commands/mnemeiosis.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -2361,6 +2362,11 @@ export async function run(argv: string[]): Promise<void> {
       process.stdout.write(renderAdvancedHelp());
       process.exit(0);
     });
+
+  // ─── MneMeiosis Lineage commands (v1.19.0) ─────────────────────────
+  registerWelcomeCommand(program);
+  registerSporeCommands(program);
+  registerLinCommands(program);
 
   program.exitOverride((err) => {
     if (err.code === "commander.help" || err.code === "commander.helpDisplayed") process.exit(0);

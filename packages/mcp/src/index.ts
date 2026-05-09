@@ -43,6 +43,7 @@ import { recordObservation, recordKarmaEvent } from "./tools/_aletheia.js";
 import { listResources, readResource } from "./mcp_primitives/resources.js";
 import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
 import { completeArgument } from "./mcp_primitives/completion.js";
+import { lineage } from "@mneme-ai/core";
 
 export interface McpOptions {
   cwd: string;
@@ -235,6 +236,59 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const toolMap = buildToolMap();
   const dynamic = loadDynamicState(runtime.meta.rootPath);
 
+  // ─── MneMeiosis (v1.19) — boot the working-memory session + fertilize ────
+  // Detect AI vendor from MCP client info if available (best-effort —
+  // falls back to "unknown-mcp-client" so chromosomes are still attributable).
+  const lineageSettings = lineage.readSettings(runtime.meta.rootPath);
+  const sessionVendor = process.env["MNEME_AI_VENDOR"] ?? "unknown-mcp-client";
+  const machineId = lineage.machineFingerprint(runtime.meta.rootPath);
+  const sessionId = `${new Date().toISOString().replace(/[:.]/g, "")}-${sessionVendor}-${machineId.slice(0, 6)}`;
+
+  if (!lineageSettings.optedOut) {
+    lineage.startSession({ sessionId, vendor: sessionVendor, machineId });
+
+    // Auto-fertilize at boot — agent gets the inheritance bundle via
+    // mneme://lineage/inheritance resource (best-effort; non-blocking).
+    try {
+      const bundle = lineage.fertilize(runtime.meta.rootPath, { topN: 3 });
+      if (bundle) {
+        // Stash the bundle in working memory so the resource handler
+        // surfaces it on first read (no need to recompute on every read).
+        // We rely on a process-global var — single MCP process per session.
+        (globalThis as { __mnemeInheritanceBundle?: typeof bundle }).__mnemeInheritanceBundle = bundle;
+      }
+    } catch { /* best-effort */ }
+
+    // Auto-crystallize on process exit signals.
+    const onExit = (reason: "exit-signal" | "idle-timeout") => {
+      try {
+        const result = lineage.crystallize(runtime.meta.rootPath, { endReason: reason });
+        if (result) lineage.addToTree(runtime.meta.rootPath, result.chromosome);
+      } catch { /* best-effort */ }
+    };
+    process.on("SIGTERM", () => { onExit("exit-signal"); process.exit(0); });
+    process.on("SIGINT", () => { onExit("exit-signal"); process.exit(0); });
+    process.on("beforeExit", () => onExit("exit-signal"));
+
+    // Idle-timeout crystallize — every 45 min of no MCP calls.
+    const IDLE_MS = 45 * 60 * 1000;
+    let idleTimer: NodeJS.Timeout | null = null;
+    const resetIdleTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        const result = lineage.crystallize(runtime.meta.rootPath, { endReason: "idle-timeout" });
+        if (result) {
+          lineage.addToTree(runtime.meta.rootPath, result.chromosome);
+          // Start a fresh session post-idle for the next round of work.
+          lineage.startSession({ sessionId: `${sessionId}-idle-${Date.now()}`, vendor: sessionVendor, machineId });
+        }
+      }, IDLE_MS);
+    };
+    // Stash so the dispatch path can call it.
+    (globalThis as { __mnemeResetIdleTimer?: () => void }).__mnemeResetIdleTimer = resetIdleTimer;
+    resetIdleTimer();
+  }
+
   const server = new Server(
     { name: "mneme", version: resolveVersion() },
     {
@@ -303,13 +357,17 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
         const args = (req.params.arguments ?? {}) as Record<string, unknown>;
         // v1.18.0 — record observation for ALETHEIA immune profile (best-effort).
         recordObservation(runtime.meta.rootPath, tool.name, args);
+        // v1.19.0 — record atom in MneMeiosis working memory + reset idle timer.
+        try {
+          lineage.recordAtom(runtime.meta.rootPath, tool.name, args);
+          const resetIdle = (globalThis as { __mnemeResetIdleTimer?: () => void }).__mnemeResetIdleTimer;
+          if (resetIdle) resetIdle();
+        } catch { /* best-effort */ }
         const response = await tool.handler(runtime, args);
         const enriched = enrichWithSecondBrain(response, tool, runtime.meta.rootPath);
         // v1.18.0 — record HMAC-chained replay entry for audit (best-effort).
         recordReplay(runtime.meta.rootPath, tool.name, args, enriched);
-        // v1.18.0 — increment karma invocations (no verdict-based delta yet
-        // unless response.data.verdict is present; tools that pair with confess
-        // call recordKarmaEvent themselves).
+        // v1.18.0 — increment karma invocations.
         recordKarmaEvent(runtime.meta.rootPath, tool.name, "invocation");
         return toCallResult(enriched);
       } catch (err) {

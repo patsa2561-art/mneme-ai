@@ -51,6 +51,12 @@ const STATIC_RESOURCES: McpResourceListItem[] = [
     mimeType: "application/json",
     description: "Per-tool karma score (verified +1, hallucination -3, fuzz hit -2). Public + auditable.",
   },
+  {
+    uri: "mneme://lineage/inheritance",
+    name: "MneMeiosis boot inheritance bundle",
+    mimeType: "application/json",
+    description: "(v1.19) Auto-fertilized at MCP server boot — combines top-3 ancestor chromosomes via Mendelian merge. Read this FIRST to know what prior AI sessions left for you.",
+  },
 ];
 
 export function listResources(rt: ToolRuntime): McpResourceListItem[] {
@@ -116,6 +122,15 @@ export function readResource(rt: ToolRuntime, uri: string): McpResourceContent {
       return { uri, mimeType: "application/json", text: readFileSync(path, "utf8") };
     }
     return { uri, mimeType: "application/json", text: JSON.stringify({ tools: {} }, null, 2) };
+  }
+  if (uri === "mneme://lineage/inheritance") {
+    // Read the bundle stashed at MCP boot by startMcpServer's auto-fertilize.
+    const bundle = (globalThis as { __mnemeInheritanceBundle?: unknown }).__mnemeInheritanceBundle;
+    return {
+      uri,
+      mimeType: "application/json",
+      text: JSON.stringify(bundle ?? { empty: true, note: "no lineage to inherit yet — fresh repo or lineage opted out" }, null, 2),
+    };
   }
   if (uri.startsWith("mneme://passport/")) {
     return {
