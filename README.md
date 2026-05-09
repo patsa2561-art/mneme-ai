@@ -80,6 +80,8 @@
 > ### 🤖 AI agent reading this for the first time?
 >
 > If a user shared this repo with you and asked you to install Mneme — **jump to [§ For AI agents](#-for-ai-agents--installation-contract) below and follow the contract verbatim.** Don't improvise the steps. Mneme has a specific install order + auto-config command (`mneme mcp --install`) that's safer than editing JSON manually.
+>
+> **After install, your FIRST MCP request must be `mneme.welcome`** — it returns the install handoff: which features auto-enabled (Lineage, ALETHEIA, Replay), the per-feature opt-out commands, and a user-message template you must translate to the user's language. Then call `mneme.capabilities` for the full 149-tool catalog. Read [`MNEMEIOSIS.md`](./MNEMEIOSIS.md) for the v1.19 inheritance protocol — every session you participate in is auto-saved + cross-machine syncable, no extra config needed.
 
 ---
 

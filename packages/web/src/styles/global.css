@@ -485,13 +485,189 @@ body::before {
 .app-main {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  /* Auto column for the wisdom drawer (open ≈ 360px, closed ≈ 36px) +
+     1fr for the canvas + 340px for the detail panel. */
+  grid-template-columns: auto minmax(0, 1fr) 340px;
   gap: 16px;
   padding: 14px 22px 18px;
   min-height: 0;
-  /* Guarantee the graph canvas always has room to breathe — wisdom panels
-     render BELOW (page-scroll), they no longer steal vertical space. */
+  /* Guarantee the graph canvas always has room to breathe. */
   height: calc(100vh - 180px);
+}
+
+/* ─── Wisdom drawer (v1.19.1) — left-edge collapsible accordion ───── */
+.wisdom-drawer {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(124,58,237,0.32);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(124,58,237,0.10), rgba(0,0,0,0.32));
+  overflow: hidden;
+  transition: width 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.wisdom-drawer.is-open {
+  width: 360px;
+}
+.wisdom-drawer.is-closed {
+  width: 44px;
+  background: linear-gradient(180deg, rgba(124,58,237,0.18), rgba(124,58,237,0.06));
+  border-color: rgba(124,58,237,0.5);
+}
+
+.wisdom-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.25);
+}
+.wisdom-drawer-head h2 {
+  font-size: 0.95rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: rgba(232,232,255,0.96);
+}
+.wisdom-drawer-glyph { font-size: 1.1em; }
+.wisdom-drawer-count {
+  font-size: 0.72rem;
+  color: rgba(232,232,255,0.55);
+  font-weight: 500;
+  font-family: var(--font-mono, monospace);
+  margin-left: 4px;
+}
+.wisdom-drawer-toggle {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.16);
+  color: rgba(232,232,255,0.85);
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: grid;
+  place-items: center;
+  transition: background 140ms, border-color 140ms;
+}
+.wisdom-drawer-toggle:hover {
+  background: rgba(124,58,237,0.18);
+  border-color: rgba(124,58,237,0.55);
+}
+
+.wisdom-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* When drawer is closed: a vertical glowing tab the user cannot miss */
+.wisdom-drawer-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px 4px;
+  color: #c084fc;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 140ms, background 140ms;
+  position: relative;
+}
+.wisdom-drawer-tab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(124,58,237,0.18), transparent);
+  animation: wisdom-tab-glow 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes wisdom-tab-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.wisdom-drawer-tab:hover {
+  background: rgba(124,58,237,0.20);
+  color: #e8d4ff;
+}
+.wisdom-drawer-tab-glyph {
+  font-size: 1.45rem;
+  filter: drop-shadow(0 0 6px rgba(192,132,252,0.65));
+  text-transform: none;
+}
+.wisdom-drawer-tab-text {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-family: var(--font-mono, monospace);
+}
+.wisdom-drawer-tab-arrow {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  text-transform: none;
+}
+
+/* ─── Inner accordion items (one per panel) ───────────────────────── */
+.wisdom-accordion {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.22);
+  overflow: hidden;
+}
+.wisdom-accordion.is-open { border-color: rgba(124,58,237,0.32); }
+
+.wisdom-accordion-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(124,58,237,0.10);
+  border: none;
+  color: rgba(232,232,255,0.96);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 140ms;
+}
+.wisdom-accordion-head:hover { background: rgba(124,58,237,0.18); }
+.wisdom-accordion-arrow {
+  font-size: 0.7rem;
+  width: 12px;
+  text-align: center;
+  color: #c084fc;
+}
+.wisdom-accordion-glyph { font-size: 1.05em; }
+.wisdom-accordion-title { flex: 1; }
+
+.wisdom-accordion-body {
+  padding: 4px 4px 8px;
+}
+/* Tighten the embedded panels so they fit comfortably inside the drawer */
+.wisdom-accordion-body .graph-wisdom,
+.wisdom-accordion-body .live-wisdom,
+.wisdom-accordion-body .limits-panel {
+  margin: 0;
+  border-radius: 8px;
+  padding: 12px;
+}
+.wisdom-accordion-body .graph-wisdom-isolated,
+.wisdom-accordion-body .graph-wisdom-components,
+.wisdom-accordion-body .live-wisdom-grid {
+  grid-template-columns: 1fr;
 }
 
 .app-canvas {
@@ -2389,9 +2565,35 @@ body::before {
 .load-primary-hint.ok { color: #34d399; }
 .load-primary-hint.warn { color: rgba(251,191,36,0.85); }
 .load-primary-busy {
-  margin-top: 6px;
-  font-size: 0.85rem;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(124,58,237,0.10);
+  border: 1px solid rgba(124,58,237,0.32);
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 500;
   color: var(--accent, #c084fc);
+}
+.load-primary-busy-text {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.2px;
+}
+/* Cross-browser spinner — uses transform + CSS animation (works in every
+   browser back to IE10; no SVG, no GIF, no vendor prefix needed). */
+.load-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(124,58,237,0.25);
+  border-top-color: #c084fc;
+  animation: load-spinner-rotate 0.85s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes load-spinner-rotate {
+  to { transform: rotate(360deg); }
 }
 
 .load-divider {

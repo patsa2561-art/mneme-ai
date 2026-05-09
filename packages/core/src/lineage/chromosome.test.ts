@@ -154,7 +154,13 @@ describe("persistChromosome + loadChromosome (round trip)", () => {
 
   it("verification fails when the signature is corrupted", () => {
     const final = persistChromosome(repo, emptyChromosome());
-    const tampered: Chromosome = { ...final, signature: final.signature.slice(0, -2) + "00" };
+    // XOR the last byte with 0xff so the corruption is GUARANTEED different
+    // from the original (slicing + "00" had a 1/256 collision risk if the
+    // final byte was already 0x00 — caused a flaky CI failure).
+    const last2 = final.signature.slice(-2);
+    const flipped = (parseInt(last2, 16) ^ 0xff).toString(16).padStart(2, "0");
+    const tampered: Chromosome = { ...final, signature: final.signature.slice(0, -2) + flipped };
+    expect(tampered.signature).not.toBe(final.signature);
     expect(verifyChromosome(tampered).valid).toBe(false);
   });
 

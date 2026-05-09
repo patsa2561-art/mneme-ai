@@ -164,7 +164,12 @@ export function LoadDialog({ base, onClose, onLoaded, onError }: Props) {
               {urlKindLabel}
             </div>
           )}
-          {busyMsg && <div className="load-primary-busy">⏳ {busyMsg}</div>}
+          {busyMsg && (
+            <div className="load-primary-busy" role="status" aria-live="polite">
+              <span className="load-spinner" aria-hidden />
+              <span className="load-primary-busy-text">{busyMsg}</span>
+            </div>
+          )}
         </div>
 
         <div className="load-divider"><span>or</span></div>

@@ -12,6 +12,7 @@ import { DetailPanel } from "./components/DetailPanel";
 import { LimitsPanel } from "./components/LimitsPanel";
 import { LiveWisdomPanel } from "./components/LiveWisdomPanel";
 import { GraphWisdomPanel } from "./components/GraphWisdomPanel";
+import { WisdomDrawer, WisdomAccordion } from "./components/WisdomDrawer";
 import { LoadDialog } from "./components/LoadDialog";
 import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
@@ -168,6 +169,35 @@ export function App() {
       )}
 
       <main className="app-main">
+        {/* v1.19.1 — wisdom panels live in a left-side collapsible drawer
+            (was: scrolled below the canvas, users missed them). */}
+        {(() => {
+          const showGraphWisdom = view === "graph" && scrubbed;
+          const showLiveWisdom = !!raw?._liveMode;
+          const limitsList = scrubbed?.limits ?? raw?.limits ?? [];
+          const showLimits = limitsList.length > 0;
+          const panelCount = (showGraphWisdom ? 1 : 0) + (showLiveWisdom ? 1 : 0) + (showLimits ? 1 : 0);
+          if (panelCount === 0) return null;
+          return (
+            <WisdomDrawer panelCount={panelCount} defaultOpen={view === "graph"}>
+              {showGraphWisdom && (
+                <WisdomAccordion title="Why the graph looks like this" glyph="⌬" defaultOpen>
+                  <GraphWisdomPanel data={scrubbed} />
+                </WisdomAccordion>
+              )}
+              {showLiveWisdom && (
+                <WisdomAccordion title="Live wisdom — Mneme metrics" glyph="⚛" defaultOpen={!showGraphWisdom}>
+                  <LiveWisdomPanel data={raw} />
+                </WisdomAccordion>
+              )}
+              {showLimits && (
+                <WisdomAccordion title="Honest limits" glyph="ⓘ" defaultOpen={false}>
+                  <LimitsPanel limits={limitsList} />
+                </WisdomAccordion>
+              )}
+            </WisdomDrawer>
+          );
+        })()}
         <section className="app-canvas" aria-label={`${view} view`}>
           {view === "ecosystems" ? (
             <EcosystemsView data={raw ?? null} />
@@ -208,9 +238,7 @@ export function App() {
         </aside>
       </main>
 
-      {view === "graph" && scrubbed && <GraphWisdomPanel data={scrubbed} />}
-      {raw?._liveMode && <LiveWisdomPanel data={raw} />}
-      <LimitsPanel limits={scrubbed?.limits ?? raw?.limits ?? []} />
+      {/* Wisdom panels now live inside the left-side WisdomDrawer (above). */}
 
       {loadOpen && (
         <LoadDialog
