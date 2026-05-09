@@ -1,18 +1,22 @@
 <div align="center">
 
-<img src="./assets/profile-shinnapat.jpg" alt="Shinnapat Phunsriphatchalakul" width="220" style="border-radius: 50%; border: 3px solid #c084fc;" />
+<img src="./assets/profile-shinnapat.jpg" alt="Shinnapat Phunsriphatchalakul" width="240" style="border-radius: 50%; border: 3px solid #c084fc;" />
 
 # Shinnapat Phunsriphatchalakul
 
-### `Software Developer` · `AI Context Engineer` · `MCP Systems Architect`
+### _Builder of [Mneme](https://github.com/patsa2561-art/mneme-ai) — the memory layer for AI coding agents_
 
-_Builder of [Mneme](https://github.com/patsa2561-art/mneme-ai) — the memory layer for AI coding agents._
-_4400+ tests · 149 MCP tools · 1 engineer · 17 minor releases in 30 days._
+**4400+ tests** · **149 MCP tools** · **1 engineer** · **17 minor releases in 30 days**
 
-[![Email](https://img.shields.io/badge/Email-patsa2561@gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:patsa2561@gmail.com)
-[![GitHub](https://img.shields.io/badge/GitHub-@patsa2561--art-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/patsa2561-art)
-[![LINE](https://img.shields.io/badge/LINE/WhatsApp-+66_939455645-25D366?style=for-the-badge&logo=line&logoColor=white)](tel:+66939455645)
-[![TZ](https://img.shields.io/badge/Asia/Bangkok-UTC+7-7C3AED?style=for-the-badge&logo=clockify&logoColor=white)]()
+<br/>
+
+[![Email](https://img.shields.io/badge/EMAIL-patsa2561@gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:patsa2561@gmail.com)
+[![GitHub](https://img.shields.io/badge/GITHUB-@patsa2561--art-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/patsa2561-art)
+
+[![LINE](https://img.shields.io/badge/LINE_ID-paedotnet-00C300?style=for-the-badge&logo=line&logoColor=white)](https://line.me/ti/p/~paedotnet)
+[![WhatsApp](https://img.shields.io/badge/WHATSAPP-+66_939455645-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)](https://wa.me/66939455645)
+
+[![Bangkok](https://img.shields.io/badge/ASIA%2FBANGKOK-UTC+7-7C3AED?style=for-the-badge&logo=clockify&logoColor=white)]()
 
 </div>
 
