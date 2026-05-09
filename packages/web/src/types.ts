@@ -216,7 +216,7 @@ export interface GraphLink {
   lastSeen: number;
 }
 
-export type ViewMode = "graph" | "atrophy" | "influence" | "ecosystems" | "dna" | "scrubber";
+export type ViewMode = "graph" | "atrophy" | "influence" | "ecosystems" | "dna" | "scrubber" | "antivirus";
 
 // ─── v1.16 demo data shapes for the new tabs ─────────────────────────
 

@@ -17,12 +17,19 @@ import { hostname } from "node:os";
 import { createHash } from "node:crypto";
 import { machineFingerprint, persistChromosome, buildChromosomeId } from "./chromosome.js";
 import { scrubDeep } from "./pii_scrub.js";
+import { snapshotForChromosome as antivirusSnapshot } from "../antivirus/lineage_vaccines.js";
 import {
   flushToDisk,
   getSnapshot,
   summarizeMolecules,
   topTopics,
 } from "./working_memory.js";
+
+/** Best-effort wrapper -- antivirus may not be initialized yet on a
+ *  fresh install; never throw from crystallize because of it. */
+function snapshotVaccinesForChromosome(repoRoot: string): ReturnType<typeof antivirusSnapshot> | undefined {
+  try { return antivirusSnapshot(repoRoot); } catch { return undefined; }
+}
 import type { Chromosome, ConstitutionCandidate, VoiceFingerprint } from "./types.js";
 
 export interface CrystallizeOptions {
@@ -97,6 +104,9 @@ export function crystallize(repoRoot: string, opts: CrystallizeOptions): Crystal
     voiceFingerprint: fingerprint,
     constitutionCandidates,
     lethalRecessives: [...snap.lethalRecessives],
+    // v1.24.0 -- snapshot the active vaccine inventory so children
+    // sessions inherit (Lamarckian).
+    vaccineSignatures: snapshotVaccinesForChromosome(repoRoot),
     session: {
       startedAt: snap.startedAt,
       endedAt: createdAt,

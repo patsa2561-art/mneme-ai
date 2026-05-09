@@ -91,6 +91,7 @@ Commands:
   lin  >  MneMeiosis Lineage — session inheritance across AI agents and machines.
   nucleus  >  Infinity Wisdom Brain — persistent loop that grows DNA across sessions.
   inbox  >  Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.
+  antivirus|av  >  Antivirus -- scan AI drafts for hallucination strains + run the vaccine lab.
   tools [options]  >  List Mneme's full MCP tool catalog (mirror of mneme.capabilities).
   squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles.
   health [options]  >  Single-screen health: version + lineage state + nucleus streaks.

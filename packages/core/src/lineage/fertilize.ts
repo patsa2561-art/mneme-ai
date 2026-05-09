@@ -88,6 +88,23 @@ export function fertilize(repoRoot: string, opts: FertilizeOptions = {}): Inheri
   }
   if (!merged) return null;
 
+  // v1.24.0 -- Lamarckian vaccine inheritance. Merge inherited
+  // vaccineSignatures from the chosen ancestors into the local
+  // pharmacopoeia. Best-effort; never blocks fertilize.
+  try {
+    const inheritedVaccines = chromosomes
+      .filter((c) => Array.isArray(c.vaccineSignatures) && c.vaccineSignatures!.length > 0)
+      .map((c) => ({ chromosomeId: c.id, signatures: c.vaccineSignatures! }));
+    if (inheritedVaccines.length > 0) {
+      // Lazy import to avoid loading antivirus when fertilize is called
+      // by callers that don't need it (e.g., bench tooling).
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      import("../antivirus/lineage_vaccines.js").then((mod) => {
+        try { mod.mergeInheritedVaccines(repoRoot, inheritedVaccines); } catch { /* best-effort */ }
+      }).catch(() => { /* best-effort */ });
+    }
+  } catch { /* best-effort */ }
+
   const vendors = Array.from(new Set(chromosomes.map((c) => c.vendor)));
   const inheritedAtomCount = Object.keys(merged.atomKarmaDeltas).length;
   const overallKarma = Object.values(merged.atomKarmaDeltas).reduce((s, a) => s + a.karma, 0);

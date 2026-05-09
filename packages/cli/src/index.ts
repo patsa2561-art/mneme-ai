@@ -103,6 +103,7 @@ import {
   taxLossHarvestCommand,
 } from "./commands/quant-cli.js";
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
+import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
@@ -2392,6 +2393,8 @@ export async function run(argv: string[]): Promise<void> {
   registerNucleusCommands(program);
   // ─── Inbox / RLHF Force-Push (v1.23.0) ────────────────────────────
   registerInboxCommands(program);
+  // ─── Antivirus / Vaccine Lab (v1.24.0) ────────────────────────────
+  registerAntivirusCommands(program);
   // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
   registerToolsCommand(program);
   registerBotCommand(program);

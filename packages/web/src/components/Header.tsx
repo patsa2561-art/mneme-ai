@@ -20,6 +20,7 @@ const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string }
   { id: "ecosystems", label: "Ecosystems", symbol: "🧬", hint: "Per-repo MCP tools spawned by ecosystem detection" },
   { id: "dna", label: "Code Search (DNA)", symbol: "🎯", hint: "Ghost-Sniper Verifier — strict-mode 16-strand search" },
   { id: "scrubber", label: "Scrubber", symbol: "🧼", hint: "Live prompt-injection defence — paste hostile text, see scrubbed" },
+  { id: "antivirus", label: "Antivirus Lab", symbol: "🧬", hint: "Mneme Vaccine Lab — strain atlas, pharmacopoeia, realtime infection feed" },
 ];
 
 export function Header({

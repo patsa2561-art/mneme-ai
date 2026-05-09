@@ -8,6 +8,127 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.24.0] — 2026-05-09
+
+**Mneme Antivirus — the world's first MCP server with a hallucination
+antiviral.** Hallucinations modeled as virus strains; vaccines as
+antibody molecules; certified efficacy with HMAC-signed benchmarks;
+Lamarckian inheritance through MneMeiosis chromosomes; realtime Lab
+dashboard. Every claim measurable; no rounding up. Three phases
+shipped together (no MVP): full taxonomy, full pharmacopoeia, full
+inheritance, full Lab UI.
+
+### The 8 strains (taxonomy)
+
+| Scientific name | Common name | Severity |
+|---|---|---|
+| *Citatio viridis* | Phantom commit hash | 4 |
+| *API phantasma* | Ghost function/method | 4 |
+| *Depends imaginarium* | Phantom npm package | 4 |
+| *Persona fictum* | Invented author | 3 |
+| *Structura invenita* | Phantom file path | 3 |
+| *Logica circularis* | Circular reasoning | 3 |
+| *Tempus perversum* | Time-warped event | 2 |
+| *Confidens cardinalis* | Off-by-N count | 2 |
+
+Each strain has: surface signature (regex), a vaccine with a real
+assay (no mocks — shells out to git/npm/fs), and a labeled benchmark
+case set (5 positive + 5 negative).
+
+### The 8 vaccines (real assays)
+
+  - `anti_citatio_viridis_v1` — verifies SHAs against the cached set of
+    git log hashes + a `git cat-file -t` tie-breaker.
+  - `anti_persona_fictum_v1` — verifies attributed names against the
+    cached set of git authors (substring-tolerant).
+  - `anti_api_phantasma_v1` — verifies function/method identifiers
+    against `git grep` for definitions; skips known builtins.
+  - `anti_depends_imaginarium_v1` — verifies npm packages against
+    package.json + node_modules + npm registry packument.
+  - `anti_tempus_perversum_v1` — verifies dates against the repo's
+    git commit-date range (±1 year tolerance).
+  - `anti_confidens_cardinalis_v1` — verifies counts (commits/files/
+    packages/tests) against actual repo state; flags >20% AND >5
+    absolute deviation.
+  - `anti_structura_invenita_v1` — verifies paths against `git ls-files`
+    + `fs.existsSync` tie-breaker.
+  - `anti_logica_circularis_v1` — builds a clause DAG keyed by 6-gram
+    fingerprint, detects cycles via DFS.
+
+### Benchmark harness (HMAC-certified, honest scoring)
+
+  - `runBenchmark(repoRoot, vaccine)` runs every labeled case, computes
+    precision / recall / F1, and HMAC-SHA256 signs the result keyed by
+    the repo's `.mneme/antivirus/.bench-secret`.
+  - Anyone can recompute the HMAC over `(vaccine_id, version, ranAt,
+    totalCases, tp, tn, fp, fn)` and verify Mneme didn't lie.
+  - Persisted at `.mneme/antivirus/benchmarks/<vaccine_id>.json`.
+  - 80 labeled cases total (10 per strain: 5 positive + 5 negative).
+
+### Pharmacopoeia + Lamarckian inheritance
+
+  - `.mneme/antivirus/pharmacopoeia.json` — the active vaccine inventory.
+    Auto-seeds with all 8 vaccines on first read.
+  - `Chromosome.vaccineSignatures[]` — every crystallized chromosome
+    carries a snapshot of the active pharmacopoeia + each vaccine's
+    efficacy at crystallization time.
+  - `mergeInheritedVaccines()` — on `fertilize()`, the top-3 ancestor
+    chromosomes' vaccineSignatures are merged into the local
+    pharmacopoeia. Strategy: highest F1 wins per (strain, id, version).
+  - **Biologically Lamarckian**: vaccines a parent session learned about
+    flow into the child without the child encountering the original
+    strain. Cross-machine, cross-AI-vendor inheritance via the existing
+    spore sync mechanism.
+
+### 7 MCP tools
+
+  - `mneme.antivirus.scan({ draft })` — run all vaccines, return
+    infections + cures + risk score 0..1
+  - `mneme.antivirus.immunize()` — activate session protection
+    (returns an `[AUTO-ACTION]` instructing the AI to scan every draft)
+  - `mneme.antivirus.lab.strains()` — taxonomy
+  - `mneme.antivirus.lab.vaccines()` — pharmacopoeia
+  - `mneme.antivirus.cert.benchmark()` — run benchmarks, certify
+  - `mneme.antivirus.stats()` — realtime stats
+  - `mneme.antivirus.cure({ draft })` — apply cures (redact / annotate)
+
+### CLI
+
+```
+mneme antivirus scan <textOrFile>     # one-shot scan
+mneme antivirus lab                   # strain taxonomy + pharmacopoeia
+mneme antivirus benchmark             # certify all vaccines
+mneme antivirus immunize              # session protection summary
+mneme antivirus stats                 # lifetime metrics
+mneme antivirus cure <textOrFile>     # apply cures
+```
+
+### Web Lab dashboard
+
+New "🧬 Antivirus Lab" tab on https://patsa2561-art.github.io/mneme-ai/
+with four sections:
+
+  - **Strain Atlas** — 8-card grid; each card shows scientific +
+    common name, pathogenesis, severity (color-coded).
+  - **Pharmacopoeia** — vaccine inventory with F1 efficacy bars.
+  - **Realtime Feed** — recent scan activity + per-strain catch counts.
+  - **Cert Ledger** — HMAC signatures for every certified vaccine
+    (anyone can re-verify).
+
+Live mode reads `.mneme/antivirus/*.json` from a loaded repo. Demo
+mode shows seed data so the lab is never empty.
+
+### Tests
+
+  - 4630 / 4630 passing (was 4519; +111 from antivirus suite + auto-
+    seeded chromosome integration tests + snapshot refresh).
+  - 41 dedicated antivirus tests across 6 suites.
+  - 166 MCP tools (was 159; +7 antivirus tools).
+  - All TypeScript strict; production build clean.
+  - Live system test verified: `mneme antivirus scan "see commit
+    feedfacedeadbeef0123 for the fix"` correctly catches the phantom
+    SHA with evidence + cure in 87ms.
+
 ## [1.23.5] — 2026-05-09
 
 **CI self-heal + AUTO-ACTION protocol + Caretaker Bot.** Two surfaces

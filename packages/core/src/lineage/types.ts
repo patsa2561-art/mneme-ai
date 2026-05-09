@@ -95,6 +95,22 @@ export interface Chromosome {
   constitutionCandidates: ConstitutionCandidate[];
   /** Atoms that confess marked as hallucination — culled from inheritance. */
   lethalRecessives: string[];
+  /** v1.24.0 — Antivirus vaccine signatures snapshot at crystallization
+   *  time. Inheriting sessions merge these into their pharmacopoeia
+   *  (Lamarckian: acquired traits flow to offspring). Optional for
+   *  back-compat with chromosomes from pre-v1.24 sessions. */
+  vaccineSignatures?: Array<{
+    id: string;
+    strain: string;
+    version: string;
+    source: "seed" | "local-developed" | "inherited" | "community";
+    efficacy: {
+      totalCases: number; tp: number; tn: number; fp: number; fn: number;
+      precision: number | null; recall: number | null; f1: number | null;
+      ranAt: string; signature: string;
+    } | null;
+    registeredAt: string;
+  }>;
   /** Session metadata. */
   session: {
     startedAt: string;

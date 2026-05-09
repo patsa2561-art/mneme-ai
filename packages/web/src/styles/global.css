@@ -3559,3 +3559,65 @@ body::before {
   .graph-wisdom-isolated { grid-template-columns: 1fr; }
   .graph-wisdom-components { grid-template-columns: 1fr; }
 }
+
+/* ─── Antivirus Lab (v1.24.0) ─────────────────────────────────────── */
+.antivirus-lab {
+  padding: 18px 24px;
+  color: rgba(232, 232, 255, 0.92);
+}
+.antivirus-lab .lab-header h2 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+  background: linear-gradient(90deg, #c084fc, #38bdf8, #34d399);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.antivirus-lab .lab-tagline { margin: 0 0 14px; color: rgba(232,232,255,0.7); font-size: 0.92rem; }
+.antivirus-lab .lab-badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-left: 6px; }
+.antivirus-lab .lab-badge.live { background: rgba(52,211,153,0.16); color: #34d399; }
+.antivirus-lab .lab-badge.demo { background: rgba(251,191,36,0.16); color: #fbbf24; }
+.antivirus-lab .lab-summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 14px 0 22px; }
+.antivirus-lab .lab-stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; }
+.antivirus-lab .lab-stat-num { font-size: 1.8rem; font-weight: 700; color: #c084fc; }
+.antivirus-lab .lab-stat-label { font-size: 0.78rem; color: rgba(232,232,255,0.6); margin-top: 2px; }
+
+.antivirus-lab .lab-tabs { display: flex; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 18px; }
+.antivirus-lab .lab-tabs button { background: transparent; color: rgba(232,232,255,0.7); border: none; padding: 8px 16px; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; }
+.antivirus-lab .lab-tabs button.active { color: #c084fc; border-bottom-color: #c084fc; }
+
+.strain-atlas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.strain-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; }
+.strain-card.sev-4, .strain-card.sev-5 { border-color: rgba(239,68,68,0.4); }
+.strain-card.sev-3 { border-color: rgba(251,191,36,0.4); }
+.strain-card.sev-2 { border-color: rgba(56,189,248,0.4); }
+.strain-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.strain-sev { font-size: 0.7rem; padding: 2px 6px; background: rgba(255,255,255,0.06); border-radius: 4px; color: rgba(232,232,255,0.7); }
+.strain-id { font-size: 0.8rem; color: rgba(232,232,255,0.5); font-family: ui-monospace, monospace; }
+.strain-name { font-size: 0.95rem; margin-bottom: 4px; }
+.strain-pathogenesis { font-size: 0.82rem; color: rgba(232,232,255,0.65); line-height: 1.4; }
+
+.pharmacopoeia { display: flex; flex-direction: column; gap: 10px; }
+.vaccine-row { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 14px; display: grid; grid-template-columns: 1.6fr 1fr 2fr 1fr 0.5fr; gap: 10px; align-items: center; }
+.vaccine-id { font-family: ui-monospace, monospace; font-size: 0.86rem; }
+.vaccine-ver { color: rgba(232,232,255,0.5); font-size: 0.75rem; margin-left: 4px; }
+.vaccine-strain { font-size: 0.8rem; color: rgba(232,232,255,0.6); }
+.vaccine-bar-wrap { position: relative; height: 18px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; }
+.vaccine-bar { background: linear-gradient(90deg, #34d399, #c084fc); height: 100%; transition: width 0.3s; }
+.vaccine-bar-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.74rem; font-weight: 600; }
+.vaccine-counts { font-size: 0.74rem; color: rgba(232,232,255,0.6); font-family: ui-monospace, monospace; }
+.vaccine-source { font-size: 0.72rem; color: rgba(232,232,255,0.5); }
+
+.realtime-feed { display: grid; grid-template-columns: 1fr 1.4fr; gap: 18px; }
+.realtime-feed h3 { font-size: 0.88rem; margin: 0 0 8px; color: rgba(232,232,255,0.7); }
+.feed-strain-row, .feed-scan-row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.82rem; }
+.feed-scan-row { grid-template-columns: auto auto auto auto; }
+.empty-state { text-align: center; padding: 40px 0; color: rgba(232,232,255,0.5); }
+
+.cert-ledger .cert-intro { font-size: 0.86rem; color: rgba(232,232,255,0.7); margin-bottom: 14px; }
+.cert-ledger .cert-intro code { background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 3px; font-size: 0.84em; color: #c084fc; }
+.cert-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.cert-table th, .cert-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.cert-table th { color: rgba(232,232,255,0.65); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.cert-sig { font-family: ui-monospace, monospace; font-size: 0.74rem; color: rgba(232,232,255,0.5); }
+.cert-footnote { margin-top: 14px; font-size: 0.78rem; color: rgba(232,232,255,0.5); font-style: italic; }
