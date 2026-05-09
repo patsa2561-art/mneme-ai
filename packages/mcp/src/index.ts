@@ -403,4 +403,19 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  // CRITICAL (v1.19.5): keep the event loop alive after connect() resolves.
+  // The SDK registers a stdin 'data' listener but does NOT call resume(),
+  // so on some platforms (notably Windows piped stdin) Node considers the
+  // event loop idle and exits 0 BEFORE the first JSON-RPC frame is read.
+  // Result: every MCP client got "Connection closed" before initialize.
+  // Fix: explicitly resume stdin + await a never-resolving promise that
+  // is rejected only when the transport closes (SIGTERM / EOF / explicit
+  // close()). The transport's onclose handler resolves it for us.
+  process.stdin.resume();
+  await new Promise<void>((resolve) => {
+    transport.onclose = () => resolve();
+    process.on("SIGINT", () => resolve());
+    process.on("SIGTERM", () => resolve());
+  });
 }

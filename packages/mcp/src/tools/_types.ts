@@ -279,23 +279,33 @@ export function toCallResult(r: ToolResponse): CallToolResult {
       // best-effort — never block a tool result on scrubber failure
     }
   }
+  // v1.19.5: when a tool declares outputSchema, the MCP SDK enforces that
+  // the response carries `structuredContent` matching that schema. We map
+  // `data` to structuredContent (it IS the structured payload). The text
+  // content stays as the full envelope so older clients still see wisdom.
+  const envelope = {
+    data: r.data,
+    wisdom,
+    followUp: r.followUp ?? [],
+    confidence: r.confidence ?? { level: "medium" },
+    ...(secondBrain ? { secondBrain } : {}),
+  };
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(
-          {
-            data: r.data,
-            wisdom,
-            followUp: r.followUp ?? [],
-            confidence: r.confidence ?? { level: "medium" },
-            ...(secondBrain ? { secondBrain } : {}),
-          },
-          null,
-          2,
-        ),
+        text: JSON.stringify(envelope, null, 2),
       },
     ],
+    // structuredContent is what MCP-spec-2025-06-18 clients validate
+    // against outputSchema. Always emit it (no harm to tools without
+    // an outputSchema — clients ignore the field in that case).
+    // Spec requires a JSON OBJECT — wrap arrays/primitives so non-object
+    // `data` values (rare but legal) don't break the spec.
+    structuredContent:
+      r.data && typeof r.data === "object" && !Array.isArray(r.data)
+        ? (r.data as Record<string, unknown>)
+        : { value: r.data },
   };
 }
 
