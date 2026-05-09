@@ -22,6 +22,8 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tick, mutate, readNucleus, dnaBanner } from "./nucleus.js";
+import { pushInbox, deterministicId } from "./inbox.js";
+import { readStreaks } from "./karma_streaks.js";
 
 const PID_FILE = ".mneme/nucleus.pid";
 const HEARTBEAT_FILE = ".mneme/nucleus.heartbeat.json";
@@ -151,7 +153,43 @@ export async function runDaemonLoop(
         mutate(repoRoot, 1);
         mutationsApplied += 1;
         noteworthyTicks = 0;
+        // v1.23.0 — push milestone every 10 mutations into the inbox so
+        // the user sees progress even if they never run a Mneme command.
+        if (mutationsApplied > 0 && mutationsApplied % 10 === 0) {
+          try {
+            pushInbox(repoRoot, {
+              id: deterministicId(`mutation-milestone-${mutationsApplied}`),
+              priority: "medium",
+              source: "daemon",
+              title: `Nucleus reached ${mutationsApplied} mutations`,
+              body: `Your Mneme nucleus has self-evolved ${mutationsApplied} times since the daemon started.`,
+              cta: "ask: 'show me the mneme dna'",
+            });
+          } catch { /* ignore */ }
+        }
       }
+      // v1.23.0 — push achievement-unlocked alerts to the inbox.
+      try {
+        const streaks = readStreaks(repoRoot);
+        const knownAchievements = (globalThis as { __mnemeKnownAchievements?: Set<string> }).__mnemeKnownAchievements ??= new Set<string>();
+        for (const a of streaks.unlocked) {
+          if (!knownAchievements.has(a.id)) {
+            knownAchievements.add(a.id);
+            // Only push if first daemon-tick already populated the set
+            // (otherwise we'd flood the inbox with pre-existing achievements).
+            if (tickCount > 1) {
+              pushInbox(repoRoot, {
+                id: deterministicId(`achievement-${a.id}`),
+                priority: "high",
+                source: "achievement",
+                title: `${a.glyph} Unlocked: ${a.title}`,
+                body: a.detail,
+                cta: "ask: 'show me my mneme achievements'",
+              });
+            }
+          }
+        }
+      } catch { /* ignore */ }
       // Heartbeat
       if (tickCount % HEARTBEAT_WRITE_EVERY_TICK === 0) {
         const banner = dnaBanner(result.state);

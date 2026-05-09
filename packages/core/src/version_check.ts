@@ -16,6 +16,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { pushInbox, deterministicId } from "./inbox.js";
 
 const CACHE_FILE = ".mneme/version-check.json";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -145,10 +146,26 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
     failureReason: fetchResult.reason,
   };
   writeCache(repoRoot, rec);
+  const updateAvailable = fetchResult.version !== null && semverGt(fetchResult.version, currentVersion);
+  // v1.23.0 — push update notice into the inbox so the AI agent surfaces
+  // it on the next tool call, even if the user never runs `mneme upgrade`.
+  // Idempotent on the latest version string — no spam across daemon ticks.
+  if (updateAvailable && fetchResult.version) {
+    try {
+      pushInbox(repoRoot, {
+        id: deterministicId(`update-available-${fetchResult.version}`),
+        priority: "high",
+        source: "version-check",
+        title: `Mneme v${fetchResult.version} is available`,
+        body: `You're on v${currentVersion}.`,
+        cta: "say: 'upgrade Mneme'",
+      });
+    } catch { /* ignore */ }
+  }
   return {
     current: currentVersion,
     latest: fetchResult.version,
-    updateAvailable: fetchResult.version !== null && semverGt(fetchResult.version, currentVersion),
+    updateAvailable,
     lastChecked,
     fromCache: false,
     failureReason: fetchResult.reason,

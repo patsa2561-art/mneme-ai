@@ -102,7 +102,7 @@ import {
   impliedVolatilityCommand,
   taxLossHarvestCommand,
 } from "./commands/quant-cli.js";
-import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands } from "./commands/mnemeiosis.js";
+import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
@@ -2370,6 +2370,8 @@ export async function run(argv: string[]): Promise<void> {
   registerLinCommands(program);
   // ─── NUCLEUS Infinity Wisdom Brain (v1.21.0) ──────────────────────
   registerNucleusCommands(program);
+  // ─── Inbox / RLHF Force-Push (v1.23.0) ────────────────────────────
+  registerInboxCommands(program);
   // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
   registerToolsCommand(program);
   registerBotCommand(program);

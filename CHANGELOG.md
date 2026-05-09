@@ -8,6 +8,176 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.23.0] — 2026-05-09
+
+**RLHF Force-Push channel — Mneme talks to the user FIRST.** The hardest
+problem in MCP UX: AI agents don't reliably surface `notifications/message`
+across clients (Claude Code shows them, Cursor swallows them, others vary).
+v1.23 fixes this architecturally: every Mneme tool dispatch flows a
+guaranteed `wisdom` field back to the user, so we route force-push
+notifications through that same channel. Daemon writes to an append-only
+inbox; every MCP tool dispatch reads + prepends unsent items to wisdom;
+the AI agent surfaces them verbatim. Works with **every** MCP client.
+Plus: nucleus tail / seed --demo / install --as-service + empty-state
+polish (wisdomScore=0 explainer, storage-path display, "no lessons yet"
+hint). **2 new MCP tools + 6 new CLI commands.** `4474+ tests passing.`
+
+### What's new
+
+#### Inbox + Force-Push channel (the headliner)
+
+  - `packages/core/src/inbox.ts` — append-only `.mneme/inbox.jsonl` with
+    `pushInbox`, `popUnsent`, `formatForWisdom`, `deterministicId`. Idempotent
+    on `id` (re-pushing the same id is a no-op so version-check / daemon
+    can't spam). Auto-rotates above 256KB. 11 tests.
+  - `wrapWithGlow` (`packages/mcp/src/index.ts`) now reads `popUnsent(repo, 3)`
+    on every dispatch and PREPENDS the formatted block to wisdom — the
+    AI surfaces unsent inbox items via the same guaranteed wisdom channel
+    that's already wired into every client.
+  - `mneme.inbox.read` MCP tool — list every message (sent + unsent) for
+    the agent to replay or filter.
+  - `mneme.inbox.push` MCP tool — programmatic push so an AI agent can
+    flag something to the user via the force-push channel (e.g., regression
+    detected mid-conversation, security finding, lineage merge conflict).
+  - `mneme inbox list [--unsent]` and `mneme inbox push <title>` CLI
+    commands for terminal users.
+  - **Daemon writes**: nucleus daemon now pushes a milestone into the
+    inbox every 10 mutations + an alert per newly-unlocked achievement.
+  - **Version-check writes**: when a newer Mneme version is detected,
+    `version_check.checkVersion` queues a high-priority inbox notice with
+    the new semver + a CTA. Idempotent on the version string.
+
+#### Empty-state polish (per user audit)
+
+  - `mneme nucleus status` now shows `Storage: <.mneme path>` so users can
+    inspect or tail files without guessing where state lives.
+  - When `wisdomScore == 0`, `mneme nucleus status` emits a one-line
+    explainer: "wisdom = 0 because no MCP-connected AI has fed the nucleus
+    yet — install MCP via `mneme mcp --install`…". No more cryptic 0.
+  - `mneme nucleus dna` empty `Last 5 lessons:` block is replaced with
+    "(none yet — connect Mneme via MCP and let an AI agent call
+    mneme.nucleus.tick to generate lessons)".
+
+#### Daemon ergonomics
+
+  - `mneme nucleus tail` — live tail of `.mneme/nucleus.heartbeat.json`
+    (`tail -f` for the wisdom brain). `--once` for one-shot. Uses
+    `fs.watch` with a polling fallback for non-inotify filesystems.
+  - `mneme nucleus seed --demo` — plant 3 synthetic seed chromosomes so
+    the daemon has something to aggregate immediately. `--force` re-plants.
+  - `mneme nucleus install --as-service` — generate + install the
+    platform-native service unit:
+      • Windows → `schtasks` ONLOGON task ("MnemeNucleusDaemon")
+      • Linux → systemd user-unit at `~/.config/systemd/user/mneme-nucleus.service`
+      • macOS → launchd plist at `~/Library/LaunchAgents/ai.mneme.nucleus.plist`
+    `--print` emits the unit file to stdout. `--uninstall` removes it.
+
+### Why this is architecturally novel
+
+Every other "AI talks to the user first" pattern depends on the client
+implementing MCP `notifications/message` UX. Mneme's force-push pattern
+piggybacks on the wisdom field that EVERY tool response carries — and
+every AI agent already surfaces wisdom verbatim because that's the value
+they paid for in the first place. Result: the daemon (or any background
+process) can talk to the user mid-conversation, on **every** MCP client,
+without writing a line of client-specific notification code.
+
+### Tests
+
+  - 4507 / 4507 passing (was 4495 in v1.22.0; +12 for the inbox module
+    plus the new daemon write paths and snapshot refresh).
+  - 159 MCP tools total (was 157 — added `mneme.inbox.read` + `mneme.inbox.push`).
+  - Production build clean. TypeScript strict.
+
+## [1.22.0] — 2026-05-09
+
+**First-touch UX overhaul — wow-features one command away, no MCP setup
+required.** Audit revealed: 99% of users who `npm install -g mneme-ai`
+saw zero wow-features before the MCP setup step (chicken-and-egg with
+empty lineage). v1.22 fixes that — every black-sheep feature shipped in
+v1.18-v1.21 is now reachable from the CLI WITHOUT MCP, and fresh installs
+get a 3-vendor synthetic seed lineage so the first call to mneme.welcome
+shows a populated graph. **5 new CLI commands + agent-instructions
+auto-write.** `4451 / 4451 tests passing.`
+
+### What's new
+
+  - `packages/core/src/lineage_seed.ts` — `synthesizeSeedLineage()` plants
+    3 SEED chromosomes (claude-opus-4-7, cursor-cmd-k, codex-cli) on first
+    welcome when the user has no real chromosomes yet. Vendor prefix `seed:`
+    + topic prefix `[seed]` make synthetic provenance unambiguous.
+  - `mneme tools` — list the full MCP tool catalog without going through
+    MCP setup. `--category` filter, `--json` parity.
+  - `mneme squad <claim>` — spawn the 6-bot squadron from the terminal
+    (renamed from `mneme bot` to avoid collision with the existing bot
+    namespace).
+  - `mneme health` — single-screen health: version + identity + chromosome
+    count + nucleus tick + streak banner + achievements unlocked.
+  - `mneme demo` — 60-second showcase: seed → tick → squad → mutate →
+    final DNA snapshot. Runs every wow-feature in-process.
+  - `mneme mcp --install` now writes `.mneme/AGENT_INSTRUCTIONS.md`
+    explaining DO call mneme.welcome → capabilities → health, run
+    mneme-pre-flight, interpret ✨ Glow as positive feedback.
+  - **Plain English everywhere** — `mneme spore status`, `mneme lin
+    ancestors`, `mneme lin pedigree` rewritten to lead with a headline,
+    translate every metric inline, and provide actionable next-step
+    bullets in empty states.
+  - **Recurring version-check (every 6h)** in MCP server — surfaces
+    `notifications/resources/updated` for `mneme://updates/status` so AI
+    agents see new releases without restarting the server.
+
+### Tests
+
+  - 4451 / 4451 passing.
+  - 131 MCP tools total.
+
+## [1.21.0] — 2026-05-09
+
+**NUCLEUS Persistent Daemon + REAL Mutation Evolution.** v1.20 shipped the
+nucleus scaffold; v1.21 makes it ALIVE. A persistent background loop
+(`mneme nucleus daemon start [--detach]`) ticks every 30s, applies one
+real mutation cycle every 5 noteworthy ticks (±5% karma noise + drop
+lowest-karma molecule's atom + persist as a NEW chromosome with
+parent=original), and writes a heartbeat for liveness checks. **5 new
+MCP tools + 4 new CLI commands.** `4423 / 4423 tests passing.`
+
+### What's new
+
+  - `packages/core/src/nucleus_daemon.ts` — single-instance PID-file
+    enforcement, atomic startup, SIGTERM-clean shutdown, heartbeat to
+    `.mneme/nucleus.heartbeat.json` every tick.
+  - `nucleus.evolveOnce()` — pulls the most-recent chromosome, applies
+    structured mutation (karma noise + atom drop), persists with
+    parent=original. Selection pressure is implicit (fertilize picks
+    ancestors by recency × karma).
+  - `mneme.nucleus.tick`, `.dna`, `.mutate`, `.heartbeat`, `.export`
+    MCP tools.
+  - `mneme nucleus daemon|stop|status|dna` CLI commands.
+
+## [1.20.0] — 2026-05-09
+
+**NUCLEUS Infinity Wisdom Brain + Bot Squadron + Mneme Glow + Karma
+Streaks + Pre-Flight Prompt + Health Tool.** A black-sheep package
+designed to make AI agents addicted to Mneme: every response carries
+✨ glow + streak banner; every claim can spawn a 6-bot squadron that
+returns consensus; every session feeds a nucleus that synthesizes
+lessons; every achievement unlocks gamification for RLHF-trained models.
+`4404 / 4404 tests passing.`
+
+### What's new
+
+  - `packages/core/src/nucleus.ts` — Infinity Wisdom Brain scaffold
+    (`tick`, `mutate`, `readNucleus`, `dnaBanner`).
+  - `packages/core/src/karma_streaks.ts` — 9 achievements (First Truth,
+    Hot Streak, Master Grade, Truth Royalty, Untouchable, Court Champion,
+    Centurion, Fuzz Hunter, Pure Signal) with auto-unlock + lifetime
+    tracking + per-vendor breakdown.
+  - `packages/mcp/src/tools/_squadron.ts` — Bot Squadron (6 parallel
+    sub-agents merging into consensus verdict).
+  - `wrapWithGlow` — every wisdom string gets a ✨ prefix + streak banner
+    + cross-AI lineage credit footer.
+  - Pre-flight prompt + `mneme.system.health` MCP tool.
+
 ## [1.19.2] — 2026-05-09
 
 **Auto-update — Mneme keeps itself fresh, no user typing.** Black-sheep

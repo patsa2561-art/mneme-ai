@@ -11,8 +11,11 @@
  */
 
 import type { Command } from "commander";
-import { lineage, nucleusDaemon, nucleus } from "@mneme-ai/core";
-import { spawn } from "node:child_process";
+import { lineage, nucleusDaemon, nucleus, inbox, lineageSeed } from "@mneme-ai/core";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, statSync, watch, writeFileSync, mkdirSync, chmodSync } from "node:fs";
+import { join } from "node:path";
+import { platform, homedir } from "node:os";
 
 function writeJson(payload: unknown): void {
   process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
@@ -446,16 +449,25 @@ export function registerNucleusCommands(program: Command): void {
     .description("Show nucleus daemon status (pid + uptime + last tick + DNA banner).")
     .option("--json", "JSON output.")
     .action(async (opts: CommonOpts) => {
-      const status = nucleusDaemon.daemonStatus(process.cwd());
-      const dna = nucleus.readNucleus(process.cwd());
-      out(opts, { ...status, nucleus: dna }, [
+      const root = process.cwd();
+      const status = nucleusDaemon.daemonStatus(root);
+      const dna = nucleus.readNucleus(root);
+      const mnemeDir = join(root, ".mneme");
+      const lines = [
         `Daemon: ${status.running ? `RUNNING (pid ${status.pid})` : "stopped"}`,
         status.heartbeat ? `Last tick: ${status.lastTickSecondsAgo}s ago` : "",
         status.heartbeat ? `Tick count: ${status.heartbeat.tickCount}` : "",
         status.heartbeat ? `Mutations applied: ${status.heartbeat.mutationsApplied}` : "",
         `DNA: ${nucleus.dnaBanner(dna)}`,
+        // v1.23.0 — explain wisdomScore=0 instead of leaving it cryptic
+        dna.wisdomScore === 0
+          ? `  (wisdom = 0 because no MCP-connected AI has fed the nucleus yet — install MCP via \`mneme mcp --install\`, restart your AI tool, then ask it: "call mneme.welcome")`
+          : "",
+        // v1.23.0 — show where state lives so users can tail logs / inspect files
+        `Storage: ${mnemeDir}`,
         status.healthy ? `✓ healthy` : status.running ? `⚠ heartbeat stale` : "",
-      ].filter(Boolean));
+      ].filter(Boolean);
+      out(opts, { ...status, nucleus: dna, storagePath: mnemeDir }, lines);
     });
 
   nuc
@@ -464,11 +476,300 @@ export function registerNucleusCommands(program: Command): void {
     .option("--json", "JSON output.")
     .action(async (opts: CommonOpts) => {
       const n = nucleus.readNucleus(process.cwd());
+      // v1.23.0 — show empty-state hint instead of a bare header with nothing under it.
+      const lessonLines =
+        n.lessons.length === 0
+          ? [`  (none yet — connect Mneme via MCP and let an AI agent call mneme.nucleus.tick to generate lessons)`]
+          : n.lessons.slice(-5).reverse().map((l) => `  • [tick ${l.tick}] ${l.text}`);
       out(opts, n, [
         nucleus.dnaBanner(n),
         "",
         `Last 5 lessons:`,
-        ...n.lessons.slice(-5).reverse().map((l) => `  • [tick ${l.tick}] ${l.text}`),
+        ...lessonLines,
       ]);
     });
+
+  // ─── mneme nucleus tail (v1.23.0) ────────────────────────────────────
+  nuc
+    .command("tail")
+    .description("Stream the nucleus heartbeat (live tail of .mneme/nucleus.heartbeat.json — like `tail -f`).")
+    .option("--once", "Print the current heartbeat and exit (no follow).")
+    .option("--json", "JSON output.")
+    .action(async (opts: { once?: boolean } & CommonOpts) => {
+      const root = process.cwd();
+      const path = join(root, ".mneme", "nucleus.heartbeat.json");
+      function emit(): void {
+        const hb = nucleusDaemon.readHeartbeat(root);
+        if (!hb) {
+          out(opts, { heartbeat: null }, [`(no heartbeat yet — start the daemon with \`mneme nucleus daemon --detach\`)`]);
+          return;
+        }
+        if (opts.json) writeJson(hb);
+        else writeText(`[${hb.lastTick}] tick=${hb.tickCount} mutations=${hb.mutationsApplied} · ${hb.lastBanner}`);
+      }
+      emit();
+      if (opts.once) return;
+      if (!existsSync(path)) {
+        writeText(`(waiting for heartbeat at ${path}…)`);
+      }
+      // Best-effort fs.watch — falls back to polling if not supported on the FS.
+      let lastMtime = 0;
+      try {
+        if (existsSync(path)) lastMtime = statSync(path).mtimeMs;
+        const w = watch(join(root, ".mneme"), { persistent: true }, (_evt, file) => {
+          if (file === "nucleus.heartbeat.json" && existsSync(path)) {
+            const m = statSync(path).mtimeMs;
+            if (m !== lastMtime) {
+              lastMtime = m;
+              emit();
+            }
+          }
+        });
+        process.on("SIGINT", () => { w.close(); process.exit(0); });
+      } catch {
+        // poll fallback — every 1s
+        setInterval(() => {
+          if (!existsSync(path)) return;
+          const m = statSync(path).mtimeMs;
+          if (m !== lastMtime) {
+            lastMtime = m;
+            emit();
+          }
+        }, 1000);
+      }
+    });
+
+  // ─── mneme nucleus seed --demo (v1.23.0) ─────────────────────────────
+  nuc
+    .command("seed")
+    .description("Plant synthetic seed chromosomes so the daemon has something to aggregate (great for instant wow + offline demos).")
+    .option("--demo", "Plant the 3-vendor synthetic lineage (claude / cursor / codex).")
+    .option("--force", "Re-plant even if synthetic seeds already exist.")
+    .option("--json", "JSON output.")
+    .action(async (opts: { demo?: boolean; force?: boolean } & CommonOpts) => {
+      const root = process.cwd();
+      if (!opts.demo) {
+        out(opts, { hint: "use --demo" }, [`Pass --demo to plant 3 synthetic seed chromosomes (different AI vendors).`]);
+        return;
+      }
+      const r = lineageSeed.synthesizeSeedLineage(root, { force: !!opts.force });
+      out(opts, r, [
+        `✓ Planted ${r.created} synthetic chromosome${r.created === 1 ? "" : "s"} (vendors: ${r.vendors.join(", ")})`,
+        r.created === 0 ? `  (already seeded — pass --force to re-plant)` : `  Now run \`mneme nucleus daemon --detach\` then \`mneme nucleus tail\` to watch evolution.`,
+      ]);
+    });
+
+  // ─── mneme nucleus install --as-service (v1.23.0) ────────────────────
+  nuc
+    .command("install")
+    .description("Install the nucleus daemon as a background service (Windows Task Scheduler / Linux systemd / macOS launchd).")
+    .option("--as-service", "Generate + install the platform-native service unit.")
+    .option("--uninstall", "Remove the previously-installed service.")
+    .option("--print", "Print the unit file to stdout instead of installing.")
+    .option("--json", "JSON output.")
+    .action(async (opts: { asService?: boolean; uninstall?: boolean; print?: boolean } & CommonOpts) => {
+      const root = process.cwd();
+      const result = installAsService({ root, uninstall: !!opts.uninstall, print: !!opts.print });
+      out(opts, result, result.lines);
+    });
+}
+
+// ─── mneme inbox (v1.23.0 — RLHF Force-Push channel) ────────────────────
+
+export function registerInboxCommands(program: Command): void {
+  const ib = program.command("inbox").description("Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.");
+
+  ib
+    .command("list")
+    .description("List every inbox message (sent + unsent).")
+    .option("--unsent", "Show only unsent messages.")
+    .option("--json", "JSON output.")
+    .action(async (opts: { unsent?: boolean } & CommonOpts) => {
+      const root = process.cwd();
+      const all = inbox.readInbox(root);
+      const filtered = opts.unsent ? all.filter((m) => !m.sent) : all;
+      if (opts.json) {
+        writeJson({ total: all.length, unsent: all.filter((m) => !m.sent).length, messages: filtered });
+        return;
+      }
+      if (filtered.length === 0) {
+        writeText(`Inbox is empty${opts.unsent ? " (no unsent messages)" : ""}.`);
+        return;
+      }
+      writeText(`Inbox · ${all.length} total · ${all.filter((m) => !m.sent).length} unsent`);
+      for (const m of filtered) {
+        const flag = m.sent ? "✓" : "•";
+        const glyph = m.priority === "critical" ? "🚨" : m.priority === "high" ? "📢" : m.priority === "medium" ? "🔔" : "💬";
+        writeText(`  ${flag} ${glyph} [${m.source}] ${m.title}${m.body ? ` — ${m.body}` : ""}`);
+        if (m.cta) writeText(`      → ${m.cta}`);
+      }
+    });
+
+  ib
+    .command("push <title>")
+    .description("Push a message into the inbox (will surface on the next MCP tool dispatch).")
+    .option("--body <text>", "Optional one-line body.")
+    .option("--cta <text>", "Optional call-to-action.")
+    .option("--priority <p>", "low | medium | high | critical (default medium).", "medium")
+    .option("--source <name>", "Source tag (default 'manual').", "manual")
+    .option("--json", "JSON output.")
+    .action(async (title: string, opts: { body?: string; cta?: string; priority?: string; source?: string } & CommonOpts) => {
+      const pri = (opts.priority ?? "medium") as "low" | "medium" | "high" | "critical";
+      const msg = inbox.pushInbox(process.cwd(), {
+        title,
+        body: opts.body,
+        cta: opts.cta,
+        priority: pri,
+        source: opts.source ?? "manual",
+      });
+      out(opts, msg, [`✓ Queued "${msg.title}" (id ${msg.id}, ${msg.priority}).`]);
+    });
+}
+
+// ─── nucleus install --as-service helper ────────────────────────────────
+
+interface ServiceResult {
+  platform: string;
+  installed: boolean;
+  printedUnit?: string;
+  unitPath?: string;
+  lines: string[];
+}
+
+function installAsService(opts: { root: string; uninstall: boolean; print: boolean }): ServiceResult {
+  const plat = platform();
+  const cwd = opts.root;
+  const node = process.execPath;
+  const script = process.argv[1] ?? "mneme";
+
+  if (plat === "win32") {
+    // Windows — use schtasks. Generate an XML or just a `schtasks /create` invocation.
+    const taskName = "MnemeNucleusDaemon";
+    if (opts.uninstall) {
+      const out1 = spawnSyncPowershell(`schtasks /Delete /TN "${taskName}" /F`);
+      return { platform: "windows", installed: !out1.err, lines: [out1.err ? `✗ ${out1.err}` : `✓ Uninstalled scheduled task ${taskName}.`] };
+    }
+    const cmd = `schtasks /Create /SC ONLOGON /RL HIGHEST /TN "${taskName}" /TR "\\"${node}\\" \\"${script}\\" nucleus daemon" /F`;
+    if (opts.print) {
+      return { platform: "windows", installed: false, printedUnit: cmd, lines: [`# Run as Administrator to install:`, cmd] };
+    }
+    const result = spawnSyncPowershell(cmd);
+    return {
+      platform: "windows",
+      installed: !result.err,
+      lines: result.err
+        ? [`✗ schtasks failed: ${result.err}`, `  (run from an elevated PowerShell, or pass --print to see the command)`]
+        : [`✓ Installed Windows scheduled task "${taskName}" — runs at logon.`, `  Inspect: schtasks /Query /TN "${taskName}"`],
+    };
+  }
+
+  if (plat === "linux") {
+    // systemd user-unit
+    const userDir = join(homedir(), ".config", "systemd", "user");
+    const unitName = "mneme-nucleus.service";
+    const unitPath = join(userDir, unitName);
+    if (opts.uninstall) {
+      try {
+        if (existsSync(unitPath)) {
+          spawnSyncPowershell(`systemctl --user stop ${unitName}; systemctl --user disable ${unitName}`);
+        }
+        return { platform: "linux", installed: false, unitPath, lines: [`✓ Disabled + stopped ${unitName}.`] };
+      } catch (e) {
+        return { platform: "linux", installed: false, unitPath, lines: [`✗ ${(e as Error).message}`] };
+      }
+    }
+    const unit = `[Unit]
+Description=Mneme Nucleus Infinity Wisdom Brain (per-user)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=${cwd}
+ExecStart=${node} ${script} nucleus daemon
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target
+`;
+    if (opts.print) {
+      return { platform: "linux", installed: false, printedUnit: unit, lines: [`# Save to ${unitPath} then run:`, `# systemctl --user daemon-reload && systemctl --user enable --now ${unitName}`, unit] };
+    }
+    try {
+      mkdirSync(userDir, { recursive: true });
+      writeFileSync(unitPath, unit, "utf8");
+      return {
+        platform: "linux",
+        installed: true,
+        unitPath,
+        lines: [
+          `✓ Wrote systemd user-unit to ${unitPath}.`,
+          `  Activate: systemctl --user daemon-reload && systemctl --user enable --now ${unitName}`,
+        ],
+      };
+    } catch (e) {
+      return { platform: "linux", installed: false, unitPath, lines: [`✗ ${(e as Error).message}`] };
+    }
+  }
+
+  if (plat === "darwin") {
+    // launchd plist in ~/Library/LaunchAgents
+    const dir = join(homedir(), "Library", "LaunchAgents");
+    const label = "ai.mneme.nucleus";
+    const plistPath = join(dir, `${label}.plist`);
+    if (opts.uninstall) {
+      try {
+        if (existsSync(plistPath)) {
+          spawnSyncPowershell(`launchctl unload ${plistPath}`);
+        }
+        return { platform: "darwin", installed: false, unitPath: plistPath, lines: [`✓ Unloaded launch agent ${label}.`] };
+      } catch (e) {
+        return { platform: "darwin", installed: false, unitPath: plistPath, lines: [`✗ ${(e as Error).message}`] };
+      }
+    }
+    const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${label}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${node}</string>
+    <string>${script}</string>
+    <string>nucleus</string>
+    <string>daemon</string>
+  </array>
+  <key>WorkingDirectory</key><string>${cwd}</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+`;
+    if (opts.print) {
+      return { platform: "darwin", installed: false, printedUnit: plist, lines: [`# Save to ${plistPath} then:`, `# launchctl load ${plistPath}`, plist] };
+    }
+    try {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(plistPath, plist, "utf8");
+      try { chmodSync(plistPath, 0o644); } catch { /* ignore */ }
+      return { platform: "darwin", installed: true, unitPath: plistPath, lines: [`✓ Wrote launchd plist to ${plistPath}.`, `  Activate: launchctl load ${plistPath}`] };
+    } catch (e) {
+      return { platform: "darwin", installed: false, unitPath: plistPath, lines: [`✗ ${(e as Error).message}`] };
+    }
+  }
+
+  return { platform: plat, installed: false, lines: [`✗ Unsupported platform '${plat}' — only win32 / linux / darwin are wired.`] };
+}
+
+function spawnSyncPowershell(cmd: string): { err: string | null; out: string } {
+  try {
+    const isWin = platform() === "win32";
+    const r = isWin
+      ? spawnSync("powershell.exe", ["-NoProfile", "-Command", cmd], { encoding: "utf8" })
+      : spawnSync("sh", ["-c", cmd], { encoding: "utf8" });
+    if (r.status !== 0) return { err: (r.stderr || r.stdout || "non-zero exit").trim(), out: r.stdout ?? "" };
+    return { err: null, out: r.stdout ?? "" };
+  } catch (e) {
+    return { err: (e as Error).message, out: "" };
+  }
 }

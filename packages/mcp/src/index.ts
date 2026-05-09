@@ -43,7 +43,7 @@ import { recordObservation, recordKarmaEvent } from "./tools/_aletheia.js";
 import { listResources, readResource } from "./mcp_primitives/resources.js";
 import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
 import { completeArgument } from "./mcp_primitives/completion.js";
-import { lineage, versionCheck, karmaStreaks, nucleus } from "@mneme-ai/core";
+import { lineage, versionCheck, karmaStreaks, nucleus, inbox } from "@mneme-ai/core";
 
 export interface McpOptions {
   cwd: string;
@@ -130,6 +130,20 @@ function enrichWithSecondBrain(
 function wrapWithGlow(repoRoot: string, wisdom: string, toolName: string): string {
   try {
     const parts: string[] = [];
+
+    // ─── v1.23.0 — Inbox Force-Push channel ──────────────────────────
+    // Read up to 3 unsent inbox messages and PREPEND them to wisdom.
+    // This is how Mneme (especially the daemon) talks to the user FIRST,
+    // mid-conversation, without the user typing anything Mneme-related.
+    // popUnsent flips the sent flag so each message surfaces exactly once.
+    try {
+      const pending = inbox.popUnsent(repoRoot, 3);
+      const block = inbox.formatForWisdom(pending);
+      if (block) parts.push(block);
+    } catch {
+      // Best-effort. Never block a tool call on inbox I/O.
+    }
+
     parts.push(`✨ ${wisdom}`);
 
     // Streak banner — only when there's something noteworthy to surface.
