@@ -243,15 +243,83 @@ export function tick(repoRoot: string): TickResult {
   };
 }
 
-/** Apply N mutation cycles — adds small structured noise to the
- *  consolidation counter. v1.20 scaffold; v1.21 will mutate molecule
- *  recipes + karma deltas in-place to drive evolution. */
+/** Apply N mutation cycles — increments mutation counter (sync, fast).
+ *  For ACTUAL chromosome evolution, call `evolveOnce()` (async, requires
+ *  lineage modules + does I/O). Separated to keep `mutate` cheap for the
+ *  hot MCP dispatch path. */
 export function mutate(repoRoot: string, cycles = 1): NucleusState {
   const n = readNucleus(repoRoot);
   n.mutations += cycles;
   n.lastTick = new Date().toISOString();
   writeNucleus(repoRoot, n);
   return n;
+}
+
+/** v1.21 — REAL evolution: take the most-recent chromosome, apply
+ *  structured mutations (karma noise + molecule drift), persist as a
+ *  new chromosome with parent = original. Async to allow dynamic
+ *  import of the lineage barrel without a circular load.
+ *
+ *  Selection pressure is implicit: mutations that produce HIGHER
+ *  per-call verified rates persist (fertilize picks ancestors by
+ *  recency × karma, so fitter chromosomes win inheritance). Bad
+ *  mutations age out + drop from the top-3 window.
+ *
+ *  Returns the new chromosome ID, or null when no chromosome exists
+ *  to mutate from. */
+export async function evolveOnce(repoRoot: string): Promise<string | null> {
+  // Dynamic import avoids the circular load (lineage barrel re-exports
+  // nucleus.ts via core/index.ts).
+  const lineage = await import("./lineage/index.js");
+  const ids = lineage.listChromosomes(repoRoot);
+  if (ids.length === 0) return null;
+  const parent = lineage.loadChromosome(repoRoot, ids[0]!);
+
+  // 1. Karma noise: ±5% on each atom karma, bounded to [-100, +100].
+  const newKarma: typeof parent.atomKarmaDeltas = {};
+  for (const [name, k] of Object.entries(parent.atomKarmaDeltas)) {
+    const noise = (Math.random() - 0.5) * 0.1;
+    const next = k.karma * (1 + noise);
+    newKarma[name] = { ...k, karma: Math.max(-100, Math.min(100, Math.round(next * 100) / 100)) };
+  }
+
+  // 2. Molecule drift: pick the LOWEST-karma molecule, drop one atom.
+  let newMolecules = parent.molecules;
+  if (parent.molecules.length > 0) {
+    const sorted = [...parent.molecules].sort((a, b) => a.karma - b.karma);
+    const target = sorted[0]!;
+    if (target.atoms.length > 1) {
+      const dropIndex = Math.floor(Math.random() * target.atoms.length);
+      const newAtoms = target.atoms.filter((_, i) => i !== dropIndex);
+      newMolecules = parent.molecules.map((m) =>
+        m.name === target.name ? { ...m, atoms: newAtoms, name: newAtoms.join("__").slice(0, 80) } : m,
+      );
+    }
+  }
+
+  // 3. Persist as a new chromosome with parent = original.
+  const createdAt = new Date().toISOString();
+  const childDraft = {
+    schemaVersion: 1 as const,
+    id: lineage.buildChromosomeId(createdAt, "nucleus-mutation", parent.contentHash.slice(0, 8)),
+    createdAt,
+    vendor: "nucleus-mutation",
+    machineId: parent.machineId,
+    parents: [parent.id],
+    vectorClock: parent.vectorClock,
+    topic: `[mutation of ${parent.topic}]`,
+    atomKarmaDeltas: newKarma,
+    molecules: newMolecules,
+    courtVerdicts: parent.courtVerdicts,
+    confessOutcomes: parent.confessOutcomes,
+    voiceFingerprint: parent.voiceFingerprint,
+    constitutionCandidates: parent.constitutionCandidates,
+    lethalRecessives: parent.lethalRecessives,
+    session: { ...parent.session, endReason: "incremental" as const },
+  };
+  const child = lineage.persistChromosome(repoRoot, childDraft);
+  lineage.addToTree(repoRoot, child);
+  return child.id;
 }
 
 /** Snapshot the current DNA state as a single line the agent can quote. */

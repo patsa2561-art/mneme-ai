@@ -102,7 +102,7 @@ import {
   impliedVolatilityCommand,
   taxLossHarvestCommand,
 } from "./commands/quant-cli.js";
-import { registerWelcomeCommand, registerSporeCommands, registerLinCommands } from "./commands/mnemeiosis.js";
+import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands } from "./commands/mnemeiosis.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -2367,6 +2367,8 @@ export async function run(argv: string[]): Promise<void> {
   registerWelcomeCommand(program);
   registerSporeCommands(program);
   registerLinCommands(program);
+  // ─── NUCLEUS Infinity Wisdom Brain (v1.21.0) ──────────────────────
+  registerNucleusCommands(program);
 
   program.exitOverride((err) => {
     if (err.code === "commander.help" || err.code === "commander.helpDisplayed") process.exit(0);

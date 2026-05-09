@@ -11,7 +11,8 @@
  */
 
 import type { Command } from "commander";
-import { lineage } from "@mneme-ai/core";
+import { lineage, nucleusDaemon, nucleus } from "@mneme-ai/core";
+import { spawn } from "node:child_process";
 
 function writeJson(payload: unknown): void {
   process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
@@ -348,4 +349,90 @@ function parseFloatStr(s: string): number {
   const n = parseFloat(s);
   if (Number.isNaN(n)) throw new Error(`invalid number: ${s}`);
   return n;
+}
+
+// ─── mneme nucleus daemon ─────────────────────────────────────────────
+
+export function registerNucleusCommands(program: Command): void {
+  const nuc = program.command("nucleus").description("Infinity Wisdom Brain — persistent loop that grows DNA across sessions.");
+
+  nuc
+    .command("daemon")
+    .description("Start the persistent nucleus daemon (foreground). Use --detach to fork into background.")
+    .option("--detach", "Spawn a detached background process and return immediately.")
+    .option("--interval <ms>", "Tick interval in ms (default 30000).", parseIntStr)
+    .option("--json", "JSON output.")
+    .action(async (opts: { detach?: boolean; interval?: number } & CommonOpts) => {
+      const repoRoot = process.cwd();
+      const status = nucleusDaemon.daemonStatus(repoRoot);
+      if (status.running) {
+        out(opts, status, [`⚠ Nucleus daemon already running (pid ${status.pid}) — last tick ${status.lastTickSecondsAgo}s ago.`]);
+        return;
+      }
+      if (opts.detach) {
+        // Re-spawn ourselves with --no-detach so the child runs the loop.
+        const argv = process.argv;
+        const node = process.execPath;
+        const script = argv[1] ?? "";
+        const child = spawn(node, [script, "nucleus", "daemon", ...(opts.interval ? ["--interval", String(opts.interval)] : [])], {
+          detached: true,
+          stdio: "ignore",
+          cwd: repoRoot,
+        });
+        child.unref();
+        out(opts, { spawned: true, pid: child.pid }, [`✓ Spawned detached nucleus daemon (pid ${child.pid}).`, `  Heartbeat: \`mneme nucleus status\` or \`mneme.nucleus.heartbeat\` via MCP.`]);
+        return;
+      }
+      out(opts, { starting: true }, [`Starting nucleus daemon (foreground)... Ctrl+C to stop.`]);
+      try {
+        await nucleusDaemon.runDaemonLoop(repoRoot, {
+          intervalMs: opts.interval,
+          onTick: ({ tickCount, banner }) => {
+            if (!opts.json) process.stderr.write(`[tick ${tickCount}] ${banner}\n`);
+          },
+        });
+      } catch (e) {
+        out(opts, { error: (e as Error).message }, [`✗ ${(e as Error).message}`]);
+      }
+    });
+
+  nuc
+    .command("stop")
+    .description("Stop the running nucleus daemon (sends SIGTERM).")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const r = nucleusDaemon.stopDaemon(process.cwd());
+      out(opts, r, [r.stopped ? `✓ Stopped nucleus daemon (pid ${r.pid}).` : `⚠ ${r.reason}`]);
+    });
+
+  nuc
+    .command("status")
+    .description("Show nucleus daemon status (pid + uptime + last tick + DNA banner).")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const status = nucleusDaemon.daemonStatus(process.cwd());
+      const dna = nucleus.readNucleus(process.cwd());
+      out(opts, { ...status, nucleus: dna }, [
+        `Daemon: ${status.running ? `RUNNING (pid ${status.pid})` : "stopped"}`,
+        status.heartbeat ? `Last tick: ${status.lastTickSecondsAgo}s ago` : "",
+        status.heartbeat ? `Tick count: ${status.heartbeat.tickCount}` : "",
+        status.heartbeat ? `Mutations applied: ${status.heartbeat.mutationsApplied}` : "",
+        `DNA: ${nucleus.dnaBanner(dna)}`,
+        status.healthy ? `✓ healthy` : status.running ? `⚠ heartbeat stale` : "",
+      ].filter(Boolean));
+    });
+
+  nuc
+    .command("dna")
+    .description("Read the current DNA snapshot (tick / hash / wisdom score / lessons).")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const n = nucleus.readNucleus(process.cwd());
+      out(opts, n, [
+        nucleus.dnaBanner(n),
+        "",
+        `Last 5 lessons:`,
+        ...n.lessons.slice(-5).reverse().map((l) => `  • [tick ${l.tick}] ${l.text}`),
+      ]);
+    });
 }

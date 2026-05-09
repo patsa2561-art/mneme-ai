@@ -89,6 +89,7 @@ Commands:
   welcome [options]  >  Show the install handoff: what's auto-enabled + how to opt out (mirror of mneme.welcome MCP tool).
   spore  >  Cross-machine lineage sync (git-backed).
   lin  >  MneMeiosis Lineage — session inheritance across AI agents and machines.
+  nucleus  >  Infinity Wisdom Brain — persistent loop that grows DNA across sessions.
   help [command]  >  display help for command
 
 Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.

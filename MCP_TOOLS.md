@@ -2,7 +2,7 @@
 
 _Auto-generated from the live tool registry. Do not edit by hand — run_ `npx tsx packages/mcp/scripts/gen-tools-md.ts` _to refresh._
 
-**155 tools** across **9 categories** · catalog hash `5d86cba0a33d46dd` · generated 2026-05-09 05:58:49 UTC
+**157 tools** across **9 categories** · catalog hash `9f5369be259a0da0` · generated 2026-05-09 06:11:05 UTC
 
 ## What is this
 
@@ -12,7 +12,7 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 
 ## Categories
 
-- [**meta**](#meta) (68 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
+- [**meta**](#meta) (70 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
 - [**memory**](#memory) (7 tools) — Q&A, semantic search, citations — answers grounded in the repo's commit history.
 - [**people**](#people) (10 tools) — Contributors, knowledge atrophy, telepathic teammates, cultural alphas, semantic ownership.
 - [**audit**](#audit) (8 tools) — AI Session Audit — trust certificate for AI commits. Vendor-neutral.
@@ -88,7 +88,9 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 | `mneme.bot.spawn` | meta | You have a claim/bug to investigate from multiple angles in one shot — root cause + replication + history + security + side-effects + adversarial — and want a single consensus output. |
 | `mneme.nucleus.tick` | meta | After an interaction worth recording, OR at session start to pick up the latest evolved DNA + read recent lessons. |
 | `mneme.nucleus.dna` | meta | You want to see the nucleus's accumulated wisdom + recent lessons. |
-| `mneme.nucleus.mutate` | meta | You want to track mutation cycles applied to the nucleus (v1.20 scaffold). |
+| `mneme.nucleus.mutate` | meta | You want to evolve the lineage by introducing structured noise + selection pressure. |
+| `mneme.nucleus.heartbeat` | meta | You want to verify the nucleus daemon is alive between MCP sessions. |
+| `mneme.nucleus.export` | meta | You want to export anonymized DNA for a public benchmark or share. |
 | `mneme.smart_do` | meta | Fallback dispatcher — give it a NATURAL-LANGUAGE intent, it routes to the appropriate Mneme command and runs it |
 | `mneme.memory.ask` | memory | User asks WHY code exists or WHEN something was added — answers grounded in cited commits, not generated prose. |
 | `mneme.memory.why` | memory | Explain why a specific FILE (or line range within it) exists by combining git blame with related commits |
@@ -3701,9 +3703,9 @@ Read the current DNA snapshot of the Nucleus — tick number, DNA hash, wisdom s
 
 ### `mneme.nucleus.mutate`
 
-Apply N mutation cycles to the Nucleus. v1.20 scaffold: increments mutation counter for tracking. v1.21 will mutate molecule recipes + karma deltas with structured noise to drive evolution under selection pressure (verified outcomes promoted, hallucinations suppressed). Use WHEN you want to nudge the nucleus toward exploration vs exploitation.
+Apply N REAL mutation cycles (v1.21) — each cycle takes the most-recent chromosome, applies ±5% karma noise + drops one atom from the lowest-karma molecule, persists as a NEW chromosome with parent = original. Selection pressure is implicit: fertilize picks ancestors by recency × karma, so fitter mutations win inheritance over time. Use WHEN you want to push the nucleus toward exploration vs exploitation.
 
-**When to use:** You want to track mutation cycles applied to the nucleus (v1.20 scaffold).
+**When to use:** You want to evolve the lineage by introducing structured noise + selection pressure.
 
 <details><summary>Contract</summary>
 
@@ -3733,6 +3735,12 @@ Apply N mutation cycles to the Nucleus. v1.20 scaffold: increments mutation coun
     },
     "dnaHash": {
       "type": "string"
+    },
+    "mutatedChromosomeIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }
@@ -3742,9 +3750,132 @@ Apply N mutation cycles to the Nucleus. v1.20 scaffold: increments mutation coun
 - *"Mutate the nucleus once"*
 
 **Pitfalls:**
-- v1.20 scaffold: counts mutations but doesn't yet evolve molecule recipes (v1.21).
+- v1.21 ships REAL evolution. Each mutation creates a new chromosome on disk — don't run hundreds in a tight loop.
+- Returns null mutatedChromosomeIds when lineage is empty (nothing to mutate from).
 
 **Compose with:** `mneme.nucleus.tick` · `mneme.nucleus.dna`
+
+</details>
+
+### `mneme.nucleus.heartbeat`
+
+Check if the persistent nucleus daemon is alive (runs in background via `mneme nucleus daemon start`). Returns pid + uptime + tick count + last DNA banner + healthy flag. Use WHEN you want to verify the infinity loop is actually running outside of MCP sessions.
+
+**When to use:** You want to verify the nucleus daemon is alive between MCP sessions.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "running": {
+      "type": "boolean"
+    },
+    "pid": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "heartbeat": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "lastTickSecondsAgo": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "healthy": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Is the nucleus daemon alive?"*
+
+**Pitfalls:**
+- Returns running=false + healthy=false when no daemon was ever started (run `mneme nucleus daemon start` from a terminal).
+
+**Compose with:** `mneme.nucleus.tick` · `mneme.nucleus.dna`
+
+</details>
+
+### `mneme.nucleus.export`
+
+Export an anonymized snapshot of the nucleus DNA — wisdom score, growth metrics, per-vendor stats (vendor name + verified rate, no PII), recent lessons, mutation count. Designed for v1.22 public AI-vendor trust leaderboard at lineage.mneme.dev. Use WHEN you want to share your nucleus state externally without leaking repo content.
+
+**When to use:** You want to export anonymized DNA for a public benchmark or share.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "dnaHash": {
+      "type": "string"
+    },
+    "wisdomScore": {
+      "type": "number"
+    },
+    "tick": {
+      "type": "number"
+    },
+    "growth": {
+      "type": "object"
+    },
+    "vendors": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "lessons": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "mutations": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Export my nucleus DNA"*
+
+**Pitfalls:**
+- Output is suitable for sharing — vendor names + counts + scores only, no commit hashes / file paths / emails.
+- v1.22 will provide a one-line publish command; for now, take the JSON yourself.
+
+**Compose with:** `mneme.nucleus.dna` · `mneme.lineage.pedigree`
 
 </details>
 

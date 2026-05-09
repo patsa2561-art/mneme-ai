@@ -12,7 +12,7 @@
  * the persistent daemon + auto-tick on every MCP dispatch.
  */
 
-import { nucleus } from "@mneme-ai/core";
+import { nucleus, nucleusDaemon } from "@mneme-ai/core";
 import type { MnemeTool } from "./_types.js";
 
 export const nucleusTickTool: MnemeTool = {
@@ -122,12 +122,13 @@ export const nucleusMutateTool: MnemeTool = {
   name: "mneme.nucleus.mutate",
   category: "meta",
   description:
-    "Apply N mutation cycles to the Nucleus. v1.20 scaffold: increments " +
-    "mutation counter for tracking. v1.21 will mutate molecule recipes + " +
-    "karma deltas with structured noise to drive evolution under selection " +
-    "pressure (verified outcomes promoted, hallucinations suppressed). Use " +
-    "WHEN you want to nudge the nucleus toward exploration vs exploitation.",
-  whenToUse: "You want to track mutation cycles applied to the nucleus (v1.20 scaffold).",
+    "Apply N REAL mutation cycles (v1.21) — each cycle takes the most-recent " +
+    "chromosome, applies ±5% karma noise + drops one atom from the lowest-karma " +
+    "molecule, persists as a NEW chromosome with parent = original. Selection " +
+    "pressure is implicit: fertilize picks ancestors by recency × karma, so " +
+    "fitter mutations win inheritance over time. Use WHEN you want to push the " +
+    "nucleus toward exploration vs exploitation.",
+  whenToUse: "You want to evolve the lineage by introducing structured noise + selection pressure.",
   triggers: ["mutate nucleus", "evolve dna"],
   inputSchema: {
     type: "object",
@@ -141,20 +142,133 @@ export const nucleusMutateTool: MnemeTool = {
       mutations: { type: "number" },
       tick: { type: "number" },
       dnaHash: { type: "string" },
+      mutatedChromosomeIds: { type: "array", items: { type: "string" } },
     },
   },
   examples: [{ userQuery: "Mutate the nucleus once" }],
-  pitfalls: ["v1.20 scaffold: counts mutations but doesn't yet evolve molecule recipes (v1.21)."],
+  pitfalls: [
+    "v1.21 ships REAL evolution. Each mutation creates a new chromosome on disk — don't run hundreds in a tight loop.",
+    "Returns null mutatedChromosomeIds when lineage is empty (nothing to mutate from).",
+  ],
   composeWith: ["mneme.nucleus.tick", "mneme.nucleus.dna"],
   handler: async (rt, args) => {
     const cycles = Math.max(1, Math.min(100, typeof args["cycles"] === "number" ? (args["cycles"] as number) : 1));
+    const mutatedIds: string[] = [];
+    for (let i = 0; i < cycles; i++) {
+      const id = await nucleus.evolveOnce(rt.meta.rootPath);
+      if (id) mutatedIds.push(id);
+    }
     const n = nucleus.mutate(rt.meta.rootPath, cycles);
     return {
-      data: { mutations: n.mutations, tick: n.tick, dnaHash: n.dnaHash },
-      wisdom: `Applied ${cycles} mutation cycle${cycles === 1 ? "" : "s"} — nucleus now at ${n.mutations} total mutations · DNA ${n.dnaHash}.`,
+      data: { mutations: n.mutations, tick: n.tick, dnaHash: n.dnaHash, mutatedChromosomeIds: mutatedIds },
+      wisdom: `Applied ${cycles} mutation cycle${cycles === 1 ? "" : "s"} — ${mutatedIds.length} new mutated chromosome${mutatedIds.length === 1 ? "" : "s"} born · DNA ${n.dnaHash}. Selection pressure will pick fitter ones over time.`,
       confidence: { level: "high" },
     };
   },
 };
 
-export const nucleusTools: MnemeTool[] = [nucleusTickTool, nucleusDnaTool, nucleusMutateTool];
+// ─── nucleus.heartbeat — daemon liveness check ───────────────────────
+export const nucleusHeartbeatTool: MnemeTool = {
+  name: "mneme.nucleus.heartbeat",
+  category: "meta",
+  description:
+    "Check if the persistent nucleus daemon is alive (runs in background " +
+    "via `mneme nucleus daemon start`). Returns pid + uptime + tick count + " +
+    "last DNA banner + healthy flag. Use WHEN you want to verify the infinity " +
+    "loop is actually running outside of MCP sessions.",
+  whenToUse: "You want to verify the nucleus daemon is alive between MCP sessions.",
+  triggers: ["nucleus heartbeat", "daemon status"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: {
+    type: "object",
+    properties: {
+      running: { type: "boolean" },
+      pid: { type: ["number", "null"] },
+      heartbeat: { type: ["object", "null"] },
+      lastTickSecondsAgo: { type: ["number", "null"] },
+      healthy: { type: "boolean" },
+    },
+  },
+  examples: [{ userQuery: "Is the nucleus daemon alive?" }],
+  pitfalls: [
+    "Returns running=false + healthy=false when no daemon was ever started (run `mneme nucleus daemon start` from a terminal).",
+  ],
+  composeWith: ["mneme.nucleus.tick", "mneme.nucleus.dna"],
+  handler: async (rt) => {
+    const status = nucleusDaemon.daemonStatus(rt.meta.rootPath);
+    return {
+      data: status,
+      wisdom: status.running
+        ? `✓ Nucleus daemon alive (pid ${status.pid}) · ${status.heartbeat?.tickCount ?? 0} ticks · ${status.heartbeat?.mutationsApplied ?? 0} mutations applied · last tick ${status.lastTickSecondsAgo ?? "?"}s ago`
+        : `✗ No nucleus daemon running. Start with \`mneme nucleus daemon start\` to keep the infinity loop alive between MCP sessions.`,
+      confidence: { level: "high" },
+    };
+  },
+};
+
+// ─── nucleus.export — anonymized export for v1.22 leaderboard ───────
+export const nucleusExportTool: MnemeTool = {
+  name: "mneme.nucleus.export",
+  category: "meta",
+  description:
+    "Export an anonymized snapshot of the nucleus DNA — wisdom score, growth " +
+    "metrics, per-vendor stats (vendor name + verified rate, no PII), recent " +
+    "lessons, mutation count. Designed for v1.22 public AI-vendor trust " +
+    "leaderboard at lineage.mneme.dev. Use WHEN you want to share your " +
+    "nucleus state externally without leaking repo content.",
+  whenToUse: "You want to export anonymized DNA for a public benchmark or share.",
+  triggers: ["export dna", "nucleus snapshot"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: {
+    type: "object",
+    properties: {
+      dnaHash: { type: "string" },
+      wisdomScore: { type: "number" },
+      tick: { type: "number" },
+      growth: { type: "object" },
+      vendors: { type: "array", items: { type: "object" } },
+      lessons: { type: "array", items: { type: "object" } },
+      mutations: { type: "number" },
+    },
+  },
+  examples: [{ userQuery: "Export my nucleus DNA" }],
+  pitfalls: [
+    "Output is suitable for sharing — vendor names + counts + scores only, no commit hashes / file paths / emails.",
+    "v1.22 will provide a one-line publish command; for now, take the JSON yourself.",
+  ],
+  composeWith: ["mneme.nucleus.dna", "mneme.lineage.pedigree"],
+  handler: async (rt) => {
+    // Lazy-import lineage to avoid load on every MCP boot.
+    const { lineage } = await import("@mneme-ai/core");
+    const n = nucleus.readNucleus(rt.meta.rootPath);
+    const ped = lineage.buildPedigree(rt.meta.rootPath);
+    const data = {
+      dnaHash: n.dnaHash,
+      wisdomScore: n.wisdomScore,
+      tick: n.tick,
+      growth: n.growth,
+      vendors: ped.vendors.map((v) => ({
+        vendor: v.vendor,
+        chromosomeCount: v.chromosomeCount,
+        totalKarma: v.totalKarma,
+        verifiedRate: v.verifiedRate,
+      })),
+      lessons: n.lessons.slice(-10).map((l) => ({ tick: l.tick, text: l.text })),
+      mutations: n.mutations,
+      exportedAt: new Date().toISOString(),
+    };
+    return {
+      data,
+      wisdom: `Exported anonymized nucleus snapshot — wisdom ${n.wisdomScore} · tick ${n.tick} · ${ped.vendors.length} vendor${ped.vendors.length === 1 ? "" : "s"}.`,
+      confidence: { level: "high" },
+    };
+  },
+};
+
+export const nucleusTools: MnemeTool[] = [
+  nucleusTickTool,
+  nucleusDnaTool,
+  nucleusMutateTool,
+  nucleusHeartbeatTool,
+  nucleusExportTool,
+];

@@ -26,9 +26,10 @@
 
 | Hat | What it means in practice |
 |---|---|
-| 🧠 **Software Developer** | 12+ years shipping production software — backend, frontend, CLI, distributed systems. Strict TypeScript, deterministic test suites, security-first defaults. |
+| 🧠 **Software Developer** | 20+ years shipping production software — backend, frontend, CLI, distributed systems. Strict TypeScript, deterministic test suites, security-first defaults. |
 | ⚡ **AI Context Engineer** | I design the **memory layer** between AI agents and the codebases they operate on. The discipline that bridges "smart model" and "useful behavior" — context compression, retrieval, citation grounding, hallucination defense. |
-| 🧬 **MCP Systems Architect** | Architect of [Mneme](https://github.com/patsa2561-art/mneme-ai) — 149 MCP tools, 4 MCP primitives, 7 black-sheep firsts. Wrote the open ALETHEIA security spec + the MneMeiosis inheritance protocol that nobody else has shipped. |
+| 🧬 **MCP Systems Architect** | Architect of [Mneme](https://github.com/patsa2561-art/mneme-ai) — 155 MCP tools, 5 MCP primitives, 8 black-sheep firsts. Wrote the open ALETHEIA security spec + the MneMeiosis inheritance protocol that nobody else has shipped. |
+| 🧠 **Second-Brain Architect for AI** | I design the **persistent cognition layer** AI agents operate from. Not "RAG", not "long context", not "vector DB" — the actual nucleus of accumulated wisdom that survives session resets, machine swaps, and AI vendor switches. The Mneme NUCLEUS (v1.20+) is this discipline made concrete. |
 
 ---
 
