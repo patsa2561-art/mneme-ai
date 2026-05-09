@@ -149,6 +149,10 @@ export function registerLinCommands(program: Command): void {
         topVendor: ped?.vendors[0]?.vendor ?? null,
         spore,
       };
+      // v1.20.0 — when chromosomes=0, the user might be running CLI standalone
+      // without MCP. Point them to the right path so Mneme actually starts
+      // capturing context.
+      const empty = ids.length === 0 && !settings.optedOut;
       out(opts, data, [
         `Lineage: ${settings.optedOut ? "OPTED OUT" : "active"}`,
         `Identity fingerprint: ${identity.fingerprint}`,
@@ -156,6 +160,15 @@ export function registerLinCommands(program: Command): void {
         tree.head ? `Head: ${tree.head}` : "",
         ped?.vendors[0] ? `Top vendor: ${ped.vendors[0].vendor} (karma ${ped.vendors[0].totalKarma})` : "",
         `Spore: ${spore.configured ? `configured (${spore.remote?.url})` : "local-only"}`,
+        ...(empty ? [
+          "",
+          "⚠ Lineage is empty — chromosomes only get written when an AI agent",
+          "  uses Mneme via MCP. To start capturing context:",
+          "    1. Run `mneme mcp --install` (auto-configs Claude Code/Cursor/Continue)",
+          "    2. Restart your AI tool",
+          "    3. Ask the AI: 'call mneme.welcome'",
+          "  Then come back to this CLI to see chromosomes appear.",
+        ] : []),
       ].filter(Boolean));
     });
 

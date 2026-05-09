@@ -22,8 +22,95 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { versionCheck } from "@mneme-ai/core";
+import { versionCheck, lineage, karmaStreaks } from "@mneme-ai/core";
 import type { MnemeTool } from "./_types.js";
+
+// ─── mneme.system.health (v1.20.0) ──────────────────────────────────────
+//
+// Single-screen status of the live MCP server: uptime, lineage state,
+// streaks, version-check, ALETHEIA posture. Designed for AI agents to
+// call once at session start to decide "is Mneme ready and worth using?"
+// (answer is always YES, but the data tells the agent WHY).
+
+export const systemHealthTool: MnemeTool = {
+  name: "mneme.system.health",
+  category: "meta",
+  description:
+    "One-screen health status of the live MCP server — uptime, version " +
+    "(current vs latest), lineage state (chromosome count / identity / " +
+    "spore configured), karma streaks (verified / clean / court wins), " +
+    "and active feature flags. Use WHEN you want a fast 'is Mneme alive " +
+    "and ready' check at session start, OR to surface to the user 'here's " +
+    "what Mneme has been doing in the background'.",
+  whenToUse:
+    "First call after mneme.welcome to verify the MCP server is healthy + see what Mneme has been tracking on this repo.",
+  triggers: ["mneme health", "is mneme alive", "mneme heartbeat"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: {
+    type: "object",
+    properties: {
+      status: { type: "string", enum: ["healthy", "degraded"] },
+      version: { type: "string" },
+      uptimeMs: { type: "number" },
+      lineage: { type: "object" },
+      streaks: { type: "object" },
+      versionCheck: { type: "object" },
+      banner: { type: "string" },
+    },
+  },
+  examples: [
+    {
+      userQuery: "Is Mneme up?",
+      expectedOutput: "Returns { status, version, uptimeMs, lineage, streaks, banner }. Streaks include current verified-streak, clean-fuzz-streak, total verified, etc.",
+    },
+  ],
+  pitfalls: ["Reads cached state — if you just upgraded, restart the MCP server to pick up the new version."],
+  composeWith: ["mneme.welcome", "mneme.system.upgrade", "mneme.lineage.status"],
+  handler: async (rt) => {
+    const root = rt.meta.rootPath;
+    const startedAt = (globalThis as { __mnemeBootedAt?: number }).__mnemeBootedAt ?? Date.now();
+    const version = process.env["npm_package_version"] ?? "unknown";
+    const ids = lineage.listChromosomes(root);
+    const tree = lineage.readTree(root);
+    const sporeStatus = lineage.sporeStatus(root);
+    const identity = lineage.loadOrCreateIdentity(root);
+    const streaks = karmaStreaks.readStreaks(root);
+    const banner = karmaStreaks.streakBanner(streaks);
+    const verCheck = (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus ?? null;
+    const data = {
+      status: "healthy" as const,
+      version,
+      uptimeMs: Date.now() - startedAt,
+      lineage: {
+        identityFingerprint: identity.fingerprint,
+        chromosomeCount: ids.length,
+        head: tree.head,
+        sporeConfigured: sporeStatus.configured,
+        sporeRemote: sporeStatus.remote?.url ?? null,
+      },
+      streaks: {
+        verifiedStreak: streaks.verifiedStreak,
+        bestVerifiedStreak: streaks.bestVerifiedStreak,
+        cleanFuzzStreak: streaks.cleanFuzzStreak,
+        courtWinStreak: streaks.courtWinStreak,
+        totalVerified: streaks.totalVerified,
+        totalHallucinations: streaks.totalHallucinations,
+        unlockedAchievements: streaks.unlocked.length,
+      },
+      versionCheck: verCheck,
+      banner,
+    };
+    return {
+      data,
+      wisdom:
+        `Mneme v${version} is healthy · uptime ${Math.round(data.uptimeMs / 1000)}s · ` +
+        `${ids.length} chromosomes on disk · identity ${identity.fingerprint}` +
+        (banner ? ` · ${banner}` : ""),
+      confidence: { level: "high" },
+      followUp: ["mneme.welcome", "mneme.lineage.ancestors"],
+    };
+  },
+};
 
 function detectInstallMethod(): { method: "npm-global" | "npx" | "docker" | "unknown"; binary: string | null } {
   // Check `which`/`where` for mneme.

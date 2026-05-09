@@ -2,7 +2,7 @@
 
 _Auto-generated from the live tool registry. Do not edit by hand — run_ `npx tsx packages/mcp/scripts/gen-tools-md.ts` _to refresh._
 
-**150 tools** across **9 categories** · catalog hash `9cbfeac7a2515d8b` · generated 2026-05-09 04:44:11 UTC
+**155 tools** across **9 categories** · catalog hash `5d86cba0a33d46dd` · generated 2026-05-09 05:58:49 UTC
 
 ## What is this
 
@@ -12,7 +12,7 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 
 ## Categories
 
-- [**meta**](#meta) (63 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
+- [**meta**](#meta) (68 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
 - [**memory**](#memory) (7 tools) — Q&A, semantic search, citations — answers grounded in the repo's commit history.
 - [**people**](#people) (10 tools) — Contributors, knowledge atrophy, telepathic teammates, cultural alphas, semantic ownership.
 - [**audit**](#audit) (8 tools) — AI Session Audit — trust certificate for AI commits. Vendor-neutral.
@@ -84,6 +84,11 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 | `mneme.spore.sync` | meta | You want a single round-trip that pushes local + pulls remote. |
 | `mneme.spore.status` | meta | You want to inspect the current sync state. |
 | `mneme.system.upgrade` | meta | User said 'upgrade Mneme' OR mneme.welcome reported updateAvailable=true OR you want a one-screen status of current vs latest. |
+| `mneme.system.health` | meta | First call after mneme.welcome to verify the MCP server is healthy + see what Mneme has been tracking on this repo. |
+| `mneme.bot.spawn` | meta | You have a claim/bug to investigate from multiple angles in one shot — root cause + replication + history + security + side-effects + adversarial — and want a single consensus output. |
+| `mneme.nucleus.tick` | meta | After an interaction worth recording, OR at session start to pick up the latest evolved DNA + read recent lessons. |
+| `mneme.nucleus.dna` | meta | You want to see the nucleus's accumulated wisdom + recent lessons. |
+| `mneme.nucleus.mutate` | meta | You want to track mutation cycles applied to the nucleus (v1.20 scaffold). |
 | `mneme.smart_do` | meta | Fallback dispatcher — give it a NATURAL-LANGUAGE intent, it routes to the appropriate Mneme command and runs it |
 | `mneme.memory.ask` | memory | User asks WHY code exists or WHEN something was added — answers grounded in cited commits, not generated prose. |
 | `mneme.memory.why` | memory | Explain why a specific FILE (or line range within it) exists by combining git blame with related commits |
@@ -2455,10 +2460,16 @@ Summarize lineage state — opted-out flag, identity fingerprint, total chromoso
       "type": "number"
     },
     "head": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "topVendor": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "spore": {
       "type": "object"
@@ -3409,6 +3420,331 @@ Self-update orchestrator — checks npm registry for the latest mneme-ai version
 - On non-npm-global installs (npx / docker), the tool returns a SUGGESTED command instead of running it — those install methods don't have a clean self-upgrade path.
 
 **Compose with:** `mneme.welcome` · `mneme.whats_new`
+
+</details>
+
+### `mneme.system.health`
+
+One-screen health status of the live MCP server — uptime, version (current vs latest), lineage state (chromosome count / identity / spore configured), karma streaks (verified / clean / court wins), and active feature flags. Use WHEN you want a fast 'is Mneme alive and ready' check at session start, OR to surface to the user 'here's what Mneme has been doing in the background'.
+
+**When to use:** First call after mneme.welcome to verify the MCP server is healthy + see what Mneme has been tracking on this repo.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "healthy",
+        "degraded"
+      ]
+    },
+    "version": {
+      "type": "string"
+    },
+    "uptimeMs": {
+      "type": "number"
+    },
+    "lineage": {
+      "type": "object"
+    },
+    "streaks": {
+      "type": "object"
+    },
+    "versionCheck": {
+      "type": "object"
+    },
+    "banner": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Is Mneme up?"*
+  - returns: Returns { status, version, uptimeMs, lineage, streaks, banner }. Streaks include current verified-streak, clean-fuzz-streak, total verified, etc.
+
+**Pitfalls:**
+- Reads cached state — if you just upgraded, restart the MCP server to pick up the new version.
+
+**Compose with:** `mneme.welcome` · `mneme.system.upgrade` · `mneme.lineage.status`
+
+</details>
+
+### `mneme.bot.spawn`
+
+Spawn a coordinated squadron of 6 specialized sub-agents that fight ONE claim or bug from 6 angles in parallel and return a consensus verdict. Bots: 🔬 Diagnostician (root cause) · 🧪 Replicator (similar past bugs) · 📜 Historian (when/where/who) · 🛡 ALETHEIA (security scan) · 🔮 PreMortem (predict side effects) · 🏛 Court (adversarial cross-examine). Each bot calls 1-3 underlying Mneme tools and returns a verdict + confidence. The orchestrator merges into verdict_for / verdict_against / split / insufficient_data. Use WHEN you have a confident factual claim about the codebase that you want stress-tested from every direction before delivery.
+
+**When to use:** You have a claim/bug to investigate from multiple angles in one shot — root cause + replication + history + security + side-effects + adversarial — and want a single consensus output.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "claim": {
+      "type": "string",
+      "description": "The claim or bug description in plain English."
+    },
+    "bots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "diagnostician",
+          "replicator",
+          "historian",
+          "aletheia",
+          "premortem",
+          "court"
+        ]
+      },
+      "description": "Optional subset of bots. Default: all 6."
+    },
+    "filePath": {
+      "type": "string",
+      "description": "Optional file path to scope investigation."
+    },
+    "authorEmail": {
+      "type": "string",
+      "description": "Optional author to scope investigation."
+    }
+  },
+  "required": [
+    "claim"
+  ]
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "claim": {
+      "type": "string"
+    },
+    "consensus": {
+      "type": "string",
+      "enum": [
+        "verdict_for",
+        "verdict_against",
+        "split",
+        "insufficient_data"
+      ]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "recommendation": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "agreeing": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dissenting": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "totalMs": {
+      "type": "number"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Stress-test: 'src/legacy/auth.ts is dead code and safe to delete'"*
+  - args: `{"claim":"src/legacy/auth.ts is dead code and safe to delete"}`
+  - returns: Returns SquadronVerdict with all 6 bots' findings. Diagnostician + Historian search commits; Replicator scans lineage; ALETHEIA scans the claim; PreMortem checks revert history; Court runs adversarial cross-examine. Final consensus + confidence + recommendation.
+
+**Pitfalls:**
+- Each bot is heuristic-driven — none of them call an LLM. Confidence reflects the weight of agreement, not ground truth.
+- Performance: typically 200-1500ms total (bots run in parallel). Largest cost is git log for 500-1000 commits.
+- ALETHEIA bot will flag claims containing shell-meta or SSRF-shaped strings — useful safety net but can fire on legitimate technical claims that mention http://localhost / ../paths in passing.
+
+**Compose with:** `mneme.adversary.cross_examine` · `mneme.confess` · `mneme.grade.answer`
+
+</details>
+
+### `mneme.nucleus.tick`
+
+Apply one tick to the Infinity Wisdom Brain (the Nucleus). Aggregates current DNA from all chromosomes + streaks, computes growth deltas since last tick, synthesizes an optional new lesson, and persists. Returns the updated tick counter, DNA hash, wisdom score, and any lesson generated. Use WHEN you want to feed Mneme's nucleus a fresh observation cycle (e.g., after every meaningful interaction with the user, or at session start to inherit the latest evolved DNA).
+
+**When to use:** After an interaction worth recording, OR at session start to pick up the latest evolved DNA + read recent lessons.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {}
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "state": {
+      "type": "object"
+    },
+    "delta": {
+      "type": "object"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Tick the nucleus and tell me what evolved"*
+  - returns: Returns { state: { tick, dnaHash, wisdomScore, lessons }, delta: { growthSinceLastTick, wisdomScoreDelta, newLesson } }. wisdomScore is monotonically non-decreasing.
+
+**Pitfalls:**
+- Wisdom score is a heuristic — it reflects accumulated activity + verified outcomes, not absolute correctness.
+- Calling tick repeatedly with no new chromosomes / streak changes won't grow the score (sub-linear formula).
+- v1.20 ships the scaffold; auto-tick on every MCP dispatch lands in v1.21.
+
+**Compose with:** `mneme.nucleus.dna` · `mneme.nucleus.mutate` · `mneme.lineage.fertilize`
+
+</details>
+
+### `mneme.nucleus.dna`
+
+Read the current DNA snapshot of the Nucleus — tick number, DNA hash, wisdom score, growth metrics, and the last 50 synthesized lessons. Use WHEN you want to know what Mneme has learned about THIS repo + lineage so far, or to surface accumulated wisdom to the user.
+
+**When to use:** You want to see the nucleus's accumulated wisdom + recent lessons.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "lessonLimit": {
+      "type": "number",
+      "description": "Max lessons to return (default 10, max 50)."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "tick": {
+      "type": "number"
+    },
+    "bornAt": {
+      "type": "string"
+    },
+    "dnaHash": {
+      "type": "string"
+    },
+    "wisdomScore": {
+      "type": "number"
+    },
+    "growth": {
+      "type": "object"
+    },
+    "lessons": {
+      "type": "array"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"What has Mneme learned about my repo?"*
+  - returns: Returns the nucleus state — tick count, DNA hash, wisdom score (monotonically grows), and recent lessons.
+
+**Pitfalls:**
+- Returns the LAST tick's state — call mneme.nucleus.tick first if you want fresh aggregation.
+
+**Compose with:** `mneme.nucleus.tick` · `mneme.lineage.pedigree`
+
+</details>
+
+### `mneme.nucleus.mutate`
+
+Apply N mutation cycles to the Nucleus. v1.20 scaffold: increments mutation counter for tracking. v1.21 will mutate molecule recipes + karma deltas with structured noise to drive evolution under selection pressure (verified outcomes promoted, hallucinations suppressed). Use WHEN you want to nudge the nucleus toward exploration vs exploitation.
+
+**When to use:** You want to track mutation cycles applied to the nucleus (v1.20 scaffold).
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "cycles": {
+      "type": "number",
+      "description": "Number of mutation cycles. Default 1, max 100."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "mutations": {
+      "type": "number"
+    },
+    "tick": {
+      "type": "number"
+    },
+    "dnaHash": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Mutate the nucleus once"*
+
+**Pitfalls:**
+- v1.20 scaffold: counts mutations but doesn't yet evolve molecule recipes (v1.21).
+
+**Compose with:** `mneme.nucleus.tick` · `mneme.nucleus.dna`
 
 </details>
 

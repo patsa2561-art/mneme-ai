@@ -30,6 +30,11 @@ export interface McpPromptResult {
 
 const PROMPTS: McpPromptListItem[] = [
   {
+    name: "mneme-pre-flight",
+    description: "(v1.20.0) Pre-flight checklist the AI agent must run BEFORE delivering any user-facing answer. Confess + verify + grade. Returns a 6-step checklist + the tools to call for each.",
+    arguments: [{ name: "draft", description: "The draft answer to be checked.", required: false }],
+  },
+  {
     name: "refactor-safety",
     description: "Before merging an AI-written refactor, run a safety bundle: certify + verify + cross-examine.",
     arguments: [{ name: "commit", description: "Commit hash to gate (defaults to HEAD).", required: false }],
@@ -57,6 +62,39 @@ export function listPrompts(): McpPromptListItem[] {
 
 export function getPrompt(name: string, args: Record<string, string>): McpPromptResult {
   switch (name) {
+    case "mneme-pre-flight": {
+      const draft = args["draft"] ?? "<your draft answer here>";
+      return {
+        description: "Pre-flight checklist BEFORE delivering any user-facing answer.",
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: [
+                `Run the Mneme pre-flight checklist on the draft below — DO NOT deliver to the user until every step is GREEN.`,
+                ``,
+                `Draft:`,
+                `─────────────────────────────────────`,
+                draft,
+                `─────────────────────────────────────`,
+                ``,
+                `1. mneme.verify_claims({ draft })           → catch hallucinated commit hashes`,
+                `2. mneme.confess({ draft, selfConfidence, vendor })  → cross-check facts; record outcome`,
+                `3. mneme.adversary.cross_examine({ claim }) → red-team the strongest assertion in the draft`,
+                `4. mneme.bot.spawn({ claim })               → if the claim is high-stakes, run the full 6-bot squadron`,
+                `5. mneme.grade.answer({ originalQuery, aiDraft, sourceCategory, retryCount })  → final grade`,
+                `6. If grade is FAIL → rewrite using rewriteHints + restart at step 1.`,
+                ``,
+                `On every step that FAILS or returns "hallucination" / "motion_to_dismiss" — DO NOT proceed. Rewrite first.`,
+                ``,
+                `When all 6 steps pass: deliver the answer to the user with the streak banner appended ("✨ guided by Mneme · X verified streak").`,
+              ].join("\n"),
+            },
+          },
+        ],
+      };
+    }
     case "refactor-safety": {
       const commit = args["commit"] ?? "HEAD";
       return {

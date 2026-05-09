@@ -26,6 +26,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, isAbsolute, resolve as pathResolve } from "node:path";
+import { karmaStreaks } from "@mneme-ai/core";
 import type { MnemeTool } from "./_types.js";
 
 export type ConfessVerdict = "verified" | "partially_verified" | "hallucination" | "unverifiable";
@@ -296,9 +297,27 @@ export const confessTool: MnemeTool = {
     } catch {
       // Scoreboard is best-effort — never block confession on a write error.
     }
+    // v1.20.0 — record outcome in karma streaks; surface unlocks back
+    // to the agent so positive feedback flows real-time.
+    let unlockedBanner = "";
+    try {
+      const out = karmaStreaks.noteOutcome(rt.meta.rootPath, {
+        outcome:
+          report.verdict === "verified" ? "verified" :
+          report.verdict === "partially_verified" ? "partial" :
+          report.verdict === "hallucination" ? "hallucination" : "unverifiable",
+        vendor,
+        selfConfidence,
+      });
+      if (out.newlyUnlocked.length > 0) {
+        unlockedBanner = ` 🎉 UNLOCKED: ${out.newlyUnlocked.map((a) => `${a.glyph} ${a.title}`).join(" · ")}`;
+      } else if (out.state.verifiedStreak >= 3 && report.verdict === "verified") {
+        unlockedBanner = ` 🔥 ${out.state.verifiedStreak}-verified streak — keep it going!`;
+      }
+    } catch { /* best-effort */ }
     return {
       data: { ...report, vendorScoreboard: scoreboard },
-      wisdom: report.guidance,
+      wisdom: report.guidance + unlockedBanner,
       followUp:
         report.verdict === "hallucination"
           ? ["mneme.memory.search_commits", "mneme.adversary.cross_examine"]

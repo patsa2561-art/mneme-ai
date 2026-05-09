@@ -34,7 +34,9 @@ import { genomeMarketplaceTools } from "./_genome_marketplace.js";
 import { aletheiaTools, honeypotTools } from "./_aletheia.js";
 import { meshTools } from "./_mesh.js";
 import { lineageTools } from "./_lineage.js";
-import { systemUpgradeTool } from "./_upgrade.js";
+import { systemUpgradeTool, systemHealthTool } from "./_upgrade.js";
+import { botSpawnTool } from "./_squadron.js";
+import { nucleusTools } from "./_nucleus.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
@@ -58,6 +60,9 @@ export function buildAllTools(): MnemeTool[] {
     ...meshTools,
     ...lineageTools,
     systemUpgradeTool,
+    systemHealthTool,
+    botSpawnTool,
+    ...nucleusTools,
     smartDoTool,
     ...memoryTools,
     ...peopleTools,

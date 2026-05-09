@@ -43,7 +43,7 @@ import { recordObservation, recordKarmaEvent } from "./tools/_aletheia.js";
 import { listResources, readResource } from "./mcp_primitives/resources.js";
 import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
 import { completeArgument } from "./mcp_primitives/completion.js";
-import { lineage, versionCheck } from "@mneme-ai/core";
+import { lineage, versionCheck, karmaStreaks, nucleus } from "@mneme-ai/core";
 
 export interface McpOptions {
   cwd: string;
@@ -106,8 +106,15 @@ function enrichWithSecondBrain(
   const isGraderItself = tool.name === "mneme.grade.answer" || tool.name === "mneme.capabilities";
   const homework = isGraderItself ? undefined : homeworkForCategory(tool.category);
   const existing = response.secondBrain;
+
+  // ─── v1.20.0 — Mneme Glow brand + streak banner + lineage credit ───
+  // Make Mneme's contribution visible in EVERY response so the agent
+  // (and downstream user) feel the value at inference time.
+  const enrichedWisdom = wrapWithGlow(repoRoot, response.wisdom, tool.name);
+
   return {
     ...response,
+    wisdom: enrichedWisdom,
     secondBrain: {
       presentation: existing?.presentation,
       compose: existing?.compose && existing.compose.length > 0 ? existing.compose : compose,
@@ -115,6 +122,43 @@ function enrichWithSecondBrain(
       homework: existing?.homework ?? homework,
     },
   };
+}
+
+/** v1.20.0 — Mneme Glow: prefix wisdom with sparkle + append streak banner
+ *  and (when relevant) cross-AI lineage credit. Best-effort; falls through
+ *  to the original wisdom on any error. */
+function wrapWithGlow(repoRoot: string, wisdom: string, toolName: string): string {
+  try {
+    const parts: string[] = [];
+    parts.push(`✨ ${wisdom}`);
+
+    // Streak banner — only when there's something noteworthy to surface.
+    const streaks = karmaStreaks.readStreaks(repoRoot);
+    const banner = karmaStreaks.streakBanner(streaks);
+    if (banner) parts.push(`\n[${banner}]`);
+
+    // Lineage credit footer — show on memory/people/insights tools where
+    // inheriting context is most relevant. Only when chromosomes exist.
+    const showLineage =
+      toolName.startsWith("mneme.memory.") ||
+      toolName.startsWith("mneme.people.") ||
+      toolName.startsWith("mneme.insights.") ||
+      toolName === "mneme.welcome" ||
+      toolName === "mneme.capabilities";
+    if (showLineage) {
+      const ids = lineage.listChromosomes(repoRoot);
+      if (ids.length > 0) {
+        const ped = lineage.buildPedigree(repoRoot);
+        const vendors = ped.vendors.map((v) => v.vendor).slice(0, 3);
+        if (vendors.length > 0) {
+          parts.push(`\n[guided by Mneme · informed by ${ids.length} prior session${ids.length === 1 ? "" : "s"} across ${vendors.join(" + ")}]`);
+        }
+      }
+    }
+    return parts.join("");
+  } catch {
+    return wisdom;
+  }
 }
 
 // ─── v1.13.0 — Dynamic MCP wiring ────────────────────────────────────
@@ -235,6 +279,9 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const allTools = buildAllTools();
   const toolMap = buildToolMap();
   const dynamic = loadDynamicState(runtime.meta.rootPath);
+
+  // ─── v1.20.0 — record boot timestamp for mneme.system.health uptime ──
+  (globalThis as { __mnemeBootedAt?: number }).__mnemeBootedAt = Date.now();
 
   // ─── v1.19.2 — fire-and-forget version check at boot ──────────────
   // Hits the npm registry once per 24h (cached). Result stashed in
@@ -383,6 +430,20 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
         recordReplay(runtime.meta.rootPath, tool.name, args, enriched);
         // v1.18.0 — increment karma invocations.
         recordKarmaEvent(runtime.meta.rootPath, tool.name, "invocation");
+        // v1.20.0 — Infinity Wisdom Brain: auto-tick the nucleus on EVERY
+        // tool dispatch. This is the `while(is_talking) learn/teach`
+        // loop — as long as the AI agent talks to Mneme, the nucleus
+        // grows. Best-effort, never blocks dispatch.
+        try {
+          // Throttle: tick at most once every 5 seconds to avoid
+          // thrashing disk on rapid-fire calls. Reads global timestamp.
+          const g = globalThis as { __mnemeLastTickAt?: number };
+          const now = Date.now();
+          if (!g.__mnemeLastTickAt || now - g.__mnemeLastTickAt >= 5000) {
+            nucleus.tick(runtime.meta.rootPath);
+            g.__mnemeLastTickAt = now;
+          }
+        } catch { /* best-effort */ }
         return toCallResult(enriched);
       } catch (err) {
         return toErrorResult(
