@@ -885,8 +885,35 @@ Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON t
 - 📋 [CHANGELOG](./CHANGELOG.md)
 - 🗺 [ROADMAP](./ROADMAP.md)
 - 🐛 [Open an issue](https://github.com/patsa2561-art/mneme-ai/issues/new)
-- 🤝 [Partnership / Contact](./docs/CONTACT.md)
 - 📜 [License — MIT](./LICENSE)
+
+---
+
+## 👤 Creator · Maintainer · One-engineer team
+
+<table>
+<tr>
+<td width="180" align="center" valign="top">
+<a href="./docs/CONTACT.md"><img src="./docs/assets/profile-shinnapat.jpg" alt="Shinnapat Phunsriphatchalakul" width="140" style="border-radius: 50%;" /></a>
+</td>
+<td valign="top">
+
+### **Shinnapat Phunsriphatchalakul** ([@patsa2561-art](https://github.com/patsa2561-art))
+
+`Software Developer` · `AI Context Engineer` · `MCP Systems Architect`
+
+Sole creator + maintainer of Mneme. **Mneme is built and maintained by one engineer** — every line, every test, every release.
+
+[![Email](https://img.shields.io/badge/Email-patsa2561@gmail.com-EA4335?style=flat-square&logo=gmail&logoColor=white)](mailto:patsa2561@gmail.com)
+[![LINE](https://img.shields.io/badge/LINE_ID-paedotnet-00C300?style=flat-square&logo=line&logoColor=white)](https://line.me/ti/p/~paedotnet)
+[![WhatsApp](https://img.shields.io/badge/WhatsApp-+66_939455645-25D366?style=flat-square&logo=whatsapp&logoColor=white)](https://wa.me/66939455645)
+[![Profile](https://img.shields.io/badge/Full_profile-→_Partnership_%26_Contact-7C3AED?style=flat-square)](./docs/CONTACT.md)
+
+**Reach out for:** 🤝 partnership / integration · 🎯 acquihire · 🔬 research collaboration · 🏦 enterprise pilot
+
+</td>
+</tr>
+</table>
 
 ---
 

@@ -6,7 +6,7 @@
  * write-through.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { listChromosomes, loadChromosome } from "./chromosome.js";
 import { lineageRoot, treePath } from "./paths.js";
@@ -34,9 +34,8 @@ export function writeTree(repoRoot: string, tree: LineageTree): void {
   const path = treePath(repoRoot);
   // Atomic write.
   const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify(tree, null, 2), "utf8");
-  const { renameSync } = require("node:fs") as typeof import("node:fs");
   if (!existsSync(dirname(tmp))) mkdirSync(dirname(tmp), { recursive: true });
+  writeFileSync(tmp, JSON.stringify(tree, null, 2), "utf8");
   renameSync(tmp, path);
 }
 

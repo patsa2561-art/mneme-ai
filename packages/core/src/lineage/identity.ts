@@ -16,8 +16,8 @@
  * are idempotent.
  */
 
-import { generateKeyPairSync, createPrivateKey, createPublicKey, sign as cryptoSign, verify as cryptoVerify } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { generateKeyPairSync, createPrivateKey, createPublicKey, sign as cryptoSign, verify as cryptoVerify, createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, rmSync } from "node:fs";
 import { identityDir, identityPrivatePath, identityPublicPath } from "./paths.js";
 
 export interface LineageIdentity {
@@ -36,7 +36,6 @@ interface FullIdentity extends LineageIdentity {
 function fingerprintOf(publicPem: string): string {
   // Hash the canonical key (strip headers/whitespace) for stability.
   const compact = publicPem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
-  const { createHash } = require("node:crypto") as typeof import("node:crypto");
   return createHash("sha256").update(compact).digest("hex").slice(0, 16);
 }
 
@@ -93,6 +92,5 @@ export function verifyPayload(publicPem: string, payload: string | Buffer, signa
 
 /** Reset (only for tests) — wipe identity files so next load regenerates. */
 export function _resetIdentityForTests(repoRoot: string): void {
-  const { rmSync } = require("node:fs") as typeof import("node:fs");
   try { rmSync(identityDir(repoRoot), { recursive: true, force: true }); } catch { /* ignore */ }
 }

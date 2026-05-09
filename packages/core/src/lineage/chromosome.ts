@@ -12,7 +12,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, renameSync } from "node:fs";
 import { hostname } from "node:os";
 import { signPayload, verifyPayload, loadOrCreateIdentity } from "./identity.js";
 import { chromosomePath, chromosomesDir } from "./paths.js";
@@ -80,8 +80,6 @@ export function persistChromosome(
   // Atomic write: tmp + rename.
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, JSON.stringify(final, null, 2), "utf8");
-  // On Windows, rename over existing file is fine since v1.18.
-  const { renameSync } = require("node:fs") as typeof import("node:fs");
   renameSync(tmp, path);
   return final;
 }

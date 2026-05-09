@@ -20,8 +20,9 @@
  * via spawnSync — no JS git library needed.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, readdirSync, mkdtempSync, cpSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { lineageRoot, sporeDir, sporeRemotePath, sporeVectorClockPath, sporeLastSyncPath, identityDir } from "./paths.js";
 import type { SporeRemote } from "./types.js";
@@ -158,7 +159,7 @@ export function sporeStatus(repoRoot: string): SporeStatus {
   const chromosomeDir = join(lineageDir, "chromosomes");
   let count = 0;
   if (existsSync(chromosomeDir)) {
-    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    // readdirSync imported at top
     count = readdirSync(chromosomeDir).filter((f: string) => f.endsWith(".chromosome.json")).length;
   }
   const identityReady = existsSync(join(identityDir(repoRoot), "private.pem"));
@@ -218,7 +219,7 @@ export function sporePush(repoRoot: string, machineId: string): PushResult {
   const lineageDirAbs = lineageRoot(repoRoot);
   let count = 0;
   if (existsSync(lineageDirAbs)) {
-    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    // readdirSync imported at top
     const chromosomeDirAbs = join(lineageDirAbs, "chromosomes");
     if (existsSync(chromosomeDirAbs)) {
       count = readdirSync(chromosomeDirAbs).filter((f: string) => f.endsWith(".chromosome.json")).length;
@@ -251,8 +252,7 @@ function pushPlumbing(repoRoot: string, remote: SporeRemote): { ok: boolean; mes
   // --orphan mneme-lineage` once. Then we just commit + push from a
   // worktree. Dry-run gracefully if commands fail.
   try {
-    const { mkdtempSync, cpSync, rmSync } = require("node:fs") as typeof import("node:fs");
-    const { tmpdir } = require("node:os") as typeof import("node:os");
+    // mkdtempSync, cpSync, rmSync, tmpdir imported at top
     const wtPath = mkdtempSync(join(tmpdir(), "mneme-spore-wt-"));
     try {
       // Add a worktree for the orphan branch — create if missing.
@@ -328,7 +328,6 @@ export function sporePull(repoRoot: string): PullResult {
   const remoteFiles = (ls.stdout ?? "").trim().split("\n").filter(Boolean);
   // Local files we already have.
   const localDir = join(lineageRoot(repoRoot), "chromosomes");
-  const { readdirSync } = require("node:fs") as typeof import("node:fs");
   const localFiles = existsSync(localDir)
     ? readdirSync(localDir).filter((f: string) => f.endsWith(".chromosome.json")).map((f: string) => `.mneme/lineage/chromosomes/${f}`)
     : [];

@@ -191,13 +191,13 @@ describe("Cross-machine signature verification", () => {
     try { rmSync(repoB, { recursive: true, force: true }); } catch { /* ignore */ }
   });
 
-  it("a chromosome signed on machine A still verifies when loaded on machine B (signedBy travels with it)", () => {
+  it("a chromosome signed on machine A still verifies when loaded on machine B (signedBy travels with it)", async () => {
     const signed = persistChromosome(repoA, emptyChromosome());
     // Read raw bytes + write into repoB's chromosome dir to simulate spore transfer.
     const path = join(repoB, ".mneme/lineage/chromosomes", `${signed.id}.chromosome.json`);
-    const { mkdirSync, writeFileSync } = require("node:fs");
-    mkdirSync(join(repoB, ".mneme/lineage/chromosomes"), { recursive: true });
-    writeFileSync(path, JSON.stringify(signed, null, 2), "utf8");
+    const { mkdirSync: mk, writeFileSync: wf } = await import("node:fs");
+    mk(join(repoB, ".mneme/lineage/chromosomes"), { recursive: true });
+    wf(path, JSON.stringify(signed, null, 2), "utf8");
     // Load on repoB — repoB has its own identity, but the chromosome carries A's pubkey.
     const reloaded = loadChromosome(repoB, signed.id);
     expect(verifyChromosome(reloaded).valid).toBe(true);

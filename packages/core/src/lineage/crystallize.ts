@@ -14,6 +14,7 @@
  */
 
 import { hostname } from "node:os";
+import { createHash } from "node:crypto";
 import { machineFingerprint, persistChromosome, buildChromosomeId } from "./chromosome.js";
 import { scrubDeep } from "./pii_scrub.js";
 import {
@@ -68,8 +69,7 @@ export function crystallize(repoRoot: string, opts: CrystallizeOptions): Crystal
 
   const createdAt = new Date().toISOString();
   // Short hash of session ID + topic for the chromosome ID.
-  const shortHash = require("node:crypto")
-    .createHash("sha256")
+  const shortHash = createHash("sha256")
     .update(snap.sessionId)
     .update("|")
     .update(topic)
