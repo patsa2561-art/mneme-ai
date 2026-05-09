@@ -123,24 +123,6 @@ Your AI coding tool is brilliant but **amnesiac**. It never saw why JWT got roll
 
 ## 📋 What's new
 
-**v1.19.0 (latest)** — **MneMeiosis Protocol**. AI session inheritance across machines, AI vendors, and time. When you close your laptop, your AI agent's context dies — UNTIL Mneme. v1.19 adds 18 new MCP tools + 13 CLI commands that silently crystallize each session into a signed Chromosome, then fertilize the next session with Mendelian inheritance from up to 3 ancestors. Cross-machine sync via git (auto-detected origin, orphan branch). Cross-AI pedigree shows which vendor (Claude / Cursor / Codex) contributed which molecules. Full spec: [MNEMEIOSIS.md](./MNEMEIOSIS.md). **150+ tools total.** **4383 tests passing.**
-
-**v1.18.0** — the MCP-grade upgrade. **131 tools** (up from 99), full
-[MCP-spec-2025-06-18](https://modelcontextprotocol.io) primitive support
-(resources / prompts / completion), plus six MCP firsts no other server has:
-
-- 🏛 **Mneme Court** — `mneme.adversary.cross_examine` red-teams your own AI claims against repo history.
-- 🤞 **Truth Confession** — `mneme.confess` builds a per-AI-vendor lifetime trust scoreboard.
-- 📼 **HMAC Replay Log** — `mneme.replay.dump` / `.fingerprint` — SOC2-grade tamper-evident session traces.
-- ⏰ **Time-Travel MCP** — freeze the agent's view at any commit for hindsight analysis.
-- 🧬 **Genome Marketplace** — pack & share team conventions across repos (`npm install` for engineering wisdom).
-- 🛡 **ALETHEIA** — open MCP security framework with karma ledger + adversarial self-fuzz + 5 honeypot tools. See [ALETHEIA.md](./ALETHEIA.md).
-
-Plus a complete **Tool Contract Schema** (every tool now declares WHEN /
-INPUT / OUTPUT / EXAMPLES / PITFALLS / COMPOSE_WITH / JARGON) and a
-self-validating linter (`mneme.tool.lint`). The full v1.18 catalog lives in
-[MCP_TOOLS.md](./MCP_TOOLS.md).
-
 See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
 
 ---

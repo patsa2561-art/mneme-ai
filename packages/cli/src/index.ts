@@ -887,19 +887,39 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("doctor")
-    .description("Probe the environment (Ollama, OpenAI, hardware) and recommend the best embedder")
+    .description("Probe the environment (Ollama, OpenAI, hardware), check Mneme version against npm registry, and recommend next steps")
     .option("--json", "machine-readable output", false)
     .action(async (opts: { json?: boolean }) => {
       const { runFullProbe } = await import("./probe.js");
+      const { versionCheck } = await import("@mneme-ai/core");
       const probe = await runFullProbe();
+      // v1.23.1 — version mismatch is the single most-asked "is my Mneme
+      // okay?" check. doctor is the right place to surface it because
+      // users run doctor when something feels off.
+      let vCheck: Awaited<ReturnType<typeof versionCheck.checkVersion>> | null = null;
+      try { vCheck = await versionCheck.checkVersion(process.cwd(), getVersion()); } catch { /* best-effort */ }
+
       if (opts.json) {
-        process.stdout.write(JSON.stringify(probe, null, 2) + "\n");
+        process.stdout.write(JSON.stringify({ ...probe, mnemeVersion: vCheck }, null, 2) + "\n");
         process.exit(0);
       }
       const kleur = (await import("kleur")).default;
       const stars = "★".repeat(probe.recommendation.qualityStars) + "☆".repeat(5 - probe.recommendation.qualityStars);
       ui.banner();
-      process.stdout.write(`  ${kleur.bold().cyan("Environment probe")}\n`);
+      process.stdout.write(`  ${kleur.bold().cyan("Mneme version")}\n`);
+      if (vCheck && vCheck.latest) {
+        if (vCheck.updateAvailable) {
+          process.stdout.write(`    ${kleur.gray("installed ")}  ${kleur.bold(vCheck.current)}\n`);
+          process.stdout.write(`    ${kleur.gray("latest    ")}  ${kleur.bold().yellow(vCheck.latest)} ${kleur.yellow("(update available)")}\n`);
+          process.stdout.write(`\n    ${kleur.yellow().bold("👉 Upgrade with:")}\n`);
+          process.stdout.write(`       ${kleur.cyan().bold("$")} ${kleur.bold().white("mneme upgrade --force")}\n`);
+        } else {
+          process.stdout.write(`    ${kleur.gray("installed ")}  ${kleur.bold(vCheck.current)} ${kleur.green("(latest)")}\n`);
+        }
+      } else {
+        process.stdout.write(`    ${kleur.gray("installed ")}  ${kleur.bold(getVersion())} · ${kleur.gray("could not reach npm registry")}\n`);
+      }
+      process.stdout.write(`\n  ${kleur.bold().cyan("Environment probe")}\n`);
       process.stdout.write(`    ${kleur.gray("hardware ")}  ${probe.hardware.ramGB}GB RAM · ${probe.hardware.cpuCount} cpus · ${probe.hardware.platform}/${probe.hardware.arch} (${probe.hardware.tier})\n`);
       process.stdout.write(`    ${kleur.gray("ollama   ")}  ${probe.ollama.reachable ? kleur.green("reachable") : kleur.gray("not running")}${probe.ollama.hasEmbedModel ? kleur.green(" · embed model pulled") : probe.ollama.reachable ? kleur.yellow(" · embed model NOT pulled") : ""}\n`);
       process.stdout.write(`    ${kleur.gray("openai   ")}  ${probe.openai.hasKey ? kleur.green(`key set …${probe.openai.keyTail}`) : kleur.gray("no key")}\n`);
@@ -2383,6 +2403,32 @@ export async function run(argv: string[]): Promise<void> {
     if (err.code === "commander.version") process.exit(0);
     process.exit(err.exitCode ?? 1);
   });
+
+  // v1.23.1 — fire the npm version-check from the CLI too. Previously
+  // this only ran inside the MCP server boot path, so any user who
+  // hadn't wired Mneme as MCP never got an update notification +
+  // .mneme/CURRENT_VERSION.md never got written.
+  //
+  // Strategy: AWAIT only when the cache is stale/missing (otherwise the
+  // command would exit before the fire-and-forget IIFE writes the memo).
+  // Cache hit (95%+ of invocations once primed) = ≤1ms, no perceptible
+  // latency. Cache miss = ≤2s timeout to avoid hanging the CLI on a slow
+  // network. Total cost amortizes to ~0 once the 1h cache is warm.
+  try {
+    const { versionCheck } = await import("@mneme-ai/core");
+    const cached = versionCheck.readCachedVersionCheck(process.cwd(), getVersion());
+    const cacheAgeOk = cached !== null && (Date.now() - Date.parse(cached.lastChecked)) < 60 * 60 * 1000;
+    if (cacheAgeOk) {
+      // Refresh in background — current cache is good enough to satisfy this command.
+      void versionCheck.checkVersion(process.cwd(), getVersion()).catch(() => { /* ignore */ });
+    } else {
+      // Wait briefly so the memo + cache get written before this command exits.
+      await Promise.race([
+        versionCheck.checkVersion(process.cwd(), getVersion()).catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+      ]);
+    }
+  } catch { /* best-effort — never block CLI commands */ }
 
   try {
     await program.parseAsync(argv);

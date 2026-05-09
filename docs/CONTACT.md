@@ -52,15 +52,6 @@
 
 ---
 
-## $${\color{#fbbf24}\textbf{What I will NOT do}}$$
-
-- ❌ Cold-pitch follow-ups. If you don't reach out, I assume you're not interested.
-- ❌ Unpaid proof-of-concept work for large companies. The OSS code is already proof.
-- ❌ Equity-only deals without a clear path to either revenue or salary.
-- ❌ NDAs that block me from continuing to ship Mneme publicly.
-
----
-
 <div align="center">
 
 ### $${\color{#ec4899}\text{Mneme is built and maintained by one engineer.}}$$

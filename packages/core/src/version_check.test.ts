@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs"; // readFileSync used in v1.23.1 memo test
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkVersion, readCachedVersionCheck, semverGt } from "./version_check.js";
@@ -70,15 +70,25 @@ describe("checkVersion + cache", () => {
     expect(r?.updateAvailable).toBe(true);
   });
 
-  it("expired cache (>24h) triggers a re-check on the next call", async () => {
+  it("expired cache (>1h) triggers a re-check on the next call", async () => {
     mkdirSync(join(repo, ".mneme"), { recursive: true });
     writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({
       current: "1.19.0",
       latest: "0.0.1",
-      lastChecked: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(), // 25h old
+      lastChecked: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2h old
     }));
     const r = await checkVersion(repo, "1.19.0");
     // Either fresh from network (fromCache=false) or cache was bumped.
     expect(r.fromCache).toBe(false);
+  });
+
+  it("v1.23.1 — also writes .mneme/CURRENT_VERSION.md memo for AI agents", async () => {
+    await checkVersion(repo, "1.19.0");
+    const memoPath = join(repo, ".mneme/CURRENT_VERSION.md");
+    expect(existsSync(memoPath)).toBe(true);
+    const memo = readFileSync(memoPath, "utf8");
+    expect(memo).toContain("Mneme — current version status");
+    expect(memo).toContain("mneme-ai@1.19.0");
+    expect(memo).toContain("For AI agents reading this file");
   });
 });

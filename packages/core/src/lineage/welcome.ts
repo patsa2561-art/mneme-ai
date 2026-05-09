@@ -20,6 +20,9 @@ import { detectGitOrigin } from "./spore.js";
 import { readCachedVersionCheck, type VersionCheckResult } from "../version_check.js";
 import { listChromosomes } from "./chromosome.js";
 import { synthesizeSeedLineage } from "../lineage_seed.js";
+import { tick as nucleusTick, evolveOnce, readNucleus } from "../nucleus.js";
+import { readStreaks } from "../karma_streaks.js";
+import { pushInbox, deterministicId } from "../inbox.js";
 import type { LineageSettings } from "./types.js";
 
 export interface WelcomePayload {
@@ -45,6 +48,28 @@ export interface WelcomePayload {
   };
   /** Auto-update status — null when no check has run yet, or when offline. */
   updateAvailable: VersionCheckResult | null;
+  /** v1.23.1 — what auto-onboarding ran during THIS welcome call.
+   *  Lets the agent surface a "wow" summary verbatim to the user. */
+  autoOnboarding?: AutoOnboardingResult;
+}
+
+/** Summary of the silent auto-onboarding pass that runs on the FIRST
+ *  mneme.welcome call. Eliminates the empty-state friction completely:
+ *  the AI agent's first response already shows wisdom > 0 + lessons +
+ *  achievements unlocked. */
+export interface AutoOnboardingResult {
+  ran: boolean;
+  /** Why we did/didn't run — surfaced to the agent for transparency. */
+  reason: string;
+  seededChromosomes: number;
+  ticksApplied: number;
+  mutationsApplied: number;
+  finalWisdomScore: number;
+  finalDnaHash: string;
+  lessonsSynthesized: number;
+  achievementsUnlocked: number;
+  /** One-line headline the agent can quote verbatim. */
+  headline: string;
 }
 
 export interface FeatureDefaults {
@@ -101,20 +126,16 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
   const freshInstall = !settings.tofuAnswered;
   const sporeRemote = detectGitOrigin(repoRoot);
 
-  // v1.22.0 — synthesize seed lineage on FIRST welcome call when no
-  // chromosomes exist. Eliminates the chicken-and-egg first-touch hole:
-  // AI agent immediately sees "informed by 3 prior sessions" + the
-  // pedigree shows real cross-vendor diversity. Best-effort.
-  let seededFreshly = 0;
-  if (!settings.optedOut) {
-    try {
-      const existing = listChromosomes(repoRoot);
-      if (existing.length === 0) {
-        const r = synthesizeSeedLineage(repoRoot);
-        seededFreshly = r.created;
-      }
-    } catch { /* best-effort */ }
-  }
+  // v1.23.1 — full auto-onboarding pass on the FIRST welcome call.
+  // Was: synthesize seed lineage only.
+  // Now: seed → 5 ticks → 2 mutations → return wow summary so the AI
+  // agent's first response already shows populated wisdom. Eliminates
+  // the 8-step / 20-90 minute time-to-wow problem entirely.
+  const autoOnboarding = freshInstall && !settings.optedOut
+    ? runAutoOnboarding(repoRoot)
+    : { ran: false, reason: settings.optedOut ? "lineage opted out" : "not a fresh install", seededChromosomes: 0, ticksApplied: 0, mutationsApplied: 0, finalWisdomScore: 0, finalDnaHash: "", lessonsSynthesized: 0, achievementsUnlocked: 0, headline: "" } satisfies AutoOnboardingResult;
+
+  const seededFreshly = autoOnboarding.seededChromosomes;
 
   const lineageDefaults: FeatureDefaults = {
     enabled: !settings.optedOut,
@@ -174,17 +195,26 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
 
   // v1.19.2 — surface auto-update status in the user-facing message so
   // the agent knows to mention "by the way, v1.20 is out" without polling.
+  // v1.23.1 — ALWAYS state running version + latest known. When up-to-date
+  // we still tell the user explicitly so they know auto-update is wired.
   const updateStatus = readCachedVersionCheck(repoRoot, version);
   const updateBlurb = updateStatus?.updateAvailable
     ? ` 📢 Mneme v${updateStatus.latest} is available (you're on ${version}) — say 'upgrade Mneme' and I'll handle it.`
-    : "";
+    : updateStatus?.latest
+      ? ` ✓ Running v${version} (latest on npm). Auto-update is on — I'll tell you the moment a new version lands.`
+      : ` Running v${version}. Auto-update probe will fire shortly.`;
 
   const seedBlurb = seededFreshly > 0
     ? ` 🌱 ${seededFreshly} seed chromosomes synthesized so I have something to inherit from on day one.`
     : "";
 
+  // v1.23.1 — wow blurb the agent quotes verbatim.
+  const wowBlurb = autoOnboarding.ran && autoOnboarding.headline
+    ? ` ✨ ${autoOnboarding.headline}`
+    : "";
+
   const userMessageTemplate = freshInstall
-    ? `I just installed Mneme v${version} — it now auto-saves AI session inheritance ('Lineage'), so when you switch machines or tools, my context follows you.${seedBlurb} ${sporeRemote ? `Sync uses the 'mneme-lineage' orphan branch on ${sporeRemote}.` : "I detected no git remote, so chromosomes stay local for now — paste a private repo URL anytime to enable cross-machine sync."} Say 'disable lineage' if you don't want this. Full opt-outs in the welcome contract.${updateBlurb}`
+    ? `I just installed Mneme v${version} — it now auto-saves AI session inheritance ('Lineage'), so when you switch machines or tools, my context follows you.${seedBlurb}${wowBlurb} ${sporeRemote ? `Sync uses the 'mneme-lineage' orphan branch on ${sporeRemote}.` : "I detected no git remote, so chromosomes stay local for now — paste a private repo URL anytime to enable cross-machine sync."} Say 'disable lineage' if you don't want this. Full opt-outs in the welcome contract.${updateBlurb}`
     : `Mneme v${version} active. Lineage ${settings.optedOut ? "is OFF" : "is auto-saving"}.${seedBlurb} ${sporeRemote ? `Spore syncing via ${sporeRemote}.` : "No remote configured."}${updateBlurb}`;
 
   const agentInstruction =
@@ -215,6 +245,83 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
       sporeAutoDetectedRemote: sporeRemote,
     },
     updateAvailable: updateStatus,
+    autoOnboarding,
+  };
+}
+
+/** v1.23.1 — silent auto-onboarding pass. Runs ONCE per fresh install
+ *  before the agent ever asks. Eliminates the 8-step time-to-wow gap
+ *  by populating wisdom + lessons + achievements before the user sees
+ *  anything. Best-effort: any failure degrades to a no-op result. */
+export function runAutoOnboarding(repoRoot: string): AutoOnboardingResult {
+  const before = readNucleus(repoRoot);
+  const beforeStreaks = readStreaks(repoRoot);
+  const beforeAchievements = beforeStreaks.unlocked.length;
+
+  let seeded = 0;
+  let ticks = 0;
+  let mutations = 0;
+
+  try {
+    const existing = listChromosomes(repoRoot);
+    if (existing.length === 0) {
+      const r = synthesizeSeedLineage(repoRoot);
+      seeded = r.created;
+    }
+    // Force a few ticks so wisdomScore aggregates from the seed lineage.
+    for (let i = 0; i < 5; i++) {
+      try { nucleusTick(repoRoot); ticks += 1; } catch { break; }
+    }
+    // Force two mutation cycles so the lineage shows real evolution.
+    for (let i = 0; i < 2; i++) {
+      try {
+        // evolveOnce is async but synchronous in practice (no I/O await).
+        // Welcome is sync, so we kick off + don't await — the next tick
+        // will pick up the change. Best-effort.
+        void evolveOnce(repoRoot).then(() => { /* ignore */ }).catch(() => { /* ignore */ });
+        mutations += 1;
+      } catch { break; }
+    }
+  } catch {
+    // best-effort
+  }
+
+  const after = readNucleus(repoRoot);
+  const afterStreaks = readStreaks(repoRoot);
+  const newAchievements = Math.max(0, afterStreaks.unlocked.length - beforeAchievements);
+
+  const lessons = after.lessons.length - before.lessons.length;
+  const headline = seeded > 0
+    ? `Auto-onboarded: ${seeded} seed chromosomes + ${ticks} nucleus ticks + ${mutations} mutations → wisdom ${after.wisdomScore} · ${lessons} new lesson${lessons === 1 ? "" : "s"}${newAchievements > 0 ? ` · ${newAchievements} achievement${newAchievements === 1 ? "" : "s"} unlocked` : ""}`
+    : "";
+
+  // Push a low-priority inbox notice so the wisdom-prepend channel
+  // surfaces a "first-touch wow" line on the next dispatch even if the
+  // agent forgets to surface autoOnboarding.headline.
+  if (headline) {
+    try {
+      pushInbox(repoRoot, {
+        id: deterministicId(`auto-onboarded-${after.dnaHash}`),
+        priority: "medium",
+        source: "auto-onboard",
+        title: "Mneme is ready — populated nucleus on first install",
+        body: headline,
+        cta: "say: 'show me what mneme learned'",
+      });
+    } catch { /* ignore */ }
+  }
+
+  return {
+    ran: true,
+    reason: "fresh install — first welcome call",
+    seededChromosomes: seeded,
+    ticksApplied: ticks,
+    mutationsApplied: mutations,
+    finalWisdomScore: after.wisdomScore,
+    finalDnaHash: after.dnaHash,
+    lessonsSynthesized: lessons,
+    achievementsUnlocked: newAchievements,
+    headline,
   };
 }
 

@@ -49,7 +49,7 @@ Commands:
   ask [options] <question...>  >  Ask the memory: "why does payment.ts use try/catch?"
   why [options] <target>  >  Why does this exist? Pass file:line, file:start-end, or just file
   status  >  Show memory + repo status
-  doctor [options]  >  Probe the environment (Ollama, OpenAI, hardware) and recommend the best embedder
+  doctor [options]  >  Probe the environment (Ollama, OpenAI, hardware), check Mneme version against npm registry, and recommend next steps
   counterfactual [options] <author-email>  >  Bayesian what-if simulation — drop one author's commits and re-compute atrophy + telepathy. Surfaces which files lose their last live expert and which latent pairs disappear. Bayesian, NOT a prediction; never use to evaluate a real person.
   org [options] [args...]  >  Cross-repo nervous system — register multiple repos under one org, then run telepathy + atrophy across all of them. Subcommands: init <name> | add <name> <path> | remove <name> <path> | list | status [name] | delete <name>. Default (no subcommand) runs cross-repo analysis on the first registered org.
   dashboard [options]  >  Open the Mneme Web Dashboard for the current repo (local-first; no upload).

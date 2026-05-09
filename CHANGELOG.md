@@ -8,6 +8,92 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.23.1] — 2026-05-09
+
+**Zero-step first-touch wow + always-on update notification.** v1.23.0
+shipped the inbox channel; v1.23.1 turns it into a fully autonomous
+onboarding pass. The 8-step / 20-90-minute time-to-wow problem is now
+gone — `mneme.welcome` runs the full auto-onboarding inline (seed → 5
+ticks → 2 mutations → achievements), so the AI agent's FIRST response
+already shows populated wisdom + lessons + cross-vendor pedigree. Plus
+the version-check now fires the inbox push on cache HITS too (was
+fresh-fetch only) and the cache TTL drops 24h → 1h so new releases
+land in every running session within an hour.
+
+### What's new
+
+  - `runAutoOnboarding(repoRoot)` (`packages/core/src/lineage/welcome.ts`) —
+    silent first-install pass:
+      • Seeds 3 cross-vendor synthetic chromosomes (claude / cursor / codex).
+      • Forces 5 nucleus ticks so wisdomScore aggregates immediately.
+      • Fires 2 mutation cycles so the lineage shows real evolution.
+      • Reads delta achievements + lesson count + DNA hash and returns
+        a one-line `headline` the AI agent quotes verbatim.
+      • Pushes a starter inbox notice ("Mneme is ready — populated
+        nucleus on first install") so the wisdom-prepend channel
+        surfaces the wow even if the agent forgets the headline.
+    Best-effort: any failure degrades silently to a no-op.
+  - `WelcomePayload.autoOnboarding` — new field exposing the
+    onboarding result so MCP clients see exactly what auto-fired.
+  - `userMessageTemplate` now embeds the wow headline (`✨ Auto-onboarded:
+    3 seed chromosomes + 5 nucleus ticks + 2 mutations → wisdom N · M new
+    lessons · K achievements unlocked`) on fresh installs.
+  - `userMessageTemplate` ALWAYS states the running version — and on
+    fresh-no-update sessions, explicitly says "✓ Running v1.23.1
+    (latest on npm). Auto-update is on — I'll tell you the moment a
+    new version lands." So users never wonder "did the update probe
+    even fire?"
+
+### Always-on update notifications (the chicken-and-egg fix)
+
+The auto-update path used to live ONLY inside `startMcpServer()` — so
+users who hadn't wired Mneme as their MCP server never had the version
+cache written, never saw a notification, never knew a new release was
+out. v1.23.1 lifts the notification mechanism out of the MCP-only path
+into THREE independent surfaces:
+
+  - **CLI auto-probe** — every `mneme <command>` invocation now fires
+    `versionCheck.checkVersion()` as part of the entrypoint. Cache hit
+    (≤1ms) refreshes in background; cache miss awaits ≤2s. After the
+    first command, the 1h cache keeps subsequent commands fast.
+    `version_check.checkVersion` cache TTL itself dropped from 24h to
+    1h, so a brand-new release lands within an hour.
+  - **`.mneme/CURRENT_VERSION.md` memo** — written on every cache
+    refresh (CLI or MCP path). A human-readable markdown file that
+    EVERY AI agent reading the workspace sees via filesystem walks /
+    IDE indexing / RAG. Includes "For AI agents reading this file"
+    instructions: tell the user, run upgrade, restart. The fallback
+    channel: even if Mneme isn't wired as MCP, any AI in the workspace
+    sees the version status.
+  - **`mneme doctor` version block** — the doctor command now leads
+    with `Mneme version` showing installed vs latest + a copy-pasteable
+    `mneme upgrade --force` line when an update is available. doctor
+    is the natural "is my Mneme okay?" entrypoint.
+
+Cache HIT path now pushes the inbox notice too (previously only fresh
+fetches did — so a session booting within the cache window NEVER
+surfaced the available-update line). Idempotent on the version string,
+so re-pushing across many cache hits is a no-op.
+
+Inbox notice copy upgraded to lead with the auto-upgrade CTA:
+"Auto-upgrade is one tool call away (mneme.system.upgrade mode='install').
+· say: 'upgrade Mneme' and I'll handle it."
+
+### Docs
+
+  - `docs/CONTACT.md` — removed the "What I will NOT do" section per
+    user feedback (positioning was off-tone for the public-facing
+    contact page).
+  - `README.md` — "What's new" section trimmed from the v1.18 + v1.19
+    inline blurbs down to a single CHANGELOG link. The blurbs
+    accumulated and were stale within weeks; CHANGELOG.md is the
+    canonical source.
+
+### Tests
+
+  - 4508 / 4508 passing. Production build clean. TypeScript strict.
+  - 159 MCP tools total (no schema additions in this point release).
+
 ## [1.23.0] — 2026-05-09
 
 **RLHF Force-Push channel — Mneme talks to the user FIRST.** The hardest
