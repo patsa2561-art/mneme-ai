@@ -94,6 +94,51 @@ function writeStreaks(repoRoot: string, s: StreaksState): void {
   } catch { /* best-effort */ }
 }
 
+/** v1.23.2 — recompute the `unlocked` array from current state. Used by
+ *  the seed flow + by callers that mutate state outside noteOutcome. */
+export function recomputeAchievements(s: StreaksState): Achievement[] {
+  const existing = new Set(s.unlocked.map((a) => a.id));
+  const now = new Date().toISOString();
+  for (const a of ACHIEVEMENTS) {
+    if (!existing.has(a.id) && a.check(s)) {
+      s.unlocked.push({ id: a.id, glyph: a.glyph, title: a.title, detail: a.detail, unlockedAt: now });
+    }
+  }
+  return s.unlocked;
+}
+
+/** v1.23.2 — plant a synthetic streak history matching the seed lineage.
+ *  Resolves the contradiction where seed lineage gave 18 verified outcomes
+ *  but bestVerifiedStreak stayed 0 + no achievements unlocked. After this,
+ *  `mneme.welcome` on a fresh install shows 6 unlocked achievements
+ *  immediately, completing the wow loop. */
+export function seedStreaksForDemo(repoRoot: string): StreaksState {
+  const existing = readStreaks(repoRoot);
+  // If user already has REAL streak data, don't clobber it.
+  if (existing.totalConfessions > 0 || existing.unlocked.length > 0) return existing;
+  const s: StreaksState = {
+    totalConfessions: 18,
+    totalVerified: 18,
+    totalHallucinations: 0,
+    totalCourtCases: 5,
+    totalFuzzCatches: 10,
+    verifiedStreak: 7,
+    cleanFuzzStreak: 10,
+    courtWinStreak: 5,
+    bestVerifiedStreak: 7,
+    byVendor: {
+      "seed:claude-opus-4-7": { confessions: 7, verified: 7, hallucinations: 0, avgSelfConfidence: 0.81 },
+      "seed:cursor-cmd-k":    { confessions: 5, verified: 5, hallucinations: 0, avgSelfConfidence: 0.74 },
+      "seed:codex-cli":       { confessions: 6, verified: 6, hallucinations: 0, avgSelfConfidence: 0.79 },
+    },
+    unlocked: [],
+    lastUpdate: new Date().toISOString(),
+  };
+  recomputeAchievements(s);
+  writeStreaks(repoRoot, s);
+  return s;
+}
+
 export interface OutcomeRecord {
   outcome: Outcome;
   vendor?: string;

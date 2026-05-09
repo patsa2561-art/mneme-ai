@@ -22,6 +22,7 @@
 
 import { addToTree } from "./lineage/tree.js";
 import { listChromosomes, persistChromosome, buildChromosomeId } from "./lineage/chromosome.js";
+import { seedStreaksForDemo } from "./karma_streaks.js";
 import type { Chromosome } from "./lineage/types.js";
 
 export interface SeedResult {
@@ -40,10 +41,12 @@ interface SeedSpec {
   ageDays: number; // how far back to date the chromosome
 }
 
+// v1.23.2 — ASCII-only topic strings. Em-dash bytes mojibake on Windows
+// when downstream tools open chromosome files with the system codepage.
 const SEEDS: SeedSpec[] = [
   {
     vendor: "seed:claude-opus-4-7",
-    topic: "[seed] auth refactor — JWT verify timeout",
+    topic: "[seed] auth refactor -- JWT verify timeout",
     atomCount: 7,
     baselineKarma: 4,
     molecule: "memory_ask__audit_certify",
@@ -51,7 +54,7 @@ const SEEDS: SeedSpec[] = [
   },
   {
     vendor: "seed:cursor-cmd-k",
-    topic: "[seed] regression hunt — payment webhook idempotency",
+    topic: "[seed] regression hunt -- payment webhook idempotency",
     atomCount: 5,
     baselineKarma: 3,
     molecule: "people_atrophy__memory_why",
@@ -120,7 +123,7 @@ function buildSeedDraft(spec: SeedSpec, machineId: string): Omit<Chromosome, "co
     voiceFingerprint: {
       avgSentenceLen: 0,
       topPhrases: [],
-      topTopics: [spec.topic.replace(/^\[seed\]\s*/, "").split("—")[0]?.trim() ?? "general"],
+      topTopics: [spec.topic.replace(/^\[seed\]\s*/, "").split("--")[0]?.trim() ?? "general"],
     },
     constitutionCandidates: [],
     lethalRecessives: [],
@@ -158,5 +161,10 @@ export function synthesizeSeedLineage(
       // best-effort
     }
   }
+  // v1.23.2 — also plant a karma streak history matching the seeds, so
+  // the welcome contract surfaces unlocked achievements immediately.
+  // Without this, the seed lineage gave "totalVerified=18 but
+  // bestVerifiedStreak=0" -- a self-contradicting state.
+  try { seedStreaksForDemo(repoRoot); } catch { /* best-effort */ }
   return { created: ids.length, vendors, ids, alreadyExisted: false };
 }

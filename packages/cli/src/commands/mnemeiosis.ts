@@ -539,24 +539,85 @@ export function registerNucleusCommands(program: Command): void {
       }
     });
 
-  // ─── mneme nucleus seed --demo (v1.23.0) ─────────────────────────────
+  // mneme nucleus seed --demo (v1.23.0; --auto-start --watch in v1.23.2)
   nuc
     .command("seed")
     .description("Plant synthetic seed chromosomes so the daemon has something to aggregate (great for instant wow + offline demos).")
     .option("--demo", "Plant the 3-vendor synthetic lineage (claude / cursor / codex).")
     .option("--force", "Re-plant even if synthetic seeds already exist.")
+    .option("--auto-start", "After seeding, spawn the nucleus daemon detached so it ticks immediately.")
+    .option("--watch", "Tail the heartbeat in this terminal until Ctrl+C (implies --auto-start).")
     .option("--json", "JSON output.")
-    .action(async (opts: { demo?: boolean; force?: boolean } & CommonOpts) => {
+    .action(async (opts: { demo?: boolean; force?: boolean; autoStart?: boolean; watch?: boolean } & CommonOpts) => {
       const root = process.cwd();
       if (!opts.demo) {
         out(opts, { hint: "use --demo" }, [`Pass --demo to plant 3 synthetic seed chromosomes (different AI vendors).`]);
         return;
       }
       const r = lineageSeed.synthesizeSeedLineage(root, { force: !!opts.force });
-      out(opts, r, [
-        `✓ Planted ${r.created} synthetic chromosome${r.created === 1 ? "" : "s"} (vendors: ${r.vendors.join(", ")})`,
-        r.created === 0 ? `  (already seeded — pass --force to re-plant)` : `  Now run \`mneme nucleus daemon --detach\` then \`mneme nucleus tail\` to watch evolution.`,
-      ]);
+      const seedLines = [
+        `OK Planted ${r.created} synthetic chromosome${r.created === 1 ? "" : "s"} (vendors: ${r.vendors.join(", ")})`,
+        r.created === 0 ? `  (already seeded -- pass --force to re-plant)` : `  Karma streak history seeded too: 18 verified, achievements unlocked.`,
+      ];
+      if (!opts.autoStart && !opts.watch) {
+        out(opts, r, [...seedLines, `  Next: \`mneme nucleus seed --demo --auto-start --watch\` to spawn daemon + tail in one shot.`]);
+        return;
+      }
+      // auto-start: spawn detached daemon
+      const status = nucleusDaemon.daemonStatus(root);
+      let spawnedPid: number | null = null;
+      if (status.running) {
+        seedLines.push(`  Daemon already running (pid ${status.pid}).`);
+      } else {
+        const argv = process.argv;
+        const node = process.execPath;
+        const script = argv[1] ?? "";
+        const child = spawn(node, [script, "nucleus", "daemon"], {
+          detached: true,
+          stdio: "ignore",
+          cwd: root,
+        });
+        child.unref();
+        spawnedPid = child.pid ?? null;
+        seedLines.push(`  Spawned detached nucleus daemon (pid ${spawnedPid}).`);
+      }
+      if (opts.json) {
+        writeJson({ ...r, spawnedPid, watchMode: !!opts.watch });
+        return;
+      }
+      for (const line of seedLines) writeText(line);
+      if (!opts.watch) return;
+      writeText("");
+      writeText(`Watching .mneme/nucleus.heartbeat.json -- Ctrl+C to stop.`);
+      const path = join(root, ".mneme", "nucleus.heartbeat.json");
+      let lastMtime = 0;
+      let lastTick = -1;
+      function emitHeartbeat(): void {
+        const hb = nucleusDaemon.readHeartbeat(root);
+        if (!hb) return;
+        if (hb.tickCount === lastTick) return;
+        lastTick = hb.tickCount;
+        const dna = nucleus.readNucleus(root);
+        const lessonLine = dna.lessons.length > 0 ? dna.lessons[dna.lessons.length - 1]?.text ?? "" : "";
+        writeText(`[tick ${hb.tickCount}] wisdom=${dna.wisdomScore} mutations=${hb.mutationsApplied} ${lessonLine ? "+ " + lessonLine : ""}`);
+      }
+      try {
+        if (existsSync(path)) lastMtime = statSync(path).mtimeMs;
+        emitHeartbeat();
+        const w = watch(join(root, ".mneme"), { persistent: true }, (_evt, file) => {
+          if (file === "nucleus.heartbeat.json" && existsSync(path)) {
+            const m = statSync(path).mtimeMs;
+            if (m !== lastMtime) {
+              lastMtime = m;
+              emitHeartbeat();
+            }
+          }
+        });
+        process.on("SIGINT", () => { w.close(); process.exit(0); });
+        await new Promise<void>(() => { /* hold forever; SIGINT exits */ });
+      } catch (e) {
+        writeText(`(watch error: ${(e as Error).message} -- daemon still running detached)`);
+      }
     });
 
   // ─── mneme nucleus install --as-service (v1.23.0) ────────────────────

@@ -30,6 +30,10 @@ const HEARTBEAT_FILE = ".mneme/nucleus.heartbeat.json";
 
 const NUCLEUS_INTERVAL_MS = 30 * 1000;          // tick every 30s
 const MUTATION_THRESHOLD = 5;                    // mutate after 5 noteworthy ticks
+// v1.23.2 — also force a mutation every N ticks regardless of growth.
+// Without this, a stable nucleus shows mutations=0 forever, and the
+// "evolution" promise from v1.20 stays asleep.
+const TIME_BASED_MUTATION_EVERY = 10;            // mutate at tick 10, 20, 30, ...
 const HEARTBEAT_WRITE_EVERY_TICK = 1;            // write heartbeat every tick
 
 export interface DaemonHeartbeat {
@@ -149,10 +153,16 @@ export async function runDaemonLoop(
         result.delta.growthSinceLastTick.calls > 0 ||
         result.delta.growthSinceLastTick.verified > 0;
       if (grew) noteworthyTicks += 1;
-      if (noteworthyTicks >= MUTATION_THRESHOLD) {
+      // v1.23.2 — TWO mutation triggers, both independent:
+      //   1. Growth-based: noteworthyTicks >= MUTATION_THRESHOLD (existing)
+      //   2. Time-based: every TIME_BASED_MUTATION_EVERY ticks regardless
+      //      of growth, so a stable nucleus still evolves slowly.
+      const shouldMutateGrowth = noteworthyTicks >= MUTATION_THRESHOLD;
+      const shouldMutateTime = tickCount > 0 && tickCount % TIME_BASED_MUTATION_EVERY === 0;
+      if (shouldMutateGrowth || shouldMutateTime) {
         mutate(repoRoot, 1);
         mutationsApplied += 1;
-        noteworthyTicks = 0;
+        if (shouldMutateGrowth) noteworthyTicks = 0;
         // v1.23.0 — push milestone every 10 mutations into the inbox so
         // the user sees progress even if they never run a Mneme command.
         if (mutationsApplied > 0 && mutationsApplied % 10 === 0) {

@@ -87,7 +87,7 @@ describe("checkVersion + cache", () => {
     const memoPath = join(repo, ".mneme/CURRENT_VERSION.md");
     expect(existsSync(memoPath)).toBe(true);
     const memo = readFileSync(memoPath, "utf8");
-    expect(memo).toContain("Mneme — current version status");
+    expect(memo).toContain("Mneme -- current version status");
     expect(memo).toContain("mneme-ai@1.19.0");
     expect(memo).toContain("For AI agents reading this file");
   });

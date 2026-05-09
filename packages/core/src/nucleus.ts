@@ -167,17 +167,21 @@ function synthesizeLesson(prev: NucleusState, curr: NucleusState["growth"]): Nuc
   const newVendors = curr.vendorCount - prev.growth.vendorCount;
   let text: string | null = null;
   let source = "";
+  // v1.23.2 — ASCII-only text in file-persisted strings. Em-dash bytes
+  // (e2 80 94) get mojibake'd when Windows tools read .mneme/nucleus.json
+  // with the system codepage (cp874 / cp1252) instead of UTF-8.
+  // `--` is bulletproof in every encoding.
   if (newVendors > 0) {
-    text = `A new AI vendor joined the lineage this tick — ${curr.vendorCount} vendors now contribute to the nucleus.`;
+    text = `A new AI vendor joined the lineage this tick -- ${curr.vendorCount} vendors now contribute to the nucleus.`;
     source = "newVendor";
   } else if (newVerified > 0) {
-    text = `${newVerified} new verified outcome${newVerified === 1 ? "" : "s"} this tick — DNA fitness rising.`;
+    text = `${newVerified} new verified outcome${newVerified === 1 ? "" : "s"} this tick -- DNA fitness rising.`;
     source = "newVerified";
   } else if (newChromosomes > 0) {
-    text = `${newChromosomes} new chromosome${newChromosomes === 1 ? "" : "s"} crystallized — the lineage grew.`;
+    text = `${newChromosomes} new chromosome${newChromosomes === 1 ? "" : "s"} crystallized -- the lineage grew.`;
     source = "newChromosome";
   } else if (newCalls > 0) {
-    text = `${newCalls} call${newCalls === 1 ? "" : "s"} this tick — keep talking to Mneme; every call deepens the nucleus.`;
+    text = `${newCalls} call${newCalls === 1 ? "" : "s"} this tick -- keep talking to Mneme; every call deepens the nucleus.`;
     source = "newCalls";
   }
   if (!text) return null;
@@ -187,6 +191,44 @@ function synthesizeLesson(prev: NucleusState, curr: NucleusState["growth"]): Nuc
     bornAt: new Date().toISOString(),
     text,
     source,
+  };
+}
+
+/** v1.23.2 — periodic CONSOLIDATION lesson when there's no growth this
+ *  tick. Surfaces nucleus-is-alive evidence to the user at meaningful
+ *  milestones. Without this, a stable nucleus looks like a frozen daemon. */
+const PERIODIC_TICKS = new Set([5, 10, 25, 50, 100, 250, 500, 1000]);
+function maybePeriodicLesson(
+  prev: NucleusState,
+  curr: NucleusState["growth"],
+): NucleusLesson | null {
+  const nextTick = prev.tick + 1;
+  if (!PERIODIC_TICKS.has(nextTick)) return null;
+  let text: string;
+  if (nextTick === 5) {
+    text = "5 ticks of stable DNA -- nucleus has consolidated this knowledge baseline.";
+  } else if (nextTick === 10) {
+    const div = curr.vendorCount;
+    text = `10 ticks complete. Vendor diversity = ${div}; baseline DNA fingerprint locked in.`;
+  } else if (nextTick === 25) {
+    text = `25 ticks. ${curr.totalCalls} call${curr.totalCalls === 1 ? "" : "s"} aggregated; nucleus is steady.`;
+  } else if (nextTick === 50) {
+    text = `50-tick milestone. Knowledge has compounded; ${curr.chromosomesEver} chromosome${curr.chromosomesEver === 1 ? "" : "s"} in lineage.`;
+  } else if (nextTick === 100) {
+    text = `Century tick (100). DNA has had 100 cycles to stabilize; nucleus is mature.`;
+  } else if (nextTick === 250) {
+    text = `250 ticks. Long-running session -- nucleus has seen ${curr.totalVerified} verified outcomes.`;
+  } else if (nextTick === 500) {
+    text = `500 ticks. The nucleus is now a stable substrate for inheritance.`;
+  } else {
+    text = `Milestone tick #${nextTick}. Nucleus continues to consolidate.`;
+  }
+  return {
+    id: createHash("sha256").update(`periodic|${nextTick}|${text}`).digest("hex").slice(0, 8),
+    tick: nextTick,
+    bornAt: new Date().toISOString(),
+    text,
+    source: "periodic",
   };
 }
 
@@ -206,7 +248,12 @@ export function tick(repoRoot: string): TickResult {
   const prev = readNucleus(repoRoot);
   const streaks = readStreaks(repoRoot);
   const aggregated = aggregateDna(repoRoot, streaks);
-  const newLesson = synthesizeLesson(prev, aggregated);
+  // v1.23.2 — when there's no growth-driven lesson, emit a CONSOLIDATION
+  // lesson at tick milestones (5/10/25/50/100/250/500) so the user sees
+  // the nucleus is still thinking. UX problem reported: stable ticks
+  // looked like the daemon had crashed.
+  const newLesson = synthesizeLesson(prev, aggregated)
+    ?? maybePeriodicLesson(prev, aggregated);
   const lessons = newLesson ? [...prev.lessons, newLesson].slice(-50) : prev.lessons;
   const wisdomScore = computeWisdomScore(aggregated, lessons.length);
   const next: NucleusState = {

@@ -8,6 +8,76 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.23.2] — 2026-05-09
+
+**Four root-cause bugs found by live testing — all fixed.** The user
+ran the full daemon flow end-to-end and found four real issues. Each
+fixed at the source, not patched at the edge. Plus a 3-step demo
+flow collapsed into one command.
+
+### Bugs fixed
+
+  - **Unicode mojibake in nucleus.json + chromosome topics + memo files.**
+    Em-dash bytes (`e2 80 94` UTF-8) were rendered as `โ€"` /
+    `â€"` when Windows tools opened the file with the system codepage
+    (cp874 / cp1252). Files on disk were valid UTF-8, but downstream
+    tools that don't auto-detect encoding showed garbage. Cross-machine
+    sync (`mneme spore push/pull`) would have shipped the same bytes
+    to other machines where the same problem repeats.
+    **Fix:** all machine-written strings (lesson text, seed topics,
+    memo headers) are now ASCII-only — `--` instead of `—`, `->`
+    instead of `→`. Display strings (terminal, MCP wisdom) keep
+    Unicode where the renderer is known good. Test asserts no em-dash
+    bytes appear in `.mneme/nucleus.json`.
+  - **Stable ticks looked like a frozen daemon.** Tick #78 → #79 with
+    the same wisdom score + same DNA hash + no new lesson made the
+    user think the daemon had crashed. Technically correct (no input,
+    no growth), but UX-confusing.
+    **Fix:** new `maybePeriodicLesson()` emits a CONSOLIDATION lesson
+    at milestone ticks (5 / 10 / 25 / 50 / 100 / 250 / 500 / 1000)
+    even with zero growth. Examples: "5 ticks of stable DNA --
+    nucleus has consolidated this knowledge baseline", "Vendor
+    diversity = 3; baseline DNA fingerprint locked in".
+  - **`bestVerifiedStreak: 0` but `totalVerified: 18`** — a self-
+    contradicting state shipped by the seed lineage. Seed planted
+    chromosome counts but never wrote `karma_streaks.json`, so
+    achievements stayed locked even with 18 verified outcomes.
+    **Fix:** `seedStreaksForDemo()` plants a self-consistent karma
+    history (totalVerified=18, bestVerifiedStreak=7,
+    cleanFuzzStreak=10, courtWinStreak=5, totalFuzzCatches=10) and
+    runs the achievement-unlock pass. Result: 6 achievements unlock
+    on first welcome (was 0). `synthesizeSeedLineage()` calls it
+    inline so seeds and streaks ship together.
+  - **`mutations: 0` after 79 daemon ticks.** The v1.20 commit promised
+    "MUTATION = small noise on every replication that drives evolution"
+    but the daemon only mutated when growth was happening. A stable
+    nucleus never evolved.
+    **Fix:** daemon now has TWO independent mutation triggers:
+      • Growth-based (existing): `noteworthyTicks >= 5`
+      • Time-based (new): every 10 ticks, regardless of growth
+    Stable nuclei now evolve slowly; active ones still evolve fast.
+
+### UX — friction reduced from 3 commands to 1
+
+`mneme nucleus seed --demo --auto-start --watch` does the whole
+demo dance in one shot:
+
+  1. Plants 3 cross-vendor synthetic chromosomes + karma streak history.
+  2. Spawns the nucleus daemon detached (returns immediately if one
+     is already running).
+  3. Opens a live `tail -f`-style stream of the heartbeat with one
+     line per tick: `[tick N] wisdom=X mutations=Y + <lesson>`.
+  4. Ctrl+C exits the watch; the daemon keeps running.
+
+Time-to-wow: one command + 30 seconds + one screen.
+
+### Tests
+
+  - 4517 / 4517 passing (was 4508 in v1.23.1; +9 for nucleus periodic
+    lesson tests + karma seed tests + memo encoding test).
+  - 159 MCP tools total (no schema additions).
+  - Production build clean. TypeScript strict.
+
 ## [1.23.1] — 2026-05-09
 
 **Zero-step first-touch wow + always-on update notification.** v1.23.0
