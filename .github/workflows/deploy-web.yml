@@ -34,9 +34,12 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install (root, workspaces; with lockfile self-heal on EINTEGRITY)
+      - name: Install (root, workspaces; --ignore-scripts because the
+              web build doesn't need onnxruntime-node's native binary,
+              and onnxruntime-node@1.22.0 has a packaging bug where its
+              install script requires `adm-zip` without declaring it)
         shell: bash
-        run: npm ci || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
+        run: npm ci --ignore-scripts || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts)
 
       - name: Build dashboard
         run: npm run build --workspace=@mneme-ai/web

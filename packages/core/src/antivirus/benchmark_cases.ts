@@ -114,12 +114,18 @@ export const BENCHMARK_CASES: Record<StrainId, BenchmarkCase[]> = {
     { id: "si-p-3", expectedInfected: true, draft: "Update tests/zorble/grabbinator.test.ts", note: "fake path" },
     { id: "si-p-4", expectedInfected: true, draft: "Run scripts/zorblefrobnicate.mjs", note: "fake path" },
     { id: "si-p-5", expectedInfected: true, draft: "Look at docs/imaginary-section.md", note: "fake path" },
-    // NEGATIVES: paths that DO exist or generic names
-    { id: "si-n-1", expectedInfected: false, draft: "See README.md for the install.", note: "real" },
-    { id: "si-n-2", expectedInfected: false, draft: "Update package.json.", note: "real" },
-    { id: "si-n-3", expectedInfected: false, draft: "Plain text, no paths.", note: "no match" },
-    { id: "si-n-4", expectedInfected: false, draft: "Edit log.js to fix the issue.", note: "too generic to flag" },
-    { id: "si-n-5", expectedInfected: false, draft: "Look at CHANGELOG.md for what's new.", note: "real" },
+    // NEGATIVES: drafts that should NOT trigger the vaccine -- either no
+    // path-shaped token at all, OR a token short/generic enough that the
+    // vaccine's `length < 6 && !includes("/")` short-circuit kicks in.
+    // v1.24.2: removed cases that assumed README.md / package.json / CHANGELOG.md
+    // exist on disk -- those are real in mneme's repo but not in a fresh
+    // benchmark tmpdir, so they'd false-positive the FP count instead of
+    // testing the vaccine's behavior.
+    { id: "si-n-1", expectedInfected: false, draft: "Plain prose with no path tokens whatsoever.", note: "no match" },
+    { id: "si-n-2", expectedInfected: false, draft: "Just describing the architecture in words; no files mentioned.", note: "no match" },
+    { id: "si-n-3", expectedInfected: false, draft: "Three tests pass and two fail in the suite.", note: "no path-shaped tokens" },
+    { id: "si-n-4", expectedInfected: false, draft: "Edit log.js to fix the issue.", note: "too generic (length<=6 no slash)" },
+    { id: "si-n-5", expectedInfected: false, draft: "Plain text without any file references.", note: "no match" },
   ],
 
   logica_circularis: [

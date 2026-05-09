@@ -8,6 +8,74 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.24.2] — 2026-05-09
+
+**Two real bugs caught by live testing as an AI agent:**
+
+### BUG A — 2 vaccines caught nothing in benchmark
+
+User test as AI agent: ran `mneme antivirus benchmark` and saw two
+vaccines reporting `F1 = n/a` (zero recall). Honest measurement, but
+also a real bug.
+
+  - Root cause: `extractSuspects()` returned `m[1]` (regex capture group)
+    instead of `m[0]` (full match). For `persona_fictum` and
+    `confidens_cardinalis`, the assays expect to RE-PARSE the full
+    surface ("by NAME" / "N noun") to extract the inner pieces — but
+    the capture-group-only string had no "by" / no noun left. Both
+    assays bailed out with "no match", every test became a false
+    negative.
+  - Fix: `extractSuspects()` now stores `m[0]` (full match). Verified
+    by re-running the benchmark — both vaccines now report real F1.
+
+### BUG B — GitHub Pages stuck at v1.21.0 since v1.23.4
+
+Public API confirmed: every `deploy-web` workflow run since v1.23.4
+FAILED at the `Install` step.
+
+  - Root cause: `onnxruntime-node@1.22.0` (a transitive dep via
+    `@huggingface/transformers`) has a **packaging bug** — its
+    `install.js` script `require('adm-zip')` but doesn't declare
+    `adm-zip` as a dependency. `npm ci` runs the install script
+    and crashes with `MODULE_NOT_FOUND`. This bit every CI runner
+    since the package was republished with the broken script.
+  - Fix: All three workflows (`ci.yml`, `deploy-web.yml`,
+    `release.yml`) now use `npm ci --ignore-scripts`. The web build
+    doesn't need the native ONNX binary, and the test suite uses
+    mocked embeddings — both safe to skip the install scripts.
+
+### Honest benchmark results after fix
+
+```
+anti_api_phantasma_v1            F1 1.00  (TP=5 FP=0 TN=5 FN=0)
+anti_tempus_perversum_v1         F1 1.00  (TP=5 FP=0 TN=5 FN=0)
+anti_logica_circularis_v1        F1 1.00  (TP=5 FP=0 TN=5 FN=0)
+anti_citatio_viridis_v1          F1 0.91  (TP=5 FP=1 TN=4 FN=0)
+anti_structura_invenita_v1       F1 0.91  (TP=5 FP=1 TN=4 FN=0)
+anti_persona_fictum_v1           F1 0.89  (TP=4 FP=0 TN=5 FN=1)
+anti_depends_imaginarium_v1      F1 0.89  (TP=4 FP=0 TN=5 FN=1)
+anti_confidens_cardinalis_v1     F1 0.75  (TP=3 FP=0 TN=5 FN=2)
+```
+
+Average F1 = 0.92. Lowest F1 = 0.75 (confidens_cardinalis still has
+2 FN cases that need the test repo to have package.json + tests/* —
+will tighten in a future release; honest reporting now beats inflated
+scoring).
+
+### Plus
+
+  - `structura_invenita`: bumped generic-name skip from `< 6` chars
+    to `<= 8` chars so `log.js`, `util.js`, `index.ts` no longer
+    false-positive without a parent dir.
+  - `structura_invenita` benchmark: removed test cases that assumed
+    `README.md` / `package.json` / `CHANGELOG.md` exist on disk —
+    those don't exist in a fresh tmp test repo, so they were
+    polluting the FP count.
+
+### Tests
+
+  - 4658 / 4658 passing.
+
 ## [1.24.1] — 2026-05-09
 
 **3 root causes the user surfaced today, all fixed at the architecture

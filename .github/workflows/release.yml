@@ -32,9 +32,12 @@ jobs:
           git config --global core.autocrlf false
           git config --global init.defaultBranch main
 
-      - name: Install (with lockfile self-heal on EINTEGRITY)
+      - name: Install (self-heal + ignore-scripts)
         shell: bash
-        run: npm ci || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
+        # --ignore-scripts: onnxruntime-node@1.22.0 has a packaging bug
+        # (install script requires adm-zip without declaring it). Tests
+        # don't need the native ONNX binary; embeddings are mocked.
+        run: npm ci --ignore-scripts || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts)
 
       - name: Build (sanity gate — type errors block publish)
         run: npm run build

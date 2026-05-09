@@ -51,7 +51,11 @@ export function extractSuspects(draft: string): SuspectClaim[] {
       let m: RegExpExecArray | null;
       const seen = new Set<string>();
       while ((m = re.exec(draft)) !== null) {
-        const match = m[1] ?? m[0];
+        // v1.24.2 -- use FULL match (m[0]) so assays can re-parse context.
+        // Previous version used m[1] (capture group) which broke
+        // persona_fictum + confidens_cardinalis assays that expect the
+        // whole "by NAME" / "N noun" surface to re-extract.
+        const match = m[0];
         if (!match) continue;
         // Dedupe identical matches at different offsets to avoid noise
         // (same SHA mentioned twice = one suspect).

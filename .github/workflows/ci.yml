@@ -56,15 +56,12 @@ jobs:
           git config --global init.defaultBranch main
           git config --global core.autocrlf false
 
-      # v1.23.5 — npm ci is strict about lockfile integrity. When npm
-      # republishes a package (which they do silently within ~72h windows),
-      # the recorded sha512 drifts and EVERY runner fails with EINTEGRITY.
-      # heal-lockfile.mjs surgically patches the drifted hashes against
-      # registry truth WITHOUT regenerating the lockfile (which would
-      # strip platform-specific optionalDependencies on the wrong host).
-      - name: Install (with lockfile self-heal on EINTEGRITY)
+      # v1.23.5: npm ci self-heal on EINTEGRITY drift.
+      # v1.24.2: --ignore-scripts safety net for onnxruntime-node@1.22.0
+      #   packaging bug (its install script needs adm-zip without declaring it).
+      - name: Install (self-heal + ignore-scripts)
         shell: bash
-        run: npm ci || (echo "::warning::lockfile integrity drift detected -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
+        run: npm ci --ignore-scripts || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts)
 
       - name: Build
         run: npm run build
@@ -95,15 +92,12 @@ jobs:
           git config --global user.email "ci@mneme.dev"
           git config --global user.name "Mneme CI"
           git config --global core.autocrlf false
-      # v1.23.5 — npm ci is strict about lockfile integrity. When npm
-      # republishes a package (which they do silently within ~72h windows),
-      # the recorded sha512 drifts and EVERY runner fails with EINTEGRITY.
-      # heal-lockfile.mjs surgically patches the drifted hashes against
-      # registry truth WITHOUT regenerating the lockfile (which would
-      # strip platform-specific optionalDependencies on the wrong host).
-      - name: Install (with lockfile self-heal on EINTEGRITY)
+      # v1.23.5: npm ci self-heal on EINTEGRITY drift.
+      # v1.24.2: --ignore-scripts safety net for onnxruntime-node@1.22.0
+      #   packaging bug (its install script needs adm-zip without declaring it).
+      - name: Install (self-heal + ignore-scripts)
         shell: bash
-        run: npm ci || (echo "::warning::lockfile integrity drift detected -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
+        run: npm ci --ignore-scripts || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts)
       - run: npm run build
       - name: Run full eval
         run: npm run eval -- --out tests/.tmp/eval-report.json
@@ -128,15 +122,12 @@ jobs:
           git config --global user.email "ci@mneme.dev"
           git config --global user.name "Mneme CI"
           git config --global core.autocrlf false
-      # v1.23.5 — npm ci is strict about lockfile integrity. When npm
-      # republishes a package (which they do silently within ~72h windows),
-      # the recorded sha512 drifts and EVERY runner fails with EINTEGRITY.
-      # heal-lockfile.mjs surgically patches the drifted hashes against
-      # registry truth WITHOUT regenerating the lockfile (which would
-      # strip platform-specific optionalDependencies on the wrong host).
-      - name: Install (with lockfile self-heal on EINTEGRITY)
+      # v1.23.5: npm ci self-heal on EINTEGRITY drift.
+      # v1.24.2: --ignore-scripts safety net for onnxruntime-node@1.22.0
+      #   packaging bug (its install script needs adm-zip without declaring it).
+      - name: Install (self-heal + ignore-scripts)
         shell: bash
-        run: npm ci || (echo "::warning::lockfile integrity drift detected -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
+        run: npm ci --ignore-scripts || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts)
       - run: npm run build
       - name: Run benchmark (small + medium)
         run: npm run bench -- --only small --out tests/.tmp/bench-small.json

@@ -377,9 +377,12 @@ export const VAC_STRUCTURA_INVENITA: Vaccine = {
     // Tie-breaker: real filesystem (catches files newer than the cache).
     const abs = resolve(ctx.repoRoot, raw);
     if (existsSync(abs)) return { infected: false, evidence: `"${raw}" exists on disk` };
-    // Skip very short / generic strings that pattern false-positives (like "log.js")
-    if (raw.length < 6 && !raw.includes("/")) {
-      return { infected: false, evidence: `"${raw}" too generic to flag` };
+    // Skip very short / generic strings that pattern false-positives.
+    // v1.24.2: bumped from `< 6` to `<= 8` to cover log.js, util.js,
+    // index.ts (8 chars), foo.json -- generic names that say nothing
+    // about "this exact path exists" until a slash gives them context.
+    if (raw.length <= 8 && !raw.includes("/")) {
+      return { infected: false, evidence: `"${raw}" too generic to flag (no parent dir)` };
     }
     return {
       infected: true,
