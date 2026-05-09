@@ -2,7 +2,7 @@
 
 _Auto-generated from the live tool registry. Do not edit by hand — run_ `npx tsx packages/mcp/scripts/gen-tools-md.ts` _to refresh._
 
-**149 tools** across **9 categories** · catalog hash `f96170da499f8ff6` · generated 2026-05-09 03:46:48 UTC
+**150 tools** across **9 categories** · catalog hash `9cbfeac7a2515d8b` · generated 2026-05-09 04:44:11 UTC
 
 ## What is this
 
@@ -12,7 +12,7 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 
 ## Categories
 
-- [**meta**](#meta) (62 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
+- [**meta**](#meta) (63 tools) — Discovery, contracts, lint, intent matching, doctor, manifesto.
 - [**memory**](#memory) (7 tools) — Q&A, semantic search, citations — answers grounded in the repo's commit history.
 - [**people**](#people) (10 tools) — Contributors, knowledge atrophy, telepathic teammates, cultural alphas, semantic ownership.
 - [**audit**](#audit) (8 tools) — AI Session Audit — trust certificate for AI commits. Vendor-neutral.
@@ -83,6 +83,7 @@ Mneme exposes its full tool catalog through the [Model Context Protocol](https:/
 | `mneme.spore.pull` | meta | You want to fetch lineage updates from other machines. |
 | `mneme.spore.sync` | meta | You want a single round-trip that pushes local + pulls remote. |
 | `mneme.spore.status` | meta | You want to inspect the current sync state. |
+| `mneme.system.upgrade` | meta | User said 'upgrade Mneme' OR mneme.welcome reported updateAvailable=true OR you want a one-screen status of current vs latest. |
 | `mneme.smart_do` | meta | Fallback dispatcher — give it a NATURAL-LANGUAGE intent, it routes to the appropriate Mneme command and runs it |
 | `mneme.memory.ask` | memory | User asks WHY code exists or WHEN something was added — answers grounded in cited commits, not generated prose. |
 | `mneme.memory.why` | memory | Explain why a specific FILE (or line range within it) exists by combining git blame with related commits |
@@ -3313,6 +3314,101 @@ Report spore configuration, vector clock, last sync timestamps, local chromosome
 - Reports CONFIG state, not connectivity — use mneme.spore.push to actually contact the remote.
 
 **Compose with:** `mneme.spore.init` · `mneme.spore.sync`
+
+</details>
+
+### `mneme.system.upgrade`
+
+Self-update orchestrator — checks npm registry for the latest mneme-ai version, compares to the locally-installed one, and (with mode='install') spawns the right upgrade command for the detected install method (npm-global / npx / docker). Use WHEN you want to keep the user on the current Mneme without making them remember to upgrade. Default mode is 'check' — you must pass mode='install' to actually upgrade.
+
+**When to use:** User said 'upgrade Mneme' OR mneme.welcome reported updateAvailable=true OR you want a one-screen status of current vs latest.
+
+<details><summary>Contract</summary>
+
+**Input schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "check",
+        "install"
+      ],
+      "description": "Default 'check' (no side effect). Pass 'install' to actually upgrade."
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Pass to `mneme upgrade --force` (re-install even when versions match — e.g., after CI publish lag)."
+    }
+  }
+}
+```
+
+**Output schema:**
+```json
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string"
+    },
+    "current": {
+      "type": "string"
+    },
+    "latest": {
+      "type": "string"
+    },
+    "updateAvailable": {
+      "type": "boolean"
+    },
+    "installMethod": {
+      "type": "string",
+      "enum": [
+        "npm-global",
+        "npx",
+        "docker",
+        "unknown"
+      ]
+    },
+    "installBinary": {
+      "type": "string"
+    },
+    "lastChecked": {
+      "type": "string"
+    },
+    "upgradeRan": {
+      "type": "boolean"
+    },
+    "upgradeSuccess": {
+      "type": "boolean"
+    },
+    "upgradeStdout": {
+      "type": "string"
+    },
+    "remediation": {
+      "type": "string"
+    }
+  }
+}
+```
+
+**Examples:**
+- *"Is Mneme up to date?"*
+  - args: `{"mode":"check"}`
+  - returns: { current, latest, updateAvailable, installMethod, lastChecked }. If updateAvailable, surface to user with the install command they can confirm.
+- *"Upgrade Mneme to the latest version"*
+  - args: `{"mode":"install"}`
+  - returns: { upgradeRan: true, upgradeSuccess, upgradeStdout }. Report success / failure to user; on success, ask them to restart their AI tool to pick up new MCP tools.
+
+**Pitfalls:**
+- Default mode is 'check' — you MUST pass mode='install' to actually upgrade. This is intentional: never silently mutate the user's environment.
+- Network failures degrade gracefully — `latest` becomes null, updateAvailable=false. Surface the failure reason if present.
+- After successful upgrade, the user must RESTART their AI tool (Claude Code / Cursor / etc.) for the new MCP server binary to load.
+- On non-npm-global installs (npx / docker), the tool returns a SUGGESTED command instead of running it — those install methods don't have a clean self-upgrade path.
+
+**Compose with:** `mneme.welcome` · `mneme.whats_new`
 
 </details>
 

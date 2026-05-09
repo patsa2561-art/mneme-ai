@@ -57,6 +57,12 @@ const STATIC_RESOURCES: McpResourceListItem[] = [
     mimeType: "application/json",
     description: "(v1.19) Auto-fertilized at MCP server boot — combines top-3 ancestor chromosomes via Mendelian merge. Read this FIRST to know what prior AI sessions left for you.",
   },
+  {
+    uri: "mneme://updates/status",
+    name: "Mneme self-update status",
+    mimeType: "application/json",
+    description: "(v1.19.2) Cached npm-registry version-check result — current vs latest, updateAvailable, lastChecked. Mneme refreshes this every 24h in the background.",
+  },
 ];
 
 export function listResources(rt: ToolRuntime): McpResourceListItem[] {
@@ -130,6 +136,15 @@ export function readResource(rt: ToolRuntime, uri: string): McpResourceContent {
       uri,
       mimeType: "application/json",
       text: JSON.stringify(bundle ?? { empty: true, note: "no lineage to inherit yet — fresh repo or lineage opted out" }, null, 2),
+    };
+  }
+  if (uri === "mneme://updates/status") {
+    // Read the cached version-check result stashed by startMcpServer.
+    const status = (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus;
+    return {
+      uri,
+      mimeType: "application/json",
+      text: JSON.stringify(status ?? { empty: true, note: "version check has not run yet — try again in a few seconds" }, null, 2),
     };
   }
   if (uri.startsWith("mneme://passport/")) {

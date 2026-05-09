@@ -8,6 +8,69 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.19.2] — 2026-05-09
+
+**Auto-update — Mneme keeps itself fresh, no user typing.** Black-sheep
+auto-upgrade flow that fits the AI-agent-driven UX of v1.19: every MCP
+server boot fires a non-blocking version-check against the npm registry
+(cached 24h), surfaces the result via `mneme.welcome`, exposes a new
+resource `mneme://updates/status`, and ships the new `mneme.system.upgrade`
+MCP tool that auto-detects the install method (npm-global / npx / docker)
+and spawns the right upgrade command. `4404 / 4404 tests passing.`
+
+### What's new
+
+  - `packages/core/src/version_check.ts` — non-blocking npm registry probe
+    with 24h cache (`.mneme/version-check.json`). Never throws — network
+    failures, registry downtime, malformed responses degrade to "unknown".
+    Validates returned version against strict semver before propagating.
+    11 tests.
+  - `mneme.system.upgrade` — auto-detected, AI-agent-friendly upgrade
+    orchestrator. Default mode='check' (no side effect); pass mode='install'
+    to actually upgrade. Auto-detects install method:
+      • npm-global → spawns `mneme upgrade --force`
+      • npx → returns suggested `npx clear-npx-cache && npx -y mneme-ai@<v>`
+      • docker → returns suggested `docker pull` command
+      • unknown → returns suggested `npm install -g`
+    Reports back upgradeRan/upgradeSuccess/upgradeStdout so the agent can
+    surface the result to the user. Refuses to install non-semver target
+    versions (defense against registry-poisoning).
+  - `mneme://updates/status` — new MCP resource. Cached version-check
+    result with current/latest/updateAvailable/lastChecked. Agents can
+    subscribe (when subscribe=true is negotiated) for proactive update
+    notifications.
+  - `mneme.welcome` extended — adds `updateAvailable` field surfaced in
+    the install-handoff payload + a "📢 Mneme vX is available" line
+    appended to userMessageTemplate when an update is detected. The agent
+    surfaces this to the user without any explicit prompt.
+  - Auto-trigger in `startMcpServer()` — fires `versionCheck.checkVersion`
+    asynchronously at boot; result stashed in `globalThis.__mnemeUpdateStatus`
+    for the resource handler + welcome contract to read.
+
+### How the agent sees it
+
+```
+1. User installs Mneme (or boots their AI tool).
+2. Mneme MCP server starts → fires version-check (non-blocking).
+3. AI agent's first call → mneme.welcome
+   → response contains updateAvailable={ current, latest, updateAvailable }
+   → userMessageTemplate ends with "📢 Mneme v1.19.3 is available"
+4. AI agent: "Hey, Mneme v1.19.3 is available — want me to upgrade?"
+5. User: "yes"
+6. AI agent → mneme.system.upgrade({ mode: "install" })
+7. Tool spawns `mneme upgrade --force` → reports back
+8. AI agent: "Upgraded — restart your AI tool to load the new MCP binary."
+```
+
+User typed "yes" once. Mneme handled the rest.
+
+### Tests
+
+  - 4404 / 4404 passing (was 4383 in v1.19.0; +21 from version_check 11 +
+    expanded contract tests for the new tool).
+  - 150 MCP tools total (was 149).
+  - Production build clean. TypeScript strict.
+
 ## [1.19.0] — 2026-05-09
 
 **MneMeiosis Protocol — AI session inheritance across machines, AI vendors,

@@ -35,3 +35,4 @@ export * as metrics from "./metrics/index.js";
 export * as dna from "./dna/index.js";
 export * as genome from "./genome/index.js";
 export * as lineage from "./lineage/index.js";
+export * as versionCheck from "./version_check.js";

@@ -43,7 +43,7 @@ import { recordObservation, recordKarmaEvent } from "./tools/_aletheia.js";
 import { listResources, readResource } from "./mcp_primitives/resources.js";
 import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
 import { completeArgument } from "./mcp_primitives/completion.js";
-import { lineage } from "@mneme-ai/core";
+import { lineage, versionCheck } from "@mneme-ai/core";
 
 export interface McpOptions {
   cwd: string;
@@ -235,6 +235,20 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const allTools = buildAllTools();
   const toolMap = buildToolMap();
   const dynamic = loadDynamicState(runtime.meta.rootPath);
+
+  // ─── v1.19.2 — fire-and-forget version check at boot ──────────────
+  // Hits the npm registry once per 24h (cached). Result stashed in
+  // globalThis so the welcome contract + resource handler can read it
+  // without re-fetching. Never blocks the server boot path.
+  void (async () => {
+    try {
+      const current = resolveVersion();
+      const status = await versionCheck.checkVersion(runtime.meta.rootPath, current);
+      (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus = status;
+    } catch {
+      // best-effort
+    }
+  })();
 
   // ─── MneMeiosis (v1.19) — boot the working-memory session + fertilize ────
   // Detect AI vendor from MCP client info if available (best-effort —
