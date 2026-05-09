@@ -6,6 +6,11 @@ on:
     paths:
       - 'packages/web/**'
       - '.github/workflows/deploy-web.yml'
+      # v1.23.4 — also redeploy when package versions bump or CHANGELOG
+      # changes, so the version pill + release-notes link in the
+      # dashboard header stay in sync with the latest published release.
+      - 'package.json'
+      - 'CHANGELOG.md'
   workflow_dispatch:
 
 permissions:

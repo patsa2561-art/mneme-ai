@@ -22,7 +22,7 @@
 
 ---
 
-## $${\color{#c084fc}\textbf{What I do}}$$
+## What I do
 
 | Hat | What it means in practice |
 |---|---|
@@ -33,7 +33,7 @@
 
 ---
 
-## $${\color{#34d399}\textbf{When to reach out}}$$
+## When to reach out
 
 | Reason | Pitch in one line |
 |---|---|
@@ -44,7 +44,7 @@
 
 ---
 
-## $${\color{#38bdf8}\textbf{What I can ship}}$$
+## What I can ship
 
 - **Single-engineer project.** Code quality is high — **4400+ tests**, deterministic, fully audited security primitives.
 - **Velocity is real** — 17+ minor releases in 30 days. If a partnership produces a clear technical request, expect a turnaround **in days, not quarters**.
@@ -54,7 +54,7 @@
 
 <div align="center">
 
-### $${\color{#ec4899}\text{Mneme is built and maintained by one engineer.}}$$
-### $${\color{#c084fc}\text{If you see something worth a real conversation — that's the contact.}}$$
+### Mneme is built and maintained by one engineer.
+### If you see something worth a real conversation — that's the contact.
 
 </div>

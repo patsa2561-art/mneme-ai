@@ -195,7 +195,7 @@ mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 </p>
 
 <details>
-<summary><b>🧑‍💻 $${\color{#c084fc}\textbf{Solo dev / vibe coder using AI tools}}$$</b></summary>
+<summary><b>🧑‍💻 Solo dev / vibe coder using AI tools</b></summary>
 
 You ship features fast with Claude Code or Cursor. But sometimes the AI **hallucinates a function that doesn't exist**, or invents a "fix" for a bug whose real cause is in a 2-year-old commit.
 
@@ -208,7 +208,7 @@ You ship features fast with Claude Code or Cursor. But sometimes the AI **halluc
 </details>
 
 <details>
-<summary><b>👥 $${\color{#38bdf8}\textbf{Developer team — multiple engineers, multiple AIs, one repo}}$$</b></summary>
+<summary><b>👥 Developer team — multiple engineers, multiple AIs, one repo</b></summary>
 
 You're 3-15 engineers shipping together. Half the team uses Claude Code, the other half uses Cursor or Codex. Without Mneme, every AI session starts from zero — no shared learning, no shared "we tried this before and it broke."
 
@@ -224,7 +224,7 @@ You're 3-15 engineers shipping together. Half the team uses Claude Code, the oth
 </details>
 
 <details>
-<summary><b>🧑‍🔬 $${\color{#34d399}\textbf{Engineering team lead — running PR reviews + onboarding}}$$</b></summary>
+<summary><b>🧑‍🔬 Engineering team lead — running PR reviews + onboarding</b></summary>
 
 You're the person who has to know **who knows what**, who's overloaded, what's a regression risk, and which AI commits to trust.
 
@@ -243,7 +243,7 @@ Mneme gives you:
 </details>
 
 <details>
-<summary><b>🛡 $${\color{#fbbf24}\textbf{Security / compliance — EU AI Act 2026, SOX, SOC2}}$$</b></summary>
+<summary><b>🛡 Security / compliance — EU AI Act 2026, SOX, SOC2</b></summary>
 
 You need a **tamper-evident audit trail** of every AI-driven commit, with cryptographic signatures (HMAC + Ed25519), QSAC trust certificates, and 8-of-8 EU AI Act clause coverage.
 
@@ -261,7 +261,7 @@ You need a **tamper-evident audit trail** of every AI-driven commit, with crypto
 </details>
 
 <details>
-<summary><b>🤖 $${\color{#ec4899}\textbf{You ARE an AI agent reading this}}$$</b></summary>
+<summary><b>🤖 You ARE an AI agent reading this</b></summary>
 
 A user just shared this URL with you and asked you to install Mneme. **Follow the install contract verbatim** ([§ For AI agents](#-for-ai-agents--installation-contract) below) — don't improvise.
 

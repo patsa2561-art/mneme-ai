@@ -8,6 +8,69 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.23.4] — 2026-05-09
+
+**Cross-platform robustness pass + docs cleanup + web auto-sync.**
+Three audit findings rolled into one release:
+
+### Docs
+
+  - **README + CONTACT** — removed all `$${\color{#hex}\textbf{...}}$$`
+    GitHub-LaTeX wrappers from headings + `<summary>` blocks. GitHub's
+    math renderer doesn't run inside HTML containers, so the colored
+    text was rendering as literal `$${\color...}$$` source on the
+    public README. Plain markdown `**bold**` renders correctly across
+    every renderer (GitHub / npm / GitLab / IDE preview).
+
+### Web dashboard auto-sync
+
+  - **Version pill stuck at v1.21.0** — the GitHub Pages deploy
+    workflow only triggered on `packages/web/**` changes, not on
+    root version bumps. Extended `paths:` in
+    `.github/workflows/deploy-web.yml` to also fire on root
+    `package.json` and `CHANGELOG.md`. Every release now redeploys
+    the dashboard with the right version pill + release-notes link.
+
+### Cross-platform script audit
+
+User feedback: "AI agent runs Mneme install/update on dev's machine —
+must work on Windows / macOS / Linux without surprises." Audited every
+spawn / install / file-resolution call:
+
+  - **`mneme upgrade` PATH diagnosis** — replaced shell-out with a
+    pure-JS PATH walker. Old code used `where mneme` (Windows) or
+    `which -a mneme` (Linux GNU only — macOS BSD `which` rejects
+    `-a` and silently errors). New `findOnPath()` parses `$PATH`
+    + `$PATHEXT` directly via `node:path`, works identically on all
+    3 OSes, no shell required.
+  - **`mneme upgrade` Windows file-lock failure path** — when
+    `npm install -g` fails because the running mneme.cmd is locked,
+    the error message now tells the user to open a NEW PowerShell
+    window and re-run, instead of suggesting `sudo` (which is wrong
+    on Windows).
+  - **`mneme.system.upgrade` MCP tool failure copy** —
+    platform-aware remediation: Windows users get the file-lock
+    workaround; POSIX users get the `sudo` hint.
+  - **Detached daemon spawn** — added `windowsHide: true` to the two
+    `spawn(node, ..., { detached: true })` call sites in
+    `nucleus daemon --detach` and `nucleus seed --auto-start` so
+    the child doesn't pop a stray console window on Windows.
+  - **`spawnSyncPowershell` renamed to `spawnSyncShell`** — the
+    function already ran `sh -c` on POSIX and `powershell.exe -c`
+    on Windows; the old name made readers think it was Windows-only.
+    Added a docstring documenting the cross-platform behavior.
+
+Verified: `mneme nucleus install --as-service` already had three
+correct OS branches (schtasks / systemd-user / launchd plist).
+`mcp-install` already used `homedir()` + `process.env.APPDATA` +
+darwin-specific `Library/Application Support` correctly. No changes
+needed there.
+
+### Tests
+
+  - 4517 / 4517 passing.
+  - Production build clean. TypeScript strict.
+
 ## [1.23.3] — 2026-05-09
 
 **Watch display fix — stop printing the same lesson on every tick.**

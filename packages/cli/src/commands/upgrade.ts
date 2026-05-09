@@ -21,8 +21,38 @@
  *   6. If versions still mismatch → prints concrete remediation steps.
  */
 import { execSync, spawnSync } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
+import { delimiter as pathDelimiter, join as pathJoin } from "node:path";
 import kleur from "kleur";
 import { ui, header, section, pill, kv, nextSteps } from "../ui.js";
+
+/** v1.23.4 — pure-JS PATH walker; replaces `which -a` (not portable to
+ *  macOS BSD which) and `where` (Windows-only). Works identically on
+ *  win32 / darwin / linux without shelling out. */
+function findOnPath(binName: string): string[] {
+  const isWin = process.platform === "win32";
+  const exts = isWin
+    ? (process.env["PATHEXT"] ?? ".COM;.EXE;.BAT;.CMD").split(";").map((e) => e.toLowerCase())
+    : [""]; // POSIX: no extension required
+  const dirs = (process.env["PATH"] ?? "").split(pathDelimiter).filter(Boolean);
+  const hits: string[] = [];
+  const seen = new Set<string>();
+  for (const dir of dirs) {
+    for (const ext of exts) {
+      const full = pathJoin(dir, binName + ext);
+      try {
+        if (!existsSync(full)) continue;
+        const st = statSync(full);
+        if (!st.isFile()) continue;
+        // De-duplicate (PATH may list same dir twice).
+        if (seen.has(full)) continue;
+        seen.add(full);
+        hits.push(full);
+      } catch { /* unreachable file — skip */ }
+    }
+  }
+  return hits;
+}
 import { getVersion } from "../version.js";
 
 export interface UpgradeOptions {
@@ -101,20 +131,22 @@ export async function upgradeCommand(opts: UpgradeOptions): Promise<number> {
   });
   if (installed.status !== 0) {
     ui.error(`Install exited with code ${installed.status}.`);
-    process.stdout.write(`  ${kleur.gray("On permission issues (Linux/macOS), try:  sudo npm install -g mneme-ai@" + remote)}\n\n`);
+    // v1.23.4 — give the right remediation per platform. Windows
+    // file-lock + macOS/Linux permission errors look the same to npm
+    // but need different fixes.
+    if (process.platform === "win32") {
+      process.stdout.write(`  ${kleur.gray("On Windows, the running mneme.cmd may be locked by this very process.")}\n`);
+      process.stdout.write(`  ${kleur.gray("Workaround: open a NEW PowerShell window and run:")}\n`);
+      process.stdout.write(`     ${kleur.cyan().bold("npm install -g --force mneme-ai@" + remote)}\n\n`);
+    } else {
+      process.stdout.write(`  ${kleur.gray("On Linux/macOS permission issues:  sudo npm install -g mneme-ai@" + remote)}\n\n`);
+    }
     return installed.status ?? 1;
   }
 
-  // ── 4. Diagnose PATH for stale binaries ──────────────────────────
+  // ── 4. Diagnose PATH for stale binaries (pure JS, no shell) ──────
   process.stdout.write("\n" + section("✦ Diagnosing PATH") + "\n\n");
-  const finder = process.platform === "win32" ? "where" : "which -a";
-  let pathHits: string[] = [];
-  try {
-    const out = execSync(`${finder} mneme`, { encoding: "utf8", timeout: 5000 });
-    pathHits = out.trim().split(/\r?\n/).filter(Boolean);
-  } catch {
-    // Some shells return non-zero if `mneme` isn't found — non-fatal.
-  }
+  const pathHits = findOnPath("mneme");
   if (pathHits.length === 0) {
     process.stdout.write(`    ${kleur.yellow("⚠")}  No \`mneme\` found on PATH after install. Restart your terminal.\n\n`);
   } else if (pathHits.length === 1) {

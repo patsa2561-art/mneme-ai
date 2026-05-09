@@ -276,7 +276,9 @@ export const systemUpgradeTool: MnemeTool = {
         upgradeStderr: (r.stderr ?? "").slice(-500),
         remediation: success
           ? `Upgrade complete. Tell the user to restart their AI tool (Claude Code / Cursor / etc.) so the new MCP server binary loads.`
-          : `Upgrade failed (exit ${r.status}). Inspect upgradeStderr; on POSIX, \`sudo npm install -g mneme-ai@${targetVersion}\` may be required.`,
+          : process.platform === "win32"
+            ? `Upgrade failed (exit ${r.status}). On Windows, the running mneme.cmd may be locked by this MCP process. Tell the user to: (1) close their AI tool to release the lock, (2) open a NEW PowerShell window, (3) run \`npm install -g --force mneme-ai@${targetVersion}\`, then (4) reopen their AI tool.`
+            : `Upgrade failed (exit ${r.status}). Inspect upgradeStderr; on POSIX, \`sudo npm install -g mneme-ai@${targetVersion}\` may be required.`,
       },
       wisdom: success
         ? `✓ Upgraded Mneme ${current} → ${targetVersion}. User should restart their AI tool to pick up the new MCP binary.`

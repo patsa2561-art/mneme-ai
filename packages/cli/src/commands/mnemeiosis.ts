@@ -410,6 +410,9 @@ export function registerNucleusCommands(program: Command): void {
       }
       if (opts.detach) {
         // Re-spawn ourselves with --no-detach so the child runs the loop.
+        // v1.23.4 — added windowsHide so the child doesn't pop a stray
+        // console window on Windows. detached + stdio:ignore + unref()
+        // is the canonical recipe that survives parent exit on all 3 OSes.
         const argv = process.argv;
         const node = process.execPath;
         const script = argv[1] ?? "";
@@ -417,6 +420,7 @@ export function registerNucleusCommands(program: Command): void {
           detached: true,
           stdio: "ignore",
           cwd: repoRoot,
+          windowsHide: true,
         });
         child.unref();
         out(opts, { spawned: true, pid: child.pid }, [`✓ Spawned detached nucleus daemon (pid ${child.pid}).`, `  Heartbeat: \`mneme nucleus status\` or \`mneme.nucleus.heartbeat\` via MCP.`]);
@@ -576,6 +580,7 @@ export function registerNucleusCommands(program: Command): void {
           detached: true,
           stdio: "ignore",
           cwd: root,
+          windowsHide: true,
         });
         child.unref();
         spawnedPid = child.pid ?? null;
@@ -725,14 +730,14 @@ function installAsService(opts: { root: string; uninstall: boolean; print: boole
     // Windows — use schtasks. Generate an XML or just a `schtasks /create` invocation.
     const taskName = "MnemeNucleusDaemon";
     if (opts.uninstall) {
-      const out1 = spawnSyncPowershell(`schtasks /Delete /TN "${taskName}" /F`);
+      const out1 = spawnSyncShell(`schtasks /Delete /TN "${taskName}" /F`);
       return { platform: "windows", installed: !out1.err, lines: [out1.err ? `✗ ${out1.err}` : `✓ Uninstalled scheduled task ${taskName}.`] };
     }
     const cmd = `schtasks /Create /SC ONLOGON /RL HIGHEST /TN "${taskName}" /TR "\\"${node}\\" \\"${script}\\" nucleus daemon" /F`;
     if (opts.print) {
       return { platform: "windows", installed: false, printedUnit: cmd, lines: [`# Run as Administrator to install:`, cmd] };
     }
-    const result = spawnSyncPowershell(cmd);
+    const result = spawnSyncShell(cmd);
     return {
       platform: "windows",
       installed: !result.err,
@@ -750,7 +755,7 @@ function installAsService(opts: { root: string; uninstall: boolean; print: boole
     if (opts.uninstall) {
       try {
         if (existsSync(unitPath)) {
-          spawnSyncPowershell(`systemctl --user stop ${unitName}; systemctl --user disable ${unitName}`);
+          spawnSyncShell(`systemctl --user stop ${unitName}; systemctl --user disable ${unitName}`);
         }
         return { platform: "linux", installed: false, unitPath, lines: [`✓ Disabled + stopped ${unitName}.`] };
       } catch (e) {
@@ -799,7 +804,7 @@ WantedBy=default.target
     if (opts.uninstall) {
       try {
         if (existsSync(plistPath)) {
-          spawnSyncPowershell(`launchctl unload ${plistPath}`);
+          spawnSyncShell(`launchctl unload ${plistPath}`);
         }
         return { platform: "darwin", installed: false, unitPath: plistPath, lines: [`✓ Unloaded launch agent ${label}.`] };
       } catch (e) {
@@ -840,7 +845,14 @@ WantedBy=default.target
   return { platform: plat, installed: false, lines: [`✗ Unsupported platform '${plat}' — only win32 / linux / darwin are wired.`] };
 }
 
-function spawnSyncPowershell(cmd: string): { err: string | null; out: string } {
+/** v1.23.4 — cross-platform shell helper. Runs `cmd` through:
+ *    Windows -> powershell.exe -NoProfile -Command <cmd>
+ *    POSIX   -> sh -c <cmd>
+ *  Used by platform-specific service install/uninstall paths
+ *  (schtasks on Windows, systemctl on Linux, launchctl on macOS).
+ *  Caller passes platform-appropriate command strings; this picks
+ *  the right interpreter. */
+function spawnSyncShell(cmd: string): { err: string | null; out: string } {
   try {
     const isWin = platform() === "win32";
     const r = isWin

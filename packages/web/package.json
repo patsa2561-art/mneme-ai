@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/web",
-  "version": "1.23.3",
+  "version": "1.23.4",
   "description": "Mneme Web Dashboard โ€” visual nervous-system graph with time scrubber",
   "type": "module",
   "private": true,
