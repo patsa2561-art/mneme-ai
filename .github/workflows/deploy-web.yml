@@ -1,16 +1,18 @@
 name: Deploy Dashboard to GitHub Pages
 
 on:
-  # v1.24.1 — Two triggers, both unconditional:
-  #   1. push to main (any commit)  -> redeploy with the latest HEAD
-  #   2. push of a v* tag           -> redeploy at the tagged commit
-  # We REMOVED the `paths` filter that was here in v1.23.4 -- it was
-  # too brittle: a commit that bumped versions everywhere EXCEPT inside
-  # packages/web/** never triggered the deploy, so the version pill
-  # would silently lag. Every main push now redeploys (build ~4s).
+  # v1.24.3 — push to main is the ONLY auto-trigger.
+  # We REMOVED `tags: ['v*']` (added in v1.24.1) because:
+  #   1. The github-pages environment has a deployment-branch
+  #      protection rule that only allows `main`, not tags. Tag
+  #      pushes failed instantly with "not allowed to deploy".
+  #   2. Tag pushes happen RIGHT AFTER the main push during release.
+  #      With concurrency: cancel-in-progress, the tag run cancelled
+  #      the main run that WOULD have succeeded, leaving zero good
+  #      deploys per release.
+  # Now every main push redeploys; tags don't trigger anything.
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:

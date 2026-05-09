@@ -8,6 +8,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.24.3] — 2026-05-09
+
+**Web deploy: real root cause finally identified.**
+
+The user (correctly!) showed that GitHub Pages source IS set to
+"GitHub Actions". So that wasn't the issue. The actual error from
+the API:
+
+> "Tag v1.24.2 is not allowed to deploy to github-pages due to
+> environment protection rules."
+
+The `github-pages` environment in this repo has a deployment-branch
+protection rule that only allows `main` (not tags). v1.24.1 added
+a `tags: ['v*']` trigger to deploy-web; that trigger fired on every
+release, was rejected by the environment rule, AND killed the main-
+push run that would have succeeded — because the `pages` concurrency
+group has `cancel-in-progress: true`. Net result: zero successful
+deploys per release.
+
+Fix: removed the tag trigger entirely. Main push happens with every
+release anyway (we always commit + tag), so the deploy still fires
+on every release — but only ONCE, from main, which the environment
+rule allows.
+
+Tests: 4658 / 4658 passing.
+
 ## [1.24.2] — 2026-05-09
 
 **Two real bugs caught by live testing as an AI agent:**
