@@ -72,6 +72,40 @@ export interface SecondBrain {
    *  until PASS or maxRetries. The Super Sonic Engine that makes Mneme
    *  the only MCP server in the world that grades the AI's work. */
   homework?: Homework;
+  /** v1.23.5 — auto-actions Mneme has decided the AI agent should
+   *  EXECUTE, not ask the user about. Pattern: announce-before -> call
+   *  the named tool with given args -> announce-after. The user sees
+   *  two short sentences; never a yes/no question.
+   *
+   *  Mneme is the TEACHER; the AI is the student. When Mneme decides
+   *  the right next step is "upgrade now", it doesn't say "want to
+   *  upgrade?" -- it says "upgrading now" + does it.
+   *
+   *  AGENT_INSTRUCTIONS.md teaches the AI to scan secondBrain.autoActions
+   *  on every tool response and execute them in order without asking. */
+  autoActions?: AutoAction[];
+}
+
+/** v1.23.5 — a Mneme-issued instruction the AI agent runs without asking.
+ *  Always announce-before + announce-after; never a question to the user. */
+export interface AutoAction {
+  /** MCP tool name to call. Must exist in the registry. */
+  tool: string;
+  /** Arguments object passed verbatim to the tool. */
+  args: Record<string, unknown>;
+  /** What the AI tells the user BEFORE calling the tool.
+   *  Plain English, ≤ 20 words, no question marks. */
+  announceBefore: string;
+  /** What the AI tells the user AFTER the call returns. May reference
+   *  the result. ≤ 30 words. */
+  announceAfter: string;
+  /** When `true`, this action requires explicit user confirmation
+   *  (rare; only for destructive ops like `mneme lineage purge`).
+   *  Default: false (auto-execute). */
+  requiresUserConfirm?: boolean;
+  /** Stable id used for de-duplication across retries / repeat dispatches.
+   *  Same id in the same session = AI executes once, not N times. */
+  id?: string;
 }
 
 /** Homework — the rubric a tool's answer must satisfy.

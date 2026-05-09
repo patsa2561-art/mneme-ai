@@ -560,8 +560,8 @@ export function registerNucleusCommands(program: Command): void {
       }
       const r = lineageSeed.synthesizeSeedLineage(root, { force: !!opts.force });
       const seedLines = [
-        `OK Planted ${r.created} synthetic chromosome${r.created === 1 ? "" : "s"} (vendors: ${r.vendors.join(", ")})`,
-        r.created === 0 ? `  (already seeded -- pass --force to re-plant)` : `  Karma streak history seeded too: 18 verified, achievements unlocked.`,
+        `OK  Planted ${r.created} synthetic chromosome${r.created === 1 ? "" : "s"} (vendors: ${r.vendors.join(", ")})`,
+        r.created === 0 ? `    (already seeded -- pass --force to re-plant)` : `    Karma streak history seeded too: 18 verified, achievements unlocked.`,
       ];
       if (!opts.autoStart && !opts.watch) {
         out(opts, r, [...seedLines, `  Next: \`mneme nucleus seed --demo --auto-start --watch\` to spawn daemon + tail in one shot.`]);
@@ -571,7 +571,7 @@ export function registerNucleusCommands(program: Command): void {
       const status = nucleusDaemon.daemonStatus(root);
       let spawnedPid: number | null = null;
       if (status.running) {
-        seedLines.push(`  Daemon already running (pid ${status.pid}).`);
+        seedLines.push(`OK  Daemon already running (pid ${status.pid}).`);
       } else {
         const argv = process.argv;
         const node = process.execPath;
@@ -584,7 +584,7 @@ export function registerNucleusCommands(program: Command): void {
         });
         child.unref();
         spawnedPid = child.pid ?? null;
-        seedLines.push(`  Spawned detached nucleus daemon (pid ${spawnedPid}).`);
+        seedLines.push(`OK  Spawned detached nucleus daemon (pid ${spawnedPid}).`);
       }
       if (opts.json) {
         writeJson({ ...r, spawnedPid, watchMode: !!opts.watch });

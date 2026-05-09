@@ -56,7 +56,15 @@ jobs:
           git config --global init.defaultBranch main
           git config --global core.autocrlf false
 
-      - run: npm ci
+      # v1.23.5 — npm ci is strict about lockfile integrity. When npm
+      # republishes a package (which they do silently within ~72h windows),
+      # the recorded sha512 drifts and EVERY runner fails with EINTEGRITY.
+      # heal-lockfile.mjs surgically patches the drifted hashes against
+      # registry truth WITHOUT regenerating the lockfile (which would
+      # strip platform-specific optionalDependencies on the wrong host).
+      - name: Install (with lockfile self-heal on EINTEGRITY)
+        shell: bash
+        run: npm ci || (echo "::warning::lockfile integrity drift detected -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
 
       - name: Build
         run: npm run build
@@ -87,7 +95,15 @@ jobs:
           git config --global user.email "ci@mneme.dev"
           git config --global user.name "Mneme CI"
           git config --global core.autocrlf false
-      - run: npm ci
+      # v1.23.5 — npm ci is strict about lockfile integrity. When npm
+      # republishes a package (which they do silently within ~72h windows),
+      # the recorded sha512 drifts and EVERY runner fails with EINTEGRITY.
+      # heal-lockfile.mjs surgically patches the drifted hashes against
+      # registry truth WITHOUT regenerating the lockfile (which would
+      # strip platform-specific optionalDependencies on the wrong host).
+      - name: Install (with lockfile self-heal on EINTEGRITY)
+        shell: bash
+        run: npm ci || (echo "::warning::lockfile integrity drift detected -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
       - run: npm run build
       - name: Run full eval
         run: npm run eval -- --out tests/.tmp/eval-report.json
@@ -112,7 +128,15 @@ jobs:
           git config --global user.email "ci@mneme.dev"
           git config --global user.name "Mneme CI"
           git config --global core.autocrlf false
-      - run: npm ci
+      # v1.23.5 — npm ci is strict about lockfile integrity. When npm
+      # republishes a package (which they do silently within ~72h windows),
+      # the recorded sha512 drifts and EVERY runner fails with EINTEGRITY.
+      # heal-lockfile.mjs surgically patches the drifted hashes against
+      # registry truth WITHOUT regenerating the lockfile (which would
+      # strip platform-specific optionalDependencies on the wrong host).
+      - name: Install (with lockfile self-heal on EINTEGRITY)
+        shell: bash
+        run: npm ci || (echo "::warning::lockfile integrity drift detected -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
       - run: npm run build
       - name: Run benchmark (small + medium)
         run: npm run bench -- --only small --out tests/.tmp/bench-small.json

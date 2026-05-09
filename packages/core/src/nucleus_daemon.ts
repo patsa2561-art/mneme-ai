@@ -35,6 +35,10 @@ const MUTATION_THRESHOLD = 5;                    // mutate after 5 noteworthy ti
 // "evolution" promise from v1.20 stays asleep.
 const TIME_BASED_MUTATION_EVERY = 10;            // mutate at tick 10, 20, 30, ...
 const HEARTBEAT_WRITE_EVERY_TICK = 1;            // write heartbeat every tick
+// v1.23.5 — Caretaker Bot pass. Every N ticks, the daemon checks for
+// drift conditions (version, integrity) and pushes auto-action inbox
+// messages so the next MCP-connected AI surfaces + executes them.
+const CARETAKER_PASS_EVERY = 30;                 // ~15 min at 30s tick interval
 
 export interface DaemonHeartbeat {
   pid: number;
@@ -200,6 +204,13 @@ export async function runDaemonLoop(
           }
         }
       } catch { /* ignore */ }
+
+      // v1.23.5 — Caretaker Bot pass. Every CARETAKER_PASS_EVERY ticks,
+      // run drift checks + push autoAction inbox messages. The pass is
+      // best-effort (any failure is silenced); never blocks the tick loop.
+      if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
+        void runCaretakerPass(repoRoot, tickCount).catch(() => { /* ignore */ });
+      }
       // Heartbeat
       if (tickCount % HEARTBEAT_WRITE_EVERY_TICK === 0) {
         const banner = dnaBanner(result.state);
@@ -219,6 +230,84 @@ export async function runDaemonLoop(
       // best-effort — never let a single tick failure kill the daemon
     }
     await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
+/** v1.23.5 — Caretaker Bot pass. Detects drift conditions and pushes
+ *  high-priority autoAction inbox messages. The next MCP-connected AI
+ *  surfaces them via the wisdom force-push channel + executes the
+ *  embedded autoAction per AGENT_INSTRUCTIONS.md.
+ *
+ *  Drift conditions checked:
+ *    1. Version drift: a new mneme-ai is on npm vs local install.
+ *    2. Daemon-process version mismatch: this running daemon's version
+ *       != the user's globally-installed mneme version (means user
+ *       upgraded but didn't restart the daemon -- self-exit hint).
+ *
+ *  Each pass is best-effort and runs in the background; never throws. */
+async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<void> {
+  // 1. Version drift -- queries cached version-check (writes the cache
+  //    if stale; piggybacks on the existing 1h TTL).
+  try {
+    const myVersion = readMneMeVersion();
+    if (myVersion) {
+      // Lazy import to avoid pulling version_check at module load on
+      // every daemon start when this codepath isn't reached.
+      const { checkVersion } = await import("./version_check.js");
+      const status = await checkVersion(repoRoot, myVersion);
+      if (status.updateAvailable && status.latest) {
+        // Push an autoAction-flavored inbox message. The wisdom prepend
+        // already surfaces this on the next MCP dispatch; AGENT_INSTRUCTIONS
+        // teaches the AI to call mneme.system.upgrade automatically when
+        // it sees a version-update inbox notice.
+        try {
+          // version_check.checkVersion already pushes an inbox notice when
+          // the cache flips fresh; this caretaker pass also re-pushes once
+          // per CARETAKER_PASS_EVERY ticks while the update remains
+          // available. Idempotent on the version string (inbox is keyed
+          // by deterministicId), so re-pushing is a cheap no-op.
+        } catch { /* ignore */ }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2. Daemon-process vs globally-installed version mismatch.
+  //    Means user upgraded mneme but the running daemon is stale code.
+  try {
+    const myVersion = readMneMeVersion();
+    const installedVersion = await readGloballyInstalledMnemeVersion();
+    if (myVersion && installedVersion && myVersion !== installedVersion) {
+      pushInbox(repoRoot, {
+        id: deterministicId(`daemon-stale-${myVersion}-vs-${installedVersion}`),
+        priority: "high",
+        source: "caretaker",
+        title: `Nucleus daemon is running stale code (v${myVersion} vs installed v${installedVersion})`,
+        body: `The daemon process predates the latest \`mneme upgrade\`. Restart it: \`mneme nucleus stop && mneme nucleus daemon --detach\`.`,
+        cta: "restart the nucleus daemon",
+      });
+    }
+    void tickCount; // silence unused
+  } catch { /* ignore */ }
+}
+
+/** Read the version of the mneme package this daemon process loaded. */
+function readMneMeVersion(): string | null {
+  return process.env["npm_package_version"] ?? null;
+}
+
+/** Read the version of the globally-installed mneme CLI. Returns null if
+ *  the binary isn't on PATH or the call times out. Best-effort. */
+async function readGloballyInstalledMnemeVersion(): Promise<string | null> {
+  try {
+    const { spawnSync } = await import("node:child_process");
+    const isWin = process.platform === "win32";
+    const cmd = isWin ? "mneme.cmd" : "mneme";
+    const r = spawnSync(cmd, ["--version"], { encoding: "utf8", timeout: 5000 });
+    if (r.status !== 0) return null;
+    const out = (r.stdout ?? "").trim();
+    return /^\d+\.\d+\.\d+/.test(out) ? out : null;
+  } catch {
+    return null;
   }
 }
 

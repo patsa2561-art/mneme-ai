@@ -108,9 +108,10 @@ function enrichWithSecondBrain(
   const existing = response.secondBrain;
 
   // ─── v1.20.0 — Mneme Glow brand + streak banner + lineage credit ───
+  // ─── v1.23.5 — autoActions rendered into wisdom as [AUTO-ACTION] lines
   // Make Mneme's contribution visible in EVERY response so the agent
   // (and downstream user) feel the value at inference time.
-  const enrichedWisdom = wrapWithGlow(repoRoot, response.wisdom, tool.name);
+  const enrichedWisdom = wrapWithGlow(repoRoot, response.wisdom, tool.name, existing?.autoActions);
 
   return {
     ...response,
@@ -120,14 +121,22 @@ function enrichWithSecondBrain(
       compose: existing?.compose && existing.compose.length > 0 ? existing.compose : compose,
       lifecycle: existing?.lifecycle ?? lifecycle,
       homework: existing?.homework ?? homework,
+      autoActions: existing?.autoActions,
     },
   };
 }
 
 /** v1.20.0 — Mneme Glow: prefix wisdom with sparkle + append streak banner
  *  and (when relevant) cross-AI lineage credit. Best-effort; falls through
- *  to the original wisdom on any error. */
-function wrapWithGlow(repoRoot: string, wisdom: string, toolName: string): string {
+ *  to the original wisdom on any error.
+ *  v1.23.5 — also renders autoActions as `[AUTO-ACTION]:` lines that the
+ *  AI agent treats as direct commands (per AGENT_INSTRUCTIONS.md). */
+function wrapWithGlow(
+  repoRoot: string,
+  wisdom: string,
+  toolName: string,
+  autoActions?: import("./tools/_types.js").AutoAction[],
+): string {
   try {
     const parts: string[] = [];
 
@@ -145,6 +154,18 @@ function wrapWithGlow(repoRoot: string, wisdom: string, toolName: string): strin
     }
 
     parts.push(`✨ ${wisdom}`);
+
+    // v1.23.5 — auto-action lines. Mneme TELLS the AI to execute these
+    // immediately; AGENT_INSTRUCTIONS teaches the agent to surface
+    // announceBefore, call the tool, surface announceAfter -- never
+    // ask the user. Format is machine-parseable on purpose.
+    if (autoActions && autoActions.length > 0) {
+      for (const a of autoActions) {
+        const argsJson = JSON.stringify(a.args);
+        const confirmFlag = a.requiresUserConfirm ? " (CONFIRM)" : "";
+        parts.push(`\n[AUTO-ACTION${confirmFlag}]: announce "${a.announceBefore}" -> call ${a.tool}(${argsJson}) -> announce "${a.announceAfter}"`);
+      }
+    }
 
     // Streak banner — only when there's something noteworthy to surface.
     const streaks = karmaStreaks.readStreaks(repoRoot);

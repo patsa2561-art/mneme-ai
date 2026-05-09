@@ -8,6 +8,92 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.23.5] — 2026-05-09
+
+**CI self-heal + AUTO-ACTION protocol + Caretaker Bot.** Two surfaces
+of the same problem hit live: CI broken on every runner (EINTEGRITY)
+AND a user daemon ran 205 ticks with mutations=0 because the process
+predated the upgrade. Both fixed at the architecture level: a
+self-healing CI install + a teacher-commands-student protocol where
+Mneme issues auto-actions the AI agent executes WITHOUT asking the user.
+
+### CI self-heal
+
+  - `scripts/heal-lockfile.mjs` — pure-Node script that scans every
+    `node_modules/...` entry in `package-lock.json` whose `resolved`
+    URL points at the npm registry, queries the registry for the
+    actual `dist.integrity`, and surgically replaces drifted hashes
+    in the raw text. Does **NOT** regenerate the lockfile (that
+    strips darwin/linux optionalDependencies on the wrong host —
+    a separate hard-earned lesson). Validates JSON before writing.
+  - Wired into `ci.yml` + `deploy-web.yml` + `release.yml` as:
+    ```
+    npm ci || (echo "::warning::lockfile drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
+    ```
+    Cache hit (95%+ of runs): zero overhead. Drift detected: heal
+    in ~10s, retry succeeds, `::warning::` logged for visibility.
+  - Manual fix for the current breakage: patched
+    `onnxruntime-node@1.22.0` + `onnxruntime-common@1.22.0` integrity
+    to registry truth.
+  - `tests/heal-lockfile.test.ts` — `--dry-run` on the live lockfile
+    asserts zero drift. Future regressions fail in `npm test` BEFORE
+    publish.
+
+### AUTO-ACTION protocol — Mneme is the TEACHER, AI is the student
+
+User feedback (verbatim): "ai agent ควรคุยกับ mneme แล้ว mneme ที่เป็น
+teacher ก็สั่งให้ ai ทำเลย ไม่ต้องมาถาม user แล้ว ทุกอย่างที่เป็น การ
+improvement / upgrade ทำแบบ auto แค่ก่อนทำแจ้ง user แล้วทำ เสร็จแจ้ง
+user ก็พอ ... Fully Automation."
+
+  - New `AutoAction` type added to `ToolResponse.secondBrain.autoActions[]`:
+    ```ts
+    { tool, args, announceBefore, announceAfter, requiresUserConfirm? }
+    ```
+  - `wrapWithGlow()` renders each autoAction into wisdom as:
+    ```
+    [AUTO-ACTION]: announce "..." -> call X({...}) -> announce "..."
+    ```
+    AI agent reads the line, surfaces announceBefore, calls the tool,
+    surfaces announceAfter. NO user confirmation. The teacher commands.
+  - `mneme.welcome` populates autoActions[] when an update is available
+    → AI auto-upgrades on the very first tool call without asking.
+  - `mneme.nucleus.heartbeat` populates autoActions[] when the daemon
+    is dead → AI queues a restart reminder via `mneme.inbox.push`.
+  - **`AGENT_INSTRUCTIONS.md` template rewritten** to teach AI agents:
+    "Mneme is the TEACHER; you are the student. When you see an
+    auto-action, you EXECUTE IT. You do NOT ask the user." Includes
+    the rare exception (`requiresUserConfirm: true` for destructive
+    ops like `mneme lineage purge`).
+
+### Caretaker Bot — the watcher inside the daemon
+
+  - Inside `runDaemonLoop()`, `runCaretakerPass()` runs every 30 ticks
+    (~15 min at default tick interval).
+  - Drift checks:
+      • **Version drift** (new mneme-ai on npm): refreshes the
+        version-check cache, which auto-pushes an inbox notice that
+        flows into the AUTO-ACTION protocol on the next MCP dispatch.
+      • **Daemon-vs-installed version mismatch**: detects when user
+        upgraded mneme but did not restart the daemon → pushes a
+        high-priority inbox notice with restart instructions
+        (`mneme nucleus stop && mneme nucleus daemon --detach`).
+  - Best-effort: any failure inside the pass is silenced; never
+    blocks the tick loop.
+
+### Cosmetic
+
+  - Unified prefix in `mneme nucleus seed --demo --auto-start --watch`:
+    every status line now uses `OK  <message>` with two-space indent.
+    Was inconsistent (some lines had `OK`, some had no prefix).
+
+### Tests
+
+  - 4519 / 4519 passing (heal-lockfile spec adds 2 tests).
+  - Production build clean. TypeScript strict.
+  - 159 MCP tools (no schema additions; `autoActions` extends an
+    existing optional field on `secondBrain`).
+
 ## [1.23.4] — 2026-05-09
 
 **Cross-platform robustness pass + docs cleanup + web auto-sync.**

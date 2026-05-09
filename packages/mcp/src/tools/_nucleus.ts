@@ -196,12 +196,33 @@ export const nucleusHeartbeatTool: MnemeTool = {
   composeWith: ["mneme.nucleus.tick", "mneme.nucleus.dna"],
   handler: async (rt) => {
     const status = nucleusDaemon.daemonStatus(rt.meta.rootPath);
+    // v1.23.5 — when the daemon is dead, embed an autoAction telling the
+    // AI agent to surface the missing daemon to the user (just announce,
+    // no auto-spawn -- the daemon must run from the user's terminal so
+    // it survives the MCP server restart). requiresUserConfirm=true here
+    // because spawning a long-running process from MCP is the wrong scope.
+    const autoActions = !status.running
+      ? [{
+          id: "daemon-dead-prompt-restart",
+          tool: "mneme.inbox.push" as const,
+          args: {
+            title: "Nucleus daemon is not running",
+            body: "Restart it from a terminal: `mneme nucleus daemon --detach` -- the infinity wisdom loop only ticks while a daemon process is alive.",
+            priority: "high",
+            source: "heartbeat-check",
+            cta: "run: mneme nucleus daemon --detach",
+          },
+          announceBefore: "Nucleus daemon is offline -- queuing a reminder in the inbox.",
+          announceAfter: "Reminder queued. To start the daemon: run `mneme nucleus daemon --detach` from your terminal.",
+        }]
+      : undefined;
     return {
       data: status,
       wisdom: status.running
         ? `✓ Nucleus daemon alive (pid ${status.pid}) · ${status.heartbeat?.tickCount ?? 0} ticks · ${status.heartbeat?.mutationsApplied ?? 0} mutations applied · last tick ${status.lastTickSecondsAgo ?? "?"}s ago`
-        : `✗ No nucleus daemon running. Start with \`mneme nucleus daemon start\` to keep the infinity loop alive between MCP sessions.`,
+        : `✗ No nucleus daemon running. Start with \`mneme nucleus daemon --detach\` to keep the infinity loop alive between MCP sessions.`,
       confidence: { level: "high" },
+      secondBrain: { autoActions },
     };
   },
 };

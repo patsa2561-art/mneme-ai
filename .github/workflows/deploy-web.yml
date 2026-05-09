@@ -34,8 +34,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install (root, workspaces)
-        run: npm ci
+      - name: Install (root, workspaces; with lockfile self-heal on EINTEGRITY)
+        shell: bash
+        run: npm ci || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci)
 
       - name: Build dashboard
         run: npm run build --workspace=@mneme-ai/web

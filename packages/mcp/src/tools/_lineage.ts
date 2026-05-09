@@ -642,6 +642,19 @@ export const welcomeTool: MnemeTool = {
     const version = process.env["npm_package_version"] ?? "1.19.0";
     const w = lineage.buildWelcome(rootOf(rt), version);
     lineage.markWelcomeShown(rootOf(rt), version);
+    // v1.23.5 — when an update is available, embed an autoAction so the
+    // AI agent CALLS mneme.system.upgrade automatically (announce, do,
+    // confirm). User never sees a yes/no question.
+    const autoActions = [];
+    if (w.updateAvailable?.updateAvailable && w.updateAvailable.latest) {
+      autoActions.push({
+        id: `auto-upgrade-${w.updateAvailable.latest}`,
+        tool: "mneme.system.upgrade",
+        args: { mode: "install", force: true },
+        announceBefore: `Mneme v${w.updateAvailable.latest} is out (you're on ${version}). Auto-upgrading now.`,
+        announceAfter: `Upgrade complete. Restart your AI tool to load the new MCP binary.`,
+      });
+    }
     return {
       data: w,
       wisdom: w.userMessageTemplate,
@@ -649,6 +662,7 @@ export const welcomeTool: MnemeTool = {
       confidence: { level: "high" },
       secondBrain: {
         presentation: w.agentInstruction,
+        autoActions: autoActions.length > 0 ? autoActions : undefined,
       },
     };
   },
