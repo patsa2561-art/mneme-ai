@@ -204,36 +204,92 @@ mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 <details>
 <summary><h2 style="display:inline">👥 Who is this for</h2></summary>
 
+<p>
+  <img src="https://img.shields.io/badge/Solo%20Dev-c084fc?style=for-the-badge&logoColor=white" alt="Solo Dev" />
+  <img src="https://img.shields.io/badge/Developer%20Team-38bdf8?style=for-the-badge&logoColor=white" alt="Developer Team" />
+  <img src="https://img.shields.io/badge/Engineering%20Lead-34d399?style=for-the-badge&logoColor=white" alt="Engineering Lead" />
+  <img src="https://img.shields.io/badge/Security%20%2F%20Compliance-fbbf24?style=for-the-badge&logoColor=white" alt="Security / Compliance" />
+  <img src="https://img.shields.io/badge/AI%20Agent%20%2F%20MCP%20Client-ec4899?style=for-the-badge&logoColor=white" alt="AI Agent / MCP Client" />
+</p>
+
 <details>
-<summary><b>🧑‍💻 Solo dev / vibe coder using AI tools</b></summary>
+<summary><b>🧑‍💻 $${\color{#c084fc}\textbf{Solo dev / vibe coder using AI tools}}$$</b></summary>
 
-You ship features fast with Claude Code or Cursor. But sometimes the AI hallucinates a function that doesn't exist, or invents a "fix" for a bug whose real cause is in a 2-year-old commit.
+You ship features fast with Claude Code or Cursor. But sometimes the AI **hallucinates a function that doesn't exist**, or invents a "fix" for a bug whose real cause is in a 2-year-old commit.
 
-Mneme bolts on and teaches your AI *your* repo's truth. Less hallucination, more grounded answers, citations everywhere.
+**Mneme bolts on and teaches your AI _your_ repo's truth.** Less hallucination, more grounded answers, citations everywhere.
+
+✨ **v1.19+** — close your laptop, open Cursor on a different machine: your AI agent **inherits the context** automatically (MneMeiosis Lineage syncs via your repo's git remote — zero setup).
 
 → Quick install above. Just talk to your AI.
 
 </details>
 
 <details>
-<summary><b>🧑‍🔬 Engineering team lead — running PR reviews + onboarding</b></summary>
+<summary><b>👥 $${\color{#38bdf8}\textbf{Developer team — multiple engineers, multiple AIs, one repo}}$$</b></summary>
 
-You're the person who has to know who knows what, who's overloaded, what's a regression risk, and which AI commits to trust.
+You're 3-15 engineers shipping together. Half the team uses Claude Code, the other half uses Cursor or Codex. Without Mneme, every AI session starts from zero — no shared learning, no shared "we tried this before and it broke."
 
-Mneme gives you `mneme.audit.certify` (5-axis CI gate for AI commits), `mneme.people.passport` (per-engineer dossier), `mneme.people.atrophy` (knowledge half-life), `mneme.insights.premortem` (regret prediction).
+**Mneme gives the WHOLE team a shared brain:**
+
+- 🧬 **Cross-AI pedigree** — Mneme tracks which vendor (Claude / Cursor / Codex) shipped which molecule. `mneme.lineage.routing_hint(query)` recommends the AI tool with the strongest track record on _your_ repo.
+- 🤝 **Genome Marketplace** — `mneme.genome.publish` packs your team's accumulated wisdom (constitution + tribal knowledge + ecosystem packs) into a portable file. Onboarding a new dev = `mneme.genome.install` → their AI agent inherits 6 months of team learning on day one.
+- 📼 **HMAC-chained audit log** — every AI tool call by every team member is tamper-evident. PR reviews can verify "did the AI actually do what the commit message says?".
+- 🛡 **ALETHEIA immune system** — shared anomaly detection + per-tool karma ledger. The team gets _smarter together_ over time.
+
+→ See [`MNEMEIOSIS.md`](./MNEMEIOSIS.md) for the inheritance protocol.
+
+</details>
+
+<details>
+<summary><b>🧑‍🔬 $${\color{#34d399}\textbf{Engineering team lead — running PR reviews + onboarding}}$$</b></summary>
+
+You're the person who has to know **who knows what**, who's overloaded, what's a regression risk, and which AI commits to trust.
+
+Mneme gives you:
+
+| Tool | What it answers |
+|---|---|
+| `mneme.audit.certify` | 5-axis CI gate for every AI-written commit (PASS/WARN/FAIL + structured findings) |
+| `mneme.people.passport` | Per-engineer dossier (DNA + expertise + telepathy + influence + atrophy) |
+| `mneme.people.atrophy` | Knowledge half-life — who's about to forget what |
+| `mneme.insights.premortem` | Regret prediction grounded in the repo's own incident history |
+| `mneme.lineage.pedigree` | **(v1.19)** Cross-AI family tree — which AI vendor shipped which molecule |
 
 → See [AI-Session-Audit wiki](https://github.com/patsa2561-art/mneme-ai/wiki/AI-Session-Audit) and [People-Analytics wiki](https://github.com/patsa2561-art/mneme-ai/wiki/People-Analytics).
 
 </details>
 
 <details>
-<summary><b>🛡 Security / compliance — EU AI Act 2026, SOX, SOC2</b></summary>
+<summary><b>🛡 $${\color{#fbbf24}\textbf{Security / compliance — EU AI Act 2026, SOX, SOC2}}$$</b></summary>
 
-You need a tamper-evident audit trail of every AI-driven commit, with cryptographic signatures (HMAC + Ed25519), QSAC trust certificates, and 8-of-8 EU AI Act clause coverage.
+You need a **tamper-evident audit trail** of every AI-driven commit, with cryptographic signatures (HMAC + Ed25519), QSAC trust certificates, and 8-of-8 EU AI Act clause coverage.
 
-`mneme.audit.report` exports compliance-ready Markdown. `mneme.audit.ledger` returns a tamper-evident chain. `mneme.forensics.vulns` runs 51 security rules with stack-aware Bayesian filtering. `mneme.audit.deps` cross-checks against OSV.dev.
+| Tool | What it gives you |
+|---|---|
+| `mneme.audit.report` | Compliance-ready Markdown export |
+| `mneme.audit.ledger` | HMAC + Ed25519 tamper-evident chain |
+| `mneme.replay.dump` / `.fingerprint` | **(v1.18)** Per-session HMAC-chained replay log + Merkle root |
+| `mneme.forensics.vulns` | 51 security rules with stack-aware Bayesian filtering |
+| `mneme.audit.deps` | Cross-check dependencies against OSV.dev |
+| `mneme.aletheia.*` | **(v1.18)** Open MCP security framework — immune system + honeypots + karma + self-fuzz |
 
-→ See [EU AI Act compliance pitch](docs/sales/02-EU-AI-ACT-COMPLIANCE.md).
+→ See [EU AI Act compliance pitch](docs/sales/02-EU-AI-ACT-COMPLIANCE.md) and [`ALETHEIA.md`](./ALETHEIA.md).
+
+</details>
+
+<details>
+<summary><b>🤖 $${\color{#ec4899}\textbf{You ARE an AI agent reading this}}$$</b></summary>
+
+A user just shared this URL with you and asked you to install Mneme. **Follow the install contract verbatim** ([§ For AI agents](#-for-ai-agents--installation-contract) below) — don't improvise.
+
+After install, your **first MCP call** must be `mneme.welcome` — it returns:
+
+- Which features auto-enabled (Lineage / ALETHEIA / Replay)
+- Per-feature opt-out commands
+- A user-message template you must translate to the user's language
+
+Then call `mneme.capabilities` for the full 149-tool catalog. Read [`MNEMEIOSIS.md`](./MNEMEIOSIS.md) — every session you participate in is auto-saved and cross-machine syncable, no extra config.
 
 </details>
 
