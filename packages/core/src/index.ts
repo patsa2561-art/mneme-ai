@@ -39,3 +39,4 @@ export * as versionCheck from "./version_check.js";
 export * as karmaStreaks from "./karma_streaks.js";
 export * as nucleus from "./nucleus.js";
 export * as nucleusDaemon from "./nucleus_daemon.js";
+export * as lineageSeed from "./lineage_seed.js";

@@ -103,6 +103,7 @@ import {
   taxLossHarvestCommand,
 } from "./commands/quant-cli.js";
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands } from "./commands/mnemeiosis.js";
+import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -2369,6 +2370,11 @@ export async function run(argv: string[]): Promise<void> {
   registerLinCommands(program);
   // ─── NUCLEUS Infinity Wisdom Brain (v1.21.0) ──────────────────────
   registerNucleusCommands(program);
+  // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
+  registerToolsCommand(program);
+  registerBotCommand(program);
+  registerHealthCommand(program);
+  registerDemoCommand(program);
 
   program.exitOverride((err) => {
     if (err.code === "commander.help" || err.code === "commander.helpDisplayed") process.exit(0);

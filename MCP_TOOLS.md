@@ -2,7 +2,7 @@
 
 _Auto-generated from the live tool registry. Do not edit by hand — run_ `npx tsx packages/mcp/scripts/gen-tools-md.ts` _to refresh._
 
-**157 tools** across **9 categories** · catalog hash `9f5369be259a0da0` · generated 2026-05-09 06:11:05 UTC
+**157 tools** across **9 categories** · catalog hash `9f5369be259a0da0` · generated 2026-05-09 06:27:34 UTC
 
 ## What is this
 

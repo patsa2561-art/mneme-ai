@@ -112,24 +112,49 @@ export function registerSporeCommands(program: Command): void {
 
   spore
     .command("status")
-    .description("Report spore configuration + vector clock + last sync.")
+    .description("Report cross-machine sync state in plain English.")
     .option("--json", "JSON output.")
     .action(async (opts: CommonOpts) => {
       const s = lineage.sporeStatus(process.cwd());
+      const clockEntries = Object.entries(s.vectorClock);
       out(opts, s, [
-        `Configured: ${s.configured ? "yes" : "no"}`,
-        s.remote ? `Remote: ${s.remote.url} · branch ${s.remote.branch}` : "",
-        `Local chromosomes: ${s.localChromosomeCount}`,
-        `Identity ready: ${s.identityReady ? "yes" : "no"}`,
-        `Vector clock: ${JSON.stringify(s.vectorClock)}`,
-      ].filter(Boolean));
+        s.configured
+          ? `Sync to git: configured ✓ → branch '${s.remote?.branch}' on ${s.remote?.url}`
+          : `Sync to git: not configured yet → run \`mneme spore init\` to enable cross-machine inheritance`,
+        s.localChromosomeCount > 0
+          ? `Local sessions saved: ${s.localChromosomeCount} chromosome${s.localChromosomeCount === 1 ? "" : "s"}`
+          : `Local sessions saved: 0 → none captured yet (need MCP-connected AI; run \`mneme mcp --install\`)`,
+        s.identityReady
+          ? `Identity: ready ✓ (cryptographic ID generated, signs every chromosome before push)`
+          : `Identity: not yet generated (will auto-create on first chromosome write)`,
+        clockEntries.length === 0
+          ? `Causality clock: empty (will track who-saw-what across your machines)`
+          : `Causality clock: ${clockEntries.map(([m, n]) => `${m}=${n}`).join(", ")}`,
+      ]);
     });
 }
 
 // ─── mneme lin (MneMeiosis core) ──────────────────────────────────────
 
+const LINEAGE_SCHEMA_VERSION = 1;
+
 export function registerLinCommands(program: Command): void {
   const lin = program.command("lin").description("MneMeiosis Lineage — session inheritance across AI agents and machines.");
+
+  lin
+    .command("version")
+    .description("Print the lineage schema version (relevant for cross-machine pull compatibility).")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const data = { schemaVersion: LINEAGE_SCHEMA_VERSION, mnemeVersion: process.env["npm_package_version"] ?? "unknown" };
+      out(opts, data, [
+        `Lineage schema version: ${LINEAGE_SCHEMA_VERSION}`,
+        `Mneme version: ${data.mnemeVersion}`,
+        ``,
+        `Cross-machine compatibility: same schemaVersion required to merge.`,
+        `Future schema bumps will ship a migration path via \`mneme lin migrate\`.`,
+      ]);
+    });
 
   lin
     .command("status")
@@ -231,7 +256,7 @@ export function registerLinCommands(program: Command): void {
 
   lin
     .command("ancestors")
-    .description("List the most recent N chromosomes.")
+    .description("List the most recent N chromosomes (one per AI session).")
     .option("--limit <n>", "How many to list (default 10).", parseIntStr)
     .option("--json", "JSON output.")
     .action(async (opts: { limit?: number } & CommonOpts) => {
@@ -245,7 +270,16 @@ export function registerLinCommands(program: Command): void {
           return { id, error: (e as Error).message };
         }
       });
-      out(opts, items, items.length === 0 ? ["Lineage is empty."] : items.map((i) => "vendor" in i ? `  ${i.createdAt} · ${i.vendor} · "${i.topic}" · ${i.atomCount} atoms · ${i.id}` : `  [error] ${i.id}: ${i.error}`));
+      out(opts, items, items.length === 0 ? [
+        "Lineage is empty — no chromosomes yet.",
+        "",
+        "Each chromosome is a saved AI session. They appear when:",
+        "  1. You install Mneme as an MCP server: `mneme mcp --install`",
+        "  2. Restart your AI tool (Claude Code / Cursor / Continue)",
+        "  3. Talk to your AI normally — every session auto-saves on exit",
+        "",
+        "Quick demo without MCP setup: `mneme demo` (synthesizes 3 sample chromosomes)",
+      ] : items.map((i) => "vendor" in i ? `  ${i.createdAt} · ${i.vendor} · "${i.topic}" · ${i.atomCount} atoms · ${i.id}` : `  [error] ${i.id}: ${i.error}`));
     });
 
   lin
@@ -284,13 +318,15 @@ export function registerLinCommands(program: Command): void {
 
   lin
     .command("pedigree")
-    .description("Cross-AI family tree — per-vendor stats.")
+    .description("Cross-AI family tree — per-vendor stats (which AI vendor shipped which molecule).")
     .option("--json", "JSON output.")
     .action(async (opts: CommonOpts) => {
       const p = lineage.buildPedigree(process.cwd());
       out(opts, p, [
         `Total chromosomes: ${p.totalChromosomes}`,
-        `Vendors:`,
+        p.vendors.length === 0
+          ? `Vendors: (none yet — chromosomes appear once an MCP-connected AI talks to Mneme)`
+          : `Vendors:`,
         ...p.vendors.map((v) => `  ${v.vendor} · ${v.chromosomeCount} chromosomes · karma ${v.totalKarma} · verified ${(v.verifiedRate * 100).toFixed(0)}%`),
       ]);
     });

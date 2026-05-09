@@ -297,6 +297,7 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     }
   })();
 
+
   // ─── MneMeiosis (v1.19) — boot the working-memory session + fertilize ────
   // Detect AI vendor from MCP client info if available (best-effort —
   // falls back to "unknown-mcp-client" so chromosomes are still attributable).
@@ -464,6 +465,36 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  // ─── v1.22.0 — RECURRING version-check + push notification ─────────
+  // Checks every 6 hours and PUSHES an MCP notification when a new
+  // version is detected. AI agents that subscribed to
+  // mneme://updates/status receive resources/updated and surface "Mneme
+  // v1.X is available, want me to upgrade?" on the next response.
+  // Idempotent: never re-pushes for the same version.
+  let lastNotifiedVersion: string | null = null;
+  const RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+  const tickVersionCheck = async () => {
+    try {
+      const current = resolveVersion();
+      const status = await versionCheck.checkVersion(runtime.meta.rootPath, current);
+      (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus = status;
+      if (status.updateAvailable && status.latest && status.latest !== lastNotifiedVersion) {
+        lastNotifiedVersion = status.latest;
+        try {
+          (server as unknown as { notification: (n: { method: string; params: unknown }) => Promise<void> | void })
+            .notification({
+              method: "notifications/resources/updated",
+              params: { uri: "mneme://updates/status" },
+            });
+        } catch { /* best-effort */ }
+      }
+    } catch { /* best-effort */ }
+  };
+  setTimeout(() => {
+    void tickVersionCheck();
+    setInterval(() => { void tickVersionCheck(); }, RECHECK_INTERVAL_MS).unref?.();
+  }, 30 * 60 * 1000).unref?.();
 
   // CRITICAL (v1.19.5): keep the event loop alive after connect() resolves.
   // The SDK registers a stdin 'data' listener but does NOT call resume(),

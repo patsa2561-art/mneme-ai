@@ -18,6 +18,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { lineageRoot, settingsPath } from "./paths.js";
 import { detectGitOrigin } from "./spore.js";
 import { readCachedVersionCheck, type VersionCheckResult } from "../version_check.js";
+import { listChromosomes } from "./chromosome.js";
+import { synthesizeSeedLineage } from "../lineage_seed.js";
 import type { LineageSettings } from "./types.js";
 
 export interface WelcomePayload {
@@ -99,6 +101,21 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
   const freshInstall = !settings.tofuAnswered;
   const sporeRemote = detectGitOrigin(repoRoot);
 
+  // v1.22.0 — synthesize seed lineage on FIRST welcome call when no
+  // chromosomes exist. Eliminates the chicken-and-egg first-touch hole:
+  // AI agent immediately sees "informed by 3 prior sessions" + the
+  // pedigree shows real cross-vendor diversity. Best-effort.
+  let seededFreshly = 0;
+  if (!settings.optedOut) {
+    try {
+      const existing = listChromosomes(repoRoot);
+      if (existing.length === 0) {
+        const r = synthesizeSeedLineage(repoRoot);
+        seededFreshly = r.created;
+      }
+    } catch { /* best-effort */ }
+  }
+
   const lineageDefaults: FeatureDefaults = {
     enabled: !settings.optedOut,
     defaultsApplied: [
@@ -162,9 +179,13 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
     ? ` 📢 Mneme v${updateStatus.latest} is available (you're on ${version}) — say 'upgrade Mneme' and I'll handle it.`
     : "";
 
+  const seedBlurb = seededFreshly > 0
+    ? ` 🌱 ${seededFreshly} seed chromosomes synthesized so I have something to inherit from on day one.`
+    : "";
+
   const userMessageTemplate = freshInstall
-    ? `I just installed Mneme v${version} — it now auto-saves AI session inheritance ('Lineage'), so when you switch machines or tools, my context follows you. ${sporeRemote ? `Sync uses the 'mneme-lineage' orphan branch on ${sporeRemote}.` : "I detected no git remote, so chromosomes stay local for now — paste a private repo URL anytime to enable cross-machine sync."} Say 'disable lineage' if you don't want this. Full opt-outs in the welcome contract.${updateBlurb}`
-    : `Mneme v${version} active. Lineage ${settings.optedOut ? "is OFF" : "is auto-saving"}. ${sporeRemote ? `Spore syncing via ${sporeRemote}.` : "No remote configured."}${updateBlurb}`;
+    ? `I just installed Mneme v${version} — it now auto-saves AI session inheritance ('Lineage'), so when you switch machines or tools, my context follows you.${seedBlurb} ${sporeRemote ? `Sync uses the 'mneme-lineage' orphan branch on ${sporeRemote}.` : "I detected no git remote, so chromosomes stay local for now — paste a private repo URL anytime to enable cross-machine sync."} Say 'disable lineage' if you don't want this. Full opt-outs in the welcome contract.${updateBlurb}`
+    : `Mneme v${version} active. Lineage ${settings.optedOut ? "is OFF" : "is auto-saving"}.${seedBlurb} ${sporeRemote ? `Spore syncing via ${sporeRemote}.` : "No remote configured."}${updateBlurb}`;
 
   const agentInstruction =
     "Translate userMessageTemplate to the user's language and tone. ALWAYS mention that Lineage is on (or off) + the opt-out command. Then call mneme.capabilities to learn the full catalog. Treat opt-outs as a contract — surface them at install AND when the user asks 'what data are you collecting?'.";
