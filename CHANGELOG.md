@@ -8,6 +8,41 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.23.3] — 2026-05-09
+
+**Watch display fix — stop printing the same lesson on every tick.**
+Live test of v1.23.2 surfaced one more UX bug: `mneme nucleus seed
+--demo --auto-start --watch` printed the LATEST lesson on every tick,
+even when no new lesson was emitted. Output looked like:
+
+```
+[tick 1] wisdom=33.35 mutations=0 + A new AI vendor joined ...
+[tick 2] wisdom=33.35 mutations=0 + A new AI vendor joined ...
+[tick 3] wisdom=33.35 mutations=0 + A new AI vendor joined ...
+```
+
+That triggers the exact "is the daemon repeating itself?" reaction the
+v1.23.2 periodic-lesson fix was designed to avoid.
+
+### Fix
+
+Watch loop now tracks `lessonCount` and `mutationsApplied` between
+emits and only annotates `[tick N]` lines when one of them grew:
+
+```
+[tick 1] wisdom=33.35 mutations=0  >> NEW LESSON: A new AI vendor joined ...
+[tick 2] wisdom=33.35 mutations=0
+[tick 3] wisdom=33.35 mutations=0
+[tick 5] wisdom=33.35 mutations=0  >> NEW LESSON: 5 ticks of stable DNA ...
+[tick 10] wisdom=33.35 mutations=1  >> +1 mutation (DNA evolved)
+```
+
+CLI patch only — no schema or API changes.
+
+### Tests
+
+  - 4517 / 4517 passing.
+
 ## [1.23.2] — 2026-05-09
 
 **Four root-cause bugs found by live testing — all fixed.** The user

@@ -592,14 +592,32 @@ export function registerNucleusCommands(program: Command): void {
       const path = join(root, ".mneme", "nucleus.heartbeat.json");
       let lastMtime = 0;
       let lastTick = -1;
+      let lastLessonCount = nucleus.readNucleus(root).lessons.length;
+      let lastMutations = -1;
       function emitHeartbeat(): void {
         const hb = nucleusDaemon.readHeartbeat(root);
         if (!hb) return;
         if (hb.tickCount === lastTick) return;
         lastTick = hb.tickCount;
         const dna = nucleus.readNucleus(root);
-        const lessonLine = dna.lessons.length > 0 ? dna.lessons[dna.lessons.length - 1]?.text ?? "" : "";
-        writeText(`[tick ${hb.tickCount}] wisdom=${dna.wisdomScore} mutations=${hb.mutationsApplied} ${lessonLine ? "+ " + lessonLine : ""}`);
+        // v1.23.3 — only show "+ lesson" when a NEW lesson was added this
+        // tick. Previous version printed the LATEST lesson every tick,
+        // which made stable nuclei look like they were repeating the same
+        // event over and over. Same for mutations.
+        const newLessons = dna.lessons.length - lastLessonCount;
+        const newMutations = lastMutations >= 0 ? hb.mutationsApplied - lastMutations : 0;
+        lastLessonCount = dna.lessons.length;
+        lastMutations = hb.mutationsApplied;
+        const tags: string[] = [];
+        if (newLessons > 0) {
+          const last = dna.lessons[dna.lessons.length - 1];
+          tags.push(`NEW LESSON: ${last?.text ?? ""}`);
+        }
+        if (newMutations > 0) {
+          tags.push(`+${newMutations} mutation${newMutations === 1 ? "" : "s"} (DNA evolved)`);
+        }
+        const tagSuffix = tags.length > 0 ? "  >> " + tags.join(" | ") : "";
+        writeText(`[tick ${hb.tickCount}] wisdom=${dna.wisdomScore} mutations=${hb.mutationsApplied}${tagSuffix}`);
       }
       try {
         if (existsSync(path)) lastMtime = statSync(path).mtimeMs;
