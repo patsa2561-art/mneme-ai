@@ -42,3 +42,4 @@ export * as nucleusDaemon from "./nucleus_daemon.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
+export * as whatsNew from "./whats_new.js";

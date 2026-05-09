@@ -1,16 +1,16 @@
 name: Deploy Dashboard to GitHub Pages
 
 on:
+  # v1.24.1 — Two triggers, both unconditional:
+  #   1. push to main (any commit)  -> redeploy with the latest HEAD
+  #   2. push of a v* tag           -> redeploy at the tagged commit
+  # We REMOVED the `paths` filter that was here in v1.23.4 -- it was
+  # too brittle: a commit that bumped versions everywhere EXCEPT inside
+  # packages/web/** never triggered the deploy, so the version pill
+  # would silently lag. Every main push now redeploys (build ~4s).
   push:
     branches: [main]
-    paths:
-      - 'packages/web/**'
-      - '.github/workflows/deploy-web.yml'
-      # v1.23.4 — also redeploy when package versions bump or CHANGELOG
-      # changes, so the version pill + release-notes link in the
-      # dashboard header stay in sync with the latest published release.
-      - 'package.json'
-      - 'CHANGELOG.md'
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -42,6 +42,27 @@ jobs:
         run: npm run build --workspace=@mneme-ai/web
         env:
           BASE_PATH: /mneme-ai/
+
+      # v1.24.1 — emit a deploy-info.json the deployed site exposes so we
+      # (and any AI agent) can hit https://patsa2561-art.github.io/mneme-ai/deploy-info.json
+      # and SEE exactly which commit + version + timestamp is currently live.
+      # Solves the "site looks stale -- did the deploy fire?" debugging gap.
+      - name: Emit deploy-info.json
+        shell: bash
+        run: |
+          cat > packages/web/dist/deploy-info.json <<EOF
+          {
+            "version": "$(node -p "require('./packages/web/package.json').version")",
+            "commit": "${{ github.sha }}",
+            "shortCommit": "$(echo ${{ github.sha }} | cut -c1-7)",
+            "ref": "${{ github.ref }}",
+            "deployedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "workflow": "${{ github.workflow }}",
+            "runId": "${{ github.run_id }}",
+            "runNumber": ${{ github.run_number }}
+          }
+          EOF
+          cat packages/web/dist/deploy-info.json
 
       - uses: actions/configure-pages@v5
 

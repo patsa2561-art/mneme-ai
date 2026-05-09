@@ -86,6 +86,7 @@ Commands:
   manage [options]  >  Engineering management dashboard — health, succession, skill matrix, trajectory
   export-bundle|bundle [options]  >  Export the universal bundle — DNA + drift + chronicle + oracle + constellation + clusters + network + manage + ghost
   advanced  >  Show advanced commands grouped by phase (hidden from main --help)
+  whats-new|wn [options]  >  Show curated highlights of what's new in this Mneme version (mirrors mneme.whats_new MCP tool).
   welcome [options]  >  Show the install handoff: what's auto-enabled + how to opt out (mirror of mneme.welcome MCP tool).
   spore  >  Cross-machine lineage sync (git-backed).
   lin  >  MneMeiosis Lineage — session inheritance across AI agents and machines.

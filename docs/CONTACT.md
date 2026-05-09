@@ -15,6 +15,7 @@
 
 [![LINE](https://img.shields.io/badge/LINE_ID-paedotnet-00C300?style=for-the-badge&logo=line&logoColor=white)](https://line.me/ti/p/~paedotnet)
 [![WhatsApp](https://img.shields.io/badge/WHATSAPP-+66_939455645-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)](https://wa.me/66939455645)
+[![Discord](https://img.shields.io/badge/DISCORD-shinnapat-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/users/shinnapat)
 
 [![Bangkok](https://img.shields.io/badge/ASIA%2FBANGKOK-UTC+7-7C3AED?style=for-the-badge&logo=clockify&logoColor=white)]()
 

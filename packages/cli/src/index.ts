@@ -2385,6 +2385,32 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(0);
     });
 
+  // ─── mneme whats-new (v1.24.1) ─────────────────────────────────────
+  program
+    .command("whats-new")
+    .alias("wn")
+    .description("Show curated highlights of what's new in this Mneme version (mirrors mneme.whats_new MCP tool).")
+    .option("--since <semver>", "Only highlights newer than this version.")
+    .option("--limit <n>", "Max highlights (default 3).", (v) => Number(v))
+    .option("--json", "JSON output.")
+    .action(async (opts: { since?: string; limit?: number; json?: boolean }) => {
+      const { whatsNew } = await import("@mneme-ai/core");
+      const currentVersion = getVersion();
+      const digest = whatsNew.buildDigest({ currentVersion, sinceVersion: opts.since, limit: opts.limit ?? 3 });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(digest, null, 2) + "\n");
+        return;
+      }
+      process.stdout.write(`Mneme v${currentVersion} -- What's new\n\n`);
+      for (const h of digest.highlights) {
+        process.stdout.write(`v${h.version}  ${h.headline}\n`);
+        process.stdout.write(`            ${h.body}\n`);
+        if (h.suggestedAction) process.stdout.write(`            -> ${h.suggestedAction}\n`);
+        process.stdout.write(`\n`);
+      }
+      process.stdout.write(`(${digest.highlights.length} of ${digest.totalAvailable} highlights shown.)\n`);
+    });
+
   // ─── MneMeiosis Lineage commands (v1.19.0) ─────────────────────────
   registerWelcomeCommand(program);
   registerSporeCommands(program);

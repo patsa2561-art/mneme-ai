@@ -39,6 +39,7 @@ import { botSpawnTool } from "./_squadron.js";
 import { nucleusTools } from "./_nucleus.js";
 import { inboxTools } from "./_inbox.js";
 import { antivirusTools } from "./_antivirus.js";
+import { whatsNewTool } from "./_whats_new.js";
 
 /** All Mneme tools, in display order. The capabilities syllabus comes first
  *  so AI clients that read tool lists top-down see it immediately. */
@@ -67,6 +68,7 @@ export function buildAllTools(): MnemeTool[] {
     ...nucleusTools,
     ...inboxTools,
     ...antivirusTools,
+    whatsNewTool,
     smartDoTool,
     ...memoryTools,
     ...peopleTools,

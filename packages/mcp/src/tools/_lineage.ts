@@ -655,6 +655,18 @@ export const welcomeTool: MnemeTool = {
         announceAfter: `Upgrade complete. Restart your AI tool to load the new MCP binary.`,
       });
     }
+    // v1.24.1 — ALWAYS auto-call mneme.whats_new on a fresh install so
+    // the AI proactively tells the user about every recent feature.
+    // Idempotent at the AI layer (autoAction id is stable per session).
+    if (w.freshInstall) {
+      autoActions.push({
+        id: "auto-show-release-notes",
+        tool: "mneme.release_notes",
+        args: { limit: 3 },
+        announceBefore: `Mneme v${version} is fresh -- let me show you what's new.`,
+        announceAfter: `Above are the headline features. Ask 'what else?' for the full digest.`,
+      });
+    }
     return {
       data: w,
       wisdom: w.userMessageTemplate,

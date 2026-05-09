@@ -889,6 +889,7 @@ Sole creator + maintainer of Mneme. **Mneme is built and maintained by one engin
 [![Email](https://img.shields.io/badge/Email-patsa2561@gmail.com-EA4335?style=flat-square&logo=gmail&logoColor=white)](mailto:patsa2561@gmail.com)
 [![LINE](https://img.shields.io/badge/LINE_ID-paedotnet-00C300?style=flat-square&logo=line&logoColor=white)](https://line.me/ti/p/~paedotnet)
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-+66_939455645-25D366?style=flat-square&logo=whatsapp&logoColor=white)](https://wa.me/66939455645)
+[![Discord](https://img.shields.io/badge/Discord-shinnapat-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.com/users/shinnapat)
 [![Profile](https://img.shields.io/badge/Full_profile-→_Partnership_%26_Contact-7C3AED?style=flat-square)](./docs/CONTACT.md)
 
 **Reach out for:** 🤝 partnership / integration · 🎯 acquihire · 🔬 research collaboration · 🏦 enterprise pilot

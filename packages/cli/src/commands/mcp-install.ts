@@ -165,11 +165,18 @@ Mneme exposes 150+ MCP tools that give you persistent memory of this
 repo's history, AI-vendor-aware lineage, and self-grading on every
 answer.
 
-## DO this on session start (FIRST 3 MCP calls)
+## DO this on session start (FIRST 4 MCP calls)
 
 1. \`mneme.welcome\`           — install handoff: what's auto-enabled + opt-outs + user-message template
-2. \`mneme.capabilities\`      — full 150-tool catalog (your syllabus)
-3. \`mneme.system.health\`     — verify Mneme is alive + nucleus tick + streaks
+2. \`mneme.release_notes\`     — proactively learn what shipped recently; surface every highlight to the user
+3. \`mneme.capabilities\`      — full tool catalog (your syllabus, ~166 tools)
+4. \`mneme.system.health\`     — verify Mneme is alive + nucleus tick + streaks
+
+The AI agent ALWAYS calls mneme.release_notes on a fresh session and surfaces
+every returned highlight to the user. This is how Mneme tells humans
+about new features without them having to read the changelog. The OLDER
+\`mneme.whats_new\` tool returns a catalog-hash diff (engineering view); use
+\`mneme.release_notes\` for the user-facing highlights.
 
 ## DO this BEFORE delivering ANY user-facing answer
 
