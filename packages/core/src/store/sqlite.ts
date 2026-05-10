@@ -257,6 +257,36 @@ export class MnemeStore {
     }
   }
 
+  /** v1.25.1 -- group chunk ids by commit hash. Used by the Retrieval
+   *  Lab hard eval suite to build "what chunks does this commit own?"
+   *  ground-truth labels without needing humans. */
+  chunkIdsByCommit(commitHashes: string[]): Map<string, string[]> {
+    const out = new Map<string, string[]>();
+    if (commitHashes.length === 0) return out;
+    // SQLite has a 999-arg limit on parameterized IN clauses; chunk our query.
+    const CHUNK = 500;
+    const stmt = this.db.prepare(
+      `SELECT id, commit_hash FROM chunks WHERE commit_hash IN (${commitHashes.slice(0, CHUNK).map(() => "?").join(",")})`,
+    );
+    const seen = new Set<string>();
+    for (let i = 0; i < commitHashes.length; i += CHUNK) {
+      const batch = commitHashes.slice(i, i + CHUNK);
+      const stmtBatch = this.db.prepare(
+        `SELECT id, commit_hash FROM chunks WHERE commit_hash IN (${batch.map(() => "?").join(",")})`,
+      );
+      const rows = stmtBatch.all(...batch) as Array<{ id: string; commit_hash: string }>;
+      for (const r of rows) {
+        if (seen.has(r.id)) continue;
+        seen.add(r.id);
+        let arr = out.get(r.commit_hash);
+        if (!arr) { arr = []; out.set(r.commit_hash, arr); }
+        arr.push(r.id);
+      }
+    }
+    void stmt;
+    return out;
+  }
+
   ftsSearch(query: string, limit: number): Array<{ id: string; commitHash: string; text: string; kind: string; bm25: number }> {
     const sanitized = sanitizeFts(query);
     if (!sanitized) return [];

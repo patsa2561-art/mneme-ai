@@ -33,6 +33,14 @@ export interface SearchOptions {
    * can render a live trace. Defaults to a no-op sink — zero cost when unused.
    */
   events?: EventSink;
+  /**
+   * v1.25.1 -- GraphRAG community filter. When set, only chunks whose
+   * parent commit touched at least one file in the named community
+   * survive the top-K cut. The community ids come from the Louvain
+   * pass; build them with mneme graphrag build + louvain.
+   * Pass null/undefined to disable (default).
+   */
+  topicFilter?: string | null;
 }
 
 /** Thresholds used when confidenceFloor === "auto". Calibrated from the eval set. */
@@ -182,6 +190,44 @@ export async function search(query: string, opts: SearchOptions): Promise<Search
         reason: "below topK cut",
       });
     }
+  }
+
+  // v1.25.1 -- GraphRAG community filter. Best-effort: requires the
+  // graphrag/communities.json file (built by `mneme graphrag louvain`).
+  // Falls through silently when the index isn't available, so this
+  // option is safe to set even on repos that haven't run the analysis.
+  if (opts.topicFilter && opts.repo?.rootPath) {
+    try {
+      const { fileToCommunityIndex } = await import("../graphrag/index.js");
+      const idx = fileToCommunityIndex(opts.repo.rootPath);
+      if (idx) {
+        const wanted = opts.topicFilter;
+        // We don't have direct file paths on chunks; the surface clue
+        // we DO have is the commit hash. We collect commits whose
+        // touched files (looked up from git) include any community member
+        // for `wanted`. That requires another git call per scan -- to
+        // keep cost bounded, we cap at the top 100 ranked.
+        const wantedFiles = new Set<string>();
+        for (const [file, cid] of idx) if (cid === wanted) wantedFiles.add(file);
+        if (wantedFiles.size > 0) {
+          const { spawnSync } = await import("node:child_process");
+          const candidate = ranked.slice(0, 100);
+          const passing = candidate.filter((r) => {
+            const sh = r.commit.shortHash || (r as unknown as { hash?: string }).hash;
+            if (!sh) return true;
+            try {
+              const out = spawnSync("git", ["show", "--name-only", "--format=", sh], {
+                cwd: opts.repo!.rootPath, encoding: "utf8", timeout: 2000,
+              });
+              if (out.status !== 0) return true;
+              const files = (out.stdout ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+              return files.some((f) => wantedFiles.has(f));
+            } catch { return true; }
+          });
+          return passing.slice(0, topK);
+        }
+      }
+    } catch { /* best-effort */ }
   }
 
   return ranked.slice(0, topK);

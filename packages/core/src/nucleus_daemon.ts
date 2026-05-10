@@ -137,6 +137,16 @@ export async function runDaemonLoop(
   let noteworthyTicks = 0;
   const intervalMs = opts.intervalMs ?? NUCLEUS_INTERVAL_MS;
 
+  // v1.25.1 — warm up the cross-encoder ONCE at boot so the first
+  // user query that needs it doesn't pay the 5-15s model-load latency.
+  // Best-effort: silent failure (the lab tuner falls back to term-density).
+  void (async () => {
+    try {
+      const { warmupCrossEncoder } = await import("./retrieval_lab/cross_encoder.js");
+      await warmupCrossEncoder();
+    } catch { /* ignore */ }
+  })();
+
   // Cleanup on shutdown — remove PID file so next `start` can succeed.
   const cleanup = () => {
     try { unlinkSync(pidFilePath(repoRoot)); } catch { /* ignore */ }

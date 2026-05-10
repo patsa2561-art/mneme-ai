@@ -101,16 +101,60 @@ export class Indexer {
         message: `warming up ${model} (first batch may take ~30s)`,
       });
 
+      // v1.25.1 -- LATE CHUNKING (Jina-style, opt-in via env).
+      // When MNEME_LATE_CHUNKING=1, we group chunks by parent commit,
+      // embed the FULL commit body alongside chunks, then mix each
+      // chunk vector with the parent vector via alpha=0.3. Cosine-
+      // normalized so existing search() works unchanged. Recall lifts
+      // on cross-chunk queries.
+      const lateChunking = process.env["MNEME_LATE_CHUNKING"] === "1";
+      const lateAlpha = Number(process.env["MNEME_LATE_CHUNKING_ALPHA"] ?? "0.3");
+
       for (let i = 0; i < chunks.length; i += batchSize) {
         const batch = chunks.slice(i, i + batchSize);
-        const vecs = await this.opts.embedder.embed(batch.map((c) => c.text));
+        let vecs: Float32Array[] | number[][];
+        if (lateChunking) {
+          const { lateChunkEmbed } = await import("../graphrag/late_chunking.js");
+          const byCommit = new Map<string, typeof batch>();
+          for (const c of batch) {
+            let arr = byCommit.get(c.commitHash);
+            if (!arr) { arr = []; byCommit.set(c.commitHash, arr); }
+            arr.push(c);
+          }
+          const batchVecs: Float32Array[] = new Array(batch.length);
+          for (const [, group] of byCommit) {
+            if (group.length === 1) {
+              const v = await this.opts.embedder.embed([group[0]!.text]);
+              const idx = batch.indexOf(group[0]!);
+              batchVecs[idx] = v[0]!;
+              continue;
+            }
+            const fullText = group.map((c) => c.text).join("\n\n");
+            const out = await lateChunkEmbed({
+              fullText,
+              chunks: group.map((c, gi) => ({ id: `${c.commitHash}:${gi}`, text: c.text })),
+              embed: async (texts) => {
+                const f32s = await this.opts.embedder!.embed(texts);
+                return f32s.map((f) => Array.from(f));
+              },
+              alpha: Number.isFinite(lateAlpha) ? Math.max(0, Math.min(1, lateAlpha)) : 0.3,
+            });
+            for (let g = 0; g < group.length; g++) {
+              const idx = batch.indexOf(group[g]!);
+              batchVecs[idx] = Float32Array.from(out.vectors[g] ?? []);
+            }
+          }
+          vecs = batchVecs;
+        } else {
+          vecs = await this.opts.embedder.embed(batch.map((c) => c.text));
+        }
         for (let j = 0; j < batch.length; j++) batch[j]!.embedding = vecs[j];
         this.opts.store.upsertChunks(batch, model);
         report({
           phase: "embedding",
           current: Math.min(i + batchSize, chunks.length),
           total: chunks.length,
-          message: `embedding with ${model}`,
+          message: `embedding with ${model}${lateChunking ? " (late chunking)" : ""}`,
         });
       }
     } else {

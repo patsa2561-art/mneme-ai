@@ -27,7 +27,10 @@ export {
   activeConfig, paretoFrontier,
 } from "./leaderboard.js";
 
-export { runTrial, verifyTrial, readEvalSuite } from "./tuner.js";
+export { runTrial, runTrialAsync, verifyTrial, readEvalSuite } from "./tuner.js";
+export type { HardEvalRunner, RunTrialOptions } from "./tuner.js";
+export type { HardEvalStoreReader, HardEvalResult } from "./hard_eval.js";
+export { buildHardEvalSuite, scoreRanking } from "./hard_eval.js";
 
 export type { RetrievalConfigSignature } from "./lineage_retrieval.js";
 export { snapshotForChromosome, mergeInheritedConfigs } from "./lineage_retrieval.js";

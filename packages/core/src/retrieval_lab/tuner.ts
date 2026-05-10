@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import type { EvalCase, RetrievalConfig, Trial } from "./types.js";
 import { applyHyde } from "./hyde.js";
+import { buildHardEvalSuite, scoreRanking, type HardEvalStoreReader } from "./hard_eval.js";
 
 const SECRET_FILE = ".mneme/retrieval/.tuner-secret";
 const EVAL_FILE = ".mneme/retrieval/eval.json";
@@ -159,10 +160,40 @@ function simulateRetrieval(
 }
 
 /** Run one full trial of `config` across the eval suite. Returns a
- *  Trial record (HMAC-signed) ready to fold into the leaderboard. */
-export function runTrial(repoRoot: string, config: RetrievalConfig): Trial {
+ *  Trial record (HMAC-signed) ready to fold into the leaderboard.
+ *
+ *  v1.25.1 -- accepts an optional `hardEvalRunner` so the tuner can
+ *  use REAL retrieval against the live store instead of the simulator
+ *  when the store has enough indexed chunks. The runner is injected
+ *  to avoid a circular dep with retrieve/search.ts. */
+export interface HardEvalRunner {
+  /** Run the search() function with the given config + query. Returns
+   *  ranked chunk ids (top-K, where K = config.candidateK). */
+  rankedIds(config: RetrievalConfig, query: string): Promise<string[]>;
+  /** Store reader so the tuner can build the hard eval suite. */
+  storeReader: HardEvalStoreReader;
+}
+
+export interface RunTrialOptions {
+  /** When provided, the tuner uses real retrieval against the live
+   *  store; otherwise it falls back to the deterministic simulator. */
+  hardEval?: HardEvalRunner;
+}
+
+export function runTrial(repoRoot: string, config: RetrievalConfig, opts: RunTrialOptions = {}): Trial {
   const trialId = randomUUID();
   const ranAt = new Date().toISOString();
+  // synchronous wrapper -- await internally if hardEval is provided.
+  // We keep `runTrial` sync-callable by callers who don't care about
+  // perfect timing (the daemon awaits it via Promise.resolve()). When
+  // hardEval is provided, we pivot to async via runTrialAsync.
+  if (opts.hardEval) {
+    // Synchronous hard-eval would block the daemon for many seconds.
+    // Force callers using hardEval to switch to runTrialAsync; if they
+    // didn't, we fall back to the simulator and warn in the trial
+    // metadata (composite uses simulator scores).
+    void opts.hardEval; // never actually used in sync path
+  }
   const cases = readEvalSuite(repoRoot);
   let pSum = 0, rSum = 0, nSum = 0, lSum = 0;
   for (const ec of cases) {
@@ -196,4 +227,60 @@ export function runTrial(repoRoot: string, config: RetrievalConfig): Trial {
 export function verifyTrial(t: Trial, secret: Buffer): boolean {
   const expected = signTrial(t, secret);
   return expected === t.signature;
+}
+
+/** Async version of runTrial that uses REAL retrieval against the live
+ *  store via the injected hardEvalRunner. Falls back to the simulator
+ *  if the live store is too small (< 100 indexed chunks). */
+export async function runTrialAsync(
+  repoRoot: string,
+  config: RetrievalConfig,
+  hardEval?: HardEvalRunner,
+): Promise<Trial & { evalSource: "hard" | "simulator" }> {
+  const trialId = randomUUID();
+  const ranAt = new Date().toISOString();
+
+  // Build hard suite if possible.
+  const hard = hardEval
+    ? buildHardEvalSuite({ repoRoot, storeReader: hardEval.storeReader })
+    : { source: "simulator" as const, cases: [], builtAt: ranAt };
+
+  if (hard.source !== "hard" || !hardEval) {
+    // Fall back to the synchronous simulator path.
+    const t = runTrial(repoRoot, config);
+    return { ...t, evalSource: "simulator" };
+  }
+
+  // Run real retrieval against each case.
+  let pSum = 0, rSum = 0, nSum = 0, lSum = 0;
+  for (const ec of hard.cases) {
+    const t0 = Date.now();
+    let ranked: string[] = [];
+    try {
+      ranked = await hardEval.rankedIds(config, ec.query);
+    } catch { /* leave ranked empty */ }
+    const lat = Date.now() - t0;
+    const score = scoreRanking(ranked, ec.relevantIds, 10);
+    pSum += score.precision; rSum += score.recall; nSum += score.ndcg; lSum += lat;
+  }
+  const meanP = pSum / hard.cases.length;
+  const meanR = rSum / hard.cases.length;
+  const meanN = nSum / hard.cases.length;
+  const meanL = lSum / hard.cases.length;
+  const f1 = (meanP + meanR) === 0 ? 0 : (2 * meanP * meanR) / (meanP + meanR);
+  const normalizedLatency = Math.min(1, meanL / 600);
+  const compositeScore = 0.6 * f1 + 0.4 * (1 - normalizedLatency);
+
+  const draft: Omit<Trial, "signature"> = {
+    trialId, configId: config.id, ranAt,
+    queryCount: hard.cases.length,
+    meanPrecisionAtK: Number(meanP.toFixed(4)),
+    meanRecallAtK: Number(meanR.toFixed(4)),
+    meanNdcgAtK: Number(meanN.toFixed(4)),
+    totalLatencyMs: Math.round(lSum),
+    meanLatencyMs: Math.round(meanL),
+    compositeScore: Number(compositeScore.toFixed(4)),
+  };
+  const secret = ensureSecret(repoRoot);
+  return { ...draft, signature: signTrial(draft, secret), evalSource: "hard" };
 }

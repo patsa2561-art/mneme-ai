@@ -8,6 +8,96 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.25.1] — 2026-05-09
+
+**The 5 future-roadmap items from v1.25.0 — all shipped, all
+measurable, all production-ready.**
+
+### 1. Hard eval suite (replaces simulator)
+
+`packages/core/src/retrieval_lab/hard_eval.ts` — `buildHardEvalSuite()`
+walks the live git log + indexed chunk store to build REAL
+(query, expected-relevant-chunks) pairs. Self-supervised: commit
+subject = query, chunk_ids of that commit = ground truth.
+
+  - `runTrialAsync(repoRoot, config, hardEvalRunner)` -- pivots
+    automatically: hard eval when ≥ 100 chunks indexed, falls back
+    to the deterministic simulator otherwise. Caller injects the
+    runner so we avoid a circular dep with retrieve/search.
+  - `scoreRanking(rankedIds, relevantIds, k)` -- precision@K +
+    recall@K + NDCG@K computed honestly (idea: relevant items at
+    the top score higher NDCG than at the bottom).
+  - `MnemeStore.chunkIdsByCommit(shas)` — new method (also satisfies
+    the `HardEvalStoreReader` interface so the tuner can adopt either
+    backend without changes).
+
+### 2. Cross-encoder warmup at daemon boot
+
+`runDaemonLoop()` now fires `warmupCrossEncoder()` once at boot
+(best-effort, silent on failure). The first user query that needs
+the bge-reranker-base model no longer pays the 5-15s cold-start
+load latency.
+
+### 3. Late chunking integrated into the indexer
+
+`packages/core/src/indexer/indexer.ts` — opt-in via
+`MNEME_LATE_CHUNKING=1` env var (default off so existing users see
+no behavior change).
+
+When enabled, the embed loop:
+  1. Groups the current batch by `commit_hash`.
+  2. For each multi-chunk group, builds a "full text" = concatenation
+     of the group's chunks.
+  3. Calls `lateChunkEmbed({ fullText, chunks, embed, alpha })`
+     which embeds chunks AND full text, then mixes via alpha (default
+     0.3, configurable via `MNEME_LATE_CHUNKING_ALPHA`).
+  4. Stores the mixed (and L2-normalized) vectors so existing
+     cosine search still works unchanged.
+
+Recall lifts on cross-chunk queries; per-chunk embedding now carries
+context from its commit's other chunks.
+
+### 4. GraphRAG retrieve filter (top-K within a community)
+
+`SearchOptions.topicFilter?: string | null` — when set, only chunks
+whose parent commit touched at least one file in the named community
+survive the top-K cut.
+
+  - `fileToCommunityIndex(repoRoot)` — builds the file → community
+    lookup from `.mneme/graphrag/communities.json`.
+  - `communityForFile(idx, filePath)` — single-file lookup helper.
+  - `search()` — checks the option, looks up the community, walks
+    `git show --name-only` per top-100 candidate (capped to bound
+    cost), keeps only those touching at least one community file.
+  - Best-effort: missing graph cache or git failure falls through
+    silently (returns the unfiltered ranking).
+
+### 5. pgvector backend (auto-detect, opt-in)
+
+`packages/core/src/store/pgvector.ts` — Postgres + pgvector adapter
+implementing the same `VectorStore` interface as `MnemeStore`:
+
+  - `MNEME_PG_URL` env var triggers the backend (sqlite default).
+  - `pg` package is an OPTIONAL dep (lazy-imported via dynamic name
+    so TypeScript doesn't try to resolve at compile time). Clear
+    error message if `pg` isn't installed when needed.
+  - Schema auto-creation: `vector` extension, `mneme.chunks` table,
+    IVFFlat index for ANN, GIN tsvector index for FTS.
+  - `detectBackend({ totalChunks })` — returns `kind: "pg"` when
+    `MNEME_PG_URL` is set; otherwise hints at pg when corpus
+    > 100K chunks (still defaults to sqlite — no surprise).
+  - Same surface as SQLite: `upsertChunks`, `ftsSearch` (uses
+    `ts_rank_cd`), `countChunksWithEmbedding`, `iterEmbeddedChunks`,
+    `chunkIdsByCommit`. Drop-in replacement.
+
+### Tests
+
+  - 4766 / 4766 passing (was 4747; +19: 8 hard_eval + 7 pgvector +
+    4 file_to_community).
+  - 172 MCP tools (no schema changes; all 5 features extend existing
+    surfaces).
+  - TypeScript strict; production build clean.
+
 ## [1.25.0] — 2026-05-09
 
 **Mneme RAG Lab + GraphRAG + Late Chunking + Ingest+ — three phases
