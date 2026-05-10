@@ -8,6 +8,147 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.1] — 2026-05-10
+
+**Hooks installer real-bug fix + per-agent dynamic adapter system.**
+
+### The bug
+
+v1.25.2's `mneme hooks install` wrote a STRING shorthand into Claude
+Code's `~/.claude/settings.json`:
+
+```json
+"hooks": { "UserPromptSubmit": "mneme nucleus pulse --quiet" }
+```
+
+Per [official Claude Code hook docs](https://code.claude.com/docs/en/hooks)
+that format is **silently rejected**. The actual schema is
+array-of-objects:
+
+```json
+"hooks": {
+  "UserPromptSubmit": [
+    { "hooks": [{ "type": "command", "command": "mneme nucleus pulse --quiet" }] }
+  ]
+}
+```
+
+Net effect: the headline pulse loop of v1.25.2 didn't fire on Claude
+Code at all. Self-check check #1 (`pulse-hook-installed`) was ALSO
+matching the broken format, so it greenlit the bad config.
+
+### The fix -- new module: `@mneme-ai/core/integrations`
+
+A dynamic adapter system, one adapter per AI tool, each with its OWN
+schema validation + repair logic + multi-layer error handling:
+
+| Adapter id | Tool | Mode | Where it writes |
+|---|---|---|---|
+| `claude-code` | Claude Code | real exec hook | `~/.claude/settings.json` (correct array schema) |
+| `claude-code-project` | Claude Code (project) | agent file | `CLAUDE.md` |
+| `cursor` | Cursor | rules file | `.cursor/rules/mneme.mdc` |
+| `cursor-legacy` | Cursor (legacy) | rules file | `.cursorrules` |
+| `codex` | Codex CLI / cross-vendor | agent file | `AGENTS.md` |
+| `gemini-cli` | Gemini CLI | agent file | `GEMINI.md` |
+| `windsurf` | Windsurf | rules file | `.windsurfrules` |
+
+The honest design: **only Claude Code today has a real shell-execute
+hook surface**. For every other agent, the equivalent is auto-loaded
+context files (markdown). We write a sentinel-bracketed Mneme block
+into the right file for each agent. Re-running the install replaces
+text BETWEEN sentinels — never duplicates, never touches anything
+outside.
+
+### Auto-detect + auto-repair
+
+  - `mneme hooks install` (default) — detects which agents are present
+    on this machine + repo, installs in each. Always tries Claude Code
+    (user-scope). Other agents are skipped if undetected.
+  - `mneme hooks install --all` — install in every known adapter.
+  - `mneme hooks install --only claude-code,cursor` — restrict to ids.
+  - `mneme hooks install --force` — overwrite foreign config / merge
+    alongside existing hooks.
+  - `mneme hooks status` — per-adapter state across all agents.
+  - `mneme hooks repair` — auto-fixes the v1.25.2 broken Claude Code
+    string-shorthand drift (and any other repairable drifts). Safe to
+    run on any machine; no-op when nothing's broken.
+  - `mneme hooks uninstall [--only ids]` — strip Mneme from all (or
+    selected) agents. Preserves foreign hooks.
+  - `mneme hooks list` — list known adapter ids.
+  - `mneme integrate` — alias for `mneme hooks` (more accurate name
+    since most adapters aren't real "hooks").
+
+### Multi-layer error handling
+
+Every adapter:
+
+  - Returns a structured `InstallResult` (`ok / status / mode / message`)
+    instead of throwing.
+  - Catches JSON parse errors → reports + suggests fix, never crashes.
+  - Catches missing dirs → mkdir -p before writing.
+  - Catches existing-but-wrong-format → auto-repair when safe,
+    refuse-without-force otherwise.
+  - Catches existing-and-correct → silent no-op (idempotent).
+  - Catches perm/IO errors → reports `status: "error"` with message,
+    never crashes.
+
+Batch ops (`installAll`, `statusAll`, `uninstallAll`) wrap individual
+adapter calls in `.catch()` so a single adapter failure can never
+take down the whole batch.
+
+### What was changed
+
+  - `packages/core/src/integrations/types.ts` — `IntegrationAdapter`
+    interface, `PULSE_COMMAND` constant, sentinel markers, default block.
+  - `packages/core/src/integrations/claude_code.ts` — fixed array schema,
+    auto-repair for v1.25.2 string drift, refuse + merge alongside foreign.
+  - `packages/core/src/integrations/file_inject.ts` — sentinel-bracketed
+    block primitives (idempotent inject, precise remove).
+  - `packages/core/src/integrations/file_adapters.ts` — Cursor (.mdc +
+    legacy), Codex (AGENTS.md), Gemini (GEMINI.md), Windsurf, Claude
+    project.
+  - `packages/core/src/integrations/index.ts` — registry,
+    `detectAll/installAll/statusAll/uninstallAll`, single-id convenience.
+  - `packages/cli/src/commands/hooks.ts` — refactored to use adapters;
+    new subcommands: `list`, `repair`. Alias: `mneme integrate`.
+  - `packages/core/src/selfcheck/checks.ts` — `pulse-hook-installed`
+    now uses the adapter; reports `fail` on the v1.25.2 drift instead
+    of `pass`, with auto-action hint to run `mneme hooks repair`.
+  - `packages/core/src/pulse.ts` — doc comment updated to show correct
+    array schema.
+  - `packages/core/src/integrations/integrations.test.ts` — 58 new
+    tests: schema validation per-adapter, idempotency, refuse-without-force,
+    auto-repair of v1.25.2 drift, foreign-hook merge with --force,
+    sandboxed HOME for Claude adapter, multi-layer error handling.
+
+### Migration
+
+If you installed v1.25.2's `mneme hooks install`, your Claude Code
+hook silently failed. To fix:
+
+```
+npm install -g mneme-ai@1.26.1
+mneme hooks repair
+# Restart Claude Code
+```
+
+The `repair` command auto-detects the broken string shorthand and
+rewrites it to the correct array form. Idempotent + safe to run
+even if nothing's broken.
+
+### Test coverage
+
+  - `+58 new tests` in `integrations.test.ts`
+  - **4874/4874 passing** (267 → 268 test files)
+  - Snapshot refreshed for new `mneme hooks|integrate` help line
+
+### Net effect
+
+The "AI didn't trigger on its own" loop that v1.25.2 promised is now
+actually wired correctly on Claude Code — and v1.26.1 extends it
+across Cursor / Codex / Gemini / Windsurf / project AGENTS.md via
+auto-loaded context files. No more silent-failure on flagship clients.
+
 ## [1.26.0] — 2026-05-10
 
 **The 12-path autonomy bridge — closing every gap MCP can't close

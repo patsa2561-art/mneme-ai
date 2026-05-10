@@ -9,10 +9,20 @@
  *   - imperative (tells the AI what to do, not what to suggest)
  *   - silent when nothing's noteworthy (returns "" so the hook is a no-op)
  *
- * Hook contract (Claude Code / settings.json):
+ * Hook contract (Claude Code / settings.json) -- v1.26.1 corrected schema
+ * per official docs (code.claude.com/docs/en/hooks):
+ *
  *   "hooks": {
- *     "UserPromptSubmit": "mneme nucleus pulse --quiet"
+ *     "UserPromptSubmit": [
+ *       { "hooks": [{ "type": "command", "command": "mneme nucleus pulse --quiet" }] }
+ *     ]
  *   }
+ *
+ * NOTE: the v1.25.2 string-shorthand `"UserPromptSubmit": "cmd"` is
+ * silently rejected by Claude Code -- use the array form above. The
+ * `mneme hooks install` adapter writes the correct shape and
+ * `mneme hooks repair` auto-fixes the broken string format if you
+ * already installed v1.25.2.
  *
  * The shell command's stdout becomes part of the AI's next-turn context
  * (Claude Code injects it as a system message). Net effect: every user

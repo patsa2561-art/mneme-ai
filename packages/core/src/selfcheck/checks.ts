@@ -14,49 +14,76 @@ const v = (start: number, partial: Omit<AuditVerdict, "ms">): AuditVerdict => ({
   ms: Date.now() - start,
 });
 
-/** Check 1: pulse hook installed in ~/.claude/settings.json */
+/**
+ * Check 1: pulse hook is wired correctly into Claude Code.
+ * v1.26.1: uses the integrations adapter so we recognize the correct
+ * array-of-objects schema AND the v1.25.2 broken string-shorthand
+ * (which we surface as a repairable drift, not a pass).
+ */
 const pulseHookCheck: AuditCheck = {
   name: "pulse-hook-installed",
-  description: "Mneme pulse hook is wired into ~/.claude/settings.json",
+  description: "Mneme pulse hook is wired into Claude Code (~/.claude/settings.json)",
   failSeverity: "warning",
   async run() {
     const start = t0();
-    const settingsPath = join(homedir(), ".claude", "settings.json");
-    if (!existsSync(settingsPath)) {
-      return v(start, {
-        name: "pulse-hook-installed",
-        description: "pulse hook installed",
-        status: "warn",
-        evidence: `~/.claude/settings.json does not exist`,
-        fixHint: "Run `mneme hooks install` to wire the pulse hook so AI sees Mneme on every keystroke.",
-      });
-    }
     try {
-      const data = JSON.parse(readFileSync(settingsPath, "utf8")) as { hooks?: Record<string, string | { command?: string }> };
-      const hook = data.hooks?.["UserPromptSubmit"];
-      const cmd = typeof hook === "string" ? hook : hook?.command;
-      if (cmd === "mneme nucleus pulse --quiet") {
+      const mod = await import("../integrations/index.js");
+      const s = await mod.claudeCodeAdapter.status(process.cwd());
+      if (s.state === "ok") {
         return v(start, {
           name: "pulse-hook-installed",
           description: "pulse hook installed",
           status: "pass",
-          evidence: "UserPromptSubmit -> mneme nucleus pulse --quiet",
+          evidence: s.details,
+        });
+      }
+      if (s.state === "drift") {
+        return v(start, {
+          name: "pulse-hook-installed",
+          description: "pulse hook installed",
+          status: "fail",
+          evidence: s.details,
+          fixHint: "Run `mneme hooks repair` (auto-fixes v1.25.2 broken string-shorthand schema).",
+          autoAction: { tool: "mneme.system.upgrade", args: { mode: "install", force: true } },
+        });
+      }
+      if (s.state === "no-config") {
+        return v(start, {
+          name: "pulse-hook-installed",
+          description: "pulse hook installed",
+          status: "warn",
+          evidence: s.details,
+          fixHint: "Run `mneme hooks install` to wire the pulse hook so AI sees Mneme on every turn.",
         });
       }
       return v(start, {
         name: "pulse-hook-installed",
         description: "pulse hook installed",
         status: "warn",
-        evidence: `UserPromptSubmit hook present but not Mneme: "${cmd ?? "(unset)"}"`,
+        evidence: s.details,
         fixHint: "Run `mneme hooks install --force` to overwrite (or merge manually).",
       });
-    } catch {
+    } catch (e) {
+      // Last-ditch fallback if the integrations import itself blew up.
+      const settingsPath = join(homedir(), ".claude", "settings.json");
+      if (!existsSync(settingsPath)) {
+        return v(start, {
+          name: "pulse-hook-installed", description: "pulse hook installed",
+          status: "warn", evidence: `~/.claude/settings.json does not exist`,
+          fixHint: "Run `mneme hooks install`.",
+        });
+      }
+      try { JSON.parse(readFileSync(settingsPath, "utf8")); }
+      catch {
+        return v(start, {
+          name: "pulse-hook-installed", description: "pulse hook installed",
+          status: "warn", evidence: `${settingsPath} is not valid JSON`,
+          fixHint: "Fix the JSON, then re-run `mneme hooks install`.",
+        });
+      }
       return v(start, {
-        name: "pulse-hook-installed",
-        description: "pulse hook installed",
-        status: "warn",
-        evidence: `${settingsPath} is not valid JSON`,
-        fixHint: "Fix the JSON, then re-run `mneme hooks install`.",
+        name: "pulse-hook-installed", description: "pulse hook installed",
+        status: "skip", evidence: `integrations import failed: ${(e as Error).message}`,
       });
     }
   },

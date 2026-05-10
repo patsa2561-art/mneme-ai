@@ -50,4 +50,5 @@ export * as pulse from "./pulse.js";
 export * as notifier from "./notifier/index.js";
 export * as agent from "./agent/index.js";
 export * as selfcheck from "./selfcheck/index.js";
+export * as integrations from "./integrations/index.js";
 export * as quantum from "./quantum.js";
