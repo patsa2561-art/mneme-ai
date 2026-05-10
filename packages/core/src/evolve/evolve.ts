@@ -257,13 +257,15 @@ export function generateProposals(repoRoot: string, signals?: EvolveSignal[]): E
   return proposals;
 }
 
-/** List every persisted proposal. */
+/** List every persisted proposal. v1.27.2 fix: skip *.synth.json
+ *  sidecars (Phase-3 synthesis output) which were leaking into the
+ *  list as `[id] (??%) undefined` entries. */
 export function listProposals(repoRoot: string): EvolveProposal[] {
   const dir = join(repoRoot, DIR);
   if (!existsSync(dir)) return [];
   try {
     return readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
+      .filter((f) => f.endsWith(".json") && !f.endsWith(".synth.json"))
       .map((f) => {
         try { return JSON.parse(readFileSync(join(dir, f), "utf8")) as EvolveProposal; }
         catch { return null; }
@@ -275,11 +277,81 @@ export function listProposals(repoRoot: string): EvolveProposal[] {
   }
 }
 
-/** View one proposal by id (returns markdown). */
+/**
+ * View one proposal by id (returns markdown).
+ *
+ * v1.27.2 -- accepts THREE id forms:
+ *   1. proposalId (12 hex chars)        -> reads <id>.md
+ *   2. proposalId + has synth.json      -> appends Phase-3 status header + patch
+ *   3. synthesisId (16 hex chars)       -> resolves to its proposalId + behaves as case 2
+ *
+ * This way `mneme evolve view <anything>` always returns the right
+ * artifact. No more "no proposal at id" when the user copies an id
+ * from `mneme evolve synthesize` output.
+ */
 export function viewProposal(repoRoot: string, id: string): string | null {
-  const path = join(repoRoot, DIR, `${id}.md`);
-  if (!existsSync(path)) return null;
-  try { return readFileSync(path, "utf8"); } catch { return null; }
+  const dir = join(repoRoot, DIR);
+
+  // Try direct: <id>.md (proposal form)
+  const md = join(dir, `${id}.md`);
+  let proposalId: string | null = null;
+  if (existsSync(md)) {
+    proposalId = id;
+  } else {
+    // Maybe `id` is a synthesisId. Walk every .synth.json and look up.
+    if (existsSync(dir)) {
+      try {
+        for (const f of readdirSync(dir)) {
+          if (!f.endsWith(".synth.json")) continue;
+          try {
+            const s = JSON.parse(readFileSync(join(dir, f), "utf8")) as { id?: string; proposalId?: string };
+            if (s.id === id && s.proposalId) { proposalId = s.proposalId; break; }
+          } catch { /* skip */ }
+        }
+      } catch { /* skip */ }
+    }
+  }
+  if (!proposalId) return null;
+
+  // Read the proposal markdown.
+  let body = "";
+  const proposalMd = join(dir, `${proposalId}.md`);
+  if (existsSync(proposalMd)) {
+    try { body = readFileSync(proposalMd, "utf8"); } catch { /* */ }
+  }
+
+  // Append Phase-3 status if a synthesis sidecar exists.
+  const synthPath = join(dir, `${proposalId}.synth.json`);
+  const patchPath = join(dir, `${proposalId}.patch`);
+  if (existsSync(synthPath)) {
+    try {
+      const synth = JSON.parse(readFileSync(synthPath, "utf8")) as {
+        id?: string; templateId?: string; verified?: boolean;
+        confidence?: number; signature?: string;
+      };
+      const verifiedTag = synth.verified ? "VERIFIED ✓" : "NOT verified ✗";
+      const header = [
+        ``,
+        `---`,
+        ``,
+        `## Phase-3 synthesis status: ${verifiedTag}`,
+        ``,
+        `- synthesisId: \`${synth.id ?? "?"}\``,
+        `- template:    \`${synth.templateId ?? "?"}\``,
+        `- confidence:  ${synth.confidence != null ? (synth.confidence * 100).toFixed(0) + "%" : "?"}`,
+        `- signature:   \`${synth.signature?.slice(0, 16) ?? "?"}...\``,
+        ``,
+      ].join("\n");
+      body += header;
+      if (synth.verified && existsSync(patchPath)) {
+        try {
+          const patchBody = readFileSync(patchPath, "utf8");
+          body += `### Verified .patch (run \`mneme evolve apply ${proposalId}\` to apply)\n\n\`\`\`diff\n${patchBody}\n\`\`\`\n`;
+        } catch { /* */ }
+      }
+    } catch { /* */ }
+  }
+  return body || null;
 }
 
 /** Aggregate stats. */

@@ -8,6 +8,130 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.2] — 2026-05-10
+
+**Three real bugs caught by an AI-agent reviewer in the v1.27.0
+EVOLVE Phase-3 dogfooding session. All three fixed + verified
+end-to-end against Mneme's own source.**
+
+### 🔴 Bug #1 -- Phase-3 patch hit the WRONG check block
+
+**AI agent's exact quote:**
+> "Proposal: signal บอก selfcheck:antivirus-ready:warn failing.
+> Synthesized patch: กลับไปแก้ check ชื่อ pulse-hook-installed
+> (คนละ check!)"
+
+**Root cause:** the template extracted only the line `        status:
+"warn",` as its before/after pair. `String.replace` then replaced the
+FIRST file-wide occurrence -- which was `pulse-hook-installed`'s
+warn-line (it appears earlier in checks.ts) -- not the
+`antivirus-ready` block the proposal cited. The match-region anchor
+was correct; the splice unit was too small.
+
+**Fix:** the template now uses the FULL anchor-matched span (which
+starts at `name: "<unique-check-name>"` and is therefore unique in
+file) as both `before` and `after`, with `"warn"` -> `"skip"`
+substituted inside. Plain string `String.replace` now lands on the
+right block by construction. Bonus: tolerant of CRLF / extra
+whitespace from Windows checkouts -- no regex anchored to `\n`
+required.
+
+**Verified e2e:** the antivirus-ready proposal now patches lines
+187-194 (the antivirus-ready warn-branch), not lines 49-53
+(pulse-hook-installed).
+
+### 🟡 Bug #2 -- `mneme evolve list` showed `(64%) undefined`
+
+**Root cause:** `listProposals` filtered files ending in `.json`
+without excluding `.synth.json`. Phase-3 sidecars were being parsed
+as `EvolveProposal` -- they have a `confidence` field (0.64 when
+verified) but no `title` -- producing the `(64%) undefined` line.
+
+**Fix:** `listProposals` now filters
+`f.endsWith(".json") && !f.endsWith(".synth.json")`. Bonus: the
+list output now shows Phase-3 verification badge inline per
+proposal:
+
+```
+[81dc2ccc6763] (13%) Self-heal: selfcheck "antivirus-ready" keeps failing
+   ✓ Phase-3 VERIFIED (64%, sig=4aaca62c)
+[7298176a1838] (13%) Self-heal: selfcheck "antivirus-certified" keeps failing
+   · Phase-3 not yet attempted
+```
+
+### 🟡 Bug #3 -- `mneme evolve view <synthesisId>` returned "no proposal at id"
+
+**Root cause:** the `view` command only looked up `<id>.md`. A
+synthesis id (16 hex chars from the .synth.json) doesn't match any
+.md file, so the user's natural "view this synthesis" workflow
+broke.
+
+**Fix:** `viewProposal()` now accepts THREE id forms:
+  1. `proposalId`                    -> reads `<id>.md`
+  2. `proposalId` w/ synth sidecar    -> appends Phase-3 status header + diff
+  3. `synthesisId`                    -> walks `.synth.json` to resolve to its proposalId, behaves as case 2
+
+Output now shows the full proposal markdown PLUS a Phase-3 status
+block PLUS the verified .patch (when verified):
+
+```
+## Phase-3 synthesis status: VERIFIED ✓
+- synthesisId: e6343533e33718dc
+- template:    selfcheck-warn-to-skip-on-missing-file
+- confidence:  64%
+- signature:   4aaca62cc1abadbd...
+
+### Verified .patch (run `mneme evolve apply 81dc2ccc6763` to apply)
+```diff
+@@ -187,7 +187,7 @@
+     if (!existsSync(path)) {
+       return v(start, {
+         name: "antivirus-ready", description: "antivirus ready",
+-        status: "warn",
++        status: "skip",
+\``\`\`
+```
+
+### Phase 4 + Phase 5 verified
+
+The AI reviewer also asked us to test the Phase 4 and Phase 5
+commands end-to-end. Both verified working:
+
+```
+$ mneme evolve auto-pr 81dc2ccc6763 --dry-run
+✓ auto-pr ok
+  dry-run -- no branch/commit/push/PR was created
+
+$ mneme evolve pass
+Evolution pass complete.
+  Scanned proposals:  3
+  Synthesized:        3
+  VERIFIED (saved):   3
+  - [...] selfcheck-warn-to-skip-on-missing-file  verified=✓
+  - [...] selfcheck-warn-to-skip-on-missing-file  verified=✓
+  - [...] selfcheck-warn-to-skip-on-missing-file  verified=✓
+```
+
+### Files changed
+
+  - `packages/core/src/evolve/synthesis/templates.ts` -- unique-span
+    before/after fix
+  - `packages/core/src/evolve/evolve.ts` -- listProposals filter
+    + viewProposal multi-form id resolution + Phase-3 status block
+  - `packages/cli/src/commands/evolve.ts` -- list output shows
+    Phase-3 verification badge inline
+
+### Test coverage
+
+  - 4965/4965 still passing.
+
+### Net effect
+
+EVOLVE Phase-3 pipeline is now actually **trustworthy**: patches
+target the cited check, list output is honest about synthesis
+state, and `view <id>` works for both id forms. The closed-loop
+shipped in v1.27.0 was real -- v1.27.2 makes it precise.
+
 ## [1.27.1] — 2026-05-10
 
 **Web demo clarity fix: the "is this MY data or a demo?" confusion

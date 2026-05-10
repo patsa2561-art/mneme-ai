@@ -56,15 +56,41 @@ export function registerEvolveCommands(program: Command): void {
     });
 
   ev.command("list")
-    .description("List every persisted proposal (sorted by confidence desc).")
+    .description("List every persisted proposal (sorted by confidence desc). v1.27.2: shows Phase-3 synthesis state per proposal.")
     .option("--json", "JSON output.")
-    .action((opts: CommonOpts) => {
+    .action(async (opts: CommonOpts) => {
       const ps = evolve.listProposals(process.cwd());
       if (opts.json) { writeJson(ps); return; }
       if (ps.length === 0) { writeText("(no proposals -- run `mneme evolve propose`)"); return; }
       writeText(`Mneme proposals -- ${ps.length}`);
+      // v1.27.2: read Phase-3 sidecars so the listing shows verification state inline.
+      const fs = await import("node:fs");
+      const path = await import("node:path");
+      const dir = path.join(process.cwd(), ".mneme/proposals");
+      const synths: Record<string, { verified: boolean; confidence: number; sigShort: string }> = {};
+      try {
+        for (const f of fs.readdirSync(dir)) {
+          if (!f.endsWith(".synth.json")) continue;
+          try {
+            const s = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")) as { proposalId?: string; verified?: boolean; confidence?: number; signature?: string };
+            if (s.proposalId) {
+              synths[s.proposalId] = {
+                verified: !!s.verified,
+                confidence: s.confidence ?? 0,
+                sigShort: (s.signature ?? "").slice(0, 8),
+              };
+            }
+          } catch { /* skip */ }
+        }
+      } catch { /* dir missing -- nothing synthesized yet */ }
       for (const p of ps) {
-        writeText(`  [${p.id}] (${(p.confidence * 100).toFixed(0)}%) ${p.title}`);
+        const synth = synths[p.id];
+        const synthBadge = synth
+          ? (synth.verified
+              ? `  ✓ Phase-3 VERIFIED (${(synth.confidence * 100).toFixed(0)}%, sig=${synth.sigShort})`
+              : `  ✗ Phase-3 not verified`)
+          : `  · Phase-3 not yet attempted`;
+        writeText(`  [${p.id}] (${(p.confidence * 100).toFixed(0)}%) ${p.title}${synthBadge}`);
       }
     });
 

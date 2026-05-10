@@ -76,20 +76,32 @@ function matchSelfcheckWarnToSkipOnMissingFile(
   const m = anchorRe.exec(source);
   if (!m) return null;
 
-  // Construct before/after string slices for line-based git diff.
-  // Strategy: find the line where `status: "warn"` appears WITHIN the
-  // matched span, replace just that line.
-  const matchStart = m.index;
-  const matchEnd = matchStart + m[0].length;
-  const matchedSpan = source.slice(matchStart, matchEnd);
-
-  // Within the matchedSpan, locate the line that contains status: "warn"
-  const lineRe = /([ \t]*status:\s*)"warn"(,?[ \t]*)$/m;
-  const lineM = lineRe.exec(matchedSpan);
-  if (!lineM) return null;
-
-  const before = `${lineM[1]}"warn"${lineM[2]}`;
-  const after = `${lineM[1]}"skip"${lineM[2]}`;
+  // BUG FIX (v1.27.2): the original implementation extracted just the
+  // single `status: "warn",` line as the template's before/after pair.
+  // String.replace then replaced the FIRST file-wide occurrence -- which
+  // is whichever check appears earliest in the file, NOT the one our
+  // proposal cited. (Reported by AI-agent reviewer 2026-05-10: a
+  // proposal for `antivirus-ready` patched `pulse-hook-installed`
+  // because pulse-hook-installed's warn-line came first in the file.)
+  //
+  // The fix: anchor the before/after to the FULL matched span. The
+  // span starts with `name: "${checkName}"` which is unique in file
+  // (only one AuditCheck object owns each check name). We construct
+  // before/after by replacing the status:"warn" inside the span and
+  // returning the entire span on both sides, so String.replace can
+  // only land on the right block.
+  const matchedSpan = m[0];
+  // The matched span starts at `return v(start, { ... name: "<unique>"`
+  // and runs through exactly ONE `status: "warn"` (the warn we want to
+  // demote to skip). Inside this span, "warn" appears in `status: "warn"`
+  // only (other occurrences would require crossing a `}` which the
+  // anchor regex's [^}]*? forbids). So a plain replace of `"warn"` ->
+  // `"skip"` inside the span is safe AND tolerant of CRLF / extra
+  // whitespace from Windows checkouts.
+  if (!matchedSpan.includes('"warn"')) return null;
+  const before = matchedSpan;
+  const after = matchedSpan.replace('"warn"', '"skip"');
+  if (before === after) return null;
 
   return {
     templateId: "selfcheck-warn-to-skip-on-missing-file",
