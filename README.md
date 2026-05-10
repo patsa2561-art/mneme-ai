@@ -128,6 +128,10 @@ A self-improving memory + awareness layer for AI coding. It sits ON TOP of any m
 
 Each row maps to exactly one layer in the OS AI Layer model. Each ships under the same audit guarantees.
 
+### Works with every AI coding tool
+
+One command — `mneme hooks install` — auto-detects which AI clients are on your machine and writes the right config shape for each. Real shell-execute hook where supported, auto-loaded context files where not. Re-installable, drift-aware, sentinel-bracketed (never touches anything outside its own block). `mneme hooks status` to see what's wired.
+
 > **On by default · free · local · open-source.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Zero telemetry. Works offline.
 
 > **5015 tests · 172+ MCP tools · open-source · works offline.**
@@ -139,35 +143,6 @@ Each row maps to exactly one layer in the OS AI Layer model. Each ships under th
 ## 📋 What's new
 
 See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
-
----
-
-## 🔌 Multi-agent integration (v1.26.1)
-
-Mneme integrates with every AI coding tool through that tool's *own* configuration shape — not just Claude Code:
-
-| AI tool | Mode | Where Mneme writes |
-|---|---|---|
-| **Claude Code** | real shell-execute hook | `~/.claude/settings.json` (`UserPromptSubmit`, correct array schema) |
-| **Cursor** | rules file | `.cursor/rules/mneme.mdc` (auto-loaded) |
-| **OpenAI Codex CLI** | agent file | `AGENTS.md` (cross-vendor convention) |
-| **Gemini CLI** | agent file | `GEMINI.md` |
-| **Windsurf** | rules file | `.windsurfrules` |
-| **Project-level Claude** | agent file | `CLAUDE.md` (travels with the repo) |
-
-One command does the right thing for every tool you have installed:
-
-```bash
-mneme hooks install        # auto-detects what's present, installs in each
-mneme hooks status         # per-tool state
-mneme hooks repair         # auto-fixes any drift (incl. v1.25.2 broken format)
-mneme hooks uninstall      # strip Mneme from all tools
-mneme integrate            # alias for `mneme hooks` (more accurate name)
-```
-
-**v1.25.2 users:** the old `mneme hooks install` wrote a string-shorthand format that Claude Code silently rejected. v1.26.1 ships the correct array-of-objects schema AND auto-repairs the broken format — just run `npm i -g mneme-ai@1.26.1 && mneme hooks repair`.
-
-**Honest reality:** only Claude Code today exposes a real `UserPromptSubmit`-style exec hook. For every other agent the equivalent is auto-loaded markdown context files. Mneme writes a sentinel-bracketed block (`<!-- BEGIN MNEME PULSE --> ... <!-- END MNEME PULSE -->`) into the right file for each tool — re-installing replaces the block in place, never duplicates, never touches anything outside the sentinels.
 
 ---
 
