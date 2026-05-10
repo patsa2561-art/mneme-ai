@@ -38,6 +38,8 @@ import { join } from "node:path";
 
 import type { StrainId, SuspectClaim } from "./types.js";
 import { SEED_VACCINES, buildCache } from "./vaccines.js";
+import { bestEffortMutate } from "./mutators.js";
+import { buildCalibrationReport, type CalibrationReport, type CalibrationCase } from "./calibration.js";
 
 const ALL_VACCINES = SEED_VACCINES;
 
@@ -64,6 +66,10 @@ export interface StrainGapReport {
   precision: number | null;
   recall: number | null;
   f1: number | null;
+  /** v1.28.0 -- calibration metrics (Brier + margin). */
+  calibration: CalibrationReport;
+  /** v1.28.0 -- the actual FN sample texts (for auto-synth). */
+  fnSamples: string[];
   /** Human-readable diagnostic. */
   recommendation: string;
 }
@@ -129,10 +135,39 @@ function mutatePath(path: string): string {
   return path.replace(/\.(\w+)$/, "_phantom.$1");
 }
 
-function buildCases(repoRoot: string): { strain: StrainId; cases: GapTestCase[] }[] {
+export function buildGapCases(repoRoot: string): { strain: StrainId; cases: GapTestCase[] }[] {
   const shas = collectShas(repoRoot, 20);
   const deps = collectDeps(repoRoot);
   const paths = collectPaths(repoRoot, 15);
+
+  // v1.28.0: use bestEffortMutate (5-family adversarial mutators) when
+  // the entity is amenable; fall back to the trivial swap when not.
+  // Each positive case is generated 2x -- once with the deterministic
+  // simple mutator and once with bestEffortMutate -- to widen the
+  // adversarial surface against the vaccine.
+  function mutatePosCases<T>(
+    items: T[],
+    asText: (x: T) => string,
+    simpleMutator: (x: T) => string,
+    label: (m: string) => string,
+  ): GapTestCase[] {
+    const out: GapTestCase[] = [];
+    let seed = 0;
+    for (const item of items.slice(0, 5)) {
+      const text = asText(item);
+      const simple = simpleMutator(item);
+      out.push({ label: label(simple), match: simple, shouldBeInfected: true });
+      const adv = bestEffortMutate(text, seed++);
+      if (adv && adv.mutated !== simple && adv.mutated !== text) {
+        out.push({
+          label: `${label(adv.mutated)} (mut=${adv.name})`,
+          match: adv.mutated,
+          shouldBeInfected: true,
+        });
+      }
+    }
+    return out;
+  }
 
   return [
     {
@@ -143,14 +178,12 @@ function buildCases(repoRoot: string): { strain: StrainId; cases: GapTestCase[] 
           match: `commit ${sha}`,
           shouldBeInfected: false,
         })),
-        ...shas.slice(0, 5).map((sha): GapTestCase => {
-          const phantom = mutateSha(sha);
-          return {
-            label: `positive: mutated SHA ${phantom.slice(0, 8)}...`,
-            match: `commit ${phantom}`,
-            shouldBeInfected: true,
-          };
-        }),
+        ...mutatePosCases(
+          shas,
+          (sha) => sha,
+          (sha) => `commit ${mutateSha(sha)}`,
+          (m) => `positive: mutated SHA ${m.slice(0, 24)}...`,
+        ),
       ],
     },
     {
@@ -161,14 +194,12 @@ function buildCases(repoRoot: string): { strain: StrainId; cases: GapTestCase[] 
           match: `from "${dep}"`,
           shouldBeInfected: false,
         })),
-        ...deps.slice(0, 5).map((dep): GapTestCase => {
-          const phantom = mutatePackage(dep);
-          return {
-            label: `positive: phantom package ${phantom}`,
-            match: `from "${phantom}"`,
-            shouldBeInfected: true,
-          };
-        }),
+        ...mutatePosCases(
+          deps,
+          (dep) => dep,
+          (dep) => `from "${mutatePackage(dep)}"`,
+          (m) => `positive: phantom dep ${m}`,
+        ),
       ],
     },
     {
@@ -179,14 +210,12 @@ function buildCases(repoRoot: string): { strain: StrainId; cases: GapTestCase[] 
           match: p,
           shouldBeInfected: false,
         })),
-        ...paths.slice(0, 5).map((p): GapTestCase => {
-          const phantom = mutatePath(p);
-          return {
-            label: `positive: mutated path ${phantom}`,
-            match: phantom,
-            shouldBeInfected: true,
-          };
-        }),
+        ...mutatePosCases(
+          paths,
+          (p) => p,
+          mutatePath,
+          (m) => `positive: mutated path ${m}`,
+        ),
       ],
     },
   ];
@@ -199,38 +228,52 @@ async function evaluateStrain(
   strain: StrainId,
   cases: GapTestCase[],
 ): Promise<StrainGapReport> {
+  const emptyCal = buildCalibrationReport([]);
   const vaccine = ALL_VACCINES.find((v) => v.strain === strain);
   if (!vaccine || cases.length === 0) {
     return {
       strain, vaccineId: vaccine?.id ?? "(none)",
       tp: 0, tn: 0, fp: 0, fn: 0,
       precision: null, recall: null, f1: null,
+      calibration: emptyCal, fnSamples: [],
       recommendation: vaccine ? "no test cases (insufficient ground truth)" : "no vaccine for this strain",
     };
   }
   const cache = buildCache(repoRoot);
   let tp = 0, tn = 0, fp = 0, fn = 0;
+  const fnSamples: string[] = [];
+  const calCases: CalibrationCase[] = [];
   for (const c of cases) {
     const claim: SuspectClaim = { strain, match: c.match, offset: 0, surfaceConfidence: 0.7 };
     let infected = false;
-    try { infected = (await vaccine.assay(claim, { repoRoot, cache })).infected; }
-    catch { infected = false; }
+    let confidence = 0.5;
+    try {
+      const r = await vaccine.assay(claim, { repoRoot, cache });
+      infected = r.infected;
+      // Vaccines today return boolean, not probability. Map: infected
+      // = 0.85 (high but not perfect), clean = 0.15. Future vaccines
+      // can supply graded confidence directly.
+      confidence = infected ? 0.85 : 0.15;
+    }
+    catch { infected = false; confidence = 0.5; }
+    calCases.push({ confidence, actual: c.shouldBeInfected });
     if (c.shouldBeInfected && infected) tp++;
     else if (!c.shouldBeInfected && !infected) tn++;
     else if (!c.shouldBeInfected && infected) fp++;
-    else fn++;
+    else { fn++; fnSamples.push(c.match); }   // capture FN samples for auto-synth
   }
   const precision = tp + fp === 0 ? null : tp / (tp + fp);
   const recall = tp + fn === 0 ? null : tp / (tp + fn);
   const f1 = precision != null && recall != null && precision + recall > 0
     ? 2 * (precision * recall) / (precision + recall) : null;
+  const calibration = buildCalibrationReport(calCases);
   let recommendation = "ok";
   if (recall != null && recall < 0.80) {
-    recommendation = `LOW RECALL ${(recall * 100).toFixed(0)}%: vaccine misses real-world phantoms. Add patterns to strains.ts:${strain} signature.`;
+    recommendation = `LOW RECALL ${(recall * 100).toFixed(0)}%: vaccine misses real-world phantoms. Try \`mneme antivirus synthesize ${strain}\` to auto-generate patterns from the ${fnSamples.length} FN samples.`;
   } else if (precision != null && precision < 0.80) {
     recommendation = `LOW PRECISION ${(precision * 100).toFixed(0)}%: vaccine flags false positives. Tighten the assay in vaccines.ts:VAC_${strain.toUpperCase()}.`;
   }
-  return { strain, vaccineId: vaccine.id, tp, tn, fp, fn, precision, recall, f1, recommendation };
+  return { strain, vaccineId: vaccine.id, tp, tn, fp, fn, precision, recall, f1, calibration, fnSamples, recommendation };
 }
 
 /**
@@ -238,7 +281,7 @@ async function evaluateStrain(
  * with recall below 0.80 (the "gap strains" maintainer should fix).
  */
 export async function gapScan(repoRoot: string): Promise<GapScanReport> {
-  const buckets = buildCases(repoRoot);
+  const buckets = buildGapCases(repoRoot);
   const perStrain: StrainGapReport[] = [];
   for (const b of buckets) {
     perStrain.push(await evaluateStrain(repoRoot, b.strain, b.cases));

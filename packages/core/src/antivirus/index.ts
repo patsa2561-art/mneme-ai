@@ -39,4 +39,24 @@ export {
 // the user's repo as ground truth. Returns per-strain F1 + a list
 // of "gap strains" with recall < 0.80 that need vaccine improvement.
 export type { GapTestCase, StrainGapReport, GapScanReport } from "./gap_scan.js";
-export { gapScan } from "./gap_scan.js";
+export { gapScan, buildGapCases } from "./gap_scan.js";
+// v1.28.0 -- adversarial mutators (5 families: visualSwap, damerauSwap,
+// phoneticDrift, crossNamespace, versionDrift) for stressing vaccines
+// with the kinds of phantoms that actually appear in production AI output.
+export type { MutatorName } from "./mutators.js";
+export {
+  visualSwap, damerauSwap, phoneticDrift, crossNamespace, versionDrift,
+  bestEffortMutate,
+} from "./mutators.js";
+// v1.28.0 -- calibration metrics (Brier score + meanMargin) so vaccines
+// are judged not only on accuracy but on how well-calibrated their
+// confidence is.
+export type { CalibrationCase, CalibrationReport } from "./calibration.js";
+export { brierScore, meanMargin, buildCalibrationReport } from "./calibration.js";
+// v1.28.0 -- auto-vaccine synthesis: feed FN samples through a
+// deterministic pattern miner, get a regex back, re-evaluate against
+// the gap-scan test set, accept iff recall climbs and precision holds.
+export type { VaccineSynthesisResult, SynthesisInput } from "./auto_synthesize.js";
+export {
+  mineRegexFromSamples, evaluateCandidatePattern, synthesizeVaccine,
+} from "./auto_synthesize.js";

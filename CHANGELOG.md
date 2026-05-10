@@ -8,6 +8,86 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.28.0] — 2026-05-10
+
+**Mneme antivirus learns to write its own vaccines.** Closed-loop self-
+improvement: gap-scan finds the false negatives the vaccine missed →
+deterministic pattern miner generalises them into a regex →
+re-evaluates against legitimate negatives → only ACCEPTS the candidate
+when recall climbs ≥+10pp AND precision stays ≥0.90. No LLM in the hot
+path. The daemon runs this nightly while you sleep, broadcasts via the
+notifier fabric when a new patch passes the gate. Five wild upgrades
+ship together.
+
+### Upgrade 1 — Auto-vaccine synthesis (`mneme antivirus synthesize <strain>`)
+
+`packages/core/src/antivirus/auto_synthesize.ts` is the centerpiece:
+
+- `mineRegexFromSamples()` — longest common suffix/prefix/keyword
+  pattern miner. Conservative; prefers fewer matches over over-
+  generalising.
+- `evaluateCandidatePattern()` — TP/FP count against legitimate
+  negatives drawn from the user's own repo via `buildGapCases`.
+- `synthesizeVaccine()` — full pipeline. Acceptance gate:
+  `MIN_RECALL_DELTA = 0.10` AND `PRECISION_FLOOR = 0.90`.
+- Persists every proposal (accepted OR rejected) to
+  `.mneme/proposals/vaccine-<id>.md` for the maintainer's paper trail.
+
+CLI: `mneme antivirus synthesize <strain>` (alias `synth`). Runs gap-
+scan, mines a pattern from FN samples, derives negatives from the same
+case builder, prints verdict.
+
+### Upgrade 2 — Adversarial mutators (5 families)
+
+`packages/core/src/antivirus/mutators.ts`. Pre-fix gap-scan used a
+trivial 1-char swap (a↔b, 0↔9). Real-world AI hallucinations have
+specific shapes that are MUCH harder to catch:
+
+- `visualSwap`     — chars that look alike at small font (0/O, l/1, rn/m, vv/w, cl/d)
+- `damerauSwap`    — single-char substitution / adjacent transposition
+- `phoneticDrift`  — vowel-cluster swap (anthropic ↔ anthrophic)
+- `crossNamespace` — @vue ↔ @react, @anthropic ↔ @openai
+- `versionDrift`   — 1.27.8 ↔ 1.28.7 (digit shuffle)
+
+`bestEffortMutate(s, seed)` picks the first applicable mutator + names
+which family fired. Deterministic with seed → reproducible gap-scan.
+
+### Upgrade 4 — Polyglot ground truth in `buildCache`
+
+`vaccines.ts` now reads dependencies from `package.json`,
+`requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`,
+`Gemfile`/`Gemfile.lock`, `build.gradle`, `pom.xml`. The Mneme
+antivirus now defends Python, Rust, Go, Java, and Ruby projects — not
+just JavaScript.
+
+### Upgrade 5 — Calibration metrics (Brier + meanMargin)
+
+`packages/core/src/antivirus/calibration.ts`. F1 tells you whether the
+vaccine fires correctly; calibration tells you whether its CONFIDENCE
+is well-matched to its accuracy. Gap-scan now reports per-strain:
+
+- Brier score (0 = perfect, 1 = perfectly wrong)
+- meanMargin (decisiveness)
+- Combined verdict: "expert" / "overconfident" / "well-calibrated" /
+  "honest doubt" / "needs tuning"
+
+### Daemon nightly self-evolve cycle
+
+`nucleus_daemon.ts` gets a new `ANTIVIRUS_SYNTH_EVERY = 360` ticks
+(~3h at 30s tick interval). Every cycle: runs gap-scan → for each
+strain with FN samples, calls `synthesizeVaccine` → if any proposal is
+ACCEPTED, broadcasts via the multi-channel notifier (toast + push +
+email + agent files) so the maintainer wakes up to a paper-trailed
+queue of patches to merge into `strains.ts`.
+
+### Tests
+
+39 new tests across `mutators.test.ts` (visualSwap, damerauSwap,
+phoneticDrift, crossNamespace, versionDrift, bestEffortMutate),
+`calibration.test.ts` (Brier formula edge cases + verdict bands),
+`auto_synthesize.test.ts` (mining + acceptance gate + ACCEPT/REJECT
+proposal sidecar). Suite total: **5066 / 5066 passing.**
+
 ## [1.27.9] — 2026-05-10
 
 **3 critical bugs FINALLY fixed (1 was 4 rounds old) + MNEME CHIMERA

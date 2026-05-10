@@ -69,7 +69,16 @@ export function buildCache(repoRoot: string): VaccineCache {
     }
   } catch { /* best-effort */ }
 
-  // package.json deps + devDeps + peerDeps
+  // Polyglot package deps -- v1.28.0 expanded from JS-only to:
+  //   JS    : package.json (deps + dev + peer + optional)
+  //   Python: requirements.txt + pyproject.toml [project.dependencies]
+  //   Rust  : Cargo.toml [dependencies] + [dev-dependencies]
+  //   Go    : go.mod (require blocks)
+  //   Ruby  : Gemfile (gem 'name')
+  //   Java  : build.gradle / pom.xml (best-effort regex)
+  // Each ecosystem extends the same `knownDeps` set; the
+  // depends_imaginarium vaccine looks up across all of them.
+  const knownDeps = new Set<string>();
   try {
     const pkgPath = join(repoRoot, "package.json");
     if (existsSync(pkgPath)) {
@@ -79,14 +88,96 @@ export function buildCache(repoRoot: string): VaccineCache {
         peerDependencies?: Record<string, string>;
         optionalDependencies?: Record<string, string>;
       };
-      const set = new Set<string>();
-      for (const k of Object.keys(pkg.dependencies ?? {})) set.add(k);
-      for (const k of Object.keys(pkg.devDependencies ?? {})) set.add(k);
-      for (const k of Object.keys(pkg.peerDependencies ?? {})) set.add(k);
-      for (const k of Object.keys(pkg.optionalDependencies ?? {})) set.add(k);
-      cache.knownDeps = set;
+      for (const k of Object.keys(pkg.dependencies ?? {})) knownDeps.add(k);
+      for (const k of Object.keys(pkg.devDependencies ?? {})) knownDeps.add(k);
+      for (const k of Object.keys(pkg.peerDependencies ?? {})) knownDeps.add(k);
+      for (const k of Object.keys(pkg.optionalDependencies ?? {})) knownDeps.add(k);
     }
-  } catch { /* best-effort */ }
+  } catch { /* */ }
+  // Python: requirements.txt
+  try {
+    const reqPath = join(repoRoot, "requirements.txt");
+    if (existsSync(reqPath)) {
+      for (const line of readFileSync(reqPath, "utf8").split("\n")) {
+        const m = /^([a-zA-Z0-9_.\-]+)\s*[<>=~!\[]/.exec(line.trim()) ?? /^([a-zA-Z0-9_.\-]+)\s*$/.exec(line.trim());
+        if (m && m[1]) knownDeps.add(m[1].toLowerCase());
+      }
+    }
+  } catch { /* */ }
+  // Python: pyproject.toml [project.dependencies] (best-effort regex --
+  // we don't pull in a TOML parser to keep deps minimal)
+  try {
+    const pp = join(repoRoot, "pyproject.toml");
+    if (existsSync(pp)) {
+      const text = readFileSync(pp, "utf8");
+      const m = /\[project\.dependencies\]([\s\S]*?)(?:\n\[|$)/.exec(text)
+        ?? /dependencies\s*=\s*\[([\s\S]*?)\]/.exec(text);
+      if (m && m[1]) {
+        for (const dep of m[1].matchAll(/["']([a-zA-Z0-9_.\-]+)/g)) {
+          if (dep[1]) knownDeps.add(dep[1].toLowerCase());
+        }
+      }
+    }
+  } catch { /* */ }
+  // Rust: Cargo.toml [dependencies]
+  try {
+    const cargo = join(repoRoot, "Cargo.toml");
+    if (existsSync(cargo)) {
+      const text = readFileSync(cargo, "utf8");
+      const sections = text.match(/\[(?:dev-)?dependencies\]([\s\S]*?)(?=\n\[|$)/g) ?? [];
+      for (const sec of sections) {
+        for (const m of sec.matchAll(/^([a-zA-Z0-9_-]+)\s*=/gm)) {
+          if (m[1]) knownDeps.add(m[1].toLowerCase());
+        }
+      }
+    }
+  } catch { /* */ }
+  // Go: go.mod
+  try {
+    const gomod = join(repoRoot, "go.mod");
+    if (existsSync(gomod)) {
+      const text = readFileSync(gomod, "utf8");
+      // Single-line + multi-line `require ( ... )` blocks.
+      const req = text.match(/^require\s+(?:\(([\s\S]*?)\)|(\S+\s+\S+))/m);
+      if (req) {
+        const body = req[1] ?? req[2] ?? "";
+        for (const m of body.matchAll(/^\s*([a-zA-Z0-9_./.\-]+)\s+v\d/gm)) {
+          if (m[1]) knownDeps.add(m[1].toLowerCase());
+        }
+      }
+    }
+  } catch { /* */ }
+  // Ruby: Gemfile / Gemfile.lock
+  try {
+    for (const f of ["Gemfile", "Gemfile.lock"]) {
+      const p = join(repoRoot, f);
+      if (existsSync(p)) {
+        const text = readFileSync(p, "utf8");
+        for (const m of text.matchAll(/(?:^|\s)(?:gem\s+["']|^\s+)([a-zA-Z0-9_\-]+)/gm)) {
+          if (m[1]) knownDeps.add(m[1].toLowerCase());
+        }
+      }
+    }
+  } catch { /* */ }
+  // Java: build.gradle / pom.xml (best-effort)
+  try {
+    const gradle = join(repoRoot, "build.gradle");
+    if (existsSync(gradle)) {
+      const text = readFileSync(gradle, "utf8");
+      for (const m of text.matchAll(/['"]([a-zA-Z0-9_.\-]+):([a-zA-Z0-9_.\-]+):/g)) {
+        if (m[1] && m[2]) knownDeps.add(`${m[1]}:${m[2]}`.toLowerCase());
+      }
+    }
+    const pom = join(repoRoot, "pom.xml");
+    if (existsSync(pom)) {
+      const text = readFileSync(pom, "utf8");
+      const groups = text.matchAll(/<artifactId>([^<]+)<\/artifactId>/g);
+      for (const g of groups) {
+        if (g[1]) knownDeps.add(g[1].toLowerCase());
+      }
+    }
+  } catch { /* */ }
+  if (knownDeps.size > 0) cache.knownDeps = knownDeps;
 
   return cache;
 }

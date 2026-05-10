@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/mcp",
-  "version": "1.27.9",
+  "version": "1.28.0",
   "description": "MCP server that exposes Mneme to Claude Code, Cursor, Continue, and other AI clients",
   "type": "module",
   "main": "./dist/index.js",

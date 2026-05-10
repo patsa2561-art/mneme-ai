@@ -305,6 +305,49 @@ export async function runDaemonLoop(
         } catch { /* best-effort */ }
       }
 
+      // v1.28.0 — Antivirus self-synthesis pass. Every ANTIVIRUS_SYNTH_EVERY
+      // ticks (~3h at 30s tick) the daemon runs gap-scan, and for each
+      // strain whose vaccine is missing FN samples it tries the
+      // deterministic pattern miner. Only ACCEPTED proposals (recall +10pp,
+      // precision >= 0.90) trigger a broadcast -- the rest sit silently in
+      // .mneme/proposals/ for the maintainer's paper trail. This is the
+      // closed loop: the antivirus rewrites itself overnight, no LLM in
+      // the hot path, no auto-merge -- patches wait for review.
+      const ANTIVIRUS_SYNTH_EVERY = 360;
+      if (tickCount > 0 && tickCount % ANTIVIRUS_SYNTH_EVERY === 0) {
+        try {
+          const { gapScan, buildGapCases, synthesizeVaccine } = await import("./antivirus/index.js");
+          const r = await gapScan(repoRoot);
+          const buckets = buildGapCases(repoRoot);
+          const accepted: string[] = [];
+          for (const sg of r.perStrain) {
+            if (sg.fnSamples.length === 0) continue;
+            const negativeSamples = buckets
+              .find((b) => b.strain === sg.strain)
+              ?.cases.filter((c) => !c.shouldBeInfected)
+              .map((c) => c.match) ?? [];
+            const synth = synthesizeVaccine(repoRoot, {
+              strain: sg.strain,
+              fnSamples: sg.fnSamples,
+              negativeSamples,
+            });
+            if (synth.accepted) accepted.push(`${sg.strain}: ${synth.proposedPattern}`);
+          }
+          if (accepted.length > 0) {
+            try {
+              const { buildAllNotifiers, notifyAll } = await import("./notifier/index.js");
+              const all = buildAllNotifiers(repoRoot);
+              await notifyAll({
+                id: `antivirus-synth-${Date.now()}`,
+                severity: "action",
+                title: `Mneme antivirus auto-synthesized ${accepted.length} vaccine proposal${accepted.length === 1 ? "" : "s"}`,
+                body: `New regex patterns mined from FN samples (deterministic, no LLM). Review with: ls .mneme/proposals/  -- then paste accepted patterns into packages/core/src/antivirus/strains.ts.\n\n${accepted.join("\n")}`,
+              }, all);
+            } catch { /* best-effort */ }
+          }
+        } catch { /* best-effort */ }
+      }
+
       // v1.26.0 — Self-check audit + multi-channel notifier dispatch.
       // Every CARETAKER_PASS_EVERY ticks, run all selfcheck checks. Any
       // FAIL fires a notifier broadcast (OS toast + mobile push + email

@@ -145,6 +145,59 @@ export function registerAntivirusCommands(program: Command): void {
       }
     });
 
+  // v1.28.0 -- auto-vaccine synthesis. Closed loop: gap-scan finds the
+  // FN samples this strain MISSED; pattern miner generalises them into
+  // a regex; we re-evaluate; if recall climbs ≥+10pp AND precision stays
+  // ≥0.90 the proposal is ACCEPTED and a sidecar markdown is written
+  // to .mneme/proposals/ for the maintainer to merge into strains.ts.
+  av.command("synthesize <strain>")
+    .alias("synth")
+    .description("Auto-mine a candidate regex pattern from the FN samples a strain's vaccine missed; accept iff recall +10pp and precision stays >=0.90. Writes a proposal sidecar to .mneme/proposals/.")
+    .option("--json", "JSON output.")
+    .action(async (strain: string, opts: CommonOpts) => {
+      const repoRoot = process.cwd();
+      const r = await antivirus.gapScan(repoRoot);
+      const target = r.perStrain.find((s) => s.strain === strain);
+      if (!target) {
+        writeText(`No gap-scan report for strain "${strain}". Known strains: ${r.perStrain.map((s) => s.strain).join(", ")}`);
+        process.exitCode = 1;
+        return;
+      }
+      if (target.fnSamples.length === 0) {
+        writeText(`Strain "${strain}" has 0 FN samples -- nothing to mine. Recall ${target.recall == null ? "n/a" : `${(target.recall * 100).toFixed(0)}%`} -- vaccine already catches every adversarial case.`);
+        return;
+      }
+      // Pull legitimate negatives from the same gap-scan case builder
+      // so the precision gate has something to bite on.
+      const buckets = antivirus.buildGapCases(repoRoot);
+      const negativeSamples = buckets
+        .find((b) => b.strain === strain)
+        ?.cases.filter((c) => !c.shouldBeInfected)
+        .map((c) => c.match) ?? [];
+      const result = antivirus.synthesizeVaccine(repoRoot, {
+        strain: target.strain,
+        fnSamples: target.fnSamples,
+        negativeSamples,
+      });
+      if (opts.json) { writeJson(result); return; }
+      writeText(`MNEME ANTIVIRUS auto-synthesize -- ${strain}`);
+      writeText(``);
+      writeText(`FN samples mined: ${result.fnSamples.length}`);
+      writeText(`Proposed pattern: ${result.proposedPattern || "(no stable structure found)"}`);
+      writeText(`Recall after:     ${(result.recallAfter * 100).toFixed(0)}%`);
+      writeText(`Precision after:  ${(result.precisionAfter * 100).toFixed(0)}%`);
+      writeText(``);
+      writeText(`Verdict: ${result.accepted ? "ACCEPTED ✓" : "REJECTED ✗"}`);
+      writeText(`         ${result.verdict}`);
+      if (result.proposalPath) {
+        writeText(``);
+        writeText(`Proposal written: ${result.proposalPath}`);
+        if (result.accepted) {
+          writeText(`Next: paste the pattern into packages/core/src/antivirus/strains.ts under the "${strain}" strain's signature.patterns array, then re-run \`mneme antivirus gap-scan\`.`);
+        }
+      }
+    });
+
   av.command("stats")
     .description("Realtime stats snapshot.")
     .option("--json", "JSON output.")
