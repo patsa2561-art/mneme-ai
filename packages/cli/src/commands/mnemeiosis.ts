@@ -543,6 +543,24 @@ export function registerNucleusCommands(program: Command): void {
       }
     });
 
+  // mneme nucleus pulse (v1.25.2) -- tiny status block for AI context injection.
+  nuc
+    .command("pulse")
+    .description("Output a tiny Mneme status block. Designed for Claude Code UserPromptSubmit hook.")
+    .option("--quiet", "Output nothing when there are no [AUTO-ACTION] / [WARN] notices (default).")
+    .option("--no-quiet", "Always output (even when nothing notable).")
+    .option("--json", "JSON output instead of text block.")
+    .action(async (opts: { quiet?: boolean; json?: boolean }) => {
+      const { pulse } = await import("@mneme-ai/core");
+      const status = pulse.collectPulseStatus(process.cwd());
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(status, null, 2) + "\n");
+        return;
+      }
+      const text = pulse.renderPulse(status, { quiet: opts.quiet !== false });
+      if (text) process.stdout.write(text + "\n");
+    });
+
   // mneme nucleus seed --demo (v1.23.0; --auto-start --watch in v1.23.2)
   nuc
     .command("seed")

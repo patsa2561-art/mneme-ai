@@ -46,3 +46,4 @@ export * as whatsNew from "./whats_new.js";
 export * as retrievalLab from "./retrieval_lab/index.js";
 export * as graphrag from "./graphrag/index.js";
 export * as ingest from "./ingest/index.js";
+export * as pulse from "./pulse.js";

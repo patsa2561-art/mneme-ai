@@ -8,6 +8,85 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.25.2] — 2026-05-09
+
+**Mneme Pulse + Hooks installer — closing the "AI agent didn't trigger
+on its own" loop.**
+
+### The architectural reality
+
+User asked: "ai agent ไม่ auto upgrade ทำไม / ผมอยากให้ระบบมี trigger
+ตลอดเวลาระหว่าง mneme + ai agent ต่อให้ user เปิดหน้า chat ค้างไว้ก็มี
+trigger".
+
+Honest answer: **MCP is request-response.** AI clients (Claude Code,
+Cursor, etc.) only run inference when the user types something. There
+is no protocol primitive for "server tells AI to think now" while
+the chat is idle. We've already wired everything the protocol allows:
+
+  - `notifications/message` push at boot + every 5min idle (v1.24.1)
+  - `notifications/resources/updated` on `mneme://updates/status` (v1.22)
+  - Inbox prepend on every tool dispatch wisdom field (v1.23.0)
+  - `[AUTO-ACTION]` lines + `autoActions[]` in tool responses (v1.23.5)
+  - Boot handshake nudge 3s after connect (v1.24.1)
+
+The remaining gap: **if the AI agent never makes a tool call**, none
+of those fire. That's what the user observed in the screenshot — AI
+read `.mneme/CURRENT_VERSION.md` via filesystem walk + reported
+status to the user, but never called `mneme.system.upgrade`.
+
+### The fix: `mneme nucleus pulse` + Claude Code `UserPromptSubmit` hook
+
+Claude Code (and other tools that support it) run a shell command
+before every user prompt is sent to the AI, and inject the command's
+stdout into the AI's context. Wire `mneme nucleus pulse` there and
+**every user keystroke = AI sees Mneme**.
+
+```
+$ mneme hooks install
+OK Installed Mneme pulse hook in C:\Users\you\.claude\settings.json
+   UserPromptSubmit -> mneme nucleus pulse --quiet
+
+Restart Claude Code to pick up the new hook.
+From now on, every user message you type triggers a Mneme pulse:
+AI sees current Mneme version + inbox + auto-actions on every turn.
+```
+
+### What's new
+
+  - `packages/core/src/pulse.ts` — `collectPulseStatus(repoRoot)` reads
+    every `.mneme/*.json` state file in parallel. `renderPulse(s, opts)`
+    formats a tiny `[MNEME PULSE] ... [/MNEME PULSE]` block (≤600 chars)
+    with imperative `[AUTO-ACTION]` + `EXECUTE NOW: tool({args})` lines
+    when there's something to do. Returns "" on quiet days (so the hook
+    is a no-op when nothing changed).
+  - `mneme nucleus pulse [--quiet] [--no-quiet] [--json]` — CLI surface.
+  - `mneme hooks install [--force]` — atomically merges the hook entry
+    into `~/.claude/settings.json`. Refuses to overwrite a foreign
+    hook unless `--force`.
+  - `mneme hooks uninstall` / `mneme hooks status` — full lifecycle.
+  - **`AGENT_INSTRUCTIONS.md`** rewritten to teach the AI: when you
+    see `[AUTO-ACTION]` in a `[MNEME PULSE]` block, run the
+    `EXECUTE NOW` tool call IMMEDIATELY. Don't ask permission.
+
+### Net effect
+
+User installs Mneme + runs `mneme hooks install` once. From that point:
+
+  - Every keystroke in Claude Code -> hook runs `mneme nucleus pulse`
+  - Pulse outputs ASCII status block (or "" if nothing notable)
+  - AI sees the block as system context BEFORE processing user message
+  - If `[AUTO-ACTION]` present, AI executes the named MCP tool call
+    in the same turn (announce -> call -> announce)
+
+This is the closest thing to a continuous heartbeat MCP allows.
+
+### Tests
+
+  - 4775 / 4775 passing (was 4766; +9 pulse tests).
+  - 172 MCP tools (no schema changes; pulse is read-only state aggregator).
+  - TypeScript strict; production build clean.
+
 ## [1.25.1] — 2026-05-09
 
 **The 5 future-roadmap items from v1.25.0 — all shipped, all
