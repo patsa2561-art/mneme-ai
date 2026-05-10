@@ -46,33 +46,14 @@ tab change was indistinguishable from a no-op.
      with no benchmark yet (signature column = 'uncertified'). Run
      `mneme antivirus benchmark` to populate real HMAC signatures."
 
-### NEW: [Jack the Giant Slayer competitive strategy](./docs/JACK_THE_GIANT_SLAYER_STRATEGY.md)
+### Internal strategy notes (kept local, not committed)
 
-Strategy document responding to user's brief on competitive
-positioning:
-
-  - Honest resource asymmetry table (we have 1 dev vs giants' 600+).
-  - Competitive map of the 6 prior-art categories (CLAUDE.md, MCP
-    pull, editor-side context, daemon, update-notifier, per-vendor
-    memory) + each one's soft underbelly.
-  - Mneme's wedge: **giants compete on L0-L3; we define L4-L8.**
-  - 6 asymmetric advantages a giant can't replicate quickly:
-     1. Push not pull (pulse + hooks + AUTO-ACTION)
-     2. Cross-vendor lineage (DNA travels across Claude/Cursor/...)
-     3. Self-modifying source (`mneme evolve`)
-     4. PRECOG precognition cache
-     5. The OS AI Layer model itself (the taxonomy is the moat)
-     6. Free + open + zero telemetry
-  - **Fission strategy** for global brain compounding:
-     1. Genome Pool packager (shipped v1.26.4)
-     2. Central upload + dedup + search (planned v1.28)
-     3. Self-fertilizing nucleus (planned v1.28)
-     4. Cross-vendor wisdom propagation
-     5. Vaccine combinatorics (BSL-4 lab metaphor)
-  - **Beehive UX** vision for Antivirus Lab: hex grid, queen panel,
-    combinator chamber, outbreak feed (planned v1.27/v1.28).
-  - 6 operating principles distilled from the v1.20 -> v1.26 sprint.
-  - 12-month success metrics target.
+Strategy / phase-plan / Beehive UX vision for v1.27+ moved to the
+maintainer's private memory store rather than the public repo. Public
+documentation in this release is limited to the technical layer
+spec (`docs/OS_AI_LAYER.md`, kept public) and the runtime CHANGELOG
+entries below. AI agents do not need the strategy doc at runtime --
+they read README + technical specs.
 
 ### Files changed
 
@@ -82,7 +63,7 @@ positioning:
     scroll-on-tab-click + per-tab titles
   - `packages/web/src/styles/global.css` -- `.lab-tab-title`,
     `.lab-empty-rich`, `.lab-empty-mock`, `.cert-demo-callout`
-  - `docs/JACK_THE_GIANT_SLAYER_STRATEGY.md` (NEW)
+  - (strategy doc kept in maintainer's private memory; not committed)
 
 ### Test coverage
 
