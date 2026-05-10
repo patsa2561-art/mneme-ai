@@ -18,3 +18,7 @@ export { applyAndVerify } from "./verify.js";
 export {
   synthesize, verifySignature, applyPatch, evolutionPass, autoPr,
 } from "./synthesize.js";
+export {
+  readLineage, recordApply, verifyChain, trackRecordFor, lineageStats,
+} from "./lineage.js";
+export type { LineageEntry, TemplateTrackRecord } from "./lineage.js";

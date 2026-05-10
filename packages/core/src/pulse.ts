@@ -221,7 +221,20 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
 
   const lines: string[] = [];
   lines.push("[MNEME PULSE]");
-  lines.push(`mneme v${status.version.current}${status.version.latest && status.version.latest !== status.version.current ? ` (latest: v${status.version.latest})` : " (latest)"}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}`);
+  // v1.27.4 -- only annotate "(latest: vX)" when latest is GENUINELY
+  // ahead of current. Cache lag after an upgrade ("running 1.27.3 but
+  // cache still says latest=1.27.2") otherwise produces a misleading
+  // "(latest: v<older>)" string that suggests we're ahead of npm
+  // when really the cache just hasn't refreshed.
+  const showLatestAnnotation = !!(
+    status.version.latest &&
+    status.version.current !== "unknown" &&
+    semverGt(status.version.latest, status.version.current)
+  );
+  const versionTag = showLatestAnnotation
+    ? `v${status.version.current} (latest: v${status.version.latest})`
+    : `v${status.version.current} (latest)`;
+  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}`);
   if (status.notable.length > 0) {
     lines.push("");
     for (const n of status.notable) {

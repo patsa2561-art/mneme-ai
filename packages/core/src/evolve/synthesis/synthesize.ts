@@ -14,10 +14,11 @@ import { join } from "node:path";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
-import type { EvolveProposal } from "../types.js";
+import type { EvolveProposal, EvolveSignal } from "../types.js";
 import type { SynthesisResult, ApplyResult, AutoPrResult } from "./types.js";
 import { matchTemplate } from "./templates.js";
 import { applyAndVerify } from "./verify.js";
+import { trackRecordFor, recordApply } from "./lineage.js";
 
 const PROPOSALS_DIR = ".mneme/proposals";
 const SECRET_FILE = ".mneme/.evolve-secret";
@@ -102,11 +103,51 @@ export function synthesize(repoRoot: string, proposalId: string): SynthesisResul
     const verifyResult = applyAndVerify(repoRoot, match);
     const verified = verifyResult.kept;
 
-    // Confidence bump: Phase-2 baseline + 0.50 if all gates green.
-    // Saturates at 0.99.
-    const baseConf = proposal.confidence;
-    const bump = verified ? 0.5 : 0;
-    const confidence = Math.min(0.99, baseConf + bump);
+    // v1.27.4 -- DIFFERENTIATED confidence formula. Replaces the old
+    // "constant +0.50 bump" that gave every verified patch the same
+    // 64% score regardless of evidence quality.
+    //
+    //   confidence = clip(0.05, 0.99,
+    //     0.20 * signal_evidence       // occurrences + source diversity
+    //   + 0.20 * template_track_record // prior accept/revert ratio
+    //   + 0.10 * test_coverage         // co-located vitest existed + green
+    //   + 0.50 * verification          // all gates green
+    //   )
+    //
+    // Now confidence ACTUALLY varies. A first-time template with one
+    // signal occurrence + no co-located test + verified gates =
+    // around 0.65. A template with 5 prior clean accepts + multi-source
+    // signal + co-located green test = around 0.95.
+
+    // Signal evidence in [0, 1]. Saturates at 10 occurrences across signals.
+    const totalOcc = signal.occurrences;
+    const sourceCount = new Set(proposal.signals.map((s: EvolveSignal) => s.kind)).size;
+    const occScore = Math.min(1, totalOcc / 10);
+    const srcScore = Math.min(1, sourceCount / 3);
+    const signalEvidence = 0.7 * occScore + 0.3 * srcScore;
+
+    // Template track record from the Patch Provenance Chain.
+    const track = trackRecordFor(repoRoot, match.templateId);
+    const trackRecord = track.score;
+
+    // Test coverage factor: 1.0 if vitest ran green, 0.6 if no co-located
+    // test (skipped), 0 if test failed (verified=false anyway).
+    const testCoverage = verifyResult.gates.testsOk === true ? 1.0
+      : verifyResult.gates.testsOk === null ? 0.6
+      : 0;
+
+    const verificationFactor = verified ? 1.0 : 0;
+
+    const rawConfidence =
+      0.20 * signalEvidence +
+      0.20 * trackRecord +
+      0.10 * testCoverage +
+      0.50 * verificationFactor;
+
+    // Clip to [0.05, 0.99]. Floor of 0.05 so unverified Phase-2-only
+    // proposals still show some signal; ceiling of 0.99 so we never
+    // emit "100% certain" (overconfidence is a Mneme anti-pattern).
+    const confidence = Math.max(0.05, Math.min(0.99, rawConfidence));
 
     const partial: Omit<SynthesisResult, "signature"> = {
       id,
@@ -168,10 +209,42 @@ export function applyPatch(repoRoot: string, proposalId: string): ApplyResult {
   if (check.status !== 0) {
     return { ok: false, appliedAt: new Date().toISOString(), reason: `git apply --check failed: ${(check.stderr || check.stdout || "").slice(0, 300)}` };
   }
+  // Capture HEAD commit BEFORE the apply so the lineage entry can
+  // reference what state the patch was applied on top of.
+  let gitCommitBefore: string | null = null;
+  try {
+    const headRev = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5_000 });
+    if (headRev.status === 0) gitCommitBefore = (headRev.stdout || "").trim() || null;
+  } catch { /* */ }
+
   const apply = spawnSync("git", ["apply", patchPath], { cwd: repoRoot, encoding: "utf8", timeout: 10_000 });
   if (apply.status !== 0) {
     return { ok: false, appliedAt: new Date().toISOString(), reason: `git apply failed: ${(apply.stderr || apply.stdout || "").slice(0, 300)}` };
   }
+
+  // v1.27.4 -- record the apply in the Patch Provenance Chain so
+  // future synthesis runs of the same template see prior-accept
+  // history and confidence varies accordingly.
+  try {
+    // We only have synth here (no proposal). Read the proposal's first
+    // signal evidence as the human signalSummary.
+    const proposalPath = join(repoRoot, PROPOSALS_DIR, `${proposalId}.json`);
+    let signalSummary: string = String(synth.templateId);
+    if (existsSync(proposalPath)) {
+      try {
+        const p = JSON.parse(readFileSync(proposalPath, "utf8")) as { signals?: Array<{ pattern?: string; evidence?: string }> };
+        const s0 = p.signals?.[0];
+        if (s0?.pattern) signalSummary = `${s0.pattern}${s0.evidence ? ` -- ${s0.evidence.slice(0, 80)}` : ""}`;
+      } catch { /* */ }
+    }
+    recordApply(repoRoot, {
+      templateId: synth.templateId,
+      proposalId,
+      gitCommitBefore,
+      signalSummary,
+    });
+  } catch { /* lineage is best-effort -- don't fail the apply */ }
+
   return { ok: true, appliedAt: new Date().toISOString() };
 }
 

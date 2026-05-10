@@ -170,6 +170,46 @@ export function registerEvolveCommands(program: Command): void {
       if (r.reason) writeText(`  ${r.reason}`);
     });
 
+  // ─── Patch Provenance Chain (v1.27.4) ────────────────────────────
+  ev.command("lineage [templateId]")
+    .description("Show the Patch Provenance Chain. Pass a templateId to filter; no arg = aggregate stats. v1.27.4 -- HMAC-chained record of every applied EVOLVE patch, scoped per template.")
+    .option("--json", "JSON output.")
+    .option("--verify", "Verify HMAC chain integrity.")
+    .action((templateId: string | undefined, opts: { json?: boolean; verify?: boolean }) => {
+      const root = process.cwd();
+      if (templateId) {
+        const tr = evolve.synthesis.trackRecordFor(root, templateId);
+        if (opts.json) { writeJson(tr); return; }
+        writeText(`Template lineage: ${tr.templateId}`);
+        writeText(`  Total accepts:    ${tr.totalAccepts}`);
+        writeText(`  Total reverts:    ${tr.totalReverts}`);
+        writeText(`  Last applied:     ${tr.lastAppliedAt ?? "(never)"}`);
+        writeText(`  Track-record:     ${(tr.score * 100).toFixed(0)}%`);
+        return;
+      }
+      const stats = evolve.synthesis.lineageStats(root);
+      if (opts.verify) {
+        const v = evolve.synthesis.verifyChain(root);
+        if (opts.json) { writeJson(v); return; }
+        writeText(`Chain integrity: ${v.ok ? "✓ INTACT" : "✗ BROKEN at index " + v.brokenAt}`);
+        writeText(`Total entries:   ${v.total}`);
+        return;
+      }
+      if (opts.json) { writeJson(stats); return; }
+      writeText(`Patch Provenance Chain -- ${stats.totalEntries} total entries`);
+      writeText(`  HMAC integrity:  ${stats.chain.ok ? "✓ INTACT" : "✗ BROKEN at " + stats.chain.brokenAt}`);
+      if (stats.perTemplate.length === 0) {
+        writeText(`  (no templates applied yet -- run \`mneme evolve apply <id>\` to populate)`);
+        return;
+      }
+      writeText(``);
+      writeText(`Per-template track records:`);
+      for (const t of stats.perTemplate) {
+        writeText(`  [${(t.score * 100).toFixed(0).padStart(3)}%] ${t.templateId}`);
+        writeText(`         accepts=${t.totalAccepts} · reverts=${t.totalReverts} · last=${t.lastAppliedAt?.slice(0, 10) ?? "?"}`);
+      }
+    });
+
   // ─── Phase 5 (v1.27.0): evolution pass (manual trigger) ───────────
   ev.command("pass")
     .description("Phase 5 -- run one full evolution pass: scan signals -> propose -> synthesize -> verify -> save. Usually fires from the daemon every 6h.")

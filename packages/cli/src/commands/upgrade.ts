@@ -178,6 +178,21 @@ export async function upgradeCommand(opts: UpgradeOptions): Promise<number> {
   }
 
   if (verified === remote) {
+    // v1.27.4 -- invalidate the version-check cache. Without this, the
+    // next pulse / selfcheck run still sees `latest=<old>` from the
+    // cache and emits a misleading "(latest: v<old>)" annotation
+    // (or worse, a false-positive AUTO-ACTION self-loop pre-v1.27.3).
+    // We DELETE the cache file so the next probe forces a fresh fetch
+    // from npm.
+    try {
+      const { unlinkSync, existsSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const cachePath = join(process.cwd(), ".mneme/version-check.json");
+      if (existsSync(cachePath)) {
+        unlinkSync(cachePath);
+        process.stdout.write(`    ${pill("CACHE", "ok")}  invalidated .mneme/version-check.json\n`);
+      }
+    } catch { /* best-effort */ }
     process.stdout.write(`    ${pill("SUCCESS", "ok")}  ${kleur.green().bold(`mneme --version → ${verified}`)}\n\n`);
     return 0;
   }

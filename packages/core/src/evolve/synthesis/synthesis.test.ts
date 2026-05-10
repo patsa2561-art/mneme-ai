@@ -219,15 +219,19 @@ describe("synthesize + HMAC", () => {
     expect(verifySignature(repo, tampered)).toBe(false);
   });
 
-  it("confidence bumps when verified", () => {
+  it("v1.27.4: differentiated confidence is below verified threshold when gates fail (no node_modules in temp)", () => {
     gitInit(repo);
     writeChecks(repo, SAMPLE_CHECKS_SRC);
     spawnSync("git", ["add", "."], { cwd: repo });
     spawnSync("git", ["commit", "-m", "init", "-q"], { cwd: repo });
     writeProposal(repo, SAMPLE_PROPOSAL);
     const r = synthesize(repo, SAMPLE_PROPOSAL.id)!;
-    // Without verified, confidence stays at proposal baseline (0.13).
-    expect(r.confidence).toBeCloseTo(0.13, 2);
+    // v1.27.4 formula: 0.20*signal + 0.20*track + 0.10*test + 0.50*verify.
+    // Temp repo has no node_modules -> tsc gate fails (status null);
+    // verify=false -> the 0.50*verify term is 0. Confidence lands well
+    // below 0.50 (no verified bonus, no template history).
+    expect(r.confidence).toBeLessThan(0.4);
+    expect(r.confidence).toBeGreaterThanOrEqual(0.05);
   });
 });
 
