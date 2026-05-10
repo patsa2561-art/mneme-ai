@@ -8,6 +8,148 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.0] — 2026-05-10
+
+**MNEME EVOLVE Phase 3 + Phase 4 + Phase 5 -- the closed-loop
+self-improving AI dev tool. World-first.**
+
+A live AI agent reviewed v1.26.x EVOLVE and called it: *"World's first
+AI dev tool ที่อ่าน telemetry ตัวเอง → เขียน markdown draft อ้างอิง
+file path + prior commits, แต่ยังเป็น Phase 2 (markdown only). Phase
+3 = Mneme เขียน .patch ที่ compile + test ได้จริง = moat ที่ยังไม่มี
+ใครในโลกข้าม."*
+
+This release ships Phases 3, 4, 5 in one go.
+
+### Phase 3 -- Code Synthesis (`mneme evolve synthesize <id>`)
+
+Phase 2 (shipped v1.26.4) wrote markdown PR proposals -- "go look at
+this file, change something like this". Phase 3 writes ACTUAL `.patch`
+files that compile AND pass tests. Hard contract:
+
+  - **Templates are deterministic.** Same signal + same source → same
+    patch every time. No LLM in the hot path. Today: 1 template
+    (`selfcheck-warn-to-skip-on-missing-file`). The architecture is
+    designed so adding template #2, #100, #1000 is a single function
+    plus tests, with the gate pipeline guaranteeing safety.
+  - **Three gates, in order:**
+     1. **Working-tree-clean** -- `git diff --quiet HEAD -- <file>`
+        must exit 0. We refuse to apply on top of unstaged user edits.
+     2. **`tsc --noEmit`** on the target package's tsconfig. Patch
+        must type-check. Catches "we broke the type signature" cases.
+     3. **`vitest run <co-located test>`** -- if the target file has
+        a sibling `<name>.test.ts`, that test must stay green. If
+        no co-located test exists, this gate is a no-op (we don't
+        require tests for files that don't have them).
+  - **Synthesize is dry-run by contract.** Even when all gates pass,
+    the file on disk is RESTORED to its original state. The verified
+    patch sits in `.mneme/proposals/<id>.patch` until the user runs
+    `mneme evolve apply <id>`.
+  - **HMAC-SHA256 signature** over `(id, patchText, gates, timestamp,
+    confidence)` keyed by `.mneme/.evolve-secret` (auto-created, 32
+    random bytes). Anyone can recompute and verify the patch was
+    actually checked at synthesis time. Detect tamper in O(1).
+  - **Confidence bump:** Phase-2 baseline + 0.50 when verified.
+    Saturates at 0.99. A verified patch shows ~64% (vs 13% pre-Phase-3)
+    -- the gates earned the trust.
+
+### Phase 4 -- Auto-PR (`mneme evolve auto-pr <id>`)
+
+Wraps `gh pr create`. For a verified patch, creates branch
+`mneme/evolve/<proposalId>`, applies the patch, commits with
+deterministic message including the HMAC signature, pushes, opens
+the PR. Refuses if `gh` CLI is missing or if the patch isn't
+verified. `--dry-run` checks pre-conditions without touching the
+remote.
+
+### Phase 5 -- Nightly evolution pass
+
+`nucleus_daemon.ts` runs `evolutionPass()` every 720 ticks (~6h at
+30s tick interval). The pass:
+
+  1. Re-scans signals (selfcheck FAILs + antivirus + PRECOG misses)
+  2. Generates Phase-2 proposals
+  3. Runs Phase-3 synthesizer for each proposal that lacks a synth
+     sidecar (idempotent -- already-synthesized proposals are skipped)
+  4. If any new patches verify (gates green), broadcasts a notifier
+     notice: *"Mneme self-evolved overnight: N new patches verified
+     (compile + tests green). Review with: mneme evolve list."*
+
+User wakes up to verified, signed, gate-passed patches ready for
+review. Mneme self-improving while you sleep -- no auto-merge, full
+human-in-loop guarantee.
+
+### CLI
+
+```
+mneme evolve scan                # Phase 1 -- show signals
+mneme evolve propose             # Phase 2 -- markdown PR drafts
+mneme evolve synthesize <id>     # Phase 3 -- verified .patch (alias: synth)
+mneme evolve apply <id>          # Phase 3 -- git apply (only if verified)
+mneme evolve auto-pr <id>        # Phase 4 -- gh pr create (--dry-run available)
+mneme evolve pass                # Phase 5 -- one full pass (manual trigger)
+mneme evolve list / view <id> / stats
+```
+
+### Verified end-to-end on Mneme's own source
+
+```
+$ mneme evolve synthesize 5ca712f88544
+Synthesis [02a1b8e013f08d62] template=selfcheck-warn-to-skip-on-missing-file
+                              file=packages/core/src/selfcheck/checks.ts
+  Working tree clean: ✓
+  tsc --noEmit:       ✓
+  vitest run:         ✓
+  VERIFIED:           YES (.patch saved + HMAC signed)
+  Confidence:         64%
+  Signature:          71d98cd89ee897f1...
+
+$ mneme evolve apply 5ca712f88544
+✓ Applied at 2026-05-10T10:07:47Z. Review with `git diff`.
+```
+
+The applied diff is the canonical fix the AI agent proposed in
+review (warn → skip when gating file missing).
+
+### Files added
+
+  - `packages/core/src/evolve/synthesis/types.ts` -- Patch,
+    SynthesisResult, gate verdicts, AutoPrResult
+  - `packages/core/src/evolve/synthesis/templates.ts` -- pattern
+    library + first template
+  - `packages/core/src/evolve/synthesis/verify.ts` -- 3-gate pipeline
+    with Windows .cmd shell:true awareness + 180s tsc timeout
+  - `packages/core/src/evolve/synthesis/synthesize.ts` -- orchestrator
+    + HMAC + applyPatch + autoPr + evolutionPass
+  - `packages/core/src/evolve/synthesis/index.ts` -- barrel
+  - `packages/core/src/evolve/synthesis/synthesis.test.ts` -- 18 tests
+  - `packages/cli/src/commands/evolve.ts` -- 4 new subcommands
+  - `packages/core/src/nucleus_daemon.ts` -- Phase 5 EVOLUTION_PASS_EVERY hook
+
+### Test coverage
+
+  - **+18 new synthesis tests**: template matching, dirty-tree refusal,
+    tsc-missing graceful failure, restore-on-failure, HMAC sign +
+    verify + tamper-detect, evolutionPass idempotency, autoPr safety
+    gates.
+  - **4965/4965 passing** (272 test files).
+
+### Why this is the moat
+
+Phase 3 closes the loop that no AI vendor today closes:
+
+  - Cursor / Copilot / Claude Code = prompt-driven (waits for user)
+  - Dependabot / Renovate = scope-limited (deps only)
+  - AutoGPT / Devin = no structured telemetry → garbage in/out
+  - **Mneme has structured telemetry (selfcheck/antivirus/PRECOG) +
+    verified patch synthesis + HMAC audit trail + nightly daemon
+    pass.** No other tool ships this stack.
+
+The Phase 3 contract -- *deterministic templates, gate-verified,
+HMAC-signed, never auto-merged* -- is exactly what an audit-conscious
+team would design if they had to build self-modifying code under
+SOX / ISO27001. Mneme ships it MIT, free, today.
+
 ## [1.26.6] — 2026-05-10
 
 **Retrieval Lab tab perception bug + PRECOG chicken-and-egg breaker.

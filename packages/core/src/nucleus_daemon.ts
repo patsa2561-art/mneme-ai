@@ -250,6 +250,38 @@ export async function runDaemonLoop(
         } catch { /* best-effort */ }
       }
 
+      // v1.27.0 — Phase 5 EVOLUTION PASS. Every 720 ticks (~6h at 30s
+      // tick interval) the daemon scans signals, generates Phase-2
+      // proposals, then runs the Phase-3 synthesizer for each. Every
+      // verified patch (compile + test gates green) gets persisted to
+      // .mneme/proposals/<id>.patch with HMAC signature. When new
+      // patches arrive, the user gets a notifier broadcast.
+      //
+      // Mneme self-improving while the user sleeps. Closed-loop. No
+      // auto-merge -- patches sit until the user runs `mneme evolve
+      // apply <id>` (or `auto-pr <id>` for Phase-4 GitHub PR).
+      const EVOLUTION_PASS_EVERY = 720;
+      if (tickCount > 0 && tickCount % EVOLUTION_PASS_EVERY === 0) {
+        try {
+          const { generateProposals } = await import("./evolve/index.js");
+          const { evolutionPass } = await import("./evolve/synthesis/index.js");
+          generateProposals(repoRoot);
+          const r = evolutionPass(repoRoot);
+          if (r.verified > 0) {
+            try {
+              const { buildAllNotifiers, notifyAll } = await import("./notifier/index.js");
+              const all = buildAllNotifiers(repoRoot);
+              await notifyAll({
+                id: `evolve-pass-${Date.now()}`,
+                title: "Mneme self-evolved overnight",
+                body: `${r.verified} new patch${r.verified === 1 ? "" : "es"} verified (compile + tests green). Review with: mneme evolve list  -- then mneme evolve apply <id>.`,
+                severity: "action",
+              }, all);
+            } catch { /* best-effort */ }
+          }
+        } catch { /* best-effort */ }
+      }
+
       // v1.26.0 — Self-check audit + multi-channel notifier dispatch.
       // Every CARETAKER_PASS_EVERY ticks, run all selfcheck checks. Any
       // FAIL fires a notifier broadcast (OS toast + mobile push + email

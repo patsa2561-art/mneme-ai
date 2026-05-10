@@ -19,3 +19,4 @@ export * from "./types.js";
 export {
   scanSignals, generateProposals, listProposals, viewProposal, evolveStats,
 } from "./evolve.js";
+export * as synthesis from "./synthesis/index.js";
