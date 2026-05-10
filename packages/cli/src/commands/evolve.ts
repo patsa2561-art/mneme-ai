@@ -121,10 +121,29 @@ export function registerEvolveCommands(program: Command): void {
     .alias("synth")
     .description("Phase 3 -- generate a verified .patch from a Phase-2 proposal. Runs template -> apply -> tsc gate -> vitest gate. Saves only if both gates pass.")
     .option("--json", "JSON output.")
-    .action((id: string, opts: CommonOpts) => {
+    .action(async (id: string, opts: CommonOpts) => {
       const r = evolve.synthesis.synthesize(process.cwd(), id);
       if (!r) {
-        writeText(`No template matched any signal in proposal ${id}, OR proposal not found.`);
+        // v1.27.6: synthesize() side-effect-writes a <id>.placeholder.md
+        // when no template matches. Detect + report it so the user
+        // knows where to look. Pre-fix the CLI just printed a flat
+        // reject and the placeholder file was silent.
+        const fs = await import("node:fs");
+        const path = await import("node:path");
+        const placeholderPath = path.join(process.cwd(), ".mneme/proposals", `${id}.placeholder.md`);
+        if (fs.existsSync(placeholderPath)) {
+          writeText(`No deterministic template matched proposal ${id}.`);
+          writeText(``);
+          writeText(`✓ Wrote a Phase-3 PLACEHOLDER scaffold for human authoring:`);
+          writeText(`  ${placeholderPath}`);
+          writeText(``);
+          writeText(`Open it, fill in the patch by hand, then save:`);
+          writeText(`  git diff > .mneme/proposals/${id}.patch`);
+          writeText(`  mneme evolve apply ${id}    # records lineage + verifies HMAC chain`);
+          process.exit(0); // not an error -- a structured handoff to the human
+          return;
+        }
+        writeText(`No template matched any signal in proposal ${id}, AND proposal not found at .mneme/proposals/${id}.json.`);
         process.exit(1);
         return;
       }

@@ -101,7 +101,7 @@ export function registerBotCommand(program: Command): void {
 
 // ─── mneme health (= mneme.system.health) ────────────────────────────
 export function registerHealthCommand(program: Command): void {
-  program
+  const health = program
     .command("health")
     .description("Single-screen health: version + lineage state + nucleus streaks.")
     .option("--json", "JSON output.")
@@ -126,6 +126,29 @@ export function registerHealthCommand(program: Command): void {
         `Streaks: ${banner || "(no streaks yet — start using Mneme via MCP)"}`,
         `Achievements unlocked: ${streaks.unlocked.length}/9`,
       ]);
+    });
+
+  // v1.27.6 NEW: HCI (Healthcare Index) -- composite 0-100 score for repo wisdom layer.
+  health
+    .command("hci")
+    .description("Mneme Healthcare Index: composite 0-100 score from 6 axes (selfcheck, daemon, inbox, antivirus, retrieval, evolve). Single number for repo wisdom-layer health.")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const { hci } = await import("@mneme-ai/core");
+      const r = hci.computeHci(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(`Mneme Healthcare Index: ${r.score}/100 (${r.band})\n\n`);
+      process.stdout.write(`Per-axis breakdown:\n`);
+      for (const a of r.axes) {
+        const wt = (a.weight * 100).toFixed(0);
+        process.stdout.write(`  [${a.score.toString().padStart(3)}/100 · w=${wt}%] ${a.name.padEnd(11)} -- ${a.evidence}\n`);
+      }
+      process.stdout.write(`\nBand legend:\n`);
+      process.stdout.write(`  90-100  Robust    every system green\n`);
+      process.stdout.write(`  75-89   Healthy   most green, minor drift\n`);
+      process.stdout.write(`  50-74   Wobbly    daemon stale OR major axis untriaged\n`);
+      process.stdout.write(`  30-49   Sick      multiple FAILs, evolve queue building\n`);
+      process.stdout.write(`   0-29   Critical  daemon dead, antivirus uncertified\n`);
     });
 }
 

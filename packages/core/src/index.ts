@@ -53,4 +53,6 @@ export * as selfcheck from "./selfcheck/index.js";
 export * as integrations from "./integrations/index.js";
 export * as oracle from "./oracle/index.js";
 export * as evolve from "./evolve/index.js";
+export * as hci from "./hci.js";
+export * as stigmergy from "./stigmergy/index.js";
 export * as quantum from "./quantum.js";

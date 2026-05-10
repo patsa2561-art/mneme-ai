@@ -113,6 +113,7 @@ import { registerQuantumCommands } from "./commands/quantum.js";
 import { registerOracleCommands } from "./commands/oracle.js";
 import { registerEvolveCommands } from "./commands/evolve.js";
 import { registerGenomePoolCommands } from "./commands/genome-pool.js";
+import { registerStigmergyCommands } from "./commands/stigmergy.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
@@ -2445,6 +2446,8 @@ export async function run(argv: string[]): Promise<void> {
   registerEvolveCommands(program);
   // ─── Genome Pool MVP (v1.26.4 -- opt-in PII-scrubbed contributor) ─
   registerGenomePoolCommands(program);
+  // ─── Stigmergy Hive (v1.27.6 -- emergent collab from git traces) ──
+  registerStigmergyCommands(program);
   // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
   registerToolsCommand(program);
   registerBotCommand(program);

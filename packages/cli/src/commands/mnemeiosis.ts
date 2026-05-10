@@ -789,6 +789,26 @@ export function registerInboxCommands(program: Command): void {
       out(opts, { acked: n }, [`✓ Acked ${n} message${n === 1 ? "" : "s"}.`]);
     });
 
+  // v1.27.6: drain command -- ack every unsent message in one shot. Useful
+  // when the inbox accumulates and the user wants a clean slate without
+  // looking up individual ids.
+  ib
+    .command("drain")
+    .description("Mark every unsent inbox message as sent (silent ack-all). Use when inbox grew unattended.")
+    .option("--source <name>", "Restrict to entries from a specific source (e.g. 'daemon', 'daemon-milestone', 'version-check').")
+    .option("--json", "JSON output.")
+    .action(async (opts: { source?: string } & CommonOpts) => {
+      const root = process.cwd();
+      const all = inbox.readInbox(root);
+      const filtered = all.filter((m) => !m.sent && (opts.source ? m.source === opts.source : true));
+      if (filtered.length === 0) {
+        out(opts, { drained: 0 }, [`(nothing to drain -- 0 unsent messages${opts.source ? ` from source '${opts.source}'` : ""})`]);
+        return;
+      }
+      const n = inbox.ackInbox(root, filtered.map((m) => m.id));
+      out(opts, { drained: n, source: opts.source ?? "all" }, [`✓ Drained ${n} unsent message${n === 1 ? "" : "s"}${opts.source ? ` (source='${opts.source}')` : ""}.`]);
+    });
+
   // v1.26.3 (Bug #2): permanent delete (vs ack which just flips sent flag).
   ib
     .command("clear")

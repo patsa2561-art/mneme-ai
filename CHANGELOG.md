@@ -8,6 +8,152 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.6] — 2026-05-10
+
+**4 stuck bugs fixed + 2 wild new features (HCI + STIGMERGY HIVE).
+27 new tests, 5015/5015 passing. AI-agent-facing README updated.**
+
+### 4 fixes (the user reported these multiple rounds)
+
+**1. Unmatched-template placeholder was silently written.**
+`synthesize()` wrote `<id>.placeholder.md` to disk but the CLI just
+printed "No template matched". Users never knew. Now the CLI detects
+the file + tells the user where it is + how to author the patch.
+
+**2. Daemon milestone migration.**
+Pre-v1.27.5 milestones were pushed with source `"daemon"` (no
+dedup). v1.27.5 added `"daemon-milestone"` source with replacing
+semantics, but pre-existing entries from older daemon runs never got
+cleaned. **One-shot migration at daemon startup** sweeps any
+`source="daemon"` entry with title matching `/^Nucleus reached \d+
+mutations$/`. Idempotent + best-effort.
+
+**3. Inbox lifecycle -- `mneme inbox drain` + caretaker auto-ack.**
+`ack` + `clear` shipped in v1.26.3 but daemon-pushed entries
+accumulated when no `mneme.*` MCP tool calls drained them. Two
+fixes:
+  - **NEW `mneme inbox drain [--source <name>]`** -- one-shot
+    ack-all of unsent (or restricted to one source).
+  - **Caretaker pass auto-acks** any `daemon` / `daemon-milestone` /
+    `caretaker`-source entry older than 1 hour. User-pushed entries
+    are NEVER auto-acked.
+
+**4. CRITICAL+HIGH inbox messages → individual pulse promotion.**
+Pre-fix the pulse just said `Mneme has 8 unread inbox messages`. A
+user pushing a CRITICAL message ("verify pulse handling") was just a
++1 to the count -- AI never saw the content. Now the pulse surfaces
+each CRITICAL+HIGH message individually as `[WARN] CRITICAL inbox: <title>`
+or `[INFO] HIGH inbox: <title>`. Capped at 5 per pulse to prevent
+flooding.
+
+### NEW: Mneme HCI (Healthcare Index)
+
+Single 0-100 score that summarizes Mneme's overall health for THIS
+repo. Like a credit score, but for a repo's wisdom layer. Six
+weighted axes:
+
+| Axis | Weight | Source |
+|---|---|---|
+| selfcheck | 25% | % of last-audit verdicts that pass |
+| daemon | 15% | running + recent heartbeat |
+| inbox | 10% | low staleness, no critical unhandled |
+| antivirus | 15% | vaccines registered + recently certified |
+| retrieval | 10% | trial count |
+| evolve | 25% | verified patches in chain + low queue |
+
+**Bands:** 90-100 Robust · 75-89 Healthy · 50-74 Wobbly · 30-49
+Sick · 0-29 Critical.
+
+Surfaces in two places:
+  - Every pulse line now ends with `hci=N/100[Band]` -- AI agent
+    sees instant repo-wisdom-health on every keystroke.
+  - `mneme health hci` shows the per-axis breakdown with evidence
+    so the user knows WHICH axis to fix.
+
+Computed locally in <50ms, deterministic across calls.
+
+### NEW: MNEME STIGMERGY HIVE
+
+Emergent dev-collaboration detection from git traces alone -- no
+chat logs, no PR-review data, no Slack integration needed.
+
+**Stigmergy** (biological term): indirect coordination via traces
+in the environment. Termites build cathedrals because each one
+responds to local pheromone gradients. Devs do the same in a
+codebase: every commit leaves a trace, every other dev decides
+what to commit based on what's there.
+
+The algorithm walks `git log`, indexes file→touches by author with
+timestamps, then for every author pair computes:
+
+  - **Shared files** -- both touched at any time
+  - **Synchrony** -- touches within 24h of each other (one reacted
+    to the other)
+  - **Carry-on** -- one introduced a file, the other extended it
+    within 7 days
+
+Composite stigmergy score = `2×synchrony + 3×carry-on + 1×shared`,
+capped at 100.
+
+Output: ranked list of dev pairs by score. Pairs near the top are
+people who effectively work together WITHOUT EVER TALKING. Often
+gold for org charts: the real team structure vs the formal one.
+
+**As far as we can tell, no other dev tool ships this analysis.**
+Mneme is the only one with the git-graph + author-passport
+substrate to compute it.
+
+```
+$ mneme stigmergy --top 5
+MNEME STIGMERGY HIVE -- emergent collaboration analysis
+  Commits analysed:  500
+  Authors:           12
+  Pairs surfaced:    7  (28 below threshold)
+
+Top 5 stigmergic dev pairs (highest = strongest invisible collab):
+  [ 47/100]  alice@x.com  <->  bob@x.com
+         shared=8 files · sync=12 · carry-on=4
+         first co-touch 2026-02-14 · last 2026-05-09
+  ...
+```
+
+CLI alias: `mneme hive`.
+
+### Files added
+
+  - `packages/core/src/hci.ts` (NEW) -- Healthcare Index
+  - `packages/core/src/hci.test.ts` (NEW) -- 12 tests
+  - `packages/core/src/stigmergy/types.ts` (NEW)
+  - `packages/core/src/stigmergy/index.ts` (NEW) -- analyze + parse + compute
+  - `packages/core/src/stigmergy/stigmergy.test.ts` (NEW) -- 15 tests
+  - `packages/cli/src/commands/stigmergy.ts` (NEW) -- `mneme stigmergy`/`hive`
+
+### Files changed
+
+  - `packages/core/src/pulse.ts` -- HCI line + critical/high inbox promotion
+  - `packages/core/src/nucleus_daemon.ts` -- daemon migration + caretaker auto-ack
+  - `packages/cli/src/commands/evolve.ts` -- placeholder report
+  - `packages/cli/src/commands/mnemeiosis.ts` -- `mneme inbox drain`
+  - `packages/cli/src/commands/demo.ts` -- `mneme health hci`
+  - `packages/cli/src/index.ts` -- registers stigmergy
+  - `packages/core/src/index.ts` -- exports hci + stigmergy
+  - `README.md` -- v1.27.x AGENT WORKFLOW + new-command table
+
+### Test coverage
+
+  - **+27 new tests** (12 HCI + 15 STIGMERGY)
+  - **5015/5015 passing** (276 test files)
+  - Snapshot refreshed for new `mneme stigmergy|hive` help line
+
+### AI-agent integration (in README)
+
+The v1.27.x AGENT WORKFLOW section now teaches every AI client
+about: PRECOG (anticipate next call), HCI (read score from pulse,
+recommend fix when Sick/Critical), STIGMERGY (use for "who works on
+what" questions), EVOLVE (offer to apply highest-confidence verified
+patch), and the v1.27.3 self-loop defense (refuse upgrade
+AUTO-ACTION when target == current).
+
 ## [1.27.5] — 2026-05-10
 
 **Four real polish fixes flagged by an AI reviewer in v1.27.4

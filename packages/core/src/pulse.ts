@@ -34,6 +34,7 @@ import { join } from "node:path";
 import { ackInbox } from "./inbox.js";
 import { renderOracleHint } from "./oracle/index.js";
 import { readLiveMnemeVersion, semverGt } from "./version_check.js";
+import { computeHci } from "./hci.js";
 
 export interface PulseStatus {
   version: { current: string; latest: string | null; updateAvailable: boolean };
@@ -108,29 +109,38 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     } catch { /* ignore */ }
   }
 
-  // Inbox unsent count + collect any AUTO-ACTION-flagged messages so
-  // they surface as `[AUTO-ACTION]` in pulse output (v1.26.3).
+  // Inbox unsent count + collect:
+  //   - AUTO-ACTION-flagged messages (v1.26.3, surface as [AUTO-ACTION])
+  //   - v1.27.6: CRITICAL + HIGH priority unsent messages (surface
+  //     individually as [WARN] / [INFO] so the user sees the actual
+  //     content instead of just a count). Pre-fix: a critical message
+  //     ("verify pulse handling") just bumped the count and the AI
+  //     never saw the content.
   const inboxPath = join(repoRoot, ".mneme/inbox.jsonl");
   const inboxAutoActions: Array<{ id: string; title: string; body?: string; tool: string; args: Record<string, unknown> }> = [];
+  const inboxPriority: Array<{ id: string; priority: string; title: string; body?: string; cta?: string }> = [];
   if (existsSync(inboxPath)) {
     try {
       const lines = readFileSync(inboxPath, "utf8").trim().split("\n").filter(Boolean);
       let unsent = 0;
       for (const ln of lines) {
         try {
-          const e = JSON.parse(ln) as { sent?: boolean; id?: string; title?: string; body?: string; autoAction?: { tool: string; args?: Record<string, unknown> } };
+          const e = JSON.parse(ln) as { sent?: boolean; id?: string; priority?: string; title?: string; body?: string; cta?: string; autoAction?: { tool: string; args?: Record<string, unknown> } };
           if (e && e.sent === false) {
             unsent++;
             if (e.autoAction && typeof e.autoAction.tool === "string" && e.id && e.title) {
               inboxAutoActions.push({ id: e.id, title: e.title, body: e.body, tool: e.autoAction.tool, args: e.autoAction.args ?? {} });
+            } else if ((e.priority === "critical" || e.priority === "high") && e.id && e.title) {
+              inboxPriority.push({ id: e.id, priority: e.priority, title: e.title, body: e.body, cta: e.cta });
             }
           }
         } catch { /* skip */ }
       }
       status.inbox.unsent = unsent;
-      // Cache for renderPulse via a non-enumerable side-channel so the
-      // public PulseStatus shape stays stable (older callers ignore it).
+      // Cache for renderPulse via non-enumerable side-channels so the
+      // public PulseStatus shape stays stable (older callers ignore them).
       Object.defineProperty(status.inbox, "_autoActions", { value: inboxAutoActions, enumerable: false });
+      Object.defineProperty(status.inbox, "_priority", { value: inboxPriority, enumerable: false });
     } catch { /* ignore */ }
   }
 
@@ -185,6 +195,20 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       text: `Mneme has ${status.inbox.unsent} unread inbox message${status.inbox.unsent === 1 ? "" : "s"}. They will surface on your next mneme.* tool call.`,
     });
   }
+  // v1.27.6 -- promote CRITICAL + HIGH priority inbox messages
+  // INDIVIDUALLY into notable[] so the AI sees the actual content,
+  // not just a count. Critical -> [WARN], High -> [INFO]. Cap at 5
+  // to prevent pulse flooding.
+  const inboxPriorityList = (status.inbox as { _priority?: Array<{ id: string; priority: string; title: string; body?: string; cta?: string }> })._priority ?? [];
+  for (const p of inboxPriorityList.slice(0, 5)) {
+    const level = p.priority === "critical" ? "warning" : "info";
+    const labelTag = p.priority === "critical" ? "CRITICAL inbox" : "HIGH inbox";
+    const ctaSuffix = p.cta ? `  (${p.cta})` : "";
+    status.notable.push({
+      level,
+      text: `${labelTag}: ${p.title}${p.body ? ` -- ${p.body}` : ""}${ctaSuffix}`,
+    });
+  }
   // v1.26.3 -- inbox-flagged AUTO-ACTION entries are surfaced individually
   // so the AI executes the tool immediately on this turn (no waiting for
   // an mneme.* tool call to ack-and-surface them via the wisdom channel).
@@ -234,7 +258,18 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
   const versionTag = showLatestAnnotation
     ? `v${status.version.current} (latest: v${status.version.latest})`
     : `v${status.version.current} (latest)`;
-  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}`);
+  // v1.27.6 -- compute HCI (Healthcare Index) as a composite 0-100
+  // score from selfcheck/daemon/inbox/antivirus/retrieval/evolve.
+  // Single number the user can trust without reading 6 separate panels.
+  // Falls back gracefully on disk read errors (treats as 50).
+  let hciSuffix = "";
+  if (opts.repoRoot) {
+    try {
+      const hci = computeHci(opts.repoRoot);
+      hciSuffix = `  hci=${hci.score}/100[${hci.band}]`;
+    } catch { /* */ }
+  }
+  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}`);
   if (status.notable.length > 0) {
     lines.push("");
     for (const n of status.notable) {

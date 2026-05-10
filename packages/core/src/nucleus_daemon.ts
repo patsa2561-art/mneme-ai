@@ -22,7 +22,7 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tick, mutate, readNucleus, dnaBanner } from "./nucleus.js";
-import { pushInbox, pushInboxReplacingSource, deterministicId } from "./inbox.js";
+import { pushInbox, pushInboxReplacingSource, deterministicId, readInbox, ackInbox, clearInbox } from "./inbox.js";
 import { readStreaks } from "./karma_streaks.js";
 
 const PID_FILE = ".mneme/nucleus.pid";
@@ -146,6 +146,24 @@ export async function runDaemonLoop(
       await warmupCrossEncoder();
     } catch { /* ignore */ }
   })();
+
+  // v1.27.6 -- ONE-SHOT MIGRATION: clean OLD "daemon"-source mutation-
+  // milestone entries from the inbox. Pre-v1.27.5 every milestone was
+  // pushed with source="daemon" (no dedup). v1.27.5 switched to source=
+  // "daemon-milestone" with replacing-source semantics, but pre-existing
+  // "daemon"-source "Nucleus reached N mutations" entries persisted. This
+  // migration sweeps them at startup. Best-effort. Idempotent (no-op on
+  // a fresh daemon).
+  try {
+    const all = readInbox(repoRoot);
+    const staleMilestoneIds = all
+      .filter((m) => m.source === "daemon" && /^Nucleus reached \d+ mutations$/.test(m.title))
+      .map((m) => m.id);
+    if (staleMilestoneIds.length > 0) {
+      ackInbox(repoRoot, staleMilestoneIds);  // mark sent (so they don't surface)
+      clearInbox(repoRoot, "sent");           // then permanently delete
+    }
+  } catch { /* best-effort */ }
 
   // Cleanup on shutdown — remove PID file so next `start` can succeed.
   const cleanup = () => {
@@ -391,6 +409,23 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
       });
     }
     void tickCount; // silence unused
+  } catch { /* ignore */ }
+
+  // v1.27.6 -- AUTO-DRAIN stale daemon-sourced unsent inbox entries.
+  // Daemon pushes "Nucleus reached N mutations" + caretaker pushes its
+  // own notices. If the user never makes a mneme.* tool call (which
+  // would popUnsent + ack), these accumulate. Auto-ack any entry from
+  // a daemon-shaped source older than 1 hour. User-pushed messages
+  // (source != daemon*) are NEVER auto-acked -- those are the user's
+  // intentional notices.
+  try {
+    const all = readInbox(repoRoot);
+    const cutoff = Date.now() - 60 * 60 * 1000; // 1 hour
+    const daemonSources = new Set(["daemon", "daemon-milestone", "caretaker"]);
+    const stale = all
+      .filter((m) => !m.sent && daemonSources.has(m.source) && Date.parse(m.createdAt) < cutoff)
+      .map((m) => m.id);
+    if (stale.length > 0) ackInbox(repoRoot, stale);
   } catch { /* ignore */ }
 }
 
