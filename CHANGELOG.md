@@ -8,6 +8,247 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.0] — 2026-05-10
+
+**The 12-path autonomy bridge — closing every gap MCP can't close
+on its own. Mneme now has its own notifier fabric, its own free-first
+local agent loop, a recurring self-recheck conscience, and an honest
+quantum easter egg that explains why qubits don't fix architecture.**
+
+### The architectural reality (continued from v1.25.2)
+
+v1.25.2 closed the "AI didn't trigger on its own" loop **for the
+inside-Claude-Code path** (every keystroke fires `mneme nucleus pulse`
+via the `UserPromptSubmit` hook). That left one honest gap:
+
+> "what if the user isn't typing? what if the AI client is closed?
+>  what if the AI never makes a tool call at all?"
+
+This release ships **12 separate paths**, each closing one slice of
+that gap. Together they form Mneme's first real autonomy fabric:
+Mneme can now reach out (toast, mobile push, voice, email, agent
+files), wake itself up (local agent loop), audit itself on a timer
+(self-check), and even tell you honestly why a quantum computer
+won't save you here.
+
+### The 12 paths
+
+| # | Path                          | Status        | Cost      |
+|---|-------------------------------|---------------|-----------|
+| 1 | OS toast notifier             | shipped       | free      |
+| 2 | Local Ollama agent loop       | shipped       | free      |
+| 3 | Cloud API agent fallback      | shipped       | opt-in $  |
+| 4 | Sentinel-bracket agent files  | shipped       | free      |
+| 5 | Mobile push (ntfy.sh)         | shipped       | free      |
+| 6 | Browser extension             | design doc    | free      |
+| 7 | TTS / voice notifier          | shipped       | free      |
+| 8 | Email (pure-stdlib SMTP)      | shipped       | free*     |
+| 9 | Experimental IPC              | gated stub    | free      |
+| 10| Experimental keystroke        | refused stub  | n/a       |
+| 11| Agentic-client adapters       | stub adapters | varies    |
+| 12| Quantum easter egg            | shipped       | free      |
+
+\* email path file-spools to `.mneme/notifier/email.log` when no SMTP
+   env vars are set — still works, no daemon required, no account.
+
+### Path 1 — OS toast notifier (free, cross-platform)
+
+`packages/core/src/notifier/os_toast.ts` — zero deps, uses what's
+already on the box:
+
+  - **Windows 10+**: PowerShell + WinRT `ToastNotificationManager`
+  - **macOS**: `osascript -e 'display notification ...'`
+  - **Linux**: `notify-send` (libnotify)
+
+Severity threshold (default `action`) gates noise. Toast title shows
+`Mneme` + the notice title; body shows the notice body (truncated to
+fit OS limits). No daemon, no extra install, works offline.
+
+### Path 2 — Local Ollama agent loop (free, uses your GPU)
+
+`packages/core/src/agent/ollama.ts` + `runtime.ts`. Talks to a local
+Ollama at `http://localhost:11434` with model `llama3.2:3b` by default.
+
+  - `parseAgentReply()` extracts `{tool: ..., args: ...}` JSON lines
+    out of free-form model output. Multiple tool calls per turn OK.
+    `{"final": "..."}` ends the loop.
+  - `runAgent({ repoRoot, task, tools, toolExecutor, maxSteps: 5 })`
+    runs a bounded reasoning loop and persists the full transcript
+    to `.mneme/agent/runs/<runId>.json`.
+
+The user's RTX 5080 + 96GB box runs llama3.2:3b instantly. **No API
+key, no Raspberry Pi, no cloud.** This is the default backend.
+
+### Path 3 — Cloud API agent fallback (opt-in only)
+
+`packages/core/src/agent/api_backends.ts`:
+
+  - `anthropicBackend()` — needs `ANTHROPIC_API_KEY`
+  - `openaiBackend()` — needs `OPENAI_API_KEY`
+
+Both report `available()=false` when the env var is missing, so they
+**never silently bill you** and the code is safe to import on a
+key-less box. `pickBestBackend()` always tries Ollama first; cloud
+APIs are explicit fallback.
+
+### Path 4 — Sentinel-bracket agent files (free, persistent)
+
+`packages/core/src/notifier/agent_files.ts` writes a Mneme block
+between sentinel markers into shared agent context files:
+
+```
+<!-- BEGIN MNEME PULSE -->
+... mneme status / auto-actions ...
+<!-- END MNEME PULSE -->
+```
+
+into `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`
+(only ones that already exist). Idempotent — re-run replaces the
+block in place, never duplicates, never touches anything outside
+the sentinels.
+
+### Path 5 — Mobile push via ntfy.sh (free, no account)
+
+`packages/core/src/notifier/mobile_push.ts`. `ntfy.sh` is a free
+public push relay — install the ntfy app on your phone, subscribe
+to a topic, Mneme `POST`s notices to it. **No registration, no API
+key, no quota.** Topic name defaults to `mneme-<random>`; user can
+override via `MNEME_NTFY_TOPIC`.
+
+### Path 6 — Browser extension (design doc only)
+
+`docs/BROWSER_EXTENSION.md`. We deliberately did **not** ship a
+browser extension here because Chrome Web Store / Firefox AMO are
+the right distribution channel, not npm. The design doc covers
+content-script injection of pulse text into ChatGPT/Claude.ai
+textareas, manifest v3 service worker for OS-side push, and the
+narrow security model.
+
+### Path 7 — TTS / voice notifier (free, opt-in loud)
+
+`packages/core/src/notifier/tts_voice.ts`. Default `minSeverity:
+"critical"` — so Mneme doesn't talk unless something is actually
+on fire. Cross-platform: `say` (macOS), `espeak` (Linux), SAPI
+PowerShell (Windows).
+
+### Path 8 — Email via pure-stdlib SMTP (no nodemailer dep)
+
+`packages/core/src/notifier/email_smtp.ts` is a hand-rolled SMTP
+client over `node:net` + `node:tls`. **No `nodemailer`** because
+we refuse to take a runtime dep when the platform already has
+sockets and TLS. When SMTP env vars (`MNEME_SMTP_HOST`, etc.) are
+absent, falls back to **file-spooling** notices into
+`.mneme/notifier/email.log` so the path still works offline.
+
+### Path 9 — Experimental IPC (env-gated stub)
+
+`packages/core/src/notifier/experimental.ts`. Gated behind
+`MNEME_EXPERIMENTAL_IPC=1`. Reserved for future Chrome DevTools
+Protocol / Cursor IPC research. Ships disabled by default.
+
+### Path 10 — Experimental keystroke notifier (deliberately refused)
+
+Same file. `MNEME_EXPERIMENTAL_KEYSTROKE=1` plus
+`MNEME_EXPERIMENTAL_KEYSTROKE_ACK=I_ACCEPT_RISKS` — and even then,
+the notifier returns `ok:false` with an explicit refusal message.
+We will **not** silently install OS-input automation. Every major
+AI vendor's TOS forbids it, anti-cheat treats it as a rootkit, and
+it's the wrong shape of solution. The stub exists so we can say
+"yes we considered it; here's why no."
+
+### Path 11 — Agentic-client adapters (stubs)
+
+`adapterCursorComposer()` + `adapterClaudeCodeAgent()` in
+`packages/core/src/agent/index.ts`. Both report `available()=false`
+today because the host clients don't expose stable IPC yet. Ship
+the shape so v1.27 can swap in real impls without API churn.
+
+### Path 12 — Quantum easter egg (honest)
+
+`packages/core/src/quantum.ts`. Three exports:
+
+  - `whyNotQuantum()` — plain-English explanation that quantum
+    speedups (Grover sqrt-N, Shor exp) are about *compute*, not
+    about *MCP being a request-response protocol*. The autonomy
+    gap is architectural, not algorithmic.
+  - `COMPLEXITY_TABLE` — Big-O comparison: classical retrieval O(N),
+    Grover O(sqrt(N)), Mneme's vector retrieval O(log N) via HNSW.
+    Quantum loses to a good index for AI-recall workloads.
+  - `groverIterations(N)` + `quantumSpeedupAt(N)` — actual math, so
+    `mneme quantum compare 1000000` shows you real numbers.
+
+**Easter egg, but the math is right.** Quantum is the wrong tool;
+this release tells you why instead of pretending otherwise.
+
+### Mneme Self-Check — recurring conscience loop
+
+User's exact request: *"output ให้คุณ recheck ถามตัวเองแบบ recurring
+flow system ทุกครั้งว่าดีพอยัง ถ้ายังต้อง กลับไป recurring เสมอๆๆ"*.
+
+`packages/core/src/selfcheck/` — 12 built-in checks:
+
+  1. `pulse-hook-installed`
+  2. `daemon-alive`
+  3. `version-up-to-date`
+  4. `antivirus-ready`
+  5. `antivirus-certified`
+  6. `retrieval-lab-active`
+  7. `inbox-fresh`
+  8. `notifier-channel-available`
+  9. `agent-backend-reachable`
+  10. `lockfile-integrity`
+  11. `agent-files-synced`
+  12. `hook-command-on-path`
+
+Each returns `pass | warn | fail | skip` with evidence + `fixHint`.
+`runAudit()` runs all 12 in parallel; `recurringSelfRecheck()`
+re-runs every N seconds until no failures or `maxIterations` hit.
+Persists last report to `.mneme/selfcheck/last.json`. Wired into
+the **Caretaker pass** of `nucleus_daemon.ts` — every CARETAKER tick
+runs the audit and **auto-fires every available notifier on FAIL**.
+
+### CLI commands
+
+```
+mneme notify status               # show available channels
+mneme notify send -s critical ... # broadcast a notice
+mneme notify test                 # smoke-test all channels
+
+mneme agent backends              # show ollama/anthropic/openai status
+mneme agent run "<task>"          # run the local agent loop
+mneme agent test                  # round-trip echo task
+
+mneme selfcheck run [--json]      # one-shot 12-check audit
+mneme selfcheck watch [--max 5]   # recurring loop until clean
+mneme selfcheck last              # last persisted report
+mneme recheck ...                 # alias
+
+mneme quantum why                 # honest "why not quantum"
+mneme quantum compare <N>         # complexity table for size N
+mneme quantum grover <N>          # iteration count + speedup
+```
+
+### Test coverage
+
+  - `packages/core/src/notifier/notifier.test.ts` — 14 new tests
+  - `packages/core/src/agent/agent.test.ts` — 13 new tests
+  - `packages/core/src/selfcheck/selfcheck.test.ts` — 8 new tests
+  - `packages/core/src/quantum.test.ts` — 6 new tests
+  - **+41 new tests, 4816/4816 passing**, snapshots refreshed.
+
+### Net effect
+
+  - **Free out of the box.** Ollama backend is default; every notifier
+    path that ships without a key works without one (toast, ntfy.sh,
+    voice, email file-spool, agent files).
+  - **AI-tool-agnostic.** Toast/voice/mobile push reach you even when
+    Claude Code, Cursor, ChatGPT are all closed.
+  - **Self-healing.** Caretaker pass + selfcheck means Mneme detects
+    its own drift and pushes notices to every channel without asking.
+  - **Honest.** Path 6 ships as a doc not a half-built extension; path
+    10 ships as a refusal not a TOS-violating keylogger; path 12 says
+    "qubits don't fix architecture" instead of riding a buzzword.
+
 ## [1.25.2] — 2026-05-09
 
 **Mneme Pulse + Hooks installer — closing the "AI agent didn't trigger

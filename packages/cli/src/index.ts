@@ -106,6 +106,10 @@ import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, reg
 import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerRetrievalCommands } from "./commands/retrieval.js";
 import { registerHooksCommands } from "./commands/hooks.js";
+import { registerNotifyCommands } from "./commands/notify.js";
+import { registerAgentCommands } from "./commands/agent.js";
+import { registerSelfcheckCommands } from "./commands/selfcheck.js";
+import { registerQuantumCommands } from "./commands/quantum.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
@@ -2427,6 +2431,11 @@ export async function run(argv: string[]): Promise<void> {
   registerRetrievalCommands(program);
   // ─── Hooks (v1.25.2) ──────────────────────────────────────────────
   registerHooksCommands(program);
+  // ─── Notifier / Agent / Audit / Quantum (v1.26.0 -- 12-path bridge) ─
+  registerNotifyCommands(program);
+  registerAgentCommands(program);
+  registerSelfcheckCommands(program);
+  registerQuantumCommands(program);
   // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
   registerToolsCommand(program);
   registerBotCommand(program);

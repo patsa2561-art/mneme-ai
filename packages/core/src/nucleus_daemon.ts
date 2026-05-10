@@ -236,6 +236,35 @@ export async function runDaemonLoop(
           recordTrial(repoRoot, trial);
         } catch { /* best-effort */ }
       }
+
+      // v1.26.0 — Self-check audit + multi-channel notifier dispatch.
+      // Every CARETAKER_PASS_EVERY ticks, run all selfcheck checks. Any
+      // FAIL fires a notifier broadcast (OS toast + mobile push + email
+      // + agent files + ...) so the user/AI sees the problem regardless
+      // of whether they have the chat window open.
+      if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
+        try {
+          const { runAudit } = await import("./selfcheck/index.js");
+          const report = await runAudit(repoRoot);
+          // For every FAIL with an autoAction, broadcast.
+          const failed = report.verdicts.filter((v) => v.status === "fail");
+          if (failed.length > 0) {
+            const { buildAllNotifiers, notifyAll } = await import("./notifier/index.js");
+            const all = buildAllNotifiers(repoRoot);
+            for (const v of failed) {
+              try {
+                await notifyAll({
+                  id: `selfcheck-${v.name}-${Date.now()}`,
+                  severity: "warning",
+                  title: `Mneme audit FAIL: ${v.name}`,
+                  body: `${v.evidence}${v.fixHint ? ` -- fix: ${v.fixHint}` : ""}`,
+                  autoAction: v.autoAction,
+                }, all);
+              } catch { /* best-effort */ }
+            }
+          }
+        } catch { /* best-effort */ }
+      }
       // Heartbeat
       if (tickCount % HEARTBEAT_WRITE_EVERY_TICK === 0) {
         const banner = dnaBanner(result.state);
