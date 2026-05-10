@@ -16,11 +16,17 @@
  * infrastructure yet.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
 
-const LINEAGE_FILE = ".mneme/lineage/chromosomes.jsonl";
+// v1.27.9 (BUG FIX): pre-fix the packager read from the non-existent
+// `.mneme/lineage/chromosomes.jsonl` -- chromosomes are actually
+// stored as INDIVIDUAL JSON files at
+// `.mneme/lineage/chromosomes/<id>.chromosome.json`. This is why the
+// genome-pool stayed empty across v1.27.5/v1.27.6/v1.27.7/v1.27.8 even
+// after seed --demo planted 3 chromosomes (user reported 3 rounds).
+const CHROMOSOMES_DIR = ".mneme/lineage/chromosomes";
 
 export interface GenomePoolEntry {
   /** sha256 of the redacted chromosome JSON. Lets the pool dedup. */
@@ -112,14 +118,19 @@ export function scrubPII(input: string): string {
   return out;
 }
 
-/** Read every chromosome from the lineage store. */
+/** Read every chromosome from the lineage store. v1.27.9: reads
+ *  per-chromosome JSON files from `.mneme/lineage/chromosomes/`,
+ *  not a single .jsonl file (the .jsonl path was a bug). */
 function readChromosomes(repoRoot: string): Array<Record<string, unknown>> {
-  const path = join(repoRoot, LINEAGE_FILE);
-  if (!existsSync(path)) return [];
+  const dir = join(repoRoot, CHROMOSOMES_DIR);
+  if (!existsSync(dir)) return [];
   try {
-    return readFileSync(path, "utf8")
-      .trim().split("\n").filter(Boolean)
-      .map((ln) => { try { return JSON.parse(ln) as Record<string, unknown>; } catch { return null; } })
+    return readdirSync(dir)
+      .filter((f) => f.endsWith(".chromosome.json"))
+      .map((f) => {
+        try { return JSON.parse(readFileSync(join(dir, f), "utf8")) as Record<string, unknown>; }
+        catch { return null; }
+      })
       .filter((x): x is Record<string, unknown> => x !== null);
   } catch {
     return [];

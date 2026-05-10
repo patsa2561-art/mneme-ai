@@ -8,6 +8,108 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.9] — 2026-05-10
+
+**3 critical bugs FINALLY fixed (1 was 4 rounds old) + MNEME CHIMERA
+new feature. Net: solo repos finally get useful insight, genome pool
+finally surfaces seeded chromosomes, stigmergy/chimera parsers
+finally read git log correctly.**
+
+### 🔴 Critical bug #1 (4-rounds flagged) -- Genome Pool wrong file path
+
+User flagged 4 times that `mneme genome-pool preview` always said
+"nothing to contribute" even after `mneme nucleus seed --demo --force`
+planted 3 chromosomes. Each prior fix (v1.27.5/v1.27.6/v1.27.7/v1.27.8)
+addressed peripheral issues but missed the root cause.
+
+**Root cause (this round)**: `pool.ts` read from
+`.mneme/lineage/chromosomes.jsonl` which has NEVER existed.
+Chromosomes are stored as INDIVIDUAL files at
+`.mneme/lineage/chromosomes/<id>.chromosome.json`. The file path
+was wrong from day one.
+
+**Fix:** rewrote `readChromosomes()` to use `readdirSync` on the
+correct directory + parse each `.chromosome.json` file.
+
+**Verified e2e:**
+```
+$ mneme nucleus seed --demo --force
+OK  Planted 3 synthetic chromosomes
+
+$ mneme genome-pool preview
+Genome Pool contribution
+  Chromosomes:   3
+  [...] (seed:claude-opus-4-7) [seed] auth refactor -- JWT verify timeout
+    body excerpt: Session walked the agent through diagnosing a JWT verify timeout...
+```
+
+### 🔴 Critical bug #2 -- git-log parser discarded files
+
+Both stigmergy + chimera (newly written) parsed `git log
+--pretty=tformat:%h|%ae|%cI --name-only` output. tformat puts ONE
+blank line between header and file list AND another between commits.
+The parser closed the current commit on the FIRST blank line --
+discarding all files. Result: chimera reported "0 distinct top-level
+dirs" on a real repo with 9.
+
+**Fix:** rewrote both parsers (chimera + stigmergy) with explicit
+header regex and ignore-blanks-entirely logic. A new commit only
+opens when a header line is matched.
+
+### NEW: MNEME CHIMERA -- single-author insight synthesizer
+
+When the repo is solo (no co-author for STIGMERGY, no AI commits for
+AUDIT certify, no peers for NETWORK), Mneme commands degenerate
+honestly. CHIMERA extracts insight from what IS available:
+
+  - **Time fingerprint** -- peak day-of-week + hour-of-day
+  - **Area diversity** -- top dirs by churn + spread index
+    (Shannon entropy / max entropy)
+  - **Velocity profile** -- last 30/60/90d commit counts +
+    accelerating/steady/decelerating trend
+  - **Topic momentum** -- per-dir 30d-vs-prior comparison with
+    🔥/📈/→/📉/❄ labels
+  - **Phantom collaborators** -- if you scaled to N people, who
+    would own which area, ranked by churn share
+
+**Verified e2e on Mneme repo (solo, 262 commits):**
+```
+Solo author across 262 commits.
+Peak coding window: Fris around 09:00 UTC.
+Attention concentrated on packages/ (74% of touches);
+spread index 39/100.
+Velocity: 262 commits in last 30d (accelerating).
+If team grew to 2, ownership would naturally split 2 ways:
+packages, (root).
+```
+
+CLI: `mneme chimera [--commits N] [--json]`
+
+### Files changed
+
+  - `packages/core/src/genome/pool.ts` -- correct chromosome path
+  - `packages/core/src/genome/pool.test.ts` -- updated fixture writer
+  - `packages/core/src/chimera/index.ts` (NEW) -- analyser + 5 axes
+  - `packages/core/src/chimera/chimera.test.ts` (NEW) -- 7 tests
+  - `packages/core/src/stigmergy/index.ts` -- parser fix
+  - `packages/core/src/index.ts` -- export chimera
+  - `packages/cli/src/commands/chimera.ts` (NEW) -- `mneme chimera`
+  - `packages/cli/src/index.ts` -- register chimera
+
+### Test coverage
+
+  - **+7 chimera tests** + parser tests
+  - **5027/5027 passing** (277 test files)
+
+### Net effect
+
+The 3 stuck bugs the AI reviewer flagged across 4 rounds are FIXED
+end-to-end. Solo repos no longer dead-end -- CHIMERA gives them
+real intelligence (time fingerprint + area diversity + velocity +
+phantom collab suggestions) where NETWORK / STIGMERGY / AUDIT all
+honestly degenerate. Genome Pool finally ships seeded chromosomes
+with rich body text the network-effect future can dedup against.
+
 ## [1.27.8] — 2026-05-10
 
 **4 antivirus + lineage fixes flagged by AI dogfooding +

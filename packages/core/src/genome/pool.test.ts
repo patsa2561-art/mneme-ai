@@ -8,12 +8,16 @@ let repo: string;
 beforeEach(() => { repo = mkdtempSync(join(tmpdir(), "mneme-genome-pool-")); });
 afterEach(() => { try { rmSync(repo, { recursive: true, force: true }); } catch { /* */ } });
 
+// v1.27.9: chromosomes are per-file under .mneme/lineage/chromosomes/<id>.chromosome.json
+// NOT a single .jsonl file (that was a long-standing pool.ts bug).
 function writeChromosomes(repoRoot: string, items: Array<Record<string, unknown>>): void {
-  const dir = join(repoRoot, ".mneme/lineage");
+  const dir = join(repoRoot, ".mneme/lineage/chromosomes");
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "chromosomes.jsonl"),
-    items.map((c) => JSON.stringify(c)).join("\n") + "\n",
-    "utf8");
+  let n = 0;
+  for (const c of items) {
+    const id = `test-${(n++).toString().padStart(4, "0")}`;
+    writeFileSync(join(dir, `${id}.chromosome.json`), JSON.stringify(c), "utf8");
+  }
 }
 
 describe("pool.scrubPII", () => {

@@ -27,23 +27,31 @@ export type { FixtureBundle, VerificationOutcome } from "./fixture.js";
 /**
  * Parse `git log --pretty=tformat:'<sha>|<email>|<isoDate>' --name-only`
  * output into structured CommitFacts.
+ *
+ * v1.27.9: tformat puts ONE blank line between the header and the file
+ * list AND another between commits. Pre-fix the parser closed `cur` on
+ * the first blank line, which discarded files. Now blanks are ignored;
+ * a header line (3-pipe-separated, sha-shaped first segment) opens a
+ * new commit (pushing the previous).
  */
 export function parseGitLog(raw: string): CommitFact[] {
   const out: CommitFact[] = [];
-  const lines = raw.split("\n");
   let cur: CommitFact | null = null;
-  for (const ln of lines) {
-    if (ln === "") {
+  const HEADER_RE = /^([0-9a-f]+)\|([^|]+)\|([\dT:.+\-Z]+)$/;
+  for (const ln of raw.split("\n")) {
+    if (ln === "") continue;
+    const h = HEADER_RE.exec(ln);
+    if (h) {
       if (cur) out.push(cur);
-      cur = null;
+      cur = {
+        sha: h[1]!.trim(),
+        email: h[2]!.trim().toLowerCase(),
+        at: h[3]!.trim(),
+        files: [],
+      };
       continue;
     }
-    if (ln.includes("|") && ln.split("|").length === 3 && !cur) {
-      const [sha, email, at] = ln.split("|");
-      cur = { sha: (sha ?? "").trim(), email: (email ?? "").trim().toLowerCase(), at: (at ?? "").trim(), files: [] };
-      continue;
-    }
-    if (cur && ln.trim().length > 0) cur.files.push(ln.trim());
+    if (cur) cur.files.push(ln.trim());
   }
   if (cur) out.push(cur);
   return out.filter((c) => c.sha && c.email && c.at);

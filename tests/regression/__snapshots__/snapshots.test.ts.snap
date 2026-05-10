@@ -103,6 +103,7 @@ Commands:
   evolve  >  MNEME EVOLVE -- self-modifying NUCLEUS. Reads local telemetry, proposes markdown PR patches to Mneme itself. Never auto-merges.
   genome-pool  >  Mneme Genome Pool MVP -- opt-in PII-scrubbed chromosome contributor.
   stigmergy|hive [options]  >  MNEME STIGMERGY HIVE -- emergent dev-collaboration detection from git traces alone (no chat logs needed). Finds pairs who effectively work together without ever talking.
+  chimera [options]  >  MNEME CHIMERA -- single-author insight synthesizer for solo repos. Surfaces time-of-day fingerprint + area diversity + velocity + topic momentum + phantom-collaborator suggestions even when other commands degenerate.
   tools [options]  >  List Mneme's full MCP tool catalog (mirror of mneme.capabilities).
   squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles.
   health [options]  >  Single-screen health: version + lineage state + nucleus streaks.
