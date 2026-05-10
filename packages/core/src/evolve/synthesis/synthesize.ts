@@ -19,6 +19,7 @@ import type { SynthesisResult, ApplyResult, AutoPrResult } from "./types.js";
 import { matchTemplate } from "./templates.js";
 import { applyAndVerify } from "./verify.js";
 import { trackRecordFor, recordApply } from "./lineage.js";
+import { computePatchRisk } from "./risk.js";
 
 const PROPOSALS_DIR = ".mneme/proposals";
 const SECRET_FILE = ".mneme/.evolve-secret";
@@ -42,6 +43,8 @@ function readOrCreateSecret(repoRoot: string): string {
 
 /** HMAC-SHA256 over a stable subset of the SynthesisResult. */
 function signResult(secret: string, partial: Omit<SynthesisResult, "signature">): string {
+  // v1.27.5: include risk in the signature so a tampered risk block
+  // (which would change the displayed safety score) is detectable.
   const payload = JSON.stringify({
     id: partial.id,
     proposalId: partial.proposalId,
@@ -52,6 +55,7 @@ function signResult(secret: string, partial: Omit<SynthesisResult, "signature">)
     gates: partial.gates,
     verified: partial.verified,
     confidence: partial.confidence,
+    risk: partial.risk ?? null,
   });
   return createHmac("sha256", secret).update(payload).digest("hex");
 }
@@ -103,50 +107,55 @@ export function synthesize(repoRoot: string, proposalId: string): SynthesisResul
     const verifyResult = applyAndVerify(repoRoot, match);
     const verified = verifyResult.kept;
 
-    // v1.27.4 -- DIFFERENTIATED confidence formula. Replaces the old
-    // "constant +0.50 bump" that gave every verified patch the same
-    // 64% score regardless of evidence quality.
+    // v1.27.5 -- TRULY differentiated confidence formula. v1.27.4
+    // formula was "differentiated" in theory but in practice every
+    // selfcheck-template patch on the same checks.ts file got the
+    // same 0.734 score. Reason: signal evidence + test_coverage
+    // existence don't vary across signals that all hit the same file.
+    //
+    // The fix: add a per-PATCH RISK score from CODE METRICS. Two
+    // signals on the same template now score differently if they hit
+    // files with different risk profiles (LOC, fan-in, churn, age,
+    // test density).
     //
     //   confidence = clip(0.05, 0.99,
-    //     0.20 * signal_evidence       // occurrences + source diversity
-    //   + 0.20 * template_track_record // prior accept/revert ratio
-    //   + 0.10 * test_coverage         // co-located vitest existed + green
-    //   + 0.50 * verification          // all gates green
+    //     0.15 * signal_evidence       // occurrences + source diversity
+    //   + 0.20 * template_track_record // from Provenance Chain
+    //   + 0.20 * patch_safety          // from PatchRisk -- THE NEW ENTROPY
+    //   + 0.05 * test_density_bonus    // co-located vitest test count
+    //   + 0.40 * verification          // all gates green
     //   )
-    //
-    // Now confidence ACTUALLY varies. A first-time template with one
-    // signal occurrence + no co-located test + verified gates =
-    // around 0.65. A template with 5 prior clean accepts + multi-source
-    // signal + co-located green test = around 0.95.
 
-    // Signal evidence in [0, 1]. Saturates at 10 occurrences across signals.
     const totalOcc = signal.occurrences;
     const sourceCount = new Set(proposal.signals.map((s: EvolveSignal) => s.kind)).size;
     const occScore = Math.min(1, totalOcc / 10);
     const srcScore = Math.min(1, sourceCount / 3);
     const signalEvidence = 0.7 * occScore + 0.3 * srcScore;
 
-    // Template track record from the Patch Provenance Chain.
     const track = trackRecordFor(repoRoot, match.templateId);
     const trackRecord = track.score;
 
-    // Test coverage factor: 1.0 if vitest ran green, 0.6 if no co-located
-    // test (skipped), 0 if test failed (verified=false anyway).
-    const testCoverage = verifyResult.gates.testsOk === true ? 1.0
-      : verifyResult.gates.testsOk === null ? 0.6
+    // v1.27.5: per-patch risk from code metrics. THIS is where real
+    // differentiation comes from. Two patches to the same file get
+    // the same risk; patches to different files get different risk.
+    const risk = computePatchRisk(repoRoot, match.filePath);
+    const patchSafety = risk.safetyScore;
+
+    // Test density bonus: 0.5 if no test, 1.0 saturating at 20+ tests.
+    const testDensityBonus = verifyResult.gates.testsOk === true
+      ? Math.min(1, 0.5 + risk.testDensity / 40)
+      : verifyResult.gates.testsOk === null ? 0.4
       : 0;
 
     const verificationFactor = verified ? 1.0 : 0;
 
     const rawConfidence =
-      0.20 * signalEvidence +
+      0.15 * signalEvidence +
       0.20 * trackRecord +
-      0.10 * testCoverage +
-      0.50 * verificationFactor;
+      0.20 * patchSafety +
+      0.05 * testDensityBonus +
+      0.40 * verificationFactor;
 
-    // Clip to [0.05, 0.99]. Floor of 0.05 so unverified Phase-2-only
-    // proposals still show some signal; ceiling of 0.99 so we never
-    // emit "100% certain" (overconfidence is a Mneme anti-pattern).
     const confidence = Math.max(0.05, Math.min(0.99, rawConfidence));
 
     const partial: Omit<SynthesisResult, "signature"> = {
@@ -159,6 +168,15 @@ export function synthesize(repoRoot: string, proposalId: string): SynthesisResul
       gates: verifyResult.gates,
       verified,
       confidence,
+      risk: {
+        fileAgeDays: risk.fileAgeDays,
+        churn30d: risk.churn30d,
+        loc: risk.loc,
+        testDensity: risk.testDensity,
+        fanIn: risk.fanIn,
+        riskScore: risk.riskScore,
+        safetyScore: risk.safetyScore,
+      },
     };
     const secret = readOrCreateSecret(repoRoot);
     const signature = signResult(secret, partial);
@@ -183,8 +201,58 @@ export function synthesize(repoRoot: string, proposalId: string): SynthesisResul
     return result;
   }
 
-  // No template matched any signal.
+  // v1.27.5: no template matched any signal -- write a placeholder
+  // .md scaffold so the human writer has a structured starting
+  // point, instead of silent skip ("No template matched"). The
+  // placeholder includes the proposal's evidence + a stub for the
+  // human to fill in. Returns null (no SynthesisResult), but the
+  // file IS written.
+  try {
+    ensureDir(repoRoot, PROPOSALS_DIR);
+    const placeholderPath = join(repoRoot, PROPOSALS_DIR, `${proposalId}.placeholder.md`);
+    if (!existsSync(placeholderPath)) {
+      const md = buildPlaceholderMd(proposal);
+      writeFileSync(placeholderPath, md, "utf8");
+    }
+  } catch { /* best-effort */ }
   return null;
+}
+
+/**
+ * Build a markdown scaffold when no template matches. Lifts the
+ * proposal's evidence + signals into a structured fill-in-the-blank
+ * format the human writer can convert into a real patch.
+ */
+function buildPlaceholderMd(proposal: EvolveProposal): string {
+  const lines: string[] = [];
+  lines.push(`# Phase-3 PLACEHOLDER -- no template matched\n`);
+  lines.push(`**Proposal:** \`${proposal.id}\`  \n**Title:** ${proposal.title}\n`);
+  lines.push(`> No deterministic template in the v1.27.5 library matched any of this proposal's signals.\n> A human writer (or future LLM-augmented template) is needed to turn this proposal into a verifiable patch.\n`);
+  lines.push(`## Signals to address\n`);
+  for (const s of proposal.signals) {
+    lines.push(`- **\`${s.pattern}\`** (\`${s.kind}\`, ${s.occurrences} occurrence${s.occurrences === 1 ? "" : "s"})`);
+    if (s.evidence) lines.push(`  - Evidence: ${s.evidence}`);
+    if (s.filePath) lines.push(`  - File: \`${s.filePath}\``);
+  }
+  lines.push(``);
+  if (proposal.suggestion) {
+    lines.push(`## Suggested direction (from Phase-2)\n`);
+    lines.push(`- Touch files: ${proposal.suggestion.files.map((f) => `\`${f}\``).join(", ")}`);
+    lines.push(`- ${proposal.suggestion.direction}`);
+    lines.push(``);
+  }
+  lines.push(`## Author the patch\n`);
+  lines.push(`1. Open the file(s) above.`);
+  lines.push(`2. Make the change. Keep it minimal -- one signal = one diff.`);
+  lines.push(`3. Run \`tsc --noEmit\` and \`vitest run <co-located-test>\` locally.`);
+  lines.push(`4. When green, save the .patch:\n`);
+  lines.push(`   \`\`\`bash`);
+  lines.push(`   git diff > .mneme/proposals/${proposal.id}.patch`);
+  lines.push(`   \`\`\``);
+  lines.push(`5. Then \`mneme evolve apply ${proposal.id}\` to record the lineage entry + run the gate verification.`);
+  lines.push(``);
+  lines.push(`> Generated by Mneme EVOLVE Phase-3 (v1.27.5+) when no deterministic template matched.\n> This file is a SCAFFOLD, not a verified patch -- no HMAC signature, no gate verification yet.`);
+  return lines.join("\n");
 }
 
 /**

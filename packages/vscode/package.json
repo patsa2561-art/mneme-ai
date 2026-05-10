@@ -3,7 +3,7 @@
   "publisher": "patsa2561-art",
   "displayName": "Mneme โ€” Memory layer for your codebase",
   "description": "What your codebase already knows โ€” atrophy lens, AI session audit, nervous system dashboard.",
-  "version": "1.27.4",
+  "version": "1.27.5",
   "private": true,
   "engines": {
     "vscode": "^1.85.0"
@@ -147,7 +147,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mneme-ai/core": "1.27.4"
+    "@mneme-ai/core": "1.27.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

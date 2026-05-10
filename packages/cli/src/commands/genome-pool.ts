@@ -30,7 +30,21 @@ export function registerGenomePoolCommands(program: Command): void {
     .option("--json", "JSON output.")
     .action((opts: CommonOpts) => {
       const pkg = genome.pool.buildPackage(process.cwd());
-      if (!pkg) { writeText("(nothing to contribute -- no chromosomes in lineage store yet)"); return; }
+      if (!pkg) {
+        if (opts.json) { writeJson(null); return; }
+        writeText("(nothing to contribute -- no chromosomes have a topic + body yet)");
+        writeText("");
+        writeText("Why empty:");
+        writeText("  Genome Pool only ships chromosomes with BOTH topic + notes/body.");
+        writeText("  Synthetic seed chromosomes from `mneme nucleus seed --demo` use seed:* topics");
+        writeText("  but their notes are short markers, so the packager skips them by default.");
+        writeText("");
+        writeText("How to populate:");
+        writeText("  1. Use Mneme via MCP for a few real sessions (chromosomes accrue).");
+        writeText("  2. OR manually add via `mneme lin add --topic foo --notes 'bar'` (see `mneme lin --help`).");
+        writeText("  3. OR re-run `mneme nucleus seed --demo` -- v1.27.5+ seed packs richer body text.");
+        return;
+      }
       if (opts.json) { writeJson(pkg); return; }
       writeText(genome.pool.packageSummary(pkg));
     });

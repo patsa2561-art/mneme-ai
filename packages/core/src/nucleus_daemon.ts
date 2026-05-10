@@ -22,7 +22,7 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tick, mutate, readNucleus, dnaBanner } from "./nucleus.js";
-import { pushInbox, deterministicId } from "./inbox.js";
+import { pushInbox, pushInboxReplacingSource, deterministicId } from "./inbox.js";
 import { readStreaks } from "./karma_streaks.js";
 
 const PID_FILE = ".mneme/nucleus.pid";
@@ -177,14 +177,19 @@ export async function runDaemonLoop(
         mutate(repoRoot, 1);
         mutationsApplied += 1;
         if (shouldMutateGrowth) noteworthyTicks = 0;
-        // v1.23.0 — push milestone every 10 mutations into the inbox so
-        // the user sees progress even if they never run a Mneme command.
+        // v1.23.0 -- push milestone every 10 mutations into the inbox.
+        // v1.27.5 (FIX): use pushInboxReplacingSource so the latest
+        // milestone REPLACES the prior one. Pre-fix the inbox accumulated
+        // "Nucleus reached 10 mutations", "20 mutations", "30 mutations"
+        // ... forever, until 256KB rotation. Now there's at most ONE
+        // "daemon-milestone" entry at any time, always reflecting the
+        // latest count. (Reported by AI reviewer 2026-05-10.)
         if (mutationsApplied > 0 && mutationsApplied % 10 === 0) {
           try {
-            pushInbox(repoRoot, {
+            pushInboxReplacingSource(repoRoot, {
               id: deterministicId(`mutation-milestone-${mutationsApplied}`),
-              priority: "medium",
-              source: "daemon",
+              priority: "low",
+              source: "daemon-milestone",
               title: `Nucleus reached ${mutationsApplied} mutations`,
               body: `Your Mneme nucleus has self-evolved ${mutationsApplied} times since the daemon started.`,
               cta: "ask: 'show me the mneme dna'",

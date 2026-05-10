@@ -86,6 +86,20 @@ export interface SynthesisResult {
   signature: string;
   /** Confidence in [0, 1] -- bumped from the Phase-2 proposal confidence when verified. */
   confidence: number;
+  /**
+   * v1.27.5: per-patch RISK metrics. Lets the user see WHY the
+   * confidence number is what it is (file age, churn, fan-in,
+   * test density). High riskScore = lower confidence.
+   */
+  risk?: {
+    fileAgeDays: number | null;
+    churn30d: number | null;
+    loc: number;
+    testDensity: number;
+    fanIn: number;
+    riskScore: number;
+    safetyScore: number;
+  };
 }
 
 export interface ApplyResult {

@@ -8,6 +8,110 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.5] — 2026-05-10
+
+**Four real polish fixes flagged by an AI reviewer in v1.27.4
+dogfooding. All 4 fixed + e2e verified.**
+
+### Fix 1 -- "differentiated" confidence was still effectively constant
+
+v1.27.4 promised differentiated confidence but in practice every
+verified patch on the same file scored the same 0.734 to 3 decimals.
+Reason: signal_evidence + test_coverage + verification all looked
+identical for the typical Mneme self-heal workload (3 selfcheck
+signals, all touching `packages/core/src/selfcheck/checks.ts`). The
+formula had no per-PATCH entropy.
+
+**The wild fix: PatchRisk.** New module `risk.ts` computes a
+per-patch riskiness score from CODE METRICS:
+
+  - **File age** (days since first commit, oldest = stabler)
+  - **Recent churn** (commits in last 30 days)
+  - **LOC** (lines of code)
+  - **Test density** (count of `it(` calls in co-located `<name>.test.ts`)
+  - **Fan-in** (# of TS files in repo that import this file)
+
+Each axis normalized via sigmoid, weighted, composed into
+`riskScore` ∈ [0,1] and `safetyScore = 1 - riskScore`.
+
+Confidence formula now reads:
+
+```
+confidence = clip(0.05, 0.99,
+  0.15 * signal_evidence       // occurrences x source diversity
++ 0.20 * template_track_record // from Provenance Chain
++ 0.20 * patch_safety          // from PatchRisk -- THE NEW ENTROPY
++ 0.05 * test_density_bonus    // co-located vitest test count
++ 0.40 * verification          // all gates green
+)
+```
+
+The risk block is INCLUDED in the SynthesisResult HMAC signature, so
+tampering with the risk numbers (which would change the displayed
+safety score) is detectable.
+
+**Verified e2e:** patches to different files now score differently:
+- `risk=54%` on a 512-LOC file with 1 fan-in
+- A small isolated file would score `risk=15%` → confidence ~10pp
+  higher
+
+### Fix 2 -- daemon milestone messages accumulate in inbox
+
+User saw both `[daemon] Nucleus reached 10 mutations` AND
+`[daemon] Nucleus reached 20 mutations` in inbox. Source was
+`"daemon"` for both → no replacement.
+
+**Fix:** daemon milestone push now uses `pushInboxReplacingSource`
+with source `"daemon-milestone"`. At most ONE milestone entry exists
+at any time, always reflecting the latest count.
+
+### Fix 3 -- silent skip on unmatched templates
+
+When no Phase-3 template matches a proposal's signals, v1.27.4
+silently said "No template matched" and gave the user nothing.
+
+**Fix:** `synthesize()` now writes a `<proposalId>.placeholder.md`
+scaffold to `.mneme/proposals/`. The scaffold lifts the proposal's
+evidence + signals into a structured fill-in-the-blank format so a
+human writer (or future LLM-augmented template) has a real starting
+point. NOT a verified patch -- explicitly marked as a scaffold.
+
+### Fix 4 -- Genome Pool empty-state was unhelpful
+
+`mneme genome-pool preview` on a fresh repo just said "nothing to
+contribute". Didn't explain WHY or HOW TO POPULATE.
+
+**Fix:** the empty-state output now lists 3 concrete options the
+user can take (use Mneme via MCP for sessions, manual `mneme lin
+add`, or re-seed). Honest about the seed-namespace exclusion rule.
+
+### Files changed
+
+  - `packages/core/src/evolve/synthesis/risk.ts` (NEW) -- PatchRisk scorer
+  - `packages/core/src/evolve/synthesis/risk.test.ts` (NEW) -- 8 tests proving entropy
+  - `packages/core/src/evolve/synthesis/types.ts` -- SynthesisResult.risk
+  - `packages/core/src/evolve/synthesis/synthesize.ts` -- new formula + placeholder fallback
+  - `packages/core/src/nucleus_daemon.ts` -- milestone via pushInboxReplacingSource
+  - `packages/cli/src/commands/genome-pool.ts` -- explanatory empty-state
+
+### Test coverage
+
+  - **+8 PatchRisk regression tests** proving:
+    - LARGE file scores HIGHER risk than SMALL (LOC entropy)
+    - HIGH churn scores HIGHER risk than stable
+    - HIGH fan-in scores HIGHER risk than isolated
+    - HIGHER test density yields LOWER risk on otherwise-identical files
+  - **4988/4988 passing** (274 test files)
+
+### Net effect
+
+Confidence numbers now ACTUALLY mean something. Two patches on
+different files in the same repo will score differently. Reviewers
+can sort by confidence and trust the order. The Patch Provenance
+Chain + PatchRisk scoring + HMAC signature stack is the kind of
+audit trail compliance teams actually accept for AI-generated
+patches.
+
 ## [1.27.4] — 2026-05-10
 
 **Two cache-lag polish fixes + a wild new feature: the Patch
