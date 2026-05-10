@@ -152,56 +152,111 @@ export function RetrievalLabView(props: RetrievalLabViewProps) {
 
       <div className="lab-body">
         {tab === "leaderboard" && (
-          <table className="cert-table">
-            <thead>
-              <tr>
-                <th>Rank</th><th>Config</th><th>Trials</th><th>Composite</th><th>P</th><th>R</th><th>NDCG</th><th>Latency</th><th>UCB1</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((e, i) => (
-                <tr key={e.configId} className={e.configId === active ? "active-row" : ""}>
-                  <td>{i + 1}</td>
-                  <td><code>{e.configId}</code> {pareto.has(e.configId) ? <span className="pareto-tag">Pareto</span> : null}</td>
-                  <td>{e.trialCount}</td>
-                  <td><strong>{e.meanComposite.toFixed(3)}</strong></td>
-                  <td>{e.meanPrecisionAtK.toFixed(2)}</td>
-                  <td>{e.meanRecallAtK.toFixed(2)}</td>
-                  <td>{e.meanNdcgAtK.toFixed(2)}</td>
-                  <td>{Math.round(e.meanLatencyMs)}ms</td>
-                  <td>{e.ucb1 === Number.POSITIVE_INFINITY ? "∞" : e.ucb1.toFixed(3)}</td>
+          <>
+            <h3 className="lab-tab-title">🏆 Leaderboard — every candidate arm + how many trials it's run</h3>
+            {!isLive && totalTrials === 0 && (
+              <div className="lab-empty-rich">
+                <p className="lab-empty-headline">DEMO mode — every arm shows 0 trials.</p>
+                <p className="lab-empty-sub">
+                  The composite, precision, recall, NDCG, and latency columns are all 0 because no
+                  retrieval trials have been run on this demo. The UCB1 column shows <code>∞</code>
+                  for every untried arm — that's the algorithm saying "try me first; I have no
+                  data yet".
+                </p>
+                <p className="lab-empty-sub">
+                  Live mode looks like this — actual numbers appear after each trial:
+                </p>
+                <pre className="lab-empty-mock">{`Rank  Config                          Trials  Composite  P     R     NDCG  Latency  UCB1
+1     bge-m3-rrf60-hyde-cross         42      0.834      0.79  0.81  0.86  187ms    1.234
+2     bge-small-rrf60-cross           38      0.812      0.78  0.79  0.83  142ms    1.205
+3     bge-small-rrf60                 35      0.795      0.74  0.79  0.81  98ms     1.187`}</pre>
+                <p className="lab-empty-sub">
+                  Run <code>mneme retrieval tune --rounds 3</code> from your terminal — UCB1 picks
+                  the most-promising untried arm, runs a trial, folds the result back in.
+                </p>
+              </div>
+            )}
+            <table className="cert-table">
+              <thead>
+                <tr>
+                  <th>Rank</th><th>Config</th><th>Trials</th><th>Composite</th><th>P</th><th>R</th><th>NDCG</th><th>Latency</th><th>UCB1</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sorted.map((e, i) => (
+                  <tr key={e.configId} className={e.configId === active ? "active-row" : ""}>
+                    <td>{i + 1}</td>
+                    <td><code>{e.configId}</code> {pareto.has(e.configId) ? <span className="pareto-tag">Pareto</span> : null}</td>
+                    <td>{e.trialCount}</td>
+                    <td><strong>{e.meanComposite.toFixed(3)}</strong></td>
+                    <td>{e.meanPrecisionAtK.toFixed(2)}</td>
+                    <td>{e.meanRecallAtK.toFixed(2)}</td>
+                    <td>{e.meanNdcgAtK.toFixed(2)}</td>
+                    <td>{Math.round(e.meanLatencyMs)}ms</td>
+                    <td>{e.ucb1 === Number.POSITIVE_INFINITY ? "∞" : e.ucb1.toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
 
         {tab === "pareto" && (
           <div className="pareto-scatter">
+            <h3 className="lab-tab-title">📐 Pareto Frontier — quality vs latency tradeoff</h3>
             <p className="cert-intro">
               Pareto frontier: configs that are not dominated on (composite quality, latency).
               <strong> Right-down is best.</strong> Configs on the frontier represent the best
               tradeoffs the auto-tuner has discovered.
             </p>
-            <ParetoChart entries={entries} pareto={pareto} active={active} />
+            {!isLive && totalTrials === 0 ? (
+              <div className="lab-empty-rich">
+                <p className="lab-empty-headline">DEMO mode — no scatter to draw.</p>
+                <p className="lab-empty-sub">
+                  The Pareto frontier needs at least 2 trial results before it can rank anything.
+                  Once <code>mneme retrieval tune --rounds 3</code> has run, this panel shows a
+                  scatter plot: <strong>X-axis = mean latency</strong> (ms),
+                  <strong> Y-axis = composite quality</strong>. Every dot is one arm. Connected dots
+                  on the bottom-right form the Pareto frontier — the configs that are
+                  Pareto-optimal (no other config beats them on both axes simultaneously).
+                </p>
+                <p className="lab-empty-sub">
+                  Why this matters: a config that scores 0.92 quality at 800ms is sometimes a worse
+                  choice than 0.85 at 200ms — depends on your latency budget. Pareto lets you see
+                  ALL the good tradeoffs at once.
+                </p>
+              </div>
+            ) : (
+              <ParetoChart entries={entries} pareto={pareto} active={active} />
+            )}
           </div>
         )}
 
         {tab === "configs" && (
-          <div className="pharmacopoeia">
-            {SEED_CONFIGS.map((c) => (
-              <div key={c.id} className="vaccine-row">
-                <div className="vaccine-id">{c.id}</div>
-                <div className="vaccine-strain">{c.label}</div>
-                <div className="vaccine-counts">
-                  embedder=<code>{c.embedder}</code> RRF=<code>{c.rrfK}</code> sw=<code>{c.semanticWeight}</code><br/>
-                  rerank=<code>{c.reranker}</code> hyde=<code>{String(c.useHyDE)}</code> candK=<code>{c.candidateK}</code>
+          <>
+            <h3 className="lab-tab-title">⚙ All Configs — every candidate arm Mneme can try</h3>
+            <p className="cert-intro">
+              Eight bundled configs span the dimensions Mneme tunes over: embedder model
+              (<code>bundled-bge-small</code>, <code>bge-m3</code>, paid <code>voyage-3</code>),
+              reranker (<code>noop</code>, <code>term-density</code>, <code>cross-encoder-bge-base</code>,
+              paid <code>cohere-rerank-3</code>), HyDE on/off, RRF k, and candidate-K.
+              Add custom arms by editing <code>.mneme/retrieval/configs.json</code>.
+            </p>
+            <div className="pharmacopoeia">
+              {SEED_CONFIGS.map((c) => (
+                <div key={c.id} className="vaccine-row">
+                  <div className="vaccine-id">{c.id}</div>
+                  <div className="vaccine-strain">{c.label}</div>
+                  <div className="vaccine-counts">
+                    embedder=<code>{c.embedder}</code> RRF=<code>{c.rrfK}</code> sw=<code>{c.semanticWeight}</code><br/>
+                    rerank=<code>{c.reranker}</code> hyde=<code>{String(c.useHyDE)}</code> candK=<code>{c.candidateK}</code>
+                  </div>
+                  <div className="vaccine-source">arm</div>
+                  <div className="vaccine-source"></div>
                 </div>
-                <div className="vaccine-source">arm</div>
-                <div className="vaccine-source"></div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

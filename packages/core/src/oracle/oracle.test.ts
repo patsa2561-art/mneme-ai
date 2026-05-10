@@ -7,7 +7,7 @@ import {
   buildBigrams, transitionProbabilities, topKMarkov, uniqueTools,
   evaporate, reinforce, pheromoneScores, tauOf,
   recordObservation, predictNext, dreamCycle, peekCache, oracleStats,
-  resetOracle, renderOracleHint,
+  resetOracle, renderOracleHint, seedDemoOracle,
   DEFAULT_ORACLE_CONFIG,
 } from "./index.js";
 import type { OracleObservation, PheromoneEdge } from "./index.js";
@@ -239,6 +239,28 @@ describe("oracle.oracle -- end to end", () => {
     const s = oracleStats(repo);
     expect(s.hits).toBeGreaterThanOrEqual(1);
     expect(s.hitRate).toBeGreaterThan(0);
+  });
+
+  it("seedDemoOracle plants a believable trail + populates predictions", () => {
+    const r = seedDemoOracle(repo);
+    expect(r.observations).toBeGreaterThan(20);
+    expect(r.dreamCycles).toBe(2);
+    const s = oracleStats(repo);
+    expect(s.totalObservations).toBe(r.observations);
+    expect(s.uniqueTools).toBeGreaterThan(5);
+    expect(s.bigramCount).toBeGreaterThan(5);
+    expect(s.pheromoneEdges).toBeGreaterThan(5);
+    expect(s.predictions).toBeGreaterThan(0);
+    // Hint should now render (above threshold).
+    expect(renderOracleHint(repo)).toContain("[PRECOG]");
+  });
+
+  it("seedDemoOracle is idempotent (resets first then re-seeds)", () => {
+    seedDemoOracle(repo);
+    const a = oracleStats(repo);
+    seedDemoOracle(repo);
+    const b = oracleStats(repo);
+    expect(b.totalObservations).toBe(a.totalObservations);
   });
 
   it("DEFAULT_ORACLE_CONFIG is exported with sensible defaults", () => {

@@ -123,4 +123,40 @@ export function registerOracleCommands(program: Command): void {
       oracle.resetOracle(process.cwd());
       writeText(`Oracle state reset.`);
     });
+
+  // v1.26.6 -- chicken-and-egg breaker. Plant a synthetic Mneme-shaped
+  // sequence so peek/predict/hint all show populated state without
+  // needing a live MCP connection.
+  orc.command("seed")
+    .description("Plant a synthetic observation trail (5x 8 sessions over the past hour) + run 2 dream cycles. Demoable instantly.")
+    .option("--demo", "Required confirmation flag (this overwrites existing oracle state).")
+    .option("--json", "JSON output.")
+    .action((opts: { demo?: boolean } & CommonOpts) => {
+      if (!opts.demo) {
+        writeText(`This wipes existing PRECOG state. Re-run with --demo to confirm.`);
+        process.exit(1);
+        return;
+      }
+      const r = oracle.seedDemoOracle(process.cwd());
+      const stats = oracle.oracleStats(process.cwd());
+      const top = stats.currentState ? oracle.predictNext(process.cwd(), stats.currentState, 3) : [];
+      if (opts.json) { writeJson({ ...r, stats, topPredictions: top }); return; }
+      writeText(`Seeded PRECOG with ${r.observations} observations + ${r.dreamCycles} dream cycles.`);
+      writeText(``);
+      writeText(`Stats now:`);
+      writeText(`  Observations:    ${stats.totalObservations} (${stats.uniqueTools} unique tools)`);
+      writeText(`  Bigram edges:    ${stats.bigramCount}`);
+      writeText(`  Pheromone:       ${stats.pheromoneEdges} edges`);
+      writeText(`  Predictions:     ${stats.predictions} cached`);
+      writeText(`  Current state:   ${stats.currentState ?? "(none)"}`);
+      if (top.length > 0) {
+        writeText(``);
+        writeText(`Top 3 predictions from current state:`);
+        for (const p of top) {
+          writeText(`  -> ${p.tool}  conf=${(p.confidence * 100).toFixed(1)}%`);
+        }
+      }
+      writeText(``);
+      writeText(`Try: mneme precog hint  |  mneme precog peek  |  mneme nucleus pulse --no-quiet`);
+    });
 }

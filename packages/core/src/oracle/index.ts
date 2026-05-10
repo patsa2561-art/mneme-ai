@@ -25,4 +25,5 @@ export {
 export {
   recordObservation, predictNext, dreamCycle,
   peekCache, oracleStats, resetOracle, renderOracleHint,
+  seedDemoOracle,
 } from "./oracle.js";

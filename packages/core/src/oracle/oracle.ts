@@ -332,6 +332,61 @@ export function resetOracle(repoRoot: string): void {
 }
 
 /**
+ * v1.26.6 -- chicken-and-egg breaker. Plant a synthetic observation
+ * trail that mirrors realistic Mneme MCP usage patterns, then run a
+ * dream cycle. After this, `mneme precog peek` / `predict` / `hint`
+ * all show populated state -- demoable without needing a live MCP
+ * connection.
+ *
+ * The seeded sequence is deliberately MNEME-shaped (not random):
+ *   capabilities -> who_knows -> passport -> story
+ *   capabilities -> blast -> palimpsest
+ *   capabilities -> antivirus.scan -> antivirus.bench
+ *   nucleus.tick -> selfcheck.run -> evolve.scan
+ * Repeat 5x with a few cross-bridges so bigram + pheromone both
+ * carry signal.
+ *
+ * Returns the count of observations + dream cycles produced.
+ */
+export function seedDemoOracle(repoRoot: string): { observations: number; dreamCycles: number } {
+  resetOracle(repoRoot);
+
+  const sequences: string[][] = [
+    ["mneme.capabilities", "mneme.who_knows", "mneme.passport", "mneme.story"],
+    ["mneme.capabilities", "mneme.blast", "mneme.palimpsest"],
+    ["mneme.capabilities", "mneme.antivirus.scan", "mneme.antivirus.cert.benchmark"],
+    ["mneme.nucleus.tick", "mneme.selfcheck.run", "mneme.evolve.scan"],
+    ["mneme.who_knows", "mneme.passport", "mneme.confess"],
+    ["mneme.dna.search", "mneme.confess"],
+    ["mneme.smart_do", "mneme.dna.search", "mneme.confess"],
+    ["mneme.help", "mneme.tool.contract", "mneme.smart_do"],
+  ];
+
+  // Spread observations across the past hour so bigrams form within
+  // the default 30-min session window.
+  let baseTime = Date.now() - 30 * 60 * 1000;
+  let n = 0;
+  for (let cycle = 0; cycle < 5; cycle++) {
+    for (const seq of sequences) {
+      for (const tool of seq) {
+        const ts = new Date(baseTime).toISOString();
+        recordObservation(repoRoot, tool, [], {}, ts);
+        baseTime += 5_000; // 5s between successive calls in a session
+        n++;
+      }
+      baseTime += 60_000; // 1-min gap between sessions
+    }
+  }
+
+  // Run two dream cycles so the cache populates with predictions.
+  const c1 = dreamCycle(repoRoot);
+  const c2 = dreamCycle(repoRoot);
+  void c1; void c2;
+
+  return { observations: n, dreamCycles: 2 };
+}
+
+/**
  * Render a 1-3 line "Oracle hint" for inclusion in the pulse, when the
  * current top prediction has confidence >= minConfidenceForHint.
  *

@@ -8,6 +8,97 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.6] — 2026-05-10
+
+**Retrieval Lab tab perception bug + PRECOG chicken-and-egg breaker.
+Both surfaced from a live AI-agent test session — root-caused, fixed,
+shipped same day.**
+
+### Bug -- "Retrieval Lab tabs hang on click"
+
+User report: clicking 🏆 Leaderboard / 📐 Pareto Frontier / ⚙ All
+Configs in DEMO mode appeared to do nothing. Root cause was the same
+class of perception bug as v1.26.5's Antivirus Lab fix:
+
+  - Tabs DID switch (state worked + active tab underlined).
+  - But Pareto Frontier in 0-trial DEMO mode had only 1 line of
+    intro text + an empty `<ParetoChart>` returning a single
+    "No trials yet" line. From the screenshot: looks blank.
+  - Leaderboard rendered the table with all-zero rows (composite,
+    P, R, NDCG, latency = 0) so it looked broken too.
+  - All Configs was the most differentiated tab but lacked context.
+
+### Fix
+
+  1. Per-tab title (h3 with emoji prefix) on all three Retrieval Lab
+     tabs -- visible from a screenshot.
+  2. Leaderboard DEMO mode now shows a `lab-empty-rich` block above
+     the table explaining why every column is 0 + an illustrative
+     mock of what live numbers look like + the `mneme retrieval tune`
+     command to populate real data.
+  3. Pareto Frontier DEMO mode replaces the empty scatter with a
+     `lab-empty-rich` block explaining the X/Y axes, what Pareto
+     optimality means, why latency-vs-quality matters.
+  4. All Configs gets a cert-intro paragraph explaining the 5
+     dimensions Mneme tunes over (embedder × reranker × HyDE × RRF k
+     × candidate-K).
+
+### NEW: `mneme precog seed --demo` -- chicken-and-egg breaker
+
+Live AI-agent feedback: PRECOG runtime works but is empty until an
+MCP-connected AI starts calling tools. Same chicken-and-egg as
+NUCLEUS faced in v1.23.x.
+
+**Fix:** `seedDemoOracle(repoRoot)` plants a synthetic Mneme-shaped
+observation trail (5 cycles × 8 sessions × ~3 calls each = 120
+observations across 16 unique tools) + runs 2 dream cycles. After
+this, `mneme precog peek` / `predict` / `hint` all show populated
+state. The pulse `[PRECOG]` hint surfaces immediately.
+
+```bash
+mneme precog seed --demo
+
+# Output:
+#   Seeded PRECOG with 120 observations + 2 dream cycles.
+#   Stats now:
+#     Observations:    120 (16 unique tools)
+#     Bigram edges:    22
+#     Pheromone:       22 edges
+#     Predictions:     4 cached
+#     Current state:   mneme.smart_do
+#   Top 3 predictions from current state:
+#     -> mneme.dna.search   conf=55.6%
+#     -> mneme.capabilities conf=44.4%
+```
+
+The seeded sequences are deliberately MNEME-shaped (not random):
+`capabilities -> who_knows -> passport -> story`,
+`capabilities -> blast -> palimpsest`,
+`nucleus.tick -> selfcheck.run -> evolve.scan`, etc. This way the
+predictions look believable even without a real session.
+
+### Files changed
+
+  - `packages/web/src/components/RetrievalLabView.tsx` -- per-tab
+    titles + rich DEMO empty-state for Leaderboard / Pareto / Configs
+  - `packages/core/src/oracle/oracle.ts` -- `seedDemoOracle()`
+  - `packages/core/src/oracle/index.ts` -- export
+  - `packages/cli/src/commands/oracle.ts` -- `mneme precog seed --demo`
+  - `packages/core/src/oracle/oracle.test.ts` -- 2 new tests for seed
+
+### Test coverage
+
+  - **+2 new tests** (seedDemoOracle planting + idempotency)
+  - **4947/4947 passing** (271 test files)
+
+### Net effect
+
+Retrieval Lab tabs are now visually obvious from a single screenshot
+(per-tab title + rich content even in DEMO). PRECOG ships with a
+one-command demo that shows the precognition cache populated and
+predicting -- no MCP setup required. Both fixes target the same root
+cause: empty-state UX.
+
 ## [1.26.5] — 2026-05-10
 
 **Lab tab UX fix + Jack-the-Giant-Slayer competitive strategy doc.**
