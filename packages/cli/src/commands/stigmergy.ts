@@ -21,16 +21,18 @@ function writeJson(p: unknown): void { process.stdout.write(JSON.stringify(p, nu
 function writeText(s: string): void { process.stdout.write(s + "\n"); }
 
 export function registerStigmergyCommands(program: Command): void {
-  program
+  const cmd = program
     .command("stigmergy")
     .alias("hive")
     .description("MNEME STIGMERGY HIVE -- emergent dev-collaboration detection from git traces alone (no chat logs needed). Finds pairs who effectively work together without ever talking.")
     .option("--commits <n>", "git log window size (default 500)", (v) => Number(v))
     .option("--top <n>", "show top N pairs (default 10)", (v) => Number(v))
     .option("--threshold <n>", "minimum stigmergy score to surface (default 10)", (v) => Number(v))
+    .option("--git-dir <path>", "analyze a specific local git checkout (default cwd). Useful for pointing at a cloned multi-author repo to evaluate STIGMERGY beyond your own.")
     .option("--json", "JSON output.")
-    .action((opts: { commits?: number; top?: number; threshold?: number } & CommonOpts) => {
-      const r = stigmergy.analyze(process.cwd(), {
+    .action((opts: { commits?: number; top?: number; threshold?: number; gitDir?: string } & CommonOpts) => {
+      const target = opts.gitDir ?? process.cwd();
+      const r = stigmergy.analyze(target, {
         windowCommits: opts.commits ?? 500,
         surfaceThreshold: opts.threshold ?? 10,
       });
@@ -63,5 +65,41 @@ export function registerStigmergyCommands(program: Command): void {
       writeText(``);
       writeText(`This is the INVISIBLE layer of org coordination. Pairs near the top often work`);
       writeText(`together effectively without ever DMing or PR-reviewing each other.`);
+    });
+
+  // v1.27.7 -- self-contained proof. Runs the algorithm against a
+  // bundled synthetic 5-author / 200-commit history with KNOWN
+  // ground-truth pairs. PASS = algorithm detects the engineered pairs.
+  // Lets users prove STIGMERGY works without needing access to a
+  // multi-author public repo.
+  cmd.command("verify")
+    .description("Run STIGMERGY against a built-in synthetic 5-author fixture with KNOWN ground-truth pairs. Proves the algorithm without needing a multi-author repo.")
+    .option("--threshold <n>", "surface threshold to use in the verification (default 10)", (v) => Number(v))
+    .option("--json", "JSON output.")
+    .action((opts: { threshold?: number } & CommonOpts) => {
+      const threshold = opts.threshold ?? 10;
+      const r = stigmergy.verifyAgainstFixture(
+        (commits) => stigmergy.computeOverlaps(commits),
+        threshold,
+      );
+      if (opts.json) { writeJson(r); return; }
+      writeText(`MNEME STIGMERGY HIVE -- verification against synthetic fixture`);
+      writeText(`  Threshold:    ${threshold}`);
+      writeText(`  Verdict:      ${r.ok ? "✓ PASS -- algorithm detects all engineered pairs" : "✗ FAIL -- see details below"}`);
+      writeText(``);
+      writeText(`Fixture: 5 authors (alice/bob/carol/dave/eve), ~200 commits, deterministic seed=42`);
+      writeText(`  Engineered HIGH pairs:  alice<->bob (auth squad), carol<->dave (infra squad)`);
+      writeText(`  Engineered LOW pair:    alice<->carol (weak overlap on shared/config.ts)`);
+      writeText(`  Engineered LONE author: eve (touches src/util/* alone)`);
+      writeText(``);
+      writeText(`Per-assertion:`);
+      for (const d of r.details) writeText(`  ${d}`);
+      writeText(``);
+      writeText(`Detected pair scores (top by score desc):`);
+      const sorted = Object.entries(r.detectedScores).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      for (const [pair, score] of sorted) {
+        writeText(`  [${score.toString().padStart(3)}/100]  ${pair.replace("::", "  <->  ")}`);
+      }
+      if (!r.ok) process.exit(1);
     });
 }

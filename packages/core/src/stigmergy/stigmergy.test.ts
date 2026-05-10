@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { parseGitLog, computeOverlaps, analyze, DEFAULT_STIGMERGY_CONFIG } from "./index.js";
+import { parseGitLog, computeOverlaps, analyze, DEFAULT_STIGMERGY_CONFIG, buildFixture, verifyAgainstFixture } from "./index.js";
 import type { CommitFact } from "./types.js";
 
 let repo: string;
@@ -134,6 +134,58 @@ describe("computeOverlaps", () => {
     expect(DEFAULT_STIGMERGY_CONFIG.windowCommits).toBeGreaterThan(0);
     expect(DEFAULT_STIGMERGY_CONFIG.synchronyHours).toBeGreaterThan(0);
     expect(DEFAULT_STIGMERGY_CONFIG.carryOnDays).toBeGreaterThan(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// v1.27.7: synthetic fixture + verification harness
+// ─────────────────────────────────────────────────────────────────────────
+describe("v1.27.7 fixture + verifyAgainstFixture", () => {
+  it("buildFixture produces deterministic 5-author commits", () => {
+    const f1 = buildFixture(42);
+    const f2 = buildFixture(42);
+    expect(f1.commits.length).toBe(f2.commits.length);
+    expect(f1.commits[0]!.sha).toBe(f2.commits[0]!.sha);
+    expect(f1.commits[0]!.email).toBe(f2.commits[0]!.email);
+    const authors = new Set(f1.commits.map((c) => c.email));
+    expect(authors.size).toBe(5);
+    expect(authors.has("alice@example.com")).toBe(true);
+    expect(authors.has("eve@example.com")).toBe(true);
+  });
+
+  it("buildFixture has expected pairs declared", () => {
+    const f = buildFixture(42);
+    const highPairs = f.expectedPairs.filter((p) => p.band === "high");
+    expect(highPairs).toHaveLength(2);
+    expect(f.loneAuthors).toContain("eve@example.com");
+  });
+
+  it("verifyAgainstFixture passes -- algorithm detects engineered pairs", () => {
+    const r = verifyAgainstFixture(computeOverlaps);
+    expect(r.ok).toBe(true);
+    // alice+bob and carol+dave should both score high.
+    const ab = r.detectedScores["alice@example.com::bob@example.com"];
+    const cd = r.detectedScores["carol@example.com::dave@example.com"];
+    expect(ab).toBeDefined();
+    expect(cd).toBeDefined();
+    expect(ab!).toBeGreaterThanOrEqual(50);
+    expect(cd!).toBeGreaterThanOrEqual(50);
+  });
+
+  it("verifyAgainstFixture surfaces alice+carol below threshold (weak overlap)", () => {
+    const r = verifyAgainstFixture(computeOverlaps);
+    const ac = r.detectedScores["alice@example.com::carol@example.com"];
+    expect(ac).toBeDefined();
+    expect(ac!).toBeGreaterThan(0);
+    expect(ac!).toBeLessThan(30);
+  });
+
+  it("verifyAgainstFixture: eve never appears in a HIGH pair", () => {
+    const r = verifyAgainstFixture(computeOverlaps);
+    const eveKeys = Object.keys(r.detectedScores).filter((k) => k.includes("eve@example.com"));
+    for (const k of eveKeys) {
+      expect(r.detectedScores[k]!).toBeLessThan(50);
+    }
   });
 });
 

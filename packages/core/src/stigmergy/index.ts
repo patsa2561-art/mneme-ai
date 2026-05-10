@@ -21,6 +21,8 @@ import type {
 import { DEFAULT_STIGMERGY_CONFIG } from "./types.js";
 
 export * from "./types.js";
+export { buildFixture, verifyAgainstFixture } from "./fixture.js";
+export type { FixtureBundle, VerificationOutcome } from "./fixture.js";
 
 /**
  * Parse `git log --pretty=tformat:'<sha>|<email>|<isoDate>' --name-only`
@@ -118,32 +120,36 @@ export function computeOverlaps(
         const acc = get(a, b);
         acc.sharedFiles.add(filePath);
 
-        // Synchrony: any A-touch within SYNC_MS of any B-touch (or v/v).
+        // v1.27.7 -- count EVERY close (a, b) commit pair as a sync
+        // hit, not just one-per-file. This way 30 paired bursts on
+        // src/auth/login.ts yields 30 hits, not 1. Differentiates
+        // strong collaboration from incidental overlap.
         const aTouches = touches.filter((t) => t.email === a).map((t) => t.at);
         const bTouches = touches.filter((t) => t.email === b).map((t) => t.at);
-        let syncHit = false;
         for (const ta of aTouches) {
           for (const tb of bTouches) {
             if (Math.abs(ta - tb) <= SYNC_MS) {
-              syncHit = true;
+              acc.synchronyHits++;
               acc.coTouchTimes.push(Math.min(ta, tb));
-              break;
+              break; // count this A-commit once even if it syncs with multiple B-commits
             }
           }
-          if (syncHit) break;
         }
-        if (syncHit) acc.synchronyHits++;
 
-        // Carry-on: introducer was a, b touched within CARRY_MS; or v/v.
+        // v1.27.7 -- count EVERY post-introduction extension within
+        // CARRY_MS as a carry-on hit. Pre-fix this was at most 1 per
+        // file; now reflects actual extension volume.
         if (introducer) {
           const introducerEmail = introducer.email;
           const introTime = introducer.at;
           if (introducerEmail === a) {
-            const bExtended = bTouches.some((t) => t > introTime && t - introTime <= CARRY_MS);
-            if (bExtended) acc.carryOnHits++;
+            for (const t of bTouches) {
+              if (t > introTime && t - introTime <= CARRY_MS) acc.carryOnHits++;
+            }
           } else if (introducerEmail === b) {
-            const aExtended = aTouches.some((t) => t > introTime && t - introTime <= CARRY_MS);
-            if (aExtended) acc.carryOnHits++;
+            for (const t of aTouches) {
+              if (t > introTime && t - introTime <= CARRY_MS) acc.carryOnHits++;
+            }
           }
         }
       }

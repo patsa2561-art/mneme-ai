@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/core",
-  "version": "1.27.6",
+  "version": "1.27.7",
   "description": "Core indexing, retrieval, and graph engine for Mneme",
   "type": "module",
   "main": "./dist/index.js",
