@@ -89,6 +89,23 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
   const stats = props.liveStats;
   const isLive = !!props.liveStats;
 
+  // v1.26.5 -- when user clicks a tab, scroll the body into view so the
+  // content shift is obvious. Without this, in DEMO mode the user clicks
+  // "Realtime Feed" / "Cert Ledger" and the new content lands BELOW the
+  // fold; they think the tab didn't switch ("hang"). With scroll-on-click,
+  // the active panel always pops into view.
+  function selectTab(next: typeof tab): void {
+    setTab(next);
+    requestAnimationFrame(() => {
+      try {
+        const el = document.querySelector(".lab-body");
+        if (el && "scrollIntoView" in el) {
+          (el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      } catch { /* best-effort */ }
+    });
+  }
+
   const totalCertified = useMemo(
     () => vaccines.filter((v) => v.efficacy?.signature && v.efficacy.signature.length > 0).length,
     [vaccines],
@@ -136,10 +153,10 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
       </div>
 
       <nav className="lab-tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "atlas"} className={tab === "atlas" ? "active" : ""} onClick={() => setTab("atlas")}>Strain Atlas</button>
-        <button role="tab" aria-selected={tab === "pharmacopoeia"} className={tab === "pharmacopoeia" ? "active" : ""} onClick={() => setTab("pharmacopoeia")}>Pharmacopoeia</button>
-        <button role="tab" aria-selected={tab === "feed"} className={tab === "feed" ? "active" : ""} onClick={() => setTab("feed")}>Realtime Feed</button>
-        <button role="tab" aria-selected={tab === "cert"} className={tab === "cert" ? "active" : ""} onClick={() => setTab("cert")}>Cert Ledger</button>
+        <button role="tab" aria-selected={tab === "atlas"} className={tab === "atlas" ? "active" : ""} onClick={() => selectTab("atlas")}>🧬 Strain Atlas</button>
+        <button role="tab" aria-selected={tab === "pharmacopoeia"} className={tab === "pharmacopoeia" ? "active" : ""} onClick={() => selectTab("pharmacopoeia")}>💉 Pharmacopoeia</button>
+        <button role="tab" aria-selected={tab === "feed"} className={tab === "feed" ? "active" : ""} onClick={() => selectTab("feed")}>📡 Realtime Feed</button>
+        <button role="tab" aria-selected={tab === "cert"} className={tab === "cert" ? "active" : ""} onClick={() => selectTab("cert")}>🛡 Cert Ledger</button>
       </nav>
 
       <div className="lab-body">
@@ -185,11 +202,33 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
 
         {tab === "feed" && (
           <div className="realtime-feed">
+            <h3 className="lab-tab-title">📡 Realtime Feed — what live infection-catches look like</h3>
             {!stats || stats.recentScans.length === 0 ? (
-              <div className="empty-state">
-                {isLive
-                  ? "No scans yet. Run `mneme antivirus scan <draft>` from your terminal."
-                  : "Demo mode — load your repo to see real scan activity here."}
+              <div className="lab-empty-rich">
+                <p className="lab-empty-headline">
+                  {isLive
+                    ? "No scans yet on this repo."
+                    : "DEMO mode — this panel is empty because no real scans have run."}
+                </p>
+                <p className="lab-empty-sub">
+                  When you run <code>mneme antivirus scan ai-draft.txt</code>, this feed lights up
+                  with one row per AI claim that got checked, and a per-strain catch counter on the
+                  left. Live mode looks like this:
+                </p>
+                <pre className="lab-empty-mock">{`Per-strain catches
+  citatio_viridis      4    2026-05-10 14:23:01
+  api_phantasma        2    2026-05-10 14:01:18
+  depends_imaginarium  1    2026-05-10 13:55:42
+
+Recent scans
+  14:23:01   137 claims    4 caught    312ms
+  14:01:18    89 claims    2 caught    198ms
+  13:55:42    52 claims    1 caught    140ms`}</pre>
+                <p className="lab-empty-sub">
+                  Beehive analogy: each strain row is a cell in the hive. Catches are bees returning
+                  with pollen the colony can study. The Cert Ledger (next tab) is the queen's record
+                  of every certified vaccine.
+                </p>
               </div>
             ) : (
               <>
@@ -221,11 +260,19 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
 
         {tab === "cert" && (
           <div className="cert-ledger">
+            <h3 className="lab-tab-title">🛡 Cert Ledger — HMAC-signed vaccine efficacy proofs</h3>
             <p className="cert-intro">
               Every certified vaccine carries an HMAC-SHA256 signature over its
               benchmark result. Anyone can recompute the HMAC from
               <code> (vaccine_id, version, ranAt, totalCases, tp, tn, fp, fn) </code>
               keyed by the repo's <code>.mneme/antivirus/.bench-secret</code>.
+              {!isLive && (
+                <span className="cert-demo-callout">
+                  &nbsp;<strong>DEMO mode:</strong> the table below shows seed vaccines with no
+                  benchmark yet (signature column = "uncertified"). Run
+                  <code> mneme antivirus benchmark</code> to populate real HMAC signatures.
+                </span>
+              )}
             </p>
             <table className="cert-table">
               <thead>

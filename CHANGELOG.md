@@ -8,6 +8,86 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.5] — 2026-05-10
+
+**Lab tab UX fix + Jack-the-Giant-Slayer competitive strategy doc.**
+
+### UX bug -- "lab tabs hang when switching"
+
+User report: clicking Realtime Feed / Cert Ledger in DEMO mode
+appeared to do nothing. Root cause: tabs DID switch, but the new
+content (an empty-state line) landed below the visual fold and was
+shorter than the lab-hero block above. From a screenshot review, the
+tab change was indistinguishable from a no-op.
+
+### Fix (3 layers)
+
+  1. `selectTab()` helper in `AntivirusLabView` (and inline equivalent
+     in `RetrievalLabView`) calls `scrollIntoView({behavior:"smooth",
+     block:"start"})` on the `.lab-body` after every tab click. The
+     active panel pops into view -- the user always sees the change.
+
+  2. Per-tab title + emoji on every lab tab:
+     - 🧬 Strain Atlas
+     - 💉 Pharmacopoeia
+     - 📡 Realtime Feed
+     - 🛡 Cert Ledger
+     - 🏆 Leaderboard
+     - 📐 Pareto Frontier
+     - ⚙ All Configs
+
+  3. Realtime Feed empty-state in DEMO mode now shows a rich
+     illustrative mock + the **Beehive analogy** ("each strain row is
+     a cell in the hive. Catches are bees returning with pollen the
+     colony can study"). Sets up the v1.27 BSL-4 / Raccoon City lab
+     vision.
+
+  4. Cert Ledger DEMO callout: explicit "this table shows seed vaccines
+     with no benchmark yet (signature column = 'uncertified'). Run
+     `mneme antivirus benchmark` to populate real HMAC signatures."
+
+### NEW: [Jack the Giant Slayer competitive strategy](./docs/JACK_THE_GIANT_SLAYER_STRATEGY.md)
+
+Strategy document responding to user's brief on competitive
+positioning:
+
+  - Honest resource asymmetry table (we have 1 dev vs giants' 600+).
+  - Competitive map of the 6 prior-art categories (CLAUDE.md, MCP
+    pull, editor-side context, daemon, update-notifier, per-vendor
+    memory) + each one's soft underbelly.
+  - Mneme's wedge: **giants compete on L0-L3; we define L4-L8.**
+  - 6 asymmetric advantages a giant can't replicate quickly:
+     1. Push not pull (pulse + hooks + AUTO-ACTION)
+     2. Cross-vendor lineage (DNA travels across Claude/Cursor/...)
+     3. Self-modifying source (`mneme evolve`)
+     4. PRECOG precognition cache
+     5. The OS AI Layer model itself (the taxonomy is the moat)
+     6. Free + open + zero telemetry
+  - **Fission strategy** for global brain compounding:
+     1. Genome Pool packager (shipped v1.26.4)
+     2. Central upload + dedup + search (planned v1.28)
+     3. Self-fertilizing nucleus (planned v1.28)
+     4. Cross-vendor wisdom propagation
+     5. Vaccine combinatorics (BSL-4 lab metaphor)
+  - **Beehive UX** vision for Antivirus Lab: hex grid, queen panel,
+    combinator chamber, outbreak feed (planned v1.27/v1.28).
+  - 6 operating principles distilled from the v1.20 -> v1.26 sprint.
+  - 12-month success metrics target.
+
+### Files changed
+
+  - `packages/web/src/components/AntivirusLabView.tsx` -- selectTab(),
+    per-tab titles, rich empty-state with Beehive analogy, Cert demo callout
+  - `packages/web/src/components/RetrievalLabView.tsx` -- inline
+    scroll-on-tab-click + per-tab titles
+  - `packages/web/src/styles/global.css` -- `.lab-tab-title`,
+    `.lab-empty-rich`, `.lab-empty-mock`, `.cert-demo-callout`
+  - `docs/JACK_THE_GIANT_SLAYER_STRATEGY.md` (NEW)
+
+### Test coverage
+
+  - 4945/4945 still passing. No new tests (UX-only patch).
+
 ## [1.26.4] — 2026-05-10
 
 **The "OS AI Layer" release.** A new 9-layer textbook for AI tooling

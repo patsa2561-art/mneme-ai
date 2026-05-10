@@ -136,9 +136,18 @@ export function RetrievalLabView(props: RetrievalLabViewProps) {
       </div>
 
       <nav className="lab-tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "leaderboard"} className={tab === "leaderboard" ? "active" : ""} onClick={() => setTab("leaderboard")}>Leaderboard</button>
-        <button role="tab" aria-selected={tab === "pareto"} className={tab === "pareto" ? "active" : ""} onClick={() => setTab("pareto")}>Pareto Frontier</button>
-        <button role="tab" aria-selected={tab === "configs"} className={tab === "configs" ? "active" : ""} onClick={() => setTab("configs")}>All Configs</button>
+        <button role="tab" aria-selected={tab === "leaderboard"} className={tab === "leaderboard" ? "active" : ""} onClick={() => {
+          setTab("leaderboard");
+          requestAnimationFrame(() => { try { document.querySelector(".lab-body")?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { /* */ } });
+        }}>🏆 Leaderboard</button>
+        <button role="tab" aria-selected={tab === "pareto"} className={tab === "pareto" ? "active" : ""} onClick={() => {
+          setTab("pareto");
+          requestAnimationFrame(() => { try { document.querySelector(".lab-body")?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { /* */ } });
+        }}>📐 Pareto Frontier</button>
+        <button role="tab" aria-selected={tab === "configs"} className={tab === "configs" ? "active" : ""} onClick={() => {
+          setTab("configs");
+          requestAnimationFrame(() => { try { document.querySelector(".lab-body")?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch { /* */ } });
+        }}>⚙ All Configs</button>
       </nav>
 
       <div className="lab-body">
