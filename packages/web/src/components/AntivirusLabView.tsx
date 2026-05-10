@@ -13,6 +13,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { DataModeBadge } from "./DataModeBadge";
 
 interface StrainCard {
   id: string;
@@ -81,6 +82,10 @@ interface AntivirusLabViewProps {
     recentScans: ScanCard[];
   };
   livePharmacopoeia?: VaccineCard[];
+  /** v1.27.1: explicit repo-data signal so badge can distinguish demo-repo from your-repo. */
+  syntheticRepo?: boolean;
+  liveMode?: boolean;
+  liveSource?: string;
 }
 
 export function AntivirusLabView(props: AntivirusLabViewProps) {
@@ -121,7 +126,14 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
         <h2>💉 Mneme Antivirus Lab</h2>
         <p className="lab-tagline">
           The first MCP server in the world that ships a hallucination antiviral.
-          {isLive ? <span className="lab-badge live">● LIVE — your repo</span> : <span className="lab-badge demo">◉ DEMO — synthetic seed data</span>}
+          &nbsp;
+          <DataModeBadge
+            syntheticRepo={!!props.syntheticRepo}
+            liveMode={!!props.liveMode}
+            liveSource={props.liveSource}
+            featureHasData={isLive}
+            featureLabel="antivirus scans"
+          />
         </p>
         {!isLive && (
           <p className="lab-hero">
@@ -130,12 +142,14 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
             those hallucinations BEFORE they merge — using HMAC-signed vaccines with
             measured precision/recall/F1.
             <br />
-            <strong>How to use:</strong> run <code>mneme antivirus scan &lt;ai-draft.txt&gt;</code>
-            from your terminal — every claim gets checked against your real git history.
+            <strong>How to use on YOUR repo:</strong> from your terminal run <code>mneme antivirus scan &lt;ai-draft.txt&gt;</code>
+            — every claim gets checked against your real git history. Then run
+            <code> mneme antivirus benchmark</code> to score the vaccines.
             <br />
-            <strong>Where the data below comes from:</strong> 8 seed strains from the
-            built-in pharmacopoeia (no benchmarks yet — F1 shows "—"). Run
-            <code> mneme antivirus benchmark</code> to populate real efficacy numbers.
+            <strong>Numbers below:</strong> 8 seed strains from the built-in pharmacopoeia.
+            F1 = "—" because no benchmarks have run yet. {props.liveMode
+              ? "These are illustrative ONLY -- they describe what Mneme catches in general, NOT what's been caught in your repo."
+              : "When you load your repo via the header (\"Load my repo\"), the labels above will tell you when these become real numbers from your scans."}
           </p>
         )}
         <div className="lab-summary-strip">

@@ -3933,3 +3933,47 @@ body::before {
 }
 .cert-demo-callout strong { color: #fde047; }
 
+
+/* v1.27.1 -- DataModeBadge: 3 distinct visual states so the user always
+   knows whether they're looking at demo data, their-repo-no-feature-data,
+   or their-repo-with-real-feature-data. Replaces the confusing single
+   "DEMO -- synthetic seed data" label that conflated repo-data with
+   feature-usage. */
+.data-mode-badge {
+  display: inline-block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+.data-mode-badge.state-demo-repo {
+  background: rgba(251,191,36,0.20);
+  color: #fde047;
+  border: 1.5px solid rgba(251,191,36,0.55);
+  text-shadow: 0 0 6px rgba(251,191,36,0.30);
+}
+.data-mode-badge.state-feature-unused {
+  background: rgba(56,189,248,0.16);
+  color: #7dd3fc;
+  border: 1.5px solid rgba(56,189,248,0.55);
+}
+.data-mode-badge.state-live-with-data {
+  background: rgba(52,211,153,0.18);
+  color: #6ee7b7;
+  border: 1.5px solid rgba(52,211,153,0.55);
+}
+.data-mode-badge.state-loaded {
+  background: rgba(167,139,250,0.18);
+  color: var(--violet-100);
+  border: 1.5px solid rgba(167,139,250,0.45);
+}
+
+/* v1.27.1 -- when the right-side aside is hidden (lab/scrubber/dna views),
+   the canvas should expand to full width so dense tables don't squish. */
+.app-main:not(:has(.app-detail)) .app-canvas {
+  grid-column: 1 / -1;
+}
+

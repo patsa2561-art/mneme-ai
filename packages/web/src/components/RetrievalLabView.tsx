@@ -9,6 +9,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { DataModeBadge } from "./DataModeBadge";
 
 interface RetrievalConfigSeed {
   id: string; label: string; embedder: string; rrfK: number;
@@ -43,6 +44,10 @@ interface RetrievalLabViewProps {
   liveLeaderboard?: LeaderboardSeed[];
   liveActive?: string;
   liveTotalTrials?: number;
+  /** v1.27.1: explicit repo-data signal so badge can distinguish demo-repo from your-repo. */
+  syntheticRepo?: boolean;
+  liveMode?: boolean;
+  liveSource?: string;
 }
 
 export function RetrievalLabView(props: RetrievalLabViewProps) {
@@ -86,21 +91,31 @@ export function RetrievalLabView(props: RetrievalLabViewProps) {
         <h2>🧪 Mneme Retrieval Lab</h2>
         <p className="lab-tagline">
           Self-tuning RAG: tries multiple search configs in the background and picks the best one for YOUR repo.
-          {isLive ? <span className="lab-badge live">● LIVE — your repo</span> : <span className="lab-badge demo">◉ DEMO — synthetic seed data</span>}
+          &nbsp;
+          <DataModeBadge
+            syntheticRepo={!!props.syntheticRepo}
+            liveMode={!!props.liveMode}
+            liveSource={props.liveSource}
+            featureHasData={isLive && totalTrials > 0}
+            featureLabel="retrieval trials"
+          />
         </p>
-        {!isLive && (
+        {(!isLive || totalTrials === 0) && (
           <p className="lab-hero">
             <strong>What this is:</strong> most RAG systems pick one search config and freeze it.
             Mneme runs 8 candidate arms (different embedder × reranker × HyDE × RRF k × weight combos)
             and uses UCB1 multi-armed bandit to keep trying — so your retrieval gets better the more
             you use it.
             <br />
-            <strong>How to use:</strong> from your terminal run <code>mneme retrieval tune --rounds 3</code> to
-            seed real trials, then any <code>mneme.search()</code> tool call uses the winning config.
+            <strong>How to use on YOUR repo:</strong> from your terminal run <code>mneme retrieval tune --rounds 3</code> —
+            this seeds real trials AGAINST YOUR REPO's content. Then any <code>mneme.search()</code>
+            tool call uses the winning config.
             <br />
-            <strong>Where the data below comes from:</strong> 8 seed configs from the bundled
-            registry — composite/latency all 0 because no trials have run yet on this demo. The
-            UCB1 ∞ values mean "untried — try me first".
+            <strong>Numbers below:</strong> 8 seed configs from the bundled registry. Composite /
+            P / R / NDCG / Latency = 0 because no trials have run on this repo yet (UCB1 = ∞ means
+            "untried — try me first"). {props.liveMode
+              ? "These configs are illustrative ONLY -- the columns will fill in real numbers AFTER you run `mneme retrieval tune`."
+              : "When you load your real repo + run `mneme retrieval tune`, these columns fill with measurements from YOUR data."}
           </p>
         )}
         <div className="lab-summary-strip">

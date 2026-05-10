@@ -8,6 +8,94 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.1] — 2026-05-10
+
+**Web demo clarity fix: the "is this MY data or a demo?" confusion
+killed once and for all + lab content now uses full canvas width.**
+
+### The painpoint
+
+Even the maintainer was confused (real quote): *"ผม upload git เข้ามา
+แล้ว แต่ผมก็ไม่รู้ว่าสรุปข้อมูลนี้มัน demo อยู่หรือใช้ข้อมูลจริง เพราะ
+มันมีคำว่า demo เช่น DEMO synthetic seed data"*.
+
+### Root cause
+
+Two separate "demo" concepts were collapsed into ONE confusing label.
+
+  1. **DEMO REPO** = the loaded git repo is the bundled synthetic
+     example, not the user's repo.
+  2. **DEMO FEATURE** = the user's REAL repo is loaded, but the lab
+     feature (antivirus scans / retrieval trials / ecosystem detection)
+     hasn't been run yet, so the numbers shown are illustrative seed
+     data.
+
+When a user pasted fdroid/fdroidclient (LIVE GitLab data confirmed in
+the header pill), the lab views STILL said "DEMO -- synthetic seed
+data" because they'd never received the live-mode signal from App.tsx.
+The lab views were comparing only the existence of `liveStats` /
+`liveLeaderboard` -- ignoring whether the user had loaded a real repo.
+
+### Fix
+
+  1. **New `<DataModeBadge/>` component** with 3 visually distinct
+     states:
+       - `◉ DEMO REPO -- not your repo` (amber + glow)
+       - `⏳ YOUR REPO -- <feature> not yet run · numbers below are examples` (sky-blue)
+       - `● YOUR REPO -- live <feature> data` (sage)
+
+  2. **Threaded `syntheticRepo` + `liveMode` + `liveSource` props from
+     App.tsx down** to AntivirusLabView, RetrievalLabView,
+     EcosystemsView. Previously these views ran in isolation and had
+     no idea what was loaded at the top level.
+
+  3. **Per-lab plain-English copy** updated to reflect the user's
+     state. Example: when liveMode + zero trials, the Retrieval Lab
+     hero now reads "Your repo IS loaded -- the columns will fill in
+     real numbers AFTER you run `mneme retrieval tune`" instead of
+     "no trials have run yet on this demo."
+
+  4. **EcosystemsView** specifically: when in LIVE mode and only some
+     packs detected, the banner now explicitly says "the OTHER N
+     cards in the list are illustrative only -- they show what Mneme
+     WOULD ship if your repo used those frameworks". Killed the
+     confusion the user flagged about clicking "Stripe Payments" on
+     fdroidclient and not knowing if it was real.
+
+### Layout fix: right-sidebar squish
+
+The right-side `<aside class="app-detail">` was being shown on EVERY
+view, including lab views that don't have a "selected entity" model.
+Result: dense tables (Retrieval leaderboard, Cert ledger) and the
+GitLab-API repo summary on the right got squished into a narrow
+column.
+
+**Fix:** the aside is now only mounted on graph / atrophy / influence
+views (where a selected author makes sense). On antivirus / retrieval /
+ecosystems / scrubber / dna views, the canvas takes full width via
+`grid-column: 1 / -1`. Tables breathe; scatter plots don't clip;
+GitLab/GitHub summary boxes have proper space.
+
+### Files changed
+
+  - `packages/web/src/components/DataModeBadge.tsx` (NEW)
+  - `packages/web/src/App.tsx` -- thread props down + conditional aside
+  - `packages/web/src/components/AntivirusLabView.tsx` -- adopt badge + clearer hero
+  - `packages/web/src/components/RetrievalLabView.tsx` -- adopt badge + clearer hero
+  - `packages/web/src/components/EcosystemsView.tsx` -- adopt badge + clearer banner
+  - `packages/web/src/styles/global.css` -- 3 new badge styles + canvas-full-width selector
+
+### Test coverage
+
+  - 4965/4965 still passing (UX-only patch).
+
+### Net effect
+
+Open the web demo, look at any lab tab, glance at the badge: you
+INSTANTLY know whether you're looking at the bundled demo, your real
+repo with no feature data, or your real repo with measured feature
+data. No more "wait... is this mine?".
+
 ## [1.27.0] — 2026-05-10
 
 **MNEME EVOLVE Phase 3 + Phase 4 + Phase 5 -- the closed-loop

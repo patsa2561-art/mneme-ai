@@ -229,15 +229,28 @@ export function App() {
         })()}
         <section className="app-canvas" aria-label={`${view} view`}>
           {view === "ecosystems" ? (
-            <EcosystemsView data={raw ?? null} />
+            <EcosystemsView
+              data={raw ?? null}
+              syntheticRepo={!!raw?._demo_synthetic}
+              liveMode={!!raw?._liveMode}
+              liveSource={raw?._liveSource}
+            />
           ) : view === "dna" ? (
             <DnaView data={raw ?? null} />
           ) : view === "scrubber" ? (
             <ScrubberView />
           ) : view === "antivirus" ? (
-            <AntivirusLabView />
+            <AntivirusLabView
+              syntheticRepo={!!raw?._demo_synthetic}
+              liveMode={!!raw?._liveMode}
+              liveSource={raw?._liveSource}
+            />
           ) : view === "retrieval" ? (
-            <RetrievalLabView />
+            <RetrievalLabView
+              syntheticRepo={!!raw?._demo_synthetic}
+              liveMode={!!raw?._liveMode}
+              liveSource={raw?._liveSource}
+            />
           ) : !scrubbed ? (
             <EmptyState onLoadClick={() => setLoadOpen(true)} />
           ) : view === "graph" ? (
@@ -262,13 +275,20 @@ export function App() {
           )}
         </section>
 
-        <aside className="app-detail" aria-label="Detail panel">
-          <DetailPanel
-            passport={selectedPassport}
-            fallbackData={scrubbed}
-            onClose={() => setSelectedEmail(null)}
-          />
-        </aside>
+        {/* v1.27.1 -- the right-side detail panel only makes sense for
+            views that have a "selected entity" (graph / atrophy / influence).
+            Full-content lab views (antivirus / retrieval / ecosystems /
+            scrubber / dna) get the full canvas width so dense tables and
+            scatter plots aren't squished into a narrow column. */}
+        {view !== "antivirus" && view !== "retrieval" && view !== "ecosystems" && view !== "scrubber" && view !== "dna" && (
+          <aside className="app-detail" aria-label="Detail panel">
+            <DetailPanel
+              passport={selectedPassport}
+              fallbackData={scrubbed}
+              onClose={() => setSelectedEmail(null)}
+            />
+          </aside>
+        )}
       </main>
 
       {/* Wisdom panels now live inside the left-side WisdomDrawer (above). */}

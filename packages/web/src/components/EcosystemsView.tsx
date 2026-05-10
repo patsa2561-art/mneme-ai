@@ -11,9 +11,14 @@
 import { useState, useMemo } from "react";
 import type { NervousSystemData } from "../types";
 import { detectEcosystems } from "../lib/detectEcosystems";
+import { DataModeBadge } from "./DataModeBadge";
 
 interface Props {
   data: NervousSystemData | null;
+  /** v1.27.1: explicit repo-data signals so badge can distinguish demo-repo from your-repo. */
+  syntheticRepo?: boolean;
+  liveMode?: boolean;
+  liveSource?: string;
 }
 
 interface PackTool {
@@ -131,7 +136,7 @@ const PACKS: Pack[] = [
   },
 ];
 
-export function EcosystemsView({ data }: Props) {
+export function EcosystemsView({ data, syntheticRepo, liveMode, liveSource }: Props) {
   const [openId, setOpenId] = useState<string>("stripe");
   const open = PACKS.find((p) => p.id === openId);
 
@@ -147,7 +152,17 @@ export function EcosystemsView({ data }: Props) {
   return (
     <div className="ecosystems-view">
       <div className="eco-intro">
-        <h2>🧬 Dynamic MCP — every other server is static. Mneme is repo-shaped.</h2>
+        <h2>
+          🧬 Dynamic MCP — every other server is static. Mneme is repo-shaped.
+          &nbsp;
+          <DataModeBadge
+            syntheticRepo={!!syntheticRepo}
+            liveMode={!!liveMode}
+            liveSource={liveSource}
+            featureHasData={isLiveDetection}
+            featureLabel="ecosystem detection"
+          />
+        </h2>
         {isLiveDetection ? (
           <p className="livecheck-banner">
             <span className="livecheck-pill">● LIVE DETECTION</span>{" "}
@@ -166,15 +181,18 @@ export function EcosystemsView({ data }: Props) {
                 </span>
               );
             })}
-            . Click them below to see the MCP tools your AI agent would receive.
+            . The OTHER {PACKS.length - detected.length} cards in the list below are
+            <strong> illustrative only</strong> -- they show what Mneme <em>would</em> ship
+            if your repo used those frameworks. Click any card to inspect.
           </p>
         ) : (
           <p className="showcase-banner">
-            <span className="showcase-pill">DEMO DATA · NOT YOUR REPO</span> This tab
+            <span className="showcase-pill">SHOWCASE — bundled packs only</span> This tab
             shows the <b>8 bundled ecosystem packs Mneme ships with (v1.15.0+)</b>.
-            Detection here is hardcoded for the demo — when you load a real repo via
-            the URL paste path or run <code>mneme ecosystem</code> via your AI agent,
-            Mneme detects the packs <em>your</em> repo actually triggers.
+            None of the cards below were detected from your repo's actual code.
+            {liveMode
+              ? " (Your repo IS loaded -- the detector just didn't match any of the 8 known packs against your imports/deps.)"
+              : " Click 'Load my repo' in the header (or paste a GitHub/GitLab URL) so the detector can pick out which packs your repo actually uses."}
           </p>
         )}
         <p>
