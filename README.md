@@ -98,7 +98,7 @@ Your AI coding tool is brilliant but **amnesiac**. It never saw why your team ro
                   ┌─ L8  Governance   audit · constitution · court
                   ├─ L7  Wisdom       regret · evolve · provenance
    Mneme ────────┼─ L6  Awareness    pulse · hooks · push
-   (open, MIT)    ├─ L5  Intent       HyDE · DNA search · smart_do
+                  ├─ L5  Intent       HyDE · DNA search · smart_do
                   └─ L4  Memory       lineage · atrophy · PRECOG · genome
                   ─── (above is where Mneme lives) ───
                      L0 – L3          silicon · model · inference · MCP
@@ -121,16 +121,16 @@ A self-improving memory + awareness layer for AI coding. It sits ON TOP of any m
 
 | | |
 |---|---|
-| **Genome Pool** | Opt-in cross-user wisdom sharing — every install makes the global brain smarter (PII-scrubbed, MIT). |
+| **Genome Pool** | Opt-in cross-user wisdom sharing — every install makes the global brain smarter (PII-scrubbed, opt-in). |
 | **STIGMERGY HIVE** | Emergent dev-collaboration mapping from git traces alone — surfaces invisible coordination. |
 | **Mnemiosphere** | Public AI-trust globe — anonymized verdict counts, vendor-neutral reputation. |
 | **Truth Bonds** | Cryptographic reputation staking for AI vendors — economic accountability for hallucination. |
 
 Each row maps to exactly one layer in the OS AI Layer model. Each ships under the same audit guarantees.
 
-> **On by default · free · local · MIT.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Zero telemetry. Works offline.
+> **On by default · free · local · open-source.** AES-256-GCM · HMAC-SHA-256 · Ed25519 · scrypt — all FIPS-approved. Zero telemetry. Works offline.
 
-> **5015 tests · 172+ MCP tools · MIT · works offline.**
+> **5015 tests · 172+ MCP tools · open-source · works offline.**
 
 </details>
 
