@@ -1,5 +1,6 @@
 import type { ViewMode } from "../types";
 import { fmtDate } from "../lib/scrub";
+import { FontSizePicker } from "./FontSizePicker";
 
 interface HeaderProps {
   repoName: string;
@@ -13,15 +14,19 @@ interface HeaderProps {
   liveSource?: string;
 }
 
+// v1.26.2: hints rewritten in PLAIN ENGLISH (1-line, no jargon) so a
+// non-engineer can understand what each menu is in under 5 seconds.
+// The full multi-line explanation lives in <ViewExplainer/> below the
+// header.
 const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string }> = [
-  { id: "graph", label: "Nervous System", symbol: "✦", hint: "Force-directed graph of authors and latent collaboration" },
-  { id: "atrophy", label: "Atrophy", symbol: "⏳", hint: "Files × authors knowledge heatmap" },
-  { id: "influence", label: "Influence", symbol: "♛", hint: "PageRank ladder of cultural alphas" },
-  { id: "ecosystems", label: "Ecosystems", symbol: "🧬", hint: "Per-repo MCP tools spawned by ecosystem detection" },
-  { id: "dna", label: "Code Search (DNA)", symbol: "🎯", hint: "Ghost-Sniper Verifier — strict-mode 16-strand search" },
-  { id: "scrubber", label: "Scrubber", symbol: "🧼", hint: "Live prompt-injection defence — paste hostile text, see scrubbed" },
-  { id: "antivirus", label: "Antivirus Lab", symbol: "🧬", hint: "Mneme Vaccine Lab — strain atlas, pharmacopoeia, realtime infection feed" },
-  { id: "retrieval", label: "Retrieval Lab", symbol: "🎯", hint: "Self-tuning RAG — UCB1 leaderboard, Pareto frontier, cross-encoder + HyDE + multi-embedder configs" },
+  { id: "graph",      label: "Nervous System", symbol: "✦",   hint: "Map of who knows what in your repo." },
+  { id: "atrophy",    label: "Atrophy",        symbol: "⏳",  hint: "Files where the original author is gone or hasn't touched it in a long time." },
+  { id: "influence",  label: "Influence",      symbol: "♛",   hint: "Who actually moves the codebase — ranked by code still alive in HEAD." },
+  { id: "ecosystems", label: "Ecosystems",     symbol: "🧬",  hint: "Frameworks/libraries your repo uses — and the MCP tools Mneme spawns for each." },
+  { id: "dna",        label: "Code Search",    symbol: "🎯",  hint: "Search code by meaning, not keywords (16-strand DNA engine)." },
+  { id: "scrubber",   label: "Scrubber",       symbol: "🧼",  hint: "Live prompt-injection defence — paste hostile text, watch it get neutralised." },
+  { id: "antivirus",  label: "Antivirus Lab",  symbol: "💉",  hint: "Catches AI hallucinations (phantom commits, ghost functions, fake packages) before they merge." },
+  { id: "retrieval",  label: "Retrieval Lab",  symbol: "🧪",  hint: "Self-tuning RAG — Mneme tries multiple search configs and picks the best one for your repo." },
 ];
 
 export function Header({
@@ -51,7 +56,14 @@ export function Header({
             generated {fmtDate(Date.parse(generatedAt))}
           </span>
         )}
-        {synthetic && <span className="synthetic-pill">synthetic demo</span>}
+        {synthetic && (
+          <span
+            className="synthetic-pill"
+            title="This is seed/synthetic data, NOT your repo. Click 'Load my repo' to render real numbers."
+          >
+            ◉ DEMO DATA — not your repo
+          </span>
+        )}
         {liveMode && (
           <span
             className="live-pill"
@@ -79,6 +91,7 @@ export function Header({
       </nav>
 
       <div className="header-actions">
+        <FontSizePicker />
         <a
           className="version-pill"
           href={`https://github.com/patsa2561-art/mneme-ai/releases/tag/v${__APP_VERSION__}`}

@@ -83,11 +83,26 @@ export function RetrievalLabView(props: RetrievalLabViewProps) {
   return (
     <div className="retrieval-lab antivirus-lab">
       <div className="lab-header">
-        <h2>🎯 Mneme Retrieval Lab</h2>
+        <h2>🧪 Mneme Retrieval Lab</h2>
         <p className="lab-tagline">
-          Self-tuning RAG: UCB1 over candidate arms (embedder × reranker × HyDE × RRF k × weight). The auto-tuner runs trials in the background; the active config is what every search() call uses.
-          {isLive ? <span className="lab-badge live"> · LIVE</span> : <span className="lab-badge demo"> · DEMO</span>}
+          Self-tuning RAG: tries multiple search configs in the background and picks the best one for YOUR repo.
+          {isLive ? <span className="lab-badge live">● LIVE — your repo</span> : <span className="lab-badge demo">◉ DEMO — synthetic seed data</span>}
         </p>
+        {!isLive && (
+          <p className="lab-hero">
+            <strong>What this is:</strong> most RAG systems pick one search config and freeze it.
+            Mneme runs 8 candidate arms (different embedder × reranker × HyDE × RRF k × weight combos)
+            and uses UCB1 multi-armed bandit to keep trying — so your retrieval gets better the more
+            you use it.
+            <br />
+            <strong>How to use:</strong> from your terminal run <code>mneme retrieval tune --rounds 3</code> to
+            seed real trials, then any <code>mneme.search()</code> tool call uses the winning config.
+            <br />
+            <strong>Where the data below comes from:</strong> 8 seed configs from the bundled
+            registry — composite/latency all 0 because no trials have run yet on this demo. The
+            UCB1 ∞ values mean "untried — try me first".
+          </p>
+        )}
         <div className="lab-summary-strip">
           <div className="lab-stat"><div className="lab-stat-num">{entries.length}</div><div className="lab-stat-label">candidate arms</div></div>
           <div className="lab-stat"><div className="lab-stat-num">{totalTrials}</div><div className="lab-stat-label">total trials</div></div>

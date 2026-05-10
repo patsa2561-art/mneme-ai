@@ -18,7 +18,30 @@ import { MetricsTopBar } from "./components/MetricsTopBar";
 import { LoadDialog } from "./components/LoadDialog";
 import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
+import { ViewExplainer } from "./components/ViewExplainer";
 import { computeTimeBounds, scrubData } from "./lib/scrub";
+
+// v1.26.2: per-view "what's new since v1.24" callouts shown inside the
+// ViewExplainer strip, so users can see the latest features without
+// hunting through the changelog.
+const VIEW_CALLOUTS: Partial<Record<ViewMode, string[]>> = {
+  ecosystems: [
+    "v1.25.0 GraphRAG: file-to-community detection picks the right MCP tool slice for your query",
+    "v1.25.1 Late-chunking embedder (MNEME_LATE_CHUNKING=1) for cross-chunk context",
+  ],
+  antivirus: [
+    "v1.24.0 ANTIVIRUS: world's first MCP server with hallucination antiviral",
+    "v1.24.1 Vaccine bug fixed; HMAC-signed efficacy benchmarks",
+  ],
+  retrieval: [
+    "v1.25.0 UCB1 multi-armed bandit picks best retrieval config per query",
+    "v1.25.1 Cross-encoder reranker + HyDE + multi-embedder + warmup",
+    "v1.25.2 Pulse + hooks installer (and v1.26.1 fixed broken Claude Code hook schema)",
+  ],
+  graph: [
+    "v1.26.0 12-path autonomy bridge: Mneme can now reach you outside the AI client",
+  ],
+};
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") + "/";
 
@@ -169,6 +192,17 @@ export function App() {
           onPlayToggle={() => setPlaying((p) => !p)}
         />
       )}
+
+      {/* v1.26.2 — always-visible plain-English explanation of the
+          active view, with prominent DEMO/LIVE indicator. Mounted above
+          the metrics strip so users see "what is this menu" first. */}
+      <ViewExplainer
+        view={view}
+        synthetic={!!raw?._demo_synthetic}
+        liveMode={!!raw?._liveMode}
+        liveSource={raw?._liveSource}
+        callouts={VIEW_CALLOUTS[view]}
+      />
 
       {/* v1.19.3 — Live metrics + caveats in a horizontal strip ABOVE the
           main content. Always visible, no scroll, no drawer to open. */}

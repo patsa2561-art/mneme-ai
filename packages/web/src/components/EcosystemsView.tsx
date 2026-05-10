@@ -219,8 +219,17 @@ export function EcosystemsView({ data }: Props) {
               </div>
             </header>
 
+            {isLiveDetection && !detectedIds.has(open.id) && (
+              <div className="eco-undetected-warning" role="alert">
+                <strong>◉ Not detected in your repo.</strong> The tools and tribal-knowledge example
+                below are illustrative only — they show what Mneme <em>would</em> ship if you used
+                {" "}{open.displayName}. To see your repo's real ecosystems, look at the LIVE
+                DETECTION banner above (or click any "● live" tab in the list).
+              </div>
+            )}
+
             <section className="eco-tools-section">
-              <h4>MCP tools your AI agent receives</h4>
+              <h4>MCP tools your AI agent receives{isLiveDetection && !detectedIds.has(open.id) ? " (example — not active for your repo)" : ""}</h4>
               <ul className="eco-tool-list">
                 {open.tools.map((t) => (
                   <li key={t.name} className="eco-tool">

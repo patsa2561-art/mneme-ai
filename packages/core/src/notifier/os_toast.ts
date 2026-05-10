@@ -1,13 +1,18 @@
 /**
  * Path 1 -- OS-level toast notification.
  *
- *   Windows: BurntToast (PowerShell module) OR fall back to msg.exe
- *            OR fall back to PowerShell New-BurntToastNotification
- *            shell-out via powershell.exe -Command.
+ *   Windows: WinRT ToastNotification via PowerShell (silent, non-modal)
  *   macOS:   `osascript -e 'display notification ...'`
  *   Linux:   `notify-send` (libnotify, ships with most desktops)
  *
  * Zero external npm deps. All shells out via spawnSync. Best-effort.
+ *
+ * v1.26.2: REMOVED the `msg.exe` Windows fallback. msg.exe shows a
+ * MODAL Windows MessageBox ("Message from User HH:MM") that blocks
+ * the user's foreground until they click OK -- exactly the opposite
+ * of what a "toast" should do. If WinRT fails on this box, we now
+ * silently report ok=false and let other notifier channels (mobile
+ * push, agent files, voice) carry the notice instead.
  */
 
 import { spawnSync } from "node:child_process";
@@ -78,11 +83,12 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $XmlDocument
   if (r.status === 0) {
     return { notifierId: "os-toast", ok: true, ms: Date.now() - t0 };
   }
-  // Fallback: msg.exe (visible only when interactive session present).
-  const r2 = spawnSync("msg.exe", ["*", `${n.title}: ${n.body.slice(0, 100)}`],
-    { encoding: "utf8", timeout: 3000 });
-  if (r2.status === 0) return { notifierId: "os-toast", ok: true, ms: Date.now() - t0, detail: "msg.exe-fallback" };
-  return { notifierId: "os-toast", ok: false, ms: Date.now() - t0, error: (r.stderr || r2.stderr || "powershell + msg.exe both failed").slice(0, 200) };
+  // No msg.exe fallback (v1.26.2): msg.exe shows a MODAL MessageBox
+  // that blocks the user's foreground until they click OK. We refuse
+  // to do that for a "toast" channel. If WinRT failed (rare on Win10+),
+  // report ok=false; other notifier channels (mobile push, agent
+  // files, voice) will carry the notice instead.
+  return { notifierId: "os-toast", ok: false, ms: Date.now() - t0, error: (r.stderr || "WinRT toast failed; no msg.exe fallback (would be modal)").slice(0, 200) };
 }
 
 async function sendDarwin(n: NotifyNotice, t0: number): Promise<NotifyResult> {

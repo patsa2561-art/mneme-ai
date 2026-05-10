@@ -101,11 +101,26 @@ export function AntivirusLabView(props: AntivirusLabViewProps) {
   return (
     <div className="antivirus-lab">
       <div className="lab-header">
-        <h2>🧬 Mneme Antivirus Lab</h2>
+        <h2>💉 Mneme Antivirus Lab</h2>
         <p className="lab-tagline">
           The first MCP server in the world that ships a hallucination antiviral.
-          {isLive ? <span className="lab-badge live"> · LIVE</span> : <span className="lab-badge demo"> · DEMO</span>}
+          {isLive ? <span className="lab-badge live">● LIVE — your repo</span> : <span className="lab-badge demo">◉ DEMO — synthetic seed data</span>}
         </p>
+        {!isLive && (
+          <p className="lab-hero">
+            <strong>What this is:</strong> when an AI generates code, it sometimes invents
+            functions, files, packages, or commit hashes that don't exist. Mneme catches
+            those hallucinations BEFORE they merge — using HMAC-signed vaccines with
+            measured precision/recall/F1.
+            <br />
+            <strong>How to use:</strong> run <code>mneme antivirus scan &lt;ai-draft.txt&gt;</code>
+            from your terminal — every claim gets checked against your real git history.
+            <br />
+            <strong>Where the data below comes from:</strong> 8 seed strains from the
+            built-in pharmacopoeia (no benchmarks yet — F1 shows "—"). Run
+            <code> mneme antivirus benchmark</code> to populate real efficacy numbers.
+          </p>
+        )}
         <div className="lab-summary-strip">
           <div className="lab-stat"><div className="lab-stat-num">{SEED_STRAINS.length}</div><div className="lab-stat-label">strains catalogued</div></div>
           <div className="lab-stat"><div className="lab-stat-num">{vaccines.length}</div><div className="lab-stat-label">vaccines registered</div></div>

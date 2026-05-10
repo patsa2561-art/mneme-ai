@@ -45,6 +45,14 @@
   box-sizing: border-box;
 }
 
+/* v1.26.2: base font bumped 14 -> 16px for accessibility. Users can
+   override via the FontSizePicker in the header (S/M/L/XL maps to
+   13/16/18/21). The selector writes --root-font-size on :root and we
+   read it here so all rem-based sizing scales automatically. */
+:root {
+  --root-font-size: 16px;
+}
+
 html,
 body,
 #root {
@@ -53,8 +61,8 @@ body,
   background: var(--bg-0);
   color: var(--ink-0);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--root-font-size);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -3633,3 +3641,235 @@ body::before {
 .pareto-tag { background: rgba(192,132,252,0.16); color: #c084fc; font-size: 0.7rem; padding: 1px 5px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
 .pareto-scatter { padding: 14px 0; }
 .pareto-svg { background: rgba(0,0,0,0.18); border-radius: 8px; }
+
+/* ───────────────────────────────────────────────────────────────────────
+   v1.26.2 -- ViewExplainer, FontSizePicker, DEMO/LIVE prominence
+   --------------------------------------------------------------------- */
+
+/* The ViewExplainer strip lives directly under the Header. It's the
+   1-minute-understanding component. Always visible, never collapsed. */
+.view-explainer {
+  margin: 14px 18px 6px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(124,58,237,0.10) 0%, rgba(76,29,149,0.05) 100%);
+  border: 1px solid rgba(167,139,250,0.20);
+  box-shadow: 0 4px 16px rgba(76,29,149,0.10);
+}
+.view-explainer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.view-explainer-titles {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.view-explainer-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--violet-100);
+  letter-spacing: -0.01em;
+}
+.view-explainer-mode { display: flex; gap: 8px; }
+.data-mode {
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.data-mode.demo {
+  background: rgba(251,191,36,0.18);
+  color: #fde047;
+  border: 1.5px solid rgba(251,191,36,0.55);
+  text-shadow: 0 0 8px rgba(251,191,36,0.35);
+}
+.data-mode.live {
+  background: rgba(52,211,153,0.18);
+  color: #6ee7b7;
+  border: 1.5px solid rgba(52,211,153,0.55);
+}
+.data-mode.loaded {
+  background: rgba(167,139,250,0.18);
+  color: var(--violet-100);
+  border: 1.5px solid rgba(167,139,250,0.45);
+}
+.view-explainer-oneline {
+  font-size: 1.15rem;
+  margin: 8px 0 6px;
+  color: var(--ink-0);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.view-explainer-whycare {
+  font-size: 1.0rem;
+  margin: 4px 0 10px;
+  color: var(--ink-1);
+  line-height: 1.5;
+}
+.view-explainer-whycare strong {
+  color: var(--violet-300);
+  font-weight: 600;
+  margin-right: 4px;
+}
+.view-explainer-bullets {
+  margin: 8px 0 4px;
+  padding-left: 22px;
+  color: var(--ink-1);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+.view-explainer-bullets li { margin-bottom: 4px; }
+.view-explainer-callouts {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(34,197,94,0.10);
+  border: 1px solid rgba(52,211,153,0.30);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.view-explainer-callouts-label {
+  background: var(--sage-500);
+  color: #042f2e;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.view-explainer-callouts ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.92rem;
+  color: var(--sage-400);
+  line-height: 1.5;
+}
+
+/* The FontSizePicker (Aa | S | M | L | XL) sits in the header actions. */
+.font-size-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255,255,255,0.03);
+  margin-right: 6px;
+}
+.font-size-picker .fsp-prefix {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-right: 4px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.fsp-btn {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 5px;
+  color: var(--ink-2);
+  border: 1px solid transparent;
+  transition: background 0.12s, color 0.12s;
+}
+.fsp-btn:hover { color: var(--ink-0); background: rgba(255,255,255,0.04); }
+.fsp-btn.active {
+  background: var(--violet-700);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* DEMO pill in the Header repo-meta row -- v1.26.2 made it MUCH more prominent.
+   Old design called it "synthetic demo" in soft text. New design shouts. */
+.synthetic-pill {
+  background: rgba(251,191,36,0.20);
+  color: #fde047;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(251,191,36,0.55);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 6px rgba(251,191,36,0.30);
+}
+
+/* Lab views (Antivirus, Retrieval) -- bigger DEMO/LIVE badges + clearer hero. */
+.lab-badge {
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 4px 9px;
+  border-radius: 5px;
+  margin-left: 8px;
+  letter-spacing: 0.02em;
+}
+.lab-badge.live {
+  background: rgba(52,211,153,0.18);
+  color: #6ee7b7;
+  border: 1px solid rgba(52,211,153,0.5);
+}
+.lab-badge.demo {
+  background: rgba(251,191,36,0.20);
+  color: #fde047;
+  border: 1px solid rgba(251,191,36,0.55);
+}
+
+/* Existing menu tab labels: bump font weight + size for a11y. */
+.view-tab {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.view-tab.active { font-weight: 700; }
+
+/* Header brand readability bump (v1.26.2). */
+.brand-name { font-size: 1.25rem; font-weight: 700; }
+.brand-tag  { font-size: 0.85rem; font-weight: 500; opacity: 0.85; }
+
+
+/* v1.26.2: highlight when user clicks an UNDETECTED ecosystem in live mode --
+   make it CRYSTAL clear the example below is illustrative only. */
+.eco-undetected-warning {
+  margin: 14px 0 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(251,191,36,0.10);
+  border: 1.5px solid rgba(251,191,36,0.45);
+  color: #fde047;
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+.eco-undetected-warning strong { color: #fef08a; }
+
+/* Lab hero paragraph -- explains what each Lab is in plain English. */
+.lab-hero {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 14px 0;
+  font-size: 1.0rem;
+  line-height: 1.55;
+  color: var(--ink-1);
+}
+.lab-hero strong { color: var(--violet-300); margin-right: 4px; }
+.lab-hero code {
+  background: rgba(0,0,0,0.35);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #c4b5fd;
+  font-size: 0.92em;
+}
+

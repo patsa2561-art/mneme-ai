@@ -8,6 +8,118 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.2] — 2026-05-10
+
+**Three real-user complaints, three honest fixes: kill the modal popup,
+make every menu understandable in 60 seconds, make DEMO data
+impossible to confuse with real data.**
+
+### Bug 1 -- "Test: Hello" modal popup keeps appearing on Windows
+
+**Root cause:** `os_toast.ts` had a `msg.exe *` fallback when WinRT
+toast failed. `msg.exe` shows a MODAL Windows MessageBox that blocks
+the user's foreground until they click OK -- exactly the opposite of
+what a "toast" should do. Triggered by `mneme notify test` (and the
+v1.26.0 Caretaker pass when it auto-broadcasts).
+
+**Fix:** removed the `msg.exe` fallback entirely. If WinRT fails on
+this box (rare on Win10+), `os-toast` reports `ok: false` and other
+notifier channels (mobile push via ntfy.sh, agent files, voice) carry
+the notice instead. We refuse to ever show a modal MessageBox from a
+"toast" channel -- the affordance mismatch is the bug.
+
+### Bug 2 -- "ดูไม่รู้เรื่อง" — every menu was opaque to non-engineers
+
+**Root cause:** menu hints lived only in HTML `title=` tooltips and
+used insider phrasing ("Force-directed graph of authors and latent
+collaboration", "PageRank ladder of cultural alphas"). Non-engineers
+hovering for help got jargon, not clarity.
+
+**Fix:** new `<ViewExplainer/>` strip mounted right under the header,
+ALWAYS visible (not hover-only). Each menu now has:
+
+  - 1-line **what is this** in plain English
+  - 1-line **why care** explaining who benefits
+  - 2-3 **bullets** of what you can actually do here
+  - **NEW** callout strip showing what shipped recently for that view
+    (v1.24+ → v1.26+ feature highlights)
+
+All 8 menu hints in `Header.tsx` rewritten from jargon to plain
+English (e.g. Atrophy went from "Files × authors knowledge heatmap"
+to "Files where the original author is gone or hasn't touched it in
+a long time").
+
+### Bug 3 -- DEMO data confused for the user's real repo
+
+**Root cause:** the `synthetic-pill` was a soft grey pill saying
+"synthetic demo" -- easy to miss. When a user uploaded fdroid/fdroidclient
+and the Dynamic MCP tab still showed Stripe Payments / React / Next.js
+hardcoded packs, they reasonably wondered if those were detected from
+their repo. They were not -- they were illustrative.
+
+**Fix (3 layers):**
+
+  1. The Header pill now shouts:
+     `◉ DEMO DATA — not your repo` in amber, bold, with a glow.
+  2. The new `<ViewExplainer/>` reflects the same indicator next to
+     every view title:
+     `◉ DEMO DATA — not your repo` / `● LIVE · git API` / `● Loaded data`
+  3. EcosystemsView: when in LIVE detection mode and the user clicks
+     an UNDETECTED ecosystem, a yellow alert banner appears above the
+     tool list: *"Not detected in your repo. The tools below are
+     illustrative only..."*. Pack header also gets "(example — not
+     active for your repo)" appended.
+
+Each Lab (Antivirus, Retrieval) gets a `lab-hero` paragraph at the
+top explaining in 3 sentences: **What this is**, **How to use**,
+**Where the data below comes from** — so the user never has to guess
+whether numbers are real or seed.
+
+### UX improvement -- font size selector
+
+  - Base font bumped from 14px → 16px (Apple HIG / WCAG default).
+  - New `<FontSizePicker/>` in the header (Aa | S M L **XL**) lets
+    users pick 13/16/18/21px. Choice persists to `localStorage`.
+  - All sizing is rem-based + reads `--root-font-size`, so every
+    component scales without per-component CSS work.
+  - View tab labels bumped to 0.95rem / weight 500 (700 when active).
+  - Brand name bumped to 1.25rem / weight 700.
+
+### Files changed
+
+  - `packages/core/src/notifier/os_toast.ts` -- removed msg.exe fallback
+  - `packages/web/src/components/Header.tsx` -- plain-English hints,
+    bigger DEMO pill, mounts FontSizePicker
+  - `packages/web/src/components/ViewExplainer.tsx` (NEW) -- always-
+    visible per-view explanation
+  - `packages/web/src/components/FontSizePicker.tsx` (NEW) -- accessible
+    text-size selector (S/M/L/XL)
+  - `packages/web/src/App.tsx` -- mounts ViewExplainer above
+    MetricsTopBar, wires per-view callouts
+  - `packages/web/src/components/AntivirusLabView.tsx` -- prominent
+    DEMO/LIVE badges + lab-hero explanation
+  - `packages/web/src/components/RetrievalLabView.tsx` -- same
+  - `packages/web/src/components/EcosystemsView.tsx` -- undetected-
+    ecosystem alert banner in live mode
+  - `packages/web/src/styles/global.css` -- `--root-font-size`
+    variable, ViewExplainer + FontSizePicker + lab-hero +
+    eco-undetected-warning styles, prominent DEMO/LIVE pill styling
+
+### Net effect
+
+  - No more modal popups from `mneme notify test`.
+  - Every menu reads like a friendly explainer, not a jargon dump.
+  - DEMO vs LIVE is impossible to miss (header pill + view title + lab
+    hero all carry the same indicator).
+  - Users who need bigger text get a 1-click selector, not a
+    browser-zoom workaround that breaks layout.
+
+### Test coverage
+
+  - 4874/4874 tests still passing (no regressions).
+  - notifier/os_toast unchanged in test surface (no test asserted
+    msg.exe fallback path).
+
 ## [1.26.1] — 2026-05-10
 
 **Hooks installer real-bug fix + per-agent dynamic adapter system.**
