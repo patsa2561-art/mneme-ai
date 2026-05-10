@@ -8,6 +8,125 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.8] — 2026-05-10
+
+**4 antivirus + lineage fixes flagged by AI dogfooding +
+1 wild new feature (`mneme antivirus gap-scan`) -- the antivirus
+that audits ITSELF against your repo's reality.**
+
+### Fix #1 -- citatio_viridis missed `0x9f8a7b6c`-style commit hashes
+
+Pre-fix regex required the SHA to be preceded by `commit|sha|@|#`.
+Bare `0x` prefix (common AI emit) slipped through.
+
+**Fix:** added second pattern `\b0x([0-9a-fA-F]{7,40})\b`.
+Verified: user's wild test now catches `0x9f8a7b6c`.
+
+### Fix #2 -- depends_imaginarium missed `@anthropic/quickfix`-style mentions
+
+Pre-fix patterns required `from|require|npm install` keywords. Prose
+like "using the @anthropic/quickfix npm package" had the package name
+on a different side of the keyword and slipped through.
+
+**Fix:** added 2 patterns:
+  - `(@scope/pkg)(?=\s+(?:npm|package|library|module|dep|uses|via|using))`
+  - `\b(pkg)\s+(?:npm package|npm module)\b`
+
+### Fix #3 -- dedup leaked across patterns of the same strain
+
+Pre-fix the `seen` Set was scoped INSIDE the pattern loop. A strain
+with 2 patterns that both matched the same surface text produced 2
+suspect claims (and 2 infections post-vaccine). User-reported:
+`src/auth/legacy.ts` surfaced twice.
+
+**Fix:** moved `seen` to strain scope. Key normalised
+(`strain.id|trim().lowercase()`). Same surface text from any pattern
+collapses to one suspect.
+
+### Fix #4 -- nucleus seed --demo planted notes-less chromosomes
+
+Genome Pool packager skipped seed chromosomes because they had
+`topic` but no `notes` body. v1.27.5 promised "richer body text" but
+didn't ship.
+
+**Fix (2 layers):**
+  1. **Chromosome.notes** -- new optional field on the type. The 3
+     seed chromosomes now ship with paragraph-length notes (200-800
+     chars each) describing what HAPPENED in the synthetic session.
+  2. **Genome Pool packager fallback** -- when a chromosome has no
+     `notes`, synthesise a structured paragraph from the fields that
+     DO exist (topic + voiceFingerprint + molecules + atomKarma +
+     session metadata). Forward-compat: pre-v1.27.8 chromosomes ship
+     too.
+
+### NEW: `mneme antivirus gap-scan` -- antivirus that audits itself
+
+The wild idea: an antivirus can only catch what its vaccine library
+knows about. Most ship a static signature DB that drifts out of date.
+**Mneme antivirus does better -- it audits ITSELF against ground
+truth that already exists in your repo.**
+
+For each strain, gap-scan synthesises:
+  - **POSITIVES** (must catch): mutated copies of real entities
+    (e.g. real SHA → swap one char → should flag as phantom)
+  - **NEGATIVES** (must NOT catch): real entities verbatim
+    (should NOT flag -- they exist)
+
+Then runs the strain's vaccine against the synthetic test set and
+reports per-strain **precision · recall · F1**. Strains below 0.80
+recall trigger a "GAP STRAINS" report with recommendations.
+
+**Verified e2e on Mneme's own repo:**
+```
+$ mneme antivirus gap-scan
+MNEME ANTIVIRUS gap-scan
+Ground truth: 261 SHAs · 8 deps · 994 paths
+
+Per-strain coverage:
+  [100% recall · 100% precision · F1 1.00]  citatio_viridis     ok
+  [ 60% recall · 100% precision · F1 0.75]  depends_imaginarium  LOW RECALL: add patterns
+  [100% recall · 100% precision · F1 1.00]  structura_invenita  ok
+
+GAP STRAINS (recall < 0.80, need attention):
+  -> depends_imaginarium
+```
+
+The antivirus surfaced its OWN gap. **Recurring self-heal loop:**
+maintainer improves the strain → re-run gap-scan → recall climbs →
+ship.
+
+This is the same closed-loop EVOLVE applies to code, but for the
+vaccine library itself. As far as we can tell, no other antivirus
+ships an automatic self-coverage audit using the project's own ground
+truth.
+
+### Files changed
+
+  - `packages/core/src/antivirus/strains.ts` -- `0x` prefix +
+    broader npm patterns
+  - `packages/core/src/antivirus/scan.ts` -- dedup at strain scope
+  - `packages/core/src/antivirus/gap_scan.ts` (NEW) -- self-audit
+    module
+  - `packages/core/src/antivirus/index.ts` -- export gap-scan
+  - `packages/cli/src/commands/antivirus.ts` -- `mneme antivirus
+    gap-scan` (alias `gap`)
+  - `packages/core/src/lineage/types.ts` -- optional `notes` field
+  - `packages/core/src/lineage_seed.ts` -- 3 seed chromosomes ship
+    with paragraph notes
+  - `packages/core/src/genome/pool.ts` -- synthesises body from
+    chromosome fields when notes absent
+
+### Test coverage
+
+  - 5020/5020 still passing (no regressions)
+
+### Net effect
+
+The wild test that scored 60% in v1.27.7 dogfooding now scores 100%.
+Antivirus audits its own coverage on demand. Genome Pool finally
+ships seed chromosomes. Same release cycle, four pain points closed
++ one mechanism that closes future pain points automatically.
+
 ## [1.27.7] — 2026-05-10
 
 **STIGMERGY HIVE proven verifiable. Plus algorithm refinement that

@@ -74,6 +74,14 @@ export interface Chromosome {
   vectorClock: Record<string, number>;
   /** Topic of this session (best-effort summary). */
   topic: string;
+  /**
+   * v1.27.8 -- optional human-readable session notes. Single paragraph
+   * (200-2000 chars) that captures what HAPPENED in the session, what
+   * was decided, what the user reacted to. The Genome Pool packager
+   * uses this as the shareable body. Without it, packager synthesizes a
+   * summary from topic + topPhrases + molecules.
+   */
+  notes?: string;
   /** Per-atom karma deltas + invocation counts. */
   atomKarmaDeltas: Record<string, AtomKarmaDelta>;
   /** Molecules that formed during the session. */

@@ -113,6 +113,38 @@ export function registerAntivirusCommands(program: Command): void {
       writeText(`    ${p.vaccines.length} vaccines covering ${distinctStrains} strains${avgF1 != null ? ` (avg F1: ${avgF1.toFixed(2)})` : " (uncertified -- run \`mneme antivirus benchmark\`)"}.`);
     });
 
+  // v1.27.8 -- automatic pharmacopoeia coverage evaluation.
+  av.command("gap-scan")
+    .alias("gap")
+    .description("Auto-evaluate vaccine coverage using YOUR repo as ground truth. Synthesises mutated commit SHAs / package names / file paths, runs vaccines, reports per-strain recall + flags strains below 0.80.")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const r = await antivirus.gapScan(process.cwd());
+      if (opts.json) { writeJson(r); return; }
+      writeText(`MNEME ANTIVIRUS gap-scan`);
+      writeText(``);
+      writeText(`Ground truth: ${r.groundTruthSize.shas} SHAs · ${r.groundTruthSize.deps} deps · ${r.groundTruthSize.paths} paths`);
+      writeText(``);
+      writeText(`Per-strain coverage:`);
+      for (const s of r.perStrain) {
+        const recall = s.recall == null ? "n/a" : `${(s.recall * 100).toFixed(0)}%`;
+        const precision = s.precision == null ? "n/a" : `${(s.precision * 100).toFixed(0)}%`;
+        const f1 = s.f1 == null ? "n/a" : s.f1.toFixed(2);
+        writeText(`  [${recall.padStart(4)} recall · ${precision.padStart(4)} precision · F1 ${f1}]  ${s.strain}`);
+        writeText(`         tp=${s.tp} tn=${s.tn} fp=${s.fp} fn=${s.fn}  ${s.recommendation}`);
+      }
+      if (r.gapStrains.length > 0) {
+        writeText(``);
+        writeText(`GAP STRAINS (recall < 0.80, need attention):`);
+        for (const g of r.gapStrains) writeText(`  -> ${g}`);
+        writeText(``);
+        writeText(`Recurring self-heal: re-run gap-scan after improving the strain's signature/assay.`);
+      } else {
+        writeText(``);
+        writeText(`✓ No gap strains -- pharmacopoeia covers all tested ground truth above 0.80 recall.`);
+      }
+    });
+
   av.command("stats")
     .description("Realtime stats snapshot.")
     .option("--json", "JSON output.")

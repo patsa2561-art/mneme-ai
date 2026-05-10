@@ -39,6 +39,8 @@ interface SeedSpec {
   baselineKarma: number;
   molecule: string;
   ageDays: number; // how far back to date the chromosome
+  /** v1.27.8 -- rich body text so genome-pool packager picks it up. */
+  notes: string;
 }
 
 // v1.23.2 — ASCII-only topic strings. Em-dash bytes mojibake on Windows
@@ -51,6 +53,8 @@ const SEEDS: SeedSpec[] = [
     baselineKarma: 4,
     molecule: "memory_ask__audit_certify",
     ageDays: 14,
+    notes:
+      "Session walked the agent through diagnosing a JWT verify timeout that surfaced in production after a key-rotation deploy. The agent first opened mneme.memory.ask to surface prior incidents on the auth path; one match (incident 2024-09 PII leak) was relevant but not load-bearing. The agent then ran mneme.audit.certify on the proposed patch which flagged a missed leeway window -- key rotations can briefly leave both old and new keys valid, and the verify call must accept either for ~5 minutes. Final fix: extend JWT_LEEWAY_MS to 300000 in services/auth/verify.ts, gated behind a feature flag so legacy clients can opt out. Lessons captured: always probe rotation history before deciding leeway; cert-pinning libraries silently default to 0 leeway which is wrong for rotation events.",
   },
   {
     vendor: "seed:cursor-cmd-k",
@@ -59,6 +63,8 @@ const SEEDS: SeedSpec[] = [
     baselineKarma: 3,
     molecule: "people_atrophy__memory_why",
     ageDays: 7,
+    notes:
+      "Diagnosed a payment-webhook double-charge regression. Used mneme.people.atrophy on services/billing/webhook.ts -- the original author had left the company 18 months prior and no one had touched the idempotency key generation since. mneme.memory.why surfaced the original decision to use timestamp+amount as the key, which BREAKS for retries within the same second. Fix: switch to provider-event-id as the canonical idempotency key, with a 24h Redis lookup. Recorded a constitution rule: NEVER derive idempotency keys from clock values. Pair recommendation: rotate auth-team senior in for billing reviews going forward, since the original author's mental model is now lost.",
   },
   {
     vendor: "seed:codex-cli",
@@ -67,6 +73,8 @@ const SEEDS: SeedSpec[] = [
     baselineKarma: 5,
     molecule: "insights_mirror__people_passport",
     ageDays: 3,
+    notes:
+      "Built an onboarding kit for a new contributor joining the platform team. mneme.insights.mirror surfaced the 12 files most likely to surprise a newcomer (high churn + low test density + long average diff). mneme.people.passport gave per-area expert + atrophy heatmap, so the new contributor knows who to pair with on each subsystem. Output: a markdown packet with 5 sections (auth, billing, infra, observability, build), each with named expert, ghost areas to avoid until familiar, and 3 starter PRs ranked by safety. Lesson: onboarding documents written by HR are stale within weeks; passports generated on-demand are always current.",
   },
 ];
 
@@ -103,6 +111,7 @@ function buildSeedDraft(spec: SeedSpec, machineId: string): Omit<Chromosome, "co
     parents: [],
     vectorClock: { [machineId]: 1 },
     topic: spec.topic,
+    notes: spec.notes,
     atomKarmaDeltas,
     molecules: [
       {

@@ -10,12 +10,18 @@ export const STRAINS: Record<StrainId, Strain> = {
     scientificName: "Citatio viridis",
     commonName: "Phantom commit hash",
     pathogenesis:
-      "AI cites a commit SHA (e.g., \"see commit a1b2c3d\") that doesn't exist in the repo's git history. Hardest to spot because SHAs LOOK authoritative.",
+      "AI cites a commit SHA (e.g., \"see commit a1b2c3d\" or \"0x9f8a7b6c\") that doesn't exist in the repo's git history. Hardest to spot because SHAs LOOK authoritative.",
     severity: 4,
     signature: {
-      // 7-40 hex chars, optionally preceded by "commit", "sha", "@", or "#".
-      patterns: ["\\b(?:commit|sha|@|#)?\\s*([0-9a-fA-F]{7,40})\\b"],
-      explanation: "7-40 character hex strings that look like git SHAs.",
+      // v1.27.8 -- broadened to also match `0xHEXHEXHEX...` notation (which
+      // some AI agents emit in place of bare hex). Two patterns:
+      //   1. `commit|sha|@|#` prefix + 7-40 hex
+      //   2. bare `0x` prefix + 7-40 hex (anywhere in text)
+      patterns: [
+        "\\b(?:commit|sha|@|#)?\\s*([0-9a-fA-F]{7,40})\\b",
+        "\\b0x([0-9a-fA-F]{7,40})\\b",
+      ],
+      explanation: "7-40 character hex strings (with or without 0x prefix) that look like git SHAs.",
     },
   },
   persona_fictum: {
@@ -57,11 +63,17 @@ export const STRAINS: Record<StrainId, Strain> = {
       "AI suggests installing or imports a package that doesn't exist on npm or isn't a project dependency.",
     severity: 4,
     signature: {
-      // import x from 'pkg' / require('pkg') / npm install pkg
+      // v1.27.8 -- broadened to catch:
+      //   1. `from "pkg"` / `require("pkg")` / `npm install pkg` (existing)
+      //   2. Bare `@scope/pkg` mentioned near words like "package", "library",
+      //      "module", "dep", "uses" (so prose mentions don't slip through)
+      //   3. Bare `pkg` followed by " npm package " or " library "
       patterns: [
         "(?:from|require\\(|npm install|npm i|yarn add|pnpm add)\\s+['\"]?(@?[a-z0-9][\\w./-]*)['\"]?",
+        "(@[a-z0-9][\\w-]*\\/[a-z0-9][\\w.-]*)(?=\\s+(?:npm|package|library|module|dep|uses|via|using))",
+        "\\b([a-z0-9][\\w-]{2,})\\s+(?:npm package|npm module)\\b",
       ],
-      explanation: "Package names following import / require / install markers.",
+      explanation: "Package names following import/require/install markers OR bare scoped packages mentioned alongside 'npm', 'package', 'library', 'dep'.",
     },
   },
   tempus_perversum: {

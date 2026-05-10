@@ -63,6 +63,44 @@ const PII_PATTERNS: Array<{ re: RegExp; replacement: string }> = [
   { re: /\b[A-Za-z0-9_-]{24,}\b/g, replacement: "<SECRET>" },
 ];
 
+/**
+ * v1.27.8 -- when a chromosome has no explicit notes field, synthesise
+ * a structured paragraph from the fields that DO exist (topic, voice
+ * fingerprint, molecules, atom karma, session metadata). Returns empty
+ * string only when there's truly nothing meaningful to share.
+ */
+function synthesiseNotesFromChromosome(c: Record<string, unknown>): string | null {
+  const parts: string[] = [];
+  const topic = typeof c["topic"] === "string" ? c["topic"] : "";
+  const vendor = typeof c["vendor"] === "string" ? c["vendor"] : "unknown";
+  const voice = c["voiceFingerprint"] as { topPhrases?: string[]; topTopics?: string[] } | undefined;
+  const molecules = Array.isArray(c["molecules"]) ? c["molecules"] as Array<{ name?: string; fireCount?: number; karma?: number }> : [];
+  const atomKarma = c["atomKarmaDeltas"] as Record<string, { karma?: number; invocations?: number; verified?: number }> | undefined;
+  const session = c["session"] as { totalCalls?: number; endReason?: string } | undefined;
+
+  if (topic) parts.push(`Session topic: ${topic}.`);
+  if (vendor !== "unknown") parts.push(`Captured by ${vendor}.`);
+  if (molecules.length > 0) {
+    const top = molecules.slice(0, 3).map((m) => `${m.name ?? "?"} (fired ${m.fireCount ?? 0}x)`).join(", ");
+    parts.push(`Active molecules: ${top}.`);
+  }
+  if (atomKarma) {
+    const ranked = Object.entries(atomKarma)
+      .sort((a, b) => (b[1].karma ?? 0) - (a[1].karma ?? 0))
+      .slice(0, 5)
+      .map(([atom, d]) => `${atom} (karma ${d.karma ?? 0}, ${d.invocations ?? 0} calls)`);
+    if (ranked.length > 0) parts.push(`Top atoms by karma: ${ranked.join(", ")}.`);
+  }
+  if (voice?.topTopics && voice.topTopics.length > 0) {
+    parts.push(`Topics surfaced: ${voice.topTopics.slice(0, 5).join(", ")}.`);
+  }
+  if (session) {
+    parts.push(`Session ended via ${session.endReason ?? "?"} after ${session.totalCalls ?? 0} calls.`);
+  }
+  const synthesised = parts.join(" ").trim();
+  return synthesised.length >= 60 ? synthesised : null;
+}
+
 /** Redact PII from a string. Conservative -- prefers false-positive
  *  over false-negative (some valid technical strings will be over-
  *  redacted; that's fine for a public pool). */
@@ -105,9 +143,17 @@ export function buildPackage(repoRoot: string): GenomePoolPackage | null {
   for (const c of all) {
     const vendor = typeof c["vendor"] === "string" ? c["vendor"] : "unknown";
     const topic = typeof c["topic"] === "string" ? c["topic"] : null;
-    const notes = typeof c["notes"] === "string" ? c["notes"]
+    // v1.27.8: prefer explicit notes, then body, then synthesise from
+    // existing chromosome fields. Lets ANY chromosome (including pre-
+    // v1.27.8 ones without an explicit notes field) ship to the pool
+    // with at least a structured summary.
+    let notes: string | null =
+      typeof c["notes"] === "string" ? c["notes"]
       : typeof c["body"] === "string" ? c["body"]
       : null;
+    if (!notes) {
+      notes = synthesiseNotesFromChromosome(c);
+    }
     if (!topic || !notes) continue;
     const redactedBody = scrubPII(notes);
     const hash = createHash("sha256")

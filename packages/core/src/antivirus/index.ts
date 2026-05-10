@@ -35,3 +35,8 @@ export type { VaccineSignature } from "./lineage_vaccines.js";
 export {
   snapshotForChromosome, mergeInheritedVaccines,
 } from "./lineage_vaccines.js";
+// v1.27.8 -- gap-scan: auto-evaluation of vaccine coverage using
+// the user's repo as ground truth. Returns per-strain F1 + a list
+// of "gap strains" with recall < 0.80 that need vaccine improvement.
+export type { GapTestCase, StrainGapReport, GapScanReport } from "./gap_scan.js";
+export { gapScan } from "./gap_scan.js";

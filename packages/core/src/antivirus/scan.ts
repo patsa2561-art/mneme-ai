@@ -45,22 +45,29 @@ export function extractSuspects(draft: string): SuspectClaim[] {
   const out: SuspectClaim[] = [];
   for (const strain of listStrains()) {
     const patterns = compilePatterns(strain.id);
+    // v1.27.8 (BUGFIX): the `seen` Set was scoped INSIDE the pattern
+    // loop, so two patterns of the same strain that both matched the
+    // same substring produced TWO suspect claims (and two infections
+    // post-vaccine). User-reported: src/auth/legacy.ts surfaced twice.
+    // Now `seen` lives at the strain scope, so we dedup across all
+    // patterns of the same strain. Key = strain|normalisedMatch (case-
+    // insensitive trim) -- different offsets of the same surface text
+    // collapse into one suspect, regardless of which pattern matched.
+    const seen = new Set<string>();
     for (const re of patterns) {
-      // Reset lastIndex; iterate all matches.
       re.lastIndex = 0;
       let m: RegExpExecArray | null;
-      const seen = new Set<string>();
       while ((m = re.exec(draft)) !== null) {
-        // v1.24.2 -- use FULL match (m[0]) so assays can re-parse context.
-        // Previous version used m[1] (capture group) which broke
-        // persona_fictum + confidens_cardinalis assays that expect the
-        // whole "by NAME" / "N noun" surface to re-extract.
         const match = m[0];
-        if (!match) continue;
-        // Dedupe identical matches at different offsets to avoid noise
-        // (same SHA mentioned twice = one suspect).
-        const key = `${strain.id}|${match}`;
-        if (seen.has(key)) continue;
+        if (!match) {
+          if (re.lastIndex === m.index) re.lastIndex++;
+          continue;
+        }
+        const key = `${strain.id}|${match.trim().toLowerCase()}`;
+        if (seen.has(key)) {
+          if (re.lastIndex === m.index) re.lastIndex++;
+          continue;
+        }
         seen.add(key);
         out.push({
           strain: strain.id,
@@ -68,8 +75,6 @@ export function extractSuspects(draft: string): SuspectClaim[] {
           offset: m.index,
           surfaceConfidence: 0.7,
         });
-        // Defensive: regex without the global flag would loop forever; we
-        // built ours with /g, but guard against zero-width matches.
         if (re.lastIndex === m.index) re.lastIndex++;
       }
     }
