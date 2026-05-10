@@ -550,7 +550,9 @@ export function registerNucleusCommands(program: Command): void {
     .option("--quiet", "Output nothing when there are no [AUTO-ACTION] / [WARN] notices (default).")
     .option("--no-quiet", "Always output (even when nothing notable).")
     .option("--json", "JSON output instead of text block.")
-    .action(async (opts: { quiet?: boolean; json?: boolean }) => {
+    .option("--broadcast", "(v1.26.4) Push the pulse text via every available notifier channel (OS toast / mobile push / voice / email / agent files). Beyond-editor reach when the user is not at the keyboard.")
+    .option("--broadcast-severity <s>", "Severity for broadcast: info | action | warning | critical. Default 'action'.", "action")
+    .action(async (opts: { quiet?: boolean; json?: boolean; broadcast?: boolean; broadcastSeverity?: string }) => {
       const { pulse } = await import("@mneme-ai/core");
       const status = pulse.collectPulseStatus(process.cwd());
       if (opts.json) {
@@ -564,6 +566,29 @@ export function registerNucleusCommands(program: Command): void {
       // exactly once per inbox push.
       const text = pulse.renderPulse(status, { quiet: opts.quiet !== false, autoAck: true, repoRoot: process.cwd() });
       if (text) process.stdout.write(text + "\n");
+
+      // v1.26.4 -- Pulse Beyond Editor. When --broadcast, push the
+      // rendered text via every available notifier channel. Closes the
+      // gap when the user has the chat window closed entirely.
+      if (opts.broadcast && text) {
+        try {
+          const { notifier } = await import("@mneme-ai/core");
+          const all = notifier.buildAllNotifiers(process.cwd());
+          const sev = (opts.broadcastSeverity ?? "action") as "info" | "action" | "warning" | "critical";
+          const notice = {
+            id: `pulse-${Date.now()}`,
+            title: "Mneme pulse",
+            body: text.length > 1500 ? text.slice(0, 1500) + "...[truncated]" : text,
+            severity: sev,
+          };
+          const results = await notifier.notifyAll(notice, all);
+          const ok = results.filter((r) => r.ok).map((r) => r.notifierId);
+          const fail = results.filter((r) => !r.ok).map((r) => r.notifierId);
+          process.stdout.write(`\nBroadcast: ${ok.length} channel(s) ok${ok.length > 0 ? ` (${ok.join(", ")})` : ""}${fail.length > 0 ? `, ${fail.length} fail` : ""}\n`);
+        } catch (e) {
+          process.stdout.write(`\nBroadcast failed: ${(e as Error).message}\n`);
+        }
+      }
     });
 
   // mneme nucleus seed --demo (v1.23.0; --auto-start --watch in v1.23.2)

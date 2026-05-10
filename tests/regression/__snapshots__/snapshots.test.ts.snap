@@ -100,6 +100,8 @@ Commands:
   selfcheck|recheck  >  Recurring self-recheck loop: 12 checks against Mneme's own state.
   quantum  >  Why Mneme doesn't need quantum (yet) -- educational easter egg.
   precog|precognition  >  MNEME PRECOG -- Markov + ACO pheromone + dream-loop precognition cache for AI tool sequences (world-first for MCP).
+  evolve  >  MNEME EVOLVE -- self-modifying NUCLEUS. Reads local telemetry, proposes markdown PR patches to Mneme itself. Never auto-merges.
+  genome-pool  >  Mneme Genome Pool MVP -- opt-in PII-scrubbed chromosome contributor.
   tools [options]  >  List Mneme's full MCP tool catalog (mirror of mneme.capabilities).
   squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles.
   health [options]  >  Single-screen health: version + lineage state + nucleus streaks.

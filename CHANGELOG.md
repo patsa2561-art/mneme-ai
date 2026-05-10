@@ -8,6 +8,129 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.4] — 2026-05-10
+
+**The "OS AI Layer" release.** A new 9-layer textbook for AI tooling
+that didn't exist until now. Plus three concrete L4-L7 deliverables:
+**Self-modifying NUCLEUS** (Mneme proposes patches against itself),
+**Pulse Broadcast** (notifier-fabric reach beyond the editor), and
+**Genome Pool packager** (opt-in PII-scrub bundler for the
+network-effect future).
+
+### NEW: [The Mneme OS AI Layer Model](./docs/OS_AI_LAYER.md)
+
+TCP/IP gave networking 7 layers. AI tooling has zero. v1.26.4 ships
+v0 of a 9-layer model:
+
+  - L0 Physical · L1 Model · L2 Inference · L3 Tool (MCP)
+  - **L4 Memory** -- lineage / atrophy / inbox / PRECOG / chromosomes
+  - **L5 Intent** -- HyDE, query rewriting, intent classification
+  - **L6 Awareness** -- pulse, hooks, push, beyond-editor reach
+  - **L7 Wisdom** -- constitution, regret, decision provenance,
+    self-modifying NUCLEUS
+  - **L8 Governance** -- ALETHEIA, audit chains, Court, compliance
+
+Most existing AI tools cap at L3. **Mneme is the reference impl for
+L4-L8.** The whitepaper explains the model + invites pushback. We
+expect the spec to evolve via community PRs on
+`docs/OS_AI_LAYER.md`. Cite as:
+
+> S. Phunsriphatchalakul, "The Mneme OS AI Layer Model,"
+> github.com/patsa2561-art/mneme-ai/blob/main/docs/OS_AI_LAYER.md, 2026.
+
+### NEW: Self-modifying NUCLEUS (`mneme evolve`)
+
+The first AI dev tool with closed-loop self-improvement from
+telemetry. Mneme reads its OWN bug reports and writes markdown PR
+proposals against itself. Three signal sources:
+
+  1. **selfcheck FAILs** -- `.mneme/selfcheck/last.json` recurring
+     failures
+  2. **antivirus recurrences** -- strains caught >=3 times
+  3. **PRECOG misses** -- predictions that expired without `hit`
+     >=5 times
+
+Confidence scoring + suggestion shape (which files to touch + why
++ similar prior PRs) bundled into `.mneme/proposals/<id>.md`.
+**Never auto-merges** -- human (or CI agent) opens the actual GitHub
+PR.
+
+```
+mneme evolve scan          # show signals
+mneme evolve propose       # generate proposals from current signals
+mneme evolve list          # list every persisted proposal
+mneme evolve view <id>     # print full markdown
+mneme evolve stats         # aggregate stats
+```
+
+### NEW: Pulse Broadcast (`mneme nucleus pulse --broadcast`)
+
+L6-Awareness extension. The pulse text now ships via every available
+notifier channel (OS toast / mobile push / TTS / email / agent files)
+when invoked with `--broadcast`. Closes the gap when the user has the
+chat window closed entirely -- the teacher walks over to the desk.
+
+```
+mneme nucleus pulse --no-quiet --broadcast --broadcast-severity warning
+```
+
+### NEW: Genome Pool packager MVP (`mneme genome-pool`)
+
+Phase 1 deliverable for the network-effect "world brain" idea.
+Opt-in: bundles a user's chromosomes into a PII-scrubbed JSON file
+the user reviews before sharing.
+
+PII scrubbing is conservative -- emails, IPs, GitHub handles,
+absolute file paths, long alphanumeric tokens all become `<REDACTED>`.
+Each entry is sha256-hashed so a future pool can dedup
+contributions without seeing source.
+
+**No upload yet.** This is the bundler MVP -- the upload endpoint
+ships in v1.28+. Today the user owns the file, can grep it, can decide
+to share or not.
+
+```
+mneme genome-pool preview              # dry-run, show what would ship
+mneme genome-pool package [--out FILE] # write bundle to disk
+```
+
+### Files added
+
+  - `packages/core/src/evolve/types.ts` -- EvolveSignal / EvolveProposal
+  - `packages/core/src/evolve/evolve.ts` -- main impl
+  - `packages/core/src/evolve/index.ts` -- barrel
+  - `packages/core/src/evolve/evolve.test.ts` -- 14 tests
+  - `packages/core/src/genome/pool.ts` -- packager + PII scrub
+  - `packages/core/src/genome/pool.test.ts` -- 15 tests
+  - `packages/cli/src/commands/evolve.ts` -- `mneme evolve` CLI
+  - `packages/cli/src/commands/genome-pool.ts` -- `mneme genome-pool` CLI
+  - `docs/OS_AI_LAYER.md` -- 9-layer textbook + phase plan
+
+### README update
+
+`README.md` "Why Mneme exists" section now links to the OS AI Layer
+whitepaper. Tool count bumped to **172+** (the layered framing makes
+this an honest claim across L4-L8). The v1.26.x AI agent workflow
+section also added in this release teaches every AI client how to
+use the new commands (precog/inbox-ack/auto-action/notify/agent/
+integrate/evolve/genome-pool).
+
+### Test coverage
+
+  - **+29 new tests** (14 evolve + 15 genome pool)
+  - **4945/4945 passing** (269 -> 271 test files)
+  - Snapshot refreshed for new `evolve` + `genome-pool` help lines
+
+### Net effect
+
+Mneme is no longer "an MCP server with extra features". It's the
+**reference implementation for layers L4-L8 of a stack that didn't
+have a name until today**. Every release from here forward maps to a
+specific layer in the model -- which means the roadmap finally has
+shape, the comparisons finally have meaning, and the conversation
+moves from "is X better than Y?" to "what layer are you talking
+about?".
+
 ## [1.26.3] — 2026-05-10
 
 **Two real-world bugs caught from a live AI session + MNEME PRECOG —

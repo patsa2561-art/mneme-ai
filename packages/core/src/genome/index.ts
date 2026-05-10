@@ -14,3 +14,4 @@ export * from "./circuits.js";
 export * from "./operons.js";
 export * from "./crispr.js";
 export * from "./synthesizer.js";
+export * as pool from "./pool.js";

@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/embeddings",
-  "version": "1.26.3",
+  "version": "1.26.4",
   "description": "Embedding providers (OpenAI, Ollama, bundled-WASM, hash-fallback) for Mneme",
   "type": "module",
   "main": "./dist/index.js",
@@ -34,6 +34,6 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.0.0",
-    "@mneme-ai/core": "1.26.3"
+    "@mneme-ai/core": "1.26.4"
   }
 }

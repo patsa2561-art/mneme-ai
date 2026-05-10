@@ -111,6 +111,8 @@ import { registerAgentCommands } from "./commands/agent.js";
 import { registerSelfcheckCommands } from "./commands/selfcheck.js";
 import { registerQuantumCommands } from "./commands/quantum.js";
 import { registerOracleCommands } from "./commands/oracle.js";
+import { registerEvolveCommands } from "./commands/evolve.js";
+import { registerGenomePoolCommands } from "./commands/genome-pool.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
@@ -2439,6 +2441,10 @@ export async function run(argv: string[]): Promise<void> {
   registerQuantumCommands(program);
   // ─── Oracle (v1.26.3 -- Markov + ACO + dream-loop precognition) ───
   registerOracleCommands(program);
+  // ─── Evolve (v1.26.4 -- self-modifying NUCLEUS PR proposals) ──────
+  registerEvolveCommands(program);
+  // ─── Genome Pool MVP (v1.26.4 -- opt-in PII-scrubbed contributor) ─
+  registerGenomePoolCommands(program);
   // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
   registerToolsCommand(program);
   registerBotCommand(program);
