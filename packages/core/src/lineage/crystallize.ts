@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import { machineFingerprint, persistChromosome, buildChromosomeId } from "./chromosome.js";
 import { scrubDeep } from "./pii_scrub.js";
 import { snapshotForChromosome as antivirusSnapshot } from "../antivirus/lineage_vaccines.js";
+import { snapshotForChromosome as retrievalSnapshot } from "../retrieval_lab/lineage_retrieval.js";
 import {
   flushToDisk,
   getSnapshot,
@@ -29,6 +30,12 @@ import {
  *  fresh install; never throw from crystallize because of it. */
 function snapshotVaccinesForChromosome(repoRoot: string): ReturnType<typeof antivirusSnapshot> | undefined {
   try { return antivirusSnapshot(repoRoot); } catch { return undefined; }
+}
+
+/** v1.25.0 -- Retrieval Lab leaderboard snapshot. Same best-effort
+ *  contract as the vaccine snapshot. */
+function snapshotRetrievalForChromosome(repoRoot: string): ReturnType<typeof retrievalSnapshot> | undefined {
+  try { return retrievalSnapshot(repoRoot); } catch { return undefined; }
 }
 import type { Chromosome, ConstitutionCandidate, VoiceFingerprint } from "./types.js";
 
@@ -107,6 +114,9 @@ export function crystallize(repoRoot: string, opts: CrystallizeOptions): Crystal
     // v1.24.0 -- snapshot the active vaccine inventory so children
     // sessions inherit (Lamarckian).
     vaccineSignatures: snapshotVaccinesForChromosome(repoRoot),
+    // v1.25.0 -- snapshot top-3 retrieval configs so the next session
+    // boots already pointed at the best arm without re-running trials.
+    retrievalConfigSignatures: snapshotRetrievalForChromosome(repoRoot),
     session: {
       startedAt: snap.startedAt,
       endedAt: createdAt,

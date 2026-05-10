@@ -105,6 +105,25 @@ export function fertilize(repoRoot: string, opts: FertilizeOptions = {}): Inheri
     }
   } catch { /* best-effort */ }
 
+  // v1.25.0 -- Lamarckian retrieval-config inheritance. Same shape:
+  // pick configs the parent learned were good, fold into local
+  // leaderboard. Lazy import; best-effort.
+  try {
+    const inheritedConfigs = chromosomes
+      .filter((c) => Array.isArray(c.retrievalConfigSignatures) && c.retrievalConfigSignatures!.length > 0)
+      .map((c) => ({ chromosomeId: c.id, signatures: c.retrievalConfigSignatures! }));
+    if (inheritedConfigs.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      import("../retrieval_lab/lineage_retrieval.js").then((mod) => {
+        try {
+          // Type narrowing: the chromosome stores a wider config shape;
+          // mergeInheritedConfigs only reads fields that match.
+          mod.mergeInheritedConfigs(repoRoot, inheritedConfigs as Parameters<typeof mod.mergeInheritedConfigs>[1]);
+        } catch { /* best-effort */ }
+      }).catch(() => { /* best-effort */ });
+    }
+  } catch { /* best-effort */ }
+
   const vendors = Array.from(new Set(chromosomes.map((c) => c.vendor)));
   const inheritedAtomCount = Object.keys(merged.atomKarmaDeltas).length;
   const overallKarma = Object.values(merged.atomKarmaDeltas).reduce((s, a) => s + a.karma, 0);

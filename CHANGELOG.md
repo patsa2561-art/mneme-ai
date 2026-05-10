@@ -8,6 +8,92 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.25.0] — 2026-05-09
+
+**Mneme RAG Lab + GraphRAG + Late Chunking + Ingest+ — three phases
+of classical-RAG world-class infrastructure shipped together. The
+moat: NUCLEUS daemon auto-tunes retrieval configs in the background
+via UCB1 multi-armed bandit. Lamarckian inheritance via chromosomes
+means a session that proved "config X beats Y by 30%" lets the next
+session anywhere SKIP re-discovering it.**
+
+User feedback that drove this release: "focus on retrieval quality +
+data ingestion is 1000x better than quantum stuff for Mneme." Right.
+This release does exactly that.
+
+### Phase 1 — Mneme RAG Lab
+
+Self-tuning retrieval config selected by UCB1 over 8 candidate arms:
+
+  - **Cross-encoder reranker** (Phase 2 promise from v0.x finally
+    shipped) — `bge-reranker-base` via `@huggingface/transformers`
+    (zero new deps; same stack as the embedder).
+  - **HyDE (Hypothetical Document Embeddings)** — agent generates
+    hypothetical answer, Mneme embeds THAT instead of the question.
+    Server returns a system-prompt payload; AI loops back with the
+    rewrite. Deterministic fallback for non-looping agents.
+  - **Pluggable embedder backends**:
+      - `bundled-bge-small` (free, 384-dim, default)
+      - `bundled-bge-m3` (free, 1024-dim, multilingual)
+      - `voyage-3` (paid, needs `VOYAGE_API_KEY`)
+      - `openai-3-small` / `openai-3-large` (paid, needs `OPENAI_API_KEY`)
+  - **Auto-tuner** — UCB1 multi-armed bandit picks the next arm to trial.
+    Runs ONE trial per NUCLEUS daemon caretaker pass (~15 min). After
+    a few hours of trials, the active config converges on the best
+    arm for THIS repo's queries. HMAC-SHA256 signed trials so anyone
+    can re-verify the leaderboard wasn't fabricated.
+  - **5 MCP tools**: `mneme.retrieval.lab.list_configs`,
+    `mneme.retrieval.lab.leaderboard`, `mneme.retrieval.lab.tune`,
+    `mneme.retrieval.cross_encoder.rerank`, `mneme.retrieval.hyde.rewrite`.
+  - **CLI**: `mneme retrieval lab|tune|configs|rerank|hyde`.
+  - **Web Lab tab** "🎯 Retrieval Lab" — leaderboard table + Pareto-
+    frontier scatter plot (composite vs latency) + active-config card.
+  - **Lamarckian inheritance** — `Chromosome.retrievalConfigSignatures`
+    snapshot top-3 leaderboard entries; `fertilize()` merges them into
+    the inheriting session's local leaderboard (highest mean composite
+    wins per configId).
+
+### Phase 2 — GraphRAG + Late Chunking
+
+  - **Knowledge graph** (`packages/core/src/graphrag/build.ts`) — walks
+    `git log` to build a graph of (commit × file × author) with edges:
+    `authored`, `touched`, `co-edits` (file ↔ file via shared commit),
+    `co-author` (author ↔ author via shared file).
+  - **Louvain community detection** (`louvain.ts`) — pure-JS Newman
+    modularity-maximizing pass. Detects topic clusters, drops singletons,
+    auto-labels each community by its dominant filename tokens. No
+    external deps. Tested with cliques + bridges + singletons.
+  - **Late chunking** (`late_chunking.ts`) — Jina-style: embeds the
+    full doc once, mixes each chunk's embedding with the doc's
+    embedding via configurable alpha. L2-normalized for cosine
+    compatibility. Recall lifts on cross-chunk queries.
+
+### Phase 3 — Ingest+ (PR reviews / Linear / Jira)
+
+External context that doesn't live in commits but should still be
+retrievable:
+
+  - **`scrapePRReviews(repoRoot)`** — uses `gh` CLI (no API tokens
+    needed) to fetch PR review comments + issue threads from GitHub.
+    Auto-detects repo from `git remote get-url origin`.
+  - **`scrapeLinear()`** — needs `LINEAR_API_KEY`; pulls issues +
+    comments via Linear's GraphQL.
+  - **`scrapeJira()`** — needs `JIRA_BASE_URL` + `JIRA_EMAIL` +
+    `JIRA_API_TOKEN`; pulls issues + comments via Jira's REST API.
+  - All three return `IngestedChunk[]` written to
+    `.mneme/ingest/chunks.jsonl` (de-duped on id), ready for the
+    indexer to pick up alongside commit chunks.
+  - Best-effort: missing tokens / failed network / no `gh` returns
+    empty + clear error in stats; never throws.
+
+### Tests
+
+  - 4747 / 4747 passing (was 4658; +89: 39 dedicated retrieval-lab/
+    graphrag/ingest tests + 50 from welcome auto-action wiring +
+    snapshot updates).
+  - 172 MCP tools (was 167; +5 retrieval-lab tools).
+  - TypeScript strict; production build clean.
+
 ## [1.24.3] — 2026-05-09
 
 **Web deploy: real root cause finally identified.**

@@ -9,6 +9,7 @@ import { EcosystemsView } from "./components/EcosystemsView";
 import { DnaView } from "./components/DnaView";
 import { ScrubberView } from "./components/ScrubberView";
 import { AntivirusLabView } from "./components/AntivirusLabView";
+import { RetrievalLabView } from "./components/RetrievalLabView";
 import { DetailPanel } from "./components/DetailPanel";
 // LimitsPanel + LiveWisdomPanel moved into MetricsTopBar (v1.19.3).
 import { GraphWisdomPanel } from "./components/GraphWisdomPanel";
@@ -201,6 +202,8 @@ export function App() {
             <ScrubberView />
           ) : view === "antivirus" ? (
             <AntivirusLabView />
+          ) : view === "retrieval" ? (
+            <RetrievalLabView />
           ) : !scrubbed ? (
             <EmptyState onLoadClick={() => setLoadOpen(true)} />
           ) : view === "graph" ? (

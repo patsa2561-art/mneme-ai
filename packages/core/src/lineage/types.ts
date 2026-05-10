@@ -95,6 +95,24 @@ export interface Chromosome {
   constitutionCandidates: ConstitutionCandidate[];
   /** Atoms that confess marked as hallucination — culled from inheritance. */
   lethalRecessives: string[];
+  /** v1.25.0 — Retrieval Lab top-3 leaderboard snapshot at
+   *  crystallization. Inheriting sessions merge these into their local
+   *  leaderboard (Lamarckian: a session that proved "config X beats Y
+   *  by 30%" lets the next session anywhere SKIP re-discovering that). */
+  retrievalConfigSignatures?: Array<{
+    configId: string;
+    config: {
+      id: string; label: string; embedder: string; rrfK: number;
+      semanticWeight: number; reranker: string; useHyDE: boolean; candidateK: number;
+    };
+    trialCount: number;
+    meanComposite: number;
+    meanPrecisionAtK: number;
+    meanRecallAtK: number;
+    meanNdcgAtK: number;
+    meanLatencyMs: number;
+    capturedAt: string;
+  }>;
   /** v1.24.0 — Antivirus vaccine signatures snapshot at crystallization
    *  time. Inheriting sessions merge these into their pharmacopoeia
    *  (Lamarckian: acquired traits flow to offspring). Optional for

@@ -3621,3 +3621,15 @@ body::before {
 .cert-table th { color: rgba(232,232,255,0.65); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
 .cert-sig { font-family: ui-monospace, monospace; font-size: 0.74rem; color: rgba(232,232,255,0.5); }
 .cert-footnote { margin-top: 14px; font-size: 0.78rem; color: rgba(232,232,255,0.5); font-style: italic; }
+
+/* ─── Retrieval Lab (v1.25.0) — extra classes on top of Antivirus styles */
+.active-config-card { background: rgba(52,211,153,0.06); border: 1px solid rgba(52,211,153,0.3); border-radius: 10px; padding: 12px 16px; margin: 14px 0 8px; }
+.active-config-id { font-size: 0.95rem; color: #34d399; font-weight: 600; }
+.active-config-id code { background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; }
+.active-config-label { font-size: 0.88rem; color: rgba(232,232,255,0.85); margin: 4px 0 6px; }
+.active-config-detail { font-size: 0.78rem; color: rgba(232,232,255,0.65); }
+.active-config-detail code { background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 3px; color: #c084fc; font-size: 0.85em; }
+.cert-table tr.active-row { background: rgba(52,211,153,0.08); }
+.pareto-tag { background: rgba(192,132,252,0.16); color: #c084fc; font-size: 0.7rem; padding: 1px 5px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+.pareto-scatter { padding: 14px 0; }
+.pareto-svg { background: rgba(0,0,0,0.18); border-radius: 8px; }

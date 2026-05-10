@@ -211,6 +211,21 @@ export async function runDaemonLoop(
       if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
         void runCaretakerPass(repoRoot, tickCount).catch(() => { /* ignore */ });
       }
+
+      // v1.25.0 — Retrieval Lab tuning round. Every CARETAKER_PASS_EVERY
+      // ticks, the daemon picks the next arm via UCB1, runs a trial,
+      // folds it into the leaderboard. Over time the active config
+      // converges on the best arm without anyone having to ask.
+      if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
+        try {
+          const { pickNextArm, readLeaderboard, recordTrial } = await import("./retrieval_lab/leaderboard.js");
+          const { runTrial } = await import("./retrieval_lab/tuner.js");
+          const lb = readLeaderboard(repoRoot);
+          const { config } = pickNextArm(lb);
+          const trial = runTrial(repoRoot, config);
+          recordTrial(repoRoot, trial);
+        } catch { /* best-effort */ }
+      }
       // Heartbeat
       if (tickCount % HEARTBEAT_WRITE_EVERY_TICK === 0) {
         const banner = dnaBanner(result.state);
