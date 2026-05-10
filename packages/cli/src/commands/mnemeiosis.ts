@@ -557,7 +557,12 @@ export function registerNucleusCommands(program: Command): void {
         process.stdout.write(JSON.stringify(status, null, 2) + "\n");
         return;
       }
-      const text = pulse.renderPulse(status, { quiet: opts.quiet !== false });
+      // v1.26.3 (Bug #2): pass autoAck=true so any inbox AUTO-ACTION
+      // entry that we surface this turn gets marked sent immediately.
+      // Without this, every keystroke would re-emit the same EXECUTE NOW
+      // line, causing the AI to loop. With autoAck, AUTO-ACTION fires
+      // exactly once per inbox push.
+      const text = pulse.renderPulse(status, { quiet: opts.quiet !== false, autoAck: true, repoRoot: process.cwd() });
       if (text) process.stdout.write(text + "\n");
     });
 
@@ -714,17 +719,65 @@ export function registerInboxCommands(program: Command): void {
     .option("--cta <text>", "Optional call-to-action.")
     .option("--priority <p>", "low | medium | high | critical (default medium).", "medium")
     .option("--source <name>", "Source tag (default 'manual').", "manual")
+    .option("--auto-action <tool>", "Mark as AUTO-ACTION: pulse will emit `[AUTO-ACTION] EXECUTE NOW: <tool>(<args>)` so the AI runs the tool immediately on its next turn.")
+    .option("--auto-action-args <json>", "JSON object passed as the tool args. Default {}.")
     .option("--json", "JSON output.")
-    .action(async (title: string, opts: { body?: string; cta?: string; priority?: string; source?: string } & CommonOpts) => {
+    .action(async (title: string, opts: { body?: string; cta?: string; priority?: string; source?: string; autoAction?: string; autoActionArgs?: string } & CommonOpts) => {
       const pri = (opts.priority ?? "medium") as "low" | "medium" | "high" | "critical";
+      let autoAction: { tool: string; args: Record<string, unknown> } | undefined;
+      if (opts.autoAction) {
+        let args: Record<string, unknown> = {};
+        if (opts.autoActionArgs) {
+          try { args = JSON.parse(opts.autoActionArgs) as Record<string, unknown>; }
+          catch (e) {
+            writeText(`✗ --auto-action-args must be valid JSON: ${(e as Error).message}`);
+            process.exit(1);
+          }
+        }
+        autoAction = { tool: opts.autoAction, args };
+      }
       const msg = inbox.pushInbox(process.cwd(), {
         title,
         body: opts.body,
         cta: opts.cta,
         priority: pri,
         source: opts.source ?? "manual",
+        autoAction,
       });
-      out(opts, msg, [`✓ Queued "${msg.title}" (id ${msg.id}, ${msg.priority}).`]);
+      out(opts, msg, [
+        `✓ Queued "${msg.title}" (id ${msg.id}, ${msg.priority})${autoAction ? ` AUTO-ACTION → ${autoAction.tool}(${JSON.stringify(autoAction.args)})` : ""}.`,
+      ]);
+    });
+
+  // v1.26.3 (Bug #2): mark inbox messages as sent / read.
+  ib
+    .command("ack [ids...]")
+    .description("Mark inbox messages as sent (acked). Pass ids or --all to ack everything.")
+    .option("--all", "Ack every unsent message.")
+    .option("--json", "JSON output.")
+    .action(async (ids: string[], opts: { all?: boolean } & CommonOpts) => {
+      if (!opts.all && ids.length === 0) {
+        writeText(`Pass one or more ids, or --all. \`mneme inbox list --unsent --json\` for ids.`);
+        process.exit(1);
+      }
+      const n = inbox.ackInbox(process.cwd(), opts.all ? "all" : ids);
+      out(opts, { acked: n }, [`✓ Acked ${n} message${n === 1 ? "" : "s"}.`]);
+    });
+
+  // v1.26.3 (Bug #2): permanent delete (vs ack which just flips sent flag).
+  ib
+    .command("clear")
+    .description("Delete inbox entries. Default: 'sent' (only acked messages).")
+    .option("--all", "Delete EVERY entry, sent or unsent.")
+    .option("--older-than <days>", "Delete entries older than N days (regardless of sent flag).", (v) => Number(v))
+    .option("--json", "JSON output.")
+    .action(async (opts: { all?: boolean; olderThan?: number } & CommonOpts) => {
+      let which: "sent" | "all" | { olderThanDays: number } = "sent";
+      if (opts.all) which = "all";
+      else if (typeof opts.olderThan === "number" && Number.isFinite(opts.olderThan)) which = { olderThanDays: opts.olderThan };
+      const n = inbox.clearInbox(process.cwd(), which);
+      const what = opts.all ? "all" : typeof opts.olderThan === "number" ? `older than ${opts.olderThan}d` : "sent";
+      out(opts, { removed: n, which: what }, [`✓ Removed ${n} ${what} entr${n === 1 ? "y" : "ies"}.`]);
     });
 }
 

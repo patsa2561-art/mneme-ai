@@ -110,6 +110,7 @@ import { registerNotifyCommands } from "./commands/notify.js";
 import { registerAgentCommands } from "./commands/agent.js";
 import { registerSelfcheckCommands } from "./commands/selfcheck.js";
 import { registerQuantumCommands } from "./commands/quantum.js";
+import { registerOracleCommands } from "./commands/oracle.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
@@ -2436,6 +2437,8 @@ export async function run(argv: string[]): Promise<void> {
   registerAgentCommands(program);
   registerSelfcheckCommands(program);
   registerQuantumCommands(program);
+  // ─── Oracle (v1.26.3 -- Markov + ACO + dream-loop precognition) ───
+  registerOracleCommands(program);
   // ─── CLI wow-feature exposure (v1.22.0) ───────────────────────────
   registerToolsCommand(program);
   registerBotCommand(program);

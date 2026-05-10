@@ -49,6 +49,13 @@ export interface InboxMessage {
   sent: boolean;
   /** ISO timestamp the message was sent. */
   sentAt?: string;
+  /**
+   * v1.26.3 -- when set, this inbox message is an AUTO-ACTION:
+   * pulse.ts surfaces it with `[AUTO-ACTION]` instead of `[INFO]`
+   * and emits an `EXECUTE NOW: <tool>(<args>)` line so the AI runs
+   * the tool immediately without asking permission.
+   */
+  autoAction?: { tool: string; args?: Record<string, unknown> };
 }
 
 function ensureDir(repoRoot: string): void {
@@ -87,6 +94,7 @@ export function pushInbox(
     body: msg.body,
     cta: msg.cta,
     sent: false,
+    autoAction: msg.autoAction,
   };
   try {
     ensureDir(repoRoot);
@@ -96,6 +104,123 @@ export function pushInbox(
     // best-effort — never fail callers on disk error
   }
   return full;
+}
+
+/**
+ * v1.26.3 (Bug #1 fix) -- remove every entry whose source matches.
+ * Used by version-check to invalidate stale "vX available" entries
+ * before pushing the new one, so users don't accumulate one notice
+ * per past version.
+ *
+ * Returns the number of removed entries.
+ */
+export function popInboxBySource(repoRoot: string, source: string): number {
+  const all = readInbox(repoRoot);
+  const kept = all.filter((m) => m.source !== source);
+  if (kept.length === all.length) return 0;
+  try {
+    writeFileSync(
+      inboxPath(repoRoot),
+      kept.length === 0 ? "" : kept.map((m) => JSON.stringify(m)).join("\n") + "\n",
+      "utf8",
+    );
+  } catch {
+    // best-effort
+  }
+  return all.length - kept.length;
+}
+
+/**
+ * v1.26.3 (Bug #1 fix) -- atomic "replace by source" helper. Pops every
+ * existing entry from `source`, then pushes the new one. Net effect:
+ * the inbox contains AT MOST ONE message per source at any time.
+ *
+ * If `skip` returns true, no push happens (used by version-check to
+ * skip self-notice when current >= target).
+ */
+export function pushInboxReplacingSource(
+  repoRoot: string,
+  msg: Omit<InboxMessage, "id" | "createdAt" | "sent"> & { id?: string },
+  opts: { skip?: () => boolean } = {},
+): InboxMessage | null {
+  if (opts.skip && opts.skip()) {
+    // Still pop existing -- the user is now current, stale notices must go.
+    popInboxBySource(repoRoot, msg.source);
+    return null;
+  }
+  popInboxBySource(repoRoot, msg.source);
+  return pushInbox(repoRoot, msg);
+}
+
+/**
+ * v1.26.3 (Bug #2 fix) -- ack one or more inbox entries by id. When
+ * `ids` is "all", every unsent entry becomes sent. When `ids` is an
+ * array, only those ids are acked (no-op for ids that don't exist).
+ *
+ * Returns the number of entries actually changed (sent flag flipped).
+ */
+export function ackInbox(repoRoot: string, ids: string[] | "all"): number {
+  const all = readInbox(repoRoot);
+  if (all.length === 0) return 0;
+  const targetIds = ids === "all"
+    ? new Set(all.filter((m) => !m.sent).map((m) => m.id))
+    : new Set(ids);
+  if (targetIds.size === 0) return 0;
+  const sentAt = new Date().toISOString();
+  let changed = 0;
+  const next = all.map((m) => {
+    if (targetIds.has(m.id) && !m.sent) {
+      changed++;
+      return { ...m, sent: true, sentAt };
+    }
+    return m;
+  });
+  if (changed === 0) return 0;
+  try {
+    writeFileSync(inboxPath(repoRoot), next.map((m) => JSON.stringify(m)).join("\n") + "\n", "utf8");
+  } catch {
+    // best-effort
+  }
+  return changed;
+}
+
+/**
+ * v1.26.3 (Bug #2 fix) -- delete inbox entries entirely (not just ack).
+ * `which` = "sent" removes sent entries, "all" wipes everything,
+ * "older-than-days" removes entries older than the given day count.
+ * Returns the number of removed entries.
+ */
+export function clearInbox(
+  repoRoot: string,
+  which: "sent" | "all" | { olderThanDays: number },
+): number {
+  const all = readInbox(repoRoot);
+  if (all.length === 0) return 0;
+  let kept: InboxMessage[];
+  if (which === "all") {
+    kept = [];
+  } else if (which === "sent") {
+    kept = all.filter((m) => !m.sent);
+  } else {
+    const cutoff = Date.now() - which.olderThanDays * 24 * 60 * 60 * 1000;
+    kept = all.filter((m) => Date.parse(m.createdAt) >= cutoff);
+  }
+  if (kept.length === all.length) return 0;
+  try {
+    writeFileSync(
+      inboxPath(repoRoot),
+      kept.length === 0 ? "" : kept.map((m) => JSON.stringify(m)).join("\n") + "\n",
+      "utf8",
+    );
+  } catch {
+    // best-effort
+  }
+  return all.length - kept.length;
+}
+
+/** v1.26.3 -- count of unsent messages, cheap (one file read). */
+export function countUnsent(repoRoot: string): number {
+  return readInbox(repoRoot).filter((m) => !m.sent).length;
 }
 
 /** Read all messages currently in the inbox (sent + unsent). */

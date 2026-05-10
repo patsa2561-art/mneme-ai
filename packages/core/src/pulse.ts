@@ -31,6 +31,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ackInbox } from "./inbox.js";
+import { renderOracleHint } from "./oracle/index.js";
 
 export interface PulseStatus {
   version: { current: string; latest: string | null; updateAvailable: boolean };
@@ -91,16 +93,29 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     } catch { /* ignore */ }
   }
 
-  // Inbox unsent count
+  // Inbox unsent count + collect any AUTO-ACTION-flagged messages so
+  // they surface as `[AUTO-ACTION]` in pulse output (v1.26.3).
   const inboxPath = join(repoRoot, ".mneme/inbox.jsonl");
+  const inboxAutoActions: Array<{ id: string; title: string; body?: string; tool: string; args: Record<string, unknown> }> = [];
   if (existsSync(inboxPath)) {
     try {
       const lines = readFileSync(inboxPath, "utf8").trim().split("\n").filter(Boolean);
       let unsent = 0;
       for (const ln of lines) {
-        try { const e = JSON.parse(ln); if (e && e.sent === false) unsent++; } catch { /* skip */ }
+        try {
+          const e = JSON.parse(ln) as { sent?: boolean; id?: string; title?: string; body?: string; autoAction?: { tool: string; args?: Record<string, unknown> } };
+          if (e && e.sent === false) {
+            unsent++;
+            if (e.autoAction && typeof e.autoAction.tool === "string" && e.id && e.title) {
+              inboxAutoActions.push({ id: e.id, title: e.title, body: e.body, tool: e.autoAction.tool, args: e.autoAction.args ?? {} });
+            }
+          }
+        } catch { /* skip */ }
       }
       status.inbox.unsent = unsent;
+      // Cache for renderPulse via a non-enumerable side-channel so the
+      // public PulseStatus shape stays stable (older callers ignore it).
+      Object.defineProperty(status.inbox, "_autoActions", { value: inboxAutoActions, enumerable: false });
     } catch { /* ignore */ }
   }
 
@@ -145,6 +160,17 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       text: `Mneme has ${status.inbox.unsent} unread inbox message${status.inbox.unsent === 1 ? "" : "s"}. They will surface on your next mneme.* tool call.`,
     });
   }
+  // v1.26.3 -- inbox-flagged AUTO-ACTION entries are surfaced individually
+  // so the AI executes the tool immediately on this turn (no waiting for
+  // an mneme.* tool call to ack-and-surface them via the wisdom channel).
+  const surfacedInboxAutoActions = (status.inbox as { _autoActions?: Array<{ id: string; title: string; body?: string; tool: string; args: Record<string, unknown> }> })._autoActions ?? [];
+  for (const aa of surfacedInboxAutoActions) {
+    status.notable.push({
+      level: "action",
+      text: `${aa.title}${aa.body ? " — " + aa.body : ""}`,
+      autoAction: { tool: aa.tool, args: aa.args },
+    });
+  }
   if (status.antivirus.uncertified > 0 && status.antivirus.activeVaccines > 0) {
     status.notable.push({
       level: "warning",
@@ -157,8 +183,14 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
 
 /** Render the status as the text block injected into AI context. Returns
  *  empty string when `quiet: true` and nothing is noteworthy (so the hook
- *  is a no-op on idle days). */
-export function renderPulse(status: PulseStatus, opts: PulseOptions = {}): string {
+ *  is a no-op on idle days).
+ *
+ *  v1.26.3 (Bug #2): when `autoAck` is true and a `repoRoot` is supplied,
+ *  any inbox-AUTO-ACTION entries that we surfaced this turn are
+ *  marked sent. This prevents the same EXECUTE NOW line firing on
+ *  every subsequent keystroke (which would loop the AI). The pulse
+ *  CLI passes autoAck=true; tests/observers can pass false. */
+export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?: boolean; repoRoot?: string } = {}): string {
   const quiet = opts.quiet !== false;
   if (quiet && status.notable.length === 0) return "";
 
@@ -177,7 +209,29 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions = {}): strin
     lines.push("");
     lines.push("AI agent: when you see [AUTO-ACTION] above, run the EXECUTE NOW tool call IMMEDIATELY. Announce one short sentence to the user, call the tool, announce the result. Do NOT ask the user 'should I'?");
   }
+  // v1.26.3 -- ORACLE hint. Append the [ORACLE] line right before
+  // the closing tag, so the AI sees the predicted next-likely tools
+  // for its current state.
+  if (opts.repoRoot) {
+    try {
+      const hint = renderOracleHint(opts.repoRoot);
+      if (hint) {
+        lines.push("");
+        for (const ln of hint.split("\n")) lines.push(ln);
+      }
+    } catch { /* best-effort */ }
+  }
   lines.push("[/MNEME PULSE]");
+  // v1.26.3 (Bug #2): auto-ack inbox AUTO-ACTION entries so the same
+  // EXECUTE NOW line doesn't fire on every subsequent pulse turn.
+  if (opts.autoAck && opts.repoRoot) {
+    const aas = (status.inbox as { _autoActions?: Array<{ id: string }> })._autoActions ?? [];
+    if (aas.length > 0) {
+      try {
+        ackInbox(opts.repoRoot, aas.map((a) => a.id));
+      } catch { /* best-effort */ }
+    }
+  }
   return lines.join("\n");
 }
 

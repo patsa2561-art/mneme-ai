@@ -16,7 +16,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pushInbox, deterministicId } from "./inbox.js";
+import { pushInboxReplacingSource, popInboxBySource, deterministicId } from "./inbox.js";
 
 const CACHE_FILE = ".mneme/version-check.json";
 // v1.23.1 — was 24h. Dropped to 1h so a brand-new release is detected
@@ -183,7 +183,11 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
     // even when an update is known to be available.
     if (updateAvailable && cached.latest) {
       try {
-        pushInbox(repoRoot, {
+        // v1.26.3 (Bug #1): use pushInboxReplacingSource so any
+        // pre-existing "version-check" notice gets removed first --
+        // user no longer sees stale "v1.25.2 available" sitting next
+        // to "v1.26.1 available" after multiple upgrades.
+        pushInboxReplacingSource(repoRoot, {
           id: deterministicId(`update-available-${cached.latest}`),
           priority: "high",
           source: "version-check",
@@ -192,6 +196,11 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
           cta: "say: 'upgrade Mneme' and I'll handle it.",
         });
       } catch { /* ignore */ }
+    } else {
+      // v1.26.3 (Bug #1): we're on or past `cached.latest` -- pop any
+      // stale version-check entry. Otherwise an inbox notice for an
+      // older version persists until 256KB rotation.
+      try { popInboxBySource(repoRoot, "version-check"); } catch { /* ignore */ }
     }
     return {
       current: currentVersion,
@@ -218,7 +227,8 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
   // Idempotent on the latest version string — no spam across daemon ticks.
   if (updateAvailable && fetchResult.version) {
     try {
-      pushInbox(repoRoot, {
+      // v1.26.3 (Bug #1): replace, don't append. See cache-hit branch above.
+      pushInboxReplacingSource(repoRoot, {
         id: deterministicId(`update-available-${fetchResult.version}`),
         priority: "high",
         source: "version-check",
@@ -227,6 +237,9 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
         cta: "say: 'upgrade Mneme' and I'll handle it.",
       });
     } catch { /* ignore */ }
+  } else {
+    // v1.26.3 (Bug #1): we're on or past latest -- pop any stale notice.
+    try { popInboxBySource(repoRoot, "version-check"); } catch { /* ignore */ }
   }
   return {
     current: currentVersion,

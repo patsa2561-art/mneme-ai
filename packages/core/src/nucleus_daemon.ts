@@ -237,6 +237,19 @@ export async function runDaemonLoop(
         } catch { /* best-effort */ }
       }
 
+      // v1.26.3 — Mneme ORACLE dream cycle. Every 5 ticks (~2.5 min)
+      // the Oracle evaporates pheromones, re-predicts top-K successors
+      // for the current state, and refreshes the cache. Over time the
+      // pulse hint converges on the AI's actual usage patterns -- the
+      // teacher walking over with the answer before the student asks.
+      const ORACLE_DREAM_EVERY = 5;
+      if (tickCount > 0 && tickCount % ORACLE_DREAM_EVERY === 0) {
+        try {
+          const { dreamCycle } = await import("./oracle/index.js");
+          dreamCycle(repoRoot);
+        } catch { /* best-effort */ }
+      }
+
       // v1.26.0 — Self-check audit + multi-channel notifier dispatch.
       // Every CARETAKER_PASS_EVERY ticks, run all selfcheck checks. Any
       // FAIL fires a notifier broadcast (OS toast + mobile push + email

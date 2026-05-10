@@ -8,6 +8,173 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.26.3] — 2026-05-10
+
+**Two real-world bugs caught from a live AI session + MNEME PRECOG —
+the world's first proactive precognition cache for an MCP server
+(Markov bigram + ACO pheromone + dream-loop). The teacher now
+literally walks over and tells the student before being asked.**
+
+### Bug 1 (live AI report) — version-check inbox entries pile up
+
+**Repro:** every Mneme upgrade pushes a "Mneme vX is available"
+entry into the inbox. The id keys on `target_version`, so the OLD
+notice never gets removed when the user upgrades. After three
+upgrades the user sees "v1.25.2 available", "v1.26.0 available",
+"v1.26.1 available" all sitting next to each other while they're on
+v1.26.1.
+
+**Root cause:** `pushInbox` is idempotent on `id` but doesn't dedup
+*by source*. Each version generates a new id.
+
+**Fix:** new `inbox.popInboxBySource(source)` + `inbox.pushInboxReplacingSource(...)`.
+`version_check.ts` now atomically pops every "version-check" source
+entry before pushing the new one. When the user is at-or-past latest,
+the no-update branch ALSO pops stale notices (so an upgrade clears
+the inbox without needing another fetch). Net effect: at most ONE
+"version-check" inbox entry exists at any time.
+
+### Bug 2 (live AI report) — no inbox ack/clear surface
+
+**Repro:** `mneme inbox list` shows "4 total · 4 unsent" forever.
+There's no `mneme inbox read` or `mneme inbox clear`. Inbox
+grows until 256KB rotation. And pulse promises "will surface on
+your next mneme.* tool call" -- but surface didn't actually mark
+anything read.
+
+**Fix (4 layers):**
+
+  1. `inbox.ackInbox(repoRoot, ids[] | "all")` -- flips sent flag
+  2. `inbox.clearInbox(repoRoot, "sent" | "all" | {olderThanDays: N})`
+     -- permanent delete
+  3. `inbox.countUnsent(repoRoot)` -- O(file-read) helper
+  4. `mneme inbox ack [ids...] [--all]` + `mneme inbox clear [--all] [--older-than N]` CLI
+  5. `pulse.renderPulse({autoAck: true, repoRoot})` auto-acks any
+     inbox-flagged AUTO-ACTION entry it surfaces this turn -- so
+     the same EXECUTE NOW line doesn't fire on every keystroke
+     (which would loop the AI). The pulse CLI passes autoAck=true.
+
+### AUTO-ACTION protocol verification surface
+
+**User's exact request:**
+> "Synthetic AUTO-ACTION test: mneme inbox push --auto-action --title
+> 'test' เพื่อ verify EXECUTE NOW protocol ใน lab condition"
+
+**Fix:** `InboxMessage` gains an optional `autoAction: { tool, args }`
+field. Pulse surfaces inbox-flagged entries as `[AUTO-ACTION]`
+notices with `EXECUTE NOW: tool({args})` instead of `[INFO]`. CLI
+gains `--auto-action <tool>` + `--auto-action-args <json>` flags on
+`mneme inbox push`.
+
+To verify the protocol fires end-to-end:
+
+```bash
+mneme inbox push "Verify protocol" \
+  --priority high --source manual \
+  --auto-action mneme.health.report \
+  --auto-action-args '{"verbose":true}'
+mneme nucleus pulse --no-quiet     # see [AUTO-ACTION] line + EXECUTE NOW
+```
+
+The next AI turn will see the EXECUTE NOW line in pulse context and
+fire the named tool immediately. (`autoAck: true` ensures it fires
+exactly once -- subsequent pulses don't re-emit.)
+
+### NEW SUBSYSTEM: MNEME PRECOG -- precognition cache
+
+The metaphor in the user's brief:
+> Static rules files = บัตรประชาชน (sits there)
+> MCP servers = call center (must call to ask)
+> Pulse loop = Apple Watch tap on wrist -- info comes WITHOUT looking
+> "ครู ที่ดีไม่ได้รอให้นักเรียนถาม เขาเดินไปบอกเอง"
+
+PRECOG is the next mile. Three novel algorithms working together:
+
+  1. **MARKOV bigram** -- classic stochastic model:
+     `P(next | prev) = count(prev,next) / count(prev)`. Gives the
+     stationary "what-follows-what" pattern in the AI's tool
+     sequence.
+
+  2. **ACO pheromone** -- Ant Colony Optimization update rule:
+     `tau(i,j) <- (1 - rho) * tau(i,j) + delta`. Reinforce on
+     observation; evaporate on dream cycle. Pheromone gives a
+     *time-decaying* signal that surfaces hot edges fast and
+     forgets cold ones -- the cache self-organizes from the AI's
+     actual behavior with NO retrain step.
+
+  3. **Dream loop** -- on idle daemon ticks, PRECOG runs
+     `predictNext(currentState, K=3)`, scores via
+     `alpha*P_markov + beta*P_pheromone`, and stores the top
+     predictions in a TTL'd cache. When the AI's next tool call
+     lands, PRECOG checks the cache -- if a hit, the prediction
+     was right; meta hit-rate ticks up.
+
+The pulse hint surfaces predictions inline:
+
+```
+[PRECOG] After mneme.who_knows you usually call:
+  -> mneme.passport            (78%, markov=82%, phero=2.3)
+  -> mneme.story               (12%, markov=10%, phero=0.8)
+```
+
+The AI sees this on every turn -- so it KNOWS what tool is most
+likely next, and the daemon has pre-warmed the answer.
+
+Why this is novel for MCP:
+  - Most caches are reactive (LRU). PRECOG is proactive.
+  - Most retrieval uses static embeddings. PRECOG uses *behavior*
+    sequences with pheromone-style emergent self-organization.
+  - The "REM-sleep dream consolidation" pattern has never been
+    applied to MCP tool prediction before (as far as we can find).
+
+### CLI surface
+
+```
+mneme inbox ack [ids...] | --all     # flip sent flag
+mneme inbox clear | --all | --older-than N  # permanent delete
+mneme inbox push <title> --auto-action <tool> [--auto-action-args <json>]
+                                     # AUTO-ACTION verification
+
+mneme precog peek                    # show cached predictions
+mneme precog predict <fromTool> -k N # top-K likely successors
+mneme precog stats                   # hit rate / pheromone density
+mneme precog dream                   # run one dream cycle manually
+mneme precog observe <tool>          # record observation (debugging)
+mneme precog hint                    # print [PRECOG] line for pulse
+mneme precog reset                   # wipe oracle state
+```
+
+(`mneme oracle` is taken by an unrelated co-edit predictor; we used
+`precog` for the new surface.)
+
+### Daemon wiring
+
+`nucleus_daemon.ts` runs `oracle.dreamCycle()` every 5 ticks (~2.5
+min). Pheromones evaporate; predictions refresh; the cache stays
+fresh without any user intervention.
+
+### Files added
+
+  - `packages/core/src/oracle/types.ts` -- algorithm + interfaces
+  - `packages/core/src/oracle/markov.ts` -- bigram primitives
+  - `packages/core/src/oracle/pheromone.ts` -- ACO primitives
+  - `packages/core/src/oracle/oracle.ts` -- main API + persistence
+  - `packages/core/src/oracle/index.ts` -- barrel
+  - `packages/core/src/oracle/oracle.test.ts` -- 28 tests
+  - `packages/cli/src/commands/oracle.ts` -- `mneme precog` CLI
+
+### Test coverage
+
+  - **+42 new tests**: 28 PRECOG + 14 inbox (Bug #1, Bug #2, AUTO-ACTION)
+  - **4916/4916 passing** (268 -> 269 test files)
+  - Snapshot refreshed for new `precog|precognition` help line
+
+### Migration note
+
+After upgrade, run `mneme inbox clear --all` ONCE to wipe pre-fix
+stale entries from your inbox. From then on, version-check
+self-cleans + ack/clear are first-class commands.
+
 ## [1.26.2] — 2026-05-10
 
 **Three real-user complaints, three honest fixes: kill the modal popup,
