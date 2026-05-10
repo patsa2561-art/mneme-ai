@@ -32,9 +32,12 @@ describe("pulse", () => {
   });
 
   it("update-available state surfaces an [AUTO-ACTION]", () => {
+    // v1.27.3: comparison is now LIVE-current vs cached-latest using
+    // semver. Use a far-future version so this test is still
+    // meaningful regardless of what live Mneme is running at.
     writeFileSync(
       join(repo, ".mneme/version-check.json"),
-      JSON.stringify({ current: "1.25.0", latest: "1.26.0" }),
+      JSON.stringify({ current: "1.0.0", latest: "9999.0.0" }),
       "utf8",
     );
     const s = collectPulseStatus(repo);
@@ -44,6 +47,60 @@ describe("pulse", () => {
     expect(out).toContain("[AUTO-ACTION]");
     expect(out).toContain("EXECUTE NOW");
     expect(out).toContain("mneme.system.upgrade");
+  });
+
+  // v1.27.3 (HOTFIX): regression tests for the AUTO-ACTION self-loop
+  // bug. If `latest <= live current`, the pulse must NOT emit an
+  // AUTO-ACTION upgrade notice -- otherwise an AI honoring the
+  // EXECUTE NOW contract will call mneme.system.upgrade in a loop.
+  it("v1.27.3 regression: stale cache (latest == live current) emits NO AUTO-ACTION", async () => {
+    const { readLiveMnemeVersion } = await import("./version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return; // skip if we can't determine live version
+    writeFileSync(
+      join(repo, ".mneme/version-check.json"),
+      // SIMULATE: cache says "current=1.0.0, latest=<live>" -- but live IS <live>.
+      // The upgrade was completed; the cache wasn't refreshed. Without the
+      // v1.27.3 fix, this would emit an "upgrade to <live> (you're on <live>)"
+      // self-loop notice.
+      JSON.stringify({ current: "1.0.0", latest: live }),
+      "utf8",
+    );
+    const s = collectPulseStatus(repo);
+    expect(s.version.current).toBe(live);
+    expect(s.version.latest).toBe(live);
+    expect(s.version.updateAvailable).toBe(false);
+    expect(s.notable.some((n) => n.level === "action" && n.text.includes("is available"))).toBe(false);
+  });
+
+  it("v1.27.3 regression: cache ahead of live current works (real upgrade)", async () => {
+    const { readLiveMnemeVersion } = await import("./version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return;
+    writeFileSync(
+      join(repo, ".mneme/version-check.json"),
+      JSON.stringify({ current: live, latest: "9999.0.0" }),
+      "utf8",
+    );
+    const s = collectPulseStatus(repo);
+    expect(s.version.updateAvailable).toBe(true);
+    const upgradeNotice = s.notable.find((n) => n.text.includes("9999.0.0"));
+    expect(upgradeNotice).toBeDefined();
+    expect(upgradeNotice!.level).toBe("action");
+  });
+
+  it("v1.27.3 regression: cache BEHIND live current emits NO AUTO-ACTION (we're ahead of npm)", async () => {
+    // E.g., user is running a pre-release like 9999.0.1 but npm says
+    // latest is 1.0.0. This must NOT trigger an "upgrade" notice --
+    // we'd be downgrading.
+    writeFileSync(
+      join(repo, ".mneme/version-check.json"),
+      JSON.stringify({ current: "9999.0.1", latest: "1.0.0" }),
+      "utf8",
+    );
+    const s = collectPulseStatus(repo);
+    expect(s.version.updateAvailable).toBe(false);
+    expect(s.notable.some((n) => n.level === "action" && n.text.includes("is available"))).toBe(false);
   });
 
   it("daemon heartbeat < 5min ago is reported as running", () => {
@@ -87,7 +144,10 @@ describe("pulse", () => {
   });
 
   it("renders all expected counters in quiet mode when notable", () => {
-    writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({ current: "1", latest: "2" }), "utf8");
+    // v1.27.3: comparison uses semver (not just !==). Use a far-future
+    // valid-semver latest so updateAvailable fires regardless of which
+    // version of Mneme is running this test.
+    writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({ current: "1.0.0", latest: "9999.0.0" }), "utf8");
     const s = collectPulseStatus(repo);
     const out = renderPulse(s);
     expect(out).toMatch(/mneme v[\w.]+/);

@@ -18,6 +18,33 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pushInboxReplacingSource, popInboxBySource, deterministicId } from "./inbox.js";
 
+/**
+ * v1.27.3 -- read the LIVE installed Mneme version from the package.json
+ * nearest this module. Walks up from the current file location so it
+ * works in both src (vitest) and dist (production) layouts.
+ *
+ * Lifted to a shared export here so both pulse.ts and selfcheck/checks.ts
+ * use the SAME source of truth -- the v1.27.2 self-loop bug (pulse +
+ * selfcheck both reading stale `current` from the version-check cache
+ * and emitting "upgrade to vX (you're on vX)" AUTO-ACTIONs that would
+ * loop the AI) is structurally impossible when both code paths read
+ * the live package.json.
+ */
+export function readLiveMnemeVersion(): string {
+  try {
+    let dir = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]):/, "$1:");
+    for (let i = 0; i < 6; i++) {
+      const candidate = join(dir, "package.json");
+      if (existsSync(candidate)) {
+        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { version?: string; name?: string };
+        if (pkg.name === "@mneme-ai/core" || pkg.name === "mneme-ai") return pkg.version ?? "unknown";
+      }
+      dir = join(dir, "..");
+    }
+  } catch { /* ignore */ }
+  return "unknown";
+}
+
 const CACHE_FILE = ".mneme/version-check.json";
 // v1.23.1 — was 24h. Dropped to 1h so a brand-new release is detected
 // within an hour by every running session, not next-day. Network cost is

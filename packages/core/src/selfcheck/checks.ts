@@ -131,7 +131,17 @@ const daemonAliveCheck: AuditCheck = {
   },
 };
 
-/** Check 3: version is up-to-date */
+/**
+ * Check 3: version is up-to-date.
+ *
+ * v1.27.3 (HOTFIX): compares against the LIVE installed version from
+ * package.json -- NOT the `data.current` from the (possibly-stale)
+ * version-check cache. Without this fix, after a user upgrades 1.27.0
+ * -> 1.27.2, the cache still says current=1.27.0/latest=1.27.2 ->
+ * the check FAILs with autoAction "upgrade to 1.27.2" while the user
+ * IS on 1.27.2 -> AI runs the upgrade tool to no effect, then sees
+ * the same FAIL on next selfcheck -> loop.
+ */
 const versionUpToDateCheck: AuditCheck = {
   name: "version-up-to-date",
   description: "Installed Mneme version matches npm latest",
@@ -154,16 +164,25 @@ const versionUpToDateCheck: AuditCheck = {
           status: "skip", evidence: "no latest in cache (network may have failed)",
         });
       }
-      if (data.current === data.latest) {
+      // v1.27.3 fix: use LIVE current, not cached.
+      const { readLiveMnemeVersion } = await import("../version_check.js");
+      const liveCurrent = readLiveMnemeVersion();
+      if (liveCurrent === "unknown") {
         return v(start, {
           name: "version-up-to-date", description: "version up to date",
-          status: "pass", evidence: `running latest v${data.current}`,
+          status: "skip", evidence: "could not determine live installed version",
+        });
+      }
+      if (liveCurrent === data.latest) {
+        return v(start, {
+          name: "version-up-to-date", description: "version up to date",
+          status: "pass", evidence: `running latest v${liveCurrent}`,
         });
       }
       return v(start, {
         name: "version-up-to-date", description: "version up to date",
         status: "fail",
-        evidence: `installed v${data.current}, npm latest v${data.latest}`,
+        evidence: `installed v${liveCurrent}, npm latest v${data.latest}`,
         fixHint: "Run `mneme upgrade --force`",
         autoAction: { tool: "mneme.system.upgrade", args: { mode: "install", force: true } },
       });

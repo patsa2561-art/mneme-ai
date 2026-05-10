@@ -55,21 +55,44 @@ describe("Mneme self-check audit", () => {
     }
   });
 
-  it("version-up-to-date check passes when current==latest", async () => {
+  it("version-up-to-date check passes when LIVE current matches latest (v1.27.3 fix)", async () => {
+    // v1.27.3 (HOTFIX): the check now compares cached `latest` against
+    // LIVE current (read from package.json), not the cached `current`.
+    // So we set latest = live to simulate "we are on latest".
+    const { readLiveMnemeVersion } = await import("../version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return; // skip if version cannot be determined
     writeFileSync(join(repo, ".mneme/version-check.json"),
-      JSON.stringify({ current: "1.26.0", latest: "1.26.0" }), "utf8");
+      JSON.stringify({ current: "0.0.1", latest: live }), "utf8");
     const r = await runAudit(repo);
     const v = r.verdicts.find((x) => x.name === "version-up-to-date");
     expect(v?.status).toBe("pass");
+    expect(v?.evidence).toContain(live);
   });
 
-  it("version-up-to-date check FAILS when current<latest + emits autoAction", async () => {
+  it("version-up-to-date check FAILS only when LIVE current < latest + emits autoAction", async () => {
+    // Far-future latest -- live current is always less, so this will FAIL.
     writeFileSync(join(repo, ".mneme/version-check.json"),
-      JSON.stringify({ current: "1.0.0", latest: "9.9.9" }), "utf8");
+      JSON.stringify({ current: "0.0.1", latest: "9999.0.0" }), "utf8");
     const r = await runAudit(repo);
     const v = r.verdicts.find((x) => x.name === "version-up-to-date");
     expect(v?.status).toBe("fail");
     expect(v?.autoAction?.tool).toBe("mneme.system.upgrade");
+  });
+
+  it("v1.27.3 regression: stale cache where latest == LIVE current passes (no AUTO-ACTION self-loop)", async () => {
+    // The exact bug v1.27.3 fixes: cache says current=1.0.0/latest=1.27.2
+    // but live IS 1.27.2 (user upgraded). Without the fix, this would
+    // fail with autoAction "upgrade to 1.27.2" looping the AI.
+    const { readLiveMnemeVersion } = await import("../version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return;
+    writeFileSync(join(repo, ".mneme/version-check.json"),
+      JSON.stringify({ current: "1.0.0", latest: live }), "utf8");
+    const r = await runAudit(repo);
+    const v = r.verdicts.find((x) => x.name === "version-up-to-date");
+    expect(v?.status).toBe("pass");
+    expect(v?.autoAction).toBeUndefined();
   });
 
   it("recurringSelfRecheck loops at least once", async () => {

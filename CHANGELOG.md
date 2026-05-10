@@ -8,6 +8,108 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.27.3] — 2026-05-10  --  HOTFIX
+
+**🔴 Critical -- pulse + selfcheck were emitting an AUTO-ACTION
+self-loop ("upgrade to vX, you're on vX") that any AI honoring the
+EXECUTE NOW contract would have called in a tight loop.** Caught
+during live dogfooding by an AI reviewer that correctly REFUSED to
+execute the contract.
+
+### The bug (in plain words)
+
+After a user upgraded Mneme (e.g. 1.27.0 → 1.27.2), the
+`.mneme/version-check.json` cache might still hold
+`current=1.27.0, latest=1.27.2`. Both pulse.ts and the
+`version-up-to-date` selfcheck compared the CACHED `current` against
+the CACHED `latest` -- saw they differed -- and emitted:
+
+```
+[AUTO-ACTION] Mneme v1.27.2 is available (you're on 1.27.0).
+  -> EXECUTE NOW: mneme.system.upgrade({mode:"install",force:true})
+```
+
+But the user was ALREADY on 1.27.2. An AI client honoring the
+contract would call `mneme.system.upgrade` -> no actual upgrade
+needed -> next pulse fires -> stale cache still says upgrade
+needed -> AI calls again -> loop.
+
+### Root cause
+
+Both code paths trusted the cached `current` instead of reading
+the LIVE installed version. After an upgrade, the cache lags until
+the next 1-hour TTL refresh. During that window, every pulse and
+selfcheck run produces a false-positive upgrade notice.
+
+### Fix (defense in depth)
+
+  1. **New shared `readLiveMnemeVersion()`** in `version_check.ts`.
+     Walks up from the running module to the nearest mneme `package.json`
+     and returns the actual installed version. Single source of truth
+     for both pulse + selfcheck.
+
+  2. **`pulse.ts` rewritten** to compare `live current` (not cached
+     `current`) against `cached latest`, using semver-aware
+     comparison (`semverGt`). Plus a belt-and-suspenders re-check at
+     the notable.push site so even if upstream logic ever flips
+     `updateAvailable=true` with `latest <= current`, no AUTO-ACTION
+     emits.
+
+  3. **`selfcheck/checks.ts` `versionUpToDateCheck`** now also reads
+     `readLiveMnemeVersion()` instead of the cached `data.current`.
+     A cache that says `current=1.0.0/latest=1.27.3` while live IS
+     1.27.3 → status = `pass` (was `fail` with autoAction looping
+     the AI).
+
+  4. **Semver-aware comparison.** Old code used `current !== latest`
+     -- which would also fire AUTO-ACTION if you were running a
+     pre-release AHEAD of npm latest (a downgrade!). Now uses
+     `semverGt(latest, current)` so only true forward upgrades
+     trigger.
+
+### Regression tests (lock-in)
+
+3 new tests in `pulse.test.ts` + 2 new in `selfcheck.test.ts`:
+
+  - **stale cache where latest == LIVE current** → no AUTO-ACTION
+  - **cache ahead of LIVE current** → AUTO-ACTION fires (real upgrade)
+  - **cache BEHIND LIVE current** (running pre-release) → no AUTO-ACTION
+    (would be a downgrade)
+  - **selfcheck pass when LIVE current matches latest** (was failing
+    pre-fix because comparison used cached current)
+
+### Files changed
+
+  - `packages/core/src/version_check.ts` -- exports `readLiveMnemeVersion()`
+  - `packages/core/src/pulse.ts` -- live comparison + semver guard +
+    belt-and-suspenders notable guard
+  - `packages/core/src/selfcheck/checks.ts` -- `versionUpToDateCheck`
+    uses live current
+  - `packages/core/src/pulse.test.ts` -- +3 regression tests
+  - `packages/core/src/selfcheck/selfcheck.test.ts` -- updated 2
+    tests + 1 new regression
+
+### Test coverage
+
+  - **+4 regression tests**, **4969/4969 passing total**.
+
+### Why this is critical
+
+The EXECUTE NOW protocol works because AI agents trust it. If
+Mneme ever emits a contract that loops, the protocol becomes
+unsafe to honor and AIs will start ignoring it -- breaking the
+entire "AI auto-trigger" loop closed by v1.25.2 + v1.26.x.
+v1.27.3 restores the contract's safety guarantee: AUTO-ACTION
+fires ONLY when there's a real action to take.
+
+### Migration
+
+Anyone running v1.25.x → v1.27.2 should `npm i -g mneme-ai@1.27.3`
+immediately. The bug was latent in v1.25.x but only became
+weaponizable when v1.26.3 introduced inbox AUTO-ACTION + v1.27.0
+introduced the self-modifying NUCLEUS that AIs are more likely to
+honor.
+
 ## [1.27.2] — 2026-05-10
 
 **Three real bugs caught by an AI-agent reviewer in the v1.27.0

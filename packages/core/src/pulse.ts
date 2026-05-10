@@ -33,6 +33,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ackInbox } from "./inbox.js";
 import { renderOracleHint } from "./oracle/index.js";
+import { readLiveMnemeVersion, semverGt } from "./version_check.js";
 
 export interface PulseStatus {
   version: { current: string; latest: string | null; updateAvailable: boolean };
@@ -69,13 +70,27 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     notable: [],
   };
 
-  // Version
+  // Version. v1.27.3 (HOTFIX): the comparison MUST use the LIVE
+  // current version (readMyVersion above), not the `v.current` field
+  // from the cache. AND must use semver "latest > current", not just
+  // "latest != current" -- otherwise running a pre-release ahead of
+  // npm latest would fire AUTO-ACTION too.
+  //
+  // Without this fix, the v1.27.2 user upgraded 1.27.0 -> 1.27.2 but
+  // the cache still said current=1.27.0/latest=1.27.2. The pulse
+  // emitted "[AUTO-ACTION] upgrade to 1.27.2 (you're on 1.27.2)" --
+  // a self-loop the AI would honor under the EXECUTE NOW contract.
   const vPath = join(repoRoot, ".mneme/version-check.json");
   if (existsSync(vPath)) {
     try {
       const v = JSON.parse(readFileSync(vPath, "utf8")) as { current?: string; latest?: string };
       status.version.latest = v.latest ?? null;
-      if (v.current && v.latest && v.current !== v.latest) {
+      if (
+        v.latest &&
+        status.version.current &&
+        status.version.current !== "unknown" &&
+        semverGt(v.latest, status.version.current)
+      ) {
         status.version.updateAvailable = true;
       }
     } catch { /* ignore */ }
@@ -147,7 +162,17 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
   }
 
   // Build notable[] from the gathered state.
-  if (status.version.updateAvailable && status.version.latest) {
+  // v1.27.3 (HOTFIX): belt-and-suspenders. Even if upstream logic
+  // ever sets updateAvailable=true with latest <= current, refuse to
+  // emit an AUTO-ACTION. The EXECUTE NOW contract is sacred -- if
+  // it fires, the AI runs the tool. We must never tell it to
+  // "upgrade" to a version it already has (or already exceeds).
+  if (
+    status.version.updateAvailable &&
+    status.version.latest &&
+    status.version.current !== "unknown" &&
+    semverGt(status.version.latest, status.version.current)
+  ) {
     status.notable.push({
       level: "action",
       text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). Auto-upgrade now: call mneme.system.upgrade with mode='install', force=true.`,
@@ -235,18 +260,12 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
   return lines.join("\n");
 }
 
+/**
+ * v1.27.3 -- delegates to the shared `readLiveMnemeVersion()` so pulse
+ * + selfcheck both read the same source of truth (the live
+ * package.json near this module). This is what makes the v1.27.2
+ * self-loop bug structurally impossible.
+ */
 function readMyVersion(): string {
-  try {
-    // Find package.json near this module (works in both src and dist).
-    let dir = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]):/, "$1:");
-    for (let i = 0; i < 6; i++) {
-      const candidate = join(dir, "package.json");
-      if (existsSync(candidate)) {
-        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { version?: string; name?: string };
-        if (pkg.name === "@mneme-ai/core" || pkg.name === "mneme-ai") return pkg.version ?? "unknown";
-      }
-      dir = join(dir, "..");
-    }
-  } catch { /* ignore */ }
-  return "unknown";
+  return readLiveMnemeVersion();
 }
