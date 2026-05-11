@@ -319,7 +319,8 @@ export async function runSquadron(ctx: SpawnContext, bots?: BotName[], opts?: { 
   }));
   const advocateFinding = opts?.skipAdvocate
     ? null
-    : squadronAdvocate.runAdvocate({ claim: ctx.claim, otherFindings });
+    // v1.50.0 — pass repoRoot so advocate runs FACT GROUNDING.
+    : squadronAdvocate.runAdvocate({ claim: ctx.claim, otherFindings, repoRoot: process.cwd() });
   const quorum = squadronAdvocate.aggregateWithQuorum(ctx.claim, otherFindings, advocateFinding, {
     repoRoot: process.cwd(),
     requireAdvocate: !!opts?.requireAdvocate,

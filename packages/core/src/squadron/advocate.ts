@@ -60,6 +60,7 @@
 
 import { existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
+import { checkClaim, hasFalseFact, type FactCheckResult } from "./fact_grounding.js";
 
 export type Verdict = "supports" | "contradicts" | "neutral" | "needs_data";
 
@@ -117,6 +118,12 @@ export interface AdvocateInput {
    *  When the claim mentions a specific feature/version that has zero
    *  hits in any other bot's evidence, the advocate flags it. */
   knownEvidenceTokens?: string[];
+  /** v1.50.0 -- absolute path to the repo root, so the advocate can run
+   *  FACT GROUNDING against the actual codebase. When provided, any
+   *  factual claim that contradicts ground truth (wrong language, wrong
+   *  tool count, missing file, etc.) triggers a HARD refute that
+   *  overrides pattern-matching bot votes. */
+  repoRoot?: string;
 }
 
 export interface AdvocateFinding extends BotFindingShape {
@@ -124,7 +131,10 @@ export interface AdvocateFinding extends BotFindingShape {
   /** Why the advocate emitted this verdict, in 1-2 sentences. */
   reasoning: string;
   /** Specific bias signals the advocate detected. */
-  biasSignals: Array<"absence-of-evidence" | "single-source-laundering" | "all-irrelevant-citations" | "claim-too-vague" | "specific-entity-mismatch">;
+  biasSignals: Array<"absence-of-evidence" | "single-source-laundering" | "all-irrelevant-citations" | "claim-too-vague" | "specific-entity-mismatch" | "false-fact-claim">;
+  /** v1.50.0 -- fact-check results (one per extracted claim). Empty
+   *  when no repoRoot was provided or no claims were extractable. */
+  factChecks?: import("./fact_grounding.js").FactCheckResult[];
 }
 
 /** v1.42.0 — extract entities the claim is SPECIFICALLY about, not just
@@ -159,6 +169,34 @@ export function runAdvocate(input: AdvocateInput): AdvocateFinding {
   const otherFindings = input.otherFindings ?? [];
   const claim = (input.claim ?? "").trim();
   const biasSignals: AdvocateFinding["biasSignals"] = [];
+
+  // v1.50.0 — FACT GROUNDING. Before any pattern-matching bias check
+  // runs, verify factual claims against the actual repo state. A single
+  // FALSE fact triggers a hard refute that overrides any number of
+  // pattern-matching "supports" votes. This is what stops the
+  // smoking-gun pattern where "Mneme has 200 tools and the daemon is
+  // written in Rust" got SUPPORTED 57%.
+  let factChecks: FactCheckResult[] = [];
+  if (input.repoRoot) {
+    try {
+      factChecks = checkClaim(input.repoRoot, claim);
+    } catch { /* fact grounding is best-effort */ }
+  }
+  if (factChecks.length > 0 && hasFalseFact(factChecks)) {
+    const falseOnes = factChecks.filter((r) => r.verdict === "false");
+    biasSignals.push("false-fact-claim");
+    const falseDetail = falseOnes.map((r) => `${r.claim.kind}="${r.claim.asserted}" (ground truth: ${r.groundTruth})`).join("; ");
+    return {
+      bot: "advocate",
+      verdict: "contradicts",
+      confidence: 0.95,
+      headline: `FACT-CHECK REFUTE — ${falseOnes.length} claim${falseOnes.length === 1 ? "" : "s"} contradicted by repo state`,
+      evidence: falseOnes.map((r) => `${r.claim.raw} → ${r.evidence}`),
+      reasoning: `Hard refute via FACT GROUNDING (v1.50.0). ${falseOnes.length} of ${factChecks.length} factual claim${factChecks.length === 1 ? "" : "s"} contradicted by the actual repo. Pattern-matching consensus is OVERRIDDEN -- when the facts are wrong, no number of "supports" votes can compensate. Falsehoods: ${falseDetail}.`,
+      biasSignals,
+      factChecks,
+    };
+  }
 
   // Test 1: Is the claim specific enough to demand evidence?
   // Heuristic: claims with specific tokens (version numbers, feature
@@ -265,6 +303,7 @@ export function runAdvocate(input: AdvocateInput): AdvocateFinding {
     evidence: [],          // advocate's "evidence" is the metadata, not citations
     reasoning,
     biasSignals,
+    factChecks,            // v1.50.0 — always surface for transparency
   };
 }
 

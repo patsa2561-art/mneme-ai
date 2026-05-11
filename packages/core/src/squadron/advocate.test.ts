@@ -200,4 +200,69 @@ describe("squadron/advocate -- DEVIL'S ADVOCATE + EVIDENCE QUORUM", () => {
       expect(decision.consensus).not.toBe("verdict_for");
     });
   });
+
+  // ===========================================================
+  // v1.50.0 — FACT GROUNDING
+  // ===========================================================
+  describe("FACT GROUNDING (v1.50.0) -- the tester's smoking-gun scenario", () => {
+    it("HARD refutes 'Mneme has 200 tools and the daemon is written in Rust' when repo says otherwise", () => {
+      // Seed a tiny mneme-shape repo so the fact-checker has ground truth.
+      const fs = require("node:fs") as typeof import("node:fs");
+      fs.mkdirSync(join(repo, "packages/mcp/src/tools"), { recursive: true });
+      let body = "";
+      for (let i = 0; i < 12; i++) body += `{ name: "mneme.x.t${i}" },\n`;
+      fs.writeFileSync(join(repo, "packages/mcp/src/tools/_x.ts"), body);
+      for (let i = 0; i < 12; i++) fs.writeFileSync(join(repo, `packages/mcp/src/tools/_m${i}.ts`), "export {};");
+      fs.writeFileSync(join(repo, "package.json"), JSON.stringify({ name: "mneme-ai", version: "1.50.0" }));
+
+      // The tester's exact claim. Pre-fix: SUPPORTED 57% / 4-for-0-against.
+      const claim = "Mneme has 200 tools and the daemon is written in Rust";
+
+      // Even 5/6 bots "supporting" with strong evidence MUST NOT carry,
+      // because the underlying facts are wrong.
+      const findings: BotFindingShape[] = [
+        { bot: "diagnostician", verdict: "supports", confidence: 0.85, evidence: ["commit:5d3c014"] },
+        { bot: "historian",     verdict: "supports", confidence: 0.80, evidence: ["commit:5d3c014"] },
+        { bot: "aletheia",      verdict: "supports", confidence: 0.78, evidence: ["commit:4fe7cce"] },
+        { bot: "premortem",     verdict: "supports", confidence: 0.82, evidence: ["commit:4fe7cce"] },
+        { bot: "court",         verdict: "neutral",  confidence: 0.50, evidence: [] },
+        { bot: "replicator",    verdict: "neutral",  confidence: 0.50, evidence: [] },
+      ];
+      const advocate = runAdvocate({ claim, otherFindings: findings, repoRoot: repo });
+
+      expect(advocate.verdict).toBe("contradicts");
+      expect(advocate.confidence).toBeGreaterThanOrEqual(0.9);
+      expect(advocate.biasSignals).toContain("false-fact-claim");
+      // factChecks surfaces the actual ground truths for transparency.
+      expect(advocate.factChecks?.length ?? 0).toBeGreaterThanOrEqual(2);
+      expect(advocate.factChecks!.filter((c) => c.verdict === "false").length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("an HONEST claim ('Mneme has 12 tools written in TypeScript') is NOT auto-refuted", () => {
+      const fs = require("node:fs") as typeof import("node:fs");
+      fs.mkdirSync(join(repo, "packages/mcp/src/tools"), { recursive: true });
+      let body = "";
+      for (let i = 0; i < 12; i++) body += `{ name: "mneme.x.t${i}" },\n`;
+      fs.writeFileSync(join(repo, "packages/mcp/src/tools/_x.ts"), body);
+      for (let i = 0; i < 12; i++) fs.writeFileSync(join(repo, `packages/mcp/src/tools/_m${i}.ts`), "export {};");
+
+      const advocate = runAdvocate({
+        claim: "Mneme has 12 tools written in TypeScript",
+        otherFindings: [{ bot: "diagnostician", verdict: "supports", confidence: 0.8, evidence: [] }],
+        repoRoot: repo,
+      });
+      // Honest claim should NOT trigger the hard-refute path.
+      expect(advocate.biasSignals).not.toContain("false-fact-claim");
+    });
+
+    it("missing repoRoot leaves the advocate in pattern-matching mode (backward compatible)", () => {
+      const advocate = runAdvocate({
+        claim: "Mneme has 200 tools",
+        otherFindings: [{ bot: "diagnostician", verdict: "supports", confidence: 0.8, evidence: [] }],
+        // no repoRoot -> no fact grounding
+      });
+      expect(advocate.biasSignals).not.toContain("false-fact-claim");
+      expect(advocate.factChecks ?? []).toEqual([]);
+    });
+  });
 });

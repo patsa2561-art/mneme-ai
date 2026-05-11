@@ -134,7 +134,11 @@ ran on top (compliance-grade evidence quorum).
         confidence: f.confidence, evidence: f.evidence ?? [],
       }));
       const advocateFinding = wantAdvocate
-        ? squadronAdvocate.runAdvocate({ claim: text, otherFindings })
+        // v1.50.0 — pass repoRoot so the advocate runs FACT GROUNDING.
+        // Without this, a claim like "Mneme is written in Rust" gets
+        // rubber-stamped SUPPORTED 57% because pattern-matching bots
+        // never check the actual repo state.
+        ? squadronAdvocate.runAdvocate({ claim: text, otherFindings, repoRoot: process.cwd() })
         : null;
       const quorum = squadronAdvocate.aggregateWithQuorum(text, otherFindings, advocateFinding, {
         repoRoot: process.cwd(),

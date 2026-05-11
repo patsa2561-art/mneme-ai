@@ -297,7 +297,8 @@ Only manual step. After restart, your AI tool now sees Mneme tools.
 
 ---
 
-## 💬 5 scenes — what it actually feels like
+<details>
+<summary><h2 style="display:inline">💬 5 scenes — what it actually feels like</h2></summary>
 
 > Three characters: **👤 You** · **🤖 your AI** · **🧠 Mneme (silent secretary)**.
 > Every conversation below happens **without you typing a single Mneme command.**
@@ -553,9 +554,12 @@ failed.
 
 </details>
 
+</details>
+
 ---
 
-## 💰 Business Model — 5 wild bets (every feature FREE today)
+<details>
+<summary><h2 style="display:inline">💰 Business Model — 5 wild bets (every feature FREE today)</h2></summary>
 
 > Mneme is **MIT-licensed and 100% free to use**. The five business models below are how Mneme stays **economically sustainable as public infrastructure** — they don't gate any feature you use today.
 
@@ -632,6 +636,8 @@ No certification body in this market today. **First mover holds the seat.**
                               ▲
                 100K EMs × $50/mo = $5M MRR · sticky daily-use SaaS
 ```
+
+</details>
 
 ---
 

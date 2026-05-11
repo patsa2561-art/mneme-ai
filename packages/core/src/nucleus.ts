@@ -74,10 +74,23 @@ export interface NucleusLesson {
   id: string;
   tick: number;
   bornAt: string;
-  /** One-sentence wisdom the AI agent reads + internalizes. */
+  /** One-sentence note describing what changed at this tick. */
   text: string;
   /** Source: what observation triggered this lesson. */
   source: string;
+  /** v1.50.0 -- evidence kind to surface honestly:
+   *  "milestone"    = tick-counter narrative, no specific data behind it
+   *  "growth-event" = a measurable change (chromosomes / vendors / verified)
+   *                   with the specific delta + sample IDs in `evidence`
+   *  "consolidation" = nucleus stayed alive at a milestone tick
+   *  Pre-v1.50.0 all entries lied about being "wisdom"; now the kind makes
+   *  the substance honest.
+   */
+  kind?: "milestone" | "growth-event" | "consolidation";
+  /** v1.50.0 -- concrete evidence behind this lesson (chromosome IDs,
+   *  vendor names, etc.). Empty array = no evidence = milestone, not
+   *  wisdom. Surfaces honestly in `mneme nucleus lessons`. */
+  evidence?: string[];
 }
 
 function emptyNucleus(): NucleusState {
@@ -115,8 +128,12 @@ function writeNucleus(repoRoot: string, n: NucleusState): void {
 }
 
 /** Aggregate the live DNA from all chromosomes + streaks. Pure read.
- *  Used by tick() to compute current growth + wisdom score. */
-function aggregateDna(repoRoot: string, streaks: StreaksState): NucleusState["growth"] & { dnaHash: string } {
+ *  Used by tick() to compute current growth + wisdom score.
+ *
+ *  v1.50.0 — also returns the specific chromosome IDs + vendor names
+ *  observed, so lesson synthesis can CITE real evidence instead of
+ *  emitting tick-counter filler. */
+function aggregateDna(repoRoot: string, streaks: StreaksState): NucleusState["growth"] & { dnaHash: string; chromosomeIds: string[]; vendors: string[] } {
   const ids = listChromosomes(repoRoot);
   let totalCalls = 0;
   const vendors = new Set<string>();
@@ -140,6 +157,8 @@ function aggregateDna(repoRoot: string, streaks: StreaksState): NucleusState["gr
     bestVerifiedStreak: streaks.bestVerifiedStreak,
     vendorCount: vendors.size,
     dnaHash,
+    chromosomeIds: ids,
+    vendors: [...vendors],
   };
 }
 
@@ -159,30 +178,57 @@ function computeWisdomScore(g: NucleusState["growth"], lessonCount: number): num
 }
 
 /** Synthesize a lesson from the current growth deltas. Heuristic — picks
- *  the most "informative" delta since last tick + turns it into a sentence. */
-function synthesizeLesson(prev: NucleusState, curr: NucleusState["growth"]): NucleusLesson | null {
+ *  the most "informative" delta since last tick + turns it into a sentence.
+ *
+ *  v1.50.0 — every lesson now carries an `evidence` array citing the
+ *  SPECIFIC chromosomes / vendors / outcomes that grew. Pre-v1.50 these
+ *  were generic filler ("X new outcomes this tick -- DNA fitness rising");
+ *  testers correctly called this out as a marketing lie. The new shape
+ *  is honest: if `evidence.length === 0`, the lesson is a TICK MILESTONE,
+ *  not wisdom. The `kind` field surfaces this distinction.
+ */
+function synthesizeLesson(
+  prev: NucleusState,
+  curr: NucleusState["growth"],
+  evidence: { chromosomeIds: string[]; vendors: string[] } = { chromosomeIds: [], vendors: [] },
+): NucleusLesson | null {
   const newChromosomes = curr.chromosomesEver - prev.growth.chromosomesEver;
   const newCalls = curr.totalCalls - prev.growth.totalCalls;
   const newVerified = curr.totalVerified - prev.growth.totalVerified;
   const newVendors = curr.vendorCount - prev.growth.vendorCount;
   let text: string | null = null;
   let source = "";
+  let kind: NucleusLesson["kind"] = "growth-event";
+  let citedEvidence: string[] = [];
   // v1.23.2 — ASCII-only text in file-persisted strings. Em-dash bytes
   // (e2 80 94) get mojibake'd when Windows tools read .mneme/nucleus.json
   // with the system codepage (cp874 / cp1252) instead of UTF-8.
   // `--` is bulletproof in every encoding.
   if (newVendors > 0) {
-    text = `A new AI vendor joined the lineage this tick -- ${curr.vendorCount} vendors now contribute to the nucleus.`;
+    const sample = evidence.vendors.slice(-newVendors).slice(0, 3);
+    text = sample.length > 0
+      ? `New AI vendor${newVendors === 1 ? "" : "s"} joined: ${sample.join(", ")} (now ${curr.vendorCount} vendor${curr.vendorCount === 1 ? "" : "s"} total).`
+      : `${newVendors} new AI vendor${newVendors === 1 ? "" : "s"} this tick (${curr.vendorCount} total).`;
     source = "newVendor";
+    citedEvidence = sample;
   } else if (newVerified > 0) {
-    text = `${newVerified} new verified outcome${newVerified === 1 ? "" : "s"} this tick -- DNA fitness rising.`;
+    text = `+${newVerified} verified outcome${newVerified === 1 ? "" : "s"} this tick (running total: ${curr.totalVerified}).`;
     source = "newVerified";
+    // No specific IDs available here -- be honest about it.
+    kind = newVerified >= 5 ? "growth-event" : "milestone";
   } else if (newChromosomes > 0) {
-    text = `${newChromosomes} new chromosome${newChromosomes === 1 ? "" : "s"} crystallized -- the lineage grew.`;
+    const sample = evidence.chromosomeIds.slice(-newChromosomes).slice(0, 3);
+    text = sample.length > 0
+      ? `+${newChromosomes} chromosome${newChromosomes === 1 ? "" : "s"} crystallized: ${sample.map((s) => s.slice(0, 8)).join(", ")}.`
+      : `+${newChromosomes} chromosome${newChromosomes === 1 ? "" : "s"} crystallized (running total: ${curr.chromosomesEver}).`;
     source = "newChromosome";
+    citedEvidence = sample;
   } else if (newCalls > 0) {
-    text = `${newCalls} call${newCalls === 1 ? "" : "s"} this tick -- keep talking to Mneme; every call deepens the nucleus.`;
+    // Pre-fix: "X calls this tick -- DNA fitness rising" = filler.
+    // Post-fix: state it plainly as a counter increment, NOT wisdom.
+    text = `+${newCalls} tool call${newCalls === 1 ? "" : "s"} this tick (running total: ${curr.totalCalls}). Counter increment, no new structural growth.`;
     source = "newCalls";
+    kind = "milestone";
   }
   if (!text) return null;
   return {
@@ -191,6 +237,8 @@ function synthesizeLesson(prev: NucleusState, curr: NucleusState["growth"]): Nuc
     bornAt: new Date().toISOString(),
     text,
     source,
+    kind,
+    evidence: citedEvidence,
   };
 }
 
@@ -229,6 +277,8 @@ function maybePeriodicLesson(
     bornAt: new Date().toISOString(),
     text,
     source: "periodic",
+    kind: "consolidation",   // v1.50.0 -- honest label, not "wisdom"
+    evidence: [],
   };
 }
 
@@ -252,7 +302,9 @@ export function tick(repoRoot: string): TickResult {
   // lesson at tick milestones (5/10/25/50/100/250/500) so the user sees
   // the nucleus is still thinking. UX problem reported: stable ticks
   // looked like the daemon had crashed.
-  const newLesson = synthesizeLesson(prev, aggregated)
+  // v1.50.0 — pass real evidence (chromosome IDs + vendor names) so the
+  // lesson cites concrete data instead of generic filler.
+  const newLesson = synthesizeLesson(prev, aggregated, { chromosomeIds: aggregated.chromosomeIds, vendors: aggregated.vendors })
     ?? maybePeriodicLesson(prev, aggregated);
   const lessons = newLesson ? [...prev.lessons, newLesson].slice(-50) : prev.lessons;
   const wisdomScore = computeWisdomScore(aggregated, lessons.length);

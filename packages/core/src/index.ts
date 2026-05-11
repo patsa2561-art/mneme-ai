@@ -242,6 +242,12 @@ export * as autoship from "./autoship/cycle.js";
 // laundering + absence-of-evidence + irrelevant citations. The
 // quorum aggregator caps consensus when bias signals fire.
 export * as squadronAdvocate from "./squadron/advocate.js";
+// v1.50.0 -- FACT GROUNDING. Squad/Advocate now verifies factual claims
+// against the actual repo state (package.json, source tree). A single
+// FALSE fact triggers a hard refute that overrides pattern-matching
+// "supports" votes. Fixes the smoking-gun bug where "Mneme has 200
+// tools and the daemon is written in Rust" got SUPPORTED 57%.
+export * as squadronFactGrounding from "./squadron/fact_grounding.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
