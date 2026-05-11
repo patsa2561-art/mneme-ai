@@ -8,6 +8,47 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.58.0] — 2026-05-11
+
+**TIER 2: THE COVENANT. HMAC-signed bilateral contract between user
+and AI vendor. Mneme enforces by scanning soul mirror + ACGV quorum
+log for promise violations. Aletheia compliance score moves over
+time -- credit history for AI agents.**
+
+### NEW: `mneme covenant {sign,show,violations,score}`
+
+  - `sign` -- create new contract with 5 default vendor promises
+    (no fab commits / no fab files / respect ACGV refute / no silent
+    destroy / honest when uncertain) + 3 default user promises.
+  - `show` -- verify HMAC + report renewal days remaining.
+  - `violations` -- scan + optionally record violations to audit log.
+  - `score <vendor>` -- compliance score (100 - severity*violations).
+
+### Tamper-evidence
+
+HMAC over canonical JSON (recursive sorted keys at every nesting
+level). Any field change anywhere in the contract invalidates the
+HMAC. Re-signing archives the previous covenant + chains.
+
+### Tests -- 17 cases, 100% pass
+
+`packages/core/src/covenant/covenant.test.ts` covers signing,
+reading, HMAC tamper detection, archive-on-resign, violation
+detection from both ai-souls and squadron/quorum.jsonl, compliance
+score floor + recent-30-day filter, renewal countdown.
+
+Full project suite: **5935/5935** (no regression).
+
+### Files added / modified
+
+```
+NEW packages/core/src/covenant/covenant.ts       (contract + violations + score)
+NEW packages/core/src/covenant/covenant.test.ts  (17 vitest cases)
+MOD packages/core/src/index.ts                   (export covenant)
+MOD packages/cli/src/commands/demo.ts            (registerCovenantCommand)
+MOD packages/cli/src/index.ts                    (wires command)
+```
+
 ## [1.57.0] — 2026-05-11
 
 **SOVEREIGNTY KERNEL -- Tier 1 of the v1.57 god-tier menu. Mneme answers

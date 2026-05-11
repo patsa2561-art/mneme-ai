@@ -294,6 +294,11 @@ export * as autoboot from "./autoboot/index.js";
 // decides what to say (verdict), Ollama generates the words (text).
 // Free-first: no API key, no cloud, no source code leaves the laptop.
 export * as sovereign from "./sovereign/index.js";
+// v1.58.0 -- TIER 2: THE COVENANT. Bilateral HMAC-signed contract
+// between user + AI vendor. Mneme enforces by scanning soul mirror +
+// quorum.jsonl for violations. Aletheia compliance score moves over
+// time -- credit history for AI.
+export * as covenant from "./covenant/covenant.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

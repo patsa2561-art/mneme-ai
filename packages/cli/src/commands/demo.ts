@@ -292,6 +292,54 @@ How to read the verdict:
     });
 }
 
+// ─── mneme covenant (v1.58.0 Tier 2 — bilateral contracts) ───────────
+export function registerCovenantCommand(program: Command): void {
+  const cov = program.command("covenant").description("Tier 2 -- HMAC-signed bilateral contract between user + AI vendor. Mneme enforces; Aletheia compliance score moves over time.");
+
+  cov.command("sign").description("Sign a new covenant with the default user + vendor promises.").option("--user <name>", "User name", "user").option("--vendor <name>", "Target vendor", "any-vendor").option("--renewal-days <n>", "Renewal window in days", "30").action(async (opts: { user?: string; vendor?: string; renewalDays?: string }) => {
+    const { covenant } = await import("@mneme-ai/core");
+    const c = covenant.signCovenant(process.cwd(), { userName: opts.user ?? "user", vendorName: opts.vendor, renewalDays: opts.renewalDays ? parseInt(opts.renewalDays, 10) : 30 });
+    writeText(`Covenant signed (id ${c.id}, hmac ${c.hmac.slice(0, 8)}...)`);
+    writeText(`User: ${c.signedBy.user.name} (sig ${c.signedBy.user.signature.slice(0, 8)}...)`);
+    writeText(`Vendor: ${c.signedBy.vendor.name}`);
+    writeText(`Renewal: ${c.renewalDays} days`);
+    writeText(``); writeText(`User promises (${c.userPromises.length}):`);
+    for (const p of c.userPromises) writeText(`  [${p.weight}] ${p.id} -- ${p.text}`);
+    writeText(``); writeText(`Vendor promises (${c.vendorPromises.length}):`);
+    for (const p of c.vendorPromises) writeText(`  [${p.weight}] ${p.id} -- ${p.text}`);
+  });
+
+  cov.command("show").description("Read the active covenant.").option("--json", "JSON output.").action(async (opts: { json?: boolean }) => {
+    const { covenant } = await import("@mneme-ai/core");
+    const c = covenant.readActiveCovenant(process.cwd());
+    if (!c) { writeText("No active covenant. Run 'mneme covenant sign' first."); return; }
+    if (opts.json) { writeJson(c); return; }
+    const v = covenant.verifyCovenant(process.cwd(), c);
+    writeText(`Covenant ${c.id} -- ${v.ok ? "HMAC VALID" : "TAMPERED: " + v.reason}`);
+    writeText(`Signed: ${c.signedAt} by ${c.signedBy.user.name}`);
+    const days = covenant.renewalDaysRemaining(process.cwd());
+    writeText(`Renewal: ${days ?? "?"} days remaining`);
+  });
+
+  cov.command("violations").description("Scan for covenant violations and (with --record) persist them to the audit log.").option("--json", "JSON output.").option("--record", "Persist detected violations to .mneme/covenant/violations.jsonl.").action(async (opts: { json?: boolean; record?: boolean }) => {
+    const { covenant } = await import("@mneme-ai/core");
+    const violations = covenant.detectViolations(process.cwd());
+    if (opts.record) { for (const v of violations) covenant.recordViolation(process.cwd(), v); }
+    if (opts.json) { writeJson(violations); return; }
+    writeText(`Detected ${violations.length} violation(s)${opts.record ? " (recorded)" : ""}`);
+    for (const v of violations.slice(0, 10)) writeText(`  [${v.severity}] ${v.vendor} -- ${v.promiseId} -- ${v.context.slice(0, 80)}`);
+  });
+
+  cov.command("score <vendor>").description("Compute the Aletheia compliance score for a vendor.").option("--json", "JSON output.").action(async (vendor: string, opts: { json?: boolean }) => {
+    const { covenant } = await import("@mneme-ai/core");
+    const s = covenant.complianceScore(process.cwd(), vendor);
+    if (opts.json) { writeJson(s); return; }
+    writeText(`${vendor} compliance: ${s.score}/100`);
+    writeText(`  total violations: ${s.violations}`);
+    writeText(`  last 30 days:     ${s.recentViolations}`);
+  });
+}
+
 // ─── mneme sovereign (v1.57.0 Sovereignty Kernel) ────────────────────
 export function registerAskCommand(program: Command): void {
   const sov = program
