@@ -99,6 +99,7 @@ Commands:
   manifest  >  Sync the Mneme AGENT COMMAND MANIFEST into every agent file (CLAUDE.md, AGENTS.md, .cursor/rules, GEMINI.md, .windsurfrules) so the AI agent in your editor always knows the latest command surface.
   trust  >  Per-subsystem calibration grade (precision/recall/F1 + band). Honest about which Mneme subsystem deserves trust + which should be cross-checked with Semgrep / Cursor / Claude Code.
   nuclear  >  MNEME WISDOM REACTOR readout. Five real nuclear-physics formulas mapped to Mneme metrics: wisdom yield (E=mc² mass defect), atrophy half-life (radioactive decay), EVOLVE patch energy (reaction Q), RAG cluster radius, user-engagement criticality (k-factor).
+  overnight  >  Run a goal-driven multi-round transformation while you sleep. Inspired by ARIS but free-path-first: 6-quark jury (one Ollama model, six personas) reviews each round; NUCLEAR FUSION verdict bands; auto-stops on reject-streak / negative-Q-streak / budget exhaust. Wakes you up to a morning report at .mneme/overnight/<id>/REPORT.md.
   retrieval|rl  >  Retrieval Lab -- self-tuning retrieval config (UCB1 over candidate arms).
   hooks|integrate  >  Wire Mneme into your AI tool(s). Supports Claude Code (real hook), Cursor, Codex, Gemini, Windsurf, and project AGENTS.md.
   notify  >  Multi-channel outbound notifications (OS toast, TTS, mobile push, email, agent files).

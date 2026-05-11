@@ -88,6 +88,15 @@ export * as cacheHologram from "./cache_hologram.js";
 // k_factor drives NUCLEUS TIDE: pulse auto-tunes verbosity (quiet when
 // supercritical, proactive when subcritical).
 export * as wisdomReactor from "./nuclear/wisdom_reactor.js";
+// v1.34.0 -- DUAL-CONSCIENCE COURT + PERSPECTIVE QUARK JURY +
+// OVERNIGHT RUNNER. Inspired by ARIS but explicitly broader: any
+// goal-driven multi-round transformation runs through the runner;
+// reviewer is a 6-quark jury (one model, six personas) so the FREE
+// path beats ARIS's 2-model setup. NUCLEAR FUSION verdict: stable
+// nucleus = merge, unstable = defer. Wisdom-Q auto-stop on regression.
+export * as overnightConscience from "./overnight/conscience.js";
+export * as overnightQuarkJury from "./overnight/quark_jury.js";
+export * as overnightRunner from "./overnight/runner.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

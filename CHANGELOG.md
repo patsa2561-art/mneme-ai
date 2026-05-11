@@ -8,6 +8,103 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.34.0] — 2026-05-11
+
+**MNEME OVERNIGHT** — go to sleep, wake up to better work. Direct
+response to ARIS (Auto-Research-In-Sleep) but explicitly broader
+AND free-path-first.
+
+### What ARIS does + how Mneme goes further
+
+| ARIS | MNEME OVERNIGHT (this release) |
+|---|---|
+| 2 different MODELS (Claude doer + GPT reviewer) | **6-PERSPECTIVE QUARK JURY** -- ONE model, six personas (optimist / pessimist / elegance / edge-cases / security / performance) -- philosophical diversity > model-vendor diversity, on the FREE Ollama path |
+| Specialized to AI research papers | **Any goal**: refactors, EVOLVE patches, vaccine proposals, docs |
+| Linear 4-round loop | **Wisdom-Q auto-stop** + reject-streak guard + budget time/cost cap (uses v1.33.0 reactor Q-score) |
+| Single reviewer median verdict | **NUCLEAR FUSION verdict**: 6 quark scores fuse into a verdict nucleus. Stable nucleus (low variance + high mean) → merge. Unstable (1 quark hates it) → defer to human. |
+| Cost = 2 paid API providers per round | **Free path** = local Ollama with persona prompts. Paid jurors are opt-in. |
+
+### Module 1 — DUAL-CONSCIENCE COURT
+
+`packages/core/src/overnight/conscience.ts`. N-model jury with
+median aggregation + consensus-fraction banding (merge / review /
+reject). Reviewer interface is provider-agnostic; ships with
+`mockReviewer()` (deterministic for tests), `ollamaReviewer()`
+(default free path), and the generic `parseReviewerJSON()` defensive
+parser. Reviewer that throws is captured as a neutral 5/false abstain
+so a single network failure can't sink the court.
+
+13 tests: empty-jury rejection, threshold-band classification,
+median-resistance to single rogue reviewer, JSON parse defense,
+custom-threshold knob.
+
+### Module 2 — PERSPECTIVE QUARK JURY (KILLER IDEA #1)
+
+`packages/core/src/overnight/quark_jury.ts`. Six quark flavors
+matching real quark families: **up** OPTIMIST, **down** PESSIMIST,
+**charm** ELEGANCE, **strange** EDGE-CASES, **top** SECURITY,
+**bottom** PERFORMANCE. Each persona = system-prompt prefix +
+temperature variation that biases the same underlying model.
+
+`spawnQuarkJury(baseReviewer)` returns 6 jurors from one base.
+`fuseQuarkVerdicts(verdicts, workItemKind)` runs the **NUCLEAR
+FUSION** aggregator: stable nucleus = low variance (≤2.5) AND high
+mean (≥6.5) = `merge-stable`. High mean but high variance =
+`merge-with-watch` (defer to human). `DOMAIN_WEIGHTS` table tunes
+energy yield per workItemKind (e.g., security weighs 1.5× for
+evolve-patch, 0.3× for docs).
+
+**ENERGY YIELD**: `Σ score_i × weight_i × c²` (reuses
+`WISDOM_C_SQUARED` from v1.33.0 reactor) -- single domain-aware
+score that beats raw mean.
+
+12 tests: persona catalog completeness, domain weighting (security
+heavier for evolve-patch than docs), variance-based stability
+classification, energy yield > mean for high-security-score
+evolve-patch.
+
+### Module 3 — OVERNIGHT RUNNER (KILLER IDEA #2)
+
+`packages/core/src/overnight/runner.ts`. Goal-driven multi-round
+loop with hard guardrails:
+
+- **maxRounds** (default 4 -- matches ARIS)
+- **maxWallSec** (default 4 hours -- equivalent of "4 GPU-hours")
+- **maxCostUsd** (optional -- when actor reports cost)
+- **rejectStreakStop** (default 2 -- stops on N consecutive rejects)
+- **WISDOM-Q AUTO-STOP** (default 2 -- stops on N consecutive
+  negative-Q rounds; uses v1.33.0 reactor Q-score; ARIS doesn't have
+  this -- they always run to round cap)
+- **actor-error-stop** (any thrown error → stops + records)
+
+Per round: PLAN → ACT (caller-supplied actor) → REVIEW (quark jury
+NUCLEAR FUSION) → DECIDE (band) → write `.mneme/overnight/<id>/round-N.md`.
+Final morning report at `.mneme/overnight/<id>/REPORT.md` aggregates
+every round + recommends next step. Session summary appended to
+`.mneme/overnight/sessions.jsonl`.
+
+8 tests: full-rounds happy path, reject-streak stop, negative-Q-streak
+stop, actor-error stop, artifact + REPORT.md persistence, explicit
+jury overrides quark spawn, sessions.jsonl append, budget-time stops
+before maxRounds.
+
+### CLI
+
+`mneme overnight run "<goal>" [--rounds 4] [--max-time 4h] [--max-cost 1.0]`
+`mneme overnight list [-n 20]`
+`mneme overnight show <sessionId-prefix>`
+
+v1.34.0 ships a STUB ACTOR that exercises the runner + jury + budget
+end-to-end. Real-actor wiring (EVOLVE + git apply + index updates)
+lands in v1.34.1+. The runner accepts ANY actor function -- callers
+can plug in custom actors today.
+
+### Tests
+
++33 across the 3 modules. Snapshot for `mneme --help` updated to
+include the `overnight` subcommand. Suite total: **5265 / 5265
+passing**. Zero regressions.
+
 ## [1.33.0] — 2026-05-11
 
 **MNEME WISDOM REACTOR.** Five real nuclear-physics formulas mapped to

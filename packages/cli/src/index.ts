@@ -110,6 +110,7 @@ import { registerSupernovaCommands } from "./commands/supernova-cli.js";
 import { registerManifestCommands } from "./commands/manifest.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
+import { registerOvernightCommand } from "./commands/overnight.js";
 import { registerRetrievalCommands } from "./commands/retrieval.js";
 import { registerHooksCommands } from "./commands/hooks.js";
 import { registerNotifyCommands } from "./commands/notify.js";
@@ -2450,6 +2451,8 @@ export async function run(argv: string[]): Promise<void> {
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics
   registerNuclearCommands(program);
+  // ─── Overnight runner (v1.34.0) -- multi-round goal-driven transformations
+  registerOvernightCommand(program);
   // ─── Retrieval Lab (v1.25.0) ──────────────────────────────────────
   registerRetrievalCommands(program);
   // ─── Hooks (v1.25.2) ──────────────────────────────────────────────
