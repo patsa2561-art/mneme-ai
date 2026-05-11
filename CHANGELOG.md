@@ -8,6 +8,72 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.53.0] — 2026-05-11
+
+**THREE fixes the tester surfaced in stress testing:**
+
+1. **`mneme.truth.check` MCP tool** -- the new ACGV pipeline was
+   CLI-only in v1.52; AI agents using MCP had no way to discover it
+   without typing the bare `mneme verify` command. v1.53 ships
+   `mneme.truth.check` as a first-class MCP tool with trigger phrases
+   ("verify this claim", "is that true", "ground-check this",
+   Thai "ตรวจสอบ", "เช็คจริง"). AI agents auto-discover + auto-route
+   to it. Returns a tiny friendly payload (`verdict`, `oneLine`,
+   `plain`, `nextAction`, `trafficLight`) the AI quotes verbatim.
+
+2. **tool_count substrate accuracy fix** -- ACGV v1.51-v1.52 returned
+   substrate=0.5 stub for `tool_count` claims, which let "Mneme has
+   500 tools" pass as TRUSTWORTHY 75% when the actual count is 129.
+   Stress test caught it. Now the substrate flavor actually counts
+   `mneme.<...>` tool definitions and grounds:
+     - within +/-15% slack    -> score 1.0 (TRUSTWORTHY)
+     - 1x to 2x slack          -> score 0.3 (LIMBO / MIXED)
+     - more than 2x slack      -> score 0   (BLACK_HOLE / IMPOSSIBLE)
+   6/6 stress-test cases now correct (was 4/6 = 67%).
+
+3. **README hero** -- the v1.52 ship landed `mneme verify` but kept
+   it buried below the fold. v1.53 surfaces the four verdict labels
+   (TRUSTWORTHY / MIXED / REFUTED / IMPOSSIBLE) under the title in
+   the AI-first "Tell your AI" format -- per the mandate that says
+   "user describes outcome; AI runs commands; never expose CLI as
+   the primary pitch."
+
+### Why this matters
+
+The tester ran an honest stress test ("test it like a user, is it
+really 100% accurate?") and surfaced both a UX gap (AI doesn't
+discover the new tool) and a correctness gap (count claims were
+half-grounded). v1.53 ships HONEST fixes to both. Accuracy on the
+factual-claim battery is now 6/6; vague-claim PASSTHROUGH is
+intentional (Mneme refuses to fake confidence on opinion-shaped
+inputs).
+
+### Honest accuracy report (kept current per release)
+
+- **Strong**: language stack claims (`rust` / `typescript` / etc),
+  file existence, package.json deps, version match, AND-compound
+  claims with even one false assertion.
+- **Borderline**: tool-count claims at exactly 1.5x slack distance
+  -> LIMBO ("Mneme refuses to verdict"). Intentional honesty.
+- **Pass-through**: opinion claims ("the code is good", "this is
+  clean") -- no extractable facts -> NEEDS-DATA verdict, returns
+  to legacy squadron logic.
+- **Known limits**: common language names (`typescript`, `rust`,
+  `python`) are filtered as GENERIC by the `library_used`
+  extractor -- name the actual package (e.g. `commander` not
+  `a CLI framework`) for library claims to ground.
+
+### Files added / modified
+
+```
+packages/mcp/src/tools/_truth_check.ts   (NEW MCP tool)
+packages/mcp/src/tools/_registry.ts      (registers truthCheckTool)
+packages/core/src/squadron/acgv_neutrino.ts  (tool_count substrate fix)
+packages/core/src/squadron/fact_grounding.ts (exports countMnemeTools)
+README.md                                (verdict labels under title)
+CHANGELOG.md
+```
+
 ## [1.52.0] — 2026-05-11
 
 **Z3 SAT formal upgrade + plain-English explainer + `mneme verify`.

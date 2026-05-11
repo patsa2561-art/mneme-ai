@@ -8,6 +8,36 @@
   <img src="https://img.shields.io/badge/%F0%9F%94%8A%20Pronounced-NEE--meh-c084fc?style=for-the-badge&labelColor=4c1d95" alt="🔊 Pronounced NEE-meh" height="32">
 </p>
 
+<br/>
+
+<table align="center" width="92%">
+<tr>
+<td align="center" valign="top">
+
+### 💬 Tell your AI: <i>"Mneme, verify that..."</i>
+
+The first AI tool willing to answer <b>"I do not know"</b> with math backing.<br/>
+Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
+
+</td>
+</tr>
+<tr><td align="center">
+
+<table>
+<tr>
+<td align="center"><b>✅ TRUSTWORTHY</b><br/><sub>every assertion grounds<br/>in the repo</sub></td>
+<td align="center"><b>⚠️ MIXED</b><br/><sub>partial signal —<br/>refuses to fake confidence</sub></td>
+<td align="center"><b>❌ REFUTED</b><br/><sub>contradictory evidence<br/>found on disk + in git</sub></td>
+<td align="center"><b>🌑 IMPOSSIBLE</b><br/><sub>Z3 SAT proof:<br/>cannot be true in this repo</sub></td>
+</tr>
+</table>
+
+<sub>Every verdict comes with one concrete <b>next action</b> in plain English. Math jargon hidden by default — pass <code>--explain</code> for the full Chandrasekhar / Neutrino / Godel breakdown.</sub><br/>
+<sub>Verified lies are <b>auto-immunized</b>: future variants refute in 0 ms via the simhash vaccine bank.</sub>
+
+</td></tr>
+</table>
+
 <h3>The Stage-3 tune for your AI coding tool.</h3>
 
 <p>

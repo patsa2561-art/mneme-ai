@@ -28,7 +28,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
-import type { FactClaim } from "./fact_grounding.js";
+import { countMnemeTools, type FactClaim } from "./fact_grounding.js";
 
 export interface FlavorScore {
   /** 0-1 score for how well this flavor grounds the claim entity. */
@@ -220,12 +220,30 @@ export function neutrinoSubstrate(repoRoot: string, claim: FactClaim): FlavorSco
     }
     return { score: 0, evidence: `package.json says ${pkg.version}, claim says ${claim.asserted}` };
   }
-  // Tool count -- delegated to the existing v1.50 logic; score 0.5 here so
-  // the harmonic mean still has signal but isn't dominated.
+  // Tool count -- count actual `mneme.<...>` tool definitions and compare
+  // to asserted N with 15% slack. False-positive bug fix (v1.52.1): pre-fix
+  // this returned 0.5 default and let "500 tools" pass as TRUSTWORTHY when
+  // actual is 172. Now it grounds properly:
+  //   |asserted - actual| <= slack -> 1.0 (within tolerance)
+  //   off by 1-2x slack             -> 0.3 (borderline; pushes to LIMBO)
+  //   off by > 2x slack             -> 0   (substrate refute; explicit negative)
   if (claim.kind === "tool_count") {
-    return { score: 0.5, evidence: "tool count substrate handled by advocate fact-checker" };
+    const asserted = parseInt(claim.asserted, 10);
+    if (!Number.isFinite(asserted) || asserted <= 0) {
+      return { score: 0.5, evidence: "non-numeric tool count" };
+    }
+    const actual = countMnemeTools(repoRoot);
+    const slack = Math.max(5, asserted * 0.15);
+    const diff = Math.abs(asserted - actual);
+    if (diff <= slack) {
+      return { score: 1.0, evidence: `${actual} MCP tool definitions found (within ${Math.round(slack)} of asserted ${asserted})` };
+    }
+    if (diff <= slack * 2) {
+      return { score: 0.3, evidence: `${actual} actual vs ${asserted} asserted -- borderline (off by ${diff}, slack ${Math.round(slack)})` };
+    }
+    return { score: 0, evidence: `no support for ${asserted} tools -- actual count is ${actual} (off by ${diff}, slack ${Math.round(slack)})` };
   }
-  // Function exists -- handled by existing fact_grounding; default 0.5.
+  // Function exists -- delegated to advocate fact-checker for cross-file grep.
   if (claim.kind === "function_exists") {
     return { score: 0.5, evidence: "function existence handled by advocate fact-checker" };
   }

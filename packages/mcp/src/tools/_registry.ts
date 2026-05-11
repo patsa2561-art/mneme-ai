@@ -23,6 +23,7 @@ import { graderTool } from "./_grader_tool.js";
 import { understandIntentTool } from "./_intent_tool.js";
 import { constitutionTool } from "./_constitution_tool.js";
 import { verifyClaimsTool } from "./_verify_claims_tool.js";
+import { truthCheckTool } from "./_truth_check.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -50,6 +51,7 @@ export function buildAllTools(): MnemeTool[] {
     understandIntentTool,
     graderTool,
     verifyClaimsTool,
+    truthCheckTool,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

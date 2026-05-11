@@ -177,7 +177,7 @@ function countLanguageFiles(repoRoot: string, exts: string[]): { count: number; 
   return { count, sampleFile };
 }
 
-function countMnemeTools(repoRoot: string): number {
+export function countMnemeTools(repoRoot: string): number {
   // Heuristic: count occurrences of `name: "mneme.` in MCP tool definitions.
   const stack: string[] = [join(repoRoot, "packages")];
   if (!existsSync(stack[0]!)) return 0;
