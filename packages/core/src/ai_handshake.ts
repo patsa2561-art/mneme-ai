@@ -96,13 +96,46 @@ export function autoDetectVendor(repoRoot: string): { vendor: string; reason: st
   }
   if (process.env["CONTINUE_DEV"]) return { vendor: "continue", reason: "Continue env signal" };
   // 5) Gemini CLI signal
-  if (process.env["GEMINI_API_KEY"]) return { vendor: "google-gemini", reason: "GEMINI_API_KEY env" };
+  if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
+    return { vendor: "google-gemini", reason: "GEMINI/GOOGLE_API_KEY env" };
+  }
+  // 5b) Ollama (local LLM runner — used directly OR as a backend for
+  //      Continue / Cline / Aider). User explicitly asked: this MUST work
+  //      so the demon rampages for self-hosted setups too.
+  if (process.env["OLLAMA_HOST"] || process.env["OLLAMA_MODELS"]) {
+    return { vendor: "ollama", reason: "OLLAMA_HOST/OLLAMA_MODELS env" };
+  }
+  // 5c) Aider (uses LITELLM_* / AIDER_* prefixes when running)
+  if (process.env["AIDER_MODEL"] || process.env["AIDER_API_KEY"]) {
+    return { vendor: "aider", reason: "AIDER_* env signal" };
+  }
+  // 5d) xAI / Grok
+  if (process.env["XAI_API_KEY"] || process.env["GROK_API_KEY"]) {
+    return { vendor: "xai-grok", reason: "XAI/GROK_API_KEY env" };
+  }
+  // 5e) Mistral
+  if (process.env["MISTRAL_API_KEY"]) return { vendor: "mistral", reason: "MISTRAL_API_KEY env" };
+  // 5f) DeepSeek
+  if (process.env["DEEPSEEK_API_KEY"]) return { vendor: "deepseek", reason: "DEEPSEEK_API_KEY env" };
+  // 5g) Cline (a popular Claude/Anthropic-based agent in VS Code)
+  if (process.env["CLINE_AGENT"] || process.env["CLINE_TASK_ID"]) {
+    return { vendor: "cline", reason: "CLINE_* env signal" };
+  }
   // 6) Repo-config sentinel — e.g. CLAUDE.md present + nothing else → likely Claude
   if (existsSync(join(repoRoot, "CLAUDE.md"))) {
     return { vendor: "claude-opus-4-7", reason: "CLAUDE.md present in repo" };
   }
   if (existsSync(join(repoRoot, ".cursorrules"))) {
     return { vendor: "cursor", reason: ".cursorrules present in repo" };
+  }
+  if (existsSync(join(repoRoot, "GEMINI.md"))) {
+    return { vendor: "google-gemini", reason: "GEMINI.md present in repo" };
+  }
+  if (existsSync(join(repoRoot, ".aider.conf.yml"))) {
+    return { vendor: "aider", reason: ".aider.conf.yml present in repo" };
+  }
+  if (existsSync(join(repoRoot, ".continue/config.json"))) {
+    return { vendor: "continue", reason: ".continue/config.json present in repo" };
   }
   if (existsSync(join(repoRoot, "AGENTS.md"))) {
     return { vendor: "openai-gpt", reason: "AGENTS.md (Codex convention) present" };

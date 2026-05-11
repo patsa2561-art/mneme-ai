@@ -57,8 +57,28 @@ describe("ai_handshake · greet", () => {
 
 describe("ai_handshake · recordCliActivity", () => {
   let repo: string;
-  beforeEach(() => { repo = mkdtempSync(join(tmpdir(), "mneme-handshake-")); });
-  afterEach(() => { try { rmSync(repo, { recursive: true, force: true }); } catch { /* */ } });
+  // Same env-isolation as the autoDetectVendor describe — host machine's
+  // OLLAMA_HOST etc. would otherwise satisfy the auto-detect step.
+  const SNIFFED_ENV = [
+    "MNEME_AI_VENDOR", "ANTHROPIC_API_KEY", "CLAUDE_CODE_SESSION",
+    "OPENAI_API_KEY", "CURSOR_TRACE_ID", "CURSOR_AGENT", "CONTINUE_DEV",
+    "GEMINI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST", "OLLAMA_MODELS",
+    "AIDER_MODEL", "AIDER_API_KEY", "XAI_API_KEY", "GROK_API_KEY",
+    "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "CLINE_AGENT", "CLINE_TASK_ID",
+  ];
+  let savedEnv: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    repo = mkdtempSync(join(tmpdir(), "mneme-handshake-"));
+    savedEnv = {};
+    for (const k of SNIFFED_ENV) { savedEnv[k] = process.env[k]; delete process.env[k]; }
+  });
+  afterEach(() => {
+    try { rmSync(repo, { recursive: true, force: true }); } catch { /* */ }
+    for (const k of SNIFFED_ENV) {
+      if (savedEnv[k] === undefined) delete process.env[k];
+      else process.env[k] = savedEnv[k];
+    }
+  });
 
   it("records a tick when active vendor exists", () => {
     greet(repo, { vendor: "v1" });
@@ -107,12 +127,30 @@ describe("ai_handshake · autoDetectVendor", () => {
   beforeEach(() => {
     repo = mkdtempSync(join(tmpdir(), "mneme-handshake-"));
   });
+  // Snapshot + clear ALL detection-relevant env vars per test so the host
+  // machine's env doesn't bleed into assertions (e.g., OLLAMA_HOST set
+  // system-wide would make every "no signals" test see vendor=ollama).
+  const SNIFFED_ENV = [
+    "MNEME_AI_VENDOR", "ANTHROPIC_API_KEY", "CLAUDE_CODE_SESSION",
+    "OPENAI_API_KEY", "CURSOR_TRACE_ID", "CURSOR_AGENT", "CONTINUE_DEV",
+    "GEMINI_API_KEY", "GOOGLE_API_KEY", "OLLAMA_HOST", "OLLAMA_MODELS",
+    "AIDER_MODEL", "AIDER_API_KEY", "XAI_API_KEY", "GROK_API_KEY",
+    "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "CLINE_AGENT", "CLINE_TASK_ID",
+  ];
+  let savedEnv: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    savedEnv = {};
+    for (const k of SNIFFED_ENV) {
+      savedEnv[k] = process.env[k];
+      delete process.env[k];
+    }
+  });
   afterEach(() => {
     try { rmSync(repo, { recursive: true, force: true }); } catch { /* */ }
-    delete process.env["MNEME_AI_VENDOR"];
-    delete process.env["ANTHROPIC_API_KEY"];
-    delete process.env["OPENAI_API_KEY"];
-    delete process.env["CURSOR_TRACE_ID"];
+    for (const k of SNIFFED_ENV) {
+      if (savedEnv[k] === undefined) delete process.env[k];
+      else process.env[k] = savedEnv[k];
+    }
   });
 
   it("respects explicit MNEME_AI_VENDOR env var", () => {
