@@ -111,6 +111,22 @@ export * as toolCurator from "./tool_curator.js";
 // Honest disclaimer baked in: Mneme can't snoop provider traffic --
 // AI cooperates because saving tokens saves the user $$.
 export * as tokenEconomy from "./token_economy.js";
+// v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
+// telemetry and produces GitHub-issue-shaped proposals (title + body +
+// labels + fissile-mass severity). Operation Automation bet #4 from
+// the README -- now with real code behind it. Daemon's nightly cycle
+// can call proposeTriage() to generate a prioritized backlog.
+export * as triage from "./triage/auto_issue.js";
+// v1.37.0 -- DEVHEALTH SNAPSHOT (composes every per-metric subsystem
+// into a single composite + ATOMIC SECOND-BRAIN BONDS that surface
+// cross-axis disagreements). Foundation for Business Model bet #5
+// (hosted SaaS dashboard for engineering managers).
+export * as devhealth from "./devhealth/snapshot.js";
+// v1.37.0 -- COMPLIANCE EVIDENCE PACK (EU AI Act / SOC2 / HIPAA-shaped
+// evidence rollup with AUDIT-TRAIL HOLOGRAM hash; auditors recompute
+// to verify integrity). Foundation for Business Model bet #3
+// (Compliance-as-a-Service).
+export * as compliance from "./compliance/evidence_pack.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
