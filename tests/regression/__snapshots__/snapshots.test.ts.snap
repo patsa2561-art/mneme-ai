@@ -85,13 +85,23 @@ Commands:
   network [options]  >  Author network — semantic collaboration graph with co-edit + co-time + co-topic edges
   manage [options]  >  Engineering management dashboard — health, succession, skill matrix, trajectory
   export-bundle|bundle [options]  >  Export the universal bundle — DNA + drift + chronicle + oracle + constellation + clusters + network + manage + ghost
-  advanced  >  Show advanced commands grouped by phase (hidden from main --help)
+  advanced [options]  >  Show advanced commands grouped by phase (hidden from main --help)
   whats-new|wn [options]  >  Show curated highlights of what's new in this Mneme version (mirrors mneme.whats_new MCP tool).
   welcome [options]  >  Show the install handoff: what's auto-enabled + how to opt out (mirror of mneme.welcome MCP tool).
   spore  >  Cross-machine lineage sync (git-backed).
   lin  >  MneMeiosis Lineage — session inheritance across AI agents and machines.
   nucleus  >  Infinity Wisdom Brain — persistent loop that grows DNA across sessions.
   inbox  >  Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.
+  compliance  >  AI Compliance audit — who executed which AUTO-ACTION mandate (pulse pre-executor / daemon-queue / ai-agent).
+  companion  >  MNEME COMPANION PROTOCOL — soul · consent · pheromone · contract · template surface for the active AI vendor.
+  cloud  >  Smart Cloud Connectivity — probe / queue / drain. Local-first; cloud is OPTIONAL relay (vaccine CDN, federated PRECOG, compliance scoreboard).
+  pharmacopoeia|phr  >  Vaccine CDN auto-distribution (Demon Stage 1.1) — pull + atomically swap pharmacopoeia bundle from a public/private CDN.
+  parasite  >  Parasite bridge installer (Demon Stage 1.2) — inject Mneme bridge into other AI tools' configs (Cursor / Continue / Aider / Codex / Gemini / Windsurf / Claude Code project). Always sentinel-bracketed + reversible.
+  aletheia  >  Vendor reputation scoring (Demon Stage 1.3) — composite trust score per AI vendor, computed from local compliance / karma / advocate / autoaction. Badge SVG ready for README embeds.
+  teeth  >  DEMON STAGE 2 — bug-bounty harvester, ransom-proof vault, stake-weighted genome marketplace.
+  wings  >  DEMON STAGE 3 — continuous shipper, vendor arbitrage router, synthetic adversarial army.
+  godmode  >  DEMON STAGE 4 — Mneme OS supervisor, compliance reporter, dead-vendor planner.
+  avatar  >  DEMON STAGE 5 — gossip mesh, vendor-neutral lingua stream, replicating-wisdom transfer.
   antivirus|av  >  Antivirus -- scan AI drafts for hallucination strains + run the vaccine lab.
   uninstall [options]  >  Remove EVERY Mneme artifact from this machine: stop daemon, remove OS service, remove agent hooks, remove auto-boot marker. (Pass --purge to also wipe .mneme/ in this repo; --npm to also \`npm uninstall -g\`.)
   embeddings|emb  >  Inspect + upgrade the memory-layer embedder. \`status\` shows which tier is active with a real similarity test; \`upgrade\` pre-downloads the bundled MiniLM model so the next \`mneme index\` runs on real semantic embeddings.
@@ -111,7 +121,7 @@ Commands:
   genome-pool  >  Mneme Genome Pool MVP -- opt-in PII-scrubbed chromosome contributor.
   stigmergy|hive [options]  >  MNEME STIGMERGY HIVE -- emergent dev-collaboration detection from git traces alone (no chat logs needed). Finds pairs who effectively work together without ever talking.
   chimera [options]  >  MNEME CHIMERA -- single-author insight synthesizer for solo repos. Surfaces time-of-day fingerprint + area diversity + velocity + topic momentum + phantom-collaborator suggestions even when other commands degenerate.
-  tools [options]  >  List Mneme's full MCP tool catalog (mirror of mneme.capabilities).
+  tools [options]  >  List Mneme's MCP tool catalog (default ALL 172). Pass --curated for the 20-tool starter set.
   squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware.
   health [options]  >  Single-screen health: version + lineage state + nucleus streaks.
   demo [options]  >  Showcase Mneme's wow-features in 60 seconds — synthesizes seed lineage + ticks nucleus + spawns bot squadron + shows DNA evolution.

@@ -107,6 +107,7 @@ import { registerComplianceCommand } from "./commands/compliance.js";
 import { registerCompanionCommand } from "./commands/companion.js";
 import { registerCloudCommand } from "./commands/cloud.js";
 import { registerPharmacopoeiaCommand, registerParasiteCommand, registerAletheiaCommand } from "./commands/demon_stage_one.js";
+import { registerTeethCommand, registerWingsCommand, registerGodModeCommand, registerAvatarCommand } from "./commands/demon_stages_two_to_five.js";
 import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerUninstallCommand } from "./commands/uninstall.js";
 import { registerEmbeddingsCommands } from "./commands/embeddings.js";
@@ -2466,6 +2467,12 @@ export async function run(argv: string[]): Promise<void> {
   registerPharmacopoeiaCommand(program);   // 1.1 Vaccine CDN
   registerParasiteCommand(program);        // 1.2 Parasite Bridge
   registerAletheiaCommand(program);        // 1.3 Aletheia Reputation
+  // ─── DEMON STAGES 2-5 (v1.44.0). Twelve more modules across teeth /
+  // wings / god-mode / avatar. All free-first, all on-disk.
+  registerTeethCommand(program);           // 2.x bug-bounty / ransom-vault / market
+  registerWingsCommand(program);           // 3.x shipper / arbitrage / synthetic-army
+  registerGodModeCommand(program);         // 4.x os / compliance-report / dead-vendor
+  registerAvatarCommand(program);          // 5.x mesh / lingua / wisdom-pack
   // ─── Antivirus / Vaccine Lab (v1.24.0) ────────────────────────────
   registerAntivirusCommands(program);
   // ─── Uninstall (v1.28.2) -- comprehensive removal of every Mneme artifact

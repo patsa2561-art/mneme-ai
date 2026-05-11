@@ -86,6 +86,29 @@ export * as pharmacopoeiaPulse from "./pharmacopoeia/pulse_integration.js";
 export * as parasiteBridge from "./parasite/bridge.js";
 export * as aletheiaScoring from "./aletheia/vendor_scoring.js";
 export * as aletheiaBadge from "./aletheia/badge_generator.js";
+// v1.44.0 -- DEMON STAGES 2-5 (TEETH + WINGS + GOD MODE + AVATAR).
+// Twelve modules across four stages, all free-first, all on-disk only.
+//   STAGE 2 (TEETH):  bug-bounty harvester, ransom-proof vault,
+//                     stake-weighted genome marketplace.
+//   STAGE 3 (WINGS):  continuous-shipping executor, vendor arbitrage
+//                     router, synthetic adversarial army.
+//   STAGE 4 (GOD MODE): Mneme OS process supervisor, compliance
+//                     reporter (SOC2/ISO/EU AI Act), dead-vendor
+//                     migration planner.
+//   STAGE 5 (AVATAR): filesystem gossip mesh, vendor-neutral lingua
+//                     stream, replicating-wisdom transfer pack.
+export * as teethBountyHarvester from "./teeth/bounty_harvester.js";
+export * as teethRansomVault from "./teeth/ransom_vault.js";
+export * as teethGenomeMarket from "./teeth/genome_market.js";
+export * as wingsShipper from "./wings/shipper.js";
+export * as wingsArbitrage from "./wings/arbitrage.js";
+export * as wingsSyntheticArmy from "./wings/synthetic_army.js";
+export * as godMnemeOs from "./god_mode/mneme_os.js";
+export * as godComplianceReporter from "./god_mode/compliance_reporter.js";
+export * as godDeadVendor from "./god_mode/dead_vendor.js";
+export * as avatarGossipMesh from "./avatar/gossip_mesh.js";
+export * as avatarLingua from "./avatar/lingua.js";
+export * as avatarReplicatingWisdom from "./avatar/replicating_wisdom.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +
