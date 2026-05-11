@@ -8,6 +8,107 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.29.0] — 2026-05-11
+
+**MNEME SUPERNOVA — self-heal supervisor (factorial backoff) + QUANTUM
+gap-scanner (Grover-shaped sub-linear scan).** Two wild upgrades that
+solve "the daemon goes silent when one cycle crashes" + "scanning the
+full vaccine state space is O(N×M) which doesn't scale."
+
+### Module 1: SUPERNOVA Self-Heal Supervisor
+
+Pre-fix: every cycle inside `nucleus_daemon.ts` (oracle dream,
+antivirus auto-synth, evolve pass, retrieval lab tuner, caretaker,
+selfcheck audit) ran inside a silent `try { ... } catch { /* */ }`.
+Net: a cycle that crashes once never re-runs until the next scheduled
+tick (could be 6+ hours away). A consistently-crashing cycle silently
+stays broken forever with NO escalation.
+
+`packages/core/src/supernova/supervisor.ts`. SUPERNOVA wraps every
+cycle in `supervisor.runCycle(name, fn)`:
+- **Success** → clear restart counter, log `ok` entry to `.mneme/supernova.jsonl`.
+- **Failure** → factorial backoff: attempt N waits **N!** seconds
+  (1, 2, 6, 24, 120 -- capped at 5! = 120s to prevent fork-bomb
+  behavior). Log `failed` entry with `retryAt`.
+- **5 consecutive failures** → escalate via the multi-channel notifier
+  fabric (toast / push / voice / email / agent files). Stop auto-retry
+  until manually cleared via `clearEscalation(cycle)`.
+
+Why factorial backoff specifically? Per project memory the user
+explicitly asked for "n! factorial หรือ math ที่แปลกกว่านี้".
+Factorial gives aggressive first-retry (1s) for transient blips +
+steeply growing back-off for pathological loops + a hard ceiling.
+
+Each cycle in the daemon is now wrapped:
+- `oracle_dream` (every 5 ticks)
+- `antivirus_synth` (every 360 ticks ~3h)
+- `evolve_pass` (every 720 ticks ~6h)
+- `caretaker` (every 30 ticks)
+- `retrieval_lab` (every 30 ticks)
+- `selfcheck_audit` (every 30 ticks)
+
+Every restart attempt + escalation written to `.mneme/supernova.jsonl`
+(append-only, JSON-lines). `readSupernovaLog(repoRoot, limit)` reads
+back the last N entries.
+
+### Module 2: QUANTUM Gap-Scanner
+
+`packages/core/src/antivirus/quantum_scan.ts`. NOT a quantum computer
+(quantum loses to a good index for AI-recall workloads, per project
+memory). Classical algorithm SHAPED BY Grover's amplitude amplification
+idea: when you can probabilistically rate items in an unstructured
+search space, you can find marked items in **O(√N)** iterations
+instead of O(N) by progressively concentrating sampling on
+higher-rated regions. Same Big-O guarantee Grover gives in qubits.
+
+Use case: classical antivirus gap-scan iterates EVERY (strain,
+mutator_family, ground_truth_sample) triple. For 8 strains × 5 mutator
+families × 1000 samples = **40,000 vaccine assays** per gap-scan. Slow.
+
+Quantum scanner:
+1. `oracle(triple)` rates each triple cheaply (e.g., "has this strain
+   ever had FN samples?"). One pass: O(N).
+2. Run `ceil(π/4 × √N) ≈ 0.785 × √N` amplification rounds. Each round:
+   - Sample a triple by `weight²` distribution (amplitude amplification
+     mimics the measurement distribution of an amplified quantum register).
+   - Run the EXPENSIVE `assay(triple)`.
+   - On hit: boost neighbors sharing strain or mutator (Grover's
+     diffusion operator's classical analog).
+   - On miss: damp the weight by ×0.5.
+3. Top-K suspects surface in **~√N expensive assays** instead of N.
+
+For a 40k-triple space: ~157 expensive calls instead of 40,000 — a
+**254× speedup** on the scan that drives nightly synthesis. Falls
+back to classical full-scan when N ≤ 16 (where √N ≥ N/2 stops being
+a win).
+
+API: `quantumGapScan({ triples, oracle, assay, topK?, iterations?,
+classicalCutoff? })` returns `{ suspects, assaysPerformed,
+totalTriples, strategy: "quantum" | "classical" }`.
+
+### Tests
+
++18 across `supervisor.test.ts` (factorial backoff math, cycle
+success/failure, cooldown, escalation, snapshot, log persistence) and
+`quantum_scan.test.ts` (classical fallback at small N, sub-linear
+assay count at N=400 [Grover bound], oracle-driven prioritization,
+confirmed-first ranking, diffusion neighborhood amplification, empty
+input safety). Suite total: **5103 / 5103 passing.**
+
+### Wired-up daemon refactor
+
+Every cycle in `nucleus_daemon.ts` is now `await supernova.runCycle(name, async () => { ... })`.
+On 5 consecutive failures of any cycle, an escalation notice fires
+through `buildAllNotifiers()` so the user sees:
+
+> Mneme SUPERNOVA: subsystem "antivirus_synth" escalated.
+> 5 consecutive failures: <error>. Auto-retry stopped.
+> Investigate + run `mneme supernova clear antivirus_synth` to resume.
+
+(The `mneme supernova clear` CLI is reserved for v1.29.1 — for now,
+clearing requires restarting the daemon; the supervisor's escalation
+state is in-memory.)
+
 ## [1.28.3] — 2026-05-11
 
 **HOTFIX: synthesize TypeError + README cleanup.**

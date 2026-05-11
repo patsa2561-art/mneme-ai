@@ -24,6 +24,7 @@ import { join } from "node:path";
 import { tick, mutate, readNucleus, dnaBanner } from "./nucleus.js";
 import { pushInbox, pushInboxReplacingSource, deterministicId, readInbox, ackInbox, clearInbox } from "./inbox.js";
 import { readStreaks } from "./karma_streaks.js";
+import { SupernovaSupervisor } from "./supernova/supervisor.js";
 
 const PID_FILE = ".mneme/nucleus.pid";
 const HEARTBEAT_FILE = ".mneme/nucleus.heartbeat.json";
@@ -137,6 +138,24 @@ export async function runDaemonLoop(
   let noteworthyTicks = 0;
   const intervalMs = opts.intervalMs ?? NUCLEUS_INTERVAL_MS;
 
+  // v1.29.0 SUPERNOVA -- self-heal supervisor wraps every cycle. On
+  // throw, factorial backoff (1s, 2s, 6s, 24s, 120s) before retry.
+  // After 5 consecutive failures, escalate via notifier so the user
+  // knows a subsystem needs manual attention. Replaces the previous
+  // silent-try/catch-everything-and-pray pattern.
+  const supernova = new SupernovaSupervisor(repoRoot, async (cycle, error) => {
+    try {
+      const { buildAllNotifiers, notifyAll } = await import("./notifier/index.js");
+      const all = buildAllNotifiers(repoRoot);
+      await notifyAll({
+        id: `supernova-${cycle}-${Date.now()}`,
+        severity: "warning",
+        title: `Mneme SUPERNOVA: subsystem "${cycle}" escalated`,
+        body: `5 consecutive failures: ${error}. Auto-retry stopped. Investigate + run \`mneme supernova clear ${cycle}\` to resume.`,
+      }, all);
+    } catch { /* best-effort */ }
+  });
+
   // v1.25.1 — warm up the cross-encoder ONCE at boot so the first
   // user query that needs it doesn't pay the 5-15s model-load latency.
   // Best-effort: silent failure (the lab tuner falls back to term-density).
@@ -242,7 +261,7 @@ export async function runDaemonLoop(
       // run drift checks + push autoAction inbox messages. The pass is
       // best-effort (any failure is silenced); never blocks the tick loop.
       if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
-        void runCaretakerPass(repoRoot, tickCount).catch(() => { /* ignore */ });
+        void supernova.runCycle("caretaker", () => runCaretakerPass(repoRoot, tickCount));
       }
 
       // v1.25.0 — Retrieval Lab tuning round. Every CARETAKER_PASS_EVERY
@@ -250,14 +269,14 @@ export async function runDaemonLoop(
       // folds it into the leaderboard. Over time the active config
       // converges on the best arm without anyone having to ask.
       if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
-        try {
+        await supernova.runCycle("retrieval_lab", async () => {
           const { pickNextArm, readLeaderboard, recordTrial } = await import("./retrieval_lab/leaderboard.js");
           const { runTrial } = await import("./retrieval_lab/tuner.js");
           const lb = readLeaderboard(repoRoot);
           const { config } = pickNextArm(lb);
           const trial = runTrial(repoRoot, config);
           recordTrial(repoRoot, trial);
-        } catch { /* best-effort */ }
+        });
       }
 
       // v1.26.3 — Mneme ORACLE dream cycle. Every 5 ticks (~2.5 min)
@@ -267,10 +286,10 @@ export async function runDaemonLoop(
       // teacher walking over with the answer before the student asks.
       const ORACLE_DREAM_EVERY = 5;
       if (tickCount > 0 && tickCount % ORACLE_DREAM_EVERY === 0) {
-        try {
+        await supernova.runCycle("oracle_dream", async () => {
           const { dreamCycle } = await import("./oracle/index.js");
           dreamCycle(repoRoot);
-        } catch { /* best-effort */ }
+        });
       }
 
       // v1.27.0 — Phase 5 EVOLUTION PASS. Every 720 ticks (~6h at 30s
@@ -285,7 +304,7 @@ export async function runDaemonLoop(
       // apply <id>` (or `auto-pr <id>` for Phase-4 GitHub PR).
       const EVOLUTION_PASS_EVERY = 720;
       if (tickCount > 0 && tickCount % EVOLUTION_PASS_EVERY === 0) {
-        try {
+        await supernova.runCycle("evolve_pass", async () => {
           const { generateProposals } = await import("./evolve/index.js");
           const { evolutionPass } = await import("./evolve/synthesis/index.js");
           generateProposals(repoRoot);
@@ -302,7 +321,7 @@ export async function runDaemonLoop(
               }, all);
             } catch { /* best-effort */ }
           }
-        } catch { /* best-effort */ }
+        });
       }
 
       // v1.28.0 — Antivirus self-synthesis pass. Every ANTIVIRUS_SYNTH_EVERY
@@ -315,7 +334,7 @@ export async function runDaemonLoop(
       // the hot path, no auto-merge -- patches wait for review.
       const ANTIVIRUS_SYNTH_EVERY = 360;
       if (tickCount > 0 && tickCount % ANTIVIRUS_SYNTH_EVERY === 0) {
-        try {
+        await supernova.runCycle("antivirus_synth", async () => {
           const { gapScan, buildGapCases, synthesizeVaccine } = await import("./antivirus/index.js");
           const r = await gapScan(repoRoot);
           const buckets = buildGapCases(repoRoot);
@@ -345,7 +364,7 @@ export async function runDaemonLoop(
               }, all);
             } catch { /* best-effort */ }
           }
-        } catch { /* best-effort */ }
+        });
       }
 
       // v1.26.0 — Self-check audit + multi-channel notifier dispatch.
@@ -354,7 +373,7 @@ export async function runDaemonLoop(
       // + agent files + ...) so the user/AI sees the problem regardless
       // of whether they have the chat window open.
       if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
-        try {
+        await supernova.runCycle("selfcheck_audit", async () => {
           const { runAudit } = await import("./selfcheck/index.js");
           const report = await runAudit(repoRoot);
           // For every FAIL with an autoAction, broadcast.
@@ -374,7 +393,7 @@ export async function runDaemonLoop(
               } catch { /* best-effort */ }
             }
           }
-        } catch { /* best-effort */ }
+        });
       }
       // Heartbeat
       if (tickCount % HEARTBEAT_WRITE_EVERY_TICK === 0) {

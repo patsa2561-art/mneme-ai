@@ -60,3 +60,7 @@ export type { VaccineSynthesisResult, SynthesisInput } from "./auto_synthesize.j
 export {
   mineRegexFromSamples, evaluateCandidatePattern, synthesizeVaccine,
 } from "./auto_synthesize.js";
+// v1.29.0 -- QUANTUM gap-scanner (Grover-shaped amplitude amplification).
+// Sub-linear sqrt(N) scan over (strain, mutator, sample) state space.
+export type { QuantumTriple, QuantumScanInput, QuantumScanResult } from "./quantum_scan.js";
+export { quantumGapScan } from "./quantum_scan.js";

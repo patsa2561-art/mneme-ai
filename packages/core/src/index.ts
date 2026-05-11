@@ -41,6 +41,9 @@ export * as nucleus from "./nucleus.js";
 export * as nucleusDaemon from "./nucleus_daemon.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
+// v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +
+// escalation) and QUANTUM gap-scanner (Grover-shaped sub-linear scan).
+export * as supernova from "./supernova/supervisor.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
