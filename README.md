@@ -57,19 +57,36 @@
 
 <br/>
 
-<table align="center">
-  <tr><td align="center"><b>📜 1-minute summary — what changes the moment you bolt on Mneme</b></td></tr>
+<table align="center" width="100%">
+  <tr><td align="center" colspan="2"><b>🚀 What Mneme actually <i>is</i> — in 2 columns</b></td></tr>
   <tr>
-    <td>
-      <table>
-        <tr>
-          <td align="center" width="25%">🩻<br/><b>Grounded answers</b><br/><sub>Cites <code>commit a3f9b21</code><br/>not "I think it's..."</sub></td>
-          <td align="center" width="25%">⚖<br/><b>Constitutional Gate</b><br/><sub>AI cannot suggest code that<br/>contradicts your repo's lessons</sub></td>
-          <td align="center" width="25%">📐<br/><b>5-axis grading</b><br/><sub>Every AI commit graded<br/>PASS · WARN · FAIL</sub></td>
-          <td align="center" width="25%">☢<br/><b>Atrophy radar</b><br/><sub>Knows which files<br/>only one person remembers</sub></td>
-        </tr>
-      </table>
+    <td align="center" width="50%" valign="top">
+      <h3>💰 Business Model</h3>
+      <p><i>5 revenue rails. Every feature <b>free today.</b></i></p>
+      <p>
+        🎯 Pay-per-bug-prevented &nbsp;·&nbsp;
+        🏷 "Mneme Inside" trust badge<br/>
+        📜 Compliance-as-a-Service &nbsp;·&nbsp;
+        📊 Devhealth SaaS dashboard<br/>
+        🧬 Genome Pool consent marketplace
+      </p>
+      <p><sub>Vendors + enterprises + EMs pay; <b>users use free.</b></sub></p>
     </td>
+    <td align="center" width="50%" valign="top">
+      <h3>🤖 Automation Operation</h3>
+      <p><i>5 self-running loops. The daemon does them.</i></p>
+      <p>
+        🚀 Continuous shipping <code>(ships itself)</code> &nbsp;·&nbsp;
+        🌐 Federated PRECOG<br/>
+        🐛 Autonomous bug triage <code>✓</code> &nbsp;·&nbsp;
+        🔌 Caregiver-as-API<br/>
+        🔁 Cross-vendor agent failover
+      </p>
+      <p><sub>You sleep. Mneme runs. <b>Wake to morning reports.</b></sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub><b>📜 1-minute summary:</b> 🩻 grounded answers · ⚖ Constitutional Gate · 📐 5-axis grading · ☢ atrophy radar — all powered by the loops above.</sub></td>
   </tr>
 </table>
 
