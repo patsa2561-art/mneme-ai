@@ -1,34 +1,28 @@
 #cloud-config
-# mneme-brain cloud-init (v1.42.3 / Cloud Phase 4 MVP).
+# mneme-brain cloud-init v2 (v1.42.3 / Cloud Phase 4 MVP).
 #
-# Boots a fresh Ubuntu 24.04 droplet, installs Node 22 LTS + Caddy,
-# pulls the mneme-brain server.mjs from the public GitHub repo, runs
-# it under systemd behind Caddy on :443. No SSH access required —
-# this file IS the entire setup.
-#
-# FREE-FIRST: no paid services, no licence keys, no API tokens needed
-# at boot. Self-signed TLS for IP-only deployments (Caddy generates an
-# internal cert); swap to Let's Encrypt later by setting BRAIN_DOMAIN.
+# v1 hung on `package_upgrade: true` + NodeSource curl-to-bash on a
+# fresh droplet (8+ min, ports never opened). v2 keeps it tiny:
+#   - no apt update / no apt upgrade (saves 5+ min on cold boot)
+#   - Node via snap (pre-installed on Ubuntu 24.04 cloud images)
+#   - mneme-brain bound to :8080 (no Caddy / no TLS in v1.42.3 MVP)
+#   - server.mjs fetched via raw.githubusercontent.com (no git clone)
+#   - everything in runcmd, no write_files of large content
+# TLS / Caddy / Let's Encrypt arrives in v1.43 once a domain is live.
 
-package_update: true
-package_upgrade: true
-
-packages:
-  - curl
-  - ca-certificates
-  - git
-  - debian-keyring
-  - debian-archive-keyring
-  - apt-transport-https
-  - ufw
+users:
+  - default
+  - name: mneme
+    system: true
+    no_create_home: false
+    shell: /usr/sbin/nologin
 
 write_files:
-  # systemd unit for mneme-brain — restarts on crash, journald logging
   - path: /etc/systemd/system/mneme-brain.service
     permissions: '0644'
     content: |
       [Unit]
-      Description=Mneme Brain (Cloud Phase 4 MVP)
+      Description=Mneme Brain (Cloud Phase 4 MVP, v1.42.3)
       After=network-online.target
       Wants=network-online.target
 
@@ -38,103 +32,48 @@ write_files:
       Group=mneme
       WorkingDirectory=/opt/mneme-brain
       Environment=PORT=8080
-      Environment=HOST=127.0.0.1
-      ExecStart=/usr/bin/node /opt/mneme-brain/server.mjs
+      Environment=HOST=0.0.0.0
+      ExecStart=/snap/bin/node /opt/mneme-brain/server.mjs
       Restart=always
       RestartSec=3
       StandardOutput=journal
       StandardError=journal
       LimitNOFILE=65536
+      AmbientCapabilities=
+      NoNewPrivileges=yes
 
       [Install]
       WantedBy=multi-user.target
 
-  # Caddy config — TLS-terminating reverse proxy. Default uses internal
-  # self-signed cert (works for IP-only). Override by editing the
-  # site address below to a real domain — Caddy will auto-fetch
-  # Let's Encrypt certs (free).
-  - path: /etc/caddy/Caddyfile
-    permissions: '0644'
-    content: |
-      :443 {
-        tls internal
-        encode gzip zstd
-        reverse_proxy 127.0.0.1:8080
-        header {
-          Strict-Transport-Security "max-age=31536000"
-          X-Content-Type-Options "nosniff"
-          Referrer-Policy "no-referrer"
-          Server "mneme-brain"
-        }
-        log {
-          output stdout
-          format console
-        }
-      }
-
-      :80 {
-        redir https://{host}{uri} permanent
-      }
-
-  # Bootstrap script — clones the repo's cloud/mneme-brain dir + sets
-  # up the system. Idempotent: re-runs are safe.
-  - path: /usr/local/bin/mneme-brain-bootstrap.sh
-    permissions: '0755'
-    content: |
-      #!/usr/bin/env bash
-      set -euo pipefail
-
-      # Add the NodeSource repo for Node 22 LTS.
-      if ! command -v node >/dev/null 2>&1; then
-        curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-        apt-get install -y nodejs
-      fi
-
-      # Install Caddy from the official repo.
-      if ! command -v caddy >/dev/null 2>&1; then
-        curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-        curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt | tee /etc/apt/sources.list.d/caddy-stable.list
-        apt-get update
-        apt-get install -y caddy
-      fi
-
-      # Create the unprivileged service user.
-      id mneme >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin mneme
-
-      # Pull only the server file from the public repo (sparse clone).
-      mkdir -p /opt/mneme-brain
-      cd /opt/mneme-brain
-      if [ ! -d .git ]; then
-        git init
-        git remote add origin https://github.com/patsa2561-art/mneme-ai.git
-      fi
-      git fetch --depth=1 origin main
-      git checkout origin/main -- cloud/mneme-brain/server.mjs
-      cp cloud/mneme-brain/server.mjs ./server.mjs
-      chown -R mneme:mneme /opt/mneme-brain
-
-      # Firewall — only 22 (SSH), 80 (HTTP redirect), 443 (HTTPS) open.
-      ufw allow OpenSSH
-      ufw allow 80/tcp
-      ufw allow 443/tcp
-      yes | ufw enable || true
-
-      # Enable + start services.
-      systemctl daemon-reload
-      systemctl enable mneme-brain caddy
-      systemctl restart mneme-brain caddy
-
-      # Smoke test.
-      sleep 2
-      curl -sk https://127.0.0.1/v1/healthz || true
-      echo
-      echo "mneme-brain bootstrap complete."
-
 runcmd:
-  - [ bash, -c, "/usr/local/bin/mneme-brain-bootstrap.sh 2>&1 | tee /var/log/mneme-brain-bootstrap.log" ]
+  # Verbose log everything to /var/log/mneme-brain-bootstrap.log so SSH
+  # debugging is one `cat` away.
+  - bash -xeuo pipefail -c '
+      exec > >(tee -a /var/log/mneme-brain-bootstrap.log) 2>&1;
+      echo "==> v2 bootstrap start $(date -u +%FT%TZ)";
+      snap install node --classic --channel=22;
+      node --version;
+      mkdir -p /opt/mneme-brain;
+      curl -fsSL --retry 3 --retry-delay 2 \
+        https://raw.githubusercontent.com/patsa2561-art/mneme-ai/main/cloud/mneme-brain/server.mjs \
+        -o /opt/mneme-brain/server.mjs;
+      ls -la /opt/mneme-brain/;
+      chown -R mneme:mneme /opt/mneme-brain;
+      ufw allow OpenSSH;
+      ufw allow 8080/tcp;
+      yes | ufw enable || true;
+      systemctl daemon-reload;
+      systemctl enable mneme-brain;
+      systemctl restart mneme-brain;
+      sleep 3;
+      systemctl status mneme-brain --no-pager;
+      echo "==> smoke test";
+      curl -sf http://127.0.0.1:8080/v1/healthz || echo "health check failed";
+      echo "==> v2 bootstrap end $(date -u +%FT%TZ)";
+    '
 
 final_message: |
-  Mneme Brain (Cloud Phase 4 MVP) is live.
-  Test:   curl -k https://${PUBLIC_IPV4}/v1/healthz
-  Logs:   journalctl -u mneme-brain -f
-  Caddy:  journalctl -u caddy -f
+  Mneme Brain (Cloud Phase 4 MVP, v1.42.3) bootstrap finished.
+  Test:   curl http://${PUBLIC_IPV4}:8080/v1/healthz
+  Logs:   tail -f /var/log/mneme-brain-bootstrap.log
+  systemd: journalctl -u mneme-brain -f
