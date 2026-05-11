@@ -8,6 +8,94 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.42.2] — 2026-05-12
+
+**Wave 1 of the 21-bug roadmap — six honest bug fixes. Per the
+bug-fixes-only mandate the user set at v1.40, this release ships
+ZERO new features. Every change is either a one-line correction,
+a wording softening, or a missing safety mechanism (replay
+rotation) the documentation already implied.**
+
+### Critical / honesty / risky-pattern fixes (Wave 1 = 6 of 21)
+
+- **#6** `mneme advanced --json` now works. Was an embarrassing own-feature
+  bug: the rest of the CLI accepts `--json`, but `advanced` errored
+  with `unknown option '--json'`. Added the flag + a structured
+  groups+commands payload derived from the same renderAdvancedHelp
+  text (single source of truth).
+- **#9** `encryptionEnabled: false` comment in `lineage/welcome.ts:85`
+  used to claim "v1.20 adds AES-256-GCM" — never true. v1.35 shipped
+  the `at_rest_crypto` MODULE (AES-256-GCM + Argon2id) but it is NOT
+  yet wired into the chromosome read/write path. Comment now reflects
+  the honest state. Wiring is roadmapped for v1.43.x.
+- **#11** "SOC2/EU AI Act audit-grade evidence" wording in welcome
+  contract softened to "Audit-trail-ready evidence — bring your own
+  auditor for SOC2 / PCI-DSS / EU AI Act certification." Mneme has
+  not been pen-tested or certified; over-claiming exposure to a
+  buyer is itself a compliance risk.
+- **#14** Welcome `userMessageTemplate` no longer scripts the AI's
+  words. Field stays for backward compat, but `agentInstruction`
+  now reads: "Use as a fact summary, not a script. Rewrite in your
+  own voice + the user's language." Aligns with the v1.42 mandate
+  (`feedback_ai_does_everything.md`).
+- **#19** `replay.jsonl` rotates at 256 KB. Previously grew unbounded
+  on long-running sessions. Same threshold as inbox / pheromone /
+  contracts modules, for consistency. The HMAC chain spans rotations:
+  `readLastHash` falls back to the most recent rotated file when the
+  active file is empty, so the next entry's `prevHash` continues the
+  chain. +2 vitest cases prove rotation + chain continuity.
+- **#21** "TEACHER vs STUDENT" framing replaced with "persistent
+  context provider" in README hero + `whats_new.ts` v1.23.5 entry.
+  More honest about the actual mechanism (Mneme provides context the
+  AI agent uses; it does not "teach" anything in the LLM sense) and
+  drops a positioning the user explicitly asked to retire.
+
+### Tests
+
+- +2 vitest cases for replay rotation in `_replay.test.ts`.
+- 10/10 in the replay suite, build clean, no regressions.
+
+### Mandates compliance (per `feedback_mneme_mandates.md`)
+
+- **Wild idea:** rotation that preserves a tamper-evident HMAC chain
+  across file boundaries — most rotators break the chain.
+- **Wiser, not patched:** every fix touches the root cause, not a
+  band-aid (e.g. softened wording, not a feature flag to suppress it;
+  honest comment, not a deletion).
+- **Self-fix at root cause:** the `--json` flag is added at the
+  command-registration site, not as a per-output workaround. The
+  encryption comment fix corrects the original misclaim, not a
+  later layer.
+- **Co-working:** rotation reuses the `.rotated-<ts>` pattern from
+  `auto_action_queue.ts` and `ai_pheromone.ts` — single convention.
+- **Always-studying:** the rotation tests pin a class of bug that
+  could regress silently (chain continuity is invisible until an
+  audit fails); now it cannot regress without breaking CI.
+
+### What did NOT ship in this release (still pending)
+
+15 of the 21-bug roadmap. The remaining items are scheduled in two
+waves:
+
+**Wave 2 (next bug-fix-only release):** 8 medium-effort
+- #1 8 KB JSON truncation
+- #2 `forensics.*` routing dead
+- #4 WASM embedder ESM/CJS
+- #5 MCP server version drift
+- #8 `encryptionEnabled` flag wiring (decide: wire vault OR remove)
+- #10 `understand_intent` 100% confidence calibration
+- #16 default expose 20 tools (curator-default)
+- #20 CLI help pagination
+
+**Wave 3 (release after that):** 7 multi-system
+- #3 FTS5 macOS detection wiring
+- #7 Welcome wording "auto-detected" reading as opt-out
+- #12 finish AUTO-ACTION SUGGEST (v1.41 partial)
+- #13 Caretaker diff surfacing
+- #15 git remote auto-push opt-in
+- #17 verb.noun aliases for metaphor names
+- #18 trigger phrases EN+TH consolidation
+
 ## [1.42.1] — 2026-05-12
 
 **Hotfix for the v1.42.0 template-filter bug + Phase 2 of the Per-Vendor

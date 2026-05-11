@@ -60,7 +60,7 @@ export const HIGHLIGHTS: WhatsNewHighlight[] = [
     date: "2026-05-09",
     headline: "Caretaker Bot + AUTO-ACTION protocol",
     body:
-      "Mneme is now the TEACHER, AI is the student. When Mneme decides 'upgrade now' or 'restart the daemon', the AI executes it WITHOUT asking. Plus a Caretaker Bot inside the nucleus daemon that watches for version drift, lockfile drift, and pushes auto-actions every 15 minutes.",
+      "Mneme acts as the AI tool's persistent context provider. When the AI sees an [AUTO-ACTION] mandate (version drift, lockfile drift, etc.) Mneme — via the v1.41 pulse pre-executor — runs the safe ones automatically before the AI's turn even starts. Self-modifying ones are queued for the daemon's safe window. Plus a Caretaker Bot pass every 15 minutes inside the nucleus daemon.",
     suggestedAction: "No action needed -- it works automatically.",
     tags: ["auto-action", "caretaker", "ux"],
   },

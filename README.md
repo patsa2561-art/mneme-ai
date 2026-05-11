@@ -13,7 +13,7 @@
 <p>
   <i>Bolted onto your <b>Claude Code</b> · <b>Cursor</b> · <b>Codex</b> · <b>Gemini</b> · <b>Continue</b> · <b>Aider</b>,<br/>
   Mneme turns a stock AI into one that <b>knows your repo's history</b> — every commit, every regret, every decision.<br/>
-  The teacher · the mentor · for the <b>git / source-control</b> domain.</i>
+  The persistent context provider for the <b>git / source-control</b> domain.</i>
 </p>
 
 <p>

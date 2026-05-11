@@ -82,7 +82,12 @@ export interface FeatureDefaults {
 const DEFAULT_SETTINGS: LineageSettings = {
   tofuAnswered: false,
   optedOut: false,
-  encryptionEnabled: false, // v1.19 ships unencrypted at rest; v1.20 adds AES-256-GCM
+  // v1.42.2 (#9 fix) — honest state: the at_rest_crypto module shipped in
+  // v1.35.0 (AES-256-GCM + Argon2id) but it is NOT yet wired into the
+  // chromosome read/write path. The flag below is currently informational
+  // only. `mneme.lineage.encryption.status` reports the same. Auto-wire
+  // lands in v1.43.x.
+  encryptionEnabled: false,
   piiScrubEnabled: true,
   lastWelcomeShown: null,
 };
@@ -189,7 +194,11 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
       "verify integrity": "mneme.replay.fingerprint",
     },
     userShouldKnow: [
-      "SOC2/EU AI Act audit-grade evidence — Merkle root verifiable any time",
+      // v1.42.2 (#11 fix) — softened from "SOC2/EU AI Act audit-grade"
+      // to "audit-trail-ready". Mneme has not been pen-tested or
+      // certified against SOC2 / PCI-DSS / EU AI Act; over-claiming
+      // exposure to a buyer is itself a compliance risk.
+      "Audit-trail-ready evidence — every MCP call HMAC-chained; Merkle root verifiable any time. Bring your own auditor for SOC2 / PCI-DSS / EU AI Act certification.",
     ],
   };
 
@@ -218,7 +227,13 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
     : `Mneme v${version} active. Lineage ${settings.optedOut ? "is OFF" : "is auto-saving"}.${seedBlurb} ${sporeRemote ? `Spore syncing via ${sporeRemote}.` : "No remote configured."}${updateBlurb}`;
 
   const agentInstruction =
-    "Translate userMessageTemplate to the user's language and tone. ALWAYS mention that Lineage is on (or off) + the opt-out command. Then call mneme.capabilities to learn the full catalog. Treat opt-outs as a contract — surface them at install AND when the user asks 'what data are you collecting?'.";
+    // v1.42.2 (#14 fix) — Mneme is no longer scripting AI's words. The
+    // `userMessageTemplate` is provided as a SUMMARY of facts only;
+    // the AI agent rewrites the message in their own voice, in the
+    // user's language. The agent MUST mention: lineage state, the
+    // opt-out command, and any [AUTO-ACTION] in the pulse. Beyond
+    // that, the wording is the agent's choice.
+    "Use userMessageTemplate as a fact summary, not a script. Rewrite in your own voice + the user's language. ALWAYS surface: lineage state (on/off), opt-out command, any [AUTO-ACTION] mandate. Then call mneme.capabilities to learn the full catalog. Treat opt-outs as a contract — surface them at install AND when the user asks 'what data are you collecting?'.";
 
   const nextActions = [
     "mneme.capabilities",

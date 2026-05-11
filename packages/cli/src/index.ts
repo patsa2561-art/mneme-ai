@@ -2400,8 +2400,17 @@ export async function run(argv: string[]): Promise<void> {
   program
     .command("advanced")
     .description("Show advanced commands grouped by phase (hidden from main --help)")
-    .action(() => {
-      process.stdout.write(renderAdvancedHelp());
+    // v1.42.2 (#6 fix) — `--json` is the standard flag for machine output
+    // across the rest of the Mneme CLI. `mneme advanced --json` used to
+    // error with `unknown option '--json'`, which was embarrassing for an
+    // own-feature. Now: emit a structured groups + commands payload.
+    .option("--json", "JSON output: { groups: [{ name, commands: [{ name, description }] }] }")
+    .action((opts: { json?: boolean }) => {
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(advancedGroupsAsJson(), null, 2) + "\n");
+      } else {
+        process.stdout.write(renderAdvancedHelp());
+      }
       process.exit(0);
     });
 
@@ -2568,6 +2577,24 @@ function parseOrgSub(args: string[]): OrgSubcommand | null {
       return null;
     }
   }
+}
+
+/** v1.42.2 (#6 fix) — structured groups derived from the rendered help
+ *  text. Keeps a single source of truth (the text) while letting
+ *  `mneme advanced --json` emit a machine-readable form. */
+function advancedGroupsAsJson(): { groups: Array<{ name: string; commands: Array<{ name: string; description: string }> }> } {
+  const groups: Array<{ name: string; commands: Array<{ name: string; description: string }> }> = [];
+  let currentGroup: { name: string; commands: Array<{ name: string; description: string }> } | null = null;
+  for (const raw of renderAdvancedHelp().split("\n")) {
+    if (/^  [A-Z]/.test(raw)) {
+      currentGroup = { name: raw.trim(), commands: [] };
+      groups.push(currentGroup);
+    } else if (/^    \S/.test(raw) && currentGroup) {
+      const m = raw.match(/^ {4}(\S(?:[^ ]| (?! ))*)\s\s+(.+)$/);
+      if (m) currentGroup.commands.push({ name: m[1].trim(), description: m[2].trim() });
+    }
+  }
+  return { groups };
 }
 
 function renderAdvancedHelp(): string {

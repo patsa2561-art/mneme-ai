@@ -18,7 +18,7 @@
  * corrupted disk can never block tool dispatch.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, statSync, renameSync, readdirSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { join } from "node:path";
 import type { MnemeTool } from "./_types.js";
@@ -26,6 +26,13 @@ import type { MnemeTool } from "./_types.js";
 const REPLAY_DIR = ".mneme";
 const REPLAY_FILE = "replay.jsonl";
 const SECRET_FILE = "replay-secret.bin";
+
+/** v1.42.2 (#19 fix) — rotate the replay file at 256 KB to prevent
+ *  unbounded growth on long-running sessions. Same threshold the inbox,
+ *  pheromone, and contracts modules use, for consistency. The HMAC
+ *  chain is preserved across rotations because readLastHash falls back
+ *  to the most recent rotated file when the active file is empty. */
+const REPLAY_ROTATION_BYTES = 256 * 1024;
 
 interface ReplayEntry {
   /** ISO-8601 timestamp. */
@@ -67,19 +74,49 @@ function hmacSha(secret: Buffer, payload: string): string {
   return h.digest("hex").slice(0, 32);
 }
 
-function readLastHash(repoRoot: string): string {
-  const path = join(repoRoot, REPLAY_DIR, REPLAY_FILE);
-  if (!existsSync(path)) return "GENESIS";
-  const txt = readFileSync(path, "utf8").trimEnd();
-  if (!txt) return "GENESIS";
-  const lines = txt.split("\n");
-  const last = lines[lines.length - 1];
-  if (!last) return "GENESIS";
+function readLastHashFromFile(p: string): string | null {
+  if (!existsSync(p)) return null;
   try {
+    const txt = readFileSync(p, "utf8").trimEnd();
+    if (!txt) return null;
+    const lines = txt.split("\n");
+    const last = lines[lines.length - 1];
+    if (!last) return null;
     const e = JSON.parse(last) as ReplayEntry;
     return e.hash;
   } catch {
+    return null;
+  }
+}
+
+function readLastHash(repoRoot: string): string {
+  // First try the active replay file.
+  const fromActive = readLastHashFromFile(join(repoRoot, REPLAY_DIR, REPLAY_FILE));
+  if (fromActive) return fromActive;
+  // v1.42.2 (#19 fix) — chain spans rotations. If the active file is
+  // empty (just rotated, or fresh), fall back to the newest rotated
+  // file so the next entry's prevHash continues the chain.
+  try {
+    const dir = join(repoRoot, REPLAY_DIR);
+    if (!existsSync(dir)) return "GENESIS";
+    const rotated = readdirSync(dir).filter((f) => f.startsWith(REPLAY_FILE + ".rotated-")).sort();
+    if (rotated.length === 0) return "GENESIS";
+    const fromRotated = readLastHashFromFile(join(dir, rotated[rotated.length - 1]!));
+    return fromRotated ?? "GENESIS";
+  } catch {
     return "GENESIS";
+  }
+}
+
+function maybeRotateReplay(repoRoot: string): void {
+  try {
+    const path = join(repoRoot, REPLAY_DIR, REPLAY_FILE);
+    if (!existsSync(path)) return;
+    if (statSync(path).size < REPLAY_ROTATION_BYTES) return;
+    renameSync(path, path + ".rotated-" + Date.now());
+  } catch {
+    // Best-effort rotation. If rename fails (Windows file lock, etc.),
+    // the file simply keeps growing this turn; next call retries.
   }
 }
 
@@ -102,6 +139,10 @@ export function recordReplay(
     const entry: ReplayEntry = { ts, tool, argHash, responseHash, prevHash, hash };
     if (verdict) entry.verdict = verdict;
     appendFileSync(join(repoRoot, REPLAY_DIR, REPLAY_FILE), JSON.stringify(entry) + "\n", "utf8");
+    // v1.42.2 (#19 fix) — rotate after append so an oversized file gets
+    // archived before the NEXT call grows it further. Cheap stat() check
+    // gates the actual rename. Best-effort.
+    maybeRotateReplay(repoRoot);
   } catch {
     // best-effort — never block dispatch
   }

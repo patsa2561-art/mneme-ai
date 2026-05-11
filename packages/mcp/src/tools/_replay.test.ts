@@ -93,3 +93,50 @@ describe("recordReplay + verifyChain", () => {
     expect(existsSync(join(repo, ".mneme", "replay.jsonl"))).toBe(true);
   });
 });
+
+// v1.42.2 (#19 fix) — replay file rotates at 256 KB. The HMAC chain
+// must survive rotation: the first entry written AFTER a rotation must
+// reference (via prevHash) the LAST entry of the rotated file.
+describe("recordReplay · rotation (v1.42.2)", () => {
+  let repo: string;
+  beforeEach(() => { repo = mkdtempSync(join(tmpdir(), "mneme-replay-")); });
+  afterEach(() => { try { rmSync(repo, { recursive: true, force: true }); } catch { /* */ } });
+
+  it("rotates the active file when it exceeds 256 KB", () => {
+    // Pre-fill the replay file with > 256 KB of bogus lines so the next
+    // append + rotation check trips the threshold.
+    require("node:fs").mkdirSync(join(repo, ".mneme"), { recursive: true });
+    const bigLine = JSON.stringify({ ts: "x", tool: "y", argHash: "a".repeat(16), responseHash: "b".repeat(16), prevHash: "GENESIS", hash: "c".repeat(32) }) + "\n";
+    let blob = "";
+    while (blob.length < 260 * 1024) blob += bigLine;
+    writeFileSync(join(repo, ".mneme", "replay.jsonl"), blob, "utf8");
+    recordReplay(repo, "tool.trigger", {}, {});
+    // After the call: the active file should have been renamed to a
+    // .rotated-<ts> sibling. The active file may or may not exist again
+    // (depends on whether a fresh write follows the rotation in the
+    // same call). We assert that AT LEAST one rotated file was created.
+    const fs = require("node:fs");
+    const dir = join(repo, ".mneme");
+    const rotated = fs.readdirSync(dir).filter((f: string) => f.startsWith("replay.jsonl.rotated-"));
+    expect(rotated.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("post-rotation chain links to the rotated file's last hash", () => {
+    // Seed: write 2 valid entries to build a real chain.
+    recordReplay(repo, "tool.a", {}, {});
+    recordReplay(repo, "tool.b", {}, {});
+    const beforeEntries = readReplay(repo);
+    const lastHashBefore = beforeEntries[beforeEntries.length - 1]!.hash;
+    // Force-rotate by renaming the active file (simulating the rotation
+    // that would have happened at 256 KB).
+    const fs = require("node:fs");
+    const active = join(repo, ".mneme", "replay.jsonl");
+    fs.renameSync(active, active + ".rotated-" + Date.now());
+    // Now record one more entry. The new entry's prevHash MUST equal the
+    // last hash of the rotated file — chain continuity across rotation.
+    recordReplay(repo, "tool.c", {}, {});
+    const afterEntries = readReplay(repo);
+    expect(afterEntries.length).toBe(1);
+    expect(afterEntries[0]!.prevHash).toBe(lastHashBefore);
+  });
+});
