@@ -131,6 +131,7 @@ Commands:
   demo [options]  >  Showcase Mneme's wow-features in 60 seconds — synthesizes seed lineage + ticks nucleus + spawns bot squadron + shows DNA evolution.
   verify [options] <claim...>  >  Fast truth-check on a claim. Plain-English verdict (TRUSTWORTHY / MIXED / REFUTED / IMPOSSIBLE) anchored to the ACGV pipeline. Pass --explain for the math; --json for machine output.
   autoboot  >  Phoenix Resurrection Protocol -- install / uninstall / status of the cross-platform auto-boot mechanisms. Arms Plan 1/2/3 simultaneously so the daemon resurrects after every reboot regardless of which mechanism is blocked by the host.
+  sovereign  >  Sovereignty Kernel -- Mneme answers questions about THIS repo using local Ollama + ACGV grounding gate. Free-first: no API key, no cloud, no source code leaves the laptop. v1.57.0.
   help [command]  >  display help for command
 
 Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.

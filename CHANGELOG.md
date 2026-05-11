@@ -8,6 +8,124 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.57.0] — 2026-05-11
+
+**SOVEREIGNTY KERNEL -- Tier 1 of the v1.57 god-tier menu. Mneme answers
+questions about THIS repo using local Ollama as the language model and
+ACGV as the grounding gate. Free-first: no API key, no cloud, no source
+code leaves the laptop. Mneme decides what to say (verdict comes from
+deterministic math); Ollama generates the words. Standalone AI.**
+
+### NEW: `mneme sovereign ask`
+
+  ```
+  $ mneme sovereign ask "what does the harmonic mean function do?"
+  Mneme · ✓ GROUNDED  (1240ms)
+
+  The harmonic mean in packages/core/src/squadron/acgv_neutrino.ts is
+  the unforgiving discriminator for the 3-flavor grounding pipeline.
+  Returns 0 when any input is 0 so a single zero-flavor assertion
+  kills the score.
+
+  > ACGV verified the answer grounds in repo state.
+
+  latency: context=107ms  ollama=1100ms  grounding=33ms  total=1240ms
+  ```
+
+  Flags: `--show-evidence` (print evidence slices), `--skip-grounding`
+  (bypass ACGV gate -- debug only), `--model <name>` (override
+  Ollama model), `--json`.
+
+### Architecture
+
+```
+question -> buildContext()        -- SYSTEM + REPO + HISTORY + WISDOM
+         -> ollamaGenerate()      -- local Ollama, 1 HTTP call
+         -> runACGV(draft)        -- grounding gate (Chandrasekhar + PRTF)
+         -> verdict ∈ {grounded, ungrounded, refused, ollama-unreachable}
+```
+
+**Mneme decides; Ollama writes.** This is the architectural sovereignty:
+the model produces text but the verdict comes from deterministic math
+(ACGV's 6-layer pipeline). Ollama hallucinations are caught by the
+grounding gate. The user only sees claims that ground in real repo state.
+
+### Context budget (token-cheap)
+
+  - [SYSTEM] -- ~150 tokens (grounding rules)
+  - [REPO]   -- top 3 token-matching files (with 100-char snippets)
+  - [HISTORY] -- top 3 commits whose subjects mention the question tokens
+  - [WISDOM] -- top 3 recent growth-event nucleus lessons
+  - [USER]   -- the question itself
+
+Total typical prompt: 500-1500 tokens. Fits even on qwen2.5:0.5b
+(the smallest viable Ollama chat model, ~500MB on disk).
+
+### Verdict ladder
+
+  - `grounded`           -> ACGV verified or meta-refusal ("I do not see
+                            this in the evidence"). Safe to relay.
+  - `ungrounded`         -> ACGV in LIMBO; surface with caveat.
+  - `refused`            -> ACGV BLACK_HOLE / IMPOSSIBLE_REFUTE. Mneme
+                            REFUSES to relay the answer. Returns the
+                            ACGV reason so the caller can show "the
+                            model said X but Mneme blocked it because Y".
+  - `ollama-unreachable` -> Ollama not running / model missing / busy.
+                            Honest error, not silent failure.
+
+### Free-first
+
+`z3-solver` was already optional in v1.52; Ollama is similarly opt-in.
+If Ollama isn't installed Mneme says so cleanly. If z3-solver isn't
+installed the grounding gate falls back to propositional. Stack works
+on ANY laptop, costs $0/month.
+
+### Tests -- 16 cases, 100% pass
+
+`packages/core/src/sovereign/sovereign.test.ts`:
+
+  - Ollama client: 200 / 500 / unreachable paths
+  - Context builder: SYSTEM / REPO / HISTORY / token counting / empty
+  - sovereignAsk end-to-end: 6 cases including the safety case
+    (Ollama says "Rust" -> Mneme refuses)
+  - Latency breakdown captured per call
+  - Evidence slices surfaced to caller
+
+Tests use injected `fetchImpl` (mock Ollama) so they run without a
+live Ollama instance. Deterministic across machines.
+
+Full project suite: **5918/5918** (no regression).
+
+### Mandate compliance
+
+- **Wild idea**: invert the model. Most AI tools = wrapper around a
+  cloud LLM. Mneme = wrapper around a local LLM PLUS a deterministic
+  verdict engine that refuses to relay model output until it grounds.
+- **Wiser, not patched**: ACGV is reused as the grounding gate (no
+  new verification logic). The same pipeline that catches Squad
+  hallucinations now catches Ollama hallucinations.
+- **Self-fix root cause**: prior versions of "Mneme as AI's friend"
+  required a host AI (Claude / Cursor). Now Mneme works WITHOUT a
+  host. Tier 1 of 7 in the god-tier roadmap.
+- **Co-working**: integrates with the ACGV pipeline. The vaccine bank,
+  PRTF signature, two-witness rule all apply automatically.
+- **Always-studying**: latency breakdown captured per call for
+  telemetry; future tiers (Oracle, Nemesis) consume the latency
+  history to forecast vendor health.
+
+### Files added / modified
+
+```
+NEW packages/core/src/sovereign/ollama_client.ts     (Ollama HTTP client)
+NEW packages/core/src/sovereign/context_builder.ts   (wisdom-grounded prompt)
+NEW packages/core/src/sovereign/answer.ts            (verdict pipeline)
+NEW packages/core/src/sovereign/index.ts             (public API)
+NEW packages/core/src/sovereign/sovereign.test.ts    (16 vitest cases)
+MOD packages/core/src/index.ts                       (export sovereign)
+MOD packages/cli/src/commands/demo.ts                (registerAskCommand)
+MOD packages/cli/src/index.ts                        (wires command)
+```
+
 ## [1.56.1] — 2026-05-11
 
 **Phoenix v1.56.0 schtasks hotfix.**

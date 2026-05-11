@@ -289,6 +289,11 @@ export * as acgvLogic from "./squadron/acgv_logic.js";
 // is blocked by the host. P(resurrection) = 1 - 0.05^3 = 99.99% under the
 // assumed 5% per-mechanism failure rate.
 export * as autoboot from "./autoboot/index.js";
+// v1.57.0 -- SOVEREIGNTY KERNEL. Mneme answers questions using local
+// Ollama as the language model + ACGV as the grounding gate. Mneme
+// decides what to say (verdict), Ollama generates the words (text).
+// Free-first: no API key, no cloud, no source code leaves the laptop.
+export * as sovereign from "./sovereign/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

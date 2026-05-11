@@ -129,7 +129,7 @@ import { registerEvolveCommands } from "./commands/evolve.js";
 import { registerGenomePoolCommands } from "./commands/genome-pool.js";
 import { registerStigmergyCommands } from "./commands/stigmergy.js";
 import { registerChimeraCommands } from "./commands/chimera.js";
-import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand, registerVerifyCommand, registerAutobootCommand } from "./commands/demo.js";
+import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand, registerVerifyCommand, registerAutobootCommand, registerAskCommand } from "./commands/demo.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -2532,6 +2532,7 @@ export async function run(argv: string[]): Promise<void> {
   registerDemoCommand(program);
   registerVerifyCommand(program);
   registerAutobootCommand(program);
+  registerAskCommand(program);
 
   program.exitOverride((err) => {
     if (err.code === "commander.help" || err.code === "commander.helpDisplayed") process.exit(0);

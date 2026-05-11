@@ -292,6 +292,66 @@ How to read the verdict:
     });
 }
 
+// ─── mneme sovereign (v1.57.0 Sovereignty Kernel) ────────────────────
+export function registerAskCommand(program: Command): void {
+  const sov = program
+    .command("sovereign")
+    .description("Sovereignty Kernel -- Mneme answers questions about THIS repo using local Ollama + ACGV grounding gate. Free-first: no API key, no cloud, no source code leaves the laptop. v1.57.0.");
+
+  sov
+    .command("ask <question...>")
+    .description("Ask Mneme a grounded question. Ollama generates the text; Mneme (ACGV) decides whether to relay it. Refuses to fake confidence.")
+    .option("--json", "JSON output.")
+    .option("--show-evidence", "Print the evidence slices that grounded the answer.")
+    .option("--skip-grounding", "Bypass the ACGV grounding gate (debug / power-user).")
+    .option("--model <name>", "Ollama model name. Defaults to MNEME_OLLAMA_MODEL or llama3.2.")
+    .addHelpText("after", `
+Examples:
+  $ mneme ask "what does the harmonic mean function do?"
+  $ mneme ask "when was v1.42 shipped?" --show-evidence
+  $ mneme ask "is Mneme written in Rust?"
+
+Prerequisites:
+  - Ollama running locally: 'ollama serve' (default http://127.0.0.1:11434)
+  - At least one model pulled: 'ollama pull llama3.2'
+
+Set MNEME_OLLAMA_URL / MNEME_OLLAMA_MODEL to override defaults.
+`)
+    .action(async (words: string[], opts: { json?: boolean; showEvidence?: boolean; skipGrounding?: boolean; model?: string }) => {
+      const { sovereign } = await import("@mneme-ai/core");
+      const question = words.join(" ");
+      const t0 = Date.now();
+      const r = await sovereign.sovereignAsk({
+        repoRoot: process.cwd(),
+        question,
+        skipGroundingGate: opts.skipGrounding === true,
+        ollama: opts.model ? { model: opts.model } : undefined,
+      });
+      if (opts.json) { writeJson(r); return; }
+      const glyph = r.verdict === "grounded" ? "✓"
+        : r.verdict === "ungrounded" ? "?"
+        : r.verdict === "refused" ? "X"
+        : "!";
+      writeText(`Mneme · ${glyph} ${r.verdict.toUpperCase()}  (${(Date.now() - t0)}ms)`);
+      writeText(``);
+      if (r.text) {
+        writeText(r.text);
+        writeText(``);
+      }
+      writeText(`> ${r.reason}`);
+      if (opts.showEvidence && r.evidence.length > 0) {
+        writeText(``);
+        writeText(`Evidence that grounded the prompt:`);
+        for (const s of r.evidence) {
+          writeText(`  [${s.label}]`);
+          for (const l of s.lines) writeText(`    - ${l}`);
+        }
+      }
+      writeText(``);
+      writeText(`latency: context=${r.latency.contextMs}ms  ollama=${r.latency.ollamaMs}ms  grounding=${r.latency.groundingMs}ms  total=${r.latency.totalMs}ms`);
+    });
+}
+
 // ─── mneme autoboot (v1.56.0 Phoenix Resurrection) ───────────────────
 export function registerAutobootCommand(program: Command): void {
   const cmd = program
