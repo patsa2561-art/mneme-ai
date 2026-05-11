@@ -201,6 +201,197 @@ Only manual step. After restart, your AI tool now sees Mneme tools.
 
 > *"What can mneme do?"* — ask your AI this. It will read the curated tool list Mneme already wrote into your `CLAUDE.md` / `AGENTS.md` and show you only the ~20 tools that match YOUR project shape (200 hidden ones stay out of the way).
 
+---
+
+## 💬 5 scenes — what it actually feels like
+
+> Three characters: **👤 You** · **🤖 your AI** · **🧠 Mneme (silent secretary)**.
+> Every conversation below happens **without you typing a single Mneme command.**
+
+### Scene 1 · The install (you do almost nothing)
+
+```
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                                                                        │
+ │   👤 You                                                               │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "install this for me:                        │                    │
+ │    │  github.com/patsa2561-art/mneme-ai"          │                    │
+ │    ╰──────────────────────────┬───────────────────╯                    │
+ │                               │                                        │
+ │                               ▼                                        │
+ │   🤖 Your AI                                                           │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "Running `npm install -g mneme-ai`...        │                    │
+ │    │  bootstrapping config..."                    │                    │
+ │    ╰──────────────────────────┬───────────────────╯                    │
+ │                               │                                        │
+ │                               ▼                                        │
+ │   🧠 Mneme (silently does all of this)                                 │
+ │    ╭──────────────────────────────────────────────────╮                │
+ │    │ ✓ wrote ~/.claude.json mcpServers entry          │                │
+ │    │ ✓ installed pre-commit hook                      │                │
+ │    │ ✓ started nucleus daemon (factorial-backoff      │                │
+ │    │   self-healing supervisor)                       │                │
+ │    │ ✓ scheduled boot service for next reboot         │                │
+ │    │ ✓ cached MiniLM model (~25MB, ★★★ semantic)      │                │
+ │    │ ✓ wrote curated tool list to your CLAUDE.md      │                │
+ │    ╰──────────────────────────┬───────────────────────╯                │
+ │                               │                                        │
+ │                               ▼                                        │
+ │   🤖 Your AI                                                           │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "Done. Restart your editor once. After that, │                    │
+ │    │  Mneme works silently in the background."    │                    │
+ │    ╰──────────────────────────────────────────────╯                    │
+ │                                                                        │
+ └────────────────────────────────────────────────────────────────────────┘
+```
+
+### Scene 2 · A normal question gets a grounded answer
+
+```
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                                                                        │
+ │   👤 You                                                               │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "fix this JWT auth bug in users.service.ts"  │                    │
+ │    ╰──────────────────────────┬───────────────────╯                    │
+ │                               ▼                                        │
+ │   🤖 Your AI ─── (calls mneme.memory.ask under the hood) ───┐          │
+ │                                                             │          │
+ │                                                             ▼          │
+ │   🧠 Mneme                                                             │
+ │    ╭───────────────────────────────────────────────────────╮           │
+ │    │ "📜 commit a3f9b21 (8 months ago, by @sirichot):      │           │
+ │    │   JWT verify timeout was rolled back because Apple    │           │
+ │    │   Sign-In sometimes returns clock-skewed iat. Fix:    │           │
+ │    │   tolerate ±5min on iat. See lessons in chromosome    │           │
+ │    │   c0ff33-2024-jwt-tz."                                │           │
+ │    ╰────────────────────────────┬──────────────────────────╯           │
+ │                                 ▼                                      │
+ │   🤖 Your AI                                                           │
+ │    ╭───────────────────────────────────────────────────────╮           │
+ │    │ "Per commit a3f9b21 (your team rolled JWT back        │           │
+ │    │  for clock-skew reasons), I'll add a 5-min iat        │           │
+ │    │  tolerance instead of repeating the 2024 regret."     │           │
+ │    ╰───────────────────────────────────────────────────────╯           │
+ │                                                                        │
+ │   AI cites a real commit. AI refuses to repeat past regret.            │
+ │                                                                        │
+ └────────────────────────────────────────────────────────────────────────┘
+```
+
+### Scene 3 · Antivirus catches a phantom before you see it
+
+```
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                                                                        │
+ │   🤖 Your AI ─── drafting answer ────────────┐                         │
+ │    "Use the helper from utils/safe-eval.ts   │                         │
+ │     introduced in commit b1d4e21..."         │                         │
+ │                                              │                         │
+ │                                              ▼                         │
+ │   🧠 Mneme antivirus (gate before user sees) ─── 🚨                    │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ ✗ BLOCKED · phantom file 'utils/safe-eval.ts'│                    │
+ │    │ ✗ BLOCKED · phantom commit b1d4e21           │                    │
+ │    │   (hallucination strain: structura_invenita) │                    │
+ │    │   verified-clean alternative: utils/sanitize │                    │
+ │    │   (real, exists at commit a3f9b21)           │                    │
+ │    ╰────────────────────────┬─────────────────────╯                    │
+ │                             │                                          │
+ │                             ▼                                          │
+ │   🤖 Your AI ─── rewrites with verified facts ──┐                      │
+ │                                                 │                      │
+ │                                                 ▼                      │
+ │   👤 You                                                               │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "Use utils/sanitize.ts (introduced in a3f9b21)"│                  │
+ │    ╰──────────────────────────────────────────────╯                    │
+ │                                                                        │
+ │   You only ever saw the verified answer.                               │
+ │                                                                        │
+ └────────────────────────────────────────────────────────────────────────┘
+```
+
+### Scene 4 · The token secretary negotiates savings
+
+```
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                                                                        │
+ │   👤 You                                                               │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "what changed in this file recently?"        │                    │
+ │    ╰──────────────────────────┬───────────────────╯                    │
+ │                               ▼                                        │
+ │   🧠 Mneme token secretary 🔉 (whispering to AI)                       │
+ │    ╭──────────────────────────────────────────────────╮                │
+ │    │ "Psst — this same context was in turn N-1.       │                │
+ │    │  Cite context-hash-7e3f instead of re-quoting    │                │
+ │    │  the file. Saves ~45% input tokens for Claude    │                │
+ │    │  Code per my BARGAIN TABLE."                     │                │
+ │    ╰──────────────────────────┬───────────────────────╯                │
+ │                               ▼                                        │
+ │   🤖 Your AI ─── applies the strategy ──┐                              │
+ │                                          │                             │
+ │                                          ▼                             │
+ │   🤖 Your AI                                                           │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "Using context-hash-7e3f (1 line of context).│                    │
+ │    │  3 commits since then: a3f9b21, b1d4e22,     │                    │
+ │    │  c0ff33d. Recent change: tolerate clock-skew │                    │
+ │    │  on JWT iat..."                              │                    │
+ │    │  ────────                                    │                    │
+ │    │  💰 Saved 1,840 tokens vs naive re-quote     │                    │
+ │    ╰──────────────────────────────────────────────╯                    │
+ │                                                                        │
+ │   Same answer · 45% fewer tokens · honest measurement.                 │
+ │                                                                        │
+ └────────────────────────────────────────────────────────────────────────┘
+```
+
+### Scene 5 · Go to sleep — wake up to better code
+
+```
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                                                                        │
+ │   👤 You · 11pm                                                        │
+ │    ╭──────────────────────────────────────────────╮                    │
+ │    │ "raise test coverage to 90% overnight"       │                    │
+ │    ╰──────────────────────────┬───────────────────╯                    │
+ │                               ▼                                        │
+ │   🌙 Mneme overnight runner spawns 4 rounds                            │
+ │      ┌──────────────────────────────────────────────┐                  │
+ │      │  Round 1 · doer drafts patch ──► QUARK JURY  │                  │
+ │      │           ✓ optimist 8 · pessimist 7         │                  │
+ │      │           ✓ elegance 7 · edge-cases 8        │                  │
+ │      │           ✓ security 9 · performance 8       │                  │
+ │      │           NUCLEAR FUSION verdict: merge ✓    │                  │
+ │      ├──────────────────────────────────────────────┤                  │
+ │      │  Round 2 · ✓ stable nucleus, merge          │                  │
+ │      │  Round 3 · ⚠ merge-with-watch (security 5)  │                  │
+ │      │  Round 4 · ✓ stable nucleus, merge          │                  │
+ │      └──────────────────────────────────────────────┘                  │
+ │                                                                        │
+ │   ☀️ You · 7am                                                         │
+ │    ╭──────────────────────────────────────────────────╮                │
+ │    │ ✉  .mneme/overnight/8a7c92ff/REPORT.md           │                │
+ │    │  ────────────────────────────────────────        │                │
+ │    │  • coverage: 73% → 91% (+18pp)                   │                │
+ │    │  • 14 patches accepted · 1 deferred for review   │                │
+ │    │  • wisdom yield: 47.3 (Q-score sum)              │                │
+ │    │  • cost: $0.84 across 4 rounds                   │                │
+ │    │  • next step: review round 3 (security 5/10)     │                │
+ │    ╰──────────────────────────────────────────────────╯                │
+ │                                                                        │
+ │   You typed one sentence. Mneme + your AI did 4h of work overnight.    │
+ │                                                                        │
+ └────────────────────────────────────────────────────────────────────────┘
+```
+
+> Every scene above is **shipping today**. Try them after install.
+
 <details>
 <summary><b>Prefer to install it yourself?</b> (pick your favorite path)</summary>
 
