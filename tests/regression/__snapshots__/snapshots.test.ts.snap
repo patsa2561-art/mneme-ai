@@ -94,6 +94,9 @@ Commands:
   inbox  >  Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.
   compliance  >  AI Compliance audit — who executed which AUTO-ACTION mandate (pulse pre-executor / daemon-queue / ai-agent).
   companion  >  MNEME COMPANION PROTOCOL — soul · consent · pheromone · contract · template surface for the active AI vendor.
+  soul  >  Shortcut for \`mneme companion soul\` — your AI's per-vendor diary (commitments kept/broken).
+  consent  >  Shortcut for \`mneme companion consent\` — view / renew / revoke your repo's Mneme consent grant.
+  greet [options]  >  AI handshake — let Mneme know which AI vendor is active in this session (so Soul Mirror tracks CLI-only activity, not just MCP).
   cloud  >  Smart Cloud Connectivity — probe / queue / drain. Local-first; cloud is OPTIONAL relay (vaccine CDN, federated PRECOG, compliance scoreboard).
   pharmacopoeia|phr  >  Vaccine CDN auto-distribution (Demon Stage 1.1) — pull + atomically swap pharmacopoeia bundle from a public/private CDN.
   parasite  >  Parasite bridge installer (Demon Stage 1.2) — inject Mneme bridge into other AI tools' configs (Cursor / Continue / Aider / Codex / Gemini / Windsurf / Claude Code project). Always sentinel-bracketed + reversible.
@@ -122,7 +125,7 @@ Commands:
   stigmergy|hive [options]  >  MNEME STIGMERGY HIVE -- emergent dev-collaboration detection from git traces alone (no chat logs needed). Finds pairs who effectively work together without ever talking.
   chimera [options]  >  MNEME CHIMERA -- single-author insight synthesizer for solo repos. Surfaces time-of-day fingerprint + area diversity + velocity + topic momentum + phantom-collaborator suggestions even when other commands degenerate.
   tools [options]  >  List Mneme's MCP tool catalog (default ALL 172). Pass --curated for the 20-tool starter set.
-  squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware.
+  squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware. Example: \`mneme squad "the auth refactor in v1.42 introduced a regression"\`
   health [options]  >  Single-screen health: version + lineage state + nucleus streaks.
   demo [options]  >  Showcase Mneme's wow-features in 60 seconds — synthesizes seed lineage + ticks nucleus + spawns bot squadron + shows DNA evolution.
   help [command]  >  display help for command

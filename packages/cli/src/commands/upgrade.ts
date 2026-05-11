@@ -139,6 +139,17 @@ export async function upgradeCommand(opts: UpgradeOptions): Promise<number> {
       const vc = (core as { versionCheck?: { invalidateOnVersionShift?: (root: string) => unknown } }).versionCheck;
       if (vc?.invalidateOnVersionShift) vc.invalidateOnVersionShift(process.cwd());
     } catch { /* */ }
+    // v1.46.0 (#15 fix) -- auto-refresh CLAUDE.md / AGENTS.md /
+    // GEMINI.md / .cursorrules / .windsurfrules sentinels right after
+    // the install. Pre-fix: testers had to run `mneme manifest sync`
+    // by hand because sentinels still showed the old version (or even
+    // a stale "warning v1.27.9" days later). Best-effort.
+    try {
+      const core = await import("@mneme-ai/core");
+      const am = (core as { agentManifest?: { syncManifest?: (root: string, opts?: { mnemeVersion?: string }) => unknown; resolveMnemeVersion?: () => string } }).agentManifest;
+      const resolveMnemeVersion = (core as { resolveMnemeVersion?: () => string }).resolveMnemeVersion;
+      if (am?.syncManifest) am.syncManifest(process.cwd(), { mnemeVersion: resolveMnemeVersion ? resolveMnemeVersion() : remote });
+    } catch { /* */ }
   }
   if (installed.status !== 0) {
     ui.error(`Install exited with code ${installed.status}.`);

@@ -765,9 +765,12 @@ export function registerNucleusCommands(program: Command): void {
 export function registerInboxCommands(program: Command): void {
   const ib = program.command("inbox").description("Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.");
 
+  // v1.46.0 (#11 fix) — `mneme inbox` (no subcommand) used to print help;
+  // now defaults to `list` since that's the day-1 expectation. Help still
+  // available via `mneme inbox --help`.
   ib
-    .command("list")
-    .description("List every inbox message (sent + unsent).")
+    .command("list", { isDefault: true })
+    .description("List every inbox message (sent + unsent). [DEFAULT]")
     .option("--unsent", "Show only unsent messages.")
     .option("--json", "JSON output.")
     .action(async (opts: { unsent?: boolean } & CommonOpts) => {
@@ -797,12 +800,22 @@ export function registerInboxCommands(program: Command): void {
     .option("--body <text>", "Optional one-line body.")
     .option("--cta <text>", "Optional call-to-action.")
     .option("--priority <p>", "low | medium | high | critical (default medium).", "medium")
+    // v1.46.0 (#12 fix) — `--severity` accepted as alias for --priority.
+    // Pulse text uses "severity:info|warn|critical" wording; users typed
+    // --severity and got "unknown option". Now both map to the same field.
+    .option("--severity <p>", "Alias for --priority. Accepts: info|low → low, warn|medium → medium, high → high, critical → critical.")
     .option("--source <name>", "Source tag (default 'manual').", "manual")
     .option("--auto-action <tool>", "Mark as AUTO-ACTION: pulse will emit `[AUTO-ACTION] EXECUTE NOW: <tool>(<args>)` so the AI runs the tool immediately on its next turn.")
     .option("--auto-action-args <json>", "JSON object passed as the tool args. Default {}.")
     .option("--json", "JSON output.")
-    .action(async (title: string, opts: { body?: string; cta?: string; priority?: string; source?: string; autoAction?: string; autoActionArgs?: string } & CommonOpts) => {
-      const pri = (opts.priority ?? "medium") as "low" | "medium" | "high" | "critical";
+    .action(async (title: string, opts: { body?: string; cta?: string; priority?: string; severity?: string; source?: string; autoAction?: string; autoActionArgs?: string } & CommonOpts) => {
+      // v1.46.0 (#12 fix) — accept severity wording (info/warn/etc) and map.
+      const SEVERITY_MAP: Record<string, "low" | "medium" | "high" | "critical"> = {
+        info: "low", low: "low", warn: "medium", warning: "medium",
+        medium: "medium", high: "high", critical: "critical",
+      };
+      const rawPri = (opts.severity ?? opts.priority ?? "medium").toLowerCase();
+      const pri: "low" | "medium" | "high" | "critical" = SEVERITY_MAP[rawPri] ?? "medium";
       let autoAction: { tool: string; args: Record<string, unknown> } | undefined;
       if (opts.autoAction) {
         let args: Record<string, unknown> = {};

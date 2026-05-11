@@ -113,6 +113,13 @@ export * as avatarReplicatingWisdom from "./avatar/replicating_wisdom.js";
 // version. Never falls back to a hard-coded string -- those bit-rot
 // the moment a new version ships.
 export { resolveMnemeVersion } from "./mneme_version.js";
+// v1.46.0 (#8 fix) — AI HANDSHAKE PROTOCOL. Lets Mneme see CLI-only
+// AI sessions (Claude Code / Cursor / Codex / Continue / Gemini /
+// Aider). Pre-fix: Soul Mirror reported "0 sessions" because every
+// CLI invocation bypassed the MCP-side observer. Post-fix: AI calls
+// `mneme greet --vendor X` once per session + every CLI invocation
+// records an activity tick against the active vendor.
+export * as aiHandshake from "./ai_handshake.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +

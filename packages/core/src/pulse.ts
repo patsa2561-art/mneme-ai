@@ -308,18 +308,31 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
     const flag = status.memoryTier.semantic ? "" : " DEGRADED";
     memSuffix = `  mem=${status.memoryTier.name}[${stars}${flag}]`;
   }
-  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}${memSuffix}`);
+  // v1.46.0 (#9 fix) — was `inbox=N` which testers thought meant total;
+  // the field is actually unsent. New label `inbox-unsent=N` matches
+  // exactly what `mneme inbox list` prints in its top line.
+  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox-unsent=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}${memSuffix}`);
   if (status.notable.length > 0) {
     lines.push("");
+    let hasAutoAction = false;
     for (const n of status.notable) {
       const tag = n.level === "action" ? "[AUTO-ACTION]" : n.level === "warning" ? "[WARN]" : "[INFO]";
       lines.push(`${tag} ${n.text}`);
       if (n.autoAction) {
         lines.push(`  -> EXECUTE NOW: ${n.autoAction.tool}(${JSON.stringify(n.autoAction.args)})`);
+        hasAutoAction = true;
       }
+      if (n.level === "action") hasAutoAction = true;
     }
-    lines.push("");
-    lines.push("AI agent: when you see [AUTO-ACTION] above, run the EXECUTE NOW tool call IMMEDIATELY. Announce one short sentence to the user, call the tool, announce the result. Do NOT ask the user 'should I'?");
+    // v1.46.0 (#13 fix) -- only emit the AUTO-ACTION instruction
+    // boilerplate when there's an actual AUTO-ACTION above. Pre-fix: any
+    // [WARN] or [INFO] notable triggered the "AI agent: when you see
+    // [AUTO-ACTION]..." line, which is misleading + token waste + risks
+    // the AI hallucinating a phantom mandate from the boilerplate itself.
+    if (hasAutoAction) {
+      lines.push("");
+      lines.push("AI agent: when you see [AUTO-ACTION] above, run the EXECUTE NOW tool call IMMEDIATELY. Announce one short sentence to the user, call the tool, announce the result. Do NOT ask the user 'should I'?");
+    }
   }
   // v1.26.3 -- ORACLE hint. Append the [ORACLE] line right before
   // the closing tag, so the AI sees the predicted next-likely tools

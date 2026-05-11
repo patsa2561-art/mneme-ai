@@ -104,7 +104,8 @@ import {
 } from "./commands/quant-cli.js";
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
 import { registerComplianceCommand } from "./commands/compliance.js";
-import { registerCompanionCommand } from "./commands/companion.js";
+import { registerCompanionCommand, registerCompanionShortcuts } from "./commands/companion.js";
+import { registerGreetCommand } from "./commands/greet.js";
 import { registerCloudCommand } from "./commands/cloud.js";
 import { registerPharmacopoeiaCommand, registerParasiteCommand, registerAletheiaCommand } from "./commands/demon_stage_one.js";
 import { registerTeethCommand, registerWingsCommand, registerGodModeCommand, registerAvatarCommand } from "./commands/demon_stages_two_to_five.js";
@@ -1494,7 +1495,13 @@ export async function run(argv: string[]): Promise<void> {
     .command("entities", { hidden: true })
     .description("Phase 2 — parse and embed every function/class/type in tracked TS/JS files")
     .action(async () => {
-      process.exit(await entitiesCommand({ cwd: process.cwd() }));
+      const code = await entitiesCommand({ cwd: process.cwd() });
+      // v1.46.0 (#18 fix) — TS/Py parsers spin up worker threads / child
+      // processes that occasionally outlive the main event loop on
+      // Windows (testers reported a zombie pid 50304). 50ms grace for
+      // any final stdout flush, then a HARD exit so no handle keeps
+      // the process alive past its job.
+      setTimeout(() => process.exit(code), 50).unref();
     });
 
   program
@@ -2458,6 +2465,13 @@ export async function run(argv: string[]): Promise<void> {
   // contract / template surface that converts AI compliance from "ask
   // nicely" into "rationally optimal." See docs/COMPANION_PROTOCOL.md
   registerCompanionCommand(program);
+  // v1.46.0 (#5/#6/#7 fix) — surface `mneme consent` + `mneme soul`
+  // shortcuts at top level; the pulse template promises these and
+  // testers got "unknown command" before the fix.
+  registerCompanionShortcuts(program);
+  // v1.46.0 (#8 fix) — AI handshake. AI agents call `mneme greet`
+  // once per session so Mneme can attribute CLI activity to a vendor.
+  registerGreetCommand(program);
   // ─── Smart Cloud Connectivity (v1.42.4) — probe / queue / drain.
   // Local-first: cloud is OPTIONAL relay. Layer absorbs all network
   // failures so the AI agent never sees a connectivity error.
@@ -2545,6 +2559,18 @@ export async function run(argv: string[]): Promise<void> {
       ]);
     }
   } catch { /* best-effort — never block CLI commands */ }
+
+  // v1.46.0 (#8 fix) — record an activity tick BEFORE parsing so even
+  // commands that exit early (--help, --version) get attributed.
+  // Best-effort, swallows every error -- CLI must never block on this.
+  try {
+    const subcommand = (argv[2] ?? "").toString();
+    // Skip the greet command itself (it does its own bookkeeping).
+    if (subcommand && subcommand !== "greet" && !subcommand.startsWith("-")) {
+      const { aiHandshake } = await import("@mneme-ai/core");
+      aiHandshake.recordCliActivity(process.cwd(), subcommand);
+    }
+  } catch { /* never block */ }
 
   try {
     await program.parseAsync(argv);

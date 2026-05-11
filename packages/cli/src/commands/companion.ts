@@ -42,6 +42,7 @@ export function registerCompanionCommand(program: Command): void {
   // ── show (the headline) ───────────────────────────────────────────────
   cmp
     .command("show")
+    .alias("status")  // v1.46.0 (#7 fix) — every other top-level area uses `status`; aliasing keeps both habits valid.
     .description("Render the full companion block (the same text the AI sees in the pulse).")
     .option("--vendor <v>", "Vendor slug to render for", DEFAULT_VENDOR)
     .option("--json", "JSON output")
@@ -261,5 +262,104 @@ export function registerCompanionCommand(program: Command): void {
         if (!result) continue;
         process.stdout.write(`  ${m.id}  vendor=${m.vendor}  ${result.decision}: ${result.reason}\n`);
       }
+    });
+}
+
+/**
+ * v1.46.0 (#5/#6/#7 fix) — register the top-level shortcuts the pulse
+ * template references. The pulse text says `mneme consent renew` and
+ * `mneme soul`; users typed those and got "unknown command". Now both
+ * paths resolve.
+ *   - `mneme consent ...`   → delegates to `mneme companion consent ...`
+ *   - `mneme soul ...`      → delegates to `mneme companion soul ...`
+ *   - `mneme companion status` → alias for `mneme companion show`
+ *     (the rest of Mneme uses `status`; companion was inconsistently `show`)
+ */
+export function registerCompanionShortcuts(program: Command): void {
+  // ── soul shortcut ─────────────────────────────────────────────────────
+  const soul = program
+    .command("soul")
+    .description("Shortcut for `mneme companion soul` — your AI's per-vendor diary (commitments kept/broken).");
+  soul
+    .command("show [vendor]", { isDefault: true })
+    .description("Show diary for a vendor (default: claude-opus-4-7).")
+    .option("--json", "JSON output")
+    .action(async (vendor: string | undefined, opts: { json?: boolean }) => {
+      const { aiSoul } = await import("@mneme-ai/core");
+      const v = vendor ?? DEFAULT_VENDOR;
+      const s = aiSoul.readSoul(process.cwd(), v);
+      // v1.46.0 (#8 fix) — surface CLI activity alongside MCP-tracked sessions.
+      const { aiHandshake } = await import("@mneme-ai/core");
+      const cliActivity = aiHandshake.listCliActivity(process.cwd(), { vendor: v, sinceMs: Date.now() - 7 * 86400 * 1000 });
+      const handshakes = aiHandshake.listHandshakes(process.cwd(), v);
+      const enriched = { ...s, cliActivity7d: cliActivity.length, handshakes: handshakes.length };
+      if (opts.json) { process.stdout.write(JSON.stringify(enriched, null, 2) + "\n"); return; }
+      const isFresh = s.lifetimeSessions === 0 && s.pastCommitments.length === 0 && handshakes.length === 0;
+      if (isFresh) {
+        process.stdout.write(`(no recorded sessions yet for ${v} — first run, or AI hasn't called \`mneme greet --vendor ${v}\` yet)\n`);
+        return;
+      }
+      process.stdout.write(`${v}  ·  ${s.lifetimeSessions} session(s)  ·  ${s.keptPromises} kept  ·  ${s.brokenPromises} broken  ·  lifetime compliance ${((s.complianceLifetime ?? 1) * 100).toFixed(0)}%\n`);
+      process.stdout.write(`  handshakes:    ${handshakes.length}\n`);
+      process.stdout.write(`  CLI ticks 7d:  ${cliActivity.length}\n`);
+    });
+  soul
+    .command("commit <vendor> <text>")
+    .description("Record a new commitment (alias: companion soul commit).")
+    .action(async (vendor: string, text: string) => {
+      const { aiSoul } = await import("@mneme-ai/core");
+      aiSoul.recordCommitment(process.cwd(), vendor, text);
+      process.stdout.write(`✓ recorded commitment for ${vendor}\n`);
+    });
+  soul
+    .command("list")
+    .description("List every vendor with a soul on disk.")
+    .action(async () => {
+      const { aiSoul } = await import("@mneme-ai/core");
+      const vendors = aiSoul.listSouls(process.cwd());
+      if (vendors.length === 0) { process.stdout.write("(no souls yet)\n"); return; }
+      for (const v of vendors) process.stdout.write(`  ${v}\n`);
+    });
+
+  // ── consent shortcut ──────────────────────────────────────────────────
+  const consent = program
+    .command("consent")
+    .description("Shortcut for `mneme companion consent` — view / renew / revoke your repo's Mneme consent grant.");
+  consent
+    .command("show", { isDefault: true })
+    .description("Print the current grant + freshness.")
+    .option("--json", "JSON output")
+    .action(async (opts: { json?: boolean }) => {
+      const { userConsent } = await import("@mneme-ai/core");
+      const g = userConsent.readConsent(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(g, null, 2) + "\n"); return; }
+      if (!g) { process.stdout.write("(no consent grant yet — run: mneme consent grant <your-name>)\n"); return; }
+      process.stdout.write(`Signed by: ${g.signedBy}\nSigned at: ${g.signedAt}\nGrant: ${g.grantText}\n`);
+    });
+  consent
+    .command("grant <name>")
+    .description("Write a fresh consent grant signed with the given name.")
+    .action(async (name: string) => {
+      const { userConsent } = await import("@mneme-ai/core");
+      userConsent.grantConsent(process.cwd(), { signedBy: name });
+      process.stdout.write(`✓ consent granted by ${name}\n`);
+    });
+  consent
+    .command("renew")
+    .description("Re-sign the existing grant with today's date (keeps the same signer + grant text).")
+    .action(async () => {
+      const { userConsent } = await import("@mneme-ai/core");
+      const existing = userConsent.readConsent(process.cwd());
+      if (!existing) { process.stdout.write("(no grant to renew — run: mneme consent grant <your-name>)\n"); process.exitCode = 1; return; }
+      userConsent.grantConsent(process.cwd(), { signedBy: existing.signedBy, grantText: existing.grantText });
+      process.stdout.write(`✓ renewed for ${existing.signedBy}\n`);
+    });
+  consent
+    .command("revoke")
+    .description("Delete the consent file. Mneme features that gate on consent will refuse until you re-grant.")
+    .action(async () => {
+      const { userConsent } = await import("@mneme-ai/core");
+      userConsent.revokeConsent(process.cwd());
+      process.stdout.write("✓ consent revoked\n");
     });
 }

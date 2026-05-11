@@ -124,6 +124,12 @@ function writeSoul(repo: string, soul: AiSoul): void {
 
 export type SoulOutcome = "session-start" | "promise-kept" | "promise-broken" | "compliance-tick";
 
+/** v1.46.0 (#8 fix) — convenience wrapper used by ai_handshake.greet().
+ *  Bumps lifetimeSessions and persists the soul. */
+export function startSession(repo: string, vendor: string): AiSoul {
+  return recordOutcome(repo, vendor, "session-start");
+}
+
 /** Record an outcome against a vendor's soul. `text` is required for
  *  promise-* outcomes (so the diary contains the actual commitment text). */
 export function recordOutcome(repo: string, vendor: string, kind: SoulOutcome, text?: string): AiSoul {

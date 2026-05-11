@@ -252,7 +252,29 @@ export function generateProbes(
   const seed = opts.seed ?? "default";
   const rng = mulberry32(seed);
 
-  const abstracts = Array.from(getAllAbstracts(store).values());
+  let abstracts = Array.from(getAllAbstracts(store).values());
+  // v1.46.0 (#16 fix) -- commit-message fallback. When the HTC index
+  // has no abstracts (user hasn't run `mneme htc-build` yet), synthesize
+  // ad-hoc abstracts from the commit subject + body so adversarial
+  // works out-of-box. Quality is lower than HTC abstracts (no LLM
+  // summarization) but the variant-flip + grading logic still works.
+  if (abstracts.length === 0) {
+    try {
+      // Lazy require to avoid pulling sqlite types into the test path
+      // where MnemeStore is mocked.
+      const stmt = (store.db as { prepare: (sql: string) => { all: () => unknown[] } })
+        .prepare("SELECT hash, subject, body FROM commits WHERE subject IS NOT NULL ORDER BY committed_at DESC LIMIT 200");
+      const rows = stmt.all() as { hash: string; subject: string; body: string | null }[];
+      abstracts = rows.map((r) => ({
+        hash: r.hash,
+        abstract: (r.subject + (r.body ? "\n\n" + r.body : "")).slice(0, 400),
+        tokenCount: 0,
+        generatedAt: new Date().toISOString(),
+        generator: "commit-fallback",
+        generationMs: 0,
+      })) as typeof abstracts;
+    } catch { /* leave abstracts empty -- caller handles */ }
+  }
   const commitsAvailable = abstracts.length;
 
   const probes: Probe[] = [];

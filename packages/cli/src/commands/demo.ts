@@ -98,10 +98,21 @@ export function registerToolsCommand(program: Command): void {
 export function registerBotCommand(program: Command): void {
   program
     .command("squad <claim...>")
-    .description("Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware.")
+    .description("Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware. Example: `mneme squad \"the auth refactor in v1.42 introduced a regression\"`")
     .option("--json", "JSON output.")
     .option("--no-advocate", "Skip the v1.39 devil's advocate (legacy verdict only). Default: advocate ON.")
     .option("--require-advocate", "COMPLIANCE-GRADE: refuse to verdict without the advocate present.")
+    .addHelpText("after", `
+Examples:
+  $ mneme squad "the auth refactor in v1.42 introduced a regression"
+  $ mneme squad "this commit is safe to ship" --require-advocate
+  $ mneme squad we need to revert HEAD --json
+
+The claim should be a single sentence -- the squadron splits it across 6 angles
+(architect / historian / forensics / quality / security / business). With
+--require-advocate the verdict refuses to render unless DEVIL'S ADVOCATE
+ran on top (compliance-grade evidence quorum).
+`)
     .action(async (claim: string[], opts: { advocate?: boolean; requireAdvocate?: boolean } & CommonOpts) => {
       const { runSquadron } = await import("@mneme-ai/mcp/tools/squadron");
       const { squadronAdvocate } = await import("@mneme-ai/core");

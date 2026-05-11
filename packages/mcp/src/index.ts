@@ -476,6 +476,18 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
         recordReplay(runtime.meta.rootPath, tool.name, args, enriched);
         // v1.18.0 — increment karma invocations.
         recordKarmaEvent(runtime.meta.rootPath, tool.name, "invocation");
+        // v1.46.0 (#14 fix) — deposit a pheromone trail for the
+        // (vendor, tool) edge. Pre-fix: the ai_pheromone module
+        // existed since v1.42 but nothing called deposit(), so the
+        // .mneme/ai-pheromones.jsonl file was never written. Now
+        // every successful MCP tool call leaves a trail; the active
+        // vendor (from the AI handshake, or "unknown" when AI hasn't
+        // greeted yet) gets credit. Best-effort, never blocks.
+        try {
+          const { aiPheromone, aiHandshake } = await import("@mneme-ai/core");
+          const active = aiHandshake.readActiveVendor(runtime.meta.rootPath);
+          aiPheromone.deposit(runtime.meta.rootPath, active?.vendor ?? "unknown", tool.name, 1);
+        } catch { /* best-effort */ }
         // v1.20.0 — Infinity Wisdom Brain: auto-tick the nucleus on EVERY
         // tool dispatch. This is the `while(is_talking) learn/teach`
         // loop — as long as the AI agent talks to Mneme, the nucleus

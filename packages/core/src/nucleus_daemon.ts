@@ -555,6 +555,16 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
       .map((m) => m.id);
     if (stale.length > 0) ackInbox(repoRoot, stale);
   } catch { /* ignore */ }
+
+  // v1.46.0 (#20 fix) -- HARD-PRUNE acked inbox entries older than 30 days.
+  // Pre-fix: even after `inbox ack`, entries lingered forever; testers saw
+  // weeks of accumulated wild-test/synthetic messages. Now caretaker
+  // permanently deletes acked entries past the TTL. User-pushed unacked
+  // entries are NEVER touched -- only acked + age > TTL.
+  try {
+    const { clearInbox } = await import("./inbox.js");
+    clearInbox(repoRoot, { olderThanDays: 30 });
+  } catch { /* ignore */ }
 }
 
 /** Read the version of the mneme package this daemon process loaded. */

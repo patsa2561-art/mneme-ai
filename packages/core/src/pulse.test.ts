@@ -237,7 +237,7 @@ describe("pulse", () => {
     const out = renderPulse(s);
     expect(out).toMatch(/mneme v[\w.]+/);
     expect(out).toMatch(/daemon=/);
-    expect(out).toMatch(/inbox=/);
+    expect(out).toMatch(/inbox-unsent=/); // v1.46.0 (#9 fix) — was inbox=N (ambiguous), now inbox-unsent=N matches list output
     expect(out).toMatch(/vaccines=/);
     expect(out).toMatch(/retrieval-trials=/);
   });
