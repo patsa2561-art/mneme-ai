@@ -33,6 +33,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { buildRuntime } from "./tools/_runtime.js";
+import { resolveAlias } from "./tools/_aliases.js";
 import { buildAllTools, buildToolMap } from "./tools/_registry.js";
 import { toCallResult, toErrorResult, type MnemeTool, type ToolResponse, type ToolLifecycle } from "./tools/_types.js";
 import { moleculesContaining } from "./tools/_molecules.js";
@@ -453,7 +454,11 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
 
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
     idleState.lastToolCallAt = Date.now();
-    const tool = toolMap.get(req.params.name);
+    // v1.45.0 (#17 fix) — resolve verb.noun aliases (e.g.,
+    // "mneme.security.detect_tool_anomaly" → "mneme.aletheia.immune.scan")
+    // before dispatch. Canonical names pass through unchanged.
+    const canonicalName = resolveAlias(req.params.name);
+    const tool = toolMap.get(canonicalName);
     if (tool) {
       try {
         const args = (req.params.arguments ?? {}) as Record<string, unknown>;

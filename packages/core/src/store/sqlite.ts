@@ -55,6 +55,7 @@ import type {
   Correlation,
 } from "../types.js";
 import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema.js";
+import { detectFts5, fts5RemedyMessage } from "./fts5_detect.js";
 
 /**
  * Loose alias for the Node sqlite Database handle. We keep it `any`-like
@@ -66,6 +67,10 @@ export type MnemeDb = DatabaseSyncType;
 
 export class MnemeStore {
   readonly db: MnemeDb;
+  /** v1.45.0 (#3 fix) -- exposed so the indexer + status command can
+   *  surface the FTS5 remediation message instead of crashing mid-migration. */
+  readonly fts5Available: boolean;
+  readonly fts5RemedyMessage: string;
 
   constructor(public readonly dbPath: string) {
     if (dbPath !== ":memory:" && !existsSync(dirname(dbPath))) {
@@ -75,13 +80,33 @@ export class MnemeStore {
     this.db.exec("PRAGMA journal_mode = WAL");
     this.db.exec("PRAGMA synchronous = NORMAL");
     this.db.exec("PRAGMA foreign_keys = ON");
-    this.db.exec(SCHEMA_SQL);
+
+    // v1.45.0 (#3 fix) -- probe FTS5 BEFORE running SCHEMA_SQL. If
+    // FTS5 is missing (some macOS Homebrew Node builds strip it), we
+    // run a schema variant without the chunks_fts vtable instead of
+    // crashing mid-migration and corrupting chunks half-write.
+    const probe = detectFts5(this.db);
+    this.fts5Available = probe.available;
+    this.fts5RemedyMessage = fts5RemedyMessage(probe);
+
+    if (this.fts5Available) {
+      this.db.exec(SCHEMA_SQL);
+    } else {
+      // Strip the CREATE VIRTUAL TABLE...USING fts5 block when FTS5 isn't
+      // available. The retrieve module already handles the LIKE + n-gram
+      // fallback (TRIPLE-INDEX WAR mode).
+      const schemaWithoutFts = SCHEMA_SQL.replace(
+        /CREATE VIRTUAL TABLE[^;]*USING fts5[\s\S]*?\);/g,
+        "-- FTS5 disabled: see store.fts5RemedyMessage for fix",
+      );
+      this.db.exec(schemaWithoutFts);
+    }
 
     // v2 → v3 migration: FTS5 tokenizer changed from `porter unicode61` to
     // `trigram` for cross-language support (Thai, CJK, Arabic). Re-create the
     // FTS table and let the next `mneme index` re-populate from chunks.
     const previousVersion = Number(this.getMeta("schema_version") ?? "0");
-    if (previousVersion > 0 && previousVersion < 3) {
+    if (previousVersion > 0 && previousVersion < 3 && this.fts5Available) {
       this.migrateFtsToTrigram();
     }
 

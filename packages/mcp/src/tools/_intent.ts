@@ -29,6 +29,10 @@ export interface IntentMatch {
   toolName: string;
   category: string;
   score: number;
+  /** v1.45.0 (#10 fix) — # of distinct signal kinds (description /
+   *  trigger / name / category) that fired. Used by the calibrator to
+   *  cap confidence on shallow single-source matches. */
+  signalKinds: number;
   why: string;
   description: string;
   triggers: string[];
@@ -79,9 +83,11 @@ function bigrams(tokens: string[]): string[] {
 function scoreToolForQuery(tool: MnemeTool, queryTokens: string[], queryBigrams: string[]): {
   score: number;
   why: string;
+  signalKinds: number;     // v1.45.0 (#10 fix) -- # of distinct signal sources
 } {
   const reasons: string[] = [];
   let score = 0;
+  let signalKinds = 0;
 
   // 1 — description keyword overlap (BM25-lite, no IDF — terms are rare enough by descriptor)
   const descTokens = new Set(tokenize(tool.description));
@@ -89,6 +95,7 @@ function scoreToolForQuery(tool: MnemeTool, queryTokens: string[], queryBigrams:
   if (descMatches > 0) {
     const w = descMatches * 1.5;
     score += w;
+    signalKinds++;
     reasons.push(`${descMatches} description keyword match${descMatches === 1 ? "" : "es"}`);
   }
 
@@ -107,6 +114,7 @@ function scoreToolForQuery(tool: MnemeTool, queryTokens: string[], queryBigrams:
     }
   }
   if (triggerHits > 0) {
+    signalKinds++;
     reasons.push(`matched ${triggerHits} trigger phrase${triggerHits === 1 ? "" : "s"}`);
   }
 
@@ -118,6 +126,7 @@ function scoreToolForQuery(tool: MnemeTool, queryTokens: string[], queryBigrams:
     // tools whose name contains that word should beat tools that merely
     // mention it in their description.
     score += nameMatches * 12;
+    signalKinds++;
     reasons.push(`name token "${nameTokens.find((t) => queryTokens.includes(t))}" matches`);
   }
 
@@ -137,12 +146,14 @@ function scoreToolForQuery(tool: MnemeTool, queryTokens: string[], queryBigrams:
   const catMatches = queryTokens.filter((t) => categoryWords.includes(t)).length;
   if (catMatches > 0) {
     score += catMatches * 1.0;
+    signalKinds++;
     reasons.push(`category-prior boost on "${tool.category}"`);
   }
 
   return {
     score,
     why: reasons.length === 0 ? "no signal" : reasons.join(" · "),
+    signalKinds,
   };
 }
 
@@ -223,11 +234,12 @@ export function understandIntent(query: string, allTools: MnemeTool[]): IntentRe
   );
 
   const scored = candidates.map((t) => {
-    const { score, why } = scoreToolForQuery(t, queryTokens, queryBigrams);
+    const { score, why, signalKinds } = scoreToolForQuery(t, queryTokens, queryBigrams);
     return {
       toolName: t.name,
       category: t.category,
       score,
+      signalKinds,
       why,
       description: t.description,
       triggers: t.triggers ?? [],
@@ -238,8 +250,16 @@ export function understandIntent(query: string, allTools: MnemeTool[]): IntentRe
   const matches = scored.filter((m) => m.score > 0).slice(0, 3);
 
   const topScore = matches[0]?.score ?? 0;
-  // Confidence calibration: score scales by query length + match strength
-  const topConfidence = Math.min(1, topScore / 10);
+  const topSignalKinds = matches[0]?.signalKinds ?? 0;
+  // v1.45.0 (#10 fix) -- multi-signal calibration. A single
+  // high-weight name match used to produce 100% confidence (e.g.,
+  // "atrophy" → mneme.people.atrophy at 12 score → 100%). Now we
+  // require ≥2 distinct signal kinds (description, trigger, name,
+  // category-prior) for confidence > 0.6. Single-signal matches cap
+  // at 0.55 -- enough to recommend, not enough to bypass clarification.
+  let topConfidence = Math.min(1, topScore / 12);
+  if (topSignalKinds < 2) topConfidence = Math.min(topConfidence, 0.55);
+  if (topSignalKinds < 3) topConfidence = Math.min(topConfidence, 0.85);
 
   const reasoning =
     matches.length === 0

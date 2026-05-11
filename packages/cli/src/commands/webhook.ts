@@ -118,7 +118,7 @@ export async function fireWebhooks(
           "Content-Type": "application/json",
           "X-Mneme-Signature": `sha256=${sig}`,
           "X-Mneme-Event": event,
-          "User-Agent": `mneme-webhook/${process.env["npm_package_version"] ?? "1.10.0"}`,
+          "User-Agent": `mneme-webhook/${(await import("@mneme-ai/core")).resolveMnemeVersion()}`,
         },
         body,
       });

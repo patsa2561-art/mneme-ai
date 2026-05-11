@@ -227,6 +227,14 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
   const s = new store.MnemeStore(dbPath(meta.rootPath));
   s.setMeta("repo_root", meta.rootPath);
   s.setMeta("embedder", activeEmbedder.name);
+  // v1.45.0 (#3 fix) -- surface FTS5 absence honestly + early. Indexer
+  // continues with the LIKE + n-gram fallback (TRIPLE-INDEX WAR mode);
+  // user gets a banner instead of a silent crash mid-migration.
+  if (!s.fts5Available) {
+    ui.dim("");
+    ui.error(s.fts5RemedyMessage);
+    ui.dim("");
+  }
 
   const redactConfig = opts.noRedact
     ? false

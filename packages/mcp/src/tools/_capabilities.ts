@@ -96,9 +96,10 @@ export const capabilitiesTool: MnemeTool = {
     return {
       data: {
         positioning:
-          "Mneme is the Stage-3 tune for your AI coding tool — Claude Code / Cursor / Codex / Gemini / Continue / " +
-          "Aider. Mneme is the TEACHER of AI in the domain of git / source control. The AI is the STUDENT. The teacher " +
-          "grades the student's homework before the user ever sees it.",
+          "Mneme is the persistent context provider for your AI coding tool — Claude Code / Cursor / Codex / Gemini / " +
+          "Continue / Aider. Mneme indexes the repo's git history + author lineage + prior decisions, then surfaces " +
+          "that context (with a grader pass) before the AI delivers an answer to the user. You stay the agent; Mneme " +
+          "is the memory + verifier sitting alongside.",
         totalTools: total,
         catalog: data,
         secondBrainContract:
@@ -114,13 +115,13 @@ export const capabilitiesTool: MnemeTool = {
           "mutation-counterfactual) and returns PASS / WARN / FAIL with concrete rewrite hints. " +
           "On FAIL: rewrite using the rewriteHints, increment retryCount, call grade.answer again. " +
           "Loop until PASS or until giveUp=true. NO OTHER MCP server enforces this loop — it's what makes " +
-          "Mneme the teacher and your answer publishable.",
+          "your answer publishable.",
         chainReaction:
           "Before grading: when you call an atom, check secondBrain.compose for natural molecules. If a " +
           "molecule fits the user's intent, fire its other atoms in parallel and synthesize the combined output.",
       },
       wisdom:
-        `Mneme exposes ${total} tools across 9 categories. The teacher-student protocol: ` +
+        `Mneme exposes ${total} tools across 9 categories. The context-provider protocol: ` +
         `(1) match user intent to a specific tool, or call mneme.smart_do for ambiguous cases. ` +
         `(2) Read secondBrain.compose; fire molecule combinations when they fit. ` +
         `(3) Draft your answer. ` +

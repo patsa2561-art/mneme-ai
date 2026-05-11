@@ -51,7 +51,8 @@ export const whatsNewTool: MnemeTool = {
   composeWith: ["mneme.welcome", "mneme.system.upgrade"],
   handler: async (rt, args) => {
     void rt;
-    const currentVersion = process.env["npm_package_version"] ?? "1.24.1";
+    const { resolveMnemeVersion } = await import("@mneme-ai/core");
+    const currentVersion = resolveMnemeVersion();
     const sinceVersion = typeof args["sinceVersion"] === "string" ? (args["sinceVersion"] as string) : undefined;
     const limit = typeof args["limit"] === "number" ? (args["limit"] as number) : 3;
     const digest = whatsNew.buildDigest({ currentVersion, sinceVersion, limit });

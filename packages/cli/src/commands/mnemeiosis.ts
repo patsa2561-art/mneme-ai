@@ -45,7 +45,8 @@ export function registerWelcomeCommand(program: Command): void {
     .description("Show the install handoff: what's auto-enabled + how to opt out (mirror of mneme.welcome MCP tool).")
     .option("--json", "Machine-readable output.")
     .action(async (opts: CommonOpts) => {
-      const version = process.env["npm_package_version"] ?? "1.19.0";
+      const { resolveMnemeVersion } = await import("@mneme-ai/core");
+      const version = resolveMnemeVersion();
       const w = lineage.buildWelcome(process.cwd(), version);
       lineage.markWelcomeShown(process.cwd(), version);
       out(opts, w, [

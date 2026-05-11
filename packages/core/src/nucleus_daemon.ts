@@ -559,7 +559,11 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
 
 /** Read the version of the mneme package this daemon process loaded. */
 function readMneMeVersion(): string | null {
-  return process.env["npm_package_version"] ?? null;
+  // v1.45.0 (#5 fix) — package.json-aware via resolveMnemeVersion;
+  // returns null when even that resolves to the unknown sentinel.
+  // (require to avoid circular ESM at module-init.)
+  const v = (require("./mneme_version.js") as typeof import("./mneme_version.js")).resolveMnemeVersion();
+  return v === "0.0.0-unknown" ? null : v;
 }
 
 /** Read the version of the globally-installed mneme CLI. Returns null if

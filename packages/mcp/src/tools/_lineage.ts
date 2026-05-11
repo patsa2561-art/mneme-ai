@@ -639,7 +639,8 @@ export const welcomeTool: MnemeTool = {
   ],
   composeWith: ["mneme.capabilities", "mneme.lineage.status", "mneme.spore.init"],
   handler: async (rt) => {
-    const version = process.env["npm_package_version"] ?? "1.19.0";
+    const { resolveMnemeVersion } = await import("@mneme-ai/core");
+    const version = resolveMnemeVersion();
     const w = lineage.buildWelcome(rootOf(rt), version);
     lineage.markWelcomeShown(rootOf(rt), version);
     // v1.23.5 — when an update is available, embed an autoAction so the

@@ -94,3 +94,30 @@ describe("intent — execution plan", () => {
     expect(r.plan.some((p) => p.includes("mneme.grade.answer"))).toBe(true);
   });
 });
+
+describe("intent — confidence calibration (#10 fix)", () => {
+  const tools = buildAllTools();
+
+  it("shallow-signal query never exceeds 0.85 confidence", () => {
+    // "atrophy" hits name + description but no triggers/category-prior.
+    // Pre-fix: a high-weight name match alone returned 100% confidence.
+    // Post-fix: < 3 signal kinds caps at 0.85.
+    const r = understandIntent("atrophy", tools);
+    expect(r.matches[0]?.signalKinds).toBeLessThanOrEqual(2);
+    expect(r.topConfidence).toBeLessThanOrEqual(0.85);
+  });
+
+  it("multi-signal query (≥2 signal kinds) breaks past 0.55", () => {
+    // "who knows about auth" hits BOTH triggers AND category-prior keywords.
+    const r = understandIntent("who knows about auth?", tools);
+    expect(r.matches[0]?.signalKinds).toBeGreaterThanOrEqual(2);
+    expect(r.topConfidence).toBeGreaterThan(0.55);
+  });
+
+  it("matches still expose signalKinds field", () => {
+    const r = understandIntent("any tool", tools);
+    if (r.matches.length > 0) {
+      expect(typeof r.matches[0]!.signalKinds).toBe("number");
+    }
+  });
+});

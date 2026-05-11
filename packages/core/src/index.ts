@@ -109,6 +109,10 @@ export * as godDeadVendor from "./god_mode/dead_vendor.js";
 export * as avatarGossipMesh from "./avatar/gossip_mesh.js";
 export * as avatarLingua from "./avatar/lingua.js";
 export * as avatarReplicatingWisdom from "./avatar/replicating_wisdom.js";
+// v1.45.0 (#5 fix) -- single source of truth for the running Mneme
+// version. Never falls back to a hard-coded string -- those bit-rot
+// the moment a new version ships.
+export { resolveMnemeVersion } from "./mneme_version.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +

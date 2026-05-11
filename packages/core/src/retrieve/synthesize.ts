@@ -136,8 +136,8 @@ export async function synthesize(
     };
   }
 
-  // Audit mode — refuse below floor (audit-grade caller doesn't want
-  // best-effort prose; they want either an answer or a refusal).
+  // Audit mode — refuse below floor (audit-trail-ready caller doesn't
+  // want best-effort prose; they want either an answer or a refusal).
   if (opts.auditMode && !meetsConfidenceFloor(confidence, auditFloor)) {
     return {
       answer: auditRefusedAnswer(question, confidence, auditFloor),
@@ -197,7 +197,7 @@ export async function synthesize(
     // Hallucination guard — verify all backtick-hashes in the answer
     // appear in the evidence set. If unverified citations are present, we
     // still return the LLM answer (caller can choose to surface or refuse)
-    // but mark the offending hashes so audit-grade consumers can hard-fail.
+    // but mark the offending hashes so audit-trail-ready consumers can hard-fail.
     const unverified = findUnverifiedCitations(cleaned, evidenceHashes);
 
     // In audit mode, ANY unverified citation = refuse.

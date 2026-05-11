@@ -44,3 +44,18 @@ describe("fts5_detect", () => {
     });
   });
 });
+
+describe("MnemeStore wiring (#3 fix)", () => {
+  it("exposes fts5Available + fts5RemedyMessage on a real store", async () => {
+    const { MnemeStore } = await import("./sqlite.js");
+    const s = new MnemeStore(":memory:");
+    expect(typeof s.fts5Available).toBe("boolean");
+    expect(typeof s.fts5RemedyMessage).toBe("string");
+    if (s.fts5Available) {
+      expect(s.fts5RemedyMessage).toBe("");
+    } else {
+      expect(s.fts5RemedyMessage).toContain("[FTS5 MISSING]");
+    }
+    s.close();
+  });
+});

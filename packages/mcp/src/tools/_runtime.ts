@@ -68,12 +68,18 @@ export async function runCliJson(
       throw new Error(`Refusing to spawn: argument contains shell metacharacters or is non-string: ${JSON.stringify(a).slice(0, 80)}`);
     }
   }
-  // Windows: resolve to .cmd explicitly so we don't need shell:true
-  const exe = process.platform === "win32" ? "mneme.cmd" : "mneme";
+  // v1.45.0 (#6 fix): Node 18+ refuses to spawn .cmd files without
+  // shell:true (EINVAL). Resolve `mneme.cmd` via PATH lookup, then run
+  // it with shell:true on Windows -- safe because we already
+  // shell-meta-validated every arg above. Non-Windows uses the regular
+  // shim and stays shell:false.
+  const isWin = process.platform === "win32";
+  const exe = isWin ? "mneme.cmd" : "mneme";
   return await new Promise((resolve, reject) => {
     const child = spawn(exe, [command, ...cliArgs, "--json"], {
       cwd,
-      shell: false,
+      shell: isWin,
+      windowsHide: true,
     });
     let stdout = "";
     let stderr = "";
