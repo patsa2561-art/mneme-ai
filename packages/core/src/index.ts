@@ -97,6 +97,12 @@ export * as wisdomReactor from "./nuclear/wisdom_reactor.js";
 export * as overnightConscience from "./overnight/conscience.js";
 export * as overnightQuarkJury from "./overnight/quark_jury.js";
 export * as overnightRunner from "./overnight/runner.js";
+// v1.35.0 -- LINEAGE AT-REST ENCRYPTION (AES-256-GCM, HKDF over
+// machine-local salt) + TOOL CURATOR (project-shape detection +
+// filtered tool list). Direct fixes for "plaintext on disk" and
+// "200 tools overwhelm AI" tester painpoints.
+export * as lineageAtRestCrypto from "./lineage/at_rest_crypto.js";
+export * as toolCurator from "./tool_curator.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

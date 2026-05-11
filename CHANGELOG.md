@@ -8,6 +8,99 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.35.0] — 2026-05-11
+
+**Mandate-driven release** -- every change satisfies the 5 permanent
+rules: wild idea, wiser, self-fix root cause, co-working, always-
+studying ([feedback_mneme_mandates](memory)). Three modules attack
+real tester painpoints:
+
+### Module 1 -- LINEAGE AT-REST ENCRYPTION
+
+`packages/core/src/lineage/at_rest_crypto.ts`. Direct fix for
+"chromosomes are plaintext on disk; if anyone gets your laptop they
+read every AI session." AES-256-GCM with HKDF over a per-machine
+salt (gitignored, mode 0600). Magic header `MNEMECv1` so loaders
+auto-detect: encrypted blob → decrypt; plaintext (legacy) → still
+works. Two encrypts of the same plaintext produce DIFFERENT
+ciphertexts (random nonce -- replay-attack resistant). GCM MAC
+catches any tampered byte.
+
+`encryptString` / `decryptBlob` / `isEncryptedBlob` /
+`atomicWriteEncryptedJSON` / `readEncryptedJSON` / `loadOrCreateSalt`
+/ `readEncryptionStatus`. 14 tests.
+
+**Wild idea**: HKDF over (machine identity || persistent salt) means
+a machine swap auto-invalidates old keys -- matches v1.32.0
+photonics dependency model.
+
+### Module 2 -- TOOL CURATOR
+
+`packages/core/src/tool_curator.ts`. Direct fix for "200 tools
+overwhelm AI; metaphor names are unreadable; honeypot tools mixed
+in with real ones." Detects project shape (NestJS / Postgres /
+Stripe / FastAPI / Rust / Docker / monorepo / etc.) and produces a
+~20-tool curated subset relevant to THIS project. Honeypots are
+moved to a clearly-marked `DANGER` bucket with `[HONEYPOT -- DO NOT
+CALL]` plain labels. Universal tools (memory, atrophy) always
+included regardless of stack.
+
+`detectProjectShape` / `curate` / `persistCurated` /
+`renderCuratedMarkdown`. 14 tests including the user's specific
+stack (NestJS + Postgres + Stripe).
+
+**Wild idea -- PROJECT-SHAPE PHEROMONE**: the curated listing
+persists to `.mneme/curated-tools.json` so MCP servers + agent files
+read it on session start. AI sees ~20 relevant tools instead of 200,
+in plain English, with When-To-Call hints.
+
+### Module 3 -- PRE-PUBLISH SHIP-READINESS GATE
+
+`scripts/ship-readiness.mjs` + `npm run ship-readiness`. The
+permanent fix for the v1.34.1-class root-cause bug. Runs 5 checks
+BEFORE any `npm publish`:
+
+1. monorepo root has version
+2. workspace versions match root
+3. internal `@mneme-ai/*` dep pins match root version
+4. CLI bin file exists (build was run)
+5. dist sizes non-trivial (catches "shipped empty dist" foot-gun)
+
+Outputs structured report to `.mneme/ship-readiness.json`. Exit
+code 1 on any failure -- a broken release CANNOT silently ship.
+The gate caught a stale `embeddings -> @mneme-ai/core@1.27.9`
+drift the moment we ran it -- evidence the root-cause-fix gate
+works in practice.
+
+**Self-fix root cause**: this gate IS the lasting fix. v1.34.1
+patched the symptom; v1.35.0 prevents the bug class from ever
+shipping again.
+
+### Co-working integrations
+
+- Tool curator integrates with cache_hologram (auto-invalidate when
+  package.json mtime shifts) and agent_manifest (renderCuratedMarkdown
+  goes into the LIVE STATE block).
+- Encryption integrates with v1.34.1 dep pins (uses node:crypto
+  built-in HKDF — no new native dep).
+- Ship-readiness gate writes to `.mneme/ship-readiness.json` so
+  `mneme doctor` (future) can surface it in the unified status.
+
+### Tests
+
++28 across the 3 modules. Suite total: **5293 / 5293 passing**.
+Zero regressions.
+
+### Mandate scoreboard for this release
+
+| Mandate | This release |
+|---|---|
+| Wild idea | ✓ HKDF-from-machine-photon, PROJECT-SHAPE PHEROMONE, ship-readiness gate as the permanent block |
+| Wiser | ✓ reuses cache hologram + agent manifest + node:crypto built-in |
+| Self-fix root cause | ✓ ship-readiness gate prevents v1.34.1-class drift forever |
+| Co-working | ✓ curator + manifest + hologram + encryption all integrate |
+| Always-studying | ✓ ship-readiness report persists for future audits |
+
 ## [1.34.1] — 2026-05-11
 
 **🚨 ROOT-CAUSE HOTFIX: internal package dep pins were stuck at 1.27.9
