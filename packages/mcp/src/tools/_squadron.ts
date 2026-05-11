@@ -301,54 +301,57 @@ const ALL_BOTS: Record<BotName, (ctx: SpawnContext) => Promise<BotFinding>> = {
   court: courtBot,
 };
 
-export async function runSquadron(ctx: SpawnContext, bots?: BotName[]): Promise<SquadronVerdict> {
+export async function runSquadron(ctx: SpawnContext, bots?: BotName[], opts?: { requireAdvocate?: boolean; skipAdvocate?: boolean }): Promise<SquadronVerdict & { quorum?: import("@mneme-ai/core").squadronAdvocate.QuorumDecision; advocate?: import("@mneme-ai/core").squadronAdvocate.AdvocateFinding }> {
   const t0 = Date.now();
   const which = (bots && bots.length > 0 ? bots : (Object.keys(ALL_BOTS) as BotName[]));
   const findings = await Promise.all(which.map((b) => ALL_BOTS[b](ctx)));
 
-  // Tally — supports vs contradicts vs neutral. Weighted by confidence.
-  let forScore = 0;
-  let againstScore = 0;
-  let neutralScore = 0;
-  for (const f of findings) {
-    if (f.verdict === "supports") forScore += f.confidence;
-    else if (f.verdict === "contradicts") againstScore += f.confidence;
-    else neutralScore += f.confidence * 0.5;
-  }
-  const total = forScore + againstScore + neutralScore;
+  // v1.39+ -- DEVIL'S ADVOCATE + EVIDENCE QUORUM. Replaces the legacy
+  // forScore/againstScore tally with a bias-aware aggregator that
+  // detects single-source-N-laundering, absence-of-evidence, and
+  // all-irrelevant-citations. The legacy fields (consensus, confidence)
+  // are populated FROM the quorum result, so existing callers see the
+  // bias-corrected verdict by default. The new `quorum` + `advocate`
+  // fields are added for callers that want the full breakdown.
+  const { squadronAdvocate } = await import("@mneme-ai/core");
+  const otherFindings: import("@mneme-ai/core").squadronAdvocate.BotFindingShape[] = findings.map((f) => ({
+    bot: f.bot, verdict: f.verdict, confidence: f.confidence, evidence: f.evidence ?? [],
+  }));
+  const advocateFinding = opts?.skipAdvocate
+    ? null
+    : squadronAdvocate.runAdvocate({ claim: ctx.claim, otherFindings });
+  const quorum = squadronAdvocate.aggregateWithQuorum(ctx.claim, otherFindings, advocateFinding, {
+    repoRoot: process.cwd(),
+    requireAdvocate: !!opts?.requireAdvocate,
+  });
 
-  let consensus: SquadronVerdict["consensus"];
+  // Map quorum consensus -> legacy SquadronVerdict consensus shape.
+  const consensus: SquadronVerdict["consensus"] = quorum.consensus;
   let recommendation: string;
-  if (total === 0) {
-    consensus = "insufficient_data";
-    recommendation = "Cannot draw a verdict — every bot returned no signal. Restate the claim with more specific terms (file names, function names, or feature words) and try again.";
-  } else if (forScore > againstScore * 1.5) {
-    consensus = "verdict_for";
-    recommendation = "The squadron broadly supports this claim. Cite the strongest witness commits as evidence and proceed with confidence.";
-  } else if (againstScore > forScore * 1.5) {
-    consensus = "verdict_against";
-    recommendation = "The squadron contradicts this claim. Retract or qualify the assertion before delivering to the user; the historical record won't support it.";
+  if (consensus === "verdict_for") {
+    recommendation = `The squadron broadly supports this claim with ${quorum.uniqueSourcesFor} independent evidence source(s). Cite the strongest witness commits as evidence and proceed with confidence.${quorum.caveats.length > 0 ? " Advisory: " + quorum.caveats.join(", ") : ""}`;
+  } else if (consensus === "verdict_against") {
+    recommendation = `The squadron contradicts this claim. ${quorum.summary} Retract or qualify the assertion before delivering to the user.`;
+  } else if (consensus === "split") {
+    recommendation = `The squadron is split. ${quorum.summary} Surface the disagreement to the user -- present the strongest argument on each side.`;
   } else {
-    consensus = "split";
-    recommendation = "The squadron is split. Surface the disagreement to the user — present the strongest argument on each side and let them decide.";
+    recommendation = "Cannot draw a verdict -- every bot returned no signal. Restate the claim with more specific terms (file names, function names, or feature words).";
   }
 
-  const agreeing = findings.filter((f) => matchesConsensus(f.verdict, consensus)).map((f) => f.bot);
-  const dissenting = findings.filter((f) => !matchesConsensus(f.verdict, consensus) && f.verdict !== "needs_data").map((f) => f.bot);
-  const confidence = findings.length === 0 ? 0 : agreeing.length / findings.length;
-
-  const summary = buildSummary(consensus, findings, ctx.claim);
+  const summary = `${buildSummary(consensus, findings, ctx.claim)} ${quorum.summary}`.trim();
 
   return {
     claim: ctx.claim,
     consensus,
-    confidence: Math.round(confidence * 100) / 100,
+    confidence: quorum.confidence,
     summary,
     recommendation,
     findings,
-    agreeing,
-    dissenting,
+    agreeing: quorum.agreeing as BotName[],
+    dissenting: quorum.dissenting as BotName[],
     totalMs: Date.now() - t0,
+    quorum,
+    advocate: advocateFinding ?? undefined,
   };
 }
 

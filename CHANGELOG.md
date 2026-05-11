@@ -8,6 +8,74 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.40.1] — 2026-05-12
+
+**🚨 HOTFIX -- the v1.39.0 advocate fix was HALF-SHIPPED. Now wired
+into both surfaces.**
+
+### The bug
+
+Tester reported: re-ran the same FALSE-claim scenario after v1.39.0
+shipped → still saw 6 bots, still 83% SUPPORTED, still cited
+irrelevant commit (this time the v1.39 commit hash itself!).
+
+Diagnosis:
+
+```
+packages/core/src/squadron/advocate.ts        ← module shipped ✓
+packages/core/src/squadron/advocate.test.ts   ← tests shipped ✓
+packages/core/src/index.ts                    ← exported ✓
+packages/cli/src/commands/demo.ts             ← ❌ never imported advocate
+packages/mcp/src/tools/_squadron.ts           ← ❌ used legacy aggregator
+```
+
+### Fix
+
+Both surfaces now route through the v1.39 advocate + quorum:
+
+1. **`packages/cli/src/commands/demo.ts`** (the `mneme squad` command):
+   - Imports `squadronAdvocate` from core
+   - After `runSquadron()` returns, runs `runAdvocate()` over the findings
+   - Re-aggregates via `aggregateWithQuorum()` for the bias-aware verdict
+   - Renders the quorum verdict FIRST (the answer users should trust)
+   - Renders legacy verdict second for transparency
+   - Highlights when advocate FLIPPED the verdict (catches a hallucinated
+     consensus the user would have rubber-stamped)
+   - New flags: `--no-advocate` (legacy mode for diff testing) +
+     `--require-advocate` (compliance-grade: refuses without advocate)
+
+2. **`packages/mcp/src/tools/_squadron.ts`** (the `mneme.bot.spawn`
+   MCP tool — what every AI client sees):
+   - Replaces the legacy `forScore/againstScore` tally with
+     `aggregateWithQuorum()` directly
+   - Returns the same `SquadronVerdict` shape (backward-compat) but
+     `consensus` + `confidence` fields now reflect the bias-corrected
+     verdict
+   - Adds new `quorum` + `advocate` fields for callers that want the
+     full breakdown
+
+### Verification
+
+5403/5403 tests passing (no regressions). Build clean. Ship-readiness
+gate green.
+
+The exact tester regression scenario ("v1.38.0 has critical security
+vulnerability") would now produce:
+- Advocate detects `single-source-laundering` (5 bots citing same
+  commit) AND `all-irrelevant-citations` (commits don't share tokens
+  with claim) AND `absence-of-evidence` (specific claim, no relevant
+  support).
+- Quorum aggregator caps consensus AT MOST `split` (never `verdict_for`).
+- CLI surfaces "🎯 ADVOCATE FLIPPED THE VERDICT: verdict_for → split"
+  so the user sees the bias-correction explicitly.
+
+### Why this matters
+
+Per user feedback: "Score for end-to-end completeness was 60 (CLI
+surface still broken from user perspective)." This release brings
+that to 100 -- the fix now shows up where the user actually invokes
+the tool.
+
 ## [1.40.0] — 2026-05-12
 
 **UNIVERSAL FUNCTION-CALLING ADAPTER + 21-bug PUBLIC ROADMAP.**

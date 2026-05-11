@@ -74,28 +74,73 @@ export function registerToolsCommand(program: Command): void {
 export function registerBotCommand(program: Command): void {
   program
     .command("squad <claim...>")
-    .description("Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles.")
+    .description("Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware.")
     .option("--json", "JSON output.")
-    .action(async (claim: string[], opts: CommonOpts) => {
+    .option("--no-advocate", "Skip the v1.39 devil's advocate (legacy verdict only). Default: advocate ON.")
+    .option("--require-advocate", "COMPLIANCE-GRADE: refuse to verdict without the advocate present.")
+    .action(async (claim: string[], opts: { advocate?: boolean; requireAdvocate?: boolean } & CommonOpts) => {
       const { runSquadron } = await import("@mneme-ai/mcp/tools/squadron");
+      const { squadronAdvocate } = await import("@mneme-ai/core");
       const text = claim.join(" ");
-      writeText(`🚀 Spawning 6-bot squadron — claim: "${text.slice(0, 80)}"…\n`);
+      writeText(`🚀 Spawning 6-bot squadron + 🦹 devil's advocate — claim: "${text.slice(0, 80)}"…\n`);
       // Build a minimal runtime so the squadron can call git etc.
       const { buildRuntime } = await import("@mneme-ai/mcp/tools/runtime");
       const rt = await buildRuntime(process.cwd());
       const verdict = await runSquadron({ rt, claim: text });
-      if (opts.json) { writeJson(verdict); return; }
-      const verdictGlyph =
-        verdict.consensus === "verdict_for" ? "✅ SUPPORTED" :
-        verdict.consensus === "verdict_against" ? "❌ CONTRADICTED" :
-        verdict.consensus === "split" ? "⚖ SPLIT" : "❓ INSUFFICIENT DATA";
-      writeText(`${verdictGlyph} · confidence ${(verdict.confidence * 100).toFixed(0)}% · ${verdict.totalMs}ms\n`);
+
+      // v1.39+ DEVIL'S ADVOCATE + EVIDENCE QUORUM. Run the advocate
+      // over the squad's findings, then re-aggregate with bias-aware
+      // quorum semantics. The legacy `verdict.consensus` is preserved
+      // for comparison; the NEW `quorum.consensus` is what users
+      // should trust for compliance-grade decisions.
+      const wantAdvocate = opts.advocate !== false;
+      const otherFindings = verdict.findings.map((f: { bot: string; verdict: string; confidence: number; evidence?: string[] }) => ({
+        bot: f.bot, verdict: f.verdict as "supports" | "contradicts" | "neutral" | "needs_data",
+        confidence: f.confidence, evidence: f.evidence ?? [],
+      }));
+      const advocateFinding = wantAdvocate
+        ? squadronAdvocate.runAdvocate({ claim: text, otherFindings })
+        : null;
+      const quorum = squadronAdvocate.aggregateWithQuorum(text, otherFindings, advocateFinding, {
+        repoRoot: process.cwd(),
+        requireAdvocate: !!opts.requireAdvocate,
+      });
+
+      if (opts.json) { writeJson({ legacyVerdict: verdict, advocate: advocateFinding, quorum }); return; }
+
+      // Render: advocate-aware verdict FIRST, legacy verdict second for diff transparency.
+      const quorumGlyph =
+        quorum.consensus === "verdict_for" ? "✅ SUPPORTED" :
+        quorum.consensus === "verdict_against" ? "❌ CONTRADICTED" :
+        quorum.consensus === "split" ? "⚖ SPLIT" : "❓ INSUFFICIENT DATA";
+      writeText(`${quorumGlyph} (quorum-aware · v1.39+) · confidence ${(quorum.confidence * 100).toFixed(0)}% · ${verdict.totalMs}ms`);
+      writeText(`📊 ${quorum.summary}`);
+      writeText(`📚 Evidence sources: ${quorum.uniqueSourcesFor} for · ${quorum.uniqueSourcesAgainst} against`);
+      if (quorum.caveats.length > 0) {
+        writeText(`⚠ Caveats: ${quorum.caveats.join(", ")}`);
+      }
+      writeText(``);
+      writeText(`Per-bot findings:`);
       for (const f of verdict.findings) {
         writeText(`  ${f.glyph} ${f.bot.padEnd(14)} → ${f.verdict.padEnd(11)} · ${f.headline}`);
       }
-      writeText(`\n📋 Recommendation: ${verdict.recommendation}`);
-      if (verdict.agreeing.length) writeText(`✓ Agreeing: ${verdict.agreeing.join(", ")}`);
-      if (verdict.dissenting.length) writeText(`✗ Dissenting: ${verdict.dissenting.join(", ")}`);
+      if (advocateFinding) {
+        const flag = advocateFinding.verdict === "contradicts" ? "✗" : advocateFinding.verdict === "supports" ? "✓" : "·";
+        writeText(`  🦹 advocate       → ${flag} ${advocateFinding.verdict.padEnd(11)} · ${advocateFinding.reasoning.slice(0, 100)}`);
+        if (advocateFinding.biasSignals.length > 0) {
+          writeText(`     bias signals: ${advocateFinding.biasSignals.join(", ")}`);
+        }
+      }
+      writeText(``);
+      // Legacy verdict for diff transparency.
+      const legacyGlyph =
+        verdict.consensus === "verdict_for" ? "✅" :
+        verdict.consensus === "verdict_against" ? "❌" :
+        verdict.consensus === "split" ? "⚖" : "❓";
+      writeText(`(legacy v1.38 verdict for comparison: ${legacyGlyph} ${verdict.consensus} @ ${(verdict.confidence * 100).toFixed(0)}%)`);
+      if (quorum.consensus !== verdict.consensus) {
+        writeText(`🎯 ADVOCATE FLIPPED THE VERDICT: ${verdict.consensus} → ${quorum.consensus}. Bias signals saved you from rubber-stamping a hallucinated claim.`);
+      }
     });
 }
 
