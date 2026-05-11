@@ -81,6 +81,13 @@ export * as forensicsV2 from "./forensics_v2.js";
 // Kills the pulse-cache-lag bug at root: when mneme-version source
 // shifts, version-check cache is auto-stale on the next read.
 export * as cacheHologram from "./cache_hologram.js";
+// v1.33.0 -- WISDOM REACTOR. Five real nuclear-physics formulas
+// (E=mc², radioactive decay, reaction Q, nuclear radius, criticality
+// k-factor) mapped to Mneme metrics: wisdom yield, atrophy half-life,
+// EVOLVE patch energy, RAG cluster sizing, user-engagement criticality.
+// k_factor drives NUCLEUS TIDE: pulse auto-tunes verbosity (quiet when
+// supercritical, proactive when subcritical).
+export * as wisdomReactor from "./nuclear/wisdom_reactor.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

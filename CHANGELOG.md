@@ -8,6 +8,68 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.33.0] — 2026-05-11
+
+**MNEME WISDOM REACTOR.** Five real nuclear-physics formulas mapped to
+Mneme metrics as actually-useful architecture, not marketing. Honest
+framing: this is NOT a physics simulator -- the formulas have well-
+defined operational meanings the user/AI can read, trust, and act on.
+We use the math because the math is RIGHT for these problems.
+
+### Formulas → Mneme metrics
+
+1. **E = mc²  →  WISDOM YIELD**.
+   `wisdomYield = (rawChunks + rawLessons + rawCommits − synthesizedDNA − synthesizedLessons) × c²`.
+   Single number that says "how much raw content this session
+   compressed into reusable patterns." Bigger is better.
+
+2. **N(t) = N₀·e^(-λt)  →  EXPONENTIAL ATROPHY HALF-LIFE.**
+   Pre-fix `mneme atrophy` used a linear half-life model. Real
+   knowledge decays exponentially. Each cluster gets a band-specific
+   T_½: hot files 30d, warm 90d, cold 365d, library 5y.
+   λ = ln(2)/T_½. Result: atrophy report is now physically accurate.
+
+3. **Q = (m_initial − m_final) × c²  →  EVOLVE PATCH ENERGY**.
+   Per-template Q-score = (LOC before − LOC after) × confidence.
+   Q > 0 → patch compressed code. Q < 0 → patch added complexity.
+   Operational meaning: prioritize templates with positive Q.
+
+4. **R = r₀·A^(1/3)  →  RAG CLUSTER RADIUS**.
+   When a cluster's effective radius exceeds the theoretical
+   `r₀·A^(1/3)`, the centroid blurs and retrieval recall drops.
+   Operational meaning: trigger a split.
+
+5. **k = neutrons_n / neutrons_n-1  →  USER-ENGAGEMENT CRITICALITY**.
+   "Neutrons" = follow-up commands the user runs after each Mneme
+   response. Measured over the last 10 prompts.
+   k > 1.2 → supercritical (user engaging deeper).
+   0.8 < k < 1.2 → stable.
+   k < 0.8 → subcritical (user disengaging).
+
+   **KILLER IDEA -- NUCLEUS TIDE**: pulse uses k_factor to auto-tune
+   verbosity. supercritical → quiet (don't overwhelm). subcritical
+   → proactive (surface Oracle hints + supernova alerts to revive
+   engagement). No setting needed; Mneme reads the user's rhythm.
+
+### New module + CLI
+
+`packages/core/src/nuclear/wisdom_reactor.ts` -- all 5 formulas as
+pure functions + a composite `computeReactorReport(input)` that
+returns mass / atrophy / Q / radius / criticality + a one-line
+banner suitable for the pulse.
+
+`mneme nuclear status` -- full reactor readout.
+`mneme nuclear k` -- one-line criticality + verbosity hint.
+`mneme nuclear half-life` -- atrophy decay table per band.
+
+### Tests
+
++20 across all 5 formulas: mass-defect clamping, decay constant
+matches λ = ln(2)/T_½, aliveness at exactly T_½ is 0.5, Q-score
+sign discrimination, cluster overflow detection, k-factor band
+classification (supercritical/stable/subcritical), record/read
+followup persistence. Suite total: **5232 / 5232 passing**.
+
 ## [1.32.0] — 2026-05-11
 
 **MANIFEST PHOTONICS ENGINE.** Cache hologram with photon-based
