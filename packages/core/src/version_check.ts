@@ -85,6 +85,25 @@ function readCache(repoRoot: string): CachedRecord | null {
   }
 }
 
+/** v1.32.0 -- PHOTONICS hook. Call this when the local mneme version
+ *  has shifted (e.g., right after a successful `mneme upgrade`). It
+ *  wipes the version-check cache so the next pulse fetches fresh and
+ *  the AI agent stops seeing stale "v(old) (latest: vX)" lines. */
+export function invalidateOnVersionShift(repoRoot: string): { invalidated: boolean } {
+  try {
+    const cached = readCache(repoRoot);
+    const live = readLiveMnemeVersion();
+    if (!cached || cached.current === live) return { invalidated: false };
+    // Local version has shifted -> wipe the cache.
+    const path = join(repoRoot, CACHE_FILE);
+    try {
+      const fs = require("node:fs");
+      if (fs.existsSync(path)) fs.unlinkSync(path);
+    } catch { /* */ }
+    return { invalidated: true };
+  } catch { return { invalidated: false }; }
+}
+
 function writeCache(repoRoot: string, rec: CachedRecord): void {
   try {
     const dir = join(repoRoot, ".mneme");

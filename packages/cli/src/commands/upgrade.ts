@@ -129,6 +129,17 @@ export async function upgradeCommand(opts: UpgradeOptions): Promise<number> {
     stdio: "inherit",
     timeout: 180000,
   });
+  // v1.32.0 -- PHOTONICS PROPAGATION on successful upgrade. Wipe the
+  // version-check cache RIGHT NOW so the next pulse fetches fresh and
+  // the AI agent doesn't see "v(old) (latest: vX)" for an hour.
+  // Best-effort -- failure here doesn't affect the upgrade itself.
+  if (installed.status === 0) {
+    try {
+      const core = await import("@mneme-ai/core");
+      const vc = (core as { versionCheck?: { invalidateOnVersionShift?: (root: string) => unknown } }).versionCheck;
+      if (vc?.invalidateOnVersionShift) vc.invalidateOnVersionShift(process.cwd());
+    } catch { /* */ }
+  }
   if (installed.status !== 0) {
     ui.error(`Install exited with code ${installed.status}.`);
     // v1.23.4 — give the right remediation per platform. Windows

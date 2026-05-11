@@ -76,6 +76,11 @@ export * as trustCalibration from "./trust_calibration.js";
 // NVD-stub). GHOST-NEGATIVE LOG: dismissed FPs are auto-suppressed
 // on subsequent scans. Direct response to "forensics vulns 80% FP".
 export * as forensicsV2 from "./forensics_v2.js";
+// v1.32.0 -- CACHE HOLOGRAM + PHOTONICS PROPAGATION. Central registry
+// of every cache in .mneme/ + photon-based dependency invalidation.
+// Kills the pulse-cache-lag bug at root: when mneme-version source
+// shifts, version-check cache is auto-stale on the next read.
+export * as cacheHologram from "./cache_hologram.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

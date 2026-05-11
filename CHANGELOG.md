@@ -8,6 +8,75 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.32.0] — 2026-05-11
+
+**MANIFEST PHOTONICS ENGINE.** Cache hologram with photon-based
+dependency invalidation (causal-cone analog from special relativity)
++ LIVE STATE block in agent files so AI agent and Mneme genuinely
+become one body, no MCP round-trips for state inquiry.
+
+### Module 1 — CACHE HOLOGRAM + PHOTONICS PROPAGATION
+
+`packages/core/src/cache_hologram.ts`. Central registry of every
+cache in `.mneme/`. Each cache declares its TTL + which UPSTREAM
+SOURCES it depends on. Each "source of truth" is hashed into a
+**photon** -- a stable signature of its current state. `isFresh(id)`
+is a 2-step check: TTL window + photon match.
+
+**KILLER IDEA -- PHOTONICS PROPAGATION**: when a source changes
+(mneme upgrade, package.json edit, etc.), `invalidateSource(id)`
+propagates the photon shift through the dependency DAG -- only
+caches in the source's "future light cone" get invalidated. Same
+Big-O guarantee a CDN gets from tag-based invalidation, at the
+filesystem layer with zero infrastructure.
+
+Default registrations:
+- `version-check` depends on `mneme-version` photon
+- `ecosystem` depends on `package-json-mtime` photon
+- `oracle-precog` (5min TTL, no photon deps)
+- `trust-grades` depends on `mneme-version` (re-grade after upgrade)
+- `pulse-trace` (no deps -- continuity log)
+
+API: `registerCache`, `registerSource`, `markBuilt`, `isFresh`,
+`invalidate`, `invalidateSource`, `snapshotHologram`,
+`registerDefaultMnemeCaches`. 10 tests cover registration, TTL
+expiry, photon shift detection, source-based propagation, snapshot
+tally.
+
+### Module 2 — MANIFEST PHOTONICS ENGINE: LIVE STATE block
+
+`packages/core/src/agent_manifest.ts` extended with a second
+sentinel-bracketed block (`<!-- BEGIN MNEME LIVE STATE -->`) that
+renders right-now reality alongside the static command manifest:
+daemon health, vaccines count, HCI, memory tier, **cache hologram
+snapshot** (what's fresh / what's stale / why), trust grades,
+SUPERNOVA recent events.
+
+`renderLiveStateMarkdown(state)` + `upsertLiveStateBlock(filePath,
+block)` + `syncLiveState(repoRoot, state, targets?)`.
+
+The result: AI agent reading any agent file sees BOTH:
+1. **Static manifest** -- "every command Mneme ships."
+2. **LIVE STATE** -- "right now: daemon is X, hologram says Y, calibration grades are Z."
+
+Every prompt → AI re-reads the agent file → AI sees fresh state →
+adapts. No MCP round-trip needed for state inquiry. The seamless-
+fusion layer the user asked for: AI agent + Mneme as one body, each
+becoming an organ for the other.
+
+### Photonics hook in `mneme upgrade`
+
+`upgrade.ts` now calls `versionCheck.invalidateOnVersionShift(cwd)`
+right after a successful npm install. Wipes the version-check cache
+INSTANTLY -- pulse on the next prompt fetches fresh, no more
+"v(old) (latest: vX)" lines for an hour after upgrade. Root-cause
+fix for the pulse-cache-lag bug the tester reported.
+
+### Tests
+
++10 cache_hologram tests. Suite total: **5212 / 5212 passing**.
+Zero regressions.
+
 ## [1.31.1] — 2026-05-11
 
 **HOTFIX: synthesize CLI bulletproof + E2E regression guard.**

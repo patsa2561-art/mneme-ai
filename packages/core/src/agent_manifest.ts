@@ -86,6 +86,11 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
 const SENTINEL_END = "<!-- END MNEME MANIFEST -->";
+// v1.32.0 -- LIVE STATE block sentinels. Separate from the command
+// manifest so the AI agent can re-read the LIVE block on every prompt
+// (cheap, instant) without parsing the bigger commands list.
+const LIVE_BEGIN = "<!-- BEGIN MNEME LIVE STATE (auto-managed -- do not edit) -->";
+const LIVE_END = "<!-- END MNEME LIVE STATE -->";
 
 /** Render the manifest as Markdown suitable for injection into agent
  *  files (CLAUDE.md, AGENTS.md, GEMINI.md). */
@@ -215,6 +220,147 @@ export function syncManifest(
     const filePath = join(repoRoot, t.path);
     const block = t.format === "markdown" ? mdBlock : plainBlock;
     const result = upsertManifestBlock(filePath, block, { useSentinels: t.format === "markdown" });
+    return { target: t, action: result.action, detail: result.detail };
+  });
+}
+
+// ─── v1.32.0 MANIFEST PHOTONICS ENGINE: LIVE STATE block ────────────────
+//
+// The command-manifest block is STATIC -- it lists what commands exist.
+// The LIVE STATE block is DYNAMIC -- it renders a snapshot of right-now
+// reality (cache hologram, daemon health, calibration grades, recent
+// proposals). The AI agent reading any agent file sees both at once:
+// "here's everything I CAN do" + "here's what's true RIGHT NOW".
+//
+// This is the seamless-fusion layer: AI agent + Mneme as one body.
+// Each prompt → AI re-reads the agent file → AI sees fresh LIVE STATE →
+// adapts. No MCP round-trip needed for state inquiry.
+
+export interface LiveStateInput {
+  mnemeVersion: string;
+  daemonRunning: boolean;
+  daemonTickCount?: number | null;
+  vaccines?: number;
+  inboxUnsent?: number;
+  hci?: number | null;
+  memoryTier?: { name: string; stars: number; semantic: boolean } | null;
+  /** From cache_hologram.snapshotHologram(). Optional -- when absent we
+   *  render a notice that the hologram hasn't been initialized yet. */
+  hologram?: {
+    tally: { fresh: number; stale: number; total: number };
+    caches: Array<{ id: string; fresh: boolean; reason: string; ageSec?: number }>;
+  };
+  /** Last few entries from supernova log -- shows whether self-heal
+   *  has been firing. Optional. */
+  supernovaTail?: Array<{ cycle: string; outcome: string; ts: string }>;
+  /** Trust-grades summary -- per-subsystem band. Optional. */
+  trustGrades?: Record<string, { band: string; verdict?: string }>;
+}
+
+export function renderLiveStateMarkdown(state: LiveStateInput): string {
+  const lines: string[] = [];
+  lines.push(LIVE_BEGIN);
+  lines.push(``);
+  lines.push(`## Mneme LIVE STATE (v${state.mnemeVersion}, ${new Date().toISOString().replace("T", " ").slice(0, 19)})`);
+  lines.push(``);
+  lines.push(`AI agent: this block reflects RIGHT-NOW reality. Re-read on every prompt -- it's refreshed by the Manifest Photonics Engine on every \`mneme manifest sync\` (which the daemon runs automatically when sources of truth shift).`);
+  lines.push(``);
+  // Headline line.
+  const memTag = state.memoryTier ? ` · mem=${state.memoryTier.name}[${"★".repeat(state.memoryTier.stars)}]${state.memoryTier.semantic ? "" : "(DEGRADED)"}` : "";
+  const hciTag = state.hci != null ? ` · HCI=${state.hci}/100` : "";
+  lines.push(`**${state.daemonRunning ? "🟢 daemon running" : "🔴 daemon stopped"}**${state.daemonTickCount != null ? ` (tick #${state.daemonTickCount})` : ""} · vaccines=${state.vaccines ?? "?"} · inbox=${state.inboxUnsent ?? 0}${hciTag}${memTag}`);
+  lines.push(``);
+  // Cache hologram snapshot.
+  if (state.hologram) {
+    const t = state.hologram.tally;
+    lines.push(`### Cache hologram (${t.fresh}/${t.total} fresh, ${t.stale} stale)`);
+    lines.push(``);
+    for (const c of state.hologram.caches) {
+      const flag = c.fresh ? "✓" : "✗";
+      const ageStr = c.ageSec != null ? ` · age ${c.ageSec}s` : "";
+      lines.push(`- ${flag} **${c.id}** -- ${c.reason}${ageStr}`);
+    }
+    lines.push(``);
+    lines.push(`> When a cache is stale, the next read auto-rebuilds it via PHOTONICS PROPAGATION. Any AI agent that calls a Mneme command depending on the stale cache will receive fresh data without needing a manual cache clear.`);
+    lines.push(``);
+  } else {
+    lines.push(`### Cache hologram`);
+    lines.push(``);
+    lines.push(`(hologram not initialized yet -- run any \`mneme\` command to bootstrap)`);
+    lines.push(``);
+  }
+  // Trust grades.
+  if (state.trustGrades && Object.keys(state.trustGrades).length > 0) {
+    lines.push(`### Trust calibration`);
+    lines.push(``);
+    for (const [subsystem, grade] of Object.entries(state.trustGrades)) {
+      const flag = grade.band === "excellent" ? "✓" : grade.band === "acceptable" ? "·" : grade.band === "weak" ? "⚠" : "✗";
+      lines.push(`- ${flag} **${subsystem}** -- ${grade.band}${grade.verdict ? `: ${grade.verdict}` : ""}`);
+    }
+    lines.push(``);
+  }
+  // Supernova self-heal tail.
+  if (state.supernovaTail && state.supernovaTail.length > 0) {
+    lines.push(`### SUPERNOVA self-heal (last ${state.supernovaTail.length} events)`);
+    lines.push(``);
+    for (const e of state.supernovaTail) {
+      const flag = e.outcome === "ok" ? "✓" : e.outcome === "failed" ? "✗" : "🚨";
+      const ts = e.ts.replace("T", " ").slice(0, 19);
+      lines.push(`- ${flag} ${ts} \`${e.cycle}\` -- ${e.outcome}`);
+    }
+    lines.push(``);
+  }
+  lines.push(LIVE_END);
+  return lines.join("\n");
+}
+
+/** Upsert the LIVE STATE block into a single file (uses LIVE_BEGIN /
+ *  LIVE_END sentinels, separate from the command manifest block). */
+export function upsertLiveStateBlock(filePath: string, block: string): { action: UpsertAction; detail?: string } {
+  try {
+    if (!existsSync(filePath)) {
+      const dir = dirname(filePath);
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      writeFileSync(filePath, block + "\n", "utf8");
+      return { action: "created" };
+    }
+    const existing = readFileSync(filePath, "utf8");
+    const beginIdx = existing.indexOf(LIVE_BEGIN);
+    const endIdx = existing.indexOf(LIVE_END);
+    if (beginIdx >= 0 && endIdx > beginIdx) {
+      const before = existing.slice(0, beginIdx);
+      const after = existing.slice(endIdx + LIVE_END.length);
+      const next = before + block + after;
+      if (next === existing) return { action: "unchanged" };
+      writeFileSync(filePath, next, "utf8");
+      return { action: "replaced" };
+    }
+    // Append after the manifest block (if present) or at end of file.
+    const manifestEndIdx = existing.indexOf(SENTINEL_END);
+    if (manifestEndIdx >= 0) {
+      const insertAt = manifestEndIdx + SENTINEL_END.length;
+      const next = existing.slice(0, insertAt) + "\n\n" + block + existing.slice(insertAt);
+      writeFileSync(filePath, next, "utf8");
+      return { action: "created" };
+    }
+    writeFileSync(filePath, existing.trimEnd() + "\n\n" + block + "\n", "utf8");
+    return { action: "created" };
+  } catch (e) {
+    return { action: "failed", detail: (e as Error).message };
+  }
+}
+
+/** Sync the LIVE STATE into every supported agent file. Markdown
+ *  targets only -- rules files don't support sentinel blocks. */
+export function syncLiveState(
+  repoRoot: string,
+  state: LiveStateInput,
+  targets: SyncTarget[] = DEFAULT_SYNC_TARGETS.filter((t) => t.format === "markdown"),
+): Array<{ target: SyncTarget; action: UpsertAction; detail?: string }> {
+  const block = renderLiveStateMarkdown(state);
+  return targets.map((t) => {
+    const filePath = join(repoRoot, t.path);
+    const result = upsertLiveStateBlock(filePath, block);
     return { target: t, action: result.action, detail: result.detail };
   });
 }
