@@ -561,7 +561,7 @@ export function registerNucleusCommands(program: Command): void {
       // identical, the daemon just becomes alive on the next prompt.
       // Eliminates the "user has to know `mneme nucleus install
       // --as-service`" bottleneck for 90%+ of users.
-      try { pulse.autoBootDaemonIfStopped(status.daemon.running); } catch { /* silent */ }
+      try { pulse.autoBootDaemonIfStopped(status.daemon.running, { repoRoot: process.cwd() }); } catch { /* silent */ }
       if (opts.json) {
         process.stdout.write(JSON.stringify(status, null, 2) + "\n");
         return;

@@ -104,6 +104,7 @@ import {
 } from "./commands/quant-cli.js";
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
 import { registerAntivirusCommands } from "./commands/antivirus.js";
+import { registerUninstallCommand } from "./commands/uninstall.js";
 import { registerRetrievalCommands } from "./commands/retrieval.js";
 import { registerHooksCommands } from "./commands/hooks.js";
 import { registerNotifyCommands } from "./commands/notify.js";
@@ -2432,6 +2433,8 @@ export async function run(argv: string[]): Promise<void> {
   registerInboxCommands(program);
   // ─── Antivirus / Vaccine Lab (v1.24.0) ────────────────────────────
   registerAntivirusCommands(program);
+  // ─── Uninstall (v1.28.2) -- comprehensive removal of every Mneme artifact
+  registerUninstallCommand(program);
   // ─── Retrieval Lab (v1.25.0) ──────────────────────────────────────
   registerRetrievalCommands(program);
   // ─── Hooks (v1.25.2) ──────────────────────────────────────────────

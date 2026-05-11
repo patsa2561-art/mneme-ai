@@ -8,6 +8,65 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.28.2] — 2026-05-11
+
+**Trust contract — `mneme uninstall` + every auto-boot failure mode
+has a fallback.** v1.28.1 added silent ghost-sniper auto-install. The
+trust risk: anything we silently install, the user (or AI agent acting
+on their behalf) must be able to silently remove. v1.28.2 closes that
+loop end-to-end + plugs every gap that could leave the auto-boot
+unable to fire.
+
+### `mneme uninstall` — comprehensive removal
+
+New top-level command. Removes EVERY artifact in one pass:
+
+1. Stops the running daemon (SIGTERM via `nucleusDaemon.stopDaemon`).
+2. Removes the OS boot service (cross-platform):
+   - **Windows**: schtasks `/Delete /TN MnemeNucleusDaemon /F`
+   - **Linux**: `systemctl --user stop|disable mneme-nucleus.service` + unlinks `~/.config/systemd/user/mneme-nucleus.service`
+   - **macOS**: `launchctl unload` + unlinks `~/Library/LaunchAgents/ai.mneme.nucleus.plist`
+3. Removes the auto-boot marker (`~/.mneme-auto-service-attempted`).
+4. Removes hooks + agent files via `integrations.uninstallAll()`
+   (Claude Code settings.json, CLAUDE.md sentinel block, .cursor/rules,
+   AGENTS.md, GEMINI.md, .windsurfrules, .cursorrules).
+5. (`--purge`) Wipes the `.mneme/` directory in the current repo.
+6. (`--npm`) Runs `npm uninstall -g mneme-ai` to remove the CLI binary.
+
+Every step reports a structured status (removed / not-installed /
+skipped / failed). Final verdict: `COMPLETE` / `PARTIAL` / `INCOMPLETE`.
+The wisdom-shaped report tells the user EXACTLY what was removed,
+what was already gone, and what failed -- no silent post-uninstall
+surprises. Exit code 1 if any step failed.
+
+### Auto-boot fallbacks (every failure mode covered)
+
+- **`mneme.cmd` not on PATH** (nvm shells, pnpm shims) → fallback to
+  `process.execPath` + `process.argv[1]` so spawn ALWAYS works.
+- **Home dir unwritable** (sandboxed envs, locked corp boxes) → marker
+  falls back to `<repoRoot>/.mneme/.mneme-auto-service-attempted`. The
+  one-time-per-machine guarantee still holds, just per-repo instead.
+- **schtasks blocked by group policy** → marker still gets written so
+  we don't spam-retry every prompt.
+- **launchctl SIP / TCC denial** → silent fail, marker prevents retry.
+- **Sync `spawn` throw** (rare) → caught, retried via Strategy B.
+
+### New API in `core`
+
+- `service_uninstall.ts` — `removeBootService()` + `removeAutoBootMarker(homeDir?)`.
+  Both return `ServiceRemovalResult[]` / `ServiceRemovalResult` with
+  status: `removed` / `not-installed` / `failed`.
+- `pulse.ts` — `hasAutoBootMarker(homeDir?, repoRoot?)` + new
+  `repoRoot` field on `AutoBootOptions` for the fallback marker chain.
+
+### Tests
+
++6 across `pulse.test.ts` (fallback marker landing in repoRoot,
+hasAutoBootMarker checks both locations) and `service_uninstall.test.ts`
+(removeAutoBootMarker no-op + happy path; removeBootService never throws).
+Snapshot for `mneme --help` updated to include the new `uninstall`
+subcommand. Suite total: **5077 / 5077 passing.**
+
 ## [1.28.1] — 2026-05-11
 
 **Ghost Sniper auto-boot.** Closes the bottleneck where 90%+ of users

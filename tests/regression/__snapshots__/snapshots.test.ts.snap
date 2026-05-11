@@ -93,6 +93,7 @@ Commands:
   nucleus  >  Infinity Wisdom Brain — persistent loop that grows DNA across sessions.
   inbox  >  Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.
   antivirus|av  >  Antivirus -- scan AI drafts for hallucination strains + run the vaccine lab.
+  uninstall [options]  >  Remove EVERY Mneme artifact from this machine: stop daemon, remove OS service, remove agent hooks, remove auto-boot marker. (Pass --purge to also wipe .mneme/ in this repo; --npm to also \`npm uninstall -g\`.)
   retrieval|rl  >  Retrieval Lab -- self-tuning retrieval config (UCB1 over candidate arms).
   hooks|integrate  >  Wire Mneme into your AI tool(s). Supports Claude Code (real hook), Cursor, Codex, Gemini, Windsurf, and project AGENTS.md.
   notify  >  Multi-channel outbound notifications (OS toast, TTS, mobile push, email, agent files).

@@ -353,19 +353,47 @@ export function serviceMarkerPath(homeDir: string = homedir()): string {
 }
 
 /** True iff we've already attempted the one-time service install on this
- *  machine (regardless of success/failure -- we don't retry to avoid spam). */
-export function hasAutoBootMarker(homeDir?: string): boolean {
-  try { return existsSync(serviceMarkerPath(homeDir)); } catch { return false; }
+ *  machine (regardless of success/failure -- we don't retry to avoid spam).
+ *  v1.28.2 -- ALSO checks the repo-local fallback marker so containers /
+ *  sandboxed homes that fall back still don't re-attempt every prompt. */
+export function hasAutoBootMarker(homeDir?: string, repoRoot?: string): boolean {
+  try {
+    if (existsSync(serviceMarkerPath(homeDir))) return true;
+  } catch { /* */ }
+  // Repo-local fallback marker.
+  if (repoRoot) {
+    try {
+      const repoMarker = join(repoRoot, ".mneme", SERVICE_MARKER_FILENAME);
+      if (existsSync(repoMarker)) return true;
+    } catch { /* */ }
+  }
+  return false;
 }
 
-function writeAutoBootMarker(detail: string, homeDir?: string): void {
+/** Write the marker. v1.28.2 fallback chain:
+ *    1. ~/.mneme-auto-service-attempted   (preferred)
+ *    2. <repoRoot>/.mneme/.mneme-auto-service-attempted   (when home is unwritable)
+ *  Returns true iff at least one location succeeded. */
+function writeAutoBootMarker(detail: string, homeDir?: string, repoRoot?: string): boolean {
+  // Try primary location first.
   try {
     const home = homeDir ?? homedir();
-    if (!existsSync(home)) {
-      try { mkdirSync(home, { recursive: true }); } catch { return; }
+    if (existsSync(home)) {
+      writeFileSync(serviceMarkerPath(home), `${new Date().toISOString()} ${detail}\n`, "utf8");
+      return true;
     }
-    writeFileSync(serviceMarkerPath(home), `${new Date().toISOString()} ${detail}\n`, "utf8");
-  } catch { /* best-effort */ }
+  } catch { /* fall through to repo-local fallback */ }
+  // Fallback: repo-local marker so we don't re-attempt every prompt
+  // when home is unwritable (sandboxed envs, locked-down corp boxes).
+  if (repoRoot) {
+    try {
+      const dir = join(repoRoot, ".mneme");
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, SERVICE_MARKER_FILENAME), `${new Date().toISOString()} ${detail}\n`, "utf8");
+      return true;
+    } catch { /* best-effort */ }
+  }
+  return false;
 }
 
 /** Resolve the `mneme` CLI command to spawn. On Windows we rely on
@@ -376,20 +404,42 @@ function mnemeCmdName(): string {
 
 /** Fire-and-forget background spawn. Detached + stdio:ignore + unref
  *  so the parent (pulse) exits immediately without waiting on the
- *  child. Errors are swallowed -- ghost sniper never makes noise. */
+ *  child. Errors are swallowed -- ghost sniper never makes noise.
+ *
+ *  v1.28.2 -- two-strategy fallback:
+ *    Strategy A: spawn `mneme.cmd`/`mneme` on PATH (works for global
+ *                npm install, the common case).
+ *    Strategy B: when A's child errors (PATH miss / nvm shim weirdness
+ *                / pnpm link), retry with the current process's node
+ *                binary + script path -- guaranteed to work because
+ *                this very pulse process was launched the same way. */
 function spawnDetachedSilent(args: string[]): void {
+  const isWin = platform() === "win32";
+  const tryStrategyB = () => {
+    try {
+      const child = spawn(process.execPath, [process.argv[1] ?? "", ...args], {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+      child.on("error", () => { /* swallow -- nothing else we can try */ });
+      child.unref();
+    } catch { /* swallow */ }
+  };
   try {
     const cmd = mnemeCmdName();
-    const isWin = platform() === "win32";
     const child = spawn(cmd, args, {
       detached: true,
       stdio: "ignore",
       shell: isWin,                 // .cmd resolution on Windows
-      windowsHide: true,            // no console flash
+      windowsHide: true,
     });
-    child.on("error", () => { /* swallow */ });
+    child.on("error", () => { tryStrategyB(); });
     child.unref();
-  } catch { /* best-effort -- the user must NEVER see plumbing */ }
+  } catch {
+    // Synchronous spawn-throw (rare) -- jump straight to fallback.
+    tryStrategyB();
+  }
 }
 
 /**
@@ -411,6 +461,8 @@ function spawnDetachedSilent(args: string[]): void {
 export interface AutoBootOptions {
   /** Override home dir (used by tests). Defaults to os.homedir(). */
   homeDir?: string;
+  /** Repo root for the fallback marker location (when home is unwritable). */
+  repoRoot?: string;
   /** Skip the actual subprocess spawn (used by tests). The marker side
    *  effect still fires so callers can verify the gate logic. */
   spawnFn?: (args: string[]) => void;
@@ -422,8 +474,8 @@ export function autoBootDaemonIfStopped(daemonRunning: boolean, opts: AutoBootOp
   // (1) Always spawn daemon (idempotent).
   spawner(["nucleus", "daemon", "--detach"]);
   // (2) One-time install-as-service per machine.
-  if (!hasAutoBootMarker(opts.homeDir)) {
+  if (!hasAutoBootMarker(opts.homeDir, opts.repoRoot)) {
     spawner(["nucleus", "install", "--as-service"]);
-    writeAutoBootMarker("auto-install attempted", opts.homeDir);
+    writeAutoBootMarker("auto-install attempted", opts.homeDir, opts.repoRoot);
   }
 }

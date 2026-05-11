@@ -186,6 +186,37 @@ describe("pulse", () => {
       expect(() => autoBootDaemonIfStopped(false, { homeDir: fakeHome, spawnFn: fakeSpawn })).not.toThrow();
     });
 
+    it("v1.28.2 fallback: when home is unwritable, marker falls back to repoRoot/.mneme/", () => {
+      const fakeHome = join(home, "definitely-does-not-exist", "and-cannot-be-created");
+      // Pre-create a barrier so mkdir on fakeHome would also fail (write a file
+      // where the directory would need to be).
+      const repoRoot = mkdtempSync(join(tmpdir(), "mneme-ghost-repo-"));
+      try {
+        autoBootDaemonIfStopped(false, { homeDir: fakeHome, repoRoot, spawnFn: fakeSpawn });
+        // Marker should land in the repo-local fallback location.
+        const repoMarker = join(repoRoot, ".mneme", ".mneme-auto-service-attempted");
+        expect(existsSync(repoMarker)).toBe(true);
+        // hasAutoBootMarker should now return true even when the home marker is missing.
+        expect(hasAutoBootMarker(fakeHome, repoRoot)).toBe(true);
+      } finally {
+        try { rmSync(repoRoot, { recursive: true, force: true }); } catch { /* */ }
+      }
+    });
+
+    it("v1.28.2 fallback: hasAutoBootMarker checks both home AND repoRoot", () => {
+      const repoRoot = mkdtempSync(join(tmpdir(), "mneme-ghost-repo-"));
+      try {
+        // Neither marker present
+        expect(hasAutoBootMarker(home, repoRoot)).toBe(false);
+        // Write only the repo-local marker
+        mkdirSync(join(repoRoot, ".mneme"), { recursive: true });
+        writeFileSync(join(repoRoot, ".mneme", ".mneme-auto-service-attempted"), "x", "utf8");
+        expect(hasAutoBootMarker(home, repoRoot)).toBe(true);
+      } finally {
+        try { rmSync(repoRoot, { recursive: true, force: true }); } catch { /* */ }
+      }
+    });
+
     it("emits NO user-visible signal -- ghost sniper contract (no notable[] entries)", () => {
       // The function returns void by design. Even if called with the
       // real spawn (no fake), it must add nothing to status.notable.

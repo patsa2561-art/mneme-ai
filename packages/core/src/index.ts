@@ -39,6 +39,8 @@ export * as versionCheck from "./version_check.js";
 export * as karmaStreaks from "./karma_streaks.js";
 export * as nucleus from "./nucleus.js";
 export * as nucleusDaemon from "./nucleus_daemon.js";
+// v1.28.2 -- comprehensive service uninstall (cross-platform).
+export * as serviceUninstall from "./service_uninstall.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
