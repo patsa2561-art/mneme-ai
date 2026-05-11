@@ -155,41 +155,77 @@ export function registerAntivirusCommands(program: Command): void {
     .description("Auto-mine a candidate regex pattern from the FN samples a strain's vaccine missed; accept iff recall +10pp and precision stays >=0.90. Writes a proposal sidecar to .mneme/proposals/.")
     .option("--json", "JSON output.")
     .action(async (strain: string, opts: CommonOpts) => {
+      // v1.31.1 BULLETPROOF -- defensive at every .length access.
+      // Pre-fix v1.30.0 crashed `target.fnSamples.length` and
+      // `result.fnSamples.length` when @mneme-ai/core was older than
+      // v1.28.0 (no fnSamples field on StrainGapReport). Same crash
+      // also possible when synthesizeVaccine is shimmed by an older
+      // core. Now every cross-package boundary is shape-checked.
       const repoRoot = process.cwd();
-      const r = await antivirus.gapScan(repoRoot);
-      const target = r.perStrain.find((s) => s.strain === strain);
-      if (!target) {
-        writeText(`No gap-scan report for strain "${strain}". Known strains: ${r.perStrain.map((s) => s.strain).join(", ")}`);
+      let r;
+      try { r = await antivirus.gapScan(repoRoot); }
+      catch (e) {
+        writeText(`✗ gap-scan failed: ${(e as Error).message}`);
+        writeText(`  Likely cause: @mneme-ai/core older than v1.27.8 (gap-scan was added in v1.27.8). Upgrade: \`npm install -g mneme-ai@latest\`.`);
         process.exitCode = 1;
         return;
       }
-      if (target.fnSamples.length === 0) {
-        writeText(`Strain "${strain}" has 0 FN samples -- nothing to mine. Recall ${target.recall == null ? "n/a" : `${(target.recall * 100).toFixed(0)}%`} -- vaccine already catches every adversarial case.`);
+      const perStrain = Array.isArray(r?.perStrain) ? r.perStrain : [];
+      const target = perStrain.find((s) => s?.strain === strain);
+      if (!target) {
+        const knownStrains = perStrain.map((s) => s?.strain).filter(Boolean).join(", ") || "(none -- gap-scan returned no strains)";
+        writeText(`No gap-scan report for strain "${strain}". Known strains: ${knownStrains}`);
+        process.exitCode = 1;
+        return;
+      }
+      const fnSamples = Array.isArray((target as { fnSamples?: unknown }).fnSamples) ? (target as { fnSamples: string[] }).fnSamples : [];
+      if (fnSamples.length === 0) {
+        const recallStr = target.recall == null ? "n/a" : `${(target.recall * 100).toFixed(0)}%`;
+        writeText(`Strain "${strain}" has 0 FN samples -- nothing to mine. Recall ${recallStr} -- vaccine already catches every adversarial case (or @mneme-ai/core is older than v1.28.0 and doesn't expose fnSamples; upgrade with \`npm install -g mneme-ai@latest\`).`);
         return;
       }
       // Pull legitimate negatives from the same gap-scan case builder
       // so the precision gate has something to bite on.
-      const buckets = antivirus.buildGapCases(repoRoot);
-      const negativeSamples = buckets
-        .find((b) => b.strain === strain)
-        ?.cases.filter((c) => !c.shouldBeInfected)
-        .map((c) => c.match) ?? [];
-      const result = antivirus.synthesizeVaccine(repoRoot, {
-        strain: target.strain,
-        fnSamples: target.fnSamples,
-        negativeSamples,
-      });
+      let negativeSamples: string[] = [];
+      try {
+        const buckets = antivirus.buildGapCases ? antivirus.buildGapCases(repoRoot) : [];
+        if (Array.isArray(buckets)) {
+          const bucket = buckets.find((b) => b?.strain === strain);
+          if (bucket && Array.isArray(bucket.cases)) {
+            negativeSamples = bucket.cases
+              .filter((c) => c && c.shouldBeInfected === false)
+              .map((c) => c.match)
+              .filter((m): m is string => typeof m === "string");
+          }
+        }
+      } catch { /* keep negativeSamples = [] -- synthesizeVaccine still works */ }
+      let result;
+      try {
+        result = antivirus.synthesizeVaccine(repoRoot, {
+          strain: target.strain,
+          fnSamples,
+          negativeSamples,
+        });
+      } catch (e) {
+        writeText(`✗ synthesize failed: ${(e as Error).message}`);
+        writeText(`  Likely cause: @mneme-ai/core older than v1.28.3 (defensive guards added in v1.28.3). Upgrade: \`npm install -g mneme-ai@latest\`.`);
+        process.exitCode = 1;
+        return;
+      }
       if (opts.json) { writeJson(result); return; }
+      const safeFnLen = Array.isArray(result?.fnSamples) ? result.fnSamples.length : fnSamples.length;
+      const safeRecallAfter = typeof result?.recallAfter === "number" ? result.recallAfter : 0;
+      const safePrecisionAfter = typeof result?.precisionAfter === "number" ? result.precisionAfter : 0;
       writeText(`MNEME ANTIVIRUS auto-synthesize -- ${strain}`);
       writeText(``);
-      writeText(`FN samples mined: ${result.fnSamples.length}`);
-      writeText(`Proposed pattern: ${result.proposedPattern || "(no stable structure found)"}`);
-      writeText(`Recall after:     ${(result.recallAfter * 100).toFixed(0)}%`);
-      writeText(`Precision after:  ${(result.precisionAfter * 100).toFixed(0)}%`);
+      writeText(`FN samples mined: ${safeFnLen}`);
+      writeText(`Proposed pattern: ${result?.proposedPattern || "(no stable structure found)"}`);
+      writeText(`Recall after:     ${(safeRecallAfter * 100).toFixed(0)}%`);
+      writeText(`Precision after:  ${(safePrecisionAfter * 100).toFixed(0)}%`);
       writeText(``);
-      writeText(`Verdict: ${result.accepted ? "ACCEPTED ✓" : "REJECTED ✗"}`);
-      writeText(`         ${result.verdict}`);
-      if (result.proposalPath) {
+      writeText(`Verdict: ${result?.accepted ? "ACCEPTED ✓" : "REJECTED ✗"}`);
+      writeText(`         ${result?.verdict ?? "(no verdict returned -- core may be outdated)"}`);
+      if (result?.proposalPath) {
         writeText(``);
         writeText(`Proposal written: ${result.proposalPath}`);
         if (result.accepted) {

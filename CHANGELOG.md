@@ -8,6 +8,62 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.31.1] — 2026-05-11
+
+**HOTFIX: synthesize CLI bulletproof + E2E regression guard.**
+
+A tester reported `mneme antivirus synthesize depends_imaginarium`
+STILL crashed on v1.30.0 with "Cannot read properties of undefined
+(reading 'length')" -- the same bug claimed-fixed in v1.28.3. This
+release ends the regression cycle by adding both a defensive CLI
+layer AND an end-to-end smoke test that would have caught the
+previous regressions before publish.
+
+### Bug
+
+`packages/cli/src/commands/antivirus.ts` synthesize action had THREE
+unguarded `.length` accesses on cross-package boundaries:
+1. `r.perStrain.map(...)` -- crash if perStrain is undefined.
+2. `target.fnSamples.length === 0` -- crash if @mneme-ai/core is
+   older than v1.28.0 (pre-fnSamples StrainGapReport).
+3. `result.fnSamples.length` -- crash if synthesizeVaccine returns a
+   stub-shaped object (older core).
+
+### Fix
+
+Every cross-package access in the CLI synthesize action is now:
+- Array-checked via `Array.isArray()` before `.length`.
+- Wrapped in try/catch with actionable error messages on `gapScan` /
+  `synthesizeVaccine` throw.
+- Guarded with optional chaining on the response shape.
+- On core-version mismatch: prints "Likely cause: @mneme-ai/core older
+  than vX.Y.Z. Upgrade: `npm install -g mneme-ai@latest`."
+
+### Why v1.28.3 didn't catch this
+
+The unit tests covered `synthesizeVaccine()` directly with well-shaped
+inputs. The CLI surface -- which deals with untyped JS-runtime objects
+returned from gap-scan AND may face an older `@mneme-ai/core` via npm
+peer-dep resolution -- was never end-to-end tested against the actual
+built CLI binary.
+
+### NEW: `tests/e2e/synthesize-no-crash.test.ts`
+
+10 tests that spawn the actual built CLI binary against fresh tmp repos
+in 4 shapes (empty dir, bare git, git+package.json+commit, unknown
+strain). Asserts:
+- exit code in {0, 1} (clean OR friendly failure)
+- stdout/stderr does NOT contain `Cannot read properties of undefined`
+- stdout/stderr does NOT contain `is not iterable`
+- stderr does NOT contain `^SyntaxError:` (the v1.28.2 module-load crash)
+
+This test would have FAILED on v1.28.2 / v1.28.3 / v1.30.0. From now
+on, every release runs it before publish.
+
+### Tests
+
+Suite total: **5202 / 5202 passing** (5192 + 10 e2e). Zero regressions.
+
 ## [1.31.0] — 2026-05-11
 
 **MNEME BLACK SHEEP RENAISSANCE.** Three modules + three killer wild
