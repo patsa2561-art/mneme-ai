@@ -127,6 +127,12 @@ export * as devhealth from "./devhealth/snapshot.js";
 // to verify integrity). Foundation for Business Model bet #3
 // (Compliance-as-a-Service).
 export * as compliance from "./compliance/evidence_pack.js";
+// v1.38.0 -- AUTOPHAGY SHIPPER (Continuous Shipping Cycle).
+// Operation Automation bet #1 -- "world's first software that ships
+// its own patch updates while the maintainer sleeps." Paranoid gates:
+// PATCH-only, evolve-bot author, 24h green CI, ship-readiness READY,
+// rate-limited, killswitch via env. Dry-run by default.
+export * as autoship from "./autoship/cycle.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

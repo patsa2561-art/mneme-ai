@@ -88,9 +88,84 @@
 <details>
 <summary><h2 style="display:inline">⚡ Why Mneme exists</h2></summary>
 
-Your AI coding tool is brilliant but **amnesiac**. It never saw why your team rolled back JWT in 2024, why the auth refactor went sideways, or who to pair with on `payments.ts`. So it guesses — fluently, plausibly, wrongly.
+> *A short funeral, then a resurrection. Read carefully — these 3 minutes will save you 6 months.*
 
-**Mneme is the memory + awareness layer that fixes that.**
+### 📜 The Funeral of a Lost Decision
+
+```
+ ╔═══════════════════════════════════════════════════════════════════════╗
+ ║                                                                       ║
+ ║    IN MEMORIAM                                                        ║
+ ║    ─────────────                                                      ║
+ ║                                                                       ║
+ ║    Decision #a3f9b21  ·  born 2024-03-14  ·  died 2025-09-07          ║
+ ║                                                                       ║
+ ║    "Apple Sign-In sometimes returns clock-skewed iat values.          ║
+ ║     Tolerate ±5min on JWT verification or production breaks           ║
+ ║     during DST transitions in EU regions."                            ║
+ ║                                                                       ║
+ ║                            — committed by Sirichot, peer-reviewed     ║
+ ║                              by 2 humans, mentioned in incident-     ║
+ ║                              postmortem #IR-2024-088                  ║
+ ║                                                                       ║
+ ║    SURVIVED BY: 18 months of green production traffic                 ║
+ ║                                                                       ║
+ ║    CAUSE OF DEATH: A new dev opened auth.ts in 2025-09-07,            ║
+ ║                   their AI assistant said:                            ║
+ ║                                                                       ║
+ ║                      "This 5-minute tolerance looks too               ║
+ ║                       loose. JWTs should be strict.                   ║
+ ║                       Let me tighten this for you."                   ║
+ ║                                                                       ║
+ ║    ATTENDED BY: every customer in the EU at 02:00 UTC                 ║
+ ║                  on the next DST transition.                          ║
+ ║                                                                       ║
+ ║    REPOSE: rolled back at 03:47 UTC after 4,802 failed logins.        ║
+ ║                                                                       ║
+ ╚═══════════════════════════════════════════════════════════════════════╝
+
+                 The decision didn't die because it was wrong.
+                 It died because nobody — neither human nor AI —
+                 remembered WHY it was made.
+```
+
+### ⚡ Then Mneme arrived.
+
+```
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                                                                     │
+ │   👤 dev (2026)                  🤖 their AI                        │
+ │     "Tighten this JWT     ──►   reads file,  ──►   🧠 mneme         │
+ │      verification."              about to act        ╭─────────╮    │
+ │                                       │              │ a3f9b21!│    │
+ │                                       │              │ DST!    │    │
+ │                                       ▼              │ IR-088! │    │
+ │                              "Wait — Mneme says     │ 4,802 fails│  │
+ │                               this exact change      ╰────┬────╯    │
+ │                               broke prod last year.       │         │
+ │                               See commit a3f9b21."  ◄─────┘         │
+ │                                       │                             │
+ │                                       ▼                             │
+ │                              👤 dev: "...thanks. Skipping."         │
+ │                                                                     │
+ └─────────────────────────────────────────────────────────────────────┘
+
+           The decision lived because Mneme remembered for everyone.
+```
+
+### 🧬 The hypothesis Mneme is built on
+
+> Every codebase has a graveyard of decisions like commit a3f9b21.
+> Every AI assistant is **brilliant but amnesiac** — it never attended any of those funerals.
+> Without memory, AI plausibly suggests resurrecting bugs that were already buried.
+>
+> **Mneme is the antibody. Memory + awareness + provenance.** Bolted on top of any AI tool, it makes that AI remember every funeral so the team never holds the same one twice.
+
+### What Mneme is
+
+A self-improving memory + awareness layer for AI coding. It sits ON TOP of any model + any MCP client, gives the AI persistent context across sessions, pushes relevant state when something needs attention, and audits every AI action with a signable record.
+
+**Mneme is the memory + awareness layer that fixes the amnesia.**
 
 > 📚 **Read first: [Mneme OS AI Layer Model](./docs/OS_AI_LAYER.md)** — a 9-layer textbook for AI tooling. Mneme is the open reference implementation for layers **L4 → L8**.
 
@@ -103,10 +178,6 @@ Your AI coding tool is brilliant but **amnesiac**. It never saw why your team ro
                   ─── (above is where Mneme lives) ───
                      L0 – L3          silicon · model · inference · MCP
 ```
-
-### What Mneme is
-
-A self-improving memory + awareness layer for AI coding. It sits ON TOP of any model + any MCP client, gives the AI persistent context across sessions, pushes relevant state when something needs attention, and audits every AI action with a signable record.
 
 ### What we focus on (4 things, only)
 
@@ -667,6 +738,28 @@ Any AI vendor talks to Mneme via HTTP — not just MCP-compliant ones. Mneme = A
 
 <details>
 <summary><h2 style="display:inline">📊 What's solid vs what's still maturing (honest)</h2></summary>
+
+```
+   ┌──────────────────────────────────────────────────────────────────┐
+   │                                                                  │
+   │   🟢 SOLID         🟡 TIER-DEPENDENT       🟠 RESEARCH-GRADE      │
+   │                                                                  │
+   │  ▸ guard           ▸ memory.ask          ▸ adversarial          │
+   │  ▸ atrophy         ▸ memory.search       ▸ evolve (Phase 3-5)   │
+   │  ▸ premortem       ▸ who-knows           ▸ oracle precog        │
+   │  ▸ stigmergy        (★★ → ★★★★★)         ▸ forensics (CWE)      │
+   │  ▸ antivirus                                                     │
+   │  ▸ uninstall       quality scales         interesting +         │
+   │  ▸ overnight       with embedder tier     maturing fast         │
+   │                                                                  │
+   │  → ship to prod    → run `mneme           → use as triage        │
+   │    today             embeddings upgrade'    not as gate          │
+   │                                                                  │
+   └──────────────────────────────────────────────────────────────────┘
+
+       Mneme is the *memory + awareness layer* for AI tools.
+       Where a more mature tool fits a job, prefer the mature tool.
+```
 
 Mneme ships a lot of surface area. Here's what's actually production-ready vs what's research-grade. We'd rather under-promise than have you discover this the hard way.
 

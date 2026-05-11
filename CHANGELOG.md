@@ -8,6 +8,90 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.38.0] — 2026-05-11
+
+**🚀 AUTOPHAGY SHIPPER (Continuous Shipping Cycle).** The
+TechCrunch-headline-worthy one. "World's first software that ships
+its own patch updates while the maintainer sleeps."
+
+### Module: AUTOPHAGY SHIPPER
+
+`packages/core/src/autoship/cycle.ts`. The Continuous Shipping Cycle
+from the README's Operation Automation bet #1 — now with code.
+
+Cycle (runs nightly inside the daemon, OR on demand via CLI):
+
+1. List EVOLVE-bot-authored open PRs (auto-pr from Phase 4).
+2. For each PR, run 7 paranoid gates:
+   - **killswitch**: env `MNEME_AUTOSHIP_DISABLED=1` halts everything
+   - **author-is-evolve-bot**: PR must be authored by `mneme-evolve-bot`
+   - **patch-only**: x.y.z → x.y.(z+1) only; never minor/major
+   - **green-ci-hours**: CI must be green for ≥ MIN_GREEN_HOURS (default 24)
+   - **no-critical-issues**: no open critical-labeled issues linked
+   - **ship-readiness**: `.mneme/ship-readiness.json` must say `READY`
+   - **rate-limit**: max 1 publish per UTC day (configurable)
+3. If ALL gates green AND `--execute`:
+   - `gh pr merge --squash --delete-branch`
+   - bump patch + run ship-readiness
+   - `npm publish` 5 packages in dependency order
+   - tag + push
+   - notifier broadcast: "Mneme self-shipped v1.X.Y"
+4. If any gate failed: log to `.mneme/autoship/cycle.jsonl` + skip.
+
+**KILLER IDEA — AUTOPHAGY (cell self-renewal)**:
+Mneme literally ships Mneme. PATCH only — the cell renews its
+membrane, not its DNA. Major changes still need a human (chromosome
+edit). Every cycle (dry-run + execute alike) appends to the cycle
+log; reactor reads it to compute "self-ship velocity" + "rejection
+reasons histogram" — which gates fire most.
+
+**Paranoid by default**: `execute: false` is the default. The runner
+exists separately (v1.38.1+ wires the actual `gh pr merge` + `npm
+publish` shell-out); v1.38.0 ships the EVALUATOR + safety gates.
+
+26 tests cover every gate's pass/fail path + the WILD safety
+invariants:
+- A HUMAN PR can NEVER trigger merged-and-published
+- A MINOR/MAJOR bump can NEVER trigger merged-and-published
+- killswitch ALWAYS wins over `execute: true`
+
+API: `evaluateAutoshipReadiness({ pr, options, criticalIssueNumbers })`
+returns `{ allPass, gates, action: 'noop' | 'would-merge' |
+'merged-and-published' | 'killswitched' }`. `readCycleHistory(repoRoot)`
++ `computeCycleStats(repoRoot, lookbackDays)` for the daemon's nightly
+reactor read.
+
+### README polish
+
+- "What's solid vs maturing" gets a 3-column ASCII infographic at the
+  top so readers see the whole picture before the long table.
+- "Why Mneme exists" rewritten as a 3-act story:
+  1. **The Funeral of a Lost Decision** — a memorial program for
+     commit a3f9b21 (a real-shaped scenario about JWT + DST + Apple
+     Sign-In) showing why decisions die when nobody remembers WHY.
+  2. **Then Mneme arrived** — the ASCII dialog scene where Mneme
+     resurrects the funeral memory and stops a regression.
+  3. **The hypothesis Mneme is built on** — the antibody framing.
+  Pure new content, never been written this way before.
+
+### Mandate scoreboard
+
+| Mandate | This release |
+|---|---|
+| Wild idea | ✓ AUTOPHAGY (cell self-renewal); funeral-as-marketing |
+| Wiser | ✓ reuses ship-readiness gate + EVOLVE Phase 4 + supernova |
+| Self-fix root cause | ✓ Mneme is its own engineering manager |
+| Co-working | ✓ composes triage → EVOLVE → autoship into one self-loop |
+| Always-studying | ✓ cycle log feeds reactor for next-cycle tuning |
+
+### Tests
+
++26 (autoship/cycle). Suite total: **5374 / 5374 passing**.
+
+## [1.37.0] — 2026-05-11
+
+(See git log; auto-triage + devhealth + compliance — 42 tests.)
+
 ## [1.36.0] — 2026-05-11
 
 **Direct response to a 10-bug tester report + the headline ask
