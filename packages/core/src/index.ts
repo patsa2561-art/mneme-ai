@@ -266,6 +266,15 @@ export * as acgvGodel from "./squadron/acgv_godel.js";
 export * as acgvConfession from "./squadron/acgv_confession.js";
 export * as acgvVaccine from "./squadron/acgv_vaccine.js";
 export * as acgvStake from "./squadron/acgv_stake.js";
+// v1.52.0 -- Z3 SAT formal upgrade (optional z3-solver dep) + plain-English
+// explainer. The Z3 layer turns Godel post-mortem into court-grade proof
+// when z3-solver is installed; otherwise gracefully falls back to the
+// v1.51 propositional check (free-first). The explainer translates the
+// physics-jargon verdict into a one-line headline + 2-sentence layperson
+// summary + one concrete next action so users without a math degree can
+// actually act on the verdict.
+export * as acgvGodelZ3 from "./squadron/acgv_godel_z3.js";
+export * as acgvExplain from "./squadron/acgv_explain.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

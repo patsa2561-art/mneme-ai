@@ -8,6 +8,107 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.52.0] — 2026-05-11
+
+**Z3 SAT formal upgrade + plain-English explainer + `mneme verify`.
+Two complementary additions: world-class formal proof for the curious,
+plain-English for everyone else. The math (Chandrasekhar density,
+neutrino harmonic) is unchanged -- v1.52 adds (a) a Z3-backed UNSAT
+proof certificate when `z3-solver` is installed, and (b) a friendly
+`mneme verify` command that translates the verdict into TRUSTWORTHY /
+MIXED / REFUTED / IMPOSSIBLE with one concrete next action.**
+
+### NEW: Z3 SAT proof engine (optional, free-first)
+
+- `z3-solver` is declared as **optionalDependency** in `packages/core`.
+  When installed, the new `acgv_godel_z3.ts` module runs Z3 alongside
+  the v1.51 propositional check; when missing, the propositional check
+  carries the verdict. Free-first users pay zero install cost.
+
+- New async entry point `runACGVAsync(input)` in `packages/core/src/
+  squadron/acgv.ts` runs the full pipeline + invokes Z3 when available.
+  Returns `ACGVResult & { engine: "z3" | "propositional" }` so callers
+  see which proof system carried the verdict. The sync `runACGV`
+  remains identical to v1.51 -- backwards compatible.
+
+- The `mneme.bot.spawn` MCP tool + `mneme squad` CLI now pass through
+  the `engine` tag in their response payload.
+
+### NEW: Plain-English explainer + `mneme verify` command
+
+- `acgv_explain.ts` translates an ACGVResult into:
+  - `headline` (≤90 chars, AI quotes verbatim)
+  - `plain` (2-3 sentence layperson summary, no math jargon by default)
+  - `nextAction` (ONE concrete step the user can take)
+  - `trafficLight` (`green` / `yellow` / `red` / `black`)
+  - `confidencePct` (e.g. "99%")
+
+- `mneme verify <claim>` is the friendly entry point most users should
+  reach for. Plain output by default; `--explain` surfaces the ACGV
+  layer breakdown; `--json` produces a machine-readable payload for AI
+  agents; `--counter-evidence "p1|p2|p3"` feeds the Confession layer
+  inline. Example:
+
+  ```
+  $ mneme verify "Mneme is written in Rust"
+  🌑 IMPOSSIBLE -- REFUTED -- language=rust is impossible in this repo (99%)
+  Claim: "Mneme is written in Rust"
+  What this means:
+    This claim cannot be true. Mneme proved that language=rust contradicts
+    what's actually on disk + in git history (no matching files, no commits,
+    no package.json entry). The proof is formal, not heuristic.
+  Next step:
+    -> Do NOT relay this claim to the user. Retract or fix the false part
+       and re-verify.
+  ```
+
+### NEW: Tests
+
+- `packages/core/src/squadron/acgv_v152.test.ts` -- 12 new vitest cases:
+  - Plain-English explainer per verdict (IMPOSSIBLE_REFUTE / FUSION /
+    PASSTHROUGH render with the right traffic light + action).
+  - `godelPostMortemZ3` returns an `engine` tag (z3 or propositional).
+  - UNSAT for the Rust-on-TypeScript repo with either engine.
+  - SKIPPED on FUSION (no need to invoke SAT).
+  - `runACGVAsync` round-trip: IMPOSSIBLE_REFUTE -> vaccine emit ->
+    AUTO_REFUTE short-circuit on re-call.
+
+  Total ACGV coverage: **41 dedicated tests** + 1 critical regression
+  test against the Rust-lie smoking gun.
+
+- Full suite remains green at **5822/5822** after snapshot refresh.
+
+### Mandate compliance
+
+- **Wild idea**: optional Z3 SAT path that gracefully degrades to free
+  propositional check. Most "world-class" formal tools force the heavy
+  dep on everyone; Mneme keeps the free path canonical.
+- **Wiser, not patched**: the explainer is a SEPARATE module that
+  consumes the ACGV result, not a string-templating shortcut buried in
+  the orchestrator. Lets future surfaces (web, MCP, vscode) reuse the
+  same translation layer.
+- **Self-fix root cause**: the v1.51 ship surfaced a real UX gap (user
+  said "I'm a user and still confused" about the math output). v1.52
+  ships a separate user-facing layer rather than burying jargon
+  defaults into the squad command.
+- **Co-working**: the new `engine` tag and explained verdict are
+  ADDITIVE on top of the existing ACGVResult. No legacy field changed.
+- **Always-studying**: every Z3-certified IMPOSSIBLE_REFUTE still emits
+  a vaccine + bumps karma -- the formal proof feeds the same
+  stigmergy-immunity loop.
+
+### Files added
+
+```
+packages/core/src/squadron/acgv_godel_z3.ts    (Z3 SAT integration)
+packages/core/src/squadron/acgv_explain.ts     (plain-English layer)
+packages/core/src/squadron/acgv_v152.test.ts   (12 vitest cases)
+packages/cli/src/commands/demo.ts              (registerVerifyCommand)
+packages/cli/src/index.ts                      (wires verify command)
+packages/core/src/index.ts                     (2 new exports)
+packages/core/package.json                     (z3-solver as optional)
+```
+
 ## [1.51.0] — 2026-05-11
 
 **ACGV PROTOCOL -- Aletheia Chandrasekhar-Neutrino-Godel Verifier +

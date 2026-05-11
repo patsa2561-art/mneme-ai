@@ -47,6 +47,7 @@ import { extractFactClaims } from "./fact_grounding.js";
 import { groundAllClaims, type GroundingResult } from "./acgv_neutrino.js";
 import { chandrasekharCollapse, type ChandrasekharResult } from "./acgv_chandrasekhar.js";
 import { godelPostMortem, type GodelResult } from "./acgv_godel.js";
+import { godelPostMortemZ3, type GodelZ3Result } from "./acgv_godel_z3.js";
 import { evaluateConfession, requestConfession, type ConfessionRequest, type ConfessionVerdict } from "./acgv_confession.js";
 import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vaccine.js";
 import { noteBotOutcome } from "./acgv_stake.js";
@@ -107,6 +108,69 @@ const CAVEAT_TAGS = {
 
 /** Run the full ACGV pipeline. Pure-ish: only side effects are the
  *  vaccine bank append + karma ledger writes (both off by default flags). */
+/** v1.52.0 -- async variant that runs the Z3 SAT solver alongside the
+ *  propositional Godel check (when z3-solver is installed). Returns the
+ *  same ACGVResult shape, but `layers.godel.engine` is exposed via the
+ *  cast to GodelZ3Result so callers can see which engine carried the
+ *  verdict. Free-first users without z3-solver get the propositional
+ *  result -- no install burden. */
+export async function runACGVAsync(input: ACGVRunInput): Promise<ACGVResult & { engine: "z3" | "propositional" }> {
+  // Run the sync pipeline up to + including chandrasekhar; we'll upgrade
+  // the godel layer with Z3 if available, then re-evaluate the verdict.
+  const prelim = runACGV({ ...input, noEmitVaccine: true, noStake: true });
+  if (prelim.verdict === "PASSTHROUGH" || prelim.verdict === "AUTO_REFUTE" || prelim.verdict === "FUSION") {
+    // No need for Z3 upgrade -- propositional already conclusive (or
+    // there's nothing to prove against).
+    return { ...prelim, engine: "propositional" };
+  }
+
+  // Re-run Godel with Z3 over the same grounding + Chandrasekhar.
+  const z3Godel = await godelPostMortemZ3(prelim.layers.chandrasekhar, prelim.layers.grounding);
+  const upgraded = z3Godel.upgrade && prelim.verdict !== "IMPOSSIBLE_REFUTE";
+
+  // Decide final verdict considering Z3 outcome.
+  const finalResult: ACGVResult = upgraded
+    ? {
+        ...prelim,
+        verdict: "IMPOSSIBLE_REFUTE",
+        confidence: 0.99,
+        caveats: [...prelim.caveats, "Z3_UNSAT_PROOF"].filter((c, i, a) => a.indexOf(c) === i),
+        layers: { ...prelim.layers, godel: z3Godel },
+        summary: `IMPOSSIBLE_REFUTE -- Z3 SAT solver returned UNSAT for the compound claim. ${prelim.summary}`,
+        reasoning: `${prelim.reasoning}\n\n${z3Godel.certificate}`,
+      }
+    : { ...prelim, layers: { ...prelim.layers, godel: z3Godel } };
+
+  // Emit vaccine + stake updates only on the final verdict (skipped above).
+  if (!input.noEmitVaccine && (finalResult.verdict === "IMPOSSIBLE_REFUTE" || finalResult.verdict === "BLACK_HOLE")) {
+    const sig = `${finalResult.verdict} :: ` + finalResult.layers.chandrasekhar.citations
+      .filter((c) => c.verdict === "false")
+      .map((c) => c.asserted)
+      .join(" + ");
+    emitVaccine(input.repoRoot, input.claim, sig || finalResult.verdict);
+    finalResult.vaccineEmitted = true;
+  }
+  if (!input.noStake && input.botFindings) {
+    const refuteOutcome = finalResult.verdict === "IMPOSSIBLE_REFUTE" || finalResult.verdict === "BLACK_HOLE";
+    const supportOutcome = finalResult.verdict === "FUSION";
+    for (const f of input.botFindings) {
+      let correct: boolean | null = null;
+      if (refuteOutcome) {
+        if (f.verdict === "contradicts") correct = true;
+        else if (f.verdict === "supports") correct = false;
+      } else if (supportOutcome) {
+        if (f.verdict === "supports") correct = true;
+        else if (f.verdict === "contradicts") correct = false;
+      }
+      if (correct !== null) {
+        try { noteBotOutcome(input.repoRoot, f.bot, f.confidence, correct); } catch { /* best-effort */ }
+      }
+    }
+  }
+
+  return { ...finalResult, engine: z3Godel.engine };
+}
+
 export function runACGV(input: ACGVRunInput): ACGVResult {
   const claim = (input.claim ?? "").trim();
   const repoRoot = input.repoRoot;

@@ -227,6 +227,71 @@ ran on top (compliance-grade evidence quorum).
 }
 
 // ─── mneme health (= mneme.system.health) ────────────────────────────
+// ─── mneme verify (v1.52.0 friendly UX) ──────────────────────────────
+export function registerVerifyCommand(program: Command): void {
+  program
+    .command("verify <claim...>")
+    .description("Fast truth-check on a claim. Plain-English verdict (TRUSTWORTHY / MIXED / REFUTED / IMPOSSIBLE) anchored to the ACGV pipeline. Pass --explain for the math; --json for machine output.")
+    .option("--json", "Structured JSON output for AI agents.")
+    .option("--explain", "Surface the ACGV layer breakdown (Chandrasekhar / Neutrino / Godel / Vaccine).")
+    .option("--counter-evidence <points>", "Pipe-separated counter-points to feed the Confession layer.")
+    .option("--engine <name>", "'z3' = use Z3 SAT (requires optional z3-solver); 'propositional' = fast path (default 'z3' when available).", "z3")
+    .addHelpText("after", `
+Examples:
+  $ mneme verify "the codebase is healthy"
+  $ mneme verify "this depends on typescript" --explain
+  $ mneme verify "v1.51 introduced a regression" --counter-evidence "tests still pass|no revert commits"
+
+How to read the verdict:
+  TRUSTWORTHY  every assertion grounds in the repo + git history -- safe to relay
+  MIXED        some assertions ground, others don't -- ask Mneme to drill deeper
+  REFUTED      Mneme found contradictory evidence -- retract the claim
+  IMPOSSIBLE   Godel SAT proof: no repo state can satisfy this claim -- formal refute
+`)
+    .action(async (claimWords: string[], opts: { json?: boolean; explain?: boolean; counterEvidence?: string; engine?: string }) => {
+      const claim = claimWords.join(" ");
+      const { acgv, acgvExplain } = await import("@mneme-ai/core");
+      const counter = opts.counterEvidence ? opts.counterEvidence.split("|").map((s) => s.trim()).filter(Boolean) : undefined;
+      const result = opts.engine === "propositional"
+        ? acgv.runACGV({ claim, repoRoot: process.cwd(), counterEvidence: counter })
+        : await acgv.runACGVAsync({ claim, repoRoot: process.cwd(), counterEvidence: counter });
+      const explained = acgvExplain.explain(result, claim);
+
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ verdict: result.verdict, confidence: result.confidence, headline: explained.headline, plain: explained.plain, nextAction: explained.nextAction, trafficLight: explained.trafficLight, engine: (result as { engine?: string }).engine ?? "propositional", acgv: result }, null, 2) + "\n");
+        return;
+      }
+
+      const lines = acgvExplain.renderExplained(explained, claim);
+      for (const l of lines) writeText(l);
+
+      if (opts.explain) {
+        writeText(``);
+        writeText(`-- ACGV layer breakdown --`);
+        const c = result.layers.chandrasekhar;
+        if (c.verdict !== "UNKNOWN_MASS") {
+          writeText(`  Chandrasekhar: mass=${c.mass.toFixed(2)} density=${c.density.toFixed(3)} verdict=${c.verdict}`);
+          writeText(`                 thresholds: rho_crit_low=${c.rhoCritLow.toFixed(3)} rho_crit_high=${c.rhoCritHigh.toFixed(3)}`);
+        }
+        if (result.layers.grounding.length > 0) {
+          writeText(`  Neutrino (per assertion):`);
+          for (const g of result.layers.grounding) {
+            writeText(`    ${g.claim.kind}=${g.claim.asserted} -> surface=${g.surface.score.toFixed(2)} substrate=${g.substrate.score.toFixed(2)} spectrum=${g.spectrum.score.toFixed(2)} harmonic=${g.harmonic.toFixed(2)}`);
+          }
+        }
+        const engine = (result as { engine?: string }).engine;
+        if (result.layers.godel.status === "UNSAT") {
+          writeText(`  Godel: UNSAT proof (engine=${engine ?? "propositional"})`);
+          for (const u of result.layers.godel.core.slice(0, 3)) writeText(`    ${u.asserted}`);
+        } else if (result.layers.godel.status !== "SKIPPED") {
+          writeText(`  Godel: ${result.layers.godel.status} (engine=${engine ?? "propositional"})`);
+        }
+        if (result.vaccineEmitted) writeText(`  Vaccine: emitted for future variants`);
+        if (result.layers.confession) writeText(`  Confession: ${result.layers.confession.responded ? `${result.layers.confession.pointCount} point(s), ${result.layers.confession.groundedCount} grounded` : "none supplied"}`);
+      }
+    });
+}
+
 export function registerHealthCommand(program: Command): void {
   const health = program
     .command("health")
