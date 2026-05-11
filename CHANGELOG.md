@@ -8,6 +8,113 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.40.0] — 2026-05-12
+
+**UNIVERSAL FUNCTION-CALLING ADAPTER + 21-bug PUBLIC ROADMAP.**
+
+This release ships ONE new feature (the universal adapter) AND
+publicly acknowledges a 21-item bug list a tester reported. Per user
+mandate ("STOP shipping features — fix bugs first"), v1.41+ will be
+DEDICATED to bug fixes with NO new features until the list is clean.
+
+### NEW: Universal function-calling adapter
+
+`packages/core/src/universal/adapter.ts`. Exports Mneme's tool catalog
+in three native function-call formats so AI clients can consume Mneme
+tools WITHOUT MCP:
+
+- `exportOpenAI(tools)` → `[{ type: 'function', function: { name,
+  description, parameters } }]`
+- `exportAnthropic(tools)` → `[{ name, description, input_schema }]`
+- `exportGemini(tools)` → `{ functionDeclarations: [{ name,
+  description, parameters }] }`
+
+**KILLER IDEA — SCHEMA MOLECULES**: pre-bundled multi-tool sequences
+the AI invokes as ONE function call:
+- `mneme.audit-before-merge` — antivirus + forensics + premortem +
+  grader (fan-out-grade strategy)
+- `mneme.who-knows-this` — memory + people + atrophy (parallel)
+- `mneme.before-refactor` — time-machine + premortem + bus-factor
+  + atrophy (parallel)
+- `mneme.compliance-grade` — squadron WITH advocate + audit (sequential)
+
+Vendor-neutral intermediate format projects to each vendor's shape
+— adding a 4th vendor is one new projection function, not a rewrite.
+
+`recordAdapterCall()` appends every call to
+`.mneme/universal/calls.jsonl` so the daemon's reactor can compute
+which (vendor, tool) combos are most-used + auto-promote them to new
+molecules.
+
+14 tests cover schema correctness across all 3 vendors + WILD
+invariants (vendor-neutral fidelity: same tool count, identical
+function names across vendors).
+
+### 🚨 Public 21-bug roadmap (per user mandate)
+
+A tester's batch surfaced 21 issues. v1.40.0 acknowledges them
+publicly — no quiet defer:
+
+#### Critical (release-blockers)
+1. **8KB JSON truncation** — `quality.repo_mri` / `insights.oracle` /
+   `insights.ghost` truncate at position ~8192. Buffer limit in MCP
+   transport. **v1.41.0 Module 1.**
+2. **`forensics.*` routing dead** — entire category broken.
+   **v1.41.0 Module 2.**
+3. **FTS5 missing on macOS** — v1.30.0 shipped detect module but it's
+   NOT WIRED into the actual `mneme index` path. **v1.41.0 Module 3.**
+4. **WASM embedder** `require is not defined` (ESM/CJS confusion) →
+   falls back to hash. **v1.41.0 Module 4.**
+5. **MCP server version drift** — CLI shows current but running MCP
+   reports stale. **v1.41.0 Module 5** (restart-hint broadcast on
+   version photon shift).
+6. **`meta.advanced` --json** unknown flag. **v1.41.0 Module 6.**
+
+#### Honesty fixes (required before Compliance product)
+7. Welcome misleading "Spore remote auto-detected" wording.
+8. `encryptionEnabled: false` decorative flag (lineage doesn't import
+   vault.js for 14 versions). **REMOVE the flag** until wired.
+9. Stale source comment `// v1.20 adds AES-256-GCM` (19 versions
+   later, never landed). REMOVE.
+10. `understand_intent` 100% confidence on shallow keyword match.
+11. "SOC2 / PCI-DSS / EU AI Act audit-grade" overreach. Soften to
+    "audit-trail-ready."
+
+#### Risky-pattern fixes
+12. **AUTO-ACTION protocol** → change `EXECUTE NOW` to `SUGGEST`.
+13. **Caretaker auto-action every 15min** — surface diff, not silent.
+14. **Welcome `userMessageTemplate`** — REMOVE; Mneme should not
+    script the AI's words.
+15. **Auto-detect git remote prepares push** — make explicit opt-in.
+
+#### Naming + bloat fixes
+16. **Default tool catalog 20 not 172** — make curator (v1.35) the
+    DEFAULT MCP path.
+17. **Metaphor names** alias to `verb.noun`.
+18. **Trigger phrases EN+TH** — pick one or compress.
+19. **`replay.jsonl` no rotation** — file grows forever.
+20. **CLI help 1500+ lines** — paginate/level it.
+21. **"TEACHER vs STUDENT" framing** → "context provider."
+
+### v1.41+ shipping rule (locked in)
+
+> "STOP shipping features. Fix bugs first. Each release smoke-tests
+> all tools."
+
+### Tests
+
++14 (universal/adapter). Suite: **5403 / 5403 passing**.
+
+### Mandate scoreboard
+
+| Mandate | This release |
+|---|---|
+| Wild idea | ✓ SCHEMA MOLECULES (vendor-neutral pre-bundled tool sequences) |
+| Wiser | ✓ vendor-neutral format projects to each vendor (adding a 4th = one function) |
+| Self-fix root cause | ✓ public bug roadmap with explicit owners; no quiet defer |
+| Co-working | ✓ universal adapter wires to v1.35 curator + v1.39 advocate (compliance molecule routes through requireAdvocate=true) |
+| Always-studying | ✓ adapter call telemetry feeds reactor for next-version molecule promotion |
+
 ## [1.39.0] — 2026-05-12
 
 **🚨 CRITICAL FIX -- Bot Squadron confirmation bias.** A tester gave

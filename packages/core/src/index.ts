@@ -142,6 +142,12 @@ export * as autoship from "./autoship/cycle.js";
 // laundering + absence-of-evidence + irrelevant citations. The
 // quorum aggregator caps consensus when bias signals fire.
 export * as squadronAdvocate from "./squadron/advocate.js";
+// v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
+// in OpenAI / Anthropic / Gemini native function-call schema formats
+// so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
+// pre-bundle multi-tool sequences (audit-before-merge / who-knows-this
+// / before-refactor / compliance-grade) for one-call invocation.
+export * as universalAdapter from "./universal/adapter.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
