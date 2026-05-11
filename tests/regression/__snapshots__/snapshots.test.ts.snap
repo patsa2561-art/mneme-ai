@@ -97,6 +97,7 @@ Commands:
   soul  >  Shortcut for \`mneme companion soul\` — your AI's per-vendor diary (commitments kept/broken).
   consent  >  Shortcut for \`mneme companion consent\` — view / renew / revoke your repo's Mneme consent grant.
   greet [options]  >  AI handshake — let Mneme know which AI vendor is active in this session (so Soul Mirror tracks CLI-only activity, not just MCP).
+  powers  >  The 9 Powers — Mneme's permanence engine. Status, gravity, manifesto, capsule, war-game, treasury, scenarios.
   cloud  >  Smart Cloud Connectivity — probe / queue / drain. Local-first; cloud is OPTIONAL relay (vaccine CDN, federated PRECOG, compliance scoreboard).
   pharmacopoeia|phr  >  Vaccine CDN auto-distribution (Demon Stage 1.1) — pull + atomically swap pharmacopoeia bundle from a public/private CDN.
   parasite  >  Parasite bridge installer (Demon Stage 1.2) — inject Mneme bridge into other AI tools' configs (Cursor / Continue / Aider / Codex / Gemini / Windsurf / Claude Code project). Always sentinel-bracketed + reversible.

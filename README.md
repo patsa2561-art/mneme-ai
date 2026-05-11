@@ -769,76 +769,42 @@ Any AI vendor talks to Mneme via HTTP — not just MCP-compliant ones. Mneme = A
 
 ---
 
-<details>
-<summary><h2 style="display:inline">📊 What's solid vs what's still maturing (honest)</h2></summary>
+<details open>
+<summary><h2 style="display:inline">🔱 Mneme has 9 Powers</h2></summary>
+
+Beyond the day-1 features, Mneme runs a **permanence engine** of 9 capabilities. Each one is a structural advantage that survives a different kind of disruption — tech-paradigm shift, jurisdiction change, fork attack, post-AGI futures, and so on. They're real code in [`packages/core/src/powers/`](packages/core/src/powers/), not slides. Run `mneme powers status` to see the live state.
 
 ```
-   ┌──────────────────────────────────────────────────────────────────┐
-   │                                                                  │
-   │   🟢 SOLID         🟡 TIER-DEPENDENT       🟠 RESEARCH-GRADE      │
-   │                                                                  │
-   │  ▸ guard           ▸ memory.ask          ▸ adversarial          │
-   │  ▸ atrophy         ▸ memory.search       ▸ evolve (Phase 3-5)   │
-   │  ▸ premortem       ▸ who-knows           ▸ oracle precog        │
-   │  ▸ stigmergy        (★★ → ★★★★★)         ▸ forensics (CWE)      │
-   │  ▸ antivirus                                                     │
-   │  ▸ uninstall       quality scales         interesting +         │
-   │  ▸ overnight       with embedder tier     maturing fast         │
-   │                                                                  │
-   │  → ship to prod    → run `mneme           → use as triage        │
-   │    today             embeddings upgrade'    not as gate          │
-   │                                                                  │
-   └──────────────────────────────────────────────────────────────────┘
-
-       Mneme is the *memory + awareness layer* for AI tools.
-       Where a more mature tool fits a job, prefer the mature tool.
+                          ┌──────────────────────────┐
+                          │   MNEME · 9 POWERS       │
+                          │   permanence engine      │
+                          └─────────────┬────────────┘
+                                        │
+       ┌──────────────────────┬─────────┼──────────┬──────────────────────┐
+       │                      │         │          │                      │
+   STRUCTURAL            DEFENSIVE   ECONOMIC   STRATEGIC             ARCHIVAL
+   ──────────            ─────────   ────────   ─────────             ────────
+   P1 substrate          P5 anti-    P7 DAO     P3 dialect            P9 Rosetta
+      independence          fork        treasury    ownership             capsule
+   P2 sovereign          P6 attacks  policy +   P4 ALETHEIA           1000-year
+      infrastructure        become      runway      Manifesto             archive
+                            vaccines                P8 5-scenario
+                                                    futures
 ```
 
-Mneme ships a lot of surface area. Here's what's actually production-ready vs what's research-grade. We'd rather under-promise than have you discover this the hard way.
+| # | Power | What it actually does today | Run it |
+|---|---|---|---|
+| **P1** | **Substrate Independence** | Mneme PROTOCOL is a 25-capability spec separate from this TS/Node implementation. Future Q# / Rust / neural ports validate against the same spec. | `mneme powers spec` |
+| **P2** | **Sovereign Infrastructure** | Audit decentralization across nodes + jurisdictions; flag single-jurisdiction concentration (HHI math). Verdict: embryonic → regional → multi-jurisdictional → sovereign. | `mneme powers status` |
+| **P3** | **Language Ownership** | 10-term Mneme dialect (Aletheia score, mneme'd, chromosome, spore, vaccine, …) tracked vs competing terms via `git grep`; "dialect index" surfaces who dominates the local corpus. | (programmatic) |
+| **P4** | **Philosophical Moat** | The **ALETHEIA Manifesto** — 9 articles (M-001..M-009) with forever-stable IDs that any code change can be auto-graded against. | `mneme powers manifesto` |
+| **P5** | **Anti-Fork Immunity** | "Network gravity" score across 6 axes: vaccines, replay chain, ratified cards, handshakes, CLI ticks, pheromones. Verdict: vulnerable → costly → prohibitive → impossible. | `mneme powers gravity` |
+| **P6** | **Adversarial Resilience** | Attack log → auto-promote 2× signatures into vaccine drafts → war-game replays detection rate + MTTD. Verdict: weakened → baseline → hardened → antifragile. | `mneme powers wargame` |
+| **P7** | **Autonomous Economy** | DAO treasury simulator: 60/20/10/10 split (R&D / bug-bounty / vendor outreach / validator yield) with a rainy-day floor. Project N months forward at any monthly revenue. | `mneme powers treasury <usd>` |
+| **P8** | **Existential Niche** | Five forever-future scenarios (AGI / quantum-AI / climate / interplanetary / post-human), each with a markdown position paper + partner candidates. | `mneme powers scenario <key>` |
+| **P9** | **Inherits-the-Earth** | **Rosetta capsule**: a single self-describing JSON bundling spec + manifesto + wisdom packs + chain heads + plain-English decoding instructions. Hash-chained back to the previous capsule. Designed to be readable a millennium from now. | `mneme powers capsule` |
 
-**Solid — use it in production:**
-
-| Feature | Why it works |
-|---|---|
-| `mneme guard` (pre-commit hook) | Pattern-matching on staged diffs. No model magic — fast + deterministic. |
-| `mneme atrophy` | Knowledge half-life from git history. Math is solid, output is honest. |
-| `mneme premortem` | Failure-history-grounded regret prediction. No competitor does this. |
-| `mneme stigmergy` (`hive`) | Emergent collaboration from git traces. Verified on a synthetic fixture. |
-| `mneme antivirus scan / gap-scan / synthesize` | Vaccine framework with 5066+ tests. NO LLM in hot path. |
-| `mneme uninstall` | Removes EVERY artifact + reports `COMPLETE`/`PARTIAL`/`INCOMPLETE`. |
-
-**Tier-dependent — quality scales with your embedder:**
-
-| Memory layer surface | Hash tier (★★) | Bundled MiniLM (★★★) | Ollama (★★★★) | OpenAI (★★★★★) |
-|---|---|---|---|---|
-| `mneme ask`, `mneme why`, `mneme who-knows` | keyword overlap | real semantic | better recall | best |
-| `mneme.memory.*` MCP tools | works but degraded | usable | good | excellent |
-| Citations / RAG output | low precision | usable | good | excellent |
-
-> **Run `mneme embeddings status` to see your active tier + a real similarity test.**
-> **Run `mneme embeddings upgrade` to force-download the bundled MiniLM (~25MB) for ★★★ semantic search with no API key.**
-
-**Research-grade — interesting but maturing:**
-
-| Feature | What's mature | What's not |
-|---|---|---|
-| `mneme adversarial` | Test idea is unique | Calibration vs real AI clients still in early benchmarks |
-| `mneme evolve` (Phase 3-5) | Synthesis + tsc/vitest gates work | Patch acceptance rate still depends on template breadth |
-| `mneme oracle precog` | Markov bigram + ACO pheromones run | Hint quality depends on ≥ 1 month of usage data |
-| `mneme forensics` (CWE) | 11 CWE patterns + Bayesian rerank | Regex-shaped — high precision on known shapes, low on novel ones (use Semgrep for production security gates) |
-
-**Use the right tool for the job:**
-
-| If you need… | Use… |
-|---|---|
-| Semantic code search across a big repo | Cursor / Claude Code / Copilot Chat |
-| Production security gating | Semgrep (free) or Snyk |
-| Code review / refactor | Claude Code |
-| Memory between AI sessions | Mneme (this is the unique value) |
-| Knowledge atrophy / phantom-collaborator analysis | Mneme (no competitor does this) |
-| Vaccine for AI hallucinations | Mneme antivirus (no competitor does this) |
-
-Mneme is the *memory + awareness layer for AI tools*, not a replacement for the tools you already trust. Where it overlaps with mature tools, prefer the mature tool.
+> **Honest note.** P1-P9 modules + tests are in code today. Their *organizational* unlocks (1000-node DAO, NGO foundation, on-chain governance, NASA partnership, 1000-year archive vault) are what the next decade looks like. Mneme ships the engine; the world wires the rest.
 
 </details>
 

@@ -106,6 +106,7 @@ import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, reg
 import { registerComplianceCommand } from "./commands/compliance.js";
 import { registerCompanionCommand, registerCompanionShortcuts } from "./commands/companion.js";
 import { registerGreetCommand } from "./commands/greet.js";
+import { registerPowersCommand } from "./commands/powers.js";
 import { registerCloudCommand } from "./commands/cloud.js";
 import { registerPharmacopoeiaCommand, registerParasiteCommand, registerAletheiaCommand } from "./commands/demon_stage_one.js";
 import { registerTeethCommand, registerWingsCommand, registerGodModeCommand, registerAvatarCommand } from "./commands/demon_stages_two_to_five.js";
@@ -2472,6 +2473,8 @@ export async function run(argv: string[]): Promise<void> {
   // v1.46.0 (#8 fix) — AI handshake. AI agents call `mneme greet`
   // once per session so Mneme can attribute CLI activity to a vendor.
   registerGreetCommand(program);
+  // v1.48.0 -- The 9 Powers permanence engine.
+  registerPowersCommand(program);
   // ─── Smart Cloud Connectivity (v1.42.4) — probe / queue / drain.
   // Local-first: cloud is OPTIONAL relay. Layer absorbs all network
   // failures so the AI agent never sees a connectivity error.

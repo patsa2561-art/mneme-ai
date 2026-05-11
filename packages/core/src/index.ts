@@ -120,6 +120,25 @@ export { resolveMnemeVersion } from "./mneme_version.js";
 // `mneme greet --vendor X` once per session + every CLI invocation
 // records an activity tick against the active vendor.
 export * as aiHandshake from "./ai_handshake.js";
+// v1.48.0 -- THE 9 POWERS. Each module is a concrete capability that
+// pushes Mneme past "Tier-1 demon" into permanence. Substrate
+// independence (P1) makes the protocol outlive any implementation;
+// sovereign infrastructure (P2) audits decentralization; language
+// ownership (P3) tracks dialect spread; philosophical moat (P4) is
+// the ALETHEIA Manifesto; anti-fork immunity (P5) measures network
+// gravity; adversarial resilience (P6) auto-vaccinates from the
+// attack log; autonomous economy (P7) simulates DAO treasury policy;
+// existential niche (P8) renders position papers for 5 future
+// scenarios; inherits-the-earth (P9) packages Rosetta capsules.
+export * as powerSubstrate from "./powers/p1_substrate.js";
+export * as powerSovereign from "./powers/p2_sovereign.js";
+export * as powerLanguage from "./powers/p3_language.js";
+export * as powerPhilosophical from "./powers/p4_philosophical.js";
+export * as powerAntifork from "./powers/p5_antifork.js";
+export * as powerAdversarial from "./powers/p6_adversarial.js";
+export * as powerAutonomous from "./powers/p7_autonomous.js";
+export * as powerExistential from "./powers/p8_existential.js";
+export * as powerInherits from "./powers/p9_inherits.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +
