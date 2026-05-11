@@ -98,10 +98,12 @@ export function registerToolsCommand(program: Command): void {
 export function registerBotCommand(program: Command): void {
   program
     .command("squad <claim...>")
-    .description("Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator on top so the verdict is bias-aware. Example: `mneme squad \"the auth refactor in v1.42 introduced a regression\"`")
+    .description("Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator + v1.51 ACGV (Chandrasekhar/Neutrino/Godel/Confession/Vaccine/Stake) on top so the verdict is bias-aware AND repo-grounded. Example: `mneme squad \"the auth refactor in v1.42 introduced a regression\"`")
     .option("--json", "JSON output.")
     .option("--no-advocate", "Skip the v1.39 devil's advocate (legacy verdict only). Default: advocate ON.")
     .option("--require-advocate", "COMPLIANCE-GRADE: refuse to verdict without the advocate present.")
+    .option("--no-acgv", "Skip the v1.51 ACGV pre-filter (Chandrasekhar / Neutrino / Godel / Vaccine).")
+    .option("--counter-evidence <points>", "Inline confession: '|'-separated counter-points (e.g. 'no .rs files|no Cargo.toml|node daemon'). Triggers Confession layer.")
     .addHelpText("after", `
 Examples:
   $ mneme squad "the auth refactor in v1.42 introduced a regression"
@@ -113,15 +115,16 @@ The claim should be a single sentence -- the squadron splits it across 6 angles
 --require-advocate the verdict refuses to render unless DEVIL'S ADVOCATE
 ran on top (compliance-grade evidence quorum).
 `)
-    .action(async (claim: string[], opts: { advocate?: boolean; requireAdvocate?: boolean } & CommonOpts) => {
+    .action(async (claim: string[], opts: { advocate?: boolean; requireAdvocate?: boolean; acgv?: boolean; counterEvidence?: string } & CommonOpts) => {
       const { runSquadron } = await import("@mneme-ai/mcp/tools/squadron");
       const { squadronAdvocate } = await import("@mneme-ai/core");
       const text = claim.join(" ");
-      writeText(`🚀 Spawning 6-bot squadron + 🦹 devil's advocate — claim: "${text.slice(0, 80)}"…\n`);
+      const counter = opts.counterEvidence ? opts.counterEvidence.split("|").map((s) => s.trim()).filter(Boolean) : undefined;
+      writeText(`🚀 Spawning 6-bot squadron + 🦹 advocate + 🌌 ACGV — claim: "${text.slice(0, 80)}"…\n`);
       // Build a minimal runtime so the squadron can call git etc.
       const { buildRuntime } = await import("@mneme-ai/mcp/tools/runtime");
       const rt = await buildRuntime(process.cwd());
-      const verdict = await runSquadron({ rt, claim: text });
+      const verdict = await runSquadron({ rt, claim: text }, undefined, { skipAcgv: opts.acgv === false, counterEvidence: counter });
 
       // v1.39+ DEVIL'S ADVOCATE + EVIDENCE QUORUM. Run the advocate
       // over the squad's findings, then re-aggregate with bias-aware
@@ -145,9 +148,49 @@ ran on top (compliance-grade evidence quorum).
         requireAdvocate: !!opts.requireAdvocate,
       });
 
-      if (opts.json) { writeJson({ legacyVerdict: verdict, advocate: advocateFinding, quorum }); return; }
+      if (opts.json) { writeJson({ legacyVerdict: verdict, advocate: advocateFinding, quorum, acgv: verdict.acgv }); return; }
 
-      // Render: advocate-aware verdict FIRST, legacy verdict second for diff transparency.
+      // v1.51.0 -- ACGV verdict surfaces FIRST when authoritative. It uses
+      // hard repo grounding, not pattern matching, so its verdict overrides
+      // the legacy quorum for IMPOSSIBLE_REFUTE / BLACK_HOLE / AUTO_REFUTE.
+      if (verdict.acgv && verdict.acgv.verdict !== "PASSTHROUGH") {
+        const acgvGlyph = {
+          IMPOSSIBLE_REFUTE: "🌑 IMPOSSIBLE_REFUTE",
+          AUTO_REFUTE:       "🦠 AUTO_REFUTE (vaccine match)",
+          BLACK_HOLE:        "🕳 BLACK_HOLE collapse",
+          FUSION:            "☀ FUSION",
+          LIMBO:             "🌫 LIMBO (REFUSE_VERDICT)",
+          PASSTHROUGH:       "·",
+        }[verdict.acgv.verdict];
+        writeText(`${acgvGlyph} (ACGV · v1.51+) · confidence ${(verdict.acgv.confidence * 100).toFixed(0)}%`);
+        const c = verdict.acgv.layers.chandrasekhar;
+        if (c.verdict !== "UNKNOWN_MASS") {
+          writeText(`   mass=${c.mass.toFixed(1)} · density=${c.density.toFixed(3)} · rho_crit=[${c.rhoCritLow.toFixed(3)}, ${c.rhoCritHigh.toFixed(3)}]`);
+        }
+        if (verdict.acgv.layers.grounding.length > 0) {
+          writeText(`   neutrino flavors:`);
+          for (const g of verdict.acgv.layers.grounding) {
+            writeText(`     ${g.claim.kind}=${g.claim.asserted} → surface=${g.surface.score.toFixed(2)} · substrate=${g.substrate.score.toFixed(2)} · spectrum=${g.spectrum.score.toFixed(2)} · harmonic=${g.harmonic.toFixed(2)}`);
+          }
+        }
+        if (verdict.acgv.layers.godel.status === "UNSAT") {
+          writeText(`   godel UNSAT-core (${verdict.acgv.layers.godel.core.length} constraint(s) simultaneously unsatisfiable):`);
+          for (const u of verdict.acgv.layers.godel.core.slice(0, 3)) {
+            writeText(`     ${u.asserted}`);
+          }
+        }
+        if (verdict.acgv.layers.confession) {
+          writeText(`   confession: ${verdict.acgv.layers.confession.responded ? `${verdict.acgv.layers.confession.pointCount} point(s), ${verdict.acgv.layers.confession.groundedCount} grounded` : "no counter-evidence supplied"}`);
+        } else if (verdict.acgv.layers.confessionRequest) {
+          writeText(`   confession: PENDING -- supply counter-evidence with --counter-evidence "p1|p2|p3" to lock in verdict`);
+        }
+        if (verdict.acgv.vaccineEmitted) {
+          writeText(`   vaccine emitted -- future variants of this lie will auto-refute in microseconds`);
+        }
+        writeText(``);
+      }
+
+      // Render: advocate-aware verdict (NEXT), legacy verdict (LAST) for diff transparency.
       const quorumGlyph =
         quorum.consensus === "verdict_for" ? "✅ SUPPORTED" :
         quorum.consensus === "verdict_against" ? "❌ CONTRADICTED" :

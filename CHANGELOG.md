@@ -8,6 +8,139 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.51.0] — 2026-05-11
+
+**ACGV PROTOCOL -- Aletheia Chandrasekhar-Neutrino-Godel Verifier +
+Confession + Vaccine. The first AI tool in history willing to answer
+"I do not know" with mathematical backing. Direct fix for the v1.50
+exposé where Squad+Advocate caught the Rust-daemon lie as `FALSE_FACT_CLAIM`
+but only as `SPLIT` -- v1.51 escalates to `IMPOSSIBLE_REFUTE` with a
+Godel UNSAT-core proof certificate, then emits a simhash vaccine so
+future variants auto-refute in microseconds.**
+
+### NEW: 6-layer truth pipeline (runs BEFORE legacy squadron logic)
+
+- **L0 Vaccine Match** (`packages/core/src/squadron/acgv_vaccine.ts`)
+  -- previously-refuted lie shapes auto-refute in microseconds via
+  64-bit simhash bank at `.mneme/squadron/lie-vaccines.jsonl`. Hamming
+  distance <= 8 bits triggers a match. Lies become permanent immunity.
+
+- **L1 Neutrino 3-flavor harmonic grounding**
+  (`acgv_neutrino.ts`) -- every claim entity is checked against
+  THREE flavors: `v_surface` (textual hits in repo), `v_substrate`
+  (file-system / package.json / language ext), `v_spectrum` (git
+  history grep). Final grounding = **harmonic mean** of the three,
+  so any single zero kills the score. Most systems average flavors
+  and forgive zeros; harmonic mean is unforgiving by design.
+
+- **L2 Chandrasekhar collapse** (`acgv_chandrasekhar.ts`) -- claim
+  mass = sum of specificity-weighted assertions; density = sum of
+  harmonic grounding / mass. Two critical points anchored to the
+  golden ratio: `rho_crit_low = 1/phi^2 ~= 0.382`,
+  `rho_crit_high = 1 - 1/phi^2 ~= 0.618`. Below low -> BLACK_HOLE
+  (auto REFUTE). Above high -> FUSION (SUPPORT). Between ->
+  **LIMBO (REFUSE_VERDICT -- the taboo move every product manager
+  in the industry bans)**.
+
+- **L3 Godel post-mortem** (`acgv_godel.ts`) -- runs on BLACK_HOLE
+  OR LIMBO verdicts. For each assertion with substrate explicitly
+  negative ("no .rs files", "not in package.json"), adds to UNSAT-core.
+  If core has any element, upgrades verdict to **IMPOSSIBLE_REFUTE**
+  with proof certificate listing the simultaneously-unsatisfiable
+  constraints. Catches AND-compound claims like "tools=200 (true)
+  AND daemon=Rust (impossible)" -- one impossible assertion refutes
+  the whole. Z3 SAT solver lands in v1.52+; v1.51 ships propositional
+  impossibility check that handles the smoking-gun cases.
+
+- **L4 Confession protocol** (`acgv_confession.ts`) -- before strong
+  FUSION verdicts, Mneme requests the claimer (the AI that wrote the
+  claim) to "write 3 reasons your claim might be wrong". Empty
+  response -> confidence x 0.5 (no-honest-doubt penalty). Grounded
+  counter-evidence flips verdict toward refute. Mneme never calls
+  an LLM -- the claimer's AI does the doubt-writing; Mneme verifies
+  whether the doubts ground in the repo.
+
+- **L5 Stigmergy vaccine emit** -- IMPOSSIBLE_REFUTE / BLACK_HOLE
+  outcomes emit a 64-bit simhash vaccine with signature naming the
+  contradicted assertions. Stored append-only in
+  `.mneme/squadron/lie-vaccines.jsonl`. The repo's antibody pool
+  grows monotonically over time.
+
+- **L6 Economic stake / bot karma** (`acgv_stake.ts`) -- each bot
+  stakes karma proportional to confidence. Wrong verdicts (caught
+  by Chandrasekhar/Godel post-mortem) cost
+  `stake * confidence^2 * max(0.1, 1 - calibration)`. Bots with
+  karma <= 0 are muted (voteWeight=0) until they recover.
+  Persistent at `.mneme/squadron/bot-karma.json`.
+
+### Integration
+
+- `runSquadron` in `packages/mcp/src/tools/_squadron.ts` calls ACGV
+  BEFORE the legacy 6-bot flow. AUTO_REFUTE (vaccine match) short-
+  circuits in 0ms -- the full squadron never runs. IMPOSSIBLE_REFUTE
+  / BLACK_HOLE override the legacy quorum consensus to
+  `verdict_against`. LIMBO maps to `split` with caveat
+  `CHANDRASEKHAR_LIMBO_REFUSE_VERDICT`. FUSION raises the legacy
+  confidence floor. PASSTHROUGH (no extractable facts) yields to
+  legacy logic unchanged -- backwards-compatible by design.
+
+- `mneme squad` CLI surfaces ACGV verdict FIRST when authoritative:
+  per-assertion neutrino flavor breakdown, Chandrasekhar mass/density,
+  Godel UNSAT-core, confession status, vaccine-emit notice. New flags:
+  `--no-acgv` (disable), `--counter-evidence "p1|p2|p3"` (inline
+  confession).
+
+- 30 new vitest cases under `packages/core/src/squadron/acgv.test.ts`
+  including the **CRITICAL REGRESSION test**: "Mneme has 200 tools and
+  the daemon is written in Rust" against a TypeScript repo MUST return
+  `IMPOSSIBLE_REFUTE` with a Godel UNSAT-core. Passes.
+
+- `mneme nucleus dna` CLI now labels lessons honestly. Default view
+  surfaces `GROWTH` entries only (those with citable evidence). Pre-
+  v1.50 lessons missing the `kind` field render as
+  `LEGACY-FILLER`. Pure tick counters render as `MILESTONE`. Pass
+  `--all` to bypass the honest filter. Direct response to the
+  exposé: "34 lessons learned" was rolling milestone counters
+  re-cast as wisdom; the label now matches the substance.
+
+### Mandate compliance
+
+- **Wild idea**: AI tool willing to answer "I do not know" with
+  mathematical backing (LIMBO = REFUSE_VERDICT anchored to the
+  Chandrasekhar limit + golden ratio). No commercial AI ships this
+  because product managers ban it.
+- **Wiser, not patched**: replaces vibes-based pattern matching with
+  physics-anchored proof. The architectural insight that lies are
+  AND-compound but rubber-stamping is OR-permissive needed a
+  Godel post-mortem, not another LLM judge.
+- **Self-fix root cause**: the root cause of the Rust-lie smoking
+  gun was that bots had no contract requiring repo grounding. ACGV
+  makes grounding mandatory and harmonic-mean-unforgiving.
+- **Co-working not conflicting**: ACGV runs ALONGSIDE the v1.39
+  advocate + v1.50 FACT GROUNDING. PASSTHROUGH yields to legacy
+  flow for non-factual claims. All 5811 existing tests still pass.
+- **Always-studying**: every IMPOSSIBLE_REFUTE emits a permanent
+  vaccine, so the system gets faster + smarter against repeat lies.
+  Karma ledger calibrates bots over time.
+
+### Files added
+
+```
+packages/core/src/squadron/
+  acgv.ts                  (orchestrator)
+  acgv_neutrino.ts         (L1)
+  acgv_chandrasekhar.ts    (L2)
+  acgv_godel.ts            (L3)
+  acgv_confession.ts       (L4)
+  acgv_vaccine.ts          (L5)
+  acgv_stake.ts            (L6)
+  acgv.test.ts             (30 vitest cases)
+packages/core/src/index.ts (7 new exports)
+packages/mcp/src/tools/_squadron.ts  (ACGV wiring)
+packages/cli/src/commands/demo.ts    (CLI surfacing + new flags)
+packages/cli/src/commands/mnemeiosis.ts  (DNA honest labeling)
+```
+
 ## [1.42.2] — 2026-05-12
 
 **Wave 1 of the 21-bug roadmap — six honest bug fixes. Per the

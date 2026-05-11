@@ -477,19 +477,43 @@ export function registerNucleusCommands(program: Command): void {
 
   nuc
     .command("dna")
-    .description("Read the current DNA snapshot (tick / hash / wisdom score / lessons).")
+    .description("Read the current DNA snapshot (tick / hash / wisdom score / lessons). v1.51 surfaces lessons with HONEST labels: growth-event (real evidence) vs milestone (tick counter) vs legacy-filler (pre-v1.50 entries).")
     .option("--json", "JSON output.")
-    .action(async (opts: CommonOpts) => {
+    .option("--all", "Surface ALL lessons including legacy/filler entries.")
+    .action(async (opts: CommonOpts & { all?: boolean }) => {
       const n = nucleus.readNucleus(process.cwd());
-      // v1.23.0 — show empty-state hint instead of a bare header with nothing under it.
-      const lessonLines =
-        n.lessons.length === 0
-          ? [`  (none yet — connect Mneme via MCP and let an AI agent call mneme.nucleus.tick to generate lessons)`]
-          : n.lessons.slice(-5).reverse().map((l) => `  • [tick ${l.tick}] ${l.text}`);
+      // v1.51.0 -- DNA HONESTY surfacing. Prefer growth-events (have citable
+      // evidence) over milestones (counter-only). Legacy lessons missing
+      // the `kind` field are labeled clearly so testers stop counting them
+      // as "wisdom". Pass --all to bypass the honest filter.
+      const growthEvents = n.lessons.filter((l) => l.kind === "growth-event");
+      const milestones = n.lessons.filter((l) => l.kind === "milestone");
+      const legacy = n.lessons.filter((l) => !l.kind);
+      let lessonLines: string[];
+      if (n.lessons.length === 0) {
+        lessonLines = [`  (none yet -- connect Mneme via MCP and let an AI agent call mneme.nucleus.tick to generate lessons)`];
+      } else if (opts.all) {
+        lessonLines = n.lessons.slice(-10).reverse().map((l) => {
+          const tag = l.kind === "growth-event" ? "GROWTH" : l.kind === "milestone" ? "MILESTONE" : l.kind === "consolidation" ? "CONSOLIDATION" : "LEGACY-FILLER";
+          return `  ${tag.padEnd(13)} [tick ${l.tick}] ${l.text}`;
+        });
+      } else if (growthEvents.length > 0) {
+        lessonLines = growthEvents.slice(-5).reverse().map((l) => `  GROWTH [tick ${l.tick}] ${l.text}${l.evidence && l.evidence.length > 0 ? ` (evidence: ${l.evidence.slice(0, 3).join(", ")})` : ""}`);
+        if (milestones.length + legacy.length > 0) {
+          lessonLines.push(`  -- ${milestones.length} milestone(s) + ${legacy.length} legacy-filler entries hidden; pass --all to surface`);
+        }
+      } else {
+        // No growth events yet; label honestly so user doesn't mistake counters for wisdom.
+        lessonLines = n.lessons.slice(-5).reverse().map((l) => {
+          const tag = l.kind === "milestone" ? "MILESTONE   " : l.kind === "consolidation" ? "CONSOLIDATION" : "LEGACY-FILLER";
+          return `  ${tag} [tick ${l.tick}] ${l.text}`;
+        });
+        lessonLines.push(`  -- no growth-events recorded yet; entries above are counters or legacy filler, NOT wisdom`);
+      }
       out(opts, n, [
         nucleus.dnaBanner(n),
         "",
-        `Last 5 lessons:`,
+        `Last lessons (honest labeling -- v1.51 DNA honesty):`,
         ...lessonLines,
       ]);
     });

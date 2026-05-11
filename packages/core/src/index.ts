@@ -248,6 +248,24 @@ export * as squadronAdvocate from "./squadron/advocate.js";
 // "supports" votes. Fixes the smoking-gun bug where "Mneme has 200
 // tools and the daemon is written in Rust" got SUPPORTED 57%.
 export * as squadronFactGrounding from "./squadron/fact_grounding.js";
+// v1.51.0 -- ACGV PROTOCOL (Aletheia Chandrasekhar-Neutrino-Godel Verifier).
+// 6-layer truth pipeline that runs BEFORE legacy squadron logic:
+//   L0 vaccine match     -- previously-refuted lie shapes auto-refute in us
+//   L1 neutrino 3-flavor -- harmonic mean of surface / substrate / spectrum
+//   L2 chandrasekhar     -- claim mass / density / collapse verdict
+//   L3 godel post-mortem -- UNSAT-core proof certificate on BLACK_HOLE
+//   L4 confession        -- claimer must write doubt or take confidence cut
+//   L5 stigmergy vaccine -- lies become permanent immunity (simhash bank)
+//   L6 economic stake    -- bots lose karma when caught wrong by L2/L3
+// Output: ACGVVerdict ladder (IMPOSSIBLE_REFUTE > AUTO_REFUTE > BLACK_HOLE >
+//   FUSION > LIMBO > PASSTHROUGH). PASSTHROUGH yields to legacy flow.
+export * as acgv from "./squadron/acgv.js";
+export * as acgvNeutrino from "./squadron/acgv_neutrino.js";
+export * as acgvChandrasekhar from "./squadron/acgv_chandrasekhar.js";
+export * as acgvGodel from "./squadron/acgv_godel.js";
+export * as acgvConfession from "./squadron/acgv_confession.js";
+export * as acgvVaccine from "./squadron/acgv_vaccine.js";
+export * as acgvStake from "./squadron/acgv_stake.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

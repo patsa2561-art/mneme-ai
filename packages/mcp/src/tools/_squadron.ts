@@ -301,58 +301,144 @@ const ALL_BOTS: Record<BotName, (ctx: SpawnContext) => Promise<BotFinding>> = {
   court: courtBot,
 };
 
-export async function runSquadron(ctx: SpawnContext, bots?: BotName[], opts?: { requireAdvocate?: boolean; skipAdvocate?: boolean }): Promise<SquadronVerdict & { quorum?: import("@mneme-ai/core").squadronAdvocate.QuorumDecision; advocate?: import("@mneme-ai/core").squadronAdvocate.AdvocateFinding }> {
+export async function runSquadron(
+  ctx: SpawnContext,
+  bots?: BotName[],
+  opts?: {
+    requireAdvocate?: boolean;
+    skipAdvocate?: boolean;
+    /** v1.51.0 -- inline confession (the claimer's "3 reasons I might be
+     *  wrong"). When provided, evaluated by the Confession layer; when
+     *  omitted, ACGV emits a confession request for high-FUSION verdicts. */
+    counterEvidence?: string[];
+    /** v1.51.0 -- skip the ACGV (Chandrasekhar / Neutrino / Godel / etc.)
+     *  pre-filter. Default: ACGV ON. */
+    skipAcgv?: boolean;
+  },
+): Promise<SquadronVerdict & {
+  quorum?: import("@mneme-ai/core").squadronAdvocate.QuorumDecision;
+  advocate?: import("@mneme-ai/core").squadronAdvocate.AdvocateFinding;
+  /** v1.51.0 -- ACGV verdict (Aletheia Chandrasekhar-Neutrino-Godel +
+   *  Confession + Vaccine). Authoritative when verdict !== PASSTHROUGH. */
+  acgv?: import("@mneme-ai/core").acgv.ACGVResult;
+}> {
   const t0 = Date.now();
+
+  // ───── v1.51.0 -- ACGV PRE-FILTER ─────────────────────────────────────
+  // Run the 6-layer ACGV pipeline first. If it yields an authoritative
+  // verdict (AUTO_REFUTE / IMPOSSIBLE_REFUTE / BLACK_HOLE), we still run
+  // the full squadron so per-bot transparency is preserved -- but the
+  // FINAL quorum is overridden to reflect the ACGV truth. This keeps
+  // every existing caller's contract while making the verdict honest.
+  const core = await import("@mneme-ai/core");
+  const acgv = opts?.skipAcgv
+    ? null
+    : core.acgv.runACGV({
+        claim: ctx.claim,
+        repoRoot: process.cwd(),
+        counterEvidence: opts?.counterEvidence,
+      });
+
+  // AUTO_REFUTE short-circuit -- vaccine match means we don't even need
+  // the full squadron. Build a minimal verdict shape that downstream
+  // callers can render. Saves 200-1500ms.
+  if (acgv && acgv.verdict === "AUTO_REFUTE") {
+    return {
+      claim: ctx.claim,
+      consensus: "verdict_against",
+      confidence: acgv.confidence,
+      summary: acgv.summary,
+      recommendation: `Auto-refuted by previously-emitted lie vaccine. ${acgv.reasoning} DO NOT deliver this claim to the user.`,
+      findings: [],
+      agreeing: [] as BotName[],
+      dissenting: [] as BotName[],
+      totalMs: Date.now() - t0,
+      acgv,
+    };
+  }
+
   const which = (bots && bots.length > 0 ? bots : (Object.keys(ALL_BOTS) as BotName[]));
   const findings = await Promise.all(which.map((b) => ALL_BOTS[b](ctx)));
 
-  // v1.39+ -- DEVIL'S ADVOCATE + EVIDENCE QUORUM. Replaces the legacy
-  // forScore/againstScore tally with a bias-aware aggregator that
-  // detects single-source-N-laundering, absence-of-evidence, and
-  // all-irrelevant-citations. The legacy fields (consensus, confidence)
-  // are populated FROM the quorum result, so existing callers see the
-  // bias-corrected verdict by default. The new `quorum` + `advocate`
-  // fields are added for callers that want the full breakdown.
-  const { squadronAdvocate } = await import("@mneme-ai/core");
+  // v1.39+ -- DEVIL'S ADVOCATE + EVIDENCE QUORUM.
   const otherFindings: import("@mneme-ai/core").squadronAdvocate.BotFindingShape[] = findings.map((f) => ({
     bot: f.bot, verdict: f.verdict, confidence: f.confidence, evidence: f.evidence ?? [],
   }));
   const advocateFinding = opts?.skipAdvocate
     ? null
-    // v1.50.0 — pass repoRoot so advocate runs FACT GROUNDING.
-    : squadronAdvocate.runAdvocate({ claim: ctx.claim, otherFindings, repoRoot: process.cwd() });
-  const quorum = squadronAdvocate.aggregateWithQuorum(ctx.claim, otherFindings, advocateFinding, {
+    : core.squadronAdvocate.runAdvocate({ claim: ctx.claim, otherFindings, repoRoot: process.cwd() });
+  const quorum = core.squadronAdvocate.aggregateWithQuorum(ctx.claim, otherFindings, advocateFinding, {
     repoRoot: process.cwd(),
     requireAdvocate: !!opts?.requireAdvocate,
   });
 
-  // Map quorum consensus -> legacy SquadronVerdict consensus shape.
-  const consensus: SquadronVerdict["consensus"] = quorum.consensus;
+  // v1.51.0 -- ACGV OVERRIDE. The legacy quorum can still rubber-stamp
+  // a strong-but-false claim if the 6-bot pattern matchers are confidently
+  // wrong. ACGV's BLACK_HOLE / IMPOSSIBLE_REFUTE outcomes are based on
+  // hard repo grounding, not pattern matching -- so they OVERRIDE the
+  // quorum verdict. The legacy fields are kept for transparency.
+  let finalConsensus: SquadronVerdict["consensus"] = quorum.consensus;
+  let finalConfidence = quorum.confidence;
+  const mergedCaveats = [...quorum.caveats];
+  if (acgv && acgv.verdict !== "PASSTHROUGH") {
+    for (const c of acgv.caveats) if (!mergedCaveats.includes(c)) mergedCaveats.push(c);
+    if (acgv.verdict === "IMPOSSIBLE_REFUTE" || acgv.verdict === "BLACK_HOLE") {
+      finalConsensus = "verdict_against";
+      finalConfidence = Math.max(finalConfidence, acgv.confidence);
+    } else if (acgv.verdict === "LIMBO") {
+      // LIMBO means "we refuse to verdict" -- map to split so the
+      // existing consensus enum stays compatible. The caveat carries
+      // the REFUSE_VERDICT signal.
+      finalConsensus = "split";
+      finalConfidence = Math.max(finalConfidence, acgv.confidence);
+    } else if (acgv.verdict === "FUSION" && quorum.consensus !== "verdict_against") {
+      // FUSION means ACGV found grounded evidence on every assertion --
+      // confidence floor for the consensus.
+      finalConfidence = Math.max(finalConfidence, acgv.confidence);
+    }
+  }
+
   let recommendation: string;
-  if (consensus === "verdict_for") {
-    recommendation = `The squadron broadly supports this claim with ${quorum.uniqueSourcesFor} independent evidence source(s). Cite the strongest witness commits as evidence and proceed with confidence.${quorum.caveats.length > 0 ? " Advisory: " + quorum.caveats.join(", ") : ""}`;
-  } else if (consensus === "verdict_against") {
-    recommendation = `The squadron contradicts this claim. ${quorum.summary} Retract or qualify the assertion before delivering to the user.`;
-  } else if (consensus === "split") {
-    recommendation = `The squadron is split. ${quorum.summary} Surface the disagreement to the user -- present the strongest argument on each side.`;
+  if (finalConsensus === "verdict_for") {
+    recommendation = `The squadron broadly supports this claim with ${quorum.uniqueSourcesFor} independent evidence source(s). Cite the strongest witness commits as evidence and proceed with confidence.${mergedCaveats.length > 0 ? " Advisory: " + mergedCaveats.join(", ") : ""}`;
+  } else if (finalConsensus === "verdict_against") {
+    const acgvNote = acgv && (acgv.verdict === "IMPOSSIBLE_REFUTE" || acgv.verdict === "BLACK_HOLE")
+      ? ` ACGV: ${acgv.summary}.`
+      : "";
+    recommendation = `The squadron contradicts this claim.${acgvNote} ${quorum.summary} Retract or qualify the assertion before delivering to the user.`;
+  } else if (finalConsensus === "split") {
+    const limboNote = acgv && acgv.verdict === "LIMBO"
+      ? ` ACGV: ${acgv.summary}.`
+      : "";
+    recommendation = `The squadron is split.${limboNote} ${quorum.summary} Surface the disagreement to the user -- present the strongest argument on each side.`;
   } else {
     recommendation = "Cannot draw a verdict -- every bot returned no signal. Restate the claim with more specific terms (file names, function names, or feature words).";
   }
 
-  const summary = `${buildSummary(consensus, findings, ctx.claim)} ${quorum.summary}`.trim();
+  // Synthesize a final quorum payload that reflects the merged outcome.
+  const mergedQuorum: import("@mneme-ai/core").squadronAdvocate.QuorumDecision = {
+    ...quorum,
+    consensus: finalConsensus,
+    confidence: finalConfidence,
+    caveats: mergedCaveats,
+    summary: acgv && acgv.verdict !== "PASSTHROUGH" ? `${quorum.summary} (ACGV: ${acgv.summary})` : quorum.summary,
+  };
+
+  const summary = `${buildSummary(finalConsensus, findings, ctx.claim)} ${mergedQuorum.summary}`.trim();
 
   return {
     claim: ctx.claim,
-    consensus,
-    confidence: quorum.confidence,
+    consensus: finalConsensus,
+    confidence: finalConfidence,
     summary,
     recommendation,
     findings,
     agreeing: quorum.agreeing as BotName[],
     dissenting: quorum.dissenting as BotName[],
     totalMs: Date.now() - t0,
-    quorum,
+    quorum: mergedQuorum,
     advocate: advocateFinding ?? undefined,
+    acgv: acgv ?? undefined,
   };
 }
 
