@@ -38,6 +38,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHmac } from "node:crypto";
+import { spawnSync } from "node:child_process";
 
 const LINEAGE_FILE = ".mneme/proposals/_lineage.jsonl";
 const SECRET_FILE = ".mneme/.evolve-secret";
@@ -178,8 +179,6 @@ export function trackRecordFor(repoRoot: string, templateId: string): TemplateTr
   // "revert" commit message that mentions an applied proposalId.
   let reverts = 0;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { spawnSync } = require("node:child_process") as typeof import("node:child_process");
     const r = spawnSync("git", ["log", "--pretty=format:%s%n%b", "--no-merges", "-n", "200"],
       { cwd: repoRoot, encoding: "utf8", timeout: 5_000 });
     if (r.status === 0) {

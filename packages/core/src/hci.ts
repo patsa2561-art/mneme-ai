@@ -25,7 +25,7 @@
  * deterministic across calls (same disk state -> same score).
  */
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 export interface HciAxis {
@@ -171,8 +171,6 @@ function scoreEvolve(repoRoot: string): HciAxis {
   try {
     const fs = readFileSync;
     let proposals = 0, verifiedSynth = 0, applied = 0;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { readdirSync } = require("node:fs") as typeof import("node:fs");
     const files = readdirSync(proposalsDir);
     for (const f of files) {
       if (f.endsWith(".json") && !f.endsWith(".synth.json") && f !== "_lineage.jsonl") proposals++;

@@ -14,6 +14,9 @@
  */
 
 import type { Command } from "commander";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 interface CommonOpts { json?: boolean }
 
@@ -43,12 +46,20 @@ async function resolveAgentManifest(): Promise<AgentManifestShape | null> {
 
 function readMnemeVersion(): string {
   try {
-    // Look up version from the package.json that ships with the CLI.
-    const fs = require("node:fs");
-    const path = require("node:path");
-    const pkgPath = path.resolve(__dirname, "..", "..", "package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-    return pkg.version ?? "?";
+    // ESM-safe lookup: walk up from this module's directory to the
+    // closest package.json. Replaces the v1.x require()-based version
+    // that crashed under "type":"module".
+    const here = dirname(fileURLToPath(import.meta.url));
+    let dir = here;
+    for (let i = 0; i < 6; i++) {
+      const candidate = join(dir, "package.json");
+      if (existsSync(candidate)) {
+        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { version?: string };
+        if (pkg.version) return pkg.version;
+      }
+      dir = dirname(dir);
+    }
+    return "?";
   } catch {
     return "?";
   }

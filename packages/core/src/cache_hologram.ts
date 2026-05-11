@@ -47,8 +47,9 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 
 export interface CacheNode {
   /** Stable id, e.g. "version-check", "oracle-precog". */
@@ -273,32 +274,24 @@ export function registerDefaultMnemeCaches(): void {
   // Sources of truth that downstream caches care about.
   registerSource({ id: "mneme-version", kind: "fn", compute: () => {
     try {
-      // Lazy require to avoid pulling version_check at module init.
-      // Same logic as readLiveMnemeVersion -- we read the package.json
-      // adjacent to this module.
-      const path = require("node:path");
-      const fs = require("node:fs");
-      const url = require("node:url");
-      const here = path.dirname(url.fileURLToPath(import.meta.url));
-      // Walk up looking for the closest package.json.
+      // Walk up from this module's directory looking for the closest package.json.
+      const here = dirname(fileURLToPath(import.meta.url));
       let dir = here;
       for (let i = 0; i < 6; i++) {
-        const candidate = path.join(dir, "package.json");
-        if (fs.existsSync(candidate)) {
-          const pkg = JSON.parse(fs.readFileSync(candidate, "utf8"));
+        const candidate = join(dir, "package.json");
+        if (existsSync(candidate)) {
+          const pkg = JSON.parse(readFileSync(candidate, "utf8"));
           if (pkg.version) return pkg.version;
         }
-        dir = path.dirname(dir);
+        dir = dirname(dir);
       }
       return "unknown";
     } catch { return "unknown"; }
   }});
   registerSource({ id: "package-json-mtime", kind: "fn", compute: () => {
     try {
-      const fs = require("node:fs");
-      const path = require("node:path");
-      const p = path.join(process.cwd(), "package.json");
-      return fs.existsSync(p) ? String(fs.statSync(p).mtimeMs) : "missing";
+      const p = join(process.cwd(), "package.json");
+      return existsSync(p) ? String(statSync(p).mtimeMs) : "missing";
     } catch { return "missing"; }
   }});
 

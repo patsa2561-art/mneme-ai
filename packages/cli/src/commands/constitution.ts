@@ -48,10 +48,8 @@ export interface Constitution {
 function safeReadVersion(): string {
   try {
     const here = new URL(".", import.meta.url).pathname;
-    const fs = require("node:fs") as typeof import("node:fs");
-    const path = require("node:path") as typeof import("node:path");
-    const pkgPath = path.resolve(here, "..", "..", "package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8")) as { version?: string };
+    const pkgPath = join(here, "..", "..", "package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { version?: string };
     return pkg.version ?? "0.0.0";
   } catch {
     return "0.0.0";

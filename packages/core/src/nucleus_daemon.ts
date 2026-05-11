@@ -25,6 +25,7 @@ import { tick, mutate, readNucleus, dnaBanner } from "./nucleus.js";
 import { pushInbox, pushInboxReplacingSource, deterministicId, readInbox, ackInbox, clearInbox } from "./inbox.js";
 import { readStreaks } from "./karma_streaks.js";
 import { SupernovaSupervisor } from "./supernova/supervisor.js";
+import { resolveMnemeVersion } from "./mneme_version.js";
 
 const PID_FILE = ".mneme/nucleus.pid";
 const HEARTBEAT_FILE = ".mneme/nucleus.heartbeat.json";
@@ -569,10 +570,10 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
 
 /** Read the version of the mneme package this daemon process loaded. */
 function readMneMeVersion(): string | null {
-  // v1.45.0 (#5 fix) — package.json-aware via resolveMnemeVersion;
-  // returns null when even that resolves to the unknown sentinel.
-  // (require to avoid circular ESM at module-init.)
-  const v = (require("./mneme_version.js") as typeof import("./mneme_version.js")).resolveMnemeVersion();
+  // v1.49.0 — pure-ESM static import (the v1.45 fix used require() which
+  // is a runtime ReferenceError under "type":"module"). Static import is
+  // safe because mneme_version.ts has no circular dep on this file.
+  const v = resolveMnemeVersion();
   return v === "0.0.0-unknown" ? null : v;
 }
 

@@ -68,19 +68,60 @@ export function registerParasiteCommand(program: Command): void {
 
   par
     .command("status")
-    .description("Show every detected AI tool + its injection state.")
+    .description("Show parasite-bridge state across all known AI tools (8 inject targets + 11 auto-detect signals).")
     .option("--json", "JSON output")
     .action(async (opts: CommonOpts) => {
-      const { parasiteBridge } = await import("@mneme-ai/core");
+      const { parasiteBridge, aiHandshake } = await import("@mneme-ai/core");
       const r = parasiteBridge.detectAgentTools(process.cwd());
       const present = r.filter((d) => d.exists);
-      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
-      if (present.length === 0) { process.stdout.write("(no AI tool configs detected in this repo)\n"); return; }
-      for (const d of r) {
-        if (!d.exists) continue;
-        const mark = d.injected ? "✓ injected" : d.lastDisinfectAt ? "⊘ user opted out" : "○ not injected";
-        process.stdout.write(`  ${d.tool.id.padEnd(16)} ${mark.padEnd(20)}  ${d.configPath}\n`);
+      const injected = present.filter((d) => d.injected);
+      const optedOut = present.filter((d) => !d.injected && d.lastDisinfectAt);
+      const handshakeDetect = aiHandshake.autoDetectVendor(process.cwd());
+
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({
+          knownTargets: r.length,
+          presentInRepo: present.length,
+          injected: injected.length,
+          optedOut: optedOut.length,
+          autoDetect: handshakeDetect,
+          targets: r,
+        }, null, 2) + "\n");
+        return;
       }
+
+      // v1.49.0 — separate "inject targets" (8 known agent files we can
+      // inject into when they exist) from "auto-detect signals"
+      // (11 vendor signatures the handshake module recognises). Both
+      // are a fact about Mneme's surface; testers were confused by
+      // the difference, so we now show both.
+      process.stdout.write("Mneme parasite bridge\n");
+      process.stdout.write("─".repeat(72) + "\n");
+      process.stdout.write(`inject targets known:    ${r.length}  (one per supported AI tool config)\n`);
+      process.stdout.write(`present in this repo:    ${present.length}\n`);
+      process.stdout.write(`injected:                ${injected.length}\n`);
+      process.stdout.write(`opted-out:               ${optedOut.length}\n`);
+      process.stdout.write(`active vendor (handshake): ${handshakeDetect ? `${handshakeDetect.vendor}  (${handshakeDetect.reason})` : "none"}\n`);
+      process.stdout.write("\n");
+      process.stdout.write("Per-target status:\n");
+      for (const d of r) {
+        const mark = !d.exists ? "· not present" : d.injected ? "✓ injected" : d.lastDisinfectAt ? "⊘ user opted out" : "○ ready to inject";
+        process.stdout.write(`  ${d.tool.id.padEnd(16)} ${mark.padEnd(22)}  ${d.configPath}\n`);
+      }
+      process.stdout.write("\n");
+      process.stdout.write("AI agent vendor auto-detect signals (11 supported -- env vars / repo files):\n");
+      process.stdout.write("  ANTHROPIC_API_KEY / CLAUDE_CODE_SESSION / CLAUDE.md         → claude-opus-4-7\n");
+      process.stdout.write("  OPENAI_API_KEY / AGENTS.md                                  → openai-gpt\n");
+      process.stdout.write("  CURSOR_TRACE_ID / CURSOR_AGENT / .cursorrules               → cursor\n");
+      process.stdout.write("  CONTINUE_DEV / .continue/config.json                        → continue\n");
+      process.stdout.write("  GEMINI_API_KEY / GOOGLE_API_KEY / GEMINI.md                 → google-gemini\n");
+      process.stdout.write("  OLLAMA_HOST / OLLAMA_MODELS                                 → ollama\n");
+      process.stdout.write("  AIDER_MODEL / AIDER_API_KEY / .aider.conf.yml               → aider\n");
+      process.stdout.write("  XAI_API_KEY / GROK_API_KEY                                  → xai-grok\n");
+      process.stdout.write("  MISTRAL_API_KEY                                             → mistral\n");
+      process.stdout.write("  DEEPSEEK_API_KEY                                            → deepseek\n");
+      process.stdout.write("  CLINE_AGENT / CLINE_TASK_ID                                 → cline\n");
+      process.stdout.write("  MNEME_AI_VENDOR (override)                                  → user-supplied\n");
     });
 
   par

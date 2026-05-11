@@ -14,7 +14,7 @@
  *     missing if the verdict says "fork-vulnerable".
  */
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 export interface GravityReport {
@@ -44,8 +44,7 @@ function jsonlLineCount(p: string): number {
 function dirCount(p: string, suffix?: string): number {
   if (!existsSync(p)) return 0;
   try {
-    const fs = require("node:fs") as typeof import("node:fs");
-    return fs.readdirSync(p).filter((f) => suffix ? f.endsWith(suffix) : true).length;
+    return readdirSync(p).filter((f) => suffix ? f.endsWith(suffix) : true).length;
   } catch { return 0; }
 }
 

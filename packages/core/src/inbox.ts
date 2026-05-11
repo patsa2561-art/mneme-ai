@@ -24,7 +24,7 @@
  * Items have a `sent: bool` flag flipped when first surfaced.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, statSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 import { join } from "node:path";
 
@@ -275,7 +275,7 @@ function rotateIfNeeded(repoRoot: string): void {
   try {
     const path = inboxPath(repoRoot);
     if (!existsSync(path)) return;
-    const stat = require("node:fs").statSync(path);
+    const stat = statSync(path);
     if (stat.size <= MAX_INBOX_BYTES) return;
     const all = readInbox(repoRoot);
     const keep = all.slice(Math.floor(all.length / 2));

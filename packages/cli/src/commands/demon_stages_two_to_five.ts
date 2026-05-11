@@ -159,21 +159,61 @@ export function registerGodModeCommand(program: Command): void {
   // 4.2 Compliance report
   god
     .command("compliance-report")
-    .description("Generate a SOC2 / ISO 42001 / EU AI Act evidence report from local audit logs.")
-    .option("--days <n>", "Window size in days", (v) => parseInt(v, 10), 30)
+    .description("Generate evidence report for 12 frameworks: SOC2 / ISO 42001 / EU AI Act + 9 banking (SOX / FFIEC / BCBS-239 / PCI-DSS / SR 11-7 / GLBA / MAS / HKMA / BoT).")
+    .option("--days <n>", "Window size in days (default 30).", (v) => parseInt(v, 10), 30)
+    .option("--framework <fw>", "Filter to a single framework. Comma-separate for multiple. e.g. --framework SOX,PCI-DSS.")
     .option("--json", "JSON output")
-    .action(async (opts: { days?: number } & CommonOpts) => {
+    .action(async (opts: { days?: number; framework?: string } & CommonOpts) => {
       const { godComplianceReporter } = await import("@mneme-ai/core");
       const days = opts.days ?? 30;
       const end = new Date();
       const start = new Date(end.getTime() - days * 86400 * 1000);
       const r = godComplianceReporter.generateComplianceReport(process.cwd(), { windowStart: start, windowEnd: end });
-      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
-      process.stdout.write(`report:    ${r.reportPath}\n`);
-      process.stdout.write(`window:    ${r.windowStart} → ${r.windowEnd}\n`);
-      process.stdout.write(`events:    ${r.totalEvents}\n`);
-      for (const [fw, c] of Object.entries(r.coverageByFramework)) process.stdout.write(`  ${fw.padEnd(12)} ${c.covered}/${c.total} (${c.percent}%)\n`);
-      process.stdout.write(`gaps:      ${r.gaps.length}\n`);
+
+      // v1.49.0 -- optional framework filter for vertical use cases
+      // (e.g. a US bank only cares about SOX/FFIEC/SR-11-7/PCI-DSS).
+      const filter = opts.framework ? new Set(opts.framework.split(",").map((s) => s.trim())) : null;
+      const framework2body: Record<string, string> = {
+        "SOC2-CC":     "AICPA SOC 2 Common Criteria",
+        "ISO-42001":   "ISO/IEC 42001 AI Management System",
+        "EU-AI-ACT":   "EU AI Act 2024",
+        "SOX":         "US Sarbanes-Oxley s.404",
+        "FFIEC":       "US Federal Financial Institutions Examination Council",
+        "BCBS-239":    "Basel Committee Risk Data Aggregation Principles",
+        "PCI-DSS":     "Payment Card Industry Data Security Standard v4.0",
+        "SR-11-7":     "US Federal Reserve Model Risk Management",
+        "GLBA":        "US Gramm-Leach-Bliley Act (financial privacy)",
+        "MAS-TRM":     "Monetary Authority of Singapore -- Tech Risk Mgmt",
+        "HKMA-TM-G-1": "Hong Kong Monetary Authority TM-G-1",
+        "BoT-IT-RM":   "Bank of Thailand IT Risk Management Notification",
+      };
+
+      if (opts.json) {
+        const filtered = filter ? Object.fromEntries(Object.entries(r.coverageByFramework).filter(([fw]) => filter.has(fw))) : r.coverageByFramework;
+        process.stdout.write(JSON.stringify({ ...r, coverageByFramework: filtered }, null, 2) + "\n");
+        return;
+      }
+
+      process.stdout.write("Mneme Compliance Evidence Report (v1.49 -- 12 frameworks)\n");
+      process.stdout.write("─".repeat(72) + "\n");
+      process.stdout.write(`report saved:     ${r.reportPath}\n`);
+      process.stdout.write(`window:           ${r.windowStart}  →  ${r.windowEnd}\n`);
+      process.stdout.write(`events analyzed:  ${r.totalEvents}\n\n`);
+      process.stdout.write("Coverage by framework:\n");
+      for (const [fw, c] of Object.entries(r.coverageByFramework)) {
+        if (filter && !filter.has(fw)) continue;
+        const bar = "█".repeat(Math.round(c.percent / 5)).padEnd(20);
+        process.stdout.write(`  ${fw.padEnd(13)} ${c.covered}/${c.total}  ${bar} ${String(c.percent).padStart(3)}%   ${framework2body[fw] ?? ""}\n`);
+      }
+      process.stdout.write(`\ngaps (controls with zero evidence): ${r.gaps.length}\n`);
+      if (r.gaps.length > 0) {
+        process.stdout.write("First 10:\n");
+        for (const g of r.gaps.slice(0, 10)) process.stdout.write(`  · ${g.framework} ${g.controlId} -- ${g.title}\n`);
+      }
+      process.stdout.write("\n");
+      process.stdout.write("> ⚠ This is audit-trail-ready evidence, NOT a certification. Bring your own auditor.\n");
+      process.stdout.write("> Filter to your jurisdiction:  --framework SOX,FFIEC,SR-11-7  (US bank)\n");
+      process.stdout.write(">                              --framework MAS-TRM  (SG)  HKMA-TM-G-1  (HK)  BoT-IT-RM  (TH)\n");
     });
 
   // 4.3 Dead-vendor planner
@@ -215,6 +255,41 @@ export function registerAvatarCommand(program: Command): void {
 
   // 5.1 Gossip mesh
   const mesh = avatar.command("mesh").description("Filesystem-based p2p wisdom sharing (no servers).");
+  // v1.49.0 — default `status` subcommand is what testers naturally type.
+  // Summarises seen + quarantine + secret state so the operator gets a
+  // single answer to "is the mesh healthy".
+  mesh
+    .command("status", { isDefault: true })
+    .description("Show mesh health: seen-msg counts, quarantine size, secret state. [DEFAULT]")
+    .option("--json", "JSON output")
+    .action(async (opts: CommonOpts) => {
+      const { avatarGossipMesh } = await import("@mneme-ai/core");
+      const seen = avatarGossipMesh.listSeen(process.cwd());
+      const quarantine = avatarGossipMesh.listQuarantine(process.cwd());
+      const counts = { accepted: 0, duplicate: 0, "bad-signature": 0, "quota-exceeded": 0, "hops-exceeded": 0, "trusted-auto-apply": 0 } as Record<string, number>;
+      for (const s of seen) counts[s.outcome] = (counts[s.outcome] ?? 0) + 1;
+      const senders = new Set(seen.map((s) => s.sender));
+      const summary = {
+        mesh: "filesystem-gossip",
+        seenTotal: seen.length,
+        uniqueSenders: senders.size,
+        outcomeCounts: counts,
+        quarantineSize: quarantine.length,
+      };
+      if (opts.json) { process.stdout.write(JSON.stringify(summary, null, 2) + "\n"); return; }
+      process.stdout.write("Mneme mesh — Stage 5.1 gossip mesh\n");
+      process.stdout.write("─".repeat(72) + "\n");
+      process.stdout.write(`seen total:        ${seen.length} messages\n`);
+      process.stdout.write(`unique senders:    ${senders.size}\n`);
+      process.stdout.write(`accepted:          ${counts.accepted}\n`);
+      process.stdout.write(`duplicates:        ${counts.duplicate}\n`);
+      process.stdout.write(`bad signatures:    ${counts["bad-signature"]}  (cross-mesh isolation working)\n`);
+      process.stdout.write(`quota-exceeded:    ${counts["quota-exceeded"]}  (in quarantine)\n`);
+      process.stdout.write(`trusted auto-apply: ${counts["trusted-auto-apply"]}\n`);
+      process.stdout.write(`quarantine:        ${quarantine.length} held messages\n`);
+      process.stdout.write("\n");
+      process.stdout.write("Tell your AI: \"mesh seen / mesh quarantine\" for per-message detail.\n");
+    });
   mesh
     .command("seen")
     .description("List recently seen mesh messages.")
@@ -240,6 +315,28 @@ export function registerAvatarCommand(program: Command): void {
 
   // 5.2 Lingua
   const lingua = avatar.command("lingua").description("Vendor-neutral knowledge stream (universal JSONL schema).");
+  // v1.49.0 — default `status` shows the schema descriptor + the latest
+  // event count, so testers see at a glance whether the stream is alive.
+  lingua
+    .command("status", { isDefault: true })
+    .description("Show Lingua schema version + event totals across the unified stream. [DEFAULT]")
+    .option("--json", "JSON output")
+    .action(async (opts: CommonOpts) => {
+      const { avatarLingua } = await import("@mneme-ai/core");
+      const schema = avatarLingua.schema();
+      const stream = avatarLingua.emitStream(process.cwd(), { maxEvents: 1 });
+      const totals = avatarLingua.emitStream(process.cwd(), { maxEvents: 10000 });
+      const summary = { schema, latestEvent: stream.events[0] ?? null, totalEmitted: totals.totalEmitted, totalRead: totals.totalRead, kindsCovered: schema.kinds.length };
+      if (opts.json) { process.stdout.write(JSON.stringify(summary, null, 2) + "\n"); return; }
+      process.stdout.write("Mneme Lingua — Stage 5.2 vendor-neutral knowledge stream\n");
+      process.stdout.write("─".repeat(72) + "\n");
+      process.stdout.write(`schema:           v${schema.version} (${schema.topLevel.length} top-level fields)\n`);
+      process.stdout.write(`event kinds:      ${schema.kinds.length} (${schema.kinds.join(", ")})\n`);
+      process.stdout.write(`events emitted:   ${totals.totalEmitted}\n`);
+      process.stdout.write(`latest at:        ${stream.events[0]?.at ?? "(empty)"}\n`);
+      process.stdout.write("\n");
+      process.stdout.write("Tell your AI: \"lingua stream\" for the full JSONL output (interop with any vendor).\n");
+    });
   lingua
     .command("stream")
     .description("Emit the unified Mneme stream.")
@@ -262,6 +359,34 @@ export function registerAvatarCommand(program: Command): void {
 
   // 5.3 Wisdom packs
   const pack = avatar.command("pack").description("Replicating-wisdom transfer packs (.mwt).");
+  // v1.49.0 — default `status` lists local packs + inheritance log so
+  // testers don't have to remember separate `list` / `inherited` calls.
+  pack
+    .command("status", { isDefault: true })
+    .description("Show local wisdom packs + inheritance receipts. [DEFAULT]")
+    .option("--json", "JSON output")
+    .action(async (opts: CommonOpts) => {
+      const { avatarReplicatingWisdom } = await import("@mneme-ai/core");
+      const local = avatarReplicatingWisdom.listLocalPacks(process.cwd());
+      const inherits = avatarReplicatingWisdom.listInheritances(process.cwd());
+      const summary = {
+        localPacks: local.length,
+        inherited: inherits.length,
+        latestPack: local[local.length - 1] ?? null,
+        latestInherit: inherits[inherits.length - 1] ?? null,
+      };
+      if (opts.json) { process.stdout.write(JSON.stringify(summary, null, 2) + "\n"); return; }
+      process.stdout.write("Mneme wisdom packs — Stage 5.3\n");
+      process.stdout.write("─".repeat(72) + "\n");
+      process.stdout.write(`local packs:      ${local.length}\n`);
+      process.stdout.write(`inherited from:   ${inherits.length} packs\n`);
+      if (local.length > 0) {
+        const last = local[local.length - 1]!;
+        process.stdout.write(`latest pack:      ${last.packId.slice(0, 16)}  (${last.vaccines.length} vaccines, donor=${last.donorSender})\n`);
+      }
+      process.stdout.write("\n");
+      process.stdout.write("Tell your AI: \"create a wisdom pack\" / \"list local packs\" for actions.\n");
+    });
   pack
     .command("create")
     .description("Pack the top-K ratified vaccines into a portable .mwt file.")

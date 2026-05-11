@@ -35,7 +35,7 @@
  *      future audits can verify the encryption layer was never bypassed.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes, createCipheriv, createDecipheriv, hkdfSync } from "node:crypto";
 import { hostname, userInfo } from "node:os";
@@ -188,8 +188,7 @@ export function atomicWriteEncryptedJSON(repoRoot: string, path: string, value: 
     writeFileSync(tmp, json, "utf8");
   }
   // Atomic rename.
-  const fs = require("node:fs");
-  fs.renameSync(tmp, path);
+  renameSync(tmp, path);
 }
 
 /** Read JSON from a path, auto-decrypting if the file has the magic

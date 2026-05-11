@@ -23,7 +23,7 @@
  *     PII regexes used by the synthetic army before packing
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash, createHmac } from "node:crypto";
 
@@ -136,7 +136,7 @@ export function listLocalPacks(repoRoot: string): WisdomPack[] {
   const dir = join(resolve(repoRoot), PACK_DIR_REL);
   if (!existsSync(dir)) return [];
   const out: WisdomPack[] = [];
-  for (const name of (require("node:fs") as typeof import("node:fs")).readdirSync(dir)) {
+  for (const name of readdirSync(dir)) {
     if (!name.endsWith(".mwt.json")) continue;
     try { out.push(JSON.parse(readFileSync(join(dir, name), "utf8")) as WisdomPack); } catch { /* skip */ }
   }
@@ -217,7 +217,7 @@ function readInheritanceLog(repoRoot: string): InheritanceRecord[] {
 function appendInheritanceLog(repoRoot: string, rec: InheritanceRecord): void {
   const path = join(repoRoot, INHERITANCE_LOG_REL);
   mkdirSync(join(repoRoot, ".mneme"), { recursive: true });
-  (require("node:fs") as typeof import("node:fs")).appendFileSync(path, JSON.stringify(rec) + "\n");
+  appendFileSync(path, JSON.stringify(rec) + "\n");
 }
 
 export function listInheritances(repoRoot: string): InheritanceRecord[] {

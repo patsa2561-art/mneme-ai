@@ -26,7 +26,7 @@
  *     start is fast.
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs";
 import { join } from "node:path";
 
 export interface EcosystemSignal {
@@ -197,9 +197,9 @@ function scanSourceFiles(repoRoot: string, limit = 50): string[] {
         try {
           // Read up to first 2KB — imports are at the top
           const buf = Buffer.alloc(2048);
-          const fd = require("node:fs").openSync(full, "r");
-          const bytesRead = require("node:fs").readSync(fd, buf, 0, 2048, 0);
-          require("node:fs").closeSync(fd);
+          const fd = openSync(full, "r");
+          const bytesRead = readSync(fd, buf, 0, 2048, 0);
+          closeSync(fd);
           samples.push(buf.slice(0, bytesRead).toString("utf8"));
         } catch { /* skip */ }
       }

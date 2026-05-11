@@ -66,7 +66,7 @@
  * formula. One source of truth, five readings. Like a real reactor.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 
 // ─── Calibration constants ──────────────────────────────────────────────
@@ -242,8 +242,7 @@ export function recordFollowupBurst(repoRoot: string, followups: number): void {
     const path = criticalityPath(repoRoot);
     const line = JSON.stringify({ ts: new Date().toISOString(), followups }) + "\n";
     if (existsSync(path)) {
-      const fs = require("node:fs");
-      fs.appendFileSync(path, line, "utf8");
+      appendFileSync(path, line, "utf8");
     } else {
       writeFileSync(path, line, "utf8");
     }

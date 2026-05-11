@@ -26,7 +26,7 @@
 
 import { spawn, type ChildProcess } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, appendFileSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const EVENTS_REL = ".mneme/os-events.jsonl";
@@ -237,7 +237,7 @@ export function readEventsLog(repoRoot: string): OsEvent[] {
   const path = join(repoRoot, EVENTS_REL);
   if (!existsSync(path)) return [];
   const out: OsEvent[] = [];
-  for (const line of (require("node:fs") as typeof import("node:fs")).readFileSync(path, "utf8").split("\n")) {
+  for (const line of readFileSync(path, "utf8").split("\n")) {
     if (!line.trim()) continue;
     try { out.push(JSON.parse(line)); } catch { /* skip */ }
   }

@@ -14,7 +14,7 @@
  * No telemetry, no IP-of-user-leaked-on-purpose, no auth headers.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { pushInboxReplacingSource, popInboxBySource, deterministicId } from "./inbox.js";
 
@@ -97,8 +97,7 @@ export function invalidateOnVersionShift(repoRoot: string): { invalidated: boole
     // Local version has shifted -> wipe the cache.
     const path = join(repoRoot, CACHE_FILE);
     try {
-      const fs = require("node:fs");
-      if (fs.existsSync(path)) fs.unlinkSync(path);
+      if (existsSync(path)) unlinkSync(path);
     } catch { /* */ }
     return { invalidated: true };
   } catch { return { invalidated: false }; }

@@ -18,7 +18,7 @@
  * future Mneme-operated public hub.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import kleur from "kleur";
@@ -204,7 +204,7 @@ async function leaveHub(opts: FederationOptions): Promise<number> {
   }
   // Just delete the config file
   try {
-    require("node:fs").unlinkSync(configPath(meta.rootPath));
+    unlinkSync(configPath(meta.rootPath));
   } catch {}
   if (opts.json) process.stdout.write(JSON.stringify({ left: true }) + "\n");
   else ui.success("Left the federation. Local config deleted.");
