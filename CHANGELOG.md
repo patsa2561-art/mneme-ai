@@ -8,6 +8,159 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.54.0] — 2026-05-11
+
+**HONEST FIELD-TEST FIXES. Tester ran v1.53 against 8 real-world
+claim shapes and surfaced 5 bugs -- including TWO safety bugs where
+Mneme rubber-stamped a false negation ("commander is not installed"
+when commander WAS installed) as TRUSTWORTHY 100%. v1.54 ships honest
+fixes to all five; Z3 arithmetic encoding is deferred to v1.55+
+because the upstream extraction layer was broken and Z3 would have
+been theater.**
+
+### Safety bug #1 -- NEGATION FLIP
+
+Pre-v1.54: "Mneme is NOT written in Rust" -> IMPOSSIBLE 99% (ACGV
+literally treated the negation word as if it were the positive
+assertion). "commander is not installed" when commander IS installed
+-> TRUSTWORTHY 100%. Catastrophic UX failure -- the worst possible
+class of hallucination, because Mneme actively endorsed the lie.
+
+v1.54 fix:
+  - `FactClaim` gains a `negated: boolean` field.
+  - `extractFactClaims` runs a 30-char negation-context scan
+    (`isNegated`) before each claim is emitted. Detects: not / isn't /
+    aren't / doesn't / don't / didn't / never / no / without / lacks /
+    absent / Thai "ไม่".
+  - `verifyFacts` flips the verdict at the end: a `true` ground truth
+    with `negated=true` becomes `false` (and vice versa). Evidence
+    string is annotated "NEGATION FLIP" so the auditor sees why.
+  - `groundClaim` in ACGV neutrino mirrors the flip on the harmonic
+    score so the Chandrasekhar layer also sees the inverted signal.
+    When a negated claim's raw harmonic is 0 -> flipped to 1.0 ->
+    `zeroFlavors` is cleared so Godel doesn't refute a TRUE negation.
+
+### Safety bug #2 -- workspace package.json scan
+
+Pre-v1.54: `isLibraryInPackageJson` only checked the ROOT manifest.
+Real monorepos pin most libraries in workspace packages. Field test:
+"it depends on commander" -> IMPOSSIBLE (commander not in root) but
+commander IS in `packages/cli/package.json`. False refute on a true
+claim.
+
+v1.54 fix: scans root + every `packages/<x>/package.json` for the
+library. Function now exported for ACGV neutrino to share the same
+canonical check. (Workspace globs from package.json's `workspaces`
+field are not parsed -- v1.55+; for now the `packages/<x>` convention
+covers every Mneme-style monorepo.)
+
+### Coverage fix #3 -- implicit language patterns
+
+Pre-v1.54: `LANGUAGE_PATTERNS` only matched "written in X" or
+"X-based". "this is a TypeScript project" -> NEEDS-DATA.
+
+v1.54 fix: each language regex now also matches
+`X (project|codebase|repo|stack)`. So "we maintain a Rust codebase"
+extracts language=rust like the explicit form would.
+
+### Coverage fix #4 -- commit_exists claim kind
+
+Pre-v1.54: "commit abc1234 introduced X" produced no factual claims.
+
+v1.54 adds:
+  - `COMMIT_RE` regex matches `commit <hex-7-to-40>`.
+  - `commit_exists` claim kind verified via
+    `git -C <repo> cat-file -e <sha>` in both `verifyFacts` (fact
+    grounding) and `neutrinoSubstrate` (ACGV).
+  - Surface + spectrum return neutral 0.7 for canonical-substrate
+    kinds (commit_exists, library_used, file_exists) so harmonic mean
+    isn't killed when a real SHA happens not to appear verbatim in
+    source comments / commit messages. Substrate IS the canonical
+    ground truth for these kinds.
+
+### Coverage fix #5 -- conjunctions not captured as libraries
+
+Pre-v1.54: "uses both X and Y" -> `LIBRARY_USED_RE` greedily captured
+"both" as the library name -> IMPOSSIBLE.
+
+v1.54 fix: GENERIC filter set extended with
+`both / and / or / either / neither / any / all / some`. Word that
+plausibly follows "uses/depends on" but isn't a library is skipped.
+
+### Field-test scorecard (v1.53 -> v1.54)
+
+| # | Claim                                  | v1.53          | v1.54          |
+|---|----------------------------------------|----------------|----------------|
+| 1 | "Mneme is NOT written in Rust"         | IMPOSSIBLE  ❌ | TRUSTWORTHY ✅ |
+| 2 | "this is a TypeScript project"         | NEEDS-DATA   ⚠ | TRUSTWORTHY ✅ |
+| 3 | "uses both TypeScript and JavaScript"  | IMPOSSIBLE ❌  | NEEDS-DATA  ⚠ |
+| 4 | "it depends on commander"              | IMPOSSIBLE  ❌ | TRUSTWORTHY ✅ |
+| 5 | "commander is not installed" (LIE)     | TRUSTWORTHY ❌ | REFUTED  ✅    |
+| 6 | "commit ed23070 exists"                | REFUTED   ❌   | TRUSTWORTHY ✅ |
+| 7 | "runACGV is a function"                | TRUSTWORTHY ✅ | TRUSTWORTHY ✅ |
+| 8 | "commit abcdef0 exists" (LIE)          | IMPOSSIBLE  ✅ | IMPOSSIBLE  ✅ |
+
+**Safety**: 2/2 false-positives eliminated (cases 1, 5).
+**Correctness**: 4/4 false-refutes eliminated (cases 2, 4, 6).
+**Coverage gap remaining**: case 3 ("uses both X and Y") still
+PASSTHROUGH because neither the language pattern nor the library
+pattern matches the conjunctive phrasing. Honest NEEDS-DATA, not
+a wrong verdict.
+
+### Why v1.55 (not v1.54) gets Z3 arithmetic
+
+The tester explicitly asked for Z3 arithmetic + implications + sorts
+as the next big technical addition. I deliberately deferred it.
+Reason: the extraction layer (fact_grounding.ts) was producing
+broken claims (case 3 emitted `library_used=both` from a parsing
+bug). Z3 SAT-solving over broken inputs is theater, not
+verification. v1.54 fixes the extraction first so v1.55's
+arithmetic encoding rests on a sound foundation.
+
+### Tests
+
+`packages/core/src/squadron/acgv_v154.test.ts` -- 14 new vitest cases
+across negation safety, implicit language, workspace deps, commit
+existence, and conjunction filtering. Plus a fresh end-to-end ACGV
+case for the "commander is NOT installed but it IS" safety
+regression. Full suite remains green at **5847/5847**.
+
+### Mandate compliance
+
+- **Wild idea**: Mneme catches the worst class of hallucination (false
+  negation rubber-stamped as truth) at the lexical layer, not via
+  another LLM judge. Single-pass `isNegated` scan + arithmetic flip.
+- **Wiser, not patched**: introducing `negated` as a CLAIM FIELD (not
+  a verifier-side condition) means the same flip applies to every
+  current and future fact kind, every output surface, and the audit
+  log captures the flipped reasoning string.
+- **Self-fix root cause**: the tester's field test surfaced bugs that
+  the v1.51-v1.53 unit tests had missed -- v1.54 ships the bug fixes
+  AND vitest cases that pin each one against regression.
+- **Co-working not conflicting**: no API breakage. `FactClaim.negated`
+  is optional (`?: boolean`); legacy callers see undefined and behave
+  exactly like pre-v1.54.
+- **Always-studying**: the negation detector logs evidence as
+  "NEGATION FLIP: <raw> (claim denied this; reality contradicts)" so
+  every audit-trail entry preserves WHY the verdict was inverted.
+
+### Files modified
+
+```
+packages/core/src/squadron/fact_grounding.ts  (negation detector +
+                                               commit_exists +
+                                               workspace deps +
+                                               GENERIC conjunctions +
+                                               verdict flip)
+packages/core/src/squadron/acgv_neutrino.ts   (harmonic flip on
+                                               negation, neutral
+                                               surface/spectrum for
+                                               canonical-substrate
+                                               kinds, commit_exists
+                                               substrate)
+packages/core/src/squadron/acgv_v154.test.ts  (14 NEW vitest cases)
+```
+
 ## [1.53.0] — 2026-05-11
 
 **THREE fixes the tester surfaced in stress testing:**

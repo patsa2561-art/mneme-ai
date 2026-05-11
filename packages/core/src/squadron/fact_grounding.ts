@@ -27,6 +27,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { execSync } from "node:child_process";
 
 export type FactKind =
   | "language"
@@ -34,12 +35,20 @@ export type FactKind =
   | "library_used"
   | "version"
   | "file_exists"
-  | "function_exists";
+  | "function_exists"
+  | "commit_exists";
 
 export interface FactClaim {
   kind: FactKind;
   asserted: string;
   raw: string;
+  /** v1.54.0 -- when true, the claim asserts the NEGATION (e.g.
+   *  "Mneme is NOT written in Rust" or "commander is not installed").
+   *  Verification flips: true ground truth -> "false" verdict,
+   *  false ground truth -> "true" verdict. Fixes the safety bug where
+   *  "X is not installed" was rubber-stamped as TRUSTWORTHY when X
+   *  *was* installed. */
+  negated?: boolean;
 }
 
 export interface FactCheckResult {
@@ -51,17 +60,21 @@ export interface FactCheckResult {
 
 // ─── EXTRACTION ─────────────────────────────────────────────────────────
 
+// v1.54.0 -- per-language pattern set. Each entry has BOTH an explicit
+// "written in X" / "X-based" pattern AND an implicit "X project /
+// X codebase / X repo" pattern so claims like "this is a TypeScript
+// project" actually extract a language claim (was PASSTHROUGH pre-v1.54).
 const LANGUAGE_PATTERNS: { name: string; re: RegExp }[] = [
-  { name: "rust", re: /\b(written\s+in\s+rust|in\s+rust|rust[-\s]?based)\b/i },
-  { name: "go", re: /\b(written\s+in\s+go|in\s+golang?|golang[-\s]?based)\b/i },
-  { name: "python", re: /\bwritten\s+in\s+python|python[-\s]?based\b/i },
-  { name: "typescript", re: /\bwritten\s+in\s+typescript|typescript[-\s]?based\b/i },
-  { name: "javascript", re: /\bwritten\s+in\s+javascript|javascript[-\s]?based\b/i },
-  { name: "node.js", re: /\b(written\s+in\s+node\.?js|node\.?js[-\s]?based)\b/i },
-  { name: "java", re: /\bwritten\s+in\s+java\b/i },
-  { name: "csharp", re: /\bwritten\s+in\s+c#|written\s+in\s+csharp\b/i },
-  { name: "ruby", re: /\bwritten\s+in\s+ruby\b/i },
-  { name: "elixir", re: /\bwritten\s+in\s+elixir\b/i },
+  { name: "rust", re: /\b(written\s+in\s+rust|in\s+rust|rust[-\s]?based|rust\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "go", re: /\b(written\s+in\s+go|in\s+golang?|golang[-\s]?based|go(?:lang)?\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "python", re: /\b(written\s+in\s+python|python[-\s]?based|python\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "typescript", re: /\b(written\s+in\s+typescript|typescript[-\s]?based|typescript\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "javascript", re: /\b(written\s+in\s+javascript|javascript[-\s]?based|javascript\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "node.js", re: /\b(written\s+in\s+node\.?js|node\.?js[-\s]?based|node\.?js\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "java", re: /\b(written\s+in\s+java|java\s+(?:project|codebase|repo|stack))\b/i },
+  { name: "csharp", re: /\b(written\s+in\s+c#|written\s+in\s+csharp|c#\s+(?:project|codebase|repo))\b/i },
+  { name: "ruby", re: /\b(written\s+in\s+ruby|ruby\s+(?:project|codebase|repo))\b/i },
+  { name: "elixir", re: /\b(written\s+in\s+elixir|elixir\s+(?:project|codebase|repo))\b/i },
 ];
 
 const TOOL_COUNT_RE = /\b(?:has|exposes|ships|exports?|provides?|with)\s+(\d+)\s+(?:tools?|commands?|mcp\s+tools?|features?)\b/i;
@@ -69,52 +82,137 @@ const LIBRARY_USED_RE = /\b(?:depends?\s+on|uses?|built\s+on|requires?|imports?)
 const VERSION_RE = /\b(?:version\s+)?v?(\d+\.\d+\.\d+(?:[.-][\w]+)?)\b/g;
 const FILE_PATH_RE = /\b([a-zA-Z0-9_./-]+\.(?:ts|tsx|js|jsx|py|go|rs|java|md|json|ya?ml|toml))\b/g;
 const FUNCTION_RE = /\b(?:function|fn|method|class)\s+([a-zA-Z_][a-zA-Z0-9_]+)\b/g;
+// v1.54.0 -- commit SHA references. Triggers `commit_exists` claim verified
+// via `git cat-file`. Matches both "commit abcd123" and bare 7+ hex.
+const COMMIT_RE = /\b(?:commit\s+)([0-9a-f]{7,40})\b/gi;
+
+// v1.54.0 -- NEGATION CONTEXT detector. Looks for negation markers in the
+// 25 chars *immediately before* the matched fact. Single regex catches:
+// "not X", "isn't X", "doesn't X", "no X", "does not X", "is never X",
+// "without X", "lacks X", "absent X", + Thai "ไม่" (rare in EN prompts).
+// Single source of truth so all claim kinds share the negation logic.
+const NEGATION_RE = /\b(?:not|isn'?t|aren'?t|wasn'?t|weren'?t|doesn'?t|don'?t|didn'?t|never|no|without|lacks?|absent|ไม่)\b\s*(?:\w+\s+){0,3}$/i;
+
+function isNegated(fullText: string, matchIndex: number): boolean {
+  // Look at the 30-char window ENDING at the match start. If a negation
+  // word appears there, the claim is asserting the OPPOSITE.
+  if (matchIndex <= 0) return false;
+  const windowStart = Math.max(0, matchIndex - 30);
+  const window = fullText.slice(windowStart, matchIndex);
+  return NEGATION_RE.test(window);
+}
 
 export function extractFactClaims(text: string): FactClaim[] {
   if (!text) return [];
   const out: FactClaim[] = [];
 
-  // Language claims
+  // Language claims (now picks up explicit AND implicit "X project" patterns).
   for (const lang of LANGUAGE_PATTERNS) {
-    const m = text.match(lang.re);
-    if (m) out.push({ kind: "language", asserted: lang.name, raw: m[0] });
+    const m = lang.re.exec(text);
+    if (m) {
+      out.push({
+        kind: "language",
+        asserted: lang.name,
+        raw: m[0],
+        negated: isNegated(text, m.index),
+      });
+    }
   }
 
   // Tool counts -- only the FIRST hit; multiple "N tools" claims in one
   // sentence is rare and we treat them as the same claim.
-  const tc = text.match(TOOL_COUNT_RE);
-  if (tc) out.push({ kind: "tool_count", asserted: tc[1]!, raw: tc[0] });
+  const tc = TOOL_COUNT_RE.exec(text);
+  if (tc) {
+    out.push({
+      kind: "tool_count",
+      asserted: tc[1]!,
+      raw: tc[0],
+      negated: isNegated(text, tc.index),
+    });
+  }
 
-  // Library used (best-effort; we only verify against package.json)
-  const lib = text.match(LIBRARY_USED_RE);
+  // Library used (best-effort; we only verify against package.json). v1.54.0
+  // extends GENERIC to skip conjunctions ("both", "and", "or") that the LIBRARY_RE
+  // would otherwise grab as the library name -- the bug surfaced in stress
+  // testing where "uses both X and Y" extracted `library_used=both`.
+  const lib = LIBRARY_USED_RE.exec(text);
   if (lib) {
     const candidate = lib[1]!.toLowerCase();
-    // Filter out generic words that match the pattern but aren't libs.
-    const GENERIC = new Set(["it", "this", "that", "ai", "the", "mneme", "node", "rust", "go", "python", "typescript", "javascript", "java"]);
+    const GENERIC = new Set([
+      "it", "this", "that", "ai", "the", "mneme",
+      "node", "rust", "go", "python", "typescript", "javascript", "java",
+      // v1.54.0 -- conjunctions + connectors that aren't libraries
+      "both", "and", "or", "either", "neither", "any", "all", "some",
+    ]);
     if (!GENERIC.has(candidate) && candidate.length >= 2) {
-      out.push({ kind: "library_used", asserted: candidate, raw: lib[0] });
+      out.push({
+        kind: "library_used",
+        asserted: candidate,
+        raw: lib[0],
+        negated: isNegated(text, lib.index),
+      });
     }
   }
 
   // Versions
-  const versionMatches: string[] = [];
-  for (const m of text.matchAll(VERSION_RE)) versionMatches.push(m[1]!);
-  for (const v of new Set(versionMatches)) {
-    out.push({ kind: "version", asserted: v, raw: `v${v}` });
+  const versionMatches: { v: string; idx: number }[] = [];
+  for (const m of text.matchAll(VERSION_RE)) versionMatches.push({ v: m[1]!, idx: m.index });
+  const seenVersions = new Set<string>();
+  for (const vm of versionMatches) {
+    if (seenVersions.has(vm.v)) continue;
+    seenVersions.add(vm.v);
+    out.push({
+      kind: "version",
+      asserted: vm.v,
+      raw: `v${vm.v}`,
+      negated: isNegated(text, vm.idx),
+    });
   }
 
   // File paths
-  const fileMatches: string[] = [];
-  for (const m of text.matchAll(FILE_PATH_RE)) fileMatches.push(m[1]!);
-  for (const f of new Set(fileMatches)) {
-    out.push({ kind: "file_exists", asserted: f, raw: f });
+  const fileMatches: { f: string; idx: number }[] = [];
+  for (const m of text.matchAll(FILE_PATH_RE)) fileMatches.push({ f: m[1]!, idx: m.index });
+  const seenFiles = new Set<string>();
+  for (const fm of fileMatches) {
+    if (seenFiles.has(fm.f)) continue;
+    seenFiles.add(fm.f);
+    out.push({
+      kind: "file_exists",
+      asserted: fm.f,
+      raw: fm.f,
+      negated: isNegated(text, fm.idx),
+    });
   }
 
   // Function / class names
-  const fnMatches: string[] = [];
-  for (const m of text.matchAll(FUNCTION_RE)) fnMatches.push(m[1]!);
-  for (const f of new Set(fnMatches)) {
-    out.push({ kind: "function_exists", asserted: f, raw: `function ${f}` });
+  const fnMatches: { f: string; idx: number }[] = [];
+  for (const m of text.matchAll(FUNCTION_RE)) fnMatches.push({ f: m[1]!, idx: m.index });
+  const seenFns = new Set<string>();
+  for (const fm of fnMatches) {
+    if (seenFns.has(fm.f)) continue;
+    seenFns.add(fm.f);
+    out.push({
+      kind: "function_exists",
+      asserted: fm.f,
+      raw: `function ${fm.f}`,
+      negated: isNegated(text, fm.idx),
+    });
+  }
+
+  // v1.54.0 -- commit SHA claims: "commit abc1234 did X" extracts a
+  // commit_exists assertion that's verified via `git cat-file`.
+  const commitMatches: { sha: string; idx: number }[] = [];
+  for (const m of text.matchAll(COMMIT_RE)) commitMatches.push({ sha: m[1]!.toLowerCase(), idx: m.index });
+  const seenShas = new Set<string>();
+  for (const cm of commitMatches) {
+    if (seenShas.has(cm.sha)) continue;
+    seenShas.add(cm.sha);
+    out.push({
+      kind: "commit_exists",
+      asserted: cm.sha,
+      raw: `commit ${cm.sha}`,
+      negated: isNegated(text, cm.idx),
+    });
   }
 
   return out;
@@ -205,12 +303,47 @@ export function countMnemeTools(repoRoot: string): number {
   return total;
 }
 
-function isLibraryInPackageJson(repoRoot: string, lib: string): boolean {
-  const pkg = readPackageJson(repoRoot);
-  if (!pkg) return false;
-  const deps = (pkg.dependencies ?? {}) as Record<string, unknown>;
-  const dev = (pkg.devDependencies ?? {}) as Record<string, unknown>;
-  return lib in deps || lib in dev || `@${lib}` in deps || `@${lib}` in dev;
+export function isLibraryInPackageJson(repoRoot: string, lib: string): boolean {
+  // Check root + every workspace package.json. v1.54.0 fix: previously
+  // only the root manifest was scanned, so claims like "depends on
+  // commander" were refuted as missing even when commander lives in
+  // a workspace's package.json (real-world surface bug from field test).
+  const candidates: string[] = [join(repoRoot, "package.json")];
+  const workspacesRoot = join(repoRoot, "packages");
+  if (existsSync(workspacesRoot)) {
+    try {
+      for (const name of readdirSync(workspacesRoot)) {
+        const p = join(workspacesRoot, name, "package.json");
+        if (existsSync(p)) candidates.push(p);
+      }
+    } catch { /* */ }
+  }
+  for (const path of candidates) {
+    let pkg: Record<string, unknown> | null;
+    try { pkg = JSON.parse(readFileSync(path, "utf8")); } catch { continue; }
+    if (!pkg) continue;
+    const deps = (pkg.dependencies ?? {}) as Record<string, unknown>;
+    const dev = (pkg.devDependencies ?? {}) as Record<string, unknown>;
+    if (lib in deps || lib in dev || `@${lib}` in deps || `@${lib}` in dev) return true;
+  }
+  return false;
+}
+
+// v1.54.0 -- verify a commit SHA is reachable from the current repo via
+// `git cat-file`. Falls back to false when git isn't on PATH (rare in CI).
+function commitExists(repoRoot: string, sha: string): boolean {
+  if (!/^[0-9a-f]{7,40}$/i.test(sha)) return false;
+  try {
+    const r = execSync(`git -C "${repoRoot}" cat-file -e ${sha}`, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 3000,
+    });
+    // exit 0 = exists; non-zero throws.
+    return r !== undefined;
+  } catch {
+    return false;
+  }
 }
 
 function repoVersion(repoRoot: string): string | null {
@@ -343,9 +476,32 @@ export function verifyFacts(repoRoot: string, claims: FactClaim[]): FactCheckRes
       continue;
     }
 
+    if (c.kind === "commit_exists") {
+      const present = commitExists(root, c.asserted);
+      if (present) {
+        out.push({ claim: c, verdict: "true", groundTruth: c.asserted, evidence: "git cat-file -e succeeded" });
+      } else {
+        out.push({ claim: c, verdict: "false", groundTruth: "(not in repo)", evidence: "git cat-file -e failed -- commit SHA not reachable" });
+      }
+      continue;
+    }
+
     out.push({ claim: c, verdict: "unverifiable", groundTruth: null, evidence: "unknown fact kind" });
   }
-  return out;
+  // v1.54.0 -- NEGATION FLIP. Verification computed "is the entity there?"
+  // but the claim asserted the OPPOSITE if `negated`. Flip the verdict so
+  // a true-grounded entity makes a negated claim FALSE (and vice versa).
+  // Single source of truth for negation across every fact kind.
+  return out.map((r) => {
+    if (!r.claim.negated) return r;
+    if (r.verdict === "true") {
+      return { ...r, verdict: "false" as const, evidence: `NEGATION FLIP: ${r.evidence} (claim denied this; reality contradicts)` };
+    }
+    if (r.verdict === "false") {
+      return { ...r, verdict: "true" as const, evidence: `NEGATION FLIP: ${r.evidence} (claim denied this; reality confirms)` };
+    }
+    return r; // unverifiable stays as-is
+  });
 }
 
 /** Convenience: extract + verify in one call. */

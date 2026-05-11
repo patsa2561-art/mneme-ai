@@ -28,7 +28,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execSync } from "node:child_process";
-import { countMnemeTools, type FactClaim } from "./fact_grounding.js";
+import { countMnemeTools, isLibraryInPackageJson, type FactClaim } from "./fact_grounding.js";
 
 export interface FlavorScore {
   /** 0-1 score for how well this flavor grounds the claim entity. */
@@ -117,6 +117,16 @@ function scoreFromHits(hits: number): number {
 
 export function neutrinoSurface(repoRoot: string, claim: FactClaim): FlavorScore {
   const needle = claim.asserted;
+  // v1.54.0 -- claim kinds where substrate is the CANONICAL ground truth
+  // (the binary fact "is X in package.json / is commit X reachable / does
+  // file X exist") -- surface scan can MISS the entity in source comments
+  // entirely. Return neutral 0.7 so harmonic-mean isn't killed when text
+  // scan misses a real dependency / file / commit. The flip-side: when
+  // surface DOES find textual mentions, the substrate would also be 1.0
+  // so the bump is harmless.
+  if (claim.kind === "commit_exists" || claim.kind === "library_used" || claim.kind === "file_exists") {
+    return { score: 0.7, evidence: `${claim.kind} -- surface scan deferred to substrate (canonical signal)` };
+  }
   // For language claims, surface scan is the *word* not the extension.
   // (substrate handles the extensions.) Skip the word "rust" finding the
   // verb "rust"; require word-boundary intent via prefix space.
@@ -186,16 +196,14 @@ export function neutrinoSubstrate(repoRoot: string, claim: FactClaim): FlavorSco
     if (count > 0) return { score: 0.3, evidence: `only ${count} ${claim.asserted} file(s) -- not the dominant language` };
     return { score: 0, evidence: `zero ${claim.asserted} files on disk (no ${exts.join("/")} extension)` };
   }
-  // Library claim -- check package.json.
+  // Library claim -- check root + workspace package.json manifests. v1.54.0
+  // fix: previously only root was scanned and workspace-pinned libraries
+  // (commander in packages/cli/package.json, etc) were refuted as missing.
   if (claim.kind === "library_used") {
-    const pkg = readPackageJson(repoRoot);
-    if (!pkg) return { score: 0, evidence: "no package.json to verify library claim" };
-    const deps = (pkg.dependencies ?? {}) as Record<string, unknown>;
-    const dev = (pkg.devDependencies ?? {}) as Record<string, unknown>;
-    if (claim.asserted in deps || claim.asserted in dev || `@${claim.asserted}` in deps || `@${claim.asserted}` in dev) {
-      return { score: 1.0, evidence: `${claim.asserted} listed in package.json` };
+    if (isLibraryInPackageJson(repoRoot, claim.asserted)) {
+      return { score: 1.0, evidence: `${claim.asserted} listed in root or workspace package.json` };
     }
-    return { score: 0, evidence: `${claim.asserted} NOT in package.json` };
+    return { score: 0, evidence: `${claim.asserted} not in any root or workspace package.json` };
   }
   // File claim -- existsSync at a few likely paths.
   if (claim.kind === "file_exists") {
@@ -247,6 +255,22 @@ export function neutrinoSubstrate(repoRoot: string, claim: FactClaim): FlavorSco
   if (claim.kind === "function_exists") {
     return { score: 0.5, evidence: "function existence handled by advocate fact-checker" };
   }
+  // Commit exists -- verify via git cat-file. 1.0 if reachable, 0 if not.
+  if (claim.kind === "commit_exists") {
+    if (!/^[0-9a-f]{7,40}$/i.test(claim.asserted)) {
+      return { score: 0, evidence: `not a valid SHA: ${claim.asserted}` };
+    }
+    try {
+      execSync(`git -C "${repoRoot}" cat-file -e ${claim.asserted}`, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 3000,
+      });
+      return { score: 1.0, evidence: `commit ${claim.asserted} reachable via git cat-file` };
+    } catch {
+      return { score: 0, evidence: `commit ${claim.asserted} not reachable in this repo` };
+    }
+  }
   return { score: 0.5, evidence: "no substrate check for this claim kind" };
 }
 
@@ -280,6 +304,12 @@ function appearedInGit(repoRoot: string, needle: string): { hits: number; sample
 
 export function neutrinoSpectrum(repoRoot: string, claim: FactClaim): FlavorScore {
   const needle = claim.asserted;
+  // v1.54.0 -- canonical-substrate claim kinds defer spectrum the same
+  // way they defer surface: substrate is the binary ground truth, the
+  // git history just provides extra signal when available, never refutes.
+  if (claim.kind === "commit_exists" || claim.kind === "library_used" || claim.kind === "file_exists") {
+    return { score: 0.7, evidence: `${claim.kind} -- spectrum deferred to substrate (canonical signal)` };
+  }
   // Hard-skip the noisy generic words that match accidentally in any repo.
   const NOISY = new Set(["js", "ts", "node", "go", "the", "and", "or", "use"]);
   if (NOISY.has(needle.toLowerCase())) {
@@ -305,17 +335,32 @@ export function harmonicMean(scores: number[]): number {
   return scores.length / sumReciprocal;
 }
 
-/** Combined neutrino grounding for one fact claim. */
+/** Combined neutrino grounding for one fact claim. v1.54.0 applies the
+ *  negation flip at the very end: a claim that asserts "X is NOT Y" with
+ *  reality not-Y has its effective harmonic inverted (1 - raw). The raw
+ *  flavor scores are preserved on the result so the explainer can still
+ *  surface the underlying signals. */
 export function groundClaim(repoRoot: string, claim: FactClaim): GroundingResult {
   const root = resolve(repoRoot);
   const surface = neutrinoSurface(root, claim);
   const substrate = neutrinoSubstrate(root, claim);
   const spectrum = neutrinoSpectrum(root, claim);
-  const harmonic = harmonicMean([surface.score, substrate.score, spectrum.score]);
+  const rawHarmonic = harmonicMean([surface.score, substrate.score, spectrum.score]);
+  const harmonic = claim.negated ? 1 - rawHarmonic : rawHarmonic;
+  // zeroFlavors describes the raw-grounding signal (which flavors saw nothing).
+  // It's used by the Godel layer; we keep this regardless of negation so the
+  // proof certificate cites the raw evidence on disk.
   const zeroFlavors: GroundingResult["zeroFlavors"] = [];
   if (surface.score === 0) zeroFlavors.push("surface");
   if (substrate.score === 0) zeroFlavors.push("substrate");
   if (spectrum.score === 0) zeroFlavors.push("spectrum");
+  // When a negated claim COMES BACK as supported (raw=0 -> flipped to 1.0),
+  // the Godel UNSAT-core would still fire on the raw zeroes. Suppress that
+  // by clearing zeroFlavors on a successfully negated claim. Otherwise Godel
+  // would refute a TRUE negation -- exactly the bug we're fixing.
+  if (claim.negated && rawHarmonic === 0) {
+    return { claim, surface, substrate, spectrum, harmonic, zeroFlavors: [] };
+  }
   return { claim, surface, substrate, spectrum, harmonic, zeroFlavors };
 }
 
