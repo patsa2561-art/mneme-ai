@@ -133,6 +133,15 @@ export * as compliance from "./compliance/evidence_pack.js";
 // PATCH-only, evolve-bot author, 24h green CI, ship-readiness READY,
 // rate-limited, killswitch via env. Dry-run by default.
 export * as autoship from "./autoship/cycle.js";
+// v1.39.0 -- DEVIL'S ADVOCATE + EVIDENCE QUORUM. Direct fix for the
+// CRITICAL Bot Squadron confirmation-bias finding: when a FALSE claim
+// triggered 5/6 bots into 'support' citing the same irrelevant
+// commit, the squad rubber-stamped it at 83% confidence. THIS BLOCKED
+// the Compliance product roadmap. The advocate is a 7th bot that
+// actively constructs counter-narrative + detects single-source
+// laundering + absence-of-evidence + irrelevant citations. The
+// quorum aggregator caps consensus when bias signals fire.
+export * as squadronAdvocate from "./squadron/advocate.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

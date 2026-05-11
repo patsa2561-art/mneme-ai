@@ -8,6 +8,81 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.39.0] — 2026-05-12
+
+**🚨 CRITICAL FIX -- Bot Squadron confirmation bias.** A tester gave
+the squad a FALSE claim ("v1.38.0 has critical security vulnerability")
+and 5/6 bots SUPPORTED at 83% confidence by citing the same irrelevant
+commit. **This blocked the Compliance product roadmap** (Compliance-
+as-a-Service trust contract depends on the squad NOT rubber-stamping
+hallucinated claims).
+
+### Module: DEVIL'S ADVOCATE + EVIDENCE QUORUM
+
+`packages/core/src/squadron/advocate.ts`. Three remedies:
+
+1. **DEVIL'S ADVOCATE BOT** — the missing 7th juror. Actively
+   constructs counter-narrative. Detects:
+   - **absence-of-evidence**: claim is specific (mentions
+     version/CVE/feature) but ZERO relevant supporting evidence found
+     across N supporting bots → active refutation, not "neutral."
+   - **single-source-laundering**: 3+ bots all cite the SAME evidence
+     → 1 source masquerading as N (downgrades to neutral until
+     independent corroboration appears).
+   - **all-irrelevant-citations**: every supporting citation shares
+     no tokens with the claim → bots may be hallucinating relevance.
+   - **claim-too-vague**: short non-specific claim → returns
+     needs_data with "restate with specific tokens" hint.
+
+2. **EVIDENCE QUORUM check**: counts UNIQUE evidence sources across
+   supporting findings. If unique < `minIndependentSources` (default
+   2) → cap support consensus at 0.5 + emit `SINGLE_SOURCE_SUPPORT`
+   blocking caveat.
+
+3. **SPARSE-EVIDENCE REFUTE TILT**: when total evidence count <
+   `minTotalEvidence` (default 3), weight refute by 1.5× and support
+   by 0.7×. Extraordinary-claims-need-extraordinary-evidence rule.
+
+**`requireAdvocate: true`** option for compliance-grade calls — if
+the advocate is missing, returns `consensus: "insufficient_data"`
+with `MISSING_ADVOCATE` caveat.
+
+### Caveat severity bands
+
+- **BLOCKING caveats** (single-source, absence-of-evidence,
+  all-irrelevant) prevent `verdict_for` consensus.
+- **ADVISORY caveats** (claim-too-vague) surface but don't tip the
+  consensus.
+
+### Tests
+
+15 tests cover every bias signal + the WILD invariants:
+- A claim with NO supporting evidence can NEVER reach `verdict_for`
+- 5 bots citing same single source can NEVER outrank 1 contradiction
+  with independent evidence
+- The exact tester-reported regression scenario (FALSE security claim
+  + 5 bots citing irrelevant commit) now returns `not verdict_for`
+
+Suite total: **5389 / 5389 passing**. Zero regressions.
+
+### Why this MUST ship before Compliance product
+
+If Compliance-as-a-Service ($50K-$500K/yr) is built on Squad
+verdicts, and the squad rubber-stamps strong-but-false claims, the
+Aletheia trust contract collapses. v1.39.0 closes the gate; v1.40+
+can wire the advocate into `mneme.squadron.spawn` MCP tool with
+`requireAdvocate: true` for compliance-grade calls.
+
+### Mandate scoreboard
+
+| Mandate | This release |
+|---|---|
+| Wild idea | ✓ "absence-of-evidence = refutation signal"; single-source-N-laundering detection |
+| Wiser | ✓ blocking vs advisory caveat severity; persists to quorum.jsonl for self-grading |
+| Self-fix root cause | ✓ adds the missing 7th juror -- structural fix, not vote re-weighting |
+| Co-working | ✓ integrates with v1.31 trust calibration (advocate verdict feeds calibration) |
+| Always-studying | ✓ daemon reactor reads quorum log to compute "advocate flip rate" honesty metric |
+
 ## [1.38.0] — 2026-05-11
 
 **🚀 AUTOPHAGY SHIPPER (Continuous Shipping Cycle).** The
