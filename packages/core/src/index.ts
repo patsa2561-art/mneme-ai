@@ -60,6 +60,11 @@ export * as vendorPulseTemplates from "./vendor_pulse_templates.js";
 // Reads compliance log → proposes mutations on under-performing templates
 // → records A/B baseline → auto-promotes the winner after a window.
 export * as templateEvolution from "./template_evolution.js";
+// v1.42.4 — Smart Cloud Connectivity. 4-state probe (online / degraded /
+// offline / unknown) with TTL cache + queue-and-drain pattern so cloud
+// outages never block the local-first path. See cloud_connectivity.ts
+// docstring for the full design rationale.
+export { CloudConnectivity, type CloudState, type QueuedEvent, type ConnectivityState, type ConnectivityOptions } from "./cloud_connectivity.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +

@@ -105,6 +105,7 @@ import {
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
 import { registerComplianceCommand } from "./commands/compliance.js";
 import { registerCompanionCommand } from "./commands/companion.js";
+import { registerCloudCommand } from "./commands/cloud.js";
 import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerUninstallCommand } from "./commands/uninstall.js";
 import { registerEmbeddingsCommands } from "./commands/embeddings.js";
@@ -2455,6 +2456,10 @@ export async function run(argv: string[]): Promise<void> {
   // contract / template surface that converts AI compliance from "ask
   // nicely" into "rationally optimal." See docs/COMPANION_PROTOCOL.md
   registerCompanionCommand(program);
+  // ─── Smart Cloud Connectivity (v1.42.4) — probe / queue / drain.
+  // Local-first: cloud is OPTIONAL relay. Layer absorbs all network
+  // failures so the AI agent never sees a connectivity error.
+  registerCloudCommand(program);
   // ─── Antivirus / Vaccine Lab (v1.24.0) ────────────────────────────
   registerAntivirusCommands(program);
   // ─── Uninstall (v1.28.2) -- comprehensive removal of every Mneme artifact
