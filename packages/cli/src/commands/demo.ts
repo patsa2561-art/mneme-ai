@@ -292,6 +292,83 @@ How to read the verdict:
     });
 }
 
+// ─── mneme autoboot (v1.56.0 Phoenix Resurrection) ───────────────────
+export function registerAutobootCommand(program: Command): void {
+  const cmd = program
+    .command("autoboot")
+    .description("Phoenix Resurrection Protocol -- install / uninstall / status of the cross-platform auto-boot mechanisms. Arms Plan 1/2/3 simultaneously so the daemon resurrects after every reboot regardless of which mechanism is blocked by the host.");
+
+  cmd
+    .command("install")
+    .description("Arm auto-boot. Default mode='triple' installs every available mechanism for the host platform; 'first-success' stops after the first armed mechanism.")
+    .option("--json", "JSON output.")
+    .option("--mode <mode>", "'triple' (default) or 'first-success'", "triple")
+    .action(async (opts: { json?: boolean; mode?: string }) => {
+      const { autoboot } = await import("@mneme-ai/core");
+      // mnemeBin: derive from process.argv[1] (the CLI entry that's running now).
+      const mnemeBin = process.argv[1] ?? "mneme";
+      const summary = autoboot.installAutoBoot({
+        mnemeBin,
+        mode: opts.mode === "first-success" ? "first-success" : "triple",
+        repoRoot: process.cwd(),
+      });
+      if (opts.json) { writeJson(summary); return; }
+      writeText(`Phoenix Resurrection Protocol -- install`);
+      writeText(`  platform: ${summary.platform}`);
+      writeText(`  plan:     ${summary.plan.join(" -> ")}`);
+      writeText(``);
+      for (const r of summary.results) {
+        const glyph = r.ok ? "OK" : "FAIL";
+        writeText(`  [${glyph}] ${r.mechanism.padEnd(16)} -- ${r.message}${r.target ? ` (${r.target})` : ""}`);
+      }
+      writeText(``);
+      writeText(`  armed mechanisms: ${summary.armedMechanisms.length}/${summary.plan.length}`);
+      writeText(`  resurrection probability (5% indep. failure assumption): ${(summary.estimatedResurrectionProbability * 100).toFixed(2)}%`);
+    });
+
+  cmd
+    .command("uninstall")
+    .description("Remove every Phoenix mechanism (scheduled task / startup folder / registry / LaunchAgent / cron / systemd unit / shell rc).")
+    .option("--json", "JSON output.")
+    .action(async (opts: { json?: boolean }) => {
+      const { autoboot } = await import("@mneme-ai/core");
+      const summary = autoboot.uninstallAutoBoot({ repoRoot: process.cwd() });
+      if (opts.json) { writeJson(summary); return; }
+      writeText(`Phoenix Resurrection Protocol -- uninstall (platform: ${summary.platform})`);
+      for (const r of summary.results) {
+        writeText(`  [${r.ok ? "OK" : "FAIL"}] ${r.mechanism.padEnd(16)} -- ${r.message}`);
+      }
+    });
+
+  cmd
+    .command("status")
+    .description("Diagnose the current auto-boot state. Reports which mechanisms are armed, the last install timestamp, and whether the daemon is alive.")
+    .option("--json", "JSON output.")
+    .action(async (opts: { json?: boolean }) => {
+      const { autoboot } = await import("@mneme-ai/core");
+      const report = autoboot.autoBootStatus(process.cwd());
+      if (opts.json) { writeJson(report); return; }
+      writeText(`Phoenix Resurrection Protocol -- status`);
+      writeText(`  platform:        ${report.platform}`);
+      writeText(`  daemon running:  ${report.daemonRunning ? "yes" : "no"}`);
+      writeText(``);
+      writeText(`  available mechanisms:`);
+      for (const [name, cap] of Object.entries(report.capabilities)) {
+        writeText(`    [${cap.available ? "OK" : "--"}] ${name.padEnd(16)} -- ${cap.reason}`);
+      }
+      writeText(``);
+      writeText(`  recommended plan: ${report.plan.join(" -> ") || "(none on this host)"}`);
+      writeText(``);
+      if (report.lastInstall) {
+        writeText(`  last install:    ${report.lastInstall.installedAt}`);
+        writeText(`  armed:           ${report.lastInstall.mechanisms.join(", ")}`);
+        writeText(`  resurrection P:  ${(report.lastInstall.probSuccess * 100).toFixed(2)}%`);
+      } else {
+        writeText(`  no install record -- run 'mneme autoboot install' (or it'll be done silently on next 'mneme upgrade').`);
+      }
+    });
+}
+
 export function registerHealthCommand(program: Command): void {
   const health = program
     .command("health")

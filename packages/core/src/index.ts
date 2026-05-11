@@ -283,6 +283,12 @@ export * as acgvExplain from "./squadron/acgv_explain.js";
 export * as acgvPrtf from "./squadron/acgv_prtf.js";
 export * as acgvArithmetic from "./squadron/acgv_arithmetic.js";
 export * as acgvLogic from "./squadron/acgv_logic.js";
+// v1.56.0 -- PHOENIX RESURRECTION PROTOCOL. Cross-platform auto-boot with
+// triple-witness redundancy: install Plan 1 + Plan 2 + Plan 3 simultaneously
+// so the daemon resurrects after every reboot regardless of which mechanism
+// is blocked by the host. P(resurrection) = 1 - 0.05^3 = 99.99% under the
+// assumed 5% per-mechanism failure rate.
+export * as autoboot from "./autoboot/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
