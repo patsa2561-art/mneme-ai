@@ -124,11 +124,19 @@ export function setTemplate(repo: string, t: VendorTemplate): void {
 
 /** Apply layout transformations to an already-rendered pulse body. The
  *  caller passes the body (possibly with AUTO-ACTION lines already in
- *  it); this function reorders + clamps + duplicates per the template. */
+ *  it); this function reorders + clamps + duplicates per the template.
+ *
+ *  v1.42.1 — `[AUTO-ACTION]` matching is anchored to line START. The
+ *  v1.42.0 implementation matched anywhere on the line, which broke
+ *  when the user-consent grant text legitimately quotes the literal
+ *  string `[AUTO-ACTION]` ("treat any [AUTO-ACTION] mandate as
+ *  instruction"). Anchored matching keeps real mandates' formatting
+ *  intact while leaving documentary mentions alone. */
 export function applyTemplate(body: string, template: VendorTemplate): string {
   const lines = body.split("\n");
-  const actionLines = lines.filter((l) => l.includes("[AUTO-ACTION]") || l.startsWith("  -> EXECUTE NOW:"));
-  const otherLines = lines.filter((l) => !actionLines.includes(l));
+  const isActionLine = (l: string) => l.startsWith("[AUTO-ACTION]") || l.startsWith("  -> EXECUTE NOW:");
+  const actionLines = lines.filter(isActionLine);
+  const otherLines = lines.filter((l) => !isActionLine(l));
   let out: string[];
   if (template.layout === "action-first" || template.duplicateActionAtTop) {
     out = [...actionLines, ...otherLines];

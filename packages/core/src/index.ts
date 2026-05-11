@@ -56,6 +56,10 @@ export * as userConsent from "./user_consent.js";
 export * as aiPheromone from "./ai_pheromone.js";
 export * as aiContracts from "./ai_contracts.js";
 export * as vendorPulseTemplates from "./vendor_pulse_templates.js";
+// v1.42.1 — Phase 2 of Per-Vendor Pulse Templates: EVOLVE-driven A/B.
+// Reads compliance log → proposes mutations on under-performing templates
+// → records A/B baseline → auto-promotes the winner after a window.
+export * as templateEvolution from "./template_evolution.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +

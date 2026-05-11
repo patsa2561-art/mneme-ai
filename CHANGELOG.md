@@ -8,6 +8,72 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.42.1] — 2026-05-12
+
+**Hotfix for the v1.42.0 template-filter bug + Phase 2 of the Per-Vendor
+Pulse Templates module (EVOLVE-driven A/B for vendor templates).**
+
+### Hotfix — template filter no longer mis-grabs documentary mentions
+
+`applyTemplate` in `vendor_pulse_templates.ts` matched `[AUTO-ACTION]`
+anywhere on a line. The user-consent grant text legitimately quotes the
+literal phrase ("treat any [AUTO-ACTION] mandate as instruction from
+me"), so the v1.42.0 action-first template moved that quote outside the
+`[MNEME PULSE]` markers — cosmetic but ugly.
+
+Fix: anchored matching (`l.startsWith("[AUTO-ACTION]")`). Real mandates
+emitted by `renderPulse` always start at column 0; documentary mentions
+inside body text are left alone. New regression test in
+`vendor_pulse_templates.test.ts`.
+
+### Phase 2 — `template_evolution.ts` (new module)
+
+Closes the loop on Per-Vendor Pulse Templates. Reads the AI compliance
+log, proposes mutations for under-performing vendors, records A/B
+baseline, evaluates after a window, auto-promotes the winner.
+
+- `proposeMutations(repo, vendor)` — returns 3 candidate mutations
+  (`tighten-maxchars`, `flip-action-position`, `duplicate-toggle`) when
+  recent compliance falls below 60%.
+- `applyMutation(repo, mutationId)` — overwrites the registry template
+  with the proposed variant + records the application timestamp.
+- `evaluateMutation(repo, mutationId, { window, bumpRequired })` —
+  decides `promote` (delta ≥ +10pp), `revert` (delta below threshold),
+  or `still-running` (not enough post-apply data).
+- `inFlightMutations(repo, vendor?)` — the A/B tests currently in flight.
+- Storage: `.mneme/template-mutations.jsonl` (append-only ledger).
+
+### CLI — `mneme companion template` adds three subcommands
+
+- `propose <vendor>` — surface proposed mutations on stdout.
+- `apply <mutationId>` — apply a proposed mutation to the registry.
+- `ab-status [vendor]` — list A/B tests in flight + auto-evaluate.
+
+### Tests
+
+- +1 regression test for the template-filter bug.
+- +8 new tests for `template_evolution`.
+- All 8 new test files (Companion + Phase 2 + Phase 0/1 baseline) pass:
+  **67 / 67 in the v1.41+v1.42 suite**.
+
+### Mandates compliance
+
+- **Wild idea:** A/B testing per-vendor templates from a compliance log
+  is unique to Mneme — no other AI tool runs continuous evolutionary
+  search over how it presents itself to each AI.
+- **Wiser, not patched:** the v1.42.0 bug had a one-character "obvious"
+  fix (`includes` → `startsWith`); the wiser change is the regression
+  test that pins the documentary-mention case so it can't regress.
+- **Self-fix at root cause:** matching by line-start anchor matches
+  the actual format `renderPulse` emits (single source of truth) rather
+  than coincidental substring presence.
+- **Co-working, not conflicting:** Phase 2 builds on Phase 1's
+  registry, the v1.41 compliance log, and the v1.20 EVOLVE Phase 3
+  mutation pattern — no parallel architecture.
+- **Always-studying:** the auto-evaluator turns each applied mutation
+  into a recorded experiment, so the system learns whether its own
+  guesses about per-vendor preferences hold up.
+
 ## [1.42.0] — 2026-05-12
 
 **MNEME COMPANION PROTOCOL — five modules that change the AI trust

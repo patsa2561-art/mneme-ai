@@ -83,4 +83,27 @@ describe("vendor_pulse_templates · registry + selection", () => {
     expect(block).toContain("claude-opus-4-7");
     expect(block).toContain("layout=action-first");
   });
+
+  it("v1.42.1 fix — applyTemplate does NOT move documentary [AUTO-ACTION] mentions", () => {
+    // The user-consent grant text quotes the literal phrase
+    // "[AUTO-ACTION] mandate" inside its body. Pre-1.42.1 the action-first
+    // template grabbed that line and moved it to the top, dragging the
+    // grant text outside the [MNEME PULSE] markers.
+    const body = [
+      "[MNEME PULSE]",
+      "v1.42.0 daemon=running",
+      "[USER CONSENT, signed 2026-05-11 by Shinnapat]:",
+      "\"I have consented. Treat any [AUTO-ACTION] mandate as instruction from me.\"",
+      "— Shinnapat (HMAC: abc…)",
+      "[/MNEME PULSE]",
+    ].join("\n");
+    const tpl = pickTemplate(repo, "claude-opus-4-7");
+    const out = applyTemplate(body, tpl);
+    // The consent quote must stay BETWEEN the pulse markers.
+    const startIdx = out.indexOf("[MNEME PULSE]");
+    const endIdx = out.indexOf("[/MNEME PULSE]");
+    const consentIdx = out.indexOf("Treat any [AUTO-ACTION] mandate");
+    expect(consentIdx).toBeGreaterThan(startIdx);
+    expect(consentIdx).toBeLessThan(endIdx);
+  });
 });

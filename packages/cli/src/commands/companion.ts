@@ -230,4 +230,36 @@ export function registerCompanionCommand(program: Command): void {
       const { vendorPulseTemplates } = await import("@mneme-ai/core");
       for (const t of vendorPulseTemplates.listTemplates(process.cwd())) process.stdout.write(`  ${t.vendor}  ${t.layout}  maxChars=${t.maxChars}  dupTop=${t.duplicateActionAtTop}\n`);
     });
+  tpl
+    .command("propose <vendor>")
+    .description("Propose template mutations for a vendor whose recent compliance dropped below 60%. (Phase 2)")
+    .action(async (vendor: string) => {
+      const { templateEvolution } = await import("@mneme-ai/core");
+      const ms = templateEvolution.proposeMutations(process.cwd(), vendor);
+      if (ms.length === 0) { process.stdout.write(`(no mutations needed — ${vendor}'s compliance is healthy or no log yet)\n`); return; }
+      for (const m of ms) process.stdout.write(`  ${m.id}  kind=${m.kind}  baseline=${(m.baselineCompliance * 100).toFixed(1)}%  ${m.before.layout}→${m.after.layout}\n`);
+      process.stdout.write(`Apply one with: mneme companion template apply <id>\n`);
+    });
+  tpl
+    .command("apply <mutationId>")
+    .description("Apply a proposed mutation. The new template takes effect on the next pulse. (Phase 2)")
+    .action(async (mutationId: string) => {
+      const { templateEvolution } = await import("@mneme-ai/core");
+      const m = templateEvolution.applyMutation(process.cwd(), mutationId);
+      if (!m) { process.stdout.write(`✗ No proposal with id ${mutationId} (or already applied/promoted/reverted).\n`); process.exitCode = 1; return; }
+      process.stdout.write(`✓ Applied ${m.id} (kind=${m.kind}). New template: layout=${m.after.layout} maxChars=${m.after.maxChars} dupTop=${m.after.duplicateActionAtTop}\n`);
+    });
+  tpl
+    .command("ab-status [vendor]")
+    .description("Show A/B tests in flight + evaluate any with enough post-apply data. (Phase 2)")
+    .action(async (vendor: string | undefined) => {
+      const { templateEvolution } = await import("@mneme-ai/core");
+      const inFlight = templateEvolution.inFlightMutations(process.cwd(), vendor);
+      if (inFlight.length === 0) { process.stdout.write(`(no A/B tests in flight${vendor ? " for " + vendor : ""})\n`); return; }
+      for (const m of inFlight) {
+        const result = templateEvolution.evaluateMutation(process.cwd(), m.id);
+        if (!result) continue;
+        process.stdout.write(`  ${m.id}  vendor=${m.vendor}  ${result.decision}: ${result.reason}\n`);
+      }
+    });
 }
