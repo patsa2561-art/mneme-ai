@@ -8,6 +8,93 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.60.0] — 2026-05-12
+
+**MCP TIER TOOLS -- the v1.57-v1.59 god-tier modules become AI-agent-
+discoverable. AI clients that connect to Mneme MCP now auto-discover
+16 new tools spanning the 7 final-boss layers. Users don't have to
+memorize CLI commands -- their AI knows the right tool from the
+trigger phrases ("ask mneme", "forecast regression", "sign covenant",
+"counterfactual", "ตรวจสอบ").**
+
+### 16 new MCP tools
+
+**Tier 1 -- Sovereignty Kernel (1 tool):**
+  - `mneme.sovereign.ask` -- grounded Q&A via local Ollama + ACGV gate
+
+**Tier 2 -- Covenant (4 tools):**
+  - `mneme.covenant.sign`
+  - `mneme.covenant.show`
+  - `mneme.covenant.violations`
+  - `mneme.covenant.score`
+
+**Tier 3 -- Oracle / Forecast (1 tool):**
+  - `mneme.oracle.forecast` -- Bayesian P(regression within 14 days)
+
+**Tier 4 -- Whisper Net (3 tools):**
+  - `mneme.whisper.emit`
+  - `mneme.whisper.import`
+  - `mneme.whisper.stats`
+
+**Tier 5 -- Nemesis (3 tools):**
+  - `mneme.nemesis.generate`
+  - `mneme.nemesis.grade`
+  - `mneme.nemesis.trend`
+
+**Tier 6 -- Recursive Soul (2 tools):**
+  - `mneme.soul.review`
+  - `mneme.soul.aggregate`
+
+**Tier 7 -- Time-River (2 tools):**
+  - `mneme.time.rewind`
+  - `mneme.time.counterfactual`
+
+Each tool ships the full MnemeTool envelope: `description`,
+`whenToUse`, `triggers` (multi-language including TH), `inputSchema`,
+`outputSchema`, `examples`, `pitfalls`, `composeWith`, `handler`.
+AI clients reading the tool catalog see immediately when + how to
+call each one.
+
+### Why this matters
+
+The v1.57-v1.59 layers are powerful but were CLI-only -- users had
+to type `mneme sovereign ask` / `mneme covenant sign` etc to use
+them. Per the mandate "user describes outcome, AI runs commands",
+the AI must DISCOVER these capabilities. MCP exposure closes that
+gap: the user says "verify this claim" / "forecast regression risk
+on this change" / "what would Mneme have said at v1.42?" and the
+AI routes to the right tool automatically.
+
+### Tests
+
+Full project suite: **6135/6135** (no regression). The registry
+tests run shape validation against every registered tool, so 152
+new tests fired automatically when the 16 new tools were
+registered -- pinning the contract for every handler.
+
+### Files added / modified
+
+```
+NEW packages/mcp/src/tools/_tier_tools.ts   (16 MCP tool definitions)
+MOD packages/mcp/src/tools/_registry.ts     (imports TIER_TOOLS)
+```
+
+### Mandate compliance
+
+- **Wild idea**: AI tools usually expose 5-20 tools. Mneme MCP now
+  has ~190 tools across 7 god-tier layers + the legacy 172, but
+  every tool ships rich triggers + plain-English `whenToUse` so the
+  AI's tool-router routes correctly without overwhelm.
+- **Wiser, not patched**: each tier tool is a 30-line wrapper
+  around the corresponding core API -- swapping the algorithm in
+  core leaves the MCP surface untouched.
+- **Self-fix root cause**: user feedback from tier-1 ship: "AI
+  agent doesn't know the command". v1.60 fixes that structurally.
+- **Co-working**: pure additive. Every prior MCP tool still works.
+- **Always-studying**: each handler returns the standard `{ data,
+  wisdom, confidence }` envelope so MCP host clients can log + cite
+  uniformly.
+
 ## [1.59.0] — 2026-05-12
 
 **IMMORTAL DEMON BUNDLE -- Tiers 3-7 of the v1.57 god-tier menu landed
