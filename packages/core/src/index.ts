@@ -299,6 +299,16 @@ export * as sovereign from "./sovereign/index.js";
 // quorum.jsonl for violations. Aletheia compliance score moves over
 // time -- credit history for AI.
 export * as covenant from "./covenant/covenant.js";
+// v1.59 -- TIER 3: Oracle/forecast (Bayesian regression risk)
+export * as forecast from "./forecast/forecast.js";
+// v1.60 -- TIER 4: Whisper Net (P2P wisdom federation)
+export * as whisper from "./whisper/whisper.js";
+// v1.61 -- TIER 5: Nemesis Protocol (weekly adversarial audit)
+export * as nemesis from "./nemesis/nemesis.js";
+// v1.62 -- TIER 6: Recursive Soul (cross-session AI accountability)
+export * as recursiveSoul from "./recursive_soul/recursive_soul.js";
+// v1.63 -- TIER 7: Time-River (counterfactual history)
+export * as timeriver from "./timeriver/timeriver.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
