@@ -55,7 +55,27 @@ export class BundledEmbedder implements EmbeddingProvider {
   private loadPromise: Promise<FeatureExtractor> | null = null;
 
   constructor(opts: BundledOptions = {}) {
-    this.model = opts.model ?? DEFAULT_MODEL;
+    // v1.30.0 -- MODEL-URL HONEYPOT pre-validation. If the caller hands
+    // us a model id that doesn't look like a HuggingFace repo path
+    // (e.g., "fnv-256" -- the hash embedder's internal name leaked
+    // through a config write/read cycle), FALL BACK to DEFAULT_MODEL
+    // instead of constructing a 404-bound URL. The user previously got
+    // a confusing "Unauthorized access to file: huggingface.co/fnv-256/..."
+    // because their config had been polluted by a prior hash-tier run.
+    const requestedModel = opts.model ?? DEFAULT_MODEL;
+    const looksValid = /^[\w.-]+\/[\w.-]+$/.test(requestedModel);
+    if (!looksValid) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[mneme/embeddings] model id "${requestedModel}" doesn't look like a HuggingFace repo path ` +
+        `(expected "<owner>/<name>"). Falling back to ${DEFAULT_MODEL}. ` +
+        `Likely cause: a prior hash-tier run polluted .mneme/config.json. ` +
+        `Run \`mneme embeddings upgrade\` to reset cleanly.`,
+      );
+      this.model = DEFAULT_MODEL;
+    } else {
+      this.model = requestedModel;
+    }
     this.dimensions = DEFAULT_DIMS;
     this.cacheDir = opts.cacheDir ?? defaultCacheDir();
     this.onProgress = opts.onProgress;
@@ -161,22 +181,30 @@ export class BundledEmbedder implements EmbeddingProvider {
       }
     }
 
-    // Force the WASM execution provider so we never touch onnxruntime-node
-    // (the native ONNX backend has no Windows-ARM64 binary; WASM ships in
-    // the package itself and runs on every Node platform).
+    // v1.30.0 -- WASM CONSTELLATION (auto-detect best device).
+    //
+    // Pre-fix: hardcoded `device: "wasm"` worked on @huggingface/transformers
+    // <= 3.0 but newer releases threw "Unsupported device 'wasm'. Should be
+    // one of: cpu" -- silently dropping the user to the hash tier without
+    // them ever knowing the bundled MiniLM was reachable.
+    //
+    // KILLER IDEA -- WASM Constellation: try a SEQUENCE of device IDs
+    // (newest first), keep the first one that loads, cache the winner to
+    // `~/.cache/mneme/models/.device-winner` so the NEXT session skips the
+    // race. The galaxy of device IDs (cpu / wasm / webgpu / cuda / auto)
+    // is searched like a constellation -- whichever star shines first
+    // becomes the lighthouse for future runs.
     const onProgress = this.onProgress;
-    const pipeline = await transformers.pipeline("feature-extraction", this.model, {
-      device: "wasm",
-      progress_callback: onProgress
-        ? (info: Record<string, unknown>) =>
-            onProgress({
-              status: String(info["status"] ?? ""),
-              loaded: typeof info["loaded"] === "number" ? (info["loaded"] as number) : undefined,
-              total: typeof info["total"] === "number" ? (info["total"] as number) : undefined,
-              file: typeof info["file"] === "string" ? (info["file"] as string) : undefined,
-            })
-        : undefined,
-    });
+    const progressCb = onProgress
+      ? (info: Record<string, unknown>) =>
+          onProgress({
+            status: String(info["status"] ?? ""),
+            loaded: typeof info["loaded"] === "number" ? (info["loaded"] as number) : undefined,
+            total: typeof info["total"] === "number" ? (info["total"] as number) : undefined,
+            file: typeof info["file"] === "string" ? (info["file"] as string) : undefined,
+          })
+      : undefined;
+    const pipeline = await this.loadViaConstellation(transformers, progressCb);
 
     // v1.11.1 — TOFU post-pipeline pin. After the pipeline downloaded any
     // missing files, snapshot hashes if no manifest existed yet. Best-effort:
@@ -187,6 +215,63 @@ export class BundledEmbedder implements EmbeddingProvider {
     }
 
     return pipeline;
+  }
+
+  /** v1.30.0 -- WASM CONSTELLATION. Try device IDs in order; cache the
+   *  winner so the next session loads instantly. The order goes
+   *  newest-first because @huggingface/transformers@3.x deprecated
+   *  "wasm" in favor of "cpu" and the user gets the freshest path
+   *  on a fresh install. */
+  private async loadViaConstellation(
+    // We type the transformers module loosely -- its `device` field
+    // is a string literal union that varies between major versions.
+    transformers: { pipeline: (task: string, model: string, opts: Record<string, unknown>) => Promise<FeatureExtractor> },
+    progressCb?: (info: { status: string; loaded?: number; total?: number; file?: string }) => void,
+  ): Promise<FeatureExtractor> {
+    const constellation = ["cpu", "wasm", "webgpu", "auto"];
+    const winnerPath = join(this.cacheDir, ".device-winner");
+    let cachedWinner: string | null = null;
+    try {
+      const fs = await import("node:fs");
+      if (fs.existsSync(winnerPath)) cachedWinner = fs.readFileSync(winnerPath, "utf8").trim();
+    } catch { /* */ }
+
+    // Reorder the constellation so the cached winner is tried FIRST.
+    const order = cachedWinner && constellation.includes(cachedWinner)
+      ? [cachedWinner, ...constellation.filter((d) => d !== cachedWinner)]
+      : constellation;
+
+    let lastErr: Error | null = null;
+    for (const device of order) {
+      try {
+        const pipeline = await transformers.pipeline("feature-extraction", this.model, {
+          device,
+          progress_callback: progressCb,
+        });
+        // Winner!  Persist for next session.
+        try {
+          const fs = await import("node:fs");
+          if (!fs.existsSync(this.cacheDir)) fs.mkdirSync(this.cacheDir, { recursive: true });
+          fs.writeFileSync(winnerPath, device, "utf8");
+        } catch { /* */ }
+        return pipeline;
+      } catch (e) {
+        lastErr = e as Error;
+        // Only retry on "Unsupported device" / similar device-rejection errors.
+        // Network errors, file-not-found, etc. propagate out of the loop.
+        const msg = (e as Error).message ?? "";
+        if (!/unsupported device|device.*should be|invalid.*device/i.test(msg)) {
+          throw e;
+        }
+        // else: fall through to next device in the constellation.
+      }
+    }
+    throw new Error(
+      `WASM CONSTELLATION exhausted -- none of [${order.join(", ")}] worked. ` +
+      `Last error: ${lastErr?.message ?? "unknown"}. ` +
+      `This usually means @huggingface/transformers needs a different device id. ` +
+      `Workaround: \`mneme embeddings status\` to see your tier; \`ollama serve && ollama pull nomic-embed-text\` for the ★★★★ tier without WASM.`,
+    );
   }
 }
 

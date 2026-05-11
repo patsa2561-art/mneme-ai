@@ -234,6 +234,29 @@ export async function runDaemonLoop(
           } catch { /* ignore */ }
         }
       }
+      // v1.30.0 -- honor `mneme supernova clear <cycle>` requests from
+      // the inbox. The CLI can't reach into the daemon process's memory,
+      // so it pushes a "supernova-clear" inbox item; the daemon picks it
+      // up here and clears the named cycle's escalation. After clearing,
+      // we ack the inbox entry so it doesn't fire again.
+      try {
+        const all = readInbox(repoRoot);
+        const clearReqs = all.filter((m) => !m.sent && m.source === "supernova-clear");
+        if (clearReqs.length > 0) {
+          const acked: string[] = [];
+          for (const m of clearReqs) {
+            // Title format: SUPERNOVA: clear escalation for "<cycle>"
+            const match = /clear escalation for "(.+?)"/.exec(m.title);
+            const cycle = match?.[1];
+            if (cycle) {
+              supernova.clearEscalation(cycle);
+              acked.push(m.id);
+            }
+          }
+          if (acked.length > 0) ackInbox(repoRoot, acked);
+        }
+      } catch { /* best-effort */ }
+
       // v1.23.0 — push achievement-unlocked alerts to the inbox.
       try {
         const streaks = readStreaks(repoRoot);

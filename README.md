@@ -218,6 +218,59 @@ failed.
 ---
 
 <details>
+<summary><h2 style="display:inline">📊 What's solid vs what's still maturing (honest)</h2></summary>
+
+Mneme ships a lot of surface area. Here's what's actually production-ready vs what's research-grade. We'd rather under-promise than have you discover this the hard way.
+
+**Solid — use it in production:**
+
+| Feature | Why it works |
+|---|---|
+| `mneme guard` (pre-commit hook) | Pattern-matching on staged diffs. No model magic — fast + deterministic. |
+| `mneme atrophy` | Knowledge half-life from git history. Math is solid, output is honest. |
+| `mneme premortem` | Failure-history-grounded regret prediction. No competitor does this. |
+| `mneme stigmergy` (`hive`) | Emergent collaboration from git traces. Verified on a synthetic fixture. |
+| `mneme antivirus scan / gap-scan / synthesize` | Vaccine framework with 5066+ tests. NO LLM in hot path. |
+| `mneme uninstall` | Removes EVERY artifact + reports `COMPLETE`/`PARTIAL`/`INCOMPLETE`. |
+
+**Tier-dependent — quality scales with your embedder:**
+
+| Memory layer surface | Hash tier (★★) | Bundled MiniLM (★★★) | Ollama (★★★★) | OpenAI (★★★★★) |
+|---|---|---|---|---|
+| `mneme ask`, `mneme why`, `mneme who-knows` | keyword overlap | real semantic | better recall | best |
+| `mneme.memory.*` MCP tools | works but degraded | usable | good | excellent |
+| Citations / RAG output | low precision | usable | good | excellent |
+
+> **Run `mneme embeddings status` to see your active tier + a real similarity test.**
+> **Run `mneme embeddings upgrade` to force-download the bundled MiniLM (~25MB) for ★★★ semantic search with no API key.**
+
+**Research-grade — interesting but maturing:**
+
+| Feature | What's mature | What's not |
+|---|---|---|
+| `mneme adversarial` | Test idea is unique | Calibration vs real AI clients still in early benchmarks |
+| `mneme evolve` (Phase 3-5) | Synthesis + tsc/vitest gates work | Patch acceptance rate still depends on template breadth |
+| `mneme oracle precog` | Markov bigram + ACO pheromones run | Hint quality depends on ≥ 1 month of usage data |
+| `mneme forensics` (CWE) | 11 CWE patterns + Bayesian rerank | Regex-shaped — high precision on known shapes, low on novel ones (use Semgrep for production security gates) |
+
+**Use the right tool for the job:**
+
+| If you need… | Use… |
+|---|---|
+| Semantic code search across a big repo | Cursor / Claude Code / Copilot Chat |
+| Production security gating | Semgrep (free) or Snyk |
+| Code review / refactor | Claude Code |
+| Memory between AI sessions | Mneme (this is the unique value) |
+| Knowledge atrophy / phantom-collaborator analysis | Mneme (no competitor does this) |
+| Vaccine for AI hallucinations | Mneme antivirus (no competitor does this) |
+
+Mneme is the *memory + awareness layer for AI tools*, not a replacement for the tools you already trust. Where it overlaps with mature tools, prefer the mature tool.
+
+</details>
+
+---
+
+<details>
 <summary><h2 style="display:inline">👥 Who is this for</h2></summary>
 
 <p>
@@ -437,7 +490,18 @@ If you don't → check Step 3 config; ask user to restart again.
 
 When the user installs Mneme today via `npm install -g mneme-ai`, they get **all** of these — no extra config:
 
-**🚨 v1.28.x — what every AI agent MUST know about (newest):**
+**🚨 v1.29.x → v1.30.x — what every AI agent MUST know about (newest):**
+
+| New surface (v1.29.x → v1.30.x) | When to use |
+|---|---|
+| **`mneme embeddings status`** (v1.30.0+; alias `tier`) | Show which embedder tier is ACTIVE (★★★★★ OpenAI / ★★★★ Ollama / ★★★ bundled MiniLM / ★★ hash) + run a REAL similarity test on your machine so the user can see if semantic search actually works. Pulse line now also shows `mem=<tier>[★…]` -- when on the hash tier, it's flagged `DEGRADED`. |
+| **`mneme embeddings upgrade`** (v1.30.0+) | Eagerly download the bundled MiniLM-L6 model (~25MB) so the next `mneme index` runs on real ★★★ semantic embeddings instead of falling back to ★★ hash. One command. Idempotent. |
+| **`mneme supernova log / status / clear <cycle>`** (v1.30.0+; alias `sn`) | Inspect the SUPERNOVA self-heal supervisor (v1.29.0+). `log` prints every restart attempt + escalation; `status` aggregates per cycle; `clear <cycle>` queues a clear-escalation request via inbox so the daemon resumes auto-retry without restart. |
+| **SUPER SONIC continuity pulse** (v1.30.0+, AUTOMATIC) | Pulse now persists snapshots to `.mneme/pulse-trace.jsonl` and emits a `[CHANGED ...]` line on every fire showing what shifted since the prior prompt (vaccines, daemon restart, HCI delta, memory tier upgrade, etc.). AI agent adapts incrementally instead of re-discovering state. |
+| **SUPERNOVA self-heal supervisor** (v1.29.0+, AUTOMATIC) | Wraps every daemon cycle (oracle / antivirus_synth / evolve / caretaker / retrieval_lab / selfcheck) in factorial-backoff auto-retry (1!, 2!, 3!, 4!, 5! seconds, capped 120s). 5 consecutive failures escalates via the multi-channel notifier. Logged to `.mneme/supernova.jsonl`. |
+| **QUANTUM gap-scanner** (v1.29.0+, internal) | Grover-shaped sub-linear scan: O(√N) expensive vaccine assays vs O(N) classical. ~254× speedup on a 40k-triple state space. Falls back to classical scan at N ≤ 16. Used by the antivirus auto-synth nightly cycle. |
+
+**🚨 v1.28.x:**
 
 | New surface (v1.28.x) | When to use |
 |---|---|

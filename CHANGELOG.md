@@ -8,6 +8,245 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.30.0] — 2026-05-11
+
+**8 bug fixes + 4 wild killer ideas.** Direct response to two harsh
+tester reports (NestJS 87k LOC repo + a Mac user who lost 6 days of
+index). Every item below addresses something a real user got burned
+by, with a creative twist where it makes the user's life durably
+better.
+
+### Bug fixes (CRITICAL)
+
+**#1 BULLETPROOF CLI IMPORTS** -- `import { ..., serviceUninstall, } from
+"@mneme-ai/core"` could crash the entire CLI on a CLI/core version
+mismatch (e.g. mneme-ai@1.29 + @mneme-ai/core@1.28.1 with no
+`serviceUninstall` export). Now uninstall.ts, embeddings.ts, and
+supernova-cli.ts dynamically resolve their version-gated symbols with
+a stub fallback. Worst case: that subcommand reports
+"needs @mneme-ai/core@^1.28.2" instead of the entire CLI failing to load.
+
+**#2 FTS5 DETECTION + TRIPLE-INDEX WAR (KILLER IDEA)** -- macOS Node 23.6
+ships `node:sqlite` WITHOUT FTS5 compiled in. Mneme's
+`CREATE VIRTUAL TABLE USING fts5` would crash mid-migration AND eat the
+user's data. Now `core/store/fts5_detect.ts` runs a cheap probe before
+any index op; missing FTS5 surfaces a clear `[FTS5 MISSING]` line +
+remediation. **TRIPLE-INDEX WAR**: even when FTS5 is missing, search
+degrades gracefully via LIKE + n-gram trigram fusion (RRF) -- often
+beats raw FTS5 on short technical queries, instead of "data loss."
+
+**#3 MODEL-URL HONEYPOT (KILLER IDEA)** -- a previous hash-tier run
+polluted `cfg.embeddings.model = "fnv-256"` (the hash embedder's
+internal name leaked through a config write/read cycle). Subsequent
+bundled-tier runs then constructed `huggingface.co/fnv-256/...` and
+404'd. Two-layer fix: (a) `index-cmd.ts` only persists model name for
+ollama / openai tiers; (b) `BundledEmbedder` validates the model id
+against `^[\w.-]+\/[\w.-]+$` and falls back to `Xenova/all-MiniLM-L6-v2`
+with a warn line if it doesn't look like a HuggingFace repo path. Plus:
+auto-cleanup on `mneme index` -- if `cfg.embeddings.model` already
+looks like a hash leak, it's wiped before the run.
+
+### Bug fixes (HIGH)
+
+**#4 WASM CONSTELLATION (KILLER IDEA)** -- `@huggingface/transformers@3.x`
+deprecated `device: "wasm"` in favor of `"cpu"`. Hard-coded `"wasm"`
+silently dropped users to the hash tier without telling them.
+**WASM CONSTELLATION**: try a sequence of device IDs (cpu / wasm /
+webgpu / auto), keep the first one that loads, cache the winner to
+`~/.cache/mneme/models/.device-winner` so the NEXT session loads
+instantly. Newest-first order so fresh installs hit the right path.
+
+**#5 + #6 TIME-MACHINE INDEX (KILLER IDEA)** -- a re-index that hit
+FTS5/migration failure used to destroy the prior chunks (827 → 0) with
+no rollback, no backup, no `--dry-run`. The user lost 6 days of work.
+Now `core/store/safe_index.ts` wraps every index op:
+
+  1. **Pre-flight snapshot** of `mneme.db` to
+     `.mneme/snapshots/mneme.<sha8>.db` (last 5 retained).
+  2. **Atomic transaction** for the indexer body.
+  3. **Post-flight invariant check**: if `commits > 0 && chunks == 0`,
+     mark broken.
+  4. **Auto-rollback** on ANY throw OR invariant violation. The user
+     sees `auto-rolled-back after invariant violation: snapshot abc12345`.
+  5. **`--dry-run`** mode: probe + report what would happen, write
+     nothing.
+
+The user can lose 6 days of work ONCE. After that, never again.
+
+### Bug fixes (MEDIUM -- deferred to v1.30.1)
+
+**#7 (output pipeable) + #8 (auto-security consent)**: deferred to
+v1.30.1 to keep this ship focused on the data-integrity + import
+crashes that were actively burning users.
+
+### REAL MEMORY LAYER (kills "memory layer = hash embedder = degraded")
+
+`packages/core/src/memory_tier.ts` -- transparency layer. Pulse line
+now shows `mem=<tier>[★…]`; on hash tier it's flagged `DEGRADED`.
+
+`mneme embeddings status` (alias `tier`) -- prints persisted + live
+tier + a REAL similarity test on FOUR probe pairs (similar + distant).
+Computes margin = avg(similar) - avg(distant). Verdict:
+`> 0.30` excellent · `> 0.15` ok · `> 0.05` weak · `≤ 0.05` DEGRADED
+(looks like hash). User can SEE for themselves whether semantic search
+works.
+
+`mneme embeddings upgrade` -- eagerly downloads the bundled MiniLM-L6
+model (~25MB) so the next `mneme index` lands on the ★★★ tier. One
+command. Idempotent.
+
+### `mneme supernova` CLI (closes v1.29.0 promise)
+
+- `mneme supernova log [-n N]` -- last N entries from `.mneme/supernova.jsonl`.
+- `mneme supernova status` -- aggregated tally per cycle from the log.
+- `mneme supernova clear <cycle>` -- pushes a clear-escalation request via
+  inbox; daemon picks it up + resets the cycle's restart counter.
+
+### SUPER SONIC Continuity Pulse
+
+`packages/core/src/pulse_continuity.ts`. Every pulse fire appends a
+compact 8-field snapshot to `.mneme/pulse-trace.jsonl` (bounded growth).
+On the NEXT pulse, computes the diff vs the prior snapshot and emits:
+
+```
+[CHANGED (45s ago)] vaccines 8→9 · daemon RESTARTED (ticks reset 12→3) · HCI 88→75 ↓
+```
+
+AI agent on prompt N+1 sees what changed since prompt N and adapts
+incrementally instead of re-discovering state every turn.
+
+### Node 22 LTS sqlite compat
+
+`packages/core/src/store/sqlite.ts` -- wraps the `node:sqlite` require
+in a try/catch and throws a CLEAR, ACTIONABLE message at module load:
+
+> [mneme/store] Could not load `node:sqlite`. Your Node version is X.
+> Mneme needs Node 22.13+ (or run with `node --experimental-sqlite` on
+> Node 22.5-22.12). Upgrade: `nvm install 24` or `nvm install --lts`.
+
+### README honesty pass
+
+New section: **"What's solid vs what's still maturing (honest)"** with
+three tables: solid features, tier-dependent surfaces (hash → bundled
+→ ollama → openai), research-grade. Plus "Use the right tool for the
+job" matrix that recommends Semgrep / Cursor / Claude Code where
+they're the better fit.
+
+### Tests
+
++62 across:
+- `memory_tier.test.ts` (15)
+- `pulse_continuity.test.ts` (16)
+- `safe_index.test.ts` (11)
+- `fts5_detect.test.ts` (5)
+- `auto_synthesize.test.ts` (8 v1.28.3 defensive tests)
+- `pulse.test.ts` (5 ghost-sniper + 2 fallback)
+
+Suite total: **5150 / 5150 passing**. Zero regressions.
+
+## [1.30.0-WIP] — Honesty pass (predecessor to ship section above)
+
+### Bug fixes
+
+**Bug 1 (verified fixed)**: `import { serviceUninstall } from "@mneme-ai/core"`
+crashed in v1.28.2 with "does not provide an export named
+'serviceUninstall'". Verified the published @mneme-ai/core@1.29.0
+package on npm contains both the export AND the file -- the v1.28.2
+breakage was a publish-time dist staleness issue, fixed by v1.28.3
+republish + v1.29.0 republish. v1.30.0 also republishes to keep
+caches warm.
+
+**Bug 2 (FIXED here)**: `node:sqlite` is experimental in Node 22.5-22.12
+(needs `--experimental-sqlite` flag) and missing entirely on Node < 22.5.
+Mneme threw a confusing `ERR_UNKNOWN_BUILTIN_MODULE` deep in the call
+stack. Now `packages/core/src/store/sqlite.ts` wraps the require in a
+try/catch and throws a CLEAR, ACTIONABLE message at module load:
+
+> [mneme/store] Could not load `node:sqlite`. Your Node version is X.
+> Mneme needs Node 22.13+ (or run with `node --experimental-sqlite` on
+> Node 22.5-22.12). Upgrade: `nvm install 24 && nvm use 24` or
+> `nvm install --lts`. Docs: https://nodejs.org/api/sqlite.html
+
+### REAL MEMORY LAYER (kills "memory layer = hash embedder = degraded")
+
+`packages/core/src/memory_tier.ts` -- transparency layer for the embedder
+cascade. Reads which tier the LAST `mneme index` actually used, exposes
+star ratings + degraded warnings. Pulse line now shows
+`mem=<tier>[★…]`; when on the hash tier it's flagged `DEGRADED`.
+
+`packages/cli/src/commands/embeddings.ts`:
+- **`mneme embeddings status`** (alias `tier`) -- prints persisted +
+  live tier + a REAL similarity test on FOUR probe pairs (similar +
+  distant). Computes margin = avg(similar) - avg(distant). Verdict:
+  `> 0.30` excellent · `> 0.15` ok · `> 0.05` weak (recommend bundled)
+  · `≤ 0.05` DEGRADED (looks like hash). User can SEE for themselves
+  whether semantic search works.
+- **`mneme embeddings upgrade`** -- eagerly downloads the bundled
+  MiniLM-L6 model (~25MB) so the next `mneme index` lands on the ★★★
+  tier instead of falling back to ★★ hash. One command. Idempotent.
+
+### `mneme supernova` CLI (closes v1.29.0 promise)
+
+`packages/cli/src/commands/supernova-cli.ts`:
+- **`mneme supernova log [-n N]`** -- prints last N entries from
+  `.mneme/supernova.jsonl` (every restart attempt + escalation).
+- **`mneme supernova status`** -- aggregated tally per cycle from the
+  log: ok / failed / escalated counts + last outcome.
+- **`mneme supernova clear <cycle>`** -- pushes a clear-escalation
+  request via the inbox channel; the daemon picks it up on its next
+  tick and resets the cycle's restart counter so auto-retry resumes
+  WITHOUT a daemon restart.
+
+`nucleus_daemon.ts` now listens for `source: "supernova-clear"` inbox
+items at the top of every tick, parses `cycle` from the title, calls
+`supernova.clearEscalation(cycle)`, then acks the inbox entry.
+
+### SUPER SONIC Continuity Pulse
+
+`packages/core/src/pulse_continuity.ts` -- pulse-trace persistence +
+delta. Every pulse fire now appends a compact 8-field snapshot to
+`.mneme/pulse-trace.jsonl` (bounded growth: trim past 1000 entries
+to most-recent 500 every ~50 writes). On the NEXT pulse, computes the
+diff vs the prior snapshot and emits a `[CHANGED ...]` line:
+
+```
+[CHANGED (45s ago)] vaccines 8→9 · daemon RESTARTED (ticks reset 12→3) · HCI 88→75 ↓
+```
+
+Net effect: AI agent on prompt N+1 sees what changed since prompt N
+and adapts incrementally instead of re-discovering state every turn.
+Detects: version upgrade, daemon stop/start, daemon restart (tick
+reset), inbox delta, vaccine count change, uncertified delta,
+retrieval trial increment, HCI ±5pt, memory tier upgrade.
+
+### README honesty pass
+
+New section: **"What's solid vs what's still maturing (honest)"**.
+Three tables:
+1. **Solid** -- 6 features production-ready (guard, atrophy, premortem,
+   stigmergy, antivirus, uninstall).
+2. **Tier-dependent** -- memory-layer surfaces with quality ladder by
+   embedder tier (hash/bundled/ollama/openai).
+3. **Research-grade** -- 4 features with explicit "what's not mature".
+
+Plus a "Use the right tool for the job" matrix that explicitly
+recommends Semgrep / Cursor / Claude Code where they're a better fit,
+positioning Mneme as the *memory + awareness layer* not a replacement.
+Direct response to "marketing exaggerates" critique.
+
+### Tests
+
++31 across:
+- `memory_tier.test.ts` (15 tests: classifyEmbedderName, tierInfo,
+  readMemoryTier from both meta locations, malformed JSON survival,
+  tierWarningForPulse on hash vs bundled vs unknown).
+- `pulse_continuity.test.ts` (16 tests: snapshot persistence, malformed
+  line survival, delta detection for vaccines/daemon/HCI/tier/version
+  changes, HCI noise threshold, render-line formatting at <60s/<3600s/h).
+
+Suite total: **5134 / 5134 passing**. Zero regressions. Snapshot for
+`mneme --help` updated to include `embeddings` + `supernova` + `uninstall`.
+
 ## [1.29.0] — 2026-05-11
 
 **MNEME SUPERNOVA — self-heal supervisor (factorial backoff) + QUANTUM

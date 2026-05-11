@@ -94,6 +94,8 @@ Commands:
   inbox  >  Mneme's force-push channel — daemon + version-check + achievement notices waiting to surface to the user.
   antivirus|av  >  Antivirus -- scan AI drafts for hallucination strains + run the vaccine lab.
   uninstall [options]  >  Remove EVERY Mneme artifact from this machine: stop daemon, remove OS service, remove agent hooks, remove auto-boot marker. (Pass --purge to also wipe .mneme/ in this repo; --npm to also \`npm uninstall -g\`.)
+  embeddings|emb  >  Inspect + upgrade the memory-layer embedder. \`status\` shows which tier is active with a real similarity test; \`upgrade\` pre-downloads the bundled MiniLM model so the next \`mneme index\` runs on real semantic embeddings.
+  supernova|sn  >  Inspect + manage the SUPERNOVA self-heal supervisor (v1.29.0+). Shows per-cycle restart attempts, escalations, and lets you clear stuck-escalated cycles.
   retrieval|rl  >  Retrieval Lab -- self-tuning retrieval config (UCB1 over candidate arms).
   hooks|integrate  >  Wire Mneme into your AI tool(s). Supports Claude Code (real hook), Cursor, Codex, Gemini, Windsurf, and project AGENTS.md.
   notify  >  Multi-channel outbound notifications (OS toast, TTS, mobile push, email, agent files).

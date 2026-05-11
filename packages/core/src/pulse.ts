@@ -37,6 +37,8 @@ import { ackInbox } from "./inbox.js";
 import { renderOracleHint } from "./oracle/index.js";
 import { readLiveMnemeVersion, semverGt } from "./version_check.js";
 import { computeHci } from "./hci.js";
+import { readMemoryTier, tierWarningForPulse } from "./memory_tier.js";
+import { recordPulseSnapshot, computePulseDelta, renderPulseDeltaLine, type PulseSnapshot } from "./pulse_continuity.js";
 
 export interface PulseStatus {
   version: { current: string; latest: string | null; updateAvailable: boolean };
@@ -44,6 +46,12 @@ export interface PulseStatus {
   inbox: { unsent: number };
   antivirus: { totalInfectionsCaught: number; activeVaccines: number; uncertified: number };
   retrieval: { totalTrials: number; activeConfig: string | null };
+  /** v1.30.0 -- which embedder tier the last `mneme index` actually used.
+   *  null when no index has run on this repo yet. Surfaced in the pulse
+   *  line so the AI agent + user can see at a glance whether the memory
+   *  layer is on real semantic embeddings (★★★+) or the degraded hash
+   *  fallback (★★). */
+  memoryTier: { name: string; stars: number; semantic: boolean } | null;
   notable: PulseNotice[];
 }
 
@@ -70,8 +78,27 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     inbox: { unsent: 0 },
     antivirus: { totalInfectionsCaught: 0, activeVaccines: 0, uncertified: 0 },
     retrieval: { totalTrials: 0, activeConfig: null },
+    memoryTier: null,
     notable: [],
   };
+
+  // v1.30.0 -- memory-tier transparency. Read which embedder tier the
+  // last `mneme index` used, surface it on the pulse line so the AI +
+  // user can see whether semantic memory is actually live or the user
+  // is silently on the degraded hash tier.
+  try {
+    const tier = readMemoryTier(repoRoot);
+    if (tier.name !== "unknown") {
+      status.memoryTier = { name: tier.name, stars: tier.stars, semantic: tier.semantic };
+    }
+    const warn = tierWarningForPulse(repoRoot);
+    if (warn) {
+      status.notable.push({
+        level: "warning",
+        text: `${warn.text} ${warn.remedy}`,
+      });
+    }
+  } catch { /* silent */ }
 
   // Version. v1.27.3 (HOTFIX): the comparison MUST use the LIVE
   // current version (readMyVersion above), not the `v.current` field
@@ -271,7 +298,17 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
       hciSuffix = `  hci=${hci.score}/100[${hci.band}]`;
     } catch { /* */ }
   }
-  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}`);
+  // v1.30.0 -- show the embedder tier on the pulse line so the user can
+  // tell at a glance whether their "memory layer" is real semantic search
+  // or the degraded hash fallback. Format: `mem=bundled[★★★]` or
+  // `mem=hash[★★ DEGRADED]`. Omitted when no index has ever run.
+  let memSuffix = "";
+  if (status.memoryTier) {
+    const stars = "★".repeat(status.memoryTier.stars) + "☆".repeat(Math.max(0, 5 - status.memoryTier.stars));
+    const flag = status.memoryTier.semantic ? "" : " DEGRADED";
+    memSuffix = `  mem=${status.memoryTier.name}[${stars}${flag}]`;
+  }
+  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}${memSuffix}`);
   if (status.notable.length > 0) {
     lines.push("");
     for (const n of status.notable) {
@@ -294,6 +331,33 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
         lines.push("");
         for (const ln of hint.split("\n")) lines.push(ln);
       }
+    } catch { /* best-effort */ }
+  }
+  // v1.30.0 -- SUPER SONIC CONTINUITY. Compute the delta vs the prior
+  // pulse + emit a [CHANGED] line so the AI sees what changed since the
+  // last prompt without having to re-call mneme.* tools to discover.
+  // Then persist the current snapshot for the NEXT pulse to diff against.
+  if (opts.repoRoot) {
+    try {
+      const snap: PulseSnapshot = {
+        ts: new Date().toISOString(),
+        version: status.version.current,
+        daemonRunning: status.daemon.running,
+        daemonTickCount: status.daemon.tickCount,
+        inboxUnsent: status.inbox.unsent,
+        vaccines: status.antivirus.activeVaccines,
+        uncertifiedVaccines: status.antivirus.uncertified,
+        retrievalTrials: status.retrieval.totalTrials,
+        hci: hciSuffix ? Number(/hci=(\d+)/.exec(hciSuffix)?.[1] ?? "0") : null,
+        memoryTier: status.memoryTier?.name ?? null,
+      };
+      const delta = computePulseDelta(opts.repoRoot, snap);
+      const deltaLine = renderPulseDeltaLine(delta);
+      if (deltaLine) {
+        lines.push("");
+        lines.push(deltaLine);
+      }
+      recordPulseSnapshot(opts.repoRoot, snap);
     } catch { /* best-effort */ }
   }
   lines.push("[/MNEME PULSE]");

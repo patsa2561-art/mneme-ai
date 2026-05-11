@@ -274,12 +274,26 @@ export async function indexCommand(opts: IndexCommandOptions): Promise<number> {
       : activeEmbedder.name.startsWith("bundled:")
         ? "bundled"
         : "hash";
-  const resolvedModel = activeEmbedder.name.includes(":")
+  // v1.30.0 HOTFIX (Bug #3) -- only persist model name for tiers where it's
+  // actually a HuggingFace / vendor model id (ollama, openai). Pre-fix we
+  // persisted "fnv-256" (hash embedder's internal name) into
+  // cfg.embeddings.model, which the NEXT index run then passed to the
+  // bundled embedder as a HuggingFace repo id -- producing the infamous
+  // `huggingface.co/fnv-256/resolve/main/...` 404 the user reported.
+  const resolvedModel = (resolvedKind === "ollama" || resolvedKind === "openai") && activeEmbedder.name.includes(":")
     ? activeEmbedder.name.split(":").slice(1).join(":")
     : undefined;
+  // v1.30.0 -- if the persisted model already looks like a hash-tier leak
+  // (e.g. "fnv-256", "fnv", anything without a slash), WIPE it so the next
+  // run uses the bundled DEFAULT_MODEL ("Xenova/all-MiniLM-L6-v2").
+  const looksLikeHashLeak = cfg.embeddings.model && !cfg.embeddings.model.includes("/") && /^(fnv|hash|sha)/i.test(cfg.embeddings.model);
+  if (looksLikeHashLeak) {
+    delete cfg.embeddings.model;
+  }
   if (
     cfg.embeddings.provider !== resolvedKind ||
-    (resolvedModel && cfg.embeddings.model !== resolvedModel)
+    (resolvedModel && cfg.embeddings.model !== resolvedModel) ||
+    looksLikeHashLeak
   ) {
     cfg.embeddings.provider = resolvedKind;
     if (resolvedModel) cfg.embeddings.model = resolvedModel;

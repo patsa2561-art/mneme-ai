@@ -24,7 +24,28 @@ import type { DatabaseSync as DatabaseSyncType, StatementSync } from "node:sqlit
 // the resolution at runtime, where Node's loader handles it natively. The
 // type import above is erased at compile time so it doesn't trigger Vite.
 const req = createRequire(import.meta.url);
-const { DatabaseSync } = req("node:sqlite") as typeof import("node:sqlite");
+
+// v1.30.0 -- Node 22 LTS compat. `node:sqlite` shipped behind the
+// `--experimental-sqlite` flag in Node 22.5-22.12 (LTS), became flag-free
+// in Node 22.13 / 23.5+. On Node < 22.5 it's missing entirely. The user
+// who reported the v1.28.x crash was on Node 22 LTS without the flag and
+// got a confusing `ERR_UNKNOWN_BUILTIN_MODULE: no such built-in module:
+// node:sqlite`. We now fail FAST with a clear, actionable message at
+// module load -- no silent crash deeper in the call stack.
+let DatabaseSync: typeof import("node:sqlite").DatabaseSync;
+try {
+  DatabaseSync = (req("node:sqlite") as typeof import("node:sqlite")).DatabaseSync;
+} catch (e) {
+  const err = e as { code?: string; message?: string };
+  const nodeVer = process.versions.node;
+  const hint = err.code === "ERR_UNKNOWN_BUILTIN_MODULE"
+    ? `Your Node version is ${nodeVer}. Mneme needs Node 22.13+ (or run with \`node --experimental-sqlite\` on Node 22.5-22.12). Upgrade: \`nvm install 24 && nvm use 24\` or \`nvm install --lts\`.`
+    : `Underlying error: ${err.message}. Try restarting the shell, or upgrade Node: \`nvm install --lts\`.`;
+  throw new Error(
+    `[mneme/store] Could not load \`node:sqlite\`. ${hint}\n` +
+    `Docs: https://nodejs.org/api/sqlite.html`,
+  );
+}
 import type {
   Commit,
   CommitChunk,

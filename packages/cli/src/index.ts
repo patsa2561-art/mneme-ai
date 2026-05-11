@@ -105,6 +105,8 @@ import {
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
 import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerUninstallCommand } from "./commands/uninstall.js";
+import { registerEmbeddingsCommands } from "./commands/embeddings.js";
+import { registerSupernovaCommands } from "./commands/supernova-cli.js";
 import { registerRetrievalCommands } from "./commands/retrieval.js";
 import { registerHooksCommands } from "./commands/hooks.js";
 import { registerNotifyCommands } from "./commands/notify.js";
@@ -2435,6 +2437,10 @@ export async function run(argv: string[]): Promise<void> {
   registerAntivirusCommands(program);
   // ─── Uninstall (v1.28.2) -- comprehensive removal of every Mneme artifact
   registerUninstallCommand(program);
+  // ─── Embeddings (v1.30.0) -- memory-tier transparency + one-command upgrade
+  registerEmbeddingsCommands(program);
+  // ─── Supernova (v1.30.0) -- inspect + clear self-heal supervisor state
+  registerSupernovaCommands(program);
   // ─── Retrieval Lab (v1.25.0) ──────────────────────────────────────
   registerRetrievalCommands(program);
   // ─── Hooks (v1.25.2) ──────────────────────────────────────────────

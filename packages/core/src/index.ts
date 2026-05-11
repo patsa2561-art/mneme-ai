@@ -44,6 +44,23 @@ export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +
 // escalation) and QUANTUM gap-scanner (Grover-shaped sub-linear scan).
 export * as supernova from "./supernova/supervisor.js";
+// v1.30.0 -- Memory-tier transparency. Reads the active embedder tier
+// from store metadata, exposes star ratings + degraded-tier warnings.
+// Lets the pulse honestly tell the user "your memory layer is on the
+// hash tier, here's the one-command upgrade".
+export * as memoryTier from "./memory_tier.js";
+// v1.30.0 -- Super Sonic Continuity: pulse-trace persistence + delta
+// diff. Each pulse fire is appended to .mneme/pulse-trace.jsonl; the
+// next pulse computes the delta against the prior snapshot and emits
+// a [CHANGED] annotation so the AI agent on prompt N+1 sees what
+// changed since prompt N -- adapts incrementally instead of
+// re-discovering state every turn.
+export * as pulseContinuity from "./pulse_continuity.js";
+// v1.30.0 -- TIME-MACHINE INDEX (atomic snapshot + auto-rollback) and
+// FTS5 detection (TRIPLE-INDEX WAR fallback). Together they kill the
+// "lost 6 days of index" failure mode reported on macOS Node 23.6.
+export * as safeIndex from "./store/safe_index.js";
+export * as fts5Detect from "./store/fts5_detect.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";

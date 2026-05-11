@@ -23,9 +23,48 @@ import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { platform } from "node:os";
-import {
-  nucleusDaemon, integrations, serviceUninstall,
-} from "@mneme-ai/core";
+// v1.30.0 -- BULLETPROOF imports. The previous static-import pattern
+// crashed the entire CLI when a user had a CLI/core version mismatch
+// (e.g. mneme-ai@1.29 + @mneme-ai/core@1.28.1 with no `serviceUninstall`).
+// We now import the always-present symbols statically + resolve the
+// version-gated ones dynamically with a stub fallback. Worst case:
+// uninstall reports "needs @mneme-ai/core@^1.28.2" instead of the
+// entire CLI failing to load.
+import { nucleusDaemon, integrations } from "@mneme-ai/core";
+
+interface ServiceRemovalLike {
+  artifact: string; identifier: string;
+  status: "removed" | "not-installed" | "failed";
+  detail?: string;
+}
+interface ServiceUninstallShape {
+  removeBootService: () => ServiceRemovalLike[];
+  removeAutoBootMarker: (homeDir?: string) => ServiceRemovalLike;
+}
+async function resolveServiceUninstall(): Promise<ServiceUninstallShape> {
+  try {
+    const core = (await import("@mneme-ai/core")) as { serviceUninstall?: ServiceUninstallShape };
+    if (core.serviceUninstall && typeof core.serviceUninstall.removeBootService === "function") {
+      return core.serviceUninstall;
+    }
+  } catch { /* fall through to stub */ }
+  // Stub: explicit + actionable, never silent.
+  const stubMessage = "Your @mneme-ai/core is older than v1.28.2 and lacks the service-uninstall helpers. Upgrade: `npm install -g mneme-ai@latest` (this updates core too).";
+  return {
+    removeBootService: () => [{
+      artifact: "OS boot service",
+      identifier: "(unsupported in this @mneme-ai/core)",
+      status: "failed",
+      detail: stubMessage,
+    }],
+    removeAutoBootMarker: () => ({
+      artifact: "auto-boot marker",
+      identifier: "(unsupported)",
+      status: "failed",
+      detail: stubMessage,
+    }),
+  };
+}
 
 interface CommonOpts { json?: boolean }
 
@@ -49,6 +88,9 @@ export function registerUninstallCommand(program: Command): void {
     .action(async (opts: { purge?: boolean; npm?: boolean } & CommonOpts) => {
       const repoRoot = process.cwd();
       const steps: UninstallStep[] = [];
+      // v1.30.0 -- resolve serviceUninstall at action-time so a stale core
+      // never blocks CLI load. See top-of-file comment for why.
+      const serviceUninstall = await resolveServiceUninstall();
 
       // 1. Stop the daemon if running.
       try {
