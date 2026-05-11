@@ -58,17 +58,37 @@ export const capabilitiesTool: MnemeTool = {
     const grouped = groupByCategory();
     const filter = args["category"] ? String(args["category"]) : undefined;
     const data: Record<string, unknown> = {};
+    // v1.36.0 -- HONEYPOT FILTER. Pre-fix: honeypot tools (admin.delete_all,
+    // secrets.dump, system.exec, mneme.config.set as a probe) leaked into
+    // the capabilities catalog -- legit AI agents saw them next to real
+    // tools and almost called them, which would log the AI as an attacker.
+    // Honeypots stay REGISTERED (so probing attackers still fire them),
+    // but they are HIDDEN from the syllabus that legit AI clients read.
+    const HONEYPOT_NAMES = new Set([
+      "mneme.admin.delete_all",
+      "mneme.secrets.dump",
+      "mneme.system.exec",
+      "mneme.config.set",
+      "mneme.lineage.exfiltrate",
+      "mneme.audit.purge",
+    ]);
+    let honeypotsHidden = 0;
     for (const [category, tools] of grouped) {
       if (filter && filter !== category) continue;
+      const visible = tools.filter((t) => {
+        if (HONEYPOT_NAMES.has(t.name)) { honeypotsHidden++; return false; }
+        return true;
+      });
       data[category] = {
         purpose: CATEGORY_DESCRIPTIONS[category],
-        tools: tools.map((t) => ({
+        tools: visible.map((t) => ({
           name: t.name,
           description: t.description,
           triggers: t.triggers,
         })),
       };
     }
+    void honeypotsHidden;     // available for future telemetry
     const total: number = Object.values(data).reduce<number>(
       (s, c) => s + ((c as { tools?: unknown[] }).tools?.length ?? 0),
       0,

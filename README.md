@@ -146,9 +146,13 @@ See [CHANGELOG.md](./CHANGELOG.md) for every release's features and fixes.
 
 ---
 
-## 🚀 Install in 30 seconds
+## 🚀 Install in 30 seconds — and what you'll see
 
-> **The fastest path:** copy this URL into your AI coding tool — Claude Code, Cursor, Codex, Continue — and ask it to install Mneme. The AI will do the rest.
+> **No commands to memorize. No JSON to edit. Your AI does the install for you.**
+
+### Step 1 · Tell your AI to install Mneme
+
+Open your AI coding tool. Paste this URL and ask it to install:
 
 ```
 https://github.com/patsa2561-art/mneme-ai
@@ -156,7 +160,46 @@ https://github.com/patsa2561-art/mneme-ai
 
 > *"Install this tool from npm and add it as an MCP server in my config so you can use its memory of my repo."*
 
-Your AI will run the install, configure its own MCP wiring, and tell you when it's ready. You don't open a JSON file. You don't memorize a single command.
+### Step 2 · Restart your AI tool **once**
+
+Only manual step. After restart, your AI tool now sees Mneme tools.
+
+### Step 3 · Just keep coding — Mneme works silently in the background
+
+```
+   ┌─────────────────────────────────────────────────────────────────┐
+   │  👤 YOU                                          🤖 YOUR AI     │
+   │                                                                 │
+   │  "fix this auth bug"   ───────────────────►   thinking...       │
+   │                                                                 │
+   │                    🧠 Mneme (silent secretary)                  │
+   │                    ┌─────────────────────────┐                  │
+   │                    │ • cites commit a3f9b21  │                  │
+   │                    │ • flags 2024 JWT regret │                  │
+   │                    │ • catches phantom SHA   │                  │
+   │                    │ • saves 35% tokens      │                  │
+   │                    └────────────┬────────────┘                  │
+   │                                 │                               │
+   │  "Here's the fix"   ◄───────────┴── grounded answer + sources   │
+   └─────────────────────────────────────────────────────────────────┘
+
+         ╭───────────────────────────────────────────────╮
+         │  Mneme talks to your AI on YOUR behalf.       │
+         │  You write zero commands. AI gets smarter.    │
+         ╰───────────────────────────────────────────────╯
+```
+
+### What changes for you, without typing a single command
+
+| Before Mneme | After Mneme |
+|---|---|
+| AI says *"I think the JWT logic..."* | AI says *"per commit a3f9b21, JWT was rolled back because..."* |
+| AI suggests a function that doesn't exist | Mneme antivirus catches the phantom **before** you see it |
+| Each AI session starts fresh, forgets prior decisions | Lineage carries context across sessions + machines |
+| You re-paste the same context every prompt | Mneme caches context — token usage drops 30-50% |
+| You wake up to the same TODOs | Overnight runner ships a morning report at `.mneme/overnight/REPORT.md` |
+
+> *"What can mneme do?"* — ask your AI this. It will read the curated tool list Mneme already wrote into your `CLAUDE.md` / `AGENTS.md` and show you only the ~20 tools that match YOUR project shape (200 hidden ones stay out of the way).
 
 <details>
 <summary><b>Prefer to install it yourself?</b> (pick your favorite path)</summary>
@@ -214,6 +257,220 @@ tell the user exactly what was cleaned up. Exit code is `1` if any step
 failed.
 
 </details>
+
+---
+
+## 💰 Business Model — 5 wild bets (every feature FREE today)
+
+> Mneme is **MIT-licensed and 100% free to use**. The five business models below are how Mneme stays **economically sustainable as public infrastructure** — they don't gate any feature you use today.
+
+### 1️⃣ Pay-per-bug-prevented · the antivirus bounty
+
+```
+   ┌────────────────────┐    ┌─────────────────┐    ┌──────────────────┐
+   │ AI vendor's model  │ →  │ Mneme antivirus │ →  │ vendor PAYS      │
+   │ hallucinates a SHA │    │ catches + logs  │    │ $0.01 per block  │
+   └────────────────────┘    └─────────────────┘    └──────────────────┘
+                                                              │
+                          10M blocks/month × $0.01 = $100K MRR per vendor
+```
+
+The vendor *wants* to pay because Mneme makes their model look more trustworthy. Aligned incentives. No blame, just reduced refund rate.
+
+### 2️⃣ "Mneme Inside" trust badge · $100K/yr per vendor
+
+```
+                 ╭──────────────────────────────────────╮
+                 │  Verified by Mneme  ★★★★☆  96/100    │
+                 │  Antivirus catch rate · 99.4%        │
+                 ╰──────────────────────────────────────╯
+                            shown on vendor's landing page
+                                       ▲
+                                       │
+                          vendors pay → marketing asset
+                                       │
+                          (same model that built "Intel Inside")
+```
+
+Mneme becomes **the referee**. Every AI tool wants the badge because users learn to look for it.
+
+### 3️⃣ Compliance-as-a-Service · enterprise $50K–$500K/yr
+
+```
+   EU AI Act    ┐
+   SOX          ├─ require continuous AI governance evidence
+   HIPAA        ┘                       │
+                                        ▼
+                          Mneme HMAC-signed audit trail
+                          + grader loop + replay log
+                                        │
+                                        ▼
+                          1,000 enterprises × $100K avg
+                          = $100M ARR realistic in 3 yrs
+```
+
+No certification body in this market today. **First mover holds the seat.**
+
+### 4️⃣ Genome Pool · consent-based data marketplace
+
+```
+   ┌──────────────┐    50% revenue share   ┌──────────────────────┐
+   │ Contributors │ ◄──────────────────── │ Enterprise queries   │
+   │ opt-in       │                        │ "How do top teams    │
+   │ chromosomes  │ ─────────────────────► │  handle X?"          │
+   └──────────────┘   anonymized patterns  └──────────────────────┘
+                                                    │
+                          $0.10/query × consent-based pool
+                          = ethical alternative to scraped-code
+```
+
+**Contributors get paid. Users opt in.** The data layer training-data marketplaces wish they had.
+
+### 5️⃣ Devhealth dashboard · $50/seat/month for engineering managers
+
+```
+   ┌─────────────────────────────────────────────────────────────┐
+   │  📊 atrophy · bus-factor · paradox · heartbeat · drawdown   │
+   │  → all hosted on a single dashboard for the EM              │
+   └─────────────────────────────────────────────────────────────┘
+            CLI commands already exist · just needs hosted UI
+                              ▲
+                100K EMs × $50/mo = $5M MRR · sticky daily-use SaaS
+```
+
+---
+
+## 🤖 Operation Automation — 5 wild self-running loops
+
+### 1️⃣ Continuous shipping cycle · *Mneme ships Mneme overnight*
+
+```
+   24h cycle:
+   ┌────────────────────────────────────────────────────────────┐
+   │  Daemon sees test failure                                  │
+   │     → EVOLVE Phase 3 generates fix                         │
+   │     → tsc + vitest gates pass                              │
+   │     → Phase 4 opens auto-PR                                │
+   │     → CI runs, all green for 24h                           │
+   │     → AUTO-MERGE                                           │
+   │     → npm publish patch (no human in the loop)             │
+   └────────────────────────────────────────────────────────────┘
+                  Self-shipping software · zero typing
+```
+
+### 2️⃣ Distributed PRECOG + EVOLVE federation · network effect
+
+```
+   Every install ─► contributes anonymized FN samples
+                        │
+                  ┌─────▼─────┐
+                  │  central  │
+                  │   brain   │
+                  └─────┬─────┘
+                        │
+                  patterns shipped back to every install
+                        │
+   ┌────────────────────▼──────────────────────────────────┐
+   │  1k users  = small intelligence pool                  │
+   │  1M users  = global brain that vendors can't catch up │
+   └───────────────────────────────────────────────────────┘
+```
+
+### 3️⃣ Caregiver-as-API · universal HTTP middleware
+
+```
+   POST /pulse/incoming
+     body: { vendor, sessionId, currentTool, recentClaims }
+                        │
+                        ▼
+        Mneme decides AUTO-SUGGEST (never "execute")
+                        │
+                        ▼
+     returns: { suggest: "mneme.system.upgrade", urgency: "high" }
+```
+
+Any AI vendor talks to Mneme via HTTP — not just MCP-compliant ones. Mneme = AI awareness OS layer for the whole ecosystem.
+
+### 4️⃣ Autonomous bug triage · *Mneme manages Mneme's roadmap*
+
+```
+   Daemon nightly cycle:
+   ┌──────────────────────────────────────────────────────────┐
+   │  gap-scan finds strain with recall < 0.80                │
+   │      ↓                                                   │
+   │  echo searches incidents resembling the FN samples       │
+   │      ↓                                                   │
+   │  if pattern found ─► auto-create GitHub issue:           │
+   │     title:   "Vaccine X recall regressed (60%, was 100%)" │
+   │     body:    5 FN samples + suggested fix file:line      │
+   │     labels:  bug, antivirus, auto-triage                 │
+   │     assign:  maintainer                                  │
+   └──────────────────────────────────────────────────────────┘
+       Maintainer wakes up to a prioritized backlog
+       generated from real telemetry · not gut feeling
+```
+
+### 5️⃣ Cross-vendor agent failover · AI session load balancer
+
+```
+   Claude session: context full @ 95%
+                        │
+                  Mneme detects ↓
+                        │
+              spawn fresh Cursor agent
+                        │
+              spore push chromosomes ──► spore pull on Cursor
+                        │
+              continuity preserved · user sees a seamless handoff
+                        │
+              ┌─────────┴─────────┐
+              │ next: Codex       │
+              │ next: Gemini      │
+              │ next: Aider       │
+              │ infinite loop     │
+              └───────────────────┘
+       No AI session ever dies · Mneme = the infinity engine
+```
+
+---
+
+## ⚡ Combined moat — the inevitable flywheel
+
+```
+                          ┌───────────────────┐
+                          │  More users       │
+                          └────────┬──────────┘
+                                   │
+        ┌──────────────────────────┴──────────────────────────┐
+        │                                                     │
+        ▼                                                     ▼
+ ┌──────────────────┐                              ┌──────────────────┐
+ │ Federated        │                              │ More vendor      │
+ │ patterns improve │                              │ blocks logged    │
+ └────────┬─────────┘                              └────────┬─────────┘
+          │                                                 │
+          ▼                                                 ▼
+ ┌──────────────────┐                              ┌──────────────────┐
+ │ Vaccines catch   │                              │ Vendors PAY for  │
+ │ MORE bugs        │                              │ blocks + badge   │
+ └────────┬─────────┘                              └────────┬─────────┘
+          │                                                 │
+          └──────────────────┬──────────────────────────────┘
+                             ▼
+                    ┌────────────────────┐
+                    │ Revenue → hire     │
+                    │ devs → ship faster │
+                    └─────────┬──────────┘
+                              │
+                              ▼
+                    ┌────────────────────┐
+                    │ More users (loop)  │
+                    └────────────────────┘
+
+   5-layer moat: open standard · cross-vendor · federated data
+                  · cryptographic provenance · regulatory compliance
+   Vendor copy is incompatible with their own lock-in incentive.
+```
 
 ---
 

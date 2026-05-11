@@ -103,6 +103,14 @@ export * as overnightRunner from "./overnight/runner.js";
 // "200 tools overwhelm AI" tester painpoints.
 export * as lineageAtRestCrypto from "./lineage/at_rest_crypto.js";
 export * as toolCurator from "./tool_curator.js";
+// v1.36.0 -- TOKEN ECONOMY (secretary bot framework). Per-vendor
+// BARGAIN TABLE of strategies (context-hash-reuse, delta-only,
+// compact-json, identifier-shortening, early-summary-frame). AI agent
+// volunteers token counts via mneme.token.report; Mneme rolls up
+// savings + tunes which strategies work best per vendor over time.
+// Honest disclaimer baked in: Mneme can't snoop provider traffic --
+// AI cooperates because saving tokens saves the user $$.
+export * as tokenEconomy from "./token_economy.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
