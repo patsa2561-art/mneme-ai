@@ -73,13 +73,17 @@ function publicIp(droplet) {
 
 async function checkBrain(ip) {
   if (!ip) return { ok: false, reason: "no-ip" };
-  try {
-    const res = await fetch(`https://${ip}/v1/healthz`, { redirect: "follow" });
-    const json = await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, body: json };
-  } catch (e) {
-    return { ok: false, reason: String(e?.message ?? e) };
+  // v1.42.3 MVP runs HTTP on :8080 (no Caddy / TLS yet — that lands in
+  // v1.43.x once a domain is registered). Try :8080 first, then :443
+  // for forward-compat with the eventual TLS setup.
+  for (const url of [`http://${ip}:8080/v1/healthz`, `https://${ip}/v1/healthz`]) {
+    try {
+      const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(5000) });
+      const json = await res.json().catch(() => null);
+      if (res.ok) return { ok: true, status: res.status, body: json, url };
+    } catch { /* try next */ }
   }
+  return { ok: false, reason: "no /v1/healthz reachable on :8080 or :443" };
 }
 
 async function cmdStatus() {
