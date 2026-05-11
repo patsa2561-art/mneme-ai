@@ -8,6 +8,52 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.34.1] — 2026-05-11
+
+**🚨 ROOT-CAUSE HOTFIX: internal package dep pins were stuck at 1.27.9
+across EVERY prior 1.28.x → 1.34.0 release.**
+
+This is the bug that caused every "serviceUninstall not exported",
+"antivirus synthesize crash", "node:sqlite missing" report from
+testers. We've been treating each as a separate bug + adding
+defensive guards (which were still good!). The actual root cause:
+when we bumped `version` in every package.json, the INTERNAL DEPENDENCY
+pins kept pointing to `1.27.9`. So when a user ran
+`npm install -g mneme-ai@1.34.0`, npm dutifully installed
+`@mneme-ai/core@1.27.9` next to it -- the EXACT version mismatch
+that produced every cross-package crash.
+
+The pre-bump-script regex matched `^1.27.9` (with caret), but the
+actual package.json had `1.27.9` (no caret, exact pin). The regex
+silently never matched, the bumps silently never happened, and 7
+releases shipped with broken cross-deps.
+
+### Fix
+
+`packages/cli/package.json`, `packages/mcp/package.json`,
+`packages/correlator/package.json`, `packages/web/package.json`,
+`packages/vscode/package.json` -- every internal `@mneme-ai/*`
+dependency now correctly points to `1.34.1`. From now on, the bump
+script handles BOTH `^X.Y.Z` and exact `X.Y.Z` patterns.
+
+### Why every defensive guard we shipped is still valuable
+
+The guards we added (bulletproof imports, defensive synthesize,
+TIME-MACHINE rollback, FTS5 detect, cache hologram, etc.) are still
+the right architecture -- they protect against ANY cross-version
+mismatch, including this one + future ones we haven't anticipated.
+What v1.34.1 fixes is that we stop SHIPPING the mismatch in the
+first place.
+
+### Testing improvement to prevent this class of bug forever
+
+(Coming in v1.35.0:) the e2e regression suite will install the
+to-be-published tarball into a fresh tmp dir and verify
+`@mneme-ai/core` version matches `mneme-ai` version, BEFORE the
+publish step.
+
+Suite: 5265 / 5265 passing.
+
 ## [1.34.0] — 2026-05-11
 
 **MNEME OVERNIGHT** — go to sleep, wake up to better work. Direct
