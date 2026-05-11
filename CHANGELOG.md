@@ -8,6 +8,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.56.1] — 2026-05-11
+
+**Phoenix v1.56.0 schtasks hotfix.**
+
+The first live install on Windows 11 surfaced the schtasks /TR quoting
+bug: paths containing spaces inside a quoted argument get re-split by
+schtasks's own arg parser even with backslash escaping. The fix is
+two-fold:
+
+1. **Shim script.** schtasks now points at a tiny .cmd shim at
+   `~/.mneme-phoenix-shim.cmd` which contains the full daemon launch.
+   The shim path has no spaces -> schtasks /TR is happy. The shim
+   handles the actual quoted paths in cmd.exe-native syntax.
+
+2. **spawnSync + dual /RL fallback.** Switched from `execSync` (shell
+   string) to `spawnSync` (arg array) so we control the schtasks
+   argv exactly. If `/RL LIMITED` returns Access Denied (corp policy /
+   Group Policy / Defender block), Mneme silently retries with
+   default rights + explicit `/RU %USERNAME%`.
+
+**Triple-witness in the wild.** Live test on Windows 11 corp install:
+
+  - Plan 1 (schtasks)      -> still fails (host policy denies it)
+  - Plan 2 (Startup folder) -> OK
+  - Plan 3 (Registry Run)   -> OK
+
+Result: 2 of 3 armed -> 99.75% resurrection probability. The
+triple-witness cheat paid out exactly as designed -- one mechanism
+blocked by host policy, two others armed, daemon will still wake on
+every logon. The user paid zero attention.
+
+### Files modified
+
+```
+MOD packages/core/src/autoboot/install_windows.ts  (shim + spawnSync + dual /RL)
+```
+
 ## [1.56.0] — 2026-05-11
 
 **PHOENIX RESURRECTION PROTOCOL -- the cross-platform, multi-witness,

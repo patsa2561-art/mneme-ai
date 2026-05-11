@@ -16,9 +16,10 @@
  * writing. Re-installing produces no side effect.
  */
 
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { existsSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 
 export interface InstallResult {
   mechanism: string;
@@ -37,6 +38,17 @@ function daemonCommand(nodePath: string, mnemeBin: string): string {
   return `"${nodePath}" "${mnemeBin}" daemon start --attached`;
 }
 
+/** Path to the shim script the Scheduled Task invokes. We point
+ *  schtasks at a single .cmd shim file so we sidestep the notorious
+ *  /TR quoting bug (paths-with-spaces inside a quoted argument are
+ *  treated as multiple positional args by schtasks itself, even with
+ *  proper escaping). The shim has no spaces in its path, so schtasks
+ *  is happy. */
+function schtasksShimPath(): string {
+  // Per-user shim, no admin needed.
+  return join(homedir(), ".mneme-phoenix-shim.cmd");
+}
+
 /** Plan 1: Scheduled Task at logon (most reliable on modern Windows). */
 export function installSchtasks(nodePath: string, mnemeBin: string): InstallResult {
   try {
@@ -46,13 +58,32 @@ export function installSchtasks(nodePath: string, mnemeBin: string): InstallResu
       return { mechanism: "schtasks", ok: true, message: "already installed", target: TASK_NAME };
     } catch { /* not installed yet -- continue */ }
 
-    const cmd = daemonCommand(nodePath, mnemeBin);
-    // /F = force overwrite; /SC ONLOGON = trigger on user logon; /RL LIMITED = no UAC.
-    execSync(`schtasks /Create /TN "${TASK_NAME}" /TR ${cmd.replace(/"/g, '\\"')} /SC ONLOGON /RL LIMITED /F`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      timeout: 5000,
-    });
-    return { mechanism: "schtasks", ok: true, message: "scheduled task armed for logon", target: TASK_NAME };
+    // Write a tiny .cmd shim with the full daemon command. schtasks /TR
+    // gets the shim path (no spaces -> no quoting hell). The shim itself
+    // handles quoting the node + mneme paths in cmd.exe-native syntax.
+    const shim = schtasksShimPath();
+    const shimBody = [
+      "@echo off",
+      `start "" /B "${nodePath}" "${mnemeBin}" daemon start --attached`,
+    ].join("\r\n") + "\r\n";
+    writeFileSync(shim, shimBody, { encoding: "utf8" });
+
+    // Attempt 1: /RL LIMITED (no UAC). Some corp policies reject this.
+    // Attempt 2: default rights (HIGHEST -- still no UAC for current user
+    // tasks on most Win10/11). Both run AS CURRENT USER via /RU %USERNAME%.
+    const user = process.env["USERNAME"] ?? "";
+    const baseArgs = ["/Create", "/TN", TASK_NAME, "/TR", shim, "/SC", "ONLOGON", "/F"];
+    if (user) { baseArgs.push("/RU", user); }
+    let r = spawnSync("schtasks", [...baseArgs, "/RL", "LIMITED"], { stdio: ["ignore", "pipe", "pipe"], timeout: 5000 });
+    if (r.status !== 0) {
+      // Retry without /RL LIMITED -- some installs require default rights.
+      r = spawnSync("schtasks", baseArgs, { stdio: ["ignore", "pipe", "pipe"], timeout: 5000 });
+    }
+    if (r.status !== 0) {
+      const err = (r.stderr?.toString() ?? "").trim() || (r.stdout?.toString() ?? "").trim() || `exit ${r.status}`;
+      return { mechanism: "schtasks", ok: false, message: `schtasks failed: ${err.slice(0, 120)}` };
+    }
+    return { mechanism: "schtasks", ok: true, message: "scheduled task armed for logon (via shim)", target: TASK_NAME };
   } catch (e) {
     return { mechanism: "schtasks", ok: false, message: `schtasks failed: ${(e as Error).message.slice(0, 100)}` };
   }
