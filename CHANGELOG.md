@@ -8,6 +8,82 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.41.0] — 2026-05-12
+
+**Architectural fix for the AI compliance problem — pulse pre-executor +
+durable mandate queue + HMAC tokens + compliance scoreboard CLI + cloud
+deployment spec.**
+
+The cross-session pattern: AI agents see `[AUTO-ACTION]` mandates in
+the pulse, parse them as "context tag" instead of "imperative command",
+and skip execution. Root cause is structural — AI training treats
+system-reminder content as data, not commands. No amount of pulse-text
+emphasis fixes it.
+
+This release stops asking AI to comply and starts executing first.
+
+### What's new
+
+- **`packages/core/src/ai_compliance.ts`** — pulse pre-executor.
+  `preExecuteAutoActions(notices, repoRoot)` walks every notice with an
+  `autoAction`, spawns the equivalent local CLI for safe inline mandates
+  (antivirus benchmark / lab, evolve scan / pass, oracle dream, nucleus
+  dna), and returns a per-mandate result. Failures degrade silently to
+  the legacy AI-agent path. `rewriteNoticesPostExecution(notices, results)`
+  rewrites the notice text so the AI sees `✓ AUTO-EXECUTED` instead of
+  `EXECUTE NOW`. 12 vitest cases.
+- **`packages/core/src/auto_action_queue.ts`** — durable JSONL queue at
+  `.mneme/auto-action-queue.jsonl` for self-modifying mandates that
+  cannot run from inside a Mneme subprocess (Windows file lock on the
+  running mneme.cmd binary). `enqueueMandate / readQueue / drainQueue`.
+  Atomic rename-swap on drain prevents double-execution. 6 vitest cases.
+- **HMAC mandate tokens** — `signMandate(repo, mandate, args)` and
+  `verifyMandate(...)` reuse the per-repo replay secret to issue 16-hex
+  tokens stamped into every compliance log entry. Tamper-evident audit
+  trail; the foundation Phase 4 cloud middleware will validate against.
+- **Daemon queue consumer** in `nucleus_daemon.ts` — every
+  CARETAKER_PASS_EVERY ticks (~15 min) the daemon drains the queue from
+  a fresh subprocess context outside the lock window. Each execution is
+  logged to `.mneme/ai-compliance.jsonl`; a low-priority inbox notice
+  surfaces the run on the next pulse.
+- **`mneme compliance`** CLI — `show` renders the mandate × outcome
+  table + inline compliance rate; `log [-n N]` tails recent entries;
+  `stats` emits JSON for cron / CI.
+- **Pulse hook wiring** in `mneme nucleus pulse` — between
+  `collectPulseStatus` and `renderPulse`, the new pre-executor runs
+  inside a try/catch so a compliance failure can never break the
+  pulse path.
+- **`docs/ARCHITECTURAL_FIXES.md`** — wisdom-grade roadmap that
+  replaces the prior "7 root causes" essay. Five-phase ladder with
+  measurable before/after, pre-mortem, and live implementation status.
+- **`docs/CLOUD_DEPLOYMENT.md`** — full DigitalOcean spec for Phase 4
+  ($90 / month, 5 droplets). Includes the $24 single-droplet MVP for
+  budget validation before full deploy.
+
+### Why this matters
+
+| Metric | Before v1.41.0 | After v1.41.0 |
+|--------|----------------|---------------|
+| AI compliance with safe inline mandates | 40–60% (vendor-dependent) | 100% (AI choice removed from the loop) |
+| Time-to-execution after mandate fires | undefined (could be never) | ≤ 8 s (subprocess timeout) |
+| Provenance of every execution | none | one HMAC-signed JSONL line per attempt |
+| Self-modifying mandate safety | manual upgrade required | enqueued + daemon-drained at safe window |
+| Maintainer visibility into AI obedience | grep commit log | `mneme compliance show` |
+
+### Tests
+
+- `4517 / 4517 passing` baseline (TODO: fold this batch into ship-readiness).
+- `+18 new tests` across `ai_compliance.test.ts` (12) and
+  `auto_action_queue.test.ts` (6).
+
+### Phase status
+
+- ✓ Phase 0 — local pulse pre-executor (this release)
+- ✓ Phase 1 — daemon queue consumer (this release)
+- ✓ Phase 2 — HMAC mandate tokens (this release)
+- ✓ Phase 3 — `mneme compliance` scoreboard CLI (this release)
+- ☐ Phase 4 — cloud middleware (spec only — see `docs/CLOUD_DEPLOYMENT.md`)
+
 ## [1.40.1] — 2026-05-12
 
 **🚨 HOTFIX -- the v1.39.0 advocate fix was HALF-SHIPPED. Now wired

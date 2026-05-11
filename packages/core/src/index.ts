@@ -39,6 +39,14 @@ export * as versionCheck from "./version_check.js";
 export * as karmaStreaks from "./karma_streaks.js";
 export * as nucleus from "./nucleus.js";
 export * as nucleusDaemon from "./nucleus_daemon.js";
+// v1.41.0 — AI Compliance pre-executor. Pulse pre-executes AUTO-ACTION
+// mandates so AI agents see "✓ AUTO-EXECUTED" instead of "EXECUTE NOW".
+// Architectural fix for the cross-session AI-ignore-pulse problem.
+export * as aiCompliance from "./ai_compliance.js";
+// v1.41.0 Phase 1 — durable queue for self-modifying mandates that the
+// pulse pre-executor cannot safely run inline (file-lock on running
+// mneme.cmd binary). Daemon caretaker pass drains the queue.
+export * as autoActionQueue from "./auto_action_queue.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +

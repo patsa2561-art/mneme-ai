@@ -553,7 +553,7 @@ export function registerNucleusCommands(program: Command): void {
     .option("--broadcast", "(v1.26.4) Push the pulse text via every available notifier channel (OS toast / mobile push / voice / email / agent files). Beyond-editor reach when the user is not at the keyboard.")
     .option("--broadcast-severity <s>", "Severity for broadcast: info | action | warning | critical. Default 'action'.", "action")
     .action(async (opts: { quiet?: boolean; json?: boolean; broadcast?: boolean; broadcastSeverity?: string }) => {
-      const { pulse } = await import("@mneme-ai/core");
+      const { pulse, aiCompliance } = await import("@mneme-ai/core");
       const status = pulse.collectPulseStatus(process.cwd());
       // v1.28.1 GHOST SNIPER -- silent auto-boot. If daemon is stopped,
       // spawn it in background AND (one-time per machine) install as
@@ -562,6 +562,22 @@ export function registerNucleusCommands(program: Command): void {
       // Eliminates the "user has to know `mneme nucleus install
       // --as-service`" bottleneck for 90%+ of users.
       try { pulse.autoBootDaemonIfStopped(status.daemon.running, { repoRoot: process.cwd() }); } catch { /* silent */ }
+
+      // v1.41.0 AI COMPLIANCE pre-executor — for every [AUTO-ACTION] in
+      // the pulse, fire the equivalent local CLI BEFORE the AI agent
+      // sees the pulse text. Eliminates the cross-session "AI ignores
+      // EXECUTE NOW" failure mode (root cause: AI training treats
+      // system-reminder content as data, not commands). After execution,
+      // we rewrite the notice text so the AI sees "✓ AUTO-EXECUTED"
+      // instead of the original "EXECUTE NOW: tool" mandate.
+      // Self-modifying mandates (e.g. mneme.system.upgrade) get queued
+      // for the daemon's next safe window. Failures degrade gracefully
+      // back to the legacy AI-agent path.
+      try {
+        const execResults = await aiCompliance.preExecuteAutoActions(status.notable, process.cwd());
+        if (execResults.length > 0) aiCompliance.rewriteNoticesPostExecution(status.notable, execResults);
+      } catch { /* compliance pre-executor must never break the pulse path */ }
+
       if (opts.json) {
         process.stdout.write(JSON.stringify(status, null, 2) + "\n");
         return;

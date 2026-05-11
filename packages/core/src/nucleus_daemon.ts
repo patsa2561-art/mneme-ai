@@ -287,6 +287,49 @@ export async function runDaemonLoop(
         void supernova.runCycle("caretaker", () => runCaretakerPass(repoRoot, tickCount));
       }
 
+      // v1.41.0 Phase 1 — drain the AUTO-ACTION queue that the pulse
+      // pre-executor wrote. Self-modifying mandates (e.g. mneme.system.upgrade)
+      // were enqueued because they cannot run from inside a Mneme subprocess
+      // on Windows (file lock on mneme.cmd). The daemon runs in its own
+      // detached process tree, so spawning a fresh `mneme upgrade` here is
+      // safe. Best-effort; failures get logged to ai-compliance.jsonl.
+      if (tickCount > 0 && tickCount % CARETAKER_PASS_EVERY === 0) {
+        await supernova.runCycle("auto_action_queue_drain", async () => {
+          const { drainQueue } = await import("./auto_action_queue.js");
+          const { logCompliance } = await import("./ai_compliance.js");
+          const { spawn } = await import("node:child_process");
+          const result = await drainQueue(repoRoot, async (mandate, args) => {
+            return await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+              // Map mandate name → CLI args. Self-modifying mandates we know about:
+              const cliArgs: string[] | null = mandate === "mneme.system.upgrade"
+                ? ["upgrade", "--force"]
+                : null;
+              if (!cliArgs) { resolve({ ok: false, error: `unknown mandate ${mandate}` }); return; }
+              const start = Date.now();
+              const child = spawn("mneme", cliArgs, { cwd: repoRoot, detached: false, stdio: "ignore", shell: process.platform === "win32" });
+              const timeout = setTimeout(() => { try { child.kill(); } catch { /* ignore */ } resolve({ ok: false, error: "exec-timeout" }); }, 60_000);
+              child.on("error", (e) => { clearTimeout(timeout); resolve({ ok: false, error: (e as Error).message }); });
+              child.on("exit", (code) => {
+                clearTimeout(timeout);
+                logCompliance(repoRoot, { ts: new Date().toISOString(), mandate, args, executor: "daemon-queue", outcome: code === 0 ? "executed" : "failed", durationMs: Date.now() - start, error: code === 0 ? undefined : `exit-${code}` });
+                resolve({ ok: code === 0, error: code === 0 ? undefined : `exit-${code}` });
+              });
+            });
+          });
+          if (result.drained > 0) {
+            // surface a one-line audit into the inbox so the next pulse shows
+            // the daemon-side execution + user can grep ack history later
+            const { pushInbox } = await import("./inbox.js");
+            pushInbox(repoRoot, {
+              priority: "low",
+              source: "daemon-queue",
+              title: `Drained ${result.drained} queued mandate(s) — ${result.executed} executed, ${result.failed} failed`,
+              body: result.errors.join(" · "),
+            });
+          }
+        });
+      }
+
       // v1.25.0 — Retrieval Lab tuning round. Every CARETAKER_PASS_EVERY
       // ticks, the daemon picks the next arm via UCB1, runs a trial,
       // folds it into the leaderboard. Over time the active config
