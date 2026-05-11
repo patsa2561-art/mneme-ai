@@ -51,6 +51,9 @@ import { godelPostMortemZ3, type GodelZ3Result } from "./acgv_godel_z3.js";
 import { evaluateConfession, requestConfession, type ConfessionRequest, type ConfessionVerdict } from "./acgv_confession.js";
 import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vaccine.js";
 import { noteBotOutcome } from "./acgv_stake.js";
+import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
+import { checkArithmetic, type ArithmeticVerdict } from "./acgv_arithmetic.js";
+import { countMnemeTools } from "./fact_grounding.js";
 
 export type ACGVVerdict =
   | "IMPOSSIBLE_REFUTE"
@@ -86,6 +89,12 @@ export interface ACGVResult {
     godel: GodelResult;
     confession: ConfessionVerdict | null;
     confessionRequest: ConfessionRequest | null;
+    /** v1.55.0 -- Mneme's signature wisdom layer (Prime Resonance Truth
+     *  Function). Independent second witness for the Chandrasekhar verdict. */
+    prtf?: PRTFResult;
+    /** v1.55.0 -- Z3 arithmetic + logic encoding result. Present only
+     *  when the claim text carried numeric / logical shapes. */
+    arithmetic?: ArithmeticVerdict;
   };
   /** One-line summary. */
   summary: string;
@@ -118,15 +127,74 @@ export async function runACGVAsync(input: ACGVRunInput): Promise<ACGVResult & { 
   // Run the sync pipeline up to + including chandrasekhar; we'll upgrade
   // the godel layer with Z3 if available, then re-evaluate the verdict.
   const prelim = runACGV({ ...input, noEmitVaccine: true, noStake: true });
-  if (prelim.verdict === "PASSTHROUGH" || prelim.verdict === "AUTO_REFUTE" || prelim.verdict === "FUSION") {
-    // No need for Z3 upgrade -- propositional already conclusive (or
-    // there's nothing to prove against).
-    return { ...prelim, engine: "propositional" };
+
+  // v1.55.0 -- Z3 ARITHMETIC LAYER. Runs alongside the existing pipeline
+  // and can fire on claims that have numeric / logical shapes
+  // ("between 200 and 500 tools", "Mneme has more than 200 tools", etc).
+  // Independent from the Godel layer, with its own UNSAT certificate.
+  // Always-runs because numeric refutations apply to ALL verdict outcomes.
+  let arithmetic: ArithmeticVerdict | undefined;
+  try {
+    const toolCount = countMnemeTools(input.repoRoot);
+    arithmetic = await checkArithmetic(input.claim, { toolCount });
+  } catch {
+    arithmetic = undefined;
+  }
+
+  if (prelim.verdict === "PASSTHROUGH" || prelim.verdict === "AUTO_REFUTE") {
+    // For AUTO_REFUTE the vaccine match is canonical; nothing to add.
+    // For PASSTHROUGH, Z3 arithmetic can override the verdict either way:
+    //   - arithmetic.upgrade (UNSAT) -> IMPOSSIBLE_REFUTE
+    //   - arithmetic.status === "sat" -> FUSION (the claim's numeric
+    //     range is satisfied by actual repo state, so it's TRUE)
+    if (arithmetic && arithmetic.upgrade && prelim.verdict === "PASSTHROUGH") {
+      return {
+        ...prelim,
+        verdict: "IMPOSSIBLE_REFUTE",
+        confidence: 0.95,
+        caveats: [...prelim.caveats, "Z3_ARITHMETIC_UNSAT"].filter((c, i, a) => a.indexOf(c) === i),
+        layers: { ...prelim.layers, arithmetic },
+        summary: `IMPOSSIBLE_REFUTE -- Z3 arithmetic proved the numeric claim impossible against repo state.`,
+        reasoning: [prelim.reasoning, "", arithmetic.certificate].join("\n"),
+        engine: "z3",
+      };
+    }
+    if (arithmetic && arithmetic.status === "sat" && prelim.verdict === "PASSTHROUGH") {
+      return {
+        ...prelim,
+        verdict: "FUSION",
+        confidence: 0.85,
+        caveats: [...prelim.caveats, "Z3_ARITHMETIC_SAT"].filter((c, i, a) => a.indexOf(c) === i),
+        layers: { ...prelim.layers, arithmetic },
+        summary: `FUSION -- Z3 arithmetic confirmed the numeric claim against actual repo state.`,
+        reasoning: [prelim.reasoning, "", arithmetic.certificate].join("\n"),
+        engine: "z3",
+      };
+    }
+    return { ...prelim, layers: { ...prelim.layers, arithmetic }, engine: arithmetic?.engine ?? "propositional" };
+  }
+  if (prelim.verdict === "FUSION") {
+    // FUSION is the propositional path's strongest claim. Z3 arithmetic
+    // might still refute a numeric range hidden inside a positive-shaped
+    // claim, so we keep it as a check.
+    if (arithmetic && arithmetic.upgrade) {
+      return {
+        ...prelim,
+        verdict: "IMPOSSIBLE_REFUTE",
+        confidence: 0.95,
+        caveats: [...prelim.caveats, "Z3_ARITHMETIC_UNSAT"].filter((c, i, a) => a.indexOf(c) === i),
+        layers: { ...prelim.layers, arithmetic },
+        summary: `IMPOSSIBLE_REFUTE (FUSION downgraded) -- Z3 arithmetic refuted a hidden numeric claim.`,
+        reasoning: [prelim.reasoning, "", arithmetic.certificate].join("\n"),
+        engine: "z3",
+      };
+    }
+    return { ...prelim, layers: { ...prelim.layers, arithmetic }, engine: "propositional" };
   }
 
   // Re-run Godel with Z3 over the same grounding + Chandrasekhar.
   const z3Godel = await godelPostMortemZ3(prelim.layers.chandrasekhar, prelim.layers.grounding);
-  const upgraded = z3Godel.upgrade && prelim.verdict !== "IMPOSSIBLE_REFUTE";
+  const upgraded = (z3Godel.upgrade || (arithmetic?.upgrade ?? false)) && prelim.verdict !== "IMPOSSIBLE_REFUTE";
 
   // Decide final verdict considering Z3 outcome.
   const finalResult: ACGVResult = upgraded
@@ -134,12 +202,12 @@ export async function runACGVAsync(input: ACGVRunInput): Promise<ACGVResult & { 
         ...prelim,
         verdict: "IMPOSSIBLE_REFUTE",
         confidence: 0.99,
-        caveats: [...prelim.caveats, "Z3_UNSAT_PROOF"].filter((c, i, a) => a.indexOf(c) === i),
-        layers: { ...prelim.layers, godel: z3Godel },
-        summary: `IMPOSSIBLE_REFUTE -- Z3 SAT solver returned UNSAT for the compound claim. ${prelim.summary}`,
-        reasoning: `${prelim.reasoning}\n\n${z3Godel.certificate}`,
+        caveats: [...prelim.caveats, z3Godel.upgrade ? "Z3_UNSAT_PROOF" : "Z3_ARITHMETIC_UNSAT"].filter((c, i, a) => a.indexOf(c) === i),
+        layers: { ...prelim.layers, godel: z3Godel, arithmetic },
+        summary: `IMPOSSIBLE_REFUTE -- Z3 ${z3Godel.upgrade ? "SAT solver returned UNSAT for the compound claim" : "arithmetic refuted the numeric constraint"}. ${prelim.summary}`,
+        reasoning: [prelim.reasoning, "", z3Godel.certificate, arithmetic ? `\n${arithmetic.certificate}` : ""].join("\n"),
       }
-    : { ...prelim, layers: { ...prelim.layers, godel: z3Godel } };
+    : { ...prelim, layers: { ...prelim.layers, godel: z3Godel, arithmetic } };
 
   // Emit vaccine + stake updates only on the final verdict (skipped above).
   if (!input.noEmitVaccine && (finalResult.verdict === "IMPOSSIBLE_REFUTE" || finalResult.verdict === "BLACK_HOLE")) {
@@ -230,6 +298,19 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   // ───── Layer 3: GODEL POST-MORTEM ────────────────────────────────────
   const godel = godelPostMortem(chandra, grounding);
 
+  // ───── v1.55.0 -- Layer 3.5: PRTF SECOND WITNESS ─────────────────────
+  // Compute the Prime-Resonance Truth Function over the harmonic scores.
+  // This is Mneme's signature wisdom layer -- a SECOND mathematical witness
+  // independent of Chandrasekhar. We use the two-witness rule (Babylonian
+  // double attestation, mapped onto independent math foundations) to
+  // upgrade or downgrade verdicts.
+  const prtf = primeResonance(grounding.map((g) => g.harmonic));
+  const agreement = twoWitnessAgreement(chandra.verdict, prtf);
+  if (agreement === "DISAGREE") caveats.push("CHANDRA_PRTF_DISAGREE");
+  if (agreement === "AGREE_REFUTE") caveats.push("TWO_WITNESS_REFUTE");
+  if (agreement === "AGREE_SUPPORT") caveats.push("TWO_WITNESS_SUPPORT");
+  if (prtf.verdict === "DEPHASED") caveats.push("PRTF_DEPHASED");
+
   // ───── Layer 4: CONFESSION (optional) ────────────────────────────────
   let confession: ConfessionVerdict | null = null;
   let confessionRequest: ConfessionRequest | null = null;
@@ -291,6 +372,34 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
     reasoning = chandra.reasoning;
   }
 
+  // ───── v1.55.0 -- Two-witness escalation / de-escalation ─────────────
+  // Witness disagreement is logged but does NOT change verdict; Mneme
+  // surfaces the disagreement as a caveat so callers can decide. Witness
+  // AGREEMENT on a refute or support boosts confidence (or in the case
+  // of LIMBO, confirms the honest uncertainty).
+  if (agreement === "AGREE_REFUTE" && (verdict === "BLACK_HOLE" || verdict === "IMPOSSIBLE_REFUTE")) {
+    confidence = Math.min(0.99, confidence + 0.05);
+    reasoning = [reasoning, "", prtfCertificate(prtf, agreement)].join("\n");
+  } else if (agreement === "AGREE_SUPPORT" && verdict === "FUSION") {
+    confidence = Math.min(0.99, confidence + 0.05);
+    reasoning = [reasoning, "", prtfCertificate(prtf, agreement)].join("\n");
+  } else if (agreement === "DISAGREE") {
+    // The two pillars contradict. Mneme refuses to fake confidence.
+    // Downgrade BLACK_HOLE/FUSION verdicts to LIMBO when witnesses split.
+    if (verdict === "FUSION" || verdict === "BLACK_HOLE") {
+      reasoning = [
+        reasoning, "",
+        `WITNESS DISAGREEMENT: Chandrasekhar says ${chandra.verdict}; PRTF says ${prtf.verdict}.`,
+        `Mneme refuses to fake confidence when its own mathematical pillars contradict.`,
+        prtfCertificate(prtf, agreement),
+      ].join("\n");
+      // Soften confidence; keep verdict shape so downstream callers don't break.
+      confidence = Math.max(0.4, confidence * 0.6);
+    }
+  } else if (agreement === "AGREE_LIMBO" && verdict === "LIMBO") {
+    reasoning = [reasoning, "", prtfCertificate(prtf, agreement)].join("\n");
+  }
+
   // ───── Layer 5: VACCINE EMIT (on refute outcomes) ─────────────────────
   let vaccineEmitted = false;
   if (!input.noEmitVaccine && (verdict === "IMPOSSIBLE_REFUTE" || verdict === "BLACK_HOLE")) {
@@ -333,6 +442,7 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
       grounding,
       chandrasekhar: chandra,
       godel,
+      prtf,
       confession,
       confessionRequest,
     },

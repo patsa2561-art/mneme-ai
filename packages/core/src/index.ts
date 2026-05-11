@@ -275,6 +275,14 @@ export * as acgvStake from "./squadron/acgv_stake.js";
 // actually act on the verdict.
 export * as acgvGodelZ3 from "./squadron/acgv_godel_z3.js";
 export * as acgvExplain from "./squadron/acgv_explain.js";
+// v1.55.0 -- PRIME-RESONANCE TRUTH FUNCTION (Mneme's signature wisdom layer
+// mixing prime number theory, complex Fourier, golden ratio, pi) + Z3
+// ARITHMETIC encoding for numeric range / inequality / logical compound
+// claims. Two-witness rule: Chandrasekhar (v1.51) + PRTF (v1.55) must
+// agree before Mneme declares a strong verdict.
+export * as acgvPrtf from "./squadron/acgv_prtf.js";
+export * as acgvArithmetic from "./squadron/acgv_arithmetic.js";
+export * as acgvLogic from "./squadron/acgv_logic.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
