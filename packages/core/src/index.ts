@@ -61,6 +61,21 @@ export * as pulseContinuity from "./pulse_continuity.js";
 // "lost 6 days of index" failure mode reported on macOS Node 23.6.
 export * as safeIndex from "./store/safe_index.js";
 export * as fts5Detect from "./store/fts5_detect.js";
+// v1.31.0 -- AGENT COMMAND MANIFEST. Single source of truth for what
+// commands every AI agent in the user's editor knows about. Daemon
+// auto-syncs to CLAUDE.md, AGENTS.md, .cursor/rules, GEMINI.md,
+// .windsurfrules whenever a new command ships. No more "I didn't know
+// that command existed" from testers.
+export * as agentManifest from "./agent_manifest.js";
+// v1.31.0 -- TRUST CALIBRATOR. Per-subsystem benchmark + calibration
+// grade (excellent / acceptable / weak / untrusted). SELF-DOWNGRADE:
+// outputs from weak/untrusted subsystems get [CALIBRATION:LOW]
+// annotation appended so the AI agent + user know what to trust.
+export * as trustCalibration from "./trust_calibration.js";
+// v1.31.0 -- FORENSICS V2 (3-layer detection: regex + AST-shape +
+// NVD-stub). GHOST-NEGATIVE LOG: dismissed FPs are auto-suppressed
+// on subsequent scans. Direct response to "forensics vulns 80% FP".
+export * as forensicsV2 from "./forensics_v2.js";
 export * as lineageSeed from "./lineage_seed.js";
 export * as inbox from "./inbox.js";
 export * as antivirus from "./antivirus/index.js";
