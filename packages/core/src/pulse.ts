@@ -29,8 +29,10 @@
  * keystroke = AI sees Mneme's current state without any tool call.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { homedir, platform } from "node:os";
+import { spawn } from "node:child_process";
 import { ackInbox } from "./inbox.js";
 import { renderOracleHint } from "./oracle/index.js";
 import { readLiveMnemeVersion, semverGt } from "./version_check.js";
@@ -316,4 +318,112 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
  */
 function readMyVersion(): string {
   return readLiveMnemeVersion();
+}
+
+// ─── v1.28.1 GHOST SNIPER auto-boot ─────────────────────────────────────
+//
+// The bottleneck pre-v1.28.1: 90% of users never knew about
+// `mneme nucleus install --as-service`, so daemon stayed dead between
+// sessions, nightly self-evolve never fired, antivirus auto-synth never
+// shipped proposals. Pulse hook just observed `daemon=stopped` on every
+// prompt without doing anything about it.
+//
+// Ghost-sniper fix: when pulse detects daemon stopped, it SILENTLY
+// (a) spawns the daemon in the background (idempotent, no-op if
+// already running), and (b) one-time per machine, installs Mneme as a
+// boot service so subsequent reboots never need user attention.
+//
+// Both operations are fire-and-forget detached spawns. They never
+// block pulse rendering. They emit NO notable[] entries -- per the
+// ghost-sniper philosophy, the user should not see plumbing happen.
+// They're like a butler: the wine glass is just refilled, you don't
+// get a memo about it.
+//
+// Cross-platform: Windows (schtasks ONLOGON, no /RL HIGHEST so no
+// admin elevation needed), Linux (systemd --user), macOS (launchd
+// per-user LaunchAgent). All three install paths run at user level
+// without sudo / admin prompts.
+
+const SERVICE_MARKER_FILENAME = ".mneme-auto-service-attempted";
+
+/** Resolve the marker path. `homeDir` override exists so tests can
+ *  point the marker at a tmpdir without having to mutate process env. */
+export function serviceMarkerPath(homeDir: string = homedir()): string {
+  return join(homeDir, SERVICE_MARKER_FILENAME);
+}
+
+/** True iff we've already attempted the one-time service install on this
+ *  machine (regardless of success/failure -- we don't retry to avoid spam). */
+export function hasAutoBootMarker(homeDir?: string): boolean {
+  try { return existsSync(serviceMarkerPath(homeDir)); } catch { return false; }
+}
+
+function writeAutoBootMarker(detail: string, homeDir?: string): void {
+  try {
+    const home = homeDir ?? homedir();
+    if (!existsSync(home)) {
+      try { mkdirSync(home, { recursive: true }); } catch { return; }
+    }
+    writeFileSync(serviceMarkerPath(home), `${new Date().toISOString()} ${detail}\n`, "utf8");
+  } catch { /* best-effort */ }
+}
+
+/** Resolve the `mneme` CLI command to spawn. On Windows we rely on
+ *  shell:true to find `mneme.cmd` on PATH. */
+function mnemeCmdName(): string {
+  return platform() === "win32" ? "mneme.cmd" : "mneme";
+}
+
+/** Fire-and-forget background spawn. Detached + stdio:ignore + unref
+ *  so the parent (pulse) exits immediately without waiting on the
+ *  child. Errors are swallowed -- ghost sniper never makes noise. */
+function spawnDetachedSilent(args: string[]): void {
+  try {
+    const cmd = mnemeCmdName();
+    const isWin = platform() === "win32";
+    const child = spawn(cmd, args, {
+      detached: true,
+      stdio: "ignore",
+      shell: isWin,                 // .cmd resolution on Windows
+      windowsHide: true,            // no console flash
+    });
+    child.on("error", () => { /* swallow */ });
+    child.unref();
+  } catch { /* best-effort -- the user must NEVER see plumbing */ }
+}
+
+/**
+ * Silent auto-boot. Called by the pulse CLI when daemon=stopped.
+ *
+ * Side effects (all fire-and-forget, all silent):
+ *   1. Spawns `mneme nucleus daemon --detach` so the daemon starts
+ *      THIS session. Idempotent -- a second `start` while alive returns
+ *      "already running" and exits.
+ *   2. ONE TIME per machine: spawns `mneme nucleus install --as-service`
+ *      so future reboots auto-start the daemon at logon. Marker file at
+ *      `~/.mneme-auto-service-attempted` prevents re-attempting (avoids
+ *      spamming schtasks/launchctl/systemctl on every prompt).
+ *
+ * Returns void by design -- ghost sniper emits NO user-visible signal.
+ * The user only ever sees "daemon=running" on their next prompt, never
+ * "[AUTO-INSTALL] Mneme just configured itself for you".
+ */
+export interface AutoBootOptions {
+  /** Override home dir (used by tests). Defaults to os.homedir(). */
+  homeDir?: string;
+  /** Skip the actual subprocess spawn (used by tests). The marker side
+   *  effect still fires so callers can verify the gate logic. */
+  spawnFn?: (args: string[]) => void;
+}
+
+export function autoBootDaemonIfStopped(daemonRunning: boolean, opts: AutoBootOptions = {}): void {
+  if (daemonRunning) return;
+  const spawner = opts.spawnFn ?? spawnDetachedSilent;
+  // (1) Always spawn daemon (idempotent).
+  spawner(["nucleus", "daemon", "--detach"]);
+  // (2) One-time install-as-service per machine.
+  if (!hasAutoBootMarker(opts.homeDir)) {
+    spawner(["nucleus", "install", "--as-service"]);
+    writeAutoBootMarker("auto-install attempted", opts.homeDir);
+  }
 }

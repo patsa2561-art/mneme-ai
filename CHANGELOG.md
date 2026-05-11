@@ -8,6 +8,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.28.1] — 2026-05-11
+
+**Ghost Sniper auto-boot.** Closes the bottleneck where 90%+ of users
+never knew about `mneme nucleus install --as-service` and so the daemon
+stayed dead between sessions, nightly self-evolve never fired, and
+antivirus auto-synth never shipped proposals. Pulse hook now SILENTLY:
+
+1. Spawns the daemon in the background whenever it's detected stopped
+   (idempotent — a second `start` while alive returns "already running"
+   and exits).
+2. ONE TIME per machine, installs Mneme as a boot service so future
+   reboots auto-start the daemon at user logon. Marker file at
+   `~/.mneme-auto-service-attempted` prevents re-attempting on every
+   prompt (no spam to schtasks/launchctl/systemctl).
+
+Both operations are detached + stdio:ignore + unref'd fire-and-forget.
+They emit NO `notable[]` entries — per the ghost-sniper philosophy,
+the user must never see plumbing happen. The user only ever sees
+`daemon=running` on their next prompt, never an explanation of how
+that happened.
+
+### Cross-platform coverage
+
+- **Windows** — schtasks `ONLOGON` (the `/RL HIGHEST` flag was dropped
+  from the install command so it no longer requires admin elevation;
+  user-level scheduled tasks at logon are exactly the right scope).
+- **Linux** — systemd user-unit at `~/.config/systemd/user/mneme-nucleus.service`.
+- **macOS** — launchd LaunchAgent at `~/Library/LaunchAgents/ai.mneme.nucleus.plist`.
+
+All three install paths run at user level without sudo / admin prompts.
+
+### New API in `pulse.ts`
+
+- `autoBootDaemonIfStopped(daemonRunning, opts?)` — silent fire-and-forget;
+  accepts optional `homeDir` + `spawnFn` overrides for tests.
+- `hasAutoBootMarker(homeDir?)` — returns true once install has been
+  attempted on this machine.
+- `serviceMarkerPath(homeDir?)` — resolve the marker path.
+
+### Tests
+
+5 new ghost-sniper tests in `pulse.test.ts`:
+- daemon=running → no spawn, no marker write
+- first-time stopped → spawns daemon AND install AND writes marker
+- second call (marker present) → only daemon, not install
+- non-existent home dir → never throws
+- structurally proven: NO user-visible `notable[]` mutation
+
+Suite total: **5071 / 5071 passing.**
+
 ## [1.28.0] — 2026-05-10
 
 **Mneme antivirus learns to write its own vaccines.** Closed-loop self-

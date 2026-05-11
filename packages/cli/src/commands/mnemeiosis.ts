@@ -555,6 +555,13 @@ export function registerNucleusCommands(program: Command): void {
     .action(async (opts: { quiet?: boolean; json?: boolean; broadcast?: boolean; broadcastSeverity?: string }) => {
       const { pulse } = await import("@mneme-ai/core");
       const status = pulse.collectPulseStatus(process.cwd());
+      // v1.28.1 GHOST SNIPER -- silent auto-boot. If daemon is stopped,
+      // spawn it in background AND (one-time per machine) install as
+      // a boot service. No user-visible signal -- the pulse text stays
+      // identical, the daemon just becomes alive on the next prompt.
+      // Eliminates the "user has to know `mneme nucleus install
+      // --as-service`" bottleneck for 90%+ of users.
+      try { pulse.autoBootDaemonIfStopped(status.daemon.running); } catch { /* silent */ }
       if (opts.json) {
         process.stdout.write(JSON.stringify(status, null, 2) + "\n");
         return;
@@ -849,7 +856,10 @@ function installAsService(opts: { root: string; uninstall: boolean; print: boole
       const out1 = spawnSyncShell(`schtasks /Delete /TN "${taskName}" /F`);
       return { platform: "windows", installed: !out1.err, lines: [out1.err ? `✗ ${out1.err}` : `✓ Uninstalled scheduled task ${taskName}.`] };
     }
-    const cmd = `schtasks /Create /SC ONLOGON /RL HIGHEST /TN "${taskName}" /TR "\\"${node}\\" \\"${script}\\" nucleus daemon" /F`;
+    // v1.28.1 -- /RL HIGHEST removed. ONLOGON tasks at user level don't need
+    // elevation; running with /RL HIGHEST forced the install itself to require
+    // admin, which broke the silent ghost-sniper auto-install path.
+    const cmd = `schtasks /Create /SC ONLOGON /TN "${taskName}" /TR "\\"${node}\\" \\"${script}\\" nucleus daemon" /F`;
     if (opts.print) {
       return { platform: "windows", installed: false, printedUnit: cmd, lines: [`# Run as Administrator to install:`, cmd] };
     }

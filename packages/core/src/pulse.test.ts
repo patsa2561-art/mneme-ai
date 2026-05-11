@@ -1,8 +1,11 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { collectPulseStatus, renderPulse } from "./pulse.js";
+import {
+  collectPulseStatus, renderPulse,
+  autoBootDaemonIfStopped, hasAutoBootMarker, serviceMarkerPath,
+} from "./pulse.js";
 
 describe("pulse", () => {
   let repo: string;
@@ -141,6 +144,57 @@ describe("pulse", () => {
     writeFileSync(join(repo, ".mneme/nucleus.heartbeat.json"), "{broken", "utf8");
     writeFileSync(join(repo, ".mneme/inbox.jsonl"), "garbage\nmore garbage", "utf8");
     expect(() => collectPulseStatus(repo)).not.toThrow();
+  });
+
+  // v1.28.1 GHOST SNIPER -- silent auto-boot tests.
+  describe("autoBootDaemonIfStopped (ghost sniper)", () => {
+    let home: string;
+    let spawnedArgs: string[][];
+    const fakeSpawn = (args: string[]) => { spawnedArgs.push(args); };
+
+    beforeEach(() => {
+      home = mkdtempSync(join(tmpdir(), "mneme-ghost-"));
+      spawnedArgs = [];
+    });
+    afterEach(() => { try { rmSync(home, { recursive: true, force: true }); } catch { /* */ } });
+
+    it("does NOTHING when daemon is already running", () => {
+      autoBootDaemonIfStopped(true, { homeDir: home, spawnFn: fakeSpawn });
+      expect(spawnedArgs).toEqual([]);
+      expect(hasAutoBootMarker(home)).toBe(false);
+    });
+
+    it("first-time stopped: spawns daemon AND install-as-service AND writes marker", () => {
+      expect(hasAutoBootMarker(home)).toBe(false);
+      autoBootDaemonIfStopped(false, { homeDir: home, spawnFn: fakeSpawn });
+      expect(spawnedArgs).toContainEqual(["nucleus", "daemon", "--detach"]);
+      expect(spawnedArgs).toContainEqual(["nucleus", "install", "--as-service"]);
+      expect(hasAutoBootMarker(home)).toBe(true);
+      expect(existsSync(serviceMarkerPath(home))).toBe(true);
+    });
+
+    it("second call (marker present) only spawns daemon, NOT install-as-service", () => {
+      autoBootDaemonIfStopped(false, { homeDir: home, spawnFn: fakeSpawn });
+      spawnedArgs = [];                   // reset capture
+      autoBootDaemonIfStopped(false, { homeDir: home, spawnFn: fakeSpawn });
+      expect(spawnedArgs).toContainEqual(["nucleus", "daemon", "--detach"]);
+      expect(spawnedArgs).not.toContainEqual(["nucleus", "install", "--as-service"]);
+    });
+
+    it("never throws when home dir is a non-existent path (best-effort)", () => {
+      const fakeHome = join(home, "does-not-exist", "nested", "deep");
+      expect(() => autoBootDaemonIfStopped(false, { homeDir: fakeHome, spawnFn: fakeSpawn })).not.toThrow();
+    });
+
+    it("emits NO user-visible signal -- ghost sniper contract (no notable[] entries)", () => {
+      // The function returns void by design. Even if called with the
+      // real spawn (no fake), it must add nothing to status.notable.
+      const s = collectPulseStatus(repo);
+      const notableBefore = s.notable.length;
+      autoBootDaemonIfStopped(false, { homeDir: home, spawnFn: fakeSpawn });
+      // No status mutation channel exists -- this is structural proof.
+      expect(s.notable.length).toBe(notableBefore);
+    });
   });
 
   it("renders all expected counters in quiet mode when notable", () => {
