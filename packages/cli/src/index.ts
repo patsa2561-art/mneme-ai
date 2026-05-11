@@ -106,6 +106,7 @@ import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, reg
 import { registerComplianceCommand } from "./commands/compliance.js";
 import { registerCompanionCommand } from "./commands/companion.js";
 import { registerCloudCommand } from "./commands/cloud.js";
+import { registerPharmacopoeiaCommand, registerParasiteCommand, registerAletheiaCommand } from "./commands/demon_stage_one.js";
 import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerUninstallCommand } from "./commands/uninstall.js";
 import { registerEmbeddingsCommands } from "./commands/embeddings.js";
@@ -2460,6 +2461,11 @@ export async function run(argv: string[]): Promise<void> {
   // Local-first: cloud is OPTIONAL relay. Layer absorbs all network
   // failures so the AI agent never sees a connectivity error.
   registerCloudCommand(program);
+  // ─── DEMON STAGE 1 — FANGS (v1.43.0). Three modules that turn
+  // Mneme from solo product into networked organism. All free-first.
+  registerPharmacopoeiaCommand(program);   // 1.1 Vaccine CDN
+  registerParasiteCommand(program);        // 1.2 Parasite Bridge
+  registerAletheiaCommand(program);        // 1.3 Aletheia Reputation
   // ─── Antivirus / Vaccine Lab (v1.24.0) ────────────────────────────
   registerAntivirusCommands(program);
   // ─── Uninstall (v1.28.2) -- comprehensive removal of every Mneme artifact

@@ -70,6 +70,22 @@ export { CloudConnectivity, type CloudState, type QueuedEvent, type Connectivity
 //   #16 curated default tools list (20 high-value of 172)
 export * as lineageEncryptionStatus from "./lineage/encryption_status.js";
 export * as curatedTools from "./curated_tools.js";
+// v1.43.0 — DEMON STAGE 1: FANGS. Three modules that flip Mneme from
+// solo product to networked organism. All free-first; future
+// monetization hooks live in pricingTier metadata (HIDDEN from
+// public renderers per user mandate "ใช้ฟรีก่อน").
+//   1.1 Vaccine CDN auto-distribution — pulls + atomically swaps the
+//        pharmacopoeia bundle. Downgrade-attack-resistant.
+//   1.2 Parasite bridge installer — sentinel-bracketed + symmetric
+//        disinfect. ALWAYS attributed (the opposite of sneaky).
+//   1.3 Aletheia vendor scoring — composite score per vendor from
+//        local compliance log + karma + advocate + autoaction.
+//        Badge SVG ready for any README.
+export * as pharmacopoeiaCdn from "./pharmacopoeia/cdn_client.js";
+export * as pharmacopoeiaPulse from "./pharmacopoeia/pulse_integration.js";
+export * as parasiteBridge from "./parasite/bridge.js";
+export * as aletheiaScoring from "./aletheia/vendor_scoring.js";
+export * as aletheiaBadge from "./aletheia/badge_generator.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +
