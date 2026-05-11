@@ -151,8 +151,10 @@ cursor-cmd-k    (this repo)    23              19         82.6% ★★★☆☆
 codex-cli       (this repo)     8               7         87.5% ★★★★☆
 ```
 
-User-visible via `mneme compliance show`. Surfaces compliance trend
-per vendor over time. Becomes the data source for the Aletheia public
+User-visible via the `mneme compliance show` CLI (the AI agent calls it
+on the user's behalf when the user says *"show me AI compliance"* or
+*"who's been ignoring my mandates"*). Surfaces compliance trend per
+vendor over time. Becomes the data source for the Aletheia public
 dashboard (when Phase 4 cloud surface ships).
 
 **Effort:** ~2 weeks. Pure read-side work over the JSONL log.

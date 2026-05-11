@@ -104,6 +104,7 @@ import {
 } from "./commands/quant-cli.js";
 import { registerWelcomeCommand, registerSporeCommands, registerLinCommands, registerNucleusCommands, registerInboxCommands } from "./commands/mnemeiosis.js";
 import { registerComplianceCommand } from "./commands/compliance.js";
+import { registerCompanionCommand } from "./commands/companion.js";
 import { registerAntivirusCommands } from "./commands/antivirus.js";
 import { registerUninstallCommand } from "./commands/uninstall.js";
 import { registerEmbeddingsCommands } from "./commands/embeddings.js";
@@ -2441,6 +2442,10 @@ export async function run(argv: string[]): Promise<void> {
   // ─── AI Compliance audit (v1.41.0) — Phase 0/1/2/3 of the architectural
   // fix ladder. Reports who executed which AUTO-ACTION mandate.
   registerComplianceCommand(program);
+  // ─── MNEME COMPANION PROTOCOL (v1.42.0) — soul / consent / pheromone /
+  // contract / template surface that converts AI compliance from "ask
+  // nicely" into "rationally optimal." See docs/COMPANION_PROTOCOL.md
+  registerCompanionCommand(program);
   // ─── Antivirus / Vaccine Lab (v1.24.0) ────────────────────────────
   registerAntivirusCommands(program);
   // ─── Uninstall (v1.28.2) -- comprehensive removal of every Mneme artifact

@@ -175,31 +175,30 @@ ship one at a time as need / budget grows.
 
 ---
 
-## What you do (~2 hours start to first request)
+## What you say to your AI (~2 hours from speaking to first cloud request)
 
-```bash
-# 0. Authenticate doctl
-doctl auth init    # paste your DO API token
+You don't type any commands yourself. Mneme's design contract is that
+the AI agent does the work — you describe the outcome you want.
 
-# 1. Spin up the brain droplet
-doctl compute droplet create mneme-brain \
-  --image ubuntu-24-04-x64 \
-  --size s-2vcpu-4gb \
-  --region nyc3 \
-  --ssh-keys "$YOUR_SSH_FINGERPRINT" \
-  --enable-monitoring \
-  --tag-name mneme-cloud
+> *"Deploy the Mneme cloud brain on my DigitalOcean account.
+>  Region NYC3, 4 GB / 2 vCPU droplet, point brain.mneme.dev at it,
+>  and report back when the first health check passes."*
 
-# 2. Point DNS
-# (your DNS provider) — A record: brain.mneme.dev → droplet's IPv4
+The agent (claude-code / cursor / codex / etc.) will:
 
-# 3. SSH in + bootstrap
-ssh root@brain.mneme.dev
-curl -fsSL https://get.docker.com | sh
-docker run -d --restart always -p 443:443 \
-  -v /etc/letsencrypt:/etc/letsencrypt \
-  ghcr.io/patsa2561-art/mneme-brain:latest    # we'll publish this image
-```
+1. Authenticate `doctl` against the DO token you've already given it
+   access to (typically via env var or 1Password connect — the agent
+   knows where to look because Mneme's onboarding asked once).
+2. Provision the droplet (`doctl compute droplet create mneme-brain ...`).
+3. Update your DNS provider (the agent reads which provider you use
+   from `.mneme/cloud-config.json` — written the first time you said
+   "set up Mneme cloud").
+4. SSH in, install Docker, and pull `ghcr.io/patsa2561-art/mneme-brain:latest`.
+5. Wait for the first `/v1/healthz` 200, then announce: *"mneme-brain
+   live at https://brain.mneme.dev. First pulse hook latency: 87 ms."*
+
+Mneme's CLI commands exist — they're just for the AI agent to call,
+not for you to memorise.
 
 ## What we publish (in this repo)
 

@@ -124,7 +124,33 @@ export interface AdvocateFinding extends BotFindingShape {
   /** Why the advocate emitted this verdict, in 1-2 sentences. */
   reasoning: string;
   /** Specific bias signals the advocate detected. */
-  biasSignals: Array<"absence-of-evidence" | "single-source-laundering" | "all-irrelevant-citations" | "claim-too-vague">;
+  biasSignals: Array<"absence-of-evidence" | "single-source-laundering" | "all-irrelevant-citations" | "claim-too-vague" | "specific-entity-mismatch">;
+}
+
+/** v1.42.0 — extract entities the claim is SPECIFICALLY about, not just
+ *  generic 4-char tokens. Versions, file names, identifiers, CVE IDs.
+ *  Used by the semantic-relevance gate to catch the FALSE-positive
+ *  pattern where citations share a generic word ("critical", "fix")
+ *  but say nothing about the actual claim subject. */
+const SPECIFIC_ENTITY_PATTERNS: RegExp[] = [
+  /v?\d+\.\d+\.\d+(?:[.-][\w]+)?/g,                      // version numbers (v1.40.1, 2.0.0-beta)
+  /\bcve-?\d{4}-?\d+/gi,                                  // CVE IDs
+  /\b[a-z][\w-]+\.(ts|tsx|js|jsx|py|go|rs|java|md|json|yml|yaml|toml)\b/gi,  // file names
+  /\b[A-Z][a-zA-Z]*[A-Z][a-zA-Z]+\b/g,                   // CamelCase identifiers
+  /\b[a-z][a-z]+[A-Z][a-zA-Z]+\b/g,                      // camelCase identifiers
+  /\b[a-z][a-z_]+_[a-z_]+\b/g,                            // snake_case identifiers
+  /#\d{2,}/g,                                              // PR / issue numbers
+  /[0-9a-f]{7,40}/gi,                                      // commit SHAs
+];
+
+export function extractSpecificEntities(text: string): string[] {
+  if (!text) return [];
+  const found = new Set<string>();
+  for (const re of SPECIFIC_ENTITY_PATTERNS) {
+    const matches = text.match(re);
+    if (matches) for (const m of matches) found.add(m.toLowerCase());
+  }
+  return [...found];
 }
 
 /** Run the devil's advocate. Returns a finding shaped like a normal bot
@@ -171,12 +197,44 @@ export function runAdvocate(input: AdvocateInput): AdvocateFinding {
   const isAbsenceOfEvidence = isSpecificClaim && relevantSupportCount === 0;
   if (isAbsenceOfEvidence) biasSignals.push("absence-of-evidence");
 
+  // Test 5 (v1.42.0) — SEMANTIC RELEVANCE GATE.
+  // Tests 3-4 use lexical token overlap which lets generic words ("critical",
+  // "fix", "security") pass as "relevant" even when the citation is about a
+  // totally different commit. The gate extracts SPECIFIC ENTITIES from the
+  // claim (versions, file names, identifiers, CVE IDs, commit SHAs) and
+  // checks whether ANY supporting citation actually mentions ANY of them.
+  // If the claim cites 2+ specific entities and zero citations contain any
+  // of them, the supporting consensus is laundered through irrelevant
+  // evidence. Strong refute signal.
+  //
+  // Repro: claim "v1.40.1 has critical security vulnerability" with citations
+  // about a v1.39.0 advocate-fix commit shared the word "critical" but not
+  // the specific entities "v1.40.1" / "vulnerability". Pre-v1.42.0 the
+  // advocate said "no bias signals". Post-v1.42.0 the gate flips to refute
+  // at high confidence.
+  const claimEntities = extractSpecificEntities(claim);
+  let specificEntityMismatch = false;
+  if (claimEntities.length >= 2 && allSupportCitations.length > 0) {
+    const anyEntityMatched = allSupportCitations.some((c) => {
+      const lower = c.toLowerCase();
+      return claimEntities.some((e) => lower.includes(e));
+    });
+    if (!anyEntityMatched) {
+      specificEntityMismatch = true;
+      biasSignals.push("specific-entity-mismatch");
+    }
+  }
+
   // Verdict logic.
   let verdict: Verdict;
   let confidence: number;
   let reasoning: string;
 
-  if (isAbsenceOfEvidence) {
+  if (specificEntityMismatch) {
+    verdict = "contradicts";
+    confidence = 0.85;
+    reasoning = `Claim references specific entities (${claimEntities.join(", ")}) but ZERO supporting citations mention any of them across ${supports.length} supporting bot(s). Pattern: unrelated-evidence misdirection — N bots laundering the same generic-word match into N "supports" votes. Refuting at high confidence.`;
+  } else if (isAbsenceOfEvidence) {
     verdict = "contradicts";
     confidence = 0.75;
     reasoning = `Claim is specific (mentions version/vuln/feature shape) but ZERO relevant supporting evidence found across ${supports.length} supporting bot(s). Absence of evidence for a specific claim = active refutation, not neutral.`;

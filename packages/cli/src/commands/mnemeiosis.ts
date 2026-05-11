@@ -587,7 +587,37 @@ export function registerNucleusCommands(program: Command): void {
       // Without this, every keystroke would re-emit the same EXECUTE NOW
       // line, causing the AI to loop. With autoAck, AUTO-ACTION fires
       // exactly once per inbox push.
-      const text = pulse.renderPulse(status, { quiet: opts.quiet !== false, autoAck: true, repoRoot: process.cwd() });
+      let text = pulse.renderPulse(status, { quiet: opts.quiet !== false, autoAck: true, repoRoot: process.cwd() });
+
+      // v1.42.0 — MNEME COMPANION PROTOCOL injection. Five companion
+      // blocks (soul / consent / pheromone / contract / template) get
+      // appended to the pulse so the AI sees its own diary, the user's
+      // consent grant, the colony's pheromone trails, the active
+      // contract, and the per-vendor template name. Best-effort — if
+      // any block read fails, that block is silently dropped; the rest
+      // ship. The active vendor defaults to claude-opus-4-7; override
+      // with MNEME_VENDOR env var.
+      try {
+        const { aiSoul, userConsent, aiPheromone, aiContracts, vendorPulseTemplates } = await import("@mneme-ai/core");
+        const vendor = process.env["MNEME_VENDOR"] ?? "claude-opus-4-7";
+        const repo = process.cwd();
+        const companionBlocks: string[] = [];
+        try { const soulText = aiSoul.renderSoulBlock(aiSoul.readSoul(repo, vendor)); if (soulText) companionBlocks.push(soulText); } catch { /* drop block */ }
+        try { const consentText = userConsent.renderConsentBlock(repo); if (consentText) companionBlocks.push(consentText); } catch { /* drop block */ }
+        try { const pheromoneText = aiPheromone.renderPheromoneBlock(repo); if (pheromoneText) companionBlocks.push(pheromoneText); } catch { /* drop block */ }
+        try { const contractText = aiContracts.renderContractBlock(repo, vendor); if (contractText) companionBlocks.push(contractText); } catch { /* drop block */ }
+        try { const templateText = vendorPulseTemplates.renderTemplateBlock(repo, vendor); if (templateText) companionBlocks.push(templateText); } catch { /* drop block */ }
+        if (companionBlocks.length > 0 && text) {
+          // splice the companion block into the pulse — before the closing tag
+          // so renderPulse's framing stays intact.
+          const companionBody = "\n" + companionBlocks.join("\n\n") + "\n";
+          if (text.includes("[/MNEME PULSE]")) text = text.replace("[/MNEME PULSE]", companionBody + "[/MNEME PULSE]");
+          else text = text + companionBody;
+          // apply per-vendor template (layout / max-chars / duplicate-at-top)
+          try { text = vendorPulseTemplates.applyTemplate(text, vendorPulseTemplates.pickTemplate(repo, vendor)); } catch { /* template never breaks pulse */ }
+        }
+      } catch { /* companion injection must never break the pulse path */ }
+
       if (text) process.stdout.write(text + "\n");
 
       // v1.26.4 -- Pulse Beyond Editor. When --broadcast, push the

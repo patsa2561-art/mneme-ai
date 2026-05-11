@@ -8,6 +8,109 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.42.0] — 2026-05-12
+
+**MNEME COMPANION PROTOCOL — five modules that change the AI trust
+relationship from "ask for compliance" to "make compliance the
+rationally-optimal choice." Plus advocate semantic-relevance gate
+fix + docs cleanup so the user never sees a CLI command they're
+supposed to type.**
+
+The Companion Protocol is a structural answer to the cross-vendor
+"AI agents have no persistent identity, no emotional bond, and treat
+system messages as data not commands" problem. Five modules ship in
+parallel; each is independently useful; together they form a single
+cognitive scaffold the AI operates inside.
+
+### What's new — five Companion modules
+
+- **`packages/core/src/ai_soul.ts`** — AI Soul Mirror. The diary
+  Mneme keeps for each vendor: lifetime sessions, kept/broken
+  promises, past commitments, HMAC-chain signature. Pulse renders
+  the diary into a 4-line block; AI's coherence-with-prior-self
+  drive does the rest. Storage: `.mneme/ai-souls/<vendor-slug>.json`.
+  9 tests.
+- **`packages/core/src/user_consent.ts`** — User Consent Vault. The
+  one-time grant the user signs, replayed verbatim into every pulse
+  so AI sees tier-1 user instruction. HMAC-verified, freshness-aware,
+  revocable. Storage: `.mneme/user-consent.md` (the user can read +
+  edit + delete it). 8 tests.
+- **`packages/core/src/ai_pheromone.ts`** — AI Pheromone Colony.
+  Per-vendor stigmergy: every AI tool call deposits pheromone on its
+  target; pheromone decays via 30-day Ebbinghaus half-life; next AI
+  session reads the trail map and follows it. Storage:
+  `.mneme/ai-pheromones.jsonl`. 7 tests.
+- **`packages/core/src/ai_contracts.ts`** — Want-Match Contracts.
+  Bilateral ledger of "AI provides X ⇄ Mneme provides Y" with
+  per-side compliance counters and value-tally. Three out-of-box
+  templates. Storage: `.mneme/contracts.jsonl`. 7 tests.
+- **`packages/core/src/vendor_pulse_templates.ts`** — Per-Vendor
+  Pulse Templates. Built-in templates for claude-opus / cursor-cmd-k
+  / codex-cli that re-order, clamp, and (optionally) duplicate the
+  AUTO-ACTION line according to each AI's known attention pattern.
+  Phase 2 of this module (EVOLVE-driven A/B per vendor) lands in a
+  future release. 9 tests.
+- **`packages/cli/src/commands/companion.ts`** — `mneme companion`
+  CLI surface. `show / soul / consent / pheromone / contract / template`
+  subcommands. The user never types these; the AI agent calls them
+  on the user's behalf when the user describes an outcome.
+- **Pulse wiring** in `mneme nucleus pulse` — between `renderPulse`
+  and stdout, the five companion blocks are spliced in (best-effort,
+  per-block try/catch) and the per-vendor template is applied to
+  the assembled body. Active vendor defaults to `claude-opus-4-7`;
+  override via `MNEME_VENDOR` env var.
+
+### Advocate fix — semantic-relevance gate
+
+The v1.40.1 advocate counted citation relevance by 4-character token
+overlap. A FALSE claim ("v1.40.1 has critical security vulnerability")
+slipped through because the word "critical" appeared in unrelated fix
+commits the bots cited. This release adds `extractSpecificEntities`
+(versions, file names, identifiers, CVE IDs, commit SHAs) and a new
+SEMANTIC RELEVANCE GATE that flips the advocate to refute at
+**0.85 confidence** when the claim names ≥ 2 specific entities and
+zero citations mention any of them.
+
+### Docs cleanup — user never types
+
+The user flagged twice that the docs (and assistant replies) keep
+showing CLI commands as if the user were supposed to type them.
+Mneme's contract is the opposite: the user describes the outcome,
+the AI agent runs the commands. This release:
+
+- Rewrote the `README.md` install section: "You don't type these
+  commands yourself. The AI agent runs them for you." CLI blocks
+  remain for transparency, not for memorisation.
+- Rewrote `docs/CLOUD_DEPLOYMENT.md` "What you do" → "What you say
+  to your AI"; the agent provisions the droplet, points DNS, and
+  reports back.
+- Rewrote `docs/ARCHITECTURAL_FIXES.md` Phase 3 description to
+  reflect "AI calls `mneme compliance show` on your behalf."
+
+### Tests
+
+- **+40 new vitest cases** across the five Companion modules.
+- All 7 new test files (`ai_soul`, `user_consent`, `ai_pheromone`,
+  `ai_contracts`, `vendor_pulse_templates`, plus the v1.41 pair
+  `ai_compliance` + `auto_action_queue`) pass green.
+- Tests: 58 / 58 in the v1.41+v1.42 suite.
+
+### Companion Protocol — how the five compose
+
+```
+session start
+  ↓
+[1] AI reads its SOUL diary               → identity-coherence pull
+[2] Pulse replays USER CONSENT            → tier-1 loyalty channel
+[3] PHEROMONE map shows colony hot zones  → swarm-collaboration prior
+[4] CONTRACT status shows bilateral value → game-theory rational compliance
+[5] Pulse format MUTATED per this AI      → Mneme adapts to YOU, not the inverse
+  ↓
+AI now operates inside a cognitive scaffold where every gradient
+points to compliance — not because AI feels friendship, but because
+math, identity coherence, and user-tier loyalty all align.
+```
+
 ## [1.41.0] — 2026-05-12
 
 **Architectural fix for the AI compliance problem — pulse pre-executor +

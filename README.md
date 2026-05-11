@@ -485,32 +485,42 @@ Only manual step. After restart, your AI tool now sees Mneme tools.
 
 <br/>
 
-**🟢 Option 1 — npm global (most common)**
+> **You don't type these commands yourself.** Mneme's whole point is that
+> your AI agent (Claude Code / Cursor / Codex / Gemini / Continue / Aider)
+> runs them for you. You say *"install Mneme on this repo"* and the agent
+> picks the right option below for your environment, runs it, verifies,
+> and reports back. The blocks below are what the AI executes on your
+> behalf — kept here for transparency, not for typing.
+
+**🟢 Option 1 — npm global (most common; AI picks this when Node ≥ 22 is available)**
 
 ```bash
+# AI agent runs these — you don't.
 npm install -g mneme-ai
 cd <your-repo> && mneme init && mneme index    # ~90s for 5k commits
 mneme mcp --install                             # auto-detects Claude Code / Cursor / Continue
 ```
 
-**🟡 Option 2 — npx (no install, runs once)**
+**🟡 Option 2 — npx (AI picks this for one-off use, no install)**
 
 ```bash
+# AI agent runs these — you don't.
 cd <your-repo>
 npx mneme-ai init && npx mneme-ai index
 npx mneme-ai mcp --install
 ```
 
-**🔵 Option 3 — Docker (no Node.js needed)**
+**🔵 Option 3 — Docker (AI picks this when Node isn't available)**
 
 ```bash
+# AI agent runs these — you don't.
 cd <your-repo>
 docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme init
 docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme index
 docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/patsa2561-art/mneme-ai mneme mcp --install
 ```
 
-After any of the three options: **restart your AI tool once.** Done.
+After any of the three options the AI tells you to **restart your AI tool once**. Done.
 
 ---
 

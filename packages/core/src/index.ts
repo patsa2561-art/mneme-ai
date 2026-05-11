@@ -47,6 +47,15 @@ export * as aiCompliance from "./ai_compliance.js";
 // pulse pre-executor cannot safely run inline (file-lock on running
 // mneme.cmd binary). Daemon caretaker pass drains the queue.
 export * as autoActionQueue from "./auto_action_queue.js";
+// v1.42.0 — MNEME COMPANION PROTOCOL. Five modules that change the AI
+// trust relationship from "ask for compliance" to "make compliance the
+// rationally-optimal choice." See docs/COMPANION_PROTOCOL.md for the
+// design + docs/ARCHITECTURAL_FIXES.md for the broader fix ladder.
+export * as aiSoul from "./ai_soul.js";
+export * as userConsent from "./user_consent.js";
+export * as aiPheromone from "./ai_pheromone.js";
+export * as aiContracts from "./ai_contracts.js";
+export * as vendorPulseTemplates from "./vendor_pulse_templates.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +
