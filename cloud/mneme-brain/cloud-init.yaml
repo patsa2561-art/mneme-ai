@@ -1,119 +1,80 @@
 #cloud-config
-# mneme-brain cloud-init v3 (v1.42.3 / Cloud Phase 4 MVP).
+# mneme-brain cloud-init v4 (v1.42.3 / Cloud Phase 4 MVP).
 #
-# v1: hung on package_upgrade + NodeSource curl-to-bash (8+ min, no boot).
-# v2: tried snap node — also stuck (no port ever opened).
-# v3: lean Ubuntu universe nodejs, NO external curl during boot.
-#     server.mjs FETCHED from raw.githubusercontent.com (small, fast)
-#     with 3 retries; if that fails we still drop a static-file marker
-#     so we can SSH-debug without guessing.
+# v1-v3 all failed (ports never opened). v4 thesis: drop EVERYTHING that
+# touches apt — ALL cloud images have python3 pre-installed. Skip Node
+# for the MVP; serve healthz from a 25-line python script. Once we have
+# SSH + can confirm what cloud-init was failing on, v5 reintroduces Node.
 #
-# Everything inline; if cloud-init runs at all, port 8080 should answer
-# within 90 s of boot. If 22 is open but 8080 isn't, SSH in + read
-# /var/log/mneme-brain-bootstrap.log — verbose (set -x) tells the story.
-
-users:
-  - default
-  - name: mneme
-    system: true
-    no_create_home: false
-    shell: /usr/sbin/nologin
+# Cloud-init order: write_files (always) → runcmd (if write_files ok).
+# v4 makes runcmd a single self-contained line so we can SEE in
+# /var/log/cloud-init-output.log exactly where it died.
 
 write_files:
+  - path: /opt/mneme-brain/healthz.py
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env python3
+      """Tiny mneme-brain MVP — pure stdlib, no external deps. Serves
+      JSON on :8080 for /v1/healthz, /v1/version, /v1/pulse (echoes the
+      payload back). Validates the cloud deployment chain works before
+      we ship the full Node server."""
+      from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+      import json, sys, datetime
+      VERSION = "1.42.3-mvp-python"
+      class H(BaseHTTPRequestHandler):
+          def _send(self, status, body):
+              raw = json.dumps(body).encode()
+              self.send_response(status)
+              self.send_header("content-type", "application/json")
+              self.send_header("content-length", str(len(raw)))
+              self.send_header("x-mneme-brain", VERSION)
+              self.end_headers()
+              self.wfile.write(raw)
+          def do_GET(self):
+              if self.path == "/v1/healthz":
+                  return self._send(200, {"ok": True, "version": VERSION, "ts": datetime.datetime.utcnow().isoformat() + "Z"})
+              if self.path == "/v1/version":
+                  return self._send(200, {"brain": VERSION, "stack": "python3-stdlib"})
+              return self._send(404, {"error": "not-found", "path": self.path})
+          def do_POST(self):
+              n = int(self.headers.get("content-length", "0"))
+              raw = self.rfile.read(n) if n else b"{}"
+              try: body = json.loads(raw or b"{}")
+              except: body = {}
+              if self.path == "/v1/pulse":
+                  return self._send(200, {"ok": True, "echoed": body, "note": "MVP echoes payload; full pre-executor lands when we swap to Node"})
+              if self.path == "/v1/compliance":
+                  return self._send(202, {"ack": True, "received": len(body.get("events", []) if isinstance(body, dict) else [])})
+              return self._send(404, {"error": "not-found", "path": self.path})
+          def log_message(self, fmt, *args): pass
+      port = 8080
+      print(f"mneme-brain {VERSION} listening on 0.0.0.0:{port}", flush=True)
+      ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever()
+
   - path: /etc/systemd/system/mneme-brain.service
     permissions: '0644'
     content: |
       [Unit]
-      Description=Mneme Brain (Cloud Phase 4 MVP, v1.42.3)
+      Description=Mneme Brain (Cloud Phase 4 MVP, v1.42.3 / python3 stdlib)
       After=network-online.target
       Wants=network-online.target
 
       [Service]
       Type=simple
-      User=mneme
-      Group=mneme
-      WorkingDirectory=/opt/mneme-brain
-      Environment=PORT=8080
-      Environment=HOST=0.0.0.0
-      ExecStart=/usr/bin/node /opt/mneme-brain/server.mjs
+      ExecStart=/usr/bin/python3 /opt/mneme-brain/healthz.py
       Restart=always
       RestartSec=3
       StandardOutput=journal
       StandardError=journal
-      LimitNOFILE=65536
 
       [Install]
       WantedBy=multi-user.target
 
-  # Tiny diagnostic page in case Node fails to boot — lets us see at a
-  # glance whether cloud-init even ran. Served by python3 (pre-installed)
-  # on a different port (8090) as the LAST step so port-8090 = "got here".
-  - path: /opt/mneme-brain/index.html
-    permissions: '0644'
-    content: |
-      <!doctype html><meta charset=utf8><title>mneme-brain bootstrap</title>
-      <h1>mneme-brain cloud-init reached the file-write stage</h1>
-      <p>If you see this on port 8090, cloud-init ran. Check :8080 for the real Node server.</p>
-
-  - path: /usr/local/bin/mneme-brain-bootstrap.sh
-    permissions: '0755'
-    content: |
-      #!/usr/bin/env bash
-      set -xeuo pipefail
-      exec > >(tee -a /var/log/mneme-brain-bootstrap.log) 2>&1
-      echo "==> v3 bootstrap start $(date -u +%FT%TZ)"
-
-      # 1. Make sure the install dir exists + is owned by mneme.
-      mkdir -p /opt/mneme-brain
-      chown -R mneme:mneme /opt/mneme-brain
-
-      # 2. Install Node from Ubuntu universe (already in package cache on
-      #    fresh cloud images). NO NodeSource curl, NO snap. Universe
-      #    Node is 18.x on 22.04 / 20.x on 24.04 — both support our
-      #    plain-ESM server.mjs.
-      apt-get install -y --no-install-recommends nodejs python3 ufw curl
-      node --version
-      python3 --version
-
-      # 3. Pull the actual server file from the public repo.
-      curl -fsSL --retry 5 --retry-delay 3 --max-time 30 \
-        https://raw.githubusercontent.com/patsa2561-art/mneme-ai/main/cloud/mneme-brain/server.mjs \
-        -o /opt/mneme-brain/server.mjs
-      ls -la /opt/mneme-brain/
-      chown mneme:mneme /opt/mneme-brain/server.mjs
-
-      # 4. Firewall — only 22, 8080, 8090 open. Disable IPv6 rules to
-      #    avoid first-boot ufw warnings.
-      ufw allow OpenSSH
-      ufw allow 8080/tcp
-      ufw allow 8090/tcp
-      yes | ufw enable || true
-      ufw status verbose || true
-
-      # 5. Start mneme-brain via systemd.
-      systemctl daemon-reload
-      systemctl enable mneme-brain
-      systemctl restart mneme-brain
-      sleep 3
-      systemctl status mneme-brain --no-pager || true
-      ss -tlnp | grep 8080 || echo "WARNING: nothing listening on 8080 yet"
-
-      # 6. Diagnostic static page on :8090 (python3, no deps). Always
-      #    starts last so its presence proves the whole script reached
-      #    the end.
-      cd /opt/mneme-brain
-      nohup python3 -m http.server 8090 >/var/log/mneme-brain-diag.log 2>&1 &
-      sleep 1
-      ss -tlnp | grep 8090 || true
-
-      echo "==> v3 bootstrap end $(date -u +%FT%TZ)"
-
 runcmd:
-  - bash /usr/local/bin/mneme-brain-bootstrap.sh
+  - bash -c 'set -x; mkdir -p /opt/mneme-brain; chmod +x /opt/mneme-brain/healthz.py; systemctl daemon-reload; systemctl enable mneme-brain; systemctl restart mneme-brain; sleep 2; ufw allow OpenSSH 2>/dev/null || true; ufw allow 8080/tcp; yes | ufw enable 2>/dev/null || true; ss -tlnp; echo "==> v4 done $(date -u +%FT%TZ)"' 2>&1 | tee /var/log/mneme-brain-bootstrap.log
 
 final_message: |
-  Mneme Brain (Cloud Phase 4 MVP, v1.42.3) — cloud-init v3 done.
-  Node API:  curl http://${PUBLIC_IPV4}:8080/v1/healthz
-  Diag page: curl http://${PUBLIC_IPV4}:8090/index.html
-  Logs:      cat /var/log/mneme-brain-bootstrap.log
-  systemd:   journalctl -u mneme-brain -f
+  Mneme Brain MVP (v4 / python3) bootstrap finished.
+  Test: curl http://${PUBLIC_IPV4}:8080/v1/healthz
+  Logs: cat /var/log/mneme-brain-bootstrap.log
