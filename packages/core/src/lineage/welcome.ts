@@ -146,7 +146,10 @@ export function buildWelcome(repoRoot: string, version: string): WelcomePayload 
     enabled: !settings.optedOut,
     defaultsApplied: [
       "Auto-crystallize on session end + idle (45 min) + context pressure",
-      `Spore remote: ${sporeRemote ? `auto-detected git origin (${sporeRemote}, branch mneme-lineage)` : "local-only (no git origin detected)"}`,
+      // v1.42.5 (#7 fix) — wording was reading as opt-out ("we already
+      // hooked up your remote!"). Now: detection ≠ enabled. Push only
+      // happens after the user explicitly says "enable spore sync".
+      `Spore remote: ${sporeRemote ? `git origin DETECTED (${sporeRemote}) — push to 'mneme-lineage' branch is OFF until you say 'enable spore sync'` : "no git origin — chromosomes stay local"}`,
       `PII scrub: ${settings.piiScrubEnabled ? "on" : "off"}`,
       "Mendelian inheritance from up to 3 most-recent ancestors at boot",
     ],

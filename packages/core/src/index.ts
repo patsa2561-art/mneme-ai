@@ -65,6 +65,11 @@ export * as templateEvolution from "./template_evolution.js";
 // outages never block the local-first path. See cloud_connectivity.ts
 // docstring for the full design rationale.
 export { CloudConnectivity, type CloudState, type QueuedEvent, type ConnectivityState, type ConnectivityOptions } from "./cloud_connectivity.js";
+// v1.42.5 — Wave 2 bug fixes
+//   #8  honest encryption status (replaces decorative boolean flag)
+//   #16 curated default tools list (20 high-value of 172)
+export * as lineageEncryptionStatus from "./lineage/encryption_status.js";
+export * as curatedTools from "./curated_tools.js";
 // v1.28.2 -- comprehensive service uninstall (cross-platform).
 export * as serviceUninstall from "./service_uninstall.js";
 // v1.29.0 -- SUPERNOVA self-heal supervisor (factorial backoff +

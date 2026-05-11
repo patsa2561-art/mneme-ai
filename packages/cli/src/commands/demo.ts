@@ -35,10 +35,34 @@ function out(opts: CommonOpts, jsonPayload: unknown, humanLines: string[]): void
 export function registerToolsCommand(program: Command): void {
   program
     .command("tools")
-    .description("List Mneme's full MCP tool catalog (mirror of mneme.capabilities).")
+    .description("List Mneme's MCP tool catalog (default ALL 172). Pass --curated for the 20-tool starter set.")
     .option("--category <name>", "Filter to one category.")
+    // v1.42.5 (#16 fix) — curator default: 20 high-value tools instead
+    // of the full 172. Stops the catalog-explosion problem where smaller
+    // models thrash through tool selection.
+    .option("--curated", "Show only the 20-tool starter set + per-tool rationale (best for first-touch with new AI agents).")
     .option("--json", "JSON output.")
-    .action(async (opts: { category?: string } & CommonOpts) => {
+    .action(async (opts: { category?: string; curated?: boolean } & CommonOpts) => {
+      // v1.42.5 (#16) curated path — short-circuit before hitting the
+      // big registry import.
+      if (opts.curated) {
+        const { curatedTools } = await import("@mneme-ai/core");
+        const list = curatedTools.CURATED_DEFAULT_TOOLS;
+        if (opts.json) { writeJson({ curated: list, count: list.length }); return; }
+        const byCat = curatedTools.curatedByCategory();
+        writeText(`✨ Mneme · curated 20-tool starter set (v1.42.5 — 20 of 172)`);
+        writeText("");
+        for (const [cat, tools] of Object.entries(byCat)) {
+          writeText(`── ${cat.toUpperCase()} (${tools.length}) ${"─".repeat(60 - cat.length)}`);
+          for (const t of tools) {
+            writeText(`  ${t.name}`);
+            writeText(`    ${t.why}`);
+          }
+          writeText("");
+        }
+        writeText(`Run \`mneme tools\` (no flag) for the full 172-tool catalog.`);
+        return;
+      }
       // Lazy import via the MCP package's public registry export.
       const { buildAllTools, groupByCategory } = await import("@mneme-ai/mcp/tools/registry");
       void buildAllTools; void groupByCategory;
