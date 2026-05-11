@@ -131,4 +131,99 @@ describe("antivirus auto-synthesize", () => {
       }
     });
   });
+
+  // v1.28.3 HOTFIX regression -- defensive against undefined/null inputs.
+  // Day-one v1.28.0 crashed with "negativeSamples is not iterable" when
+  // a third-party caller passed undefined for negativeSamples. Same kind
+  // of crash for fnSamples / non-array / non-string entries. These tests
+  // make those crash paths structurally impossible.
+  describe("v1.28.3 defensive guards (regression for synthesize TypeError)", () => {
+    it("evaluateCandidatePattern survives undefined negativeSamples", () => {
+      const r = evaluateCandidatePattern(
+        "phantom",
+        ["x-phantom"],
+        undefined as unknown as string[],
+      );
+      expect(r.recallAfter).toBe(1);
+      expect(r.precisionAfter).toBe(1);
+      expect(r.negativeMatches).toEqual([]);
+    });
+
+    it("evaluateCandidatePattern survives undefined fnSamples", () => {
+      const r = evaluateCandidatePattern(
+        "phantom",
+        undefined as unknown as string[],
+        ["real"],
+      );
+      expect(r.recallAfter).toBe(0);
+      expect(r.precisionAfter).toBe(1);
+    });
+
+    it("evaluateCandidatePattern survives invalid regex pattern", () => {
+      const r = evaluateCandidatePattern(
+        "(",                              // unbalanced -- would throw without guard
+        ["foo"],
+        ["bar"],
+      );
+      expect(r.recallAfter).toBe(0);
+      expect(r.negativeMatches).toEqual([]);
+    });
+
+    it("evaluateCandidatePattern survives non-string entries in arrays", () => {
+      const r = evaluateCandidatePattern(
+        "phantom",
+        ["x-phantom", null as unknown as string, undefined as unknown as string, 42 as unknown as string],
+        [{} as unknown as string, "real"],
+      );
+      expect(r.recallAfter).toBe(0.25);   // only 1 of 4 entries was valid + matched
+    });
+
+    it("synthesizeVaccine survives undefined negativeSamples (the v1.28.0 day-one crash)", () => {
+      const tmp = mkdtempSync(join(tmpdir(), "mneme-synth-defensive-"));
+      try {
+        const r = synthesizeVaccine(tmp, {
+          strain: "depends_imaginarium",
+          fnSamples: ["x-phantom-1", "y-phantom-2"],
+          negativeSamples: undefined as unknown as string[],
+        });
+        // Must NOT throw, and must produce a coherent result.
+        expect(r).toBeTruthy();
+        expect(r.accepted === true || r.accepted === false).toBe(true);
+        expect(typeof r.verdict).toBe("string");
+      } finally {
+        rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+
+    it("synthesizeVaccine survives undefined fnSamples", () => {
+      const tmp = mkdtempSync(join(tmpdir(), "mneme-synth-defensive-"));
+      try {
+        const r = synthesizeVaccine(tmp, {
+          strain: "depends_imaginarium",
+          fnSamples: undefined as unknown as string[],
+          negativeSamples: ["foo"],
+        });
+        expect(r.accepted).toBe(false);
+        expect(r.verdict).toMatch(/no FN samples/i);
+      } finally {
+        rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+
+    it("synthesizeVaccine survives a completely empty input object (no crash)", () => {
+      const tmp = mkdtempSync(join(tmpdir(), "mneme-synth-defensive-"));
+      try {
+        const r = synthesizeVaccine(tmp, {} as unknown as { strain: "depends_imaginarium"; fnSamples: string[]; negativeSamples: string[] });
+        expect(r.accepted).toBe(false);
+      } finally {
+        rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+
+    it("mineRegexFromSamples survives non-array + non-string entries", () => {
+      expect(mineRegexFromSamples(undefined as unknown as string[])).toBeNull();
+      expect(mineRegexFromSamples(null as unknown as string[])).toBeNull();
+      expect(mineRegexFromSamples([null, undefined, 42] as unknown as string[])).toBeNull();
+    });
+  });
 });

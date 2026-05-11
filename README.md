@@ -198,6 +198,21 @@ After any of the three options: **restart your AI tool once.** Done.
 mneme upgrade        # one command, replaces npm uninstall + reinstall dance
 ```
 
+**Remove cleanly (Mneme leaves no trace):**
+
+```bash
+mneme uninstall              # stops daemon, removes OS boot service, removes hooks,
+                             # removes auto-boot marker, prints a structured report
+mneme uninstall --purge      # also wipes .mneme/ in the current repo
+mneme uninstall --npm        # also `npm uninstall -g mneme-ai` to remove the CLI itself
+mneme uninstall --purge --npm --json   # full removal + machine-readable report
+```
+
+Every removal step reports `removed` / `not-installed` / `failed`. Final
+verdict line is `COMPLETE` / `PARTIAL` / `INCOMPLETE` so an AI agent can
+tell the user exactly what was cleaned up. Exit code is `1` if any step
+failed.
+
 </details>
 
 ---
@@ -422,7 +437,16 @@ If you don't → check Step 3 config; ask user to restart again.
 
 When the user installs Mneme today via `npm install -g mneme-ai`, they get **all** of these — no extra config:
 
-**🚨 v1.27.x — what every AI agent MUST know about (newest):**
+**🚨 v1.28.x — what every AI agent MUST know about (newest):**
+
+| New surface (v1.28.x) | When to use |
+|---|---|
+| **`mneme uninstall [--purge] [--npm] [--json]`** (v1.28.2+) | Comprehensive removal of EVERY Mneme artifact: stops daemon, removes OS boot service (schtasks/systemd-user/launchd), removes hooks + agent files, removes auto-boot marker, optionally wipes `.mneme/` and `npm uninstall -g`. Each step prints structured status; final verdict is `COMPLETE` / `PARTIAL` / `INCOMPLETE`. **Trust contract**: anything Mneme silently installs, this command silently removes. Run when user asks to uninstall Mneme. |
+| **`mneme antivirus synthesize <strain>`** (v1.28.0+; alias `synth`) | Auto-mine a candidate regex pattern from the FN samples a strain's vaccine missed. Acceptance gate: recall +10pp AND precision >=0.90. Writes `.mneme/proposals/vaccine-<id>.md` sidecar (accepted OR rejected). NO LLM in the hot path. Run after `mneme antivirus gap-scan` flags a strain with low recall. |
+| **`mneme antivirus gap-scan`** (v1.27.8+; alias `gap`) | Auto-evaluate vaccine coverage using YOUR repo as ground truth. Synthesises mutated SHAs / dep names / paths via 5-family adversarial mutators. Reports per-strain recall + Brier calibration. Polyglot: reads pip / cargo / go.mod / Gemfile / build.gradle / pom.xml. |
+| **Ghost-sniper auto-boot** (v1.28.1+, INVISIBLE) | Pulse hook now SILENTLY spawns the daemon when stopped + ONE TIME per machine installs Mneme as a boot service so reboots auto-start. No CLI command needed -- just install Mneme + open AI chat once. |
+
+**🚨 v1.27.x:**
 
 | New surface (v1.27.x) | When to use |
 |---|---|

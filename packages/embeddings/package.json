@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/embeddings",
-  "version": "1.28.2",
+  "version": "1.28.3",
   "description": "Embedding providers (OpenAI, Ollama, bundled-WASM, hash-fallback) for Mneme",
   "type": "module",
   "main": "./dist/index.js",

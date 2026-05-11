@@ -85,8 +85,13 @@ function reEscape(s: string): string {
  * Conservative: prefers fewer matches over over-generalising.
  */
 export function mineRegexFromSamples(samples: string[]): string | null {
-  if (samples.length === 0) return null;
-  const norm = samples.map((s) => s.trim()).filter(Boolean);
+  // v1.28.3 HOTFIX -- defensive: tolerate undefined/null/non-array input
+  // and non-string entries so a third-party caller cannot crash the miner.
+  if (!Array.isArray(samples) || samples.length === 0) return null;
+  const norm = samples
+    .filter((s): s is string => typeof s === "string")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (norm.length === 0) return null;
 
   // Find longest common prefix.
@@ -150,17 +155,25 @@ export function evaluateCandidatePattern(
   fnSamples: string[],
   negativeSamples: string[],
 ): { recallAfter: number; precisionAfter: number; negativeMatches: string[] } {
-  const re = new RegExp(pattern);
+  // v1.28.3 HOTFIX -- defensive against undefined/null/non-array inputs.
+  // Original v1.28.0 crashed with "negativeSamples is not iterable" when
+  // a third-party caller bypassed the CLI's `?? []` guard. Root cause of
+  // the day-one synthesize TypeError reported on v1.28.0.
+  const safeFn = Array.isArray(fnSamples) ? fnSamples : [];
+  const safeNeg = Array.isArray(negativeSamples) ? negativeSamples : [];
+  let re: RegExp;
+  try { re = new RegExp(pattern); }
+  catch { return { recallAfter: 0, precisionAfter: 1, negativeMatches: [] }; }
   let tp = 0;
-  for (const fn of fnSamples) {
-    if (re.test(fn)) tp++;
+  for (const fn of safeFn) {
+    if (typeof fn === "string" && re.test(fn)) tp++;
   }
   const negativeMatches: string[] = [];
-  for (const neg of negativeSamples) {
-    if (re.test(neg)) negativeMatches.push(neg);
+  for (const neg of safeNeg) {
+    if (typeof neg === "string" && re.test(neg)) negativeMatches.push(neg);
   }
-  const recallAfter = fnSamples.length === 0 ? 0 : tp / fnSamples.length;
-  const totalNeg = negativeSamples.length || 1;
+  const recallAfter = safeFn.length === 0 ? 0 : tp / safeFn.length;
+  const totalNeg = safeNeg.length || 1;
   const fp = negativeMatches.length;
   const precisionAfter = (totalNeg - fp) / totalNeg;
   return { recallAfter, precisionAfter, negativeMatches };
@@ -172,24 +185,32 @@ export function synthesizeVaccine(
   repoRoot: string,
   input: SynthesisInput,
 ): VaccineSynthesisResult {
+  // v1.28.3 HOTFIX -- defensive normalization of inputs. Day-one v1.28.0
+  // crashed when callers passed undefined arrays. Now every field is
+  // coerced to a safe shape BEFORE any property access.
+  const safeInput: SynthesisInput = {
+    strain: input?.strain ?? ("unknown" as StrainId),
+    fnSamples: Array.isArray(input?.fnSamples) ? input.fnSamples.filter((s) => typeof s === "string") : [],
+    negativeSamples: Array.isArray(input?.negativeSamples) ? input.negativeSamples.filter((s) => typeof s === "string") : [],
+  };
   const generatedAt = new Date().toISOString();
   const id = createHash("sha256")
-    .update(input.strain).update(input.fnSamples.join("|")).update(generatedAt)
+    .update(safeInput.strain).update(safeInput.fnSamples.join("|")).update(generatedAt)
     .digest("hex").slice(0, 12);
   const fail = (verdict: string, partial: Partial<VaccineSynthesisResult> = {}): VaccineSynthesisResult => ({
-    id, strain: input.strain, generatedAt,
-    proposedPattern: "", fnSamples: input.fnSamples,
+    id, strain: safeInput.strain, generatedAt,
+    proposedPattern: "", fnSamples: safeInput.fnSamples,
     recallBefore: 0, recallAfter: 0, negativeMatches: [],
     precisionAfter: 0, accepted: false, verdict,
     ...partial,
   });
 
-  if (input.fnSamples.length === 0) return fail("no FN samples to mine from -- skip");
+  if (safeInput.fnSamples.length === 0) return fail("no FN samples to mine from -- skip");
 
-  const pattern = mineRegexFromSamples(input.fnSamples);
+  const pattern = mineRegexFromSamples(safeInput.fnSamples);
   if (!pattern) return fail("pattern miner found no stable shared structure across FN samples");
 
-  const evalResult = evaluateCandidatePattern(pattern, input.fnSamples, input.negativeSamples);
+  const evalResult = evaluateCandidatePattern(pattern, safeInput.fnSamples, safeInput.negativeSamples);
   const recallDelta = evalResult.recallAfter - 0; // before is 0 by definition (these are FNs)
   const accepted =
     recallDelta >= MIN_RECALL_DELTA &&
@@ -202,9 +223,9 @@ export function synthesizeVaccine(
       : `REJECTED: recall delta ${(recallDelta * 100).toFixed(0)}pp below floor ${(MIN_RECALL_DELTA * 100).toFixed(0)}pp`;
 
   const result: VaccineSynthesisResult = {
-    id, strain: input.strain, generatedAt,
+    id, strain: safeInput.strain, generatedAt,
     proposedPattern: pattern,
-    fnSamples: input.fnSamples,
+    fnSamples: safeInput.fnSamples,
     recallBefore: 0,
     recallAfter: evalResult.recallAfter,
     negativeMatches: evalResult.negativeMatches,

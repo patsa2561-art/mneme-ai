@@ -8,6 +8,56 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.28.3] — 2026-05-11
+
+**HOTFIX: synthesize TypeError + README cleanup.**
+
+### The bug
+
+`mneme antivirus synthesize <strain>` crashed with `Cannot read
+properties of undefined (reading 'length')` (variant: `negativeSamples
+is not iterable`) when a third-party caller bypassed the CLI's
+`?? []` guard and passed `undefined` for `negativeSamples`. The
+v1.28.0 headline upgrade ("antivirus learns to write its own
+vaccines") was the most-affected feature — flagship feature with a
+day-one crash.
+
+### Root cause
+
+`evaluateCandidatePattern` and `synthesizeVaccine` trusted their
+inputs to be arrays. The CLI shielded them with `?? []`, but anyone
+calling the JS API directly (or any future internal call site that
+forgot the guard) crashed at `for (const neg of negativeSamples)` /
+`negativeSamples.length`.
+
+### Fix
+
+Defensive normalization at every public entry point:
+- `evaluateCandidatePattern` coerces both `fnSamples` and
+  `negativeSamples` to safe arrays via `Array.isArray()` + filters
+  non-string entries.
+- `synthesizeVaccine` builds a `safeInput` shape BEFORE any property
+  access (handles `input` itself being null/undefined too).
+- `mineRegexFromSamples` tolerates non-array + non-string entries.
+- `new RegExp(pattern)` is wrapped in try/catch so a malformed
+  pattern from the miner can't crash the evaluator.
+
+### Tests
+
++8 regression tests in `auto_synthesize.test.ts` under
+`v1.28.3 defensive guards (regression for synthesize TypeError)`:
+each tests a specific undefined/null/non-array/non-string input that
+previously crashed. Suite total: **5085 / 5085 passing.**
+
+### README
+
+- Added a "Remove cleanly (Mneme leaves no trace)" section with
+  `mneme uninstall` examples (alongside the existing `mneme upgrade`
+  block).
+- Added a v1.28.x "what every AI agent MUST know about" table:
+  `mneme uninstall`, `mneme antivirus synthesize`,
+  `mneme antivirus gap-scan`, ghost-sniper auto-boot.
+
 ## [1.28.2] — 2026-05-11
 
 **Trust contract — `mneme uninstall` + every auto-boot failure mode
