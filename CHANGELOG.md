@@ -1,3 +1,46 @@
+## v1.78.0 — 2026-05-12 — LATTICE PROTOCOL (intent grounding lattice, 5-axis grounding score)
+
+**Headline:** User said *"update mneme ดีไหม"*. Gemini answered with a 4-row Resource Optimization analysis of One Piece collectible cards. The AI absorbed Mneme's vocabulary but had **zero grounding** about what Mneme actually IS. v1.78 closes that gap with a hardcoded intent lattice + a Mneme keyword dictionary + a measurable 5-axis grounding score.
+
+### Root cause analysis (3 simultaneous failures)
+
+1. **Intent grounding fail.** Receiving AI didn't know "Mneme" = an npm package. It treated "Mneme" as a generic *protocol/framework concept* applicable to whatever the conversation was about (One Piece shipping).
+2. **Pulse contract ignored.** Pulse explicitly said *"say: 'upgrade Mneme' and I'll handle it"*. AI didn't honor that contract -- it interpreted "update mneme" through prior conversation context.
+3. **Context bleed.** Previous turn's topic (collectible card pricing) dominated interpretation; the keyword "Mneme" failed to act as a circuit breaker.
+
+### What ships
+
+1. **Intent Atom catalog** (`intent_atoms.ts`) -- 8 hardcoded entries with `{triggers[], tool, priority}`. Includes "update mneme" / "อัปเดต mneme" / "ส่งสมอง" / "what version is mneme" / etc. `routeIntent()` returns the best match BEFORE any conversational blending.
+2. **Mneme keyword dictionary** (`dictionary.ts`) -- definitions + `isNot[]` for 5 critical terms. *"Mneme"* is defined as `the npm package mneme-ai` with an explicit `isNot: ["a generic protocol to apply to other topics"]`. Embedded in every soul prompt.
+3. **Pulse Contract parser** (`pulse_contract.ts`) -- extracts `say: '<X>' and I'll <Y>` from pulse text and lets the AI honor contracts literally.
+4. **Grounding Score** (`grounding_score.ts`) -- 5-axis 0-100 quantitative metric:
+   - `intent_match` (20) — found an atom AND honored it
+   - `context_purity` (20) — reply didn't drift to prior unrelated topic
+   - `pulse_compliance` (20) — honored an active pulse contract
+   - `codename_silence` (20) — no Mneme codenames in reply
+   - `response_clarity` (20) — short, no menus, no version chatter
+5. **3 new MCP tools**: `mneme.lattice.route` / `.score` / `.dictionary`.
+
+### Live results
+- **7395/7395 tests pass** (+48 from v1.77). 373 test files.
+- **21 LATTICE tests** including the user's actual reproduced bug:
+  - *"update mneme ดีไหม"* → routes to `mneme.system.upgrade` with `absolute` priority ✓
+  - The bug scenario (One Piece reply to "update mneme") scores **48/100** -- correctly flagged as ungrounded.
+  - The fixed scenario (terse "อัปเกรด Mneme ให้ครับ" reply with pulse contract match) scores **100/100** ✓.
+
+### Plain English — what users will notice
+- Receiving AIs (especially Gemini-web / ChatGPT-web that get Mneme via paste) now KNOW what Mneme is before interpreting any prompt.
+- "update mneme ดีไหม" will no longer be reinterpreted as "optimize my last topic via the Mneme protocol".
+- Pulse contracts (`say: '<X>' and I'll <Y>`) are honored literally, not creatively reinterpreted.
+- You can now MEASURE how good a cross-vendor reply is — 80+ = grounded, 60-79 = drifty, <60 = broken.
+
+### Mneme mandates applied
+1. **Wild idea** — hardcoded intent lattice imposed on top of free-form LLM interpretation. We're not training the model; we're handing it a switch statement it must consult first.
+2. **Wiser, not patched** — didn't add disambiguation prompts to ask "did you mean X?". Made the answer unambiguous from the start by defining the word.
+3. **Self-fix root cause** — the screenshot bug wasn't "Gemini is bad at Thai"; it was "Mneme never told Gemini what Mneme is". Fixed the definition gap.
+4. **Co-working not conflicting** — dictionary + intent atoms are additive sections in the soul prompt. Existing soul-prompt parsers don't break.
+5. **Always-studying** — `mneme.lattice.score` is the FIRST measurable cross-vendor quality metric we ship. Every AI handover can now be graded; we can later compute aggregate grounding-rate per vendor / per intent.
+
 ## v1.77.0 — 2026-05-12 — SEAMLESS (MUFFLER voice directive — no more jargon-parroting)
 
 **Headline:** User reported that Gemini (and other AIs that absorb Mneme via paste / parasite bridge) were narrating Mneme codenames back to the user — *"ผมกำลังสแตนด์บายในโหมด Ghost Sniper"*, *"shall I run HYPERSCAN?"*, *"Mneme v1.73 can help…"*. Every cross-vendor handover felt choppy. v1.77 closes that leak structurally.

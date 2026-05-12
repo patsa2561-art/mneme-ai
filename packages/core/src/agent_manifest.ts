@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -172,6 +172,11 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.seamless.lint", since: "1.77.0", group: "seamless", what: "Scan an AI draft reply for voice violations (codenames / mode narration / version chatter / tool-name menus).", when: "Receiving AI self-checks its draft before sending. Use when user reports 'the AI is parroting Mneme jargon'." },
   { command: "mneme.seamless.silence", since: "1.77.0", group: "seamless", what: "Auto-strip Mneme codenames + standby boilerplate + version chatter from a draft reply.", when: "After lint flags issues; conservative auto-fix." },
   { command: "mneme.seamless.directive", since: "1.77.0", group: "seamless", what: "Render the 6-rule MUFFLER voice directive for custom prompts. Soul prompts + parasite bridge embed it automatically.", when: "Building a custom prompt template that should obey the same voice rules." },
+
+  // ─── v1.78 LATTICE (intent grounding) ───────────────────────────────
+  { command: "mneme.lattice.route", since: "1.78.0", group: "lattice", what: "Route a user prompt to the correct Mneme tool via hardcoded intent atoms. Stops 'update mneme ดีไหม' from being interpreted as 'optimize the previous topic'.", when: "MANDATORY first step for any prompt containing a Mneme keyword. Run BEFORE blending with conversational context." },
+  { command: "mneme.lattice.score", since: "1.78.0", group: "lattice", what: "5-axis grounding score 0-100 (intent_match / context_purity / pulse_compliance / codename_silence / response_clarity).", when: "Measure cross-vendor reply quality; if <70, re-prompt or re-route." },
+  { command: "mneme.lattice.dictionary", since: "1.78.0", group: "lattice", what: "Render Mneme keyword dictionary (definitions + isNot lists) so receiving AIs know what 'Mneme' literally is.", when: "Building a custom prompt that needs the same grounding receiving AIs get from soul prompts." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -196,7 +201,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

@@ -422,6 +422,10 @@ export * as abyss from "./abyss/index.js";
 // from leaking into the receiving AI's user-facing replies. Prepended
 // to every soul prompt + parasite bridge block.
 export * as seamless from "./seamless/index.js";
+// v1.78 -- LATTICE: intent grounding. Hardcoded {trigger → tool} map +
+// Mneme dictionary + pulse-contract parser + 5-axis grounding score
+// that quantifies cross-vendor reply quality.
+export * as lattice from "./lattice/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

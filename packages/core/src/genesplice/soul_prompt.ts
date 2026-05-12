@@ -46,6 +46,7 @@ import { createHash, createHmac } from "node:crypto";
 import type { SessionCapsule } from "../diaspora/session_capsule.js";
 import { renderHeartbeatMarkdown, type Heartbeat } from "../telepathy/heartbeat.js";
 import { renderVoiceDirective } from "../seamless/voice_directive.js";
+import { renderDictionary } from "../lattice/dictionary.js";
 
 export interface SoulPromptInput {
   capsule: SessionCapsule;
@@ -114,6 +115,8 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
     "# Mneme cross-vendor brain transfer — paste this verbatim into any AI to reincarnate the session.",
     "",
     renderVoiceDirective({ source: "soul-prompt", includeCodenameList: false }),
+    "",
+    renderDictionary(),
     "",
     `## Origin`,
     `vendor=${capsule.originVendor}  capsule=${capsule.id}  fingerprint=${capsule.repoFingerprint}  createdAt=${capsule.createdAt}`,

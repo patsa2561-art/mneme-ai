@@ -35,10 +35,11 @@ const sampleCapsule = (vendor: string, extras: { decisions?: string[]; contextOv
 // ─── G1 SOUL PROMPT ──────────────────────────────────────────────────
 
 describe("v1.73 GeneSplice G1 · Soul Prompt", () => {
-  it("compresses to under 500 tokens by default", () => {
+  it("compresses to a bounded token budget (incl. v1.77 voice directive + v1.78 dictionary)", () => {
     const cap = sampleCapsule("claude");
     const soul = compressToSoulPrompt({ capsule: cap });
-    expect(soul.estTokens).toBeLessThanOrEqual(700);
+    // 500 token base body + ~80 voice directive + ~210 dictionary = ~790 max
+    expect(soul.estTokens).toBeLessThanOrEqual(900);
     expect(soul.text).toContain("MNEME SOUL PROMPT");
     expect(soul.text).toContain("claude");
     expect(soul.text).toContain("bcrypt");
