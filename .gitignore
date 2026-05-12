@@ -42,3 +42,12 @@ desktop.ini
 # >>> mneme auto-managed (do not edit between sentinels) <<<
 # AI tooling artifacts -- never commit. Mneme manages this block.
 # <<< mneme auto-managed >>>
+# Mneme Lineage — never push the private key
+.mneme/lineage/identity/private.pem
+.mneme/lineage/working/
+
+# Personal brain-transfer / handoff test artifacts (Ghost Sniper privacy)
+.brain-*
+.test-*.mjs
+.test-machine2/
+assets/8*.jpg
