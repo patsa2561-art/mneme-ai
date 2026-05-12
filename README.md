@@ -127,13 +127,39 @@ So if you want **ChatGPT-web** to actually read `src/foo.ts`, paste the soul pro
 - The receiving AI doesn't run Mneme — it just reads the prompt as context.
 - Your second brain stays on **YOUR disk**, always. Nothing uploaded anywhere unless you choose Gist.
 
-#### 😅 "But the soul prompt is long — I have to memorize it?!"
+#### 📍 "Wait — where do I actually type? Source AI or destination AI?"
 
-**No. You never type or memorize it.** Here is what you actually say to your AI:
+Crystal clear, this trips everyone up the first time:
 
-> *"ส่งสมองไปให้ ChatGPT"* &nbsp;·&nbsp; *"hand this brain off"* &nbsp;·&nbsp; *"continue this in Gemini"*
+<table align="center" width="92%">
+<tr>
+  <th align="left">Step</th>
+  <th align="left">Where you are</th>
+  <th align="left">What you do</th>
+</tr>
+<tr>
+  <td><b>1.</b> Speak to the <b>SOURCE</b> AI</td>
+  <td>The AI you've been chatting with — Claude Code, Cursor, Codex, whatever has Mneme MCP wired.</td>
+  <td>Type one Thai/English sentence: <i>"ส่งสมองให้ ChatGPT"</i> / <i>"hand this off to ChatGPT"</i>.</td>
+</tr>
+<tr>
+  <td><b>2.</b> Source AI does the work</td>
+  <td>Same chat window. Watch it briefly.</td>
+  <td>Source AI silently calls <code>mneme.genesplice.soul-prompt</code>, copies the result to your clipboard, and tells you "ready — open the destination + paste".</td>
+</tr>
+<tr>
+  <td><b>3.</b> Switch to the <b>DESTINATION</b></td>
+  <td>Open chatgpt.com / gemini.google.com / claude.ai in your browser <i>(or the Gemini CLI in another terminal, or any AI of your choice)</i>.</td>
+  <td><b>Don't type anything</b> — just press <b>Ctrl+V</b> (or press the <b>💉</b> button if you installed the userscript), then hit send.</td>
+</tr>
+<tr>
+  <td><b>4.</b> Destination AI confirms</td>
+  <td>Destination chat.</td>
+  <td>It says something like <i>"Resumed from claude-opus-4-7 — continuing from where it left off…"</i>. From here, keep chatting normally.</td>
+</tr>
+</table>
 
-The AI knows the command — it's in the MCP tool manifest. **You describe the outcome; the AI runs the tools.**
+**Total typing on your part:** one sentence at the source. **Zero memorized commands. Zero pasting from a wiki.** The AI knows the commands — they live in the MCP tool manifest.
 
 If your AI isn't connected to MCP yet, run once:
 

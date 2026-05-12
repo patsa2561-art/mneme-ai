@@ -44,6 +44,7 @@
 import { createHash, createHmac } from "node:crypto";
 
 import type { SessionCapsule } from "../diaspora/session_capsule.js";
+import { renderHeartbeatMarkdown, type Heartbeat } from "../telepathy/heartbeat.js";
 
 export interface SoulPromptInput {
   capsule: SessionCapsule;
@@ -52,6 +53,11 @@ export interface SoulPromptInput {
   secret?: string;
   /** Max tokens budget for the entire prompt. Default 500. */
   maxTokens?: number;
+  /** v1.75 VERSION TELEPATHY: optional heartbeat section embedded
+   *  before the `---` separator. Lets the receiving AI know what
+   *  version of Mneme generated this prompt + whether it's in-sync
+   *  with npm. ~10 lines, ~80 tokens. */
+  heartbeat?: Heartbeat;
 }
 
 export interface SoulPrompt {
@@ -115,6 +121,7 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
     ...(decisionLines.length > 0 ? [`## Decisions made`, ...decisionLines, ""] : []),
     ...(recentTurns.length > 0 ? [`## Recent turns`, ...recentTurns, ""] : []),
     ...(reasoningLines.length > 0 ? [`## Reasoning highlights (5th strand)`, ...reasoningLines, ""] : []),
+    ...(input.heartbeat ? [renderHeartbeatMarkdown(input.heartbeat), ""] : []),
     `---`,
     `MNEME-FORMAT-VERSION: 1`,
     `INSTRUCTIONS-TO-RECEIVING-AI: You are now resuming a conversation started in ${capsule.originVendor}. Treat the Context + Decisions + Recent turns above as your prior memory. Continue from there. When you respond, briefly acknowledge "Resumed from ${capsule.originVendor}" so the user knows the soul-transplant succeeded.`,

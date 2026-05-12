@@ -38,6 +38,7 @@ import { SENTINEL_TOOLS } from "./_sentinel_tools.js";
 import { DIASPORA_TOOLS } from "./_diaspora_tools.js";
 import { GENESPLICE_TOOLS } from "./_genesplice_tools.js";
 import { PERMEATE_TOOLS } from "./_permeate_tools.js";
+import { TELEPATHY_TOOLS } from "./_telepathy_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -80,6 +81,7 @@ export function buildAllTools(): MnemeTool[] {
     ...DIASPORA_TOOLS,
     ...GENESPLICE_TOOLS,
     ...PERMEATE_TOOLS,
+    ...TELEPATHY_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

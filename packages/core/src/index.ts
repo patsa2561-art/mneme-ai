@@ -406,6 +406,13 @@ export * as genesplice from "./genesplice/index.js";
 //   P3 editor integration map   15 AI tools + status matrix
 //   P4 transport menu           ranked cross-machine paths
 export * as permeate from "./permeate/index.js";
+// v1.75 -- VERSION TELEPATHY. Mneme's heartbeat survives the cross-vendor
+// jump: every soul prompt now carries a `## Mneme Heartbeat` section
+// (local version + npm latest + sync status + daemon state). The
+// receiving AI -- even one that has never seen Mneme -- can answer
+// "what version is Mneme on this machine? Is there a newer one?"
+// without running any command.
+export * as telepathy from "./telepathy/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

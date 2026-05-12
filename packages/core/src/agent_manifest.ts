@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -156,6 +156,10 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.permeate.bookmarklet", since: "1.74.0", group: "permeate", what: "Single-line javascript: URI — drag to bookmark bar; click to inject on any AI chat page.", when: "User can't install Tampermonkey (corporate / phone)." },
   { command: "mneme.permeate.integrations", since: "1.74.0", group: "permeate", what: "Report supported AI tools (15+ catalog: native-MCP / parasite-bridge / browser-only / partial).", when: "User asks 'does Mneme work with X?' or 'which editor AIs are auto-wired?'." },
   { command: "mneme.permeate.transport", since: "1.74.0", group: "permeate", what: "Recommend best cross-machine transport (clipboard / Gist / Wanderer .mwt / QR) — ranked by friction.", when: "User asks 'how do I move brain to my Mac / phone / second computer?'." },
+
+  // ─── v1.75 VERSION TELEPATHY (cross-vendor version sync) ────────────
+  { command: "mneme.telepathy.heartbeat", since: "1.75.0", group: "telepathy", what: "Generate live Mneme heartbeat (local version + npm-latest + sync status + daemon + vaccines + inbox). Soul prompt embeds this automatically; receiving AI reads it like a normal section.", when: "User asks 'what version is Mneme?' / 'is Mneme up to date?' / 'are you on the latest?'. Also embed before any cross-vendor handoff." },
+  { command: "mneme.telepathy.compare", since: "1.75.0", group: "telepathy", what: "Parse a heartbeat from any pasted text and compare it to the current local heartbeat. Spots cross-machine version mismatches.", when: "User pastes a soul prompt and asks 'is the other side on the same version?'." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -180,7 +184,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

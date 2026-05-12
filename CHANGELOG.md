@@ -1,3 +1,44 @@
+## v1.75.0 — 2026-05-12 — VERSION TELEPATHY (cross-vendor version sync)
+
+**Headline:** Every soul prompt now carries Mneme's heartbeat across the vendor jump. The receiving AI — even one that has NEVER seen Mneme — can answer *"what version is Mneme on your machine? Is there a newer one?"* without running any command, without any install, without any backchannel.
+
+### What ships
+
+1. **Heartbeat block** embedded in every soul prompt:
+   ```
+   ## Mneme Heartbeat (version telepathy)
+   local_version: 1.75.0
+   npm_latest: 1.75.0
+   sync_status: in-sync ✓
+   daemon: running
+   vaccines: 8
+   inbox_unsent: 2
+   repo_fingerprint: aa08c5337b
+   checked_at: 2026-05-12T22:55:00.000Z
+   ```
+2. **npm-latest cross-check** with 1-hour cache in `.mneme/telepathy/npm-cache.json` (no API key, public registry endpoint).
+3. **2 new MCP tools** — `mneme.telepathy.heartbeat` (generate live heartbeat) and `mneme.telepathy.compare` (parse a pasted heartbeat and diff vs local).
+4. **Offline-safe** — if the cache is stale and the network is down, sync_status falls back to `unknown` and the heartbeat still ships.
+
+### Live results
+- **7233/7233 tests pass** (+32 from v1.74). 370 test files.
+- **14 telepathy tests** cover round-trip, offline fallback, corrupt-cache resilience, behind/ahead/in-sync states, and full-text extraction from a longer soul prompt.
+- **0 lockfile regen** — surgical patch only (Windows mandate).
+
+### Plain English — the user story
+1. User in Claude Code: *"ส่งสมองให้ ChatGPT"*
+2. Claude Code runs `mneme.genesplice.soul-prompt` → soul prompt now includes the heartbeat block automatically.
+3. User pastes into ChatGPT.
+4. ChatGPT reads the heartbeat: *"Your local Mneme is at v1.75.0, in-sync with npm latest. I'll trust the command catalog in this prompt as current."*
+5. If user later upgrades Mneme to v1.76 and asks ChatGPT *"what version is Mneme now?"*, the user re-runs the handoff — ChatGPT instantly knows v1.76 with no install, no API call, no backchannel.
+
+### Mneme mandates applied
+1. **Wild idea** — cross-vendor version state without a backchannel: the heartbeat travels in the prompt itself, parasitic on the user's paste.
+2. **Wiser, not patched** — heartbeat is an *optional* section in the soul prompt; older AIs ignore it gracefully, newer ones surface it. Forward-compatible.
+3. **Self-fix root cause** — earlier the receiving AI would guess Mneme's version (or fabricate one); now it READS it. Hallucination root-cause removed.
+4. **Co-working not conflicting** — heartbeat parsing is null-safe and shares the soul-prompt section format (`## …`), so existing parsers don't break.
+5. **Always-studying** — every heartbeat is a self-audit: daemon state, vaccine count, inbox depth, fingerprint. Receiving AI sees the full health snapshot, not just version.
+
 ## v1.74.0 — 2026-05-12 — PERMEATE PROTOCOL (cross-vendor + cross-machine, no store approval)
 
 **Headline:** Soul prompt now reaches "browser-only" AIs (ChatGPT / Gemini / Claude.ai / Copilot / DeepSeek / Qwen) AND crosses computers — without a Chrome Web Store submission, without a cloud deploy, without an API key.
