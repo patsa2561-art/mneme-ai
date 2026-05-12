@@ -8,6 +8,76 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.72.0] — 2026-05-12
+
+**DIASPORA PROTOCOL -- four cross-boundary upgrades + root-cause
+fix for the AGENTS.md/GEMINI.md privacy leak the user identified.**
+
+### D1 GHOST SNIPER GITIGNORE (root-cause bug fix)
+
+  `packages/core/src/diaspora/gitignore_writer.ts` -- canonical
+  `PRIVATE_AI_ARTIFACTS` list (13 entries) + sentinel-bracketed
+  managed block + wired into `parasite/bridge.ts injectBridge()`
+  so every future inject auto-appends its config path. The
+  AGENTS.md / GEMINI.md privacy gap closed structurally.
+
+### D2 SPORE DEFAULT-ON
+
+  `packages/core/src/diaspora/spore_autostart.ts` -- `[remote ...]`
+  in `.git/config` -> auto-enable cross-machine wisdom sync. The
+  remote URL IS the cross-machine identity. "Cross-machine" is
+  now default UX, not manual opt-in.
+
+### D3 PORTABLE SESSION CAPSULE (cross-vendor handover proof)
+
+  `packages/core/src/diaspora/session_capsule.ts` -- HMAC-signed
+  `.capsule` files. Vendor A `saveCapsule(...)` -> Vendor B
+  `resumeCapsule(id, {toVendor})` returns RESUMED + recap +
+  writes inheritance event to `.mneme/ai-souls/<toVendor>.json`.
+  Verdict ladder: RESUMED / INVALID_HMAC / NOT_FOUND / EXPIRED.
+
+### D4 HTTP BRIDGE + OPENAPI
+
+  `packages/core/src/diaspora/http_bridge.ts` -- localhost HTTP
+  server exposing PRECOG / SENTINEL / APOPTOSIS over REST + an
+  OpenAPI 3.1 spec + a Custom GPT template the user pastes into
+  ChatGPT Custom GPT "Actions". Bearer-token auth, per-IP rate
+  limit, CORS for chat.openai.com + chatgpt.com.
+
+  **No cloud deploy required**; user picks tunnel (Cloudflare /
+  ngrok / fly.io). ChatGPT web -> tunnel -> local Mneme.
+
+### Live measurements on this repo
+
+```
+D1 Gitignore:    AGENTS.md + GEMINI.md added; bug closed structurally
+D2 Spore:        auto-enabled via origin = github.com/patsa2561-art/mneme-ai.git
+D3 Capsule:      saved in claude-opus-4-7 -> RESUMED in cursor-claude;
+                 inheritance event recorded in ai-souls
+D4 Bridge:       OpenAPI 3.1 valid; bearer auth enforced
+```
+
+### MCP -- 5 new tools
+
+  - `mneme.diaspora.gitignore` / .spore / .capsule.save / .capsule.resume / .bridge.template
+
+### Mandates (all five applied)
+
+  1. **WILD** -- Portable Capsule with HMAC + inheritance ledger;
+     Custom-GPT-via-localhost (no cloud deploy)
+  2. **WISER, NOT PATCHED** -- D1 fixes where the cause lives
+     (every inject), not where the symptom shows (specific files)
+  3. **SELF-FIX ROOT CAUSE** -- D1 wired into parasite/bridge so
+     future vendors can't leak by accident
+  4. **CO-WORKING** -- D3 writes to existing ai-souls; D4 wraps
+     existing PRECOG/SENTINEL/APOPTOSIS
+  5. **ALWAYS-STUDYING** -- D3 inheritance events feed Aletheia;
+     D2 reads existing git config (zero maintenance)
+
+### Tests -- 20 new vitest cases + zero regression
+
+  Full project: **7093/7093 pass** (+65 vs v1.71.0).
+
 ## [1.71.0] — 2026-05-12
 
 **SENTINEL PROTOCOL + MULTI-VOICE COUNCIL + ADVERSARIAL MUTATION.

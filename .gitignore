@@ -20,6 +20,8 @@ sbom.json
 .claude.json
 .claudeignore
 CLAUDE.md
+AGENTS.md
+GEMINI.md
 .cursor/
 .cursorrules
 .cursorignore
@@ -35,3 +37,8 @@ desktop.ini
 *.swp
 *.swo
 .~lock.*
+
+
+# >>> mneme auto-managed (do not edit between sentinels) <<<
+# AI tooling artifacts -- never commit. Mneme manages this block.
+# <<< mneme auto-managed >>>

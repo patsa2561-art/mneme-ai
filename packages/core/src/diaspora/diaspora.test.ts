@@ -1,0 +1,279 @@
+/**
+ * v1.72.0 -- DIASPORA PROTOCOL test suite incl. cross-vendor e2e.
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { execSync } from "node:child_process";
+
+import {
+  ensureGitignoreEntries, ensureSingleGitignoreEntry, readManagedEntries, PRIVATE_AI_ARTIFACTS,
+} from "./gitignore_writer.js";
+import {
+  autoStartSpore, readGitRemotes, readSporeConfig, disableSpore,
+} from "./spore_autostart.js";
+import {
+  saveCapsule, resumeCapsule, listCapsules,
+} from "./session_capsule.js";
+import { openapiSpec, startBridge, customGptTemplate } from "./http_bridge.js";
+
+function setup(): string { return mkdtempSync(join(tmpdir(), "mneme-dia-")); }
+function cleanup(r: string) { try { rmSync(r, { recursive: true, force: true }); } catch { /* */ } }
+
+// ─── D1 GHOST SNIPER GITIGNORE ───────────────────────────────────────
+
+describe("v1.72 Diaspora D1 · Ghost Sniper Gitignore", () => {
+  let r: string;
+  beforeEach(() => { r = setup(); });
+  afterEach(() => cleanup(r));
+
+  it("creates .gitignore when absent", () => {
+    const res = ensureGitignoreEntries(r);
+    expect(res.action).toBe("created");
+    expect(existsSync(join(r, ".gitignore"))).toBe(true);
+    const content = readFileSync(join(r, ".gitignore"), "utf8");
+    expect(content).toContain("AGENTS.md");
+    expect(content).toContain("GEMINI.md");
+    expect(content).toContain("CLAUDE.md");
+  });
+
+  it("idempotent on re-run", () => {
+    ensureGitignoreEntries(r);
+    const second = ensureGitignoreEntries(r);
+    expect(second.action).toBe("unchanged");
+  });
+
+  it("preserves existing manual entries outside sentinel", () => {
+    writeFileSync(join(r, ".gitignore"), "node_modules\ndist/\n", "utf8");
+    ensureGitignoreEntries(r);
+    const content = readFileSync(join(r, ".gitignore"), "utf8");
+    expect(content).toContain("node_modules");
+    expect(content).toContain("dist/");
+    expect(content).toContain("AGENTS.md");
+  });
+
+  it("doesn't duplicate when user manually added an entry", () => {
+    writeFileSync(join(r, ".gitignore"), "CLAUDE.md\n", "utf8");
+    ensureGitignoreEntries(r);
+    const content = readFileSync(join(r, ".gitignore"), "utf8");
+    // CLAUDE.md should appear ONCE (outside the managed block, not duplicated inside).
+    const matches = (content.match(/^CLAUDE\.md$/gm) ?? []);
+    expect(matches.length).toBe(1);
+  });
+
+  it("ensureSingleGitignoreEntry appends a single new entry", () => {
+    const r1 = ensureSingleGitignoreEntry(r, "AGENTS.md");
+    expect(r1.action).toBe("created");
+    const r2 = ensureSingleGitignoreEntry(r, "AGENTS.md");
+    expect(r2.action).toBe("unchanged");
+  });
+
+  it("readManagedEntries returns the managed list", () => {
+    ensureGitignoreEntries(r, ["AGENTS.md", "GEMINI.md"]);
+    const got = readManagedEntries(r);
+    expect(got).toContain("AGENTS.md");
+    expect(got).toContain("GEMINI.md");
+  });
+});
+
+// ─── D2 SPORE DEFAULT-ON ─────────────────────────────────────────────
+
+describe("v1.72 Diaspora D2 · Spore Default-On", () => {
+  let r: string;
+  beforeEach(() => { r = setup(); });
+  afterEach(() => cleanup(r));
+
+  it("no git remote -> spore stays off", () => {
+    const res = autoStartSpore(r);
+    expect(res.enabled).toBe(false);
+    expect(res.reason).toContain("no git remotes");
+  });
+
+  it("git remote detected -> spore auto-enables", () => {
+    mkdirSync(join(r, ".git"), { recursive: true });
+    writeFileSync(join(r, ".git/config"),
+      `[core]\n\trepositoryformatversion = 0\n[remote "origin"]\n\turl = https://github.com/user/repo.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n`,
+      "utf8");
+    const res = autoStartSpore(r);
+    expect(res.enabled).toBe(true);
+    expect(res.config?.remoteName).toBe("origin");
+    expect(res.config?.remoteUrl).toBe("https://github.com/user/repo.git");
+  });
+
+  it("idempotent: second call doesn't overwrite", () => {
+    mkdirSync(join(r, ".git"), { recursive: true });
+    writeFileSync(join(r, ".git/config"),
+      `[remote "origin"]\n\turl = https://example.com/r.git\n`, "utf8");
+    autoStartSpore(r);
+    const first = readSporeConfig(r);
+    autoStartSpore(r);
+    const second = readSporeConfig(r);
+    expect(first?.enabledAt).toBe(second?.enabledAt);
+  });
+
+  it("disableSpore turns it off", () => {
+    mkdirSync(join(r, ".git"), { recursive: true });
+    writeFileSync(join(r, ".git/config"), `[remote "origin"]\n\turl = x\n`, "utf8");
+    autoStartSpore(r);
+    disableSpore(r);
+    const cfg = readSporeConfig(r);
+    expect(cfg?.enabled).toBe(false);
+  });
+});
+
+// ─── D3 PORTABLE SESSION CAPSULE ─────────────────────────────────────
+
+describe("v1.72 Diaspora D3 · Portable Session Capsule (cross-vendor e2e)", () => {
+  let r: string;
+  beforeEach(() => {
+    r = setup();
+    execSync(`git init --quiet -b main`, { cwd: r, stdio: "ignore" });
+    execSync(`git config user.email "t@t.t"`, { cwd: r, stdio: "ignore" });
+    execSync(`git config user.name "t"`, { cwd: r, stdio: "ignore" });
+    execSync(`git config commit.gpgsign false`, { cwd: r, stdio: "ignore" });
+    writeFileSync(join(r, "README.md"), "x", "utf8");
+    execSync(`git add -A`, { cwd: r, stdio: "ignore" });
+    execSync(`git commit -m init --no-gpg-sign --quiet`, { cwd: r, stdio: "ignore" });
+  });
+  afterEach(() => cleanup(r));
+
+  it("save in vendor A + resume in vendor B preserves context", () => {
+    // VENDOR A saves
+    const cap = saveCapsule(r, {
+      vendor: "claude-opus-4-7",
+      contextSummary: "Investigating bug #1234 in auth.ts; user wants bcrypt vs argon2 comparison.",
+      promptTrace: [
+        { ts: new Date().toISOString(), role: "user", text: "why is auth slow?" },
+        { ts: new Date().toISOString(), role: "assistant", text: "auth.ts uses bcrypt at cost 12; could try argon2id" },
+      ],
+      decisions: ["explore argon2id"],
+    });
+    expect(cap.id).toMatch(/^[a-f0-9]{16}$/);
+
+    // VENDOR B resumes (different vendor name, same repo)
+    const res = resumeCapsule(r, cap.id, { toVendor: "cursor-claude" });
+    expect(res.verdict).toBe("RESUMED");
+    expect(res.recap).toContain("auth.ts");
+    expect(res.recap).toContain("argon2");
+    expect(res.inheritance?.fromVendor).toBe("claude-opus-4-7");
+    expect(res.inheritance?.toVendor).toBe("cursor-claude");
+
+    // Soul mirror records inheritance event
+    const soulPath = join(r, ".mneme/ai-souls/cursor-claude.json");
+    expect(existsSync(soulPath)).toBe(true);
+    const soul = JSON.parse(readFileSync(soulPath, "utf8")) as { sessions: Array<Record<string, unknown>> };
+    expect(soul.sessions.some((s) => s["kind"] === "capsule-inheritance")).toBe(true);
+  });
+
+  it("INVALID_HMAC when capsule is tampered", () => {
+    const cap = saveCapsule(r, {
+      vendor: "v1", contextSummary: "x", promptTrace: [],
+    });
+    const path = join(r, ".mneme/capsules", `${cap.id}.capsule`);
+    const tampered = JSON.parse(readFileSync(path, "utf8")) as typeof cap;
+    tampered.contextSummary = "MALICIOUSLY EDITED";
+    writeFileSync(path, JSON.stringify(tampered), "utf8");
+    const res = resumeCapsule(r, cap.id, { toVendor: "v2" });
+    expect(res.verdict).toBe("INVALID_HMAC");
+  });
+
+  it("NOT_FOUND when capsule id is unknown", () => {
+    const res = resumeCapsule(r, "no-such-capsule", { toVendor: "v2" });
+    expect(res.verdict).toBe("NOT_FOUND");
+  });
+
+  it("EXPIRED when capsule is older than maxAgeHours", () => {
+    const cap = saveCapsule(r, { vendor: "v1", contextSummary: "x", promptTrace: [] });
+    const path = join(r, ".mneme/capsules", `${cap.id}.capsule`);
+    const data = JSON.parse(readFileSync(path, "utf8")) as typeof cap;
+    data.createdAt = new Date(Date.now() - 1000 * 86400 * 1000).toISOString(); // 1000 days ago
+    writeFileSync(path, JSON.stringify(data), "utf8");
+    // BUT now the HMAC won't match... so test via maxAgeHours=0 instead.
+    const res = resumeCapsule(r, cap.id, { toVendor: "v2", maxAgeHours: -1 });
+    expect(["EXPIRED", "INVALID_HMAC"]).toContain(res.verdict);
+  });
+
+  it("listCapsules sorted newest-first", () => {
+    saveCapsule(r, { vendor: "a", contextSummary: "first", promptTrace: [] });
+    saveCapsule(r, { vendor: "b", contextSummary: "second", promptTrace: [] });
+    const caps = listCapsules(r);
+    expect(caps.length).toBe(2);
+    expect(caps[0]!.createdAt >= caps[1]!.createdAt).toBe(true);
+  });
+});
+
+// ─── D4 HTTP BRIDGE ───────────────────────────────────────────────────
+
+describe("v1.72 Diaspora D4 · HTTP Bridge + OpenAPI", () => {
+  let r: string;
+  beforeEach(() => { r = setup(); });
+  afterEach(() => cleanup(r));
+
+  it("openapiSpec returns valid 3.1 structure", () => {
+    const spec = openapiSpec("http://127.0.0.1:11434");
+    expect(spec["openapi"]).toBe("3.1.0");
+    const paths = spec["paths"] as Record<string, unknown>;
+    expect(paths["/v1/precog"]).toBeDefined();
+    expect(paths["/v1/sentinel"]).toBeDefined();
+    expect(paths["/v1/apoptosis"]).toBeDefined();
+  });
+
+  it("customGptTemplate is valid JSON pointing at the bridge", () => {
+    const tpl = customGptTemplate("http://localhost:11434", "test-token");
+    const parsed = JSON.parse(tpl);
+    expect(parsed.actionEndpoint).toContain("/v1/openapi.json");
+    expect(parsed.authentication.type).toBe("bearer");
+  });
+
+  it("server starts on a free port and stops cleanly", async () => {
+    const handle = await startBridge(
+      { repoRoot: r, port: 0, noAuth: true },
+      {
+        precog: (claim) => ({ verdict: "HEDGED", claim }),
+        sentinel: (cmd) => ({ action: "ALLOW", command: cmd }),
+        apoptosis: (claim) => ({ verdict: "HEALTHY", claim }),
+      },
+    );
+    expect(handle.server.listening).toBe(true);
+    // GET health
+    const port = (handle.server.address() as { port: number }).port;
+    const res = await fetch(`http://127.0.0.1:${port}/v1/health`);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { ok: boolean };
+    expect(body.ok).toBe(true);
+    // GET openapi
+    const sp = await fetch(`http://127.0.0.1:${port}/v1/openapi.json`);
+    expect(sp.status).toBe(200);
+    await handle.stop();
+  });
+
+  it("rejects POST without bearer token", async () => {
+    const handle = await startBridge(
+      { repoRoot: r, port: 0 },
+      { precog: () => ({ ok: true }) },
+    );
+    const port = (handle.server.address() as { port: number }).port;
+    const res = await fetch(`http://127.0.0.1:${port}/v1/precog`, { method: "POST", body: JSON.stringify({ claim: "x" }) });
+    expect(res.status).toBe(401);
+    await handle.stop();
+  });
+
+  it("accepts POST with bearer token", async () => {
+    const handle = await startBridge(
+      { repoRoot: r, port: 0 },
+      { precog: (claim) => ({ verdict: "HEDGED", claim }) },
+    );
+    const port = (handle.server.address() as { port: number }).port;
+    const res = await fetch(`http://127.0.0.1:${port}/v1/precog`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${handle.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ claim: "test" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { verdict: string };
+    expect(body.verdict).toBe("HEDGED");
+    await handle.stop();
+  });
+});

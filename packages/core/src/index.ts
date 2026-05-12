@@ -377,6 +377,12 @@ export * as agentAnnounce from "./agent_announce.js";
 // risk-scorer / HMAC-audit / orchestrator) with trust-decay learning
 // + auto-vaccine harvesting from past BLOCK events.
 export * as sentinel from "./sentinel/index.js";
+// v1.72 -- DIASPORA PROTOCOL. Four cross-boundary upgrades:
+//   D1 ghost-sniper gitignore    auto-append on every parasite inject
+//   D2 spore default-on           git remote -> auto-enable sync
+//   D3 portable session capsule   vendor A save -> vendor B resume
+//   D4 HTTP bridge + OpenAPI      ChatGPT Custom GPT compatible
+export * as diaspora from "./diaspora/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

@@ -35,6 +35,7 @@ import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
 import { SENTINEL_TOOLS } from "./_sentinel_tools.js";
+import { DIASPORA_TOOLS } from "./_diaspora_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -74,6 +75,7 @@ export function buildAllTools(): MnemeTool[] {
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,
     ...SENTINEL_TOOLS,
+    ...DIASPORA_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

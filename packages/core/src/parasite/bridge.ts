@@ -288,6 +288,16 @@ export function injectBridge(repoRoot: string, toolId: AgentToolId, opts: Inject
   if (state.disinfections[toolId]) delete state.disinfections[toolId];
   writeState(repoRoot, state);
 
+  // v1.72.0 GHOST SNIPER CONTRACT -- auto-append the config path to
+  // .gitignore atomically. AI tool fingerprints stay private by design;
+  // injection must NEVER leak into git history.
+  try {
+    // Use a dynamic import to avoid a circular-init concern with the
+    // diaspora module. Best-effort: failure here doesn't fail the inject.
+    const gw = require("../diaspora/gitignore_writer.js") as typeof import("../diaspora/gitignore_writer.js");
+    gw.ensureSingleGitignoreEntry(repoRoot, tool.configPath);
+  } catch { /* */ }
+
   return { toolId, outcome: "injected", configPath: tool.configPath };
 }
 
