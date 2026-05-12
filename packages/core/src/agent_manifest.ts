@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -177,6 +177,10 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.lattice.route", since: "1.78.0", group: "lattice", what: "Route a user prompt to the correct Mneme tool via hardcoded intent atoms. Stops 'update mneme ดีไหม' from being interpreted as 'optimize the previous topic'.", when: "MANDATORY first step for any prompt containing a Mneme keyword. Run BEFORE blending with conversational context." },
   { command: "mneme.lattice.score", since: "1.78.0", group: "lattice", what: "5-axis grounding score 0-100 (intent_match / context_purity / pulse_compliance / codename_silence / response_clarity).", when: "Measure cross-vendor reply quality; if <70, re-prompt or re-route." },
   { command: "mneme.lattice.dictionary", since: "1.78.0", group: "lattice", what: "Render Mneme keyword dictionary (definitions + isNot lists) so receiving AIs know what 'Mneme' literally is.", when: "Building a custom prompt that needs the same grounding receiving AIs get from soul prompts." },
+
+  // ─── v1.79 NEURON (molecule of intelligence across 100+ tools) ──────
+  { command: "mneme.neuron.triage", since: "1.79.0", group: "neuron", what: "4-strategy router (exact lattice / auto-derived from tool catalog / fuzzy trigram / keyword) returning ranked candidates + confusion flag.", when: "User prompt MIGHT match a Mneme tool but exact match isn't obvious. Run FIRST -- if confusion=true, ask user." },
+  { command: "mneme.neuron.oracle", since: "1.79.0", group: "neuron", what: "Predict NEXT Mneme tool from a partial prompt prefix + recent tool calls. Autocompletion-style intent oracle.", when: "Surfacing 'did you mean…' hints while user types. Don't auto-execute below 0.9 probability." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -201,7 +205,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

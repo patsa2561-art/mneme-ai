@@ -42,6 +42,7 @@ import { TELEPATHY_TOOLS } from "./_telepathy_tools.js";
 import { ABYSS_TOOLS } from "./_abyss_tools.js";
 import { SEAMLESS_TOOLS } from "./_seamless_tools.js";
 import { LATTICE_TOOLS } from "./_lattice_tools.js";
+import { NEURON_TOOLS } from "./_neuron_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -88,6 +89,7 @@ export function buildAllTools(): MnemeTool[] {
     ...ABYSS_TOOLS,
     ...SEAMLESS_TOOLS,
     ...LATTICE_TOOLS,
+    ...NEURON_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

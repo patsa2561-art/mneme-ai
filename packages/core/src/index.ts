@@ -426,6 +426,12 @@ export * as seamless from "./seamless/index.js";
 // Mneme dictionary + pulse-contract parser + 5-axis grounding score
 // that quantifies cross-vendor reply quality.
 export * as lattice from "./lattice/index.js";
+// v1.79 -- NEURON: molecule of intelligence. Auto-derives intent atoms
+// from any tool catalog, runs 4-strategy triage (exact / auto-derived /
+// fuzzy / keyword), and ORACLE-predicts the next tool BEFORE the user
+// finishes typing. Closes the gap between Mneme's ~100 tools and the
+// receiving AI's ability to route naturally.
+export * as neuron from "./neuron/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

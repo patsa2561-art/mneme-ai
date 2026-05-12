@@ -42,133 +42,34 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 <h1 align="center"><a id="cross-vendor-brain-transfer"></a><img src="https://img.shields.io/badge/%F0%9F%A7%AC%20Cross--vendor%20brain%20transfer-1abc9c?style=for-the-badge&labelColor=2c3e50&color=1abc9c" alt="🧬 Cross-vendor brain transfer" height="58"></h1>
 
-<h3 align="center"><i>ChatGPT picks up where Claude Code left off.<br/>No cloud. No install on the other AI. No long command for the user to memorize.</i></h3>
+<h3 align="center"><i>ChatGPT picks up where Claude Code left off. No cloud. No install. No memorized commands.</i></h3>
 
-<table align="center" width="92%">
-<tr>
-<td>
+<table align="center" width="92%"><tr><td>
 
-#### ⏱ The 60-second user story
+### 🥢 In 3 steps
 
-You spent 4 hours pair-programming with **Claude Code** in `~/myrepo`. Now you want to keep going in **ChatGPT** — maybe your Claude credit ran out, you're on your phone, or you just want a second opinion from a different model.
+1. **In the AI you're using NOW** (Claude Code / Cursor / any editor with Mneme): say *"hand this brain off to ChatGPT"* — or in Thai *"ส่งสมองให้ ChatGPT"*. **No version number. No commands. Just that sentence.**
+2. **Your AI** silently packages the conversation + copies it to your clipboard.
+3. **Open chatgpt.com** in your browser (or any AI's web/app — Gemini, Claude.ai, Copilot, DeepSeek). Press **Ctrl+V** → send.
 
-**Old way 😞** — Start from scratch. Re-explain the architecture. Re-paste the diff. ChatGPT has no idea what was already decided.
+That's it. The receiving AI replies *"Resumed from claude-opus-4-7…"* and you keep working.
 
-**Mneme way 🧬** — One sentence to your AI in plain language:
+**Cross-machine?** Same 3 steps, but on step 2 say *"ส่งสมองข้ามเครื่องด้วย"* — your AI uploads to your own private GitHub Gist + gives you a URL. Open the URL on the second laptop / Mac / phone → paste anywhere.
 
-```
-You (in Claude Code): "ส่งสมองนี้ไปคุยต่อกับ ChatGPT ให้หน่อย"
-                      (or in English: "hand this brain off to ChatGPT")
+**Why this is wild** — the receiving AI **never installs Mneme**. It just reads your paste as context. No store approval, no cloud, no API key. Works in 6 chat apps + 10 editors today.
 
-Claude Code:          [silently runs mneme.genesplice.soul-prompt]
-                      [silently copies it to your clipboard]
-                      "Done. Open chatgpt.com — press 💉 button (if you installed it),
-                       or just Ctrl+V into the chat box and send."
+</td></tr></table>
 
-You:                  [opens chatgpt.com → Ctrl+V → send]
+<details><summary><b>FAQ — answers in one line each</b></summary>
 
-ChatGPT:              "I've received the soul prompt from your claude-opus-4-7
-                       session. Continuing from where it left off…"
-```
+- **Open ChatGPT first or type in current AI?** → Type in current AI first. Then open ChatGPT and paste.
+- **Need version number?** → No. AI handles versioning.
+- **Cross-machine?** → Say *"ส่งสมองข้ามเครื่อง"* → AI uploads to your private Gist → open the link anywhere.
+- **Does ChatGPT need Mneme installed?** → No. It just reads your paste as text.
+- **What survives the transfer?** → Last few turns + decisions + reasoning. File contents stay on YOUR disk; for web AIs to read code, paste the file too.
+- **First time?** → Run once: `npx mneme-ai init` — silently wires Mneme into your editor.
 
-**That's it.** ChatGPT now knows the context, decisions, and last few turns — *without Mneme ever being installed on OpenAI's servers*.
-
-</td>
-</tr>
-</table>
-
-#### 🎚 Three modes — pick whichever fits the moment
-
-<table align="center" width="92%">
-<tr>
-  <th align="left">Mode</th>
-  <th align="left">What the user does</th>
-  <th align="center">Friction</th>
-  <th align="left">When</th>
-</tr>
-<tr>
-  <td><b>🤖 AI-driven</b><br/><sub>recommended</sub></td>
-  <td><i>"ส่งสมองให้ ChatGPT"</i> — that's the whole command</td>
-  <td align="center">0</td>
-  <td>Default. AI runs the MCP tool, copies to clipboard for you.</td>
-</tr>
-<tr>
-  <td><b>🔘 One-click button</b></td>
-  <td>Install Tampermonkey once → press <b>💉</b> on chatgpt.com</td>
-  <td align="center">1 install</td>
-  <td>If you cross vendors many times a day.</td>
-</tr>
-<tr>
-  <td><b>📋 Manual paste</b></td>
-  <td>Copy the soul prompt, paste it anywhere</td>
-  <td align="center">0 install</td>
-  <td>Phone, public computer, screen-share demo.</td>
-</tr>
-</table>
-
-#### 🧠 What the "second brain" actually remembers — honest answer
-
-Mneme isn't telepathy. Here's what survives the transfer:
-
-| Survives the jump? | Item | How |
-|:--:|---|---|
-| ✅ | **Conversation context** — last N turns, key decisions, reasoning trail | Packed into ~500 tokens by `mneme.genesplice.soul-prompt` |
-| ✅ | **Repo facts** — commits, atrophy, who-knows-what, vaccine bank | The receiving AI calls `mneme ask` if it has shell/repo access |
-| ✅ | **Cross-machine** — laptop → Mac → phone | Soul prompt is plain text; ship via clipboard, Gist link, QR code, or Wanderer `.mwt` |
-| ⚠️ | **Live file contents** in the *receiving* AI | Only if the receiver is an editor AI in the same repo (Cursor / Continue / Cline / Aider / Zed / Copilot Chat). **Web AIs (chatgpt.com / gemini.com / claude.ai) read the soul prompt — not your filesystem.** |
-
-So if you want **ChatGPT-web** to actually read `src/foo.ts`, paste the soul prompt **AND** the file's contents. For **editor AIs** that already see the repo, no extra paste — Mneme is already attached via MCP.
-
-#### 🤔 "Do I need to install Mneme on ChatGPT too?"
-
-**No.** That's the whole breakthrough.
-
-- Mneme runs on **YOUR machine**, **per-repo**, never global. Lives in `.mneme/` on your disk.
-- It generates a *plain-text* soul prompt that any AI can read like a normal message.
-- The receiving AI doesn't run Mneme — it just reads the prompt as context.
-- Your second brain stays on **YOUR disk**, always. Nothing uploaded anywhere unless you choose Gist.
-
-#### 📍 "Wait — where do I actually type? Source AI or destination AI?"
-
-Crystal clear, this trips everyone up the first time:
-
-<table align="center" width="92%">
-<tr>
-  <th align="left">Step</th>
-  <th align="left">Where you are</th>
-  <th align="left">What you do</th>
-</tr>
-<tr>
-  <td><b>1.</b> Speak to the <b>SOURCE</b> AI</td>
-  <td>The AI you've been chatting with — Claude Code, Cursor, Codex, whatever has Mneme MCP wired.</td>
-  <td>Type one Thai/English sentence: <i>"ส่งสมองให้ ChatGPT"</i> / <i>"hand this off to ChatGPT"</i>.</td>
-</tr>
-<tr>
-  <td><b>2.</b> Source AI does the work</td>
-  <td>Same chat window. Watch it briefly.</td>
-  <td>Source AI silently calls <code>mneme.genesplice.soul-prompt</code>, copies the result to your clipboard, and tells you "ready — open the destination + paste".</td>
-</tr>
-<tr>
-  <td><b>3.</b> Switch to the <b>DESTINATION</b></td>
-  <td>Open chatgpt.com / gemini.google.com / claude.ai in your browser <i>(or the Gemini CLI in another terminal, or any AI of your choice)</i>.</td>
-  <td><b>Don't type anything</b> — just press <b>Ctrl+V</b> (or press the <b>💉</b> button if you installed the userscript), then hit send.</td>
-</tr>
-<tr>
-  <td><b>4.</b> Destination AI confirms</td>
-  <td>Destination chat.</td>
-  <td>It says something like <i>"Resumed from claude-opus-4-7 — continuing from where it left off…"</i>. From here, keep chatting normally.</td>
-</tr>
-</table>
-
-**Total typing on your part:** one sentence at the source. **Zero memorized commands. Zero pasting from a wiki.** The AI knows the commands — they live in the MCP tool manifest.
-
-If your AI isn't connected to MCP yet, run once:
-
-```
-npx mneme-ai init      # silent ghost-sniper setup; auto-wires MCP into your editor
-```
-
-Then talk to your AI in plain English from forever after.
+</details>
 
 <hr/>
 
