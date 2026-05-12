@@ -12,6 +12,8 @@
  * user to share the NEXUS code or Gist URL instead.
  */
 
+import { createHash } from "node:crypto";
+
 export interface QRAnchorOptions {
   /** Pixel size of each QR module (cell). Default 8. */
   moduleSize?: number;
@@ -73,8 +75,9 @@ export function encodeQRAnchor(payload: string, opts: QRAnchorOptions = {}): QRA
   drawFinder(gridSize - 7, 0);
 
   // Fill the data region from a hash of payload.
-  const crypto = require("node:crypto") as typeof import("node:crypto");
-  const seed = crypto.createHash("sha256").update(payload).digest();
+  // v1.84 Bug R4-1: top-level ESM import instead of require() which
+  // throws "Cannot determine intended module format" in pure-ESM build.
+  const seed = createHash("sha256").update(payload).digest();
   let cursor = 0;
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {

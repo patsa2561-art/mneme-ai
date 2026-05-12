@@ -272,8 +272,9 @@ function pushPlumbing(repoRoot: string, remote: SporeRemote): { ok: boolean; mes
     // mkdtempSync, cpSync, rmSync, tmpdir imported at top
     const wtPath = mkdtempSync(join(tmpdir(), "mneme-spore-wt-"));
     try {
-      // Add a worktree for the orphan branch — create if missing.
-      const lsBranch = spawnSync("git", ["rev-parse", "--verify", `refs/remotes/origin/${remote.branch}`], {
+      // v1.84 Bug R5-5: check LOCAL branch existence (not remote-tracking
+      // against "origin") so we work with any remote.url, not just GitHub.
+      const lsBranch = spawnSync("git", ["rev-parse", "--verify", `refs/heads/${remote.branch}`], {
         cwd: repoRoot, encoding: "utf8",
       });
       if (lsBranch.status !== 0) {
@@ -302,11 +303,14 @@ function pushPlumbing(repoRoot: string, remote: SporeRemote): { ok: boolean; mes
       if (commit.status !== 0 && !(commit.stderr ?? "").includes("nothing to commit")) {
         return { ok: false, message: `commit failed: ${(commit.stderr ?? "").trim().slice(0, 200)}` };
       }
-      const push = spawnSync("git", ["-C", wtPath, "push", "origin", `HEAD:${remote.branch}`], { encoding: "utf8", timeout: 30_000 });
+      // v1.84 Bug R5-5: push to the CONFIGURED remote.url (was hardcoded
+      // to "origin" which silently routed pushes to GitHub origin even when
+      // user explicitly set spore remote to a private bare repo).
+      const push = spawnSync("git", ["-C", wtPath, "push", remote.url, `HEAD:${remote.branch}`], { encoding: "utf8", timeout: 30_000 });
       if (push.status !== 0) {
         return { ok: false, message: `push failed: ${(push.stderr ?? "").trim().slice(0, 200)}` };
       }
-      return { ok: true, message: `pushed lineage to ${remote.branch}` };
+      return { ok: true, message: `pushed lineage to ${remote.url} branch=${remote.branch}` };
     } finally {
       try { spawnSync("git", ["worktree", "remove", "--force", wtPath], { cwd: repoRoot }); } catch { /* ignore */ }
       try { rmSync(wtPath, { recursive: true, force: true }); } catch { /* ignore */ }
@@ -332,13 +336,15 @@ export function sporePull(repoRoot: string): PullResult {
   if (!remote) {
     return { ok: false, newChromosomes: 0, message: "no spore remote configured", dryRun: true };
   }
-  // For v1.19, ship a minimal pull that fetches + checks remote-tracking.
-  const fetch = spawnSync("git", ["fetch", "origin", remote.branch], { cwd: repoRoot, encoding: "utf8", timeout: 30_000 });
+  // v1.84 Bug R5-5: fetch from the CONFIGURED remote.url, not "origin".
+  // Using FETCH_HEAD for the subsequent ls-tree since we can't assume
+  // remote-tracking refs exist for an arbitrary URL.
+  const fetch = spawnSync("git", ["fetch", remote.url, remote.branch], { cwd: repoRoot, encoding: "utf8", timeout: 30_000 });
   if (fetch.status !== 0) {
     return { ok: false, newChromosomes: 0, message: `fetch failed: ${(fetch.stderr ?? "").trim().slice(0, 200)}`, dryRun: true };
   }
-  // Count new files in the remote branch's lineage payload by diffing with FETCH_HEAD.
-  const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", `origin/${remote.branch}`, ".mneme/lineage/chromosomes/"], { cwd: repoRoot, encoding: "utf8" });
+  // Count new files in the remote branch's lineage payload via FETCH_HEAD.
+  const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", "FETCH_HEAD", ".mneme/lineage/chromosomes/"], { cwd: repoRoot, encoding: "utf8" });
   if (ls.status !== 0) {
     return { ok: false, newChromosomes: 0, message: `could not enumerate remote: ${(ls.stderr ?? "").trim().slice(0, 200)}`, dryRun: false };
   }
@@ -354,7 +360,7 @@ export function sporePull(repoRoot: string): PullResult {
   // Materialize each incoming chromosome via `git show`.
   let materialized = 0;
   for (const path of incoming) {
-    const show = spawnSync("git", ["show", `origin/${remote.branch}:${path}`], { cwd: repoRoot, encoding: "utf8" });
+    const show = spawnSync("git", ["show", `FETCH_HEAD:${path}`], { cwd: repoRoot, encoding: "utf8" });
     if (show.status !== 0) continue;
     if (!existsSync(localDir)) mkdirSync(localDir, { recursive: true });
     const filename = path.split("/").pop()!;

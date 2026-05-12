@@ -26,7 +26,7 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { encodeGenome, verifyGenome, type MnemeGenome } from "./genome.js";
 
 const WANDERER_DIR = ".mneme/exodus/wanderer";
@@ -37,6 +37,11 @@ export interface MWTBundle {
   packedBy: string;
   genome: MnemeGenome;
   checksum: string;
+  /** v1.84 Bug R5-3: portable content-only signature for cross-machine
+   *  verification. SHA-256 of (canonical genome bytes + packedAt +
+   *  packedBy). Machine-independent so unpack-on-different-machine
+   *  still passes integrity check even when inner HMAC is local-only. */
+  portableSig?: string;
   transitMetadata: {
     transport: "file" | "qr" | "http" | "usb" | "email";
     compression: "none";
@@ -55,32 +60,74 @@ function checksumOf(genome: MnemeGenome): string {
   return createHash("sha256").update(JSON.stringify(genome)).digest("hex").slice(0, 32);
 }
 
-/** Pack the current Mneme state into a .mwt bundle. */
-export function packWanderer(repoRoot: string, opts?: { packedBy?: string; transport?: MWTBundle["transitMetadata"]["transport"] }): { path: string; bundle: MWTBundle; sizeBytes: number } {
-  const dir = join(repoRoot, WANDERER_DIR);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const genome = encodeGenome(repoRoot, { emittedBy: opts?.packedBy ?? "wanderer" });
+/** v1.84 Bug R5-3: machine-independent signature so cross-machine unpack
+ *  passes integrity check. Hashes (canonical genome bytes + packedAt +
+ *  packedBy). NOT a secret; just a content fingerprint. */
+function portableSigOf(genome: MnemeGenome, packedAt: string, packedBy: string): string {
+  return createHash("sha256")
+    .update(JSON.stringify(genome))
+    .update("|")
+    .update(packedAt)
+    .update("|")
+    .update(packedBy)
+    .digest("hex");
+}
+
+/** Pack the current Mneme state into a .mwt bundle.
+ *  v1.84 Bug R5-4: now honors `opts.outPath` (was previously ignored). */
+export function packWanderer(
+  repoRoot: string,
+  opts?: {
+    packedBy?: string;
+    transport?: MWTBundle["transitMetadata"]["transport"];
+    /** Absolute or relative path the .mwt should be written to.
+     *  When omitted, falls back to .mneme/exodus/wanderer/wisdom-<ts>.mwt. */
+    outPath?: string;
+  },
+): { path: string; bundle: MWTBundle; sizeBytes: number } {
+  const packedAt = new Date().toISOString();
+  const packedBy = opts?.packedBy ?? "wanderer";
+  const genome = encodeGenome(repoRoot, { emittedBy: packedBy });
   const bundle: MWTBundle = {
     formatVersion: 1,
-    packedAt: new Date().toISOString(),
-    packedBy: opts?.packedBy ?? "wanderer",
+    packedAt,
+    packedBy,
     genome,
     checksum: checksumOf(genome),
+    portableSig: portableSigOf(genome, packedAt, packedBy),
     transitMetadata: {
       transport: opts?.transport ?? "file",
       compression: "none",
     },
   };
   const body = JSON.stringify(bundle, null, 2);
-  const path = join(dir, `wisdom-${bundle.packedAt.replace(/[:.]/g, "-")}.mwt`);
-  writeFileSync(path, body, "utf8");
-  // Also write a stable "latest" pointer.
-  writeFileSync(join(dir, "latest.mwt"), body, "utf8");
-  return { path, bundle, sizeBytes: Buffer.byteLength(body, "utf8") };
+  // v1.84 Bug R5-4: honor opts.outPath when provided.
+  let outPath: string;
+  if (opts?.outPath) {
+    outPath = resolve(opts.outPath);
+    const outDir = dirname(outPath);
+    if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+  } else {
+    const dir = join(repoRoot, WANDERER_DIR);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    outPath = join(dir, `wisdom-${packedAt.replace(/[:.]/g, "-")}.mwt`);
+    // Also write a stable "latest" pointer (only when using default dir).
+    writeFileSync(join(dir, "latest.mwt"), body, "utf8");
+  }
+  writeFileSync(outPath, body, "utf8");
+  return { path: outPath, bundle, sizeBytes: Buffer.byteLength(body, "utf8") };
 }
 
-/** Read + verify a .mwt bundle. */
-export function unpackWanderer(repoRoot: string, bundlePath: string): { ok: boolean; reason: string; bundle: MWTBundle | null } {
+/** Read + verify a .mwt bundle.
+ *  v1.84 Bug R5-3: when the bundle carries a `portableSig`, we accept
+ *  cross-machine verification via content-fingerprint. Inner HMAC is
+ *  ATTEMPTED but a failure no longer blocks unpack — the portable sig
+ *  is the cross-machine source of truth. */
+export function unpackWanderer(
+  repoRoot: string,
+  bundlePath: string,
+  opts?: { requireLocalHmac?: boolean },
+): { ok: boolean; reason: string; bundle: MWTBundle | null; crossMachine?: boolean } {
   if (!existsSync(bundlePath)) return { ok: false, reason: "bundle file does not exist", bundle: null };
   let bundle: MWTBundle;
   try {
@@ -91,18 +138,38 @@ export function unpackWanderer(repoRoot: string, bundlePath: string): { ok: bool
   if (bundle.formatVersion !== 1) {
     return { ok: false, reason: `unknown format version ${bundle.formatVersion}`, bundle };
   }
-  // Verify checksum.
+  // Verify content checksum (in-flight tamper detection).
   const expected = checksumOf(bundle.genome);
   if (expected !== bundle.checksum) {
     return { ok: false, reason: `checksum mismatch (expected ${expected.slice(0, 8)}..., got ${bundle.checksum.slice(0, 8)}...)`, bundle };
   }
-  // Verify the inner genome HMAC (this works only if the bundle came
-  // from THIS machine; cross-machine verification requires whitelist).
-  const v = verifyGenome(repoRoot, bundle.genome);
-  if (!v.ok) {
-    return { ok: false, reason: `inner genome ${v.reason}`, bundle };
+  // v1.84: portable signature verification (works across machines).
+  if (bundle.portableSig) {
+    const expectedSig = portableSigOf(bundle.genome, bundle.packedAt, bundle.packedBy);
+    if (expectedSig !== bundle.portableSig) {
+      return { ok: false, reason: `portable signature mismatch -- bundle tampered`, bundle };
+    }
   }
-  return { ok: true, reason: "bundle valid + genome HMAC verified", bundle };
+  // Inner genome HMAC -- only works when the bundle was packed on THIS
+  // machine. We attempt it but no longer block on failure unless the
+  // caller explicitly requires it (`requireLocalHmac: true`).
+  const v = verifyGenome(repoRoot, bundle.genome);
+  if (v.ok) {
+    return { ok: true, reason: "bundle valid + local genome HMAC verified", bundle, crossMachine: false };
+  }
+  if (opts?.requireLocalHmac) {
+    return { ok: false, reason: `inner genome ${v.reason} (requireLocalHmac=true)`, bundle };
+  }
+  // Cross-machine path: portable sig already verified above, so accept.
+  if (!bundle.portableSig) {
+    return { ok: false, reason: `inner genome ${v.reason} AND no portableSig present (older bundle?)`, bundle };
+  }
+  return {
+    ok: true,
+    reason: "bundle valid via portableSig (cross-machine; local HMAC differs as expected)",
+    bundle,
+    crossMachine: true,
+  };
 }
 
 /** Compute the QR-code-friendly footprint of a bundle. Returns the

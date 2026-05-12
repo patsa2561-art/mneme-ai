@@ -31,7 +31,7 @@ export interface CompressionCodebookEntry {
 }
 
 export const COMPRESSION_CODEBOOK: readonly CompressionCodebookEntry[] = [
-  // Section headers (largest savings)
+  // Section headers (largest savings).
   { code: "@@V", expansion: "## VOICE DIRECTIVE (read FIRST -- governs every user-facing reply)" },
   { code: "@@D", expansion: "## Mneme dictionary (read this BEFORE interpreting any Mneme keyword)" },
   { code: "@@C", expansion: "## CONDUIT relay protocol (paste-only AIs read this carefully)" },
@@ -43,13 +43,38 @@ export const COMPRESSION_CODEBOOK: readonly CompressionCodebookEntry[] = [
   { code: "@@T", expansion: "## Recent turns" },
   { code: "@@R", expansion: "## Reasoning highlights (5th strand)" },
 
-  // High-frequency phrases
+  // v1.84 R4-2: full directive body fragments (the bulk of soul-prompt tokens).
+  { code: "@@v1", expansion: "Never speak Mneme codenames out loud" },
+  { code: "@@v2", expansion: "No mode narration" },
+  { code: "@@v3", expansion: "Stop offering menus" },
+  { code: "@@v4", expansion: "No unsolicited version chatter" },
+  { code: "@@v5", expansion: "One hedge per reply, max" },
+  { code: "@@v6", expansion: "Match the previous turn's voice" },
+  { code: "@@in", expansion: "Internal codenames (never say these to the user)" },
+  { code: "@@gv", expansion: "Compute age = now - createdAt and act:" },
+  { code: "@@cr", expansion: "# CONDUIT RETURN" },
+  { code: "@@hb", expansion: "What this means (receiving AI, READ THIS):" },
+  { code: "@@dx", expansion: "user-facing reply" },
+  { code: "@@rc", expansion: "receiving AI" },
+  { code: "@@sa", expansion: "source AI" },
+  { code: "@@oa", expansion: "originating session" },
+  { code: "@@np", expansion: "no Mneme installed locally" },
+  { code: "@@cp", expansion: "cross-vendor" },
+  { code: "@@hh", expansion: "handover" },
+  { code: "@@nm", expansion: "the npm package mneme-ai" },
+  { code: "@@cp2", expansion: "cross-machine" },
+
+  // Common Mneme phrases (1-3 chars).
   { code: "@u", expansion: "the user" },
   { code: "@a", expansion: "the AI" },
   { code: "@s", expansion: "soul prompt" },
   { code: "@m", expansion: "Mneme" },
   { code: "@e", expansion: "MCP tool" },
   { code: "@p", expansion: "paste-only" },
+  { code: "@nx", expansion: "NEXUS code" },
+  { code: "@gx", expansion: "Gist URL" },
+  { code: "@lb", expansion: "LAN bridge" },
+  { code: "@vd", expansion: "voice directive" },
 ];
 
 export interface CompressionReport {

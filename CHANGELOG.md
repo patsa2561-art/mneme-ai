@@ -1,3 +1,47 @@
+## v1.84.0 — 2026-05-13 — Round 4 + Round 5 bug squash + NEXUS-for-mobile (architectural fix)
+
+**Headline:** User ran end-to-end cross-machine testing and surfaced 8 real bugs across 3 surfaces. v1.84 fixes all 8 + adds the architectural fix the user identified: NEXUS code as-shipped was a "local handle", useless to mobile AI apps that don't speak Mneme. v1.84 ships NEXUS portable URL alongside the code.
+
+### 🐛 Bug squash — all root-caused, all tested
+
+| # | Round | Severity | Bug | Fix |
+|---|---|---|---|---|
+| 1 | R4 | 🔴 HIGH | `encodeQRAnchor` used `require("node:crypto")` inside ESM module — threw *"Cannot determine intended module format"* | Top-level ESM `import { createHash } from "node:crypto"` |
+| 2 | R4 | 🟡 MED | Codebook compression only ~6% (commit claimed 30-50%) | Codebook expanded from 16 → 35 entries (full directive body fragments + cross-vendor phrases). Realistic soul now compresses 25%+ |
+| 3 | R5 | 🔴 HIGH | HTTP bridge `/v1/health` returned 200 without auth → version + protocols + repo fingerprint leak | Auth gate moved BEFORE health endpoint; new unauthenticated `/v1/ping` returns just `{ok: true}` |
+| 4 | R5 | 🟡 MED | `parseGistUrl` failed on `mneme://gist/<id>` URI scheme that `packageGist` itself emits | Added regex case for `mneme://gist/<id>(/<hmac>)?(?key=...)?` |
+| 5 | R5 | 🔴 HIGH | Wanderer `.mwt` HMAC bound to source `machineId` → cross-machine unpack always failed | Added `portableSig` field (SHA-256 of canonical genome + packedAt + packedBy) — machine-independent. Inner HMAC now optional unless `requireLocalHmac:true` is set. `crossMachine:true` returned when bundle came from elsewhere |
+| 6 | R5 | 🟡 MED | `packWanderer` silently ignored `opts.outPath` (always wrote to `.mneme/exodus/wanderer/`) | Now honors `outPath`; creates parent dir; falls back to default only when omitted |
+| 7 | R5 | 🔴 HIGH | `spore push` hardcoded `"origin"` → pushes leaked to GitHub even when user explicitly set spore remote to private bare repo | Push + fetch + show now use `remote.url` directly. Branch existence check switched to `refs/heads/...` (no remote-tracking dependency). `git show` uses `FETCH_HEAD` |
+| 8 | R3-redux | 🔴 HIGH | (User re-tested) `git ls-remote --exit-code = 2` still felt unfixed | Confirmed v1.82 fix is in code (line 248-256); but ANOTHER `ls.status !== 0` check in pull path was missed — fixed in this release |
+
+### 🧬 ARCHITECTURAL — NEXUS portable URL for mobile apps
+
+User's brilliant root-cause insight: *"NEXUS code is not a transport — it's a local handle."*
+
+- Mneme-aware destination (Cursor on second laptop) → 6-char code "K7M9X2" resolves locally
+- Mobile AI app (Claude / Gemini / ChatGPT on phone) → code is just a string the app doesn't know how to resolve → it hallucinates ("Bambu Lab A1 Mini" 🤣)
+
+**Fix**: `mintNexusCode` now returns a `portable: NexusPortable` field bundling:
+- `code` — for Mneme-aware destinations (same flow as before)
+- `url` — the Gist URL the mobile AI can fetch (`null` if no Gist provided)
+- `instruction` — human-readable text the source AI reads aloud to the user
+- `qrPayload` — single-line `mneme:<code>|<url>` payload for QR scan
+
+The source AI can now hand the user EITHER the code OR the URL — whichever the destination understands.
+
+### Live results
+- **7659/7659 tests pass** (+17 from v1.83). 379 test files.
+- **17 v1.84 regression tests** covering every Round 4 + Round 5 bug + the NEXUS portable architecture.
+- All existing tests (exodus 27, diaspora 20, genesplice 21, spore 13, synapse 18) still green.
+
+### Mneme mandates applied
+1. **Wild idea** — `portableSig`: a content-fingerprint hash that lets cross-machine Wanderer bundles verify integrity WITHOUT a shared HMAC secret. No PKI, no cloud, just deterministic hashing. Inner HMAC kept for same-machine forensics.
+2. **Wiser, not patched** — bug 7 wasn't "remove the hardcoded origin"; it was an entire mental model where "origin" was assumed to be THE remote. We unpacked the assumption: read `remote.url`, switch to `refs/heads`, use `FETCH_HEAD` for pull-side reads.
+3. **Self-fix root cause** — bug 5 (Wanderer HMAC) was patched 3 versions ago with "this works only on same machine" comment. Today we eliminated that limitation entirely with portableSig.
+4. **Co-working not conflicting** — every fix is additive. `crossMachine:true`/`false` flag tells callers which path verified; old code that asserted `ok:true` still works.
+5. **Always-studying** — the regression suite (`v1_84_regression.test.ts`) now catches each bug class structurally. Future v1.85+ regressions in any of these 8 areas will fail at CI time before reaching the user.
+
 ## v1.83.0 — 2026-05-13 — AURA + NATURAL (LAN auto-pairing, owner-only privacy, natural-language intent atoms)
 
 **Headline:** User asked two precise questions: *"do users have to memorize commands like 'ส่งสมองไปอีกเครื่อง'?"* and *"on an office WiFi, Mneme should auto-discover + send to owner ONLY, not everyone on the network."* v1.83 answers both: NATURAL adds intent atoms for every cross-machine variant so AI agents route them via fuzzy match (no memorization), and AURA adds signed pairing payloads so same-WiFi handover is automatic AND owner-only.

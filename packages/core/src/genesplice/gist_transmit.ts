@@ -108,6 +108,12 @@ export function parseGistUrl(url: string): ParsedGistUrl {
   // gist.github.com/<user>/<gistId>
   const webMatch = url.match(/gist\.github\.com\/[^/]+\/([a-f0-9]+)/);
   if (webMatch) return { gistId: webMatch[1]!, rawUrl: url, isRaw: false };
+  // v1.84 Bug R5-2: mneme://gist/<gistId>(/<hmac>)?(?key=...)?
+  // packageGist itself emits this scheme; previously parseGistUrl
+  // ignored it, breaking the round-trip when users shared the
+  // custom URI form. Now extracts gistId correctly.
+  const mnemeMatch = url.match(/^mneme:\/\/gist\/([a-f0-9]+)(?:\/[a-f0-9]+)?(?:\?.*)?$/i);
+  if (mnemeMatch) return { gistId: mnemeMatch[1]!, rawUrl: url, isRaw: false };
   return { gistId: null, rawUrl: url, isRaw: false };
 }
 

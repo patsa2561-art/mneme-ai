@@ -190,6 +190,19 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
     setCors(req, res, opts.extraCorsOrigins);
     if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
 
+    // v1.84 Bug R5-1: /v1/health used to short-circuit auth and leak
+    // version + protocols + repo fingerprint to any unauthenticated
+    // scanner. Now auth-required by default; only the brand-new
+    // /v1/ping endpoint is unauthenticated (returns ok:true, nothing else).
+    if (req.url === "/v1/ping" && req.method === "GET") {
+      return json(res, 200, { ok: true });
+    }
+
+    // Auth required for ALL real endpoints (health / openapi / precog / ...).
+    if (!opts.noAuth && !isAuthorized(req, token)) {
+      return json(res, 401, { error: "unauthorized -- set Authorization: Bearer <token>" });
+    }
+
     if (req.url === "/v1/health" && req.method === "GET") {
       return json(res, 200, { ok: true, version: "1.72.0", protocols: ["precog", "sentinel", "apoptosis"] });
     }
@@ -198,7 +211,7 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
       return json(res, 200, openapiSpec(baseUrl));
     }
 
-    // Auth required for non-health, non-openapi endpoints.
+    // Defensive double-check (handlers below assume auth already enforced).
     if (!opts.noAuth && !isAuthorized(req, token)) {
       return json(res, 401, { error: "unauthorized -- set Authorization: Bearer <token>" });
     }

@@ -49,6 +49,42 @@ export interface MintInput {
   gistUrl?: string;
   ttlMs?: number;
   storeDir?: string;
+  /** Optional LAN URL for same-WiFi pairing (used with AURA payloads). */
+  lanUrl?: string;
+}
+
+/** v1.84 ARCHITECTURAL FIX: NEXUS code → portable URL for mobile apps.
+ *  Root problem the user surfaced: mobile AI apps (Claude/Gemini/ChatGPT
+ *  on phone) cannot resolve a bare 6-char code -- they have no Mneme +
+ *  no MCP. They hallucinate something completely unrelated.
+ *
+ *  Solution: every NEXUS code is ALSO published as a portable URL the
+ *  mobile AI can fetch. The "code" stays for Mneme-aware destinations;
+ *  the URL is for everyone else. User shares whichever the destination
+ *  can use:
+ *    - Mneme-aware destination (Cursor laptop)  -> short code "K7M9X2"
+ *    - Mobile app / web AI                       -> portable URL
+ */
+export interface NexusPortable {
+  /** The 6-char code (Mneme-aware destinations). */
+  code: string;
+  /** A user-shareable URL the mobile AI can fetch.
+   *  Prefers gistUrl > lanUrl > null. */
+  url: string | null;
+  /** Human-readable instruction the SOURCE AI can read aloud to the user. */
+  instruction: string;
+  /** A QR-friendly payload combining code + URL on one line.
+   *  Format: "mneme:K7M9X2|<url>" -- short, scannable, deterministic. */
+  qrPayload: string;
+}
+
+export function portableFor(entry: NexusCode): NexusPortable {
+  const url = entry.gistUrl ?? null;
+  const qrPayload = url ? `mneme:${entry.code}|${url}` : `mneme:${entry.code}`;
+  const instruction = url
+    ? `On the other device, either type code "${entry.code}" (if it has Mneme) OR paste this URL into the chat and say "fetch this brain": ${url}`
+    : `On the other device with Mneme, type code "${entry.code}". (For a phone app WITHOUT Mneme, ask source AI to mint a code WITH a Gist URL.)`;
+  return { code: entry.code, url, instruction, qrPayload };
 }
 
 function ensureStoreDir(repoRoot: string, override?: string): string {
@@ -71,7 +107,7 @@ function sha16(s: string): string {
 }
 
 /** Mint a NEXUS code for a soul prompt. Returns the code + persists. */
-export function mintNexusCode(repoRoot: string, input: MintInput): NexusCode {
+export function mintNexusCode(repoRoot: string, input: MintInput): NexusCode & { portable: NexusPortable } {
   const dir = ensureStoreDir(repoRoot, input.storeDir);
   const now = Date.now();
   const ttl = input.ttlMs ?? DEFAULT_TTL_MS;
@@ -86,7 +122,9 @@ export function mintNexusCode(repoRoot: string, input: MintInput): NexusCode {
     resolveCount: 0,
   };
   appendFileSync(join(dir, STORE_FILE), JSON.stringify(entry) + "\n", "utf8");
-  return entry;
+  // v1.84: bundle the portable representation alongside so source AI
+  // can directly hand the user a mobile-friendly URL + instruction.
+  return { ...entry, portable: portableFor(entry) };
 }
 
 /** Resolve a NEXUS code back to its entry. Returns null if expired or
