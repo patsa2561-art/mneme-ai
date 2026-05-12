@@ -372,6 +372,19 @@ export * as autarchy from "./autarchy/index.js";
 // caretaker auto-syncs CLAUDE.md / AGENTS.md / .cursor/rules so the
 // AI agent in the user's editor learns about new MCP tools instantly.
 export * as agentAnnounce from "./agent_announce.js";
+// v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
+// PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
+// at the MCP boundary, verified against ACTUAL repo state (git, fs,
+// package.json, CHANGELOG), and either CERTIFIED or auto-hedged with
+// a named cause. Position: AI tools that connect via MCP become
+// structurally incapable of hallucinating.
+//   P1 package verifier        npm / import / install refs
+//   P2 SHA/version/email       git rev-list / tags / authors
+//   P3 temporal verifier       "last week" -> git log range
+//   P4 firewall                intercept + auto-hedge + verdict
+//   P5 trust certificate       HMAC-signed proof
+//   P6 Bayesian repo priors    per-repo failure-shape memory
+export * as precog from "./precog/index.js";
 // v1.69 -- HYPERSCAN PROTOCOL. Four wild axes that close the prose-scan
 // gap + Q&A trust gap + HTC coverage gap, plus a shape-shifting
 // molecule (textForm / vectorForm / structuralForm / temporalForm)
