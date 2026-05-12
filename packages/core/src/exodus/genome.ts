@@ -64,11 +64,20 @@ export interface MnemeGenome {
   hmac: string;
 }
 
+/** v1.61.1 hotfix: drop undefined-valued keys + filter undefined array
+ *  elements so a JSON write/read roundtrip produces the same canonical
+ *  bytes. Without this, fields read from .jsonl that have missing
+ *  attributes (e.g. an old vaccine row lacking `signature`) come back
+ *  as `{key: undefined}` on the encode side and `{}` on the decode side
+ *  -- breaking HMAC verification across pack/unpack. */
 function canonicalize(v: unknown): string {
+  if (v === undefined) return "null";
   if (v === null || typeof v !== "object") return JSON.stringify(v);
-  if (Array.isArray(v)) return "[" + v.map(canonicalize).join(",") + "]";
+  if (Array.isArray(v)) {
+    return "[" + v.filter((x) => x !== undefined).map(canonicalize).join(",") + "]";
+  }
   const o = v as Record<string, unknown>;
-  const ks = Object.keys(o).sort();
+  const ks = Object.keys(o).filter((k) => o[k] !== undefined).sort();
   return "{" + ks.map((k) => JSON.stringify(k) + ":" + canonicalize(o[k])).join(",") + "}";
 }
 

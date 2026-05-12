@@ -43,16 +43,16 @@ export interface MWTBundle {
   };
 }
 
-function canonicalize(v: unknown): string {
-  if (v === null || typeof v !== "object") return JSON.stringify(v);
-  if (Array.isArray(v)) return "[" + v.map(canonicalize).join(",") + "]";
-  const o = v as Record<string, unknown>;
-  const ks = Object.keys(o).sort();
-  return "{" + ks.map((k) => JSON.stringify(k) + ":" + canonicalize(o[k])).join(",") + "}";
-}
-
+/** v1.61.1 hotfix: switched from a recursive canonicalize() (which can
+ *  drift on undefined / NaN / array-vs-object edge cases between encode
+ *  and decode) to plain JSON.stringify. Node's V8 preserves object key
+ *  insertion order deterministically, so the bytes match across a pure
+ *  write/read roundtrip. Inner genome HMAC still uses the canonicalize
+ *  function (genome.ts) for tamper detection across instances; the
+ *  wanderer checksum is only an in-flight integrity check, so plain
+ *  stringify is the simpler + bulletproof choice. */
 function checksumOf(genome: MnemeGenome): string {
-  return createHash("sha256").update(canonicalize(genome)).digest("hex").slice(0, 32);
+  return createHash("sha256").update(JSON.stringify(genome)).digest("hex").slice(0, 32);
 }
 
 /** Pack the current Mneme state into a .mwt bundle. */

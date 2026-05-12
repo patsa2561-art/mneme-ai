@@ -30,11 +30,15 @@ import type { MnemeGenome, StrandLabel, AdamantStrand, CalibratedStrand, Governe
 
 const EXCHANGE_DIR = ".mneme/exodus/exchange";
 
+/** v1.61.1 hotfix -- mirror the genome.ts undefined-safe canonicalize. */
 function canonicalize(v: unknown): string {
+  if (v === undefined) return "null";
   if (v === null || typeof v !== "object") return JSON.stringify(v);
-  if (Array.isArray(v)) return "[" + v.map(canonicalize).join(",") + "]";
+  if (Array.isArray(v)) {
+    return "[" + v.filter((x) => x !== undefined).map(canonicalize).join(",") + "]";
+  }
   const o = v as Record<string, unknown>;
-  const ks = Object.keys(o).sort();
+  const ks = Object.keys(o).filter((k) => o[k] !== undefined).sort();
   return "{" + ks.map((k) => JSON.stringify(k) + ":" + canonicalize(o[k])).join(",") + "}";
 }
 
