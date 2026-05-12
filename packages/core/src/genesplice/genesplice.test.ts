@@ -38,8 +38,8 @@ describe("v1.73 GeneSplice G1 · Soul Prompt", () => {
   it("compresses to a bounded token budget (incl. v1.77 voice directive + v1.78 dictionary)", () => {
     const cap = sampleCapsule("claude");
     const soul = compressToSoulPrompt({ capsule: cap });
-    // 500 token base body + ~80 voice directive + ~210 dictionary = ~790 max
-    expect(soul.estTokens).toBeLessThanOrEqual(900);
+    // 500 base + ~80 voice + ~210 dictionary + ~120 conduit relay + ~30 version gate ≈ 1200 max
+    expect(soul.estTokens).toBeLessThanOrEqual(1400);
     expect(soul.text).toContain("MNEME SOUL PROMPT");
     expect(soul.text).toContain("claude");
     expect(soul.text).toContain("bcrypt");
@@ -218,7 +218,8 @@ describe("v1.73 GeneSplice · END-TO-END brain transfer (no install)", () => {
 
     // Step 2: Compress to soul prompt
     const soul = compressToSoulPrompt({ capsule: cap, secret: "test-cluster-secret" });
-    expect(soul.estTokens).toBeLessThan(800);
+    // v1.80 conduit blocks raise the budget; ~1200 max with relay + gate.
+    expect(soul.estTokens).toBeLessThan(1400);
 
     // Step 3: Express for Gemini
     const geminiSoul = expressSoulForVendor(soul.text, "gemini-pro", "claude-opus-4-7");

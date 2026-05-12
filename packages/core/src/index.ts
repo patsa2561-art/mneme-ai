@@ -432,6 +432,13 @@ export * as lattice from "./lattice/index.js";
 // finishes typing. Closes the gap between Mneme's ~100 tools and the
 // receiving AI's ability to route naturally.
 export * as neuron from "./neuron/index.js";
+// v1.80 -- CONDUIT: the immortal demon's nervous system.
+// 5 modules close the cross-vendor loop: relay_prompt (web AI returns
+// CONDUIT RETURN blocks for source-AI execution), version_gate (dead
+// man's handshake for stale souls), uninstall_directive (per-vendor
+// recipe), sync_status (source-newer / destination-newer detection),
+// phantom_exec (web AI previews tool output without real execution).
+export * as conduit from "./conduit/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

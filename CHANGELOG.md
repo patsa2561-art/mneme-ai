@@ -1,3 +1,46 @@
+## v1.80.0 — 2026-05-13 — CONDUIT PROTOCOL (the immortal demon's nervous system)
+
+**Headline:** User pasted Mneme's brain into Gemini-web, typed *"upgrade mneme"* — Gemini-web has no Mneme + no shell + no MCP, so it freelanced a "Mneme Protocol v1.8 Master Collector Edition" creative response on top of the previous topic (One Piece cards). v1.80 ships the fix: web AIs become **structured relay nodes**, not freelance pretenders.
+
+### The 5-question answer (clarified once)
+
+1. **Editor AI clones (Cursor / Continue / Aider / Cline / Zed / Codex / Claude Code)** — share ONE local Mneme. Upgrade local once → every editor sees v1.80 tools instantly.
+2. **Web AI clones (chatgpt.com / gemini / claude.ai)** — never had Mneme installed. Nothing to "upgrade" there. They get fresh capabilities by reading a NEW soul prompt from the upgraded local Mneme.
+3. **Upgrade flow** — say *"upgrade mneme"* in your editor AI; local upgrades; next paste to web AI carries the new feature set.
+4. **Uninstall** — `mneme uninstall --purge` on local removes everything for editor AIs. For web AIs: close the tab. For browser userscript / bookmarklet: Tampermonkey → delete.
+5. **ChatGPT without MCP** — talks to Mneme via paste (soul prompt) + 💉 userscript button (v1.74) + CONDUIT RETURN protocol (NEW v1.80).
+
+### What ships — 5 modules + 5 MCP tools
+
+1. **`relay_prompt.ts`** — every soul prompt now embeds a `## CONDUIT relay protocol` block. Web AI reads it and learns: *"I'm paste-only — I cannot run upgrade / uninstall / shell / filesystem / MCP-call. When user asks, emit a structured `# CONDUIT RETURN` block they paste back into the editor AI for REAL execution."*
+2. **`version_gate.ts`** — DEAD MAN'S HANDSHAKE. Every soul prompt has `createdAt`. Web AI computes age:
+   - **<24h** = fresh, act normally
+   - **24h..7d** = aging, mention age once
+   - **7d..30d** = stale, suggest re-handoff
+   - **>30d** = abandoned, refuse to act on stale context
+3. **`uninstall_directive.ts`** — per-surface uninstall recipe (editor-ai / web-ai / browser-userscript / browser-bookmarklet / all) with steps + commands + post-check + time estimate.
+4. **`sync_status.ts`** — cross-vendor version compare. Pasted soul says v1.78, local is v1.80 → status="destination-newer", recommendation="regenerate the soul prompt".
+5. **`phantom_exec.ts`** — *the wildest module.* Web AI can PREVIEW a Mneme tool's likely output as `[PHANTOM]` without real execution. Disclaimer + real-exec hint embedded. Honesty-with-value: user gets a preview now, decides if real-exec round-trip is worth it.
+
+### 5 new MCP tools
+- `mneme.conduit.detect_relay` — detect relay actions in user prompts
+- `mneme.conduit.ingest_return` — parse `# CONDUIT RETURN` blocks
+- `mneme.conduit.uninstall_plan` — generate per-surface uninstall plan
+- `mneme.conduit.sync_status` — compute cross-vendor sync state
+- `mneme.conduit.phantom_directive` — render PHANTOM EXECUTION directive
+
+### Live results
+- **7500/7500 tests pass** (+69 from v1.79). 375 test files.
+- **24 CONDUIT tests** covering relay detection, version gate buckets, uninstall plans, sync states, phantom directives.
+- Soul prompt now ~1200 tokens (was ~790 in v1.79). Worth every token — closes the cross-vendor loop.
+
+### Mneme mandates applied
+1. **Wild idea** — PHANTOM EXECUTION: web AI previews a tool's output WITHOUT real execution. Nobody else ships this. Honesty-with-value preview while the user is still in the destination chat.
+2. **Wiser, not patched** — didn't tell web AIs to "try harder". Gave them a STRUCTURED CONTRACT to follow when they can't run something.
+3. **Self-fix root cause** — the Gemini freelance bug wasn't "Gemini is bad"; it was "soul prompts never told Gemini what to do when it can't execute". Fixed the missing protocol.
+4. **Co-working not conflicting** — CONDUIT respects v1.76 HOMUNCULUS, v1.77 SEAMLESS, v1.78 LATTICE; adds a NEW layer (paste-only-AI behavior) without overriding existing ones.
+5. **Always-studying** — version gate auto-detects drift; sync_status quantifies cross-vendor distance; phantom executions log themselves for later real-exec reconciliation.
+
 ## v1.79.0 — 2026-05-12 — NEURON PROTOCOL (molecule of intelligence) + README clarification
 
 **Headline:** User asked the deepest question yet — *"can cloned AI agents call ALL ~100 Mneme functions intelligently, picking the right one for any natural-language phrase?"* — and asked for *"the wildest function nobody dares to ship."* v1.79 ships both: NEURON, the 4-strategy router that auto-routes across the entire tool catalog, plus ORACLE, the intent-from-partial-prompt predictor.

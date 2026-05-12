@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -181,6 +181,13 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // ─── v1.79 NEURON (molecule of intelligence across 100+ tools) ──────
   { command: "mneme.neuron.triage", since: "1.79.0", group: "neuron", what: "4-strategy router (exact lattice / auto-derived from tool catalog / fuzzy trigram / keyword) returning ranked candidates + confusion flag.", when: "User prompt MIGHT match a Mneme tool but exact match isn't obvious. Run FIRST -- if confusion=true, ask user." },
   { command: "mneme.neuron.oracle", since: "1.79.0", group: "neuron", what: "Predict NEXT Mneme tool from a partial prompt prefix + recent tool calls. Autocompletion-style intent oracle.", when: "Surfacing 'did you mean…' hints while user types. Don't auto-execute below 0.9 probability." },
+
+  // ─── v1.80 CONDUIT (cross-vendor upgrade / uninstall / sync / phantom) ──────
+  { command: "mneme.conduit.detect_relay", since: "1.80.0", group: "conduit", what: "Detect whether a user prompt requires action only the source AI can run (upgrade / uninstall / shell / fs / mcp-call). Web AIs use this BEFORE freelancing.", when: "Mandatory on every user prompt when the AI is paste-only (web surface). If detected → emit CONDUIT RETURN block." },
+  { command: "mneme.conduit.ingest_return", since: "1.80.0", group: "conduit", what: "Parse a pasted `# CONDUIT RETURN` block from a web AI; surface the requested action so the editor AI executes it.", when: "After user pastes a return block from ChatGPT/Gemini back into Claude Code / Cursor." },
+  { command: "mneme.conduit.uninstall_plan", since: "1.80.0", group: "conduit", what: "Per-surface uninstall plan (editor-ai / web-ai / browser-userscript / browser-bookmarklet / all).", when: "User asks 'how do I remove Mneme from X?'." },
+  { command: "mneme.conduit.sync_status", since: "1.80.0", group: "conduit", what: "Compare pasted soul's version vs local Mneme → in-sync / source-newer / destination-newer / unknown + recommendation.", when: "Before trusting a pasted soul prompt; surface mismatches." },
+  { command: "mneme.conduit.phantom_directive", since: "1.80.0", group: "conduit", what: "Render PHANTOM EXECUTION directive; web AIs preview a tool's conceptual output WITHOUT real execution.", when: "Embedding in custom paste-only AI workflows where a preview saves a round-trip." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -205,7 +212,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

@@ -47,6 +47,8 @@ import type { SessionCapsule } from "../diaspora/session_capsule.js";
 import { renderHeartbeatMarkdown, type Heartbeat } from "../telepathy/heartbeat.js";
 import { renderVoiceDirective } from "../seamless/voice_directive.js";
 import { renderDictionary } from "../lattice/dictionary.js";
+import { renderRelayBlock } from "../conduit/relay_prompt.js";
+import { renderVersionGate } from "../conduit/version_gate.js";
 
 export interface SoulPromptInput {
   capsule: SessionCapsule;
@@ -117,6 +119,10 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
     renderVoiceDirective({ source: "soul-prompt", includeCodenameList: false }),
     "",
     renderDictionary(),
+    "",
+    renderRelayBlock({ originatorVendor: capsule.originVendor }),
+    "",
+    renderVersionGate(capsule.createdAt),
     "",
     `## Origin`,
     `vendor=${capsule.originVendor}  capsule=${capsule.id}  fingerprint=${capsule.repoFingerprint}  createdAt=${capsule.createdAt}`,
