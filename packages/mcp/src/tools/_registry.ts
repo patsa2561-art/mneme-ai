@@ -49,6 +49,7 @@ import { OSMOSIS_TOOLS } from "./_osmosis_tools.js";
 import { AURA_TOOLS } from "./_aura_tools.js";
 import { RELAY_TOOLS } from "./_relay_tools.js";
 import { CHAMELEON_TOOLS } from "./_chameleon_tools.js";
+import { ANCHOR_TOOLS } from "./_anchor_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -102,6 +103,7 @@ export function buildAllTools(): MnemeTool[] {
     ...AURA_TOOLS,
     ...RELAY_TOOLS,
     ...CHAMELEON_TOOLS,
+    ...ANCHOR_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

@@ -1,3 +1,68 @@
+## v1.88.0 — 2026-05-13 — ANCHOR (parent-pole/child-rope architecture) + OS clipboard 1-click + README v6 + Aletheia image removed
+
+**Headline:** User crystallized the architecture: *"parent คือเสา, ropes ลากไปยัง children. ตราบใดที่เชือกไม่ขาดมัน sync กันได้หมด"*. v1.88 ships ANCHOR — the pole-and-rope model in code — plus OS-level clipboard handoff (the realistic 1-click cross-device flow nobody else exploits), and a full README rewrite with a 30-second guide that any student can read once.
+
+### 🪝 ANCHOR — parent-pole / child-rope (the architecture user described)
+
+```
+                         ┌─ PARENT (pole) ─┐
+                         │  HMAC secret     │  ← only on parent disk
+                         │  pole_id, pubkey │
+                         └──┬──┬──┬──┬──┬───┘
+                            │  │  │  │  │
+                  signed rope tokens (HMAC over child_id+expires+scope+nonce)
+                            │  │  │  │  │
+                  ┌─────────┘  │  │  │  └───────────┐
+                  ▼            ▼  ▼  ▼              ▼
+              [Cursor]    [Mobile] [iPad]      [2nd laptop]
+                  └─────────────╲──╱─────────────────┘
+                                 ╲╱
+                       child↔child sync gate:
+                  BOTH ropes must share the SAME pole_id
+                  → stranger's rope rejected automatically
+```
+
+`packages/core/src/anchor/pole_id.ts`:
+- `ensurePole(repoRoot)` — idempotent. First call creates `.mneme/anchor/pole.json` (public) + `.mneme/anchor/pole-secret.json` (private HMAC key, never shared).
+- `issueRope(secret, childId, {ttlMs, scope})` — signed rope token. Default 30d TTL; scope = `["sync", "resume", "upgrade-notify"]`.
+- `verifyRope(secret, token)` — returns `{ok, rope}` or `{ok: false, reason: "bad-sig" | "expired" | "wrong-pole" | "malformed"}`.
+- `canChildrenSync(secret, ropeA, ropeB)` — gate for child↔child sync. Same pole + both have "sync" scope → allow. Otherwise refuse.
+
+### 📋 OS-level 1-click clipboard handoff
+
+`packages/core/src/anchor/clipboard_handoff.ts`:
+- Detects the user's clipboard tool: `win-clip` / `pbcopy` / `wl-copy` / `xclip` / `xsel` / `kde-connect`.
+- Detects the user's cross-device sync provider: `win-phone-link` / `apple-universal-clipboard` / `kde-connect` / `unknown`.
+- `writeClipboard(text)` — writes the handoff prompt to the local clipboard. With the OS provider configured, it appears on the user's phone within seconds. **Phone flow: long-press → paste → send. Two actions.**
+- `renderClipboardSetupHint(cap)` — one-time setup instructions surfaced when no provider is detected.
+
+The user's realistic-1-click insight: don't deploy our own cross-device service; lean on the OS's existing clipboard sync.
+
+### 📖 README v6 — sections 1 + 2 rewritten + 30-second guide + Aletheia image removed
+
+- Top tagline replaced: *"A persistent brain you bolt onto any AI."* with a single paragraph that fits in one breath.
+- 3-column "Stock AI / +MCP / Tuned AI" table collapsed into a 2-column before/after with a 1-line summary on each side.
+- Aletheia score image removed (user said it looked ugly).
+- New **🧠 30-second guide** section with:
+  - ASCII pole-and-rope diagram
+  - 11-row plain-English Q&A table covering: install / how AI uses it / send to phone or iPad / browser AI / mobile AI app / two computers / upgrade / uninstall / use without git / lost PC / phone-to-desktop round-trip
+
+### Live results
+- **7800/7800 tests pass** (+39 from v1.87). 383 test files.
+- **12 ANCHOR tests** covering pole idempotence / file persistence / rope verify-pass + bad-sig + expired + wrong-pole / child↔child sync allow + reject-different-pole + reject-no-sync-scope / clipboard detection + setup hint.
+
+### 3 new MCP tools
+- `mneme.anchor.pole` — get or create pole identity
+- `mneme.anchor.issue_rope` — mint signed rope for a child device
+- `mneme.anchor.clipboard_write` — OS clipboard write + cross-device-provider hint
+
+### Mneme mandates applied
+1. **Wild idea** — borrow the OS's existing cross-device clipboard sync (Phone Link / Universal Clipboard / KDE Connect) instead of building our own. Most "AI memory" products try to be a cloud; Mneme is a parasite on the user's existing infra.
+2. **Wiser, not patched** — the pole-rope model didn't exist before; we built it as the canonical architecture so future cross-device features compose cleanly.
+3. **Self-fix root cause** — the README was unclear about who-is-parent / who-is-child. The 30-second guide fixes it for non-technical users; the ANCHOR module fixes it in code.
+4. **Co-working not conflicting** — ANCHOR ropes use the same per-repo HMAC pattern as AURA / RELAY / wisdom-chain; conceptually consistent across the whole codebase.
+5. **Always-studying** — every issued rope is signed + scoped + expirable. The pole can later show "your 4 active ropes: phone-android-1 (expires 2026-06-12), ipad (2026-06-08), ..." giving the user perfect visibility into their own colony.
+
 ## v1.87.0 — 2026-05-13 — MAGNET (REAL scannable QR + vendor deep links + handoff artifact) + NATURAL completeness + API consistency
 
 **Headline:** User surfaced the deepest UX pain: *"นึกว่าจะมี qr code ที่ใช้ได้ 100% ถูกต้องให้สแกนแทน"* — the previous QR was stipple-art, not scannable. v1.87 ships a **real scannable QR encoder from scratch (zero deps, pure TS, ~400 lines)** + vendor deep links + handoff artifact. User scans QR with phone camera → AI app opens with the fetch-and-decrypt prompt PRE-FILLED → tap send. **Zero typing on the phone.**

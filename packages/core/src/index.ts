@@ -463,6 +463,12 @@ export * as relay from "./relay/index.js";
 // gates spore git push behind explicit opt-in (default OFF), routes
 // every destination to the safest transport.
 export * as chameleon from "./chameleon/index.js";
+// v1.88 -- ANCHOR: parent-pole / child-rope architecture.
+// Parent generates a stable identity; children carry signed ropes.
+// Same-pole children can sync with each other; cross-pole ropes
+// are rejected automatically. Plus OS-level clipboard handoff
+// (Phone Link / Universal Clipboard / KDE Connect → phone).
+export * as anchor from "./anchor/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -216,6 +216,11 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.chameleon.select_transport", since: "1.86.0", group: "chameleon", what: "Pick safest transport given destination + env. Refuses spore-git on risky repos.", when: "Source AI deciding which transport to use." },
   { command: "mneme.chameleon.spore_opt_in", since: "1.86.0", group: "chameleon", what: "Write explicit OPT_IN marker; required AFTER v1.86 for spore push to work.", when: "User reviewed env probe risks and explicitly consented to git push." },
   { command: "mneme.chameleon.spore_gate", since: "1.86.0", group: "chameleon", what: "Evaluate spore push permission right now; returns allow/refuse + reason.", when: "ALWAYS gate before calling sporePush." },
+
+  // ─── v1.88 ANCHOR (parent-pole / child-rope architecture) ──────────────
+  { command: "mneme.anchor.pole", since: "1.88.0", group: "anchor", what: "Read or create the parent-pole identity (HMAC pubkey). Stable per-repo.", when: "First-run; whenever showing the pole id to the user." },
+  { command: "mneme.anchor.issue_rope", since: "1.88.0", group: "anchor", what: "Mint a signed rope token for a child device. Same-pole children can sync; different-pole tokens are rejected.", when: "New device joins the user's brain." },
+  { command: "mneme.anchor.clipboard_write", since: "1.88.0", group: "anchor", what: "Write text to the OS clipboard. With Phone Link / Universal Clipboard / KDE Connect configured, it appears on the user's phone within seconds.", when: "User wants the lowest-friction cross-device handoff path." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -240,7 +245,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;
