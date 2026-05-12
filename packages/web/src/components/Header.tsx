@@ -19,14 +19,16 @@ interface HeaderProps {
 // The full multi-line explanation lives in <ViewExplainer/> below the
 // header.
 const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string }> = [
-  { id: "graph",      label: "Nervous System", symbol: "✦",   hint: "Map of who knows what in your repo." },
-  { id: "atrophy",    label: "Atrophy",        symbol: "⏳",  hint: "Files where the original author is gone or hasn't touched it in a long time." },
-  { id: "influence",  label: "Influence",      symbol: "♛",   hint: "Who actually moves the codebase — ranked by code still alive in HEAD." },
-  { id: "ecosystems", label: "Ecosystems",     symbol: "🧬",  hint: "Frameworks/libraries your repo uses — and the MCP tools Mneme spawns for each." },
-  { id: "dna",        label: "Code Search",    symbol: "🎯",  hint: "Search code by meaning, not keywords (16-strand DNA engine)." },
-  { id: "scrubber",   label: "Scrubber",       symbol: "🧼",  hint: "Live prompt-injection defence — paste hostile text, watch it get neutralised." },
-  { id: "antivirus",  label: "Antivirus Lab",  symbol: "💉",  hint: "Catches AI hallucinations (phantom commits, ghost functions, fake packages) before they merge." },
-  { id: "retrieval",  label: "Retrieval Lab",  symbol: "🧪",  hint: "Self-tuning RAG — Mneme tries multiple search configs and picks the best one for your repo." },
+  // v1.70 -- DEMON STACK headline. World's first prevent-before MCP.
+  { id: "demon",      label: "Demon Stack",    symbol: "🛡️",  hint: "World's first prevent-before MCP. Live PRECOG firewall + all 6 protocols (v1.65-v1.70)." },
+  { id: "graph",      label: "Nervous System", symbol: "✦",   hint: "Painpoint: 'who is the expert on X?' Map who knows what in your repo from real git history." },
+  { id: "atrophy",    label: "Atrophy",        symbol: "⏳",  hint: "Painpoint: 'bus factor / orphaned code'. Files where the original author left or hasn't touched it in months." },
+  { id: "influence",  label: "Influence",      symbol: "♛",   hint: "Painpoint: 'who really moves this codebase?' Ranked by code still alive in HEAD, not commit count." },
+  { id: "ecosystems", label: "Ecosystems",     symbol: "🧬",  hint: "Painpoint: 'which MCP tools should I install?' Mneme picks tools by libraries your repo actually uses." },
+  { id: "dna",        label: "Code Search",    symbol: "🎯",  hint: "Painpoint: 'I know what I want but not the keyword'. Meaning-based search (16-strand DNA)." },
+  { id: "scrubber",   label: "Scrubber",       symbol: "🧼",  hint: "Painpoint: 'prompt injection in pasted content'. Paste hostile text, watch it get neutralised live." },
+  { id: "antivirus",  label: "Antivirus Lab",  symbol: "💉",  hint: "Painpoint: 'AI fabricates commits / functions / packages'. Catches 8 hallucination strains before merge." },
+  { id: "retrieval",  label: "Retrieval Lab",  symbol: "🧪",  hint: "Painpoint: 'RAG quality varies'. Mneme tries multiple search configs and picks the best per repo." },
 ];
 
 export function Header({

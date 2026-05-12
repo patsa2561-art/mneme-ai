@@ -18,6 +18,16 @@ interface Explainer {
 }
 
 const EXPLAINERS: Record<ViewMode, Explainer> = {
+  demon: {
+    title: "Demon Stack",
+    oneLine: "World's first PREVENT-BEFORE MCP layer. Type a claim, see what Mneme would let through to the user.",
+    whyCare: "Every other MCP tool DETECTS hallucination after the fact. Mneme INTERCEPTS it before delivery — AI is structurally unable to lie through Mneme.",
+    bullets: [
+      "Live PRECOG firewall — type any AI claim, watch un-verifiable spans get hedged with named cause.",
+      "All 6 protocols (PRECOG / APOPTOSIS / AEGIS / AUTARCHY / HYPERSCAN / ASCENSION) explained with bench numbers.",
+      "World-position table: what no other MCP server does (4 mixed regex algos / shell-out to git / HMAC trust cert).",
+    ],
+  },
   graph: {
     title: "Nervous System",
     oneLine: "A live map of who knows what in your codebase.",

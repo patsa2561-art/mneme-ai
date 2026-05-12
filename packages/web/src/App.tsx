@@ -10,6 +10,7 @@ import { DnaView } from "./components/DnaView";
 import { ScrubberView } from "./components/ScrubberView";
 import { AntivirusLabView } from "./components/AntivirusLabView";
 import { RetrievalLabView } from "./components/RetrievalLabView";
+import { DemonStackView } from "./components/DemonStackView";
 import { DetailPanel } from "./components/DetailPanel";
 // LimitsPanel + LiveWisdomPanel moved into MetricsTopBar (v1.19.3).
 import { GraphWisdomPanel } from "./components/GraphWisdomPanel";
@@ -56,7 +57,9 @@ function readOnboarded(): boolean {
 export function App() {
   const [raw, setRaw] = useState<NervousSystemData | null>(null);
   const [scrubT, setScrubT] = useState<number>(Date.now());
-  const [view, setView] = useState<ViewMode>("graph");
+  // v1.70 -- default to "demon" (the headline new view) so first-time
+  // visitors see PRECOG firewall + protocol stack before anything else.
+  const [view, setView] = useState<ViewMode>("demon");
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [loadOpen, setLoadOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState<boolean>(() => !readOnboarded());
@@ -228,7 +231,9 @@ export function App() {
           );
         })()}
         <section className="app-canvas" aria-label={`${view} view`}>
-          {view === "ecosystems" ? (
+          {view === "demon" ? (
+            <DemonStackView />
+          ) : view === "ecosystems" ? (
             <EcosystemsView
               data={raw ?? null}
               syntheticRepo={!!raw?._demo_synthetic}
@@ -280,7 +285,7 @@ export function App() {
             Full-content lab views (antivirus / retrieval / ecosystems /
             scrubber / dna) get the full canvas width so dense tables and
             scatter plots aren't squished into a narrow column. */}
-        {view !== "antivirus" && view !== "retrieval" && view !== "ecosystems" && view !== "scrubber" && view !== "dna" && (
+        {view !== "demon" && view !== "antivirus" && view !== "retrieval" && view !== "ecosystems" && view !== "scrubber" && view !== "dna" && (
           <aside className="app-detail" aria-label="Detail panel">
             <DetailPanel
               passport={selectedPassport}

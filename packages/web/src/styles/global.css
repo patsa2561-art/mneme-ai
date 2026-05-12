@@ -3977,3 +3977,375 @@ body::before {
   grid-column: 1 / -1;
 }
 
+
+/* ─── v1.70 DEMON STACK VIEW ──────────────────────────────────────── */
+
+.demon-stack {
+  padding: 1.5rem 2rem 4rem;
+  max-width: 1300px;
+  margin: 0 auto;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.demon-stack h1 {
+  font-size: 2.2rem;
+  margin: 0 0 0.5rem;
+  background: linear-gradient(135deg, #ff6b6b 0%, #9b59b6 35%, #3498db 70%, #27ae60 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.demon-stack h2 {
+  font-size: 1.3rem;
+  margin: 2rem 0 1rem;
+  color: #f1f5f9;
+}
+
+.demon-stack-tagline {
+  color: #cbd5e1;
+  font-size: 1.05rem;
+  max-width: 780px;
+}
+
+.demon-stack-tagline strong {
+  color: #ffe066;
+}
+
+.demon-stack-tagline em {
+  color: #67e8f9;
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ── PRECOG live demo ────────────────────────────────────────────── */
+
+.demon-precog-demo {
+  background: rgba(255,107,107,0.06);
+  border: 1px solid rgba(255,107,107,0.35);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.demon-precog-demo h2 {
+  margin-top: 0;
+  color: #ff8787;
+}
+
+.demon-precog-help {
+  color: #cbd5e1;
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.demon-precog-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.demon-precog-example {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #cbd5e1;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.demon-precog-example:hover {
+  background: rgba(255,107,107,0.15);
+  border-color: rgba(255,107,107,0.55);
+  color: #fff;
+}
+
+.demon-precog-input {
+  width: 100%;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  padding: 0.8rem 1rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+.demon-precog-input:focus {
+  outline: none;
+  border-color: rgba(255,107,107,0.6);
+  box-shadow: 0 0 0 3px rgba(255,107,107,0.15);
+}
+
+.demon-precog-output {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.demon-precog-verdict {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.demon-precog-verdict-badge {
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+}
+
+.demon-verdict-certified .demon-precog-verdict-badge {
+  background: rgba(39,174,96,0.22);
+  color: #6ee7b7;
+  border: 1px solid rgba(39,174,96,0.6);
+}
+
+.demon-verdict-hedged .demon-precog-verdict-badge {
+  background: rgba(243,156,18,0.22);
+  color: #fcd34d;
+  border: 1px solid rgba(243,156,18,0.6);
+}
+
+.demon-verdict-rejected .demon-precog-verdict-badge {
+  background: rgba(255,107,107,0.22);
+  color: #fca5a5;
+  border: 1px solid rgba(255,107,107,0.6);
+}
+
+.demon-precog-hedge-count {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.demon-precog-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 0.35rem;
+}
+
+.demon-precog-verified {
+  background: rgba(255,255,255,0.04);
+  border-left: 3px solid rgba(255,107,107,0.6);
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+}
+
+.demon-precog-verified pre {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #f1f5f9;
+}
+
+.demon-precog-reasons {
+  background: rgba(0,0,0,0.25);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.demon-precog-reasons ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.demon-precog-reasons li {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.demon-precog-reasons code {
+  background: rgba(255,107,107,0.15);
+  color: #ff8787;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.demon-precog-src {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: #67e8f9;
+}
+
+.demon-precog-note {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.demon-precog-note code {
+  background: rgba(255,255,255,0.06);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  font-style: normal;
+}
+
+/* ── Protocol cards ───────────────────────────────────────────────── */
+
+.demon-protocol-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.demon-protocol-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: transform 0.15s ease;
+}
+
+.demon-protocol-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,0.06);
+}
+
+.demon-protocol-card header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.demon-protocol-symbol {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.demon-protocol-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #f1f5f9;
+}
+
+.demon-protocol-version {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.demon-protocol-oneliner {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.demon-protocol-bench {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.demon-protocol-why {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ── Comparison table ────────────────────────────────────────────── */
+
+.demon-comparison {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.demon-comparison th,
+.demon-comparison td {
+  padding: 0.55rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.88rem;
+}
+
+.demon-comparison th {
+  background: rgba(255,255,255,0.06);
+  color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.demon-comparison td:nth-child(2) {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.demon-comparison td:nth-child(3) {
+  color: #6ee7b7;
+}
+
+.demon-comparison td:nth-child(3) strong {
+  color: #ffe066;
+}
+
+/* ── CTA ─────────────────────────────────────────────────────────── */
+
+.demon-cta {
+  background: linear-gradient(135deg, rgba(255,107,107,0.08), rgba(155,89,182,0.08));
+  border: 1px solid rgba(155,89,182,0.35);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 2rem;
+}
+
+.demon-cta h2 {
+  margin-top: 0;
+}
+
+.demon-cta ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.demon-cta li {
+  margin-bottom: 0.45rem;
+  color: #cbd5e1;
+}
+
+.demon-cta code {
+  background: rgba(0,0,0,0.35);
+  color: #67e8f9;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: ui-monospace, monospace;
+}
+
+.demon-cta a {
+  color: #ffe066;
+  text-decoration: underline;
+}
+
+.demon-cta a:hover {
+  color: #fff;
+}
