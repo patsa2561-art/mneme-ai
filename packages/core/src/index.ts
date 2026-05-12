@@ -315,6 +315,14 @@ export * as timeriver from "./timeriver/timeriver.js";
 // Weaver (overnight self-evolution) + Quantum Cache (speculative
 // pre-execution + Markov) + Wisdom River (SSE live broadcast).
 export * as exodus from "./exodus/index.js";
+// v1.62 -- TOKEN NUCLEAR REACTOR. 12 layers that reduce AI token spend
+// while preserving 100% output quality: pre-computed answer cache +
+// intent compiler + compiled-intent recipes + shard cache + semantic
+// diff + atomic tool fusion + streaming truncation + verification
+// certs + context compression + turn diff + summary debt + precog regret.
+// Every layer reports {tokensSpent, baselineTokens, tokensSaved, savingsRatio}
+// so the ledger rolls them up into a single before/after dashboard.
+export * as reactor from "./reactor/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
