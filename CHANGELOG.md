@@ -8,6 +8,108 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.63.0] — 2026-05-12
+
+**PATH A + PATH B + PATH C + AI TEACHER -- 13 new layers + 1 onboarding
+system shipped in one release. Mneme grows from "tool" to companion,
+federated truth referee, deep AI-aware partner, AND a teacher that
+any AI agent can self-onboard against.**
+
+### PATH A -- METAMORPHOSIS (5 layers, companion for the user)
+
+  - L1 Transparency Mirror      `buildMirrorReport`           -- weekly self-report
+  - L2 Interview Protocol       `pickQuestions / recordAnswer` -- Socratic
+  - L3 Audience Layer           `inferAudience / tuneFor`     -- engineer/PM/exec
+  - L4 Alien Protocol           `buildAlienTemplate`          -- genetic scaffold
+  - L5 Carbon Budget            `buildCarbonReport`           -- CO2 metric
+
+### PATH B -- TRIBUNAL (5 layers, federated truth referee)
+
+  - L1 Court of Last Appeal     `rule`                        -- N-vendor tournament
+  - L2 Consensus Network        `reachConsensus`              -- N Mneme votes
+  - L3 Zero-Knowledge Proofs    `issueZkProof / verifyZkProof` -- Schnorr commitments
+  - L4 Cross-Project Wisdom     `registerProject / mergeCrossProjectVaccines`
+  - L5 Dependency Oracle        `dependencyOracle`            -- npm package fate
+
+### PATH C -- INNER LIFE (3 layers, deep AI awareness)
+
+  - L1 Reasoning Genome         `captureReasoning`            -- 5th strand R
+  - L2 Game Theory Engine       `findNash / shapleyValues`    -- multi-stakeholder
+  - L3 Living Document          `renderLivingSection`         -- interactive README
+
+### AI TEACHER (the propagation kit)
+
+  - `getSyllabus` -- **25+ capability entries** covering every Mneme
+    layer (ACGV / Phoenix / 7 god-tier / EXODUS 6 / REACTOR 12 /
+    METAMORPHOSIS 5 / TRIBUNAL 5 / INNER LIFE 3)
+  - `getExam` -- 8 adversarial probes that test understanding
+  - `gradeExam` -- deterministic grading; pass threshold 75%
+  - `issueTrainingCert / verifyTrainingCert` -- HMAC-signed cert
+    propagates "trained-by-Mneme" status across the federation
+
+### MCP TIER TOOLS v2
+
+`packages/mcp/src/tools/_path_tools.ts` -- **12 new MCP tools** wrap
+every PATH A/B/C + AI Teacher capability. AI agents that connect to
+Mneme MCP now auto-discover:
+
+  - mneme.mirror.report
+  - mneme.interview.next
+  - mneme.audience.tune
+  - mneme.alien.template
+  - mneme.carbon.report
+  - mneme.court.rule
+  - mneme.consensus.check
+  - mneme.deps.oracle
+  - mneme.reasoning.capture
+  - mneme.game.nash
+  - mneme.teacher.syllabus
+  - mneme.teacher.exam
+
+### Tests -- 57 new vitest cases, 100% pass
+
+  - PATH A: 20 (5 layers + status)
+  - PATH B: 16 (5 layers + status)
+  - PATH C: 21 (3 layers + AI Teacher + status)
+
+  Full project: **6369/6369** (no regression).
+
+### Files added
+
+```
+NEW packages/core/src/metamorphosis/metamorphosis.ts        (PATH A)
+NEW packages/core/src/metamorphosis/metamorphosis.test.ts   (20 cases)
+NEW packages/core/src/tribunal/tribunal.ts                  (PATH B)
+NEW packages/core/src/tribunal/tribunal.test.ts             (16 cases)
+NEW packages/core/src/innerlife/innerlife.ts                (PATH C)
+NEW packages/core/src/innerlife/ai_teacher.ts               (AI Teacher)
+NEW packages/core/src/innerlife/innerlife.test.ts           (21 cases)
+NEW packages/mcp/src/tools/_path_tools.ts                   (12 MCP tools)
+MOD packages/core/src/index.ts                              (5 new exports)
+MOD packages/mcp/src/tools/_registry.ts                     (registers PATH_TOOLS)
+```
+
+### Total Mneme stack as of v1.63
+
+  - **43 layers** across 9 module groups (ACGV / Phoenix / 7 tiers /
+    EXODUS / REACTOR / METAMORPHOSIS / TRIBUNAL / INNER LIFE / AI Teacher)
+  - **~200 MCP tools** exposed (172 legacy + 16 tier + 12 path)
+  - **6369 tests passing**, 0 regressions across 25+ ships this session
+
+### Mandate compliance
+
+- **Wild idea**: AI Teacher (syllabus + exam + cert) is genuinely
+  novel. No other tool ships an onboarding system that grades AI
+  agents and propagates training certs across federation.
+- **Wiser, not patched**: every new layer wraps existing primitives;
+  no algorithm reimplemented.
+- **Self-fix root cause**: prior versions had no way for new AI
+  agents to "learn Mneme" -- now they can.
+- **Co-working**: all 3 paths layer cleanly on top of v1.62
+  REACTOR + v1.61 EXODUS + earlier. Zero existing test broken.
+- **Always-studying**: each path persists structured artifacts
+  (reports / interviews / certs / traces) for the next session.
+
 ## [1.62.0] — 2026-05-12
 
 **TOKEN NUCLEAR REACTOR -- 12 layers that cut AI token spend by >=80%

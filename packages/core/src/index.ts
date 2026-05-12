@@ -323,6 +323,21 @@ export * as exodus from "./exodus/index.js";
 // Every layer reports {tokensSpent, baselineTokens, tokensSaved, savingsRatio}
 // so the ledger rolls them up into a single before/after dashboard.
 export * as reactor from "./reactor/index.js";
+// v1.63 -- PATH A: METAMORPHOSIS. 5 self-knowledge / companion layers:
+// Transparency Mirror + Interview Protocol + Audience Layer + Alien
+// Protocol + Carbon Budget. Mneme grows from "tool" to "companion that
+// knows me".
+export * as metamorphosis from "./metamorphosis/metamorphosis.js";
+// v1.64 -- PATH B: TRIBUNAL. Federated truth-keeping: Court of Last
+// Appeal + Consensus Network + ZK Proofs + Cross-Project Wisdom +
+// Dependency Oracle. Mneme as multi-vendor referee.
+export * as tribunal from "./tribunal/tribunal.js";
+// v1.65 -- PATH C: INNER LIFE + AI TEACHER. Reasoning Genome (5th
+// strand R) + Game Theory Engine (Nash + Shapley) + Living Document
+// (interactive README) + AI TEACHER (syllabus + exam + training-cert
+// propagation for any AI agent that connects to Mneme).
+export * as innerlife from "./innerlife/innerlife.js";
+export * as aiTeacher from "./innerlife/ai_teacher.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

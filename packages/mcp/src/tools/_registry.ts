@@ -25,6 +25,7 @@ import { constitutionTool } from "./_constitution_tool.js";
 import { verifyClaimsTool } from "./_verify_claims_tool.js";
 import { truthCheckTool } from "./_truth_check.js";
 import { TIER_TOOLS } from "./_tier_tools.js";
+import { PATH_TOOLS } from "./_path_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -54,6 +55,7 @@ export function buildAllTools(): MnemeTool[] {
     verifyClaimsTool,
     truthCheckTool,
     ...TIER_TOOLS,
+    ...PATH_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
