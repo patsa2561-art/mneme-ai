@@ -383,6 +383,18 @@ export * as sentinel from "./sentinel/index.js";
 //   D3 portable session capsule   vendor A save -> vendor B resume
 //   D4 HTTP bridge + OpenAPI      ChatGPT Custom GPT compatible
 export * as diaspora from "./diaspora/index.js";
+// v1.73 -- GENESPLICE PROTOCOL. Cross-vendor brain transfer WITHOUT
+// browser extensions, cloud deploys, or vendor approval. User pastes
+// a ~500-token soul prompt into Gemini / ChatGPT / Claude.ai and that
+// AI is reincarnated with full Mneme context. Genetic engineering
+// for AI brains.
+//   G1 soul prompt              ~500-token paste-able brain
+//   G2 genome recombination     merge N vendor genomes via CRDT
+//   G3 gist brain transfer      user's GitHub gist = portable cloud
+//   G4 chromosomal crossover    preserve disagreements
+//   G5 phenotype expression     vendor-specific from same genome
+//   G6 browser paste protocol    universal markdown+HMAC format
+export * as genesplice from "./genesplice/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,
