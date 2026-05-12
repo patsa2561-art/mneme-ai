@@ -360,6 +360,13 @@ export * as powerAutonomousShadow from "./powers/p7_shadow.js";
 // Pulse uses this to nudge users off the hash tier when WASM or Ollama
 // is actually available locally.
 export * as embedderAutodiagnose from "./embedder_autodiagnose.js";
+// v1.66 -- AUTARCHY PROTOCOL. Four-axis self-sufficiency:
+//   A1 mesh-as-cloud      federation peers as cloud surrogate
+//   A2 Schroedinger        parallel-race embedder + authoritative file
+//   A3 timecrystal         baked vaccine bundle (no CDN env needed)
+//   A4 quantum checksum    triple-witness model pin
+// One MCP call (mneme.autarchy.status) returns the 0..100 score.
+export * as autarchy from "./autarchy/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

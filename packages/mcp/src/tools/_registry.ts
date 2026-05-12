@@ -29,6 +29,7 @@ import { PATH_TOOLS } from "./_path_tools.js";
 import { COGNITIVE_TOOLS } from "./_cognitive_tools.js";
 import { APOPTOSIS_TOOLS } from "./_apoptosis_tools.js";
 import { TUNE_TOOLS } from "./_tune_tools.js";
+import { AUTARCHY_TOOLS } from "./_autarchy_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -62,6 +63,7 @@ export function buildAllTools(): MnemeTool[] {
     ...COGNITIVE_TOOLS,
     ...APOPTOSIS_TOOLS,
     ...TUNE_TOOLS,
+    ...AUTARCHY_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
