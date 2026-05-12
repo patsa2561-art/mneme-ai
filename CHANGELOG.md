@@ -8,6 +8,94 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.67.1] — 2026-05-12
+
+**AGENT AWARENESS PATCH -- close the last gap. Mneme has shipped 45+
+new MCP tools across v1.63-v1.67 (PATH / COGNITIVE / APOPTOSIS /
+TUNE / AUTARCHY / AEGIS) but the AI agents in users' editors didn't
+know about them until now. This patch teaches every AI agent the
+full new surface in one daemon tick.**
+
+### Four awareness mechanisms updated
+
+  1. **`packages/core/src/agent_manifest.ts`** -- catalog expanded
+     from ~25 CLI commands to ~63 entries covering every new MCP
+     tool with WHEN + WHAT lines + 8 new group buckets (cognitive
+     / apoptosis / autarchy / aegis / metamorphosis / tribunal /
+     innerlife / tune).
+
+  2. **`packages/core/src/innerlife/ai_teacher.ts`** -- syllabus
+     extended with 17 new entries covering COGNITIVE 7 + APOPTOSIS
+     + Powers rewire + TUNE + AUTARCHY + AEGIS. AI agents that
+     read `mneme.teacher.syllabus` now see every capability.
+
+  3. **`packages/core/src/parasite/bridge.ts`** -- bridge content
+     gains 5 new sections (COGNITIVE / APOPTOSIS / TUNE / AUTARCHY
+     / AEGIS) + composition-recipe block ("multi-tool flows").
+     EN+TH trigger phrases throughout.
+
+  4. **`packages/core/src/agent_announce.ts`** (NEW) --
+     `announceNewCapabilities` + `caretakerSyncOnUpgrade`. Pulse
+     surfaces a `[NEW]` line on the FIRST tick after a version
+     bump; daemon caretaker auto-syncs CLAUDE.md / AGENTS.md /
+     GEMINI.md / .cursor/rules / .cursorrules / .windsurfrules.
+     State persisted in `.mneme/agent-announce.json` so the
+     announcement fires exactly once per upgrade.
+
+### Live-verified on this repo
+
+  After one caretakerSync call: 6 agent files synced (4 created +
+  2 replaced) -- CLAUDE.md / AGENTS.md / GEMINI.md / .cursor/rules
+  / .cursorrules / .windsurfrules each contain the full v1.67
+  manifest. 17 references to aegis/autarchy/apoptosis/atom.decide
+  in AGENTS.md.
+
+  Announce line for a v1.65->v1.67.1 jump:
+  ```
+  [NEW] v1.67.1: 9 new Mneme capabilities across 3 group(s)
+  (tune, autarchy, aegis). Say "show new mneme tools" to list them.
+  ```
+
+### Mandates (all five applied)
+
+  1. **WILD** -- composition-recipe block ("for X, call A then B
+     then C") is novel. Most MCP servers list tools; few teach
+     ORCHESTRATION.
+  2. **WISER, NOT PATCHED** -- diagnosed the root cause (manifest
+     drift) rather than reactively pushing news per release.
+  3. **SELF-FIX ROOT CAUSE** -- caretaker hook auto-syncs on every
+     version bump. Future releases never have this gap again.
+  4. **CO-WORKING NOT CONFLICTING** -- new module READS the
+     existing manifest catalog; existing tests continue to pass.
+  5. **ALWAYS-STUDYING** -- announce state persists per repo so
+     the user is never re-notified about the same upgrade.
+
+### Tests -- 11 new vitest cases + zero regression
+
+  - announceNewCapabilities: 6 cases
+  - describeNewCapabilities: 2 cases
+  - caretakerSyncOnUpgrade:  3 cases
+
+  Full project: **6770/6770 pass** (+11 vs v1.67.0; zero regression).
+
+### Files
+
+```
+NEW packages/core/src/agent_announce.ts
+NEW packages/core/src/agent_announce.test.ts             (11 cases)
+MOD packages/core/src/agent_manifest.ts                  (38 new commands)
+MOD packages/core/src/innerlife/ai_teacher.ts            (17 new syllabus entries)
+MOD packages/core/src/parasite/bridge.ts                 (5 new sections + recipes)
+MOD packages/core/src/index.ts                           (agentAnnounce export)
+```
+
+### On-disk artifacts
+
+```
+.mneme/agent-announce.json                               (last-announced version)
++ all 6 default agent files in repo root (auto-synced)
+```
+
 ## [1.67.0] — 2026-05-12
 
 **AEGIS PROTOCOL -- 9-axis immune system inside Mneme. Defensive

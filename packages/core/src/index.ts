@@ -367,6 +367,11 @@ export * as embedderAutodiagnose from "./embedder_autodiagnose.js";
 //   A4 quantum checksum    triple-witness model pin
 // One MCP call (mneme.autarchy.status) returns the 0..100 score.
 export * as autarchy from "./autarchy/index.js";
+// v1.67.1 -- AGENT ANNOUNCE + CARETAKER SYNC. Closes the agent-
+// awareness gap: pulse surfaces [NEW] line when version bumps;
+// caretaker auto-syncs CLAUDE.md / AGENTS.md / .cursor/rules so the
+// AI agent in the user's editor learns about new MCP tools instantly.
+export * as agentAnnounce from "./agent_announce.js";
 // v1.67 -- AEGIS PROTOCOL. Nine-axis immune system inside Mneme.
 // Defensive answer to Palisade self-replication / sandbagging /
 // shutdown-evasion findings. Strictly observe + record + propagate;

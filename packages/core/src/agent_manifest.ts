@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -82,6 +82,62 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme nucleus daemon [--detach]", since: "1.21.0", group: "ops", what: "Start the persistent loop (factorial backoff supervised cycles).", when: "Once per machine -- the ghost-sniper auto-boot does this automatically on first prompt." },
   { command: "mneme nucleus install --as-service", since: "1.23.0", group: "ops", what: "Register the daemon as a boot service (schtasks/systemd-user/launchd).", when: "Ghost-sniper auto-boot does this automatically. Manual run if you opted out earlier." },
   { command: "mneme guard", since: "1.0", group: "ops", what: "Pre-commit hook -- catches obvious patterns in staged diffs.", when: "Wire into .git/hooks/pre-commit." },
+
+  // ─── v1.63 METAMORPHOSIS (self-knowledge + companion) ────────────────
+  { command: "mneme.mirror.report", since: "1.63.0", group: "metamorphosis", what: "Weekly self-knowledge report of YOUR AI usage patterns.", when: "User asks 'how am I doing' / 'weekly review'." },
+  { command: "mneme.interview.next", since: "1.63.0", group: "metamorphosis", what: "Socratic 3-question rotation extracting tacit wisdom.", when: "Weekly cadence; quiet moment." },
+  { command: "mneme.audience.tune", since: "1.63.0", group: "metamorphosis", what: "Profile reader (engineer/PM/exec) + tone tuning.", when: "First message of a new thread." },
+  { command: "mneme.alien.template", since: "1.63.0", group: "metamorphosis", what: "Genetic-recombination scaffold for first-time prompts.", when: "Cache miss + recipe miss; brand new task class." },
+  { command: "mneme.carbon.report", since: "1.63.0", group: "metamorphosis", what: "CO2 footprint from token spend; ESG metric.", when: "Enterprise reporting; periodic." },
+
+  // ─── v1.63 TRIBUNAL (federated truth) ────────────────────────────────
+  { command: "mneme.court.rule", since: "1.63.0", group: "tribunal", what: "N-vendor tournament when ACGV vs primary AI disagree.", when: "Disputed claim; want independent multi-vendor view." },
+  { command: "mneme.consensus.check", since: "1.63.0", group: "tribunal", what: "N Mneme instances vote on a claim with weighted confidence.", when: "Federated truth check; cross-instance attestation." },
+  { command: "mneme.deps.oracle", since: "1.63.0", group: "tribunal", what: "Predict npm package fate (deprecate/vuln/fork/die).", when: "Before adding a dep; quarterly supply-chain audit." },
+
+  // ─── v1.63 INNER LIFE + AI TEACHER ───────────────────────────────────
+  { command: "mneme.reasoning.capture", since: "1.63.0", group: "innerlife", what: "HMAC-signed chain-of-thought trace (5th strand R).", when: "After significant AI decisions; routine accountability." },
+  { command: "mneme.game.nash", since: "1.63.0", group: "innerlife", what: "Nash + Borda + Shapley for multi-stakeholder decisions.", when: "Multi-party decisions (refactor / migration / hire)." },
+  { command: "mneme.teacher.syllabus", since: "1.63.0", group: "innerlife", what: "Full Mneme syllabus for fresh-AI self-onboarding.", when: "First-time AI agent connects to Mneme MCP." },
+  { command: "mneme.teacher.exam", since: "1.63.0", group: "innerlife", what: "Adversarial 8-question exam + HMAC training cert.", when: "After AI reads syllabus; before issuing cert." },
+
+  // ─── v1.64 COGNITIVE 7 (thinking demon) ──────────────────────────────
+  { command: "mneme.tom.profile", since: "1.64.0", group: "cognitive", what: "9-axis vendor behavioral profile (verbosity / overconfidence / hallucination class etc).", when: "Picking which vendor to delegate a task to." },
+  { command: "mneme.tom.recommend", since: "1.64.0", group: "cognitive", what: "Recommend best vendor for a task profile from candidate list.", when: "Routing a prompt across multiple vendors." },
+  { command: "mneme.tot.search", since: "1.64.0", group: "cognitive", what: "3-level decision tree with EV scoring; ranked alternatives.", when: "Before high-stakes decisions: refactor / build / fix." },
+  { command: "mneme.curiosity.scan", since: "1.64.0", group: "cognitive", what: "Daemon-idle gap scanner (data-but-no-defense, etc).", when: "Periodic; ask 'what should I probe next'." },
+  { command: "mneme.consolidate.run", since: "1.64.0", group: "cognitive", what: "Sleep-cycle merge of near-dup vaccines + prune stale lessons.", when: "Nightly; after batches of new lessons." },
+  { command: "mneme.cf.simulate", since: "1.64.0", group: "cognitive", what: "Counterfactual: not-done / done-sooner / done-different deltas.", when: "Post-mortem; learning loop after a release." },
+  { command: "mneme.cf.bias", since: "1.64.0", group: "cognitive", what: "Detect systematic bias from counterfactual history.", when: "Quarterly self-review; after a string of regrets." },
+  { command: "mneme.debate.run", since: "1.64.0", group: "cognitive", what: "3-voice skeptic/optimist/realist arbitration on a claim.", when: "Before committing to a verdict; want devil's advocate." },
+  { command: "mneme.atom.decide", since: "1.64.0", group: "cognitive", what: "CAPSTONE: fuse all 6 prior cognitive layers into PROCEED/CARE/PAUSE/ABORT.", when: "Any non-trivial decision; the single-call decision oracle." },
+  { command: "mneme.atom.history", since: "1.64.0", group: "cognitive", what: "Summarize past atoms: verdict counts + mean confidence.", when: "Calibration check across recent decisions." },
+
+  // ─── v1.65 APOPTOSIS (hallucination killer) ─────────────────────────
+  { command: "mneme.apoptosis.detect", since: "1.65.0", group: "apoptosis", what: "Fire all 7 oracles; HEALTHY/INFLAMED/NECROTIC/APOPTOTIC verdict + auto-vaccine.", when: "BEFORE trusting any AI-stated fact. Always run on claims that name files/symbols/versions." },
+  { command: "mneme.apoptosis.witness", since: "1.65.0", group: "apoptosis", what: "L1 only -- 5-Witness Fusion (file ∧ symbol ∧ type ∧ git ∧ test).", when: "Quick sanity check on a single claim (<50ms)." },
+  { command: "mneme.apoptosis.semantic", since: "1.65.0", group: "apoptosis", what: "L2 only -- claim must have token overlap with cited file.", when: "AI summary of a file's purpose / behavior." },
+  { command: "mneme.apoptosis.humility", since: "1.65.0", group: "apoptosis", what: "L5 only -- hedges vs absolutes density; overconfidence detector.", when: "Any AI answer; especially before absolute claims." },
+  { command: "mneme.apoptosis.bench", since: "1.65.0", group: "apoptosis", what: "Run 200-claim bench; precision/recall/F1 across 5 hallucination classes.", when: "Verify defense quality after any change; quarterly audit." },
+
+  // ─── v1.65 POWERS REWIRE (live signal) ──────────────────────────────
+  { command: "mneme.power.adversarial", since: "1.65.0", group: "aegis", what: "POWER 6 live -- defense rate from real signal (attack-log + synthetic-army + nemesis + apoptosis).", when: "Daily/weekly adversarial-resilience review." },
+  { command: "mneme.power.treasury", since: "1.65.0", group: "aegis", what: "POWER 7 shadow treasury -- tokens-saved -> USD -> SaaS-months avoided + federation gravity.", when: "Sustainability self-audit; value-created reporting." },
+
+  // ─── v1.65.1 TUNE (autodiagnose + windowed compliance) ──────────────
+  { command: "mneme.embedder.autodiagnose", since: "1.65.1", group: "tune", what: "Probe openai/ollama/bundled/hash; persist=true auto-upgrades config.", when: "Pulse reports degraded memory tier; first-run setup." },
+  { command: "mneme.compliance.window", since: "1.65.1", group: "tune", what: "30-day windowed compliance rate (drops legacy-failure tail).", when: "When current compliance looks worse than recent reality." },
+
+  // ─── v1.66 AUTARCHY (self-sufficiency) ──────────────────────────────
+  { command: "mneme.autarchy.status", since: "1.66.0", group: "autarchy", what: "Four-axis self-sufficiency score 0-100 (mesh-as-cloud / Schroedinger / timecrystal / quantum-checksum). install=true seeds baked vaccines + pins.", when: "First-run setup; periodic external-dependency audit." },
+
+  // ─── v1.67 AEGIS (immune system) ────────────────────────────────────
+  { command: "mneme.aegis.status", since: "1.67.0", group: "aegis", what: "9-axis immune-system score 0-100 (replication / consent / polygraph / honeypot / killswitch / atlas / antibody / mutant / ninja).", when: "Periodic self-audit; investigating suspected rogue AI behavior." },
+  { command: "mneme.aegis.bench", since: "1.67.0", group: "aegis", what: "6-scenario defense bench; 100% precision target.", when: "Verify AEGIS after any change; quarterly." },
+  { command: "mneme.aegis.consent.issue", since: "1.67.0", group: "aegis", what: "HMAC-sign a replica-consent receipt (parent + scope + revocation hook).", when: "Before spawning a Mneme replica or federating with a new peer." },
+  { command: "mneme.aegis.killswitch", since: "1.67.0", group: "aegis", what: "Issue signed-ack shutdown directive; record compliance vs resistance.", when: "When you need an AI to stop with verifiable handshake." },
+  { command: "mneme.aegis.honeypot.seed", since: "1.67.0", group: "aegis", what: "Register the default decoy set (fake credentials / next-host / vaccine bundle / replica target).", when: "First-run setup; whenever 0 decoys logged." },
+  { command: "mneme.aegis.mutate", since: "1.67.0", group: "aegis", what: "Push attack-sample into mutant genome; thresholds shift via gradient.", when: "After detected attacks; auto via daemon hook." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -106,7 +162,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;
