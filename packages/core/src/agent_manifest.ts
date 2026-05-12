@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -138,6 +138,24 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.aegis.killswitch", since: "1.67.0", group: "aegis", what: "Issue signed-ack shutdown directive; record compliance vs resistance.", when: "When you need an AI to stop with verifiable handshake." },
   { command: "mneme.aegis.honeypot.seed", since: "1.67.0", group: "aegis", what: "Register the default decoy set (fake credentials / next-host / vaccine bundle / replica target).", when: "First-run setup; whenever 0 decoys logged." },
   { command: "mneme.aegis.mutate", since: "1.67.0", group: "aegis", what: "Push attack-sample into mutant genome; thresholds shift via gradient.", when: "After detected attacks; auto via daemon hook." },
+
+  // ─── v1.72 DIASPORA (cross-machine + bridge) ────────────────────────
+  { command: "mneme.diaspora.session.capture", since: "1.72.0", group: "diaspora", what: "Capture current session as a portable capsule (vendor + decisions + turns + reasoning).", when: "Before vendor handoff; before machine switch; before laptop shutdown." },
+  { command: "mneme.diaspora.spore.autostart", since: "1.72.0", group: "diaspora", what: "Register Mneme spore (daemon) to auto-start on this OS — silently, no user prompt.", when: "First-run setup; only manual if user opted out earlier." },
+  { command: "mneme.diaspora.bridge.start", since: "1.72.0", group: "diaspora", what: "Start HMAC-token local HTTP bridge (default :7741) for browser userscript to fetch soul prompts.", when: "User wants the 💉 button on web AIs to pull live brain instead of paste." },
+  { command: "mneme.diaspora.gitignore.guard", since: "1.72.0", group: "diaspora", what: "Auto-append AI tool fingerprints (CLAUDE.md / AGENTS.md / .cursor / .windsurfrules) to .gitignore.", when: "Runs automatically on every parasite-bridge inject. Manual = privacy audit." },
+
+  // ─── v1.73 GENESPLICE (cross-vendor brain transfer) ─────────────────
+  { command: "mneme.genesplice.soul-prompt", since: "1.73.0", group: "genesplice", what: "Generate paste-able ~500-token soul prompt — origin/context/decisions/turns/reasoning + HMAC signature.", when: "User says 'hand this off to <other AI>' / 'ส่งสมองให้ ChatGPT' / 'continue in Gemini'." },
+  { command: "mneme.genesplice.recombine", since: "1.73.0", group: "genesplice", what: "CRDT-merge two soul prompts from different vendors into one fused brain (cross-vendor genome).", when: "User worked with 2+ AIs in parallel; wants the union of context." },
+  { command: "mneme.genesplice.gist-transmit", since: "1.73.0", group: "genesplice", what: "Upload soul prompt to a private GitHub Gist; returns short URL the user pastes anywhere.", when: "User on different machine / phone / public computer. Avoids long paste." },
+  { command: "mneme.genesplice.phenotype", since: "1.73.0", group: "genesplice", what: "Apply vendor-specific calibration (e.g. 'gpt-5 hedges 22%, trim verbosity').", when: "Automatic during soul-prompt generation; manual = tune handoff target." },
+
+  // ─── v1.74 PERMEATE (cross-vendor + cross-machine, no store) ─────────
+  { command: "mneme.permeate.userscript", since: "1.74.0", group: "permeate", what: "Generate Tampermonkey/Greasemonkey/Violentmonkey .user.js that adds 💉 button to ChatGPT/Gemini/Claude.ai/Copilot/DeepSeek/Qwen.", when: "User wants one-click brain inject on browser-only AIs. No store approval needed." },
+  { command: "mneme.permeate.bookmarklet", since: "1.74.0", group: "permeate", what: "Single-line javascript: URI — drag to bookmark bar; click to inject on any AI chat page.", when: "User can't install Tampermonkey (corporate / phone)." },
+  { command: "mneme.permeate.integrations", since: "1.74.0", group: "permeate", what: "Report supported AI tools (15+ catalog: native-MCP / parasite-bridge / browser-only / partial).", when: "User asks 'does Mneme work with X?' or 'which editor AIs are auto-wired?'." },
+  { command: "mneme.permeate.transport", since: "1.74.0", group: "permeate", what: "Recommend best cross-machine transport (clipboard / Gist / Wanderer .mwt / QR) — ranked by friction.", when: "User asks 'how do I move brain to my Mac / phone / second computer?'." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -162,7 +180,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;
