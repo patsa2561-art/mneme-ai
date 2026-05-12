@@ -338,6 +338,12 @@ export * as tribunal from "./tribunal/tribunal.js";
 // propagation for any AI agent that connects to Mneme).
 export * as innerlife from "./innerlife/innerlife.js";
 export * as aiTeacher from "./innerlife/ai_teacher.js";
+// v1.64 -- COGNITIVE 7. Theory of Mind + Tree-of-Thought + Curiosity +
+// Memory Consolidation + Counterfactual + Internal Debate + Decision
+// Atom (fusion of all 6 prior cognitive layers into a single verdict).
+// All seven are pure-read by default; opt-in persistence under
+// .mneme/cognitive/.
+export * as cognitive from "./cognitive/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
