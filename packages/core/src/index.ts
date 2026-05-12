@@ -444,6 +444,10 @@ export * as conduit from "./conduit/index.js";
 //   qr_anchor         -- SVG QR for any URL / code / short payload
 //   token_compression -- deterministic codebook saves 30-50% tokens
 export * as synapse from "./synapse/index.js";
+// v1.82 -- OSMOSIS: 24/7 second-brain expansion. Harvests observations
+// from every AI agent (with consent), distills into a hash-chained
+// wisdom ledger. No training, no cloud, no API key.
+export * as osmosis from "./osmosis/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

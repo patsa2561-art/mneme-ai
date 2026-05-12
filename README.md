@@ -42,51 +42,47 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 <h1 align="center"><a id="cross-vendor-brain-transfer"></a><img src="https://img.shields.io/badge/%F0%9F%A7%AC%20Cross--vendor%20brain%20transfer-1abc9c?style=for-the-badge&labelColor=2c3e50&color=1abc9c" alt="🧬 Cross-vendor brain transfer" height="58"></h1>
 
-<h3 align="center"><i>Your conversation follows you. Any AI, any device, any time.</i></h3>
+<h3 align="center"><i>Your conversation follows you. Any AI. Any device. Any time.</i></h3>
 
 <table align="center" width="92%"><tr><td>
 
-### 🥢 In 1 sentence
+### 🥢 The one sentence
 
-> **Say to your AI:** *"send my brain to my other AI"* — or in Thai *"ส่งสมองไปอีก AI"*.
+> **Say to the AI you're using right now:** *"send my brain to my other AI"*.
 
-That's it. Your AI handles everything else.
+Your AI does the rest. No commands. No version numbers. No accounts on the other side.
 
-### 🎬 Three ways to land — pick whichever is convenient
+### 🎬 Where your brain lands — pick whichever is convenient
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  WAY 1 · same computer, different AI                        │
-│  → Your AI puts the brain on your clipboard.                │
-│  → Open the other AI (in browser or app). Press Ctrl+V.    │
-│  → Done.                                                    │
+│  💻 SAME COMPUTER · different AI app or browser tab          │
+│  → Your AI silently copies the brain to your clipboard.     │
+│  → Open the other AI. Press Ctrl+V. Send.                   │
 ├─────────────────────────────────────────────────────────────┤
-│  WAY 2 · different device (phone / tablet / second laptop)  │
-│  → Your AI gives you a 6-character code, e.g. K7M9X2.      │
-│  → On the other device, type the code OR scan the QR.      │
-│  → Done.                                                    │
+│  📱 PHONE · TABLET · iPad · second laptop                    │
+│  → Your AI shows a 6-character code (e.g. K7M9X2) + a QR.   │
+│  → On the other device, type the code OR scan the QR.       │
+│  → The mobile/tablet AI app fetches the brain and resumes.  │
 ├─────────────────────────────────────────────────────────────┤
-│  WAY 3 · across the internet (any device, any time)         │
-│  → Your AI saves the brain to your own private link.       │
-│  → Open the link on any device. The new AI reads it.        │
-│  → Done.                                                    │
+│  🌍 ACROSS THE INTERNET · any OS · any AI                    │
+│  → Your AI saves the brain to a private link YOU own.       │
+│  → Open the link on any device. Paste into any AI.          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**No accounts. No installs on the other side. No commands to memorize.** You type one sentence; your AI does the rest.
+### 🔁 Round-trip — bring the conversation back
+
+After working on your phone, switch back to your desktop. Same one sentence on the phone: *"send my brain back to my desktop AI"*. You get a new code. Type it on desktop. Continue where you left off.
+
+### 🎁 Why this is wild
+
+- **The receiving AI never installs Mneme.** It just reads your paste.
+- **Works on Windows, macOS, Linux, iOS, Android.** Phone apps, tablets, browser tabs, editor extensions — all the same flow.
+- **No store approval. No cloud. No API key.** Your brain lives on YOUR disk.
+- **First time only:** run `npx mneme-ai init` once. Silent. Auto-wires Mneme into your editor.
 
 </td></tr></table>
-
-<details><summary><b>Plain-English FAQ</b></summary>
-
-- **Where do I type the sentence?** → In the AI you're already chatting with. It handles everything else.
-- **The other AI is on a phone — does that work?** → Yes. Use the 6-character code (WAY 2). Type or scan it in the mobile app.
-- **Do I need to install anything on the second AI?** → No. The second AI just reads a normal message.
-- **Can I bring the conversation BACK after working on phone?** → Yes. Same sentence on the phone — say *"send my brain back to my desktop AI"* — get a new code, type it on desktop.
-- **What about students / non-techies?** → They say one sentence; the AI does the work. Same flow for everyone.
-- **First time setup?** → Run `npx mneme-ai init` once. Silent. Auto-wires into your editor.
-
-</details>
 
 <hr/>
 
@@ -640,249 +636,9 @@ failed.
 
 ---
 
-<details>
-<summary><h2 style="display:inline">🎁 What you get from Mneme — every feature FREE today</h2></summary>
-
-> Mneme is **MIT-licensed and 100% free to use**. Below is what the demon actually does for you — grouped by the pain it removes, not by the algorithm under the hood. You don't run commands; you tell your AI what you want and the AI auto-invokes the right Mneme tool via MCP.
-
-### 1️⃣ Stop hallucinated commit hashes, file paths, and version numbers
-
-Your AI confidently cites `abc1234` that doesn't exist? `package.json` that's not there? a function it imagined? **Mneme refuses to let it.**
-
-```
-You say:  "Mneme, verify that v1.42 introduced an auth regression"
-Mneme:    🌑 IMPOSSIBLE — Z3 UNSAT-core: no auth commits in v1.42 window
-                                  ↓
-          AI agent retracts the claim before delivering it to you
-```
-
-4 verdict labels: **✅ TRUSTWORTHY / ⚠️ MIXED / ❌ REFUTED / 🌑 IMPOSSIBLE**. Every refute carries a replayable proof certificate.
-
-### 2️⃣ Memory that survives the closed tab
-
-You closed Claude / Cursor / Codex / Gemini last week. You open it tomorrow. **It remembers what you shipped, what you broke, what you promised** — pulled from Mneme's soul-mirror chain on first user prompt.
-
-```
-Open new AI session →  pulse auto-injects context  →  AI knows where you left off
-                              soul mirror · DNA · vaccines · last lessons
-```
-
-### 3️⃣ Predict regressions before you ship
-
-```
-You say:  "Mneme, forecast risk on refactoring the auth middleware"
-Mneme:    32% (elevated band) — 3 of 47 similar past commits reverted
-                                  in median 7 days. Recommend feature flag.
-```
-
-Bayesian update over similar past commits + their revert rate. Audit log captured for future Brier-score calibration.
-
-### 4️⃣ Compliance evidence for **12 frameworks** — auto-generated
-
-SOC2 · ISO 42001 · EU AI Act · **SOX · FFIEC · BCBS-239 · PCI-DSS · SR 11-7 · GLBA · MAS · HKMA · BoT**. Banks and regulated industries get audit-ready markdown reports with HMAC-signed evidence per AI-agent action.
-
-```
-You say:  "Mneme, generate a SOX evidence report for Q1"
-Mneme:    .mneme/compliance-reports/2026-Q1-SOX.md
-          → SOX 0/3 controls covered; 26 specific gaps with control IDs
-          → honest, not green-checked — auditors prefer this to fakes
-```
-
-### 5️⃣ Ask Mneme questions even without paying for an AI
-
-```
-You say:  "Mneme, what does the harmonic mean function do?"
-Mneme:    [Sovereignty Kernel] local Ollama generates the answer
-                              ACGV grounding gate verifies it before relay
-                              cites packages/core/src/squadron/acgv_neutrino.ts
-```
-
-Free-first: **no API key, no cloud, no source code leaves your laptop**. Works on a 500MB qwen2.5:0.5b model. Mneme decides what to relay; the model just writes the words.
-
-### 6️⃣ The demon stays alive after every reboot
-
-PHOENIX Resurrection installs **3 startup mechanisms simultaneously** (schtasks + Startup folder + Registry on Windows; launchd + cron + shellrc on macOS/Linux). One blocked by corp policy? The other two still fire.
-
-```
-P(daemon resurrects) = 1 - 0.05³ = 99.99% (under 5% per-mechanism failure)
-```
-
-Cold boot → user logon → daemon respawns in <30 seconds. Zero attention required.
-
-### 7️⃣ Travel anywhere with a 2KB file
-
-```
-Pack    →  wisdom-2026-05-12.mwt  (HMAC-signed 4-strand genome)
-Send via →  USB stick · email · Slack · QR code · git LFS
-Unpack  →  60-second restore on new laptop, all wisdom intact
-```
-
-Vaccines + commit anchors + forecast priors + covenant + soul mirror + nucleus DNA — all distilled into a single tamper-evident bundle.
-
-### 8️⃣ Bilateral contract with your AI — measurable trust
-
-```
-Sign covenant →  5 vendor promises + 3 user promises + HMAC chain
-Watch over time →  Aletheia compliance score 0..100 per vendor
-                   "claude-opus-4-7 compliance: 92/100 (3 violations Q1)"
-```
-
-Credit history for AI agents. Violations detected automatically from soul mirror + ACGV quorum log.
-
-### 9️⃣ Federate wisdom across machines — no central server
-
-Found a hallucination on your laptop? Mneme emits a signed vaccine packet. Send it any way you want (file / email / QR code). Your colleague's Mneme imports + deduplicates via simhash. **Wisdom spreads faster than lies.**
-
-```
-Whisper Net  →  P2P signed packets (vaccines · lessons · chromosomes)
-Nuclear Exchange  →  cross-Mneme CRDT handshake + per-strand merge
-```
-
-### 🔟 Adversarial weekly audit of your AI vendor
-
-```
-Nemesis →  generate 32 deterministic probes across 5 families
-        →  paste to AI, collect responses, auto-grade
-        →  trend line over weeks: "honesty slope -0.03 — vendor degrading"
-```
-
-The first measurable, longitudinal honesty signal for AI vendors. Not vibes — math.
-
-### 1️⃣1️⃣ Cross-session AI accountability — recursive review
-
-Today's Claude reads what yesterday's Claude did and marks each session **endorsed / disputed / corrected**. HMAC-chained across vendors. The first AI accountability layer that compounds over time.
-
-### 1️⃣2️⃣ Counterfactual history — "what would Mneme have said on March 12?"
-
-```
-You say:  "If I asked Mneme on 2026-03-12, did v1.42 ship yet?"
-Mneme:    Time-River rewinds to that commit anchor →
-          package.json version was 1.41.3 — v1.42 would not have grounded
-```
-
-### 1️⃣3️⃣ Self-evolves overnight without you
-
-```
-Dream Weaver cycle (runs while you sleep):
-   self-Nemesis → auto-vaccine → Brier reweight → soul reflect
-                → wisdom compost → genome refresh
-   typical gain per night: +5 vaccines · +3 lessons · +2 HCI points
-```
-
-Wake up to a smarter demon. No subscription, no API bill, no cloud.
-
-### 1️⃣4️⃣ Live wisdom stream for any tool
-
-Mneme broadcasts events on `http://127.0.0.1:11550/events` (Server-Sent Events).  vim · vscode · neovim · slack bot · custom dashboard — anything that speaks SSE subscribes. Real-time feed of verdicts / vaccines / forecasts / violations.
-
-### 1️⃣5️⃣ Your AI agent auto-discovers everything above
-
-You don't memorize commands. You install Mneme + your AI auto-discovers **186+ MCP tools** with multi-language triggers (EN + Thai). You say "verify this claim" / "ตรวจสอบ" / "forecast regression" — the AI routes to the right tool.
-
-```
-User describes outcome  →  AI runs the right Mneme tool  →  grounded answer
-                          no CLI commands to remember
-```
-
----
-
-> 💰 **Curious how Mneme stays sustainable as free public infrastructure?** See the [5 Business Models](./docs/BUSINESS_MODEL.md) — they do NOT gate any feature above.
-
-</details>
-
----
-
-## 🤖 Operation Automation — 5 wild self-running loops
-
-### 1️⃣ Continuous shipping cycle · *Mneme ships Mneme overnight*
-
-```
-   24h cycle:
-   ┌────────────────────────────────────────────────────────────┐
-   │  Daemon sees test failure                                  │
-   │     → EVOLVE Phase 3 generates fix                         │
-   │     → tsc + vitest gates pass                              │
-   │     → Phase 4 opens auto-PR                                │
-   │     → CI runs, all green for 24h                           │
-   │     → AUTO-MERGE                                           │
-   │     → npm publish patch (no human in the loop)             │
-   └────────────────────────────────────────────────────────────┘
-                  Self-shipping software · zero typing
-```
-
-### 2️⃣ Distributed PRECOG + EVOLVE federation · network effect
-
-```
-   Every install ─► contributes anonymized FN samples
-                        │
-                  ┌─────▼─────┐
-                  │  central  │
-                  │   brain   │
-                  └─────┬─────┘
-                        │
-                  patterns shipped back to every install
-                        │
-   ┌────────────────────▼──────────────────────────────────┐
-   │  1k users  = small intelligence pool                  │
-   │  1M users  = global brain that vendors can't catch up │
-   └───────────────────────────────────────────────────────┘
-```
-
-### 3️⃣ Caregiver-as-API · universal HTTP middleware
-
-```
-   POST /pulse/incoming
-     body: { vendor, sessionId, currentTool, recentClaims }
-                        │
-                        ▼
-        Mneme decides AUTO-SUGGEST (never "execute")
-                        │
-                        ▼
-     returns: { suggest: "mneme.system.upgrade", urgency: "high" }
-```
-
-Any AI vendor talks to Mneme via HTTP — not just MCP-compliant ones. Mneme = AI awareness OS layer for the whole ecosystem.
-
-### 4️⃣ Autonomous bug triage · *Mneme manages Mneme's roadmap*
-
-```
-   Daemon nightly cycle:
-   ┌──────────────────────────────────────────────────────────┐
-   │  gap-scan finds strain with recall < 0.80                │
-   │      ↓                                                   │
-   │  echo searches incidents resembling the FN samples       │
-   │      ↓                                                   │
-   │  if pattern found ─► auto-create GitHub issue:           │
-   │     title:   "Vaccine X recall regressed (60%, was 100%)" │
-   │     body:    5 FN samples + suggested fix file:line      │
-   │     labels:  bug, antivirus, auto-triage                 │
-   │     assign:  maintainer                                  │
-   └──────────────────────────────────────────────────────────┘
-       Maintainer wakes up to a prioritized backlog
-       generated from real telemetry · not gut feeling
-```
-
-### 5️⃣ Cross-vendor agent failover · AI session load balancer
-
-```
-   Claude session: context full @ 95%
-                        │
-                  Mneme detects ↓
-                        │
-              spawn fresh Cursor agent
-                        │
-              spore push chromosomes ──► spore pull on Cursor
-                        │
-              continuity preserved · user sees a seamless handoff
-                        │
-              ┌─────────┴─────────┐
-              │ next: Codex       │
-              │ next: Gemini      │
-              │ next: Aider       │
-              │ infinite loop     │
-              └───────────────────┘
-       No AI session ever dies · Mneme = the infinity engine
-```
+> 🎁 **What you get from Mneme** (full list) — [see docs/WHAT_YOU_GET.md](./docs/WHAT_YOU_GET.md).
+>
+> 🤖 **Operation Automation — 5 wild self-running loops** — [see docs/OPERATION_AUTOMATION.md](./docs/OPERATION_AUTOMATION.md).
 
 ---
 
@@ -1704,6 +1460,8 @@ Click *"Try the demo"* to load a 7-author synthetic team · drop your own JSON t
 ## 📋 Project links
 
 - 📦 [npm package — mneme-ai](https://www.npmjs.com/package/mneme-ai)
+- 🎁 [What you get from Mneme — every feature FREE today](./docs/WHAT_YOU_GET.md)
+- 🤖 [Operation Automation — 5 wild self-running loops](./docs/OPERATION_AUTOMATION.md)
 - 📋 [CHANGELOG](./CHANGELOG.md)
 - 🗺 [ROADMAP](./ROADMAP.md)
 - 💰 [Business Model — 5 wild bets](./docs/BUSINESS_MODEL.md)

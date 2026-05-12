@@ -44,7 +44,15 @@ export function readSporeRemote(repoRoot: string): SporeRemote | null {
   const path = sporeRemotePath(repoRoot);
   if (!existsSync(path)) return null;
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as SporeRemote;
+    let raw = readFileSync(path, "utf8");
+    // v1.82 Bug #3 fix: strip UTF-8 BOM that Windows tools (Notepad,
+    // PowerShell `Out-File`, git core.autocrlf) sometimes prepend.
+    // Without this, JSON.parse threw silently and status reported
+    // "not configured" even though remote.json was on disk.
+    if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+    raw = raw.trim();
+    if (!raw) return null;
+    return JSON.parse(raw) as SporeRemote;
   } catch {
     return null;
   }
@@ -229,14 +237,23 @@ export function sporePush(repoRoot: string, machineId: string): PushResult {
   // Best-effort: try `git ls-remote` to verify the remote is reachable.
   // If unreachable or git unavailable, fall back to dry-run (local
   // snapshot updated, marked for later push).
+  //
+  // v1.82 Bug #1 fix: `git ls-remote --exit-code <url>` returns:
+  //   exit 0  -- refs found, remote reachable
+  //   exit 2  -- NO REFS FOUND but remote IS reachable (fresh bare repo)
+  //   other   -- truly unreachable (network / auth / wrong URL)
+  // Previously we treated exit 2 as unreachable, which broke push to a
+  // fresh bare repo on Windows. Now we accept exit 2 as "reachable but
+  // empty" and proceed with the push.
   const ls = spawnSync("git", ["ls-remote", "--exit-code", remote.url], {
     cwd: repoRoot,
     encoding: "utf8",
     timeout: 10_000,
   });
-  if (ls.status !== 0) {
+  const reachable = ls.status === 0 || ls.status === 2;
+  if (!reachable) {
     writeLastSync(repoRoot, { ...readLastSync(repoRoot), pushedAt: new Date().toISOString(), lastPushClock: clock });
-    return { ok: false, pushedFiles: count, message: `remote unreachable: ${(ls.stderr ?? "").trim().slice(0, 200)}`, dryRun: true };
+    return { ok: false, pushedFiles: count, message: `remote unreachable (ls-remote exit ${ls.status ?? "?"}): ${(ls.stderr ?? "").trim().slice(0, 200)}`, dryRun: true };
   }
 
   // Real push: shell out to git via worktree-orphan strategy. Implementation

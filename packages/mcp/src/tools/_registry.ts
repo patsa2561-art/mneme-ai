@@ -45,6 +45,7 @@ import { LATTICE_TOOLS } from "./_lattice_tools.js";
 import { NEURON_TOOLS } from "./_neuron_tools.js";
 import { CONDUIT_TOOLS } from "./_conduit_tools.js";
 import { SYNAPSE_TOOLS } from "./_synapse_tools.js";
+import { OSMOSIS_TOOLS } from "./_osmosis_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -94,6 +95,7 @@ export function buildAllTools(): MnemeTool[] {
     ...NEURON_TOOLS,
     ...CONDUIT_TOOLS,
     ...SYNAPSE_TOOLS,
+    ...OSMOSIS_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

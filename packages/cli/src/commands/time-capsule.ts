@@ -24,7 +24,7 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, basename } from "node:path";
 import { execSync, spawnSync } from "node:child_process";
 import kleur from "kleur";
 import { ui } from "../ui.js";
@@ -186,8 +186,15 @@ async function exportCapsule(opts: TimeCapsuleOptions): Promise<number> {
     );
     return 1;
   }
-  const tarRes = spawnSync("tar", ["-czf", outPath, "-C", stageDir, "."], {
-    cwd: meta.rootPath,
+  // v1.82 Bug #2 fix: bsdtar (Windows 10+) parses `-f C:\path` as
+  // `host:path` (treats C: as an SSH hostname). Fix by running tar in
+  // dirname(outPath) with cwd, and passing only the basename to -f.
+  // This sidesteps colon-host parsing entirely.
+  const absOut = resolve(outPath);
+  const outDirAbs = dirname(absOut);
+  const outFile = basename(absOut);
+  const tarRes = spawnSync("tar", ["-czf", outFile, "-C", stageDir, "."], {
+    cwd: outDirAbs,
     stdio: "pipe",
   });
   if (tarRes.status !== 0) {
@@ -228,7 +235,15 @@ async function importCapsule(opts: TimeCapsuleOptions): Promise<number> {
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
-  const tarRes = spawnSync("tar", ["-xzf", inPath, "-C", outDir], { stdio: "pipe" });
+  // v1.82 Bug #2 fix (extract side): same colon-as-host issue.
+  // cwd into dirname(inPath), pass basename(inPath) to -f.
+  const absIn = resolve(inPath);
+  const inDirAbs = dirname(absIn);
+  const inFile = basename(absIn);
+  const tarRes = spawnSync("tar", ["-xzf", inFile, "-C", resolve(outDir)], {
+    cwd: inDirAbs,
+    stdio: "pipe",
+  });
   if (tarRes.status !== 0) {
     ui.error(`tar extract failed: ${tarRes.stderr?.toString() ?? "unknown"}`);
     return 1;

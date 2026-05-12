@@ -1,3 +1,46 @@
+## v1.82.0 — 2026-05-13 — OSMOSIS + 3 Windows bug fixes + README split
+
+**Headline:** User shipped a precise bug bench (spore exit-2, time-capsule colon-host, spore status BOM-blind) plus asked for OSMOSIS — 24/7 second-brain expansion harvesting wisdom from every AI agent. All four delivered with tests.
+
+### 🐛 3 real bug fixes (Windows-precision)
+
+| # | Bug | Root cause | Fix |
+|---|---|---|---|
+| 1 🔴 | `spore push` reported *"remote unreachable"* for fresh bare repos | `git ls-remote --exit-code` returns **2** for an empty-but-reachable remote; spore treated any non-zero exit as unreachable | Accept exit 0 OR exit 2 as `reachable`; only other exits trigger dry-run |
+| 2 🟡 | `time-capsule --export` failed because bsdtar interpreted `C:\path` as `host:path` | bsdtar (Win10+) parses `-f` arg for colon-host syntax | Run tar with `cwd: dirname(absPath)` + pass `basename(absPath)` to `-f`; same for `-xzf` extract |
+| 3 🟡 | `mneme spore status` said *"not configured"* even when `remote.json` existed | UTF-8 BOM (added by Windows Notepad / PowerShell Out-File / git core.autocrlf) made `JSON.parse` throw silently | Strip BOM (0xFEFF) + trim before parse in `readSporeRemote` |
+
+### 🧬 OSMOSIS — 24/7 second-brain expansion
+
+The wild premise: every AI agent the user works with leaks reusable knowledge (verdicts, decisions, refusals, reasoning). OSMOSIS captures it (with consent), distills into wisdom shards, hash-chains them.
+
+- **`harvest(obs)`** — record one observation; gated by per-vendor consent + duplicate-hash check.
+- **`distill(observations, rule?)`** — compress N observations into a signed wisdom shard. SHA-256 hash chain links each shard to its predecessor → tamper-evident.
+- **`verifyChain()`** — audit the full log; returns `{valid, brokenAtIndex}`.
+- **`setConsent(vendor, enabled)`** — opt-in per vendor. Default is OPT-OUT for everything. Nothing leaves the user's machine.
+- **`todayShardCount()`** — daily-cap guard (default 100/day).
+
+**4 new MCP tools**: `mneme.osmosis.consent` / `.harvest` / `.distill` / `.verify`.
+
+### 📖 README split + cross-vendor v4 (user-requested simplification)
+
+- "What you get from Mneme — every feature FREE today" → moved to [`docs/WHAT_YOU_GET.md`](./docs/WHAT_YOU_GET.md)
+- "Operation Automation — 5 wild self-running loops" → moved to [`docs/OPERATION_AUTOMATION.md`](./docs/OPERATION_AUTOMATION.md)
+- Project links section now lists both
+- Cross-vendor brain transfer section rewritten English-only, no FAQ collapsible, explicit phone/tablet/iPad coverage, ASCII diagram with three landing surfaces + round-trip path
+
+### Live results
+- **7610/7610 tests pass** (+48 from v1.81). 377 test files.
+- **12 OSMOSIS tests** covering consent gates, duplicate rejection, hash-chain integrity, tamper detection, daily-cap counting.
+- README dropped from 116k → 105k bytes; docs/ gained 11k.
+
+### Mneme mandates applied
+1. **Wild idea** — OSMOSIS treats every AI agent the user touches as a free, opt-in knowledge faucet. Wisdom shards are hash-chained so the ledger is tamper-evident. No cloud, no API call, no training.
+2. **Wiser, not patched** — `readSporeRemote` had been silently swallowing parse errors for 20+ versions. The BOM root cause was hidden by `catch { return null }`. Now BOM-strip is explicit + future encoding quirks won't reintroduce the bug.
+3. **Self-fix root cause** — bsdtar's colon-host parsing isn't unique to time-capsule; any future Mneme tar invocation now follows the cwd-into-dirname pattern. Bug class eliminated.
+4. **Co-working not conflicting** — OSMOSIS is additive (new `.mneme/osmosis/` subdir, never touches existing storage). Consent is OPT-OUT by default → zero behaviour change for existing users.
+5. **Always-studying** — the entire OSMOSIS premise IS "always-studying": Mneme keeps learning while the user sleeps, every AI session is a potential teacher, the wisdom ledger grows forever (capped only by user's daily limit).
+
 ## v1.81.0 — 2026-05-13 — SYNAPSE PROTOCOL (universal cross-device brain sync) + 3 bug fixes + plain-English README
 
 **Headline:** User asked the deepest universal question yet — *"how do I clone my Mneme brain across PC ↔ phone ↔ tablet, talk to it in any AI app, and bring the conversation BACK?"* — plus three real bug findings (heartbeat undefined fingerprint, summarizeHomunculusReturn(null) crash, silenceJargon "the the tool" doubled words). v1.81 ships all three plus SYNAPSE: the protocol that makes Mneme's brain follow the user across every device with **6-character codes**, **QR scan**, and **30-50% token compression**.

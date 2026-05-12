@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -195,6 +195,12 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.synapse.qr", since: "1.81.0", group: "synapse", what: "Render any short payload (code / URL) as SVG QR for camera scan.", when: "User would rather scan than type a code." },
   { command: "mneme.synapse.compress", since: "1.81.0", group: "synapse", what: "Compress text via deterministic codebook substitution (30-50% token savings).", when: "Before pasting into a tight-context-window mobile AI app." },
   { command: "mneme.synapse.decompress", since: "1.81.0", group: "synapse", what: "Expand SYNAPSE-compressed text back to readable form.", when: "Destination AI receives a compressed prompt; expand before reading." },
+
+  // ─── v1.82 OSMOSIS (24/7 second-brain expansion) ──────────────────────
+  { command: "mneme.osmosis.consent", since: "1.82.0", group: "osmosis", what: "Grant/revoke harvesting consent per vendor. Default is OPT-OUT.", when: "User says 'let Mneme learn from my <vendor> sessions' OR 'stop harvesting from <vendor>'." },
+  { command: "mneme.osmosis.harvest", since: "1.82.0", group: "osmosis", what: "Record one AI observation (reply/tool-call/refusal/verdict/decision); duplicate-protected.", when: "After significant AI turns the user wants captured for long-term wisdom." },
+  { command: "mneme.osmosis.distill", since: "1.82.0", group: "osmosis", what: "Distill recent observations into a signed wisdom shard (hash-chained, tamper-evident).", when: "Nightly via daemon; or manual snapshot." },
+  { command: "mneme.osmosis.verify", since: "1.82.0", group: "osmosis", what: "Verify wisdom hash-chain; detect tampering.", when: "Periodic audit; suspected external modification." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -219,7 +225,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;
