@@ -372,6 +372,16 @@ export * as autarchy from "./autarchy/index.js";
 // caretaker auto-syncs CLAUDE.md / AGENTS.md / .cursor/rules so the
 // AI agent in the user's editor learns about new MCP tools instantly.
 export * as agentAnnounce from "./agent_announce.js";
+// v1.69 -- HYPERSCAN PROTOCOL. Four wild axes that close the prose-scan
+// gap + Q&A trust gap + HTC coverage gap, plus a shape-shifting
+// molecule (textForm / vectorForm / structuralForm / temporalForm)
+// queryable via 5 mixed retrieval algorithms (cosine / jaccard /
+// structural / temporal / hybrid). Every axis is measurable.
+//   H1 prose shadow scan   entity extraction from prose claims
+//   H2 cross-citation      every named entity needs codebase evidence
+//   H3 cross-source Q&A    fuse retrieval across 5 source kinds
+//   H4 nucleus dust HTC    auto-populate coverage 0% -> >=80%
+export * as hyperscan from "./hyperscan/index.js";
 // v1.68 -- ASCENSION PROTOCOL. Six wild moves that push 3 existing
 // metrics toward 100% + close 3 root-cause residuals:
 //   ASC-1 circadian heartbeat       per-hour-of-week baseline

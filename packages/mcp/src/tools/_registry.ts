@@ -32,6 +32,7 @@ import { TUNE_TOOLS } from "./_tune_tools.js";
 import { AUTARCHY_TOOLS } from "./_autarchy_tools.js";
 import { AEGIS_TOOLS } from "./_aegis_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
+import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -68,6 +69,7 @@ export function buildAllTools(): MnemeTool[] {
     ...AUTARCHY_TOOLS,
     ...AEGIS_TOOLS,
     ...ASCENSION_TOOLS,
+    ...HYPERSCAN_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
