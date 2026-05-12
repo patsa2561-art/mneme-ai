@@ -413,6 +413,11 @@ export * as permeate from "./permeate/index.js";
 // "what version is Mneme on this machine? Is there a newer one?"
 // without running any command.
 export * as telepathy from "./telepathy/index.js";
+// v1.76 -- ABYSS PROTOCOL: final-boss minions.
+//   SCYTHE     -- capsule TTL + auto-prune (closes the disk-bloat hole)
+//   REVENANT   -- soul prompt archive + replay + mark-as-used
+//   HOMUNCULUS -- receiver-write-back contract for bidirectional brain sync
+export * as abyss from "./abyss/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

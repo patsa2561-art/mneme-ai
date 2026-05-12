@@ -15,8 +15,17 @@ export interface BookmarkletOptions {
 }
 
 export interface BookmarkletArtifact {
-  /** The javascript: URI to put in bookmark's URL field. */
+  /** The full javascript: URI to put in bookmark's URL field. Guaranteed
+   *  to start with `javascript:` -- the function asserts the prefix
+   *  before returning. */
   uri: string;
+  /** The URI scheme prefix, separated from the encoded body. Always
+   *  `"javascript:"`. Exposed so AI consumers can do explicit prefix
+   *  checks without parsing the URI. Bug #2 (v1.74). */
+  protocol: "javascript:";
+  /** The URL-encoded body (everything AFTER `javascript:`). Reconstruct
+   *  `uri` as `protocol + body` if needed. */
+  body: string;
   /** Suggested bookmark name. */
   name: string;
   /** Setup instructions. */
@@ -49,14 +58,29 @@ const SCRIPT = `
 })();
 `.replace(/\s+/g, " ").trim();
 
+const PROTOCOL = "javascript:" as const;
+// v1.76 perf -- pre-encode the script ONCE at module load; same payload
+// every time generateBookmarklet is called, so reuse the encoded body.
+const ENCODED_BODY = encodeURIComponent(SCRIPT);
+const FULL_URI = PROTOCOL + ENCODED_BODY;
+
 export function generateBookmarklet(opts: BookmarkletOptions = {}): BookmarkletArtifact {
   const max = opts.maxChars ?? 2000;
-  const uri = "javascript:" + encodeURIComponent(SCRIPT);
+  const uri = FULL_URI;
+  const body = ENCODED_BODY;
+  // Defensive assertion -- Bug #2 (v1.74): if anyone ever breaks the
+  // prefix this throws immediately rather than silently returning a
+  // non-functional bookmarklet.
+  if (!uri.startsWith(PROTOCOL)) {
+    throw new Error(`bookmarklet generator broken: URI does not start with ${PROTOCOL}`);
+  }
   const warning = uri.length > max
     ? `URI is ${uri.length} chars -- some browsers cap at ${max}. Use the userscript (P1) instead if this bookmarklet doesn't work.`
     : null;
   return {
     uri,
+    protocol: PROTOCOL,
+    body,
     name: "💉 Mneme Soul",
     instructions: [
       "1. Open your browser's bookmark manager.",

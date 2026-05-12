@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -160,6 +160,13 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // ─── v1.75 VERSION TELEPATHY (cross-vendor version sync) ────────────
   { command: "mneme.telepathy.heartbeat", since: "1.75.0", group: "telepathy", what: "Generate live Mneme heartbeat (local version + npm-latest + sync status + daemon + vaccines + inbox). Soul prompt embeds this automatically; receiving AI reads it like a normal section.", when: "User asks 'what version is Mneme?' / 'is Mneme up to date?' / 'are you on the latest?'. Also embed before any cross-vendor handoff." },
   { command: "mneme.telepathy.compare", since: "1.75.0", group: "telepathy", what: "Parse a heartbeat from any pasted text and compare it to the current local heartbeat. Spots cross-machine version mismatches.", when: "User pastes a soul prompt and asks 'is the other side on the same version?'." },
+
+  // ─── v1.76 ABYSS PROTOCOL (final-boss minions) ──────────────────────
+  { command: "mneme.abyss.scythe.prune", since: "1.76.0", group: "abyss", what: "SCYTHE -- prune `.mneme/capsules/` according to TTL (30d default) + max-count cap (200 default). Audit log at `.mneme/abyss/scythe.jsonl`.", when: "Nightly via daemon; manual when capsule dir bloats." },
+  { command: "mneme.abyss.revenant.archive", since: "1.76.0", group: "abyss", what: "REVENANT -- archive a soul prompt for later replay (git-reflog for cross-vendor handovers).", when: "Automatic on soul-prompt generation; manual when user says 'save this brain'." },
+  { command: "mneme.abyss.revenant.list", since: "1.76.0", group: "abyss", what: "REVENANT -- list archived souls (newest first), filterable by vendor / used / unused.", when: "User asks 'show past handovers' / 'soul history'." },
+  { command: "mneme.abyss.homunculus.request", since: "1.76.0", group: "abyss", what: "HOMUNCULUS -- render a write-back contract that asks the receiving AI to RETURN decisions+reasoning back at session end.", when: "Embed in outgoing soul prompts for bidirectional brain sync." },
+  { command: "mneme.abyss.homunculus.ingest", since: "1.76.0", group: "abyss", what: "HOMUNCULUS -- parse a pasted `# HOMUNCULUS RETURN` block from a foreign AI and surface its decisions/reasoning/vaccines.", when: "User pastes a return block from ChatGPT/Gemini back into the editor AI." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -184,7 +191,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

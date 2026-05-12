@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 
 import { generateUserscript } from "./userscript_generator.js";
 import { generateBookmarklet } from "./bookmarklet_generator.js";
-import { EDITOR_INTEGRATIONS, reportIntegrations, filterIntegrations } from "./editor_integration_map.js";
+import { EDITOR_INTEGRATIONS, reportIntegrations, filterIntegrations, _resetIntegrationReportCache } from "./editor_integration_map.js";
 import { TRANSPORT_OPTIONS, recommendTransport } from "./transport_menu.js";
 
 // ─── P1 USERSCRIPT GENERATOR ─────────────────────────────────────────
@@ -158,10 +158,78 @@ describe("v1.74 Permeate P4 · Transport Menu", () => {
     expect(r.recommended).toBe("wanderer-mwt");
   });
 
-  it("rankedOptions sorted by friction ascending", () => {
-    const r = recommendTransport();
-    for (let i = 1; i < r.rankedOptions.length; i++) {
-      expect(r.rankedOptions[i - 1]!.friction <= r.rankedOptions[i]!.friction).toBe(true);
+  it("v1.76 Bug #3 fix -- rankedOptions sorted by score descending (best fallback first)", () => {
+    const r = recommendTransport({ hasGithubAccount: true });
+    expect(r.scored.length).toBe(4);
+    for (let i = 1; i < r.scored.length; i++) {
+      expect(r.scored[i - 1]!.score >= r.scored[i]!.score).toBe(true);
     }
+    // The recommended is always the head of the ranked list.
+    expect(r.rankedOptions[0]!.method).toBe(r.recommended);
+  });
+
+  it("v1.76 Bug #3 fix -- different scenarios produce DIFFERENT rankings (not all clipboard)", () => {
+    const defaultRec = recommendTransport().recommended;
+    const githubRec = recommendTransport({ hasGithubAccount: true }).recommended;
+    const phoneRec = recommendTransport({ laptopToPhone: true }).recommended;
+    const offlineRec = recommendTransport({ preferOffline: true }).recommended;
+    const recs = new Set([defaultRec, githubRec, phoneRec, offlineRec]);
+    // At least 3 distinct recommendations across the 4 scenarios.
+    expect(recs.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it("v1.76 Bug #3 fix -- every option has reasons explaining its score", () => {
+    const r = recommendTransport({ hasGithubAccount: true });
+    for (const s of r.scored) {
+      expect(s.reasons.length).toBeGreaterThanOrEqual(2);
+      expect(s.score).toBeGreaterThanOrEqual(0);
+      expect(s.score).toBeLessThanOrEqual(100);
+    }
+  });
+});
+
+// ─── v1.76 ABYSS · Bug-fix coverage ──────────────────────────────────
+
+describe("v1.76 ABYSS · Bug #1 fix -- IntegrationReport stringification", () => {
+  it("report.toString() returns the headline, NOT '[object Object]'", () => {
+    _resetIntegrationReportCache();
+    const r = reportIntegrations();
+    expect(String(r)).not.toContain("[object Object]");
+    expect(String(r)).toBe(r.headline);
+  });
+
+  it("report.text is a non-empty multi-line markdown summary", () => {
+    _resetIntegrationReportCache();
+    const r = reportIntegrations();
+    expect(r.text.length).toBeGreaterThan(100);
+    expect(r.text).toContain("# Mneme integration report");
+    expect(r.text).toContain("## Tools");
+    expect(r.text.split("\n").length).toBeGreaterThan(10);
+  });
+
+  it("repeated calls hit the cache (same reference returned)", () => {
+    _resetIntegrationReportCache();
+    const a = reportIntegrations();
+    const b = reportIntegrations();
+    expect(a).toBe(b);
+  });
+});
+
+describe("v1.76 ABYSS · Bug #2 fix -- bookmarklet javascript: prefix lock", () => {
+  it("uri ALWAYS starts with javascript:", () => {
+    const a = generateBookmarklet();
+    expect(a.uri.startsWith("javascript:")).toBe(true);
+    expect(a.protocol).toBe("javascript:");
+  });
+
+  it("body field equals uri minus the protocol prefix", () => {
+    const a = generateBookmarklet();
+    expect(a.protocol + a.body).toBe(a.uri);
+  });
+
+  it("uri body is URL-decodable (round-trip)", () => {
+    const a = generateBookmarklet();
+    const decoded = decodeURIComponent(a.body);
+    expect(decoded).toContain("MNEME SOUL PROMPT");
   });
 });

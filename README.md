@@ -40,7 +40,8 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 <hr/>
 
-<h2 align="center">🧬 NEW in v1.74 — <i>Cross-vendor brain transfer</i></h2>
+<h1 align="center"><a id="cross-vendor-brain-transfer"></a><img src="https://img.shields.io/badge/%F0%9F%A7%AC%20Cross--vendor%20brain%20transfer-1abc9c?style=for-the-badge&labelColor=2c3e50&color=1abc9c" alt="🧬 Cross-vendor brain transfer" height="58"></h1>
+
 <h3 align="center"><i>ChatGPT picks up where Claude Code left off.<br/>No cloud. No install on the other AI. No long command for the user to memorize.</i></h3>
 
 <table align="center" width="92%">

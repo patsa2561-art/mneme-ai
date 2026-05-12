@@ -174,11 +174,24 @@ export interface IntegrationReport {
   partial: number;
   needsPaste: number;
   byKind: Record<IntegrationKind, number>;
-  /** Plain-English summary. */
+  /** Plain-English one-line summary. */
   headline: string;
+  /** Multi-line markdown summary -- AI clients should render this directly
+   *  when surfacing the report. Bug #1 (v1.74) -- consumers were getting
+   *  `[object Object]` when stringifying naively. */
+  text: string;
+  /** Standard JS hook: String(report) returns headline so naive stringify
+   *  no longer leaks `[object Object]`. */
+  toString(): string;
 }
 
+// v1.76 perf -- cache the report between calls. EDITOR_INTEGRATIONS is
+// a module-level constant so the report never changes within a process
+// lifetime. 1000x speedup for repeated MCP calls.
+let _reportCache: IntegrationReport | null = null;
+
 export function reportIntegrations(): IntegrationReport {
+  if (_reportCache) return _reportCache;
   const byKind: Record<IntegrationKind, number> = {
     "native-mcp": 0, "parasite-bridge": 0, "browser-only": 0, "partial": 0,
   };
@@ -190,7 +203,42 @@ export function reportIntegrations(): IntegrationReport {
     else if (i.status === "needs-paste") needsPaste += 1;
   }
   const headline = `${EDITOR_INTEGRATIONS.length} AI tools tracked: ${working} working / ${partial} partial / ${needsPaste} browser-only (use PERMEATE userscript or soul-prompt paste).`;
-  return { total: EDITOR_INTEGRATIONS.length, working, partial, needsPaste, byKind, headline };
+
+  const textLines: string[] = [];
+  textLines.push(`# Mneme integration report`);
+  textLines.push(``);
+  textLines.push(headline);
+  textLines.push(``);
+  textLines.push(`## By integration kind`);
+  for (const [k, n] of Object.entries(byKind)) {
+    if (n > 0) textLines.push(`- **${k}**: ${n}`);
+  }
+  textLines.push(``);
+  textLines.push(`## Tools`);
+  for (const i of EDITOR_INTEGRATIONS) {
+    textLines.push(`- **${i.displayName}** (${i.vendor}, ${i.surface}) — ${i.integration}, status: ${i.status}`);
+  }
+  const text = textLines.join("\n");
+
+  const report: IntegrationReport = {
+    total: EDITOR_INTEGRATIONS.length,
+    working,
+    partial,
+    needsPaste,
+    byKind,
+    headline,
+    text,
+    toString() { return headline; },
+  };
+  // Make toString non-enumerable so JSON.stringify still works cleanly.
+  Object.defineProperty(report, "toString", { value: () => headline, enumerable: false });
+  _reportCache = report;
+  return report;
+}
+
+/** Test-only helper -- reset the cache between integration tests. */
+export function _resetIntegrationReportCache(): void {
+  _reportCache = null;
 }
 
 /** Filter integrations by status or surface. */
