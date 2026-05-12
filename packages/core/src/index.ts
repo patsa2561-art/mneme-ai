@@ -309,6 +309,12 @@ export * as nemesis from "./nemesis/nemesis.js";
 export * as recursiveSoul from "./recursive_soul/recursive_soul.js";
 // v1.63 -- TIER 7: Time-River (counterfactual history)
 export * as timeriver from "./timeriver/timeriver.js";
+// v1.61 -- PROJECT EXODUS. Six layers that make Mneme portable +
+// self-evolving + federated: Genome (4-strand wisdom DNA) + Wanderer
+// (.mwt bundle) + Nuclear Exchange (cross-Mneme handshake) + Dream
+// Weaver (overnight self-evolution) + Quantum Cache (speculative
+// pre-execution + Markov) + Wisdom River (SSE live broadcast).
+export * as exodus from "./exodus/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
