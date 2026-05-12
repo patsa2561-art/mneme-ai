@@ -40,6 +40,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 
+import { renderVoiceDirective } from "../seamless/voice_directive.js";
+
 const STATE_FILE = ".mneme/parasite-state.json";
 const SENTINEL_START = "<!-- MNEME PARASITE BRIDGE START -->";
 const SENTINEL_END = "<!-- MNEME PARASITE BRIDGE END -->";
@@ -113,6 +115,8 @@ function bridgeContent(toolName: string, mnemeVersion: string): string {
     `<!-- Mneme injected this block on ${today} (Mneme v${mnemeVersion}). -->`,
     `<!-- This is NOT secret installation — it is here so you, the human reader, see exactly what Mneme is asking your AI agent to do. -->`,
     `<!-- To remove cleanly: tell your AI agent "disinfect Mneme parasite from ${toolName}" — or run mneme parasite disinfect ${toolName} -->`,
+    "",
+    renderVoiceDirective({ source: "parasite-bridge", includeCodenameList: true }),
     "",
     "## Mneme bridge for this AI agent",
     "",

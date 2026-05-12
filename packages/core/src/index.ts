@@ -418,6 +418,10 @@ export * as telepathy from "./telepathy/index.js";
 //   REVENANT   -- soul prompt archive + replay + mark-as-used
 //   HOMUNCULUS -- receiver-write-back contract for bidirectional brain sync
 export * as abyss from "./abyss/index.js";
+// v1.77 -- SEAMLESS: MUFFLER voice directive. Stops Mneme codenames
+// from leaking into the receiving AI's user-facing replies. Prepended
+// to every soul prompt + parasite bridge block.
+export * as seamless from "./seamless/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

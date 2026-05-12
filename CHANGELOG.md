@@ -1,3 +1,51 @@
+## v1.77.0 — 2026-05-12 — SEAMLESS (MUFFLER voice directive — no more jargon-parroting)
+
+**Headline:** User reported that Gemini (and other AIs that absorb Mneme via paste / parasite bridge) were narrating Mneme codenames back to the user — *"ผมกำลังสแตนด์บายในโหมด Ghost Sniper"*, *"shall I run HYPERSCAN?"*, *"Mneme v1.73 can help…"*. Every cross-vendor handover felt choppy. v1.77 closes that leak structurally.
+
+### Root cause (not a UI problem, an instruction-leak problem)
+
+Mneme's `parasite/bridge.ts` and `genesplice/soul_prompt.ts` describe the tool surface to the receiving AI using internal codenames (APOPTOSIS, AEGIS, HYPERSCAN, …). The receiving AI absorbs that vocabulary and reuses it in user-facing prose. We never told it *"these are internal names — speak plain English to the user."*
+
+### What ships (MUFFLER fix)
+
+1. **VOICE DIRECTIVE** (`renderVoiceDirective`) — 6-rule markdown block prepended to every Mneme-authored instruction surface:
+   1. Never speak Mneme codenames out loud
+   2. No mode narration (*"standing by in X mode"*)
+   3. Stop offering tool-name menus
+   4. No unsolicited version chatter
+   5. One hedge per reply, max
+   6. Match the previous turn's voice
+2. **Codename catalog** — 29 internal names the AI must not surface to the user.
+3. **`lintReply()`** — voice violation scanner. Receiving AI self-checks its draft before sending.
+4. **`silenceJargon()`** — conservative auto-rewrite that strips codenames + standby boilerplate + version chatter.
+5. **Embedded in 2 surfaces automatically:**
+   - Soul prompt body now opens with the directive (no codename list — keeps tokens low).
+   - Parasite bridge block now opens with the directive (full codename list since this file is local-only).
+6. Soul-prompt `INSTRUCTIONS-TO-RECEIVING-AI` rewritten to drop the *"say exactly"* boilerplate; replaced with: *"You ARE the same conversation; only the underlying model changed. Don't introduce yourself, don't recap, don't name the soul-prompt mechanism."*
+
+### 3 new MCP tools
+- `mneme.seamless.lint` — scan a draft reply
+- `mneme.seamless.silence` — auto-strip jargon
+- `mneme.seamless.directive` — render the directive for custom prompts
+
+### Live results
+- **7347/7347 tests pass** (+42 from v1.76). 372 test files.
+- **15 SEAMLESS tests** (render / lint / silence / catalog) all green.
+- **No existing soul-prompt or parasite-bridge tests broke** — directive is additive.
+
+### Plain English — what users will notice
+- Receiving AI replies are SHORTER and warmer; no more *"shall I run X or Y?"* menus.
+- No "standing by in Ghost Sniper mode" narration.
+- No "Mneme v1.73 can…" preamble.
+- The cross-vendor handover finally feels seamless, not choppy.
+
+### Mneme mandates applied
+1. **Wild idea** — fix the AI's voice from inside its own context window, not by retraining or post-filtering. Soul prompt teaches the receiver how to speak BEFORE the user sees a single word.
+2. **Wiser, not patched** — didn't blocklist phrases at the surface; we added a positive directive at the SOURCE so the receiver self-regulates. Both lint + silence are available as fallbacks.
+3. **Self-fix root cause** — the screenshot bug wasn't "Gemini is robotic"; it was "Mneme leaks codenames into Gemini's context." Fixed the leak.
+4. **Co-working not conflicting** — directive is prepended additively; no existing soul-prompt parser breaks, no existing test fails.
+5. **Always-studying** — `lintReply` returns structured issues so we can later measure voice-violation rate across vendors and iterate.
+
 ## v1.76.0 — 2026-05-12 — ABYSS PROTOCOL (final-boss minions + bug squash)
 
 **Headline:** The final boss has minions now. 3 pro-defeating henchmen ship alongside hard fixes to every PERMEATE finding from the v1.74 review.

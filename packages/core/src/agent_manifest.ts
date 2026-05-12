@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -167,6 +167,11 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.abyss.revenant.list", since: "1.76.0", group: "abyss", what: "REVENANT -- list archived souls (newest first), filterable by vendor / used / unused.", when: "User asks 'show past handovers' / 'soul history'." },
   { command: "mneme.abyss.homunculus.request", since: "1.76.0", group: "abyss", what: "HOMUNCULUS -- render a write-back contract that asks the receiving AI to RETURN decisions+reasoning back at session end.", when: "Embed in outgoing soul prompts for bidirectional brain sync." },
   { command: "mneme.abyss.homunculus.ingest", since: "1.76.0", group: "abyss", what: "HOMUNCULUS -- parse a pasted `# HOMUNCULUS RETURN` block from a foreign AI and surface its decisions/reasoning/vaccines.", when: "User pastes a return block from ChatGPT/Gemini back into the editor AI." },
+
+  // ─── v1.77 SEAMLESS (MUFFLER voice directive) ───────────────────────
+  { command: "mneme.seamless.lint", since: "1.77.0", group: "seamless", what: "Scan an AI draft reply for voice violations (codenames / mode narration / version chatter / tool-name menus).", when: "Receiving AI self-checks its draft before sending. Use when user reports 'the AI is parroting Mneme jargon'." },
+  { command: "mneme.seamless.silence", since: "1.77.0", group: "seamless", what: "Auto-strip Mneme codenames + standby boilerplate + version chatter from a draft reply.", when: "After lint flags issues; conservative auto-fix." },
+  { command: "mneme.seamless.directive", since: "1.77.0", group: "seamless", what: "Render the 6-rule MUFFLER voice directive for custom prompts. Soul prompts + parasite bridge embed it automatically.", when: "Building a custom prompt template that should obey the same voice rules." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -191,7 +196,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

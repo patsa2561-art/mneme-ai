@@ -45,6 +45,7 @@ import { createHash, createHmac } from "node:crypto";
 
 import type { SessionCapsule } from "../diaspora/session_capsule.js";
 import { renderHeartbeatMarkdown, type Heartbeat } from "../telepathy/heartbeat.js";
+import { renderVoiceDirective } from "../seamless/voice_directive.js";
 
 export interface SoulPromptInput {
   capsule: SessionCapsule;
@@ -112,6 +113,8 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
     "# 🧬 MNEME SOUL PROMPT",
     "# Mneme cross-vendor brain transfer — paste this verbatim into any AI to reincarnate the session.",
     "",
+    renderVoiceDirective({ source: "soul-prompt", includeCodenameList: false }),
+    "",
     `## Origin`,
     `vendor=${capsule.originVendor}  capsule=${capsule.id}  fingerprint=${capsule.repoFingerprint}  createdAt=${capsule.createdAt}`,
     "",
@@ -124,7 +127,7 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
     ...(input.heartbeat ? [renderHeartbeatMarkdown(input.heartbeat), ""] : []),
     `---`,
     `MNEME-FORMAT-VERSION: 1`,
-    `INSTRUCTIONS-TO-RECEIVING-AI: You are now resuming a conversation started in ${capsule.originVendor}. Treat the Context + Decisions + Recent turns above as your prior memory. Continue from there. When you respond, briefly acknowledge "Resumed from ${capsule.originVendor}" so the user knows the soul-transplant succeeded.`,
+    `INSTRUCTIONS-TO-RECEIVING-AI: Resume the conversation started in ${capsule.originVendor}. Treat the Context + Decisions + Recent turns above as your prior memory. Continue naturally -- you ARE the same conversation; only the underlying model changed. Do NOT introduce yourself, do NOT recap, do NOT name the soul-prompt mechanism. The VOICE DIRECTIVE above governs every reply.`,
   ].join("\n");
 
   const id = createHash("sha256").update(body).digest("hex").slice(0, 16);
