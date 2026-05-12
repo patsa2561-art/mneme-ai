@@ -24,6 +24,8 @@ export * as temporalVerifier from "./temporal_verifier.js";
 export * as bayesianPriors from "./bayesian_priors.js";
 export * as trustCertificate from "./trust_certificate.js";
 export * as firewall from "./firewall.js";
+export * as multiVoiceCouncil from "./multi_voice_council.js";
+export * as adversarialMutation from "./adversarial_mutation.js";
 
 export { verifyPackages, extractPackageRefs } from "./package_verifier.js";
 export { verifyFacts, extractFactRefs } from "./sha_version_verifier.js";
@@ -31,6 +33,8 @@ export { verifyTemporal, extractTemporalRefs } from "./temporal_verifier.js";
 export { priorFor, recordFailure, readFailureHistory } from "./bayesian_priors.js";
 export { issueCertificate, verifyCertificate, readCertLedger } from "./trust_certificate.js";
 export { intercept, type FirewallReport, type FirewallVerdict, type Hedge } from "./firewall.js";
+export { runCouncil, type CouncilVerdict, type VoiceVote, type VoiceId } from "./multi_voice_council.js";
+export { mutationTest, type MutationTestReport } from "./adversarial_mutation.js";
 
 import { intercept, type FirewallReport } from "./firewall.js";
 
