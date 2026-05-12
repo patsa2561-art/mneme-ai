@@ -372,6 +372,15 @@ export * as autarchy from "./autarchy/index.js";
 // caretaker auto-syncs CLAUDE.md / AGENTS.md / .cursor/rules so the
 // AI agent in the user's editor learns about new MCP tools instantly.
 export * as agentAnnounce from "./agent_announce.js";
+// v1.68 -- ASCENSION PROTOCOL. Six wild moves that push 3 existing
+// metrics toward 100% + close 3 root-cause residuals:
+//   ASC-1 circadian heartbeat       per-hour-of-week baseline
+//   ASC-2 superposed antivirus      cache + pre-filter for 10x+ speed
+//   ASC-3 conformal apoptosis       UNCERTAIN tier -> 100% auto-precision
+//   ASC-4 prophetic embedder        config vs Schroedinger vs meta drift
+//   ASC-5 sovereign mode            distinguishes intentional offline
+//   ASC-6 inbox tier filter         alert vs routine separation
+export * as ascension from "./ascension/index.js";
 // v1.67 -- AEGIS PROTOCOL. Nine-axis immune system inside Mneme.
 // Defensive answer to Palisade self-replication / sandbagging /
 // shutdown-evasion findings. Strictly observe + record + propagate;
