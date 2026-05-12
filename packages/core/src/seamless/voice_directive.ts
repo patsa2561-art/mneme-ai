@@ -171,18 +171,26 @@ export function lintReply(reply: string): VoiceLintReport {
 }
 
 /** Auto-rewrite a draft reply by stripping codenames and banned mode
- *  phrases. Conservative -- replaces codenames with their plain-English
- *  fallback ("the tool") and removes "standing by" boilerplate. */
+ *  phrases. Bug #3 (v1.81): smarter replacement avoids "the the tool"
+ *  artefacts. Strategy:
+ *   - `the <CODENAME>` / `<CODENAME> tool` / `<CODENAME>'s` → "Mneme"
+ *   - bare `<CODENAME>` → "Mneme"
+ *   - post-pass collapses any "the the", "Mneme Mneme", "Mneme tool tool". */
 export function silenceJargon(reply: string): string {
   let out = reply;
   for (const c of MNEME_CODENAMES) {
-    const re = new RegExp(`\\b${c.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\b`, "gi");
-    out = out.replace(re, "the tool");
+    const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Pattern: optional "the/a/an" + codename + optional "tool/mode/protocol"
+    const phraseRe = new RegExp(`\\b(?:the |a |an |my )?${escaped}(?:'s)?(?:\\s+(?:tool|mode|protocol|system|feature|module))?\\b`, "gi");
+    out = out.replace(phraseRe, "Mneme");
   }
   out = out.replace(/\bstanding by\b[^.\n]*/gi, "ready");
   out = out.replace(/ผมกำลังสแตนด์บาย[^.\n]*/g, "");
   out = out.replace(/\bMneme v?\d+\.\d+(?:\.\d+)?\b/gi, "Mneme");
-  // Collapse double spaces / blank lines that may result.
+
+  // Post-pass: collapse repeated words introduced by substitution.
+  // "the the X" -> "the X"; "Mneme Mneme" -> "Mneme"; etc.
+  out = out.replace(/\b(\w+)(?:\s+\1\b)+/gi, "$1");
   out = out.replace(/[ \t]{2,}/g, " ");
   out = out.replace(/\n{3,}/g, "\n\n");
   return out.trim();

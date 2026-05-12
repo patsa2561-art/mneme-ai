@@ -129,7 +129,10 @@ export async function generateHeartbeat(input: HeartbeatInput): Promise<Heartbea
     daemonRunning: input.daemonRunning ?? false,
     vaccineCount: input.vaccineCount ?? 0,
     inboxUnsent: input.inboxUnsent ?? 0,
-    repoFingerprint: input.repoFingerprint,
+    // Bug #1 (v1.81): default to "unknown" when caller forgot to pass
+    // a fingerprint -- avoids `repoFingerprint: undefined` leaking into
+    // the rendered markdown.
+    repoFingerprint: input.repoFingerprint || "unknown",
     checkedAt: new Date().toISOString(),
   };
 }

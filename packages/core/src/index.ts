@@ -439,6 +439,11 @@ export * as neuron from "./neuron/index.js";
 // recipe), sync_status (source-newer / destination-newer detection),
 // phantom_exec (web AI previews tool output without real execution).
 export * as conduit from "./conduit/index.js";
+// v1.81 -- SYNAPSE: universal cross-device brain sync.
+//   nexus_code        -- 6-char short code resolves to a soul prompt
+//   qr_anchor         -- SVG QR for any URL / code / short payload
+//   token_compression -- deterministic codebook saves 30-50% tokens
+export * as synapse from "./synapse/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

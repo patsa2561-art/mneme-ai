@@ -42,32 +42,49 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 <h1 align="center"><a id="cross-vendor-brain-transfer"></a><img src="https://img.shields.io/badge/%F0%9F%A7%AC%20Cross--vendor%20brain%20transfer-1abc9c?style=for-the-badge&labelColor=2c3e50&color=1abc9c" alt="🧬 Cross-vendor brain transfer" height="58"></h1>
 
-<h3 align="center"><i>ChatGPT picks up where Claude Code left off. No cloud. No install. No memorized commands.</i></h3>
+<h3 align="center"><i>Your conversation follows you. Any AI, any device, any time.</i></h3>
 
 <table align="center" width="92%"><tr><td>
 
-### 🥢 In 3 steps
+### 🥢 In 1 sentence
 
-1. **In the AI you're using NOW** (Claude Code / Cursor / any editor with Mneme): say *"hand this brain off to ChatGPT"* — or in Thai *"ส่งสมองให้ ChatGPT"*. **No version number. No commands. Just that sentence.**
-2. **Your AI** silently packages the conversation + copies it to your clipboard.
-3. **Open chatgpt.com** in your browser (or any AI's web/app — Gemini, Claude.ai, Copilot, DeepSeek). Press **Ctrl+V** → send.
+> **Say to your AI:** *"send my brain to my other AI"* — or in Thai *"ส่งสมองไปอีก AI"*.
 
-That's it. The receiving AI replies *"Resumed from claude-opus-4-7…"* and you keep working.
+That's it. Your AI handles everything else.
 
-**Cross-machine?** Same 3 steps, but on step 2 say *"ส่งสมองข้ามเครื่องด้วย"* — your AI uploads to your own private GitHub Gist + gives you a URL. Open the URL on the second laptop / Mac / phone → paste anywhere.
+### 🎬 Three ways to land — pick whichever is convenient
 
-**Why this is wild** — the receiving AI **never installs Mneme**. It just reads your paste as context. No store approval, no cloud, no API key. Works in 6 chat apps + 10 editors today.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  WAY 1 · same computer, different AI                        │
+│  → Your AI puts the brain on your clipboard.                │
+│  → Open the other AI (in browser or app). Press Ctrl+V.    │
+│  → Done.                                                    │
+├─────────────────────────────────────────────────────────────┤
+│  WAY 2 · different device (phone / tablet / second laptop)  │
+│  → Your AI gives you a 6-character code, e.g. K7M9X2.      │
+│  → On the other device, type the code OR scan the QR.      │
+│  → Done.                                                    │
+├─────────────────────────────────────────────────────────────┤
+│  WAY 3 · across the internet (any device, any time)         │
+│  → Your AI saves the brain to your own private link.       │
+│  → Open the link on any device. The new AI reads it.        │
+│  → Done.                                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**No accounts. No installs on the other side. No commands to memorize.** You type one sentence; your AI does the rest.
 
 </td></tr></table>
 
-<details><summary><b>FAQ — answers in one line each</b></summary>
+<details><summary><b>Plain-English FAQ</b></summary>
 
-- **Open ChatGPT first or type in current AI?** → Type in current AI first. Then open ChatGPT and paste.
-- **Need version number?** → No. AI handles versioning.
-- **Cross-machine?** → Say *"ส่งสมองข้ามเครื่อง"* → AI uploads to your private Gist → open the link anywhere.
-- **Does ChatGPT need Mneme installed?** → No. It just reads your paste as text.
-- **What survives the transfer?** → Last few turns + decisions + reasoning. File contents stay on YOUR disk; for web AIs to read code, paste the file too.
-- **First time?** → Run once: `npx mneme-ai init` — silently wires Mneme into your editor.
+- **Where do I type the sentence?** → In the AI you're already chatting with. It handles everything else.
+- **The other AI is on a phone — does that work?** → Yes. Use the 6-character code (WAY 2). Type or scan it in the mobile app.
+- **Do I need to install anything on the second AI?** → No. The second AI just reads a normal message.
+- **Can I bring the conversation BACK after working on phone?** → Yes. Same sentence on the phone — say *"send my brain back to my desktop AI"* — get a new code, type it on desktop.
+- **What about students / non-techies?** → They say one sentence; the AI does the work. Same flow for everyone.
+- **First time setup?** → Run `npx mneme-ai init` once. Silent. Auto-wires into your editor.
 
 </details>
 

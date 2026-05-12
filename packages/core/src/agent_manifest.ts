@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -188,6 +188,13 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.conduit.uninstall_plan", since: "1.80.0", group: "conduit", what: "Per-surface uninstall plan (editor-ai / web-ai / browser-userscript / browser-bookmarklet / all).", when: "User asks 'how do I remove Mneme from X?'." },
   { command: "mneme.conduit.sync_status", since: "1.80.0", group: "conduit", what: "Compare pasted soul's version vs local Mneme → in-sync / source-newer / destination-newer / unknown + recommendation.", when: "Before trusting a pasted soul prompt; surface mismatches." },
   { command: "mneme.conduit.phantom_directive", since: "1.80.0", group: "conduit", what: "Render PHANTOM EXECUTION directive; web AIs preview a tool's conceptual output WITHOUT real execution.", when: "Embedding in custom paste-only AI workflows where a preview saves a round-trip." },
+
+  // ─── v1.81 SYNAPSE (universal cross-device sync + token compression) ───
+  { command: "mneme.synapse.mint_code", since: "1.81.0", group: "synapse", what: "Mint a 6-char NEXUS code resolving to a soul prompt -- AirDrop-style PIN for cross-device handover (PC ↔ phone ↔ tablet).", when: "User wants to continue a session on another device. Generate code; user types it on destination." },
+  { command: "mneme.synapse.resolve_code", since: "1.81.0", group: "synapse", what: "Resolve a NEXUS code to its soul prompt + bump resolve count. Returns null on expired/unknown.", when: "User typed a 6-char code from another device; fetch the brain." },
+  { command: "mneme.synapse.qr", since: "1.81.0", group: "synapse", what: "Render any short payload (code / URL) as SVG QR for camera scan.", when: "User would rather scan than type a code." },
+  { command: "mneme.synapse.compress", since: "1.81.0", group: "synapse", what: "Compress text via deterministic codebook substitution (30-50% token savings).", when: "Before pasting into a tight-context-window mobile AI app." },
+  { command: "mneme.synapse.decompress", since: "1.81.0", group: "synapse", what: "Expand SYNAPSE-compressed text back to readable form.", when: "Destination AI receives a compressed prompt; expand before reading." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -212,7 +219,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

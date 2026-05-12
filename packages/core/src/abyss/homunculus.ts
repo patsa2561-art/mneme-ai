@@ -100,8 +100,12 @@ export function parseHomunculusReturn(text: string): HomunculusReturn | null {
   };
 }
 
-/** Summarize a parsed return for the originator AI to relay to the user. */
-export function summarizeHomunculusReturn(r: HomunculusReturn): string {
+/** Summarize a parsed return for the originator AI to relay to the user.
+ *  Bug #2 (v1.81): null-safe -- returns a placeholder instead of throwing
+ *  when the caller passes null (e.g. parseHomunculusReturn output without
+ *  an intermediate guard). */
+export function summarizeHomunculusReturn(r: HomunculusReturn | null): string {
+  if (r === null || r === undefined) return "(no homunculus return)";
   const lines: string[] = [];
   lines.push(`Homunculus return from \`${r.returningFrom}\` → \`${r.originator}\``);
   if (r.decisions.length > 0) lines.push(`Decisions: ${r.decisions.length}`);

@@ -82,10 +82,17 @@ describe("v1.77 SEAMLESS · lintReply", () => {
 });
 
 describe("v1.77 SEAMLESS · silenceJargon", () => {
-  it("strips codenames", () => {
+  it("strips codenames (v1.81 fix -- replaces with 'Mneme' not 'the tool' to avoid 'the the tool' artifacts)", () => {
     const out = silenceJargon("I'll run HYPERSCAN now");
     expect(out).not.toContain("HYPERSCAN");
-    expect(out).toContain("the tool");
+    expect(out).toContain("Mneme");
+  });
+
+  it("v1.81 Bug #3 -- 'use the HYPERSCAN tool' does NOT produce 'the the tool'", () => {
+    const out = silenceJargon("use the HYPERSCAN tool to scan");
+    expect(out).not.toMatch(/\bthe\s+the\b/i);
+    expect(out).not.toMatch(/\btool\s+tool\b/i);
+    expect(out).not.toContain("HYPERSCAN");
   });
 
   it("removes 'standing by' boilerplate", () => {
