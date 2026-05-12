@@ -82,7 +82,26 @@ export function readComplianceLog(repoRoot: string, limit = 200): ComplianceEntr
   try {
     const lines = readFileSync(p, "utf8").split("\n").filter((l) => l.trim().length > 0);
     const entries = lines.map((l) => {
-      try { return JSON.parse(l) as ComplianceEntry; } catch { return null; }
+      try {
+        const raw = JSON.parse(l) as Record<string, unknown>;
+        // v1.65.1 -- normalize the v1.41-era schema (`at` + `mandateId`)
+        // into the canonical (`ts` + `mandate`) shape so downstream
+        // stats see one homogeneous stream. Old entries are otherwise
+        // dropped by the windowed filter (no `ts` -> invalid date).
+        if (typeof raw["ts"] !== "string" && typeof raw["at"] === "string") {
+          raw["ts"] = raw["at"];
+        }
+        if (typeof raw["mandate"] !== "string" && typeof raw["mandateId"] === "string") {
+          raw["mandate"] = raw["mandateId"];
+        }
+        if (typeof raw["executor"] !== "string") {
+          raw["executor"] = "ai-agent";
+        }
+        if (typeof raw["args"] !== "object" || raw["args"] === null) {
+          raw["args"] = {};
+        }
+        return raw as unknown as ComplianceEntry;
+      } catch { return null; }
     }).filter((x): x is ComplianceEntry => x !== null);
     return entries.slice(-limit);
   } catch {
@@ -118,6 +137,39 @@ export function computeComplianceStats(entries: ComplianceEntry[]): ComplianceSt
   const inline = (stats.byOutcome["executed"] ?? 0) + (stats.byOutcome["skipped"] ?? 0) + (stats.byOutcome["failed"] ?? 0);
   stats.inlineComplianceRate = inline === 0 ? 1 : (stats.byOutcome["executed"] ?? 0) / inline;
   return stats;
+}
+
+/** v1.65.1 -- WINDOWED compliance stats. Pre-filters entries to those
+ *  within the last `windowDays` (default 30) before computing the rate.
+ *  Fixes the legacy-failure-tail problem: historical Windows-lock
+ *  schtasks failures from v1.56 stay in the file forever and drag the
+ *  lifetime rate down even after the root cause is fixed. The 30-day
+ *  window gives an honest "what's happening NOW" rate while the full
+ *  lifetime stat remains available via computeComplianceStats(). */
+export interface WindowedComplianceStats extends ComplianceStats {
+  /** Window in days used to filter entries (e.g. 30). */
+  windowDays: number;
+  /** Entries OLDER than the window. Reported but not counted in rate. */
+  excludedOlderCount: number;
+  /** Boundary timestamp (entries at or after this date are counted). */
+  windowStartTs: string;
+}
+
+export function computeWindowedComplianceStats(
+  entries: ComplianceEntry[],
+  windowDays: number = 30,
+): WindowedComplianceStats {
+  const boundaryMs = Date.now() - windowDays * 86400 * 1000;
+  const windowStartTs = new Date(boundaryMs).toISOString();
+  const inWindow: ComplianceEntry[] = [];
+  let excluded = 0;
+  for (const e of entries) {
+    const t = Date.parse(e.ts);
+    if (Number.isFinite(t) && t >= boundaryMs) inWindow.push(e);
+    else excluded += 1;
+  }
+  const base = computeComplianceStats(inWindow);
+  return { ...base, windowDays, excludedOlderCount: excluded, windowStartTs };
 }
 
 export interface PreExecutionResult {

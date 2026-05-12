@@ -8,6 +8,63 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 —
 
+## [1.65.1] — 2026-05-12
+
+**WISDOM PATCH: 3 residual signals fixed.**
+
+  1. **Inbox drain** -- 5 stale messages surfaced (test probes + 1
+     legacy daemon-queue Windows-lock failure + 1 milestone).
+     `popUnsent` flushed; pulse `inbox-unsent` returns to 0.
+  2. **Embedder gap diagnosis (bug #4)** -- the v1.45 "WASM regression"
+     was actually a STALE-CONFIG state: bundled WASM verifies OK,
+     but `.mneme/config.json` still pointed at `provider: "hash"`.
+     New module `embedder_autodiagnose.ts` probes all four tiers
+     (openai / ollama / bundled / hash) in parallel + offers
+     `persist=true` auto-upgrade. Verified live: ★★ hash -> ★★★★ Ollama
+     on the user's repo.
+  3. **Compliance 30-day window + schema migration** -- new
+     `computeWindowedComplianceStats(entries, windowDays=30)` honors
+     the legacy v1.41 schema (`at` + `mandateId`) by normalizing it
+     to (`ts` + `mandate`) inside `readComplianceLog`. Phantom-zero
+     bug fixed: rate jumped from 0% (window) to honest 88.2%
+     after normalization.
+
+### New modules
+
+  - `packages/core/src/embedder_autodiagnose.ts`     (autodiagnose)
+  - `packages/core/src/ai_compliance.ts`             (+`computeWindowedComplianceStats`, schema migration)
+  - `packages/mcp/src/tools/_tune_tools.ts`          (2 MCP wrappers)
+
+### MCP -- 2 new tools
+
+  - `mneme.embedder.autodiagnose` -- probe + recommend + optional persist
+  - `mneme.compliance.window`     -- 30-day rolling rate
+
+### Mandates (all five applied)
+
+  1. **WILD**: probe-all-tiers + auto-upgrade-config is not standard;
+     most AI tools leave it to the user to discover their own degradation.
+  2. **WISER, NOT PATCHED**: didn't hack around bug #4 -- diagnosed it
+     to a stale config, fixed the diagnosis pipeline so the SAME class
+     of bug can't masquerade as a code regression again.
+  3. **SELF-FIX ROOT CAUSE**: schema migration in `readComplianceLog`
+     means future readers stop seeing phantom-zero rates without any
+     downstream code changes. One place, one fix.
+  4. **CO-WORKING NOT CONFLICTING**: autodiagnose reads the same
+     `.mneme/config.json` the embedder cascade already uses; windowed
+     stats are PURELY ADDITIVE to `computeComplianceStats`.
+  5. **ALWAYS-STUDYING**: both modules surface "what we found vs what
+     we expected", so any future cold-start state mismatch is loud,
+     not silent.
+
+### Tests -- 16 new + zero regression
+
+  - `embedder_autodiagnose.test.ts`: 10 cases
+  - `ai_compliance_windowed.test.ts`: 6 cases
+  + MCP contract cases for 2 new tools
+
+  Full project: **6626/6626 pass** (+34 vs v1.65.0).
+
 ## [1.65.0] — 2026-05-12
 
 **APOPTOSIS PROTOCOL -- 7-layer hallucination killer + Powers rewire.

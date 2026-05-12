@@ -355,6 +355,11 @@ export * as apoptosis from "./apoptosis/index.js";
 // Adds honest live-signal axes alongside the v1.48 simulation modules.
 export * as powerAdversarialLive from "./powers/p6_live.js";
 export * as powerAutonomousShadow from "./powers/p7_shadow.js";
+// v1.65.1 -- EMBEDDER AUTODIAGNOSE. Probes openai / ollama / bundled /
+// hash; flags upgrade gap; persist=true rewrites .mneme/config.json.
+// Pulse uses this to nudge users off the hash tier when WASM or Ollama
+// is actually available locally.
+export * as embedderAutodiagnose from "./embedder_autodiagnose.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
