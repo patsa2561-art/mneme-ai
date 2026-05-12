@@ -109,9 +109,11 @@ Mneme has 6 transports for cross-device handover. **Only one uses git.** Every o
 
 **Spore is default-OFF starting v1.86.** It will refuse to push to your git remote until you explicitly run `mneme.chameleon.spore_opt_in` after reviewing the env-probe risks (CI / CODEOWNERS / fork-vs-personal). If you don't have git, fork someone else's repo, or work in a corporate repo with branch protection — Spore stays silent. Use the 5 non-git transports instead.
 
-### 📱 Same flow → QR code
+### 📱 The real fix → SCAN QR with your phone
 
-For step 2 of any transport, your parent AI can also **render a QR code** instead of a text URL. Scan it with your phone's camera; the destination AI opens with the URL + decryption code pre-filled.
+For mobile handover, your parent AI now renders a **REAL scannable QR code** (zero-dependency pure-TS encoder; not an ASCII art). Point your phone camera at it — the QR carries a vendor deep-link (`gemini.google.com/?q=…` / `chat.openai.com/?q=…` / `claude.ai/new?q=…`) — the AI app opens with the fetch+decrypt instruction pre-filled. Tap send. Conversation resumes. **Zero typing on the phone.**
+
+If your phone camera fails or your AI app doesn't support deep links, the same artifact ships a tap-link + a copy-fallback string. Three ways to land; one works.
 
 ### 🎬 The 5 transports — what actually happens
 

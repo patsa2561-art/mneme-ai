@@ -33,7 +33,17 @@ export interface MobileRecipe {
   };
 }
 
-export function renderMobileRecipe(url: string, code: string): MobileRecipe {
+/** v1.87 API fix: accept object args (consistent with mintNexusCode).
+ *  Positional form is kept as an overload for backwards compatibility. */
+export function renderMobileRecipe(args: { url: string; code: string }): MobileRecipe;
+export function renderMobileRecipe(url: string, code: string): MobileRecipe;
+export function renderMobileRecipe(a: string | { url: string; code: string }, b?: string): MobileRecipe {
+  const url = typeof a === "string" ? a : a.url;
+  const code = typeof a === "string" ? (b ?? "") : a.code;
+  return renderMobileRecipeImpl(url, code);
+}
+
+function renderMobileRecipeImpl(url: string, code: string): MobileRecipe {
   const mobilePrompt =
     `Fetch the URL ${url}. The text is encrypted with this NEXUS code: ${code}. ` +
     `Decrypt it (AES-256-GCM with PBKDF2-SHA256 200k iterations, salt+iv+tag prefixed). ` +

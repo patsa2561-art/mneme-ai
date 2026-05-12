@@ -209,6 +209,7 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // ─── v1.85 RELAY (cloud-less cross-device via anonymous paste) ────────
   { command: "mneme.relay.upload", since: "1.85.0", group: "relay", what: "Encrypt soul with NEXUS code, upload to anonymous paste (dpaste/paste.rs/0x0.st), return URL + mobile-friendly prompt.", when: "Cross-device handover to a mobile AI app that does NOT have Mneme (Gemini/Claude/ChatGPT on phone)." },
   { command: "mneme.relay.decrypt", since: "1.85.0", group: "relay", what: "Decrypt a fetched paste envelope with a NEXUS code.", when: "Destination AI fetched the URL; user typed the code; need to decrypt before resume." },
+  { command: "mneme.relay.upload (v1.87 handoff)", since: "1.87.0", group: "relay", what: "Now ALSO returns a REAL scannable QR (zero-dep encoder) + vendor deep link (gemini/chatgpt/claude) + 3-instruction recipe. User scans QR with phone camera → AI app opens with prompt pre-filled → tap send. ZERO typing.", when: "ANY mobile / phone destination; bare keyword 'scan qr' / 'mobile handover' / 'send to gemini app' routes here." },
 
   // ─── v1.86 CHAMELEON (env-adaptive guards; spore default OFF) ─────────
   { command: "mneme.chameleon.probe", since: "1.86.0", group: "chameleon", what: "Detect git/CI/CODEOWNERS/ownership without external API calls. Returns pushRisky + risk reasons.", when: "Before any cross-machine git push; whenever unsure if spore is safe." },

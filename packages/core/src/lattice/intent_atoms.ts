@@ -166,23 +166,88 @@ export const INTENT_ATOMS: readonly IntentAtom[] = [
   },
 
   // ─── v1.85 NATURAL gap fills ────────────────────────────────────────
-  // Troubleshooting / "my code isn't working"
+  // Troubleshooting / "my code isn't working" — v1.87 expanded
   {
     triggers: [
       "code ใช้ไม่ได้",
       "code ไม่ work",
+      "code ไม่ขึ้น",
+      "code ไม่ทำงาน",
+      "code broken",
+      "nexus broken",
       "nexus ไม่ทำงาน",
       "ทำไม code error",
       "code doesn't work",
+      "code doesnt work",
       "code not working",
       "code expired",
       "code unknown",
+      "code is wrong",
+      "wrong code",
+      "นี่ใช้ไม่ได้",
       "พิมพ์ code แล้วไม่ขึ้น",
+      "พิมพ์โค้ดแล้วไม่ขึ้น",
+      "พิมพ์ทางมือถือไม่ได้",
+      "พิมพ์ทาง phone ไม่ได้",
+      "พิมพ์มือถือไม่ได้",
     ],
     tool: "mneme.synapse.resolve_code",
     priority: "absolute",
     intent: "diagnose a NEXUS code that failed to resolve (expired / wrong / different machine)",
     promise: "เช็คโค้ดให้ — ถ้าหมดอายุจะมินต์ใหม่ + แจ้งทาง relay สำรองให้.",
+  },
+  // Brand-specific mobile app destinations (Gemini / ChatGPT / Claude)
+  {
+    triggers: [
+      "send to gemini app",
+      "ส่งไป gemini app",
+      "ส่งให้ gemini",
+      "to my gemini app",
+      "gemini handover",
+      "share with gemini mobile",
+    ],
+    tool: "mneme.relay.upload",
+    priority: "absolute",
+    intent: "publish encrypted soul + render Gemini deep link + QR for Gemini mobile",
+  },
+  {
+    triggers: [
+      "send to chatgpt app",
+      "ส่งไป chatgpt",
+      "share with chatgpt",
+      "chatgpt mobile",
+      "to chatgpt app",
+    ],
+    tool: "mneme.relay.upload",
+    priority: "absolute",
+    intent: "publish encrypted soul + render ChatGPT deep link + QR for ChatGPT mobile",
+  },
+  {
+    triggers: [
+      "send to claude app",
+      "ส่งให้ claude app",
+      "claude mobile",
+      "claude.ai mobile",
+    ],
+    tool: "mneme.relay.upload",
+    priority: "absolute",
+    intent: "publish encrypted soul + render Claude deep link + QR for Claude mobile",
+  },
+  // Bare "mobile handover" / "phone handover" keyword
+  {
+    triggers: [
+      "mobile handover",
+      "phone handover",
+      "ส่งสมองมือถือ",
+      "handover to mobile",
+      "scan qr",
+      "ขอ qr",
+      "give me qr",
+      "show qr code",
+    ],
+    tool: "mneme.relay.upload",
+    priority: "absolute",
+    intent: "QR-based handover artifact for the mobile destination",
   },
   // Mac / macOS / iPad / Apple-specific
   {

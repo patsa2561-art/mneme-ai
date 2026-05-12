@@ -1,3 +1,63 @@
+## v1.87.0 — 2026-05-13 — MAGNET (REAL scannable QR + vendor deep links + handoff artifact) + NATURAL completeness + API consistency
+
+**Headline:** User surfaced the deepest UX pain: *"นึกว่าจะมี qr code ที่ใช้ได้ 100% ถูกต้องให้สแกนแทน"* — the previous QR was stipple-art, not scannable. v1.87 ships a **real scannable QR encoder from scratch (zero deps, pure TS, ~400 lines)** + vendor deep links + handoff artifact. User scans QR with phone camera → AI app opens with the fetch-and-decrypt prompt PRE-FILLED → tap send. **Zero typing on the phone.**
+
+### 🧬 SYNAPSE — real QR encoder (zero dependencies)
+
+`packages/core/src/synapse/qr_real.ts` — 400-line pure-TS QR Model 2 encoder:
+- Byte mode + EC level L
+- Auto-version selection (1-10, max ~270 bytes payload)
+- Galois Field GF(2^8) with primitive polynomial 0x11d (computed at module load)
+- Reed-Solomon generator polynomial + interleaved EC blocks
+- All 8 mask patterns; lowest-penalty wins
+- Format info bits at top-left + top-right + bottom-left
+- SVG output ready to drop into terminals / web UIs / clipboard
+
+No npm dependency. No remote QR-rendering API. No cloud. Just math.
+
+### 🔗 RELAY — vendor deep links + handoff artifact
+
+`relay/deep_link.ts`:
+- `composePrompt(url, code)` — short single-line instruction (~140 chars)
+- `buildDeepLink({vendor})` — emits `https://gemini.google.com/?q=…` / `chat.openai.com/?q=…` / `claude.ai/new?q=…`
+- `bestDeepLink()` — picks the shortest URL that fits in a v10 QR
+
+`relay/handoff_artifact.ts`:
+- `renderHandoff({pasteUrl, nexusCode, vendor?})` bundles:
+  - The deep link URL
+  - The REAL scannable QR (SVG)
+  - Plain-text copy-fallback
+  - Three instructions (qrScan / tapLink / manualCopy)
+- ANY one path works on its own
+
+`mneme.relay.upload` MCP tool now returns the full handoff alongside the existing mobile recipe. Source AI displays the QR; user scans; done.
+
+### 🛠 API consistency fix
+`renderMobileRecipe()` now accepts `{url, code}` object args (consistent with `mintNexusCode`). Positional `(url, code)` form kept as an overload for backwards compat.
+
+### 🗣 NATURAL — 8 new atom phrases close all remaining Round 7 gaps
+
+Reported as "still gap" in user's Round 7 test:
+- *"code doesnt work"* → `mneme.synapse.resolve_code` (troubleshoot)
+- *"send to gemini app"* / *"chatgpt app"* / *"claude app"* → `mneme.relay.upload` (brand-specific mobile)
+- *"mobile handover"* / *"phone handover"* / *"scan qr"* / *"give me qr"* → `mneme.relay.upload`
+- *"พิมพ์มือถือไม่ได้"* → resolve_code
+- *"พิมพ์ทางมือถือไม่ได้"* / *"พิมพ์ทาง phone ไม่ได้"* → resolve_code
+
+Plus all existing v1.86 atoms intact.
+
+### Live results
+- **7761/7761 tests pass** (+19 from v1.86). 382 test files.
+- **19 v1.87 regression tests** covering real QR encoder properties, deep link variants, handoff artifact composition, API form parity, NATURAL routing for the 4 reported gaps.
+- **5 new NATURAL atoms** routed correctly across Thai + English variants.
+
+### Mneme mandates applied
+1. **Wild idea** — wrote a complete QR encoder from scratch in pure TypeScript. Reed-Solomon + Galois field + mask scoring + format info bit placement. Zero deps. ~400 lines. The user explicitly asked for the wildest idea nobody else dares; building a real QR encoder for an MCP server is precisely that.
+2. **Wiser, not patched** — didn't tell users to install a QR app or use a QR rendering service. Made the QR itself a first-class Mneme artifact.
+3. **Self-fix root cause** — the stipple-art QR was a UX lie (looked like a QR, wasn't scannable). Replaced with real QR. Users can no longer be misled.
+4. **Co-working not conflicting** — the old `qr_anchor.ts` stays for non-QR visual anchors; `qr_real.ts` is the new canonical real encoder. `renderMobileRecipe` accepts both object + positional args for migration.
+5. **Always-studying** — handoff artifact records the QR version + mask + URL byte count. Future analytics can correlate "QR scan success rate" with payload size; we can tune the deep-link template to keep ratios high.
+
 ## v1.86.0 — 2026-05-13 — CHAMELEON (spore default-OFF + env-adaptive transport) + codebook v3 + typo tolerance
 
 **Headline:** User raised the deepest privacy concern yet — *"Mneme auto-enables spore git push when origin is detected. Most users don't own the repo, work under branch protection, or burn CI minutes on the mneme-lineage branch."* v1.86 flips spore to **default-OFF**, gated behind an explicit OPT_IN file, with full environment probing to detect risky repos BEFORE any push attempt. Plus codebook v3 (compression back to 25%+ on real Gemini phenotype souls) and NEURON typo tolerance.

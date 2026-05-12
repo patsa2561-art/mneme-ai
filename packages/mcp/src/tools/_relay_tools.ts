@@ -56,12 +56,24 @@ export const relayUploadTool: MnemeTool = {
         confidence: { level: "low" },
       };
     }
-    const recipe = core.relay.renderMobileRecipe(up.url, nexusCode);
+    // v1.87: emit FULL handoff artifact (QR + deep link + fallback)
+    // alongside the existing mobile recipe. AI client shows QR; user
+    // scans on phone; mobile AI opens with prompt pre-filled.
+    const recipe = core.relay.renderMobileRecipe({ url: up.url, code: nexusCode });
+    const handoff = core.relay.renderHandoff({ pasteUrl: up.url, nexusCode });
     return {
-      data: { ok: true, backend: up.backend, expiresIn: up.expiresIn, recipe, algorithm: env.algorithm, iterations: env.iterations },
-      wisdom: `uploaded to ${up.backend} (${up.expiresIn}); paste this in mobile AI: "${recipe.mobilePrompt.slice(0, 80)}..."`,
+      data: {
+        ok: true,
+        backend: up.backend,
+        expiresIn: up.expiresIn,
+        recipe,
+        handoff,
+        algorithm: env.algorithm,
+        iterations: env.iterations,
+      },
+      wisdom: `uploaded to ${up.backend} (${up.expiresIn}). Show user the QR (v${handoff.qr.version}, ${handoff.qr.size}x${handoff.qr.size} modules); they scan with phone camera and the AI app opens with the prompt ready.`,
       confidence: { level: "high" },
-      secondBrain: { presentation: recipe.instructions.mobileAiApp },
+      secondBrain: { presentation: handoff.qr.svg + "\n\n" + handoff.instructions.qrScan + "\n\n" + handoff.instructions.tapLink },
     };
   },
 };

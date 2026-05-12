@@ -14,3 +14,5 @@
 export * from "./paste_backend.js";
 export * from "./encrypted_payload.js";
 export * from "./mobile_recipe.js";
+export * from "./deep_link.js";
+export * from "./handoff_artifact.js";
