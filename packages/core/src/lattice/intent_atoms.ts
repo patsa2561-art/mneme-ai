@@ -165,6 +165,86 @@ export const INTENT_ATOMS: readonly IntentAtom[] = [
     intent: "pack the brain as a signed .mwt file for USB / offline transfer",
   },
 
+  // ─── v1.85 NATURAL gap fills ────────────────────────────────────────
+  // Troubleshooting / "my code isn't working"
+  {
+    triggers: [
+      "code ใช้ไม่ได้",
+      "code ไม่ work",
+      "nexus ไม่ทำงาน",
+      "ทำไม code error",
+      "code doesn't work",
+      "code not working",
+      "code expired",
+      "code unknown",
+      "พิมพ์ code แล้วไม่ขึ้น",
+    ],
+    tool: "mneme.synapse.resolve_code",
+    priority: "absolute",
+    intent: "diagnose a NEXUS code that failed to resolve (expired / wrong / different machine)",
+    promise: "เช็คโค้ดให้ — ถ้าหมดอายุจะมินต์ใหม่ + แจ้งทาง relay สำรองให้.",
+  },
+  // Mac / macOS / iPad / Apple-specific
+  {
+    triggers: [
+      "ส่งไป mac",
+      "ไป mac",
+      "send to my mac",
+      "mac เห็นด้วย",
+      "ทำยังไงให้ mac เห็น",
+      "ipad เห็น",
+      "macbook เห็น",
+      "across macOS",
+      "to macOS",
+    ],
+    tool: "mneme.synapse.mint_code",
+    priority: "absolute",
+    intent: "device handoff to a Mac / iPad / macOS-flavored destination",
+  },
+  // Bare-keyword triggers ("gist link please" / "use gist" / "wifi" alone)
+  {
+    triggers: [
+      "gist link please",
+      "use gist",
+      "make a gist",
+      "ทำ gist",
+      "publish to gist",
+      "send via the internet",
+    ],
+    tool: "mneme.genesplice.gist-transmit",
+    priority: "strong",
+    intent: "publish soul prompt to a private GitHub Gist (bare-keyword variant)",
+  },
+  {
+    triggers: [
+      "wifi",
+      "wi-fi",
+      "บน wifi",
+      "ผ่าน wifi",
+      "via wifi",
+    ],
+    tool: "mneme.diaspora.bridge.start",
+    priority: "advisory",
+    intent: "open the same-WiFi LAN bridge (bare-keyword variant)",
+  },
+  // Use the public paste relay (v1.85 RELAY)
+  {
+    triggers: [
+      "use paste",
+      "paste relay",
+      "ใช้ paste",
+      "anonymous paste",
+      "share with my phone",
+      "share with mobile",
+      "make it work on mobile",
+      "ส่งเข้ามือถือให้ใช้ได้จริง",
+    ],
+    tool: "mneme.relay.upload",
+    priority: "absolute",
+    intent: "publish encrypted soul to an anonymous public paste so any mobile AI can fetch + decrypt",
+    promise: "อัปโหลด paste + คืน URL + NEXUS code — paste ใน Gemini/ChatGPT app ตามคำแนะนำ.",
+  },
+
   // ─── Round-trip back to source ──────────────────────────────────────
   {
     triggers: [

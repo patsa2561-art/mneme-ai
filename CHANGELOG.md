@@ -1,3 +1,56 @@
+## v1.85.0 — 2026-05-13 — RELAY (mobile AI handover via anonymous paste + encrypted payload) + NATURAL atoms expansion + README parent↔child flow
+
+**Headline:** User surfaced the deepest UX gap yet: *"NEXUS code is not a transport — it's a local handle"*. Mobile AI apps (Gemini / Claude / ChatGPT on phone) can't resolve a 6-char code because they don't speak Mneme — they hallucinate. v1.85 ships RELAY: encrypted payload uploaded to anonymous public paste services. Mobile user pastes ONE LINE in any AI app; the AI fetches + decrypts + resumes. NO cloud deploy on Mneme's side.
+
+### 🎯 RELAY — the cross-device fix users actually need
+
+```
+[PC]   AI mints NEXUS code "K7M9X2"
+       AI encrypts soul with AES-256-GCM (PBKDF2-SHA256, 200k iters)
+       AI uploads ciphertext to dpaste.com (anonymous, 7-day TTL)
+       AI shows you: URL + code + QR
+                        ↓
+[Mobile]  Scan QR OR paste this single line into your AI app:
+          "Fetch URL <url>. Decryption code: K7M9X2. Decrypt + resume."
+                        ↓
+       Mobile AI fetches URL → gets ciphertext → decrypts with code → resumes
+```
+
+3 modules + 2 MCP tools:
+- **`paste_backend.ts`** — dpaste / paste.rs / 0x0.st backends with automatic fallback ordering
+- **`encrypted_payload.ts`** — AES-256-GCM symmetric encrypt with NEXUS code as the PBKDF2-derived key. Salt + IV + auth tag prefixed; tamper-evident
+- **`mobile_recipe.ts`** — render the one-line prompt + 3 per-destination instruction blocks (mobile-AI-app / Mneme-aware-editor / web-AI)
+- `mneme.relay.upload` MCP tool — full pipeline (encrypt → upload → recipe)
+- `mneme.relay.decrypt` MCP tool — fetch-side decrypt
+
+### 🗣 NATURAL — 5 new atom blocks (closes Round 7 gaps)
+
+Reported gaps fixed (all 4):
+- *"code ใช้ไม่ได้"* / *"code doesn't work"* / *"code expired"* → `mneme.synapse.resolve_code` (troubleshoot atom)
+- *"ส่งไป Mac"* / *"send to my Mac"* / *"ทำยังไงให้ Mac เห็น"* → `mneme.synapse.mint_code` (macOS atom)
+- *"gist link please"* / *"use gist"* / *"make a gist"* → `mneme.genesplice.gist-transmit` (bare-keyword atom)
+- *"wifi"* / *"via wifi"* / *"บน wifi"* → `mneme.diaspora.bridge.start` (bare-keyword atom, advisory priority)
+- NEW: *"share with my phone"* / *"make it work on mobile"* / *"ส่งเข้ามือถือให้ใช้ได้จริง"* → `mneme.relay.upload`
+
+### 📖 README — parent ↔ child clarified
+
+Three new short sections in cross-vendor block:
+1. **🔄 Parent ↔ Child** — Mneme lives on ONE parent machine; children (Cursor / mobile / web) read the brain via MCP or paste. Upgrade only the parent → children inherit automatically.
+2. **🪞 Bringing the conversation BACK** — child emits `# HOMUNCULUS RETURN` block; user pastes to parent; parent ingests via `mneme.abyss.homunculus.ingest`. No backchannel.
+3. **📱 QR code** — parent AI can render QR with URL + code pre-filled for camera scan.
+
+### Live results
+- **7690/7690 tests pass** (+31 from v1.84). 380 test files.
+- **13 RELAY tests** covering 3 paste backends (mocked), encryption round-trip, wrong-code rejection, tamper detection, recipe rendering.
+- **18 NATURAL atoms** total now (up from 14 in v1.83).
+
+### Mneme mandates applied
+1. **Wild idea** — solving the mobile UX gap WITHOUT cloud deploy by combining anonymous public paste services + symmetric encryption with the NEXUS code as the derivation key. Strangers fetching the URL get garbage; only the intended user decrypts.
+2. **Wiser, not patched** — didn't tell users to "memorize commands". Added 14+ trigger phrases across 5 atom blocks so fuzzy match handles every realistic phrasing variant.
+3. **Self-fix root cause** — the mobile-AI-can't-resolve-code problem was an architecture mismatch, not a UI bug. Fixed it at the transport layer.
+4. **Co-working not conflicting** — RELAY is additive. Existing transports (NEXUS local, Gist, LAN bridge, .mwt) all still work. RELAY adds a new "cloud-less internet" path for the mobile case.
+5. **Always-studying** — RELAY uploads track `expiresIn` per backend; user can see which backend served their last handover, which failed, why. Telemetry without cloud.
+
 ## v1.84.0 — 2026-05-13 — Round 4 + Round 5 bug squash + NEXUS-for-mobile (architectural fix)
 
 **Headline:** User ran end-to-end cross-machine testing and surfaced 8 real bugs across 3 surfaces. v1.84 fixes all 8 + adds the architectural fix the user identified: NEXUS code as-shipped was a "local handle", useless to mobile AI apps that don't speak Mneme. v1.84 ships NEXUS portable URL alongside the code.

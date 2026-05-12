@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -205,6 +205,10 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // ─── v1.83 AURA (same-WiFi auto-pairing, owner-only) ──────────────────
   { command: "mneme.aura.pair", since: "1.83.0", group: "aura", what: "Build a signed pairing payload (lanUrl + NEXUS code + expiry + owner fingerprint). Office neighbours on same WiFi without owner key CANNOT use it.", when: "Same-WiFi handover where user shouldn't type any URL." },
   { command: "mneme.aura.discover", since: "1.83.0", group: "aura", what: "List LAN IPv4 candidates + recommended LAN URL for this machine. NO broadcast.", when: "Before pairing: figure out which URL to embed." },
+
+  // ─── v1.85 RELAY (cloud-less cross-device via anonymous paste) ────────
+  { command: "mneme.relay.upload", since: "1.85.0", group: "relay", what: "Encrypt soul with NEXUS code, upload to anonymous paste (dpaste/paste.rs/0x0.st), return URL + mobile-friendly prompt.", when: "Cross-device handover to a mobile AI app that does NOT have Mneme (Gemini/Claude/ChatGPT on phone)." },
+  { command: "mneme.relay.decrypt", since: "1.85.0", group: "relay", what: "Decrypt a fetched paste envelope with a NEXUS code.", when: "Destination AI fetched the URL; user typed the code; need to decrypt before resume." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -229,7 +233,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

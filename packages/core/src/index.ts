@@ -453,6 +453,11 @@ export * as osmosis from "./osmosis/index.js";
 // fingerprint). Office WiFi neighbours can't fetch -- they don't have
 // the matching owner key. No mDNS broadcast.
 export * as aura from "./aura/index.js";
+// v1.85 -- RELAY: paste-backed cross-vendor brain transport.
+// Anonymous public paste services (dpaste / paste.rs / 0x0.st) host the
+// encrypted soul; mobile AI apps fetch the URL + decrypt with NEXUS
+// code. No cloud deploy on our side. No Mneme on destination.
+export * as relay from "./relay/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

@@ -63,6 +63,40 @@ You do NOT memorize commands. Describe the outcome in plain language. Mneme's NE
 
 Your AI doesn't need the EXACT phrase — fuzzy matching handles typos, paraphrasing, Thai-English mixing. The table is for inspiration, not a script.
 
+### 🔄 Parent ↔ Child — who upgrades what
+
+Mneme lives on **ONE machine** (the **parent** — usually your main PC). Every AI tool you use is a **child** that talks to the parent via MCP or paste.
+
+```
+[PARENT — your main PC]              [CHILDREN — anywhere]
+  Mneme installed (npm)               Cursor laptop · Claude mobile · Gemini web
+  Owns the brain (.mneme/)            Read the brain via MCP or paste
+  Pushes new features                 No install, no upgrade needed
+        ↓
+   npm install -g mneme-ai@latest  ← upgrade ONLY on the parent
+        ↓
+   All children see the new features automatically
+   (editor children via MCP refresh; web children via the next soul prompt)
+```
+
+- **Want a new Mneme feature on Cursor / mobile / iPad?** → Upgrade Mneme on your parent PC. Children inherit it the next time they connect (editor) or receive a soul prompt (web).
+- **You do NOT install Mneme on the mobile app.** The mobile AI just reads your paste; it cannot have Mneme.
+
+### 🪞 Bringing the conversation BACK (child → parent)
+
+When you work in a child AI (mobile / web) and want the result back on the parent:
+
+1. Tell the child AI: *"send my brain back to my main PC"*.
+2. The child emits a `# HOMUNCULUS RETURN` block — a structured summary of decisions / reasoning / next-actions.
+3. You paste that block into the parent (Cursor / Claude Code).
+4. Parent's Mneme parses it via `mneme.abyss.homunculus.ingest` and merges into the local genome.
+
+No backchannel. The user is the courier; the format is typed.
+
+### 📱 Same flow → QR code
+
+For step 2 of any transport, your parent AI can also **render a QR code** instead of a text URL. Scan it with your phone's camera; the destination AI opens with the URL + decryption code pre-filled.
+
 ### 🎬 The 5 transports — what actually happens
 
 ```
