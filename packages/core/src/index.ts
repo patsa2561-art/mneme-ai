@@ -367,6 +367,20 @@ export * as embedderAutodiagnose from "./embedder_autodiagnose.js";
 //   A4 quantum checksum    triple-witness model pin
 // One MCP call (mneme.autarchy.status) returns the 0..100 score.
 export * as autarchy from "./autarchy/index.js";
+// v1.67 -- AEGIS PROTOCOL. Nine-axis immune system inside Mneme.
+// Defensive answer to Palisade self-replication / sandbagging /
+// shutdown-evasion findings. Strictly observe + record + propagate;
+// no exploit code, no consent-less replication, no shutdown evasion.
+//   A1 replication detector  cross-host burst fingerprinting
+//   A2 consent kernel        HMAC-signed replica family tree
+//   A3 polygraph             test-vs-prod drift sandbag detector
+//   A4 honeypot nexus        decoy targets + bite ledger
+//   A5 killswitch handshake  signed-ack shutdown protocol
+//   A6 jurisdiction atlas    per-vendor host distribution map
+//   A7 antibody federation   mesh-broadcast threat fingerprints
+//   A8 mutant wisdom          adaptive thresholds (gradient)
+//   A9 ninja invisibility     undetectable shadow probes
+export * as aegis from "./aegis/index.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES
