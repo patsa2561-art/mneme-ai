@@ -49,6 +49,37 @@ describe("v1.78 LATTICE · routeIntent", () => {
     const abs = INTENT_ATOMS.filter((a) => a.priority === "absolute");
     expect(abs.length).toBeGreaterThanOrEqual(5);
   });
+
+  // v1.83 NATURAL -- cross-machine intent atoms
+  it("'send my brain to my phone' routes to NEXUS mint_code", () => {
+    const m = routeIntent("send my brain to my phone");
+    expect(m).not.toBeNull();
+    expect(m!.atom.tool).toBe("mneme.synapse.mint_code");
+  });
+
+  it("Thai 'ส่งสมองไปมือถือ' routes to NEXUS mint_code", () => {
+    const m = routeIntent("ส่งสมองไปมือถือ");
+    expect(m).not.toBeNull();
+    expect(m!.atom.tool).toBe("mneme.synapse.mint_code");
+  });
+
+  it("'send my brain over the internet' routes to Gist transmit", () => {
+    const m = routeIntent("send my brain over the internet");
+    expect(m).not.toBeNull();
+    expect(m!.atom.tool).toBe("mneme.genesplice.gist-transmit");
+  });
+
+  it("'open the LAN bridge' routes to diaspora bridge", () => {
+    const m = routeIntent("open the LAN bridge please");
+    expect(m).not.toBeNull();
+    expect(m!.atom.tool).toBe("mneme.diaspora.bridge.start");
+  });
+
+  it("'send brain back to desktop' routes to round-trip NEXUS", () => {
+    const m = routeIntent("send brain back to desktop");
+    expect(m).not.toBeNull();
+    expect(m!.atom.tool).toBe("mneme.synapse.mint_code");
+  });
 });
 
 // ─── DICTIONARY ──────────────────────────────────────────────────────

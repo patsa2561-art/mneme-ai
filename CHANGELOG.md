@@ -1,3 +1,56 @@
+## v1.83.0 — 2026-05-13 — AURA + NATURAL (LAN auto-pairing, owner-only privacy, natural-language intent atoms)
+
+**Headline:** User asked two precise questions: *"do users have to memorize commands like 'ส่งสมองไปอีกเครื่อง'?"* and *"on an office WiFi, Mneme should auto-discover + send to owner ONLY, not everyone on the network."* v1.83 answers both: NATURAL adds intent atoms for every cross-machine variant so AI agents route them via fuzzy match (no memorization), and AURA adds signed pairing payloads so same-WiFi handover is automatic AND owner-only.
+
+### What ships
+
+#### 🗣 NATURAL — natural-language intent atoms for cross-machine
+6 new intent atoms cover every transport variant:
+- **NEXUS device handoff** — `to my phone` / `ส่งสมองไปมือถือ` / `send brain to my phone` / `device handoff` / `give me a code` → `mneme.synapse.mint_code`
+- **Gist over the internet** — `over the internet` / `via gist` / `ส่งสมองข้ามเน็ต` / `private link` → `mneme.genesplice.gist-transmit`
+- **LAN bridge** — `lan bridge` / `same wifi` / `เปิด lan` → `mneme.diaspora.bridge.start`
+- **Offline `.mwt`** — `pack as mwt` / `pack สมองเป็นไฟล์` / `ไม่มีเน็ต` → `mneme.avatar.wisdom-pack`
+- **Round-trip back to source** — `send brain back` / `ส่งสมองกลับ` → `mneme.synapse.mint_code` (the round-trip recipe)
+
+User now says ANY natural variant — NEURON's fuzzy trigram matcher (v1.79) + LATTICE atoms (v1.78) handle typos / paraphrasing / Thai-English mixing. **No memorization.**
+
+#### 🛜 AURA — same-WiFi auto-pairing, owner-only privacy
+2 modules close the LAN handover gap user spotted:
+- **`pair_payload.ts`** — `encodePairing({lanUrl, code, expiresAt, ownerSecret, ownerPubKeyHash})` builds a base64url token bundling LAN URL + NEXUS code + expiry + signed owner fingerprint. `decodePairing(token, expectedOwner, secret)` returns `{ok: true, payload}` ONLY if:
+  - signature verifies with the local owner secret
+  - owner fingerprint matches the local owner pubkey hash
+  - payload is not expired
+  Otherwise `{ok: false, reason: 'wrong-owner' | 'bad-sig' | 'expired' | 'malformed'}`.
+- **`auto_discovery.ts`** — `discoverLanAddresses()` lists private IPv4 candidates from `os.networkInterfaces()`. `buildLanUrl(port)` returns the recommended LAN URL. **NO mDNS broadcast** — nothing leaves the source machine until the user explicitly shares the pairing payload (QR / NEXUS code).
+
+#### 🛡 Privacy property (the user's real concern, resolved)
+On an office WiFi:
+- Source's `pair_payload` is signed with owner's secret + carries owner's fingerprint
+- Office neighbours who somehow intercept the payload CANNOT use it — their own AI's `decodePairing` returns `wrong-owner` because their owner fingerprint differs
+- Office neighbours can't even discover the source — no broadcast on the wire
+
+#### 2 new MCP tools
+- `mneme.aura.pair` — build pairing payload
+- `mneme.aura.discover` — list LAN URLs
+
+### README v5
+Cross-vendor section now has:
+1. "What you can say" examples table (Thai + English alongside) — explicitly framed as *"inspiration, not a script"*
+2. 5-transport concrete dialogue block — each scenario shows source / destination dialogue
+3. LAN bridge section now describes the auto-pairing flow with explicit **🔒 Privacy** callout
+
+### Live results
+- **7642/7642 tests pass** (+32 from v1.82). 378 test files.
+- **9 AURA tests** covering encode/decode/owner-mismatch/tamper/expiry/garbage + auto-discovery returns valid private IPv4s.
+- **5 new LATTICE tests** for cross-machine routing.
+
+### Mneme mandates applied
+1. **Wild idea** — *pair_payload* puts the auth + the LAN URL in one signed token. Office privacy without any cloud, mDNS, or broadcast. Nobody else ships this.
+2. **Wiser, not patched** — didn't tell user to type URLs more carefully. Built a structured payload so URLs are NEVER typed.
+3. **Self-fix root cause** — the privacy gap wasn't "user types URL wrong"; it was "no owner check on the LAN endpoint". Fixed at the auth layer, not the UX layer.
+4. **Co-working not conflicting** — AURA wraps the existing HTTP bridge auth (HMAC token from v1.72) with an additional owner-fingerprint check. Older bridge invocations still work.
+5. **Always-studying** — every pairing payload contains an expiry + owner fingerprint. Over time we can compute "average pairing latency", "owner-mismatch rate" (= attempted snoops) without any cloud telemetry.
+
 ## v1.82.0 — 2026-05-13 — OSMOSIS + 3 Windows bug fixes + README split
 
 **Headline:** User shipped a precise bug bench (spore exit-2, time-capsule colon-host, spore status BOM-blind) plus asked for OSMOSIS — 24/7 second-brain expansion harvesting wisdom from every AI agent. All four delivered with tests.

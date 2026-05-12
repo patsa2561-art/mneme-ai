@@ -448,6 +448,11 @@ export * as synapse from "./synapse/index.js";
 // from every AI agent (with consent), distills into a hash-chained
 // wisdom ledger. No training, no cloud, no API key.
 export * as osmosis from "./osmosis/index.js";
+// v1.83 -- AURA: same-WiFi auto-discovery + owner-only pairing.
+// Signed pair payload bundles (lanUrl + NEXUS code + expiry + owner
+// fingerprint). Office WiFi neighbours can't fetch -- they don't have
+// the matching owner key. No mDNS broadcast.
+export * as aura from "./aura/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

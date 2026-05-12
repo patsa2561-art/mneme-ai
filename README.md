@@ -46,11 +46,63 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 <table align="center" width="92%"><tr><td>
 
-### 🥢 The one sentence
+### 🗣 Just say what you want — in any words
 
-> **Say to the AI you're using right now:** *"send my brain to my other AI"*.
+You do NOT memorize commands. Describe the outcome in plain language. Mneme's NEURON router understands the intent and picks the right transport automatically.
 
-Your AI does the rest. No commands. No version numbers. No accounts on the other side.
+**Examples — say any of these in your current AI:**
+
+| What you want | Say something like |
+|---|---|
+| Same computer, different AI | *"send my brain to my other AI"* |
+| Phone / tablet / 2nd laptop | *"send my brain to another device"* / *"give me a code"* |
+| Across the internet | *"send my brain over the internet"* / *"share via private link"* |
+| Same WiFi as another device | *"open the LAN bridge"* |
+| Offline / USB transfer | *"pack my brain as a file"* |
+| Bring conversation BACK | *"send my brain back to my desktop"* |
+
+Your AI doesn't need the EXACT phrase — fuzzy matching handles typos, paraphrasing, Thai-English mixing. The table is for inspiration, not a script.
+
+### 🎬 The 5 transports — what actually happens
+
+```
+🥇 NEXUS code (phone / tablet / 2nd laptop) ─────────────────────────
+   [Source machine]  You: "send my brain to my phone"   (ส่งสมองไปมือถือ)
+                     AI:  "code K7M9X2 (valid 24h)" + QR
+                          ─────────────────────────────
+   [Destination]     You: type K7M9X2  OR  scan the QR
+                     AI:  fetches the brain → resume
+
+🥈 Gist link (across the internet, different networks) ──────────────
+   You: "send my brain over the internet"               (ส่งสมองข้ามเน็ต)
+   AI:  uploads to your private Gist → returns a short URL
+   → paste the URL into any AI on any device
+
+🥉 LAN bridge (same WiFi — fully automatic + owner-only) ────────────
+   [PC]   You: "send to my Mac on the same WiFi"        (ส่งไป Mac WiFi เดียวกัน)
+          AI:  detects LAN IP + mints a SIGNED pairing payload + QR
+          AI:  shows the QR on screen — you don't type any URL
+   [Mac]  Scan the QR with the Mac's camera or paste the code.
+          Mac's AI auto-fetches the brain → resume.
+
+   🔒 Privacy: the pairing payload is signed with YOUR owner key.
+      Office neighbours on the same WiFi cannot use it — their AIs
+      reject any payload that doesn't match their owner fingerprint.
+
+4️⃣ Wanderer .mwt (offline / USB / no cloud) ────────────────────────
+   [PC]   You: "pack my brain as a file"                (pack สมองเป็นไฟล์)
+          AI:  creates a signed .mwt → drop onto USB stick
+   [Other PC]
+          You: "unpack this .mwt"                       (unpack ไฟล์นี้)
+          AI:  restores the brain locally
+
+5️⃣ Git sync (continuous, 2 always-on machines) ──────────────────────
+   Set up once on each machine. Then commits sync the lineage
+   between them via your own bare git repo. Best when both
+   machines are always on and on the same private network.
+```
+
+**One sentence does all 5.** You never pick the transport manually — say the outcome, AI picks the best path.
 
 ### 🎬 Where your brain lands — pick whichever is convenient
 
