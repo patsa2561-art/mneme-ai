@@ -93,6 +93,22 @@ When you work in a child AI (mobile / web) and want the result back on the paren
 
 No backchannel. The user is the courier; the format is typed.
 
+### 🦎 Don't have git? Don't worry — it's OPTIONAL
+
+Mneme has 6 transports for cross-device handover. **Only one uses git.** Every other path works fine without git, without a GitHub account, without any push permission.
+
+| Use case | Uses git? | Default-on? |
+|---|---|---|
+| Phone / tablet (mobile AI app) | ❌ no | ✅ ready |
+| Same WiFi (AURA owner-only pairing) | ❌ no | ✅ ready |
+| Anonymous paste relay (encrypted) | ❌ no | ✅ ready |
+| Offline / USB (Wanderer `.mwt`) | ❌ no | ✅ ready |
+| Time-capsule tarball | ❌ no | ✅ ready |
+| Personal GitHub Gist | optional | manual upload |
+| `mneme spore` (continuous git sync) | ✅ yes | **🔒 OPT-IN only after v1.86** |
+
+**Spore is default-OFF starting v1.86.** It will refuse to push to your git remote until you explicitly run `mneme.chameleon.spore_opt_in` after reviewing the env-probe risks (CI / CODEOWNERS / fork-vs-personal). If you don't have git, fork someone else's repo, or work in a corporate repo with branch protection — Spore stays silent. Use the 5 non-git transports instead.
+
 ### 📱 Same flow → QR code
 
 For step 2 of any transport, your parent AI can also **render a QR code** instead of a text URL. Scan it with your phone's camera; the destination AI opens with the URL + decryption code pre-filled.

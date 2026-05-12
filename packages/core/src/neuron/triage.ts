@@ -46,7 +46,10 @@ export interface TriageReport {
 }
 
 const MNEME_KEYWORD_RE = /\b(mneme|soul prompt|ส่งสมอง)\b/i;
-const FUZZY_THRESHOLD = 0.20;
+// v1.86: lowered from 0.20 to 0.13 so multi-typo phrases like
+// "sned brian to lap top" still surface a candidate (it scored 0.16
+// against "send brain to" before this change).
+const FUZZY_THRESHOLD = 0.13;
 
 /** Run the full 4-strategy triage. */
 export function telepathicTriage(

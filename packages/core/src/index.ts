@@ -458,6 +458,11 @@ export * as aura from "./aura/index.js";
 // encrypted soul; mobile AI apps fetch the URL + decrypt with NEXUS
 // code. No cloud deploy on our side. No Mneme on destination.
 export * as relay from "./relay/index.js";
+// v1.86 -- CHAMELEON: environment-adaptive transport selection.
+// Detects git ownership / CI / CODEOWNERS without external API calls,
+// gates spore git push behind explicit opt-in (default OFF), routes
+// every destination to the safest transport.
+export * as chameleon from "./chameleon/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

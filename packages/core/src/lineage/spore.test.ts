@@ -98,11 +98,23 @@ describe("Spore push/pull (dry-run when no real remote)", () => {
 
   it("sporePush returns dry-run when remote unreachable", () => {
     sporeInit(repo, { remote: "https://invalid-host-that-does-not-exist.localhost/x.git" });
+    // v1.86: spore is default-off until OPT_IN is written. Test the
+    // dry-run-when-unreachable path with opt-in granted.
+    require("node:fs").mkdirSync(`${repo}/.mneme/spore`, { recursive: true });
+    require("node:fs").writeFileSync(`${repo}/.mneme/spore/OPT_IN`, "test-ack");
     const r = sporePush(repo, "machineA");
     expect(r.dryRun).toBe(true);
     expect(r.ok).toBe(false);
     // Vector clock incremented even on dry-run (so we can resync later).
     expect(readVectorClock(repo)["machineA"]).toBeGreaterThan(0);
+  });
+
+  it("v1.86 -- sporePush REFUSES without OPT_IN marker", () => {
+    sporeInit(repo, { remote: "https://example.com/x.git" });
+    const r = sporePush(repo, "machineA");
+    expect(r.ok).toBe(false);
+    expect(r.dryRun).toBe(true);
+    expect(r.message).toContain("OPT_IN");
   });
 
   it("sporePull returns dry-run when no remote configured", () => {

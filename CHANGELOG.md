@@ -1,3 +1,61 @@
+## v1.86.0 — 2026-05-13 — CHAMELEON (spore default-OFF + env-adaptive transport) + codebook v3 + typo tolerance
+
+**Headline:** User raised the deepest privacy concern yet — *"Mneme auto-enables spore git push when origin is detected. Most users don't own the repo, work under branch protection, or burn CI minutes on the mneme-lineage branch."* v1.86 flips spore to **default-OFF**, gated behind an explicit OPT_IN file, with full environment probing to detect risky repos BEFORE any push attempt. Plus codebook v3 (compression back to 25%+ on real Gemini phenotype souls) and NEURON typo tolerance.
+
+### 🔒 CHAMELEON — environment-adaptive guards
+
+3 modules close the spore-auto-enable hole:
+
+1. **`env_probe.ts`** — Detects, no API calls:
+   - `hasGit`, `hasOrigin`, `originUrl`, `originOwner` (extracted from `https://github.com/<owner>/...` / `git@host:<owner>/...`)
+   - `localGitName` from `git config user.name`
+   - `isUserOwned: boolean | "unknown"` — heuristic match owner vs local user
+   - `hasCi` — looks for `.github/workflows/`, `.gitlab-ci.yml`, `.circleci/config.yml`, `azure-pipelines.yml`, `.buildkite/pipeline.yml`
+   - `hasCodeowners` — `.github/CODEOWNERS` or root `CODEOWNERS`
+   - `pushRisky: boolean` + `riskReasons[]` — plain-English explanations
+2. **`spore_gate.ts`** — `sporeGate()` returns `{allow, reason, env, optInState, howToOptIn}`. Without an `.mneme/spore/OPT_IN` marker, **every spore push is refused** with a structured explanation. `writeSporeOptIn(ack)` writes the marker only after the user explicitly consented. `revokeSporeOptIn()` flips back to refused.
+3. **`transport_select.ts`** — Given a destination (`same-pc-other-ai` / `same-wifi-other-device` / `phone-or-mobile-app` / `different-network-personal` / `offline-usb` / `continuous-sync`) plus the env probe, returns `{primary, fallbacks[], reasons[], warnings[]}`. Refuses to recommend `spore-git` on risky repos (fork / CI / CODEOWNERS) — routes to `relay-paste` instead.
+
+### 🦎 Spore is now DEFAULT-OFF (breaking but safe)
+
+`sporePush` now refuses with:
+```
+spore push refused: no .mneme/spore/OPT_IN marker (default OFF after v1.86).
+Call mneme.chameleon.spore_opt_in after confirming the repo is safe for push.
+```
+
+Even on legitimately-yours repo, you have to explicitly opt in once. This prevents:
+- Accidental pushes to fork/upstream
+- Surprise PR-review flow on protected branches
+- Unintended CI minutes on the `mneme-lineage` branch
+- Privacy leak when contributing to OSS
+
+### 🔤 R4-2 follow-up — codebook v3
+
+User reported a real Gemini phenotype soul compressed only **10.6%** (claim was 25-50%). Root cause: codebook had section headers + Mneme phrases but missing phenotype keywords. v1.86 adds 23 phenotype + heartbeat entries (`vendor=`, `fingerprint=`, `capsule=`, `createdAt=`, `INSTRUCTIONS-TO-RECEIVING-AI:`, `MNEME-FORMAT-VERSION: 1`, `claude-opus-4-7`, `gpt-`, `gemini-pro`, etc.) so real-world ratios return to 25%+.
+
+### 🤖 NEURON typo tolerance
+
+Reported: *"sned brian to lap top"* (multi-typo) routed null. Lowered fuzzy threshold from 0.20 to 0.13 so multi-typo phrases surface candidates instead of falling through.
+
+### 4 new MCP tools
+- `mneme.chameleon.probe` — return env probe + risk reasons
+- `mneme.chameleon.select_transport` — pick safe transport per destination + env
+- `mneme.chameleon.spore_opt_in` — write OPT_IN marker (call only after user consent)
+- `mneme.chameleon.spore_gate` — evaluate current push permission
+
+### Live results
+- **7742/7742 tests pass** (+52 from v1.85). 381 test files.
+- **18 CHAMELEON tests** covering fork detection / CI detection / CODEOWNERS / OPT_IN write & revoke / BOM-stripped OPT_IN files / transport selection on risky vs clean repos.
+- **NEW:** README has explicit "Don't have git? It's OPTIONAL" section listing which transports avoid git entirely (5 out of 6).
+
+### Mneme mandates applied
+1. **Wild idea** — Mneme MUTATES based on environment. Same code, different recommendations on a fork repo vs a personal repo vs a CI-laden corp repo. The transport selector is essentially a tiny environment-aware AI built into Mneme itself.
+2. **Wiser, not patched** — didn't add a flag to `sporePush` to make it safer. Flipped the default. Old `default-on` behavior was the bug; explicit opt-in is the right contract.
+3. **Self-fix root cause** — the privacy concern wasn't "spore pushed accidentally"; it was "spore auto-enabled without consent". Fixed the consent layer, not the push retry logic.
+4. **Co-working not conflicting** — existing spore tests updated to write OPT_IN where they assume push reaches dry-run. New REFUSE test added. Old code paths still work for opted-in users.
+5. **Always-studying** — env_probe is local-only (no API calls), but produces structured signal that the daemon can later mine to suggest "you've contributed to N forks this month — never opt in spore for those".
+
 ## v1.85.0 — 2026-05-13 — RELAY (mobile AI handover via anonymous paste + encrypted payload) + NATURAL atoms expansion + README parent↔child flow
 
 **Headline:** User surfaced the deepest UX gap yet: *"NEXUS code is not a transport — it's a local handle"*. Mobile AI apps (Gemini / Claude / ChatGPT on phone) can't resolve a 6-char code because they don't speak Mneme — they hallucinate. v1.85 ships RELAY: encrypted payload uploaded to anonymous public paste services. Mobile user pastes ONE LINE in any AI app; the AI fetches + decrypts + resumes. NO cloud deploy on Mneme's side.

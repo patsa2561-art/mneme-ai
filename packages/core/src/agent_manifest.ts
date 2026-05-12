@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -209,6 +209,12 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // ─── v1.85 RELAY (cloud-less cross-device via anonymous paste) ────────
   { command: "mneme.relay.upload", since: "1.85.0", group: "relay", what: "Encrypt soul with NEXUS code, upload to anonymous paste (dpaste/paste.rs/0x0.st), return URL + mobile-friendly prompt.", when: "Cross-device handover to a mobile AI app that does NOT have Mneme (Gemini/Claude/ChatGPT on phone)." },
   { command: "mneme.relay.decrypt", since: "1.85.0", group: "relay", what: "Decrypt a fetched paste envelope with a NEXUS code.", when: "Destination AI fetched the URL; user typed the code; need to decrypt before resume." },
+
+  // ─── v1.86 CHAMELEON (env-adaptive guards; spore default OFF) ─────────
+  { command: "mneme.chameleon.probe", since: "1.86.0", group: "chameleon", what: "Detect git/CI/CODEOWNERS/ownership without external API calls. Returns pushRisky + risk reasons.", when: "Before any cross-machine git push; whenever unsure if spore is safe." },
+  { command: "mneme.chameleon.select_transport", since: "1.86.0", group: "chameleon", what: "Pick safest transport given destination + env. Refuses spore-git on risky repos.", when: "Source AI deciding which transport to use." },
+  { command: "mneme.chameleon.spore_opt_in", since: "1.86.0", group: "chameleon", what: "Write explicit OPT_IN marker; required AFTER v1.86 for spore push to work.", when: "User reviewed env probe risks and explicitly consented to git push." },
+  { command: "mneme.chameleon.spore_gate", since: "1.86.0", group: "chameleon", what: "Evaluate spore push permission right now; returns allow/refuse + reason.", when: "ALWAYS gate before calling sporePush." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -233,7 +239,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

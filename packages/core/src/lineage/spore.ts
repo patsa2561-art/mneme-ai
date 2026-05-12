@@ -215,11 +215,25 @@ export interface PushResult {
 }
 
 /** Push the local lineage to the configured remote. Returns dryRun=true
- *  if no remote is configured (the snapshot is still updated locally). */
+ *  if no remote is configured (the snapshot is still updated locally).
+ *  v1.86 CHAMELEON: refuses to push unless the user has written the
+ *  explicit OPT_IN marker via mneme.chameleon.spore_opt_in. This stops
+ *  accidental pushes to fork/upstream/protected-branch repos. */
 export function sporePush(repoRoot: string, machineId: string): PushResult {
   const remote = readSporeRemote(repoRoot);
   if (!remote) {
     return { ok: false, pushedFiles: 0, message: "no spore remote configured — call mneme.spore.init first", dryRun: true };
+  }
+  // v1.86: gate by explicit opt-in. Inline check (avoid cross-module import cycle).
+  const optInPath = join(repoRoot, ".mneme/spore/OPT_IN");
+  if (!existsSync(optInPath)) {
+    return {
+      ok: false,
+      pushedFiles: 0,
+      message:
+        "spore push refused: no .mneme/spore/OPT_IN marker (default OFF after v1.86). Call mneme.chameleon.spore_opt_in after confirming the repo is safe for push.",
+      dryRun: true,
+    };
   }
   // Tick our machine's clock — local first.
   const clock = tickClock(repoRoot, machineId);

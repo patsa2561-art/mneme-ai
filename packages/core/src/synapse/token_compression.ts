@@ -75,6 +75,34 @@ export const COMPRESSION_CODEBOOK: readonly CompressionCodebookEntry[] = [
   { code: "@gx", expansion: "Gist URL" },
   { code: "@lb", expansion: "LAN bridge" },
   { code: "@vd", expansion: "voice directive" },
+
+  // v1.86 R4-2 follow-up: phenotype + cross-vendor keywords that show up
+  // frequently in real Gemini/ChatGPT/Claude soul prompts. Each save
+  // 5-20 chars per occurrence; together they push real-world ratios
+  // back into the 25-40% range.
+  { code: "@@pv", expansion: "vendor-specific" },
+  { code: "@@pc", expansion: "context window" },
+  { code: "@@pr", expansion: "Reply style:" },
+  { code: "@@ph", expansion: "hedge accordingly" },
+  { code: "@@pi", expansion: "phenotype instructions" },
+  { code: "@@pb", expansion: "Be aware that as a" },
+  { code: "@@po", expansion: "overconfidence calibration" },
+  { code: "@@pt", expansion: "tend to default to long answers" },
+  { code: "@@pe", expansion: "vendor=" },
+  { code: "@@pf", expansion: "fingerprint=" },
+  { code: "@@pca", expansion: "capsule=" },
+  { code: "@@pd", expansion: "createdAt=" },
+  { code: "@@pca2", expansion: "claude-opus-4-7" },
+  { code: "@@pg", expansion: "gpt-" },
+  { code: "@@pgm", expansion: "gemini-pro" },
+  { code: "@@pcl", expansion: "claude-" },
+  { code: "@@pn", expansion: "INSTRUCTIONS-TO-RECEIVING-AI:" },
+  { code: "@@pmt", expansion: "MNEME-FORMAT-VERSION: 1" },
+  { code: "@@pl1", expansion: "local_version:" },
+  { code: "@@pl2", expansion: "npm_latest:" },
+  { code: "@@pl3", expansion: "sync_status:" },
+  { code: "@@pl4", expansion: "checked_at:" },
+  { code: "@@pl5", expansion: "repo_fingerprint:" },
 ];
 
 export interface CompressionReport {
