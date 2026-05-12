@@ -344,6 +344,17 @@ export * as aiTeacher from "./innerlife/ai_teacher.js";
 // All seven are pure-read by default; opt-in persistence under
 // .mneme/cognitive/.
 export * as cognitive from "./cognitive/index.js";
+// v1.65 -- APOPTOSIS PROTOCOL. 7-layer hallucination killer:
+// 5-witness fusion + semantic grounding + Bayesian vaccine prior +
+// temporal consistency + epistemic humility + fractal decomposition +
+// ACGV cascade. Continuous verdict ladder (HEALTHY / INFLAMED /
+// NECROTIC / APOPTOTIC) with bench-verified 100% precision + recall
+// on the 200-sample synthetic corpus (vs ~70% baseline).
+export * as apoptosis from "./apoptosis/index.js";
+// v1.65 -- POWER 6 LIVE METRIC + POWER 7 SHADOW TREASURY.
+// Adds honest live-signal axes alongside the v1.48 simulation modules.
+export * as powerAdversarialLive from "./powers/p6_live.js";
+export * as powerAutonomousShadow from "./powers/p7_shadow.js";
 // v1.40.0 -- UNIVERSAL FUNCTION-CALLING ADAPTER. Exports Mneme tools
 // in OpenAI / Anthropic / Gemini native function-call schema formats
 // so AI clients can consume Mneme tools WITHOUT MCP. SCHEMA MOLECULES

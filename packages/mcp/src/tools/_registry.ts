@@ -27,6 +27,7 @@ import { truthCheckTool } from "./_truth_check.js";
 import { TIER_TOOLS } from "./_tier_tools.js";
 import { PATH_TOOLS } from "./_path_tools.js";
 import { COGNITIVE_TOOLS } from "./_cognitive_tools.js";
+import { APOPTOSIS_TOOLS } from "./_apoptosis_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -58,6 +59,7 @@ export function buildAllTools(): MnemeTool[] {
     ...TIER_TOOLS,
     ...PATH_TOOLS,
     ...COGNITIVE_TOOLS,
+    ...APOPTOSIS_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
