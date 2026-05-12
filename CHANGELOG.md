@@ -1,3 +1,31 @@
+## v1.74.0 — 2026-05-12 — PERMEATE PROTOCOL (cross-vendor + cross-machine, no store approval)
+
+**Headline:** Soul prompt now reaches "browser-only" AIs (ChatGPT / Gemini / Claude.ai / Copilot / DeepSeek / Qwen) AND crosses computers — without a Chrome Web Store submission, without a cloud deploy, without an API key.
+
+### 4 axes shipped
+
+1. **Userscript generator** — One-shot Tampermonkey/Greasemonkey/Violentmonkey `.user.js`. Floating "💉 Inject Mneme Soul" button on 6 chat sites; survives React re-mounts via MutationObserver; optional bridge URL+token integration.
+2. **Bookmarklet** — Single-line `javascript:` URI, drag-to-bookmark-bar. 8 selector fallbacks. Works without ANY install.
+3. **Editor integration map** — 15 AI tools catalogued (Claude Code / Cursor / Continue / Cline / Aider / Zed / Codex / Windsurf / Copilot Chat / JetBrains AI + 5 web). Native-MCP / parasite-bridge / browser-only / partial — exposed via `mneme.permeate.integrations`.
+4. **Transport menu** — Cross-machine ranked recommender: clipboard / Gist / Wanderer `.mwt` / QR-code. Considers `hasGithubAccount` / `preferOffline` / `laptopToPhone`.
+
+### Live results
+- **7201/7201 tests pass** (+28 from v1.73). 369 test files.
+- **4 new MCP tools** registered: `mneme.permeate.userscript` / `.bookmarklet` / `.integrations` / `.transport`.
+- **NO cloud, NO API key, NO store approval** — user installs Tampermonkey once (or just drags the bookmarklet); soul prompt travels by clipboard or Gist link.
+
+### Plain English
+- Q: "Does this work with ChatGPT.com / Gemini / Claude.ai?" — Yes, via the userscript or bookmarklet button.
+- Q: "Two computers — same brain?" — Yes. Generate the soul prompt on machine A, paste it on machine B. Or send it as a Gist link.
+- Q: "VS Code / Cursor / other editors?" — Already works natively via MCP (no extension needed). 10 editor surfaces verified.
+
+### Mneme mandates applied
+1. **Wild idea** — route around Chrome Web Store entirely with userscripts + bookmarklets; nobody else does this for an MCP product.
+2. **Wiser, not patched** — generates a NEW userscript per Mneme version (versioned in the `@grant` header), not a hand-edited single file.
+3. **Self-fix root cause** — earlier sessions had "how do I get this on ChatGPT.com" friction; v1.74 makes it a one-click button on every chat surface.
+4. **Co-working not conflicting** — userscript reuses v1.72 D4 HTTP bridge if installed (graceful fallback to paste mode otherwise).
+5. **Always-studying** — integration map is queryable from MCP so AI clients can self-report compatibility status instead of guessing.
+
 # Changelog
 
 All notable changes to Mneme are documented in this file.

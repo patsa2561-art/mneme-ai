@@ -395,6 +395,17 @@ export * as diaspora from "./diaspora/index.js";
 //   G5 phenotype expression     vendor-specific from same genome
 //   G6 browser paste protocol    universal markdown+HMAC format
 export * as genesplice from "./genesplice/index.js";
+// v1.74 -- PERMEATE PROTOCOL. Reach every AI tool on Earth without
+// vendor approval or cloud deploy. Userscript + bookmarklet route
+// around store approval (Tampermonkey-compatible). Editor map proves
+// MCP-native tools (Cursor / Continue / Cline / Aider / Zed / etc)
+// already work via MCP. Cross-machine transport menu offers 4
+// concrete paths (clipboard / Gist / Wanderer .mwt / QR).
+//   P1 userscript generator    Tampermonkey-ready .user.js
+//   P2 bookmarklet generator    single-line URI fallback
+//   P3 editor integration map   15 AI tools + status matrix
+//   P4 transport menu           ranked cross-machine paths
+export * as permeate from "./permeate/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,
