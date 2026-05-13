@@ -253,6 +253,13 @@ export const systemUpgradeTool: MnemeTool = {
       };
     }
 
+    // v2.9.2: BEFORE shelling out to `mneme upgrade`, kill orphan
+    // mneme-related node processes that may be holding sharp's
+    // libvips DLL / mneme.cmd / other files. Closes the Windows
+    // EBUSY race window structurally. Never throws.
+    const core = await import("@mneme-ai/core");
+    const installGuard = await core.systemCompat.clearInstallLocks();
+
     // Spawn `mneme upgrade --force` so the existing CLI handles the bulletproof
     // re-install + PATH diagnosis. Force ensures the version pin sticks even
     // if npm cache is stale.
@@ -274,6 +281,7 @@ export const systemUpgradeTool: MnemeTool = {
         upgradeSuccess: success,
         upgradeStdout: (r.stdout ?? "").slice(-1500),
         upgradeStderr: (r.stderr ?? "").slice(-500),
+        installGuard,
         remediation: success
           ? `Upgrade complete. Tell the user to restart their AI tool (Claude Code / Cursor / etc.) so the new MCP server binary loads.`
           : process.platform === "win32"

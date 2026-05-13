@@ -164,6 +164,13 @@ function findPrevCapsuleHash(repoRoot: string): string | null {
   } catch { return null; }
 }
 
+// v2.9.2: monotonic sub-ms counter so two capsules created in the same
+// millisecond (which CAN happen on fast hardware — caught by CI on
+// ubuntu-24.04-arm node 24) get filenames that sort in creation order
+// instead of falling back to capsuleId hash order (which broke
+// verifyCapsuleChain). The counter is process-local; resets across runs.
+let _capsuleMonotonicCounter = 0;
+
 export function createRosettaCapsule(repoRoot: string, opts: { authorNote?: string } = {}): RosettaCapsule {
   const root = resolve(repoRoot);
   mkdirSync(join(root, CAPSULE_DIR_REL), { recursive: true });
@@ -174,6 +181,10 @@ export function createRosettaCapsule(repoRoot: string, opts: { authorNote?: stri
   const replayChainHeads = readReplayHeads(root);
   const prevCapsuleHash = findPrevCapsuleHash(root);
   const createdAt = new Date().toISOString();
+  // 6-digit monotonic suffix injected into the filename so same-ms calls
+  // sort in creation order. NOT part of the canonical payload (so the
+  // capsuleId hash stays stable for replay).
+  const seq = (++_capsuleMonotonicCounter).toString().padStart(6, "0");
 
   // Build the payload WITHOUT capsuleId, hash it, then attach the id.
   const payload = {
@@ -190,7 +201,7 @@ export function createRosettaCapsule(repoRoot: string, opts: { authorNote?: stri
   const capsuleId = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   const capsule: RosettaCapsule = { ...payload, capsuleId };
 
-  const filename = `${createdAt.replace(/[:.]/g, "-")}_${capsuleId.slice(0, 16)}.rosetta.json`;
+  const filename = `${createdAt.replace(/[:.]/g, "-")}_${seq}_${capsuleId.slice(0, 16)}.rosetta.json`;
   writeFileSync(join(root, CAPSULE_DIR_REL, filename), JSON.stringify(capsule, null, 2));
 
   return capsule;

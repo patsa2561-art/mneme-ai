@@ -342,6 +342,11 @@ export function _testNearestAncestor(p: string): string | null {
   return nearestExistingAncestor(p);
 }
 
+// v2.9.2 -- INSTALL GUARD: kill orphan mneme node processes BEFORE
+// `npm install -g mneme-ai@latest` so the Windows EBUSY race on
+// sharp's libvips DLL closes structurally.
+export * from "./install_guard.js";
+
 /** Used by the daemon's drainQueue when it sees mneme.system.upgrade. */
 export interface DaemonGuard {
   shouldProceed: boolean;

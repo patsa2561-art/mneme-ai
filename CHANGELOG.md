@@ -1,3 +1,49 @@
+## v2.9.2 — 2026-05-13 — HOTFIX · CI flake (rosetta capsule chain) + Windows EBUSY on install
+
+**Headline:** Two real-world bugs surfaced as soon as v2.9.1 shipped:
+
+1. **CI flake on ubuntu-24.04-arm node 24** — `powers.test.ts:272` `verifyCapsuleChain` returned `false`. Root cause: two `createRosettaCapsule()` calls completing in the same millisecond produced identical `createdAt` filename prefixes; the sort fell back to capsuleId hash order (effectively random), so the chain verifier walked them in the wrong order and saw a broken chain.
+2. **Windows EBUSY on `npm install -g mneme-ai`** — sharp's `libvips-cpp-8.17.3.dll` locked even though `mneme daemon status` says "not running". Root cause: orphan node processes from a prior session still held the DLL handle.
+
+### Fix 1 — monotonic sub-ms counter on capsule filenames
+
+`packages/core/src/powers/p9_inherits.ts` — every `createRosettaCapsule()` call now appends a process-local 6-digit monotonic sequence number to the filename:
+
+```
+2026-05-13T08-29-18-667Z_000001_a1b2c3d4....rosetta.json
+2026-05-13T08-29-18-667Z_000002_e5f6a7b8....rosetta.json
+```
+
+Lexicographic sort now matches creation order even when `createdAt` collides at the millisecond. Counter is process-local (resets across runs); not part of the canonical payload, so the capsuleId hash stays stable.
+
+### Fix 2 — INSTALL GUARD (Windows DLL lock killer)
+
+`packages/core/src/system_compat/install_guard.ts` — `clearInstallLocks()` runs BEFORE any `npm install -g mneme-ai`:
+
+  1. Enumerates running node processes (Windows: `wmic` → PowerShell `Get-CimInstance` fallback; POSIX: `ps -axww`).
+  2. Filters to processes whose command line mentions `mneme` / `mneme-ai` / `mneme.cmd` / `mneme.js` (excludes the upgrade process itself + npm install).
+  3. Sends polite SIGTERM / `taskkill /PID`. After 1.5 s grace, escalates to SIGKILL / `taskkill /F`.
+  4. Windows-only: waits 1 s after kill for the OS to release file locks.
+  5. Returns `{ ok, orphans, killed, resisted, summary }` — never throws.
+
+Wired into `mneme.system.upgrade` MCP tool: every auto-upgrade calls `clearInstallLocks()` first; the install guard report is surfaced via the tool's `data.installGuard` field so AI agents can explain to the user what was killed (e.g., "killed 2 leftover mneme processes; install is now safe").
+
+### Tests
+
+**8712 / 8713 pass** (1 known flake: `bot.test.ts` "dry-run --json" — parallel-test interference, passes in isolation; unrelated to this hotfix). **+24 new tests** for install_guard.
+
+### What changes for the user
+
+When the user says *"upgrade Mneme"* to their AI agent:
+  1. AI calls `mneme.system.upgrade`.
+  2. Mneme kills orphan node processes (the one holding the libvips DLL).
+  3. Mneme runs `mneme upgrade --force` → `npm install -g mneme-ai@latest`.
+  4. Mneme reports back: orphans killed, install succeeded, please restart your AI tool.
+
+Previously this failed silently on Windows with `EBUSY: resource busy or locked, copyfile … libvips-cpp-8.17.3.dll`. Now it kills the orphan first.
+
+---
+
 ## v2.9.1 — 2026-05-13 — HOTFIX · stale soul prompt + missing real-QR on mobile target
 
 **Headline:** User test exposed two bugs in v2.8/v2.9:
