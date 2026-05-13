@@ -306,6 +306,22 @@ export * as wormholeAutoWire from "./wormhole/auto_wire.js";
 export * as metron from "./metron/index.js";
 export * as metronCodeAudit from "./metron/code_audit.js";
 export * as metronUpdateNotifier from "./metron/update_notifier.js";
+// v2.8.0 -- HANDOFF UNIVERSAL: 1-call bundle returns every viable
+// cross-device path (clipboard + AURA-DROP self-contained QR + NEXUS
+// code + raw markdown) so the AI agent paints every option for the
+// user and the user picks the easiest. No install needed on receiver.
+export * as handoff from "./handoff/index.js";
+// v2.8.0 -- SHADOW CONSENSUS: N-vendor truth fusion via HMAC-chained
+// ballots + replies. Mneme becomes a meta-LLM that asks every vendor
+// and fuses their answers via TRUTH KERNEL without paying for any.
+export * as shadowConsensus from "./shadow_consensus/index.js";
+// v2.8.0 -- BIRTHRIGHT TOKEN: genealogy-as-security. Install-time
+// HMAC-chained proof of the legitimate Mneme of THIS repo; copied
+// `.mneme/` dirs fail the cross-device peer handshake.
+export * as birthright from "./birthright/index.js";
+// v2.8.0 -- bestEffort marker for deliberate silent catches; METRON
+// audit excludes these from the Reliability penalty.
+export * as bestEffortMod from "./util/best_effort.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

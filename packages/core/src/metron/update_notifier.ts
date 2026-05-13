@@ -43,6 +43,25 @@ export interface VersionDelta {
 /** The canonical changelog Mneme ships. Add new entries at the TOP. */
 export const VERSION_DELTAS: VersionDelta[] = [
   {
+    version: "2.8.0",
+    releasedAt: "2026-05-13",
+    headline: "🔥 HANDOFF UNIVERSAL with AURA-DROP self-contained QR (offline, no install on receiver), 👁 SHADOW CONSENSUS N-vendor truth fusion, 🩸 BIRTHRIGHT TOKEN install-time genealogy-as-security, bestEffort marker for deliberate silent catches.",
+    newTools: [
+      "mneme.handoff.universal",
+      "mneme.consensus.open_ballot",
+      "mneme.consensus.record_reply",
+      "mneme.consensus.close",
+      "mneme.birthright.mint",
+      "mneme.birthright.verify",
+    ],
+    changedBehaviors: [
+      "METRON catch auditor now EXCLUDES catches wrapped in bestEffort() / marked /* BE:silent-by-design */. Wrap deliberate swallow with packages/core/src/util/best_effort.ts.",
+      "On v2.8 install, daemon mints a BIRTHRIGHT TOKEN for the repo and writes it to .mneme/birthright.token (mode 0600). Cross-device federation now requires presenting it.",
+    ],
+    removed: [],
+    recommendedAction: "For 'send my brain' / 'sync to phone' style asks, call mneme.handoff.universal — it returns clipboard + AURA-DROP QR + NEXUS code + raw markdown in ONE response. The user picks the easiest path (1 click for the QR). For high-stakes claims, run mneme.consensus.open_ballot to fan the question across N vendors and fuse the verdicts.",
+  },
+  {
     version: "2.7.0",
     releasedAt: "2026-05-13",
     headline: "METRON verifiable scorecard (HMAC-signed evidence per axis), WORMHOLE auto-wire (daemon discovers + persists EWMA stats), CATCH AUDITOR + ANY DENSITY auditors feed real-time numbers into METRON.",

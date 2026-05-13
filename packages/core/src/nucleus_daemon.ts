@@ -164,7 +164,7 @@ export async function runDaemonLoop(
     try {
       const { warmupCrossEncoder } = await import("./retrieval_lab/cross_encoder.js");
       await warmupCrossEncoder();
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   })();
 
   // v1.27.6 -- ONE-SHOT MIGRATION: clean OLD "daemon"-source mutation-
@@ -187,7 +187,7 @@ export async function runDaemonLoop(
 
   // Cleanup on shutdown — remove PID file so next `start` can succeed.
   const cleanup = () => {
-    try { unlinkSync(pidFilePath(repoRoot)); } catch { /* ignore */ }
+    try { unlinkSync(pidFilePath(repoRoot)); } catch { /* BE:silent-by-design  ignore  */ }
   };
   process.on("SIGTERM", () => { cleanup(); process.exit(0); });
   process.on("SIGINT", () => { cleanup(); process.exit(0); });
@@ -232,7 +232,7 @@ export async function runDaemonLoop(
               body: `Your Mneme nucleus has self-evolved ${mutationsApplied} times since the daemon started.`,
               cta: "ask: 'show me the mneme dna'",
             });
-          } catch { /* ignore */ }
+          } catch { /* BE:silent-by-design  ignore  */ }
         }
       }
       // v1.30.0 -- honor `mneme supernova clear <cycle>` requests from
@@ -279,7 +279,7 @@ export async function runDaemonLoop(
             }
           }
         }
-      } catch { /* ignore */ }
+      } catch { /* BE:silent-by-design  ignore  */ }
 
       // v1.23.5 — Caretaker Bot pass. Every CARETAKER_PASS_EVERY ticks,
       // run drift checks + push autoAction inbox messages. The pass is
@@ -323,7 +323,7 @@ export async function runDaemonLoop(
               const start = Date.now();
               return await new Promise<{ ok: boolean; error?: string }>((resolve) => {
                 const child = spawn(c.cmd, c.args, { cwd: repoRoot, detached: false, stdio: "ignore", shell: process.platform === "win32" });
-                const timeout = setTimeout(() => { try { child.kill(); } catch { /* ignore */ } resolve({ ok: false, error: "exec-timeout" }); }, 120_000);
+                const timeout = setTimeout(() => { try { child.kill(); } catch { /* BE:silent-by-design  ignore  */ } resolve({ ok: false, error: "exec-timeout" }); }, 120_000);
                 child.on("error", (e) => { clearTimeout(timeout); resolve({ ok: false, error: (e as Error).message }); });
                 child.on("exit", (code) => {
                   clearTimeout(timeout);
@@ -338,7 +338,7 @@ export async function runDaemonLoop(
               if (!cliArgs) { resolve({ ok: false, error: `unknown mandate ${mandate}` }); return; }
               const start = Date.now();
               const child = spawn("mneme", cliArgs, { cwd: repoRoot, detached: false, stdio: "ignore", shell: process.platform === "win32" });
-              const timeout = setTimeout(() => { try { child.kill(); } catch { /* ignore */ } resolve({ ok: false, error: "exec-timeout" }); }, 60_000);
+              const timeout = setTimeout(() => { try { child.kill(); } catch { /* BE:silent-by-design  ignore  */ } resolve({ ok: false, error: "exec-timeout" }); }, 60_000);
               child.on("error", (e) => { clearTimeout(timeout); resolve({ ok: false, error: (e as Error).message }); });
               child.on("exit", (code) => {
                 clearTimeout(timeout);
@@ -507,9 +507,7 @@ export async function runDaemonLoop(
         writeFileSync(heartbeatFilePath(repoRoot), JSON.stringify(hb, null, 2), "utf8");
         opts.onTick?.({ tickCount, banner });
       }
-    } catch {
-      // best-effort — never let a single tick failure kill the daemon
-    }
+    } catch { /* BE:silent-by-design -  best-effort — never let a single tick failure kill the daemon */ }
     await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
   }
 }
@@ -547,10 +545,10 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
           // per CARETAKER_PASS_EVERY ticks while the update remains
           // available. Idempotent on the version string (inbox is keyed
           // by deterministicId), so re-pushing is a cheap no-op.
-        } catch { /* ignore */ }
+        } catch { /* BE:silent-by-design  ignore  */ }
       }
     }
-  } catch { /* ignore */ }
+  } catch { /* BE:silent-by-design  ignore  */ }
 
   // 2. Daemon-process vs globally-installed version mismatch.
   //    Means user upgraded mneme but the running daemon is stale code.
@@ -568,7 +566,7 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
       });
     }
     void tickCount; // silence unused
-  } catch { /* ignore */ }
+  } catch { /* BE:silent-by-design  ignore  */ }
 
   // v1.27.6 -- AUTO-DRAIN stale daemon-sourced unsent inbox entries.
   // Daemon pushes "Nucleus reached N mutations" + caretaker pushes its
@@ -585,7 +583,7 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
       .filter((m) => !m.sent && daemonSources.has(m.source) && Date.parse(m.createdAt) < cutoff)
       .map((m) => m.id);
     if (stale.length > 0) ackInbox(repoRoot, stale);
-  } catch { /* ignore */ }
+  } catch { /* BE:silent-by-design  ignore  */ }
 
   // v1.46.0 (#20 fix) -- HARD-PRUNE acked inbox entries older than 30 days.
   // Pre-fix: even after `inbox ack`, entries lingered forever; testers saw
@@ -595,7 +593,7 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
   try {
     const { clearInbox } = await import("./inbox.js");
     clearInbox(repoRoot, { olderThanDays: 30 });
-  } catch { /* ignore */ }
+  } catch { /* BE:silent-by-design  ignore  */ }
 }
 
 /** Read the version of the mneme package this daemon process loaded. */
@@ -631,7 +629,7 @@ export function stopDaemon(repoRoot: string): { stopped: boolean; pid: number | 
     process.kill(pid, "SIGTERM");
     // Best-effort cleanup of pid file (the daemon's own shutdown handler
     // also tries to do this).
-    try { unlinkSync(pidFilePath(repoRoot)); } catch { /* ignore */ }
+    try { unlinkSync(pidFilePath(repoRoot)); } catch { /* BE:silent-by-design  ignore  */ }
     return { stopped: true, pid, reason: "SIGTERM sent" };
   } catch (err) {
     return { stopped: false, pid, reason: (err as Error).message };

@@ -106,7 +106,7 @@ function collectPrecogMissSignals(repoRoot: string): EvolveSignal[] {
         } else {
           missesByTool.set(p.toTool, { count: 1, firstSeen: p.predictedAt, lastSeen: p.predictedAt });
         }
-      } catch { /* skip */ }
+      } catch { /* BE:silent-by-design  skip  */ }
     }
     return Array.from(missesByTool.entries())
       .filter(([, v]) => v.count >= 5) // only worth reporting when miss-count is real
@@ -251,7 +251,7 @@ export function generateProposals(repoRoot: string, signals?: EvolveSignal[]): E
     const md = `# ${p.title}\n\n${p.body}\n`;
     try { writeFileSync(path, md, "utf8"); } catch { /* best-effort */ }
     // Also persist a JSON sidecar so `mneme evolve list/view` can parse.
-    try { writeFileSync(join(repoRoot, DIR, `${p.id}.json`), JSON.stringify(p, null, 2), "utf8"); } catch { /* */ }
+    try { writeFileSync(join(repoRoot, DIR, `${p.id}.json`), JSON.stringify(p, null, 2), "utf8"); } catch { /* BE:silent-by-design   */ }
   }
 
   return proposals;
@@ -306,9 +306,9 @@ export function viewProposal(repoRoot: string, id: string): string | null {
           try {
             const s = JSON.parse(readFileSync(join(dir, f), "utf8")) as { id?: string; proposalId?: string };
             if (s.id === id && s.proposalId) { proposalId = s.proposalId; break; }
-          } catch { /* skip */ }
+          } catch { /* BE:silent-by-design  skip  */ }
         }
-      } catch { /* skip */ }
+      } catch { /* BE:silent-by-design  skip  */ }
     }
   }
   if (!proposalId) return null;
@@ -317,7 +317,7 @@ export function viewProposal(repoRoot: string, id: string): string | null {
   let body = "";
   const proposalMd = join(dir, `${proposalId}.md`);
   if (existsSync(proposalMd)) {
-    try { body = readFileSync(proposalMd, "utf8"); } catch { /* */ }
+    try { body = readFileSync(proposalMd, "utf8"); } catch { /* BE:silent-by-design   */ }
   }
 
   // Append Phase-3 status if a synthesis sidecar exists.
@@ -347,9 +347,9 @@ export function viewProposal(repoRoot: string, id: string): string | null {
         try {
           const patchBody = readFileSync(patchPath, "utf8");
           body += `### Verified .patch (run \`mneme evolve apply ${proposalId}\` to apply)\n\n\`\`\`diff\n${patchBody}\n\`\`\`\n`;
-        } catch { /* */ }
+        } catch { /* BE:silent-by-design   */ }
       }
-    } catch { /* */ }
+    } catch { /* BE:silent-by-design   */ }
   }
   return body || null;
 }

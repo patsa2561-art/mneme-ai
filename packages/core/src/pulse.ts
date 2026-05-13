@@ -100,7 +100,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
         text: `${warn.text} ${warn.remedy}`,
       });
     }
-  } catch { /* silent */ }
+  } catch { /* BE:silent-by-design  silent  */ }
 
   // Version. v1.27.3 (HOTFIX): the comparison MUST use the LIVE
   // current version (readMyVersion above), not the `v.current` field
@@ -125,7 +125,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       ) {
         status.version.updateAvailable = true;
       }
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
 
   // Daemon heartbeat
@@ -137,7 +137,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       // Consider "running" if heartbeat is < 5 min old.
       const ageMs = hb.lastTick ? Date.now() - Date.parse(hb.lastTick) : Infinity;
       status.daemon.running = ageMs < 5 * 60 * 1000;
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
 
   // Inbox unsent count + collect:
@@ -165,14 +165,14 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
               inboxPriority.push({ id: e.id, priority: e.priority, title: e.title, body: e.body, cta: e.cta });
             }
           }
-        } catch { /* skip */ }
+        } catch { /* BE:silent-by-design  skip  */ }
       }
       status.inbox.unsent = unsent;
       // Cache for renderPulse via non-enumerable side-channels so the
       // public PulseStatus shape stays stable (older callers ignore them).
       Object.defineProperty(status.inbox, "_autoActions", { value: inboxAutoActions, enumerable: false });
       Object.defineProperty(status.inbox, "_priority", { value: inboxPriority, enumerable: false });
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
 
   // Antivirus
@@ -181,7 +181,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     try {
       const s = JSON.parse(readFileSync(avStatsPath, "utf8")) as { totalInfectionsCaught?: number };
       status.antivirus.totalInfectionsCaught = s.totalInfectionsCaught ?? 0;
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
   const avPharm = join(repoRoot, ".mneme/antivirus/pharmacopoeia.json");
   if (existsSync(avPharm)) {
@@ -189,7 +189,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       const p = JSON.parse(readFileSync(avPharm, "utf8")) as { vaccines?: Array<{ efficacy?: { f1?: number | null } | null }> };
       status.antivirus.activeVaccines = p.vaccines?.length ?? 0;
       status.antivirus.uncertified = (p.vaccines ?? []).filter((v) => v.efficacy?.f1 == null).length;
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
 
   // Retrieval lab
@@ -199,7 +199,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       const lb = JSON.parse(readFileSync(lbPath, "utf8")) as { totalTrials?: number; active?: string };
       status.retrieval.totalTrials = lb.totalTrials ?? 0;
       status.retrieval.activeConfig = lb.active ?? null;
-    } catch { /* ignore */ }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
 
   // Build notable[] from the gathered state.
@@ -307,7 +307,7 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
     try {
       const hci = computeHci(opts.repoRoot);
       hciSuffix = `  hci=${hci.score}/100[${hci.band}]`;
-    } catch { /* */ }
+    } catch { /* BE:silent-by-design   */ }
   }
   // v1.30.0 -- show the embedder tier on the pulse line so the user can
   // tell at a glance whether their "memory layer" is real semantic search
@@ -450,13 +450,13 @@ export function serviceMarkerPath(homeDir: string = homedir()): string {
 export function hasAutoBootMarker(homeDir?: string, repoRoot?: string): boolean {
   try {
     if (existsSync(serviceMarkerPath(homeDir))) return true;
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Repo-local fallback marker.
   if (repoRoot) {
     try {
       const repoMarker = join(repoRoot, ".mneme", SERVICE_MARKER_FILENAME);
       if (existsSync(repoMarker)) return true;
-    } catch { /* */ }
+    } catch { /* BE:silent-by-design   */ }
   }
   return false;
 }
@@ -473,7 +473,7 @@ function writeAutoBootMarker(detail: string, homeDir?: string, repoRoot?: string
       writeFileSync(serviceMarkerPath(home), `${new Date().toISOString()} ${detail}\n`, "utf8");
       return true;
     }
-  } catch { /* fall through to repo-local fallback */ }
+  } catch { /* BE:silent-by-design  fall through to repo-local fallback  */ }
   // Fallback: repo-local marker so we don't re-attempt every prompt
   // when home is unwritable (sandboxed envs, locked-down corp boxes).
   if (repoRoot) {
@@ -515,7 +515,7 @@ function spawnDetachedSilent(args: string[]): void {
       });
       child.on("error", () => { /* swallow -- nothing else we can try */ });
       child.unref();
-    } catch { /* swallow */ }
+    } catch { /* BE:silent-by-design  swallow  */ }
   };
   try {
     const cmd = mnemeCmdName();

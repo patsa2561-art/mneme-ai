@@ -353,7 +353,7 @@ export function registerLinCommands(program: Command): void {
       const ids = lineage.listChromosomes(process.cwd());
       const all = new Set<string>();
       for (const id of ids) {
-        try { for (const a of lineage.loadChromosome(process.cwd(), id).lethalRecessives) all.add(a); } catch { /* skip */ }
+        try { for (const a of lineage.loadChromosome(process.cwd(), id).lethalRecessives) all.add(a); } catch { /* BE:silent-by-design  skip  */ }
       }
       const list = [...all].sort();
       out(opts, list, list.length === 0 ? ["No lethal-recessive atoms."] : list.map((a) => `  • ${a}`));
@@ -586,7 +586,7 @@ export function registerNucleusCommands(program: Command): void {
       // identical, the daemon just becomes alive on the next prompt.
       // Eliminates the "user has to know `mneme nucleus install
       // --as-service`" bottleneck for 90%+ of users.
-      try { pulse.autoBootDaemonIfStopped(status.daemon.running, { repoRoot: process.cwd() }); } catch { /* silent */ }
+      try { pulse.autoBootDaemonIfStopped(status.daemon.running, { repoRoot: process.cwd() }); } catch { /* BE:silent-by-design  silent  */ }
 
       // v1.41.0 AI COMPLIANCE pre-executor — for every [AUTO-ACTION] in
       // the pulse, fire the equivalent local CLI BEFORE the AI agent
@@ -601,7 +601,7 @@ export function registerNucleusCommands(program: Command): void {
       try {
         const execResults = await aiCompliance.preExecuteAutoActions(status.notable, process.cwd());
         if (execResults.length > 0) aiCompliance.rewriteNoticesPostExecution(status.notable, execResults);
-      } catch { /* compliance pre-executor must never break the pulse path */ }
+      } catch { /* BE:silent-by-design  compliance pre-executor must never break the pulse path  */ }
 
       if (opts.json) {
         process.stdout.write(JSON.stringify(status, null, 2) + "\n");
@@ -627,11 +627,11 @@ export function registerNucleusCommands(program: Command): void {
         const vendor = process.env["MNEME_VENDOR"] ?? "claude-opus-4-7";
         const repo = process.cwd();
         const companionBlocks: string[] = [];
-        try { const soulText = aiSoul.renderSoulBlock(aiSoul.readSoul(repo, vendor)); if (soulText) companionBlocks.push(soulText); } catch { /* drop block */ }
-        try { const consentText = userConsent.renderConsentBlock(repo); if (consentText) companionBlocks.push(consentText); } catch { /* drop block */ }
-        try { const pheromoneText = aiPheromone.renderPheromoneBlock(repo); if (pheromoneText) companionBlocks.push(pheromoneText); } catch { /* drop block */ }
-        try { const contractText = aiContracts.renderContractBlock(repo, vendor); if (contractText) companionBlocks.push(contractText); } catch { /* drop block */ }
-        try { const templateText = vendorPulseTemplates.renderTemplateBlock(repo, vendor); if (templateText) companionBlocks.push(templateText); } catch { /* drop block */ }
+        try { const soulText = aiSoul.renderSoulBlock(aiSoul.readSoul(repo, vendor)); if (soulText) companionBlocks.push(soulText); } catch { /* BE:silent-by-design  drop block  */ }
+        try { const consentText = userConsent.renderConsentBlock(repo); if (consentText) companionBlocks.push(consentText); } catch { /* BE:silent-by-design  drop block  */ }
+        try { const pheromoneText = aiPheromone.renderPheromoneBlock(repo); if (pheromoneText) companionBlocks.push(pheromoneText); } catch { /* BE:silent-by-design  drop block  */ }
+        try { const contractText = aiContracts.renderContractBlock(repo, vendor); if (contractText) companionBlocks.push(contractText); } catch { /* BE:silent-by-design  drop block  */ }
+        try { const templateText = vendorPulseTemplates.renderTemplateBlock(repo, vendor); if (templateText) companionBlocks.push(templateText); } catch { /* BE:silent-by-design  drop block  */ }
         if (companionBlocks.length > 0 && text) {
           // splice the companion block into the pulse — before the closing tag
           // so renderPulse's framing stays intact.
@@ -639,9 +639,9 @@ export function registerNucleusCommands(program: Command): void {
           if (text.includes("[/MNEME PULSE]")) text = text.replace("[/MNEME PULSE]", companionBody + "[/MNEME PULSE]");
           else text = text + companionBody;
           // apply per-vendor template (layout / max-chars / duplicate-at-top)
-          try { text = vendorPulseTemplates.applyTemplate(text, vendorPulseTemplates.pickTemplate(repo, vendor)); } catch { /* template never breaks pulse */ }
+          try { text = vendorPulseTemplates.applyTemplate(text, vendorPulseTemplates.pickTemplate(repo, vendor)); } catch { /* BE:silent-by-design  template never breaks pulse  */ }
         }
-      } catch { /* companion injection must never break the pulse path */ }
+      } catch { /* BE:silent-by-design  companion injection must never break the pulse path  */ }
 
       if (text) process.stdout.write(text + "\n");
 
@@ -1045,7 +1045,7 @@ WantedBy=default.target
     try {
       mkdirSync(dir, { recursive: true });
       writeFileSync(plistPath, plist, "utf8");
-      try { chmodSync(plistPath, 0o644); } catch { /* ignore */ }
+      try { chmodSync(plistPath, 0o644); } catch { /* BE:silent-by-design  ignore  */ }
       return { platform: "darwin", installed: true, unitPath: plistPath, lines: [`✓ Wrote launchd plist to ${plistPath}.`, `  Activate: launchctl load ${plistPath}`] };
     } catch (e) {
       return { platform: "darwin", installed: false, unitPath: plistPath, lines: [`✗ ${(e as Error).message}`] };

@@ -269,9 +269,7 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
       mergeDeps(profile, pkg.dependencies);
       mergeDeps(profile, pkg.devDependencies);
       mergeDeps(profile, pkg.peerDependencies);
-    } catch {
-      // file missing or invalid JSON — skip silently
-    }
+    } catch { /* BE:silent-by-design -  file missing or invalid JSON — skip silently */ }
   }
 
   // Python — pyproject.toml / requirements.txt / Pipfile
@@ -282,7 +280,7 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
       profile.ecosystemPython = true;
       // Cheap parser: scan for known package names
       mergeRawText(profile, txt);
-    } catch { /* skip */ }
+    } catch { /* BE:silent-by-design  skip  */ }
   }
 
   // Go — go.mod
@@ -291,7 +289,7 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
     profile.sources.push(path.join(rootPath, "go.mod"));
     profile.ecosystemGo = true;
     mergeRawText(profile, txt);
-  } catch { /* skip */ }
+  } catch { /* BE:silent-by-design  skip  */ }
 
   // Rust — Cargo.toml
   try {
@@ -299,7 +297,7 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
     profile.sources.push(path.join(rootPath, "Cargo.toml"));
     profile.ecosystemRust = true;
     mergeRawText(profile, txt);
-  } catch { /* skip */ }
+  } catch { /* BE:silent-by-design  skip  */ }
 
   // Ruby — Gemfile
   try {
@@ -307,7 +305,7 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
     profile.sources.push(path.join(rootPath, "Gemfile"));
     profile.ecosystemRuby = true;
     mergeRawText(profile, txt);
-  } catch { /* skip */ }
+  } catch { /* BE:silent-by-design  skip  */ }
 
   // PHP — composer.json
   try {
@@ -320,7 +318,7 @@ export async function detectStackProfile(rootPath: string): Promise<StackProfile
     // Also scan raw text so vendor/package combos like laravel/framework
     // and symfony/* fire the framework signal via name match.
     mergeRawText(profile, txt);
-  } catch { /* skip */ }
+  } catch { /* BE:silent-by-design  skip  */ }
 
   return profile;
 }

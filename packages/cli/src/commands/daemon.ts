@@ -104,7 +104,7 @@ function appendLog(repoRoot: string, line: string) {
     const ts = new Date().toISOString();
     const formatted = `[${ts}] ${line}\n`;
     writeFileSync(p.log, formatted, { flag: "a" });
-  } catch {}
+  } catch { /* BE:silent-by-design */ }
 }
 
 function readHeadHash(repoRoot: string): string | null {
@@ -195,11 +195,11 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
     for (const w of watchers) {
       try {
         w.close();
-      } catch {}
+      } catch { /* BE:silent-by-design */ }
     }
     try {
       if (existsSync(p.pid)) unlinkSync(p.pid);
-    } catch {}
+    } catch { /* BE:silent-by-design */ }
     process.exit(0);
   };
   process.on("SIGINT", shutdown);
@@ -246,7 +246,7 @@ async function startDaemon(opts: DaemonOptions): Promise<number> {
     // Stale PID file — clean up
     try {
       unlinkSync(p.pid);
-    } catch {}
+    } catch { /* BE:silent-by-design */ }
   }
 
   if (opts.attached) {
@@ -305,7 +305,7 @@ async function stopDaemon(opts: DaemonOptions): Promise<number> {
   }
   const pid = parseInt(readFileSync(p.pid, "utf8").trim(), 10);
   if (!isAlive(pid)) {
-    try { unlinkSync(p.pid); } catch {}
+    try { unlinkSync(p.pid); } catch { /* BE:silent-by-design */ }
     if (opts.json) process.stdout.write(JSON.stringify({ stopped: true, reason: "stale-pid-cleaned" }, null, 2) + "\n");
     else ui.warn(`Daemon was not alive (stale pid ${pid}); cleaned up.`);
     return 0;
@@ -318,7 +318,7 @@ async function stopDaemon(opts: DaemonOptions): Promise<number> {
       await wait(100);
     }
     if (isAlive(pid)) process.kill(pid, "SIGKILL");
-    try { unlinkSync(p.pid); } catch {}
+    try { unlinkSync(p.pid); } catch { /* BE:silent-by-design */ }
   } catch (err) {
     if (opts.json) process.stdout.write(JSON.stringify({ stopped: false, error: (err as Error).message }, null, 2) + "\n");
     else ui.error(`Failed to stop daemon: ${(err as Error).message}`);

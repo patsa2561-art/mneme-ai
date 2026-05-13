@@ -176,7 +176,7 @@ function recentGreetForVendor(repoRoot: string, vendor: string): { at: number; s
         if (r.vendor !== vendor) continue;
         const t = Date.parse(r.greetedAt);
         if (!best || t > best.at) best = { at: t, sessionId: r.session ?? f.replace(/\.json$/, "") };
-      } catch { /* skip */ }
+      } catch { /* BE:silent-by-design  skip  */ }
     }
     return best;
   } catch { return null; }
@@ -228,9 +228,7 @@ export function greet(repoRoot: string, opts: { vendor: string; model?: string; 
       lifetimeSessions = updated.lifetimeSessions;
       bornAt = updated.bornAt;
     }
-  } catch {
-    // Soul module not loadable -- continue, the handshake itself is still recorded.
-  }
+  } catch { /* BE:silent-by-design -  Soul module not loadable -- continue, the handshake itself is still recorded. */ }
 
   return {
     outcome: rateLimited ? "rate-limited" : "greeted",
@@ -269,9 +267,9 @@ export function recordCliActivity(repoRoot: string, command: string, vendorHint?
               alreadyToday = true;
               break;
             }
-          } catch { /* skip malformed */ }
+          } catch { /* BE:silent-by-design  skip malformed  */ }
         }
-      } catch { /* fall through */ }
+      } catch { /* BE:silent-by-design  fall through  */ }
     }
     if (alreadyToday) return;
 
@@ -279,7 +277,7 @@ export function recordCliActivity(repoRoot: string, command: string, vendorHint?
     appendFileSync(path, JSON.stringify({ at: new Date().toISOString(), vendor, command, day: dayKey }) + "\n");
     // v1.46.0 (#14 fix) -- mirror the activity into the pheromone trail
     // so trails capture CLI usage too, not just MCP. Best-effort.
-    try { depositPheromone(root, vendor, `cli:${command}`, 1); } catch { /* */ }
+    try { depositPheromone(root, vendor, `cli:${command}`, 1); } catch { /* BE:silent-by-design   */ }
   } catch {
     // CLI activity tracking is best-effort. A failure here MUST NOT
     // block the actual CLI command -- the user's request comes first.
@@ -298,7 +296,7 @@ export function listHandshakes(repoRoot: string, vendor?: string): { vendor: str
         const r = JSON.parse(readFileSync(join(dir, f), "utf8"));
         if (vendor && r.vendor !== vendor) continue;
         out.push(r);
-      } catch { /* skip */ }
+      } catch { /* BE:silent-by-design  skip  */ }
     }
     out.sort((a, b) => (a.greetedAt < b.greetedAt ? 1 : -1));
     return out;
@@ -318,7 +316,7 @@ export function listCliActivity(repoRoot: string, opts: { vendor?: string; since
       if (opts.vendor && e.vendor !== opts.vendor) continue;
       if (Date.parse(e.at) < sinceMs) continue;
       out.push(e);
-    } catch { /* skip */ }
+    } catch { /* BE:silent-by-design  skip  */ }
   }
   return out.sort((a, b) => (a.at < b.at ? 1 : -1));
 }
@@ -334,8 +332,8 @@ export function pruneOldHandshakes(repoRoot: string, maxAgeDays = 30): { pruned:
       const full = join(dir, f);
       try {
         if (statSync(full).mtimeMs < cutoff) { unlinkSync(full); pruned++; }
-      } catch { /* skip */ }
+      } catch { /* BE:silent-by-design  skip  */ }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   return { pruned };
 }

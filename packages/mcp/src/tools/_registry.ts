@@ -54,6 +54,7 @@ import { RAINBOW_TOOLS } from "./_rainbow_tools.js";
 import { ORPHANS_TOOLS } from "./_orphans_tools.js";
 import { TRUTH_WORMHOLE_TOOLS } from "./_truth_wormhole_tools.js";
 import { METRON_TOOLS } from "./_metron_tools.js";
+import { V28_TOOLS } from "./_v28_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -112,6 +113,7 @@ export function buildAllTools(): MnemeTool[] {
     ...ORPHANS_TOOLS,
     ...TRUTH_WORMHOLE_TOOLS,
     ...METRON_TOOLS,
+    ...V28_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

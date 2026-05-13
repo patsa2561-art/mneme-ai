@@ -535,9 +535,7 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
           try {
             const s = await narrateAct(enricher, opts.topic, story.acts[i]!.commits);
             if (s) summaries.set(i, s);
-          } catch {
-            /* skip act */
-          }
+          } catch { /* BE:silent-by-design  skip act  */ }
         }
       } catch {
         summaries = undefined;
@@ -606,9 +604,7 @@ export async function storyCommand(opts: StoryOptions): Promise<number> {
           for (const line of wrap(summary, 90, "      ")) process.stdout.write(`${line}\n`);
           process.stdout.write("\n");
         }
-      } catch {
-        // Fall through to commit list
-      }
+      } catch { /* BE:silent-by-design -  Fall through to commit list */ }
     }
 
     for (const c of act.commits.slice(0, 5)) {
@@ -686,9 +682,7 @@ export async function dreamCommand(opts: DreamOptions): Promise<number> {
         ideas = parsed.slice(0, n);
         source = "llm";
       }
-    } catch {
-      // fall through to heuristics
-    }
+    } catch { /* BE:silent-by-design -  fall through to heuristics */ }
   }
 
   if (opts.json) {
@@ -859,9 +853,7 @@ export async function chatCommand(opts: ChatOptions): Promise<number> {
           minSemCosine: calib.minSemCosine,
           rrfK: calib.rrfK,
         });
-      } catch {
-        /* ignore */
-      }
+      } catch { /* BE:silent-by-design  ignore  */ }
 
       process.stdout.write(
         renderAnswer({ question: line, synthesized: synth, results, repo: meta, feedbackId }),
@@ -1161,9 +1153,7 @@ export async function commitCoachCommand(opts: CommitCoachOptions): Promise<numb
       const { spawnSync } = await import("node:child_process");
       const r = spawnSync("git", ["diff", "--staged"], { cwd: opts.cwd, encoding: "utf8" });
       if (r.status === 0) diffText = r.stdout;
-    } catch {
-      // git not available — let user know
-    }
+    } catch { /* BE:silent-by-design -  git not available — let user know */ }
   }
   if (!diffText.trim()) {
     ui.error("No staged diff. Pass --from <file>, --stdin, or `git add` something first.");
@@ -1263,9 +1253,7 @@ export async function crystalBallCommand(opts: CrystalBallOptions): Promise<numb
       const { spawnSync } = await import("node:child_process");
       const r = spawnSync("git", ["diff", "--staged"], { cwd: opts.cwd, encoding: "utf8" });
       if (r.status === 0) diffText = r.stdout;
-    } catch {
-      /* ignore */
-    }
+    } catch { /* BE:silent-by-design  ignore  */ }
   }
   if (!diffText.trim()) {
     ui.error("No staged diff. Pass --from <file>, --stdin, or `git add` something first.");

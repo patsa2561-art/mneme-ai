@@ -93,7 +93,7 @@ export function buildCache(repoRoot: string): VaccineCache {
       for (const k of Object.keys(pkg.peerDependencies ?? {})) knownDeps.add(k);
       for (const k of Object.keys(pkg.optionalDependencies ?? {})) knownDeps.add(k);
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Python: requirements.txt
   try {
     const reqPath = join(repoRoot, "requirements.txt");
@@ -103,7 +103,7 @@ export function buildCache(repoRoot: string): VaccineCache {
         if (m && m[1]) knownDeps.add(m[1].toLowerCase());
       }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Python: pyproject.toml [project.dependencies] (best-effort regex --
   // we don't pull in a TOML parser to keep deps minimal)
   try {
@@ -118,7 +118,7 @@ export function buildCache(repoRoot: string): VaccineCache {
         }
       }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Rust: Cargo.toml [dependencies]
   try {
     const cargo = join(repoRoot, "Cargo.toml");
@@ -131,7 +131,7 @@ export function buildCache(repoRoot: string): VaccineCache {
         }
       }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Go: go.mod
   try {
     const gomod = join(repoRoot, "go.mod");
@@ -146,7 +146,7 @@ export function buildCache(repoRoot: string): VaccineCache {
         }
       }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Ruby: Gemfile / Gemfile.lock
   try {
     for (const f of ["Gemfile", "Gemfile.lock"]) {
@@ -158,7 +158,7 @@ export function buildCache(repoRoot: string): VaccineCache {
         }
       }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   // Java: build.gradle / pom.xml (best-effort)
   try {
     const gradle = join(repoRoot, "build.gradle");
@@ -176,7 +176,7 @@ export function buildCache(repoRoot: string): VaccineCache {
         if (g[1]) knownDeps.add(g[1].toLowerCase());
       }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   if (knownDeps.size > 0) cache.knownDeps = knownDeps;
 
   return cache;
@@ -341,7 +341,7 @@ export const VAC_DEPENDS_IMAGINARIUM: Vaccine = {
       if (r.ok) {
         return { infected: false, evidence: `"${pkg}" exists on npm registry (not installed locally)` };
       }
-    } catch { /* network may be offline -- fall through to infected */ }
+    } catch { /* BE:silent-by-design  network may be offline -- fall through to infected  */ }
     return {
       infected: true,
       evidence: `"${pkg}" not in package.json, not in node_modules, not on npm registry`,

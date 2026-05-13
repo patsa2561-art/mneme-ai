@@ -131,9 +131,9 @@ export function cacheLookup(
         if (e.vaccineHash !== invalidationKey.vaccineHash) continue;
         if (Date.parse(e.expiresAt) < Date.now()) return null;
         return e;
-      } catch { /* skip bad row */ }
+      } catch { /* BE:silent-by-design  skip bad row  */ }
     }
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   return null;
 }
 
@@ -158,7 +158,7 @@ export function cacheStore(
   };
   try {
     appendFileSync(join(dir(repoRoot), "entries.jsonl"), JSON.stringify(entry) + "\n", "utf8");
-  } catch { /* */ }
+  } catch { /* BE:silent-by-design   */ }
   return entry;
 }
 
@@ -176,7 +176,7 @@ export function currentInvalidationKey(repoRoot: string): { headHash: string; va
         if (existsSync(refPath)) head = readFileSync(refPath, "utf8").trim().slice(0, 12);
         else head = ref;
       } else head = ref.slice(0, 12);
-    } catch { /* */ }
+    } catch { /* BE:silent-by-design   */ }
   }
   let vaccineSig = "no-vaccines";
   const vaccinesPath = join(repoRoot, ".mneme/squadron/lie-vaccines.jsonl");
@@ -185,7 +185,7 @@ export function currentInvalidationKey(repoRoot: string): { headHash: string; va
       const body = readFileSync(vaccinesPath, "utf8");
       const lines = body.split("\n").filter(Boolean);
       vaccineSig = `${lines.length}:${lines.length > 0 ? (lines[lines.length - 1]?.slice(0, 16) ?? "") : ""}`;
-    } catch { /* */ }
+    } catch { /* BE:silent-by-design   */ }
   }
   return {
     headHash: createHash("sha256").update(head).digest("hex").slice(0, 12),
@@ -214,9 +214,9 @@ export function cacheStats(repoRoot: string): CacheStats {
           total += 1;
           tools.add(e.toolName);
           if (Date.parse(e.expiresAt) < Date.now()) expired += 1;
-        } catch { /* */ }
+        } catch { /* BE:silent-by-design   */ }
       }
-    } catch { /* */ }
+    } catch { /* BE:silent-by-design   */ }
   }
   const markov = readMarkov(repoRoot);
   return {

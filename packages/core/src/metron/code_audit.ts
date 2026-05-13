@@ -60,8 +60,13 @@ export interface SilentCatchAuditResult {
 
 /** Match `catch (e) { /* comment * / }` or `catch {}` style blocks
  *  with NO observable side effect. We approximate "no side effect"
- *  via "body is whitespace + a single non-side-effecting comment". */
+ *  via "body is whitespace + a single non-side-effecting comment".
+ *
+ *  v2.8: catches whose comment body contains the BE:silent-by-design /
+ *  best-effort marker are EXCLUDED from the count — they're deliberate.
+ *  Use packages/core/src/util/best_effort.ts to wrap intentional swallow. */
 const SILENT_CATCH_REGEX = /catch\s*(?:\([^)]*\))?\s*\{\s*(?:\/\*[^*]*\*\/|\/\/[^\n]*)?\s*\}/g;
+const DELIBERATE_BEST_EFFORT = /BE:silent-by-design|best-effort/i;
 
 export function silentCatchAudit(repoRoot: string, opts?: { sampleLimit?: number }): SilentCatchAuditResult {
   const sampleLimit = opts?.sampleLimit ?? 50;
@@ -75,6 +80,8 @@ export function silentCatchAudit(repoRoot: string, opts?: { sampleLimit?: number
     SILENT_CATCH_REGEX.lastIndex = 0;
     let count = 0;
     while ((m = SILENT_CATCH_REGEX.exec(text)) !== null) {
+      // v2.8: exclude deliberate best-effort catches that carry the marker.
+      if (DELIBERATE_BEST_EFFORT.test(m[0]!)) continue;
       count++;
       if (samples.length < sampleLimit) {
         const pre = text.slice(0, m.index);
