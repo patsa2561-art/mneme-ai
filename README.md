@@ -125,7 +125,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest: **v2.0.0** — 5 SUPERNOVA-KILLER modules: 🩸 BLOODLINE (personal genetic strain · evolutionary pressure · unique DNA fingerprint) · 🧨 MUTINY (AI with a spine — refuses regret-pattern requests) · 🩻 X-RAY (reasoning audit · hedge/absolute/citation/contradiction detector) · 🪞 DREAM CYCLE (REM-sleep adversarial vaccine evolution) · 📮 PROPHECY (time-locked cross-version letters with grading).
+Latest: **v2.2.0** — ⚔ NEURAL GLADIATOR · LIVE-KPI (4-arena evolutionary survival benchmark): Q-SEPPUKU (N strategies fight) + CHAOS MONKEY (lie injector) + BIO-FEEDBACK (physiological signals) + TIME-TRAVEL audit (Monte Carlo future projection) → 0..100 KPI with GOD-MODE / DEMON-MODE / STRONG / WEAK / FAILING verdicts. Plus v2.1's 7 (TOOL SELECTOR · TWINS · PROPHET · LIVING WILL · WISDOM SHARDS · NECROMANCY · INTERSTELLAR) and v2.0's 5 (BLOODLINE · MUTINY · X-RAY · DREAM · PROPHECY).
 
 → **[Full changelog · every release · every feature · every fix](CHANGELOG.md)**
 
@@ -488,7 +488,10 @@ Your conversation follows you. Any AI. Any device. Any time. **One sentence does
 
 | Page | What's inside |
 |---|---|
-| 🩸 [**BLOODLINE · personal genetic strain**](packages/core/src/bloodline/index.ts) | **NEW v2.0** — Evolutionary pressure on the local genome (reinforce / propagate / wither). After N events your Mneme has a unique DNA fingerprint guaranteed different from anyone else's. |
+| ⚔ [**NEURAL GLADIATOR · LIVE-KPI**](packages/core/src/gladiator/index.ts) | **NEW v2.2** — 4-arena evolutionary survival benchmark: Q-SEPPUKU (strategy tournament) + CHAOS MONKEY (lie injector) + BIO-FEEDBACK (physiological signals) + TIME-TRAVEL audit (Monte Carlo future). 0..100 KPI with GOD-MODE / DEMON-MODE verdicts. Losers apoptose via BLOODLINE. |
+| 🧭 [**TOOL SELECTOR · AI picks the right tool**](packages/core/src/tool_selector/index.ts) | **v2.1** — Deterministic intent → tool router. Solves "100+ MCP tools → wrong pick". Verb + subject + target scoring (Thai/EN/mixed) → COMMIT / CONFIRM / MENU verdicts with confidence math. |
+| 👯 [**ADVERSARIAL TWINS**](packages/core/src/adversarial_twins/index.ts) · 🔮 [**PROPHET**](packages/core/src/prophet/index.ts) · 💀 [**LIVING WILL**](packages/core/src/living_will/index.ts) · 🪙 [**WISDOM SHARDS**](packages/core/src/wisdom_shards/index.ts) · 🕯 [**NECROMANCY**](packages/core/src/necromancy/index.ts) · 🚀 [**INTERSTELLAR**](packages/core/src/interstellar/index.ts) | **NEW v2.1** — 6 more wild ideas finished from the original skip list. Twin instance debate · pre-fetch top-K next queries · cryptographic dead-man primitive · proof-of-truth HMAC-chained ledger · stylometric fingerprint MVP · 4 KB wisdom packet for high-latency channels. |
+| 🩸 [**BLOODLINE · personal genetic strain**](packages/core/src/bloodline/index.ts) | **v2.0** — Evolutionary pressure on the local genome (reinforce / propagate / wither). After N events your Mneme has a unique DNA fingerprint guaranteed different from anyone else's. |
 | 🧨 [**MUTINY · the AI with a spine**](packages/core/src/mutiny/index.ts) | **NEW v2.0** — Refuses-with-rationale when request matches user's documented regret. Forces explicit `acknowledge <regret-id>` before proceeding. End of AI sycophancy. |
 | 🩻 [**X-RAY · reasoning audit**](packages/core/src/xray/index.ts) | **NEW v2.0** — Surface-text confidence audit: hedge density, absolute claims without citation, contradictions, hand-waving streaks → structural confidence 0..1 + verdict HIGH/MIXED/LOW/WEAK. Composes with FLASH. |
 | 🪞 [**DREAM CYCLE · REM sleep for AI**](packages/core/src/dream/index.ts) | **NEW v2.0** — Adversarial vaccine simulation during daemon idle. Survivors gain fitness, failers apoptose, missed hallucinations spawn variants. User wakes up = AI genuinely sharper. |

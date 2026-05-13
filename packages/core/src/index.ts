@@ -256,6 +256,20 @@ export * as mutiny from "./mutiny/index.js";
 export * as xray from "./xray/index.js";
 export * as dream from "./dream/index.js";
 export * as prophecy from "./prophecy/index.js";
+// v2.1.0 -- 7 MORE wild ideas finished from the skip list.
+export * as toolSelector from "./tool_selector/index.js";
+export * as adversarialTwins from "./adversarial_twins/index.js";
+export * as prophet from "./prophet/index.js";
+export * as livingWill from "./living_will/index.js";
+export * as wisdomShards from "./wisdom_shards/index.js";
+export * as necromancy from "./necromancy/index.js";
+export * as interstellar from "./interstellar/index.js";
+// v2.2.0 -- NEURAL GLADIATOR + LIVE KPI: 4-arena tournament for AI.
+//   Q-SEPPUKU (N strategies fight) + CHAOS MONKEY (lie injector) +
+//   BIO-FEEDBACK BRIDGE (physiological signals) + TIME-TRAVEL AUDIT
+//   (Monte Carlo future projection). All four feed liveKpi() →
+//   single 0..100 score with verdict GOD-MODE / DEMON-MODE / STRONG / etc.
+export * as gladiator from "./gladiator/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

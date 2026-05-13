@@ -1,6 +1,6 @@
 {
   "name": "mneme-monorepo",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "description": "Mneme เนโฌโ€ the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS, all in one graph.",
@@ -31,7 +31,7 @@
     "ship-readiness": "node scripts/ship-readiness.mjs"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.2.0",
     "@vitest/coverage-v8": "^2.1.8",
     "fast-check": "^4.7.0",
     "prettier": "^3.3.3",

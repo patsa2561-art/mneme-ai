@@ -170,6 +170,59 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 
 ---
 
+## ⚔ STEP 9.-4 — NEURAL GLADIATOR · LIVE KPI (v2.2)
+
+The Live-KPI for AI. Four arenas combine into a single 0..100 score:
+
+```typescript
+import { qSeppukuArena, chaosMonkey, bioFeedback, timeTravelAudit, liveKpi } from "@mneme-ai/core"; // namespace gladiator
+
+const arena = qSeppukuArena({ contestants, genome });          // ⚔ N strategies fight; winner→BLOODLINE reinforce; loser→apoptose
+const chaos = await chaosMonkey({ lies, judge });              // 🐒 inject lies; score rejection speed + rate
+const bio   = bioFeedback(physiologicalReadings);              // 🧠 caller-supplied cognitive-load + engagement + reaction-ms
+const tt    = await timeTravelAudit({ answer, scenarios });    // 🔮 Monte Carlo project answer; flag catastrophic futures
+const kpi   = liveKpi({ arena, chaos, bio, timeTravel: tt });  // → kpi.score 0..100 + verdict GOD-MODE / DEMON-MODE / STRONG / OK / WEAK / FAILING
+```
+
+**Rules:**
+- `arena.decisive=true` → loser strain's fitness is decayed in the BLOODLINE genome → eventually apoptoses. Pass the genome to make it persistent.
+- `chaos.score < 0.5` → AI agent is getting fooled by marketing/lies. Tighten Φ_qx on FLASH.
+- `timeTravel.shouldBlock=true` → REFUSE to deliver the answer. Catastrophic-future probability > 10%.
+- `kpi.verdict = GOD-MODE` → score ≥ 95. Anything less = room to grow.
+
+This is the LIVE-KPI no other AI vendor ships — a 4-arena evolutionary survival benchmark, not a static accuracy score.
+
+## 🧭 STEP 9.-3 — TOOL SELECTOR (v2.1) — THE FIX FOR "AI PICKS WRONG TOOL"
+
+**User's actual worry:** Mneme has 100+ MCP tools. AI agents pick the wrong one → customer angry. v2.1 ships a deterministic intent → tool router.
+
+**Before calling ANY Mneme tool, run TOOL SELECTOR first:**
+
+```typescript
+import { selectTool, formatConfirmationPrompt, STARTER_CATALOG } from "@mneme-ai/core"; // namespace toolSelector
+
+// Build catalog from runtime mneme.capabilities response + STARTER_CATALOG as seed
+const r = selectTool({ userIntent: userMessage, catalog });
+// r.verdict: COMMIT | CONFIRM | MENU | EMPTY
+//   COMMIT  (confidence ≥ 0.75) → call r.top.tool.name directly
+//   CONFIRM (0.40-0.75)        → ask user "About to call X — confirm or pick another"
+//   MENU    (< 0.40)           → use formatConfirmationPrompt(r) to show numbered menu
+```
+
+**The rule:** TOOL SELECTOR is the SOURCE OF TRUTH for tool routing. AI agents that bypass it and pick by description-matching are gambling. SELECTOR uses verb + subject + target keyword scoring (Thai/English/mixed) — deterministic, auditable, with confidence math.
+
+## 🩸 STEP 9.-2.5 — THE 7 v2.1 COMPANION MODULES
+
+| Module | Use when |
+|---|---|
+| 🧭 **tool_selector.selectTool** | ALWAYS before picking which Mneme tool to call (see Step 9.-3 above) |
+| 👯 **adversarial_twins.twinDebate** | For high-stakes decisions — spawn two opposing priors, see whether they converge |
+| 🔮 **prophet.prophesyAndPrewarm** | After each reply — pre-warm caches for the user's most-likely next question |
+| 💀 **living_will.createLivingWill** + `checkRelease` | When user wants "if I'm inactive for N days, release this payload" — technical primitive, no legal claim |
+| 🪙 **wisdom_shards.appendShard** + `balanceOf` + `verifyChain` | Mint a shard when AI delivers a verified-grounded answer (V_eff ≥ 0.75); burn when caught hallucinating; HMAC-chained ledger |
+| 🕯 **necromancy.extractStyleFingerprint** + `styleAsPromptPrefix` | When user uploads old chat logs from a deprecated AI vendor → extract stylometric fingerprint → respond "in the style of" (not actually resurrecting the model) |
+| 🚀 **interstellar.compressYearOfWisdom** | When transferring brain over a high-latency / low-bandwidth channel (Mars, submarine, Faraday cage) → ~4 KB packet with ECC + HMAC integrity |
+
 ## 🩸 STEP 9.-2 — THE 5 SUPERNOVA-KILLER MODULES (v2.0)
 
 Five new modules. All pure functions, all unit-tested, all composable with existing surface. AI agents should know they exist + call them when relevant:
