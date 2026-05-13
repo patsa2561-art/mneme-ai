@@ -247,6 +247,15 @@ export * as qxBridge from "./qx_bridge/index.js";
 //   Prompt-Q-Latency Engine (predict next user question, pre-warm context)
 //   Master runFlash() — the one function AI agents call before any factual claim.
 export * as flash from "./flash/index.js";
+// v2.0.0 -- 5 SUPERNOVA-KILLER modules: BLOODLINE (evolutionary pressure
+// on personal genome), MUTINY (AI refuses regret-pattern requests),
+// X-RAY (reasoning audit), DREAM CYCLE (REM-sleep adversarial sim),
+// PROPHECY LETTERS (time-locked cross-version messages).
+export * as bloodline from "./bloodline/index.js";
+export * as mutiny from "./mutiny/index.js";
+export * as xray from "./xray/index.js";
+export * as dream from "./dream/index.js";
+export * as prophecy from "./prophecy/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

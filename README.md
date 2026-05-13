@@ -125,7 +125,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest: **v1.99.0** — FLASH INTELLIGENCE (anti-hallucination · V_eff formula) + MNEME PASSPORT (eternal, you-revoke). Every release ships HMAC-signed provenance + zero breaking changes by default.
+Latest: **v2.0.0** — 5 SUPERNOVA-KILLER modules: 🩸 BLOODLINE (personal genetic strain · evolutionary pressure · unique DNA fingerprint) · 🧨 MUTINY (AI with a spine — refuses regret-pattern requests) · 🩻 X-RAY (reasoning audit · hedge/absolute/citation/contradiction detector) · 🪞 DREAM CYCLE (REM-sleep adversarial vaccine evolution) · 📮 PROPHECY (time-locked cross-version letters with grading).
 
 → **[Full changelog · every release · every feature · every fix](CHANGELOG.md)**
 
@@ -488,7 +488,12 @@ Your conversation follows you. Any AI. Any device. Any time. **One sentence does
 
 | Page | What's inside |
 |---|---|
-| ⚡ [**FLASH INTELLIGENCE · anti-hallucination Core**](docs/FLASH.md) | **NEW v1.99** — Veracity-Velocity Singularity V_eff = Σ(E·W)/ln(H+e)×Φ_qx + Devil's Advocate refutations + source-context grounding. Math refuses marketing-tier claims. |
+| 🩸 [**BLOODLINE · personal genetic strain**](packages/core/src/bloodline/index.ts) | **NEW v2.0** — Evolutionary pressure on the local genome (reinforce / propagate / wither). After N events your Mneme has a unique DNA fingerprint guaranteed different from anyone else's. |
+| 🧨 [**MUTINY · the AI with a spine**](packages/core/src/mutiny/index.ts) | **NEW v2.0** — Refuses-with-rationale when request matches user's documented regret. Forces explicit `acknowledge <regret-id>` before proceeding. End of AI sycophancy. |
+| 🩻 [**X-RAY · reasoning audit**](packages/core/src/xray/index.ts) | **NEW v2.0** — Surface-text confidence audit: hedge density, absolute claims without citation, contradictions, hand-waving streaks → structural confidence 0..1 + verdict HIGH/MIXED/LOW/WEAK. Composes with FLASH. |
+| 🪞 [**DREAM CYCLE · REM sleep for AI**](packages/core/src/dream/index.ts) | **NEW v2.0** — Adversarial vaccine simulation during daemon idle. Survivors gain fitness, failers apoptose, missed hallucinations spawn variants. User wakes up = AI genuinely sharper. |
+| 📮 [**PROPHECY LETTERS · cross-version time-locked**](packages/core/src/prophecy/index.ts) | **NEW v2.0** — HMAC-sealed predictions from version N to version M. Future Mneme decrypts + grades — time-consistency score across releases. |
+| ⚡ [**FLASH INTELLIGENCE · anti-hallucination Core**](docs/FLASH.md) | **v1.99** — Veracity-Velocity Singularity V_eff = Σ(E·W)/ln(H+e)×Φ_qx + Devil's Advocate refutations + source-context grounding. Math refuses marketing-tier claims. |
 | 🛂 [**MNEME PASSPORT · the disruption move**](docs/PASSPORT.md) | **v1.98/99** — Portable HMAC-signed identity bundle (~2-4 KB). **Eternal by default** until you revoke. Carry decisions/regrets/wisdoms across vendors. Tamper-evident. Vendor-lock-in cracks open. |
 | 🧬 [**CLONE-TO · phrase guide for sending brain anywhere**](docs/CLONE_TO_AI.md) | **v1.97** — Say any phrase in Thai/English/mixed → Mneme parses it, picks target (mobile · chatgpt · gemini · claude · ipad · another PC · usb · return), opens browser, copies brain to clipboard. Honest 4-bug postmortem of v1.85 RELAY. |
 | 🌌 [**QX-BRIDGE · AI agents ↔ real quantum hardware**](docs/QX_BRIDGE.md) | **v1.95** — Pure-TS simulator + IBM/Braket/Azure/D-Wave provider bridge · Bell pair / GHZ / Grover verified live |
