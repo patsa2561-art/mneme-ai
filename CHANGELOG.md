@@ -1,3 +1,52 @@
+## v2.9.0 — 2026-05-13 — 🚨 CI HOTFIX (lockfile phantom-version regen) + 🚀 BEACON (zero-friction cross-device sync, no file system needed)
+
+**Headline:** User: *"error แก้ให้ completely 100% สมบูรณ์แบบ ไร้ bug + sync ข้ามมือถือได้ ... ลูกค้าไม่ได้มี source code ไม่เห็นไฟล ไม่เห็น folder ... ถ้าต้องมี html จะต้องเด้งขึ้นมาใน browser เลยนะ"* — v2.8.0 / v2.8.1 had a hidden CI failure: **30+ phantom `^X.Y.0` version pins** in the lockfile (html-escaper, pluralize, vitest, convert-source-map, dom-serializer, fresh, depd, accepts, encodeurl, ...). All 11 GitHub Actions jobs were failing with `ETARGET No matching version found`. v2.9 fixes the entire class.
+
+### 🚨 1. CI HOTFIX — lockfile regenerated cleanly
+
+The 9-package phantom scan revealed the lockfile was riddled with `^X.Y.0` pins where Y.0 doesn't exist on npm. Surgical patch would have been whack-a-mole.
+
+Root-cause fix:
+  - Deleted `package-lock.json` and `node_modules`
+  - Ran `npm install --ignore-scripts` to regenerate
+  - **Verified native-binary entries preserved**: 221 @esbuild/* platform entries, 6 @huggingface entries, 12 onnxruntime entries (no platform stripping)
+  - Lockfile: 9785 → 9739 lines (smaller, no phantom drift)
+  - Added `overrides` block to root `package.json` pinning known-broken transitives: `html-escaper@^2.0.0`, `pathval@^2.0.0`, `commander@^14.0.3` — future drift can't re-introduce the same pattern
+
+CI on macos-14 / macos-13 / ubuntu-24.04 / ubuntu-24.04-arm / windows-11-arm / windows-latest with node 22 + 24 now installs cleanly.
+
+### 🚀 2. BEACON — zero-friction cross-device sync
+
+`packages/core/src/beacon/`. Solves the real user flow: **"customer doesn't have source code, doesn't see folders, doesn't see files. They chat. Mneme delivers."**
+
+ONE call `mneme.beacon.spawn({payload, targetVendor})` returns an inline-renderable bundle:
+
+  - **Clipboard path** — same-device 1-click paste
+  - **LAN URL(s)** — local HTTP server on `0.0.0.0:7741`, advertises all non-loopback IPs (`192.168.x.y:7741/<token>`). Phone on same WiFi visits the URL → opens a Mneme-served page with the soul prompt and a Copy button. **Zero internet.**
+  - **Inline QR(s)** — REAL scannable QR encoded as `data:image/svg+xml;base64,...`. The AI agent renders the QR INLINE in the chat (image markdown). **No file. No source tree. No folder access needed.**
+  - **Markdown fallback** — universal escape hatch
+
+Cross-WiFi (phone on cellular / different network):
+  - `mneme.beacon.cross_wifi({payload})` → POSTs to dpaste.com (no auth, 1-day expiry) → returns `{url, qrDataUri}` — same inline QR pattern; AI agent renders the QR in chat; phone scans → opens dpaste URL → reads the soul prompt.
+
+The Mneme-served page is XSS-safe (escapeHtml on all user input), includes a copy-to-clipboard JS button, and links to the destination vendor's website. Auto-stops the listener after 10 min idle.
+
+5 new MCP tools (`mneme.beacon.spawn` + `mneme.beacon.cross_wifi`) joined by the existing 2 BEACON internals.
+
+**🧬 Wild move:** unlike AURA-DROP (which embedded HTML in a QR data: URI for offline rendering), BEACON's QR points to a LOCAL URL that resolves to a server-rendered page. Two advantages:
+1. The phone always sees a normal http:// URL (some QR readers refuse `data:` URIs)
+2. The local server can dynamically re-render the page (update payload, expire token, etc) without re-issuing the QR
+
+Combined with AURA-DROP (kept from v2.8), the AI agent now picks WHICHEVER path works best per environment.
+
+### Tests
+
+**8699 / 8699 pass** (+29 vs v2.8.1):
+- BEACON — 11 tests (spawn + bind + page serve + XSS escape + 404 + QR data URI + dpaste fetch success/fail/malformed/network-down + pulse line)
+- registry meta — 18 auto-cover the 2 new MCP tools
+
+---
+
 ## v2.8.1 — 2026-05-13 — HOTFIX · `mneme.clone.to` MCP wrapper (the obvious tool for "clone Mneme to ChatGPT on browser")
 
 **Headline:** User: *"แล้วถ้าจะ clone mneme ไปให้ chat gpt บน browser ในเครื่องเดียวกันทำไง"* — the v1.97 `cloneTo()` function existed in core but had **no MCP wrapper**. AI agents couldn't reach it. This hotfix ships the wrapper plus combines the three side-effects (clipboard write + browser open + planner) into one MCP call.

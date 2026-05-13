@@ -322,6 +322,11 @@ export * as birthright from "./birthright/index.js";
 // v2.8.0 -- bestEffort marker for deliberate silent catches; METRON
 // audit excludes these from the Reliability penalty.
 export * as bestEffortMod from "./util/best_effort.js";
+// v2.9.0 -- BEACON: zero-friction cross-device sync. Local HTTP server
+// (LAN-reachable) + auto-discovered LAN IPs + REAL QR (data:image/svg+xml)
+// + dpaste.com cross-WiFi fallback. Returns all paths inline so the AI
+// agent can render them in chat — no file system access needed.
+export * as beacon from "./beacon/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

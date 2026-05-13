@@ -56,6 +56,7 @@ import { TRUTH_WORMHOLE_TOOLS } from "./_truth_wormhole_tools.js";
 import { METRON_TOOLS } from "./_metron_tools.js";
 import { V28_TOOLS } from "./_v28_tools.js";
 import { CLONE_TO_TOOLS } from "./_clone_to_tool.js";
+import { BEACON_TOOLS } from "./_beacon_tool.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -116,6 +117,7 @@ export function buildAllTools(): MnemeTool[] {
     ...METRON_TOOLS,
     ...V28_TOOLS,
     ...CLONE_TO_TOOLS,
+    ...BEACON_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
