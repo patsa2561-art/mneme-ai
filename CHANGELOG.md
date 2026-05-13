@@ -1,4 +1,124 @@
-﻿## v1.91.0 โ€” 2026-05-13 โ€” INSTANT (HOMUNCULUS in soul + page renderers + 4 critical UX fixes)
+## v1.92.0 — 2026-05-13 — IMMORTAL (SAME-SHELL no-QR clone + PHOENIX tunnel watchdog + BOOMERANG return-pad)
+
+**Headline:** User scanned the v1.91 QR on mobile → HTTP 404 (`ranging-theology-frames-ready.trycloudflare.com page can't be found`). Cloudflare quick-tunnels are ephemeral — they die on process exit, ~30 min idle, or when the edge garbage-collects them. v1.91 served a beautiful page that pointed at a tunnel that may already be dead. v1.92 fixes the ROOT cause + adds the missing fastest path the architecture forgot existed: **same-machine clone needs no QR and no tunnel at all**.
+
+### 🩺 The honest diagnosis (what was actually broken)
+
+```
+v1.91 → user scans QR → cloudflared edge returns 404 → page never loads → user is stuck
+
+WHY: quick tunnels are ephemeral. They DIE.
+  - process exit       → tunnel killed instantly
+  - ~30 min idle       → Cloudflare GCs it
+  - random edge events → URL goes 404 with no warning
+
+v1.91 told the user "scan the QR, it works ANYWHERE" — but never warned the URL has a half-life.
+```
+
+### 🧬 SAME-SHELL — the case the architecture forgot existed
+
+User asked the deepest question of this release cycle: *"if I'm on Claude Code on this PC and want to clone my brain to ChatGPT.com / Gemini.com on the SAME PC, why do I need a QR? Why a tunnel? Why dpaste?"*
+
+Answer: **you don't, and we should never have made you go through that.**
+
+`packages/core/src/rainbow/same_shell.ts` adds `renderSameShellPage`:
+- Page served at `http://localhost:PORT/local`
+- **Brain auto-copies to clipboard on page load** — zero clicks for the most common case
+- 4 AI quick-buttons (ChatGPT / Gemini / Claude / Perplexity); clicking re-copies clipboard then opens the AI in a new tab → user just hits Ctrl+V
+- Full TH+EN capability matrix (the one user pasted, transplanted verbatim with both languages)
+- Optional BOOMERANG return-pad textarea when `returnEndpoint` is provided
+- **Zero QR. Zero tunnel. Zero public URL. Zero 404 risk.** Page never leaves localhost.
+
+```
+[Claude Code] --soul--> [SAME-SHELL page on localhost] --paste--> [ChatGPT in another browser tab]
+                                  ^                                            |
+                                  | BOOMERANG /return                          | reply with HOMUNCULUS RETURN
+                                  +------ user pastes back --------------------+
+```
+
+### 🔥 PHOENIX — tunnel watchdog (URL pushed live to the page)
+
+`packages/core/src/rainbow/phoenix.ts`:
+- `createPhoenix({initialUrl, probeIntervalMs, failuresBeforeRespawn, respawnFn})` — async loop probes the tunnel every 30s; on N consecutive 4xx/5xx/network failures, calls `respawnFn` to spawn a fresh `cloudflared` and fires `onUrlChange(newUrl, oldUrl)`.
+- `renderPhoenixSubscriberScript()` — IIFE for the served page that subscribes to `/events` Server-Sent Events. When PHOENIX emits `event: url-change`, the page **re-renders the QR `<img>` src in place** without reload.
+- `formatUrlChangeSseFrame(url)` — the wire format helper (defensive — strips embedded newlines).
+
+User experience: scan QR → wait 5 min → tunnel dies → PHOENIX respawns silently → your phone's open page now has a fresh working QR. **The wizard never confesses the URL died.**
+
+### 🪃 BOOMERANG — return-pad → MCP-watched JSONL inbox
+
+`packages/core/src/rainbow/boomerang.ts`:
+- `openBoomerangInbox(path)` — append-only JSONL at `.mneme/inbox/homunculus-return.jsonl`. Each entry: `{id, receivedAt, source, raw, rawSha256, parsed, ingested}`.
+- Validates HOMUNCULUS RETURN format (rejects garbage with helpful error).
+- **Dedup by SHA-256** — same body POSTed twice returns the same id, no duplicate line.
+- 256KB cap on body size (defensive).
+- `handleReturnPost({inbox, body, source})` → returns `{status, body}` for caller's HTTP framework.
+- `formatPulseLine(entry)` → compact `[BOOMERANG abc123] from gemini-2.5-pro -> claude-opus-4-7 (d:2 r:1 n:3)` for the supersonic pulse.
+- Survives malformed JSONL lines (forward-compat).
+
+`.brain-show8.mjs` end-to-end demo wires the LAN HTTP server with five endpoints: `/` (mobile page), `/local` (same-shell page), `/return` (POST → BOOMERANG), `/events` (SSE → PHOENIX), `/stop` (graceful shutdown).
+
+### 🛑 STOP button — now self-explanatory
+
+The PC page got a new `.stop-help` block answering the three questions every user actually has:
+1. **What does pressing STOP do?** Shuts down LAN server + tunnel; QR will 404 from then on.
+2. **What if I DON'T press STOP?** Server keeps running until terminal close / reboot — local-only, no risk.
+3. **What if I close the browser?** Say to your AI: *"show handoff again"* — fresh page, fresh URL.
+
+Both languages, plain words.
+
+### 🎯 Capability matrix (TH+EN) on the SAME-SHELL page
+
+The exact matrix the user dictated, transplanted verbatim into the rendered page in both languages:
+
+| ✅ Paste-only WORKS | ❌ Paste-only doesn't |
+|---|---|
+| On a train, only have your phone / อยู่บนรถไฟ มีแค่มือถือ | Call Mneme tools (apoptosis / scan / audit) / เรียก Mneme tools |
+| Switch models for a second opinion / อยากเปลี่ยน model | Read .mneme/ files / อ่านไฟล์ .mneme/ |
+| Share with a teammate / ส่งให้เพื่อน | Upgrade Mneme / อัปเกรด Mneme |
+| Backup whole conversation / Backup บทสนทนา | Modify your code / แก้ code |
+| Brainstorm with the best model per task | |
+| Cross-team handoff (dev → PM) | |
+
+### Live e2e proof (all-pass, not promised)
+
+Started `node .brain-show8.mjs --local-only`, then:
+- ✅ `GET /local` → 200, 16064 bytes, 13/13 content checks (auto-copy on load, 4 AI links, TH+EN matrix, BOOMERANG return-pad, no QR, no tunnel mention)
+- ✅ `POST /return` with valid HOMUNCULUS RETURN block → 200 `{ok:true, id:"6dd67ad11db3"}`, JSONL line written, parsed correctly (2 decisions, 3 next_actions)
+- ✅ `POST /return` with garbage → 400 `{ok:false, error:"no HOMUNCULUS RETURN block detected"}`
+- ✅ Dedup: same body POSTed twice → same id, single JSONL line
+- ✅ `GET /stop` → 200, server shuts down, port :7741 released
+
+### Tests
+
+- **+25 v1.92 tests** in `packages/core/src/rainbow/v1_92.test.ts` covering all three modules + XSS + dedup + edge cases.
+- **63/63 rainbow tests pass** (was 38 in v1.91; +25).
+- **7899/7899 full suite pass** (was 7874 in v1.91; +25).
+- **soul_prompt budget tests still green** (≤ 1400 tokens).
+
+### Mneme mandates applied
+
+1. **Wild idea** — the SAME-SHELL recognition: when both endpoints are on one machine, the entire QR / tunnel / dpaste ladder is wrong. Localhost IS the path. We just never offered it.
+2. **Wiser, not patched** — didn't add a "tunnel may die, scan again" warning. Made the truth structural via PHOENIX (auto-respawn + push to live page via SSE). Wizard mode.
+3. **Self-fix root cause** — quick tunnels die. Don't apologize for it; watch for it; respawn it; tell the page about the new URL without the user reloading.
+4. **Co-working not conflicting** — `.brain-show7.mjs` (v1.91) keeps working unmodified. `.brain-show8.mjs` is additive. The new HTTP endpoints are namespaced (`/local`, `/return`, `/events`).
+5. **Always-studying** — BOOMERANG inbox is JSONL with a stable schema; future Mneme versions can add fields without breaking forward-compat (`list()` skips malformed lines).
+
+### What does NOT change
+
+- v1.91 paths still work (LAN page, QR, dpaste fallback, HOMUNCULUS in soul prompt).
+- All v1.91 tests still pass without modification.
+- No new external deps.
+
+### v1.93 commitment (next session)
+
+1. **MCP watcher** for `.mneme/inbox/homunculus-return.jsonl` — surface BOOMERANG entries through the supersonic pulse so the editor AI sees them automatically.
+2. **`mneme.rainbow.show_local` MCP tool** — single-call wrapper that starts the server in `--local-only` mode + opens the browser at `localhost:PORT/local`.
+3. **ggwave audio handoff** — vendor ggwave-js, integrate WebAudio sender + mic receiver.
+4. **WebRTC P2P** — public STUN, signaling page (true peer-to-peer cross-network without any tunnel).
+
+
+## v1.91.0 โ€” 2026-05-13 โ€” INSTANT (HOMUNCULUS in soul + page renderers + 4 critical UX fixes)
 
 **Headline:** User asked the deepest architectural question: *"if Web AI can't call MCP, what's the value of paste?"* The answer: paste = read-only memory transfer; HOMUNCULUS round-trip closes the cycle (Web AI emits suggestions โ’ user pastes back โ’ editor AI executes). v1.91 ships HOMUNCULUS embedded in every soul prompt by default + promotes the inline page HTML to proper testable modules + fixes 4 critical mobile UX bugs.
 

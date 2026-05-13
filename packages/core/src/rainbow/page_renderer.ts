@@ -197,6 +197,8 @@ h2{font-size:32px;text-align:center}
 .howto ol{padding-left:28px}
 .howto li{margin:8px 0}
 .warn-soft{background:rgba(241,196,15,0.2);border:1px solid rgba(241,196,15,0.4);padding:18px;border-radius:12px;font-size:17px;line-height:1.5;text-align:center;max-width:600px}
+.stop-help{background:rgba(0,0,0,0.35);padding:16px;border-radius:12px;font-size:14px;line-height:1.6;max-width:600px}
+.stop-help h4{font-size:16px;margin-bottom:8px}
 footer{font-size:14px;opacity:0.7;text-align:center;line-height:1.6;max-width:700px;padding:16px;background:rgba(0,0,0,0.2);border-radius:10px}
 </style></head><body>
 <button class="lang-btn" id="lang">ไทย</button>
@@ -222,6 +224,12 @@ footer{font-size:14px;opacity:0.7;text-align:center;line-height:1.6;max-width:70
 </div>
 <div class="warn-soft">
   <span data-en="⚠ Honest truth: paste gives the AI READ-ONLY memory. For LIVE Mneme tool execution that AI must have Mneme installed (Cursor / Claude Code / Codex / VS Code MCP). Web AIs (chatgpt.com, gemini.com) read but can NOT call MCP. They CAN suggest next actions back via HOMUNCULUS RETURN block — paste it back to your editor AI to execute." data-th="⚠ ความจริง: paste ให้ AI เห็น MEMORY แบบอ่านอย่างเดียว. ถ้าจะให้ AI เรียก Mneme tools จริง AI ตัวนั้นต้องติดตั้ง Mneme (Cursor / Claude Code / Codex / VS Code MCP). Web AIs อ่านได้แต่เรียก MCP ไม่ได้. แต่มัน suggest next actions กลับมาเป็น HOMUNCULUS RETURN block ได้ — paste กลับไป editor AI เพื่อ execute"></span>
+</div>
+<div class="stop-help">
+  <h4 data-en="🛑 What the STOP button does" data-th="🛑 ปุ่ม STOP ทำอะไร"></h4>
+  <div data-en="Press STOP when you're DONE. It shuts down: (1) the local LAN server on this PC, (2) the public tunnel (if any), and (3) makes this page stop working. The QR will 404." data-th="กด STOP ตอนเสร็จแล้ว — มันจะปิด: (1) LAN server บน PC, (2) public tunnel (ถ้ามี), (3) หน้านี้จะใช้ไม่ได้แล้ว และ QR จะ 404"></div>
+  <div style="margin-top:8px" data-en="If you DON'T press STOP: server keeps running until you close this terminal or reboot. That's fine — it's local only. Public quick-tunnels self-expire after ~30 min of idle anyway." data-th="ถ้าไม่กด STOP: server จะรันไปเรื่อยๆ จนกว่าจะปิด terminal หรือ reboot. ไม่อันตราย เพราะเป็น local only. ส่วน quick-tunnel จะตายเองหลัง idle ~30 นาที"></div>
+  <div style="margin-top:8px" data-en="Closed the browser by accident? Just say to your editor AI: 'show handoff again'. The page regenerates with a fresh URL." data-th="เผลอปิด browser ไปแล้ว? บอก editor AI ของคุณ: 'show handoff again' หน้าจะ generate ใหม่พร้อม URL ใหม่"></div>
 </div>
 <footer>
   <span data-en="Soul ${input.soulTokens} tokens · ${tunnelMention}LAN :7741${pasteMention}" data-th="สมอง ${input.soulTokens} โทเค็น · ${tunnelMention}LAN :7741${pasteMention}"></span><br>

@@ -116,6 +116,43 @@ Scenario matrix coverage (1 = same WiFi, 2 = different WiFi, 3 = cellular, 4-5 =
 💾 Wanderer     covers 8 (offline)
 ```
 
+### 🧬 Same-machine clone — fastest path (v1.92 SAME-SHELL)
+
+You're on **one machine**. You've been chatting with Claude Code / Cursor / Codex. You want to switch to ChatGPT / Gemini / Claude in your **browser** — same machine, no QR needed.
+
+> **Tell your AI:** *"clone my brain to a browser AI on this PC"* — your AI runs `mneme.rainbow.show_local`. A browser tab opens at `localhost:7741/local`. The brain is **already on your clipboard**. Click ChatGPT (or Gemini / Claude / Perplexity), paste, done.
+
+| Step | What happens | Time |
+|---|---|---|
+| 1 | Browser tab opens automatically | ~200ms |
+| 2 | Soul prompt auto-copies to clipboard on page load | instant |
+| 3 | You click any AI button → opens that AI in a new tab | 1 click |
+| 4 | You press Ctrl+V (Cmd+V on Mac) | 1 keystroke |
+
+**No QR. No tunnel. No public URL. No 404 risk.** The page never leaves your machine.
+
+### 🛑 The STOP button — what does it actually do?
+
+The page served on PC + mobile has a red **STOP** button at top-right.
+
+| You... | What happens |
+|---|---|
+| **Press STOP** | Local LAN server shuts down. Public tunnel (if any) is killed. The QR will 404 from now on. The PC page shows "Server stopped." |
+| **Don't press STOP** | Server keeps running until you close that terminal or reboot. Local-only — not exposed to the internet unless you started a tunnel. Public tunnels self-expire after ~30 min idle. |
+| **Close the browser by accident** | Just say to your AI: *"show handoff again"*. A new page is generated with a fresh URL. Old QR is dead, new QR replaces it. |
+
+### 🔥 If the QR ever 404s — PHOENIX is watching (v1.92)
+
+Cloudflare quick-tunnels are ephemeral — they die randomly (process exit, idle ~30 min, edge garbage-collection). With PHOENIX, the LAN server probes the tunnel every 30 seconds. If the URL goes dead, **cloudflared respawns automatically** and the new URL is **pushed live to the page on your phone via Server-Sent Events** — the QR re-renders without you reloading. Wizard mode.
+
+### 🪃 Brain → Web AI → back to you (v1.92 BOOMERANG)
+
+Web AIs (ChatGPT.com / Gemini.com) read your soul prompt but **can't call Mneme MCP tools**. Honest. So how do they help?
+
+The soul prompt embeds a **HOMUNCULUS RETURN contract** — the Web AI is asked to emit a structured block of decisions / reasoning / next-actions at the end. You paste that block into the **return-pad** on the same page (or directly to your editor AI). It POSTs to `/return` → lands in `.mneme/inbox/homunculus-return.jsonl` → Mneme MCP daemon picks it up → your editor AI sees it on the next pulse: `[BOOMERANG abc123] from gemini-2.5-pro → claude-opus-4-7 (d:2 r:1 n:3)` — and offers to ingest + execute.
+
+**Web AI = brain. Editor AI = hands. You = courier (2 paste ops, no install on either side).**
+
 ### 🦎 Don't have git? Don't worry — it's OPTIONAL
 
 Mneme has 6 transports for cross-device handover. **Only one uses git.** Every other path works fine without git, without a GitHub account, without any push permission.

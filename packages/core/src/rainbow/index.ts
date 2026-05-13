@@ -17,3 +17,6 @@ export * from "./tunnel.js";
 export * from "./multi_paste.js";
 export * from "./resource_hints.js";
 export * from "./page_renderer.js";
+export * from "./same_shell.js";
+export * from "./phoenix.js";
+export * from "./boomerang.js";
