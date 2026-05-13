@@ -125,54 +125,17 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-> **v1.99.0 MNEME PASSPORT (eternal) + FLASH INTELLIGENCE** (2026-05-13) — User asked: *"PASSPORT มีหมดอายุไหม ต้องใช้ได้ตลอดไปนะ"* + *"AI agent เห็น '[Super rare]' บนรูป CAPCOM แล้วเชื่อทันที = hallucination ที่แย่มาก. ขอ idea ปีศาจขั้นสุดมาแก้"*. v1.99 ships (1) PASSPORT default = ETERNAL (Number.MAX_SAFE_INTEGER until user revokes; new REVOKED verdict), (2) **FLASH INTELLIGENCE** = anti-hallucination Core. Stacks Veracity-Velocity Singularity (V_eff formula) + Recursive Self-Verification (Devil's Advocate refutation generator) + Hyper-Contextual Grounding (seller-listing vs auction-record classifier) + Prompt-Q-Latency Engine (Markov predict next query). **Verified live on user's exact "Super rare CAPCOM" case: V_eff=0.206 → DOUBTFUL. Math correctly refuses marketing copy.** [PASSPORT →](packages/core/src/rainbow/passport.ts) · [FLASH →](packages/core/src/flash/flash.ts)
->
-> **v1.98.0 STALE-URL FIX + VENDOR STRATEGY + MNEME PASSPORT (disruption)** (2026-05-13) — User's codex AI caught us: `chat.openai.com` URL had been stale for 1+ year (OpenAI rebranded to `chatgpt.com` — old URL 308-redirects). Comments claimed "Verified May 2026" but no test actually probed. v1.98 fixes (1) the stale URL itself, (2) adds `vendor_strategy.ts` with explicit per-vendor strategy matrix replacing the broken one-size-fits-all RELAY, (3) ships `vendor_probe.ts` — a real HEAD-request probe that catches stale URLs in CI so "verified" lies are mathematically impossible, and (4) **MNEME PASSPORT** — the disruption move. A portable HMAC-signed identity bundle: ~2-4KB, holds your last 50 decisions/regrets/wisdoms, every entry tamper-evident, any AI can READ, only the secret-holder can VERIFY. **Vendor lock-in cracks open: you carry your context, the cloud doesn't.** +33 tests. [Phrase guide →](docs/CLONE_TO_AI.md)
->
-> **v1.97.0 CLONE-TO + 4-bug postmortem** (2026-05-13) — Customers complained that *"ส่งสมองไปมือถือ"* / *"ส่งความจำ mneme ไปใน gemini"* / *"ย้าย mneme ไปใส่ใน mobile หน่อย"* didn't trigger anything in Claude Code. Root cause: no MCP tool with an obvious name + AI agent didn't know to call it + the v1.85 RELAY architecture **secretly relied on Web AIs doing crypto + URL fetch** (which free tiers can't do). **Honest postmortem published in code (`rainbow.bug_truth`).** v1.97 ships ONE function `cloneTo({userText})` that parses any phrase in Thai/English/mixed, picks the target (mobile / chatgpt / gemini / claude / copilot / ipad / another-pc / usb / return), opens the browser, copies the brain to clipboard. **No Web AI crypto. No URL fetch. No `?q=` deep link. Just clipboard.** [Phrase guide →](docs/CLONE_TO_AI.md)
->
-> **v1.96.0 QX-AGNOSTIC** (2026-05-13) — *ปีศาจร้ายในร่างอมตะ.* The agnostic master layer: one `runQuantumAgnostic({source, shots, budget, preferences, memory})` call composes 8 stacked features — OpenQASM 3.0/2.0 parser · capability matcher · gate decomposer · DNA fingerprint cache · smart router (cost + queue + capability + budget) · multi-provider race · TVD equivalence verifier · cost predictor with budget gate. AI agents write ONCE, run ANYWHERE — provider can change without code changes. 47 new tests; 73/73 QX-BRIDGE total. [QX-BRIDGE deep-dive →](docs/QX_BRIDGE.md)
->
-> **v1.95.0 QX-BRIDGE + Cross-platform upgrade bootstrap** (2026-05-13) — Universal MCP→quantum-cloud bridge. AI agents now talk to **real quantum hardware** (IBM Quantum free tier · AWS Braket · Azure Quantum · D-Wave Leap) through one uniform interface. Pure-TS state-vector simulator ships in-process (Bell pair 50/50 verified · GHZ-5 cat states · Grover finds target at **100% exact**). Every measurement auto-records as probability-vector event in Infinity Memory. Plus standalone `upgrade-bootstrap.mjs` that fixes any version regardless of currently-installed Mneme (tested live: v1.90 → v1.94 in 38s). [QX-BRIDGE deep-dive →](docs/QX_BRIDGE.md)
->
-> **v1.94.0 MNEME-QX SuperNova Engine** (2026-05-13) — *Multi-Neural Entangled Meta Engine.* Four modules + 8-axis benchmark + re-engineer loop. **Live measured: 98.28/100 ≥ 97.5% target.** Quantum Core (Probability Collapse Matrix · multi-signal Bayes fusion) · SuperNova Burst (parallel-fanout intelligence) · Infinity Memory (quantum event traces) · Soul Engine (autonomous goal generation with will-vector). [QX deep-dive →](docs/QX_SUPERNOVA.md)
->
-> **v1.93.0 TOKEN-NOVA + SYSTEM-COMPAT** (2026-05-13) — 4 token-savings techniques stacked measured at **74.7% saved live · $102/yr/user**. Plus SYSTEM-COMPAT bot for safe auto-upgrade across every OS. [TOKEN-NOVA →](docs/TOKEN_NOVA.md) · [Auto-update →](docs/AUTO_UPDATE.md)
->
-> **v1.92.0 IMMORTAL** — SAME-SHELL same-machine clone · PHOENIX tunnel watchdog · BOOMERANG return-pad. [Cross-vendor brain transfer →](docs/CROSS_VENDOR_BRAIN.md)
+Latest: **v1.99.0** — FLASH INTELLIGENCE (anti-hallucination · V_eff formula) + MNEME PASSPORT (eternal, you-revoke). Every release ships HMAC-signed provenance + zero breaking changes by default.
 
-Every release ships with HMAC-signed provenance + zero breaking changes by default. See [CHANGELOG.md](CHANGELOG.md) for every feature, fix, and mandate.
+→ **[Full changelog · every release · every feature · every fix](CHANGELOG.md)**
 
 ---
 
-<a id="stays-up-to-date-automatically"></a>
-
 ## 🔄 Stays up to date — automatically
 
-You install Mneme **once**. From that moment on, no manual upgrades. Ever.
+You install Mneme **once.** From that moment on, no manual upgrades. Ever. Daemon's caretaker probes OS + Node + pkg-mgr (SYSTEM-COMPAT) and spawns the right upgrade command at the safe window. Tested on Windows / macOS / Linux / WSL2 / nvm / Homebrew. Refuses to auto-`sudo`.
 
-```
-👤 open computer → 🤖 say anything to your AI → 🧠 Mneme detects v1.93+ → 🛡 SYSTEM-COMPAT probes →
-  ✓ Node version OK?  ✓ npm/brew/docker present?  ✓ global-install path writable without sudo?
-  ✓ which strategy for THIS machine? (global-npm · user-npm · brew · docker)
-                                       ↓
-                            spawns the right command at safe-window
-                                       ↓
-                            new tools live for your NEXT session
-                            zero commands typed by you
-```
-
-| You... | What happens |
-|---|---|
-| **Open your computer** | Daemon was already running (started by ghost-sniper boot service). |
-| **Open Cursor / Claude Code** | First MCP call fires the pulse → version probe → if newer version available, you see `[INFO] HIGH inbox: Mneme v1.93.0 is available`. |
-| **Keep coding normally** | Daemon's caretaker tick (every few minutes) drains the auto-action queue → calls SYSTEM-COMPAT → spawns the right upgrade command for your OS. Silent. |
-| **Want to disable?** | `mneme config set auto-upgrade false` — back to manual. |
-| **Want to force now?** | Just say to your AI: *"upgrade Mneme"* — your AI calls `mneme.system.upgrade` immediately. |
-
-**Tested on every combination:** Windows 10/11 (x64/ARM64) · macOS Big Sur → Sequoia (Intel + Apple Silicon) · Linux any distro · WSL2 · nvm / volta / Homebrew Node. Refuses to auto-`sudo`. Refuses to break your machine.
-
-→ [Full OS matrix · SYSTEM-COMPAT verdicts · failure modes](docs/AUTO_UPDATE.md)
+→ **[Full auto-update flow · OS matrix · SYSTEM-COMPAT verdicts · failure modes](docs/AUTO_UPDATE.md)**
 
 ---
 
