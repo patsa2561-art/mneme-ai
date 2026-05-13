@@ -224,7 +224,9 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
 
   // ─── v1.89 RAINBOW (multi-channel handoff orchestrator) ──────────────
   { command: "mneme.rainbow.probe", since: "1.89.0", group: "rainbow", what: "Probe live handoff channels (LAN / data: URL bridge / dpaste raw / roadmap channels). Returns recommended channel + per-channel scenario coverage.", when: "Before generating a handoff: ask which channels work in the current network state." },
-  { command: "mneme.rainbow.data_bridge", since: "1.89.0", group: "rainbow", what: "Build a data: URL HTML bridge for a dpaste URL. The wild move -- entire handoff page lives in the QR; phone scans → renders → fetches soul → Web Share button.", when: "Cross-network handoff when LAN bridge isn't reachable AND user wants 1-tap on phone." },
+  { command: "mneme.rainbow.data_bridge", since: "1.89.0", group: "rainbow", what: "Build a data: URL HTML bridge for a dpaste URL. NOTE v1.90: modern Chrome/Safari block top-level data: URL navigation; kept for compat but DEPRECATED in favour of cloudflared tunnel.", when: "Legacy only -- prefer mneme.rainbow.tunnel_detect + cloudflared for working cross-network 1-tap." },
+  { command: "mneme.rainbow.tunnel_detect", since: "1.90.0", group: "rainbow", what: "Detect cloudflared on PATH (free quick tunnels, no account). Returns availability + version + per-OS install hint.", when: "Before generating cross-network handoff: tunnel = true 1-tap on any network." },
+  { command: "mneme.rainbow.multi_paste", since: "1.90.0", group: "rainbow", what: "Upload soul to public paste with automatic backend fallback (dpaste → paste.rs → 0x0.st). Handles rate limits + transient failures with attempt log.", when: "Cross-network handoff fallback when tunnel unavailable or LAN unreachable." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";

@@ -83,4 +83,67 @@ export const rainbowDataBridgeTool: MnemeTool = {
   },
 };
 
-export const RAINBOW_TOOLS: MnemeTool[] = [rainbowProbeTool, rainbowDataBridgeTool];
+export const rainbowTunnelTool: MnemeTool = {
+  name: "mneme.rainbow.tunnel_detect",
+  category: "meta",
+  description:
+    "RAINBOW v1.90 -- detect cloudflared on PATH (free quick tunnels, no account). Returns availability + version + install hint per OS. Caller starts a tunnel separately when available.",
+  whenToUse: "Before generating a cross-network handoff: check if cloudflared can give us a public HTTPS URL.",
+  triggers: ["detect tunnel", "cloudflared check", "is tunnel available"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Is cloudflared installed?", args: {}, expectedOutput: "{ available: true, version: '...', installHint: '...' }" }],
+  pitfalls: ["Detection is on-demand; cloudflared can be installed mid-session and re-detected next call."],
+  handler: async () => {
+    const core = await import("@mneme-ai/core");
+    const r = core.rainbow.detectCloudflared();
+    return {
+      data: r,
+      wisdom: r.available ? `cloudflared ${r.version} at ${r.path}` : `cloudflared not found -- install: ${r.installHint}`,
+      confidence: { level: "high" },
+    };
+  },
+};
+
+export const rainbowMultiPasteTool: MnemeTool = {
+  name: "mneme.rainbow.multi_paste",
+  category: "meta",
+  description:
+    "RAINBOW v1.90 -- upload soul to public paste with automatic backend fallback (dpaste → paste.rs → 0x0.st). Handles rate limits + transient failures.",
+  whenToUse: "Cross-network handoff. Always try this before falling back to local-only modes.",
+  triggers: ["upload paste", "publish soul", "paste with fallback"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      content: { type: "string" },
+      order: { type: "array", items: { type: "string" } },
+      retryWaitMs: { type: "integer" },
+    },
+    required: ["content"],
+  },
+  outputSchema: { type: "object" },
+  examples: [
+    { userQuery: "Upload soul with fallback", args: { content: "..." }, expectedOutput: "{ ok: true, url: '...', backend: 'dpaste', attempts: [...] }" },
+  ],
+  pitfalls: [
+    "Default retryWaitMs is 1100ms (dpaste 1 req/sec); lowering risks rate-limit cascade.",
+    "Returns ok=false with full attempt log when ALL backends fail.",
+  ],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.rainbow.uploadResilient({
+      content: String(args["content"] ?? ""),
+      order: args["order"] as ("dpaste" | "pasters" | "zero-x-zero")[] | undefined,
+      retryWaitMs: args["retryWaitMs"] as number | undefined,
+    });
+    return {
+      data: r,
+      wisdom: r.ok
+        ? `uploaded via ${r.backend} (${r.totalMs}ms, ${r.attempts.length} attempt${r.attempts.length === 1 ? "" : "s"})`
+        : `all backends failed: ${r.attempts.map((a) => `${a.backend}=${a.reason ?? "?"}`).join("; ")}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
+export const RAINBOW_TOOLS: MnemeTool[] = [rainbowProbeTool, rainbowDataBridgeTool, rainbowTunnelTool, rainbowMultiPasteTool];
