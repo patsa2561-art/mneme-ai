@@ -27,7 +27,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { safeExecTry } from "../util/safe_exec.js";
 import { countMnemeTools, isLibraryInPackageJson, type FactClaim } from "./fact_grounding.js";
 
 export interface FlavorScore {
@@ -260,16 +260,12 @@ export function neutrinoSubstrate(repoRoot: string, claim: FactClaim): FlavorSco
     if (!/^[0-9a-f]{7,40}$/i.test(claim.asserted)) {
       return { score: 0, evidence: `not a valid SHA: ${claim.asserted}` };
     }
-    try {
-      execSync(`git -C "${repoRoot}" cat-file -e ${claim.asserted}`, {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: 3000,
-      });
+    // v2.4: SHA already regex-validated above; passed as a distinct argv element. No shell.
+    const r = safeExecTry("git", ["-C", repoRoot, "cat-file", "-e", claim.asserted], { timeoutMs: 3000 });
+    if (r?.status === 0) {
       return { score: 1.0, evidence: `commit ${claim.asserted} reachable via git cat-file` };
-    } catch {
-      return { score: 0, evidence: `commit ${claim.asserted} not reachable in this repo` };
     }
+    return { score: 0, evidence: `commit ${claim.asserted} not reachable in this repo` };
   }
   return { score: 0.5, evidence: "no substrate check for this claim kind" };
 }
@@ -281,24 +277,25 @@ export function neutrinoSubstrate(repoRoot: string, claim: FactClaim): FlavorSco
  *  commits so we don't burn the daemon on a 50k-commit history. */
 function appearedInGit(repoRoot: string, needle: string): { hits: number; sample: string | null } {
   if (!needle || needle.length < 2) return { hits: 0, sample: null };
-  // Use --grep on log first (cheap), then -S (pickaxe) only if --grep is empty.
-  // --grep finds in commit messages; -S finds in diffs.
-  try {
-    const cmd1 = `git -C "${repoRoot}" log --grep="${needle.replace(/"/g, '\\"')}" -n 5 --pretty=format:%h:%s`;
-    const out1 = execSync(cmd1, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim();
-    if (out1) {
-      const lines = out1.split("\n").filter(Boolean);
+  // v2.4: needle is user-controlled (came from an AI claim). Use spawnSync
+  // with argv array so --grep / -S receive the needle as a single literal
+  // argument — no shell, no quoting issues, no injection.
+  const out1 = safeExecTry("git", ["-C", repoRoot, "log", `--grep=${needle}`, "-n", "5", "--pretty=format:%h:%s"], { timeoutMs: 5000 });
+  if (out1?.status === 0) {
+    const trimmed = out1.stdout.trim();
+    if (trimmed) {
+      const lines = trimmed.split("\n").filter(Boolean);
       return { hits: lines.length, sample: lines[0] ?? null };
     }
-  } catch { /* swallow */ }
-  try {
-    const cmd2 = `git -C "${repoRoot}" log -S"${needle.replace(/"/g, '\\"')}" -n 5 --pretty=format:%h:%s`;
-    const out2 = execSync(cmd2, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim();
-    if (out2) {
-      const lines = out2.split("\n").filter(Boolean);
+  }
+  const out2 = safeExecTry("git", ["-C", repoRoot, "log", `-S${needle}`, "-n", "5", "--pretty=format:%h:%s"], { timeoutMs: 5000 });
+  if (out2?.status === 0) {
+    const trimmed = out2.stdout.trim();
+    if (trimmed) {
+      const lines = trimmed.split("\n").filter(Boolean);
       return { hits: lines.length, sample: lines[0] ?? null };
     }
-  } catch { /* swallow */ }
+  }
   return { hits: 0, sample: null };
 }
 

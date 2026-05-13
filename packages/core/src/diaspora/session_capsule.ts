@@ -25,6 +25,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeExecTry } from "../util/safe_exec.js";
 import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { join } from "node:path";
 
@@ -81,13 +82,9 @@ function canonical(payload: Omit<SessionCapsule, "hmac" | "id">): string {
 }
 
 function computeRepoFingerprint(repoRoot: string): string {
-  let extras = "";
-  try {
-    const { execSync } = require("node:child_process") as typeof import("node:child_process");
-    extras = execSync(`git -C "${repoRoot}" log --max-count=5 --pretty=format:%s`, {
-      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 2000,
-    });
-  } catch { /* */ }
+  // v2.4: spawnSync via safeExecTry — repoRoot is never interpolated into a shell template.
+  const r = safeExecTry("git", ["-C", repoRoot, "log", "--max-count=5", "--pretty=format:%s"], { timeoutMs: 2000 });
+  const extras = r?.status === 0 ? r.stdout : "";
   return createHash("sha256").update(repoRoot + "|" + extras).digest("hex").slice(0, 16);
 }
 

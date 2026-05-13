@@ -27,7 +27,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { execSync } from "node:child_process";
+import { safeExecTry } from "../util/safe_exec.js";
 
 export type FactKind =
   | "language"
@@ -334,13 +334,9 @@ export function isLibraryInPackageJson(repoRoot: string, lib: string): boolean {
 function commitExists(repoRoot: string, sha: string): boolean {
   if (!/^[0-9a-f]{7,40}$/i.test(sha)) return false;
   try {
-    const r = execSync(`git -C "${repoRoot}" cat-file -e ${sha}`, {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 3000,
-    });
-    // exit 0 = exists; non-zero throws.
-    return r !== undefined;
+    // v2.4: SHA is regex-validated AND passed as a distinct argv element; no shell.
+    const r = safeExecTry("git", ["-C", repoRoot, "cat-file", "-e", sha], { timeoutMs: 3000 });
+    return r?.status === 0;
   } catch {
     return false;
   }

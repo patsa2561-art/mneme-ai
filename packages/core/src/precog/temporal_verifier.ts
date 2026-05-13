@@ -21,7 +21,7 @@
  * Honest "INSUFFICIENT_EVIDENCE" verdict when window is empty.
  */
 
-import { execSync } from "node:child_process";
+import { safeExecTry } from "../util/safe_exec.js";
 
 export interface TemporalReference {
   /** The phrase that triggered the match. */
@@ -102,14 +102,10 @@ interface GitWindowResult {
 function queryGitWindow(repoRoot: string, ref: TemporalReference, verbs: string[], files: string[]): GitWindowResult {
   const since = new Date(ref.fromMs).toISOString();
   const until = new Date(ref.toMs).toISOString();
-  let totalCommits = 0;
-  let subjects = "";
-  try {
-    const r = execSync(`git -C "${repoRoot}" log --since="${since}" --until="${until}" --pretty=format:%s`,
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 });
-    subjects = r;
-    totalCommits = r.split("\n").filter(Boolean).length;
-  } catch { /* */ }
+  // v2.4: spawnSync via safeExecTry — since/until/file paths are argv elements, no shell.
+  const subjectsResult = safeExecTry("git", ["-C", repoRoot, "log", `--since=${since}`, `--until=${until}`, "--pretty=format:%s"], { timeoutMs: 3000 });
+  const subjects = subjectsResult?.status === 0 ? subjectsResult.stdout : "";
+  const totalCommits = subjects.split("\n").filter(Boolean).length;
   let verbMatches = 0;
   for (const v of verbs) {
     const re = new RegExp(`\\b${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
@@ -117,11 +113,8 @@ function queryGitWindow(repoRoot: string, ref: TemporalReference, verbs: string[
   }
   let fileTouches = 0;
   for (const f of files.slice(0, 3)) {
-    try {
-      const r = execSync(`git -C "${repoRoot}" log --since="${since}" --until="${until}" --format=%H -- "${f}"`,
-        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 });
-      if (r.trim().split("\n").filter(Boolean).length > 0) fileTouches += 1;
-    } catch { /* */ }
+    const r = safeExecTry("git", ["-C", repoRoot, "log", `--since=${since}`, `--until=${until}`, "--format=%H", "--", f], { timeoutMs: 3000 });
+    if (r?.status === 0 && r.stdout.trim().split("\n").filter(Boolean).length > 0) fileTouches += 1;
   }
   return { totalCommits, verbMatches, fileTouches };
 }

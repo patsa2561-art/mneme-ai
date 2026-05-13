@@ -24,6 +24,7 @@
 import { existsSync, readFileSync, readdirSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHmac, randomBytes } from "node:crypto";
+import { safeExecTry } from "../util/safe_exec.js";
 
 export type StrandLabel = "A" | "C" | "G" | "T";
 
@@ -116,15 +117,13 @@ function encodeAdamant(repoRoot: string): AdamantStrand {
   );
   const commits: string[] = [];
   // Pull last 20 git SHAs as commit anchors -- cheap, useful for time-river.
+  // v2.4: spawnSync via safeExecTry — repoRoot never reaches a shell.
   const gitPath = join(repoRoot, ".git");
   if (existsSync(gitPath)) {
-    try {
-      const { execSync } = require("node:child_process") as typeof import("node:child_process");
-      const r = execSync(`git -C "${repoRoot}" log --max-count=20 --pretty=format:%H`, {
-        encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000,
-      });
-      for (const sha of r.split("\n").filter(Boolean)) commits.push(sha.slice(0, 12));
-    } catch { /* */ }
+    const r = safeExecTry("git", ["-C", repoRoot, "log", "--max-count=20", "--pretty=format:%H"], { timeoutMs: 3000 });
+    if (r?.status === 0) {
+      for (const sha of r.stdout.split("\n").filter(Boolean)) commits.push(sha.slice(0, 12));
+    }
   }
   return {
     vaccines: vaccines.map((v) => ({

@@ -26,6 +26,7 @@
 
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { safeExecTry } from "../util/safe_exec.js";
 
 const COGNITIVE_DIR = ".mneme/cognitive";
 
@@ -86,14 +87,9 @@ function readSignals(repoRoot: string): RepoSignals {
       }).filter(Boolean);
     } catch { /* */ }
   }
-  // Recent commit subjects
-  try {
-    const { execSync } = require("node:child_process") as typeof import("node:child_process");
-    const r = execSync(`git -C "${repoRoot}" log --max-count=30 --pretty=format:%s`, {
-      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000,
-    });
-    out.recentSubjects = r.split("\n").filter(Boolean);
-  } catch { /* */ }
+  // Recent commit subjects -- v2.4: spawnSync via safeExecTry (no shell).
+  const r = safeExecTry("git", ["-C", repoRoot, "log", "--max-count=30", "--pretty=format:%s"], { timeoutMs: 3000 });
+  if (r?.status === 0) out.recentSubjects = r.stdout.split("\n").filter(Boolean);
   return out;
 }
 

@@ -15,6 +15,7 @@
 
 import { existsSync, readFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
+import { safeExecTry } from "../util/safe_exec.js";
 
 const COGNITIVE_DIR = ".mneme/cognitive";
 
@@ -45,13 +46,10 @@ function tokenize(s: string): string[] {
 }
 
 function readRecentCommitSubjects(repoRoot: string, max = 100): string[] {
-  try {
-    const { execSync } = require("node:child_process") as typeof import("node:child_process");
-    const r = execSync(`git -C "${repoRoot}" log --max-count=${max} --pretty=format:%s`, {
-      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000,
-    });
-    return r.split("\n").filter(Boolean);
-  } catch { return []; }
+  // v2.4: spawnSync via safeExecTry (no shell). `max` validated by JS type system as a number.
+  const r = safeExecTry("git", ["-C", repoRoot, "log", `--max-count=${max}`, "--pretty=format:%s"], { timeoutMs: 3000 });
+  if (r?.status !== 0) return [];
+  return r.stdout.split("\n").filter(Boolean);
 }
 
 function readVaccineSamples(repoRoot: string): string[] {

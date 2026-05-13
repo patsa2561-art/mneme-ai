@@ -24,8 +24,8 @@
 
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { safeExecTry } from "../util/safe_exec.js";
 
 const DUST_DIR = ".mneme/hyperscan/htc-dust";
 const ABSTRACTS_FILE = ".mneme/hyperscan/htc-dust/abstracts.jsonl";
@@ -119,15 +119,14 @@ function walkSourceFiles(repoRoot: string, max = 500): Array<{ path: string; con
 }
 
 function readCommits(repoRoot: string, max = 500): Array<{ hash: string; subject: string; body: string }> {
-  try {
-    const r = execSync(`git -C "${repoRoot}" log --max-count=${max} --pretty=format:%H%x09%s%x09%b%n---COMMIT---`,
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 });
-    return r.split(/\n---COMMIT---\n/).map((row) => {
-      const [hash, subject, ...rest] = row.split("\t");
-      if (!hash || !subject) return null;
-      return { hash, subject, body: rest.join("\t") };
-    }).filter((x): x is { hash: string; subject: string; body: string } => x !== null);
-  } catch { return []; }
+  // v2.4: spawnSync via safeExecTry (no shell).
+  const r = safeExecTry("git", ["-C", repoRoot, "log", `--max-count=${max}`, "--pretty=format:%H%x09%s%x09%b%n---COMMIT---"], { timeoutMs: 5000 });
+  if (r?.status !== 0) return [];
+  return r.stdout.split(/\n---COMMIT---\n/).map((row) => {
+    const [hash, subject, ...rest] = row.split("\t");
+    if (!hash || !subject) return null;
+    return { hash, subject, body: rest.join("\t") };
+  }).filter((x): x is { hash: string; subject: string; body: string } => x !== null);
 }
 
 /** Idempotent: generates abstracts for everything not yet covered. */

@@ -16,7 +16,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
+import { safeExecTry } from "../util/safe_exec.js";
 
 const SHA_RE = /\b([0-9a-f]{7,40})\b/gi;
 const VERSION_RE = /\bv?(\d+\.\d+\.\d+(?:-[\w.-]+)?)\b/g;
@@ -42,29 +42,26 @@ export interface FactReport {
 }
 
 function gitCheckSha(repoRoot: string, sha: string): boolean {
-  try {
-    execSync(`git -C "${repoRoot}" cat-file -e ${sha}`, { stdio: "ignore", timeout: 2000 });
-    return true;
-  } catch { return false; }
+  if (!/^[0-9a-f]{4,40}$/i.test(sha)) return false; // v2.4: validate sha-shape before exec
+  const r = safeExecTry("git", ["-C", repoRoot, "cat-file", "-e", sha], { timeoutMs: 2000 });
+  return r?.status === 0;
 }
 
 function gitListTags(repoRoot: string): Set<string> {
-  try {
-    const r = execSync(`git -C "${repoRoot}" tag --list`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 2000 });
-    return new Set(r.split("\n").map((t) => t.trim()).filter(Boolean));
-  } catch { return new Set(); }
+  const r = safeExecTry("git", ["-C", repoRoot, "tag", "--list"], { timeoutMs: 2000 });
+  if (r?.status !== 0) return new Set();
+  return new Set(r.stdout.split("\n").map((t) => t.trim()).filter(Boolean));
 }
 
 function gitListAuthorEmails(repoRoot: string): Set<string> {
-  try {
-    const r = execSync(`git -C "${repoRoot}" log --format=%ae --max-count=2000`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 });
-    const out = new Set<string>();
-    for (const line of r.split("\n")) {
-      const v = line.trim().toLowerCase();
-      if (v) out.add(v);
-    }
-    return out;
-  } catch { return new Set(); }
+  const r = safeExecTry("git", ["-C", repoRoot, "log", "--format=%ae", "--max-count=2000"], { timeoutMs: 3000 });
+  if (r?.status !== 0) return new Set();
+  const out = new Set<string>();
+  for (const line of r.stdout.split("\n")) {
+    const v = line.trim().toLowerCase();
+    if (v) out.add(v);
+  }
+  return out;
 }
 
 function changelogVersions(repoRoot: string): Set<string> {

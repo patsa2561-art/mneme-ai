@@ -24,7 +24,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
+import { safeExecTry } from "../util/safe_exec.js";
 
 export type SourceKind = "commit" | "readme" | "changelog" | "docstring" | "package-json";
 
@@ -76,11 +76,10 @@ function readMaybeFile(p: string): string {
 }
 
 function readCommitSubjects(repoRoot: string, max = 500): string[] {
-  try {
-    const r = execSync(`git -C "${repoRoot}" log --max-count=${max} --pretty=format:%s%n%b%n---`,
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 });
-    return r.split(/\n---\n/).map((s) => s.trim()).filter(Boolean);
-  } catch { return []; }
+  // v2.4: spawnSync via safeExecTry (no shell).
+  const r = safeExecTry("git", ["-C", repoRoot, "log", `--max-count=${max}`, "--pretty=format:%s%n%b%n---"], { timeoutMs: 3000 });
+  if (r?.status !== 0) return [];
+  return r.stdout.split(/\n---\n/).map((s) => s.trim()).filter(Boolean);
 }
 
 function splitSentences(text: string): string[] {
