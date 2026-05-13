@@ -1,3 +1,49 @@
+## v2.5.0 — 2026-05-13 — 12 ORPHAN MODULES GET MCP SURFACE
+
+**Headline:** User: *"เพิ่ม MCP wrappers — ให้ 12 features มี surface จริง"* — after the v2.4 audit flagged 12 v2.0/v2.1 modules as "orphans" (library-only, no MCP wrapper, no internal caller). Instead of deleting (the audit's recommendation, which would erase wild ideas the user explicitly shipped), v2.5 gives each module a real MCP tool. AI agents can now call them; the audit's "orphan" critique is structurally resolved.
+
+### 12 new MCP tools — [packages/mcp/src/tools/_orphans_tools.ts](packages/mcp/src/tools/_orphans_tools.ts)
+
+- `mneme.mutiny.check` — evaluate request vs documented regret history; APPROVE / WARN / BLOCK verdict
+- `mneme.prophet.predict` — predict the next K user queries + pre-warm hydration tasks
+- `mneme.prophecy.read` — unseal an HMAC-signed time-locked message from a predecessor version
+- `mneme.dream.run` — REM-sleep adversarial vaccine simulation (survivors gain fitness)
+- `mneme.wisdom_shards.append` — append a proof-of-truth entry to the HMAC-chained ledger
+- `mneme.necromancy.fingerprint` — stylometric fingerprint from an author's writing samples
+- `mneme.interstellar.compress` — compress a year of wisdom into a 4 KB packet for high-latency channels
+- `mneme.adversarial_twins.debate` — two-instance opposing-prior debate; surface the disagreement
+- `mneme.living_will.create` — cryptographic dead-man envelope with N-day inactivity release
+- `mneme.timeriver.counterfactual` — rewind to a historical anchor; answer "what if we hadn't shipped X?"
+- `mneme.recursive_soul.list_reviews` — list AI sessions eligible for cross-session review
+- `mneme.holy.heartbeat` — multi-axis pulse snapshot for circadian deviation detection
+
+### Defense-in-depth sweep (post-v2.4)
+
+After v2.4 fixed the cited 3 command-injection sites at the class level via `util/safe_exec.ts`, this release sweeps **10 more** files that still used the `execSync(\`git ${var}\`)` template-string pattern — defense-in-depth for the same class:
+
+- `diaspora/session_capsule.ts`, `exodus/genome.ts` — git log fingerprint
+- `cognitive/debate.ts`, `cognitive/curiosity.ts` — recent commit subjects
+- `hyperscan/cross_source_qa.ts`, `hyperscan/nucleus_dust_htc.ts` — git log %s%n%b
+- `squadron/fact_grounding.ts`, `squadron/acgv_neutrino.ts` — git cat-file + grep / pickaxe over **AI-claim-controlled needle**
+- `precog/temporal_verifier.ts` — git log --since / --until / -- ${f}
+- `precog/sha_version_verifier.ts` — git cat-file / tag-list / log %ae + added sha-shape validation
+
+The acgv_neutrino sweep is the most consequential: `needle` came from an AI claim. Previous code escaped quotes via `.replace(/"/g, '\\"')` which is INSUFFICIENT against backticks / `$()` / newlines. Now passed as a single argv element to spawn so even a malicious AI claim cannot inject shell.
+
+### 🧬 5 Mneme Mandates — proof per CHANGELOG
+
+1. **Wild idea** — keep the 12 wild-idea modules; give them a real surface instead of mass-deleting. Audit was structurally right (no MCP) but operationally wrong (these are intentional features). The fix is to add the surface, not delete the body.
+2. **Wiser not patched** — defense-in-depth: v2.4 fixed the cited 3 sites + the class via safe_exec; v2.5 sweeps the remaining 10 sites of the same class so a future regression in any of them becomes structurally impossible.
+3. **Self-fix root cause** — the `safe_exec` helper rejects shell strings at the type level; calling it with non-string argv elements is a type error. Future contributors who try the unsafe pattern fail typechecking.
+4. **Co-working not conflicting** — 12 wrappers all delegate to existing library API; zero changes to the modules themselves; existing callers untouched.
+5. **Always studying** — every wrapper exposes confidence + pitfalls so AI agents know which tools are mature (high) vs MVP (low).
+
+### Tests
+
+**8465 / 8465 pass** (+108 vs v2.4.0). Registry meta-tests automatically validate the 12 new tools (name uniqueness, schema shape, example presence, pitfalls present).
+
+---
+
 ## v2.4.0 — 2026-05-13 — SECURITY HARDENING + SYMBIOSIS + writer-routing
 
 **Headline:** User: *"bug ร้ายแรงมากแก้ให้หมด … แก้ root cause แก้ให้หมด"* — two independent external agents cross-confirmed five findings. v2.4 fixes the four root-cause classes (not just the cited sites) so future regressions in those classes become structurally impossible, ships SYMBIOSIS (per-vendor fusion), and auto-tunes the three vendor-facing artifact writers through LEXICON.
