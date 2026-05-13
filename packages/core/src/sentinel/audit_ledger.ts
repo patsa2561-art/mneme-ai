@@ -12,6 +12,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { join } from "node:path";
 
 import type { RecommendedAction, RiskScoreReport } from "./risk_scorer.js";
@@ -92,7 +93,7 @@ export type VerifyVerdict = "VALID" | "INVALID_HMAC" | "NOT_FOUND";
 export function verifyAuditEntry(repoRoot: string, entry: AuditEntry): VerifyVerdict {
   const secret = ensureSecret(repoRoot);
   const expected = createHmac("sha256", secret).update(canonical(entry)).digest("hex");
-  if (expected !== entry.hmac) return "INVALID_HMAC";
+  if (safeHmacNotEqual(expected, entry.hmac)) return "INVALID_HMAC";
   return "VALID";
 }
 

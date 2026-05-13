@@ -20,8 +20,10 @@
  */
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { writeSecretJson } from "../util/secret_store.js";
 
 const POLE_DIR = ".mneme/anchor";
 const POLE_FILE = "pole.json";
@@ -86,8 +88,14 @@ export function ensurePole(repoRoot: string): { point: PolePoint; secret: PoleSe
   const publicKey = createHash("sha256").update(secret).digest("hex");
   const point: PolePoint = { poleId, publicKey, createdAt: new Date().toISOString() };
   const sec: PoleSecret = { poleId, secret };
+  // The PUBLIC point file can be world-readable — it carries no secret.
   writeFileSync(polePublicPath(repoRoot), JSON.stringify(point, null, 2), "utf8");
-  writeFileSync(poleSecretPath(repoRoot), JSON.stringify(sec, null, 2), "utf8");
+  // v2.4 root-cause fix: pole-secret.json carries the HMAC secret used to
+  // sign rope tokens. If another user on the same machine can read it
+  // they can forge ropes and bypass cross-pole rejection. Land it via
+  // writeSecretJson so the file lands at mode 0600 on POSIX and with a
+  // restricted ACL on Windows.
+  writeSecretJson(poleSecretPath(repoRoot), sec);
   return { point, secret: sec };
 }
 
@@ -126,7 +134,7 @@ export function verifyRope(secret: PoleSecret, token: RopeToken): RopeVerdict {
   }
   if (token.poleId !== secret.poleId) return { ok: false, reason: "wrong-pole" };
   const expected = createHmac("sha256", secret.secret).update(canonical(token)).digest("hex");
-  if (expected !== token.sig) return { ok: false, reason: "bad-sig" };
+  if (safeHmacNotEqual(expected, token.sig)) return { ok: false, reason: "bad-sig" };
   if (new Date(token.expiresAt).getTime() < Date.now()) return { ok: false, reason: "expired" };
   return { ok: true, rope: token };
 }

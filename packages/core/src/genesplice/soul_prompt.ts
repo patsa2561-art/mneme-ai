@@ -50,6 +50,7 @@ import { renderDictionary } from "../lattice/dictionary.js";
 import { renderRelayBlock } from "../conduit/relay_prompt.js";
 import { renderVersionGate } from "../conduit/version_gate.js";
 import { renderHomunculusRequest } from "../abyss/homunculus.js";
+import { sanitizePromptUserContent } from "../util/prompt_sanitize.js";
 
 export interface SoulPromptInput {
   capsule: SessionCapsule;
@@ -99,19 +100,30 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
   const turnsBudget = Math.floor(budget * 0.25);
   const reasoningBudget = Math.floor(budget * 0.10);
 
-  const ctx = truncate(capsule.contextSummary, Math.floor(ctxBudget / TOK_PER_WORD));
+  // v2.4 root-cause fix for prompt injection: every piece of user
+  // content (commit messages, decisions, prior-turn text, reasoning
+  // highlights) goes through sanitizePromptUserContent before landing
+  // in the soul prompt. The sanitizer keeps the natural-language
+  // semantics intact but neutralizes section headers, role-header
+  // sentinels, and Mneme's own directive phrases so attacker-controlled
+  // content cannot smuggle instructions into the receiving AI.
+  const ctx = sanitizePromptUserContent(truncate(capsule.contextSummary, Math.floor(ctxBudget / TOK_PER_WORD)));
 
   const decisionLines = (capsule.decisions ?? [])
     .slice(0, 8)
-    .map((d) => `- ${truncate(d, Math.floor(decisionsBudget / TOK_PER_WORD / 8))}`);
+    .map((d) => `- ${sanitizePromptUserContent(truncate(d, Math.floor(decisionsBudget / TOK_PER_WORD / 8)))}`);
 
   const turnsToShow = Math.min(5, capsule.promptTrace.length);
   const recentTurns = capsule.promptTrace.slice(-turnsToShow)
-    .map((step) => `${step.role}: ${truncate(step.text, Math.floor(turnsBudget / TOK_PER_WORD / turnsToShow))}`);
+    .map((step) => {
+      const safeRole = sanitizePromptUserContent(step.role).slice(0, 20);
+      const safeText = sanitizePromptUserContent(truncate(step.text, Math.floor(turnsBudget / TOK_PER_WORD / turnsToShow)));
+      return `${safeRole}: ${safeText}`;
+    });
 
   const reasoningLines = (capsule.reasoningTrace ?? [])
     .slice(-3)
-    .map((r) => `- ${truncate(r, Math.floor(reasoningBudget / TOK_PER_WORD / 3))}`);
+    .map((r) => `- ${sanitizePromptUserContent(truncate(r, Math.floor(reasoningBudget / TOK_PER_WORD / 3)))}`);
 
   const body = [
     "# 🧬 MNEME SOUL PROMPT",

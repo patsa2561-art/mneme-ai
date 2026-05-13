@@ -25,6 +25,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { join } from "node:path";
 
 const CAPSULE_DIR = ".mneme/capsules";
@@ -150,7 +151,7 @@ export function resumeCapsule(repoRoot: string, capsuleId: string, opts: ResumeO
 
   const secret = ensureSecret(repoRoot);
   const expected = createHmac("sha256", secret).update(canonical(cap)).digest("hex");
-  if (expected !== cap.hmac) return { verdict: "INVALID_HMAC", capsule: cap, recap: "", inheritance: null };
+  if (safeHmacNotEqual(expected, cap.hmac)) return { verdict: "INVALID_HMAC", capsule: cap, recap: "", inheritance: null };
 
   const ageMs = Date.now() - Date.parse(cap.createdAt);
   const maxMs = (opts.maxAgeHours ?? 720) * 3600 * 1000;

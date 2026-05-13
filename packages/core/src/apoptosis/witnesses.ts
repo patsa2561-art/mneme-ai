@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync, statSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { execSync } from "node:child_process";
+import { safeExecTry } from "../util/safe_exec.js";
 
 export type WitnessId = "W1-path" | "W2-symbol" | "W3-type" | "W4-history" | "W5-behavior";
 
@@ -248,14 +248,13 @@ function w4GitHistory(repoRoot: string, facets: ClaimFacets): WitnessReport {
   if (!facets.versionRefs || facets.versionRefs.length === 0) {
     return { id: "W4-history", verdict: "INAPPLICABLE", detail: "Claim makes no version/SHA references.", ms: Date.now() - t0 };
   }
-  let tags = "";
-  let shas = "";
-  try {
-    tags = execSync(`git -C "${repoRoot}" tag --list`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 });
-  } catch { /* */ }
-  try {
-    shas = execSync(`git -C "${repoRoot}" log --format=%H --max-count=1000`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 3000 });
-  } catch { /* */ }
+  // v2.4 — root-cause fix for command injection. repoRoot may be supplied
+  // by an MCP tool arg; never interpolate it into a shell template. Use
+  // spawnSync with argv array (no shell) via safeExecTry.
+  const tagsResult = safeExecTry("git", ["-C", repoRoot, "tag", "--list"], { timeoutMs: 3000 });
+  const tags = tagsResult?.status === 0 ? tagsResult.stdout : "";
+  const shasResult = safeExecTry("git", ["-C", repoRoot, "log", "--format=%H", "--max-count=1000"], { timeoutMs: 3000 });
+  const shas = shasResult?.status === 0 ? shasResult.stdout : "";
   const tagSet = new Set(tags.split("\n").map((s) => s.trim()).filter(Boolean));
   const shaSet = new Set(shas.split("\n").map((s) => s.trim()).filter(Boolean));
   const failed: string[] = [];

@@ -12,11 +12,11 @@
  *   Cooperative PID-lock prevents double-spawn.
  */
 
-import { execSync } from "node:child_process";
 import { existsSync, writeFileSync, readFileSync, mkdirSync, appendFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { homedir, userInfo } from "node:os";
+import { homedir, userInfo, tmpdir } from "node:os";
 import type { InstallResult } from "./install_windows.js";
+import { safeExec, safeExecTry } from "../util/safe_exec.js";
 
 const UNIT_NAME = "mneme-daemon.service";
 const MNEME_BLOCK_MARKER = "# >>> mneme phoenix autoboot >>>";
@@ -50,14 +50,14 @@ export function installSystemd(nodePath: string, mnemeBin: string): InstallResul
     // Reload + enable + start. Best-effort: any single failure (e.g. no DBus
     // session in a container) doesn't kill the whole install -- caller
     // falls through to Plan 2.
-    try { execSync(`systemctl --user daemon-reload`, { stdio: ["ignore", "ignore", "ignore"], timeout: 5000 }); } catch { /* */ }
-    try { execSync(`systemctl --user enable ${UNIT_NAME}`, { stdio: ["ignore", "ignore", "ignore"], timeout: 5000 }); } catch { /* */ }
-    try { execSync(`systemctl --user start ${UNIT_NAME}`, { stdio: ["ignore", "ignore", "ignore"], timeout: 5000 }); } catch { /* */ }
+    safeExecTry("systemctl", ["--user", "daemon-reload"], { timeoutMs: 5000 });
+    safeExecTry("systemctl", ["--user", "enable", UNIT_NAME], { timeoutMs: 5000 });
+    safeExecTry("systemctl", ["--user", "start", UNIT_NAME], { timeoutMs: 5000 });
     // Lingering keeps the user unit alive after logout. Requires no root
     // on modern systemd; falls back silent on errors.
     try {
       const user = userInfo().username;
-      execSync(`loginctl enable-linger ${user}`, { stdio: ["ignore", "ignore", "ignore"], timeout: 5000 });
+      safeExecTry("loginctl", ["enable-linger", user], { timeoutMs: 5000 });
     } catch { /* */ }
     return { mechanism: "systemd", ok: true, message: drift ? "user unit installed + enabled" : "already installed", target };
   } catch (e) {
@@ -68,8 +68,8 @@ export function installSystemd(nodePath: string, mnemeBin: string): InstallResul
 export function uninstallSystemd(): InstallResult {
   try {
     const target = join(homedir(), ".config", "systemd", "user", UNIT_NAME);
-    try { execSync(`systemctl --user disable ${UNIT_NAME}`, { stdio: ["ignore", "ignore", "ignore"] }); } catch { /* */ }
-    try { execSync(`systemctl --user stop ${UNIT_NAME}`, { stdio: ["ignore", "ignore", "ignore"] }); } catch { /* */ }
+    safeExecTry("systemctl", ["--user", "disable", UNIT_NAME], { timeoutMs: 5000 });
+    safeExecTry("systemctl", ["--user", "stop", UNIT_NAME], { timeoutMs: 5000 });
     if (existsSync(target)) {
       unlinkSync(target);
       return { mechanism: "systemd", ok: true, message: "user unit removed", target };
@@ -80,19 +80,36 @@ export function uninstallSystemd(): InstallResult {
   }
 }
 
-/** Plan 2: crontab @reboot (re-uses macOS cron logic structurally). */
+/** Plan 2: crontab @reboot (re-uses macOS cron logic structurally).
+ *
+ * v2.4 root-cause fix: temp-file approach replaces the old `echo "..."
+ * | crontab -` shell pipe — same injection vector as install_macos.ts.
+ */
+function writeCrontabFromString(body: string): void {
+  const tmpPath = join(tmpdir(), `mneme-crontab-${process.pid}-${Date.now()}.txt`);
+  writeFileSync(tmpPath, body, { encoding: "utf8", mode: 0o600 });
+  try {
+    safeExec("crontab", [tmpPath], { timeoutMs: 5000 });
+  } finally {
+    try { unlinkSync(tmpPath); } catch { /* best-effort */ }
+  }
+}
+
+function readCurrentCrontab(): string {
+  const r = safeExecTry("crontab", ["-l"], { timeoutMs: 5000 });
+  if (!r || r.status !== 0) return "";
+  return r.stdout;
+}
+
 export function installCronReboot(nodePath: string, mnemeBin: string): InstallResult {
   try {
     const line = `@reboot ${nodePath} ${mnemeBin} daemon start --attached`;
-    let current = "";
-    try { current = execSync(`crontab -l 2>/dev/null`, { encoding: "utf8" }); } catch { /* */ }
+    const current = readCurrentCrontab();
     if (current.split("\n").some((l) => l.trim() === line.trim())) {
       return { mechanism: "cron", ok: true, message: "already in crontab", target: "user crontab" };
     }
     const merged = current.trimEnd() + (current ? "\n" : "") + line + "\n";
-    execSync(`echo "${merged.replace(/"/g, '\\"')}" | crontab -`, {
-      shell: "/bin/bash", stdio: ["ignore", "ignore", "pipe"], timeout: 5000,
-    });
+    writeCrontabFromString(merged);
     return { mechanism: "cron", ok: true, message: "crontab @reboot armed", target: "user crontab" };
   } catch (e) {
     return { mechanism: "cron", ok: false, message: `cron install failed: ${(e as Error).message.slice(0, 100)}` };
@@ -101,11 +118,11 @@ export function installCronReboot(nodePath: string, mnemeBin: string): InstallRe
 
 export function uninstallCronReboot(): InstallResult {
   try {
-    let current = "";
-    try { current = execSync(`crontab -l 2>/dev/null`, { encoding: "utf8" }); } catch { return { mechanism: "cron", ok: true, message: "no crontab" }; }
+    const current = readCurrentCrontab();
+    if (!current) return { mechanism: "cron", ok: true, message: "no crontab" };
     const lines = current.split("\n").filter((l) => !/mneme.*daemon.*start/i.test(l));
     const merged = lines.join("\n");
-    execSync(`echo "${merged.replace(/"/g, '\\"')}" | crontab -`, { shell: "/bin/bash", stdio: ["ignore", "ignore", "pipe"] });
+    writeCrontabFromString(merged);
     return { mechanism: "cron", ok: true, message: "crontab line removed" };
   } catch (e) {
     return { mechanism: "cron", ok: false, message: `cron uninstall failed: ${(e as Error).message.slice(0, 80)}` };

@@ -20,6 +20,7 @@
  */
 
 import { createHmac, createHash } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 export interface WisdomEvent {
   /** Original id. */
@@ -124,7 +125,7 @@ export function decompressPacket(input: DecompressInput): DecompressResult {
   if (p.version !== 1) return { verdict: "VERSION_UNKNOWN", reason: `unsupported version ${p.version}` };
   const serialized = `MNINTR1\nv1\n${p.rows.length}\n` + serializeRows(p.rows);
   const expected = createHmac("sha256", input.secret).update(serialized).digest("hex").slice(0, 32);
-  if (expected !== p.integrity) return { verdict: "TAMPERED", reason: "integrity mismatch — packet was modified or wrong secret" };
+  if (safeHmacNotEqual(expected, p.integrity)) return { verdict: "TAMPERED", reason: "integrity mismatch — packet was modified or wrong secret" };
   // Reconstitute minimal events
   const events: WisdomEvent[] = p.rows.map((r, i) => ({
     id: createHash("sha256").update(`${r.kind}|${r.tsDays}|${r.scope}|${r.text}|${i}`).digest("hex").slice(0, 8),

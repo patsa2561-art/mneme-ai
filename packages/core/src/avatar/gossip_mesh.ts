@@ -34,6 +34,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 const MESH_SECRET_REL = ".mneme/mesh-secret";
 const SEEN_REL = ".mneme/mesh-seen.jsonl";
@@ -144,7 +145,7 @@ export function ingestMessage(repoRoot: string, msg: GossipMessage): IngestOutco
 
   // 2. Signature
   const expected = signMessage(secret, msg.kind, msg.sender, msg.body, msg.hops);
-  if (expected !== msg.signature) {
+  if (safeHmacNotEqual(expected, msg.signature)) {
     appendSeen(repoRoot, { id: msg.id, sender: msg.sender, at: new Date().toISOString(), outcome: "bad-signature" });
     return { msgId: msg.id, outcome: "bad-signature", reason: "HMAC mismatch — message dropped" };
   }

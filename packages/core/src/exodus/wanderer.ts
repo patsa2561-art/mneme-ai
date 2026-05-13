@@ -25,6 +25,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { encodeGenome, verifyGenome, type MnemeGenome } from "./genome.js";
@@ -146,7 +147,7 @@ export function unpackWanderer(
   // v1.84: portable signature verification (works across machines).
   if (bundle.portableSig) {
     const expectedSig = portableSigOf(bundle.genome, bundle.packedAt, bundle.packedBy);
-    if (expectedSig !== bundle.portableSig) {
+    if (safeHmacNotEqual(expectedSig, bundle.portableSig)) {
       return { ok: false, reason: `portable signature mismatch -- bundle tampered`, bundle };
     }
   }

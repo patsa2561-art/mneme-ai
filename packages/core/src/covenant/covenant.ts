@@ -36,6 +36,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, readdirSync } from "node:fs";
+import { writeSecretFile } from "../util/secret_store.js";
 import { join } from "node:path";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 
@@ -125,7 +126,8 @@ function loadOrCreateSecret(repoRoot: string): string {
   const path = covenantSecretPath(repoRoot);
   if (existsSync(path)) return readFileSync(path, "utf8").trim();
   const secret = randomBytes(32).toString("hex");
-  writeFileSync(path, secret, "utf8");
+  // v2.4: secret lands at 0600 / locked ACL via the shared helper.
+  writeSecretFile(path, secret);
   return secret;
 }
 

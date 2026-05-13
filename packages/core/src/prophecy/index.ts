@@ -15,6 +15,7 @@
  */
 
 import { createHmac, createHash } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 export interface Prophecy {
   /** Stable id. */
@@ -115,7 +116,7 @@ export function unsealProphecy(input: UnsealInput): UnsealResult {
   const { signature: _drop, id: _drop2, keyFingerprint: _drop3, ...rest } = input.prophecy;
   void _drop; void _drop2; void _drop3;
   const expected = computeSig(rest, input.secret);
-  if (expected !== input.prophecy.signature) {
+  if (safeHmacNotEqual(expected, input.prophecy.signature)) {
     return { verdict: "TAMPERED", reason: `signature mismatch` };
   }
   return { verdict: "OPENABLE", reason: "all checks pass", prophecy: input.prophecy };

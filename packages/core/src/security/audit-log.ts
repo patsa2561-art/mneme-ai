@@ -36,6 +36,7 @@
 import { existsSync, mkdirSync, appendFileSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 const HMAC_ALGORITHM = "sha256";
 const SECRET_LENGTH = 32;     // 256 bits for HMAC-SHA-256
@@ -245,7 +246,8 @@ export function verify(repoRoot: string): VerifyResult {
     } catch (err) {
       return { ok: false, totalEntries: lines.length, brokenAtIndex: i, brokenReason: "non-JSON line" };
     }
-    if (entry.prevHmac !== prevHmac) {
+    // v2.4: chain + per-entry HMACs compared in constant time.
+    if (safeHmacNotEqual(entry.prevHmac, prevHmac)) {
       return { ok: false, totalEntries: lines.length, brokenAtIndex: i, brokenReason: "prevHmac mismatch (chain broken)" };
     }
     const recomputed = computeEntryHmac(secret, prevHmac, {
@@ -255,7 +257,7 @@ export function verify(repoRoot: string): VerifyResult {
       target: entry.target,
       details: entry.details,
     });
-    if (recomputed !== entry.hmac) {
+    if (safeHmacNotEqual(recomputed, entry.hmac)) {
       return { ok: false, totalEntries: lines.length, brokenAtIndex: i, brokenReason: "hmac mismatch (entry tampered)" };
     }
     prevHmac = entry.hmac;

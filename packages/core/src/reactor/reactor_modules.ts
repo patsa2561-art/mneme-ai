@@ -7,6 +7,7 @@
  */
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { estimateTokens, metricsOf, recordSavings, type ReactorMetrics } from "./measure.js";
@@ -283,7 +284,7 @@ export function verifyCert(repoRoot: string, cert: VerificationCert): { valid: b
   const baseline = 300;
   const { hmac, ...body } = cert;
   const expected = createHmac("sha256", certSecret(repoRoot)).update(JSON.stringify(body)).digest("hex").slice(0, 24);
-  if (expected !== hmac) {
+  if (safeHmacNotEqual(expected, hmac)) {
     return { valid: false, reason: "HMAC mismatch", metrics: metricsOf(0, 0, "cert_invalid") };
   }
   if (Date.parse(cert.expiresAt) < Date.now()) {

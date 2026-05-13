@@ -10,6 +10,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { writeSecretFile } from "../../util/secret_store.js";
 import { join } from "node:path";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -37,7 +38,8 @@ function readOrCreateSecret(repoRoot: string): string {
   }
   ensureDir(repoRoot, ".mneme");
   const secret = randomBytes(32).toString("hex");
-  try { writeFileSync(path, secret, "utf8"); } catch { /* best-effort */ }
+  // v2.4: secret lands at 0600 / locked ACL via the shared helper.
+  try { writeSecretFile(path, secret); } catch { /* best-effort */ }
   return secret;
 }
 

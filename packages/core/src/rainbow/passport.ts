@@ -40,6 +40,7 @@
  */
 
 import { createHmac, createHash, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 export interface PassportEntry {
   /** Stable id. */
@@ -186,7 +187,7 @@ export function verifyPassport(envelope: PassportEnvelope, secret: Buffer): Veri
     return { verdict: "TAMPERED", reason: `entriesHash mismatch — entries were modified after signing`, ok: false };
   }
   const expectedSig = computeSignature(envelope.holder, envelope.issuedAt, envelope.expiresAt, envelope.entriesHash, secret);
-  if (expectedSig !== envelope.signature) {
+  if (safeHmacNotEqual(expectedSig, envelope.signature)) {
     return { verdict: "TAMPERED", reason: `signature mismatch — envelope was modified`, ok: false };
   }
   return { verdict: "VALID", reason: `signature + hash + key + revocation all check out · ${envelope.expiresAt === Number.MAX_SAFE_INTEGER ? "eternal" : "ttl-bounded"}`, ok: true };

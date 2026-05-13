@@ -15,11 +15,11 @@
  *     spawn attempts; PID-lock cooperative startup handles the race).
  */
 
-import { execSync } from "node:child_process";
-import { existsSync, writeFileSync, readFileSync, mkdirSync, appendFileSync } from "node:fs";
+import { existsSync, writeFileSync, readFileSync, mkdirSync, appendFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import type { InstallResult } from "./install_windows.js";
+import { safeExec, safeExecTry } from "../util/safe_exec.js";
 
 const PLIST_LABEL = "ai.mneme.daemon";
 const PLIST_NAME = `${PLIST_LABEL}.plist`;
@@ -64,14 +64,14 @@ export function installLaunchAgent(nodePath: string, mnemeBin: string): InstallR
       const existing = readFileSync(target, "utf8");
       if (existing === body) {
         // Reload anyway in case launchd dropped it on a previous session.
-        try { execSync(`launchctl load -w "${target}"`, { stdio: ["ignore", "ignore", "ignore"] }); } catch { /* */ }
+        safeExecTry("launchctl", ["load", "-w", target], { timeoutMs: 5000 });
         return { mechanism: "launchctl", ok: true, message: "already installed", target };
       }
       // Body drift -- unload + rewrite.
-      try { execSync(`launchctl unload "${target}"`, { stdio: ["ignore", "ignore", "ignore"] }); } catch { /* */ }
+      safeExecTry("launchctl", ["unload", target], { timeoutMs: 5000 });
     }
     writeFileSync(target, body, "utf8");
-    execSync(`launchctl load -w "${target}"`, { stdio: ["ignore", "ignore", "pipe"], timeout: 5000 });
+    safeExec("launchctl", ["load", "-w", target], { timeoutMs: 5000 });
     return { mechanism: "launchctl", ok: true, message: "LaunchAgent installed + loaded", target };
   } catch (e) {
     return { mechanism: "launchctl", ok: false, message: `launchctl failed: ${(e as Error).message.slice(0, 100)}` };
@@ -82,8 +82,8 @@ export function uninstallLaunchAgent(): InstallResult {
   try {
     const target = join(homedir(), "Library", "LaunchAgents", PLIST_NAME);
     if (existsSync(target)) {
-      try { execSync(`launchctl unload "${target}"`, { stdio: ["ignore", "ignore", "ignore"] }); } catch { /* */ }
-      execSync(`rm -f "${target}"`, { stdio: ["ignore", "ignore", "ignore"] });
+      safeExecTry("launchctl", ["unload", target], { timeoutMs: 5000 });
+      try { unlinkSync(target); } catch { /* best-effort */ }
       return { mechanism: "launchctl", ok: true, message: "removed", target };
     }
     return { mechanism: "launchctl", ok: true, message: "not installed" };
@@ -92,24 +92,41 @@ export function uninstallLaunchAgent(): InstallResult {
   }
 }
 
-/** Plan 2: crontab @reboot. */
+/** Plan 2: crontab @reboot.
+ *
+ * v2.4 root-cause fix: the old `echo "..." | crontab -` shell pipe was a
+ * direct command-injection vector — any backtick / $() / newline that
+ * survived the naive double-quote escape would execute. We now:
+ *   1. read existing crontab via spawnSync (no shell)
+ *   2. write the merged body to a private temp file
+ *   3. pass the temp file path as a single argv element to `crontab`
+ * No shell, no pipe, no template interpolation.
+ */
+function writeCrontabFromString(body: string): void {
+  const tmpPath = join(tmpdir(), `mneme-crontab-${process.pid}-${Date.now()}.txt`);
+  writeFileSync(tmpPath, body, { encoding: "utf8", mode: 0o600 });
+  try {
+    safeExec("crontab", [tmpPath], { timeoutMs: 5000 });
+  } finally {
+    try { unlinkSync(tmpPath); } catch { /* best-effort */ }
+  }
+}
+
+function readCurrentCrontab(): string {
+  const r = safeExecTry("crontab", ["-l"], { timeoutMs: 5000 });
+  if (!r || r.status !== 0) return "";
+  return r.stdout;
+}
+
 export function installCronReboot(nodePath: string, mnemeBin: string): InstallResult {
   try {
     const line = `@reboot ${nodePath} ${mnemeBin} daemon start --attached`;
-    let current = "";
-    try {
-      current = execSync(`crontab -l 2>/dev/null`, { encoding: "utf8" });
-    } catch { /* empty crontab is fine */ }
+    const current = readCurrentCrontab();
     if (current.split("\n").some((l) => l.trim() === line.trim())) {
       return { mechanism: "cron", ok: true, message: "already in crontab", target: "@reboot line" };
     }
     const merged = current.trimEnd() + (current ? "\n" : "") + line + "\n";
-    // Pipe to crontab -
-    execSync(`echo "${merged.replace(/"/g, '\\"')}" | crontab -`, {
-      shell: "/bin/bash",
-      stdio: ["ignore", "ignore", "pipe"],
-      timeout: 5000,
-    });
+    writeCrontabFromString(merged);
     return { mechanism: "cron", ok: true, message: "crontab @reboot armed", target: "user crontab" };
   } catch (e) {
     return { mechanism: "cron", ok: false, message: `cron install failed: ${(e as Error).message.slice(0, 100)}` };
@@ -118,11 +135,11 @@ export function installCronReboot(nodePath: string, mnemeBin: string): InstallRe
 
 export function uninstallCronReboot(): InstallResult {
   try {
-    let current = "";
-    try { current = execSync(`crontab -l 2>/dev/null`, { encoding: "utf8" }); } catch { return { mechanism: "cron", ok: true, message: "no crontab" }; }
+    const current = readCurrentCrontab();
+    if (!current) return { mechanism: "cron", ok: true, message: "no crontab" };
     const lines = current.split("\n").filter((l) => !/mneme.*daemon.*start/i.test(l));
     const merged = lines.join("\n");
-    execSync(`echo "${merged.replace(/"/g, '\\"')}" | crontab -`, { shell: "/bin/bash", stdio: ["ignore", "ignore", "pipe"] });
+    writeCrontabFromString(merged);
     return { mechanism: "cron", ok: true, message: "crontab line removed" };
   } catch (e) {
     return { mechanism: "cron", ok: false, message: `cron uninstall failed: ${(e as Error).message.slice(0, 80)}` };

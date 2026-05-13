@@ -21,6 +21,7 @@
  */
 
 import { createHmac, createHash } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 export interface PairPayload {
   /** Format version. */
@@ -98,7 +99,7 @@ export function decodePairing(
     return { ok: false, reason: "wrong-owner" };
   }
   const expectedSig = createHmac("sha256", ownerSecret).update(canonical(payload)).digest("hex");
-  if (expectedSig !== payload.sig) {
+  if (safeHmacNotEqual(expectedSig, payload.sig)) {
     return { ok: false, reason: "bad-sig" };
   }
   if (new Date(payload.expiresAt).getTime() < now.getTime()) {

@@ -27,6 +27,7 @@
  */
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { VerdictDistribution } from "./superposition.js";
@@ -217,7 +218,7 @@ export async function verifyChain(rootPath: string, opts: VerifyChainOptions = {
             continue;
           }
           const expectedSig = createHmac("sha256", opts.hmacKey).update(cert.hash).digest("hex");
-          if (expectedSig !== cert.signature) {
+          if (safeHmacNotEqual(expectedSig, cert.signature)) {
             result.issues.push({ index: i, reason: `signature mismatch (HMAC)` });
             result.ok = false;
             continue;

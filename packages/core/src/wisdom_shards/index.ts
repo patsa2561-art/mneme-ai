@@ -11,6 +11,7 @@
  */
 
 import { createHmac, createHash, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 export interface ShardEntry {
   /** Stable id. */
@@ -108,7 +109,7 @@ export function verifyChain(ledger: Ledger, secret: Buffer): ChainVerifyResult {
     const { chainHash: _h, ...rest } = e;
     void _h;
     const expected = chainOf(prevHash, rest, secret);
-    if (expected !== e.chainHash) {
+    if (safeHmacNotEqual(expected, e.chainHash)) {
       return { verdict: "BROKEN", reason: `chain hash mismatch at entry ${e.id} (index ${i})`, firstBrokenIndex: i };
     }
     prevHash = e.chainHash;

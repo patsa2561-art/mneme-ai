@@ -38,6 +38,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHmac } from "node:crypto";
+import { safeHmacNotEqual } from "../../util/hmac_compare.js";
 import { spawnSync } from "node:child_process";
 
 const LINEAGE_FILE = ".mneme/proposals/_lineage.jsonl";
@@ -145,7 +146,7 @@ export function verifyChain(repoRoot: string): { ok: boolean; brokenAt: number |
       .update(e.proposalId)
       .update(e.appliedAt)
       .digest("hex");
-    if (expected !== e.signature || e.prevSignature !== prev) {
+    if (safeHmacNotEqual(expected, e.signature) || safeHmacNotEqual(e.prevSignature, prev)) {
       return { ok: false, brokenAt: e.index, total: all.length };
     }
     prev = e.signature;

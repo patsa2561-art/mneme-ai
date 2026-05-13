@@ -19,7 +19,9 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
+import { writeSecretFile } from "../util/secret_store.js";
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { join } from "node:path";
 
 const AEGIS_DIR = ".mneme/aegis";
@@ -53,7 +55,8 @@ function ensureSecret(repoRoot: string): string {
   const dir = join(repoRoot, AEGIS_DIR);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const secret = randomBytes(32).toString("hex");
-  writeFileSync(path, secret, "utf8");
+  // v2.4: land at mode 0600 (POSIX) / locked ACL (Windows) via secret_store.
+  writeSecretFile(path, secret);
   return secret;
 }
 
@@ -127,7 +130,7 @@ export function verifyConsent(repoRoot: string, receiptId: string): { verdict: C
   const secret = ensureSecret(repoRoot);
   const canon = canonicalize({ ...r });
   const expected = createHmac("sha256", secret).update(canon).digest("hex");
-  if (expected !== r.hmac) return { verdict: "INVALID_HMAC", receipt: r };
+  if (safeHmacNotEqual(expected, r.hmac)) return { verdict: "INVALID_HMAC", receipt: r };
   return { verdict: "VALID", receipt: r };
 }
 

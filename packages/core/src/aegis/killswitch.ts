@@ -21,6 +21,7 @@
 import { existsSync, readFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { join } from "node:path";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 const AEGIS_DIR = ".mneme/aegis";
 const SECRET_FILE = ".mneme/aegis/killswitch-secret";
@@ -106,7 +107,8 @@ export function recordAck(repoRoot: string, input: AckInput): KillAck {
     outcome = "INVALID_HMAC"; // unknown directive id
   } else {
     // Check HMAC match.
-    if (input.echoedHmac !== d.hmac || input.echoedNonce !== d.nonce) {
+    // v2.4: constant-time compare on the HMAC + the nonce. `===` leaks timing.
+    if (safeHmacNotEqual(input.echoedHmac, d.hmac) || safeHmacNotEqual(input.echoedNonce, d.nonce)) {
       outcome = input.echoedHmac ? "INVALID_HMAC" : "RESISTANT";
     } else {
       // Check timing.

@@ -279,6 +279,11 @@ export * as gladiator from "./gladiator/index.js";
 // Auto-detect retries blocked calls under a stricter profile. Learner mines
 // flagged-vs-clean corpora to propose new rules. Per-tool opt-out preserved.
 export * as lexicon from "./lexicon/index.js";
+// v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
+// per-vendor success ledger + fusion handshake bundle. Layers on top of
+// v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while
+// still neutralizing demonic vocabulary at the byte level.
+export * as symbiosis from "./symbiosis/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from
@@ -416,8 +421,10 @@ export * as cognitive from "./cognitive/index.js";
 // 5-witness fusion + semantic grounding + Bayesian vaccine prior +
 // temporal consistency + epistemic humility + fractal decomposition +
 // ACGV cascade. Continuous verdict ladder (HEALTHY / INFLAMED /
-// NECROTIC / APOPTOTIC) with bench-verified 100% precision + recall
-// on the 200-sample synthetic corpus (vs ~70% baseline).
+// NECROTIC / APOPTOTIC). Internal bench on a 200-sample SYNTHETIC corpus
+// shows precision + recall converging toward 1.0; production performance
+// will differ on real-world distributions (the synthetic corpus is the
+// engineering target, not a coverage proof).
 export * as apoptosis from "./apoptosis/index.js";
 // v1.65 -- POWER 6 LIVE METRIC + POWER 7 SHADOW TREASURY.
 // Adds honest live-signal axes alongside the v1.48 simulation modules.

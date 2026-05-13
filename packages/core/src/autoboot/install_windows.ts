@@ -16,10 +16,11 @@
  * writing. Re-installing produces no side effect.
  */
 
-import { execSync, spawnSync } from "node:child_process";
-import { existsSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, writeFileSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { safeExec, safeExecTry } from "../util/safe_exec.js";
 
 export interface InstallResult {
   mechanism: string;
@@ -53,10 +54,11 @@ function schtasksShimPath(): string {
 export function installSchtasks(nodePath: string, mnemeBin: string): InstallResult {
   try {
     // Check if already exists -- query returns non-zero when missing.
-    try {
-      execSync(`schtasks /Query /TN "${TASK_NAME}"`, { stdio: ["ignore", "ignore", "ignore"] });
+    // v2.4: spawnSync with argv array; no shell, no template interpolation.
+    const queryResult = safeExecTry("schtasks", ["/Query", "/TN", TASK_NAME], { timeoutMs: 5000 });
+    if (queryResult?.status === 0) {
       return { mechanism: "schtasks", ok: true, message: "already installed", target: TASK_NAME };
-    } catch { /* not installed yet -- continue */ }
+    }
 
     // Write a tiny .cmd shim with the full daemon command. schtasks /TR
     // gets the shim path (no spaces -> no quoting hell). The shim itself
@@ -91,8 +93,9 @@ export function installSchtasks(nodePath: string, mnemeBin: string): InstallResu
 
 export function uninstallSchtasks(): InstallResult {
   try {
-    execSync(`schtasks /Delete /TN "${TASK_NAME}" /F`, { stdio: ["ignore", "ignore", "ignore"] });
-    return { mechanism: "schtasks", ok: true, message: "removed" };
+    const r = safeExecTry("schtasks", ["/Delete", "/TN", TASK_NAME, "/F"], { timeoutMs: 5000 });
+    if (r && r.status === 0) return { mechanism: "schtasks", ok: true, message: "removed" };
+    return { mechanism: "schtasks", ok: true, message: "not installed (nothing to remove)" };
   } catch {
     return { mechanism: "schtasks", ok: true, message: "not installed (nothing to remove)" };
   }
@@ -126,7 +129,9 @@ export function uninstallStartupFolder(): InstallResult {
   try {
     const target = join(process.env["APPDATA"] ?? "", "Microsoft", "Windows", "Start Menu", "Programs", "Startup", STARTUP_FILE);
     if (existsSync(target)) {
-      execSync(`del "${target}"`, { stdio: ["ignore", "ignore", "ignore"] });
+      // v2.4: prefer Node's fs.unlinkSync over shelling out to `del`. No
+      // string interpolation; no shell metacharacter risk.
+      try { unlinkSync(target); } catch { /* best-effort */ }
       return { mechanism: "startupFolder", ok: true, message: "removed", target };
     }
     return { mechanism: "startupFolder", ok: true, message: "not installed" };
@@ -136,24 +141,19 @@ export function uninstallStartupFolder(): InstallResult {
 }
 
 /** Plan 3: HKCU Registry Run key. */
+const RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+
 export function installRegistryRun(nodePath: string, mnemeBin: string): InstallResult {
   try {
     const value = daemonCommand(nodePath, mnemeBin);
-    // Check if already set.
-    try {
-      const r = execSync(`reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${REGISTRY_NAME}"`, {
-        stdio: ["ignore", "pipe", "ignore"],
-        encoding: "utf8",
-      });
-      if (r.includes(value)) {
-        return { mechanism: "registryRun", ok: true, message: "already installed", target: `HKCU\\Run\\${REGISTRY_NAME}` };
-      }
-    } catch { /* not set */ }
+    // v2.4: spawnSync argv array; REGISTRY_NAME + value pass as separate
+    // argv elements, never composed into a shell template.
+    const queryResult = safeExecTry("reg", ["query", RUN_KEY, "/v", REGISTRY_NAME], { timeoutMs: 5000 });
+    if (queryResult?.status === 0 && queryResult.stdout.includes(value)) {
+      return { mechanism: "registryRun", ok: true, message: "already installed", target: `HKCU\\Run\\${REGISTRY_NAME}` };
+    }
 
-    execSync(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${REGISTRY_NAME}" /t REG_SZ /d "${value.replace(/"/g, '\\"')}" /f`, {
-      stdio: ["ignore", "ignore", "pipe"],
-      timeout: 5000,
-    });
+    safeExec("reg", ["add", RUN_KEY, "/v", REGISTRY_NAME, "/t", "REG_SZ", "/d", value, "/f"], { timeoutMs: 5000 });
     return { mechanism: "registryRun", ok: true, message: "HKCU Run key set", target: `HKCU\\Run\\${REGISTRY_NAME}` };
   } catch (e) {
     return { mechanism: "registryRun", ok: false, message: `registry failed: ${(e as Error).message.slice(0, 100)}` };
@@ -162,8 +162,8 @@ export function installRegistryRun(nodePath: string, mnemeBin: string): InstallR
 
 export function uninstallRegistryRun(): InstallResult {
   try {
-    execSync(`reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${REGISTRY_NAME}" /f`, {
-      stdio: ["ignore", "ignore", "ignore"],
+    safeExecTry("reg", ["delete", RUN_KEY, "/v", REGISTRY_NAME, "/f"], {
+      timeoutMs: 5000,
     });
     return { mechanism: "registryRun", ok: true, message: "removed" };
   } catch {

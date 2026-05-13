@@ -13,6 +13,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { createHash, createHmac, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 import { join } from "node:path";
 
 const PRECOG_DIR = ".mneme/precog";
@@ -111,7 +112,7 @@ export function verifyCertificate(repoRoot: string, cert: TrustCertificate): Ver
   const secret = ensureSecret(repoRoot);
   const canon = canonical(cert);
   const expected = createHmac("sha256", secret).update(canon).digest("hex");
-  if (expected !== cert.hmac) return "INVALID_HMAC";
+  if (safeHmacNotEqual(expected, cert.hmac)) return "INVALID_HMAC";
   if (cert.verdict === "REVOKED") return "NOT_CERTIFIED";
   return "VALID";
 }

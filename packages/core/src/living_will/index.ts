@@ -18,6 +18,7 @@
  */
 
 import { createHmac, createHash, randomBytes } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 export interface LivingWill {
   /** Stable id (12-hex). */
@@ -95,7 +96,7 @@ export function checkRelease(will: LivingWill, secret: Buffer, now: number = Dat
     return { verdict: "WRONG_KEY", reason: "secret fingerprint mismatch", releasableAt: will.lastActivityAt + will.inactivityThresholdMs };
   }
   const expected = computeSig(will.id, will.sealedAt, will.inactivityThresholdMs, will.encryptedPayloadHex, secret);
-  if (expected !== will.signature) {
+  if (safeHmacNotEqual(expected, will.signature)) {
     return { verdict: "TAMPERED", reason: "signature mismatch", releasableAt: will.lastActivityAt + will.inactivityThresholdMs };
   }
   const releasableAt = will.lastActivityAt + will.inactivityThresholdMs;

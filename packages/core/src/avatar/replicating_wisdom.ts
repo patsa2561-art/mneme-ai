@@ -26,6 +26,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash, createHmac } from "node:crypto";
+import { safeHmacNotEqual } from "../util/hmac_compare.js";
 
 import { computeAllVerdicts, listCards } from "../teeth/genome_market.js";
 import { getOrCreateMeshSecret } from "./gossip_mesh.js";
@@ -176,7 +177,7 @@ export function inheritPack(repoRoot: string, pack: WisdomPack, opts: { sameMesh
   if (opts.sameMesh) {
     const secret = getOrCreateMeshSecret(root);
     const expected = createHmac("sha256", secret).update(packId).digest("hex");
-    if (expected !== signature) {
+    if (safeHmacNotEqual(expected, signature)) {
       return { outcome: "rejected-signature", reason: "donor signature does not verify under our mesh secret" };
     }
   }
