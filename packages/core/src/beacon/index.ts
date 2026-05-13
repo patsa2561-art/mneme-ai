@@ -90,35 +90,86 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function vendorMeta(vendor: string): { name: string; url: string; deeplink: string | null } {
+  const v = vendor.toLowerCase();
+  if (v.includes("claude") || v.includes("anthropic")) return { name: "Claude", url: "https://claude.ai/new", deeplink: null };
+  if (v.includes("gpt") || v.includes("chatgpt") || v.includes("openai")) return { name: "ChatGPT", url: "https://chatgpt.com/", deeplink: null };
+  if (v.includes("gemini") || v.includes("google")) return { name: "Gemini", url: "https://gemini.google.com/app", deeplink: null };
+  if (v.includes("perplexity")) return { name: "Perplexity", url: "https://perplexity.ai/", deeplink: null };
+  if (v.includes("copilot")) return { name: "Copilot", url: "https://copilot.microsoft.com/", deeplink: null };
+  return { name: "your AI app", url: "https://www.google.com/search?q=ai+chat", deeplink: null };
+}
+
 function renderBeaconPage(payload: string, vendor: string, label: string): string {
-  const hint = vendor.toLowerCase().includes("claude") ? "claude.ai"
-    : vendor.toLowerCase().includes("gpt") || vendor.toLowerCase().includes("chatgpt") ? "chatgpt.com"
-    : vendor.toLowerCase().includes("gemini") ? "gemini.google.com"
-    : "your AI app";
+  const meta = vendorMeta(vendor);
+  // v2.9.3 BEACON page upgrade:
+  //  - Plaintext soul prompt (no AES-256-GCM nonsense — Gemini Free can't decrypt anyway)
+  //  - Big copy button + visible status
+  //  - Vendor-specific deeplink button (Open Gemini app / ChatGPT / Claude)
+  //  - Mobile-first responsive CSS
+  //  - LIVE STATE block visible at top so receiving AI reads current version
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(label)}</title>
 <style>
-  body{font-family:system-ui,sans-serif;max-width:680px;margin:14px auto;padding:0 12px;line-height:1.5;color:#202124}
-  h1{font-size:1.1em}
-  pre{white-space:pre-wrap;word-break:break-word;background:#f4f4f4;padding:12px;border-radius:8px;font-size:.85em;max-height:50vh;overflow:auto}
-  button{font-size:1em;padding:12px 18px;border:0;border-radius:8px;background:#1a73e8;color:#fff;cursor:pointer;margin:6px 0}
-  button:active{background:#0d47a1}
-  .ok{color:#137333;font-weight:bold}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,sans-serif;max-width:680px;margin:0 auto;padding:14px;line-height:1.5;color:#202124;background:#fafafa}
+  h1{font-size:1.2em;margin:.2em 0}
+  h2{font-size:1em;color:#555;margin-top:1.4em}
+  pre{white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #e0e0e0;padding:12px;border-radius:8px;font-size:.78em;max-height:38vh;overflow:auto}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+  .btn{flex:1 1 200px;font-size:1.05em;padding:14px 18px;border:0;border-radius:10px;color:#fff;cursor:pointer;font-weight:600;text-align:center;text-decoration:none;display:inline-block}
+  .btn-primary{background:#1a73e8}
+  .btn-primary:active{background:#0d47a1}
+  .btn-vendor{background:#137333}
+  .btn-vendor:active{background:#0b5a25}
+  .status{margin:8px 0;font-weight:600}
+  .ok{color:#137333}
+  .err{color:#c5221f}
   small{color:#555}
-  a{color:#1a73e8}
+  details{margin:14px 0}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e0e0e0;color:#777;font-size:.85em}
 </style></head><body>
 <h1>${escapeHtml(label)}</h1>
-<p><small>Mneme cross-device handoff. Self-contained — no Mneme install needed on this device.</small></p>
-<p><b>Step 1</b> — Tap the button to copy the soul prompt.</p>
-<button id="cp" onclick="navigator.clipboard.writeText(document.getElementById('p').textContent).then(()=>{document.getElementById('s').textContent='Copied! Now paste into ${escapeHtml(hint)}.';document.getElementById('s').className='ok'})">Copy soul prompt</button>
-<p id="s"></p>
-<p><b>Step 2</b> — Open <b><a href="https://${escapeHtml(hint)}" target="_blank">${escapeHtml(hint)}</a></b> and paste.</p>
-<details><summary>Show the soul prompt</summary>
+<p><small>Mneme cross-device brain transfer. No app install needed on this device. Tap the buttons below in order.</small></p>
+
+<h2>Step 1 — Copy the brain</h2>
+<div class="row">
+  <button id="cp" class="btn btn-primary" onclick="copyAndStatus()">📋 Copy soul prompt</button>
+</div>
+<p class="status" id="s"></p>
+
+<h2>Step 2 — Open ${escapeHtml(meta.name)} and paste</h2>
+<div class="row">
+  <a href="${escapeHtml(meta.url)}" target="_blank" rel="noopener" class="btn btn-vendor">🚀 Open ${escapeHtml(meta.name)}</a>
+</div>
+<p><small>After ${escapeHtml(meta.name)} opens, long-press the message input → Paste → Send. The receiving AI will read the LIVE STATE block at the top of the prompt and continue your conversation with current Mneme context.</small></p>
+
+<details><summary>Show / verify the soul prompt</summary>
 <pre id="p">${escapeHtml(payload)}</pre>
 </details>
+
+<div class="footer">
+  Served by Mneme BEACON · ephemeral local server · auto-stops after 10 min idle · <span id="ts"></span>
+</div>
+
+<script>
+function copyAndStatus(){
+  const el = document.getElementById('p');
+  const s = document.getElementById('s');
+  if (!navigator.clipboard) { s.textContent = '⚠ Browser does not support auto-copy. Long-press the soul prompt below + Copy manually.'; s.className = 'status err'; return; }
+  navigator.clipboard.writeText(el.textContent).then(()=>{
+    s.textContent = '✓ Copied! Tap "Open ${meta.name.replace(/'/g, "\\'")}" above, then paste in the chat box.';
+    s.className = 'status ok';
+  }, (err)=>{
+    s.textContent = '⚠ Copy failed: ' + err.message + ' — long-press the soul prompt below + Copy manually.';
+    s.className = 'status err';
+  });
+}
+document.getElementById('ts').textContent = new Date().toLocaleString();
+</script>
 </body></html>`;
 }
 
@@ -182,7 +233,12 @@ export async function spawnBeacon(input: SpawnBeaconInput): Promise<BeaconResult
     actualPort = null;
   }
 
-  const lanIPs = detectLanIPs();
+  // v2.9.3: if caller bound to 127.0.0.1 only, the server is NOT reachable
+  // on LAN IPs — don't lie to the AI agent by advertising URLs that will
+  // throw ECONNREFUSED when scanned. Only surface LAN IPs when we bound
+  // to a wildcard or all-interfaces address.
+  const lanReachable = bindHost === "0.0.0.0" || bindHost === "::" || bindHost === "" || bindHost === "::0";
+  const lanIPs = lanReachable ? detectLanIPs() : [];
   const paths: BeaconPath[] = [];
 
   // PATH 1 — clipboard (same-device 1-click)

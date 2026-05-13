@@ -68,11 +68,28 @@ export const cloneToTool: MnemeTool = {
   ],
   handler: async (rt, args) => {
     const core = await import("@mneme-ai/core");
-    const { resolve } = await import("node:path");
+    const { resolve, join } = await import("node:path");
+    const { readdirSync, unlinkSync } = await import("node:fs");
     const repoRoot = resolve(rt?.meta?.rootPath ?? process.cwd());
     const rawPayload = String(args["payload"] ?? "");
     const writeClipFlag = args["writeClip"] !== false;
     const openBrowser = args["openBrowser"] !== false;
+
+    // v2.9.3: GHOST SNIPER cleanup. Burn stale `.brain-*.html` artifacts
+    // from prior v1.97-era flows BEFORE anything else. AI agents kept
+    // re-opening these old file:/// URLs which (a) don't exist on the
+    // user's phone, (b) advertised broken fetch+decrypt patterns that
+    // free-tier Gemini can't execute. Burning them forces the AI agent
+    // to use the v2.9 BEACON path which actually works.
+    const burnedArtifacts: string[] = [];
+    try {
+      for (const entry of readdirSync(repoRoot)) {
+        if (/^\.brain-.*\.html$/.test(entry)) {
+          try { unlinkSync(join(repoRoot, entry)); burnedArtifacts.push(entry); }
+          catch { /* BE:silent-by-design — file may be locked by another process */ }
+        }
+      }
+    } catch { /* BE:silent-by-design — repo dir read failed; not fatal */ }
 
     // v2.9.1: ALWAYS inject a LIVE STATE block at the top of the payload.
     // This block carries the current installed version + recent commits +
@@ -95,8 +112,12 @@ export const cloneToTool: MnemeTool = {
     // 2) v2.9.1: mobile / tablet / phone target → delegate to BEACON for a
     //    REAL scannable QR. The legacy cloneTo planner just returned a
     //    description; BEACON actually spawns the LAN server + QR data URI.
+    // v2.9.3: BEACON targets EXPANDED to include web AIs (gemini/chatgpt/etc)
+    // because the user may want to scan from phone even when destination
+    // is a web AI accessible at chatgpt.com etc.
     let beacon: Awaited<ReturnType<typeof core.beacon.spawnBeacon>> | null = null;
-    const mobileTarget = r.resolvedTarget === "mobile" || r.resolvedTarget === "ipad" || r.resolvedTarget === "another-pc";
+    const beaconTargets = new Set(["mobile", "ipad", "another-pc", "chatgpt", "gemini", "claude", "perplexity", "copilot"]);
+    const mobileTarget = beaconTargets.has(r.resolvedTarget);
     if (mobileTarget && payload.length > 0) {
       try {
         beacon = await core.beacon.spawnBeacon({
@@ -118,7 +139,8 @@ export const cloneToTool: MnemeTool = {
     const wisdom = core.rainbow.formatCloneToPulseLine(r)
       + (clipboardWrite ? ` · clipboard=${clipboardWrite.ok ? "ok" : "fail"}` : "")
       + (beacon ? ` · beacon-paths=${beacon.paths.length}` : "")
-      + (liveInjected ? ` · live=${liveInjected.live.state.localVersion}` : "");
+      + (liveInjected ? ` · live=${liveInjected.live.state.localVersion}` : "")
+      + (burnedArtifacts.length > 0 ? ` · burned=${burnedArtifacts.length}-stale-html` : "");
 
     return {
       data: {
@@ -133,6 +155,7 @@ export const cloneToTool: MnemeTool = {
           paths: beacon.paths,
           generatedAt: beacon.generatedAt,
         } : null,
+        burnedArtifacts,
       },
       wisdom,
       followUp: mobileTarget && !beacon ? ["mneme.beacon.spawn"] : [],

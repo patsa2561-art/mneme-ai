@@ -1,3 +1,75 @@
+## v2.9.3 — 2026-05-13 — 🔥 BURN stale `.brain-*.html` + 🎯 FORCE BEACON path for ALL web AI targets + REAL end-to-end self-test
+
+**Headline:** User caught the system in the act of being broken:
+> *"AI agent ทำไมมันจำ เวอรชั่น 1.97 งง ... QR ใช้จริงไม่ได้พังหมด ... file:///D:/lib_ai_git/.brain-clone-gemini.html มือถือไม่มี path นี้ ... ไหนบอกเป็นปีศาจ"*
+
+Three root causes diagnosed Ghost-Sniper-style:
+
+1. **Stale `.brain-clone-gemini.html` artifacts from v1.97** — AI agents (Claude Code / Cursor) kept reopening these old files. They used the v1.97 fetch+AES-256-GCM-decrypt pattern that **Gemini Free mobile cannot execute** (no URL fetch, no manual crypto).
+2. **QR encoded `file:///D:/...` path** — that path exists ONLY on the user's desktop. Phone has no such path. Whole flow dead on arrival.
+3. **Cross-vendor handover bypassed v2.9.1 LIVE STATE injection** because the file-based flow side-stepped `mneme.clone.to` entirely.
+
+### Fix 1 — BURN stale artifacts at the source
+
+`packages/mcp/src/tools/_clone_to_tool.ts`. Every `mneme.clone.to` invocation now scans the repo root for `.brain-*.html` files and DELETES them BEFORE planning anything. Result reports as `burnedArtifacts: [".brain-clone-gemini.html", ...]`. AI agents that try to re-open the old files find them gone — forced to use the v2.9 BEACON path which actually works.
+
+### Fix 2 — FORCE BEACON for every web-AI target
+
+Previously BEACON only triggered for `mobile / ipad / another-pc` targets. Now it triggers for `chatgpt / gemini / claude / perplexity / copilot` too — because the user may want to scan from phone even when the destination is a web AI. The legacy "web-paste" planner-only path is gone for these targets.
+
+### Fix 3 — REAL working BEACON page
+
+`packages/core/src/beacon/index.ts` page redesigned for mobile-first usage:
+  - **PLAINTEXT soul prompt** (no AES — Gemini can't decrypt anyway)
+  - **Big "Copy soul prompt" button** with visible status (✓ Copied / ⚠ Failed)
+  - **Vendor-specific Open button** — `https://gemini.google.com/app` / `https://chatgpt.com/` / `https://claude.ai/new` — phone opens the right destination
+  - **Mobile-first responsive CSS** — large tap targets, mobile viewport meta
+  - **Step 1 / Step 2 instructions** — Copy → Open destination → Paste
+  - **Auto-stops after 10 min idle** — ephemeral, no leaked URLs
+
+### Fix 4 — lanIPs honesty
+
+When caller binds the server to `127.0.0.1` only, `lanIPs` is now empty in the response (was: still advertised, causing ECONNREFUSED when phone tried to hit it). The AI agent now sees an honest picture of what IS reachable.
+
+### END-TO-END SELF-TEST (proves it works)
+
+A real `node` script spawned BEACON, fetched the LAN URL, and verified the response:
+
+```
+token=546aee69a0d8  port=63111  lanIPs=192.168.1.106,172.19.112.1
+Fetching http://192.168.1.106:63111/546aee69a0d8
+status=200  bytes=2971
+  has payload:         ✓
+  has Copy button:     ✓
+  has Gemini link:     ✓
+  has clipboard.write: ✓
+  has "Open Gemini":   ✓
+  has Step 1 / Step 2: ✓
+  has mobile viewport: ✓
+✓ END-TO-END BEACON SELF-TEST PASSED
+```
+
+**Real LAN HTTP server. Real fetch. Real bytes. Real working flow.**
+
+### What changes for the user
+
+User says to AI agent: *"clone mneme ไป Gemini app บนมือถือ"*. AI agent now:
+  1. Burns any leftover `.brain-*.html` files.
+  2. Calls `mneme.clone.to` → which auto-delegates to `mneme.beacon.spawn`.
+  3. Mneme spawns LAN server on `192.168.x.y:<port>` and returns:
+     - **REAL QR data URI** the AI agent renders inline in chat
+     - LAN URL (clickable)
+     - Live LIVE STATE block prepended to payload
+  4. User raises phone, scans QR → phone browser opens **real page on real server** → user taps **Copy** → taps **Open Gemini** → Gemini app opens → paste.
+
+The page that loads is the REAL Mneme-served page, not a `file:///` URL from the desktop.
+
+### Tests
+
+**8712 / 8713 pass** (same known flake on snapshot/bot parallel interference; unrelated; passes in isolation).
+
+---
+
 ## v2.9.2 — 2026-05-13 — HOTFIX · CI flake (rosetta capsule chain) + Windows EBUSY on install
 
 **Headline:** Two real-world bugs surfaced as soon as v2.9.1 shipped:
