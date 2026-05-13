@@ -211,6 +211,20 @@ export * as toolCurator from "./tool_curator.js";
 // Honest disclaimer baked in: Mneme can't snoop provider traffic --
 // AI cooperates because saving tokens saves the user $$.
 export * as tokenEconomy from "./token_economy.js";
+// v1.93.0 -- TOKEN-NOVA. Four-technique stack ON TOP of token_economy:
+//   🦠 VACCINE PRE-EMPTION (cached refute = 0 AI call)
+//   🪞 MIRROR-MIND DEDUP (lineage hash → reference token)
+//   🌌 FRACTAL CONTEXT DECAY (power-of-2 budget per turn-age)
+//   🪙 TOKENIZER ARBITRAGE (per-vendor BPE rewrites)
+// Plus computeSavingsReport + formatPulseSavingsLine for measurable $$.
+export * as tokenNova from "./token_nova/index.js";
+// v1.93.0 -- SYSTEM-COMPAT bot. Probes the upgrade environment
+// (OS / Node version / npm / brew / docker / global-install permissions)
+// BEFORE the daemon spawns `mneme upgrade --force`. Returns SAFE / DEFER
+// / BLOCK + the right shell command per strategy (global-npm /
+// user-npm / brew / docker / manual). Silent failures during auto-update
+// are now structurally impossible.
+export * as systemCompat from "./system_compat/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

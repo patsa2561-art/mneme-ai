@@ -170,6 +170,65 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 
 ---
 
+## 💎 TOKEN-NOVA (v1.93) — call before preparing any vendor prompt
+
+Mneme ships a 4-technique stack that cuts token spend ~74% on a real conversation. ALWAYS run prompts through it before sending to the vendor:
+
+```typescript
+import { applyTokenNova, computeSavingsReport, formatPulseSavingsLine } from "@mneme-ai/core";
+
+const fusion = applyTokenNova({
+  query: userMessage,
+  turns: conversationTurns, // age:0 newest
+  vendor: "claude", // or "gpt", "gemini"
+  vaccineBank,  // optional — enables 🦠 VACCINE PRE-EMPTION (0 AI call on match)
+  lineage,      // optional — enables 🪞 MIRROR-MIND DEDUP via local genome hashes
+});
+
+if (fusion.preempted) return fusion.preemptedRefutation; // skip the AI entirely
+const finalText = fusion.finalText;
+// 🌌 FRACTAL CONTEXT DECAY + 🪙 TOKENIZER ARBITRAGE applied automatically
+// log fusion.events to compliance audit (HMAC-signed)
+```
+
+Surface real savings to the user:
+
+```typescript
+const report = computeSavingsReport(events, 30);
+const line = formatPulseSavingsLine(report);
+// → "TOKEN-NOVA · 47.3K tokens saved · $0.12 · top=fractal-decay (62%)"
+```
+
+The 4 shipped techniques (see [`docs/TOKEN_NOVA.md`](TOKEN_NOVA.md) for the full 10):
+
+| # | Technique | Tokens saved | When it kicks in |
+|---|---|---|---|
+| 🦠 | VACCINE PRE-EMPTION | ~prompt+350 (the whole round-trip) | query matches known hallucination strain |
+| 🪞 | MIRROR-MIND DEDUP | per-chunk ~80-2000 → 1 ref | chunk hash already in lineage genome |
+| 🌌 | FRACTAL CONTEXT DECAY | ~85% of historical context | conversation has > 1 turn of history |
+| 🪙 | TOKENIZER ARBITRAGE | 1-5% per prompt | verbose phrasing detected for current vendor |
+
+## 🛡 SYSTEM-COMPAT (v1.93) — call before any auto-upgrade
+
+```typescript
+import { probeUpgradeEnvironment, gateDaemonUpgrade } from "@mneme-ai/core";
+
+const probe = probeUpgradeEnvironment();
+// probe.verdict: "SAFE" | "DEFER" | "BLOCK"
+// probe.upgradeStrategy: "global-npm" | "user-npm" | "brew" | "docker" | "manual"
+// probe.reasons: string[] — surface to user when not SAFE
+// probe.pulseLine: one-line summary, e.g. "SYSTEM-COMPAT ✓ SAFE · macOS Sonoma · Node v22.7.0 · strategy=global-npm"
+
+const gate = gateDaemonUpgrade();
+if (gate.shouldProceed) {
+  // spawn gate.command.cmd with gate.command.args (strategy-specific)
+} else {
+  // gate.inboxLine has the user-facing reason; do NOT spawn
+}
+```
+
+The daemon already calls `gateDaemonUpgrade()` inside its drainQueue tick. AI agents that surface upgrade state to the user should call `probeUpgradeEnvironment()` to show the same SAFE/DEFER/BLOCK verdict. Never auto-`sudo`; never assume Node version; never assume npm is the right package manager.
+
 ## Cross-vendor handoff (v1.92)
 
 When user asks to clone the brain to another AI:

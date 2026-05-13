@@ -299,12 +299,42 @@ export async function runDaemonLoop(
           const { drainQueue } = await import("./auto_action_queue.js");
           const { logCompliance } = await import("./ai_compliance.js");
           const { spawn } = await import("node:child_process");
+          const { gateDaemonUpgrade } = await import("./system_compat/index.js");
+          const { pushInbox: pushInboxForCompat } = await import("./inbox.js");
           const result = await drainQueue(repoRoot, async (mandate, args) => {
+            // v1.93 SYSTEM-COMPAT gate for self-modifying mandates: probe
+            // OS/Node/pkg-mgr/perms BEFORE we spawn `mneme upgrade`, so
+            // a misconfigured machine can't trigger a silent failure loop.
+            if (mandate === "mneme.system.upgrade") {
+              const gate = gateDaemonUpgrade();
+              if (!gate.shouldProceed) {
+                pushInboxForCompat(repoRoot, {
+                  priority: "high",
+                  source: "system-compat",
+                  title: "Auto-upgrade blocked / deferred by SYSTEM-COMPAT",
+                  body: gate.inboxLine ?? "no detail",
+                });
+                return { ok: false, error: gate.inboxLine ?? "system-compat blocked" };
+              }
+              // OK to proceed — use the strategy-derived command rather than
+              // the hardcoded "mneme upgrade --force" so user-npm / docker /
+              // brew paths work too.
+              const c = gate.command!;
+              const start = Date.now();
+              return await new Promise<{ ok: boolean; error?: string }>((resolve) => {
+                const child = spawn(c.cmd, c.args, { cwd: repoRoot, detached: false, stdio: "ignore", shell: process.platform === "win32" });
+                const timeout = setTimeout(() => { try { child.kill(); } catch { /* ignore */ } resolve({ ok: false, error: "exec-timeout" }); }, 120_000);
+                child.on("error", (e) => { clearTimeout(timeout); resolve({ ok: false, error: (e as Error).message }); });
+                child.on("exit", (code) => {
+                  clearTimeout(timeout);
+                  logCompliance(repoRoot, { ts: new Date().toISOString(), mandate, args, executor: "daemon-queue", outcome: code === 0 ? "executed" : "failed", durationMs: Date.now() - start, error: code === 0 ? undefined : `exit-${code}` });
+                  resolve({ ok: code === 0, error: code === 0 ? undefined : `exit-${code}` });
+                });
+              });
+            }
             return await new Promise<{ ok: boolean; error?: string }>((resolve) => {
               // Map mandate name → CLI args. Self-modifying mandates we know about:
-              const cliArgs: string[] | null = mandate === "mneme.system.upgrade"
-                ? ["upgrade", "--force"]
-                : null;
+              const cliArgs: string[] | null = null; // mneme.system.upgrade handled above
               if (!cliArgs) { resolve({ ok: false, error: `unknown mandate ${mandate}` }); return; }
               const start = Date.now();
               const child = spawn("mneme", cliArgs, { cwd: repoRoot, detached: false, stdio: "ignore", shell: process.platform === "win32" });
