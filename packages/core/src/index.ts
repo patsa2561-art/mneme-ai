@@ -284,6 +284,18 @@ export * as lexicon from "./lexicon/index.js";
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while
 // still neutralizing demonic vocabulary at the byte level.
 export * as symbiosis from "./symbiosis/index.js";
+// v2.6.0 -- TRUTH KERNEL: weighted-Bayesian fusion of every Mneme
+// hallucination gate as sensors → ONE verdict + disagreement signal.
+// Composes flash + apoptosis + xray + adversarial_twins (or any caller-
+// supplied sensor). No breaking change — sensors stay independently
+// callable; the kernel is a new SURFACE on top.
+export * as truthKernel from "./truth_kernel/index.js";
+// v2.6.0 -- WORMHOLE: channel auto-negotiation for cross-device sync.
+// ICE-style: probe every transport in parallel, race-to-success on the
+// live ones, adaptive score (EWMA success × inverse latency × preference)
+// decides order. Composes anchor / aura / relay / synapse / rainbow /
+// ... transports without breaking any of them.
+export * as wormhole from "./wormhole/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

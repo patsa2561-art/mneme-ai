@@ -9,8 +9,8 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.5&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-8465%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.6&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-8512%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
 [![MCP tools](https://img.shields.io/badge/MCP%20tools-149%2B-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
 [![license MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -125,7 +125,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest: **v2.5.0** — 12 v2.0/v2.1 wild-idea modules (MUTINY / PROPHET / PROPHECY / DREAM / WISDOM SHARDS / NECROMANCY / INTERSTELLAR / TWINS / LIVING WILL / TIMERIVER / RECURSIVE SOUL / HOLY HEARTBEAT) now have **real MCP surface** — AI agents can call them directly. Plus defense-in-depth sweep of 10 more git-template execSync sites (continues v2.4's safe_exec class fix). Previous: v2.4 SECURITY HARDENING + SYMBIOSIS + LEXICON writer-routing.
+Latest: **v2.6.0** — 💎 TRUTH KERNEL (weighted-Bayesian fusion of every hallucination gate → ONE verdict + disagreement-as-signal) + 🌌 WORMHOLE (channel auto-negotiation for cross-device sync — ICE-style parallel probe + race-to-success + EWMA-adaptive scoring). Both turn the v2.5 "metaphor sprawl" audit finding into architectural strength: every existing gate / transport becomes a sensor / channel. Zero breaking change. Previous: v2.5 12 MCP wrappers, v2.4 SECURITY HARDENING + SYMBIOSIS + LEXICON writer-routing.
 
 → **[Full changelog · every release · every feature · every fix](CHANGELOG.md)**
 

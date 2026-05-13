@@ -52,6 +52,7 @@ import { CHAMELEON_TOOLS } from "./_chameleon_tools.js";
 import { ANCHOR_TOOLS } from "./_anchor_tools.js";
 import { RAINBOW_TOOLS } from "./_rainbow_tools.js";
 import { ORPHANS_TOOLS } from "./_orphans_tools.js";
+import { TRUTH_WORMHOLE_TOOLS } from "./_truth_wormhole_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -108,6 +109,7 @@ export function buildAllTools(): MnemeTool[] {
     ...ANCHOR_TOOLS,
     ...RAINBOW_TOOLS,
     ...ORPHANS_TOOLS,
+    ...TRUTH_WORMHOLE_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
