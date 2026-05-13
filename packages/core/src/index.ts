@@ -233,6 +233,13 @@ export * as systemCompat from "./system_compat/index.js";
 //   📊  Benchmark         — 8-axis measurable score 0..100
 //   🔁  Re-engineer loop  — recurring optimizer until score ≥ 97.5%
 export * as qxSupernova from "./qx_supernova/index.js";
+// v1.95.0 -- QX-BRIDGE: universal MCP→quantum-cloud bridge.
+//   Pure-TS state-vector simulator (up to 12 qubits) + provider
+//   abstraction for IBM Quantum / AWS Braket / Azure Quantum / D-Wave.
+//   Famous circuit constructors (Bell pair, GHZ, Grover-2q).
+//   Every measurement auto-records into Infinity Memory as a quantum
+//   event with the full probability vector.
+export * as qxBridge from "./qx_bridge/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

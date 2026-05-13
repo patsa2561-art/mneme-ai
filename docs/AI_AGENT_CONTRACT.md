@@ -170,6 +170,48 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 
 ---
 
+## 🌌 QX-BRIDGE (v1.95) — talk to real quantum hardware
+
+```typescript
+import {
+  runQuantumCircuit, runBellPair, runGhz, runGrover2q,
+  probeProviders, formatQuantumPulseLine,
+  bellPairCircuit, ghzCircuit, groverCircuit2q,
+  QuantumState,
+} from "@mneme-ai/core";
+
+// What's available?
+const caps = probeProviders();
+// simulator (ready always) · ibm/braket/azure/dwave (need env vars)
+
+// Quick helpers
+await runBellPair({ shots: 1024, memory });
+await runGhz(5);
+await runGrover2q("11");
+
+// Generic call (uniform CircuitIR; auto-routed to provider)
+await runQuantumCircuit({ circuit, shots, provider: "simulator", seed }, { memory });
+```
+
+Every measurement auto-records as `kind: "quantum-measurement"` event in Infinity Memory with full `probabilityVector`. Use `memory.collapse({ kind: "quantum-measurement" })` to recall the most-confident past quantum result.
+
+**When user mentions Qiskit / Cirq / Quil / Q# / quantum / qubits:** they probably want the QX-BRIDGE. Use the simulator first (works free, no auth); when they want real qubits, point them to the right env var (e.g. `MNEME_IBM_TOKEN` from `quantum.ibm.com` free tier).
+
+See [`docs/QX_BRIDGE.md`](QX_BRIDGE.md) for the full provider table + cloud-credential setup.
+
+## 🔄 Standalone upgrade-bootstrap (v1.95) — when installed Mneme is too old
+
+If `mneme upgrade` is broken because the installed version is too old / has the bug being fixed:
+
+```bash
+# Cross-platform, no Mneme dep, just Node
+node packages/cli/upgrade-bootstrap.mjs
+# Or via npx
+npx -p mneme-ai upgrade-bootstrap   # (v1.95+)
+```
+
+The bootstrap probes the env (OS / Node / pkg-mgr / write-perms), picks the right strategy (global-npm / user-npm / brew / docker / manual), and runs the upgrade with clear exit codes (0=ok, 1=err, 2=blocked, 3=deferred). **Refuses to auto-sudo; refuses silent fail.**
+
 ## ⚛ MNEME-QX SuperNova Engine (v1.94) — the Stage-9999 super functions
 
 The QX engine is **4 modules + benchmark + re-engineer loop**. Live measured score **98.28/100 ≥ 97.5%**. Call when you need to:
