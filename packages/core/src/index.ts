@@ -469,6 +469,11 @@ export * as chameleon from "./chameleon/index.js";
 // are rejected automatically. Plus OS-level clipboard handoff
 // (Phone Link / Universal Clipboard / KDE Connect → phone).
 export * as anchor from "./anchor/index.js";
+// v1.89 -- RAINBOW: multi-channel handoff orchestrator. Probes which
+// transports are live (LAN / data: URL bridge / dpaste) and picks the
+// recommended channel. The data: URL bridge is the wild move — entire
+// HTML page lives in the QR; phone scans → renders → fetches soul.
+export * as rainbow from "./rainbow/index.js";
 // v1.70 -- PRECOG FIREWALL. Paradigm shift: from DETECT-AFTER to
 // PREVENT-BEFORE. Every AI claim flowing through Mneme is intercepted
 // at the MCP boundary, verified against ACTUAL repo state (git, fs,

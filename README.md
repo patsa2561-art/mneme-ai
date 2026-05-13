@@ -93,6 +93,29 @@ When you work in a child AI (mobile / web) and want the result back on the paren
 
 No backchannel. The user is the courier; the format is typed.
 
+### 🌈 RAINBOW handoff matrix — every scenario, honest coverage
+
+3 channels live in v1.89, 3 more on the v1.90 roadmap. Pick the one that fits your network — your AI auto-recommends.
+
+| Channel | Network needed | Taps on phone | Live? | Wild factor |
+|---|---|---|:--:|---|
+| 🅰 **LAN HTTP server** | same WiFi | 1 | ✅ v1.89 | minimal — uses Web Share API |
+| 🅱 **data: URL bridge** | any network with internet | 1 | ✅ v1.89 | ⭐ HTML page lives in the QR itself |
+| 🅲 **dpaste raw** | any network with internet | 4 | ✅ v1.89 | last-resort fallback, always works |
+| 🔊 **ggwave audio** | none — sound through the air | 1 | ⏳ v1.90 | ⭐⭐ multi-recipient via PC speaker |
+| 🔗 **Cloudflared tunnel** | any | 1 | ⏳ v1.90 | one-time install (`cloudflared`) |
+| 📡 **WebRTC P2P** | any | 1 | ⏳ v1.90 | true peer-to-peer browser-native |
+| 💾 **Wanderer .mwt USB** | none — offline | n/a | ✅ v1.84 | for total air-gap |
+
+Scenario matrix coverage (1 = same WiFi, 2 = different WiFi, 3 = cellular, 4-5 = mixed LAN/WiFi, 6 = different building, 7 = many devices, 8 = offline):
+
+```
+🅰 LAN          covers 1, 4, 5
+🅱 data: bridge covers 1, 2, 3, 4, 5, 6, 7    ← THE WILD MOVE
+🅲 dpaste       covers 1, 2, 3, 4, 5, 6, 7    ← always works
+💾 Wanderer     covers 8 (offline)
+```
+
 ### 🦎 Don't have git? Don't worry — it's OPTIONAL
 
 Mneme has 6 transports for cross-device handover. **Only one uses git.** Every other path works fine without git, without a GitHub account, without any push permission.

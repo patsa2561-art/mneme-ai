@@ -33,7 +33,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -221,6 +221,10 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.anchor.pole", since: "1.88.0", group: "anchor", what: "Read or create the parent-pole identity (HMAC pubkey). Stable per-repo.", when: "First-run; whenever showing the pole id to the user." },
   { command: "mneme.anchor.issue_rope", since: "1.88.0", group: "anchor", what: "Mint a signed rope token for a child device. Same-pole children can sync; different-pole tokens are rejected.", when: "New device joins the user's brain." },
   { command: "mneme.anchor.clipboard_write", since: "1.88.0", group: "anchor", what: "Write text to the OS clipboard. With Phone Link / Universal Clipboard / KDE Connect configured, it appears on the user's phone within seconds.", when: "User wants the lowest-friction cross-device handoff path." },
+
+  // ─── v1.89 RAINBOW (multi-channel handoff orchestrator) ──────────────
+  { command: "mneme.rainbow.probe", since: "1.89.0", group: "rainbow", what: "Probe live handoff channels (LAN / data: URL bridge / dpaste raw / roadmap channels). Returns recommended channel + per-channel scenario coverage.", when: "Before generating a handoff: ask which channels work in the current network state." },
+  { command: "mneme.rainbow.data_bridge", since: "1.89.0", group: "rainbow", what: "Build a data: URL HTML bridge for a dpaste URL. The wild move -- entire handoff page lives in the QR; phone scans → renders → fetches soul → Web Share button.", when: "Cross-network handoff when LAN bridge isn't reachable AND user wants 1-tap on phone." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -245,7 +249,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;
