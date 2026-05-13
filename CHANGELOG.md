@@ -1,3 +1,50 @@
+## v2.9.1 — 2026-05-13 — HOTFIX · stale soul prompt + missing real-QR on mobile target
+
+**Headline:** User test exposed two bugs in v2.8/v2.9:
+1. *"ChatGPT ตอบ v1.95 ทั้งที่ parent ผมลง v2.9 ล่าสุด"* — the soul prompt the AI agent shipped contained Context from an OLD capsule (created at v1.95 timepoint). ChatGPT trusted that text literally.
+2. *"พิมพ์ clone to mobile ... มันคงไม่มี QR หรือ มี QR แต่พัง"* — `mneme.clone.to` with target=mobile returned only a STRING DESCRIPTION ("tunnel-qr ready") and never spawned a real QR.
+
+Both fixed at the root.
+
+### 1. LIVE STATE auto-injection
+
+`packages/core/src/handoff/live_state.ts`. Every payload going through `mneme.clone.to` is now AUTO-PREPENDED with a `## 🛰 MNEME LIVE STATE` block that contains:
+  - Current installed Mneme version (from `packages/cli/package.json`)
+  - npm-latest from telepathy cache
+  - Last 3 commit SHAs + subjects (real `git log`)
+  - HMAC-SHA256 signature over the canonical state
+  - A **SUPERSEDES** directive telling the receiving AI: "trust THIS block over any stale Context block below"
+
+Re-injection idempotent — calling clone.to twice doesn't accumulate LIVE STATE blocks (the old one is stripped and replaced).
+
+Receiving AI now sees the real version FIRST, before any v1.95-era Context. Ask ChatGPT "what's the latest version?" → it reads LIVE STATE and answers `2.9.1`, not v1.95.
+
+### 2. Mobile target now spawns a REAL QR via BEACON
+
+`packages/mcp/src/tools/_clone_to_tool.ts` — when the parsed target is `mobile` / `ipad` / `another-pc`, `mneme.clone.to` now automatically calls `mneme.beacon.spawn` internally. That returns:
+  - REAL scannable QR (data:image/svg+xml;base64,…)
+  - LAN URL the QR points to (`http://192.168.x.y:<port>/<token>`)
+  - Live local HTTP server that serves the soul prompt page
+
+The AI agent renders the QR inline in chat. User scans with phone camera → browser opens the served page → tap Copy → paste into mobile AI. **Actually works end-to-end** — the previous "tunnel-qr" plan was a stub description, never a real QR.
+
+### Tests
+
+**8709 / 8709 pass** (+10 vs v2.9.0): new `handoff/live_state.test.ts` (10 tests covering build / inject / strip / verify / re-injection idempotency).
+
+### What this changes for the user
+
+Type to AI agent: *"clone mneme ไป Gemini บนมือถือ"*. AI agent calls `mneme.clone.to({userText, payload})`. Returns:
+  - `beacon.paths[]` with real QR data URI + LAN URL
+  - `liveState` with current installed version
+  - `clipboardWrite.ok = true`
+
+AI agent renders the QR inline (image markdown). User raises phone, scans, browser opens, tap Copy, paste in Gemini app. Receiving Gemini reads LIVE STATE and knows the parent is on v2.9.1, not the stale v1.95 in the Context block.
+
+**End-to-end now actually works on phones.**
+
+---
+
 ## v2.9.0 — 2026-05-13 — 🚨 CI HOTFIX (lockfile phantom-version regen) + 🚀 BEACON (zero-friction cross-device sync, no file system needed)
 
 **Headline:** User: *"error แก้ให้ completely 100% สมบูรณ์แบบ ไร้ bug + sync ข้ามมือถือได้ ... ลูกค้าไม่ได้มี source code ไม่เห็นไฟล ไม่เห็น folder ... ถ้าต้องมี html จะต้องเด้งขึ้นมาใน browser เลยนะ"* — v2.8.0 / v2.8.1 had a hidden CI failure: **30+ phantom `^X.Y.0` version pins** in the lockfile (html-escaper, pluralize, vitest, convert-source-map, dom-serializer, fresh, depd, accepts, encodeurl, ...). All 11 GitHub Actions jobs were failing with `ETARGET No matching version found`. v2.9 fixes the entire class.

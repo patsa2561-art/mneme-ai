@@ -148,6 +148,11 @@ function genNexusCode(seed: string): string {
 }
 
 /** Compose the full handoff bundle. */
+// v2.9.1 -- LIVE STATE injector (auto-prepends current Mneme version /
+// recent commits / HMAC-signed signature to every soul prompt going
+// through clone.to so stale capsules don't mislead the receiving AI).
+export * from "./live_state.js";
+
 export function handoffUniversal(input: HandoffInput): HandoffBundle {
   const paths: HandoffPath[] = [];
   const nexusCode = input.nexusCode ?? genNexusCode(input.payload);

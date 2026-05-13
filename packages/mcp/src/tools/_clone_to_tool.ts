@@ -66,20 +66,49 @@ export const cloneToTool: MnemeTool = {
     "Clipboard write is best-effort on Linux — falls back to a setup hint if xclip / wl-copy / xsel are missing.",
     "openBrowser=false is useful for tests; leave true in production so user truly gets 1-click.",
   ],
-  handler: async (_rt, args) => {
+  handler: async (rt, args) => {
     const core = await import("@mneme-ai/core");
-    const payload = String(args["payload"] ?? "");
+    const { resolve } = await import("node:path");
+    const repoRoot = resolve(rt?.meta?.rootPath ?? process.cwd());
+    const rawPayload = String(args["payload"] ?? "");
     const writeClipFlag = args["writeClip"] !== false;
     const openBrowser = args["openBrowser"] !== false;
 
-    // 1) Plan + open browser via the v1.97 cloneTo planner.
+    // v2.9.1: ALWAYS inject a LIVE STATE block at the top of the payload.
+    // This block carries the current installed version + recent commits +
+    // an HMAC signature, and tells the receiving AI to TRUST IT over any
+    // older Context block carried from a stale capsule. Without this,
+    // a soul prompt generated at v1.95 timepoint will tell ChatGPT
+    // "latest version is v1.95" even when local Mneme is at v2.9.
+    const liveInjected = rawPayload.length > 0
+      ? core.handoff.injectLiveState(rawPayload, { repoRoot })
+      : null;
+    const payload = liveInjected ? liveInjected.combined : rawPayload;
+
+    // 1) Plan target.
     const r = core.rainbow.cloneTo({
       userText: args["userText"] ? String(args["userText"]) : undefined,
       target: args["target"] as Parameters<typeof core.rainbow.cloneTo>[0]["target"],
       openBrowser,
     });
 
-    // 2) Best-effort clipboard write — only when payload is non-empty.
+    // 2) v2.9.1: mobile / tablet / phone target → delegate to BEACON for a
+    //    REAL scannable QR. The legacy cloneTo planner just returned a
+    //    description; BEACON actually spawns the LAN server + QR data URI.
+    let beacon: Awaited<ReturnType<typeof core.beacon.spawnBeacon>> | null = null;
+    const mobileTarget = r.resolvedTarget === "mobile" || r.resolvedTarget === "ipad" || r.resolvedTarget === "another-pc";
+    if (mobileTarget && payload.length > 0) {
+      try {
+        beacon = await core.beacon.spawnBeacon({
+          payload,
+          targetVendor: typeof r.resolvedTarget === "string" ? r.resolvedTarget : "any AI",
+          label: "Mneme brain transfer",
+          port: 0, // ephemeral — won't clash with existing daemons
+        });
+      } catch { /* BE:silent-by-design — fall through to clipboard / markdown */ }
+    }
+
+    // 3) Best-effort clipboard write — only when payload is non-empty.
     let clipboardWrite: ReturnType<typeof core.anchor.writeClipboard> | undefined;
     if (writeClipFlag && payload.length > 0) {
       try { clipboardWrite = core.anchor.writeClipboard(payload); }
@@ -87,13 +116,29 @@ export const cloneToTool: MnemeTool = {
     }
 
     const wisdom = core.rainbow.formatCloneToPulseLine(r)
-      + (clipboardWrite ? ` · clipboard=${clipboardWrite.ok ? "ok" : "fail"}` : "");
+      + (clipboardWrite ? ` · clipboard=${clipboardWrite.ok ? "ok" : "fail"}` : "")
+      + (beacon ? ` · beacon-paths=${beacon.paths.length}` : "")
+      + (liveInjected ? ` · live=${liveInjected.live.state.localVersion}` : "");
 
     return {
-      data: { ...r, clipboardWrite },
+      data: {
+        ...r,
+        clipboardWrite,
+        liveState: liveInjected ? liveInjected.live.state : null,
+        liveStateSig: liveInjected?.live.sig ?? null,
+        beacon: beacon ? {
+          token: beacon.token,
+          port: beacon.port,
+          lanIPs: beacon.lanIPs,
+          paths: beacon.paths,
+          generatedAt: beacon.generatedAt,
+        } : null,
+      },
       wisdom,
-      followUp: r.plan.transport === "menu" ? [] : [],
-      confidence: { level: r.intent && r.intent.confidence > 0.5 ? "high" : "medium", notes: r.userInstruction },
+      followUp: mobileTarget && !beacon ? ["mneme.beacon.spawn"] : [],
+      confidence: { level: r.intent && r.intent.confidence > 0.5 ? "high" : "medium", notes: beacon
+        ? `BEACON spawned on port ${beacon.port}. AI agent: render the lan-qr data: URI inline in chat for the user to scan with their phone. LIVE STATE block prepended so receiving AI knows current Mneme version = ${liveInjected?.live.state.localVersion ?? "unknown"}.`
+        : r.userInstruction },
     };
   },
 };
