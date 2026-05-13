@@ -296,6 +296,16 @@ export * as truthKernel from "./truth_kernel/index.js";
 // decides order. Composes anchor / aura / relay / synapse / rainbow /
 // ... transports without breaking any of them.
 export * as wormhole from "./wormhole/index.js";
+// v2.7.0 -- WORMHOLE auto-wire: daemon discovers + adapts every
+// transport, persists EWMA stats to .mneme/wormhole-stats.json.
+export * as wormholeAutoWire from "./wormhole/auto_wire.js";
+// v2.7.0 -- METRON: verifiable 8-axis KPI scorecard. Each axis has a
+// documented measurement function, evidence record, and HMAC signature
+// over its canonical form. Users can recompute + verify locally —
+// "world-class" becomes a recomputable proof, not a vibe.
+export * as metron from "./metron/index.js";
+export * as metronCodeAudit from "./metron/code_audit.js";
+export * as metronUpdateNotifier from "./metron/update_notifier.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

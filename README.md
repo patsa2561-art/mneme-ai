@@ -9,8 +9,8 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.6&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-8512%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.7&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-8575%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
 [![MCP tools](https://img.shields.io/badge/MCP%20tools-149%2B-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
 [![license MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
@@ -125,7 +125,13 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest: **v2.6.0** — 💎 TRUTH KERNEL (weighted-Bayesian fusion of every hallucination gate → ONE verdict + disagreement-as-signal) + 🌌 WORMHOLE (channel auto-negotiation for cross-device sync — ICE-style parallel probe + race-to-success + EWMA-adaptive scoring). Both turn the v2.5 "metaphor sprawl" audit finding into architectural strength: every existing gate / transport becomes a sensor / channel. Zero breaking change. Previous: v2.5 12 MCP wrappers, v2.4 SECURITY HARDENING + SYMBIOSIS + LEXICON writer-routing.
+Latest: **v2.7.0** — 🔭 **METRON** (8-axis verifiable KPI scorecard — every score has HMAC-signed evidence + recomputable formula) + 🌌 WORMHOLE auto-wire (daemon discovers transports + persists EWMA stats) + 🩻 CATCH AUDITOR + 🧬 ANY DENSITY (real numbers feed METRON Reliability + DX axes) + 📣 UPDATE NOTIFIER (signed [NEW SINCE vX] block on every Mneme upgrade so AI agents see what changed). The Nobel-tier move: METRON's Honesty axis grades itself — Mneme cannot publish a flattering score without first making the evidence rigorous. Previous: v2.6 TRUTH KERNEL + WORMHOLE, v2.5 12 MCP wrappers, v2.4 SECURITY HARDENING + SYMBIOSIS + LEXICON writer-routing.
+
+## 📣 What changed since your last upgrade
+
+Run `mneme.updates.whats_new` to get a tight, version-scoped delta of every new MCP tool + behaviour change since the version you last saw. Block is HMAC-signed so stale embeds in CLAUDE.md / AGENTS.md are detectable.
+
+Run `mneme.metron.score` once at session start to learn your repo's current 8-axis scorecard — **don't promise "world-class X" for any axis scoring below 75**. Re-verify any pasted scorecard with `mneme.metron.verify`.
 
 → **[Full changelog · every release · every feature · every fix](CHANGELOG.md)**
 
