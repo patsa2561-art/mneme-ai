@@ -20,3 +20,10 @@ export * from "./page_renderer.js";
 export * from "./same_shell.js";
 export * from "./phoenix.js";
 export * from "./boomerang.js";
+// v1.97 — clone_to: universal Thai+English+mixed intent parser →
+// transport plan → auto-open browser. The ONE function AI agents call
+// when user says ANY phrase about sending/cloning/syncing brain.
+export * from "./clone_to.js";
+// v1.97 — bug_truth: honest postmortem on v1.85 RELAY (4 bugs the user
+// caught us in). Replacement is clone_to.cloneTo with clipboard transport.
+export * from "./bug_truth.js";

@@ -105,10 +105,20 @@ export function probeChannels(soul: SoulPrompt, input: RainbowInputs): RainbowHa
   return { soul, channels, recommended, summary };
 }
 
-/** Build the data: URL bridge -- the wild move. Tiny HTML page that
- *  fetches soul from dpaste + renders Web Share button. Whole thing
- *  fits in a QR because the soul is fetched, not embedded. */
+/** @deprecated v1.97 — DO NOT USE. See bug_truth.ts for the 4 reasons
+ *  this fails on every free-tier Web AI. Use rainbow.clone_to.cloneTo
+ *  with target "chatgpt" / "gemini" / "claude" instead — those rely on
+ *  CLIPBOARD (which every Web AI supports) not WEB-FETCH (which most
+ *  free-tier Web AIs lack).
+ *  Kept as an export for backward compatibility; emits a console.warn
+ *  on first call to alert any caller still depending on this. */
+let _dataBridgeWarned = false;
 export function buildDataBridgeUrl(dpasteUrl: string): string {
+  if (!_dataBridgeWarned) {
+    _dataBridgeWarned = true;
+    // eslint-disable-next-line no-console
+    console.warn("[mneme] buildDataBridgeUrl is DEPRECATED (v1.97). See rainbow.bug_truth + rainbow.clone_to for the working clipboard-based replacement.");
+  }
   const wrapper =
     `<!doctype html><html><head>` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +

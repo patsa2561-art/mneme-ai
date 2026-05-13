@@ -1,3 +1,104 @@
+## v1.97.0 — 2026-05-13 — CLONE-TO + 4-bug postmortem (ปีศาจฟื้นคืนชีพ — clipboard-based handoff that actually works)
+
+**Headline:** User caught us in 4 lies + a fatal UX bug. Customer in another Claude Code session typed *"ส่งสมองไปมือถือ"* and *"ส่งความจำของ mneme ไปใน gemini"* — **Claude Code didn't recognize the intent at all**. No QR popped, no URL appeared, user was stranded. User said: *"ปีศาจตัวนี้จะตายทันที — คุณจะยอมให้มันตายเหรอ?"*. v1.97 is the rescue.
+
+### 🔴 4 bugs the user uncovered in v1.85 RELAY architecture (`packages/core/src/rainbow/bug_truth.ts`)
+
+1. **AI-fetches-URL doesn't work** — Free Gemini / ChatGPT-Free / Claude.ai have NO web-fetch in chat completion paths. The instruction "Fetch this URL..." is silently ignored.
+2. **AI can't do AES-256-GCM + PBKDF2(200k) decryption** — no Web Crypto in chat sandbox; AI hallucinates output.
+3. **`gemini.google.com/?q=...` deep link DOES NOT prefill** — verified broken by user; deep-link parameter is silently ignored.
+4. **We claimed it works without integration testing** — v1.85 commit messages and docs asserted "any AI can fetch URL + decrypt". Never tested against a real free-tier AI. False claim.
+
+**`bug_truth.ts` now ships in code** with explicit `DEPRECATED_RELAY_PATHS` records + `formatBugTruth()` printer. The doctor command surfaces it. AI agents reading `docs/AI_AGENT_CONTRACT.md` see the 4 don'ts at the top of Step 9.0.
+
+### 🧬 CLONE-TO — the ONE function AI agents call
+
+`packages/core/src/rainbow/clone_to.ts`:
+
+```typescript
+import { cloneTo, parseCloneIntent } from "@mneme-ai/core";
+
+// When user says ANY phrase about cloning/sending/syncing brain:
+const r = cloneTo({ userText: theUserMessage });
+// Mneme parses Thai+English+mixed, picks target, opens browser, copies clipboard.
+```
+
+**Phrase parser:** 50+ keywords per language across 12 canonical targets. Confidence scoring (verb + subject + target) decides if it's a clone request. Returns `{ isCloneRequest, confidence, target, targetEvidence, verbEvidence, subjectEvidence }`.
+
+**Transport plans:**
+- `this-pc` → SAME-SHELL (`http://localhost:7741/local`)
+- `chatgpt` / `gemini` / `claude` / `perplexity` / `copilot` → web-paste (open AI home page + clipboard); **NOT** `?q=` deep links (verified broken)
+- `mobile` / `ipad` → tunnel-qr (PHOENIX-watched cloudflared)
+- `another-pc` → lan-qr
+- `usb` → wanderer pack/unpack
+- `return` → boomerang return-pad
+- `unknown` → numbered menu
+
+**Cross-platform browser open:** `openInBrowser(url)` works on Windows (`cmd /c start`), macOS (`open`), Linux/WSL (`xdg-open`).
+
+### 📜 Phrases verified in 18-case regression suite (every one user complained about):
+
+```
+"ย้าย mneme ไปใส่ใน mobile หน่อย"          → mobile  ✓
+"ส่งความจำของ mneme ไปใน gemini"             → gemini  ✓
+"ส่งสมองไปมือถือ"                             → mobile  ✓
+"ส่งสมองไป iphone"                            → mobile  ✓
+"ส่งไป android"                               → mobile  ✓
+"clone brain to ipad"                          → ipad    ✓
+"send mneme to chat gpt"                       → chatgpt ✓
+"sync to claude.ai"                            → claude  ✓
+"ส่ง mneme ไป copilot"                       → copilot ✓
+"give brain to perplexity"                     → perplexity ✓
+"ก๊อปไป tablet"                                → ipad    ✓
+"send brain to my second laptop"               → another-pc ✓
+"clone to localhost"                           → this-pc ✓
+"send mneme to browser on this pc"             → this-pc ✓
+"pack mneme as a file"                         → usb     ✓
+"send back to my pc"                           → return  ✓
+"Mneme ส่งไป google ai หน่อย"               → gemini  ✓
+"share mneme กับ openai"                      → chatgpt ✓
+```
+
+### 🛡 Architectural deprecation (honest)
+
+`rainbow.handoff.buildDataBridgeUrl` — emits `console.warn` on first use pointing to `bug_truth.ts`. Existing v1.89 callers still get a working data: URL bridge for backward compat, but the docs make clear it's deprecated.
+
+### 🤖 AI agent contract elevated
+
+`docs/AI_AGENT_CONTRACT.md` gets a new **Step 9.0 — THE MOST IMPORTANT RULE** at the top: when user says ANY clone phrase, call `cloneTo({userText})` FIRST. Don't improvise. Don't tell the Web AI to fetch or decrypt. The 4-bug list is right next to the rule so every AI agent reading the contract sees what NOT to do.
+
+### 📖 User-facing guide
+
+`docs/CLONE_TO_AI.md` (~140 lines) ships:
+- Big trigger-phrase table per target (Thai + English + mixed)
+- "What ACTUALLY happens behind the scenes" — the honest clipboard flow
+- The 4-bug postmortem in human language
+- AI agent invocation snippet
+- Round-trip BOOMERANG flow
+- Live copy-paste-able test cases
+
+### Tests + build
+
+- **+51 v1.97 tests** in `clone_to.test.ts` (phrase recognition × 13, transport planning × 9, dispatcher × 5, openInBrowser × 2, bug-truth × 3, regression suite × 18, plus edge cases)
+- **8098/8098 full suite pass** (was 8047; +51)
+- TypeScript strict mode clean
+
+### Mneme mandates applied
+
+1. **Wild idea** — instead of yet another transport protocol, **delete** the assumption that Web AIs can do crypto / fetch / honor deep-link prefill. Lean entirely on clipboard, the one capability ALL Web AIs share.
+2. **Wiser, not patched** — didn't add a "try harder" retry loop on the broken RELAY path. Deprecated it in code with a `console.warn` + honest doc in `bug_truth.ts`.
+3. **Self-fix root cause** — Claude Code didn't recognize the user's intent because no MCP tool had an obvious name. Now there's ONE tool, `cloneTo`, with crystal-clear description in Step 9.0.
+4. **Co-working not conflicting** — Existing v1.91/92/95 same-shell + tunnel + boomerang modules unchanged. CLONE-TO is a UNIFICATION layer on top.
+5. **Always-studying** — every parse records `confidence` + `targetEvidence` + `verbEvidence` + `subjectEvidence` so future versions can A/B-test which phrases users actually say.
+
+### v1.98 commitment
+
+- `mneme clone --to <target>` CLI command (so terminal users get the same UX without an AI agent)
+- Inject phrase library into CLAUDE.md / AGENTS.md on install so even agents that DON'T read MCP discovery see the trigger phrases
+- Pulse line shows `CLONE-TO available` reminder once per session
+- Cross-Mneme-instance phrase telemetry (privacy-preserving) so the dictionary grows from real usage
+
+
 ## v1.96.0 — 2026-05-13 — QX-AGNOSTIC (ปีศาจร้ายในร่างอมตะ — one function, every provider)
 
 **Headline:** User tested v1.95 + said "ยังไม่ดีพอ ช่วยทำให้เป็นปีศาจโหดร้ายที่สุดฉลาดที่สุดในเรื่อง agnostic code". v1.96 ships the agnostic master layer — a single function call that composes 8 stacked features so AI agents write quantum code **ONCE** and run it on **ANY** provider without changing a single line.

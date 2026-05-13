@@ -170,6 +170,45 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 
 ---
 
+## 🧬 STEP 9.0 — CLONE-TO (v1.97) — THE MOST IMPORTANT RULE
+
+**Read this BEFORE any other step.** Customers complained about this; v1.97 fixes it definitively.
+
+**The rule:** when the user says ANYTHING containing a verb (`send / clone / sync / move / share / ส่ง / โคลน / ย้าย / ก๊อป / แชร์ / push`) + a subject (`brain / memory / mneme / context / สมอง / ความจำ`) + a destination (`mobile / phone / chatgpt / gemini / claude / copilot / vscode / another pc / มือถือ / ipad / ...`), you MUST call:
+
+```typescript
+import { cloneTo } from "@mneme-ai/core";
+
+const r = cloneTo({ userText: theUserMessage });
+// Mneme parses Thai+English+mixed, picks target, opens browser, copies clipboard.
+// Surface r.userInstruction verbatim to the user.
+```
+
+**Phrases that MUST trigger this** (verified in unit tests):
+
+| User says (Thai/English/mixed) | What you do |
+|---|---|
+| *"ย้าย mneme ไปใส่ใน mobile หน่อย"* | `cloneTo({userText: ...})` → target=mobile |
+| *"ส่งความจำของ mneme ไปใน gemini"* | → target=gemini, opens gemini.google.com (NOT ?q= — that's broken) |
+| *"ส่งสมองไปมือถือ"* | → target=mobile, QR + tunnel |
+| *"send brain to chat gpt"* | → target=chatgpt, opens chatgpt.com, brain on clipboard |
+| *"sync to claude.ai"* | → target=claude |
+| *"clone to localhost"* | → target=this-pc, same-shell page |
+| *"pack mneme as a file"* | → target=usb, wanderer pack |
+| *"send back to my pc"* | → target=return, boomerang |
+| anything ambiguous | → target=unknown, show menu |
+
+**4 things the AI agent must NOT do** (because they break — verified):
+
+1. ❌ Tell the Web AI to "fetch this URL and decrypt it" — free-tier Web AIs have no web-fetch in chat. The instruction is silently ignored.
+2. ❌ Ask the Web AI to do AES-256-GCM / PBKDF2 decryption — no Web Crypto in chat sandbox; output is hallucinated.
+3. ❌ Use `gemini.google.com/?q=...` deep links — verified broken; the prompt does NOT prefill.
+4. ❌ Use the v1.85 `buildDataBridgeUrl` / data: URL bridge — DEPRECATED in v1.97.
+
+**The DEMON FIX:** clipboard. Every Web AI can read what the user pastes. Period.
+
+Full reasoning + 4-bug postmortem: [`docs/CLONE_TO_AI.md`](CLONE_TO_AI.md) + `rainbow.bug_truth.DEPRECATED_RELAY_PATHS` in code.
+
 ## 🌌 QX-AGNOSTIC (v1.96) — one function, every quantum provider
 
 **Default to this for every quantum request.** Composes parser + router + decomposer + cache + race + verify + cost.

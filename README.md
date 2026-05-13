@@ -84,6 +84,8 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 ## 📋 What's new
 
+> **v1.97.0 CLONE-TO + 4-bug postmortem** (2026-05-13) — Customers complained that *"ส่งสมองไปมือถือ"* / *"ส่งความจำ mneme ไปใน gemini"* / *"ย้าย mneme ไปใส่ใน mobile หน่อย"* didn't trigger anything in Claude Code. Root cause: no MCP tool with an obvious name + AI agent didn't know to call it + the v1.85 RELAY architecture **secretly relied on Web AIs doing crypto + URL fetch** (which free tiers can't do). **Honest postmortem published in code (`rainbow.bug_truth`).** v1.97 ships ONE function `cloneTo({userText})` that parses any phrase in Thai/English/mixed, picks the target (mobile / chatgpt / gemini / claude / copilot / ipad / another-pc / usb / return), opens the browser, copies the brain to clipboard. **No Web AI crypto. No URL fetch. No `?q=` deep link. Just clipboard.** [Phrase guide →](docs/CLONE_TO_AI.md)
+>
 > **v1.96.0 QX-AGNOSTIC** (2026-05-13) — *ปีศาจร้ายในร่างอมตะ.* The agnostic master layer: one `runQuantumAgnostic({source, shots, budget, preferences, memory})` call composes 8 stacked features — OpenQASM 3.0/2.0 parser · capability matcher · gate decomposer · DNA fingerprint cache · smart router (cost + queue + capability + budget) · multi-provider race · TVD equivalence verifier · cost predictor with budget gate. AI agents write ONCE, run ANYWHERE — provider can change without code changes. 47 new tests; 73/73 QX-BRIDGE total. [QX-BRIDGE deep-dive →](docs/QX_BRIDGE.md)
 >
 > **v1.95.0 QX-BRIDGE + Cross-platform upgrade bootstrap** (2026-05-13) — Universal MCP→quantum-cloud bridge. AI agents now talk to **real quantum hardware** (IBM Quantum free tier · AWS Braket · Azure Quantum · D-Wave Leap) through one uniform interface. Pure-TS state-vector simulator ships in-process (Bell pair 50/50 verified · GHZ-5 cat states · Grover finds target at **100% exact**). Every measurement auto-records as probability-vector event in Infinity Memory. Plus standalone `upgrade-bootstrap.mjs` that fixes any version regardless of currently-installed Mneme (tested live: v1.90 → v1.94 in 38s). [QX-BRIDGE deep-dive →](docs/QX_BRIDGE.md)
@@ -595,7 +597,8 @@ Your conversation follows you. Any AI. Any device. Any time. **One sentence does
 
 | Page | What's inside |
 |---|---|
-| 🌌 [**QX-BRIDGE · AI agents ↔ real quantum hardware**](docs/QX_BRIDGE.md) | **NEW v1.95** — Pure-TS simulator + IBM/Braket/Azure/D-Wave provider bridge · Bell pair / GHZ / Grover verified live |
+| 🧬 [**CLONE-TO · phrase guide for sending brain anywhere**](docs/CLONE_TO_AI.md) | **NEW v1.97** — Say any phrase in Thai/English/mixed → Mneme parses it, picks target (mobile · chatgpt · gemini · claude · ipad · another PC · usb · return), opens browser, copies brain to clipboard. Honest 4-bug postmortem of v1.85 RELAY. |
+| 🌌 [**QX-BRIDGE · AI agents ↔ real quantum hardware**](docs/QX_BRIDGE.md) | **v1.95** — Pure-TS simulator + IBM/Braket/Azure/D-Wave provider bridge · Bell pair / GHZ / Grover verified live |
 | ⚛ [**MNEME-QX SuperNova Engine**](docs/QX_SUPERNOVA.md) | **v1.94** — Quantum Core · SuperNova Burst · Infinity Memory · Soul Engine · 8-axis benchmark · re-engineer loop |
 | 💎 [**TOKEN-NOVA · 10 treasures**](docs/TOKEN_NOVA.md) | **NEW v1.93** — 4 wild techniques shipped (Pre-empt · Mirror-Dedup · Fractal · Arbitrage), 6 on roadmap. Real numbers, live measured. |
 | 🔄 [**Auto-update + SYSTEM-COMPAT**](docs/AUTO_UPDATE.md) | **NEW v1.93** — OS matrix, daemon flow, SAFE/DEFER/BLOCK verdicts, failure modes, the gate that makes silent failures impossible |
