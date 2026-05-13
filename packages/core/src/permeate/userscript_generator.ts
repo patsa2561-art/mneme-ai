@@ -50,6 +50,7 @@ export function generateUserscript(opts: UserscriptOptions): UserscriptArtifact 
     "// @description  Inject Mneme cross-vendor brain (soul prompt) into ChatGPT, Gemini, Claude.ai, Copilot, DeepSeek. No store approval needed.",
     "// @author       Mneme",
     "// @match        https://chatgpt.com/*",
+    // v1.98: chat.openai.com kept for backward compat (308-redirects to chatgpt.com but old bookmarks survive)
     "// @match        https://chat.openai.com/*",
     "// @match        https://gemini.google.com/*",
     "// @match        https://aistudio.google.com/*",

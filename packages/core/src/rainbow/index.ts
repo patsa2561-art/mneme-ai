@@ -27,3 +27,14 @@ export * from "./clone_to.js";
 // v1.97 — bug_truth: honest postmortem on v1.85 RELAY (4 bugs the user
 // caught us in). Replacement is clone_to.cloneTo with clipboard transport.
 export * from "./bug_truth.js";
+// v1.98 — vendor_strategy: explicit per-vendor strategy map (clipboard-first /
+// plain-qr / mcp-direct / prefill-and-paste / app-deeplink-NA). Replaces the
+// broken "one-size-fits-all RELAY" assumption.
+export * from "./vendor_strategy.js";
+// v1.98 — vendor_probe: HEAD-request probe that catches stale URLs in CI.
+// Closes the "comment lies" gap (chat.openai.com was stale for 1+ year).
+export * from "./vendor_probe.js";
+// v1.98 — passport: portable HMAC-signed identity bundle for vendor-agnostic
+// context portability. The disruption move — user owns the brain, vendor
+// doesn't. ANY AI can READ + ANY holder of the secret can VERIFY.
+export * from "./passport.js";

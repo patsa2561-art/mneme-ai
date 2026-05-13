@@ -60,9 +60,10 @@ describe("v1.87 RELAY · deep link builder", () => {
     expect(dl.fitsInQR).toBe(true);
   });
 
-  it("buildDeepLink for ChatGPT uses chat.openai.com", () => {
+  it("buildDeepLink for ChatGPT uses chatgpt.com (v1.98: was chat.openai.com → 308 redirect)", () => {
     const dl = buildDeepLink({ pasteUrl: "https://dpaste.com/x", nexusCode: "ABC123", vendor: "chatgpt" });
-    expect(dl.url.startsWith("https://chat.openai.com/?q=")).toBe(true);
+    expect(dl.url.startsWith("https://chatgpt.com/?q=")).toBe(true);
+    expect(dl.url).not.toContain("chat.openai.com");
   });
 
   it("vendor='any' returns the prompt verbatim (copy-only fallback)", () => {

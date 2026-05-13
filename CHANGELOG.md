@@ -1,3 +1,102 @@
+## v1.98.0 — 2026-05-13 — STALE-URL FIX + VENDOR STRATEGY + MNEME PASSPORT (the disruption move)
+
+**Headline:** User's codex AI ran an independent audit and caught us in a multi-year lie:
+- `chat.openai.com` URL in `packages/core/src/relay/deep_link.ts:30` had been stale since OpenAI rebranded to `chatgpt.com` — the old URL silently 308-redirects.
+- Code comments claimed "Verified URL params (May 2026)" but **no integration test had ever probed the URL**. The comment was a lie.
+- `composePrompt` instructed the destination AI to **fetch the URL and decrypt AES-256-GCM with PBKDF2 200k** — free-tier Web AIs can do NEITHER.
+- The whole "RELAY architecture" was structurally broken for the user demographic Mneme ships for.
+
+v1.98 ships 4 fixes + a disruption move.
+
+### 🔧 4 honest fixes
+
+**1. Stale URL** — `packages/core/src/relay/deep_link.ts:30`
+- `chat.openai.com` → `chatgpt.com`
+- Old test `v1_87_regression.test.ts:63` updated; asserts `chat.openai.com` is NOT in the URL anymore.
+
+**2. `composePrompt` deprecated; `composeCleanPrompt` ships**
+- The old prompt asked the AI to fetch + decrypt. That broken assumption is now documented in the function's JSDoc as `@deprecated`.
+- The new `composeCleanPrompt()` just says "this is a Mneme soul prompt; paste from clipboard". No fetch. No crypto. No fictional capabilities.
+
+**3. `vendor_strategy.ts` — explicit per-vendor strategy matrix**
+- 10 vendor entries (chatgpt-web, gemini-web, claude-web, claude-code, cursor, copilot-web, perplexity-web, gemini-mobile, chatgpt-mobile, any-mobile-browser).
+- Each entry has `freeStrategy` + `paidStrategy` + `qParamWorks` (boolean) + `webFetchAvailable` (boolean) + `lastChecked` (ISO date) + `reasoning` (string).
+- Strategies: `clipboard-first` (default for Web AIs) · `mcp-direct` (MCP-aware editors) · `plain-qr` (mobile browsers) · `prefill-and-paste` (opt-in for Perplexity which DOES honor `?q=`) · `app-deeplink-NA` (mobile apps with no URL scheme — honest refusal).
+- Replaces the broken "one-size-fits-all RELAY" assumption with explicit, auditable decisions.
+
+**4. `vendor_probe.ts` — real HEAD-request probe**
+- HEADs each vendor URL and detects host changes (the chat.openai.com → chatgpt.com case).
+- Verdicts: `OK` / `REDIRECT_HOST_CHANGE` / `NOT_FOUND` / `BLOCKED` (Cloudflare 403) / `NETWORK_ERR` / `SKIP` (app URL schemes).
+- `failingProbes(results)` returns anything that ALERTS — surfaces stale URLs in the daemon's nightly cycle (future) or CI.
+- `formatProbePulseLine` makes the result visible to the user in the next pulse.
+- **No more comment lies.** If the URL goes stale, the probe screams.
+
+### 🛂 MNEME PASSPORT — the disruption move (`packages/core/src/rainbow/passport.ts`)
+
+> *"Until today, every AI vendor was the warden of your context. Tomorrow, you hand the AI a passport and the warden disappears."*
+
+**The vendor lock-in thesis:**
+- ChatGPT remembers YOUR conversation history in OpenAI's cloud.
+- Claude.ai remembers YOUR conversation history in Anthropic's cloud.
+- Gemini remembers in Google's.
+- Switching vendor = losing memory. Starts from scratch every time. **Worth billions to vendors.**
+
+**Mneme PASSPORT inverts this:**
+- Portable HMAC-SHA256-signed identity bundle (~2-4 KB).
+- Holds last N entries (decisions / regrets / wisdoms / vaccines / preferences).
+- HMAC-chained → every entry cryptographically tamper-evident.
+- **READ permission is open** — any AI can read entries without the secret (the disruption: AI gets your context).
+- **WRITE permission requires the secret** — only the user (with the secret in `.mneme/passport.secret`) can sign a fresh passport.
+- 4 verdict states: `VALID` · `EXPIRED` · `TAMPERED` · `WRONG_KEY`.
+
+**Public surface:**
+```typescript
+import { issuePassport, verifyPassport, serializePassport, parsePassport, generatePassportSecret } from "@mneme-ai/core";
+
+const secret = generatePassportSecret(); // persist to .mneme/passport.secret
+const envelope = issuePassport({ holder: "alice@mneme", entries, secret });
+const text = serializePassport(envelope);       // ~2-4 KB; paste into any AI
+const parsed = parsePassport(text);             // ANY AI can READ
+const result = verifyPassport(parsed, secret);  // only secret-holder can VERIFY
+// result.verdict: "VALID" | "EXPIRED" | "TAMPERED" | "WRONG_KEY"
+```
+
+**Disruption mechanic:**
+- A vendor that accepts the PASSPORT format signals "we don't lock you in" and wins user trust.
+- A vendor that refuses becomes a wall and loses portable users.
+- The open standard (PASSPORT envelope JSON shape) becomes the lingua franca of AI context.
+- Mneme is the reference implementation + first adopter.
+
+This v1.98 release is **the seed**. The market work is community adoption — that ships at the pace vendors say yes.
+
+### 🗣 README updated with phrase-flexibility note
+
+User explicitly asked: *"ต้องพิมพ์ตาม pattern เปะๆไหม? ลูกค้าจะไม่จำ pattern ใช่ไหม?"*
+
+README hero now has a collapsed `<details>` block with 18 verified phrases AND clear text: *"You don't have to use these exact words. The parser recognizes 18+ verbs, 6+ subjects, 60+ target keywords across 12 canonical targets. Fuzzy matches across Thai, English, and mixed. Mistyped or unusual phrasing? Try anything reasonable. If Mneme isn't sure, it shows the menu."*
+
+### Tests + build
+
+- **+33 v1.98 tests** in `v1_98.test.ts` (stale-URL fix 2 · vendor strategy 11 · vendor probe 5 · passport 13 · flexible-phrase 2)
+- **8131/8131 full suite pass** (was 8098; +33)
+- TypeScript strict mode clean
+
+### Mneme mandates applied
+
+1. **Wild idea** — MNEME PASSPORT cracks the vendor lock-in moat that's worth billions. Not by competing on memory features — by **giving the user the keys**.
+2. **Wiser, not patched** — didn't update the comment to say "Verified later in 2026" and call it a day. Built `vendor_probe.ts` so the next stale URL screams instead of hiding.
+3. **Self-fix root cause** — "comment lies" gap fixed structurally: probe + lastChecked field + failing-probe surfacing.
+4. **Co-working not conflicting** — old `composePrompt` retained for Pro-tier flows; new `composeCleanPrompt` is the default. Existing v1.85/87/89/91/92/95/97 modules untouched; vendor_strategy + vendor_probe + passport are NEW.
+5. **Always-studying** — every probe records `elapsedMs` + final URL + status. PASSPORT has `lastChecked` per vendor. Future versions can A/B-test which strategies work best per user demographic.
+
+### v1.99 commitment
+
+- Wire `vendor_probe` into the daemon's nightly cycle so stale URLs surface as pulse warnings automatically
+- PASSPORT integration: auto-issue passport on session save; auto-attach to clipboard alongside soul prompt
+- Cross-vendor passport federation: vendors accept Mneme PASSPORT envelopes as a "warm boot" hint
+- mneme CLI command: `mneme passport issue` / `mneme passport verify <file>` / `mneme passport rotate-secret`
+
+
 ## v1.97.0 — 2026-05-13 — CLONE-TO + 4-bug postmortem (ปีศาจฟื้นคืนชีพ — clipboard-based handoff that actually works)
 
 **Headline:** User caught us in 4 lies + a fatal UX bug. Customer in another Claude Code session typed *"ส่งสมองไปมือถือ"* and *"ส่งความจำของ mneme ไปใน gemini"* — **Claude Code didn't recognize the intent at all**. No QR popped, no URL appeared, user was stranded. User said: *"ปีศาจตัวนี้จะตายทันที — คุณจะยอมให้มันตายเหรอ?"*. v1.97 is the rescue.

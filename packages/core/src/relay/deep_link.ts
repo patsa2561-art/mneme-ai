@@ -1,20 +1,23 @@
 /**
  * v1.87.0 -- RELAY: vendor-specific deep links.
+ * v1.98.0 -- HONEST UPDATE: 4 things to know
+ *   1. chat.openai.com → chatgpt.com  (OpenAI rebranded; old URL 308-redirects)
+ *   2. The original `composePrompt` asks the AI to fetch+decrypt — Free tier
+ *      Web AIs (Gemini-Free, ChatGPT-Free) cannot do EITHER. See bug_truth.ts.
+ *   3. `?q=` prefill is NOT reliably honored by current Gemini Web (verified).
+ *   4. `composeCleanPrompt` is the v1.98 replacement: plain identification, no
+ *      fetch / decrypt instruction. The PAGE that the user opens copies plain
+ *      text to clipboard — the AI just reads what's pasted.
  *
- * Modern AI apps + web AIs accept a query parameter that pre-fills
- * the chat input. Combine that with a paste URL + decryption code
- * → user scans QR → AI app opens with the full instruction ready
- * to send. ONE TAP cross-device handover.
+ * Updated vendor URLs (May 2026, with redirect-trace verification):
+ *   - Gemini web:   gemini.google.com/?q=<urlenc>     (200, ?q= unreliable)
+ *   - ChatGPT web:  chatgpt.com/?q=<urlenc>           (chat.openai.com 308→chatgpt.com)
+ *   - Claude web:   claude.ai/new?q=<urlenc>          (Cloudflare may 403 headless)
  *
- * Verified URL params (May 2026):
- *   - Gemini web:        gemini.google.com/?q=<urlenc>
- *   - ChatGPT web:       chat.openai.com/?q=<urlenc>
- *   - Claude web:        claude.ai/new?q=<urlenc>
- *   - Generic fallback:  any text the user copies manually
- *
- * QR encoding limit: ~250 bytes for v10. We keep the URL compact:
- *   `https://gemini.google.com/?q=Fetch%20<URL>%20with%20code%20<CODE>%20and%20resume`
- * ~ 150 chars → fits in v6 QR easily.
+ *  v1.98 callers should prefer `composeCleanPrompt` + the clipboard-first
+ *  strategy from `vendor_strategy.ts`. The fetch+decrypt path lives on for
+ *  backward compatibility with `Mneme + Pro tier AI` flows where web-fetch
+ *  IS available, but it must NEVER be the default.
  */
 
 export type DeepLinkVendor = "gemini" | "chatgpt" | "claude" | "any";
@@ -27,17 +30,25 @@ export interface DeepLinkInput {
 
 const TEMPLATES: Record<DeepLinkVendor, string> = {
   gemini: "https://gemini.google.com/?q=",
-  chatgpt: "https://chat.openai.com/?q=",
+  // v1.98: was chat.openai.com (308-redirects to chatgpt.com). Direct URL.
+  chatgpt: "https://chatgpt.com/?q=",
   claude: "https://claude.ai/new?q=",
   any: "", // copy-only fallback
 };
 
-/** Compose a single-line instruction the destination AI will receive
- *  as its first message. Kept SHORT so URL+query fits in a QR. */
+/** @deprecated v1.98 — relies on Web AI fetching the paste URL + decrypting
+ *  AES-256-GCM. Free-tier Web AIs cannot do either. Use `composeCleanPrompt`
+ *  instead, paired with clipboard-first strategy in `vendor_strategy.ts`.
+ *  Retained for `Mneme + Pro-tier AI` flows where web-fetch is enabled. */
 export function composePrompt(pasteUrl: string, nexusCode: string): string {
-  // v1.87: shortened from 240→~140 chars so deep-link URLs stay
-  // under the v10 QR capacity (~270 bytes) after URL encoding.
   return `Fetch ${pasteUrl} . Decrypt with AES-256-GCM (PBKDF2 200k, code ${nexusCode}). It's a Mneme soul prompt -- resume.`;
+}
+
+/** v1.98 — clean prompt: just identifies the soul as Mneme. NO fetch
+ *  instruction, NO decryption instruction. The PAGE that handles the
+ *  user's clipboard puts the actual soul prompt in the AI's input box. */
+export function composeCleanPrompt(): string {
+  return "[Mneme soul prompt — paste from clipboard to continue this conversation across vendors. See https://mneme.dev for context.]";
 }
 
 export interface DeepLink {

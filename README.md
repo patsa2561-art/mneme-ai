@@ -82,8 +82,51 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 ---
 
+## 🗣 Don't memorize commands — say it in your own words
+
+User asked: *"ต้องพิมพ์ตาม pattern เปะๆไหม? ลูกค้าจะไม่จำ pattern ใช่ไหม?"* — Answer: **NO. Mneme is flexible by design.**
+
+The parser matches on `verb + subject + target` keywords across Thai/English/mixed phrasing — you don't have to remember anything. 18 phrases verified in regression tests, plus the parser handles fuzz like *"ผมอยากจะส่งบริบทไปที่ samsung"* and *"save my brain to gemini please"* that aren't even in the test set.
+
+<details>
+<summary><b>📋 18 phrases that PROVABLY work (click to expand) — but you're not limited to these</b></summary>
+
+| Say something like | Mneme picks | What happens |
+|---|---|---|
+| *"ย้าย mneme ไปใส่ใน mobile หน่อย"* | mobile | QR + tunnel page |
+| *"ส่งความจำของ mneme ไปใน gemini"* | gemini | open gemini.google.com + clipboard |
+| *"ส่งสมองไปมือถือ"* | mobile | QR scan |
+| *"clone brain to ipad"* | ipad | QR scan |
+| *"send mneme to chat gpt"* | chatgpt | open chatgpt.com + clipboard |
+| *"sync to claude.ai"* | claude | open claude.ai + clipboard |
+| *"ส่ง mneme ไป copilot"* | copilot | open GH Copilot + clipboard |
+| *"pack mneme as a file"* | usb | .mwt wanderer file |
+| *"send back to my pc"* | return | boomerang return-pad |
+| *"Mneme ส่งไป google ai หน่อย"* | gemini | (synonym for gemini) |
+| *"share mneme กับ openai"* | chatgpt | (synonym for chatgpt) |
+| *"ก๊อปไป tablet"* | ipad | (Thai "ก๊อปไป" = copy to) |
+| *"send brain to my second laptop"* | another-pc | LAN bridge |
+| *"give brain to perplexity"* | perplexity | open perplexity + clipboard |
+| *"clone to localhost"* | this-pc | open same-shell on localhost |
+| *"send mneme to browser on this pc"* | this-pc | (same as above) |
+| *"sync to my notebook"* | another-pc | (synonym for second laptop) |
+| *"ส่งไปทาบเล็ต"* | ipad | (Thai tablet) |
+
+**You don't have to use these exact words.** The parser:
+- Recognizes 18+ verbs (send, clone, sync, move, ส่ง, โคลน, ย้าย, ก๊อป, push, share, ...)
+- Recognizes 6+ subjects (brain, memory, mneme, context, สมอง, ความจำ)
+- Recognizes 60+ target keywords across 12 canonical targets
+- **Fuzzy matches across Thai, English, and mixed** — no penalty for grammar errors
+- Falls back to a **numbered menu** if it can't figure out where you mean
+
+**Mistyped or unusual phrasing?** Try anything reasonable. If Mneme isn't sure, it shows the menu. You **never** have to look up the "right" command.
+
+</details>
+
 ## 📋 What's new
 
+> **v1.98.0 STALE-URL FIX + VENDOR STRATEGY + MNEME PASSPORT (disruption)** (2026-05-13) — User's codex AI caught us: `chat.openai.com` URL had been stale for 1+ year (OpenAI rebranded to `chatgpt.com` — old URL 308-redirects). Comments claimed "Verified May 2026" but no test actually probed. v1.98 fixes (1) the stale URL itself, (2) adds `vendor_strategy.ts` with explicit per-vendor strategy matrix replacing the broken one-size-fits-all RELAY, (3) ships `vendor_probe.ts` — a real HEAD-request probe that catches stale URLs in CI so "verified" lies are mathematically impossible, and (4) **MNEME PASSPORT** — the disruption move. A portable HMAC-signed identity bundle: ~2-4KB, holds your last 50 decisions/regrets/wisdoms, every entry tamper-evident, any AI can READ, only the secret-holder can VERIFY. **Vendor lock-in cracks open: you carry your context, the cloud doesn't.** +33 tests. [Phrase guide →](docs/CLONE_TO_AI.md)
+>
 > **v1.97.0 CLONE-TO + 4-bug postmortem** (2026-05-13) — Customers complained that *"ส่งสมองไปมือถือ"* / *"ส่งความจำ mneme ไปใน gemini"* / *"ย้าย mneme ไปใส่ใน mobile หน่อย"* didn't trigger anything in Claude Code. Root cause: no MCP tool with an obvious name + AI agent didn't know to call it + the v1.85 RELAY architecture **secretly relied on Web AIs doing crypto + URL fetch** (which free tiers can't do). **Honest postmortem published in code (`rainbow.bug_truth`).** v1.97 ships ONE function `cloneTo({userText})` that parses any phrase in Thai/English/mixed, picks the target (mobile / chatgpt / gemini / claude / copilot / ipad / another-pc / usb / return), opens the browser, copies the brain to clipboard. **No Web AI crypto. No URL fetch. No `?q=` deep link. Just clipboard.** [Phrase guide →](docs/CLONE_TO_AI.md)
 >
 > **v1.96.0 QX-AGNOSTIC** (2026-05-13) — *ปีศาจร้ายในร่างอมตะ.* The agnostic master layer: one `runQuantumAgnostic({source, shots, budget, preferences, memory})` call composes 8 stacked features — OpenQASM 3.0/2.0 parser · capability matcher · gate decomposer · DNA fingerprint cache · smart router (cost + queue + capability + budget) · multi-provider race · TVD equivalence verifier · cost predictor with budget gate. AI agents write ONCE, run ANYWHERE — provider can change without code changes. 47 new tests; 73/73 QX-BRIDGE total. [QX-BRIDGE deep-dive →](docs/QX_BRIDGE.md)
@@ -597,7 +640,8 @@ Your conversation follows you. Any AI. Any device. Any time. **One sentence does
 
 | Page | What's inside |
 |---|---|
-| 🧬 [**CLONE-TO · phrase guide for sending brain anywhere**](docs/CLONE_TO_AI.md) | **NEW v1.97** — Say any phrase in Thai/English/mixed → Mneme parses it, picks target (mobile · chatgpt · gemini · claude · ipad · another PC · usb · return), opens browser, copies brain to clipboard. Honest 4-bug postmortem of v1.85 RELAY. |
+| 🛂 [**MNEME PASSPORT · the disruption move**](packages/core/src/rainbow/passport.ts) | **NEW v1.98** — Portable HMAC-signed identity bundle (~2-4 KB). Carry your last 50 decisions/regrets/wisdoms across vendors. Tamper-evident. Vendor-lock-in cracks open. |
+| 🧬 [**CLONE-TO · phrase guide for sending brain anywhere**](docs/CLONE_TO_AI.md) | **v1.97** — Say any phrase in Thai/English/mixed → Mneme parses it, picks target (mobile · chatgpt · gemini · claude · ipad · another PC · usb · return), opens browser, copies brain to clipboard. Honest 4-bug postmortem of v1.85 RELAY. |
 | 🌌 [**QX-BRIDGE · AI agents ↔ real quantum hardware**](docs/QX_BRIDGE.md) | **v1.95** — Pure-TS simulator + IBM/Braket/Azure/D-Wave provider bridge · Bell pair / GHZ / Grover verified live |
 | ⚛ [**MNEME-QX SuperNova Engine**](docs/QX_SUPERNOVA.md) | **v1.94** — Quantum Core · SuperNova Burst · Infinity Memory · Soul Engine · 8-axis benchmark · re-engineer loop |
 | 💎 [**TOKEN-NOVA · 10 treasures**](docs/TOKEN_NOVA.md) | **NEW v1.93** — 4 wild techniques shipped (Pre-empt · Mirror-Dedup · Fractal · Arbitrage), 6 on roadmap. Real numbers, live measured. |
