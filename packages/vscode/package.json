@@ -1,9 +1,9 @@
-{
+﻿{
   "name": "mneme-vscode",
   "publisher": "patsa2561-art",
-  "displayName": "Mneme โ€” Memory layer for your codebase",
-  "description": "What your codebase already knows โ€” atrophy lens, AI session audit, nervous system dashboard.",
-  "version": "1.90.0",
+  "displayName": "Mneme เนโฌโ€ Memory layer for your codebase",
+  "description": "What your codebase already knows เนโฌโ€ atrophy lens, AI session audit, nervous system dashboard.",
+  "version": "1.91.0",
   "private": true,
   "engines": {
     "vscode": "^1.85.0"
@@ -43,7 +43,7 @@
     "commands": [
       {
         "command": "mneme.ask",
-        "title": "Mneme: Askโ€ฆ",
+        "title": "Mneme: Askเนโฌเธ",
         "category": "Mneme"
       },
       {
@@ -78,7 +78,7 @@
         {
           "id": "mneme.sidebar",
           "name": "Mneme",
-          "contextualTitle": "Mneme โ€” Memory layer"
+          "contextualTitle": "Mneme เนโฌโ€ Memory layer"
         }
       ]
     },
@@ -147,7 +147,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mneme-ai/core": "1.90.0"
+    "@mneme-ai/core": "1.91.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

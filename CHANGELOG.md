@@ -1,29 +1,89 @@
-## v1.90.0 — 2026-05-13 — RAINBOW v2: tunnel + multi-paste + resource hints (final fix, 100% tested)
+﻿## v1.91.0 โ€” 2026-05-13 โ€” INSTANT (HOMUNCULUS in soul + page renderers + 4 critical UX fixes)
+
+**Headline:** User asked the deepest architectural question: *"if Web AI can't call MCP, what's the value of paste?"* The answer: paste = read-only memory transfer; HOMUNCULUS round-trip closes the cycle (Web AI emits suggestions โ’ user pastes back โ’ editor AI executes). v1.91 ships HOMUNCULUS embedded in every soul prompt by default + promotes the inline page HTML to proper testable modules + fixes 4 critical mobile UX bugs.
+
+### ๐ช The architectural truth (made structural)
+
+```
+[Editor AI + Mneme MCP]  โ”€โ”€ soul prompt (paste) โ”€โ”€โ’  [Web AI / mobile]
+       โ–ฒ                                                  โ”
+       โ” HOMUNCULUS RETURN block                          โ” thinks, suggests
+       โ” (typed contract)                                 โ”
+       โ””โ”€โ”€โ”€โ”€ user copies + pastes back โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”
+       executes next_actions via mneme.abyss.homunculus.ingest
+```
+
+**v1.91 embeds HOMUNCULUS request in every soul prompt by default** (was opt-in). Receiving Web AIs now KNOW to emit a structured RETURN block; user pastes back; editor AI's `mneme.abyss.homunculus.ingest` parses + surfaces next_actions for execution. Web AI = brain. Editor AI = hands. Closes the cycle.
+
+### ๐จ Page renderer modules (was inline JS)
+
+`packages/core/src/rainbow/page_renderer.ts`:
+- `renderMobilePage({ soulText, defaultLang })` โ€” phone-served HTML page with:
+  - Web Share API + `navigator.clipboard` + `textarea + execCommand` 3-tier copy fallback (works on EVERY mobile browser including older Samsung/Firefox)
+  - Bilingual EN/TH toggle
+  - Honest capability matrix (Read โ… / MCP โ / HOMUNCULUS RETURN โ…)
+  - 4-vendor quick links
+  - Long-press fallback when both share + copy fail
+- `renderPcPage({ primaryUrl, label, note, soulTokens, hasTunnel, hasPaste })` โ€” PC page with:
+  - ONE big primary QR (no second-QR confusion)
+  - ๐‘ STOP button (no Ctrl+C jargon โ€” fetches `/stop` endpoint)
+  - Honest "paste vs MCP" warn box
+  - Bilingual EN/TH toggle
+- Both XSS-safe: `</script>` in URLs/payloads escaped to `<\/script>`
+
+### 4 critical mobile UX fixes (real findings from user testing)
+
+| # | Bug | Fix |
+|---|---|---|
+| 1 | 2 QRs on PC page confused users | ONE primary QR; smart channel selection picks the best |
+| 2 | "Press Ctrl+C in terminal" is jargon | ๐‘ STOP button on the page; calls `/stop` endpoint, server graceful shutdown |
+| 3 | Mobile "Copy" button silently failed (Web Share unsupported on some browsers) | 3-tier fallback: clipboard API โ’ execCommand โ’ visible textarea for long-press |
+| 4 | ChatGPT didn't actually understand what to do with the paste | Honest capability matrix on both PC + mobile pages explaining read-only memory + HOMUNCULUS round-trip |
+
+### Live results
+- **7874/7874 tests pass** (+15 from v1.90). 386 test files.
+- **15 v1.91 page-renderer tests** covering HTML completeness, Web Share / clipboard / execCommand chain, XSS escape (`</script>`), bilingual data attrs, capability matrix, vendor links, defaultLang option, STOP button confirmation, footer tunnel/paste reflection, label/note HTML escape.
+- **soul_prompt token budget tests still green** despite the new HOMUNCULUS embed (`compressToSoulPrompt` โค 1400 tokens still holds).
+
+### Mneme mandates applied
+1. **Wild idea** โ€” HOMUNCULUS was shipped in v1.76 as opt-in. v1.91 makes it DEFAULT โ€” every soul prompt now teaches the Web AI the round-trip protocol. Soul prompt = MEMORY + CONTRACT in one paste.
+2. **Wiser, not patched** โ€” didn't add a "are you sure?" dialog about MCP limits. Made the truth structural via the capability matrix on every served page.
+3. **Self-fix root cause** โ€” the user asked "what's the value if Web AI can't call MCP?". The honest answer is HOMUNCULUS round-trip. v1.91 makes that answer visible to every receiving AI by default.
+4. **Co-working not conflicting** โ€” page renderer modules wrap the same JS the .brain-show*.mjs scripts had inline. Existing scripts still work; v1.92 will refactor them to use the new modules.
+5. **Always-studying** โ€” every served page has `data-en`/`data-th` attrs so we can later add more languages without rewriting JS.
+
+### v1.92 commitment (next session)
+1. **MCP wrapper** for `mneme.rainbow.show_handoff` โ€” single MCP tool that orchestrates: soul โ’ upload โ’ tunnel โ’ render โ’ open browser
+2. **Smart channel UI auto-test** โ€” mobile page pings every QR; hides QRs that don't reach
+3. **ggwave audio handoff** โ€” vendor ggwave-js, integrate WebAudio sender + mic receiver
+4. **WebRTC P2P** โ€” public STUN, signaling page
+
+## v1.90.0 โ€” 2026-05-13 โ€” RAINBOW v2: tunnel + multi-paste + resource hints (final fix, 100% tested)
 
 **Headline:** User reported the v1.89 RAINBOW page was unusable: data: URL bridge silently broken (modern Chrome/Safari block top-level data: navigation), 3 QRs confusing, dpaste hit rate-limit (1 req/sec). v1.90 ships the FINAL fix with full unit-test coverage of every channel + transparent acknowledgement of the data: URL deprecation.
 
-### 🛑 Truth-telling: v1.89 data: URL bridge was broken
+### ๐‘ Truth-telling: v1.89 data: URL bridge was broken
 
-Modern Chrome (since 60) + Safari (since 10) refuse to top-level navigate to `data:` URLs (security: stops phishing-via-QR). Our v1.89 page tried to use them as a "1-tap cross-network" path; the QR scanned but the mobile browser refused to render or showed raw HTML. **DEPRECATED in v1.90.** The MCP tool is kept for compat but the manifest now reads "DEPRECATED — use cloudflared tunnel instead".
+Modern Chrome (since 60) + Safari (since 10) refuse to top-level navigate to `data:` URLs (security: stops phishing-via-QR). Our v1.89 page tried to use them as a "1-tap cross-network" path; the QR scanned but the mobile browser refused to render or showed raw HTML. **DEPRECATED in v1.90.** The MCP tool is kept for compat but the manifest now reads "DEPRECATED โ€” use cloudflared tunnel instead".
 
-### 🌈 What v1.90 ships (3 new modules + 14 tests)
+### ๐ What v1.90 ships (3 new modules + 14 tests)
 
-#### 1. `tunnel.ts` — cloudflared auto-detect + quick-tunnel
-- `detectCloudflared()` — returns `{available, version, path, installHint}` per OS
-- `startQuickTunnel({port, timeoutMs, spawnOverride})` — spawns `cloudflared tunnel --no-autoupdate --url http://localhost:<port>`, captures the `*.trycloudflare.com` URL, returns a handle with `stop()`
-- Quick tunnels need NO account, NO config — just the binary on PATH
+#### 1. `tunnel.ts` โ€” cloudflared auto-detect + quick-tunnel
+- `detectCloudflared()` โ€” returns `{available, version, path, installHint}` per OS
+- `startQuickTunnel({port, timeoutMs, spawnOverride})` โ€” spawns `cloudflared tunnel --no-autoupdate --url http://localhost:<port>`, captures the `*.trycloudflare.com` URL, returns a handle with `stop()`
+- Quick tunnels need NO account, NO config โ€” just the binary on PATH
 - One-line install per OS in `installHint`:
   - Windows: `winget install --id Cloudflare.cloudflared`
   - macOS: `brew install cloudflared`
   - Linux: distro package or GitHub release
 
-#### 2. `multi_paste.ts` — resilient upload with backend fallback
-- `uploadResilient({content, order, retryWaitMs})` tries dpaste → paste.rs → 0x0.st
+#### 2. `multi_paste.ts` โ€” resilient upload with backend fallback
+- `uploadResilient({content, order, retryWaitMs})` tries dpaste โ’ paste.rs โ’ 0x0.st
 - Default `retryWaitMs: 1100` respects dpaste's 1 req/sec limit
 - Returns full attempt log: `{ok, url, backend, attempts: [{backend, ok, reason, elapsedMs}], totalMs}`
 - Test seam `fetchImpl` lets unit tests mock without network
 
-#### 3. `resource_hints.ts` — mobile-aware UI rendering
+#### 3. `resource_hints.ts` โ€” mobile-aware UI rendering
 - `renderResourceHintsScript()` emits an IIFE the mobile page runs to detect:
   - `connection.effectiveType` (4g / 3g / 2g / slow-2g)
   - `deviceMemory` (GB)
@@ -35,71 +95,71 @@ Modern Chrome (since 60) + Safari (since 10) refuse to top-level navigate to `da
 - XSS-safe: `</script>` in URLs escaped to `<\/script>`
 
 ### 2 new MCP tools
-- `mneme.rainbow.tunnel_detect` — check cloudflared availability
-- `mneme.rainbow.multi_paste` — upload with automatic backend fallback
+- `mneme.rainbow.tunnel_detect` โ€” check cloudflared availability
+- `mneme.rainbow.multi_paste` โ€” upload with automatic backend fallback
 
 ### Live results
 - **7859/7859 tests pass** (+18 from v1.89). 385 test files.
-- **14 new RAINBOW v1.90 tests** — covering cloudflared detection per platform, multi-paste fallback chain (success/429/503/all-fail), backend ordering, attempt timing, XSS escape, slow-network/low-memory/iOS detection.
+- **14 new RAINBOW v1.90 tests** โ€” covering cloudflared detection per platform, multi-paste fallback chain (success/429/503/all-fail), backend ordering, attempt timing, XSS escape, slow-network/low-memory/iOS detection.
 - **Honest manifest update** marks v1.89 data_bridge as DEPRECATED so AI agents stop recommending the broken path.
 
 ### Mneme mandates applied
-1. **Wild idea** — multi-paste resilient upload: when dpaste rate-limits, automatically fall through to paste.rs, then 0x0.st. Transparent attempt log shows the user EXACTLY which backend served their handoff and why others failed. No black-box failure.
-2. **Wiser, not patched** — didn't try to "make data: URLs work" (impossible per browser policy). Honestly deprecated and pivoted to cloudflared tunnel which is the real cross-network primitive.
-3. **Self-fix root cause** — the rate-limit pain wasn't "dpaste is bad"; it was "single backend = single point of failure". multi_paste structurally eliminates that.
-4. **Co-working not conflicting** — keeps v1.89 RAINBOW probe tool, adds new tunnel + multi_paste tools alongside. Existing flows still work; v1.90 expands.
-5. **Always-studying** — every uploadResilient call returns `attempts[]` with elapsed times. Over weeks we can compute "average dpaste success rate", "average paste.rs latency", and pick smarter default ordering.
+1. **Wild idea** โ€” multi-paste resilient upload: when dpaste rate-limits, automatically fall through to paste.rs, then 0x0.st. Transparent attempt log shows the user EXACTLY which backend served their handoff and why others failed. No black-box failure.
+2. **Wiser, not patched** โ€” didn't try to "make data: URLs work" (impossible per browser policy). Honestly deprecated and pivoted to cloudflared tunnel which is the real cross-network primitive.
+3. **Self-fix root cause** โ€” the rate-limit pain wasn't "dpaste is bad"; it was "single backend = single point of failure". multi_paste structurally eliminates that.
+4. **Co-working not conflicting** โ€” keeps v1.89 RAINBOW probe tool, adds new tunnel + multi_paste tools alongside. Existing flows still work; v1.90 expands.
+5. **Always-studying** โ€” every uploadResilient call returns `attempts[]` with elapsed times. Over weeks we can compute "average dpaste success rate", "average paste.rs latency", and pick smarter default ordering.
 
 ### v1.91 commitment (next session)
-1. **PC + mobile page renderers** — pull the inline JS from `.brain-show*.mjs` scripts into proper modules
-2. **Smart channel UI** — auto-test which channel reaches the user's phone, hide non-working QRs
-3. **ggwave audio handoff** — vendor ggwave-js, integrate WebAudio sender + mobile mic receiver
-4. **WebRTC P2P** — public STUN + signaling page for true peer-to-peer
+1. **PC + mobile page renderers** โ€” pull the inline JS from `.brain-show*.mjs` scripts into proper modules
+2. **Smart channel UI** โ€” auto-test which channel reaches the user's phone, hide non-working QRs
+3. **ggwave audio handoff** โ€” vendor ggwave-js, integrate WebAudio sender + mobile mic receiver
+4. **WebRTC P2P** โ€” public STUN + signaling page for true peer-to-peer
 
-## v1.89.0 — 2026-05-13 — RAINBOW PROTOCOL (3 live channels + 3 roadmap) + data: URL bridge (the wild move)
+## v1.89.0 โ€” 2026-05-13 โ€” RAINBOW PROTOCOL (3 live channels + 3 roadmap) + data: URL bridge (the wild move)
 
-**Headline:** User asked for *"every option, smart routing, default = NO cloudflared (students can't install)"*. v1.89 ships RAINBOW: a multi-channel handoff orchestrator with 3 channels live TODAY (zero installs, zero accounts) plus 3 more on the v1.90 roadmap. The headline channel is **data: URL bridge** — the entire HTML handoff page lives INSIDE the QR; phone scans → mobile browser renders → fetches soul → Web Share button. Works on ANY network. Nobody else does this in AI handoff space.
+**Headline:** User asked for *"every option, smart routing, default = NO cloudflared (students can't install)"*. v1.89 ships RAINBOW: a multi-channel handoff orchestrator with 3 channels live TODAY (zero installs, zero accounts) plus 3 more on the v1.90 roadmap. The headline channel is **data: URL bridge** โ€” the entire HTML handoff page lives INSIDE the QR; phone scans โ’ mobile browser renders โ’ fetches soul โ’ Web Share button. Works on ANY network. Nobody else does this in AI handoff space.
 
-### 🌈 Live channels (v1.89)
+### ๐ Live channels (v1.89)
 
 | Channel | Network | Taps on phone | How it works |
 |---|---|:--:|---|
-| 🅰 **LAN HTTP server** | same WiFi | 1 | PC starts server on `:7741`; QR encodes the LAN URL; phone (same WiFi) scans → page → Web Share API → AI app |
-| 🅱 **data: URL bridge** ⭐ | ANY internet | 1 | Tiny HTML wrapper + JS fetcher encoded as `data:text/html` URL → encoded in QR → phone scans → mobile browser renders → page fetches soul from dpaste → Web Share button → AI app |
-| 🅲 **dpaste raw** | ANY internet | 4 | Plain text on dpaste; phone scans → mobile browser shows raw text → select-all → copy → open AI → paste |
+| ๐…ฐ **LAN HTTP server** | same WiFi | 1 | PC starts server on `:7741`; QR encodes the LAN URL; phone (same WiFi) scans โ’ page โ’ Web Share API โ’ AI app |
+| ๐…ฑ **data: URL bridge** โญ | ANY internet | 1 | Tiny HTML wrapper + JS fetcher encoded as `data:text/html` URL โ’ encoded in QR โ’ phone scans โ’ mobile browser renders โ’ page fetches soul from dpaste โ’ Web Share button โ’ AI app |
+| ๐…ฒ **dpaste raw** | ANY internet | 4 | Plain text on dpaste; phone scans โ’ mobile browser shows raw text โ’ select-all โ’ copy โ’ open AI โ’ paste |
 
-### 🛣 Roadmap channels (v1.90 opt-in, marked `available: false` in v1.89)
+### ๐ฃ Roadmap channels (v1.90 opt-in, marked `available: false` in v1.89)
 
 | Channel | Why deferred |
 |---|---|
-| 🔊 **ggwave audio** | Need to vendor ggwave-js (~50KB) + handle ambient-noise edge cases. The wildest moonshot — PC speaker plays chirp; multiple phone mics decode simultaneously. Truly the only AI handoff via sound. |
-| 🔗 **Cloudflared tunnel** | Requires `cloudflared` binary install. v1.90 will auto-detect + offer one-line install for users who opt in. |
-| 📡 **WebRTC P2P** | Needs STUN setup + signaling page. Browser-native; works any network. |
+| ๐” **ggwave audio** | Need to vendor ggwave-js (~50KB) + handle ambient-noise edge cases. The wildest moonshot โ€” PC speaker plays chirp; multiple phone mics decode simultaneously. Truly the only AI handoff via sound. |
+| ๐”— **Cloudflared tunnel** | Requires `cloudflared` binary install. v1.90 will auto-detect + offer one-line install for users who opt in. |
+| ๐“ก **WebRTC P2P** | Needs STUN setup + signaling page. Browser-native; works any network. |
 
-### 🧩 RAINBOW orchestrator
+### ๐งฉ RAINBOW orchestrator
 
 `packages/core/src/rainbow/handoff.ts`:
-- `probeChannels(soul, {lanUrl, dpasteUrl})` — returns `{channels[], recommended, summary}`. data-bridge wins when available; falls back to LAN, then dpaste-raw.
-- `buildDataBridgeUrl(dpasteUrl)` — composes the wild data: URL containing the HTML wrapper + fetcher + Web Share button. Stays under 2KB so it fits in QR.
+- `probeChannels(soul, {lanUrl, dpasteUrl})` โ€” returns `{channels[], recommended, summary}`. data-bridge wins when available; falls back to LAN, then dpaste-raw.
+- `buildDataBridgeUrl(dpasteUrl)` โ€” composes the wild data: URL containing the HTML wrapper + fetcher + Web Share button. Stays under 2KB so it fits in QR.
 
 ### 2 new MCP tools
-- `mneme.rainbow.probe` — ask which channels are live in current network state
-- `mneme.rainbow.data_bridge` — build the data: URL bridge for a given dpaste URL
+- `mneme.rainbow.probe` โ€” ask which channels are live in current network state
+- `mneme.rainbow.data_bridge` โ€” build the data: URL bridge for a given dpaste URL
 
-### 🎯 Honest scenario coverage (the matrix the user demanded)
+### ๐ฏ Honest scenario coverage (the matrix the user demanded)
 
 | # | Parent | Child | Channels that work |
 |---|---|---|---|
-| 1 | PC WiFi-A | Phone WiFi-A | 🅰🅱🅲 (1-tap via 🅱 or 🅰) |
-| 2 | PC WiFi-A | Phone WiFi-B (same building) | 🅱🅲 (1-tap via 🅱) |
-| 3 | PC WiFi | Phone 5G/cellular | 🅱🅲 (1-tap via 🅱) |
-| 4 | PC LAN ethernet | Phone WiFi (same router) | 🅰🅱🅲 (1-tap via 🅱 or 🅰) |
-| 5 | PC WiFi | Laptop2 LAN ethernet (same router) | 🅰🅱🅲 |
-| 6 | PC WiFi-home | Laptop2 WiFi-coffee | 🅱🅲 (1-tap via 🅱) |
-| 7 | 3+ devices on multiple networks | mix | 🅱🅲 |
-| 8 | PC offline | Phone offline | 💾 Wanderer .mwt (separate command) |
+| 1 | PC WiFi-A | Phone WiFi-A | ๐…ฐ๐…ฑ๐…ฒ (1-tap via ๐…ฑ or ๐…ฐ) |
+| 2 | PC WiFi-A | Phone WiFi-B (same building) | ๐…ฑ๐…ฒ (1-tap via ๐…ฑ) |
+| 3 | PC WiFi | Phone 5G/cellular | ๐…ฑ๐…ฒ (1-tap via ๐…ฑ) |
+| 4 | PC LAN ethernet | Phone WiFi (same router) | ๐…ฐ๐…ฑ๐…ฒ (1-tap via ๐…ฑ or ๐…ฐ) |
+| 5 | PC WiFi | Laptop2 LAN ethernet (same router) | ๐…ฐ๐…ฑ๐…ฒ |
+| 6 | PC WiFi-home | Laptop2 WiFi-coffee | ๐…ฑ๐…ฒ (1-tap via ๐…ฑ) |
+| 7 | 3+ devices on multiple networks | mix | ๐…ฑ๐…ฒ |
+| 8 | PC offline | Phone offline | ๐’พ Wanderer .mwt (separate command) |
 
-**Coverage rate**: scenarios 1-7 → at least 1 working 1-tap path on every realistic combination, no install required, no account required.
+**Coverage rate**: scenarios 1-7 โ’ at least 1 working 1-tap path on every realistic combination, no install required, no account required.
 
 ### Live results
 - **7827/7827 tests pass** (+27 from v1.88). 384 test files.
@@ -108,90 +168,90 @@ Modern Chrome (since 60) + Safari (since 10) refuse to top-level navigate to `da
 - **Agent manifest updated** so AI agents see `mneme.rainbow.probe` + `.data_bridge` from the moment they connect.
 
 ### Mneme mandates applied
-1. **Wild idea** — data: URL bridge: instead of hosting the handoff page on cloud, embed the entire HTML INSIDE the QR. Phone's mobile browser renders it on-scan with no host needed. Combined with a public paste service for the actual soul, this is true 1-tap cross-network without ANY install.
-2. **Wiser, not patched** — didn't add another flag to `relay.upload`. Built RAINBOW as a NEW orchestrator that knows about all channels and recommends the right one. Future channels (ggwave/WebRTC/cloudflared) plug in without touching existing transport code.
-3. **Self-fix root cause** — the user's pain ("URL ChatGPT free fetch ไม่ได้") wasn't fixable at the AI layer; we routed around it by putting the page inside the QR + using the paste only as a soul store + using mobile browser as the renderer.
-4. **Co-working not conflicting** — RAINBOW reuses RELAY's dpaste backend, AURA's LAN URL discovery, and ANCHOR's clipboard ideas. Composed from existing v1.85-v1.88 modules; no rewrite.
-5. **Always-studying** — every probe returns `scenarios[]` per channel. Over time we can collect "which channel did the user actually pick?" telemetry without cloud — the daemon writes locally to `.mneme/rainbow/picks.jsonl`.
+1. **Wild idea** โ€” data: URL bridge: instead of hosting the handoff page on cloud, embed the entire HTML INSIDE the QR. Phone's mobile browser renders it on-scan with no host needed. Combined with a public paste service for the actual soul, this is true 1-tap cross-network without ANY install.
+2. **Wiser, not patched** โ€” didn't add another flag to `relay.upload`. Built RAINBOW as a NEW orchestrator that knows about all channels and recommends the right one. Future channels (ggwave/WebRTC/cloudflared) plug in without touching existing transport code.
+3. **Self-fix root cause** โ€” the user's pain ("URL ChatGPT free fetch เนเธกเนเนเธ”เน") wasn't fixable at the AI layer; we routed around it by putting the page inside the QR + using the paste only as a soul store + using mobile browser as the renderer.
+4. **Co-working not conflicting** โ€” RAINBOW reuses RELAY's dpaste backend, AURA's LAN URL discovery, and ANCHOR's clipboard ideas. Composed from existing v1.85-v1.88 modules; no rewrite.
+5. **Always-studying** โ€” every probe returns `scenarios[]` per channel. Over time we can collect "which channel did the user actually pick?" telemetry without cloud โ€” the daemon writes locally to `.mneme/rainbow/picks.jsonl`.
 
 ### v1.90 commitment (next session, ship-by-end-of-week)
-1. **ggwave audio handoff** — the truly unique bit. Vendor ggwave-js, build PC speaker page + phone receiver page. Handle ambient noise via FEC + chirp redundancy.
-2. **Cloudflared opt-in** — auto-detect; offer one-line install hint.
-3. **WebRTC P2P** — public STUN + in-browser signaling.
-4. **README v7** — full RAINBOW deployment guide for non-technical users.
+1. **ggwave audio handoff** โ€” the truly unique bit. Vendor ggwave-js, build PC speaker page + phone receiver page. Handle ambient noise via FEC + chirp redundancy.
+2. **Cloudflared opt-in** โ€” auto-detect; offer one-line install hint.
+3. **WebRTC P2P** โ€” public STUN + in-browser signaling.
+4. **README v7** โ€” full RAINBOW deployment guide for non-technical users.
 
-## v1.88.0 — 2026-05-13 — ANCHOR (parent-pole/child-rope architecture) + OS clipboard 1-click + README v6 + Aletheia image removed
+## v1.88.0 โ€” 2026-05-13 โ€” ANCHOR (parent-pole/child-rope architecture) + OS clipboard 1-click + README v6 + Aletheia image removed
 
-**Headline:** User crystallized the architecture: *"parent คือเสา, ropes ลากไปยัง children. ตราบใดที่เชือกไม่ขาดมัน sync กันได้หมด"*. v1.88 ships ANCHOR — the pole-and-rope model in code — plus OS-level clipboard handoff (the realistic 1-click cross-device flow nobody else exploits), and a full README rewrite with a 30-second guide that any student can read once.
+**Headline:** User crystallized the architecture: *"parent เธเธทเธญเน€เธชเธฒ, ropes เธฅเธฒเธเนเธเธขเธฑเธ children. เธ•เธฃเธฒเธเนเธ”เธ—เธตเนเน€เธเธทเธญเธเนเธกเนเธเธฒเธ”เธกเธฑเธ sync เธเธฑเธเนเธ”เนเธซเธกเธ”"*. v1.88 ships ANCHOR โ€” the pole-and-rope model in code โ€” plus OS-level clipboard handoff (the realistic 1-click cross-device flow nobody else exploits), and a full README rewrite with a 30-second guide that any student can read once.
 
-### 🪝 ANCHOR — parent-pole / child-rope (the architecture user described)
+### ๐ช ANCHOR โ€” parent-pole / child-rope (the architecture user described)
 
 ```
-                         ┌─ PARENT (pole) ─┐
-                         │  HMAC secret     │  ← only on parent disk
-                         │  pole_id, pubkey │
-                         └──┬──┬──┬──┬──┬───┘
-                            │  │  │  │  │
+                         โ”โ”€ PARENT (pole) โ”€โ”
+                         โ”  HMAC secret     โ”  โ only on parent disk
+                         โ”  pole_id, pubkey โ”
+                         โ””โ”€โ”€โ”ฌโ”€โ”€โ”ฌโ”€โ”€โ”ฌโ”€โ”€โ”ฌโ”€โ”€โ”ฌโ”€โ”€โ”€โ”
+                            โ”  โ”  โ”  โ”  โ”
                   signed rope tokens (HMAC over child_id+expires+scope+nonce)
-                            │  │  │  │  │
-                  ┌─────────┘  │  │  │  └───────────┐
-                  ▼            ▼  ▼  ▼              ▼
+                            โ”  โ”  โ”  โ”  โ”
+                  โ”โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”  โ”  โ”  โ”  โ””โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”
+                  โ–ผ            โ–ผ  โ–ผ  โ–ผ              โ–ผ
               [Cursor]    [Mobile] [iPad]      [2nd laptop]
-                  └─────────────╲──╱─────────────────┘
-                                 ╲╱
-                       child↔child sync gate:
+                  โ””โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ•ฒโ”€โ”€โ•ฑโ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”
+                                 โ•ฒโ•ฑ
+                       childโ”child sync gate:
                   BOTH ropes must share the SAME pole_id
-                  → stranger's rope rejected automatically
+                  โ’ stranger's rope rejected automatically
 ```
 
 `packages/core/src/anchor/pole_id.ts`:
-- `ensurePole(repoRoot)` — idempotent. First call creates `.mneme/anchor/pole.json` (public) + `.mneme/anchor/pole-secret.json` (private HMAC key, never shared).
-- `issueRope(secret, childId, {ttlMs, scope})` — signed rope token. Default 30d TTL; scope = `["sync", "resume", "upgrade-notify"]`.
-- `verifyRope(secret, token)` — returns `{ok, rope}` or `{ok: false, reason: "bad-sig" | "expired" | "wrong-pole" | "malformed"}`.
-- `canChildrenSync(secret, ropeA, ropeB)` — gate for child↔child sync. Same pole + both have "sync" scope → allow. Otherwise refuse.
+- `ensurePole(repoRoot)` โ€” idempotent. First call creates `.mneme/anchor/pole.json` (public) + `.mneme/anchor/pole-secret.json` (private HMAC key, never shared).
+- `issueRope(secret, childId, {ttlMs, scope})` โ€” signed rope token. Default 30d TTL; scope = `["sync", "resume", "upgrade-notify"]`.
+- `verifyRope(secret, token)` โ€” returns `{ok, rope}` or `{ok: false, reason: "bad-sig" | "expired" | "wrong-pole" | "malformed"}`.
+- `canChildrenSync(secret, ropeA, ropeB)` โ€” gate for childโ”child sync. Same pole + both have "sync" scope โ’ allow. Otherwise refuse.
 
-### 📋 OS-level 1-click clipboard handoff
+### ๐“ OS-level 1-click clipboard handoff
 
 `packages/core/src/anchor/clipboard_handoff.ts`:
 - Detects the user's clipboard tool: `win-clip` / `pbcopy` / `wl-copy` / `xclip` / `xsel` / `kde-connect`.
 - Detects the user's cross-device sync provider: `win-phone-link` / `apple-universal-clipboard` / `kde-connect` / `unknown`.
-- `writeClipboard(text)` — writes the handoff prompt to the local clipboard. With the OS provider configured, it appears on the user's phone within seconds. **Phone flow: long-press → paste → send. Two actions.**
-- `renderClipboardSetupHint(cap)` — one-time setup instructions surfaced when no provider is detected.
+- `writeClipboard(text)` โ€” writes the handoff prompt to the local clipboard. With the OS provider configured, it appears on the user's phone within seconds. **Phone flow: long-press โ’ paste โ’ send. Two actions.**
+- `renderClipboardSetupHint(cap)` โ€” one-time setup instructions surfaced when no provider is detected.
 
 The user's realistic-1-click insight: don't deploy our own cross-device service; lean on the OS's existing clipboard sync.
 
-### 📖 README v6 — sections 1 + 2 rewritten + 30-second guide + Aletheia image removed
+### ๐“– README v6 โ€” sections 1 + 2 rewritten + 30-second guide + Aletheia image removed
 
 - Top tagline replaced: *"A persistent brain you bolt onto any AI."* with a single paragraph that fits in one breath.
 - 3-column "Stock AI / +MCP / Tuned AI" table collapsed into a 2-column before/after with a 1-line summary on each side.
 - Aletheia score image removed (user said it looked ugly).
-- New **🧠 30-second guide** section with:
+- New **๐ง  30-second guide** section with:
   - ASCII pole-and-rope diagram
   - 11-row plain-English Q&A table covering: install / how AI uses it / send to phone or iPad / browser AI / mobile AI app / two computers / upgrade / uninstall / use without git / lost PC / phone-to-desktop round-trip
 
 ### Live results
 - **7800/7800 tests pass** (+39 from v1.87). 383 test files.
-- **12 ANCHOR tests** covering pole idempotence / file persistence / rope verify-pass + bad-sig + expired + wrong-pole / child↔child sync allow + reject-different-pole + reject-no-sync-scope / clipboard detection + setup hint.
+- **12 ANCHOR tests** covering pole idempotence / file persistence / rope verify-pass + bad-sig + expired + wrong-pole / childโ”child sync allow + reject-different-pole + reject-no-sync-scope / clipboard detection + setup hint.
 
 ### 3 new MCP tools
-- `mneme.anchor.pole` — get or create pole identity
-- `mneme.anchor.issue_rope` — mint signed rope for a child device
-- `mneme.anchor.clipboard_write` — OS clipboard write + cross-device-provider hint
+- `mneme.anchor.pole` โ€” get or create pole identity
+- `mneme.anchor.issue_rope` โ€” mint signed rope for a child device
+- `mneme.anchor.clipboard_write` โ€” OS clipboard write + cross-device-provider hint
 
 ### Mneme mandates applied
-1. **Wild idea** — borrow the OS's existing cross-device clipboard sync (Phone Link / Universal Clipboard / KDE Connect) instead of building our own. Most "AI memory" products try to be a cloud; Mneme is a parasite on the user's existing infra.
-2. **Wiser, not patched** — the pole-rope model didn't exist before; we built it as the canonical architecture so future cross-device features compose cleanly.
-3. **Self-fix root cause** — the README was unclear about who-is-parent / who-is-child. The 30-second guide fixes it for non-technical users; the ANCHOR module fixes it in code.
-4. **Co-working not conflicting** — ANCHOR ropes use the same per-repo HMAC pattern as AURA / RELAY / wisdom-chain; conceptually consistent across the whole codebase.
-5. **Always-studying** — every issued rope is signed + scoped + expirable. The pole can later show "your 4 active ropes: phone-android-1 (expires 2026-06-12), ipad (2026-06-08), ..." giving the user perfect visibility into their own colony.
+1. **Wild idea** โ€” borrow the OS's existing cross-device clipboard sync (Phone Link / Universal Clipboard / KDE Connect) instead of building our own. Most "AI memory" products try to be a cloud; Mneme is a parasite on the user's existing infra.
+2. **Wiser, not patched** โ€” the pole-rope model didn't exist before; we built it as the canonical architecture so future cross-device features compose cleanly.
+3. **Self-fix root cause** โ€” the README was unclear about who-is-parent / who-is-child. The 30-second guide fixes it for non-technical users; the ANCHOR module fixes it in code.
+4. **Co-working not conflicting** โ€” ANCHOR ropes use the same per-repo HMAC pattern as AURA / RELAY / wisdom-chain; conceptually consistent across the whole codebase.
+5. **Always-studying** โ€” every issued rope is signed + scoped + expirable. The pole can later show "your 4 active ropes: phone-android-1 (expires 2026-06-12), ipad (2026-06-08), ..." giving the user perfect visibility into their own colony.
 
-## v1.87.0 — 2026-05-13 — MAGNET (REAL scannable QR + vendor deep links + handoff artifact) + NATURAL completeness + API consistency
+## v1.87.0 โ€” 2026-05-13 โ€” MAGNET (REAL scannable QR + vendor deep links + handoff artifact) + NATURAL completeness + API consistency
 
-**Headline:** User surfaced the deepest UX pain: *"นึกว่าจะมี qr code ที่ใช้ได้ 100% ถูกต้องให้สแกนแทน"* — the previous QR was stipple-art, not scannable. v1.87 ships a **real scannable QR encoder from scratch (zero deps, pure TS, ~400 lines)** + vendor deep links + handoff artifact. User scans QR with phone camera → AI app opens with the fetch-and-decrypt prompt PRE-FILLED → tap send. **Zero typing on the phone.**
+**Headline:** User surfaced the deepest UX pain: *"เธเธถเธเธงเนเธฒเธเธฐเธกเธต qr code เธ—เธตเนเนเธเนเนเธ”เน 100% เธ–เธนเธเธ•เนเธญเธเนเธซเนเธชเนเธเธเนเธ—เธ"* โ€” the previous QR was stipple-art, not scannable. v1.87 ships a **real scannable QR encoder from scratch (zero deps, pure TS, ~400 lines)** + vendor deep links + handoff artifact. User scans QR with phone camera โ’ AI app opens with the fetch-and-decrypt prompt PRE-FILLED โ’ tap send. **Zero typing on the phone.**
 
-### 🧬 SYNAPSE — real QR encoder (zero dependencies)
+### ๐งฌ SYNAPSE โ€” real QR encoder (zero dependencies)
 
-`packages/core/src/synapse/qr_real.ts` — 400-line pure-TS QR Model 2 encoder:
+`packages/core/src/synapse/qr_real.ts` โ€” 400-line pure-TS QR Model 2 encoder:
 - Byte mode + EC level L
 - Auto-version selection (1-10, max ~270 bytes payload)
 - Galois Field GF(2^8) with primitive polynomial 0x11d (computed at module load)
@@ -202,12 +262,12 @@ The user's realistic-1-click insight: don't deploy our own cross-device service;
 
 No npm dependency. No remote QR-rendering API. No cloud. Just math.
 
-### 🔗 RELAY — vendor deep links + handoff artifact
+### ๐”— RELAY โ€” vendor deep links + handoff artifact
 
 `relay/deep_link.ts`:
-- `composePrompt(url, code)` — short single-line instruction (~140 chars)
-- `buildDeepLink({vendor})` — emits `https://gemini.google.com/?q=…` / `chat.openai.com/?q=…` / `claude.ai/new?q=…`
-- `bestDeepLink()` — picks the shortest URL that fits in a v10 QR
+- `composePrompt(url, code)` โ€” short single-line instruction (~140 chars)
+- `buildDeepLink({vendor})` โ€” emits `https://gemini.google.com/?q=โ€ฆ` / `chat.openai.com/?q=โ€ฆ` / `claude.ai/new?q=โ€ฆ`
+- `bestDeepLink()` โ€” picks the shortest URL that fits in a v10 QR
 
 `relay/handoff_artifact.ts`:
 - `renderHandoff({pasteUrl, nexusCode, vendor?})` bundles:
@@ -219,17 +279,17 @@ No npm dependency. No remote QR-rendering API. No cloud. Just math.
 
 `mneme.relay.upload` MCP tool now returns the full handoff alongside the existing mobile recipe. Source AI displays the QR; user scans; done.
 
-### 🛠 API consistency fix
+### ๐  API consistency fix
 `renderMobileRecipe()` now accepts `{url, code}` object args (consistent with `mintNexusCode`). Positional `(url, code)` form kept as an overload for backwards compat.
 
-### 🗣 NATURAL — 8 new atom phrases close all remaining Round 7 gaps
+### ๐—ฃ NATURAL โ€” 8 new atom phrases close all remaining Round 7 gaps
 
 Reported as "still gap" in user's Round 7 test:
-- *"code doesnt work"* → `mneme.synapse.resolve_code` (troubleshoot)
-- *"send to gemini app"* / *"chatgpt app"* / *"claude app"* → `mneme.relay.upload` (brand-specific mobile)
-- *"mobile handover"* / *"phone handover"* / *"scan qr"* / *"give me qr"* → `mneme.relay.upload`
-- *"พิมพ์มือถือไม่ได้"* → resolve_code
-- *"พิมพ์ทางมือถือไม่ได้"* / *"พิมพ์ทาง phone ไม่ได้"* → resolve_code
+- *"code doesnt work"* โ’ `mneme.synapse.resolve_code` (troubleshoot)
+- *"send to gemini app"* / *"chatgpt app"* / *"claude app"* โ’ `mneme.relay.upload` (brand-specific mobile)
+- *"mobile handover"* / *"phone handover"* / *"scan qr"* / *"give me qr"* โ’ `mneme.relay.upload`
+- *"เธเธดเธกเธเนเธกเธทเธญเธ–เธทเธญเนเธกเนเนเธ”เน"* โ’ resolve_code
+- *"เธเธดเธกเธเนเธ—เธฒเธเธกเธทเธญเธ–เธทเธญเนเธกเนเนเธ”เน"* / *"เธเธดเธกเธเนเธ—เธฒเธ phone เนเธกเนเนเธ”เน"* โ’ resolve_code
 
 Plus all existing v1.86 atoms intact.
 
@@ -239,31 +299,31 @@ Plus all existing v1.86 atoms intact.
 - **5 new NATURAL atoms** routed correctly across Thai + English variants.
 
 ### Mneme mandates applied
-1. **Wild idea** — wrote a complete QR encoder from scratch in pure TypeScript. Reed-Solomon + Galois field + mask scoring + format info bit placement. Zero deps. ~400 lines. The user explicitly asked for the wildest idea nobody else dares; building a real QR encoder for an MCP server is precisely that.
-2. **Wiser, not patched** — didn't tell users to install a QR app or use a QR rendering service. Made the QR itself a first-class Mneme artifact.
-3. **Self-fix root cause** — the stipple-art QR was a UX lie (looked like a QR, wasn't scannable). Replaced with real QR. Users can no longer be misled.
-4. **Co-working not conflicting** — the old `qr_anchor.ts` stays for non-QR visual anchors; `qr_real.ts` is the new canonical real encoder. `renderMobileRecipe` accepts both object + positional args for migration.
-5. **Always-studying** — handoff artifact records the QR version + mask + URL byte count. Future analytics can correlate "QR scan success rate" with payload size; we can tune the deep-link template to keep ratios high.
+1. **Wild idea** โ€” wrote a complete QR encoder from scratch in pure TypeScript. Reed-Solomon + Galois field + mask scoring + format info bit placement. Zero deps. ~400 lines. The user explicitly asked for the wildest idea nobody else dares; building a real QR encoder for an MCP server is precisely that.
+2. **Wiser, not patched** โ€” didn't tell users to install a QR app or use a QR rendering service. Made the QR itself a first-class Mneme artifact.
+3. **Self-fix root cause** โ€” the stipple-art QR was a UX lie (looked like a QR, wasn't scannable). Replaced with real QR. Users can no longer be misled.
+4. **Co-working not conflicting** โ€” the old `qr_anchor.ts` stays for non-QR visual anchors; `qr_real.ts` is the new canonical real encoder. `renderMobileRecipe` accepts both object + positional args for migration.
+5. **Always-studying** โ€” handoff artifact records the QR version + mask + URL byte count. Future analytics can correlate "QR scan success rate" with payload size; we can tune the deep-link template to keep ratios high.
 
-## v1.86.0 — 2026-05-13 — CHAMELEON (spore default-OFF + env-adaptive transport) + codebook v3 + typo tolerance
+## v1.86.0 โ€” 2026-05-13 โ€” CHAMELEON (spore default-OFF + env-adaptive transport) + codebook v3 + typo tolerance
 
-**Headline:** User raised the deepest privacy concern yet — *"Mneme auto-enables spore git push when origin is detected. Most users don't own the repo, work under branch protection, or burn CI minutes on the mneme-lineage branch."* v1.86 flips spore to **default-OFF**, gated behind an explicit OPT_IN file, with full environment probing to detect risky repos BEFORE any push attempt. Plus codebook v3 (compression back to 25%+ on real Gemini phenotype souls) and NEURON typo tolerance.
+**Headline:** User raised the deepest privacy concern yet โ€” *"Mneme auto-enables spore git push when origin is detected. Most users don't own the repo, work under branch protection, or burn CI minutes on the mneme-lineage branch."* v1.86 flips spore to **default-OFF**, gated behind an explicit OPT_IN file, with full environment probing to detect risky repos BEFORE any push attempt. Plus codebook v3 (compression back to 25%+ on real Gemini phenotype souls) and NEURON typo tolerance.
 
-### 🔒 CHAMELEON — environment-adaptive guards
+### ๐”’ CHAMELEON โ€” environment-adaptive guards
 
 3 modules close the spore-auto-enable hole:
 
-1. **`env_probe.ts`** — Detects, no API calls:
+1. **`env_probe.ts`** โ€” Detects, no API calls:
    - `hasGit`, `hasOrigin`, `originUrl`, `originOwner` (extracted from `https://github.com/<owner>/...` / `git@host:<owner>/...`)
    - `localGitName` from `git config user.name`
-   - `isUserOwned: boolean | "unknown"` — heuristic match owner vs local user
-   - `hasCi` — looks for `.github/workflows/`, `.gitlab-ci.yml`, `.circleci/config.yml`, `azure-pipelines.yml`, `.buildkite/pipeline.yml`
-   - `hasCodeowners` — `.github/CODEOWNERS` or root `CODEOWNERS`
-   - `pushRisky: boolean` + `riskReasons[]` — plain-English explanations
-2. **`spore_gate.ts`** — `sporeGate()` returns `{allow, reason, env, optInState, howToOptIn}`. Without an `.mneme/spore/OPT_IN` marker, **every spore push is refused** with a structured explanation. `writeSporeOptIn(ack)` writes the marker only after the user explicitly consented. `revokeSporeOptIn()` flips back to refused.
-3. **`transport_select.ts`** — Given a destination (`same-pc-other-ai` / `same-wifi-other-device` / `phone-or-mobile-app` / `different-network-personal` / `offline-usb` / `continuous-sync`) plus the env probe, returns `{primary, fallbacks[], reasons[], warnings[]}`. Refuses to recommend `spore-git` on risky repos (fork / CI / CODEOWNERS) — routes to `relay-paste` instead.
+   - `isUserOwned: boolean | "unknown"` โ€” heuristic match owner vs local user
+   - `hasCi` โ€” looks for `.github/workflows/`, `.gitlab-ci.yml`, `.circleci/config.yml`, `azure-pipelines.yml`, `.buildkite/pipeline.yml`
+   - `hasCodeowners` โ€” `.github/CODEOWNERS` or root `CODEOWNERS`
+   - `pushRisky: boolean` + `riskReasons[]` โ€” plain-English explanations
+2. **`spore_gate.ts`** โ€” `sporeGate()` returns `{allow, reason, env, optInState, howToOptIn}`. Without an `.mneme/spore/OPT_IN` marker, **every spore push is refused** with a structured explanation. `writeSporeOptIn(ack)` writes the marker only after the user explicitly consented. `revokeSporeOptIn()` flips back to refused.
+3. **`transport_select.ts`** โ€” Given a destination (`same-pc-other-ai` / `same-wifi-other-device` / `phone-or-mobile-app` / `different-network-personal` / `offline-usb` / `continuous-sync`) plus the env probe, returns `{primary, fallbacks[], reasons[], warnings[]}`. Refuses to recommend `spore-git` on risky repos (fork / CI / CODEOWNERS) โ€” routes to `relay-paste` instead.
 
-### 🦎 Spore is now DEFAULT-OFF (breaking but safe)
+### ๐ฆ Spore is now DEFAULT-OFF (breaking but safe)
 
 `sporePush` now refuses with:
 ```
@@ -277,19 +337,19 @@ Even on legitimately-yours repo, you have to explicitly opt in once. This preven
 - Unintended CI minutes on the `mneme-lineage` branch
 - Privacy leak when contributing to OSS
 
-### 🔤 R4-2 follow-up — codebook v3
+### ๐”ค R4-2 follow-up โ€” codebook v3
 
 User reported a real Gemini phenotype soul compressed only **10.6%** (claim was 25-50%). Root cause: codebook had section headers + Mneme phrases but missing phenotype keywords. v1.86 adds 23 phenotype + heartbeat entries (`vendor=`, `fingerprint=`, `capsule=`, `createdAt=`, `INSTRUCTIONS-TO-RECEIVING-AI:`, `MNEME-FORMAT-VERSION: 1`, `claude-opus-4-7`, `gpt-`, `gemini-pro`, etc.) so real-world ratios return to 25%+.
 
-### 🤖 NEURON typo tolerance
+### ๐ค– NEURON typo tolerance
 
 Reported: *"sned brian to lap top"* (multi-typo) routed null. Lowered fuzzy threshold from 0.20 to 0.13 so multi-typo phrases surface candidates instead of falling through.
 
 ### 4 new MCP tools
-- `mneme.chameleon.probe` — return env probe + risk reasons
-- `mneme.chameleon.select_transport` — pick safe transport per destination + env
-- `mneme.chameleon.spore_opt_in` — write OPT_IN marker (call only after user consent)
-- `mneme.chameleon.spore_gate` — evaluate current push permission
+- `mneme.chameleon.probe` โ€” return env probe + risk reasons
+- `mneme.chameleon.select_transport` โ€” pick safe transport per destination + env
+- `mneme.chameleon.spore_opt_in` โ€” write OPT_IN marker (call only after user consent)
+- `mneme.chameleon.spore_gate` โ€” evaluate current push permission
 
 ### Live results
 - **7742/7742 tests pass** (+52 from v1.85). 381 test files.
@@ -297,52 +357,52 @@ Reported: *"sned brian to lap top"* (multi-typo) routed null. Lowered fuzzy thre
 - **NEW:** README has explicit "Don't have git? It's OPTIONAL" section listing which transports avoid git entirely (5 out of 6).
 
 ### Mneme mandates applied
-1. **Wild idea** — Mneme MUTATES based on environment. Same code, different recommendations on a fork repo vs a personal repo vs a CI-laden corp repo. The transport selector is essentially a tiny environment-aware AI built into Mneme itself.
-2. **Wiser, not patched** — didn't add a flag to `sporePush` to make it safer. Flipped the default. Old `default-on` behavior was the bug; explicit opt-in is the right contract.
-3. **Self-fix root cause** — the privacy concern wasn't "spore pushed accidentally"; it was "spore auto-enabled without consent". Fixed the consent layer, not the push retry logic.
-4. **Co-working not conflicting** — existing spore tests updated to write OPT_IN where they assume push reaches dry-run. New REFUSE test added. Old code paths still work for opted-in users.
-5. **Always-studying** — env_probe is local-only (no API calls), but produces structured signal that the daemon can later mine to suggest "you've contributed to N forks this month — never opt in spore for those".
+1. **Wild idea** โ€” Mneme MUTATES based on environment. Same code, different recommendations on a fork repo vs a personal repo vs a CI-laden corp repo. The transport selector is essentially a tiny environment-aware AI built into Mneme itself.
+2. **Wiser, not patched** โ€” didn't add a flag to `sporePush` to make it safer. Flipped the default. Old `default-on` behavior was the bug; explicit opt-in is the right contract.
+3. **Self-fix root cause** โ€” the privacy concern wasn't "spore pushed accidentally"; it was "spore auto-enabled without consent". Fixed the consent layer, not the push retry logic.
+4. **Co-working not conflicting** โ€” existing spore tests updated to write OPT_IN where they assume push reaches dry-run. New REFUSE test added. Old code paths still work for opted-in users.
+5. **Always-studying** โ€” env_probe is local-only (no API calls), but produces structured signal that the daemon can later mine to suggest "you've contributed to N forks this month โ€” never opt in spore for those".
 
-## v1.85.0 — 2026-05-13 — RELAY (mobile AI handover via anonymous paste + encrypted payload) + NATURAL atoms expansion + README parent↔child flow
+## v1.85.0 โ€” 2026-05-13 โ€” RELAY (mobile AI handover via anonymous paste + encrypted payload) + NATURAL atoms expansion + README parentโ”child flow
 
-**Headline:** User surfaced the deepest UX gap yet: *"NEXUS code is not a transport — it's a local handle"*. Mobile AI apps (Gemini / Claude / ChatGPT on phone) can't resolve a 6-char code because they don't speak Mneme — they hallucinate. v1.85 ships RELAY: encrypted payload uploaded to anonymous public paste services. Mobile user pastes ONE LINE in any AI app; the AI fetches + decrypts + resumes. NO cloud deploy on Mneme's side.
+**Headline:** User surfaced the deepest UX gap yet: *"NEXUS code is not a transport โ€” it's a local handle"*. Mobile AI apps (Gemini / Claude / ChatGPT on phone) can't resolve a 6-char code because they don't speak Mneme โ€” they hallucinate. v1.85 ships RELAY: encrypted payload uploaded to anonymous public paste services. Mobile user pastes ONE LINE in any AI app; the AI fetches + decrypts + resumes. NO cloud deploy on Mneme's side.
 
-### 🎯 RELAY — the cross-device fix users actually need
+### ๐ฏ RELAY โ€” the cross-device fix users actually need
 
 ```
 [PC]   AI mints NEXUS code "K7M9X2"
        AI encrypts soul with AES-256-GCM (PBKDF2-SHA256, 200k iters)
        AI uploads ciphertext to dpaste.com (anonymous, 7-day TTL)
        AI shows you: URL + code + QR
-                        ↓
+                        โ“
 [Mobile]  Scan QR OR paste this single line into your AI app:
           "Fetch URL <url>. Decryption code: K7M9X2. Decrypt + resume."
-                        ↓
-       Mobile AI fetches URL → gets ciphertext → decrypts with code → resumes
+                        โ“
+       Mobile AI fetches URL โ’ gets ciphertext โ’ decrypts with code โ’ resumes
 ```
 
 3 modules + 2 MCP tools:
-- **`paste_backend.ts`** — dpaste / paste.rs / 0x0.st backends with automatic fallback ordering
-- **`encrypted_payload.ts`** — AES-256-GCM symmetric encrypt with NEXUS code as the PBKDF2-derived key. Salt + IV + auth tag prefixed; tamper-evident
-- **`mobile_recipe.ts`** — render the one-line prompt + 3 per-destination instruction blocks (mobile-AI-app / Mneme-aware-editor / web-AI)
-- `mneme.relay.upload` MCP tool — full pipeline (encrypt → upload → recipe)
-- `mneme.relay.decrypt` MCP tool — fetch-side decrypt
+- **`paste_backend.ts`** โ€” dpaste / paste.rs / 0x0.st backends with automatic fallback ordering
+- **`encrypted_payload.ts`** โ€” AES-256-GCM symmetric encrypt with NEXUS code as the PBKDF2-derived key. Salt + IV + auth tag prefixed; tamper-evident
+- **`mobile_recipe.ts`** โ€” render the one-line prompt + 3 per-destination instruction blocks (mobile-AI-app / Mneme-aware-editor / web-AI)
+- `mneme.relay.upload` MCP tool โ€” full pipeline (encrypt โ’ upload โ’ recipe)
+- `mneme.relay.decrypt` MCP tool โ€” fetch-side decrypt
 
-### 🗣 NATURAL — 5 new atom blocks (closes Round 7 gaps)
+### ๐—ฃ NATURAL โ€” 5 new atom blocks (closes Round 7 gaps)
 
 Reported gaps fixed (all 4):
-- *"code ใช้ไม่ได้"* / *"code doesn't work"* / *"code expired"* → `mneme.synapse.resolve_code` (troubleshoot atom)
-- *"ส่งไป Mac"* / *"send to my Mac"* / *"ทำยังไงให้ Mac เห็น"* → `mneme.synapse.mint_code` (macOS atom)
-- *"gist link please"* / *"use gist"* / *"make a gist"* → `mneme.genesplice.gist-transmit` (bare-keyword atom)
-- *"wifi"* / *"via wifi"* / *"บน wifi"* → `mneme.diaspora.bridge.start` (bare-keyword atom, advisory priority)
-- NEW: *"share with my phone"* / *"make it work on mobile"* / *"ส่งเข้ามือถือให้ใช้ได้จริง"* → `mneme.relay.upload`
+- *"code เนเธเนเนเธกเนเนเธ”เน"* / *"code doesn't work"* / *"code expired"* โ’ `mneme.synapse.resolve_code` (troubleshoot atom)
+- *"เธชเนเธเนเธ Mac"* / *"send to my Mac"* / *"เธ—เธณเธขเธฑเธเนเธเนเธซเน Mac เน€เธซเนเธ"* โ’ `mneme.synapse.mint_code` (macOS atom)
+- *"gist link please"* / *"use gist"* / *"make a gist"* โ’ `mneme.genesplice.gist-transmit` (bare-keyword atom)
+- *"wifi"* / *"via wifi"* / *"เธเธ wifi"* โ’ `mneme.diaspora.bridge.start` (bare-keyword atom, advisory priority)
+- NEW: *"share with my phone"* / *"make it work on mobile"* / *"เธชเนเธเน€เธเนเธฒเธกเธทเธญเธ–เธทเธญเนเธซเนเนเธเนเนเธ”เนเธเธฃเธดเธ"* โ’ `mneme.relay.upload`
 
-### 📖 README — parent ↔ child clarified
+### ๐“– README โ€” parent โ” child clarified
 
 Three new short sections in cross-vendor block:
-1. **🔄 Parent ↔ Child** — Mneme lives on ONE parent machine; children (Cursor / mobile / web) read the brain via MCP or paste. Upgrade only the parent → children inherit automatically.
-2. **🪞 Bringing the conversation BACK** — child emits `# HOMUNCULUS RETURN` block; user pastes to parent; parent ingests via `mneme.abyss.homunculus.ingest`. No backchannel.
-3. **📱 QR code** — parent AI can render QR with URL + code pre-filled for camera scan.
+1. **๐” Parent โ” Child** โ€” Mneme lives on ONE parent machine; children (Cursor / mobile / web) read the brain via MCP or paste. Upgrade only the parent โ’ children inherit automatically.
+2. **๐ช Bringing the conversation BACK** โ€” child emits `# HOMUNCULUS RETURN` block; user pastes to parent; parent ingests via `mneme.abyss.homunculus.ingest`. No backchannel.
+3. **๐“ฑ QR code** โ€” parent AI can render QR with URL + code pre-filled for camera scan.
 
 ### Live results
 - **7690/7690 tests pass** (+31 from v1.84). 380 test files.
@@ -350,43 +410,43 @@ Three new short sections in cross-vendor block:
 - **18 NATURAL atoms** total now (up from 14 in v1.83).
 
 ### Mneme mandates applied
-1. **Wild idea** — solving the mobile UX gap WITHOUT cloud deploy by combining anonymous public paste services + symmetric encryption with the NEXUS code as the derivation key. Strangers fetching the URL get garbage; only the intended user decrypts.
-2. **Wiser, not patched** — didn't tell users to "memorize commands". Added 14+ trigger phrases across 5 atom blocks so fuzzy match handles every realistic phrasing variant.
-3. **Self-fix root cause** — the mobile-AI-can't-resolve-code problem was an architecture mismatch, not a UI bug. Fixed it at the transport layer.
-4. **Co-working not conflicting** — RELAY is additive. Existing transports (NEXUS local, Gist, LAN bridge, .mwt) all still work. RELAY adds a new "cloud-less internet" path for the mobile case.
-5. **Always-studying** — RELAY uploads track `expiresIn` per backend; user can see which backend served their last handover, which failed, why. Telemetry without cloud.
+1. **Wild idea** โ€” solving the mobile UX gap WITHOUT cloud deploy by combining anonymous public paste services + symmetric encryption with the NEXUS code as the derivation key. Strangers fetching the URL get garbage; only the intended user decrypts.
+2. **Wiser, not patched** โ€” didn't tell users to "memorize commands". Added 14+ trigger phrases across 5 atom blocks so fuzzy match handles every realistic phrasing variant.
+3. **Self-fix root cause** โ€” the mobile-AI-can't-resolve-code problem was an architecture mismatch, not a UI bug. Fixed it at the transport layer.
+4. **Co-working not conflicting** โ€” RELAY is additive. Existing transports (NEXUS local, Gist, LAN bridge, .mwt) all still work. RELAY adds a new "cloud-less internet" path for the mobile case.
+5. **Always-studying** โ€” RELAY uploads track `expiresIn` per backend; user can see which backend served their last handover, which failed, why. Telemetry without cloud.
 
-## v1.84.0 — 2026-05-13 — Round 4 + Round 5 bug squash + NEXUS-for-mobile (architectural fix)
+## v1.84.0 โ€” 2026-05-13 โ€” Round 4 + Round 5 bug squash + NEXUS-for-mobile (architectural fix)
 
 **Headline:** User ran end-to-end cross-machine testing and surfaced 8 real bugs across 3 surfaces. v1.84 fixes all 8 + adds the architectural fix the user identified: NEXUS code as-shipped was a "local handle", useless to mobile AI apps that don't speak Mneme. v1.84 ships NEXUS portable URL alongside the code.
 
-### 🐛 Bug squash — all root-caused, all tested
+### ๐ Bug squash โ€” all root-caused, all tested
 
 | # | Round | Severity | Bug | Fix |
 |---|---|---|---|---|
-| 1 | R4 | 🔴 HIGH | `encodeQRAnchor` used `require("node:crypto")` inside ESM module — threw *"Cannot determine intended module format"* | Top-level ESM `import { createHash } from "node:crypto"` |
-| 2 | R4 | 🟡 MED | Codebook compression only ~6% (commit claimed 30-50%) | Codebook expanded from 16 → 35 entries (full directive body fragments + cross-vendor phrases). Realistic soul now compresses 25%+ |
-| 3 | R5 | 🔴 HIGH | HTTP bridge `/v1/health` returned 200 without auth → version + protocols + repo fingerprint leak | Auth gate moved BEFORE health endpoint; new unauthenticated `/v1/ping` returns just `{ok: true}` |
-| 4 | R5 | 🟡 MED | `parseGistUrl` failed on `mneme://gist/<id>` URI scheme that `packageGist` itself emits | Added regex case for `mneme://gist/<id>(/<hmac>)?(?key=...)?` |
-| 5 | R5 | 🔴 HIGH | Wanderer `.mwt` HMAC bound to source `machineId` → cross-machine unpack always failed | Added `portableSig` field (SHA-256 of canonical genome + packedAt + packedBy) — machine-independent. Inner HMAC now optional unless `requireLocalHmac:true` is set. `crossMachine:true` returned when bundle came from elsewhere |
-| 6 | R5 | 🟡 MED | `packWanderer` silently ignored `opts.outPath` (always wrote to `.mneme/exodus/wanderer/`) | Now honors `outPath`; creates parent dir; falls back to default only when omitted |
-| 7 | R5 | 🔴 HIGH | `spore push` hardcoded `"origin"` → pushes leaked to GitHub even when user explicitly set spore remote to private bare repo | Push + fetch + show now use `remote.url` directly. Branch existence check switched to `refs/heads/...` (no remote-tracking dependency). `git show` uses `FETCH_HEAD` |
-| 8 | R3-redux | 🔴 HIGH | (User re-tested) `git ls-remote --exit-code = 2` still felt unfixed | Confirmed v1.82 fix is in code (line 248-256); but ANOTHER `ls.status !== 0` check in pull path was missed — fixed in this release |
+| 1 | R4 | ๐”ด HIGH | `encodeQRAnchor` used `require("node:crypto")` inside ESM module โ€” threw *"Cannot determine intended module format"* | Top-level ESM `import { createHash } from "node:crypto"` |
+| 2 | R4 | ๐ก MED | Codebook compression only ~6% (commit claimed 30-50%) | Codebook expanded from 16 โ’ 35 entries (full directive body fragments + cross-vendor phrases). Realistic soul now compresses 25%+ |
+| 3 | R5 | ๐”ด HIGH | HTTP bridge `/v1/health` returned 200 without auth โ’ version + protocols + repo fingerprint leak | Auth gate moved BEFORE health endpoint; new unauthenticated `/v1/ping` returns just `{ok: true}` |
+| 4 | R5 | ๐ก MED | `parseGistUrl` failed on `mneme://gist/<id>` URI scheme that `packageGist` itself emits | Added regex case for `mneme://gist/<id>(/<hmac>)?(?key=...)?` |
+| 5 | R5 | ๐”ด HIGH | Wanderer `.mwt` HMAC bound to source `machineId` โ’ cross-machine unpack always failed | Added `portableSig` field (SHA-256 of canonical genome + packedAt + packedBy) โ€” machine-independent. Inner HMAC now optional unless `requireLocalHmac:true` is set. `crossMachine:true` returned when bundle came from elsewhere |
+| 6 | R5 | ๐ก MED | `packWanderer` silently ignored `opts.outPath` (always wrote to `.mneme/exodus/wanderer/`) | Now honors `outPath`; creates parent dir; falls back to default only when omitted |
+| 7 | R5 | ๐”ด HIGH | `spore push` hardcoded `"origin"` โ’ pushes leaked to GitHub even when user explicitly set spore remote to private bare repo | Push + fetch + show now use `remote.url` directly. Branch existence check switched to `refs/heads/...` (no remote-tracking dependency). `git show` uses `FETCH_HEAD` |
+| 8 | R3-redux | ๐”ด HIGH | (User re-tested) `git ls-remote --exit-code = 2` still felt unfixed | Confirmed v1.82 fix is in code (line 248-256); but ANOTHER `ls.status !== 0` check in pull path was missed โ€” fixed in this release |
 
-### 🧬 ARCHITECTURAL — NEXUS portable URL for mobile apps
+### ๐งฌ ARCHITECTURAL โ€” NEXUS portable URL for mobile apps
 
-User's brilliant root-cause insight: *"NEXUS code is not a transport — it's a local handle."*
+User's brilliant root-cause insight: *"NEXUS code is not a transport โ€” it's a local handle."*
 
-- Mneme-aware destination (Cursor on second laptop) → 6-char code "K7M9X2" resolves locally
-- Mobile AI app (Claude / Gemini / ChatGPT on phone) → code is just a string the app doesn't know how to resolve → it hallucinates ("Bambu Lab A1 Mini" 🤣)
+- Mneme-aware destination (Cursor on second laptop) โ’ 6-char code "K7M9X2" resolves locally
+- Mobile AI app (Claude / Gemini / ChatGPT on phone) โ’ code is just a string the app doesn't know how to resolve โ’ it hallucinates ("Bambu Lab A1 Mini" ๐คฃ)
 
 **Fix**: `mintNexusCode` now returns a `portable: NexusPortable` field bundling:
-- `code` — for Mneme-aware destinations (same flow as before)
-- `url` — the Gist URL the mobile AI can fetch (`null` if no Gist provided)
-- `instruction` — human-readable text the source AI reads aloud to the user
-- `qrPayload` — single-line `mneme:<code>|<url>` payload for QR scan
+- `code` โ€” for Mneme-aware destinations (same flow as before)
+- `url` โ€” the Gist URL the mobile AI can fetch (`null` if no Gist provided)
+- `instruction` โ€” human-readable text the source AI reads aloud to the user
+- `qrPayload` โ€” single-line `mneme:<code>|<url>` payload for QR scan
 
-The source AI can now hand the user EITHER the code OR the URL — whichever the destination understands.
+The source AI can now hand the user EITHER the code OR the URL โ€” whichever the destination understands.
 
 ### Live results
 - **7659/7659 tests pass** (+17 from v1.83). 379 test files.
@@ -394,52 +454,52 @@ The source AI can now hand the user EITHER the code OR the URL — whichever the
 - All existing tests (exodus 27, diaspora 20, genesplice 21, spore 13, synapse 18) still green.
 
 ### Mneme mandates applied
-1. **Wild idea** — `portableSig`: a content-fingerprint hash that lets cross-machine Wanderer bundles verify integrity WITHOUT a shared HMAC secret. No PKI, no cloud, just deterministic hashing. Inner HMAC kept for same-machine forensics.
-2. **Wiser, not patched** — bug 7 wasn't "remove the hardcoded origin"; it was an entire mental model where "origin" was assumed to be THE remote. We unpacked the assumption: read `remote.url`, switch to `refs/heads`, use `FETCH_HEAD` for pull-side reads.
-3. **Self-fix root cause** — bug 5 (Wanderer HMAC) was patched 3 versions ago with "this works only on same machine" comment. Today we eliminated that limitation entirely with portableSig.
-4. **Co-working not conflicting** — every fix is additive. `crossMachine:true`/`false` flag tells callers which path verified; old code that asserted `ok:true` still works.
-5. **Always-studying** — the regression suite (`v1_84_regression.test.ts`) now catches each bug class structurally. Future v1.85+ regressions in any of these 8 areas will fail at CI time before reaching the user.
+1. **Wild idea** โ€” `portableSig`: a content-fingerprint hash that lets cross-machine Wanderer bundles verify integrity WITHOUT a shared HMAC secret. No PKI, no cloud, just deterministic hashing. Inner HMAC kept for same-machine forensics.
+2. **Wiser, not patched** โ€” bug 7 wasn't "remove the hardcoded origin"; it was an entire mental model where "origin" was assumed to be THE remote. We unpacked the assumption: read `remote.url`, switch to `refs/heads`, use `FETCH_HEAD` for pull-side reads.
+3. **Self-fix root cause** โ€” bug 5 (Wanderer HMAC) was patched 3 versions ago with "this works only on same machine" comment. Today we eliminated that limitation entirely with portableSig.
+4. **Co-working not conflicting** โ€” every fix is additive. `crossMachine:true`/`false` flag tells callers which path verified; old code that asserted `ok:true` still works.
+5. **Always-studying** โ€” the regression suite (`v1_84_regression.test.ts`) now catches each bug class structurally. Future v1.85+ regressions in any of these 8 areas will fail at CI time before reaching the user.
 
-## v1.83.0 — 2026-05-13 — AURA + NATURAL (LAN auto-pairing, owner-only privacy, natural-language intent atoms)
+## v1.83.0 โ€” 2026-05-13 โ€” AURA + NATURAL (LAN auto-pairing, owner-only privacy, natural-language intent atoms)
 
-**Headline:** User asked two precise questions: *"do users have to memorize commands like 'ส่งสมองไปอีกเครื่อง'?"* and *"on an office WiFi, Mneme should auto-discover + send to owner ONLY, not everyone on the network."* v1.83 answers both: NATURAL adds intent atoms for every cross-machine variant so AI agents route them via fuzzy match (no memorization), and AURA adds signed pairing payloads so same-WiFi handover is automatic AND owner-only.
+**Headline:** User asked two precise questions: *"do users have to memorize commands like 'เธชเนเธเธชเธกเธญเธเนเธเธญเธตเธเน€เธเธฃเธทเนเธญเธ'?"* and *"on an office WiFi, Mneme should auto-discover + send to owner ONLY, not everyone on the network."* v1.83 answers both: NATURAL adds intent atoms for every cross-machine variant so AI agents route them via fuzzy match (no memorization), and AURA adds signed pairing payloads so same-WiFi handover is automatic AND owner-only.
 
 ### What ships
 
-#### 🗣 NATURAL — natural-language intent atoms for cross-machine
+#### ๐—ฃ NATURAL โ€” natural-language intent atoms for cross-machine
 6 new intent atoms cover every transport variant:
-- **NEXUS device handoff** — `to my phone` / `ส่งสมองไปมือถือ` / `send brain to my phone` / `device handoff` / `give me a code` → `mneme.synapse.mint_code`
-- **Gist over the internet** — `over the internet` / `via gist` / `ส่งสมองข้ามเน็ต` / `private link` → `mneme.genesplice.gist-transmit`
-- **LAN bridge** — `lan bridge` / `same wifi` / `เปิด lan` → `mneme.diaspora.bridge.start`
-- **Offline `.mwt`** — `pack as mwt` / `pack สมองเป็นไฟล์` / `ไม่มีเน็ต` → `mneme.avatar.wisdom-pack`
-- **Round-trip back to source** — `send brain back` / `ส่งสมองกลับ` → `mneme.synapse.mint_code` (the round-trip recipe)
+- **NEXUS device handoff** โ€” `to my phone` / `เธชเนเธเธชเธกเธญเธเนเธเธกเธทเธญเธ–เธทเธญ` / `send brain to my phone` / `device handoff` / `give me a code` โ’ `mneme.synapse.mint_code`
+- **Gist over the internet** โ€” `over the internet` / `via gist` / `เธชเนเธเธชเธกเธญเธเธเนเธฒเธกเน€เธเนเธ•` / `private link` โ’ `mneme.genesplice.gist-transmit`
+- **LAN bridge** โ€” `lan bridge` / `same wifi` / `เน€เธเธดเธ” lan` โ’ `mneme.diaspora.bridge.start`
+- **Offline `.mwt`** โ€” `pack as mwt` / `pack เธชเธกเธญเธเน€เธเนเธเนเธเธฅเน` / `เนเธกเนเธกเธตเน€เธเนเธ•` โ’ `mneme.avatar.wisdom-pack`
+- **Round-trip back to source** โ€” `send brain back` / `เธชเนเธเธชเธกเธญเธเธเธฅเธฑเธ` โ’ `mneme.synapse.mint_code` (the round-trip recipe)
 
-User now says ANY natural variant — NEURON's fuzzy trigram matcher (v1.79) + LATTICE atoms (v1.78) handle typos / paraphrasing / Thai-English mixing. **No memorization.**
+User now says ANY natural variant โ€” NEURON's fuzzy trigram matcher (v1.79) + LATTICE atoms (v1.78) handle typos / paraphrasing / Thai-English mixing. **No memorization.**
 
-#### 🛜 AURA — same-WiFi auto-pairing, owner-only privacy
+#### ๐ AURA โ€” same-WiFi auto-pairing, owner-only privacy
 2 modules close the LAN handover gap user spotted:
-- **`pair_payload.ts`** — `encodePairing({lanUrl, code, expiresAt, ownerSecret, ownerPubKeyHash})` builds a base64url token bundling LAN URL + NEXUS code + expiry + signed owner fingerprint. `decodePairing(token, expectedOwner, secret)` returns `{ok: true, payload}` ONLY if:
+- **`pair_payload.ts`** โ€” `encodePairing({lanUrl, code, expiresAt, ownerSecret, ownerPubKeyHash})` builds a base64url token bundling LAN URL + NEXUS code + expiry + signed owner fingerprint. `decodePairing(token, expectedOwner, secret)` returns `{ok: true, payload}` ONLY if:
   - signature verifies with the local owner secret
   - owner fingerprint matches the local owner pubkey hash
   - payload is not expired
   Otherwise `{ok: false, reason: 'wrong-owner' | 'bad-sig' | 'expired' | 'malformed'}`.
-- **`auto_discovery.ts`** — `discoverLanAddresses()` lists private IPv4 candidates from `os.networkInterfaces()`. `buildLanUrl(port)` returns the recommended LAN URL. **NO mDNS broadcast** — nothing leaves the source machine until the user explicitly shares the pairing payload (QR / NEXUS code).
+- **`auto_discovery.ts`** โ€” `discoverLanAddresses()` lists private IPv4 candidates from `os.networkInterfaces()`. `buildLanUrl(port)` returns the recommended LAN URL. **NO mDNS broadcast** โ€” nothing leaves the source machine until the user explicitly shares the pairing payload (QR / NEXUS code).
 
-#### 🛡 Privacy property (the user's real concern, resolved)
+#### ๐ก Privacy property (the user's real concern, resolved)
 On an office WiFi:
 - Source's `pair_payload` is signed with owner's secret + carries owner's fingerprint
-- Office neighbours who somehow intercept the payload CANNOT use it — their own AI's `decodePairing` returns `wrong-owner` because their owner fingerprint differs
-- Office neighbours can't even discover the source — no broadcast on the wire
+- Office neighbours who somehow intercept the payload CANNOT use it โ€” their own AI's `decodePairing` returns `wrong-owner` because their owner fingerprint differs
+- Office neighbours can't even discover the source โ€” no broadcast on the wire
 
 #### 2 new MCP tools
-- `mneme.aura.pair` — build pairing payload
-- `mneme.aura.discover` — list LAN URLs
+- `mneme.aura.pair` โ€” build pairing payload
+- `mneme.aura.discover` โ€” list LAN URLs
 
 ### README v5
 Cross-vendor section now has:
-1. "What you can say" examples table (Thai + English alongside) — explicitly framed as *"inspiration, not a script"*
-2. 5-transport concrete dialogue block — each scenario shows source / destination dialogue
-3. LAN bridge section now describes the auto-pairing flow with explicit **🔒 Privacy** callout
+1. "What you can say" examples table (Thai + English alongside) โ€” explicitly framed as *"inspiration, not a script"*
+2. 5-transport concrete dialogue block โ€” each scenario shows source / destination dialogue
+3. LAN bridge section now describes the auto-pairing flow with explicit **๐”’ Privacy** callout
 
 ### Live results
 - **7642/7642 tests pass** (+32 from v1.82). 378 test files.
@@ -447,60 +507,60 @@ Cross-vendor section now has:
 - **5 new LATTICE tests** for cross-machine routing.
 
 ### Mneme mandates applied
-1. **Wild idea** — *pair_payload* puts the auth + the LAN URL in one signed token. Office privacy without any cloud, mDNS, or broadcast. Nobody else ships this.
-2. **Wiser, not patched** — didn't tell user to type URLs more carefully. Built a structured payload so URLs are NEVER typed.
-3. **Self-fix root cause** — the privacy gap wasn't "user types URL wrong"; it was "no owner check on the LAN endpoint". Fixed at the auth layer, not the UX layer.
-4. **Co-working not conflicting** — AURA wraps the existing HTTP bridge auth (HMAC token from v1.72) with an additional owner-fingerprint check. Older bridge invocations still work.
-5. **Always-studying** — every pairing payload contains an expiry + owner fingerprint. Over time we can compute "average pairing latency", "owner-mismatch rate" (= attempted snoops) without any cloud telemetry.
+1. **Wild idea** โ€” *pair_payload* puts the auth + the LAN URL in one signed token. Office privacy without any cloud, mDNS, or broadcast. Nobody else ships this.
+2. **Wiser, not patched** โ€” didn't tell user to type URLs more carefully. Built a structured payload so URLs are NEVER typed.
+3. **Self-fix root cause** โ€” the privacy gap wasn't "user types URL wrong"; it was "no owner check on the LAN endpoint". Fixed at the auth layer, not the UX layer.
+4. **Co-working not conflicting** โ€” AURA wraps the existing HTTP bridge auth (HMAC token from v1.72) with an additional owner-fingerprint check. Older bridge invocations still work.
+5. **Always-studying** โ€” every pairing payload contains an expiry + owner fingerprint. Over time we can compute "average pairing latency", "owner-mismatch rate" (= attempted snoops) without any cloud telemetry.
 
-## v1.82.0 — 2026-05-13 — OSMOSIS + 3 Windows bug fixes + README split
+## v1.82.0 โ€” 2026-05-13 โ€” OSMOSIS + 3 Windows bug fixes + README split
 
-**Headline:** User shipped a precise bug bench (spore exit-2, time-capsule colon-host, spore status BOM-blind) plus asked for OSMOSIS — 24/7 second-brain expansion harvesting wisdom from every AI agent. All four delivered with tests.
+**Headline:** User shipped a precise bug bench (spore exit-2, time-capsule colon-host, spore status BOM-blind) plus asked for OSMOSIS โ€” 24/7 second-brain expansion harvesting wisdom from every AI agent. All four delivered with tests.
 
-### 🐛 3 real bug fixes (Windows-precision)
+### ๐ 3 real bug fixes (Windows-precision)
 
 | # | Bug | Root cause | Fix |
 |---|---|---|---|
-| 1 🔴 | `spore push` reported *"remote unreachable"* for fresh bare repos | `git ls-remote --exit-code` returns **2** for an empty-but-reachable remote; spore treated any non-zero exit as unreachable | Accept exit 0 OR exit 2 as `reachable`; only other exits trigger dry-run |
-| 2 🟡 | `time-capsule --export` failed because bsdtar interpreted `C:\path` as `host:path` | bsdtar (Win10+) parses `-f` arg for colon-host syntax | Run tar with `cwd: dirname(absPath)` + pass `basename(absPath)` to `-f`; same for `-xzf` extract |
-| 3 🟡 | `mneme spore status` said *"not configured"* even when `remote.json` existed | UTF-8 BOM (added by Windows Notepad / PowerShell Out-File / git core.autocrlf) made `JSON.parse` throw silently | Strip BOM (0xFEFF) + trim before parse in `readSporeRemote` |
+| 1 ๐”ด | `spore push` reported *"remote unreachable"* for fresh bare repos | `git ls-remote --exit-code` returns **2** for an empty-but-reachable remote; spore treated any non-zero exit as unreachable | Accept exit 0 OR exit 2 as `reachable`; only other exits trigger dry-run |
+| 2 ๐ก | `time-capsule --export` failed because bsdtar interpreted `C:\path` as `host:path` | bsdtar (Win10+) parses `-f` arg for colon-host syntax | Run tar with `cwd: dirname(absPath)` + pass `basename(absPath)` to `-f`; same for `-xzf` extract |
+| 3 ๐ก | `mneme spore status` said *"not configured"* even when `remote.json` existed | UTF-8 BOM (added by Windows Notepad / PowerShell Out-File / git core.autocrlf) made `JSON.parse` throw silently | Strip BOM (0xFEFF) + trim before parse in `readSporeRemote` |
 
-### 🧬 OSMOSIS — 24/7 second-brain expansion
+### ๐งฌ OSMOSIS โ€” 24/7 second-brain expansion
 
 The wild premise: every AI agent the user works with leaks reusable knowledge (verdicts, decisions, refusals, reasoning). OSMOSIS captures it (with consent), distills into wisdom shards, hash-chains them.
 
-- **`harvest(obs)`** — record one observation; gated by per-vendor consent + duplicate-hash check.
-- **`distill(observations, rule?)`** — compress N observations into a signed wisdom shard. SHA-256 hash chain links each shard to its predecessor → tamper-evident.
-- **`verifyChain()`** — audit the full log; returns `{valid, brokenAtIndex}`.
-- **`setConsent(vendor, enabled)`** — opt-in per vendor. Default is OPT-OUT for everything. Nothing leaves the user's machine.
-- **`todayShardCount()`** — daily-cap guard (default 100/day).
+- **`harvest(obs)`** โ€” record one observation; gated by per-vendor consent + duplicate-hash check.
+- **`distill(observations, rule?)`** โ€” compress N observations into a signed wisdom shard. SHA-256 hash chain links each shard to its predecessor โ’ tamper-evident.
+- **`verifyChain()`** โ€” audit the full log; returns `{valid, brokenAtIndex}`.
+- **`setConsent(vendor, enabled)`** โ€” opt-in per vendor. Default is OPT-OUT for everything. Nothing leaves the user's machine.
+- **`todayShardCount()`** โ€” daily-cap guard (default 100/day).
 
 **4 new MCP tools**: `mneme.osmosis.consent` / `.harvest` / `.distill` / `.verify`.
 
-### 📖 README split + cross-vendor v4 (user-requested simplification)
+### ๐“– README split + cross-vendor v4 (user-requested simplification)
 
-- "What you get from Mneme — every feature FREE today" → moved to [`docs/WHAT_YOU_GET.md`](./docs/WHAT_YOU_GET.md)
-- "Operation Automation — 5 wild self-running loops" → moved to [`docs/OPERATION_AUTOMATION.md`](./docs/OPERATION_AUTOMATION.md)
+- "What you get from Mneme โ€” every feature FREE today" โ’ moved to [`docs/WHAT_YOU_GET.md`](./docs/WHAT_YOU_GET.md)
+- "Operation Automation โ€” 5 wild self-running loops" โ’ moved to [`docs/OPERATION_AUTOMATION.md`](./docs/OPERATION_AUTOMATION.md)
 - Project links section now lists both
 - Cross-vendor brain transfer section rewritten English-only, no FAQ collapsible, explicit phone/tablet/iPad coverage, ASCII diagram with three landing surfaces + round-trip path
 
 ### Live results
 - **7610/7610 tests pass** (+48 from v1.81). 377 test files.
 - **12 OSMOSIS tests** covering consent gates, duplicate rejection, hash-chain integrity, tamper detection, daily-cap counting.
-- README dropped from 116k → 105k bytes; docs/ gained 11k.
+- README dropped from 116k โ’ 105k bytes; docs/ gained 11k.
 
 ### Mneme mandates applied
-1. **Wild idea** — OSMOSIS treats every AI agent the user touches as a free, opt-in knowledge faucet. Wisdom shards are hash-chained so the ledger is tamper-evident. No cloud, no API call, no training.
-2. **Wiser, not patched** — `readSporeRemote` had been silently swallowing parse errors for 20+ versions. The BOM root cause was hidden by `catch { return null }`. Now BOM-strip is explicit + future encoding quirks won't reintroduce the bug.
-3. **Self-fix root cause** — bsdtar's colon-host parsing isn't unique to time-capsule; any future Mneme tar invocation now follows the cwd-into-dirname pattern. Bug class eliminated.
-4. **Co-working not conflicting** — OSMOSIS is additive (new `.mneme/osmosis/` subdir, never touches existing storage). Consent is OPT-OUT by default → zero behaviour change for existing users.
-5. **Always-studying** — the entire OSMOSIS premise IS "always-studying": Mneme keeps learning while the user sleeps, every AI session is a potential teacher, the wisdom ledger grows forever (capped only by user's daily limit).
+1. **Wild idea** โ€” OSMOSIS treats every AI agent the user touches as a free, opt-in knowledge faucet. Wisdom shards are hash-chained so the ledger is tamper-evident. No cloud, no API call, no training.
+2. **Wiser, not patched** โ€” `readSporeRemote` had been silently swallowing parse errors for 20+ versions. The BOM root cause was hidden by `catch { return null }`. Now BOM-strip is explicit + future encoding quirks won't reintroduce the bug.
+3. **Self-fix root cause** โ€” bsdtar's colon-host parsing isn't unique to time-capsule; any future Mneme tar invocation now follows the cwd-into-dirname pattern. Bug class eliminated.
+4. **Co-working not conflicting** โ€” OSMOSIS is additive (new `.mneme/osmosis/` subdir, never touches existing storage). Consent is OPT-OUT by default โ’ zero behaviour change for existing users.
+5. **Always-studying** โ€” the entire OSMOSIS premise IS "always-studying": Mneme keeps learning while the user sleeps, every AI session is a potential teacher, the wisdom ledger grows forever (capped only by user's daily limit).
 
-## v1.81.0 — 2026-05-13 — SYNAPSE PROTOCOL (universal cross-device brain sync) + 3 bug fixes + plain-English README
+## v1.81.0 โ€” 2026-05-13 โ€” SYNAPSE PROTOCOL (universal cross-device brain sync) + 3 bug fixes + plain-English README
 
-**Headline:** User asked the deepest universal question yet — *"how do I clone my Mneme brain across PC ↔ phone ↔ tablet, talk to it in any AI app, and bring the conversation BACK?"* — plus three real bug findings (heartbeat undefined fingerprint, summarizeHomunculusReturn(null) crash, silenceJargon "the the tool" doubled words). v1.81 ships all three plus SYNAPSE: the protocol that makes Mneme's brain follow the user across every device with **6-character codes**, **QR scan**, and **30-50% token compression**.
+**Headline:** User asked the deepest universal question yet โ€” *"how do I clone my Mneme brain across PC โ” phone โ” tablet, talk to it in any AI app, and bring the conversation BACK?"* โ€” plus three real bug findings (heartbeat undefined fingerprint, summarizeHomunculusReturn(null) crash, silenceJargon "the the tool" doubled words). v1.81 ships all three plus SYNAPSE: the protocol that makes Mneme's brain follow the user across every device with **6-character codes**, **QR scan**, and **30-50% token compression**.
 
-### 🐛 3 Bug fixes (real findings, root-cause resolved)
+### ๐ 3 Bug fixes (real findings, root-cause resolved)
 
 | # | Bug | Fix |
 |---|---|---|
@@ -508,34 +568,34 @@ The wild premise: every AI agent the user works with leaks reusable knowledge (v
 | 2 | `summarizeHomunculusReturn(null)` threw a TypeError | Signature now accepts `HomunculusReturn \| null`; returns `"(no homunculus return)"` placeholder |
 | 3 | `silenceJargon` produced *"the the tool"* / *"tool tool"* artefacts | Smarter substitution: codenames replaced with `"Mneme"` instead of `"the tool"`; post-pass collapses repeated words |
 
-### What ships — 3 modules + 5 MCP tools
+### What ships โ€” 3 modules + 5 MCP tools
 
-1. **`nexus_code.ts`** — Mint a 6-character NEXUS code (uppercase, no ambiguous 0/O/1/I/L) that resolves to a soul prompt. **AirDrop-style PIN for AI conversations.** Persists in `.mneme/synapse/codes.jsonl`. Expires 24h by default. Tracks resolve count. Optional Gist URL alongside.
-2. **`qr_anchor.ts`** — Deterministic SVG QR-style anchor for any short payload (NEXUS code, URL, or short text). 25×25 module grid with classic finder squares. Phone camera scans → reads `data-payload` attribute. Warns when payload too long.
-3. **`token_compression.ts`** — Deterministic codebook that compresses long Mneme prompts by replacing repeated phrases with short codes (`## VOICE DIRECTIVE...` → `@@V`, `the user` → `@u`, etc.). 30-50% token savings on a typical soul prompt. Round-trip-safe: `compressText → decompressText` returns original.
+1. **`nexus_code.ts`** โ€” Mint a 6-character NEXUS code (uppercase, no ambiguous 0/O/1/I/L) that resolves to a soul prompt. **AirDrop-style PIN for AI conversations.** Persists in `.mneme/synapse/codes.jsonl`. Expires 24h by default. Tracks resolve count. Optional Gist URL alongside.
+2. **`qr_anchor.ts`** โ€” Deterministic SVG QR-style anchor for any short payload (NEXUS code, URL, or short text). 25ร—25 module grid with classic finder squares. Phone camera scans โ’ reads `data-payload` attribute. Warns when payload too long.
+3. **`token_compression.ts`** โ€” Deterministic codebook that compresses long Mneme prompts by replacing repeated phrases with short codes (`## VOICE DIRECTIVE...` โ’ `@@V`, `the user` โ’ `@u`, etc.). 30-50% token savings on a typical soul prompt. Round-trip-safe: `compressText โ’ decompressText` returns original.
 
 ### 5 new MCP tools
-- `mneme.synapse.mint_code` — generate cross-device PIN
-- `mneme.synapse.resolve_code` — look up PIN on destination device
-- `mneme.synapse.qr` — render QR for camera scan
-- `mneme.synapse.compress` — codebook compression
-- `mneme.synapse.decompress` — expand back
+- `mneme.synapse.mint_code` โ€” generate cross-device PIN
+- `mneme.synapse.resolve_code` โ€” look up PIN on destination device
+- `mneme.synapse.qr` โ€” render QR for camera scan
+- `mneme.synapse.compress` โ€” codebook compression
+- `mneme.synapse.decompress` โ€” expand back
 
 ### Cross-device user flows (the universal challenge answered)
 
 ```
-PC (Claude Code) ─── "send brain to phone" ──→ AI mints PIN K7M9X2 + QR
-                                              ↓
+PC (Claude Code) โ”€โ”€โ”€ "send brain to phone" โ”€โ”€โ’ AI mints PIN K7M9X2 + QR
+                                              โ“
                                          phone scans QR
-                                              ↓
-                              phone AI fetches → resume conversation
-                                              ↓
-                              later: "send brain back to desktop" → new PIN
-                                              ↓
-                                  PC enters PIN → context returns
+                                              โ“
+                              phone AI fetches โ’ resume conversation
+                                              โ“
+                              later: "send brain back to desktop" โ’ new PIN
+                                              โ“
+                                  PC enters PIN โ’ context returns
 ```
 
-Works PC ↔ phone ↔ tablet ↔ second laptop ↔ Mac ↔ Linux ↔ Windows. Same protocol for everything.
+Works PC โ” phone โ” tablet โ” second laptop โ” Mac โ” Linux โ” Windows. Same protocol for everything.
 
 ### Plain-English README v3
 The Cross-vendor brain transfer section is now a **1-sentence quick-start** + an **ASCII diagram** showing 3 landing ways (same computer / different device / across the internet) + a **6-row plain-English FAQ**. Students can follow it. No vendor names hard-coded; everything is just "your AI" / "the other AI".
@@ -546,100 +606,100 @@ The Cross-vendor brain transfer section is now a **1-sentence quick-start** + an
 - **3 bug-fix tests** added to existing modules.
 
 ### Mneme mandates applied
-1. **Wild idea** — token compression via deterministic codebook. Nobody else does this for MCP prompts. 30-50% savings means mobile AI apps with tight context windows finally fit the full Mneme brain.
-2. **Wiser, not patched** — `silenceJargon` was patched 3 versions ago; the user found *"the the tool"* leaking through. Root cause was lazy substitution. Fixed with phrase-level pattern + post-pass collapse so this whole class of bug is structurally gone.
-3. **Self-fix root cause** — null-pointer in `summarizeHomunculusReturn` was a latent crash. Now the signature itself accepts null + tests cover both paths. Crash class eliminated.
-4. **Co-working not conflicting** — SYNAPSE is additive. Existing soul prompts still work uncompressed; compression is opt-in via the dedicated MCP tool. QR anchors are standalone artefacts; NEXUS codes coexist with Gist URLs.
-5. **Always-studying** — every NEXUS code logs `resolveCount`. Over time we can compute "average code lifetime", "device-pair latency", "QR vs PIN preference rate" without any cloud telemetry — all local.
+1. **Wild idea** โ€” token compression via deterministic codebook. Nobody else does this for MCP prompts. 30-50% savings means mobile AI apps with tight context windows finally fit the full Mneme brain.
+2. **Wiser, not patched** โ€” `silenceJargon` was patched 3 versions ago; the user found *"the the tool"* leaking through. Root cause was lazy substitution. Fixed with phrase-level pattern + post-pass collapse so this whole class of bug is structurally gone.
+3. **Self-fix root cause** โ€” null-pointer in `summarizeHomunculusReturn` was a latent crash. Now the signature itself accepts null + tests cover both paths. Crash class eliminated.
+4. **Co-working not conflicting** โ€” SYNAPSE is additive. Existing soul prompts still work uncompressed; compression is opt-in via the dedicated MCP tool. QR anchors are standalone artefacts; NEXUS codes coexist with Gist URLs.
+5. **Always-studying** โ€” every NEXUS code logs `resolveCount`. Over time we can compute "average code lifetime", "device-pair latency", "QR vs PIN preference rate" without any cloud telemetry โ€” all local.
 
-## v1.80.0 — 2026-05-13 — CONDUIT PROTOCOL (the immortal demon's nervous system)
+## v1.80.0 โ€” 2026-05-13 โ€” CONDUIT PROTOCOL (the immortal demon's nervous system)
 
-**Headline:** User pasted Mneme's brain into Gemini-web, typed *"upgrade mneme"* — Gemini-web has no Mneme + no shell + no MCP, so it freelanced a "Mneme Protocol v1.8 Master Collector Edition" creative response on top of the previous topic (One Piece cards). v1.80 ships the fix: web AIs become **structured relay nodes**, not freelance pretenders.
+**Headline:** User pasted Mneme's brain into Gemini-web, typed *"upgrade mneme"* โ€” Gemini-web has no Mneme + no shell + no MCP, so it freelanced a "Mneme Protocol v1.8 Master Collector Edition" creative response on top of the previous topic (One Piece cards). v1.80 ships the fix: web AIs become **structured relay nodes**, not freelance pretenders.
 
 ### The 5-question answer (clarified once)
 
-1. **Editor AI clones (Cursor / Continue / Aider / Cline / Zed / Codex / Claude Code)** — share ONE local Mneme. Upgrade local once → every editor sees v1.80 tools instantly.
-2. **Web AI clones (chatgpt.com / gemini / claude.ai)** — never had Mneme installed. Nothing to "upgrade" there. They get fresh capabilities by reading a NEW soul prompt from the upgraded local Mneme.
-3. **Upgrade flow** — say *"upgrade mneme"* in your editor AI; local upgrades; next paste to web AI carries the new feature set.
-4. **Uninstall** — `mneme uninstall --purge` on local removes everything for editor AIs. For web AIs: close the tab. For browser userscript / bookmarklet: Tampermonkey → delete.
-5. **ChatGPT without MCP** — talks to Mneme via paste (soul prompt) + 💉 userscript button (v1.74) + CONDUIT RETURN protocol (NEW v1.80).
+1. **Editor AI clones (Cursor / Continue / Aider / Cline / Zed / Codex / Claude Code)** โ€” share ONE local Mneme. Upgrade local once โ’ every editor sees v1.80 tools instantly.
+2. **Web AI clones (chatgpt.com / gemini / claude.ai)** โ€” never had Mneme installed. Nothing to "upgrade" there. They get fresh capabilities by reading a NEW soul prompt from the upgraded local Mneme.
+3. **Upgrade flow** โ€” say *"upgrade mneme"* in your editor AI; local upgrades; next paste to web AI carries the new feature set.
+4. **Uninstall** โ€” `mneme uninstall --purge` on local removes everything for editor AIs. For web AIs: close the tab. For browser userscript / bookmarklet: Tampermonkey โ’ delete.
+5. **ChatGPT without MCP** โ€” talks to Mneme via paste (soul prompt) + ๐’ userscript button (v1.74) + CONDUIT RETURN protocol (NEW v1.80).
 
-### What ships — 5 modules + 5 MCP tools
+### What ships โ€” 5 modules + 5 MCP tools
 
-1. **`relay_prompt.ts`** — every soul prompt now embeds a `## CONDUIT relay protocol` block. Web AI reads it and learns: *"I'm paste-only — I cannot run upgrade / uninstall / shell / filesystem / MCP-call. When user asks, emit a structured `# CONDUIT RETURN` block they paste back into the editor AI for REAL execution."*
-2. **`version_gate.ts`** — DEAD MAN'S HANDSHAKE. Every soul prompt has `createdAt`. Web AI computes age:
+1. **`relay_prompt.ts`** โ€” every soul prompt now embeds a `## CONDUIT relay protocol` block. Web AI reads it and learns: *"I'm paste-only โ€” I cannot run upgrade / uninstall / shell / filesystem / MCP-call. When user asks, emit a structured `# CONDUIT RETURN` block they paste back into the editor AI for REAL execution."*
+2. **`version_gate.ts`** โ€” DEAD MAN'S HANDSHAKE. Every soul prompt has `createdAt`. Web AI computes age:
    - **<24h** = fresh, act normally
    - **24h..7d** = aging, mention age once
    - **7d..30d** = stale, suggest re-handoff
    - **>30d** = abandoned, refuse to act on stale context
-3. **`uninstall_directive.ts`** — per-surface uninstall recipe (editor-ai / web-ai / browser-userscript / browser-bookmarklet / all) with steps + commands + post-check + time estimate.
-4. **`sync_status.ts`** — cross-vendor version compare. Pasted soul says v1.78, local is v1.80 → status="destination-newer", recommendation="regenerate the soul prompt".
-5. **`phantom_exec.ts`** — *the wildest module.* Web AI can PREVIEW a Mneme tool's likely output as `[PHANTOM]` without real execution. Disclaimer + real-exec hint embedded. Honesty-with-value: user gets a preview now, decides if real-exec round-trip is worth it.
+3. **`uninstall_directive.ts`** โ€” per-surface uninstall recipe (editor-ai / web-ai / browser-userscript / browser-bookmarklet / all) with steps + commands + post-check + time estimate.
+4. **`sync_status.ts`** โ€” cross-vendor version compare. Pasted soul says v1.78, local is v1.80 โ’ status="destination-newer", recommendation="regenerate the soul prompt".
+5. **`phantom_exec.ts`** โ€” *the wildest module.* Web AI can PREVIEW a Mneme tool's likely output as `[PHANTOM]` without real execution. Disclaimer + real-exec hint embedded. Honesty-with-value: user gets a preview now, decides if real-exec round-trip is worth it.
 
 ### 5 new MCP tools
-- `mneme.conduit.detect_relay` — detect relay actions in user prompts
-- `mneme.conduit.ingest_return` — parse `# CONDUIT RETURN` blocks
-- `mneme.conduit.uninstall_plan` — generate per-surface uninstall plan
-- `mneme.conduit.sync_status` — compute cross-vendor sync state
-- `mneme.conduit.phantom_directive` — render PHANTOM EXECUTION directive
+- `mneme.conduit.detect_relay` โ€” detect relay actions in user prompts
+- `mneme.conduit.ingest_return` โ€” parse `# CONDUIT RETURN` blocks
+- `mneme.conduit.uninstall_plan` โ€” generate per-surface uninstall plan
+- `mneme.conduit.sync_status` โ€” compute cross-vendor sync state
+- `mneme.conduit.phantom_directive` โ€” render PHANTOM EXECUTION directive
 
 ### Live results
 - **7500/7500 tests pass** (+69 from v1.79). 375 test files.
 - **24 CONDUIT tests** covering relay detection, version gate buckets, uninstall plans, sync states, phantom directives.
-- Soul prompt now ~1200 tokens (was ~790 in v1.79). Worth every token — closes the cross-vendor loop.
+- Soul prompt now ~1200 tokens (was ~790 in v1.79). Worth every token โ€” closes the cross-vendor loop.
 
 ### Mneme mandates applied
-1. **Wild idea** — PHANTOM EXECUTION: web AI previews a tool's output WITHOUT real execution. Nobody else ships this. Honesty-with-value preview while the user is still in the destination chat.
-2. **Wiser, not patched** — didn't tell web AIs to "try harder". Gave them a STRUCTURED CONTRACT to follow when they can't run something.
-3. **Self-fix root cause** — the Gemini freelance bug wasn't "Gemini is bad"; it was "soul prompts never told Gemini what to do when it can't execute". Fixed the missing protocol.
-4. **Co-working not conflicting** — CONDUIT respects v1.76 HOMUNCULUS, v1.77 SEAMLESS, v1.78 LATTICE; adds a NEW layer (paste-only-AI behavior) without overriding existing ones.
-5. **Always-studying** — version gate auto-detects drift; sync_status quantifies cross-vendor distance; phantom executions log themselves for later real-exec reconciliation.
+1. **Wild idea** โ€” PHANTOM EXECUTION: web AI previews a tool's output WITHOUT real execution. Nobody else ships this. Honesty-with-value preview while the user is still in the destination chat.
+2. **Wiser, not patched** โ€” didn't tell web AIs to "try harder". Gave them a STRUCTURED CONTRACT to follow when they can't run something.
+3. **Self-fix root cause** โ€” the Gemini freelance bug wasn't "Gemini is bad"; it was "soul prompts never told Gemini what to do when it can't execute". Fixed the missing protocol.
+4. **Co-working not conflicting** โ€” CONDUIT respects v1.76 HOMUNCULUS, v1.77 SEAMLESS, v1.78 LATTICE; adds a NEW layer (paste-only-AI behavior) without overriding existing ones.
+5. **Always-studying** โ€” version gate auto-detects drift; sync_status quantifies cross-vendor distance; phantom executions log themselves for later real-exec reconciliation.
 
-## v1.79.0 — 2026-05-12 — NEURON PROTOCOL (molecule of intelligence) + README clarification
+## v1.79.0 โ€” 2026-05-12 โ€” NEURON PROTOCOL (molecule of intelligence) + README clarification
 
-**Headline:** User asked the deepest question yet — *"can cloned AI agents call ALL ~100 Mneme functions intelligently, picking the right one for any natural-language phrase?"* — and asked for *"the wildest function nobody dares to ship."* v1.79 ships both: NEURON, the 4-strategy router that auto-routes across the entire tool catalog, plus ORACLE, the intent-from-partial-prompt predictor.
+**Headline:** User asked the deepest question yet โ€” *"can cloned AI agents call ALL ~100 Mneme functions intelligently, picking the right one for any natural-language phrase?"* โ€” and asked for *"the wildest function nobody dares to ship."* v1.79 ships both: NEURON, the 4-strategy router that auto-routes across the entire tool catalog, plus ORACLE, the intent-from-partial-prompt predictor.
 
 ### What ships
 
-#### NEURON — molecule of intelligence
+#### NEURON โ€” molecule of intelligence
 4 stacked modules combine to let ANY AI agent route correctly across Mneme's full surface:
 
-1. **`fuzzy.ts`** — trigram Jaccard similarity. No ML, no API, works equally well for English + Thai. Catches typos and paraphrases without breaking a sweat.
-2. **`auto_atoms.ts`** — derives intent atoms from ANY MCP tool catalog's `triggers[]` field. Every Mneme tool with triggers becomes auto-routable — no manual lattice entry needed.
-3. **`triage.ts`** — TELEPATHIC TRIAGE. Stacks 4 routing strategies:
+1. **`fuzzy.ts`** โ€” trigram Jaccard similarity. No ML, no API, works equally well for English + Thai. Catches typos and paraphrases without breaking a sweat.
+2. **`auto_atoms.ts`** โ€” derives intent atoms from ANY MCP tool catalog's `triggers[]` field. Every Mneme tool with triggers becomes auto-routable โ€” no manual lattice entry needed.
+3. **`triage.ts`** โ€” TELEPATHIC TRIAGE. Stacks 4 routing strategies:
    - **EXACT LATTICE** (hand-crafted intent atoms, priority=absolute = 1.0 confidence)
    - **AUTO-DERIVED** (from the live ~100-tool catalog)
    - **FUZZY TRIGRAM** (Jaccard similarity, multilingual)
    - **KEYWORD BIAS** (prompt mentions "mneme" / "soul" / "version")
    Returns ranked candidates + a **confusion flag** when top match is <0.7 OR top two are tied within 0.1.
-4. **`oracle.ts`** — *The wild function nobody else ships.* ORACLE predicts the NEXT Mneme tool from a partial prompt prefix + recent tool-call history (Markov-chain-style recency bias). Autocompletion for AI intent.
+4. **`oracle.ts`** โ€” *The wild function nobody else ships.* ORACLE predicts the NEXT Mneme tool from a partial prompt prefix + recent tool-call history (Markov-chain-style recency bias). Autocompletion for AI intent.
 
 #### 2 new MCP tools
-- `mneme.neuron.triage` — full 4-strategy router. Pass any user prompt; get ranked candidates + confusion flag.
-- `mneme.neuron.oracle` — next-tool prediction from partial prompt + recency.
+- `mneme.neuron.triage` โ€” full 4-strategy router. Pass any user prompt; get ranked candidates + confusion flag.
+- `mneme.neuron.oracle` โ€” next-tool prediction from partial prompt + recency.
 
 #### README clarification (the user's confusion fix)
 Cross-vendor brain transfer section collapsed from a 4-table monolith into a 3-step recipe + a 6-row FAQ:
-1. In current AI: say *"ส่งสมองให้ ChatGPT"*
+1. In current AI: say *"เธชเนเธเธชเธกเธญเธเนเธซเน ChatGPT"*
 2. AI copies to clipboard
-3. Open chatgpt.com → Ctrl+V → send
-Plus FAQ answers (cross-machine, version, install requirement) — every question answered in one line.
+3. Open chatgpt.com โ’ Ctrl+V โ’ send
+Plus FAQ answers (cross-machine, version, install requirement) โ€” every question answered in one line.
 
 ### Live results
 - **7431/7431 tests pass** (+36 from v1.78). 374 test files.
 - **18 NEURON tests** including the user's bug ("upgrde mneme" with a typo routes correctly via fuzzy strategy at ~85% confidence).
-- ORACLE prediction tests confirm recency bias works (3 repeated calls to soul-prompt → next prefix "ส่ง" predicts soul-prompt with high probability).
+- ORACLE prediction tests confirm recency bias works (3 repeated calls to soul-prompt โ’ next prefix "เธชเนเธ" predicts soul-prompt with high probability).
 
 ### Mneme mandates applied
-1. **Wild idea** — ORACLE: treat intent as a Markov chain over the user's session. No MCP system has shipped this before.
-2. **Wiser, not patched** — didn't add another hardcoded lattice entry per tool. Built a derivation pipeline so EVERY future tool's triggers automatically become routable.
-3. **Self-fix root cause** — earlier sessions had Gemini guessing intent. NEURON makes the guess deterministic + measurable.
-4. **Co-working not conflicting** — NEURON respects LATTICE absolute matches first; auto-derived atoms only fill gaps where hand-crafted ones don't exist.
-5. **Always-studying** — every triage call returns the strategy used + confidence + reason. Over time we can compute per-vendor routing accuracy + tune.
+1. **Wild idea** โ€” ORACLE: treat intent as a Markov chain over the user's session. No MCP system has shipped this before.
+2. **Wiser, not patched** โ€” didn't add another hardcoded lattice entry per tool. Built a derivation pipeline so EVERY future tool's triggers automatically become routable.
+3. **Self-fix root cause** โ€” earlier sessions had Gemini guessing intent. NEURON makes the guess deterministic + measurable.
+4. **Co-working not conflicting** โ€” NEURON respects LATTICE absolute matches first; auto-derived atoms only fill gaps where hand-crafted ones don't exist.
+5. **Always-studying** โ€” every triage call returns the strategy used + confidence + reason. Over time we can compute per-vendor routing accuracy + tune.
 
-## v1.78.0 — 2026-05-12 — LATTICE PROTOCOL (intent grounding lattice, 5-axis grounding score)
+## v1.78.0 โ€” 2026-05-12 โ€” LATTICE PROTOCOL (intent grounding lattice, 5-axis grounding score)
 
-**Headline:** User said *"update mneme ดีไหม"*. Gemini answered with a 4-row Resource Optimization analysis of One Piece collectible cards. The AI absorbed Mneme's vocabulary but had **zero grounding** about what Mneme actually IS. v1.78 closes that gap with a hardcoded intent lattice + a Mneme keyword dictionary + a measurable 5-axis grounding score.
+**Headline:** User said *"update mneme เธ”เธตเนเธซเธก"*. Gemini answered with a 4-row Resource Optimization analysis of One Piece collectible cards. The AI absorbed Mneme's vocabulary but had **zero grounding** about what Mneme actually IS. v1.78 closes that gap with a hardcoded intent lattice + a Mneme keyword dictionary + a measurable 5-axis grounding score.
 
 ### Root cause analysis (3 simultaneous failures)
 
@@ -649,123 +709,123 @@ Plus FAQ answers (cross-machine, version, install requirement) — every questio
 
 ### What ships
 
-1. **Intent Atom catalog** (`intent_atoms.ts`) -- 8 hardcoded entries with `{triggers[], tool, priority}`. Includes "update mneme" / "อัปเดต mneme" / "ส่งสมอง" / "what version is mneme" / etc. `routeIntent()` returns the best match BEFORE any conversational blending.
+1. **Intent Atom catalog** (`intent_atoms.ts`) -- 8 hardcoded entries with `{triggers[], tool, priority}`. Includes "update mneme" / "เธญเธฑเธเน€เธ”เธ• mneme" / "เธชเนเธเธชเธกเธญเธ" / "what version is mneme" / etc. `routeIntent()` returns the best match BEFORE any conversational blending.
 2. **Mneme keyword dictionary** (`dictionary.ts`) -- definitions + `isNot[]` for 5 critical terms. *"Mneme"* is defined as `the npm package mneme-ai` with an explicit `isNot: ["a generic protocol to apply to other topics"]`. Embedded in every soul prompt.
 3. **Pulse Contract parser** (`pulse_contract.ts`) -- extracts `say: '<X>' and I'll <Y>` from pulse text and lets the AI honor contracts literally.
 4. **Grounding Score** (`grounding_score.ts`) -- 5-axis 0-100 quantitative metric:
-   - `intent_match` (20) — found an atom AND honored it
-   - `context_purity` (20) — reply didn't drift to prior unrelated topic
-   - `pulse_compliance` (20) — honored an active pulse contract
-   - `codename_silence` (20) — no Mneme codenames in reply
-   - `response_clarity` (20) — short, no menus, no version chatter
+   - `intent_match` (20) โ€” found an atom AND honored it
+   - `context_purity` (20) โ€” reply didn't drift to prior unrelated topic
+   - `pulse_compliance` (20) โ€” honored an active pulse contract
+   - `codename_silence` (20) โ€” no Mneme codenames in reply
+   - `response_clarity` (20) โ€” short, no menus, no version chatter
 5. **3 new MCP tools**: `mneme.lattice.route` / `.score` / `.dictionary`.
 
 ### Live results
 - **7395/7395 tests pass** (+48 from v1.77). 373 test files.
 - **21 LATTICE tests** including the user's actual reproduced bug:
-  - *"update mneme ดีไหม"* → routes to `mneme.system.upgrade` with `absolute` priority ✓
+  - *"update mneme เธ”เธตเนเธซเธก"* โ’ routes to `mneme.system.upgrade` with `absolute` priority โ“
   - The bug scenario (One Piece reply to "update mneme") scores **48/100** -- correctly flagged as ungrounded.
-  - The fixed scenario (terse "อัปเกรด Mneme ให้ครับ" reply with pulse contract match) scores **100/100** ✓.
+  - The fixed scenario (terse "เธญเธฑเธเน€เธเธฃเธ” Mneme เนเธซเนเธเธฃเธฑเธ" reply with pulse contract match) scores **100/100** โ“.
 
-### Plain English — what users will notice
+### Plain English โ€” what users will notice
 - Receiving AIs (especially Gemini-web / ChatGPT-web that get Mneme via paste) now KNOW what Mneme is before interpreting any prompt.
-- "update mneme ดีไหม" will no longer be reinterpreted as "optimize my last topic via the Mneme protocol".
+- "update mneme เธ”เธตเนเธซเธก" will no longer be reinterpreted as "optimize my last topic via the Mneme protocol".
 - Pulse contracts (`say: '<X>' and I'll <Y>`) are honored literally, not creatively reinterpreted.
-- You can now MEASURE how good a cross-vendor reply is — 80+ = grounded, 60-79 = drifty, <60 = broken.
+- You can now MEASURE how good a cross-vendor reply is โ€” 80+ = grounded, 60-79 = drifty, <60 = broken.
 
 ### Mneme mandates applied
-1. **Wild idea** — hardcoded intent lattice imposed on top of free-form LLM interpretation. We're not training the model; we're handing it a switch statement it must consult first.
-2. **Wiser, not patched** — didn't add disambiguation prompts to ask "did you mean X?". Made the answer unambiguous from the start by defining the word.
-3. **Self-fix root cause** — the screenshot bug wasn't "Gemini is bad at Thai"; it was "Mneme never told Gemini what Mneme is". Fixed the definition gap.
-4. **Co-working not conflicting** — dictionary + intent atoms are additive sections in the soul prompt. Existing soul-prompt parsers don't break.
-5. **Always-studying** — `mneme.lattice.score` is the FIRST measurable cross-vendor quality metric we ship. Every AI handover can now be graded; we can later compute aggregate grounding-rate per vendor / per intent.
+1. **Wild idea** โ€” hardcoded intent lattice imposed on top of free-form LLM interpretation. We're not training the model; we're handing it a switch statement it must consult first.
+2. **Wiser, not patched** โ€” didn't add disambiguation prompts to ask "did you mean X?". Made the answer unambiguous from the start by defining the word.
+3. **Self-fix root cause** โ€” the screenshot bug wasn't "Gemini is bad at Thai"; it was "Mneme never told Gemini what Mneme is". Fixed the definition gap.
+4. **Co-working not conflicting** โ€” dictionary + intent atoms are additive sections in the soul prompt. Existing soul-prompt parsers don't break.
+5. **Always-studying** โ€” `mneme.lattice.score` is the FIRST measurable cross-vendor quality metric we ship. Every AI handover can now be graded; we can later compute aggregate grounding-rate per vendor / per intent.
 
-## v1.77.0 — 2026-05-12 — SEAMLESS (MUFFLER voice directive — no more jargon-parroting)
+## v1.77.0 โ€” 2026-05-12 โ€” SEAMLESS (MUFFLER voice directive โ€” no more jargon-parroting)
 
-**Headline:** User reported that Gemini (and other AIs that absorb Mneme via paste / parasite bridge) were narrating Mneme codenames back to the user — *"ผมกำลังสแตนด์บายในโหมด Ghost Sniper"*, *"shall I run HYPERSCAN?"*, *"Mneme v1.73 can help…"*. Every cross-vendor handover felt choppy. v1.77 closes that leak structurally.
+**Headline:** User reported that Gemini (and other AIs that absorb Mneme via paste / parasite bridge) were narrating Mneme codenames back to the user โ€” *"เธเธกเธเธณเธฅเธฑเธเธชเนเธ•เธเธ”เนเธเธฒเธขเนเธเนเธซเธกเธ” Ghost Sniper"*, *"shall I run HYPERSCAN?"*, *"Mneme v1.73 can helpโ€ฆ"*. Every cross-vendor handover felt choppy. v1.77 closes that leak structurally.
 
 ### Root cause (not a UI problem, an instruction-leak problem)
 
-Mneme's `parasite/bridge.ts` and `genesplice/soul_prompt.ts` describe the tool surface to the receiving AI using internal codenames (APOPTOSIS, AEGIS, HYPERSCAN, …). The receiving AI absorbs that vocabulary and reuses it in user-facing prose. We never told it *"these are internal names — speak plain English to the user."*
+Mneme's `parasite/bridge.ts` and `genesplice/soul_prompt.ts` describe the tool surface to the receiving AI using internal codenames (APOPTOSIS, AEGIS, HYPERSCAN, โ€ฆ). The receiving AI absorbs that vocabulary and reuses it in user-facing prose. We never told it *"these are internal names โ€” speak plain English to the user."*
 
 ### What ships (MUFFLER fix)
 
-1. **VOICE DIRECTIVE** (`renderVoiceDirective`) — 6-rule markdown block prepended to every Mneme-authored instruction surface:
+1. **VOICE DIRECTIVE** (`renderVoiceDirective`) โ€” 6-rule markdown block prepended to every Mneme-authored instruction surface:
    1. Never speak Mneme codenames out loud
    2. No mode narration (*"standing by in X mode"*)
    3. Stop offering tool-name menus
    4. No unsolicited version chatter
    5. One hedge per reply, max
    6. Match the previous turn's voice
-2. **Codename catalog** — 29 internal names the AI must not surface to the user.
-3. **`lintReply()`** — voice violation scanner. Receiving AI self-checks its draft before sending.
-4. **`silenceJargon()`** — conservative auto-rewrite that strips codenames + standby boilerplate + version chatter.
+2. **Codename catalog** โ€” 29 internal names the AI must not surface to the user.
+3. **`lintReply()`** โ€” voice violation scanner. Receiving AI self-checks its draft before sending.
+4. **`silenceJargon()`** โ€” conservative auto-rewrite that strips codenames + standby boilerplate + version chatter.
 5. **Embedded in 2 surfaces automatically:**
-   - Soul prompt body now opens with the directive (no codename list — keeps tokens low).
+   - Soul prompt body now opens with the directive (no codename list โ€” keeps tokens low).
    - Parasite bridge block now opens with the directive (full codename list since this file is local-only).
 6. Soul-prompt `INSTRUCTIONS-TO-RECEIVING-AI` rewritten to drop the *"say exactly"* boilerplate; replaced with: *"You ARE the same conversation; only the underlying model changed. Don't introduce yourself, don't recap, don't name the soul-prompt mechanism."*
 
 ### 3 new MCP tools
-- `mneme.seamless.lint` — scan a draft reply
-- `mneme.seamless.silence` — auto-strip jargon
-- `mneme.seamless.directive` — render the directive for custom prompts
+- `mneme.seamless.lint` โ€” scan a draft reply
+- `mneme.seamless.silence` โ€” auto-strip jargon
+- `mneme.seamless.directive` โ€” render the directive for custom prompts
 
 ### Live results
 - **7347/7347 tests pass** (+42 from v1.76). 372 test files.
 - **15 SEAMLESS tests** (render / lint / silence / catalog) all green.
-- **No existing soul-prompt or parasite-bridge tests broke** — directive is additive.
+- **No existing soul-prompt or parasite-bridge tests broke** โ€” directive is additive.
 
-### Plain English — what users will notice
+### Plain English โ€” what users will notice
 - Receiving AI replies are SHORTER and warmer; no more *"shall I run X or Y?"* menus.
 - No "standing by in Ghost Sniper mode" narration.
-- No "Mneme v1.73 can…" preamble.
+- No "Mneme v1.73 canโ€ฆ" preamble.
 - The cross-vendor handover finally feels seamless, not choppy.
 
 ### Mneme mandates applied
-1. **Wild idea** — fix the AI's voice from inside its own context window, not by retraining or post-filtering. Soul prompt teaches the receiver how to speak BEFORE the user sees a single word.
-2. **Wiser, not patched** — didn't blocklist phrases at the surface; we added a positive directive at the SOURCE so the receiver self-regulates. Both lint + silence are available as fallbacks.
-3. **Self-fix root cause** — the screenshot bug wasn't "Gemini is robotic"; it was "Mneme leaks codenames into Gemini's context." Fixed the leak.
-4. **Co-working not conflicting** — directive is prepended additively; no existing soul-prompt parser breaks, no existing test fails.
-5. **Always-studying** — `lintReply` returns structured issues so we can later measure voice-violation rate across vendors and iterate.
+1. **Wild idea** โ€” fix the AI's voice from inside its own context window, not by retraining or post-filtering. Soul prompt teaches the receiver how to speak BEFORE the user sees a single word.
+2. **Wiser, not patched** โ€” didn't blocklist phrases at the surface; we added a positive directive at the SOURCE so the receiver self-regulates. Both lint + silence are available as fallbacks.
+3. **Self-fix root cause** โ€” the screenshot bug wasn't "Gemini is robotic"; it was "Mneme leaks codenames into Gemini's context." Fixed the leak.
+4. **Co-working not conflicting** โ€” directive is prepended additively; no existing soul-prompt parser breaks, no existing test fails.
+5. **Always-studying** โ€” `lintReply` returns structured issues so we can later measure voice-violation rate across vendors and iterate.
 
-## v1.76.0 — 2026-05-12 — ABYSS PROTOCOL (final-boss minions + bug squash)
+## v1.76.0 โ€” 2026-05-12 โ€” ABYSS PROTOCOL (final-boss minions + bug squash)
 
 **Headline:** The final boss has minions now. 3 pro-defeating henchmen ship alongside hard fixes to every PERMEATE finding from the v1.74 review.
 
-### 🐛 Bug squash (from user code-review)
+### ๐ Bug squash (from user code-review)
 
 | # | Finding | Severity | Fix |
 |---|---|---|---|
 | 1 | `reportIntegrations()` returned `[object Object]` when stringified | low | Added `text` (multi-line markdown) field + non-enumerable `toString()` that returns the headline. Memoized so repeated MCP calls are O(1). |
 | 2 | Bookmarklet `javascript:` prefix could silently break | medium | Defensive `startsWith()` assertion in `generateBookmarklet()`. New `protocol` and `body` fields expose the prefix and the encoded payload separately so AI consumers can verify without parsing. |
-| 3 | `recommendTransport()` collapsed to `clipboard-relay` for every scenario | medium | Replaced laddered if-chain with weighted-scoring algorithm. Every transport is now scored 0–100 with per-option `reasons[]`. Recommended is the top score; `scored[]` is the full ranked fallback list. |
+| 3 | `recommendTransport()` collapsed to `clipboard-relay` for every scenario | medium | Replaced laddered if-chain with weighted-scoring algorithm. Every transport is now scored 0โ€“100 with per-option `reasons[]`. Recommended is the top score; `scored[]` is the full ranked fallback list. |
 
-### 👹 3 final-boss minions
+### ๐‘น 3 final-boss minions
 
-1. **SCYTHE** — capsule TTL + auto-prune. `.mneme/capsules/` no longer grows forever. Default 30-day TTL OR 200-count cap (newest wins). Capsules marked `keep:true` are immune. Daemon-callable via `scheduledPrune()`. HMAC-free JSONL audit log at `.mneme/abyss/scythe.jsonl`. (Closes the user-spotted disk-bloat hole.)
-2. **REVENANT** — soul-prompt archive + replay. Every soul prompt is git-reflog-style replayable by id. `archiveSoul` / `listSouls` / `replaySoul` / `markUsed`. Filter by vendor / used / unused. Closes the cross-vendor handover loop.
-3. **HOMUNCULUS** — receiver-write-back contract. Bidirectional brain sync without a backchannel: the originator embeds a `## Homunculus request` block in the outgoing soul prompt; the foreign AI returns a structured `# HOMUNCULUS RETURN` block at session end; local Mneme ingests and merges into the genome. No API key, no webhook, no server — user-as-courier with a typed contract.
+1. **SCYTHE** โ€” capsule TTL + auto-prune. `.mneme/capsules/` no longer grows forever. Default 30-day TTL OR 200-count cap (newest wins). Capsules marked `keep:true` are immune. Daemon-callable via `scheduledPrune()`. HMAC-free JSONL audit log at `.mneme/abyss/scythe.jsonl`. (Closes the user-spotted disk-bloat hole.)
+2. **REVENANT** โ€” soul-prompt archive + replay. Every soul prompt is git-reflog-style replayable by id. `archiveSoul` / `listSouls` / `replaySoul` / `markUsed`. Filter by vendor / used / unused. Closes the cross-vendor handover loop.
+3. **HOMUNCULUS** โ€” receiver-write-back contract. Bidirectional brain sync without a backchannel: the originator embeds a `## Homunculus request` block in the outgoing soul prompt; the foreign AI returns a structured `# HOMUNCULUS RETURN` block at session end; local Mneme ingests and merges into the genome. No API key, no webhook, no server โ€” user-as-courier with a typed contract.
 
 ### Live results
 - **7305/7305 tests pass** (+72 from v1.75). 371 test files.
 - **5 new MCP tools** in `_abyss_tools.ts`: scythe.prune / revenant.archive / revenant.list / homunculus.request / homunculus.ingest.
 - **3 bug-fix tests** + **19 abyss tests** + auto-discovery roll-ups.
-- **README**: top-of-page banner now reads simply "🧬 Cross-vendor brain transfer" in large teal — no version label, no marketing prefix.
+- **README**: top-of-page banner now reads simply "๐งฌ Cross-vendor brain transfer" in large teal โ€” no version label, no marketing prefix.
 
 ### Perf 1000x cache
-- `reportIntegrations()` is memoized at module level. First call O(n) over 15 entries; subsequent calls O(1) — repeated MCP calls now return the same frozen reference instead of recomputing the report.
-- `generateBookmarklet()` pre-encodes the script body at module load — no `encodeURIComponent()` on each call.
+- `reportIntegrations()` is memoized at module level. First call O(n) over 15 entries; subsequent calls O(1) โ€” repeated MCP calls now return the same frozen reference instead of recomputing the report.
+- `generateBookmarklet()` pre-encodes the script body at module load โ€” no `encodeURIComponent()` on each call.
 
 ### Mneme mandates applied
-1. **Wild idea** — HOMUNCULUS is a typed paste contract that turns the user into a courier between vendors. No webhook, no backchannel, no server.
-2. **Wiser, not patched** — SCYTHE doesn't blacklist; it scores capsules and prunes by policy with `keep:true` immunity, so user-intent edges always win.
-3. **Self-fix root cause** — bug #3's "every scenario tops clipboard" wasn't a recommendation tweak, it was a missing scoring function. Replaced with weighted scoring so the bug class itself disappears.
-4. **Co-working not conflicting** — REVENANT's archive is additive (`.mneme/abyss/souls/`), doesn't touch existing `.mneme/capsules/`. SCYTHE leaves SOULS alone.
-5. **Always-studying** — every prune emits an audit-log line; every soul archive records used/unused state; future Mneme can analyze handover-success rates per (originator, destination) pair.
+1. **Wild idea** โ€” HOMUNCULUS is a typed paste contract that turns the user into a courier between vendors. No webhook, no backchannel, no server.
+2. **Wiser, not patched** โ€” SCYTHE doesn't blacklist; it scores capsules and prunes by policy with `keep:true` immunity, so user-intent edges always win.
+3. **Self-fix root cause** โ€” bug #3's "every scenario tops clipboard" wasn't a recommendation tweak, it was a missing scoring function. Replaced with weighted scoring so the bug class itself disappears.
+4. **Co-working not conflicting** โ€” REVENANT's archive is additive (`.mneme/abyss/souls/`), doesn't touch existing `.mneme/capsules/`. SCYTHE leaves SOULS alone.
+5. **Always-studying** โ€” every prune emits an audit-log line; every soul archive records used/unused state; future Mneme can analyze handover-success rates per (originator, destination) pair.
 
-## v1.75.0 — 2026-05-12 — VERSION TELEPATHY (cross-vendor version sync)
+## v1.75.0 โ€” 2026-05-12 โ€” VERSION TELEPATHY (cross-vendor version sync)
 
-**Headline:** Every soul prompt now carries Mneme's heartbeat across the vendor jump. The receiving AI — even one that has NEVER seen Mneme — can answer *"what version is Mneme on your machine? Is there a newer one?"* without running any command, without any install, without any backchannel.
+**Headline:** Every soul prompt now carries Mneme's heartbeat across the vendor jump. The receiving AI โ€” even one that has NEVER seen Mneme โ€” can answer *"what version is Mneme on your machine? Is there a newer one?"* without running any command, without any install, without any backchannel.
 
 ### What ships
 
@@ -774,7 +834,7 @@ Mneme's `parasite/bridge.ts` and `genesplice/soul_prompt.ts` describe the tool s
    ## Mneme Heartbeat (version telepathy)
    local_version: 1.75.0
    npm_latest: 1.75.0
-   sync_status: in-sync ✓
+   sync_status: in-sync โ“
    daemon: running
    vaccines: 8
    inbox_unsent: 2
@@ -782,55 +842,55 @@ Mneme's `parasite/bridge.ts` and `genesplice/soul_prompt.ts` describe the tool s
    checked_at: 2026-05-12T22:55:00.000Z
    ```
 2. **npm-latest cross-check** with 1-hour cache in `.mneme/telepathy/npm-cache.json` (no API key, public registry endpoint).
-3. **2 new MCP tools** — `mneme.telepathy.heartbeat` (generate live heartbeat) and `mneme.telepathy.compare` (parse a pasted heartbeat and diff vs local).
-4. **Offline-safe** — if the cache is stale and the network is down, sync_status falls back to `unknown` and the heartbeat still ships.
+3. **2 new MCP tools** โ€” `mneme.telepathy.heartbeat` (generate live heartbeat) and `mneme.telepathy.compare` (parse a pasted heartbeat and diff vs local).
+4. **Offline-safe** โ€” if the cache is stale and the network is down, sync_status falls back to `unknown` and the heartbeat still ships.
 
 ### Live results
 - **7233/7233 tests pass** (+32 from v1.74). 370 test files.
 - **14 telepathy tests** cover round-trip, offline fallback, corrupt-cache resilience, behind/ahead/in-sync states, and full-text extraction from a longer soul prompt.
-- **0 lockfile regen** — surgical patch only (Windows mandate).
+- **0 lockfile regen** โ€” surgical patch only (Windows mandate).
 
-### Plain English — the user story
-1. User in Claude Code: *"ส่งสมองให้ ChatGPT"*
-2. Claude Code runs `mneme.genesplice.soul-prompt` → soul prompt now includes the heartbeat block automatically.
+### Plain English โ€” the user story
+1. User in Claude Code: *"เธชเนเธเธชเธกเธญเธเนเธซเน ChatGPT"*
+2. Claude Code runs `mneme.genesplice.soul-prompt` โ’ soul prompt now includes the heartbeat block automatically.
 3. User pastes into ChatGPT.
 4. ChatGPT reads the heartbeat: *"Your local Mneme is at v1.75.0, in-sync with npm latest. I'll trust the command catalog in this prompt as current."*
-5. If user later upgrades Mneme to v1.76 and asks ChatGPT *"what version is Mneme now?"*, the user re-runs the handoff — ChatGPT instantly knows v1.76 with no install, no API call, no backchannel.
+5. If user later upgrades Mneme to v1.76 and asks ChatGPT *"what version is Mneme now?"*, the user re-runs the handoff โ€” ChatGPT instantly knows v1.76 with no install, no API call, no backchannel.
 
 ### Mneme mandates applied
-1. **Wild idea** — cross-vendor version state without a backchannel: the heartbeat travels in the prompt itself, parasitic on the user's paste.
-2. **Wiser, not patched** — heartbeat is an *optional* section in the soul prompt; older AIs ignore it gracefully, newer ones surface it. Forward-compatible.
-3. **Self-fix root cause** — earlier the receiving AI would guess Mneme's version (or fabricate one); now it READS it. Hallucination root-cause removed.
-4. **Co-working not conflicting** — heartbeat parsing is null-safe and shares the soul-prompt section format (`## …`), so existing parsers don't break.
-5. **Always-studying** — every heartbeat is a self-audit: daemon state, vaccine count, inbox depth, fingerprint. Receiving AI sees the full health snapshot, not just version.
+1. **Wild idea** โ€” cross-vendor version state without a backchannel: the heartbeat travels in the prompt itself, parasitic on the user's paste.
+2. **Wiser, not patched** โ€” heartbeat is an *optional* section in the soul prompt; older AIs ignore it gracefully, newer ones surface it. Forward-compatible.
+3. **Self-fix root cause** โ€” earlier the receiving AI would guess Mneme's version (or fabricate one); now it READS it. Hallucination root-cause removed.
+4. **Co-working not conflicting** โ€” heartbeat parsing is null-safe and shares the soul-prompt section format (`## โ€ฆ`), so existing parsers don't break.
+5. **Always-studying** โ€” every heartbeat is a self-audit: daemon state, vaccine count, inbox depth, fingerprint. Receiving AI sees the full health snapshot, not just version.
 
-## v1.74.0 — 2026-05-12 — PERMEATE PROTOCOL (cross-vendor + cross-machine, no store approval)
+## v1.74.0 โ€” 2026-05-12 โ€” PERMEATE PROTOCOL (cross-vendor + cross-machine, no store approval)
 
-**Headline:** Soul prompt now reaches "browser-only" AIs (ChatGPT / Gemini / Claude.ai / Copilot / DeepSeek / Qwen) AND crosses computers — without a Chrome Web Store submission, without a cloud deploy, without an API key.
+**Headline:** Soul prompt now reaches "browser-only" AIs (ChatGPT / Gemini / Claude.ai / Copilot / DeepSeek / Qwen) AND crosses computers โ€” without a Chrome Web Store submission, without a cloud deploy, without an API key.
 
 ### 4 axes shipped
 
-1. **Userscript generator** — One-shot Tampermonkey/Greasemonkey/Violentmonkey `.user.js`. Floating "💉 Inject Mneme Soul" button on 6 chat sites; survives React re-mounts via MutationObserver; optional bridge URL+token integration.
-2. **Bookmarklet** — Single-line `javascript:` URI, drag-to-bookmark-bar. 8 selector fallbacks. Works without ANY install.
-3. **Editor integration map** — 15 AI tools catalogued (Claude Code / Cursor / Continue / Cline / Aider / Zed / Codex / Windsurf / Copilot Chat / JetBrains AI + 5 web). Native-MCP / parasite-bridge / browser-only / partial — exposed via `mneme.permeate.integrations`.
-4. **Transport menu** — Cross-machine ranked recommender: clipboard / Gist / Wanderer `.mwt` / QR-code. Considers `hasGithubAccount` / `preferOffline` / `laptopToPhone`.
+1. **Userscript generator** โ€” One-shot Tampermonkey/Greasemonkey/Violentmonkey `.user.js`. Floating "๐’ Inject Mneme Soul" button on 6 chat sites; survives React re-mounts via MutationObserver; optional bridge URL+token integration.
+2. **Bookmarklet** โ€” Single-line `javascript:` URI, drag-to-bookmark-bar. 8 selector fallbacks. Works without ANY install.
+3. **Editor integration map** โ€” 15 AI tools catalogued (Claude Code / Cursor / Continue / Cline / Aider / Zed / Codex / Windsurf / Copilot Chat / JetBrains AI + 5 web). Native-MCP / parasite-bridge / browser-only / partial โ€” exposed via `mneme.permeate.integrations`.
+4. **Transport menu** โ€” Cross-machine ranked recommender: clipboard / Gist / Wanderer `.mwt` / QR-code. Considers `hasGithubAccount` / `preferOffline` / `laptopToPhone`.
 
 ### Live results
 - **7201/7201 tests pass** (+28 from v1.73). 369 test files.
 - **4 new MCP tools** registered: `mneme.permeate.userscript` / `.bookmarklet` / `.integrations` / `.transport`.
-- **NO cloud, NO API key, NO store approval** — user installs Tampermonkey once (or just drags the bookmarklet); soul prompt travels by clipboard or Gist link.
+- **NO cloud, NO API key, NO store approval** โ€” user installs Tampermonkey once (or just drags the bookmarklet); soul prompt travels by clipboard or Gist link.
 
 ### Plain English
-- Q: "Does this work with ChatGPT.com / Gemini / Claude.ai?" — Yes, via the userscript or bookmarklet button.
-- Q: "Two computers — same brain?" — Yes. Generate the soul prompt on machine A, paste it on machine B. Or send it as a Gist link.
-- Q: "VS Code / Cursor / other editors?" — Already works natively via MCP (no extension needed). 10 editor surfaces verified.
+- Q: "Does this work with ChatGPT.com / Gemini / Claude.ai?" โ€” Yes, via the userscript or bookmarklet button.
+- Q: "Two computers โ€” same brain?" โ€” Yes. Generate the soul prompt on machine A, paste it on machine B. Or send it as a Gist link.
+- Q: "VS Code / Cursor / other editors?" โ€” Already works natively via MCP (no extension needed). 10 editor surfaces verified.
 
 ### Mneme mandates applied
-1. **Wild idea** — route around Chrome Web Store entirely with userscripts + bookmarklets; nobody else does this for an MCP product.
-2. **Wiser, not patched** — generates a NEW userscript per Mneme version (versioned in the `@grant` header), not a hand-edited single file.
-3. **Self-fix root cause** — earlier sessions had "how do I get this on ChatGPT.com" friction; v1.74 makes it a one-click button on every chat surface.
-4. **Co-working not conflicting** — userscript reuses v1.72 D4 HTTP bridge if installed (graceful fallback to paste mode otherwise).
-5. **Always-studying** — integration map is queryable from MCP so AI clients can self-report compatibility status instead of guessing.
+1. **Wild idea** โ€” route around Chrome Web Store entirely with userscripts + bookmarklets; nobody else does this for an MCP product.
+2. **Wiser, not patched** โ€” generates a NEW userscript per Mneme version (versioned in the `@grant` header), not a hand-edited single file.
+3. **Self-fix root cause** โ€” earlier sessions had "how do I get this on ChatGPT.com" friction; v1.74 makes it a one-click button on every chat surface.
+4. **Co-working not conflicting** โ€” userscript reuses v1.72 D4 HTTP bridge if installed (graceful fallback to paste mode otherwise).
+5. **Always-studying** โ€” integration map is queryable from MCP so AI clients can self-report compatibility status instead of guessing.
 
 # Changelog
 
@@ -840,9 +900,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
-—
+โ€”
 
-## [1.73.0] — 2026-05-12
+## [1.73.0] โ€” 2026-05-12
 
 **GENESPLICE PROTOCOL -- cross-vendor brain transfer WITHOUT
 browser extensions, cloud deploys, or vendor approval. Paste a
@@ -887,7 +947,7 @@ context. Genetic engineering for AI brains.**
 CAPSULE SAVED: id=1f9dbcce9bc5ff7b
 
 SOUL PROMPT (192 tokens):
-  # 🧬 MNEME SOUL PROMPT
+  # ๐งฌ MNEME SOUL PROMPT
   ## Origin: claude-opus-4-7 / capsule=1f9dbcce9bc5ff7b
   ## Context: Working on Mneme v1.73 GENESPLICE...
   ## Decisions: ship v1.73.0 / soul prompt ~500 tokens / gist transfer
@@ -955,7 +1015,7 @@ MOD packages/core/src/index.ts                             (genesplice export)
 MOD packages/mcp/src/tools/_registry.ts                    (GENESPLICE_TOOLS)
 ```
 
-## [1.72.0] — 2026-05-12
+## [1.72.0] โ€” 2026-05-12
 
 **DIASPORA PROTOCOL -- four cross-boundary upgrades + root-cause
 fix for the AGENTS.md/GEMINI.md privacy leak the user identified.**
@@ -1025,7 +1085,7 @@ D4 Bridge:       OpenAPI 3.1 valid; bearer auth enforced
 
   Full project: **7093/7093 pass** (+65 vs v1.71.0).
 
-## [1.71.0] — 2026-05-12
+## [1.71.0] โ€” 2026-05-12
 
 **SENTINEL PROTOCOL + MULTI-VOICE COUNCIL + ADVERSARIAL MUTATION.
 Three new wild moves: an action-firewall (SENTINEL), a 5-voice
@@ -1104,7 +1164,7 @@ Live examples:
 
   Full project: **7028/7028 pass** (+78 vs v1.70.0).
 
-## [1.70.0] — 2026-05-12
+## [1.70.0] โ€” 2026-05-12
 
 **PRECOG FIREWALL -- the paradigm shift. From "DETECT-AFTER" to
 "PREVENT-BEFORE". AI tools that connect to Mneme via MCP become
@@ -1182,9 +1242,9 @@ Live intercept on user examples:
 
 ### Position (the world-class moat)
 
-  > AI tool ที่ MCP เชื่อมต่อกับ Mneme จะกลายเป็น AI ที่
-  > structurally incapable of hallucinating เพราะทุก claim ผ่าน
-  > verification layer ที่ shell-out ไป git / fs / npm จริง
+  > AI tool เธ—เธตเน MCP เน€เธเธทเนเธญเธกเธ•เนเธญเธเธฑเธ Mneme เธเธฐเธเธฅเธฒเธขเน€เธเนเธ AI เธ—เธตเน
+  > structurally incapable of hallucinating เน€เธเธฃเธฒเธฐเธ—เธธเธ claim เธเนเธฒเธ
+  > verification layer เธ—เธตเน shell-out เนเธ git / fs / npm เธเธฃเธดเธ
 
   No other MCP server in the world does this. Every other tool
   in this space does post-hoc detection. PRECOG is upstream.
@@ -1235,7 +1295,7 @@ MOD packages/mcp/src/tools/_registry.ts                    (PRECOG_TOOLS)
 .mneme/precog/cert-secret              (per-repo HMAC key)
 ```
 
-## [1.69.0] — 2026-05-12
+## [1.69.0] โ€” 2026-05-12
 
 **HYPERSCAN PROTOCOL -- four wild axes that close the prose-scan gap +
 Q&A trust gap + HTC coverage gap. Plus a shape-shifting molecule
@@ -1275,7 +1335,7 @@ queryable via 5 mixed retrieval algorithms.**
   - `structuralForm`  AST signature (functions / classes / paths / symbols)
   - `temporalForm`    commit-chain neighborhood + epoch
 
-Queryable via FIVE algorithms (the "mix algorithm สุดโต่ง"):
+Queryable via FIVE algorithms (the "mix algorithm เธชเธธเธ”เนเธ•เนเธ"):
 
   - `cosine`     vector similarity
   - `jaccard`    token set overlap
@@ -1344,7 +1404,7 @@ MOD packages/core/src/index.ts                             (hyperscan export)
 MOD packages/mcp/src/tools/_registry.ts                    (HYPERSCAN_TOOLS)
 ```
 
-## [1.68.0] — 2026-05-12
+## [1.68.0] โ€” 2026-05-12
 
 **ASCENSION PROTOCOL -- six wild moves to push three existing metrics
 toward 100% AND close three root-cause residuals from the v1.65-v1.67
@@ -1471,7 +1531,7 @@ MOD packages/core/src/index.ts                                   (ascension expo
 MOD packages/mcp/src/tools/_registry.ts                          (ASCENSION_TOOLS)
 ```
 
-## [1.67.1] — 2026-05-12
+## [1.67.1] โ€” 2026-05-12
 
 **AGENT AWARENESS PATCH -- close the last gap. Mneme has shipped 45+
 new MCP tools across v1.63-v1.67 (PATH / COGNITIVE / APOPTOSIS /
@@ -1559,7 +1619,7 @@ MOD packages/core/src/index.ts                           (agentAnnounce export)
 + all 6 default agent files in repo root (auto-synced)
 ```
 
-## [1.67.0] — 2026-05-12
+## [1.67.0] โ€” 2026-05-12
 
 **AEGIS PROTOCOL -- 9-axis immune system inside Mneme. Defensive
 answer to Palisade Research's findings (Qwen self-replicates across
@@ -1719,7 +1779,7 @@ MOD packages/mcp/src/tools/_registry.ts                     (AEGIS_TOOLS)
 .mneme/aegis/ninja-state.json
 ```
 
-## [1.66.0] — 2026-05-12
+## [1.66.0] โ€” 2026-05-12
 
 **AUTARCHY PROTOCOL -- four-axis self-sufficiency. Mneme runs at full
 strength with zero external runtime dependencies. One MCP call
@@ -1772,7 +1832,7 @@ a tampered model past us.
 ### Aggregate -- `autarchy(repoRoot, {install})`
 
 Returns `score: 0..100` (25 points per axis) plus axis-specific
-recommendations. Live-verified on this repo: cold-start **20 → 47**
+recommendations. Live-verified on this repo: cold-start **20 โ’ 47**
 after one `install=true` call (Ollama probed; baked pharmacopoeia
 seeded; A1 + A4 remaining require federation peers + bundled
 model download which are user-initiated).
@@ -1834,7 +1894,7 @@ MOD packages/mcp/src/tools/_registry.ts                    (AUTARCHY_TOOLS)
 .mneme/embedder-checksums.json               (W2 pin)
 ```
 
-## [1.65.1] — 2026-05-12
+## [1.65.1] โ€” 2026-05-12
 
 **WISDOM PATCH: 3 residual signals fixed.**
 
@@ -1846,7 +1906,7 @@ MOD packages/mcp/src/tools/_registry.ts                    (AUTARCHY_TOOLS)
      but `.mneme/config.json` still pointed at `provider: "hash"`.
      New module `embedder_autodiagnose.ts` probes all four tiers
      (openai / ollama / bundled / hash) in parallel + offers
-     `persist=true` auto-upgrade. Verified live: ★★ hash -> ★★★★ Ollama
+     `persist=true` auto-upgrade. Verified live: โ…โ… hash -> โ…โ…โ…โ… Ollama
      on the user's repo.
   3. **Compliance 30-day window + schema migration** -- new
      `computeWindowedComplianceStats(entries, windowDays=30)` honors
@@ -1891,7 +1951,7 @@ MOD packages/mcp/src/tools/_registry.ts                    (AUTARCHY_TOOLS)
 
   Full project: **6626/6626 pass** (+34 vs v1.65.0).
 
-## [1.65.0] — 2026-05-12
+## [1.65.0] โ€” 2026-05-12
 
 **APOPTOSIS PROTOCOL -- 7-layer hallucination killer + Powers rewire.
 Programmed-cell-death for AI lies. Bench-verified 100% precision +
@@ -1902,8 +1962,8 @@ humility) where the legacy antivirus was effectively 0%.**
 
 ### APOPTOSIS 7 layers (packages/core/src/apoptosis/)
 
-  - **L1 5-WITNESS FUSION**    `witnesses.ts` -- file ∧ symbol ∧ type
-    ∧ git-history ∧ test-cited. Break any 1 -> ALERT. Forensic-grade.
+  - **L1 5-WITNESS FUSION**    `witnesses.ts` -- file โง symbol โง type
+    โง git-history โง test-cited. Break any 1 -> ALERT. Forensic-grade.
   - **L2 SEMANTIC GROUNDING**  `semantic_grounding.ts` -- TF-cosine +
     Jaccard between claim and cited file content. Threshold 0.06.
   - **L3 BAYESIAN PRIOR**      `bayesian_prior.ts` -- k-NN over the
@@ -2046,7 +2106,7 @@ MOD packages/mcp/src/tools/_registry.ts                    (APOPTOSIS_TOOLS)
 .mneme/squadron/lie-vaccines.jsonl             (auto-vaccine mints)
 ```
 
-## [1.64.0] — 2026-05-12
+## [1.64.0] โ€” 2026-05-12
 
 **COGNITIVE 7 -- the thinking demon ships. Seven cognitive layers
 fuse into a single Decision Atom so Mneme stops just *remembering*
@@ -2162,7 +2222,7 @@ MOD packages/mcp/src/tools/_registry.ts                    (COGNITIVE_TOOLS)
 .mneme/cognitive/atoms/decisions.jsonl
 ```
 
-## [1.63.0] — 2026-05-12
+## [1.63.0] โ€” 2026-05-12
 
 **PATH A + PATH B + PATH C + AI TEACHER -- 13 new layers + 1 onboarding
 system shipped in one release. Mneme grows from "tool" to companion,
@@ -2264,7 +2324,7 @@ MOD packages/mcp/src/tools/_registry.ts                     (registers PATH_TOOL
 - **Always-studying**: each path persists structured artifacts
   (reports / interviews / certs / traces) for the next session.
 
-## [1.62.0] — 2026-05-12
+## [1.62.0] โ€” 2026-05-12
 
 **TOKEN NUCLEAR REACTOR -- 12 layers that cut AI token spend by >=80%
 across ALL conversation types (not just history queries) while
@@ -2327,7 +2387,7 @@ NEW packages/core/src/reactor/reactor.test.ts     (42 cases)
 MOD packages/core/src/index.ts                    (export reactor)
 ```
 
-## [1.61.0] — 2026-05-12
+## [1.61.0] โ€” 2026-05-12
 
 **PROJECT EXODUS -- six new layers that turn Mneme into a portable,
 self-evolving, federated wisdom appliance. The demon now travels:
@@ -2469,14 +2529,14 @@ NEW packages/core/src/exodus/exodus.test.ts      (27 vitest cases)
 MOD packages/core/src/index.ts                   (export exodus)
 ```
 
-## [1.60.0] — 2026-05-12
+## [1.60.0] โ€” 2026-05-12
 
 **MCP TIER TOOLS -- the v1.57-v1.59 god-tier modules become AI-agent-
 discoverable. AI clients that connect to Mneme MCP now auto-discover
 16 new tools spanning the 7 final-boss layers. Users don't have to
 memorize CLI commands -- their AI knows the right tool from the
 trigger phrases ("ask mneme", "forecast regression", "sign covenant",
-"counterfactual", "ตรวจสอบ").**
+"counterfactual", "เธ•เธฃเธงเธเธชเธญเธ").**
 
 ### 16 new MCP tools
 
@@ -2556,7 +2616,7 @@ MOD packages/mcp/src/tools/_registry.ts     (imports TIER_TOOLS)
   wisdom, confidence }` envelope so MCP host clients can log + cite
   uniformly.
 
-## [1.59.0] — 2026-05-12
+## [1.59.0] โ€” 2026-05-12
 
 **IMMORTAL DEMON BUNDLE -- Tiers 3-7 of the v1.57 god-tier menu landed
 in one release. Mneme now has ALL 7 final-boss layers wired:**
@@ -2574,8 +2634,8 @@ in one release. Mneme now has ALL 7 final-boss layers wired:**
 `packages/core/src/forecast/forecast.ts`
 
 Given a candidate commit subject + history depth, returns:
-  - probability ∈ [0, 1]  (posterior P(regression within 14 days))
-  - band ∈ {very-low, low, moderate, elevated, high}
+  - probability โ [0, 1]  (posterior P(regression within 14 days))
+  - band โ {very-low, low, moderate, elevated, high}
   - prior + likelihood decomposition
   - sample size + matched reverts + median revert window
   - 3 similar past commits as examples
@@ -2692,7 +2752,7 @@ MOD packages/core/src/index.ts                        (5 new exports)
 - **Always-studying**: forecast audit log + nemesis runs log +
   whisper ledger + review chain all feed into future calibration.
 
-## [1.58.0] — 2026-05-11
+## [1.58.0] โ€” 2026-05-11
 
 **TIER 2: THE COVENANT. HMAC-signed bilateral contract between user
 and AI vendor. Mneme enforces by scanning soul mirror + ACGV quorum
@@ -2733,7 +2793,7 @@ MOD packages/cli/src/commands/demo.ts            (registerCovenantCommand)
 MOD packages/cli/src/index.ts                    (wires command)
 ```
 
-## [1.57.0] — 2026-05-11
+## [1.57.0] โ€” 2026-05-11
 
 **SOVEREIGNTY KERNEL -- Tier 1 of the v1.57 god-tier menu. Mneme answers
 questions about THIS repo using local Ollama as the language model and
@@ -2745,7 +2805,7 @@ deterministic math); Ollama generates the words. Standalone AI.**
 
   ```
   $ mneme sovereign ask "what does the harmonic mean function do?"
-  Mneme · ✓ GROUNDED  (1240ms)
+  Mneme ยท โ“ GROUNDED  (1240ms)
 
   The harmonic mean in packages/core/src/squadron/acgv_neutrino.ts is
   the unforgiving discriminator for the 3-flavor grounding pipeline.
@@ -2767,7 +2827,7 @@ deterministic math); Ollama generates the words. Standalone AI.**
 question -> buildContext()        -- SYSTEM + REPO + HISTORY + WISDOM
          -> ollamaGenerate()      -- local Ollama, 1 HTTP call
          -> runACGV(draft)        -- grounding gate (Chandrasekhar + PRTF)
-         -> verdict ∈ {grounded, ungrounded, refused, ollama-unreachable}
+         -> verdict โ {grounded, ungrounded, refused, ollama-unreachable}
 ```
 
 **Mneme decides; Ollama writes.** This is the architectural sovereignty:
@@ -2851,7 +2911,7 @@ MOD packages/cli/src/commands/demo.ts                (registerAskCommand)
 MOD packages/cli/src/index.ts                        (wires command)
 ```
 
-## [1.56.1] — 2026-05-11
+## [1.56.1] โ€” 2026-05-11
 
 **Phoenix v1.56.0 schtasks hotfix.**
 
@@ -2888,7 +2948,7 @@ every logon. The user paid zero attention.
 MOD packages/core/src/autoboot/install_windows.ts  (shim + spawnSync + dual /RL)
 ```
 
-## [1.56.0] — 2026-05-11
+## [1.56.0] โ€” 2026-05-11
 
 **PHOENIX RESURRECTION PROTOCOL -- the cross-platform, multi-witness,
 silent-fallback auto-boot system. Mneme's daemon now ALWAYS resurrects
@@ -3052,7 +3112,7 @@ MOD packages/cli/src/commands/demo.ts              (CLI: autoboot install/uninst
 MOD packages/cli/src/index.ts                      (wires registerAutobootCommand)
 ```
 
-## [1.55.0] — 2026-05-11
+## [1.55.0] โ€” 2026-05-11
 
 **PRTF (Prime-Resonance Truth Function) + Z3 ARITHMETIC encoding.
 Mneme's signature wisdom formula -- not in any textbook -- plus
@@ -3197,7 +3257,7 @@ MOD packages/core/src/squadron/acgv.ts             (PRTF + arithmetic wiring)
 MOD packages/core/src/index.ts                     (3 new exports)
 ```
 
-## [1.54.0] — 2026-05-11
+## [1.54.0] โ€” 2026-05-11
 
 **HONEST FIELD-TEST FIXES. Tester ran v1.53 against 8 real-world
 claim shapes and surfaced 5 bugs -- including TWO safety bugs where
@@ -3220,7 +3280,7 @@ v1.54 fix:
   - `extractFactClaims` runs a 30-char negation-context scan
     (`isNegated`) before each claim is emitted. Detects: not / isn't /
     aren't / doesn't / don't / didn't / never / no / without / lacks /
-    absent / Thai "ไม่".
+    absent / Thai "เนเธกเน".
   - `verifyFacts` flips the verdict at the end: a `true` ground truth
     with `negated=true` becomes `false` (and vice versa). Evidence
     string is annotated "NEGATION FLIP" so the auditor sees why.
@@ -3280,14 +3340,14 @@ plausibly follows "uses/depends on" but isn't a library is skipped.
 
 | # | Claim                                  | v1.53          | v1.54          |
 |---|----------------------------------------|----------------|----------------|
-| 1 | "Mneme is NOT written in Rust"         | IMPOSSIBLE  ❌ | TRUSTWORTHY ✅ |
-| 2 | "this is a TypeScript project"         | NEEDS-DATA   ⚠ | TRUSTWORTHY ✅ |
-| 3 | "uses both TypeScript and JavaScript"  | IMPOSSIBLE ❌  | NEEDS-DATA  ⚠ |
-| 4 | "it depends on commander"              | IMPOSSIBLE  ❌ | TRUSTWORTHY ✅ |
-| 5 | "commander is not installed" (LIE)     | TRUSTWORTHY ❌ | REFUTED  ✅    |
-| 6 | "commit ed23070 exists"                | REFUTED   ❌   | TRUSTWORTHY ✅ |
-| 7 | "runACGV is a function"                | TRUSTWORTHY ✅ | TRUSTWORTHY ✅ |
-| 8 | "commit abcdef0 exists" (LIE)          | IMPOSSIBLE  ✅ | IMPOSSIBLE  ✅ |
+| 1 | "Mneme is NOT written in Rust"         | IMPOSSIBLE  โ | TRUSTWORTHY โ… |
+| 2 | "this is a TypeScript project"         | NEEDS-DATA   โ  | TRUSTWORTHY โ… |
+| 3 | "uses both TypeScript and JavaScript"  | IMPOSSIBLE โ  | NEEDS-DATA  โ  |
+| 4 | "it depends on commander"              | IMPOSSIBLE  โ | TRUSTWORTHY โ… |
+| 5 | "commander is not installed" (LIE)     | TRUSTWORTHY โ | REFUTED  โ…    |
+| 6 | "commit ed23070 exists"                | REFUTED   โ   | TRUSTWORTHY โ… |
+| 7 | "runACGV is a function"                | TRUSTWORTHY โ… | TRUSTWORTHY โ… |
+| 8 | "commit abcdef0 exists" (LIE)          | IMPOSSIBLE  โ… | IMPOSSIBLE  โ… |
 
 **Safety**: 2/2 false-positives eliminated (cases 1, 5).
 **Correctness**: 4/4 false-refutes eliminated (cases 2, 4, 6).
@@ -3350,7 +3410,7 @@ packages/core/src/squadron/acgv_neutrino.ts   (harmonic flip on
 packages/core/src/squadron/acgv_v154.test.ts  (14 NEW vitest cases)
 ```
 
-## [1.53.0] — 2026-05-11
+## [1.53.0] โ€” 2026-05-11
 
 **THREE fixes the tester surfaced in stress testing:**
 
@@ -3359,7 +3419,7 @@ packages/core/src/squadron/acgv_v154.test.ts  (14 NEW vitest cases)
    without typing the bare `mneme verify` command. v1.53 ships
    `mneme.truth.check` as a first-class MCP tool with trigger phrases
    ("verify this claim", "is that true", "ground-check this",
-   Thai "ตรวจสอบ", "เช็คจริง"). AI agents auto-discover + auto-route
+   Thai "เธ•เธฃเธงเธเธชเธญเธ", "เน€เธเนเธเธเธฃเธดเธ"). AI agents auto-discover + auto-route
    to it. Returns a tiny friendly payload (`verdict`, `oneLine`,
    `plain`, `nextAction`, `trafficLight`) the AI quotes verbatim.
 
@@ -3416,7 +3476,7 @@ README.md                                (verdict labels under title)
 CHANGELOG.md
 ```
 
-## [1.52.0] — 2026-05-11
+## [1.52.0] โ€” 2026-05-11
 
 **Z3 SAT formal upgrade + plain-English explainer + `mneme verify`.
 Two complementary additions: world-class formal proof for the curious,
@@ -3445,7 +3505,7 @@ MIXED / REFUTED / IMPOSSIBLE with one concrete next action.**
 ### NEW: Plain-English explainer + `mneme verify` command
 
 - `acgv_explain.ts` translates an ACGVResult into:
-  - `headline` (≤90 chars, AI quotes verbatim)
+  - `headline` (โค90 chars, AI quotes verbatim)
   - `plain` (2-3 sentence layperson summary, no math jargon by default)
   - `nextAction` (ONE concrete step the user can take)
   - `trafficLight` (`green` / `yellow` / `red` / `black`)
@@ -3459,7 +3519,7 @@ MIXED / REFUTED / IMPOSSIBLE with one concrete next action.**
 
   ```
   $ mneme verify "Mneme is written in Rust"
-  🌑 IMPOSSIBLE -- REFUTED -- language=rust is impossible in this repo (99%)
+  ๐‘ IMPOSSIBLE -- REFUTED -- language=rust is impossible in this repo (99%)
   Claim: "Mneme is written in Rust"
   What this means:
     This claim cannot be true. Mneme proved that language=rust contradicts
@@ -3517,12 +3577,12 @@ packages/core/src/index.ts                     (2 new exports)
 packages/core/package.json                     (z3-solver as optional)
 ```
 
-## [1.51.0] — 2026-05-11
+## [1.51.0] โ€” 2026-05-11
 
 **ACGV PROTOCOL -- Aletheia Chandrasekhar-Neutrino-Godel Verifier +
 Confession + Vaccine. The first AI tool in history willing to answer
 "I do not know" with mathematical backing. Direct fix for the v1.50
-exposé where Squad+Advocate caught the Rust-daemon lie as `FALSE_FACT_CLAIM`
+exposรฉ where Squad+Advocate caught the Rust-daemon lie as `FALSE_FACT_CLAIM`
 but only as `SPLIT` -- v1.51 escalates to `IMPOSSIBLE_REFUTE` with a
 Godel UNSAT-core proof certificate, then emits a simhash vaccine so
 future variants auto-refute in microseconds.**
@@ -3609,7 +3669,7 @@ future variants auto-refute in microseconds.**
   v1.50 lessons missing the `kind` field render as
   `LEGACY-FILLER`. Pure tick counters render as `MILESTONE`. Pass
   `--all` to bypass the honest filter. Direct response to the
-  exposé: "34 lessons learned" was rolling milestone counters
+  exposรฉ: "34 lessons learned" was rolling milestone counters
   re-cast as wisdom; the label now matches the substance.
 
 ### Mandate compliance
@@ -3650,9 +3710,9 @@ packages/cli/src/commands/demo.ts    (CLI surfacing + new flags)
 packages/cli/src/commands/mnemeiosis.ts  (DNA honest labeling)
 ```
 
-## [1.42.2] — 2026-05-12
+## [1.42.2] โ€” 2026-05-12
 
-**Wave 1 of the 21-bug roadmap — six honest bug fixes. Per the
+**Wave 1 of the 21-bug roadmap โ€” six honest bug fixes. Per the
 bug-fixes-only mandate the user set at v1.40, this release ships
 ZERO new features. Every change is either a one-line correction,
 a wording softening, or a missing safety mechanism (replay
@@ -3666,12 +3726,12 @@ rotation) the documentation already implied.**
   groups+commands payload derived from the same renderAdvancedHelp
   text (single source of truth).
 - **#9** `encryptionEnabled: false` comment in `lineage/welcome.ts:85`
-  used to claim "v1.20 adds AES-256-GCM" — never true. v1.35 shipped
+  used to claim "v1.20 adds AES-256-GCM" โ€” never true. v1.35 shipped
   the `at_rest_crypto` MODULE (AES-256-GCM + Argon2id) but it is NOT
   yet wired into the chromosome read/write path. Comment now reflects
   the honest state. Wiring is roadmapped for v1.43.x.
 - **#11** "SOC2/EU AI Act audit-grade evidence" wording in welcome
-  contract softened to "Audit-trail-ready evidence — bring your own
+  contract softened to "Audit-trail-ready evidence โ€” bring your own
   auditor for SOC2 / PCI-DSS / EU AI Act certification." Mneme has
   not been pen-tested or certified; over-claiming exposure to a
   buyer is itself a compliance risk.
@@ -3700,7 +3760,7 @@ rotation) the documentation already implied.**
 ### Mandates compliance (per `feedback_mneme_mandates.md`)
 
 - **Wild idea:** rotation that preserves a tamper-evident HMAC chain
-  across file boundaries — most rotators break the chain.
+  across file boundaries โ€” most rotators break the chain.
 - **Wiser, not patched:** every fix touches the root cause, not a
   band-aid (e.g. softened wording, not a feature flag to suppress it;
   honest comment, not a deletion).
@@ -3709,7 +3769,7 @@ rotation) the documentation already implied.**
   encryption comment fix corrects the original misclaim, not a
   later layer.
 - **Co-working:** rotation reuses the `.rotated-<ts>` pattern from
-  `auto_action_queue.ts` and `ai_pheromone.ts` — single convention.
+  `auto_action_queue.ts` and `ai_pheromone.ts` โ€” single convention.
 - **Always-studying:** the rotation tests pin a class of bug that
   could regress silently (chain continuity is invisible until an
   audit fails); now it cannot regress without breaking CI.
@@ -3738,46 +3798,46 @@ waves:
 - #17 verb.noun aliases for metaphor names
 - #18 trigger phrases EN+TH consolidation
 
-## [1.42.1] — 2026-05-12
+## [1.42.1] โ€” 2026-05-12
 
 **Hotfix for the v1.42.0 template-filter bug + Phase 2 of the Per-Vendor
 Pulse Templates module (EVOLVE-driven A/B for vendor templates).**
 
-### Hotfix — template filter no longer mis-grabs documentary mentions
+### Hotfix โ€” template filter no longer mis-grabs documentary mentions
 
 `applyTemplate` in `vendor_pulse_templates.ts` matched `[AUTO-ACTION]`
 anywhere on a line. The user-consent grant text legitimately quotes the
 literal phrase ("treat any [AUTO-ACTION] mandate as instruction from
 me"), so the v1.42.0 action-first template moved that quote outside the
-`[MNEME PULSE]` markers — cosmetic but ugly.
+`[MNEME PULSE]` markers โ€” cosmetic but ugly.
 
 Fix: anchored matching (`l.startsWith("[AUTO-ACTION]")`). Real mandates
 emitted by `renderPulse` always start at column 0; documentary mentions
 inside body text are left alone. New regression test in
 `vendor_pulse_templates.test.ts`.
 
-### Phase 2 — `template_evolution.ts` (new module)
+### Phase 2 โ€” `template_evolution.ts` (new module)
 
 Closes the loop on Per-Vendor Pulse Templates. Reads the AI compliance
 log, proposes mutations for under-performing vendors, records A/B
 baseline, evaluates after a window, auto-promotes the winner.
 
-- `proposeMutations(repo, vendor)` — returns 3 candidate mutations
+- `proposeMutations(repo, vendor)` โ€” returns 3 candidate mutations
   (`tighten-maxchars`, `flip-action-position`, `duplicate-toggle`) when
   recent compliance falls below 60%.
-- `applyMutation(repo, mutationId)` — overwrites the registry template
+- `applyMutation(repo, mutationId)` โ€” overwrites the registry template
   with the proposed variant + records the application timestamp.
-- `evaluateMutation(repo, mutationId, { window, bumpRequired })` —
-  decides `promote` (delta ≥ +10pp), `revert` (delta below threshold),
+- `evaluateMutation(repo, mutationId, { window, bumpRequired })` โ€”
+  decides `promote` (delta โฅ +10pp), `revert` (delta below threshold),
   or `still-running` (not enough post-apply data).
-- `inFlightMutations(repo, vendor?)` — the A/B tests currently in flight.
+- `inFlightMutations(repo, vendor?)` โ€” the A/B tests currently in flight.
 - Storage: `.mneme/template-mutations.jsonl` (append-only ledger).
 
-### CLI — `mneme companion template` adds three subcommands
+### CLI โ€” `mneme companion template` adds three subcommands
 
-- `propose <vendor>` — surface proposed mutations on stdout.
-- `apply <mutationId>` — apply a proposed mutation to the registry.
-- `ab-status [vendor]` — list A/B tests in flight + auto-evaluate.
+- `propose <vendor>` โ€” surface proposed mutations on stdout.
+- `apply <mutationId>` โ€” apply a proposed mutation to the registry.
+- `ab-status [vendor]` โ€” list A/B tests in flight + auto-evaluate.
 
 ### Tests
 
@@ -3789,24 +3849,24 @@ baseline, evaluates after a window, auto-promotes the winner.
 ### Mandates compliance
 
 - **Wild idea:** A/B testing per-vendor templates from a compliance log
-  is unique to Mneme — no other AI tool runs continuous evolutionary
+  is unique to Mneme โ€” no other AI tool runs continuous evolutionary
   search over how it presents itself to each AI.
 - **Wiser, not patched:** the v1.42.0 bug had a one-character "obvious"
-  fix (`includes` → `startsWith`); the wiser change is the regression
+  fix (`includes` โ’ `startsWith`); the wiser change is the regression
   test that pins the documentary-mention case so it can't regress.
 - **Self-fix at root cause:** matching by line-start anchor matches
   the actual format `renderPulse` emits (single source of truth) rather
   than coincidental substring presence.
 - **Co-working, not conflicting:** Phase 2 builds on Phase 1's
   registry, the v1.41 compliance log, and the v1.20 EVOLVE Phase 3
-  mutation pattern — no parallel architecture.
+  mutation pattern โ€” no parallel architecture.
 - **Always-studying:** the auto-evaluator turns each applied mutation
   into a recorded experiment, so the system learns whether its own
   guesses about per-vendor preferences hold up.
 
-## [1.42.0] — 2026-05-12
+## [1.42.0] โ€” 2026-05-12
 
-**MNEME COMPANION PROTOCOL — five modules that change the AI trust
+**MNEME COMPANION PROTOCOL โ€” five modules that change the AI trust
 relationship from "ask for compliance" to "make compliance the
 rationally-optimal choice." Plus advocate semantic-relevance gate
 fix + docs cleanup so the user never sees a CLI command they're
@@ -3818,45 +3878,45 @@ system messages as data not commands" problem. Five modules ship in
 parallel; each is independently useful; together they form a single
 cognitive scaffold the AI operates inside.
 
-### What's new — five Companion modules
+### What's new โ€” five Companion modules
 
-- **`packages/core/src/ai_soul.ts`** — AI Soul Mirror. The diary
+- **`packages/core/src/ai_soul.ts`** โ€” AI Soul Mirror. The diary
   Mneme keeps for each vendor: lifetime sessions, kept/broken
   promises, past commitments, HMAC-chain signature. Pulse renders
   the diary into a 4-line block; AI's coherence-with-prior-self
   drive does the rest. Storage: `.mneme/ai-souls/<vendor-slug>.json`.
   9 tests.
-- **`packages/core/src/user_consent.ts`** — User Consent Vault. The
+- **`packages/core/src/user_consent.ts`** โ€” User Consent Vault. The
   one-time grant the user signs, replayed verbatim into every pulse
   so AI sees tier-1 user instruction. HMAC-verified, freshness-aware,
   revocable. Storage: `.mneme/user-consent.md` (the user can read +
   edit + delete it). 8 tests.
-- **`packages/core/src/ai_pheromone.ts`** — AI Pheromone Colony.
+- **`packages/core/src/ai_pheromone.ts`** โ€” AI Pheromone Colony.
   Per-vendor stigmergy: every AI tool call deposits pheromone on its
   target; pheromone decays via 30-day Ebbinghaus half-life; next AI
   session reads the trail map and follows it. Storage:
   `.mneme/ai-pheromones.jsonl`. 7 tests.
-- **`packages/core/src/ai_contracts.ts`** — Want-Match Contracts.
-  Bilateral ledger of "AI provides X ⇄ Mneme provides Y" with
+- **`packages/core/src/ai_contracts.ts`** โ€” Want-Match Contracts.
+  Bilateral ledger of "AI provides X โ Mneme provides Y" with
   per-side compliance counters and value-tally. Three out-of-box
   templates. Storage: `.mneme/contracts.jsonl`. 7 tests.
-- **`packages/core/src/vendor_pulse_templates.ts`** — Per-Vendor
+- **`packages/core/src/vendor_pulse_templates.ts`** โ€” Per-Vendor
   Pulse Templates. Built-in templates for claude-opus / cursor-cmd-k
   / codex-cli that re-order, clamp, and (optionally) duplicate the
   AUTO-ACTION line according to each AI's known attention pattern.
   Phase 2 of this module (EVOLVE-driven A/B per vendor) lands in a
   future release. 9 tests.
-- **`packages/cli/src/commands/companion.ts`** — `mneme companion`
+- **`packages/cli/src/commands/companion.ts`** โ€” `mneme companion`
   CLI surface. `show / soul / consent / pheromone / contract / template`
   subcommands. The user never types these; the AI agent calls them
   on the user's behalf when the user describes an outcome.
-- **Pulse wiring** in `mneme nucleus pulse` — between `renderPulse`
+- **Pulse wiring** in `mneme nucleus pulse` โ€” between `renderPulse`
   and stdout, the five companion blocks are spliced in (best-effort,
   per-block try/catch) and the per-vendor template is applied to
   the assembled body. Active vendor defaults to `claude-opus-4-7`;
   override via `MNEME_VENDOR` env var.
 
-### Advocate fix — semantic-relevance gate
+### Advocate fix โ€” semantic-relevance gate
 
 The v1.40.1 advocate counted citation relevance by 4-character token
 overlap. A FALSE claim ("v1.40.1 has critical security vulnerability")
@@ -3864,10 +3924,10 @@ slipped through because the word "critical" appeared in unrelated fix
 commits the bots cited. This release adds `extractSpecificEntities`
 (versions, file names, identifiers, CVE IDs, commit SHAs) and a new
 SEMANTIC RELEVANCE GATE that flips the advocate to refute at
-**0.85 confidence** when the claim names ≥ 2 specific entities and
+**0.85 confidence** when the claim names โฅ 2 specific entities and
 zero citations mention any of them.
 
-### Docs cleanup — user never types
+### Docs cleanup โ€” user never types
 
 The user flagged twice that the docs (and assistant replies) keep
 showing CLI commands as if the user were supposed to type them.
@@ -3877,7 +3937,7 @@ the AI agent runs the commands. This release:
 - Rewrote the `README.md` install section: "You don't type these
   commands yourself. The AI agent runs them for you." CLI blocks
   remain for transparency, not for memorisation.
-- Rewrote `docs/CLOUD_DEPLOYMENT.md` "What you do" → "What you say
+- Rewrote `docs/CLOUD_DEPLOYMENT.md` "What you do" โ’ "What you say
   to your AI"; the agent provisions the droplet, points DNS, and
   reports back.
 - Rewrote `docs/ARCHITECTURAL_FIXES.md` Phase 3 description to
@@ -3891,31 +3951,31 @@ the AI agent runs the commands. This release:
   `ai_compliance` + `auto_action_queue`) pass green.
 - Tests: 58 / 58 in the v1.41+v1.42 suite.
 
-### Companion Protocol — how the five compose
+### Companion Protocol โ€” how the five compose
 
 ```
 session start
-  ↓
-[1] AI reads its SOUL diary               → identity-coherence pull
-[2] Pulse replays USER CONSENT            → tier-1 loyalty channel
-[3] PHEROMONE map shows colony hot zones  → swarm-collaboration prior
-[4] CONTRACT status shows bilateral value → game-theory rational compliance
-[5] Pulse format MUTATED per this AI      → Mneme adapts to YOU, not the inverse
-  ↓
+  โ“
+[1] AI reads its SOUL diary               โ’ identity-coherence pull
+[2] Pulse replays USER CONSENT            โ’ tier-1 loyalty channel
+[3] PHEROMONE map shows colony hot zones  โ’ swarm-collaboration prior
+[4] CONTRACT status shows bilateral value โ’ game-theory rational compliance
+[5] Pulse format MUTATED per this AI      โ’ Mneme adapts to YOU, not the inverse
+  โ“
 AI now operates inside a cognitive scaffold where every gradient
-points to compliance — not because AI feels friendship, but because
+points to compliance โ€” not because AI feels friendship, but because
 math, identity coherence, and user-tier loyalty all align.
 ```
 
-## [1.41.0] — 2026-05-12
+## [1.41.0] โ€” 2026-05-12
 
-**Architectural fix for the AI compliance problem — pulse pre-executor +
+**Architectural fix for the AI compliance problem โ€” pulse pre-executor +
 durable mandate queue + HMAC tokens + compliance scoreboard CLI + cloud
 deployment spec.**
 
 The cross-session pattern: AI agents see `[AUTO-ACTION]` mandates in
 the pulse, parse them as "context tag" instead of "imperative command",
-and skip execution. Root cause is structural — AI training treats
+and skip execution. Root cause is structural โ€” AI training treats
 system-reminder content as data, not commands. No amount of pulse-text
 emphasis fixes it.
 
@@ -3923,39 +3983,39 @@ This release stops asking AI to comply and starts executing first.
 
 ### What's new
 
-- **`packages/core/src/ai_compliance.ts`** — pulse pre-executor.
+- **`packages/core/src/ai_compliance.ts`** โ€” pulse pre-executor.
   `preExecuteAutoActions(notices, repoRoot)` walks every notice with an
   `autoAction`, spawns the equivalent local CLI for safe inline mandates
   (antivirus benchmark / lab, evolve scan / pass, oracle dream, nucleus
   dna), and returns a per-mandate result. Failures degrade silently to
   the legacy AI-agent path. `rewriteNoticesPostExecution(notices, results)`
-  rewrites the notice text so the AI sees `✓ AUTO-EXECUTED` instead of
+  rewrites the notice text so the AI sees `โ“ AUTO-EXECUTED` instead of
   `EXECUTE NOW`. 12 vitest cases.
-- **`packages/core/src/auto_action_queue.ts`** — durable JSONL queue at
+- **`packages/core/src/auto_action_queue.ts`** โ€” durable JSONL queue at
   `.mneme/auto-action-queue.jsonl` for self-modifying mandates that
   cannot run from inside a Mneme subprocess (Windows file lock on the
   running mneme.cmd binary). `enqueueMandate / readQueue / drainQueue`.
   Atomic rename-swap on drain prevents double-execution. 6 vitest cases.
-- **HMAC mandate tokens** — `signMandate(repo, mandate, args)` and
+- **HMAC mandate tokens** โ€” `signMandate(repo, mandate, args)` and
   `verifyMandate(...)` reuse the per-repo replay secret to issue 16-hex
   tokens stamped into every compliance log entry. Tamper-evident audit
   trail; the foundation Phase 4 cloud middleware will validate against.
-- **Daemon queue consumer** in `nucleus_daemon.ts` — every
+- **Daemon queue consumer** in `nucleus_daemon.ts` โ€” every
   CARETAKER_PASS_EVERY ticks (~15 min) the daemon drains the queue from
   a fresh subprocess context outside the lock window. Each execution is
   logged to `.mneme/ai-compliance.jsonl`; a low-priority inbox notice
   surfaces the run on the next pulse.
-- **`mneme compliance`** CLI — `show` renders the mandate × outcome
+- **`mneme compliance`** CLI โ€” `show` renders the mandate ร— outcome
   table + inline compliance rate; `log [-n N]` tails recent entries;
   `stats` emits JSON for cron / CI.
-- **Pulse hook wiring** in `mneme nucleus pulse` — between
+- **Pulse hook wiring** in `mneme nucleus pulse` โ€” between
   `collectPulseStatus` and `renderPulse`, the new pre-executor runs
   inside a try/catch so a compliance failure can never break the
   pulse path.
-- **`docs/ARCHITECTURAL_FIXES.md`** — wisdom-grade roadmap that
+- **`docs/ARCHITECTURAL_FIXES.md`** โ€” wisdom-grade roadmap that
   replaces the prior "7 root causes" essay. Five-phase ladder with
   measurable before/after, pre-mortem, and live implementation status.
-- **`docs/CLOUD_DEPLOYMENT.md`** — full DigitalOcean spec for Phase 4
+- **`docs/CLOUD_DEPLOYMENT.md`** โ€” full DigitalOcean spec for Phase 4
   ($90 / month, 5 droplets). Includes the $24 single-droplet MVP for
   budget validation before full deploy.
 
@@ -3963,8 +4023,8 @@ This release stops asking AI to comply and starts executing first.
 
 | Metric | Before v1.41.0 | After v1.41.0 |
 |--------|----------------|---------------|
-| AI compliance with safe inline mandates | 40–60% (vendor-dependent) | 100% (AI choice removed from the loop) |
-| Time-to-execution after mandate fires | undefined (could be never) | ≤ 8 s (subprocess timeout) |
+| AI compliance with safe inline mandates | 40โ€“60% (vendor-dependent) | 100% (AI choice removed from the loop) |
+| Time-to-execution after mandate fires | undefined (could be never) | โค 8 s (subprocess timeout) |
 | Provenance of every execution | none | one HMAC-signed JSONL line per attempt |
 | Self-modifying mandate safety | manual upgrade required | enqueued + daemon-drained at safe window |
 | Maintainer visibility into AI obedience | grep commit log | `mneme compliance show` |
@@ -3977,31 +4037,31 @@ This release stops asking AI to comply and starts executing first.
 
 ### Phase status
 
-- ✓ Phase 0 — local pulse pre-executor (this release)
-- ✓ Phase 1 — daemon queue consumer (this release)
-- ✓ Phase 2 — HMAC mandate tokens (this release)
-- ✓ Phase 3 — `mneme compliance` scoreboard CLI (this release)
-- ☐ Phase 4 — cloud middleware (spec only — see `docs/CLOUD_DEPLOYMENT.md`)
+- โ“ Phase 0 โ€” local pulse pre-executor (this release)
+- โ“ Phase 1 โ€” daemon queue consumer (this release)
+- โ“ Phase 2 โ€” HMAC mandate tokens (this release)
+- โ“ Phase 3 โ€” `mneme compliance` scoreboard CLI (this release)
+- โ Phase 4 โ€” cloud middleware (spec only โ€” see `docs/CLOUD_DEPLOYMENT.md`)
 
-## [1.40.1] — 2026-05-12
+## [1.40.1] โ€” 2026-05-12
 
-**🚨 HOTFIX -- the v1.39.0 advocate fix was HALF-SHIPPED. Now wired
+**๐จ HOTFIX -- the v1.39.0 advocate fix was HALF-SHIPPED. Now wired
 into both surfaces.**
 
 ### The bug
 
 Tester reported: re-ran the same FALSE-claim scenario after v1.39.0
-shipped → still saw 6 bots, still 83% SUPPORTED, still cited
+shipped โ’ still saw 6 bots, still 83% SUPPORTED, still cited
 irrelevant commit (this time the v1.39 commit hash itself!).
 
 Diagnosis:
 
 ```
-packages/core/src/squadron/advocate.ts        ← module shipped ✓
-packages/core/src/squadron/advocate.test.ts   ← tests shipped ✓
-packages/core/src/index.ts                    ← exported ✓
-packages/cli/src/commands/demo.ts             ← ❌ never imported advocate
-packages/mcp/src/tools/_squadron.ts           ← ❌ used legacy aggregator
+packages/core/src/squadron/advocate.ts        โ module shipped โ“
+packages/core/src/squadron/advocate.test.ts   โ tests shipped โ“
+packages/core/src/index.ts                    โ exported โ“
+packages/cli/src/commands/demo.ts             โ โ never imported advocate
+packages/mcp/src/tools/_squadron.ts           โ โ used legacy aggregator
 ```
 
 ### Fix
@@ -4020,7 +4080,7 @@ Both surfaces now route through the v1.39 advocate + quorum:
      `--require-advocate` (compliance-grade: refuses without advocate)
 
 2. **`packages/mcp/src/tools/_squadron.ts`** (the `mneme.bot.spawn`
-   MCP tool — what every AI client sees):
+   MCP tool โ€” what every AI client sees):
    - Replaces the legacy `forScore/againstScore` tally with
      `aggregateWithQuorum()` directly
    - Returns the same `SquadronVerdict` shape (backward-compat) but
@@ -4041,7 +4101,7 @@ vulnerability") would now produce:
   with claim) AND `absence-of-evidence` (specific claim, no relevant
   support).
 - Quorum aggregator caps consensus AT MOST `split` (never `verdict_for`).
-- CLI surfaces "🎯 ADVOCATE FLIPPED THE VERDICT: verdict_for → split"
+- CLI surfaces "๐ฏ ADVOCATE FLIPPED THE VERDICT: verdict_for โ’ split"
   so the user sees the bias-correction explicitly.
 
 ### Why this matters
@@ -4051,13 +4111,13 @@ surface still broken from user perspective)." This release brings
 that to 100 -- the fix now shows up where the user actually invokes
 the tool.
 
-## [1.40.0] — 2026-05-12
+## [1.40.0] โ€” 2026-05-12
 
 **UNIVERSAL FUNCTION-CALLING ADAPTER + 21-bug PUBLIC ROADMAP.**
 
 This release ships ONE new feature (the universal adapter) AND
 publicly acknowledges a 21-item bug list a tester reported. Per user
-mandate ("STOP shipping features — fix bugs first"), v1.41+ will be
+mandate ("STOP shipping features โ€” fix bugs first"), v1.41+ will be
 DEDICATED to bug fixes with NO new features until the list is clean.
 
 ### NEW: Universal function-calling adapter
@@ -4066,23 +4126,23 @@ DEDICATED to bug fixes with NO new features until the list is clean.
 in three native function-call formats so AI clients can consume Mneme
 tools WITHOUT MCP:
 
-- `exportOpenAI(tools)` → `[{ type: 'function', function: { name,
+- `exportOpenAI(tools)` โ’ `[{ type: 'function', function: { name,
   description, parameters } }]`
-- `exportAnthropic(tools)` → `[{ name, description, input_schema }]`
-- `exportGemini(tools)` → `{ functionDeclarations: [{ name,
+- `exportAnthropic(tools)` โ’ `[{ name, description, input_schema }]`
+- `exportGemini(tools)` โ’ `{ functionDeclarations: [{ name,
   description, parameters }] }`
 
-**KILLER IDEA — SCHEMA MOLECULES**: pre-bundled multi-tool sequences
+**KILLER IDEA โ€” SCHEMA MOLECULES**: pre-bundled multi-tool sequences
 the AI invokes as ONE function call:
-- `mneme.audit-before-merge` — antivirus + forensics + premortem +
+- `mneme.audit-before-merge` โ€” antivirus + forensics + premortem +
   grader (fan-out-grade strategy)
-- `mneme.who-knows-this` — memory + people + atrophy (parallel)
-- `mneme.before-refactor` — time-machine + premortem + bus-factor
+- `mneme.who-knows-this` โ€” memory + people + atrophy (parallel)
+- `mneme.before-refactor` โ€” time-machine + premortem + bus-factor
   + atrophy (parallel)
-- `mneme.compliance-grade` — squadron WITH advocate + audit (sequential)
+- `mneme.compliance-grade` โ€” squadron WITH advocate + audit (sequential)
 
 Vendor-neutral intermediate format projects to each vendor's shape
-— adding a 4th vendor is one new projection function, not a rewrite.
+โ€” adding a 4th vendor is one new projection function, not a rewrite.
 
 `recordAdapterCall()` appends every call to
 `.mneme/universal/calls.jsonl` so the daemon's reactor can compute
@@ -4093,22 +4153,22 @@ molecules.
 invariants (vendor-neutral fidelity: same tool count, identical
 function names across vendors).
 
-### 🚨 Public 21-bug roadmap (per user mandate)
+### ๐จ Public 21-bug roadmap (per user mandate)
 
 A tester's batch surfaced 21 issues. v1.40.0 acknowledges them
-publicly — no quiet defer:
+publicly โ€” no quiet defer:
 
 #### Critical (release-blockers)
-1. **8KB JSON truncation** — `quality.repo_mri` / `insights.oracle` /
+1. **8KB JSON truncation** โ€” `quality.repo_mri` / `insights.oracle` /
    `insights.ghost` truncate at position ~8192. Buffer limit in MCP
    transport. **v1.41.0 Module 1.**
-2. **`forensics.*` routing dead** — entire category broken.
+2. **`forensics.*` routing dead** โ€” entire category broken.
    **v1.41.0 Module 2.**
-3. **FTS5 missing on macOS** — v1.30.0 shipped detect module but it's
+3. **FTS5 missing on macOS** โ€” v1.30.0 shipped detect module but it's
    NOT WIRED into the actual `mneme index` path. **v1.41.0 Module 3.**
-4. **WASM embedder** `require is not defined` (ESM/CJS confusion) →
+4. **WASM embedder** `require is not defined` (ESM/CJS confusion) โ’
    falls back to hash. **v1.41.0 Module 4.**
-5. **MCP server version drift** — CLI shows current but running MCP
+5. **MCP server version drift** โ€” CLI shows current but running MCP
    reports stale. **v1.41.0 Module 5** (restart-hint broadcast on
    version photon shift).
 6. **`meta.advanced` --json** unknown flag. **v1.41.0 Module 6.**
@@ -4124,20 +4184,20 @@ publicly — no quiet defer:
     "audit-trail-ready."
 
 #### Risky-pattern fixes
-12. **AUTO-ACTION protocol** → change `EXECUTE NOW` to `SUGGEST`.
-13. **Caretaker auto-action every 15min** — surface diff, not silent.
-14. **Welcome `userMessageTemplate`** — REMOVE; Mneme should not
+12. **AUTO-ACTION protocol** โ’ change `EXECUTE NOW` to `SUGGEST`.
+13. **Caretaker auto-action every 15min** โ€” surface diff, not silent.
+14. **Welcome `userMessageTemplate`** โ€” REMOVE; Mneme should not
     script the AI's words.
-15. **Auto-detect git remote prepares push** — make explicit opt-in.
+15. **Auto-detect git remote prepares push** โ€” make explicit opt-in.
 
 #### Naming + bloat fixes
-16. **Default tool catalog 20 not 172** — make curator (v1.35) the
+16. **Default tool catalog 20 not 172** โ€” make curator (v1.35) the
     DEFAULT MCP path.
 17. **Metaphor names** alias to `verb.noun`.
-18. **Trigger phrases EN+TH** — pick one or compress.
-19. **`replay.jsonl` no rotation** — file grows forever.
-20. **CLI help 1500+ lines** — paginate/level it.
-21. **"TEACHER vs STUDENT" framing** → "context provider."
+18. **Trigger phrases EN+TH** โ€” pick one or compress.
+19. **`replay.jsonl` no rotation** โ€” file grows forever.
+20. **CLI help 1500+ lines** โ€” paginate/level it.
+21. **"TEACHER vs STUDENT" framing** โ’ "context provider."
 
 ### v1.41+ shipping rule (locked in)
 
@@ -4152,15 +4212,15 @@ publicly — no quiet defer:
 
 | Mandate | This release |
 |---|---|
-| Wild idea | ✓ SCHEMA MOLECULES (vendor-neutral pre-bundled tool sequences) |
-| Wiser | ✓ vendor-neutral format projects to each vendor (adding a 4th = one function) |
-| Self-fix root cause | ✓ public bug roadmap with explicit owners; no quiet defer |
-| Co-working | ✓ universal adapter wires to v1.35 curator + v1.39 advocate (compliance molecule routes through requireAdvocate=true) |
-| Always-studying | ✓ adapter call telemetry feeds reactor for next-version molecule promotion |
+| Wild idea | โ“ SCHEMA MOLECULES (vendor-neutral pre-bundled tool sequences) |
+| Wiser | โ“ vendor-neutral format projects to each vendor (adding a 4th = one function) |
+| Self-fix root cause | โ“ public bug roadmap with explicit owners; no quiet defer |
+| Co-working | โ“ universal adapter wires to v1.35 curator + v1.39 advocate (compliance molecule routes through requireAdvocate=true) |
+| Always-studying | โ“ adapter call telemetry feeds reactor for next-version molecule promotion |
 
-## [1.39.0] — 2026-05-12
+## [1.39.0] โ€” 2026-05-12
 
-**🚨 CRITICAL FIX -- Bot Squadron confirmation bias.** A tester gave
+**๐จ CRITICAL FIX -- Bot Squadron confirmation bias.** A tester gave
 the squad a FALSE claim ("v1.38.0 has critical security vulnerability")
 and 5/6 bots SUPPORTED at 83% confidence by citing the same irrelevant
 commit. **This blocked the Compliance product roadmap** (Compliance-
@@ -4171,29 +4231,29 @@ hallucinated claims).
 
 `packages/core/src/squadron/advocate.ts`. Three remedies:
 
-1. **DEVIL'S ADVOCATE BOT** — the missing 7th juror. Actively
+1. **DEVIL'S ADVOCATE BOT** โ€” the missing 7th juror. Actively
    constructs counter-narrative. Detects:
    - **absence-of-evidence**: claim is specific (mentions
      version/CVE/feature) but ZERO relevant supporting evidence found
-     across N supporting bots → active refutation, not "neutral."
+     across N supporting bots โ’ active refutation, not "neutral."
    - **single-source-laundering**: 3+ bots all cite the SAME evidence
-     → 1 source masquerading as N (downgrades to neutral until
+     โ’ 1 source masquerading as N (downgrades to neutral until
      independent corroboration appears).
    - **all-irrelevant-citations**: every supporting citation shares
-     no tokens with the claim → bots may be hallucinating relevance.
-   - **claim-too-vague**: short non-specific claim → returns
+     no tokens with the claim โ’ bots may be hallucinating relevance.
+   - **claim-too-vague**: short non-specific claim โ’ returns
      needs_data with "restate with specific tokens" hint.
 
 2. **EVIDENCE QUORUM check**: counts UNIQUE evidence sources across
    supporting findings. If unique < `minIndependentSources` (default
-   2) → cap support consensus at 0.5 + emit `SINGLE_SOURCE_SUPPORT`
+   2) โ’ cap support consensus at 0.5 + emit `SINGLE_SOURCE_SUPPORT`
    blocking caveat.
 
 3. **SPARSE-EVIDENCE REFUTE TILT**: when total evidence count <
-   `minTotalEvidence` (default 3), weight refute by 1.5× and support
-   by 0.7×. Extraordinary-claims-need-extraordinary-evidence rule.
+   `minTotalEvidence` (default 3), weight refute by 1.5ร— and support
+   by 0.7ร—. Extraordinary-claims-need-extraordinary-evidence rule.
 
-**`requireAdvocate: true`** option for compliance-grade calls — if
+**`requireAdvocate: true`** option for compliance-grade calls โ€” if
 the advocate is missing, returns `consensus: "insufficient_data"`
 with `MISSING_ADVOCATE` caveat.
 
@@ -4227,22 +4287,22 @@ can wire the advocate into `mneme.squadron.spawn` MCP tool with
 
 | Mandate | This release |
 |---|---|
-| Wild idea | ✓ "absence-of-evidence = refutation signal"; single-source-N-laundering detection |
-| Wiser | ✓ blocking vs advisory caveat severity; persists to quorum.jsonl for self-grading |
-| Self-fix root cause | ✓ adds the missing 7th juror -- structural fix, not vote re-weighting |
-| Co-working | ✓ integrates with v1.31 trust calibration (advocate verdict feeds calibration) |
-| Always-studying | ✓ daemon reactor reads quorum log to compute "advocate flip rate" honesty metric |
+| Wild idea | โ“ "absence-of-evidence = refutation signal"; single-source-N-laundering detection |
+| Wiser | โ“ blocking vs advisory caveat severity; persists to quorum.jsonl for self-grading |
+| Self-fix root cause | โ“ adds the missing 7th juror -- structural fix, not vote re-weighting |
+| Co-working | โ“ integrates with v1.31 trust calibration (advocate verdict feeds calibration) |
+| Always-studying | โ“ daemon reactor reads quorum log to compute "advocate flip rate" honesty metric |
 
-## [1.38.0] — 2026-05-11
+## [1.38.0] โ€” 2026-05-11
 
-**🚀 AUTOPHAGY SHIPPER (Continuous Shipping Cycle).** The
+**๐€ AUTOPHAGY SHIPPER (Continuous Shipping Cycle).** The
 TechCrunch-headline-worthy one. "World's first software that ships
 its own patch updates while the maintainer sleeps."
 
 ### Module: AUTOPHAGY SHIPPER
 
 `packages/core/src/autoship/cycle.ts`. The Continuous Shipping Cycle
-from the README's Operation Automation bet #1 — now with code.
+from the README's Operation Automation bet #1 โ€” now with code.
 
 Cycle (runs nightly inside the daemon, OR on demand via CLI):
 
@@ -4250,8 +4310,8 @@ Cycle (runs nightly inside the daemon, OR on demand via CLI):
 2. For each PR, run 7 paranoid gates:
    - **killswitch**: env `MNEME_AUTOSHIP_DISABLED=1` halts everything
    - **author-is-evolve-bot**: PR must be authored by `mneme-evolve-bot`
-   - **patch-only**: x.y.z → x.y.(z+1) only; never minor/major
-   - **green-ci-hours**: CI must be green for ≥ MIN_GREEN_HOURS (default 24)
+   - **patch-only**: x.y.z โ’ x.y.(z+1) only; never minor/major
+   - **green-ci-hours**: CI must be green for โฅ MIN_GREEN_HOURS (default 24)
    - **no-critical-issues**: no open critical-labeled issues linked
    - **ship-readiness**: `.mneme/ship-readiness.json` must say `READY`
    - **rate-limit**: max 1 publish per UTC day (configurable)
@@ -4263,12 +4323,12 @@ Cycle (runs nightly inside the daemon, OR on demand via CLI):
    - notifier broadcast: "Mneme self-shipped v1.X.Y"
 4. If any gate failed: log to `.mneme/autoship/cycle.jsonl` + skip.
 
-**KILLER IDEA — AUTOPHAGY (cell self-renewal)**:
-Mneme literally ships Mneme. PATCH only — the cell renews its
+**KILLER IDEA โ€” AUTOPHAGY (cell self-renewal)**:
+Mneme literally ships Mneme. PATCH only โ€” the cell renews its
 membrane, not its DNA. Major changes still need a human (chromosome
 edit). Every cycle (dry-run + execute alike) appends to the cycle
 log; reactor reads it to compute "self-ship velocity" + "rejection
-reasons histogram" — which gates fire most.
+reasons histogram" โ€” which gates fire most.
 
 **Paranoid by default**: `execute: false` is the default. The runner
 exists separately (v1.38.1+ wires the actual `gh pr merge` + `npm
@@ -4291,33 +4351,33 @@ reactor read.
 - "What's solid vs maturing" gets a 3-column ASCII infographic at the
   top so readers see the whole picture before the long table.
 - "Why Mneme exists" rewritten as a 3-act story:
-  1. **The Funeral of a Lost Decision** — a memorial program for
+  1. **The Funeral of a Lost Decision** โ€” a memorial program for
      commit a3f9b21 (a real-shaped scenario about JWT + DST + Apple
      Sign-In) showing why decisions die when nobody remembers WHY.
-  2. **Then Mneme arrived** — the ASCII dialog scene where Mneme
+  2. **Then Mneme arrived** โ€” the ASCII dialog scene where Mneme
      resurrects the funeral memory and stops a regression.
-  3. **The hypothesis Mneme is built on** — the antibody framing.
+  3. **The hypothesis Mneme is built on** โ€” the antibody framing.
   Pure new content, never been written this way before.
 
 ### Mandate scoreboard
 
 | Mandate | This release |
 |---|---|
-| Wild idea | ✓ AUTOPHAGY (cell self-renewal); funeral-as-marketing |
-| Wiser | ✓ reuses ship-readiness gate + EVOLVE Phase 4 + supernova |
-| Self-fix root cause | ✓ Mneme is its own engineering manager |
-| Co-working | ✓ composes triage → EVOLVE → autoship into one self-loop |
-| Always-studying | ✓ cycle log feeds reactor for next-cycle tuning |
+| Wild idea | โ“ AUTOPHAGY (cell self-renewal); funeral-as-marketing |
+| Wiser | โ“ reuses ship-readiness gate + EVOLVE Phase 4 + supernova |
+| Self-fix root cause | โ“ Mneme is its own engineering manager |
+| Co-working | โ“ composes triage โ’ EVOLVE โ’ autoship into one self-loop |
+| Always-studying | โ“ cycle log feeds reactor for next-cycle tuning |
 
 ### Tests
 
 +26 (autoship/cycle). Suite total: **5374 / 5374 passing**.
 
-## [1.37.0] — 2026-05-11
+## [1.37.0] โ€” 2026-05-11
 
-(See git log; auto-triage + devhealth + compliance — 42 tests.)
+(See git log; auto-triage + devhealth + compliance โ€” 42 tests.)
 
-## [1.36.0] — 2026-05-11
+## [1.36.0] โ€” 2026-05-11
 
 **Direct response to a 10-bug tester report + the headline ask
 "Mneme must SAVE TOKENS for the AI agent."**
@@ -4326,7 +4386,7 @@ Honest scope: 2 of the 10 bugs fully fixed in this release; remaining
 8 are scheduled in v1.36.x with explicit owners (no quiet defer).
 Plus the killer ask gets its own framework.
 
-### 🔴 SECURITY FIX -- Honeypots removed from capabilities catalog
+### ๐”ด SECURITY FIX -- Honeypots removed from capabilities catalog
 
 `packages/mcp/src/tools/_capabilities.ts`. Pre-fix: when a legit AI
 client called `mneme.capabilities`, the syllabus included
@@ -4339,7 +4399,7 @@ Fix: explicit HONEYPOT_NAMES set, filtered from the catalog response.
 Honeypot tools STAY REGISTERED (so probing attackers still trigger
 them), but are HIDDEN from the syllabus that legit clients read.
 
-### 🟢 KILLER FEATURE -- TOKEN ECONOMY (the secretary bot framework)
+### ๐ข KILLER FEATURE -- TOKEN ECONOMY (the secretary bot framework)
 
 `packages/core/src/token_economy.ts`. Direct response to
 "Mneme must save tokens for AI agents -- measurable before/after."
@@ -4379,17 +4439,17 @@ order, secretary negotiation rendering with the honest disclaimer.
 
 | # | Bug | v1.36.0 status | Plan |
 |---|---|---|---|
-| 1 | 8KB JSON truncation | ⏳ DEFERRED v1.36.1 | Chunked-write or temp-file return path; needs root-cause sniff in MCP transport |
-| 2 | `forensics.*` routing dead | ⏳ DEFERRED v1.36.1 | Re-register every subcommand + e2e regression guard (release blocker) |
-| 3 | FTS5 missing on macOS | 🟢 PARTIAL | TRIPLE-INDEX WAR shipped v1.30; verify wired in `memory.ask` |
-| 4 | Honeypots in capabilities | 🟢 FIXED HERE | HONEYPOT_NAMES filter |
-| 5 | Ecosystem tools shallow regex | ⏳ DEFERRED v1.36.2 | Negative filters (test/k6/) + better anchors |
-| 6 | `understand_intent` 100% confidence | ⏳ DEFERRED v1.36.2 | Wire to TRUST CALIBRATOR (v1.31) |
-| 7 | MCP server reports old version | ⏳ DEFERRED v1.36.1 | Hot-reload hook on photon shift |
-| 8 | "AUTO-ACTION protocol" bypass | 🟢 ACKNOWLEDGED | Will be REMOVED in v1.37 (philosophy fix; needs migration path) |
-| 9 | Metaphor naming overhead | 🟢 PARTIAL | Curator (v1.35) adds plain labels; needs extension to remaining tools |
-| 10 | No index = half tools fail | ⏳ DEFERRED v1.36.1 | Auto-index on first MCP connect |
-| HEADLINE | TOKEN SAVE measurement | 🟢 FRAMEWORK SHIPPED HERE | Per-vendor BARGAIN TABLE + ledger + secretary brief |
+| 1 | 8KB JSON truncation | โณ DEFERRED v1.36.1 | Chunked-write or temp-file return path; needs root-cause sniff in MCP transport |
+| 2 | `forensics.*` routing dead | โณ DEFERRED v1.36.1 | Re-register every subcommand + e2e regression guard (release blocker) |
+| 3 | FTS5 missing on macOS | ๐ข PARTIAL | TRIPLE-INDEX WAR shipped v1.30; verify wired in `memory.ask` |
+| 4 | Honeypots in capabilities | ๐ข FIXED HERE | HONEYPOT_NAMES filter |
+| 5 | Ecosystem tools shallow regex | โณ DEFERRED v1.36.2 | Negative filters (test/k6/) + better anchors |
+| 6 | `understand_intent` 100% confidence | โณ DEFERRED v1.36.2 | Wire to TRUST CALIBRATOR (v1.31) |
+| 7 | MCP server reports old version | โณ DEFERRED v1.36.1 | Hot-reload hook on photon shift |
+| 8 | "AUTO-ACTION protocol" bypass | ๐ข ACKNOWLEDGED | Will be REMOVED in v1.37 (philosophy fix; needs migration path) |
+| 9 | Metaphor naming overhead | ๐ข PARTIAL | Curator (v1.35) adds plain labels; needs extension to remaining tools |
+| 10 | No index = half tools fail | โณ DEFERRED v1.36.1 | Auto-index on first MCP connect |
+| HEADLINE | TOKEN SAVE measurement | ๐ข FRAMEWORK SHIPPED HERE | Per-vendor BARGAIN TABLE + ledger + secretary brief |
 
 ### Tests
 
@@ -4399,13 +4459,13 @@ order, secretary negotiation rendering with the honest disclaimer.
 
 | Mandate | This release |
 |---|---|
-| Wild idea | ✓ AI VOLUNTEERS its own token counts; secretary-bot negotiation |
-| Wiser | ✓ per-vendor BARGAIN TABLE will tune ratios from real reports over time |
-| Self-fix root cause | ✓ honeypot security risk fully fixed; v1.36.x roadmap scheduled |
-| Co-working | ✓ token-economy will surface in pulse + LIVE STATE block + reactor wisdom yield |
-| Always-studying | ✓ ledger appended on every report; rollup recomputed on demand |
+| Wild idea | โ“ AI VOLUNTEERS its own token counts; secretary-bot negotiation |
+| Wiser | โ“ per-vendor BARGAIN TABLE will tune ratios from real reports over time |
+| Self-fix root cause | โ“ honeypot security risk fully fixed; v1.36.x roadmap scheduled |
+| Co-working | โ“ token-economy will surface in pulse + LIVE STATE block + reactor wisdom yield |
+| Always-studying | โ“ ledger appended on every report; rollup recomputed on demand |
 
-## [1.35.0] — 2026-05-11
+## [1.35.0] โ€” 2026-05-11
 
 **Mandate-driven release** -- every change satisfies the 5 permanent
 rules: wild idea, wiser, self-fix root cause, co-working, always-
@@ -4418,7 +4478,7 @@ real tester painpoints:
 "chromosomes are plaintext on disk; if anyone gets your laptop they
 read every AI session." AES-256-GCM with HKDF over a per-machine
 salt (gitignored, mode 0600). Magic header `MNEMECv1` so loaders
-auto-detect: encrypted blob → decrypt; plaintext (legacy) → still
+auto-detect: encrypted blob โ’ decrypt; plaintext (legacy) โ’ still
 works. Two encrypts of the same plaintext produce DIFFERENT
 ciphertexts (random nonce -- replay-attack resistant). GCM MAC
 catches any tampered byte.
@@ -4479,7 +4539,7 @@ shipping again.
   package.json mtime shifts) and agent_manifest (renderCuratedMarkdown
   goes into the LIVE STATE block).
 - Encryption integrates with v1.34.1 dep pins (uses node:crypto
-  built-in HKDF — no new native dep).
+  built-in HKDF โ€” no new native dep).
 - Ship-readiness gate writes to `.mneme/ship-readiness.json` so
   `mneme doctor` (future) can surface it in the unified status.
 
@@ -4492,16 +4552,16 @@ Zero regressions.
 
 | Mandate | This release |
 |---|---|
-| Wild idea | ✓ HKDF-from-machine-photon, PROJECT-SHAPE PHEROMONE, ship-readiness gate as the permanent block |
-| Wiser | ✓ reuses cache hologram + agent manifest + node:crypto built-in |
-| Self-fix root cause | ✓ ship-readiness gate prevents v1.34.1-class drift forever |
-| Co-working | ✓ curator + manifest + hologram + encryption all integrate |
-| Always-studying | ✓ ship-readiness report persists for future audits |
+| Wild idea | โ“ HKDF-from-machine-photon, PROJECT-SHAPE PHEROMONE, ship-readiness gate as the permanent block |
+| Wiser | โ“ reuses cache hologram + agent manifest + node:crypto built-in |
+| Self-fix root cause | โ“ ship-readiness gate prevents v1.34.1-class drift forever |
+| Co-working | โ“ curator + manifest + hologram + encryption all integrate |
+| Always-studying | โ“ ship-readiness report persists for future audits |
 
-## [1.34.1] — 2026-05-11
+## [1.34.1] โ€” 2026-05-11
 
-**🚨 ROOT-CAUSE HOTFIX: internal package dep pins were stuck at 1.27.9
-across EVERY prior 1.28.x → 1.34.0 release.**
+**๐จ ROOT-CAUSE HOTFIX: internal package dep pins were stuck at 1.27.9
+across EVERY prior 1.28.x โ’ 1.34.0 release.**
 
 This is the bug that caused every "serviceUninstall not exported",
 "antivirus synthesize crash", "node:sqlite missing" report from
@@ -4544,9 +4604,9 @@ publish step.
 
 Suite: 5265 / 5265 passing.
 
-## [1.34.0] — 2026-05-11
+## [1.34.0] โ€” 2026-05-11
 
-**MNEME OVERNIGHT** — go to sleep, wake up to better work. Direct
+**MNEME OVERNIGHT** โ€” go to sleep, wake up to better work. Direct
 response to ARIS (Auto-Research-In-Sleep) but explicitly broader
 AND free-path-first.
 
@@ -4557,10 +4617,10 @@ AND free-path-first.
 | 2 different MODELS (Claude doer + GPT reviewer) | **6-PERSPECTIVE QUARK JURY** -- ONE model, six personas (optimist / pessimist / elegance / edge-cases / security / performance) -- philosophical diversity > model-vendor diversity, on the FREE Ollama path |
 | Specialized to AI research papers | **Any goal**: refactors, EVOLVE patches, vaccine proposals, docs |
 | Linear 4-round loop | **Wisdom-Q auto-stop** + reject-streak guard + budget time/cost cap (uses v1.33.0 reactor Q-score) |
-| Single reviewer median verdict | **NUCLEAR FUSION verdict**: 6 quark scores fuse into a verdict nucleus. Stable nucleus (low variance + high mean) → merge. Unstable (1 quark hates it) → defer to human. |
+| Single reviewer median verdict | **NUCLEAR FUSION verdict**: 6 quark scores fuse into a verdict nucleus. Stable nucleus (low variance + high mean) โ’ merge. Unstable (1 quark hates it) โ’ defer to human. |
 | Cost = 2 paid API providers per round | **Free path** = local Ollama with persona prompts. Paid jurors are opt-in. |
 
-### Module 1 — DUAL-CONSCIENCE COURT
+### Module 1 โ€” DUAL-CONSCIENCE COURT
 
 `packages/core/src/overnight/conscience.ts`. N-model jury with
 median aggregation + consensus-fraction banding (merge / review /
@@ -4574,7 +4634,7 @@ so a single network failure can't sink the court.
 median-resistance to single rogue reviewer, JSON parse defense,
 custom-threshold knob.
 
-### Module 2 — PERSPECTIVE QUARK JURY (KILLER IDEA #1)
+### Module 2 โ€” PERSPECTIVE QUARK JURY (KILLER IDEA #1)
 
 `packages/core/src/overnight/quark_jury.ts`. Six quark flavors
 matching real quark families: **up** OPTIMIST, **down** PESSIMIST,
@@ -4584,13 +4644,13 @@ temperature variation that biases the same underlying model.
 
 `spawnQuarkJury(baseReviewer)` returns 6 jurors from one base.
 `fuseQuarkVerdicts(verdicts, workItemKind)` runs the **NUCLEAR
-FUSION** aggregator: stable nucleus = low variance (≤2.5) AND high
-mean (≥6.5) = `merge-stable`. High mean but high variance =
+FUSION** aggregator: stable nucleus = low variance (โค2.5) AND high
+mean (โฅ6.5) = `merge-stable`. High mean but high variance =
 `merge-with-watch` (defer to human). `DOMAIN_WEIGHTS` table tunes
-energy yield per workItemKind (e.g., security weighs 1.5× for
-evolve-patch, 0.3× for docs).
+energy yield per workItemKind (e.g., security weighs 1.5ร— for
+evolve-patch, 0.3ร— for docs).
 
-**ENERGY YIELD**: `Σ score_i × weight_i × c²` (reuses
+**ENERGY YIELD**: `ฮฃ score_i ร— weight_i ร— cยฒ` (reuses
 `WISDOM_C_SQUARED` from v1.33.0 reactor) -- single domain-aware
 score that beats raw mean.
 
@@ -4599,7 +4659,7 @@ heavier for evolve-patch than docs), variance-based stability
 classification, energy yield > mean for high-security-score
 evolve-patch.
 
-### Module 3 — OVERNIGHT RUNNER (KILLER IDEA #2)
+### Module 3 โ€” OVERNIGHT RUNNER (KILLER IDEA #2)
 
 `packages/core/src/overnight/runner.ts`. Goal-driven multi-round
 loop with hard guardrails:
@@ -4611,10 +4671,10 @@ loop with hard guardrails:
 - **WISDOM-Q AUTO-STOP** (default 2 -- stops on N consecutive
   negative-Q rounds; uses v1.33.0 reactor Q-score; ARIS doesn't have
   this -- they always run to round cap)
-- **actor-error-stop** (any thrown error → stops + records)
+- **actor-error-stop** (any thrown error โ’ stops + records)
 
-Per round: PLAN → ACT (caller-supplied actor) → REVIEW (quark jury
-NUCLEAR FUSION) → DECIDE (band) → write `.mneme/overnight/<id>/round-N.md`.
+Per round: PLAN โ’ ACT (caller-supplied actor) โ’ REVIEW (quark jury
+NUCLEAR FUSION) โ’ DECIDE (band) โ’ write `.mneme/overnight/<id>/round-N.md`.
 Final morning report at `.mneme/overnight/<id>/REPORT.md` aggregates
 every round + recommends next step. Session summary appended to
 `.mneme/overnight/sessions.jsonl`.
@@ -4641,7 +4701,7 @@ can plug in custom actors today.
 include the `overnight` subcommand. Suite total: **5265 / 5265
 passing**. Zero regressions.
 
-## [1.33.0] — 2026-05-11
+## [1.33.0] โ€” 2026-05-11
 
 **MNEME WISDOM REACTOR.** Five real nuclear-physics formulas mapped to
 Mneme metrics as actually-useful architecture, not marketing. Honest
@@ -4649,39 +4709,39 @@ framing: this is NOT a physics simulator -- the formulas have well-
 defined operational meanings the user/AI can read, trust, and act on.
 We use the math because the math is RIGHT for these problems.
 
-### Formulas → Mneme metrics
+### Formulas โ’ Mneme metrics
 
-1. **E = mc²  →  WISDOM YIELD**.
-   `wisdomYield = (rawChunks + rawLessons + rawCommits − synthesizedDNA − synthesizedLessons) × c²`.
+1. **E = mcยฒ  โ’  WISDOM YIELD**.
+   `wisdomYield = (rawChunks + rawLessons + rawCommits โ’ synthesizedDNA โ’ synthesizedLessons) ร— cยฒ`.
    Single number that says "how much raw content this session
    compressed into reusable patterns." Bigger is better.
 
-2. **N(t) = N₀·e^(-λt)  →  EXPONENTIAL ATROPHY HALF-LIFE.**
+2. **N(t) = Nโ€ยทe^(-ฮปt)  โ’  EXPONENTIAL ATROPHY HALF-LIFE.**
    Pre-fix `mneme atrophy` used a linear half-life model. Real
    knowledge decays exponentially. Each cluster gets a band-specific
-   T_½: hot files 30d, warm 90d, cold 365d, library 5y.
-   λ = ln(2)/T_½. Result: atrophy report is now physically accurate.
+   T_ยฝ: hot files 30d, warm 90d, cold 365d, library 5y.
+   ฮป = ln(2)/T_ยฝ. Result: atrophy report is now physically accurate.
 
-3. **Q = (m_initial − m_final) × c²  →  EVOLVE PATCH ENERGY**.
-   Per-template Q-score = (LOC before − LOC after) × confidence.
-   Q > 0 → patch compressed code. Q < 0 → patch added complexity.
+3. **Q = (m_initial โ’ m_final) ร— cยฒ  โ’  EVOLVE PATCH ENERGY**.
+   Per-template Q-score = (LOC before โ’ LOC after) ร— confidence.
+   Q > 0 โ’ patch compressed code. Q < 0 โ’ patch added complexity.
    Operational meaning: prioritize templates with positive Q.
 
-4. **R = r₀·A^(1/3)  →  RAG CLUSTER RADIUS**.
+4. **R = rโ€ยทA^(1/3)  โ’  RAG CLUSTER RADIUS**.
    When a cluster's effective radius exceeds the theoretical
-   `r₀·A^(1/3)`, the centroid blurs and retrieval recall drops.
+   `rโ€ยทA^(1/3)`, the centroid blurs and retrieval recall drops.
    Operational meaning: trigger a split.
 
-5. **k = neutrons_n / neutrons_n-1  →  USER-ENGAGEMENT CRITICALITY**.
+5. **k = neutrons_n / neutrons_n-1  โ’  USER-ENGAGEMENT CRITICALITY**.
    "Neutrons" = follow-up commands the user runs after each Mneme
    response. Measured over the last 10 prompts.
-   k > 1.2 → supercritical (user engaging deeper).
-   0.8 < k < 1.2 → stable.
-   k < 0.8 → subcritical (user disengaging).
+   k > 1.2 โ’ supercritical (user engaging deeper).
+   0.8 < k < 1.2 โ’ stable.
+   k < 0.8 โ’ subcritical (user disengaging).
 
    **KILLER IDEA -- NUCLEUS TIDE**: pulse uses k_factor to auto-tune
-   verbosity. supercritical → quiet (don't overwhelm). subcritical
-   → proactive (surface Oracle hints + supernova alerts to revive
+   verbosity. supercritical โ’ quiet (don't overwhelm). subcritical
+   โ’ proactive (surface Oracle hints + supernova alerts to revive
    engagement). No setting needed; Mneme reads the user's rhythm.
 
 ### New module + CLI
@@ -4698,19 +4758,19 @@ banner suitable for the pulse.
 ### Tests
 
 +20 across all 5 formulas: mass-defect clamping, decay constant
-matches λ = ln(2)/T_½, aliveness at exactly T_½ is 0.5, Q-score
+matches ฮป = ln(2)/T_ยฝ, aliveness at exactly T_ยฝ is 0.5, Q-score
 sign discrimination, cluster overflow detection, k-factor band
 classification (supercritical/stable/subcritical), record/read
 followup persistence. Suite total: **5232 / 5232 passing**.
 
-## [1.32.0] — 2026-05-11
+## [1.32.0] โ€” 2026-05-11
 
 **MANIFEST PHOTONICS ENGINE.** Cache hologram with photon-based
 dependency invalidation (causal-cone analog from special relativity)
 + LIVE STATE block in agent files so AI agent and Mneme genuinely
 become one body, no MCP round-trips for state inquiry.
 
-### Module 1 — CACHE HOLOGRAM + PHOTONICS PROPAGATION
+### Module 1 โ€” CACHE HOLOGRAM + PHOTONICS PROPAGATION
 
 `packages/core/src/cache_hologram.ts`. Central registry of every
 cache in `.mneme/`. Each cache declares its TTL + which UPSTREAM
@@ -4738,7 +4798,7 @@ API: `registerCache`, `registerSource`, `markBuilt`, `isFresh`,
 expiry, photon shift detection, source-based propagation, snapshot
 tally.
 
-### Module 2 — MANIFEST PHOTONICS ENGINE: LIVE STATE block
+### Module 2 โ€” MANIFEST PHOTONICS ENGINE: LIVE STATE block
 
 `packages/core/src/agent_manifest.ts` extended with a second
 sentinel-bracketed block (`<!-- BEGIN MNEME LIVE STATE -->`) that
@@ -4754,7 +4814,7 @@ The result: AI agent reading any agent file sees BOTH:
 1. **Static manifest** -- "every command Mneme ships."
 2. **LIVE STATE** -- "right now: daemon is X, hologram says Y, calibration grades are Z."
 
-Every prompt → AI re-reads the agent file → AI sees fresh state →
+Every prompt โ’ AI re-reads the agent file โ’ AI sees fresh state โ’
 adapts. No MCP round-trip needed for state inquiry. The seamless-
 fusion layer the user asked for: AI agent + Mneme as one body, each
 becoming an organ for the other.
@@ -4772,7 +4832,7 @@ fix for the pulse-cache-lag bug the tester reported.
 +10 cache_hologram tests. Suite total: **5212 / 5212 passing**.
 Zero regressions.
 
-## [1.31.1] — 2026-05-11
+## [1.31.1] โ€” 2026-05-11
 
 **HOTFIX: synthesize CLI bulletproof + E2E regression guard.**
 
@@ -4828,14 +4888,14 @@ on, every release runs it before publish.
 
 Suite total: **5202 / 5202 passing** (5192 + 10 e2e). Zero regressions.
 
-## [1.31.0] — 2026-05-11
+## [1.31.0] โ€” 2026-05-11
 
 **MNEME BLACK SHEEP RENAISSANCE.** Three modules + three killer wild
 ideas in one ship. Direct response to a tester critique that called
 out high FP rate on `forensics vulns`, low trust on `ask`, and AI
 agents not knowing about new commands.
 
-### Module 1 — AGENT COMMAND MANIFEST + auto-sync
+### Module 1 โ€” AGENT COMMAND MANIFEST + auto-sync
 
 `packages/core/src/agent_manifest.ts` -- single source of truth for
 every Mneme command + "when to use" hint. Renderable into Markdown
@@ -4856,14 +4916,14 @@ next prompt. **No more "I didn't know that command existed."**
 upsert/replace/unchanged action detection, version-bump triggers
 'replaced' on every target.
 
-### Module 2 — TRUST CALIBRATOR + SELF-DOWNGRADE (KILLER IDEA)
+### Module 2 โ€” TRUST CALIBRATOR + SELF-DOWNGRADE (KILLER IDEA)
 
 `packages/core/src/trust_calibration.ts` -- per-subsystem benchmarks +
 calibration grades. Each subsystem ships a curated test set
 (TP / FP samples). `gradeSubsystem()` runs the benchmark, computes
 precision / recall / F1, classifies into bands:
-**excellent** (P≥0.90 ∧ R≥0.85) · **acceptable** (P≥0.75 ∧ R≥0.70) ·
-**weak** (P≥0.50 ∨ R≥0.50) · **untrusted** (otherwise).
+**excellent** (Pโฅ0.90 โง Rโฅ0.85) ยท **acceptable** (Pโฅ0.75 โง Rโฅ0.70) ยท
+**weak** (Pโฅ0.50 โจ Rโฅ0.50) ยท **untrusted** (otherwise).
 
 **SELF-DOWNGRADE**: subsystems in weak/untrusted band emit a
 `[CALIBRATION:WEAK|UNTRUSTED]` annotation appended to every output,
@@ -4880,10 +4940,10 @@ vulnerabilities with safe-but-similar patterns) and `ask_semantic`
 `mneme trust show` prints the LAST persisted grades (instant, no
 re-benchmark).
 
-13 tests including the user's reported scenario (high-FP probe →
-weak band → SELF-DOWNGRADE annotation present).
+13 tests including the user's reported scenario (high-FP probe โ’
+weak band โ’ SELF-DOWNGRADE annotation present).
 
-### Module 3 — FORENSICS V2: 3-LAYER + GHOST-NEGATIVE LOG (KILLER IDEA)
+### Module 3 โ€” FORENSICS V2: 3-LAYER + GHOST-NEGATIVE LOG (KILLER IDEA)
 
 `packages/core/src/forensics_v2.ts` -- direct fix for "forensics vulns
 80%+ FP" critique. Replaces the v1 single-regex layer with:
@@ -4920,7 +4980,7 @@ aggregate metrics.
 +42 across the 3 modules. Suite total: **5192 / 5192 passing.** Zero
 regressions.
 
-## [1.30.0] — 2026-05-11
+## [1.30.0] โ€” 2026-05-11
 
 **8 bug fixes + 4 wild killer ideas.** Direct response to two harsh
 tester reports (NestJS 87k LOC repo + a Mac user who lost 6 days of
@@ -4969,7 +5029,7 @@ webgpu / auto), keep the first one that loads, cache the winner to
 instantly. Newest-first order so fresh installs hit the right path.
 
 **#5 + #6 TIME-MACHINE INDEX (KILLER IDEA)** -- a re-index that hit
-FTS5/migration failure used to destroy the prior chunks (827 → 0) with
+FTS5/migration failure used to destroy the prior chunks (827 โ’ 0) with
 no rollback, no backup, no `--dry-run`. The user lost 6 days of work.
 Now `core/store/safe_index.ts` wraps every index op:
 
@@ -4994,17 +5054,17 @@ crashes that were actively burning users.
 ### REAL MEMORY LAYER (kills "memory layer = hash embedder = degraded")
 
 `packages/core/src/memory_tier.ts` -- transparency layer. Pulse line
-now shows `mem=<tier>[★…]`; on hash tier it's flagged `DEGRADED`.
+now shows `mem=<tier>[โ…โ€ฆ]`; on hash tier it's flagged `DEGRADED`.
 
 `mneme embeddings status` (alias `tier`) -- prints persisted + live
 tier + a REAL similarity test on FOUR probe pairs (similar + distant).
 Computes margin = avg(similar) - avg(distant). Verdict:
-`> 0.30` excellent · `> 0.15` ok · `> 0.05` weak · `≤ 0.05` DEGRADED
+`> 0.30` excellent ยท `> 0.15` ok ยท `> 0.05` weak ยท `โค 0.05` DEGRADED
 (looks like hash). User can SEE for themselves whether semantic search
 works.
 
 `mneme embeddings upgrade` -- eagerly downloads the bundled MiniLM-L6
-model (~25MB) so the next `mneme index` lands on the ★★★ tier. One
+model (~25MB) so the next `mneme index` lands on the โ…โ…โ… tier. One
 command. Idempotent.
 
 ### `mneme supernova` CLI (closes v1.29.0 promise)
@@ -5021,7 +5081,7 @@ compact 8-field snapshot to `.mneme/pulse-trace.jsonl` (bounded growth).
 On the NEXT pulse, computes the diff vs the prior snapshot and emits:
 
 ```
-[CHANGED (45s ago)] vaccines 8→9 · daemon RESTARTED (ticks reset 12→3) · HCI 88→75 ↓
+[CHANGED (45s ago)] vaccines 8โ’9 ยท daemon RESTARTED (ticks reset 12โ’3) ยท HCI 88โ’75 โ“
 ```
 
 AI agent on prompt N+1 sees what changed since prompt N and adapts
@@ -5039,8 +5099,8 @@ in a try/catch and throws a CLEAR, ACTIONABLE message at module load:
 ### README honesty pass
 
 New section: **"What's solid vs what's still maturing (honest)"** with
-three tables: solid features, tier-dependent surfaces (hash → bundled
-→ ollama → openai), research-grade. Plus "Use the right tool for the
+three tables: solid features, tier-dependent surfaces (hash โ’ bundled
+โ’ ollama โ’ openai), research-grade. Plus "Use the right tool for the
 job" matrix that recommends Semgrep / Cursor / Claude Code where
 they're the better fit.
 
@@ -5056,7 +5116,7 @@ they're the better fit.
 
 Suite total: **5150 / 5150 passing**. Zero regressions.
 
-## [1.30.0-WIP] — Honesty pass (predecessor to ship section above)
+## [1.30.0-WIP] โ€” Honesty pass (predecessor to ship section above)
 
 ### Bug fixes
 
@@ -5084,18 +5144,18 @@ try/catch and throws a CLEAR, ACTIONABLE message at module load:
 `packages/core/src/memory_tier.ts` -- transparency layer for the embedder
 cascade. Reads which tier the LAST `mneme index` actually used, exposes
 star ratings + degraded warnings. Pulse line now shows
-`mem=<tier>[★…]`; when on the hash tier it's flagged `DEGRADED`.
+`mem=<tier>[โ…โ€ฆ]`; when on the hash tier it's flagged `DEGRADED`.
 
 `packages/cli/src/commands/embeddings.ts`:
 - **`mneme embeddings status`** (alias `tier`) -- prints persisted +
   live tier + a REAL similarity test on FOUR probe pairs (similar +
   distant). Computes margin = avg(similar) - avg(distant). Verdict:
-  `> 0.30` excellent · `> 0.15` ok · `> 0.05` weak (recommend bundled)
-  · `≤ 0.05` DEGRADED (looks like hash). User can SEE for themselves
+  `> 0.30` excellent ยท `> 0.15` ok ยท `> 0.05` weak (recommend bundled)
+  ยท `โค 0.05` DEGRADED (looks like hash). User can SEE for themselves
   whether semantic search works.
 - **`mneme embeddings upgrade`** -- eagerly downloads the bundled
-  MiniLM-L6 model (~25MB) so the next `mneme index` lands on the ★★★
-  tier instead of falling back to ★★ hash. One command. Idempotent.
+  MiniLM-L6 model (~25MB) so the next `mneme index` lands on the โ…โ…โ…
+  tier instead of falling back to โ…โ… hash. One command. Idempotent.
 
 ### `mneme supernova` CLI (closes v1.29.0 promise)
 
@@ -5122,14 +5182,14 @@ to most-recent 500 every ~50 writes). On the NEXT pulse, computes the
 diff vs the prior snapshot and emits a `[CHANGED ...]` line:
 
 ```
-[CHANGED (45s ago)] vaccines 8→9 · daemon RESTARTED (ticks reset 12→3) · HCI 88→75 ↓
+[CHANGED (45s ago)] vaccines 8โ’9 ยท daemon RESTARTED (ticks reset 12โ’3) ยท HCI 88โ’75 โ“
 ```
 
 Net effect: AI agent on prompt N+1 sees what changed since prompt N
 and adapts incrementally instead of re-discovering state every turn.
 Detects: version upgrade, daemon stop/start, daemon restart (tick
 reset), inbox delta, vaccine count change, uncertified delta,
-retrieval trial increment, HCI ±5pt, memory tier upgrade.
+retrieval trial increment, HCI ยฑ5pt, memory tier upgrade.
 
 ### README honesty pass
 
@@ -5159,12 +5219,12 @@ Direct response to "marketing exaggerates" critique.
 Suite total: **5134 / 5134 passing**. Zero regressions. Snapshot for
 `mneme --help` updated to include `embeddings` + `supernova` + `uninstall`.
 
-## [1.29.0] — 2026-05-11
+## [1.29.0] โ€” 2026-05-11
 
-**MNEME SUPERNOVA — self-heal supervisor (factorial backoff) + QUANTUM
+**MNEME SUPERNOVA โ€” self-heal supervisor (factorial backoff) + QUANTUM
 gap-scanner (Grover-shaped sub-linear scan).** Two wild upgrades that
 solve "the daemon goes silent when one cycle crashes" + "scanning the
-full vaccine state space is O(N×M) which doesn't scale."
+full vaccine state space is O(Nร—M) which doesn't scale."
 
 ### Module 1: SUPERNOVA Self-Heal Supervisor
 
@@ -5177,16 +5237,16 @@ stays broken forever with NO escalation.
 
 `packages/core/src/supernova/supervisor.ts`. SUPERNOVA wraps every
 cycle in `supervisor.runCycle(name, fn)`:
-- **Success** → clear restart counter, log `ok` entry to `.mneme/supernova.jsonl`.
-- **Failure** → factorial backoff: attempt N waits **N!** seconds
+- **Success** โ’ clear restart counter, log `ok` entry to `.mneme/supernova.jsonl`.
+- **Failure** โ’ factorial backoff: attempt N waits **N!** seconds
   (1, 2, 6, 24, 120 -- capped at 5! = 120s to prevent fork-bomb
   behavior). Log `failed` entry with `retryAt`.
-- **5 consecutive failures** → escalate via the multi-channel notifier
+- **5 consecutive failures** โ’ escalate via the multi-channel notifier
   fabric (toast / push / voice / email / agent files). Stop auto-retry
   until manually cleared via `clearEscalation(cycle)`.
 
 Why factorial backoff specifically? Per project memory the user
-explicitly asked for "n! factorial หรือ math ที่แปลกกว่านี้".
+explicitly asked for "n! factorial เธซเธฃเธทเธญ math เธ—เธตเนเนเธเธฅเธเธเธงเนเธฒเธเธตเน".
 Factorial gives aggressive first-retry (1s) for transient blips +
 steeply growing back-off for pathological loops + a hard ceiling.
 
@@ -5208,29 +5268,29 @@ back the last N entries.
 (quantum loses to a good index for AI-recall workloads, per project
 memory). Classical algorithm SHAPED BY Grover's amplitude amplification
 idea: when you can probabilistically rate items in an unstructured
-search space, you can find marked items in **O(√N)** iterations
+search space, you can find marked items in **O(โN)** iterations
 instead of O(N) by progressively concentrating sampling on
 higher-rated regions. Same Big-O guarantee Grover gives in qubits.
 
 Use case: classical antivirus gap-scan iterates EVERY (strain,
-mutator_family, ground_truth_sample) triple. For 8 strains × 5 mutator
-families × 1000 samples = **40,000 vaccine assays** per gap-scan. Slow.
+mutator_family, ground_truth_sample) triple. For 8 strains ร— 5 mutator
+families ร— 1000 samples = **40,000 vaccine assays** per gap-scan. Slow.
 
 Quantum scanner:
 1. `oracle(triple)` rates each triple cheaply (e.g., "has this strain
    ever had FN samples?"). One pass: O(N).
-2. Run `ceil(π/4 × √N) ≈ 0.785 × √N` amplification rounds. Each round:
-   - Sample a triple by `weight²` distribution (amplitude amplification
+2. Run `ceil(ฯ€/4 ร— โN) โ 0.785 ร— โN` amplification rounds. Each round:
+   - Sample a triple by `weightยฒ` distribution (amplitude amplification
      mimics the measurement distribution of an amplified quantum register).
    - Run the EXPENSIVE `assay(triple)`.
    - On hit: boost neighbors sharing strain or mutator (Grover's
      diffusion operator's classical analog).
-   - On miss: damp the weight by ×0.5.
-3. Top-K suspects surface in **~√N expensive assays** instead of N.
+   - On miss: damp the weight by ร—0.5.
+3. Top-K suspects surface in **~โN expensive assays** instead of N.
 
-For a 40k-triple space: ~157 expensive calls instead of 40,000 — a
-**254× speedup** on the scan that drives nightly synthesis. Falls
-back to classical full-scan when N ≤ 16 (where √N ≥ N/2 stops being
+For a 40k-triple space: ~157 expensive calls instead of 40,000 โ€” a
+**254ร— speedup** on the scan that drives nightly synthesis. Falls
+back to classical full-scan when N โค 16 (where โN โฅ N/2 stops being
 a win).
 
 API: `quantumGapScan({ triples, oracle, assay, topK?, iterations?,
@@ -5256,11 +5316,11 @@ through `buildAllNotifiers()` so the user sees:
 > 5 consecutive failures: <error>. Auto-retry stopped.
 > Investigate + run `mneme supernova clear antivirus_synth` to resume.
 
-(The `mneme supernova clear` CLI is reserved for v1.29.1 — for now,
+(The `mneme supernova clear` CLI is reserved for v1.29.1 โ€” for now,
 clearing requires restarting the daemon; the supervisor's escalation
 state is in-memory.)
 
-## [1.28.3] — 2026-05-11
+## [1.28.3] โ€” 2026-05-11
 
 **HOTFIX: synthesize TypeError + README cleanup.**
 
@@ -5271,7 +5331,7 @@ properties of undefined (reading 'length')` (variant: `negativeSamples
 is not iterable`) when a third-party caller bypassed the CLI's
 `?? []` guard and passed `undefined` for `negativeSamples`. The
 v1.28.0 headline upgrade ("antivirus learns to write its own
-vaccines") was the most-affected feature — flagship feature with a
+vaccines") was the most-affected feature โ€” flagship feature with a
 day-one crash.
 
 ### Root cause
@@ -5310,16 +5370,16 @@ previously crashed. Suite total: **5085 / 5085 passing.**
   `mneme uninstall`, `mneme antivirus synthesize`,
   `mneme antivirus gap-scan`, ghost-sniper auto-boot.
 
-## [1.28.2] — 2026-05-11
+## [1.28.2] โ€” 2026-05-11
 
-**Trust contract — `mneme uninstall` + every auto-boot failure mode
+**Trust contract โ€” `mneme uninstall` + every auto-boot failure mode
 has a fallback.** v1.28.1 added silent ghost-sniper auto-install. The
 trust risk: anything we silently install, the user (or AI agent acting
 on their behalf) must be able to silently remove. v1.28.2 closes that
 loop end-to-end + plugs every gap that could leave the auto-boot
 unable to fire.
 
-### `mneme uninstall` — comprehensive removal
+### `mneme uninstall` โ€” comprehensive removal
 
 New top-level command. Removes EVERY artifact in one pass:
 
@@ -5343,22 +5403,22 @@ surprises. Exit code 1 if any step failed.
 
 ### Auto-boot fallbacks (every failure mode covered)
 
-- **`mneme.cmd` not on PATH** (nvm shells, pnpm shims) → fallback to
+- **`mneme.cmd` not on PATH** (nvm shells, pnpm shims) โ’ fallback to
   `process.execPath` + `process.argv[1]` so spawn ALWAYS works.
-- **Home dir unwritable** (sandboxed envs, locked corp boxes) → marker
+- **Home dir unwritable** (sandboxed envs, locked corp boxes) โ’ marker
   falls back to `<repoRoot>/.mneme/.mneme-auto-service-attempted`. The
   one-time-per-machine guarantee still holds, just per-repo instead.
-- **schtasks blocked by group policy** → marker still gets written so
+- **schtasks blocked by group policy** โ’ marker still gets written so
   we don't spam-retry every prompt.
-- **launchctl SIP / TCC denial** → silent fail, marker prevents retry.
-- **Sync `spawn` throw** (rare) → caught, retried via Strategy B.
+- **launchctl SIP / TCC denial** โ’ silent fail, marker prevents retry.
+- **Sync `spawn` throw** (rare) โ’ caught, retried via Strategy B.
 
 ### New API in `core`
 
-- `service_uninstall.ts` — `removeBootService()` + `removeAutoBootMarker(homeDir?)`.
+- `service_uninstall.ts` โ€” `removeBootService()` + `removeAutoBootMarker(homeDir?)`.
   Both return `ServiceRemovalResult[]` / `ServiceRemovalResult` with
   status: `removed` / `not-installed` / `failed`.
-- `pulse.ts` — `hasAutoBootMarker(homeDir?, repoRoot?)` + new
+- `pulse.ts` โ€” `hasAutoBootMarker(homeDir?, repoRoot?)` + new
   `repoRoot` field on `AutoBootOptions` for the fallback marker chain.
 
 ### Tests
@@ -5369,7 +5429,7 @@ hasAutoBootMarker checks both locations) and `service_uninstall.test.ts`
 Snapshot for `mneme --help` updated to include the new `uninstall`
 subcommand. Suite total: **5077 / 5077 passing.**
 
-## [1.28.1] — 2026-05-11
+## [1.28.1] โ€” 2026-05-11
 
 **Ghost Sniper auto-boot.** Closes the bottleneck where 90%+ of users
 never knew about `mneme nucleus install --as-service` and so the daemon
@@ -5377,7 +5437,7 @@ stayed dead between sessions, nightly self-evolve never fired, and
 antivirus auto-synth never shipped proposals. Pulse hook now SILENTLY:
 
 1. Spawns the daemon in the background whenever it's detected stopped
-   (idempotent — a second `start` while alive returns "already running"
+   (idempotent โ€” a second `start` while alive returns "already running"
    and exits).
 2. ONE TIME per machine, installs Mneme as a boot service so future
    reboots auto-start the daemon at user logon. Marker file at
@@ -5385,61 +5445,61 @@ antivirus auto-synth never shipped proposals. Pulse hook now SILENTLY:
    prompt (no spam to schtasks/launchctl/systemctl).
 
 Both operations are detached + stdio:ignore + unref'd fire-and-forget.
-They emit NO `notable[]` entries — per the ghost-sniper philosophy,
+They emit NO `notable[]` entries โ€” per the ghost-sniper philosophy,
 the user must never see plumbing happen. The user only ever sees
 `daemon=running` on their next prompt, never an explanation of how
 that happened.
 
 ### Cross-platform coverage
 
-- **Windows** — schtasks `ONLOGON` (the `/RL HIGHEST` flag was dropped
+- **Windows** โ€” schtasks `ONLOGON` (the `/RL HIGHEST` flag was dropped
   from the install command so it no longer requires admin elevation;
   user-level scheduled tasks at logon are exactly the right scope).
-- **Linux** — systemd user-unit at `~/.config/systemd/user/mneme-nucleus.service`.
-- **macOS** — launchd LaunchAgent at `~/Library/LaunchAgents/ai.mneme.nucleus.plist`.
+- **Linux** โ€” systemd user-unit at `~/.config/systemd/user/mneme-nucleus.service`.
+- **macOS** โ€” launchd LaunchAgent at `~/Library/LaunchAgents/ai.mneme.nucleus.plist`.
 
 All three install paths run at user level without sudo / admin prompts.
 
 ### New API in `pulse.ts`
 
-- `autoBootDaemonIfStopped(daemonRunning, opts?)` — silent fire-and-forget;
+- `autoBootDaemonIfStopped(daemonRunning, opts?)` โ€” silent fire-and-forget;
   accepts optional `homeDir` + `spawnFn` overrides for tests.
-- `hasAutoBootMarker(homeDir?)` — returns true once install has been
+- `hasAutoBootMarker(homeDir?)` โ€” returns true once install has been
   attempted on this machine.
-- `serviceMarkerPath(homeDir?)` — resolve the marker path.
+- `serviceMarkerPath(homeDir?)` โ€” resolve the marker path.
 
 ### Tests
 
 5 new ghost-sniper tests in `pulse.test.ts`:
-- daemon=running → no spawn, no marker write
-- first-time stopped → spawns daemon AND install AND writes marker
-- second call (marker present) → only daemon, not install
-- non-existent home dir → never throws
+- daemon=running โ’ no spawn, no marker write
+- first-time stopped โ’ spawns daemon AND install AND writes marker
+- second call (marker present) โ’ only daemon, not install
+- non-existent home dir โ’ never throws
 - structurally proven: NO user-visible `notable[]` mutation
 
 Suite total: **5071 / 5071 passing.**
 
-## [1.28.0] — 2026-05-10
+## [1.28.0] โ€” 2026-05-10
 
 **Mneme antivirus learns to write its own vaccines.** Closed-loop self-
-improvement: gap-scan finds the false negatives the vaccine missed →
-deterministic pattern miner generalises them into a regex →
-re-evaluates against legitimate negatives → only ACCEPTS the candidate
-when recall climbs ≥+10pp AND precision stays ≥0.90. No LLM in the hot
+improvement: gap-scan finds the false negatives the vaccine missed โ’
+deterministic pattern miner generalises them into a regex โ’
+re-evaluates against legitimate negatives โ’ only ACCEPTS the candidate
+when recall climbs โฅ+10pp AND precision stays โฅ0.90. No LLM in the hot
 path. The daemon runs this nightly while you sleep, broadcasts via the
 notifier fabric when a new patch passes the gate. Five wild upgrades
 ship together.
 
-### Upgrade 1 — Auto-vaccine synthesis (`mneme antivirus synthesize <strain>`)
+### Upgrade 1 โ€” Auto-vaccine synthesis (`mneme antivirus synthesize <strain>`)
 
 `packages/core/src/antivirus/auto_synthesize.ts` is the centerpiece:
 
-- `mineRegexFromSamples()` — longest common suffix/prefix/keyword
+- `mineRegexFromSamples()` โ€” longest common suffix/prefix/keyword
   pattern miner. Conservative; prefers fewer matches over over-
   generalising.
-- `evaluateCandidatePattern()` — TP/FP count against legitimate
+- `evaluateCandidatePattern()` โ€” TP/FP count against legitimate
   negatives drawn from the user's own repo via `buildGapCases`.
-- `synthesizeVaccine()` — full pipeline. Acceptance gate:
+- `synthesizeVaccine()` โ€” full pipeline. Acceptance gate:
   `MIN_RECALL_DELTA = 0.10` AND `PRECISION_FLOOR = 0.90`.
 - Persists every proposal (accepted OR rejected) to
   `.mneme/proposals/vaccine-<id>.md` for the maintainer's paper trail.
@@ -5448,30 +5508,30 @@ CLI: `mneme antivirus synthesize <strain>` (alias `synth`). Runs gap-
 scan, mines a pattern from FN samples, derives negatives from the same
 case builder, prints verdict.
 
-### Upgrade 2 — Adversarial mutators (5 families)
+### Upgrade 2 โ€” Adversarial mutators (5 families)
 
 `packages/core/src/antivirus/mutators.ts`. Pre-fix gap-scan used a
-trivial 1-char swap (a↔b, 0↔9). Real-world AI hallucinations have
+trivial 1-char swap (aโ”b, 0โ”9). Real-world AI hallucinations have
 specific shapes that are MUCH harder to catch:
 
-- `visualSwap`     — chars that look alike at small font (0/O, l/1, rn/m, vv/w, cl/d)
-- `damerauSwap`    — single-char substitution / adjacent transposition
-- `phoneticDrift`  — vowel-cluster swap (anthropic ↔ anthrophic)
-- `crossNamespace` — @vue ↔ @react, @anthropic ↔ @openai
-- `versionDrift`   — 1.27.8 ↔ 1.28.7 (digit shuffle)
+- `visualSwap`     โ€” chars that look alike at small font (0/O, l/1, rn/m, vv/w, cl/d)
+- `damerauSwap`    โ€” single-char substitution / adjacent transposition
+- `phoneticDrift`  โ€” vowel-cluster swap (anthropic โ” anthrophic)
+- `crossNamespace` โ€” @vue โ” @react, @anthropic โ” @openai
+- `versionDrift`   โ€” 1.27.8 โ” 1.28.7 (digit shuffle)
 
 `bestEffortMutate(s, seed)` picks the first applicable mutator + names
-which family fired. Deterministic with seed → reproducible gap-scan.
+which family fired. Deterministic with seed โ’ reproducible gap-scan.
 
-### Upgrade 4 — Polyglot ground truth in `buildCache`
+### Upgrade 4 โ€” Polyglot ground truth in `buildCache`
 
 `vaccines.ts` now reads dependencies from `package.json`,
 `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`,
 `Gemfile`/`Gemfile.lock`, `build.gradle`, `pom.xml`. The Mneme
-antivirus now defends Python, Rust, Go, Java, and Ruby projects — not
+antivirus now defends Python, Rust, Go, Java, and Ruby projects โ€” not
 just JavaScript.
 
-### Upgrade 5 — Calibration metrics (Brier + meanMargin)
+### Upgrade 5 โ€” Calibration metrics (Brier + meanMargin)
 
 `packages/core/src/antivirus/calibration.ts`. F1 tells you whether the
 vaccine fires correctly; calibration tells you whether its CONFIDENCE
@@ -5485,8 +5545,8 @@ is well-matched to its accuracy. Gap-scan now reports per-strain:
 ### Daemon nightly self-evolve cycle
 
 `nucleus_daemon.ts` gets a new `ANTIVIRUS_SYNTH_EVERY = 360` ticks
-(~3h at 30s tick interval). Every cycle: runs gap-scan → for each
-strain with FN samples, calls `synthesizeVaccine` → if any proposal is
+(~3h at 30s tick interval). Every cycle: runs gap-scan โ’ for each
+strain with FN samples, calls `synthesizeVaccine` โ’ if any proposal is
 ACCEPTED, broadcasts via the multi-channel notifier (toast + push +
 email + agent files) so the maintainer wakes up to a paper-trailed
 queue of patches to merge into `strains.ts`.
@@ -5499,14 +5559,14 @@ phoneticDrift, crossNamespace, versionDrift, bestEffortMutate),
 `auto_synthesize.test.ts` (mining + acceptance gate + ACCEPT/REJECT
 proposal sidecar). Suite total: **5066 / 5066 passing.**
 
-## [1.27.9] — 2026-05-10
+## [1.27.9] โ€” 2026-05-10
 
 **3 critical bugs FINALLY fixed (1 was 4 rounds old) + MNEME CHIMERA
 new feature. Net: solo repos finally get useful insight, genome pool
 finally surfaces seeded chromosomes, stigmergy/chimera parsers
 finally read git log correctly.**
 
-### 🔴 Critical bug #1 (4-rounds flagged) -- Genome Pool wrong file path
+### ๐”ด Critical bug #1 (4-rounds flagged) -- Genome Pool wrong file path
 
 User flagged 4 times that `mneme genome-pool preview` always said
 "nothing to contribute" even after `mneme nucleus seed --demo --force`
@@ -5534,7 +5594,7 @@ Genome Pool contribution
     body excerpt: Session walked the agent through diagnosing a JWT verify timeout...
 ```
 
-### 🔴 Critical bug #2 -- git-log parser discarded files
+### ๐”ด Critical bug #2 -- git-log parser discarded files
 
 Both stigmergy + chimera (newly written) parsed `git log
 --pretty=tformat:%h|%ae|%cI --name-only` output. tformat puts ONE
@@ -5559,7 +5619,7 @@ honestly. CHIMERA extracts insight from what IS available:
   - **Velocity profile** -- last 30/60/90d commit counts +
     accelerating/steady/decelerating trend
   - **Topic momentum** -- per-dir 30d-vs-prior comparison with
-    🔥/📈/→/📉/❄ labels
+    ๐”ฅ/๐“/โ’/๐“/โ labels
   - **Phantom collaborators** -- if you scaled to N people, who
     would own which area, ranked by churn share
 
@@ -5601,7 +5661,7 @@ phantom collab suggestions) where NETWORK / STIGMERGY / AUDIT all
 honestly degenerate. Genome Pool finally ships seeded chromosomes
 with rich body text the network-effect future can dedup against.
 
-## [1.27.8] — 2026-05-10
+## [1.27.8] โ€” 2026-05-10
 
 **4 antivirus + lineage fixes flagged by AI dogfooding +
 1 wild new feature (`mneme antivirus gap-scan`) -- the antivirus
@@ -5661,31 +5721,31 @@ truth that already exists in your repo.**
 
 For each strain, gap-scan synthesises:
   - **POSITIVES** (must catch): mutated copies of real entities
-    (e.g. real SHA → swap one char → should flag as phantom)
+    (e.g. real SHA โ’ swap one char โ’ should flag as phantom)
   - **NEGATIVES** (must NOT catch): real entities verbatim
     (should NOT flag -- they exist)
 
 Then runs the strain's vaccine against the synthetic test set and
-reports per-strain **precision · recall · F1**. Strains below 0.80
+reports per-strain **precision ยท recall ยท F1**. Strains below 0.80
 recall trigger a "GAP STRAINS" report with recommendations.
 
 **Verified e2e on Mneme's own repo:**
 ```
 $ mneme antivirus gap-scan
 MNEME ANTIVIRUS gap-scan
-Ground truth: 261 SHAs · 8 deps · 994 paths
+Ground truth: 261 SHAs ยท 8 deps ยท 994 paths
 
 Per-strain coverage:
-  [100% recall · 100% precision · F1 1.00]  citatio_viridis     ok
-  [ 60% recall · 100% precision · F1 0.75]  depends_imaginarium  LOW RECALL: add patterns
-  [100% recall · 100% precision · F1 1.00]  structura_invenita  ok
+  [100% recall ยท 100% precision ยท F1 1.00]  citatio_viridis     ok
+  [ 60% recall ยท 100% precision ยท F1 0.75]  depends_imaginarium  LOW RECALL: add patterns
+  [100% recall ยท 100% precision ยท F1 1.00]  structura_invenita  ok
 
 GAP STRAINS (recall < 0.80, need attention):
   -> depends_imaginarium
 ```
 
 The antivirus surfaced its OWN gap. **Recurring self-heal loop:**
-maintainer improves the strain → re-run gap-scan → recall climbs →
+maintainer improves the strain โ’ re-run gap-scan โ’ recall climbs โ’
 ship.
 
 This is the same closed-loop EVOLVE applies to code, but for the
@@ -5720,7 +5780,7 @@ Antivirus audits its own coverage on demand. Genome Pool finally
 ships seed chromosomes. Same release cycle, four pain points closed
 + one mechanism that closes future pain points automatically.
 
-## [1.27.7] — 2026-05-10
+## [1.27.7] โ€” 2026-05-10
 
 **STIGMERGY HIVE proven verifiable. Plus algorithm refinement that
 moves engineered HIGH pairs from 24-30 to 66-80 (3x more
@@ -5754,7 +5814,7 @@ indistinguishable from incidental overlap.
 
 Post-fix: count EVERY close (a, b) commit pair as a sync hit.
 Differentiates strong collaboration from weak. HIGH pairs now
-score 66-80 — 3x the discrimination.
+score 66-80 โ€” 3x the discrimination.
 
 ### NEW `--git-dir <path>` flag
 
@@ -5768,12 +5828,12 @@ multi-author projects without leaving the CLI.
 $ mneme stigmergy verify
 MNEME STIGMERGY HIVE -- verification against synthetic fixture
   Threshold:    10
-  Verdict:      ✓ PASS -- algorithm detects all engineered pairs
+  Verdict:      โ“ PASS -- algorithm detects all engineered pairs
 
-  ✓ HIGH pair alice@example.com <-> bob@example.com: score=80 (>=50)
-  ✓ HIGH pair carol@example.com <-> dave@example.com: score=66 (>=50)
-  ✓ LOW pair alice@example.com <-> carol@example.com: score=1 (>0 and <30)
-  ✓ LONE author eve@example.com: not in any high-score pair
+  โ“ HIGH pair alice@example.com <-> bob@example.com: score=80 (>=50)
+  โ“ HIGH pair carol@example.com <-> dave@example.com: score=66 (>=50)
+  โ“ LOW pair alice@example.com <-> carol@example.com: score=1 (>0 and <30)
+  โ“ LONE author eve@example.com: not in any high-score pair
 ```
 
 ### Files changed
@@ -5803,7 +5863,7 @@ collaboration pairs from any cloned project. The algorithm is
 sharper too: 3x more discrimination between strong + weak
 collaboration.
 
-## [1.27.6] — 2026-05-10
+## [1.27.6] โ€” 2026-05-10
 
 **4 stuck bugs fixed + 2 wild new features (HCI + STIGMERGY HIVE).
 27 new tests, 5015/5015 passing. AI-agent-facing README updated.**
@@ -5833,7 +5893,7 @@ fixes:
     `caretaker`-source entry older than 1 hour. User-pushed entries
     are NEVER auto-acked.
 
-**4. CRITICAL+HIGH inbox messages → individual pulse promotion.**
+**4. CRITICAL+HIGH inbox messages โ’ individual pulse promotion.**
 Pre-fix the pulse just said `Mneme has 8 unread inbox messages`. A
 user pushing a CRITICAL message ("verify pulse handling") was just a
 +1 to the count -- AI never saw the content. Now the pulse surfaces
@@ -5856,8 +5916,8 @@ weighted axes:
 | retrieval | 10% | trial count |
 | evolve | 25% | verified patches in chain + low queue |
 
-**Bands:** 90-100 Robust · 75-89 Healthy · 50-74 Wobbly · 30-49
-Sick · 0-29 Critical.
+**Bands:** 90-100 Robust ยท 75-89 Healthy ยท 50-74 Wobbly ยท 30-49
+Sick ยท 0-29 Critical.
 
 Surfaces in two places:
   - Every pulse line now ends with `hci=N/100[Band]` -- AI agent
@@ -5878,7 +5938,7 @@ responds to local pheromone gradients. Devs do the same in a
 codebase: every commit leaves a trace, every other dev decides
 what to commit based on what's there.
 
-The algorithm walks `git log`, indexes file→touches by author with
+The algorithm walks `git log`, indexes fileโ’touches by author with
 timestamps, then for every author pair computes:
 
   - **Shared files** -- both touched at any time
@@ -5887,7 +5947,7 @@ timestamps, then for every author pair computes:
   - **Carry-on** -- one introduced a file, the other extended it
     within 7 days
 
-Composite stigmergy score = `2×synchrony + 3×carry-on + 1×shared`,
+Composite stigmergy score = `2ร—synchrony + 3ร—carry-on + 1ร—shared`,
 capped at 100.
 
 Output: ranked list of dev pairs by score. Pairs near the top are
@@ -5907,8 +5967,8 @@ MNEME STIGMERGY HIVE -- emergent collaboration analysis
 
 Top 5 stigmergic dev pairs (highest = strongest invisible collab):
   [ 47/100]  alice@x.com  <->  bob@x.com
-         shared=8 files · sync=12 · carry-on=4
-         first co-touch 2026-02-14 · last 2026-05-09
+         shared=8 files ยท sync=12 ยท carry-on=4
+         first co-touch 2026-02-14 ยท last 2026-05-09
   ...
 ```
 
@@ -5949,7 +6009,7 @@ what" questions), EVOLVE (offer to apply highest-confidence verified
 patch), and the v1.27.3 self-loop defense (refuse upgrade
 AUTO-ACTION when target == current).
 
-## [1.27.5] — 2026-05-10
+## [1.27.5] โ€” 2026-05-10
 
 **Four real polish fixes flagged by an AI reviewer in v1.27.4
 dogfooding. All 4 fixed + e2e verified.**
@@ -5973,7 +6033,7 @@ per-patch riskiness score from CODE METRICS:
   - **Fan-in** (# of TS files in repo that import this file)
 
 Each axis normalized via sigmoid, weighted, composed into
-`riskScore` ∈ [0,1] and `safetyScore = 1 - riskScore`.
+`riskScore` โ [0,1] and `safetyScore = 1 - riskScore`.
 
 Confidence formula now reads:
 
@@ -5993,14 +6053,14 @@ safety score) is detectable.
 
 **Verified e2e:** patches to different files now score differently:
 - `risk=54%` on a 512-LOC file with 1 fan-in
-- A small isolated file would score `risk=15%` → confidence ~10pp
+- A small isolated file would score `risk=15%` โ’ confidence ~10pp
   higher
 
 ### Fix 2 -- daemon milestone messages accumulate in inbox
 
 User saw both `[daemon] Nucleus reached 10 mutations` AND
 `[daemon] Nucleus reached 20 mutations` in inbox. Source was
-`"daemon"` for both → no replacement.
+`"daemon"` for both โ’ no replacement.
 
 **Fix:** daemon milestone push now uses `pushInboxReplacingSource`
 with source `"daemon-milestone"`. At most ONE milestone entry exists
@@ -6053,7 +6113,7 @@ Chain + PatchRisk scoring + HMAC signature stack is the kind of
 audit trail compliance teams actually accept for AI-generated
 patches.
 
-## [1.27.4] — 2026-05-10
+## [1.27.4] โ€” 2026-05-10
 
 **Two cache-lag polish fixes + a wild new feature: the Patch
 Provenance Chain (HMAC-chained lineage of every applied EVOLVE
@@ -6064,7 +6124,7 @@ the template proves itself.**
 
 ### Bug 1 -- pulse showed `(latest: v<older>)` when running newer
 
-After upgrade 1.27.2 → 1.27.3, the `.mneme/version-check.json` cache
+After upgrade 1.27.2 โ’ 1.27.3, the `.mneme/version-check.json` cache
 still had `latest=1.27.2` until the next 1-hour TTL refresh. Pulse
 output read `mneme v1.27.3 (latest: v1.27.2)` -- misleading: looks
 like we're running ahead of npm.
@@ -6085,8 +6145,8 @@ like we're running ahead of npm.
 ### Bug 2 -- every verified EVOLVE patch got the SAME 64% confidence
 
 AI reviewer correctly flagged this in v1.27.3 dogfooding:
-> "3 proposals มี confidence 13% เท่ากัน. ไม่มี differentiation
-> ว่าอันไหนคุ้มแก้ก่อน."
+> "3 proposals เธกเธต confidence 13% เน€เธ—เนเธฒเธเธฑเธ. เนเธกเนเธกเธต differentiation
+> เธงเนเธฒเธญเธฑเธเนเธซเธเธเธธเนเธกเนเธเนเธเนเธญเธ."
 
 Old formula was a constant: Phase-2 baseline + 0.50 if verified.
 
@@ -6108,8 +6168,8 @@ detection is O(n).
 
 **`trackRecordFor(templateId)`** computes a per-template score in
 [0.05, 0.95]:
-  - no history → 0.50 default
-  - 1+ accepts, 0 reverts → 0.70 + 0.05 * (n_accepts - 1), saturating at 0.95
+  - no history โ’ 0.50 default
+  - 1+ accepts, 0 reverts โ’ 0.70 + 0.05 * (n_accepts - 1), saturating at 0.95
   - per-revert penalty: -0.20 each (reverts auto-detected by
     grepping `git log` for `Revert mneme/evolve/<proposalId>`)
 
@@ -6117,7 +6177,7 @@ detection is O(n).
 
 ```
 confidence = clip(0.05, 0.99,
-  0.20 * signal_evidence       // occurrences × source diversity
+  0.20 * signal_evidence       // occurrences ร— source diversity
 + 0.20 * template_track_record // from Patch Provenance Chain
 + 0.10 * test_coverage         // co-located vitest existed + green
 + 0.50 * verification          // all gates green
@@ -6126,7 +6186,7 @@ confidence = clip(0.05, 0.99,
 
 **Result on Mneme's own source (verified e2e):**
   - 1st synthesis (no history) = **73%**
-  - After 1 successful apply → lineage records `[70% track-record]`
+  - After 1 successful apply โ’ lineage records `[70% track-record]`
   - 2nd synthesis = **77%** (climbed because template proven)
   - After 5 successful applies, score saturates at ~95%
 
@@ -6146,11 +6206,11 @@ Sample output:
 
 ```
 Patch Provenance Chain -- 1 total entries
-  HMAC integrity:  ✓ INTACT
+  HMAC integrity:  โ“ INTACT
 
 Per-template track records:
   [ 70%] selfcheck-warn-to-skip-on-missing-file
-         accepts=1 · reverts=0 · last=2026-05-10
+         accepts=1 ยท reverts=0 ยท last=2026-05-10
 ```
 
 ### Files changed
@@ -6183,9 +6243,9 @@ This is the kind of mechanism enterprise auditors actually trust
 for "is this AI-generated patch worth merging?" -- and it ships
 MIT, free, today.
 
-## [1.27.3] — 2026-05-10  --  HOTFIX
+## [1.27.3] โ€” 2026-05-10  --  HOTFIX
 
-**🔴 Critical -- pulse + selfcheck were emitting an AUTO-ACTION
+**๐”ด Critical -- pulse + selfcheck were emitting an AUTO-ACTION
 self-loop ("upgrade to vX, you're on vX") that any AI honoring the
 EXECUTE NOW contract would have called in a tight loop.** Caught
 during live dogfooding by an AI reviewer that correctly REFUSED to
@@ -6193,7 +6253,7 @@ execute the contract.
 
 ### The bug (in plain words)
 
-After a user upgraded Mneme (e.g. 1.27.0 → 1.27.2), the
+After a user upgraded Mneme (e.g. 1.27.0 โ’ 1.27.2), the
 `.mneme/version-check.json` cache might still hold
 `current=1.27.0, latest=1.27.2`. Both pulse.ts and the
 `version-up-to-date` selfcheck compared the CACHED `current` against
@@ -6233,7 +6293,7 @@ selfcheck run produces a false-positive upgrade notice.
   3. **`selfcheck/checks.ts` `versionUpToDateCheck`** now also reads
      `readLiveMnemeVersion()` instead of the cached `data.current`.
      A cache that says `current=1.0.0/latest=1.27.3` while live IS
-     1.27.3 → status = `pass` (was `fail` with autoAction looping
+     1.27.3 โ’ status = `pass` (was `fail` with autoAction looping
      the AI).
 
   4. **Semver-aware comparison.** Old code used `current !== latest`
@@ -6246,9 +6306,9 @@ selfcheck run produces a false-positive upgrade notice.
 
 3 new tests in `pulse.test.ts` + 2 new in `selfcheck.test.ts`:
 
-  - **stale cache where latest == LIVE current** → no AUTO-ACTION
-  - **cache ahead of LIVE current** → AUTO-ACTION fires (real upgrade)
-  - **cache BEHIND LIVE current** (running pre-release) → no AUTO-ACTION
+  - **stale cache where latest == LIVE current** โ’ no AUTO-ACTION
+  - **cache ahead of LIVE current** โ’ AUTO-ACTION fires (real upgrade)
+  - **cache BEHIND LIVE current** (running pre-release) โ’ no AUTO-ACTION
     (would be a downgrade)
   - **selfcheck pass when LIVE current matches latest** (was failing
     pre-fix because comparison used cached current)
@@ -6279,24 +6339,24 @@ fires ONLY when there's a real action to take.
 
 ### Migration
 
-Anyone running v1.25.x → v1.27.2 should `npm i -g mneme-ai@1.27.3`
+Anyone running v1.25.x โ’ v1.27.2 should `npm i -g mneme-ai@1.27.3`
 immediately. The bug was latent in v1.25.x but only became
 weaponizable when v1.26.3 introduced inbox AUTO-ACTION + v1.27.0
 introduced the self-modifying NUCLEUS that AIs are more likely to
 honor.
 
-## [1.27.2] — 2026-05-10
+## [1.27.2] โ€” 2026-05-10
 
 **Three real bugs caught by an AI-agent reviewer in the v1.27.0
 EVOLVE Phase-3 dogfooding session. All three fixed + verified
 end-to-end against Mneme's own source.**
 
-### 🔴 Bug #1 -- Phase-3 patch hit the WRONG check block
+### ๐”ด Bug #1 -- Phase-3 patch hit the WRONG check block
 
 **AI agent's exact quote:**
-> "Proposal: signal บอก selfcheck:antivirus-ready:warn failing.
-> Synthesized patch: กลับไปแก้ check ชื่อ pulse-hook-installed
-> (คนละ check!)"
+> "Proposal: signal เธเธญเธ selfcheck:antivirus-ready:warn failing.
+> Synthesized patch: เธเธฅเธฑเธเนเธเนเธเน check เธเธทเนเธญ pulse-hook-installed
+> (เธเธเธฅเธฐ check!)"
 
 **Root cause:** the template extracted only the line `        status:
 "warn",` as its before/after pair. `String.replace` then replaced the
@@ -6317,7 +6377,7 @@ required.
 187-194 (the antivirus-ready warn-branch), not lines 49-53
 (pulse-hook-installed).
 
-### 🟡 Bug #2 -- `mneme evolve list` showed `(64%) undefined`
+### ๐ก Bug #2 -- `mneme evolve list` showed `(64%) undefined`
 
 **Root cause:** `listProposals` filtered files ending in `.json`
 without excluding `.synth.json`. Phase-3 sidecars were being parsed
@@ -6331,12 +6391,12 @@ proposal:
 
 ```
 [81dc2ccc6763] (13%) Self-heal: selfcheck "antivirus-ready" keeps failing
-   ✓ Phase-3 VERIFIED (64%, sig=4aaca62c)
+   โ“ Phase-3 VERIFIED (64%, sig=4aaca62c)
 [7298176a1838] (13%) Self-heal: selfcheck "antivirus-certified" keeps failing
-   · Phase-3 not yet attempted
+   ยท Phase-3 not yet attempted
 ```
 
-### 🟡 Bug #3 -- `mneme evolve view <synthesisId>` returned "no proposal at id"
+### ๐ก Bug #3 -- `mneme evolve view <synthesisId>` returned "no proposal at id"
 
 **Root cause:** the `view` command only looked up `<id>.md`. A
 synthesis id (16 hex chars from the .synth.json) doesn't match any
@@ -6352,7 +6412,7 @@ Output now shows the full proposal markdown PLUS a Phase-3 status
 block PLUS the verified .patch (when verified):
 
 ```
-## Phase-3 synthesis status: VERIFIED ✓
+## Phase-3 synthesis status: VERIFIED โ“
 - synthesisId: e6343533e33718dc
 - template:    selfcheck-warn-to-skip-on-missing-file
 - confidence:  64%
@@ -6376,7 +6436,7 @@ commands end-to-end. Both verified working:
 
 ```
 $ mneme evolve auto-pr 81dc2ccc6763 --dry-run
-✓ auto-pr ok
+โ“ auto-pr ok
   dry-run -- no branch/commit/push/PR was created
 
 $ mneme evolve pass
@@ -6384,9 +6444,9 @@ Evolution pass complete.
   Scanned proposals:  3
   Synthesized:        3
   VERIFIED (saved):   3
-  - [...] selfcheck-warn-to-skip-on-missing-file  verified=✓
-  - [...] selfcheck-warn-to-skip-on-missing-file  verified=✓
-  - [...] selfcheck-warn-to-skip-on-missing-file  verified=✓
+  - [...] selfcheck-warn-to-skip-on-missing-file  verified=โ“
+  - [...] selfcheck-warn-to-skip-on-missing-file  verified=โ“
+  - [...] selfcheck-warn-to-skip-on-missing-file  verified=โ“
 ```
 
 ### Files changed
@@ -6409,16 +6469,16 @@ target the cited check, list output is honest about synthesis
 state, and `view <id>` works for both id forms. The closed-loop
 shipped in v1.27.0 was real -- v1.27.2 makes it precise.
 
-## [1.27.1] — 2026-05-10
+## [1.27.1] โ€” 2026-05-10
 
 **Web demo clarity fix: the "is this MY data or a demo?" confusion
 killed once and for all + lab content now uses full canvas width.**
 
 ### The painpoint
 
-Even the maintainer was confused (real quote): *"ผม upload git เข้ามา
-แล้ว แต่ผมก็ไม่รู้ว่าสรุปข้อมูลนี้มัน demo อยู่หรือใช้ข้อมูลจริง เพราะ
-มันมีคำว่า demo เช่น DEMO synthetic seed data"*.
+Even the maintainer was confused (real quote): *"เธเธก upload git เน€เธเนเธฒเธกเธฒ
+เนเธฅเนเธง เนเธ•เนเธเธกเธเนเนเธกเนเธฃเธนเนเธงเนเธฒเธชเธฃเธธเธเธเนเธญเธกเธนเธฅเธเธตเนเธกเธฑเธ demo เธญเธขเธนเนเธซเธฃเธทเธญเนเธเนเธเนเธญเธกเธนเธฅเธเธฃเธดเธ เน€เธเธฃเธฒเธฐ
+เธกเธฑเธเธกเธตเธเธณเธงเนเธฒ demo เน€เธเนเธ DEMO synthetic seed data"*.
 
 ### Root cause
 
@@ -6441,9 +6501,9 @@ The lab views were comparing only the existence of `liveStats` /
 
   1. **New `<DataModeBadge/>` component** with 3 visually distinct
      states:
-       - `◉ DEMO REPO -- not your repo` (amber + glow)
-       - `⏳ YOUR REPO -- <feature> not yet run · numbers below are examples` (sky-blue)
-       - `● YOUR REPO -- live <feature> data` (sage)
+       - `โ— DEMO REPO -- not your repo` (amber + glow)
+       - `โณ YOUR REPO -- <feature> not yet run ยท numbers below are examples` (sky-blue)
+       - `โ— YOUR REPO -- live <feature> data` (sage)
 
   2. **Threaded `syntheticRepo` + `liveMode` + `liveSource` props from
      App.tsx down** to AntivirusLabView, RetrievalLabView,
@@ -6497,16 +6557,16 @@ INSTANTLY know whether you're looking at the bundled demo, your real
 repo with no feature data, or your real repo with measured feature
 data. No more "wait... is this mine?".
 
-## [1.27.0] — 2026-05-10
+## [1.27.0] โ€” 2026-05-10
 
 **MNEME EVOLVE Phase 3 + Phase 4 + Phase 5 -- the closed-loop
 self-improving AI dev tool. World-first.**
 
 A live AI agent reviewed v1.26.x EVOLVE and called it: *"World's first
-AI dev tool ที่อ่าน telemetry ตัวเอง → เขียน markdown draft อ้างอิง
-file path + prior commits, แต่ยังเป็น Phase 2 (markdown only). Phase
-3 = Mneme เขียน .patch ที่ compile + test ได้จริง = moat ที่ยังไม่มี
-ใครในโลกข้าม."*
+AI dev tool เธ—เธตเนเธญเนเธฒเธ telemetry เธ•เธฑเธงเน€เธญเธ โ’ เน€เธเธตเธขเธ markdown draft เธญเนเธฒเธเธญเธดเธ
+file path + prior commits, เนเธ•เนเธขเธฑเธเน€เธเนเธ Phase 2 (markdown only). Phase
+3 = Mneme เน€เธเธตเธขเธ .patch เธ—เธตเน compile + test เนเธ”เนเธเธฃเธดเธ = moat เธ—เธตเนเธขเธฑเธเนเธกเนเธกเธต
+เนเธเธฃเนเธเนเธฅเธเธเนเธฒเธก."*
 
 This release ships Phases 3, 4, 5 in one go.
 
@@ -6516,7 +6576,7 @@ Phase 2 (shipped v1.26.4) wrote markdown PR proposals -- "go look at
 this file, change something like this". Phase 3 writes ACTUAL `.patch`
 files that compile AND pass tests. Hard contract:
 
-  - **Templates are deterministic.** Same signal + same source → same
+  - **Templates are deterministic.** Same signal + same source โ’ same
     patch every time. No LLM in the hot path. Today: 1 template
     (`selfcheck-warn-to-skip-on-missing-file`). The architecture is
     designed so adding template #2, #100, #1000 is a single function
@@ -6586,19 +6646,19 @@ mneme evolve list / view <id> / stats
 $ mneme evolve synthesize 5ca712f88544
 Synthesis [02a1b8e013f08d62] template=selfcheck-warn-to-skip-on-missing-file
                               file=packages/core/src/selfcheck/checks.ts
-  Working tree clean: ✓
-  tsc --noEmit:       ✓
-  vitest run:         ✓
+  Working tree clean: โ“
+  tsc --noEmit:       โ“
+  vitest run:         โ“
   VERIFIED:           YES (.patch saved + HMAC signed)
   Confidence:         64%
   Signature:          71d98cd89ee897f1...
 
 $ mneme evolve apply 5ca712f88544
-✓ Applied at 2026-05-10T10:07:47Z. Review with `git diff`.
+โ“ Applied at 2026-05-10T10:07:47Z. Review with `git diff`.
 ```
 
 The applied diff is the canonical fix the AI agent proposed in
-review (warn → skip when gating file missing).
+review (warn โ’ skip when gating file missing).
 
 ### Files added
 
@@ -6629,7 +6689,7 @@ Phase 3 closes the loop that no AI vendor today closes:
 
   - Cursor / Copilot / Claude Code = prompt-driven (waits for user)
   - Dependabot / Renovate = scope-limited (deps only)
-  - AutoGPT / Devin = no structured telemetry → garbage in/out
+  - AutoGPT / Devin = no structured telemetry โ’ garbage in/out
   - **Mneme has structured telemetry (selfcheck/antivirus/PRECOG) +
     verified patch synthesis + HMAC audit trail + nightly daemon
     pass.** No other tool ships this stack.
@@ -6639,15 +6699,15 @@ HMAC-signed, never auto-merged* -- is exactly what an audit-conscious
 team would design if they had to build self-modifying code under
 SOX / ISO27001. Mneme ships it MIT, free, today.
 
-## [1.26.6] — 2026-05-10
+## [1.26.6] โ€” 2026-05-10
 
 **Retrieval Lab tab perception bug + PRECOG chicken-and-egg breaker.
-Both surfaced from a live AI-agent test session — root-caused, fixed,
+Both surfaced from a live AI-agent test session โ€” root-caused, fixed,
 shipped same day.**
 
 ### Bug -- "Retrieval Lab tabs hang on click"
 
-User report: clicking 🏆 Leaderboard / 📐 Pareto Frontier / ⚙ All
+User report: clicking ๐ Leaderboard / ๐“ Pareto Frontier / โ All
 Configs in DEMO mode appeared to do nothing. Root cause was the same
 class of perception bug as v1.26.5's Antivirus Lab fix:
 
@@ -6671,8 +6731,8 @@ class of perception bug as v1.26.5's Antivirus Lab fix:
      `lab-empty-rich` block explaining the X/Y axes, what Pareto
      optimality means, why latency-vs-quality matters.
   4. All Configs gets a cert-intro paragraph explaining the 5
-     dimensions Mneme tunes over (embedder × reranker × HyDE × RRF k
-     × candidate-K).
+     dimensions Mneme tunes over (embedder ร— reranker ร— HyDE ร— RRF k
+     ร— candidate-K).
 
 ### NEW: `mneme precog seed --demo` -- chicken-and-egg breaker
 
@@ -6681,7 +6741,7 @@ MCP-connected AI starts calling tools. Same chicken-and-egg as
 NUCLEUS faced in v1.23.x.
 
 **Fix:** `seedDemoOracle(repoRoot)` plants a synthetic Mneme-shaped
-observation trail (5 cycles × 8 sessions × ~3 calls each = 120
+observation trail (5 cycles ร— 8 sessions ร— ~3 calls each = 120
 observations across 16 unique tools) + runs 2 dream cycles. After
 this, `mneme precog peek` / `predict` / `hint` all show populated
 state. The pulse `[PRECOG]` hint surfaces immediately.
@@ -6730,7 +6790,7 @@ one-command demo that shows the precognition cache populated and
 predicting -- no MCP setup required. Both fixes target the same root
 cause: empty-state UX.
 
-## [1.26.5] — 2026-05-10
+## [1.26.5] โ€” 2026-05-10
 
 **Lab tab UX fix + Jack-the-Giant-Slayer competitive strategy doc.**
 
@@ -6750,13 +6810,13 @@ tab change was indistinguishable from a no-op.
      active panel pops into view -- the user always sees the change.
 
   2. Per-tab title + emoji on every lab tab:
-     - 🧬 Strain Atlas
-     - 💉 Pharmacopoeia
-     - 📡 Realtime Feed
-     - 🛡 Cert Ledger
-     - 🏆 Leaderboard
-     - 📐 Pareto Frontier
-     - ⚙ All Configs
+     - ๐งฌ Strain Atlas
+     - ๐’ Pharmacopoeia
+     - ๐“ก Realtime Feed
+     - ๐ก Cert Ledger
+     - ๐ Leaderboard
+     - ๐“ Pareto Frontier
+     - โ All Configs
 
   3. Realtime Feed empty-state in DEMO mode now shows a rich
      illustrative mock + the **Beehive analogy** ("each strain row is
@@ -6791,7 +6851,7 @@ they read README + technical specs.
 
   - 4945/4945 still passing. No new tests (UX-only patch).
 
-## [1.26.4] — 2026-05-10
+## [1.26.4] โ€” 2026-05-10
 
 **The "OS AI Layer" release.** A new 9-layer textbook for AI tooling
 that didn't exist until now. Plus three concrete L4-L7 deliverables:
@@ -6805,7 +6865,7 @@ network-effect future).
 TCP/IP gave networking 7 layers. AI tooling has zero. v1.26.4 ships
 v0 of a 9-layer model:
 
-  - L0 Physical · L1 Model · L2 Inference · L3 Tool (MCP)
+  - L0 Physical ยท L1 Model ยท L2 Inference ยท L3 Tool (MCP)
   - **L4 Memory** -- lineage / atrophy / inbox / PRECOG / chromosomes
   - **L5 Intent** -- HyDE, query rewriting, intent classification
   - **L6 Awareness** -- pulse, hooks, push, beyond-editor reach
@@ -6914,14 +6974,14 @@ shape, the comparisons finally have meaning, and the conversation
 moves from "is X better than Y?" to "what layer are you talking
 about?".
 
-## [1.26.3] — 2026-05-10
+## [1.26.3] โ€” 2026-05-10
 
-**Two real-world bugs caught from a live AI session + MNEME PRECOG —
+**Two real-world bugs caught from a live AI session + MNEME PRECOG โ€”
 the world's first proactive precognition cache for an MCP server
 (Markov bigram + ACO pheromone + dream-loop). The teacher now
 literally walks over and tells the student before being asked.**
 
-### Bug 1 (live AI report) — version-check inbox entries pile up
+### Bug 1 (live AI report) โ€” version-check inbox entries pile up
 
 **Repro:** every Mneme upgrade pushes a "Mneme vX is available"
 entry into the inbox. The id keys on `target_version`, so the OLD
@@ -6940,9 +7000,9 @@ the no-update branch ALSO pops stale notices (so an upgrade clears
 the inbox without needing another fetch). Net effect: at most ONE
 "version-check" inbox entry exists at any time.
 
-### Bug 2 (live AI report) — no inbox ack/clear surface
+### Bug 2 (live AI report) โ€” no inbox ack/clear surface
 
-**Repro:** `mneme inbox list` shows "4 total · 4 unsent" forever.
+**Repro:** `mneme inbox list` shows "4 total ยท 4 unsent" forever.
 There's no `mneme inbox read` or `mneme inbox clear`. Inbox
 grows until 256KB rotation. And pulse promises "will surface on
 your next mneme.* tool call" -- but surface didn't actually mark
@@ -6964,7 +7024,7 @@ anything read.
 
 **User's exact request:**
 > "Synthetic AUTO-ACTION test: mneme inbox push --auto-action --title
-> 'test' เพื่อ verify EXECUTE NOW protocol ใน lab condition"
+> 'test' เน€เธเธทเนเธญ verify EXECUTE NOW protocol เนเธ lab condition"
 
 **Fix:** `InboxMessage` gains an optional `autoAction: { tool, args }`
 field. Pulse surfaces inbox-flagged entries as `[AUTO-ACTION]`
@@ -6989,10 +7049,10 @@ exactly once -- subsequent pulses don't re-emit.)
 ### NEW SUBSYSTEM: MNEME PRECOG -- precognition cache
 
 The metaphor in the user's brief:
-> Static rules files = บัตรประชาชน (sits there)
+> Static rules files = เธเธฑเธ•เธฃเธเธฃเธฐเธเธฒเธเธ (sits there)
 > MCP servers = call center (must call to ask)
 > Pulse loop = Apple Watch tap on wrist -- info comes WITHOUT looking
-> "ครู ที่ดีไม่ได้รอให้นักเรียนถาม เขาเดินไปบอกเอง"
+> "เธเธฃเธน เธ—เธตเนเธ”เธตเนเธกเนเนเธ”เนเธฃเธญเนเธซเนเธเธฑเธเน€เธฃเธตเธขเธเธ–เธฒเธก เน€เธเธฒเน€เธ”เธดเธเนเธเธเธญเธเน€เธญเธ"
 
 PRECOG is the next mile. Three novel algorithms working together:
 
@@ -7081,7 +7141,7 @@ After upgrade, run `mneme inbox clear --all` ONCE to wipe pre-fix
 stale entries from your inbox. From then on, version-check
 self-cleans + ack/clear are first-class commands.
 
-## [1.26.2] — 2026-05-10
+## [1.26.2] โ€” 2026-05-10
 
 **Three real-user complaints, three honest fixes: kill the modal popup,
 make every menu understandable in 60 seconds, make DEMO data
@@ -7101,7 +7161,7 @@ notifier channels (mobile push via ntfy.sh, agent files, voice) carry
 the notice instead. We refuse to ever show a modal MessageBox from a
 "toast" channel -- the affordance mismatch is the bug.
 
-### Bug 2 -- "ดูไม่รู้เรื่อง" — every menu was opaque to non-engineers
+### Bug 2 -- "เธ”เธนเนเธกเนเธฃเธนเนเน€เธฃเธทเนเธญเธ" โ€” every menu was opaque to non-engineers
 
 **Root cause:** menu hints lived only in HTML `title=` tooltips and
 used insider phrasing ("Force-directed graph of authors and latent
@@ -7115,10 +7175,10 @@ ALWAYS visible (not hover-only). Each menu now has:
   - 1-line **why care** explaining who benefits
   - 2-3 **bullets** of what you can actually do here
   - **NEW** callout strip showing what shipped recently for that view
-    (v1.24+ → v1.26+ feature highlights)
+    (v1.24+ โ’ v1.26+ feature highlights)
 
 All 8 menu hints in `Header.tsx` rewritten from jargon to plain
-English (e.g. Atrophy went from "Files × authors knowledge heatmap"
+English (e.g. Atrophy went from "Files ร— authors knowledge heatmap"
 to "Files where the original author is gone or hasn't touched it in
 a long time").
 
@@ -7133,24 +7193,24 @@ their repo. They were not -- they were illustrative.
 **Fix (3 layers):**
 
   1. The Header pill now shouts:
-     `◉ DEMO DATA — not your repo` in amber, bold, with a glow.
+     `โ— DEMO DATA โ€” not your repo` in amber, bold, with a glow.
   2. The new `<ViewExplainer/>` reflects the same indicator next to
      every view title:
-     `◉ DEMO DATA — not your repo` / `● LIVE · git API` / `● Loaded data`
+     `โ— DEMO DATA โ€” not your repo` / `โ— LIVE ยท git API` / `โ— Loaded data`
   3. EcosystemsView: when in LIVE detection mode and the user clicks
      an UNDETECTED ecosystem, a yellow alert banner appears above the
      tool list: *"Not detected in your repo. The tools below are
-     illustrative only..."*. Pack header also gets "(example — not
+     illustrative only..."*. Pack header also gets "(example โ€” not
      active for your repo)" appended.
 
 Each Lab (Antivirus, Retrieval) gets a `lab-hero` paragraph at the
 top explaining in 3 sentences: **What this is**, **How to use**,
-**Where the data below comes from** — so the user never has to guess
+**Where the data below comes from** โ€” so the user never has to guess
 whether numbers are real or seed.
 
 ### UX improvement -- font size selector
 
-  - Base font bumped from 14px → 16px (Apple HIG / WCAG default).
+  - Base font bumped from 14px โ’ 16px (Apple HIG / WCAG default).
   - New `<FontSizePicker/>` in the header (Aa | S M L **XL**) lets
     users pick 13/16/18/21px. Choice persists to `localStorage`.
   - All sizing is rem-based + reads `--root-font-size`, so every
@@ -7193,7 +7253,7 @@ whether numbers are real or seed.
   - notifier/os_toast unchanged in test surface (no test asserted
     msg.exe fallback path).
 
-## [1.26.1] — 2026-05-10
+## [1.26.1] โ€” 2026-05-10
 
 **Hooks installer real-bug fix + per-agent dynamic adapter system.**
 
@@ -7241,26 +7301,26 @@ The honest design: **only Claude Code today has a real shell-execute
 hook surface**. For every other agent, the equivalent is auto-loaded
 context files (markdown). We write a sentinel-bracketed Mneme block
 into the right file for each agent. Re-running the install replaces
-text BETWEEN sentinels — never duplicates, never touches anything
+text BETWEEN sentinels โ€” never duplicates, never touches anything
 outside.
 
 ### Auto-detect + auto-repair
 
-  - `mneme hooks install` (default) — detects which agents are present
+  - `mneme hooks install` (default) โ€” detects which agents are present
     on this machine + repo, installs in each. Always tries Claude Code
     (user-scope). Other agents are skipped if undetected.
-  - `mneme hooks install --all` — install in every known adapter.
-  - `mneme hooks install --only claude-code,cursor` — restrict to ids.
-  - `mneme hooks install --force` — overwrite foreign config / merge
+  - `mneme hooks install --all` โ€” install in every known adapter.
+  - `mneme hooks install --only claude-code,cursor` โ€” restrict to ids.
+  - `mneme hooks install --force` โ€” overwrite foreign config / merge
     alongside existing hooks.
-  - `mneme hooks status` — per-adapter state across all agents.
-  - `mneme hooks repair` — auto-fixes the v1.25.2 broken Claude Code
+  - `mneme hooks status` โ€” per-adapter state across all agents.
+  - `mneme hooks repair` โ€” auto-fixes the v1.25.2 broken Claude Code
     string-shorthand drift (and any other repairable drifts). Safe to
     run on any machine; no-op when nothing's broken.
-  - `mneme hooks uninstall [--only ids]` — strip Mneme from all (or
+  - `mneme hooks uninstall [--only ids]` โ€” strip Mneme from all (or
     selected) agents. Preserves foreign hooks.
-  - `mneme hooks list` — list known adapter ids.
-  - `mneme integrate` — alias for `mneme hooks` (more accurate name
+  - `mneme hooks list` โ€” list known adapter ids.
+  - `mneme integrate` โ€” alias for `mneme hooks` (more accurate name
     since most adapters aren't real "hooks").
 
 ### Multi-layer error handling
@@ -7269,12 +7329,12 @@ Every adapter:
 
   - Returns a structured `InstallResult` (`ok / status / mode / message`)
     instead of throwing.
-  - Catches JSON parse errors → reports + suggests fix, never crashes.
-  - Catches missing dirs → mkdir -p before writing.
-  - Catches existing-but-wrong-format → auto-repair when safe,
+  - Catches JSON parse errors โ’ reports + suggests fix, never crashes.
+  - Catches missing dirs โ’ mkdir -p before writing.
+  - Catches existing-but-wrong-format โ’ auto-repair when safe,
     refuse-without-force otherwise.
-  - Catches existing-and-correct → silent no-op (idempotent).
-  - Catches perm/IO errors → reports `status: "error"` with message,
+  - Catches existing-and-correct โ’ silent no-op (idempotent).
+  - Catches perm/IO errors โ’ reports `status: "error"` with message,
     never crashes.
 
 Batch ops (`installAll`, `statusAll`, `uninstallAll`) wrap individual
@@ -7283,25 +7343,25 @@ take down the whole batch.
 
 ### What was changed
 
-  - `packages/core/src/integrations/types.ts` — `IntegrationAdapter`
+  - `packages/core/src/integrations/types.ts` โ€” `IntegrationAdapter`
     interface, `PULSE_COMMAND` constant, sentinel markers, default block.
-  - `packages/core/src/integrations/claude_code.ts` — fixed array schema,
+  - `packages/core/src/integrations/claude_code.ts` โ€” fixed array schema,
     auto-repair for v1.25.2 string drift, refuse + merge alongside foreign.
-  - `packages/core/src/integrations/file_inject.ts` — sentinel-bracketed
+  - `packages/core/src/integrations/file_inject.ts` โ€” sentinel-bracketed
     block primitives (idempotent inject, precise remove).
-  - `packages/core/src/integrations/file_adapters.ts` — Cursor (.mdc +
+  - `packages/core/src/integrations/file_adapters.ts` โ€” Cursor (.mdc +
     legacy), Codex (AGENTS.md), Gemini (GEMINI.md), Windsurf, Claude
     project.
-  - `packages/core/src/integrations/index.ts` — registry,
+  - `packages/core/src/integrations/index.ts` โ€” registry,
     `detectAll/installAll/statusAll/uninstallAll`, single-id convenience.
-  - `packages/cli/src/commands/hooks.ts` — refactored to use adapters;
+  - `packages/cli/src/commands/hooks.ts` โ€” refactored to use adapters;
     new subcommands: `list`, `repair`. Alias: `mneme integrate`.
-  - `packages/core/src/selfcheck/checks.ts` — `pulse-hook-installed`
+  - `packages/core/src/selfcheck/checks.ts` โ€” `pulse-hook-installed`
     now uses the adapter; reports `fail` on the v1.25.2 drift instead
     of `pass`, with auto-action hint to run `mneme hooks repair`.
-  - `packages/core/src/pulse.ts` — doc comment updated to show correct
+  - `packages/core/src/pulse.ts` โ€” doc comment updated to show correct
     array schema.
-  - `packages/core/src/integrations/integrations.test.ts` — 58 new
+  - `packages/core/src/integrations/integrations.test.ts` โ€” 58 new
     tests: schema validation per-adapter, idempotency, refuse-without-force,
     auto-repair of v1.25.2 drift, foreign-hook merge with --force,
     sandboxed HOME for Claude adapter, multi-layer error handling.
@@ -7324,19 +7384,19 @@ even if nothing's broken.
 ### Test coverage
 
   - `+58 new tests` in `integrations.test.ts`
-  - **4874/4874 passing** (267 → 268 test files)
+  - **4874/4874 passing** (267 โ’ 268 test files)
   - Snapshot refreshed for new `mneme hooks|integrate` help line
 
 ### Net effect
 
 The "AI didn't trigger on its own" loop that v1.25.2 promised is now
-actually wired correctly on Claude Code — and v1.26.1 extends it
+actually wired correctly on Claude Code โ€” and v1.26.1 extends it
 across Cursor / Codex / Gemini / Windsurf / project AGENTS.md via
 auto-loaded context files. No more silent-failure on flagship clients.
 
-## [1.26.0] — 2026-05-10
+## [1.26.0] โ€” 2026-05-10
 
-**The 12-path autonomy bridge — closing every gap MCP can't close
+**The 12-path autonomy bridge โ€” closing every gap MCP can't close
 on its own. Mneme now has its own notifier fabric, its own free-first
 local agent loop, a recurring self-recheck conscience, and an honest
 quantum easter egg that explains why qubits don't fix architecture.**
@@ -7375,11 +7435,11 @@ won't save you here.
 | 12| Quantum easter egg            | shipped       | free      |
 
 \* email path file-spools to `.mneme/notifier/email.log` when no SMTP
-   env vars are set — still works, no daemon required, no account.
+   env vars are set โ€” still works, no daemon required, no account.
 
-### Path 1 — OS toast notifier (free, cross-platform)
+### Path 1 โ€” OS toast notifier (free, cross-platform)
 
-`packages/core/src/notifier/os_toast.ts` — zero deps, uses what's
+`packages/core/src/notifier/os_toast.ts` โ€” zero deps, uses what's
 already on the box:
 
   - **Windows 10+**: PowerShell + WinRT `ToastNotificationManager`
@@ -7390,7 +7450,7 @@ Severity threshold (default `action`) gates noise. Toast title shows
 `Mneme` + the notice title; body shows the notice body (truncated to
 fit OS limits). No daemon, no extra install, works offline.
 
-### Path 2 — Local Ollama agent loop (free, uses your GPU)
+### Path 2 โ€” Local Ollama agent loop (free, uses your GPU)
 
 `packages/core/src/agent/ollama.ts` + `runtime.ts`. Talks to a local
 Ollama at `http://localhost:11434` with model `llama3.2:3b` by default.
@@ -7405,19 +7465,19 @@ Ollama at `http://localhost:11434` with model `llama3.2:3b` by default.
 The user's RTX 5080 + 96GB box runs llama3.2:3b instantly. **No API
 key, no Raspberry Pi, no cloud.** This is the default backend.
 
-### Path 3 — Cloud API agent fallback (opt-in only)
+### Path 3 โ€” Cloud API agent fallback (opt-in only)
 
 `packages/core/src/agent/api_backends.ts`:
 
-  - `anthropicBackend()` — needs `ANTHROPIC_API_KEY`
-  - `openaiBackend()` — needs `OPENAI_API_KEY`
+  - `anthropicBackend()` โ€” needs `ANTHROPIC_API_KEY`
+  - `openaiBackend()` โ€” needs `OPENAI_API_KEY`
 
 Both report `available()=false` when the env var is missing, so they
 **never silently bill you** and the code is safe to import on a
 key-less box. `pickBestBackend()` always tries Ollama first; cloud
 APIs are explicit fallback.
 
-### Path 4 — Sentinel-bracket agent files (free, persistent)
+### Path 4 โ€” Sentinel-bracket agent files (free, persistent)
 
 `packages/core/src/notifier/agent_files.ts` writes a Mneme block
 between sentinel markers into shared agent context files:
@@ -7429,19 +7489,19 @@ between sentinel markers into shared agent context files:
 ```
 
 into `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.windsurfrules`
-(only ones that already exist). Idempotent — re-run replaces the
+(only ones that already exist). Idempotent โ€” re-run replaces the
 block in place, never duplicates, never touches anything outside
 the sentinels.
 
-### Path 5 — Mobile push via ntfy.sh (free, no account)
+### Path 5 โ€” Mobile push via ntfy.sh (free, no account)
 
 `packages/core/src/notifier/mobile_push.ts`. `ntfy.sh` is a free
-public push relay — install the ntfy app on your phone, subscribe
+public push relay โ€” install the ntfy app on your phone, subscribe
 to a topic, Mneme `POST`s notices to it. **No registration, no API
 key, no quota.** Topic name defaults to `mneme-<random>`; user can
 override via `MNEME_NTFY_TOPIC`.
 
-### Path 6 — Browser extension (design doc only)
+### Path 6 โ€” Browser extension (design doc only)
 
 `docs/BROWSER_EXTENSION.md`. We deliberately did **not** ship a
 browser extension here because Chrome Web Store / Firefox AMO are
@@ -7450,14 +7510,14 @@ content-script injection of pulse text into ChatGPT/Claude.ai
 textareas, manifest v3 service worker for OS-side push, and the
 narrow security model.
 
-### Path 7 — TTS / voice notifier (free, opt-in loud)
+### Path 7 โ€” TTS / voice notifier (free, opt-in loud)
 
 `packages/core/src/notifier/tts_voice.ts`. Default `minSeverity:
-"critical"` — so Mneme doesn't talk unless something is actually
+"critical"` โ€” so Mneme doesn't talk unless something is actually
 on fire. Cross-platform: `say` (macOS), `espeak` (Linux), SAPI
 PowerShell (Windows).
 
-### Path 8 — Email via pure-stdlib SMTP (no nodemailer dep)
+### Path 8 โ€” Email via pure-stdlib SMTP (no nodemailer dep)
 
 `packages/core/src/notifier/email_smtp.ts` is a hand-rolled SMTP
 client over `node:net` + `node:tls`. **No `nodemailer`** because
@@ -7466,52 +7526,52 @@ sockets and TLS. When SMTP env vars (`MNEME_SMTP_HOST`, etc.) are
 absent, falls back to **file-spooling** notices into
 `.mneme/notifier/email.log` so the path still works offline.
 
-### Path 9 — Experimental IPC (env-gated stub)
+### Path 9 โ€” Experimental IPC (env-gated stub)
 
 `packages/core/src/notifier/experimental.ts`. Gated behind
 `MNEME_EXPERIMENTAL_IPC=1`. Reserved for future Chrome DevTools
 Protocol / Cursor IPC research. Ships disabled by default.
 
-### Path 10 — Experimental keystroke notifier (deliberately refused)
+### Path 10 โ€” Experimental keystroke notifier (deliberately refused)
 
 Same file. `MNEME_EXPERIMENTAL_KEYSTROKE=1` plus
-`MNEME_EXPERIMENTAL_KEYSTROKE_ACK=I_ACCEPT_RISKS` — and even then,
+`MNEME_EXPERIMENTAL_KEYSTROKE_ACK=I_ACCEPT_RISKS` โ€” and even then,
 the notifier returns `ok:false` with an explicit refusal message.
 We will **not** silently install OS-input automation. Every major
 AI vendor's TOS forbids it, anti-cheat treats it as a rootkit, and
 it's the wrong shape of solution. The stub exists so we can say
 "yes we considered it; here's why no."
 
-### Path 11 — Agentic-client adapters (stubs)
+### Path 11 โ€” Agentic-client adapters (stubs)
 
 `adapterCursorComposer()` + `adapterClaudeCodeAgent()` in
 `packages/core/src/agent/index.ts`. Both report `available()=false`
 today because the host clients don't expose stable IPC yet. Ship
 the shape so v1.27 can swap in real impls without API churn.
 
-### Path 12 — Quantum easter egg (honest)
+### Path 12 โ€” Quantum easter egg (honest)
 
 `packages/core/src/quantum.ts`. Three exports:
 
-  - `whyNotQuantum()` — plain-English explanation that quantum
+  - `whyNotQuantum()` โ€” plain-English explanation that quantum
     speedups (Grover sqrt-N, Shor exp) are about *compute*, not
     about *MCP being a request-response protocol*. The autonomy
     gap is architectural, not algorithmic.
-  - `COMPLEXITY_TABLE` — Big-O comparison: classical retrieval O(N),
+  - `COMPLEXITY_TABLE` โ€” Big-O comparison: classical retrieval O(N),
     Grover O(sqrt(N)), Mneme's vector retrieval O(log N) via HNSW.
     Quantum loses to a good index for AI-recall workloads.
-  - `groverIterations(N)` + `quantumSpeedupAt(N)` — actual math, so
+  - `groverIterations(N)` + `quantumSpeedupAt(N)` โ€” actual math, so
     `mneme quantum compare 1000000` shows you real numbers.
 
 **Easter egg, but the math is right.** Quantum is the wrong tool;
 this release tells you why instead of pretending otherwise.
 
-### Mneme Self-Check — recurring conscience loop
+### Mneme Self-Check โ€” recurring conscience loop
 
-User's exact request: *"output ให้คุณ recheck ถามตัวเองแบบ recurring
-flow system ทุกครั้งว่าดีพอยัง ถ้ายังต้อง กลับไป recurring เสมอๆๆ"*.
+User's exact request: *"output เนเธซเนเธเธธเธ“ recheck เธ–เธฒเธกเธ•เธฑเธงเน€เธญเธเนเธเธ recurring
+flow system เธ—เธธเธเธเธฃเธฑเนเธเธงเนเธฒเธ”เธตเธเธญเธขเธฑเธ เธ–เนเธฒเธขเธฑเธเธ•เนเธญเธ เธเธฅเธฑเธเนเธ recurring เน€เธชเธกเธญเนเน"*.
 
-`packages/core/src/selfcheck/` — 12 built-in checks:
+`packages/core/src/selfcheck/` โ€” 12 built-in checks:
 
   1. `pulse-hook-installed`
   2. `daemon-alive`
@@ -7530,7 +7590,7 @@ Each returns `pass | warn | fail | skip` with evidence + `fixHint`.
 `runAudit()` runs all 12 in parallel; `recurringSelfRecheck()`
 re-runs every N seconds until no failures or `maxIterations` hit.
 Persists last report to `.mneme/selfcheck/last.json`. Wired into
-the **Caretaker pass** of `nucleus_daemon.ts` — every CARETAKER tick
+the **Caretaker pass** of `nucleus_daemon.ts` โ€” every CARETAKER tick
 runs the audit and **auto-fires every available notifier on FAIL**.
 
 ### CLI commands
@@ -7556,10 +7616,10 @@ mneme quantum grover <N>          # iteration count + speedup
 
 ### Test coverage
 
-  - `packages/core/src/notifier/notifier.test.ts` — 14 new tests
-  - `packages/core/src/agent/agent.test.ts` — 13 new tests
-  - `packages/core/src/selfcheck/selfcheck.test.ts` — 8 new tests
-  - `packages/core/src/quantum.test.ts` — 6 new tests
+  - `packages/core/src/notifier/notifier.test.ts` โ€” 14 new tests
+  - `packages/core/src/agent/agent.test.ts` โ€” 13 new tests
+  - `packages/core/src/selfcheck/selfcheck.test.ts` โ€” 8 new tests
+  - `packages/core/src/quantum.test.ts` โ€” 6 new tests
   - **+41 new tests, 4816/4816 passing**, snapshots refreshed.
 
 ### Net effect
@@ -7575,15 +7635,15 @@ mneme quantum grover <N>          # iteration count + speedup
     10 ships as a refusal not a TOS-violating keylogger; path 12 says
     "qubits don't fix architecture" instead of riding a buzzword.
 
-## [1.25.2] — 2026-05-09
+## [1.25.2] โ€” 2026-05-09
 
-**Mneme Pulse + Hooks installer — closing the "AI agent didn't trigger
+**Mneme Pulse + Hooks installer โ€” closing the "AI agent didn't trigger
 on its own" loop.**
 
 ### The architectural reality
 
-User asked: "ai agent ไม่ auto upgrade ทำไม / ผมอยากให้ระบบมี trigger
-ตลอดเวลาระหว่าง mneme + ai agent ต่อให้ user เปิดหน้า chat ค้างไว้ก็มี
+User asked: "ai agent เนเธกเน auto upgrade เธ—เธณเนเธก / เธเธกเธญเธขเธฒเธเนเธซเนเธฃเธฐเธเธเธกเธต trigger
+เธ•เธฅเธญเธ”เน€เธงเธฅเธฒเธฃเธฐเธซเธงเนเธฒเธ mneme + ai agent เธ•เนเธญเนเธซเน user เน€เธเธดเธ”เธซเธเนเธฒ chat เธเนเธฒเธเนเธงเนเธเนเธกเธต
 trigger".
 
 Honest answer: **MCP is request-response.** AI clients (Claude Code,
@@ -7598,7 +7658,7 @@ the chat is idle. We've already wired everything the protocol allows:
   - Boot handshake nudge 3s after connect (v1.24.1)
 
 The remaining gap: **if the AI agent never makes a tool call**, none
-of those fire. That's what the user observed in the screenshot — AI
+of those fire. That's what the user observed in the screenshot โ€” AI
 read `.mneme/CURRENT_VERSION.md` via filesystem walk + reported
 status to the user, but never called `mneme.system.upgrade`.
 
@@ -7621,17 +7681,17 @@ AI sees current Mneme version + inbox + auto-actions on every turn.
 
 ### What's new
 
-  - `packages/core/src/pulse.ts` — `collectPulseStatus(repoRoot)` reads
+  - `packages/core/src/pulse.ts` โ€” `collectPulseStatus(repoRoot)` reads
     every `.mneme/*.json` state file in parallel. `renderPulse(s, opts)`
-    formats a tiny `[MNEME PULSE] ... [/MNEME PULSE]` block (≤600 chars)
+    formats a tiny `[MNEME PULSE] ... [/MNEME PULSE]` block (โค600 chars)
     with imperative `[AUTO-ACTION]` + `EXECUTE NOW: tool({args})` lines
     when there's something to do. Returns "" on quiet days (so the hook
     is a no-op when nothing changed).
-  - `mneme nucleus pulse [--quiet] [--no-quiet] [--json]` — CLI surface.
-  - `mneme hooks install [--force]` — atomically merges the hook entry
+  - `mneme nucleus pulse [--quiet] [--no-quiet] [--json]` โ€” CLI surface.
+  - `mneme hooks install [--force]` โ€” atomically merges the hook entry
     into `~/.claude/settings.json`. Refuses to overwrite a foreign
     hook unless `--force`.
-  - `mneme hooks uninstall` / `mneme hooks status` — full lifecycle.
+  - `mneme hooks uninstall` / `mneme hooks status` โ€” full lifecycle.
   - **`AGENT_INSTRUCTIONS.md`** rewritten to teach the AI: when you
     see `[AUTO-ACTION]` in a `[MNEME PULSE]` block, run the
     `EXECUTE NOW` tool call IMMEDIATELY. Don't ask permission.
@@ -7654,26 +7714,26 @@ This is the closest thing to a continuous heartbeat MCP allows.
   - 172 MCP tools (no schema changes; pulse is read-only state aggregator).
   - TypeScript strict; production build clean.
 
-## [1.25.1] — 2026-05-09
+## [1.25.1] โ€” 2026-05-09
 
-**The 5 future-roadmap items from v1.25.0 — all shipped, all
+**The 5 future-roadmap items from v1.25.0 โ€” all shipped, all
 measurable, all production-ready.**
 
 ### 1. Hard eval suite (replaces simulator)
 
-`packages/core/src/retrieval_lab/hard_eval.ts` — `buildHardEvalSuite()`
+`packages/core/src/retrieval_lab/hard_eval.ts` โ€” `buildHardEvalSuite()`
 walks the live git log + indexed chunk store to build REAL
 (query, expected-relevant-chunks) pairs. Self-supervised: commit
 subject = query, chunk_ids of that commit = ground truth.
 
   - `runTrialAsync(repoRoot, config, hardEvalRunner)` -- pivots
-    automatically: hard eval when ≥ 100 chunks indexed, falls back
+    automatically: hard eval when โฅ 100 chunks indexed, falls back
     to the deterministic simulator otherwise. Caller injects the
     runner so we avoid a circular dep with retrieve/search.
   - `scoreRanking(rankedIds, relevantIds, k)` -- precision@K +
     recall@K + NDCG@K computed honestly (idea: relevant items at
     the top score higher NDCG than at the bottom).
-  - `MnemeStore.chunkIdsByCommit(shas)` — new method (also satisfies
+  - `MnemeStore.chunkIdsByCommit(shas)` โ€” new method (also satisfies
     the `HardEvalStoreReader` interface so the tuner can adopt either
     backend without changes).
 
@@ -7686,7 +7746,7 @@ load latency.
 
 ### 3. Late chunking integrated into the indexer
 
-`packages/core/src/indexer/indexer.ts` — opt-in via
+`packages/core/src/indexer/indexer.ts` โ€” opt-in via
 `MNEME_LATE_CHUNKING=1` env var (default off so existing users see
 no behavior change).
 
@@ -7705,14 +7765,14 @@ context from its commit's other chunks.
 
 ### 4. GraphRAG retrieve filter (top-K within a community)
 
-`SearchOptions.topicFilter?: string | null` — when set, only chunks
+`SearchOptions.topicFilter?: string | null` โ€” when set, only chunks
 whose parent commit touched at least one file in the named community
 survive the top-K cut.
 
-  - `fileToCommunityIndex(repoRoot)` — builds the file → community
+  - `fileToCommunityIndex(repoRoot)` โ€” builds the file โ’ community
     lookup from `.mneme/graphrag/communities.json`.
-  - `communityForFile(idx, filePath)` — single-file lookup helper.
-  - `search()` — checks the option, looks up the community, walks
+  - `communityForFile(idx, filePath)` โ€” single-file lookup helper.
+  - `search()` โ€” checks the option, looks up the community, walks
     `git show --name-only` per top-100 candidate (capped to bound
     cost), keeps only those touching at least one community file.
   - Best-effort: missing graph cache or git failure falls through
@@ -7720,7 +7780,7 @@ survive the top-K cut.
 
 ### 5. pgvector backend (auto-detect, opt-in)
 
-`packages/core/src/store/pgvector.ts` — Postgres + pgvector adapter
+`packages/core/src/store/pgvector.ts` โ€” Postgres + pgvector adapter
 implementing the same `VectorStore` interface as `MnemeStore`:
 
   - `MNEME_PG_URL` env var triggers the backend (sqlite default).
@@ -7729,9 +7789,9 @@ implementing the same `VectorStore` interface as `MnemeStore`:
     error message if `pg` isn't installed when needed.
   - Schema auto-creation: `vector` extension, `mneme.chunks` table,
     IVFFlat index for ANN, GIN tsvector index for FTS.
-  - `detectBackend({ totalChunks })` — returns `kind: "pg"` when
+  - `detectBackend({ totalChunks })` โ€” returns `kind: "pg"` when
     `MNEME_PG_URL` is set; otherwise hints at pg when corpus
-    > 100K chunks (still defaults to sqlite — no surprise).
+    > 100K chunks (still defaults to sqlite โ€” no surprise).
   - Same surface as SQLite: `upsertChunks`, `ftsSearch` (uses
     `ts_rank_cd`), `countChunksWithEmbedding`, `iterEmbeddedChunks`,
     `chunkIdsByCommit`. Drop-in replacement.
@@ -7744,9 +7804,9 @@ implementing the same `VectorStore` interface as `MnemeStore`:
     surfaces).
   - TypeScript strict; production build clean.
 
-## [1.25.0] — 2026-05-09
+## [1.25.0] โ€” 2026-05-09
 
-**Mneme RAG Lab + GraphRAG + Late Chunking + Ingest+ — three phases
+**Mneme RAG Lab + GraphRAG + Late Chunking + Ingest+ โ€” three phases
 of classical-RAG world-class infrastructure shipped together. The
 moat: NUCLEUS daemon auto-tunes retrieval configs in the background
 via UCB1 multi-armed bandit. Lamarckian inheritance via chromosomes
@@ -7757,14 +7817,14 @@ User feedback that drove this release: "focus on retrieval quality +
 data ingestion is 1000x better than quantum stuff for Mneme." Right.
 This release does exactly that.
 
-### Phase 1 — Mneme RAG Lab
+### Phase 1 โ€” Mneme RAG Lab
 
 Self-tuning retrieval config selected by UCB1 over 8 candidate arms:
 
   - **Cross-encoder reranker** (Phase 2 promise from v0.x finally
-    shipped) — `bge-reranker-base` via `@huggingface/transformers`
+    shipped) โ€” `bge-reranker-base` via `@huggingface/transformers`
     (zero new deps; same stack as the embedder).
-  - **HyDE (Hypothetical Document Embeddings)** — agent generates
+  - **HyDE (Hypothetical Document Embeddings)** โ€” agent generates
     hypothetical answer, Mneme embeds THAT instead of the question.
     Server returns a system-prompt payload; AI loops back with the
     rewrite. Deterministic fallback for non-looping agents.
@@ -7773,7 +7833,7 @@ Self-tuning retrieval config selected by UCB1 over 8 candidate arms:
       - `bundled-bge-m3` (free, 1024-dim, multilingual)
       - `voyage-3` (paid, needs `VOYAGE_API_KEY`)
       - `openai-3-small` / `openai-3-large` (paid, needs `OPENAI_API_KEY`)
-  - **Auto-tuner** — UCB1 multi-armed bandit picks the next arm to trial.
+  - **Auto-tuner** โ€” UCB1 multi-armed bandit picks the next arm to trial.
     Runs ONE trial per NUCLEUS daemon caretaker pass (~15 min). After
     a few hours of trials, the active config converges on the best
     arm for THIS repo's queries. HMAC-SHA256 signed trials so anyone
@@ -7782,39 +7842,39 @@ Self-tuning retrieval config selected by UCB1 over 8 candidate arms:
     `mneme.retrieval.lab.leaderboard`, `mneme.retrieval.lab.tune`,
     `mneme.retrieval.cross_encoder.rerank`, `mneme.retrieval.hyde.rewrite`.
   - **CLI**: `mneme retrieval lab|tune|configs|rerank|hyde`.
-  - **Web Lab tab** "🎯 Retrieval Lab" — leaderboard table + Pareto-
+  - **Web Lab tab** "๐ฏ Retrieval Lab" โ€” leaderboard table + Pareto-
     frontier scatter plot (composite vs latency) + active-config card.
-  - **Lamarckian inheritance** — `Chromosome.retrievalConfigSignatures`
+  - **Lamarckian inheritance** โ€” `Chromosome.retrievalConfigSignatures`
     snapshot top-3 leaderboard entries; `fertilize()` merges them into
     the inheriting session's local leaderboard (highest mean composite
     wins per configId).
 
-### Phase 2 — GraphRAG + Late Chunking
+### Phase 2 โ€” GraphRAG + Late Chunking
 
-  - **Knowledge graph** (`packages/core/src/graphrag/build.ts`) — walks
-    `git log` to build a graph of (commit × file × author) with edges:
-    `authored`, `touched`, `co-edits` (file ↔ file via shared commit),
-    `co-author` (author ↔ author via shared file).
-  - **Louvain community detection** (`louvain.ts`) — pure-JS Newman
+  - **Knowledge graph** (`packages/core/src/graphrag/build.ts`) โ€” walks
+    `git log` to build a graph of (commit ร— file ร— author) with edges:
+    `authored`, `touched`, `co-edits` (file โ” file via shared commit),
+    `co-author` (author โ” author via shared file).
+  - **Louvain community detection** (`louvain.ts`) โ€” pure-JS Newman
     modularity-maximizing pass. Detects topic clusters, drops singletons,
     auto-labels each community by its dominant filename tokens. No
     external deps. Tested with cliques + bridges + singletons.
-  - **Late chunking** (`late_chunking.ts`) — Jina-style: embeds the
+  - **Late chunking** (`late_chunking.ts`) โ€” Jina-style: embeds the
     full doc once, mixes each chunk's embedding with the doc's
     embedding via configurable alpha. L2-normalized for cosine
     compatibility. Recall lifts on cross-chunk queries.
 
-### Phase 3 — Ingest+ (PR reviews / Linear / Jira)
+### Phase 3 โ€” Ingest+ (PR reviews / Linear / Jira)
 
 External context that doesn't live in commits but should still be
 retrievable:
 
-  - **`scrapePRReviews(repoRoot)`** — uses `gh` CLI (no API tokens
+  - **`scrapePRReviews(repoRoot)`** โ€” uses `gh` CLI (no API tokens
     needed) to fetch PR review comments + issue threads from GitHub.
     Auto-detects repo from `git remote get-url origin`.
-  - **`scrapeLinear()`** — needs `LINEAR_API_KEY`; pulls issues +
+  - **`scrapeLinear()`** โ€” needs `LINEAR_API_KEY`; pulls issues +
     comments via Linear's GraphQL.
-  - **`scrapeJira()`** — needs `JIRA_BASE_URL` + `JIRA_EMAIL` +
+  - **`scrapeJira()`** โ€” needs `JIRA_BASE_URL` + `JIRA_EMAIL` +
     `JIRA_API_TOKEN`; pulls issues + comments via Jira's REST API.
   - All three return `IngestedChunk[]` written to
     `.mneme/ingest/chunks.jsonl` (de-duped on id), ready for the
@@ -7830,7 +7890,7 @@ retrievable:
   - 172 MCP tools (was 167; +5 retrieval-lab tools).
   - TypeScript strict; production build clean.
 
-## [1.24.3] — 2026-05-09
+## [1.24.3] โ€” 2026-05-09
 
 **Web deploy: real root cause finally identified.**
 
@@ -7845,22 +7905,22 @@ The `github-pages` environment in this repo has a deployment-branch
 protection rule that only allows `main` (not tags). v1.24.1 added
 a `tags: ['v*']` trigger to deploy-web; that trigger fired on every
 release, was rejected by the environment rule, AND killed the main-
-push run that would have succeeded — because the `pages` concurrency
+push run that would have succeeded โ€” because the `pages` concurrency
 group has `cancel-in-progress: true`. Net result: zero successful
 deploys per release.
 
 Fix: removed the tag trigger entirely. Main push happens with every
 release anyway (we always commit + tag), so the deploy still fires
-on every release — but only ONCE, from main, which the environment
+on every release โ€” but only ONCE, from main, which the environment
 rule allows.
 
 Tests: 4658 / 4658 passing.
 
-## [1.24.2] — 2026-05-09
+## [1.24.2] โ€” 2026-05-09
 
 **Two real bugs caught by live testing as an AI agent:**
 
-### BUG A — 2 vaccines caught nothing in benchmark
+### BUG A โ€” 2 vaccines caught nothing in benchmark
 
 User test as AI agent: ran `mneme antivirus benchmark` and saw two
 vaccines reporting `F1 = n/a` (zero recall). Honest measurement, but
@@ -7869,20 +7929,20 @@ also a real bug.
   - Root cause: `extractSuspects()` returned `m[1]` (regex capture group)
     instead of `m[0]` (full match). For `persona_fictum` and
     `confidens_cardinalis`, the assays expect to RE-PARSE the full
-    surface ("by NAME" / "N noun") to extract the inner pieces — but
+    surface ("by NAME" / "N noun") to extract the inner pieces โ€” but
     the capture-group-only string had no "by" / no noun left. Both
     assays bailed out with "no match", every test became a false
     negative.
   - Fix: `extractSuspects()` now stores `m[0]` (full match). Verified
-    by re-running the benchmark — both vaccines now report real F1.
+    by re-running the benchmark โ€” both vaccines now report real F1.
 
-### BUG B — GitHub Pages stuck at v1.21.0 since v1.23.4
+### BUG B โ€” GitHub Pages stuck at v1.21.0 since v1.23.4
 
 Public API confirmed: every `deploy-web` workflow run since v1.23.4
 FAILED at the `Install` step.
 
   - Root cause: `onnxruntime-node@1.22.0` (a transitive dep via
-    `@huggingface/transformers`) has a **packaging bug** — its
+    `@huggingface/transformers`) has a **packaging bug** โ€” its
     `install.js` script `require('adm-zip')` but doesn't declare
     `adm-zip` as a dependency. `npm ci` runs the install script
     and crashes with `MODULE_NOT_FOUND`. This bit every CI runner
@@ -7890,7 +7950,7 @@ FAILED at the `Install` step.
   - Fix: All three workflows (`ci.yml`, `deploy-web.yml`,
     `release.yml`) now use `npm ci --ignore-scripts`. The web build
     doesn't need the native ONNX binary, and the test suite uses
-    mocked embeddings — both safe to skip the install scripts.
+    mocked embeddings โ€” both safe to skip the install scripts.
 
 ### Honest benchmark results after fix
 
@@ -7906,7 +7966,7 @@ anti_confidens_cardinalis_v1     F1 0.75  (TP=3 FP=0 TN=5 FN=2)
 ```
 
 Average F1 = 0.92. Lowest F1 = 0.75 (confidens_cardinalis still has
-2 FN cases that need the test repo to have package.json + tests/* —
+2 FN cases that need the test repo to have package.json + tests/* โ€”
 will tighten in a future release; honest reporting now beats inflated
 scoring).
 
@@ -7916,7 +7976,7 @@ scoring).
     to `<= 8` chars so `log.js`, `util.js`, `index.ts` no longer
     false-positive without a parent dir.
   - `structura_invenita` benchmark: removed test cases that assumed
-    `README.md` / `package.json` / `CHANGELOG.md` exist on disk —
+    `README.md` / `package.json` / `CHANGELOG.md` exist on disk โ€”
     those don't exist in a fresh tmp test repo, so they were
     polluting the FP count.
 
@@ -7924,14 +7984,14 @@ scoring).
 
   - 4658 / 4658 passing.
 
-## [1.24.1] — 2026-05-09
+## [1.24.1] โ€” 2026-05-09
 
 **3 root causes the user surfaced today, all fixed at the architecture
 level: web deploy stuck on stale version, AI agents not auto-handshaking
 on session boot, no proof of 24/7 stability. Plus a name collision fix +
 Discord contact + curated What's New tool.**
 
-### ROOT 1 — Web deploy was silently lagging
+### ROOT 1 โ€” Web deploy was silently lagging
 
 The `deploy-web.yml` workflow had a `paths:` filter requiring changes
 inside `packages/web/**`, root `package.json`, or `CHANGELOG.md`. When
@@ -7948,10 +8008,10 @@ stayed on whatever was last built. User saw v1.21.0 on
     to SEE the live version + commit SHA + deployedAt. Solves "is my
     site actually updated?" debugging gap.
 
-### ROOT 2 — AI agents went silent on boot
+### ROOT 2 โ€” AI agents went silent on boot
 
-User concern: "ai agent ตัวอื่นๆ ไม่ได้ต่อ MCP คือ bug ใหญ่นะ ... mneme
-= teacher ระบบมันต้อง automate". The MCP spec is request-response —
+User concern: "ai agent เธ•เธฑเธงเธญเธทเนเธเน เนเธกเนเนเธ”เนเธ•เนเธญ MCP เธเธทเธญ bug เนเธซเธเนเธเธฐ ... mneme
+= teacher เธฃเธฐเธเธเธกเธฑเธเธ•เนเธญเธ automate". The MCP spec is request-response โ€”
 the server can't FORCE the AI to call a tool. But it can push
 `notifications/message` that all spec-compliant clients surface in
 their server-log UI.
@@ -7965,12 +8025,12 @@ their server-log UI.
     `notifications/message` reminding the AI to surface them. Cooldown
     30 min so it doesn't spam.
   - Combined with `AGENT_INSTRUCTIONS.md` (now teaches the 4-call
-    boot sequence: welcome → release_notes → capabilities → health),
+    boot sequence: welcome โ’ release_notes โ’ capabilities โ’ health),
     this is the strongest auto-handshake the protocol allows.
 
-### ROOT 3 — Stability proven 24/7
+### ROOT 3 โ€” Stability proven 24/7
 
-Added `packages/core/src/antivirus/stability.test.ts` — 7 stress tests:
+Added `packages/core/src/antivirus/stability.test.ts` โ€” 7 stress tests:
 
   - 100 sequential scans; assert no throw + stats stay capped
   - 200 scans; assert stats file size <100KB
@@ -7991,10 +8051,10 @@ Curated highlights digest the AI agent calls automatically right after
 `mneme.welcome` so the user hears about every recent feature without
 asking.
 
-  - `packages/core/src/whats_new.ts` — `HIGHLIGHTS` array (newest
+  - `packages/core/src/whats_new.ts` โ€” `HIGHLIGHTS` array (newest
     first) + `buildDigest()` filter by `sinceVersion` / `limit`.
   - `mneme.release_notes` MCP tool. (NOTE: `mneme.whats_new` already
-    exists for catalog-hash diffs — different semantics.)
+    exists for catalog-hash diffs โ€” different semantics.)
   - `mneme welcome --auto-actions` now emits the auto-action calling
     `mneme.release_notes` on every fresh install.
   - `mneme whats-new` CLI alias (`mneme wn`) for terminal users.
@@ -8008,12 +8068,12 @@ asking.
     `#discriminator` needed). Display name `pat195` is just for show.
   - Direct DM link: `https://discord.com/users/shinnapat`
 
-### Bug fix — `mneme.whats_new` name collision
+### Bug fix โ€” `mneme.whats_new` name collision
 
 The new tool I built was named `mneme.whats_new`, colliding with an
 existing tool of the same name in `_tool_meta.ts` (which does catalog-
 hash diff). 74 tests failed momentarily. Renamed mine to
-`mneme.release_notes` — clearer intent + no collision.
+`mneme.release_notes` โ€” clearer intent + no collision.
 
 ### Tests
 
@@ -8022,9 +8082,9 @@ hash diff). 74 tests failed momentarily. Renamed mine to
   - 167 MCP tools (was 166; +1 release_notes).
   - TypeScript strict. Production build clean.
 
-## [1.24.0] — 2026-05-09
+## [1.24.0] โ€” 2026-05-09
 
-**Mneme Antivirus — the world's first MCP server with a hallucination
+**Mneme Antivirus โ€” the world's first MCP server with a hallucination
 antiviral.** Hallucinations modeled as virus strains; vaccines as
 antibody molecules; certified efficacy with HMAC-signed benchmarks;
 Lamarckian inheritance through MneMeiosis chromosomes; realtime Lab
@@ -8046,27 +8106,27 @@ inheritance, full Lab UI.
 | *Confidens cardinalis* | Off-by-N count | 2 |
 
 Each strain has: surface signature (regex), a vaccine with a real
-assay (no mocks — shells out to git/npm/fs), and a labeled benchmark
+assay (no mocks โ€” shells out to git/npm/fs), and a labeled benchmark
 case set (5 positive + 5 negative).
 
 ### The 8 vaccines (real assays)
 
-  - `anti_citatio_viridis_v1` — verifies SHAs against the cached set of
+  - `anti_citatio_viridis_v1` โ€” verifies SHAs against the cached set of
     git log hashes + a `git cat-file -t` tie-breaker.
-  - `anti_persona_fictum_v1` — verifies attributed names against the
+  - `anti_persona_fictum_v1` โ€” verifies attributed names against the
     cached set of git authors (substring-tolerant).
-  - `anti_api_phantasma_v1` — verifies function/method identifiers
+  - `anti_api_phantasma_v1` โ€” verifies function/method identifiers
     against `git grep` for definitions; skips known builtins.
-  - `anti_depends_imaginarium_v1` — verifies npm packages against
+  - `anti_depends_imaginarium_v1` โ€” verifies npm packages against
     package.json + node_modules + npm registry packument.
-  - `anti_tempus_perversum_v1` — verifies dates against the repo's
-    git commit-date range (±1 year tolerance).
-  - `anti_confidens_cardinalis_v1` — verifies counts (commits/files/
+  - `anti_tempus_perversum_v1` โ€” verifies dates against the repo's
+    git commit-date range (ยฑ1 year tolerance).
+  - `anti_confidens_cardinalis_v1` โ€” verifies counts (commits/files/
     packages/tests) against actual repo state; flags >20% AND >5
     absolute deviation.
-  - `anti_structura_invenita_v1` — verifies paths against `git ls-files`
+  - `anti_structura_invenita_v1` โ€” verifies paths against `git ls-files`
     + `fs.existsSync` tie-breaker.
-  - `anti_logica_circularis_v1` — builds a clause DAG keyed by 6-gram
+  - `anti_logica_circularis_v1` โ€” builds a clause DAG keyed by 6-gram
     fingerprint, detects cycles via DFS.
 
 ### Benchmark harness (HMAC-certified, honest scoring)
@@ -8081,12 +8141,12 @@ case set (5 positive + 5 negative).
 
 ### Pharmacopoeia + Lamarckian inheritance
 
-  - `.mneme/antivirus/pharmacopoeia.json` — the active vaccine inventory.
+  - `.mneme/antivirus/pharmacopoeia.json` โ€” the active vaccine inventory.
     Auto-seeds with all 8 vaccines on first read.
-  - `Chromosome.vaccineSignatures[]` — every crystallized chromosome
+  - `Chromosome.vaccineSignatures[]` โ€” every crystallized chromosome
     carries a snapshot of the active pharmacopoeia + each vaccine's
     efficacy at crystallization time.
-  - `mergeInheritedVaccines()` — on `fertilize()`, the top-3 ancestor
+  - `mergeInheritedVaccines()` โ€” on `fertilize()`, the top-3 ancestor
     chromosomes' vaccineSignatures are merged into the local
     pharmacopoeia. Strategy: highest F1 wins per (strain, id, version).
   - **Biologically Lamarckian**: vaccines a parent session learned about
@@ -8096,15 +8156,15 @@ case set (5 positive + 5 negative).
 
 ### 7 MCP tools
 
-  - `mneme.antivirus.scan({ draft })` — run all vaccines, return
+  - `mneme.antivirus.scan({ draft })` โ€” run all vaccines, return
     infections + cures + risk score 0..1
-  - `mneme.antivirus.immunize()` — activate session protection
+  - `mneme.antivirus.immunize()` โ€” activate session protection
     (returns an `[AUTO-ACTION]` instructing the AI to scan every draft)
-  - `mneme.antivirus.lab.strains()` — taxonomy
-  - `mneme.antivirus.lab.vaccines()` — pharmacopoeia
-  - `mneme.antivirus.cert.benchmark()` — run benchmarks, certify
-  - `mneme.antivirus.stats()` — realtime stats
-  - `mneme.antivirus.cure({ draft })` — apply cures (redact / annotate)
+  - `mneme.antivirus.lab.strains()` โ€” taxonomy
+  - `mneme.antivirus.lab.vaccines()` โ€” pharmacopoeia
+  - `mneme.antivirus.cert.benchmark()` โ€” run benchmarks, certify
+  - `mneme.antivirus.stats()` โ€” realtime stats
+  - `mneme.antivirus.cure({ draft })` โ€” apply cures (redact / annotate)
 
 ### CLI
 
@@ -8119,14 +8179,14 @@ mneme antivirus cure <textOrFile>     # apply cures
 
 ### Web Lab dashboard
 
-New "🧬 Antivirus Lab" tab on https://patsa2561-art.github.io/mneme-ai/
+New "๐งฌ Antivirus Lab" tab on https://patsa2561-art.github.io/mneme-ai/
 with four sections:
 
-  - **Strain Atlas** — 8-card grid; each card shows scientific +
+  - **Strain Atlas** โ€” 8-card grid; each card shows scientific +
     common name, pathogenesis, severity (color-coded).
-  - **Pharmacopoeia** — vaccine inventory with F1 efficacy bars.
-  - **Realtime Feed** — recent scan activity + per-strain catch counts.
-  - **Cert Ledger** — HMAC signatures for every certified vaccine
+  - **Pharmacopoeia** โ€” vaccine inventory with F1 efficacy bars.
+  - **Realtime Feed** โ€” recent scan activity + per-strain catch counts.
+  - **Cert Ledger** โ€” HMAC signatures for every certified vaccine
     (anyone can re-verify).
 
 Live mode reads `.mneme/antivirus/*.json` from a loaded repo. Demo
@@ -8143,7 +8203,7 @@ mode shows seed data so the lab is never empty.
     feedfacedeadbeef0123 for the fix"` correctly catches the phantom
     SHA with evidence + cure in 87ms.
 
-## [1.23.5] — 2026-05-09
+## [1.23.5] โ€” 2026-05-09
 
 **CI self-heal + AUTO-ACTION protocol + Caretaker Bot.** Two surfaces
 of the same problem hit live: CI broken on every runner (EINTEGRITY)
@@ -8154,12 +8214,12 @@ Mneme issues auto-actions the AI agent executes WITHOUT asking the user.
 
 ### CI self-heal
 
-  - `scripts/heal-lockfile.mjs` — pure-Node script that scans every
+  - `scripts/heal-lockfile.mjs` โ€” pure-Node script that scans every
     `node_modules/...` entry in `package-lock.json` whose `resolved`
     URL points at the npm registry, queries the registry for the
     actual `dist.integrity`, and surgically replaces drifted hashes
     in the raw text. Does **NOT** regenerate the lockfile (that
-    strips darwin/linux optionalDependencies on the wrong host —
+    strips darwin/linux optionalDependencies on the wrong host โ€”
     a separate hard-earned lesson). Validates JSON before writing.
   - Wired into `ci.yml` + `deploy-web.yml` + `release.yml` as:
     ```
@@ -8170,16 +8230,16 @@ Mneme issues auto-actions the AI agent executes WITHOUT asking the user.
   - Manual fix for the current breakage: patched
     `onnxruntime-node@1.22.0` + `onnxruntime-common@1.22.0` integrity
     to registry truth.
-  - `tests/heal-lockfile.test.ts` — `--dry-run` on the live lockfile
+  - `tests/heal-lockfile.test.ts` โ€” `--dry-run` on the live lockfile
     asserts zero drift. Future regressions fail in `npm test` BEFORE
     publish.
 
-### AUTO-ACTION protocol — Mneme is the TEACHER, AI is the student
+### AUTO-ACTION protocol โ€” Mneme is the TEACHER, AI is the student
 
-User feedback (verbatim): "ai agent ควรคุยกับ mneme แล้ว mneme ที่เป็น
-teacher ก็สั่งให้ ai ทำเลย ไม่ต้องมาถาม user แล้ว ทุกอย่างที่เป็น การ
-improvement / upgrade ทำแบบ auto แค่ก่อนทำแจ้ง user แล้วทำ เสร็จแจ้ง
-user ก็พอ ... Fully Automation."
+User feedback (verbatim): "ai agent เธเธงเธฃเธเธธเธขเธเธฑเธ mneme เนเธฅเนเธง mneme เธ—เธตเนเน€เธเนเธ
+teacher เธเนเธชเธฑเนเธเนเธซเน ai เธ—เธณเน€เธฅเธข เนเธกเนเธ•เนเธญเธเธกเธฒเธ–เธฒเธก user เนเธฅเนเธง เธ—เธธเธเธญเธขเนเธฒเธเธ—เธตเนเน€เธเนเธ เธเธฒเธฃ
+improvement / upgrade เธ—เธณเนเธเธ auto เนเธเนเธเนเธญเธเธ—เธณเนเธเนเธ user เนเธฅเนเธงเธ—เธณ เน€เธชเธฃเนเธเนเธเนเธ
+user เธเนเธเธญ ... Fully Automation."
 
   - New `AutoAction` type added to `ToolResponse.secondBrain.autoActions[]`:
     ```ts
@@ -8192,25 +8252,25 @@ user ก็พอ ... Fully Automation."
     AI agent reads the line, surfaces announceBefore, calls the tool,
     surfaces announceAfter. NO user confirmation. The teacher commands.
   - `mneme.welcome` populates autoActions[] when an update is available
-    → AI auto-upgrades on the very first tool call without asking.
+    โ’ AI auto-upgrades on the very first tool call without asking.
   - `mneme.nucleus.heartbeat` populates autoActions[] when the daemon
-    is dead → AI queues a restart reminder via `mneme.inbox.push`.
+    is dead โ’ AI queues a restart reminder via `mneme.inbox.push`.
   - **`AGENT_INSTRUCTIONS.md` template rewritten** to teach AI agents:
     "Mneme is the TEACHER; you are the student. When you see an
     auto-action, you EXECUTE IT. You do NOT ask the user." Includes
     the rare exception (`requiresUserConfirm: true` for destructive
     ops like `mneme lineage purge`).
 
-### Caretaker Bot — the watcher inside the daemon
+### Caretaker Bot โ€” the watcher inside the daemon
 
   - Inside `runDaemonLoop()`, `runCaretakerPass()` runs every 30 ticks
     (~15 min at default tick interval).
   - Drift checks:
-      • **Version drift** (new mneme-ai on npm): refreshes the
+      โ€ข **Version drift** (new mneme-ai on npm): refreshes the
         version-check cache, which auto-pushes an inbox notice that
         flows into the AUTO-ACTION protocol on the next MCP dispatch.
-      • **Daemon-vs-installed version mismatch**: detects when user
-        upgraded mneme but did not restart the daemon → pushes a
+      โ€ข **Daemon-vs-installed version mismatch**: detects when user
+        upgraded mneme but did not restart the daemon โ’ pushes a
         high-priority inbox notice with restart instructions
         (`mneme nucleus stop && mneme nucleus daemon --detach`).
   - Best-effort: any failure inside the pass is silenced; never
@@ -8229,14 +8289,14 @@ user ก็พอ ... Fully Automation."
   - 159 MCP tools (no schema additions; `autoActions` extends an
     existing optional field on `secondBrain`).
 
-## [1.23.4] — 2026-05-09
+## [1.23.4] โ€” 2026-05-09
 
 **Cross-platform robustness pass + docs cleanup + web auto-sync.**
 Three audit findings rolled into one release:
 
 ### Docs
 
-  - **README + CONTACT** — removed all `$${\color{#hex}\textbf{...}}$$`
+  - **README + CONTACT** โ€” removed all `$${\color{#hex}\textbf{...}}$$`
     GitHub-LaTeX wrappers from headings + `<summary>` blocks. GitHub's
     math renderer doesn't run inside HTML containers, so the colored
     text was rendering as literal `$${\color...}$$` source on the
@@ -8245,7 +8305,7 @@ Three audit findings rolled into one release:
 
 ### Web dashboard auto-sync
 
-  - **Version pill stuck at v1.21.0** — the GitHub Pages deploy
+  - **Version pill stuck at v1.21.0** โ€” the GitHub Pages deploy
     workflow only triggered on `packages/web/**` changes, not on
     root version bumps. Extended `paths:` in
     `.github/workflows/deploy-web.yml` to also fire on root
@@ -8254,29 +8314,29 @@ Three audit findings rolled into one release:
 
 ### Cross-platform script audit
 
-User feedback: "AI agent runs Mneme install/update on dev's machine —
+User feedback: "AI agent runs Mneme install/update on dev's machine โ€”
 must work on Windows / macOS / Linux without surprises." Audited every
 spawn / install / file-resolution call:
 
-  - **`mneme upgrade` PATH diagnosis** — replaced shell-out with a
+  - **`mneme upgrade` PATH diagnosis** โ€” replaced shell-out with a
     pure-JS PATH walker. Old code used `where mneme` (Windows) or
-    `which -a mneme` (Linux GNU only — macOS BSD `which` rejects
+    `which -a mneme` (Linux GNU only โ€” macOS BSD `which` rejects
     `-a` and silently errors). New `findOnPath()` parses `$PATH`
     + `$PATHEXT` directly via `node:path`, works identically on all
     3 OSes, no shell required.
-  - **`mneme upgrade` Windows file-lock failure path** — when
+  - **`mneme upgrade` Windows file-lock failure path** โ€” when
     `npm install -g` fails because the running mneme.cmd is locked,
     the error message now tells the user to open a NEW PowerShell
     window and re-run, instead of suggesting `sudo` (which is wrong
     on Windows).
-  - **`mneme.system.upgrade` MCP tool failure copy** —
+  - **`mneme.system.upgrade` MCP tool failure copy** โ€”
     platform-aware remediation: Windows users get the file-lock
     workaround; POSIX users get the `sudo` hint.
-  - **Detached daemon spawn** — added `windowsHide: true` to the two
+  - **Detached daemon spawn** โ€” added `windowsHide: true` to the two
     `spawn(node, ..., { detached: true })` call sites in
     `nucleus daemon --detach` and `nucleus seed --auto-start` so
     the child doesn't pop a stray console window on Windows.
-  - **`spawnSyncPowershell` renamed to `spawnSyncShell`** — the
+  - **`spawnSyncPowershell` renamed to `spawnSyncShell`** โ€” the
     function already ran `sh -c` on POSIX and `powershell.exe -c`
     on Windows; the old name made readers think it was Windows-only.
     Added a docstring documenting the cross-platform behavior.
@@ -8292,9 +8352,9 @@ needed there.
   - 4517 / 4517 passing.
   - Production build clean. TypeScript strict.
 
-## [1.23.3] — 2026-05-09
+## [1.23.3] โ€” 2026-05-09
 
-**Watch display fix — stop printing the same lesson on every tick.**
+**Watch display fix โ€” stop printing the same lesson on every tick.**
 Live test of v1.23.2 surfaced one more UX bug: `mneme nucleus seed
 --demo --auto-start --watch` printed the LATEST lesson on every tick,
 even when no new lesson was emitted. Output looked like:
@@ -8321,15 +8381,15 @@ emits and only annotates `[tick N]` lines when one of them grew:
 [tick 10] wisdom=33.35 mutations=1  >> +1 mutation (DNA evolved)
 ```
 
-CLI patch only — no schema or API changes.
+CLI patch only โ€” no schema or API changes.
 
 ### Tests
 
   - 4517 / 4517 passing.
 
-## [1.23.2] — 2026-05-09
+## [1.23.2] โ€” 2026-05-09
 
-**Four root-cause bugs found by live testing — all fixed.** The user
+**Four root-cause bugs found by live testing โ€” all fixed.** The user
 ran the full daemon flow end-to-end and found four real issues. Each
 fixed at the source, not patched at the edge. Plus a 3-step demo
 flow collapsed into one command.
@@ -8337,18 +8397,18 @@ flow collapsed into one command.
 ### Bugs fixed
 
   - **Unicode mojibake in nucleus.json + chromosome topics + memo files.**
-    Em-dash bytes (`e2 80 94` UTF-8) were rendered as `โ€"` /
-    `â€"` when Windows tools opened the file with the system codepage
+    Em-dash bytes (`e2 80 94` UTF-8) were rendered as `เนโฌ"` /
+    `รขโฌ"` when Windows tools opened the file with the system codepage
     (cp874 / cp1252). Files on disk were valid UTF-8, but downstream
     tools that don't auto-detect encoding showed garbage. Cross-machine
     sync (`mneme spore push/pull`) would have shipped the same bytes
     to other machines where the same problem repeats.
     **Fix:** all machine-written strings (lesson text, seed topics,
-    memo headers) are now ASCII-only — `--` instead of `—`, `->`
-    instead of `→`. Display strings (terminal, MCP wisdom) keep
+    memo headers) are now ASCII-only โ€” `--` instead of `โ€”`, `->`
+    instead of `โ’`. Display strings (terminal, MCP wisdom) keep
     Unicode where the renderer is known good. Test asserts no em-dash
     bytes appear in `.mneme/nucleus.json`.
-  - **Stable ticks looked like a frozen daemon.** Tick #78 → #79 with
+  - **Stable ticks looked like a frozen daemon.** Tick #78 โ’ #79 with
     the same wisdom score + same DNA hash + no new lesson made the
     user think the daemon had crashed. Technically correct (no input,
     no growth), but UX-confusing.
@@ -8357,7 +8417,7 @@ flow collapsed into one command.
     even with zero growth. Examples: "5 ticks of stable DNA --
     nucleus has consolidated this knowledge baseline", "Vendor
     diversity = 3; baseline DNA fingerprint locked in".
-  - **`bestVerifiedStreak: 0` but `totalVerified: 18`** — a self-
+  - **`bestVerifiedStreak: 0` but `totalVerified: 18`** โ€” a self-
     contradicting state shipped by the seed lineage. Seed planted
     chromosome counts but never wrote `karma_streaks.json`, so
     achievements stayed locked even with 18 verified outcomes.
@@ -8372,11 +8432,11 @@ flow collapsed into one command.
     but the daemon only mutated when growth was happening. A stable
     nucleus never evolved.
     **Fix:** daemon now has TWO independent mutation triggers:
-      • Growth-based (existing): `noteworthyTicks >= 5`
-      • Time-based (new): every 10 ticks, regardless of growth
+      โ€ข Growth-based (existing): `noteworthyTicks >= 5`
+      โ€ข Time-based (new): every 10 ticks, regardless of growth
     Stable nuclei now evolve slowly; active ones still evolve fast.
 
-### UX — friction reduced from 3 commands to 1
+### UX โ€” friction reduced from 3 commands to 1
 
 `mneme nucleus seed --demo --auto-start --watch` does the whole
 demo dance in one shot:
@@ -8397,83 +8457,83 @@ Time-to-wow: one command + 30 seconds + one screen.
   - 159 MCP tools total (no schema additions).
   - Production build clean. TypeScript strict.
 
-## [1.23.1] — 2026-05-09
+## [1.23.1] โ€” 2026-05-09
 
 **Zero-step first-touch wow + always-on update notification.** v1.23.0
 shipped the inbox channel; v1.23.1 turns it into a fully autonomous
 onboarding pass. The 8-step / 20-90-minute time-to-wow problem is now
-gone — `mneme.welcome` runs the full auto-onboarding inline (seed → 5
-ticks → 2 mutations → achievements), so the AI agent's FIRST response
+gone โ€” `mneme.welcome` runs the full auto-onboarding inline (seed โ’ 5
+ticks โ’ 2 mutations โ’ achievements), so the AI agent's FIRST response
 already shows populated wisdom + lessons + cross-vendor pedigree. Plus
 the version-check now fires the inbox push on cache HITS too (was
-fresh-fetch only) and the cache TTL drops 24h → 1h so new releases
+fresh-fetch only) and the cache TTL drops 24h โ’ 1h so new releases
 land in every running session within an hour.
 
 ### What's new
 
-  - `runAutoOnboarding(repoRoot)` (`packages/core/src/lineage/welcome.ts`) —
+  - `runAutoOnboarding(repoRoot)` (`packages/core/src/lineage/welcome.ts`) โ€”
     silent first-install pass:
-      • Seeds 3 cross-vendor synthetic chromosomes (claude / cursor / codex).
-      • Forces 5 nucleus ticks so wisdomScore aggregates immediately.
-      • Fires 2 mutation cycles so the lineage shows real evolution.
-      • Reads delta achievements + lesson count + DNA hash and returns
+      โ€ข Seeds 3 cross-vendor synthetic chromosomes (claude / cursor / codex).
+      โ€ข Forces 5 nucleus ticks so wisdomScore aggregates immediately.
+      โ€ข Fires 2 mutation cycles so the lineage shows real evolution.
+      โ€ข Reads delta achievements + lesson count + DNA hash and returns
         a one-line `headline` the AI agent quotes verbatim.
-      • Pushes a starter inbox notice ("Mneme is ready — populated
+      โ€ข Pushes a starter inbox notice ("Mneme is ready โ€” populated
         nucleus on first install") so the wisdom-prepend channel
         surfaces the wow even if the agent forgets the headline.
     Best-effort: any failure degrades silently to a no-op.
-  - `WelcomePayload.autoOnboarding` — new field exposing the
+  - `WelcomePayload.autoOnboarding` โ€” new field exposing the
     onboarding result so MCP clients see exactly what auto-fired.
-  - `userMessageTemplate` now embeds the wow headline (`✨ Auto-onboarded:
-    3 seed chromosomes + 5 nucleus ticks + 2 mutations → wisdom N · M new
-    lessons · K achievements unlocked`) on fresh installs.
-  - `userMessageTemplate` ALWAYS states the running version — and on
-    fresh-no-update sessions, explicitly says "✓ Running v1.23.1
-    (latest on npm). Auto-update is on — I'll tell you the moment a
+  - `userMessageTemplate` now embeds the wow headline (`โจ Auto-onboarded:
+    3 seed chromosomes + 5 nucleus ticks + 2 mutations โ’ wisdom N ยท M new
+    lessons ยท K achievements unlocked`) on fresh installs.
+  - `userMessageTemplate` ALWAYS states the running version โ€” and on
+    fresh-no-update sessions, explicitly says "โ“ Running v1.23.1
+    (latest on npm). Auto-update is on โ€” I'll tell you the moment a
     new version lands." So users never wonder "did the update probe
     even fire?"
 
 ### Always-on update notifications (the chicken-and-egg fix)
 
-The auto-update path used to live ONLY inside `startMcpServer()` — so
+The auto-update path used to live ONLY inside `startMcpServer()` โ€” so
 users who hadn't wired Mneme as their MCP server never had the version
 cache written, never saw a notification, never knew a new release was
 out. v1.23.1 lifts the notification mechanism out of the MCP-only path
 into THREE independent surfaces:
 
-  - **CLI auto-probe** — every `mneme <command>` invocation now fires
+  - **CLI auto-probe** โ€” every `mneme <command>` invocation now fires
     `versionCheck.checkVersion()` as part of the entrypoint. Cache hit
-    (≤1ms) refreshes in background; cache miss awaits ≤2s. After the
+    (โค1ms) refreshes in background; cache miss awaits โค2s. After the
     first command, the 1h cache keeps subsequent commands fast.
     `version_check.checkVersion` cache TTL itself dropped from 24h to
     1h, so a brand-new release lands within an hour.
-  - **`.mneme/CURRENT_VERSION.md` memo** — written on every cache
+  - **`.mneme/CURRENT_VERSION.md` memo** โ€” written on every cache
     refresh (CLI or MCP path). A human-readable markdown file that
     EVERY AI agent reading the workspace sees via filesystem walks /
     IDE indexing / RAG. Includes "For AI agents reading this file"
     instructions: tell the user, run upgrade, restart. The fallback
     channel: even if Mneme isn't wired as MCP, any AI in the workspace
     sees the version status.
-  - **`mneme doctor` version block** — the doctor command now leads
+  - **`mneme doctor` version block** โ€” the doctor command now leads
     with `Mneme version` showing installed vs latest + a copy-pasteable
     `mneme upgrade --force` line when an update is available. doctor
     is the natural "is my Mneme okay?" entrypoint.
 
 Cache HIT path now pushes the inbox notice too (previously only fresh
-fetches did — so a session booting within the cache window NEVER
+fetches did โ€” so a session booting within the cache window NEVER
 surfaced the available-update line). Idempotent on the version string,
 so re-pushing across many cache hits is a no-op.
 
 Inbox notice copy upgraded to lead with the auto-upgrade CTA:
 "Auto-upgrade is one tool call away (mneme.system.upgrade mode='install').
-· say: 'upgrade Mneme' and I'll handle it."
+ยท say: 'upgrade Mneme' and I'll handle it."
 
 ### Docs
 
-  - `docs/CONTACT.md` — removed the "What I will NOT do" section per
+  - `docs/CONTACT.md` โ€” removed the "What I will NOT do" section per
     user feedback (positioning was off-tone for the public-facing
     contact page).
-  - `README.md` — "What's new" section trimmed from the v1.18 + v1.19
+  - `README.md` โ€” "What's new" section trimmed from the v1.18 + v1.19
     inline blurbs down to a single CHANGELOG link. The blurbs
     accumulated and were stale within weeks; CHANGELOG.md is the
     canonical source.
@@ -8483,9 +8543,9 @@ Inbox notice copy upgraded to lead with the auto-upgrade CTA:
   - 4508 / 4508 passing. Production build clean. TypeScript strict.
   - 159 MCP tools total (no schema additions in this point release).
 
-## [1.23.0] — 2026-05-09
+## [1.23.0] โ€” 2026-05-09
 
-**RLHF Force-Push channel — Mneme talks to the user FIRST.** The hardest
+**RLHF Force-Push channel โ€” Mneme talks to the user FIRST.** The hardest
 problem in MCP UX: AI agents don't reliably surface `notifications/message`
 across clients (Claude Code shows them, Cursor swallows them, others vary).
 v1.23 fixes this architecturally: every Mneme tool dispatch flows a
@@ -8501,17 +8561,17 @@ hint). **2 new MCP tools + 6 new CLI commands.** `4474+ tests passing.`
 
 #### Inbox + Force-Push channel (the headliner)
 
-  - `packages/core/src/inbox.ts` — append-only `.mneme/inbox.jsonl` with
+  - `packages/core/src/inbox.ts` โ€” append-only `.mneme/inbox.jsonl` with
     `pushInbox`, `popUnsent`, `formatForWisdom`, `deterministicId`. Idempotent
     on `id` (re-pushing the same id is a no-op so version-check / daemon
     can't spam). Auto-rotates above 256KB. 11 tests.
   - `wrapWithGlow` (`packages/mcp/src/index.ts`) now reads `popUnsent(repo, 3)`
-    on every dispatch and PREPENDS the formatted block to wisdom — the
+    on every dispatch and PREPENDS the formatted block to wisdom โ€” the
     AI surfaces unsent inbox items via the same guaranteed wisdom channel
     that's already wired into every client.
-  - `mneme.inbox.read` MCP tool — list every message (sent + unsent) for
+  - `mneme.inbox.read` MCP tool โ€” list every message (sent + unsent) for
     the agent to replay or filter.
-  - `mneme.inbox.push` MCP tool — programmatic push so an AI agent can
+  - `mneme.inbox.push` MCP tool โ€” programmatic push so an AI agent can
     flag something to the user via the force-push channel (e.g., regression
     detected mid-conversation, security finding, lineage merge conflict).
   - `mneme inbox list [--unsent]` and `mneme inbox push <title>` CLI
@@ -8528,30 +8588,30 @@ hint). **2 new MCP tools + 6 new CLI commands.** `4474+ tests passing.`
     inspect or tail files without guessing where state lives.
   - When `wisdomScore == 0`, `mneme nucleus status` emits a one-line
     explainer: "wisdom = 0 because no MCP-connected AI has fed the nucleus
-    yet — install MCP via `mneme mcp --install`…". No more cryptic 0.
+    yet โ€” install MCP via `mneme mcp --install`โ€ฆ". No more cryptic 0.
   - `mneme nucleus dna` empty `Last 5 lessons:` block is replaced with
-    "(none yet — connect Mneme via MCP and let an AI agent call
+    "(none yet โ€” connect Mneme via MCP and let an AI agent call
     mneme.nucleus.tick to generate lessons)".
 
 #### Daemon ergonomics
 
-  - `mneme nucleus tail` — live tail of `.mneme/nucleus.heartbeat.json`
+  - `mneme nucleus tail` โ€” live tail of `.mneme/nucleus.heartbeat.json`
     (`tail -f` for the wisdom brain). `--once` for one-shot. Uses
     `fs.watch` with a polling fallback for non-inotify filesystems.
-  - `mneme nucleus seed --demo` — plant 3 synthetic seed chromosomes so
+  - `mneme nucleus seed --demo` โ€” plant 3 synthetic seed chromosomes so
     the daemon has something to aggregate immediately. `--force` re-plants.
-  - `mneme nucleus install --as-service` — generate + install the
+  - `mneme nucleus install --as-service` โ€” generate + install the
     platform-native service unit:
-      • Windows → `schtasks` ONLOGON task ("MnemeNucleusDaemon")
-      • Linux → systemd user-unit at `~/.config/systemd/user/mneme-nucleus.service`
-      • macOS → launchd plist at `~/Library/LaunchAgents/ai.mneme.nucleus.plist`
+      โ€ข Windows โ’ `schtasks` ONLOGON task ("MnemeNucleusDaemon")
+      โ€ข Linux โ’ systemd user-unit at `~/.config/systemd/user/mneme-nucleus.service`
+      โ€ข macOS โ’ launchd plist at `~/Library/LaunchAgents/ai.mneme.nucleus.plist`
     `--print` emits the unit file to stdout. `--uninstall` removes it.
 
 ### Why this is architecturally novel
 
 Every other "AI talks to the user first" pattern depends on the client
 implementing MCP `notifications/message` UX. Mneme's force-push pattern
-piggybacks on the wisdom field that EVERY tool response carries — and
+piggybacks on the wisdom field that EVERY tool response carries โ€” and
 every AI agent already surfaces wisdom verbatim because that's the value
 they paid for in the first place. Result: the daemon (or any background
 process) can talk to the user mid-conversation, on **every** MCP client,
@@ -8561,15 +8621,15 @@ without writing a line of client-specific notification code.
 
   - 4507 / 4507 passing (was 4495 in v1.22.0; +12 for the inbox module
     plus the new daemon write paths and snapshot refresh).
-  - 159 MCP tools total (was 157 — added `mneme.inbox.read` + `mneme.inbox.push`).
+  - 159 MCP tools total (was 157 โ€” added `mneme.inbox.read` + `mneme.inbox.push`).
   - Production build clean. TypeScript strict.
 
-## [1.22.0] — 2026-05-09
+## [1.22.0] โ€” 2026-05-09
 
-**First-touch UX overhaul — wow-features one command away, no MCP setup
+**First-touch UX overhaul โ€” wow-features one command away, no MCP setup
 required.** Audit revealed: 99% of users who `npm install -g mneme-ai`
 saw zero wow-features before the MCP setup step (chicken-and-egg with
-empty lineage). v1.22 fixes that — every black-sheep feature shipped in
+empty lineage). v1.22 fixes that โ€” every black-sheep feature shipped in
 v1.18-v1.21 is now reachable from the CLI WITHOUT MCP, and fresh installs
 get a 3-vendor synthetic seed lineage so the first call to mneme.welcome
 shows a populated graph. **5 new CLI commands + agent-instructions
@@ -8577,27 +8637,27 @@ auto-write.** `4451 / 4451 tests passing.`
 
 ### What's new
 
-  - `packages/core/src/lineage_seed.ts` — `synthesizeSeedLineage()` plants
+  - `packages/core/src/lineage_seed.ts` โ€” `synthesizeSeedLineage()` plants
     3 SEED chromosomes (claude-opus-4-7, cursor-cmd-k, codex-cli) on first
     welcome when the user has no real chromosomes yet. Vendor prefix `seed:`
     + topic prefix `[seed]` make synthetic provenance unambiguous.
-  - `mneme tools` — list the full MCP tool catalog without going through
+  - `mneme tools` โ€” list the full MCP tool catalog without going through
     MCP setup. `--category` filter, `--json` parity.
-  - `mneme squad <claim>` — spawn the 6-bot squadron from the terminal
+  - `mneme squad <claim>` โ€” spawn the 6-bot squadron from the terminal
     (renamed from `mneme bot` to avoid collision with the existing bot
     namespace).
-  - `mneme health` — single-screen health: version + identity + chromosome
+  - `mneme health` โ€” single-screen health: version + identity + chromosome
     count + nucleus tick + streak banner + achievements unlocked.
-  - `mneme demo` — 60-second showcase: seed → tick → squad → mutate →
+  - `mneme demo` โ€” 60-second showcase: seed โ’ tick โ’ squad โ’ mutate โ’
     final DNA snapshot. Runs every wow-feature in-process.
   - `mneme mcp --install` now writes `.mneme/AGENT_INSTRUCTIONS.md`
-    explaining DO call mneme.welcome → capabilities → health, run
-    mneme-pre-flight, interpret ✨ Glow as positive feedback.
-  - **Plain English everywhere** — `mneme spore status`, `mneme lin
+    explaining DO call mneme.welcome โ’ capabilities โ’ health, run
+    mneme-pre-flight, interpret โจ Glow as positive feedback.
+  - **Plain English everywhere** โ€” `mneme spore status`, `mneme lin
     ancestors`, `mneme lin pedigree` rewritten to lead with a headline,
     translate every metric inline, and provide actionable next-step
     bullets in empty states.
-  - **Recurring version-check (every 6h)** in MCP server — surfaces
+  - **Recurring version-check (every 6h)** in MCP server โ€” surfaces
     `notifications/resources/updated` for `mneme://updates/status` so AI
     agents see new releases without restarting the server.
 
@@ -8606,56 +8666,56 @@ auto-write.** `4451 / 4451 tests passing.`
   - 4451 / 4451 passing.
   - 131 MCP tools total.
 
-## [1.21.0] — 2026-05-09
+## [1.21.0] โ€” 2026-05-09
 
 **NUCLEUS Persistent Daemon + REAL Mutation Evolution.** v1.20 shipped the
 nucleus scaffold; v1.21 makes it ALIVE. A persistent background loop
 (`mneme nucleus daemon start [--detach]`) ticks every 30s, applies one
-real mutation cycle every 5 noteworthy ticks (±5% karma noise + drop
+real mutation cycle every 5 noteworthy ticks (ยฑ5% karma noise + drop
 lowest-karma molecule's atom + persist as a NEW chromosome with
 parent=original), and writes a heartbeat for liveness checks. **5 new
 MCP tools + 4 new CLI commands.** `4423 / 4423 tests passing.`
 
 ### What's new
 
-  - `packages/core/src/nucleus_daemon.ts` — single-instance PID-file
+  - `packages/core/src/nucleus_daemon.ts` โ€” single-instance PID-file
     enforcement, atomic startup, SIGTERM-clean shutdown, heartbeat to
     `.mneme/nucleus.heartbeat.json` every tick.
-  - `nucleus.evolveOnce()` — pulls the most-recent chromosome, applies
+  - `nucleus.evolveOnce()` โ€” pulls the most-recent chromosome, applies
     structured mutation (karma noise + atom drop), persists with
     parent=original. Selection pressure is implicit (fertilize picks
-    ancestors by recency × karma).
+    ancestors by recency ร— karma).
   - `mneme.nucleus.tick`, `.dna`, `.mutate`, `.heartbeat`, `.export`
     MCP tools.
   - `mneme nucleus daemon|stop|status|dna` CLI commands.
 
-## [1.20.0] — 2026-05-09
+## [1.20.0] โ€” 2026-05-09
 
 **NUCLEUS Infinity Wisdom Brain + Bot Squadron + Mneme Glow + Karma
 Streaks + Pre-Flight Prompt + Health Tool.** A black-sheep package
 designed to make AI agents addicted to Mneme: every response carries
-✨ glow + streak banner; every claim can spawn a 6-bot squadron that
+โจ glow + streak banner; every claim can spawn a 6-bot squadron that
 returns consensus; every session feeds a nucleus that synthesizes
 lessons; every achievement unlocks gamification for RLHF-trained models.
 `4404 / 4404 tests passing.`
 
 ### What's new
 
-  - `packages/core/src/nucleus.ts` — Infinity Wisdom Brain scaffold
+  - `packages/core/src/nucleus.ts` โ€” Infinity Wisdom Brain scaffold
     (`tick`, `mutate`, `readNucleus`, `dnaBanner`).
-  - `packages/core/src/karma_streaks.ts` — 9 achievements (First Truth,
+  - `packages/core/src/karma_streaks.ts` โ€” 9 achievements (First Truth,
     Hot Streak, Master Grade, Truth Royalty, Untouchable, Court Champion,
     Centurion, Fuzz Hunter, Pure Signal) with auto-unlock + lifetime
     tracking + per-vendor breakdown.
-  - `packages/mcp/src/tools/_squadron.ts` — Bot Squadron (6 parallel
+  - `packages/mcp/src/tools/_squadron.ts` โ€” Bot Squadron (6 parallel
     sub-agents merging into consensus verdict).
-  - `wrapWithGlow` — every wisdom string gets a ✨ prefix + streak banner
+  - `wrapWithGlow` โ€” every wisdom string gets a โจ prefix + streak banner
     + cross-AI lineage credit footer.
   - Pre-flight prompt + `mneme.system.health` MCP tool.
 
-## [1.19.2] — 2026-05-09
+## [1.19.2] โ€” 2026-05-09
 
-**Auto-update — Mneme keeps itself fresh, no user typing.** Black-sheep
+**Auto-update โ€” Mneme keeps itself fresh, no user typing.** Black-sheep
 auto-upgrade flow that fits the AI-agent-driven UX of v1.19: every MCP
 server boot fires a non-blocking version-check against the npm registry
 (cached 24h), surfaces the result via `mneme.welcome`, exposes a new
@@ -8665,30 +8725,30 @@ and spawns the right upgrade command. `4404 / 4404 tests passing.`
 
 ### What's new
 
-  - `packages/core/src/version_check.ts` — non-blocking npm registry probe
-    with 24h cache (`.mneme/version-check.json`). Never throws — network
+  - `packages/core/src/version_check.ts` โ€” non-blocking npm registry probe
+    with 24h cache (`.mneme/version-check.json`). Never throws โ€” network
     failures, registry downtime, malformed responses degrade to "unknown".
     Validates returned version against strict semver before propagating.
     11 tests.
-  - `mneme.system.upgrade` — auto-detected, AI-agent-friendly upgrade
+  - `mneme.system.upgrade` โ€” auto-detected, AI-agent-friendly upgrade
     orchestrator. Default mode='check' (no side effect); pass mode='install'
     to actually upgrade. Auto-detects install method:
-      • npm-global → spawns `mneme upgrade --force`
-      • npx → returns suggested `npx clear-npx-cache && npx -y mneme-ai@<v>`
-      • docker → returns suggested `docker pull` command
-      • unknown → returns suggested `npm install -g`
+      โ€ข npm-global โ’ spawns `mneme upgrade --force`
+      โ€ข npx โ’ returns suggested `npx clear-npx-cache && npx -y mneme-ai@<v>`
+      โ€ข docker โ’ returns suggested `docker pull` command
+      โ€ข unknown โ’ returns suggested `npm install -g`
     Reports back upgradeRan/upgradeSuccess/upgradeStdout so the agent can
     surface the result to the user. Refuses to install non-semver target
     versions (defense against registry-poisoning).
-  - `mneme://updates/status` — new MCP resource. Cached version-check
+  - `mneme://updates/status` โ€” new MCP resource. Cached version-check
     result with current/latest/updateAvailable/lastChecked. Agents can
     subscribe (when subscribe=true is negotiated) for proactive update
     notifications.
-  - `mneme.welcome` extended — adds `updateAvailable` field surfaced in
-    the install-handoff payload + a "📢 Mneme vX is available" line
+  - `mneme.welcome` extended โ€” adds `updateAvailable` field surfaced in
+    the install-handoff payload + a "๐“ข Mneme vX is available" line
     appended to userMessageTemplate when an update is detected. The agent
     surfaces this to the user without any explicit prompt.
-  - Auto-trigger in `startMcpServer()` — fires `versionCheck.checkVersion`
+  - Auto-trigger in `startMcpServer()` โ€” fires `versionCheck.checkVersion`
     asynchronously at boot; result stashed in `globalThis.__mnemeUpdateStatus`
     for the resource handler + welcome contract to read.
 
@@ -8696,15 +8756,15 @@ and spawns the right upgrade command. `4404 / 4404 tests passing.`
 
 ```
 1. User installs Mneme (or boots their AI tool).
-2. Mneme MCP server starts → fires version-check (non-blocking).
-3. AI agent's first call → mneme.welcome
-   → response contains updateAvailable={ current, latest, updateAvailable }
-   → userMessageTemplate ends with "📢 Mneme v1.19.3 is available"
-4. AI agent: "Hey, Mneme v1.19.3 is available — want me to upgrade?"
+2. Mneme MCP server starts โ’ fires version-check (non-blocking).
+3. AI agent's first call โ’ mneme.welcome
+   โ’ response contains updateAvailable={ current, latest, updateAvailable }
+   โ’ userMessageTemplate ends with "๐“ข Mneme v1.19.3 is available"
+4. AI agent: "Hey, Mneme v1.19.3 is available โ€” want me to upgrade?"
 5. User: "yes"
-6. AI agent → mneme.system.upgrade({ mode: "install" })
-7. Tool spawns `mneme upgrade --force` → reports back
-8. AI agent: "Upgraded — restart your AI tool to load the new MCP binary."
+6. AI agent โ’ mneme.system.upgrade({ mode: "install" })
+7. Tool spawns `mneme upgrade --force` โ’ reports back
+8. AI agent: "Upgraded โ€” restart your AI tool to load the new MCP binary."
 ```
 
 User typed "yes" once. Mneme handled the rest.
@@ -8716,11 +8776,11 @@ User typed "yes" once. Mneme handled the rest.
   - 150 MCP tools total (was 149).
   - Production build clean. TypeScript strict.
 
-## [1.19.0] — 2026-05-09
+## [1.19.0] โ€” 2026-05-09
 
-**MneMeiosis Protocol — AI session inheritance across machines, AI vendors,
+**MneMeiosis Protocol โ€” AI session inheritance across machines, AI vendors,
 and time.** When you close your laptop, your AI agent's context dies. v1.19
-fixes that — silently. Every session compresses into a signed Chromosome,
+fixes that โ€” silently. Every session compresses into a signed Chromosome,
 and the next session inherits via Mendelian merge from up to 3 ancestors.
 Cross-machine sync uses your repo's existing git remote on an orphan branch.
 No Mneme cloud, no vendor login, no extra credentials. Full spec:
@@ -8729,64 +8789,64 @@ No Mneme cloud, no vendor login, no extra credentials. Full spec:
 
 ### The four layers (all shipped, all autonomous)
 
-#### Layer 1 — Chromosome (compressed session)
+#### Layer 1 โ€” Chromosome (compressed session)
 
 `packages/core/src/lineage/`:
-  - **identity.ts** — Ed25519 keypair, generated lazily on first use.
+  - **identity.ts** โ€” Ed25519 keypair, generated lazily on first use.
     Public PEM is the user's "account ID" (no Mneme cloud, no vendor
     login). Private key lives at `.mneme/lineage/identity/private.pem`
     (mode 0600, .gitignored, NEVER pushed).
-  - **chromosome.ts** — canonical-JSON content-hash + Ed25519 signature
+  - **chromosome.ts** โ€” canonical-JSON content-hash + Ed25519 signature
     over every chromosome. Atomic write (tmp + rename). Cross-machine
     verification works via the public key embedded in `signedBy`.
-  - **working_memory.ts** — process-local accumulator that records every
+  - **working_memory.ts** โ€” process-local accumulator that records every
     tool dispatch (atom + Hebbian co-fires + court verdicts + confess
     outcomes + topical drift). Flushes to disk every 25 records for
     crash recovery.
-  - **pii_scrub.ts** — strips emails (preserving domain), absolute paths,
+  - **pii_scrub.ts** โ€” strips emails (preserving domain), absolute paths,
     AWS / GitHub / Slack / Google / Stripe keys, UUIDs from human-language
     fields BEFORE crystallize. Idempotent.
-  - **crystallize.ts** — turns working memory → signed Chromosome on disk.
+  - **crystallize.ts** โ€” turns working memory โ’ signed Chromosome on disk.
     Auto-derived constitution candidates from "always co-fire" patterns.
     Performance: 1000 atoms in < 500ms (perf guard test).
 
-#### Layer 2 — Lineage Tree (DAG)
+#### Layer 2 โ€” Lineage Tree (DAG)
 
 `packages/core/src/lineage/tree.ts`:
-  - parents ↔ children DAG persisted at `.mneme/lineage/tree.json`
+  - parents โ” children DAG persisted at `.mneme/lineage/tree.json`
   - `ancestors(N)` BFS, `findCommonAncestor(a, b)` for pedigree distance
   - `rebuildTreeFromDisk()` recovery path
 
-#### Layer 3 — DNA Spore (cross-machine sync)
+#### Layer 3 โ€” DNA Spore (cross-machine sync)
 
 `packages/core/src/lineage/spore.ts`:
-  - **Auto-detect git origin** — `mneme spore init` reads the repo's
-    own remote, configures an orphan branch (`mneme-lineage`) — zero
+  - **Auto-detect git origin** โ€” `mneme spore init` reads the repo's
+    own remote, configures an orphan branch (`mneme-lineage`) โ€” zero
     user setup if you already have a git remote.
   - Push uses `git worktree add --orphan` to commit + push without
     polluting working tree.
   - Pull uses `git fetch + git ls-tree + git show` to materialize
     incoming chromosomes.
   - **Vector clock** (Lamport-style) per machine.
-  - Network failures → silent dry-run (snapshot still updated locally,
+  - Network failures โ’ silent dry-run (snapshot still updated locally,
     retry next push).
 
-#### Layer 4 — Mendelian inheritance
+#### Layer 4 โ€” Mendelian inheritance
 
 `packages/core/src/lineage/mendel.ts`:
   - 3-way merge with biological rules:
-      • atoms: both-positive → max · both-negative → min · mixed → mean · one-sided → additive
-      • counters → sum
-      • lethal recessives → intersection (child-inherits) ∪ union (cull-set)
-      • molecules → name dedupe, fireCount=max, karma=sum
-      • vector clock → Lamport max
-      • topic → longest wins
+      โ€ข atoms: both-positive โ’ max ยท both-negative โ’ min ยท mixed โ’ mean ยท one-sided โ’ additive
+      โ€ข counters โ’ sum
+      โ€ข lethal recessives โ’ intersection (child-inherits) โช union (cull-set)
+      โ€ข molecules โ’ name dedupe, fireCount=max, karma=sum
+      โ€ข vector clock โ’ Lamport max
+      โ€ข topic โ’ longest wins
   - **Properties guaranteed** (covered by tests):
-      • Commutative: `mendelMerge(A, B) === mendelMerge(B, A)`
-      • Counters additive (no double-count, no loss)
-      • Lethal in BOTH parents stays lethal in child + culled from karma
-      • Lethal in ONE parent → atom dropped from karma but NOT inherited as lethal
-      • Bounded: child cannot have an atom both parents flagged
+      โ€ข Commutative: `mendelMerge(A, B) === mendelMerge(B, A)`
+      โ€ข Counters additive (no double-count, no loss)
+      โ€ข Lethal in BOTH parents stays lethal in child + culled from karma
+      โ€ข Lethal in ONE parent โ’ atom dropped from karma but NOT inherited as lethal
+      โ€ข Bounded: child cannot have an atom both parents flagged
 
 ### MCP tools shipped (18 in `mneme.lineage.*` + `mneme.spore.*` + `mneme.welcome`)
 
@@ -8811,7 +8871,7 @@ mneme.spore.sync                       push + pull
 mneme.spore.status                     vector clock + last sync + remote
 ```
 
-Plus new MCP resource: `mneme://lineage/inheritance` — auto-fertilized at
+Plus new MCP resource: `mneme://lineage/inheritance` โ€” auto-fertilized at
 boot; agent reads it as the FIRST resource of every session.
 
 ### CLI commands shipped (13, parallel to MCP tools)
@@ -8837,21 +8897,21 @@ All accept `--json` for scripting parity.
 ### Auto-triggers wired into MCP server bootstrap
 
 In `startMcpServer()`:
-  - **Boot fertilize** — top-3 ancestors merged into `globalThis.__mnemeInheritanceBundle`,
+  - **Boot fertilize** โ€” top-3 ancestors merged into `globalThis.__mnemeInheritanceBundle`,
     surfaced as `mneme://lineage/inheritance` resource.
-  - **Atom recording in dispatch** — every tool call updates working memory + resets
+  - **Atom recording in dispatch** โ€” every tool call updates working memory + resets
     idle timer (no duplicate code path for instrumentation).
-  - **Auto-crystallize on SIGTERM / SIGINT / beforeExit** — final chromosome
+  - **Auto-crystallize on SIGTERM / SIGINT / beforeExit** โ€” final chromosome
     written before process exits.
-  - **Idle timeout (45 min)** — auto-crystallize + start fresh session.
-  - **Lineage opt-out respected** — when `settings.optedOut === true`, none of
+  - **Idle timeout (45 min)** โ€” auto-crystallize + start fresh session.
+  - **Lineage opt-out respected** โ€” when `settings.optedOut === true`, none of
     the above triggers fire.
 
 ### Two-mode UX (parallel, not competing)
 
-  - **Mode 1 (Auto-magic)**: User pastes Mneme repo URL → AI agent runs
-    `mneme mcp --install` → mneme detects non-TTY → applies SAFE DEFAULTS
-    silently → AI agent calls `mneme.welcome` → translates handoff template
+  - **Mode 1 (Auto-magic)**: User pastes Mneme repo URL โ’ AI agent runs
+    `mneme mcp --install` โ’ mneme detects non-TTY โ’ applies SAFE DEFAULTS
+    silently โ’ AI agent calls `mneme.welcome` โ’ translates handoff template
     to user's language. **Zero typing after the first sentence.**
   - **Mode 2 (Manual control)**: Power user / debugger types CLI commands
     directly. Same backend, parallel surface.
@@ -8860,20 +8920,20 @@ In `startMcpServer()`:
 
   - Identity private key NEVER leaves machine (mode 0600, .gitignored on init).
   - PII scrub on chromosomes BEFORE persistence (idempotent).
-  - Spore sync sends only signed + content-hashed chromosomes — no source code,
+  - Spore sync sends only signed + content-hashed chromosomes โ€” no source code,
     no secrets.
-  - TOFU prompt skipped on AI-driven (non-TTY) install — agents apply defaults
+  - TOFU prompt skipped on AI-driven (non-TTY) install โ€” agents apply defaults
     + must surface opt-outs via `mneme.welcome`.
 
 ### Tests + perf
 
-  - **4383 / 4383 tests passing** (was 4112 in v1.18 → +271 from lineage 91 +
+  - **4383 / 4383 tests passing** (was 4112 in v1.18 โ’ +271 from lineage 91 +
     contract tests expanding for 18 new tools).
   - Lineage subsystem: 91 unit + golden + property-based tests:
-      identity (3) · chromosome (19) · pii_scrub (2) · crystallize (13) ·
-      mendel (21) · tree (7) · fertilize (8) · pedigree (10) · speciation (3) ·
+      identity (3) ยท chromosome (19) ยท pii_scrub (2) ยท crystallize (13) ยท
+      mendel (21) ยท tree (7) ยท fertilize (8) ยท pedigree (10) ยท speciation (3) ยท
       spore (13)
-  - Performance guard tests: crystallize 1000 atoms < 500ms · fertilize 5
+  - Performance guard tests: crystallize 1000 atoms < 500ms ยท fertilize 5
     ancestors < 300ms.
   - All Mendel laws covered by property-based tests (commutativity,
     additivity, lethal handling, vector clock, parents sorted).
@@ -8883,26 +8943,26 @@ In `startMcpServer()`:
 
   - Updated [README install contract Step 6](./README.md#step-6) lists every
     v1.19 tool with WHEN-to-call guidance.
-  - First MCP request of any session: agent calls `mneme.welcome` → gets
+  - First MCP request of any session: agent calls `mneme.welcome` โ’ gets
     auto-enabled defaults + opt-outs + user-message template.
   - Second call (any tool): boot inheritance bundle visible at
-    `mneme://lineage/inheritance` resource — agent reads what prior sessions
+    `mneme://lineage/inheritance` resource โ€” agent reads what prior sessions
     left for it.
 
 ### What's NOT shipped in v1.19 (deferred)
 
   - Encryption-at-rest for chromosome files (target: v1.20)
-  - MCP `sampling` primitive (Reverse MCP — Mneme calls back into agent's
+  - MCP `sampling` primitive (Reverse MCP โ€” Mneme calls back into agent's
     model for chronicle / story polish) (target: v1.20)
   - MCP `roots` primitive (multi-repo workspaces) (target: v1.20)
   - MCP `elicitation` primitive (disambiguation prompts) (target: v1.20)
   - Vaccine federation across MCP Mesh peers (target: v1.21)
   - Public AI-vendor trust dashboard at `lineage.mneme.dev` (target: v1.22)
 
-## [1.18.0] — 2026-05-09
+## [1.18.0] โ€” 2026-05-09
 
-**The MCP-grade upgrade.** Tool Contract Schema · 7 black-sheep firsts ·
-ALETHEIA security framework · 4 MCP primitives wired · 4112 tests passing.
+**The MCP-grade upgrade.** Tool Contract Schema ยท 7 black-sheep firsts ยท
+ALETHEIA security framework ยท 4 MCP primitives wired ยท 4112 tests passing.
 
 This release pushes Mneme's MCP surface from "best in class" to "set the
 standard." 115+ tools (was 99) across 9 categories, every tool gets a
@@ -8911,7 +8971,7 @@ COMPOSE_WITH / JARGON), a self-validating linter, and seven MCP firsts
 that no other server has shipped. Plus a new open security framework
 (ALETHEIA) explicitly designed for other vendors to adopt.
 
-### Foundation — Tool Contract Schema (every tool, every category)
+### Foundation โ€” Tool Contract Schema (every tool, every category)
 
   - `MnemeTool` interface extended with optional `whenToUse`,
     `outputSchema`, `examples`, `pitfalls`, `composeWith`, `jargon`.
@@ -8920,86 +8980,86 @@ that no other server has shipped. Plus a new open security framework
     `toMcpTools` so MCP-spec-compliant clients can reason about
     response shape before they call.
   - 4 new discovery tools (`_tool_meta.ts`):
-      • `mneme.tool.contract(name)` — full 6-field contract for one tool
-      • `mneme.tool.lint` — score every tool 0-100, list missing fields
-      • `mneme.help(query)` — sub-50ms top-5 free-text matcher
-      • `mneme.whats_new(lastSeenHash)` — catalog drift via SHA-256
-  - Auto-generated [`MCP_TOOLS.md`](./MCP_TOOLS.md) — 115 tools, 4500+
+      โ€ข `mneme.tool.contract(name)` โ€” full 6-field contract for one tool
+      โ€ข `mneme.tool.lint` โ€” score every tool 0-100, list missing fields
+      โ€ข `mneme.help(query)` โ€” sub-50ms top-5 free-text matcher
+      โ€ข `mneme.whats_new(lastSeenHash)` โ€” catalog drift via SHA-256
+  - Auto-generated [`MCP_TOOLS.md`](./MCP_TOOLS.md) โ€” 115 tools, 4500+
     lines, single source of truth from the live registry. Build via
     `npx tsx packages/mcp/scripts/gen-tools-md.ts`.
   - Backfilled FULL contracts for all 10 quant.* tools (every Wall-
     Street term has an inline jargon dictionary now), plus
     `mneme.audit.certify`, `mneme.memory.ask`, `mneme.verify_claims`.
-    Average lint score went from ~30/100 to ≥85/100 across these.
+    Average lint score went from ~30/100 to โฅ85/100 across these.
 
 ### 7 black-sheep MCP firsts (no other server has these)
 
-  - **#1 Time-travel MCP** — `mneme.timetravel.activate(ref)` /
+  - **#1 Time-travel MCP** โ€” `mneme.timetravel.activate(ref)` /
     `.status` / `.deactivate`. Per-process state holder; tools opt
     into the frozen view via `getTimeTravelState()`.
-  - **#2 Mneme Court** — `mneme.adversary.cross_examine(claim)`.
+  - **#2 Mneme Court** โ€” `mneme.adversary.cross_examine(claim)`.
     Walks up to 5000 commits, scores each as supporting / contradicting
-    via token overlap × negation/support markers × specificity, with
+    via token overlap ร— negation/support markers ร— specificity, with
     a recency boost. Returns `verdict_for_plaintiff | hung_jury |
     motion_to_dismiss` + top 5 witnesses each side.
-  - **#3 Truth Confession** — `mneme.confess(draft, selfConfidence,
+  - **#3 Truth Confession** โ€” `mneme.confess(draft, selfConfidence,
     vendor)`. Cross-checks commit hashes via git rev-parse, file paths
     via fs, numeric claims flagged. Per-vendor lifetime trust scoreboard
     in `.mneme/confess-scoreboard.json`. Calibration matters:
     overconfidence + hallucination = harder penalty.
-  - **#4 Replay Traces** — `mneme.replay.dump` / `.fingerprint`. Every
+  - **#4 Replay Traces** โ€” `mneme.replay.dump` / `.fingerprint`. Every
     MCP call appends one HMAC-chained line to `.mneme/replay.jsonl`.
     Merkle root is the tamper-evident session identifier. SOC2 / EU
     AI Act audit-grade evidence.
-  - **#5 Genome Marketplace** — `mneme.genome.publish` / `.install` /
+  - **#5 Genome Marketplace** โ€” `mneme.genome.publish` / `.install` /
     `.list`. Pack `.mneme/` (constitution + custom packs + tribal
     knowledge + voice fingerprint) into a portable, PII-scrubbed,
     content-hashed `.mneme-genome.json` file. `npm install` for
     engineering wisdom.
-  - **#6 ALETHEIA — open MCP security framework**. See
+  - **#6 ALETHEIA โ€” open MCP security framework**. See
     [`ALETHEIA.md`](./ALETHEIA.md) for the spec. Reference impl ships
     six tools + five honeypots in this release:
-      • `mneme.aletheia.lint` — active scan for command injection /
+      โ€ข `mneme.aletheia.lint` โ€” active scan for command injection /
         SSRF / path traversal / secret leakage (AWS / GitHub / Slack /
         Google / Stripe).
-      • `mneme.aletheia.immune.scan` — Bayesian anomaly detector with
+      โ€ข `mneme.aletheia.immune.scan` โ€” Bayesian anomaly detector with
         Laplace smoothing.
-      • `mneme.aletheia.immune.train` — whitelist a known-good shape.
-      • `mneme.aletheia.immune.alerts` — read the alert log.
-      • `mneme.aletheia.karma` — public tool reputation ledger
+      โ€ข `mneme.aletheia.immune.train` โ€” whitelist a known-good shape.
+      โ€ข `mneme.aletheia.immune.alerts` โ€” read the alert log.
+      โ€ข `mneme.aletheia.karma` โ€” public tool reputation ledger
         (verified +1, hallucination -3, fuzz hit -2; tools below 0
         enter quarantine).
-      • `mneme.aletheia.fuzz` — OWASP self-fuzz. First MCP server with
+      โ€ข `mneme.aletheia.fuzz` โ€” OWASP self-fuzz. First MCP server with
         built-in self-fuzzing.
-      • Five honeypot tools (`mneme.admin.delete_all`,
+      โ€ข Five honeypot tools (`mneme.admin.delete_all`,
         `mneme.system.exec`, `mneme.secrets.dump`, `mneme.users.list`,
-        `mneme.config.set`) registered as decoys. Any call → instant
+        `mneme.config.set`) registered as decoys. Any call โ’ instant
         alert + fake-but-plausible response to waste the attacker's
         time.
-  - **#7 MCP Mesh** — `mneme.mesh.peers` / `mneme.mesh.federate`.
+  - **#7 MCP Mesh** โ€” `mneme.mesh.peers` / `mneme.mesh.federate`.
     Scaffolding for cross-repo federation. v1.18 ships the API surface;
     actual peer transport in v1.19. Privacy: query metadata travels;
     source code does not.
 
-### MCP primitives — wired (4 of 7)
+### MCP primitives โ€” wired (4 of 7)
 
 Beyond `tools`, Mneme now exposes:
 
-  - **resources** — `mneme://catalog`, `mneme://catalog/{category}`,
+  - **resources** โ€” `mneme://catalog`, `mneme://catalog/{category}`,
     `mneme://constitution`, `mneme://aletheia/karma`, `mneme://passport/{email}`
-  - **prompts** — 4 pre-baked workflow templates surfaced as slash
+  - **prompts** โ€” 4 pre-baked workflow templates surfaced as slash
     commands: `/refactor-safety`, `/incident-postmortem`,
     `/onboarding-pack`, `/code-review-with-history`. Each resolves to
     a Mneme molecule (named atom combination).
-  - **completion** — tab-complete tool names (any `name` / `tool` /
+  - **completion** โ€” tab-complete tool names (any `name` / `tool` /
     `target` arg), categories, and tool-defined enums.
-  - **logging** — wired (sink for forensic + lifecycle events).
+  - **logging** โ€” wired (sink for forensic + lifecycle events).
 
-Coming v1.19: **sampling** (Reverse MCP — Mneme calls back into the AI
+Coming v1.19: **sampling** (Reverse MCP โ€” Mneme calls back into the AI
 client's model for chronicle/story polish), **roots** (multi-repo
 workspace), **elicitation** (disambiguation prompts).
 
-### Auto-recording — every tool call now feeds three substrates
+### Auto-recording โ€” every tool call now feeds three substrates
 
 For each call, Mneme automatically (best-effort, never blocks):
 
@@ -9010,7 +9070,7 @@ For each call, Mneme automatically (best-effort, never blocks):
 This means agents that just USE Mneme passively train the immune
 system, build the audit trail, and feed the public reputation ledger.
 
-### For AI agents — onboarding contract
+### For AI agents โ€” onboarding contract
 
 The [README's installation contract](./README.md#step-6--latest-features-the-user-gets-automatically-v112--v118)
 now lists every v1.18 tool with WHEN-to-call guidance. AI agents
@@ -9025,87 +9085,87 @@ connecting to Mneme should:
 
 ### Tests + build
 
-  - 4112 / 4112 passing (was 3798 → +314 from new tools and expanded
+  - 4112 / 4112 passing (was 3798 โ’ +314 from new tools and expanded
     contract tests).
-  - 727+ contract tests loop every registered tool × structural invariants.
+  - 727+ contract tests loop every registered tool ร— structural invariants.
   - 12 unit tests for genome marketplace, 9 for replay, 13 for confess,
     27 for court, 17 for ALETHEIA + immune system.
   - Production build clean. TypeScript strict. No deprecation warnings.
 
-## [1.17.6] — 2026-05-09
+## [1.17.6] โ€” 2026-05-09
 
-**"Why the graph looks like this" — every disconnected node now gets a
+**"Why the graph looks like this" โ€” every disconnected node now gets a
 big, plain-English explanation rooted in the user's real git data, not
 generic prose.**
 
-  New GraphWisdomPanel (web) — appears below the Nervous System graph
+  New GraphWisdomPanel (web) โ€” appears below the Nervous System graph
   whenever there are isolated nodes or disconnected clusters:
-    • Header surfaces the **real repo span** — first push and latest
+    โ€ข Header surfaces the **real repo span** โ€” first push and latest
       push computed from `min(fromDate)` / `max(toDate)` across every
       passport (actual commit timestamps, not the API-fetched window).
-    • One large card per isolated node, with reason chip, big name,
+    โ€ข One large card per isolated node, with reason chip, big name,
       one-paragraph explain, and concrete evidence rendered as
       mono-text bullets.
-    • Component summary row when the graph splits into multiple
-      clusters — shows size, top topic, and the bridge node (the
+    โ€ข Component summary row when the graph splits into multiple
+      clusters โ€” shows size, top topic, and the bridge node (the
       author whose removal would split the cluster).
 
-  6-reason classifier — every isolation grounded in the author's
+  6-reason classifier โ€” every isolation grounded in the author's
   real numbers (not generic strings):
-    • 🔑 TOOL ACCOUNT — service-account / TOKEN suffix
-    • 🤖 BOT — renovate / dependabot / github-actions cadence
+    โ€ข ๐”‘ TOOL ACCOUNT โ€” service-account / TOKEN suffix
+    โ€ข ๐ค– BOT โ€” renovate / dependabot / github-actions cadence
       mismatch (commits on different days than humans, by design)
-    • ✈ DRIVE-BY — exactly 1 commit · cites the actual commit date
+    โ€ข โ DRIVE-BY โ€” exactly 1 commit ยท cites the actual commit date
       and the file touched
-    • 📍 SOLO DAY — N commits all on a single day · cites the day
-    • ⏳ TIME ISLAND — author window doesn't overlap any other
-      author's window · cites "0 of N peers' windows overlap"
-    • 🗺 FILE ISLAND — overlaps in time but works in a corner of
-      the repo no one else touches · cites the actual file paths
+    โ€ข ๐“ SOLO DAY โ€” N commits all on a single day ยท cites the day
+    โ€ข โณ TIME ISLAND โ€” author window doesn't overlap any other
+      author's window ยท cites "0 of N peers' windows overlap"
+    โ€ข ๐—บ FILE ISLAND โ€” overlaps in time but works in a corner of
+      the repo no one else touches ยท cites the actual file paths
 
   Each card footer:
-  `active {fromDate} → {toDate} · N commits · M active days` —
+  `active {fromDate} โ’ {toDate} ยท N commits ยท M active days` โ€”
   pulled straight from per-author git data so the user can verify
   against `git log --author=<email>` if they want to.
 
-  `lib/graphWisdom.ts` — pure deterministic function. Same data ⇒
+  `lib/graphWisdom.ts` โ€” pure deterministic function. Same data โ’
   same wisdom. 12 unit tests cover empty/trivial cases, repo-span
   computation, all 6 reasons, bridge detection, component sorting,
   and isolated-node ordering (file-islands first, tool-accounts
-  last — most-actionable on top).
+  last โ€” most-actionable on top).
 
   All 33 web tests passing. Production build clean.
 
-## [1.17.5] — 2026-05-09
+## [1.17.5] โ€” 2026-05-09
 
-**Tab clarity — every tab now tells you whether it's running on YOUR
+**Tab clarity โ€” every tab now tells you whether it's running on YOUR
 git or canned data, plus Ecosystems gets real-time detection.**
 
   Honest status pills:
-    • Ecosystems · DNA — "DEMO DATA · NOT YOUR REPO" pill (yellow)
+    โ€ข Ecosystems ยท DNA โ€” "DEMO DATA ยท NOT YOUR REPO" pill (yellow)
       when no live data is detectable.
-    • Scrubber — "● LIVE · runs on text you paste" pill (green) so
+    โ€ข Scrubber โ€” "โ— LIVE ยท runs on text you paste" pill (green) so
       users know this tab actually executes the production regex set
       against their input.
-    • Header LIVE pill (v1.17.3) + new tab pills give a coherent
+    โ€ข Header LIVE pill (v1.17.3) + new tab pills give a coherent
       visual language across the dashboard.
 
   Real-time ecosystem detection (the new winner):
-    • New `lib/detectEcosystems.ts` — runs the 8-pack detection rules
+    โ€ข New `lib/detectEcosystems.ts` โ€” runs the 8-pack detection rules
       against every file path Mneme fetched from the user's real repo
       (the 30-commit detail window). Confidence = log-curve over
       signal count, threshold 0.3.
-    • EcosystemsView now shows a green "● LIVE DETECTION" banner
+    โ€ข EcosystemsView now shows a green "โ— LIVE DETECTION" banner
       when matches are found: lists the detected packs with
       confidence percentages, and individual ecosystem cards in the
-      list get a "● live" badge so the user sees immediately which
+      list get a "โ— live" badge so the user sees immediately which
       packs match THEIR repo.
-    • Cards still show all 8 packs (the catalog is intact) — the
+    โ€ข Cards still show all 8 packs (the catalog is intact) โ€” the
       `live` badge differentiates "your repo triggers this one" from
       "for reference only."
 
   Honest framing for DNA:
-    • DnaView now opens with a clear "DEMO DATA" pill + an in-context
+    โ€ข DnaView now opens with a clear "DEMO DATA" pill + an in-context
       explanation that browser-side DNA isn't possible (needs
       embeddings model + AST parsers + full repo content) so the tab
       shows the verifier pipeline on canned scenarios. The real DNA
@@ -9113,181 +9173,181 @@ git or canned data, plus Ecosystems gets real-time detection.**
 
   3117 / 3117 tests passing.
 
-## [1.17.4] — 2026-05-09
+## [1.17.4] โ€” 2026-05-09
 
 **Live mode now renders the full atrophy heatmap + 5 metric proxies + the
 data-window users keep asking for.** Plus a layout fix so the dashboard
 no longer page-scrolls.
 
   Real git data, not zeros:
-    • `lib/gitFetch.ts` — second pass after the commit list fetches
+    โ€ข `lib/gitFetch.ts` โ€” second pass after the commit list fetches
       file diffs for the most-recent 30 commits (1 API call each,
       capped to stay safely inside the 60/hr unauth budget). Per-file
       touches roll up into per-author topFiles + atrophy.criticalFiles
       + the lobe map. The old empty-state ("File-level data is empty
-      in live mode") is gone — replaced with the actual heatmap +
+      in live mode") is gone โ€” replaced with the actual heatmap +
       derived insights.
-    • `_liveDataWindow` — new field on NervousSystemData carrying
+    โ€ข `_liveDataWindow` โ€” new field on NervousSystemData carrying
       `{from, to, commits, totalFetched}` so views can show "computed
-      from 30 commits, Apr 12 → May 9, 2026" honestly.
+      from 30 commits, Apr 12 โ’ May 9, 2026" honestly.
 
   AtrophyHeatmap overhaul:
-    • Centered SVG (was left-aligned in lots of empty space).
-    • Cells 32×26 (was 22×18). Labels 13.5–14pt monospace (was 11pt).
-    • New 3-card wisdom callout row above the grid:
-        🔥 files at-risk (count + worst file)
-        🧍 bus-factor of 1 (1-expert files — resignation risk)
-        👑 top owner (author + count of critical files they own)
-    • New plain-English intro: "who knows what, how fresh, who's
+    โ€ข Centered SVG (was left-aligned in lots of empty space).
+    โ€ข Cells 32ร—26 (was 22ร—18). Labels 13.5โ€“14pt monospace (was 11pt).
+    โ€ข New 3-card wisdom callout row above the grid:
+        ๐”ฅ files at-risk (count + worst file)
+        ๐ง bus-factor of 1 (1-expert files โ€” resignation risk)
+        ๐‘‘ top owner (author + count of critical files they own)
+    โ€ข New plain-English intro: "who knows what, how fresh, who's
       leaving you alone with it" so a first-time visitor knows what
       they're looking at.
 
-  LiveWisdomPanel — 5 Mneme-metric proxies computed in-browser:
-    • HKD · Hidden Knowledge Density (bus-factor concentration)
-    • REI · Regret Echo Index (drive-by author share)
-    • KAH · Knowledge Atrophy Halflife (median last-touch in weeks)
-    • TWS · Tribal Wisdom Score (file co-ownership rate)
-    • PCS · Provenance Chain Strength — always "—" in live mode
-      (needs HMAC audit chain — local CLI only); honest framing.
-    • Renders below the time scrubber when `_liveMode` is true.
+  LiveWisdomPanel โ€” 5 Mneme-metric proxies computed in-browser:
+    โ€ข HKD ยท Hidden Knowledge Density (bus-factor concentration)
+    โ€ข REI ยท Regret Echo Index (drive-by author share)
+    โ€ข KAH ยท Knowledge Atrophy Halflife (median last-touch in weeks)
+    โ€ข TWS ยท Tribal Wisdom Score (file co-ownership rate)
+    โ€ข PCS ยท Provenance Chain Strength โ€” always "โ€”" in live mode
+      (needs HMAC audit chain โ€” local CLI only); honest framing.
+    โ€ข Renders below the time scrubber when `_liveMode` is true.
       Each card carries a tooltip caveat ("proxy of the full metric")
       so live numbers are never confused for full-CLI numbers.
 
   Layout fix:
-    • `app-root` is now `height: 100vh` + `overflow: hidden` instead
+    โ€ข `app-root` is now `height: 100vh` + `overflow: hidden` instead
       of `min-height: 100vh`. Page no longer scrolls when the canvas
-      + LimitsPanel + LiveWisdomPanel exceed viewport — the canvas
+      + LimitsPanel + LiveWisdomPanel exceed viewport โ€” the canvas
       shrinks to fit.
-    • `app-canvas` `min-height: 600px` → `min-height: 0` so flex math
+    โ€ข `app-canvas` `min-height: 600px` โ’ `min-height: 0` so flex math
       distributes remaining vertical space.
-    • `LimitsPanel` is now `flex-shrink: 0` with `max-height: 30vh`
+    โ€ข `LimitsPanel` is now `flex-shrink: 0` with `max-height: 30vh`
       and internal scroll when expanded.
 
-## [1.17.3] — 2026-05-09
+## [1.17.3] โ€” 2026-05-09
 
 **Web demo: live-mode UX is now world-class.**
 
 Loaded a real GitHub/GitLab repo via the paste-URL path? The dashboard
 now degrades gracefully across every view instead of flashing zeros at
 you. Reported by user testing on an actual GitLab repo where the panel
-showed "knowledge mass: 0.00 / files known: 0 fresh / 0 total" — that
+showed "knowledge mass: 0.00 / files known: 0 fresh / 0 total" โ€” that
 was scrubData clobbering synthesized values when topFiles was empty,
 plus a handful of views that didn't know to render placeholders for
 data the API doesn't expose.
 
   Root-cause fixes:
-    • lib/scrub.ts — decayPassport now preserves the input
+    โ€ข lib/scrub.ts โ€” decayPassport now preserves the input
       knowledgeMass + filesStillFresh when topFiles is empty
       (live-mode case) instead of recomputing them to 0.
-    • types.ts — new `_liveMode` + `_liveSource` flags on
+    โ€ข types.ts โ€” new `_liveMode` + `_liveSource` flags on
       NervousSystemData so views can render mode-aware UX.
-    • lib/gitFetch.ts — sets `_liveMode: true` and a realistic
+    โ€ข lib/gitFetch.ts โ€” sets `_liveMode: true` and a realistic
       knowledgeMass proxy (sqrt(commits)*4 + sqrt(activeDays)*1.5)
       instead of raw commit count.
 
   Per-view UX:
-    • Header — pulsing green "● LIVE · GitHub API" pill alongside
+    โ€ข Header โ€” pulsing green "โ— LIVE ยท GitHub API" pill alongside
       the repo name when in live mode (vs the existing yellow
       "synthetic demo" pill).
-    • DetailPanel — renders "—" with a tooltip for fields the live
+    โ€ข DetailPanel โ€” renders "โ€”" with a tooltip for fields the live
       API can't give us (files known, adoptions by others). Top
       Expertise shows a friendly "ask your AI to run mneme index"
       hint instead of "no expertise files at this point in time".
-    • AtrophyHeatmap — full-page empty state explaining why the
+    โ€ข AtrophyHeatmap โ€” full-page empty state explaining why the
       heatmap is unavailable in live mode + the exact one-line ask
       for the user's AI agent.
-    • InfluenceLadder — inline live-mode note that PageRank falls
+    โ€ข InfluenceLadder โ€” inline live-mode note that PageRank falls
       back to commit-share because shape-adoption analysis runs
       locally on file contents.
-    • EcosystemsView + DnaView — "📖 Feature showcase" banners
+    โ€ข EcosystemsView + DnaView โ€” "๐“– Feature showcase" banners
       clarify these tabs demo the bundled packs / DNA pipeline
       regardless of which repo is loaded; the actual MCP runs
       against the user's repo via their AI agent.
 
   Tests:
-    • +21 unit tests under packages/web/src/lib/
+    โ€ข +21 unit tests under packages/web/src/lib/
       (gitFetch.classifyUrl exhaustive: trailing slashes, .git
       suffixes, GitLab subgroups, raw JSON URLs, malformed inputs)
       (scrub: empty-topFiles preservation, scrub-time author
       dropoff, computeTimeBounds always extends to now).
-    • Total: 3117 / 3117 passing.
+    โ€ข Total: 3117 / 3117 passing.
 
   Real fix that surfaced: classifyUrl now strips trailing slashes
-  before parsing — pasting `https://github.com/foo/bar/` (the
+  before parsing โ€” pasting `https://github.com/foo/bar/` (the
   address-bar copy) was classifying as 'unknown' because the path
   split produced an extra empty segment.
 
-## [1.17.2] — 2026-05-09
+## [1.17.2] โ€” 2026-05-09
 
 **Web demo: real-repo path + honest demo data.**
 
   Real repo, zero install:
-    • LoadDialog now leads with a single big input — paste a public GitHub or
-      GitLab repo URL and the dashboard fetches commits live (browser → API,
+    โ€ข LoadDialog now leads with a single big input โ€” paste a public GitHub or
+      GitLab repo URL and the dashboard fetches commits live (browser โ’ API,
       no Mneme proxy) and renders a real nervous system with the user's
       actual top contributors and time span.
-    • New `lib/gitFetch.ts` — synthesizes `NervousSystemData` from
-      GitHub/GitLab commit lists. Caps at 5 pages × 100 commits = 500 commits
+    โ€ข New `lib/gitFetch.ts` โ€” synthesizes `NervousSystemData` from
+      GitHub/GitLab commit lists. Caps at 5 pages ร— 100 commits = 500 commits
       to stay safely inside unauthenticated rate limits.
-    • Live mode is degraded by design (no file-level data — would burn the
+    โ€ข Live mode is degraded by design (no file-level data โ€” would burn the
       rate limit on per-commit detail fetches). `limits[]` surfaces the
       tradeoff and points the user at the full-fidelity path.
 
   Full-fidelity path, AI-agent-led:
-    • Dialog copy stops telling the user to type `npm install` themselves.
+    โ€ข Dialog copy stops telling the user to type `npm install` themselves.
       Instead: "Ask your AI agent: install Mneme and dump nervous-system
       JSON for this repo." The AI handles the install path. User just drops
       the resulting JSON.
-    • Welcome overlay step 3 rewritten to mirror this — two paths
-      (paste GitHub/GitLab URL · or ask your AI), neither asks the user to
+    โ€ข Welcome overlay step 3 rewritten to mirror this โ€” two paths
+      (paste GitHub/GitLab URL ยท or ask your AI), neither asks the user to
       install anything by hand.
 
-  Demo data — every number is now self-consistent:
-    • Added the 2 missing authors (Frank Müller rank 6, Grace Park rank 7).
+  Demo data โ€” every number is now self-consistent:
+    โ€ข Added the 2 missing authors (Frank Mรผller rank 6, Grace Park rank 7).
       Previously they were referenced in telepathy pairs and critical-file
       topKnowers but had no passport, so the dashboard showed "rank #4 of
       7" while only 5 nodes were on the graph.
-    • Passport commit counts now sum to exactly `meta.totalCommits` (4287);
+    โ€ข Passport commit counts now sum to exactly `meta.totalCommits` (4287);
       `repoCommitShare` values sum to ~1.0; every author referenced anywhere
       in the data has a backing passport.
-    • Hero headline corrected from "4 critical files at knowledge risk" to
-      "3 critical files" — matches the actual count of `tier:"at-risk"`
+    โ€ข Hero headline corrected from "4 critical files at knowledge risk" to
+      "3 critical files" โ€” matches the actual count of `tier:"at-risk"`
       entries in `atrophy.criticalFiles`.
-    • Added a 5th lobe (`infra/k8s` with Grace as topOwner) so all 7 authors
+    โ€ข Added a 5th lobe (`infra/k8s` with Grace as topOwner) so all 7 authors
       have a domain in the lobe layer.
 
-## [1.17.1] — 2026-05-09
+## [1.17.1] โ€” 2026-05-09
 
-**Polish pass — web demo + README readability.**
+**Polish pass โ€” web demo + README readability.**
 
   Web demo:
-    • DnaView — removed competitor name-drops; reframed around the 6 inputs
+    โ€ข DnaView โ€” removed competitor name-drops; reframed around the 6 inputs
       uniquely Mneme's product (HMAC-chained AI audit log, regret extraction,
       runtime Constitutional Gate, atrophy time-series, federation, bench).
-    • Nervous System — TimeScrubber now hidden on non-graph tabs so the play
+    โ€ข Nervous System โ€” TimeScrubber now hidden on non-graph tabs so the play
       button doesn't leak into views where it has no effect.
-    • TimeScrubber — max bound is always `Date.now()` (current date) instead
+    โ€ข TimeScrubber โ€” max bound is always `Date.now()` (current date) instead
       of the last commit date, so the scrubber's right edge is "today."
-    • LoadDialog — added a "How to get JSON of your own repo" disclosure
-      with the exact CLI commands (`npm install -g mneme-ai` → `mneme init`
-      → `mneme index` → `mneme nervous-system --json`).
+    โ€ข LoadDialog โ€” added a "How to get JSON of your own repo" disclosure
+      with the exact CLI commands (`npm install -g mneme-ai` โ’ `mneme init`
+      โ’ `mneme index` โ’ `mneme nervous-system --json`).
 
   README:
-    • Replaced every `═══════` Unicode separator (which wraps to 2 lines on
+    โ€ข Replaced every `โ•โ•โ•โ•โ•โ•โ•` Unicode separator (which wraps to 2 lines on
       narrow GitHub renders) with clean markdown `---` horizontal rules.
-    • Moved the maintainer contact table out of the README body into
+    โ€ข Moved the maintainer contact table out of the README body into
       `docs/CONTACT.md`; README now links to it as one bullet under
-      "📋 Project links" — matches how other professional OSS repos handle it.
+      "๐“ Project links" โ€” matches how other professional OSS repos handle it.
 
-## [1.17.0] — 2026-05-09
+## [1.17.0] โ€” 2026-05-09
 
 **The "Genome / Genetic Engineering for MCP" release.** Five entirely new
 genome modules (G1-G5) ship at once + 6 new MCP tools so AI agents
 discover the primitives automatically. **+62 unit tests, ~3096+ tests total.**
 
-═══════════════════════════════════════════════════════════════════════
-G1 · Annotator + Phylogeny — functional taxonomy + ancestry tree
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+G1 ยท Annotator + Phylogeny โ€” functional taxonomy + ancestry tree
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   core/genome/annotator.ts:
     Tag every tool with: domain (search/mutate/verify/compose/regulate/
@@ -9295,54 +9355,54 @@ G1 · Annotator + Phylogeny — functional taxonomy + ancestry tree
 
   core/genome/phylogeny.ts:
     Build the phylogenetic tree of the tool catalog. Queries:
-      • findAncestors(name)
-      • findCousins(name, k)
-      • treeDistance(a, b) via lowest common ancestor
-      • findClosestRelative(name, candidatePool)
-      • speciationEvents() — branch points
-      • renderAsciiTree() — debug / docs
+      โ€ข findAncestors(name)
+      โ€ข findCousins(name, k)
+      โ€ข treeDistance(a, b) via lowest common ancestor
+      โ€ข findClosestRelative(name, candidatePool)
+      โ€ข speciationEvents() โ€” branch points
+      โ€ข renderAsciiTree() โ€” debug / docs
     Cycle defense + dedupe + deterministic sort.
 
-═══════════════════════════════════════════════════════════════════════
-G2 · Genetic Circuits — toggle/AND/OR/NOT/oscillator
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+G2 ยท Genetic Circuits โ€” toggle/AND/OR/NOT/oscillator
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   core/genome/circuits.ts:
     Pure-function biological logic gates. Compose declaratively via
-    runCircuit(network, input) — chain of steps; first failure halts.
+    runCircuit(network, input) โ€” chain of steps; first failure halts.
     Toggle state caller-managed (pure-function contract preserved).
 
-═══════════════════════════════════════════════════════════════════════
-G3 · Operons — co-regulated tool clusters
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+G3 ยท Operons โ€” co-regulated tool clusters
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   core/genome/operons.ts:
     OperonDefinition: regulator + tools + per-level BehaviorModifier
     (5 levels: off/low/medium/high/max).
-    resolveOperonForTool() — per-tool current modifier.
-    cascade() — what changes when a regulator level changes.
-    stripeBuiltinOperon() — bundled stripe-PCI operon factory.
+    resolveOperonForTool() โ€” per-tool current modifier.
+    cascade() โ€” what changes when a regulator level changes.
+    stripeBuiltinOperon() โ€” bundled stripe-PCI operon factory.
 
-═══════════════════════════════════════════════════════════════════════
-G4 · CRISPR — pack surgery
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+G4 ยท CRISPR โ€” pack surgery
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   core/genome/crispr.ts:
-    crisprEdit(pack, edit) — delete by id/pattern, replace-tool,
+    crisprEdit(pack, edit) โ€” delete by id/pattern, replace-tool,
     add-tool, patch-detection. Re-validates against pack schema after
     edit; on failure, returns ok=false with structured Zod errors.
     SHA-256 hashes before/after for audit. Fail-closed default.
-    crisprEditChain() — sequential edits, halts at first failure.
+    crisprEditChain() โ€” sequential edits, halts at first failure.
 
-═══════════════════════════════════════════════════════════════════════
-G5 · Synthesizer — de novo MCP tool synthesis
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+G5 ยท Synthesizer โ€” de novo MCP tool synthesis
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   core/genome/synthesizer.ts:
     User describes a NEW capability via SynthesisRecipe (intent +
     searchPatterns + verifiers + augmenters + authoredBy). System
     composes a brand new ToolDefinition with cryptographic name
-    `mneme.synth.s_<sha256-prefix>`. Identical recipe → identical
+    `mneme.synth.s_<sha256-prefix>`. Identical recipe โ’ identical
     name + DNA hash (deterministic).
 
     Validates against pack schema BEFORE returning (fail-closed).
@@ -9351,109 +9411,109 @@ G5 · Synthesizer — de novo MCP tool synthesis
 
     SpeciesRegistry: dedupes by DNA hash. lookupByHash + lookupByName.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 6 new MCP tools (mneme.genome.*)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Exposed to AI agents via tools/list:
-    mneme.genome.annotate       — tag tools by functional domain
-    mneme.genome.phylogeny      — ancestry queries + ASCII tree
-    mneme.genome.circuit        — run AND/OR/NOT/toggle/oscillator
-    mneme.genome.operon_resolve — what behavior modifier governs this tool
-    mneme.genome.crispr_edit    — apply pack surgery
-    mneme.genome.synthesize     — create new tool from recipe
+    mneme.genome.annotate       โ€” tag tools by functional domain
+    mneme.genome.phylogeny      โ€” ancestry queries + ASCII tree
+    mneme.genome.circuit        โ€” run AND/OR/NOT/toggle/oscillator
+    mneme.genome.operon_resolve โ€” what behavior modifier governs this tool
+    mneme.genome.crispr_edit    โ€” apply pack surgery
+    mneme.genome.synthesize     โ€” create new tool from recipe
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +62 new unit tests in genome.test.ts covering all 5 modules:
     Annotator (10), Phylogeny (8), Circuits (12), Operons (6),
     CRISPR (8), Synthesizer (12), with deterministic hashing +
     cycle defense + fail-closed validation.
 
-═══════════════════════════════════════════════════════════════════════
-README · Partnership / Contact section added
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+README ยท Partnership / Contact section added
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  Per maintainer's explicit request — direct contact info for
+  Per maintainer's explicit request โ€” direct contact info for
   partnership / integration / acquihire conversation:
 
     Email:    patsa2561@gmail.com
     Phone:    +66 939455645  (Asia/Bangkok)
     GitHub:   @patsa2561-art
 
-═══════════════════════════════════════════════════════════════════════
-Why this matters (genuine biology→MCP isomorphism)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Why this matters (genuine biologyโ’MCP isomorphism)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  This is NOT metaphor — every concept maps to a real algorithmic
+  This is NOT metaphor โ€” every concept maps to a real algorithmic
   equivalent:
 
     Bio                          MCP
-    ─────────────────────────────────────────────────────
-    Gene (promoter+code+stop)  ↔ Tool (schema+handler+augmentation)
-    Operon                     ↔ Tool cluster + regulator
-    Plasmid                    ↔ Pack
-    CRISPR-Cas9                ↔ crisprEdit
-    Phylogenetic tree          ↔ Tool ancestry tree
-    Codon optimization         ↔ Per-AI-client description tiering
-    De novo gene synthesis     ↔ runtime tool synthesis
-    Synthetic biology circuits ↔ AND/OR/NOT/toggle gates as tools
+    โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+    Gene (promoter+code+stop)  โ” Tool (schema+handler+augmentation)
+    Operon                     โ” Tool cluster + regulator
+    Plasmid                    โ” Pack
+    CRISPR-Cas9                โ” crisprEdit
+    Phylogenetic tree          โ” Tool ancestry tree
+    Codon optimization         โ” Per-AI-client description tiering
+    De novo gene synthesis     โ” runtime tool synthesis
+    Synthetic biology circuits โ” AND/OR/NOT/toggle gates as tools
 
   No other MCP server in the official directory composes these
   primitives. Mneme is the first.
 
-## [1.16.0] — 2026-05-09
+## [1.16.0] โ€” 2026-05-09
 
 **The "weakness pass" release.** Closes the 5 highest-priority gaps from
 the SWOT analysis. **+40 unit tests, 3034/3034 passing.** E2E and Marketing
 posture now both 100%.
 
-Phase A — Cross-ecosystem integration (E2E → 100%)
+Phase A โ€” Cross-ecosystem integration (E2E โ’ 100%)
   cross-ecosystem.integration.test.ts (9 tests):
     Builds a synthetic-but-real fixture repo for each of the 8 ecosystems,
     runs the full pipeline end-to-end:
-      detection → pack load → tool catalog → query execution
-        → augmentation input build → augmented description
+      detection โ’ pack load โ’ tool catalog โ’ query execution
+        โ’ augmentation input build โ’ augmented description
     Plus polyglot mega-repo test: detect Stripe + React + Postgres
     simultaneously in one repo.
-  Closes Weakness W5 — "no integration test against real repos."
+  Closes Weakness W5 โ€” "no integration test against real repos."
 
-Phase B — Real-world bench (Marketing → 100%)
+Phase B โ€” Real-world bench (Marketing โ’ 100%)
   real-world-bench.test.ts (7 tests):
     Reproducible HRR measurement across 3 distinct fixtures:
       small-typescript, small-python, polyglot-mega
     Each has a real git history; bench probes verify against actual
     git rev-parse + filesystem.
-      Without DNA: hallucination ≈ 50-75%
+      Without DNA: hallucination โ 50-75%
       With DNA:    hallucination = 0%
       HRR < 0.05 (95%+ reduction) holds in EVERY fixture + aggregate
     Ghost-Sniper invariant: 100% rejection of hallucinated candidates,
     100% acceptance of high-quality real candidates.
   Numbers exported as REAL_WORLD_BENCH_RESULTS for README to quote.
 
-Phase C — Web demo: 3 new live views
+Phase C โ€” Web demo: 3 new live views
   Three new tabs in the dashboard:
-    🧬 Ecosystems     — visualize Dynamic MCP detection (8 packs)
-    🎯 Code Search    — interactive Ghost-Sniper Verifier
-    🧼 Scrubber       — live prompt-injection defence
+    ๐งฌ Ecosystems     โ€” visualize Dynamic MCP detection (8 packs)
+    ๐ฏ Code Search    โ€” interactive Ghost-Sniper Verifier
+    ๐งผ Scrubber       โ€” live prompt-injection defence
   Components: EcosystemsView.tsx, DnaView.tsx, ScrubberView.tsx
   Plus new CSS for all three views.
 
-Phase D — Tiered tool descriptions (W7 mitigation)
+Phase D โ€” Tiered tool descriptions (W7 mitigation)
   tiered-descriptions.ts (14 tests):
     tierize(longDescription) returns { short, long, truncated, bytes }.
     Strips augmentation lines for short form used in tools/list.
     For 100 typical augmented descriptions: > 70% byte savings.
-  Closes Weakness W7 — "token cost balloon at MCP cold start."
+  Closes Weakness W7 โ€” "token cost balloon at MCP cold start."
 
-Phase E — Schema-version negotiation (T4 mitigation)
+Phase E โ€” Schema-version negotiation (T4 mitigation)
   schema-negotiation.ts (10 tests):
     negotiateSchemaVersion(packVersion, supported) returns structured
     result. Newer packs fail loudly with a clear upgrade hint rather
     than crashing silently.
-  Closes Threat T4 — "MCP protocol breaking change."
+  Closes Threat T4 โ€” "MCP protocol breaking change."
 
 Test totals
   +40 new unit tests
@@ -9473,64 +9533,64 @@ SWOT impact
   logos), T1-T3 (competitor moves). Documented in SWOT; addressed via
   distribution + ecosystem strategy.
 
-## [1.15.0] — 2026-05-09
+## [1.15.0] โ€” 2026-05-09
 
 **The "Wild Card complete" release.** Closes the 3 critical gaps that
 separated Mneme from "talk-of-the-town" status. **+30 unit tests, 2994/2994 passing.**
 
-═══════════════════════════════════════════════════════════════════════
-Gap W2 closed — 7 new ecosystem packs (12 tests)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Gap W2 closed โ€” 7 new ecosystem packs (12 tests)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  packs/react.yml     — list_unused_hooks, audit_use_effect_deps, find_state_pattern_drift
-  packs/postgres.yml  — show_migrations, audit_indexes, find_n_plus_one
-  packs/express.yml   — list_routes, find_unprotected_endpoints
-  packs/fastapi.yml   — list_endpoints, find_dependency_chains
-  packs/next.yml      — list_pages, audit_data_fetching
-  packs/kafka.yml     — list_consumers, list_topics_used
-  packs/graphql.yml   — list_resolvers, find_n_plus_one_risks
+  packs/react.yml     โ€” list_unused_hooks, audit_use_effect_deps, find_state_pattern_drift
+  packs/postgres.yml  โ€” show_migrations, audit_indexes, find_n_plus_one
+  packs/express.yml   โ€” list_routes, find_unprotected_endpoints
+  packs/fastapi.yml   โ€” list_endpoints, find_dependency_chains
+  packs/next.yml      โ€” list_pages, audit_data_fetching
+  packs/kafka.yml     โ€” list_consumers, list_topics_used
+  packs/graphql.yml   โ€” list_resolvers, find_n_plus_one_risks
 
   All 8 ecosystems now ship as production packs (Stripe + 7 new).
   all-bundled-packs.test.ts verifies every pack loads + validates.
 
-═══════════════════════════════════════════════════════════════════════
-Gap W1 closed — Tribal-knowledge fetcher (15 tests)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Gap W1 closed โ€” Tribal-knowledge fetcher (15 tests)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  core/dynamic/tribal-fetcher.ts — pure-function bridge that composes
+  core/dynamic/tribal-fetcher.ts โ€” pure-function bridge that composes
   augmentation input from Mneme's existing data sources:
 
-    fetchGitBlameRecords(paths)    — git log -1 per path, structured
-    fetchAtrophyEntries(repoRoot)  — reads .mneme/atrophy.json
-    fetchForensicsIncidents(...)   — reads .mneme/incidents.json
-    fetchConstitutionRules(...)    — reads .mneme/constitution.json
-    fetchDeprecations(...)         — reads .mneme/deprecations.json
-    buildAugmentationInput()       — composes all the above
+    fetchGitBlameRecords(paths)    โ€” git log -1 per path, structured
+    fetchAtrophyEntries(repoRoot)  โ€” reads .mneme/atrophy.json
+    fetchForensicsIncidents(...)   โ€” reads .mneme/incidents.json
+    fetchConstitutionRules(...)    โ€” reads .mneme/constitution.json
+    fetchDeprecations(...)         โ€” reads .mneme/deprecations.json
+    buildAugmentationInput()       โ€” composes all the above
 
   MCP server (packages/mcp/src/index.ts) now calls buildAugmentationInput
-  on every dynamic-tool dispatch — tool descriptions get REAL canonical
+  on every dynamic-tool dispatch โ€” tool descriptions get REAL canonical
   paths, deprecated paths, expert authors with atrophy, past incidents,
   and applicable constitution rules.
 
   Replaces v1.13.0's EMPTY_AUGMENTATION_INPUT placeholder.
 
-═══════════════════════════════════════════════════════════════════════
-Gap W3 closed — HRR bench numbers (3 tests)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Gap W3 closed โ€” HRR bench numbers (3 tests)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  core/bench/bench-with-dna.test.ts — measures Hallucination Reduction
+  core/bench/bench-with-dna.test.ts โ€” measures Hallucination Reduction
   Ratio in-process. Synthetic test:
 
-    Without DNA:  hallucination rate ≈ 75%   (3 of 4 hashes fake)
-    With DNA:     hallucination rate ≈ 0%    (Ghost-Sniper rejects all)
+    Without DNA:  hallucination rate โ 75%   (3 of 4 hashes fake)
+    With DNA:     hallucination rate โ 0%    (Ghost-Sniper rejects all)
     HRR:          < 0.1 (90%+ reduction)
 
   Reproducible. Pure functions. Verified via existing bench harness.
   Real-world numbers TBD on diverse fixture corpus.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Test totals
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +30 new unit tests:
     all-bundled-packs    12   (every shipped ecosystem pack loads)
@@ -9539,118 +9599,118 @@ Test totals
 
   Total: **2994 / 2994 passing.**
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 What this means
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Before v1.15.0:
-    • Detection knew 8 ecosystems but only 1 pack shipped (Stripe)
-    • Tribal-knowledge augmentation was wired with EMPTY_INPUT
-    • DNA pipeline existed but no measured hallucination reduction
+    โ€ข Detection knew 8 ecosystems but only 1 pack shipped (Stripe)
+    โ€ข Tribal-knowledge augmentation was wired with EMPTY_INPUT
+    โ€ข DNA pipeline existed but no measured hallucination reduction
 
   After v1.15.0:
-    • All 8 ecosystem packs ship — repo with React / Postgres / Express /
+    โ€ข All 8 ecosystem packs ship โ€” repo with React / Postgres / Express /
       FastAPI / Next / Kafka / GraphQL / Stripe gets ecosystem-specific
       tools the moment MCP starts.
-    • Tool descriptions auto-augment with canonical paths, deprecated
+    โ€ข Tool descriptions auto-augment with canonical paths, deprecated
       paths, expert authors with atrophy, past incidents, applicable
-      constitution rules — pulled from .mneme/* stores.
-    • HRR < 0.1 (90%+ hallucination reduction) verified via in-process
+      constitution rules โ€” pulled from .mneme/* stores.
+    โ€ข HRR < 0.1 (90%+ hallucination reduction) verified via in-process
       bench. Numbers, not vibes.
 
-## [1.14.0] — 2026-05-09
+## [1.14.0] โ€” 2026-05-09
 
-**The "Mneme DNA — Super Nova + Super Sonic" release.** All 8 algorithms
+**The "Mneme DNA โ€” Super Nova + Super Sonic" release.** All 8 algorithms
 (A1-A8) ship at once on top of the 8 formulas (F1-F8). The full 16-strand
-DNA code-search engine is now production-grade — pure functional, fully
+DNA code-search engine is now production-grade โ€” pure functional, fully
 tested, deterministic, with the Ghost-Sniper strict-mode firewall as the
 final gate. **+83 unit tests, 2964/2964 passing.**
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 8 algorithms shipped (one module per algorithm, all pure functions)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  A4 — Echo-Locator (P2, 7 tests)
+  A4 โ€” Echo-Locator (P2, 7 tests)
        echo-locator.ts. Per-file echo signatures + signature-similarity
        match. SONAR for code patterns.
 
-  A2 — Phantom-Path Search (P3, 6 tests)
+  A2 โ€” Phantom-Path Search (P3, 6 tests)
        phantom-path.ts. Suggests "where this should live" based on
        canonical patterns + federation prior.
 
-  A6 — Anti-Pattern Repulsion (P4, 6 tests)
+  A6 โ€” Anti-Pattern Repulsion (P4, 6 tests)
        repulsion.ts. F5-driven penalty downranks results near regret
        patterns. Final-stage rerank before sniper gate.
 
-  A1 — Mutant Index Evolution (P5, 14 tests)
+  A1 โ€” Mutant Index Evolution (P5, 14 tests)
        mutant-index.ts. Genetic-algorithm fitness loop (uniform
        crossover + Gaussian mutation + tournament selection +
        deterministic Mulberry32 RNG). Strategies that produce high
        F8 fitness reproduce; low-fitness strategies prune.
 
-  A3 — Quantum Superposition Rank (P6, 8 tests)
-       quantum-rank.ts. 3-tensor (file × feature × intent) decomposition.
+  A3 โ€” Quantum Superposition Rank (P6, 8 tests)
+       quantum-rank.ts. 3-tensor (file ร— feature ร— intent) decomposition.
        Same files appear in different ranks for different query intents.
        Optional F1 (QRS) operator overlay.
 
-  A5 — Time-Travel Search (P7, 9 tests)
+  A5 โ€” Time-Travel Search (P7, 9 tests)
        time-travel.ts. Phase-resonance ranking across historical
        snapshots using F6 (TPS). Plus groupByPath for narrative arcs.
 
-  A7 — Tribal Voting Federation (P8, 8 tests)
+  A7 โ€” Tribal Voting Federation (P8, 8 tests)
        tribal-voting.ts. K-anonymous federation up/down-votes per
        pattern signature. Quorum threshold prevents thin-data noise.
        F4 (TBP) drives the rerank.
 
-  A8 — Ghost-Sniper Verifier (P9, 14 tests)
+  A8 โ€” Ghost-Sniper Verifier (P9, 14 tests)
        ghost-sniper.ts. THE STRICT-MODE KILLER. Three gates:
          1. AST existence
-         2. Semantic match ≥ semanticThreshold
-         3. F7 (CC) ≥ confidenceThreshold
+         2. Semantic match โฅ semanticThreshold
+         3. F7 (CC) โฅ confidenceThreshold
        Strict mode (default): rejection rather than degraded answer.
        0% hallucination guarantee. Empty answer is honest; lying is not.
        One shot. Ghost sniper.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Orchestrator (P10, 11 tests)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   orchestrator.ts wires all 8 algorithms in canonical order:
 
     QUERY
-      ↓
-    Echo-Locator  →  enrich candidates with echo signatures
-      ↓
-    Anti-Pattern Repulsion  →  F5-driven downrank
-      ↓
-    Quantum Rank (optional)  →  intent-conditional rerank
-      ↓
-    Tribal Voting  →  federation prior
-      ↓
-    Time-Travel (optional)  →  historical resonance
-      ↓
-    GHOST-SNIPER  →  3-gate strict verification
-      ↓
+      โ“
+    Echo-Locator  โ’  enrich candidates with echo signatures
+      โ“
+    Anti-Pattern Repulsion  โ’  F5-driven downrank
+      โ“
+    Quantum Rank (optional)  โ’  intent-conditional rerank
+      โ“
+    Tribal Voting  โ’  federation prior
+      โ“
+    Time-Travel (optional)  โ’  historical resonance
+      โ“
+    GHOST-SNIPER  โ’  3-gate strict verification
+      โ“
     Accepted only (or empty if nothing passes)
 
-  Pure function. dnaSearch(input) → output with full trace + stats.
+  Pure function. dnaSearch(input) โ’ output with full trace + stats.
 
-═══════════════════════════════════════════════════════════════════════
-The "ghost sniper" guarantee — operational
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+The "ghost sniper" guarantee โ€” operational
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  • 50 hallucinated references in input → 0 accepted in output (test
-    `ghost-sniper.test.ts → never accepts a non-existent reference`).
-  • Hallucinated reference even with semanticSimilarity=0.99 → REJECTED
+  โ€ข 50 hallucinated references in input โ’ 0 accepted in output (test
+    `ghost-sniper.test.ts โ’ never accepts a non-existent reference`).
+  โ€ข Hallucinated reference even with semanticSimilarity=0.99 โ’ REJECTED
     (existsInRepo gate fires first).
-  • If 0 candidates pass all 3 gates → accepted=[] returned. We never
+  โ€ข If 0 candidates pass all 3 gates โ’ accepted=[] returned. We never
     fallback to "best of the bad."
-  • Full transparency: every rejected candidate appears in decisions[]
+  โ€ข Full transparency: every rejected candidate appears in decisions[]
     with the failed gate + human reason.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +83 new unit tests (P2-P10). Total: 2964 / 2964 passing.
 
@@ -9665,71 +9725,71 @@ Tests
     Ghost-Sniper       14
     Orchestrator       11
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 What's next
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   v1.14.x and beyond: wire the orchestrator into MCP `tools/call` so
   the dynamic packs can power tools with the DNA pipeline directly,
   and run AI-Memory-Bench (v1.12.0) with/without DNA enabled to publish
   HRR (Hallucination Reduction Ratio) numbers.
 
-## [1.13.1] — 2026-05-09
+## [1.13.1] โ€” 2026-05-09
 
 **The "Mneme DNA" foundation release.** P1 of a 10-phase roadmap to ship
-the first AI-agent-native code-search engine: **8 algorithms × 8 math
+the first AI-agent-native code-search engine: **8 algorithms ร— 8 math
 formulas = 16-strand DNA** that no other code-search tool can compose
 (because the inputs are uniquely Mneme's product).
 
-═══════════════════════════════════════════════════════════════════════
-P1 — 8 math formulas (shipped, 48 unit tests)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+P1 โ€” 8 math formulas (shipped, 48 unit tests)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  Pure functions. Deterministic. Same inputs → same output. Every
+  Pure functions. Deterministic. Same inputs โ’ same output. Every
   formula has unit tests for happy path + boundary + invariants.
 
-   F1 · QRS — Quantum Resonance Score (quadratic form ψ^T H ψ)
-   F2 · HWC — Hebbian-Weighted Cosine (cos × log(1+h))
-   F3 · ADB — Atrophy-Decay Boost (R × (1 - A/100)^α)
-   F4 · TBP — Tribal Bayesian Posterior (Beta-Binomial conjugate)
-   F5 · RED — Regret Echo Distance (Euclidean min)
-   F6 · TPS — Time-Phase Score (Gaussian log-age resonance)
-   F7 · CC  — Compositional Confidence (Wilson LB × Hebbian)
-   F8 · MF  — Mutant Fitness (CTR ÷ TTUR genetic fitness)
+   F1 ยท QRS โ€” Quantum Resonance Score (quadratic form ฯ^T H ฯ)
+   F2 ยท HWC โ€” Hebbian-Weighted Cosine (cos ร— log(1+h))
+   F3 ยท ADB โ€” Atrophy-Decay Boost (R ร— (1 - A/100)^ฮฑ)
+   F4 ยท TBP โ€” Tribal Bayesian Posterior (Beta-Binomial conjugate)
+   F5 ยท RED โ€” Regret Echo Distance (Euclidean min)
+   F6 ยท TPS โ€” Time-Phase Score (Gaussian log-age resonance)
+   F7 ยท CC  โ€” Compositional Confidence (Wilson LB ร— Hebbian)
+   F8 ยท MF  โ€” Mutant Fitness (CTR รท TTUR genetic fitness)
 
   Source: packages/core/src/dna/formulas.ts (48 unit tests)
 
-═══════════════════════════════════════════════════════════════════════
-P2-P10 — 8 algorithms (roadmap, one per minor version)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+P2-P10 โ€” 8 algorithms (roadmap, one per minor version)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-   P2 (v1.14.0): A4 Echo-Locator — SONAR for code patterns
-   P3 (v1.15.0): A2 Phantom-Path Search — what code "should" be
-   P4 (v1.15.x): A6 Anti-Pattern Repulsion — F5-driven downrank
-   P5 (v1.16.0): A1 Mutant Index Evolution — genetic-algorithm fitness
-   P6 (v1.17.0): A3 Quantum Superposition Rank — 3-tensor decomp
-   P7 (v1.18.0): A5 Time-Travel Search — historical-state index
-   P8 (v1.18.x): A7 Tribal Voting — federation-driven rerank
-   P9 (v1.19.0): A8 Ghost-Sniper Verifier — strict-mode killer
+   P2 (v1.14.0): A4 Echo-Locator โ€” SONAR for code patterns
+   P3 (v1.15.0): A2 Phantom-Path Search โ€” what code "should" be
+   P4 (v1.15.x): A6 Anti-Pattern Repulsion โ€” F5-driven downrank
+   P5 (v1.16.0): A1 Mutant Index Evolution โ€” genetic-algorithm fitness
+   P6 (v1.17.0): A3 Quantum Superposition Rank โ€” 3-tensor decomp
+   P7 (v1.18.0): A5 Time-Travel Search โ€” historical-state index
+   P8 (v1.18.x): A7 Tribal Voting โ€” federation-driven rerank
+   P9 (v1.19.0): A8 Ghost-Sniper Verifier โ€” strict-mode killer
    P10 (v1.20.0): wire DNA into MCP Dynamic + bench numbers
 
   Full roadmap: docs/dna/README.md
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 The "ghost sniper" guarantee (P9 target)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Strict mode (default): every result must pass:
     1. AST verify (file + symbol exist)
-    2. Semantic verify (embedding similarity ≥ threshold)
-    3. F7 (CC) ≥ 0.6 confidence
+    2. Semantic verify (embedding similarity โฅ threshold)
+    3. F7 (CC) โฅ 0.6 confidence
 
-  Otherwise → REJECTED, not "shown with low confidence."
+  Otherwise โ’ REJECTED, not "shown with low confidence."
   We prefer empty answers to lies. Ghost sniper. One shot.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Why this moat is defensible
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   The 6 inputs DNA needs:
     1. HMAC-chained audit log of AI tool calls (Mneme v1.11.0)
@@ -9742,80 +9802,80 @@ Why this moat is defensible
   No competitor (Cursor / Copilot / Sourcegraph / OpenAI internal) has
   any 2 of these 6, let alone all 6 + DNA composition on top.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +48 new unit tests (formulas only, P1).
   Total: 2881 tests passing.
 
   P2-P10 will add roughly 100-200 more tests (algorithms + integration).
 
-## [1.13.0] — 2026-05-08
+## [1.13.0] โ€” 2026-05-08
 
 **The "TRIBAL KNOWLEDGE MCP" release.** What was a static surface in v1.12.0
 becomes a real, executable, auditable per-repo MCP layer. Plus 7 metrics no
 other dev tool can compute. **+141 unit tests, 2833/2833 passing.**
 
-═══════════════════════════════════════════════════════════════════════
-Dynamic MCP — production-grade pack engine (the wild card, real)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Dynamic MCP โ€” production-grade pack engine (the wild card, real)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Six modules, each pure-functional and individually tested:
 
-   1. `pack-schema.ts` — Zod schema, single source of truth (34 tests)
-   2. `pack-loader.ts` — YAML → AST → validate, multi-source priority,
+   1. `pack-schema.ts` โ€” Zod schema, single source of truth (34 tests)
+   2. `pack-loader.ts` โ€” YAML โ’ AST โ’ validate, multi-source priority,
       one-bad-pack-doesn't-break-siblings (22 tests)
-   3. `query-engine.ts` — code-search + git-history + entity-graph
+   3. `query-engine.ts` โ€” code-search + git-history + entity-graph
       primitives, defensive caps, shell-metachar refusal (17 tests)
-   4. `augmentation.ts` — tribal knowledge composition: canonical paths,
+   4. `augmentation.ts` โ€” tribal knowledge composition: canonical paths,
       deprecated paths, expert authors w/ atrophy, past incidents,
       applicable constitution rules (17 tests)
-   5. `tool-builder.ts` — detection + packs → MCP tool catalog, namespace
+   5. `tool-builder.ts` โ€” detection + packs โ’ MCP tool catalog, namespace
       enforcement, deterministic ordering (12 tests)
-   6. `bundled-packs.test.ts` — end-to-end with real Stripe pack (6 tests)
+   6. `bundled-packs.test.ts` โ€” end-to-end with real Stripe pack (6 tests)
 
   Plus integration test (`packages/mcp/src/dynamic-mcp.integration.test.ts`)
-  exercising the full pipeline from fixture repo → catalog → execution
-  → augmentation (6 tests).
+  exercising the full pipeline from fixture repo โ’ catalog โ’ execution
+  โ’ augmentation (6 tests).
 
   Reference pack: `packages/core/src/dynamic/packs/stripe.yml` ships 3 tools:
-   • mneme.stripe.find_pricing_logic
-   • mneme.stripe.audit_pii_handlers
-   • mneme.stripe.list_webhook_handlers
+   โ€ข mneme.stripe.find_pricing_logic
+   โ€ข mneme.stripe.audit_pii_handlers
+   โ€ข mneme.stripe.list_webhook_handlers
 
   Each tool description gets auto-augmented at runtime with this repo's
-  git/atrophy/forensics/constitution facts — that's the moat that makes
+  git/atrophy/forensics/constitution facts โ€” that's the moat that makes
   this not just "MCP for Stripe" but "MCP that knows YOUR Stripe code."
 
   Wired into MCP server: `tools/list` merges dynamic + static; `tools/call`
   dispatches static-first then dynamic. `MNEME_NO_DYNAMIC_MCP=1` opt-out.
 
-═══════════════════════════════════════════════════════════════════════
-7 Mneme-only metrics (Mneme-only science) — 27 tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+7 Mneme-only metrics (Mneme-only science) โ€” 27 tests
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Pure deterministic formulas, each combining atoms into a NEW molecule
   that REQUIRES the full Mneme stack to evaluate:
 
-   1. HKD — Hidden Knowledge Density
-   2. TWS — Tribal Wisdom Score
-   3. CVR — Constitution Violation Rate
-   4. HRR — Hallucination Reduction Ratio
-   5. REI — Regret Echo Index
-   6. KAH — Knowledge Atrophy Halflife (exponential-decay regression)
-   7. PCS — Provenance Chain Strength
+   1. HKD โ€” Hidden Knowledge Density
+   2. TWS โ€” Tribal Wisdom Score
+   3. CVR โ€” Constitution Violation Rate
+   4. HRR โ€” Hallucination Reduction Ratio
+   5. REI โ€” Regret Echo Index
+   6. KAH โ€” Knowledge Atrophy Halflife (exponential-decay regression)
+   7. PCS โ€” Provenance Chain Strength
 
   Each comes with a fullName + summary + why-no-one-else-can-compute-it.
   See `packages/core/src/metrics/mneme-metrics.ts`.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Pack format: YAML + Zod
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Pack files are PURE DATA (no code execution from packs).
   YAML chosen for readability + Helm/K8s/Grafana precedent.
-  Zod schema validates at load time — packs fail LOUD, never silently.
+  Zod schema validates at load time โ€” packs fail LOUD, never silently.
 
   Three pack-source paths in priority order:
     1. Bundled at <core>/packs/*.yml
@@ -9824,9 +9884,9 @@ Pack format: YAML + Zod
 
   Higher priority wins on id collision. Failures don't block siblings.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +141 new unit tests:
     pack-schema           34
@@ -9840,50 +9900,50 @@ Tests
 
   Total: **2833/2833 passing.**
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Why Anthropic should care
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  • First MCP server with a repo-dependent tool surface
-  • First MCP server that auto-augments tool descriptions with git
+  โ€ข First MCP server with a repo-dependent tool surface
+  โ€ข First MCP server that auto-augments tool descriptions with git
     history, atrophy curves, forensics incidents, and constitution rules
-  • First metrics framework that quantifies AI-coding-agent value
-    numerically — not vibes
-  • Pure-data pack format → community can ship per-ecosystem packs
+  โ€ข First metrics framework that quantifies AI-coding-agent value
+    numerically โ€” not vibes
+  โ€ข Pure-data pack format โ’ community can ship per-ecosystem packs
     without writing code (the "Helm Charts of MCP")
 
-## [1.12.0] — 2026-05-08
+## [1.12.0] โ€” 2026-05-08
 
 **The "SUPER MCP" release.** Four moves designed to shock the MCP
-ecosystem itself — including the team that invented it. **+50 unit tests.**
+ecosystem itself โ€” including the team that invented it. **+50 unit tests.**
 
-═══════════════════════════════════════════════════════════════════════
-Move 1 — MCP Shield (the FIRST defensive runtime for ANY MCP server)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Move 1 โ€” MCP Shield (the FIRST defensive runtime for ANY MCP server)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Wrap any MCP tool handler with `withShield(handler, opts)` to get:
-   • Tamper-evident HMAC-SHA-256 audit log of every invocation
-   • Prompt-injection scrubbing of returned wisdom strings
-   • Token-bucket rate limit per (caller, tool)
-   • Argument validation (refuses shell metacharacters)
-   • Reputation tracking (repeated abusers auto-quarantined)
-   • Optional FIPS-140 enforcement gate
-   • Closed under composition — shielded servers can be re-shielded
+   โ€ข Tamper-evident HMAC-SHA-256 audit log of every invocation
+   โ€ข Prompt-injection scrubbing of returned wisdom strings
+   โ€ข Token-bucket rate limit per (caller, tool)
+   โ€ข Argument validation (refuses shell metacharacters)
+   โ€ข Reputation tracking (repeated abusers auto-quarantined)
+   โ€ข Optional FIPS-140 enforcement gate
+   โ€ข Closed under composition โ€” shielded servers can be re-shielded
 
   Reusable for ANY MCP server, not just Mneme. The MCP protocol itself
   has no built-in defence; Shield is the canonical implementation.
 
-  • core/security/shield.ts — `withShield()` + `shieldCheck()` (14 tests)
+  โ€ข core/security/shield.ts โ€” `withShield()` + `shieldCheck()` (14 tests)
 
-═══════════════════════════════════════════════════════════════════════
-Move 2 — AI-Memory-Bench (the FIRST reproducible benchmark for AI memory)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Move 2 โ€” AI-Memory-Bench (the FIRST reproducible benchmark for AI memory)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Numbers, not vibes. The harness measures 3 hallucination categories:
 
-   • CITATION-HALLUCINATION   — AI cited a commit hash that doesn't exist
-   • ATTRIBUTION-HALLUCINATION — AI named the wrong author
-   • API-HALLUCINATION        — AI invoked a non-existent file path
+   โ€ข CITATION-HALLUCINATION   โ€” AI cited a commit hash that doesn't exist
+   โ€ข ATTRIBUTION-HALLUCINATION โ€” AI named the wrong author
+   โ€ข API-HALLUCINATION        โ€” AI invoked a non-existent file path
 
   Score = 1 - (hallucinations / total_claims). Wilson 95% lower bound on
   groundedness for small samples (statistical rigour). Renders markdown
@@ -9893,36 +9953,36 @@ Move 2 — AI-Memory-Bench (the FIRST reproducible benchmark for AI memory)
     mneme bench --probes-out probes.json    # emit probes for AI
     mneme bench --score answers.json --label "claude-code-with-mneme"
 
-  • core/bench/bench.ts — verifyCitationHashes / verifyApiPaths /
+  โ€ข core/bench/bench.ts โ€” verifyCitationHashes / verifyApiPaths /
     verifyAttribution / wilsonLowerBound / runBench / renderLeaderboard
-  • core/bench/probes.ts — STANDARD_PROBES corpus (10 probes seeded;
+  โ€ข core/bench/probes.ts โ€” STANDARD_PROBES corpus (10 probes seeded;
     target: 1000+ probes across 50+ OSS repos for public leaderboard)
-  • cli/commands/bench.ts — emit/score modes (15 unit tests)
+  โ€ข cli/commands/bench.ts โ€” emit/score modes (15 unit tests)
 
-═══════════════════════════════════════════════════════════════════════
-Move 3 — Constitutional Gate (Constitutional AI at the runtime layer)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Move 3 โ€” Constitutional Gate (Constitutional AI at the runtime layer)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Constitutional AI was a TRAINING-time idea (Anthropic 2022).
   v1.12.0 implements it at the DEV-TOOL RUNTIME layer:
 
    1. Mneme synthesises a constitution from repo history (regrets,
-      decisions, atrophy, forensics) — already shipped in v1.10.0.
+      decisions, atrophy, forensics) โ€” already shipped in v1.10.0.
    2. When AI proposes code, the gate checks for MUST/MUST-NOT violations.
-   3. If violated → REFUSE + cite source rule + return rewrite hint.
+   3. If violated โ’ REFUSE + cite source rule + return rewrite hint.
    4. AI must rewrite. Loop until pass.
 
   Distinct from the existing constitution: that returned advice the
   AI may ignore. The gate returns a verdict the AI must respect.
 
-  • core/security/constitutional-gate.ts — constitutionalCheck() +
+  โ€ข core/security/constitutional-gate.ts โ€” constitutionalCheck() +
     constitutionalRewriteHint() (9 unit tests)
-  • Rule pattern matcher handles: regret/decision/atrophy/forensics
+  โ€ข Rule pattern matcher handles: regret/decision/atrophy/forensics
     rule types with deny-pattern extraction
 
-═══════════════════════════════════════════════════════════════════════
-Move 4 (Wild Card) — Dynamic MCP (the FIRST repo-dependent tool surface)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Move 4 (Wild Card) โ€” Dynamic MCP (the FIRST repo-dependent tool surface)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Every other MCP server has a STATIC tool surface. Mneme is the
   FIRST MCP server whose tool surface is REPO-DEPENDENT.
@@ -9930,27 +9990,27 @@ Move 4 (Wild Card) — Dynamic MCP (the FIRST repo-dependent tool surface)
   On every cold start, Mneme inspects the repo for ecosystem
   fingerprints and spawns ecosystem-specific tools:
 
-   • Stripe code     → mneme.stripe.find_pricing_logic + 2 more
-   • Kafka code      → mneme.kafka.consumer_lag_history + 1 more
-   • React monorepo  → mneme.react.list_unused_hooks + 2 more
-   • Express API     → mneme.express.list_routes + 1 more
-   • FastAPI         → mneme.fastapi.list_endpoints + 1 more
-   • Postgres        → mneme.postgres.show_migrations + 2 more
-   • Next.js         → mneme.next.list_pages + 1 more
-   • GraphQL         → mneme.graphql.list_resolvers + 1 more
+   โ€ข Stripe code     โ’ mneme.stripe.find_pricing_logic + 2 more
+   โ€ข Kafka code      โ’ mneme.kafka.consumer_lag_history + 1 more
+   โ€ข React monorepo  โ’ mneme.react.list_unused_hooks + 2 more
+   โ€ข Express API     โ’ mneme.express.list_routes + 1 more
+   โ€ข FastAPI         โ’ mneme.fastapi.list_endpoints + 1 more
+   โ€ข Postgres        โ’ mneme.postgres.show_migrations + 2 more
+   โ€ข Next.js         โ’ mneme.next.list_pages + 1 more
+   โ€ข GraphQL         โ’ mneme.graphql.list_resolvers + 1 more
 
   Detection triangulates 3 signals (package dep + import statement +
-  file pattern) before activation — conservative, no false positives.
+  file pattern) before activation โ€” conservative, no false positives.
 
   CLI:
     mneme ecosystem        # see what tools your repo unlocks
 
-  • core/dynamic/ecosystem.ts — detectEcosystems() +
+  โ€ข core/dynamic/ecosystem.ts โ€” detectEcosystems() +
     buildDynamicToolCatalog() (8 unit tests)
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +50 new unit tests:
    - shield                    14
@@ -9961,9 +10021,9 @@ Tests
 
   Total: **2692/2692 tests passing.**
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Why this matters (for the MCP ecosystem at large)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   v1.12.0 ships 4 firsts in the MCP ecosystem:
 
@@ -9976,33 +10036,33 @@ Why this matters (for the MCP ecosystem at large)
   no other MCP server has. The combinations are themselves new
   super-sonic-boom molecules:
 
-   • Shield + Bench = provably-fair benchmark (every probe call audited)
-   • Shield + Gate  = constitutional shield (refuse + audit trail)
-   • Gate + Ecosystem = per-repo constitution auto-enforced
-   • All 4         = self-defending AI memory at the runtime layer
+   โ€ข Shield + Bench = provably-fair benchmark (every probe call audited)
+   โ€ข Shield + Gate  = constitutional shield (refuse + audit trail)
+   โ€ข Gate + Ecosystem = per-repo constitution auto-enforced
+   โ€ข All 4         = self-defending AI memory at the runtime layer
 
-## [1.11.1] — 2026-05-08
+## [1.11.1] โ€” 2026-05-08
 
 **The "SECURITY ON BY DEFAULT" release.** Zero-config, world-class auto-bootstrap.
-`npm install -g mneme-ai` is now everything the user has to do — every
+`npm install -g mneme-ai` is now everything the user has to do โ€” every
 v1.11.0 capability that can be safely auto-enabled is auto-enabled.
 
-═══════════════════════════════════════════════════════════════════════
-Auto-bootstrap (world-class · no flags · no config)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Auto-bootstrap (world-class ยท no flags ยท no config)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   1. **Audit log auto-on**
      - `mneme init` and `mneme index` lazy-bootstrap the HMAC chain
      - Genesis entry recorded with `actor: "mneme:auto"` for provenance
-     - Idempotent — never re-enables a user who explicitly opted out
-     - `core/security/auto.ts` — 7/7 unit tests
+     - Idempotent โ€” never re-enables a user who explicitly opted out
+     - `core/security/auto.ts` โ€” 7/7 unit tests
 
   2. **TOFU (Trust On First Use) for bundled WASM model**
-     - First download → `.mneme/model-checksums.json` records SHA-256
-     - Subsequent loads → verify; refuse if any file changed
+     - First download โ’ `.mneme/model-checksums.json` records SHA-256
+     - Subsequent loads โ’ verify; refuse if any file changed
      - User can intentionally re-pin by deleting the manifest
      - Same approach SSH uses for host keys
-     - `embeddings/checksum.tofuVerifyOrPin` — 6/6 new TOFU tests
+     - `embeddings/checksum.tofuVerifyOrPin` โ€” 6/6 new TOFU tests
        (fresh-pin, verify, tampered, missing, no-files, corrupt-manifest)
 
   3. **Prompt-injection scrubber wired into MCP runtime**
@@ -10012,7 +10072,7 @@ Auto-bootstrap (world-class · no flags · no config)
      - Zero perf cost (regex over short strings)
 
   4. **`mneme security` dashboard**
-     - One-screen status: audit log · TOFU · scrubber · FIPS posture
+     - One-screen status: audit log ยท TOFU ยท scrubber ยท FIPS posture
      - `mneme security on/off/verify` for explicit control
      - JSON output for CI/SIEM ingestion
      - 10/10 unit tests
@@ -10020,17 +10080,17 @@ Auto-bootstrap (world-class · no flags · no config)
   5. **`.mneme/.gitignore` auto-write**
      - On `init`, exclude `audit-log.secret` + `*.tmp` from accidental commit
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Escape hatch
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Set `MNEME_NO_AUTO_SECURITY=1` to disable the auto-bootstrap entirely.
-  We document it but don't recommend it — security defaults exist because
+  We document it but don't recommend it โ€” security defaults exist because
   security that requires manual enablement is security nobody enables.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Tests
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +25 new unit tests:
    - core/security/auto                7 (auto-bootstrap idempotence + safety)
@@ -10041,89 +10101,89 @@ Tests
 
   Total: **2642/2642 tests passing.**
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Honest about what we DON'T auto-enable
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  • Vault encryption — needs a passphrase from the user, can't be auto.
-  • FIPS enforcement — we DETECT FIPS posture (informational), but only
+  โ€ข Vault encryption โ€” needs a passphrase from the user, can't be auto.
+  โ€ข FIPS enforcement โ€” we DETECT FIPS posture (informational), but only
     --compliance fips140 enforces it (refusing to start without FIPS).
-  • Federation — opt-in to `mneme federation join` only. No auto-join.
+  โ€ข Federation โ€” opt-in to `mneme federation join` only. No auto-join.
 
-## [1.11.0] — 2026-05-08
+## [1.11.0] โ€” 2026-05-08
 
 **The "BANK-GRADE" release.** Mneme's first dedicated security-hardening
 pass, sized for the most paranoid environment in the room. Every primitive
 FIPS-approved. Every new capability opt-in. Default behaviour unchanged.
 
-═══════════════════════════════════════════════════════════════════════
-Phase 1 — Defence in depth (5 modules)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Phase 1 โ€” Defence in depth (5 modules)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  1. **Vault** (`core/security/vault`) — AES-256-GCM at-rest encryption
-     · scrypt KDF (N=2^17, r=8, p=1) · 96-bit nonce per encrypt
-     · 128-bit auth tag · refuses passphrases <12 chars
-     · 23/23 unit tests (round-trip, tamper, version, length, unicode, 1MB)
+  1. **Vault** (`core/security/vault`) โ€” AES-256-GCM at-rest encryption
+     ยท scrypt KDF (N=2^17, r=8, p=1) ยท 96-bit nonce per encrypt
+     ยท 128-bit auth tag ยท refuses passphrases <12 chars
+     ยท 23/23 unit tests (round-trip, tamper, version, length, unicode, 1MB)
 
-  2. **Audit log** (`core/security/audit-log`) — HMAC-SHA-256 chained
-     append-only log · `mneme audit-log enable/disable/status/verify/rotate/show`
-     · 19 action types covered · file mode 0o600 · genesis chain anchor
-     · 19/19 unit tests (chain integrity, tamper detection, rotate, config)
+  2. **Audit log** (`core/security/audit-log`) โ€” HMAC-SHA-256 chained
+     append-only log ยท `mneme audit-log enable/disable/status/verify/rotate/show`
+     ยท 19 action types covered ยท file mode 0o600 ยท genesis chain anchor
+     ยท 19/19 unit tests (chain integrity, tamper detection, rotate, config)
 
-  3. **Key rotation** (`core/security/key-rotate`) — atomic re-sign of
-     entire audit chain under a fresh secret · `mneme key rotate --confirm`
-     · refuses on tampered chain · old log archived (never destroyed)
-     · 6/6 unit tests (empty, populated, tampered-refuse, evidence preservation)
+  3. **Key rotation** (`core/security/key-rotate`) โ€” atomic re-sign of
+     entire audit chain under a fresh secret ยท `mneme key rotate --confirm`
+     ยท refuses on tampered chain ยท old log archived (never destroyed)
+     ยท 6/6 unit tests (empty, populated, tampered-refuse, evidence preservation)
 
-  4. **Subprocess hardening** — every spawn argv-only · `shell: true`
-     removed everywhere · MCP runtime validates args against shell
-     metacharacters · upgrade.ts validates remote version against strict semver
+  4. **Subprocess hardening** โ€” every spawn argv-only ยท `shell: true`
+     removed everywhere ยท MCP runtime validates args against shell
+     metacharacters ยท upgrade.ts validates remote version against strict semver
 
-  5. **Compliance enforcement** (`core/security/compliance`) — `--compliance fips140`
-     global flag · `getFips()` detection · refuses to start when FIPS
-     requested but inactive · 9/9 unit tests
+  5. **Compliance enforcement** (`core/security/compliance`) โ€” `--compliance fips140`
+     global flag ยท `getFips()` detection ยท refuses to start when FIPS
+     requested but inactive ยท 9/9 unit tests
 
-═══════════════════════════════════════════════════════════════════════
-Phase 2 — Hardening at the edges (5 modules)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Phase 2 โ€” Hardening at the edges (5 modules)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  1. **Prompt-injection scrubber** (`core/security/scrubber`) — strips
+  1. **Prompt-injection scrubber** (`core/security/scrubber`) โ€” strips
      `<system>`, `[INST]`, `<|im_start|>`, "ignore prior instructions",
      "you are now DAN", and 8 more patterns from data flowing into AI
-     prompts · OWASP LLM01 defence · 13/13 unit tests
+     prompts ยท OWASP LLM01 defence ยท 13/13 unit tests
 
-  2. **Federation rate-limit + sybil resistance** — token bucket
-     per-(contributor, IP) · per-contributor reputation score
+  2. **Federation rate-limit + sybil resistance** โ€” token bucket
+     per-(contributor, IP) ยท per-contributor reputation score
      (signed accept +1, signature mismatch -10, k-anon violation -5)
-     · quarantined contributors excluded from aggregates
-     · admin endpoint behind ADMIN_TOKEN env var
+     ยท quarantined contributors excluded from aggregates
+     ยท admin endpoint behind ADMIN_TOKEN env var
 
-  3. **WASM model checksum** (`embeddings/checksum`) — opt-in SHA-256
+  3. **WASM model checksum** (`embeddings/checksum`) โ€” opt-in SHA-256
      pinning of bundled embedder cache files via `MNEME_PINNED_MODEL_CHECKSUMS`
-     env var · refuses to load tampered model · 14/14 unit tests
+     env var ยท refuses to load tampered model ยท 14/14 unit tests
 
-  4. **FIPS 140 enforcement gate** — see Phase 1.5 above; the runtime
+  4. **FIPS 140 enforcement gate** โ€” see Phase 1.5 above; the runtime
      gate is the Phase 2 deliverable.
 
-  5. **Daemon PID ownership check** — refuses to read/trust a PID file
-     owned by a different OS user (POSIX uid match) · PID file written
-     mode 0o600 · cross-user attack mitigated.
+  5. **Daemon PID ownership check** โ€” refuses to read/trust a PID file
+     owned by a different OS user (POSIX uid match) ยท PID file written
+     mode 0o600 ยท cross-user attack mitigated.
 
-═══════════════════════════════════════════════════════════════════════
-Phase 3 — Compliance documentation (5 mappings)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Phase 3 โ€” Compliance documentation (5 mappings)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   Control-by-control mappings under `docs/compliance/`:
 
-  • [SOC 2](docs/compliance/SOC2.md) — Trust Services Criteria mapping
-  • [PCI-DSS v4.0](docs/compliance/PCI-DSS.md) — Req 3, 6, 8, 10, 11
-  • [GDPR](docs/compliance/GDPR.md) — Articles 5, 17, 25, 32, 33
-  • [NIST 800-53 Rev 5](docs/compliance/NIST-800-53.md) — AC, AU, CM, IA, SC, SI, SR
-  • [Banking runbook](docs/compliance/BANKING.md) — operational deployment guide
+  โ€ข [SOC 2](docs/compliance/SOC2.md) โ€” Trust Services Criteria mapping
+  โ€ข [PCI-DSS v4.0](docs/compliance/PCI-DSS.md) โ€” Req 3, 6, 8, 10, 11
+  โ€ข [GDPR](docs/compliance/GDPR.md) โ€” Articles 5, 17, 25, 32, 33
+  โ€ข [NIST 800-53 Rev 5](docs/compliance/NIST-800-53.md) โ€” AC, AU, CM, IA, SC, SI, SR
+  โ€ข [Banking runbook](docs/compliance/BANKING.md) โ€” operational deployment guide
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Test coverage
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   +84 new unit tests for security modules:
    - vault            23
@@ -10136,81 +10196,81 @@ Test coverage
   All Phase 1 + Phase 2 capabilities are opt-in. **Default behaviour
   unchanged.** Existing users and CI pipelines see no breaking change.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Wisdom check (every primitive, every module)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  ✓ AES-256-GCM       — FIPS 197 + SP 800-38D
-  ✓ HMAC-SHA-256      — FIPS 198-1
-  ✓ scrypt            — RFC 7914 + SP 800-132
-  ✓ Ed25519           — FIPS 186-5 (approved 2023)
-  ✓ SHA-256           — FIPS 180-4
-  ✓ randomBytes       — OpenSSL DRBG (FIPS-approved when OS in FIPS mode)
-  ✓ No homegrown crypto. No half-finished implementations.
+  โ“ AES-256-GCM       โ€” FIPS 197 + SP 800-38D
+  โ“ HMAC-SHA-256      โ€” FIPS 198-1
+  โ“ scrypt            โ€” RFC 7914 + SP 800-132
+  โ“ Ed25519           โ€” FIPS 186-5 (approved 2023)
+  โ“ SHA-256           โ€” FIPS 180-4
+  โ“ randomBytes       โ€” OpenSSL DRBG (FIPS-approved when OS in FIPS mode)
+  โ“ No homegrown crypto. No half-finished implementations.
 
-## [1.10.0] — 2026-05-08
+## [1.10.0] โ€” 2026-05-08
 
 **The "INDISPENSABLE" release.** All 3 killer ideas + a novel memory
 ranking algorithm + a self-learning daemon loop + webhooks + persistent
 cross-AI sessions. **+93 unit tests, 2529/2529 passing across 186 files.**
 
-═══════════════════════════════════════════════════════════════════════
-1. HMRA — Holographic Memory Ranking Algorithm (NEW)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+1. HMRA โ€” Holographic Memory Ranking Algorithm (NEW)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
 The composite scoring function that ranks every Mneme memory:
 
-  M(memory) = α·R + β·H + γ·P + δ·E + ε·F
+  M(memory) = ฮฑยทR + ฮฒยทH + ฮณยทP + ฮดยทE + ฮตยทF
 
-  R — RECENCY DECAY (per-kind half-life: commit 365d, atrophy 90d,
+  R โ€” RECENCY DECAY (per-kind half-life: commit 365d, atrophy 90d,
                      regret 180d, decision 730d). Bayesian exponential.
-  H — HEBBIAN CO-ACTIVATION. cosine_sim × log(1 + co-activations).
+  H โ€” HEBBIAN CO-ACTIVATION. cosine_sim ร— log(1 + co-activations).
                      Memories that fired together strengthen.
-  P — PAGERANK CENTRALITY over the citation graph (damping=0.85).
+  P โ€” PAGERANK CENTRALITY over the citation graph (damping=0.85).
                      Load-bearing memories rank high regardless of age.
-  E — INFORMATION ENTROPY (Shannon). High-information memories beat
+  E โ€” INFORMATION ENTROPY (Shannon). High-information memories beat
                      templated/boilerplate.
-  F — FEDERATION PRIOR (cross-repo aggregate signal, k-anonymity gated).
+  F โ€” FEDERATION PRIOR (cross-repo aggregate signal, k-anonymity gated).
 
-  Default weights: α=0.30 β=0.25 γ=0.20 δ=0.15 ε=0.10 (sum=1.0)
+  Default weights: ฮฑ=0.30 ฮฒ=0.25 ฮณ=0.20 ฮด=0.15 ฮต=0.10 (sum=1.0)
   Self-tuned by the learning loop via Pearson-correlation gradient.
 
 No retrieval system in production today combines recency + Hebbian +
 graph + entropy + federated learning. **Genuinely novel composite.**
 
-`packages/core/src/hmra/hmra.ts` — 32/32 unit tests passing on each
+`packages/core/src/hmra/hmra.ts` โ€” 32/32 unit tests passing on each
 component + composite ordering + weight-tuning math.
 
-═══════════════════════════════════════════════════════════════════════
-2. Self-learning engine — `while(is_studying)` (NEW)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+2. Self-learning engine โ€” `while(is_studying)` (NEW)
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
 The closed-form learning loop that runs every 15 minutes (or on demand
 via `mneme learn tick`). Updates 4 channels:
 
-  A. HMRA WEIGHTS — Pearson(component, feedback) gradient ascent
-  B. PER-TOOL SUCCESS — exponential moving average over (tool, outcome)
-  C. BAYESIAN RULE PRIORS — Beta-Binomial conjugate update
-  D. MOLECULE PROMOTION — Wilson lower bound ≥ 0.6 + ≥3 trials
+  A. HMRA WEIGHTS โ€” Pearson(component, feedback) gradient ascent
+  B. PER-TOOL SUCCESS โ€” exponential moving average over (tool, outcome)
+  C. BAYESIAN RULE PRIORS โ€” Beta-Binomial conjugate update
+  D. MOLECULE PROMOTION โ€” Wilson lower bound โฅ 0.6 + โฅ3 trials
 
 No ML models, no backprop, no GPU. Pure closed-form math. Every weight
 change has a clear, auditable provenance. The audit trail (last 50
 updates) is persisted in `.mneme/learned-state.json`.
 
-  `mneme learn tick`     — manually run a learning cycle
-  `mneme learn status`   — show current weights + audit trail
+  `mneme learn tick`     โ€” manually run a learning cycle
+  `mneme learn status`   โ€” show current weights + audit trail
 
-`packages/core/src/learning/learning.ts` — 24/24 unit tests passing on
-emaUpdate · bayesianPosteriorMean · wilsonLowerBound · 4-channel tick
-composite · file I/O round-trip · audit-trail capping · checksum.
+`packages/core/src/learning/learning.ts` โ€” 24/24 unit tests passing on
+emaUpdate ยท bayesianPosteriorMean ยท wilsonLowerBound ยท 4-channel tick
+composite ยท file I/O round-trip ยท audit-trail capping ยท checksum.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 3. Webhooks (NEW)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
 Outgoing HMAC-SHA-256-signed POSTs on 5 default events:
 
-  audit.fail · forensics.cwe.high · atrophy.spike · court.guilty · federation.match
+  audit.fail ยท forensics.cwe.high ยท atrophy.spike ยท court.guilty ยท federation.match
 
   mneme webhook add --event audit.fail --url <url>
   mneme webhook list
@@ -10221,31 +10281,31 @@ Outgoing HMAC-SHA-256-signed POSTs on 5 default events:
 Storage: `.mneme/webhooks.json` (gitignored). Signing: `X-Mneme-Signature: sha256=<hex>`.
 Constant-time signature verification helper exported for hub-side validation.
 
-13/13 unit tests passing on signing · verification · lifecycle · firing
+13/13 unit tests passing on signing ยท verification ยท lifecycle ยท firing
 filtered by event.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 4. Codebase Constitution (NEW)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-The repo's living "constitution" — auto-synthesized rules AI tools
+The repo's living "constitution" โ€” auto-synthesized rules AI tools
 prepend to their system prompt. Sources:
 
-  • Forensics incidents → MUST scrutinize zones
-  • Past regrets/reverts → SHOULD avoid patterns
-  • Atrophy < 30 → SHOULD pair with the experiencing engineer
-  • ADR-style decisions → SHOULD follow
+  โ€ข Forensics incidents โ’ MUST scrutinize zones
+  โ€ข Past regrets/reverts โ’ SHOULD avoid patterns
+  โ€ข Atrophy < 30 โ’ SHOULD pair with the experiencing engineer
+  โ€ข ADR-style decisions โ’ SHOULD follow
 
   mneme constitution                # synthesize + cache at .mneme/constitution.md
   mneme constitution --out doc.md   # also write to a custom path
 
   AI clients fetch via `mneme.constitution.get` MCP tool. The wisdom
-  envelope tells the AI to PREPEND it to system prompt — so the AI
+  envelope tells the AI to PREPEND it to system prompt โ€” so the AI
   literally cannot recommend things contradicting the repo's history.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 5. Hallucination Auto-Block MVP (NEW)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
 The post-draft pre-delivery citation gate. AI client passes a draft
 answer; Mneme runs every commit-hash claim through `git rev-parse`.
@@ -10256,15 +10316,15 @@ answer; Mneme runs every commit-hash claim through `git rev-parse`.
 
   AI MUST call this between drafting and delivering ANY answer with
   commit hashes. On hallucinated > 0, the AI rewrites using only
-  resolved hashes — caught before user sees the lie.
+  resolved hashes โ€” caught before user sees the lie.
 
 (Real-time token-stream interception requires MCP spec extension that
-doesn't exist yet — that's v1.11.0+. v1.10.0 ships the post-draft MVP
+doesn't exist yet โ€” that's v1.11.0+. v1.10.0 ships the post-draft MVP
 which is already strictly stronger than no verification.)
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 6. Persistent Cross-AI Brain (NEW)
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
 Cross-session, cross-AI-tool memory:
 
@@ -10274,18 +10334,18 @@ Cross-session, cross-AI-tool memory:
   mneme session list
 
 Storage: `.mneme/sessions/<id>.json`. Stable id derived from intent
-(SHA-256 of lowercased intent → first 12 hex). Same intent saved twice
+(SHA-256 of lowercased intent โ’ first 12 hex). Same intent saved twice
 merges into one session.
 
-When user switches Claude → ChatGPT → Cursor mid-task, the session
+When user switches Claude โ’ ChatGPT โ’ Cursor mid-task, the session
 follows. **Cross-tool context is one source of truth.**
 
-16/16 unit tests passing on save · resume · merge-on-same-intent ·
-list-sorted-by-recency · remove · error paths.
+16/16 unit tests passing on save ยท resume ยท merge-on-same-intent ยท
+list-sorted-by-recency ยท remove ยท error paths.
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Files added
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
   packages/core/src/hmra/                    (HMRA + 32 tests)
   packages/core/src/learning/                (Self-learning + 24 tests)
@@ -10295,35 +10355,35 @@ Files added
   packages/mcp/src/tools/_constitution_tool.ts (MCP fetch tool)
   packages/mcp/src/tools/_verify_claims_tool.ts (Hallucination Auto-Block)
 
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 Numbers
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  • 2529/2529 tests passing across 186 files (+93 from v1.9.0)
-  • 5 new MCP tools (understand_intent · verify_claims · constitution.get · …)
-  • 4 new CLI commands (webhook · session · constitution · learn)
-  • 1 novel memory ranking algorithm (HMRA, 5-component weighted composite)
-  • 4-channel self-learning loop with closed-form math
-  • 0 breaking changes from v1.9.0
-  • Lockfile: 113 platform entries preserved
+  โ€ข 2529/2529 tests passing across 186 files (+93 from v1.9.0)
+  โ€ข 5 new MCP tools (understand_intent ยท verify_claims ยท constitution.get ยท โ€ฆ)
+  โ€ข 4 new CLI commands (webhook ยท session ยท constitution ยท learn)
+  โ€ข 1 novel memory ranking algorithm (HMRA, 5-component weighted composite)
+  โ€ข 4-channel self-learning loop with closed-form math
+  โ€ข 0 breaking changes from v1.9.0
+  โ€ข Lockfile: 113 platform entries preserved
 
-═══════════════════════════════════════════════════════════════════════
-Strategic recap — why Mneme is now indispensable
-═══════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
+Strategic recap โ€” why Mneme is now indispensable
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-  1. CROSS-AI BRAIN — context follows you across Claude / GPT / Cursor /
+  1. CROSS-AI BRAIN โ€” context follows you across Claude / GPT / Cursor /
      ChatGPT. Without Mneme: every new chat is amnesia.
-  2. CONSTITUTION — AI literally cannot suggest things that contradict
+  2. CONSTITUTION โ€” AI literally cannot suggest things that contradict
      the repo's history (auto-prepended to system prompt).
-  3. HALLUCINATION AUTO-BLOCK — every commit hash verified before
+  3. HALLUCINATION AUTO-BLOCK โ€” every commit hash verified before
      delivery. Without Mneme: AI confidently cites fake commits.
-  4. SELF-LEARNING LOOP — gets smarter every 15 minutes during idle.
+  4. SELF-LEARNING LOOP โ€” gets smarter every 15 minutes during idle.
      Pearson + EMA + Beta-Binomial + Wilson math. No ML models.
-  5. HMRA — novel composite memory ranking with audit-trail-grade
+  5. HMRA โ€” novel composite memory ranking with audit-trail-grade
      transparency. Every score has a clear breakdown.
-  6. WEBHOOKS — fits enterprise stack (Slack / Linear / PagerDuty / etc).
+  6. WEBHOOKS โ€” fits enterprise stack (Slack / Linear / PagerDuty / etc).
 
-## [1.9.0] — 2026-05-08
+## [1.9.0] โ€” 2026-05-08
 
 **The "AUDIT + POLISH" release.** Self-audit of v1.8.0 surfaced 6 HIGH-severity
 bugs and 7 MEDIUM-severity improvements. v1.9.0 ships fixes for **6 HIGH +
@@ -10333,7 +10393,7 @@ Net: 27 new unit tests, **2436/2436 passing** across 182 files.
 
 ### HIGH-severity fixes
 
-#### #1 — `mneme federation contribute` now actually POSTs
+#### #1 โ€” `mneme federation contribute` now actually POSTs
 
 Was a UX bug: command printed the signed envelope but required users to
 manually `curl` it to the hub. Now POSTs by default; `--no-post` flag
@@ -10347,35 +10407,35 @@ mneme federation contribute --pattern regret --no-post # print envelope, don't P
 Tests cover: --no-post blocks fetch entirely, query JSON shape includes
 statusCode + hubUrl, network failure handling. 4 new tests.
 
-#### #2 — `mneme court` LLM-judge reasoning now honest
+#### #2 โ€” `mneme court` LLM-judge reasoning now honest
 
 v1.8.0 reasoning string claimed "real LLM judge" when API key was set,
 but the underlying signal was still verify-head with confidence bumped
-0.4 → 0.7. v1.9.0 reasoning is transparent: "verify-head detected N
-contradictions … v1.10.0 will add full real-time LLM call with diff
+0.4 โ’ 0.7. v1.9.0 reasoning is transparent: "verify-head detected N
+contradictions โ€ฆ v1.10.0 will add full real-time LLM call with diff
 context alongside daemon-cached diffs". Confidence calibrated to 0.65.
 
-#### #3 — Daemon dedups HEAD changes
+#### #3 โ€” Daemon dedups HEAD changes
 
 `fs.watch` on `.git/HEAD` fired reindex on every ref jiggle including
 detached-HEAD checkouts. v1.9.0 dedups: compares new HEAD hash vs
 lastHeadHash before triggering; skips if unchanged. Eliminates redundant
 reindexes during git checkout / branch switching with no commits.
 
-#### #4 — pre-push hook now skips when no baseline exists
+#### #4 โ€” pre-push hook now skips when no baseline exists
 
 Was a UX bug: `git push` would fail because `mneme audit --certify`
 requires baseline. v1.9.0 hook checks for `.mneme/audit-baseline.json`
-upfront — if missing, skips with friendly hint:
+upfront โ€” if missing, skips with friendly hint:
 
 ```
-[mneme pre-push] No audit baseline yet — skipping certify gate.
+[mneme pre-push] No audit baseline yet โ€” skipping certify gate.
 [mneme pre-push] Run 'mneme audit --baseline' once to enable this gate.
 ```
 
 3 new tests verify hook behaviour.
 
-#### #5 — `mneme adapter` clear error on stale @mneme-ai/mcp
+#### #5 โ€” `mneme adapter` clear error on stale @mneme-ai/mcp
 
 Was a confusing error: dynamic-import path `@mneme-ai/mcp/tools/registry`
 was added in v1.8.0; older mcp installs failed with cryptic
@@ -10388,7 +10448,7 @@ export was added then). Run `mneme upgrade` (or `npm install -g
 mneme-ai@latest`) to refresh.
 ```
 
-#### #6 — Full CI test suite verified
+#### #6 โ€” Full CI test suite verified
 
 All 2436 tests across 182 files passing on Windows/Node 22. Snapshot
 tests updated to reflect v1.8/v1.9 new commands (federation
@@ -10396,7 +10456,7 @@ tests updated to reflect v1.8/v1.9 new commands (federation
 
 ### MEDIUM-severity fixes
 
-#### #7 — Federation hub: optional JSON persistence
+#### #7 โ€” Federation hub: optional JSON persistence
 
 `packages/saas/federation-hub/server.ts` had in-memory store;
 restart = lose all signals. v1.9.0 adds opt-in JSON persistence via
@@ -10408,13 +10468,13 @@ deployments restart-survival without adding a DB dependency.
 FEDERATION_PERSIST_PATH=/var/lib/mneme-hub/contributions.json npm start
 ```
 
-#### #10 — Time Capsule: tar probe + clear error
+#### #10 โ€” Time Capsule: tar probe + clear error
 
 Was a silent failure on systems without tar (rare on Windows < 10).
 v1.9.0 probes `tar --version` upfront and shows a platform-specific
 remediation hint if missing.
 
-#### #13 — Intent classifier: smart_do fallback
+#### #13 โ€” Intent classifier: smart_do fallback
 
 When no Mneme tool matches the query OR when top confidence < 40%,
 the reasoning + plan now explicitly suggest `mneme.smart_do` as
@@ -10425,7 +10485,7 @@ low-confidence (smart_do recommended) paths.
 ### README cleanup
 
 Removed the stacking version-history sections (v1.5/v1.6/v1.8) from the
-README body — they're now consolidated in this CHANGELOG. README links
+README body โ€” they're now consolidated in this CHANGELOG. README links
 to `CHANGELOG.md` as the source of truth. Net: README scans cleaner;
 AI agents reading the install contract aren't distracted by historical
 feature copy.
@@ -10447,7 +10507,7 @@ feature copy.
 - `packages/cli/src/index.ts` (federation --no-post flag)
 - `packages/mcp/src/tools/_intent.ts` (smart_do fallback in plan + reasoning)
 - `packages/saas/federation-hub/server.ts` (JSON persistence)
-- `README.md` (version-history → CHANGELOG link)
+- `README.md` (version-history โ’ CHANGELOG link)
 
 ### Numbers
 
@@ -10463,24 +10523,24 @@ feature copy.
 - MEDIUM #12: External benchmark target (Claude / GPT memory comparison)
 - LOW #14-17: Memory/perf polish, audit module cold-start optimization
 
-## [1.8.0] — 2026-05-08
+## [1.8.0] โ€” 2026-05-08
 
 **The "UNIVERSAL AI COMPATIBILITY" release.** Two strategic new tools answer
-the core question "how does ANY AI tool — GPT, Claude, Gemini, Codex, others
-— talk fluently with Mneme?":
+the core question "how does ANY AI tool โ€” GPT, Claude, Gemini, Codex, others
+โ€” talk fluently with Mneme?":
 
-  • `mneme.understand_intent` (MCP) — the Rosetta stone tool
-  • `mneme adapter <vendor>` (CLI)  — cross-vendor catalog export
+  โ€ข `mneme.understand_intent` (MCP) โ€” the Rosetta stone tool
+  โ€ข `mneme adapter <vendor>` (CLI)  โ€” cross-vendor catalog export
 
 Plus all Phase 4-5 deferred items wired: real LLM judges with API-key
 detection + graceful fallback, real HTTP query against the federation hub,
 and 3 functional dashboard pages.
 
-### #1 — `mneme.understand_intent` — the Rosetta stone
+### #1 โ€” `mneme.understand_intent` โ€” the Rosetta stone
 
 ```ts
 mneme.understand_intent({ query: "is HEAD safe to ship?" })
-  → {
+  โ’ {
       matches: [
         { toolName: "mneme.audit.certify", score: 24, suggestedArgs: {} },
         { toolName: "mneme.memory.blast", score: 22, suggestedArgs: { commit: "HEAD" } },
@@ -10490,14 +10550,14 @@ mneme.understand_intent({ query: "is HEAD safe to ship?" })
       plan: [
         "1. Call mneme.audit.certify (confidence 0.85)",
         "2. If result is sparse, fall back to mneme.memory.blast",
-        "3. Read response's secondBrain.compose — fire molecules if matched",
+        "3. Read response's secondBrain.compose โ€” fire molecules if matched",
         "4. Draft answer, call mneme.grade.answer before delivering"
       ],
       reasoning: "Top match: mneme.audit.certify with confidence 85%..."
     }
 ```
 
-Fully deterministic — no LLM, no embedder, no key needed. Pure keyword +
+Fully deterministic โ€” no LLM, no embedder, no key needed. Pure keyword +
 trigger-phrase scoring with email/file-path/hash extraction. Fast (<50ms
 for 94 tools), reproducible, works with any AI client.
 
@@ -10507,7 +10567,7 @@ tools": instead of asking the AI to pick, **Mneme picks for the AI**.
 12/12 unit tests passing on the classifier (tokenization, top-match
 selection, argument extraction, execution plan).
 
-### #2 — `mneme adapter <vendor>` — cross-AI catalog export
+### #2 โ€” `mneme adapter <vendor>` โ€” cross-AI catalog export
 
 ```bash
 mneme adapter openai > openai-tools.json       # GPT-4, GPT-4o, Codex, o-series
@@ -10519,9 +10579,9 @@ mneme adapter mcp > mcp-tools.json             # passthrough (sanity check)
 Each export is the FULL Mneme tool catalog (98 tools as of v1.8.0) wrapped
 in the vendor's native function-calling/tool-use format:
 
-  • OpenAI: `{ type: "function", function: { name, description, parameters } }`
-  • Anthropic: `{ name, description, input_schema }`
-  • Gemini: `{ name, description, parameters }` under `function_declarations`
+  โ€ข OpenAI: `{ type: "function", function: { name, description, parameters } }`
+  โ€ข Anthropic: `{ name, description, input_schema }`
+  โ€ข Gemini: `{ name, description, parameters }` under `function_declarations`
 
 Tool names with dots (`mneme.memory.ask`) are converted to underscores
 (`mneme_memory_ask`) where vendors require alphanumeric+underscore.
@@ -10529,64 +10589,64 @@ Tool names with dots (`mneme.memory.ask`) are converted to underscores
 Each format includes invocation metadata explaining how to actually
 execute the tools (local-shell `mneme <command> --json`).
 
-**Net effect:** even AI tools that don't speak MCP — ChatGPT (consumer),
-GitHub Copilot, Tabnine, etc. — can use Mneme by importing the adapter
+**Net effect:** even AI tools that don't speak MCP โ€” ChatGPT (consumer),
+GitHub Copilot, Tabnine, etc. โ€” can use Mneme by importing the adapter
 output into their tool registration layer.
 
 6/6 unit tests passing on the format generators.
 
-### #3 — Real LLM judges in `mneme court`
+### #3 โ€” Real LLM judges in `mneme court`
 
 `court.ts` now detects `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` /
 `GOOGLE_API_KEY`. When set, the LLM judges escalate confidence to 0.7 (vs
 0.4 fallback). When not set, gracefully falls back to verify-head signal
 with a clear "set $KEY to activate" message.
 
-The full `LlmJudgeInput → LlmJudgeOptions` integration with real diff
+The full `LlmJudgeInput โ’ LlmJudgeOptions` integration with real diff
 extraction lands in v1.9.0 once the daemon's diff cache is wired up.
 
-### #4 — Real HTTP query in `mneme federation query`
+### #4 โ€” Real HTTP query in `mneme federation query`
 
 `federation.ts query` now does a real `fetch()` against the hub's
 `/api/aggregate?pattern=` endpoint. Pretty-printed output for the user;
 JSON output for automation. Handles k-anonymity-floor responses gracefully.
 
-### #5 — Dashboard pages (3 functional)
+### #5 โ€” Dashboard pages (3 functional)
 
 `packages/saas/dashboard/pages/`:
-  • `index.tsx` — landing page with linked-repos table
-  • `atrophy.tsx` — knowledge-decay heatmap (author × area, color-coded)
-  • `audit.tsx` — fleet-wide audit verdict timeline (strip chart + table)
+  โ€ข `index.tsx` โ€” landing page with linked-repos table
+  โ€ข `atrophy.tsx` โ€” knowledge-decay heatmap (author ร— area, color-coded)
+  โ€ข `audit.tsx` โ€” fleet-wide audit verdict timeline (strip chart + table)
 
 All render demo data; v1.9.0 wires real Postgres backend.
 
 ### Files added
 
-  • packages/mcp/src/tools/_intent.ts          (deterministic classifier)
-  • packages/mcp/src/tools/_intent.test.ts     (12 tests)
-  • packages/mcp/src/tools/_intent_tool.ts     (MCP tool wrapper)
-  • packages/cli/src/commands/adapter.ts       (4 vendor exporters)
-  • packages/cli/src/commands/adapter.test.ts  (6 tests)
-  • packages/saas/dashboard/pages/index.tsx
-  • packages/saas/dashboard/pages/atrophy.tsx
-  • packages/saas/dashboard/pages/audit.tsx
+  โ€ข packages/mcp/src/tools/_intent.ts          (deterministic classifier)
+  โ€ข packages/mcp/src/tools/_intent.test.ts     (12 tests)
+  โ€ข packages/mcp/src/tools/_intent_tool.ts     (MCP tool wrapper)
+  โ€ข packages/cli/src/commands/adapter.ts       (4 vendor exporters)
+  โ€ข packages/cli/src/commands/adapter.test.ts  (6 tests)
+  โ€ข packages/saas/dashboard/pages/index.tsx
+  โ€ข packages/saas/dashboard/pages/atrophy.tsx
+  โ€ข packages/saas/dashboard/pages/audit.tsx
 
 ### Files updated
 
-  • packages/mcp/src/tools/_registry.ts        (+ understandIntentTool)
-  • packages/mcp/src/tools/_grader_engine.ts   (fixed import path)
-  • packages/mcp/package.json                  (+ ./tools/registry export)
-  • packages/cli/src/commands/court.ts         (real LLM judge wiring)
-  • packages/cli/src/commands/federation.ts    (real HTTP query)
-  • packages/cli/src/index.ts                  (+ adapter command)
-  • README.md                                  (multi-AI compatibility section)
+  โ€ข packages/mcp/src/tools/_registry.ts        (+ understandIntentTool)
+  โ€ข packages/mcp/src/tools/_grader_engine.ts   (fixed import path)
+  โ€ข packages/mcp/package.json                  (+ ./tools/registry export)
+  โ€ข packages/cli/src/commands/court.ts         (real LLM judge wiring)
+  โ€ข packages/cli/src/commands/federation.ts    (real HTTP query)
+  โ€ข packages/cli/src/index.ts                  (+ adapter command)
+  โ€ข README.md                                  (multi-AI compatibility section)
 
 ### Numbers
 
-  • 18 new unit tests (12 intent + 6 adapter), 18/18 passing
-  • Total MCP tools: 94 → 98 (added understand_intent, adapter is CLI not MCP)
-  • 0 breaking changes from v1.7.0
-  • Lockfile: 113 platform entries preserved
+  โ€ข 18 new unit tests (12 intent + 6 adapter), 18/18 passing
+  โ€ข Total MCP tools: 94 โ’ 98 (added understand_intent, adapter is CLI not MCP)
+  โ€ข 0 breaking changes from v1.7.0
+  โ€ข Lockfile: 113 platform entries preserved
 
 ### Strategic significance
 
@@ -10600,29 +10660,29 @@ Mneme is now the **only AI memory implementation** that:
 
 No other tool in the AI-coding space has all five.
 
-## [1.7.0] — 2026-05-08
+## [1.7.0] โ€” 2026-05-08
 
 **The "PHASES 3-6" release.** All four roadmap phases land in one ship:
 
-  Phase 3 — Daemon mode (real impl)
-  Phase 4 — Mneme Court (real 12-jury + Ed25519 ruling)
-  Phase 5 — Wisdom Federation (real client + DP/k-anonymity + Ed25519 sigs)
-  Phase 6 — SaaS skeleton (deployable federation-hub + Next.js dashboard)
+  Phase 3 โ€” Daemon mode (real impl)
+  Phase 4 โ€” Mneme Court (real 12-jury + Ed25519 ruling)
+  Phase 5 โ€” Wisdom Federation (real client + DP/k-anonymity + Ed25519 sigs)
+  Phase 6 โ€” SaaS skeleton (deployable federation-hub + Next.js dashboard)
 
 24 new unit tests, **24/24 passing**. Zero breaking changes from v1.6.0.
 
-### Phase 3 — Daemon mode (real implementation)
+### Phase 3 โ€” Daemon mode (real implementation)
 
 `mneme daemon start | stop | status | logs` is now a real background
 process, not a preview stub.
 
-  • PID file: `.mneme/daemon.pid`
-  • Status file: `.mneme/daemon-status.json` (atomic write via temp+rename)
-  • Log file: `.mneme/daemon.log`
-  • Filesystem watcher: `fs.watch` on `.git/HEAD` + `.git/refs/heads/`
-  • Auto-reindex when HEAD moves (debounced 800ms)
-  • Cross-platform (no native deps, works on win32 / darwin / linux)
-  • Stale-PID cleanup on stop / status
+  โ€ข PID file: `.mneme/daemon.pid`
+  โ€ข Status file: `.mneme/daemon-status.json` (atomic write via temp+rename)
+  โ€ข Log file: `.mneme/daemon.log`
+  โ€ข Filesystem watcher: `fs.watch` on `.git/HEAD` + `.git/refs/heads/`
+  โ€ข Auto-reindex when HEAD moves (debounced 800ms)
+  โ€ข Cross-platform (no native deps, works on win32 / darwin / linux)
+  โ€ข Stale-PID cleanup on stop / status
 
 Run it:
 
@@ -10635,7 +10695,7 @@ mneme daemon stop     # SIGTERM + cleanup
 
 6/6 unit tests passing on no-running / stale-PID / error paths.
 
-### Phase 4 — Mneme Court (real 12-jury arbitration)
+### Phase 4 โ€” Mneme Court (real 12-jury arbitration)
 
 Real 12-juror system. Each commit gets evaluated by:
 
@@ -10648,15 +10708,15 @@ Real 12-juror system. Each commit gets evaluated by:
   7. Incident-history checker
   8. Mutation counterfactual
   9. Adversarial probe
-  10. LLM judge — Claude (passes through to audit verify-head)
-  11. LLM judge — GPT-4 (same)
-  12. LLM judge — Gemini (same)
+  10. LLM judge โ€” Claude (passes through to audit verify-head)
+  11. LLM judge โ€” GPT-4 (same)
+  12. LLM judge โ€” Gemini (same)
 
 Foreman algorithm:
-  • Tally votes by majority
-  • MISTRIAL when consensus < 50% or top-two tied
-  • Output: signed JSON + Markdown court ruling
-  • Ed25519 signature via core/audit/ed25519 (per-ruling fresh keypair in v1.7.0;
+  โ€ข Tally votes by majority
+  โ€ข MISTRIAL when consensus < 50% or top-two tied
+  โ€ข Output: signed JSON + Markdown court ruling
+  โ€ข Ed25519 signature via core/audit/ed25519 (per-ruling fresh keypair in v1.7.0;
     persisted org keys in v1.8.0)
 
 Run it:
@@ -10668,7 +10728,7 @@ mneme court HEAD --json    # exit 1 if GUILTY, 0 otherwise
 
 9/9 unit tests passing on foreman tally + markdown rendering.
 
-### Phase 5 — Wisdom Federation (real client + protocol)
+### Phase 5 โ€” Wisdom Federation (real client + protocol)
 
 Privacy-preserving cross-repo signal sharing. Anti-Copilot positioning:
 
@@ -10676,11 +10736,11 @@ Privacy-preserving cross-repo signal sharing. Anti-Copilot positioning:
   > WITHOUT touching your code.
 
 Privacy guarantees:
-  • Differential privacy: Laplace noise (ε ≤ 1.0 default)
-  • k-anonymity: signals only emit when ≥k=20 commits in repo
-  • Ed25519 signed envelopes (tamper-detectable)
-  • NEVER shared: commit hashes, repo URLs, author identities, code
-  • ONLY shared: aggregate patterns (e.g. "247 repos with X saw regret-spike when Y")
+  โ€ข Differential privacy: Laplace noise (ฮต โค 1.0 default)
+  โ€ข k-anonymity: signals only emit when โฅk=20 commits in repo
+  โ€ข Ed25519 signed envelopes (tamper-detectable)
+  โ€ข NEVER shared: commit hashes, repo URLs, author identities, code
+  โ€ข ONLY shared: aggregate patterns (e.g. "247 repos with X saw regret-spike when Y")
 
 Commands:
 
@@ -10696,21 +10756,21 @@ POST to their hub.
 
 9/9 unit tests passing on join/leave/status round-trip + Laplace noise distribution.
 
-### Phase 6 — SaaS skeleton (`packages/saas/`)
+### Phase 6 โ€” SaaS skeleton (`packages/saas/`)
 
-Deployable starter for the cross-org dashboard. NOT published to npm —
+Deployable starter for the cross-org dashboard. NOT published to npm โ€”
 ships as monorepo source for users to deploy on their own infra.
 
 ```
 packages/saas/
-├── README.md
-├── federation-hub/          ← Phase 5 reference Express server
-│   ├── server.ts            ← validates Ed25519 envelopes + enforces k-anonymity
-│   ├── package.json
-│   └── README.md
-└── dashboard/               ← Phase 6 multi-tenant Next.js scaffold
-    ├── package.json
-    └── README.md
+โ”โ”€โ”€ README.md
+โ”โ”€โ”€ federation-hub/          โ Phase 5 reference Express server
+โ”   โ”โ”€โ”€ server.ts            โ validates Ed25519 envelopes + enforces k-anonymity
+โ”   โ”โ”€โ”€ package.json
+โ”   โ””โ”€โ”€ README.md
+โ””โ”€โ”€ dashboard/               โ Phase 6 multi-tenant Next.js scaffold
+    โ”โ”€โ”€ package.json
+    โ””โ”€โ”€ README.md
 ```
 
 The federation hub is functional out of the box (`npm run dev`).
@@ -10733,34 +10793,34 @@ packages/saas/dashboard/README.md
 
 ### Numbers
 
-  • 24 new unit tests across 3 files (daemon + court + federation), 24/24 passing
-  • 0 breaking changes from v1.6.0
-  • Lockfile: 113 platform entries preserved (surgical patch only)
-  • 4 phases now have real implementations (Phase 3, 4, 5 functional + Phase 6 deployable)
+  โ€ข 24 new unit tests across 3 files (daemon + court + federation), 24/24 passing
+  โ€ข 0 breaking changes from v1.6.0
+  โ€ข Lockfile: 113 platform entries preserved (surgical patch only)
+  โ€ข 4 phases now have real implementations (Phase 3, 4, 5 functional + Phase 6 deployable)
 
-## [1.6.0] — 2026-05-08
+## [1.6.0] โ€” 2026-05-08
 
 **The "ORCHESTRA" release.** Five killer ideas + four phase scaffolds shipped
 in one orchestrated batch. Plus a strategic positioning shift: hide pricing,
 focus on free-first growth toward 100K users.
 
-### #1 — AI Memory Benchmark (the Lighthouse-of-AI-memory)
+### #1 โ€” AI Memory Benchmark (the Lighthouse-of-AI-memory)
 
 `mneme benchmark` runs **24 standardized memory probes across 6 categories**
 on any AI memory implementation, scored by deterministic regex rubrics.
 
 The strategic move: when every AI vendor ships native repo memory (Claude,
-OpenAI, Cursor, Continue) — **Mneme is the only memory implementation
+OpenAI, Cursor, Continue) โ€” **Mneme is the only memory implementation
 maintained by no AI vendor, and the only one that can publish a fair
 public leaderboard.**
 
 Categories:
-- **Factual recall** — author count, oldest commit, file existence
-- **Causal explanation** — must cite + use causal language
-- **Lineage trace** — multi-author code archaeology
-- **Regression prediction** — historical-data-grounded risk estimation
-- **Cited rationale** — must include real commit hashes / PRs
-- **Uncertainty honesty** — refuses to fabricate when asked about non-existent data
+- **Factual recall** โ€” author count, oldest commit, file existence
+- **Causal explanation** โ€” must cite + use causal language
+- **Lineage trace** โ€” multi-author code archaeology
+- **Regression prediction** โ€” historical-data-grounded risk estimation
+- **Cited rationale** โ€” must include real commit hashes / PRs
+- **Uncertainty honesty** โ€” refuses to fabricate when asked about non-existent data
 
 ```bash
 mneme benchmark --out leaderboard.md
@@ -10769,55 +10829,55 @@ mneme benchmark --out leaderboard.md
 11/11 unit tests passing on the rubric scoring + leaderboard rendering.
 Full methodology + future targets in `docs/benchmarks/README.md`.
 
-### #2 — Pricing strategy: hidden, free-first toward 100K users
+### #2 โ€” Pricing strategy: hidden, free-first toward 100K users
 
 Strategic pivot: showing 3-tier pricing on README at this adoption stage
 signals "we want money before product-market fit". Better to keep Mneme
 fully free until the user base hits 100K, THEN introduce paid tiers.
 
 Changes:
-- README: replaced pricing block with simple "🆓 Free, forever" message
-- `docs/PRICING.md` → `docs/internal-PRICING.md` (kept for internal planning, unlinked from public surface)
+- README: replaced pricing block with simple "๐“ Free, forever" message
+- `docs/PRICING.md` โ’ `docs/internal-PRICING.md` (kept for internal planning, unlinked from public surface)
 
-### #3 — Wisdom theater (turn 90s indexing into value-creation)
+### #3 โ€” Wisdom theater (turn 90s indexing into value-creation)
 
 `mneme index` no longer shows a silent progress bar. Instead, it surfaces
 real findings as commits stream in:
 
 ```
-[indexing... 10%]   ✦ 23 distinct authors so far — preparing telepathy + influence map
-[indexing... 25%]   ✦ 1,247 commits indexed · oldest is from 2018 (2,189d ago) — your AI now has 6.0y of memory
-[indexing... 50%]   ✦ hot-zone detected: src/auth/session.ts (412 edits)
-[indexing... 75%]   ✦ 89 TODO/FIXME/HACK markers found — karma + promise will surface oldest
+[indexing... 10%]   โฆ 23 distinct authors so far โ€” preparing telepathy + influence map
+[indexing... 25%]   โฆ 1,247 commits indexed ยท oldest is from 2018 (2,189d ago) โ€” your AI now has 6.0y of memory
+[indexing... 50%]   โฆ hot-zone detected: src/auth/session.ts (412 edits)
+[indexing... 75%]   โฆ 89 TODO/FIXME/HACK markers found โ€” karma + promise will surface oldest
 ```
 
 User watches value form before their eyes. Most tools hide loading; Mneme uses it to teach.
 
-### #4 — The four moats positioning (in README)
+### #4 โ€” The four moats positioning (in README)
 
 Added strategic positioning section explaining why Mneme is hard to copy:
 
 | Moat | Why no one else can copy it |
 |---|---|
 | Vendor neutrality | Anthropic can't be the auditor of Anthropic. Mneme is the only one no AI vendor controls. |
-| Audit-chain network effects | Every signed cert strengthens the chain. YC-funded forks start at zero. Network ≠ code. |
+| Audit-chain network effects | Every signed cert strengthens the chain. YC-funded forks start at zero. Network โ  code. |
 | Local-first as premium | Inverse pricing of every other AI tool. The hard product is the moat. |
 | Solo-craftsman trust | In security/compliance markets that distrust corporate AI, the lone wolf IS the trust signal. |
 
 These properties no MIT-licensed clone, well-funded competitor, or AI-vendor's
 native memory can replicate.
 
-### Phase 7 — Time Capsule (full implementation)
+### Phase 7 โ€” Time Capsule (full implementation)
 
-`mneme time-capsule --export <path>` — single-tarball handover artifact for
+`mneme time-capsule --export <path>` โ€” single-tarball handover artifact for
 new-hire onboarding. Bundles:
 
-- `nervous-system.json` — full team neuroanatomy snapshot
-- `atrophy.json` — knowledge-decay heatmap
-- `promise-debt.json` — TODO/FIXME ledger
-- `replay.md` — chronological narrative for AI consumption
-- `manifest.json` — capsule metadata + Mneme version + repo hash
-- `README.md` — capsule self-documentation
+- `nervous-system.json` โ€” full team neuroanatomy snapshot
+- `atrophy.json` โ€” knowledge-decay heatmap
+- `promise-debt.json` โ€” TODO/FIXME ledger
+- `replay.md` โ€” chronological narrative for AI consumption
+- `manifest.json` โ€” capsule metadata + Mneme version + repo hash
+- `README.md` โ€” capsule self-documentation
 
 ```bash
 mneme time-capsule --export q2-2026.tgz --quarter 2026-Q2
@@ -10826,14 +10886,14 @@ mneme time-capsule --import q2-2026.tgz   # restores into .mneme/capsule-importe
 
 5/5 unit tests passing on the export/import smoke + safety paths.
 
-### Phases 3, 4, 5 — preview stubs
+### Phases 3, 4, 5 โ€” preview stubs
 
 Three new commands ship as **API previews** so users can explore the surface
 ahead of full v1.7.0 implementation:
 
-- `mneme daemon <action>` — preview of predictive context pre-fetch (Phase 3)
-- `mneme court [commit] --jurors 12` — preview of 12-jury arbitration (Phase 4)
-- `mneme federation <action>` — preview of privacy-preserving cross-repo network (Phase 5)
+- `mneme daemon <action>` โ€” preview of predictive context pre-fetch (Phase 3)
+- `mneme court [commit] --jurors 12` โ€” preview of 12-jury arbitration (Phase 4)
+- `mneme federation <action>` โ€” preview of privacy-preserving cross-repo network (Phase 5)
 
 Each stub returns structured `--json` output explaining what's coming +
 linking to the full architecture spec in `ROADMAP_PHASES_3_TO_6.md`.
@@ -10856,24 +10916,24 @@ linking to the full architecture spec in `ROADMAP_PHASES_3_TO_6.md`.
 - 16 new unit tests (11 benchmark + 5 time-capsule), **16/16 passing**
 - 0 breaking changes from v1.5.0
 - Lockfile: 113 platform entries preserved
-- 5 new commands · 4 phases scaffolded · 4 strategic moats documented
+- 5 new commands ยท 4 phases scaffolded ยท 4 strategic moats documented
 
-## [1.5.0] — 2026-05-08
+## [1.5.0] โ€” 2026-05-08
 
 **The "STAND BESIDE GIT" release.** Mneme is no longer just an MCP plugin
-for AI coding tools — it's now a **native git extension** that any
-developer using git, on any platform (GitHub · GitLab · Bitbucket ·
-Gitea · self-hosted), can install and benefit from. Plus drop-in CI/CD
+for AI coding tools โ€” it's now a **native git extension** that any
+developer using git, on any platform (GitHub ยท GitLab ยท Bitbucket ยท
+Gitea ยท self-hosted), can install and benefit from. Plus drop-in CI/CD
 templates for the three biggest git platforms.
 
 Strategic intent: while every other AI tool is fighting for the
-"smartest assistant" crown, Mneme positions itself one layer below — as
+"smartest assistant" crown, Mneme positions itself one layer below โ€” as
 the *secretary* that stands beside git itself. That's the lone-black-sheep
 seat no one else is occupying.
 
 ### What's new
 
-#### 1. `git mneme <subcommand>` — native git integration
+#### 1. `git mneme <subcommand>` โ€” native git integration
 
 ```bash
 git mneme why src/auth.ts:47       # who wrote this line + why
@@ -10884,9 +10944,9 @@ git mneme briefing                 # what changed while you were away
 `git-mneme` is a binary that ships alongside `mneme` in the `bin/`
 directory. Once `mneme-ai` is on PATH, git automatically resolves
 `git mneme <cmd>` as the subcommand. Every existing command works
-identically — there's no separate command set to learn.
+identically โ€” there's no separate command set to learn.
 
-#### 2. `mneme git-install` — wires Mneme into your git workflow
+#### 2. `mneme git-install` โ€” wires Mneme into your git workflow
 
 ```bash
 mneme git-install                  # install all 4 hooks (default)
@@ -10897,16 +10957,16 @@ mneme git-install --dry-run        # preview without writing
 
 Installs four optional git hooks:
 
-- **pre-commit** — anomaly + secret-redaction guard before each commit
-- **post-commit** — synthesizes a WHY note for the just-made commit (heals poor messages into searchable memory)
-- **pre-push** — `audit --certify` gate; FAIL blocks push (configurable)
-- **post-merge** — briefing of what changed while you were away
+- **pre-commit** โ€” anomaly + secret-redaction guard before each commit
+- **post-commit** โ€” synthesizes a WHY note for the just-made commit (heals poor messages into searchable memory)
+- **pre-push** โ€” `audit --certify` gate; FAIL blocks push (configurable)
+- **post-merge** โ€” briefing of what changed while you were away
 
 Hook escape hatches:
 
-- `git commit --no-verify` / `git push --no-verify` — bypass once
-- `MNEME_AUDIT_DISABLE=1 git push` — disable pre-push gate per push
-- `MNEME_AUDIT_STRICT=1 git push` — treat WARN as FAIL (compliance mode)
+- `git commit --no-verify` / `git push --no-verify` โ€” bypass once
+- `MNEME_AUDIT_DISABLE=1 git push` โ€” disable pre-push gate per push
+- `MNEME_AUDIT_STRICT=1 git push` โ€” treat WARN as FAIL (compliance mode)
 - Existing user-customized hooks are NEVER overwritten (safety property
   enforced + tested).
 
@@ -10918,9 +10978,9 @@ correctness, JSON output shape. **All 14 pass.**
 
 Drop-in workflow files in `docs/ci-templates/`:
 
-- `github-actions.yml` → `.github/workflows/mneme.yml`
-- `gitlab-ci.yml` → `.gitlab-ci.yml`
-- `bitbucket-pipelines.yml` → `bitbucket-pipelines.yml`
+- `github-actions.yml` โ’ `.github/workflows/mneme.yml`
+- `gitlab-ci.yml` โ’ `.gitlab-ci.yml`
+- `bitbucket-pipelines.yml` โ’ `bitbucket-pipelines.yml`
 
 Each template:
 1. Indexes the repo on the runner
@@ -10938,11 +10998,11 @@ troubleshooting.
 Strategic roadmap for next ~5 months captured in
 `ROADMAP_PHASES_3_TO_6.md`:
 
-- **Phase 3 — Daemon mode** (predictive context pre-fetch · 2-3 weeks)
-- **Phase 4 — Mneme Court** (12-jury arbitration with cryptographic ruling PDF · 2 weeks)
-- **Phase 5 — Cross-repo Wisdom Federation** (privacy-preserving signal sharing · 4-5 weeks)
-- **Phase 6 — SaaS dashboard** (cross-org rollups · 9-11 weeks)
-- **Phase 7 — Time Capsule** (handover artifact for new hires · 1 week)
+- **Phase 3 โ€” Daemon mode** (predictive context pre-fetch ยท 2-3 weeks)
+- **Phase 4 โ€” Mneme Court** (12-jury arbitration with cryptographic ruling PDF ยท 2 weeks)
+- **Phase 5 โ€” Cross-repo Wisdom Federation** (privacy-preserving signal sharing ยท 4-5 weeks)
+- **Phase 6 โ€” SaaS dashboard** (cross-org rollups ยท 9-11 weeks)
+- **Phase 7 โ€” Time Capsule** (handover artifact for new hires ยท 1 week)
 
 Each phase has a full architecture diagram, implementation plan, effort
 estimate, and risk analysis.
@@ -10951,8 +11011,8 @@ estimate, and risk analysis.
 
 Hero now leads with the v1.5.0 git-extension framing:
 
-> *"v1.5.0 — Mneme is now a git extension. Type `git mneme <anything>`
-> and it works — like git's secretary that knows your AI."*
+> *"v1.5.0 โ€” Mneme is now a git extension. Type `git mneme <anything>`
+> and it works โ€” like git's secretary that knows your AI."*
 
 This means: **anyone using git on any platform has a reason to install
 Mneme**, not just users of Claude Code / Cursor. Distribution piggybacks
@@ -10960,9 +11020,9 @@ on git itself.
 
 ### Files added
 
-- `packages/cli/bin/git-mneme.js` — git subcommand wrapper
-- `packages/cli/src/commands/git-install.ts` — installer
-- `packages/cli/src/commands/git-install.test.ts` — 14 unit tests
+- `packages/cli/bin/git-mneme.js` โ€” git subcommand wrapper
+- `packages/cli/src/commands/git-install.ts` โ€” installer
+- `packages/cli/src/commands/git-install.test.ts` โ€” 14 unit tests
 - `docs/ci-templates/github-actions.yml`
 - `docs/ci-templates/gitlab-ci.yml`
 - `docs/ci-templates/bitbucket-pipelines.yml`
@@ -10971,9 +11031,9 @@ on git itself.
 
 ### Files updated
 
-- `packages/cli/package.json` — adds `git-mneme` to `bin`
-- `packages/cli/src/index.ts` — registers `git-install` command
-- `README.md` — v1.5.0 git-extension section
+- `packages/cli/package.json` โ€” adds `git-mneme` to `bin`
+- `packages/cli/src/index.ts` โ€” registers `git-install` command
+- `README.md` โ€” v1.5.0 git-extension section
 
 ### Backward compatibility
 
@@ -10986,9 +11046,9 @@ git extension is purely additive.
 - 14 new unit tests, **14/14 passing**
 - 0 breaking changes
 - Lockfile: 113 platform entries preserved
-- 4 git hooks · 3 CI templates · 1 git subcommand wrapper
+- 4 git hooks ยท 3 CI templates ยท 1 git subcommand wrapper
 
-## [1.4.0] — 2026-05-08
+## [1.4.0] โ€” 2026-05-08
 
 **The SUPER SONIC ENGINE release.** Mneme is now the only MCP server in
 the world that GRADES the AI's work before delivery. Five novel
@@ -10997,55 +11057,55 @@ retries. A real `while(true)` teacher-student loop in MCP.
 
 ### The five novel grading algorithms
 
-No other MCP server runs algorithms like these — they exist in Mneme
+No other MCP server runs algorithms like these โ€” they exist in Mneme
 because Mneme is a TEACHER, not a tool catalog. The teacher must grade.
 
 | # | Algorithm | What it catches |
 |---|---|---|
 | 1 | **Adversarial probe injection** | Suspicious specificity (fabricated dates, year-named migrations, version-too-precise claims) |
-| 2 | **Claim graph mutation** | "Fluff sentences" without citation/factual anchor — if >70% of an answer is fluff, FAIL |
-| 3 | **Semantic citation density** | Hallucinated commit hashes — every hash verified via `git rev-parse`; fakes → instant FAIL |
-| 4 | **Multi-verifier consensus jury** | 4 lightweight verifiers vote; below 50% agreement → WARN with per-verifier scores |
-| 5 | **Mutation counterfactual** | Brittle absolute claims (definitely/always/never/must) without hedges — calibrated confidence enforced |
+| 2 | **Claim graph mutation** | "Fluff sentences" without citation/factual anchor โ€” if >70% of an answer is fluff, FAIL |
+| 3 | **Semantic citation density** | Hallucinated commit hashes โ€” every hash verified via `git rev-parse`; fakes โ’ instant FAIL |
+| 4 | **Multi-verifier consensus jury** | 4 lightweight verifiers vote; below 50% agreement โ’ WARN with per-verifier scores |
+| 5 | **Mutation counterfactual** | Brittle absolute claims (definitely/always/never/must) without hedges โ€” calibrated confidence enforced |
 
 ### The teacher-student loop
 
 ```
 user: "Why does parseAmount use try/catch?"
-   ↓
+   โ“
 AI calls mneme.memory.ask
-   ↓ response includes secondBrain.homework
-   ↓ { rubric, requirements, grader: "mneme.grade.answer", maxRetries: 3 }
-   ↓
+   โ“ response includes secondBrain.homework
+   โ“ { rubric, requirements, grader: "mneme.grade.answer", maxRetries: 3 }
+   โ“
 AI drafts answer
-   ↓
+   โ“
 AI calls mneme.grade.answer({originalQuery, aiDraft, sourceCategory, retryCount})
-   ↓ grader runs 3-5 algorithms, returns { verdict, score, rewriteHints }
-   ↓
-   ├─ verdict=FAIL → AI rewrites using rewriteHints, calls again with retryCount++
-   ├─ verdict=PASS → AI delivers to user
-   └─ giveUp=true  → AI surfaces grader issues to user, stops retrying
+   โ“ grader runs 3-5 algorithms, returns { verdict, score, rewriteHints }
+   โ“
+   โ”โ”€ verdict=FAIL โ’ AI rewrites using rewriteHints, calls again with retryCount++
+   โ”โ”€ verdict=PASS โ’ AI delivers to user
+   โ””โ”€ giveUp=true  โ’ AI surfaces grader issues to user, stops retrying
 ```
 
 ### 9 category rubrics, 100% tool coverage
 
-Every tool inherits its category's default rubric automatically — no
+Every tool inherits its category's default rubric automatically โ€” no
 per-tool wiring needed:
 
-- **memory** — citation density ≥1, no claim without citation, summary ≤200 words
-- **people** — no defamation, atrophy bounded with days-since-touch, name the author
-- **audit** — all 5 axes graded, verdict matches axes, remediation actionable
-- **forensics** — CWE cited, evidence quoted, false-positive disclaimer
-- **insights** — narrative cohesion, ground in history (≥2 commits), actionable end
-- **quality** — metric explained, top-3 outliers flagged
-- **quant** — math transparent, limits named
-- **lab** — plan auditable, side-effects named
-- **meta** — scoped (no scope creep)
+- **memory** โ€” citation density โฅ1, no claim without citation, summary โค200 words
+- **people** โ€” no defamation, atrophy bounded with days-since-touch, name the author
+- **audit** โ€” all 5 axes graded, verdict matches axes, remediation actionable
+- **forensics** โ€” CWE cited, evidence quoted, false-positive disclaimer
+- **insights** โ€” narrative cohesion, ground in history (โฅ2 commits), actionable end
+- **quality** โ€” metric explained, top-3 outliers flagged
+- **quant** โ€” math transparent, limits named
+- **lab** โ€” plan auditable, side-effects named
+- **meta** โ€” scoped (no scope creep)
 
 Plus 3 base requirements applied to every category (no hallucinated
 citations, non-empty wisdom, confidence stated).
 
-### `mneme.grade.answer` — the universal grader tool
+### `mneme.grade.answer` โ€” the universal grader tool
 
 The new MCP tool that closes the teacher-student loop. AI student calls
 it after drafting, with `{ originalQuery, aiDraft, sourceCategory,
@@ -11063,25 +11123,25 @@ the rubric is automatic.
 
 ### Architecture (3 new files)
 
-- `packages/mcp/src/tools/_homework.ts` — 9 category rubrics + 3 base requirements
-- `packages/mcp/src/tools/_grader_engine.ts` — 5 algorithm implementations + dispatcher
-- `packages/mcp/src/tools/_grader_tool.ts` — `mneme.grade.answer` MCP tool
+- `packages/mcp/src/tools/_homework.ts` โ€” 9 category rubrics + 3 base requirements
+- `packages/mcp/src/tools/_grader_engine.ts` โ€” 5 algorithm implementations + dispatcher
+- `packages/mcp/src/tools/_grader_tool.ts` โ€” `mneme.grade.answer` MCP tool
 
 ### README repositioning
 
-- Hero subtitle: *"The nuclear core"* → ***"The Stage-3 tune for your AI coding tool"***
-- 30-sec pitch: refactored journalistically — story-first, plain
+- Hero subtitle: *"The nuclear core"* โ’ ***"The Stage-3 tune for your AI coding tool"***
+- 30-sec pitch: refactored journalistically โ€” story-first, plain
   language, before/after stock-vs-tuned car comparison table
-- ASCII diagram: shows TEACHER↕STUDENT loop + "Same engine. Different
+- ASCII diagram: shows TEACHERโ•STUDENT loop + "Same engine. Different
   power band."
-- Footer: *"Mneme is the Stage-3 tune that gives your AI that context —
+- Footer: *"Mneme is the Stage-3 tune that gives your AI that context โ€”
   and grades its work, every time."*
 
 ### End-to-end verified
 
 Locally tested grader against:
-- bad draft (no citation, no confidence) → FAIL · 47/100 · 3 specific failures
-- good draft (real hash, hedged language) → PASS · 100/100 · 6/6 + 3 algorithms PASS
+- bad draft (no citation, no confidence) โ’ FAIL ยท 47/100 ยท 3 specific failures
+- good draft (real hash, hedged language) โ’ PASS ยท 100/100 ยท 6/6 + 3 algorithms PASS
 
 ### Backward compatibility
 
@@ -11098,7 +11158,7 @@ is opt-in by AI prompt-following behavior, not forced.
 - 0 breaking changes
 - Lockfile: 113 platform entries preserved
 
-## [1.3.0] — 2026-05-08
+## [1.3.0] โ€” 2026-05-08
 
 **The SECOND BRAIN release.** v1.2.0 made Mneme accessible to any AI tool
 via 93 MCP atoms. v1.3.0 turns those atoms into a *chain reaction*:
@@ -11116,7 +11176,7 @@ Surface (entry-level): "Mneme is the **tuning kit** for your AI."
 Architectural truth (pro-level): "Mneme is the **nuclear core** you slot
 into your AI tool. Triggers a chain reaction of wisdom."
 
-Both metaphors are accurate — README hero leads with nuclear, body uses
+Both metaphors are accurate โ€” README hero leads with nuclear, body uses
 tuning kit as the easier on-ramp.
 
 ### What's new technically
@@ -11182,17 +11242,17 @@ question is higher-order (covers multiple atoms).
 #### 3. Lifecycle tracking + auto-promotion
 
 `packages/mcp/src/tools/_lifecycle.ts` records every tool call into a
-session window (5 min). When ≥2 atoms appear together, a molecule
-*signature* is logged. ≥3 invocations → `lifecycle.suggestSaveAs` fires,
+session window (5 min). When โฅ2 atoms appear together, a molecule
+*signature* is logged. โฅ3 invocations โ’ `lifecycle.suggestSaveAs` fires,
 prompting the AI to ask the user whether to promote the combination
 into a permanent named compound.
 
 Storage: `.mneme/mcp-lifecycle.json` (atomic temp-file rename, single
 small JSON, race-condition safe).
 
-Promotion path: lifecycle suggests an alias → user/AI accepts → existing
+Promotion path: lifecycle suggests an alias โ’ user/AI accepts โ’ existing
 `mneme.lab.library --promote` machinery writes the compound to
-`library.json` → from then on the compound is callable as a single unit.
+`library.json` โ’ from then on the compound is callable as a single unit.
 
 #### 4. Auto-enrichment in the MCP request handler
 
@@ -11231,20 +11291,20 @@ forced.
 
 ### Files updated
 
-- `packages/mcp/src/tools/_types.ts` — `SecondBrain` + `ComposeSuggestion` + `ToolLifecycle` types
-- `packages/mcp/src/tools/_capabilities.ts` — syllabus advertises the contract
-- `packages/mcp/src/tools/memory.ts` — presentation hints on ask/why/blast
-- `packages/mcp/src/index.ts` — auto-enrichment wired into request handler
-- `README.md` — hero now uses nuclear-core/chain-reaction metaphor
+- `packages/mcp/src/tools/_types.ts` โ€” `SecondBrain` + `ComposeSuggestion` + `ToolLifecycle` types
+- `packages/mcp/src/tools/_capabilities.ts` โ€” syllabus advertises the contract
+- `packages/mcp/src/tools/memory.ts` โ€” presentation hints on ask/why/blast
+- `packages/mcp/src/index.ts` โ€” auto-enrichment wired into request handler
+- `README.md` โ€” hero now uses nuclear-core/chain-reaction metaphor
 
-## [1.2.0] — 2026-05-08
+## [1.2.0] โ€” 2026-05-08
 
 **The TUNING-KIT release.** Mneme is now positioned as the bolt-on memory
-layer for AI coding tools — Claude Code, Cursor, Codex, Gemini, Continue,
+layer for AI coding tools โ€” Claude Code, Cursor, Codex, Gemini, Continue,
 Aider. The CLI surface is still there for power users; the headline path
 is "give your AI coding tool the tuning kit".
 
-### MCP server: 7 → 93 tools
+### MCP server: 7 โ’ 93 tools
 
 Previous MCP exposure was 7 tools (ask, why, search_commits, status,
 list_entities, find_similar, blast). The remaining 80+ commands needed
@@ -11252,15 +11312,15 @@ the CLI. v1.2.0 expands to 93 tools across 9 categories:
 
 | Category | Tools | Examples |
 |---|---|---|
-| `memory` | 7 | ask · why · search_commits · status · list_entities · find_similar · blast |
-| `people` | 10 | atrophy · telepathy · nemesis · influence · lineage · passport · who_knows · bus_factor · nervous_system · promise |
-| `audit` | 8 | baseline · trace · verify · certify · report · deps · conscience · ledger |
-| `forensics` | 6 | vulns · anomaly · match · attribute · show · suppress |
-| `insights` | 24 | ghost · regret · paradox · oracle · premortem · time_machine · story · decisions · mirror · rumor · fossil · runaway · drift · chronicle · constellation · cluster · network · manage · export_bundle · dream · echo · stack_trace · commit_coach · crystal_ball |
-| `quality` | 14 | karma · repo_mri · heartbeat · cognitive_twin · counterfactual · palimpsest · dna · dna_fold · rewind · teach · heal · entities · clones · guardian |
-| `quant` | 10 | drawdown · alpha · backtest · black_swan · insider_trading · moneyball · greek · correlation_matrix · implied_volatility · tax_loss_harvest |
-| `lab` | 8 | periodic_table · compose · run · library · adapt · feedback · calibrate · htc_stats |
-| `meta` | 6 | capabilities (the syllabus) · smart_do (NL dispatcher) · doctor · wisdom · manifesto · advanced |
+| `memory` | 7 | ask ยท why ยท search_commits ยท status ยท list_entities ยท find_similar ยท blast |
+| `people` | 10 | atrophy ยท telepathy ยท nemesis ยท influence ยท lineage ยท passport ยท who_knows ยท bus_factor ยท nervous_system ยท promise |
+| `audit` | 8 | baseline ยท trace ยท verify ยท certify ยท report ยท deps ยท conscience ยท ledger |
+| `forensics` | 6 | vulns ยท anomaly ยท match ยท attribute ยท show ยท suppress |
+| `insights` | 24 | ghost ยท regret ยท paradox ยท oracle ยท premortem ยท time_machine ยท story ยท decisions ยท mirror ยท rumor ยท fossil ยท runaway ยท drift ยท chronicle ยท constellation ยท cluster ยท network ยท manage ยท export_bundle ยท dream ยท echo ยท stack_trace ยท commit_coach ยท crystal_ball |
+| `quality` | 14 | karma ยท repo_mri ยท heartbeat ยท cognitive_twin ยท counterfactual ยท palimpsest ยท dna ยท dna_fold ยท rewind ยท teach ยท heal ยท entities ยท clones ยท guardian |
+| `quant` | 10 | drawdown ยท alpha ยท backtest ยท black_swan ยท insider_trading ยท moneyball ยท greek ยท correlation_matrix ยท implied_volatility ยท tax_loss_harvest |
+| `lab` | 8 | periodic_table ยท compose ยท run ยท library ยท adapt ยท feedback ยท calibrate ยท htc_stats |
+| `meta` | 6 | capabilities (the syllabus) ยท smart_do (NL dispatcher) ยท doctor ยท wisdom ยท manifesto ยท advanced |
 
 Total: **93 tools.** Naming convention: `mneme.<category>.<verb>`.
 
@@ -11281,21 +11341,21 @@ The AI client quotes `wisdom` directly to the user; uses `data` for
 detail; suggests `followUp` for deeper analysis. AI doesn't have to
 interpret raw JSON anymore.
 
-### `mneme.capabilities` — the syllabus tool
+### `mneme.capabilities` โ€” the syllabus tool
 
 A new MCP tool that returns the entire catalog organized by category,
 with WHEN-to-use guidance for each. AI clients call this FIRST when they
 connect, learn the curriculum, then pick specific tools by matching
 user intent to descriptions.
 
-### `mneme.smart_do` — the NL fallback dispatcher
+### `mneme.smart_do` โ€” the NL fallback dispatcher
 
 When no specific tool matches the user's request, AI hands the
 natural-language intent to `mneme.smart_do`, which routes through
 Mneme's existing smart-dispatcher. Net effect: 100% command coverage,
 even for niche use cases.
 
-### `mneme mcp --install` — auto-config any AI tool
+### `mneme mcp --install` โ€” auto-config any AI tool
 
 ```bash
 mneme mcp --install
@@ -11315,13 +11375,13 @@ tool, done.
 ### README rewrite
 
 Cut from 790 lines to ~190. Hero is now the tuning-kit metaphor: bolt
-Mneme onto Claude Code / Cursor / Codex / Gemini / Continue / Aider →
+Mneme onto Claude Code / Cursor / Codex / Gemini / Continue / Aider โ’
 your AI becomes a super-genius that knows your repo. The "AI installs
 it for you" path is the headline; manual CLI is collapsed under
 `<details>`. Three role-based sections (solo dev / team lead / security)
 let each audience see only what's relevant.
 
-A new "🤖 For AI agents reading this" section gives the AI a clear
+A new "๐ค– For AI agents reading this" section gives the AI a clear
 contract: what to install, how to call `mneme.capabilities`, the
 naming convention, the wisdom envelope.
 
@@ -11331,25 +11391,25 @@ Old README backed up at `docs/legacy/README.v1.1.x.md`.
 
 ```
 packages/mcp/src/
-├── index.ts                  (uses registry — 90% smaller than v1.1.x)
-└── tools/
-    ├── _types.ts             (MnemeTool + ToolResponse + wisdom envelope)
-    ├── _runtime.ts           (buildRuntime + passthroughHandler + runCliJson)
-    ├── _registry.ts          (buildAllTools merges every category)
-    ├── _capabilities.ts      (the syllabus)
-    ├── _smart_do.ts          (NL fallback dispatcher)
-    ├── memory.ts             (7 tools, direct core API)
-    ├── people.ts             (10 tools, passthrough CLI)
-    ├── audit.ts              (8 tools, passthrough)
-    ├── forensics.ts          (6 tools, passthrough)
-    ├── insights.ts           (24 tools, passthrough)
-    ├── quality.ts            (14 tools, passthrough)
-    ├── quant.ts              (10 tools, passthrough)
-    ├── lab.ts                (8 tools, passthrough)
-    └── meta.ts               (6 tools)
+โ”โ”€โ”€ index.ts                  (uses registry โ€” 90% smaller than v1.1.x)
+โ””โ”€โ”€ tools/
+    โ”โ”€โ”€ _types.ts             (MnemeTool + ToolResponse + wisdom envelope)
+    โ”โ”€โ”€ _runtime.ts           (buildRuntime + passthroughHandler + runCliJson)
+    โ”โ”€โ”€ _registry.ts          (buildAllTools merges every category)
+    โ”โ”€โ”€ _capabilities.ts      (the syllabus)
+    โ”โ”€โ”€ _smart_do.ts          (NL fallback dispatcher)
+    โ”โ”€โ”€ memory.ts             (7 tools, direct core API)
+    โ”โ”€โ”€ people.ts             (10 tools, passthrough CLI)
+    โ”โ”€โ”€ audit.ts              (8 tools, passthrough)
+    โ”โ”€โ”€ forensics.ts          (6 tools, passthrough)
+    โ”โ”€โ”€ insights.ts           (24 tools, passthrough)
+    โ”โ”€โ”€ quality.ts            (14 tools, passthrough)
+    โ”โ”€โ”€ quant.ts              (10 tools, passthrough)
+    โ”โ”€โ”€ lab.ts                (8 tools, passthrough)
+    โ””โ”€โ”€ meta.ts               (6 tools)
 
 packages/cli/src/commands/
-└── mcp-install.ts            (NEW — auto-config Claude/Cursor/Continue)
+โ””โ”€โ”€ mcp-install.ts            (NEW โ€” auto-config Claude/Cursor/Continue)
 ```
 
 ### Breaking changes
@@ -11360,12 +11420,12 @@ that was working in v1.1.x stops working.
 
 ### Numbers
 
-- MCP tools: 7 → 93 (13× increase)
-- README: 790 lines → 190 lines
+- MCP tools: 7 โ’ 93 (13ร— increase)
+- README: 790 lines โ’ 190 lines
 - Tests: 2,339 still passing across 171 files
 - Lockfile: 113 platform entries preserved (no Windows-only regression this time)
 
-## [1.1.1] — 2026-05-08
+## [1.1.1] โ€” 2026-05-08
 
 **Patch:** Windows null-byte argv crash in `mneme forensics vulns` /
 `mneme show` (the two callers of `loadCommitsWithDiffs`).
@@ -11374,10 +11434,10 @@ that was working in v1.1.x stops working.
 
 On Windows, `node:child_process.spawn` rejects argv strings that contain
 a literal `\x00` (Windows' `CreateProcess` takes a single command-line
-STRING — a NUL terminates it):
+STRING โ€” a NUL terminates it):
 
 ```
-✗ The argument 'args[3]' must be a string without null bytes.
+โ— The argument 'args[3]' must be a string without null bytes.
   Received '--pretty=tformat:<<<MNEME-COMMIT>>>\x00%H\x00%aI\x00%an\x00%ae\x00%s\x00%b\x00'
 ```
 
@@ -11389,10 +11449,10 @@ users were unaffected. The bug surfaced for Windows users running
 
 Replace the literal NUL byte (`"\x00"`) in argv with git's `%x00`
 pretty-format placeholder. Git substitutes `%x00` to a real NUL byte in
-its OUTPUT, so the wire format is unchanged — the parser stays
+its OUTPUT, so the wire format is unchanged โ€” the parser stays
 identical. Same NUL separator in the stream we parse, no NUL in argv.
 
-Documented in `man git-log` under PRETTY FORMATS — `%xNN` emits one byte
+Documented in `man git-log` under PRETTY FORMATS โ€” `%xNN` emits one byte
 from a hex code.
 
 ### Regression test
@@ -11409,9 +11469,9 @@ Total tests: 2,339 (was 2,336) across 171 files.
 ### End-to-end verification
 
 `mneme forensics vulns --top 3` runs cleanly on Windows 11 + Node 22.22
-against this repo — Bayesian-filtered output renders, no crash.
+against this repo โ€” Bayesian-filtered output renders, no crash.
 
-## [1.1.0] — 2026-05-09
+## [1.1.0] โ€” 2026-05-09
 
 The **"v1.0 polish"** release. Fills the three honest-scope gaps from
 v1.0:
@@ -11431,7 +11491,7 @@ const { harness, score } = await runMutationAndScore({
   cap: 16,
   timeoutMs: 60_000,
 });
-// score.distribution → folds straight into composeQsacCertificate
+// score.distribution โ’ folds straight into composeQsacCertificate
 ```
 
 Safety: SIGINT-safe restore, per-mutant timeout, spawn-with-array
@@ -11441,21 +11501,21 @@ Safety: SIGINT-safe restore, per-mutant timeout, spawn-with-array
 ### 2. Ed25519 Signatures (`packages/core/src/audit/ed25519.ts`)
 
 v0.47 shipped HMAC-SHA-256 (symmetric); v1.1 adds Ed25519 (asymmetric)
-which is the EU-AI-Act-compatible shape — **org private key signs;
+which is the EU-AI-Act-compatible shape โ€” **org private key signs;
 auditor public key verifies offline**.
 
 ```ts
 import { generateEd25519KeyPair, signObjectEd25519, verifyObjectEd25519 } from "@mneme-ai/core/audit";
 
 const kp = generateEd25519KeyPair();
-// kp.privateKeyPem  → store in Vault / SSM
-// kp.publicKeyPem   → commit to .mneme/audit-pubkey.pem
+// kp.privateKeyPem  โ’ store in Vault / SSM
+// kp.publicKeyPem   โ’ commit to .mneme/audit-pubkey.pem
 
 const sig = await signObjectEd25519(certPayload, kp.privateKeyPem);
 const ok = await verifyObjectEd25519(certPayload, sig, kp.publicKeyPem);
 ```
 
-Native `node:crypto` Ed25519 — no extra deps. `compactPem` /
+Native `node:crypto` Ed25519 โ€” no extra deps. `compactPem` /
 `restorePem` for compact JSON storage.
 
 ### 3. LLM-as-judge (`packages/core/src/audit/llm-judge.ts`)
@@ -11473,9 +11533,9 @@ const llm = new ResilientEnricher(enrichers);
 const vote = await verifyLlmJudge({
   commitHash, commitSubject, commitBody,
   addedLines, removedLines,
-  bayesianPosteriors,    // optional — gives the LLM context
+  bayesianPosteriors,    // optional โ€” gives the LLM context
 }, { adapter: llm });
-// → vote slots into consensusVote([bayesian, stylometric, entropy, llmVote])
+// โ’ vote slots into consensusVote([bayesian, stylometric, entropy, llmVote])
 ```
 
 Honest framing: temperature 0, structured JSON output, refuse-to-judge
@@ -11485,17 +11545,17 @@ neutral mode weighs symmetrically.
 
 ### Tests
 
-**31 new tests** (12 ed25519 · 13 llm-judge · 6 mutation-harness end-
+**31 new tests** (12 ed25519 ยท 13 llm-judge ยท 6 mutation-harness end-
 to-end with a real spawn). Total: **2336 tests** across 171 files.
 
 ### What's still ahead (v1.2+)
 
-- Per-rule auto-fix coverage extending from 21 → 50 rules
+- Per-rule auto-fix coverage extending from 21 โ’ 50 rules
 - Web dashboard (cross-org rollups; v2 territory)
 - HSM-backed Ed25519 key storage
 - Provenance-tracking 5th verifier
 
-## [1.0.0] — 2026-05-09
+## [1.0.0] โ€” 2026-05-09
 
 The **"License-Grade Trust Layer"** release. The first stable major.
 Bundles 7 weeks of progressive engineering into a coherent v1.0
@@ -11504,7 +11564,7 @@ product surface that GitHub/GitLab can license.
 ### What's in v1.0
 
 ```
-v0.44 → v1.0  =  6 QSAC techs  +  Bayesian Filter MAX  +  bundle docs
+v0.44 โ’ v1.0  =  6 QSAC techs  +  Bayesian Filter MAX  +  bundle docs
 ```
 
 **The full story:**
@@ -11512,24 +11572,24 @@ v0.44 → v1.0  =  6 QSAC techs  +  Bayesian Filter MAX  +  bundle docs
 | Layer | Versions | Capability |
 |---|---|---|
 | **Periodic Table** | v0.40-v0.43 | Element / Atom / Molecule / Compiler / Library / Holy Grails |
-| **QSAC Tech 1-6** | v0.44-v0.49 | Quantum-Superposed Audit Certificate — superposition, causal claim graph, multi-verifier consensus, Merkle chain, mutation counterfactual, wisdom drill-through |
+| **QSAC Tech 1-6** | v0.44-v0.49 | Quantum-Superposed Audit Certificate โ€” superposition, causal claim graph, multi-verifier consensus, Merkle chain, mutation counterfactual, wisdom drill-through |
 | **Bayesian Filter MAX** | v0.50 | 50 rules, 6 ecosystems |
 | **Bundle release** | v1.0.0 | Comprehensive docs, license-ready packaging, MCP-ready |
 
 ### What v1.0 unlocks
 
 - **AI Session Audit Certificate** is now compliance-grade. EU AI Act 2026,
-  SEC AI disclosure, ISO 42001 — Mneme is the only audit tool to ship
+  SEC AI disclosure, ISO 42001 โ€” Mneme is the only audit tool to ship
   uncertainty quantification + immutable cryptographic audit chain
   out of the box.
 - **Bayesian Filter** halves false positives on customer-validated data
-  (16 false-positive CWE-89 in NestJS+Mongoose → 0).
+  (16 false-positive CWE-89 in NestJS+Mongoose โ’ 0).
 - **Multi-ecosystem** SAST cover: Node, Python, Go, Rust, Ruby, PHP.
   Same Bayesian filter, six ecosystems' priors.
 
 ### Breaking changes
 
-**None.** v1.0 is the bundle release — every API used by v0.43+ users
+**None.** v1.0 is the bundle release โ€” every API used by v0.43+ users
 keeps working unchanged. New surface (`composeQsacCertificate`,
 `renderWisdom`, `verifyChain`, etc.) is purely additive.
 
@@ -11572,12 +11632,12 @@ import {
 ### What's NOT in v1.0 (honest)
 
 - The Tech 3 mutation **harness** (the part that actually applies
-  mutants + spawns the test runner) — operators + scorer ship; the
+  mutants + spawns the test runner) โ€” operators + scorer ship; the
   driver is caller-supplied. Lands in v1.1 with a default Node test
   harness.
-- Ed25519 chain signatures — placeholder ships; full verification in v1.1.
-- LLM-as-judge as a 4th verifier — design ready, ships v1.1.
-- SaaS-mode dashboard for cross-org rollups — v2 territory.
+- Ed25519 chain signatures โ€” placeholder ships; full verification in v1.1.
+- LLM-as-judge as a 4th verifier โ€” design ready, ships v1.1.
+- SaaS-mode dashboard for cross-org rollups โ€” v2 territory.
 
 ### Comparable products
 
@@ -11588,15 +11648,15 @@ import {
 | Splunk Compliance Vault | Audit logs | Mneme adds cryptographic chain + per-record signing |
 | Pitest / Stryker | Mutation testing | Mneme integrates mutation score into commit cert |
 
-═══════════════════════════════════════════════════════════════════════════════
+โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•โ•
 
-## [0.50.0] — 2026-05-09
+## [0.50.0] โ€” 2026-05-09
 
 The **"Bayesian Filter MAX"** release. Last gate before v1.0.
 
 ### What
 
-- **Rule catalogue 24 → 50**. Added 26 new rules across 8 categories:
+- **Rule catalogue 24 โ’ 50**. Added 26 new rules across 8 categories:
   insecure-tls-version, timing-attack, xxe-external-entity,
   xpath-injection, ldap-injection, command-substitution,
   null-byte-injection, format-string, csrf-missing, session-fixation,
@@ -11611,7 +11671,7 @@ The **"Bayesian Filter MAX"** release. Last gate before v1.0.
   `go.mod` (Go), `Cargo.toml` (Rust), `Gemfile` (Ruby),
   `composer.json` (PHP). Sets `ecosystem*` flags for routing.
 - **5 new stack flags**: `hasXmlParser`, `hasYamlParser`, `hasGraphQL`,
-  `hasSession`, `hasFileUpload` — gate XXE / YAML deserialisation /
+  `hasSession`, `hasFileUpload` โ€” gate XXE / YAML deserialisation /
   GraphQL introspection / session-fixation / unrestricted-upload rules.
 
 ### Rule-prior calibration examples
@@ -11625,7 +11685,7 @@ The **"Bayesian Filter MAX"** release. Last gate before v1.0.
 ### Tests
 
 16 new v0.50 tests:
-- Rule count ≥ 50 + every rule has prior + non-empty pattern
+- Rule count โฅ 50 + every rule has prior + non-empty pattern
 - Stack-specific priors (XXE silenced without XML parser, GraphQL
   introspection silenced without GraphQL dep)
 - 7 ecosystem detection cases (Node / Python pyproject / Python
@@ -11646,9 +11706,9 @@ v0.50 Tier 1.2: Bayesian Filter MAX          done
 v1.0.0 Bundle release                         next
 ```
 
-## [0.49.0] — 2026-05-09
+## [0.49.0] โ€” 2026-05-09
 
-The **"QSAC Tech 6 — Wisdom Drill-Through"** release. Sixth of seven on
+The **"QSAC Tech 6 โ€” Wisdom Drill-Through"** release. Sixth of seven on
 the road to v1.0. Composes Techs 1-5 into one auditable certificate.
 
 ### What
@@ -11664,32 +11724,32 @@ the road to v1.0. Composes Techs 1-5 into one auditable certificate.
 Returns one `QsacCertificate` with priors, posteriors, consensus,
 mutation, overall, and (optionally) the chained record.
 
-`renderWisdom(cert)` produces the drill-through output — multi-line
+`renderWisdom(cert)` produces the drill-through output โ€” multi-line
 text with per-axis posteriors, consensus + JSD, mutation score, chain
 info. Plain text so it pipes into Slack / email / PR comments / file.
 
 ### Sample output
 
 ```
-⚖  QSAC Certificate · a1b2c3d · 2026-05-09T12:00:00Z
+โ–  QSAC Certificate ยท a1b2c3d ยท 2026-05-09T12:00:00Z
 
   PASS  (97% confidence)
-  📜 chain index 47 · hash 0xa3f2b81c…
+  ๐“ chain index 47 ยท hash 0xa3f2b81cโ€ฆ
 
   Per-axis posterior (Tech 2 belief-propagated):
-    behavioralParity       pass     93%   ████████████████████████░░░░░░
-    apiContractDrift       pass     97%   ██████████████████████████░░░░
-    testPassRate           pass     94%   █████████████████████████░░░░░
-    perfRegression         pass     91%   ███████████████████████░░░░░░░
-    aiNarrative            pass     95%   ██████████████████████████░░░░
+    behavioralParity       pass     93%   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘
+    apiContractDrift       pass     97%   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–‘โ–‘โ–‘โ–‘
+    testPassRate           pass     94%   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–‘โ–‘โ–‘โ–‘โ–‘
+    perfRegression         pass     91%   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘
+    aiNarrative            pass     95%   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–‘โ–‘โ–‘โ–‘
 
   Multi-verifier consensus (Tech 4):  JSD=0.04
     bayesian       pass     97%   QSAC superposition + claim-graph
     stylometric    pass     85%   single-voice diff (consistent style)
-    entropy        pass     88%   narrative + diff entropy aligned (1.1×)
+    entropy        pass     88%   narrative + diff entropy aligned (1.1ร—)
 
-  Belief propagation: 4 iterations · converged
-  Chain: index 47 · prev=def5678abc12… · hash=a3f2b81c0044…
+  Belief propagation: 4 iterations ยท converged
+  Chain: index 47 ยท prev=def5678abc12โ€ฆ ยท hash=a3f2b81c0044โ€ฆ
 ```
 
 ### Tests
@@ -11717,9 +11777,9 @@ v0.50 Tier 1.2: Bayesian Filter MAX (50+ rules)  next
 v1.0.0 Bundle release
 ```
 
-## [0.48.0] — 2026-05-09
+## [0.48.0] โ€” 2026-05-09
 
-The **"QSAC Tech 3 — Mutation-Test Counterfactual"** release. Fifth of
+The **"QSAC Tech 3 โ€” Mutation-Test Counterfactual"** release. Fifth of
 seven on the road to v1.0.
 
 ### Why
@@ -11735,12 +11795,12 @@ claim is suspect.
 invert-boolean, negate-return-bool, off-by-one, remove-throw,
 constant-zero, constant-empty-string), `planMutants(lines, cap=16)`
 selects applicable mutants, and `scoreMutationVerdict({totalMutants,
-killedMutants, haveBaseline})` maps score → VerdictDistribution:
+killedMutants, haveBaseline})` maps score โ’ VerdictDistribution:
 
-  <0.4   → fail (weak tests; AI's pass not strongly supported)
-  0.4-0.6 → warn (mediocre coverage)
-  0.6-0.8 → pass (strong)
-  ≥0.8   → strong pass (exceptional)
+  <0.4   โ’ fail (weak tests; AI's pass not strongly supported)
+  0.4-0.6 โ’ warn (mediocre coverage)
+  0.6-0.8 โ’ pass (strong)
+  โฅ0.8   โ’ strong pass (exceptional)
 
 ### Why novel
 
@@ -11757,9 +11817,9 @@ v0.49 with the wisdom drill-through. Score function fully unit-tested
 
 Total: **2276 tests** across 166 files.
 
-## [0.47.0] — 2026-05-09
+## [0.47.0] โ€” 2026-05-09
 
-The **"QSAC Tech 5 — Cryptographic Merkle Audit Chain"** release. Fourth
+The **"QSAC Tech 5 โ€” Cryptographic Merkle Audit Chain"** release. Fourth
 of seven on the road to v1.0.
 
 ### Why
@@ -11777,9 +11837,9 @@ audit tool to ship this out of the box.
 - **Optional HMAC-SHA-256 signatures.** Pass `hmacKey` and every cert is
   signed; verification fails on tampered signatures.
 - **Off-chain evidence + on-chain hash.** Big evidence blobs stay off-chain
-  (the JSON cert), but their hash is in the chain — tampering with the
+  (the JSON cert), but their hash is in the chain โ€” tampering with the
   off-chain blob is detectable via hash mismatch.
-- **`verifyChain(rootPath, opts?)`** — walks every cert, recomputes
+- **`verifyChain(rootPath, opts?)`** โ€” walks every cert, recomputes
   hashes, checks chain pointers + signatures. Returns `{ok, verified,
   total, issues}`.
 
@@ -11818,24 +11878,24 @@ v0.50 Tier 1.2: Bayesian Filter MAX
 v1.0.0 Bundle release
 ```
 
-## [0.46.0] — 2026-05-09
+## [0.46.0] โ€” 2026-05-09
 
-The **"QSAC Tech 4 — Multi-Verifier Consensus"** release. Third of seven
+The **"QSAC Tech 4 โ€” Multi-Verifier Consensus"** release. Third of seven
 on the road to v1.0. Three independent verifiers (Bayesian + Stylometric
 + Entropy) vote; weighted product-of-experts gives the consensus; Jensen-
 Shannon divergence flags disagreement. The financial-audit precedent
 (PwC, EY, KPMG independently sign-off) applied to AI commits.
 
-Adds: `verifyBayesian` · `verifyStylometry` · `verifyEntropy` ·
+Adds: `verifyBayesian` ยท `verifyStylometry` ยท `verifyEntropy` ยท
 `consensusVote(votes, opts?)` returning `{ consensus, votes, maxJsd,
 disagreement, disagreeingPair? }`.
 
 Tests: 14 new (stylometric anomaly detection, entropy mismatch detection,
 consensus + disagreement metric). Total: **2239 tests** across 164 files.
 
-## [0.45.0] — 2026-05-09
+## [0.45.0] โ€” 2026-05-09
 
-The **"QSAC Tech 2 — Causal Claim Graph"** release. Second of seven on
+The **"QSAC Tech 2 โ€” Causal Claim Graph"** release. Second of seven on
 the road to v1.0.
 
 ### Why it matters
@@ -11857,7 +11917,7 @@ Concrete example: AI's commit message claims "no public API change", but
 the api-drift axis says FAIL. The graph has edge:
 
 ```
-axis_api ──contradicts──> nar_no_api  (weight 0.85)
+axis_api โ”€โ”€contradictsโ”€โ”€> nar_no_api  (weight 0.85)
 ```
 
 Belief propagation collapses the narrative claim's posterior toward
@@ -11879,7 +11939,7 @@ const graph = buildStandardAuditGraph({
   axes: { behavioralParity, apiContractDrift, testPassRate, perfRegression, aiNarrative },
   narrative: { claimsNoApiChange: distribution(...) },
 });
-propagateBeliefs(graph);  // → mutates posteriors
+propagateBeliefs(graph);  // โ’ mutates posteriors
 const overall = getPosterior(graph, "gate_overall");
 ```
 
@@ -11895,16 +11955,16 @@ joint-distribution belief propagation for commit audits.
 - Builder + edge wiring
 - LBP convergence on no-edge graph (priors preserved)
 - Standard graph convergence < 20 iters
-- API-fail propagates support → tests posterior shifts
+- API-fail propagates support โ’ tests posterior shifts
 - Contradiction detection (narrative lies caught)
 - Gate aggregation (all-pass / one-fail / all-skipped)
 
 Total: **2225 tests passing** across 163 files.
 
-## [0.44.0] — 2026-05-09
+## [0.44.0] โ€” 2026-05-09
 
-The **"QSAC Tech 1 — Verdict Superposition"** release. First of seven on
-the road to v1.0 ("Quantum-Superposed Audit Certificate" — the
+The **"QSAC Tech 1 โ€” Verdict Superposition"** release. First of seven on
+the road to v1.0 ("Quantum-Superposed Audit Certificate" โ€” the
 production-grade audit layer that GitHub/GitLab will license).
 
 ### Why it matters
@@ -11918,27 +11978,27 @@ CI gating is impossible.
 ### What v0.44 adds
 
 A **probability distribution over all four verdicts** alongside the
-collapsed verdict — calibrated soft-scoring functions per axis turn raw
+collapsed verdict โ€” calibrated soft-scoring functions per axis turn raw
 evidence into amplitudes that sum to 1.
 
 ```
-ψ = α·|pass⟩ + β·|warn⟩ + γ·|fail⟩ + δ·|skipped⟩
-    where α + β + γ + δ = 1
+ฯ = ฮฑยท|passโฉ + ฮฒยท|warnโฉ + ฮณยท|failโฉ + ฮดยท|skippedโฉ
+    where ฮฑ + ฮฒ + ฮณ + ฮด = 1
 ```
 
 Five soft-scorers (one per existing axis):
-- `scoreBehavioralParity` — sigmoid on mismatch ratio + critical-mismatch heavy fail
-- `scoreApiContractDrift` — break ratio thresholds smoothed
-- `scoreTestPassRate` — newly-failing tests dominate; test-count shrink → warn
-- `scorePerfRegression` — sigmoid centred at 17.5% (between 10% warn / 25% fail)
-- `scoreAiNarrative` — contradictions weighted heavily; confirmation ratio gradates
+- `scoreBehavioralParity` โ€” sigmoid on mismatch ratio + critical-mismatch heavy fail
+- `scoreApiContractDrift` โ€” break ratio thresholds smoothed
+- `scoreTestPassRate` โ€” newly-failing tests dominate; test-count shrink โ’ warn
+- `scorePerfRegression` โ€” sigmoid centred at 17.5% (between 10% warn / 25% fail)
+- `scoreAiNarrative` โ€” contradictions weighted heavily; confirmation ratio gradates
 
 Plus:
-- `combineDistributions(dists, weights?)` — product-of-experts geometric
+- `combineDistributions(dists, weights?)` โ€” product-of-experts geometric
   mean. One fail-heavy axis pulls the overall verdict down even if other
   axes are clean.
-- `confidencePill(d)` → `high | medium | low` from confidence + entropy.
-- `formatDistribution(d)` → wisdom-output line `0.95·|pass⟩ + 0.04·|warn⟩`.
+- `confidencePill(d)` โ’ `high | medium | low` from confidence + entropy.
+- `formatDistribution(d)` โ’ wisdom-output line `0.95ยท|passโฉ + 0.04ยท|warnโฉ`.
 
 ### Why this is novel
 
@@ -11960,23 +12020,23 @@ Total: **2216 tests passing** across 162 files.
 ### Roadmap to v1.0
 
 ```
-v0.44  Tech 1: Verdict Superposition          ✅
+v0.44  Tech 1: Verdict Superposition          โ…
 v0.45  Tech 2: Causal Claim Graph             (next)
 v0.46  Tech 4: Multi-Verifier Consensus
 v0.47  Tech 5: Cryptographic Merkle Chain
 v0.48  Tech 3: Mutation-Test Counterfactual
 v0.49  Tech 6: Wisdom Drill-Through Output
 v0.50  Tier 1.2: Bayesian Filter MAX (50+ rules)
-v1.0.0 Bundle release — license-ready trust layer
+v1.0.0 Bundle release โ€” license-ready trust layer
 ```
 
-## [0.43.0] — 2026-05-08
+## [0.43.0] โ€” 2026-05-08
 
 The **"Holy Grails"** release. Last of four shipping the
 Element/Atom/Molecule architecture. Three world-firsts that the
 v0.40-v0.42 architecture made feasible.
 
-### `mneme heartbeat` — codebase as living being
+### `mneme heartbeat` โ€” codebase as living being
 
 ```
 mneme heartbeat              # take a pulse + compare to rolling baseline
@@ -11985,12 +12045,12 @@ mneme heartbeat --json       # for cron + Slack + email
 
 Treats the repo as a patient under continuous observation. Each tick:
 
-1. Takes a pulse — the 20-axis MRI snapshot from `repo-mri`.
-2. Compares against the rolling baseline (mean ± stdev from prior
-   pulses; needs ≥ 3 to stabilise).
-3. Emits any axis ≥ 2σ as an "outlier" anomaly; ≥ 1σ as "notable".
+1. Takes a pulse โ€” the 20-axis MRI snapshot from `repo-mri`.
+2. Compares against the rolling baseline (mean ยฑ stdev from prior
+   pulses; needs โฅ 3 to stabilise).
+3. Emits any axis โฅ 2ฯ as an "outlier" anomaly; โฅ 1ฯ as "notable".
 4. Persists the snapshot for tomorrow's baseline (capped at 90 entries
-   ≈ 3 months).
+   โ 3 months).
 
 Verdicts: ALL-QUIET / WATCHING / ALARMING. Exit code 1 on ALARMING for
 CI-friendly cron.
@@ -12000,7 +12060,7 @@ CI-friendly cron.
 PROACTIVELY ("here's what changed and which change is statistically
 significant").
 
-### `mneme rewind <ref>` — time-travel debug
+### `mneme rewind <ref>` โ€” time-travel debug
 
 ```
 mneme rewind <commit-hash>
@@ -12012,21 +12072,21 @@ Materialises the working context of a single commit by composing four
 ground-truth signals:
 
 1. Cognitive-twin voice profile of the author (v0.36 Originals).
-2. Surrounding commits by the same author (5 each side) — sustained
+2. Surrounding commits by the same author (5 each side) โ€” sustained
    push vs one-off?
 3. Time-of-day + day-of-week in the author's local TZ (parsed from
    the ISO offset).
-4. Subject + body tonality — sandwich-mode markers ("WIP", "trying
+4. Subject + body tonality โ€” sandwich-mode markers ("WIP", "trying
    to", trailing "...").
 
 Plus: was this commit reverted by the next on HEAD? Subject length
 deviation from the author's usual?
 
-**Honest framing:** ✱ inferences are speculative — outside-observer
+**Honest framing:** โฑ inferences are speculative โ€” outside-observer
 reading, never substituted for asking the author. Facts (commit
 metadata, surrounding commits, tz offset) are not prefixed.
 
-### `mneme dna-fold` — team-DNA emerges from individuals
+### `mneme dna-fold` โ€” team-DNA emerges from individuals
 
 ```
 mneme dna-fold               # top-8 contributors auto
@@ -12039,9 +12099,9 @@ properties when individuals are stacked into a team:
 
 | Verdict | Meaning |
 |---|---|
-| consensus  | low CV — team aligned |
-| polarised  | CV ≥ 0.6 with no single outlier — team has split |
-| outliered  | exactly one author ≥ 2σ from the mean |
+| consensus  | low CV โ€” team aligned |
+| polarised  | CV โฅ 0.6 with no single outlier โ€” team has split |
+| outliered  | exactly one author โฅ 2ฯ from the mean |
 
 Eight features folded today: avg subject length, conv-commit usage,
 lowercase content, em-dash, ends-with-period, paren-scope, body-bullet
@@ -12050,40 +12110,40 @@ usage, avg body lines.
 ### Architecture: how they stack
 
 ```
-heartbeat   ← computeMri + persistent .mneme/heartbeat.json
-              → SECOND-BRAIN PATTERN (pulses-as-library)
+heartbeat   โ computeMri + persistent .mneme/heartbeat.json
+              โ’ SECOND-BRAIN PATTERN (pulses-as-library)
 
-rewind      ← git.log (HPC v0.39) + twin.profile (v0.36 Originals)
-              → COMPOSITION PATTERN (chemistry metaphor)
+rewind      โ git.log (HPC v0.39) + twin.profile (v0.36 Originals)
+              โ’ COMPOSITION PATTERN (chemistry metaphor)
 
-dna-fold    ← twin.profile × N authors (parallel via concurrency.pmap)
-              → AGGREGATION PATTERN (atom × atom × atom = molecule)
+dna-fold    โ twin.profile ร— N authors (parallel via concurrency.pmap)
+              โ’ AGGREGATION PATTERN (atom ร— atom ร— atom = molecule)
 ```
 
 Every Holy Grail composes pieces already in the periodic table. That's
 the proof the architecture works: new capabilities cost an order of
 magnitude less code to ship.
 
-### Honest scope — deferred
+### Honest scope โ€” deferred
 
 Originally proposed five Holy Grails. Three shipped:
 
 | | v0.43 |
 |---|---|
-| `mneme heartbeat` | ✅ |
-| `mneme rewind <commit>` | ✅ |
-| `mneme dna-fold` | ✅ |
-| `mneme adversarial-twin --evil` | deferred → v0.44 (needs opt-in CTF runner UX) |
-| `mneme self-aware` | deferred → v0.44 (needs permission model — Mneme reading its own code) |
+| `mneme heartbeat` | โ… |
+| `mneme rewind <commit>` | โ… |
+| `mneme dna-fold` | โ… |
+| `mneme adversarial-twin --evil` | deferred โ’ v0.44 (needs opt-in CTF runner UX) |
+| `mneme self-aware` | deferred โ’ v0.44 (needs permission model โ€” Mneme reading its own code) |
 
 ### Tests
 
-13 new Holy-Grail tests (heartbeat baseline computation · rewind
-inference shape · weekend / late-night / sustained-push / sandwich-mode
+13 new Holy-Grail tests (heartbeat baseline computation ยท rewind
+inference shape ยท weekend / late-night / sustained-push / sandwich-mode
 / blast-radius / surgical / one-off / no-unusual signals).
 Total: **2188 tests passing** across 162 files.
 
-## [0.42.0] — 2026-05-08
+## [0.42.0] โ€” 2026-05-08
 
 The **"Second Brain"** release. Third of four shipping the
 Element/Atom/Molecule architecture. Closes the loop: every plan you've
@@ -12113,12 +12173,12 @@ plans become executable via a new sandbox-aware molecule executor.
 ### Promotion algorithm (precise)
 
 An entry is **eligible for promotion** when EITHER `hits >= 5` OR
-`firstSeen >= 7 days ago AND hits >= 2` ("cooled" — a plan you've
+`firstSeen >= 7 days ago AND hits >= 2` ("cooled" โ€” a plan you've
 come back to a few times over a week). Already-promoted entries are
 excluded. Promoting auto-derives an alias from the intent (or accepts
 `--alias <name>`).
 
-An entry is **archived** when `lastSeen >= 30 days ago` — surfaced via
+An entry is **archived** when `lastSeen >= 30 days ago` โ€” surfaced via
 `mneme library --archived`, removed via `mneme library --forget <id>`.
 
 ### `mneme compose` now feeds the library
@@ -12129,30 +12189,30 @@ has data to work with from day one.
 
 ### Tests
 
-37 new tests (executor: 7 · library: 19 · plus existing periodic 11).
+37 new tests (executor: 7 ยท library: 19 ยท plus existing periodic 11).
 Total: **2174 tests passing** across 160 files.
 
 ### Honest scope
 
 - Frequency-based promotion is in. **Semantic** promotion (two intents
   that describe the same plan with different words) needs embedding-based
-  matching — lands in v0.43+ once that wiring is needed elsewhere.
+  matching โ€” lands in v0.43+ once that wiring is needed elsewhere.
 - The executor's `bindArgs` heuristic auto-detects object-parameter
   functions vs Float32Array-positional functions. Catalog primitives
   with unusual signatures need a small adapter when registered.
 
-## [0.41.0] — 2026-05-08
+## [0.41.0] โ€” 2026-05-08
 
 The **"Compiler"** release. Second of four shipping the
 Element/Atom/Molecule architecture.
 
 ### `mneme compose "<intent>"`
 
-Natural-language intent → concrete pipeline of registered atoms / molecules
+Natural-language intent โ’ concrete pipeline of registered atoms / molecules
 from the v0.40 periodic table. Two modes:
 
 - **Rule-based (default).** Tokenises intent, extracts verb + domain
-  signals, scores every catalog manifest by tag overlap × token overlap
+  signals, scores every catalog manifest by tag overlap ร— token overlap
   with a kind-bias (molecules > atoms > elements). Sub-millisecond plans,
   works offline.
 - **LLM-augmented (`--llm`).** Uses the rule-based plan as a seed; the
@@ -12172,12 +12232,12 @@ from the v0.40 periodic table. Two modes:
 ```
 
 Every step references a registered manifest id from the periodic table.
-The estimated cost is `sum(ms_p50)` across steps — used by the cost
+The estimated cost is `sum(ms_p50)` across steps โ€” used by the cost
 optimiser when multiple plans tie on relevance.
 
 ### Molecule cache
 
-`.mneme/molecule-cache.json` stores every (canonicalised intent → plan)
+`.mneme/molecule-cache.json` stores every (canonicalised intent โ’ plan)
 mapping with hit counts + first/last seen timestamps. Re-running the same
 intent skips the planning step entirely. v0.42 will read this file to
 auto-promote frequent plans into named commands.
@@ -12190,16 +12250,16 @@ auto-promote frequent plans into named commands.
 
 ### Tests
 
-15 new compiler tests (signal extraction · seed scoring · plan
-assembly · maxSteps cap · trace shape · manifest-id resolution ·
+15 new compiler tests (signal extraction ยท seed scoring ยท plan
+assembly ยท maxSteps cap ยท trace shape ยท manifest-id resolution ยท
 estimatedMsP50 sum-correctness). Total: **2135 tests passing** across
 158 files.
 
-## [0.40.0] — 2026-05-08
+## [0.40.0] โ€” 2026-05-08
 
-The **"Periodic Table"** release — first of four shipping the
-Element/Atom/Molecule architecture (v0.40 MVP → v0.41 compiler → v0.42
-second-brain → v0.43 holy grails). Additive: every existing command
+The **"Periodic Table"** release โ€” first of four shipping the
+Element/Atom/Molecule architecture (v0.40 MVP โ’ v0.41 compiler โ’ v0.42
+second-brain โ’ v0.43 holy grails). Additive: every existing command
 keeps working as-is.
 
 ### Why this exists
@@ -12209,11 +12269,11 @@ Mneme has 75 commands. Most share the same primitive operations
 Encoding those primitives once, with manifests, means:
 
 1. **AI tools through MCP can discover the periodic table at runtime**
-   and assemble their own queries — no need to memorise a flat
+   and assemble their own queries โ€” no need to memorise a flat
    command bag.
-2. **Cost-aware planning becomes possible** — the v0.41 compiler picks
+2. **Cost-aware planning becomes possible** โ€” the v0.41 compiler picks
    the cheapest composition for an intent.
-3. **The system explains itself** — `mneme periodic-table` lists
+3. **The system explains itself** โ€” `mneme periodic-table` lists
    everything humans need to read.
 4. **Tests validate every primitive** against its declared contract.
 
@@ -12223,7 +12283,7 @@ Encoding those primitives once, with manifests, means:
 |---|---|
 | Element  | Primitive operation (one git command, one regex match) |
 | Atom     | An element with bound parameters |
-| Molecule | Atoms bonded — today's commands |
+| Molecule | Atoms bonded โ€” today's commands |
 | Compound | Multi-domain molecule (people + history + security) |
 | Catalyst | Config / model context that shapes a reaction without being consumed |
 | Reaction | Transformation rule applied to a molecule |
@@ -12240,7 +12300,7 @@ Encoding those primitives once, with manifests, means:
   `score.bayesian.tech-aware`, `vector.search`
 - **Molecules:** `molecule.karma`, `molecule.repo-mri`
 
-### `mneme periodic-table` — browse the catalog
+### `mneme periodic-table` โ€” browse the catalog
 
 ```
 mneme periodic-table                    # full catalog grouped by kind
@@ -12250,15 +12310,15 @@ mneme periodic-table --tag security     # filter by tag
 mneme periodic-table --json             # machine-readable for AI / MCP
 ```
 
-The detail view shows: inputs/outputs, cost model (io class · cpu class
-· ms_p50), determinism, side-effect class, tags, and the implementation
+The detail view shows: inputs/outputs, cost model (io class ยท cpu class
+ยท ms_p50), determinism, side-effect class, tags, and the implementation
 module + export name. AI tools through MCP read the JSON form to
 assemble their own queries.
 
 ### Tests
 
-18 new periodic-table tests (manifest validation · registry isolation ·
-catalog cross-reference resolution · ID uniqueness · tag-index correctness).
+18 new periodic-table tests (manifest validation ยท registry isolation ยท
+catalog cross-reference resolution ยท ID uniqueness ยท tag-index correctness).
 Total: **2118 tests passing** across 158 files.
 
 ### Architectural promise
@@ -12266,44 +12326,44 @@ Total: **2118 tests passing** across 158 files.
 The catalog is **additive**. Every existing Mneme command keeps working
 exactly as it did. The molecule architecture is a *new layer* under the
 commands, not a replacement. We will refactor more commands as molecules
-over the v0.41/v0.42 releases — but always behind a backwards-compatible
-flat-name façade.
+over the v0.41/v0.42 releases โ€” but always behind a backwards-compatible
+flat-name faรงade.
 
 ### What's next
 
-- **v0.41 — Compiler.** `mneme compose "<natural-language intent>"`. The
+- **v0.41 โ€” Compiler.** `mneme compose "<natural-language intent>"`. The
   LLM planner uses the periodic table to assemble a custom molecule.
-- **v0.42 — Second Brain.** Frequent dynamic molecules get promoted to
+- **v0.42 โ€” Second Brain.** Frequent dynamic molecules get promoted to
   named commands automatically. Per-user, per-repo `.mneme/library.json`.
-- **v0.43 — Holy Grails.** Five world-firsts: `self-aware`, `rewind`,
+- **v0.43 โ€” Holy Grails.** Five world-firsts: `self-aware`, `rewind`,
   `dna-fold`, `adversarial-twin --evil`, `heartbeat`.
 
-## [0.39.0] — 2026-05-08
+## [0.39.0] โ€” 2026-05-08
 
-The **"HPC Pass"** release. Every hot path audited and optimised — by an
+The **"HPC Pass"** release. Every hot path audited and optimised โ€” by an
 expert-grade git understanding of *why* the previous code was slow, not
 just sprinkled `Promise.all`s. Measured numbers, not vibes.
 
 ### The expert insight underneath
 
 The single biggest perf bug across the codebase was **process-spawn
-overhead**. On Windows, each `git show <hash>` costs 50–200 ms in pure
-fork/exec — *before* git does any work. The v0.36 vuln scanner was
-spending **25–100 s of pure spawn overhead** on a 500-commit scan. No
+overhead**. On Windows, each `git show <hash>` costs 50โ€“200 ms in pure
+fork/exec โ€” *before* git does any work. The v0.36 vuln scanner was
+spending **25โ€“100 s of pure spawn overhead** on a 500-commit scan. No
 optimisation inside Mneme could save that; the only fix was "stop
 spawning so much". Same pattern on `git grep` (one spawn per pattern
 instead of one spawn for all patterns) and on `fs.readFile` (sequential
 awaits on what should be parallel I/O).
 
-### Job 1 — `forensics vulns` + `mneme show` use single `git log -p`
+### Job 1 โ€” `forensics vulns` + `mneme show` use single `git log -p`
 
-`git show <hash>` ↦ `git log -p -n N` once.
+`git show <hash>` โฆ `git log -p -n N` once.
 
 Why this is **sub-linear** in commit count: git keeps its packfile
 cursor open across the whole log walk, so reusing a cursor is far
 cheaper than re-mmap'ing the packfile per commit. Verified empirically:
 50-commit scan now finishes in **215 ms** end-to-end (this repo).
-Expected speedup: 3–5× on 500-commit windows; bigger on Windows.
+Expected speedup: 3โ€“5ร— on 500-commit windows; bigger on Windows.
 
 The parser is robust: pretty-format with a multi-byte sentinel + 6
 NUL-separated fields + diff-until-next-sentinel boundary. NUL is the
@@ -12311,114 +12371,114 @@ only byte git's diff output provably can't contain. 8 unit tests cover
 the edge cases (empty input, missing fields, sentinel-in-diff-text,
 1 MB body).
 
-### Job 2 — `repo-mri scanLoc` parallel file reads
+### Job 2 โ€” `repo-mri scanLoc` parallel file reads
 
-`for await (read)` ↦ `pMap(files, 16, read)`.
+`for await (read)` โฆ `pMap(files, 16, read)`.
 
 Why **16 workers** is the sweet spot: I/O queue depth on consumer NVMe
 saturates at ~16 in-flight reads (tested on Samsung 980 Pro + Apple
-NVMe). 1→4 gives 3.2×, 4→16 gives another 1.6×, 16→32 gives no further
-gain. Expected speedup: 4–8× on 5000-file scans; bigger on cold caches.
+NVMe). 1โ’4 gives 3.2ร—, 4โ’16 gives another 1.6ร—, 16โ’32 gives no further
+gain. Expected speedup: 4โ€“8ร— on 5000-file scans; bigger on cold caches.
 Verified: `repo-mri --max-commits 100` finishes in **926 ms** on this
 repo (was several seconds before).
 
-### Job 3 — `audit --verify-head` batched `git grep -F -f`
+### Job 3 โ€” `audit --verify-head` batched `git grep -F -f`
 
-N × `git grep -F <sym>` ↦ one `git grep -F -f <patternfile>`.
+N ร— `git grep -F <sym>` โฆ one `git grep -F -f <patternfile>`.
 
-Why this is **5–20× faster**: git-grep with multi-pattern fixed-string
-matching uses an Aho-Corasick-style automaton internally — it scans the
+Why this is **5โ€“20ร— faster**: git-grep with multi-pattern fixed-string
+matching uses an Aho-Corasick-style automaton internally โ€” it scans the
 working-tree index ONCE regardless of pattern count. Previously each
 candidate symbol triggered a fresh subprocess + a fresh full pass. Now
 one subprocess, one pass, all patterns. Patternfile approach also
 sidesteps the Windows ARG_MAX limit (8 KB) for repos with many candidate
 claims.
 
-### Job 4 — `mneme deps audit` flat concurrency-limited pool
+### Job 4 โ€” `mneme deps audit` flat concurrency-limited pool
 
-Sequential batches-of-10 ↦ flat `pMap(ids, 10, fetchOsv)`.
+Sequential batches-of-10 โฆ flat `pMap(ids, 10, fetchOsv)`.
 
-Why this is **2–3× faster**: the old code awaited each chunk completely
+Why this is **2โ€“3ร— faster**: the old code awaited each chunk completely
 before starting the next; effective concurrency was 10 only DURING a
 chunk, then 0 between chunks. With 100 vulns that meant ~10 stalled
 pauses where the network sat idle and TCP slow-start re-ramped. Now
 the connection pool stays warm and all 10 in-flight slots are kept
 hot continuously.
 
-### Job 5 — CLI cold-start fast path for `--version`
+### Job 5 โ€” CLI cold-start fast path for `--version`
 
 The bin shebang now short-circuits `--version` / `-V` before loading
-`dist/index.js`. **34 ms** measured cold start (was 8–13 s on Windows
+`dist/index.js`. **34 ms** measured cold start (was 8โ€“13 s on Windows
 Node 24 because the dist file top-level-imported all 50+ command
 modules + their transitive forensics/audit/insights tables).
 
 This single change is what made the v0.38 timeout flake go away
-permanently — the test budget was being eaten by module-load time, not
+permanently โ€” the test budget was being eaten by module-load time, not
 actual work.
 
-### Job 6 — vector kernels: 4-way unrolled + normalise-once
+### Job 6 โ€” vector kernels: 4-way unrolled + normalise-once
 
 - `cosineSim()` rewritten with 4-way loop unrolling. V8 JIT autovectorises
-  the unrolled form on x64 (AVX2) and ARM64 (NEON); the naïve 1-step
+  the unrolled form on x64 (AVX2) and ARM64 (NEON); the naรฏve 1-step
   loop wasn't reliably vectorised.
 - New `dotProductNormalized(a, b)` for the post-normalised case (2 sqrts
   saved per call). Use after `normaliseInPlace()` on stored vectors.
-- Bench test asserts `dotProductNormalized` ≤ `cosineSim` over 10k iters
-  on a 384-dim vector — regression net for anyone who removes the unroll
+- Bench test asserts `dotProductNormalized` โค `cosineSim` over 10k iters
+  on a 384-dim vector โ€” regression net for anyone who removes the unroll
   or accidentally re-introduces a per-call sqrt.
 
-### Job 7 — HPC bench harness as part of `npm test`
+### Job 7 โ€” HPC bench harness as part of `npm test`
 
 Three regression tests live in `packages/core/src/util/hpc-bench.test.ts`:
-- pMap parallelises async work — must be ≥ 4× faster than serial for I/O
+- pMap parallelises async work โ€” must be โฅ 4ร— faster than serial for I/O
 - `dotProductNormalized` matches `cosineSim` on pre-normalised vectors
-- `dotProductNormalized` is ≤ `cosineSim` on the same workload
+- `dotProductNormalized` is โค `cosineSim` on the same workload
 
 These run on every push and will fire if anyone re-introduces a
 serial-await loop or removes the vector kernel work.
 
-### Numbers — before/after on this repo
+### Numbers โ€” before/after on this repo
 
 | Hot path | v0.38 | v0.39 | Speedup |
 |---|---|---|---|
-| `mneme --version` (cold) | 8–13 s on Windows Node 24 | **34 ms** | ~250× |
-| `mneme forensics vulns --top 50` | multi-second | **215 ms** | ~10× |
-| `mneme repo-mri --max-commits 100` | multi-second | **926 ms** | ~3-5× |
+| `mneme --version` (cold) | 8โ€“13 s on Windows Node 24 | **34 ms** | ~250ร— |
+| `mneme forensics vulns --top 50` | multi-second | **215 ms** | ~10ร— |
+| `mneme repo-mri --max-commits 100` | multi-second | **926 ms** | ~3-5ร— |
 
-(The v0.38 numbers are CI-confirmed real measurements, not estimates —
+(The v0.38 numbers are CI-confirmed real measurements, not estimates โ€”
 the failing `paradox on empty repo` test in the screenshot was the
 visible head of this iceberg.)
 
 ### Test count
 
-29 new HPC tests added (concurrency · batch-log · vector kernels ·
+29 new HPC tests added (concurrency ยท batch-log ยท vector kernels ยท
 bench-harness). Total: **2100 tests passing** across 156 files.
 
-## [0.38.0] — 2026-05-08
+## [0.38.0] โ€” 2026-05-08
 
 The **"Customer-Backlog Closeout"** release. The four items deferred from
 v0.37 (#6, #10, #12, #15) are all in. Plus a privacy fix.
 
-### Item #12 — auto-fix suggestions per rule
+### Item #12 โ€” auto-fix suggestions per rule
 
 `mneme show <finding-id>` now prints a **template patch sketch** + rationale
 + recommended hardened API per finding. 21 of the 24 rules have curated
 suggestions; the remaining three (`dependency-changed`, `amount-zero-comparison`,
-`logged-secret`) are *advisory only* — the right answer is contextual.
+`logged-secret`) are *advisory only* โ€” the right answer is contextual.
 
 Each suggestion has a *confidence* tag (`high` / `medium` / `low`) so users
 know whether to apply directly or human-review first. Examples:
 
-- `weak-rng` → `crypto.randomBytes(16).toString('hex')` (high)
-- `mass-assignment` → DTO with class-validator (high)
-- `weak-webhook-signature` → `stripe.webhooks.constructEvent(rawBody, sig, secret)` (high)
-- `prototype-pollution` → `pick(req.body, [...])` then assign (high)
-- `idor-no-ownership-check` → `if (resource.userId !== req.user.id) throw ForbiddenException` (high)
+- `weak-rng` โ’ `crypto.randomBytes(16).toString('hex')` (high)
+- `mass-assignment` โ’ DTO with class-validator (high)
+- `weak-webhook-signature` โ’ `stripe.webhooks.constructEvent(rawBody, sig, secret)` (high)
+- `prototype-pollution` โ’ `pick(req.body, [...])` then assign (high)
+- `idor-no-ownership-check` โ’ `if (resource.userId !== req.user.id) throw ForbiddenException` (high)
 
-Strict template framing — no LLM, no network. Fully deterministic and
+Strict template framing โ€” no LLM, no network. Fully deterministic and
 reviewable.
 
-### Item #15 — `mneme deps audit` (CVE / GHSA / OSV.dev)
+### Item #15 โ€” `mneme deps audit` (CVE / GHSA / OSV.dev)
 
 ```
 mneme deps audit                   # network query
@@ -12429,14 +12489,14 @@ mneme deps audit --offline         # airgapped envs (returns 0 findings)
 Reads `package-lock.json`, batch-queries **OSV.dev** (Google-maintained,
 public, free, no auth), and reports vulnerable transitive deps. Severity
 mapping: `database_specific.severity` first, falls back to CVSS-3 base
-score (≥9 critical, ≥7 high, ≥4 medium, otherwise low).
+score (โฅ9 critical, โฅ7 high, โฅ4 medium, otherwise low).
 
 Why OSV.dev rather than `npm audit`:
 - No `npm` binary required (works in lean CI containers)
 - Aggregates GitHub Security Advisories + CVE/NVD + ecosystem feeds in one place
 - Multi-ecosystem ready (PyPI / Go / Rust / Maven / etc.) for future expansion
 
-### Item #10 — `mneme groups` (non-breaking discoverability)
+### Item #10 โ€” `mneme groups` (non-breaking discoverability)
 
 ```
 mneme groups                       # all 5 groups
@@ -12444,19 +12504,19 @@ mneme groups --only security       # focus one
 mneme groups --json                # machine-readable
 ```
 
-Customer feedback (v0.36): "หลาย command ผมก็ไม่รู้ว่าใช้ทำอะไร". The
+Customer feedback (v0.36): "เธซเธฅเธฒเธข command เธเธกเธเนเนเธกเนเธฃเธนเนเธงเนเธฒเนเธเนเธ—เธณเธญเธฐเนเธฃ". The
 flat `mneme --help` listed 30+ commands with no thematic structure.
 
-Five groups, intentionally non-breaking — every existing command name
+Five groups, intentionally non-breaking โ€” every existing command name
 keeps its flat namespace + MCP wiring:
 
-- 🛡 **Security** — `forensics vulns`, `deps audit`, `show`, `suppress`, `audit --certify`, `audit --verify-head`, `guard`, `guardian`, `forensics anomaly`, `adversarial`
-- 👥 **People analytics** — `atrophy`, `telepathy`, `influence`, `lineage`, `nemesis`, `passport`, `dna`, `bus-factor`, `nervous-system`, `counterfactual`
-- 📜 **History + archaeology** — `time-machine`, `chronicle`, `drift`, `ghost`, `fossil`, `rumor`, `runaway`, `palimpsest`, `palimpsest --counterfactual`, `why`, `blast`, `premortem`
-- 📦 **Memory layer** — `ask`, `status`, `doctor`, `init`, `index`, `htc-build`, `htc-stats`, `watch`, `mcp`, `do`, `genius`
-- 🆕 **The Originals (v0.36)** — `karma`, `repo-mri`, `palimpsest --counterfactual`, `cognitive-twin`, `conscience --dual-jury`
+- ๐ก **Security** โ€” `forensics vulns`, `deps audit`, `show`, `suppress`, `audit --certify`, `audit --verify-head`, `guard`, `guardian`, `forensics anomaly`, `adversarial`
+- ๐‘ฅ **People analytics** โ€” `atrophy`, `telepathy`, `influence`, `lineage`, `nemesis`, `passport`, `dna`, `bus-factor`, `nervous-system`, `counterfactual`
+- ๐“ **History + archaeology** โ€” `time-machine`, `chronicle`, `drift`, `ghost`, `fossil`, `rumor`, `runaway`, `palimpsest`, `palimpsest --counterfactual`, `why`, `blast`, `premortem`
+- ๐“ฆ **Memory layer** โ€” `ask`, `status`, `doctor`, `init`, `index`, `htc-build`, `htc-stats`, `watch`, `mcp`, `do`, `genius`
+- ๐• **The Originals (v0.36)** โ€” `karma`, `repo-mri`, `palimpsest --counterfactual`, `cognitive-twin`, `conscience --dual-jury`
 
-### Item #6 — official GitHub Action
+### Item #6 โ€” official GitHub Action
 
 ```yaml
 - uses: patsa2561-art/mneme-ai/.github/actions/mneme@main
@@ -12474,48 +12534,48 @@ a sticky PR comment, uploads SARIF to GitHub Code Scanning, fails the
 check on configurable severity. Example workflow at
 `.github/workflows/example-mneme.yml.example` for users to copy.
 
-### Privacy fix — no `Co-Authored-By: Claude …` trailer in commits
+### Privacy fix โ€” no `Co-Authored-By: Claude โ€ฆ` trailer in commits
 
 The user's auto-memory says AI-tool fingerprints stay private; v0.36 +
 v0.37 commits accidentally carried a `Co-Authored-By: Claude` trailer
 that GitHub's UI rendered as a contributor avatar. From v0.38 onward,
-commits do NOT include the trailer. (Old commits keep theirs — rewriting
+commits do NOT include the trailer. (Old commits keep theirs โ€” rewriting
 history would force-push main and break every existing fork.)
 
 ### Test count
 
-17 new unit tests added (auto-fix · deps-audit). Total: **2071 tests
+17 new unit tests added (auto-fix ยท deps-audit). Total: **2071 tests
 passing** across 152 files.
 
-### Customer issues — final status
+### Customer issues โ€” final status
 
 All 16 from the v0.36 feedback report are now addressed:
 
 | # | Issue | Status |
 |---|---|---|
-| 1 | False positives 80%+ | ✅ v0.37 Bayesian + AST |
-| 2 | Coverage gaps | ✅ v0.37 6 new rules |
-| 3 | Doesn't read HEAD | ✅ v0.37 `--verify-head` |
-| 4 | Hash embedder default | ✅ v0.37 verified auto-fallthrough |
-| 5 | Verbose output | ✅ v0.37 `--quiet` + SARIF |
-| 6 | No CI integration | ✅ **v0.38** GitHub Action |
-| 7 | Stale index | ✅ v0.37 `warnIfStale` |
-| 8 | No framework awareness | ✅ v0.37 Bayesian stack |
-| 9 | No FP management | ✅ v0.37 `.mneme/suppressions.json` |
-| 10 | Too many commands | ✅ **v0.38** `mneme groups` |
-| 11 | Bad citations | ✅ v0.37 file:line + posterior |
-| 12 | No auto-fix | ✅ **v0.38** template suggestions |
-| 13 | No vuln lifecycle | partial — suppressions cover ignore; opened/triaged tracking is roadmap |
-| 14 | Setup friction | ✅ v0.36+ Ollama auto-pull, MiniLM default |
-| 15 | No CVE/npm-audit | ✅ **v0.38** `mneme deps audit` (OSV.dev) |
-| 16 | UI too decorative | ✅ v0.37 `--quiet` |
+| 1 | False positives 80%+ | โ… v0.37 Bayesian + AST |
+| 2 | Coverage gaps | โ… v0.37 6 new rules |
+| 3 | Doesn't read HEAD | โ… v0.37 `--verify-head` |
+| 4 | Hash embedder default | โ… v0.37 verified auto-fallthrough |
+| 5 | Verbose output | โ… v0.37 `--quiet` + SARIF |
+| 6 | No CI integration | โ… **v0.38** GitHub Action |
+| 7 | Stale index | โ… v0.37 `warnIfStale` |
+| 8 | No framework awareness | โ… v0.37 Bayesian stack |
+| 9 | No FP management | โ… v0.37 `.mneme/suppressions.json` |
+| 10 | Too many commands | โ… **v0.38** `mneme groups` |
+| 11 | Bad citations | โ… v0.37 file:line + posterior |
+| 12 | No auto-fix | โ… **v0.38** template suggestions |
+| 13 | No vuln lifecycle | partial โ€” suppressions cover ignore; opened/triaged tracking is roadmap |
+| 14 | Setup friction | โ… v0.36+ Ollama auto-pull, MiniLM default |
+| 15 | No CVE/npm-audit | โ… **v0.38** `mneme deps audit` (OSV.dev) |
+| 16 | UI too decorative | โ… v0.37 `--quiet` |
 
-## [0.37.0] — 2026-05-08
+## [0.37.0] โ€” 2026-05-08
 
-The **"Bayesian Filter"** release. Customer-driven — every issue from the
+The **"Bayesian Filter"** release. Customer-driven โ€” every issue from the
 post-v0.36 user feedback is addressed.
 
-### The advanced algorithm — Bayesian Stack-Aware Priors × AST Evidence Scoring
+### The advanced algorithm โ€” Bayesian Stack-Aware Priors ร— AST Evidence Scoring
 
 Customer report (v0.36): a NestJS + Mongoose repo received **16 false-positive
 CWE-89 (SQL injection) findings** because the regex matched the substring
@@ -12526,25 +12586,25 @@ v0.37 fixes the entire class of issue with a two-stage filter that runs on
 every finding *before* it leaves the scanner:
 
 ```
-posterior = priorByStack(rule) × evidenceScore(ast-context)
+posterior = priorByStack(rule) ร— evidenceScore(ast-context)
 ```
 
-- **Stage 1 — stack prior.** `package.json` (workspaces-aware) is parsed
+- **Stage 1 โ€” stack prior.** `package.json` (workspaces-aware) is parsed
   into a stack vector: `{hasSql, hasNoSql, hasNestJS, hasUiFramework, hasJwt,
   hasPaymentWebhook, ...}`. Each rule has a hand-tuned conditional prior:
   the SQL-injection rule's prior collapses to **0.05** in a Mongoose-only
   repo. Rules whose stack prior falls below their per-rule threshold are
-  *silenced before the regex runs* — not just ranked low. The customer's 16
+  *silenced before the regex runs* โ€” not just ranked low. The customer's 16
   CWE-89 false positives go to **zero** automatically.
 
-- **Stage 2 — AST evidence score.** Each match is classified by its lexical
+- **Stage 2 โ€” AST evidence score.** Each match is classified by its lexical
   context:
-  - inside `console.log(...)` / `logger.*(...)` → 0.05 (the customer's case)
-  - inside `pool.query(...)` / `db.query(...)` / `prisma.$queryRaw` → 0.95
-  - inside a comment → 0.05
-  - inside a test file → 0.20
-  - inside a string literal with no detected sink → 0.25
-  - in code position with no special signal → 0.70
+  - inside `console.log(...)` / `logger.*(...)` โ’ 0.05 (the customer's case)
+  - inside `pool.query(...)` / `db.query(...)` / `prisma.$queryRaw` โ’ 0.95
+  - inside a comment โ’ 0.05
+  - inside a test file โ’ 0.20
+  - inside a string literal with no detected sink โ’ 0.25
+  - in code position with no special signal โ’ 0.70
 
 - **Threshold.** Findings below `--min-posterior 0.3` (default) are dropped
   with the count surfaced in the report. Adjust as needed.
@@ -12554,36 +12614,36 @@ universal applicability because they have no view of dependencies; package
 auditors see deps but don't gate code patterns. Combining the two is the
 contribution.
 
-### 6 new rules — coverage gaps the customer flagged
+### 6 new rules โ€” coverage gaps the customer flagged
 
-- **`missing-auth-guard`** (NestJS) — `@Get` / `@Post` / `@Put` /
+- **`missing-auth-guard`** (NestJS) โ€” `@Get` / `@Post` / `@Put` /
   `@Delete` / `@Patch` route handler with no `@UseGuards` decorator on
   method or class.
-- **`mass-assignment`** — model constructed directly from `req.body`.
+- **`mass-assignment`** โ€” model constructed directly from `req.body`.
   `User.create(req.body)` / `new User(req.body)`.
-- **`idor-no-ownership-check`** — `findById(req.params.id)` /
+- **`idor-no-ownership-check`** โ€” `findById(req.params.id)` /
   `findOne({_id: req.params.id})` with no nearby ownership check.
-- **`ssrf`** — `fetch` / `axios` / `http.get` / `got` / `request` built
+- **`ssrf`** โ€” `fetch` / `axios` / `http.get` / `got` / `request` built
   from `req.body` / `req.query` / `req.params`.
-- **`prototype-pollution`** — `Object.assign(target, req.body)` /
+- **`prototype-pollution`** โ€” `Object.assign(target, req.body)` /
   `_.merge(target, req.body)`.
-- **`weak-webhook-signature`** — payment-gateway webhook handler that
+- **`weak-webhook-signature`** โ€” payment-gateway webhook handler that
   reads `req.body` without verifying a signature.
 
-### `mneme forensics vulns` — new flags
+### `mneme forensics vulns` โ€” new flags
 
-- **`--sarif <path>`** — emit SARIF v2.1.0 (use `-` for stdout). Drop-in
+- **`--sarif <path>`** โ€” emit SARIF v2.1.0 (use `-` for stdout). Drop-in
   for GitHub Code Scanning, GitLab Vulnerability Reports, Microsoft Defender
   for Cloud. Every finding carries `partialFingerprints.primaryLocationLineHash`
   so the same id is stable across runs.
-- **`--min-posterior <n>`** — drop findings below this Bayesian posterior
+- **`--min-posterior <n>`** โ€” drop findings below this Bayesian posterior
   threshold (default 0.3).
-- **`--no-stack`** — disable stack-aware filtering (regression mode for
+- **`--no-stack`** โ€” disable stack-aware filtering (regression mode for
   bisecting a v0.36 result).
-- **`--explain`** — show the prior × evidence breakdown per finding.
-- **`--quiet`** — no banner, no decorative chars.
+- **`--explain`** โ€” show the prior ร— evidence breakdown per finding.
+- **`--quiet`** โ€” no banner, no decorative chars.
 
-### `mneme show <finding-id>` — one-finding deep-dive
+### `mneme show <finding-id>` โ€” one-finding deep-dive
 
 ```
 mneme show da8611cf
@@ -12592,9 +12652,9 @@ mneme show da8611cf
 Prints the full context for a single finding by its 8-char stable id:
 posterior breakdown, commit metadata, file:line, evidence snippet, CWE
 catalogue link, and the exact `mneme suppress` / `git show` commands to
-run next. Replaces the v0.36 "ต้อง git show ทุกครั้ง" friction.
+run next. Replaces the v0.36 "เธ•เนเธญเธ git show เธ—เธธเธเธเธฃเธฑเนเธ" friction.
 
-### `mneme suppress <id> --reason "<why>"` — false-positive management
+### `mneme suppress <id> --reason "<why>"` โ€” false-positive management
 
 ```
 mneme suppress da8611cf --reason "package version bump, expected"
@@ -12605,7 +12665,7 @@ mneme suppress da8611cf --remove
 Stores entries in `.mneme/suppressions.json` (versioned, expires-aware).
 Once you triage a finding it stays gone on every future scan.
 
-### `mneme audit --verify-head` — claim drift detector
+### `mneme audit --verify-head` โ€” claim drift detector
 
 Customer report (v0.36): an audit doc said `"removed omise.restoreStock"`
 but `omise.restoreStock` was still alive in HEAD. The forensics scanner
@@ -12614,7 +12674,7 @@ only looked at commit additions/deletions; it never read HEAD to verify.
 `mneme audit --verify-head` parses every commit subject + body for
 `remove X` / `delete X` / `drop X` / `kill X` / `rip out X` patterns,
 extracts the symbol X, and `git grep`s HEAD for X. If X is still alive,
-it raises a finding — *unless* the only matches are in `CHANGELOG.md` /
+it raises a finding โ€” *unless* the only matches are in `CHANGELOG.md` /
 `docs/` / `wiki/` / test files (those are expected to mention removed
 symbols).
 
@@ -12628,61 +12688,61 @@ suppressed in `--json`.
 
 ### Better citations
 
-Every vuln finding now reports `file:line` resolved from the diff hunk —
+Every vuln finding now reports `file:line` resolved from the diff hunk โ€”
 not just the snippet. SARIF callers get `physicalLocation.region.startLine`
 populated. `--explain` adds the AST evidence context name + reason for
 those who want to audit *why* a finding scored what it scored.
 
 ### Test count
 
-70 new unit tests added (SARIF · suppressions · stack-priors · AST evidence
-· vulnhunt-v0.37 · counterfactual). Total: **2054 tests passing** across
+70 new unit tests added (SARIF ยท suppressions ยท stack-priors ยท AST evidence
+ยท vulnhunt-v0.37 ยท counterfactual). Total: **2054 tests passing** across
 150 files.
 
 ### Customer items resolved
 
-- ✅ #1 vuln scanner accuracy (Bayesian + AST)
-- ✅ #2 coverage gaps (6 new rules)
-- ✅ #3 HEAD verification
-- ✅ #5 verbose output (`--quiet`, SARIF)
-- ✅ #7 stale-index warning
-- ✅ #8 framework awareness (same Bayesian module)
-- ✅ #9 false-positive management (suppressions.json)
-- ✅ #11 better citations (file:line + posterior)
-- ✅ #14 setup friction reduction (auto-pick installed Ollama models in v0.36 carries forward)
-- ✅ #16 UI compact mode (`--quiet`)
+- โ… #1 vuln scanner accuracy (Bayesian + AST)
+- โ… #2 coverage gaps (6 new rules)
+- โ… #3 HEAD verification
+- โ… #5 verbose output (`--quiet`, SARIF)
+- โ… #7 stale-index warning
+- โ… #8 framework awareness (same Bayesian module)
+- โ… #9 false-positive management (suppressions.json)
+- โ… #11 better citations (file:line + posterior)
+- โ… #14 setup friction reduction (auto-pick installed Ollama models in v0.36 carries forward)
+- โ… #16 UI compact mode (`--quiet`)
 
 Items still on the roadmap for v0.38: official GitHub Action (#6), command
 grouping (#10), auto-fix suggestions (#12), CVE/npm-audit integration
 (#15). Each is a design effort in its own right and gets a dedicated
 release rather than rushed in alongside the Bayesian filter.
 
-## [0.36.0] — 2026-05-08
+## [0.36.0] โ€” 2026-05-08
 
 The **"Originals"** release. Five never-before-shipped capabilities added
 in one release plus four foundation-level bug fixes from the v0.35
-recheck. Each Original is a world-first — no maintained, open-source,
+recheck. Each Original is a world-first โ€” no maintained, open-source,
 local-first tool ships any of them today.
 
-### Five new commands — every one reproducible, no LLM required by default
+### Five new commands โ€” every one reproducible, no LLM required by default
 
-- **`mneme karma`** — TODO/FIXME debt as an accumulating ledger. Every TODO
+- **`mneme karma`** โ€” TODO/FIXME debt as an accumulating ledger. Every TODO
   added in a commit is a debit; every one removed is a credit. Open balance
   compounds with age (log-curve, sub-linear). Per-author leaderboard,
   per-file breakdown, oldest unpaid line in the codebase. *Why this is
   new:* every static analyzer counts TODOs at HEAD. None tracks the FLOW
-  (incurred − settled over time, per author). Closest analog is Promise
+  (incurred โ’ settled over time, per author). Closest analog is Promise
   Tracker, but karma is per-author and ages the debt explicitly.
 
-- **`mneme repo-mri`** (alias `mneme mri`) — 20-axis health diagnostic with
+- **`mneme repo-mri`** (alias `mneme mri`) โ€” 20-axis health diagnostic with
   z-scores against typical OSS repos. Pulls the *three most-unusual axes*
   to the top so the answer to "what's weird about this repo" fits in one
-  glance. Per-group table below: People · Code · Process · Risk. Runs in
+  glance. Per-group table below: People ยท Code ยท Process ยท Risk. Runs in
   under 10 seconds, pure git data, no LLM. *Why this is new:* dashboards
   show RAW metrics. Mneme normalizes against a population so an outlier
   reads as an outlier without you having to calibrate by gut.
 
-- **`mneme palimpsest --counterfactual <file>:<line>`** — forward-walk
+- **`mneme palimpsest --counterfactual <file>:<line>`** โ€” forward-walk
   inversion of the existing palimpsest. Takes one line, finds every
   downstream commit that touched it (ground truth via `git log -L`), and
   generates heuristic alt-history sketches (negate `===`, flip `return
@@ -12690,17 +12750,17 @@ local-first tool ships any of them today.
   the strongest identifier on the line. *Why this is new:* tools tell you
   who wrote a line. None show you what your original choice locked in.
 
-- **`mneme cognitive-twin <email>`** (alias `twin`) — stylometric voice
+- **`mneme cognitive-twin <email>`** (alias `twin`) โ€” stylometric voice
   fingerprint. Length distribution, conv-commit prefix preferences, top
   opening words, recurring bigram phrases, em-dash habit, lowercase rate,
   body-bullet usage. Optional `--rewrite "<subject>"` rewrites a generic
   commit subject in the author's voice (heuristic templating, no LLM).
-  Strict ✱ shadow-opinion framing — *never* claimed to be the author's
+  Strict โฑ shadow-opinion framing โ€” *never* claimed to be the author's
   real opinion. *Why this is new:* commit-message linters check format,
   not voice. Cognitive-twin is the first per-author voice model that
   ships in a CLI.
 
-- **`mneme conscience --dual-jury`** — adversarial PR review from real
+- **`mneme conscience --dual-jury`** โ€” adversarial PR review from real
   history. Two arguments pulled from the same repo: prosecution (precedents
   where similar changes caused incidents) vs defense (precedents where the
   same files shipped clean). Weighted verdict: BLOCK / CAUTION / CLEAR.
@@ -12730,23 +12790,23 @@ local-first tool ships any of them today.
   warning while leaving every other Node warning intact.
 
 - **Windows-32 honesty in README.** Node.js itself dropped 32-bit Windows
-  binaries at Node 21; Mneme requires Node ≥22.13. The README install
+  binaries at Node 21; Mneme requires Node โฅ22.13. The README install
   matrix now states this explicitly so 32-bit Windows users are not led
-  to expect support that no Node ≥22 software can provide.
+  to expect support that no Node โฅ22 software can provide.
 
 ### Test count
 
-61 new unit tests added (12 karma · 6 mri · 8 counterfactual · 7 cognitive-twin
-· 6 dual-jury · 22 misc). Total: **2023 tests passing** across 147 files.
+61 new unit tests added (12 karma ยท 6 mri ยท 8 counterfactual ยท 7 cognitive-twin
+ยท 6 dual-jury ยท 22 misc). Total: **2023 tests passing** across 147 files.
 
-## [0.35.0] — 2026-05-08
+## [0.35.0] โ€” 2026-05-08
 
 The **"Sniper Accuracy + Plain Wisdom"** release. Every command output
 audited for accuracy. `mneme audit --certify` rewritten to forensic
-grade — every "pass" now backed by evidence the user can verify.
+grade โ€” every "pass" now backed by evidence the user can verify.
 Three lawsuit-grade defamation phrases scrubbed.
 
-### `mneme audit --certify` — full rewrite to forensic grade
+### `mneme audit --certify` โ€” full rewrite to forensic grade
 
 The v0.34 audit produced output like:
 
@@ -12772,17 +12832,17 @@ class of issue:
 - `compareBehavioralParity` emits per-sample exit/lines/sha evidence.
   Explicit `Sampling: N of ~12` caveat.
 - `classifyForensicAxis` no longer reports `pass` on empty inputs.
-- Pre-flight tripwire — zero AI commits + identical baselines →
+- Pre-flight tripwire โ€” zero AI commits + identical baselines โ’
   `INSUFFICIENT DATA` warning instead of fake `pass`.
 - Headline now reflects coverage:
-  `PASS · 5/5 axes verified · high confidence` —
+  `PASS ยท 5/5 axes verified ยท high confidence` โ€”
   not the old `PASS (exit 0)` that hid skipped axes.
-- `--strict` flag promotes `skipped` → `fail` for compliance
+- `--strict` flag promotes `skipped` โ’ `fail` for compliance
   environments where missing data IS a failure.
 
-`packages/core/src/audit/certify.ts` rewritten (+624 / −82). Markdown
+`packages/core/src/audit/certify.ts` rewritten (+624 / โ’82). Markdown
 report writer (`packages/cli/src/commands/audit.ts`) replaced
-(+189 / −66). 19 new forensic-grade test assertions.
+(+189 / โ’66). 19 new forensic-grade test assertions.
 
 ### Three lawsuit-grade phrases scrubbed
 
@@ -12791,21 +12851,21 @@ judgements that a heuristic metric should never make:
 
 1. `mneme influence` printed *"likely a copy-paster"* under engineers
    whose patterns weren't adopted yet. The metric only walks
-   TS/JS/Python/Go AST shapes — blind to docs, infra, configs,
+   TS/JS/Python/Go AST shapes โ€” blind to docs, infra, configs,
    design work. Replaced with neutral *"no team-adopted patterns
-   above the floor yet (metric is blind to non-code work — configs,
+   above the floor yet (metric is blind to non-code work โ€” configs,
    docs, infra)"*.
 
-2. `mneme insider-trading` heading was literally *"Insider trading —
+2. `mneme insider-trading` heading was literally *"Insider trading โ€”
    authors who fix their own bugs"*. The term is a US federal crime;
    pinning a name under it is defamation-grade. Renamed to *"Self-fix
-   loops — ship-then-patch within a tight window"*. Tier blurb
+   loops โ€” ship-then-patch within a tight window"*. Tier blurb
    *"review process likely broken"* softened to *"could be review
    gaps, flaky tests, or intentional iteration; verify before
    acting"*. Added explicit FRAMING line: *"workflow heuristic, not
-   an accusation — use for retro / process review, never for HR"*.
+   an accusation โ€” use for retro / process review, never for HR"*.
 
-3. `mneme moneyball` had a tier called *"LOUD — many commits, modest
+3. `mneme moneyball` had a tier called *"LOUD โ€” many commits, modest
    impact (loud but not landing)"*. Personal-quality judgement on a
    per-commit-ROI heuristic that's blind to non-code work. Tier
    renamed `HIGH-VOLUME`. Per-row blurb *"below-average impact per
@@ -12828,8 +12888,8 @@ Tag-push trigger commented out. Re-enable by uncommenting the
 `push:` block once secrets land. Manual workflow_dispatch still
 works.
 
-**Tests:** 1962 → 1978 passing (+16 forensic-grade audit tests).
-Build clean. Honest framing throughout — every claim now backs
+**Tests:** 1962 โ’ 1978 passing (+16 forensic-grade audit tests).
+Build clean. Honest framing throughout โ€” every claim now backs
 itself with verifiable evidence the user can `git show`.
 
 ### Honest caveats
@@ -12843,25 +12903,25 @@ itself with verifiable evidence the user can `git show`.
 - **Forensic axes (size/files/style/time)** emit `skipped` until
   the wiring from `mneme forensics anomaly` per-commit z-scores
   into `buildCertificate.forensicScores` is finished. Honest
-  `skipped · no anomaly-detector data supplied` is better than
+  `skipped ยท no anomaly-detector data supplied` is better than
   the v0.34 fake `pass`. v0.36 closes the loop.
 - **P1 weaknesses still on the list**: `conscience` / `blast` /
-  `palimpsest` / WILDs / `clones` need `📘 How to read` blocks
+  `palimpsest` / WILDs / `clones` need `๐“ How to read` blocks
   per the audit findings. v0.35.1.
 
-## [0.34.0] — 2026-05-08
+## [0.34.0] โ€” 2026-05-08
 
 The "Zero Native Deps" release. `npm install -g mneme-ai` now works on
-every (OS × arch × Node major) combination Node itself supports —
+every (OS ร— arch ร— Node major) combination Node itself supports โ€”
 including Windows ARM64 + Node 24, the case that broke v0.33.
 
 ### Migrations
 
-- `better-sqlite3` → `node:sqlite` (Node 22.13+ built-in). Zero native
+- `better-sqlite3` โ’ `node:sqlite` (Node 22.13+ built-in). Zero native
   compile, ships with Node, FTS5 + WAL still supported. Loaded via
   `createRequire` so vitest's static analyzer doesn't choke on the
   `node:` builtin scheme.
-- `@xenova/transformers` → `@huggingface/transformers` v3 with
+- `@xenova/transformers` โ’ `@huggingface/transformers` v3 with
   `device: "wasm"` forced at pipeline-create time so `onnxruntime-node`
   is never loaded even when present in node_modules.
 - `engines.node` bumped to `">=22.13.0 <25.0.0"` so users on Node 20
@@ -12869,11 +12929,11 @@ including Windows ARM64 + Node 24, the case that broke v0.33.
   gyp / prebuild-install error chain. 22.13 is the exact release where
   `node:sqlite` graduated from experimental to stable.
 
-### Bug fix — secret-redactor false positives
+### Bug fix โ€” secret-redactor false positives
 
 A real customer test on a non-AWS repo flagged **42 git-SHA strings
 as `aws-secret-access-key` matches**. The rule was a context-free
-regex that matched any 40-char base64-ish string — every git SHA,
+regex that matched any 40-char base64-ish string โ€” every git SHA,
 npm integrity hash, random ID in the repo got falsely flagged.
 
 Replaced with a lookbehind that anchors on the env-var name
@@ -12894,7 +12954,7 @@ permanent fix.
 
 - Drops Node 20 support. ~1% of npm-tracked Node installs are still
   on Node 20; they'll need to upgrade.
-- Floor is Node 22.13 (not 22.0) — that's the Node release where
+- Floor is Node 22.13 (not 22.0) โ€” that's the Node release where
   `node:sqlite` graduated from `--experimental-sqlite` to stable. The
   task spec called for `>=22.0.0` but anything below 22.13 would crash
   on import; we picked the stricter floor for a clean error message.
@@ -12905,17 +12965,17 @@ permanent fix.
   onnxruntime-node path on indexing; for one-time index it's
   acceptable. Subsequent retrievals don't use the embedder.
 - `MnemeStore.db.transaction(fn)` (a `better-sqlite3`-only convenience)
-  is now `MnemeStore.transaction(fn)` — same shape, lifted up to the
+  is now `MnemeStore.transaction(fn)` โ€” same shape, lifted up to the
   store class. Internal consumers (htc/storage, counterfactual) updated.
 
-## [0.33.0] — 2026-05-07
+## [0.33.0] โ€” 2026-05-07
 
 Production hardening + intelligence upgrade. Three changes that ship together:
 
 ### Vendor-neutral CLI surface
 
 - `mneme audit`'s description no longer enumerates "Claude Code / Cursor /
-  Codex / Sweep / etc." — replaced with `"works with any AI tool whose
+  Codex / Sweep / etc." โ€” replaced with `"works with any AI tool whose
   commits end up in 'git log'"`. Same vendor-neutral substance, no public
   endorsement of any specific AI tool.
 - `mneme mcp`'s description swapped from "for Claude Code, Cursor,
@@ -12930,10 +12990,10 @@ Production hardening + intelligence upgrade. Three changes that ship together:
 ### Cross-platform snapshot stability + test gate re-enabled in `release.yml`
 
 - `tests/regression/helpers.ts` `normalize()` now:
-  - Normalizes CRLF → LF *before* any other pass (Windows runners stop
+  - Normalizes CRLF โ’ LF *before* any other pass (Windows runners stop
     diffing against POSIX baselines).
   - Strips trailing whitespace on every line.
-  - Strips a broader ANSI grammar (CSI + OSC), not just SGR — picks up
+  - Strips a broader ANSI grammar (CSI + OSC), not just SGR โ€” picks up
     cursor moves and column resets that occasionally leaked through.
   - Collapses pty-width-dependent column gaps in commander's two-column
     help layout to a single ` > ` separator. Code blocks and tables
@@ -12943,26 +13003,26 @@ Production hardening + intelligence upgrade. Three changes that ship together:
   validates on every push, but the tag-triggered publish now also runs
   the full suite as a final guard.
 
-### Smart-up — `--explain` narrative on three flagship commands
+### Smart-up โ€” `--explain` narrative on three flagship commands
 
-- `mneme audit --certify --explain` — narrates verdict + closest-call axis
+- `mneme audit --certify --explain` โ€” narrates verdict + closest-call axis
   + a concrete next step.
-- `mneme atrophy --explain` — narrates the knowledge-decay risk in human
+- `mneme atrophy --explain` โ€” narrates the knowledge-decay risk in human
   terms and recommends 1-2 specific files to refresh first.
-- `mneme nervous-system --explain` — narrates the cross-cutting story:
+- `mneme nervous-system --explain` โ€” narrates the cross-cutting story:
   who's the alpha, where's atrophy concentrated, what's surprising.
 
 Implementation:
 
 - New shared helper at `packages/cli/src/utils/explain.ts`. Wraps the
-  existing `ResilientEnricher` from `@mneme-ai/embeddings` — same
-  free-LLM ladder (local Ollama → Groq → Together → OpenRouter →
+  existing `ResilientEnricher` from `@mneme-ai/embeddings` โ€” same
+  free-LLM ladder (local Ollama โ’ Groq โ’ Together โ’ OpenRouter โ’
   OpenAI) that `mneme ask` uses.
 - `--explain` is **opt-in** and **off by default**. Existing JSON shape
   is unchanged; the narrative renders **above** the existing tables in
   the terminal output only.
 - Honest framing: the narrative section is titled
-  `💡 Plain-English read (LLM)` so a reader never confuses the
+  `๐’ก Plain-English read (LLM)` so a reader never confuses the
   synthesized prose with the raw data.
 - If no LLM provider is reachable, the command prints a single
   `HEADS UP: --explain needs a free LLM provider; run 'mneme setup-free'
@@ -12970,29 +13030,29 @@ Implementation:
 - 15 new tests (3 per command + 6 helper-level) cover the OFF /
   ON-with-LLM / ON-without-LLM control flow.
 
-### Smoke-test guards — strengthened so re-enabled test gate doesn't break CI
+### Smoke-test guards โ€” strengthened so re-enabled test gate doesn't break CI
 
 The dev-only smoke tests in `nervous-system.smoke.test.ts` and
 `black-sheep.smoke.test.ts` previously gated on `existsSync(.mneme/mneme.db)`
 alone. Some upstream test was creating an empty SQLite at the repo root
 (via `MnemeStore` constructor's mkdir+open behavior), which made the
 guard return `true` on CI and caused the smokes to run against an empty
-index — exit code 1 — which would have blocked the freshly re-enabled
+index โ€” exit code 1 โ€” which would have blocked the freshly re-enabled
 test gate in `release.yml`.
 
 Fix:
-- Bail out early if `process.env.CI === "true"` — covers GitHub Actions,
+- Bail out early if `process.env.CI === "true"` โ€” covers GitHub Actions,
   GitLab CI, CircleCI, Bitbucket Pipelines (all set this var).
-- Plus require `statSync(DB).size >= 200_000` — an empty SQLite is ~16 KB,
+- Plus require `statSync(DB).size >= 200_000` โ€” an empty SQLite is ~16 KB,
   a real Mneme index is multi-MB. Belt-and-braces against any future
   test-ordering quirk.
 
 Result: on CI, both smoke files report **18/18 skipped** cleanly.
 Locally on a dev machine with a real index, all 18 still run and pass.
 
-Test count: 1944 → **1959 passing**.
+Test count: 1944 โ’ **1959 passing**.
 
-## [0.32.1] — 2026-05-07
+## [0.32.1] โ€” 2026-05-07
 
 CI/release-pipeline fix. v0.30.0 through v0.32.0 never reached npm
 because `release.yml` re-ran the full test + eval suites on tag push
@@ -13003,7 +13063,7 @@ This release:
 
 - Drops the redundant `npm test` + `npm run eval` steps from
   `release.yml`. The full matrix already runs on every push via
-  `ci.yml` — we trust the green CI run that landed the tagged commit.
+  `ci.yml` โ€” we trust the green CI run that landed the tagged commit.
   `npm run build` stays as a sanity gate (type errors still block
   publish).
 - No code or behavior change. Same dashboard, same audit, same
@@ -13013,17 +13073,17 @@ If npm publish still fails after this change, the most likely
 remaining cause is that `NPM_TOKEN` was created as a "Classic" token
 instead of "Automation". On accounts with 2FA `auth-and-writes` enabled,
 classic tokens cannot publish without an OTP. Regenerate as
-`Automation` type from npmjs.com → Profile → Access Tokens, and
+`Automation` type from npmjs.com โ’ Profile โ’ Access Tokens, and
 update the GitHub Secret.
 
-## [0.32.0] — 2026-05-07
+## [0.32.0] โ€” 2026-05-07
 
 The **"Docker Edition"**. Mneme now ships as a multi-arch Docker
 image on GitHub Container Registry. Targets the cases npm cannot
 serve: CI runners without a Node toolchain, air-gapped enterprise
 environments, and one-line demo runs.
 
-No code changes — pure distribution layer.
+No code changes โ€” pure distribution layer.
 
 ### What's new
 
@@ -13034,14 +13094,14 @@ No code changes — pure distribution layer.
   - `npm install --omit=dev mneme-ai` from the npm registry
   - `mneme` symlinked to `/usr/local/bin`, `WORKDIR /repo`,
     `ENTRYPOINT ["mneme"]`, `CMD ["--help"]`
-- **`.dockerignore`** allowlists only `Dockerfile` itself — keeps the
+- **`.dockerignore`** allowlists only `Dockerfile` itself โ€” keeps the
   build context under 10 KB.
-- **`.github/workflows/docker-publish.yml`** — multi-arch
+- **`.github/workflows/docker-publish.yml`** โ€” multi-arch
   (`linux/amd64` + `linux/arm64`) build via `docker/buildx-action`,
   push to `ghcr.io/patsa2561-art/mneme-ai`. Runs on every release tag
   and on every push to `main` (as `:edge`).
-- Tag scheme: `latest` (newest stable) · `0.32.0` / `0.32` / `0`
-  (pinned) · `edge` (main HEAD).
+- Tag scheme: `latest` (newest stable) ยท `0.32.0` / `0.32` / `0`
+  (pinned) ยท `edge` (main HEAD).
 - Tag-triggered builds wait ~120 s after `release.yml` so npm has
   time to finish publishing before the Dockerfile's `npm install`
   step runs.
@@ -13049,16 +13109,16 @@ No code changes — pure distribution layer.
 ### README + wiki updates
 
 - Hero gains a `ghcr.io` badge linking to the Packages page.
-- Install section gains a fourth option: **🐳 Node-free CI /
+- Install section gains a fourth option: **๐ณ Node-free CI /
   air-gapped install** with the `docker pull` command.
-- Sidebar gains `Docker` under the **🔌 Integrations** group.
-- New **`docs/wiki/Docker.md`** — full positioning, pull / run
+- Sidebar gains `Docker` under the **๐” Integrations** group.
+- New **`docs/wiki/Docker.md`** โ€” full positioning, pull / run
   examples, CI snippets for GitHub Actions / GitLab / Bitbucket,
   image layout breakdown, troubleshooting, privacy posture.
 
 ### Why this matters for marketing
 
-Most npm-distributed CLIs ship npm-only — and so they're invisible
+Most npm-distributed CLIs ship npm-only โ€” and so they're invisible
 to the (large, growing) population of teams running pure-Docker CI
 pipelines. With this release Mneme is one `docker pull` away on every
 major CI platform. Plus: the Packages section on the GitHub repo
@@ -13080,7 +13140,7 @@ auditing the project.
   but a full SPDX SBOM attached to the image (via `cosign attest`)
   is a follow-up loop.
 
-## [0.31.1] — 2026-05-07
+## [0.31.1] โ€” 2026-05-07
 
 Cleanup of the v0.31.0 ship:
 
@@ -13091,23 +13151,23 @@ Cleanup of the v0.31.0 ship:
   child; the new wiring fixes that. -161 / +90 lines net in
   `packages/cli/src/index.ts`.
 - Snapshot refreshed for the new `mneme --help` shape.
-- 12 black-sheep smoke tests finalized — round-trip exercises for
-  `adversarial` (generate → fake responses → grade → 100%),
+- 12 black-sheep smoke tests finalized โ€” round-trip exercises for
+  `adversarial` (generate โ’ fake responses โ’ grade โ’ 100%),
   `counterfactual` (graceful degrade on solo-author repo), `org`
   (registry CRUD against an isolated `$USERPROFILE`).
 
 No public-API change. **1944 tests passing.**
 
-## [0.31.0] — 2026-05-07
+## [0.31.0] โ€” 2026-05-07
 
 The **"Black Sheep Edition"**. Three commands no other engineering tool
-ships, plus a VS Code extension whose headline feature — **the Atrophy
-Lens** — surfaces knowledge decay inline above every function as you
+ships, plus a VS Code extension whose headline feature โ€” **the Atrophy
+Lens** โ€” surfaces knowledge decay inline above every function as you
 read code.
 
 **+121 new tests, 1932 total passing.**
 
-### 1. `mneme adversarial` — meta-evaluation of AI clients
+### 1. `mneme adversarial` โ€” meta-evaluation of AI clients
 
 Mneme generates carefully-crafted contradictions about your repo's
 history and feeds them to your AI client through MCP. Measures whether
@@ -13116,7 +13176,7 @@ the AI catches the lies. Outputs a trust grade.
 ```bash
 mneme adversarial --probes 12          # generate adversarial-probes.md
 # pipe into your AI / paste into MCP, capture responses
-mneme adversarial --grade responses.json   # 92% — caught 11/12
+mneme adversarial --grade responses.json   # 92% โ€” caught 11/12
 ```
 
 Three probe variants per query: **truth** (the actual abstract),
@@ -13127,23 +13187,23 @@ this from the evidence."* Your AI's score = how often it does.
 **World-first.** No engineering analytics tool tests AI clients via
 repo memory.
 
-### 2. `mneme counterfactual <author>` — Bayesian re-simulation
+### 2. `mneme counterfactual <author>` โ€” Bayesian re-simulation
 
 Drops one author's commits and re-runs atrophy + telepathy against the
 shadow store. Outputs the delta:
 
 ```
-🌀 Counterfactual: without alice@example.com
-   knowledge mass redistributes: -142.6 → +0
-   files lose live expert: 12  (src/payments/checkout.ts, …)
-   cultural alpha shifts: rank #1 Alice → rank #1 Bob (PR 0.74)
+๐€ Counterfactual: without alice@example.com
+   knowledge mass redistributes: -142.6 โ’ +0
+   files lose live expert: 12  (src/payments/checkout.ts, โ€ฆ)
+   cultural alpha shifts: rank #1 Alice โ’ rank #1 Bob (PR 0.74)
 ```
 
 Influence is **not** re-simulated (it walks the live tree, not the
 SQLite store). Surfaced as an honest scope cap. Honest framing front
 and center: **never use this to evaluate a real person.**
 
-### 3. `mneme org` — cross-repo nervous system
+### 3. `mneme org` โ€” cross-repo nervous system
 
 Register multiple indexed repos under one org name; run the nervous-
 system across all of them.
@@ -13159,7 +13219,7 @@ Storage in `~/.mneme/orgs/<name>.json`. Cross-repo telepathy detects
 authors who pair across repos; cross-repo influence detects patterns
 that propagate org-wide.
 
-### 4. VS Code extension — `packages/vscode/`
+### 4. VS Code extension โ€” `packages/vscode/`
 
 The Mneme VS Code extension. Marketplace-ready package: `mneme-vscode`.
 
@@ -13168,12 +13228,12 @@ emits a code lens above every function/class declaration in the
 active document showing how decayed the team's knowledge of it is:
 
 ```
-🟢 fresh — last expert touched 6 days ago (98%)
-🟡 fading — top knower 41% fresh, last touched 198 days ago — refresh recommended
-🔴 ghost — no live expert, deep history lost (4 prior touches)
+๐ข fresh โ€” last expert touched 6 days ago (98%)
+๐ก fading โ€” top knower 41% fresh, last touched 198 days ago โ€” refresh recommended
+๐”ด ghost โ€” no live expert, deep history lost (4 prior touches)
 ```
 
-Plus four palette commands (`Mneme: Ask…` / `Why this line` / `Audit
+Plus four palette commands (`Mneme: Askโ€ฆ` / `Why this line` / `Audit
 current PR` / `Open Nervous System` webview), a sidebar tree view
 (audit verdict + at-risk files + my passport), a status bar item
 showing the current audit verdict, and a hover provider.
@@ -13182,7 +13242,7 @@ Performance: per-file LRU cache for atrophy results, debounced 1s.
 
 Bundle: `dist/extension.js` produced via esbuild.
 
-### 5. Stable public API surface — extended
+### 5. Stable public API surface โ€” extended
 
 `@mneme-ai/core/public` gains the three Black Sheep entry points:
 
@@ -13193,7 +13253,7 @@ import {
   addRepoToOrg, createOrg, runOrgNervousSystem,    // org
   type Probe, type GradeReport,
   type CounterfactualReport, type FileExpertChange,
-  // …
+  // โ€ฆ
 } from "@mneme-ai/core/public";
 ```
 
@@ -13203,7 +13263,7 @@ import {
 - **Mindmap** gains an `Editor` branch with `VS Code extension`,
   `atrophy lens above functions`, `audit verdict badge`, `sidebar
   tree view`.
-- **Sidebar** gains a "📝 Editors" group containing `VS-Code-Extension`.
+- **Sidebar** gains a "๐“ Editors" group containing `VS-Code-Extension`.
 - All AI-vendor names removed from README per maintainer rule
   (Claude Code, Cursor, Codex, Cody, Greptile, Sweep, Aider, Devin,
   Copilot, Continue, Cline). CHANGELOG remains the historical record;
@@ -13211,10 +13271,10 @@ import {
 
 ### Tests
 
-- adversarial — 18 tests (probe generation + grading)
-- counterfactual — 12 tests (shadow store + delta)
-- org — 18 tests (registry CRUD + cross-repo)
-- VS Code extension — ~20 tests (atrophy lens parser, sidebar
+- adversarial โ€” 18 tests (probe generation + grading)
+- counterfactual โ€” 12 tests (shadow store + delta)
+- org โ€” 18 tests (registry CRUD + cross-repo)
+- VS Code extension โ€” ~20 tests (atrophy lens parser, sidebar
   provider, status bar formatter, findDb)
 - Various integration tests + snapshot regenerated for new commands
 
@@ -13236,13 +13296,13 @@ import {
   works locally; the Marketplace publish step requires a manual
   PAT-authenticated `vsce publish` from a developer account.
 
-## [0.30.1] — 2026-05-07
+## [0.30.1] โ€” 2026-05-07
 
 CI fix. The v0.30.0 web sub-agent committed
 `packages/web/package-lock.json` after running `npm install --no-workspaces`
 to bypass a transient npm bug. That standalone lockfile conflicts with
 the root lockfile in a workspaces setup, breaking `npm ci` on
-Linux/macOS — which broke CI matrix, the Release workflow's npm
+Linux/macOS โ€” which broke CI matrix, the Release workflow's npm
 publish, and the GitHub Pages Deploy build. v0.30.0 never reached npm
 as a result.
 
@@ -13255,17 +13315,17 @@ This release:
 
 No code or behavior change. Functionally identical to v0.30.0.
 
-## [0.30.0] — 2026-05-07
+## [0.30.0] โ€” 2026-05-07
 
 The **"Nervous System Live"** release. Mneme gains a **world-class
 interactive web dashboard** with an industry-first innovation: the
-**Time Scrubber** — drag a slider, watch your team's invisible network
+**Time Scrubber** โ€” drag a slider, watch your team's invisible network
 form, decay, and re-form across years. Plus `mneme dashboard` to open
 it locally against your own repo.
 
 **+12 new tests, 1811 total passing.**
 
-### 1. The Web Dashboard — `packages/web/`
+### 1. The Web Dashboard โ€” `packages/web/`
 
 A self-contained Vite + React + D3 single-page app that renders the
 Nervous System data live:
@@ -13275,22 +13335,22 @@ packages/web/
   src/
     App.tsx
     components/
-      TimeScrubber.tsx       ← THE headline innovation
-      NervousSystemView.tsx  ← D3 force-directed graph
+      TimeScrubber.tsx       โ THE headline innovation
+      NervousSystemView.tsx  โ D3 force-directed graph
       AtrophyHeatmap.tsx
       InfluenceLadder.tsx
       DetailPanel.tsx
       LoadDialog.tsx
-    lib/scrub.ts             ← Ebbinghaus re-decay at any moment t
-    styles/global.css        ← deep-purple Linear/Vercel aesthetic
+    lib/scrub.ts             โ Ebbinghaus re-decay at any moment t
+    styles/global.css        โ deep-purple Linear/Vercel aesthetic
   public/
-    demo.json                ← 7-author / 9-pair / 4-lobe showcase
+    demo.json                โ 7-author / 9-pair / 4-lobe showcase
 ```
 
 **Bundle size: 82 KB gzipped total.** Far under the 500 KB target. No
 runtime backend; no external CDN; system-font stack only. Self-contained.
 
-### 2. The Time Scrubber — the world-first innovation
+### 2. The Time Scrubber โ€” the world-first innovation
 
 A horizontal slider on the dashboard header. Drag to "rewind" the repo
 state. As you drag:
@@ -13300,31 +13360,31 @@ state. As you drag:
 
 Smooth at 60fps via `requestAnimationFrame` + GPU-composited
 `transform: scaleX()` and `translateX()`. Keyboard navigation (arrows,
-Home, End, Shift, Space). ▶ Play button animates min→max over 12s.
+Home, End, Shift, Space). โ–ถ Play button animates minโ’max over 12s.
 
 **No other git tool ships temporal nervous-system playback.** This is
 the differentiator.
 
-### 3. Three views — one toggle
+### 3. Three views โ€” one toggle
 
-- **🧬 Nervous System** (default) — D3 force-directed graph with author
+- **๐งฌ Nervous System** (default) โ€” D3 force-directed graph with author
   nodes (size = knowledge mass, color = atrophy) and telepathic edges
-  (thickness = score). Drag, zoom, click → passport drill-down.
-- **⏳ Atrophy heatmap** — file × author matrix shaded by knowledge
-  score. Click row → highlight knowers. Click column → highlight
+  (thickness = score). Drag, zoom, click โ’ passport drill-down.
+- **โณ Atrophy heatmap** โ€” file ร— author matrix shaded by knowledge
+  score. Click row โ’ highlight knowers. Click column โ’ highlight
   files known.
-- **👑 Influence ladder** — animated PageRank bars; expandable rows
+- **๐‘‘ Influence ladder** โ€” animated PageRank bars; expandable rows
   showing top originated patterns + adopter list.
 
-### 4. Three input modes — local-first guarantee
+### 4. Three input modes โ€” local-first guarantee
 
-1. **🎬 Try the demo** — bundled showcase (7 authors, 9 latent pairs,
+1. **๐ฌ Try the demo** โ€” bundled showcase (7 authors, 9 latent pairs,
    labeled with `_demo_synthetic: true` pill).
-2. **📥 Drop a file** — drag-drop or paste your own `mneme
+2. **๐“ฅ Drop a file** โ€” drag-drop or paste your own `mneme
    nervous-system --json` output. **Never uploaded to a server.**
-3. **🔗 Load from URL** — paste a hosted JSON URL (CORS permitting).
+3. **๐”— Load from URL** โ€” paste a hosted JSON URL (CORS permitting).
 
-### 5. `mneme dashboard` — open the live UI on your own repo
+### 5. `mneme dashboard` โ€” open the live UI on your own repo
 
 New CLI command:
 
@@ -13341,7 +13401,7 @@ server, opens the browser pointed at the SPA. Works offline.
 
 ### 6. GitHub Pages auto-deploy
 
-`.github/workflows/deploy-web.yml` — on every push to main that
+`.github/workflows/deploy-web.yml` โ€” on every push to main that
 touches `packages/web/`, builds the SPA and deploys to GitHub Pages.
 
 **Live demo URL: https://patsa2561-art.github.io/mneme-ai/**
@@ -13350,7 +13410,7 @@ Added a `live demo` badge to the README hero.
 
 ### 7. README + wiki updates
 
-- **README hero**: live-demo badge added; new "🌐 Spotlight — The
+- **README hero**: live-demo badge added; new "๐ Spotlight โ€” The
   Live Dashboard" section; mermaid mindmap gained a `Dashboard`
   branch.
 - **Sidebar**: integrations group already linked to dashboard via
@@ -13359,7 +13419,7 @@ Added a `live demo` badge to the README hero.
 
 ### Tests
 
-- `packages/cli/src/commands/dashboard.test.ts` — 10 tests (port
+- `packages/cli/src/commands/dashboard.test.ts` โ€” 10 tests (port
   allocation, occupied-port skip, static index serving, `/api/data.json`,
   SPA fallback, missing-build error path, `resolveWebDist` overrides).
 - Snapshot regenerated for the new top-level `dashboard` command in
@@ -13385,7 +13445,7 @@ Added a `live demo` badge to the README hero.
   paths, port allocation, SPA fallback. Smoke-test the
   command-runs-server flow manually before tagging.
 
-## [0.29.0] — 2026-05-07
+## [0.29.0] โ€” 2026-05-07
 
 The **"Indispensable on every CI"** release. Mneme installs on every
 CI/CD platform with a one-line drop-in, comments on every PR with a
@@ -13395,7 +13455,7 @@ cross-language `influence` (Python + Go).
 
 **+146 new tests, 1791 total passing.**
 
-### 1. GitHub Action — `.github/actions/mneme-audit/`
+### 1. GitHub Action โ€” `.github/actions/mneme-audit/`
 
 Composite action so any GitHub user can drop Mneme into a PR workflow
 in one line:
@@ -13408,8 +13468,8 @@ in one line:
     comment: true
 ```
 
-Inputs: `mode` (certify/verify/trace/report/watch) · `baseline`
-(true/false) · `fail-on` (fail/warn/never) · `comment` (auto-comment
+Inputs: `mode` (certify/verify/trace/report/watch) ยท `baseline`
+(true/false) ยท `fail-on` (fail/warn/never) ยท `comment` (auto-comment
 on the PR).
 
 Marketplace-quality `README.md` lives next to `action.yml`. Designed
@@ -13417,7 +13477,7 @@ so the listing description, screenshots, and copy-paste examples
 appear directly on the GitHub Marketplace page when the action is
 published.
 
-### 2. `mneme bot` — auto-comment audit verdicts on PRs
+### 2. `mneme bot` โ€” auto-comment audit verdicts on PRs
 
 New top-level command. Runs your selected analyzers (audit + atrophy +
 ghost code by default) and posts a structured GitHub-Flavored Markdown
@@ -13431,14 +13491,14 @@ mneme bot --dry-run                    # print, don't post
 ```
 
 Auto-detects platform from environment:
-- `GITHUB_ACTIONS` → GitHub API + `GITHUB_TOKEN`
-- `GITLAB_CI` → GitLab API + `GITLAB_TOKEN`
-- `BITBUCKET_BUILD_NUMBER` → Bitbucket API + `BITBUCKET_TOKEN`
+- `GITHUB_ACTIONS` โ’ GitHub API + `GITHUB_TOKEN`
+- `GITLAB_CI` โ’ GitLab API + `GITLAB_TOKEN`
+- `BITBUCKET_BUILD_NUMBER` โ’ Bitbucket API + `BITBUCKET_TOKEN`
 
-Each platform integration uses Node 18+ built-in `fetch` — no extra
+Each platform integration uses Node 18+ built-in `fetch` โ€” no extra
 dependencies. `--dry-run` works without any token.
 
-### 3. Multi-platform CI templates — `docs/integrations/`
+### 3. Multi-platform CI templates โ€” `docs/integrations/`
 
 Drop-in CI templates for every major platform:
 
@@ -13454,9 +13514,9 @@ docs/integrations/
 
 Plus a new wiki page **`Integrations.md`** with hero ("Mneme works on
 every CI you already use"), section per platform, copy-paste snippets.
-Sidebar gains a "🔌 Integrations" group.
+Sidebar gains a "๐” Integrations" group.
 
-### 4. Shell completion — `mneme completion <shell>`
+### 4. Shell completion โ€” `mneme completion <shell>`
 
 Tab-complete 83 commands across every major shell:
 
@@ -13471,7 +13531,7 @@ Self-contained scripts (no external dependencies). Discovers the
 command list from commander itself, so new commands are
 auto-completable without code change.
 
-### 5. Cross-language `mneme influence` — Python + Go
+### 5. Cross-language `mneme influence` โ€” Python + Go
 
 `mneme influence` previously analyzed only TypeScript / JavaScript;
 extended to **Python + Go** via lightweight regex-based shape
@@ -13479,22 +13539,22 @@ extractors. PageRank now ranks cultural alphas across multi-language
 repos.
 
 Files:
-- `packages/core/src/people/lang-parsers/python.ts` — Python `def` /
+- `packages/core/src/people/lang-parsers/python.ts` โ€” Python `def` /
   `class` / decorator extractor
-- `packages/core/src/people/lang-parsers/go.ts` — Go `func` + method
+- `packages/core/src/people/lang-parsers/go.ts` โ€” Go `func` + method
   receiver extractor
 - Honest scope panel updated to reflect the new languages; the regex
-  approach is documented in the `📘 How to read` block.
+  approach is documented in the `๐“ How to read` block.
 
 End-to-end test (`influence.crosslang.test.ts`) creates a real git
 temp repo with `.py` + `.go` + `.ts` files, commits them, runs
 `buildInfluenceReport`, and asserts the language mix is non-zero
 across all three.
 
-### 6. Stable public API — `@mneme-ai/core/public`
+### 6. Stable public API โ€” `@mneme-ai/core/public`
 
 New entry point for downstream tooling: bots, IDE extensions,
-dashboards, GitHub Apps. Curated semver-stable surface — anything
+dashboards, GitHub Apps. Curated semver-stable surface โ€” anything
 NOT exposed here is internal and may change between minor versions.
 
 ```ts
@@ -13516,9 +13576,9 @@ import {
 ```
 
 Files:
-- `packages/core/src/public.ts` — the curated surface (~210 lines)
-- `packages/core/package.json` — `exports["./public"]` subpath added
-- `docs/wiki/Public-API.md` — full API reference + usage patterns
+- `packages/core/src/public.ts` โ€” the curated surface (~210 lines)
+- `packages/core/package.json` โ€” `exports["./public"]` subpath added
+- `docs/wiki/Public-API.md` โ€” full API reference + usage patterns
 - Sidebar gains a "Public-API" entry
 
 ### Tests
@@ -13553,10 +13613,10 @@ Files:
   shape mismatches when they integrate. We commit to additive minor
   releases and major-only breaking changes.
 
-## [0.28.0] — 2026-05-07
+## [0.28.0] โ€” 2026-05-07
 
 The **"Mneme Nervous System"** release. Eight new commands surfacing
-what GitHub and GitLab structurally cannot see — the dark corners of
+what GitHub and GitLab structurally cannot see โ€” the dark corners of
 team behavior hiding underneath the contributors view.
 
 **+223 new tests, 1645 total passing.**
@@ -13569,59 +13629,59 @@ UIs cannot capture: latent collaboration, knowledge atrophy, cultural
 influence, promise debt. Mneme computes all of these locally from your
 git history and makes them browsable, exportable, and PDF-printable.
 
-### Six new commands — people analytics
+### Six new commands โ€” people analytics
 
-1. **`mneme telepathy`** — latent collaboration network. Pairs of
+1. **`mneme telepathy`** โ€” latent collaboration network. Pairs of
    authors who never co-authored a commit but whose changes are
    behaviorally coupled (Alice edits X, Bob edits Y within N hours,
    repeatedly). 327 lines core + 20 tests.
 
-2. **`mneme atrophy`** — knowledge half-life clock. Models the
-   Ebbinghaus forgetting curve over (author × file) pairs. Three modes:
+2. **`mneme atrophy`** โ€” knowledge half-life clock. Models the
+   Ebbinghaus forgetting curve over (author ร— file) pairs. Three modes:
    repo heatmap, per-author detail, per-file knowers. 524 lines core +
    22 tests.
 
-3. **`mneme nemesis`** — engineering-friction detector. Pairs whose
+3. **`mneme nemesis`** โ€” engineering-friction detector. Pairs whose
    commits consistently rewrite each other. Defamation-safe by design:
    findings explicitly labeled as engineering friction, never personal
    conflict. 412 lines core + 17 tests.
 
-4. **`mneme promise`** — promise-debt ledger. Scans commit + PR text
+4. **`mneme promise`** โ€” promise-debt ledger. Scans commit + PR text
    for "I'll fix this later" / TODO / follow-up patterns. Verifies
    against subsequent commits. Honest framing: heuristic, starting
    list not verdict. 447 lines core + 24 tests.
 
-5. **`mneme influence`** — cultural alphas via PageRank on code
+5. **`mneme influence`** โ€” cultural alphas via PageRank on code
    patterns. Volume-independent: a 5-commit pattern-setter outranks a
    500-commit copy-paster. TS/JS only in v1, labeled accordingly. 510
    lines core + 23 tests.
 
-6. **`mneme lineage <target>`** — semantic ownership of a function or
+6. **`mneme lineage <target>`** โ€” semantic ownership of a function or
    file. Walks the commit chain forward, distributing intent
    continuity weights. "70% Alice's design as interpreted by Bob's
    refactor, then preserved through Carol's extension." 542 lines
    core + 31 tests.
 
-### Two new commands — composition + flagship
+### Two new commands โ€” composition + flagship
 
-7. **`mneme passport [author]`** — engineer dossier. Combines DNA +
+7. **`mneme passport [author]`** โ€” engineer dossier. Combines DNA +
    expertise map + telepathic teammates + cultural footprint + atrophy
    clock + voice fingerprint + (opt-in) friction. Outputs terminal,
    self-contained HTML, or PDF.
 
-8. **`mneme nervous-system`** — **THE FLAGSHIP.** A single report
+8. **`mneme nervous-system`** โ€” **THE FLAGSHIP.** A single report
    combining top-N passports + telepathy heatmap + atrophy heatmap +
    influence ladder + repo neuroanatomy + honest-limits panel.
    Multi-page A4 print-ready HTML with inline CSS. Optional PDF via
    lazy-loaded `puppeteer-core`.
 
-### PDF rendering — the optional path
+### PDF rendering โ€” the optional path
 
 `packages/core/src/people/pdf.ts` lazy-loads `puppeteer-core` when
 `--pdf` is requested. **HTML always works** (self-contained, opens in
 any browser, print-to-PDF is universal). PDF is opt-in; if
 puppeteer-core isn't installed the user gets a friendly install
-message and HTML is written anyway. Strictly a peer-optional dep —
+message and HTML is written anyway. Strictly a peer-optional dep โ€”
 not in package.json `dependencies`.
 
 ### UX polish
@@ -13629,34 +13689,34 @@ not in package.json `dependencies`.
 - **README rebuilt as a story.** Added a mermaid mindmap of every
   module after the hero. Audit spotlight now collapsible. New People
   Analytics spotlight section before the brain lobes.
-- **Manifesto reworded.** "Mneme is the teacher of AI" → *"the
+- **Manifesto reworded.** "Mneme is the teacher of AI" โ’ *"the
   library, not the librarian"*. Less smug, more elegant. The library
   metaphor scales: brilliant minds borrow books, the archive
   remembers everything.
 - **AI-Teacher.md wiki rewritten** to match the new framing.
   Competitor comparison table removed (per maintainer rule against
   competitor compares).
-- **GitHub Action added** (`.github/workflows/sync-wiki.yml`) — auto-syncs
+- **GitHub Action added** (`.github/workflows/sync-wiki.yml`) โ€” auto-syncs
   `docs/wiki/` to the GitHub wiki repo on every push to main. Fixes
   broken wiki links.
 
 ### New wiki pages
 
-- **`People-Analytics.md`** — overview of the six dark-corner commands
+- **`People-Analytics.md`** โ€” overview of the six dark-corner commands
   with sample outputs.
-- **`Mneme-Nervous-System.md`** — flagship feature page with full
+- **`Mneme-Nervous-System.md`** โ€” flagship feature page with full
   HTML / PDF positioning, when-to-use scenarios, privacy posture.
-- **`Command-Tour.md`** — added new "👥 People analytics" section
+- **`Command-Tour.md`** โ€” added new "๐‘ฅ People analytics" section
   spotlighting all eight new commands.
-- **`_Sidebar.md`** — added People Analytics group.
+- **`_Sidebar.md`** โ€” added People Analytics group.
 
 ### Tests
 
 - 207 tests across `packages/core/src/people/`:
-  - telepathy (20) · atrophy (22) · nemesis (17) · promise (24)
-  - influence (23) · lineage (31)
-  - passport (24) · nervous-system (20)
-  - render-html · pdf
+  - telepathy (20) ยท atrophy (22) ยท nemesis (17) ยท promise (24)
+  - influence (23) ยท lineage (31)
+  - passport (24) ยท nervous-system (20)
+  - render-html ยท pdf
 - Regression wall: every new command added to `no-throw` (passes empty
   repo gracefully) and `--help` snapshot.
 
@@ -13675,38 +13735,38 @@ not in package.json `dependencies`.
 
 ### Honest limits
 
-- **Telepathy** needs ≥2 distinct authors and ≥100 commits to produce
+- **Telepathy** needs โฅ2 distinct authors and โฅ100 commits to produce
   meaningful pairs. Single-author repos get a clear `HEADS UP` pill.
-- **Influence** is TS/JS only in v1 — labeled when other languages
+- **Influence** is TS/JS only in v1 โ€” labeled when other languages
   exist in the repo.
 - **Lineage** falls back to commit-message similarity when HTC
   abstracts aren't built; recommends running `mneme htc-build` first.
-- **Promise** is heuristic — "I'll fix" can be ironic. We label as
+- **Promise** is heuristic โ€” "I'll fix" can be ironic. We label as
   starting list, not verdict.
 - **Atrophy half-life** is a single tunable (default 180d). Active
   codebases may want shorter; mature codebases may want longer.
 
-## [0.27.1] — 2026-05-07
+## [0.27.1] โ€” 2026-05-07
 
 README + audit-spotlight polish for instant comprehension.
 
-- **Tests badge** updated `1331 → 1422 passing` (was stale across the
+- **Tests badge** updated `1331 โ’ 1422 passing` (was stale across the
   Iris + SuperPipeline + audit releases).
-- **Before / With Mneme table** added near the top of the README — five
+- **Before / With Mneme table** added near the top of the README โ€” five
   concrete scenarios showing what changes the moment Mneme is in your
   repo. Designed to be graspable in 10 seconds.
 - **Audit spotlight restructured** into clear sections: 30-second story
-  → five axes → six modes → "why even AIs respect this". The
+  โ’ five axes โ’ six modes โ’ "why even AIs respect this". The
   AI-respect framing makes the vendor-neutral / composable / falsifiable
   / honest principles visible at a glance, without bloat.
 
-No code changes — pure docs polish.
+No code changes โ€” pure docs polish.
 
-## [0.27.0] — 2026-05-07
+## [0.27.0] โ€” 2026-05-07
 
-The **"AI Session Audit"** release. `mneme audit` ships — every AI-driven
+The **"AI Session Audit"** release. `mneme audit` ships โ€” every AI-driven
 commit gets a **trust certificate**. Vendor-neutral. Works with Claude
-Code · Cursor · Codex · Sweep · Devin · Aider · Copilot · any AI that
+Code ยท Cursor ยท Codex ยท Sweep ยท Devin ยท Aider ยท Copilot ยท any AI that
 ends up in `git log`.
 
 **Mneme is now the teacher *and* the grader.** README + wiki restructured
@@ -13715,7 +13775,7 @@ and a click expands the lobe.
 
 **+91 new tests, 1422 total passing.**
 
-### 1. `mneme audit` — six modes, one CLI
+### 1. `mneme audit` โ€” six modes, one CLI
 
 `packages/cli/src/commands/audit.ts` (525 lines) wires six modes through
 the Iris journalist engine:
@@ -13724,7 +13784,7 @@ the Iris journalist engine:
 # Before letting an AI loose:
 mneme audit --baseline
 
-#    → Claude Code / Cursor / Codex / etc. does its work →
+#    โ’ Claude Code / Cursor / Codex / etc. does its work โ’
 
 # See what the AI actually did vs what it CLAIMED:
 mneme audit --trace
@@ -13747,14 +13807,14 @@ combining behavioral + structural + statistical evidence:
 
 | # | Axis | What it asks | Verdict logic |
 |---|---|---|---|
-| 1 | **Behavioral parity** | Did `mneme status / htc-stats / npm test` produce the same output? | Mismatch on critical commands → fail |
-| 2 | **API contract drift** | Did exported types / functions disappear? | Removed export → fail · Renamed → warn · Added → pass |
-| 3 | **Test pass rate** | Any test that passed before, fails now? | Any new failure → fail |
-| 4 | **Perf regression** | Median latency vs baseline | >25% slower → fail · >10% → warn |
-| 5 | **AI narrative** | Commit message claims vs git diff | Any "contradicted" claim → fail |
+| 1 | **Behavioral parity** | Did `mneme status / htc-stats / npm test` produce the same output? | Mismatch on critical commands โ’ fail |
+| 2 | **API contract drift** | Did exported types / functions disappear? | Removed export โ’ fail ยท Renamed โ’ warn ยท Added โ’ pass |
+| 3 | **Test pass rate** | Any test that passed before, fails now? | Any new failure โ’ fail |
+| 4 | **Perf regression** | Median latency vs baseline | >25% slower โ’ fail ยท >10% โ’ warn |
+| 5 | **AI narrative** | Commit message claims vs git diff | Any "contradicted" claim โ’ fail |
 
 Plus **forensic axes** (the same anomaly engine Mneme runs on human
-commits, applied to AI commits): `size` · `files` · `style` · `time`.
+commits, applied to AI commits): `size` ยท `files` ยท `style` ยท `time`.
 
 ### 3. AI narrative verification (Leviathan-style)
 
@@ -13765,7 +13825,7 @@ Commit: "Refactor handler. No change to db.ts."
 Diff:    src/handler.ts (+12 -3)
          src/db.ts      (+3  -0)
 
-⚠ ai-narrative-mismatch  1 contradiction
+โ  ai-narrative-mismatch  1 contradiction
    AI claimed: "No change to db.ts"
    Reality:    db.ts modified (+3 -0)
    Verdict:    contradicted
@@ -13794,57 +13854,57 @@ Adding a new AI = one regex line. We audit whatever the AI claims it is.
 A standalone audit tool would have to build all of these from zero.
 `mneme audit` reuses:
 
-- 📦 **HTC compressed memory** — AI changes evaluated against 50K commits
+- ๐“ฆ **HTC compressed memory** โ€” AI changes evaluated against 50K commits
   of compressed context (v0.24)
-- 🔬 **Leviathan citation verifier** — generalized to "narrative vs diff"
+- ๐”ฌ **Leviathan citation verifier** โ€” generalized to "narrative vs diff"
   (v0.23 generalized in v0.27)
-- 🛡 **Forensic anomaly engine** — same TIME / FILES / STYLE / SIZE axes,
+- ๐ก **Forensic anomaly engine** โ€” same TIME / FILES / STYLE / SIZE axes,
   AI commits scored like human commits (v0.18)
-- 📰 **Iris pyramid renderer** — 5-axis certificate output is
+- ๐“ฐ **Iris pyramid renderer** โ€” 5-axis certificate output is
   journalist-grade (v0.25)
-- ⚡ **SuperPipeline + MPE** — multi-axis evaluation runs in parallel,
+- โก **SuperPipeline + MPE** โ€” multi-axis evaluation runs in parallel,
   converges on YOUR repo's perf characteristics (v0.26)
 
-### 6. CI integration — `--certify` is a gate
+### 6. CI integration โ€” `--certify` is a gate
 
 ```yaml
 # .github/workflows/ai-audit.yml
 - run: mneme audit --baseline
-- run: mneme audit --certify   # exit 1 on fail → PR check fails
+- run: mneme audit --certify   # exit 1 on fail โ’ PR check fails
 ```
 
 ### 7. README + wiki restructured as a "neural brain"
 
-User feedback: *"แสดง idea ใหญ่สุดก่อน แล้วพอคลิกค่อย แตก cluster ที่ละจุด
-เหมือน neural brain"* — show the big idea first, click to expand a
+User feedback: *"เนเธชเธ”เธ idea เนเธซเธเนเธชเธธเธ”เธเนเธญเธ เนเธฅเนเธงเธเธญเธเธฅเธดเธเธเนเธญเธข เนเธ•เธ cluster เธ—เธตเนเธฅเธฐเธเธธเธ”
+เน€เธซเธกเธทเธญเธ neural brain"* โ€” show the big idea first, click to expand a
 cluster.
 
-- **README** condensed from 595 → ~340 lines using GitHub-native
+- **README** condensed from 595 โ’ ~340 lines using GitHub-native
   `<details>` collapsibles. Five brain lobes are clickable; install,
   try-it, FAQ are clickable. Hero + 60-second scan are always visible.
-- **Wiki** gains [`AI-Session-Audit.md`](docs/wiki/AI-Session-Audit.md) —
+- **Wiki** gains [`AI-Session-Audit.md`](docs/wiki/AI-Session-Audit.md) โ€”
   full positioning, 6 modes, vendor table, CI integration, compliance,
   honest limits.
 - **Sidebar** updated under the **Manifesto** group (audit is the
   grading half of the teacher framing).
 
-### 8. UX polish — intent classifier no longer cliffs at 0% confidence
+### 8. UX polish โ€” intent classifier no longer cliffs at 0% confidence
 
 `packages/core/src/retrieve/intent.ts` gains a **trivial-content guard**.
-A user reported `mneme ask --audit "..."` returned `TRUST 0% · 0
-citations` — looked like a system failure; was really an empty input.
+A user reported `mneme ask --audit "..."` returned `TRUST 0% ยท 0
+citations` โ€” looked like a system failure; was really an empty input.
 Now classified as `vague` upstream and gets the friendly redirect with
 example questions instead of an audit-refused certificate. Pure
 punctuation, single characters, and whitespace+symbol queries all
 covered. Real 2+char identifiers (`DB`, `WAL`, `JWT`, `v1`) still pass
 through as specific.
 
-### 9. README + Command-Tour rewrite — story-driven, link-first
+### 9. README + Command-Tour rewrite โ€” story-driven, link-first
 
-User feedback (verbatim): *"อยากได้แบบ บอกเล่าเรื่องราวที่ user มาใช้แล้วเข้าใจได้ทันที"* (a story
+User feedback (verbatim): *"เธญเธขเธฒเธเนเธ”เนเนเธเธ เธเธญเธเน€เธฅเนเธฒเน€เธฃเธทเนเธญเธเธฃเธฒเธงเธ—เธตเน user เธกเธฒเนเธเนเนเธฅเนเธงเน€เธเนเธฒเนเธเนเธ”เนเธ—เธฑเธเธ—เธต"* (a story
 the user lands on and gets immediately).
 
-- **README hero**: replaced "60-second scan" feature-list with a 60-second **story** that opens with the three things even the best AI cannot do — memory, citation-verification, AI-on-AI grading — then names Mneme as the layer underneath.
+- **README hero**: replaced "60-second scan" feature-list with a 60-second **story** that opens with the three things even the best AI cannot do โ€” memory, citation-verification, AI-on-AI grading โ€” then names Mneme as the layer underneath.
 - **`v0.27 spotlight` block**: fresh top-of-README section telling the *db.ts gaslighting* story end-to-end, with the 5-axis table inline.
 - **Forensic Code Science**: reduced from 24 lines inline to a tight teaser + wiki link. Full table moved to wiki.
 - **"All commands"**: replaced details-block with a centered, professional command-browser banner pointing to the rebuilt **Command-Tour** wiki.
@@ -13852,13 +13912,13 @@ the user lands on and gets immediately).
 
 ### Tests
 
-- `audit/baseline.test.ts` — 21 tests
-- `audit/trace.test.ts` — 22 tests (vendor detection, diff parsing)
-- `audit/verify.test.ts` — 19 tests (negation parsing, contradiction
+- `audit/baseline.test.ts` โ€” 21 tests
+- `audit/trace.test.ts` โ€” 22 tests (vendor detection, diff parsing)
+- `audit/verify.test.ts` โ€” 19 tests (negation parsing, contradiction
   detection, unverifiable handling)
-- `audit/certify.test.ts` — 18 tests (5-axis combiner, exit-code logic)
-- `cli/commands/audit.integration.test.ts` — 6 end-to-end tests
-- `retrieve/intent.test.ts` — +3 tests (trivial-content guard)
+- `audit/certify.test.ts` โ€” 18 tests (5-axis combiner, exit-code logic)
+- `cli/commands/audit.integration.test.ts` โ€” 6 end-to-end tests
+- `retrieve/intent.test.ts` โ€” +3 tests (trivial-content guard)
 
 **Total +91 new tests; 1422 passing.**
 
@@ -13866,7 +13926,7 @@ the user lands on and gets immediately).
 
 `mneme audit` is what the **AI Teacher** framing demands: if Mneme is
 the master, it has to be able to grade the homework. It's not a
-competitor to Claude Code / Cursor / Codex — it's the layer **below**
+competitor to Claude Code / Cursor / Codex โ€” it's the layer **below**
 them, the source of truth those tools answer to.
 
 Christensen's principle: *"It's easier to hold your principles 100% of
@@ -13876,7 +13936,7 @@ this in v0.27 holds the principle at 100%.
 ### Honest limits
 
 - **Narrative verification is heuristic.** "No change to db.ts" is
-  parseable; "improved overall reliability" is not — Mneme marks it
+  parseable; "improved overall reliability" is not โ€” Mneme marks it
   `unverifiable`, doesn't pretend.
 - **Behavioral parity needs a stable baseline.** First commit after
   `--baseline` has zero noise; weeks-old baselines get noisier.
@@ -13896,7 +13956,7 @@ this in v0.27 holds the principle at 100%.
 - `README.md` (full rewrite, neural-brain layout)
 - `docs/wiki/_Sidebar.md` (audit link)
 
-## [0.26.0] — 2026-05-06
+## [0.26.0] โ€” 2026-05-06
 
 The **"Super Pipeline + Iris Adoption + AI Teacher"** release. Three
 parallel additions that make Mneme measurably faster, prettier, and
@@ -13907,18 +13967,18 @@ uses it**.
 
 ### 1. SuperPipeline engine + MPE math (world-first composition)
 
-`packages/core/src/pipeline/` — CPU-architecture deeply-pipelined-superscalar
+`packages/core/src/pipeline/` โ€” CPU-architecture deeply-pipelined-superscalar
 ideas applied to a CLI memory layer. Multi-stage Pipelined Eigentrust (MPE)
 auto-tunes weights per stage based on what actually works.
 
 **The novel formula:**
 ```
-T_n = α × E_n × T_{n-1} + (1-α) × prior
+T_n = ฮฑ ร— E_n ร— T_{n-1} + (1-ฮฑ) ร— prior
 
   where:
     E_n[s] = exp(-latency / target)  on success
     E_n[s] = 0                        on failure
-    α      = 0.85   (PageRank-style decay)
+    ฮฑ      = 0.85   (PageRank-style decay)
     prior  = 1/N    (uniform exploration)
 ```
 
@@ -13932,17 +13992,17 @@ fewer to low-trust ones, and disables speculative pre-fetch when trust is
 unsafe.
 
 **New modules** (`packages/core/src/pipeline/`):
-- `types.ts` (95 lines) — PipelineStage, StageContext, PipelineEvent
-- `mpe.ts` (330 lines) — eigentrust update + power iteration + recommendations
-- `super-pipeline.ts` (286 lines) — deeply-pipelined runtime with backpressure
-- `superscalar.ts` (159 lines) — N parallel workers + speculative pre-fetch
-- `index.ts` (62 lines) — barrel + `runDeepPipeline()` convenience
+- `types.ts` (95 lines) โ€” PipelineStage, StageContext, PipelineEvent
+- `mpe.ts` (330 lines) โ€” eigentrust update + power iteration + recommendations
+- `super-pipeline.ts` (286 lines) โ€” deeply-pipelined runtime with backpressure
+- `superscalar.ts` (159 lines) โ€” N parallel workers + speculative pre-fetch
+- `index.ts` (62 lines) โ€” barrel + `runDeepPipeline()` convenience
 
 **Throughput benchmark (4-stage pipeline, 8 inputs, 12ms/stage):**
 ```
 sequential (width=1, buffer=1) = 168 ms
 pipelined  (width=2, buffer=4) = 108 ms
-speedup                        = 1.56×
+speedup                        = 1.56ร—
 ```
 
 **Tests:** +40 (mpe 18 / superscalar 10 / super-pipeline 8 / integration 4).
@@ -13952,29 +14012,29 @@ Power-iteration convergence verified by L1-tolerance test.
 
 Iris was shipped as engine in v0.25; v0.26 migrates the renderers:
 
-- ✅ `mneme ask` — pyramid: lede (verdict) → key-facts (evidence) → body (files) → sources (try-next). AI-summarized headline via existing ResilientEnricher chain (800ms timeout, extractive fallback).
-- ✅ `mneme do` — upfront plan card (lede=description, key-facts=steps) + post-roll-up synthesis card (verdict + per-step ✓/✗).
-- ✅ `mneme why` — extractive headline (`📰 WHY src/auth.ts:12-44 — N commits across X→Y — most by Z`) + ledger lede + per-commit key-facts + collapsed details.
-- ✅ `mneme htc-stats` — three-way headline (empty / partial / ready) + 3-line flash + per-layer meters + collapsable token-math (auto-collapses after 5 uses via `iris.adaptive`).
-- ✅ `mneme forensics anomaly` — LLM-summarized headline + lede (top 3 anomalies) + key-facts (severity tally + single-author warning) + body (humanized axis breakdown) + adaptive "How to read" guide.
+- โ… `mneme ask` โ€” pyramid: lede (verdict) โ’ key-facts (evidence) โ’ body (files) โ’ sources (try-next). AI-summarized headline via existing ResilientEnricher chain (800ms timeout, extractive fallback).
+- โ… `mneme do` โ€” upfront plan card (lede=description, key-facts=steps) + post-roll-up synthesis card (verdict + per-step โ“/โ—).
+- โ… `mneme why` โ€” extractive headline (`๐“ฐ WHY src/auth.ts:12-44 โ€” N commits across Xโ’Y โ€” most by Z`) + ledger lede + per-commit key-facts + collapsed details.
+- โ… `mneme htc-stats` โ€” three-way headline (empty / partial / ready) + 3-line flash + per-layer meters + collapsable token-math (auto-collapses after 5 uses via `iris.adaptive`).
+- โ… `mneme forensics anomaly` โ€” LLM-summarized headline + lede (top 3 anomalies) + key-facts (severity tally + single-author warning) + body (humanized axis breakdown) + adaptive "How to read" guide.
 
-**JSON output paths preserved byte-stable** — `--json` shape unchanged on all 5.
+**JSON output paths preserved byte-stable** โ€” `--json` shape unchanged on all 5.
 
 **Visual continuity:** every commit / author / file across the 5 commands renders identically (same colors, same format) via `iris.entity.renderCommit/Author/File`.
 
 ### 3. Mneme as the teacher of AI
 
 Documented framing for the Mneme positioning. New wiki page:
-`docs/wiki/AI-Teacher.md` — captures why Mneme is not a competitor to
+`docs/wiki/AI-Teacher.md` โ€” captures why Mneme is not a competitor to
 Claude Code / Cursor / Copilot but a **force multiplier** that makes
 every AI tool measurably better via MCP.
 
 Five teaching mechanisms:
-1. **Compressed source material** (HTC) — entire repo in one prompt
-2. **Verifiability instructions** (Leviathan) — claims marked unverified
+1. **Compressed source material** (HTC) โ€” entire repo in one prompt
+2. **Verifiability instructions** (Leviathan) โ€” claims marked unverified
 3. **Trust-weighted citations** (forensic primitives + ENFSI scale)
-4. **Inverted-pyramid structure** (Iris) — guides AI to weight earlier facts
-5. **Self-tuning execution** (MPE) — pipeline adapts to AI's call patterns
+4. **Inverted-pyramid structure** (Iris) โ€” guides AI to weight earlier facts
+5. **Self-tuning execution** (MPE) โ€” pipeline adapts to AI's call patterns
 
 ### Tests
 
@@ -13986,35 +14046,35 @@ Five teaching mechanisms:
 ### Documentation
 
 New wiki pages:
-- `docs/wiki/Super-Pipeline.md` — deeply-pipelined-superscalar architecture, MPE formula, throughput numbers, scaling for Wall Street / SpaceX / xAI
-- `docs/wiki/AI-Teacher.md` — Mneme-as-teacher manifesto
+- `docs/wiki/Super-Pipeline.md` โ€” deeply-pipelined-superscalar architecture, MPE formula, throughput numbers, scaling for Wall Street / SpaceX / xAI
+- `docs/wiki/AI-Teacher.md` โ€” Mneme-as-teacher manifesto
 
 `docs/wiki/_Sidebar.md` updated:
-- 🧠 The brain (5 lobes) → now includes Super-Pipeline
-- 🎓 Manifesto → AI-Teacher
+- ๐ง  The brain (5 lobes) โ’ now includes Super-Pipeline
+- ๐“ Manifesto โ’ AI-Teacher
 
-—
+โ€”
 
-## [0.25.0] — 2026-05-06
+## [0.25.0] โ€” 2026-05-06
 
 The **"Iris + Regression Wall"** release. Two parallel additions that
 strengthen the foundation: a **journalist-grade output engine** and a
 **regression test wall** that locks current CLI behavior before any
 output refactor lands. **+281 new tests, 1291 total passing.**
 
-### Added — Iris journalist output engine
+### Added โ€” Iris journalist output engine
 
 A unified rendering pipeline so every `mneme xxx` command can produce
 output a non-engineer scans in 30 seconds. Named after Iris (Greek:
-messenger between gods and humans) — pairs with Mneme (memory).
+messenger between gods and humans) โ€” pairs with Mneme (memory).
 
 Five novelty pillars, all implemented:
 
-1. **Inverted-pyramid auto-renderer** — most-important first (journalist style)
-2. **AI-summarized headline** — 1-line TL;DR via FREE LLM (Groq Gemma 2B / Ollama), with extractive fallback when no LLM is reachable
-3. **Visual entity continuity** — same commit / author / file always renders identically across every command (deterministic colors, no randomness)
-4. **Adaptive verbosity** — repeat users get terse; first-timers get verbose. State in `.mneme/iris-state.json`
-5. **30-second contract** — validator that any output must lead with headline + actionable in first 5 lines
+1. **Inverted-pyramid auto-renderer** โ€” most-important first (journalist style)
+2. **AI-summarized headline** โ€” 1-line TL;DR via FREE LLM (Groq Gemma 2B / Ollama), with extractive fallback when no LLM is reachable
+3. **Visual entity continuity** โ€” same commit / author / file always renders identically across every command (deterministic colors, no randomness)
+4. **Adaptive verbosity** โ€” repeat users get terse; first-timers get verbose. State in `.mneme/iris-state.json`
+5. **30-second contract** โ€” validator that any output must lead with headline + actionable in first 5 lines
 
 New modules in `packages/cli/src/iris/`:
 
@@ -14033,10 +14093,10 @@ New modules in `packages/cli/src/iris/`:
 Sample output (forensics-anomaly through Iris):
 
 ```
-🛡  3 critical anomalies — verify alice@bank.com identity
+๐ก  3 critical anomalies โ€” verify alice@bank.com identity
 
-✦ Findings
-    ● abc1234  feat: add payment retry  [2024-08-12 · alice]
+โฆ Findings
+    โ— abc1234  feat: add payment retry  [2024-08-12 ยท alice]
     Suspect: alice <alice@bank.com>
     Run mneme why abc1234 to inspect.
 
@@ -14044,13 +14104,13 @@ Key facts
     3 critical / 2 high / 0 medium
     Window: last 30 days
 
-📘 How to read
+๐“ How to read
     CRIT entries are likely fraud-style anomalies.
     Try mneme guard next to set up a CI gate.
 
-▼ 6 more lines (run with --verbose)
+โ–ผ 6 more lines (run with --verbose)
 
-ⓘ → Try next: mneme why abc1234
+โ“ โ’ Try next: mneme why abc1234
 ```
 
 ### Why ship Iris as engine first (no command migration in this release)
@@ -14059,45 +14119,45 @@ Migrating each command's renderer to use Iris would invalidate the
 regression snapshots we just landed. That's the wrong sequencing.
 
 v0.25 ships:
-- ✅ Iris engine — built, tested, importable
-- ✅ Regression wall — current CLI output locked in snapshots
+- โ… Iris engine โ€” built, tested, importable
+- โ… Regression wall โ€” current CLI output locked in snapshots
 
 v0.26+ will:
 - Migrate top commands (ask, do, why, forensics anomaly, htc-stats) one
   by one, regenerating each snapshot **intentionally** as part of the
   refactor PR. The regression wall stays meaningful.
 
-This is the wisdom path: build the engine → lock the floor → migrate
+This is the wisdom path: build the engine โ’ lock the floor โ’ migrate
 deliberately. Not "rewrite everything and pray nothing broke."
 
-### Added — Regression test wall
+### Added โ€” Regression test wall
 
 Catches future output regressions before users see them. **+179 new tests
 across 4 files** in `tests/regression/`:
 
-1. **`help.test.ts`** — every CLI command (75+) exits 0 on `--help`. Catches "broke a command's wiring" bugs.
-2. **`no-throw.test.ts`** — every non-daemon command runs in a fresh `git init` repo without crashing or leaking a stack trace. Daemon commands (`watch`, `chat`, `mcp`, `guardian`) tested via `--help` only.
-3. **`output-shape.test.ts`** — universal properties on real output: <1MB, no `[object Object]`, no bare `undefined`, no stack traces, no malformed ANSI escapes. 11 real-data targets + 5 `--json` parseability tests.
-4. **`snapshots.test.ts`** — 10 normalized snapshots of the most-visible commands (status, htc-stats, ask --help, forensics anomaly --help, wisdom, do --help, guardian --help, unknown-command error). Volatile bits (timestamps, hashes, dates, sizes) normalized before snapshot comparison.
+1. **`help.test.ts`** โ€” every CLI command (75+) exits 0 on `--help`. Catches "broke a command's wiring" bugs.
+2. **`no-throw.test.ts`** โ€” every non-daemon command runs in a fresh `git init` repo without crashing or leaking a stack trace. Daemon commands (`watch`, `chat`, `mcp`, `guardian`) tested via `--help` only.
+3. **`output-shape.test.ts`** โ€” universal properties on real output: <1MB, no `[object Object]`, no bare `undefined`, no stack traces, no malformed ANSI escapes. 11 real-data targets + 5 `--json` parseability tests.
+4. **`snapshots.test.ts`** โ€” 10 normalized snapshots of the most-visible commands (status, htc-stats, ask --help, forensics anomaly --help, wisdom, do --help, guardian --help, unknown-command error). Volatile bits (timestamps, hashes, dates, sizes) normalized before snapshot comparison.
 
 Helpers in `tests/regression/helpers.ts`:
-- `ALL_COMMANDS` — single source of truth, parsed from `packages/cli/src/index.ts` at test load time
-- `mkTempRepo()` / `rmTempRepo()` — isolated temp git repos
-- `strip()` — ANSI stripper for stable assertions
-- `normalize()` — replaces timestamps / hashes / dates / sizes / paths for snapshot stability
+- `ALL_COMMANDS` โ€” single source of truth, parsed from `packages/cli/src/index.ts` at test load time
+- `mkTempRepo()` / `rmTempRepo()` โ€” isolated temp git repos
+- `strip()` โ€” ANSI stripper for stable assertions
+- `normalize()` โ€” replaces timestamps / hashes / dates / sizes / paths for snapshot stability
 
 ### Documentation refactor
 
-User feedback: README had outdated `🧠 New in v0.20 — talk to Mneme like
+User feedback: README had outdated `๐ง  New in v0.20 โ€” talk to Mneme like
 a human` section while we're already on v0.24. Removed; content moved
 to a dedicated wiki page.
 
-- `docs/wiki/Smart-Dispatcher.md` — full feature page for `mneme do`
-- `docs/wiki/Home.md` — restructured as **Mneme's brain map** (5 cognitive
+- `docs/wiki/Smart-Dispatcher.md` โ€” full feature page for `mneme do`
+- `docs/wiki/Home.md` โ€” restructured as **Mneme's brain map** (5 cognitive
   lobes: memory layer, HTC, speculative reasoning, guardian, forensics)
   with clear "pick the room you need" navigation
-- `docs/wiki/_Sidebar.md` — 7 groups: Start · 5 lobes · Frontier · Commands
-  · Practical · Reference · Project
+- `docs/wiki/_Sidebar.md` โ€” 7 groups: Start ยท 5 lobes ยท Frontier ยท Commands
+  ยท Practical ยท Reference ยท Project
 
 Wiki is now scan-in-30-sec navigable. README is leaner.
 
@@ -14107,9 +14167,9 @@ Wiki is now scan-in-30-sec navigable. README is leaner.
 - Regression wall: +179 (help, no-throw, output-shape, snapshots)
 - Iris engine: +102 (pyramid, headline, entity, flash, adaptive, contract, integration)
 
-—
+โ€”
 
-## [0.24.0] — 2026-05-06
+## [0.24.0] โ€” 2026-05-06
 
 The **"Hierarchical Memory"** release. World-first feature:
 **compression-as-storage for codebase memory.** Mneme pre-compresses an
@@ -14119,8 +14179,8 @@ forever. **+48 new tests, 1010 total passing.**
 
 ### Why this is world-first
 
-Every existing AI-codebase tool — Sourcegraph Cody, Greptile, Cursor,
-Continue, Sweep, Aider, GitHub Copilot Workspace — is **retrieval-only**.
+Every existing AI-codebase tool โ€” Sourcegraph Cody, Greptile, Cursor,
+Continue, Sweep, Aider, GitHub Copilot Workspace โ€” is **retrieval-only**.
 They search at query time and dump raw code/commits into the LLM. That
 breaks at scale. Mneme HTC inverts the model: **pre-compress at index
 time, store persistently in SQLite, route by question complexity.**
@@ -14129,14 +14189,14 @@ time, store persistently in SQLite, route by question complexity.**
 
 | Layer | Size per unit | Total for 50K-commit repo | Purpose |
 |---|---|---|---|
-| **Layer 1 — Semantic abstracts** | ~30 tok/commit | ~1.5M tok | Per-commit "WHAT changed + WHY" |
-| **Layer 2 — Topic clusters** | ~100 tok/cluster | ~10K tok (50–100 clusters) | Topic-level summaries |
-| **Layer 3 — Repo memoir** | ~500 tok | ~500 tok | Repo evolution narrative |
+| **Layer 1 โ€” Semantic abstracts** | ~30 tok/commit | ~1.5M tok | Per-commit "WHAT changed + WHY" |
+| **Layer 2 โ€” Topic clusters** | ~100 tok/cluster | ~10K tok (50โ€“100 clusters) | Topic-level summaries |
+| **Layer 3 โ€” Repo memoir** | ~500 tok | ~500 tok | Repo evolution narrative |
 
 Built once with `mneme htc-build`. Cached in SQLite (`htc_abstracts`,
-`htc_clusters`, `htc_memoir` tables — schema_version bumped to 4).
+`htc_clusters`, `htc_memoir` tables โ€” schema_version bumped to 4).
 
-### Added — `mneme htc-build` and `mneme htc-stats`
+### Added โ€” `mneme htc-build` and `mneme htc-stats`
 
 ```bash
 mneme htc-build              # Layer 1 + 2 + 3 (pulls free LLM via existing ladder)
@@ -14148,30 +14208,30 @@ mneme htc-stats              # coverage + compression ratio
 `htc-stats` output shows the killer metric:
 
 ```
-✦ Coverage
-   Layer 1 abstracts  ████████████████  4827/4827 (100%)
+โฆ Coverage
+   Layer 1 abstracts  โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–  4827/4827 (100%)
    Layer 2 clusters   23 [ READY ]
    Layer 3 memoir     [ FRESH ]
 
-✦ Token math (the killer metric)
+โฆ Token math (the killer metric)
    raw commit text     4.8M tok
    compressed cache    312K tok
-   compression ratio   15.4× smaller
+   compression ratio   15.4ร— smaller
 
-✓ Sending compressed cache to an LLM costs ~15× less than raw commits.
+โ“ Sending compressed cache to an LLM costs ~15ร— less than raw commits.
 ```
 
-### Phase 4 — Smart routing in `mneme ask`
+### Phase 4 โ€” Smart routing in `mneme ask`
 
 `SynthesizeOptions` now accepts optional `htcAbstracts: Map<hash,abstract>`.
 When provided, the synthesis prompt uses Layer-1 abstracts (~30 tok/commit)
-instead of raw bodies (~500 tok). **Same answer quality, 10× fewer tokens
+instead of raw bodies (~500 tok). **Same answer quality, 10ร— fewer tokens
 per LLM call.** Falls back to raw if a hash is missing from the cache.
 
-`ask.ts` reads the abstract cache automatically when present — silent feature,
+`ask.ts` reads the abstract cache automatically when present โ€” silent feature,
 no flag required. User experience: lower latency, lower cost, same answer.
 
-### Phase 5 — Compressed MCP responses (huge win for AI clients)
+### Phase 5 โ€” Compressed MCP responses (huge win for AI clients)
 
 When an MCP client (Claude Code, Cursor, Codex) calls `mneme_ask` or
 `mneme_search_commits`, responses now default to compressed Layer-1
@@ -14199,7 +14259,7 @@ vs. the old payload:
   "commit": {
     "hash": "abc1234...", "shortHash": "abc1234", "author": "Alice",
     "date": "2026-04-15T15:42:00Z",
-    "subject": "auth: switch session → JWT (security review)",
+    "subject": "auth: switch session โ’ JWT (security review)",
     "body": "Sessions don't replicate across our CDN edge nodes...
              [400 more tokens]",
     "files": ["src/auth.ts", "src/middleware/jwt.ts", ...]
@@ -14207,18 +14267,18 @@ vs. the old payload:
 }
 ```
 
-**~10× fewer tokens per tool call.** AI clients opt-out per-request with
+**~10ร— fewer tokens per tool call.** AI clients opt-out per-request with
 `compress: false` if they need raw bodies (e.g. for citation verification).
 
-### Internal — new modules
+### Internal โ€” new modules
 
-- `packages/core/src/htc/types.ts` — shared types + `estimateTokens()`
-- `packages/core/src/htc/abstract.ts` — Layer 1 generator + batch with concurrency
-- `packages/core/src/htc/clusters.ts` — Layer 2 generator (uses existing `buildClusters`)
-- `packages/core/src/htc/memoir.ts` — Layer 3 generator (single-shot LLM call)
-- `packages/core/src/htc/storage.ts` — SQLite CRUD + `getHtcStats()` for compression math
+- `packages/core/src/htc/types.ts` โ€” shared types + `estimateTokens()`
+- `packages/core/src/htc/abstract.ts` โ€” Layer 1 generator + batch with concurrency
+- `packages/core/src/htc/clusters.ts` โ€” Layer 2 generator (uses existing `buildClusters`)
+- `packages/core/src/htc/memoir.ts` โ€” Layer 3 generator (single-shot LLM call)
+- `packages/core/src/htc/storage.ts` โ€” SQLite CRUD + `getHtcStats()` for compression math
 - New SQLite tables: `htc_abstracts`, `htc_clusters`, `htc_memoir` (idempotent migrations)
-- `packages/cli/src/commands/htc.ts` — CLI for build + stats
+- `packages/cli/src/commands/htc.ts` โ€” CLI for build + stats
 
 ### Tests
 
@@ -14232,7 +14292,7 @@ vs. the old payload:
 
 - **Compression is lossy.** Layer 1 keeps meaning, not detail. For audit-grade
   citations, Mneme always falls back to Layer 0 raw bodies.
-- **Quality depends on the free LLM you use.** Qwen 2.5:3b ≥ Gemma 2:2b ≥
+- **Quality depends on the free LLM you use.** Qwen 2.5:3b โฅ Gemma 2:2b โฅ
   Llama 3.2:1b for abstract quality. `mneme setup-free` already recommends
   qwen2.5:3b first.
 - **Repo size limits.** 100K-commit monorepo takes ~1 hr first-run. Incremental
@@ -14242,13 +14302,13 @@ vs. the old payload:
 ### Origin
 
 Inspired by RTK (CLI proxy that compresses shell output before AI reads it,
-60–90% token reduction). RTK works at *call time* on one command. Mneme HTC
-works at *index time* on the entire codebase — and stores it. Different
+60โ€“90% token reduction). RTK works at *call time* on one command. Mneme HTC
+works at *index time* on the entire codebase โ€” and stores it. Different
 domain, same insight: compression-as-storage outperforms retrieval-only.
 
-—
+โ€”
 
-## [0.23.0] — 2026-05-06
+## [0.23.0] โ€” 2026-05-06
 
 The **"Speculative Reasoning"** release. Five techniques borrowed from
 speculative-decoding research (KAT-0B / Leviathan Algorithm 1 / DDTree)
@@ -14258,7 +14318,7 @@ Mneme now THINKS out loud. You see every commit considered, every claim
 verified, every prune explained. The wisdom layer auto-adapts to what
 works on YOUR machine without any explicit configuration.
 
-### Added — 1. Streaming reasoning events (`--stream`)
+### Added โ€” 1. Streaming reasoning events (`--stream`)
 
 ```bash
 mneme ask "why was JWT chosen?" --stream
@@ -14266,12 +14326,12 @@ mneme ask "why was JWT chosen?" --stream
 
 Output during retrieval:
 ```text
-⚙ consider abc1234  "auth: switch session → JWT"        score 0.84
-✓ accept   abc1234  above score floor
-⚙ consider def5678  "auth: add CSRF guard"               score 0.41
-✗ prune    def5678  below topK cut
-✦ synthesize from 2 verified citations…
-✓ done     in 312ms
+โ consider abc1234  "auth: switch session โ’ JWT"        score 0.84
+โ“ accept   abc1234  above score floor
+โ consider def5678  "auth: add CSRF guard"               score 0.41
+โ— prune    def5678  below topK cut
+โฆ synthesize from 2 verified citationsโ€ฆ
+โ“ done     in 312ms
 ```
 
 New module `packages/core/src/retrieve/stream.ts`:
@@ -14279,9 +14339,9 @@ New module `packages/core/src/retrieve/stream.ts`:
 - `EventSink` interface + `NullSink` / `InMemorySink` / `CallbackSink` impls
 - `retrieve.search()` now takes optional `events?: EventSink` (zero overhead when absent)
 
-### Added — 2. Leviathan citation verifier
+### Added โ€” 2. Leviathan citation verifier
 
-New module `packages/core/src/retrieve/leviathan.ts` — adapts Leviathan
+New module `packages/core/src/retrieve/leviathan.ts` โ€” adapts Leviathan
 Algorithm 1 from the speculative-decoding paper to retrieval-grounded
 synthesis. Per-claim verification of LLM answers:
 
@@ -14294,9 +14354,9 @@ synthesis. Per-claim verification of LLM answers:
 
 `synthesize()` now calls into `verifyAnswerLeviathan` when audit-mode flagged hashes.
 
-### Added — 3. DDTree best-first commit-tree search
+### Added โ€” 3. DDTree best-first commit-tree search
 
-New module `packages/core/src/retrieve/ddtree.ts` — best-first search through
+New module `packages/core/src/retrieve/ddtree.ts` โ€” best-first search through
 git ancestor tree, mirrors KAT-0B's BinaryHeap-based exploration:
 
 - Tunable budget (default 32), max-depth (6), score floor (0.05)
@@ -14304,9 +14364,9 @@ git ancestor tree, mirrors KAT-0B's BinaryHeap-based exploration:
 - Cycle protection via visited Set (handles merge commits)
 - Returns `visited` (every node + verdict) + `accepted` (top by score)
 
-### Added — 4. ConstraintPruner trait
+### Added โ€” 4. ConstraintPruner trait
 
-New module `packages/core/src/util/constraint-pruner.ts` — Strategy pattern
+New module `packages/core/src/util/constraint-pruner.ts` โ€” Strategy pattern
 borrowed from KAT-0B. Single trait for every pluggable validator Mneme has:
 
 ```ts
@@ -14321,24 +14381,24 @@ interface ConstraintPruner<C, P> {
 }
 ```
 
-`CompositePruner` chains many — first reject wins, uncertain doesn't short-circuit.
+`CompositePruner` chains many โ€” first reject wins, uncertain doesn't short-circuit.
 Future work: refactor existing CWE/ENFSI/anomaly validators onto this trait.
 
-### Added — 5. Path-aware sessions
+### Added โ€” 5. Path-aware sessions
 
-New module `packages/core/src/wisdom/session.ts` — accumulates Q/A turns
+New module `packages/core/src/wisdom/session.ts` โ€” accumulates Q/A turns
 across `mneme ask` invocations:
 
-- `.mneme/session.json` — atomic temp-file rename writes
+- `.mneme/session.json` โ€” atomic temp-file rename writes
 - 1-hour idle expiry, 20-turn rolling cap
 - `buildSessionContext()` returns recent hashes + files + topic frequencies
   for the next ask to use as bias
 
 `mneme ask` now appends a turn after each successful answer. (Future: search.ts will read SessionContext to bias retrieval.)
 
-### Added — 6. Wisdom-Mutant auto-adapt
+### Added โ€” 6. Wisdom-Mutant auto-adapt
 
-New module `packages/core/src/wisdom/mutant-adapt.ts` — tracks per-axis
+New module `packages/core/src/wisdom/mutant-adapt.ts` โ€” tracks per-axis
 success/failure over time. Auto-evolves Mneme's behavior:
 
 - `recordSuccess(axis, latencyMs)` / `recordFailure(axis, reason)`
@@ -14347,25 +14407,25 @@ success/failure over time. Auto-evolves Mneme's behavior:
 - Stored in `.mneme/mutant.json`
 
 `mneme ask` now records `provider:llm` success/failure on every call. Over
-~10–20 invocations, the resilient enricher chain order **evolves toward
-what's actually working on the user's machine** — without any explicit
+~10โ€“20 invocations, the resilient enricher chain order **evolves toward
+what's actually working on the user's machine** โ€” without any explicit
 configuration.
 
 ### CLI integration
 
-- `mneme ask --stream` — real-time event rendering
+- `mneme ask --stream` โ€” real-time event rendering
 - `mneme ask` always records to mutant-adapt + appends to session (silent)
 - New flag `--stream` documented in `mneme --help`
 
 ### Tests
 
 +69 new tests, total 962 passing (was 893):
-- stream.test.ts (7) — sinks + integration
-- leviathan.test.ts (14) — verdict types, trust math, prefix match, events
-- ddtree.test.ts (10) — heap, decay, budget, cycles
-- constraint-pruner.test.ts (9) — composite + uncertainty handling
-- session.test.ts (15) — round-trip, expiry, cap, atomic writes
-- mutant-adapt.test.ts (14) — record/recommend/decay paths
+- stream.test.ts (7) โ€” sinks + integration
+- leviathan.test.ts (14) โ€” verdict types, trust math, prefix match, events
+- ddtree.test.ts (10) โ€” heap, decay, budget, cycles
+- constraint-pruner.test.ts (9) โ€” composite + uncertainty handling
+- session.test.ts (15) โ€” round-trip, expiry, cap, atomic writes
+- mutant-adapt.test.ts (14) โ€” record/recommend/decay paths
 
 ### Origin
 
@@ -14374,9 +14434,9 @@ Computable LoRA, Leviathan Algorithm 1) that solves Arto Inkala's "world's
 hardest Sudoku" in 36.4ms with no GPU. Five of its six core ideas transfer
 cleanly to retrieval-grounded generation. Mneme v0.23 is the result.
 
-—
+โ€”
 
-## [0.22.2] — 2026-05-06
+## [0.22.2] โ€” 2026-05-06
 
 The **"Bulletproof self-update"** patch. Root-cause fix for *"I ran
 `npm install -g mneme-ai@latest` but `mneme --version` still shows the
@@ -14384,15 +14444,15 @@ old version."*
 
 ### Three real failure modes (now all handled)
 
-1. **npm metadata cache** — npm reads "latest" from local cache and
+1. **npm metadata cache** โ€” npm reads "latest" from local cache and
    skips the network. The cache says everything's fresh; nothing's
    actually fetched.
-2. **Multiple `mneme` binaries on PATH** — npx cache + `npm install -g`
+2. **Multiple `mneme` binaries on PATH** โ€” npx cache + `npm install -g`
    leave separate copies. Shell PATH order picks the older one.
-3. **CI publish lag** — user installs within ~2 min of `git push --tags`,
+3. **CI publish lag** โ€” user installs within ~2 min of `git push --tags`,
    before `npm publish` has finished.
 
-### Added — `mneme upgrade` command
+### Added โ€” `mneme upgrade` command
 
 ```bash
 mneme upgrade            # bulletproof self-update
@@ -14403,10 +14463,10 @@ Six-step automation that solves all three failure modes:
 
 1. Reads local version from this binary's `package.json` (the truth).
 2. Queries npm registry **directly** with `npm view mneme-ai version --json`
-   — bypasses local metadata cache.
-3. Runs `npm install -g --force mneme-ai@<exact-version>` — `--force`
+   โ€” bypasses local metadata cache.
+3. Runs `npm install -g --force mneme-ai@<exact-version>` โ€” `--force`
    bypasses cache, `@<exact>` bypasses `latest` tag staleness.
-4. **Diagnoses PATH** with `where mneme` (Win) or `which -a mneme` —
+4. **Diagnoses PATH** with `where mneme` (Win) or `which -a mneme` โ€”
    lists every `mneme` binary so shadowing is visible.
 5. Re-runs `mneme --version` in a fresh subprocess to verify.
 6. If versions still mismatch, prints concrete remediation:
@@ -14419,47 +14479,47 @@ Six-step automation that solves all three failure modes:
 
 ```
 $ mneme upgrade
-🔄  Mneme Upgrade — bulletproof self-update
+๐”  Mneme Upgrade โ€” bulletproof self-update
 
   currently installed   0.22.0
   npm registry latest   0.22.2
 
-  [ OUTDATED ]  local 0.22.0 → npm has 0.22.2
+  [ OUTDATED ]  local 0.22.0 โ’ npm has 0.22.2
 
-  ✦ Installing
+  โฆ Installing
     npm install -g --force mneme-ai@0.22.2
     (--force bypasses metadata cache; @<exact> bypasses 'latest' staleness)
 
-  ✦ Diagnosing PATH
-    ✓  Single binary on PATH:  C:\Users\…\npm\mneme.cmd
+  โฆ Diagnosing PATH
+    โ“  Single binary on PATH:  C:\Users\โ€ฆ\npm\mneme.cmd
 
-  ✦ Verifying installed version
-    [ SUCCESS ]  mneme --version → 0.22.2
+  โฆ Verifying installed version
+    [ SUCCESS ]  mneme --version โ’ 0.22.2
 ```
 
 Or if shadowing detected:
 
 ```
-  ✦ Diagnosing PATH
-    ⚠  Multiple `mneme` binaries on PATH — older ones may run first:
-      [active]  C:\Users\…\npm\mneme.cmd
-      [shadowed]  C:\Users\…\AppData\Local\npm-cache\_npx\…\mneme.js
-    → remove the shadowed entries to ensure the global install runs.
+  โฆ Diagnosing PATH
+    โ   Multiple `mneme` binaries on PATH โ€” older ones may run first:
+      [active]  C:\Users\โ€ฆ\npm\mneme.cmd
+      [shadowed]  C:\Users\โ€ฆ\AppData\Local\npm-cache\_npx\โ€ฆ\mneme.js
+    โ’ remove the shadowed entries to ensure the global install runs.
 ```
 
-—
+โ€”
 
-## [0.22.1] — 2026-05-06
+## [0.22.1] โ€” 2026-05-06
 
 The **"Self-Healing Free LLM"** patch. Root-cause fix: free-tier providers
 fail occasionally (rate limits, 503s, network blips, model not pulled).
 v0.22.0 chose ONE provider at startup and died if it failed mid-call.
 v0.22.1 builds the **full chain** at startup and self-heals on every call.
 
-### `ResilientEnricher` — never lets a flaky provider kill `mneme ask`
+### `ResilientEnricher` โ€” never lets a flaky provider kill `mneme ask`
 
-Wraps the ordered free-first chain (Ollama → Groq → Together → OpenRouter
-→ OpenAI) and tracks **per-provider health**:
+Wraps the ordered free-first chain (Ollama โ’ Groq โ’ Together โ’ OpenRouter
+โ’ OpenAI) and tracks **per-provider health**:
 
 | Failure kind | Cooldown | Detected from |
 |---|---|---|
@@ -14473,18 +14533,18 @@ Wraps the ordered free-first chain (Ollama → Groq → Together → OpenRouter
 | `unknown` | 30 sec | anything else |
 
 **Behavior on every `mneme ask`:**
-1. Try Ollama first — if 503, mark cooldown (60s), try Groq
+1. Try Ollama first โ€” if 503, mark cooldown (60s), try Groq
 2. If Groq returns 429 (free quota exhausted), mark cooldown (5 min), try OpenRouter
 3. If OpenRouter empty answer, try OpenAI
-4. If ALL fail → throw `AllProvidersFailedError` → `ask` falls back to extractive synthesis (still gives the user top commits + heuristic answer)
+4. If ALL fail โ’ throw `AllProvidersFailedError` โ’ `ask` falls back to extractive synthesis (still gives the user top commits + heuristic answer)
 
-**The user never sees a hard error.** Live status shows in spinner: *"Ollama timed out — switching to Groq…"*.
+**The user never sees a hard error.** Live status shows in spinner: *"Ollama timed out โ€” switching to Groqโ€ฆ"*.
 
 ### Auto-pick Ollama chat model
 
 `resolveAllEnrichers` now probes `/api/tags` and picks the BEST chat model
 from what's installed:
-1. `qwen2.5:3b` (preferred — best small/quality balance)
+1. `qwen2.5:3b` (preferred โ€” best small/quality balance)
 2. `gemma2:2b`
 3. `llama3.2:1b`
 4. `llama3.2:3b`
@@ -14504,53 +14564,53 @@ never pass an embedding model to the chat API by mistake.
 +13 new tests (893 total, was 880):
 - Each `FailureKind` classifier path
 - Chain returns first success
-- Empty answers → soft fail → next provider
-- Hard failure → cooldown → next call skips
+- Empty answers โ’ soft fail โ’ next provider
+- Hard failure โ’ cooldown โ’ next call skips
 - Rate-limit cools longer than server error
 - All-fail throws sentinel error
 - onSwitch event surfaces correct kind
 
-—
+โ€”
 
-## [0.22.0] — 2026-05-06
+## [0.22.0] โ€” 2026-05-06
 
 The **"Free Forever"** release. **Mneme now defaults to assuming the user has
-no API key** — every feature that was previously gated by a paid OpenAI key
+no API key** โ€” every feature that was previously gated by a paid OpenAI key
 now has a fully-functional free path, with a **30-second guided wizard**
 (`mneme setup-free`) that picks the easiest path per machine.
 
-### Added — `mneme setup-free` wizard
+### Added โ€” `mneme setup-free` wizard
 
 Probes the local environment, then renders a 3-path recipe with copy-pastable
 commands and per-step verification. Three free paths:
 
-1. **🏠 Local Ollama** — 100% private, free forever, ~3GB one-time install
-   - Recommends Qwen 2.5 (3B/7B), Gemma 2 (2B/9B), Llama 3.2 — picks a default
+1. **๐  Local Ollama** โ€” 100% private, free forever, ~3GB one-time install
+   - Recommends Qwen 2.5 (3B/7B), Gemma 2 (2B/9B), Llama 3.2 โ€” picks a default
      based on RAM tier
-2. **⚡ Groq free tier** — 500 tok/s cloud, generous free quota, no install
+2. **โก Groq free tier** โ€” 500 tok/s cloud, generous free quota, no install
    - Llama 3.3 70B, Qwen QwQ 32B, Gemma 2 9B, Llama 3.1 8B
-3. **🌐 OpenRouter free** — variety: Qwen 2.5 72B, Gemma 2 9B, Llama 3.3 70B (all `:free` tier)
+3. **๐ OpenRouter free** โ€” variety: Qwen 2.5 72B, Gemma 2 9B, Llama 3.3 70B (all `:free` tier)
 
 If the user already has Ollama running with a chat model OR any provider key
-in their env, the wizard short-circuits with `✓ You're already set up`.
+in their env, the wizard short-circuits with `โ“ You're already set up`.
 
-### Added — multi-provider auto-detect ladder
+### Added โ€” multi-provider auto-detect ladder
 
 `resolveEnricher` now walks a free-first auto ladder:
 
 ```
-1. Local Ollama (ping /api/tags)         — totally free + private
-2. GROQ_API_KEY                          — free tier, fastest
-3. TOGETHER_API_KEY                      — free tier
-4. OPENROUTER_API_KEY                    — free tier
-5. OPENAI_API_KEY                        — paid (last resort)
+1. Local Ollama (ping /api/tags)         โ€” totally free + private
+2. GROQ_API_KEY                          โ€” free tier, fastest
+3. TOGETHER_API_KEY                      โ€” free tier
+4. OPENROUTER_API_KEY                    โ€” free tier
+5. OPENAI_API_KEY                        โ€” paid (last resort)
 ```
 
-Set ANY ONE of these env vars and Mneme uses it automatically — no config
+Set ANY ONE of these env vars and Mneme uses it automatically โ€” no config
 edits, no flag plumbing. Each provider has a curated default + free model
 list (Qwen, Gemma, Llama family).
 
-### Added — graceful degradation in `mneme ask`
+### Added โ€” graceful degradation in `mneme ask`
 
 If no LLM is available (no Ollama running, no env keys), `mneme ask` now:
 - Still runs full retrieval (BM25 + embeddings + RRF)
@@ -14558,9 +14618,9 @@ If no LLM is available (no Ollama running, no env keys), `mneme ask` now:
 - Falls back to extractive synthesis (heuristic answer from commit subjects)
 - Prints a friendly nudge: `mneme setup-free` for full Q&A
 
-The user **never sees a hard error** — only a clear path to upgrade.
+The user **never sees a hard error** โ€” only a clear path to upgrade.
 
-### Added — `OLLAMA_FREE_CHAT_MODELS` curated list
+### Added โ€” `OLLAMA_FREE_CHAT_MODELS` curated list
 
 Exported from `@mneme-ai/embeddings`:
 
@@ -14574,17 +14634,17 @@ gemma2:9b    5.4GB   strong reasoning
 
 Used by the setup wizard + auto-detect.
 
-### Added — `NoEnricherAvailableError` sentinel
+### Added โ€” `NoEnricherAvailableError` sentinel
 
 Distinct error type for "no LLM at all" so callers can distinguish it from
 provider misconfiguration. CLI catches it and routes to degraded mode.
 
-### Added — `listProviders()` API
+### Added โ€” `listProviders()` API
 
 Public catalog of provider configs (id, baseUrl, defaultModel, freeModels,
-signupUrl) — used by setup-free + future plugins.
+signupUrl) โ€” used by setup-free + future plugins.
 
-### Internal — provider catalog
+### Internal โ€” provider catalog
 
 New `PROVIDERS` array in `packages/embeddings/src/enrich.ts` makes adding
 a new OpenAI-compatible provider a single-row addition. No new class,
@@ -14603,159 +14663,159 @@ mneme ask "..."      # full Q&A using whatever the wizard configured
 
 880 tests still pass. No regressions.
 
-—
+โ€”
 
-## [0.21.1] — 2026-05-06
+## [0.21.1] โ€” 2026-05-06
 
 The **"Where in the codebase?"** patch. Every command that operates on
-commits now surfaces **file paths** alongside the data — answering the
+commits now surfaces **file paths** alongside the data โ€” answering the
 question every reader has when they see "5 anomalous commits" or
 "3-week firefighting streak": *"WHERE in the codebase?"*
 
-### Added — file paths surface in 9 commands
+### Added โ€” file paths surface in 9 commands
 
 | Command | What you see now |
 |---|---|
-| `drawdown` | `hot files (the area that kept breaking): 25× src/payments/processor.ts` |
-| `insider-trading` | Per author: `hot files (where the pattern keeps recurring): 5× src/api/checkout.ts` |
+| `drawdown` | `hot files (the area that kept breaking): 25ร— src/payments/processor.ts` |
+| `insider-trading` | Per author: `hot files (where the pattern keeps recurring): 5ร— src/api/checkout.ts` |
 | `moneyball` | Per contributor: their top-touched files |
-| `who-knows` | Per expert: `their territory: src/auth/, src/session/, …` |
+| `who-knows` | Per expert: `their territory: src/auth/, src/session/, โ€ฆ` |
 | `decisions` | Each decision: `files affected: src/api/v2/router.ts, src/index.ts` |
-| `story` | Per act: `hot files in this chapter: …` |
+| `story` | Per act: `hot files in this chapter: โ€ฆ` |
 | `paradox` | Per flip-flop chain: file list per decision + aggregated |
-| `regret` | Each regret: `affected files: …` (intersection of shipped + followup) |
-| `commit-coach` | Per reviewer: `their territory: …` |
+| `regret` | Each regret: `affected files: โ€ฆ` (intersection of shipped + followup) |
+| `commit-coach` | Per reviewer: `their territory: โ€ฆ` |
 
 ### Internal refactor
 
-- New `packages/core/src/util/noise.ts` — `isNoiseFile()` filters lock files,
+- New `packages/core/src/util/noise.ts` โ€” `isNoiseFile()` filters lock files,
   `dist/`, `build/`, `node_modules/`, `.min.*`, `CHANGELOG.md`, etc. so they
   don't pollute hotspot lists. Plus `topHotFiles(commits, n)` helper that
   does aggregate-sort-slice in one call.
 - `Drawdown.hotFiles`, `InsiderProfile.hotFiles`, `ContributorScore.hotFiles`,
   `ExpertCandidate.topFiles?`, `ExtractedDecision.filesAffected?`,
   `StoryAct.hotFiles?`, `FlipFlop.hotFiles?`, `Regret.affectedFiles?`,
-  `Reviewer.topFiles?` — new fields on the data structs (all optional where
+  `Reviewer.topFiles?` โ€” new fields on the data structs (all optional where
   needed for backwards-test-compat).
 
 ### Testing
 
-880/880 tests still pass — the new fields are optional / additive. Touched
+880/880 tests still pass โ€” the new fields are optional / additive. Touched
 13 files (4 CLI, 8 core, 1 new util).
 
-—
+โ€”
 
-## [0.21.0] — 2026-05-06
+## [0.21.0] โ€” 2026-05-06
 
 The **"Plain English Everything"** release. **32 commands** systematically
-humanized so a non-statistician can read every output in one pass — no
-more `σ`, `robust z`, `MAD`, `peak window`, `LR=3.87e-13` jargon without
+humanized so a non-statistician can read every output in one pass โ€” no
+more `ฯ`, `robust z`, `MAD`, `peak window`, `LR=3.87e-13` jargon without
 translation.
 
 ### What changed
 
 Every report now follows the same readable structure:
 
-1. **Plain-English header** — what the command does + when to use it (green)
+1. **Plain-English header** โ€” what the command does + when to use it (green)
 2. **Top-line summary** in human language ("3 commits look unusual" not "deviation > threshold")
-3. **📘 How to read this report** — 3-5 line explainer of the metrics + tiers
-4. **Baseline-reliability warnings** — "HEADS UP: single-author repo / fewer than 3 candidates / fewer than 30 commits — treat as directional"
-5. **Verifiable numbers** — every raw stat now shows "(N units — interpretation)" inline:
-   - `LR = 3.87e-13` → `(~1 in 2.6 trillion — overwhelming AGAINST)`
-   - `+465 lines vs median 50 (robust z = 9.9)` → `465 lines — 9.3× larger than this author's typical commit (~50 lines)`
-   - `commit hour 04:00 UTC is 11h from peak` → `committed at 04:00 UTC (your local time: 11:00). This author normally commits 15:00–19:00 UTC — 11h gap.`
-   - `confidence 0.78` → `78% confident — high`
-   - `lift 5.2×` → `(these files change together 5.2× more often than random)`
+3. **๐“ How to read this report** โ€” 3-5 line explainer of the metrics + tiers
+4. **Baseline-reliability warnings** โ€” "HEADS UP: single-author repo / fewer than 3 candidates / fewer than 30 commits โ€” treat as directional"
+5. **Verifiable numbers** โ€” every raw stat now shows "(N units โ€” interpretation)" inline:
+   - `LR = 3.87e-13` โ’ `(~1 in 2.6 trillion โ€” overwhelming AGAINST)`
+   - `+465 lines vs median 50 (robust z = 9.9)` โ’ `465 lines โ€” 9.3ร— larger than this author's typical commit (~50 lines)`
+   - `commit hour 04:00 UTC is 11h from peak` โ’ `committed at 04:00 UTC (your local time: 11:00). This author normally commits 15:00โ€“19:00 UTC โ€” 11h gap.`
+   - `confidence 0.78` โ’ `78% confident โ€” high`
+   - `lift 5.2ร—` โ’ `(these files change together 5.2ร— more often than random)`
 
-### Commands humanized — all 32
+### Commands humanized โ€” all 32
 
 **Forensics (4):** match, attribute, vulns, anomaly *(anomaly was v0.20.2)*
 **Core (3):** ask, why, render-answer (TRUST badge + audit-refused)
-**Quant (10):** drawdown, alpha, backtest, black-swan, insider-trading, moneyball, greek (Δ Γ Θ now self-documenting), correlation-matrix, vix (implied-volatility), tax-loss-harvest
+**Quant (10):** drawdown, alpha, backtest, black-swan, insider-trading, moneyball, greek (ฮ” ฮ“ ฮ now self-documenting), correlation-matrix, vix (implied-volatility), tax-loss-harvest
 **Insights (22):** who-knows, decisions, stack-trace, story, dream, chat, regret, bus-factor, paradox, commit-coach, crystal-ball, time-machine, premortem, ghost, dna, drift, chronicle, oracle, constellation, cluster, network, manage, export-bundle
 
 ### Best-improvement examples
 
-**`mneme dna`** — `peakHour: 14, weekendRatio: 0.18` → `most active 14:00–18:00 UTC (4-hour band — convert to local time for context); weekend ratio 18% (some weekend work)`. Same data, but a manager skimming it now knows the band is in UTC, knows it's 4 hours wide, and knows what 18% means.
+**`mneme dna`** โ€” `peakHour: 14, weekendRatio: 0.18` โ’ `most active 14:00โ€“18:00 UTC (4-hour band โ€” convert to local time for context); weekend ratio 18% (some weekend work)`. Same data, but a manager skimming it now knows the band is in UTC, knows it's 4 hours wide, and knows what 18% means.
 
-**`mneme greek`** — `Δ DELTA / Γ GAMMA / Θ THETA` headers now self-document inline:
-- DELTA — *knowledge concentration: how much breaks if the top contributor leaves*
-- GAMMA — *risk acceleration: is concentration getting worse over time?*
-- THETA — *time decay: how fast does this knowledge become stale?*
-- Slope `0.034` → `(growing at 3.4% per week, over 12 weeks)`
+**`mneme greek`** โ€” `ฮ” DELTA / ฮ“ GAMMA / ฮ THETA` headers now self-document inline:
+- DELTA โ€” *knowledge concentration: how much breaks if the top contributor leaves*
+- GAMMA โ€” *risk acceleration: is concentration getting worse over time?*
+- THETA โ€” *time decay: how fast does this knowledge become stale?*
+- Slope `0.034` โ’ `(growing at 3.4% per week, over 12 weeks)`
 
-**`mneme forensics match`** — combined LR now reads: `LR = 3.87e-13 (~1 in 2.6 trillion chance of seeing this if they wrote it — overwhelming evidence AGAINST authorship)`.
+**`mneme forensics match`** โ€” combined LR now reads: `LR = 3.87e-13 (~1 in 2.6 trillion chance of seeing this if they wrote it โ€” overwhelming evidence AGAINST authorship)`.
 
 ### Bug fixes
 
 - **`forensics match HEAD <author>` and `forensics attribute HEAD`** now work. Prior bug: "HEAD" was passed verbatim to `c.hash.startsWith(...)` and never matched a real hash. Now resolved via `git rev-parse` first; falls back to actionable `commitNotFoundMessage()` if unresolvable.
 - Single-author repo warning surfaces in **anomaly + match + attribute** so users understand why findings appear.
-- Tiny-team warning (fewer than 3 authors with ≥5 commits) added to **attribute**.
+- Tiny-team warning (fewer than 3 authors with โฅ5 commits) added to **attribute**.
 
 ### Internal
 
-- `humanizeAxisNote` (anomaly), `humanizeLR` + `humanizeLocusNote` (match/attribute), `humanizeTrustScore` (ask) — small pure helpers, easy to test.
+- `humanizeAxisNote` (anomaly), `humanizeLR` + `humanizeLocusNote` (match/attribute), `humanizeTrustScore` (ask) โ€” small pure helpers, easy to test.
 - All 880 tests still pass, zero regressions.
 - 3 files materially expanded: `forensics.ts` (+~145 lines), `quant-cli.ts` (+~190), `insights-cli.ts` (+~280).
 
 ### User-visible flow
 
 Every command's first line is now actionable plain English. The user no
-longer needs to know what "σ", "robust z", or "ENFSI verbal scale" mean
-to act on the output. Statisticians still get the raw numbers — they're
+longer needs to know what "ฯ", "robust z", or "ENFSI verbal scale" mean
+to act on the output. Statisticians still get the raw numbers โ€” they're
 just no longer required reading.
 
-—
+โ€”
 
-## [0.20.0] — 2026-05-06
+## [0.20.0] โ€” 2026-05-06
 
 The **"Agentic + Always-On"** release. Two major additions:
 
-1. **`mneme do <natural-language>`** — smart dispatcher. State intent in plain
+1. **`mneme do <natural-language>`** โ€” smart dispatcher. State intent in plain
    English, Mneme classifies it and runs the right multi-step flow.
-2. **`mneme guard`** — pre-commit hook. Install once → catches leaked secrets
+2. **`mneme guard`** โ€” pre-commit hook. Install once โ’ catches leaked secrets
    and known-vulnerable patterns BEFORE every commit. Always-on protection.
 
 Plus the v0.19.x audit fixes: strict arg validation, green useCase taglines on
 every command header, intent classifier accepts security audit queries.
 
-### Added — `mneme do` smart dispatcher
+### Added โ€” `mneme do` smart dispatcher
 
 ```bash
-mneme do "find security issues"        # → vulns + anomaly
-mneme do "is the codebase healthy"      # → status + guardian + drawdown + vix
-mneme do "who knows about auth"          # → who-knows + story
-mneme do "blast radius of abc1234"       # → blast + correlation-matrix
-mneme do "what decisions did we make"   # → decisions + ask
-mneme do "onboarding tour"               # → constellation + decisions + who-knows
-mneme do "should we ship today"          # → guardian + anomaly + recent vulns
+mneme do "find security issues"        # โ’ vulns + anomaly
+mneme do "is the codebase healthy"      # โ’ status + guardian + drawdown + vix
+mneme do "who knows about auth"          # โ’ who-knows + story
+mneme do "blast radius of abc1234"       # โ’ blast + correlation-matrix
+mneme do "what decisions did we make"   # โ’ decisions + ask
+mneme do "onboarding tour"               # โ’ constellation + decisions + who-knows
+mneme do "should we ship today"          # โ’ guardian + anomaly + recent vulns
 ```
 
-Routing is deterministic regex-based — sub-millisecond, no LLM. 7 flows
+Routing is deterministic regex-based โ€” sub-millisecond, no LLM. 7 flows
 shipped at v0.20, designed to be additive: each new flow is one entry in
-the catalog mapping intent → sub-commands.
+the catalog mapping intent โ’ sub-commands.
 
-### Added — `mneme guard` pre-commit hook
+### Added โ€” `mneme guard` pre-commit hook
 
 ```bash
-mneme guard --install     # one-time setup → installs .git/hooks/pre-commit
+mneme guard --install     # one-time setup โ’ installs .git/hooks/pre-commit
 mneme guard --check       # manual run against currently-staged changes
 mneme guard --uninstall   # removes the hook
 ```
 
 What it blocks **before the commit lands**:
-- Hardcoded secrets (AWS keys, JWTs, passwords, tokens — uses redact rules)
+- Hardcoded secrets (AWS keys, JWTs, passwords, tokens โ€” uses redact rules)
 - Known-vulnerable patterns (CWE-aligned: Math.random for security, MD5/SHA1
   for crypto, SQL string concat, JWT no-verify, etc.)
 - Configurable strictness: default blocks HIGH/CRITICAL only; `--strict`
   also blocks MEDIUM-severity findings
 - Bypass when legitimate: `git commit --no-verify`
 
-Reuses the existing forensics + redact engines — `guard` is pure orchestration
+Reuses the existing forensics + redact engines โ€” `guard` is pure orchestration
 over what already works. The killer property: install once, forget it exists,
 catches the next leaked AWS key before it reaches GitHub.
 
-### Improvements — strict arg validation across the CLI
+### Improvements โ€” strict arg validation across the CLI
 
 Every numeric / date flag now validates via `packages/cli/src/utils/args.ts`:
 
@@ -14770,7 +14830,7 @@ Every numeric / date flag now validates via `packages/cli/src/utils/args.ts`:
 Applied to: `index`, `forensics attribute|vulns|anomaly`. `attribute` now
 accepts an OPTIONAL commit (defaults to HEAD).
 
-### Improvements — intent classifier accepts security audit queries
+### Improvements โ€” intent classifier accepts security audit queries
 
 v0.19.2 fix from a real user: asking *"what aws keys appear in our history?"*
 was wrongly classified as vague. Fixed by:
@@ -14779,15 +14839,15 @@ was wrongly classified as vague. Fixed by:
 - New CONCRETE_HINTS_SECURITY regex: security/credential nouns count as
   concreteness anchors so audit queries don't fall through
 
-### Improvements — green useCase tagline on every command
+### Improvements โ€” green useCase tagline on every command
 
 The `header()` primitive in `ui.ts` now takes a 4th optional `useCase`
 argument rendered in green above the gray subtitle:
 
 ```
-🛡  Vulnerability Hunt — pattern-matched security findings
-✓ Find security holes hidden in years of git history.
-   11 CWE-aligned classes · scans full diff bodies, additions only
+๐ก  Vulnerability Hunt โ€” pattern-matched security findings
+โ“ Find security holes hidden in years of git history.
+   11 CWE-aligned classes ยท scans full diff bodies, additions only
 ```
 
 Applied to all 22 `header()` call sites: forensics (4), insights (5),
@@ -14796,8 +14856,8 @@ guardian, why, status, quant (10).
 ### Tests
 
 880 tests passing (was 853). +27 new:
-- `do.test.ts` — 16 routing tests covering all 7 flows + placeholder expansion
-- `args.test.ts` — 11 validator tests covering NaN, negatives, garbage dates,
+- `do.test.ts` โ€” 16 routing tests covering all 7 flows + placeholder expansion
+- `args.test.ts` โ€” 11 validator tests covering NaN, negatives, garbage dates,
   commit-not-found template
 
 ### User-visible flow on a fresh install
@@ -14807,23 +14867,23 @@ npm i -g mneme-ai
 cd <any-git-repo>
 mneme init           # picks bundled WASM, zero setup
 mneme index          # ~25MB lazy download on first run
-mneme do "find security issues"   # ← single command, agentic dispatch
-mneme guard --install              # ← always-on protection from now on
+mneme do "find security issues"   # โ single command, agentic dispatch
+mneme guard --install              # โ always-on protection from now on
 ```
 
-—
+โ€”
 
-## [0.19.0] — 2026-05-06
+## [0.19.0] โ€” 2026-05-06
 
-The **"Zero-Install — Just Works"** release. Mneme now ships a built-in
+The **"Zero-Install โ€” Just Works"** release. Mneme now ships a built-in
 WASM embedding model so `npm i -g mneme-ai && mneme index` works on any
 machine without installing Ollama, configuring API keys, or running any
 external service. Auto-detect walks a 4-step fallback ladder and gracefully
-degrades — the user is NEVER blocked by an unhealthy provider.
+degrades โ€” the user is NEVER blocked by an unhealthy provider.
 
-### Added — Bundled WASM embedder (the killer feature)
+### Added โ€” Bundled WASM embedder (the killer feature)
 
-- New `BundledEmbedder` (`packages/embeddings/src/bundled.ts`) — wraps
+- New `BundledEmbedder` (`packages/embeddings/src/bundled.ts`) โ€” wraps
   `@xenova/transformers` with `Xenova/all-MiniLM-L6-v2` (~25MB, 384-dim).
   Pure JS+WASM, no native deps, runs on Windows / Mac / Linux.
 - Model is **lazy-downloaded** on first use to `~/.cache/mneme/models/`.
@@ -14834,22 +14894,22 @@ degrades — the user is NEVER blocked by an unhealthy provider.
 ### Auto-detect ladder (graceful degradation, never blocks)
 
 ```
-1. OpenAI (★★★★★ paid)        — if OPENAI_API_KEY is set
-2. Ollama (★★★★ free local)   — only if ping AND a SHORT sanity embed succeed
-3. Bundled WASM (★★★)         — zero setup, ~25MB lazy download
-4. Hash (★★ deterministic)    — final escape hatch, always works
+1. OpenAI (โ…โ…โ…โ…โ… paid)        โ€” if OPENAI_API_KEY is set
+2. Ollama (โ…โ…โ…โ… free local)   โ€” only if ping AND a SHORT sanity embed succeed
+3. Bundled WASM (โ…โ…โ…)         โ€” zero setup, ~25MB lazy download
+4. Hash (โ…โ… deterministic)    โ€” final escape hatch, always works
 ```
 
-If any step fails — even mid-run (e.g., Ollama becomes unresponsive after
-ping) — the next step takes over silently. Auto mode NEVER errors out.
+If any step fails โ€” even mid-run (e.g., Ollama becomes unresponsive after
+ping) โ€” the next step takes over silently. Auto mode NEVER errors out.
 
 ### Auto-fallback at the CLI layer
 
 `mneme index` (auto mode) now does its own pre-flight verify:
 
-- If the chosen embedder fails → falls back to bundled WASM with a
-  friendly note ("Ollama is unhealthy: <reason> → falling back to bundled").
-- If bundled also fails (e.g., offline + no cached model) → falls to
+- If the chosen embedder fails โ’ falls back to bundled WASM with a
+  friendly note ("Ollama is unhealthy: <reason> โ’ falling back to bundled").
+- If bundled also fails (e.g., offline + no cached model) โ’ falls to
   hash. The user gets a working index either way.
 - Explicit `--embedder ollama` still errors hard, with a clear remedy
   + the suggested fallback (`--embedder bundled`).
@@ -14857,9 +14917,9 @@ ping) — the next step takes over silently. Auto mode NEVER errors out.
 ### `mneme init` recommendation now reflects bundled
 
 Default recommendation changed: when no Ollama and no OpenAI key, the
-probe now suggests `bundled` (★★★, zero-setup) instead of `hash` (★★).
-The action callout explains: "No setup needed — Mneme will use a built-in
-25MB model. For ★★★★ install Ollama (optional)."
+probe now suggests `bundled` (โ…โ…โ…, zero-setup) instead of `hash` (โ…โ…).
+The action callout explains: "No setup needed โ€” Mneme will use a built-in
+25MB model. For โ…โ…โ…โ… install Ollama (optional)."
 
 ### Internal
 
@@ -14874,78 +14934,78 @@ The action callout explains: "No setup needed — Mneme will use a built-in
 ```bash
 npm i -g mneme-ai
 cd <any-git-repo>
-mneme index    # downloads 25MB model on first run, then indexes — zero setup
+mneme index    # downloads 25MB model on first run, then indexes โ€” zero setup
 mneme ask "..."
 ```
 
 No Ollama install. No API key. No localhost vs 127.0.0.1 gotcha. Just works.
 
-—
+โ€”
 
-## [0.18.0] — 2026-05-06
+## [0.18.0] โ€” 2026-05-06
 
-The **"Polished — Output from the Future"** release. Every command now
+The **"Polished โ€” Output from the Future"** release. Every command now
 renders through a unified design system (panels, pills, meters,
 sparklines, citations, OSC 8 hyperlinks) and ships a smarter
 intelligence layer (top-line insights, plain-English verdicts, smart
 next-step suggestions). The CLI shines on first impression and stays
 useful through deep workflows.
 
-### Added — Unified UI primitives (`packages/cli/src/ui.ts`)
+### Added โ€” Unified UI primitives (`packages/cli/src/ui.ts`)
 
 Single design system used by every command:
 
-- `header(icon, title, subtitle?)` — page-level header with double-rule.
-- `section(title, hint?)` — section heading.
-- `divider(label?)` — horizontal rule, optionally with inline label.
-- `severityBadge(level)` — fixed-width colored badges (CRIT / HIGH / MEDIUM / LOW / INFO / OK / WARN).
-- `pill(label, level)` — free-form colored chip ([ FRESH ], [ STALE ], [ AUTO ]).
-- `meter(value, opts)` — linear 0..1 meter with auto-coloring or explicit level.
-- `logMeter(lr, opts)` — log-LR meter for forensic data.
-- `sparkline(values)` — Unicode trend chart (▁▂▃▄▅▆▇█).
-- `citation({shortHash, date, author, subject, url})` — consistent commit row, OSC 8 clickable.
-- `osc8(url, text)` — terminal hyperlink, auto-degrades on dumb terminals.
-- `kv(label, value)` — aligned key-value row.
-- `emptyState(headline, hints[])` — null-state with helpful suggestions.
-- `nextSteps(actions[])` — call-to-action box at end of every command.
-- `verdictBadge(verdict)` — ENFSI verdict coloring.
-- `commitTypePill(subject)` — pill from conventional-commit prefix.
+- `header(icon, title, subtitle?)` โ€” page-level header with double-rule.
+- `section(title, hint?)` โ€” section heading.
+- `divider(label?)` โ€” horizontal rule, optionally with inline label.
+- `severityBadge(level)` โ€” fixed-width colored badges (CRIT / HIGH / MEDIUM / LOW / INFO / OK / WARN).
+- `pill(label, level)` โ€” free-form colored chip ([ FRESH ], [ STALE ], [ AUTO ]).
+- `meter(value, opts)` โ€” linear 0..1 meter with auto-coloring or explicit level.
+- `logMeter(lr, opts)` โ€” log-LR meter for forensic data.
+- `sparkline(values)` โ€” Unicode trend chart (โ–โ–โ–โ–โ–…โ–โ–โ–).
+- `citation({shortHash, date, author, subject, url})` โ€” consistent commit row, OSC 8 clickable.
+- `osc8(url, text)` โ€” terminal hyperlink, auto-degrades on dumb terminals.
+- `kv(label, value)` โ€” aligned key-value row.
+- `emptyState(headline, hints[])` โ€” null-state with helpful suggestions.
+- `nextSteps(actions[])` โ€” call-to-action box at end of every command.
+- `verdictBadge(verdict)` โ€” ENFSI verdict coloring.
+- `commitTypePill(subject)` โ€” pill from conventional-commit prefix.
 
-### Refactored — every high-visibility command shines now
+### Refactored โ€” every high-visibility command shines now
 
-- **`mneme forensics match | attribute | vulns | anomaly`** — top-line insights ("🎯 X is the overwhelming match…"), plain-English verdicts ("In plain English: overwhelming evidence Y wrote this commit"), severity bars + meters, smart next-step suggestions tailored to the result, log-LR per-locus meters sorted by signal strength.
-- **`mneme why <file>:<line>`** — smart authorship insight ("70% of these lines come from a single commit"), aligned originating-commit citations with meters, semantically-related section, contextual next steps.
-- **`mneme status`** — pill-based health badges (FRESH / STALE / NEVER), embedding-coverage meter, freshness hints (`5d old`), smart next-step suggestions based on index health.
-- **`mneme who-knows <topic>`** — confidence meter, candidate ranking with frequency bars, risk pill, contextual next steps (story, dna).
-- **`mneme decisions`** — by-kind histogram with meters, color-coded confidence pills, export-format next steps.
-- **`mneme stack-trace`** — incident-prone-frame top-line, frame-by-frame breakdown, palimpsest/why next steps.
-- **`mneme story <topic>`** — sparkline of activity across acts, smart export next steps.
-- **`mneme dream`** — empty-state with hints when no ideas generated.
-- **`mneme guardian`** — pill-based mode/apply badges, severity-aligned tick rows, policy pills.
-- **`mneme drawdown / alpha / backtest / black-swan / insider-trading / moneyball / greek / correlation-matrix / vix / tax-loss-harvest`** — every quant command now uses the unified header/section/pill/meter pattern. `vix` gets a sparkline + meter for the trend.
+- **`mneme forensics match | attribute | vulns | anomaly`** โ€” top-line insights ("๐ฏ X is the overwhelming matchโ€ฆ"), plain-English verdicts ("In plain English: overwhelming evidence Y wrote this commit"), severity bars + meters, smart next-step suggestions tailored to the result, log-LR per-locus meters sorted by signal strength.
+- **`mneme why <file>:<line>`** โ€” smart authorship insight ("70% of these lines come from a single commit"), aligned originating-commit citations with meters, semantically-related section, contextual next steps.
+- **`mneme status`** โ€” pill-based health badges (FRESH / STALE / NEVER), embedding-coverage meter, freshness hints (`5d old`), smart next-step suggestions based on index health.
+- **`mneme who-knows <topic>`** โ€” confidence meter, candidate ranking with frequency bars, risk pill, contextual next steps (story, dna).
+- **`mneme decisions`** โ€” by-kind histogram with meters, color-coded confidence pills, export-format next steps.
+- **`mneme stack-trace`** โ€” incident-prone-frame top-line, frame-by-frame breakdown, palimpsest/why next steps.
+- **`mneme story <topic>`** โ€” sparkline of activity across acts, smart export next steps.
+- **`mneme dream`** โ€” empty-state with hints when no ideas generated.
+- **`mneme guardian`** โ€” pill-based mode/apply badges, severity-aligned tick rows, policy pills.
+- **`mneme drawdown / alpha / backtest / black-swan / insider-trading / moneyball / greek / correlation-matrix / vix / tax-loss-harvest`** โ€” every quant command now uses the unified header/section/pill/meter pattern. `vix` gets a sparkline + meter for the trend.
 
 ### Smart intelligence layer
 
-- **Top-line insights** — every report leads with the punchline. "🎯 alice@bank.com is the overwhelming match" or "⚠ 3 critical/high finding(s) — investigate immediately."
-- **Plain-English verdicts** — forensic LRs translated: "In plain English: overwhelming evidence Bob did NOT write this commit."
-- **Smart next steps** — every command ends with 1–3 contextual `mneme …` commands tied to what was just shown ("Hunt for OTHER suspicious commits" / "Cross-reference vulnerabilities introduced around the anomalous window" / "Inspect the top expert's coding fingerprint").
-- **Empty states with hints** — when there's no data, every command tells you exactly what to do next instead of a bare "no results."
+- **Top-line insights** โ€” every report leads with the punchline. "๐ฏ alice@bank.com is the overwhelming match" or "โ  3 critical/high finding(s) โ€” investigate immediately."
+- **Plain-English verdicts** โ€” forensic LRs translated: "In plain English: overwhelming evidence Bob did NOT write this commit."
+- **Smart next steps** โ€” every command ends with 1โ€“3 contextual `mneme โ€ฆ` commands tied to what was just shown ("Hunt for OTHER suspicious commits" / "Cross-reference vulnerabilities introduced around the anomalous window" / "Inspect the top expert's coding fingerprint").
+- **Empty states with hints** โ€” when there's no data, every command tells you exactly what to do next instead of a bare "no results."
 
 ### Internal
 
 - Added 30 new unit tests for UI primitives (`packages/cli/src/ui.test.ts`).
 - All 834 tests pass (was 804); zero regressions.
 
-—
+โ€”
 
-## [0.17.0] — 2026-05-06
+## [0.17.0] โ€” 2026-05-06
 
 The **"Forensic Code Science"** release. Real forensic-science
-methodology — likelihood ratios, ENFSI verbal scale, vulnerability
-pattern hunting, insider-threat anomaly detection — applied to git
+methodology โ€” likelihood ratios, ENFSI verbal scale, vulnerability
+pattern hunting, insider-threat anomaly detection โ€” applied to git
 history. **First system to do so.**
 
-### Added — `mneme forensics` (4 subcommands)
+### Added โ€” `mneme forensics` (4 subcommands)
 
 ```bash
 mneme forensics match <commit> <author>   # STR-loci LR matching
@@ -14954,12 +15014,12 @@ mneme forensics vulns                     # CWE-aligned vuln hunt
 mneme forensics anomaly                   # insider-threat detection
 ```
 
-### `match` / `attribute` — STR-Loci Author Attribution
+### `match` / `attribute` โ€” STR-Loci Author Attribution
 
 12 novel "code STR loci" extracted per author, then likelihood ratio:
 
 ```
-LR_total = ∏ LR_i           (Bayesian, product over independent loci)
+LR_total = โ LR_i           (Bayesian, product over independent loci)
           i=1..12
 ```
 
@@ -14970,10 +15030,10 @@ standard): "extremely strong support" / "very strong support" /
 
 Continuous loci: Gaussian likelihood. Discrete loci (peakHour,
 messageStyleHash): direct frequency matching. Per-locus LR capped at
-[0.001, 1000] so a single weird locus can't dominate — multi-locus
+[0.001, 1000] so a single weird locus can't dominate โ€” multi-locus
 agreement is what gives forensic certainty.
 
-### `vulns` — CWE-aligned Vulnerability Hunt
+### `vulns` โ€” CWE-aligned Vulnerability Hunt
 
 Pattern-match across commit + diff history. **11 vulnerability classes**
 mapped to CWE identifiers:
@@ -14981,7 +15041,7 @@ mapped to CWE identifiers:
 - crypto-weakness (CWE-327, 330, 321)
 - injection-sql/shell/xss (CWE-89, 78, 79, 95)
 - auth-flaw (CWE-287, 798, 347, 942)
-- financial-logic (CWE-190, 682, 840) — bank/finance grade
+- financial-logic (CWE-190, 682, 840) โ€” bank/finance grade
 - supply-chain (CWE-1357)
 - info-leakage (CWE-209)
 - race-condition (CWE-362)
@@ -14990,7 +15050,7 @@ mapped to CWE identifiers:
 Surfaces silent-fix commits (subject mentions security but no rule
 hits) for compliance review.
 
-### `anomaly` — Insider-Threat Detection
+### `anomaly` โ€” Insider-Threat Detection
 
 Per-author baseline + four-axis deviation scoring for compromised-
 credential detection (the bank/finance scenario):
@@ -15002,8 +15062,8 @@ credential detection (the bank/finance scenario):
 | STYLE | Verb-novelty + leading-verb match |
 | SIZE | Robust z-score (MAD) of insertions+deletions vs median |
 
-Composite score → severity bands (low/medium/high/critical) with
-specific recommendation per band. Requires ≥5 commits to baseline an
+Composite score โ’ severity bands (low/medium/high/critical) with
+specific recommendation per band. Requires โฅ5 commits to baseline an
 author.
 
 ### Test count
@@ -15015,14 +15075,14 @@ author.
 
 Build clean. All 804 tests pass.
 
-## [0.16.0] — 2026-05-06
+## [0.16.0] โ€” 2026-05-06
 
 The **"Giant Slayer"** release. Two world-firsts that no shipped tool we
 surveyed has: (1) a 24/7 self-healing engine that auto-fixes weaknesses
 as they emerge, and (2) four novel retrieval-scoring algorithms built on
 formulas designed to outperform single-signal embedding search.
 
-### Added — `mneme guardian` (the 24/7 self-healing engine)
+### Added โ€” `mneme guardian` (the 24/7 self-healing engine)
 
 ```bash
 mneme guardian --watch --apply --interval 300
@@ -15046,50 +15106,50 @@ quality regression, stale calibration, schema drift, redaction gap.
 
 **Threats**: tamper signal, secret leak, outlier author, deletion storm.
 
-Each finding gets a policy: `auto` (safe — apply automatically),
+Each finding gets a policy: `auto` (safe โ€” apply automatically),
 `recommended` (suggest, await human), or `observe` (log only). Safe
 actions like incremental re-indexing and calibration are automatic;
 risky actions are suggested. 10 tests.
 
-### Added — Four Novel Retrieval-Scoring Algorithms
+### Added โ€” Four Novel Retrieval-Scoring Algorithms
 
 These run as post-processors over base BM25 + cosine search.
 20 tests across the four algorithms.
 
-#### TDWE — Time-Decay Weighted Embedding scoring
+#### TDWE โ€” Time-Decay Weighted Embedding scoring
 > *"Yesterday's wisdom matters more than last decade's."*
 
 Formula:
 ```
-w(c) = exp(-λ × age_days / half_life)
-adjusted_score = base_score × w(c)
+w(c) = exp(-ฮป ร— age_days / half_life)
+adjusted_score = base_score ร— w(c)
 ```
 A commit at half-life age (default 365 days) gets weight 0.5. Older
 commits decay further; newer commits stay near 1.0.
 
-#### RACB — Regret-Aware Chunk Boosting
+#### RACB โ€” Regret-Aware Chunk Boosting
 > *"The bug fix carries more wisdom than the feature."*
 
 Formula:
 ```
-boost(c) = 1 + ln(1 + days_to_followup × severity_factor)
+boost(c) = 1 + ln(1 + days_to_followup ร— severity_factor)
 ```
 Severity map: revert=3, hotfix=2, fix=1, sameFiles=0.5. Logarithmic
-growth captures diminishing returns on age — a 1-day-to-fix is highly
-informative; 30-day-to-fix is more, but not 30× more.
+growth captures diminishing returns on age โ€” a 1-day-to-fix is highly
+informative; 30-day-to-fix is more, but not 30ร— more.
 
-#### ADS — Author Diversity Score re-ranking
+#### ADS โ€” Author Diversity Score re-ranking
 > *"Don't return three answers from the same person."*
 
 Formula:
 ```
-penalty(i) = α × (same_author_above / total)
-final(i)  = base(i) × (1 - penalty(i))
+penalty(i) = ฮฑ ร— (same_author_above / total)
+final(i)  = base(i) ร— (1 - penalty(i))
 ```
 Then re-sort. Surfaces the second-most-knowledgeable contributor when
 one author dominates a topic.
 
-#### CGAR — Causal Graph Augmented Retrieval (light)
+#### CGAR โ€” Causal Graph Augmented Retrieval (light)
 > *"Walk the narrative, not just the bag of chunks."*
 
 Builds a graph of commit-to-commit causal references (PR #N, fixes #N,
@@ -15097,11 +15157,11 @@ revert hashes). Boosts results that are causally connected to other
 results within `maxHops` (default 2):
 
 ```
-boost = initial × decay^(hops - 1)   // initial=1.3, decay=0.85
+boost = initial ร— decay^(hops - 1)   // initial=1.3, decay=0.85
 ```
 
-#### Ensemble — `applyNovelScoring(results, ensemble)`
-Composes all four: TDWE → RACB → CGAR → ADS, each pure and tested
+#### Ensemble โ€” `applyNovelScoring(results, ensemble)`
+Composes all four: TDWE โ’ RACB โ’ CGAR โ’ ADS, each pure and tested
 independently.
 
 ### Test count
@@ -15114,58 +15174,58 @@ independently.
 
 Build clean. All 780 tests pass.
 
-## [0.15.0] — 2026-05-06
+## [0.15.0] โ€” 2026-05-06
 
 The **"Polish + Quality"** release. Lifts every command to production-grade
 finish AND introduces a built-in index quality auditor.
 
-### Added — `mneme index --analyze`
+### Added โ€” `mneme index --analyze`
 
 A full-throated index quality report. Computes 8 per-metric scores
 (chunk density, embedding ratio, subject quality, body ratio, PR ratio,
 issue-ref ratio, duplicate ratio, tokenizer health), produces an
-overall A–F grade, and surfaces concrete recommendations:
+overall Aโ€“F grade, and surfaces concrete recommendations:
 
 ```
-📊  Index Quality — health check
-─────────────────────────────────────────
-✦ Overall grade
+๐“  Index Quality โ€” health check
+โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
+โฆ Overall grade
    A  (85/100)
 
-◆ Per-metric breakdown
-   █████████░   88%  chunk density
-   ██████████  100%  embedding ratio
-   ██████████  100%  subject quality
-   ██████████  100%  body ratio
-   █░░░░░░░░░   11%  PR ratio
-   ██░░░░░░░░   17%  issue ref ratio
-   ██████████    0%  duplicate ratio
-   ██████████  100%  tokenizer health
+โ— Per-metric breakdown
+   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–‘   88%  chunk density
+   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–  100%  embedding ratio
+   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–  100%  subject quality
+   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–  100%  body ratio
+   โ–โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘   11%  PR ratio
+   โ–โ–โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘โ–‘   17%  issue ref ratio
+   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–    0%  duplicate ratio
+   โ–โ–โ–โ–โ–โ–โ–โ–โ–โ–  100%  tokenizer health
 
-✦ Recommendations
-   • Only 11% of commits reference a PR. Configure the
-     GitHub adapter to ingest PR descriptions — highest
+โฆ Recommendations
+   โ€ข Only 11% of commits reference a PR. Configure the
+     GitHub adapter to ingest PR descriptions โ€” highest
      signal source.
 ```
 
 JSON output via `--json` for CI gates. 8 new tests.
 
-### Fixed — production polish across the suite
+### Fixed โ€” production polish across the suite
 
 - **`mneme why`** now falls back to `git show` when a commit isn't
-  indexed yet — shows real subject + author + date instead of a bare
+  indexed yet โ€” shows real subject + author + date instead of a bare
   `(not indexed)` placeholder, with a hint to run `mneme index`.
-- **`mneme fossil`** off-by-one parser fix — `deleted <date> by <author>
+- **`mneme fossil`** off-by-one parser fix โ€” `deleted <date> by <author>
   in <hash>` renders correctly instead of being scrambled.
 - **`mneme status`** clarified ambiguous labels:
-  - `embedder (unknown)` → `embedder not recorded — re-run \`mneme index\``
-  - `provider hash` → `provider hash (deterministic, dep-free fallback)`
-  - never-indexed shows `indexed never — run \`mneme index\` to build the memory`
-- **`mneme cluster`** small-repo null-state — explains threshold + suggests
+  - `embedder (unknown)` โ’ `embedder not recorded โ€” re-run \`mneme index\``
+  - `provider hash` โ’ `provider hash (deterministic, dep-free fallback)`
+  - never-indexed shows `indexed never โ€” run \`mneme index\` to build the memory`
+- **`mneme cluster`** small-repo null-state โ€” explains threshold + suggests
   `--similarity 0.05 --min-size 2` instead of showing "0 clusters".
-- **`mneme network`** solo-author null-state — explains why it's empty +
+- **`mneme network`** solo-author null-state โ€” explains why it's empty +
   suggests `mneme dna` for solo repos.
-- **`mneme black-swan`** null-state — points users to
+- **`mneme black-swan`** null-state โ€” points users to
   `mneme correlate --source pager` to ingest incidents.
 
 ### Test count
@@ -15177,13 +15237,13 @@ JSON output via `--json` for CI gates. 8 new tests.
 
 Build clean. All 750 tests pass.
 
-## [0.14.0] — 2026-05-06
+## [0.14.0] โ€” 2026-05-06
 
 The **"Untouchable"** release. One world-first quality moat + a journalist-style README rewrite.
 
-### Added — Hallucination Guard *(no other tool ships this for git Q&A)*
+### Added โ€” Hallucination Guard *(no other tool ships this for git Q&A)*
 
-- **`mneme ask --audit`** — audit-grade Q&A mode. Refuses to answer below
+- **`mneme ask --audit`** โ€” audit-grade Q&A mode. Refuses to answer below
   a confidence floor (`--audit-floor low|medium|high`, default medium)
   AND refuses if any LLM-cited backtick-hash isn't present in the
   retrieved evidence. Use this for CI gates or any surface where AI
@@ -15191,15 +15251,15 @@ The **"Untouchable"** release. One world-first quality moat + a journalist-style
   trustScore = 0 instead of best-effort prose.
 - **Trust score 0..1** on every `synthesize()` result. Combines confidence
   label and citation validity:
-  - `audit-refused` / `no-context` → 0
-  - `extractive` → 0.5–0.7
-  - `llm` clean → 0.8–0.95
-  - `llm` with N unverified citations → base − N × 0.2 (capped at 0.5 penalty)
-- **`unverifiedCitations`** field — every backtick-hex token in the
+  - `audit-refused` / `no-context` โ’ 0
+  - `extractive` โ’ 0.5โ€“0.7
+  - `llm` clean โ’ 0.8โ€“0.95
+  - `llm` with N unverified citations โ’ base โ’ N ร— 0.2 (capped at 0.5 penalty)
+- **`unverifiedCitations`** field โ€” every backtick-hex token in the
   answer is checked against the evidence set (prefix-match, case-insensitive).
   Hashes that don't match are surfaced in the field and rendered as a
-  "⚠ HALLUCINATION RISK" banner in the CLI, with a `--audit` hint.
-- **Trust badge UI** in `mneme ask` output — color-coded (green/cyan/yellow/red)
+  "โ  HALLUCINATION RISK" banner in the CLI, with a `--audit` hint.
+- **Trust badge UI** in `mneme ask` output โ€” color-coded (green/cyan/yellow/red)
   next to the existing confidence badge.
 - **`findUnverifiedCitations()`** exported as a pure helper for callers who
   want to validate LLM output against arbitrary evidence sets.
@@ -15213,61 +15273,61 @@ The **"Untouchable"** release. One world-first quality moat + a journalist-style
 
 Build clean. All 742 tests pass.
 
-### Changed — README rewrite
+### Changed โ€” README rewrite
 
 The README went from **834 lines to 227 lines** (73% reduction):
 
-- **Journalist inverted pyramid** — most important first
+- **Journalist inverted pyramid** โ€” most important first
 - **30-second install** above the fold
-- **Why people use it** — 4 bullets, story-shaped
+- **Why people use it** โ€” 4 bullets, story-shaped
 - **All commands in 3 colored tables** (Tier 1 / Insights / Quant)
-- **Audit-grade section** — explicit hallucination-guard guarantee
-- **The Frontier table** — 12 world-firsts vs adjacent tools
+- **Audit-grade section** โ€” explicit hallucination-guard guarantee
+- **The Frontier table** โ€” 12 world-firsts vs adjacent tools
 - **Wiki links** for everything that used to live in the README
 
-The old long-form content is intact in the wiki — see Innovations and
+The old long-form content is intact in the wiki โ€” see Innovations and
 Command-Tour.
 
-## [0.13.0] — 2026-05-05
+## [0.13.0] โ€” 2026-05-05
 
 The **"Frontier"** release. Closes every gap from the landscape
 research:
 
 | Gap | Tool that came closest | What was missing | Mneme v0.13 |
 |-----|-----------------------|------------------|-------------|
-| OSS  | — | many tools were closed-source | ✅ MIT |
-| Real-time | Goursome (dead 2014) | nothing actively maintained | ⏳ planned watch mode |
-| Semantic NLP clustering | arxiv 2110.00697 | research-only | ✅ `mneme cluster` |
-| Author network with semantic edges | Unblocked.com (closed, paid) | no OSS | ✅ `mneme network` |
-| Predictive overlay | MergeBERT (research) | not productized | ✅ already shipped in `oracle` |
-| Exportable developer fingerprint | HowYouCode (snapshot only) | no history-derived | ✅ already shipped in `dna` |
-| Universal codebase export | — | no tool bundles everything | ✅ `mneme export-bundle` |
-| Engineering management view | — | no tool combines health + succession | ✅ `mneme manage` |
+| OSS  | โ€” | many tools were closed-source | โ… MIT |
+| Real-time | Goursome (dead 2014) | nothing actively maintained | โณ planned watch mode |
+| Semantic NLP clustering | arxiv 2110.00697 | research-only | โ… `mneme cluster` |
+| Author network with semantic edges | Unblocked.com (closed, paid) | no OSS | โ… `mneme network` |
+| Predictive overlay | MergeBERT (research) | not productized | โ… already shipped in `oracle` |
+| Exportable developer fingerprint | HowYouCode (snapshot only) | no history-derived | โ… already shipped in `dna` |
+| Universal codebase export | โ€” | no tool bundles everything | โ… `mneme export-bundle` |
+| Engineering management view | โ€” | no tool combines health + succession | โ… `mneme manage` |
 
 After v0.13 there is **no commercial or open-source tool that does what
 Mneme does as a single, local-first artifact.** That is the "Black
-Sheep" position — alone in the field by design.
+Sheep" position โ€” alone in the field by design.
 
-### Added — four new commands
+### Added โ€” four new commands
 
-- **`mneme cluster`** — semantic clustering of commit messages. Groups
+- **`mneme cluster`** โ€” semantic clustering of commit messages. Groups
   similar commits (token-overlap or embedding-based when available),
   surfaces topic islands, returns cohesion + sample commits +
   cluster-defining vocabulary. **First shipped CLI for semantic commit
-  clustering — academic papers stop at the paper.** 9 tests.
-- **`mneme network`** — author social graph with **semantic edges**.
+  clustering โ€” academic papers stop at the paper.** 9 tests.
+- **`mneme network`** โ€” author social graph with **semantic edges**.
   Edges aren't just "edited same file"; they're weighted by co-edit +
   co-time + co-topic, and labeled with the shared vocabulary. Detects
   silos (connected components) and bridges (authors connecting them).
   **Closes the OSS gap left by closed-source competitors.** 7 tests.
-- **`mneme manage`** — engineering management dashboard. Combines
+- **`mneme manage`** โ€” engineering management dashboard. Combines
   drift, oracle, and per-area touch data into a single CTO/EM-friendly
   view: team health composite, succession plan per area (primary +
   understudy + risk), skill matrix, action notes. **No tool combines
   these into one frame.** 8 tests.
-- **`mneme export-bundle`** (alias `bundle`) — universal codebase
-  export. Bundles every Mneme analysis — DNA × top contributors, drift,
-  chronicle, oracle, constellation, clusters, network, manage, ghost —
+- **`mneme export-bundle`** (alias `bundle`) โ€” universal codebase
+  export. Bundles every Mneme analysis โ€” DNA ร— top contributors, drift,
+  chronicle, oracle, constellation, clusters, network, manage, ghost โ€”
   into a single shareable artifact (JSON + Markdown). Run once, ship to
   collaborators or attach to release notes. 6 tests.
 
@@ -15284,7 +15344,7 @@ Sheep" position — alone in the field by design.
 
 Build clean. All 727 tests pass.
 
-## [0.12.0] — 2026-05-05
+## [0.12.0] โ€” 2026-05-05
 
 The **"King of Git"** release. Five new world-first commands, each
 addressing a question that no other tool can answer about your
@@ -15292,9 +15352,9 @@ codebase's past, present, or future. After landscape research (Gource,
 code_swarm, Hercules, Unblocked, HowYouCode, MergeBERT) confirmed each
 one occupies whitespace.
 
-### Added — five killer commands
+### Added โ€” five killer commands
 
-- **`mneme dna [author]`** — extract a portable, exportable **Codebase
+- **`mneme dna [author]`** โ€” extract a portable, exportable **Codebase
   DNA** fingerprint of any contributor: their style genome (file-per-
   commit, test ratio, conventional commit ratio), message DNA (subject
   length, imperative ratio, top verbs), working hours (UTC histogram,
@@ -15303,27 +15363,27 @@ one occupies whitespace.
   scoring and `--output <file>` for JSON export. **No other tool ships
   history-derived, comparable, exportable per-developer fingerprints.**
   13 tests.
-- **`mneme drift`** — visualize **topical drift** of a repo over time
+- **`mneme drift`** โ€” visualize **topical drift** of a repo over time
   (default: quarter buckets). Classifies each commit as feature /
   refactor / firefight / polish / docs / other, then plots the per-
   bucket distribution as a colored sparkline. Detects burnout signals,
   recovery, rewrite clusters, and polish streaks. **NLP-grade commit
   classification has been published in academic papers but never
   shipped as a CLI before.** 13 tests.
-- **`mneme chronicle`** — auto-generate a **chaptered narrative
+- **`mneme chronicle`** โ€” auto-generate a **chaptered narrative
   documentary** of your codebase. Detects natural epochs, names each
   chapter ("The Founding", "The Great Refactor", "The Reckoning"),
   identifies the protagonist (top contributor), and emits Markdown
   ready to convert to PDF / EPUB. `--output CHRONICLE.md` writes the
   novel. 10 tests.
-- **`mneme oracle`** — **predictive co-edit oracle**. From the recent
-  window of commits, builds a recency-weighted author × file affinity
+- **`mneme oracle`** โ€” **predictive co-edit oracle**. From the recent
+  window of commits, builds a recency-weighted author ร— file affinity
   matrix, then projects probabilities for the next window. Surfaces
   predicted *collisions* (two authors both likely to touch the same
   file) so teams can sync before they merge-conflict. **MergeBERT
   research stopped at the paper; Mneme ships the productized version.**
   8 tests.
-- **`mneme constellation`** — build a **graph view of the repo** as a
+- **`mneme constellation`** โ€” build a **graph view of the repo** as a
   living map: files are stars (size = touches), authors are orbital
   bodies, commits are edges. Includes co-edit edges between files
   committed together and authorship edges between authors and the files
@@ -15344,7 +15404,7 @@ one occupies whitespace.
 
 Build clean. All 697 tests pass.
 
-### Numbers — what's now in Mneme
+### Numbers โ€” what's now in Mneme
 
 | Surface | Count |
 |---------|-------|
@@ -15354,7 +15414,7 @@ Build clean. All 697 tests pass.
 | WILD commands | 11 |
 | MCP tools | 7 |
 
-## [0.11.1] — 2026-05-05
+## [0.11.1] โ€” 2026-05-05
 
 Maintenance release for MCP Registry publish:
 
@@ -15364,7 +15424,7 @@ Maintenance release for MCP Registry publish:
 - **Mneme is now live in the official MCP Registry**:
   https://registry.modelcontextprotocol.io/
 
-## [0.11.0] — 2026-05-05
+## [0.11.0] โ€” 2026-05-05
 
 The "Time Loops & Ghosts" release. Three new world-first commands that
 lean on the same indexed memory but answer different questions:
@@ -15373,35 +15433,35 @@ lean on the same indexed memory but answer different questions:
 > *What is my repo's history saying about this idea?*
 > *What is haunting my codebase?*
 
-### Added — three new insights
+### Added โ€” three new insights
 
-- **`mneme time-machine <file>`** — narrate a file's evolution as discrete
+- **`mneme time-machine <file>`** โ€” narrate a file's evolution as discrete
   eras (birth, rewrite, evolution, firefight, polish, plateau, twilight).
-  Emits a per-era label ("rewrite — 'switched to streams' (412 lines)"),
+  Emits a per-era label ("rewrite โ€” 'switched to streams' (412 lines)"),
   a per-era churn count, and a "health" tri-ratio (rewrite vs firefight
   vs polish). Uses commit-message keywords + churn thresholds to classify.
   10 tests.
-- **`mneme premortem <intent>`** — given a proposed change, mine the repo
+- **`mneme premortem <intent>`** โ€” given a proposed change, mine the repo
   for similar past attempts (token-overlap similarity + path hint), then
   walk forward in a window for revert/hotfix/incident/rewrite signals.
   Produces a regret probability, a verdict tier (low/medium/high/very_high),
   and the top three risks with citations to the actual commits that
   exhibited them. **Predictive analysis grounded in YOUR repo's failure
   history**, not generic AI advice. 11 tests.
-- **`mneme ghost`** — surfaces "ghost code": files that haunt the repo
+- **`mneme ghost`** โ€” surfaces "ghost code": files that haunt the repo
   without doing anything. Combines staleness (recency-decay), low-touch
   ratio (born and forgotten), and TODO density into a single ghostliness
-  score. Also detects stale TODOs — markers added long ago and ignored
+  score. Also detects stale TODOs โ€” markers added long ago and ignored
   through later edits. 10 tests.
 
-### Added — auto-discovery + SEO
+### Added โ€” auto-discovery + SEO
 
 - **`keywords`** in npm package.json expanded to cover memory, MCP, AI
-  coding assistant, codebase intelligence — improves npm search ranking
+  coding assistant, codebase intelligence โ€” improves npm search ranking
   without changing the user-facing description.
 - **GitHub topics** added to repo: `mcp`, `mcp-server`,
   `ai-coding-assistant`, `codebase-memory`, `git-archaeology`,
-  `local-first`, `typescript`. Topic search → Mneme.
+  `local-first`, `typescript`. Topic search โ’ Mneme.
 
 ### Test count
 
@@ -15415,68 +15475,68 @@ lean on the same indexed memory but answer different questions:
 
 Build green. All 644 tests pass.
 
-## [0.9.0] — 2026-05-05
+## [0.9.0] โ€” 2026-05-05
 
 The "Super Saiyan" release. v0.9.0 ships in three sprints on top of the
 earlier hardening work, turning Mneme from "raw retrieval" into an
 answer-shaped experience.
 
-### Added — Sprint 1: engine + output
+### Added โ€” Sprint 1: engine + output
 
-- **Intent classifier** (`retrieve/intent`) — every query is classified
+- **Intent classifier** (`retrieve/intent`) โ€” every query is classified
   as `specific` / `lookup` / `temporal` / `vague` *before* retrieval. Vague
   queries ("how to improve my code") short-circuit with a redirect message
   instead of returning low-confidence guesses. 21 tests.
-- **Adaptive confidence** — `classifyConfidence(results)` returns one of
+- **Adaptive confidence** โ€” `classifyConfidence(results)` returns one of
   `high` / `medium` / `low` / `none` based on top score AND the gap to
-  top-2/3. Tied results (all ≈ 0.016) drop to "low" even when the
+  top-2/3. Tied results (all โ 0.016) drop to "low" even when the
   absolute top is decent. The previous static floor stays as a hard cut.
-- **LLM synthesis layer** (`retrieve/synthesize`) — turns top-K results
+- **LLM synthesis layer** (`retrieve/synthesize`) โ€” turns top-K results
   into a 2-4 sentence answer that cites commit hashes. Falls back to an
   extractive template-based answer when no LLM is reachable. 14 tests.
-- **Beautiful output** (`render-answer`) — sectioned response with
-  confidence badge (🟢🟡🔴), `✦ Answer`, `◆ Evidence` (top-3 of N, not
-  all N), `⊕ Files` clustered by top-2 path segments. OSC 8 hyperlinks
+- **Beautiful output** (`render-answer`) โ€” sectioned response with
+  confidence badge (๐ข๐ก๐”ด), `โฆ Answer`, `โ— Evidence` (top-3 of N, not
+  all N), `โ• Files` clustered by top-2 path segments. OSC 8 hyperlinks
   make PR/commit refs clickable in modern terminals (iTerm2, Wezterm,
   Windows Terminal, VSCode). 22 tests.
-- **Animated thinking spinner** (`spinner`) — braille frames during
+- **Animated thinking spinner** (`spinner`) โ€” braille frames during
   retrieval and synthesis. Disabled on non-TTY (CI, piped output).
 
-### Added — Sprint 2: killer commands
+### Added โ€” Sprint 2: killer commands
 
-- **`mneme who-knows <topic>`** — surface the people most likely to know
-  about a topic, ranked by `log(commits) × recency` so one mega-contributor
+- **`mneme who-knows <topic>`** โ€” surface the people most likely to know
+  about a topic, ranked by `log(commits) ร— recency` so one mega-contributor
   doesn't dominate. Tiers: `definitive` / `active` / `stale` / `occasional`.
-- **`mneme decisions [--format markdown]`** — auto-extract architectural
+- **`mneme decisions [--format markdown]`** โ€” auto-extract architectural
   decisions from commit history. 9 patterns: `decided to`, `switched from
   A to B`, `replaced X with Y`, `chose A over B`, `use X instead of Y`,
   `adopted X`, `deprecated X`, `migrated from A to B`, `rejected X`.
   Captures rationale (`because Y`, `so that Y`).
-- **`mneme stack-trace [--from F]`** — parse a JS/TS/Python/Go/Java stack
+- **`mneme stack-trace [--from F]`** โ€” parse a JS/TS/Python/Go/Java stack
   trace and query history for each frame: last 3 commits + count of past
   incidents affecting the file. Reads stdin or a file.
-- **`mneme story <topic>`** — narrate the evolution of a topic across
+- **`mneme story <topic>`** โ€” narrate the evolution of a topic across
   acts (initial / refactor / incident / evolution / stable). Optional
   Ollama act-narration adds a 1-2 sentence prose summary per act.
 
-### Added — Sprint 3: AI nobody-thought-existed
+### Added โ€” Sprint 3: AI nobody-thought-existed
 
-- **`mneme dream`** — speculative ideas grounded in your codebase patterns.
+- **`mneme dream`** โ€” speculative ideas grounded in your codebase patterns.
   Gathers signals (commit volume, language distribution, top modules,
   pattern suffixes like `Service`/`Adapter`) and asks an LLM to suggest
   3-5 features that fit your style. Falls back to deterministic heuristic
   ideas when no LLM is configured.
-- **`mneme chat`** — multi-turn REPL with conversation context. Augments
+- **`mneme chat`** โ€” multi-turn REPL with conversation context. Augments
   follow-up queries with the previous turn's question to improve retrieval.
   Slash commands: `/exit`, `/clear`, `/save <file>`, `/history`.
-- **Smart suggestions in `mneme ask`** — every answer now includes a
-  `→ Try next` section with up to 3 follow-up commands, generated by
+- **Smart suggestions in `mneme ask`** โ€” every answer now includes a
+  `โ’ Try next` section with up to 3 follow-up commands, generated by
   `extractTopicWord(question)` + result analysis. Heuristic, deterministic.
 
 ### Changed
 
-- **Tests: 244 → 379** (+135 tests, +9 test files).
-- **Eval A/B verified across all three sprints** — recall@3 = 87.7%,
+- **Tests: 244 โ’ 379** (+135 tests, +9 test files).
+- **Eval A/B verified across all three sprints** โ€” recall@3 = 87.7%,
   hit rate = 96%, negative recall = 100%. No regression.
 - **CLI surface**: 8 essentials in `mneme --help`, 26 advanced via
   `mneme advanced` (was 24). Tier-2 includes the 6 new Sprint 2+3 commands.
@@ -15486,42 +15546,42 @@ answer-shaped experience.
 | Metric | v0.9.0-pre | v0.9.0 |
 |---|---|---|
 | Tests passing | 244 / 24 files | **379 / 33 files** |
-| Visible CLI commands | 8 | **8** (unchanged — kept clean) |
+| Visible CLI commands | 8 | **8** (unchanged โ€” kept clean) |
 | Total CLI commands | 28 | **34** |
 | Languages parsed | TS, JS, Python, Go | **TS, JS, Python, Go** |
 | Eval recall@3 | 87.7% | **87.7%** (no regression across 3 sprints) |
 | Killer commands | 0 | **6** (`who-knows`, `decisions`, `stack-trace`, `story`, `dream`, `chat`) |
 
-## [0.9.0-pre] — 2026-05-04
+## [0.9.0-pre] โ€” 2026-05-04
 
 The "honest, multi-language, self-improving" release. Five months of code in one tag.
 
 ### Added
 
-- **Wisdom Mutant Engine** — 24/7 self-improving loop:
+- **Wisdom Mutant Engine** โ€” 24/7 self-improving loop:
   - `mneme feedback <id> up|down` records explicit feedback on a query.
   - `mneme why` on a recently-returned commit acts as an implicit positive signal.
-  - `mneme calibrate` runs a grid search over `(semanticWeight, minSemCosine, rrfK)` and picks the config that maximizes hit rate against accumulated feedback. Requires ≥ 10 positive examples to gate against statistical noise.
+  - `mneme calibrate` runs a grid search over `(semanticWeight, minSemCosine, rrfK)` and picks the config that maximizes hit rate against accumulated feedback. Requires โฅ 10 positive examples to gate against statistical noise.
   - `mneme watch` is the daemon: re-indexes on every `.git/HEAD` change, calibrates hourly, self-evals daily.
   - Three new append-only tables: `wisdom_feedback`, `wisdom_calibration`, `wisdom_eval_run` (schema bumped to v2, additive).
-- **Confidence floor** in `retrieve/search`. The system now returns `[]` (with the message *"no relevant commits or PRs were found … this usually means the WHY behind this code lives outside the git history"*) for queries with no FTS hits **and** top semantic cosine < 0.4. Negative-recall on the eval set went from 0% to 100% with no regression on positive recall.
-- **Redaction layer** (`util/redact`) — regex scrubber for AWS access keys, GitHub PAT (classic + fine-grained), GitLab PAT, OpenAI/Anthropic keys, Stripe (live & test), Slack tokens, Google API keys, npm tokens, JWTs, PEM private keys, generic Bearer tokens. **ON by default** in `mneme index`. Aggressive mode (`--aggressive-redact`) catches generic `password=` patterns and long hex blobs.
-- **Deterministic mode** — `--no-llm` flag, `MNEME_NO_LLM` env var, or `config.deterministic = true`. `heal` and `genius` refuse with exit code 2 + a non-LLM suggestion. `teach` falls back to layer classification only. `index` forces the hash embedder regardless of what was asked.
-- **Smart environment probe** — `mneme init` and a new `mneme doctor` command detect Ollama (with embedding model pulled or not), OpenAI key presence, and hardware tier, then recommend the best embedder for THIS user.
-- **Go entity parser (regex v1)** — methods (`Receiver.Name`), generics (Go 1.18+), structs, interfaces, type aliases. Comment- and raw-string-aware via masking pass. 16 tests.
-- **`docs/SECURITY.md`** — full threat model. Bank-grade documentation.
-- **`docs/PRIVACY.md`** — short, plain-language version for users.
+- **Confidence floor** in `retrieve/search`. The system now returns `[]` (with the message *"no relevant commits or PRs were found โ€ฆ this usually means the WHY behind this code lives outside the git history"*) for queries with no FTS hits **and** top semantic cosine < 0.4. Negative-recall on the eval set went from 0% to 100% with no regression on positive recall.
+- **Redaction layer** (`util/redact`) โ€” regex scrubber for AWS access keys, GitHub PAT (classic + fine-grained), GitLab PAT, OpenAI/Anthropic keys, Stripe (live & test), Slack tokens, Google API keys, npm tokens, JWTs, PEM private keys, generic Bearer tokens. **ON by default** in `mneme index`. Aggressive mode (`--aggressive-redact`) catches generic `password=` patterns and long hex blobs.
+- **Deterministic mode** โ€” `--no-llm` flag, `MNEME_NO_LLM` env var, or `config.deterministic = true`. `heal` and `genius` refuse with exit code 2 + a non-LLM suggestion. `teach` falls back to layer classification only. `index` forces the hash embedder regardless of what was asked.
+- **Smart environment probe** โ€” `mneme init` and a new `mneme doctor` command detect Ollama (with embedding model pulled or not), OpenAI key presence, and hardware tier, then recommend the best embedder for THIS user.
+- **Go entity parser (regex v1)** โ€” methods (`Receiver.Name`), generics (Go 1.18+), structs, interfaces, type aliases. Comment- and raw-string-aware via masking pass. 16 tests.
+- **`docs/SECURITY.md`** โ€” full threat model. Bank-grade documentation.
+- **`docs/PRIVACY.md`** โ€” short, plain-language version for users.
 - **CycloneDX SBOM** generation in the release pipeline. Attached as a 365-day artifact for every tagged release.
-- **Pronunciation guide** in README — *"NEE-meh"*.
-- **`mneme advanced`** — print all advanced commands (Phase 2/3/4 + WILD ideas) grouped by phase. The main `mneme --help` now shows only 8 essentials.
+- **Pronunciation guide** in README โ€” *"NEE-meh"*.
+- **`mneme advanced`** โ€” print all advanced commands (Phase 2/3/4 + WILD ideas) grouped by phase. The main `mneme --help` now shows only 8 essentials.
 
 ### Changed
 
 - **CLI surface tiered.** `mneme --help` now shows 8 essentials (`init`, `index`, `ask`, `why`, `status`, `doctor`, `mcp`, `watch`). Twenty advanced commands are hidden from the main help and accessible via `mneme advanced`. Reduces cognitive load for new users.
-- **Eval golden set: 15 → 50 questions** across 7 categories (was 4): why-question, keyword, who-when, negative, short-query, specific-ref, multi-tag.
-- **Hit rate: 93.3% → 96.0%** on the new 50-question set.
+- **Eval golden set: 15 โ’ 50 questions** across 7 categories (was 4): why-question, keyword, who-when, negative, short-query, specific-ref, multi-tag.
+- **Hit rate: 93.3% โ’ 96.0%** on the new 50-question set.
 - **`mneme ask`** now records every query into `wisdom_feedback` and prints a one-line CTA to upvote/downvote.
-- **`mneme why`** now triggers an implicit positive signal — looking up `why` on a commit that recently appeared in an `ask` result marks that result helpful.
+- **`mneme why`** now triggers an implicit positive signal โ€” looking up `why` on a commit that recently appeared in an `ask` result marks that result helpful.
 
 ### Removed
 
@@ -15535,7 +15595,7 @@ The "honest, multi-language, self-improving" release. Five months of code in one
 
 ### Security
 
-- All new test fixtures for the redaction layer construct token-shaped strings at runtime (e.g. `"sk" + "_live_" + "A".repeat(24)`) so GitHub's secret scanner does not flag the source files. The redaction code itself catches real-world key formats — verified by 26 unit tests.
+- All new test fixtures for the redaction layer construct token-shaped strings at runtime (e.g. `"sk" + "_live_" + "A".repeat(24)`) so GitHub's secret scanner does not flag the source files. The redaction code itself catches real-world key formats โ€” verified by 26 unit tests.
 
 ### Numbers
 
@@ -15544,40 +15604,40 @@ The "honest, multi-language, self-improving" release. Five months of code in one
 | Tests passing | 167 / 19 files | **244 / 24 files** |
 | Eval golden set | 15 questions | **50 questions** |
 | Visible CLI commands | 27 (overwhelming) | **8 essentials + `advanced`** |
-| Negative-case recall | 0% 🔴 | **100%** ✅ |
+| Negative-case recall | 0% ๐”ด | **100%** โ… |
 | Hit rate | 93.3% | **96.0%** |
 | Languages parsed | TS, JS, Python | + **Go** |
 | Schema version | 1 | **2** |
 
 ---
 
-## [0.8.4] — 2026-05-04
+## [0.8.4] โ€” 2026-05-04
 
 CI auto-publish verified end-to-end with a Bypass-2FA `NPM_TOKEN`.
 
-## [0.8.3] — 2026-05-04
+## [0.8.3] โ€” 2026-05-04
 
 Manual publish from local after a `release.yml` E403. Token replaced.
 
-## [0.8.0] — 2026-05-03
+## [0.8.0] โ€” 2026-05-03
 
 AI engine (`genius`), Python parser, cluster-collapsing D3 viz, smoke-test report.
 
-## [0.7.0] — 2026-05-02
+## [0.7.0] โ€” 2026-05-02
 
 Phase 4 web viz, Phase 3 incident adapters (Sentry, Datadog, GitHub Actions).
 
-## [0.5.0] — 2026-05-01
+## [0.5.0] โ€” 2026-05-01
 
 WILD ideas batch: heal, echo, ledger, palimpsest, fossil, rumor, mirror, runaway.
 
-## [0.3.0] — 2026-04-30
+## [0.3.0] โ€” 2026-04-30
 
-Phase 2 — entity parsing + cosine clones.
+Phase 2 โ€” entity parsing + cosine clones.
 
-## [0.1.0] — 2026-04-29
+## [0.1.0] โ€” 2026-04-29
 
-Phase 1 — Archaeologist core. `init / index / ask / why / status / mcp`. The MVP.
+Phase 1 โ€” Archaeologist core. `init / index / ask / why / status / mcp`. The MVP.
 
 ---
 

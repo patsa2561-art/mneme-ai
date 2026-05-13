@@ -49,6 +49,7 @@ import { renderVoiceDirective } from "../seamless/voice_directive.js";
 import { renderDictionary } from "../lattice/dictionary.js";
 import { renderRelayBlock } from "../conduit/relay_prompt.js";
 import { renderVersionGate } from "../conduit/version_gate.js";
+import { renderHomunculusRequest } from "../abyss/homunculus.js";
 
 export interface SoulPromptInput {
   capsule: SessionCapsule;
@@ -123,6 +124,12 @@ export function compressToSoulPrompt(input: SoulPromptInput): SoulPrompt {
     renderRelayBlock({ originatorVendor: capsule.originVendor }),
     "",
     renderVersionGate(capsule.createdAt),
+    "",
+    // v1.91: embed HOMUNCULUS request by default so receiving AIs know
+    // to emit a structured RETURN block the user can paste back to the
+    // editor AI for actual Mneme tool execution. Closes the cycle:
+    //   editor → web (memory) → web suggests → user pastes back → editor executes.
+    renderHomunculusRequest({ originatorVendor: capsule.originVendor, ask: ["decisions", "reasoning", "next-actions"] }),
     "",
     `## Origin`,
     `vendor=${capsule.originVendor}  capsule=${capsule.id}  fingerprint=${capsule.repoFingerprint}  createdAt=${capsule.createdAt}`,

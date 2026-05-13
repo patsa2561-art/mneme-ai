@@ -16,3 +16,4 @@ export * from "./handoff.js";
 export * from "./tunnel.js";
 export * from "./multi_paste.js";
 export * from "./resource_hints.js";
+export * from "./page_renderer.js";
