@@ -1,3 +1,15 @@
+## v2.3.1 — 2026-05-13 — HOTFIX · `commander: ^12.2.0` typo blocked every `npm install`
+
+**Headline:** User: *"error ai agent update version แล้ว error ทำให้ใช้ได้แก้ที่ root cause"* — `npm install -g mneme-ai@latest` failed with `ETARGET No matching version found for commander@^12.2.0`. **commander 12.2.0 was never published to npm** (goes 12.0.0 → 12.1.0 → 13.0.0 → 14.0.3). The typo was inherited from v2.2.0; v2.3.0 also shipped with it. Every install attempt of v2.2.0 / v2.3.0 was failing.
+
+**Root cause fix:** `packages/cli/package.json` `commander: ^12.2.0` → `^14.0.3` (the actual latest stable; `Command` API surface we use is back-compat with v12). Surgically patched the local lockfile entry (no full regen — Windows install would strip native deps per the durable rule). Verified end-to-end: built five tarballs locally, installed all five into a fresh tmp dir, ran `mneme --version` → `2.3.1` cleanly under the new commander.
+
+**Defense:** Bumped only the broken constraint; everything else (kleur 4 / typescript 5 / yaml 2 / zod 3 / z3-solver 4 / @huggingface/transformers 4 / @modelcontextprotocol/sdk 1) verified to actually have satisfiable versions on npm.
+
+**Tests:** 8305 / 8305 still pass (no functional change; only dep constraint moved).
+
+---
+
 ## v2.3.0 — 2026-05-13 — LEXICON · vendor-tunable vocabulary (don't get blocked by the AUP classifier)
 
 **Headline:** User: *"ทำให้ครบ A + B + C+D ที่ป้องกันการเกิดปัญหานี้กับ user"* — after hitting an Anthropic AUP block: Mneme's internal vocabulary (`MUTINY`, `Q-SEPPUKU`, `BLOODLINE`, `killswitch`, `honeypot`, `attack-log`, `weapon`, `exploit`) pattern-matches as cyber-offensive content. The classifier doesn't read context — only patterns. LEXICON ships 4 phases that comprehensively prevent the problem WITHOUT changing the actual output.
