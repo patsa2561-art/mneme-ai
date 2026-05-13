@@ -240,6 +240,13 @@ export * as qxSupernova from "./qx_supernova/index.js";
 //   Every measurement auto-records into Infinity Memory as a quantum
 //   event with the full probability vector.
 export * as qxBridge from "./qx_bridge/index.js";
+// v1.99.0 -- FLASH INTELLIGENCE: anti-hallucination Core.
+//   Veracity-Velocity Singularity (V_eff = Σ(E·W)/ln(H+e) × Φ_qx)
+//   Recursive Self-Verification (Devil's Advocate)
+//   Hyper-Contextual Grounding (classifies seller-listing vs auction-record)
+//   Prompt-Q-Latency Engine (predict next user question, pre-warm context)
+//   Master runFlash() — the one function AI agents call before any factual claim.
+export * as flash from "./flash/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

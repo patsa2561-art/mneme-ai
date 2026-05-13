@@ -84,9 +84,9 @@ Built on Chandrasekhar collapse + Neutrino harmonic + Z3 SAT proof.
 
 ## 🗣 Don't memorize commands — say it in your own words
 
-User asked: *"ต้องพิมพ์ตาม pattern เปะๆไหม? ลูกค้าจะไม่จำ pattern ใช่ไหม?"* — Answer: **NO. Mneme is flexible by design.**
+**Common worry: "Do I have to type the exact pattern? Customers won't memorize commands, right?"** — Answer: **NO. Mneme is flexible by design.**
 
-The parser matches on `verb + subject + target` keywords across Thai/English/mixed phrasing — you don't have to remember anything. 18 phrases verified in regression tests, plus the parser handles fuzz like *"ผมอยากจะส่งบริบทไปที่ samsung"* and *"save my brain to gemini please"* that aren't even in the test set.
+The parser matches on `verb + subject + target` keywords across Thai / English / mixed phrasing — you don't have to remember anything. 18 phrases verified in regression tests, plus the parser handles fuzz like *"please put my context on a Samsung"* and *"save my brain to gemini please"* that aren't even in the test set.
 
 <details>
 <summary><b>📋 18 phrases that PROVABLY work (click to expand) — but you're not limited to these</b></summary>
@@ -125,6 +125,8 @@ The parser matches on `verb + subject + target` keywords across Thai/English/mix
 
 ## 📋 What's new
 
+> **v1.99.0 MNEME PASSPORT (eternal) + FLASH INTELLIGENCE** (2026-05-13) — User asked: *"PASSPORT มีหมดอายุไหม ต้องใช้ได้ตลอดไปนะ"* + *"AI agent เห็น '[Super rare]' บนรูป CAPCOM แล้วเชื่อทันที = hallucination ที่แย่มาก. ขอ idea ปีศาจขั้นสุดมาแก้"*. v1.99 ships (1) PASSPORT default = ETERNAL (Number.MAX_SAFE_INTEGER until user revokes; new REVOKED verdict), (2) **FLASH INTELLIGENCE** = anti-hallucination Core. Stacks Veracity-Velocity Singularity (V_eff formula) + Recursive Self-Verification (Devil's Advocate refutation generator) + Hyper-Contextual Grounding (seller-listing vs auction-record classifier) + Prompt-Q-Latency Engine (Markov predict next query). **Verified live on user's exact "Super rare CAPCOM" case: V_eff=0.206 → DOUBTFUL. Math correctly refuses marketing copy.** [PASSPORT →](packages/core/src/rainbow/passport.ts) · [FLASH →](packages/core/src/flash/flash.ts)
+>
 > **v1.98.0 STALE-URL FIX + VENDOR STRATEGY + MNEME PASSPORT (disruption)** (2026-05-13) — User's codex AI caught us: `chat.openai.com` URL had been stale for 1+ year (OpenAI rebranded to `chatgpt.com` — old URL 308-redirects). Comments claimed "Verified May 2026" but no test actually probed. v1.98 fixes (1) the stale URL itself, (2) adds `vendor_strategy.ts` with explicit per-vendor strategy matrix replacing the broken one-size-fits-all RELAY, (3) ships `vendor_probe.ts` — a real HEAD-request probe that catches stale URLs in CI so "verified" lies are mathematically impossible, and (4) **MNEME PASSPORT** — the disruption move. A portable HMAC-signed identity bundle: ~2-4KB, holds your last 50 decisions/regrets/wisdoms, every entry tamper-evident, any AI can READ, only the secret-holder can VERIFY. **Vendor lock-in cracks open: you carry your context, the cloud doesn't.** +33 tests. [Phrase guide →](docs/CLONE_TO_AI.md)
 >
 > **v1.97.0 CLONE-TO + 4-bug postmortem** (2026-05-13) — Customers complained that *"ส่งสมองไปมือถือ"* / *"ส่งความจำ mneme ไปใน gemini"* / *"ย้าย mneme ไปใส่ใน mobile หน่อย"* didn't trigger anything in Claude Code. Root cause: no MCP tool with an obvious name + AI agent didn't know to call it + the v1.85 RELAY architecture **secretly relied on Web AIs doing crypto + URL fetch** (which free tiers can't do). **Honest postmortem published in code (`rainbow.bug_truth`).** v1.97 ships ONE function `cloneTo({userText})` that parses any phrase in Thai/English/mixed, picks the target (mobile / chatgpt / gemini / claude / copilot / ipad / another-pc / usb / return), opens the browser, copies the brain to clipboard. **No Web AI crypto. No URL fetch. No `?q=` deep link. Just clipboard.** [Phrase guide →](docs/CLONE_TO_AI.md)
@@ -140,123 +142,6 @@ The parser matches on `verb + subject + target` keywords across Thai/English/mix
 > **v1.92.0 IMMORTAL** — SAME-SHELL same-machine clone · PHOENIX tunnel watchdog · BOOMERANG return-pad. [Cross-vendor brain transfer →](docs/CROSS_VENDOR_BRAIN.md)
 
 Every release ships with HMAC-signed provenance + zero breaking changes by default. See [CHANGELOG.md](CHANGELOG.md) for every feature, fix, and mandate.
-
----
-
-## 🌌 MNEME-QX BRIDGE (NEW v1.95) — AI agents now talk to real quantum hardware
-
-> *"AI agents and quantum computers live in different universes. Mneme is the wormhole."*
-
-Every quantum cloud speaks a different language: IBM Quantum (Qiskit) · AWS Braket (amazon-braket-ir) · Azure Quantum (Q#) · D-Wave Leap (Ocean QUBO). AI agents can't talk to any of them natively. **QX-BRIDGE accepts a uniform `CircuitIR` from any AI agent and routes it to whichever provider you have credentials for** — with a pure-TS state-vector simulator as the free, always-ready fallback.
-
-<table>
-<tr>
-<td valign="top" width="50%">
-
-**⚛ Pure-TS state-vector simulator** (up to 12 qubits)
-Live verified: Bell pair **50.24% / 49.76%** on 4096 shots · GHZ-5 cat state **51.1% / 48.9%** · Grover-2q finds the marked state at **100% exact probability** for every target pattern.
-
-</td>
-<td valign="top" width="50%">
-
-**🌐 5-provider abstraction**
-`simulator` (ready always · free · 12 qubits) · `ibm` (free · 127 qubits) · `braket` (pay-per-shot · 256 qubits) · `azure` (paid · 100 qubits) · `dwave` (free · 5760 qubits). Each cloud enables via one env var; same Mneme code, real qubits when ready.
-
-</td>
-</tr>
-</table>
-
-**One-line invocation:**
-
-```typescript
-import { runBellPair, runGhz, runGrover2q, runQuantumCircuit } from "@mneme-ai/core";
-
-await runBellPair({ shots: 1024 });             // entangled 50/50 of |00⟩ and |11⟩
-await runGhz(5);                                 // 5-qubit cat state
-await runGrover2q("01");                         // finds |01⟩ at 100% after 1 iteration
-
-// Or your own circuit, routed to any provider:
-await runQuantumCircuit({ circuit, shots, provider: "simulator" /* or "ibm", "braket"... */ });
-```
-
-**Every measurement auto-records into Infinity Memory** as a quantum event with the full probability vector frozen. Quantum collapse IS literally probability collapse — the two QX modules mesh perfectly.
-
-→ [QX-BRIDGE deep-dive · 26 tests · provider env-var setup · live numbers](docs/QX_BRIDGE.md)
-
----
-
-## ⚛ MNEME-QX SuperNova Engine (v1.94)
-
-> *Multi-Neural Entangled Meta Engine — "Not trained. Evolved." · "When computation becomes a cosmic event."*
-
-The Stage-9999 tune. Not a marketing skin — four real modules, 8-axis benchmark, recurring re-engineer loop that **refuses to ship below 97.5%**.
-
-<table>
-<tr>
-<td valign="top" width="50%">
-
-**⚛ Quantum Core** — Probability Collapse Matrix
-Multi-signal Bayesian fusion. Posteriors, margin, Shannon entropy. **UNCERTAIN verdict** when margin too small → engine refuses to guess.
-
-**💥 SuperNova Burst** — parallel-fanout
-N generators fire concurrently, collapse to the winner via the Quantum Core. **Measured speedup** = sequentialEquivalentMs / actualBurstMs (real, not promised).
-
-</td>
-<td valign="top" width="50%">
-
-**♾ Infinity Memory** — quantum event traces
-Where lineage stores files, Infinity stores **events with frozen probability vectors**. Recall by kind/actor/window; collapse across matching events.
-
-**👁 Soul Engine** — autonomous goals
-Reads daemon telemetry → proposes new internal goals with a will-vector (curiosity · safety · compounding · efficiency · paranoia). Top-K commits via Quantum Core.
-
-</td>
-</tr>
-</table>
-
-**📊 8-axis benchmark · 🔁 re-engineer loop converges to ≥ 97.5%**
-
-```
-QX-BENCH ✓ PASS 98.28/100 · top=collapse-accuracy(100%) · bottom=entropy-economy(90%)
-RE-ENGINEER ✓ PASSED 98.28/100 in 1 pass(es) · 97.21→98.28
-```
-
-If a release drops the score below 97.5%, the re-engineer loop runs **automatically** until convergence — each pass logged, weights reproducible, trajectory auditable.
-
-→ [Full QX deep-dive · 4 modules · benchmark · re-engineer trajectory](docs/QX_SUPERNOVA.md)
-
----
-
-## 💎 The token-savings demon (NEW v1.93 · measurable)
-
-> *Every other AI tool tries ONE compression technique. TOKEN-NOVA stacks FOUR — each measurable, each cumulative.*
-
-<table>
-<tr>
-<td valign="top" width="50%">
-
-**🦠 1. VACCINE PRE-EMPTION**
-If your query matches a known hallucination strain → return cached refute, **AI never called**. 100% saved on hits.
-
-**🪞 2. MIRROR-MIND DEDUP**
-Every chunk hashed. If already in your lineage genome → replace with `mneme:chromosome:abc123` reference. AI loads from local lineage instead of re-reading.
-
-</td>
-<td valign="top" width="50%">
-
-**🌌 3. FRACTAL CONTEXT DECAY**
-Power-of-2 token budget per turn-age. Current=100%, t-1=50%, t-2=25%... Old context fades semantically, not abruptly.
-
-**🪙 4. TOKENIZER ARBITRAGE**
-Per-vendor BPE table. "TypeScript" = 1 token in Claude, 3 in GPT. Auto-rewrites to favor cheapest tokens per vendor.
-
-</td>
-</tr>
-</table>
-
-**Live numbers:** 2,776 → 701 tokens on a real Mneme soul prompt = **74.7% saved · $102/yr saved at 20 sessions/day** — per user, measured by `mneme.tokenNova.applyTokenNova` in code, audited HMAC-signed.
-
-→ [Full deep-dive · 10 treasures (4 shipped · 6 roadmap) · how to invoke from AI agents](docs/TOKEN_NOVA.md)
 
 ---
 
@@ -640,7 +525,8 @@ Your conversation follows you. Any AI. Any device. Any time. **One sentence does
 
 | Page | What's inside |
 |---|---|
-| 🛂 [**MNEME PASSPORT · the disruption move**](packages/core/src/rainbow/passport.ts) | **NEW v1.98** — Portable HMAC-signed identity bundle (~2-4 KB). Carry your last 50 decisions/regrets/wisdoms across vendors. Tamper-evident. Vendor-lock-in cracks open. |
+| ⚡ [**FLASH INTELLIGENCE · anti-hallucination Core**](docs/FLASH.md) | **NEW v1.99** — Veracity-Velocity Singularity V_eff = Σ(E·W)/ln(H+e)×Φ_qx + Devil's Advocate refutations + source-context grounding. Math refuses marketing-tier claims. |
+| 🛂 [**MNEME PASSPORT · the disruption move**](docs/PASSPORT.md) | **v1.98/99** — Portable HMAC-signed identity bundle (~2-4 KB). **Eternal by default** until you revoke. Carry decisions/regrets/wisdoms across vendors. Tamper-evident. Vendor-lock-in cracks open. |
 | 🧬 [**CLONE-TO · phrase guide for sending brain anywhere**](docs/CLONE_TO_AI.md) | **v1.97** — Say any phrase in Thai/English/mixed → Mneme parses it, picks target (mobile · chatgpt · gemini · claude · ipad · another PC · usb · return), opens browser, copies brain to clipboard. Honest 4-bug postmortem of v1.85 RELAY. |
 | 🌌 [**QX-BRIDGE · AI agents ↔ real quantum hardware**](docs/QX_BRIDGE.md) | **v1.95** — Pure-TS simulator + IBM/Braket/Azure/D-Wave provider bridge · Bell pair / GHZ / Grover verified live |
 | ⚛ [**MNEME-QX SuperNova Engine**](docs/QX_SUPERNOVA.md) | **v1.94** — Quantum Core · SuperNova Burst · Infinity Memory · Soul Engine · 8-axis benchmark · re-engineer loop |

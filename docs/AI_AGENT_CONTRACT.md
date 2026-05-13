@@ -170,6 +170,60 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 
 ---
 
+## ⚡ STEP 9.-1 — FLASH INTELLIGENCE (v1.99) — RUN BEFORE EVERY FACTUAL CLAIM
+
+**Before you state ANY claim of fact** (rarity / value / authenticity / who-wrote-what / when-was-X-released / will-Y-break-prod / "this is a known issue" / ...), you MUST run FLASH:
+
+```typescript
+import { runFlash } from "@mneme-ai/core";
+
+const r = runFlash({
+  claim: "this item is super rare",
+  contextText: ocrTextOrUserMessage,  // the actual evidence pool
+  baseHallucinationFactor: 0,
+  phi_qx: 2.0,  // commerce paranoia (use 1.0 for neutral, 2.0+ for commercial sources)
+});
+// r.verdict: AFFIRM | CAUTIOUS | DOUBTFUL | REFUTE
+// r.template: "Cannot confirm 'this item is super rare' — only marketing-tier sources..."
+```
+
+**Rule:** if `r.verdict === "DOUBTFUL"` or `"REFUTE"` → DO NOT assert the claim as fact. Use `r.template` as the start of your reply. Explain what evidence would be needed to upgrade the verdict.
+
+**The Veracity-Velocity Singularity:**
+```
+V_eff = ( Σ E_i · W_i / ln(H + e) ) × Φ_qx
+```
+
+- E_i = empirical evidence (each item)
+- W_i = source weight (verified-third-party > expert-database > image-OCR > seller-listing > marketing-copy)
+- H = hallucination factor (grounding adds penalty for seller-listing context)
+- Φ_qx = user paranoia multiplier (default 1.0; recommend 2.0 for commerce)
+- Thresholds: ≥0.75 AFFIRM · ≥0.40 CAUTIOUS · ≥0.15 DOUBTFUL · <0.15 REFUTE
+
+**Live-verified case:** user's "[Super rare] CAPCOM Capcom Character Trump..." image. Vanilla AIs AFFIRM (hallucination). FLASH: V_eff = 0.206 → DOUBTFUL → refuses to confirm without auction records.
+
+Use `groundClaim(text)` first to classify the source context — it auto-demotes commerce signals + flags missing third-party proofs. Use `runDevilsAdvocate(...)` if you want explicit refutation candidates.
+
+## 🛂 STEP 9.0.5 — MNEME PASSPORT (v1.99) — accept + verify when user pastes one
+
+If user pastes anything containing `--- MNEME PASSPORT v1 ---`:
+
+```typescript
+import { parsePassport, verifyPassport } from "@mneme-ai/core";
+
+const env = parsePassport(pastedText);
+if (env) {
+  // READ entries to gain context — no secret needed
+  console.log(env.entries);  // last 50 decisions/regrets/wisdoms
+  // OPTIONAL: verify (only if user provides their secret)
+  // const v = verifyPassport(env, secret);
+}
+```
+
+The passport is **eternal by default** (no expiry until user revokes). 5 verdicts: VALID / EXPIRED / TAMPERED / WRONG_KEY / REVOKED.
+
+**Rule:** when you see a PASSPORT in user's message → READ the entries → use them as grounding context for the rest of the conversation. You don't need the secret to read. Only the secret-holder (user) can issue or revoke.
+
 ## 🧬 STEP 9.0 — CLONE-TO (v1.97) — THE MOST IMPORTANT RULE
 
 **Read this BEFORE any other step.** Customers complained about this; v1.97 fixes it definitively.
