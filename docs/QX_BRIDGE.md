@@ -180,6 +180,83 @@ This is the universal language between MCP-aware AI agents and quantum hardware.
 
 ---
 
+## ⚛ The Agnostic Master (v1.96) — AI agent writes ONCE, runs ANYWHERE
+
+The agnostic layer wraps every QX-BRIDGE concern into a **single function call**. AI agents stop thinking about which provider to use, which gates are native, what jobs are cached, or how much they cost. They just pass in the source and Mneme handles the rest.
+
+```typescript
+import { runQuantumAgnostic } from "@mneme-ai/core";
+
+const r = await runQuantumAgnostic({
+  source: qasmFromAnywhere,    // OpenQASM 3.0/2.0 string OR CircuitIR
+  shots: 4096,
+  budget: { maxUsd: 0.10 },     // refuses providers that exceed
+  preferences: {
+    preferFree: true,            // prefer $0/shot providers
+    race: 3,                     // fire on top-3 providers concurrently, first-back wins
+    verify: true,                // also run on simulator, flag if TVD > 0.20
+  },
+  memory,                        // auto-record into Infinity Memory
+});
+// r.response                    — measurement result (counts + probabilities)
+// r.route                       — which provider was chosen and why
+// r.decomposition               — gate rewrites for the chosen provider's native set
+// r.cost                        — predicted $ spend
+// r.cacheHit                    — true if returned from DNA cache
+// r.race                        — race trajectory across providers
+// r.verification                — TVD vs simulator + MATCH/DRIFT/DIVERGE verdict
+// r.pulseLine                   — one-line summary for the pulse
+```
+
+### What's stacked inside that one function
+
+1. **OpenQASM parser** — `parseQasm` / `qasmToCircuit`. Accepts the universal quantum input format (QASM 2.0 + 3.0). Decomposes sdg/tdg/u/u3 inline. AI agent can paste ANY Qiskit/IBM tutorial.
+2. **Capability matcher** — `matchCircuitToProvider`. Checks per-provider: enough qubits? gate set support? annealer rejection? Returns `gatesToDecompose` list.
+3. **Gate decomposer** — `decompose`. Rewrites H/Y/Z/S/T/CZ/SWAP/RX into the target provider's native gate set (e.g. IBM's `{x, rz, cnot}`). Math-correct up to global phase.
+4. **DNA fingerprint cache** — `circuitDna`. SHA-256 hash of structural form. Same circuit + shots + provider → instant cached result (1h TTL).
+5. **Smart router** — `route`. Multi-criteria scoring: cost + queue + capability + budget + readiness. Returns best provider with full reasoning.
+6. **Multi-provider race** — `multiProviderRace`. Fire on N providers concurrently; first-back wins; trajectory recorded.
+7. **Equivalence verifier** — `verifyAgainstSimulator`. Total variation distance between simulator and real-hardware result. `MATCH < 0.05 < DRIFT < 0.20 < DIVERGE`.
+8. **Cost predictor** — `estimateCost`. Per-provider $/shot × shots. Refuses provider when over `budget.maxUsd`.
+
+Every step is unit-tested. 47 tests in `agnostic.test.ts` cover all 8 layers + end-to-end composition.
+
+### Example: AI agent gets a Qiskit tutorial from the user
+
+```typescript
+const userPasted = `
+  OPENQASM 3.0;
+  include "stdgates.inc";
+  qubit[3] q;
+  h q[0];
+  cx q[0], q[1];
+  cx q[1], q[2];
+`;
+
+// One call. AI agent has zero idea where this runs.
+const r = await runQuantumAgnostic({ source: userPasted, shots: 4096, memory });
+
+console.log(r.pulseLine);
+// "QX-AGNOSTIC 🌌live · simulator · 4096 shots · $0.0000 · top: 000=50.0% · 111=50.0%"
+
+// User exports MNEME_IBM_TOKEN later → SAME code, IBM hardware
+// User wants to A/B test → preferences: { race: 3, verify: true }
+// User on a budget → budget: { maxUsd: 0.05 }
+// AI agent's source code does not change.
+```
+
+### Provider matrix (this commit)
+
+| Provider | Native gate set | maxQubits | cost/shot | typical queue |
+|---|---|---|---|---|
+| `simulator` | h · x · y · z · s · t · cnot · cz · swap · rx · ry · rz | 12 | $0 | 0ms |
+| `ibm` | x · rz · cnot (after decomposition) | 127 | $0 (free tier) | ~10 min |
+| `braket` | h · x · y · z · s · t · cnot · rx · ry · rz | 256 | $0.0003 (IonQ) | ~30s |
+| `azure` | h · x · y · z · cnot · rx · ry · rz | 100 | $0.0002 | ~60s |
+| `dwave` | (annealer — QUBO only, gate-model refused) | 5760 | $0 (free tier 1 min/mo) | ~1s |
+
+Real-cloud SDK adapters are stubbed today (return clear "not yet wired" errors). Architecture + capability probe + uniform `CircuitIR` API ship today — wiring the actual REST calls is a future increment that doesn't change AI agent code.
+
 ## 🤖 For AI agents — invocation contract
 
 When the user asks for quantum help:

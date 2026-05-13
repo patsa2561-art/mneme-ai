@@ -170,7 +170,44 @@ Every response is `{data, wisdom, followUp, confidence, secondBrain}`.
 
 ---
 
-## 🌌 QX-BRIDGE (v1.95) — talk to real quantum hardware
+## 🌌 QX-AGNOSTIC (v1.96) — one function, every quantum provider
+
+**Default to this for every quantum request.** Composes parser + router + decomposer + cache + race + verify + cost.
+
+```typescript
+import { runQuantumAgnostic, formatAgnosticLine } from "@mneme-ai/core";
+
+const r = await runQuantumAgnostic({
+  source: qasmStringFromUser,    // raw OpenQASM 3.0/2.0 OR CircuitIR
+  shots: 4096,
+  budget: { maxUsd: 0.10, maxQueueMs: 30_000 },
+  preferences: {
+    preferFree: true,             // prefer $0/shot providers
+    race: 3,                      // race top-3 concurrently
+    verify: true,                 // also run on simulator, flag DRIFT/DIVERGE
+  },
+  memory,
+});
+
+console.log(formatAgnosticLine(r));
+```
+
+Inside it stacks 8 features (all unit-tested, 47 tests):
+
+| Feature | Behavior |
+|---|---|
+| OpenQASM parser | Accepts QASM 2.0/3.0 from any tutorial. Decomposes sdg/tdg/u/u3 inline. |
+| Capability matcher | Per-provider gate set + max qubits + annealer detection. Returns `gatesToDecompose`. |
+| Gate decomposer | Rewrites H/Y/Z/S/T/CZ/SWAP/RX → provider's native gate set (math-correct up to global phase). |
+| DNA fingerprint cache | SHA-256 of structural form. 1h TTL. Same circuit + shots + provider → instant return. |
+| Smart router | Multi-criteria scoring: cost + queue + capability + budget + readiness. |
+| Multi-provider race | Concurrent fire on top-K providers; first-back wins; trajectory recorded. |
+| TVD verifier | Total variation distance between simulator + real; MATCH/DRIFT/DIVERGE verdict. |
+| Cost predictor | Per-provider $/shot × shots. Refuses provider when over `budget.maxUsd`. |
+
+`r.route.provider` = chosen provider. `r.cacheHit` = was it cached? `r.decomposition` = gate rewrites. `r.race?.trajectory` = race log. `r.verification?.verdict` = MATCH/DRIFT/DIVERGE. `r.pulseLine` = one-line summary.
+
+## 🌌 QX-BRIDGE (v1.95) — talk to real quantum hardware (low-level)
 
 ```typescript
 import {

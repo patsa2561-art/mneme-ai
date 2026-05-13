@@ -155,6 +155,14 @@ export class QuantumState {
     this.amplitudes = newAmps;
   }
 
+  /** SWAP two qubits — exchange their states. */
+  swap(a: number, b: number): void {
+    if (a === b) return;
+    this.cnot(a, b);
+    this.cnot(b, a);
+    this.cnot(a, b);
+  }
+
   /** Controlled-Z: phase flip when both qubits are |1⟩. */
   cz(ctrl: number, target: number): void {
     if (ctrl === target) throw new Error("ctrl and target must differ");
@@ -239,7 +247,7 @@ function mulberry32(seed: number): () => number {
 // Circuit IR — JSON form executable by either simulator or providers
 // ============================================================
 
-export type GateName = "h" | "x" | "y" | "z" | "s" | "t" | "cnot" | "cz" | "rx" | "ry" | "rz";
+export type GateName = "h" | "x" | "y" | "z" | "s" | "t" | "cnot" | "cz" | "swap" | "rx" | "ry" | "rz";
 
 export interface Gate {
   type: GateName;
@@ -271,6 +279,7 @@ export function runOnSimulator(circuit: CircuitIR, shots: number, seed?: number)
       case "t": state.t(g.targets[0]!); break;
       case "cnot": state.cnot(g.targets[0]!, g.targets[1]!); break;
       case "cz": state.cz(g.targets[0]!, g.targets[1]!); break;
+      case "swap": state.swap(g.targets[0]!, g.targets[1]!); break;
       case "rx": state.rx(g.targets[0]!, g.theta ?? 0); break;
       case "ry": state.ry(g.targets[0]!, g.theta ?? 0); break;
       case "rz": state.rz(g.targets[0]!, g.theta ?? 0); break;

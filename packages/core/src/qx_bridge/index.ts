@@ -21,6 +21,36 @@
 
 export * from "./simulator.js";
 export * from "./providers.js";
+export * from "./qasm_parser.js";
+export * from "./capabilities.js";
+export * from "./decomposer.js";
+// agnostic.ts re-exports parser/capabilities/decomposer too — keep
+// star order so the agnostic-master + cache + router + race + verify
+// + cost + runQuantumAgnostic public symbols flow through.
+export {
+  circuitDna,
+  cacheStats,
+  cacheClear,
+  route,
+  multiProviderRace,
+  verifyAgainstSimulator,
+  totalVariationDistance,
+  estimateCost,
+  runQuantumAgnostic,
+  formatAgnosticLine,
+} from "./agnostic.js";
+export type {
+  AgnosticInput,
+  AgnosticResult,
+  RouteDecision,
+  RouterPreferences,
+  BudgetConstraints,
+  RaceResult,
+  VerificationResult,
+  CostEstimate,
+  CacheEntry,
+  AgnosticSource,
+} from "./agnostic.js";
 
 import { runCircuit as runCircuitProvider, type CircuitRequest, type CircuitResponse, formatQuantumPulseLine } from "./providers.js";
 import type { InfinityMemory } from "../qx_supernova/infinity_memory.js";
