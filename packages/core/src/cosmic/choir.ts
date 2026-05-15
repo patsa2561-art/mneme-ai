@@ -17,7 +17,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mintSession, publishToCosmic, readCosmic, type CosmicSession, type PublishResult } from "./index.js";
+import { mintSession, publishToCosmic, readCosmic, DEFAULT_COSMIC_SERVERS, type CosmicSession, type PublishResult } from "./index.js";
 
 export interface ChoirSeat {
   /** Server URL (each gets its own session). */
@@ -43,6 +43,20 @@ export function mintChoirSession(seats: ChoirSeat[]): ChoirSession {
     })),
     createdAt: new Date().toISOString(),
   };
+}
+
+/**
+ * v2.13.1: zero-config choir using the default cosmic servers
+ * (cosmic.mneme-ai.space primary + nip.io fallback). The primary gets
+ * weight 2 so its vote carries more if both seats disagree — by design
+ * the brand domain is the source of truth; nip.io is purely a DNS-bypass
+ * fallback. Use this when you don't want to spin up your own cosmic.
+ */
+export function mintDefaultChoirSession(): ChoirSession {
+  return mintChoirSession([
+    { serverUrl: DEFAULT_COSMIC_SERVERS[0], weight: 2 },
+    { serverUrl: DEFAULT_COSMIC_SERVERS[1], weight: 1 },
+  ]);
 }
 
 export interface ChoirPublishResult {

@@ -1,3 +1,16 @@
+## v2.13.1 — 2026-05-15 — 🌐 Zero-config cosmic: cosmic.mneme-ai.space is the new default
+
+Mneme COSMIC LINK now ships with a default shared server: `https://cosmic.mneme-ai.space` (Cloudflare-edge + Caddy + Let's Encrypt, free for the community). No setup required — `mintSession()` and `mneme.cosmic.mint` both work zero-config.
+
+Changes:
+- `packages/core/src/cosmic/index.ts`: `DEFAULT_COSMIC_SERVERS` constant + `DEFAULT_COSMIC_SERVER` export. `mintSession({ serverUrl })` is now `mintSession({ serverUrl? })` — defaults to the brand domain.
+- `packages/core/src/cosmic/choir.ts`: new `mintDefaultChoirSession()` — instant 2-seat CHOIR (cosmic.mneme-ai.space weight=2 + 161.35.122.73.nip.io weight=1). Survives any single-server failure with zero configuration.
+- `packages/mcp/src/tools/_cosmic_tools.ts`: `mneme.cosmic.mint` makes `serverUrl` optional. New tool `mneme.cosmic.choir.default` returns a zero-config redundant choir (14 cosmic tools total, 159 MCP tools total).
+
+Backwards-compatible: existing self-hosted callers pass `serverUrl` and behave identically.
+
+---
+
 ## v2.13.0 — 2026-05-15 — 🌟 AURELIAN AUDITOR + 8 measurable cosmic upgrades (perf 3 / security 2 / fallback 3)
 
 **Headline:** Every change in this release shipped only after a tamper-evident HMAC-signed scorecard graded it on four axes (delta / world-class / wisdom / wildness) and emitted a SHIP verdict. The grader is open and deterministic — anyone can replay. The user's mandate ("วัดผลได้จริงๆ ทุกการแก้ ต้องดีกว่าเดิม วัดผลได้") becomes a structural gate, not a vibe.

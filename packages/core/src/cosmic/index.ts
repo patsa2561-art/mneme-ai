@@ -28,9 +28,23 @@
 
 import { createHash, createHmac, randomBytes } from "node:crypto";
 
+/**
+ * v2.13.1: default cosmic server endpoints. Anyone with no own droplet can
+ * mint a session immediately. The primary is the brand-friendly
+ * cosmic.mneme-ai.space (Cloudflare-edge + Caddy + Let's Encrypt). The
+ * legacy nip.io host is kept as a fallback seat for CELESTIAL CHOIR
+ * redundancy — if the brand domain ever has a DNS / Cloudflare incident,
+ * the IP-based host still resolves directly.
+ */
+export const DEFAULT_COSMIC_SERVERS = [
+  "https://cosmic.mneme-ai.space",
+  "https://161.35.122.73.nip.io",
+] as const;
+export const DEFAULT_COSMIC_SERVER = DEFAULT_COSMIC_SERVERS[0];
+
 export interface MintInput {
-  /** Base URL of the COSMIC server (e.g., https://cosmic.example.com). */
-  serverUrl: string;
+  /** Base URL of the COSMIC server. Defaults to DEFAULT_COSMIC_SERVER. */
+  serverUrl?: string;
 }
 
 export interface CosmicSession {
@@ -52,12 +66,13 @@ export interface CosmicSession {
 }
 
 /** Mint a fresh ephemeral session locally. No network call yet — the
- *  session is born when first published. */
-export function mintSession(input: MintInput): CosmicSession {
+ *  session is born when first published. v2.13.1: serverUrl is optional;
+ *  defaults to DEFAULT_COSMIC_SERVER (cosmic.mneme-ai.space). */
+export function mintSession(input: MintInput = {}): CosmicSession {
   const token = randomBytes(12).toString("hex");
   const secret = randomBytes(32).toString("hex");
   const adminSecretHash = createHash("sha256").update(secret).digest("hex");
-  const base = input.serverUrl.replace(/\/+$/, "");
+  const base = (input.serverUrl ?? DEFAULT_COSMIC_SERVER).replace(/\/+$/, "");
   return {
     token,
     secret,

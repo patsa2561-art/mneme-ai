@@ -13,25 +13,29 @@ export const cosmicMintTool: MnemeTool = {
   name: "mneme.cosmic.mint",
   category: "meta",
   description:
-    "COSMIC LINK -- mint a fresh ephemeral session for the user's COSMIC server. Returns { token, secret, publicUrl, jsonUrl, sseUrl }. Save the secret — needed for subsequent publish/revoke. The publicUrl is what you embed in the NEXUS-LOCK soul prompt's stargateUrl field.",
-  whenToUse: "First-time setup of a cross-vendor handoff session. Mint once per session; reuse the token for subsequent publishes.",
+    "COSMIC LINK -- mint a fresh ephemeral session. v2.13.1: serverUrl is OPTIONAL and defaults to the shared cosmic.mneme-ai.space (managed by the Mneme project; free, Cloudflare-backed, no signup). Returns { token, secret, publicUrl, jsonUrl, sseUrl }. Save the secret — needed for subsequent publish/revoke. The publicUrl is what you embed in the NEXUS-LOCK soul prompt's stargateUrl field.",
+  whenToUse: "First-time setup of a cross-vendor handoff session. Default works zero-config; supply serverUrl only when running a self-hosted cosmic.",
   triggers: ["mint cosmic", "new cosmic session"],
   inputSchema: {
     type: "object",
     properties: {
-      serverUrl: { type: "string", description: "Base URL of the user's COSMIC server (e.g., https://cosmic.example.com)" },
+      serverUrl: { type: "string", description: "Optional. Base URL of a self-hosted COSMIC server. Defaults to https://cosmic.mneme-ai.space" },
     },
-    required: ["serverUrl"],
   },
   outputSchema: { type: "object" },
-  examples: [{ userQuery: "Mint COSMIC session", args: { serverUrl: "https://cosmic.example.com" }, expectedOutput: "{ token, secret, publicUrl, jsonUrl, sseUrl }" }],
+  examples: [
+    { userQuery: "Mint COSMIC session (default server)", args: {}, expectedOutput: "{ token, secret, publicUrl, jsonUrl, sseUrl }" },
+    { userQuery: "Mint COSMIC on my own droplet", args: { serverUrl: "https://cosmic.example.com" }, expectedOutput: "{ token, secret, publicUrl, jsonUrl, sseUrl }" },
+  ],
   pitfalls: [
     "secret is sensitive — needed to publish/revoke. Treat like a password.",
     "If you mint without publishing, the session doesn't exist server-side until first publish.",
+    "Default server is shared — state is open-read by design. NEVER put source code / secrets in cosmic state.",
   ],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
-    const session = core.cosmic.mintSession({ serverUrl: String(args["serverUrl"] ?? "") });
+    const arg = args["serverUrl"];
+    const session = core.cosmic.mintSession(arg ? { serverUrl: String(arg) } : {});
     return {
       data: session,
       wisdom: `COSMIC mint · token=${session.token.slice(0, 8)} · ${session.publicUrl}`,
@@ -302,6 +306,29 @@ export const cosmicPublishIncrementalTool: MnemeTool = {
   },
 };
 
+export const cosmicChoirDefaultTool: MnemeTool = {
+  name: "mneme.cosmic.choir.default",
+  category: "meta",
+  description:
+    "COSMIC v2.13.1 -- mint a zero-config CELESTIAL CHOIR using the shared default servers (cosmic.mneme-ai.space primary weight=2, 161.35.122.73.nip.io fallback weight=1). Use this for instant multi-server redundancy without provisioning your own seats.",
+  whenToUse: "When you want CHOIR's tolerance to single-server failure but don't run your own cosmic servers. The brand domain is primary; the IP-based host is the DNS-bypass fallback.",
+  triggers: ["default choir", "zero-config choir"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Make me a multi-server cosmic session", args: {}, expectedOutput: "{ seats: [{...}, {...}], createdAt }" }],
+  pitfalls: ["Sharing the default server means anyone with your token can read your state — never include source/secrets."],
+  handler: async (_rt, _args) => {
+    const core = await import("@mneme-ai/core");
+    const choir = core.cosmic.choir.mintDefaultChoirSession();
+    return {
+      data: choir,
+      wisdom: `DEFAULT CHOIR · ${choir.seats.length} seats · primary=${choir.seats[0]!.session.publicUrl}`,
+      followUp: ["mneme.cosmic.choir.publish"],
+      confidence: { level: "high" },
+    };
+  },
+};
+
 export const cosmicChoirPublishTool: MnemeTool = {
   name: "mneme.cosmic.choir.publish",
   category: "meta",
@@ -456,6 +483,7 @@ export const COSMIC_TOOLS: MnemeTool[] = [
   cosmicInboxReadTool,
   cosmicPresenceTool,
   cosmicPublishIncrementalTool,
+  cosmicChoirDefaultTool,
   cosmicChoirPublishTool,
   cosmicChoirReadTool,
   cosmicEchoCommitTool,
