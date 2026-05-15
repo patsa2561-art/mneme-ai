@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot" | "arena" | "verified_badge" | "oracle_liability" | "nexus_proactive";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -302,6 +302,20 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
 
   // ─── v2.17 JACKPOT (the lottery-jackpot daily insight) ────────────────
   { command: "mneme.jackpot.draw", since: "2.17.0", group: "jackpot", what: "Draw ONE personalised insight per day per repo. Deterministic seed (same day = same draw); HMAC-signed. Returns { headline, body, action, confidence, surprise, valueClass, sig }.", when: "First thing on session start. The Mneme equivalent of a daily ritual coffee." },
+
+  // ─── v2.18 REVENUE PRIMITIVES (4 modules) ──────────────────────────────
+  { command: "mneme.arena.judge", since: "2.18.0", group: "arena", what: "Score N vendor responses against expected facts; returns ranked composite + winner + HMAC-signed match verdict. ARENA is the public AI showdown.", when: "Have responses from multiple AI vendors for the same prompt and want a tamper-evident verdict on which won." },
+  { command: "mneme.arena.leaderboard", since: "2.18.0", group: "arena", what: "Aggregate signed match verdicts into a per-day vendor leaderboard. Win rate + mean composite + total margin per vendor.", when: "Daily public scoreboard render; weekly digest." },
+  { command: "mneme.badge.issue", since: "2.18.0", group: "verified_badge", what: "Issue a 90-day HMAC-signed MNEME VERIFIED tier (PLATINUM/GOLD/SILVER/BRONZE/FAIL) from a measured falseRateLB + sample size. Tier rules are public.", when: "Vendor wants to display 'Mneme Verified' badge after passing BOUNTY/OBELISK gates." },
+  { command: "mneme.badge.verify", since: "2.18.0", group: "verified_badge", what: "Verify any MNEME VERIFIED badge (sig + expiry + tier ≠ fail). Anyone can verify; the secret is only needed to issue.", when: "Marketing page renders a competitor's badge — confirm before trusting." },
+  { command: "mneme.badge.svg", since: "2.18.0", group: "verified_badge", what: "Generate a 240×60 embed-safe SVG of a verified badge (escaped vendor name, tier color, certId).", when: "Vendor wants to drop the badge on their landing page." },
+  { command: "mneme.oracle.assess_risk", since: "2.18.0", group: "oracle_liability", what: "Fuse BUG PROPHET + SOUL + AURELIAN + BOUNTY + category multiplier into a 0..1 liability risk + insurable verdict.", when: "Before committing a high-stakes change; before issuing an ORACLE certificate." },
+  { command: "mneme.oracle.issue_certificate", since: "2.18.0", group: "oracle_liability", what: "Issue HMAC-signed liability certificate (per-incident cap + annual aggregate cap + voiding conditions). Refuses if risk ≥ 0.5 or SOUL=BLOCK.", when: "Subscriber on a paid Mneme tier ships a change and wants underwriting cover." },
+  { command: "mneme.oracle.decide_claim", since: "2.18.0", group: "oracle_liability", what: "Decide approved/partial/denied + payout USD given an incident loss + cert + aggregate paid YTD. Verifies cert sig first.", when: "An incident happened and the subscriber is filing." },
+  { command: "mneme.nexus.subscribe", since: "2.18.0", group: "nexus_proactive", what: "Reverse-MCP: AI subscribes to a fact (file_content / symbol_location / soul_rule / vendor_score / stat_threshold). Mneme will push when it changes.", when: "AI agent just stated a fact about the repo — subscribe so it gets notified if the fact changes." },
+  { command: "mneme.nexus.publish_observation", since: "2.18.0", group: "nexus_proactive", what: "Caller (daemon / IDE plugin / AI itself) publishes a fact value; NEXUS diffs against subscriptions and queues stale_claim notifications.", when: "Daemon's file-watch / git-pre-commit hook; on every meaningful repo event." },
+  { command: "mneme.nexus.drain", since: "2.18.0", group: "nexus_proactive", what: "AI agent drains queued notifications for its subscriber-id. Each is HMAC-signed + monotonic. Severity ≥4 means MUST ACK.", when: "Top of every prompt cycle — flush before answering." },
+  { command: "mneme.nexus.ack", since: "2.18.0", group: "nexus_proactive", what: "AI acks a notification with optional restated understanding. Un-acked sev-≥4 surface louder over time.", when: "AI updated its mental model after a stale_claim; closes the loop." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -326,7 +340,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["jackpot", "memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
+  const groupOrder = ["jackpot", "nexus_proactive", "arena", "verified_badge", "oracle_liability", "memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

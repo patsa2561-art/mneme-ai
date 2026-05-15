@@ -700,3 +700,13 @@ export * as obelisk from "./obelisk/index.js";
 
 // v2.17.0 — JACKPOT: daily personalised lottery-jackpot insight engine
 export * as jackpot from "./jackpot/index.js";
+
+// v2.18.0 — REVENUE-PRIMITIVE PENTAD (4 modules):
+//   ARENA            — public AI vendor showdown + leaderboard
+//   VERIFIED BADGE   — "Energy Star of AI" tiered trust certs
+//   ORACLE LIABILITY — signed AI-change insurance certificates
+//   NEXUS PROACTIVE  — Reverse-MCP push-notifier (closes stale-claim hallucination class)
+export * as arena from "./arena/index.js";
+export * as verifiedBadge from "./verified_badge/index.js";
+export * as oracleLiability from "./oracle_liability/index.js";
+export * as nexusProactive from "./nexus_proactive/index.js";
