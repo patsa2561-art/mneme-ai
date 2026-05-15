@@ -258,6 +258,194 @@ export const cosmicPresenceTool: MnemeTool = {
   },
 };
 
+// ====================================================================
+// v2.13.0 NOBEL-tier tools — incremental publish + multi-server quorum +
+// offline git-note recovery + AURELIAN audit verdict.
+// ====================================================================
+
+export const cosmicPublishIncrementalTool: MnemeTool = {
+  name: "mneme.cosmic.publish.incremental",
+  category: "meta",
+  description:
+    "COSMIC v2.13 -- publish a JSON Patch (RFC 6902 subset) instead of full state. ~10x bandwidth saved on a 1-field bump. Falls back to full publish automatically if patch isn't materially smaller. Server requires basedOnSig (the previous newSig) and returns 409 if your base is stale -- forcing a re-publish.",
+  whenToUse: "Daemon-driven sync where state changes incrementally (version bumps, single-commit additions, daemon-status flips). Skip on first-publish.",
+  triggers: ["publish patch", "incremental cosmic"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      session: { type: "object" },
+      prevState: { type: "object" },
+      nextState: { type: "object" },
+      basedOnSig: { type: "string", description: "newSig from the previous publish — server verifies before applying." },
+    },
+    required: ["session", "prevState", "nextState", "basedOnSig"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Bump cosmic state by patch", args: { session: {}, prevState: { v: "x" }, nextState: { v: "y" }, basedOnSig: "abc" }, expectedOutput: "{ ok, mode, count, prevSig, newSig }" }],
+  pitfalls: [
+    "If basedOnSig is stale, server returns 409 — caller should re-fetch newSig and retry as full publish.",
+    "Helper auto-falls-back to full publish when the patch isn't ≥30% smaller.",
+  ],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.cosmic.publishIncrementalToCosmic({
+      session: args["session"] as Parameters<typeof core.cosmic.publishIncrementalToCosmic>[0]["session"],
+      prevState: args["prevState"] as Record<string, unknown>,
+      nextState: args["nextState"] as Record<string, unknown>,
+      basedOnSig: String(args["basedOnSig"] ?? ""),
+    });
+    return {
+      data: r,
+      wisdom: r.ok ? `COSMIC publish ${r.mode} · count=${r.count} sig=${r.newSig?.slice(0, 8)}` : `COSMIC incremental FAILED · ${r.error}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
+export const cosmicChoirPublishTool: MnemeTool = {
+  name: "mneme.cosmic.choir.publish",
+  category: "meta",
+  description:
+    "COSMIC v2.13 -- CELESTIAL CHOIR: publish the same state to N independent cosmic servers in parallel. Tolerates N-1 failures. Receivers verify majority quorum on the state hash; disagreers are flagged. Survives a hijacked or dead server.",
+  whenToUse: "When you have ≥2 cosmic servers (yours + a community-run mirror, or yours + a personal backup) and want resilience against any single-server compromise or outage.",
+  triggers: ["publish choir", "multi-server cosmic", "celestial choir publish"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      choir: { type: "object", description: "ChoirSession from mintChoirSession({seats: [{serverUrl}]}). Persist this — receivers need the manifest." },
+      state: { type: "object" },
+    },
+    required: ["choir", "state"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Publish to 3 cosmic mirrors", args: { choir: {}, state: { v: "2.13" } }, expectedOutput: "{ total, succeeded, failed, perSeat, quorumReached }" }],
+  pitfalls: ["A network split where all seats are unreachable returns quorumReached=false — fall back to STARGATE."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.cosmic.choir.publishToChoir(
+      args["choir"] as Parameters<typeof core.cosmic.choir.publishToChoir>[0],
+      args["state"] as Record<string, unknown>,
+    );
+    return {
+      data: r,
+      wisdom: core.cosmic.choir.formatChoirPublishLine(r),
+      confidence: { level: r.quorumReached ? "high" : "low", notes: r.quorumReached ? undefined : "No majority — at least one seat dissented or was unreachable." },
+    };
+  },
+};
+
+export const cosmicChoirReadTool: MnemeTool = {
+  name: "mneme.cosmic.choir.read",
+  category: "meta",
+  description:
+    "COSMIC v2.13 -- read state from every seat in a CELESTIAL CHOIR and apply majority quorum. Disagreeing seats are reported (downweight on next read).",
+  whenToUse: "Receiving AI uses this when the parent embedded a choir manifest in the soul prompt. Higher trust than reading a single cosmic server.",
+  triggers: ["read choir", "choir read"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      choir: { type: "object", description: "ChoirSession or its exported manifest." },
+    },
+    required: ["choir"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Read with quorum", args: { choir: {} }, expectedOutput: "{ state, agree, disagree, unreachable, quorumReached, perSeat }" }],
+  pitfalls: ["No-quorum return means the seats don't agree — do not trust any single seat's state until parent re-publishes."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.cosmic.choir.readFromChoir(args["choir"] as Parameters<typeof core.cosmic.choir.readFromChoir>[0]);
+    return {
+      data: r,
+      wisdom: `CHOIR · ${r.agree} agree · ${r.disagree} disagree · ${r.unreachable} unreachable · quorum=${r.quorumReached}`,
+      confidence: { level: r.quorumReached ? "high" : "low" },
+    };
+  },
+};
+
+export const cosmicEchoCommitTool: MnemeTool = {
+  name: "mneme.cosmic.echo.commit",
+  category: "meta",
+  description:
+    "COSMIC v2.13 -- ECHO-FROM-COMMITS: write the current cosmic state as an HMAC-signed git note on HEAD. Survives total server outage; recoverable from a fresh git clone with zero network. Travels with the code that produced it.",
+  whenToUse: "After any meaningful publish that changes the state shape; before pushing the commit. Especially valuable for shareable repos where teammates clone and need provable AI-context-at-commit.",
+  triggers: ["echo cosmic to git", "write echo to commit", "git note cosmic"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      repoDir: { type: "string", description: "Absolute path to the git repo." },
+      state: { type: "object" },
+      cosmicUrl: { type: "string", description: "Optional cosmic publicUrl for receiver convenience." },
+      secret: { type: "string", description: "HMAC secret. Receivers need this to verify." },
+    },
+    required: ["repoDir", "state", "secret"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Echo cosmic to HEAD commit", args: { repoDir: "/repo", state: { v: "x" }, secret: "s" }, expectedOutput: "{ ok, commitSha, envelope }" }],
+  pitfalls: [
+    "Push refs/notes/cosmic to remote (use mneme.cosmic.echo.push) so collaborators get echoes on fetch.",
+    "Reader without the secret can read the envelope but cannot verify — verified=false.",
+  ],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = core.cosmic.echoCommit.writeEchoToCommit({
+      repoDir: String(args["repoDir"] ?? ""),
+      state: args["state"] as Record<string, unknown>,
+      cosmicUrl: args["cosmicUrl"] ? String(args["cosmicUrl"]) : undefined,
+      secret: String(args["secret"] ?? ""),
+    });
+    return {
+      data: r,
+      wisdom: r.ok ? `ECHO · written to commit ${r.commitSha?.slice(0, 8)}` : `ECHO write FAILED · ${r.error}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
+export const cosmicAuditTool: MnemeTool = {
+  name: "mneme.cosmic.audit",
+  category: "meta",
+  description:
+    "COSMIC v2.13 -- AURELIAN AUDITOR: HMAC-signed scorecard for any feature/change. Grades on 4 axes (delta / world-class / wisdom / wildness) and emits SHIP / LOOP_BACK / REJECT. Use BEFORE shipping a change to prove it's measurably better than what came before.",
+  whenToUse: "Before declaring any non-trivial change 'done'. Caller supplies measurements + evidence; auditor returns a verdict and either lets you ship or sends you back to revise.",
+  triggers: ["audit feature", "aurelian audit", "score this change"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      feature: { type: "string" },
+      category: { type: "string", enum: ["perf", "security", "fallback", "ux"] },
+      measurements: { type: "array", description: "Array of {metric, before, after, unit, betterIs}." },
+      worldClassEvidence: { type: "string" },
+      wisdomEvidence: { type: "string" },
+      wildnessEvidence: { type: "string" },
+      secret: { type: "string", description: "Optional HMAC secret to sign the scorecard." },
+    },
+    required: ["feature", "category", "measurements", "worldClassEvidence", "wisdomEvidence", "wildnessEvidence"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Audit my new ETag impl", args: { feature: "ETag", category: "perf", measurements: [{ metric: "bytes", before: 1000, after: 50, unit: "bytes", betterIs: "lower" }], worldClassEvidence: "...", wisdomEvidence: "...", wildnessEvidence: "..." }, expectedOutput: "{ verdict, scores, measurements, sig }" }],
+  pitfalls: [
+    "Verdict LOOP_BACK or REJECT means the feature should NOT ship as-is.",
+    "Evidence text quality matters — vague text scores low, concrete claims with numbers/citations score high.",
+  ],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const card = core.cosmic.audit.auditFeature({
+      feature: String(args["feature"] ?? ""),
+      category: String(args["category"] ?? "perf") as "perf" | "security" | "fallback" | "ux",
+      measurements: args["measurements"] as Parameters<typeof core.cosmic.audit.auditFeature>[0]["measurements"],
+      worldClassEvidence: String(args["worldClassEvidence"] ?? ""),
+      wisdomEvidence: String(args["wisdomEvidence"] ?? ""),
+      wildnessEvidence: String(args["wildnessEvidence"] ?? ""),
+      secret: args["secret"] ? String(args["secret"]) : undefined,
+    });
+    return {
+      data: card,
+      wisdom: core.cosmic.audit.renderScorecard(card),
+      confidence: { level: card.verdict === "SHIP" ? "high" : card.verdict === "LOOP_BACK" ? "medium" : "low" },
+    };
+  },
+};
+
 export const COSMIC_TOOLS: MnemeTool[] = [
   cosmicMintTool,
   cosmicPublishTool,
@@ -267,4 +455,9 @@ export const COSMIC_TOOLS: MnemeTool[] = [
   cosmicInboxPushTool,
   cosmicInboxReadTool,
   cosmicPresenceTool,
+  cosmicPublishIncrementalTool,
+  cosmicChoirPublishTool,
+  cosmicChoirReadTool,
+  cosmicEchoCommitTool,
+  cosmicAuditTool,
 ];

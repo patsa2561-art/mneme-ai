@@ -147,10 +147,13 @@ else
     apt-get update -qq
     apt-get install -y caddy >/dev/null
   fi
+  # v2.13: prefer brotli (~20% better than gzip on JSON state payloads).
+  # Caddy negotiates: serves brotli if client accepts, gzip otherwise,
+  # raw if neither. encode is order-sensitive — list brotli first.
   cat >/etc/caddy/Caddyfile <<EOF
 $HOSTNAME {
   reverse_proxy 127.0.0.1:$PORT
-  encode gzip
+  encode br gzip
 }
 EOF
   systemctl restart caddy

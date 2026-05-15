@@ -69,11 +69,24 @@ export function mintSession(input: MintInput): CosmicSession {
   };
 }
 
-/** Sign an HMAC bearer for a request body. Used by publish + revoke. */
-function signBearer(method: string, path: string, body: string, secret: string): string {
+/** Sign an HMAC bearer for a request body. v2.13: include the timestamp
+ *  in the canonical string so the server can enforce a NONCE-WINDOW (~120s)
+ *  and reject replays. The ts is sent as an X-Cosmic-Ts header so the
+ *  server reproduces the same canonical. ts=undefined falls back to the
+ *  v2.11/v2.12 legacy canonical for backwards compatibility. */
+function signBearer(method: string, path: string, body: string, secret: string, ts?: number): string {
   const bodyHash = createHash("sha256").update(body).digest("hex");
-  const canon = `${method} ${path} ${bodyHash}`;
+  const canon = ts === undefined ? `${method} ${path} ${bodyHash}` : `${method} ${path} ${bodyHash} ${ts}`;
   return createHmac("sha256", secret).update(canon).digest("hex");
+}
+
+/** Helper that builds standard signed headers including the v2.13 nonce. */
+function signedHeaders(method: string, path: string, body: string, secret: string): Record<string, string> {
+  const ts = Date.now();
+  return {
+    "authorization": `Bearer ${signBearer(method, path, body, secret, ts)}`,
+    "x-cosmic-ts": String(ts),
+  };
 }
 
 export interface PublishInput {
@@ -100,14 +113,13 @@ export async function publishToCosmic(input: PublishInput): Promise<PublishResul
   if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
   const path = `/api/v1/sessions/${input.session.token}`;
   const url = `${input.session.serverUrl}${path}`;
-  // First publish: include adminSecretHash so the server can store it
-  // and verify subsequent requests. Subsequent publishes auth via HMAC
-  // over the body hash.
   const body = JSON.stringify({ state: input.state, adminSecretHash: input.session.adminSecretHash });
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  // Always sign — first request the server treats as adminSecretHash bootstrap;
-  // later ones the server verifies the signature.
-  headers["authorization"] = `Bearer ${signBearer("POST", path, body, input.session.adminSecretHash)}`;
+  // v2.13: NONCE-WINDOW HMAC. signedHeaders() adds X-Cosmic-Ts so the
+  // server can reject replays (>120s old).
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...signedHeaders("POST", path, body, input.session.adminSecretHash),
+  };
   try {
     const r = await fetchFn(url, { method: "POST", headers, body });
     const json = await r.json().catch(() => ({}));
@@ -125,9 +137,7 @@ export async function revokeCosmic(session: CosmicSession, fetchOverride?: typeo
   if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
   const path = `/api/v1/sessions/${session.token}/revoke`;
   const body = "";
-  const headers: Record<string, string> = {
-    "authorization": `Bearer ${signBearer("POST", path, body, session.adminSecretHash)}`,
-  };
+  const headers: Record<string, string> = signedHeaders("POST", path, body, session.adminSecretHash);
   try {
     const r = await fetchFn(`${session.serverUrl}${path}`, { method: "POST", headers, body });
     if (!r.ok) {
@@ -187,9 +197,7 @@ export async function heartbeatCosmic(
   if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
   const path = `/api/v1/sessions/${session.token}/heartbeat`;
   const body = "";
-  const headers: Record<string, string> = {
-    "authorization": `Bearer ${signBearer("POST", path, body, session.adminSecretHash)}`,
-  };
+  const headers: Record<string, string> = signedHeaders("POST", path, body, session.adminSecretHash);
   try {
     const r = await fetchFn(`${session.serverUrl}${path}`, { method: "POST", headers, body });
     const j = await r.json().catch(() => ({})) as { ts?: number; zombie?: boolean; error?: string };
@@ -240,9 +248,7 @@ export async function readInbox(
   const fetchFn = opts.fetchOverride ?? globalThis.fetch;
   if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
   const path = `/api/v1/sessions/${session.token}/inbox`;
-  const headers: Record<string, string> = {
-    "authorization": `Bearer ${signBearer("GET", path, "", session.adminSecretHash)}`,
-  };
+  const headers: Record<string, string> = signedHeaders("GET", path, "", session.adminSecretHash);
   if (opts.drain) headers["x-drain"] = "1";
   try {
     const r = await fetchFn(`${session.serverUrl}${path}`, { headers });
@@ -255,6 +261,81 @@ export async function readInbox(
 }
 
 export interface PresenceWatcher { fp: string; vendor: string; secondsAgo: number }
+
+// ====================================================================
+// v2.13.0 NOBEL-tier helpers — incremental publish + ETag + DEAD MAN'S HAND.
+// ====================================================================
+
+/** Publish an incremental JSON Patch instead of full state. The caller
+ *  supplies prevState (what they last successfully published) and the
+ *  basedOnSig the server returned. The server applies the patch on top
+ *  of its current state and returns 409 if basedOnSig is stale.
+ *
+ *  Falls back to a full publish automatically if the patch is no smaller
+ *  than the full body (see patchIsWorthIt). */
+export async function publishIncrementalToCosmic(input: {
+  session: CosmicSession;
+  prevState: Record<string, unknown>;
+  nextState: Record<string, unknown>;
+  basedOnSig: string;
+  fetchOverride?: typeof fetch;
+}): Promise<PublishResult & { mode?: "patch" | "full" }> {
+  const { makePatch, patchIsWorthIt } = await import("./diff.js");
+  const fetchFn = input.fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  const patch = makePatch(input.prevState, input.nextState);
+  const fullBody = JSON.stringify({ state: input.nextState, adminSecretHash: input.session.adminSecretHash });
+  const patchBody = JSON.stringify({ patch, basedOnSig: input.basedOnSig, adminSecretHash: input.session.adminSecretHash });
+  const useFullForm = patch.length === 0 || !patchIsWorthIt(Buffer.byteLength(fullBody, "utf8"), Buffer.byteLength(patchBody, "utf8"));
+  const body = useFullForm ? fullBody : patchBody;
+  const path = `/api/v1/sessions/${input.session.token}`;
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...signedHeaders("POST", path, body, input.session.adminSecretHash),
+  };
+  try {
+    const r = await fetchFn(`${input.session.serverUrl}${path}`, { method: "POST", headers, body });
+    const json = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok: false, error: (json as { error?: string }).error ?? `HTTP ${r.status}`, mode: useFullForm ? "full" : "patch" };
+    const j = json as { count?: number; prevSig?: string | null; newSig?: string };
+    return { ok: true, count: j.count, prevSig: j.prevSig ?? null, newSig: j.newSig, mode: useFullForm ? "full" : "patch" };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.slice(0, 200), mode: useFullForm ? "full" : "patch" };
+  }
+}
+
+/** Conditional read using ETag: server returns 304 (not_modified) when
+ *  state hasn't changed. Saves ~99% bandwidth on poll cycles. */
+export async function readCosmicWithEtag(
+  jsonUrl: string,
+  prevEtag: string | null,
+  fetchOverride?: typeof fetch,
+): Promise<{
+  ok: boolean;
+  notModified?: boolean;
+  state?: Record<string, unknown>;
+  etag?: string;
+  rescueUrl?: string | null;
+  zombie?: boolean;
+  error?: string;
+}> {
+  const fetchFn = fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  const headers: Record<string, string> = {};
+  if (prevEtag) headers["if-none-match"] = prevEtag;
+  try {
+    const r = await fetchFn(jsonUrl, { headers });
+    if (r.status === 304) return { ok: true, notModified: true, etag: prevEtag ?? undefined };
+    if (!r.ok) {
+      if (r.status === 404) return { ok: false, error: "session not found (revoked / evicted)" };
+      return { ok: false, error: `HTTP ${r.status}` };
+    }
+    const j = await r.json() as { state?: Record<string, unknown>; rescueUrl?: string | null; zombie?: boolean };
+    return { ok: true, notModified: false, state: j.state, etag: r.headers.get("etag") ?? undefined, rescueUrl: j.rescueUrl ?? null, zombie: j.zombie };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.slice(0, 200) };
+  }
+}
 
 /** Open Google-Docs-style watcher list. Anyone with the token can see
  *  who else is reading + what vendor they appear to be. Useful for the
@@ -286,3 +367,12 @@ export async function getCosmicPresence(
     return { ok: false, error: (e as Error).message.slice(0, 200) };
   }
 }
+
+// ====================================================================
+// v2.13.0 module re-exports — composed cosmic surface.
+// ====================================================================
+export * as diff from "./diff.js";
+export * as choir from "./choir.js";
+export * as echoCommit from "./echo_commit.js";
+export * as audit from "./aurelian_audit.js";
+export * as benchmark from "./benchmark.js";

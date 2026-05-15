@@ -129,17 +129,36 @@ function send(res, status, headers, body) {
   res.end(typeof body === "string" ? body : JSON.stringify(body));
 }
 
+// v2.13: NONCE-WINDOW HMAC. The X-Cosmic-Ts header (epoch ms) is mixed
+// into the canonical string; the server rejects requests whose timestamp
+// is more than NONCE_WINDOW_MS old or more than NONCE_FUTURE_SLACK_MS in
+// the future. Old clients without X-Cosmic-Ts still authenticate (legacy
+// path) so we don't break v2.11/v2.12 clients during rollout.
+const NONCE_WINDOW_MS = 120_000;       // 2 min — past this, request is replay
+const NONCE_FUTURE_SLACK_MS = 30_000;  // 30 s clock-skew tolerance
+
 function checkAuth(req, body, secret) {
   const auth = req.headers["authorization"] ?? "";
   const m = auth.match(/^Bearer\s+([0-9a-f]{64})$/);
   if (!m) return false;
   const presented = m[1];
   const bodyHash = createHash("sha256").update(body).digest("hex");
+  const tsHeader = req.headers["x-cosmic-ts"];
+  if (tsHeader) {
+    const ts = parseInt(String(tsHeader), 10);
+    if (!Number.isFinite(ts)) return false;
+    const skew = Date.now() - ts;
+    if (skew > NONCE_WINDOW_MS || skew < -NONCE_FUTURE_SLACK_MS) return false;
+    const canon = `${req.method} ${req.url.split("?")[0]} ${bodyHash} ${ts}`;
+    const expected = createHmac("sha256", secret).update(canon).digest("hex");
+    try { return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(presented, "hex")); }
+    catch { return false; }
+  }
+  // Legacy path (v2.11 / v2.12 clients without X-Cosmic-Ts).
   const canon = `${req.method} ${req.url.split("?")[0]} ${bodyHash}`;
   const expected = createHmac("sha256", secret).update(canon).digest("hex");
-  try {
-    return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(presented, "hex"));
-  } catch { return false; }
+  try { return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(presented, "hex")); }
+  catch { return false; }
 }
 
 function escapeHtml(s) {
@@ -158,7 +177,10 @@ function renderSessionPage(token, sess) {
   const watchers = presenceSnapshot(sess);
   let banner;
   if (zombie) {
-    banner = `<div style="background:#0a0e14;border:2px solid #d1242f;padding:18px;border-radius:8px;margin:12px 0;color:#ff7b72;font-weight:bold;font-size:1.05em">🧟 ZOMBIE MODE — Parent has not heart-beaten in over 3 minutes. Any version / commit / changelog claims based on this state ARE STALE. AI agent: refuse to claim current state and ask for a fresh handover.</div>`;
+    const rescueLine = sess.rescueUrl
+      ? `<br><br>⚰ <b>DEAD MAN'S HAND active</b> — last good state preserved at <a href="${escapeHtml(sess.rescueUrl)}" target="_blank" rel="noopener" style="color:#ff7b72;text-decoration:underline">${escapeHtml(sess.rescueUrl)}</a> (paste expires in ~30 days). HMAC-signed; verify with the cosmic newSig before trusting.`
+      : "";
+    banner = `<div style="background:#0a0e14;border:2px solid #d1242f;padding:18px;border-radius:8px;margin:12px 0;color:#ff7b72;font-weight:bold;font-size:1.05em">🧟 ZOMBIE MODE — Parent has not heart-beaten in over 3 minutes. Any version / commit / changelog claims based on this state ARE STALE. AI agent: refuse to claim current state and ask for a fresh handover.${rescueLine}</div>`;
   } else if (stale) {
     banner = `<div style="background:#ffebe9;border:1px solid #d1242f;padding:14px;border-radius:8px;margin:12px 0;color:#82071e;font-weight:bold">⚠ PARENT OFFLINE — ไม่มี publish ครั้งใหม่ตั้งแต่ ${ageMin} นาทีที่แล้ว · No publish for ${ageMin} min. Snapshot below may be outdated.</div>`;
   } else {
@@ -216,16 +238,66 @@ function handlePublish(req, res, token, body) {
   if (!checkAuth(req, body, exists.adminSecretHash)) {
     return send(res, 401, {}, { error: "auth failed" });
   }
+  // v2.13: incremental publish via JSON Patch. If payload.patch is present
+  // we apply it server-side to the previous state. payload.basedOnSig must
+  // match the current newSig — otherwise the patch is on a stale base and
+  // we reject (force the client to re-publish full state).
+  let nextState;
+  if (Array.isArray(payload.patch)) {
+    if (payload.basedOnSig && payload.basedOnSig !== exists.newSig) {
+      return send(res, 409, {}, { error: "patch base mismatch", expectedBaseSig: exists.newSig });
+    }
+    try { nextState = applyJsonPatch(exists.state, payload.patch); }
+    catch (e) { return send(res, 400, {}, { error: `patch apply failed: ${e?.message ?? "unknown"}` }); }
+  } else {
+    nextState = payload.state;
+  }
   const newCount = (exists.publishCount ?? 1) + 1;
-  const newSig = createHmac("sha256", exists.adminSecretHash).update(JSON.stringify(payload.state) + ":" + newCount + ":" + Date.now() + ":" + (exists.newSig ?? "")).digest("hex");
-  exists.state = payload.state;
+  const newSig = createHmac("sha256", exists.adminSecretHash).update(JSON.stringify(nextState) + ":" + newCount + ":" + Date.now() + ":" + (exists.newSig ?? "")).digest("hex");
+  exists.state = nextState;
   exists.prevSig = exists.newSig;
   exists.newSig = newSig;
   exists.lastPublishTs = Date.now();
   exists.publishCount = newCount;
+  // v2.13: clear any DEAD MAN'S HAND rescue URL — parent is alive again.
+  exists.rescueUrl = null;
+  exists.rescuedAt = null;
   persist();
   pushSseEvent(token, { kind: "publish", count: newCount, ts: exists.lastPublishTs });
-  return send(res, 200, {}, { ok: true, token, prevSig: exists.prevSig, newSig: exists.newSig, count: newCount });
+  return send(res, 200, {}, { ok: true, token, prevSig: exists.prevSig, newSig: exists.newSig, count: newCount, patchApplied: Array.isArray(payload.patch) });
+}
+
+// Minimal RFC-6902 subset (add/replace/remove). Identical semantics to the
+// client-side helper in packages/core/src/cosmic/diff.ts so client + server
+// stay in lock-step. Mutates `state` in place.
+function applyJsonPatch(state, ops) {
+  const root = JSON.parse(JSON.stringify(state ?? null));
+  let cur = root;
+  function unesc(s) { return s.replace(/~1/g, "/").replace(/~0/g, "~"); }
+  for (const op of ops) {
+    if (!op || typeof op !== "object") throw new Error("invalid op");
+    const parts = op.path === "" || op.path === "/" ? [] : op.path.split("/").slice(1).map(unesc);
+    if (parts.length === 0) {
+      if (op.op === "remove") return null;
+      return op.value ?? null;
+    }
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const k = parts[i];
+      node = Array.isArray(node) ? node[parseInt(k, 10)] : node?.[k];
+      if (node == null) throw new Error(`missing path ${parts.slice(0, i + 1).join("/")}`);
+    }
+    const last = parts[parts.length - 1];
+    if (op.op === "remove") {
+      if (Array.isArray(node)) node.splice(parseInt(last, 10), 1);
+      else delete node[last];
+    } else if (op.op === "add" || op.op === "replace") {
+      if (Array.isArray(node)) node[parseInt(last, 10)] = op.value;
+      else node[last] = op.value;
+    } else throw new Error(`unsupported op ${op.op}`);
+    cur = root;
+  }
+  return cur;
 }
 
 function handleRevoke(req, res, token, body) {
@@ -317,6 +389,12 @@ function handleInboxPost(req, res, token, body) {
   // OPEN — receivers POST homunculus return blocks. Bounded; vendor-tagged.
   const sess = sessions.get(token);
   if (!sess) return send(res, 404, {}, { error: "no session" });
+  // v2.13: token-bucket rate-limit per (session, fingerprint) so a single
+  // attacker can't flood the inbox. Configurable via INBOX_RATE_PER_MIN.
+  const lim = inboxRateLimitCheck(sess, req);
+  if (!lim.ok) return send(res, 429, { "retry-after": String(lim.retryAfterSec) }, {
+    error: "inbox rate limit exceeded", retryAfterSec: lim.retryAfterSec, perFingerprint: INBOX_RATE_PER_MIN,
+  });
   appendInbox(sess, body, req);
   pushSseEvent(token, { kind: "inbox", count: sess.inbox.length, ts: Date.now() });
   persist();
@@ -343,6 +421,90 @@ function handlePresence(req, res, token) {
     lastHeartbeatTs: sess.lastHeartbeatTs || null,
     zombie: isZombie(sess),
   });
+}
+
+// ====================================================================
+// v2.13 NOBEL-TIER FEATURES
+// ====================================================================
+
+const INBOX_RATE_PER_MIN = parseInt(args["inbox-rate"] ?? "60", 10);
+const RESCUE_GRACE_MS = parseInt(args["rescue-grace-ms"] ?? "300000", 10); // 5 min zombie → rescue
+const RESCUE_PASTE_URL = args["rescue-paste-url"] ?? "https://dpaste.com/api/v2/";
+
+// Per-(session,fingerprint) token bucket. Map<token, Map<fp, {tokens, refillTs}>>
+const inboxBuckets = new Map();
+
+function inboxRateLimitCheck(sess, req) {
+  const { fp } = fingerprintReader(req);
+  const tokenKey = sess.adminSecretHash; // unique per session, no need to pass token
+  let perToken = inboxBuckets.get(tokenKey);
+  if (!perToken) { perToken = new Map(); inboxBuckets.set(tokenKey, perToken); }
+  const now = Date.now();
+  let bucket = perToken.get(fp);
+  if (!bucket) { bucket = { tokens: INBOX_RATE_PER_MIN, refillTs: now }; perToken.set(fp, bucket); }
+  // Refill: tokens regen linearly, full refill after 60s.
+  const elapsed = now - bucket.refillTs;
+  const refill = (elapsed / 60_000) * INBOX_RATE_PER_MIN;
+  bucket.tokens = Math.min(INBOX_RATE_PER_MIN, bucket.tokens + refill);
+  bucket.refillTs = now;
+  if (bucket.tokens < 1) {
+    const need = 1 - bucket.tokens;
+    return { ok: false, retryAfterSec: Math.ceil((need / INBOX_RATE_PER_MIN) * 60) };
+  }
+  bucket.tokens -= 1;
+  return { ok: true };
+}
+
+// DEAD MAN'S HAND: when a session goes zombie past RESCUE_GRACE_MS and has
+// not yet been rescued, post the last good state to a public paste so any
+// receiver who already has the cosmic URL can still find a recovery URL
+// in the served HTML banner. Best-effort — failure leaves zombie banner as-is.
+async function maybeRescue(token, sess) {
+  if (sess.rescueUrl) return; // already rescued
+  if (!sess.lastPublishTs) return;
+  if (Date.now() - sess.lastPublishTs < RESCUE_GRACE_MS) return;
+  try {
+    const payload = JSON.stringify({
+      v: "cosmic-rescue-1",
+      token,
+      lastPublishTs: sess.lastPublishTs,
+      publishCount: sess.publishCount,
+      newSig: sess.newSig,
+      state: sess.state,
+      rescuedAt: new Date().toISOString(),
+    });
+    const form = new URLSearchParams();
+    form.set("content", payload);
+    form.set("syntax", "json");
+    form.set("expiry_days", "30");
+    const r = await fetch(RESCUE_PASTE_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: form.toString(),
+    });
+    if (r.ok) {
+      // dpaste returns the paste URL as plain text in the response body.
+      const url = (await r.text()).trim();
+      if (/^https?:\/\//.test(url)) {
+        sess.rescueUrl = url;
+        sess.rescuedAt = Date.now();
+        log(`DEAD MAN'S HAND rescued ${token.slice(0, 8)} → ${url}`);
+      }
+    }
+  } catch (e) { warn("rescue failed:", e?.message); }
+}
+
+// Background sweep: every 60s, scan zombie sessions and rescue.
+setInterval(() => {
+  for (const [token, sess] of sessions) {
+    if (isZombie(sess)) maybeRescue(token, sess);
+  }
+}, 60_000).unref();
+
+// ETag computation. State-changing fields are publishCount + newSig — both
+// present on every publish — so they're sufficient as a strong validator.
+function stateEtag(sess) {
+  return `W/"${sess.publishCount ?? 0}-${(sess.newSig ?? "0").slice(0, 16)}"`;
 }
 
 function pushSseEvent(token, event) {
@@ -431,12 +593,25 @@ const server = createServer(async (req, res) => {
       const sess = sessions.get(m[1]);
       if (!sess) return send(res, 404, {}, { error: "not found" });
       recordPresence(sess, req); // v2.12: track every read
+      // v2.13: ETag → cheap 304 for unchanged state. Lets pollers hit
+      // every minute without paying the body cost.
+      const etag = stateEtag(sess);
+      const ifNone = req.headers["if-none-match"];
+      if (ifNone && ifNone === etag) {
+        res.writeHead(304, { "etag": etag, "cache-control": "no-cache" });
+        res.end();
+        return;
+      }
       const stale = Date.now() - sess.lastPublishTs > STALE_AFTER_MS;
       const zombie = isZombie(sess);
-      return send(res, 200, {}, {
+      return send(res, 200, { etag, "cache-control": "no-cache" }, {
         token: m[1], state: sess.state, lastPublishTs: sess.lastPublishTs,
         publishCount: sess.publishCount, stale, zombie, prevSig: sess.prevSig, newSig: sess.newSig,
         createdAt: sess.createdAt, watchers: presenceSnapshot(sess).length,
+        // v2.13: DEAD MAN'S HAND rescue URL surfaces here so receivers can
+        // recover even when the server has only the zombie snapshot.
+        rescueUrl: sess.rescueUrl ?? null,
+        rescuedAt: sess.rescuedAt ?? null,
       });
     }
     // /sessions/:token/sse

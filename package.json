@@ -1,6 +1,6 @@
 {
   "name": "mneme-monorepo",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "private": true,
   "type": "module",
   "description": "Mneme เนโฌโ€ the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS, all in one graph.",
