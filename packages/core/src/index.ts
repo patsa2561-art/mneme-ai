@@ -689,3 +689,11 @@ export * as hive from "./hive/index.js";
 export * as vibe from "./vibe/index.js";
 export * as arbitrage from "./arbitrage/index.js";
 export * as bugProphet from "./bug_prophet/index.js";
+
+// v2.16.0 REVOLUTIONARY PENTAD — Decentralized MaaS primitives.
+export * as persona from "./persona/index.js";
+export * as antiCollusion from "./anti_collusion/index.js";
+export * as alpha from "./alpha/index.js";
+export * as publicAudit from "./public_audit/index.js";
+export * as livingModel from "./living_model/index.js";
+export * as obelisk from "./obelisk/index.js";

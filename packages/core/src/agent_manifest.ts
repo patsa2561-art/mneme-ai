@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -276,6 +276,29 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
 
   // ─── v2.15.1 BUG PROPHET ──────────────────────────────────────────────
   { command: "mneme.bug_prophet.prophesy", since: "2.15.1", group: "bug_prophet", what: "Predict regression risk (0-1) for a proposed change BEFORE shipping. Pure inference (no LLM). Fuses SOUL scars + REPLICA bad outcomes + HIVE pattern history + BOUNTY vendor trust + complexity. Returns HMAC-signed verdict + evidence + mitigations.", when: "BEFORE applying any non-trivial AI-proposed change. Especially: deploys, refactors, dependency adds." },
+
+  // ─── v2.16 REVOLUTIONARY PENTAD ───────────────────────────────────────
+  // PERSONA — Myself as a Service
+  { command: "mneme.persona.export", since: "2.16.0", group: "persona", what: "Package your REPLICA decisions + soul rules into a portable HMAC-signed bundle. Teammates import to subscribe to your judgment.", when: "After ≥20 captured decisions; opt-in share." },
+  { command: "mneme.persona.query", since: "2.16.0", group: "persona", what: "Query a teammate's persona for what THEY would do in this situation. Returns recommendation + attributed confidence.", when: "Stuck on a decision; ask 'what would <person> do?'" },
+
+  // ANTI-COLLUSION — AI Internal Affairs
+  { command: "mneme.anti_collusion.detect", since: "2.16.0", group: "anti_collusion", what: "Analyse multi-agent conversation for 5 collusion patterns (skipped verification / echoing / mutual praise / verification dropout / convenient agreement). HMAC-signed verdict per agent pair; triggers APOPTOSIS if risk ≥ 0.8.", when: "Periodic audit of Dev Agent + QA Agent + Ops Agent flows." },
+
+  // ALPHA — honest financial AI layer
+  { command: "mneme.alpha.extract", since: "2.16.0", group: "alpha", what: "Pull structured financial claim (ticker / direction / horizon / target / overconfidence flag) from AI free-text. Honest layer: does NOT promise prediction accuracy; makes AI claims TRACEABLE.", when: "Whenever AI states a financial opinion." },
+  { command: "mneme.alpha.fuse", since: "2.16.0", group: "alpha", what: "Fuse N vendors' claims on same ticker into consensus + dispersion + advisory. ADVISORY ONLY -- never a trade signal.", when: "Polling multiple AI vendors for stock opinions." },
+
+  // PUBLIC AUDIT
+  { command: "mneme.audit.public", since: "2.16.0", group: "public_audit", what: "Grade any open-source package (npm/PyPI/Cargo/...) on 5 axes (popularity / freshness / openness / types / docs). Returns 0-100 composite + verdict (platinum/gold/silver/bronze/needs_work) + recommendations.", when: "Before adopting a new dep; periodic dep audit." },
+
+  // LIVING MODEL — INFRA AS AI primitives
+  { command: "mneme.living.merkle_summary", since: "2.16.0", group: "living_model", what: "Build Merkle-tree summary of local observations for anti-entropy sync between hosts.", when: "Periodic gossip exchange." },
+  { command: "mneme.living.infer_causal", since: "2.16.0", group: "living_model", what: "Naive causal inference: mean lead time + directionality vote + correlation across (cause, effect) pairs.", when: "Suspect a correlation; quantify it. HYPOTHESIS, not verdict." },
+
+  // OBELISK — federated trust graph
+  { command: "mneme.obelisk.build_card", since: "2.16.0", group: "obelisk", what: "Wrap your BOUNTY scorecard as publishable OBELISK card with signature. Submit to federated trust graph.", when: "Share measured vendor falseRate with the community." },
+  { command: "mneme.obelisk.aggregate", since: "2.16.0", group: "obelisk", what: "Aggregate N signed cards into the federated AI Trust Graph. Wilson-LB-weighted consensus per vendor.", when: "Periodic graph rebuild; researchers studying AI vendor accuracy." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -300,7 +323,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

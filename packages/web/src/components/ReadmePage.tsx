@@ -47,7 +47,7 @@ const I18N: Record<Lang, Record<string, string>> = {
 
     repo_h2: "Try Mneme on YOUR repo",
     repo_p: "Paste a public GitHub URL. Mneme analyses the stack and shows what each module would do for THIS codebase. No data leaves your browser; we only call the open GitHub API.",
-    repo_placeholder: "https://github.com/owner/repo  or  owner/repo",
+    repo_placeholder: "GitHub / GitLab / Bitbucket / Codeberg URL  (or  owner/repo for GitHub)",
     repo_try_mneme: "Try mneme-ai",
     repo_analyse: "Analyse",
     repo_loading: "loading…",
@@ -104,7 +104,7 @@ const I18N: Record<Lang, Record<string, string>> = {
 
     repo_h2: "ลอง Mneme กับ repo ของคุณ",
     repo_p: "วาง URL GitHub แบบ public. Mneme วิเคราะห์ stack แล้วโชว์ว่าแต่ละโมดูลจะทำอะไรกับ repo นี้. ข้อมูลไม่ออกจาก browser; เรียกแค่ GitHub API ฟรี",
-    repo_placeholder: "https://github.com/owner/repo  หรือ  owner/repo",
+    repo_placeholder: "GitHub / GitLab / Bitbucket / Codeberg URL  (หรือ owner/repo สำหรับ GitHub)",
     repo_try_mneme: "ลอง mneme-ai",
     repo_analyse: "วิเคราะห์",
     repo_loading: "กำลังโหลด…",
@@ -405,43 +405,140 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
 
   async function loadRepo() {
     setRepoErr(null); setRepo(null); setAnalysis(null);
-    if (!repoUrl.trim()) return;
-    let owner = "", name = "";
-    const m = repoUrl.trim().match(/github\.com\/([^/]+)\/([^/?#]+?)(?:\.git)?\/?$/);
-    if (m) { owner = m[1]!; name = m[2]!; }
-    else if (/^[\w.-]+\/[\w.-]+$/.test(repoUrl.trim())) {
-      const [a, b] = repoUrl.trim().split("/");
-      owner = a!; name = b!;
-    } else {
-      setRepoErr("Enter a GitHub URL (https://github.com/owner/repo) or owner/repo");
+    const trimmed = repoUrl.trim();
+    if (!trimmed) return;
+
+    // v2.16: parse GitHub / GitLab / Bitbucket / Codeberg / Sourcehut.
+    let host: "github" | "gitlab" | "bitbucket" | "codeberg" | "sourcehut" = "github";
+    let owner = "", name = "", path = "";
+
+    // GitLab supports nested groups (group/subgroup/repo). Capture the full path.
+    const gitlab = trimmed.match(/^https?:\/\/(?:[a-z0-9-]+\.)?gitlab\.com\/(.+?)(?:\.git)?\/?$/i);
+    const bitbucket = trimmed.match(/^https?:\/\/bitbucket\.org\/([^/]+)\/([^/?#]+?)(?:\.git)?\/?$/i);
+    const codeberg = trimmed.match(/^https?:\/\/codeberg\.org\/([^/]+)\/([^/?#]+?)(?:\.git)?\/?$/i);
+    const sourcehut = trimmed.match(/^https?:\/\/(?:git\.)?sr\.ht\/~?([^/]+)\/([^/?#]+?)\/?$/i);
+    const github = trimmed.match(/^https?:\/\/github\.com\/([^/]+)\/([^/?#]+?)(?:\.git)?\/?$/i);
+    const ownerRepo = /^[\w.-]+\/[\w.-]+$/.test(trimmed);
+
+    if (gitlab) { host = "gitlab"; path = gitlab[1]!; const parts = path.split("/"); owner = parts.slice(0, -1).join("/"); name = parts[parts.length - 1]!; }
+    else if (bitbucket) { host = "bitbucket"; owner = bitbucket[1]!; name = bitbucket[2]!; path = `${owner}/${name}`; }
+    else if (codeberg) { host = "codeberg"; owner = codeberg[1]!; name = codeberg[2]!; path = `${owner}/${name}`; }
+    else if (sourcehut) { host = "sourcehut"; owner = sourcehut[1]!; name = sourcehut[2]!; path = `${owner}/${name}`; }
+    else if (github) { host = "github"; owner = github[1]!; name = github[2]!; path = `${owner}/${name}`; }
+    else if (ownerRepo) { host = "github"; const [a, b] = trimmed.split("/"); owner = a!; name = b!; path = `${owner}/${name}`; }
+    else {
+      setRepoErr("Paste a public repo URL: github.com / gitlab.com / bitbucket.org / codeberg.org / sr.ht — or owner/repo for GitHub.");
       return;
     }
+
     setRepoLoading(true);
     try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${name}`);
-      if (!res.ok) {
-        setRepoErr(res.status === 404 ? "Repo not found (404)" : `GitHub API ${res.status}`);
-        setRepoLoading(false);
-        return;
+      let summary: RepoSummary | null = null;
+      if (host === "github") {
+        const res = await fetch(`https://api.github.com/repos/${owner}/${name}`);
+        if (!res.ok) {
+          setRepoErr(res.status === 404 ? "Repo not found (404)" : `GitHub API ${res.status}`);
+          setRepoLoading(false); return;
+        }
+        const j = await res.json() as Record<string, unknown>;
+        summary = {
+          fullName: String(j["full_name"] ?? `${owner}/${name}`),
+          description: (j["description"] as string | null) ?? null,
+          defaultBranch: String(j["default_branch"] ?? "main"),
+          stars: Number(j["stargazers_count"] ?? 0),
+          forks: Number(j["forks_count"] ?? 0),
+          openIssues: Number(j["open_issues_count"] ?? 0),
+          language: (j["language"] as string | null) ?? null,
+          topics: Array.isArray(j["topics"]) ? (j["topics"] as string[]) : [],
+          pushedAt: String(j["pushed_at"] ?? ""),
+          updatedAt: String(j["updated_at"] ?? ""),
+          size: Number(j["size"] ?? 0),
+          license: (j["license"] as { spdx_id?: string } | null)?.spdx_id ?? null,
+          url: String(j["html_url"] ?? `https://github.com/${owner}/${name}`),
+        };
+      } else if (host === "gitlab") {
+        // GitLab API needs URL-encoded path
+        const enc = encodeURIComponent(path);
+        const res = await fetch(`https://gitlab.com/api/v4/projects/${enc}`);
+        if (!res.ok) {
+          setRepoErr(res.status === 404 ? "GitLab project not found / private" : `GitLab API ${res.status}`);
+          setRepoLoading(false); return;
+        }
+        const j = await res.json() as Record<string, unknown>;
+        summary = {
+          fullName: String(j["path_with_namespace"] ?? path),
+          description: (j["description"] as string | null) ?? null,
+          defaultBranch: String(j["default_branch"] ?? "main"),
+          stars: Number(j["star_count"] ?? 0),
+          forks: Number(j["forks_count"] ?? 0),
+          openIssues: Number(j["open_issues_count"] ?? 0),
+          language: null,
+          topics: Array.isArray(j["topics"]) ? (j["topics"] as string[]) : [],
+          pushedAt: String(j["last_activity_at"] ?? ""),
+          updatedAt: String(j["last_activity_at"] ?? ""),
+          size: 0,
+          license: null,
+          url: String(j["web_url"] ?? `https://gitlab.com/${path}`),
+        };
+      } else if (host === "bitbucket") {
+        const res = await fetch(`https://api.bitbucket.org/2.0/repositories/${owner}/${name}`);
+        if (!res.ok) {
+          setRepoErr(res.status === 404 ? "Bitbucket repo not found / private" : `Bitbucket API ${res.status}`);
+          setRepoLoading(false); return;
+        }
+        const j = await res.json() as Record<string, unknown>;
+        summary = {
+          fullName: String(j["full_name"] ?? `${owner}/${name}`),
+          description: (j["description"] as string | null) ?? null,
+          defaultBranch: ((j["mainbranch"] as { name?: string } | null)?.name) ?? "main",
+          stars: 0, forks: 0, openIssues: 0,
+          language: (j["language"] as string | null) ?? null,
+          topics: [],
+          pushedAt: String(j["updated_on"] ?? ""),
+          updatedAt: String(j["updated_on"] ?? ""),
+          size: Number(j["size"] ?? 0),
+          license: null,
+          url: String(((j["links"] as { html?: { href?: string } } | null)?.html?.href) ?? `https://bitbucket.org/${owner}/${name}`),
+        };
+      } else if (host === "codeberg") {
+        // Gitea-compatible API
+        const res = await fetch(`https://codeberg.org/api/v1/repos/${owner}/${name}`);
+        if (!res.ok) {
+          setRepoErr(res.status === 404 ? "Codeberg repo not found / private" : `Codeberg API ${res.status}`);
+          setRepoLoading(false); return;
+        }
+        const j = await res.json() as Record<string, unknown>;
+        summary = {
+          fullName: String(j["full_name"] ?? `${owner}/${name}`),
+          description: (j["description"] as string | null) ?? null,
+          defaultBranch: String(j["default_branch"] ?? "main"),
+          stars: Number(j["stars_count"] ?? 0),
+          forks: Number(j["forks_count"] ?? 0),
+          openIssues: Number(j["open_issues_count"] ?? 0),
+          language: (j["language"] as string | null) ?? null,
+          topics: [],
+          pushedAt: String(j["updated_at"] ?? ""),
+          updatedAt: String(j["updated_at"] ?? ""),
+          size: Number(j["size"] ?? 0),
+          license: null,
+          url: String(j["html_url"] ?? `https://codeberg.org/${owner}/${name}`),
+        };
+      } else if (host === "sourcehut") {
+        // sr.ht doesn't have a fully-public meta API; show minimal card.
+        summary = {
+          fullName: `~${owner}/${name}`,
+          description: "Sourcehut repo (~limited metadata via public API; full analysis requires CLI).",
+          defaultBranch: "main",
+          stars: 0, forks: 0, openIssues: 0,
+          language: null, topics: [],
+          pushedAt: "", updatedAt: "", size: 0, license: null,
+          url: `https://sr.ht/~${owner}/${name}`,
+        };
       }
-      const j = await res.json() as Record<string, unknown>;
-      const summary: RepoSummary = {
-        fullName: String(j["full_name"] ?? `${owner}/${name}`),
-        description: (j["description"] as string | null) ?? null,
-        defaultBranch: String(j["default_branch"] ?? "main"),
-        stars: Number(j["stargazers_count"] ?? 0),
-        forks: Number(j["forks_count"] ?? 0),
-        openIssues: Number(j["open_issues_count"] ?? 0),
-        language: (j["language"] as string | null) ?? null,
-        topics: Array.isArray(j["topics"]) ? (j["topics"] as string[]) : [],
-        pushedAt: String(j["pushed_at"] ?? ""),
-        updatedAt: String(j["updated_at"] ?? ""),
-        size: Number(j["size"] ?? 0),
-        license: (j["license"] as { spdx_id?: string } | null)?.spdx_id ?? null,
-        url: String(j["html_url"] ?? `https://github.com/${owner}/${name}`),
-      };
-      setRepo(summary);
-      setAnalysis(analyseRepo(summary));
+      if (summary) {
+        setRepo(summary);
+        setAnalysis(analyseRepo(summary));
+      }
     } catch (e) {
       setRepoErr((e as Error).message.slice(0, 200));
     } finally {

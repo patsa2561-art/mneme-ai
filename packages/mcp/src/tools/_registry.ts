@@ -61,6 +61,7 @@ import { NEXUS_LOCK_TOOLS } from "./_nexus_lock_tools.js";
 import { COSMIC_TOOLS } from "./_cosmic_tools.js";
 import { V214_PENTAD_TOOLS } from "./_v214_pentad.js";
 import { V215_HYPERCAR_TOOLS } from "./_v215_hypercar.js";
+import { V216_REVOLUTIONARY_TOOLS } from "./_v216_revolutionary.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -126,6 +127,7 @@ export function buildAllTools(): MnemeTool[] {
     ...COSMIC_TOOLS,
     ...V214_PENTAD_TOOLS,
     ...V215_HYPERCAR_TOOLS,
+    ...V216_REVOLUTIONARY_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
