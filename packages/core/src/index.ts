@@ -334,6 +334,12 @@ export * as beacon from "./beacon/index.js";
 // for fetch-capable AIs and ObedienceLedger that scores per-vendor
 // compliance via Wilson LB.
 export * as nexusLock from "./nexus_lock/index.js";
+// v2.11.0 -- COSMIC LINK: self-hosted soul-prompt state server.
+// Parent publishes state to user's own DO/VPS; receiving AIs (and
+// users) read the URL. Survives parent shutdown (snapshot mode +
+// auto STALE banner). Server is single-file zero-deps Node script
+// at packages/core/cosmic-server/bin/mneme-cosmic.mjs.
+export * as cosmic from "./cosmic/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

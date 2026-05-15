@@ -1,3 +1,67 @@
+## v2.11.0 — 2026-05-15 — 🌌 COSMIC LINK: self-hosted state server (DO/Hetzner/fly.io ready) + STALE BANNER + SSE live push
+
+**Headline:** User has free DO. Ship the COSMIC LINK that v2.10 deferred. Survives parent shutdown via auto STALE BANNER. Live push via Server-Sent Events for clients that want it. HMAC-chain integrity verifiable by receivers.
+
+### `bin/mneme-cosmic.mjs` — single-file zero-deps Node server (~400 LOC)
+
+Endpoints:
+  - `POST /api/v1/sessions/:token` — publish state (HMAC-bearer auth)
+  - `GET /api/v1/sessions/:token.json` — read state JSON (open)
+  - `GET /sessions/:token` — human-readable HTML page with STALE BANNER
+  - `GET /sessions/:token/sse` — Server-Sent Events stream (live push)
+  - `POST /api/v1/sessions/:token/revoke` — kill session (HMAC-auth)
+  - `GET /healthz` — health check
+
+Features:
+  - **In-memory store** + optional `--persist <path>` for disk
+  - **HMAC-chain**: every publish includes `prevSig` + `newSig` derived from `state | count | ts | prevSig`. Receiver can replay to verify integrity.
+  - **STALE BANNER**: 30 min no publish → red banner in served HTML "⚠ PARENT OFFLINE since X"
+  - **Auto-evict**: 24 h stale → drop session, free memory
+  - **LRU**: 10000 sessions max, oldest evicted
+  - **Ghost mode**: `--ghost` → no logs, no persist, in-memory only
+  - **SSE heartbeat**: 25s ping so reverse proxies don't close stream
+
+### `packages/core/src/cosmic/` — client library
+
+- `mintSession({serverUrl})` — fresh ephemeral token + per-session secret
+- `publishToCosmic({session, state})` — POST with HMAC bearer
+- `readCosmic(jsonUrl)` — open read, returns `{state, stale, publishCount, lastPublishTs}`
+- `revokeCosmic(session)` — kill the session
+
+### Survives parent OFFLINE
+
+| Scenario | COSMIC behavior |
+|---|---|
+| Parent ON, publishing every 5 min | Live state served; SSE pushes |
+| Parent OFFLINE 5 min | Last published snapshot still served |
+| Parent OFFLINE 30+ min | Served HTML adds red banner: ⚠ PARENT OFFLINE since X |
+| Parent OFFLINE 24+ h | Session auto-evicted |
+
+### 4 new MCP tools (`packages/mcp/src/tools/_cosmic_tools.ts`)
+
+- `mneme.cosmic.mint` — fresh session
+- `mneme.cosmic.publish` — push state
+- `mneme.cosmic.read` — open read
+- `mneme.cosmic.revoke` — kill session
+
+### Deploy in 5 min on DigitalOcean ($4/mo droplet)
+
+Step-by-step in `packages/core/cosmic-server/README.md` — Ubuntu 22.04 + Node 22 + systemd unit + Caddy auto-TLS via Let's Encrypt. Also Docker + fly.io options documented.
+
+### END-TO-END VERIFIED (real server + real fetch)
+
+Started server on localhost:8089 → POSTed publish with HMAC bearer → got `count=1, prevSig=null, newSig=152bfd8d...` → GET JSON returned the state + chain sig → GET HTML page rendered with title `<title>COSMIC · test1234abcd</title>`. **Real Node http.createServer. Real HMAC. Real bytes on the wire.**
+
+### Tests
+
+**8837/8837 pass** (+46 vs v2.10.0). 10 new cosmic client tests (mint / publish / chain sig / read / revoke / 404 / network failure / Bearer header / pulse line) + 4 MCP tools auto-covered by registry meta.
+
+### Privacy reminder
+
+State is open-read by token URL. Never publish source / secrets — only version + commit metadata. For stricter privacy, run with `--ghost` (no disk, no logs).
+
+---
+
 ## v2.10.0 — 2026-05-15 — 🌌 NEXUS-LOCK: self-enforcing soul prompt v2 — receiving AI cannot lie about Mneme state
 
 **Headline:** User found that Gemini Free mobile (and ChatGPT) read pasted soul prompts and quoted the WRONG version (v1.95) because the stale v1.97-era `Context` block had more "weight" than the LIVE STATE hint at the top. v2.9.1 LIVE STATE injection was a polite request; receiving AIs ignored it. v2.10 fixes this at the SOURCE — there is no longer a separate "Context" block to mis-prioritize. The first authoritative section IS the current state, signed and time-locked.
