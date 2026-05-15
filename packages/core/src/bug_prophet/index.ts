@@ -201,15 +201,20 @@ export async function prophesy(input: ProphesyInput): Promise<PropheticReport> {
   const regressionRisk = Math.max(0.01, Math.min(0.99, logistic(logit)));
   confidence = Math.max(0.4, Math.min(0.95, confidence));
 
+  // v2.15.2 threshold tuning: surface medium_risk earlier (>=0.20) so the
+  // user sees friction-aware advice on more changes. Tighten very_high_risk
+  // from 0.70 -> 0.65 so genuinely scary changes block faster. high_risk
+  // band widened slightly (0.40-0.65) — most real-world risky changes land
+  // here and the band needs room to breathe.
   let verdict: PropheticReport["verdict"];
   let headline: string;
-  if (regressionRisk >= 0.7) {
+  if (regressionRisk >= 0.65) {
     verdict = "very_high_risk";
     headline = `🚨 BUG PROPHET predicts ${Math.round(regressionRisk * 100)}% regression risk — DO NOT ship without review.`;
-  } else if (regressionRisk >= 0.45) {
+  } else if (regressionRisk >= 0.40) {
     verdict = "high_risk";
     headline = `⚠ BUG PROPHET predicts ${Math.round(regressionRisk * 100)}% regression risk — test extensively first.`;
-  } else if (regressionRisk >= 0.25) {
+  } else if (regressionRisk >= 0.20) {
     verdict = "medium_risk";
     headline = `🟡 BUG PROPHET predicts ${Math.round(regressionRisk * 100)}% regression risk — standard review path.`;
   } else {

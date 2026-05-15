@@ -56,13 +56,16 @@ function readOnboarded(): boolean {
 }
 
 function readShowReadme(): boolean {
-  // v2.14: README landing page is the default first-touch surface. Power
-  // users who explicitly opted into the dashboard land back there on
-  // subsequent visits. Hash-based deep links (#dashboard) jump straight in.
+  // v2.15.2: README landing is the default for ALL visitors — no more
+  // sticky opt-out. Power users opt into the dashboard via #dashboard
+  // hash; the choice is per-session not per-machine. This fixes a bug
+  // where a one-time "Launch dashboard" click in v2.14 stuck users on
+  // the dashboard even after we shipped a much better README in v2.15.
   try {
     if (window.location.hash === "#dashboard") return false;
-    const v = window.localStorage.getItem("mneme-show-readme");
-    if (v === "false") return false;
+    // Clean up the legacy v2.14 sticky preference so users get the new
+    // README the first time they visit after the upgrade.
+    window.localStorage.removeItem("mneme-show-readme");
     return true;
   } catch { return true; }
 }
@@ -187,12 +190,14 @@ export function App() {
     pushToast(setToasts, { kind: "error", text: err });
   }, []);
 
-  // v2.14: README is the default first-touch surface.
+  // v2.15.2: README is the default. Dashboard is per-session via #dashboard
+  // hash — no sticky preference (avoids the v2.14 bug where one click stuck
+  // the user on the dashboard forever).
   if (showReadme) {
     return (
       <ReadmePage
         onLaunchDashboard={() => {
-          try { window.localStorage.setItem("mneme-show-readme", "false"); } catch {}
+          try { window.location.hash = "#dashboard"; } catch {}
           setShowReadme(false);
         }}
       />

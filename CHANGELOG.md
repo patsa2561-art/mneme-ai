@@ -1,3 +1,83 @@
+## v2.15.2 — 2026-05-15 — 🐛 Critical fix: README locked behind stale localStorage + dashboard 9→4 nav consolidation + mobile polish + BUG PROPHET threshold tune + MaaS manifesto
+
+User-driven release. The user reported they couldn't see the new v2.15 README landing page — it was stuck on the dashboard. Root-caused to a sticky `mneme-show-readme=false` localStorage flag set by clicking "Launch dashboard" once in v2.14. Fix at the source.
+
+### 🐛 Critical fix: ReadmePage stuck behind stale localStorage
+
+`packages/web/src/App.tsx`:
+- `readShowReadme()` now ALWAYS shows the README on a fresh page-load (only `#dashboard` hash escapes).
+- Removed the `mneme-show-readme` localStorage write; clicking "Launch dashboard" now uses `window.location.hash = "#dashboard"` (per-session, not per-machine).
+- Auto-cleans the legacy v2.14 key on every page-load so old visitors get the new README the first time.
+
+### 🎯 Dashboard nav consolidation (9 → 4 grouped pills)
+
+`packages/web/src/components/Header.tsx`:
+- 9 flat tabs → 4 grouped pills: **Overview** / **Memory** / **Labs** / **History**
+- Each group shows count badge `(N)` if it has multiple sub-views; clicking a group jumps to its default view AND reveals sub-pills inline (only for the active group)
+- Added "← README" escape-hatch button so power users can return to the landing page from inside the dashboard
+
+| Before | After |
+|---|---|
+| Demon Stack · Nervous System · Atrophy · Influence · Ecosystems · Code Search · Scrubber · Antivirus Lab · Retrieval Lab | 🛡️ Overview · 🧠 Memory (4) · 🧪 Labs (3) · ⏳ History |
+
+### 📱 Mobile UX polish (`ReadmePage.tsx`)
+
+- Banner stacks vertically below 720px
+- Hero font scales from 3.6rem → 1.8rem on phones
+- Install steps stack vertically below 480px
+- Input font ≥ 16px (prevents iOS zoom-on-focus)
+- Touch targets ≥ 44x44px on coarse pointers (Apple HIG)
+- Smooth scroll between sections
+- `<pre>` font shrinks + word-breaks on small screens
+
+### 🔬 BUG PROPHET threshold tuning
+
+`packages/core/src/bug_prophet/index.ts`:
+- `medium_risk` threshold lowered from 0.25 → 0.20 (surfaces friction-aware advice on more changes)
+- `very_high_risk` threshold tightened from 0.70 → 0.65 (genuinely scary changes block faster)
+- `high_risk` band widened (0.40-0.65) to fit the realistic distribution
+- All 12 tests still pass
+
+### 💥 MAAS_MANIFESTO.md (the strategic narrative)
+
+`docs/MAAS_MANIFESTO.md` — analyzes how Mneme already IS the "Decentralized Model-as-a-Service" the user described in their prior message. Three redefinitions:
+
+1. **Infrastructure IS the Model** (INFRA AS AI's gossip protocol)
+2. **Myself as a Service** (REPLICA's non-LLM oracle)
+3. **Model Alignment as a Service** (PROJECT SOUL's HMAC-signed values gate)
+
+Plus concrete v2.16-v2.19 roadmap to fully realise the MaaS narrative:
+- v2.16 **MNEME PERSONA** — package REPLICA as a callable service; teammates subscribe to your judgment
+- v2.17 **MNEME LIVING MODEL** — promote INFRA AS AI to a real distributed Living Model with anti-entropy sync + causal inference + federated query
+- v2.18 **MNEME OBELISK** — federate BOUNTY into the W3C-style AI Trust Graph
+- v2.19 **MNEME AURELIAN PUBLIC AUDIT** — `npx mneme audit <package>` ranks any open-source AI tool
+
+### 🌍 Thai launch artifacts
+
+`docs/LAUNCH_HN_POST_TH.md` — full Thai versions of:
+- Show HN body (with TH cultural framing)
+- 8-tweet X thread in Thai
+- Blognone / Pantip / Medium TH variant
+- LinkedIn TH post
+- Distribution channel list (Pantip / Blognone / Facebook tech communities / Reddit r/Thailand / Bilibili)
+- Tone tips for Thai writers
+
+### Tests
+
+- 12 BUG PROPHET tests still pass after threshold tune
+- 9 whats_new tests pass
+- 2 AURELIAN audit tests for BUG PROPHET pass
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** MAAS_MANIFESTO doesn't add code; it adds *meaning* — naming what Mneme has been the whole time.
+- 🧠 **Wiser, not patched:** localStorage bug fixed at the source (key removed, hash route used). Header consolidation is purely visual; underlying ViewMode unchanged.
+- 🛠 **Self-fix root cause:** stale localStorage was a real bug from v2.14's "Launch dashboard" preference write — fixed at the source by removing the write.
+- 🤝 **Co-working:** mobile polish doesn't break desktop; threshold tune doesn't break tests; consolidated header keeps every existing view reachable (just grouped).
+- 📚 **Always studying:** principle captured — *"the same code can be sold as 'an MCP memory layer' or as 'the Decentralized MaaS for AI safety'. The technical surface is identical; the second framing wins because it tells the user what kind of company Mneme is."*
+
+---
+
 ## v2.15.1 — 2026-05-15 — 🔮 BUG PROPHET (5th hypercar) + AI-agent install mandate + landing-page TH/EN + Scrubber demo fix
 
 The 5th HYPERCAR module that completes the pentad — predicts regression risk BEFORE shipping by fusing every Mneme corpus. Plus several UX fixes the user explicitly requested.

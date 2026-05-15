@@ -649,7 +649,7 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
       <section style={S.sec}>
         <h2 style={S.h2}>{t("install_h2")}</h2>
         <div style={S.installSteps}>
-          <div style={S.installStep}>
+          <div style={S.installStep} className="mneme-step">
             <div style={S.stepNum}>1</div>
             <div>
               <div style={S.stepTitle}>{t("install_s1_title")}</div>
@@ -657,7 +657,7 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
               <div style={S.stepNote}>{t("install_s1_note")}</div>
             </div>
           </div>
-          <div style={S.installStep}>
+          <div style={S.installStep} className="mneme-step">
             <div style={S.stepNum}>2</div>
             <div>
               <div style={S.stepTitle}>{t("install_s2_title")}</div>
@@ -665,7 +665,7 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
               <div style={S.stepNote}>{t("install_s2_note")}</div>
             </div>
           </div>
-          <div style={S.installStep}>
+          <div style={S.installStep} className="mneme-step">
             <div style={S.stepNum}>3</div>
             <div>
               <div style={S.stepTitle}>{t("install_s3_title")}</div>
@@ -756,7 +756,7 @@ const S = {
   cosmicLive: { marginTop: 16, color: "#2ea043", fontSize: "0.9em" } as React.CSSProperties,
 
   installSteps: { display: "flex", flexDirection: "column" as const, gap: 18, marginTop: 20 } as React.CSSProperties,
-  installStep: { display: "flex", gap: 18, background: "#15151f", border: "1px solid #2a2a3a", borderRadius: 12, padding: 18 } as React.CSSProperties,
+  installStep: { display: "flex", gap: 18, background: "#15151f", border: "1px solid #2a2a3a", borderRadius: 12, padding: 18 } as React.CSSProperties /* className="mneme-step" — see INLINE_CSS for mobile stacking */,
   stepNum: { background: "#f38020", color: "#0b0b14", width: 32, height: 32, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, flexShrink: 0 } as React.CSSProperties,
   stepTitle: { fontWeight: 600, marginBottom: 8 } as React.CSSProperties,
   pre: { background: "#0e0e18", padding: "10px 14px", borderRadius: 6, color: "#79c0ff", fontFamily: "ui-monospace, SFMono-Regular, monospace", fontSize: "0.88em", overflowX: "auto" as const, margin: 0 } as React.CSSProperties,
@@ -768,11 +768,38 @@ const S = {
 };
 
 const INLINE_CSS = `
-  @media (max-width: 600px) {
-    .mneme-banner { flex-direction: column; align-items: flex-start; }
-  }
+  /* v2.15.2 — full mobile polish */
   body { margin: 0; }
   pre, code { font-family: ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, monospace; }
   a:hover { text-decoration: underline; }
   button:hover { opacity: 0.92; }
+
+  /* Banner: stack on mobile */
+  @media (max-width: 720px) {
+    .mneme-banner { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 16px; font-size: 0.85em; }
+    .mneme-banner > div:last-child { align-self: flex-end; }
+  }
+
+  /* Hero scales down */
+  @media (max-width: 600px) {
+    h1 { font-size: 1.8rem !important; }
+    h2 { font-size: 1.4em !important; }
+    section { padding: 40px 16px !important; }
+  }
+
+  /* Repo form: stack on mobile so input gets full width */
+  @media (max-width: 480px) {
+    input { font-size: 16px !important; /* iOS prevents zoom-on-focus when >= 16px */ }
+    pre { font-size: 0.78em !important; padding: 10px !important; word-break: break-all; }
+    .mneme-step { flex-direction: column; gap: 10px !important; }
+  }
+
+  /* Touch targets: min 44x44 per Apple HIG */
+  button, a { min-height: 36px; }
+  @media (pointer: coarse) {
+    button, a[href] { min-height: 44px; min-width: 44px; }
+  }
+
+  /* Smooth scroll between sections */
+  html { scroll-behavior: smooth; }
 `;
