@@ -30,10 +30,10 @@ type Lang = "en" | "th";
 const I18N: Record<Lang, Record<string, string>> = {
   en: {
     brand: "μνήμη · Mneme",
-    headline_pre: "The memory layer that ",
-    headline_em: "doesn't lie",
+    headline_pre: "Stop your AI from ",
+    headline_em: "shipping the same bug twice",
     headline_post: ".",
-    sub: "Local-first MCP server. Cross-vendor brain transfer. Anti-hallucination at runtime. 184+ tools your AI agent inherits. Free + open source.",
+    sub: "Mneme is the memory + accountability layer for AI agents. It remembers your project's scars, predicts regressions BEFORE deploy, and refuses to let AI silently undo your hard-won wisdom. Local-first. Free. Open source.",
     cta_npm: "npm install",
     cta_github: "GitHub →",
     cta_demo: "Try interactive demo →",
@@ -87,10 +87,10 @@ const I18N: Record<Lang, Record<string, string>> = {
   },
   th: {
     brand: "μνήμη · Mneme",
-    headline_pre: "ชั้นความจำที่ ",
-    headline_em: "ไม่โกหก",
+    headline_pre: "หยุด AI จาก",
+    headline_em: "การสร้างบั๊กตัวเดิมซ้ำ",
     headline_post: ".",
-    sub: "MCP server แบบ local-first. ส่งสมองข้าม vendor ได้. ตรวจ AI พูดเท็จขณะใช้งาน. AI agent ของคุณได้ tools 184+ ทันที. ฟรี + open source.",
+    sub: "Mneme คือชั้นความจำ + accountability ให้ AI agent. มันจำ \"บาดแผล\" ของ project, ทำนาย regression ก่อน deploy, และไม่ปล่อยให้ AI ลบความฉลาดที่ทีมหามาได้. รันบนเครื่อง. ฟรี. Open source.",
     cta_npm: "ติดตั้ง npm",
     cta_github: "GitHub →",
     cta_demo: "ลอง demo →",
@@ -600,6 +600,57 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
           </div>
         </div>
       </header>
+
+      {/* WHAT IS MNEME — answer the #1 visitor question in 30 seconds */}
+      <section style={S.sec}>
+        <h2 style={S.h2}>{lang === "th" ? "Mneme คืออะไร? (อ่าน 30 วินาที)" : "What is Mneme? (30-second read)"}</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 20 }}>
+          <div style={{ background: "#1a1015", border: "1px solid #4a1f1f", borderRadius: 12, padding: 20 }}>
+            <div style={{ color: "#ff7b72", fontWeight: 700, marginBottom: 8 }}>{lang === "th" ? "❌ ไม่มี Mneme" : "❌ Without Mneme"}</div>
+            <div style={{ fontSize: "0.95em", color: "#e6e6e6", marginBottom: 8 }}>
+              {lang === "th"
+                ? "AI ของคุณ ship bug ที่ทีมเคยจ่าย $40K แก้ไป 18 เดือนก่อน. AI ไม่รู้ว่า project มี \"บาดแผล\". AI กล้า claim ว่าไฟล์มี อยู่จริง ทั้งที่ไม่มี. คุณเสียเวลา debug หลายชั่วโมง."
+                : "Your AI ships a bug your team paid $40K to fix 18 months ago. It doesn't know the project's scars. It hallucinates files that don't exist. You spend hours debugging."}
+            </div>
+            <div style={{ color: "#9ba1a6", fontSize: "0.85em" }}>
+              {lang === "th" ? "= ปัญหาคลาสสิก: AI ไม่มีความจำต่อเนื่อง" : "= Classic problem: AI has no persistent memory"}
+            </div>
+          </div>
+          <div style={{ background: "#0e1f15", border: "1px solid #1f4a2a", borderRadius: 12, padding: 20 }}>
+            <div style={{ color: "#3fb950", fontWeight: 700, marginBottom: 8 }}>{lang === "th" ? "✅ มี Mneme" : "✅ With Mneme"}</div>
+            <div style={{ fontSize: "0.95em", color: "#e6e6e6", marginBottom: 8 }}>
+              {lang === "th"
+                ? "AI ขอเพิ่ม lodash → Mneme เห็น scar \"no-lodash since 2024-11-12\" → BLOCK. AI claim ว่ามีไฟล์ → Mneme verify ทันที → catch hallucination. AI propose deploy วันศุกร์ → BUG PROPHET ทำนาย regression risk 87% → เตือน."
+                : "AI proposes adding lodash → Mneme sees scar \"no-lodash since 2024-11-12\" → BLOCK. AI claims a file exists → Mneme verifies → catches hallucination. AI suggests Friday deploy → BUG PROPHET predicts 87% regression risk → warns."}
+            </div>
+            <div style={{ color: "#9ba1a6", fontSize: "0.85em" }}>
+              {lang === "th" ? "= AI ของคุณกลายเป็น AI ที่จำได้ + ตรวจสอบได้" : "= Your AI gains memory + accountability"}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 24, padding: 18, background: "#0e0e18", border: "1px solid #2a2a3a", borderRadius: 8 }}>
+          <div style={{ fontWeight: 700, marginBottom: 10 }}>{lang === "th" ? "ใครควรใช้ Mneme?" : "Who is Mneme for?"}</div>
+          <ul style={{ margin: 0, paddingLeft: 20, color: "#b8bcc4", fontSize: "0.92em", lineHeight: 1.8 }}>
+            <li>{lang === "th"
+              ? "นักพัฒนา (solo / ทีม) ที่ใช้ Claude Code / Cursor / Codex / Gemini / Copilot — เพิ่มชั้นความจำ + ความปลอดภัย"
+              : "Developers using Claude Code / Cursor / Codex / Gemini / Copilot — adds memory + safety on top"}</li>
+            <li>{lang === "th"
+              ? "Vibe coders (Bolt / Lovable / Replit) ที่ไม่เคยเขียนโค้ด — VIBE mode ดูแลให้คุณไม่ ship secrets / bug"
+              : "Vibe coders (Bolt / Lovable / Replit) — VIBE mode prevents shipping secrets / bugs"}</li>
+            <li>{lang === "th"
+              ? "CTO / CISO ที่กลัว AI hallucinate ในงานสำคัญ — KILL SWITCH + DLP + court-admissible audit"
+              : "CTOs / CISOs worried about AI hallucinations in production — KILL SWITCH + DLP + court-admissible audit"}</li>
+            <li>{lang === "th"
+              ? "ทุกคนที่อยากเปลี่ยน vendor AI ได้อิสระ — ไม่ติด lock-in กับใคร"
+              : "Anyone who wants vendor freedom — never locked in with one AI vendor"}</li>
+          </ul>
+        </div>
+        <div style={{ marginTop: 16, color: "#79c0ff", fontSize: "0.92em", textAlign: "center" as const }}>
+          {lang === "th"
+            ? "👇 ลองเลย: วาง URL repo ของคุณข้างล่าง"
+            : "👇 Try it now: paste your repo URL below"}
+        </div>
+      </section>
 
       {/* Try with your repo — DYNAMIC */}
       <section style={S.sec}>

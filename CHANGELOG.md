@@ -1,3 +1,52 @@
+## v2.16.1 — 2026-05-15 — 🎯 POSITIONING FIX: "What is Mneme?" answered in 30 seconds (root cause of customer confusion)
+
+User reported visitors said "Mneme is cool but I don't know what it does." Root cause: hero led with "184 MCP tools" — a feature brag, not a problem statement. Fix at the source.
+
+### 🎯 Hero rewrite (PROBLEM → SOLUTION)
+
+`packages/web/src/components/ReadmePage.tsx`:
+- Old headline: *"The memory layer that doesn't lie"* — clever, but doesn't answer "what does it DO?"
+- New headline: **"Stop your AI from shipping the same bug twice."** — concrete outcome
+- New sub: explains memory + accountability + what it prevents in 2 sentences
+- TH translation matches: "หยุด AI จากการสร้างบั๊กตัวเดิมซ้ำ"
+
+### 🆕 "What is Mneme? (30-second read)" section above the repo input
+
+Two-card layout:
+- **❌ Without Mneme**: concrete pain (AI ships $40K bug, hallucinates files, debug for hours)
+- **✅ With Mneme**: concrete prevention (SOUL gates lodash, verifies file exists, BUG PROPHET predicts 87% risk)
+
+Plus a "Who is Mneme for?" list with 4 audiences (solo dev / vibe coder / CTO / multi-vendor user).
+
+### 📄 `docs/WHAT_IS_MNEME.md` — 1-page positioning doc
+
+Paste-anywhere strategic positioning:
+- 1-sentence pitch
+- 30-second pitch
+- Problem (1 paragraph)
+- Solution (1 paragraph)
+- Who Mneme is for (table)
+- Why Mneme exists (3 reasons)
+- What Mneme is NOT (5 anti-claims)
+- 6 audience-specific 1-liners (HN, VC, CTO, solo dev, vibe coder, skeptic)
+- Brutally honest version
+
+### Build
+
+- Web bundle 188KB (61KB gz) — +4KB for the new explainer section
+- TS build clean
+- All 195 MCP tools intact
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** the wildest move was *deleting* tooling brags from the hero. The product hasn't changed; the framing has. That's the correct fix.
+- 🧠 **Wiser, not patched:** root cause was hero positioning. Fixed at source. No new code modules; just the words and a new section.
+- 🛠 **Self-fix root cause:** customer confusion was traced to a specific UX failure (feature-list-as-pitch). Fix delivered in the same surface where the failure occurred.
+- 🤝 **Co-working:** all existing CTAs preserved; TH/EN both translated; demo button still purple in hero.
+- 📚 **Always studying:** principle captured — *"the moment a customer says 'this is cool but I don't know what it does', the answer is never to add features. The answer is to delete the feature list and write the outcome."*
+
+---
+
 ## v2.16.0 — 2026-05-15 — 💥 REVOLUTIONARY PENTAD: PERSONA + ANTI-COLLUSION + ALPHA + PUBLIC AUDIT + LIVING MODEL + OBELISK
 
 The MaaS manifesto turns into code. Six modules realize the "Decentralized Model-as-a-Service" thesis from v2.15.2's `MAAS_MANIFESTO.md`. Every module HMAC-signed; every audit AURELIAN SHIP. Plus a critical UX bug fix: GitLab/Bitbucket/Codeberg URLs now work in the landing-page repo analyzer (was GitHub-only).
