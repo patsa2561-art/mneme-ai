@@ -327,6 +327,13 @@ export * as bestEffortMod from "./util/best_effort.js";
 // + dpaste.com cross-WiFi fallback. Returns all paths inline so the AI
 // agent can render them in chat — no file system access needed.
 export * as beacon from "./beacon/index.js";
+// v2.10.0 -- NEXUS-LOCK: self-enforcing soul prompt v2 (VERSION-LOCKED
+// CONTEXT replaces stale Context block; 4-rule contract: status emoji
+// first / version claims gated / mandatory HOMUNCULUS RETURN footer /
+// no improvisation on state). Plus STARGATE public-paste publisher
+// for fetch-capable AIs and ObedienceLedger that scores per-vendor
+// compliance via Wilson LB.
+export * as nexusLock from "./nexus_lock/index.js";
 // v1.37.0 -- AUTONOMOUS BUG TRIAGE. Reads gap-scan + supernova
 // telemetry and produces GitHub-issue-shaped proposals (title + body +
 // labels + fissile-mass severity). Operation Automation bet #4 from

@@ -57,6 +57,7 @@ import { METRON_TOOLS } from "./_metron_tools.js";
 import { V28_TOOLS } from "./_v28_tools.js";
 import { CLONE_TO_TOOLS } from "./_clone_to_tool.js";
 import { BEACON_TOOLS } from "./_beacon_tool.js";
+import { NEXUS_LOCK_TOOLS } from "./_nexus_lock_tools.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -118,6 +119,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V28_TOOLS,
     ...CLONE_TO_TOOLS,
     ...BEACON_TOOLS,
+    ...NEXUS_LOCK_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
