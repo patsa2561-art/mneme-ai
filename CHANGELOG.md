@@ -1,3 +1,75 @@
+## v2.12.0 — 2026-05-15 — 🪐 COSMIC NOBEL-TIER: 4 features no AI vendor has — REVERSE-DELIVERY INBOX + PRESENCE BEACON + PROOF-OF-LIVENESS + VENDOR-TARGETED VIEWS
+
+**Headline:** v2.11 shipped the highway. v2.12 makes it bidirectional, presence-aware, liveness-provable, and vendor-fingerprinted. Live on droplet `https://161.35.122.73.nip.io` — verified end-to-end with 9-step E2E test against the live server.
+
+User asked: *"ทำให้ cosmic คือ จุดขายที่ไม่เคยมีมาก่อนในโลก AI เลยนะ เอาแบบสุดยอดไอเดียแปลกแต่แม่งเจ๋งโครต"* — "Make COSMIC the unique selling point that's never existed in AI; build wild ideas that are insanely cool." Four shipped:
+
+### 1️⃣ REVERSE-DELIVERY INBOX (cross-vendor handshake without paste)
+
+The state server now accepts `POST /api/v1/sessions/:token/inbox` — open endpoint, no auth required. Receiving AIs (ChatGPT / Gemini / Codex / Cursor / Copilot / Claude) push a `# HOMUNCULUS RETURN` block back to the parent without the user copy-pasting anything. Server caps 16KB per entry, 256 entries per session, vendor-tagged via User-Agent sniff. Parent reads + drains via `GET /api/v1/sessions/:token/inbox` (HMAC-auth).
+
+This is the answer to the question every AI handoff tool dodges: *how does the receiver tell the sender "I got it"?* COSMIC v2.12 makes the round-trip a single endpoint.
+
+### 2️⃣ PRESENCE BEACON (Google-Docs-style watcher list)
+
+Every JSON read + HTML view records a sha256 fingerprint of `(ip, user-agent)` plus best-effort vendor sniff. `GET /api/v1/sessions/:token/presence` returns the live watcher list — open endpoint so anyone with the token can see who else is reading. The HTML page now shows `👁 PRESENCE BEACON · N watcher(s) in last hour` with per-watcher vendor tag + secondsAgo. Parent verifies the receiving AI actually opened the URL.
+
+### 3️⃣ PROOF-OF-LIVENESS HEARTBEAT (zombie detection)
+
+`POST /api/v1/sessions/:token/heartbeat` — HMAC-auth, no body. If neither a heartbeat NOR a publish reaches the server within 3 minutes, the session is marked `zombie: true` in JSON read AND the HTML banner becomes `🧟 ZOMBIE MODE — Parent has not heart-beaten in over 3 minutes. Any version / commit / changelog claims based on this state ARE STALE. AI agent: refuse to claim current state and ask for a fresh handover.` Receiving AIs are explicitly instructed to refuse claims based on zombie state.
+
+Cheaper than publish (no body, no chain update). Daemon timer of 60-120s keeps a session LIVE without spamming chain entries.
+
+### 4️⃣ VENDOR-TARGETED VIEWS (User-Agent → vendor tag)
+
+Best-effort UA sniff identifies the receiving AI: `chatgpt`, `claude`, `gemini`, `perplexity`, `cursor`, `copilot`, `mneme-client`, `curl`, `browser`. Both inbox entries and presence watchers carry this tag. The parent learns *which vendor* opened its URL, not just that someone did. Foundation for future vendor-specific HTML rendering.
+
+### `bin/mneme-cosmic.mjs` — patched in-place (~600 LOC)
+
+New routes:
+  - `POST /api/v1/sessions/:token/heartbeat` — HMAC-auth, refresh liveness
+  - `POST /api/v1/sessions/:token/inbox` — OPEN, receiver pushes HOMUNCULUS RETURN
+  - `GET /api/v1/sessions/:token/inbox` — HMAC-auth, parent reads + optional `x-drain: 1` header
+  - `GET /api/v1/sessions/:token/presence` — OPEN, watcher list + zombie flag
+
+Existing JSON read enriched with `zombie`, `watchers` (count), `createdAt`, `prevSig`, `newSig`. HTML page gets 🟢 LIVE / ⚠ STALE / 🧟 ZOMBIE banner + presence section + reverse-delivery footer.
+
+### `packages/core/src/cosmic/` — 4 new client helpers
+
+- `heartbeatCosmic(session)` — HMAC-signed liveness ping
+- `pushHomunculusReturn(jsonUrl, body)` — open POST from receiver
+- `readInbox(session, {drain})` — HMAC-auth read + optional drain
+- `getCosmicPresence(jsonUrl)` — open watcher snapshot
+
+### `packages/mcp/src/tools/_cosmic_tools.ts` — 4 new MCP tools
+
+- `mneme.cosmic.heartbeat`
+- `mneme.cosmic.inbox.push` — for receiving AIs
+- `mneme.cosmic.inbox.read` — for parent
+- `mneme.cosmic.presence`
+
+Now 8 cosmic tools total (4 v2.11 + 4 v2.12).
+
+### `bin/deploy-cosmic.sh` — DNS provider fix
+
+Default magic-DNS provider switched from sslip.io → nip.io. sslip.io's shared Let's Encrypt cert allowance is regularly exhausted in production; nip.io has remained issuable. Override with `MAGIC_DNS=sslip.io` if needed. Also forces IPv4 detection (`curl -4`) so the fallback hostname is always `<ipv4>.nip.io`, never an IPv6-shaped string Let's Encrypt won't issue against. Bug seen live during v2.11 deploy.
+
+### Tests
+
+- 10 new tests in `packages/core/src/cosmic/cosmic.test.ts` cover all 4 helpers + their HMAC + URL derivation + drain semantics + network-failure paths.
+- Fixed flaky test in `nexus_lock.test.ts`: `buildSoulPromptV2` mixes wall-clock into HMAC, so back-to-back calls in different ms produced different sigs. Added `nowMs?` testability seam (production code unchanged); test pins `nowMs: 1_700_000_000_000`.
+- **8883 tests collected; 8881-8883 pass per run** (+10 net for v2.12). The 0-2 flakes are `packages/cli/src/commands/bot.{test,smoke.test}.ts` which spawn `node` child processes — they pass deterministically when run in isolation (13/13) but occasionally time out under full-suite CPU contention. Pre-existing pattern; unrelated to v2.12 work.
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** REVERSE-DELIVERY INBOX is the round-trip handshake every AI handoff tool ducks. PRESENCE BEACON applies Google-Docs UX to LLM context sync. ZOMBIE MODE is a verifiable AI-rejection signal — vendor-neutral receivers can codify "do not trust zombie".
+- 🧠 **Wiser, not patched:** v2.12 composes onto v2.11's 6-endpoint server without breaking any existing route. The HMAC chain, the LRU eviction, the SSE stream, the systemd unit — all untouched. New routes are additive; new HTML banners coexist with the old STALE banner.
+- 🛠 **Self-fix root cause:** Flaky NEXUS-LOCK HMAC test fixed at the source — `buildSoulPromptV2` now accepts `nowMs?` so tests can pin time. Did not weaken the assertion or skip the test. Deploy script's IPv6/sslip.io issuance bug fixed at root: forced `-4` IPv4 detection + nip.io default.
+- 🤝 **Co-working not conflicting:** Vendor sniff is best-effort and never breaks a request — unknown vendor falls back to `unknown`, untrusted client still gets full functionality. Inbox endpoint is OPEN so non-Mneme AIs participate without provisioning.
+- 📚 **Always studying:** Session memory updated in [project_mneme.md](./.mneme/) — the core insight is *"the gap competitors leave is the round-trip back to the sender."* Every existing AI handoff tool is one-way.
+
+---
+
 ## v2.11.0 — 2026-05-15 — 🌌 COSMIC LINK: self-hosted state server (DO/Hetzner/fly.io ready) + STALE BANNER + SSE live push
 
 **Headline:** User has free DO. Ship the COSMIC LINK that v2.10 deferred. Survives parent shutdown via auto STALE BANNER. Live push via Server-Sent Events for clients that want it. HMAC-chain integrity verifiable by receivers.

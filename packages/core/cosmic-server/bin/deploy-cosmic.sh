@@ -35,21 +35,26 @@ die() { printf "\033[1;31m[cosmic-deploy FATAL]\033[0m %s\n" "$*" >&2; exit 1; }
 [[ "$EUID" -eq 0 ]] || die "run as root (sudo bash deploy-cosmic.sh)"
 command -v apt-get >/dev/null || die "this script needs apt-get (Ubuntu/Debian)"
 
-# 1. Detect public IP (used for sslip.io fallback)
-say "detecting public IP..."
-PUBLIC_IP="$(curl -fsSL https://ifconfig.me 2>/dev/null || curl -fsSL https://icanhazip.com 2>/dev/null || true)"
-[[ -n "$PUBLIC_IP" ]] || die "could not detect public IP"
-say "public IP: $PUBLIC_IP"
+# 1. Detect public IPv4 (used for nip.io fallback). Force IPv4 — sslip.io / nip.io
+#    won't issue Let's Encrypt certs against IPv6-shaped hostnames in our wildcard.
+say "detecting public IPv4..."
+PUBLIC_IP="$(curl -fsSL -4 https://ifconfig.me 2>/dev/null || curl -fsSL -4 https://icanhazip.com 2>/dev/null || curl -fsSL -4 https://api.ipify.org 2>/dev/null || true)"
+[[ "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "could not detect public IPv4 (got: ${PUBLIC_IP:-<empty>})"
+say "public IPv4: $PUBLIC_IP"
 
-# 2. Decide hostname
+# 2. Decide hostname.
+#    Default DNS provider is nip.io (NOT sslip.io — sslip.io's shared cert allowance
+#    on Let's Encrypt is regularly exhausted, so issuance fails). Override with
+#    MAGIC_DNS=sslip.io if you specifically need sslip.io behavior.
+MAGIC_DNS="${MAGIC_DNS:-nip.io}"
 if [[ "$TUNNEL" == "1" ]]; then
   HOSTNAME="(tunnel — assigned by cloudflared)"
 elif [[ -n "$DOMAIN" ]]; then
   HOSTNAME="$DOMAIN"
   say "using your domain: $HOSTNAME"
 else
-  HOSTNAME="$(echo "$PUBLIC_IP" | tr '.' '-').sslip.io"
-  say "no DOMAIN provided — using sslip.io magic DNS: $HOSTNAME"
+  HOSTNAME="$PUBLIC_IP.$MAGIC_DNS"
+  say "no DOMAIN provided — using magic DNS: $HOSTNAME"
 fi
 
 # 3. Install Node 22 (idempotent)

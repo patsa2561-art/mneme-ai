@@ -134,9 +134,137 @@ export const cosmicRevokeTool: MnemeTool = {
   },
 };
 
+// ====================================================================
+// v2.12.0 NOBEL-tier tools — proof-of-liveness, reverse-delivery, presence.
+// ====================================================================
+
+export const cosmicHeartbeatTool: MnemeTool = {
+  name: "mneme.cosmic.heartbeat",
+  category: "meta",
+  description:
+    "COSMIC v2.12 -- send a proof-of-liveness ping (HMAC-auth) so receivers know the parent is alive. If the server has not seen a heartbeat OR a publish within ~3 minutes, the session is marked ZOMBIE in JSON read + the HTML banner shows 🧟 ZOMBIE MODE. Receiving AIs are instructed to refuse claims based on zombie state.",
+  whenToUse: "On a daemon timer (every 60-120s) for any session you want to keep LIVE without spamming publishes. Cheaper than publish (no body, no chain update).",
+  triggers: ["heartbeat cosmic", "keep cosmic alive"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      session: { type: "object", description: "{ token, secret, adminSecretHash, serverUrl } from mneme.cosmic.mint" },
+    },
+    required: ["session"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Keep this cosmic session live", args: { session: {} }, expectedOutput: "{ ok, ts, zombie }" }],
+  pitfalls: [
+    "Heartbeat alone does NOT update state — receivers still see the last-published snapshot.",
+    "Skip heartbeating if you publish frequently (< 3 min apart); publishes refresh the liveness clock too.",
+  ],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const session = args["session"] as Parameters<typeof core.cosmic.heartbeatCosmic>[0];
+    const r = await core.cosmic.heartbeatCosmic(session);
+    return {
+      data: r,
+      wisdom: r.ok ? `COSMIC heartbeat · ts=${r.ts}` : `COSMIC heartbeat FAILED · ${r.error}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
+export const cosmicInboxPushTool: MnemeTool = {
+  name: "mneme.cosmic.inbox.push",
+  category: "meta",
+  description:
+    "COSMIC v2.12 -- receiving AI POSTs a HOMUNCULUS RETURN block back to the parent's inbox. OPEN endpoint (no auth) so any vendor (ChatGPT / Gemini / Codex / Cursor) can participate. Server caps at 16KB per entry, 256 entries per session, vendor-tagged via User-Agent sniff.",
+  whenToUse: "When you (the receiving AI) have read state from a COSMIC URL and want to ack / report back / push your own findings to the parent without the user having to copy-paste.",
+  triggers: ["push to cosmic inbox", "homunculus return"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      jsonUrl: { type: "string", description: "The cosmic JSON URL (parent gave you this in the soul prompt)" },
+      body: { type: "string", description: "Free-form text — typically '# HOMUNCULUS RETURN\\nvendor: <you>\\necho: <ack>'" },
+    },
+    required: ["jsonUrl", "body"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Tell parent I got the soul prompt", args: { jsonUrl: "https://x/sessions/abc.json", body: "# HOMUNCULUS RETURN\nvendor: chatgpt\necho: ack" }, expectedOutput: "{ ok, count }" }],
+  pitfalls: ["Open endpoint — anyone with the token can push. Parent should sanity-check vendor + content before trusting."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.cosmic.pushHomunculusReturn(String(args["jsonUrl"] ?? ""), String(args["body"] ?? ""));
+    return {
+      data: r,
+      wisdom: r.ok ? `COSMIC inbox push · count=${r.count}` : `COSMIC inbox push FAILED · ${r.error}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
+export const cosmicInboxReadTool: MnemeTool = {
+  name: "mneme.cosmic.inbox.read",
+  category: "meta",
+  description:
+    "COSMIC v2.12 -- parent reads + optionally drains its inbox (HMAC-auth). Returns vendor-tagged entries that receivers pushed back. Use drain=true after processing so the inbox stays bounded.",
+  whenToUse: "Parent daemon polls every minute to learn which vendors actually opened / acked the soul prompt + what they reported.",
+  triggers: ["read cosmic inbox", "drain cosmic inbox"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      session: { type: "object", description: "{ token, secret, adminSecretHash, serverUrl }" },
+      drain: { type: "boolean", description: "If true, server clears the inbox after this read." },
+    },
+    required: ["session"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "What did the receivers say?", args: { session: {}, drain: true }, expectedOutput: "{ ok, items, count, drained }" }],
+  pitfalls: ["If drain=false the inbox grows up to 256 entries before it starts evicting oldest. Drain after processing."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const session = args["session"] as Parameters<typeof core.cosmic.readInbox>[0];
+    const drain = !!args["drain"];
+    const r = await core.cosmic.readInbox(session, { drain });
+    return {
+      data: r,
+      wisdom: r.ok ? `COSMIC inbox · items=${r.count} drained=${r.drained}` : `COSMIC inbox read FAILED · ${r.error}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
+export const cosmicPresenceTool: MnemeTool = {
+  name: "mneme.cosmic.presence",
+  category: "meta",
+  description:
+    "COSMIC v2.12 -- Google-Docs-style watcher list. Open endpoint — anyone with the token can see who else is reading + what vendor they appear to be (sniffed from User-Agent). Includes zombie flag so the parent knows if its own publishes have lapsed.",
+  whenToUse: "Parent verifies the receiving AI actually opened the URL; receivers see they're not alone. UI gold for cross-vendor handoff dashboards.",
+  triggers: ["who's reading cosmic", "cosmic presence", "cosmic watchers"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      jsonUrl: { type: "string", description: "Cosmic JSON URL — presence URL is derived from it." },
+    },
+    required: ["jsonUrl"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Who opened my COSMIC URL?", args: { jsonUrl: "https://x/sessions/abc.json" }, expectedOutput: "{ ok, watchers, zombie, publishCount }" }],
+  pitfalls: ["Watchers are anonymous fingerprints (sha256 of ip+ua, 12 chars) — not user identity. Only AI-vendor sniff is best-effort."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.cosmic.getCosmicPresence(String(args["jsonUrl"] ?? ""));
+    return {
+      data: r,
+      wisdom: r.ok ? `COSMIC presence · watchers=${r.watchers?.length ?? 0} zombie=${r.zombie}` : `COSMIC presence FAILED · ${r.error}`,
+      confidence: { level: r.ok ? "high" : "low" },
+    };
+  },
+};
+
 export const COSMIC_TOOLS: MnemeTool[] = [
   cosmicMintTool,
   cosmicPublishTool,
   cosmicReadTool,
   cosmicRevokeTool,
+  cosmicHeartbeatTool,
+  cosmicInboxPushTool,
+  cosmicInboxReadTool,
+  cosmicPresenceTool,
 ];

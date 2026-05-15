@@ -37,14 +37,16 @@ describe("v2.10 NEXUS-LOCK · soul prompt v2", () => {
   });
 
   it("HMAC signature is deterministic for same input + secret", () => {
-    const a = buildSoulPromptV2(baseInput);
-    const b = buildSoulPromptV2(baseInput);
+    const pinned = { ...baseInput, nowMs: 1_700_000_000_000 };
+    const a = buildSoulPromptV2(pinned);
+    const b = buildSoulPromptV2(pinned);
     expect(a.sig).toBe(b.sig);
   });
 
   it("HMAC signature changes when version changes (catches tampering)", () => {
-    const a = buildSoulPromptV2(baseInput);
-    const b = buildSoulPromptV2({ ...baseInput, currentMnemeVersion: "9.9.9" });
+    const pinned = { ...baseInput, nowMs: 1_700_000_000_000 };
+    const a = buildSoulPromptV2(pinned);
+    const b = buildSoulPromptV2({ ...pinned, currentMnemeVersion: "9.9.9" });
     expect(a.sig).not.toBe(b.sig);
   });
 

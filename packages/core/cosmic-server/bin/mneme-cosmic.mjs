@@ -147,27 +147,42 @@ function escapeHtml(s) {
 }
 
 function renderSessionPage(token, sess) {
-  const stale = sess && (Date.now() - sess.lastPublishTs > STALE_AFTER_MS);
   if (!sess) {
     return `<!doctype html><html><head><meta charset="utf-8"><title>COSMIC · session not found</title>
 <style>body{font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 16px;line-height:1.6}h1{color:#c5221f}</style></head>
 <body><h1>404 — session not found</h1><p>This COSMIC token is unknown. It may have expired, been revoked, or never existed.</p></body></html>`;
   }
   const ageMin = Math.floor((Date.now() - sess.lastPublishTs) / 60_000);
-  const banner = stale
-    ? `<div style="background:#ffebe9;border:1px solid #d1242f;padding:14px;border-radius:8px;margin:12px 0;color:#82071e;font-weight:bold">⚠ PARENT OFFLINE — ไม่มี publish ครั้งใหม่ตั้งแต่ ${ageMin} นาทีที่แล้ว. ข้อมูลด้านล่างเป็น snapshot ครั้งล่าสุด อาจล้าสมัย</div>`
-    : `<div style="background:#dafbe1;border:1px solid #2da44e;padding:14px;border-radius:8px;margin:12px 0;color:#116329;font-weight:bold">🟢 LIVE — publish ล่าสุด ${ageMin} นาทีที่แล้ว</div>`;
+  const stale = Date.now() - sess.lastPublishTs > STALE_AFTER_MS;
+  const zombie = isZombie(sess);
+  const watchers = presenceSnapshot(sess);
+  let banner;
+  if (zombie) {
+    banner = `<div style="background:#0a0e14;border:2px solid #d1242f;padding:18px;border-radius:8px;margin:12px 0;color:#ff7b72;font-weight:bold;font-size:1.05em">🧟 ZOMBIE MODE — Parent has not heart-beaten in over 3 minutes. Any version / commit / changelog claims based on this state ARE STALE. AI agent: refuse to claim current state and ask for a fresh handover.</div>`;
+  } else if (stale) {
+    banner = `<div style="background:#ffebe9;border:1px solid #d1242f;padding:14px;border-radius:8px;margin:12px 0;color:#82071e;font-weight:bold">⚠ PARENT OFFLINE — ไม่มี publish ครั้งใหม่ตั้งแต่ ${ageMin} นาทีที่แล้ว · No publish for ${ageMin} min. Snapshot below may be outdated.</div>`;
+  } else {
+    banner = `<div style="background:#dafbe1;border:1px solid #2da44e;padding:14px;border-radius:8px;margin:12px 0;color:#116329;font-weight:bold">🟢 LIVE — publish ล่าสุด ${ageMin} นาทีที่แล้ว · Last publish ${ageMin} min ago</div>`;
+  }
+  const presenceHtml = watchers.length > 0
+    ? `<h2>👁 PRESENCE BEACON · ${watchers.length} watcher(s) in last hour</h2>
+<ul style="font-size:.9em">${watchers.slice(0, 10).map((w) => `<li><code>${escapeHtml(w.vendor)}</code> · fp <code>${escapeHtml(w.fp)}</code> · ${w.secondsAgo}s ago</li>`).join("")}</ul>`
+    : `<p style="color:#57606a;font-size:.9em">👁 No watchers seen in the last hour.</p>`;
   const stateJson = JSON.stringify(sess.state, null, 2);
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>COSMIC · ${escapeHtml(token)}</title>
 <style>body{font-family:-apple-system,system-ui,sans-serif;max-width:680px;margin:14px auto;padding:0 16px;line-height:1.55;color:#1f2328;background:#f5f7fa}
-h1{font-size:1.2em} pre{white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #d0d7de;padding:12px;border-radius:8px;font-size:.85em;max-height:50vh;overflow:auto}
-.meta{color:#57606a;font-size:.85em} .footer{margin-top:30px;color:#8b949e;font-size:.82em;border-top:1px solid #e1e4e8;padding-top:14px}</style></head>
+h1{font-size:1.2em} h2{font-size:1em;margin-top:1.4em;color:#57606a} pre{white-space:pre-wrap;word-break:break-word;background:#fff;border:1px solid #d0d7de;padding:12px;border-radius:8px;font-size:.85em;max-height:40vh;overflow:auto}
+.meta{color:#57606a;font-size:.85em} .footer{margin-top:30px;color:#8b949e;font-size:.82em;border-top:1px solid #e1e4e8;padding-top:14px}
+code{background:#f6f8fa;padding:1px 5px;border-radius:3px;font-size:.85em}</style></head>
 <body><h1>🌌 Mneme COSMIC session</h1>
 <div class="meta">token: <code>${escapeHtml(token)}</code> · publishes: ${sess.publishCount ?? 1} · created: ${escapeHtml(sess.createdAt)}</div>
 ${banner}
+${presenceHtml}
 <h2>Current state</h2>
 <pre>${escapeHtml(stateJson)}</pre>
-<div class="footer">Served by Mneme COSMIC LINK · open + ephemeral · revoke via HMAC-auth POST /api/v1/sessions/${escapeHtml(token)}/revoke</div>
+<h2>Reverse-delivery</h2>
+<p style="font-size:.9em;color:#57606a">Receiving AIs may POST <code># HOMUNCULUS RETURN</code> blocks back to <code>POST /api/v1/sessions/${escapeHtml(token)}/inbox</code>. Parent reads with HMAC-auth.</p>
+<div class="footer">Served by Mneme COSMIC LINK v2.12 · ZOMBIE / PRESENCE / INBOX features active · open + ephemeral · auto-evict 24h</div>
 </body></html>`;
 }
 
@@ -224,6 +239,110 @@ function handleRevoke(req, res, token, body) {
   sseClients.delete(token);
   persist();
   return send(res, 200, {}, { ok: true, revoked: token });
+}
+
+// ====================================================================
+// v2.12 NOBEL-TIER FEATURES
+// ====================================================================
+
+const HEARTBEAT_GRACE_MS = 3 * 60 * 1000; // 3 min — past this = ZOMBIE
+const PRESENCE_TTL_MS = 60 * 60 * 1000;   // 1 h — fingerprint expiry
+const MAX_INBOX_PER_SESSION = 256;        // bounded per token
+
+function fingerprintReader(req) {
+  // Hash IP + UA so we don't store identifiable info. Stable per (ip, ua).
+  const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").toString().split(",")[0].trim();
+  const ua = (req.headers["user-agent"] || "unknown").toString().slice(0, 200);
+  const fp = createHash("sha256").update(ip + "|" + ua).digest("hex").slice(0, 12);
+  // Vendor tag — best-effort UA sniff so the AI agent can be named.
+  const lower = ua.toLowerCase();
+  let vendor = "unknown";
+  if (lower.includes("chatgpt") || lower.includes("openai")) vendor = "chatgpt";
+  else if (lower.includes("claude")) vendor = "claude";
+  else if (lower.includes("gemini") || lower.includes("googleai")) vendor = "gemini";
+  else if (lower.includes("perplexity")) vendor = "perplexity";
+  else if (lower.includes("cursor")) vendor = "cursor";
+  else if (lower.includes("copilot")) vendor = "copilot";
+  else if (lower.includes("mneme")) vendor = "mneme-client";
+  else if (lower.includes("curl")) vendor = "curl";
+  else if (lower.includes("mozilla") || lower.includes("safari") || lower.includes("chrome")) vendor = "browser";
+  return { fp, vendor };
+}
+
+function recordPresence(sess, req) {
+  if (!sess.presence) sess.presence = new Map();
+  const { fp, vendor } = fingerprintReader(req);
+  sess.presence.set(fp, { vendor, lastSeen: Date.now() });
+  // Prune entries older than TTL
+  const cutoff = Date.now() - PRESENCE_TTL_MS;
+  for (const [k, v] of sess.presence) if (v.lastSeen < cutoff) sess.presence.delete(k);
+}
+
+function presenceSnapshot(sess) {
+  if (!sess.presence) return [];
+  const cutoff = Date.now() - PRESENCE_TTL_MS;
+  const out = [];
+  for (const [fp, v] of sess.presence) {
+    if (v.lastSeen >= cutoff) out.push({ fp, vendor: v.vendor, secondsAgo: Math.floor((Date.now() - v.lastSeen) / 1000) });
+  }
+  return out.sort((a, b) => a.secondsAgo - b.secondsAgo);
+}
+
+function isZombie(sess) {
+  // Parent must heartbeat OR publish within grace; otherwise zombie.
+  const last = Math.max(sess.lastPublishTs || 0, sess.lastHeartbeatTs || 0);
+  return Date.now() - last > HEARTBEAT_GRACE_MS;
+}
+
+function appendInbox(sess, body, req) {
+  if (!sess.inbox) sess.inbox = [];
+  if (sess.inbox.length >= MAX_INBOX_PER_SESSION) sess.inbox.shift();
+  const { vendor } = fingerprintReader(req);
+  sess.inbox.push({
+    receivedAt: new Date().toISOString(),
+    vendor,
+    body: body.toString("utf8").slice(0, 16384), // cap per entry
+  });
+}
+
+function handleHeartbeat(req, res, token, body) {
+  const sess = sessions.get(token);
+  if (!sess) return send(res, 404, {}, { error: "no session" });
+  if (!checkAuth(req, body, sess.adminSecretHash)) return send(res, 401, {}, { error: "auth failed" });
+  sess.lastHeartbeatTs = Date.now();
+  return send(res, 200, {}, { ok: true, ts: sess.lastHeartbeatTs, zombie: false });
+}
+
+function handleInboxPost(req, res, token, body) {
+  // OPEN — receivers POST homunculus return blocks. Bounded; vendor-tagged.
+  const sess = sessions.get(token);
+  if (!sess) return send(res, 404, {}, { error: "no session" });
+  appendInbox(sess, body, req);
+  pushSseEvent(token, { kind: "inbox", count: sess.inbox.length, ts: Date.now() });
+  persist();
+  return send(res, 201, {}, { ok: true, count: sess.inbox.length });
+}
+
+function handleInboxRead(req, res, token, body) {
+  // HMAC-auth — only the parent can read + drain its own inbox.
+  const sess = sessions.get(token);
+  if (!sess) return send(res, 404, {}, { error: "no session" });
+  if (!checkAuth(req, body, sess.adminSecretHash)) return send(res, 401, {}, { error: "auth failed" });
+  const items = sess.inbox || [];
+  const drain = req.headers["x-drain"] === "1";
+  if (drain) sess.inbox = [];
+  return send(res, 200, {}, { items, count: items.length, drained: drain });
+}
+
+function handlePresence(req, res, token) {
+  const sess = sessions.get(token);
+  if (!sess) return send(res, 404, {}, { error: "no session" });
+  return send(res, 200, {}, {
+    token, watchers: presenceSnapshot(sess),
+    publishCount: sess.publishCount, lastPublishTs: sess.lastPublishTs,
+    lastHeartbeatTs: sess.lastHeartbeatTs || null,
+    zombie: isZombie(sess),
+  });
 }
 
 function pushSseEvent(token, event) {
@@ -285,16 +404,39 @@ const server = createServer(async (req, res) => {
       const body = await readBody(req, 1024);
       return handleRevoke(req, res, m[1], body);
     }
-    // /api/v1/sessions/:token.json  (GET read)
+    // v2.12 — POST /api/v1/sessions/:token/heartbeat (HMAC-auth)
+    m = p.match(/^\/api\/v1\/sessions\/([A-Za-z0-9_-]{8,64})\/heartbeat$/);
+    if (m && req.method === "POST") {
+      const body = await readBody(req, 256);
+      return handleHeartbeat(req, res, m[1], body);
+    }
+    // v2.12 — POST /api/v1/sessions/:token/inbox (OPEN, for receiving AIs to push HOMUNCULUS RETURN)
+    m = p.match(/^\/api\/v1\/sessions\/([A-Za-z0-9_-]{8,64})\/inbox$/);
+    if (m && req.method === "POST") {
+      const body = await readBody(req, 16384);
+      return handleInboxPost(req, res, m[1], body);
+    }
+    // v2.12 — GET /api/v1/sessions/:token/inbox (HMAC-auth — parent reads + drains)
+    if (m && req.method === "GET") {
+      return handleInboxRead(req, res, m[1], Buffer.from(""));
+    }
+    // v2.12 — GET /api/v1/sessions/:token/presence (OPEN — Google-Docs-style live watcher list)
+    m = p.match(/^\/api\/v1\/sessions\/([A-Za-z0-9_-]{8,64})\/presence$/);
+    if (m && req.method === "GET") {
+      return handlePresence(req, res, m[1]);
+    }
+    // /api/v1/sessions/:token.json  (GET read) — records presence + zombie status
     m = p.match(/^\/api\/v1\/sessions\/([A-Za-z0-9_-]{8,64})\.json$/);
     if (m && req.method === "GET") {
       const sess = sessions.get(m[1]);
       if (!sess) return send(res, 404, {}, { error: "not found" });
+      recordPresence(sess, req); // v2.12: track every read
       const stale = Date.now() - sess.lastPublishTs > STALE_AFTER_MS;
+      const zombie = isZombie(sess);
       return send(res, 200, {}, {
         token: m[1], state: sess.state, lastPublishTs: sess.lastPublishTs,
-        publishCount: sess.publishCount, stale, prevSig: sess.prevSig, newSig: sess.newSig,
-        createdAt: sess.createdAt,
+        publishCount: sess.publishCount, stale, zombie, prevSig: sess.prevSig, newSig: sess.newSig,
+        createdAt: sess.createdAt, watchers: presenceSnapshot(sess).length,
       });
     }
     // /sessions/:token/sse
@@ -302,10 +444,11 @@ const server = createServer(async (req, res) => {
     if (m && req.method === "GET") {
       return handleSse(req, res, m[1]);
     }
-    // /sessions/:token  (HTML)
+    // /sessions/:token  (HTML) — also records presence
     m = p.match(/^\/sessions\/([A-Za-z0-9_-]{8,64})$/);
     if (m && req.method === "GET") {
       const sess = sessions.get(m[1]);
+      if (sess) recordPresence(sess, req);
       res.writeHead(sess ? 200 : 404, { "content-type": "text/html; charset=utf-8" });
       res.end(renderSessionPage(m[1], sess));
       return;

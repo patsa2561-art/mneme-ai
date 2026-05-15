@@ -170,3 +170,119 @@ export function formatCosmicPulseLine(session: CosmicSession, lastResult?: Publi
   const tag = lastResult?.ok ? `count=${lastResult.count} sig=${lastResult.newSig?.slice(0, 8)}` : `idle`;
   return `COSMIC · ${session.token.slice(0, 8)} · ${tag} · ${session.publicUrl}`;
 }
+
+// ====================================================================
+// v2.12 NOBEL-tier helpers — proof-of-liveness, reverse-delivery, presence.
+// ====================================================================
+
+/** Send a heartbeat so receivers know the parent is still alive. If the
+ *  server has not seen a heartbeat OR a publish within ~3 minutes, the
+ *  session is marked ZOMBIE in JSON read + the HTML banner. Receivers
+ *  treat zombies as untrustworthy. */
+export async function heartbeatCosmic(
+  session: CosmicSession,
+  fetchOverride?: typeof fetch,
+): Promise<{ ok: boolean; ts?: number; zombie?: boolean; error?: string }> {
+  const fetchFn = fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  const path = `/api/v1/sessions/${session.token}/heartbeat`;
+  const body = "";
+  const headers: Record<string, string> = {
+    "authorization": `Bearer ${signBearer("POST", path, body, session.adminSecretHash)}`,
+  };
+  try {
+    const r = await fetchFn(`${session.serverUrl}${path}`, { method: "POST", headers, body });
+    const j = await r.json().catch(() => ({})) as { ts?: number; zombie?: boolean; error?: string };
+    if (!r.ok) return { ok: false, error: j.error ?? `HTTP ${r.status}` };
+    return { ok: true, ts: j.ts, zombie: j.zombie };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.slice(0, 200) };
+  }
+}
+
+export interface InboxEntry {
+  receivedAt: string;
+  vendor: string;
+  body: string;
+}
+
+/** Receivers (any AI) POST a free-form HOMUNCULUS RETURN block back to
+ *  the parent's inbox. Open endpoint — no auth — so any vendor can
+ *  participate. Server caps to 16KB / entry, 256 entries / session. */
+export async function pushHomunculusReturn(
+  jsonUrl: string,
+  body: string,
+  fetchOverride?: typeof fetch,
+): Promise<{ ok: boolean; count?: number; error?: string }> {
+  const fetchFn = fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  // jsonUrl is `${base}/api/v1/sessions/${token}.json` — derive inbox URL.
+  const inboxUrl = jsonUrl.replace(/\.json$/, "/inbox");
+  try {
+    const r = await fetchFn(inboxUrl, {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body,
+    });
+    const j = await r.json().catch(() => ({})) as { count?: number; error?: string };
+    if (!r.ok) return { ok: false, error: j.error ?? `HTTP ${r.status}` };
+    return { ok: true, count: j.count };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.slice(0, 200) };
+  }
+}
+
+/** Parent reads + optionally drains its inbox. HMAC-auth. */
+export async function readInbox(
+  session: CosmicSession,
+  opts: { drain?: boolean; fetchOverride?: typeof fetch } = {},
+): Promise<{ ok: boolean; items?: InboxEntry[]; count?: number; drained?: boolean; error?: string }> {
+  const fetchFn = opts.fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  const path = `/api/v1/sessions/${session.token}/inbox`;
+  const headers: Record<string, string> = {
+    "authorization": `Bearer ${signBearer("GET", path, "", session.adminSecretHash)}`,
+  };
+  if (opts.drain) headers["x-drain"] = "1";
+  try {
+    const r = await fetchFn(`${session.serverUrl}${path}`, { headers });
+    const j = await r.json().catch(() => ({})) as { items?: InboxEntry[]; count?: number; drained?: boolean; error?: string };
+    if (!r.ok) return { ok: false, error: j.error ?? `HTTP ${r.status}` };
+    return { ok: true, items: j.items, count: j.count, drained: j.drained };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.slice(0, 200) };
+  }
+}
+
+export interface PresenceWatcher { fp: string; vendor: string; secondsAgo: number }
+
+/** Open Google-Docs-style watcher list. Anyone with the token can see
+ *  who else is reading + what vendor they appear to be. Useful for the
+ *  parent AI to know if the receiver actually opened the URL. */
+export async function getCosmicPresence(
+  jsonUrl: string,
+  fetchOverride?: typeof fetch,
+): Promise<{
+  ok: boolean;
+  watchers?: PresenceWatcher[];
+  zombie?: boolean;
+  publishCount?: number;
+  lastPublishTs?: number;
+  lastHeartbeatTs?: number | null;
+  error?: string;
+}> {
+  const fetchFn = fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  const presenceUrl = jsonUrl.replace(/\.json$/, "/presence");
+  try {
+    const r = await fetchFn(presenceUrl);
+    const j = await r.json().catch(() => ({})) as {
+      watchers?: PresenceWatcher[]; zombie?: boolean; publishCount?: number;
+      lastPublishTs?: number; lastHeartbeatTs?: number | null; error?: string;
+    };
+    if (!r.ok) return { ok: false, error: j.error ?? `HTTP ${r.status}` };
+    return { ok: true, watchers: j.watchers, zombie: j.zombie, publishCount: j.publishCount, lastPublishTs: j.lastPublishTs, lastHeartbeatTs: j.lastHeartbeatTs };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.slice(0, 200) };
+  }
+}

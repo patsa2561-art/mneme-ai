@@ -71,6 +71,10 @@ export interface SoulPromptV2Input {
   secret?: string;
   /** Stale threshold in hours. Default 24. */
   staleAfterHours?: number;
+  /** Testability seam — pin the wall clock so HMAC is deterministic
+   *  across calls. Production callers should leave this undefined; tests
+   *  pass a fixed Date.now() so back-to-back invocations match. */
+  nowMs?: number;
 }
 
 export interface SoulPromptV2Output {
@@ -176,11 +180,13 @@ function buildContextNote(input: SoulPromptV2Input): string {
   ].join("\n");
 }
 
-/** Build the full soul prompt v2. Deterministic for the same input. */
+/** Build the full soul prompt v2. Deterministic for the same input
+ *  (use input.nowMs to pin time in tests). */
 export function buildSoulPromptV2(input: SoulPromptV2Input): SoulPromptV2Output {
-  const generatedAt = new Date().toISOString();
+  const nowMs = input.nowMs ?? Date.now();
+  const generatedAt = new Date(nowMs).toISOString();
   const staleAfterHours = input.staleAfterHours ?? 24;
-  const staleAfterEpochMs = Date.now() + staleAfterHours * 60 * 60 * 1000;
+  const staleAfterEpochMs = nowMs + staleAfterHours * 60 * 60 * 1000;
   const staleAfter = new Date(staleAfterEpochMs).toISOString();
   const secret = input.secret ?? `nexus-lock-${input.currentMnemeVersion}-${generatedAt.slice(0, 10)}`;
 
