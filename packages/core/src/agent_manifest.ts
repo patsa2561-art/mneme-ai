@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -299,6 +299,9 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // OBELISK — federated trust graph
   { command: "mneme.obelisk.build_card", since: "2.16.0", group: "obelisk", what: "Wrap your BOUNTY scorecard as publishable OBELISK card with signature. Submit to federated trust graph.", when: "Share measured vendor falseRate with the community." },
   { command: "mneme.obelisk.aggregate", since: "2.16.0", group: "obelisk", what: "Aggregate N signed cards into the federated AI Trust Graph. Wilson-LB-weighted consensus per vendor.", when: "Periodic graph rebuild; researchers studying AI vendor accuracy." },
+
+  // ─── v2.17 JACKPOT (the lottery-jackpot daily insight) ────────────────
+  { command: "mneme.jackpot.draw", since: "2.17.0", group: "jackpot", what: "Draw ONE personalised insight per day per repo. Deterministic seed (same day = same draw); HMAC-signed. Returns { headline, body, action, confidence, surprise, valueClass, sig }.", when: "First thing on session start. The Mneme equivalent of a daily ritual coffee." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -323,7 +326,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
+  const groupOrder = ["jackpot", "memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

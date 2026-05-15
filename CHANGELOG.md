@@ -1,3 +1,47 @@
+## v2.17.0 — 2026-05-15 — 🎰 MNEME JACKPOT: daily personalised "lottery jackpot" insight + README simplification
+
+User said: *"อยากให้ mneme มีฟังก์ชั่นน่าสนใจเหมือนถูกล้อตเตอรี่รางวัลที่ 1"* (want a feature that feels like winning the lottery jackpot). Built it.
+
+### 🎰 MNEME JACKPOT (`packages/core/src/jackpot/`)
+
+Open Mneme each morning, draw ONE personalised insight that feels like winning the lottery — so on-point you wonder how Mneme knew. Three properties make it feel like a jackpot:
+
+1. **Personalised** — only true for YOUR repo + YOUR Mneme data
+2. **Surprising** — you wouldn't have found it yourself
+3. **High-value** — saves time / money / a future bug
+
+Insight kinds shipped:
+- 🩹 **scar_drift** — your AI is drifting toward a known scar pattern
+- 💸 **vendor_arb** — switch vendor on this task class; save $
+- 👻 **stale_observation** — recurring infra pattern just went quiet
+- 🐝 **hive_gold** — another Mneme user solved a pattern you also have
+- 🔥 **replica_streak** — recent decisions show a hot streak; lean in
+- ☠️ **dead_dep** — a dep hasn't been published in >1y; investigate
+- 📝 **soul_gap** — your project soul is thin; capture wisdom
+- 🧪 **test_gap** — no test script in package.json; easy AI win
+
+Deterministic seed: `sha256(YYYY-MM-DD + repo basename + insight-pool-hash)` → same day = same draw. Re-roll only by waiting (anti-FOMO design). HMAC-signed for shareable bragging — "look what Mneme dropped today" is a tweet now.
+
+### 📋 README simplification
+
+`README.md` "What's new" section was a 200-word brick of v2.8.0 detail. Replaced with a one-liner pointing to CHANGELOG. The detail belongs in the changelog; the README belongs to "what is this in 5 seconds".
+
+### 📦 Surface
+
+- 1 new MCP tool: `mneme.jackpot.draw` (196 total)
+- NUCLEUS auto-manifest entry for `jackpot` group (placed FIRST in the group order — visible to AI agents on session start)
+- 10 new module tests (deterministic seed + universal fallback + auto-detection of soul / dep / test signals)
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** the lottery-jackpot framing makes a daily ritual out of Mneme. It's the difference between "tool I have" and "ritual I open every morning". Nothing else in the AI tooling field has a daily-personalised insight engine.
+- 🧠 **Wiser, not patched:** JACKPOT composes onto every existing Mneme corpus (SOUL / REPLICA / HIVE / package.json scan) — pure orchestrator. Removable cleanly. Root cause (Mneme has 196 tools but no daily moment of value) addressed via one well-aimed selector.
+- 🛠 **Self-fix root cause:** README simplification cuts the noise users complained about; JACKPOT replaces feature-list-as-product with one clear daily moment.
+- 🤝 **Co-working:** zero new dependencies; idempotent draw (same day = same insight); HMAC-signed result is post-able to social.
+- 📚 **Always studying:** principle captured — *"the difference between a tool and a habit is whether the user opens it on a normal Tuesday morning. JACKPOT engineers a Tuesday-morning reason."*
+
+---
+
 ## v2.16.1 — 2026-05-15 — 🎯 POSITIONING FIX: "What is Mneme?" answered in 30 seconds (root cause of customer confusion)
 
 User reported visitors said "Mneme is cool but I don't know what it does." Root cause: hero led with "184 MCP tools" — a feature brag, not a problem statement. Fix at the source.

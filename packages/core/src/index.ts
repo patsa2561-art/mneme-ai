@@ -697,3 +697,6 @@ export * as alpha from "./alpha/index.js";
 export * as publicAudit from "./public_audit/index.js";
 export * as livingModel from "./living_model/index.js";
 export * as obelisk from "./obelisk/index.js";
+
+// v2.17.0 — JACKPOT: daily personalised lottery-jackpot insight engine
+export * as jackpot from "./jackpot/index.js";

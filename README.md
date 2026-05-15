@@ -127,15 +127,9 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest: **v2.8.0** — 🔥 **HANDOFF UNIVERSAL** with 🌀 AURA-DROP (`data:text/html` self-contained QR — phone scans → browser opens **offline** with soul prompt pre-loaded → user taps Copy → pastes into mobile AI app. **No fetch, no install on receiver, works cross-Wi-Fi / no-Wi-Fi / airplane mode**) + 👁 **SHADOW CONSENSUS** (HMAC-chained N-vendor ballots — Mneme becomes a meta-LLM that you don't pay for) + 🩸 **BIRTHRIGHT TOKEN** (install-time genealogy-as-security — copied `.mneme/` dirs fail peer handshake) + Phase 2 sweep marked 86 deliberate silent catches with `bestEffort()` — METRON shows 443 → 358 unmarked silent catches (recomputable). Previous: v2.7 METRON verifiable scorecard, v2.6 TRUTH KERNEL + WORMHOLE.
+Latest **v2.17.0** ships **🎰 MNEME JACKPOT** — a daily personalised insight engine. Plus 6 new modules from v2.16 (PERSONA / ANTI-COLLUSION / ALPHA / PUBLIC AUDIT / LIVING MODEL / OBELISK) and the v2.15 hypercar pentad (GENESIS / HIVE / VIBE / ARBITRAGE / BUG PROPHET).
 
-## 📣 What changed since your last upgrade
-
-Run `mneme.updates.whats_new` to get a tight, version-scoped delta of every new MCP tool + behaviour change since the version you last saw. Block is HMAC-signed so stale embeds in CLAUDE.md / AGENTS.md are detectable.
-
-Run `mneme.metron.score` once at session start to learn your repo's current 8-axis scorecard — **don't promise "world-class X" for any axis scoring below 75**. Re-verify any pasted scorecard with `mneme.metron.verify`.
-
-→ **[Full changelog · every release · every feature · every fix](CHANGELOG.md)**
+→ **[Read the full changelog — every release, every feature, every fix](CHANGELOG.md)**
 
 ---
 

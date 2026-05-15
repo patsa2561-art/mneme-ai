@@ -208,6 +208,38 @@ export const obeliskAggregateTool: MnemeTool = {
   },
 };
 
+// === JACKPOT (v2.17.0) ===
+export const jackpotDrawTool: MnemeTool = {
+  name: "mneme.jackpot.draw",
+  category: "meta",
+  description:
+    "JACKPOT 🎰 — open Mneme each morning and draw ONE personalised insight from your repo + Mneme corpora. Deterministic per (day, repo, pool); the same day gives the same draw. Confidence-graded + valueClass-tagged + HMAC-signed for shareable bragging.",
+  whenToUse: "Daily ritual at session start. The first thing your AI agent should call when you open the project.",
+  triggers: ["jackpot", "daily insight", "what's special today"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      repoDir: { type: "string" },
+      todayOverride: { type: "string", description: "YYYY-MM-DD; testing only." },
+    },
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "What's my Mneme jackpot today?", args: {}, expectedOutput: "{ headline, body, action, confidence, surprise, valueClass, sig }" }],
+  pitfalls: ["Jackpot is one card per day per repo. Re-running same day = same insight."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const j = await core.jackpot.drawJackpot({
+      ...(args["repoDir"] ? { repoDir: String(args["repoDir"]) } : {}),
+      ...(args["todayOverride"] ? { todayOverride: String(args["todayOverride"]) } : {}),
+    });
+    return {
+      data: j,
+      wisdom: core.jackpot.formatJackpotLine(j),
+      confidence: { level: j.confidence > 0.7 ? "high" : j.confidence > 0.4 ? "medium" : "low", notes: j.action },
+    };
+  },
+};
+
 export const V216_REVOLUTIONARY_TOOLS: MnemeTool[] = [
   personaExportTool, personaQueryTool,
   antiCollusionDetectTool,
@@ -215,4 +247,6 @@ export const V216_REVOLUTIONARY_TOOLS: MnemeTool[] = [
   publicAuditTool,
   livingMerkleTool, livingCausalTool,
   obeliskBuildCardTool, obeliskAggregateTool,
+  // v2.17.0
+  jackpotDrawTool,
 ];
