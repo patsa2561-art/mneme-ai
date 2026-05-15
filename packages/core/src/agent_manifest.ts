@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -254,6 +254,25 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.infra.observe", since: "2.14.0", group: "infra_brain", what: "Record HMAC-signed infrastructure observation (latency_outlier / error_spike / deploy / cron_misfire / anomaly / saturation / recovery / incident). Append-only.", when: "Hook into monitoring: alerts, deploys, anomaly detectors. Each event becomes tamper-evident memory." },
   { command: "mneme.infra.diagnose", since: "2.14.0", group: "infra_brain", what: "Given current symptom, search past observations for similar patterns. Returns hypotheses + recurring-pattern flag + rationale. <50ms locally, no LLM.", when: "When a new alert fires: 'have we seen this before?'" },
   { command: "mneme.infra.digest", since: "2.14.0", group: "infra_brain", what: "Export HMAC-signed digest of host's patterns for gossip exchange between Mneme-managed hosts. Distributed infra memory without a central server.", when: "Periodic peer gossip exchange." },
+
+  // ─── v2.15 HYPERCAR PENTAD ────────────────────────────────────────────
+  // GENESIS — cold-start auto-bootstrap
+  { command: "mneme.genesis.fingerprint", since: "2.15.0", group: "genesis", what: "Detect repo stack / frameworks / CI / package managers / age. Pure I/O, no network.", when: "First-time entry into a repo, or after a major pivot." },
+  { command: "mneme.genesis.plan", since: "2.15.0", group: "genesis", what: "Produce HMAC-signed bootstrap plan: which SOUL rules to seed, which BOUNTY/REPLICA/INFRA/COMPLIANCE init steps, ETA. Signed; tamper-evident.", when: "Cold-start a new Mneme-managed repo. Show user the plan." },
+  { command: "mneme.genesis.apply", since: "2.15.0", group: "genesis", what: "Execute the plan against the repo. Idempotent: re-running is safe. Initialises every PENTAD module per the plan.", when: "After user confirms the plan." },
+
+  // HIVE — pattern-share marketplace
+  { command: "mneme.hive.hash", since: "2.15.0", group: "hive", what: "Hash a problem into a stable fingerprint (sha256 over canonical AST shape; identifiers/strings/numbers masked). Same problem across users hashes identically.", when: "Before recording or looking up a pattern." },
+  { command: "mneme.hive.record", since: "2.15.0", group: "hive", what: "Record observation (pattern hash + solution kind + outcome) into local hive. HMAC-signed; tamper-evident.", when: "After resolving a bug / build failure / etc -- record what worked." },
+  { command: "mneme.hive.lookup", since: "2.15.0", group: "hive", what: "Look up pattern in local + (opt-in) public hive. Returns best-known solution + confidence + sample size. Falls back to local if endpoint unreachable.", when: "Before asking AI to fix a bug -- check if the hive already knows the answer." },
+
+  // VIBE — non-programmer mode
+  { command: "mneme.vibe.check", since: "2.15.0", group: "vibe", what: "Beginner-friendly safety wrapper: runs DLP + SOUL + complexity-creep gates, returns plain-English status (ship_it / ship_with_note / wait_review / stop_unsafe) + 0-10 confidence + actionable findings.", when: "After EVERY AI change in a vibe-coder context (Bolt / Lovable / Replit / v0)." },
+  { command: "mneme.vibe.explain", since: "2.15.0", group: "vibe", what: "Translate technical Mneme output into vibe-coder English. 'HMAC sig mismatch' -> 'someone changed a file Mneme had marked trusted'.", when: "Before showing any technical Mneme finding to a non-programmer user." },
+
+  // ARBITRAGE — meta-AI router
+  { command: "mneme.arbitrage.choose", since: "2.15.0", group: "arbitrage", what: "Recommend best AI vendor for a task type + quality budget. Combines default per-task strength + measured BOUNTY data. Returns ranked candidates with quality/$ scores + signed decision.", when: "Before sending a prompt to an AI -- especially in agentic workflows where you control routing." },
+  { command: "mneme.arbitrage.record_outcome", since: "2.15.0", group: "arbitrage", what: "After a routed request, feed outcome (correct/wrong/partial) into BOUNTY so future routing learns.", when: "After every AI response in an arbitrage-routed flow." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -278,7 +297,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "project_soul", "bounty", "replica", "compliance", "infra_brain"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

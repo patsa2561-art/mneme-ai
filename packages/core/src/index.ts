@@ -682,3 +682,9 @@ export * as bounty from "./bounty/index.js";
 export * as replica from "./replica/index.js";
 export * as killSwitch from "./kill_switch/index.js";
 export * as infraBrain from "./infra_brain/index.js";
+
+// v2.15.0 HYPERCAR PENTAD — distribution wedges + non-programmer mode.
+export * as genesis from "./genesis/index.js";
+export * as hive from "./hive/index.js";
+export * as vibe from "./vibe/index.js";
+export * as arbitrage from "./arbitrage/index.js";

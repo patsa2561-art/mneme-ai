@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.15.0",
+    date: "2026-05-15",
+    headline: "HYPERCAR PENTAD: 4 distribution wedges that make Mneme indispensable",
+    body:
+      "MNEME GENESIS reads your repo, detects the stack + frameworks + CI + age, and seeds protective starter rules in <60 seconds (no config questions asked). MNEME HIVE is the privacy-preserving pattern marketplace: every Mneme user contributes hashed patterns + outcomes; you query the hive instead of asking AI to invent a solution. MNEME VIBE is the beginner-friendly safety wrapper for vibe-coders (Bolt / Lovable / Replit / v0) -- runs every gate after every AI change, translates findings into plain English. MNEME ARBITRAGE is the meta-AI router: pick the cheapest vendor that meets your quality bar, learning from BOUNTY's measured per-vendor falseRate over time. 10 new MCP tools.",
+    suggestedAction: "Run `npx mneme genesis` in any repo to cold-bootstrap. Run `mneme vibe check` after every AI change. Run `mneme arbitrage choose --task code_review` before sending a prompt.",
+    tags: ["hypercar", "distribution", "vibe-coder", "marketplace", "arbitrage"],
+  },
+  {
     version: "2.14.0",
     date: "2026-05-15",
     headline: "5 nuclear-useful modules every Mneme user wins from",
