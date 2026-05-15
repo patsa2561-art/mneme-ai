@@ -675,3 +675,10 @@ export * as hci from "./hci.js";
 export * as stigmergy from "./stigmergy/index.js";
 export * as chimera from "./chimera/index.js";
 export * as quantum from "./quantum.js";
+
+// v2.14.0 KILLER PENTAD — composes onto the existing surface; zero breaking change.
+export * as projectSoul from "./project_soul/index.js";
+export * as bounty from "./bounty/index.js";
+export * as replica from "./replica/index.js";
+export * as killSwitch from "./kill_switch/index.js";
+export * as infraBrain from "./infra_brain/index.js";

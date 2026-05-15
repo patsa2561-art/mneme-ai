@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -228,6 +228,32 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme.rainbow.data_bridge", since: "1.89.0", group: "rainbow", what: "Build a data: URL HTML bridge for a dpaste URL. NOTE v1.90: modern Chrome/Safari block top-level data: URL navigation; kept for compat but DEPRECATED in favour of cloudflared tunnel.", when: "Legacy only -- prefer mneme.rainbow.tunnel_detect + cloudflared for working cross-network 1-tap." },
   { command: "mneme.rainbow.tunnel_detect", since: "1.90.0", group: "rainbow", what: "Detect cloudflared on PATH (free quick tunnels, no account). Returns availability + version + per-OS install hint.", when: "Before generating cross-network handoff: tunnel = true 1-tap on any network." },
   { command: "mneme.rainbow.multi_paste", since: "1.90.0", group: "rainbow", what: "Upload soul to public paste with automatic backend fallback (dpaste → paste.rs → 0x0.st). Handles rate limits + transient failures with attempt log.", when: "Cross-network handoff fallback when tunnel unavailable or LAN unreachable." },
+
+  // ─── v2.14 KILLER PENTAD ──────────────────────────────────────────────
+  // PROJECT SOUL — HMAC-signed project values gate
+  { command: "mneme.soul.init", since: "2.14.0", group: "project_soul", what: "Bootstrap .mneme/project_soul.json with HMAC-signed values + protective starter rules (no-fake-files / no-secret-leak / sacred .mneme/ / utc-timestamps / honest-claims). Idempotent.", when: "First time AI agent enters a Mneme-managed repo." },
+  { command: "mneme.soul.add_rule", since: "2.14.0", group: "project_soul", what: "Add a rule (values | antiPatterns | conventions | scars | sacred) with severity warn|block. Sacred / antiPatterns / scars GATE; values / conventions are advisory.", when: "After an incident or hard-won design decision — capture the wisdom AI should not undo." },
+  { command: "mneme.soul.check", since: "2.14.0", group: "project_soul", what: "GATE: scan a proposed change against project soul; returns SHIP / WARN / BLOCK + signed verdict. BLOCK = refuse the change.", when: "BEFORE every non-trivial AI change." },
+
+  // MNEMOSYNE BOUNTY — vendor trust ledger
+  { command: "mneme.bounty.claim", since: "2.14.0", group: "bounty", what: "Record an AI-stated checkable fact into the HMAC-chained ledger (file exists, package version, command output, etc).", when: "Right after AI states a checkable fact — pair with mneme.bounty.verdict once verified." },
+  { command: "mneme.bounty.verdict", since: "2.14.0", group: "bounty", what: "Record true|false|partial|inconclusive verdict on a previously-claimed fact. Adds to vendor scorecard.", when: "After verifying a claim independently (file exists / version matches / command output as expected)." },
+  { command: "mneme.bounty.leaderboard", since: "2.14.0", group: "bounty", what: "Vendor trust leaderboard ranked by Wilson lower bound on falseRate (worst first). HMAC-signed cards.", when: "Periodic AI-vendor selection: which vendor has lowest falseRate on my kinds of claims?" },
+
+  // MNEME REPLICA — non-LLM oracle from history
+  { command: "mneme.replica.record", since: "2.14.0", group: "replica", what: "Record a decision (question + features + action) into the corpus. The replica gets smarter as the corpus grows.", when: "After making a non-trivial decision — capture features as key=value tags so future similar situations match." },
+  { command: "mneme.replica.consult", since: "2.14.0", group: "replica", what: "Ask the non-LLM oracle for a recommended action based on YOUR past decisions. Zero LLM dep — works offline; survives AI-vendor outage.", when: "Want a second opinion grounded in your own past judgments. Especially when AI vendors are unreachable." },
+
+  // KILL SWITCH PROTOCOL — enterprise compliance bundle
+  { command: "mneme.compliance.killswitch", since: "2.14.0", group: "compliance", what: "Issue HMAC-signed kill directive. state=active stops all AI; state=scoped stops specific vendors/tags; state=off resumes.", when: "Incident response: AI hallucinated wrong answer; vendor TOS violation; security event." },
+  { command: "mneme.compliance.should_respond", since: "2.14.0", group: "compliance", what: "Runtime check before every AI response. Tampered directives are auto-ignored (forge-resistant).", when: "EVERY response, before answering. Cheap (~1ms)." },
+  { command: "mneme.compliance.dlp", since: "2.14.0", group: "compliance", what: "Scan text for secrets / PII patterns (AWS / GitHub / OpenAI / PEM / JWT / email / cards / Thai national ID + custom rules). Block-severity hits create court-admissible audit entries.", when: "Before sending any AI output / commit / log line that could contain sensitive data." },
+  { command: "mneme.compliance.audit", since: "2.14.0", group: "compliance", what: "Export HMAC-chained audit log for compliance reporting. Verifies chain integrity. Court-admissible.", when: "Weekly CISO review; periodic compliance audits; post-incident forensics." },
+
+  // INFRA AS AI — host brain + gossip primitive
+  { command: "mneme.infra.observe", since: "2.14.0", group: "infra_brain", what: "Record HMAC-signed infrastructure observation (latency_outlier / error_spike / deploy / cron_misfire / anomaly / saturation / recovery / incident). Append-only.", when: "Hook into monitoring: alerts, deploys, anomaly detectors. Each event becomes tamper-evident memory." },
+  { command: "mneme.infra.diagnose", since: "2.14.0", group: "infra_brain", what: "Given current symptom, search past observations for similar patterns. Returns hypotheses + recurring-pattern flag + rationale. <50ms locally, no LLM.", when: "When a new alert fires: 'have we seen this before?'" },
+  { command: "mneme.infra.digest", since: "2.14.0", group: "infra_brain", what: "Export HMAC-signed digest of host's patterns for gossip exchange between Mneme-managed hosts. Distributed infra memory without a central server.", when: "Periodic peer gossip exchange." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -252,7 +278,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "project_soul", "bounty", "replica", "compliance", "infra_brain"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

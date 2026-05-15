@@ -59,6 +59,7 @@ import { CLONE_TO_TOOLS } from "./_clone_to_tool.js";
 import { BEACON_TOOLS } from "./_beacon_tool.js";
 import { NEXUS_LOCK_TOOLS } from "./_nexus_lock_tools.js";
 import { COSMIC_TOOLS } from "./_cosmic_tools.js";
+import { V214_PENTAD_TOOLS } from "./_v214_pentad.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -122,6 +123,7 @@ export function buildAllTools(): MnemeTool[] {
     ...BEACON_TOOLS,
     ...NEXUS_LOCK_TOOLS,
     ...COSMIC_TOOLS,
+    ...V214_PENTAD_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
