@@ -1,3 +1,11 @@
+## v2.14.1 — 2026-05-15 — 🌐 README landing page + AI-agent What's-New broadcast for v2.13/v2.14
+
+- Web: new clean README-style landing page at `https://patsa2561-art.github.io/mneme-ai/` (replaces dashboard as default first-touch). Vendor sniff (claude/chatgpt/gemini/cursor/copilot/perplexity/codex/human) shows the right install command. Live cosmic status. **Dynamic GitHub repo input** — paste a public GitHub URL and the page renders per-PENTAD analysis (which SOUL rules apply to your stack, what BOUNTY would track, what INFRA AS AI would observe, what DLP would catch). Dashboard escape hatch preserved.
+- Core: `whats_new.ts` HIGHLIGHTS gets v2.13.0 / v2.13.1 / v2.14.0 entries. AI agents reading `mneme.whats_new` on welcome will now surface these features to users automatically. ASCII-safe body text (em-dash → `--`).
+- The NUCLEUS auto-manifest (already in v2.14.0) advertises all 15 new commands in CLAUDE.md / AGENTS.md / GEMINI.md — every Mneme-aware AI agent picks them up on next session start.
+
+---
+
 ## v2.14.0 — 2026-05-15 — 💥 KILLER PENTAD: 5 nuclear-useful features no AI tooling vendor has
 
 The killer release. Five features built top-down from "what does the user actually win?" Each shipped under AURELIAN AUDITOR — every axis ≥84 (most ≥95). Every module HMAC-signs its outputs so the value is tamper-evident. Composes onto v2.13.1 with ZERO breaking change.

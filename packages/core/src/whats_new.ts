@@ -38,6 +38,33 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.14.0",
+    date: "2026-05-15",
+    headline: "5 nuclear-useful modules every Mneme user wins from",
+    body:
+      "PROJECT SOUL signs your project's hard-won values; AI changes are gated against them (HMAC-signed, tamper-evident). MNEMOSYNE BOUNTY records every AI claim and produces a vendor trust leaderboard ranked by measured falseRate. MNEME REPLICA is a non-LLM oracle distilled from your past decisions -- answers in ~100ms, survives any vendor outage. KILL SWITCH PROTOCOL gives CISOs an AI off-switch + 9-pattern DLP + court-admissible audit chain. INFRA AS AI turns each host into an AI agent with HMAC-signed memory and P2P gossip -- Datadog functionality without a central server.",
+    suggestedAction: "Run `mneme upgrade --force` to install v2.14, then `mneme soul init` to gate your project.",
+    tags: ["pentad", "killer-features", "gate", "ledger", "oracle", "compliance", "infra"],
+  },
+  {
+    version: "2.13.1",
+    date: "2026-05-15",
+    headline: "Zero-config cosmic -- cosmic.mneme-ai.space is the new default",
+    body:
+      "mintSession() now needs no serverUrl -- defaults to the shared cosmic.mneme-ai.space (Cloudflare-edge, Let's Encrypt). New mintDefaultChoirSession() returns a 2-seat CELESTIAL CHOIR with the brand domain primary + nip.io fallback. Instant N-1 fault tolerance with zero provisioning.",
+    suggestedAction: "Just call `mneme.cosmic.mint` with no args -- works zero-config.",
+    tags: ["cosmic", "default-server"],
+  },
+  {
+    version: "2.13.0",
+    date: "2026-05-15",
+    headline: "AURELIAN AUDITOR + 8 measurable cosmic upgrades",
+    body:
+      "Every cosmic v2.13 change shipped under the AURELIAN AUDITOR -- an HMAC-signed scorecard that grades features on delta / world-class / wisdom / wildness axes (≥80 to SHIP, 60-79 = LOOP_BACK, <60 = REJECT). The 8 upgrades: JSON Patch incremental publish (10x payload reduction); ETag conditional read (95%+ poll bandwidth saved); Brotli edge compression; NONCE-WINDOW HMAC (replay defense); inbox per-fingerprint rate-limit; DEAD MAN'S HAND auto-rescue zombie sessions to dpaste; CELESTIAL CHOIR multi-server quorum; ECHO-FROM-COMMITS HMAC-signed git note for offline recovery.",
+    suggestedAction: "Use `mneme.cosmic.audit` to grade your own changes the same way.",
+    tags: ["cosmic", "perf", "security", "fallback", "auditor"],
+  },
+  {
     version: "1.24.1",
     date: "2026-05-09",
     headline: "AI agents now learn what's new automatically",
