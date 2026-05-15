@@ -42,6 +42,7 @@ import { createServer, type Server, type IncomingMessage, type ServerResponse } 
 import { networkInterfaces } from "node:os";
 import { createHash } from "node:crypto";
 import { encodeQRReal } from "../synapse/qr_real.js";
+import { renderBeaconHtmlPage } from "./_page_template.js";
 
 export interface BeaconPath {
   /** Stable id: lan-url / paste-url / qr-inline / clipboard. */
@@ -101,6 +102,12 @@ function vendorMeta(vendor: string): { name: string; url: string; deeplink: stri
 }
 
 function renderBeaconPage(payload: string, vendor: string, label: string): string {
+  // v2.9.4: full bilingual TH/EN page lives in _page_template.ts so this
+  // file stays focused on the server + path-bundle logic.
+  return renderBeaconHtmlPage(payload, vendorMeta(vendor), label);
+}
+
+function renderBeaconPageLegacy(payload: string, vendor: string, label: string): string {
   const meta = vendorMeta(vendor);
   // v2.9.3 BEACON page upgrade:
   //  - Plaintext soul prompt (no AES-256-GCM nonsense — Gemini Free can't decrypt anyway)

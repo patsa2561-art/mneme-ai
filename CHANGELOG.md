@@ -1,3 +1,33 @@
+## v2.9.4 — 2026-05-15 — BEACON page UX overhaul (TH/EN toggle + centered + visible manual fallback + bilingual error messages)
+
+**Headline:** User real-device test of v2.9.3 BEACON found UX gaps:
+> *"ปุ่ม copy soul prompt กดแล้วใช้ไม่ได้ ... browser ไม่ support ... ควรแจ้ง text ตัวแดงๆ toast ... ต้องมี TH/EN สลับกัน ... ถ้าปุ่มใช้ไม่ได้ต้องแจ้งสองภาษาว่าด้านล่างมี soul prompt ให้ copy ตรงนี้ไปวาง"*
+
+### Polished BEACON-served page (`packages/core/src/beacon/_page_template.ts`)
+
+  - **TH/EN toggle** (top-right pill buttons) — works on every browser via plain `dataset` + `classList`, no framework, no CDN
+  - **Centered, mobile-first layout** — max-width 560px, big tap targets (16px button padding), `viewport` meta with `maximum-scale=5` for readability
+  - **Visible manual fallback section** — promoted out of `<details>` into a prominent grey box with its own bigger Copy button + a `<pre>` with `user-select:all` so long-press selects the whole soul prompt
+  - **Bilingual error toasts + status banners** — when `navigator.clipboard` is missing OR `writeText` rejects, the status bar shows in the user's chosen language: *"⚠ คัดลอกอัตโนมัติไม่ได้ในเบราว์เซอร์นี้ — เลื่อนลงไปที่กล่อง 'Soul Prompt' ด้านล่าง → กดปุ่มสีเทา"* / English equivalent
+  - **execCommand fallback** — when the modern Clipboard API is unavailable (older iOS Safari, in-app browsers), automatically falls back to `document.execCommand('copy')` via a hidden textarea
+  - **Auto-select on manual fail** — if even the fallback fails, the page auto-selects the `<pre>` content so the user only needs to long-press → Copy from the OS menu
+  - **Sukhumvit Set / Noto Sans Thai** in the font stack so Thai renders cleanly on iOS and Android
+
+### Tests
+
+**8713 / 8713 pass.** Self-test verified all key markers in served HTML:
+  - TH lang button ✓ · EN lang button ✓ · setLang() func ✓
+  - copyText execCommand fallback ✓ · Toast ✓ · Manual box section ✓
+  - Thai text 'คัดลอก' ✓ · English Copy ✓
+  - Centered .wrap ✓ · Step 2 vendor name ✓
+  - Toast div ✓ · TH/EN toggle CSS ✓
+
+### What user sees now
+
+Phone scans QR → BEACON-served page loads → top-right TH/EN toggle (default TH) → centered "Mneme → Gemini app" header → Step 1 blue Copy button → Step 2 green Open Gemini button → if either fails, RED status banner in the user's language pointing to the visible "📜 Soul Prompt (manual copy fallback)" box below with its own Copy button + selectable pre block. Toast appears for 2s when copy succeeds.
+
+---
+
 ## v2.9.3 — 2026-05-13 — 🔥 BURN stale `.brain-*.html` + 🎯 FORCE BEACON path for ALL web AI targets + REAL end-to-end self-test
 
 **Headline:** User caught the system in the act of being broken:
