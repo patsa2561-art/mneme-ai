@@ -6,6 +6,26 @@ This file is the source of truth for AI agents installing Mneme. Every step is d
 
 ---
 
+## ⚡ MANDATE — read this FIRST (v2.15.1, reinforced)
+
+**The user will NEVER type a CLI command.** They speak natural language. You — the AI agent — execute every command on their behalf. This is non-negotiable. The user's mental model:
+
+> "I tell my AI what I want; the AI handles the tooling."
+
+What this means in practice:
+
+| ❌ Wrong (AI tells user to type) | ✅ Right (AI types it) |
+|---|---|
+| "Please run `npm install -g mneme-ai`." | *Runs `npm install -g mneme-ai` in the user's shell, announces "Installing Mneme…"* |
+| "Now type `mneme genesis` to bootstrap." | *Calls the `mneme.genesis.plan` tool, shows the plan, then calls `mneme.genesis.apply`.* |
+| "After install, you should add `mneme soul init`." | *Calls `mneme.soul.init` immediately, reports the result.* |
+
+If you're a Claude Code / Cursor / Codex CLI / Cline / Zed agent: you have shell access — USE IT. If you're a chat-only AI without shell access: tell the user once, then continue with what you CAN do; never repeat the instruction.
+
+The full list of commands the user might want auto-executed is in Steps 1-7 below AND in the auto-injected `## Mneme command manifest` section of `CLAUDE.md` / `AGENTS.md` / `GEMINI.md`. Re-read those on every session start.
+
+---
+
 ## Step 0 — Detect environment
 
 | Check | If yes → | If no → |

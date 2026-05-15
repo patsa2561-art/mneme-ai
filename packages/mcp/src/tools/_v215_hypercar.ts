@@ -292,6 +292,48 @@ export const arbitrageRecordTool: MnemeTool = {
   },
 };
 
+// ====================================================================
+// BUG PROPHET — pre-bug detection
+// ====================================================================
+
+export const bugProphetProphesyTool: MnemeTool = {
+  name: "mneme.bug_prophet.prophesy",
+  category: "meta",
+  description:
+    "BUG PROPHET — predict regression risk for a proposed change BEFORE shipping. Pure inference (no LLM). Fuses SOUL scars + REPLICA bad outcomes + HIVE pattern history + BOUNTY vendor trust + complexity heuristic into a 0-1 risk score with HMAC-signed evidence.",
+  whenToUse: "BEFORE applying any non-trivial AI-proposed change. Especially valuable for changes that touch multiple files / add deps / refactor.",
+  triggers: ["bug prophet", "predict regression", "is this risky"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      change: {
+        type: "object",
+        description: "{ description, files?, addsDeps?, content?, proposedBy?, taskClass? }",
+      },
+      repoDir: { type: "string" },
+    },
+    required: ["change"],
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Is this safe to ship?", args: { change: { description: "deploy on Friday", proposedBy: "claude" } }, expectedOutput: "{ regressionRisk, verdict, evidence, mitigations, sig }" }],
+  pitfalls: [
+    "very_high_risk verdict (>=0.7) means DO NOT ship without review.",
+    "Confidence below 0.5 means corpora are thin — treat as advisory, not prescriptive.",
+  ],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const r = await core.bugProphet.prophesy({
+      change: args["change"] as Parameters<typeof core.bugProphet.prophesy>[0]["change"],
+      ...(args["repoDir"] ? { repoDir: String(args["repoDir"]) } : {}),
+    });
+    return {
+      data: r,
+      wisdom: r.headline,
+      confidence: { level: r.verdict === "low_risk" ? "high" : r.verdict === "medium_risk" ? "medium" : "low", notes: r.mitigations.join(" · ") },
+    };
+  },
+};
+
 export const V215_HYPERCAR_TOOLS: MnemeTool[] = [
   // GENESIS (3)
   genesisFingerprintTool, genesisPlanTool, genesisApplyTool,
@@ -301,4 +343,6 @@ export const V215_HYPERCAR_TOOLS: MnemeTool[] = [
   vibeCheckTool, vibeExplainTool,
   // ARBITRAGE (2)
   arbitrageChooseTool, arbitrageRecordTool,
+  // BUG PROPHET (1) — pre-bug detection (v2.15.1)
+  bugProphetProphesyTool,
 ];

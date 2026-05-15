@@ -25,6 +25,134 @@ import { useEffect, useMemo, useState } from "react";
 
 declare const __APP_VERSION__: string;
 
+// ── i18n ─────────────────────────────────────────────────────────────
+type Lang = "en" | "th";
+const I18N: Record<Lang, Record<string, string>> = {
+  en: {
+    brand: "μνήμη · Mneme",
+    headline_pre: "The memory layer that ",
+    headline_em: "doesn't lie",
+    headline_post: ".",
+    sub: "Local-first MCP server. Cross-vendor brain transfer. Anti-hallucination at runtime. 184+ tools your AI agent inherits. Free + open source.",
+    cta_npm: "npm install",
+    cta_github: "GitHub →",
+    cta_demo: "Try interactive demo →",
+    meta_tests: "tests",
+    meta_mcp: "MCP tools",
+    meta_cosmic: "cosmic",
+    meta_checking: "checking…",
+    meta_live: "LIVE",
+    meta_offline: "offline",
+    meta_sessions: "sessions",
+
+    repo_h2: "Try Mneme on YOUR repo",
+    repo_p: "Paste a public GitHub URL. Mneme analyses the stack and shows what each module would do for THIS codebase. No data leaves your browser; we only call the open GitHub API.",
+    repo_placeholder: "https://github.com/owner/repo  or  owner/repo",
+    repo_try_mneme: "Try mneme-ai",
+    repo_analyse: "Analyse",
+    repo_loading: "loading…",
+    repo_err_invalid: "Enter a GitHub URL (https://github.com/owner/repo) or owner/repo",
+    repo_err_404: "Repo not found (404)",
+
+    soul_h: "🧬 PROJECT SOUL would seed",
+    bounty_h: "📜 MNEMOSYNE BOUNTY would track",
+    replica_h: "🪞 MNEME REPLICA would seed corpus from",
+    infra_h: "🌐 INFRA AS AI would observe",
+    dlp_h: "🚨 KILL SWITCH DLP would catch",
+
+    hypercar_h2: "v2.15 HYPERCAR PENTAD",
+    hypercar_badge: "NEW",
+    hypercar_p: "Four distribution wedges that make Mneme indispensable. AURELIAN gate: 4/4 SHIP at scores 93-100.",
+
+    pentad_h2: "v2.14 KILLER PENTAD",
+    pentad_p: "Five nuclear-useful modules. Every one HMAC-signs its outputs. SHIP-graded by AURELIAN AUDITOR.",
+
+    cosmic_h2: "🌌 COSMIC LINK",
+    cosmic_p: "Self-hosted (or shared default at cosmic.mneme-ai.space) state server for cross-vendor handoff. 8 features no AI vendor combines.",
+    cosmic_live: "LIVE",
+
+    install_h2: "Install in 30 seconds",
+    install_s1_title: "Tell your AI",
+    install_s1_pre: '"Install Mneme in this project, then bootstrap it."',
+    install_s1_note: "Your AI agent reads Mneme's manifest and runs every command for you. You never type a CLI command — the AI does.",
+    install_s2_title: "AI runs (you watch)",
+    install_s2_pre: "npx mneme install  →  mneme genesis  →  mneme soul init",
+    install_s2_note: "Mneme writes .mneme/ + injects 184 tools into CLAUDE.md / AGENTS.md. Every MCP-aware AI now sees them.",
+    install_s3_title: "Just talk to your AI normally",
+    install_s3_pre: '"Refactor this React component."',
+    install_s3_note: "Behind the scenes: SOUL gate checks values; BOUNTY tracks vendor claims; VIBE explains in plain English; ARBITRAGE routes to cheapest vendor; BUG PROPHET predicts regression risk. All automatic.",
+
+    footer_built: "built by",
+    footer_launch: "Launch full dashboard",
+  },
+  th: {
+    brand: "μνήμη · Mneme",
+    headline_pre: "ชั้นความจำที่ ",
+    headline_em: "ไม่โกหก",
+    headline_post: ".",
+    sub: "MCP server แบบ local-first. ส่งสมองข้าม vendor ได้. ตรวจ AI พูดเท็จขณะใช้งาน. AI agent ของคุณได้ tools 184+ ทันที. ฟรี + open source.",
+    cta_npm: "ติดตั้ง npm",
+    cta_github: "GitHub →",
+    cta_demo: "ลอง demo →",
+    meta_tests: "tests",
+    meta_mcp: "MCP tools",
+    meta_cosmic: "cosmic",
+    meta_checking: "กำลังเช็ค…",
+    meta_live: "LIVE",
+    meta_offline: "ออฟไลน์",
+    meta_sessions: "sessions",
+
+    repo_h2: "ลอง Mneme กับ repo ของคุณ",
+    repo_p: "วาง URL GitHub แบบ public. Mneme วิเคราะห์ stack แล้วโชว์ว่าแต่ละโมดูลจะทำอะไรกับ repo นี้. ข้อมูลไม่ออกจาก browser; เรียกแค่ GitHub API ฟรี",
+    repo_placeholder: "https://github.com/owner/repo  หรือ  owner/repo",
+    repo_try_mneme: "ลอง mneme-ai",
+    repo_analyse: "วิเคราะห์",
+    repo_loading: "กำลังโหลด…",
+    repo_err_invalid: "ใส่ GitHub URL (https://github.com/owner/repo) หรือ owner/repo",
+    repo_err_404: "ไม่พบ repo (404)",
+
+    soul_h: "🧬 PROJECT SOUL จะใส่กฎ",
+    bounty_h: "📜 MNEMOSYNE BOUNTY จะ track",
+    replica_h: "🪞 MNEME REPLICA จะสร้าง corpus จาก",
+    infra_h: "🌐 INFRA AS AI จะสังเกต",
+    dlp_h: "🚨 KILL SWITCH DLP จะดักจับ",
+
+    hypercar_h2: "v2.15 HYPERCAR PENTAD",
+    hypercar_badge: "ใหม่",
+    hypercar_p: "4 distribution wedges ที่ทำให้ Mneme ขาดไม่ได้. AURELIAN กำกับ: 4/4 SHIP คะแนน 93-100.",
+
+    pentad_h2: "v2.14 KILLER PENTAD",
+    pentad_p: "5 โมดูลพลังมหาศาล. ทุกตัว HMAC-sign output. AURELIAN AUDITOR กำกับว่า SHIP ทุกตัว.",
+
+    cosmic_h2: "🌌 COSMIC LINK",
+    cosmic_p: "Server ส่งสมองข้าม vendor (ใช้ shared default ที่ cosmic.mneme-ai.space หรือ self-host). 8 features ที่ไม่มี AI vendor ใดมีพร้อมกัน.",
+    cosmic_live: "LIVE",
+
+    install_h2: "ติดตั้งใน 30 วินาที",
+    install_s1_title: "บอก AI ของคุณ",
+    install_s1_pre: '"ติดตั้ง Mneme ใน project นี้ แล้ว bootstrap ให้ด้วย"',
+    install_s1_note: "AI agent อ่าน manifest ของ Mneme แล้วรัน command ให้คุณ. คุณไม่ต้องพิมพ์ CLI เอง — AI ทำให้.",
+    install_s2_title: "AI รัน (คุณดู)",
+    install_s2_pre: "npx mneme install  →  mneme genesis  →  mneme soul init",
+    install_s2_note: "Mneme เขียน .mneme/ + ใส่ 184 tools ลง CLAUDE.md / AGENTS.md. AI ที่รองรับ MCP เห็นทันที.",
+    install_s3_title: "พูดกับ AI ปกติ",
+    install_s3_pre: '"Refactor React component นี้หน่อย"',
+    install_s3_note: "เบื้องหลัง: SOUL ตรวจค่านิยม; BOUNTY track vendor; VIBE อธิบายภาษาคน; ARBITRAGE เลือก vendor ถูกที่สุด; BUG PROPHET ทำนาย regression. อัตโนมัติทุกขั้น.",
+
+    footer_built: "พัฒนาโดย",
+    footer_launch: "เปิด full dashboard",
+  },
+};
+
+function readLang(): Lang {
+  try {
+    const v = localStorage.getItem("mneme-lang");
+    if (v === "th" || v === "en") return v;
+    // Auto-detect from browser
+    return /^th/i.test(navigator.language || "") ? "th" : "en";
+  } catch { return "en"; }
+}
+
 type Vendor = "claude" | "chatgpt" | "gemini" | "cursor" | "copilot" | "perplexity" | "codex" | "human";
 
 function detectVendor(ua: string): Vendor {
@@ -128,6 +256,44 @@ function analyseRepo(r: RepoSummary): RepoAnalysis {
   return { soulRules, bountyExamples, replicaSeed, infraObservations, dlpHits };
 }
 
+const HYPERCAR_FEATURES = [
+  {
+    emoji: "🌅",
+    name: "MNEME GENESIS",
+    cmd: "mneme.genesis.plan",
+    headline: "Cold-start to value in <60 seconds. AI knows your stack.",
+    body: "Reads your repo, detects stack + frameworks + CI + age, seeds protective starter rules per detected env. Zero config questions. Reversible.",
+  },
+  {
+    emoji: "🐝",
+    name: "MNEME HIVE",
+    cmd: "mneme.hive.lookup",
+    headline: "Privacy-preserving pattern marketplace. Network effect from day 1.",
+    body: "Hashed-pattern fingerprints (sha256 over canonical AST shape; identifiers/strings/numbers masked). Same problem across users hashes identically. Source code NEVER leaves your machine.",
+  },
+  {
+    emoji: "🎨",
+    name: "MNEME VIBE",
+    cmd: "mneme.vibe.check",
+    headline: "Beginner-friendly safety wrapper for AI-builders. Built-in plain English.",
+    body: "Auto-runs DLP + SOUL + complexity-creep gates after every AI change. Returns ship_it / ship_with_note / wait_review / stop_unsafe + 0-10 confidence + actionable findings.",
+  },
+  {
+    emoji: "🎯",
+    name: "MNEME ARBITRAGE",
+    cmd: "mneme.arbitrage.choose",
+    headline: "Meta-AI router: cheapest vendor that meets your quality bar.",
+    body: "16 task types × 7 default vendors strength table + measured BOUNTY data. Quality budgets ultra/high/balanced/cheap/free_only. Signed decision.",
+  },
+  {
+    emoji: "🔮",
+    name: "BUG PROPHET",
+    cmd: "mneme.bug_prophet.prophesy",
+    headline: "Predict regression risk BEFORE shipping. Pure inference, no LLM.",
+    body: "Fuses SOUL scars + REPLICA bad outcomes + HIVE pattern history + BOUNTY vendor trust + complexity into 0-1 risk score with mitigations.",
+  },
+];
+
 const FEATURES = [
   {
     emoji: "🧬",
@@ -200,6 +366,7 @@ const VENDOR_ADVICE: Record<Vendor, string> = {
 };
 
 export function ReadmePage(props: { onLaunchDashboard: () => void }) {
+  const [lang, setLangState] = useState<Lang>("en");
   const [vendor, setVendor] = useState<Vendor>("human");
   const [cosmic, setCosmic] = useState<CosmicHealth | null>(null);
   const [repoUrl, setRepoUrl] = useState("");
@@ -207,6 +374,13 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
   const [analysis, setAnalysis] = useState<RepoAnalysis | null>(null);
   const [repoErr, setRepoErr] = useState<string | null>(null);
   const [repoLoading, setRepoLoading] = useState(false);
+
+  useEffect(() => { setLangState(readLang()); }, []);
+  function setLang(l: Lang) {
+    setLangState(l);
+    try { localStorage.setItem("mneme-lang", l); } catch {}
+  }
+  const t = (k: string): string => I18N[lang][k] ?? I18N.en[k] ?? k;
 
   // Detect vendor on mount.
   useEffect(() => {
@@ -283,7 +457,7 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
       <div style={S.banner} className="mneme-banner">
         <span style={S.bannerEmoji}>🧠</span>
         <div style={S.bannerText}>
-          <strong>Mneme v{__APP_VERSION__} ships 15 new tools.</strong>{" "}
+          <strong>Mneme v{__APP_VERSION__} · 184 tools.</strong>{" "}
           Detected: <code>{VENDOR_LABELS[vendor]}</code> ·{" "}
           <span style={S.bannerAdvice}>{installCmd}</span>
         </div>
@@ -294,36 +468,38 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
         >
           copy
         </button>
+        {/* TH / EN language toggle */}
+        <div style={{ display: "flex", gap: 4, marginLeft: 8 }}>
+          <button onClick={() => setLang("en")} style={{ ...S.bannerCopy, background: lang === "en" ? "#f38020" : "#2a2a3a", color: lang === "en" ? "#0b0b14" : "#e6e6e6" }}>EN</button>
+          <button onClick={() => setLang("th")} style={{ ...S.bannerCopy, background: lang === "th" ? "#f38020" : "#2a2a3a", color: lang === "th" ? "#0b0b14" : "#e6e6e6" }}>TH</button>
+        </div>
       </div>
 
       {/* Hero */}
       <header style={S.hero}>
         <div style={S.heroInner}>
-          <div style={S.brand}>μνήμη · Mneme</div>
+          <div style={S.brand}>{t("brand")}</div>
           <h1 style={S.headline}>
-            The memory layer that <em style={S.em}>doesn't lie</em>.
+            {t("headline_pre")}<em style={S.em}>{t("headline_em")}</em>{t("headline_post")}
           </h1>
-          <p style={S.sub}>
-            Local-first MCP server. Cross-vendor brain transfer. Anti-hallucination at runtime.
-            174 tools your AI agent inherits. Free + open source.
-          </p>
+          <p style={S.sub}>{t("sub")}</p>
           <div style={S.heroCtas}>
             <a href="https://www.npmjs.com/package/mneme-ai" style={S.btnPrimary} target="_blank" rel="noopener">
-              npm install
+              {t("cta_npm")}
             </a>
-            <a href="https://github.com/patsa2561-art/mneme-ai" style={S.btnGhost} target="_blank" rel="noopener">
-              GitHub →
-            </a>
-            <button onClick={props.onLaunchDashboard} style={S.btnGhost}>
-              Launch dashboard →
+            <button onClick={props.onLaunchDashboard} style={{ ...S.btnPrimary, background: "#8957e5" }}>
+              {t("cta_demo")}
             </button>
+            <a href="https://github.com/patsa2561-art/mneme-ai" style={S.btnGhost} target="_blank" rel="noopener">
+              {t("cta_github")}
+            </a>
           </div>
           <div style={S.heroMeta}>
-            v{__APP_VERSION__} · 9193 tests · 174 MCP tools · cosmic{" "}
-            {cosmic === null ? <span style={{ color: "#666" }}>checking…</span>
+            v{__APP_VERSION__} · 9255+ {t("meta_tests")} · 184 {t("meta_mcp")} · {t("meta_cosmic")}{" "}
+            {cosmic === null ? <span style={{ color: "#666" }}>{t("meta_checking")}</span>
               : cosmic.ok
-                ? <span style={S.live}>● LIVE ({cosmic.sessions} sessions)</span>
-                : <span style={S.dead}>● offline</span>}
+                ? <span style={S.live}>● {t("meta_live")} ({cosmic.sessions} {t("meta_sessions")})</span>
+                : <span style={S.dead}>● {t("meta_offline")}</span>}
           </div>
         </div>
       </header>
@@ -406,10 +582,29 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
         )}
       </section>
 
-      {/* KILLER PENTAD */}
+      {/* HYPERCAR PENTAD — v2.15 */}
       <section style={S.sec}>
-        <h2 style={S.h2}>v2.14 KILLER PENTAD <span style={S.badge}>NEW</span></h2>
-        <p style={S.p}>Five nuclear-useful modules. Every one HMAC-signs its outputs. AURELIAN AUDITOR shipped them at scores 84-100 across delta / world-class / wisdom / wildness axes.</p>
+        <h2 style={S.h2}>{t("hypercar_h2")} <span style={S.badge}>{t("hypercar_badge")}</span></h2>
+        <p style={S.p}>{t("hypercar_p")}</p>
+        <div style={S.featureGrid}>
+          {HYPERCAR_FEATURES.map((f) => (
+            <div key={f.name} style={S.feature}>
+              <div style={S.featureHead}>
+                <span style={S.featureEmoji}>{f.emoji}</span>
+                <span style={S.featureName}>{f.name}</span>
+              </div>
+              <div style={S.featureHeadline}>{f.headline}</div>
+              <div style={S.featureBody}>{f.body}</div>
+              <code style={S.featureCmd}>{f.cmd}</code>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* KILLER PENTAD — v2.14 */}
+      <section style={S.sec}>
+        <h2 style={S.h2}>{t("pentad_h2")}</h2>
+        <p style={S.p}>{t("pentad_p")}</p>
         <div style={S.featureGrid}>
           {FEATURES.map((f) => (
             <div key={f.name} style={S.feature}>
@@ -450,39 +645,32 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
         )}
       </section>
 
-      {/* Quick Install */}
+      {/* Quick Install — 3 steps, AI does everything */}
       <section style={S.sec}>
-        <h2 style={S.h2}>Install in 30 seconds</h2>
+        <h2 style={S.h2}>{t("install_h2")}</h2>
         <div style={S.installSteps}>
           <div style={S.installStep}>
             <div style={S.stepNum}>1</div>
             <div>
-              <div style={S.stepTitle}>Install Mneme globally</div>
-              <pre style={S.pre}>npm install -g mneme-ai</pre>
+              <div style={S.stepTitle}>{t("install_s1_title")}</div>
+              <pre style={S.pre}>{t("install_s1_pre")}</pre>
+              <div style={S.stepNote}>{t("install_s1_note")}</div>
             </div>
           </div>
           <div style={S.installStep}>
             <div style={S.stepNum}>2</div>
             <div>
-              <div style={S.stepTitle}>In your project, run install</div>
-              <pre style={S.pre}>mneme install</pre>
-              <div style={S.stepNote}>Writes <code>.mneme/</code> + injects 174 tools into <code>CLAUDE.md</code> / <code>AGENTS.md</code>.</div>
+              <div style={S.stepTitle}>{t("install_s2_title")}</div>
+              <pre style={S.pre}>{t("install_s2_pre")}</pre>
+              <div style={S.stepNote}>{t("install_s2_note")}</div>
             </div>
           </div>
           <div style={S.installStep}>
             <div style={S.stepNum}>3</div>
             <div>
-              <div style={S.stepTitle}>Initialize project soul</div>
-              <pre style={S.pre}>mneme soul init</pre>
-              <div style={S.stepNote}>Bootstraps protective starter rules. AI changes will now pass through the SOUL gate.</div>
-            </div>
-          </div>
-          <div style={S.installStep}>
-            <div style={S.stepNum}>4</div>
-            <div>
-              <div style={S.stepTitle}>Tell your AI</div>
-              <pre style={S.pre}>"Use Mneme. Run mneme.cosmic.mint to start a cross-vendor session."</pre>
-              <div style={S.stepNote}>Any MCP-aware AI now sees + uses the 174 Mneme tools.</div>
+              <div style={S.stepTitle}>{t("install_s3_title")}</div>
+              <pre style={S.pre}>{t("install_s3_pre")}</pre>
+              <div style={S.stepNote}>{t("install_s3_note")}</div>
             </div>
           </div>
         </div>

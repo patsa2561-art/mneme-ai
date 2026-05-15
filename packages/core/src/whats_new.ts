@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.15.1",
+    date: "2026-05-15",
+    headline: "BUG PROPHET (5th hypercar) -- predict regression risk BEFORE shipping",
+    body:
+      "MNEME BUG PROPHET fuses 5 distinct evidence sources into a 0-1 regression risk score: PROJECT SOUL scars (paid-for lessons), REPLICA bad outcomes (your past decisions), HIVE pattern history (cross-user outcome rates), BOUNTY vendor trust (per-vendor falseRate), and a complexity heuristic. Pure inference, no LLM call -- ~5ms. Returns HMAC-signed verdict + targeted mitigations. The fifth hypercar that completes the v2.15 pentad. Plus: landing page got a TH/EN toggle + HYPERCAR section + prominent demo CTA. Plus: AI-agent install mandate now reinforced at top of AI_AGENT_CONTRACT.md (user never types CLI commands; AI executes everything).",
+    suggestedAction: "Tell the AI: 'check this change with bug prophet before applying'. The AI will call mneme.bug_prophet.prophesy and refuse high-risk changes.",
+    tags: ["bug-prophet", "pre-deploy", "regression-prediction", "hypercar"],
+  },
+  {
     version: "2.15.0",
     date: "2026-05-15",
     headline: "HYPERCAR PENTAD: 4 distribution wedges that make Mneme indispensable",

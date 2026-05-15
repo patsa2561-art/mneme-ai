@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage";
+  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -273,6 +273,9 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // ARBITRAGE — meta-AI router
   { command: "mneme.arbitrage.choose", since: "2.15.0", group: "arbitrage", what: "Recommend best AI vendor for a task type + quality budget. Combines default per-task strength + measured BOUNTY data. Returns ranked candidates with quality/$ scores + signed decision.", when: "Before sending a prompt to an AI -- especially in agentic workflows where you control routing." },
   { command: "mneme.arbitrage.record_outcome", since: "2.15.0", group: "arbitrage", what: "After a routed request, feed outcome (correct/wrong/partial) into BOUNTY so future routing learns.", when: "After every AI response in an arbitrage-routed flow." },
+
+  // ─── v2.15.1 BUG PROPHET ──────────────────────────────────────────────
+  { command: "mneme.bug_prophet.prophesy", since: "2.15.1", group: "bug_prophet", what: "Predict regression risk (0-1) for a proposed change BEFORE shipping. Pure inference (no LLM). Fuses SOUL scars + REPLICA bad outcomes + HIVE pattern history + BOUNTY vendor trust + complexity. Returns HMAC-signed verdict + evidence + mitigations.", when: "BEFORE applying any non-trivial AI-proposed change. Especially: deploys, refactors, dependency adds." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
@@ -297,7 +300,7 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
-  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage"] as const;
+  const groupOrder = ["memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;

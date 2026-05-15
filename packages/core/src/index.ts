@@ -688,3 +688,4 @@ export * as genesis from "./genesis/index.js";
 export * as hive from "./hive/index.js";
 export * as vibe from "./vibe/index.js";
 export * as arbitrage from "./arbitrage/index.js";
+export * as bugProphet from "./bug_prophet/index.js";
