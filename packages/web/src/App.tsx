@@ -20,6 +20,7 @@ import { LoadDialog } from "./components/LoadDialog";
 import { WelcomeOverlay } from "./components/WelcomeOverlay";
 import { ToastStack, type Toast } from "./components/Toast";
 import { ViewExplainer } from "./components/ViewExplainer";
+import { ReadmePage } from "./components/ReadmePage";
 import { computeTimeBounds, scrubData } from "./lib/scrub";
 
 // v1.26.2: per-view "what's new since v1.24" callouts shown inside the
@@ -54,9 +55,23 @@ function readOnboarded(): boolean {
   }
 }
 
+function readShowReadme(): boolean {
+  // v2.14: README landing page is the default first-touch surface. Power
+  // users who explicitly opted into the dashboard land back there on
+  // subsequent visits. Hash-based deep links (#dashboard) jump straight in.
+  try {
+    if (window.location.hash === "#dashboard") return false;
+    const v = window.localStorage.getItem("mneme-show-readme");
+    if (v === "false") return false;
+    return true;
+  } catch { return true; }
+}
+
 export function App() {
   const [raw, setRaw] = useState<NervousSystemData | null>(null);
   const [scrubT, setScrubT] = useState<number>(Date.now());
+  // v2.14: README first; dashboard is the deep-dive escape hatch.
+  const [showReadme, setShowReadme] = useState<boolean>(() => readShowReadme());
   // v1.70 -- default to "demon" (the headline new view) so first-time
   // visitors see PRECOG firewall + protocol stack before anything else.
   const [view, setView] = useState<ViewMode>("demon");
@@ -171,6 +186,18 @@ export function App() {
   const handleLoadError = useCallback((err: string) => {
     pushToast(setToasts, { kind: "error", text: err });
   }, []);
+
+  // v2.14: README is the default first-touch surface.
+  if (showReadme) {
+    return (
+      <ReadmePage
+        onLaunchDashboard={() => {
+          try { window.localStorage.setItem("mneme-show-readme", "false"); } catch {}
+          setShowReadme(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="app-root">
