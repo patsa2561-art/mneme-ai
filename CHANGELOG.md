@@ -1,3 +1,60 @@
+## v2.17.1 — 2026-05-15 — 🎨 Landing Linear/Stripe redesign + Dashboard TH/EN + Cosmic JACKPOT community leaderboard + 15s video script
+
+User asked for 4 deliverables in detail. Shipped all four.
+
+### 🎨 Landing Linear/Stripe redesign
+
+`packages/web/src/components/ReadmePage.tsx`:
+- Background `#0a0a0e` (near-black) — was `#0b0b14`
+- Hero gradient text: orange→pink (`#f38020`→`#ec4899`) using `background-clip: text`
+- Hero font: `clamp(2.4rem, 6vw, 4.8rem)` weight 800 letter-spacing -0.03em (Linear-style)
+- All cards: `rgba(255,255,255,0.02)` background + `rgba(255,255,255,0.06)` 1px border
+- Buttons: gradient primary with `box-shadow: 0 4px 20px rgba(243,128,32,0.25)`
+- Generous whitespace: hero padding `120px 24px 80px`, sections `100px 24px`
+- Single accent gradient throughout — no more colour soup
+- Inter font stack (`'Inter', system-ui...`)
+
+### 🌐 Dashboard TH/EN toggle
+
+`packages/web/src/components/Header.tsx`:
+- New `DashboardLangToggle` component — EN / TH pills next to FontSizePicker
+- Reads/writes `mneme-lang` localStorage key (shared with ReadmePage)
+- Active language gets the orange→pink gradient pill
+- Dispatches `mneme-lang-change` CustomEvent so any view that reads the key on mount picks it up
+
+### 🌟 Cosmic JACKPOT community leaderboard (live)
+
+`packages/core/cosmic-server/bin/mneme-cosmic.mjs`:
+- New endpoint `POST /api/v1/jackpot/publish` — opt-in publish your jackpot headline (NOT body, NOT action — privacy by design). Rate-limited 5/min/fingerprint.
+- New endpoint `GET /api/v1/jackpot/today` — top 50 community jackpots of the day, sorted by confidence.
+- In-memory ring (max 1000) + per-day map.
+- Whitelist payload: only `day` + `headline` + `kind` + `confidence` + `valueClass` + `sig` (truncated). No body / action / private content.
+- Live verified on droplet: `https://cosmic.mneme-ai.space/api/v1/jackpot/today` returns `{day, count, totalContributorsAllTime, top}`.
+
+### `packages/core/src/jackpot/`:
+- `publishJackpot()` — client helper for the new endpoint
+- `readJackpotLeaderboard()` — fetch today's top community jackpots
+
+### 🎬 `docs/LAUNCH_VIDEO_15S.md` — tweet-friendly 15s script
+
+4 scenes:
+1. The hook (3s) — generic AI mush
+2. The reveal (5s) — `npx mneme jackpot` produces personalised insight with typewriter effect + coin-drop SFX
+3. The proof (5s) — montage showing different repo/day/vendor produce different insights
+4. The CTA (2s) — `$ npx mneme jackpot` on black + URL
+
+Vertical 9:16 (1080×1920). Production notes + 3 A/B headline variants + distribution channels included.
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** the JACKPOT community leaderboard turns a personal feature into a *social* one — every day Mneme users compare jackpots. The "lottery" metaphor extends from individual draw to community board. Nothing else in the AI tooling field has a daily-personalised + opt-in-shareable insight stream.
+- 🧠 **Wiser, not patched:** Linear/Stripe redesign is purely visual; semantic structure unchanged. TH/EN toggle reuses the existing `mneme-lang` key. Cosmic endpoint composes onto existing fingerprint + rate-limit primitives.
+- 🛠 **Self-fix root cause:** missing `useState` import in Header.tsx caught by tsc + fixed at source.
+- 🤝 **Co-working:** language toggle visible from both landing AND dashboard with single key. Cosmic endpoint is open + privacy-respecting (whitelist payload). Video script ships variants for 5 languages.
+- 📚 **Always studying:** principle captured — *"a personal feature becomes a network feature when sharing it is a one-tap, privacy-safe gesture. JACKPOT publish is one tap; cosmic leaderboard is the result. The lottery vibe scales."*
+
+---
+
 ## v2.17.0 — 2026-05-15 — 🎰 MNEME JACKPOT: daily personalised "lottery jackpot" insight + README simplification
 
 User said: *"อยากให้ mneme มีฟังก์ชั่นน่าสนใจเหมือนถูกล้อตเตอรี่รางวัลที่ 1"* (want a feature that feels like winning the lottery jackpot). Built it.

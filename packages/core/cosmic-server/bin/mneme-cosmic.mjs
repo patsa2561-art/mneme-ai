@@ -424,6 +424,70 @@ function handlePresence(req, res, token) {
 }
 
 // ====================================================================
+// v2.17.1 — JACKPOT community leaderboard
+//
+//   Open POST endpoint — anyone with Mneme JACKPOT v2.17 can opt-in
+//   share their daily insight headline (NOT the body, NOT the action;
+//   only the headline + valueClass + confidence + day). The leaderboard
+//   shows the COMMUNITY's top jackpot wins of the day so people feel
+//   the lottery vibe collectively.
+//
+//   POST /api/v1/jackpot/publish  (open; rate-limited per fingerprint)
+//   GET  /api/v1/jackpot/today     (open; returns today's top 50)
+// ====================================================================
+
+const jackpotPublic = []; // in-memory ring; max 1000
+const jackpotByDay = new Map(); // day → array
+const JACKPOT_RATE_PER_MIN = 5; // anti-spam
+const jackpotBuckets = new Map(); // fp → { tokens, refillTs }
+
+function jackpotRateLimit(req) {
+  const { fp } = fingerprintReader(req);
+  const now = Date.now();
+  let b = jackpotBuckets.get(fp);
+  if (!b) { b = { tokens: JACKPOT_RATE_PER_MIN, refillTs: now }; jackpotBuckets.set(fp, b); }
+  const elapsed = now - b.refillTs;
+  b.tokens = Math.min(JACKPOT_RATE_PER_MIN, b.tokens + (elapsed / 60_000) * JACKPOT_RATE_PER_MIN);
+  b.refillTs = now;
+  if (b.tokens < 1) return false;
+  b.tokens -= 1;
+  return true;
+}
+
+function handleJackpotPublish(req, res, body) {
+  if (!jackpotRateLimit(req)) return send(res, 429, {}, { error: "jackpot publish rate-limited (5/min/fingerprint)" });
+  let payload;
+  try { payload = JSON.parse(body.toString("utf8")); }
+  catch { return send(res, 400, {}, { error: "invalid JSON" }); }
+  // Whitelist fields — never accept body, action, or full insight
+  const day = String(payload.day || "").slice(0, 10);
+  const headline = String(payload.headline || "").slice(0, 200);
+  const kind = String(payload.kind || "other").slice(0, 40);
+  const confidence = Number(payload.confidence);
+  const valueClass = String(payload.valueClass || "").slice(0, 40);
+  const sig = String(payload.sig || "").slice(0, 64);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return send(res, 400, {}, { error: "day must be YYYY-MM-DD" });
+  if (!headline) return send(res, 400, {}, { error: "headline required" });
+  if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) return send(res, 400, {}, { error: "confidence must be 0..1" });
+  const { vendor } = fingerprintReader(req);
+  const entry = { day, headline, kind, confidence: Math.round(confidence * 1000) / 1000, valueClass, sig: sig.slice(0, 16), vendor, ts: new Date().toISOString() };
+  jackpotPublic.push(entry);
+  if (jackpotPublic.length > 1000) jackpotPublic.shift();
+  if (!jackpotByDay.has(day)) jackpotByDay.set(day, []);
+  const dayList = jackpotByDay.get(day);
+  dayList.push(entry);
+  if (dayList.length > 200) dayList.shift();
+  return send(res, 201, {}, { ok: true, day, total: dayList.length });
+}
+
+function handleJackpotToday(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
+  const day = url.searchParams.get("day") || new Date().toISOString().slice(0, 10);
+  const list = (jackpotByDay.get(day) || []).slice().sort((a, b) => b.confidence - a.confidence).slice(0, 50);
+  return send(res, 200, {}, { day, count: list.length, totalContributorsAllTime: jackpotPublic.length, top: list });
+}
+
+// ====================================================================
 // v2.13 NOBEL-TIER FEATURES
 // ====================================================================
 
@@ -586,6 +650,14 @@ const server = createServer(async (req, res) => {
     m = p.match(/^\/api\/v1\/sessions\/([A-Za-z0-9_-]{8,64})\/presence$/);
     if (m && req.method === "GET") {
       return handlePresence(req, res, m[1]);
+    }
+    // v2.17.1 — JACKPOT community leaderboard
+    if (p === "/api/v1/jackpot/publish" && req.method === "POST") {
+      const body = await readBody(req, 4096);
+      return handleJackpotPublish(req, res, body);
+    }
+    if (p === "/api/v1/jackpot/today" && req.method === "GET") {
+      return handleJackpotToday(req, res);
     }
     // /api/v1/sessions/:token.json  (GET read) — records presence + zombie status
     m = p.match(/^\/api\/v1\/sessions\/([A-Za-z0-9_-]{8,64})\.json$/);

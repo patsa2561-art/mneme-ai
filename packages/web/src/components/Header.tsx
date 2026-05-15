@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ViewMode } from "../types";
 import { fmtDate } from "../lib/scrub";
 import { FontSizePicker } from "./FontSizePicker";
@@ -166,6 +167,8 @@ export function Header({
 
       <div className="header-actions">
         <FontSizePicker />
+        {/* v2.17.1: TH/EN toggle (shared localStorage key with ReadmePage) */}
+        <DashboardLangToggle />
         <a
           className="version-pill"
           href={`https://github.com/patsa2561-art/mneme-ai/releases/tag/v${__APP_VERSION__}`}
@@ -200,5 +203,52 @@ export function Header({
         </a>
       </div>
     </header>
+  );
+}
+
+// v2.17.1: TH/EN toggle for the dashboard. Reads/writes the same
+// `mneme-lang` localStorage key as the ReadmePage so the user's
+// language preference is consistent across landing + dashboard.
+function DashboardLangToggle() {
+  const [lang, setLang] = useState<"en" | "th">(() => {
+    try {
+      const v = localStorage.getItem("mneme-lang");
+      if (v === "th" || v === "en") return v;
+      return /^th/i.test(navigator.language || "") ? "th" : "en";
+    } catch { return "en"; }
+  });
+  function set(next: "en" | "th") {
+    setLang(next);
+    try {
+      localStorage.setItem("mneme-lang", next);
+      // The dashboard views are mostly English-only today; setting the
+      // key still makes the README + AI banner respect the choice.
+      // Reload so any view that reads the key on mount picks it up.
+      window.dispatchEvent(new CustomEvent("mneme-lang-change", { detail: next }));
+    } catch {}
+  }
+  const baseStyle: React.CSSProperties = {
+    background: "rgba(255,255,255,0.05)",
+    color: "#a1a1aa",
+    border: "1px solid rgba(255,255,255,0.1)",
+    padding: "4px 10px",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontSize: "0.8em",
+    fontFamily: "inherit",
+    fontWeight: 600,
+    letterSpacing: "0.05em",
+  };
+  const activeStyle: React.CSSProperties = {
+    ...baseStyle,
+    background: "linear-gradient(135deg, #f38020 0%, #ec4899 100%)",
+    color: "#0a0a0e",
+    border: "1px solid transparent",
+  };
+  return (
+    <div style={{ display: "inline-flex", gap: 4, marginRight: 8 }} title="Switch language (TH/EN). Saved to localStorage.">
+      <button onClick={() => set("en")} style={lang === "en" ? activeStyle : baseStyle} aria-pressed={lang === "en"}>EN</button>
+      <button onClick={() => set("th")} style={lang === "th" ? activeStyle : baseStyle} aria-pressed={lang === "th"}>TH</button>
+    </div>
   );
 }

@@ -348,6 +348,71 @@ export function formatJackpotLine(j: JackpotInsight): string {
   return `JACKPOT 🎰 · ${j.kind} · ${conf}% conf · ${j.valueEstimate}`;
 }
 
+/**
+ * v2.17.1: Opt-in publish your jackpot headline (NOT body, NOT action)
+ * to the community leaderboard at cosmic.mneme-ai.space/jackpot/publish.
+ * Privacy: only headline + kind + confidence + valueClass + sig + day.
+ * Falls back gracefully on network failure.
+ */
+export async function publishJackpot(j: JackpotInsight, opts: {
+  url?: string;
+  fetchOverride?: typeof fetch;
+} = {}): Promise<{ ok: boolean; error?: string }> {
+  const url = (opts.url ?? "https://cosmic.mneme-ai.space/api/v1/jackpot/publish");
+  const fetchFn = opts.fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  try {
+    const r = await fetchFn(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "user-agent": "mneme-jackpot/1.0" },
+      body: JSON.stringify({
+        day: j.drawDate,
+        headline: j.headline,
+        kind: j.kind,
+        confidence: j.confidence,
+        valueClass: j.valueClass,
+        sig: j.sig,
+      }),
+    });
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: (e as Error).message.slice(0, 200) }; }
+}
+
+/**
+ * Read today's community jackpot leaderboard (top 50 by confidence).
+ * Open endpoint; no auth.
+ */
+export async function readJackpotLeaderboard(opts: {
+  day?: string;
+  url?: string;
+  fetchOverride?: typeof fetch;
+} = {}): Promise<{
+  ok: boolean;
+  day?: string;
+  count?: number;
+  totalContributorsAllTime?: number;
+  top?: Array<{ headline: string; kind: string; confidence: number; valueClass: string; vendor: string; ts: string }>;
+  error?: string;
+}> {
+  const base = opts.url ?? "https://cosmic.mneme-ai.space/api/v1/jackpot/today";
+  const url = opts.day ? `${base}?day=${encodeURIComponent(opts.day)}` : base;
+  const fetchFn = opts.fetchOverride ?? globalThis.fetch;
+  if (typeof fetchFn !== "function") return { ok: false, error: "no fetch" };
+  try {
+    const r = await fetchFn(url);
+    if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+    const j = await r.json() as Record<string, unknown>;
+    return {
+      ok: true,
+      day: String(j["day"]),
+      count: Number(j["count"]),
+      totalContributorsAllTime: Number(j["totalContributorsAllTime"]),
+      top: j["top"] as Array<{ headline: string; kind: string; confidence: number; valueClass: string; vendor: string; ts: string }>,
+    };
+  } catch (e) { return { ok: false, error: (e as Error).message.slice(0, 200) }; }
+}
+
 /** Render the jackpot as a shareable "I just won a Mneme jackpot" card. */
 export function renderJackpotCard(j: JackpotInsight): string {
   return [
