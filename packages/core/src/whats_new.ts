@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.7",
+    date: "2026-05-16",
+    headline: "MEGAPACK -- 6 wild mutations (RETROCAUSAL, DREAM, COLONY, HONEY, RETROACTIVE, GENETIC) + 4 tech-debt repairs (intent persist, agreement uninstall, embedded gravity, WASM selfTest)",
+    body:
+      "🔭 RETROCAUSAL -- axiomLineage walks dep graph back + signed proof tree (depth-of-inference). 💤 DREAM CONSOLIDATION -- REM-sleep speculative axiom generator from idle daemon; parent confirms/refutes. 🐝 COLONY MIND -- federated NEXUS broadcast across Mneme instances; collective immune system. 🍯 HONEY DECISION -- vendor honesty calibration via 5 baited agreement kinds + Wilson-LB rank. 📜 RETROACTIVE COMPILE -- mine git history for broken promises (commits that violated past agreement-shaped sentences). 🧬 GENETIC PATCH -- self-modifying child proposals gated by AURELIAN. Plus: intent phrases persist to disk; agreement uninstall (safety-checked hook removal); embedded truth gravity for Chronostasis; WASM embedder selfTest with rich diagnostics; deploy-cron.sh for DO production; witness-loop.mjs end-to-end daemon helper. 75 new tests + AURELIAN SHIP. 13 new MCP tools. 62/62 claim-manifest by exact name.",
+    suggestedAction: "Tell the AI: 'is this verified' / 'time-test this' / 'rewind chronostasis' / 'compile this agreement' to use; or 'mine my git history' to see broken promises.",
+    tags: ["megapack", "retrocausal", "dream", "colony", "honey", "retroactive", "genetic", "tech-debt"],
+  },
+  {
     version: "2.19.6",
     date: "2026-05-16",
     headline: "CONVERSATION COMPILER -- chat becomes deterministic signed callable code (drift becomes impossible)",

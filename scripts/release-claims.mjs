@@ -107,6 +107,24 @@ export const RELEASE_CLAIMS = {
       "mneme.agreement.pre_commit_hook",
     ],
   },
+  "2.19.7": {
+    headline: "MEGAPACK — 6 wild mutations (RETROCAUSAL · DREAM CONSOLIDATION · COLONY MIND · HONEY DECISION · RETROACTIVE COMPILE · GENETIC PATCH) + 4 tech-debt repairs (intent persistence · agreement uninstall · embedded gravity · WASM self-test)",
+    tools: [
+      "mneme.intent.save",
+      "mneme.intent.load",
+      "mneme.agreement.uninstall",
+      "mneme.chronostasis.lineage",
+      "mneme.chronostasis.axioms_relevant_embedded",
+      "mneme.dream.run",
+      "mneme.dream.review",
+      "mneme.colony.broadcast",
+      "mneme.colony.drain",
+      "mneme.honey.generate",
+      "mneme.honey.score_vendor",
+      "mneme.retroactive.mine_history",
+      "mneme.genetic.propose",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

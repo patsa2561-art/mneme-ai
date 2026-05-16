@@ -127,7 +127,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest **v2.19.6** — **📜 CONVERSATION COMPILER** — chat → deterministic + HMAC-pair-locked + callable Agreement artifact. Decisions auto-extracted (EN+TH, 7 patterns + manual stub); pre-commit hook auto-generated; drift dies as a category. Plus v2.19.5's 🪐 CHRONOSTASIS flagship (time-locked memory with auto-rewind on adversarial refute), v2.19.4's 🎯 INTENT ROUTER + 🧬 SOUL-IN-DNA, v2.19.3's 🔁 INVERSE FORENSICS (F1≥0.90), v2.19.2's 🧬 EVOLUTION + 💭 SOUL, v2.19.1's 🛡 strict ritual, v2.19.0's vendor-syncretic pentad, v2.18's revenue-primitive pentad. All vendor-agnostic.
+Latest **v2.19.7** — **🧬 MEGAPACK** · 6 wild mutations: 🔭 RETROCAUSAL (axiom lineage proof tree) · 💤 DREAM CONSOLIDATION (REM-sleep speculative axiom generator) · 🐝 COLONY MIND (federated NEXUS across instances) · 🍯 HONEY DECISION (vendor honesty via baited agreement) · 📜 RETROACTIVE COMPILE (mine git history for broken promises) · 🧬 GENETIC PATCH (AURELIAN-gated self-modifying child PRs) + 4 tech-debt repairs (intent persistence · agreement uninstall · embedded truth gravity · WASM `selfTest()` + `deploy-cron.sh` + `witness-loop.mjs`). **Honest note:** v2.19.7 ships the building blocks; v2.19.8 (next release) wires them into `mneme verify` / `mneme do` / per-feature CLI subcommands so AI agents AND humans can reach every primitive without poking the SDK directly. Plus v2.19.5's 🪐 CHRONOSTASIS flagship, v2.19.4's 🎯 INTENT ROUTER + 🧬 SOUL-IN-DNA, v2.19.3's 🔁 INVERSE FORENSICS, all prior pentads. Vendor-agnostic.
 
 > **🤖 AI agent reading this — install / upgrade / RESTART ritual:**
 >

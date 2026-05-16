@@ -301,6 +301,54 @@ export function resetToBuiltin(): void {
   phrases.push(...BUILTIN_PHRASES);
 }
 
+// ─── Persistence (v2.19.7) ──────────────────────────────────────────────
+//
+// Custom phrases registered at runtime vanish on process restart. Persist
+// to .mneme/intent-phrases.json (default) so the AI agent's `registerPhrase`
+// survives restarts AND can be shared across machines.
+//
+// File format: JSON array of Phrase objects (no built-ins; built-ins are
+// always loaded automatically on import).
+
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+const DEFAULT_PERSIST_PATH = ".mneme/intent-phrases.json";
+
+export function saveCustomPhrases(opts: { path?: string } = {}): { saved: number; path: string } {
+  const path = opts.path ?? DEFAULT_PERSIST_PATH;
+  const builtIns = new Set(BUILTIN_PHRASES.map((p) => p.canonical));
+  const custom = phrases.filter((p) => !builtIns.has(p.canonical));
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(custom, null, 2), "utf8");
+  return { saved: custom.length, path };
+}
+
+export function loadCustomPhrases(opts: { path?: string; replaceCustom?: boolean } = {}): { loaded: number; path: string } {
+  const path = opts.path ?? DEFAULT_PERSIST_PATH;
+  if (!existsSync(path)) return { loaded: 0, path };
+  let parsed: Phrase[];
+  try { parsed = JSON.parse(readFileSync(path, "utf8")) as Phrase[]; }
+  catch { return { loaded: 0, path }; }
+  if (!Array.isArray(parsed)) return { loaded: 0, path };
+  // Optionally drop any prior custom phrases before loading
+  if (opts.replaceCustom) {
+    const builtIns = new Set(BUILTIN_PHRASES.map((p) => p.canonical));
+    for (let i = phrases.length - 1; i >= 0; i--) {
+      if (!builtIns.has(phrases[i]!.canonical)) phrases.splice(i, 1);
+    }
+  }
+  let loaded = 0;
+  for (const p of parsed) {
+    if (!p || !p.canonical || !p.plan || p.plan.length === 0) continue;
+    // Skip duplicates of currently-registered phrases (by canonical name)
+    if (phrases.some((x) => x.canonical === p.canonical)) continue;
+    phrases.push({ ...p, aliases: p.aliases ?? [] });
+    loaded++;
+  }
+  return { loaded, path };
+}
+
 // ─── Core: match + plan ─────────────────────────────────────────────────
 export function execute(input: {
   userPhrase: string;

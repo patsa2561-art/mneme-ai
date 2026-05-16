@@ -479,6 +479,52 @@ export function listAgreements(baseDir?: string): string[] {
   return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => join(dir, f));
 }
 
+// ─── Uninstall (v2.19.7) ──────────────────────────────────────────────
+import { unlinkSync } from "node:fs";
+export interface UninstallInput {
+  agreementId?: string;       // remove this agreement's 3 files
+  agreementJsonPath?: string; // OR explicit path
+  baseDir?: string;
+  /** Path to pre-commit hook to remove (if installed). */
+  hookPath?: string;
+}
+export interface UninstallResult {
+  removed: string[];
+  notFound: string[];
+  hookRemoved: boolean;
+}
+export function uninstallAgreement(input: UninstallInput): UninstallResult {
+  const baseDir = input.baseDir ?? ".mneme/agreements";
+  const targets: string[] = [];
+  if (input.agreementJsonPath) {
+    const id = input.agreementJsonPath.replace(/\.json$/, "");
+    targets.push(`${id}.json`, `${id}.mjs`, `${id}.transcript.txt`);
+  } else if (input.agreementId) {
+    const base = join(baseDir, input.agreementId);
+    targets.push(`${base}.json`, `${base}.mjs`, `${base}.transcript.txt`);
+  } else {
+    throw new Error("AGREEMENT uninstall: pass agreementId or agreementJsonPath");
+  }
+  const removed: string[] = [];
+  const notFound: string[] = [];
+  for (const t of targets) {
+    if (existsSync(t)) { try { unlinkSync(t); removed.push(t); } catch { notFound.push(t); } }
+    else notFound.push(t);
+  }
+  let hookRemoved = false;
+  if (input.hookPath && existsSync(input.hookPath)) {
+    // Only remove if it looks like a Mneme-generated hook (sanity check)
+    try {
+      const txt = readFileSync(input.hookPath, "utf8");
+      if (txt.includes("MNEME AGREEMENT PRE-COMMIT HOOK")) {
+        unlinkSync(input.hookPath);
+        hookRemoved = true;
+      }
+    } catch { /* */ }
+  }
+  return { removed, notFound, hookRemoved };
+}
+
 // ─── Helpers / formatters ────────────────────────────────────────────────
 export function formatAgreementLine(a: Agreement): string {
   return `📜 AGREEMENT · ${a.name} · ${a.agreementId} · ${a.decisions.length} decision(s)`;

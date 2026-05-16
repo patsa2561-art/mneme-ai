@@ -711,6 +711,19 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.7 — MASSIVE: 6 wild mutations + 7 tech-debt repairs
+//   RETROCAUSAL          — axiomLineage on chronostasis (proof tree)
+//   DREAM CONSOLIDATION  — REM-sleep speculative axiom generator
+//   COLONY MIND          — federated NEXUS broadcast across instances
+//   HONEY DECISION       — vendor honesty calibration via baited agreement
+//   RETROACTIVE COMPILE  — mine git history → backdated agreements + broken-promise map
+//   GENETIC PATCH        — self-modifying child PR proposals + AURELIAN gate
+export * as dreamConsolidation from "./dream_consolidation/index.js";
+export * as colonyMind from "./colony_mind/index.js";
+export * as honeyDecision from "./honey_decision/index.js";
+export * as retroactiveCompile from "./retroactive_compile/index.js";
+export * as geneticPatch from "./genetic_patch/index.js";
+
 // v2.19.6 — CONVERSATION COMPILER: chat → deterministic signed callable artifact (pair-locked)
 //   Decisions extracted from transcripts (EN+TH) → checker registry → signed (transcript + code) pair.
 //   Pre-commit hook generator. Agreements become executable; drift becomes impossible.

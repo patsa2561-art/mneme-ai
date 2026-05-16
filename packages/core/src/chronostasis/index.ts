@@ -471,6 +471,50 @@ export class Chronostasis {
     };
   }
 
+  /**
+   * v2.19.7 — embedded truth gravity. Higher fidelity ranking when caller
+   * supplies an embedder. Falls back gracefully to jaccard if vectors fail.
+   * Caller provides a small async embedder fn so we don't pin any vendor.
+   */
+  async axiomsRelevantToEmbedded(input: {
+    queryText: string;
+    embed: (texts: string[]) => Promise<number[][]>;
+    k?: number;
+    minSimilarity?: number;
+  }): Promise<GravityResult> {
+    const k = input.k ?? 5;
+    const minSim = input.minSimilarity ?? 0.30; // cosine threshold is naturally higher than jaccard
+    if (this.axioms.length === 0) {
+      return { v: PROTOCOL_VERSION, queryText: input.queryText, attractedAxioms: [], builtAt: new Date().toISOString() };
+    }
+    let vectors: number[][];
+    try {
+      vectors = await input.embed([input.queryText, ...this.axioms.map((a) => a.body)]);
+    } catch {
+      // Fail-safe: fall back to jaccard
+      return this.axiomsRelevantTo({ queryText: input.queryText, k, minSimilarity: 0.1 });
+    }
+    const queryVec = vectors[0]!;
+    const cos = (a: number[], b: number[]): number => {
+      if (a.length !== b.length) return 0;
+      let dot = 0, na = 0, nb = 0;
+      for (let i = 0; i < a.length; i++) { dot += a[i]! * b[i]!; na += a[i]! * a[i]!; nb += b[i]! * b[i]!; }
+      const d = Math.sqrt(na) * Math.sqrt(nb);
+      return d === 0 ? 0 : dot / d;
+    };
+    const ranked = this.axioms
+      .map((a, i) => ({ axiomId: a.axiomId, body: a.body, similarity: Math.round(cos(queryVec, vectors[i + 1]!) * 1000) / 1000 }))
+      .filter((r) => r.similarity >= minSim)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, k);
+    return {
+      v: PROTOCOL_VERSION,
+      queryText: input.queryText,
+      attractedAxioms: ranked,
+      builtAt: new Date().toISOString(),
+    };
+  }
+
   // ── Verification / introspection ────────────────────────────────────
   verifyClaim(c: PendingClaim): boolean {
     const { sig, ...body } = c;
@@ -539,6 +583,53 @@ export class Chronostasis {
       verdictCount: vc,
       chainOk: this.verifyChain().ok,
     };
+  }
+
+  // ── v2.19.7 WILD A: RETROCAUSAL · Lineage Proof of Truth ──────────────
+  //
+  // Walk the dependency graph BACKWARD from a target axiom. Every hop is
+  // HMAC-signed individually; the whole tree is a recomputable proof of
+  // "why this axiom is true". Foundation primitive for depth-of-inference
+  // claims that other AI systems can only assert without proof.
+  axiomLineage(axiomId: string): {
+    v: typeof PROTOCOL_VERSION;
+    rootAxiomId: string;
+    tree: Array<{ depth: number; axiomId: string; body: string; dependsOn: string[]; sig: string }>;
+    isFullyCrystallized: boolean;
+    sig: string;
+  } {
+    const ax = this.axioms.find((a) => a.axiomId === axiomId);
+    if (!ax) throw new Error(`RETROCAUSAL: axiom '${axiomId}' not found`);
+    const tree: Array<{ depth: number; axiomId: string; body: string; dependsOn: string[]; sig: string }> = [];
+    const visited = new Set<string>();
+    const queue: Array<{ id: string; depth: number }> = [{ id: axiomId, depth: 0 }];
+    let isFullyCrystallized = true;
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const node = this.axioms.find((a) => a.axiomId === id);
+      if (!node) {
+        // dep was a pending claim's ID — record but flag
+        isFullyCrystallized = false;
+        continue;
+      }
+      tree.push({ depth, axiomId: node.axiomId, body: node.body, dependsOn: node.dependsOn.slice(), sig: node.sig });
+      for (const dep of node.dependsOn) {
+        // dep is the original pending claimId; find the axiom that promoted from it
+        const child = this.axioms.find((a) => a.promotedFromClaimId === dep || a.axiomId === dep);
+        if (child) queue.push({ id: child.axiomId, depth: depth + 1 });
+        else isFullyCrystallized = false;
+      }
+    }
+    const body = {
+      v: PROTOCOL_VERSION,
+      rootAxiomId: axiomId,
+      tree,
+      isFullyCrystallized,
+    };
+    const sig = hmac(body, this.secret);
+    return { ...body, sig };
   }
 
   status(claimId: string): ClaimStatus {

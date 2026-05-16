@@ -102,6 +102,125 @@ export class BundledEmbedder implements EmbeddingProvider {
     }
   }
 
+  /**
+   * v2.19.7 — selfTest() returns rich diagnostics for the bundled embedder
+   * pipeline. Tries every constellation device + reports per-device failure
+   * mode + suggests a concrete remedy. Use when `verify()` returns `ok:false`
+   * and you want to know WHY.
+   *
+   * Common root causes (and what selfTest catches):
+   *   - 'require is not defined'     → @huggingface/transformers internal CJS
+   *                                    import under pure-ESM Node; remedy:
+   *                                    upgrade transformers to v3.x or use
+   *                                    `node --experimental-require-module`.
+   *   - 'Unsupported device'         → wasm string changed in v3; constellation
+   *                                    will already retry cpu.
+   *   - 'EACCES' / 'EPERM'           → cache dir permissions; remedy:
+   *                                    `chmod -R u+w ~/.cache/mneme/models`
+   *   - 'ENOTFOUND' / 'ECONNREFUSED' → first-run download blocked; remedy:
+   *                                    `npm config set fetch-retries 5` + retry
+   *                                    or use --embedder=ollama / hash.
+   */
+  async selfTest(): Promise<{
+    overallOk: boolean;
+    cacheDir: string;
+    cacheDirWritable: boolean;
+    networkReachable: "yes" | "no" | "unknown";
+    devicesAttempted: Array<{ device: string; ok: boolean; error?: string }>;
+    finalDevice: string | null;
+    rootCauseHint: string | null;
+    remedy: string | null;
+  }> {
+    // Probe 1: cache dir writable?
+    let cacheDirWritable = false;
+    try {
+      mkdirSync(this.cacheDir, { recursive: true });
+      const fs = await import("node:fs");
+      const testFile = join(this.cacheDir, ".mneme-write-probe");
+      fs.writeFileSync(testFile, "ok", "utf8");
+      fs.unlinkSync(testFile);
+      cacheDirWritable = true;
+    } catch { /* keep false */ }
+
+    // Probe 2: network reachable? (only check if cache doesn't have the model)
+    let networkReachable: "yes" | "no" | "unknown" = "unknown";
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 4000);
+      const r = await fetch("https://huggingface.co/", { signal: ctl.signal });
+      clearTimeout(t);
+      networkReachable = r.ok ? "yes" : "no";
+    } catch { networkReachable = "no"; }
+
+    // Probe 3: try each constellation device
+    const devicesAttempted: Array<{ device: string; ok: boolean; error?: string }> = [];
+    let finalDevice: string | null = null;
+    let lastError: string | null = null;
+    try {
+      const transformers = (await import("@huggingface/transformers")) as unknown as {
+        pipeline: (task: string, model: string, opts: Record<string, unknown>) => Promise<unknown>;
+        env: Record<string, unknown>;
+      };
+      (transformers.env as Record<string, unknown>)["cacheDir"] = this.cacheDir;
+      (transformers.env as Record<string, unknown>)["allowRemoteModels"] = true;
+      for (const device of ["cpu", "wasm", "webgpu", "auto"]) {
+        try {
+          await transformers.pipeline("feature-extraction", this.model, { device });
+          devicesAttempted.push({ device, ok: true });
+          finalDevice = device;
+          break;
+        } catch (e) {
+          const msg = (e as Error).message ?? String(e);
+          devicesAttempted.push({ device, ok: false, error: msg.slice(0, 200) });
+          lastError = msg;
+        }
+      }
+    } catch (e) {
+      lastError = (e as Error).message ?? String(e);
+      devicesAttempted.push({ device: "(transformers import)", ok: false, error: lastError.slice(0, 200) });
+    }
+
+    // Derive root cause + remedy
+    let rootCauseHint: string | null = null;
+    let remedy: string | null = null;
+    if (finalDevice) {
+      rootCauseHint = "ok";
+      remedy = null;
+    } else if (!cacheDirWritable) {
+      rootCauseHint = "cache dir is not writable";
+      remedy = `chmod -R u+w "${this.cacheDir}" or set --cacheDir to a writable path`;
+    } else if (networkReachable === "no" && !lastError) {
+      rootCauseHint = "no model in cache + network unreachable";
+      remedy = "first run requires internet to download ~25MB; retry online or switch to --embedder=ollama / hash";
+    } else if (lastError?.includes("require is not defined")) {
+      rootCauseHint = "transformers.js internal CJS import under pure-ESM Node";
+      remedy = "upgrade @huggingface/transformers to v3.x or run with `node --experimental-require-module`";
+    } else if (lastError?.toLowerCase().includes("unsupported device")) {
+      rootCauseHint = "transformers.js dropped this device name in a major version";
+      remedy = "constellation will retry remaining devices; ensure latest @huggingface/transformers is installed";
+    } else if (lastError?.match(/EACCES|EPERM/)) {
+      rootCauseHint = "filesystem permission error";
+      remedy = `chmod -R u+w "${this.cacheDir}"`;
+    } else if (lastError?.match(/ENOTFOUND|ECONNREFUSED/)) {
+      rootCauseHint = "network down during first-run model download";
+      remedy = "retry online; or switch to --embedder=ollama (if Ollama is running) / hash (zero-deps fallback)";
+    } else if (lastError) {
+      rootCauseHint = `unknown: ${lastError.slice(0, 100)}`;
+      remedy = "file a bug at https://github.com/patsa2561-art/mneme-ai/issues with this selfTest() output";
+    }
+
+    return {
+      overallOk: finalDevice !== null,
+      cacheDir: this.cacheDir,
+      cacheDirWritable,
+      networkReachable,
+      devicesAttempted,
+      finalDevice,
+      rootCauseHint,
+      remedy,
+    };
+  }
+
   async embed(texts: string[]): Promise<Float32Array[]> {
     // Fast path: empty input never triggers the lazy load — keeps tests
     // and trivial calls free of the 25MB model download.

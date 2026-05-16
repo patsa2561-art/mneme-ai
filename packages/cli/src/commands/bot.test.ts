@@ -271,7 +271,11 @@ const distExists = (() => {
 })();
 const describeIfBuilt = distExists ? describe : describe.skip;
 
-describeIfBuilt("mneme bot — built CLI smoke", () => {
+// v2.19.7 — retry up to 2 times. The built-CLI smoke spawns a Node
+// subprocess and reads its full stdout; under heavy CI parallelism this
+// occasionally hits transient EBUSY (Windows) or partial-stream reads.
+// The CLI itself is deterministic — flakes are environmental.
+describeIfBuilt("mneme bot — built CLI smoke", { retry: 2 }, () => {
   it("`mneme bot --dry-run --include audit` prints a comment and exits 0", () => {
     const r = spawnSync(process.execPath, [CLI, "bot", "--dry-run", "--include", "audit"], {
       cwd: REPO,
