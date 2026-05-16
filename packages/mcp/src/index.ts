@@ -46,6 +46,11 @@ import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
 import { completeArgument } from "./mcp_primitives/completion.js";
 import { lineage, versionCheck, karmaStreaks, nucleus, inbox } from "@mneme-ai/core";
 
+// v2.19.15 — re-export buildAllTools so the CLI's `mneme verify` can wire
+// the TRUTH FORENSIC PIPELINE against the live MCP catalog without depending
+// on internal tools/_registry path.
+export { buildAllTools, buildToolMap, groupByCategory } from "./tools/_registry.js";
+
 export interface McpOptions {
   cwd: string;
 }

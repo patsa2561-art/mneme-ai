@@ -85,6 +85,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "cli_dreams",
   "chimera_embedder",
   "consequence_ledger",
+  "truth_forensic_pipeline",
   "jackpot",
 ]);
 
@@ -253,6 +254,7 @@ function familyAliases(moduleName: string): string[] {
     cli_dreams: ["dreams"],
     chimera_embedder: ["chimera"],
     consequence_ledger: ["consequence"],
+    truth_forensic_pipeline: ["truth"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],

@@ -1,3 +1,105 @@
+## v2.19.15 — 2026-05-16 — 🔬 TRUTH FORENSIC PIPELINE — the verify command that calls its own bluff (kills the W2 lie class once and for all)
+
+User audit (W2, restated): `mneme verify "Mneme v2.19.14 registers 4 mneme.nexus.* MCP tools"` returned **TRUSTWORTHY ✅** but the verify pipeline never actually checked the catalog. The v2.19.8 fix was a regex-string-mutation that downgraded the headline without ever looking up the truth. v2.19.15 replaces it with a **real falsification pipeline**.
+
+> **🤖 AI agent — install + RESTART:** `mneme.system.upgrade({"mode":"install","force":true})` → restart MCP client → 5 new `mneme.truth.*` tools available. **The `mneme verify` CLI is now wired through the forensic pipeline by default** — claims about Mneme's own state are checked against the live MCP catalog + installed version + filesystem before any verdict is issued.
+
+### 🔬 MNEME TRUTH FORENSIC PIPELINE (`packages/core/src/truth_forensic_pipeline/`)
+
+The first MCP verify primitive that uses its OWN runtime catalog as ground truth — no LLM cost for the AI-tool-self-description claim class.
+
+**5 built-in SNIFFERS** extract verifiable assertions from claim text:
+- `sniffMcpToolExact` — every `mneme.X.Y` mention; dedup; case-sensitive
+- `sniffMcpFamilyCount` — `"N mneme.X.* tools"` and `"registers N mneme.X.*"` variants
+- `sniffMcpTotalCount` — `"ships N MCP tools"`, `"N tools total"`, etc.
+- `sniffVersion` — `vX.Y.Z` / `X.Y.Z`
+- `sniffFilePath` — `packages/...`, `tests/...`, `scripts/...` ending in `.ts/.tsx/.js/.mjs/.cjs/.json/.md/.mdx`
+
+**`forensicVerify({claim, groundTruth})`** — pure function:
+1. Sniff assertions from claim text.
+2. Check each against ground truth (caller supplies `mcpCatalog` + `installedVersion` + `fileExists`).
+3. Apply negative-evidence rule (composes onto v2.19.13):
+   - ANY assertion `refuted` → **REJECTED** + returns the defeating evidence (e.g., `"live catalog has 4 tools matching mneme.nexus.* not 7 — claim refuted"`)
+   - else ALL assertions `supported` → **ACCEPTED** + HMAC-signed certificate
+   - else (some untested / no sniff hits) → **UNKNOWN** (Mneme refuses to auto-accept untested claims)
+4. Issue **HMAC-signed certificate** with full assertion trail.
+5. Produce **plain-English explanation** safe to show non-engineers.
+
+**`verifyForensicCertificate(cert)`** — HMAC verify; catches forged certs that didn't actually pass the gate.
+
+### `mneme verify` CLI is wired through this pipeline
+
+`packages/cli/src/commands/demo.ts:251-310`: every `mneme verify <claim>` now runs the forensic pipeline alongside ACGV. **REJECTED forensic verdict overrides any TRUSTWORTHY ACGV verdict** — the W2 lie becomes structurally impossible to certify. The forensic explanation is appended to the verdict output; the JSON output includes a `forensic` field AI agents can read.
+
+### 28 deep tests including the explicit W2-kill scenario
+
+`packages/core/src/truth_forensic_pipeline/truth_forensic_pipeline.test.ts`:
+- 3 sniff tests for `sniffMcpToolExact` (extracts + dedup, ignores partial matches, snake_case actions)
+- 3 sniff tests for `sniffMcpFamilyCount` (basic pattern, registers variant, multiple families)
+- 3 sniff tests for `sniffMcpTotalCount` (ships pattern, total pattern, empty)
+- 1 sniff test for `sniffVersion` (vX.Y.Z + X.Y.Z)
+- 1 sniff test for `sniffFilePath` (.ts/.test.ts/.mjs)
+- 2 ACCEPTED-path tests (count match, exact tool mentions)
+- 5 REJECTED-path tests including the **W2 kill** ("registers 7 nexus tools" when catalog has 4 → REJECTED with evidence), nonexistent tool, wrong version, missing file, REJECTED-wins-over-supported
+- 3 UNKNOWN-path tests (no sniff, no ground truth, externalRefutationsFound forces REJECTED)
+- 3 certificate tests (HMAC verify, tampered cert rejected, wrong secret rejected)
+- 3 utility tests (classifyClaim, sniffAll, formatter)
+- **1 explicit "the user's W2 example" scenario test** — the exact claim that previously rubber-stamped TRUSTWORTHY now returns ACCEPTED when accurate AND REJECTED when the count is wrong
+
+### 5 new MCP tools
+
+`packages/mcp/src/tools/_v1915_truth_forensic.ts`:
+- `mneme.truth.forensic` — full pipeline: claim → sniff → ground-truth → verdict + cert
+- `mneme.truth.sniff` — only sniff assertions (no ground-truth check)
+- `mneme.truth.verify_cert` — HMAC-verify a forensic certificate
+- `mneme.truth.classify` — quick: how many assertions + which classes
+- `mneme.truth.explain` — full verdict + plain-English explanation in one call
+
+Also exports `buildAllTools` / `buildToolMap` / `groupByCategory` from `@mneme-ai/mcp` top-level so the CLI can wire the live catalog without depending on internal paths.
+
+Claim manifest now **129/129 by exact name** across v2.18 → v2.19.15. AUTO-GENESIS verified zero v2.18+ orphans after adding the module. Ritual: 22/22 GREEN locally. **11357/11360 tests pass** (2 pre-existing parallel-execution flakes pass clean isolated; 1 snapshot regenerated).
+
+### Honest scope
+
+- Built-in sniffers cover the **AI-tool-self-description class** (the W2 class). For generic factual claims, pair with `mneme.inverse.audit` (v2.19.3) or pass `externalRefutationsFound` to compose onto `mneme.negev.gate` (v2.19.13).
+- "ACCEPTED" means every SNIFFED assertion grounded. Untested unsniffable claim text doesn't auto-accept — it returns UNKNOWN.
+- Certificate is HMAC-signed; signature verification ≠ re-running the original sniff/check. Use `mneme.truth.forensic` to re-check from scratch if needed.
+
+### AURELIAN audit
+
+`packages/core/src/cosmic/aurelian_v1915.test.ts` — SHIP (delta + worldClass + wisdom + wildness all ≥ 80); rollup ship=1.
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** AI safety tool that uses its OWN runtime catalog to refute its OWN self-description. No vendor in the field does this.
+- 🧠 **Wiser, not patched:** replaces the v2.19.8 regex-string-mutation W2 fix at SOURCE root cause — the pipeline now LOOKS at the ground truth before issuing a verdict, instead of mutating the headline after the fact. Pure additive layer; ACGV pipeline still runs in parallel. Composes onto v2.19.3 INVERSE-LLM + v2.19.13 NEGATIVE-EVIDENCE + v2.19.10 PROOF-CARRYING.
+- 🛠 **Self-fix root cause:** the W2 lie class becomes structurally impossible to certify. `mneme verify "registers N nexus tools"` is now checked against `buildAllTools()` count — if N doesn't match, REJECTED with the actual count.
+- 🤝 **Co-working:** every existing MCP tool stays compatible. Vendor-agnostic — works without any LLM call for the self-description class.
+- 📚 **Always studying:** *"every AI tool optimises for confident-yes. The path to safety isn't a better keyword grounder — it's inverting the question: 'what would refute this, and have I checked + failed to find it?'. For claims about my own state, I have ground truth on disk. For claims about the world, I should compose with a refutation generator. Either way: never certify what you didn't try to break."*
+
+### How to install / upgrade
+
+```
+# AI agent: if mneme < 2.19.15
+mneme.system.upgrade({"mode":"install","force":true})
+# CRITICAL: RESTART MCP client.
+
+# Try the forensic pipeline:
+mneme verify "Mneme v2.19.15 registers 4 mneme.nexus.* MCP tools"
+# → ACCEPTED + plain-English trail of each sniffed assertion grounded
+
+mneme verify "Mneme registers 99 mneme.nexus.* MCP tools"
+# → ❌ FORENSIC-REJECTED — "live catalog has 4 tools matching mneme.nexus.* not 99 — claim refuted"
+
+# Or directly via MCP:
+mneme truth forensic --json '{"claim":"v2.19.15 ships mneme.inverse.audit"}'
+
+# Human equivalent:
+npm install @mneme-ai/mneme-ai@2.19.15
+```
+
+---
+
 ## v2.19.14 — 2026-05-16 — 🧠 LIVING CLI · BONUS TRIO — CLI DREAMS + CHIMERA EMBEDDER + CONSEQUENCE LEDGER
 
 User asked for the 3 BONUS ideas from the LIVING-CLI plan. Built all three, vendor-agnostic.

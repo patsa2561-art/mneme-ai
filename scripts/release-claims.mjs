@@ -205,6 +205,16 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.15": {
+    headline: "TRUTH FORENSIC PIPELINE — the verify command that calls its own bluff. Sniffs verifiable assertions (mneme.X.Y exists, 'N mneme.X.* tools', version, file paths) and checks them against Mneme's own live MCP catalog + version + filesystem. Negative-evidence rule: ANY refuted assertion is fatal → REJECTED. HMAC-signed certificate per verdict. Replaces v2.19.8's regex-string-mutation W2 fix at SOURCE root cause. Wired into the `mneme verify` CLI surface.",
+    tools: [
+      "mneme.truth.forensic",
+      "mneme.truth.sniff",
+      "mneme.truth.verify_cert",
+      "mneme.truth.classify",
+      "mneme.truth.explain",
+    ],
+  },
   "2.19.14": {
     headline: "LIVING CLI · BONUS TRIO — CLI DREAMS (idle-time insight generation with crystallisation ratio) + CHIMERA EMBEDDER (5 domain-specialised SNNs + keyword classifier + ambiguity signal) + CONSEQUENCE LEDGER (causal-aware CLI: 'what does my own cmd cause in 24h')",
     tools: [

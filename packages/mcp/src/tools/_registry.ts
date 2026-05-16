@@ -77,6 +77,7 @@ import { V1911_MORTAL_TOOLS } from "./_v1911_mortal.js";
 import { V1912_LIVING_CLI_TOOLS } from "./_v1912_living_cli.js";
 import { V1913_LIVING_CLI_P23_TOOLS } from "./_v1913_living_cli_p23.js";
 import { V1914_BONUS_TOOLS } from "./_v1914_bonus.js";
+import { V1915_TRUTH_FORENSIC_TOOLS } from "./_v1915_truth_forensic.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -158,6 +159,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1912_LIVING_CLI_TOOLS,
     ...V1913_LIVING_CLI_P23_TOOLS,
     ...V1914_BONUS_TOOLS,
+    ...V1915_TRUTH_FORENSIC_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

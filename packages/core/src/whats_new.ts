@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.15",
+    date: "2026-05-16",
+    headline: "TRUTH FORENSIC PIPELINE -- the verify command that calls its own bluff (kills the W2 lie class once and for all)",
+    body:
+      "🔬 User audit (W2) caught: 'mneme verify Mneme v2.19.14 registers 4 mneme.nexus.* MCP tools' returned TRUSTWORTHY ✅ -- but the verify pipeline never actually checked the catalog. The v2.19.8 fix was a regex-mutation that downgraded the headline string without checking anything. v2.19.15 ships a REAL falsification pipeline: 5 built-in sniffers extract verifiable assertions from claim text (mneme.X.Y exists / 'N mneme.X.* tools' / 'ships N MCP tools' / version vX.Y.Z / file paths). For each sniffed assertion, Mneme uses its OWN runtime catalog as ground truth -- vendor-free, no LLM cost. Negative-evidence rule (composes on v2.19.13): ANY refuted assertion is fatal → REJECTED + the defeating evidence returned (e.g., 'live catalog has 4 tools matching mneme.nexus.* not 7 -- claim refuted'). All sniffs ground → ACCEPTED + HMAC-signed certificate. No sniffable assertions → UNKNOWN (Mneme refuses to auto-accept untested claims). The `mneme verify` CLI is wired to this pipeline: REJECTED forensic overrides any TRUSTWORTHY ACGV verdict. 28 deep tests include the EXPLICIT W2-kill scenario. 5 new MCP tools (mneme.truth.*). AURELIAN SHIP. The disruption nobody else ships: AI tools optimise for confident-yes, Mneme inverts to refute-or-accept-with-proof.",
+    suggestedAction: "Tell the AI: 'verify forensically that mneme registers N mneme.X.* tools' (mneme.truth.forensic) -- claims about Mneme's own state are now checked against ground truth, not just keyword-grounded.",
+    tags: ["truth-forensic", "verify", "w2-kill", "vendor-free", "ground-truth", "hallucination-kill"],
+  },
+  {
     version: "2.19.14",
     date: "2026-05-16",
     headline: "LIVING CLI · BONUS TRIO -- CLI DREAMS + CHIMERA EMBEDDER + CONSEQUENCE LEDGER",
