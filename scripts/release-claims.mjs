@@ -125,6 +125,16 @@ export const RELEASE_CLAIMS = {
       "mneme.genetic.propose",
     ],
   },
+  "2.19.8": {
+    headline: "WIRING SPRINT — AUTO-GENESIS WRAPPER FACTORY (orphan-detection gate) + universal MCP→CLI auto-router + W2 fix (verify numerical-claim sniff) + 5 orphan-closure MCP tools (zero v2.18+ orphans)",
+    tools: [
+      "mneme.agreement.extract_decisions",
+      "mneme.embedder.decide_promote",
+      "mneme.jackpot.publish",
+      "mneme.jackpot.leaderboard",
+      "mneme.jackpot.render_jackpot_card",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

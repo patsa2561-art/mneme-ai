@@ -255,7 +255,31 @@ How to read the verdict:
       const result = opts.engine === "propositional"
         ? acgv.runACGV({ claim, repoRoot: process.cwd(), counterEvidence: counter })
         : await acgv.runACGVAsync({ claim, repoRoot: process.cwd(), counterEvidence: counter });
+
       const explained = acgvExplain.explain(result, claim);
+
+      // v2.19.8 W2 FIX — Numerical-Claim Sniff.
+      //
+      // ACGV grounds on keyword match; it cannot verify whether a SPECIFIC
+      // NUMBER in the claim ("registers 4 tools") matches the actual repo
+      // count. If the claim contains a load-bearing integer/percent/ratio
+      // that ACGV's surface heuristics don't actually check, downgrade the
+      // friendly verdict (TRUSTWORTHY → MIXED-NEEDS-DATA) so we don't certify
+      // false numerical claims as supported. (Bug class caught by user's
+      // W2 audit in v2.19.7.)
+      const hasLoadBearingNumber = /\b\d+(?:\.\d+)?(?:\s*(?:%|x|×|tools?|tests?|files?|commits?|axioms?|claims?|times?))\b/i.test(claim);
+      if (hasLoadBearingNumber) {
+        const mutable = explained as unknown as { headline?: string; plain?: string; trafficLight?: string };
+        if (typeof mutable.headline === "string" && /TRUSTWORTHY/i.test(mutable.headline)) {
+          mutable.headline = mutable.headline.replace(/TRUSTWORTHY/gi, "MIXED-NEEDS-DATA");
+          if (typeof mutable.plain === "string") {
+            mutable.plain = mutable.plain + "\n\n⚠ v2.19.8 numerical-claim sniff: claim contains a specific number ACGV's surface heuristic cannot ground; verdict downgraded to MIXED-NEEDS-DATA. Re-run with --counter-evidence \"actual count is N\" to ground, or use mneme.inverse.audit for a stricter check.";
+          }
+          if (typeof mutable.trafficLight === "string" && mutable.trafficLight === "green") {
+            mutable.trafficLight = "yellow";
+          }
+        }
+      }
 
       if (opts.json) {
         process.stdout.write(JSON.stringify({ verdict: result.verdict, confidence: result.confidence, headline: explained.headline, plain: explained.plain, nextAction: explained.nextAction, trafficLight: explained.trafficLight, engine: (result as { engine?: string }).engine ?? "propositional", acgv: result }, null, 2) + "\n");

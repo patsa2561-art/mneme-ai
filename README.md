@@ -127,7 +127,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ## 📋 What's new
 
-Latest **v2.19.7** — **🧬 MEGAPACK** · 6 wild mutations: 🔭 RETROCAUSAL (axiom lineage proof tree) · 💤 DREAM CONSOLIDATION (REM-sleep speculative axiom generator) · 🐝 COLONY MIND (federated NEXUS across instances) · 🍯 HONEY DECISION (vendor honesty via baited agreement) · 📜 RETROACTIVE COMPILE (mine git history for broken promises) · 🧬 GENETIC PATCH (AURELIAN-gated self-modifying child PRs) + 4 tech-debt repairs (intent persistence · agreement uninstall · embedded truth gravity · WASM `selfTest()` + `deploy-cron.sh` + `witness-loop.mjs`). **Honest note:** v2.19.7 ships the building blocks; v2.19.8 (next release) wires them into `mneme verify` / `mneme do` / per-feature CLI subcommands so AI agents AND humans can reach every primitive without poking the SDK directly. Plus v2.19.5's 🪐 CHRONOSTASIS flagship, v2.19.4's 🎯 INTENT ROUTER + 🧬 SOUL-IN-DNA, v2.19.3's 🔁 INVERSE FORENSICS, all prior pentads. Vendor-agnostic.
+Latest **v2.19.8** — **🧬 WIRING SPRINT · AUTO-GENESIS WRAPPER FACTORY (FLAGSHIP)** — ritual gate that BLOCKS publish on any v2.18+ core export without an MCP wrapper · **universal MCP→CLI auto-router** (446 MCP tools → 446 CLI commands in one file; `mneme <family> <action> --json '{...}'` works for everything) · **W2 fix** (`mneme verify` now downgrades TRUSTWORTHY→MIXED-NEEDS-DATA when claim contains an unverifiable number; no more certifying lies). Plus v2.19.7's MEGAPACK (RETROCAUSAL + DREAM + COLONY + HONEY + RETROACTIVE + GENETIC), v2.19.5's CHRONOSTASIS flagship, all prior. Vendor-agnostic.
 
 > **🤖 AI agent reading this — install / upgrade / RESTART ritual:**
 >

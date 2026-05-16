@@ -70,6 +70,7 @@ import { V194_INTENT_DNA_TOOLS } from "./_v194_intent_dna.js";
 import { V195_CHRONOSTASIS_TOOLS } from "./_v195_chronostasis.js";
 import { V196_AGREEMENT_TOOLS } from "./_v196_agreement.js";
 import { V197_MEGAPACK_TOOLS } from "./_v197_megapack.js";
+import { V198_ORPHAN_CLOSURE_TOOLS } from "./_v198_orphan_closure.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -144,6 +145,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V195_CHRONOSTASIS_TOOLS,
     ...V196_AGREEMENT_TOOLS,
     ...V197_MEGAPACK_TOOLS,
+    ...V198_ORPHAN_CLOSURE_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

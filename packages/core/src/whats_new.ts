@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.8",
+    date: "2026-05-16",
+    headline: "WIRING SPRINT -- AUTO-GENESIS WRAPPER FACTORY + universal CLI auto-router + W2 fix (verify no longer certifies false numerical claims)",
+    body:
+      "User caught (W2 audit) that mneme verify still certifies false numerical claims as TRUSTWORTHY. v2.19.8 fixes this AND fixes the systemic 'no CLI surface' bug class permanently. NEW: 🧬 AUTO-GENESIS WRAPPER FACTORY (packages/core/src/wrapper_genesis/) scans core source + MCP tools + emits signed orphan report; ritual gate phase3.no-orphan-core-exports blocks publish on any v2.18+ orphan -- the 'build then forget to wrap' bug class becomes structurally impossible. NEW: universal MCP-to-CLI auto-router (packages/cli/src/commands/universal_mcp_subcommands.ts) reads the MCP catalog at startup + auto-registers mneme <family> <action> for every tool -- ONE file covers EVERY existing + future MCP family. W2 FIX: mneme verify sniffs load-bearing numbers in claims; downgrades verdict from TRUSTWORTHY to MIXED-NEEDS-DATA when ACGV surface heuristics can't ground them. CLOSED: 5 real v2.18+ orphan wrappers (agreement.extract_decisions, embedder.decide_promote, jackpot.publish/leaderboard/render_jackpot_card). 11 wrapper_genesis tests + AURELIAN SHIP. Ritual claim manifest now 67/67 exact-name across 17 releases.",
+    suggestedAction: "Tell the AI: 'verify <claim with numbers>' -- watch it downgrade if the numbers can't be grounded. Or: mneme arena/badge/oracle/etc <action> --json '{...}' -- every MCP tool is now reachable via CLI.",
+    tags: ["wiring-sprint", "auto-genesis", "no-more-orphans", "w2-fix"],
+  },
+  {
     version: "2.19.7",
     date: "2026-05-16",
     headline: "MEGAPACK -- 6 wild mutations (RETROCAUSAL, DREAM, COLONY, HONEY, RETROACTIVE, GENETIC) + 4 tech-debt repairs (intent persist, agreement uninstall, embedded gravity, WASM selfTest)",

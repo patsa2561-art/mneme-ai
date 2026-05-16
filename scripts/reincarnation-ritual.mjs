@@ -188,6 +188,28 @@ check("phase3.claim-manifest-exact-name-match", () => {
   return { measure: { perRelease, totalClaimed: expected.length } };
 });
 
+// v2.19.8 — phase3.no-orphan-core-exports (AUTO-GENESIS WRAPPER FACTORY gate).
+// Blocks publish if ANY v2.18+ core module has an exported function/const
+// without a corresponding MCP wrapper. Closes the "build but no wrap" bug
+// class permanently. Runs as a subprocess so the ritual itself stays sync.
+check("phase3.no-orphan-core-exports", () => {
+  const orphanScript = `${REPO_ROOT}/scripts/check-orphans.mjs`;
+  if (!existsSync(orphanScript)) return { measure: { skipped: true, reason: "check-orphans.mjs not present" } };
+  const r = runSafe(`node "${orphanScript}"`, { cwd: REPO_ROOT });
+  let parsed;
+  try { parsed = JSON.parse(r.stdout); } catch { parsed = { parseFailed: true }; }
+  if (parsed.skipped) return { measure: parsed };
+  if (r.code !== 0) {
+    return {
+      ok: false,
+      reason: `${parsed.enforcedOrphans ?? "?"} v2.18+ core export(s) lack an MCP wrapper`,
+      remedy: parsed.enforcedList ? parsed.enforcedList.map((o) => `${o.module}.${o.symbol} → ${o.suggested}`).join("; ") : "run scripts/check-orphans.mjs for details",
+      measure: parsed,
+    };
+  }
+  return { measure: parsed };
+});
+
 check("phase3.whats-new-is-fresh", () => {
   const r = mnemeCmd("whats-new --json");
   if (r.code !== 0) {

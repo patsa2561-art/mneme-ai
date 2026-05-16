@@ -2535,6 +2535,21 @@ export async function run(argv: string[]): Promise<void> {
   registerAskCommand(program);
   registerCovenantCommand(program);
 
+  // v2.19.8 — UNIVERSAL MCP SUBCOMMAND AUTO-ROUTER
+  // Reads the MCP tool catalog and auto-registers `mneme <family> <action>`
+  // for every MCP tool. Closes the "no CLI route for shipped MCP tool" bug
+  // class permanently. New feature ships → MCP wrapper registers → CLI
+  // command appears in next mneme invocation. Zero hand-wiring needed.
+  try {
+    const { registerUniversalMcpSubcommands } = await import("./commands/universal_mcp_subcommands.js");
+    const { buildAllTools } = await import("@mneme-ai/mcp/tools/registry");
+    const allTools = buildAllTools();
+    // Cast — the ToolLike interface is structurally compatible with MnemeTool at runtime
+    registerUniversalMcpSubcommands(program, allTools as unknown as Parameters<typeof registerUniversalMcpSubcommands>[1]);
+  } catch {
+    // Non-fatal — if mcp catalog can't load, the rest of the CLI still works.
+  }
+
   program.exitOverride((err) => {
     if (err.code === "commander.help" || err.code === "commander.helpDisplayed") process.exit(0);
     if (err.code === "commander.version") process.exit(0);
