@@ -26,7 +26,7 @@ const PROTOCOL_VERSION = 1 as const;
 
 export type Vendor =
   | "claude" | "chatgpt" | "gemini" | "perplexity" | "cursor" | "copilot"
-  | "codex" | "llama" | "mistral" | "qwen" | "deepseek" | "other";
+  | "codex" | "llama" | "mistral" | "qwen" | "deepseek" | "grok" | "other";
 
 export type TaskClass =
   | "code_generation" | "code_review" | "debugging" | "refactoring"

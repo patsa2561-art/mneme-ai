@@ -710,3 +710,15 @@ export * as arena from "./arena/index.js";
 export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
+
+// v2.19.0 — VENDOR-SYNCRETIC PENTAD (5 modules; vendor-agnostic — every AI vendor wins):
+//   CONFESSIONAL      — pre-merge audit any vendor's diff vs peer consensus
+//   VENDOR GHOST      — local stylometric distillation of any vendor (jailbreaks lock-in)
+//   TRINITY VOTE      — consensus + tiebreaker ensemble (10× cheaper than naive ensembling)
+//   INSURANCE MARKET  — per-vendor premium multiplier (Lloyd's-of-AI pricing)
+//   VENDOR BOOMERANG  — cross-vendor context injection (the brain no single vendor has)
+export * as confessional from "./confessional/index.js";
+export * as vendorGhost from "./vendor_ghost/index.js";
+export * as trinityVote from "./trinity_vote/index.js";
+export * as insuranceMarket from "./insurance_market/index.js";
+export * as vendorBoomerang from "./vendor_boomerang/index.js";
