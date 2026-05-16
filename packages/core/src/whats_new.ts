@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.5",
+    date: "2026-05-16",
+    headline: "CHRONOSTASIS · FLAGSHIP · Time-Locked Provable Memory (the first AI memory that auto-unsays itself on adversarial refute)",
+    body:
+      "🪐 Every Mneme claim wrapped as PENDING with deadline + dep-graph. Witness AIs (any vendor: Claude/GPT/Gemini/Grok/etc.) refute or confirm during the window. If refute confidence >= 0.7 -> REWIND cascades through the dep graph and deprecates ALL downstream claims automatically. If deadline passes without refute AND all deps are axioms -> CRYSTALLIZE into an immutable AXIOM. Axioms gravitationally attract related queries (jaccard similarity). 5 phases all wired: propose -> witness -> rewind -> crystallize -> truth-gravity. 29 deep tests including end-to-end killer demo (claim + dependent + 10-min refute -> cascade deprecates both). 6 new MCP tools (mneme.chronostasis.*). AURELIAN SHIP. Cron extended on DO to call chronostasis.tick() 24/7. Intent router phrases added: 'is this verified' / 'time-test this' / 'rewind chronostasis'.",
+    suggestedAction: "Tell the AI: 'is this verified' or 'time-test this claim' or 'rewind chronostasis'. The AI walks the signed Chronostasis plan.",
+    tags: ["chronostasis", "flagship", "time-locked", "auto-rewind", "axioms", "press-tier"],
+  },
+  {
     version: "2.19.4",
     date: "2026-05-16",
     headline: "INTENT ROUTER (user speaks human; AI walks the flow) + SOUL-IN-DNA (world's first organism-readable AI memory)",

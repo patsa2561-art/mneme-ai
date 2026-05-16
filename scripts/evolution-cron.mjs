@@ -137,5 +137,20 @@ try {
   logLine(`⚠ evolution/soul record failed (likely missing @mneme-ai/core in this dir): ${e.message}`);
 }
 
+// ─── Step 5: Tick Chronostasis (v2.19.5+) ────────────────────────────────
+try {
+  const core = await import("@mneme-ai/core");
+  const chrono = core.chronostasis.defaultChronostasis();
+  const r = chrono.tick();
+  logLine(`🪐 chronostasis tick: ${r.crystallized.length} crystallized · ${r.rewinds.length} rewinds · ${r.stillPending} pending`);
+  if (r.rewinds.length > 0) {
+    for (const rw of r.rewinds) {
+      logLine(`  ↩️ rewound ${rw.deprecatedClaimIds.length} claim(s): ${rw.reason.slice(0, 100)}`);
+    }
+  }
+} catch (e) {
+  logLine(`⚠ chronostasis tick failed (likely missing v2.19.5+ core): ${e.message}`);
+}
+
 logLine("🌙 evolution-cron complete");
 process.exit(ritualPassed ? 0 : 1);

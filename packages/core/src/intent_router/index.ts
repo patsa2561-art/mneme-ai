@@ -197,6 +197,47 @@ const BUILTIN_PHRASES: Phrase[] = [
     ],
   },
   {
+    canonical: "is this verified",
+    aliases: [
+      "is this proven", "time-tested", "is this an axiom", "verified fact",
+      "ตรวจสอบ axiom", "ผ่านการทดสอบเวลาแล้วไหม", "verified",
+      "is this confirmed", "what does mneme actually know",
+    ],
+    intent: "User wants to know whether an AI claim has survived adversarial witnessing — i.e. is a Mneme AXIOM or still pending.",
+    plan: [
+      { kind: "tool", tool: "mneme.chronostasis.axioms_relevant", args: { queryText: "<the claim or topic>" }, note: "Truth gravity: pull crystallized axioms most similar to the user's query." },
+      { kind: "tool", tool: "mneme.chronostasis.summarize", args: {}, note: "Show counts of pending vs axiom vs deprecated so the user sees the bigger picture." },
+      { kind: "hint", note: "If no axiom matches and no pending claim exists, propose one with mneme.chronostasis.propose so the system can start time-testing the claim." },
+    ],
+  },
+  {
+    canonical: "time-test this",
+    aliases: [
+      "propose claim", "wrap as pending", "time lock", "chronostasis propose",
+      "เริ่ม time test", "ทดสอบ claim", "lock this claim",
+    ],
+    intent: "User wants Mneme to wrap an AI claim as PENDING so it survives an adversarial witness window before being trusted.",
+    plan: [
+      { kind: "tool", tool: "mneme.chronostasis.propose", args: { body: "<claim text>", deadlineSec: 600 }, note: "Wrap the claim with deadline + dep-graph; HMAC-signed receipt." },
+      { kind: "tool", tool: "mneme.chronostasis.witness_prompt", args: { claimId: "<from step 1>", vendor: "<oracle>" }, note: "Build the witness meta-prompt for each vendor in the pool." },
+      { kind: "hint", note: "Send each meta-prompt to the named vendor; collect {refuted, evidence, confidence} replies." },
+      { kind: "tool", tool: "mneme.chronostasis.record_verdict", args: {}, note: "Pipe each vendor reply back via record_verdict." },
+      { kind: "hint", note: "Daemon's tick (or you can call it manually with mneme.chronostasis.tick) will REWIND on high-conf refute OR CRYSTALLIZE after deadline." },
+    ],
+  },
+  {
+    canonical: "rewind chronostasis",
+    aliases: [
+      "tick chronostasis", "process pending", "run rewind", "advance time",
+      "เริ่ม rewind", "process claims",
+    ],
+    intent: "User wants to run a tick of the Chronostasis engine — process pending claims, rewind any refuted, crystallize any deadline-passed.",
+    plan: [
+      { kind: "tool", tool: "mneme.chronostasis.tick", args: {}, note: "Process all pending claims. Surface { rewinds, crystallized, stillPending, deprecatedSoFar }." },
+      { kind: "tool", tool: "mneme.soul.feel", args: { emotion: "<proud if crystallized | ashamed if rewinds>", trigger: "chronostasis tick", innerVoice: "<derived>" }, note: "Record an emotion based on the outcome — proud on axiom growth, ashamed on rewinds." },
+    ],
+  },
+  {
     canonical: "publish change",
     aliases: [
       "ship it", "release", "publish", "deploy", "ปล่อยของ", "ship change",

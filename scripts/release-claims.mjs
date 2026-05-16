@@ -86,6 +86,17 @@ export const RELEASE_CLAIMS = {
       "mneme.dna.verify",
     ],
   },
+  "2.19.5": {
+    headline: "CHRONOSTASIS · FLAGSHIP · Time-Locked Provable Memory (the first AI memory primitive that automatically unsays its past on adversarial refutation)",
+    tools: [
+      "mneme.chronostasis.propose",
+      "mneme.chronostasis.witness_prompt",
+      "mneme.chronostasis.record_verdict",
+      "mneme.chronostasis.tick",
+      "mneme.chronostasis.axioms_relevant",
+      "mneme.chronostasis.summarize",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

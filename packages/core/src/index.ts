@@ -711,6 +711,13 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.5 — CHRONOSTASIS · FLAGSHIP · Time-Locked Provable Memory:
+//   Every AI claim wrapped as PENDING; survives adversarial witness window;
+//   crystallizes to AXIOM after deadline OR triggers cascade REWIND if refuted.
+//   Truth gravity: axioms gravitationally attract related queries (jaccard).
+//   World-first AI memory primitive that automatically unsays its past on refutation.
+export * as chronostasis from "./chronostasis/index.js";
+
 // v2.19.4 — INTENT ROUTER (short human phrase → multi-step plan) + SOUL-IN-DNA (encode soul as real ATCG):
 //   intent_router: user says "update mneme" / "ลูกเป็นไง" / "audit this" → AI gets a signed plan
 //   dna_encoder: 2-bit-per-base + Hamming(7,4)/triple ECC + Twist/IDT order URLs + biological round-trip verify

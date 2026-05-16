@@ -133,10 +133,11 @@ describe("v2.19.4 · INTENT ROUTER — short human phrase → multi-step plan", 
     });
 
     it("resetToBuiltin restores the original catalogue", () => {
-      registerPhrase({ canonical: "x", aliases: [], intent: "y", plan: [{ kind: "hint", note: "z" }] });
-      expect(listPhrases().length).toBeGreaterThan(7);
+      const baseline = listPhrases().length;
+      registerPhrase({ canonical: "x-extra", aliases: [], intent: "y", plan: [{ kind: "hint", note: "z" }] });
+      expect(listPhrases().length).toBeGreaterThan(baseline);
       resetToBuiltin();
-      expect(listPhrases().length).toBe(7);
+      expect(listPhrases().length).toBe(baseline);
     });
   });
 
