@@ -82,6 +82,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "model_chrysalis",
   "neuromorphic_embedder",
   "negative_evidence",
+  "cli_dreams",
+  "chimera_embedder",
+  "consequence_ledger",
   "jackpot",
 ]);
 
@@ -247,6 +250,9 @@ function familyAliases(moduleName: string): string[] {
     model_chrysalis: ["chrysalis"],
     neuromorphic_embedder: ["snn"],
     negative_evidence: ["negev"],
+    cli_dreams: ["dreams"],
+    chimera_embedder: ["chimera"],
+    consequence_ledger: ["consequence"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -357,6 +363,14 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // mneme.negev.{tax_charge,tax_status,tax_init} which use snake_case actions
   // that don't pattern-match the camelCase symbol heuristic.
   "emptyTaxLedger", "initMonthlyBudget", "chargeTax", "vendorStatus", "routingDecision",
+  // v2.19.14 BONUS TRIO — constructors and snake_case-action-divergent symbols:
+  //   cli_dreams: emptyDreamLedger constructor; recordDreamVerdict surfaced as
+  //     mneme.dreams.resolve (snake action doesn't match camel symbol).
+  //   chimera_embedder: createChimera constructor.
+  //   consequence_ledger: emptyConsequenceLedger constructor.
+  "emptyDreamLedger", "recordDreamVerdict",
+  "createChimera", "listChimeraDomains",
+  "emptyConsequenceLedger",
 ]);
 
 export function findOrphans(input: {

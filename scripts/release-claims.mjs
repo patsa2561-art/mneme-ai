@@ -205,6 +205,23 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.14": {
+    headline: "LIVING CLI · BONUS TRIO — CLI DREAMS (idle-time insight generation with crystallisation ratio) + CHIMERA EMBEDDER (5 domain-specialised SNNs + keyword classifier + ambiguity signal) + CONSEQUENCE LEDGER (causal-aware CLI: 'what does my own cmd cause in 24h')",
+    tools: [
+      "mneme.dreams.enqueue",
+      "mneme.dreams.resolve",
+      "mneme.dreams.digest",
+      "mneme.dreams.pending",
+      "mneme.chimera.classify",
+      "mneme.chimera.embed",
+      "mneme.chimera.disagree",
+      "mneme.chimera.list_domains",
+      "mneme.consequence.record",
+      "mneme.consequence.record_delta",
+      "mneme.consequence.query",
+      "mneme.consequence.list_recent",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

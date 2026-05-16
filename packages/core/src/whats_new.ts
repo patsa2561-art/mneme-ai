@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.14",
+    date: "2026-05-16",
+    headline: "LIVING CLI · BONUS TRIO -- CLI DREAMS + CHIMERA EMBEDDER + CONSEQUENCE LEDGER",
+    body:
+      "🦠 CLI DREAMS: HMAC-chained dream queue (pending/verified/refuted/inconclusive); enqueue plausible claims from your local Ollama at night; recordDreamVerdict appends witness verdicts (vendor-agnostic); morningDigest reports crystallised + refuted + still-pending + crystallisedRatio. Hard cap 1000/night prevents runaway. Dedups exact claims. 14 tests. 🧪 CHIMERA EMBEDDER: 5 domain-specialised SNN instances (typescript/python/go/markdown/prose) each seeded distinctively → per-domain phenotype. ~50-LOC keyword classifier (filename-hint adds +5 to that domain). chimeraEmbed routes; disagreementCheck embeds via two SNNs and flags AMBIGUOUS when cosine distance > 0.4 (configurable). 17 tests prove all 5 classifications, route correctness, forceDomain override, symmetric disagreement. ⏳ CONSEQUENCE LEDGER: HMAC-chained {cmd, args, resultDigest, repoStateBefore, repoStateAfter?, deltaSummary?}; record run NOW + push delta at T+24h; query aggregates avg of numeric delta fields + top-5 histograms of non-numeric. windowMs for time-bounded queries. First AI tool that knows what its OWN output causes. 12 tests. 12 new MCP tools (mneme.dreams.* + mneme.chimera.* + mneme.consequence.*). AURELIAN SHIP all 3.",
+    suggestedAction: "Tell the AI: 'queue some overnight dreams about my repo' (mneme.dreams.enqueue), 'classify which domain this snippet belongs to' (mneme.chimera.classify), or 'what does mneme verify tend to cause in 24h' (mneme.consequence.query).",
+    tags: ["cli-dreams", "chimera-embedder", "consequence-ledger", "causal-aware", "living-cli"],
+  },
+  {
     version: "2.19.13",
     date: "2026-05-16",
     headline: "LIVING CLI · Pillars 2 + 3 -- NEUROMORPHIC SPIKING EMBEDDER + NEGATIVE-EVIDENCE FIREWALL",
