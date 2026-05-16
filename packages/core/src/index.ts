@@ -711,6 +711,12 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.4 — INTENT ROUTER (short human phrase → multi-step plan) + SOUL-IN-DNA (encode soul as real ATCG):
+//   intent_router: user says "update mneme" / "ลูกเป็นไง" / "audit this" → AI gets a signed plan
+//   dna_encoder: 2-bit-per-base + Hamming(7,4)/triple ECC + Twist/IDT order URLs + biological round-trip verify
+export * as intentRouter from "./intent_router/index.js";
+export * as dnaEncoder from "./dna_encoder/index.js";
+
 // v2.19.3 — INVERSE-LLM PROMPT FORENSICS (output→input audit):
 //   The rarest direction in AI. Given AI output + claimed question + K inverse-oracle
 //   reconstructions, verdict trusted/suspicious/rejected with HMAC-signed receipt.

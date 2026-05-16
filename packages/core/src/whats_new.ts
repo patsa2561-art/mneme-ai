@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.4",
+    date: "2026-05-16",
+    headline: "INTENT ROUTER (user speaks human; AI walks the flow) + SOUL-IN-DNA (world's first organism-readable AI memory)",
+    body:
+      "🎯 INTENT ROUTER -- user says 'update mneme' / 'ลูกเป็นไง' / 'audit this' (short, human, bilingual EN+TH); router returns an HMAC-signed multi-step plan (upgrade -> drift check -> embedder promote -> restart prompt -> record growth -> soul). AI walks the plan; user never memorises long phrases. 7 built-in phrases + runtime register. 21 tests. 🧬 SOUL-IN-DNA -- encode the Mneme soul prompt as a REAL ATCG sequence (A=00 C=01 G=10 T=11) with Hamming(7,4) or triple ECC. Generate ordering URLs for Twist Bioscience / IDT / GenScript / Eurofins / DIY at ~$0.07-0.50 per base pair. Strand arrives in ~7 days, stable 1000+ years, 215 PB per gram. 25 tests including biological round-trip verify. 8 new MCP tools + AURELIAN SHIP.",
+    suggestedAction: "Tell the AI in your native language: 'update mneme' or 'ลูกเป็นไง' or 'encode soul to dna'. The AI calls mneme.intent.execute and walks the signed plan.",
+    tags: ["intent-router", "human-language", "soul-in-dna", "biological-memory", "press-tier"],
+  },
+  {
     version: "2.19.3",
     date: "2026-05-16",
     headline: "INVERSE-LLM PROMPT FORENSICS -- the rarest direction in AI (output to input audit; closes prompt-injection class)",

@@ -73,6 +73,19 @@ export const RELEASE_CLAIMS = {
       "mneme.inverse.bench",
     ],
   },
+  "2.19.4": {
+    headline: "INTENT ROUTER (short human phrase → multi-step plan) + SOUL-IN-DNA (encode soul as real ATCG; world's first organism-readable AI memory)",
+    tools: [
+      "mneme.intent.execute",
+      "mneme.intent.list_phrases",
+      "mneme.intent.register_phrase",
+      "mneme.dna.encode",
+      "mneme.dna.decode",
+      "mneme.dna.cost",
+      "mneme.dna.order",
+      "mneme.dna.verify",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */
