@@ -711,6 +711,16 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.10 — PROOF-CARRYING WRAPPER + REVERSE-WRAPPER:
+//   PROOF-CARRYING — zero-trust tool chain; HMAC-signed cert on every output;
+//   downstream tool refuses input lacking valid parentProof. Kills prompt-
+//   injection via fake tool outputs + gives regulators chain-of-custody.
+//   REVERSE-WRAPPER — wrapper response carries optional __suggested_next_call
+//   advisory field; AI agent's planner sees hint + likely follows; loop
+//   detection + follow-through telemetry track quality.
+export * as proofCarrying from "./proof_carrying/index.js";
+export * as reverseWrapper from "./reverse_wrapper/index.js";
+
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers
 //   (sequential pipe / fan_out parallel / first_success cascade).

@@ -8,7 +8,7 @@
  *
  *   • mneme.genome.publish(outputPath?)  — pack repo's .mneme/ into a genome
  *   • mneme.genome.install(genomeFile)   — apply a genome to the current repo
- *   • mneme.genome.list                  — enumerate genomes installed locally
+ *   • mneme.genome.installed             — enumerate genomes installed locally
  *
  * Privacy model:
  *   • Email addresses scrubbed → "<email>@<domain>" placeholder
@@ -296,7 +296,7 @@ export const genomePublishTool: MnemeTool = {
     "Runtime state (mneme.db, replay.jsonl, confess-scoreboard.json) is intentionally excluded — install will NOT restore it.",
     "Conflicts with absolute paths and `..` in filenames are rejected at install — keep your portable files inside .mneme/.",
   ],
-  composeWith: ["mneme.genome.install", "mneme.genome.list", "mneme.constitution.get"],
+  composeWith: ["mneme.genome.install", "mneme.genome.installed", "mneme.constitution.get"],
   handler: async (rt, args) => {
     const repoName = basename(rt.meta.rootPath);
     const mnemeVersion = process.env["npm_package_version"] ?? "unknown";
@@ -376,7 +376,7 @@ export const genomeInstallTool: MnemeTool = {
     "Path-traversal attempts (../, absolute paths) are blocked individually — those files appear in `conflicts` with reason 'unsafe path'.",
     "force=true OVERWRITES your existing .mneme/ files — diff your repo first if unsure.",
   ],
-  composeWith: ["mneme.genome.publish", "mneme.genome.list", "mneme.constitution.get"],
+  composeWith: ["mneme.genome.publish", "mneme.genome.installed", "mneme.constitution.get"],
   handler: async (rt, args) => {
     const file = String(args["genomeFile"] ?? "");
     if (!file) {
@@ -436,12 +436,13 @@ export const genomeInstallTool: MnemeTool = {
 };
 
 export const genomeListTool: MnemeTool = {
-  name: "mneme.genome.list",
+  name: "mneme.genome.installed",
   category: "meta",
   description:
-    "List every Mneme genome installed locally to this repo, with installation " +
+    "List every Mneme genome INSTALLED locally to this repo, with installation " +
     "timestamp + source + content hash. Use WHEN you want to know which external " +
-    "wisdom packs are currently shaping this repo's behavior.",
+    "wisdom packs are currently shaping this repo's behavior. (Distinct from " +
+    "mneme.genome.list which is v2.19.9 GENESPLICING chimera listing.)",
   whenToUse:
     "You want to audit which external genomes this repo has installed.",
   triggers: ["list genomes", "what genomes installed", "mneme genome inventory"],

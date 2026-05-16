@@ -73,6 +73,8 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "dream_consolidation", "colony_mind", "honey_decision", "retroactive_compile", "genetic_patch",
   "wrapper_genesis",
   "wrapper_genesplicing",
+  "proof_carrying",
+  "reverse_wrapper",
   "jackpot",
 ]);
 
@@ -229,6 +231,8 @@ function familyAliases(moduleName: string): string[] {
   // Common aliases between core module dir names and MCP family prefixes.
   const map: Record<string, string[]> = {
     wrapper_genesplicing: ["genome"],
+    proof_carrying: ["proof"],
+    reverse_wrapper: ["suggest"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -309,6 +313,9 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "encode", "decode",
   // v2.19.9 genesplicing — class instance methods reached via singleton
   "defaultGenesplicing",
+  // v2.19.10 proof-carrying — decorator helper that wraps inner handler,
+  // paired with attachProof (which IS exposed as mneme.proof.attach).
+  "requireParentProof",
 ]);
 
 export function findOrphans(input: {

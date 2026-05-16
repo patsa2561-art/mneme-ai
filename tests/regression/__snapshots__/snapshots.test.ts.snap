@@ -133,6 +133,71 @@ Commands:
   autoboot  >  Phoenix Resurrection Protocol -- install / uninstall / status of the cross-platform auto-boot mechanisms. Arms Plan 1/2/3 simultaneously so the daemon resurrects after every reboot regardless of which mechanism is blocked by the host.
   sovereign  >  Sovereignty Kernel -- Mneme answers questions about THIS repo using local Ollama + ACGV grounding gate. Free-first: no API key, no cloud, no source code leaves the laptop. v1.57.0.
   covenant  >  Tier 2 -- HMAC-signed bilateral contract between user + AI vendor. Mneme enforces; Aletheia compliance score moves over time.
+  grade  >  Mneme grade family — 1 action(s). Run \`mneme grade --help\` for actions, or \`mneme grade <action> --json '{...}'\` to invoke.
+  truth  >  Mneme truth family — 2 action(s). Run \`mneme truth --help\` for actions, or \`mneme truth <action> --json '{...}'\` to invoke.
+  whisper  >  Mneme whisper family — 3 action(s). Run \`mneme whisper --help\` for actions, or \`mneme whisper <action> --json '{...}'\` to invoke.
+  time  >  Mneme time family — 2 action(s). Run \`mneme time --help\` for actions, or \`mneme time <action> --json '{...}'\` to invoke.
+  interview  >  Mneme interview family — 1 action(s). Run \`mneme interview --help\` for actions, or \`mneme interview <action> --json '{...}'\` to invoke.
+  audience  >  Mneme audience family — 1 action(s). Run \`mneme audience --help\` for actions, or \`mneme audience <action> --json '{...}'\` to invoke.
+  alien  >  Mneme alien family — 1 action(s). Run \`mneme alien --help\` for actions, or \`mneme alien <action> --json '{...}'\` to invoke.
+  carbon  >  Mneme carbon family — 1 action(s). Run \`mneme carbon --help\` for actions, or \`mneme carbon <action> --json '{...}'\` to invoke.
+  consensus  >  Mneme consensus family — 4 action(s). Run \`mneme consensus --help\` for actions, or \`mneme consensus <action> --json '{...}'\` to invoke.
+  reasoning  >  Mneme reasoning family — 1 action(s). Run \`mneme reasoning --help\` for actions, or \`mneme reasoning <action> --json '{...}'\` to invoke.
+  game  >  Mneme game family — 1 action(s). Run \`mneme game --help\` for actions, or \`mneme game <action> --json '{...}'\` to invoke.
+  teacher  >  Mneme teacher family — 2 action(s). Run \`mneme teacher --help\` for actions, or \`mneme teacher <action> --json '{...}'\` to invoke.
+  tom  >  Mneme tom family — 2 action(s). Run \`mneme tom --help\` for actions, or \`mneme tom <action> --json '{...}'\` to invoke.
+  tot  >  Mneme tot family — 1 action(s). Run \`mneme tot --help\` for actions, or \`mneme tot <action> --json '{...}'\` to invoke.
+  curiosity  >  Mneme curiosity family — 1 action(s). Run \`mneme curiosity --help\` for actions, or \`mneme curiosity <action> --json '{...}'\` to invoke.
+  consolidate  >  Mneme consolidate family — 1 action(s). Run \`mneme consolidate --help\` for actions, or \`mneme consolidate <action> --json '{...}'\` to invoke.
+  cf  >  Mneme cf family — 2 action(s). Run \`mneme cf --help\` for actions, or \`mneme cf <action> --json '{...}'\` to invoke.
+  debate  >  Mneme debate family — 1 action(s). Run \`mneme debate --help\` for actions, or \`mneme debate <action> --json '{...}'\` to invoke.
+  atom  >  Mneme atom family — 2 action(s). Run \`mneme atom --help\` for actions, or \`mneme atom <action> --json '{...}'\` to invoke.
+  apoptosis  >  Mneme apoptosis family — 5 action(s). Run \`mneme apoptosis --help\` for actions, or \`mneme apoptosis <action> --json '{...}'\` to invoke.
+  power  >  Mneme power family — 2 action(s). Run \`mneme power --help\` for actions, or \`mneme power <action> --json '{...}'\` to invoke.
+  embedder  >  Mneme embedder family — 3 action(s). Run \`mneme embedder --help\` for actions, or \`mneme embedder <action> --json '{...}'\` to invoke.
+  autarchy  >  Mneme autarchy family — 1 action(s). Run \`mneme autarchy --help\` for actions, or \`mneme autarchy <action> --json '{...}'\` to invoke.
+  aegis  >  Mneme aegis family — 4 action(s). Run \`mneme aegis --help\` for actions, or \`mneme aegis <action> --json '{...}'\` to invoke.
+  ascension  >  Mneme ascension family — 3 action(s). Run \`mneme ascension --help\` for actions, or \`mneme ascension <action> --json '{...}'\` to invoke.
+  hyperscan  >  Mneme hyperscan family — 5 action(s). Run \`mneme hyperscan --help\` for actions, or \`mneme hyperscan <action> --json '{...}'\` to invoke.
+  sentinel  >  Mneme sentinel family — 3 action(s). Run \`mneme sentinel --help\` for actions, or \`mneme sentinel <action> --json '{...}'\` to invoke.
+  diaspora  >  Mneme diaspora family — 2 action(s). Run \`mneme diaspora --help\` for actions, or \`mneme diaspora <action> --json '{...}'\` to invoke.
+  genesplice  >  Mneme genesplice family — 3 action(s). Run \`mneme genesplice --help\` for actions, or \`mneme genesplice <action> --json '{...}'\` to invoke.
+  permeate  >  Mneme permeate family — 4 action(s). Run \`mneme permeate --help\` for actions, or \`mneme permeate <action> --json '{...}'\` to invoke.
+  seamless  >  Mneme seamless family — 3 action(s). Run \`mneme seamless --help\` for actions, or \`mneme seamless <action> --json '{...}'\` to invoke.
+  lattice  >  Mneme lattice family — 3 action(s). Run \`mneme lattice --help\` for actions, or \`mneme lattice <action> --json '{...}'\` to invoke.
+  neuron  >  Mneme neuron family — 2 action(s). Run \`mneme neuron --help\` for actions, or \`mneme neuron <action> --json '{...}'\` to invoke.
+  conduit  >  Mneme conduit family — 5 action(s). Run \`mneme conduit --help\` for actions, or \`mneme conduit <action> --json '{...}'\` to invoke.
+  synapse  >  Mneme synapse family — 5 action(s). Run \`mneme synapse --help\` for actions, or \`mneme synapse <action> --json '{...}'\` to invoke.
+  osmosis  >  Mneme osmosis family — 4 action(s). Run \`mneme osmosis --help\` for actions, or \`mneme osmosis <action> --json '{...}'\` to invoke.
+  aura  >  Mneme aura family — 2 action(s). Run \`mneme aura --help\` for actions, or \`mneme aura <action> --json '{...}'\` to invoke.
+  relay  >  Mneme relay family — 2 action(s). Run \`mneme relay --help\` for actions, or \`mneme relay <action> --json '{...}'\` to invoke.
+  chameleon  >  Mneme chameleon family — 4 action(s). Run \`mneme chameleon --help\` for actions, or \`mneme chameleon <action> --json '{...}'\` to invoke.
+  anchor  >  Mneme anchor family — 3 action(s). Run \`mneme anchor --help\` for actions, or \`mneme anchor <action> --json '{...}'\` to invoke.
+  rainbow  >  Mneme rainbow family — 4 action(s). Run \`mneme rainbow --help\` for actions, or \`mneme rainbow <action> --json '{...}'\` to invoke.
+  mutiny  >  Mneme mutiny family — 1 action(s). Run \`mneme mutiny --help\` for actions, or \`mneme mutiny <action> --json '{...}'\` to invoke.
+  prophet  >  Mneme prophet family — 1 action(s). Run \`mneme prophet --help\` for actions, or \`mneme prophet <action> --json '{...}'\` to invoke.
+  prophecy  >  Mneme prophecy family — 1 action(s). Run \`mneme prophecy --help\` for actions, or \`mneme prophecy <action> --json '{...}'\` to invoke.
+  wisdom_shards  >  Mneme wisdom_shards family — 1 action(s). Run \`mneme wisdom_shards --help\` for actions, or \`mneme wisdom_shards <action> --json '{...}'\` to invoke.
+  necromancy  >  Mneme necromancy family — 1 action(s). Run \`mneme necromancy --help\` for actions, or \`mneme necromancy <action> --json '{...}'\` to invoke.
+  interstellar  >  Mneme interstellar family — 1 action(s). Run \`mneme interstellar --help\` for actions, or \`mneme interstellar <action> --json '{...}'\` to invoke.
+  adversarial_twins  >  Mneme adversarial_twins family — 1 action(s). Run \`mneme adversarial_twins --help\` for actions, or \`mneme adversarial_twins <action> --json '{...}'\` to invoke.
+  living_will  >  Mneme living_will family — 1 action(s). Run \`mneme living_will --help\` for actions, or \`mneme living_will <action> --json '{...}'\` to invoke.
+  timeriver  >  Mneme timeriver family — 1 action(s). Run \`mneme timeriver --help\` for actions, or \`mneme timeriver <action> --json '{...}'\` to invoke.
+  recursive_soul  >  Mneme recursive_soul family — 1 action(s). Run \`mneme recursive_soul --help\` for actions, or \`mneme recursive_soul <action> --json '{...}'\` to invoke.
+  holy  >  Mneme holy family — 1 action(s). Run \`mneme holy --help\` for actions, or \`mneme holy <action> --json '{...}'\` to invoke.
+  wormhole  >  Mneme wormhole family — 2 action(s). Run \`mneme wormhole --help\` for actions, or \`mneme wormhole <action> --json '{...}'\` to invoke.
+  metron  >  Mneme metron family — 3 action(s). Run \`mneme metron --help\` for actions, or \`mneme metron <action> --json '{...}'\` to invoke.
+  updates  >  Mneme updates family — 1 action(s). Run \`mneme updates --help\` for actions, or \`mneme updates <action> --json '{...}'\` to invoke.
+  handoff  >  Mneme handoff family — 5 action(s). Run \`mneme handoff --help\` for actions, or \`mneme handoff <action> --json '{...}'\` to invoke.
+  birthright  >  Mneme birthright family — 2 action(s). Run \`mneme birthright --help\` for actions, or \`mneme birthright <action> --json '{...}'\` to invoke.
+  clone  >  Mneme clone family — 1 action(s). Run \`mneme clone --help\` for actions, or \`mneme clone <action> --json '{...}'\` to invoke.
+  beacon  >  Mneme beacon family — 2 action(s). Run \`mneme beacon --help\` for actions, or \`mneme beacon <action> --json '{...}'\` to invoke.
+  stargate  >  Mneme stargate family — 1 action(s). Run \`mneme stargate --help\` for actions, or \`mneme stargate <action> --json '{...}'\` to invoke.
+  cosmic  >  Mneme cosmic family — 7 action(s). Run \`mneme cosmic --help\` for actions, or \`mneme cosmic <action> --json '{...}'\` to invoke.
+  bounty  >  Mneme bounty family — 3 action(s). Run \`mneme bounty --help\` for actions, or \`mneme bounty <action> --json '{...}'\` to invoke.
+  replica  >  Mneme replica family — 2 action(s). Run \`mneme replica --help\` for actions, or \`mneme replica <action> --json '{...}'\` to invoke.
+  infra  >  Mneme infra family — 3 action(s). Run \`mneme infra --help\` for actions, or \`mneme infra <action> --json '{...}'\` to invoke.
+  genesis  >  Mneme genesis family — 3 action(s). Run \`mneme genesis --help\` for actions, or \`mneme genesis <action> --json '{...}'\` to invoke.
   help [command]  >  display help for command
 
 Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.

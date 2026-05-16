@@ -116,10 +116,10 @@ export const prophecyReadTool: MnemeTool = {
 };
 
 export const dreamRunTool: MnemeTool = {
-  name: "mneme.dream.run",
+  name: "mneme.dream.vaccine_cycle",
   category: "audit",
   description:
-    "DREAM CYCLE -- REM-sleep adversarial vaccine simulation. Survivors gain fitness; missed hallucinations spawn variants. Returns updated vaccine candidates.",
+    "DREAM CYCLE (vaccine variant) -- REM-sleep adversarial vaccine simulation. Survivors gain fitness; missed hallucinations spawn variants. Returns updated vaccine candidates. (Distinct from mneme.dream.run which is v2.19.7 DREAM CONSOLIDATION over axioms.)",
   whenToUse: "Nightly via the daemon, or manually when you want to refresh the vaccine population.",
   triggers: ["run dream cycle", "rem sleep", "vaccine refresh"],
   inputSchema: { type: "object", properties: { vaccines: { type: "array" }, samples: { type: "array" }, seed: { type: "integer" } }, required: ["vaccines", "samples"] },

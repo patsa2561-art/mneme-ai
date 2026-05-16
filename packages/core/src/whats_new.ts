@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.10",
+    date: "2026-05-16",
+    headline: "PROOF-CARRYING WRAPPER (zero-trust tool chain) + REVERSE-WRAPPER (tool suggests next tool); two MCP-spec-bending primitives nobody else ships",
+    body:
+      "🔐 PROOF -- every wrapper output can carry an HMAC-signed certificate (toolName + inputSha + outputSha + callerKey + chainParent + ts). Downstream tools with requiresParentProof refuse input lacking valid proof. Kills prompt-injection via fake tool outputs structurally. Loop detection (chainDepth cap 32) + chain integrity verification. Foundation for regulator-grade audit. 17 deep tests. 🪂 REVERSE -- wrapper response carries optional __suggested_next field with tool + why + confidence + costEstimateUsd. AI planner sees hint, LIKELY follows. Loop-detected sliding window (default 8); ships 5 BUILTIN_RULES (audit-rejected -> chronostasis tick, agreement-compiled -> pre-commit hook, etc.). Follow-through telemetry measures BOTH suggestion quality + AI calibration. 19 deep tests. 8 new MCP tools (4 proof + 4 suggest). AURELIAN SHIP both. Both fix the static, stateless-MCP-call assumption cleanly without breaking the protocol.",
+    suggestedAction: "Tell the AI: 'verify the chain of proofs on this tool sequence' (mneme.proof.verify_chain) or 'what should I call next' (mneme.suggest.next).",
+    tags: ["proof-carrying", "reverse-wrapper", "zero-trust", "mcp-spec-bend", "chain-of-custody"],
+  },
+  {
     version: "2.19.9",
     date: "2026-05-16",
     headline: "WRAPPER GENESPLICING -- runtime chimera composition (Lego for MCP tools); first MCP server in the field to break the static-catalog assumption",

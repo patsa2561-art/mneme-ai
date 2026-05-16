@@ -146,6 +146,19 @@ export const RELEASE_CLAIMS = {
       "mneme.genome.stats",
     ],
   },
+  "2.19.10": {
+    headline: "PROOF-CARRYING WRAPPER (zero-trust tool chain; HMAC chain-of-custody between tools) + REVERSE-WRAPPER (tool suggests next tool; loop-detected; follow-through telemetry)",
+    tools: [
+      "mneme.proof.attach",
+      "mneme.proof.verify",
+      "mneme.proof.verify_chain",
+      "mneme.proof.fingerprint",
+      "mneme.suggest.next",
+      "mneme.suggest.attach",
+      "mneme.suggest.record_call",
+      "mneme.suggest.stats",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

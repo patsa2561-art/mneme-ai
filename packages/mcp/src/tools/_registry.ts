@@ -72,6 +72,7 @@ import { V196_AGREEMENT_TOOLS } from "./_v196_agreement.js";
 import { V197_MEGAPACK_TOOLS } from "./_v197_megapack.js";
 import { V198_ORPHAN_CLOSURE_TOOLS } from "./_v198_orphan_closure.js";
 import { V199_GENESPLICING_TOOLS } from "./_v199_genesplicing.js";
+import { V1910_PROOF_REVERSE_TOOLS } from "./_v1910_proof_reverse.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -148,6 +149,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V197_MEGAPACK_TOOLS,
     ...V198_ORPHAN_CLOSURE_TOOLS,
     ...V199_GENESPLICING_TOOLS,
+    ...V1910_PROOF_REVERSE_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
