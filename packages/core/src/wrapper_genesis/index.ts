@@ -89,6 +89,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "federated_truth",
   "tool_reachability",
   "caption_severance",
+  "caption_inpaint",
   "jackpot",
 ]);
 
@@ -261,6 +262,7 @@ function familyAliases(moduleName: string): string[] {
     federated_truth: ["federated"],
     tool_reachability: ["reachability"],
     caption_severance: ["caption"],
+    caption_inpaint: ["inpaint"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -392,6 +394,12 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   //   nakedImageFingerprint is an internal pipeline helper (Step 2);
   //   answerHasValidCert is a downstream-AI compliance check, not a tool.
   "adversarialDoubleCheck", "nakedImageFingerprint", "answerHasValidCert",
+  // v2.19.19 caption-inpaint:
+  //   inpaintMaskRegions IS surfaced as mneme.inpaint.run via orchestrator
+  //     pattern (snake-case action doesn't match camelCase symbol);
+  //   makeSolidImage/makeTestImage/meanColorDistance are test/dev helpers
+  //     exposed for callers who want to validate inpainter behaviour offline.
+  "inpaintMaskRegions", "makeSolidImage", "makeTestImage", "meanColorDistance",
 ]);
 
 export function findOrphans(input: {

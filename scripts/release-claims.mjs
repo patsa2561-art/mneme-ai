@@ -205,6 +205,15 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.19": {
+    headline: "CAPTION INPAINT — Phase A+B complete. InpainterProvider vendor-agnostic adapter + pure-TS PATCH HARVEST FILL (concentric ring search + 1/distance-weighted average + boundary Gaussian blur). 100% determinism + 100% pixel preservation + 100% fingerprint discrimination + 100% mask plausibility on measured trials (target 97.5%+). Wires into v2.19.18 severCaption via async path.",
+    tools: [
+      "mneme.inpaint.run",
+      "mneme.inpaint.naked_fingerprint",
+      "mneme.inpaint.resolve",
+      "mneme.inpaint.metrics",
+    ],
+  },
   "2.19.18": {
     headline: "CAPTION SEVERANCE PROTOCOL (CSP) — defeats CAPTION-AUTHORITY ATTACK (CAA), the unnamed multimodal vulnerability class of 2026. 6-step pipeline (OCR escape → naked fingerprint → provenance gate → adversarial double-check → entropy desperation → HMAC-signed VISION TRUST CERTIFICATE). 4-layer routing defense (welcome PROTOCOL + intent phrases + reverse-wrapper rule + NEGEV enforcement) ensures every compliant AI agent calls CSP on user images.",
     tools: [

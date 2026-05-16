@@ -384,7 +384,21 @@ export interface SeveranceInput {
   captions: OcrCaption[];
   provenance?: ProvenanceInput;
   adversarial?: AdversarialDoubleCheckInput;
+  /**
+   * v2.19.18 Phase A fast path: caller pre-computed the inpainted hash
+   * (e.g., via mneme.caption.inpaint v2.19.19) — we use it directly.
+   * Mutually exclusive with `rawImage`.
+   */
   callerSuppliedNakedHash?: string;
+  /**
+   * v2.19.19 Phase B integrated path: caller supplies raw RGBA pixel data;
+   * severCaption ALSO runs the inpainter and produces the true naked
+   * fingerprint. Imported lazily from caption_inpaint to keep this
+   * module dependency-light when callers don't need inpainting.
+   */
+  rawImage?: { width: number; height: number; rgba: Uint8Array };
+  /** Optional override: v2.19.19 `InpainterProvider`. Default: PatchFillInpainter. */
+  inpainter?: { name: string; inpaint: (i: { image: { width: number; height: number; rgba: Uint8Array }; mask: Array<{ bbox: [number, number, number, number] }> }) => Promise<{ width: number; height: number; rgba: Uint8Array }> };
   nowMs?: number;
   secret?: string;
 }
@@ -400,6 +414,10 @@ export interface SeveranceResult {
 /**
  * Run the full 6-step pipeline. Returns a HMAC-signed certificate and a
  * ready-to-inject AI prompt that wraps every caption as XSS-escaped claim.
+ *
+ * v2.19.19: when input.rawImage is supplied AND v2.19.19 caption_inpaint
+ * is importable, use severCaptionAsync() instead for the integrated Phase
+ * B path. severCaption() (sync) stays Phase-A-only and pure-function.
  */
 export function severCaption(input: SeveranceInput): SeveranceResult {
   const escaped = escapeAllCaptions(input.captions);
@@ -503,6 +521,41 @@ export function answerHasValidCert(answer: string, knownCertIds: string[]): bool
 }
 
 // ─── FORMATTERS ─────────────────────────────────────────────────────────
+
+/**
+ * v2.19.19 — async variant that ALSO runs the inpainter when input.rawImage
+ * is supplied. Returns the same SeveranceResult plus the real Phase B
+ * naked image fingerprint.
+ */
+export async function severCaptionAsync(input: SeveranceInput): Promise<SeveranceResult & { phaseBNakedHash?: string }> {
+  if (!input.rawImage) {
+    // No rawImage = pure Phase A path. Delegate.
+    return severCaption(input);
+  }
+  // Phase B: run inpainter to produce true naked image hash.
+  let phaseBNakedHash: string | undefined;
+  try {
+    // Lazy-import caption_inpaint to keep the dependency optional.
+    const inpaintMod = await import("../caption_inpaint/index.js");
+    const provider = input.inpainter ?? new inpaintMod.PatchFillInpainter();
+    const mask = input.captions.map((c) => ({ bbox: c.bbox }));
+    const result = await provider.inpaint({
+      image: input.rawImage,
+      mask,
+    });
+    phaseBNakedHash = inpaintMod.nakedFingerprint(result);
+  } catch (e) {
+    // Inpainter import failed or threw — fall back to Phase A stub.
+    // Don't block the rest of the pipeline.
+    phaseBNakedHash = undefined;
+  }
+  const enriched: SeveranceInput = {
+    ...input,
+    callerSuppliedNakedHash: phaseBNakedHash ?? input.callerSuppliedNakedHash,
+  };
+  const result = severCaption(enriched);
+  return { ...result, phaseBNakedHash };
+}
 
 export function formatSeveranceLine(r: SeveranceResult): string {
   const cert = r.certificate;
