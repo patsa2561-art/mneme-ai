@@ -75,6 +75,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "wrapper_genesplicing",
   "proof_carrying",
   "reverse_wrapper",
+  "mortal_wrappers",
   "jackpot",
 ]);
 
@@ -233,6 +234,7 @@ function familyAliases(moduleName: string): string[] {
     wrapper_genesplicing: ["genome"],
     proof_carrying: ["proof"],
     reverse_wrapper: ["suggest"],
+    mortal_wrappers: ["mortal"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -316,6 +318,11 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // v2.19.10 proof-carrying — decorator helper that wraps inner handler,
   // paired with attachProof (which IS exposed as mneme.proof.attach).
   "requireParentProof",
+  // v2.19.11 mortal-wrappers — internal building blocks for the surfaced tools
+  // (mutateSignature is exercised via mneme.mortal.tick; recordCalibration is
+  // exercised via mneme.mortal.resolve/invoke; emptyState is a constructor;
+  // birthMortalWrapper IS exposed as mneme.mortal.birth via aliasing).
+  "mutateSignature", "recordCalibration", "emptyState",
 ]);
 
 export function findOrphans(input: {

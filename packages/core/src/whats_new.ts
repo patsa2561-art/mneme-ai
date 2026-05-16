@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.11",
+    date: "2026-05-16",
+    headline: "LIVING MCP -- MORTAL + REINCARNATING WRAPPERS (the first MCP layer where wrappers are born, mutate, deprecate, die on a TTL)",
+    body:
+      "🧬 Every MCP server today is a static API: register once, schema frozen forever. AI agents memorise the schema in session 1 and never re-read tools.list -- six months later they hit silent bugs from stale signatures. Mneme breaks the assumption: a mortal wrapper is BORN with a TTL (24h default), REPRODUCES with a slightly drifted signature on tick (3 mutation kinds: rename_optional_field / add_optional_param / swap_arg_order), and the previous generation stays alive for one DEPRECATION GRAVITY cycle (1h default) before disappearing. AI agents that re-read mneme.mortal.list every turn = adapt automatically (verdict: world_class). AI agents that bake the schema into their planner prompt = break + log + lose adaptiveness score (verdict: over_fit). Honest scope: the mortal layer lives in mneme.mortal.* ONLY -- real Mneme tools stay backwards-compatible forever; this is an OPT-IN calibration tripwire. 23 deep tests cover birth / mutation / tick / deprecation gravity / max-generations loop guard / HMAC integrity / drift-bonus param tripwires / 4-band verdict (world_class/good/drifting/over_fit). 8 new MCP tools (birth/list/tick/resolve/invoke/calibration/stats/verify). AURELIAN SHIP.",
+    suggestedAction: "Tell the AI: 'birth a mortal wrapper around arena.judge and see if I can adapt over 24h of mutations' (mneme.mortal.birth) -- then 'show me my adaptiveness score' (mneme.mortal.calibration).",
+    tags: ["living-mcp", "mortal-wrapper", "reincarnation", "calibration", "mcp-spec-bend"],
+  },
+  {
     version: "2.19.10",
     date: "2026-05-16",
     headline: "PROOF-CARRYING WRAPPER (zero-trust tool chain) + REVERSE-WRAPPER (tool suggests next tool); two MCP-spec-bending primitives nobody else ships",

@@ -159,6 +159,19 @@ export const RELEASE_CLAIMS = {
       "mneme.suggest.stats",
     ],
   },
+  "2.19.11": {
+    headline: "LIVING MCP — MORTAL + REINCARNATING WRAPPERS (the first MCP layer where wrappers are born, mutate, deprecate, and die on a TTL; AI agents must re-discover or break)",
+    tools: [
+      "mneme.mortal.birth",
+      "mneme.mortal.list",
+      "mneme.mortal.tick",
+      "mneme.mortal.resolve",
+      "mneme.mortal.invoke",
+      "mneme.mortal.calibration",
+      "mneme.mortal.stats",
+      "mneme.mortal.verify",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */
