@@ -135,6 +135,17 @@ export const RELEASE_CLAIMS = {
       "mneme.jackpot.render_jackpot_card",
     ],
   },
+  "2.19.9": {
+    headline: "WRAPPER GENESPLICING — runtime chimera composition (Lego for MCP tools); first MCP server in the field to break the static-catalog assumption",
+    tools: [
+      "mneme.genome.splice",
+      "mneme.genome.execute_chimera",
+      "mneme.genome.list",
+      "mneme.genome.promote",
+      "mneme.genome.gc",
+      "mneme.genome.stats",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

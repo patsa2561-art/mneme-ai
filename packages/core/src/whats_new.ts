@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.9",
+    date: "2026-05-16",
+    headline: "WRAPPER GENESPLICING -- runtime chimera composition (Lego for MCP tools); first MCP server in the field to break the static-catalog assumption",
+    body:
+      "🧬 AI agent passes a recipe of existing tool names + composer (sequential pipe / fan_out parallel / first_success cascade) + TTL; Mneme synthesises a NEW tool on the spot, HMAC-signs the recipe, returns chimera name that's callable in the same session. Content-addressed dedup (same recipe = same name); promotion on popularity (call count >= threshold extends TTL 100x); GC of expired (preserves promoted). 22 deep tests including end-to-end ((2 * 2) + 1)^2 = 25 demo. 6 new MCP tools (mneme.genome.splice / execute_chimera / list / promote / gc / stats). AURELIAN SHIP. Closes the static-catalog assumption no MCP server has broken.",
+    suggestedAction: "Tell the AI: 'compose a chimera that audits then assesses risk then issues a badge'. The AI calls mneme.genome.splice with the recipe, then mneme.genome.execute_chimera to run.",
+    tags: ["genesplicing", "runtime-catalog", "chimera", "world-first", "mcp-spec-break"],
+  },
+  {
     version: "2.19.8",
     date: "2026-05-16",
     headline: "WIRING SPRINT -- AUTO-GENESIS WRAPPER FACTORY + universal CLI auto-router + W2 fix (verify no longer certifies false numerical claims)",

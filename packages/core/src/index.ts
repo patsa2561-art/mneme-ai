@@ -711,6 +711,13 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
+//   Splice N existing tools into a chimera with TTL + 3 composers
+//   (sequential pipe / fan_out parallel / first_success cascade).
+//   Content-addressed dedup; HMAC-signed; promotion on popularity.
+//   First MCP server in the field to support runtime catalog growth.
+export * as wrapperGenesplicing from "./wrapper_genesplicing/index.js";
+
 // v2.19.8 — WIRING SPRINT: AUTO-GENESIS WRAPPER FACTORY (FLAGSHIP)
 //   AST scan core source → diff against MCP registry → signed orphan report.
 //   Ritual gate consumes the report and blocks publish on any v2.18+ orphan.

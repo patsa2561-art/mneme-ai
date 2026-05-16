@@ -72,6 +72,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "conversation_compiler",
   "dream_consolidation", "colony_mind", "honey_decision", "retroactive_compile", "genetic_patch",
   "wrapper_genesis",
+  "wrapper_genesplicing",
   "jackpot",
 ]);
 
@@ -227,6 +228,7 @@ export function scanMcpToolNames(mcpToolsDir: string): McpToolName[] {
 function familyAliases(moduleName: string): string[] {
   // Common aliases between core module dir names and MCP family prefixes.
   const map: Record<string, string[]> = {
+    wrapper_genesplicing: ["genome"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -305,6 +307,8 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "uninstallAgreement",
   // Format helpers (already filtered by pattern but list anyway for clarity)
   "encode", "decode",
+  // v2.19.9 genesplicing — class instance methods reached via singleton
+  "defaultGenesplicing",
 ]);
 
 export function findOrphans(input: {
