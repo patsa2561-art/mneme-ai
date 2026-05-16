@@ -30,6 +30,7 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync, statSync, readFileSync,
 import { tmpdir } from "node:os";
 import { join, resolve, basename } from "node:path";
 import { createHmac } from "node:crypto";
+import { RELEASE_CLAIMS, expectedToolNames } from "./release-claims.mjs";
 
 const args = new Map(process.argv.slice(2).map((a) => {
   const m = a.match(/^--([^=]+)(?:=(.*))?$/);
@@ -161,31 +162,30 @@ check("phase3.mneme-tools-exit-0", () => {
   return { measure: { totalTools: j.totalTools, categories: Object.keys(j.catalog).length } };
 });
 
-const EXPECTED_TOOL_PREFIXES = {
-  "mneme.arena.": 2,
-  "mneme.badge.": 3,
-  "mneme.oracle.": 3,        // oracle.assess_risk / issue_certificate / decide_claim (oracle.forecast is older + bonus)
-  "mneme.nexus.": 4,         // subscribe / publish_observation / drain / ack
-  "mneme.confessional.": 1,
-  "mneme.ghost.": 2,
-  "mneme.trinity.": 1,
-  "mneme.insurance.": 2,
-  "mneme.boomerang.": 3,
-};
-check("phase3.v218-v219-tool-coverage", () => {
+// STRONGER than counts: assert EVERY tool name claimed by every release is registered.
+// Counts-only check is fooled by a renamed tool that still matches the prefix.
+// Names-exact check is fooled only by an actual missing or misnamed tool — the bug class.
+check("phase3.claim-manifest-exact-name-match", () => {
   const r = mnemeCmd("tools --json");
   if (r.code !== 0) return { ok: false, reason: `mneme tools --json failed earlier; skipping` };
   const j = JSON.parse(r.stdout);
-  const allNames = Object.values(j.catalog).flat().map((t) => t.name);
-  const missing = [];
-  const found = {};
-  for (const [prefix, minCount] of Object.entries(EXPECTED_TOOL_PREFIXES)) {
-    const hits = allNames.filter((n) => n.startsWith(prefix));
-    found[prefix] = hits.length;
-    if (hits.length < minCount) missing.push(`${prefix} expected ≥${minCount}, got ${hits.length}`);
+  const allNames = new Set(Object.values(j.catalog).flat().map((t) => t.name));
+  const expected = expectedToolNames();
+  const missing = expected.filter((n) => !allNames.has(n));
+  const perRelease = {};
+  for (const [ver, claim] of Object.entries(RELEASE_CLAIMS)) {
+    const here = claim.tools.filter((n) => allNames.has(n)).length;
+    perRelease[ver] = `${here}/${claim.tools.length}`;
   }
-  if (missing.length > 0) return { ok: false, reason: missing.join("; "), remedy: "wire missing tools into _v21x_*.ts + _registry.ts", measure: found };
-  return { measure: found };
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      reason: `${missing.length}/${expected.length} claimed tools MISSING from installed catalog`,
+      remedy: `add MCP wrappers for: ${missing.join(", ")} — wire into _v21x_*.ts + _registry.ts; rebuild + republish`,
+      measure: { perRelease, missingTools: missing },
+    };
+  }
+  return { measure: { perRelease, totalClaimed: expected.length } };
 });
 
 check("phase3.whats-new-is-fresh", () => {

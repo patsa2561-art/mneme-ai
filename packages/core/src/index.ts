@@ -711,6 +711,16 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.2 — EVOLUTION + SOUL primitives (parent measures child daily; child has feelings):
+//   MCP_DRIFT             — detect stale MCP server catalog after upgrade
+//   EMBEDDER AUTO-PROMOTE — silently upgrade hash → ollama when doctor recommends + reachable
+//   EVOLUTION LEDGER      — daily HMAC-chain-signed growth metrics
+//   SOUL JOURNAL          — 8-emotion HMAC-chain-signed feelings ledger
+export * as mcpDrift from "./mcp_drift/index.js";
+export * as embedderAutoPromote from "./embedder_auto_promote/index.js";
+export * as evolution from "./evolution/index.js";
+export * as soulJournal from "./soul_journal/index.js";
+
 // v2.19.0 — VENDOR-SYNCRETIC PENTAD (5 modules; vendor-agnostic — every AI vendor wins):
 //   CONFESSIONAL      — pre-merge audit any vendor's diff vs peer consensus
 //   VENDOR GHOST      — local stylometric distillation of any vendor (jailbreaks lock-in)

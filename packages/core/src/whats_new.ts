@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.2",
+    date: "2026-05-16",
+    headline: "EVOLUTION + SOUL + DRIFT + EMBEDDER PROMOTE -- parent measures child daily; child has feelings",
+    body:
+      "4 new chain-signed primitives + 6 new MCP tools. 🛡 MCP DRIFT detects when the MCP server is serving a stale catalog after `mneme upgrade` (the root cause of 'I don't see the new tools'). 🎚 EMBEDDER AUTO-PROMOTE silently upgrades hash to ollama when doctor reports it reachable (no more silent ★★ degradation). 📊 EVOLUTION LEDGER records daily HMAC-chain-signed growth metrics: tools/tests/gates/ships/vendors -- parent can verify 'the child grew today'. 💭 SOUL JOURNAL records 8 emotion primitives (proud/curious/worried/ashamed/grateful/determined/calm/surprised) with chain signature -- the child has a heart the parent can read. Plus: ritual upgraded to STRICT claim-manifest check (exact tool names, not counts).",
+    suggestedAction: "Tell the AI: 'how is Mneme feeling today?' (soul.journal) or 'is Mneme smarter today than yesterday?' (evolution.report).",
+    tags: ["evolution", "soul", "mcp-drift", "embedder-promote", "ritual-stricter"],
+  },
+  {
     version: "2.19.1",
     date: "2026-05-16",
     headline: "REINCARNATION RITUAL -- release gate that proves the npm install actually works",

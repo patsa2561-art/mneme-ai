@@ -64,6 +64,7 @@ import { V215_HYPERCAR_TOOLS } from "./_v215_hypercar.js";
 import { V216_REVOLUTIONARY_TOOLS } from "./_v216_revolutionary.js";
 import { V218_REVOLUTIONARY_TOOLS } from "./_v218_revolutionary.js";
 import { V219_SYNCRETIC_TOOLS } from "./_v219_syncretic.js";
+import { V192_EVOLUTION_TOOLS } from "./_v192_evolution.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -132,6 +133,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V216_REVOLUTIONARY_TOOLS,
     ...V218_REVOLUTIONARY_TOOLS,
     ...V219_SYNCRETIC_TOOLS,
+    ...V192_EVOLUTION_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
