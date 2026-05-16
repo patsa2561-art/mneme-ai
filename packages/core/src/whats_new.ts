@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.16",
+    date: "2026-05-16",
+    headline: "FEDERATED TRUTH GRAVITY -- the network-effect moat (cross-instance crypto-attestation) + SNN EMBEDDER ADAPTER (never fall to hash again)",
+    body:
+      "🌌 FEDERATED TRUTH GRAVITY: every Mneme instance becomes a node in a cross-attestation mesh. Each instance derives a stable PSEUDONYMOUS identity from (vendor, sessionId, repoPath, seed) -- no PII. Publishes HMAC-signed attestations about PUBLIC facts only (npm package shasums, git commit hashes, version strings, ecosystem advisory ids, etc.) -- whitelist of 6 discoverable claim types prevents private code leak at the boundary. Other instances cross-attest the same facts; quorum verdict bands (unanimous/supermajority/majority/minority/conflict/orphan) aggregate the result. Truth-gravity score (0-100) grows with peer count, decays with 90-day half-life so dead instances lose weight. The verify pipeline gains a new ground-truth source nobody else has: 'how many independent Mneme instances confirm this observation?'. Copies start at N=1; Mneme starts at N. **The moat that grows with usage.** Transport-agnostic -- existing v2.13 MESH / v2.18 NEXUS layers carry the JSON envelopes. 25 deep tests. 🦠 SNN EMBEDDER ADAPTER: slots the v2.19.13 spiking-neural-net into the resolve.ts fallback ladder. BundledOrSnnEmbedder wrapper silently promotes to pure-TS SNN on any bundled WASM failure (EBUSY / require-not-defined / missing onnxruntime) -- users never fall to hash:fnv-256 again. 7 tests. 5 new MCP tools (mneme.federated.{identity, attest, verify, quorum, gravity}). AURELIAN SHIP both layers.",
+    suggestedAction: "Tell the AI: 'derive my Mneme federated identity' (mneme.federated.identity) -- then 'attest mneme-ai@2.19.16 has shasum=X' (mneme.federated.attest). After other instances co-attest, run mneme.federated.gravity to see your network's truth gravity score.",
+    tags: ["federated-truth", "network-effect", "cross-attestation", "moat", "snn-embedder", "fallback-self-heal"],
+  },
+  {
     version: "2.19.15",
     date: "2026-05-16",
     headline: "TRUTH FORENSIC PIPELINE -- the verify command that calls its own bluff (kills the W2 lie class once and for all)",

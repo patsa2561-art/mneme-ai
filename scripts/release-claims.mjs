@@ -205,6 +205,16 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.16": {
+    headline: "FEDERATED TRUTH GRAVITY — the network-effect moat (cross-instance crypto-attestation; verify pipeline strengthens with every install) + SNN EMBEDDER ADAPTER (auto-promote on bundled WASM failure; never fall to hash again).",
+    tools: [
+      "mneme.federated.identity",
+      "mneme.federated.attest",
+      "mneme.federated.verify",
+      "mneme.federated.quorum",
+      "mneme.federated.gravity",
+    ],
+  },
   "2.19.15": {
     headline: "TRUTH FORENSIC PIPELINE — the verify command that calls its own bluff. Sniffs verifiable assertions (mneme.X.Y exists, 'N mneme.X.* tools', version, file paths) and checks them against Mneme's own live MCP catalog + version + filesystem. Negative-evidence rule: ANY refuted assertion is fatal → REJECTED. HMAC-signed certificate per verdict. Replaces v2.19.8's regex-string-mutation W2 fix at SOURCE root cause. Wired into the `mneme verify` CLI surface.",
     tools: [

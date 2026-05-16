@@ -86,6 +86,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "chimera_embedder",
   "consequence_ledger",
   "truth_forensic_pipeline",
+  "federated_truth",
   "jackpot",
 ]);
 
@@ -255,6 +256,7 @@ function familyAliases(moduleName: string): string[] {
     chimera_embedder: ["chimera"],
     consequence_ledger: ["consequence"],
     truth_forensic_pipeline: ["truth"],
+    federated_truth: ["federated"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -373,6 +375,10 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "emptyDreamLedger", "recordDreamVerdict",
   "createChimera", "listChimeraDomains",
   "emptyConsequenceLedger",
+  // v2.19.16 federated-truth — transport-side helpers not surfaced as
+  // standalone MCP tools (the network transport is intentionally caller's
+  // job; existing MESH / NEXUS layers carry the JSON envelopes).
+  "serializeAttestation", "deserializeAttestation", "fingerprintArtifact",
 ]);
 
 export function findOrphans(input: {

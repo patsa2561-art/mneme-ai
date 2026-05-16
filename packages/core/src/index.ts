@@ -731,6 +731,7 @@ export * as cliDreams from "./cli_dreams/index.js";
 export * as chimeraEmbedder from "./chimera_embedder/index.js";
 export * as consequenceLedger from "./consequence_ledger/index.js";
 export * as truthForensic from "./truth_forensic_pipeline/index.js";
+export * as federatedTruth from "./federated_truth/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers
