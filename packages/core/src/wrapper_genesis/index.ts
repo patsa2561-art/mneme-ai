@@ -87,6 +87,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "consequence_ledger",
   "truth_forensic_pipeline",
   "federated_truth",
+  "tool_reachability",
   "jackpot",
 ]);
 
@@ -257,6 +258,7 @@ function familyAliases(moduleName: string): string[] {
     consequence_ledger: ["consequence"],
     truth_forensic_pipeline: ["truth"],
     federated_truth: ["federated"],
+    tool_reachability: ["reachability"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -379,6 +381,9 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // standalone MCP tools (the network transport is intentionally caller's
   // job; existing MESH / NEXUS layers carry the JSON envelopes).
   "serializeAttestation", "deserializeAttestation", "fingerprintArtifact",
+  // v2.19.17 tool-reachability — surface loaders + summary helpers not
+  // user-callable standalone (scanReachability is the entry point).
+  "loadSurface", "ghostListSummary",
 ]);
 
 export function findOrphans(input: {

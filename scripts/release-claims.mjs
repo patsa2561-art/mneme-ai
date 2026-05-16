@@ -205,6 +205,15 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.17": {
+    headline: "TOOL REACHABILITY ENGINE — the ghost-tool killer. Measures per-tool USER-REACHABILITY across 5 surfaces (cli_router / welcome / whats_new / suggested_next / capabilities); HMAC-signed report; ritual gate blocks publish on any v2.18+ tool with reachability score=0. Plus: mneme status now PROBES the runtime embedder ladder (W5 fix — was reporting saved config string not actual tier).",
+    tools: [
+      "mneme.reachability.scan",
+      "mneme.reachability.report",
+      "mneme.reachability.ghost_list",
+      "mneme.reachability.surface_audit",
+    ],
+  },
   "2.19.16": {
     headline: "FEDERATED TRUTH GRAVITY — the network-effect moat (cross-instance crypto-attestation; verify pipeline strengthens with every install) + SNN EMBEDDER ADAPTER (auto-promote on bundled WASM failure; never fall to hash again).",
     tools: [

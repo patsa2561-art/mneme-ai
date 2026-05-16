@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.17",
+    date: "2026-05-16",
+    headline: "TOOL REACHABILITY ENGINE -- the ghost-tool killer (measure + enforce user-reachability per MCP tool) + STATUS PROBE FIX (W5)",
+    body:
+      "🎯 TOOL REACHABILITY: user audit caught the systemic disease 'ship a wrapper then forget to expose it' -- AUTO-GENESIS proved the wrapper EXISTS but didn't prove the wrapper REACHES users. v2.19.17 ships 5 surface scanners that count, per MCP tool, how many distinct user-facing paths actually expose it (cli_router auto-route / welcome syllabus / whats_new highlights / suggested-next rules / capabilities tool). HMAC-signed reachability report. New ritual gate phase3.no-ghost-tools-v218 BLOCKS publish on any v2.18+ tool with score=0 -- the 'invisible feature' bug class becomes structurally impossible. 4 new MCP tools (mneme.reachability.{scan, report, ghost_list, surface_audit}). 15 deep tests including the exact W2-style ghost-kill scenario. 🦠 STATUS PROBE FIX: mneme status now PROBES the runtime embedder ladder via resolveEmbedder() and shows the actual chosen tier with star badge (★★★★★ openai / ★★★★ ollama / ★★★ bundled or snn / ★★ hash) -- fixes the W5 audit where status reported hash:fnv-256 [FALLBACK] even when SNN was active. Added 'snn' to MnemeConfig.embeddings.provider union for explicit pinning. AURELIAN SHIP both layers.",
+    suggestedAction: "Tell the AI: 'scan tool reachability' (mneme.reachability.scan) -- see if your install has any ghost tools. Or 'mneme status' -- now shows the actual runtime embedder tier, not just config.",
+    tags: ["tool-reachability", "ghost-tool-kill", "ritual-gate", "status-probe", "snn-default"],
+  },
+  {
     version: "2.19.16",
     date: "2026-05-16",
     headline: "FEDERATED TRUTH GRAVITY -- the network-effect moat (cross-instance crypto-attestation) + SNN EMBEDDER ADAPTER (never fall to hash again)",

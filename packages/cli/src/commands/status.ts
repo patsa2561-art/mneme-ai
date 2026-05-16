@@ -96,14 +96,38 @@ export async function statusCommand(opts: { cwd: string }): Promise<number> {
   const providerLabel =
     cfg.embeddings.provider === "hash"
       ? `${kleur.bold(cfg.embeddings.provider)}  ${pill("FALLBACK", "info")}  ${kleur.gray("deterministic, zero-dep")}`
-      : kleur.bold(cfg.embeddings.provider);
+      : cfg.embeddings.provider === "snn"
+        ? `${kleur.bold(cfg.embeddings.provider)}  ${pill("★★★", "ok")}  ${kleur.gray("pure-TS spiking neural net (v2.19.17)")}`
+        : kleur.bold(cfg.embeddings.provider);
   process.stdout.write(kv("provider", providerLabel) + "\n");
   if (cfg.embeddings.model) {
     process.stdout.write(kv("model", kleur.bold(cfg.embeddings.model)) + "\n");
   } else if (cfg.embeddings.provider === "hash") {
     process.stdout.write(
-      kv("model", `${kleur.gray("n/a")}  ${kleur.gray("— pull `nomic-embed-text` via Ollama for higher quality")}`) + "\n",
+      kv("model", `${kleur.gray("n/a")}  ${kleur.gray("— pull `nomic-embed-text` via Ollama for higher quality, or pass --embedder snn for pure-TS SNN")}`) + "\n",
     );
+  }
+
+  // v2.19.17 — actually PROBE the resolved ladder, not just read config string.
+  // Fixes the W5 audit: "mneme status says hash:fnv-256 [FALLBACK] but SNN is shipped".
+  // Now status reports the RUNTIME-resolved provider, including auto-promoted SNN.
+  if (cfg.embeddings.provider === "auto" || cfg.embeddings.provider === "hash") {
+    try {
+      const { resolveEmbedder } = await import("@mneme-ai/embeddings");
+      const resolved = await resolveEmbedder({ provider: cfg.embeddings.provider });
+      const actualName = resolved.name;
+      const actualDim = resolved.dimensions;
+      const tierBadge = actualName.startsWith("openai:") ? "★★★★★"
+        : actualName.startsWith("ollama:") ? "★★★★"
+        : actualName.startsWith("bundled:") ? "★★★"
+        : actualName.startsWith("snn:") ? "★★★"
+        : actualName.startsWith("hash:") ? "★★"
+        : "?";
+      process.stdout.write(kv("resolved", `${kleur.bold(actualName)}  ${pill(tierBadge, actualName.startsWith("hash:") ? "info" : "ok")}  ${kleur.gray(`${actualDim} dim`)}`) + "\n");
+    } catch (e) {
+      // never block status on a resolver error
+      process.stdout.write(kv("resolved", `${kleur.gray("(probe failed — fall back to config provider)")}`) + "\n");
+    }
   }
   process.stdout.write("\n");
 

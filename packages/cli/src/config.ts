@@ -5,7 +5,7 @@ import { configPath, mnemeDir } from "./paths.js";
 export interface MnemeConfig {
   schemaVersion: number;
   embeddings: {
-    provider: "auto" | "ollama" | "openai" | "bundled" | "hash";
+    provider: "auto" | "ollama" | "openai" | "bundled" | "snn" | "hash";
     model?: string;
     baseUrl?: string;
   };
