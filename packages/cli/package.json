@@ -1,6 +1,6 @@
 {
   "name": "mneme-ai",
-  "version": "2.19.0",
+  "version": "2.19.1",
   "mcpName": "io.github.patsa2561-art/mneme-ai",
   "description": "Mneme เนโฌโ€ the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.",
   "type": "module",
@@ -30,10 +30,10 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@mneme-ai/core": "2.19.0",
-    "@mneme-ai/correlator": "2.19.0",
-    "@mneme-ai/embeddings": "2.19.0",
-    "@mneme-ai/mcp": "2.19.0",
+    "@mneme-ai/core": "2.19.1",
+    "@mneme-ai/correlator": "2.19.1",
+    "@mneme-ai/embeddings": "2.19.1",
+    "@mneme-ai/mcp": "2.19.1",
     "commander": "^14.0.3",
     "kleur": "^4.1.5"
   },

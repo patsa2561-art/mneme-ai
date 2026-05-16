@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "env": {
+    "node": "v22.22.1",
+    "platform": "win32",
+    "arch": "x64",
+    "ts": "2026-05-16T04:04:17.604Z",
+    "mode": "local-pack"
+  },
+  "total": 21,
+  "passed": 21,
+  "failed": 0,
+  "failures": [],
+  "sig": "f3527038a4fed3c9686719077f02b6a57c5ce3606df7344343ce4ce22e216fb8"
+}

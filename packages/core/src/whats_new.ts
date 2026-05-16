@@ -38,6 +38,60 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.1",
+    date: "2026-05-16",
+    headline: "REINCARNATION RITUAL -- release gate that proves the npm install actually works",
+    body:
+      "Built `scripts/reincarnation-ritual.mjs`: a discrete-step release gate that npm-installs Mneme into a clean tmp dir, runs every headline command (mneme tools / whats-new / doctor), measures the count of v2.18+v2.19 MCP tools per family, verifies dist/index.js + dist/commands/init.js + bin/mneme.js all exist, and blocks publish on any failure. Caught (and fixed) a stale whats-new curator + the missing dist-file check class. The new rule: tests-pass-in-CI is NOT enough; a real npm install in a clean dir must pass too. Future releases run this BEFORE npm publish.",
+    suggestedAction: "Tell the AI: 'before publishing, run the reincarnation ritual'. The AI will run `node scripts/reincarnation-ritual.mjs` and refuse to publish if any check fails.",
+    tags: ["release-gate", "ritual", "honesty", "no-more-bugs"],
+  },
+  {
+    version: "2.19.0",
+    date: "2026-05-16",
+    headline: "VENDOR-SYNCRETIC PENTAD -- every AI vendor wins (vendor-agnostic)",
+    body:
+      "5 vendor-agnostic primitives + 9 MCP tools, works with Claude / ChatGPT / Gemini / Cursor / Copilot / Codex / Grok / Perplexity / Llama / Mistral / Qwen / DeepSeek. 🛐 CONFESSIONAL -- pre-merge peer audit (any vendor's diff graded vs peer panel). 👻 VENDOR GHOST -- local stylometric distillation; jailbreaks vendor lock-in; honest no-match. 🎯 TRINITY VOTE -- consensus + LAZY tiebreaker; ~85% tiebreaker cost saved. 💰 INSURANCE MARKET -- Lloyd's of AI; per-vendor premium multiplier clamped [0.5, 3.0]. 📡 VENDOR BOOMERANG -- cross-vendor activity ledger; the brain no single vendor has. AURELIAN SHIP for all 5. +56 tests.",
+    suggestedAction: "Tell the AI: 'audit this Grok diff before I merge' or 'what would Claude say' or 'quote Grok's insurance premium'. The AI calls the right MCP tool.",
+    tags: ["vendor-syncretic", "pentad", "confessional", "ghost", "trinity", "insurance", "boomerang"],
+  },
+  {
+    version: "2.18.0",
+    date: "2026-05-15",
+    headline: "REVENUE-PRIMITIVE PENTAD -- ARENA + BADGE + ORACLE + NEXUS (Reverse-MCP)",
+    body:
+      "4 modules + 12 MCP tools + AURELIAN SHIP. 🏆 ARENA -- public AI vendor showdown; HMAC-signed match verdicts + daily leaderboard. 🛡 VERIFIED BADGE -- 'Energy Star of AI'; 5 tiers PLATINUM→FAIL; 90-day cert; $500-$50K/yr. 🔬 ORACLE LIABILITY -- signed AI insurance; refuses if risk≥0.5 or SOUL=BLOCK; 5 coverage tiers $1K-$10M/incident. 📡 NEXUS PROACTIVE -- FIRST Reverse-MCP primitive; server-side queue + ACK ledger; closes the stale-claim hallucination class. Honest scope: real WebSocket push violates MCP contract; built closest legal equivalent.",
+    suggestedAction: "Tell the AI: 'run ARENA on these vendor responses', 'issue Claude a Verified Badge', 'quote me a team-tier insurance certificate', or 'subscribe NEXUS to this fact'.",
+    tags: ["revenue-primitive", "arena", "badge", "oracle", "nexus", "reverse-mcp"],
+  },
+  {
+    version: "2.17.1",
+    date: "2026-05-15",
+    headline: "Landing Linear/Stripe redesign + Dashboard TH/EN + Cosmic JACKPOT community leaderboard",
+    body:
+      "Landing page rebuilt in Linear/Stripe style (orange→pink gradient, near-black bg, Inter font). Dashboard gets EN/TH toggle. Cosmic JACKPOT leaderboard endpoint live at cosmic.mneme-ai.space -- opt-in publish your daily JACKPOT headline, see the community board. 15s tweet-friendly video script in docs/LAUNCH_VIDEO_15S.md.",
+    suggestedAction: "Tell the AI: 'publish my JACKPOT to the community board' to share today's insight.",
+    tags: ["landing", "redesign", "jackpot-community", "video-script"],
+  },
+  {
+    version: "2.17.0",
+    date: "2026-05-15",
+    headline: "MNEME JACKPOT -- daily personalised lottery-jackpot insight engine",
+    body:
+      "Open Mneme each morning, draw ONE personalised insight from your repo + Mneme corpora that feels like winning the lottery. Deterministic seed (same day = same draw). 8 insight kinds (scar_drift / vendor_arb / stale_observation / hive_gold / replica_streak / dead_dep / soul_gap / test_gap). HMAC-signed for shareable bragging.",
+    suggestedAction: "Tell the AI: 'what's my Mneme jackpot today?' (first thing each morning).",
+    tags: ["jackpot", "daily-ritual", "personalised"],
+  },
+  {
+    version: "2.16.0",
+    date: "2026-05-15",
+    headline: "REVOLUTIONARY PENTAD -- PERSONA + ANTI-COLLUSION + ALPHA + PUBLIC AUDIT + LIVING MODEL + OBELISK",
+    body:
+      "🧬 PERSONA -- package your decision history + soul rules into a portable HMAC-signed bundle teammates subscribe to. 🕵 ANTI-COLLUSION -- behavioural fraud detection for AI agent chains. 📈 ALPHA -- HONEST financial-AI layer (refuses to promise prediction accuracy; ships anti-hallucination instead). 🌐 PUBLIC AUDIT -- AURELIAN-grades the whole npm. 🧬 LIVING MODEL -- anti-entropy + causal inference primitives for federated inference. 🪨 OBELISK -- federated AI trust graph (W3C-style).",
+    suggestedAction: "Tell the AI: 'export my persona for the team' or 'audit this npm package's quality'.",
+    tags: ["revolutionary-pentad", "persona", "anti-collusion", "alpha", "obelisk"],
+  },
+  {
     version: "2.15.1",
     date: "2026-05-15",
     headline: "BUG PROPHET (5th hypercar) -- predict regression risk BEFORE shipping",
