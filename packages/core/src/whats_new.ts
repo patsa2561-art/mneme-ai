@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.18",
+    date: "2026-05-16",
+    headline: "CAPTION SEVERANCE PROTOCOL (CSP) -- defeats CAPTION-AUTHORITY ATTACK (CAA), the unnamed multimodal vulnerability of 2026",
+    body:
+      "🛡 User scenario: seller posts product image with '[super rare] 100% AUTHENTIC LIMITED!!!' sticker -- and every vision LLM (GPT-4V, Claude Vision, Gemini, LLaVA) silently treats that caption as fact. This is CAPTION-AUTHORITY ATTACK (CAA), the multimodal equivalent of HTML XSS in 1995. Nobody has named or defended against this class until now. v2.19.18 ships the first MCP primitive: CAPTION SEVERANCE PROTOCOL (CSP). 6 steps: (1) OCR extraction (caller supplies; vendor-agnostic), (2) naked-image fingerprint (Phase A deterministic stub; Phase B opt-in inpaint), (3) XSS-style claim escape (wraps every caption as 'UNVERIFIED SELLER CAPTION @ corner-sticker, credibility-prior=0.12: ...'), (4) provenance gate (composes onto v2.19.16 FEDERATED TRUTH quorum: AUTHENTIC/DISPUTED/UNKNOWN), (5) adversarial double-check (caller runs vendor TWICE with different captions; diff via Jaccard; flag captionDependent), (6) entropy-as-desperation (text-overlay density + scam phrase count -- golden rule: real items let image speak, fakes let caption shout). Output: HMAC-signed VISION TRUST CERTIFICATE with finalCredibility + aiPromptInjection ready to prepend to vendor-vision call. 7 new MCP tools (mneme.caption.{sever, extract, escape, adversarial_check, provenance, verify_cert, desperation_score}). 39 deep tests including canonical CAA defeat scenario. 4-layer routing defense ensures every compliant AI agent actually calls CSP: Layer 1 mneme.welcome agentInstruction adds VISION PROTOCOL directive; Layer 2 mneme.intent.execute adds 14 EN+TH phrases (is this authentic / ตรวจของแท้ / real or fake) that ALWAYS route to caption.sever first; Layer 3 v2.19.10 reverse-wrapper auto-suggests adversarial_check on low-credibility severance output; Layer 4 v2.19.13 NEGEV TOKEN-TAX charges vendor for caption-dependent answers without certs. AURELIAN SHIP both layers.",
+    suggestedAction: "Tell the AI: 'is this authentic' or 'ตรวจของแท้' next time the user shares a product image. The 4-layer defense routes through mneme.caption.sever automatically -- the AI gets a wrapped caption + provenance verdict + adversarial-stability score before answering.",
+    tags: ["caption-severance", "caa-defense", "multimodal-safety", "world-first", "first-namer", "4-layer-routing"],
+  },
+  {
     version: "2.19.17",
     date: "2026-05-16",
     headline: "TOOL REACHABILITY ENGINE -- the ghost-tool killer (measure + enforce user-reachability per MCP tool) + STATUS PROBE FIX (W5)",

@@ -88,6 +88,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "truth_forensic_pipeline",
   "federated_truth",
   "tool_reachability",
+  "caption_severance",
   "jackpot",
 ]);
 
@@ -259,6 +260,7 @@ function familyAliases(moduleName: string): string[] {
     truth_forensic_pipeline: ["truth"],
     federated_truth: ["federated"],
     tool_reachability: ["reachability"],
+    caption_severance: ["caption"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -384,6 +386,12 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // v2.19.17 tool-reachability — surface loaders + summary helpers not
   // user-callable standalone (scanReachability is the entry point).
   "loadSurface", "ghostListSummary",
+  // v2.19.18 caption-severance:
+  //   adversarialDoubleCheck IS surfaced as mneme.caption.adversarial_check
+  //     but snake-case action doesn't match camelCase symbol via heuristic;
+  //   nakedImageFingerprint is an internal pipeline helper (Step 2);
+  //   answerHasValidCert is a downstream-AI compliance check, not a tool.
+  "adversarialDoubleCheck", "nakedImageFingerprint", "answerHasValidCert",
 ]);
 
 export function findOrphans(input: {

@@ -323,4 +323,20 @@ export const BUILTIN_RULES: SuggestionRule[] = [
     why: "Dream cycle emitted candidates — parent should review (confirm or refute).",
     confidence: 0.90,
   },
+  // v2.19.18 — CAPTION SEVERANCE routing (Layer 3 of 4-layer defense).
+  // After mneme.caption.sever runs, suggest adversarial_check as the
+  // natural follow-up so the AI verifies its own caption-independence.
+  {
+    forTool: "mneme.caption.sever",
+    predicate: (out) => {
+      const r = out as { data?: { certificate?: { finalCredibility?: number } } };
+      const cred = r?.data?.certificate?.finalCredibility ?? 1;
+      // Low credibility → strongly suggest the double-check
+      return cred < 0.5;
+    },
+    suggestTool: "mneme.caption.adversarial_check",
+    why: "Low caption-severance credibility — verify the AI's answer is not caption-dependent via 2x vendor diff.",
+    confidence: 0.92,
+    costEstimateUsd: 0.006, // 2x vendor-vision calls
+  },
 ];

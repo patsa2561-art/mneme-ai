@@ -733,6 +733,7 @@ export * as consequenceLedger from "./consequence_ledger/index.js";
 export * as truthForensic from "./truth_forensic_pipeline/index.js";
 export * as federatedTruth from "./federated_truth/index.js";
 export * as toolReachability from "./tool_reachability/index.js";
+export * as captionSeverance from "./caption_severance/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

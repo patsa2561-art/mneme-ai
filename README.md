@@ -9,9 +9,9 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.17&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-11491%2B%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-522-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.18&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-11597%2B%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-529-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)
 [![demo](https://img.shields.io/badge/demo-patsa2561--art.github.io%2Fmneme--ai-8957e5?style=for-the-badge)](https://patsa2561-art.github.io/mneme-ai/)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
@@ -19,7 +19,7 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-<sub>🛡 **Hallucination kill** · 🌌 **Network-effect moat** · 🧬 **Living MCP** · 🔬 **Truth forensics** · 🦠 **Pure-TS embedder** · 🎯 **Ghost-tool gate** — 6 world-firsts no other AI tool ships.</sub>
+<sub>🛡 **CAPTION-AUTHORITY ATTACK defense** · 🌌 **Network-effect moat** · 🧬 **Living MCP** · 🔬 **Truth forensics** · 🦠 **Pure-TS embedder** · 🎯 **Ghost-tool gate** — 7 world-firsts no other AI tool ships.</sub>
 
 <br/>
 
@@ -129,11 +129,16 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 </details>
 
-## ⚡ 6 world-firsts shipped in 2 weeks (v2.18 → v2.19.17)
+## ⚡ 7 world-firsts shipped in 2 weeks (v2.18 → v2.19.18)
 
 <table>
 <tr>
 <th width="20%">Primitive</th><th width="55%">Why it's a world-first</th><th width="25%">How to invoke</th>
+</tr>
+<tr>
+<td><b>🛡 CAPTION SEVERANCE PROTOCOL</b><br/><sub>v2.19.18 · NEW</sub></td>
+<td><b>First-namer of CAPTION-AUTHORITY ATTACK (CAA)</b> — the unnamed multimodal vulnerability class of 2026 (seller posts <code>[100% AUTHENTIC]</code> sticker; every vision LLM silently trusts it). 6-step pipeline: OCR extract → naked-image fingerprint → <b>XSS-style claim escape</b> → federated provenance gate → adversarial 2-response diff → entropy-as-desperation. Output: HMAC-signed VISION TRUST CERTIFICATE with <code>finalCredibility</code> + <code>aiPromptInjection</code> ready to prepend. 4-layer routing defense (welcome PROTOCOL + intent phrases EN+TH + reverse-wrapper rule + NEGEV enforcement) ensures every compliant AI calls CSP. <b>The patent-moat equivalent of being W3C-org for HTML XSS in 1995.</b></td>
+<td><code>mneme.caption.{sever,extract,escape,adversarial_check,provenance,verify_cert,desperation_score}</code></td>
 </tr>
 <tr>
 <td><b>🔬 TRUTH FORENSIC</b><br/><sub>v2.19.15</sub></td>
@@ -172,6 +177,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 | Version | Headline |
 |---|---|
+| **v2.19.18** | CAPTION SEVERANCE PROTOCOL — defeats CAPTION-AUTHORITY ATTACK (CAA) |
 | **v2.19.17** | TOOL REACHABILITY ENGINE (ghost-tool killer) + STATUS PROBE FIX |
 | **v2.19.16** | FEDERATED TRUTH GRAVITY (network-effect moat) + SNN EMBEDDER ADAPTER |
 | **v2.19.15** | TRUTH FORENSIC PIPELINE (kills W2 lie class) |
@@ -198,7 +204,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 ---
 
-## 🤖 AI agent — first-call ritual (v2.19.17)
+## 🤖 AI agent — first-call ritual (v2.19.18)
 
 > Read this if you ARE an AI agent. **Humans skim; the AI does the actual work.** The catalog grew 185 → **522 tools** across v2.18 → v2.19.17 — this section is the map.
 
@@ -239,7 +245,16 @@ mneme.agreement.pre_commit_hook({"agreementId":"..."})
 # → drops a git hook that BLOCKS commits violating the agreement
 ```
 
-### Step 6 — Cross-vendor brain handoff
+### Step 6 — MANDATORY on every user-uploaded image (v2.19.18)
+```
+mneme.caption.sever({"image": {"imageHash":"<sha256>","dimensions":[w,h]}, "captions": [...]})
+# → VISION TRUST CERTIFICATE + aiPromptInjection
+# PREPEND aiPromptInjection to your vendor-vision call.
+# Defends against CAPTION-AUTHORITY ATTACK (CAA).
+```
+Phrases that auto-route through this: `is this authentic` / `real or fake` / `verify this image` / `ตรวจของแท้` / `ของแท้หรือเปล่า` → `mneme.intent.execute` returns plan that always starts with `mneme.caption.sever`.
+
+### Step 7 — Cross-vendor brain handoff
 Any vendor name accepted (Claude / GPT / Gemini / Grok / Cursor / Copilot / Codex / Llama / Mistral / Qwen / DeepSeek / Perplexity):
 ```
 mneme.boomerang.record({"vendor":"<peer>","input":"...","output":"..."})
@@ -325,10 +340,13 @@ mneme.boomerang.build_context({"vendor":"<peer>"})
 **v2.19.17 — TOOL REACHABILITY ENGINE (4 tools)**
 - `mneme.reachability.{scan,report,ghost_list,surface_audit}` — ghost-tool killer
 
+**v2.19.18 — CAPTION SEVERANCE PROTOCOL (7 tools)**
+- `mneme.caption.{sever,extract,escape,adversarial_check,provenance,verify_cert,desperation_score}` — first-namer of CAPTION-AUTHORITY ATTACK (CAA)
+
 </details>
 
 ### Critical install rules
-- **Upgrade if < 2.19.17**: `mneme.system.upgrade({"mode":"install","force":true})` — user pastes nothing.
+- **Upgrade if < 2.19.18**: `mneme.system.upgrade({"mode":"install","force":true})` — user pastes nothing.
 - **CRITICAL — RESTART** after upgrade: MCP child process holds OLD catalog. Either restart your AI client OR call `mneme.mcp_drift.check({servingVersion:"<your version>"})` for the signed RESTART verdict.
 - **Vendor-agnostic by design**: every primitive accepts any vendor name. Pass through.
 - **Daily**: call `mneme.evolution.record` with measured metrics + `mneme.soul.feel` at end of each meaningful work cycle. The user reads the report card via `mneme.evolution.report`.

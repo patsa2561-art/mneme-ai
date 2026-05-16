@@ -205,6 +205,18 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.18": {
+    headline: "CAPTION SEVERANCE PROTOCOL (CSP) — defeats CAPTION-AUTHORITY ATTACK (CAA), the unnamed multimodal vulnerability class of 2026. 6-step pipeline (OCR escape → naked fingerprint → provenance gate → adversarial double-check → entropy desperation → HMAC-signed VISION TRUST CERTIFICATE). 4-layer routing defense (welcome PROTOCOL + intent phrases + reverse-wrapper rule + NEGEV enforcement) ensures every compliant AI agent calls CSP on user images.",
+    tools: [
+      "mneme.caption.sever",
+      "mneme.caption.extract",
+      "mneme.caption.escape",
+      "mneme.caption.adversarial_check",
+      "mneme.caption.provenance",
+      "mneme.caption.verify_cert",
+      "mneme.caption.desperation_score",
+    ],
+  },
   "2.19.17": {
     headline: "TOOL REACHABILITY ENGINE — the ghost-tool killer. Measures per-tool USER-REACHABILITY across 5 surfaces (cli_router / welcome / whats_new / suggested_next / capabilities); HMAC-signed report; ritual gate blocks publish on any v2.18+ tool with reachability score=0. Plus: mneme status now PROBES the runtime embedder ladder (W5 fix — was reporting saved config string not actual tier).",
     tools: [
