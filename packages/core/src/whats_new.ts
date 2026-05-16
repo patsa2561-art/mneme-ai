@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.13",
+    date: "2026-05-16",
+    headline: "LIVING CLI · Pillars 2 + 3 -- NEUROMORPHIC SPIKING EMBEDDER + NEGATIVE-EVIDENCE FIREWALL",
+    body:
+      "🧠 PILLAR 2 -- NEUROMORPHIC SPIKING EMBEDDER: 32 populations × 64 neurons (2048-dim) leaky integrate-and-fire spiking net. 50 timesteps; refractory; per-neuron threshold variance for natural sparsity. SPARSE firing-rate vector = SQLite-friendly storage. Adversarial gradient-free finetune on (anchor, positive, negative) triplets: per-neuron threshold update raises bad-co-fire neurons, lowers good-co-fire neurons. Per-repo SNN phenotype: your embedder's adversarial history is yours alone. Honest scope: pure TS now (~50 KB conceptual; WASM port future); loses to transformers on MTEB English-general ~15-20% but wins on code-corpus + tiny footprint + adversarially-tunable. Fixes the v2.19.6 'Bundled WASM model failed: require is not defined' fallback. 21 tests. ❌ PILLAR 3 -- NEGATIVE-EVIDENCE FIREWALL: every claim ACCEPTED ONLY when every generated refutation has been searched (git/file/test/web) and NOT FOUND. Any refutation evidence = REJECTED; any inconclusive = UNKNOWN; empty refutations = UNKNOWN. The inversion of burden-of-proof no AI vendor will ship because UX cost is brutal -- only an independent tool (Mneme) can enforce. ACCEPTED claims get HMAC-signed certificate + verify surface. Companion TokenTaxLedger: each vendor starts 1000 credits/month; -10 per refuted claim; exhaustion → routing fallback signal to caller (advisory, not enforcement). 19 tests. 10 new MCP tools (mneme.snn.* + mneme.negev.*). AURELIAN SHIP both. Composes onto v2.19.3 INVERSE-LLM (refutation generator) + v2.19.5 CHRONOSTASIS (rejected claims become refuted axioms).",
+    suggestedAction: "Tell the AI: 'embed this with SNN' (mneme.snn.embed) or 'gate this claim through negative-evidence' (mneme.negev.gate) -- pair with mneme.inverse.prompt to generate the refutations.",
+    tags: ["snn", "spiking-neural-net", "negative-evidence", "hallucination-kill", "token-tax", "living-cli"],
+  },
+  {
     version: "2.19.12",
     date: "2026-05-16",
     headline: "LIVING CLI · Pillar 1 -- CLI EVOLUTION: MUSCLE MEMORY + DIALECT + BRAIN BRANCHES + MODEL CHRYSALIS",

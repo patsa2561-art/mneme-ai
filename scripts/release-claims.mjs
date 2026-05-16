@@ -190,6 +190,21 @@ export const RELEASE_CLAIMS = {
       "mneme.chrysalis.list",
     ],
   },
+  "2.19.13": {
+    headline: "LIVING CLI · Pillars 2 + 3 — NEUROMORPHIC SPIKING EMBEDDER (2048-dim sparse SNN: no transformer, no ONNX bridge, gradient-free adversarial finetune) + NEGATIVE-EVIDENCE FIREWALL (inverts burden of proof: claim ACCEPTED only when every refutation is searched and NOT found; HMAC certificate + token-tax routing)",
+    tools: [
+      "mneme.snn.embed",
+      "mneme.snn.similarity",
+      "mneme.snn.finetune",
+      "mneme.snn.stats",
+      "mneme.snn.config",
+      "mneme.negev.gate",
+      "mneme.negev.verify_certificate",
+      "mneme.negev.tax_init",
+      "mneme.negev.tax_charge",
+      "mneme.negev.tax_status",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

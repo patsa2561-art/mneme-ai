@@ -725,6 +725,8 @@ export * as muscleMemory from "./muscle_memory/index.js";
 export * as dialect from "./dialect/index.js";
 export * as brainBranches from "./brain_branches/index.js";
 export * as modelChrysalis from "./model_chrysalis/index.js";
+export * as neuromorphicEmbedder from "./neuromorphic_embedder/index.js";
+export * as negativeEvidence from "./negative_evidence/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

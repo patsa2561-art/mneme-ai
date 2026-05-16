@@ -80,6 +80,8 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "dialect",
   "brain_branches",
   "model_chrysalis",
+  "neuromorphic_embedder",
+  "negative_evidence",
   "jackpot",
 ]);
 
@@ -243,6 +245,8 @@ function familyAliases(moduleName: string): string[] {
     dialect: ["dialect"],
     brain_branches: ["brain"],
     model_chrysalis: ["chrysalis"],
+    neuromorphic_embedder: ["snn"],
+    negative_evidence: ["negev"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -345,6 +349,14 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "emptyRegistry", "initMain", "branchFrom", "diffBranches", "mergeBranch",
   "verifyRegistry", "listBranches",
   "defaultChrysalis",
+  // v2.19.13 neuromorphic-embedder — surfaced via embed/finetune/stats/etc.;
+  // remaining exports are constructors / building blocks.
+  "createEmbedder", "cosine", "sparsity", "adversarialBatch", "tokenize",
+  // v2.19.13 negative-evidence — surfaced via gate/verify_cert/tax_init/charge/status;
+  // chargeTax/vendorStatus/routingDecision/initMonthlyBudget are reached through
+  // mneme.negev.{tax_charge,tax_status,tax_init} which use snake_case actions
+  // that don't pattern-match the camelCase symbol heuristic.
+  "emptyTaxLedger", "initMonthlyBudget", "chargeTax", "vendorStatus", "routingDecision",
 ]);
 
 export function findOrphans(input: {
