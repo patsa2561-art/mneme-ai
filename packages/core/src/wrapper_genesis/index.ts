@@ -90,6 +90,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "tool_reachability",
   "caption_severance",
   "caption_inpaint",
+  "reverse_caption_injection",
+  "provenance_dna",
+  "textron_captcha",
   "jackpot",
 ]);
 
@@ -263,6 +266,9 @@ function familyAliases(moduleName: string): string[] {
     tool_reachability: ["reachability"],
     caption_severance: ["caption"],
     caption_inpaint: ["inpaint"],
+    reverse_caption_injection: ["rci"],
+    provenance_dna: ["provenance"],
+    textron_captcha: ["textron"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -400,6 +406,14 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   //   makeSolidImage/makeTestImage/meanColorDistance are test/dev helpers
   //     exposed for callers who want to validate inpainter behaviour offline.
   "inpaintMaskRegions", "makeSolidImage", "makeTestImage", "meanColorDistance",
+  // v2.19.20 supporting trio:
+  //   provenance: emptyRegistry constructor; fingerprintSeller exposed as
+  //     mneme.provenance.seller_id but snake-case action doesn't match
+  //     camelCase symbol via heuristic.
+  //   textron: emptyTranscript constructor; vendorTranscript is a query helper
+  //     accessed via mneme.textron.multiplier internally, not standalone.
+  "emptyRegistry", "fingerprintSeller",
+  "emptyTranscript", "vendorTranscript",
 ]);
 
 export function findOrphans(input: {

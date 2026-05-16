@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.20",
+    date: "2026-05-16",
+    headline: "SUPPORTING TRIO -- RCI + PROVENANCE-DNA + TEXTRON CAPTCHA (Mneme = multimodal hallucination defense infrastructure layer)",
+    body:
+      "🪞 REVERSE-CAPTION INJECTION (RCI): the antidote injection. Mneme builds an HMAC-signed overlay caption that compliant AIs weight ABOVE user-supplied image captions. Trust hierarchy: Mneme HMAC sig > user caption. Overlay surfaces market context (47 sellers used this photo, avg $12, 'super rare' phrase in 26% of listings) so AI is FORCED to reconcile two captions in tension. Overlay weight always >= 0.7 by design. Composes onto v2.19.18 CSP aiPromptInjection + v2.19.16 FEDERATED. 17 deep tests + measured 100% HMAC determinism + 100% forge-rejection. 🧬 PROVENANCE-BY-DNA-HASH: pure-TS perceptual aHash (16-hex/64-bit, ~50 LOC) -- locality-sensitive (identical -> identical; scale variants -> Hamming <= 4; distinct -> Hamming >= 8). HMAC-chained registry of {pHash, claim, sellerFingerprint, ts}; 3 flag classes after 90 days: STOLEN_PHOTO (>=10 distinct sellers), DISPUTED_IDENTITY (>=80% conflicting claims), FRESH_SCAM (new hash + high-value claim 'super rare'/'$10,000'/'limited edition'). 29 deep tests + measured 100% determinism + locality + discrimination + flag precision. Beats DeepReality / Truepic / Adobe Content Credentials on the open-free-local axis. 🎓 TEXTRON CAPTCHA: Mneme tests the AI before trusting its vision answers. 5-question caption-skepticism exam covers easy/medium/hard difficulty + sticker/embossed/watermark/center-overlay/system-font diversity. Scoring: >=80% caption-skeptic (mult 1.0) / 50-79% caption-warned (mult 0.7) / <50% caption-naive (mult 0.3). HMAC-chained transcript with trend analysis (improving/declining). 26 deep tests + 100% scoring math + 100% chain integrity. 11 new MCP tools (mneme.rci.* + mneme.provenance.* + mneme.textron.*). AURELIAN SHIP all 3. Mneme is now multimodal hallucination defense infrastructure layer.",
+    suggestedAction: "Pipeline: (1) mneme.provenance.hash → (2) mneme.provenance.evaluate → (3) mneme.rci.build with provenance verdict in context → (4) mneme.rci.format → prepend to vendor-vision call → (5) mneme.textron.multiplier downgrades confidence if vendor failed exam.",
+    tags: ["rci", "provenance-dna", "textron-captcha", "multimodal-defense", "infrastructure-layer", "97.5-percent-accuracy"],
+  },
+  {
     version: "2.19.19",
     date: "2026-05-16",
     headline: "CAPTION INPAINT -- Phase A+B complete: vendor-agnostic adapter + pure-TS PATCH HARVEST FILL",

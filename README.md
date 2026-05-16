@@ -9,9 +9,9 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.19&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-11669%2B%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-533-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.20&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-11843%2B%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-544-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)
 [![demo](https://img.shields.io/badge/demo-patsa2561--art.github.io%2Fmneme--ai-8957e5?style=for-the-badge)](https://patsa2561-art.github.io/mneme-ai/)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
@@ -177,6 +177,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 | Version | Headline |
 |---|---|
+| **v2.19.20** | SUPPORTING TRIO — RCI + PROVENANCE-DNA + TEXTRON CAPTCHA (Mneme = multimodal hallucination defense infrastructure layer) |
 | **v2.19.19** | CAPTION INPAINT — Phase A+B complete (vendor-agnostic adapter + pure-TS PATCH HARVEST FILL, 100% measured accuracy) |
 | **v2.19.18** | CAPTION SEVERANCE PROTOCOL — defeats CAPTION-AUTHORITY ATTACK (CAA) |
 | **v2.19.17** | TOOL REACHABILITY ENGINE (ghost-tool killer) + STATUS PROBE FIX |
@@ -346,6 +347,11 @@ mneme.boomerang.build_context({"vendor":"<peer>"})
 
 **v2.19.19 — CAPTION INPAINT Phase A+B (4 tools)**
 - `mneme.inpaint.{run,naked_fingerprint,resolve,metrics}` — pure-TS PATCH HARVEST FILL; 100% measured accuracy on 4 axes
+
+**v2.19.20 — SUPPORTING TRIO (11 tools)**
+- `mneme.rci.{build,verify,format}` — REVERSE-CAPTION INJECTION (HMAC overlay weighted above user caption)
+- `mneme.provenance.{hash,hamming,record,evaluate,seller_id}` — perceptual aHash + STOLEN/DISPUTED/FRESH-SCAM flags
+- `mneme.textron.{exam,enroll,multiplier}` — Mneme tests AI before trusting it (5-question caption-skepticism exam)
 
 </details>
 

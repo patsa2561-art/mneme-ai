@@ -82,6 +82,7 @@ import { V1916_FEDERATED_TRUTH_TOOLS } from "./_v1916_federated_truth.js";
 import { V1917_TOOL_REACHABILITY_TOOLS } from "./_v1917_tool_reachability.js";
 import { V1918_CAPTION_SEVERANCE_TOOLS } from "./_v1918_caption_severance.js";
 import { V1919_CAPTION_INPAINT_TOOLS } from "./_v1919_caption_inpaint.js";
+import { V1920_CAPTION_TRIO_TOOLS } from "./_v1920_caption_trio.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -168,6 +169,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1917_TOOL_REACHABILITY_TOOLS,
     ...V1918_CAPTION_SEVERANCE_TOOLS,
     ...V1919_CAPTION_INPAINT_TOOLS,
+    ...V1920_CAPTION_TRIO_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

@@ -205,6 +205,22 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.20": {
+    headline: "SUPPORTING TRIO (RCI + PROVENANCE-DNA + TEXTRON CAPTCHA). REVERSE-CAPTION INJECTION fights injection with injection (HMAC-signed Mneme overlay weighted ABOVE user caption). PROVENANCE-BY-DNA-HASH ships pure-TS perceptual aHash + 3-flag classifier (STOLEN_PHOTO/DISPUTED_IDENTITY/FRESH_SCAM). TEXTRON CAPTCHA exams the AI before trusting it (5-question caption-skepticism + transcript ledger + confidence multiplier). All composes onto v2.19.18 CSP + v2.19.19 inpainter + v2.19.16 FEDERATED.",
+    tools: [
+      "mneme.rci.build",
+      "mneme.rci.verify",
+      "mneme.rci.format",
+      "mneme.provenance.hash",
+      "mneme.provenance.hamming",
+      "mneme.provenance.record",
+      "mneme.provenance.evaluate",
+      "mneme.provenance.seller_id",
+      "mneme.textron.exam",
+      "mneme.textron.enroll",
+      "mneme.textron.multiplier",
+    ],
+  },
   "2.19.19": {
     headline: "CAPTION INPAINT — Phase A+B complete. InpainterProvider vendor-agnostic adapter + pure-TS PATCH HARVEST FILL (concentric ring search + 1/distance-weighted average + boundary Gaussian blur). 100% determinism + 100% pixel preservation + 100% fingerprint discrimination + 100% mask plausibility on measured trials (target 97.5%+). Wires into v2.19.18 severCaption via async path.",
     tools: [
