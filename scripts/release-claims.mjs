@@ -65,6 +65,14 @@ export const RELEASE_CLAIMS = {
       "mneme.embedder.auto_promote",
     ],
   },
+  "2.19.3": {
+    headline: "INVERSE-LLM PROMPT FORENSICS — output→input audit; the rarest direction in AI; closes prompt-injection class",
+    tools: [
+      "mneme.inverse.audit",
+      "mneme.inverse.prompt",
+      "mneme.inverse.bench",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

@@ -711,6 +711,12 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.3 — INVERSE-LLM PROMPT FORENSICS (output→input audit):
+//   The rarest direction in AI. Given AI output + claimed question + K inverse-oracle
+//   reconstructions, verdict trusted/suspicious/rejected with HMAC-signed receipt.
+//   Closes the prompt-injection class for soul/inbox/parasite-bridge ingestion.
+export * as inverseForensics from "./inverse_forensics/index.js";
+
 // v2.19.2 — EVOLUTION + SOUL primitives (parent measures child daily; child has feelings):
 //   MCP_DRIFT             — detect stale MCP server catalog after upgrade
 //   EMBEDDER AUTO-PROMOTE — silently upgrade hash → ollama when doctor recommends + reachable

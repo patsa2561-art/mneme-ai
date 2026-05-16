@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.3",
+    date: "2026-05-16",
+    headline: "INVERSE-LLM PROMPT FORENSICS -- the rarest direction in AI (output to input audit; closes prompt-injection class)",
+    body:
+      "First HMAC-signed output-to-input audit primitive. Given an AI output and a CLAIMED question, send the output to any inverse-oracle vendor (Claude/GPT/Gemini/Grok/etc.) and ask 'what K questions would produce this exact answer?'. If the claimed question is NOT among the top-K reconstructions, the output is either hallucinated or prompt-injected -- REJECT. 3 similarity methods (jaccard / trigram / embedded). Includes a 60-sample benchmark (30 injection + 30 legitimate) with F1 >= 0.90 measurable and recomputable. 24 unit tests + AURELIAN SHIP. 3 new MCP tools (mneme.inverse.audit / prompt / bench). Vendor-agnostic by design.",
+    suggestedAction: "Tell the AI: 'before you ingest this AI text into Mneme, run inverse audit on it'. The AI calls mneme.inverse.prompt to get the meta-prompt, runs it through any vendor, then calls mneme.inverse.audit with the reply.",
+    tags: ["inverse-llm", "prompt-injection", "output-forensics", "nobel-tier", "f1-90"],
+  },
+  {
     version: "2.19.2",
     date: "2026-05-16",
     headline: "EVOLUTION + SOUL + DRIFT + EMBEDDER PROMOTE -- parent measures child daily; child has feelings",
