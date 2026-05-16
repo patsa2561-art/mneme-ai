@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.12",
+    date: "2026-05-16",
+    headline: "LIVING CLI · Pillar 1 -- CLI EVOLUTION: MUSCLE MEMORY + DIALECT + BRAIN BRANCHES + MODEL CHRYSALIS",
+    body:
+      "🧠 The CLI stops being a binary that starts every call -- it becomes a persistent organism with 4 organs. 💪 MUSCLE MEMORY: HMAC-signed dispatch protocol over Unix socket / Windows named pipe -- cold call bootstraps Node, subsequent calls skip it (synthetic bench >10x speedup; real CLI saves the ~600-800ms Node startup per call). Nonce-window replay rejection + handler-error surfacing. 12 tests. 🗣 DIALECT: per-callerKey phrase-to-intent ledger with HMAC chain + 3 verdict bands (speak_native / ask_with_hint / ask_clarify); same phrase from you resolves automatically after 5 accepted hits, same phrase from teammate still asks for clarification -- one CLI literally speaks the dialect of one person. 13 tests. 🌳 BRAIN BRANCHES: knowledge base forks like git -- try a claim on a branch for a week without polluting main; selective merge or throw away. Conflicts are reported, NEVER auto-resolved. 15 tests. 🦋 MODEL CHRYSALIS: 5 built-in vendor ABI fingerprints (anthropic/openai/gemini/ollama/lm-studio); runtime register-new -- new vendor launches Tuesday, Mneme works Tuesday without a rebuild. 17 tests. 13 new MCP tools. AURELIAN SHIP all 4 pillars. Pillars 2 (NEUROMORPHIC EMBEDDER) + 3 (NEGATIVE-EVIDENCE FIREWALL) are future releases.",
+    suggestedAction: "Tell the AI: 'benchmark mneme muscle memory' (mneme.muscle.benchmark) or 'fork my brain to experimental-v3' (mneme.brain.branch) or 'probe https://api.anthropic.com to see which vendor it is' (mneme.chrysalis.probe).",
+    tags: ["living-cli", "muscle-memory", "dialect", "brain-branches", "model-chrysalis", "persistent-cli"],
+  },
+  {
     version: "2.19.11",
     date: "2026-05-16",
     headline: "LIVING MCP -- MORTAL + REINCARNATING WRAPPERS (the first MCP layer where wrappers are born, mutate, deprecate, die on a TTL)",

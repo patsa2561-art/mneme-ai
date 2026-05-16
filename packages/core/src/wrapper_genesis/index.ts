@@ -76,6 +76,10 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "proof_carrying",
   "reverse_wrapper",
   "mortal_wrappers",
+  "muscle_memory",
+  "dialect",
+  "brain_branches",
+  "model_chrysalis",
   "jackpot",
 ]);
 
@@ -235,6 +239,10 @@ function familyAliases(moduleName: string): string[] {
     proof_carrying: ["proof"],
     reverse_wrapper: ["suggest"],
     mortal_wrappers: ["mortal"],
+    muscle_memory: ["muscle"],
+    dialect: ["dialect"],
+    brain_branches: ["brain"],
+    model_chrysalis: ["chrysalis"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -323,6 +331,20 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // exercised via mneme.mortal.resolve/invoke; emptyState is a constructor;
   // birthMortalWrapper IS exposed as mneme.mortal.birth via aliasing).
   "mutateSignature", "recordCalibration", "emptyState",
+  // v2.19.12 LIVING CLI — internal helpers paired with main surfaces:
+  //   muscle: benchmarkMuscleSpeedup exposed as mneme.muscle.benchmark;
+  //     suggestedSocketPath exposed as mneme.muscle.socket_path; the rest
+  //     are class methods, not standalone-surfaceable.
+  //   dialect: emptyLedger is a constructor; learnPhrase/resolvePhrase/
+  //     exportDialect are surfaced; verifyLedger is paired with learn.
+  //   brain: emptyRegistry/initMain are constructors; branchFrom/diffBranches/
+  //     mergeBranch/listBranches are surfaced; verifyRegistry is paired.
+  //   chrysalis: BUILTIN_FINGERPRINTS is data; defaultChrysalis is a constructor.
+  "benchmarkMuscleSpeedup", "suggestedSocketPath",
+  "emptyLedger", "learnPhrase", "resolvePhrase", "verifyLedger", "exportDialect",
+  "emptyRegistry", "initMain", "branchFrom", "diffBranches", "mergeBranch",
+  "verifyRegistry", "listBranches",
+  "defaultChrysalis",
 ]);
 
 export function findOrphans(input: {

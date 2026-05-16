@@ -172,6 +172,24 @@ export const RELEASE_CLAIMS = {
       "mneme.mortal.verify",
     ],
   },
+  "2.19.12": {
+    headline: "LIVING CLI · Pillar 1 — CLI EVOLUTION: MUSCLE MEMORY (persistent daemon dispatch, cold→warm speedup) + DIALECT (per-user phrase intent map) + BRAIN BRANCHES (counterfactual selves of knowledge) + MODEL CHRYSALIS (future-model-proof vendor ABI adapter)",
+    tools: [
+      "mneme.muscle.benchmark",
+      "mneme.muscle.status",
+      "mneme.muscle.socket_path",
+      "mneme.dialect.learn",
+      "mneme.dialect.resolve",
+      "mneme.dialect.export",
+      "mneme.brain.branch",
+      "mneme.brain.diff",
+      "mneme.brain.merge",
+      "mneme.brain.list",
+      "mneme.chrysalis.probe",
+      "mneme.chrysalis.translate",
+      "mneme.chrysalis.list",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

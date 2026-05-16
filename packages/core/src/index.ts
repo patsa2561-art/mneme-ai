@@ -721,6 +721,10 @@ export * as nexusProactive from "./nexus_proactive/index.js";
 export * as proofCarrying from "./proof_carrying/index.js";
 export * as reverseWrapper from "./reverse_wrapper/index.js";
 export * as mortalWrappers from "./mortal_wrappers/index.js";
+export * as muscleMemory from "./muscle_memory/index.js";
+export * as dialect from "./dialect/index.js";
+export * as brainBranches from "./brain_branches/index.js";
+export * as modelChrysalis from "./model_chrysalis/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers
