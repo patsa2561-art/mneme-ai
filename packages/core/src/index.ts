@@ -711,6 +711,11 @@ export * as verifiedBadge from "./verified_badge/index.js";
 export * as oracleLiability from "./oracle_liability/index.js";
 export * as nexusProactive from "./nexus_proactive/index.js";
 
+// v2.19.6 — CONVERSATION COMPILER: chat → deterministic signed callable artifact (pair-locked)
+//   Decisions extracted from transcripts (EN+TH) → checker registry → signed (transcript + code) pair.
+//   Pre-commit hook generator. Agreements become executable; drift becomes impossible.
+export * as conversationCompiler from "./conversation_compiler/index.js";
+
 // v2.19.5 — CHRONOSTASIS · FLAGSHIP · Time-Locked Provable Memory:
 //   Every AI claim wrapped as PENDING; survives adversarial witness window;
 //   crystallizes to AXIOM after deadline OR triggers cascade REWIND if refuted.

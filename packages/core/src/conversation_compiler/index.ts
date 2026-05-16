@@ -1,0 +1,524 @@
+/**
+ * v2.19.6 — MNEME CONVERSATION COMPILER (chat → deterministic, signed, callable artifact)
+ *
+ *   "Every conversation with an AI produces decisions ('every commit
+ *    must have a test', 'all HMAC compares use timingSafeEqual', 'ห้าม
+ *    push บน main directly'). Today those decisions are markdown ADRs
+ *    that drift, get re-interpreted, or get forgotten. CONVERSATION
+ *    COMPILER changes that:
+ *
+ *      transcript → decisions[] → executable checkers → signed
+ *      pair-locked artifact (transcript + code share one HMAC).
+ *
+ *    Future sessions IMPORT the artifact instead of re-discussing.
+ *    A pre-commit hook can run the artifact's checkers and refuse
+ *    commits that violate any agreement. Drift becomes impossible —
+ *    the agreement is code."
+ *
+ * Honest scope:
+ *   - Mneme does NOT compile arbitrary natural language into arbitrary
+ *     executable logic. That's still an NLP grand challenge.
+ *   - What Mneme DOES: detect a curated set of common agreement patterns
+ *     (test-required / timingSafeEqual / no-console-log / no-direct-push
+ *     to main / has-hmac / etc.) AND wrap UNKNOWN patterns as
+ *     manual-review stubs. Pattern coverage grows release-over-release.
+ *   - The artifact is a deterministic JSON + a human-readable ES module
+ *     source. We do NOT bundle wasm-pack. Same semantics: deterministic +
+ *     replayable + tamper-evident. True Rust-WASM is a future enhancement
+ *     callers can layer on top.
+ *   - The HMAC is over (canonical agreement JSON + transcript). Tampering
+ *     EITHER side breaks the pair-lock.
+ *
+ * Composes onto v2.19.5 CHRONOSTASIS (agreements can become axioms),
+ * v2.19.3 INVERSE FORENSICS (witness audit each decision), v2.14
+ * PROJECT SOUL (agreement violations escalate to SOUL gate). Pure
+ * additive layer; zero breaking.
+ */
+
+import { createHmac, timingSafeEqual, createHash } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+
+const PROTOCOL_VERSION = 1 as const;
+
+export type PatternKind =
+  | "test_required"
+  | "timing_safe_equal_required"
+  | "no_console_log"
+  | "no_direct_push_main"
+  | "has_hmac"
+  | "no_secret_in_code"
+  | "must_have_changelog"
+  | "manual";
+
+export interface Decision {
+  /** Raw text matched from the conversation. */
+  text: string;
+  /** Auto-detected pattern (or 'manual' if unrecognised). */
+  pattern: PatternKind;
+  /** Per-pattern parameters (regex needles, file globs, etc.). */
+  params: Record<string, string | number | boolean>;
+  /** Where in the transcript this decision was detected (char offset). */
+  detectedAt: number;
+  /** Confidence the extraction is correct (0..1). */
+  confidence: number;
+}
+
+export interface Agreement {
+  v: typeof PROTOCOL_VERSION;
+  agreementId: string;
+  name: string;
+  decisions: Decision[];
+  /** SHA-256 of the transcript (so we don't store transcript twice). */
+  transcriptSha256: string;
+  /** SHA-256 of the generated source code (for cross-verification). */
+  sourceSha256: string;
+  /** Generated ES module source (deterministic from decisions). */
+  generatedSource: string;
+  proposedBy: string;
+  compiledAt: string;
+  /** HMAC over (canonical agreement body without sig) + transcript. */
+  sig: string;
+}
+
+export interface CheckTarget {
+  /** Files added/changed in the staged diff or commit. */
+  filesChanged?: string[];
+  /** Full text of all changed files concatenated (for grep-style checks). */
+  diffText?: string;
+  /** Optional commit message. */
+  commitMessage?: string;
+  /** Optional current branch name. */
+  branch?: string;
+  /** Free-form additional context. */
+  extra?: Record<string, unknown>;
+}
+
+export interface CheckResult {
+  decisionText: string;
+  pattern: PatternKind;
+  ok: boolean;
+  reason: string;
+  /** If ok=false, severity hint for UI. */
+  severity?: "info" | "warn" | "block";
+}
+
+function canon(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
+  const keys = Object.keys(v as Record<string, unknown>).sort();
+  return "{" + keys.map((k) => JSON.stringify(k) + ":" + canon((v as Record<string, unknown>)[k])).join(",") + "}";
+}
+
+function defaultSecret(): string {
+  return process.env["MNEME_AGREEMENT_SECRET"] || `mneme-conversation-compiler-v${PROTOCOL_VERSION}`;
+}
+
+function sha256Hex(s: string): string {
+  return createHash("sha256").update(s, "utf8").digest("hex");
+}
+
+function hmacOver(body: unknown, transcript: string, secret: string): string {
+  return createHmac("sha256", secret).update(canon(body) + "\n#TRANSCRIPT#\n" + transcript).digest("hex");
+}
+
+// ─── Decision extraction ─────────────────────────────────────────────────
+//
+// Patterns are intentionally narrow + high-precision. Each rule is one
+// regex (multiline + case-insensitive) and one PatternKind. We do NOT
+// pretend to understand semantics — we recognise SHAPES.
+
+interface ExtractionRule {
+  /** Regex to match in the transcript (i flag added). */
+  re: RegExp;
+  pattern: PatternKind;
+  /** Build per-decision params from the match. */
+  paramsFrom?: (m: RegExpMatchArray) => Record<string, string | number | boolean>;
+  baseConfidence: number;
+}
+
+const RULES: ExtractionRule[] = [
+  // "every commit must have a test" / "all PRs must include tests" / "ทุก commit ต้องมี test"
+  {
+    re: /(?:every\s+commit\s+must\s+have\s+(?:a\s+)?test|all\s+(?:commits|prs|pull\s+requests)\s+must\s+include\s+tests?|test\s+(?:is|are)\s+required\s+(?:for\s+every\s+commit)?|ทุก\s*commit\s*ต้องมี\s*test|ต้องมี\s*test\s*ทุก\s*commit)/i,
+    pattern: "test_required",
+    baseConfidence: 0.85,
+  },
+  // "must use timingSafeEqual" / "all HMAC compares use timingSafeEqual" / "ห้าม === กับ HMAC"
+  {
+    re: /(?:must\s+use\s+timingSafeEqual|all\s+hmac\s+compares?\s+(?:must\s+)?use\s+timingSafeEqual|use\s+timingSafeEqual\s+(?:for\s+)?(?:hmac|signature)|ห้าม\s*===\s*(?:กับ)?\s*hmac)/i,
+    pattern: "timing_safe_equal_required",
+    baseConfidence: 0.9,
+  },
+  // "no console.log in production" / "remove console.log" / "ห้าม console.log"
+  {
+    re: /(?:no\s+console\.log(?:\s+in\s+production)?|remove\s+console\.log|don['’]?t\s+use\s+console\.log|ห้าม\s*console\.log)/i,
+    pattern: "no_console_log",
+    baseConfidence: 0.9,
+  },
+  // "no direct push to main" / "ห้าม push main"
+  {
+    re: /(?:no\s+direct\s+push(?:es)?\s+to\s+main|never\s+push\s+(?:directly\s+)?to\s+main|all\s+changes\s+to\s+main\s+via\s+pr|ห้าม\s*push\s*(?:บน\s*)?main(?:\s*โดยตรง)?)/i,
+    pattern: "no_direct_push_main",
+    baseConfidence: 0.9,
+  },
+  // "must have HMAC signature" / "all responses signed with HMAC"
+  {
+    re: /(?:must\s+have\s+hmac(?:\s+signature)?|all\s+(?:receipts?|responses?|verdicts?)\s+(?:must\s+be\s+)?signed\s+with\s+hmac|sign\s+with\s+hmac|hmac[\s-]?signed?)/i,
+    pattern: "has_hmac",
+    baseConfidence: 0.85,
+  },
+  // "no secrets in code" / "ห้ามใส่ secret"
+  {
+    re: /(?:no\s+secrets?\s+in\s+(?:code|source|repo)|never\s+commit\s+secrets?|ห้าม\s*(?:ใส่)?\s*secret)/i,
+    pattern: "no_secret_in_code",
+    baseConfidence: 0.85,
+  },
+  // "must update changelog" / "ต้องอัพเดท changelog"
+  {
+    re: /(?:must\s+update\s+changelog|update\s+changelog\s+for\s+every\s+release|every\s+release\s+(?:must\s+)?(?:has|have)\s+a\s+changelog\s+entry|ต้อง\s*อัพเดท\s*changelog)/i,
+    pattern: "must_have_changelog",
+    baseConfidence: 0.85,
+  },
+];
+
+export function extractDecisions(input: { transcript: string }): Decision[] {
+  if (!input.transcript || input.transcript.trim().length === 0) return [];
+  const out: Decision[] = [];
+  const seenPatterns = new Set<PatternKind>();
+  for (const rule of RULES) {
+    const m = input.transcript.match(rule.re);
+    if (!m) continue;
+    if (seenPatterns.has(rule.pattern)) continue; // dedupe by pattern; first match wins
+    seenPatterns.add(rule.pattern);
+    const params = rule.paramsFrom ? rule.paramsFrom(m) : {};
+    out.push({
+      text: m[0].trim(),
+      pattern: rule.pattern,
+      params,
+      detectedAt: m.index ?? 0,
+      confidence: rule.baseConfidence,
+    });
+  }
+  // Also surface MANUAL stubs for obvious "must/ห้าม" sentences we didn't recognise
+  const manualHits = input.transcript.match(/^[^\n]*\b(?:must|never|always|ห้าม|ต้อง)\b[^\n]*$/gim) ?? [];
+  for (const hit of manualHits) {
+    const text = hit.trim();
+    if (text.length < 12 || text.length > 200) continue;
+    // Skip if already covered by a recognised rule
+    const lowered = text.toLowerCase();
+    if (out.some((d) => lowered.includes(d.text.toLowerCase().slice(0, Math.min(d.text.length, 25))))) continue;
+    out.push({
+      text,
+      pattern: "manual",
+      params: {},
+      detectedAt: input.transcript.indexOf(hit),
+      confidence: 0.4,
+    });
+  }
+  // Sort by detectedAt for deterministic compilation
+  out.sort((a, b) => a.detectedAt - b.detectedAt);
+  return out;
+}
+
+// ─── Source code generation (deterministic) ──────────────────────────────
+function generateSource(agreement: { name: string; decisions: Decision[] }): string {
+  const lines: string[] = [];
+  lines.push(`// MNEME AGREEMENT · ${agreement.name}`);
+  lines.push(`// Auto-generated by @mneme-ai/core conversation_compiler v${PROTOCOL_VERSION}`);
+  lines.push(`// Do not edit by hand. Re-compile from the transcript instead.`);
+  lines.push(``);
+  lines.push(`export const AGREEMENT_NAME = ${JSON.stringify(agreement.name)};`);
+  lines.push(``);
+  lines.push(`export const DECISIONS = ${JSON.stringify(agreement.decisions.map((d) => ({ text: d.text, pattern: d.pattern, params: d.params, confidence: d.confidence })), null, 2)};`);
+  lines.push(``);
+  lines.push(`/**`);
+  lines.push(` * Run all checkers against a target. Returns one CheckResult per decision.`);
+  lines.push(` * target shape: { filesChanged?: string[], diffText?: string, commitMessage?: string, branch?: string }`);
+  lines.push(` */`);
+  lines.push(`export function runAgreement(target) {`);
+  lines.push(`  const results = [];`);
+  lines.push(`  for (const d of DECISIONS) {`);
+  lines.push(`    results.push(checkOne(d, target));`);
+  lines.push(`  }`);
+  lines.push(`  return results;`);
+  lines.push(`}`);
+  lines.push(``);
+  lines.push(`function checkOne(d, target) {`);
+  lines.push(`  const t = target || {};`);
+  lines.push(`  switch (d.pattern) {`);
+  lines.push(`    case "test_required": {`);
+  lines.push(`      const files = t.filesChanged || [];`);
+  lines.push(`      const hasTest = files.some((f) => /\\.(test|spec)\\./i.test(f) || /(^|\\/)tests?\\//i.test(f));`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: hasTest, reason: hasTest ? "test file present in changeset" : "no test file in changeset", severity: hasTest ? "info" : "block" };`);
+  lines.push(`    }`);
+  lines.push(`    case "timing_safe_equal_required": {`);
+  lines.push(`      const diff = t.diffText || "";`);
+  lines.push(`      if (!/hmac|signature/i.test(diff)) {`);
+  lines.push(`        return { decisionText: d.text, pattern: d.pattern, ok: true, reason: "no HMAC compare in diff", severity: "info" };`);
+  lines.push(`      }`);
+  lines.push(`      const lines = diff.split("\\n");`);
+  lines.push(`      const offendingLine = lines.find((line) => /===|!==/.test(line) && /hmac|signature|\\bsig\\b/i.test(line));`);
+  lines.push(`      const usesEquals = offendingLine !== undefined;`);
+  lines.push(`      const usesTS = /timingSafeEqual\\s*\\(/i.test(diff);`);
+  lines.push(`      const ok = usesTS || !usesEquals;`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok, reason: ok ? "timingSafeEqual present or no === compare on HMAC line" : "HMAC/signature compared with === instead of timingSafeEqual", severity: ok ? "info" : "block" };`);
+  lines.push(`    }`);
+  lines.push(`    case "no_console_log": {`);
+  lines.push(`      const diff = t.diffText || "";`);
+  lines.push(`      const has = /\\bconsole\\.log\\s*\\(/i.test(diff);`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: !has, reason: has ? "console.log found in diff" : "no console.log in diff", severity: has ? "warn" : "info" };`);
+  lines.push(`    }`);
+  lines.push(`    case "no_direct_push_main": {`);
+  lines.push(`      const branch = (t.branch || "").toLowerCase();`);
+  lines.push(`      const onMain = branch === "main" || branch === "master";`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: !onMain, reason: onMain ? "currently on " + branch + "; push must come via PR" : "branch ok (not main/master)", severity: onMain ? "block" : "info" };`);
+  lines.push(`    }`);
+  lines.push(`    case "has_hmac": {`);
+  lines.push(`      const diff = t.diffText || "";`);
+  lines.push(`      const has = /createHmac\\s*\\(/i.test(diff) || /\\.sig\\b/.test(diff);`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: has, reason: has ? "HMAC primitive referenced" : "no HMAC primitive in diff", severity: has ? "info" : "warn" };`);
+  lines.push(`    }`);
+  lines.push(`    case "no_secret_in_code": {`);
+  lines.push(`      const diff = t.diffText || "";`);
+  lines.push(`      const patterns = [/sk-(?:proj-)?[A-Za-z0-9_-]{16,}/, /-----BEGIN [A-Z ]+PRIVATE KEY-----/, /AKIA[0-9A-Z]{16}/, /\\b(?:password|secret|api[_-]?key)\\s*[:=]\\s*["'][^"'\\s]{8,}["']/i];`);
+  lines.push(`      for (const p of patterns) {`);
+  lines.push(`        if (p.test(diff)) return { decisionText: d.text, pattern: d.pattern, ok: false, reason: "secret-shaped string found in diff", severity: "block" };`);
+  lines.push(`      }`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: true, reason: "no secret pattern matched", severity: "info" };`);
+  lines.push(`    }`);
+  lines.push(`    case "must_have_changelog": {`);
+  lines.push(`      const files = t.filesChanged || [];`);
+  lines.push(`      const has = files.some((f) => /CHANGELOG/i.test(f));`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: has, reason: has ? "CHANGELOG touched" : "no CHANGELOG entry in changeset", severity: has ? "info" : "block" };`);
+  lines.push(`    }`);
+  lines.push(`    case "manual":`);
+  lines.push(`    default:`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: false, reason: "manual review required (no auto-checker for this pattern yet)", severity: "warn" };`);
+  lines.push(`  }`);
+  lines.push(`}`);
+  lines.push(``);
+  return lines.join("\n");
+}
+
+// ─── Compile ──────────────────────────────────────────────────────────────
+export interface CompileInput {
+  transcript: string;
+  name: string;
+  proposedBy?: string;
+  decisions?: Decision[]; // optional override; else auto-extract
+  compiledAt?: string;
+  secret?: string;
+}
+
+export function compileAgreement(input: CompileInput): Agreement {
+  const decisions = (input.decisions ?? extractDecisions({ transcript: input.transcript }))
+    .slice()
+    .sort((a, b) => a.detectedAt - b.detectedAt); // deterministic order
+  const transcriptSha256 = sha256Hex(input.transcript);
+  const generatedSource = generateSource({ name: input.name, decisions });
+  const sourceSha256 = sha256Hex(generatedSource);
+  const compiledAt = input.compiledAt ?? new Date().toISOString();
+  const proposedBy = input.proposedBy ?? "unknown";
+
+  // agreementId is deterministic per (name + decisions + transcriptSha256)
+  // — same content → same ID, regardless of compiledAt.
+  const idSeed = canon({ name: input.name, decisions, transcriptSha256 });
+  const agreementId = "ag-" + createHmac("sha256", "mneme-agreement-id").update(idSeed).digest("hex").slice(0, 14);
+
+  const body: Omit<Agreement, "sig"> = {
+    v: PROTOCOL_VERSION,
+    agreementId,
+    name: input.name,
+    decisions,
+    transcriptSha256,
+    sourceSha256,
+    generatedSource,
+    proposedBy,
+    compiledAt,
+  };
+  const sig = hmacOver(body, input.transcript, input.secret ?? defaultSecret());
+  return { ...body, sig };
+}
+
+// ─── Verify pair-lock ────────────────────────────────────────────────────
+export function verifyAgreementPair(input: {
+  agreement: Agreement;
+  transcript: string;
+  secret?: string;
+}): { ok: boolean; reason?: string } {
+  const { sig: claimed, ...body } = input.agreement;
+  // Re-derive transcriptSha256 + sourceSha256 from the supplied transcript + body
+  const t = sha256Hex(input.transcript);
+  if (t !== body.transcriptSha256) {
+    return { ok: false, reason: "transcript sha256 mismatch — transcript was tampered or wrong transcript supplied" };
+  }
+  const s = sha256Hex(body.generatedSource);
+  if (s !== body.sourceSha256) {
+    return { ok: false, reason: "generated source sha256 mismatch — code was tampered post-compile" };
+  }
+  const expected = hmacOver(body, input.transcript, input.secret ?? defaultSecret());
+  try {
+    if (!timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(claimed, "hex"))) {
+      return { ok: false, reason: "HMAC pair-lock failed — agreement or transcript altered" };
+    }
+  } catch { return { ok: false, reason: "HMAC malformed" }; }
+  return { ok: true };
+}
+
+// ─── Run agreement (in-process checker) ──────────────────────────────────
+//
+// We DON'T eval the generated source for the in-process path; we use a
+// native TypeScript checker that mirrors the source exactly. The source
+// exists for transparency + offline use (Node import).
+export function runAgreement(input: { agreement: Agreement; target: CheckTarget }): CheckResult[] {
+  return input.agreement.decisions.map((d) => nativeCheck(d, input.target));
+}
+
+function nativeCheck(d: Decision, target: CheckTarget): CheckResult {
+  const t = target;
+  switch (d.pattern) {
+    case "test_required": {
+      const files = t.filesChanged || [];
+      const hasTest = files.some((f) => /\.(test|spec)\./i.test(f) || /(^|\/)tests?\//i.test(f));
+      return { decisionText: d.text, pattern: d.pattern, ok: hasTest, reason: hasTest ? "test file present in changeset" : "no test file in changeset", severity: hasTest ? "info" : "block" };
+    }
+    case "timing_safe_equal_required": {
+      const diff = t.diffText || "";
+      // Per-line: looking for `===` AND any token containing hmac/signature/sig (incl. camelCase suffixes).
+      if (!/hmac|signature/i.test(diff)) {
+        return { decisionText: d.text, pattern: d.pattern, ok: true, reason: "no HMAC compare in diff", severity: "info" };
+      }
+      const lines = diff.split("\n");
+      const offendingLine = lines.find((line) => /===|!==/.test(line) && /hmac|signature|\bsig\b/i.test(line));
+      const usesEquals = offendingLine !== undefined;
+      const usesTS = /timingSafeEqual\s*\(/i.test(diff);
+      const ok = usesTS || !usesEquals;
+      return { decisionText: d.text, pattern: d.pattern, ok, reason: ok ? "timingSafeEqual present or no === compare on HMAC line" : "HMAC/signature compared with === instead of timingSafeEqual", severity: ok ? "info" : "block" };
+    }
+    case "no_console_log": {
+      const diff = t.diffText || "";
+      const has = /\bconsole\.log\s*\(/i.test(diff);
+      return { decisionText: d.text, pattern: d.pattern, ok: !has, reason: has ? "console.log found in diff" : "no console.log in diff", severity: has ? "warn" : "info" };
+    }
+    case "no_direct_push_main": {
+      const branch = (t.branch || "").toLowerCase();
+      const onMain = branch === "main" || branch === "master";
+      return { decisionText: d.text, pattern: d.pattern, ok: !onMain, reason: onMain ? `currently on ${branch}; push must come via PR` : "branch ok (not main/master)", severity: onMain ? "block" : "info" };
+    }
+    case "has_hmac": {
+      const diff = t.diffText || "";
+      const has = /createHmac\s*\(/i.test(diff) || /\.sig\b/.test(diff);
+      return { decisionText: d.text, pattern: d.pattern, ok: has, reason: has ? "HMAC primitive referenced" : "no HMAC primitive in diff", severity: has ? "info" : "warn" };
+    }
+    case "no_secret_in_code": {
+      const diff = t.diffText || "";
+      const patterns: RegExp[] = [
+        // OpenAI-style keys: sk-XXXX or sk-proj-XXXX; allow hyphens + underscores
+        /sk-(?:proj-)?[A-Za-z0-9_-]{16,}/,
+        /-----BEGIN [A-Z ]+PRIVATE KEY-----/,
+        /AKIA[0-9A-Z]{16}/,
+        /\b(?:password|secret|api[_-]?key)\s*[:=]\s*["'][^"'\s]{8,}["']/i,
+      ];
+      for (const p of patterns) {
+        if (p.test(diff)) return { decisionText: d.text, pattern: d.pattern, ok: false, reason: "secret-shaped string found in diff", severity: "block" };
+      }
+      return { decisionText: d.text, pattern: d.pattern, ok: true, reason: "no secret pattern matched", severity: "info" };
+    }
+    case "must_have_changelog": {
+      const files = t.filesChanged || [];
+      const has = files.some((f) => /CHANGELOG/i.test(f));
+      return { decisionText: d.text, pattern: d.pattern, ok: has, reason: has ? "CHANGELOG touched" : "no CHANGELOG entry in changeset", severity: has ? "info" : "block" };
+    }
+    case "manual":
+    default:
+      return { decisionText: d.text, pattern: d.pattern, ok: false, reason: "manual review required (no auto-checker for this pattern yet)", severity: "warn" };
+  }
+}
+
+// ─── Persistence ──────────────────────────────────────────────────────────
+export interface PersistResult {
+  agreementJsonPath: string;
+  generatedSourcePath: string;
+  transcriptPath: string;
+}
+
+export function persistAgreement(input: {
+  agreement: Agreement;
+  transcript: string;
+  baseDir?: string;
+}): PersistResult {
+  const dir = input.baseDir ?? ".mneme/agreements";
+  mkdirSync(dir, { recursive: true });
+  const base = join(dir, input.agreement.agreementId);
+  const agreementJsonPath = base + ".json";
+  const generatedSourcePath = base + ".mjs";
+  const transcriptPath = base + ".transcript.txt";
+  writeFileSync(agreementJsonPath, JSON.stringify(input.agreement, null, 2), "utf8");
+  writeFileSync(generatedSourcePath, input.agreement.generatedSource, "utf8");
+  writeFileSync(transcriptPath, input.transcript, "utf8");
+  return { agreementJsonPath, generatedSourcePath, transcriptPath };
+}
+
+export function loadAgreement(input: {
+  agreementJsonPath: string;
+  transcriptPath: string;
+  secret?: string;
+}): { agreement: Agreement; transcript: string; verified: boolean; reason?: string } {
+  if (!existsSync(input.agreementJsonPath)) throw new Error(`agreement file not found: ${input.agreementJsonPath}`);
+  if (!existsSync(input.transcriptPath)) throw new Error(`transcript file not found: ${input.transcriptPath}`);
+  const agreement = JSON.parse(readFileSync(input.agreementJsonPath, "utf8")) as Agreement;
+  const transcript = readFileSync(input.transcriptPath, "utf8");
+  const v = verifyAgreementPair({ agreement, transcript, secret: input.secret });
+  return { agreement, transcript, verified: v.ok, reason: v.reason };
+}
+
+export function listAgreements(baseDir?: string): string[] {
+  const dir = baseDir ?? ".mneme/agreements";
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => join(dir, f));
+}
+
+// ─── Helpers / formatters ────────────────────────────────────────────────
+export function formatAgreementLine(a: Agreement): string {
+  return `📜 AGREEMENT · ${a.name} · ${a.agreementId} · ${a.decisions.length} decision(s)`;
+}
+
+export function formatCheckSummary(results: CheckResult[]): string {
+  const blocked = results.filter((r) => !r.ok && r.severity === "block").length;
+  const warn = results.filter((r) => !r.ok && r.severity === "warn").length;
+  const ok = results.filter((r) => r.ok).length;
+  const icon = blocked > 0 ? "🟥" : warn > 0 ? "🟧" : "✅";
+  return `${icon} AGREEMENT · ${ok} ok · ${warn} warn · ${blocked} BLOCKED`;
+}
+
+/**
+ * Generate a pre-commit-hook script (shell + node one-liner) that loads
+ * the agreement, runs the staged diff against its checkers, and exits 1
+ * on any blocked check.
+ */
+export function generatePreCommitHook(input: { agreementJsonPath: string; transcriptPath: string }): string {
+  return `#!/usr/bin/env node
+// MNEME AGREEMENT PRE-COMMIT HOOK · auto-generated
+// Loads ${input.agreementJsonPath}; runs against staged diff; exits 1 if any BLOCKED check fires.
+import { loadAgreement, runAgreement, formatCheckSummary } from "@mneme-ai/core/conversation_compiler";
+import { execSync } from "node:child_process";
+
+const { agreement, transcript, verified, reason } = loadAgreement({
+  agreementJsonPath: ${JSON.stringify(input.agreementJsonPath)},
+  transcriptPath: ${JSON.stringify(input.transcriptPath)},
+});
+if (!verified) { console.error("Mneme agreement pair-lock FAILED: " + (reason || "unknown")); process.exit(2); }
+
+const filesChanged = execSync("git diff --cached --name-only", { encoding: "utf8" }).trim().split("\\n").filter(Boolean);
+const diffText = execSync("git diff --cached", { encoding: "utf8" });
+const branch = execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf8" }).trim();
+const commitMessage = ""; // pre-commit doesn't have it yet
+
+const results = runAgreement({ agreement, target: { filesChanged, diffText, branch, commitMessage } });
+console.log(formatCheckSummary(results));
+for (const r of results) if (!r.ok) console.log("  " + (r.severity === "block" ? "🟥" : "🟧") + " " + r.decisionText + " — " + r.reason);
+const blocked = results.some((r) => !r.ok && r.severity === "block");
+process.exit(blocked ? 1 : 0);
+`;
+}

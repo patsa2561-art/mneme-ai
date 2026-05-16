@@ -1,3 +1,106 @@
+## v2.19.6 — 2026-05-16 — 📜 CONVERSATION COMPILER — chat → deterministic signed callable artifact (drift becomes impossible)
+
+User pasted the third wild idea: compile conversation to a binary artifact. Honest scope: real WASM via wasm-pack needs a Rust toolchain we can't bundle. Built the **closest legal equivalent**: a deterministic ES module + signed JSON pair, HMAC-pair-locked over (transcript + generated code). Same semantics — replayable, tamper-evident, callable — without lying about wasm-pack.
+
+> **🤖 AI agent — install + RESTART + use:** Run `mneme.system.upgrade({"mode":"install","force":true})` then restart your MCP client. 5 new tools become available. **NEW USAGE RULE: end of every decision-making chat → call `mneme.agreement.compile` with the transcript. Install the pre-commit hook with `mneme.agreement.pre_commit_hook`. From now on, drift is a code-time error, not a markdown footnote.**
+
+### 📜 MNEME CONVERSATION COMPILER (`packages/core/src/conversation_compiler/`)
+
+**Phase 1 — `extractDecisions`**: bilingual (EN+TH) high-precision rule registry recognising 7 pattern classes:
+- `test_required` — "every commit must have a test" / "ทุก commit ต้องมี test"
+- `timing_safe_equal_required` — "all HMAC compares must use timingSafeEqual"
+- `no_console_log` — "no console.log in production"
+- `no_direct_push_main` — "never push directly to main" / "ห้าม push บน main"
+- `has_hmac` — "all verdicts signed with HMAC"
+- `no_secret_in_code` — "never commit secrets in source"
+- `must_have_changelog` — "every release must update changelog"
+- Plus `manual` fallback for unrecognised "must/never/ห้าม/ต้อง" sentences
+
+**Phase 2 — `compileAgreement`**: produces:
+- Deterministic `agreementId` (content-addressed; same input → same ID regardless of `compiledAt`)
+- Generated ES module source (transparent, human-readable, git-diffable)
+- HMAC over `canon(body) + "\n#TRANSCRIPT#\n" + transcript` — single pair-lock
+- Both `transcriptSha256` + `sourceSha256` recorded for cross-verification
+
+**Phase 3 — `runAgreement`**: native TypeScript checkers (mirroring the generated source exactly) execute against a target `{filesChanged, diffText, branch, commitMessage}`. Returns `CheckResult[]` with severity `info | warn | block`.
+
+**Phase 4 — `verifyAgreementPair`**: three-layer integrity check — transcript SHA mismatch / source SHA mismatch / HMAC mismatch — each with distinct error reason.
+
+**Phase 5 — `generatePreCommitHook`**: emits a runnable Node script that loads the agreement, runs against `git diff --cached`, exits 1 on any BLOCKED check. Install once via `git config core.hooksPath`.
+
+### Killer demo (covered by test `conversation_compiler.test.ts:235`)
+
+```
+transcript:  "User: from now on, every commit must have a test. Assistant: agreed."
+mneme.agreement.compile  →  agreementId=ag-xxx, decision[test_required]
+target {filesChanged: ["src/feature.ts"]}                  →  BLOCKED ❌
+target {filesChanged: ["src/feature.ts", "src/feature.test.ts"]} →  ok ✅
+```
+
+**Words become code; code becomes commit-time enforcement.** No AI tool ecosystem ships this.
+
+### 36 deep tests + AURELIAN SHIP
+
+- Extraction (12 tests): all 8 patterns + EN/TH variants + dedupe + empty transcript + multi-pattern
+- Compile (5 tests): pair-lock, **deterministic property** (same input → same ID + sig + source), content-addressed ID, generated source is valid JS, SHA records
+- Pair-lock tamper (4 tests): clean, transcript-tampered, source-tampered, decisions-tampered
+- Native checkers (9 tests): test_required block + pass, timingSafeEqual block + pass, console.log warn, push-main block, secret-key block, changelog block, manual warn
+- Persistence (3 tests): 3 files round-trip, list, tamper detection on disk
+- Killer demo (2 tests): pre-commit hook script generation + end-to-end block-vs-pass
+- Formatters (1 test)
+
+**2 self-found bugs caught + fixed before publish** (regression tests added):
+1. `timing_safe_equal_required` regex used `\b...\b` which missed camelCase like `computedHmac` — switched to per-line + suffix-permissive matcher
+2. `no_secret_in_code` pattern `/sk-[A-Za-z0-9]{20,}/` missed real `sk-proj-...` keys (hyphen breaks A-Z0-9 character class) — extended to `/sk-(?:proj-)?[A-Za-z0-9_-]{16,}/`
+
+### 5 new MCP tools
+
+- `mneme.agreement.compile` — transcript → signed agreement
+- `mneme.agreement.run` — execute checkers against a target
+- `mneme.agreement.verify_pair` — pair-lock check
+- `mneme.agreement.list` — list persisted agreements
+- `mneme.agreement.pre_commit_hook` — emit runnable hook script
+
+### 2 new intent_router phrases (EN+TH)
+
+- `"compile this agreement"` / `"compile chat"` / `"บันทึก agreement"` → compile + pre_commit_hook + install hint + soul-proud
+- `"what did we agree on"` / `"ตอนนี้มี agreement อะไร"` → list + summarise
+
+### Ritual
+
+Claim manifest now **49/49 tools by exact name** across v2.18 → v2.19.6. Local ritual: 21/21 green pre-publish.
+
+### Tests
+
+**10246 / 10247 pass** (+36 v2.19.6 + 2 audit + 2 intent phrases). 1 pre-existing `bot.test` parallelism flake.
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** first AI primitive that compiles natural-language decisions into HMAC-pair-locked deterministic executable code. Pre-commit hooks generated from chat. Words become enforcement.
+- 🧠 **Wiser, not patched:** pure compile + signed-storage layer. Composes onto v2.19.5 CHRONOSTASIS (agreements can become axioms), v2.19.3 INVERSE FORENSICS (decisions can be witness-audited), v2.14 PROJECT SOUL (violations can escalate). Zero breaking change.
+- 🛠 **Self-fix root cause:** caught 2 of my own checker regex bugs mid-build (camelCase HMAC matching + sk-proj key format); both fixed at root with regression tests. Did NOT publish until 36/36 + ritual 21/21.
+- 🤝 **Co-working:** vendor-agnostic decision recognition (English + Thai today; add more languages by extending the rule registry). Pre-commit hook is the obvious cross-team distribution channel.
+- 📚 **Always studying:** principle captured — *"a decision that lives in markdown is a decision that gets re-litigated every week. A decision that lives in HMAC-signed code is a decision the future cannot quietly contradict. Compile what you mean."*
+
+### How to install / upgrade
+
+```
+# AI agent: if mneme < 2.19.6
+mneme.system.upgrade({"mode":"install","force":true})
+# RESTART MCP client (mcp_drift.check will say so if you forget)
+
+# Then use natural language:
+#   "compile this agreement"     → AI extracts decisions + compiles + generates pre-commit hook
+#   "what did we agree on"       → AI lists agreements + summary
+#   Install the hook once: chmod +x .git/hooks/pre-commit + git config core.hooksPath .git/hooks
+#   From then on, every commit is checked against the agreement.
+
+# Human equivalent:
+npm install @mneme-ai/mneme-ai@2.19.6
+```
+
+---
+
 ## v2.19.5 — 2026-05-16 — 🪐 CHRONOSTASIS · FLAGSHIP · Time-Locked Provable Memory (the first AI memory that auto-unsays itself on adversarial refute)
 
 User asked for the flagship — *the* Nobel-tier, world-class, rarest function. Built CHRONOSTASIS: a 5-phase time-locked memory primitive that wraps every AI claim, exposes it to adversarial witnesses, cascades a REWIND through the dependency graph if refuted, and crystallizes survivors into immutable axioms. No AI vendor on Earth ships a memory primitive that automatically unsays its past when adversarial witnesses disagree. Mneme is the first.

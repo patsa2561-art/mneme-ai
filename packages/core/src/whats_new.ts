@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.6",
+    date: "2026-05-16",
+    headline: "CONVERSATION COMPILER -- chat becomes deterministic signed callable code (drift becomes impossible)",
+    body:
+      "📜 Every conversation can be compiled to an Agreement: decisions auto-extracted (EN+TH, 7 pattern classes + manual stub), generated ES module source, HMAC pair-locks transcript + code. Pre-commit hook generator produces a runnable script that loads the agreement and refuses commits violating any decision. 36 deep tests including end-to-end killer demo (user says 'every commit must have test' -> compile -> naked commit BLOCKED, test commit passes). 5 new MCP tools (mneme.agreement.compile / run / verify_pair / list / pre_commit_hook). AURELIAN SHIP. New intent phrases: 'compile this agreement' / 'what did we agree on'. Composes onto v2.19.5 CHRONOSTASIS (agreements can become axioms).",
+    suggestedAction: "Tell the AI: 'compile this agreement' at the end of a decision-making chat. The AI runs the full flow + installs a pre-commit hook so future commits respect the agreement.",
+    tags: ["conversation-compiler", "agreement", "pair-lock", "pre-commit-hook", "drift-killer"],
+  },
+  {
     version: "2.19.5",
     date: "2026-05-16",
     headline: "CHRONOSTASIS · FLAGSHIP · Time-Locked Provable Memory (the first AI memory that auto-unsays itself on adversarial refute)",

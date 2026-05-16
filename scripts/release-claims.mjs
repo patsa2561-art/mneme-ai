@@ -97,6 +97,16 @@ export const RELEASE_CLAIMS = {
       "mneme.chronostasis.summarize",
     ],
   },
+  "2.19.6": {
+    headline: "CONVERSATION COMPILER — chat → deterministic, HMAC-pair-locked, callable Agreement artifact (drift becomes impossible; pre-commit hooks generated)",
+    tools: [
+      "mneme.agreement.compile",
+      "mneme.agreement.run",
+      "mneme.agreement.verify_pair",
+      "mneme.agreement.list",
+      "mneme.agreement.pre_commit_hook",
+    ],
+  },
 };
 
 /** Flatten all expected tool names that should be present in the latest release. */

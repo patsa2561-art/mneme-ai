@@ -197,6 +197,33 @@ const BUILTIN_PHRASES: Phrase[] = [
     ],
   },
   {
+    canonical: "compile this agreement",
+    aliases: [
+      "compile agreement", "agreement compile", "make this agreement code",
+      "compile decisions", "lock this agreement", "บันทึก agreement",
+      "compile chat", "agreement from this conversation",
+    ],
+    intent: "User wants the current conversation's decisions wrapped as a deterministic + signed + executable Agreement artifact that future commits can be gated against.",
+    plan: [
+      { kind: "tool", tool: "mneme.agreement.compile", args: { transcript: "<conversation transcript>", name: "<short name>" }, note: "Extract decisions (EN+TH), generate ES module source, HMAC pair-lock transcript + code." },
+      { kind: "tool", tool: "mneme.agreement.pre_commit_hook", args: { agreementJsonPath: "<from step 1>", transcriptPath: "<from step 1>" }, note: "Generate a pre-commit-hook script that runs the agreement against staged diff." },
+      { kind: "hint", note: "Install the hook (chmod +x + git config core.hooksPath). From now on commits that violate the agreement are blocked at the local git level." },
+      { kind: "tool", tool: "mneme.soul.feel", args: { emotion: "proud", trigger: "agreement compiled into executable artifact", innerVoice: "Our words now have force." }, note: "Record the moment." },
+    ],
+  },
+  {
+    canonical: "what did we agree on",
+    aliases: [
+      "list agreements", "show agreements", "ตอนนี้มี agreement อะไร",
+      "what are the rules", "what have we agreed", "agreements list",
+    ],
+    intent: "User wants to see all the compiled agreements currently in force in this repo.",
+    plan: [
+      { kind: "tool", tool: "mneme.agreement.list", args: {}, note: "List all .mneme/agreements/*.json files." },
+      { kind: "hint", note: "Summarise each: name, decisions count, when compiled. Surface any pair-lock failures." },
+    ],
+  },
+  {
     canonical: "is this verified",
     aliases: [
       "is this proven", "time-tested", "is this an axiom", "verified fact",

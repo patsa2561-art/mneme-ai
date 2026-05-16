@@ -68,6 +68,7 @@ import { V192_EVOLUTION_TOOLS } from "./_v192_evolution.js";
 import { V193_INVERSE_TOOLS } from "./_v193_inverse.js";
 import { V194_INTENT_DNA_TOOLS } from "./_v194_intent_dna.js";
 import { V195_CHRONOSTASIS_TOOLS } from "./_v195_chronostasis.js";
+import { V196_AGREEMENT_TOOLS } from "./_v196_agreement.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -140,6 +141,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V193_INVERSE_TOOLS,
     ...V194_INTENT_DNA_TOOLS,
     ...V195_CHRONOSTASIS_TOOLS,
+    ...V196_AGREEMENT_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
