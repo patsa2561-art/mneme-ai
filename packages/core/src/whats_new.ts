@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.28",
+    date: "2026-05-17",
+    headline: "ROOT-CAUSE FIXES -- AUTONOMIC SCHEDULER wakes up dormant LIMBIC + DREAMSPACE organs 24/7; B2 router resilience; B3 consensus truthfulness",
+    body:
+      "User-audit: 'LIMBIC + DREAMSPACE = สมองสมบูรณ์อยู่ในขวด -- โครงสร้างถูก แต่ไม่มีระบบประสาทอัตโนมัติ ปลุกให้ทำงาน. 49 organ tools = 0 invocations in practice.' v2.19.28 ships the missing layer. 🩺 AUTONOMIC SCHEDULER (packages/core/src/autonomic_scheduler/) is the brain that ticks 5 organ groups on biological schedules: BREATH every 60s (heartbeat); REFLEX on git-event (debounced); SLEEP every 30min during idle; DREAMSPACE every 60min during idle; HORMONAL every 5min OR on observable event. Pure-function decideTicks returns HMAC-signed TickPlan; runTickCycle invokes caller-supplied invoker with EXCEPTION-HANDLED FALLBACK -- never crashes daemon even if every organ fails. Circuit-breaker: 3 consecutive failures opens 1hr cooldown per organ; success resets immediately. MEASURED 24/7 resilience: 100 consecutive cycles with random 30% failure injection never crashes. MEASURED B1 regression: 24-cycle simulation produces 24 tick records (vs 0 before fix). Wired into nucleus daemon at packages/cli/src/commands/daemon.ts: schedulerLoop interval (30s) calls tickAllOrgans which writes per-organ ledger to .mneme/organ_ticks/<organ>.json. Git HEAD watcher now sets lastReflexEventMs so REFLEX fires immediately on every commit. 22 deep tests. 🪞 B2 fix (router resilience): universal_mcp_subcommands previously CRASHED silently on alias clash ('hive' is alias of 'stigmergy' → 'cannot add command' throw) losing ALL subsequent families including 20 DREAMSPACE tools. Now findExistingCommand checks aliases too + per-family try/catch ensures one bad family never aborts the loop. Added skipped[] in RouterStats + DEBUG_MNEME_ROUTER env var for visibility. 🛐 B3 fix (consensus truthfulness): tribunal.reachConsensus with 0 voters previously returned consensusVerdict: 'true' (because sort-by-weight on all-zero weights returns 'true' first by insertion order). Now defends with INSUFFICIENT_DATA + NO_VOTERS caveats + verdict 'unknown'. Added ZERO_CONFIDENCE caveat for all-zero weight case. 5 new MCP scheduler tools (mneme.scheduler.{decide, stats, fresh_health, verify_plan, default_schedules}). AURELIAN 2 cards SHIP. The factory whose output now WAKES UP every night. 90/100 dormant features start ticking at once.",
+    suggestedAction: "After upgrade + daemon restart: tail .mneme/organ_ticks/ -- you should see ledger files for breath/hormonal updating every minute. mneme scheduler default_schedules shows the 5 schedules.",
+    tags: ["root-cause-fix", "autonomic-scheduler", "b1-fix", "b2-fix", "b3-fix", "always-active-24-7", "circuit-breaker"],
+  },
+  {
     version: "2.19.27",
     date: "2026-05-17",
     headline: "DREAMSPACE PIPELINE COMPLETE -- 6 stages closed (PROBE + CARTOGRAPHER + PAIR + FEDERATE join GESTATION + EVOLUTION); the self-authoring catalog now has its full nightly loop",

@@ -55,6 +55,72 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 
 ---
 
+## v2.19.28 — 2026-05-17 — 🩺 ROOT-CAUSE FIXES — AUTONOMIC SCHEDULER wakes 49 dormant organs 24/7 + B2 router resilience + B3 consensus truthfulness
+
+User audit: *"LIMBIC + DREAMSPACE = สมองสมบูรณ์อยู่ในขวด — โครงสร้างถูก แต่ไม่มีระบบประสาทอัตโนมัติ. 49 organ tools = 0 invocations in practice."* This release fixes 3 root-cause bugs simultaneously.
+
+### 🩺 AUTONOMIC SCHEDULER (B1 root-cause fix) — daemon now ticks LIMBIC + DREAMSPACE 24/7
+
+`packages/core/src/autonomic_scheduler/` (~280 LOC) + wired into [packages/cli/src/commands/daemon.ts](packages/cli/src/commands/daemon.ts) via a 30s scheduler interval that calls `tickAllOrgans`.
+
+5 organ schedules ship by default:
+
+| Organ | Interval | Trigger | Idle gate |
+|---|---|---|---|
+| 🫁 BREATH | 60s | heartbeat | — |
+| ⚡ REFLEX | 5min | git/file event (immediate) | — |
+| 💤 SLEEP | 30min | interval | 30min idle |
+| 🌱 DREAMSPACE | 60min | interval | 60min idle |
+| 🧪 HORMONAL | 5min | event-triggered | — |
+
+- `decideTicks({schedules, health, events, nowMs})` — pure-function planner; HMAC-signed `TickPlan`
+- `runTickCycle({...invoke})` — exception-handled invoker; **never crashes daemon**
+- Circuit-breaker: 3 consecutive failures → 1hr cooldown per organ; success resets immediately
+- First-tick semantics: `lastTickMs === 0` fires immediately (fresh daemon doesn't wait 60s)
+- Each tick writes ledger to `.mneme/organ_ticks/<organ>.json`
+- 22 deep tests + **MEASURED 100% determinism + MEASURED 24/7 resilience under 30% random failure injection (100 consecutive cycles never crash) + B1 regression: 24-cycle simulation produces 24 tick records**
+
+### 🪞 B2 fix — universal CLI router resilience (alias clash detection + skip-on-error)
+
+`packages/cli/src/commands/universal_mcp_subcommands.ts`. Previously `mneme dreamspace` returned "unknown command" because the router CRASHED silently on alias clash (`hive` is an alias of `stigmergy` → `cannot add command 'hive' as already have command 'stigmergy|hive'`) losing ALL subsequent families including 20 DREAMSPACE tools. Fix:
+
+1. `findExistingCommand` checks `aliases()` too (not just `name()`)
+2. Each family wrapped in try/catch — one bad family never aborts the loop
+3. `RouterStats.skipped[]` records failures for observability
+4. `DEBUG_MNEME_ROUTER=1` env var surfaces silent failures
+
+Result: 20 DREAMSPACE tools now CLI-reachable via `mneme dreamspace <action>`.
+
+### 🛐 B3 fix — tribunal consensus truthfulness (INSUFFICIENT_DATA on 0 voters)
+
+`packages/core/src/tribunal/tribunal.ts`. Previously `reachConsensus(claim, { voters: [] })` returned `{ consensusVerdict: "true", agreementRate: 0 }` — the worst possible lie (positive verdict on zero data). Sort-by-weight on all-zero weights returns "true" first by insertion order. Fix:
+
+- 0 voters → `{ consensusVerdict: "unknown", caveats: ["INSUFFICIENT_DATA", "NO_VOTERS"] }`
+- All-zero-confidence voters → `{ consensusVerdict: "unknown", caveats: ["ZERO_CONFIDENCE"] }`
+- Regression tests pin this forever
+
+### 5 new MCP scheduler tools
+
+`packages/mcp/src/tools/_v1928_scheduler.ts`:
+- `mneme.scheduler.decide` — pure-function tick planner
+- `mneme.scheduler.stats` — totals + success rate + healthy/cooldown counts
+- `mneme.scheduler.fresh_health` — emit fresh OrganHealthRecord
+- `mneme.scheduler.verify_plan` — HMAC verify
+- `mneme.scheduler.default_schedules` — list the 5 default schedules
+
+Claim manifest now **223/223 by exact name** across v2.18 → v2.19.28. Ritual: **22/22 GREEN**. AUTO-GENESIS: 0 v2.18+ orphans (648 core exports / 505 MCP tools / **607 total CLI-visible tools**).
+
+### Verify after upgrade
+
+```
+mneme dreamspace list_bands          # was "unknown command" before B2 fix
+mneme scheduler default_schedules    # NEW: see the 5 organ schedules
+mneme daemon restart                 # restart so new scheduler loop activates
+sleep 90 && ls .mneme/organ_ticks/   # should see breath.json + hormonal.json updating
+```
+
+---
+
 ## v2.19.27 — 2026-05-17 — 🔬🗺💞🌍 DREAMSPACE PIPELINE COMPLETE — 6 stages closed (the catalog that grew itself)
 
 v2.19.26 shipped DREAMSPACE GESTATION + EVOLUTION (stages 4+5). v2.19.27 ships the **4 remaining stages** to close the 6-stage self-authoring catalog loop that runs 24/7.

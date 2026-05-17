@@ -87,6 +87,30 @@ describe("v1.64 Tribunal L2 · Consensus Network", () => {
     ] });
     expect(c.caveats).toContain("CLOSE_VOTE");
   });
+
+  // v2.19.28 B3 regression: 0 voters previously returned consensusVerdict: "true"
+  // (sort returned first insertion-order entry when all weights = 0). Now must
+  // return "unknown" + INSUFFICIENT_DATA + NO_VOTERS caveats.
+  it("v2.19.28 B3 regression: 0 voters -> verdict 'unknown' + INSUFFICIENT_DATA caveat (NOT false 'true')", () => {
+    const c = reachConsensus("any claim", { voters: [] });
+    expect(c.consensusVerdict).toBe("unknown");
+    expect(c.totalVoters).toBe(0);
+    expect(c.agreementRate).toBe(0);
+    expect(c.weightedConfidence).toBe(0);
+    expect(c.caveats).toContain("INSUFFICIENT_DATA");
+    expect(c.caveats).toContain("NO_VOTERS");
+  });
+
+  it("v2.19.28 B3 edge case: all voters have 0 confidence -> ZERO_CONFIDENCE + unknown", () => {
+    const c = reachConsensus("x", {
+      voters: [
+        { instanceId: "a", verdict: "true", confidence: 0 },
+        { instanceId: "b", verdict: "false", confidence: 0 },
+      ],
+    });
+    expect(c.consensusVerdict).toBe("unknown");
+    expect(c.caveats).toContain("ZERO_CONFIDENCE");
+  });
 });
 
 // ─── Layer 3: ZK Proofs ──────────────────────────────────────────────

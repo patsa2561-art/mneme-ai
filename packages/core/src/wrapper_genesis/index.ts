@@ -118,6 +118,8 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "dreamspace_cartographer",
   "dreamspace_pair",
   "dreamspace_federate",
+  // v2.19.28 ROOT-CAUSE FIX -- daemon now ticks LIMBIC + DREAMSPACE organs
+  "autonomic_scheduler",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -312,6 +314,7 @@ function familyAliases(moduleName: string): string[] {
     dreamspace_cartographer: ["dreamspace"],
     dreamspace_pair: ["dreamspace"],
     dreamspace_federate: ["dreamspace"],
+    autonomic_scheduler: ["scheduler"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -524,6 +527,11 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // FEDERATE -- attestElite / aggregateBlessing / exportStarterPack all
   //   surfaced but symbol order is reversed from action (federate_attest etc.)
   "attestElite", "aggregateBlessing", "exportStarterPack",
+  // v2.19.28 autonomic_scheduler -- runTickCycle is the async invoker the
+  // daemon calls directly (it needs a live invoke fn that can't be JSON-passed
+  // through MCP); the other 5 surfaces are MCP-wrapped (decide, stats,
+  // fresh_health, verify_plan, default_schedules).
+  "runTickCycle",
 ]);
 
 export function findOrphans(input: {

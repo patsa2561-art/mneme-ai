@@ -112,9 +112,36 @@ export interface ConsensusResult {
 
 export function reachConsensus(claim: string, input: ConsensusInput): ConsensusResult {
   const caveats: string[] = [];
+  // v2.19.28 B3 fix: zero voters must NEVER report a positive verdict.
+  // Previously the sort fell back to "true" (insertion order) which lied
+  // to the user that consensus existed when no one had voted.
+  if (input.voters.length === 0) {
+    caveats.push("INSUFFICIENT_DATA", "NO_VOTERS");
+    return {
+      claim,
+      totalVoters: 0,
+      agreementRate: 0,
+      consensusVerdict: "unknown",
+      weightedConfidence: 0,
+      caveats,
+    };
+  }
   if (input.voters.length < 3) caveats.push("LOW_VOTER_COUNT");
   const weight: Record<string, number> = { true: 0, false: 0, unknown: 0 };
   for (const v of input.voters) weight[v.verdict] += v.confidence;
+  // If every voter has zero confidence the total weight is 0 -> also unknown.
+  const totalWeight = weight["true"]! + weight["false"]! + weight["unknown"]!;
+  if (totalWeight === 0) {
+    caveats.push("ZERO_CONFIDENCE");
+    return {
+      claim,
+      totalVoters: input.voters.length,
+      agreementRate: 0,
+      consensusVerdict: "unknown",
+      weightedConfidence: 0,
+      caveats,
+    };
+  }
   const sorted = Object.entries(weight).sort((a, b) => b[1] - a[1]);
   const top = sorted[0]!;
   const second = sorted[1]?.[1] ?? 0;
@@ -123,9 +150,9 @@ export function reachConsensus(claim: string, input: ConsensusInput): ConsensusR
   return {
     claim,
     totalVoters: input.voters.length,
-    agreementRate: input.voters.length === 0 ? 0 : aligned / input.voters.length,
+    agreementRate: aligned / input.voters.length,
     consensusVerdict: top[0] as "true" | "false" | "unknown",
-    weightedConfidence: input.voters.length === 0 ? 0 : top[1] / input.voters.reduce((a, v) => a + v.confidence, 0),
+    weightedConfidence: top[1] / input.voters.reduce((a, v) => a + v.confidence, 0),
     caveats,
   };
 }

@@ -762,6 +762,8 @@ export * as dreamspaceProbe from "./dreamspace_probe/index.js";
 export * as dreamspaceCartographer from "./dreamspace_cartographer/index.js";
 export * as dreamspacePair from "./dreamspace_pair/index.js";
 export * as dreamspaceFederate from "./dreamspace_federate/index.js";
+// v2.19.28 AUTONOMIC SCHEDULER — root-cause fix for dormant LIMBIC + DREAMSPACE organs
+export * as autonomicScheduler from "./autonomic_scheduler/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

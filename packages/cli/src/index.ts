@@ -2556,8 +2556,12 @@ export async function run(argv: string[]): Promise<void> {
     const allTools = buildAllTools();
     // Cast — the ToolLike interface is structurally compatible with MnemeTool at runtime
     registerUniversalMcpSubcommands(program, allTools as unknown as Parameters<typeof registerUniversalMcpSubcommands>[1]);
-  } catch {
-    // Non-fatal — if mcp catalog can't load, the rest of the CLI still works.
+  } catch (err) {
+    // v2.19.28 B2 fix: surface the failure so we never SILENTLY lose 100+ MCP families
+    // from the CLI surface again. Print only on DEBUG to keep normal output clean.
+    if (process.env["DEBUG_MNEME_ROUTER"]) {
+      ui.warn(`universal_mcp_subcommands failed: ${(err as Error).message}`);
+    }
   }
 
   program.exitOverride((err) => {

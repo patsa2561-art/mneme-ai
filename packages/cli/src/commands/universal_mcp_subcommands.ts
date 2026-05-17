@@ -63,79 +63,106 @@ export interface RouterStats {
   actions: number;
   /** v2.19.21 — families whose MCP wrappers were mounted onto an EXISTING legacy parent. */
   mountedOnExisting: string[];
+  /** v2.19.28 — families or family.action pairs that threw during registration; never aborts the loop. */
+  skipped: string[];
+}
+
+/** v2.19.28 B2 fix — check both .name() AND .aliases() so an MCP family
+ *  whose name matches a LEGACY ALIAS (e.g., `hive` is alias of `stigmergy`)
+ *  is recognised as "existing" and mounted-on instead of throwing
+ *  `cannot add command 'X' as already have command 'Y|X'`. */
+function findExistingCommand(program: Command, name: string): Command | undefined {
+  for (const c of program.commands) {
+    if (c.name() === name) return c;
+    const aliases = typeof c.aliases === "function" ? c.aliases() : [];
+    if (aliases.includes(name)) return c;
+  }
+  return undefined;
 }
 
 export function registerUniversalMcpSubcommands(program: Command, tools: ToolLike[]): RouterStats {
   const families = groupByFamily(tools);
   let actionCount = 0;
   const mountedOnExisting: string[] = [];
+  const skipped: string[] = [];
   for (const [family, familyTools] of families) {
-    // v2.19.21 — CLI FAMILY-CLASH RESOLVER.
+    // v2.19.21 — CLI FAMILY-CLASH RESOLVER. v2.19.28 extended to alias clashes.
     //
     // If a family clashes with an existing legacy top-level command (e.g.,
     // `ghost` collides with the ghost-code lens; `dream` collides with the
     // dream-research subcommand; `oracle` collides with revenue-primitive
-    // CLI; `constitution` collides with v0.x constitution editor), DO NOT
-    // skip the family. Instead, MOUNT the MCP subcommands onto the existing
-    // parent. Commander dispatches first-positional-arg to a registered
-    // subcommand when the name matches; falls back to the parent's own
-    // action otherwise. So `mneme ghost` still runs the legacy ghost-code
-    // lens, but `mneme ghost distill` now dispatches to the MCP wrapper.
+    // CLI; `constitution` collides with v0.x constitution editor; `hive` is
+    // an alias of `stigmergy`), DO NOT skip the family. Instead, MOUNT the
+    // MCP subcommands onto the existing parent. Commander dispatches
+    // first-positional-arg to a registered subcommand when the name matches;
+    // falls back to the parent's own action otherwise. So `mneme ghost` still
+    // runs the legacy ghost-code lens, but `mneme ghost distill` now
+    // dispatches to the MCP wrapper.
     //
-    // Before v2.19.21: 4 SYNCRETIC families (ghost/trinity/insurance/
-    // boomerang) appeared as `0 wrappers` because the legacy ghost command
-    // blocked auto-routing. v2.19.21 closes the gap at SOURCE.
-    const existing = program.commands.find((c) => c.name() === family);
-    let parent: Command;
-    if (existing) {
-      parent = existing;
-      mountedOnExisting.push(family);
-    } else {
-      parent = program.command(family)
-        .description(`Mneme ${family} family — ${familyTools.length} action(s). Run \`mneme ${family} --help\` for actions, or \`mneme ${family} <action> --json '{...}'\` to invoke.`)
-        .action(() => {
-          process.stdout.write(`📚 mneme.${family}.* · ${familyTools.length} action(s):\n`);
-          for (const t of familyTools) {
-            const action = t.name.split(".")[2] ?? "";
-            process.stdout.write(`  ${action.padEnd(28)} ${(t.description ?? "").slice(0, 80)}\n`);
-          }
-          process.stdout.write(`\nInvoke: mneme ${family} <action> --json '{...}'\n`);
-        });
-    }
-
-    for (const tool of familyTools) {
-      const action = tool.name.split(".")[2]!;
-      // Skip if action name already registered on this parent (e.g., when a
-      // legacy command happens to have an option with the same name, or
-      // re-running registration in the same process).
-      if (parent.commands.find((c) => c.name() === action)) continue;
-      const cmd = parent.command(action)
-        .description((tool.description ?? "").slice(0, 200))
-        .option("--json <jsonArgs>", "Tool arguments as a JSON object string")
-        .option("--pretty", "Pretty-print the output (default: compact JSON)")
-        .action(async (opts: { json?: string; pretty?: boolean }) => {
-          let args: Record<string, unknown> = {};
-          if (opts.json) {
-            try { args = JSON.parse(opts.json) as Record<string, unknown>; }
-            catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
-          }
-          try {
-            const result = await tool.handler({ repoRoot: process.cwd() }, args);
-            const out = opts.pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
-            process.stdout.write(out + "\n");
-            process.exit(0);
-          } catch (e) {
-            process.stderr.write(`⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
-            process.exit(1);
-          }
-        });
-      // Show examples in --help if present
-      if (tool.examples && tool.examples.length > 0) {
-        const ex = tool.examples[0]!;
-        cmd.addHelpText("after", `\nExample:\n  mneme ${family} ${action} --json '${JSON.stringify(ex.args ?? {})}'\n`);
+    // v2.19.28 B2 fix: wrap each family in try/catch so ONE bad family does
+    // not abort the entire router loop (which previously lost 100+ families
+    // including DREAMSPACE).
+    try {
+      const existing = findExistingCommand(program, family);
+      let parent: Command;
+      if (existing) {
+        parent = existing;
+        if (!mountedOnExisting.includes(family)) mountedOnExisting.push(family);
+      } else {
+        parent = program.command(family)
+          .description(`Mneme ${family} family — ${familyTools.length} action(s). Run \`mneme ${family} --help\` for actions, or \`mneme ${family} <action> --json '{...}'\` to invoke.`)
+          .action(() => {
+            process.stdout.write(`📚 mneme.${family}.* · ${familyTools.length} action(s):\n`);
+            for (const t of familyTools) {
+              const action = t.name.split(".")[2] ?? "";
+              process.stdout.write(`  ${action.padEnd(28)} ${(t.description ?? "").slice(0, 80)}\n`);
+            }
+            process.stdout.write(`\nInvoke: mneme ${family} <action> --json '{...}'\n`);
+          });
       }
-      actionCount++;
+
+      for (const tool of familyTools) {
+        const action = tool.name.split(".")[2]!;
+        // Skip if action name already registered on this parent (e.g., when a
+        // legacy command happens to have an option with the same name, or
+        // re-running registration in the same process).
+        if (parent.commands.find((c) => c.name() === action)) continue;
+        try {
+          const cmd = parent.command(action)
+            .description((tool.description ?? "").slice(0, 200))
+            .option("--json <jsonArgs>", "Tool arguments as a JSON object string")
+            .option("--pretty", "Pretty-print the output (default: compact JSON)")
+            .action(async (opts: { json?: string; pretty?: boolean }) => {
+              let args: Record<string, unknown> = {};
+              if (opts.json) {
+                try { args = JSON.parse(opts.json) as Record<string, unknown>; }
+                catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
+              }
+              try {
+                const result = await tool.handler({ repoRoot: process.cwd() }, args);
+                const out = opts.pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
+                process.stdout.write(out + "\n");
+                process.exit(0);
+              } catch (e) {
+                process.stderr.write(`⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
+                process.exit(1);
+              }
+            });
+          // Show examples in --help if present
+          if (tool.examples && tool.examples.length > 0) {
+            const ex = tool.examples[0]!;
+            cmd.addHelpText("after", `\nExample:\n  mneme ${family} ${action} --json '${JSON.stringify(ex.args ?? {})}'\n`);
+          }
+          actionCount++;
+        } catch {
+          // Per-tool registration failure must not abort the loop.
+          skipped.push(`${family}.${action}`);
+        }
+      }
+    } catch {
+      // Per-family failure must not abort the loop.
+      skipped.push(family);
     }
   }
-  return { families: families.size, actions: actionCount, mountedOnExisting };
+  return { families: families.size, actions: actionCount, mountedOnExisting, skipped };
 }

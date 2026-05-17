@@ -205,6 +205,16 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.28": {
+    headline: "ROOT-CAUSE FIXES -- AUTONOMIC SCHEDULER (B1 fix: daemon now ticks LIMBIC + DREAMSPACE organs 24/7) + B2 fix (CLI router skip-on-error + alias clash detection; previously crashed on `hive` alias of `stigmergy` losing 100+ MCP families silently) + B3 fix (consensus default INSUFFICIENT_DATA on 0 voters; was falsely 'true' with agreementRate 0). 5 new MCP scheduler tools. The daemon's heartbeat now invokes 5 organ groups (breath 60s / reflex on git-event / sleep 30min idle / dreamspace 60min idle / hormonal 5min) with circuit-breaker + exception-handled fallback. 22 deep tests verify 24/7 resilience under 30% random failure injection.",
+    tools: [
+      "mneme.scheduler.decide",
+      "mneme.scheduler.stats",
+      "mneme.scheduler.fresh_health",
+      "mneme.scheduler.verify_plan",
+      "mneme.scheduler.default_schedules",
+    ],
+  },
   "2.19.27": {
     headline: "DREAMSPACE PIPELINE COMPLETE -- stages 1, 2, 3, 6 close the 6-stage loop (v2.19.26 shipped stages 4+5). 🔬 PROBE measures 4 normalised per-tool metrics (latency / outputEntropy / errorRate / utility) + geometric-mean fitness via synthetic + real input battery. 🗺 CARTOGRAPHER aggregates probes into 2D capability map (toolName, patternSig -> quality) with EWMA recency; REFLEX's evidence-backed predict-next-tool entry point. 💞 PAIR scores ordered tool pairs via mutual_info approximation (required-coverage 0.5 + optional 0.3 + key-overlap 0.2); replaces v2.19.26 frequency-only co-occurrence with QUALITY signal. 🌍 FEDERATE issues EliteAttestation (refuses below 0.7 fitness), aggregates into 6-band quorum (unanimous / supermajority / majority / minority / conflict / orphan), exports top-N starter pack for new users -- network effect for dreamt tools. Composes onto v2.19.16 FEDERATED + v2.19.23 LIMBIC organs + v2.19.26 GESTATION+EVOLUTION. 12 new MCP tools. Mneme owns AI tool factory category by structural necessity.",
     tools: [

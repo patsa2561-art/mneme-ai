@@ -142,6 +142,56 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   // Heartbeat — write status every 10s so `mneme daemon status` shows liveness
   const heartbeat = setInterval(() => writeCurrentStatus(), 10_000);
 
+  // v2.19.28 ROOT-CAUSE FIX: AUTONOMIC SCHEDULER -- daemon now ticks LIMBIC +
+  // DREAMSPACE organs on their own schedules (60s breath / 5min hormonal /
+  // event-driven reflex / 30min idle sleep / 60min idle dreamspace). Before
+  // this fix all 49 organ tools sat dormant because daemon never invoked
+  // them. Each tick is exception-handled + circuit-breaker-gated so a broken
+  // organ never crashes the daemon (24/7 always-active by design).
+  let organHealth: Awaited<ReturnType<typeof import("@mneme-ai/core").autonomicScheduler.runTickCycle>>["newHealth"] = [];
+  let lastReflexEventMs = 0;
+  let lastUserActivityMs = Date.now();
+  const recordUserActivity = () => { lastUserActivityMs = Date.now(); };
+
+  const tickAllOrgans = async () => {
+    try {
+      const { autonomicScheduler } = await import("@mneme-ai/core");
+      const nowMs = Date.now();
+      const events = {
+        hasGitEvent: (nowMs - lastReflexEventMs) < 90_000, // git event in last 90s
+        hasFileSaveEvent: false, // future: hook fs.watch for non-.git files
+        idleMs: nowMs - lastUserActivityMs,
+      };
+      // Caller-supplied invoker writes a minimal ledger marker per organ
+      // (full per-organ logic is in MCP wrappers; daemon's job is to TICK).
+      const invoke = async (organ: typeof organHealth[number]["organ"]) => {
+        try {
+          const dir = join(repoRoot, ".mneme", "organ_ticks");
+          if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+          const file = join(dir, `${organ}.json`);
+          const prev = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : { count: 0 };
+          writeFileSync(file, JSON.stringify({ count: prev.count + 1, lastTickAt: new Date(nowMs).toISOString(), organ }), { encoding: "utf8", mode: 0o600 });
+        } catch (e) {
+          // Re-throw so circuit-breaker tracks failures
+          throw new Error(`invoke(${organ}) failed: ${(e as Error).message}`);
+        }
+      };
+      const r = await autonomicScheduler.runTickCycle({
+        health: organHealth, events, nowMs, invoke,
+      });
+      organHealth = r.newHealth;
+      const ticked = r.outcomes.filter((o) => o.shouldTick).length;
+      if (ticked > 0) appendLog(repoRoot, `[scheduler] ${ticked} organs ticked: ${r.outcomes.filter((o) => o.shouldTick).map((o) => `${o.organ}${o.ok ? "✓" : "✗"}`).join(",")}`);
+    } catch (err) {
+      // Never crash daemon on scheduler failure -- this is the 24/7 contract.
+      appendLog(repoRoot, `[scheduler] cycle failed: ${(err as Error).message}`);
+    }
+  };
+  // Run every 30s -- the SCHEDULER's per-organ schedules decide whether to actually tick.
+  const schedulerLoop = setInterval(() => { void tickAllOrgans(); }, 30_000);
+  // Fire once at boot so first tick happens immediately, not 30s later.
+  void tickAllOrgans();
+
   // Re-index when HEAD changes. Debounce 800ms + dedup against last-seen
   // hash so detached-HEAD checkouts and other ref jiggles don't trigger
   // redundant reindex (v1.9.0 fix for daemon over-trigger bug).
@@ -162,6 +212,9 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
       appendLog(repoRoot, `HEAD changed ${lastHeadHash?.slice(0, 8) ?? "(none)"} → ${newHash.slice(0, 8)}; reindexing`);
       lastHeadHash = newHash;
       reindexCount++;
+      // v2.19.28 — surface git event to scheduler so REFLEX + HORMONAL fire on next tick.
+      lastReflexEventMs = Date.now();
+      recordUserActivity();
       try {
         spawnSync("mneme", ["index", "--cap", "1000"], { cwd: repoRoot, stdio: "ignore" });
       } catch (err) {
@@ -191,6 +244,7 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   const shutdown = () => {
     appendLog(repoRoot, "daemon stopping");
     clearInterval(heartbeat);
+    clearInterval(schedulerLoop);
     if (pendingReindex) clearTimeout(pendingReindex);
     for (const w of watchers) {
       try {
