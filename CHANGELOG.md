@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.32
+# 📜 Release index — v2.18.0 → v2.19.33
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.33** | 🩹 POLISH RELEASE — 4 user-audit bugs fixed (B1 extract_decisions undercount + sentence-by-sentence + 3-mode toggle; B2 truth sensors=0 + default sensor stack + mneme.truth.init; B3 STARTER 13→35 + mneme.browse + mneme.suggest; B4 SLEEP+DREAMSPACE never tick + semantic-context-shift trigger + sleep --force). Distribution > new features |
 | **v2.19.32** | 🧬 BEACON HANDOFF FOUNDATION — fresh-context envelope (HMAC + freshness gate) + 6-char human pair code (confusable-free, one-shot, 30s TTL) + 4-emoji SAS MITM defense + device-adaptive PWA (Web Share / cursor:// / vscode:// / mneme://) + HMAC consciousness-fork lineage. Parent → QR → Child = unified brain in 2 taps |
 | **v2.19.31** | 🚨🚨🚨 BUG #1 BEACON token bypass FIXED + 🚨 BUG #2 Liar Paradox detector + 🧬 Phase D CROSS-DEVICE SYNAPSE SYNC (mobile + laptop + desktop unified brain via CRDT merge — commutative + associative + idempotent — measured) |
 | **v2.19.30** | G_a FIX (Thai decision detector multilingual) + MNEME COMMONWEALTH pillars 1+2 (⚱ SOUL EMBALMING + ⚖ HIVE COURT) — constitutional layer of the agent hive |
@@ -57,6 +58,79 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.33 — 2026-05-17 — 🩹 POLISH RELEASE — 4 user-audit bugs fixed (distribution > new features)
+
+User mandate: *"Mneme มีของจริงสำหรับ multi-agent + multi-device + ban-resilient + paradox-proof — แต่ user ใหม่เปิดมาเห็นแค่ 13 tools. ต่อจากนี้ value ที่ได้ต่อสัปดาห์ = polish + ship > ใส่ feature ใหม่. distribution คือ moat ใหม่ของ Mneme"*. STOP adding capability. POLISH the 4 moats already shipped so new users can find them.
+
+### 🟡 B1 — AGREEMENT extract_decisions undercount
+
+**Bug**: `"every commit must pass test \n deploy needs 2 reviewers"` returned **1 decision**, expected **2**. Decision detector regex matched first imperative, didn't search the whole transcript.
+
+**Fix** (`packages/core/src/conversation_compiler/index.ts`):
+- New `splitToSentences(transcript)` helper — splits on `\n` + sentence boundaries `.!?` (Thai-friendly, doesn't break on version strings like `v2.19.32`)
+- New `review_required` PatternKind for `"deploy needs N reviewers"` / `"3 approvals required"` with `paramsFrom` capturing `minReviewers`
+- New 3-mode toggle `DecisionExtractionMode = "strict" | "balanced" | "liberal"` so user picks precision-vs-recall trade-off, not developer
+  - **strict**: only RULES, no manual fallback (precision)
+  - **balanced** (default): RULES + strong manual verbs (`must|never|always|shall|required|needs|requires`) — backward-compatible
+  - **liberal**: RULES + balanced + soft verbs (`should|have to|let's|will need`) — recall
+- New `review_required` checker (in `runAgreement`): enforces `approvalCount >= minReviewers`
+
+**Tests**: 15 regression tests pin the canonical bug case + 3-mode A/B + Thai variants + 100-iter resilience. 55/55 conversation_compiler tests pass (40 existing + 15 new).
+
+### 🟡 B2 — truth check_multi sensors=0
+
+**Bug**: First-run `mneme truth check_multi` returned `INCONCLUSIVE / pTrue=0.5 / sensors=0` because the TRUTH KERNEL ships zero default sensors. Caller has to invent the stack.
+
+**Fix** (new `packages/core/src/truth_sensor_pack/`): canonical default stack as METADATA + claim-shape classifier + planner.
+- `DEFAULT_SENSOR_PACK`: 5 sensors (truth_forensic + apoptosis + inverse_forensics + bounty_vendor + contradictions) each with id / mcpTool / weight / description / fallbackBehaviour / bestFor
+- `classifyClaimShape(claim)`: 7 shapes (file_existence / symbol_existence / version_claim / tool_capability / conceptual / narrative / unknown)
+- `proposeSensorPlan({claim, full?})`: shape-classifies and returns recommendedSensors (subset for known shape) or full stack (for unknown)
+- `explainDefaultStack(plan)`: AI-agent-ingestible markdown with how-to-wire instructions
+- New MCP tool `mneme.truth.init` exposes the recipe
+
+**Tests**: 26 deep tests + measured A/B (0 sensors pre-fix → ≥4 post-fix) + 1000-iter resilience.
+
+### 🟡 B3 — STARTER tier 13/594 = 2.2%
+
+**Bug**: 97.8% of catalog hidden from default view. New users see 13 of 594 tools.
+
+**Fix** (`packages/core/src/tool_tier/index.ts` expansion + new `packages/core/src/tool_browser/`):
+- Expanded `STARTER_WHITELIST` from 13 visible to ~35: added v2.19.31/v2.19.32 headline tools (`mneme.truth.forensic`, `mneme.truth.contradictions`, `mneme.handoff.snapshot`, `mneme.synapse.sync_export`, `mneme.guard`, `mneme.reflex.observe`, `mneme.browse`, `mneme.suggest`)
+- New `browseCatalog({tier?, family?, query?, limit?, offset?})`: paginated tier-aware browse, sorted starter→explorer→deep→experimental, then alpha
+- New `suggestTools({recentActions?, repoSignals?, intent?, limit?})`: scored recommendations — intent match (substring + token overlap), starter-tier bias, recency cooldown (recently-used demoted -1.5), 5 repo signals (`hasPackageJson` / `hasUncommittedChanges` / `hasDotGit` / `hasGithubActions` / `recentCommitCount`)
+- 2 new MCP tools: `mneme.browse` + `mneme.suggest`
+
+**Tests**: 24 deep tests + A/B starter-count expansion (13 → ≥30) + deterministic ranking (no Math.random) + 1000-iter resilience.
+
+### 🟡 B4 — SLEEP + DREAMSPACE never tick for active devs
+
+**Bug**: Pre-v2.19.33 required 30/60min wall-clock idle. Active devs (16-19hr/day) NEVER reached the threshold so sleep + dreamspace ticked **0 times** in practice.
+
+**Fix** (`packages/core/src/autonomic_scheduler/index.ts`): semantic-context-shift triggers (scheduler adapts to user, not user to scheduler).
+- New `DEFAULT_SCHEDULES_ACTIVE_DEV` (now the default export):
+  - **sleep**: fires on `hasBranchSwitch` OR `msSinceLastCommit ≥ 30min` OR wall-clock 30min idle
+  - **dreamspace**: fires on `hasCommitCycle` OR `msSinceLastCommit ≥ 60min` OR wall-clock 60min idle
+- New `forceOrgans: OrganKind[]` event signal → `mneme sleep --force` translates to `{ forceOrgans: ["sleep"] }`; bypasses interval/idle (still respects circuit-breaker)
+- `DEFAULT_SCHEDULES_LEGACY` kept for backward compat
+
+**Tests**: 15 regression tests + **8-hour active-dev workday A/B simulation** — LEGACY ticks 0 sleep + 0 dreamspace; ACTIVE_DEV ticks ≥3 each (≥6 total). 35/35 scheduler tests pass (20 existing + 15 new).
+
+### Composition (no new MOATS, polish only)
+
+The 4 moats users couldn't find before:
+- 🌐 multi-device sync (v2.19.31 SYNAPSE SYNC) — now in STARTER tier
+- 🛡 vendor-ban-resilience (v2.19.30 SOUL EMBALMING) — surfaced via `mneme.suggest` recommendations
+- 🌀 paradox-proof verification (v2.19.31 truth.contradictions) — now in STARTER tier
+- 📡 secured cross-network transport (v2.19.32 BEACON HANDOFF) — now in STARTER tier
+
+**4 new MCP tools** (`mneme.truth.init` + `mneme.browse` + `mneme.suggest` + scheduler context-shift extension).
+
+### Ritual
+
+4 AURELIAN cards SHIP (rollup ship=4). 80 new tests + 0 enforced orphans. v2.19.34+ will continue the polish work (more first-run UX, real device matrix test, IDE LSP integration).
 
 ---
 

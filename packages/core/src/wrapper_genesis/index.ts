@@ -134,6 +134,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "pair_code",
   "handoff_pwa",
   "consciousness_fork",
+  // v2.19.33 POLISH (B2/B3 user-audit fixes for discoverability)
+  "truth_sensor_pack",
+  "tool_browser",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -339,6 +342,8 @@ function familyAliases(moduleName: string): string[] {
     pair_code: ["handoff"],
     handoff_pwa: ["handoff"],
     consciousness_fork: ["fork"],
+    truth_sensor_pack: ["truth"],
+    tool_browser: ["browse"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -593,6 +598,14 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "computeLineageStats", // display helper
   "findActiveDescendants", // wrapped as mneme.fork.find_descendants
   "markAbandoned",       // auxiliary state transition (callers can use mark_reconciled or skip)
+  // v2.19.33 POLISH (B2/B3) — wrappers exist but word-order mismatch on auto-scan.
+  "proposeSensorPlan",   // wrapped as mneme.truth.init
+  "explainDefaultStack", // helper used inside truth.init handler
+  "classifyClaimShape",  // helper used inside proposeSensorPlan
+  "computePackStats",    // display helper
+  "browseCatalog",       // wrapped as mneme.browse (2-part name; scanner needs 3)
+  "suggestTools",        // wrapped as mneme.suggest (2-part name; scanner needs 3)
+  "computeBrowseStats",  // display helper
 ]);
 
 export function findOrphans(input: {

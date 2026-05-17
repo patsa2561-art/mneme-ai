@@ -134,7 +134,7 @@ Commands:
   sovereign  >  Sovereignty Kernel -- Mneme answers questions about THIS repo using local Ollama + ACGV grounding gate. Free-first: no API key, no cloud, no source code leaves the laptop. v1.57.0.
   covenant  >  Tier 2 -- HMAC-signed bilateral contract between user + AI vendor. Mneme enforces; Aletheia compliance score moves over time.
   grade  >  Mneme grade family — 1 action(s). Run \`mneme grade --help\` for actions, or \`mneme grade <action> --json '{...}'\` to invoke.
-  truth  >  Mneme truth family — 8 action(s). Run \`mneme truth --help\` for actions, or \`mneme truth <action> --json '{...}'\` to invoke.
+  truth  >  Mneme truth family — 9 action(s). Run \`mneme truth --help\` for actions, or \`mneme truth <action> --json '{...}'\` to invoke.
   whisper  >  Mneme whisper family — 3 action(s). Run \`mneme whisper --help\` for actions, or \`mneme whisper <action> --json '{...}'\` to invoke.
   time  >  Mneme time family — 2 action(s). Run \`mneme time --help\` for actions, or \`mneme time <action> --json '{...}'\` to invoke.
   interview  >  Mneme interview family — 1 action(s). Run \`mneme interview --help\` for actions, or \`mneme interview <action> --json '{...}'\` to invoke.
@@ -188,7 +188,7 @@ Commands:
   wormhole  >  Mneme wormhole family — 2 action(s). Run \`mneme wormhole --help\` for actions, or \`mneme wormhole <action> --json '{...}'\` to invoke.
   metron  >  Mneme metron family — 3 action(s). Run \`mneme metron --help\` for actions, or \`mneme metron <action> --json '{...}'\` to invoke.
   updates  >  Mneme updates family — 1 action(s). Run \`mneme updates --help\` for actions, or \`mneme updates <action> --json '{...}'\` to invoke.
-  handoff  >  Mneme handoff family — 5 action(s). Run \`mneme handoff --help\` for actions, or \`mneme handoff <action> --json '{...}'\` to invoke.
+  handoff  >  Mneme handoff family — 15 action(s). Run \`mneme handoff --help\` for actions, or \`mneme handoff <action> --json '{...}'\` to invoke.
   birthright  >  Mneme birthright family — 2 action(s). Run \`mneme birthright --help\` for actions, or \`mneme birthright <action> --json '{...}'\` to invoke.
   clone  >  Mneme clone family — 1 action(s). Run \`mneme clone --help\` for actions, or \`mneme clone <action> --json '{...}'\` to invoke.
   beacon  >  Mneme beacon family — 2 action(s). Run \`mneme beacon --help\` for actions, or \`mneme beacon <action> --json '{...}'\` to invoke.
@@ -259,6 +259,7 @@ Commands:
   dreamspace  >  Mneme dreamspace family — 20 action(s). Run \`mneme dreamspace --help\` for actions, or \`mneme dreamspace <action> --json '{...}'\` to invoke.
   scheduler  >  Mneme scheduler family — 5 action(s). Run \`mneme scheduler --help\` for actions, or \`mneme scheduler <action> --json '{...}'\` to invoke.
   circadian  >  Mneme circadian family — 3 action(s). Run \`mneme circadian --help\` for actions, or \`mneme circadian <action> --json '{...}'\` to invoke.
+  fork  >  Mneme fork family — 4 action(s). Run \`mneme fork --help\` for actions, or \`mneme fork <action> --json '{...}'\` to invoke.
   tool  >  Mneme tool family — 2 action(s). Run \`mneme tool --help\` for actions, or \`mneme tool <action> --json '{...}'\` to invoke.
   adversary  >  Mneme adversary family — 1 action(s). Run \`mneme adversary --help\` for actions, or \`mneme adversary <action> --json '{...}'\` to invoke.
   replay  >  Mneme replay family — 2 action(s). Run \`mneme replay --help\` for actions, or \`mneme replay <action> --json '{...}'\` to invoke.

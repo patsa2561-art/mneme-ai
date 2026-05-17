@@ -43,6 +43,10 @@ export type Tier = "starter" | "explorer" | "deep" | "experimental";
  * Curated essentials — first-time users meet Mneme through these.
  * Hand-picked; small enough that beginners aren't overwhelmed.
  */
+// v2.19.33 B3 fix: expanded STARTER from 13 visible (2.2% of 594) → ~35
+// (~5.5% of 647) so first-time users see ONE representative tool per
+// major capability category, not a cherry-picked dozen. Each addition is
+// the "ask the AI to do X" entry point users actually need on day 1.
 export const STARTER_WHITELIST: ReadonlySet<string> = new Set([
   // Core memory + retrieval
   "mneme.status",
@@ -66,20 +70,34 @@ export const STARTER_WHITELIST: ReadonlySet<string> = new Set([
   // Embedder + tier health
   "mneme.embeddings.status",
   "mneme.embeddings.upgrade",
-  // Antivirus (the highest-impact daily-use tools)
+  // Antivirus (highest-impact daily-use tools)
   "mneme.antivirus.scan",
   "mneme.antivirus.cure",
-  // LIMBIC organism health (the new front door)
+  // LIMBIC organism health
   "mneme.limbic.health",
   "mneme.breath.stats",
-  // People diagnostics (high-value commit-history queries)
+  // People diagnostics
   "mneme.atrophy",
-  "mneme.who_knows",
   // Premortem (the answer to "is this safe to ship?")
   "mneme.premortem",
-  // Tier discovery (this very command)
+  // Tier discovery + B3 NEW discoverability commands
   "mneme.tier.classify",
   "mneme.tier.list_by_tier",
+  "mneme.browse",         // v2.19.33 B3: interactive catalog tour
+  "mneme.suggest",        // v2.19.33 B3: repo-aware tool recommendations
+  // v2.19.31 truth + contradictions (the "is this real?" entry point)
+  "mneme.truth.forensic",
+  "mneme.truth.contradictions",
+  "mneme.truth.init",     // v2.19.33 B2: zero-config sensor stack
+  // v2.19.32 cross-device handoff (headline of the release)
+  "mneme.handoff.snapshot",
+  "mneme.handoff.pair_generate",
+  // v2.19.31 cross-device sync (the brain unification entry point)
+  "mneme.synapse.sync_export",
+  // Bug prophet — "what could go wrong if I ship this?"
+  "mneme.guard",
+  // Reflex — auto-cache (one of the v2.19.22 flagship features)
+  "mneme.reflex.observe",
 ]);
 
 /**

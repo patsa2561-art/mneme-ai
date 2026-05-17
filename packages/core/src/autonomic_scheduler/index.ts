@@ -62,15 +62,50 @@ export interface OrganSchedule {
   fireOnEvent?: boolean;
   /** Require idleMs > this to consider firing (0 = no idle requirement). */
   requireIdleMs?: number;
+  /**
+   * v2.19.33 B4 fix — fire on semantic context shifts the active dev actually
+   * generates (commit cycle complete / branch switch / N-min no-commit gap).
+   * This unblocks SLEEP + DREAMSPACE for devs who work 16-19hr/day and never
+   * accumulate wall-clock idle. See EventSignals.hasContextShift*.
+   */
+  fireOnContextShift?: boolean;
 }
 
-export const DEFAULT_SCHEDULES: readonly OrganSchedule[] = [
+/**
+ * Pre-v2.19.33 schedule set kept for backward compatibility. NEW code should
+ * use DEFAULT_SCHEDULES_ACTIVE_DEV (v2.19.33 default for nucleus daemon).
+ */
+export const DEFAULT_SCHEDULES_LEGACY: readonly OrganSchedule[] = [
   { organ: "breath",     intervalMs: 60_000,        fireOnEvent: false, requireIdleMs: 0 },
   { organ: "reflex",     intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0 },
   { organ: "sleep",      intervalMs: 30 * 60_000,   fireOnEvent: false, requireIdleMs: 30 * 60_000 },
   { organ: "dreamspace", intervalMs: 60 * 60_000,   fireOnEvent: false, requireIdleMs: 60 * 60_000 },
   { organ: "hormonal",   intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0 },
 ];
+
+/**
+ * v2.19.33 B4 fix — "scheduler adapts to user, not user to scheduler".
+ *
+ * Pre-v2.19.33 SLEEP + DREAMSPACE required wall-clock idle (30/60min). Active
+ * devs (16-19hr/day) NEVER reached the threshold so the organs ticked 0 times
+ * in practice. v2.19.33 makes them fire on SEMANTIC CONTEXT SHIFTS the user
+ * actually generates:
+ *
+ *   - sleep      → on branch switch  OR  30min no-commit gap  OR  wall-idle 30min
+ *   - dreamspace → on commit cycle   OR  60min no-commit gap  OR  wall-idle 60min
+ *
+ * Both still respect the interval guard (don't fire more than once per interval).
+ */
+export const DEFAULT_SCHEDULES_ACTIVE_DEV: readonly OrganSchedule[] = [
+  { organ: "breath",     intervalMs: 60_000,        fireOnEvent: false, requireIdleMs: 0,           fireOnContextShift: false },
+  { organ: "reflex",     intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0,           fireOnContextShift: false },
+  { organ: "sleep",      intervalMs: 30 * 60_000,   fireOnEvent: false, requireIdleMs: 30 * 60_000, fireOnContextShift: true },
+  { organ: "dreamspace", intervalMs: 60 * 60_000,   fireOnEvent: false, requireIdleMs: 60 * 60_000, fireOnContextShift: true },
+  { organ: "hormonal",   intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0,           fireOnContextShift: false },
+];
+
+/** Default exposed as the ACTIVE_DEV variant from v2.19.33 onward. */
+export const DEFAULT_SCHEDULES: readonly OrganSchedule[] = DEFAULT_SCHEDULES_ACTIVE_DEV;
 
 export interface OrganHealthRecord {
   organ: OrganKind;
@@ -117,6 +152,23 @@ export interface EventSignals {
   hasFileSaveEvent?: boolean;
   /** Idle ms since last user activity. */
   idleMs?: number;
+  /**
+   * v2.19.33 B4 — semantic-context-shift signals. The caller (daemon) sets
+   * these from real git/IDE observations so SLEEP + DREAMSPACE can fire
+   * even when the dev never goes wall-clock idle.
+   */
+  /** Branch switched since last tick (git symbolic-ref HEAD changed). */
+  hasBranchSwitch?: boolean;
+  /** A commit cycle just completed (≥1 fresh commit since last tick). */
+  hasCommitCycle?: boolean;
+  /** ms since last commit (caller derives from `git log -1 --format=%ct`). */
+  msSinceLastCommit?: number;
+  /**
+   * Caller-explicit overrides — `mneme sleep --force` translates to
+   * `{ forceOrgans: ["sleep"] }`. Any organ in this list fires regardless
+   * of interval / idle / context-shift (still subject to cooldown).
+   */
+  forceOrgans?: OrganKind[];
 }
 
 function canon(v: unknown): string {
@@ -158,6 +210,7 @@ export function decideTicks(input: {
 }): TickPlan {
   const schedules = input.schedules ?? DEFAULT_SCHEDULES;
   const healthByOrgan = new Map<OrganKind, OrganHealthRecord>(input.health.map((h) => [h.organ, h]));
+  const forceSet = new Set<OrganKind>(input.events.forceOrgans ?? []);
   const entries: TickPlanEntry[] = [];
   for (const s of schedules) {
     const h = healthByOrgan.get(s.organ) ?? freshHealthRecord(s.organ);
@@ -169,6 +222,14 @@ export function decideTicks(input: {
       });
       continue;
     }
+    // v2.19.33 B4 — explicit user force (`mneme sleep --force`) bypasses interval/idle.
+    if (forceSet.has(s.organ)) {
+      entries.push({
+        organ: s.organ, shouldTick: true, reason: "manual",
+        details: `forced by caller (e.g., 'mneme ${s.organ} --force')`,
+      });
+      continue;
+    }
     const hasEvent = (s.fireOnEvent && (input.events.hasGitEvent || input.events.hasFileSaveEvent));
     if (hasEvent) {
       entries.push({
@@ -176,6 +237,38 @@ export function decideTicks(input: {
         details: `event signal received (git=${!!input.events.hasGitEvent}, file=${!!input.events.hasFileSaveEvent})`,
       });
       continue;
+    }
+    // v2.19.33 B4 — context-shift fires: branch switch (sleep) / commit cycle (dreamspace) /
+    // long no-commit gap (either). These let SLEEP + DREAMSPACE tick for active devs who
+    // never accumulate wall-clock idle.
+    if (s.fireOnContextShift) {
+      // SLEEP: triggered by branch switch
+      if (s.organ === "sleep" && input.events.hasBranchSwitch) {
+        entries.push({
+          organ: s.organ, shouldTick: true, reason: "event_triggered",
+          details: "branch switch detected (context-shift trigger)",
+        });
+        continue;
+      }
+      // DREAMSPACE: triggered by commit-cycle completion
+      if (s.organ === "dreamspace" && input.events.hasCommitCycle) {
+        entries.push({
+          organ: s.organ, shouldTick: true, reason: "event_triggered",
+          details: "commit cycle complete (context-shift trigger)",
+        });
+        continue;
+      }
+      // Long no-commit gap (applies to both) — defaults: sleep 30min, dreamspace 60min
+      const noCommitThreshold = s.organ === "dreamspace" ? 60 * 60_000 : 30 * 60_000;
+      if (input.events.msSinceLastCommit !== undefined
+          && input.events.msSinceLastCommit >= noCommitThreshold
+          && (h.lastTickMs === 0 || input.nowMs - h.lastTickMs >= s.intervalMs)) {
+        entries.push({
+          organ: s.organ, shouldTick: true, reason: "event_triggered",
+          details: `no-commit ${Math.round(input.events.msSinceLastCommit / 60_000)}m (context-shift trigger)`,
+        });
+        continue;
+      }
     }
     // First-tick semantics: lastTickMs===0 means "never ticked" — fire immediately
     // so a fresh daemon doesn't sit dormant for 60s waiting for the first interval.

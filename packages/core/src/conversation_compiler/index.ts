@@ -49,7 +49,17 @@ export type PatternKind =
   | "has_hmac"
   | "no_secret_in_code"
   | "must_have_changelog"
+  | "review_required"
   | "manual";
+
+/**
+ * v2.19.33 B1 fix — recall/precision mode for extractDecisions.
+ *   - "strict":   only high-precision RULES, no manual fallback (precision-leaning)
+ *   - "balanced": RULES + manual ("must|never|always|shall|required|needs|should") (default)
+ *   - "liberal":  RULES + balanced manual + permissive verbs ("have to|will need|let's") (recall-leaning)
+ * Trade-off: user picks precision vs recall; developer doesn't pre-assume.
+ */
+export type DecisionExtractionMode = "strict" | "balanced" | "liberal";
 
 export interface Decision {
   /** Raw text matched from the conversation. */
@@ -187,48 +197,127 @@ const RULES: ExtractionRule[] = [
     pattern: "must_have_changelog",
     baseConfidence: 0.85,
   },
+  // v2.19.33 B1 fix: "deploy needs N reviewers" / "PR needs review" /
+  //   "N reviewers required" / "ต้องมี N คน review" / "PR ต้อง review"
+  // PatternKind 'review_required' added; checker enforces ≥N reviewers signed off.
+  {
+    re: /(?:(?:deploy|merge|release|push|pull\s+request|pr)s?\s+(?:needs?|requires?)\s+(\d+)\s+(?:reviewers?|approvals?)|(\d+)\s+(?:reviewers?|approvals?)\s+(?:are\s+)?required|(?:must\s+have|need(?:s)?)\s+(\d+)\s+(?:reviewers?|approvals?)|(?:ต้อง|จำเป็น)\s*(?:มี|ผ่าน)\s*(\d+)\s*(?:คน)?\s*(?:reviewers?|approvals?|review))/i,
+    pattern: "review_required",
+    paramsFrom: (m) => {
+      const n = parseInt(m[1] ?? m[2] ?? m[3] ?? m[4] ?? "1", 10);
+      return { minReviewers: Number.isFinite(n) && n > 0 ? n : 1 };
+    },
+    baseConfidence: 0.85,
+  },
 ];
 
-export function extractDecisions(input: { transcript: string }): Decision[] {
+// v2.19.33 B1 fix: sentence-by-sentence parser. Splits transcript on
+// newlines + sentence boundaries (. ! ?) AND Thai-friendly boundaries
+// (\n + period). This lets the same rule fire multiple times in one
+// transcript (one decision per sentence, not just first match overall).
+function splitToSentences(transcript: string): string[] {
+  if (!transcript) return [];
+  // Split first by newline (most reliable boundary), then by
+  // sentence-ending punct followed by whitespace/EOL. Thai has no period
+  // tradition so newlines do the heavy lifting there.
+  const lines = transcript.split(/\r?\n/);
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Further split by English sentence boundaries (.!?) followed by
+    // whitespace + next char (handles "a. b" vs "v2.19.32" version strings).
+    const parts = trimmed.split(/(?<=[.!?])\s+(?=[A-Z฀-๿])/);
+    for (const p of parts) {
+      const tt = p.trim();
+      if (tt) out.push(tt);
+    }
+  }
+  return out;
+}
+
+/**
+ * Extract decisions from a transcript.
+ *
+ * v2.19.33 B1 fix: sentence-by-sentence parse so MULTIPLE decisions in the
+ * same transcript can be captured (previously: first-match-only by pattern).
+ *
+ * Backwards-compatible: callers passing only { transcript } get the
+ * "balanced" mode (which preserves the previous detection set + new rules).
+ */
+export function extractDecisions(input: {
+  transcript: string;
+  mode?: DecisionExtractionMode;
+}): Decision[] {
   if (!input.transcript || input.transcript.trim().length === 0) return [];
+  const mode: DecisionExtractionMode = input.mode ?? "balanced";
   const out: Decision[] = [];
-  const seenPatterns = new Set<PatternKind>();
-  for (const rule of RULES) {
-    const m = input.transcript.match(rule.re);
-    if (!m) continue;
-    if (seenPatterns.has(rule.pattern)) continue; // dedupe by pattern; first match wins
-    seenPatterns.add(rule.pattern);
-    const params = rule.paramsFrom ? rule.paramsFrom(m) : {};
-    out.push({
-      text: m[0].trim(),
-      pattern: rule.pattern,
-      params,
-      detectedAt: m.index ?? 0,
-      confidence: rule.baseConfidence,
-    });
+  const seen = new Set<string>();
+
+  const sentences = splitToSentences(input.transcript);
+  // Dedupe philosophy is the user-chosen mode:
+  //   strict / balanced: pattern-level dedupe — "every commit must have a test"
+  //     and "test is required" collapse to 1 decision (precision-leaning, default).
+  //   liberal: text-fingerprint dedupe — different wordings of same pattern stay
+  //     separate (recall-leaning, surfaces every distinct restatement).
+  const dedupeKey = (pattern: PatternKind, text: string): string => mode === "liberal"
+    ? `${pattern}::${text.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 80)}`
+    : pattern; // strict + balanced: one per pattern
+
+  // Pass 1: RULES, per sentence.
+  for (const sentence of sentences) {
+    for (const rule of RULES) {
+      const m = sentence.match(rule.re);
+      if (!m) continue;
+      const text = m[0].trim();
+      const key = dedupeKey(rule.pattern, text);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const params = rule.paramsFrom ? rule.paramsFrom(m) : {};
+      out.push({
+        text,
+        pattern: rule.pattern,
+        params,
+        detectedAt: input.transcript.indexOf(sentence) + (m.index ?? 0),
+        confidence: rule.baseConfidence,
+      });
+    }
   }
-  // v2.19.30 G_a fix: \b doesn't bind around Thai chars (Thai isn't in ASCII
-  // word class). Match Thai keywords WITHOUT \b — they're already distinctive
-  // enough not to false-positive (ห้าม/ต้อง/อย่า/ไม่ให้/บังคับ/จำเป็น never
-  // appear as substrings of English words). English keywords keep \b for precision.
-  const englishHits = input.transcript.match(/^[^\n]*\b(?:must|never|always|shall|required)\b[^\n]*$/gim) ?? [];
-  const thaiHits = input.transcript.match(/^[^\n]*(?:ห้าม|ต้อง|อย่า|ไม่ให้|ไม่ควร|บังคับ|จำเป็น|ตกลง(?:กัน)?ว่า|กฎ\s*ข้อ?)[^\n]*$/gim) ?? [];
-  const manualHits = [...englishHits, ...thaiHits];
-  for (const hit of manualHits) {
-    const text = hit.trim();
-    if (text.length < 12 || text.length > 200) continue;
-    // Skip if already covered by a recognised rule
-    const lowered = text.toLowerCase();
-    if (out.some((d) => lowered.includes(d.text.toLowerCase().slice(0, Math.min(d.text.length, 25))))) continue;
-    out.push({
-      text,
-      pattern: "manual",
-      params: {},
-      detectedAt: input.transcript.indexOf(hit),
-      confidence: 0.4,
-    });
+
+  // Pass 2: MANUAL heuristic (skipped in strict mode).
+  if (mode !== "strict") {
+    // Balanced: imperative verbs that strongly imply a rule.
+    //   English: must / never / always / shall / required / needs / requires
+    //   Thai:    ห้าม / ต้อง / อย่า / ไม่ให้ / ไม่ควร / บังคับ / จำเป็น / ตกลงกันว่า / กฎ
+    // Liberal: also catches soft imperatives (have to / will need / let's / should).
+    const enVerbs = mode === "liberal"
+      ? /\b(?:must|never|always|shall|required|need(?:s)?|requires?|should|ought\s+to|have\s+to|has\s+to|will\s+need|let['’]?s)\b/i
+      : /\b(?:must|never|always|shall|required|need(?:s)?|requires?)\b/i;
+    const thKeywords = /(?:ห้าม|ต้อง|อย่า|ไม่ให้|ไม่ควร|บังคับ|จำเป็น|ตกลง(?:กัน)?ว่า|กฎ\s*ข้อ?)/;
+
+    for (const sentence of sentences) {
+      const hasEn = enVerbs.test(sentence);
+      const hasTh = thKeywords.test(sentence);
+      if (!hasEn && !hasTh) continue;
+      if (sentence.length < 12 || sentence.length > 200) continue;
+      const key = dedupeKey("manual", sentence);
+      if (seen.has(key)) continue;
+      // Skip if already covered by a RULES match in the same sentence.
+      const alreadyRuleMatched = out.some((d) => d.pattern !== "manual"
+        && sentence.toLowerCase().includes(d.text.toLowerCase().slice(0, Math.min(d.text.length, 25))));
+      if (alreadyRuleMatched) continue;
+      seen.add(key);
+      out.push({
+        text: sentence,
+        pattern: "manual",
+        params: {},
+        detectedAt: input.transcript.indexOf(sentence),
+        confidence: mode === "liberal" ? 0.35 : 0.4,
+      });
+    }
   }
-  // Sort by detectedAt for deterministic compilation
+
+  // Deterministic order
   out.sort((a, b) => a.detectedAt - b.detectedAt);
   return out;
 }
@@ -303,6 +392,12 @@ function generateSource(agreement: { name: string; decisions: Decision[] }): str
   lines.push(`      const files = t.filesChanged || [];`);
   lines.push(`      const has = files.some((f) => /CHANGELOG/i.test(f));`);
   lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok: has, reason: has ? "CHANGELOG touched" : "no CHANGELOG entry in changeset", severity: has ? "info" : "block" };`);
+  lines.push(`    }`);
+  lines.push(`    case "review_required": {`);
+  lines.push(`      const min = (d.params && Number.isFinite(d.params.minReviewers)) ? d.params.minReviewers : 1;`);
+  lines.push(`      const approvals = Array.isArray(t.approvals) ? t.approvals.length : (typeof t.approvalCount === "number" ? t.approvalCount : 0);`);
+  lines.push(`      const ok = approvals >= min;`);
+  lines.push(`      return { decisionText: d.text, pattern: d.pattern, ok, reason: ok ? ("≥" + min + " approvals (" + approvals + ")") : ("needs " + min + " approvals, have " + approvals), severity: ok ? "info" : "block" };`);
   lines.push(`    }`);
   lines.push(`    case "manual":`);
   lines.push(`    default:`);
@@ -441,6 +536,14 @@ function nativeCheck(d: Decision, target: CheckTarget): CheckResult {
       const files = t.filesChanged || [];
       const has = files.some((f) => /CHANGELOG/i.test(f));
       return { decisionText: d.text, pattern: d.pattern, ok: has, reason: has ? "CHANGELOG touched" : "no CHANGELOG entry in changeset", severity: has ? "info" : "block" };
+    }
+    case "review_required": {
+      const minRaw = d.params?.["minReviewers"];
+      const min = typeof minRaw === "number" && Number.isFinite(minRaw) && minRaw > 0 ? minRaw : 1;
+      const tt = t as CheckTarget & { approvals?: unknown[]; approvalCount?: number };
+      const approvals = Array.isArray(tt.approvals) ? tt.approvals.length : (typeof tt.approvalCount === "number" ? tt.approvalCount : 0);
+      const ok = approvals >= min;
+      return { decisionText: d.text, pattern: d.pattern, ok, reason: ok ? `≥${min} approvals (${approvals})` : `needs ${min} approvals, have ${approvals}`, severity: ok ? "info" : "block" };
     }
     case "manual":
     default:

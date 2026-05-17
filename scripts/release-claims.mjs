@@ -205,6 +205,14 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.33": {
+    headline: "🩹 POLISH RELEASE — 4 user-audit bugs fixed (B1 EN extract_decisions undercount → sentence-by-sentence + strict/balanced/liberal modes + new review_required pattern + 15 regression tests; B2 truth check_multi sensors=0 → zero-config default sensor stack (5 sensors) + claim-shape classifier + mneme.truth.init + 26 tests; B3 STARTER 13→35 + new mneme.browse (paginated catalog tour) + mneme.suggest (repo-aware recommendations with intent matching + recency cooldown + 5 repo signals) + 24 tests; B4 SLEEP+DREAMSPACE 0-ticks-for-active-devs → semantic-context-shift triggers (branch switch / commit cycle / 30min no-commit gap) + forceOrgans for sleep --force + 15 tests with 8hr workday A/B simulation). Distribution > new features.",
+    tools: [
+      "mneme.truth.init",
+      "mneme.browse",
+      "mneme.suggest",
+    ],
+  },
   "2.19.32": {
     headline: "🧬 BEACON HANDOFF FOUNDATION — fresh-context snapshot envelope (HMAC-signed, freshness-gated) + 6-char human-friendly pair code (confusable-free alphabet, one-shot, 30s TTL) + 4-emoji SAS MITM defense + device-adaptive PWA (Web Share / cursor:// / vscode:// / claude-code:// / mneme:// — zero CDN, offline-safe) + HMAC-chained consciousness fork lineage (parent→child→reconcile via SYNAPSE SYNC). 14 new MCP tools + 80 deep tests + 10-scenario E2E system test. The foundation v2.19.33+ CLI commands will build on; turns BEACON from never-used into real cross-device brain transfer (mobile + laptop + desktop in 2 taps).",
     tools: [

@@ -784,6 +784,11 @@ export * as handoffSnapshot from "./handoff_snapshot/index.js";
 export * as pairCode from "./pair_code/index.js";
 export * as handoffPwa from "./handoff_pwa/index.js";
 export * as consciousnessFork from "./consciousness_fork/index.js";
+// v2.19.33 POLISH + DISCOVERABILITY (B1/B2/B3/B4 user-audit fixes)
+//   - truthSensorPack:  default zero-config sensor stack for truth.check_multi
+//   - toolBrowser:      paginated catalog browse + repo-aware tool suggest
+export * as truthSensorPack from "./truth_sensor_pack/index.js";
+export * as toolBrowser from "./tool_browser/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers
