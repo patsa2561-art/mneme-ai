@@ -137,46 +137,53 @@ interface ExtractionRule {
   baseConfidence: number;
 }
 
+// v2.19.30 G_a fix: every rule has BROADENED Thai patterns covering common
+// natural-language variants the user actually types:
+//   ต้องมี / ต้อง / ต้องผ่าน / ต้อง pass / จำเป็นต้อง / บังคับ → "must"
+//   ห้าม / ไม่ให้ / อย่า / ไม่ควร → "never"
+//   ทุก / each / all = "every"
+// Plus the MANUAL fallback below uses Unicode-aware boundaries so Thai chars
+// don't need ASCII \b context.
 const RULES: ExtractionRule[] = [
-  // "every commit must have a test" / "all PRs must include tests" / "ทุก commit ต้องมี test"
+  // "every commit must have/pass a test" / "ทุก commit ต้อง(มี|ผ่าน|pass) test"
   {
-    re: /(?:every\s+commit\s+must\s+have\s+(?:a\s+)?test|all\s+(?:commits|prs|pull\s+requests)\s+must\s+include\s+tests?|test\s+(?:is|are)\s+required\s+(?:for\s+every\s+commit)?|ทุก\s*commit\s*ต้องมี\s*test|ต้องมี\s*test\s*ทุก\s*commit)/i,
+    re: /(?:every\s+commit\s+must\s+(?:have|pass|include|run)\s+(?:a\s+)?tests?|all\s+(?:commits|prs|pull\s+requests)\s+must\s+(?:have|include|pass|run)\s+tests?|tests?\s+(?:is|are)\s+required\s+(?:for\s+every\s+commit)?|ทุก\s*commit\s*(?:ต้อง|จำเป็นต้อง|บังคับ\s*ให้\s*มี)\s*(?:(?:มี|ผ่าน|pass|ทำ|run)\s+)?test|(?:ต้อง|จำเป็น)\s*(?:มี|ผ่าน|pass)?\s*test\s*(?:ทุก|ก่อน|ตอน|ใน)\s*commit|test\s*(?:ต้อง|จำเป็น)\s*(?:ผ่าน|pass)?\s*(?:ก่อน|ทุก)?\s*commit)/i,
     pattern: "test_required",
     baseConfidence: 0.85,
   },
-  // "must use timingSafeEqual" / "all HMAC compares use timingSafeEqual" / "ห้าม === กับ HMAC"
+  // "must use timingSafeEqual" / "ห้าม === กับ HMAC" / "ใช้ timingSafeEqual กับ hmac"
   {
-    re: /(?:must\s+use\s+timingSafeEqual|all\s+hmac\s+compares?\s+(?:must\s+)?use\s+timingSafeEqual|use\s+timingSafeEqual\s+(?:for\s+)?(?:hmac|signature)|ห้าม\s*===\s*(?:กับ)?\s*hmac)/i,
+    re: /(?:must\s+use\s+timingSafeEqual|all\s+hmac\s+compares?\s+(?:must\s+)?use\s+timingSafeEqual|use\s+timingSafeEqual\s+(?:for\s+)?(?:hmac|signature)|ห้าม\s*===\s*(?:กับ)?\s*hmac|(?:ต้อง|จำเป็นต้อง)\s*ใช้\s*timingSafeEqual|ใช้\s*timingSafeEqual\s*(?:กับ|สำหรับ|ใน)?\s*(?:hmac|signature))/i,
     pattern: "timing_safe_equal_required",
     baseConfidence: 0.9,
   },
-  // "no console.log in production" / "remove console.log" / "ห้าม console.log"
+  // "no console.log" / "ห้าม console.log" / "ไม่ให้ใช้ console.log"
   {
-    re: /(?:no\s+console\.log(?:\s+in\s+production)?|remove\s+console\.log|don['’]?t\s+use\s+console\.log|ห้าม\s*console\.log)/i,
+    re: /(?:no\s+console\.log(?:\s+in\s+production)?|remove\s+console\.log|don['’]?t\s+use\s+console\.log|ห้าม\s*(?:ใช้\s*)?console\.log|(?:ไม่ให้|อย่า|ไม่ควร)\s*(?:ใช้\s*)?console\.log)/i,
     pattern: "no_console_log",
     baseConfidence: 0.9,
   },
-  // "no direct push to main" / "ห้าม push main"
+  // "no direct push to main" / "ห้าม push main" / "ไม่ให้ push main ตรงๆ" / "อย่า push main"
   {
-    re: /(?:no\s+direct\s+push(?:es)?\s+to\s+main|never\s+push\s+(?:directly\s+)?to\s+main|all\s+changes\s+to\s+main\s+via\s+pr|ห้าม\s*push\s*(?:บน\s*)?main(?:\s*โดยตรง)?)/i,
+    re: /(?:no\s+direct\s+push(?:es)?\s+to\s+main|never\s+push\s+(?:directly\s+)?to\s+main|all\s+changes\s+to\s+main\s+via\s+pr|(?:ห้าม|ไม่ให้|อย่า|ไม่ควร)\s*push\s*(?:บน\s*|ตรงๆ\s*|เข้า\s*)?main(?:\s*โดยตรง|\s*ตรงๆ)?|push\s*main\s*(?:ต้อง|ผ่าน)\s*pr)/i,
     pattern: "no_direct_push_main",
     baseConfidence: 0.9,
   },
-  // "must have HMAC signature" / "all responses signed with HMAC"
+  // "must have HMAC signature" / "ต้อง sign ด้วย hmac" / "response ต้องมี hmac"
   {
-    re: /(?:must\s+have\s+hmac(?:\s+signature)?|all\s+(?:receipts?|responses?|verdicts?)\s+(?:must\s+be\s+)?signed\s+with\s+hmac|sign\s+with\s+hmac|hmac[\s-]?signed?)/i,
+    re: /(?:must\s+have\s+hmac(?:\s+signature)?|all\s+(?:receipts?|responses?|verdicts?)\s+(?:must\s+be\s+)?signed\s+with\s+hmac|sign\s+with\s+hmac|hmac[\s-]?signed?|(?:ต้อง|จำเป็นต้อง)\s*(?:มี|ใช้|sign\s*ด้วย)?\s*hmac|(?:response|verdict|receipt)s?\s*ต้องมี\s*hmac)/i,
     pattern: "has_hmac",
     baseConfidence: 0.85,
   },
-  // "no secrets in code" / "ห้ามใส่ secret"
+  // "no secrets in code" / "ห้ามใส่ secret" / "อย่าเก็บ secret"
   {
-    re: /(?:no\s+secrets?\s+in\s+(?:code|source|repo)|never\s+commit\s+secrets?|ห้าม\s*(?:ใส่)?\s*secret)/i,
+    re: /(?:no\s+secrets?\s+in\s+(?:code|source|repo)|never\s+commit\s+secrets?|(?:ห้าม|ไม่ให้|อย่า|ไม่ควร)\s*(?:ใส่|เก็บ|commit|push|hardcode)?\s*secret)/i,
     pattern: "no_secret_in_code",
     baseConfidence: 0.85,
   },
-  // "must update changelog" / "ต้องอัพเดท changelog"
+  // "must update changelog" / "ต้องอัพเดท changelog" / "อัพเดต changelog ทุก release"
   {
-    re: /(?:must\s+update\s+changelog|update\s+changelog\s+for\s+every\s+release|every\s+release\s+(?:must\s+)?(?:has|have)\s+a\s+changelog\s+entry|ต้อง\s*อัพเดท\s*changelog)/i,
+    re: /(?:must\s+update\s+changelog|update\s+changelog\s+for\s+every\s+release|every\s+release\s+(?:must\s+)?(?:has|have)\s+a\s+changelog\s+entry|(?:ต้อง|จำเป็นต้อง)\s*(?:อัพ\s*เดท|อัพเดต|update)\s*changelog|(?:อัพ\s*เดท|อัพเดต|update)\s*changelog\s*ทุก\s*release)/i,
     pattern: "must_have_changelog",
     baseConfidence: 0.85,
   },
@@ -200,8 +207,13 @@ export function extractDecisions(input: { transcript: string }): Decision[] {
       confidence: rule.baseConfidence,
     });
   }
-  // Also surface MANUAL stubs for obvious "must/ห้าม" sentences we didn't recognise
-  const manualHits = input.transcript.match(/^[^\n]*\b(?:must|never|always|ห้าม|ต้อง)\b[^\n]*$/gim) ?? [];
+  // v2.19.30 G_a fix: \b doesn't bind around Thai chars (Thai isn't in ASCII
+  // word class). Match Thai keywords WITHOUT \b — they're already distinctive
+  // enough not to false-positive (ห้าม/ต้อง/อย่า/ไม่ให้/บังคับ/จำเป็น never
+  // appear as substrings of English words). English keywords keep \b for precision.
+  const englishHits = input.transcript.match(/^[^\n]*\b(?:must|never|always|shall|required)\b[^\n]*$/gim) ?? [];
+  const thaiHits = input.transcript.match(/^[^\n]*(?:ห้าม|ต้อง|อย่า|ไม่ให้|ไม่ควร|บังคับ|จำเป็น|ตกลง(?:กัน)?ว่า|กฎ\s*ข้อ?)[^\n]*$/gim) ?? [];
+  const manualHits = [...englishHits, ...thaiHits];
   for (const hit of manualHits) {
     const text = hit.trim();
     if (text.length < 12 || text.length > 200) continue;

@@ -124,6 +124,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "synapse_genesis",
   "circadian",
   "synapse_fusion",
+  // v2.19.30 MNEME COMMONWEALTH pillars 1+2
+  "soul_embalming",
+  "hive_court",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -322,6 +325,8 @@ function familyAliases(moduleName: string): string[] {
     synapse_genesis: ["synapse"],
     circadian: ["circadian"],
     synapse_fusion: ["synapse"],
+    soul_embalming: ["soul"],
+    hive_court: ["court"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -548,6 +553,10 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // includes() check returns false because... actually let me retrace - the
   // ritual flagged it so the actionMatch is missing the case)
   "decideGating",
+  // v2.19.30 COMMONWEALTH:
+  //   restoreSoulAt IS surfaced as mneme.soul.restore_at but word-order
+  //     mismatch (camel "restoresoulat" vs snake "restore_at"/"restoreat").
+  "restoreSoulAt",
 ]);
 
 export function findOrphans(input: {

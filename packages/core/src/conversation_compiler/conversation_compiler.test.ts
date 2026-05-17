@@ -19,6 +19,24 @@ describe("v2.19.6 · CONVERSATION COMPILER — chat → deterministic signed art
       const d = extractDecisions({ transcript: "ตกลงกันว่า ทุก commit ต้องมี test ก่อน merge" });
       expect(d.find((x) => x.pattern === "test_required")).toBeDefined();
     });
+
+    // v2.19.30 G_a regression: user-reported canonical Thai bug
+    it("G_a REGRESSION: detects 'ทุก commit ต้อง pass test' (Thai variant — 'pass' not 'มี')", () => {
+      const d = extractDecisions({ transcript: "User: ทุก commit ต้อง pass test\nAI: ตกลง..." });
+      expect(d.find((x) => x.pattern === "test_required")).toBeDefined();
+    });
+    it("G_a: detects 'ทุก commit ต้องผ่าน test' (Thai 'ผ่าน' variant)", () => {
+      const d = extractDecisions({ transcript: "ทุก commit ต้องผ่าน test" });
+      expect(d.find((x) => x.pattern === "test_required")).toBeDefined();
+    });
+    it("G_a: detects 'ทุก commit จำเป็นต้อง test'", () => {
+      const d = extractDecisions({ transcript: "ทุก commit จำเป็นต้อง test ก่อน merge" });
+      expect(d.find((x) => x.pattern === "test_required")).toBeDefined();
+    });
+    it("G_a: detects 'test ต้องผ่าน ก่อน commit'", () => {
+      const d = extractDecisions({ transcript: "test ต้องผ่าน ก่อน commit เสมอ" });
+      expect(d.find((x) => x.pattern === "test_required")).toBeDefined();
+    });
     it("detects 'must use timingSafeEqual'", () => {
       const d = extractDecisions({ transcript: "All HMAC compares must use timingSafeEqual." });
       expect(d.find((x) => x.pattern === "timing_safe_equal_required")).toBeDefined();

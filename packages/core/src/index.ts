@@ -768,6 +768,9 @@ export * as autonomicScheduler from "./autonomic_scheduler/index.js";
 export * as synapseGenesis from "./synapse_genesis/index.js";
 export * as circadian from "./circadian/index.js";
 export * as synapseFusion from "./synapse_fusion/index.js";
+// v2.19.30 MNEME COMMONWEALTH pillars 1+2 (soul embalming + hive court)
+export * as soulEmbalming from "./soul_embalming/index.js";
+export * as hiveCourt from "./hive_court/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers
