@@ -259,6 +259,69 @@ export function sniffNegativeAssertions(claim: string): FactAssertion[] {
   return out;
 }
 
+// v2.19.39 N2 fix — VAGUE-IDENTIFIER paradox sniffer.
+// Catches contradictions where the subject is NOT a recognised file/tool/version
+// (e.g. bare identifier "X"), which the typed sniffers miss because their
+// regexes require structured shapes. Examples this catches:
+//
+//   "file X exists AND file X does not exist"
+//   "Y is registered AND Y is not registered"
+//   "Z is true AND Z is false"
+//
+// The detector pairs an EXISTS/IS-TRUE clause with an opposite NOT-EXISTS/IS-FALSE
+// clause that share the same noun token (the "X" between the two halves). When a
+// pair is found, two synthetic FactAssertion entries are emitted with matching
+// value keys and opposite directions so `detectContradictions` fires uniformly.
+const VAGUE_POSITIVE_RE = /\b(?:file\s+|tool\s+|module\s+|class\s+|method\s+|function\s+|variable\s+|symbol\s+)?([A-Za-z_][A-Za-z0-9_]*)\s+(?:exists|is\s+(?:registered|installed|present|true|defined|here))\b/gi;
+const VAGUE_NEGATIVE_RE = /\b(?:file\s+|tool\s+|module\s+|class\s+|method\s+|function\s+|variable\s+|symbol\s+)?([A-Za-z_][A-Za-z0-9_]*)\s+(?:does\s+not\s+exist|is\s+not\s+(?:registered|installed|present|true|defined|here)|is\s+(?:absent|false|missing))\b/gi;
+
+const VAGUE_STOPWORDS = new Set([
+  "it", "this", "that", "they", "the", "a", "an", "and", "or", "but",
+  "yes", "no", "what", "which", "who", "where", "when", "why", "how",
+  "as", "if", "is", "are", "was", "were", "be", "been", "being",
+  // Common conjunction halves shouldn't be subjects.
+  "claim", "result", "value", "thing",
+]);
+
+/** Extract bare-identifier "X exists AND X does not exist" paradoxes. */
+export function sniffVagueParadox(claim: string): FactAssertion[] {
+  // Typed-sniffer precedence: if the ORIGINAL claim already carries a typed
+  // shape (mneme.X.Y or packages/.../foo.ts), bail out — the typed sniffers
+  // already handle the contradiction with a more precise evidence string.
+  if (/\bmneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*/i.test(claim)) return [];
+  if (/(?:packages|scripts|tests|src)\/[\w./-]+\.(?:ts|tsx|js|mjs|cjs|md|json|mdx)/i.test(claim)) return [];
+  const positives = new Map<string, string>();
+  let m: RegExpExecArray | null;
+  while ((m = VAGUE_POSITIVE_RE.exec(claim)) !== null) {
+    const ident = m[1]!.toLowerCase();
+    if (VAGUE_STOPWORDS.has(ident)) continue;
+    if (!positives.has(ident)) positives.set(ident, m[0]!);
+  }
+  const negatives = new Map<string, string>();
+  while ((m = VAGUE_NEGATIVE_RE.exec(claim)) !== null) {
+    const ident = m[1]!.toLowerCase();
+    if (VAGUE_STOPWORDS.has(ident)) continue;
+    if (!negatives.has(ident)) negatives.set(ident, m[0]!);
+  }
+  const out: FactAssertion[] = [];
+  for (const [ident] of positives) {
+    if (!negatives.has(ident)) continue;
+    out.push({
+      kind: "mcp_tool_exact",
+      asserted: `subject '${ident}' is asserted to EXIST`,
+      value: { toolName: `__vague_paradox__:${ident}` },
+      direction: "positive",
+    });
+    out.push({
+      kind: "mcp_tool_exact",
+      asserted: `subject '${ident}' is asserted to NOT EXIST`,
+      value: { toolName: `__vague_paradox__:${ident}` },
+      direction: "negative",
+    });
+  }
+  return out;
+}
+
 /**
  * v2.19.31 BUG #2 fix — internal CONTRADICTION DETECTOR.
  * Pairwise scan: same `kind` + same canonical `value` + opposite `direction`
@@ -332,7 +395,9 @@ export function sniffAllAssertions(claim: string): FactAssertion[] {
     ...sniffVersion(claim),
     ...sniffFilePath(claim),
   ].map((a) => ({ ...a, direction: "positive" as const }));
-  return [...positives, ...sniffNegativeAssertions(claim)];
+  // v2.19.39: include vague-identifier paradoxes ("X exists AND X does not exist")
+  // so the contradiction detector fires even when the subject isn't a typed shape.
+  return [...positives, ...sniffNegativeAssertions(claim), ...sniffVagueParadox(claim)];
 }
 
 // ─── GROUND-TRUTH CHECKER ────────────────────────────────────────────────

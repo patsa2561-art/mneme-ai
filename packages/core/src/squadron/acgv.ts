@@ -159,7 +159,16 @@ export async function runACGVAsync(input: ACGVRunInput): Promise<ACGVResult & { 
         engine: "z3",
       };
     }
-    if (arithmetic && arithmetic.status === "sat" && prelim.verdict === "PASSTHROUGH") {
+    // v2.19.39 N2 DEFENSIVE GUARD: only upgrade PASSTHROUGH -> FUSION when
+    // arithmetic actually evaluated at least one constraint. Without this
+    // guard, a vague claim with no encodable intent could still flip the
+    // verdict from honest "no extractable facts" into a confident FUSION.
+    if (
+      arithmetic &&
+      arithmetic.status === "sat" &&
+      arithmetic.constraints.length > 0 &&
+      prelim.verdict === "PASSTHROUGH"
+    ) {
       return {
         ...prelim,
         verdict: "FUSION",

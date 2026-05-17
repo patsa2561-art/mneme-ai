@@ -359,3 +359,65 @@ describe("v1.55 runACGV · PRTF layer in output", () => {
     expect(hasWitness).toBe(true);
   });
 });
+
+// ─── v2.19.39 N2 REGRESSION GUARD — arithmetic abstain on empty constraints ──
+//
+// User audit caught: verify "file X exists AND file X does not exist" returned
+// TRUSTWORTHY 85% because checkArithmetic parsed logicalShape='and' + 0 intents
+// then returned status='sat' (0===0 false-equality) and runACGVAsync upgraded
+// PASSTHROUGH → FUSION. v2.19.39 fix: empty constraint set forces status='skipped';
+// defensive guard in runACGVAsync also requires constraints.length>0.
+
+describe("v2.19.39 N2 REGRESSION GUARD -- empty-constraint arithmetic abstain", () => {
+  let repo: string;
+  beforeEach(() => { repo = setupRepo(); });
+  afterEach(() => cleanup(repo));
+
+  it("checkArithmetic returns status='skipped' on logical-AND with zero intents", async () => {
+    const r = await checkArithmetic("file X exists AND file X does not exist", { toolCount: 100 });
+    expect(r.status).toBe("skipped");
+    expect(r.upgrade).toBe(false);
+    expect(r.constraints.length).toBe(0);
+  });
+
+  it("checkArithmetic returns status='skipped' on logical-OR with zero intents", async () => {
+    const r = await checkArithmetic("foo OR bar (no numbers)", { toolCount: 100 });
+    expect(r.status).toBe("skipped");
+    expect(r.upgrade).toBe(false);
+  });
+
+  it("runACGVAsync does NOT upgrade PASSTHROUGH→FUSION on vague paradox claim", async () => {
+    const r = await runACGVAsync({
+      claim: "file X exists AND file X does not exist",
+      repoRoot: repo,
+      noEmitVaccine: true,
+      noStake: true,
+    });
+    expect(r.verdict).not.toBe("FUSION");
+    expect(r.verdict).toBe("PASSTHROUGH");
+  });
+
+  it("runACGVAsync still upgrades genuine SAT claims (regression guard)", async () => {
+    const r = await runACGVAsync({
+      claim: "Mneme exposes more than 9999 tools",
+      repoRoot: repo,
+      noEmitVaccine: true,
+      noStake: true,
+    });
+    expect(r.verdict).toBe("IMPOSSIBLE_REFUTE");
+  });
+
+  it("100-iter fuzz: vague compound claims never inflate to FUSION", async () => {
+    const templates = [
+      "X exists AND X does not exist",
+      "foo is true AND foo is false",
+      "bar is registered AND bar is absent",
+      "this thing exists AND this thing is missing",
+    ];
+    for (let i = 0; i < 100; i++) {
+      const claim = templates[i % templates.length]!;
+      const r = await runACGVAsync({ claim, repoRoot: repo, noEmitVaccine: true, noStake: true });
+      expect(r.verdict).not.toBe("FUSION");
+    }
+  });
+});

@@ -178,6 +178,22 @@ export async function checkArithmetic(
   const unsats = results.filter((r) => r.status === "unsat").length;
   let finalStatus: ArithmeticVerdict["status"];
   let upgrade = false;
+  // v2.19.39 N2 ROOT-CAUSE FIX: a logical shape with ZERO encoded intents
+  // cannot be SAT. Vague compound claims like "file X exists AND file X
+  // does not exist" produce logicalShape='and' + results=[], and the old
+  // code returned 'sat' because sats===results.length (0===0). That
+  // tricked runACGVAsync into upgrading PASSTHROUGH -> FUSION at 85%
+  // confidence. Honest answer is 'skipped': the arithmetic layer had
+  // nothing to evaluate, so it must not vote sat / unsat / upgrade.
+  if (results.length === 0) {
+    return {
+      status: "skipped",
+      engine,
+      certificate: `Z3 ARITHMETIC PROOF (v2.19.39 N2 GUARD) -- logical shape '${logicalShape.kind}' detected but no numeric intent encoded; layer abstains.`,
+      constraints: [],
+      upgrade: false,
+    };
+  }
   switch (logicalShape.kind) {
     case "and":
       // Every intent must SAT. Any UNSAT refutes the whole.

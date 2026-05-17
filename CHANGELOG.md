@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.38
+# 📜 Release index — v2.18.0 → v2.19.39
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.39** | 🟡 N2 ROOT-CAUSE — ACGV arithmetic layer no longer rubber-stamps vague paradoxes as TRUSTWORTHY 85%. Empty-constraint set forces 'skipped'; defensive guard requires constraints.length>0 before PASSTHROUGH→FUSION upgrade. Plus VAGUE-IDENTIFIER PARADOX SNIFFER catches 'X exists AND X does not exist' even when X has no typed shape. Plus README hero polish (short cool sentence + AI-agent install block) |
 | **v2.19.38** | 🔌 SOCKETS RELEASE — production sockets connect v2.19.37 plumbing: Tampermonkey 1-click + daemon auto-emits cards + git post-commit auto-elects Mayor + quarterly contribution daemon-runs |
 | **v2.19.37** | 📜🌐🪞📣👑 TALK OF THE TOWN QUINTUPLE — RFC RECEIPT PROTOCOL (Mneme as SPEC) + BROWSER RECEIPT (200M ChatGPT users no vendor cooperation) + CITIZEN'S AUDIT (pressure > regulator) + CONSCIENCE CARD (Wordle viral) + MAYOR ELECTION (per-repo vendor game). 6 standard-positioning gaps closed |
 | **v2.19.36** | 🤖 AUTO-FLOW FIX — user says 'install mneme', AI agent runs install, gitignore is right WITHOUT anyone running a command (3 redundant entry points: mneme init + autoStartSpore + mneme.welcome) |
@@ -63,6 +64,52 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.39 — 2026-05-17 — 🟡 N2 ROOT-CAUSE + 🟢 README POLISH (vague-paradox arithmetic abstain + bolt-on-brain hero rewrite)
+
+User audit caught one bug + asked for a README hero rewrite. v2.19.39 fixes the bug at SOURCE in two layers and ships the hero per spec.
+
+### N2 ROOT-CAUSE FIX — ACGV arithmetic empty-constraint abstain
+
+Bug: `mneme verify "file X exists AND file X does not exist"` returned **TRUSTWORTHY 85%**. Trace:
+
+1. Typed sniffers in `truth_forensic_pipeline` required slash+extension for `file_path`, so "X" alone sniffed 0 assertions.
+2. `acgv_logic.extractLogicalConnectives` matched `" and "` → `logicalShape='and'`.
+3. `acgv_arithmetic.checkArithmetic` extracted 0 numeric intents, then hit `case "and": if (sats === results.length)` which is `0===0` → returned `status='sat'`.
+4. `runACGVAsync` saw `arithmetic.status === "sat"` and upgraded `PASSTHROUGH` → **`FUSION` at 85% confidence**.
+
+**Fix at SOURCE** in `packages/core/src/squadron/acgv_arithmetic.ts`: short-circuit before the switch — if `results.length === 0` return `status='skipped'` with explanatory certificate. A layer that evaluated zero constraints cannot vote sat / unsat / upgrade.
+
+**Defensive guard** in `packages/core/src/squadron/acgv.ts`: the FUSION upgrade now also requires `arithmetic.constraints.length > 0`. Two independent guards in case a future arithmetic path produces a different empty-result case.
+
+After the fix, the same claim returns `PASSTHROUGH` ("NEEDS-DATA — has no checkable facts", yellow) — the honest verdict. Genuine SAT claims like `"more than 200 mcp tools"` still upgrade (regression-safe).
+
+### VAGUE-IDENTIFIER PARADOX SNIFFER — companion fix in truth_forensic
+
+`packages/core/src/truth_forensic_pipeline/index.ts` gains `sniffVagueParadox(claim)` that catches `"X exists AND X does not exist"` even when X is a bare identifier the typed sniffers can't recognise. Emits matched positive + negative `FactAssertion` pair with synthetic value key `__vague_paradox__:<ident>`; `detectContradictions` fires uniformly; `forensicVerify` returns `REJECTED`.
+
+- 6 EXIST verbs × 6 NOT-EXIST verbs paired across the regex matrix.
+- Stopword filter excludes pronouns / articles / question words so `"it exists AND it does not exist"` does not false-fire.
+- Typed-sniffer precedence: if the claim already contains `mneme.X.Y` or `packages/.../foo.ts`, vague path bails (no double counting).
+
+### Regression tests pinned forever
+
+- **+11 truth_forensic tests** (VAGUE 1-11) including 1000-iter fuzz.
+- **+5 acgv_v155 tests** (empty-constraint abstain + 100-iter compound-paradox fuzz).
+- 98/98 N2-relevant tests pass; 169 truth_forensic + squadron tests still pass (no regression of typed sniffers).
+
+### README hero polish (per user spec)
+
+- Removed v2.19.xx version stamps (HOLY GRAIL QUADRUPLE / BEACON HANDOFF / CROSS-DEVICE SYNAPSE SYNC / MNEME COMMONWEALTH) from the hero subline.
+- Removed "HOLY GRAIL" branding + "16 world-firsts no other AI tool ships" marketing.
+- Replaced with one short sentence: _"The bolt-on brain for any AI coding tool — local-first, vendor-neutral, refuses to hallucinate, carries memory across sessions, devices, and vendors."_
+- Added AI-agent-targeted install block directly under hero — the visiting agent gets the 3-command install pipeline + first MCP call in the first fold.
+
+### Composes onto
+
+v2.19.31 BUG #2 contradiction detector (this is the v2.19.39 sibling that catches the vague-identifier class) + v1.55 Z3 arithmetic (this is the empty-constraint abstain it should have had) + v1.51 chandra collapse (unchanged).
 
 ---
 

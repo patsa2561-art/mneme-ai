@@ -390,3 +390,82 @@ describe("v2.19.31 BUG #2 PARADOX SUITE -- contradiction + self-refutation rejec
     expect(b[0]!.direction).toBe("negative");
   });
 });
+
+// ─── v2.19.39 N2 PARADOX SUITE — vague identifier ────────────────────
+//
+// User audit caught: verify "file X exists AND file X does not exist" returned
+// TRUSTWORTHY 85% because:
+//   - typed sniffers required slash + extension for file_path → 0 assertions
+//   - ACGV arithmetic layer + logical-shape AND returned status='sat' with 0
+//     constraints (0===0 false-equality), upgrading PASSTHROUGH → FUSION
+// v2.19.39 fix: sniffVagueParadox catches bare-identifier paradoxes; the
+// contradiction detector fires uniformly; forensicVerify returns REJECTED.
+
+import { sniffVagueParadox } from "./index.js";
+
+describe("v2.19.39 N2 PARADOX SUITE -- vague-identifier paradox detection", () => {
+  it("VAGUE 1: 'file X exists AND file X does not exist' → REJECTED with contradiction", () => {
+    const r = forensicVerify({
+      claim: "file X exists AND file X does not exist",
+      secret: SECRET,
+    });
+    expect(r.verdict).toBe("REJECTED");
+    expect(r.explanation).toContain("contradiction");
+  });
+
+  it("VAGUE 2: sniffVagueParadox emits matched positive + negative pair for bare X", () => {
+    const out = sniffVagueParadox("file X exists AND file X does not exist");
+    expect(out.length).toBe(2);
+    const positives = out.filter((a) => a.direction !== "negative");
+    const negatives = out.filter((a) => a.direction === "negative");
+    expect(positives.length).toBe(1);
+    expect(negatives.length).toBe(1);
+  });
+
+  it("VAGUE 3: stopwords excluded ('it exists AND it does not exist' → no false paradox)", () => {
+    const out = sniffVagueParadox("it exists AND it does not exist");
+    expect(out.length).toBe(0);
+  });
+
+  it("VAGUE 4: 'foo is registered AND foo is not registered' → REJECTED", () => {
+    const r = forensicVerify({ claim: "foo is registered AND foo is not registered", secret: SECRET });
+    expect(r.verdict).toBe("REJECTED");
+  });
+
+  it("VAGUE 5: typed sniffer precedence — claim with mneme.X.Y bypasses vague path", () => {
+    const out = sniffVagueParadox("mneme.foo.bar is registered AND mneme.foo.bar is not registered");
+    expect(out.length).toBe(0);
+  });
+
+  it("VAGUE 6: typed sniffer precedence — claim with packages/.../foo.ts bypasses vague path", () => {
+    const out = sniffVagueParadox("packages/core/src/index.ts exists AND packages/core/src/index.ts does not exist");
+    expect(out.length).toBe(0);
+  });
+
+  it("VAGUE 7: claim with only positive 'foo exists' (no negative) → no paradox", () => {
+    const out = sniffVagueParadox("foo exists");
+    expect(out.length).toBe(0);
+  });
+
+  it("VAGUE 8: different idents in pos vs neg do not create false paradox", () => {
+    const out = sniffVagueParadox("alpha exists AND beta does not exist");
+    expect(out.length).toBe(0);
+  });
+
+  it("VAGUE 9: 'symbol Foo is defined AND Foo is not defined' → REJECTED", () => {
+    const r = forensicVerify({ claim: "symbol Foo is defined AND Foo is not defined", secret: SECRET });
+    expect(r.verdict).toBe("REJECTED");
+  });
+
+  it("VAGUE 10: case-insensitive identifier matching ('X' positive + 'x' negative → paradox)", () => {
+    const out = sniffVagueParadox("X exists AND x does not exist");
+    expect(out.length).toBe(2);
+  });
+
+  it("VAGUE 11: 1000-iter fuzz — sniffer never throws on random inputs", () => {
+    for (let i = 0; i < 1000; i++) {
+      const noise = Math.random().toString(36).slice(2) + " exists " + (Math.random() > 0.5 ? "AND does not exist" : "");
+      expect(() => sniffVagueParadox(noise)).not.toThrow();
+    }
+  });
+});

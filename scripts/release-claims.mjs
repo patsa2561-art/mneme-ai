@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.39": {
+    headline: "🟡 N2 ROOT-CAUSE + 🟢 README POLISH — ACGV arithmetic layer abstain (status='skipped' when results.length===0) plus defensive guard in runACGVAsync (constraints.length>0 before PASSTHROUGH→FUSION upgrade) plus VAGUE-IDENTIFIER PARADOX SNIFFER in truth_forensic that catches 'X exists AND X does not exist' even without typed shape. Plus README hero rewrite — short cool sentence + AI-agent install block. No new MCP tools (fix at source extends existing forensicVerify + checkArithmetic contracts); 16 regression tests + 1100-iter fuzz pinned forever.",
+    tools: [],
+  },
   "2.19.38": {
     headline: "🔌 SOCKETS RELEASE — 4 production sockets connect v2.19.37 plumbing to user real-world workflow. Browser userscript (Tampermonkey 1-click install) + Citizens contribute (daemon auto-runs end-of-Q) + Conscience auto-hook (failure→card to .mneme/cards/) + Mayor auto-vote (post-commit git hook + status line + bash + PowerShell shells). 12 new MCP tools + 74 deep tests + 4000+ fuzz iterations.",
     tools: [
