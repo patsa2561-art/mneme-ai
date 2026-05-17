@@ -129,63 +129,21 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 </details>
 
-## ⚡ 9 world-firsts shipped in 2 weeks (v2.18 → v2.19.23) · v2.19.23 ships the LIMBIC paradigm shift
+## 🤖 For AI Agents — discover what Mneme can do
 
-<table>
-<tr>
-<th width="20%">Primitive</th><th width="55%">Why it's a world-first</th><th width="25%">How to invoke</th>
-</tr>
-<tr>
-<td><b>🌱 DREAMSPACE (Self-Authoring Catalog · 6-stage pipeline)</b><br/><sub>v2.19.26 + v2.19.27 · PARADIGM SHIFT · COMPLETE</sub></td>
-<td><b>The first AI framework where tools are SPECIES that evolve.</b> 6-stage 24/7 nightly pipeline: 🔬 PROBE measures 4 metrics per tool (latency/entropy/error/utility → fitness) → 🗺 CARTOGRAPHER builds (tool, pattern) → quality map → 💞 PAIR ranks complementary tools via mutual_info → 🌱 GESTATION proposes chimera specs from gaps → 🦋 EVOLUTION classifies 4 lifecycle bands (🥚→🐣→🦋→🍂) + mates frequent pairs → 🌍 FEDERATE blesses elite via cross-instance quorum + exports starter pack to new users. <b>Tools are born, fitness-tested, mated, blessed, sunset.</b> Industry analysts will name this category in 2027.</td>
-<td><code>mneme.dreamspace.{probe_finalise,map_build,map_query,pair_rank,detect_gaps,propose_spec,gestation_cycle,classify,mate_pairs,evolution_cycle,federate_attest,federate_quorum,federate_starter,...}</code></td>
-</tr>
-<tr>
-<td><b>🧠 LIMBIC (Autonomic Nervous System)</b><br/><sub>v2.19.23</sub></td>
-<td><b>The first dev tool in history with autonomic nervous system.</b> 6 organs that turn Mneme from tool into organism: 🫁 BREATH (silent PID heartbeat + detached respawn on every CLI call — user never knows `mneme daemon start` exists), 🌊 THALAMUS (sensory router; daemon dead always wins priority), 🪞 PROPRIOCEPTION (unified CLI+MCP catalog — info drift to zero), ⚡ SPINAL (8 BUILTIN_RULES cold-start priors blend with frequency posteriors), 💤 HIPPOCAMPUS (yesterday's stable patterns → tomorrow's priors), 💊 HORMONAL (focus/fatigue/mood tune every organ). Each organ COMPOSES onto existing primitives. <b>3 years from now every dev tool will adopt this pattern.</b> First-mover advantage permanent.</td>
-<td><code>mneme.limbic.health</code><br/><code>mneme.breath.{decide,stats}</code><br/><code>mneme.thalamus.classify</code><br/><code>mneme.proprioception.{build,find,stats}</code><br/><code>mneme.spinal.{blend,list_rules}</code><br/><code>mneme.hippocampus.consolidate</code><br/><code>mneme.hormonal.{update,tune,neutral}</code></td>
-</tr>
-<tr>
-<td><b>🥇 REFLEX (Automatic Pre-Execution)</b><br/><sub>v2.19.22 · FLAGSHIP</sub></td>
-<td><b>The first AI tool that pre-executes likely follow-up tools BEFORE the agent asks.</b> Pipeline: user event (file_save / git_commit / terminal_command) → HMAC-chained pheromone store records (event, followup) → predictFollowup returns top-N by frequency → budget-bound concurrent prefetch (200ms cap) → TTL-bounded HMAC-signed cache → AI agent gets INSTANT HIT (0ms vs 20ms cold). <b>MEASURED 100% cache integrity + 100% prediction determinism + 100% hit rate on warm trail + p50 cached &lt; cold p50.</b> Cloud SaaS competitors cannot ship this — no event hooks, no local pheromone trail, no daemon. Mneme has all three. Structural moat, not algorithmic.</td>
-<td><code>mneme.reflex.{observe,predict,cache_write,cache_read,stats}</code></td>
-</tr>
-<tr>
-<td><b>🛡 CAPTION SEVERANCE PROTOCOL</b><br/><sub>v2.19.18</sub></td>
-<td><b>First-namer of CAPTION-AUTHORITY ATTACK (CAA)</b> — the unnamed multimodal vulnerability class of 2026 (seller posts <code>[100% AUTHENTIC]</code> sticker; every vision LLM silently trusts it). 6-step pipeline: OCR extract → naked-image fingerprint → <b>XSS-style claim escape</b> → federated provenance gate → adversarial 2-response diff → entropy-as-desperation. Output: HMAC-signed VISION TRUST CERTIFICATE with <code>finalCredibility</code> + <code>aiPromptInjection</code> ready to prepend. 4-layer routing defense (welcome PROTOCOL + intent phrases EN+TH + reverse-wrapper rule + NEGEV enforcement) ensures every compliant AI calls CSP. <b>The patent-moat equivalent of being W3C-org for HTML XSS in 1995.</b></td>
-<td><code>mneme.caption.{sever,extract,escape,adversarial_check,provenance,verify_cert,desperation_score}</code></td>
-</tr>
-<tr>
-<td><b>🔬 TRUTH FORENSIC</b><br/><sub>v2.19.15</sub></td>
-<td>The verify command that <b>calls its own bluff</b>. 5 sniffers extract verifiable assertions from claim text (<code>mneme.X.Y</code> exists, "N mneme.X.* tools", version) and check each against Mneme's <b>own live MCP catalog</b>. <b>No LLM cost</b>. Any refuted = REJECTED with the defeating evidence. The 'TRUSTWORTHY-on-lies' bug class becomes structurally impossible.</td>
-<td><code>mneme verify "&lt;claim&gt;"</code><br/><sub>or <code>mneme.truth.forensic</code></sub></td>
-</tr>
-<tr>
-<td><b>🌌 FEDERATED TRUTH GRAVITY</b><br/><sub>v2.19.16</sub></td>
-<td><b>The moat that grows with usage.</b> Every Mneme instance becomes a peer in a cross-attestation mesh. HMAC-signed attestations about <i>public facts only</i> (whitelist of 6 claim types prevents private-code leak). Quorum verdict (6 bands), truth-gravity score with 90-day half-life decay. <b>Copies start at N=1; Mneme starts at N.</b></td>
-<td><code>mneme.federated.{identity,attest,quorum,gravity}</code></td>
-</tr>
-<tr>
-<td><b>🧬 LIVING MCP</b><br/><sub>v2.19.11</sub></td>
-<td>First MCP layer where wrappers have <b>biological lifecycle</b>. Mortal wrappers born with TTL (24h), reincarnate with drifted signatures, parent stays callable for 1 deprecation gravity cycle before dying. AI agents that re-read <code>tools.list</code> = adapt; AI agents that bake stale schemas = lose adaptiveness score. <b>Prompt-injection attacks that hard-code tool names auto-expire.</b></td>
-<td><code>mneme.mortal.{birth,tick,resolve,calibration}</code></td>
-</tr>
-<tr>
-<td><b>❌ NEGATIVE-EVIDENCE FIREWALL</b><br/><sub>v2.19.13</sub></td>
-<td>Inverts burden of proof. A claim is ACCEPTED <b>only when every refutation has been searched and NOT found</b>. The companion <b>TOKEN-TAX</b> charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. <b>Vendors get skin in the game.</b> The UX cost is brutal — which is why no vendor will ship it.</td>
-<td><code>mneme.negev.{gate,tax_init,tax_charge,tax_status}</code></td>
-</tr>
-<tr>
-<td><b>🦠 SPIKING NEURAL EMBEDDER</b><br/><sub>v2.19.13 + v2.19.16</sub></td>
-<td>First MCP embedder with a <b>pure-TS leaky-integrate-and-fire SNN</b> (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge, no <code>require not defined</code>. Adversarially tunable via gradient-free triplet finetune. <b>Per-repo phenotype unique to your corpus.</b> Auto-promoted when bundled WASM fails — never falls to hash again.</td>
-<td><code>mneme.snn.{embed,similarity,finetune}</code><br/><sub>or <code>--embedder snn</code></sub></td>
-</tr>
-<tr>
-<td><b>🎯 TOOL REACHABILITY GATE</b><br/><sub>v2.19.17</sub></td>
-<td>First MCP framework that measures whether its own tools are <b>USER-VISIBLE</b>. 5 surface scanners count per-tool reachability across CLI router / welcome syllabus / whats_new / suggested-next / capabilities. Ritual gate <code>phase3.no-ghost-tools-v218</code> BLOCKS publish on any v2.18+ tool with score=0. <b>The 'feature-shipped-but-invisible' bug class becomes structurally impossible.</b></td>
-<td><code>mneme.reachability.{scan,ghost_list,surface_audit}</code></td>
-</tr>
-</table>
+After installing Mneme + restarting your MCP client, the first three calls below teach you everything you need:
+
+1. **`mneme.welcome`** — pseudonymous identity + agent instruction + first-call ritual
+2. **`mneme.capabilities`** — full syllabus of every tool family (10 LIMBIC organs + 6 DREAMSPACE stages + 40+ legacy families)
+3. **`mneme.tier.list_by_tier`** with `tier="starter"` — the 30-tool curated subset (the rest of 602 tools are available; this is the recommended first surface)
+
+For specific surfaces:
+- **🧠 LIMBIC (autonomic nervous system)** — `mneme.limbic.health` for one-line organism digest; then `mneme.{breath,thalamus,proprioception,spinal,hippocampus,hormonal,endocrine}.*`
+- **🌱 DREAMSPACE (self-authoring catalog)** — `mneme.dreamspace.list_bands` for the 4 lifecycle bands; then `mneme.dreamspace.{probe_*,map_*,pair_*,gestation_cycle,evolution_cycle,federate_*}` for the 6-stage pipeline
+- **🔬 What's new this week** — `mneme.whats_new` returns a structured digest the AI can quote verbatim to non-technical users
+- **🎯 Smart dispatch** — when in doubt, `mneme.smart_do <natural-language>` figures out which tool(s) to invoke
+
+See [CHANGELOG.md](CHANGELOG.md) for the complete world-firsts table (10 paradigm-shift primitives shipped in 2 weeks; pruned from README to keep this page lean).
 
 <details>
 <summary><b>📜 Full release history — v2.10 → v2.19.27 (click to expand)</b></summary>
