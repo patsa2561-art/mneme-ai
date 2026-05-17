@@ -205,6 +205,25 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.32": {
+    headline: "🧬 BEACON HANDOFF FOUNDATION — fresh-context snapshot envelope (HMAC-signed, freshness-gated) + 6-char human-friendly pair code (confusable-free alphabet, one-shot, 30s TTL) + 4-emoji SAS MITM defense + device-adaptive PWA (Web Share / cursor:// / vscode:// / claude-code:// / mneme:// — zero CDN, offline-safe) + HMAC-chained consciousness fork lineage (parent→child→reconcile via SYNAPSE SYNC). 14 new MCP tools + 80 deep tests + 10-scenario E2E system test. The foundation v2.19.33+ CLI commands will build on; turns BEACON from never-used into real cross-device brain transfer (mobile + laptop + desktop in 2 taps).",
+    tools: [
+      "mneme.handoff.snapshot",
+      "mneme.handoff.verify",
+      "mneme.handoff.freshness",
+      "mneme.handoff.render",
+      "mneme.handoff.pair_generate",
+      "mneme.handoff.pair_bind",
+      "mneme.handoff.pair_lookup",
+      "mneme.handoff.pair_mark_used",
+      "mneme.handoff.sas_emoji",
+      "mneme.handoff.pwa_html",
+      "mneme.fork.record",
+      "mneme.fork.reconcile",
+      "mneme.fork.find_descendants",
+      "mneme.fork.verify_ledger",
+    ],
+  },
   "2.19.31": {
     headline: "🚨 BUG #1 BEACON token bypass FIXED (root path / no longer leaks soul prompt; v2.9 server pre-fix matched `|| url === '/'` allowing UNAUTHENTICATED LAN exfiltration) + 🚨 BUG #2 Liar Paradox detector (truth.forensic now refuses TRUSTWORTHY on self-contradicting claims: 'file X exists AND file X does not exist' → REJECTED via sniffNegativeAssertions + detectContradictions; PARADOX TEST SUITE = 10-case permanent CI regression guard) + 🧬 Phase D CROSS-DEVICE SYNAPSE SYNC (mobile + laptop + desktop unified brain — CRDT last-strongest-wins merge; permanent=true sticky; observationCount cumulative; commutative + associative + idempotent — measured; HMAC-signed envelopes; forged exports auto-dropped; DIASPORA transport adapter for git-branch/HTTP/QR transport). 26 deep tests including 3-device SYSTEM TEST (mobile mneme.ask 5x + laptop mneme.truth.forensic 15x → permanent + desktop mneme.guard 8x → all 3 synapses unified, 28 cumulative obs). 6 new MCP tools.",
     tools: [

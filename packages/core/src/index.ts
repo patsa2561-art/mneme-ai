@@ -775,6 +775,15 @@ export * as hiveCourt from "./hive_court/index.js";
 //   CRDT last-strongest-wins merge for mobile + laptop + desktop unified brain.
 //   HMAC-signed envelopes + DIASPORA-shaped transport adapter.
 export * as synapseSync from "./synapse_sync/index.js";
+// v2.19.32 BEACON HANDOFF — fresh-context QR transfer (parent → child device)
+//   - handoffSnapshot:    pure-fn composer of conversation+git+activity envelope
+//   - pairCode:           6-char human-friendly + SAS emoji + one-shot lifecycle
+//   - handoffPwa:         device-adaptive HTML PWA with Web Share + deep links
+//   - consciousnessFork:  HMAC-chained parent/child fork lineage (wild axis)
+export * as handoffSnapshot from "./handoff_snapshot/index.js";
+export * as pairCode from "./pair_code/index.js";
+export * as handoffPwa from "./handoff_pwa/index.js";
+export * as consciousnessFork from "./consciousness_fork/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

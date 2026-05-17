@@ -9,9 +9,9 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.31&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-13076%2B%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-633-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.32&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-13250%2B%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-647-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)
 [![demo](https://img.shields.io/badge/demo-patsa2561--art.github.io%2Fmneme--ai-8957e5?style=for-the-badge)](https://patsa2561-art.github.io/mneme-ai/)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
@@ -19,7 +19,7 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-<sub>🧬 **CROSS-DEVICE SYNAPSE SYNC (v2.19.31 NEW)** · ⚱ **MNEME COMMONWEALTH (v2.19.30)** · 🌱 **DREAMSPACE self-authoring catalog** · 🧠 **LIMBIC autonomic nervous system** · 🥇 **REFLEX predictive prefetch** · 🛡 **CAPTION-AUTHORITY ATTACK defense** · 🌌 **Network-effect moat** · 🧬 **Living MCP** · 🔬 **Truth forensics** · 🦠 **Pure-TS embedder** · 🎯 **Ghost-tool gate** — 11 world-firsts no other AI tool ships.</sub>
+<sub>🧬 **BEACON HANDOFF (v2.19.32 NEW — parent→QR→child cross-device brain transfer)** · 🧬 **CROSS-DEVICE SYNAPSE SYNC (v2.19.31)** · ⚱ **MNEME COMMONWEALTH (v2.19.30)** · 🌱 **DREAMSPACE self-authoring catalog** · 🧠 **LIMBIC autonomic nervous system** · 🥇 **REFLEX predictive prefetch** · 🛡 **CAPTION-AUTHORITY ATTACK defense** · 🌌 **Network-effect moat** · 🧬 **Living MCP** · 🔬 **Truth forensics** · 🦠 **Pure-TS embedder** · 🎯 **Ghost-tool gate** — 12 world-firsts no other AI tool ships.</sub>
 
 <br/>
 
@@ -205,6 +205,67 @@ mneme.boomerang.record({"vendor":"<peer>","input":"...","output":"..."})
 mneme.boomerang.build_context({"vendor":"<peer>"})
 # → ready-to-inject context filtering peer's own records out
 ```
+
+### Step 8 — Cross-DEVICE brain handoff (v2.19.32 NEW · BEACON HANDOFF)
+
+**Install once on every device:**
+```
+npm i -g mneme-ai
+```
+
+**Parent side (your laptop with Claude Code, before you leave for the train):**
+```
+# 1. Capture FRESH context (live conversation + git + activity)
+mneme.handoff.snapshot({
+  "parentDeviceId": "macbook-pro",
+  "conversation": [{"role":"user","text":"continuing on phone","ts": 1700000000000}],
+  "activeIntent": "shipping v2.19.32",
+  "gitState": {"branch":"main","recentCommits":["feat(v2.19.32): BEACON HANDOFF"]},
+  "capabilities": {"mnemeVersion":"2.19.32","toolFamilies":["handoff","fork","synapse"]}
+})
+# → returns { envelopeId, sig, ..., }
+
+# 2. Bind a 30-second human-friendly pair code (CAT-DAD)
+mneme.handoff.pair_bind({"envelopeSig": <sig>, "envelopeId": <id>})
+
+# 3. Generate device-adaptive scanner page (caller hosts via local HTTP)
+mneme.handoff.pwa_html({
+  "body": <output of mneme.handoff.render>,
+  "pairCode": <code>,
+  "sasEmoji": <output of mneme.handoff.sas_emoji>,
+  "expiresInMs": 30000
+})
+
+# 4. Record the fork event (lineage for future SYNAPSE SYNC)
+mneme.fork.record({"ledger":[], "parentDeviceId":"macbook-pro", "childDeviceId":"<scanned-by>", "envelopeId":<id>})
+```
+
+**Child side (your phone with Gemini, after scanning QR):**
+```
+# 1. Look up the pair code (handles lowercase/no-dash/spaces)
+mneme.handoff.pair_lookup({"records": <store>, "code":"cat-dad"})
+# → verdict: found / not_found / expired / already_used / tampered
+
+# 2. Verify envelope HMAC
+mneme.handoff.verify({"envelope": <envelope>})
+
+# 3. Check freshness (refuse if expired)
+mneme.handoff.freshness({"envelope": <envelope>})
+# → reason: fresh / stale / expired / future_clock_skew
+
+# 4. Render for child vendor (Gemini / GPT / etc) — paste directly
+mneme.handoff.render({"envelope": <envelope>})
+# → returns markdown the child AI ingests as its onboarding prompt
+
+# 5. Burn the code (one-shot replay defense)
+mneme.handoff.pair_mark_used({"record": <record>, "usedByDeviceId":"galaxy-s24"})
+```
+
+**Security**: 4-emoji SAS visual MITM defense — `mneme.handoff.sas_emoji({envelopeSig})` returns 4 emoji; user compares parent + child screens before accepting (~16M combinations defend MITM even on hostile WiFi). Token-required transport (BUG #1 fix v2.19.31 — no root-path bypass). One-shot pair codes — replay returns `already_used`.
+
+**Future reconciliation**: when child eventually merges its brain back via v2.19.31 SYNAPSE SYNC, `mneme.fork.reconcile({ledger, forkId})` closes the loop. `mneme.fork.find_descendants({ledger, parentDeviceId})` discovers active forks needing merge.
+
+Phrases that auto-route through this: `handoff to phone` / `share brain` / `cross device sync` / `ส่งบทสนทนาให้มือถือ` / `ย้ายไป gemini` → AI agent runs the snapshot → pair_bind → pwa_html → fork.record pipeline.
 
 <details>
 <summary><b>📚 Complete tool family map (v2.18 → v2.19.17 · click to expand)</b></summary>

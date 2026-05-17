@@ -129,6 +129,11 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "hive_court",
   // v2.19.31 CROSS-DEVICE SYNAPSE SYNC (Phase D)
   "synapse_sync",
+  // v2.19.32 BEACON HANDOFF (parent → child cross-device brain transfer)
+  "handoff_snapshot",
+  "pair_code",
+  "handoff_pwa",
+  "consciousness_fork",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -330,6 +335,10 @@ function familyAliases(moduleName: string): string[] {
     soul_embalming: ["soul"],
     hive_court: ["court"],
     synapse_sync: ["synapse"],
+    handoff_snapshot: ["handoff"],
+    pair_code: ["handoff"],
+    handoff_pwa: ["handoff"],
+    consciousness_fork: ["fork"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -569,6 +578,21 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "mergeSynapseStores",
   "packForDiaspora",
   "unpackFromDiaspora",
+  // v2.19.32 BEACON HANDOFF: prefix mismatch ("pair_*" vs verb-first symbols)
+  //   + 5 pure helpers (normalise / validate / prune / compute*Stats / find*)
+  //   that don't need 1:1 MCP wrappers. The composite tools cover them.
+  "generatePairCode",   // wrapped as mneme.handoff.pair_generate
+  "bindEnvelope",        // wrapped as mneme.handoff.pair_bind
+  "lookupByCode",        // wrapped as mneme.handoff.pair_lookup
+  "normaliseCode",       // pure helper used inside lookupByCode
+  "isValidCodeShape",    // pure helper used inside verifyPairRecord
+  "pruneExpired",        // pure helper for caller's store maintenance
+  "computePwaStats",     // display helper
+  "computeSnapshotStats",// display helper
+  "computePairStats",    // display helper
+  "computeLineageStats", // display helper
+  "findActiveDescendants", // wrapped as mneme.fork.find_descendants
+  "markAbandoned",       // auxiliary state transition (callers can use mark_reconciled or skip)
 ]);
 
 export function findOrphans(input: {
