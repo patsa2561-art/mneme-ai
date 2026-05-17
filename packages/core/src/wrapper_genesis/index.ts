@@ -94,6 +94,7 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "provenance_dna",
   "textron_captcha",
   "jackpot",
+  "snn_auto_promote",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -269,6 +270,7 @@ function familyAliases(moduleName: string): string[] {
     reverse_caption_injection: ["rci"],
     provenance_dna: ["provenance"],
     textron_captcha: ["textron"],
+    snn_auto_promote: ["snn"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -414,6 +416,13 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   //     accessed via mneme.textron.multiplier internally, not standalone.
   "emptyRegistry", "fingerprintSeller",
   "emptyTranscript", "vendorTranscript",
+  // v2.19.21 snn-auto-promote — wrappers exist (mneme.snn.promote_decide +
+  // mneme.snn.promote_tier) but the action words are REVERSED relative to the
+  // camelCase symbols (decidePromotion vs promote_decide; tierFromName vs
+  // promote_tier), so the substring-actionMatch heuristic misses them.
+  // emptyPromotionHistory + appendPromotion are internal ledger primitives the
+  // CLI (status.ts) calls in-process — not user-facing MCP tools.
+  "tierFromName", "decidePromotion", "emptyPromotionHistory", "appendPromotion",
 ]);
 
 export function findOrphans(input: {

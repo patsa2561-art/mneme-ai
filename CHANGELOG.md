@@ -1,3 +1,76 @@
+## v2.19.21 — 2026-05-17 — 🆙🪞 GAP CLOSER: SNN AUTO-PROMOTE + CLI FAMILY-CLASH RESOLVER
+
+Closes 2 sticky gaps from the v2.19.20 user audit at SOURCE — no patch on patch on patch. Both layers are pure additive, surgical, root-cause fixes.
+
+### 🆙 SNN AUTO-PROMOTE — the W5 ghost-tier bug killed at SOURCE
+
+`packages/core/src/snn_auto_promote/`. User audit (W5) reported `mneme status` shows `hash:fnv-256 [FALLBACK]` even when SNN is shipped and the v2.19.16 BundledOrSnnEmbedder ladder picks SNN at runtime. v2.19.17 added a runtime probe but never wrote the resolution back to disk — so every status call re-resolved and every fresh process started cold.
+
+- `tierFromName(name)` — parses an embedder name (`snn:lif-32x64`) → tier label.
+- `decidePromotion({savedProvider, runtimeResolvedName})` — compares saved-provider rank against runtime-resolved tier rank:
+  - **Rank table**: `openai=5 / ollama=4 / auto=3 / snn=2 / bundled=2 / hash=1 / unknown=1`
+  - **Promotes when**: saved is `hash` or `auto` AND runtime resolved STRICTLY higher
+  - **REFUSES TO DOWNGRADE**: if saved rank ≥ runtime rank and saved is a user pin (≠ `auto`), no auto-write. The user's explicit pin always wins.
+- `appendPromotion` / `verifyPromotionHistory` — HMAC-chained promotion ledger so the daemon can audit + roll back if quality degrades.
+- `formatDecisionLine` — `⬆ PROMOTE` / `🛡 REFUSED` / `· no-op` tagged display.
+- **`mneme status` writes the promoted tier to `.mneme/config.json` automatically** when the ladder picks higher than saved (composes onto v2.19.16 BundledOrSnnEmbedder + v2.19.17 runtime probe).
+- 17 deep tests + **MEASURED 100% downgrade refusal across 8 (saved, runtime) tier pairs + MEASURED 100% promote correctness on hash→snn / hash→ollama / hash→openai**.
+
+### 🪞 CLI FAMILY-CLASH RESOLVER — 1-line router fix unblocks 4 SYNCRETIC families
+
+`packages/cli/src/commands/universal_mcp_subcommands.ts`. User audit reported 4 SYNCRETIC families (`ghost` / `trinity` / `insurance` / `boomerang`) as `0 wrappers across 5 patches`. The wrappers ARE registered (`packages/mcp/src/tools/_v219_syncretic.ts`) — but the universal router had `if (existing) continue;` which SKIPPED any MCP family whose name clashed with a legacy top-level command (`mneme ghost` = ghost-code lens; `mneme dream` / `oracle` / `constitution` similar).
+
+- **Before**: legacy-name clash → SKIP MCP family → wrapper exists but is unreachable from CLI.
+- **After**: MOUNT MCP subcommands onto the EXISTING legacy parent. `mneme ghost` still runs the legacy ghost-code lens; `mneme ghost distill` now dispatches to the MCP wrapper.
+- `RouterStats.mountedOnExisting: string[]` — new observability field reports which families were mounted (audit-grade).
+- Duplicate-subcommand guard prevents double-registration when MCP family + legacy parent overlap on the SAME action name.
+- 9 legacy top-level commands surveyed (`ghost / dream / oracle / constitution / wisdom / audit / anomaly / forensics / insights`); 4 SYNCRETIC families immediately unblocked.
+
+### 4 new MCP audit tools
+
+`packages/mcp/src/tools/_v1921_gap_closer.ts`:
+- `mneme.snn.promote_decide` — should the saved config be auto-promoted to runtime tier? (refuses to downgrade)
+- `mneme.snn.promote_tier` — parse an embedder name into its tier label
+- `mneme.cli.clash_audit` — which MCP families clash with legacy CLI commands?
+- `mneme.cli.mounted_families` — which v2.18+ families auto-mounted onto legacy parents? (companion to `mneme.reachability.scan`)
+
+Claim manifest now **164/164 by exact name** across v2.18 → v2.19.21. AUTO-GENESIS verified zero v2.18+ orphans (525 core exports / 445 MCP tools / 548 total CLI-visible tools). Ritual: **22/22 GREEN** locally. **11902/11902 tests pass — fully green, no flakes.**
+
+### AURELIAN audit
+
+`packages/core/src/cosmic/aurelian_v1921.test.ts` — both modules score SHIP across all 4 axes (delta / worldClass / wisdom / wildness ≥ 80); rollup ship=2.
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** auto-promote with refuse-to-downgrade invariant + MOUNT-on-existing-parent router. No CLI framework (commander / yargs / oclif) mounts MCP subcommands onto opaque legacy parents because they treat parents as black boxes. Mneme owns both sides, can merge.
+- 🧠 **Wiser, not patched:** v2.19.17 added the runtime probe; v2.19.21 closes the write-back gap rather than adding another probe surface. The 4 SYNCRETIC families needed the router fixed, not 4 more wrapper patches.
+- 🛠 **Self-fix root cause:** "status reads saved string but ladder resolves at runtime, no write-back" → fixed at SOURCE via `decidePromotion` + `writeConfig`. "router skipped on family-name clash with legacy command" → fixed at SOURCE via MOUNT-on-existing.
+- 🤝 **Co-working:** composes onto v2.19.16 BundledOrSnnEmbedder + v2.19.17 TOOL REACHABILITY ENGINE (cli_router scanner now sees mounted families) + v2.19.15 TRUTH FORENSIC (audit tools surface clash resolution) + AUTO-GENESIS (no orphan flagged).
+- 📚 **Always studying:** *every gate checks the thing you measure. orphan gate (wrapper exists) → next failure 'wrapper but no surface'. reachability gate (wrapper has surface) → next failure 'surface exists but router skipped it'. v2.19.21 measures the next frontier: 'router actually mounted what it found'. Each layer of measurement reveals the next layer of invisibility.*
+
+### How to install / upgrade
+
+```
+mneme.system.upgrade({"mode":"install","force":true})
+# CRITICAL: RESTART MCP client.
+
+# Verify the gap closure:
+mneme status                                    # now writes resolved tier to .mneme/config.json
+mneme cli mounted_families                      # lists v2.18+ families auto-mounted onto legacy parents
+mneme cli clash_audit                           # which MCP families clash with legacy CLI commands
+mneme snn promote_decide --json '{"savedProvider":"hash","runtimeResolvedName":"snn:lif-32x64"}'
+
+# The 4 previously-blocked SYNCRETIC families now work as subcommands:
+mneme ghost distill --json '{...}'              # MCP wrapper (legacy `mneme ghost` still runs ghost-code lens)
+mneme trinity judge --json '{...}'
+mneme insurance quote --json '{...}'
+mneme boomerang record --json '{...}'
+
+npm install @mneme-ai/mneme-ai@2.19.21
+```
+
+---
+
 ## v2.19.20 — 2026-05-16 — 🪞🧬🎓 SUPPORTING TRIO: RCI + PROVENANCE-DNA + TEXTRON CAPTCHA
 
 Mneme becomes the **multimodal hallucination defense infrastructure layer**. 3 supporting primitives compose onto v2.19.18 CSP + v2.19.19 inpainter + v2.19.16 FEDERATED to defend against every angle of CAPTION-AUTHORITY ATTACK.

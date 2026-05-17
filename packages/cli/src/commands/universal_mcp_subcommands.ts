@@ -58,28 +58,57 @@ function groupByFamily(tools: ToolLike[]): Map<string, ToolLike[]> {
  * Register `mneme <family>` parent commands + `mneme <family> <action>` children
  * for every MCP tool family. Idempotent (Commander silently dedupes).
  */
-export function registerUniversalMcpSubcommands(program: Command, tools: ToolLike[]): { families: number; actions: number } {
+export interface RouterStats {
+  families: number;
+  actions: number;
+  /** v2.19.21 — families whose MCP wrappers were mounted onto an EXISTING legacy parent. */
+  mountedOnExisting: string[];
+}
+
+export function registerUniversalMcpSubcommands(program: Command, tools: ToolLike[]): RouterStats {
   const families = groupByFamily(tools);
   let actionCount = 0;
+  const mountedOnExisting: string[] = [];
   for (const [family, familyTools] of families) {
-    // Some families clash with existing top-level commands (e.g., `tools`, `do`,
-    // `init`, `guard`). Skip those — the existing commands take precedence.
+    // v2.19.21 — CLI FAMILY-CLASH RESOLVER.
+    //
+    // If a family clashes with an existing legacy top-level command (e.g.,
+    // `ghost` collides with the ghost-code lens; `dream` collides with the
+    // dream-research subcommand; `oracle` collides with revenue-primitive
+    // CLI; `constitution` collides with v0.x constitution editor), DO NOT
+    // skip the family. Instead, MOUNT the MCP subcommands onto the existing
+    // parent. Commander dispatches first-positional-arg to a registered
+    // subcommand when the name matches; falls back to the parent's own
+    // action otherwise. So `mneme ghost` still runs the legacy ghost-code
+    // lens, but `mneme ghost distill` now dispatches to the MCP wrapper.
+    //
+    // Before v2.19.21: 4 SYNCRETIC families (ghost/trinity/insurance/
+    // boomerang) appeared as `0 wrappers` because the legacy ghost command
+    // blocked auto-routing. v2.19.21 closes the gap at SOURCE.
     const existing = program.commands.find((c) => c.name() === family);
-    if (existing) continue;
-
-    const parent = program.command(family)
-      .description(`Mneme ${family} family — ${familyTools.length} action(s). Run \`mneme ${family} --help\` for actions, or \`mneme ${family} <action> --json '{...}'\` to invoke.`)
-      .action(() => {
-        process.stdout.write(`📚 mneme.${family}.* · ${familyTools.length} action(s):\n`);
-        for (const t of familyTools) {
-          const action = t.name.split(".")[2] ?? "";
-          process.stdout.write(`  ${action.padEnd(28)} ${(t.description ?? "").slice(0, 80)}\n`);
-        }
-        process.stdout.write(`\nInvoke: mneme ${family} <action> --json '{...}'\n`);
-      });
+    let parent: Command;
+    if (existing) {
+      parent = existing;
+      mountedOnExisting.push(family);
+    } else {
+      parent = program.command(family)
+        .description(`Mneme ${family} family — ${familyTools.length} action(s). Run \`mneme ${family} --help\` for actions, or \`mneme ${family} <action> --json '{...}'\` to invoke.`)
+        .action(() => {
+          process.stdout.write(`📚 mneme.${family}.* · ${familyTools.length} action(s):\n`);
+          for (const t of familyTools) {
+            const action = t.name.split(".")[2] ?? "";
+            process.stdout.write(`  ${action.padEnd(28)} ${(t.description ?? "").slice(0, 80)}\n`);
+          }
+          process.stdout.write(`\nInvoke: mneme ${family} <action> --json '{...}'\n`);
+        });
+    }
 
     for (const tool of familyTools) {
       const action = tool.name.split(".")[2]!;
+      // Skip if action name already registered on this parent (e.g., when a
+      // legacy command happens to have an option with the same name, or
+      // re-running registration in the same process).
+      if (parent.commands.find((c) => c.name() === action)) continue;
       const cmd = parent.command(action)
         .description((tool.description ?? "").slice(0, 200))
         .option("--json <jsonArgs>", "Tool arguments as a JSON object string")
@@ -108,5 +137,5 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
       actionCount++;
     }
   }
-  return { families: families.size, actions: actionCount };
+  return { families: families.size, actions: actionCount, mountedOnExisting };
 }

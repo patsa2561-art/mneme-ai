@@ -110,10 +110,13 @@ export async function statusCommand(opts: { cwd: string }): Promise<number> {
 
   // v2.19.17 — actually PROBE the resolved ladder, not just read config string.
   // Fixes the W5 audit: "mneme status says hash:fnv-256 [FALLBACK] but SNN is shipped".
-  // Now status reports the RUNTIME-resolved provider, including auto-promoted SNN.
+  // v2.19.21 — additionally AUTO-PROMOTE the config when ladder resolves to a
+  // higher tier than what's saved. Refuses to downgrade (user's pin wins).
   if (cfg.embeddings.provider === "auto" || cfg.embeddings.provider === "hash") {
     try {
       const { resolveEmbedder } = await import("@mneme-ai/embeddings");
+      const { snnAutoPromote } = await import("@mneme-ai/core");
+      const { writeConfig } = await import("../config.js");
       const resolved = await resolveEmbedder({ provider: cfg.embeddings.provider });
       const actualName = resolved.name;
       const actualDim = resolved.dimensions;
@@ -124,7 +127,17 @@ export async function statusCommand(opts: { cwd: string }): Promise<number> {
         : actualName.startsWith("hash:") ? "★★"
         : "?";
       process.stdout.write(kv("resolved", `${kleur.bold(actualName)}  ${pill(tierBadge, actualName.startsWith("hash:") ? "info" : "ok")}  ${kleur.gray(`${actualDim} dim`)}`) + "\n");
-    } catch (e) {
+      // v2.19.21 auto-promote: if saved=hash and runtime resolved to higher tier, write back.
+      const decision = snnAutoPromote.decidePromotion({
+        savedProvider: cfg.embeddings.provider,
+        runtimeResolvedName: actualName,
+      });
+      if (decision.shouldPromote && decision.recommendedProvider) {
+        cfg.embeddings.provider = decision.recommendedProvider as typeof cfg.embeddings.provider;
+        writeConfig(meta.rootPath, cfg);
+        process.stdout.write(kv("auto-promoted", `${kleur.bold(decision.recommendedProvider)}  ${pill("WRITTEN", "ok")}  ${kleur.gray(decision.reason.slice(0, 80))}`) + "\n");
+      }
+    } catch (_e) {
       // never block status on a resolver error
       process.stdout.write(kv("resolved", `${kleur.gray("(probe failed — fall back to config provider)")}`) + "\n");
     }

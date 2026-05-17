@@ -9,9 +9,9 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.20&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-11843%2B%20passing-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-544-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.21&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-11902%2F11902%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-548-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)
 [![demo](https://img.shields.io/badge/demo-patsa2561--art.github.io%2Fmneme--ai-8957e5?style=for-the-badge)](https://patsa2561-art.github.io/mneme-ai/)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
@@ -129,7 +129,7 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 
 </details>
 
-## ⚡ 7 world-firsts shipped in 2 weeks (v2.18 → v2.19.18)
+## ⚡ 7 world-firsts shipped in 2 weeks (v2.18 → v2.19.18) · v2.19.21 closes 2 sticky audit gaps at SOURCE
 
 <table>
 <tr>
@@ -173,10 +173,11 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 </table>
 
 <details>
-<summary><b>📜 Full release history — v2.10 → v2.19.17 (click to expand)</b></summary>
+<summary><b>📜 Full release history — v2.10 → v2.19.21 (click to expand)</b></summary>
 
 | Version | Headline |
 |---|---|
+| **v2.19.21** | GAP CLOSER — SNN AUTO-PROMOTE (writes resolved tier to config; refuses to downgrade) + CLI FAMILY-CLASH RESOLVER (router mounts MCP subcommands onto legacy parents; unblocks 4 SYNCRETIC families) |
 | **v2.19.20** | SUPPORTING TRIO — RCI + PROVENANCE-DNA + TEXTRON CAPTCHA (Mneme = multimodal hallucination defense infrastructure layer) |
 | **v2.19.19** | CAPTION INPAINT — Phase A+B complete (vendor-agnostic adapter + pure-TS PATCH HARVEST FILL, 100% measured accuracy) |
 | **v2.19.18** | CAPTION SEVERANCE PROTOCOL — defeats CAPTION-AUTHORITY ATTACK (CAA) |

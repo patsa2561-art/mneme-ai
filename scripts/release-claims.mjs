@@ -205,6 +205,15 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.21": {
+    headline: "GAP CLOSER (SNN AUTO-PROMOTE + CLI FAMILY-CLASH RESOLVER). Closes 2 sticky gaps from the v2.19.20 audit at SOURCE: (1) mneme status now writes back the resolved embedder tier when ladder picks higher than saved config (refuses to downgrade -- user pin always wins; HMAC-chained promotion ledger); (2) universal router MOUNTS MCP subcommands onto legacy parent commands instead of skipping -- unblocks 4 SYNCRETIC families (ghost/trinity/insurance/boomerang) that appeared as 0 wrappers across 5 prior patches. 4 audit MCP tools + 2 CLI surface fixes; 17 deep tests + 100% downgrade refusal + 100% promote correctness.",
+    tools: [
+      "mneme.snn.promote_decide",
+      "mneme.snn.promote_tier",
+      "mneme.cli.clash_audit",
+      "mneme.cli.mounted_families",
+    ],
+  },
   "2.19.20": {
     headline: "SUPPORTING TRIO (RCI + PROVENANCE-DNA + TEXTRON CAPTCHA). REVERSE-CAPTION INJECTION fights injection with injection (HMAC-signed Mneme overlay weighted ABOVE user caption). PROVENANCE-BY-DNA-HASH ships pure-TS perceptual aHash + 3-flag classifier (STOLEN_PHOTO/DISPUTED_IDENTITY/FRESH_SCAM). TEXTRON CAPTCHA exams the AI before trusting it (5-question caption-skepticism + transcript ledger + confidence multiplier). All composes onto v2.19.18 CSP + v2.19.19 inpainter + v2.19.16 FEDERATED.",
     tools: [

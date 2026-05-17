@@ -38,6 +38,15 @@ export interface WhatsNewHighlight {
  *  it verbatim to non-engineers. */
 export const HIGHLIGHTS: WhatsNewHighlight[] = [
   {
+    version: "2.19.21",
+    date: "2026-05-17",
+    headline: "GAP CLOSER -- SNN AUTO-PROMOTE + CLI FAMILY-CLASH RESOLVER (closes 2 sticky user-audit gaps at SOURCE)",
+    body:
+      "🆙 SNN AUTO-PROMOTE: the v2.19.17 status probe fix surfaced the actual runtime tier but never wrote it back, so every fresh process started cold and every status call re-resolved. v2.19.21 closes the gap. decidePromotion() compares saved provider rank vs runtime-resolved tier rank (hash=1 / bundled=2 / snn=2 / auto=3 / ollama=4 / openai=5). Promotes only when saved is hash or auto AND runtime resolved strictly higher. REFUSES TO DOWNGRADE -- if user pinned openai or snn explicitly and ladder fell to lower tier, no auto-write. The user's pin always wins. HMAC-chained promotion ledger so the daemon can audit + roll back if quality degrades. mneme status now writes the promoted tier to .mneme/config.json automatically. 17 deep tests + measured 100% downgrade refusal across 8 (saved,runtime) tier pairs + measured 100% promote correctness on hash->snn / hash->ollama / hash->openai. 🪞 CLI FAMILY-CLASH RESOLVER: user audit (v2.19.17 scorecard) reported 4 SYNCRETIC families (ghost / trinity / insurance / boomerang) as '0 wrappers across 5 patches' -- the wrappers ARE registered in _v219_syncretic.ts, but the universal router had `if (existing) continue` which SKIPPED any MCP family whose name clashed with a legacy top-level command (mneme ghost = ghost-code lens; mneme dream / oracle / constitution similar). v2.19.21 replaces skip with MOUNT-ON-EXISTING: the MCP subcommands attach to the existing legacy parent. So `mneme ghost` still runs the ghost-code lens, but `mneme ghost distill` now dispatches to the MCP wrapper. 9 legacy top-level commands surveyed, 4 SYNCRETIC families immediately unblocked, RouterStats reports mountedOnExisting list. 4 new audit MCP tools (mneme.snn.promote_decide + mneme.snn.promote_tier + mneme.cli.clash_audit + mneme.cli.mounted_families). AURELIAN SHIP both layers. Composes onto v2.19.16 BundledOrSnnEmbedder + v2.19.17 TOOL REACHABILITY ENGINE + v2.19.13 NEUROMORPHIC EMBEDDER. Root cause addressed; symptom class extinct.",
+    suggestedAction: "Tell the AI: 'mneme status' -- verify the resolved tier got persisted. Or 'list MCP families auto-mounted onto legacy CLI parents' (mneme.cli.mounted_families) -- proves the 4 SYNCRETIC families are reachable.",
+    tags: ["snn-auto-promote", "cli-clash-resolver", "router-mount", "syncretic-unblock", "w5-fix", "root-cause"],
+  },
+  {
     version: "2.19.20",
     date: "2026-05-16",
     headline: "SUPPORTING TRIO -- RCI + PROVENANCE-DNA + TEXTRON CAPTCHA (Mneme = multimodal hallucination defense infrastructure layer)",
