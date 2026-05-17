@@ -798,6 +798,11 @@ export * as apostille from "./apostille/index.js";
 export * as outcomeMarket from "./outcome_market/index.js";
 export * as zkFairness from "./zk_fairness/index.js";
 export * as eternity from "./eternity/index.js";
+// v2.19.35 HONESTY + AUTO + DEAD-MAN + GITIGNORE (R1/R2/R3/R4 user-audit fixes)
+//   - honestyGate: parse whats_new claims + verify against runtime
+//   (R1 auto_check extends truthSensorPack; R3 dead-man extends autonomicScheduler;
+//    R4 mneme browse extends CLI router; gitignore fix extends diaspora/gitignore_writer)
+export * as honestyGate from "./honesty_gate/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

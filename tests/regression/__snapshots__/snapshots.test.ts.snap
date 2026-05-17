@@ -134,7 +134,7 @@ Commands:
   sovereign  >  Sovereignty Kernel -- Mneme answers questions about THIS repo using local Ollama + ACGV grounding gate. Free-first: no API key, no cloud, no source code leaves the laptop. v1.57.0.
   covenant  >  Tier 2 -- HMAC-signed bilateral contract between user + AI vendor. Mneme enforces; Aletheia compliance score moves over time.
   grade  >  Mneme grade family — 1 action(s). Run \`mneme grade --help\` for actions, or \`mneme grade <action> --json '{...}'\` to invoke.
-  truth  >  Mneme truth family — 9 action(s). Run \`mneme truth --help\` for actions, or \`mneme truth <action> --json '{...}'\` to invoke.
+  truth  >  Mneme truth family — 10 action(s). Run \`mneme truth --help\` for actions, or \`mneme truth <action> --json '{...}'\` to invoke.
   whisper  >  Mneme whisper family — 3 action(s). Run \`mneme whisper --help\` for actions, or \`mneme whisper <action> --json '{...}'\` to invoke.
   time  >  Mneme time family — 2 action(s). Run \`mneme time --help\` for actions, or \`mneme time <action> --json '{...}'\` to invoke.
   interview  >  Mneme interview family — 1 action(s). Run \`mneme interview --help\` for actions, or \`mneme interview <action> --json '{...}'\` to invoke.
@@ -264,6 +264,7 @@ Commands:
   market  >  Mneme market family — 5 action(s). Run \`mneme market --help\` for actions, or \`mneme market <action> --json '{...}'\` to invoke.
   fairness  >  Mneme fairness family — 5 action(s). Run \`mneme fairness --help\` for actions, or \`mneme fairness <action> --json '{...}'\` to invoke.
   eternity  >  Mneme eternity family — 5 action(s). Run \`mneme eternity --help\` for actions, or \`mneme eternity <action> --json '{...}'\` to invoke.
+  honesty  >  Mneme honesty family — 3 action(s). Run \`mneme honesty --help\` for actions, or \`mneme honesty <action> --json '{...}'\` to invoke.
   tool  >  Mneme tool family — 2 action(s). Run \`mneme tool --help\` for actions, or \`mneme tool <action> --json '{...}'\` to invoke.
   adversary  >  Mneme adversary family — 1 action(s). Run \`mneme adversary --help\` for actions, or \`mneme adversary <action> --json '{...}'\` to invoke.
   replay  >  Mneme replay family — 2 action(s). Run \`mneme replay --help\` for actions, or \`mneme replay <action> --json '{...}'\` to invoke.
@@ -281,7 +282,15 @@ Commands:
   quant  >  Mneme quant family — 10 action(s). Run \`mneme quant --help\` for actions, or \`mneme quant <action> --json '{...}'\` to invoke.
   lab  >  Mneme lab family — 8 action(s). Run \`mneme lab --help\` for actions, or \`mneme lab <action> --json '{...}'\` to invoke.
   meta  >  Mneme meta family — 4 action(s). Run \`mneme meta --help\` for actions, or \`mneme meta <action> --json '{...}'\` to invoke.
-  help [command]  >  display help for command
+  capabilities [options]  >  Return Mneme's full tool catalog organized by category, with WHEN-to-use guidance for each. **AI clients should call this FIRST when they connect** — it's the syllabus that teaches you what kind of qu
+  understand_intent [options]  >  Translate a natural-language user query into a step-by-step plan over Mneme's 94+ tools. Returns top-3 best-matching tools with confidence scores, suggested arguments extracted from the query, and a c
+  verify_claims [options]  >  Hallucination Auto-Block. Pass an AI draft answer; Mneme extracts every commit-hash-looking string and verifies each via \`git rev-parse\`. Returns the list of HALLUCINATED hashes (not present in this r
+  browse [options]  >  🔎 BROWSE (v2.19.33 B3 fix) — paginated catalog tour across 600+ Mneme tools. Filter by tier/family/query; sorted starter→explorer→deep→experimental. The 'where do I start' command for new users.
+  help [options]  >  Sub-millisecond top-5 tool matcher for free-text queries. Pass a natural-language description of what you want; get back the 5 tools most likely to answer it, with scores. Lighter than mneme.understan
+  whats_new [options]  >  Catalog drift detector. Pass the catalog hash you saw last session; Mneme returns adds / removes / description-changes since then. Use WHEN your agent wakes up after a Mneme upgrade and wants to know
+  confess [options]  >  Truth Confession — before delivering a user-facing answer, the AI passes its DRAFT + self-rated CONFIDENCE (0..1). Mneme cross-checks the draft against ground truth: commit hashes via git rev-parse, f
+  release_notes [options]  >  Return a curated What's New digest for the current Mneme version. Each highlight has a plain-English headline + 2-3 sentence body + optional suggestedAction. Use IMMEDIATELY after mneme.welcome on a f
+  smart_do [options]  >  Fallback dispatcher — give it a NATURAL-LANGUAGE intent, it routes to the appropriate Mneme command and runs it. Use this WHEN no specific tool from \`mneme.capabilities\` matches the user's request, or
 
 Advanced commands (Phase 2/3/4 + WILD ideas) are hidden from this help.
 Run \`mneme advanced\` to see them.

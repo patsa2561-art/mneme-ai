@@ -69,6 +69,14 @@ export interface OrganSchedule {
    * accumulate wall-clock idle. See EventSignals.hasContextShift*.
    */
   fireOnContextShift?: boolean;
+  /**
+   * v2.19.35 R3 fix — DEAD-MAN'S SWITCH. If an organ hasn't ticked in
+   * `deadManMs` ms (default 6h), force one tick on the NEXT cycle regardless
+   * of interval/idle/context-shift gates. Guarantees "perfect schedule that
+   * never fires" cannot happen — every organ must tick at least once per
+   * deadManMs window. 0 = disabled (legacy behaviour).
+   */
+  deadManMs?: number;
 }
 
 /**
@@ -96,12 +104,18 @@ export const DEFAULT_SCHEDULES_LEGACY: readonly OrganSchedule[] = [
  *
  * Both still respect the interval guard (don't fire more than once per interval).
  */
+// v2.19.35 R3 fix — DEAD-MAN'S SWITCH = 6h default. SLEEP + DREAMSPACE both
+// get the dead-man so a quiet day still triggers at least 1 sleep + 1 dream
+// cycle. BREATH/REFLEX/HORMONAL tick frequently enough that dead-man is
+// redundant (left at 0 = disabled to preserve their fast cadence).
+const DEAD_MAN_MS_6H = 6 * 60 * 60 * 1000;
+
 export const DEFAULT_SCHEDULES_ACTIVE_DEV: readonly OrganSchedule[] = [
-  { organ: "breath",     intervalMs: 60_000,        fireOnEvent: false, requireIdleMs: 0,           fireOnContextShift: false },
-  { organ: "reflex",     intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0,           fireOnContextShift: false },
-  { organ: "sleep",      intervalMs: 30 * 60_000,   fireOnEvent: false, requireIdleMs: 30 * 60_000, fireOnContextShift: true },
-  { organ: "dreamspace", intervalMs: 60 * 60_000,   fireOnEvent: false, requireIdleMs: 60 * 60_000, fireOnContextShift: true },
-  { organ: "hormonal",   intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0,           fireOnContextShift: false },
+  { organ: "breath",     intervalMs: 60_000,        fireOnEvent: false, requireIdleMs: 0,           fireOnContextShift: false, deadManMs: 0 },
+  { organ: "reflex",     intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0,           fireOnContextShift: false, deadManMs: 0 },
+  { organ: "sleep",      intervalMs: 30 * 60_000,   fireOnEvent: false, requireIdleMs: 30 * 60_000, fireOnContextShift: true,  deadManMs: DEAD_MAN_MS_6H },
+  { organ: "dreamspace", intervalMs: 60 * 60_000,   fireOnEvent: false, requireIdleMs: 60 * 60_000, fireOnContextShift: true,  deadManMs: DEAD_MAN_MS_6H },
+  { organ: "hormonal",   intervalMs: 5 * 60_000,    fireOnEvent: true,  requireIdleMs: 0,           fireOnContextShift: false, deadManMs: 0 },
 ];
 
 /** Default exposed as the ACTIVE_DEV variant from v2.19.33 onward. */
@@ -269,6 +283,17 @@ export function decideTicks(input: {
         });
         continue;
       }
+    }
+    // v2.19.35 R3 DEAD-MAN'S SWITCH — if organ hasn't ticked in deadManMs,
+    // force the next cycle to fire. Guarantees "perfect schedule that never
+    // fires" cannot happen. Skipped for lastTickMs===0 (first-tick handles).
+    const deadManMs = s.deadManMs ?? 0;
+    if (deadManMs > 0 && h.lastTickMs > 0 && (input.nowMs - h.lastTickMs) >= deadManMs) {
+      entries.push({
+        organ: s.organ, shouldTick: true, reason: "idle_threshold",
+        details: `dead-man's switch fired (no tick for ${Math.round((input.nowMs - h.lastTickMs) / 3600_000)}h; deadManMs=${Math.round(deadManMs / 3600_000)}h)`,
+      });
+      continue;
     }
     // First-tick semantics: lastTickMs===0 means "never ticked" — fire immediately
     // so a fresh daemon doesn't sit dormant for 60s waiting for the first interval.

@@ -213,6 +213,94 @@ export function explainDefaultStack(plan: SensorPlan): string {
   return lines.join("\n");
 }
 
+/**
+ * v2.19.35 R1 fix — 1-step zero-config truth check.
+ *
+ * Pre-v2.19.35: caller had to manually invoke 5 sensors then re-call
+ * mneme.truth.check_multi with the verdicts. v2.19.35 ships an
+ * EXECUTABLE PLAN: a self-contained array of (mcpTool, args) calls the
+ * AI agent runs in sequence, then a final "fuse" instruction. From the
+ * USER perspective it's 1 step ("mneme verify <claim>"); from the AI
+ * agent perspective it's a deterministic plan with zero ambiguity.
+ *
+ * Wisdom: "default = auto, expert = manual" — pre-v2.19.35 required
+ * caller to pre-compute everything (manual-only); v2.19.35 auto-plans
+ * by default while preserving the expert path for callers who want
+ * specific sensors.
+ */
+export interface AutoCheckStep {
+  /** Sequential step number. */
+  step: number;
+  /** "invoke" — call an MCP tool; "fuse" — final fusion. */
+  kind: "invoke" | "fuse";
+  /** Tool name for "invoke" steps; "mneme.truth.check_multi" for "fuse". */
+  mcpTool: string;
+  /** Args to pass to the MCP tool. */
+  args: Record<string, unknown>;
+  /** Sensor id this step corresponds to (only for "invoke" steps). */
+  sensorId?: string;
+  /** Fallback behaviour if the call fails. */
+  onFailure: "skip" | "treat_as_uncertain" | "treat_as_inapplicable";
+}
+
+export interface AutoCheckPlan {
+  v: typeof PROTOCOL_VERSION;
+  claim: string;
+  shape: ClaimShape;
+  /** Ordered execution plan: invoke each sensor → then fuse. */
+  steps: AutoCheckStep[];
+  /** Plain-English rationale shown to the user. */
+  rationale: string;
+  /** How AI agent collects per-step outputs into the fuse input. */
+  collectionRule: string;
+}
+
+export function buildAutoCheckPlan(input: {
+  claim: string;
+  full?: boolean;
+}): AutoCheckPlan {
+  const plan = proposeSensorPlan({ claim: input.claim, full: input.full });
+  const steps: AutoCheckStep[] = [];
+  let stepNum = 1;
+  for (const sensor of plan.recommendedSensors) {
+    const args: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(sensor.inputTemplate)) {
+      args[k] = v === "<the claim text>" ? input.claim : v;
+    }
+    steps.push({
+      step: stepNum++,
+      kind: "invoke",
+      mcpTool: sensor.mcpTool,
+      args,
+      sensorId: sensor.id,
+      onFailure: sensor.fallbackBehaviour,
+    });
+  }
+  // Final fuse step
+  steps.push({
+    step: stepNum,
+    kind: "fuse",
+    mcpTool: "mneme.truth.check_multi",
+    args: {
+      claim: input.claim,
+      // AI agent fills sensors[] from collected outputs of prior steps
+      sensors: "<COLLECT_FROM_PRIOR_STEPS>",
+    },
+    onFailure: "skip",
+  });
+  return {
+    v: PROTOCOL_VERSION,
+    claim: input.claim,
+    shape: plan.shape,
+    steps,
+    rationale: `🛡 auto-check plan: ${plan.recommendedSensors.length} sensors then fuse (claim shape: ${plan.shape})`,
+    collectionRule:
+      "For each 'invoke' step: capture { sensor: sensorId, verdict: tool_output.verdict, confidence: tool_output.confidence, rationale: tool_output.rationale }. " +
+      "Build an array of these objects and pass as sensors[] to the final 'fuse' step. " +
+      "If an 'invoke' step fails, apply onFailure: skip = omit; treat_as_uncertain = include with verdict='UNCERTAIN' confidence=0; treat_as_inapplicable = include with verdict='INAPPLICABLE' confidence=0.",
+  };
+}
+
 export interface SensorPackStats {
   totalDefaults: number;
   shapeSpecificMappings: number;

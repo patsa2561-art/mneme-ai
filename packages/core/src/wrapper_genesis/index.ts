@@ -142,6 +142,8 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "outcome_market",
   "zk_fairness",
   "eternity",
+  // v2.19.35 HONESTY GATE (R2+R4 user-audit fix; release-note CI gate)
+  "honesty_gate",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -353,6 +355,7 @@ function familyAliases(moduleName: string): string[] {
     outcome_market: ["market"],
     zk_fairness: ["fairness"],
     eternity: ["eternity"],
+    honesty_gate: ["honesty"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -655,6 +658,11 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "verifySurvivalCertificate",// helper
   "resolveTrace",           // wrapped as mneme.eternity.resolve
   "computeEternityStats",   // display helper
+  // v2.19.35 R1 + HONESTY GATE — wrappers exist but action prefix differs
+  "buildAutoCheckPlan",      // wrapped as mneme.truth.auto_check
+  "parseClaims",             // wrapped as mneme.honesty.parse_claims
+  "verifyClaims",            // wrapped as mneme.honesty.verify_claims
+  "computeHonestyStats",     // display helper
 ]);
 
 export function findOrphans(input: {

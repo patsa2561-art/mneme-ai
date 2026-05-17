@@ -54,6 +54,16 @@ function groupByFamily(tools: ToolLike[]): Map<string, ToolLike[]> {
   return m;
 }
 
+/** v2.19.35 R4 fix — 2-part tool names like `mneme.browse` were silently
+ *  skipped pre-v2.19.35 (router required 3 parts). Now register them as
+ *  top-level CLI commands so `mneme browse` works as documented. */
+function findTwoPartTools(tools: ToolLike[]): ToolLike[] {
+  return tools.filter((t) => {
+    const parts = t.name.split(".");
+    return parts.length === 2 && parts[0] === "mneme";
+  });
+}
+
 /**
  * Register `mneme <family>` parent commands + `mneme <family> <action>` children
  * for every MCP tool family. Idempotent (Commander silently dedupes).
@@ -164,5 +174,39 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
       skipped.push(family);
     }
   }
+
+  // v2.19.35 R4 fix — register 2-part tool names (e.g., mneme.browse,
+  // mneme.suggest) as top-level CLI commands. Pre-v2.19.35 these were
+  // silently skipped because the router only handled 3-part mneme.X.Y.
+  for (const tool of findTwoPartTools(tools)) {
+    const name = tool.name.split(".")[1]!;
+    if (findExistingCommand(program, name)) continue;
+    try {
+      program.command(name)
+        .description((tool.description ?? "").slice(0, 200))
+        .option("--json <jsonArgs>", "Tool arguments as a JSON object string")
+        .option("--pretty", "Pretty-print the output (default: compact JSON)")
+        .action(async (opts: { json?: string; pretty?: boolean }) => {
+          let args: Record<string, unknown> = {};
+          if (opts.json) {
+            try { args = JSON.parse(opts.json) as Record<string, unknown>; }
+            catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
+          }
+          try {
+            const result = await tool.handler({ repoRoot: process.cwd() }, args);
+            const out = opts.pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
+            process.stdout.write(out + "\n");
+            process.exit(0);
+          } catch (e) {
+            process.stderr.write(`⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
+            process.exit(1);
+          }
+        });
+      actionCount++;
+    } catch {
+      skipped.push(name);
+    }
+  }
+
   return { families: families.size, actions: actionCount, mountedOnExisting, skipped };
 }

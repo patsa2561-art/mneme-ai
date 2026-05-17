@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.34
+# 📜 Release index — v2.18.0 → v2.19.35
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.35** | 🪞 HONESTY + AUTO + DEAD-MAN + GITIGNORE — R1 (mneme.truth.auto_check 1-step verification) + R2 (STARTER 22→33) + R3 (DEAD-MAN'S SWITCH 6h timer) + R4 (mneme browse CLI) + HONESTY GATE (parse whats_new + verify runtime) + GITIGNORE auto-emits .mneme/. Wisdom article: file-per-subsystem > single-config-file |
 | **v2.19.34** | 🏆 HOLY GRAIL QUADRUPLE — APOSTILLE (AI audit binder for 6 compliance frameworks) + OUTCOME MARKET (Vickrey vendor auction kills SaaS rent) + ZK-FAIRNESS (mathematical non-discrimination proofs for EU AI Act) + ETERNITY (audit trail survives vendor death). 91 deep tests + 100,000+ fuzz iterations. The enterprise stack no AI vendor can ship |
 | **v2.19.33** | 🩹 POLISH RELEASE — 4 user-audit bugs fixed (B1 extract_decisions undercount + sentence-by-sentence + 3-mode toggle; B2 truth sensors=0 + default sensor stack + mneme.truth.init; B3 STARTER 13→35 + mneme.browse + mneme.suggest; B4 SLEEP+DREAMSPACE never tick + semantic-context-shift trigger + sleep --force). Distribution > new features |
 | **v2.19.32** | 🧬 BEACON HANDOFF FOUNDATION — fresh-context envelope (HMAC + freshness gate) + 6-char human pair code (confusable-free, one-shot, 30s TTL) + 4-emoji SAS MITM defense + device-adaptive PWA (Web Share / cursor:// / vscode:// / mneme://) + HMAC consciousness-fork lineage. Parent → QR → Child = unified brain in 2 taps |
@@ -59,6 +60,84 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.35 — 2026-05-17 — 🪞 HONESTY + AUTO + DEAD-MAN + GITIGNORE (R1-R4 user-audit fixes + release-note CI gate)
+
+User audit (2026-05-17) reported 4 remaining bugs after v2.19.33 + a screenshot showing 15+ `.mneme/*` files pending in source control of a different repo. v2.19.35 fixes all at SOURCE.
+
+### 🛡 R1 fix — `mneme.truth.auto_check` (1-step zero-config verification)
+
+Pre-v2.19.35: caller had to manually invoke 5 sensors then re-call `check_multi` with the verdicts (2-step manual dance). v2.19.35 ships [`buildAutoCheckPlan`](packages/core/src/truth_sensor_pack/index.ts) that returns an EXECUTABLE PLAN with ordered (invoke, args) steps + final fuse step + unambiguous `collectionRule`. From USER perspective = 1 step ("verify this claim"). From AI agent perspective = deterministic plan with zero ambiguity.
+
+10 regression tests + new MCP tool `mneme.truth.auto_check`.
+
+### 🪞 R2+R4 fix + HONESTY GATE (release-note CI gate)
+
+User-audit complaint: v2.19.33 claimed "STARTER 13→35" but reality 22; claimed "+ mneme browse" but CLI said unknown.
+
+**R2 fix**: STARTER_WHITELIST expanded 22 → 33 by adding v2.19.34 holy-grail tools (`mneme.apostille.{mint,binder}` + `mneme.market.{post_task,leaderboard}` + `mneme.fairness.commit` + `mneme.eternity.{mint,survival_score}` + `mneme.truth.auto_check` + `mneme.federated.gravity` + `mneme.boomerang.{record,build_context}`) so first-day users SEE the moats.
+
+**R4 fix**: extended CLI router to register 2-part MCP tool names (`mneme.browse`, `mneme.suggest`) as top-level CLI commands (pre-v2.19.35 router silently skipped 2-part names).
+
+**HONESTY GATE** (new [`packages/core/src/honesty_gate/`](packages/core/src/honesty_gate/index.ts)): parses whats_new body for 5 claim shapes:
+
+| Shape | Example | Verifier checks |
+|---|---|---|
+| `STARTER N→M` | "STARTER 13→35" | `runtime.starterCount >= M` |
+| `+ mneme.X.Y` | "+ mneme.handoff.snapshot" | tool registered in catalog |
+| `+ mneme X` | "+ mneme browse" | CLI command exists |
+| `N new MCP tools` | "20 new MCP tools" | `newToolsThisRelease >= N` |
+| `N compliance frameworks` | "6 frameworks" | `frameworkCount >= N` |
+
+Real R2+R4 reproduced as a test: `"STARTER 13→35 + mneme browse"` with `starterCount=22` + no browse CLI = FAIL verdict. **Block publish on lying release notes.** 17 tests + 1000-iter fuzz. 3 new MCP tools (`mneme.honesty.{parse_claims, verify_claims, audit_whats_new}`).
+
+### 💤 R3 fix — DEAD-MAN'S SWITCH for SLEEP + DREAMSPACE
+
+Pre-v2.19.35: if no event/idle/context-shift ever fires, sleep + dreamspace could ship "perfect schedule that never fires" — user reports daemon alive 3+ hours with sleep ledger frozen at last tick.
+
+v2.19.35 adds `deadManMs` field to OrganSchedule (default 6h for sleep/dreamspace; 0 = disabled for breath/reflex/hormonal because their fast cadence already guarantees ticks). If the organ hasn't ticked in deadManMs, the NEXT `decideTicks` fires it regardless of interval/idle/event gates.
+
+**Defensive**: cooldown still respected; first-tick (lastTickMs===0) still handled separately. **Dual-trigger pattern** = event + dead-man.
+
+7 regression tests including 24h-quiet-day scenario where both sleep + dreamspace force-fire.
+
+### 🧹 GITIGNORE fix (the screenshot bug)
+
+User showed 15+ `.mneme/*` files in IDE source-control pane. Mneme's own repo gitignores `.mneme/` correctly, but a DIFFERENT repo where `mneme init` ran didn't get the auto-gitignore.
+
+[`packages/core/src/diaspora/gitignore_writer.ts`](packages/core/src/diaspora/gitignore_writer.ts) `PRIVATE_AI_ARTIFACTS` extended with:
+- `.mneme/` (runtime state — daemon-status, inbox, replay, db, etc.)
+- `.brain-*` (BEACON HANDOFF artifacts)
+- `.mneme-ritual-receipt.json`
+
+Every fresh `mneme init` auto-writes the right rules.
+
+### 📚 WISDOM ARTICLE: file-per-subsystem > single-config-file
+
+The user asked: "ทำไมไม่รวมเป็นไฟล์เดียว แล้ว commit ได้?" Here's the trade-off table:
+
+| | Single file | File per subsystem (Mneme) |
+|---|---|---|
+| Commit noise | 1 line | 0 line (.gitignore'd) |
+| Concurrent write safety | ❌ needs locking | ✅ separate inodes |
+| Binary/JSON/SQLite mix | ❌ anti-pattern | ✅ each file = right format |
+| Granular permissions | ❌ all-or-nothing | ✅ per-subsystem |
+| Git history bloat | ❌ hot file rewrites per minute | ✅ runtime not tracked |
+| Atomic update | ❌ rewrite whole file to change 1 field | ✅ subsystem-local |
+| Disaster recovery | ❌ 1-byte corruption = total loss | ✅ subsystem-local failure |
+
+**Recommendation**: keep file-per-subsystem; use gitignore (which v2.19.35 auto-emits) to hide runtime state. Don't consolidate.
+
+### 4 new MCP tools
+
+- `mneme.truth.auto_check` (R1 1-step verification)
+- `mneme.honesty.{parse_claims, verify_claims, audit_whats_new}` (HONESTY GATE)
+
+### Ritual
+
+4 AURELIAN cards SHIP (R1 + R2/R4/HONESTY + R3 + GITIGNORE). 113/113 module tests + AURELIAN green. Composes onto v2.19.33 truth_sensor_pack + v2.19.33 ACTIVE_DEV schedules + v1.72 DIASPORA gitignore + v2.19.21 CLI router + REINCARNATION RITUAL.
 
 ---
 

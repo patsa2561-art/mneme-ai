@@ -205,6 +205,15 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.35": {
+    headline: "🪞 HONESTY + AUTO + DEAD-MAN + GITIGNORE — R1 fix (mneme.truth.auto_check 1-step zero-config verification) + R2 fix (STARTER 22→33 + holy-grail tools surfaced) + R3 fix (DEAD-MAN'S SWITCH for SLEEP+DREAMSPACE at 6h) + R4 fix (mneme browse + mneme suggest now CLI top-level via 2-part router) + HONESTY GATE (parse whats_new claims + verify against runtime; block lying release notes) + GITIGNORE auto-emits .mneme/ + .brain-* + .mneme-ritual-receipt.json so fresh `mneme init` never leaks runtime state into commits. 4 new MCP tools.",
+    tools: [
+      "mneme.truth.auto_check",
+      "mneme.honesty.parse_claims",
+      "mneme.honesty.verify_claims",
+      "mneme.honesty.audit_whats_new",
+    ],
+  },
   "2.19.34": {
     headline: "🏆 HOLY GRAIL QUADRUPLE — APOSTILLE (HMAC-chained AI receipts + 6-framework compliance binder) + OUTCOME MARKET (Vickrey 2nd-price vendor auction + Bayesian reputation half-life + adversarial trick-test liar detector) + ZK-FAIRNESS (commit-then-reveal non-discrimination proofs + 7 protected attributes + intersectional + EU AI Act controls) + ETERNITY (content-addressed traces + multi-root pinning + 9-scenario survival score + cross-jurisdiction diversity). 20 new MCP tools + 91 deep tests + 100,000+ fuzz iterations verified.",
     tools: [

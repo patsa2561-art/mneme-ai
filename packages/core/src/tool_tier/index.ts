@@ -98,6 +98,21 @@ export const STARTER_WHITELIST: ReadonlySet<string> = new Set([
   "mneme.guard",
   // Reflex — auto-cache (one of the v2.19.22 flagship features)
   "mneme.reflex.observe",
+  // v2.19.34 HOLY GRAIL QUADRUPLE — surface the 4 enterprise moats in STARTER
+  "mneme.apostille.mint",         // AI audit receipt — first-day visibility
+  "mneme.apostille.binder",       // compliance binder — what enterprise wants
+  "mneme.market.post_task",       // outcome-priced vendor selection
+  "mneme.market.leaderboard",     // see best vendor right now
+  "mneme.fairness.commit",        // EU AI Act mandatory primitive
+  "mneme.eternity.mint",          // audit trail that survives vendor death
+  "mneme.eternity.survival_score",// "how catastrophe-proof is my trail?"
+  // v2.19.35 R1 fix — 1-step zero-config truth verification
+  "mneme.truth.auto_check",
+  // Federated truth (network-effect moat) — first-day visible
+  "mneme.federated.gravity",
+  // Cross-vendor handoff (v2.19.0) — paired with v2.19.32 BEACON
+  "mneme.boomerang.record",
+  "mneme.boomerang.build_context",
 ]);
 
 /**

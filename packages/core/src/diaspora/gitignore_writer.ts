@@ -27,8 +27,21 @@ const SENTINEL_END = "# <<< mneme auto-managed >>>";
 
 /** Canonical list of every AI-tooling artifact Mneme might write.
  *  Extending this list is the SINGLE place to update when a new
- *  vendor is added; everything else flows from here. */
+ *  vendor is added; everything else flows from here.
+ *
+ *  v2.19.35 fix: include `.mneme/` runtime state + `.brain-*` handoff
+ *  artifacts so fresh `mneme init` never lets these leak into a commit
+ *  (the bug user reported via screenshot 2026-05-17 showing 15+ pending
+ *  .mneme/* files in source control).
+ */
 export const PRIVATE_AI_ARTIFACTS = [
+  // Mneme runtime state (daemon, inbox, replay, db, etc.) — never commit.
+  // 15+ files in this dir are runtime-only; user is shocked when they
+  // appear in source control. Blanket ignore is the wisdom default.
+  ".mneme/",
+  // BEACON HANDOFF artifacts (v2.19.32) — cross-device transfer envelopes
+  ".brain-*",
+  // AI agent instruction files / state — vendor-specific, often private
   "CLAUDE.md",
   "AGENTS.md",
   "GEMINI.md",
@@ -43,6 +56,8 @@ export const PRIVATE_AI_ARTIFACTS = [
   ".claude.json",
   ".claudeignore",
   ".github/copilot-instructions.md",
+  // Mneme ritual receipt — local audit artifact, not source
+  ".mneme-ritual-receipt.json",
 ];
 
 export interface EnsureResult {
