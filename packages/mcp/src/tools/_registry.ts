@@ -91,6 +91,7 @@ import { V1925_SLEEP_ENDOCRINE_TOOLS } from "./_v1925_sleep_endocrine.js";
 import { V1926_DREAMSPACE_TOOLS } from "./_v1926_dreamspace.js";
 import { V1927_DREAMSPACE_PIPELINE_TOOLS } from "./_v1927_dreamspace_pipeline.js";
 import { V1928_SCHEDULER_TOOLS } from "./_v1928_scheduler.js";
+import { V1929_SYNAPSE_GENESIS_TOOLS } from "./_v1929_synapse_genesis.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -186,6 +187,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1926_DREAMSPACE_TOOLS,
     ...V1927_DREAMSPACE_PIPELINE_TOOLS,
     ...V1928_SCHEDULER_TOOLS,
+    ...V1929_SYNAPSE_GENESIS_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

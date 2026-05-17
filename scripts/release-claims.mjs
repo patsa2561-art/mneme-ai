@@ -205,6 +205,21 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.29": {
+    headline: "SYNAPSE GENESIS Phase A+B+C -- scheduler that WRITES ITSELF. HEBBIAN engine reinforces (event, tool, satisfaction) triples with weight decay + permanent-pathway lock; pathways BORN from cold-start; hot pathways become permanent within <=10 obs. CIRCADIAN 5-phase classifier (WAKE_TRANSITION/AWAKE/DROWSY/SLEEP_NREM/SLEEP_REM) with per-tool gating + activity-override; Mneme as organism that sleeps and wakes with you. FUSION adjacent-pair detector (>=80% cooccurrence within 500ms) proposes parallel chimeras with deterministic id + estimated speedup. 'Static = limited by author. Genesis = unlimited by definition.' 10 new MCP tools. 77 deep tests + measured 24/7 resilience + 100% determinism + biological correctness. Composes onto v2.19.28 AUTONOMIC SCHEDULER + v2.19.22 REFLEX + v2.19.25 SLEEP TRAINING + v2.19.26 DREAMSPACE. The first MCP framework worldwide with Hebbian self-writing scheduler.",
+    tools: [
+      "mneme.synapse.reinforce",
+      "mneme.synapse.decide_fire",
+      "mneme.synapse.query",
+      "mneme.synapse.prune",
+      "mneme.synapse.stats",
+      "mneme.circadian.classify",
+      "mneme.circadian.gate",
+      "mneme.circadian.list_phases",
+      "mneme.synapse.fusion_cycle",
+      "mneme.synapse.fuse_pair",
+    ],
+  },
   "2.19.28": {
     headline: "ROOT-CAUSE FIXES -- AUTONOMIC SCHEDULER (B1 fix: daemon now ticks LIMBIC + DREAMSPACE organs 24/7) + B2 fix (CLI router skip-on-error + alias clash detection; previously crashed on `hive` alias of `stigmergy` losing 100+ MCP families silently) + B3 fix (consensus default INSUFFICIENT_DATA on 0 voters; was falsely 'true' with agreementRate 0). 5 new MCP scheduler tools. The daemon's heartbeat now invokes 5 organ groups (breath 60s / reflex on git-event / sleep 30min idle / dreamspace 60min idle / hormonal 5min) with circuit-breaker + exception-handled fallback. 22 deep tests verify 24/7 resilience under 30% random failure injection.",
     tools: [

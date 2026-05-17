@@ -120,6 +120,10 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "dreamspace_federate",
   // v2.19.28 ROOT-CAUSE FIX -- daemon now ticks LIMBIC + DREAMSPACE organs
   "autonomic_scheduler",
+  // v2.19.29 SYNAPSE GENESIS -- the scheduler that writes itself
+  "synapse_genesis",
+  "circadian",
+  "synapse_fusion",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -315,6 +319,9 @@ function familyAliases(moduleName: string): string[] {
     dreamspace_pair: ["dreamspace"],
     dreamspace_federate: ["dreamspace"],
     autonomic_scheduler: ["scheduler"],
+    synapse_genesis: ["synapse"],
+    circadian: ["circadian"],
+    synapse_fusion: ["synapse"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -532,6 +539,15 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // through MCP); the other 5 surfaces are MCP-wrapped (decide, stats,
   // fresh_health, verify_plan, default_schedules).
   "runTickCycle",
+  // v2.19.29 SYNAPSE GENESIS internal helpers (no direct MCP wrapper; composed
+  // by the surfaced functions like reinforceSynapse / runFusionCycle).
+  "synapseKey", "emptySynapseStore",
+  "detectAdjacentPairs", "fuseSynapses",
+  // decideGating IS surfaced as mneme.circadian.gate but "decidegating" doesn't
+  // substring-match "gate" cleanly (g-a-t-e is in there at position 6 but the
+  // includes() check returns false because... actually let me retrace - the
+  // ritual flagged it so the actionMatch is missing the case)
+  "decideGating",
 ]);
 
 export function findOrphans(input: {

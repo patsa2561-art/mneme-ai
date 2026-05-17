@@ -764,6 +764,10 @@ export * as dreamspacePair from "./dreamspace_pair/index.js";
 export * as dreamspaceFederate from "./dreamspace_federate/index.js";
 // v2.19.28 AUTONOMIC SCHEDULER — root-cause fix for dormant LIMBIC + DREAMSPACE organs
 export * as autonomicScheduler from "./autonomic_scheduler/index.js";
+// v2.19.29 SYNAPSE GENESIS — Hebbian + Circadian + Fusion (3 phases)
+export * as synapseGenesis from "./synapse_genesis/index.js";
+export * as circadian from "./circadian/index.js";
+export * as synapseFusion from "./synapse_fusion/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers
