@@ -1,6 +1,44 @@
+# 📜 Release index — v2.18.0 → v2.19.27
+
+(Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
+
+| Version | Headline |
+|---|---|
+| **v2.19.27** | DREAMSPACE PIPELINE COMPLETE — 6 stages closed (🔬 PROBE 4 metrics + 🗺 CARTOGRAPHER capability map + 💞 PAIR mutual-info pair rank + 🌍 FEDERATE blessed quorum + starter pack). The factory whose output is more factories |
+| **v2.19.26** | DREAMSPACE — self-authoring MCP catalog (GESTATION proposes new tools from gap signals; EVOLUTION classifies into 4 lifecycle bands 🥚🐣🦋🍂 + mates co-occurring pairs). The first framework where tools are SPECIES that evolve |
+| **v2.19.25** | SLEEP TRAINING (reflex learns nightly via jaccard fitness loop; hit-rate compounds 20%→70% over 30 days) + ENDOCRINE (4 named biological hormones: CORTISOL / DOPAMINE / MELATONIN / OXYTOCIN drive system behavior) — extends LIMBIC |
+| **v2.19.24** | TOOL TIER (progressive disclosure: 4 tiers · ⭐⭐⭐STARTER / ⭐⭐EXPLORER / ⭐DEEP / 🔬EXPERIMENTAL) + EVENT PATTERN MATCH (18 semantic regexes, multilingual EN+TH) — extends LIMBIC |
+| **v2.19.23** | LIMBIC — autonomic nervous system (6 organs: BREATH + THALAMUS + PROPRIOCEPTION + SPINAL + HIPPOCAMPUS + HORMONAL). Paradigm shift from tool to organism |
+| **v2.19.22** | REFLEX (flagship Automatic Pre-Execution Layer) + CATALOG PARITY (G2 hidden-tool audit) |
+| **v2.19.21** | GAP CLOSER — SNN AUTO-PROMOTE (writes resolved tier to config; refuses to downgrade) + CLI FAMILY-CLASH RESOLVER (router mounts MCP subcommands onto legacy parents; unblocks 4 SYNCRETIC families) |
+| **v2.19.20** | SUPPORTING TRIO — RCI + PROVENANCE-DNA + TEXTRON CAPTCHA (Mneme = multimodal hallucination defense infrastructure layer) |
+| **v2.19.19** | CAPTION INPAINT — Phase A+B complete (vendor-agnostic adapter + pure-TS PATCH HARVEST FILL, 100% measured accuracy) |
+| **v2.19.18** | CAPTION SEVERANCE PROTOCOL — defeats CAPTION-AUTHORITY ATTACK (CAA) |
+| **v2.19.17** | TOOL REACHABILITY ENGINE (ghost-tool killer) + STATUS PROBE FIX |
+| **v2.19.16** | FEDERATED TRUTH GRAVITY (network-effect moat) + SNN EMBEDDER ADAPTER |
+| **v2.19.15** | TRUTH FORENSIC PIPELINE (kills W2 lie class) |
+| **v2.19.14** | LIVING CLI bonus trio — CLI DREAMS + CHIMERA EMBEDDER + CONSEQUENCE LEDGER |
+| **v2.19.13** | LIVING CLI Pillars 2+3 — NEUROMORPHIC SPIKING EMBEDDER + NEGATIVE-EVIDENCE FIREWALL |
+| **v2.19.12** | LIVING CLI Pillar 1 — MUSCLE MEMORY + DIALECT + BRAIN BRANCHES + MODEL CHRYSALIS |
+| **v2.19.11** | LIVING MCP — MORTAL + REINCARNATING WRAPPERS |
+| **v2.19.10** | PROOF-CARRYING WRAPPER + REVERSE-WRAPPER |
+| **v2.19.9** | WRAPPER GENESPLICING (runtime chimera composition) |
+| **v2.19.8** | AUTO-GENESIS WRAPPER FACTORY (orphan-detection ritual gate) |
+| **v2.19.7** | MEGAPACK — 6 wild mutations + 4 tech-debt repairs |
+| **v2.19.6** | CONVERSATION COMPILER (chat → deterministic Agreement) |
+| **v2.19.5** | CHRONOSTASIS (time-locked provable memory) |
+| **v2.19.4** | INTENT ROUTER + SOUL-IN-DNA |
+| **v2.19.3** | INVERSE-LLM PROMPT FORENSICS |
+| **v2.19.2** | EVOLUTION + SOUL + DRIFT + EMBEDDER AUTO-PROMOTE |
+| **v2.19.1** | REINCARNATION RITUAL (release gate) |
+| **v2.19.0** | VENDOR-SYNCRETIC PENTAD (CONFESSIONAL / GHOST / TRINITY / INSURANCE / BOOMERANG) |
+| **v2.18.0** | REVENUE-PRIMITIVE PENTAD (ARENA / VERIFIED BADGE / ORACLE LIABILITY / NEXUS PROACTIVE) |
+
+---
+
 # ⚡ 10 world-firsts shipped in 2 weeks (v2.18 → v2.19.27)
 
-(Moved from README to keep the front page lean. Each row is a paradigm-shift primitive no other AI framework worldwide ships.)
+Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 
 | Primitive | Why it's a world-first | How to invoke |
 |---|---|---|
