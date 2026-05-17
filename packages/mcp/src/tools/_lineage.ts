@@ -643,6 +643,17 @@ export const welcomeTool: MnemeTool = {
     const version = resolveMnemeVersion();
     const w = lineage.buildWelcome(rootOf(rt), version);
     lineage.markWelcomeShown(rootOf(rt), version);
+    // v2.19.36 AUTO-FLOW fix: ensure repo-root .gitignore has the AI-tool
+    // patterns (.mneme/ + .brain-* + .mneme-ritual-receipt.json) on the
+    // FIRST AI-agent contact. User said "install mneme" + AI ran the
+    // install; the AI agent then calls mneme.welcome per the well-known
+    // contract — we use that touchpoint to guarantee gitignore is right
+    // without the AI agent needing to know any new command. Idempotent;
+    // never throws; best-effort silent.
+    try {
+      const core = await import("@mneme-ai/core");
+      core.diaspora.ensureGitignoreEntries(rootOf(rt));
+    } catch { /* best-effort */ }
     // v1.23.5 — when an update is available, embed an autoAction so the
     // AI agent CALLS mneme.system.upgrade automatically (announce, do,
     // confirm). User never sees a yes/no question.

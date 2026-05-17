@@ -1,7 +1,7 @@
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import kleur from "kleur";
-import { git, security } from "@mneme-ai/core";
+import { git, security, diaspora } from "@mneme-ai/core";
 import { mnemeDir } from "../paths.js";
 import { writeConfig, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { ui } from "../ui.js";
@@ -45,6 +45,14 @@ export async function initCommand(opts: InitOptions): Promise<number> {
       // Auto-add .mneme paranoia files to .mneme/.gitignore so users don't
       // accidentally commit the secret file.
       ensureMnemeGitignore(meta.rootPath);
+      // v2.19.36 AUTO-FLOW fix: also write the REPO-ROOT .gitignore so
+      // .mneme/ + .brain-* + .mneme-ritual-receipt.json never leak into
+      // source control. User reported screenshot of 15+ .mneme/* files
+      // pending in a fresh repo; this closes the gap.
+      const ig = diaspora.ensureGitignoreEntries(meta.rootPath);
+      if (ig.action === "created" || ig.action === "added") {
+        ui.success(`Wrote .gitignore (${ig.entries.length} AI-tool patterns auto-managed) — runtime state won't leak into commits`);
+      }
     } catch {
       // best-effort; never block init
     }

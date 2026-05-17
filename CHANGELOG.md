@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.35
+# 📜 Release index — v2.18.0 → v2.19.36
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.36** | 🤖 AUTO-FLOW FIX — user says 'install mneme', AI agent runs install, gitignore is right WITHOUT anyone running a command (3 redundant entry points: mneme init + autoStartSpore + mneme.welcome) |
 | **v2.19.35** | 🪞 HONESTY + AUTO + DEAD-MAN + GITIGNORE — R1 (mneme.truth.auto_check 1-step verification) + R2 (STARTER 22→33) + R3 (DEAD-MAN'S SWITCH 6h timer) + R4 (mneme browse CLI) + HONESTY GATE (parse whats_new + verify runtime) + GITIGNORE auto-emits .mneme/. Wisdom article: file-per-subsystem > single-config-file |
 | **v2.19.34** | 🏆 HOLY GRAIL QUADRUPLE — APOSTILLE (AI audit binder for 6 compliance frameworks) + OUTCOME MARKET (Vickrey vendor auction kills SaaS rent) + ZK-FAIRNESS (mathematical non-discrimination proofs for EU AI Act) + ETERNITY (audit trail survives vendor death). 91 deep tests + 100,000+ fuzz iterations. The enterprise stack no AI vendor can ship |
 | **v2.19.33** | 🩹 POLISH RELEASE — 4 user-audit bugs fixed (B1 extract_decisions undercount + sentence-by-sentence + 3-mode toggle; B2 truth sensors=0 + default sensor stack + mneme.truth.init; B3 STARTER 13→35 + mneme.browse + mneme.suggest; B4 SLEEP+DREAMSPACE never tick + semantic-context-shift trigger + sleep --force). Distribution > new features |
@@ -60,6 +61,60 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.36 — 2026-05-17 — 🤖 AUTO-FLOW FIX (user says 'install mneme' → AI agent runs it → gitignore right, zero extra commands)
+
+User asked: *"แล้ว AI agent จะรู้คำสั่งนี้ไหม? user สั่งแค่ install mneme เฉยๆ ที่เหลือ AI chat จัดการหมด ต้องเป็น auto flow แบบนี้นะ"*. v2.19.35 wrote the gitignore IF `mneme init` was called explicitly. v2.19.36 closes the gap with **3 redundant entry points** so zero user/AI command is needed beyond "install mneme".
+
+### Why the gap existed
+
+v2.19.35 added `.mneme/` + `.brain-*` + `.mneme-ritual-receipt.json` to `PRIVATE_AI_ARTIFACTS`. But `ensureGitignoreEntries` was only called from `mneme init` explicit invocation. If the AI agent flow was:
+
+1. User: "install mneme"
+2. AI: `npm install -g mneme-ai` ✓
+3. AI: starts chatting with Mneme MCP tools ❌ — **never ran `mneme init` → gitignore NOT written → user sees runtime files in source control again**
+
+### Fix — 3 redundant entry points
+
+| Path | Where | When fires |
+|---|---|---|
+| **A — `mneme init`** | [`packages/cli/src/commands/init.ts`](packages/cli/src/commands/init.ts) | Explicit user / AI call to `mneme init` |
+| **B — `autoStartSpore`** | [`packages/core/src/diaspora/spore_autostart.ts`](packages/core/src/diaspora/spore_autostart.ts) | Daemon startup; any subsystem first-write to `.mneme/` |
+| **C — `mneme.welcome` handler** | [`packages/mcp/src/tools/_lineage.ts`](packages/mcp/src/tools/_lineage.ts) | AI agent's FIRST MCP call per the contract |
+
+All 3 call `ensureGitignoreEntries(repoRoot)` idempotently. No matter which path fires first, gitignore ends up right.
+
+### Auto-flow now
+
+```
+User: "install mneme"
+  ↓
+AI:   npm install -g mneme-ai          (npm install)
+  ↓
+AI:   calls mneme.welcome (per contract)
+  ↓
+[PATH C fires] → ensureGitignoreEntries(repoRoot)
+  ↓
+.gitignore now has .mneme/ + .brain-* + .mneme-ritual-receipt.json
+  ↓
+User: continues chatting normally — runtime state stays hidden from source control forever
+```
+
+If the AI ALSO runs `mneme init` later (PATH A) or the daemon starts (PATH B), the gitignore write is idempotent — no duplicates, no surprises.
+
+### Tests
+
+8 deep auto-flow tests ([`packages/core/src/diaspora/auto_flow.test.ts`](packages/core/src/diaspora/auto_flow.test.ts)) verify all 3 paths + idempotence + preservation of user-written entries + defensive no-throw + the AUTO-FLOW INVARIANT (no matter which path fires, gitignore is right).
+
+### Composition
+
+Composes onto v2.19.35 GITIGNORE fix (extends `PRIVATE_AI_ARTIFACTS`) + v1.72 DIASPORA (`ensureGitignoreEntries` primitive) + v1.0 `mneme init` (extended) + AI agent first-contact contract (`mneme.welcome`).
+
+### Ritual
+
+No new MCP tools (extends existing handlers). 28/28 diaspora tests pass.
 
 ---
 

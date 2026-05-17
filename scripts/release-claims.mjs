@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.36": {
+    headline: "🤖 AUTO-FLOW FIX — user says 'install mneme', AI agent runs install, gitignore is right WITHOUT anyone running a command. 3 redundant entry points (mneme init + autoStartSpore daemon path + mneme.welcome MCP first-contact) all call ensureGitignoreEntries idempotently. 8 deep tests verify all paths + invariant. No new MCP tools (extends existing welcome / init / autoStartSpore handlers).",
+    tools: [],
+  },
   "2.19.35": {
     headline: "🪞 HONESTY + AUTO + DEAD-MAN + GITIGNORE — R1 fix (mneme.truth.auto_check 1-step zero-config verification) + R2 fix (STARTER 22→33 + holy-grail tools surfaced) + R3 fix (DEAD-MAN'S SWITCH for SLEEP+DREAMSPACE at 6h) + R4 fix (mneme browse + mneme suggest now CLI top-level via 2-part router) + HONESTY GATE (parse whats_new claims + verify against runtime; block lying release notes) + GITIGNORE auto-emits .mneme/ + .brain-* + .mneme-ritual-receipt.json so fresh `mneme init` never leaks runtime state into commits. 4 new MCP tools.",
     tools: [

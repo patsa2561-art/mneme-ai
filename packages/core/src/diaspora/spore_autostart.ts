@@ -17,6 +17,7 @@
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { ensureGitignoreEntries } from "./gitignore_writer.js";
 
 export interface GitRemote {
   name: string;
@@ -83,8 +84,18 @@ export interface AutoStartOptions {
 }
 
 /** Idempotent: detect git remote + write spore.json if absent. Safe to
- *  call on every `mneme init` / daemon startup. */
+ *  call on every `mneme init` / daemon startup.
+ *
+ *  v2.19.36 AUTO-FLOW fix: also ensure the repo-root .gitignore is
+ *  populated on EVERY call (idempotent). This catches the case where
+ *  Mneme is installed via `npm i -g mneme-ai` + a subsequent .mneme/
+ *  write happens BEFORE the user runs `mneme init` explicitly. Daemon
+ *  startup or first MCP call → autoStartSpore → gitignore guaranteed.
+ */
 export function autoStartSpore(repoRoot: string, opts?: AutoStartOptions): AutoStartResult {
+  // Belt-and-suspenders gitignore write (idempotent; never throws)
+  try { ensureGitignoreEntries(repoRoot); } catch { /* best-effort */ }
+
   const remotes = readGitRemotes(repoRoot);
   const existing = readSporeConfig(repoRoot);
 
