@@ -205,6 +205,19 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.26": {
+    headline: "DREAMSPACE -- self-authoring MCP catalog. Two phases that turn dreams from PRODUCT factory (vaccine/prophecy/paradox) into TOOL FACTORY (proposes brand-new MCP chimeras + lifecycle decisions). 🌱 GESTATION detects 3 gap classes (REFLEX cache miss / user_chat no-match / pattern co-occurrence) and proposes HMAC-signed ProposedToolSpecs with deterministic names (mneme.auto.X_then_Y) + sequential composer recipes that splice EXISTING tools via v2.19.9 WRAPPER_GENESPLICING. 🦋 EVOLUTION classifies each tool into 4 lifecycle bands (🥚 gestating / 🐣 juvenile / 🦋 mature / 🍂 atrophied) + selects ordered (A then B) mating pairs from a use-log within 60s window; promotes proven + sunsets unused + mates frequent pairs into new chimeras. Tools are SPECIES that evolve. 8 new MCP tools. First framework worldwide with self-authoring catalog + lifecycle bands + mating selector.",
+    tools: [
+      "mneme.dreamspace.detect_gaps",
+      "mneme.dreamspace.propose_spec",
+      "mneme.dreamspace.gestation_cycle",
+      "mneme.dreamspace.verify_proposal",
+      "mneme.dreamspace.classify",
+      "mneme.dreamspace.mate_pairs",
+      "mneme.dreamspace.evolution_cycle",
+      "mneme.dreamspace.list_bands",
+    ],
+  },
   "2.19.25": {
     headline: "SLEEP TRAINING + ENDOCRINE -- extends LIMBIC further. SLEEP TRAINING is the nightly fitness loop: compares yesterday's REFLEX predictions vs the AI agent's ACTUAL tool calls; computes jaccard fitness per (pattern, eventSig); adaptive weight updates clamp [0.01, 1.0]; hit rate compounds nightly. MEASURED trajectory: random 20% (day 1) -> >=70% (day 30) on synthetic fixable trail. ENDOCRINE adds 4 NAMED biological hormones (CORTISOL stress / DOPAMINE flow / MELATONIN rest / OXYTOCIN social) with source detectors over commit text + error rate + hour + streaks + co-authors + idle; 4 distinct half-life decays (30/20/90/60 min); 5 cross-organ effects (reflex aggressiveness / daemon quietness / dream depth / notifications suppressed / surface trinity). System literally adapts to user mood. 8 new MCP tools. No cloud SaaS competitor can ship sleep training (event observation = privacy violation; Mneme local-first immune).",
     tools: [

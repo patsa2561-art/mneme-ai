@@ -110,6 +110,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   // v2.19.25 -- extends HIPPOCAMPUS + HORMONAL
   "sleep_training",
   "endocrine",
+  // v2.19.26 DREAMSPACE -- self-authoring MCP catalog
+  "dreamspace_gestation",
+  "dreamspace_evolution",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -298,6 +301,8 @@ function familyAliases(moduleName: string): string[] {
     event_pattern_match: ["event"],
     sleep_training: ["sleep"],
     endocrine: ["endocrine"],
+    dreamspace_gestation: ["dreamspace"],
+    dreamspace_evolution: ["dreamspace"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -487,6 +492,12 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   //     "listhormoneinfo" doesn't substring-match "list_hormones" cleanly.
   "detectCortisolDelta", "detectDopamineDelta", "detectMelatoninDelta", "detectOxytocinDelta",
   "emptyEndocrineLedger", "recordEndocrine", "listHormoneInfo",
+  // v2.19.26 dreamspace -- word-order mismatches between camelCase symbol +
+  // snake_case action. All three IS surfaced via MCP:
+  //   detectToolGaps -> mneme.dreamspace.detect_gaps
+  //   proposeToolSpec -> mneme.dreamspace.propose_spec
+  //   selectMatingPairs -> mneme.dreamspace.mate_pairs
+  "detectToolGaps", "proposeToolSpec", "selectMatingPairs",
 ]);
 
 export function findOrphans(input: {

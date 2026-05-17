@@ -754,6 +754,9 @@ export * as eventPatternMatch from "./event_pattern_match/index.js";
 // v2.19.25 — extends LIMBIC further: nightly sleep training + named endocrine hormones
 export * as sleepTraining from "./sleep_training/index.js";
 export * as endocrine from "./endocrine/index.js";
+// v2.19.26 DREAMSPACE — self-authoring MCP catalog (factory > product)
+export * as dreamspaceGestation from "./dreamspace_gestation/index.js";
+export * as dreamspaceEvolution from "./dreamspace_evolution/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

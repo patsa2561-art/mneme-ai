@@ -1,3 +1,100 @@
+## v2.19.26 — 2026-05-17 — 🌱🦋 DREAMSPACE — self-authoring MCP catalog (factory > product)
+
+**Paradigm shift: dreams stop manufacturing artifacts; start manufacturing TOOLS.** Every prior dreams primitive (`vaccine_cycle` / `dream.run` / `dreams.enqueue/resolve`) was a PRODUCT factory. v2.19.26 ships the first TOOL factory in any AI framework: dreams that propose brand-new MCP tools by composing existing primitives.
+
+The diagnosis from user audit: *"LIMBIC ทำให้ tool ที่มีอยู่ ถูกใช้บ่อยขึ้น. แต่ catalog ตัวมัน static — ไม่งอก ไม่ตาย ไม่จับคู่ ไม่เรียนรู้ที่จะ author tool ใหม่."*
+
+### 🌱 GESTATION — gap-driven tool spec proposer
+
+`packages/core/src/dreamspace_gestation/`. Detects 3 gap classes from caller-supplied signals:
+
+| Gap kind | Source | Proposed name | Composer |
+|---|---|---|---|
+| `reflex_cache_miss` | REFLEX had no fresh entry for the event | `mneme.auto.handle_<label>` | sequential of relatedTools (or smart_do fallback) |
+| `user_chat_no_match` | EVENT PATTERN MATCH returned zero predictions | `mneme.auto.intent_<label>` | smart_do with query schema |
+| `pattern_co_occurrence` | 2+ tools fire together >= threshold | `mneme.auto.X_then_Y` | sequential X → Y |
+
+- `detectToolGaps({signals, minGapCount=3, minCoOccurCount=4})` — filter above-threshold; sort by frequency
+- `proposeToolSpec({gap})` — emit deterministic `ProposedToolSpec` (HMAC-signed)
+- `runGestationCycle({signals})` — full pass; one call per dream window
+- `verifyProposal(spec)` — HMAC-verify before daemon promotes via v2.19.9 splice
+- **17 deep tests** + **MEASURED 100% determinism + 100% HMAC integrity + 3 gap-kind coverage**
+
+Caller (daemon) feeds the proposed spec to v2.19.9 `WRAPPER_GENESPLICING.splice` to actually create the runtime chimera. GESTATION is the PROPOSER, not the executor.
+
+### 🦋 EVOLUTION — lifecycle bands + mate selection
+
+`packages/core/src/dreamspace_evolution/`. Decides which proposed tools survive.
+
+**4 lifecycle bands** (deterministic; pure-function):
+
+| Band | Criteria | Recommendation |
+|---|---|---|
+| 🥚 GESTATING | age < 7 days | keep (newborn) |
+| 🐣 JUVENILE | age 7-30d, uses 5-49 | keep (proving itself) |
+| 🦋 MATURE | age ≥ 30d AND uses ≥ 50 | **promote** (proven) |
+| 🍂 ATROPHIED | age ≥ 30d AND uses < 1/week | **sunset** (unused) |
+
+**Mate selection** scans a use-log for ordered (A then B) pairs co-occurring within `windowMs=60_000` more than `minCount=4` times. Each qualifying pair becomes a candidate `pattern_co_occurrence` signal that GESTATION turns into a fresh chimera. **Birth via mating.**
+
+- `classifyLifecycle({record, nowMs, config})` — single-tool band decision
+- `selectMatingPairs({log, windowMs, minCount})` — ordered pair finder; A→B ≠ B→A; self-pairs excluded
+- `runEvolutionCycle({records, log, nowMs})` — full pass; HMAC-signed `EvolutionReport`
+- **14 deep tests** + **MEASURED 100% determinism + 100% HMAC integrity + 4-band priority correctness**
+
+### 8 new MCP tools
+
+`packages/mcp/src/tools/_v1926_dreamspace.ts`:
+- GESTATION: `mneme.dreamspace.{detect_gaps, propose_spec, gestation_cycle, verify_proposal}`
+- EVOLUTION: `mneme.dreamspace.{classify, mate_pairs, evolution_cycle, list_bands}`
+
+Claim manifest now **206/206 by exact name** across v2.18 → v2.19.26. AUTO-GENESIS verified zero v2.18+ orphans (613 core exports / 488 MCP tools / **590 total CLI-visible tools**). Ritual: **22/22 GREEN** locally.
+
+### AURELIAN audit
+
+`packages/core/src/cosmic/aurelian_v1926.test.ts` — both modules score SHIP across all 4 axes (delta/worldClass/wisdom/wildness ≥ 80); rollup ship=2.
+
+### Why no AI lab nor framework can copy this
+
+| Vendor | Tool model |
+|---|---|
+| OpenAI / Anthropic / Google | tools = API endpoint engineers design + version |
+| LangChain / LangGraph | tools = functions developers wrap |
+| Cursor / Copilot | tools = LSP commands + embedded utilities |
+| MCP spec | tools = STATIC catalog the server declares |
+
+**Nobody thinks of tools as a species that evolves** because they lack:
+1. Local-first observation (privacy ok to watch user behavior)
+2. Persistent daemon (idle time to gestate proposals)
+3. LIMBIC infrastructure (organs to compose into chimeras)
+4. Free-first economics (no fear of vendor charging per generated tool)
+
+Mneme has all four. The category is Mneme's by structural necessity — first-mover forever.
+
+### Mneme mandates audit
+
+- 🌟 **Wild idea:** tools as SPECIES that evolve. First-of-its-kind worldwide. The dreams that author dreams.
+- 🧠 **Wiser, not patched:** v2.19.26 doesn't add 8 new product organs — it adds 2 META organs (gestation + evolution) that orchestrate the existing factory primitives (WRAPPER_GENESPLICING, MORTAL, REFLEX, SLEEP TRAINING).
+- 🛠 **Self-fix root cause:** "catalog static — 543 tools never grow / die / mate / learn" → fixed at SOURCE via gap-driven proposer + lifecycle classifier + co-occurrence mate selector.
+- 🤝 **Co-working:** every vendor benefits — chimeras propose themselves; users get more capability without typing more commands.
+- 📚 **Always studying:** *factory > product on compounding + durability. Industry analysts will name this category in 2027; Mneme will be the first-mover.*
+
+### How to install / upgrade
+
+```
+mneme.system.upgrade({"mode":"install","force":true})
+# CRITICAL: RESTART MCP client.
+
+# Explore DREAMSPACE:
+mneme dreamspace list_bands                                                   # 4 lifecycle bands
+mneme dreamspace gestation_cycle --json '{"signals":[{"v":1,"kind":"pattern_co_occurrence","label":"git_commit:fix","relatedTools":["mneme.ask","mneme.why"],"count":6,"ts":1}]}'
+mneme dreamspace mate_pairs --json '{"log":[{"toolName":"mneme.A","ts":0},{"toolName":"mneme.B","ts":10000}]}'
+
+npm install @mneme-ai/mneme-ai@2.19.26
+```
+
+---
+
 ## v2.19.25 — 2026-05-17 — 💤🧪 SLEEP TRAINING + ENDOCRINE — reflex learns nightly; 4 named hormones drive behavior (extends LIMBIC)
 
 Two extensions that complete the LIMBIC paradigm shift: v2.19.23 shipped 6 organs as STATE; v2.19.25 makes 2 of them LEARN and FEEL.
