@@ -751,6 +751,9 @@ export * as hormonal from "./hormonal/index.js";
 // v2.19.24 — extends LIMBIC: tier classifier + semantic event matcher
 export * as toolTier from "./tool_tier/index.js";
 export * as eventPatternMatch from "./event_pattern_match/index.js";
+// v2.19.25 — extends LIMBIC further: nightly sleep training + named endocrine hormones
+export * as sleepTraining from "./sleep_training/index.js";
+export * as endocrine from "./endocrine/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

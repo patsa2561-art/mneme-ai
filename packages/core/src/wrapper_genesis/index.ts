@@ -107,6 +107,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   // v2.19.24 -- extends LIMBIC
   "tool_tier",
   "event_pattern_match",
+  // v2.19.25 -- extends HIPPOCAMPUS + HORMONAL
+  "sleep_training",
+  "endocrine",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -293,6 +296,8 @@ function familyAliases(moduleName: string): string[] {
     hormonal: ["hormonal"],
     tool_tier: ["tier"],
     event_pattern_match: ["event"],
+    sleep_training: ["sleep"],
+    endocrine: ["endocrine"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -473,6 +478,15 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // mneme.event.list_patterns but "listbuiltinpatterns" doesn't substring-match
   // "list_patterns" cleanly (similar to v2.19.23 listBuiltinRules).
   "listBuiltinPatterns",
+  // v2.19.25 -- endocrine + sleep_training:
+  //   detect{Cortisol,Dopamine,Melatonin,Oxytocin}Delta: internal source
+  //     detectors composed by produceFromSignals (the surfaced wrapper).
+  //   emptyEndocrineLedger: constructor pattern (same as breath/hormonal).
+  //   recordEndocrine: caller-side ledger writer; daemon persists JSON.
+  //   listHormoneInfo IS surfaced as mneme.endocrine.list_hormones but
+  //     "listhormoneinfo" doesn't substring-match "list_hormones" cleanly.
+  "detectCortisolDelta", "detectDopamineDelta", "detectMelatoninDelta", "detectOxytocinDelta",
+  "emptyEndocrineLedger", "recordEndocrine", "listHormoneInfo",
 ]);
 
 export function findOrphans(input: {

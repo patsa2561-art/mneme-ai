@@ -87,6 +87,7 @@ import { V1921_GAP_CLOSER_TOOLS } from "./_v1921_gap_closer.js";
 import { V1922_REFLEX_TOOLS } from "./_v1922_reflex.js";
 import { V1923_LIMBIC_TOOLS } from "./_v1923_limbic.js";
 import { V1924_TIER_EVENT_TOOLS } from "./_v1924_tier_event.js";
+import { V1925_SLEEP_ENDOCRINE_TOOLS } from "./_v1925_sleep_endocrine.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -178,6 +179,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1922_REFLEX_TOOLS,
     ...V1923_LIMBIC_TOOLS,
     ...V1924_TIER_EVENT_TOOLS,
+    ...V1925_SLEEP_ENDOCRINE_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

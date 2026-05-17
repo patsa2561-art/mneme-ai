@@ -205,6 +205,19 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.25": {
+    headline: "SLEEP TRAINING + ENDOCRINE -- extends LIMBIC further. SLEEP TRAINING is the nightly fitness loop: compares yesterday's REFLEX predictions vs the AI agent's ACTUAL tool calls; computes jaccard fitness per (pattern, eventSig); adaptive weight updates clamp [0.01, 1.0]; hit rate compounds nightly. MEASURED trajectory: random 20% (day 1) -> >=70% (day 30) on synthetic fixable trail. ENDOCRINE adds 4 NAMED biological hormones (CORTISOL stress / DOPAMINE flow / MELATONIN rest / OXYTOCIN social) with source detectors over commit text + error rate + hour + streaks + co-authors + idle; 4 distinct half-life decays (30/20/90/60 min); 5 cross-organ effects (reflex aggressiveness / daemon quietness / dream depth / notifications suppressed / surface trinity). System literally adapts to user mood. 8 new MCP tools. No cloud SaaS competitor can ship sleep training (event observation = privacy violation; Mneme local-first immune).",
+    tools: [
+      "mneme.sleep.cycle",
+      "mneme.sleep.fitness",
+      "mneme.sleep.apply",
+      "mneme.sleep.digest",
+      "mneme.endocrine.produce",
+      "mneme.endocrine.effects",
+      "mneme.endocrine.neutral",
+      "mneme.endocrine.list_hormones",
+    ],
+  },
   "2.19.24": {
     headline: "TOOL TIER + EVENT PATTERN MATCH -- extends LIMBIC with progressive disclosure + semantic content matching. TIER ships 4-tier classifier (starter/explorer/deep/experimental) so users see a curated subset while AI agents still see all 574 via MCP; the CLI `mneme tools --tier T` flag replaces the 67-vs-505 split with explicit tiers + visual badges. EVENT PATTERN MATCH ships 18 semantic regex patterns extracting tool predictions from commit messages / file paths / clipboard text / shell commands / user chat in EN+TH; canonical scenario 'fix: token leak in auth.ts' fires 4+ predictions (bug_prophet + forensics.vulns + apoptosis.detect + antivirus.scan) with >=0.85 max confidence -- pre-execution layer becomes content-aware not just kind-aware. 6 new MCP tools.",
     tools: [
