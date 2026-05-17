@@ -61,6 +61,50 @@ describe("v2.9 BEACON", () => {
     expect(resp.status).toBe(404);
   });
 
+  // v2.19.31 BUG #1 CRITICAL REGRESSION: previously `|| url === "/"` allowed
+  // UNAUTHENTICATED access to the payload at the root. Anyone on the LAN could
+  // exfiltrate the soul prompt without the token. Fix: token REQUIRED for
+  // every request — no bypass. These tests pin the contract forever.
+  it("BUG #1 REGRESSION: root path / returns 404 (NO token bypass)", async () => {
+    const r = await spawnBeacon({ payload: "SECRET_PAYLOAD", port: 0, bindHost: "127.0.0.1" });
+    pending.push(r);
+    if (!r.port) return;
+    const resp = await fetch(`http://127.0.0.1:${r.port}/`);
+    expect(resp.status).toBe(404);
+    const text = await resp.text();
+    expect(text).not.toContain("SECRET_PAYLOAD");
+  });
+
+  it("BUG #1 REGRESSION: empty path also 404 (no implicit auth-skip)", async () => {
+    const r = await spawnBeacon({ payload: "SECRET_PAYLOAD", port: 0, bindHost: "127.0.0.1" });
+    pending.push(r);
+    if (!r.port) return;
+    const resp = await fetch(`http://127.0.0.1:${r.port}`);
+    expect(resp.status).toBe(404);
+  });
+
+  it("BUG #1 REGRESSION: similar-but-wrong tokens 404 (substring attack guard)", async () => {
+    const r = await spawnBeacon({ payload: "SECRET_PAYLOAD", port: 0, bindHost: "127.0.0.1" });
+    pending.push(r);
+    if (!r.port || !r.token) return;
+    // Append garbage after the token without proper separator
+    const resp = await fetch(`http://127.0.0.1:${r.port}/${r.token}EXTRA`);
+    expect(resp.status).toBe(404);
+    // Prefix-only attack (cut last char): must fail
+    const resp2 = await fetch(`http://127.0.0.1:${r.port}/${r.token.slice(0, -1)}`);
+    expect(resp2.status).toBe(404);
+  });
+
+  it("BUG #1 POSITIVE: valid token URL still serves payload", async () => {
+    const r = await spawnBeacon({ payload: "SECRET_PAYLOAD", port: 0, bindHost: "127.0.0.1" });
+    pending.push(r);
+    if (!r.port || !r.token) return;
+    const resp = await fetch(`http://127.0.0.1:${r.port}/${r.token}`);
+    expect(resp.status).toBe(200);
+    const text = await resp.text();
+    expect(text).toContain("SECRET_PAYLOAD");
+  });
+
   it("qrForUrl returns a data:image/svg+xml URI for short URLs", () => {
     const uri = qrForUrl("http://192.168.1.10:7741/abc");
     expect(uri).not.toBeNull();

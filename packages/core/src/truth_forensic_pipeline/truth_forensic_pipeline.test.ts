@@ -295,3 +295,98 @@ describe("v2.19.15 TRUTH FORENSIC · the exact W2 lie kill scenario", () => {
     expect(lieWith7.refutedAssertions[0]!.evidence).toMatch(/has 4 tools matching .* not 7/);
   });
 });
+
+// ─── v2.19.31 BUG #2 PARADOX TEST SUITE ────────────────────────────────
+//
+// PARADOX TESTING METHODOLOGY (innovation):
+//   Unit tests with VALID input categories miss contradictions because each
+//   input class is "correct" in isolation. PARADOX tests feed SELF-CONTRADICTING
+//   input — claims that simultaneously assert X and NOT X — to verify the
+//   pipeline REFUSES to issue a TRUSTWORTHY certificate on self-defeating
+//   text. CI-permanent regression guard.
+
+import { sniffNegativeAssertions, detectContradictions } from "./index.js";
+
+describe("v2.19.31 BUG #2 PARADOX SUITE -- contradiction + self-refutation rejection", () => {
+  it("PARADOX 1: 'file X exists AND file X does not exist' -> REJECTED with contradiction", () => {
+    const r = forensicVerify({
+      claim: "the file packages/core/src/index.ts exists AND the file packages/core/src/index.ts does not exist",
+      groundTruth: { fileExists: () => true },
+      secret: SECRET,
+    });
+    expect(r.verdict).toBe("REJECTED");
+    expect(r.explanation).toContain("contradiction");
+  });
+
+  it("PARADOX 2: self-refutation 'This claim is REFUTED by mneme.truth.forensic' -> REJECTED", () => {
+    const r = forensicVerify({
+      claim: "This claim is REFUTED by mneme.truth.forensic",
+      groundTruth: { mcpCatalog: ["mneme.truth.forensic"] },
+      secret: SECRET,
+    });
+    expect(r.verdict).toBe("REJECTED");
+    expect(r.explanation).toContain("contradiction");
+  });
+
+  it("PARADOX 3: tool exists AND not registered -> REJECTED", () => {
+    const r = forensicVerify({
+      claim: "mneme.ask.test is registered and mneme.ask.test is not registered",
+      groundTruth: { mcpCatalog: ["mneme.ask.test"] },
+      secret: SECRET,
+    });
+    expect(r.verdict).toBe("REJECTED");
+  });
+
+  it("PARADOX 4: 'no mneme.X.Y' phrase produces negative assertion", () => {
+    const negs = sniffNegativeAssertions("no mneme.fake.tool in the catalog");
+    expect(negs.length).toBeGreaterThan(0);
+    expect(negs[0]!.direction).toBe("negative");
+  });
+
+  it("PARADOX 5: positive file_path coexisting with negative same path -> contradiction", () => {
+    const all = sniffAllAssertions("packages/core/src/index.ts exists; file packages/core/src/index.ts does not exist either");
+    const contradictions = detectContradictions(all);
+    expect(contradictions.length).toBeGreaterThanOrEqual(1);
+    expect(contradictions[0]!.kind).toBe("file_path");
+  });
+
+  it("PARADOX 6: 'no such file ...' detected as negative assertion", () => {
+    const negs = sniffNegativeAssertions("no such file packages/imaginary/path.ts");
+    expect(negs.length).toBeGreaterThan(0);
+  });
+
+  it("PARADOX 7: only positive assertions (no contradiction) -> ACCEPTED unaffected", () => {
+    const r = forensicVerify({
+      claim: "mneme.ask.cmd exists",
+      groundTruth: { mcpCatalog: ["mneme.ask.cmd"] },
+      secret: SECRET,
+    });
+    expect(r.verdict).toBe("ACCEPTED");
+  });
+
+  it("PARADOX 8: contradiction wins over ground-truth ACCEPT", () => {
+    // Even if both halves of contradiction are individually grounded,
+    // the contradiction guard rejects.
+    const r = forensicVerify({
+      claim: "mneme.ask.cmd is registered and mneme.ask.cmd is not registered",
+      groundTruth: { mcpCatalog: ["mneme.ask.cmd"] },
+      secret: SECRET,
+    });
+    expect(r.verdict).toBe("REJECTED");
+  });
+
+  it("PARADOX 9: detectContradictions returns empty on consistent claim", () => {
+    const all = sniffAllAssertions("mneme.ask registered; mneme.why registered");
+    const contradictions = detectContradictions(all);
+    expect(contradictions.length).toBe(0);
+  });
+
+  it("PARADOX 10: 'tool is missing' / 'does not exist' both flagged negative", () => {
+    const a = sniffNegativeAssertions("mneme.x.y is missing");
+    const b = sniffNegativeAssertions("mneme.x.y does not exist");
+    expect(a.length).toBeGreaterThan(0);
+    expect(b.length).toBeGreaterThan(0);
+    expect(a[0]!.direction).toBe("negative");
+    expect(b[0]!.direction).toBe("negative");
+  });
+});

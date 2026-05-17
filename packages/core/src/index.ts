@@ -771,6 +771,10 @@ export * as synapseFusion from "./synapse_fusion/index.js";
 // v2.19.30 MNEME COMMONWEALTH pillars 1+2 (soul embalming + hive court)
 export * as soulEmbalming from "./soul_embalming/index.js";
 export * as hiveCourt from "./hive_court/index.js";
+// v2.19.31 CROSS-DEVICE SYNAPSE SYNC (Phase D of SYNAPSE GENESIS)
+//   CRDT last-strongest-wins merge for mobile + laptop + desktop unified brain.
+//   HMAC-signed envelopes + DIASPORA-shaped transport adapter.
+export * as synapseSync from "./synapse_sync/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

@@ -205,6 +205,18 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.31": {
+    headline: "🚨 BUG #1 BEACON token bypass FIXED (root path / no longer leaks soul prompt; v2.9 server pre-fix matched `|| url === '/'` allowing UNAUTHENTICATED LAN exfiltration) + 🚨 BUG #2 Liar Paradox detector (truth.forensic now refuses TRUSTWORTHY on self-contradicting claims: 'file X exists AND file X does not exist' → REJECTED via sniffNegativeAssertions + detectContradictions; PARADOX TEST SUITE = 10-case permanent CI regression guard) + 🧬 Phase D CROSS-DEVICE SYNAPSE SYNC (mobile + laptop + desktop unified brain — CRDT last-strongest-wins merge; permanent=true sticky; observationCount cumulative; commutative + associative + idempotent — measured; HMAC-signed envelopes; forged exports auto-dropped; DIASPORA transport adapter for git-branch/HTTP/QR transport). 26 deep tests including 3-device SYSTEM TEST (mobile mneme.ask 5x + laptop mneme.truth.forensic 15x → permanent + desktop mneme.guard 8x → all 3 synapses unified, 28 cumulative obs). 6 new MCP tools.",
+    tools: [
+      "mneme.synapse.sync_export",
+      "mneme.synapse.sync_verify",
+      "mneme.synapse.sync_merge",
+      "mneme.synapse.sync_pack",
+      "mneme.synapse.sync_unpack",
+      "mneme.synapse.sync_stats",
+      "mneme.truth.contradictions",
+    ],
+  },
   "2.19.30": {
     headline: "G_a FIX (Thai decision detector multilingual) + MNEME COMMONWEALTH pillars 1+2 (SOUL EMBALMING + HIVE COURT). G_a: 4 Thai variants ของ test_required decision pattern now detected (ต้อง pass / ต้องผ่าน / จำเป็นต้อง); Unicode-safe manual fallback regex (Thai chars don't break \\b). ⚱ SOUL EMBALMING: ring-buffered HMAC-chained agent state snapshot every 5min; ban-recovery hot path restores soul into replacement agent (no continuity break); decisionHistory capped to 100, lastToolCalls to 10, ring buffer to 8640 records (~30 days). ⚖ HIVE COURT: 4-source composite (ARENA 35% + CONFESSIONAL 25% + TRINITY 25% + TRUTH 15%) adjudicates 2+ disagreeing agents; HMAC-signed WRIT with 5 tiers (CLEAR / CLOSE_CALL / DISPUTED / SINGLE_PARTY_DEFAULT / INSUFFICIENT_PARTIES); TRUTH FORENSIC REJECTED forces winner finalScore=0 (liars never win); shouldDeferToWrit fail-safe on tamper. 9 new MCP tools. 72 deep tests + measured 100% determinism + 24/7 resilience.",
     tools: [

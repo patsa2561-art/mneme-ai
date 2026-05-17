@@ -1,9 +1,13 @@
-# 📜 Release index — v2.18.0 → v2.19.27
+# 📜 Release index — v2.18.0 → v2.19.31
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.31** | 🚨🚨🚨 BUG #1 BEACON token bypass FIXED + 🚨 BUG #2 Liar Paradox detector + 🧬 Phase D CROSS-DEVICE SYNAPSE SYNC (mobile + laptop + desktop unified brain via CRDT merge — commutative + associative + idempotent — measured) |
+| **v2.19.30** | G_a FIX (Thai decision detector multilingual) + MNEME COMMONWEALTH pillars 1+2 (⚱ SOUL EMBALMING + ⚖ HIVE COURT) — constitutional layer of the agent hive |
+| **v2.19.29** | SYNAPSE GENESIS — scheduler that WRITES ITSELF (Phase A HEBBIAN + Phase B CIRCADIAN + Phase C FUSION) |
+| **v2.19.28** | ROOT-CAUSE FIXES — AUTONOMIC SCHEDULER wakes 49 dormant organs 24/7 + B2 router resilience + B3 consensus truthfulness |
 | **v2.19.27** | DREAMSPACE PIPELINE COMPLETE — 6 stages closed (🔬 PROBE 4 metrics + 🗺 CARTOGRAPHER capability map + 💞 PAIR mutual-info pair rank + 🌍 FEDERATE blessed quorum + starter pack). The factory whose output is more factories |
 | **v2.19.26** | DREAMSPACE — self-authoring MCP catalog (GESTATION proposes new tools from gap signals; EVOLUTION classifies into 4 lifecycle bands 🥚🐣🦋🍂 + mates co-occurring pairs). The first framework where tools are SPECIES that evolve |
 | **v2.19.25** | SLEEP TRAINING (reflex learns nightly via jaccard fitness loop; hit-rate compounds 20%→70% over 30 days) + ENDOCRINE (4 named biological hormones: CORTISOL / DOPAMINE / MELATONIN / OXYTOCIN drive system behavior) — extends LIMBIC |
@@ -52,6 +56,77 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.31 — 2026-05-17 — 🚨 BUG #1 BEACON TOKEN BYPASS + 🚨 BUG #2 LIAR PARADOX + 🧬 PHASE D CROSS-DEVICE SYNAPSE SYNC
+
+User audit caught two critical bugs and one structural gap. This release fixes all three at SOURCE with permanent regression suites.
+
+### 🚨🚨🚨 BUG #1 CRITICAL — BEACON token bypass
+
+`packages/core/src/beacon/index.ts` v2.9 server matched `url.startsWith(/token/) || url === "/"`. The SECOND clause allowed **UNAUTHENTICATED access** to the soul prompt at the root path. Anyone on the LAN scanning ports could exfiltrate the payload without ever knowing the token. v2.19.31 removes the bypass: every request now REQUIRES the token; root path returns 404.
+
+**4 BUG #1 regression tests pin the contract forever:**
+- root `/` returns 404 (NO token bypass)
+- empty path returns 404 (no implicit auth-skip)
+- wrong-token substrings (prefix attack / suffix injection) return 404
+- valid token URL still serves payload (positive)
+
+15/15 beacon tests pass.
+
+### 🚨 BUG #2 HIGH — Liar Paradox not detected
+
+`packages/core/src/truth_forensic_pipeline/index.ts` sniffer was first-match-only with no negation awareness. `"file X exists AND file X does not exist"` returned TRUSTWORTHY. v2.19.31 adds:
+
+- `sniffNegativeAssertions(claim)` — 5 regex classes (file_path negative / no-such-file / mcp_tool negative / no-mneme-tool / self-refutation)
+- `direction?: "positive" | "negative"` field on `FactAssertion`
+- `detectContradictions(assertions)` — pairs same-kind same-value with opposite directions
+- Contradiction guard runs BEFORE the refuted-check in `forensicVerify` — self-contradiction defeats EVEN if both halves are individually grounded.
+
+**PARADOX TEST SUITE — 10-case permanent CI regression guard:**
+1. `'file X exists AND file X does not exist'` → REJECTED with contradiction
+2. Self-refutation `'This claim is REFUTED by mneme.truth.forensic'` → REJECTED
+3. Tool exists AND not-registered → REJECTED
+4. `'no mneme.X.Y'` phrase produces negative assertion
+5. positive file_path coexisting with negative same path → contradiction
+6. `'no such file ...'` detected as negative
+7. positive-only assertions → ACCEPT path unaffected
+8. contradiction wins over ground-truth ACCEPT
+9. consistent claim → empty contradictions
+10. `'is missing'` / `'does not exist'` both flagged negative
+
+38/38 truth_forensic_pipeline tests pass (28 existing + 10 PARADOX). New MCP tool: `mneme.truth.contradictions` exposes the detector directly.
+
+### 🧬 PHASE D — CROSS-DEVICE SYNAPSE SYNC (mobile + laptop + desktop unified brain)
+
+User mandate: *"bug ใหญ่มาก ไม่สามารถ sync brain ข้าม device ได้. ต้องทำให้ใช้ได้ ผมถึงบอกว่าคุณต้องเทสเยอะๆ ว่ามัน sync brain ได้จริงๆ ข้าม mobile + computer + notebook"*.
+
+New module `packages/core/src/synapse_sync/`:
+
+- **CRDT last-strongest-wins merge** per synapse key: `weight = max(device.weight)`, `lastObservedAtMs = max`, `observationCount = SUM` cumulative, `permanent = OR` sticky, `permanentSinceWeight = min positive`. Winner deviceId by (weight, lastObservedAtMs, deviceId asc) deterministic tie-break.
+- **MEASURED commutativity** — forward vs reverse merge order produces identical store signature
+- **MEASURED associativity** — `(A∪B)∪C ≡ A∪(B∪C)` on observation counts + synapse count
+- **MEASURED idempotence** — same envelope twice = once (deviceId dedup, last-export-wins by `exportedAtMs`)
+- **HMAC-signed envelopes** — forged exports auto-dropped into `rejectedDevices` for audit
+- **DIASPORA transport adapter** — `packForDiaspora` returns canonical (path, bytes, branchHint) with path-traversal-safe deviceId sanitization (`..` / `;` / `/etc/` all stripped); `unpackFromDiaspora` returns null on malformed bytes (never throws)
+
+**26 deep tests including SYSTEM TEST 3-device scenario:** mobile fires `mneme.ask` 5x on the train + laptop fires `mneme.truth.forensic` 15x during deep work (crystallises permanent) + desktop fires `mneme.guard` 8x on every commit → unified brain has all 3 synapses, forensic still permanent, total 28 cumulative observations.
+
+**6 new MCP tools:** `mneme.synapse.{sync_export, sync_verify, sync_merge, sync_pack, sync_unpack, sync_stats}`.
+
+### Composition + scope
+
+Composes onto v2.19.29 SYNAPSE GENESIS Phase A+B+C (consumes `SynapseStore`) + v2.19.30 SOUL EMBALMING (HMAC chain pattern) + v1.72 DIASPORA (transport — caller wires git/HTTP/QR).
+
+The third axis of brain resilience:
+- **vendor-ban-immune** (v2.19.30 SOUL EMBALMING)
+- **circadian-sleep-immune** (v2.19.29 CIRCADIAN)
+- **device-change-immune** (v2.19.31 SYNAPSE SYNC) ← NEW
+
+### Ritual
+
+3 AURELIAN cards SHIP. 13076/13080 tests pass system-wide (4 snapshot regenerations from v2.19.30's expanded CLI surface).
 
 ---
 

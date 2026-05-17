@@ -150,6 +150,26 @@ export const truthExplainTool: MnemeTool = {
   },
 };
 
+// v2.19.31 BUG #2 — Liar Paradox detector surface
+export const truthContradictionsTool: MnemeTool = {
+  name: "mneme.truth.contradictions",
+  category: "audit",
+  description: "🌀 FORENSIC v2.19.31 — detect self-contradicting assertions in a claim ('file X exists AND file X does not exist'). Pair same-kind same-value with opposite directions. REJECTED verdict from forensicVerify even when both halves are individually grounded. Liar Paradox killer.",
+  whenToUse: "Before trusting any compound claim that contains both positive + negative phrasings. Auto-fires inside forensicVerify; expose for direct AI use too.",
+  triggers: ["truth contradictions", "detect contradiction", "liar paradox", "self-refutation"],
+  inputSchema: { type: "object", properties: { claim: { type: "string" } }, required: ["claim"] },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Is this claim self-contradicting?", args: { claim: "the file packages/x.ts exists AND the file packages/x.ts does not exist" }, expectedOutput: "{ count, contradictions: [{kind, positive, negative}] }" }],
+  pitfalls: ["Only detects same-kind same-value pairs (file_path ↔ file_path on same path; mcp_tool_exact ↔ mcp_tool_exact on same name). Cross-kind contradictions not yet covered."],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const assertions = core.truthForensic.sniffAllAssertions(String(args["claim"] ?? ""));
+    const contradictions = core.truthForensic.detectContradictions(assertions);
+    return { data: { count: contradictions.length, contradictions }, wisdom: contradictions.length > 0 ? `🌀 ${contradictions.length} contradiction(s) detected` : "✅ no contradictions", confidence: { level: contradictions.length > 0 ? "high" : "medium" } };
+  },
+};
+
 export const V1915_TRUTH_FORENSIC_TOOLS: MnemeTool[] = [
   truthForensicTool, truthSniffTool, truthVerifyCertTool, truthClassifyTool, truthExplainTool,
+  truthContradictionsTool,
 ];

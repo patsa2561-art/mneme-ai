@@ -127,6 +127,8 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   // v2.19.30 MNEME COMMONWEALTH pillars 1+2
   "soul_embalming",
   "hive_court",
+  // v2.19.31 CROSS-DEVICE SYNAPSE SYNC (Phase D)
+  "synapse_sync",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -327,6 +329,7 @@ function familyAliases(moduleName: string): string[] {
     synapse_fusion: ["synapse"],
     soul_embalming: ["soul"],
     hive_court: ["court"],
+    synapse_sync: ["synapse"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -557,6 +560,15 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   //   restoreSoulAt IS surfaced as mneme.soul.restore_at but word-order
   //     mismatch (camel "restoresoulat" vs snake "restore_at"/"restoreat").
   "restoreSoulAt",
+  // v2.19.31 CROSS-DEVICE SYNAPSE SYNC: all 5 are surfaced under mneme.synapse.sync_*
+  //   but the action prefix ('sync_') comes BEFORE the verb so substring match
+  //   fails ('exportforsync' vs 'syncexport'). The wrappers exist in
+  //   _v1931_synapse_sync.ts; ritual confirms via release-claims exact-name match.
+  "exportForSync",
+  "verifySyncExport",
+  "mergeSynapseStores",
+  "packForDiaspora",
+  "unpackFromDiaspora",
 ]);
 
 export function findOrphans(input: {

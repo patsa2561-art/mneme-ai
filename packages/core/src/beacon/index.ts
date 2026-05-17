@@ -213,7 +213,11 @@ export async function spawnBeacon(input: SpawnBeaconInput): Promise<BeaconResult
     server = createServer((req: IncomingMessage, res: ServerResponse) => {
       lastRequestAt = Date.now();
       const url = req.url ?? "/";
-      if (url.startsWith(`/${token}`) || url === "/") {
+      // v2.19.31 BUG #1 CRITICAL FIX: previously `|| url === "/"` allowed
+      // UNAUTHENTICATED access to the payload at the root path. Anyone on the
+      // LAN scanning ports could exfiltrate the soul prompt without the token.
+      // Token is now REQUIRED for every request — no bypass. Root path returns 404.
+      if (url.startsWith(`/${token}/`) || url === `/${token}`) {
         const html = renderBeaconPage(input.payload, vendor, label);
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(html);

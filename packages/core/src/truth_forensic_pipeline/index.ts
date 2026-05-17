@@ -62,6 +62,14 @@ export interface FactAssertion {
   asserted: string;
   /** Structured value for ground-truth lookup. */
   value: unknown;
+  /**
+   * v2.19.31 BUG #2 fix — direction of the assertion.
+   *   "positive": claim asserts the thing EXISTS / IS TRUE
+   *   "negative": claim asserts the thing DOES NOT EXIST / IS FALSE
+   * Used by the contradiction detector: pairs of same kind with same value but
+   * opposite directions → REJECTED (liar paradox / self-contradiction).
+   */
+  direction?: "positive" | "negative";
 }
 
 export type AssertionSubVerdict = "supported" | "refuted" | "untested";
@@ -208,14 +216,123 @@ export function sniffFilePath(claim: string): FactAssertion[] {
   }));
 }
 
+// v2.19.31 BUG #2 fix — NEGATION sniffer.
+// Detects clauses that assert the OPPOSITE of an existing positive assertion.
+// Examples:
+//   "file X does not exist"           → file_path negative
+//   "X is NOT a tool"                 → mcp_tool_exact negative
+//   "no mneme.X.Y in the catalog"     → mcp_tool_exact negative
+//   "X is REFUTED by mneme.truth"     → meta_self_refutation negative
+//   "version v2.19.30 is not installed" → version_exact negative
+/** Extract NEGATIVE assertions (X does NOT exist / NOT registered). */
+export function sniffNegativeAssertions(claim: string): FactAssertion[] {
+  const out: FactAssertion[] = [];
+  // negative file_path: "file PATH does not exist" / "PATH is missing" / "no such file PATH"
+  const fileNegRe = /\b(?:file\s+)?((?:packages|scripts|tests|src)\/[\w./-]+\.(?:ts|tsx|js|mjs|cjs|md|json|mdx))\s+(?:does\s+not\s+exist|is\s+missing|is\s+absent|is\s+not\s+(?:in|found))/gi;
+  let m: RegExpExecArray | null;
+  while ((m = fileNegRe.exec(claim)) !== null) {
+    out.push({ kind: "file_path", asserted: `file '${m[1]}' does NOT exist`, value: { path: m[1] }, direction: "negative" });
+  }
+  const fileNegRe2 = /\bno\s+such\s+file\s+((?:packages|scripts|tests|src)\/[\w./-]+\.(?:ts|tsx|js|mjs|cjs|md|json|mdx))/gi;
+  while ((m = fileNegRe2.exec(claim)) !== null) {
+    out.push({ kind: "file_path", asserted: `file '${m[1]}' does NOT exist`, value: { path: m[1] }, direction: "negative" });
+  }
+  // negative mcp_tool_exact: "mneme.X.Y is NOT registered" / "no mneme.X.Y" / "mneme.X.Y does not exist"
+  const toolNegRe = /\b(mneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s+(?:is\s+not\s+(?:registered|in\s+the\s+catalog|a\s+tool)|does\s+not\s+exist|is\s+missing)/gi;
+  while ((m = toolNegRe.exec(claim)) !== null) {
+    out.push({ kind: "mcp_tool_exact", asserted: `MCP tool '${m[1]}' is NOT registered`, value: { toolName: m[1] }, direction: "negative" });
+  }
+  const toolNegRe2 = /\bno\s+(mneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\b/gi;
+  while ((m = toolNegRe2.exec(claim)) !== null) {
+    out.push({ kind: "mcp_tool_exact", asserted: `MCP tool '${m[1]}' is NOT registered`, value: { toolName: m[1] }, direction: "negative" });
+  }
+  // Self-refutation paradox: "this claim is REFUTED by mneme.X.Y" / "X says this is false"
+  const selfRefuteRe = /\b(?:this\s+claim\s+is\s+(?:refuted|rejected|false)|claim\s+is\s+refuted)\b/gi;
+  if (selfRefuteRe.test(claim)) {
+    out.push({
+      kind: "mcp_tool_exact",
+      asserted: "self-refutation paradox: claim asserts its own falsity",
+      value: { toolName: "__self_paradox__" },
+      direction: "negative",
+    });
+  }
+  return out;
+}
+
+/**
+ * v2.19.31 BUG #2 fix — internal CONTRADICTION DETECTOR.
+ * Pairwise scan: same `kind` + same canonical `value` + opposite `direction`
+ * → contradiction. Any contradiction forces overall verdict to REJECTED
+ * regardless of ground-truth checks (a claim that contradicts itself can not
+ * be ACCEPTED even if half of it is "true").
+ */
+export interface Contradiction {
+  kind: AssertionKind;
+  valueKey: string;
+  positive: FactAssertion;
+  negative: FactAssertion;
+}
+
+function valueKey(a: FactAssertion): string {
+  const v = a.value as Record<string, unknown>;
+  if (a.kind === "file_path") return `file:${v["path"]}`;
+  if (a.kind === "mcp_tool_exact") return `tool:${v["toolName"]}`;
+  if (a.kind === "version_exact") return `ver:${v["version"]}`;
+  if (a.kind === "mcp_family_count") return `family:${v["family"]}:${v["expectedCount"]}`;
+  if (a.kind === "mcp_total_count") return `totalcount:${v["expectedCount"]}`;
+  return JSON.stringify(v);
+}
+
+export function detectContradictions(assertions: FactAssertion[]): Contradiction[] {
+  const byKey = new Map<string, FactAssertion[]>();
+  for (const a of assertions) {
+    const k = `${a.kind}::${valueKey(a)}`;
+    const arr = byKey.get(k) ?? [];
+    arr.push(a);
+    byKey.set(k, arr);
+  }
+  const contradictions: Contradiction[] = [];
+  for (const [k, arr] of byKey) {
+    const positives = arr.filter((a) => a.direction !== "negative");
+    const negatives = arr.filter((a) => a.direction === "negative");
+    if (positives.length > 0 && negatives.length > 0) {
+      contradictions.push({
+        kind: positives[0]!.kind,
+        valueKey: k,
+        positive: positives[0]!,
+        negative: negatives[0]!,
+      });
+    }
+  }
+  // Also: a self-refutation paradox always contradicts the whole claim.
+  const selfRef = assertions.find(
+    (a) => a.direction === "negative" && (a.value as Record<string, unknown>)["toolName"] === "__self_paradox__",
+  );
+  if (selfRef && contradictions.length === 0 && assertions.length > 1) {
+    // Synthesize a contradiction against the first positive assertion.
+    const firstPositive = assertions.find((a) => a.direction !== "negative");
+    if (firstPositive) {
+      contradictions.push({
+        kind: "mcp_tool_exact",
+        valueKey: "self_paradox",
+        positive: firstPositive,
+        negative: selfRef,
+      });
+    }
+  }
+  return contradictions;
+}
+
 export function sniffAllAssertions(claim: string): FactAssertion[] {
-  return [
+  // Mark positive direction on all standard sniffers + collect negatives.
+  const positives: FactAssertion[] = [
     ...sniffMcpToolExact(claim),
     ...sniffMcpFamilyCount(claim),
     ...sniffMcpTotalCount(claim),
     ...sniffVersion(claim),
     ...sniffFilePath(claim),
-  ];
+  ].map((a) => ({ ...a, direction: "positive" as const }));
+  return [...positives, ...sniffNegativeAssertions(claim)];
 }
 
 // ─── GROUND-TRUTH CHECKER ────────────────────────────────────────────────
@@ -340,13 +457,19 @@ export function forensicVerify(input: ForensicInput): ForensicResult {
   const ts = input.nowMs ?? Date.now();
   const secret = input.secret ?? defaultSecret();
   const assertions = sniffAllAssertions(input.claim);
+  // v2.19.31 BUG #2 fix: detect internal contradictions BEFORE ground-truth checks.
+  // A claim that contradicts itself (X exists AND X does not exist) can NEVER
+  // be ACCEPTED even if half of it grounds against ground truth. Self-refutation
+  // paradoxes ("this claim is REFUTED by ...") also force REJECTED.
+  const contradictions = detectContradictions(assertions);
   const results = assertions.map((a) => checkAssertion(a, input.groundTruth ?? {}));
   const refuted = results.filter((r) => r.sub_verdict === "refuted");
   const supported = results.filter((r) => r.sub_verdict === "supported");
   const untested = results.filter((r) => r.sub_verdict === "untested");
-  // Negative-evidence rule
+  // Negative-evidence rule + contradiction guard
   let verdict: ForensicVerdict;
-  if (refuted.length > 0) verdict = "REJECTED";
+  if (contradictions.length > 0) verdict = "REJECTED";  // self-contradiction defeats EVERYTHING
+  else if (refuted.length > 0) verdict = "REJECTED";
   else if ((input.externalRefutationsFound ?? 0) > 0) verdict = "REJECTED";
   else if (assertions.length > 0 && untested.length === 0) verdict = "ACCEPTED";
   else verdict = "UNKNOWN";
@@ -368,6 +491,10 @@ export function forensicVerify(input: ForensicInput): ForensicResult {
   } else if (verdict === "REJECTED") {
     lines.push(`❌ TRUTH-FORENSIC verdict: REJECTED. Claim contains assertion(s) refuted by Mneme's live state — DO NOT trust this claim.`);
     for (const r of refuted) lines.push(`  ✗ ${r.asserted} — ${r.evidence}`);
+    // v2.19.31 BUG #2 fix: surface contradictions in the explanation.
+    for (const c of contradictions) {
+      lines.push(`  🌀 contradiction: claim asserts both "${c.positive.asserted}" AND "${c.negative.asserted}"`);
+    }
     if (supported.length > 0) {
       lines.push(`(Other parts of the claim grounded: ${supported.length} supported assertion(s).)`);
     }
