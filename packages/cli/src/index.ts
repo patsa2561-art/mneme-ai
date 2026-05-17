@@ -138,7 +138,7 @@ export async function run(argv: string[]): Promise<void> {
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
     .version(getVersion())
     .option("--compliance <profile>", "Cryptographic compliance profile (none | fips140). Refuses to start if profile not satisfied.", "none")
-    .hook("preAction", async (thisCommand) => {
+    .hook("preAction", async (thisCommand, actionCommand) => {
       const opts = thisCommand.opts() as { compliance?: string };
       const profile = (opts.compliance ?? "none") as "none" | "fips140";
       if (profile !== "none" && profile !== "fips140") {
@@ -150,6 +150,16 @@ export async function run(argv: string[]): Promise<void> {
       if (!check.ok) {
         ui.error(check.reason ?? "Compliance check failed.");
         process.exit(1);
+      }
+      // v2.19.23 LIMBIC · AUTONOMIC BREATH (G1 killer):
+      // Silent heartbeat check + detached respawn on every CLI invocation.
+      // User never has to know `mneme daemon start` exists.
+      // Fire-and-forget: no await on respawn; only the alive-check is sync.
+      try {
+        const { ensureAutonomicBreath } = await import("./autonomic_breath_hook.js");
+        await ensureAutonomicBreath({ cwd: process.cwd(), commandName: actionCommand.name() });
+      } catch {
+        // Never block a user command on breath failure.
       }
     })
     .addHelpText(

@@ -85,6 +85,7 @@ import { V1919_CAPTION_INPAINT_TOOLS } from "./_v1919_caption_inpaint.js";
 import { V1920_CAPTION_TRIO_TOOLS } from "./_v1920_caption_trio.js";
 import { V1921_GAP_CLOSER_TOOLS } from "./_v1921_gap_closer.js";
 import { V1922_REFLEX_TOOLS } from "./_v1922_reflex.js";
+import { V1923_LIMBIC_TOOLS } from "./_v1923_limbic.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -174,6 +175,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1920_CAPTION_TRIO_TOOLS,
     ...V1921_GAP_CLOSER_TOOLS,
     ...V1922_REFLEX_TOOLS,
+    ...V1923_LIMBIC_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

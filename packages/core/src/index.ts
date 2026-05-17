@@ -741,6 +741,13 @@ export * as textronCaptcha from "./textron_captcha/index.js";
 export * as snnAutoPromote from "./snn_auto_promote/index.js";
 export * as reflex from "./reflex/index.js";
 export * as catalogParity from "./catalog_parity/index.js";
+// v2.19.23 LIMBIC — 6 organs: autonomic nervous system layer.
+export * as autonomicBreath from "./autonomic_breath/index.js";
+export * as thalamus from "./thalamus/index.js";
+export * as proprioception from "./proprioception/index.js";
+export * as spinalReflex from "./spinal_reflex/index.js";
+export * as hippocampusDreams from "./hippocampus_dreams/index.js";
+export * as hormonal from "./hormonal/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

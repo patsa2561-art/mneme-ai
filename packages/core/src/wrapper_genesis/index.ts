@@ -97,6 +97,13 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "snn_auto_promote",
   "reflex",
   "catalog_parity",
+  // v2.19.23 LIMBIC -- 6 organs (autonomic nervous system)
+  "autonomic_breath",
+  "thalamus",
+  "proprioception",
+  "spinal_reflex",
+  "hippocampus_dreams",
+  "hormonal",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -275,6 +282,12 @@ function familyAliases(moduleName: string): string[] {
     snn_auto_promote: ["snn"],
     reflex: ["reflex"],
     catalog_parity: ["catalog"],
+    autonomic_breath: ["breath"],
+    thalamus: ["thalamus"],
+    proprioception: ["proprioception"],
+    spinal_reflex: ["spinal"],
+    hippocampus_dreams: ["hippocampus"],
+    hormonal: ["hormonal"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -437,6 +450,20 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // recordObservation IS surfaced as mneme.reflex.observe but "observation"
   // (with trailing "ation") doesn't fuzz-match "observe" exactly (off by one).
   "recordObservation",
+  // v2.19.23 LIMBIC -- 6 organs:
+  //   autonomic_breath: heartbeatBudgetMs (HORMONAL coupling helper, not surfaced);
+  //     recordBreath (caller-side ledger writer; daemon persists JSON).
+  //   thalamus: routeEvent (orchestrator that invokes caller-supplied handlers;
+  //     would need the handler functions to be passed via MCP, not feasible).
+  //   proprioception: deriveAliases (internal helper used by buildUnifiedCatalog).
+  //   spinal_reflex: listBuiltinRules IS surfaced as mneme.spinal.list_rules but
+  //     "listbuiltinrules" doesn't substring-match "list_rules" cleanly.
+  //   hormonal: recordHormonal (caller-side ledger writer; same pattern as breath).
+  "heartbeatBudgetMs", "recordBreath",
+  "routeEvent",
+  "deriveAliases",
+  "listBuiltinRules",
+  "recordHormonal",
 ]);
 
 export function findOrphans(input: {

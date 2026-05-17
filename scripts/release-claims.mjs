@@ -205,6 +205,24 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.23": {
+    headline: "LIMBIC -- the autonomic nervous system (6 organs). Paradigm shift from tool to organism: Mneme breathes itself (BREATH respawns dead daemon silently on every CLI call -- kills G1), routes events by tier (THALAMUS picks reflex/cortex/dream/breath), reflexes with cold-start priors (SPINAL ships 8 BUILTIN_RULES so day-one users get useful predictions -- kills G4), knows its own shape (PROPRIOCEPTION unifies CLI+MCP catalog -- kills G2 deeper), dreams to consolidate (HIPPOCAMPUS extracts yesterday's stable patterns into tomorrow's priors), and has hormones (HORMONAL focus/fatigue/mood tunes every organ across the system). 13 new MCP tools. All 6 organs HMAC-signed; all measure 100% determinism. Composes onto v2.19.22 REFLEX + v2.19.21 CLI RESOLVER + v2.19.14 DREAMS + v2.19.13 NEGEV. The first dev tool in history with autonomic nervous system.",
+    tools: [
+      "mneme.breath.decide",
+      "mneme.breath.stats",
+      "mneme.thalamus.classify",
+      "mneme.proprioception.build",
+      "mneme.proprioception.find",
+      "mneme.proprioception.stats",
+      "mneme.spinal.blend",
+      "mneme.spinal.list_rules",
+      "mneme.hippocampus.consolidate",
+      "mneme.hormonal.update",
+      "mneme.hormonal.tune",
+      "mneme.hormonal.neutral",
+      "mneme.limbic.health",
+    ],
+  },
   "2.19.22": {
     headline: "REFLEX (flagship Automatic Pre-Execution Layer) + CATALOG PARITY (G2 quick-win). REFLEX is the first AI tool that pre-executes likely follow-up tools BEFORE the agent asks: HMAC-chained pheromone store learns from observations, frequency-based predictor returns top-N tools, budget-bound concurrent prefetch writes TTL-bounded HMAC-signed cache. Measured 100% cache integrity + 100% prediction determinism + 100% hit rate on warm trail + p50 cached read < cold invoke. CATALOG PARITY surfaces hidden-tool UX failures (CLI vs MCP family asymmetry) -- the root cause of 'AI hallucinates a Mneme tool user cannot find'. 7 new MCP tools.",
     tools: [
