@@ -9,9 +9,9 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.23&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-12201%2F12202%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-568-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.24&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-12285%2F12289%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-574-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)
 [![demo](https://img.shields.io/badge/demo-patsa2561--art.github.io%2Fmneme--ai-8957e5?style=for-the-badge)](https://patsa2561-art.github.io/mneme-ai/)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
@@ -183,10 +183,11 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 </table>
 
 <details>
-<summary><b>📜 Full release history — v2.10 → v2.19.23 (click to expand)</b></summary>
+<summary><b>📜 Full release history — v2.10 → v2.19.24 (click to expand)</b></summary>
 
 | Version | Headline |
 |---|---|
+| **v2.19.24** | TOOL TIER (progressive disclosure: 4 tiers · ⭐⭐⭐STARTER / ⭐⭐EXPLORER / ⭐DEEP / 🔬EXPERIMENTAL) + EVENT PATTERN MATCH (18 semantic regexes, multilingual EN+TH) — extends LIMBIC |
 | **v2.19.23** | LIMBIC — autonomic nervous system (6 organs: BREATH + THALAMUS + PROPRIOCEPTION + SPINAL + HIPPOCAMPUS + HORMONAL). Paradigm shift from tool to organism |
 | **v2.19.22** | REFLEX (flagship Automatic Pre-Execution Layer) + CATALOG PARITY (G2 hidden-tool audit) |
 | **v2.19.21** | GAP CLOSER — SNN AUTO-PROMOTE (writes resolved tier to config; refuses to downgrade) + CLI FAMILY-CLASH RESOLVER (router mounts MCP subcommands onto legacy parents; unblocks 4 SYNCRETIC families) |

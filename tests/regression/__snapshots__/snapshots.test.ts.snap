@@ -125,7 +125,7 @@ Commands:
   genome-pool  >  Mneme Genome Pool MVP -- opt-in PII-scrubbed chromosome contributor.
   stigmergy|hive [options]  >  MNEME STIGMERGY HIVE -- emergent dev-collaboration detection from git traces alone (no chat logs needed). Finds pairs who effectively work together without ever talking.
   chimera [options]  >  MNEME CHIMERA -- single-author insight synthesizer for solo repos. Surfaces time-of-day fingerprint + area diversity + velocity + topic momentum + phantom-collaborator suggestions even when other commands degenerate.
-  tools [options]  >  List Mneme's MCP tool catalog (default ALL 172). Pass --curated for the 20-tool starter set.
+  tools [options]  >  List Mneme's MCP tool catalog. v2.19.24 adds --tier (starter|explorer|deep|experimental). AI agents always see all tiers via MCP; --tier is a human view.
   squad [options] <claim...>  >  Bot Squadron — spawn 6 specialized sub-agents to investigate ONE claim from 6 angles, then run the v1.39 DEVIL'S ADVOCATE + EVIDENCE QUORUM aggregator + v1.51 ACGV (Chandrasekhar/Neutrino/Godel/Confession/Vaccine/Stake) on top so the verdict is bias-aware AND repo-grounded. Example: \`mneme squad "the auth refactor in v1.42 introduced a regression"\`
   health [options]  >  Single-screen health: version + lineage state + nucleus streaks.
   demo [options]  >  Showcase Mneme's wow-features in 60 seconds — synthesizes seed lineage + ticks nucleus + spawns bot squadron + shows DNA evolution.

@@ -35,14 +35,59 @@ function out(opts: CommonOpts, jsonPayload: unknown, humanLines: string[]): void
 export function registerToolsCommand(program: Command): void {
   program
     .command("tools")
-    .description("List Mneme's MCP tool catalog (default ALL 172). Pass --curated for the 20-tool starter set.")
+    .description("List Mneme's MCP tool catalog. v2.19.24 adds --tier (starter|explorer|deep|experimental). AI agents always see all tiers via MCP; --tier is a human view.")
     .option("--category <name>", "Filter to one category.")
     // v1.42.5 (#16 fix) — curator default: 20 high-value tools instead
     // of the full 172. Stops the catalog-explosion problem where smaller
     // models thrash through tool selection.
     .option("--curated", "Show only the 20-tool starter set + per-tool rationale (best for first-touch with new AI agents).")
+    // v2.19.24 — TIER classifier (extends v2.19.23 PROPRIOCEPTION).
+    .option("--tier <tier>", "Filter to a tier: starter | explorer | deep | experimental. AI agents see all tiers regardless.")
     .option("--json", "JSON output.")
-    .action(async (opts: { category?: string; curated?: boolean } & CommonOpts) => {
+    .action(async (opts: { category?: string; curated?: boolean; tier?: string } & CommonOpts) => {
+      // v2.19.24 — TIER path (preferred for human users).
+      if (opts.tier) {
+        const tier = opts.tier.toLowerCase();
+        const allowed = new Set(["starter", "explorer", "deep", "experimental"]);
+        if (!allowed.has(tier)) {
+          writeText(`⚠ Unknown --tier "${opts.tier}". Use one of: starter | explorer | deep | experimental`);
+          process.exit(2);
+        }
+        const [{ buildAllTools: ba }, core] = await Promise.all([
+          import("@mneme-ai/mcp/tools/registry"),
+          import("@mneme-ai/core"),
+        ]);
+        const allTools = ba();
+        const budget = core.toolTier.computeTierBudget({ toolNames: allTools.map((t) => t.name) });
+        const filtered = allTools
+          .filter((t) => core.toolTier.classifyTier(t.name).tier === tier)
+          .sort((a, b) => a.name.localeCompare(b.name));
+        if (opts.json) {
+          writeJson({
+            total: budget.totalTools,
+            tier,
+            budget: { starter: budget.starter, explorer: budget.explorer, deep: budget.deep, experimental: budget.experimental },
+            entries: filtered.map((t) => ({ name: t.name, description: (t.description ?? "").slice(0, 140) })),
+          });
+          return;
+        }
+        const tierBudget = ({ starter: budget.starter, explorer: budget.explorer, deep: budget.deep, experimental: budget.experimental } as Record<string, number>)[tier] ?? 0;
+        writeText(`μνήμη Mneme tools · ${budget.totalTools} total · showing tier=${tier} (${tierBudget})`);
+        writeText("");
+        writeText(`⭐⭐⭐ STARTER       (${String(budget.starter).padStart(3)}) · always shown · curated for first-time users`);
+        writeText(`⭐⭐  EXPLORER      (${String(budget.explorer).padStart(3)}) · mneme tools --tier explorer`);
+        writeText(`⭐   DEEP          (${String(budget.deep).padStart(3)}) · mneme tools --tier deep`);
+        writeText(`🔬  EXPERIMENTAL  (${String(budget.experimental).padStart(3)}) · mneme tools --tier experimental`);
+        writeText("");
+        const badge = core.toolTier.TIER_BADGE[tier as "starter" | "explorer" | "deep" | "experimental"];
+        for (const t of filtered) {
+          writeText(`  ${badge} ${t.name.padEnd(48)}  ${(t.description ?? "").slice(0, 80)}`);
+        }
+        writeText("");
+        writeText(`💡 AI agents always see ALL ${budget.totalTools} tools via MCP regardless of tier.`);
+        writeText(`💡 Run \`mneme tools --tier explorer\` for v2.18+ power-user tools.`);
+        return;
+      }
       // v1.42.5 (#16) curated path — short-circuit before hitting the
       // big registry import.
       if (opts.curated) {

@@ -205,6 +205,17 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.24": {
+    headline: "TOOL TIER + EVENT PATTERN MATCH -- extends LIMBIC with progressive disclosure + semantic content matching. TIER ships 4-tier classifier (starter/explorer/deep/experimental) so users see a curated subset while AI agents still see all 574 via MCP; the CLI `mneme tools --tier T` flag replaces the 67-vs-505 split with explicit tiers + visual badges. EVENT PATTERN MATCH ships 18 semantic regex patterns extracting tool predictions from commit messages / file paths / clipboard text / shell commands / user chat in EN+TH; canonical scenario 'fix: token leak in auth.ts' fires 4+ predictions (bug_prophet + forensics.vulns + apoptosis.detect + antivirus.scan) with >=0.85 max confidence -- pre-execution layer becomes content-aware not just kind-aware. 6 new MCP tools.",
+    tools: [
+      "mneme.tier.classify",
+      "mneme.tier.list_by_tier",
+      "mneme.tier.budget",
+      "mneme.event.match",
+      "mneme.event.list_patterns",
+      "mneme.event.report",
+    ],
+  },
   "2.19.23": {
     headline: "LIMBIC -- the autonomic nervous system (6 organs). Paradigm shift from tool to organism: Mneme breathes itself (BREATH respawns dead daemon silently on every CLI call -- kills G1), routes events by tier (THALAMUS picks reflex/cortex/dream/breath), reflexes with cold-start priors (SPINAL ships 8 BUILTIN_RULES so day-one users get useful predictions -- kills G4), knows its own shape (PROPRIOCEPTION unifies CLI+MCP catalog -- kills G2 deeper), dreams to consolidate (HIPPOCAMPUS extracts yesterday's stable patterns into tomorrow's priors), and has hormones (HORMONAL focus/fatigue/mood tunes every organ across the system). 13 new MCP tools. All 6 organs HMAC-signed; all measure 100% determinism. Composes onto v2.19.22 REFLEX + v2.19.21 CLI RESOLVER + v2.19.14 DREAMS + v2.19.13 NEGEV. The first dev tool in history with autonomic nervous system.",
     tools: [

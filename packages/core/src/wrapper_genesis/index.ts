@@ -104,6 +104,9 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "spinal_reflex",
   "hippocampus_dreams",
   "hormonal",
+  // v2.19.24 -- extends LIMBIC
+  "tool_tier",
+  "event_pattern_match",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -288,6 +291,8 @@ function familyAliases(moduleName: string): string[] {
     spinal_reflex: ["spinal"],
     hippocampus_dreams: ["hippocampus"],
     hormonal: ["hormonal"],
+    tool_tier: ["tier"],
+    event_pattern_match: ["event"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -464,6 +469,10 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "deriveAliases",
   "listBuiltinRules",
   "recordHormonal",
+  // v2.19.24 -- event_pattern_match: listBuiltinPatterns IS surfaced as
+  // mneme.event.list_patterns but "listbuiltinpatterns" doesn't substring-match
+  // "list_patterns" cleanly (similar to v2.19.23 listBuiltinRules).
+  "listBuiltinPatterns",
 ]);
 
 export function findOrphans(input: {
