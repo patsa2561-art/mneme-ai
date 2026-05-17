@@ -803,6 +803,17 @@ export * as eternity from "./eternity/index.js";
 //   (R1 auto_check extends truthSensorPack; R3 dead-man extends autonomicScheduler;
 //    R4 mneme browse extends CLI router; gitignore fix extends diaspora/gitignore_writer)
 export * as honestyGate from "./honesty_gate/index.js";
+// v2.19.37 TALK-OF-THE-TOWN QUINTUPLE — Gaps #1-#6 closed
+//   - mnemeReceiptProtocol: open RFC-style spec + ref impl + compat matrix
+//   - browserReceipt:       pure-TS core for ChatGPT/Claude/Gemini extension
+//   - citizensAudit:        anonymise + aggregate + quarterly report
+//   - conscienceCard:       Wordle-style shareable SVG + text card
+//   - mayorElection:        per-repo vendor election + auto-rotation
+export * as mnemeReceiptProtocol from "./mneme_receipt_protocol/index.js";
+export * as browserReceipt from "./browser_receipt/index.js";
+export * as citizensAudit from "./citizens_audit/index.js";
+export * as conscienceCard from "./conscience_card/index.js";
+export * as mayorElection from "./mayor_election/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

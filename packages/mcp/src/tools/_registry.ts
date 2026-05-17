@@ -98,6 +98,7 @@ import { V1932_HANDOFF_TOOLS } from "./_v1932_handoff.js";
 import { V1933_POLISH_TOOLS } from "./_v1933_polish.js";
 import { V1934_HOLY_GRAIL_TOOLS } from "./_v1934_holy_grail.js";
 import { V1935_HONESTY_TOOLS } from "./_v1935_honesty.js";
+import { V1937_TALK_OF_TOWN_TOOLS } from "./_v1937_talk_of_town.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -200,6 +201,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1933_POLISH_TOOLS,
     ...V1934_HOLY_GRAIL_TOOLS,
     ...V1935_HONESTY_TOOLS,
+    ...V1937_TALK_OF_TOWN_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

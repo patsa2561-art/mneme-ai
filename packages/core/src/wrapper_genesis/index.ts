@@ -144,6 +144,12 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "eternity",
   // v2.19.35 HONESTY GATE (R2+R4 user-audit fix; release-note CI gate)
   "honesty_gate",
+  // v2.19.37 TALK OF THE TOWN QUINTUPLE (Gaps #1-#6 closed)
+  "mneme_receipt_protocol",
+  "browser_receipt",
+  "citizens_audit",
+  "conscience_card",
+  "mayor_election",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -356,6 +362,11 @@ function familyAliases(moduleName: string): string[] {
     zk_fairness: ["fairness"],
     eternity: ["eternity"],
     honesty_gate: ["honesty"],
+    mneme_receipt_protocol: ["protocol"],
+    browser_receipt: ["browser"],
+    citizens_audit: ["citizens"],
+    conscience_card: ["card"],
+    mayor_election: ["mayor"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -618,6 +629,35 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "browseCatalog",       // wrapped as mneme.browse (2-part name; scanner needs 3)
   "suggestTools",        // wrapped as mneme.suggest (2-part name; scanner needs 3)
   "computeBrowseStats",  // display helper
+  // v2.19.37 TALK OF THE TOWN — word-order mismatch + helper functions
+  "mintProtocolReceipt",  // wrapped as mneme.protocol.mint
+  "validateReceipt",      // wrapped as mneme.protocol.validate
+  "specText",             // wrapped as mneme.protocol.spec (action = spec; symbol = specText → match via substring works actually but be explicit)
+  "computeProtocolStats", // display helper
+  "detectVendorFromUrl",  // wrapped as mneme.browser.detect
+  "extractChatTurns",     // wrapped as mneme.browser.extract
+  "extractModelHint",     // helper used inside extractChatTurns flow
+  "mintFromBrowserCapture", // wrapped as mneme.browser.mint
+  "serializeForLocalStorage", // helper for browser extension
+  "deserializeFromLocalStorage", // helper for browser extension
+  "computeBrowserStats",  // display helper (already covered above but safe to repeat)
+  "anonymizeReceipt",     // helper used inside aggregateCitizens pipeline
+  "aggregateCitizens",    // wrapped as mneme.citizens.aggregate
+  "renderQuarterlyReport", // wrapped as mneme.citizens.report
+  "quarterIdFromMs",      // pure helper
+  "computeAuditStats",    // display helper
+  "buildConscienceCard",  // wrapped as mneme.card.build
+  "renderCardText",       // wrapped as mneme.card.render (returns text)
+  "renderCardSvg",        // wrapped as mneme.card.render (returns svg)
+  "computeCardStats",     // display helper
+  "freshElectionState",   // helper (caller initialises state)
+  "recordVote",           // wrapped as mneme.mayor.vote
+  "verifyVoteLedger",     // helper (paired with recordVote)
+  "tallyElection",        // wrapped as mneme.mayor.tally
+  "verifyElectionResult", // helper
+  "runScheduledElection", // wrapped as mneme.mayor.rotate
+  "formatMayorLine",      // display helper
+  "computeElectionStats", // display helper
   // v2.19.34 HOLY GRAIL QUADRUPLE — word-order mismatch on auto-scan + helpers
   "mintReceipt",            // wrapped as mneme.apostille.mint
   "appendToLedger",         // wrapped as mneme.apostille.append

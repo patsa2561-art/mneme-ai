@@ -265,6 +265,11 @@ Commands:
   fairness  >  Mneme fairness family — 5 action(s). Run \`mneme fairness --help\` for actions, or \`mneme fairness <action> --json '{...}'\` to invoke.
   eternity  >  Mneme eternity family — 5 action(s). Run \`mneme eternity --help\` for actions, or \`mneme eternity <action> --json '{...}'\` to invoke.
   honesty  >  Mneme honesty family — 3 action(s). Run \`mneme honesty --help\` for actions, or \`mneme honesty <action> --json '{...}'\` to invoke.
+  protocol  >  Mneme protocol family — 3 action(s). Run \`mneme protocol --help\` for actions, or \`mneme protocol <action> --json '{...}'\` to invoke.
+  browser  >  Mneme browser family — 3 action(s). Run \`mneme browser --help\` for actions, or \`mneme browser <action> --json '{...}'\` to invoke.
+  citizens  >  Mneme citizens family — 2 action(s). Run \`mneme citizens --help\` for actions, or \`mneme citizens <action> --json '{...}'\` to invoke.
+  card  >  Mneme card family — 2 action(s). Run \`mneme card --help\` for actions, or \`mneme card <action> --json '{...}'\` to invoke.
+  mayor  >  Mneme mayor family — 3 action(s). Run \`mneme mayor --help\` for actions, or \`mneme mayor <action> --json '{...}'\` to invoke.
   tool  >  Mneme tool family — 2 action(s). Run \`mneme tool --help\` for actions, or \`mneme tool <action> --json '{...}'\` to invoke.
   adversary  >  Mneme adversary family — 1 action(s). Run \`mneme adversary --help\` for actions, or \`mneme adversary <action> --json '{...}'\` to invoke.
   replay  >  Mneme replay family — 2 action(s). Run \`mneme replay --help\` for actions, or \`mneme replay <action> --json '{...}'\` to invoke.
