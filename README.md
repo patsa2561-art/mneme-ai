@@ -9,7 +9,7 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.37&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.38&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
 [![tests](https://img.shields.io/badge/tests-13450%2B%20green%20%2B%20100k%2B%20fuzz-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
 [![MCP tools](https://img.shields.io/badge/MCP%20tools-674-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)

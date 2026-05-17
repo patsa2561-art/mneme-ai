@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.37
+# 📜 Release index — v2.18.0 → v2.19.38
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.38** | 🔌 SOCKETS RELEASE — production sockets connect v2.19.37 plumbing: Tampermonkey 1-click + daemon auto-emits cards + git post-commit auto-elects Mayor + quarterly contribution daemon-runs |
 | **v2.19.37** | 📜🌐🪞📣👑 TALK OF THE TOWN QUINTUPLE — RFC RECEIPT PROTOCOL (Mneme as SPEC) + BROWSER RECEIPT (200M ChatGPT users no vendor cooperation) + CITIZEN'S AUDIT (pressure > regulator) + CONSCIENCE CARD (Wordle viral) + MAYOR ELECTION (per-repo vendor game). 6 standard-positioning gaps closed |
 | **v2.19.36** | 🤖 AUTO-FLOW FIX — user says 'install mneme', AI agent runs install, gitignore is right WITHOUT anyone running a command (3 redundant entry points: mneme init + autoStartSpore + mneme.welcome) |
 | **v2.19.35** | 🪞 HONESTY + AUTO + DEAD-MAN + GITIGNORE — R1 (mneme.truth.auto_check 1-step verification) + R2 (STARTER 22→33) + R3 (DEAD-MAN'S SWITCH 6h timer) + R4 (mneme browse CLI) + HONESTY GATE (parse whats_new + verify runtime) + GITIGNORE auto-emits .mneme/. Wisdom article: file-per-subsystem > single-config-file |
@@ -62,6 +63,60 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.38 — 2026-05-17 — 🔌 SOCKETS RELEASE (production sockets: 1 install → AI + git handle everything)
+
+v2.19.37 shipped PLUMBING (pure-function modules). v2.19.38 ships the SOCKETS user plugs into. After install, **user types nothing** — AI agent + git + daemon handle every step.
+
+### 4 sockets — each unblocks 1 user-action gap
+
+| Socket | What user does (one-time) | What happens after (automatic) |
+|---|---|---|
+| 🛡 **[browser_userscript](packages/core/src/browser_userscript/index.ts)** | Install Tampermonkey + click 1 install URL | Every ChatGPT/Claude/Gemini chat → receipt minted to localStorage |
+| 🪙 **[citizens_contribute](packages/core/src/citizens_contribute/index.ts)** | (nothing) | Daemon end-of-Q packs + signs + pushes to public `citizens-audit` repo |
+| 📣 **[conscience_auto_hook](packages/core/src/conscience_auto_hook/index.ts)** | (nothing) | Daemon hooks failure events → emits SVG to `.mneme/cards/` + daily digest |
+| 👑 **[mayor_auto_vote](packages/core/src/mayor_auto_vote/index.ts)** | `mneme mayor install-hook` once | post-commit git hook auto-detects vendor + votes; IDE status bar shows Mayor |
+
+### 12 new MCP tools
+
+- `mneme.citizens.{contribute_pack, contribute_preview}` (2)
+- `mneme.card.{auto_emit, daily_digest}` (2)
+- `mneme.mayor.{detect_vendor, auto_vote_from_commit, install_hook, status_line}` (4)
+- `mneme.browser.{userscript, manifest, popup, readme}` (4)
+
+### Tests
+
+**74/74 module tests pass + 4000+ fuzz iterations**:
+- citizens_contribute 17 (pack + PII strip + dedupe + window filter + verify + fingerprint + path-safe + 1000-iter fuzz)
+- conscience_auto_hook 17 (10 classification rules + defensive + digest + 1000-iter fuzz)
+- mayor_auto_vote 21 (15+ trailer patterns + dedupe + batch + hook scripts + status line + 1000-iter fuzz)
+- browser_userscript 19 (5 distribution artifacts + 11 vendor matchers + Manifest V3 validity + XSS + 1000-iter fuzz)
+
+### AURELIAN
+
+4 cards SHIP (rollup ship=4). Composes onto v2.19.37 plumbing + v2.19.36 auto-flow + v2.19.34 holy grails.
+
+### The user-action minimum is now:
+
+```
+# 1-time setup (90 seconds total)
+npm i -g mneme-ai            # 30s
+mneme init                   # 10s (auto-gitignore via v2.19.36 path C)
+mneme mayor install-hook     # 5s (post-commit hook)
+# Then drag mneme.user.js URL into Tampermonkey (1 click)
+```
+
+After that: commit normally, chat normally. Daemon + AI agent + git handle the rest.
+
+### Distribution artifacts (in `dist/browser/`)
+
+- `mneme.user.js` — single-file Tampermonkey install
+- `manifest.json` — Chrome Manifest V3 extension
+- `content.js` — extension content script (UserScript IIFE)
+- `popup.html` — extension popup with export/clear buttons
+- `README.md` — install instructions
 
 ---
 

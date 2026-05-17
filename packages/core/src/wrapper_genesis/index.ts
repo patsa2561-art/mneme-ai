@@ -150,6 +150,11 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "citizens_audit",
   "conscience_card",
   "mayor_election",
+  // v2.19.38 SOCKETS RELEASE (production sockets for v2.19.37 plumbing)
+  "citizens_contribute",
+  "conscience_auto_hook",
+  "mayor_auto_vote",
+  "browser_userscript",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -367,6 +372,10 @@ function familyAliases(moduleName: string): string[] {
     citizens_audit: ["citizens"],
     conscience_card: ["card"],
     mayor_election: ["mayor"],
+    citizens_contribute: ["citizens"],
+    conscience_auto_hook: ["card"],
+    mayor_auto_vote: ["mayor"],
+    browser_userscript: ["browser"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -703,6 +712,57 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "parseClaims",             // wrapped as mneme.honesty.parse_claims
   "verifyClaims",            // wrapped as mneme.honesty.verify_claims
   "computeHonestyStats",     // display helper
+  // v2.19.37 TALK OF THE TOWN QUINTUPLE
+  "mintProtocolReceipt",    // wrapped as mneme.protocol.mint
+  "validateReceipt",        // wrapped as mneme.protocol.validate
+  "specText",               // wrapped as mneme.protocol.spec
+  "computeProtocolStats",   // display helper
+  "detectVendorFromUrl",    // wrapped as mneme.browser.detect
+  "extractChatTurns",       // wrapped as mneme.browser.extract
+  "extractModelHint",       // helper used inside extract
+  "mintFromBrowserCapture", // wrapped as mneme.browser.mint
+  "serializeForLocalStorage", // helper for ext shell
+  "deserializeFromLocalStorage", // helper
+  "anonymizeReceipt",       // helper used inside aggregateCitizens pipeline
+  "aggregateCitizens",      // wrapped as mneme.citizens.aggregate
+  "renderQuarterlyReport",  // wrapped as mneme.citizens.report
+  "quarterIdFromMs",        // pure helper
+  "computeAuditStats",      // display helper
+  "buildConscienceCard",    // wrapped as mneme.card.build
+  "renderCardText",         // wrapped as mneme.card.render
+  "renderCardSvg",          // wrapped as mneme.card.render
+  "computeCardStats",       // display helper
+  "freshElectionState",     // helper
+  "recordVote",             // wrapped as mneme.mayor.vote
+  "verifyVoteLedger",       // helper
+  "tallyElection",          // wrapped as mneme.mayor.tally
+  "verifyElectionResult",   // helper
+  "runScheduledElection",   // wrapped as mneme.mayor.rotate
+  "formatMayorLine",        // display helper
+  "computeElectionStats",   // display helper
+  // v2.19.38 SOCKETS RELEASE
+  "packContribution",       // wrapped as mneme.citizens.contribute_pack
+  "verifyContribution",     // helper
+  "emitContributionFile",   // helper invoked inside pack tool
+  "previewContribution",    // wrapped as mneme.citizens.contribute_preview
+  "deriveDeviceFingerprint",// helper
+  "computeContributeStats", // display helper
+  "autoEmitConscienceCard", // wrapped as mneme.card.auto_emit
+  "buildDailyDigest",       // wrapped as mneme.card.daily_digest
+  "computeAutoHookStats",   // display helper
+  "detectVendorFromCommit", // wrapped as mneme.mayor.detect_vendor
+  "autoVoteFromCommit",     // wrapped as mneme.mayor.auto_vote_from_commit
+  "autoVoteBatch",          // batch variant helper
+  "generatePostCommitHook", // wrapped as mneme.mayor.install_hook (bash)
+  "generatePostCommitHookPwsh", // pwsh variant
+  "generateStatusLine",     // wrapped as mneme.mayor.status_line
+  "computeAutoVoteStats",   // display helper
+  "generateUserscript",     // wrapped as mneme.browser.userscript
+  "generateManifestV3",     // wrapped as mneme.browser.manifest
+  "generateContentScript",  // helper bundled into extension
+  "generatePopupHtml",      // wrapped as mneme.browser.popup
+  "generateBrowserReadme",  // wrapped as mneme.browser.readme
+  "computeUserscriptStats", // display helper
 ]);
 
 export function findOrphans(input: {

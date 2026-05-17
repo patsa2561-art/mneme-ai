@@ -814,6 +814,15 @@ export * as browserReceipt from "./browser_receipt/index.js";
 export * as citizensAudit from "./citizens_audit/index.js";
 export * as conscienceCard from "./conscience_card/index.js";
 export * as mayorElection from "./mayor_election/index.js";
+// v2.19.38 SOCKETS RELEASE — production sockets users plug into v2.19.37 plumbing
+//   - citizensContribute:    pack + sign + emit-file pipeline for quarterly contribution
+//   - conscienceAutoHook:    failure event → auto-emit card + daily digest
+//   - mayorAutoVote:         git commit trailer detection + auto-vote + status line + hook scripts
+//   - browserUserscript:     single-file .user.js + manifest v3 + popup HTML + README
+export * as citizensContribute from "./citizens_contribute/index.js";
+export * as conscienceAutoHook from "./conscience_auto_hook/index.js";
+export * as mayorAutoVote from "./mayor_auto_vote/index.js";
+export * as browserUserscript from "./browser_userscript/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

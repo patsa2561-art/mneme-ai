@@ -205,6 +205,23 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.38": {
+    headline: "🔌 SOCKETS RELEASE — 4 production sockets connect v2.19.37 plumbing to user real-world workflow. Browser userscript (Tampermonkey 1-click install) + Citizens contribute (daemon auto-runs end-of-Q) + Conscience auto-hook (failure→card to .mneme/cards/) + Mayor auto-vote (post-commit git hook + status line + bash + PowerShell shells). 12 new MCP tools + 74 deep tests + 4000+ fuzz iterations.",
+    tools: [
+      "mneme.citizens.contribute_pack",
+      "mneme.citizens.contribute_preview",
+      "mneme.card.auto_emit",
+      "mneme.card.daily_digest",
+      "mneme.mayor.detect_vendor",
+      "mneme.mayor.auto_vote_from_commit",
+      "mneme.mayor.install_hook",
+      "mneme.mayor.status_line",
+      "mneme.browser.userscript",
+      "mneme.browser.manifest",
+      "mneme.browser.popup",
+      "mneme.browser.readme",
+    ],
+  },
   "2.19.37": {
     headline: "📜🌐🪞📣👑 TALK OF THE TOWN QUINTUPLE — Gap #1-#6 closed via 5 modules: RFC RECEIPT PROTOCOL (open spec; Mneme as SPEC not TOOL) + BROWSER RECEIPT (200M ChatGPT/Claude/Gemini users without vendor cooperation) + CITIZEN'S AUDIT (anonymise + quarterly public report; vendor pressure stronger than regulators) + CONSCIENCE CARD (Wordle-style shareable card per AI failure; SVG + text; XSS-hardened) + MAYOR ELECTION (per-repo monthly AI vendor election; HMAC vote ledger; composite vote = 50% votes + 25% rep + 15% fairness + 10% trick). 13 new MCP tools + 97 deep tests + 5000+ fuzz iterations.",
     tools: [
