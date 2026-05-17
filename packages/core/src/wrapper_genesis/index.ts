@@ -137,6 +137,11 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   // v2.19.33 POLISH (B2/B3 user-audit fixes for discoverability)
   "truth_sensor_pack",
   "tool_browser",
+  // v2.19.34 HOLY GRAIL QUADRUPLE (enterprise AI accountability stack)
+  "apostille",
+  "outcome_market",
+  "zk_fairness",
+  "eternity",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -344,6 +349,10 @@ function familyAliases(moduleName: string): string[] {
     consciousness_fork: ["fork"],
     truth_sensor_pack: ["truth"],
     tool_browser: ["browse"],
+    apostille: ["apostille"],
+    outcome_market: ["market"],
+    zk_fairness: ["fairness"],
+    eternity: ["eternity"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -606,6 +615,46 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "browseCatalog",       // wrapped as mneme.browse (2-part name; scanner needs 3)
   "suggestTools",        // wrapped as mneme.suggest (2-part name; scanner needs 3)
   "computeBrowseStats",  // display helper
+  // v2.19.34 HOLY GRAIL QUADRUPLE — word-order mismatch on auto-scan + helpers
+  "mintReceipt",            // wrapped as mneme.apostille.mint
+  "appendToLedger",         // wrapped as mneme.apostille.append
+  "emptyLedger",            // helper (caller creates initial ledger)
+  "mapToComplianceControls",// pure mapping helper used inside mintReceipt
+  "queryLedger",            // wrapped as mneme.apostille.query
+  "generateAuditBinder",    // wrapped as mneme.apostille.binder
+  "computeApostilleStats",  // display helper
+  "postTask",               // wrapped as mneme.market.post_task
+  "submitBid",              // wrapped as mneme.market.submit_bid
+  "verifyTask",             // helper (paired with submitBid)
+  "verifyBid",              // helper
+  "pickWinner",             // wrapped as mneme.market.pick_winner
+  "scoreOutcome",           // wrapped as mneme.market.score_outcome
+  "freshReputation",        // helper (caller initialises)
+  "updateReputation",       // helper (caller maintains store)
+  "reputationScore",        // helper (caller reads)
+  "bayesianMean",           // pure math helper
+  "injectTrickTest",        // helper used inside post_task pipeline
+  "shouldInjectTrick",      // pure math helper
+  "federatedLeaderboard",   // wrapped as mneme.market.leaderboard
+  "computeMarketStats",     // display helper
+  "commitToDecisionFunction", // wrapped as mneme.fairness.commit
+  "verifyCommitment",       // helper (paired with commit)
+  "generateSwapTests",      // wrapped as mneme.fairness.generate_tests
+  "verifyInvariance",       // wrapped as mneme.fairness.verify
+  "mintFairnessCertificate",// wrapped as mneme.fairness.mint_cert
+  "auditCertificate",       // wrapped as mneme.fairness.audit_cert
+  "generateIntersectionalTests", // advanced helper (multi-attr extension)
+  "computeFairnessStats",   // display helper
+  "mintEternalTrace",       // wrapped as mneme.eternity.mint
+  "mintPinReceipt",         // wrapped as mneme.eternity.pin
+  "verifyEternalTrace",     // helper (paired with mint)
+  "verifyPinReceipt",       // helper (paired with pin)
+  "attachPin",              // helper (caller composes trace + pin)
+  "computeSurvivalScore",   // wrapped as mneme.eternity.survival_score
+  "mintSurvivalCertificate",// wrapped as mneme.eternity.survival_cert
+  "verifySurvivalCertificate",// helper
+  "resolveTrace",           // wrapped as mneme.eternity.resolve
+  "computeEternityStats",   // display helper
 ]);
 
 export function findOrphans(input: {

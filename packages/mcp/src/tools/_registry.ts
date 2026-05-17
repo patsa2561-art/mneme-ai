@@ -96,6 +96,7 @@ import { V1930_COMMONWEALTH_TOOLS } from "./_v1930_commonwealth.js";
 import { V1931_SYNAPSE_SYNC_TOOLS } from "./_v1931_synapse_sync.js";
 import { V1932_HANDOFF_TOOLS } from "./_v1932_handoff.js";
 import { V1933_POLISH_TOOLS } from "./_v1933_polish.js";
+import { V1934_HOLY_GRAIL_TOOLS } from "./_v1934_holy_grail.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -196,6 +197,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1931_SYNAPSE_SYNC_TOOLS,
     ...V1932_HANDOFF_TOOLS,
     ...V1933_POLISH_TOOLS,
+    ...V1934_HOLY_GRAIL_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

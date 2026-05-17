@@ -789,6 +789,15 @@ export * as consciousnessFork from "./consciousness_fork/index.js";
 //   - toolBrowser:      paginated catalog browse + repo-aware tool suggest
 export * as truthSensorPack from "./truth_sensor_pack/index.js";
 export * as toolBrowser from "./tool_browser/index.js";
+// v2.19.34 HOLY GRAIL QUADRUPLE — enterprise AI accountability stack
+//   - apostille:         HMAC-chained AI receipts + 6-framework binder
+//   - outcomeMarket:     Vickrey vendor auction + outcome attestation + reputation
+//   - zkFairness:        commitment + adversarial swap tests + intersectional
+//   - eternity:          content-addressed traces + survival score across 9 scenarios
+export * as apostille from "./apostille/index.js";
+export * as outcomeMarket from "./outcome_market/index.js";
+export * as zkFairness from "./zk_fairness/index.js";
+export * as eternity from "./eternity/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

@@ -260,6 +260,10 @@ Commands:
   scheduler  >  Mneme scheduler family — 5 action(s). Run \`mneme scheduler --help\` for actions, or \`mneme scheduler <action> --json '{...}'\` to invoke.
   circadian  >  Mneme circadian family — 3 action(s). Run \`mneme circadian --help\` for actions, or \`mneme circadian <action> --json '{...}'\` to invoke.
   fork  >  Mneme fork family — 4 action(s). Run \`mneme fork --help\` for actions, or \`mneme fork <action> --json '{...}'\` to invoke.
+  apostille  >  Mneme apostille family — 5 action(s). Run \`mneme apostille --help\` for actions, or \`mneme apostille <action> --json '{...}'\` to invoke.
+  market  >  Mneme market family — 5 action(s). Run \`mneme market --help\` for actions, or \`mneme market <action> --json '{...}'\` to invoke.
+  fairness  >  Mneme fairness family — 5 action(s). Run \`mneme fairness --help\` for actions, or \`mneme fairness <action> --json '{...}'\` to invoke.
+  eternity  >  Mneme eternity family — 5 action(s). Run \`mneme eternity --help\` for actions, or \`mneme eternity <action> --json '{...}'\` to invoke.
   tool  >  Mneme tool family — 2 action(s). Run \`mneme tool --help\` for actions, or \`mneme tool <action> --json '{...}'\` to invoke.
   adversary  >  Mneme adversary family — 1 action(s). Run \`mneme adversary --help\` for actions, or \`mneme adversary <action> --json '{...}'\` to invoke.
   replay  >  Mneme replay family — 2 action(s). Run \`mneme replay --help\` for actions, or \`mneme replay <action> --json '{...}'\` to invoke.
