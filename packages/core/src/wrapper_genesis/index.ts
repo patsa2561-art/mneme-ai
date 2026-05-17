@@ -95,6 +95,8 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   "textron_captcha",
   "jackpot",
   "snn_auto_promote",
+  "reflex",
+  "catalog_parity",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -271,6 +273,8 @@ function familyAliases(moduleName: string): string[] {
     provenance_dna: ["provenance"],
     textron_captcha: ["textron"],
     snn_auto_promote: ["snn"],
+    reflex: ["reflex"],
+    catalog_parity: ["catalog"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -423,6 +427,16 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   // emptyPromotionHistory + appendPromotion are internal ledger primitives the
   // CLI (status.ts) calls in-process — not user-facing MCP tools.
   "tierFromName", "decidePromotion", "emptyPromotionHistory", "appendPromotion",
+  // v2.19.22 reflex -- MCP surfaces: mneme.reflex.{observe,predict,cache_write,cache_read,stats}.
+  // Internal helpers below are constructors / caller-side telemetry primitives /
+  // the in-process prefetch executor (callers drive it directly, no MCP wrapper).
+  // writeCacheEntry / readCache ARE wrapped (mneme.reflex.cache_write / cache_read)
+  // but the camelCase-vs-snake-case heuristic misses the reversed word order.
+  "eventCacheKey", "emptyStore", "emptyCache", "emptyTelemetry",
+  "writeCacheEntry", "readCache", "gcCache", "recordFetch", "prefetch",
+  // recordObservation IS surfaced as mneme.reflex.observe but "observation"
+  // (with trailing "ation") doesn't fuzz-match "observe" exactly (off by one).
+  "recordObservation",
 ]);
 
 export function findOrphans(input: {

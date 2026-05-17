@@ -205,6 +205,18 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.22": {
+    headline: "REFLEX (flagship Automatic Pre-Execution Layer) + CATALOG PARITY (G2 quick-win). REFLEX is the first AI tool that pre-executes likely follow-up tools BEFORE the agent asks: HMAC-chained pheromone store learns from observations, frequency-based predictor returns top-N tools, budget-bound concurrent prefetch writes TTL-bounded HMAC-signed cache. Measured 100% cache integrity + 100% prediction determinism + 100% hit rate on warm trail + p50 cached read < cold invoke. CATALOG PARITY surfaces hidden-tool UX failures (CLI vs MCP family asymmetry) -- the root cause of 'AI hallucinates a Mneme tool user cannot find'. 7 new MCP tools.",
+    tools: [
+      "mneme.reflex.observe",
+      "mneme.reflex.predict",
+      "mneme.reflex.cache_write",
+      "mneme.reflex.cache_read",
+      "mneme.reflex.stats",
+      "mneme.catalog.parity",
+      "mneme.catalog.families",
+    ],
+  },
   "2.19.21": {
     headline: "GAP CLOSER (SNN AUTO-PROMOTE + CLI FAMILY-CLASH RESOLVER). Closes 2 sticky gaps from the v2.19.20 audit at SOURCE: (1) mneme status now writes back the resolved embedder tier when ladder picks higher than saved config (refuses to downgrade -- user pin always wins; HMAC-chained promotion ledger); (2) universal router MOUNTS MCP subcommands onto legacy parent commands instead of skipping -- unblocks 4 SYNCRETIC families (ghost/trinity/insurance/boomerang) that appeared as 0 wrappers across 5 prior patches. 4 audit MCP tools + 2 CLI surface fixes; 17 deep tests + 100% downgrade refusal + 100% promote correctness.",
     tools: [
