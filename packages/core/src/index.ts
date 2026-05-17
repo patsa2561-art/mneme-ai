@@ -757,6 +757,11 @@ export * as endocrine from "./endocrine/index.js";
 // v2.19.26 DREAMSPACE — self-authoring MCP catalog (factory > product)
 export * as dreamspaceGestation from "./dreamspace_gestation/index.js";
 export * as dreamspaceEvolution from "./dreamspace_evolution/index.js";
+// v2.19.27 DREAMSPACE — completes the 6-stage pipeline (PROBE / CARTOGRAPHER / PAIR / FEDERATE)
+export * as dreamspaceProbe from "./dreamspace_probe/index.js";
+export * as dreamspaceCartographer from "./dreamspace_cartographer/index.js";
+export * as dreamspacePair from "./dreamspace_pair/index.js";
+export * as dreamspaceFederate from "./dreamspace_federate/index.js";
 
 // v2.19.9 — WRAPPER GENESPLICING (runtime chimera composition)
 //   Splice N existing tools into a chimera with TTL + 3 composers

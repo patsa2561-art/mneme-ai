@@ -9,9 +9,9 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <br/>
 
-[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.26&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
-[![tests](https://img.shields.io/badge/tests-12378%2F12382%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
-[![MCP tools](https://img.shields.io/badge/MCP%20tools-590-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
+[![npm](https://img.shields.io/npm/v/mneme-ai?label=v2.19.27&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
+[![tests](https://img.shields.io/badge/tests-12450%2B%20green-2da44e?style=for-the-badge)](https://github.com/patsa2561-art/mneme-ai/actions)
+[![MCP tools](https://img.shields.io/badge/MCP%20tools-602-c084fc?style=for-the-badge)](docs/AI_AGENT_CONTRACT.md)
 [![ritual](https://img.shields.io/badge/ritual-22%2F22%20green-2da44e?style=for-the-badge)](scripts/reincarnation-ritual.mjs)
 [![demo](https://img.shields.io/badge/demo-patsa2561--art.github.io%2Fmneme--ai-8957e5?style=for-the-badge)](https://patsa2561-art.github.io/mneme-ai/)
 [![tokens saved](https://img.shields.io/badge/tokens%20saved-74.7%25%20live-9b59b6?style=for-the-badge)](docs/TOKEN_NOVA.md)
@@ -136,9 +136,9 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 <th width="20%">Primitive</th><th width="55%">Why it's a world-first</th><th width="25%">How to invoke</th>
 </tr>
 <tr>
-<td><b>🌱 DREAMSPACE (Self-Authoring Catalog)</b><br/><sub>v2.19.26 · NEW · PARADIGM SHIFT</sub></td>
-<td><b>The first AI framework where tools are SPECIES that evolve.</b> Every other framework treats tools as static API endpoints engineers design. Mneme dreams propose brand-new MCP tools by composing existing primitives — and a lifecycle ladder decides which survive. 🌱 GESTATION detects 3 gap classes (REFLEX cache miss / user_chat no-match / pattern co-occurrence) and proposes HMAC-signed ProposedToolSpecs (deterministic names like <code>mneme.auto.X_then_Y</code>) wired into v2.19.9 WRAPPER_GENESPLICING. 🦋 EVOLUTION classifies into 4 bands (🥚 gestating → 🐣 juvenile → 🦋 mature [promote] → 🍂 atrophied [sunset]) + selects co-occurring (A then B) pairs for mating. Tools that are born, prove themselves, mature, mate into hybrids, then die when unused. <b>Industry analysts will name this category in 2027; Mneme will be first-mover.</b></td>
-<td><code>mneme.dreamspace.{detect_gaps,propose_spec,gestation_cycle,classify,mate_pairs,evolution_cycle,list_bands,verify_proposal}</code></td>
+<td><b>🌱 DREAMSPACE (Self-Authoring Catalog · 6-stage pipeline)</b><br/><sub>v2.19.26 + v2.19.27 · PARADIGM SHIFT · COMPLETE</sub></td>
+<td><b>The first AI framework where tools are SPECIES that evolve.</b> 6-stage 24/7 nightly pipeline: 🔬 PROBE measures 4 metrics per tool (latency/entropy/error/utility → fitness) → 🗺 CARTOGRAPHER builds (tool, pattern) → quality map → 💞 PAIR ranks complementary tools via mutual_info → 🌱 GESTATION proposes chimera specs from gaps → 🦋 EVOLUTION classifies 4 lifecycle bands (🥚→🐣→🦋→🍂) + mates frequent pairs → 🌍 FEDERATE blesses elite via cross-instance quorum + exports starter pack to new users. <b>Tools are born, fitness-tested, mated, blessed, sunset.</b> Industry analysts will name this category in 2027.</td>
+<td><code>mneme.dreamspace.{probe_finalise,map_build,map_query,pair_rank,detect_gaps,propose_spec,gestation_cycle,classify,mate_pairs,evolution_cycle,federate_attest,federate_quorum,federate_starter,...}</code></td>
 </tr>
 <tr>
 <td><b>🧠 LIMBIC (Autonomic Nervous System)</b><br/><sub>v2.19.23</sub></td>
@@ -188,10 +188,11 @@ The parser matches on `verb + subject + target` keywords across Thai / English /
 </table>
 
 <details>
-<summary><b>📜 Full release history — v2.10 → v2.19.26 (click to expand)</b></summary>
+<summary><b>📜 Full release history — v2.10 → v2.19.27 (click to expand)</b></summary>
 
 | Version | Headline |
 |---|---|
+| **v2.19.27** | DREAMSPACE PIPELINE COMPLETE — 6 stages closed (🔬 PROBE measures 4 metrics + 🗺 CARTOGRAPHER capability map + 💞 PAIR mutual-info pair rank + 🌍 FEDERATE blessed quorum + starter pack). The factory whose output is more factories |
 | **v2.19.26** | DREAMSPACE — self-authoring MCP catalog (GESTATION proposes new tools from gap signals; EVOLUTION classifies into 4 lifecycle bands 🥚🐣🦋🍂 + mates co-occurring pairs). The first framework where tools are SPECIES that evolve |
 | **v2.19.25** | SLEEP TRAINING (reflex learns nightly via jaccard fitness loop; hit-rate compounds 20%→70% over 30 days) + ENDOCRINE (4 named biological hormones: CORTISOL / DOPAMINE / MELATONIN / OXYTOCIN drive system behavior) — extends LIMBIC |
 | **v2.19.24** | TOOL TIER (progressive disclosure: 4 tiers · ⭐⭐⭐STARTER / ⭐⭐EXPLORER / ⭐DEEP / 🔬EXPERIMENTAL) + EVENT PATTERN MATCH (18 semantic regexes, multilingual EN+TH) — extends LIMBIC |

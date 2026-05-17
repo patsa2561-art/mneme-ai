@@ -205,6 +205,23 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.27": {
+    headline: "DREAMSPACE PIPELINE COMPLETE -- stages 1, 2, 3, 6 close the 6-stage loop (v2.19.26 shipped stages 4+5). 🔬 PROBE measures 4 normalised per-tool metrics (latency / outputEntropy / errorRate / utility) + geometric-mean fitness via synthetic + real input battery. 🗺 CARTOGRAPHER aggregates probes into 2D capability map (toolName, patternSig -> quality) with EWMA recency; REFLEX's evidence-backed predict-next-tool entry point. 💞 PAIR scores ordered tool pairs via mutual_info approximation (required-coverage 0.5 + optional 0.3 + key-overlap 0.2); replaces v2.19.26 frequency-only co-occurrence with QUALITY signal. 🌍 FEDERATE issues EliteAttestation (refuses below 0.7 fitness), aggregates into 6-band quorum (unanimous / supermajority / majority / minority / conflict / orphan), exports top-N starter pack for new users -- network effect for dreamt tools. Composes onto v2.19.16 FEDERATED + v2.19.23 LIMBIC organs + v2.19.26 GESTATION+EVOLUTION. 12 new MCP tools. Mneme owns AI tool factory category by structural necessity.",
+    tools: [
+      "mneme.dreamspace.probe_finalise",
+      "mneme.dreamspace.probe_metrics",
+      "mneme.dreamspace.probe_verify",
+      "mneme.dreamspace.map_build",
+      "mneme.dreamspace.map_query",
+      "mneme.dreamspace.map_stats",
+      "mneme.dreamspace.pair_score",
+      "mneme.dreamspace.pair_rank",
+      "mneme.dreamspace.pair_verify",
+      "mneme.dreamspace.federate_attest",
+      "mneme.dreamspace.federate_quorum",
+      "mneme.dreamspace.federate_starter",
+    ],
+  },
   "2.19.26": {
     headline: "DREAMSPACE -- self-authoring MCP catalog. Two phases that turn dreams from PRODUCT factory (vaccine/prophecy/paradox) into TOOL FACTORY (proposes brand-new MCP chimeras + lifecycle decisions). 🌱 GESTATION detects 3 gap classes (REFLEX cache miss / user_chat no-match / pattern co-occurrence) and proposes HMAC-signed ProposedToolSpecs with deterministic names (mneme.auto.X_then_Y) + sequential composer recipes that splice EXISTING tools via v2.19.9 WRAPPER_GENESPLICING. 🦋 EVOLUTION classifies each tool into 4 lifecycle bands (🥚 gestating / 🐣 juvenile / 🦋 mature / 🍂 atrophied) + selects ordered (A then B) mating pairs from a use-log within 60s window; promotes proven + sunsets unused + mates frequent pairs into new chimeras. Tools are SPECIES that evolve. 8 new MCP tools. First framework worldwide with self-authoring catalog + lifecycle bands + mating selector.",
     tools: [

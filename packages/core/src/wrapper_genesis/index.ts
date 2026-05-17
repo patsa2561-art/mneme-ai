@@ -113,6 +113,11 @@ export const ENFORCE_FULL_COVERAGE = new Set([
   // v2.19.26 DREAMSPACE -- self-authoring MCP catalog
   "dreamspace_gestation",
   "dreamspace_evolution",
+  // v2.19.27 DREAMSPACE pipeline -- completes the 6-stage loop
+  "dreamspace_probe",
+  "dreamspace_cartographer",
+  "dreamspace_pair",
+  "dreamspace_federate",
 ]);
 
 const EXCLUDED_MODULES = new Set([
@@ -303,6 +308,10 @@ function familyAliases(moduleName: string): string[] {
     endocrine: ["endocrine"],
     dreamspace_gestation: ["dreamspace"],
     dreamspace_evolution: ["dreamspace"],
+    dreamspace_probe: ["dreamspace"],
+    dreamspace_cartographer: ["dreamspace"],
+    dreamspace_pair: ["dreamspace"],
+    dreamspace_federate: ["dreamspace"],
     arena: ["arena"],
     verified_badge: ["badge"],
     oracle_liability: ["oracle"],
@@ -498,6 +507,23 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   //   proposeToolSpec -> mneme.dreamspace.propose_spec
   //   selectMatingPairs -> mneme.dreamspace.mate_pairs
   "detectToolGaps", "proposeToolSpec", "selectMatingPairs",
+  // v2.19.27 DREAMSPACE pipeline -- mostly word-order mismatches between
+  // camelCase symbols and snake_case actions. All are surfaced via MCP
+  // (probe_finalise / map_build / pair_score / federate_attest etc).
+  // PROBE -- internal scoring helpers composed by finaliseProbe (the surfaced
+  //   wrapper); runProbeBattery is the async invoker (caller-driven).
+  "latencyScore", "outputShapeEntropy", "errorRate", "utilityScore",
+  "aggregateFitness", "finaliseProbe", "runProbeBattery",
+  // CARTOGRAPHER -- patternSignature is the internal hasher composed by
+  //   buildCapabilityMap + queryCapability; both surfaced but word-order
+  //   mismatch (buildCapabilityMap <-> map_build; queryCapability <-> map_query).
+  "patternSignature", "buildCapabilityMap", "queryCapability",
+  // PAIR -- scorePair/rankAllPairs surfaced but word-order mismatch
+  //   (scorePair <-> pair_score; rankAllPairs <-> pair_rank).
+  "scorePair", "rankAllPairs",
+  // FEDERATE -- attestElite / aggregateBlessing / exportStarterPack all
+  //   surfaced but symbol order is reversed from action (federate_attest etc.)
+  "attestElite", "aggregateBlessing", "exportStarterPack",
 ]);
 
 export function findOrphans(input: {

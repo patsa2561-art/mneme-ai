@@ -89,6 +89,7 @@ import { V1923_LIMBIC_TOOLS } from "./_v1923_limbic.js";
 import { V1924_TIER_EVENT_TOOLS } from "./_v1924_tier_event.js";
 import { V1925_SLEEP_ENDOCRINE_TOOLS } from "./_v1925_sleep_endocrine.js";
 import { V1926_DREAMSPACE_TOOLS } from "./_v1926_dreamspace.js";
+import { V1927_DREAMSPACE_PIPELINE_TOOLS } from "./_v1927_dreamspace_pipeline.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -182,6 +183,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1924_TIER_EVENT_TOOLS,
     ...V1925_SLEEP_ENDOCRINE_TOOLS,
     ...V1926_DREAMSPACE_TOOLS,
+    ...V1927_DREAMSPACE_PIPELINE_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,
