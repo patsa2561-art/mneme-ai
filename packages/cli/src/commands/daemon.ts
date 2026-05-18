@@ -129,9 +129,29 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   // to reap orphans by EXACT PID (not "kill all node.exe").
   try { process.title = `mneme-daemon-${process.pid}`; } catch { /* best-effort */ }
   let heartbeatHandle: { intervalId: NodeJS.Timeout | null; beatPath: string } | null = null;
+  let installFlagWatcher: import("node:fs").FSWatcher | null = null;
   try {
     const { installOrgan } = await import("@mneme-ai/core");
     heartbeatHandle = installOrgan.registerHeartbeat("daemon-attached");
+
+    // v2.19.54 — PREDICTIVE INSTALL SIGNAL. Watch the install-incoming flag
+    // file. When ANY installer (preinstall hook or `mneme upgrade`) announces
+    // an incoming install, this daemon self-reaps within milliseconds. Kills
+    // the orphan-storm at SOURCE: daemon dies BEFORE npm extracts the new tarball.
+    const flagPath = installOrgan.installIncomingPath();
+    const flagDir = installOrgan.organDir();
+    if (existsSync(flagDir)) {
+      try {
+        installFlagWatcher = watch(flagDir, (_event, filename) => {
+          if (filename === installOrgan.INSTALL_INCOMING_FLAG && existsSync(flagPath)) {
+            appendLog(repoRoot, "[install-organ] install-incoming detected — self-reaping for clean handoff");
+            // Use process.kill on self to trigger our existing SIGTERM shutdown
+            // handler which already does the children-reap + cleanup.
+            try { process.kill(process.pid, "SIGTERM"); } catch { /* */ }
+          }
+        });
+      } catch { /* fs.watch may fail on some FS; daemon still works without it */ }
+    }
   } catch { /* install_organ optional — daemon still works without it */ }
 
   appendLog(repoRoot, `daemon started, pid=${process.pid}`);
@@ -303,6 +323,7 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
     // nucleus / etc) via the heartbeat registry BEFORE the daemon exits. This
     // is the core EBUSY fix: no orphan node processes survive daemon-stop.
     try {
+      if (installFlagWatcher) { try { installFlagWatcher.close(); } catch { /* */ } }
       if (heartbeatHandle) {
         // Best-effort: import core synchronously (it's already loaded)
         // and reap every Mneme PID EXCEPT this one (which we'll deregister last).

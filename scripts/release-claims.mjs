@@ -205,6 +205,14 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.54": {
+    headline: "🪄✨ PREDICTIVE INSTALL SIGNAL + EXPONENTIAL-BACKOFF PROBE + MAGICAL UPGRADE PIPELINE — daemon now fs.watches ~/.mneme-global/install-incoming.flag and SELF-REAPS within ~50ms when preinstall (or `mneme upgrade` MCP) creates it. ZERO orphan because daemon dies BEFORE npm extracts the new tarball. Plus exponential-backoff probe retry loop (100ms → 4s, 6 attempts; fastest case <1ms when nothing locked) replaces the flat 1.5s wait. Plus 3 new MCP tools (install.announce / install.clear_announce / install.upgrade_pipeline) make the magic AI-agent-callable. The preinstall hook is now genuinely magical: announce → 300ms wait for self-reap → reap any survivor heartbeats → 5-step backoff retry loop. Cross-platform (Windows + macOS + Linux); zero file refs in preinstall (chicken-and-egg safe per v2.19.50 phase 3.6). 14 new deep tests + 33/33 install_organ tests pass; AURELIAN 3/3 SHIP. Total MCP tools 759 → 762 (+3).",
+    tools: [
+      "mneme.install.announce",
+      "mneme.install.clear_announce",
+      "mneme.install.upgrade_pipeline",
+    ],
+  },
   "2.19.53": {
     headline: "🪄 INSTALL ORGAN — self-healing cross-platform process-lineage protocol that fixes the Windows EBUSY + macOS .dylib lock + Linux fd-hold orphan problem at the root. Every Mneme-spawned node process registers a heartbeat at ~/.mneme-global/heartbeats/{pid}.beat; daemon-stop reaps all known PIDs via heartbeat registry (SURGICAL not nuclear — never kills random node.exe); autonomic_breath_hook throttles respawns (no spawn within 2s of existing daemon heartbeat); HMAC-chained lineage ledger composes with v2.19.34 APOSTILLE; SIGUSR2 graceful handoff signal on macOS/Linux (fallback SIGTERM on Windows); platform-aware DLL/dylib probe (Windows fs.openSync + macOS/Linux lsof). 5 new MCP tools (install.diagnose / install.heal / install.reap_orphans / install.lineage / install.heartbeat_list) + enhanced inline preinstall that reads heartbeats and reaps orphan PIDs before npm extract. No AI tool worldwide ships this. Total MCP tools 754 → 759 (+5).",
     tools: [

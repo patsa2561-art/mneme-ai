@@ -174,10 +174,108 @@ export const installHeartbeatListTool: MnemeTool = {
   },
 };
 
+// ────────────────────────────────────────────────────────────────────────
+// v2.19.54 — PREDICTIVE INSTALL SIGNAL + UPGRADE PIPELINE (new MCP tools)
+// ────────────────────────────────────────────────────────────────────────
+
+export const installAnnounceTool: MnemeTool = {
+  name: "mneme.install.announce",
+  category: "lab",
+  description: "🪄 INSTALL ORGAN v2.19.54 — announce an INCOMING install. Writes ~/.mneme-global/install-incoming.flag which all running Mneme daemons fs.watch. Daemons see it within ~50ms and SELF-REAP cleanly via their SIGTERM handler. ZERO orphan because daemon dies BEFORE npm extracts. The wild predictive-signal innovation.",
+  whenToUse: "Just before invoking `npm install -g mneme-ai@latest` programmatically. Or from a CI pipeline. Pair with mneme.install.upgrade_pipeline for the full magical experience.",
+  triggers: ["install announce", "announce upgrade"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      reason: { type: "string", description: "Free-form text for the lineage ledger (e.g. 'ci-pipeline', 'user-requested')." },
+      expectedVersion: { type: "string", description: "Optional: target version we're installing (recorded in the flag for audit)." },
+    },
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Tell daemons to step aside, install coming", args: { reason: "user-upgrade", expectedVersion: "2.19.54" }, expectedOutput: "{ flagPath, announced: true }" }],
+  pitfalls: ["Must call mneme.install.clear_announce AFTER install completes — otherwise daemons will refuse to restart on next CLI command."],
+  composeWith: ["mneme.install.upgrade_pipeline", "mneme.install.heal"],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const reason = (args["reason"] as string | undefined) ?? "ai-agent-call";
+    const expectedVersion = args["expectedVersion"] as string | undefined;
+    const flagPath = core.installOrgan.announceInstallIncoming(reason, expectedVersion);
+    return {
+      data: { announced: true, flagPath, reason, expectedVersion: expectedVersion ?? null },
+      wisdom: `🪄 install-incoming announced (${reason}) — daemons watching ~/.mneme-global/ will self-reap within ~50ms`,
+      confidence: { level: "high" },
+    };
+  },
+};
+
+export const installClearAnnounceTool: MnemeTool = {
+  name: "mneme.install.clear_announce",
+  category: "lab",
+  description: "🪄 INSTALL ORGAN — clear the install-incoming flag after install completes. Allows daemons to respawn on next CLI command. Idempotent — safe to call if flag already cleared.",
+  whenToUse: "After `npm install -g` completes (success or failure). Pair with mneme.install.announce.",
+  triggers: ["install clear announce", "clear install flag"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Install done, clear the flag", args: {}, expectedOutput: "{ cleared: true }" }],
+  pitfalls: ["If flag is not cleared, autonomic_breath_hook will throttle daemon respawns indefinitely."],
+  handler: async (_rt) => {
+    const core = await import("@mneme-ai/core");
+    core.installOrgan.clearInstallIncoming();
+    return { data: { cleared: true }, wisdom: `🪄 install-incoming flag cleared — daemons may respawn`, confidence: { level: "high" } };
+  },
+};
+
+export const installUpgradePipelineTool: MnemeTool = {
+  name: "mneme.install.upgrade_pipeline",
+  category: "lab",
+  description: "🪄✨ INSTALL ORGAN v2.19.54 — THE MAGICAL UPGRADE PIPELINE. One call composes: (1) announce install-incoming → (2) wait 300ms for daemons to self-reap → (3) full heal (diagnose+reap+reprobe) → (4) exponential-backoff retry loop (100ms→4s, 6 attempts) → (5) report ok/failure. Caller then runs `npm install -g --force mneme-ai@latest` with confidence. Cross-platform Windows + macOS + Linux.",
+  whenToUse: "BEFORE any programmatic `npm install -g mneme-ai`. The one-call magic install. Also: when user reports EBUSY/ENOTEMPTY — call this first, retry npm install second.",
+  triggers: ["upgrade pipeline", "magical install", "install ceremony"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      installRoot: { type: "string", description: "Root dir to derive default probe paths." },
+      probedPaths: { type: "array", items: { type: "string" }, description: "Explicit paths to probe (overrides default platform-aware list)." },
+      expectedVersion: { type: "string" },
+      reason: { type: "string" },
+      waitForReapMs: { type: "number", description: "ms to wait for daemons to self-reap after announce. Default 300." },
+    },
+  },
+  outputSchema: { type: "object" },
+  examples: [{ userQuery: "Prepare for the install with the full magical pipeline", args: { installRoot: "C:\\Users\\me\\AppData\\Roaming\\npm", expectedVersion: "2.19.54" }, expectedOutput: "{ ok, stages: {announce, waitForSelfReap, heal, backoff}, recommendation }" }],
+  pitfalls: [
+    "After ok=true, you STILL need to run npm install separately — this tool only PREPARES the environment.",
+    "Call mneme.install.clear_announce after install completes (success or failure) to unblock future daemon respawns.",
+  ],
+  composeWith: ["mneme.install.announce", "mneme.install.heal", "mneme.install.clear_announce"],
+  handler: async (_rt, args) => {
+    const core = await import("@mneme-ai/core");
+    const paths = (args["probedPaths"] as string[] | undefined)
+      ?? core.installOrgan.defaultLockableProbes(args["installRoot"] as string | undefined);
+    const opts = {
+      ...(typeof args["waitForReapMs"] === "number" ? { waitForReapMs: args["waitForReapMs"] as number } : {}),
+      ...(args["expectedVersion"] ? { expectedVersion: args["expectedVersion"] as string } : {}),
+      ...(args["reason"] ? { reason: args["reason"] as string } : {}),
+      skipPid: process.pid,
+    };
+    const r = core.installOrgan.runUpgradePipeline(paths, opts);
+    return {
+      data: r,
+      wisdom: r.ok
+        ? `🪄✨ MAGICAL — ${r.stages.backoff.attempts} backoff(s) · ${r.stages.backoff.totalWaitMs}ms wait · all locks released`
+        : `🪄⚠ pipeline incomplete — ${r.recommendation}`,
+      confidence: { level: "high" },
+    };
+  },
+};
+
 export const V1953_INSTALL_ORGAN_TOOLS: MnemeTool[] = [
   installDiagnoseTool,
   installHealTool,
   installReapOrphansTool,
   installLineageTool,
   installHeartbeatListTool,
+  installAnnounceTool,
+  installClearAnnounceTool,
+  installUpgradePipelineTool,
 ];
