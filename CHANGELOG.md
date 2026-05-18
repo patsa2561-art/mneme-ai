@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.45
+# 📜 Release index — v2.18.0 → v2.19.46
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.46** | 📌 N3-OVERSHOOT 6-VECTOR REGRESSION PINNED + 🪞 HONESTY 2.0 UNDERSCORE-VARIANT COVERAGE — user audit's verbatim 6 claim shapes (the v2.19.42 N3-overshoot test matrix) now CI-gated with 8 deep tests in `acgv_n3_overshoot.test.ts`. The bug class cannot ship again silently. Plus HONESTY GATE 2.0 `DEFAULT_FEATURE_FAMILY_MAP` expanded to recognise underscore + uppercase spellings (`OUTCOME_MARKET` / `outcome_market` / `ZK_FAIRNESS` / `zk_fairness`) so release-note feature-name claims with any of the 3 shapes (space / hyphen / underscore) get caught by the auto-amend pipeline. |
 | **v2.19.45** | 🎛 N6 ROUND-5 STOPS-THE-NOISE + 🔌 npm PREINSTALL DAEMON-STOP — `mneme welcome --json '{}'` no longer prints "too many arguments" to stderr (recursive configureOutput suppression + retry path); CI gate via 5 regression tests pinned forever (one for every vector: bare flag / empty payload / MCP-router payload preserved / genuine errors still surface / --version). Plus npm preinstall hook that stops any running Mneme daemon BEFORE file copy, closing the Windows EBUSY libvips-42.dll race that broke `npm install -g mneme-ai@latest`. |
 | **v2.19.44** | 🧬 N3-OVERSHOOT ROOT-CAUSE + VACCINE OSMOSIS (8-algorithm time-decay lattice) — vaccine cache no longer fires AUTO_REFUTE on TRUE claims. Pre-fix `mneme verify "mneme.truth.forensic is registered"` returned IMPOSSIBLE-REFUTED 99% because simhash from a prior session matched + short-circuited before catalog grounding. Fix: re-verify live catalog before short-circuit. Wild new module VACCINE OSMOSIS composes 8 algorithms (HyperLogLog + Page-Hinkley + Kalman + Bloom + Reservoir + Chebyshev + exp decay + Bayesian Beta-Binomial) into a self-burning vaccine lattice — first AI tool worldwide with this fusion. 5 new MCP tools + 23 deep tests + 1000-iter cross-vector daemon fuzz. |
 | **v2.19.43** | 🆔 N4 VERSION DETECTION + 🛠 N5 SPAWN ERROR CAPTURE + 🎛 N6 OMNI-FLAG RETRY + 🎨 N8 EMOJI CONSISTENCY — `mneme system upgrade` no longer reports 0.0.0 (resolveMnemeVersion walks sibling Mneme packages). Self-upgrade spawn surfaces `r.error.message` + uses Windows `shell:true` + adds `upgradeExitCode` field (no more silent empty stderr). `mneme welcome --json '{}'` no longer throws (entry-point retry strips JSON payload after `--json` when Commander rejects as positional). `mneme verify` rendering strips conflicting traffic-light emoji from plain block (presentation invariant). 10 new deep tests + 4 SOURCE fixes. |
@@ -70,6 +71,60 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.46 — 2026-05-18 — 📌 N3-OVERSHOOT 6-VECTOR REGRESSION PINNED + 🪞 HONESTY 2.0 UNDERSCORE COVERAGE
+
+User dogfood re-audit (pulse showed v2.19.43, latest v2.19.44) re-sent the exact 6 claim shapes from the v2.19.42 N3-overshoot bug to confirm the fix is solid. v2.19.44 already addressed the root cause; v2.19.45 already shipped 5 regression tests for N6. **v2.19.46 pins the 6-vector matrix verbatim** so the N3-overshoot bug class cannot regress silently again. Plus expands HONESTY GATE 2.0 feature-name coverage to include underscore + uppercase spelling variants the user flagged.
+
+### 📌 6-VECTOR PINNED REGRESSION
+
+[packages/core/src/squadron/acgv_n3_overshoot.test.ts](packages/core/src/squadron/acgv_n3_overshoot.test.ts) — every vector from the user's audit verbatim:
+
+| Vector | Claim | Expected (post-fix) |
+|---|---|---|
+| 1 | `mneme.truth.forensic is registered` | green / FORENSIC-ACCEPTED |
+| 2 | `mneme.truth.forensic exists` | green / FORENSIC-ACCEPTED |
+| 3 | `mneme.truth.forensic is a real tool` | green / FORENSIC-ACCEPTED |
+| 4 | `the tool mneme.truth.forensic is registered` | green / FORENSIC-ACCEPTED |
+| 5 | `Mneme has tool mneme.truth.forensic` | green / FORENSIC-ACCEPTED |
+| 6 | `mneme.fake.tool is registered` | red / FORENSIC-REJECTED (genuine lie) |
+
+Plus 2 cross-vector invariants:
+
+- **No TRUE claim returns AUTO_REFUTE / IMPOSSIBLE_REFUTE** when the tool IS in the catalog (the original bug class).
+- **Genuine lies for fake tools STILL get REJECTED** (zero false-negative regression).
+
+8/8 tests pass sub-1s end-to-end. CI gate forever.
+
+### 🪞 HONESTY GATE 2.0 — underscore-variant feature names
+
+User audit also noted naming inconsistency: whats_new could use `outcome_market` or `ZK_FAIRNESS` but `DEFAULT_FEATURE_FAMILY_MAP` only recognised `OUTCOME MARKET` (space) and `ZK-FAIRNESS` (hyphen). The auto-amend pipeline would silently miss those spellings.
+
+[packages/core/src/honesty_gate/index.ts](packages/core/src/honesty_gate/index.ts) — added 4 alternative spellings:
+
+- `OUTCOME_MARKET` (uppercase underscore)
+- `outcome_market` (lowercase underscore)
+- `ZK_FAIRNESS` (uppercase underscore)
+- `zk_fairness` (lowercase underscore)
+
+Each maps to the same canonical family pair `["outcome", "market"]` / `["zk_fairness", "fairness"]`. Status remains `alias_covered` (since the live MCP catalog uses `mneme.market.*` + `mneme.fairness.*`). 19 existing HONESTY 2.0 deep tests pass with zero regression.
+
+### MEASURED
+
+- 8/8 N3-overshoot regression tests pass sub-1s (user's 6 vectors + 2 cross-vector invariants).
+- 19/19 HONESTY GATE 2.0 tests pass (zero regression on existing patterns).
+- AURELIAN: 3/3 SHIP (rollup ship=2 cards).
+- Total MCP tools: 732 (unchanged — fixes extend existing logic, no new tools).
+
+### Composes onto
+
+v2.19.45 (N6 round-5 + npm preinstall), v2.19.44 (N3-overshoot fix at SOURCE + VACCINE OSMOSIS lattice), v2.19.42 (HONESTY 2.0 base), v2.19.34 APOSTILLE + ETERNITY.
+
+### Pending (logged in MEMORY)
+
+- 🟡 Dreamspace organ ledger (-mmin -60) — needs runtime reproduction; v2.19.33 B4 fix (context-shift triggers + DEAD_MAN_MS_6H) should already cover but daemon must actually be running for ticks to land.
 
 ---
 

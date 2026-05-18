@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.46": {
+    headline: "📌 N3-OVERSHOOT 6-VECTOR REGRESSION PINNED + 🪞 HONESTY 2.0 UNDERSCORE-VARIANT COVERAGE — user's verbatim 6-vector audit pinned in acgv_n3_overshoot.test.ts (CI gate forever). HONESTY GATE 2.0 DEFAULT_FEATURE_FAMILY_MAP expanded to recognise underscore + uppercase spellings (OUTCOME_MARKET / outcome_market / ZK_FAIRNESS / zk_fairness). No new MCP tools — fixes extend existing test + map.",
+    tools: [],
+  },
   "2.19.45": {
     headline: "🎛 N6 ROUND-5 STOPS-THE-NOISE + 🔌 npm PREINSTALL DAEMON-STOP + 5 PINNED REGRESSION TESTS — mneme welcome --json '{}' no longer prints 'too many arguments' to stderr (recursive configureOutput suppression + retry path preserving MCP-router payloads); CI gate pinned via 5 vitest spawns. Plus npm preinstall hook stops running daemon before file copy, closing the Windows EBUSY libvips-42.dll race that broke npm install -g.",
     tools: [],

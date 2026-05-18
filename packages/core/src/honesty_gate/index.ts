@@ -411,8 +411,15 @@ export const DEFAULT_FEATURE_FAMILY_MAP: Readonly<Record<string, string[]>> = Ob
   // Source-name first so the canonical name from whats_new gets matched as
   // expectedFamilies[0]; live MCP namespaces appear as fallback aliases.
   "OUTCOME MARKET": ["outcome", "market"],
+  // v2.19.46 — user audit flagged the underscore spelling as unrecognised
+  // by the honesty gate. Add the underscore variants so any of the three
+  // shapes (OUTCOME MARKET / outcome_market / OUTCOME_MARKET) gets caught.
+  "OUTCOME_MARKET": ["outcome", "market"],
+  "outcome_market": ["outcome", "market"],
   "ZK-FAIRNESS": ["zk_fairness", "fairness"],
   "ZK FAIRNESS": ["zk_fairness", "fairness"],
+  "ZK_FAIRNESS": ["zk_fairness", "fairness"],
+  "zk_fairness": ["zk_fairness", "fairness"],
   "ETERNITY": ["eternity"],
   "TOKEN GOVERNOR": ["governor"],
   "PROMPT FOSSIL": ["fossil"],
