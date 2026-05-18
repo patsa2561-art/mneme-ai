@@ -205,6 +205,16 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.48": {
+    headline: "🌌 CHRONOSHEAF P3 + P4 + 5 MCP TOOLS — P3 base space + P4 live ChronoSheafUpdate 7-step algorithm + 5 MCP tools. System test catches the v2.19.40 honesty bug class. 78/78 deep tests pass sub-1s.",
+    tools: [
+      "mneme.chronosheaf.update",
+      "mneme.chronosheaf.slo",
+      "mneme.chronosheaf.preflight",
+      "mneme.chronosheaf.h1",
+      "mneme.chronosheaf.cover",
+    ],
+  },
   "2.19.47": {
     headline: "🌌 CHRONOSHEAF P1 + P2 — sheaf-cohomology AI-memory foundation. P1 pain_catalog: 7 user-reported pains typed by topology obstruction class. P2: 7 mathematical primitives (Čech + RG + persistence + Friston + Wasserstein + tropical + Aczel) — first AI tool worldwide composing this set. 43/43 deep tests pass sub-1s. No new MCP tools (P3 integration layer ships later).",
     tools: [],

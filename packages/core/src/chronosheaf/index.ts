@@ -26,6 +26,10 @@ export * as wasserstein from "./wasserstein.js";
 export * as tropical from "./tropical.js";
 export * as aczel from "./aczel.js";
 
+// v2.19.48 — P3 + P4: base space + live ChronoSheafUpdate orchestrator
+export * as baseSpace from "./base_space.js";
+export * as liveUpdate from "./live_update.js";
+
 export type { PainEntry, PainTopology, PrimitiveTag } from "./pain_catalog.js";
 export type { Site, SheafCover, Section0, Section1, SheafResult } from "./sheaf.js";
 export type { RGState, RGStep, Relevance } from "./rg_flow.js";
@@ -34,3 +38,5 @@ export type { Categorical, ActionCandidate, ActionScoring } from "./free_energy.
 export type { DiscreteMeasure, CostMatrix } from "./wasserstein.js";
 export type { TropicalGraph, TropicalPathResult } from "./tropical.js";
 export type { Hyperset, HypersetNode } from "./aczel.js";
+export type { CommitSha, TimeMs, ScaleBand, OpenSet, TimeInterval, BeliefVector } from "./base_space.js";
+export type { ChronoEvent, EventEmitter, Evidence, ClaimObservation, UpdateInput, UpdateState, UpdateSummary, ChronoSlo } from "./live_update.js";
