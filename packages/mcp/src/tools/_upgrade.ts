@@ -22,8 +22,29 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { versionCheck, lineage, karmaStreaks } from "@mneme-ai/core";
+import { versionCheck, lineage, karmaStreaks, resolveMnemeVersion } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime } from "./_types.js";
+
+/**
+ * v2.19.43 N4 fix — resolve the running Mneme version robustly.
+ *
+ * Pre-v2.19.43 used `process.env["npm_package_version"]` which is ONLY
+ * set when launched via `npm run`; running the installed binary
+ * `mneme system upgrade --json '{"mode":"check"}'` returned
+ *   { current: "0.0.0", wisdom: "Mneme vX is available (you're on 0.0.0)" }
+ * The pulse advertised an available upgrade with a wrong baseline.
+ *
+ * Fix: prefer the env var (still useful in npm-run scenarios) but fall
+ * back to resolveMnemeVersion() which walks up from the module's dir
+ * looking for any Mneme-family package.json. Robust across npm-global
+ * install where sibling packages don't have core as a parent.
+ */
+function readRunningVersion(): string {
+  const env = process.env["npm_package_version"];
+  if (env && /^\d+\.\d+\.\d+/.test(env)) return env;
+  try { return resolveMnemeVersion(); }
+  catch { return "0.0.0"; }
+}
 
 /**
  * v2.19.41 — defensive runtime accessor.
@@ -91,7 +112,7 @@ export const systemHealthTool: MnemeTool = {
   handler: async (rt) => {
     const root = safeRootPath(rt);
     const startedAt = (globalThis as { __mnemeBootedAt?: number }).__mnemeBootedAt ?? Date.now();
-    const version = process.env["npm_package_version"] ?? "unknown";
+    const version = readRunningVersion();
     const ids = lineage.listChromosomes(root);
     const tree = lineage.readTree(root);
     const sporeStatus = lineage.sporeStatus(root);
@@ -213,7 +234,7 @@ export const systemUpgradeTool: MnemeTool = {
   handler: async (rt, args) => {
     const mode = args["mode"] === "install" ? "install" : "check";
     const force = Boolean(args["force"]);
-    const current = process.env["npm_package_version"] ?? "0.0.0";
+    const current = readRunningVersion();
     const status = await versionCheck.checkVersion(safeRootPath(rt), current);
     const installInfo = detectInstallMethod();
 
@@ -282,14 +303,32 @@ export const systemUpgradeTool: MnemeTool = {
     const core = await import("@mneme-ai/core");
     const installGuard = await core.systemCompat.clearInstallLocks();
 
-    // Spawn `mneme upgrade --force` so the existing CLI handles the bulletproof
-    // re-install + PATH diagnosis. Force ensures the version pin sticks even
-    // if npm cache is stale.
-    const mnemeBin = process.platform === "win32" ? "mneme.cmd" : "mneme";
+    // v2.19.43 N5 fix — robust spawn with Windows shell:true + r.error capture.
+    //
+    // Pre-v2.19.43 bug: spawnSync(mneme.cmd, [...], { encoding:"utf8" }) on
+    // Windows produced { status:null, stdout:"", stderr:"", error:<EINVAL> }
+    // because Node 18+ won't execute a .cmd file without shell:true. The
+    // returned status=null was treated as failure; stdout/stderr both empty
+    // gave the user NO clue what went wrong. v2.19.43 forces shell:true on
+    // Windows AND surfaces r.error?.message into upgradeStderr so the real
+    // failure reason is always visible.
+    const isWin = process.platform === "win32";
+    const mnemeBin = isWin ? "mneme.cmd" : "mneme";
     const cliArgs = ["upgrade"];
     if (force) cliArgs.push("--force");
-    const r = spawnSync(mnemeBin, cliArgs, { encoding: "utf8", timeout: 240_000 });
+    const r = spawnSync(mnemeBin, cliArgs, {
+      encoding: "utf8",
+      timeout: 240_000,
+      shell: isWin,                 // .cmd on Windows requires shell:true (Node 18+)
+      windowsHide: true,            // hide the spawned cmd window
+    });
     const success = r.status === 0;
+    // Surface r.error.message so failures aren't silent. Common cases:
+    //   EBUSY libvips-42.dll → AI tool holding the DLL
+    //   ENOENT mneme.cmd → PATH lookup failed
+    //   timeout → spawn hung 240s (npm registry slow or hook deadlock)
+    const errMsg = r.error ? `spawn error: ${(r.error as Error & { code?: string }).code ?? ""} ${(r.error as Error).message}`.trim() : "";
+    const stderrCombined = [errMsg, (r.stderr ?? "")].filter(Boolean).join("\n").slice(-1000);
     return {
       data: {
         mode,
@@ -302,17 +341,18 @@ export const systemUpgradeTool: MnemeTool = {
         upgradeRan: true,
         upgradeSuccess: success,
         upgradeStdout: (r.stdout ?? "").slice(-1500),
-        upgradeStderr: (r.stderr ?? "").slice(-500),
+        upgradeStderr: stderrCombined,
+        upgradeExitCode: r.status,
         installGuard,
         remediation: success
           ? `Upgrade complete. Tell the user to restart their AI tool (Claude Code / Cursor / etc.) so the new MCP server binary loads.`
-          : process.platform === "win32"
-            ? `Upgrade failed (exit ${r.status}). On Windows, the running mneme.cmd may be locked by this MCP process. Tell the user to: (1) close their AI tool to release the lock, (2) open a NEW PowerShell window, (3) run \`npm install -g --force mneme-ai@${targetVersion}\`, then (4) reopen their AI tool.`
-            : `Upgrade failed (exit ${r.status}). Inspect upgradeStderr; on POSIX, \`sudo npm install -g mneme-ai@${targetVersion}\` may be required.`,
+          : isWin
+            ? `Upgrade failed (exit ${r.status ?? "null"}). On Windows, the running mneme.cmd may be locked by this MCP process. Tell the user to: (1) close their AI tool to release the lock, (2) open a NEW PowerShell window, (3) run \`npm install -g --force mneme-ai@${targetVersion}\`, then (4) reopen their AI tool. Spawn error (if any): ${errMsg || "none captured"}.`
+            : `Upgrade failed (exit ${r.status ?? "null"}). Inspect upgradeStderr; on POSIX, \`sudo npm install -g mneme-ai@${targetVersion}\` may be required. Spawn error: ${errMsg || "none captured"}.`,
       },
       wisdom: success
         ? `✓ Upgraded Mneme ${current} → ${targetVersion}. User should restart their AI tool to pick up the new MCP binary.`
-        : `Upgrade failed: exit ${r.status}. ${(r.stderr ?? "").slice(0, 200)}`,
+        : `Upgrade failed: exit ${r.status ?? "null"}. ${(stderrCombined || "").slice(0, 200)}`,
       confidence: { level: "high" },
       secondBrain: {
         presentation: success

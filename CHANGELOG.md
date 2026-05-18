@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.42
+# 📜 Release index — v2.18.0 → v2.19.43
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.43** | 🆔 N4 VERSION DETECTION + 🛠 N5 SPAWN ERROR CAPTURE + 🎛 N6 OMNI-FLAG RETRY + 🎨 N8 EMOJI CONSISTENCY — `mneme system upgrade` no longer reports 0.0.0 (resolveMnemeVersion walks sibling Mneme packages). Self-upgrade spawn surfaces `r.error.message` + uses Windows `shell:true` + adds `upgradeExitCode` field (no more silent empty stderr). `mneme welcome --json '{}'` no longer throws (entry-point retry strips JSON payload after `--json` when Commander rejects as positional). `mneme verify` rendering strips conflicting traffic-light emoji from plain block (presentation invariant). 10 new deep tests + 4 SOURCE fixes. |
 | **v2.19.42** | 🔀 N3 FORENSIC-FIRST + 🪪 DISCOVERABILITY ALIASES + 🪞 HONESTY GATE 2.0 + 🪙 PROOF OF SAVING + 🏎 CASCADE INVERSION — `mneme verify` CLI now routes through truth.forensic first (no more MIXED-NEEDS-DATA vs ACCEPTED disagreement). 10 alias tools added so `mneme.outcome.*` + `mneme.zk_fairness.*` resolve to canonical `mneme.market.*` + `mneme.fairness.*` (closes v2.19.40 N1 discoverability gap). HONESTY GATE 2.0 auto-amends release notes with coverage disclaimers. PROOF OF SAVING mints HMAC+Merkle savings certificates auditors verify offline. CASCADE INVERSION fires raceable stages in parallel on cold start (3-6× wall-time win). 16 new MCP tools + 51 deep tests + 1100+ fuzz iterations. |
 | **v2.19.41** | 🚨 P0 FIX + 🐶 DOGFOOD GATE + ⚡ OMNI-FLAG + 🪶 SKINNY CAPABILITIES — `mneme.honesty.audit_whats_new` + `mneme.system.upgrade` were broken in v2.19.40 (the irony: HONESTY GATE itself shipped lying). Fixed at SOURCE (auto-source runtime from live MCP catalog + safeRootPath fallback). New ritual phase 3.5 DOGFOOD GATE invokes every critical-path MCP tool on the install tarball before publish — bugs of this class cannot ship again. OMNI-FLAG: schema-driven POSIX flag autogen across all 711 tools (every flag now works in both forms). SKINNY CAPABILITIES: `{ skinny: true }` returns ~2.5KB vs 216KB full (84× lighter for AI agents on cold start). |
 | **v2.19.40** | 🧠🦴🕸 WIRING TRINITY — 3 modules wiring all 13 token-saving primitives into one auto-operation layer. TOKEN GOVERNOR (5-stage cascade: cache → local → cheap → expensive → lie-tax). PROMPT FOSSIL (the first AI tool with prompt-git diff-based reuse). GANGLION (the black-sheep wiring innovation — self-rewiring synapse graph where primitives bid, Hebbian rule strengthens winners, graph EVOLVES to user's actual workflow). 12 new MCP tools + 53 deep tests + 3000+ fuzz iterations |
@@ -67,6 +68,80 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.43 — 2026-05-18 — 🆔 N4 + 🛠 N5 + 🎛 N6 + 🎨 N8 (4 SOURCE fixes from v2.19.41 dogfood audit)
+
+User audit (turn-4 dogfood after upgrading to v2.19.41) found 4 ship-stopping or UX bugs. All fixed at SOURCE in this release.
+
+### 🆔 N4 — version detection (`current: 0.0.0` bug)
+
+`mneme system upgrade --json '{"mode":"check"}'` returned `current: "0.0.0"` and `wisdom: "Mneme vX.Y.Z is available (you're on 0.0.0)"` even though `mneme --version` correctly reported `2.19.41`. The pulse advertised an available upgrade with a wrong baseline → AI agent could loop trying to upgrade from the wrong version.
+
+Root cause: `process.env["npm_package_version"]` is only set when launched via `npm run`. When MCP server runs from the installed binary, env is empty AND the existing `resolveMnemeVersion()` only accepted a `@mneme-ai/core` package.json. On npm-global install, `packages/mcp` is a SIBLING of `core` under `node_modules` — walking up never found a `@mneme-ai/core` ancestor.
+
+Fix at SOURCE in [packages/core/src/mneme_version.ts](packages/core/src/mneme_version.ts): widen the accept-list to the entire Mneme family (`@mneme-ai/{core,mcp,cli,embeddings,correlator}` + `mneme-ai`). All 5 packages ship lock-step per release-claims, so any one is canonical. Plus a `readRunningVersion()` helper in [packages/mcp/src/tools/_upgrade.ts](packages/mcp/src/tools/_upgrade.ts) that prefers env but falls back to the robust resolver.
+
+### 🛠 N5 — self-upgrade silent fail (empty stdout/stderr)
+
+`mneme system upgrade --json '{"mode":"install"}'` returned `upgradeRan: true, upgradeSuccess: false, upgradeStdout: "", upgradeStderr: ""` — both streams empty, no clue what went wrong.
+
+Root cause: Node 18+ requires `shell: true` to execute `.cmd` files on Windows. `spawnSync("mneme.cmd", [...], { encoding: "utf8" })` returns `{ status: null, stdout: "", stderr: "", error: <EINVAL> }` because the child never actually launched — but `r.error` was never surfaced to the caller.
+
+Fix at SOURCE: `shell: true` + `windowsHide: true` for Windows + capture `r.error.message` into `upgradeStderr` + add a new `upgradeExitCode` field so callers can distinguish `null` (spawn failed) from non-zero (cmd ran + failed). Remediation text now includes the spawn error inline.
+
+### 🎛 N6 — `mneme welcome --json '{}'` still throwing
+
+The v2.19.41 OMNI-FLAG fix covered MCP-router-generated subcommands but NOT the 250+ hand-rolled `.option("--json", ...)` boolean flags across legacy CLI commands. `mneme welcome --json '{}'` failed with "too many arguments for 'welcome'" because Commander treats `'{}'` as a positional arg + welcome accepts none.
+
+Refactoring 250 sites is risky scope. The universal root-cause fix lives in [packages/cli/src/index.ts](packages/cli/src/index.ts) at the entry point:
+
+1. `program.exitOverride((err) => { throw err; })` — convert Commander's exit-on-error into a throw.
+2. Catch the throw in the `run()` loop; if it's `commander.excessArguments`, strip the JSON-looking payload after `--json` from argv and retry once.
+3. `commander.help` / `commander.version` exit codes flow through correctly (no false-error on `--help`).
+
+Backwards-compat preserved: MCP-router subcommands declare `--json [payload]` so Commander consumes the payload normally; the retry path only fires when Commander itself rejected.
+
+### 🎨 N8 — `mneme verify` emoji conflict (🌑 IMPOSSIBLE headline + ✅ ACCEPTED in plain)
+
+`mneme verify "Mneme is in Rust AND mneme.truth.forensic is registered"` rendered:
+
+```
+🌑 IMPOSSIBLE -- REFUTED -- language=rust is impossible ...
+...
+What this means:
+  ✅ TRUTH-FORENSIC verdict: ACCEPTED. Every assertion grounded ...
+```
+
+The headline emoji (🌑) and the plain-block emoji (✅) contradicted each other. The user saw two opposite verdicts in the same output.
+
+Fix at SOURCE in [packages/core/src/squadron/acgv_explain.ts](packages/core/src/squadron/acgv_explain.ts): new `neutraliseConflictingEmoji(plain, headlineLight)` strips any traffic-light glyph from the plain block that disagrees with the headline; the verdict TEXT (the word ACCEPTED) is preserved so power-users see the layered evidence. Plus the verify CLI now explicitly emits a `LAYERS DISAGREE` note when ACGV is `IMPOSSIBLE_REFUTE`/`BLACK_HOLE` but forensic returned `ACCEPTED` — transparent without sacrificing the strict math verdict.
+
+### What was already working in v2.19.41 (verified)
+
+- **N7 `mneme capabilities --skinny`** — the CLI route DOES exist via the v2.19.41 OMNI-FLAG router; user must invoke via `mneme` (bin shim) not `node packages/cli/dist/index.js` (which skips the bin). Measured: full = 224,204 bytes; skinny = 2,574 bytes; **87× smaller** through the bin.
+
+### MEASURED
+
+- N4: `mneme.system.upgrade({mode:"check"})` returns `current: "2.19.42"` (was `0.0.0`).
+- N5: spawn error now surfaces inline; `upgradeExitCode` field added.
+- N6: `mneme welcome --json '{}'` exits 0 with JSON output (was exit 1).
+- N8: emoji-consistency tests 5/5 GREEN across all 4 traffic lights.
+- 10/10 new tests pass (mneme_version + acgv_explain).
+- AURELIAN: 4/4 SHIP (rollup ship=4).
+- Total MCP tools: 727 (unchanged — fixes extend existing handlers).
+
+### Composes onto
+
+v2.19.42 (N1+N3 + HONESTY 2.0 + PROOF + INVERSION still in place), v2.19.41 (OMNI-FLAG router subcommands still work + SKINNY still 84× lighter), v2.19.40 WIRING TRINITY (Governor / Fossil / Ganglion unchanged), v2.19.34 APOSTILLE + ETERNITY.
+
+### Pending P1-P3 (logged in MEMORY)
+
+- P1: post-upgrade inbox reconciler (still open from v2.19.41 dogfood)
+- P2: pulse budget hard cap 200 bytes per turn + `mneme.pulse.expand`
+- P3: full RuntimeContext invariant assert at boot (20+ files still grep-hit unguarded `rt.meta.rootPath`)
+- P3: in-place upgrade safety (daemon SIGTERM + atomic rename) — closes the `ERR_MODULE_NOT_FOUND` + `EPERM libvips-42.dll` race
 
 ---
 

@@ -107,17 +107,47 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
   }
 }
 
+/**
+ * v2.19.43 N8 fix — presentation consistency invariant.
+ *
+ * User audit (2026-05-18): `mneme verify "Mneme is written in Rust AND
+ * mneme.truth.forensic is registered"` rendered:
+ *   🌑 IMPOSSIBLE -- REFUTED -- language=rust is impossible ...
+ *   ...
+ *     ✅ TRUTH-FORENSIC verdict: ACCEPTED. Every assertion grounded ...
+ *
+ * The headline used trafficLight=black (🌑 IMPOSSIBLE) but the plain
+ * text leaked a ✅ from the appended forensic explanation. Both emoji
+ * present → user confused about which verdict won.
+ *
+ * Invariant: the headline emoji is canonical; any conflicting
+ * verdict glyphs in the plain block get neutralised to a neutral mark
+ * (●). The verdict text itself is preserved so power-users still see
+ * "TRUTH-FORENSIC verdict: ACCEPTED" — only the contradicting emoji
+ * is stripped.
+ */
+function neutraliseConflictingEmoji(plain: string, headlineLight: "green" | "yellow" | "red" | "black"): string {
+  if (!plain) return plain;
+  // Map every other-traffic-light glyph to a neutral bullet.
+  const neutralise = (glyph: string): string => `●`;
+  const allow: Record<string, string> = { green: "✅", yellow: "⚠️", red: "❌", black: "🌑" };
+  const keep = allow[headlineLight];
+  return plain
+    .replace(/✅|⚠️|❌|🌑/g, (m) => (m === keep ? m : neutralise(m)));
+}
+
 /** Format the explained verdict for terminal output. ~10 lines, scannable. */
 export function renderExplained(ev: ExplainedVerdict, claim: string): string[] {
   const glyph = ev.trafficLight === "green" ? "✅" : ev.trafficLight === "yellow" ? "⚠️" : ev.trafficLight === "red" ? "❌" : "🌑";
   const tone = ev.trafficLight === "green" ? "TRUSTWORTHY" : ev.trafficLight === "yellow" ? "MIXED" : ev.trafficLight === "red" ? "REFUTED" : "IMPOSSIBLE";
+  const cleanPlain = neutraliseConflictingEmoji(ev.plain, ev.trafficLight);
   return [
     `${glyph} ${tone} -- ${ev.headline}`,
     ``,
     `Claim: "${claim.length > 90 ? claim.slice(0, 87) + "..." : claim}"`,
     ``,
     `What this means:`,
-    `  ${ev.plain}`,
+    `  ${cleanPlain}`,
     ``,
     `Next step:`,
     `  -> ${ev.nextAction}`,

@@ -2608,10 +2608,76 @@ export async function run(argv: string[]): Promise<void> {
     }
   } catch { /* never block */ }
 
+  // v2.19.43 N6 fix — OMNI-FLAG retry-on-too-many-arguments.
+  //
+  // User audit (2026-05-18): `mneme welcome --json '{}'` threw
+  //   "error: too many arguments for 'welcome'. Expected 0 arguments but got 1."
+  // because welcome registers `.option("--json", ...)` as a boolean flag;
+  // Commander treats the trailing `'{}'` as a positional arg + welcome
+  // has no positionals.
+  //
+  // The OMNI-FLAG fix in v2.19.41 covered MCP-router-generated
+  // subcommands (which register `--json [payload]`) but NOT the 250+
+  // hand-rolled `--json` boolean flags across legacy CLI commands.
+  // Refactoring 250 sites is risky; we use Commander's exitOverride to
+  // convert the "too many arguments" error into a throw, catch it here,
+  // strip the JSON-looking payload after --json from argv, and retry.
+  //
+  // Backward-compat: MCP-router subcommands declare `--json [payload]`,
+  // so Commander consumes the payload normally; the retry path only
+  // fires when Commander itself rejected the payload as positional.
+  program.exitOverride((err) => { throw err; });
+  for (const sub of program.commands) {
+    try { sub.exitOverride((err) => { throw err; }); } catch { /* ok */ }
+  }
+
+  const stripJsonPayloadFromArgv = (a: string[]): string[] => {
+    const out: string[] = [];
+    let skipNext = false;
+    for (let i = 0; i < a.length; i++) {
+      if (skipNext) { skipNext = false; continue; }
+      const cur = a[i]!;
+      if (cur === "--json" && i + 1 < a.length) {
+        const next = a[i + 1]!;
+        const looksLikeJson = /^\s*(\{|\[|null|true|false|-?\d|".*")/i.test(next);
+        if (looksLikeJson) {
+          out.push("--json");
+          skipNext = true;
+          continue;
+        }
+      }
+      out.push(cur);
+    }
+    return out;
+  };
+
   try {
     await program.parseAsync(argv);
   } catch (err) {
-    ui.error((err as Error).message);
+    const message = (err as Error).message ?? "";
+    const code = (err as { code?: string }).code ?? "";
+    // Commander's "commander.excessArguments" + the legacy "too many arguments"
+    // error message both indicate the same condition.
+    const isExcess = /too many arguments/i.test(message) || code === "commander.excessArguments";
+    // Also let commander.help + commander.version exit silently with their own output.
+    if (code === "commander.help" || code === "commander.helpDisplayed" || code === "commander.version") {
+      process.exit(0);
+    }
+    if (isExcess) {
+      const stripped = stripJsonPayloadFromArgv(argv);
+      if (stripped.length !== argv.length) {
+        try { await program.parseAsync(stripped); return; }
+        catch (err2) {
+          const code2 = (err2 as { code?: string }).code ?? "";
+          if (code2 === "commander.help" || code2 === "commander.helpDisplayed" || code2 === "commander.version") {
+            process.exit(0);
+          }
+          ui.error((err2 as Error).message);
+          process.exit(1);
+        }
+      }
+    }
+    ui.error(message);
     process.exit(1);
   }
 }

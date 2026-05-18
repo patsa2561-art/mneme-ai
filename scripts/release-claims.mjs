@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.43": {
+    headline: "🆔 N4 + 🛠 N5 + 🎛 N6 + 🎨 N8 — 4 SOURCE fixes from v2.19.41 dogfood audit. N4 version detection (resolveMnemeVersion walks sibling Mneme packages). N5 self-upgrade spawn surfaces r.error.message + Windows shell:true + upgradeExitCode field. N6 entry-point retry strips JSON payload after --json when Commander rejects as positional. N8 verify rendering strips conflicting traffic-light emoji from plain. No new MCP tools — fixes extend existing handlers.",
+    tools: [],
+  },
   "2.19.42": {
     headline: "🔀 N3 FORENSIC-FIRST + 🪪 DISCOVERABILITY ALIASES + 🪞 HONESTY GATE 2.0 + 🪙 PROOF OF SAVING + 🏎 CASCADE INVERSION — closes v2.19.40 N3 (verify CLI != truth.forensic MCP) + N1 (HOLY GRAIL discoverability) at SOURCE; adds HONESTY GATE 2.0 auto-amend, PROOF OF SAVING HMAC+Merkle savings cert (enterprise procurement primitive), CASCADE INVERSION parallel-race stages on cold start. 16 new MCP tools (10 aliases + 6 new families).",
     tools: [

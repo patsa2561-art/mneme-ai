@@ -42,4 +42,20 @@ describe("mneme_version · resolution", () => {
     const v = resolveMnemeVersion();
     expect(v).not.toBe("not-a-version");
   });
+
+  // v2.19.43 N4 regression — pre-v2.19.43 the resolver only accepted
+  // @mneme-ai/core; on npm-global install the MCP package is a SIBLING
+  // not a parent, so walking up never found core's package.json and the
+  // resolver returned "0.0.0-unknown". Caller (system.upgrade) then
+  // reported "current: 0.0.0" + advertised an upgrade with wrong baseline.
+  it("never returns 0.0.0 when running from a real install (regression for N4)", () => {
+    delete process.env["npm_package_version"];
+    _resetMnemeVersionCache();
+    const v = resolveMnemeVersion();
+    expect(v).not.toBe("0.0.0");
+    expect(v).not.toBe("0.0.0-unknown");
+    // Should pick up a sibling Mneme-family package.json even when running
+    // from packages/mcp or packages/cli.
+    expect(v).toMatch(/^\d+\.\d+\.\d+/);
+  });
 });

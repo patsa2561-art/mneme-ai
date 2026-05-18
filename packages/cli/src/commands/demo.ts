@@ -368,9 +368,23 @@ How to read the verdict:
         mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
         mutable.trafficLight = "green";
       } else if (forensic.verdict === "ACCEPTED") {
-        // ACGV already had an opinion (FUSION / IMPOSSIBLE_REFUTE / etc).
-        // Append forensic ✓ trail; don't lower the verdict.
-        mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
+        // v2.19.43 N8 fix — when ACGV is a STRONG REFUTE (IMPOSSIBLE_REFUTE
+        // / BLACK_HOLE) but forensic ACCEPTED, the two layers genuinely
+        // disagree. Pre-fix the appended "✅ ACCEPTED" leaked emoji into a
+        // 🌑 IMPOSSIBLE rendering → user saw conflicting glyphs in the same
+        // output. Now we surface "LAYERS DISAGREE" explicitly and let the
+        // emoji neutraliser strip the contradicting ✓ from the rendered
+        // plain (presentation invariant in acgvExplain.renderExplained).
+        const strongRefute = result.verdict === "IMPOSSIBLE_REFUTE" || result.verdict === "BLACK_HOLE";
+        if (strongRefute) {
+          mutable.plain = (mutable.plain ?? "") + "\n\nLAYERS DISAGREE — forensic sniffer grounded "
+            + forensic.assertions.length + " assertion(s), but ACGV proved the compound claim impossible. "
+            + "The strict math refute wins; the grounded parts are noted for transparency.\n\n"
+            + forensic.explanation;
+        } else {
+          // ACGV had an opinion (FUSION etc) — just append the forensic trail.
+          mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
+        }
       } else if (typeof mutable.headline === "string" && /TRUSTWORTHY/i.test(mutable.headline) && forensic.assertions.length > 0) {
         // Sniffer found assertions but couldn't ground them (untested) — be cautious.
         mutable.headline = mutable.headline.replace(/TRUSTWORTHY/gi, "MIXED-NEEDS-DATA");
