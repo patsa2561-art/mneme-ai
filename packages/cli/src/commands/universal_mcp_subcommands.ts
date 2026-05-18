@@ -41,6 +41,67 @@ interface ToolLike {
   handler: (rt: unknown, args: Record<string, unknown>) => Promise<unknown> | unknown;
 }
 
+/**
+ * v2.19.41 — OMNI-FLAG protocol.
+ *
+ *   User mandate (2026-05-18): `mneme system upgrade --mode install` failed
+ *   with "unknown option '--mode'" because the router only registered the
+ *   generic `--json '{...}'` flag. AI agents had to memorise which command
+ *   family used JSON-blob vs POSIX flags. v2.19.41 reads each tool's
+ *   inputSchema.properties and auto-registers every property as a POSIX
+ *   option. Both forms now work for every tool:
+ *
+ *     mneme system upgrade --mode install           # POSIX
+ *     mneme system upgrade --json '{"mode":"install"}'  # JSON-blob
+ *
+ *   Boolean properties become flag-form (no value); string/number/array
+ *   become value-form. Auto-derived args merge with --json args (POSIX
+ *   wins on conflict so user can override the JSON-blob).
+ */
+function isJsonSchemaObject(schema: unknown): schema is { type?: string; properties?: Record<string, { type?: string; description?: string; default?: unknown }> } {
+  return !!schema && typeof schema === "object" && (schema as { type?: string }).type !== undefined;
+}
+
+function deriveOmniFlags(tool: ToolLike): Array<{ flag: string; description: string; coerce: (v: string) => unknown }> {
+  const out: Array<{ flag: string; description: string; coerce: (v: string) => unknown }> = [];
+  if (!isJsonSchemaObject(tool.inputSchema)) return out;
+  const props = tool.inputSchema.properties ?? {};
+  for (const [key, def] of Object.entries(props)) {
+    const safeKey = key.replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeKey || safeKey === "json" || safeKey === "pretty") continue; // reserved
+    const flagName = `--${safeKey}`;
+    const desc = (def && typeof def === "object" && typeof def.description === "string") ? def.description.slice(0, 80) : `${key} arg`;
+    if (def && def.type === "boolean") {
+      out.push({ flag: flagName, description: desc, coerce: (v: string) => v === "" || v === "true" || v === "1" });
+    } else if (def && (def.type === "number" || def.type === "integer")) {
+      out.push({ flag: `${flagName} <n>`, description: desc, coerce: (v: string) => Number(v) });
+    } else if (def && def.type === "array") {
+      out.push({ flag: `${flagName} <items>`, description: desc + " (JSON array or comma-separated)", coerce: (v: string) => { try { return JSON.parse(v); } catch { return v.split(",").map((s) => s.trim()); } } });
+    } else if (def && def.type === "object") {
+      out.push({ flag: `${flagName} <json>`, description: desc + " (JSON object)", coerce: (v: string) => { try { return JSON.parse(v); } catch { return v; } } });
+    } else {
+      out.push({ flag: `${flagName} <value>`, description: desc, coerce: (v: string) => v });
+    }
+  }
+  return out;
+}
+
+function mergeArgs(jsonArgs: Record<string, unknown>, posixOpts: Record<string, unknown>, omniFlags: Array<{ flag: string; coerce: (v: string) => unknown }>): Record<string, unknown> {
+  const merged = { ...jsonArgs };
+  for (const f of omniFlags) {
+    // Extract the option name from flags like "--mode <value>" or "--force"
+    const match = f.flag.match(/^--([a-zA-Z0-9_-]+)/);
+    if (!match) continue;
+    const optName = match[1]!;
+    const camelName = optName.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    if (posixOpts[camelName] !== undefined) {
+      const rawVal = posixOpts[camelName];
+      merged[optName] = typeof rawVal === "string" ? f.coerce(rawVal) : rawVal;
+    }
+  }
+  return merged;
+}
+
 function groupByFamily(tools: ToolLike[]): Map<string, ToolLike[]> {
   const m = new Map<string, ToolLike[]>();
   for (const t of tools) {
@@ -138,19 +199,26 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
         // re-running registration in the same process).
         if (parent.commands.find((c) => c.name() === action)) continue;
         try {
+          const omniFlags = deriveOmniFlags(tool);
           const cmd = parent.command(action)
             .description((tool.description ?? "").slice(0, 200))
-            .option("--json <jsonArgs>", "Tool arguments as a JSON object string")
-            .option("--pretty", "Pretty-print the output (default: compact JSON)")
-            .action(async (opts: { json?: string; pretty?: boolean }) => {
+            .option("--json [jsonArgs]", "Tool arguments as a JSON object string (or '{}' for none)")
+            .option("--pretty", "Pretty-print the output (default: compact JSON)");
+          for (const f of omniFlags) {
+            cmd.option(f.flag, f.description);
+          }
+          cmd.action(async (opts: Record<string, unknown>) => {
               let args: Record<string, unknown> = {};
-              if (opts.json) {
-                try { args = JSON.parse(opts.json) as Record<string, unknown>; }
+              const jsonOpt = opts["json"];
+              if (typeof jsonOpt === "string" && jsonOpt.length > 0) {
+                try { args = JSON.parse(jsonOpt) as Record<string, unknown>; }
                 catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
               }
+              // v2.19.41 OMNI-FLAG: merge POSIX-derived args over JSON-blob args.
+              args = mergeArgs(args, opts, omniFlags);
               try {
                 const result = await tool.handler({ repoRoot: process.cwd() }, args);
-                const out = opts.pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
+                const out = opts["pretty"] ? JSON.stringify(result, null, 2) : JSON.stringify(result);
                 process.stdout.write(out + "\n");
                 process.exit(0);
               } catch (e) {
@@ -182,19 +250,23 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
     const name = tool.name.split(".")[1]!;
     if (findExistingCommand(program, name)) continue;
     try {
-      program.command(name)
+      const omniFlags = deriveOmniFlags(tool);
+      const cmd = program.command(name)
         .description((tool.description ?? "").slice(0, 200))
-        .option("--json <jsonArgs>", "Tool arguments as a JSON object string")
-        .option("--pretty", "Pretty-print the output (default: compact JSON)")
-        .action(async (opts: { json?: string; pretty?: boolean }) => {
+        .option("--json [jsonArgs]", "Tool arguments as a JSON object string (or '{}' for none)")
+        .option("--pretty", "Pretty-print the output (default: compact JSON)");
+      for (const f of omniFlags) cmd.option(f.flag, f.description);
+      cmd.action(async (opts: Record<string, unknown>) => {
           let args: Record<string, unknown> = {};
-          if (opts.json) {
-            try { args = JSON.parse(opts.json) as Record<string, unknown>; }
+          const jsonOpt = opts["json"];
+          if (typeof jsonOpt === "string" && jsonOpt.length > 0) {
+            try { args = JSON.parse(jsonOpt) as Record<string, unknown>; }
             catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
           }
+          args = mergeArgs(args, opts, omniFlags);
           try {
             const result = await tool.handler({ repoRoot: process.cwd() }, args);
-            const out = opts.pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
+            const out = opts["pretty"] ? JSON.stringify(result, null, 2) : JSON.stringify(result);
             process.stdout.write(out + "\n");
             process.exit(0);
           } catch (e) {

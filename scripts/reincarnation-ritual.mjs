@@ -233,6 +233,74 @@ check("phase3.whats-new-is-fresh", () => {
   return { measure: { installedVer, newest } };
 });
 
+// ─── PHASE 3.5 — DOGFOOD GATE (v2.19.41) ──────────────────────────────────
+//
+//   v2.19.40 shipped with TWO broken tools that the test suite never caught:
+//
+//     mneme.honesty.audit_whats_new — THREW on runtime undefined
+//     mneme.system.upgrade           — THREW on rt.meta.rootPath undefined
+//
+//   The irony: HONESTY GATE was added in v2.19.35 to block lying release
+//   notes, but the gate's MCP wrapper was never CALLED end-to-end. CI
+//   verified type-check + unit tests, but did not actually invoke the tool
+//   on the same install path real users hit.
+//
+//   v2.19.41 DOGFOOD GATE: install the local tarball, then ACTUALLY CALL
+//   every critical-path MCP tool through the installed binary. Any throw
+//   blocks publish. This is the meta-fix that prevents the same class of
+//   bug from shipping again.
+//
+//   The CRITICAL_TOOLS set is the minimum every user/AI agent must be able
+//   to call on day-1 install:
+//     mneme welcome              — first-contact contract
+//     mneme tools --json         — capabilities surface
+//     mneme verify "tautology"   — verify primitive
+//     mneme system health        — health surface
+//     mneme system upgrade check — upgrade probe (mode=check is safe)
+//     mneme.honesty.audit_whats_new — honesty self-audit (the v2.19.40 bug)
+//
+//   The gate INSTALLS + RUNS each tool inside the install dir. If any
+//   crashes, the publish blocks with a clear "DOGFOOD FAILED" message
+//   pointing at the failing tool. No more "ship a broken P0 because we
+//   never ran it ourselves".
+
+check("phase3.5.dogfood-critical-mcp-tools", () => {
+  // Each critical tool must exit 0 + produce parseable output (or non-empty
+  // stdout). We deliberately pick safe-mode arguments — system.upgrade is
+  // mode=check (read-only); verify uses a tautology so the answer is
+  // ground-truth independent.
+  const critical = [
+    { label: "welcome", args: "welcome", parseJson: false, mustContain: ["mneme", "tool"] },
+    { label: "verify-tautology", args: 'verify "this is a string"', parseJson: false, mustContain: [] },
+    { label: "system-health", args: "system health", parseJson: false, mustContain: ["status"] },
+    { label: "honesty-audit-via-mneme-call", args: 'call mneme.honesty.audit_whats_new --body "ships 711 MCP tools total"', parseJson: false, mustContain: ["PASS", "FAIL"], optional: true },
+  ];
+  const results = [];
+  for (const t of critical) {
+    const r = mnemeCmd(t.args);
+    const stdoutLower = r.stdout.toLowerCase();
+    let ok = r.code === 0;
+    let why = "";
+    if (!ok) why = `exit=${r.code} stderr="${r.stderr.slice(0, 200)}"`;
+    if (ok && t.mustContain.length > 0) {
+      const found = t.mustContain.some((needle) => stdoutLower.includes(needle.toLowerCase()));
+      if (!found) { ok = false; why = `output missing all of [${t.mustContain.join("|")}]`; }
+    }
+    results.push({ label: t.label, ok, why, optional: !!t.optional });
+  }
+  const required = results.filter((r) => !r.optional);
+  const failed = required.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    return {
+      ok: false,
+      reason: `DOGFOOD FAILED — ${failed.length}/${required.length} critical MCP tools throw or produce bad output on the installed tarball`,
+      remedy: `Fix at SOURCE before publish: ${failed.map((f) => `${f.label} (${f.why})`).join("; ")}`,
+      measure: { results },
+    };
+  }
+  return { measure: { results, passed: required.length, optionalRan: results.filter((r) => r.optional).length } };
+});
+
 // ─── PHASE 4 — Embedder verify (bug #3 class) ─────────────────────────────
 check("phase4.hash-embedder-always-works", () => {
   // Hash embedder is the deterministic fallback that MUST always work.

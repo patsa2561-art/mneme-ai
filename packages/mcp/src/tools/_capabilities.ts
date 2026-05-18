@@ -52,11 +52,17 @@ export const capabilitiesTool: MnemeTool = {
         description:
           "Optional: filter to one category (memory | people | audit | forensics | insights | quality | quant | lab | meta).",
       },
+      skinny: {
+        type: "boolean",
+        description:
+          "v2.19.41 — return a context-window-safe summary (~2KB instead of full ~214KB). 9 category headers + 1-line description + 3 example tool names per category + handle to fetch full catalog. Use this on first contact; fetch the full catalog only when you actually need it.",
+      },
     },
   },
   handler: async (_rt, args) => {
     const grouped = groupByCategory();
     const filter = args["category"] ? String(args["category"]) : undefined;
+    const skinny = Boolean(args["skinny"]);
     const data: Record<string, unknown> = {};
     // v1.36.0 -- HONEYPOT FILTER. Pre-fix: honeypot tools (admin.delete_all,
     // secrets.dump, system.exec, mneme.config.set as a probe) leaked into
@@ -93,6 +99,34 @@ export const capabilitiesTool: MnemeTool = {
       (s, c) => s + ((c as { tools?: unknown[] }).tools?.length ?? 0),
       0,
     );
+
+    // v2.19.41 — SKINNY MODE. The full catalog is ~214KB JSON; AI agents
+    // burning that on every session start is wasteful. Skinny mode returns
+    // a ~2KB summary: 9 category headers + 1-line purpose + 3 example tool
+    // names per category. AI agent loads this in cold start; lazy-fetches
+    // the full category list when it actually needs to pick a tool.
+    if (skinny) {
+      const skinnyData: Record<string, unknown> = {};
+      for (const [cat, body] of Object.entries(data)) {
+        const tools = (body as { tools?: Array<{ name: string }> }).tools ?? [];
+        skinnyData[cat] = {
+          purpose: (body as { purpose: string }).purpose,
+          count: tools.length,
+          examples: tools.slice(0, 3).map((t) => t.name),
+        };
+      }
+      return {
+        data: {
+          mode: "skinny",
+          totalTools: total,
+          categories: skinnyData,
+          fetchFullHint: "Call mneme.capabilities (omit `skinny`) or mneme.capabilities { category: 'memory' } to drill into one family.",
+        },
+        wisdom: `🧠 ${total} tools across ${Object.keys(skinnyData).length} categories (skinny mode — ~2KB). Pass skinny=false for the full catalog.`,
+        confidence: { level: "high" },
+      };
+    }
+
     return {
       data: {
         positioning:

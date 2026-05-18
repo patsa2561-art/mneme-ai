@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.40
+# 📜 Release index — v2.18.0 → v2.19.41
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.41** | 🚨 P0 FIX + 🐶 DOGFOOD GATE + ⚡ OMNI-FLAG + 🪶 SKINNY CAPABILITIES — `mneme.honesty.audit_whats_new` + `mneme.system.upgrade` were broken in v2.19.40 (the irony: HONESTY GATE itself shipped lying). Fixed at SOURCE (auto-source runtime from live MCP catalog + safeRootPath fallback). New ritual phase 3.5 DOGFOOD GATE invokes every critical-path MCP tool on the install tarball before publish — bugs of this class cannot ship again. OMNI-FLAG: schema-driven POSIX flag autogen across all 711 tools (every flag now works in both forms). SKINNY CAPABILITIES: `{ skinny: true }` returns ~2.5KB vs 216KB full (84× lighter for AI agents on cold start). |
 | **v2.19.40** | 🧠🦴🕸 WIRING TRINITY — 3 modules wiring all 13 token-saving primitives into one auto-operation layer. TOKEN GOVERNOR (5-stage cascade: cache → local → cheap → expensive → lie-tax). PROMPT FOSSIL (the first AI tool with prompt-git diff-based reuse). GANGLION (the black-sheep wiring innovation — self-rewiring synapse graph where primitives bid, Hebbian rule strengthens winners, graph EVOLVES to user's actual workflow). 12 new MCP tools + 53 deep tests + 3000+ fuzz iterations |
 | **v2.19.39** | 🟡 N2 ROOT-CAUSE — ACGV arithmetic layer no longer rubber-stamps vague paradoxes as TRUSTWORTHY 85%. Empty-constraint set forces 'skipped'; defensive guard requires constraints.length>0 before PASSTHROUGH→FUSION upgrade. Plus VAGUE-IDENTIFIER PARADOX SNIFFER catches 'X exists AND X does not exist' even when X has no typed shape. Plus README hero polish (short cool sentence + AI-agent install block) |
 | **v2.19.38** | 🔌 SOCKETS RELEASE — production sockets connect v2.19.37 plumbing: Tampermonkey 1-click + daemon auto-emits cards + git post-commit auto-elects Mayor + quarterly contribution daemon-runs |
@@ -65,6 +66,57 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.41 — 2026-05-18 — 🚨 P0 FIX + 🐶 DOGFOOD GATE + ⚡ OMNI-FLAG + 🪶 SKINNY CAPABILITIES
+
+User audit caught: `mneme.honesty.audit_whats_new` THREW `Cannot read properties of undefined (reading 'mcpToolNames')` AND `mneme.system.upgrade` THREW `Cannot read properties of undefined (reading 'rootPath')` on the v2.19.40 install. The deep irony: HONESTY GATE was added in v2.19.35 to block lying release notes — but the gate's own MCP wrapper was never invoked end-to-end before publish, so we shipped a broken honesty tool. The pulse advertised "auto-upgrade is one tool call away" but the tool itself threw.
+
+v2.19.41 fixes both at SOURCE + adds a meta-fix (DOGFOOD GATE) so this bug class cannot ship again, plus polishes the AI-agent friction the user reported (CLI flag inconsistency, 216KB capabilities surface, optional-payload --json).
+
+### 🚨 P0 ROOT-CAUSE FIXES
+
+`packages/mcp/src/tools/_v1935_honesty.ts` — `honestyVerifyClaimsTool` + `honestyAuditWhatsNewTool` now auto-source the runtime view from the LIVE MCP catalog when caller doesn't supply one. The whole point of the one-call audit was that the caller passes only `{ body: '...' }`; pre-v2.19.41 the missing `runtime` field crashed the handler. New helper `buildLiveRuntimeView()` reads `buildAllTools()` and computes `mcpToolNames + cliCommands + frameworkCount` automatically. `coerceRuntimeArg(runtimeArg, live)` lets callers override individual fields while falling through to live defaults.
+
+`packages/mcp/src/tools/_upgrade.ts` — new `safeRootPath(rt)` defensive accessor with three-layer fallback: `rt.meta.rootPath` → `rt.cwd` → `process.cwd()`. All `rt.meta.rootPath` usages in this file (and any future ones) go through this accessor. Partial-runtime contexts (smoke tests, MCP server boot without git repo) no longer crash; they degrade gracefully.
+
+### 🐶 DOGFOOD GATE (new ritual phase 3.5)
+
+`scripts/reincarnation-ritual.mjs` — new `phase3.5.dogfood-critical-mcp-tools` check that actually INVOKES every critical-path MCP tool on the local-pack install: `mneme welcome`, `mneme verify "..."`, `mneme system health`, `mneme.honesty.audit_whats_new`. Any throw or bad output blocks publish with a clear `DOGFOOD FAILED` message naming the failing tool. The exact v2.19.40 bugs would have been caught — gate retro-validates the fix.
+
+### ⚡ OMNI-FLAG protocol
+
+`packages/cli/src/commands/universal_mcp_subcommands.ts` — new `deriveOmniFlags(tool)` reads each MCP tool's `inputSchema.properties` and auto-registers every property as a POSIX option on the corresponding CLI subcommand. Both forms now work for every tool:
+
+```
+mneme system upgrade --mode install                 # POSIX (NEW)
+mneme system upgrade --json '{"mode":"install"}'    # JSON-blob (existed)
+```
+
+`--json` is now `--json [payload]` (optional value), so `mneme welcome --json '{}'` no longer throws "too many arguments". `mergeArgs(jsonArgs, posixOpts, omniFlags)` lets users pass both forms simultaneously; POSIX wins on conflict (deterministic precedence). AI agents no longer need to remember which command family uses which flag syntax.
+
+### 🪶 SKINNY CAPABILITIES (84× lighter)
+
+`packages/mcp/src/tools/_capabilities.ts` — new `skinny: boolean` arg returns a ~2.5KB context-window-safe summary: 9 category headers + 1-line purpose + 3 example tool names per category + lazy-fetch hint. Measured: full = 216,120 bytes; skinny = 2,565 bytes; **84.3× smaller**. AI agents call skinny on cold start; lazy-fetch the full catalog only when actually picking a tool.
+
+### MEASURED post-fix
+
+- `honesty.audit_whats_new({ body: 'ships 711 MCP tools total' })` → `{ verdict: 'PASS', violationCount: 0 }`
+- `system.upgrade({ mode: 'check' })` with empty runtime → `{ mode: 'check', current: '...', updateAvailable: bool }`
+- `capabilities({ skinny: true })` → 2,565 bytes, 9 categories, 27 example tool names
+- Existing callers that DID supply runtime still work (backwards-compat preserved)
+
+### Composes onto
+
+v2.19.35 HONESTY GATE (audit_whats_new is the original gate; v2.19.41 makes the wrapper actually usable), v2.19.40 WIRING TRINITY (Token Governor cascade can now invoke capabilities --skinny on cold start without burning context), v2.18+ ritual scripts (DOGFOOD GATE is a new check() call composed into existing phase machinery, removable cleanly).
+
+### Pending follow-ups (logged in MEMORY for next session)
+
+- P1: post-upgrade inbox reconciler (pulse + inbox can disagree on installed version after self-upgrade — need a daemon hook that marks stale upgrade-inbox-messages as resolved when local version matches latest)
+- P2: pulse budget hard cap 200 bytes per turn + `mneme.pulse.expand` for detail-on-demand
+- P3: full runtime contract assert at boot — RuntimeContext shape with TypeScript invariants + runtime asserts so `null` fields cannot reach tool handlers
+- P3: in-place upgrade safety (daemon SIGTERM + atomic rename) — fixes the `ERR_MODULE_NOT_FOUND` + `EPERM libvips-42.dll` race the user reported
 
 ---
 

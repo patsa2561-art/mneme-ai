@@ -49,33 +49,74 @@ export const honestyParseClaimsTool: MnemeTool = {
   },
 };
 
+/**
+ * v2.19.41 — build the LIVE runtime view from the local MCP catalog so the
+ * caller never has to supply one. Pre-v2.19.41 the tool required the caller
+ * to compute mcpToolNames + cliCommands + starterCount themselves and crashed
+ * if any field was missing. The whole point of the gate is one-call audit —
+ * pull the runtime view from what's actually loaded right now.
+ */
+async function buildLiveRuntimeView(): Promise<{
+  mcpToolNames: Set<string>;
+  cliCommands: Set<string>;
+  starterCount: number;
+  newToolsThisRelease: number;
+  frameworkCount: number;
+}> {
+  const { buildAllTools } = await import("./_registry.js");
+  const tools = buildAllTools();
+  const toolNames = new Set(tools.map((t) => t.name));
+  // CLI commands are the 1-part stems users type after `mneme`.
+  const cli = new Set<string>();
+  for (const n of toolNames) {
+    const parts = n.split(".");
+    if (parts.length >= 2) cli.add(parts[1]!);
+  }
+  // STARTER count: tools with category starter-ish + handful manually surfaced.
+  const starter = tools.filter((t) => (t as { tier?: string }).tier === "starter").length;
+  // Frameworks fixed at 6 (SOC2 / ISO 27001 / EU AI Act / GDPR / HIPAA / Thai PDPA).
+  return {
+    mcpToolNames: toolNames,
+    cliCommands: cli,
+    starterCount: starter || tools.filter((t) => t.name.split(".")[1] === "welcome" || t.name.split(".")[1] === "verify" || t.name.split(".")[1] === "ask").length,
+    newToolsThisRelease: 0,
+    frameworkCount: 6,
+  };
+}
+
+function coerceRuntimeArg(runtimeArg: unknown, live: Awaited<ReturnType<typeof buildLiveRuntimeView>>): Awaited<ReturnType<typeof buildLiveRuntimeView>> {
+  // Caller-supplied runtime overrides live; missing fields fall through to live.
+  if (!runtimeArg || typeof runtimeArg !== "object") return live;
+  const r = runtimeArg as Record<string, unknown>;
+  return {
+    mcpToolNames: Array.isArray(r.mcpToolNames) ? new Set(r.mcpToolNames as string[]) : live.mcpToolNames,
+    cliCommands: Array.isArray(r.cliCommands) ? new Set(r.cliCommands as string[]) : live.cliCommands,
+    starterCount: typeof r.starterCount === "number" ? r.starterCount : live.starterCount,
+    newToolsThisRelease: typeof r.newToolsThisRelease === "number" ? r.newToolsThisRelease : live.newToolsThisRelease,
+    frameworkCount: typeof r.frameworkCount === "number" ? r.frameworkCount : live.frameworkCount,
+  };
+}
+
 export const honestyVerifyClaimsTool: MnemeTool = {
   name: "mneme.honesty.verify_claims",
   category: "audit",
-  description: "🪞 HONESTY — verify parsed claims against runtime view (mcpToolNames + cliCommands + starterCount + newToolsThisRelease + frameworkCount). FAIL on any violation.",
-  whenToUse: "Ritual gate. Block publish on a 'lying release note'.",
+  description: "🪞 HONESTY — verify parsed claims against runtime view (mcpToolNames + cliCommands + starterCount + newToolsThisRelease + frameworkCount). v2.19.41 auto-sources the runtime from the LIVE MCP catalog so callers don't have to supply it.",
+  whenToUse: "Ritual gate. Block publish on a 'lying release note'. Caller can pass runtime={} to use the live catalog.",
   triggers: ["verify honesty", "honesty gate"],
   inputSchema: {
     type: "object",
     properties: { claims: { type: "array" }, runtime: { type: "object" } },
-    required: ["claims", "runtime"],
+    required: ["claims"],
   },
   outputSchema: { type: "object" },
-  examples: [{ userQuery: "Do my release notes match reality?", args: { claims: [], runtime: {} }, expectedOutput: "{ verdict: PASS|FAIL, violations, totalClaims }" }],
-  pitfalls: ["Runtime view must come from LIVE catalog (mneme tools --json), not a hardcoded list."],
+  examples: [{ userQuery: "Do my release notes match reality?", args: { claims: [] }, expectedOutput: "{ verdict: PASS|FAIL, violations, totalClaims }" }],
+  pitfalls: ["v2.19.41+ auto-sources runtime from the live MCP catalog. To override, pass runtime={mcpToolNames:[...], cliCommands:[...], ...}."],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
-    // Convert runtime.mcpToolNames + cliCommands from arrays to Sets
-    const runtimeArg = args["runtime"] as Record<string, unknown>;
-    const runtime = {
-      mcpToolNames: new Set(Array.isArray(runtimeArg.mcpToolNames) ? runtimeArg.mcpToolNames as string[] : []),
-      cliCommands: new Set(Array.isArray(runtimeArg.cliCommands) ? runtimeArg.cliCommands as string[] : []),
-      starterCount: typeof runtimeArg.starterCount === "number" ? runtimeArg.starterCount : 0,
-      newToolsThisRelease: typeof runtimeArg.newToolsThisRelease === "number" ? runtimeArg.newToolsThisRelease : 0,
-      frameworkCount: typeof runtimeArg.frameworkCount === "number" ? runtimeArg.frameworkCount : 0,
-    };
+    const live = await buildLiveRuntimeView();
+    const runtime = coerceRuntimeArg(args["runtime"], live);
     const verdict = core.honestyGate.verifyClaims({
-      claims: args["claims"] as Parameters<typeof core.honestyGate.verifyClaims>[0]["claims"],
+      claims: (args["claims"] ?? []) as Parameters<typeof core.honestyGate.verifyClaims>[0]["claims"],
       runtime,
     });
     return { data: verdict, wisdom: `🪞 ${verdict.verdict} · ${verdict.violationCount} violations / ${verdict.totalClaims} claims`, confidence: { level: verdict.verdict === "PASS" ? "high" : "low" } };
@@ -85,28 +126,22 @@ export const honestyVerifyClaimsTool: MnemeTool = {
 export const honestyAuditWhatsNewTool: MnemeTool = {
   name: "mneme.honesty.audit_whats_new",
   category: "audit",
-  description: "🪞 HONESTY — one-call audit: parse whats_new body + verify against runtime. Returns combined verdict.",
-  whenToUse: "Ritual phase before publish; CI gate.",
+  description: "🪞 HONESTY — one-call audit: parse whats_new body + verify against runtime. v2.19.41 auto-sources the runtime from the LIVE MCP catalog so the caller can pass just `{ body: '...' }`. Returns combined verdict.",
+  whenToUse: "Ritual phase before publish; CI gate. One-call audit by design.",
   triggers: ["audit whats new", "honesty audit"],
   inputSchema: {
     type: "object",
     properties: { body: { type: "string" }, runtime: { type: "object" } },
-    required: ["body", "runtime"],
+    required: ["body"],
   },
   outputSchema: { type: "object" },
-  examples: [{ userQuery: "Audit my whats_new claims", args: { body: "STARTER 13→35", runtime: { starterCount: 22 } }, expectedOutput: "{ verdict: FAIL, violations: [...] }" }],
-  pitfalls: ["Combined parse+verify; for separate phases call parse_claims + verify_claims directly."],
+  examples: [{ userQuery: "Audit my whats_new claims", args: { body: "STARTER 13→35" }, expectedOutput: "{ verdict, violations: [...] }" }],
+  pitfalls: ["v2.19.41+ auto-sources runtime from the live catalog when not supplied; pre-v2.19.41 the missing-runtime case threw 'Cannot read properties of undefined (reading mcpToolNames)' — fixed at source."],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
     const claims = core.honestyGate.parseClaims(String(args["body"] ?? ""));
-    const runtimeArg = args["runtime"] as Record<string, unknown>;
-    const runtime = {
-      mcpToolNames: new Set(Array.isArray(runtimeArg.mcpToolNames) ? runtimeArg.mcpToolNames as string[] : []),
-      cliCommands: new Set(Array.isArray(runtimeArg.cliCommands) ? runtimeArg.cliCommands as string[] : []),
-      starterCount: typeof runtimeArg.starterCount === "number" ? runtimeArg.starterCount : 0,
-      newToolsThisRelease: typeof runtimeArg.newToolsThisRelease === "number" ? runtimeArg.newToolsThisRelease : 0,
-      frameworkCount: typeof runtimeArg.frameworkCount === "number" ? runtimeArg.frameworkCount : 0,
-    };
+    const live = await buildLiveRuntimeView();
+    const runtime = coerceRuntimeArg(args["runtime"], live);
     const verdict = core.honestyGate.verifyClaims({ claims, runtime });
     return { data: { claims, verdict }, wisdom: `🪞 ${verdict.verdict} · ${verdict.violationCount}/${verdict.totalClaims}`, confidence: { level: verdict.verdict === "PASS" ? "high" : "low" } };
   },

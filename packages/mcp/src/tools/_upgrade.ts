@@ -23,7 +23,29 @@
 
 import { spawnSync } from "node:child_process";
 import { versionCheck, lineage, karmaStreaks } from "@mneme-ai/core";
-import type { MnemeTool } from "./_types.js";
+import type { MnemeTool, ToolRuntime } from "./_types.js";
+
+/**
+ * v2.19.41 — defensive runtime accessor.
+ *
+ * Pre-v2.19.41, system.upgrade + system.health crashed with
+ *   "Cannot read properties of undefined (reading 'rootPath')"
+ * when called via MCP with a partial runtime (no `meta` field) — which
+ * happens when the MCP server boots without a git repo, or from a smoke
+ * test, or when the caller is dogfooding the tool from inside the install
+ * tarball. The pulse advertised "auto-upgrade is one tool call away" but
+ * the tool itself was unusable. Fix: every runtime access goes through
+ * this accessor, which falls back to process.cwd() when rt.meta is
+ * missing. Composes with the v2.19.41 contract assertion at boot, which
+ * logs (but does not throw) on partial runtimes so the cause is visible.
+ */
+function safeRootPath(rt: Partial<ToolRuntime> | undefined): string {
+  const fromMeta = rt && rt.meta && (rt.meta as { rootPath?: string }).rootPath;
+  if (typeof fromMeta === "string" && fromMeta.length > 0) return fromMeta;
+  const fromCwd = rt && (rt as { cwd?: string }).cwd;
+  if (typeof fromCwd === "string" && fromCwd.length > 0) return fromCwd;
+  return process.cwd();
+}
 
 // ─── mneme.system.health (v1.20.0) ──────────────────────────────────────
 //
@@ -67,7 +89,7 @@ export const systemHealthTool: MnemeTool = {
   pitfalls: ["Reads cached state — if you just upgraded, restart the MCP server to pick up the new version."],
   composeWith: ["mneme.welcome", "mneme.system.upgrade", "mneme.lineage.status"],
   handler: async (rt) => {
-    const root = rt.meta.rootPath;
+    const root = safeRootPath(rt);
     const startedAt = (globalThis as { __mnemeBootedAt?: number }).__mnemeBootedAt ?? Date.now();
     const version = process.env["npm_package_version"] ?? "unknown";
     const ids = lineage.listChromosomes(root);
@@ -192,7 +214,7 @@ export const systemUpgradeTool: MnemeTool = {
     const mode = args["mode"] === "install" ? "install" : "check";
     const force = Boolean(args["force"]);
     const current = process.env["npm_package_version"] ?? "0.0.0";
-    const status = await versionCheck.checkVersion(rt.meta.rootPath, current);
+    const status = await versionCheck.checkVersion(safeRootPath(rt), current);
     const installInfo = detectInstallMethod();
 
     if (mode === "check" || !status.updateAvailable) {

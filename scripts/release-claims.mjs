@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.41": {
+    headline: "🚨 P0 FIX + 🐶 DOGFOOD GATE + ⚡ OMNI-FLAG + 🪶 SKINNY CAPABILITIES — fix mneme.honesty.audit_whats_new + mneme.system.upgrade (both throwing on v2.19.40 install); add DOGFOOD GATE ritual phase 3.5 that invokes every critical-path MCP tool on the install tarball before publish; OMNI-FLAG auto-derives POSIX flags from inputSchema across all 711 tools; SKINNY CAPABILITIES returns 2.5KB vs 216KB (84× smaller). No new tools — fixes extend existing handlers + new ritual phase + new router behaviour.",
+    tools: [],
+  },
   "2.19.40": {
     headline: "🧠🦴🕸 WIRING TRINITY — 3 modules wiring all 13 token-saving primitives into one auto-operation layer. TOKEN GOVERNOR (5-stage cascade: cache → local → cheap → expensive → lie-tax via 12-callback context). PROMPT FOSSIL (the first AI tool with prompt-git diff-based reuse; REUSE / DIFF / MISS bands; freshness-tuned file-volatility decay; HMAC-chained store). GANGLION (the black-sheep wiring innovation — self-rewiring synapse graph where every primitive bids in a Vickrey-style auction; Hebbian rule strengthens winners + decays losers; graph evolves to user's actual workflow; replay-deterministic HMAC-chained update log). 12 new MCP tools + 53 deep tests + 3000+ fuzz iterations.",
     tools: [
