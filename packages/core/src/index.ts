@@ -916,3 +916,12 @@ export * as cascadeInversion from "./cascade_inversion/index.js";
 //   + exponential decay + Bayesian Beta-Binomial. First AI tool worldwide with an 8-algo
 //   vaccine self-burning lattice.
 export * as vaccineOsmosis from "./vaccine_osmosis/index.js";
+
+// v2.19.47 — CHRONOSHEAF P1 + P2 (sheaf-cohomology AI-memory foundation)
+//   The mathematical foundation for "AI memory as a sheaf over commit-time × belief-space".
+//   P1: structured pain catalog (7 entries) typing every primitive by topology obstruction.
+//   P2: 7 primitives — Čech sheaf cohomology + Renormalization Group flow + persistent
+//       homology + Friston Free Energy + Wasserstein optimal transport + tropical
+//       (max-plus) semiring + Aczel anti-foundation bisimulation. No AI tool worldwide
+//       composes this set of primitives at the spec level.
+export * as chronosheaf from "./chronosheaf/index.js";

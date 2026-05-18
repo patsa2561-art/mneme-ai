@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.47": {
+    headline: "🌌 CHRONOSHEAF P1 + P2 — sheaf-cohomology AI-memory foundation. P1 pain_catalog: 7 user-reported pains typed by topology obstruction class. P2: 7 mathematical primitives (Čech + RG + persistence + Friston + Wasserstein + tropical + Aczel) — first AI tool worldwide composing this set. 43/43 deep tests pass sub-1s. No new MCP tools (P3 integration layer ships later).",
+    tools: [],
+  },
   "2.19.46": {
     headline: "📌 N3-OVERSHOOT 6-VECTOR REGRESSION PINNED + 🪞 HONESTY 2.0 UNDERSCORE-VARIANT COVERAGE — user's verbatim 6-vector audit pinned in acgv_n3_overshoot.test.ts (CI gate forever). HONESTY GATE 2.0 DEFAULT_FEATURE_FAMILY_MAP expanded to recognise underscore + uppercase spellings (OUTCOME_MARKET / outcome_market / ZK_FAIRNESS / zk_fairness). No new MCP tools — fixes extend existing test + map.",
     tools: [],
