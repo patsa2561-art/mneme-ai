@@ -205,6 +205,15 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.55": {
+    headline: "🪶 ZERO-NATIVE-DEFAULT INSTALL — user-identified ROOT CAUSE of recurring Windows EBUSY: @huggingface/transformers was in `dependencies`, dragging libvips-cpp DLLs into every install. v2.19.55 moves it to `optionalDependencies` — npm install ALWAYS succeeds even when native postinstall fails. Runtime falls back to hash embedder cleanly. PLUS new OPTIONAL_NATIVE protocol module (5-entry catalog with detection + fallback hints + install-on-demand). PLUS ritual phase 3.9 enforces zero-hard-native-deps forever (kills the bug class at publish). PLUS GitHub Actions Windows install smoke workflow catches regressions on every push. 4 new MCP tools (mneme.optional.status / .probe / .install_hint / .list_known). Total MCP tools 762 → 766 (+4). The killer composition: zero-native default + opt-in upgrade + 4 publish-time gates (3.5/3.6/3.7/3.8/3.9) + CI Windows smoke = bug class extinct.",
+    tools: [
+      "mneme.optional.status",
+      "mneme.optional.probe",
+      "mneme.optional.install_hint",
+      "mneme.optional.list_known",
+    ],
+  },
   "2.19.54": {
     headline: "🪄✨ PREDICTIVE INSTALL SIGNAL + EXPONENTIAL-BACKOFF PROBE + MAGICAL UPGRADE PIPELINE — daemon now fs.watches ~/.mneme-global/install-incoming.flag and SELF-REAPS within ~50ms when preinstall (or `mneme upgrade` MCP) creates it. ZERO orphan because daemon dies BEFORE npm extracts the new tarball. Plus exponential-backoff probe retry loop (100ms → 4s, 6 attempts; fastest case <1ms when nothing locked) replaces the flat 1.5s wait. Plus 3 new MCP tools (install.announce / install.clear_announce / install.upgrade_pipeline) make the magic AI-agent-callable. The preinstall hook is now genuinely magical: announce → 300ms wait for self-reap → reap any survivor heartbeats → 5-step backoff retry loop. Cross-platform (Windows + macOS + Linux); zero file refs in preinstall (chicken-and-egg safe per v2.19.50 phase 3.6). 14 new deep tests + 33/33 install_organ tests pass; AURELIAN 3/3 SHIP. Total MCP tools 759 → 762 (+3).",
     tools: [

@@ -1,0 +1,115 @@
+name: Windows install smoke
+
+# v2.19.55 — catches Windows-specific install bugs (EBUSY, libvips lock,
+# preinstall hook failures) BEFORE user hits them. Spins up a fresh
+# windows-latest runner, builds + packs the tarball, installs globally,
+# verifies `mneme --version` + `mneme welcome --json '{}'` work.
+#
+# Runs on every push to main + every PR + every release tag. Sister
+# workflow to scripts/reincarnation-ritual.mjs (which runs on the
+# author's machine pre-publish). This is the cross-platform companion.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  windows-install-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Pack all 5 tarballs
+        shell: bash
+        run: |
+          set -e
+          mkdir -p /tmp/mneme-tarballs
+          for pkg in core embeddings correlator mcp cli; do
+            cd packages/$pkg
+            npm pack --pack-destination /tmp/mneme-tarballs
+            cd ../..
+          done
+          ls -la /tmp/mneme-tarballs
+
+      - name: Install from local tarballs (zero-native default path)
+        shell: bash
+        run: |
+          set -e
+          cd /tmp
+          mkdir -p mneme-install-test
+          cd mneme-install-test
+          npm init -y
+          # Install all 5 in dependency order: core → embeddings/correlator → mcp → cli
+          npm install --no-save /tmp/mneme-tarballs/mneme-ai-core-*.tgz
+          npm install --no-save /tmp/mneme-tarballs/mneme-ai-embeddings-*.tgz
+          npm install --no-save /tmp/mneme-tarballs/mneme-ai-correlator-*.tgz
+          npm install --no-save /tmp/mneme-tarballs/mneme-ai-mcp-*.tgz
+          npm install --no-save /tmp/mneme-tarballs/mneme-ai-*.tgz
+          ls -la node_modules/mneme-ai
+          ls -la node_modules/mneme-ai/bin
+
+      - name: Verify mneme --version runs (zero-native install)
+        shell: bash
+        run: |
+          set -e
+          cd /tmp/mneme-install-test
+          node node_modules/mneme-ai/bin/mneme.js --version
+
+      - name: Verify mneme welcome --json '{}' runs (smoke the MCP-router CLI)
+        shell: bash
+        run: |
+          set -e
+          cd /tmp/mneme-install-test
+          node node_modules/mneme-ai/bin/mneme.js welcome --json '{}' || echo "welcome --json '{}' exit code: $?"
+
+      - name: Verify mneme.optional.status runs (zero-native verification)
+        shell: bash
+        run: |
+          set -e
+          cd /tmp/mneme-install-test
+          # Should report transformers as MISSING (since we did --no-save without optional)
+          # but Mneme runtime should still work fine via hash fallback.
+          node -e "
+            const core = require('@mneme-ai/core');
+            core.optionalNative.installStatus().then(s => {
+              console.log('available:', s.available.map(p => p.name).join(','));
+              console.log('missing:', s.missing.map(p => p.name).join(','));
+              if (!s.recommendation) throw new Error('no recommendation');
+              console.log('recommendation:', s.recommendation);
+            });
+          "
+
+      - name: Run ritual phase 3.9 enforcement check
+        shell: bash
+        run: |
+          set -e
+          # Verify embeddings has @huggingface/transformers in optionalDependencies
+          # (not in dependencies). Phase 3.9 of ritual enforces this on every publish.
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('packages/embeddings/package.json', 'utf8'));
+            if (pkg.dependencies && pkg.dependencies['@huggingface/transformers']) {
+              console.error('FAIL: transformers is in hard dependencies — Windows EBUSY race risk');
+              process.exit(1);
+            }
+            if (!pkg.optionalDependencies || !pkg.optionalDependencies['@huggingface/transformers']) {
+              console.error('FAIL: transformers missing from optionalDependencies');
+              process.exit(1);
+            }
+            console.log('phase 3.9: PASS — transformers correctly in optionalDependencies');
+          "

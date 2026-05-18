@@ -940,3 +940,10 @@ export * as verifyCache from "./verify_cache/index.js";
 //   lineage ledger composes with v2.19.34 APOSTILLE pattern.
 //   See packages/core/src/install_organ/.
 export * as installOrgan from "./install_organ/index.js";
+
+// v2.19.55 — OPTIONAL NATIVE protocol. Mneme's default install path is
+// ZERO-NATIVE: every heavy native dep (transformers / sharp / onnxruntime)
+// lives in optionalDependencies. npm install never touches DLLs.
+// Runtime probes which natives are present + uses pure-JS fallbacks
+// when missing. See packages/core/src/optional_native/.
+export * as optionalNative from "./optional_native/index.js";

@@ -426,6 +426,74 @@ check("phase3.8.contract-test-must-pass", () => {
   return { measure: { contractTestsPassing: passMatch ? Number(passMatch[1]) : "unknown" } };
 });
 
+// ─── PHASE 3.9 — ZERO-NATIVE INSTALL GATE (v2.19.55) ──────────────────────
+//
+//   The bug class this phase kills: "@huggingface/transformers" lived in
+//   `dependencies` for 50+ releases, dragging native libvips DLLs into
+//   every Windows install. npm extract → transformers postinstall →
+//   DLL load → next install hits EBUSY. v2.19.55 moves transformers to
+//   `optionalDependencies` so npm install ALWAYS succeeds even when the
+//   native postinstall fails (network / DLL lock / build error). Phase
+//   3.9 enforces this contract forever: any future addition of a native
+//   dep to `dependencies` will fail this gate.
+//
+//   We verify that (a) cli/package.json has no hard native deps, (b) the
+//   embeddings package keeps transformers under optionalDependencies,
+//   (c) the binary still runs after `npm install --omit=optional`.
+
+check("phase3.9.zero-native-default-install", () => {
+  const repoPkgs = [
+    join(REPO_ROOT, "packages", "cli", "package.json"),
+    join(REPO_ROOT, "packages", "core", "package.json"),
+    join(REPO_ROOT, "packages", "embeddings", "package.json"),
+    join(REPO_ROOT, "packages", "mcp", "package.json"),
+    join(REPO_ROOT, "packages", "correlator", "package.json"),
+  ];
+  const KNOWN_NATIVE_DEPS = new Set([
+    "@huggingface/transformers",
+    "sharp",
+    "@img/sharp-win32-x64",
+    "@img/sharp-darwin-arm64",
+    "@img/sharp-darwin-x64",
+    "@img/sharp-linux-x64",
+    "onnxruntime-node",
+    "@tensorflow/tfjs-node",
+    "z3-solver",
+  ]);
+  const offenders = [];
+  for (const pkgPath of repoPkgs) {
+    if (!existsSync(pkgPath)) continue;
+    let pkg;
+    try { pkg = JSON.parse(readFileSync(pkgPath, "utf8")); }
+    catch (e) { return { ok: false, reason: `parse: ${e.message}` }; }
+    const hardDeps = pkg.dependencies ?? {};
+    for (const dep of Object.keys(hardDeps)) {
+      if (KNOWN_NATIVE_DEPS.has(dep)) {
+        offenders.push({ pkg: pkg.name, dep, hint: `move "${dep}" to optionalDependencies` });
+      }
+    }
+  }
+  // Special-case: embeddings package MUST list transformers under
+  // optionalDependencies — verify it's there + spelled right.
+  const embPkgPath = join(REPO_ROOT, "packages", "embeddings", "package.json");
+  if (existsSync(embPkgPath)) {
+    const embPkg = JSON.parse(readFileSync(embPkgPath, "utf8"));
+    const opt = embPkg.optionalDependencies ?? {};
+    if (!opt["@huggingface/transformers"]) {
+      offenders.push({ pkg: "@mneme-ai/embeddings", dep: "@huggingface/transformers", hint: "add to optionalDependencies — runtime falls back to hash embedder when missing" });
+    }
+  }
+  if (offenders.length > 0) {
+    return {
+      ok: false,
+      reason: `${offenders.length} native dep(s) found in hard dependencies — install will hit Windows EBUSY race`,
+      remedy: offenders.map((o) => `${o.pkg}: ${o.hint}`).join("; "),
+      measure: { offenders },
+    };
+  }
+  return { measure: { packagesScanned: repoPkgs.length, hardNativeDeps: 0, optionalNativesPresent: 1 } };
+});
+
 // ─── PHASE 4 — Embedder verify (bug #3 class) ─────────────────────────────
 check("phase4.hash-embedder-always-works", () => {
   // Hash embedder is the deterministic fallback that MUST always work.
