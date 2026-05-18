@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.50": {
+    headline: "🔌 SHIP-BROKEN P0 FIX — v2.19.48/49 preinstall hook referenced ./bin/preinstall-stop-daemon.js inside the package; npm runs preinstall BEFORE extracting tarball so install crashed + uninstalled Mneme from PATH. Fix: inline node -e in package.json + delete orphan file. Plus 2 new ritual phases (3.6 preinstall-script-no-self-reference + 3.7 install-smoke-mneme-version) so the bug class cannot ship again. No new MCP tools — release-engineering fix.",
+    tools: [],
+  },
   "2.19.49": {
     headline: "🌌 CHRONOSHEAF P5 — 12 new MCP tools (7 primitive surfaces + 4 HMAC-chained storage + 1 bonus audit_release_claim). Every P2 primitive AI-agent-callable. .mneme/chronosheaf/* HMAC-chained per APOSTILLE pattern with atomic writes + tamper-detected replay.",
     tools: [

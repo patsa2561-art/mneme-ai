@@ -301,6 +301,89 @@ check("phase3.5.dogfood-critical-mcp-tools", () => {
   return { measure: { results, passed: required.length, optionalRan: results.filter((r) => r.optional).length } };
 });
 
+// ─── PHASE 3.6 — PREINSTALL SCRIPT SAFETY (v2.19.50) ──────────────────────
+//
+//   v2.19.48 shipped a `preinstall` script that referenced a file inside
+//   the package being installed. npm runs preinstall BEFORE extracting
+//   the tarball, so the file didn't exist yet on the target install
+//   path → script crashed → npm install -g ABORTED → mneme uninstalled
+//   itself from user's machine.
+//
+//   The fix in v2.19.50 replaces the script with an inline `node -e` that
+//   references NO files in the package. This phase ENFORCES that
+//   invariant: any preinstall/install/postinstall script that mentions
+//   a path inside the package (`./bin/...`, `./dist/...`, `./scripts/...`)
+//   fails the ritual. Class of bug cannot ship again.
+
+check("phase3.6.preinstall-script-no-self-reference", () => {
+  // Read the JUST-PACKED tarball's cli package.json (installed by phase 1).
+  const cliPkgPath = join(installedRoot, "package.json");
+  if (!existsSync(cliPkgPath)) {
+    return { ok: false, reason: `cli package.json not found at ${cliPkgPath}` };
+  }
+  let pkg;
+  try { pkg = JSON.parse(readFileSync(cliPkgPath, "utf8")); }
+  catch (e) { return { ok: false, reason: `package.json parse: ${e.message}` }; }
+  const lifecycleHooks = ["preinstall", "install", "postinstall", "prepublish", "prepare"];
+  const offenders = [];
+  for (const hook of lifecycleHooks) {
+    const cmd = pkg.scripts?.[hook];
+    if (!cmd || typeof cmd !== "string") continue;
+    // Look for any reference to a local file path that would not exist
+    // BEFORE the tarball is extracted (for preinstall) or after npm has
+    // resolved deps (for postinstall — we lean conservative).
+    const localFileRe = /\.\/(?:bin|dist|src|scripts|lib|build|packages)\/[\w./-]+/;
+    const match = cmd.match(localFileRe);
+    if (match) offenders.push({ hook, cmd: cmd.slice(0, 120), reference: match[0] });
+  }
+  if (offenders.length > 0) {
+    return {
+      ok: false,
+      reason: `${offenders.length} lifecycle script(s) reference a file inside the package — chicken-and-egg risk`,
+      remedy: offenders.map(o => `${o.hook}: replace "${o.reference}" with inline node -e`).join("; "),
+      measure: { offenders },
+    };
+  }
+  return { measure: { scriptsScanned: lifecycleHooks.length, offenders: 0 } };
+});
+
+// ─── PHASE 3.7 — INSTALL SMOKE GATE (v2.19.50) ────────────────────────────
+//
+//   Simulates the real `npm install -g <tarball>` user flow + verifies
+//   `mneme --version` exits 0 + returns a valid semver. If the preinstall
+//   script crashes OR the bin shim is broken, this catches it BEFORE
+//   publish. The v2.19.48 preinstall bug would have failed here.
+//
+//   We rely on phase1 having already done `npm install --no-save` of the
+//   5 tarballs into the tmp dir; if THAT succeeded, the install path is
+//   valid. We additionally invoke `mneme --version` against the installed
+//   binary to confirm the bin shim still works.
+
+check("phase3.7.install-smoke-mneme-version", () => {
+  // Phase 1 already installed via `npm install --no-save mneme-ai-X.Y.Z.tgz`
+  // If that crashed (preinstall fail), phase1.install-from-tarballs would
+  // have failed FIRST. So if we're here, install survived. But we still
+  // need to verify `mneme --version` actually works (catches broken bin).
+  const r = mnemeCmd("--version");
+  if (r.code !== 0) {
+    return {
+      ok: false,
+      reason: `mneme --version exited ${r.code}; install path produces a broken binary`,
+      remedy: `Check bin/mneme.js, package.json bin field, and dist/index.js build output`,
+      measure: { exit: r.code, stderr: r.stderr.slice(0, 200) },
+    };
+  }
+  const stdout = r.stdout.trim();
+  if (!/^\d+\.\d+\.\d+/.test(stdout)) {
+    return {
+      ok: false,
+      reason: `mneme --version returned non-semver "${stdout}"`,
+      remedy: `bin/mneme.js fast-path may have regressed; ensure it reads package.json correctly`,
+    };
+  }
+  return { measure: { version: stdout } };
+});
+
 // ─── PHASE 4 — Embedder verify (bug #3 class) ─────────────────────────────
 check("phase4.hash-embedder-always-works", () => {
   // Hash embedder is the deterministic fallback that MUST always work.

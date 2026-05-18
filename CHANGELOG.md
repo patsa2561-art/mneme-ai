@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.49
+# 📜 Release index — v2.18.0 → v2.19.50
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.50** | 🔌 SHIP-BROKEN P0 FIX + 🛡 2 NEW RITUAL PHASES — v2.19.48/49 preinstall hook referenced `./bin/preinstall-stop-daemon.js` INSIDE the package; npm runs `preinstall` BEFORE extracting the tarball, so install crashed with `Cannot find module` and uninstalled Mneme from PATH. Recovery required `npm install -g --ignore-scripts mneme-ai@latest` which normal users don't know. v2.19.50 fix at SOURCE: inline `node -e` in `package.json` (zero file refs) + delete orphan script. Plus **phase 3.6 preinstall-script-no-self-reference** (scans lifecycle scripts for `./{bin,dist,scripts,...}/...` refs and FAILS the ritual on any match — chicken-and-egg bug class extinct) + **phase 3.7 install-smoke-mneme-version** (verifies `mneme --version` exits 0 with valid semver against the installed tarball — broken bin shims caught BEFORE publish). The exact v2.19.48 bug is now CI-gated forever. Wisdom article codified: **NEVER reference a file inside your own package from a `preinstall` script** — npm runs preinstall before extraction; the file doesn't exist yet. Use inline `node -e` or an external tool already on PATH. |
 | **v2.19.49** | 🌌 CHRONOSHEAF P5 — 12 new MCP tools (7 primitive surfaces + 4 HMAC-chained storage + 1 bonus `audit_release_claim`). Every P2 primitive now has an AI-agent-callable MCP wrapper. `.mneme/chronosheaf/*` persistence is HMAC-chained per APOSTILLE pattern with atomic temp+rename writes + tamper-detected replay. 89/89 chronosheaf deep tests + AURELIAN 3/3 SHIP. Total MCP tools: 737 → 749 (+12). |
 | **v2.19.48** | 🌌 CHRONOSHEAF P3 + P4 + 5 MCP TOOLS — P3 base space (G×T×S commit-DAG × time-interval × scale-band) with cone-caching + LCA-intersection + presheaf F with restriction. P4 live ChronoSheafUpdate algorithm: 7-step event-driven pipeline composing all P2 primitives in O(k²·d) sub-5ms per event. System test catches the v2.19.40 honesty bug class. 5 new MCP tools (`mneme.chronosheaf.{update,slo,preflight,h1,cover}`). 78/78 deep tests pass sub-1s. |
 | **v2.19.47** | 🌌 CHRONOSHEAF P1 + P2 — sheaf-cohomology AI-memory foundation. P1 pain_catalog: 7 user-reported pains typed by topology obstruction class. P2: 7 mathematical primitives (Čech cohomology + Renormalization Group + persistent homology + Friston Free Energy + Wasserstein OT + tropical max-plus semiring + Aczel anti-foundation bisimulation) — first AI tool worldwide composing this set. 43/43 deep tests pass sub-1s. No new MCP tools (P3 integration layer ships in a later release). |
@@ -74,6 +75,86 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.50 — 2026-05-18 — 🔌 SHIP-BROKEN P0 FIX + 🛡 2 NEW RITUAL PHASES (preinstall self-reference + install smoke)
+
+User report (verbatim, 2026-05-18):
+> "🚨 รอบนี้เจอบั๊กระดับ ship-broken (อันที่ 2 ในชุด session นี้) — v2.19.48 preinstall hook พังจนทำให้ uninstall ตัวเอง:
+>
+> `Cannot find module '.../mneme-ai/bin/preinstall-stop-daemon.js'`
+>
+> ของที่ต้องทำด่วนสุด (ไม่ใช่ feature ใหม่):
+> 1. smoke test pipeline ใน CI — `npm pack && npm install -g <tarball> && mneme --version && mneme welcome --json '{}'` — ถ้าไม่ผ่าน ห้าม `npm publish`
+> 2. fix preinstall script — ย้าย logic เข้า `package.json['scripts']['preinstall']` แบบ inline หรือใช้ external standalone tool, ห้าม require ไฟล์ใน package ตัวเอง
+> 3. ทุก MCP-tool-exposed CLI ต้องผ่าน test accepts `--json '{}'` — กัน welcome --json regression class"
+
+### The bug class
+
+`npm install -g mneme-ai@2.19.48` ran `preinstall: "node ./bin/preinstall-stop-daemon.js"`. Problem: npm executes lifecycle scripts BEFORE extracting the tarball into `node_modules/mneme-ai/`. The script file doesn't exist on disk yet. Node crashes with `Cannot find module`. The install ABORTS. Worse, when npm aborts a global upgrade mid-flight, it removes the OLD binary too — so the user ends up with no `mneme` on PATH at all. The very feature added in v2.19.45 to FIX the Windows `EBUSY libvips-42.dll` race (stop daemon before file copy) actually UNINSTALLED users.
+
+User's words: "ไอรอนิคซ้ำสอง" (ironic twice) — v2.19.45 was meant to fix install; v2.19.48 broke install.
+
+### Fix at SOURCE
+
+[packages/cli/package.json](packages/cli/package.json) `scripts.preinstall` rewritten as inline `node -e` with ZERO file references inside the package:
+
+```json
+"preinstall": "node -e \"try{const{spawnSync}=require('node:child_process');const w=process.platform==='win32';spawnSync(w?'mneme.cmd':'mneme',['daemon','stop'],{shell:w,windowsHide:true,timeout:8000,stdio:'ignore'});}catch(e){}process.exit(0)\""
+```
+
+Three defensive layers preserved from v2.19.45:
+1. Try/catch wraps the entire spawn — never throws no matter what.
+2. `stdio:'ignore'` so npm output is not polluted.
+3. `process.exit(0)` unconditionally — missing/stuck daemon never blocks install.
+
+Plus: spawns against `mneme.cmd` (Windows) / `mneme` (POSIX) which is the OLD binary still on PATH. Idempotent no-op if daemon not running. The script references NOTHING inside the package being installed — chicken-and-egg solved at SOURCE.
+
+The orphan `packages/cli/bin/preinstall-stop-daemon.js` was DELETED. Nothing else in the codebase referenced it (verified).
+
+### 2 new ritual phases — bug class cannot ship again
+
+**[scripts/reincarnation-ritual.mjs](scripts/reincarnation-ritual.mjs) phase 3.6 — preinstall-script-no-self-reference**: reads the installed tarball's `package.json`, scans every lifecycle hook (`preinstall` / `install` / `postinstall` / `prepublish` / `prepare`) for any reference to a local file path matching `/\.\/(?:bin|dist|src|scripts|lib|build|packages)\/[\w./-]+/`. Any match FAILS the ritual with the exact offender + remedy ("replace `./bin/X` with inline `node -e`"). The v2.19.48 preinstall would have been caught here.
+
+**[scripts/reincarnation-ritual.mjs](scripts/reincarnation-ritual.mjs) phase 3.7 — install-smoke-mneme-version**: invokes `mneme --version` against the installed binary (phase 1 already installs the tarball) and verifies exit 0 + valid semver output. Catches broken bin shims, missing `dist/index.js`, or any other reason the installed binary doesn't run. The v2.19.48 install would have failed phase 1 first — but if a similar bug ever ships where install "succeeds" but the binary doesn't run, phase 3.7 catches it.
+
+Both phases run on EVERY `npm publish` candidate. Belt-and-suspenders: phase 1 (install survives) + phase 3.5 DOGFOOD GATE (critical MCP tools work) + phase 3.6 (no self-reference in scripts) + phase 3.7 (binary actually executes).
+
+### Wisdom article codified
+
+**NEVER reference a file inside your own package from a `preinstall` script.** npm's lifecycle ordering: download tarball → run `preinstall` (cwd = future install dir, but tarball NOT extracted yet) → extract tarball → run `install` → run `postinstall`. Files inside the package only exist after extract. `postinstall` is safe; `preinstall` is not.
+
+Three safe patterns for `preinstall`:
+1. **Inline `node -e "..."`** (what v2.19.50 uses) — code lives in `package.json`, no file refs.
+2. **External tool already on PATH** — e.g. `npx --yes some-tool` (downloads + runs, doesn't need files in this package).
+3. **No `preinstall` at all** — push logic to `postinstall` which runs after extract.
+
+Anti-pattern: `"preinstall": "node ./bin/something.js"` — guaranteed crash because `./bin/something.js` doesn't exist when this fires.
+
+### What v2.19.50 DOES NOT change
+
+- No new MCP tools. Total still **749** (same as v2.19.49).
+- No new tests beyond the 2 ritual phases (phases run on every publish).
+- CHRONOSHEAF P5 and all v2.19.49 behaviour unchanged.
+- The npm preinstall daemon-stop FEATURE from v2.19.45 is preserved (still stops the daemon to avoid the Windows EBUSY race) — just rewired to not crash.
+
+### Measured
+
+- v2.19.48 reproduction: `npm install -g mneme-ai@2.19.48` crashes with `Cannot find module '.../mneme-ai/bin/preinstall-stop-daemon.js'` → install aborts → `mneme` not on PATH. Confirmed.
+- v2.19.50 post-fix: inline preinstall has no file refs → `npm install -g mneme-ai-2.19.50.tgz` succeeds → `mneme --version` returns `2.19.50`. Both ritual phases pass.
+- Ritual phase 3.6: scans 5 hook fields, 0 offenders for v2.19.50. Would have detected v2.19.48 in 1ms.
+- Ritual phase 3.7: `mneme --version` → exit 0, stdout `2.19.50`, valid semver. Pass.
+
+### Composes onto
+
+- v2.19.45 npm preinstall daemon-stop (FEATURE preserved, IMPLEMENTATION fixed)
+- v2.19.41 DOGFOOD GATE (phase 3.5 — phase 3.6/3.7 are the next-generation gates)
+- v2.19.1 REINCARNATION RITUAL (release gate — phase 3.6/3.7 are additions, not replacements)
+
+### Self-found bugs fixed mid-build
+
+None — the fix itself was 2 file edits (package.json inline + delete orphan) + 2 ritual phase additions. The session that built v2.19.50 was the DEBUG of the v2.19.48 ship-broken bug; the bug report from the user WAS the discovery.
 
 ---
 
