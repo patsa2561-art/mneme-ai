@@ -118,7 +118,7 @@ export const pairGenerateTool: MnemeTool = {
   description: "🔑 PAIR — generate a fresh 6-char human-friendly pair code (format XXX-XXX, confusable-free alphabet — no 0/O/Q/1/I/L/5/S/8/B). User reads it aloud with zero ambiguity.",
   whenToUse: "When spawning a BEACON HANDOFF server — generate code then bind to envelope.",
   triggers: ["pair generate", "pair code"],
-  inputSchema: { type: "object" },
+  inputSchema: { type: "object", properties: {} },
   outputSchema: { type: "object" },
   examples: [{ userQuery: "Get a fresh pair code", args: {}, expectedOutput: "{ code: 'CAT-DAD' }" }],
   pitfalls: ["Codes are random — caller must persist + bind to envelope to make them useful."],

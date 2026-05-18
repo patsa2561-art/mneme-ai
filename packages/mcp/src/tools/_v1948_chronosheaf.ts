@@ -4,7 +4,7 @@
  *   mneme.chronosheaf.update     — single ChronoSheafUpdate cycle
  *   mneme.chronosheaf.slo        — SLO summary across the state
  *   mneme.chronosheaf.preflight  — budget guard before update
- *   mneme.chronosheaf.h1         — Čech H¹ on a supplied cover (one-shot)
+ *   mneme.chronosheaf.first_cohomology — Čech H¹ on a supplied cover (one-shot)
  *   mneme.chronosheaf.cover      — build a default self-audit cover
  */
 
@@ -77,9 +77,12 @@ export const chronoSheafPreflightTool: MnemeTool = {
 };
 
 export const chronoSheafH1Tool: MnemeTool = {
-  name: "mneme.chronosheaf.h1",
+  // v2.19.52 — renamed from `mneme.chronosheaf.h1` to satisfy the structural
+  // name regex `^mneme\.[a-z_]+(?:\.[a-z_]+)*$` (no digits in segments). The
+  // mathematical name H¹ is "first cohomology"; the new name is explicit + grep-friendly.
+  name: "mneme.chronosheaf.first_cohomology",
   category: "audit",
-  description: "🌌 CHRONOSHEAF — one-shot Čech H¹ on a supplied SheafCover (sites + overlaps + optional triples). Returns dim H¹ + minimal obstruction witnesses. Pure-function; doesn't touch live state.",
+  description: "🌌 CHRONOSHEAF — one-shot Čech first cohomology (H¹) on a supplied SheafCover (sites + overlaps + optional triples). Returns dim H¹ + minimal obstruction witnesses. Pure-function; doesn't touch live state. (Renamed in v2.19.52 from mneme.chronosheaf.h1 to satisfy structural-name regex.)",
   whenToUse: "Diagnostic / verifier — quickly compute H¹ for any cover shape.",
   triggers: ["chronosheaf h1", "compute cohomology"],
   inputSchema: { type: "object", properties: { cover: { type: "object" } }, required: ["cover"] },

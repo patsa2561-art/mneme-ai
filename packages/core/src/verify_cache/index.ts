@@ -41,7 +41,12 @@ export interface VerifyCacheStats {
 const DEFAULT_TTL_MS = 5_000;
 const MAX_MEMO_ENTRIES = 1000;
 
-interface MemoEntry<T> { result: T; ts: number }
+// v2.19.52 — store per-entry TTL at write time so the READ honors the
+// TTL chosen by the WRITER. Previously the read's opts.ttlMs was used
+// as the freshness window, which let a long-TTL read resurrect a
+// short-TTL write. Now we use min(storedTtl, readTtl) — both sides
+// can shorten the window, neither can extend.
+interface MemoEntry<T> { result: T; ts: number; ttlMs: number }
 
 const verdictMemo = new Map<string, MemoEntry<unknown>>();
 const inflight = new Map<string, Promise<unknown>>();
@@ -72,7 +77,7 @@ export async function withVerifyCache<T>(
   const now = Date.now();
 
   const hit = verdictMemo.get(key);
-  if (hit && (now - hit.ts) < ttl) {
+  if (hit && (now - hit.ts) < Math.min(hit.ttlMs, ttl)) {
     totalHits++;
     return hit.result as T;
   }
@@ -87,7 +92,7 @@ export async function withVerifyCache<T>(
   const p = (async () => {
     try {
       const r = await compute();
-      verdictMemo.set(key, { result: r, ts: Date.now() });
+      verdictMemo.set(key, { result: r, ts: Date.now(), ttlMs: ttl });
       if (verdictMemo.size > MAX_MEMO_ENTRIES) {
         const sorted = [...verdictMemo.entries()].sort((a, b) => a[1].ts - b[1].ts);
         const evict = sorted.slice(0, verdictMemo.size - MAX_MEMO_ENTRIES);
@@ -115,13 +120,13 @@ export function syncMemo<T>(
   const ttl = opts?.ttlMs ?? DEFAULT_TTL_MS;
   const now = Date.now();
   const hit = verdictMemo.get(key);
-  if (hit && (now - hit.ts) < ttl) {
+  if (hit && (now - hit.ts) < Math.min(hit.ttlMs, ttl)) {
     totalHits++;
     return hit.result as T;
   }
   totalMisses++;
   const r = compute();
-  verdictMemo.set(key, { result: r, ts: Date.now() });
+  verdictMemo.set(key, { result: r, ts: Date.now(), ttlMs: ttl });
   if (verdictMemo.size > MAX_MEMO_ENTRIES) {
     const sorted = [...verdictMemo.entries()].sort((a, b) => a[1].ts - b[1].ts);
     const evict = sorted.slice(0, verdictMemo.size - MAX_MEMO_ENTRIES);

@@ -35,7 +35,7 @@ export const protocolSpecTool: MnemeTool = {
   description: "📜 PROTOCOL (v2.19.37) — emit Mneme Receipt Protocol v1.0 RFC-style spec text. The OPEN STANDARD any AI tool can adopt for interoperable accountability receipts. MIT licensed.",
   whenToUse: "Reference doc for implementing the protocol; auditor inspection; submission to standards bodies (IETF / NIST / EU AI Act WG).",
   triggers: ["protocol spec", "mneme rfc", "receipt protocol"],
-  inputSchema: { type: "object" },
+  inputSchema: { type: "object", properties: {} },
   outputSchema: { type: "object" },
   examples: [{ userQuery: "Show me the receipt spec", args: {}, expectedOutput: "{ spec: '# Mneme Receipt Protocol v1.0\\n...' }" }],
   pitfalls: ["Spec text is deterministic — bundled in npm tarball; safe to mirror."],

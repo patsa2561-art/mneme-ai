@@ -4,12 +4,12 @@
     "node": "v22.22.1",
     "platform": "win32",
     "arch": "x64",
-    "ts": "2026-05-18T12:22:32.190Z",
+    "ts": "2026-05-18T12:47:23.748Z",
     "mode": "local-pack"
   },
-  "total": 25,
-  "passed": 25,
+  "total": 26,
+  "passed": 26,
   "failed": 0,
   "failures": [],
-  "sig": "4e746103c3e5a0fe64c205bd103ed4f53170a3021f1557f0d4dd11fd88207d54"
+  "sig": "669f28b350f7a4e528af49d78b34733113f35fc27245de086f668c58105e1351"
 }

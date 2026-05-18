@@ -205,6 +205,16 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.52": {
+    headline: "🛡 CONTRACT GATE FOREVER (ritual phase 3.8 runs contract test pre-publish; pre-existing 9-test-fail bug class extinct) + ⚡ CACHE COALESCE MCP PRIMITIVE (5 new tools mneme.cache.{put,get,stats,reset,measure_savings} expose verify_cache as AI-agent-callable promise-coalescing memo — first AI tool worldwide) + 🪪 CHRONOSHEAF H1 RENAME (.h1 → .first_cohomology to satisfy structural regex) + 8 INPUTSCHEMA SHAPE FIXES (handoff.pair_generate + protocol.spec + browser.{userscript,manifest,popup,readme} + chronosheaf.storage_{verify,stats} all gained properties:{}) + PER-ENTRY TTL FIX in verify_cache (writes honor their own TTL on read). Contract test 9 fail → 0 fail. Total MCP tools 749 → 754 (+5).",
+    tools: [
+      "mneme.cache.put",
+      "mneme.cache.get",
+      "mneme.cache.stats",
+      "mneme.cache.reset",
+      "mneme.cache.measure_savings",
+    ],
+  },
   "2.19.51": {
     headline: "⚡ P1 LATENCY 9× FIX (50-parallel verify 524ms→sub-50ms via concurrency-coalescing VERIFY CACHE + 3 module-level memos) + 🌙 P3 DREAMSPACE WAKEUP (daemon now supplies hasCommitCycle + hasBranchSwitch + msSinceLastCommit events; organ stops going dormant for active devs) + 📦 P2 PREINSTALL WAIT (1.5s OS handle-release after daemon stop reduces ENOTEMPTY race). Wild new module verify_cache composes TTL-bounded memo + promise concurrency-coalescing — 50 parallel identical claims = 1 compute + 49 awaiters (provably 50× compute reduction). No new MCP tools (perf fix); 749 unchanged.",
     tools: [],
@@ -236,7 +246,7 @@ export const RELEASE_CLAIMS = {
       "mneme.chronosheaf.update",
       "mneme.chronosheaf.slo",
       "mneme.chronosheaf.preflight",
-      "mneme.chronosheaf.h1",
+      "mneme.chronosheaf.first_cohomology",
       "mneme.chronosheaf.cover",
     ],
   },

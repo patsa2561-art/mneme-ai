@@ -124,6 +124,7 @@ import { inboxTools } from "./_inbox.js";
 import { antivirusTools } from "./_antivirus.js";
 import { whatsNewTool } from "./_whats_new.js";
 import { retrievalLabTools } from "./_retrieval_lab.js";
+import { V1952_CACHE_COALESCE_TOOLS } from "./_v1952_cache_coalesce.js";
 
 // v2.19.51 — module-level memo for the catalog spread. Pure function;
 // only changes when the source tree changes (npm install / hot-reload).
@@ -272,6 +273,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...quantTools,
     ...labTools,
     ...metaTools,
+    ...V1952_CACHE_COALESCE_TOOLS,
   ];
 }
 

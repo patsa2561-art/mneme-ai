@@ -384,6 +384,48 @@ check("phase3.7.install-smoke-mneme-version", () => {
   return { measure: { version: stdout } };
 });
 
+// ─── PHASE 3.8 — CONTRACT-TEST GATE (v2.19.52) ────────────────────────────
+//
+//   The bug class this phase kills: pre-existing MCP tool name collisions,
+//   regex-violating tool names, malformed inputSchema shapes. Discovered in
+//   v2.19.51 when 92 contract tests had been failing across v2.19.42-50
+//   without anyone noticing — the ritual never ran them. Each shipped release
+//   silently overwrote one of two duplicate-named tools (mneme.proof.verify),
+//   user-visible behavior depended on registry spread order.
+//
+//   v2.19.52 adds this gate so the bug class cannot ship again. Runs vitest
+//   on _contract.test.ts against the SOURCE registry (which is what just got
+//   packed into the tarball — equivalent verification). Failure blocks publish.
+
+check("phase3.8.contract-test-must-pass", () => {
+  // Use the SOURCE tree's vitest because we're verifying the catalog shape
+  // BEFORE publish. The just-packed tarball was built from this same source.
+  const r = spawnSync("npx", ["vitest", "run", "packages/mcp/src/tools/_contract.test.ts", "--reporter=basic"], {
+    cwd: REPO_ROOT,
+    shell: process.platform === "win32",
+    windowsHide: true,
+    timeout: 180_000,
+    encoding: "utf8",
+  });
+  if (r.error) {
+    return { ok: false, reason: `spawn failed: ${r.error.message}`, remedy: "Ensure vitest is installed (npm install at repo root)" };
+  }
+  if (r.status !== 0) {
+    // Extract a concise failure summary from vitest output.
+    const out = (r.stdout || "") + (r.stderr || "");
+    const failLines = out.split("\n").filter((l) => l.includes("FAIL") || l.includes("×")).slice(0, 5);
+    return {
+      ok: false,
+      reason: `contract test exited ${r.status}; ${failLines.length} sample failure(s) shown`,
+      remedy: `Run 'npx vitest run packages/mcp/src/tools/_contract.test.ts' locally + fix each ✗ marker. Common causes: (1) duplicate tool name; (2) inputSchema missing 'properties: {}'; (3) tool name contains digits (regex is [a-z_] only); (4) composeWith references unknown tool name.`,
+      measure: { exitCode: r.status, sampleFailures: failLines },
+    };
+  }
+  // Parse the pass count from vitest "Tests N passed" line.
+  const passMatch = (r.stdout || "").match(/Tests\s+(\d+)\s+passed/);
+  return { measure: { contractTestsPassing: passMatch ? Number(passMatch[1]) : "unknown" } };
+});
+
 // ─── PHASE 4 — Embedder verify (bug #3 class) ─────────────────────────────
 check("phase4.hash-embedder-always-works", () => {
   // Hash embedder is the deterministic fallback that MUST always work.

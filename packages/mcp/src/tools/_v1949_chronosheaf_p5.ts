@@ -144,7 +144,7 @@ export const chronoSheafSectionTool: MnemeTool = {
   inputSchema: { type: "object", properties: { cover: { type: "object" }, claims: { type: "object", description: "Map of site → numeric claim value" } }, required: ["cover"] },
   outputSchema: { type: "object" },
   examples: [{ userQuery: "Is the system globally consistent right now?", args: { cover: {} }, expectedOutput: "{ hasGlobalSection: true|false, h1, obstructions }" }],
-  pitfalls: ["A H¹ = 0 result doesn't validate the CLAIM VALUES — only the gluing topology. Pair with mneme.chronosheaf.h1 for full diagnostic."],
+  pitfalls: ["A H¹ = 0 result doesn't validate the CLAIM VALUES — only the gluing topology. Pair with mneme.chronosheaf.first_cohomology for full diagnostic."],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
     const cover = args["cover"] as Parameters<typeof core.chronosheaf.sheaf.cohomologyH1>[0];
@@ -208,7 +208,7 @@ export const chronoSheafStorageVerifyTool: MnemeTool = {
   description: "🌌 CHRONOSHEAF STORAGE — verify HMAC chain integrity. Replays every entry + checks prevSig + recomputes HMAC. Tamper detection composes with APOSTILLE + ETERNITY.",
   whenToUse: "Pre-publish gate: verify storage integrity before trusting persisted state.",
   triggers: ["chronosheaf storage verify"],
-  inputSchema: { type: "object" },
+  inputSchema: { type: "object", properties: {} },
   outputSchema: { type: "object" },
   examples: [{ userQuery: "Verify chronosheaf chain", args: {}, expectedOutput: "{ ok: true, entries: N }" }],
   pitfalls: [],
@@ -225,7 +225,7 @@ export const chronoSheafStorageStatsTool: MnemeTool = {
   description: "🌌 CHRONOSHEAF STORAGE — dashboard view of .mneme/chronosheaf/* files + chain length + head signature.",
   whenToUse: "Daemon pulse / weekly review.",
   triggers: ["chronosheaf storage stats"],
-  inputSchema: { type: "object" },
+  inputSchema: { type: "object", properties: {} },
   outputSchema: { type: "object" },
   examples: [{ userQuery: "Show chronosheaf storage stats", args: {}, expectedOutput: "{ storageRoot, filesPresent, chainEntries, chainHeadSig }" }],
   pitfalls: [],
