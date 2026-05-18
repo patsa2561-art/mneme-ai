@@ -763,6 +763,19 @@ const ALWAYS_INTERNAL_EXPORTS = new Set([
   "generatePopupHtml",      // wrapped as mneme.browser.popup
   "generateBrowserReadme",  // wrapped as mneme.browser.readme
   "computeUserscriptStats", // display helper
+  // v2.19.42 HONESTY GATE 2.0 — these 4 are composed into the single
+  // surfaced tool mneme.honesty.audit_features (which runs
+  // parseFeatureNameClaims → verifyFeatureCoverage → autoAmendWhatsNew
+  // as one call). stripHonestyAmendments IS surfaced as
+  // mneme.honesty.strip_amendments. The composed tool is the
+  // user-facing API; the sub-functions are pure-function building
+  // blocks reachable via the composite. Word-order mismatch on the
+  // composed name fools the substring matcher.
+  "parseFeatureNameClaims",  // composed into mneme.honesty.audit_features
+  "verifyFeatureCoverage",   // composed into mneme.honesty.audit_features
+  "autoAmendWhatsNew",       // composed into mneme.honesty.audit_features
+  "auditFeatureCoverage",    // wrapped as mneme.honesty.audit_features (verb-first vs prefix mismatch)
+  "stripHonestyAmendments",  // wrapped as mneme.honesty.strip_amendments (word-order mismatch)
 ]);
 
 export function findOrphans(input: {

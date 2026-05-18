@@ -247,3 +247,196 @@ export const HONESTY_GATE_TUNABLES = Object.freeze({
   PROTOCOL_VERSION,
   CLAIM_KINDS: ["starter_count_mismatch", "missing_mcp_tool", "missing_cli_command", "tool_count_below_claim", "framework_count_mismatch"] as ReadonlyArray<ClaimViolationKind>,
 });
+
+// ─── HONESTY GATE 2.0 (v2.19.42) ──────────────────────────────────────────
+//
+// User audit (2026-05-18): v2.19.40 whats_new claimed "HOLY GRAIL QUADRUPLE
+// — APOSTILLE + OUTCOME MARKET + ZK-FAIRNESS + ETERNITY" but a grep for
+// `mneme.outcome.*` and `mneme.zk_fairness.*` returned zero hits — the
+// wrappers existed under `mneme.market.*` and `mneme.fairness.*`. Users
+// saw "QUADRUPLE" and concluded 2/4 was missing.
+//
+// HONESTY GATE 1.0 (v2.19.35) caught the strict "+ mneme.X.Y" / count /
+// framework claim shapes but did NOT recognise feature-name claims like
+// "OUTCOME MARKET" as implying MCP coverage. HONESTY GATE 2.0 adds:
+//
+//   1. parseFeatureNameClaims — pulls feature-name phrases (e.g.,
+//      "OUTCOME MARKET", "TOKEN GOVERNOR", "GANGLION") and the implied
+//      MCP-family prefix.
+//   2. verifyFeatureCoverage — checks each feature-name has at least
+//      ONE tool under its expected family OR an alias family.
+//   3. autoAmendWhatsNew — when a feature-name claim has 0 coverage,
+//      auto-injects a disclaimer marker in the body so the published
+//      release-note is self-correcting. The amendment is deterministic,
+//      idempotent, and reversible.
+//
+// Composes with v2.19.42 DISCOVERABILITY ALIASES — feature-name claim
+// resolves against either canonical family OR alias family before
+// flagging missing coverage.
+
+export interface FeatureNameClaim {
+  /** The exact phrase matched in the body. */
+  phrase: string;
+  /** Expected MCP family prefix(es) — caller can supply >1 for aliases. */
+  expectedFamilies: string[];
+}
+
+export interface FeatureCoverageReport {
+  phrase: string;
+  expectedFamilies: string[];
+  matchedFamily: string | null;
+  toolCount: number;
+  status: "covered" | "uncovered" | "alias_covered";
+}
+
+/**
+ * Pull "feature name" claims from whats_new bodies. These are the loud
+ * marketing-style banners (HOLY GRAIL QUADRUPLE / WIRING TRINITY /
+ * TALK OF THE TOWN QUINTUPLE) plus any inline FEATURE_NAME tokens we
+ * can recognise. Heuristic + conservative.
+ */
+export function parseFeatureNameClaims(
+  body: string,
+  knownFeatures: Record<string, string[]>,
+): FeatureNameClaim[] {
+  if (!body || typeof body !== "string") return [];
+  const out: FeatureNameClaim[] = [];
+  const seen = new Set<string>();
+  for (const [phrase, expectedFamilies] of Object.entries(knownFeatures)) {
+    const re = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "i");
+    if (re.test(body)) {
+      const key = phrase.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ phrase, expectedFamilies });
+    }
+  }
+  return out;
+}
+
+/**
+ * For each feature-name claim, look up its expected families against the
+ * runtime view + return coverage. Status is:
+ *   covered       — canonical family has >=1 tool
+ *   alias_covered — only an alias family has tools (mention alias)
+ *   uncovered     — no family has any tools (HONESTY violation)
+ */
+export function verifyFeatureCoverage(
+  claims: FeatureNameClaim[],
+  runtime: { mcpToolNames: Set<string> },
+): FeatureCoverageReport[] {
+  return claims.map((c) => {
+    let matchedFamily: string | null = null;
+    let toolCount = 0;
+    for (const fam of c.expectedFamilies) {
+      const prefix = `mneme.${fam}.`;
+      let count = 0;
+      for (const name of runtime.mcpToolNames) {
+        if (name.startsWith(prefix)) count += 1;
+      }
+      if (count > 0) {
+        matchedFamily = fam;
+        toolCount = count;
+        break;
+      }
+    }
+    const status: FeatureCoverageReport["status"] =
+      !matchedFamily ? "uncovered"
+        : matchedFamily === c.expectedFamilies[0] ? "covered"
+        : "alias_covered";
+    return { phrase: c.phrase, expectedFamilies: c.expectedFamilies, matchedFamily, toolCount, status };
+  });
+}
+
+/**
+ * Auto-amend whats_new body with disclaimer markers when feature-name
+ * coverage is incomplete. The marker is a deterministic single-line
+ * sentinel of the shape:
+ *
+ *   <!-- HONESTY-GATE: <phrase> covered by <N> tools under mneme.<fam>.* -->
+ *
+ * Idempotent: re-running on an already-amended body produces identical
+ * output. Reversible: callers can strip every HONESTY-GATE marker line
+ * with one regex. The amendment is INFORMATIONAL — caller decides
+ * whether to publish the amended body or just surface the diff.
+ */
+export function autoAmendWhatsNew(body: string, reports: FeatureCoverageReport[]): {
+  amended: string;
+  added: number;
+  notes: string[];
+} {
+  const lines = body.split(/\r?\n/);
+  let added = 0;
+  const notes: string[] = [];
+  for (const r of reports) {
+    const marker = r.status === "uncovered"
+      ? `<!-- HONESTY-GATE: ${r.phrase} has 0 MCP tools under expected families [${r.expectedFamilies.join("|")}] — pending wrapper -->`
+      : r.status === "alias_covered"
+        ? `<!-- HONESTY-GATE: ${r.phrase} covered by ${r.toolCount} tools under alias mneme.${r.matchedFamily}.* — canonical name was [${r.expectedFamilies[0]}] -->`
+        : null;
+    if (!marker) continue;
+    if (lines.includes(marker)) continue; // idempotent
+    // Insert marker right after the first line that mentions the phrase.
+    const phraseRe = new RegExp(`\\b${r.phrase.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "i");
+    let insertedAt = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (phraseRe.test(lines[i]!)) {
+        lines.splice(i + 1, 0, marker);
+        insertedAt = i + 1;
+        added += 1;
+        break;
+      }
+    }
+    if (insertedAt === -1) {
+      lines.push(marker);
+      added += 1;
+    }
+    notes.push(`${r.status === "uncovered" ? "❌" : "ℹ"} ${r.phrase}: ${r.status}${r.matchedFamily ? ` (${r.toolCount} tools @ mneme.${r.matchedFamily}.*)` : ""}`);
+  }
+  return { amended: lines.join("\n"), added, notes };
+}
+
+/** Strip every auto-amend marker from a body (round-trip safety). */
+export function stripHonestyAmendments(body: string): string {
+  return body.split(/\r?\n/).filter((l) => !l.startsWith("<!-- HONESTY-GATE:")).join("\n");
+}
+
+/**
+ * One-call combined audit: parse feature-name claims + verify + amend.
+ * The default knownFeatures map covers the loudest banners from v2.18+.
+ * Caller can extend per-release.
+ */
+export const DEFAULT_FEATURE_FAMILY_MAP: Readonly<Record<string, string[]>> = Object.freeze({
+  "APOSTILLE": ["apostille"],
+  // Source-name first so the canonical name from whats_new gets matched as
+  // expectedFamilies[0]; live MCP namespaces appear as fallback aliases.
+  "OUTCOME MARKET": ["outcome", "market"],
+  "ZK-FAIRNESS": ["zk_fairness", "fairness"],
+  "ZK FAIRNESS": ["zk_fairness", "fairness"],
+  "ETERNITY": ["eternity"],
+  "TOKEN GOVERNOR": ["governor"],
+  "PROMPT FOSSIL": ["fossil"],
+  "GANGLION": ["ganglion"],
+  "MAYOR ELECTION": ["mayor"],
+  "CITIZEN'S AUDIT": ["citizens"],
+  "CONSCIENCE CARD": ["card"],
+  "RECEIPT PROTOCOL": ["protocol"],
+  "BROWSER RECEIPT": ["browser"],
+  "HONESTY GATE": ["honesty"],
+  "BEACON HANDOFF": ["handoff", "beacon"],
+  "SOUL EMBALMING": ["commonwealth"],
+  "DREAMSPACE": ["dreamspace"],
+  "TRUTH FORENSIC": ["truth"],
+});
+
+export function auditFeatureCoverage(input: {
+  body: string;
+  runtime: { mcpToolNames: Set<string> };
+  knownFeatures?: Record<string, string[]>;
+}): { claims: FeatureNameClaim[]; reports: FeatureCoverageReport[]; amend: { amended: string; added: number; notes: string[] } } {
+  const known = input.knownFeatures ?? DEFAULT_FEATURE_FAMILY_MAP;
+  const claims = parseFeatureNameClaims(input.body, known as Record<string, string[]>);
+  const reports = verifyFeatureCoverage(claims, input.runtime);
+  const amend = autoAmendWhatsNew(input.body, reports);
+  return { claims, reports, amend };
+}

@@ -334,16 +334,41 @@ How to read the verdict:
           fileExists: (p: string) => existsSync(pathResolve(repoRoot, p)),
         },
       });
-      // Apply forensic verdict precedence: a REJECTED forensic always
-      // overrides a TRUSTWORTHY ACGV (catches lies); an ACCEPTED forensic
-      // CONFIRMS TRUSTWORTHY (no downgrade needed). UNKNOWN forensic
-      // doesn't touch ACGV's verdict but appends the forensic note.
+      // v2.19.42 N3 FIX — forensic-FIRST routing.
+      //
+      // Pre-v2.19.42 bug: ACGV's legacy sniffers don't recognise the
+      // "mneme.X.Y is registered" assertion shape, so claims like
+      // `mneme.truth.forensic is registered` returned PASSTHROUGH /
+      // NEEDS-DATA from ACGV while forensic correctly returned ACCEPTED
+      // (1 grounded assertion). The two layers disagreed and the CLI
+      // surfaced the weaker one.
+      //
+      // New routing rule (one place, deterministic):
+      //   forensic = REJECTED → red (overrides everything; honest refute)
+      //   forensic = ACCEPTED → green if ACGV was weak/PASSTHROUGH; otherwise append
+      //   forensic = UNKNOWN  → keep ACGV's verdict; only downgrade
+      //                         TRUSTWORTHY when forensic sniffed assertions
+      //                         it couldn't ground (be cautious)
+      //
+      // Effect: `mneme verify` now matches `mneme.truth.forensic` MCP
+      // exactly when forensic has a verdict. Legacy ACGV remains the
+      // fallback for claims forensic can't sniff (numeric/logical/
+      // language-of-implementation).
       const mutable = explained as unknown as { headline?: string; plain?: string; trafficLight?: string };
+      const acgvWeak = result.verdict === "PASSTHROUGH" || result.verdict === "LIMBO";
       if (forensic.verdict === "REJECTED") {
         mutable.headline = `❌ FORENSIC-REJECTED — claim contains refuted assertion(s).`;
         mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
         mutable.trafficLight = "red";
+      } else if (forensic.verdict === "ACCEPTED" && acgvWeak) {
+        // v2.19.42 N3 promotion: ACGV had no opinion, forensic grounded every
+        // assertion → upgrade to TRUSTWORTHY so verify CLI matches forensic MCP.
+        const sup = forensic.assertions.filter((a) => a.sub_verdict === "supported").length;
+        mutable.headline = `✅ FORENSIC-ACCEPTED — ${sup}/${forensic.assertions.length} assertion(s) grounded in the live MCP catalog`;
+        mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
+        mutable.trafficLight = "green";
       } else if (forensic.verdict === "ACCEPTED") {
+        // ACGV already had an opinion (FUSION / IMPOSSIBLE_REFUTE / etc).
         // Append forensic ✓ trail; don't lower the verdict.
         mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
       } else if (typeof mutable.headline === "string" && /TRUSTWORTHY/i.test(mutable.headline) && forensic.assertions.length > 0) {

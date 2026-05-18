@@ -101,6 +101,8 @@ import { V1935_HONESTY_TOOLS } from "./_v1935_honesty.js";
 import { V1937_TALK_OF_TOWN_TOOLS } from "./_v1937_talk_of_town.js";
 import { V1938_SOCKETS_TOOLS } from "./_v1938_sockets.js";
 import { V1940_WIRING_TRINITY_TOOLS } from "./_v1940_wiring_trinity.js";
+import { V1942_ALIAS_TOOLS } from "./_v1942_discoverability_aliases.js";
+import { V1942_PROOF_INVERSION_TOOLS } from "./_v1942_proof_inversion.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -206,6 +208,8 @@ export function buildAllTools(): MnemeTool[] {
     ...V1937_TALK_OF_TOWN_TOOLS,
     ...V1938_SOCKETS_TOOLS,
     ...V1940_WIRING_TRINITY_TOOLS,
+    ...V1942_ALIAS_TOOLS,
+    ...V1942_PROOF_INVERSION_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

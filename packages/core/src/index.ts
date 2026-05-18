@@ -903,3 +903,9 @@ export * as vendorBoomerang from "./vendor_boomerang/index.js";
 export * as tokenGovernor from "./token_governor/index.js";
 export * as promptFossil from "./prompt_fossil/index.js";
 export * as ganglion from "./ganglion/index.js";
+
+// v2.19.42 — PROOF OF SAVING + CASCADE INVERSION (token-saving infrastructure completion)
+//   PROOF OF SAVING    — HMAC-signed Merkle-rooted savings certificate (enterprise procurement primitive)
+//   CASCADE INVERSION  — parallel-race stages on cold start (3-5x wall-time win until Ganglion converges)
+export * as proofOfSaving from "./proof_of_saving/index.js";
+export * as cascadeInversion from "./cascade_inversion/index.js";
