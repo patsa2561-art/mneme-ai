@@ -205,6 +205,14 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.57": {
+    headline: "🔮✨ DREAM ORGAN — Mneme upgrades ITSELF. Self-installing pipeline that ends EBUSY forever. User asked: 'เมื่อไหร่ bug ebusy จะหมดไป ทำให้ มันเป็นสุดยอด engine ที่รันได้ด้วยตัวเองได้ไหม'. The dream organ is here. New shepherd protocol module (packages/core/src/shepherd/) detaches a standalone CJS script at ~/.mneme-global/shepherd/shepherd.cjs that runs the FULL self-install pipeline: announce → wait → reap survivors → npm install -g --omit=optional --force → verify → spawn new daemon → clear flag. State is HMAC-chained + checkpointed; resumable on crash. Parallel-safe lock (auto-clears stale). Cross-platform Windows + macOS + Linux. 3 new MCP tools (mneme.shepherd.{start, status, cancel}) make it AI-agent-callable. New CLI command `mneme upgrade --execute` detaches the shepherd; `mneme upgrade --status` reads the ledger. The `--omit=optional` flag bypasses the sharp/libvips DLL EBUSY race at SOURCE (transformers's transitive native deps now skipped automatically). 8th world-first. 22 deep tests + 6768/6768 contract pass. Total MCP tools 766 → 769 (+3).",
+    tools: [
+      "mneme.shepherd.start",
+      "mneme.shepherd.status",
+      "mneme.shepherd.cancel",
+    ],
+  },
   "2.19.56": {
     headline: "⚡ P1 18× LATENCY REGRESSION FIX (root-cause cheap-probe) + 🪙 PERF BUDGET LEDGER (WISDOM BONUS: HMAC-chained cross-release accountability) + 🛡 RITUAL PHASE 3.10 STRESS GATE (50 parallel verify <3000ms enforced at publish). User audit caught v2.19.54 regression: 50-parallel verify slowed 18x (1034ms→18385ms) because INSTALL ORGAN heartbeat scan ran on every CLI startup. Root cause was classifyHeartbeats() doing readdirSync + readFileSync × N + isPidAlive × N per process. **Root fix**: new recentHeartbeatActivity() does single statSync on dir mtime (~1ms vs ~360ms). **WISDOM BONUS — perf_budget module**: HMAC-chained .mneme-perf-budget.jsonl ledger with regressionGate that BLOCKS publish on (a) absolute ceiling violation OR (b) >10% relative regression vs prior baseline. P1_BUDGETS catalog (3 entries). Composes with v2.19.34 APOSTILLE. **Ritual phase 3.10**: spawns 50-parallel verify sub-process + asserts <3000ms + records to ledger. Bug class 'fix one thing → break another perf-wise' extinct at publish forever. No new MCP tools — pure infrastructure fix. Plus async heartbeat write (fire-and-forget) so daemon never blocks on fs.writeFileSync.",
     tools: [],

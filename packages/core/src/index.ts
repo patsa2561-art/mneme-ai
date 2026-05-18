@@ -955,3 +955,12 @@ export * as optionalNative from "./optional_native/index.js";
 // prior release. Composes with v2.19.34 APOSTILLE chain pattern.
 // First AI tool worldwide with HMAC-chained perf budget enforcement.
 export * as perfBudget from "./perf_budget/index.js";
+
+// v2.19.57 — SHEPHERD PROTOCOL (the self-installing dream organ).
+// Mneme upgrades itself. User runs `mneme upgrade --execute` and walks
+// away. Detached shepherd at ~/.mneme-global/shepherd/shepherd.cjs runs
+// the full pipeline: announce → reap → wait → npm install --omit=optional
+// → verify → spawn new daemon → clear flag. State checkpointed to
+// HMAC-chained ledger; resumable on crash. Parallel-safe lock.
+// Cross-platform Windows + macOS + Linux. 8th world-first.
+export * as shepherd from "./shepherd/index.js";

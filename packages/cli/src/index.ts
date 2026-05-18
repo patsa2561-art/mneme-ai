@@ -803,11 +803,72 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   // ─── v0.22.2: bulletproof self-update ────────────────────────────────
+  // ─── v2.19.57: --execute mode dispatches the DREAM ORGAN shepherd ────
   program
     .command("upgrade")
-    .description("Update Mneme to latest — bypasses npm cache + diagnoses PATH conflicts (more reliable than `npm install -g mneme-ai@latest`)")
+    .description("Update Mneme to latest — bypasses npm cache + diagnoses PATH conflicts (more reliable than `npm install -g mneme-ai@latest`). Use --execute for the self-installing dream-organ shepherd pipeline.")
     .option("--force", "force re-install even if versions match", false)
-    .action(async (opts: { force?: boolean }) => {
+    .option("--execute", "🔮 DREAM ORGAN: detach a shepherd process that reaps daemon + runs `npm install -g --omit=optional --force mneme-ai@latest` + spawns new daemon, all automatically. Returns immediately; check progress with `mneme upgrade --status`.", false)
+    .option("--status", "show the last 20 events from the shepherd state ledger (use after --execute)", false)
+    .option("--target <version>", "version to install when using --execute (default: latest)", "latest")
+    .option("--json", "machine-readable output", false)
+    .action(async (opts: { force?: boolean; execute?: boolean; status?: boolean; target?: string; json?: boolean }) => {
+      if (opts.status) {
+        const { shepherd } = await import("@mneme-ai/core");
+        const status = shepherd.shepherdStatus(20);
+        if (opts.json) { process.stdout.write(JSON.stringify(status, null, 2) + "\n"); return process.exit(0); }
+        process.stdout.write(`🔮 SHEPHERD STATUS\n  running: ${status.running}\n  lastVerdict: ${status.lastVerdict}\n  lastTargetVersion: ${status.lastTargetVersion ?? "(none)"}\n  lastCompleteAt: ${status.lastCompleteAt ?? "(none)"}\n  chainOk: ${status.chainOk}\n  recent events:\n${status.lastEvents.map((e) => `    ${e.ts} · ${e.step}`).join("\n")}\n`);
+        return process.exit(0);
+      }
+      if (opts.execute) {
+        const { shepherd } = await import("@mneme-ai/core");
+        const { spawn: spawnDetached } = await import("node:child_process");
+        // Extract shepherd script to ~/.mneme-global/shepherd/shepherd.cjs
+        const scriptPath = shepherd.installShepherdScript();
+        const target = opts.target ?? "latest";
+        // Acquire lock first (fail fast if another shepherd running)
+        const lockResult = shepherd.acquireShepherdLock(target, "starting");
+        if (!lockResult.acquired && lockResult.reason === "already-running") {
+          if (opts.json) { process.stdout.write(JSON.stringify({ ok: false, reason: "shepherd-already-running", lock: lockResult.otherShepherd }, null, 2) + "\n"); return process.exit(1); }
+          process.stderr.write(`❌ Shepherd already running (PID ${lockResult.otherShepherd.pid}, target ${lockResult.otherShepherd.targetVersion}, started ${lockResult.otherShepherd.startedAt}). Wait or check 'mneme upgrade --status'.\n`);
+          return process.exit(1);
+        }
+        if (!lockResult.acquired && lockResult.reason === "stale-lock-cleared") {
+          // Retry once after auto-clearing stale lock
+          const retry = shepherd.acquireShepherdLock(target, "starting");
+          if (!retry.acquired) {
+            process.stderr.write(`❌ Failed to acquire shepherd lock even after clearing stale: ${JSON.stringify(retry)}\n`);
+            return process.exit(1);
+          }
+        }
+        if (!lockResult.acquired && lockResult.reason === "lock-write-failed") {
+          process.stderr.write(`❌ Could not write shepherd lock: ${lockResult.error}\n`);
+          return process.exit(1);
+        }
+        // Release our lock so the shepherd can take it fresh (the caller-CLI is not the shepherd)
+        shepherd.releaseShepherdLock();
+        // Spawn detached shepherd
+        const args = [
+          scriptPath,
+          "--target", target,
+          "--state-path", shepherd.shepherdStatePath(),
+          "--lock-path", shepherd.shepherdLockPath(),
+          "--secret", process.env["MNEME_SHEPHERD_SECRET"] ?? `mneme-shepherd-v${shepherd.PROTOCOL_VERSION}`,
+        ];
+        try {
+          const child = spawnDetached(process.execPath, args, {
+            detached: true, stdio: "ignore", windowsHide: true,
+          });
+          if (child.unref) child.unref();
+          if (opts.json) { process.stdout.write(JSON.stringify({ ok: true, shepherdPid: child.pid, scriptPath, target }, null, 2) + "\n"); return process.exit(0); }
+          process.stdout.write(`🔮 SHEPHERD STARTED (PID ${child.pid}, target ${target})\n   Mneme will upgrade automatically in the background.\n   Check progress: mneme upgrade --status\n   This terminal can be closed.\n`);
+          return process.exit(0);
+        } catch (e) {
+          process.stderr.write(`❌ Failed to spawn shepherd: ${(e as Error).message}\n`);
+          return process.exit(1);
+        }
+      }
+      // Default path — legacy upgradeCommand
       process.exit(
         await upgradeCommand({ cwd: process.cwd(), force: opts.force }),
       );
