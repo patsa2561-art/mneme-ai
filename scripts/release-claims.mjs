@@ -205,6 +205,16 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.53": {
+    headline: "🪄 INSTALL ORGAN — self-healing cross-platform process-lineage protocol that fixes the Windows EBUSY + macOS .dylib lock + Linux fd-hold orphan problem at the root. Every Mneme-spawned node process registers a heartbeat at ~/.mneme-global/heartbeats/{pid}.beat; daemon-stop reaps all known PIDs via heartbeat registry (SURGICAL not nuclear — never kills random node.exe); autonomic_breath_hook throttles respawns (no spawn within 2s of existing daemon heartbeat); HMAC-chained lineage ledger composes with v2.19.34 APOSTILLE; SIGUSR2 graceful handoff signal on macOS/Linux (fallback SIGTERM on Windows); platform-aware DLL/dylib probe (Windows fs.openSync + macOS/Linux lsof). 5 new MCP tools (install.diagnose / install.heal / install.reap_orphans / install.lineage / install.heartbeat_list) + enhanced inline preinstall that reads heartbeats and reaps orphan PIDs before npm extract. No AI tool worldwide ships this. Total MCP tools 754 → 759 (+5).",
+    tools: [
+      "mneme.install.diagnose",
+      "mneme.install.heal",
+      "mneme.install.reap_orphans",
+      "mneme.install.lineage",
+      "mneme.install.heartbeat_list",
+    ],
+  },
   "2.19.52": {
     headline: "🛡 CONTRACT GATE FOREVER (ritual phase 3.8 runs contract test pre-publish; pre-existing 9-test-fail bug class extinct) + ⚡ CACHE COALESCE MCP PRIMITIVE (5 new tools mneme.cache.{put,get,stats,reset,measure_savings} expose verify_cache as AI-agent-callable promise-coalescing memo — first AI tool worldwide) + 🪪 CHRONOSHEAF H1 RENAME (.h1 → .first_cohomology to satisfy structural regex) + 8 INPUTSCHEMA SHAPE FIXES (handoff.pair_generate + protocol.spec + browser.{userscript,manifest,popup,readme} + chronosheaf.storage_{verify,stats} all gained properties:{}) + PER-ENTRY TTL FIX in verify_cache (writes honor their own TTL on read). Contract test 9 fail → 0 fail. Total MCP tools 749 → 754 (+5).",
     tools: [

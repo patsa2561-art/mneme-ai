@@ -931,3 +931,12 @@ export * as chronosheaf from "./chronosheaf/index.js";
 //   identical verifies now resolve as 1 compute + 49 promise-coalesced awaiters.
 //   Generic — any `() => Promise<T>` can be wrapped. See packages/core/src/verify_cache/.
 export * as verifyCache from "./verify_cache/index.js";
+
+// v2.19.53 — INSTALL ORGAN (self-healing process-lineage protocol).
+//   Cross-platform: Windows + macOS + Linux. Every Mneme-spawned node
+//   process writes a heartbeat to ~/.mneme-global/heartbeats/{pid}.beat
+//   so the install pipeline can reap orphans by EXACT PID (not "kill
+//   all node.exe" which would nuke the user's editor). HMAC-chained
+//   lineage ledger composes with v2.19.34 APOSTILLE pattern.
+//   See packages/core/src/install_organ/.
+export * as installOrgan from "./install_organ/index.js";

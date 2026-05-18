@@ -1,6 +1,6 @@
 {
   "name": "mneme-ai",
-  "version": "2.19.52",
+  "version": "2.19.53",
   "mcpName": "io.github.patsa2561-art/mneme-ai",
   "description": "Mneme เนโฌโ€ the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.",
   "type": "module",
@@ -28,13 +28,13 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "tsc -b --clean",
-    "preinstall": "node -e \"try{const{spawnSync}=require('node:child_process');const w=process.platform==='win32';spawnSync(w?'mneme.cmd':'mneme',['daemon','stop'],{shell:w,windowsHide:true,timeout:8000,stdio:'ignore'});const end=Date.now()+1500;while(Date.now()<end){}}catch(e){}process.exit(0)\""
+    "preinstall": "node -e \"try{const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const{spawnSync}=require('node:child_process');const w=process.platform==='win32';spawnSync(w?'mneme.cmd':'mneme',['daemon','stop'],{shell:w,windowsHide:true,timeout:8000,stdio:'ignore'});try{const beatDir=path.join(os.homedir(),'.mneme-global','heartbeats');if(fs.existsSync(beatDir)){for(const f of fs.readdirSync(beatDir)){const m=f.match(/^(\\d+)\\.beat$/);if(m){const pid=parseInt(m[1]);if(pid>0&&pid!==process.pid){try{process.kill(pid,'SIGTERM')}catch(e){}try{fs.unlinkSync(path.join(beatDir,f))}catch(e){}}}}}}catch(e){}const end=Date.now()+1500;while(Date.now()<end){}}catch(e){}process.exit(0)\""
   },
   "dependencies": {
-    "@mneme-ai/core": "2.19.52",
-    "@mneme-ai/correlator": "2.19.52",
-    "@mneme-ai/embeddings": "2.19.52",
-    "@mneme-ai/mcp": "2.19.52",
+    "@mneme-ai/core": "2.19.53",
+    "@mneme-ai/correlator": "2.19.53",
+    "@mneme-ai/embeddings": "2.19.53",
+    "@mneme-ai/mcp": "2.19.53",
     "commander": "^14.0.3",
     "kleur": "^4.1.5"
   },

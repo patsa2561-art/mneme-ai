@@ -51,7 +51,7 @@ function probePidFile(repoRoot: string): { pid: number; alive: boolean; exists: 
  * .mneme/breath.log on failure.
  */
 export async function ensureAutonomicBreath(opts: { cwd: string; commandName: string }): Promise<{
-  action: "skipped" | "already_alive" | "respawned" | "no_pid_file" | "failed";
+  action: "skipped" | "already_alive" | "respawned" | "no_pid_file" | "failed" | "throttled";
   ms: number;
 }> {
   const t0 = Date.now();
@@ -84,6 +84,23 @@ export async function ensureAutonomicBreath(opts: { cwd: string; commandName: st
   if (!decision.shouldRespawn) {
     return { action: "already_alive", ms: Date.now() - t0 };
   }
+  // v2.19.53 — RESPAWN THROTTLE. If ANY daemon heartbeat exists less
+  // than RESPAWN_THROTTLE_MS old, another CLI command just respawned
+  // the daemon; piling on creates the orphan-storm the user reported
+  // (10+ node.exe holding libvips DLL). Skip silently.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const core = require("@mneme-ai/core") as typeof import("@mneme-ai/core");
+    const beats = core.installOrgan.classifyHeartbeats();
+    const RESPAWN_THROTTLE_MS = 2_000;
+    const recentDaemon = beats.find((b) =>
+      (b.beat.role === "daemon-attached" || b.beat.role === "daemon" || b.beat.role === "autonomic-respawn")
+      && b.ageMs < RESPAWN_THROTTLE_MS && b.pidAlive,
+    );
+    if (recentDaemon) {
+      return { action: "throttled", ms: Date.now() - t0 };
+    }
+  } catch { /* install_organ optional — fall through */ }
   // SILENT detached respawn — we are not allowed to print anything
   // during a normal command invocation. The daemon binary is `mneme
   // daemon start`. Spawn detached so it survives our parent process.

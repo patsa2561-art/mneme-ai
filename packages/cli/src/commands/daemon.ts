@@ -123,6 +123,17 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   let lastHeadHash = readHeadHash(repoRoot);
   let reindexCount = 0;
 
+  // v2.19.53 — INSTALL ORGAN: register heartbeat + set process title so
+  // external tools can identify this process across platforms. Heartbeat
+  // refreshes every 5s; install pipeline reads ~/.mneme-global/heartbeats/
+  // to reap orphans by EXACT PID (not "kill all node.exe").
+  try { process.title = `mneme-daemon-${process.pid}`; } catch { /* best-effort */ }
+  let heartbeatHandle: { intervalId: NodeJS.Timeout | null; beatPath: string } | null = null;
+  try {
+    const { installOrgan } = await import("@mneme-ai/core");
+    heartbeatHandle = installOrgan.registerHeartbeat("daemon-attached");
+  } catch { /* install_organ optional — daemon still works without it */ }
+
   appendLog(repoRoot, `daemon started, pid=${process.pid}`);
 
   // Initial status write
@@ -288,6 +299,19 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
         w.close();
       } catch { /* BE:silent-by-design */ }
     }
+    // v2.19.53 — REAP all known Mneme children (indexer / autonomic-respawn /
+    // nucleus / etc) via the heartbeat registry BEFORE the daemon exits. This
+    // is the core EBUSY fix: no orphan node processes survive daemon-stop.
+    try {
+      if (heartbeatHandle) {
+        // Best-effort: import core synchronously (it's already loaded)
+        // and reap every Mneme PID EXCEPT this one (which we'll deregister last).
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const core = require("@mneme-ai/core") as typeof import("@mneme-ai/core");
+        core.installOrgan.reapMnemeProcesses({ skipPid: process.pid, gracePeriodMs: 800 });
+        core.installOrgan.deregisterHeartbeat("daemon-attached", heartbeatHandle.intervalId, "shutdown");
+      }
+    } catch { /* never block shutdown on reaper failure */ }
     try {
       if (existsSync(p.pid)) unlinkSync(p.pid);
     } catch { /* BE:silent-by-design */ }
@@ -295,6 +319,12 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+  // v2.19.53 — macOS/Linux: SIGUSR2 = graceful handoff signal. Future-proofs
+  // zero-downtime cross-version upgrade. Windows has no SIGUSR2 so this is
+  // a no-op there. Same shutdown path; daemon snapshots state on the way out.
+  if (process.platform !== "win32") {
+    try { process.on("SIGUSR2", shutdown); } catch { /* not all envs support */ }
+  }
 
   // Keep the process alive — the heartbeat interval already does this,
   // but we add a hard never-resolving promise as a safety net.
