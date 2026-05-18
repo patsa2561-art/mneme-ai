@@ -205,6 +205,20 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.45": {
+    headline: "🎛 N6 ROUND-5 STOPS-THE-NOISE + 🔌 npm PREINSTALL DAEMON-STOP + 5 PINNED REGRESSION TESTS — mneme welcome --json '{}' no longer prints 'too many arguments' to stderr (recursive configureOutput suppression + retry path preserving MCP-router payloads); CI gate pinned via 5 vitest spawns. Plus npm preinstall hook stops running daemon before file copy, closing the Windows EBUSY libvips-42.dll race that broke npm install -g.",
+    tools: [],
+  },
+  "2.19.44": {
+    headline: "🧬 N3-OVERSHOOT ROOT-CAUSE + VACCINE OSMOSIS (8-algorithm time-decay lattice) — vaccine cache no longer fires AUTO_REFUTE on TRUE claims. Wild new module fuses HyperLogLog + Page-Hinkley + Kalman + Bloom + Reservoir + Chebyshev + exp decay + Bayesian Beta-Binomial into self-burning vaccine lattice. 5 new MCP tools.",
+    tools: [
+      "mneme.osmosis.check",
+      "mneme.osmosis.register",
+      "mneme.osmosis.update_catalog",
+      "mneme.osmosis.stats",
+      "mneme.osmosis.stale_probability",
+    ],
+  },
   "2.19.43": {
     headline: "🆔 N4 + 🛠 N5 + 🎛 N6 + 🎨 N8 — 4 SOURCE fixes from v2.19.41 dogfood audit. N4 version detection (resolveMnemeVersion walks sibling Mneme packages). N5 self-upgrade spawn surfaces r.error.message + Windows shell:true + upgradeExitCode field. N6 entry-point retry strips JSON payload after --json when Commander rejects as positional. N8 verify rendering strips conflicting traffic-light emoji from plain. No new MCP tools — fixes extend existing handlers.",
     tools: [],

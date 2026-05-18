@@ -303,6 +303,49 @@ export function countMnemeTools(repoRoot: string): number {
   return total;
 }
 
+// v2.19.44 N3-overshoot guard helper — return a Set of every
+// `mneme.X.Y`-shaped tool name declared in the local source tree.
+// Used by acgv vaccine match to verify that a "previously refuted"
+// tool is STILL refuted by the live catalog before short-circuiting
+// AUTO_REFUTE. Sync + cheap (~30ms) because vaccine path is rare.
+let _liveToolNamesCache: { repoRoot: string; names: Set<string>; ts: number } | null = null;
+const LIVE_NAMES_TTL_MS = 30_000;
+
+export function liveMnemeToolNames(repoRoot: string): Set<string> {
+  const now = Date.now();
+  if (_liveToolNamesCache && _liveToolNamesCache.repoRoot === repoRoot && (now - _liveToolNamesCache.ts) < LIVE_NAMES_TTL_MS) {
+    return _liveToolNamesCache.names;
+  }
+  const out = new Set<string>();
+  const stack: string[] = [join(repoRoot, "packages")];
+  if (!existsSync(stack[0]!)) return out;
+  const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".mneme"]);
+  let visited = 0;
+  while (stack.length > 0 && visited < 5000) {
+    const path = stack.pop()!;
+    let entries: string[];
+    try { entries = readdirSync(path); } catch { continue; }
+    for (const name of entries) {
+      if (SKIP_DIRS.has(name)) continue;
+      const full = join(path, name);
+      visited++;
+      let s; try { s = statSync(full); } catch { continue; }
+      if (s.isDirectory()) { stack.push(full); continue; }
+      if (!name.endsWith(".ts") || name.endsWith(".test.ts") || name.endsWith(".d.ts")) continue;
+      try {
+        const body = readFileSync(full, "utf8");
+        const matches = body.matchAll(/name:\s*["'`](mneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)["'`]/g);
+        for (const m of matches) out.add(m[1]!);
+      } catch { /* skip */ }
+    }
+  }
+  _liveToolNamesCache = { repoRoot, names: out, ts: now };
+  return out;
+}
+
+/** For tests: clear the memoised live-names cache. */
+export function _resetLiveToolNamesCache(): void { _liveToolNamesCache = null; }
+
 export function isLibraryInPackageJson(repoRoot: string, lib: string): boolean {
   // Check root + every workspace package.json. v1.54.0 fix: previously
   // only the root manifest was scanned, so claims like "depends on

@@ -2626,10 +2626,35 @@ export async function run(argv: string[]): Promise<void> {
   // Backward-compat: MCP-router subcommands declare `--json [payload]`,
   // so Commander consumes the payload normally; the retry path only
   // fires when Commander itself rejected the payload as positional.
-  program.exitOverride((err) => { throw err; });
-  for (const sub of program.commands) {
-    try { sub.exitOverride((err) => { throw err; }); } catch { /* ok */ }
-  }
+  // v2.19.45 N6-ROUND-5 fix — recursively install exitOverride on the
+  // ENTIRE command tree + suppress writeErr during the first parse so
+  // Commander never prints the false "too many arguments" stderr the
+  // user sees. v2.19.43 set exitOverride only on the root program +
+  // top-level commands; nested commands (mneme spore init / etc) still
+  // exited normally, AND Commander still wrote the error to stderr
+  // before throwing — user reported the noise 4 rounds in a row.
+  const installExitOverrideRecursive = (cmd: { exitOverride?: (h: (e: unknown) => void) => unknown; commands?: Array<{ exitOverride?: (h: (e: unknown) => void) => unknown; commands?: unknown[] }> }): void => {
+    try { cmd.exitOverride?.((e) => { throw e; }); } catch { /* ok */ }
+    if (Array.isArray(cmd.commands)) {
+      for (const sub of cmd.commands) installExitOverrideRecursive(sub as Parameters<typeof installExitOverrideRecursive>[0]);
+    }
+  };
+  installExitOverrideRecursive(program as unknown as Parameters<typeof installExitOverrideRecursive>[0]);
+
+  // Suppress stderr writes from Commander on the FIRST try so the user
+  // doesn't see the "too many arguments" noise when our retry succeeds.
+  // Configure on EVERY subcommand recursively (each subcommand has its
+  // own outputConfiguration; configuring only the root program leaves
+  // subcommand stderr unfiltered).
+  const originalWriteErr = (program as unknown as { _outputConfiguration?: { writeErr?: (s: string) => void } })._outputConfiguration?.writeErr;
+  const swallow = () => { /* swallow first-try noise */ };
+  const configureRecursive = (cmd: { configureOutput?: (c: { writeErr: (s: string) => void }) => void; commands?: unknown[] }, writeErr: (s: string) => void): void => {
+    try { cmd.configureOutput?.({ writeErr }); } catch { /* ok */ }
+    if (Array.isArray(cmd.commands)) {
+      for (const sub of cmd.commands) configureRecursive(sub as Parameters<typeof configureRecursive>[0], writeErr);
+    }
+  };
+  configureRecursive(program as unknown as Parameters<typeof configureRecursive>[0], swallow);
 
   const stripJsonPayloadFromArgv = (a: string[]): string[] => {
     const out: string[] = [];
@@ -2651,23 +2676,38 @@ export async function run(argv: string[]): Promise<void> {
     return out;
   };
 
+  // v2.19.45 N6 fix — try original argv first; if Commander rejects
+  // with excess-args, restore stderr + retry with stripped JSON payload.
+  // We DON'T pre-strip because MCP-router subcommands declare
+  // `--json [payload]` and legitimately consume the payload; stripping
+  // upfront breaks those (e.g. `mneme osmosis stale_probability
+  // --json '{"volatilityPerSec":0.01,...}'`).
+  const restoreWriteErr = (): void => {
+    const wr = originalWriteErr ?? ((s: string) => process.stderr.write(s));
+    configureRecursive(program as unknown as Parameters<typeof configureRecursive>[0], wr);
+  };
+
   try {
     await program.parseAsync(argv);
+    restoreWriteErr();
+    return;
   } catch (err) {
     const message = (err as Error).message ?? "";
     const code = (err as { code?: string }).code ?? "";
-    // Commander's "commander.excessArguments" + the legacy "too many arguments"
-    // error message both indicate the same condition.
     const isExcess = /too many arguments/i.test(message) || code === "commander.excessArguments";
-    // Also let commander.help + commander.version exit silently with their own output.
     if (code === "commander.help" || code === "commander.helpDisplayed" || code === "commander.version") {
+      restoreWriteErr();
       process.exit(0);
     }
     if (isExcess) {
       const stripped = stripJsonPayloadFromArgv(argv);
       if (stripped.length !== argv.length) {
-        try { await program.parseAsync(stripped); return; }
-        catch (err2) {
+        try {
+          await program.parseAsync(stripped);
+          restoreWriteErr();
+          return;
+        } catch (err2) {
+          restoreWriteErr();
           const code2 = (err2 as { code?: string }).code ?? "";
           if (code2 === "commander.help" || code2 === "commander.helpDisplayed" || code2 === "commander.version") {
             process.exit(0);
@@ -2677,6 +2717,8 @@ export async function run(argv: string[]): Promise<void> {
         }
       }
     }
+    // Restore writeErr so the genuine error surfaces.
+    restoreWriteErr();
     ui.error(message);
     process.exit(1);
   }

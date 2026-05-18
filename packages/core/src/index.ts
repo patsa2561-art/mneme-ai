@@ -909,3 +909,10 @@ export * as ganglion from "./ganglion/index.js";
 //   CASCADE INVERSION  — parallel-race stages on cold start (3-5x wall-time win until Ganglion converges)
 export * as proofOfSaving from "./proof_of_saving/index.js";
 export * as cascadeInversion from "./cascade_inversion/index.js";
+
+// v2.19.44 — VACCINE OSMOSIS (8-algorithm time-decay vaccine lattice with concept-drift detection)
+//   Fixes N3-overshoot at the cache layer: vaccine bank hits no longer trust the cache
+//   blindly. Fusion of HyperLogLog + Page-Hinkley + Kalman + Bloom + Reservoir + Chebyshev
+//   + exponential decay + Bayesian Beta-Binomial. First AI tool worldwide with an 8-algo
+//   vaccine self-burning lattice.
+export * as vaccineOsmosis from "./vaccine_osmosis/index.js";

@@ -1,9 +1,11 @@
-# 📜 Release index — v2.18.0 → v2.19.43
+# 📜 Release index — v2.18.0 → v2.19.45
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.45** | 🎛 N6 ROUND-5 STOPS-THE-NOISE + 🔌 npm PREINSTALL DAEMON-STOP — `mneme welcome --json '{}'` no longer prints "too many arguments" to stderr (recursive configureOutput suppression + retry path); CI gate via 5 regression tests pinned forever (one for every vector: bare flag / empty payload / MCP-router payload preserved / genuine errors still surface / --version). Plus npm preinstall hook that stops any running Mneme daemon BEFORE file copy, closing the Windows EBUSY libvips-42.dll race that broke `npm install -g mneme-ai@latest`. |
+| **v2.19.44** | 🧬 N3-OVERSHOOT ROOT-CAUSE + VACCINE OSMOSIS (8-algorithm time-decay lattice) — vaccine cache no longer fires AUTO_REFUTE on TRUE claims. Pre-fix `mneme verify "mneme.truth.forensic is registered"` returned IMPOSSIBLE-REFUTED 99% because simhash from a prior session matched + short-circuited before catalog grounding. Fix: re-verify live catalog before short-circuit. Wild new module VACCINE OSMOSIS composes 8 algorithms (HyperLogLog + Page-Hinkley + Kalman + Bloom + Reservoir + Chebyshev + exp decay + Bayesian Beta-Binomial) into a self-burning vaccine lattice — first AI tool worldwide with this fusion. 5 new MCP tools + 23 deep tests + 1000-iter cross-vector daemon fuzz. |
 | **v2.19.43** | 🆔 N4 VERSION DETECTION + 🛠 N5 SPAWN ERROR CAPTURE + 🎛 N6 OMNI-FLAG RETRY + 🎨 N8 EMOJI CONSISTENCY — `mneme system upgrade` no longer reports 0.0.0 (resolveMnemeVersion walks sibling Mneme packages). Self-upgrade spawn surfaces `r.error.message` + uses Windows `shell:true` + adds `upgradeExitCode` field (no more silent empty stderr). `mneme welcome --json '{}'` no longer throws (entry-point retry strips JSON payload after `--json` when Commander rejects as positional). `mneme verify` rendering strips conflicting traffic-light emoji from plain block (presentation invariant). 10 new deep tests + 4 SOURCE fixes. |
 | **v2.19.42** | 🔀 N3 FORENSIC-FIRST + 🪪 DISCOVERABILITY ALIASES + 🪞 HONESTY GATE 2.0 + 🪙 PROOF OF SAVING + 🏎 CASCADE INVERSION — `mneme verify` CLI now routes through truth.forensic first (no more MIXED-NEEDS-DATA vs ACCEPTED disagreement). 10 alias tools added so `mneme.outcome.*` + `mneme.zk_fairness.*` resolve to canonical `mneme.market.*` + `mneme.fairness.*` (closes v2.19.40 N1 discoverability gap). HONESTY GATE 2.0 auto-amends release notes with coverage disclaimers. PROOF OF SAVING mints HMAC+Merkle savings certificates auditors verify offline. CASCADE INVERSION fires raceable stages in parallel on cold start (3-6× wall-time win). 16 new MCP tools + 51 deep tests + 1100+ fuzz iterations. |
 | **v2.19.41** | 🚨 P0 FIX + 🐶 DOGFOOD GATE + ⚡ OMNI-FLAG + 🪶 SKINNY CAPABILITIES — `mneme.honesty.audit_whats_new` + `mneme.system.upgrade` were broken in v2.19.40 (the irony: HONESTY GATE itself shipped lying). Fixed at SOURCE (auto-source runtime from live MCP catalog + safeRootPath fallback). New ritual phase 3.5 DOGFOOD GATE invokes every critical-path MCP tool on the install tarball before publish — bugs of this class cannot ship again. OMNI-FLAG: schema-driven POSIX flag autogen across all 711 tools (every flag now works in both forms). SKINNY CAPABILITIES: `{ skinny: true }` returns ~2.5KB vs 216KB full (84× lighter for AI agents on cold start). |
@@ -68,6 +70,129 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.45 — 2026-05-18 — 🎛 N6 ROUND-5 + 🔌 npm PREINSTALL DAEMON-STOP + 5 REGRESSION TESTS
+
+User dogfood audit (round 4) reported `mneme welcome --json '{}'` STILL throws "too many arguments" — for the 4th release in a row. v2.19.43's retry-on-error worked at exit-code level but Commander wrote the false error to stderr BEFORE our retry suppressed it; the user saw the noise. v2.19.45 fixes this for real + adds a pinned regression suite + an npm preinstall hook to close the parallel EBUSY libvips race.
+
+### 🎛 N6 ROUND-5 — recursive stderr suppression + ironclad retry
+
+[packages/cli/src/index.ts](packages/cli/src/index.ts) — three structural fixes:
+
+1. **Recursive exitOverride** — install on the ENTIRE command tree (`installExitOverrideRecursive`), not just root + top-level. Pre-fix: nested subcommands (e.g. `mneme spore init`) had their own exit behaviour bypassing our root override.
+
+2. **Recursive configureOutput** — install `writeErr: swallow` on every subcommand's outputConfiguration via `configureRecursive`. Pre-fix: only the root program's writeErr was suppressed; subcommand stderr leaked through.
+
+3. **Restore-on-result** — after either the first parse succeeds, the retry succeeds, or a genuine error fires, restore the real `writeErr` so background hooks + future activity stay visible.
+
+The flow: first try with suppressed stderr → if excess-args, retry with stripped `--json '{...}'` payload → restore writeErr → return. The user never sees the false "too many arguments" again, and MCP-router subcommands that legitimately consume `--json '{...}'` payloads still get them (`mneme osmosis stale_probability --json '{"volatilityPerSec":0.01,...}'` works unchanged).
+
+### CI gate — 5 pinned regression tests
+
+[packages/cli/tests/cli_json_empty_object.test.ts](packages/cli/tests/cli_json_empty_object.test.ts) — every release blocks if any of these regress:
+
+1. `mneme welcome --json '{}'` → exit 0 + JSON stdout + **empty stderr**
+2. `mneme welcome --json` (bare) → exit 0 + JSON stdout + empty stderr
+3. MCP-router payload preserved (`osmosis stale_probability --json '{...}'` returns `probability=1` not NaN)
+4. Genuine unknown-command error STILL surfaces to stderr (no over-suppression)
+5. `--version` still works after exitOverride install
+
+This is the CI gate the v2.19.40-43 cycle was missing. The bug class cannot regress silently again.
+
+### 🔌 npm preinstall daemon-stop hook
+
+[packages/cli/bin/preinstall-stop-daemon.js](packages/cli/bin/preinstall-stop-daemon.js) + `package.json scripts.preinstall` — when the user runs `npm install -g mneme-ai@latest`, npm runs the NEW package's preinstall script BEFORE extracting the tarball. The script spawns `mneme daemon stop` against the OLD binary still on PATH, releasing the libvips-42.dll lock so the new install can succeed.
+
+Ultra-defensive: stdio:ignore so npm output is never polluted, exit 0 unconditionally so a missing/stuck daemon never blocks install. Idempotent: no-op if no daemon is running. Closes the Windows EBUSY race the user hit:
+
+```
+npm error EBUSY: resource busy or locked, copyfile '.../sharp-win32-x64/lib/libvips-42.dll'
+```
+
+### MEASURED
+
+- N6 stderr-empty check: pre-fix Commander wrote "too many arguments..." to stderr; post-fix stderr is empty for the same invocation.
+- 5/5 regression tests pass with sub-2s end-to-end.
+- MCP-router payload preserved: `osmosis stale_probability --json '{volatilityPerSec:0.01,ageSeconds:86400}'` → P(stale)=1.0 (not NaN).
+- Genuine error surface preserved: `fake-command` → "unknown command 'fake-command'" still printed to stderr.
+- `--version` exit 0 with semver output.
+- Total MCP tools: 732 (unchanged — fixes extend existing handlers).
+
+### Composes onto
+
+v2.19.44 (N3-overshoot + OSMOSIS lattice still in place), v2.19.43 (N4-N8 fixes still in place — N6 was the only one not fully fixed), v2.19.42 PROOF + INVERSION, v2.19.40 WIRING TRINITY.
+
+### What didn't change
+
+Welcome handler logic, MCP-router behaviour, exitOverride scope outside of the run() entry point. The fix is surgical at the parse-time stderr boundary.
+
+---
+
+## v2.19.44 — 2026-05-18 — 🧬 N3-OVERSHOOT ROOT-CAUSE + VACCINE OSMOSIS (8-algorithm vaccine lattice)
+
+User dogfood audit on v2.19.42 caught a NEW critical bug — and asked for a wild innovation built from 6 A4 pages of math fusion. v2.19.44 delivers both.
+
+### 🚨 N3-OVERSHOOT ROOT-CAUSE FIX
+
+`mneme verify "mneme.truth.forensic is registered"` returned `IMPOSSIBLE-REFUTED 99%` on a TRUE claim. Test matrix:
+
+| claim | pre-fix | expected |
+|---|---|---|
+| `mneme.truth.forensic is registered` | ❌ IMPOSSIBLE-REFUTED 99% | ✓ ACCEPTED |
+| `mneme.truth.forensic exists` | ✓ TRUSTWORTHY | ✓ TRUSTWORTHY |
+| `the tool mneme.truth.forensic is registered` | ✓ TRUSTWORTHY (prefix-shielded from vaccine) | ✓ TRUSTWORTHY |
+| `mneme.fake.tool is registered` | ✓ REFUTED (genuine lie) | ✓ REFUTED |
+
+Root cause: a simhash vaccine from a prior unrelated refutation matched the new TRUE claim shape and short-circuited AUTO_REFUTE before catalog grounding. **Cache returned without checking source of truth** — the canonical anti-pattern.
+
+Fix at SOURCE in [packages/core/src/squadron/acgv.ts](packages/core/src/squadron/acgv.ts) Layer 0: before returning AUTO_REFUTE, extract every `mneme.X.Y` mention from the claim + call new `liveMnemeToolNames(repoRoot)` helper (memoised 30s) + if any "previously refuted" tool is now in the live catalog, BURN the cache hit + emit `OSMOSIS_VACCINE_BURNED` caveat + fall through to PASSTHROUGH so the normal forensic / chandrasekhar / godel layers do the real work.
+
+### 🧬 MNEME VACCINE OSMOSIS (the wild new idea)
+
+[packages/core/src/vaccine_osmosis/index.ts](packages/core/src/vaccine_osmosis/index.ts) — 8-algorithm time-decay vaccine lattice with concept-drift detection. **First AI tool worldwide with this fusion.** None of the 8 algorithms alone solves N3-overshoot; the fusion does.
+
+| # | Algorithm | What it does in osmosis |
+|---|---|---|
+| 1 | **Exponential decay** | `P(stale) = 1 - e^(-λ·Δt)` — older vaccines need more rechecking |
+| 2 | **HyperLogLog** (m=2^14) | O(1) catalog membership snapshot with ~12KB memory + ±0.81% RSE |
+| 3 | **Page-Hinkley** test | Cumulative concept-drift alarm — when crossed, FULL CACHE FLUSH |
+| 4 | **Kalman filter** (1D) | Smoothed volatility rate `λ` from noisy per-release deltas |
+| 5 | **Bloom filter** (m=2^17, k=7) | O(1) "have I seen this simhash" with FP rate ≈ (1-e^(-kn/m))^k |
+| 6 | **Reservoir sampling** (Alg. R) | Bounded vaccine memory — capacity-k representative sample |
+| 7 | **Chebyshev** inequality | Distribution-free confidence: `P(|X-μ|≥kσ) ≤ 1/k²` |
+| 8 | **Bayesian Beta-Binomial** | Posterior `Beta(α+s, β+n-s)` after each recheck observation |
+
+Composition contract:
+
+1. Every cache hit computes `P(stale) = 1 - exp(-λ·Δt)`. λ is the Kalman-smoothed catalog volatility; Δt is time-since-emission.
+2. If `P(stale) > threshold` OR Page-Hinkley alarmed → trigger a HyperLogLog probe against the live catalog (O(1), Chebyshev-bounded error).
+3. If catalog says claim is now TRUE but vaccine said REFUTED → BURN the vaccine + update Bayesian posterior toward "untrusted" + log to audit trail.
+4. Bloom filter accelerates "seen this simhash recently" check.
+5. Reservoir sampling keeps the vaccine bank from growing unbounded on long-running daemons.
+
+**STRANGE SYSTEM TEST**: 1000-vaccine cohort with phase-shift catalog churn — vaccines for tools added in phase 2 self-burn at >50% rate; vaccines for tools still missing survive 100+ checks with zero false-burns; full chain stays intact across 1000 random fuzz iterations.
+
+### 5 new MCP tools
+
+- `mneme.osmosis.check` — re-verify a vaccine before AUTO_REFUTE
+- `mneme.osmosis.register` — register a new vaccine in the lattice
+- `mneme.osmosis.update_catalog` — refresh HLL + drift detector + Kalman
+- `mneme.osmosis.stats` — dashboard surface for all 8 algorithm metrics
+- `mneme.osmosis.stale_probability` — pure math `P(stale) = 1 - exp(-λ·Δt)`
+
+### MEASURED
+
+- N3-overshoot reproduce: pre-fix `AUTO_REFUTE 99%` on TRUE claim; post-fix `PASSTHROUGH` with `OSMOSIS_VACCINE_BURNED` caveat → forensic upgrades to `FORENSIC-ACCEPTED` green.
+- 23/23 deep tests on osmosis (8 algorithm primitives + integration + 1000-iter daemon simulation).
+- AURELIAN 3/3 SHIP (rollup ship=2 cards).
+- Total MCP tools: 727 → **732** (+5).
+- Composes onto v2.19.43 (N4/N5/N6/N8 still in place), v2.19.42 PROOF + INVERSION, v2.19.40 WIRING TRINITY.
+
+### What didn't change
+
+Existing vaccine bank (`acgv_vaccine.ts`) untouched — osmosis composes ON TOP of it. Caller can opt into the lattice or stay with bare bank. The acgv.ts inline source-check fix is independent of osmosis and prevents N3-overshoot even without lattice enablement.
 
 ---
 

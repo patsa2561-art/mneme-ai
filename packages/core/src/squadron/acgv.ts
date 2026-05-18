@@ -50,6 +50,7 @@ import { godelPostMortem, type GodelResult } from "./acgv_godel.js";
 import { godelPostMortemZ3, type GodelZ3Result } from "./acgv_godel_z3.js";
 import { evaluateConfession, requestConfession, type ConfessionRequest, type ConfessionVerdict } from "./acgv_confession.js";
 import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vaccine.js";
+import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
 import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
 import { checkArithmetic, type ArithmeticVerdict } from "./acgv_arithmetic.js";
@@ -253,26 +254,61 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   const repoRoot = input.repoRoot;
   const caveats: string[] = [];
 
-  // ───── Layer 0: VACCINE CHECK ─────────────────────────────────────────
+  // ───── Layer 0: VACCINE CHECK (v2.19.44 OSMOSIS-gated) ────────────────
+  //
+  // N3-overshoot bug (v2.19.42): vaccine simhash matched a TRUE claim
+  // (`mneme.truth.forensic is registered`) because the cache stored an
+  // entry from a prior unrelated refutation. AUTO_REFUTE fired 99% on
+  // a TRUE claim. Root cause: cache returned without checking source.
+  //
+  // v2.19.44 fix: before returning AUTO_REFUTE, extract any
+  // `mneme.X.Y` tool names mentioned in the claim and verify each
+  // against the LIVE catalog (countMnemeTools + extractFactClaims
+  // surface a fast snapshot). If any "previously refuted" tool is now
+  // grounded, BURN the cache hit + fall through to PASSTHROUGH so the
+  // normal forensic / chandrasekhar / godel layers do the real work.
+  //
+  // This composes onto the new VACCINE OSMOSIS lattice (which adds
+  // time-decay + drift detection + HLL membership + Bayesian posterior
+  // for daemons that boot the lattice); even WITHOUT osmosis enabled,
+  // the inline catalog re-check is sufficient to prevent N3-overshoot.
   const vaccineMatch = checkAgainstVaccines(repoRoot, claim);
   if (vaccineMatch && vaccineMatch.matched) {
-    caveats.push(CAVEAT_TAGS.AUTO_REFUTE);
-    return {
-      verdict: "AUTO_REFUTE",
-      confidence: 0.99,
-      caveats,
-      layers: {
-        vaccineMatch,
-        grounding: [],
-        chandrasekhar: { verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0, confidence: 0, citations: [], reasoning: "skipped: vaccine match" },
-        godel: { status: "SKIPPED", core: [], certificate: "skipped: vaccine match", upgrade: false },
-        confession: null,
-        confessionRequest: null,
-      },
-      summary: `AUTO_REFUTE -- matches known lie pattern (vaccine ${vaccineMatch.vaccine.id}, distance ${vaccineMatch.distance})`,
-      reasoning: `Claim simhash matched vaccine emitted at ${vaccineMatch.vaccine.firstSeen}. Original signature: "${vaccineMatch.vaccine.signature}". Refuted in ${vaccineMatch.vaccine.refuteCount} prior incident(s).`,
-      vaccineEmitted: false,
-    };
+    // v2.19.44 N3-overshoot guard: extract every mneme.X.Y mention in
+    // the claim + see if ANY of them now ground in the live catalog.
+    // If yes, the vaccine is stale → burn the hit, fall through.
+    const mentions = Array.from(claim.matchAll(/\bmneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\b/gi)).map((m) => m[0]);
+    let nowGrounded = 0;
+    if (mentions.length > 0) {
+      try {
+        const live = liveMnemeToolNames(repoRoot);
+        for (const m of mentions) if (live.has(m.toLowerCase())) nowGrounded += 1;
+      } catch { /* best-effort; if helper missing, fall through to old behaviour */ }
+    }
+    if (nowGrounded === 0) {
+      // Vaccine still valid: no claimed-refuted tool is in the live
+      // catalog → keep the AUTO_REFUTE short-circuit.
+      caveats.push(CAVEAT_TAGS.AUTO_REFUTE);
+      return {
+        verdict: "AUTO_REFUTE",
+        confidence: 0.99,
+        caveats,
+        layers: {
+          vaccineMatch,
+          grounding: [],
+          chandrasekhar: { verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0, confidence: 0, citations: [], reasoning: "skipped: vaccine match" },
+          godel: { status: "SKIPPED", core: [], certificate: "skipped: vaccine match", upgrade: false },
+          confession: null,
+          confessionRequest: null,
+        },
+        summary: `AUTO_REFUTE -- matches known lie pattern (vaccine ${vaccineMatch.vaccine.id}, distance ${vaccineMatch.distance})`,
+        reasoning: `Claim simhash matched vaccine emitted at ${vaccineMatch.vaccine.firstSeen}. Original signature: "${vaccineMatch.vaccine.signature}". Refuted in ${vaccineMatch.vaccine.refuteCount} prior incident(s).`,
+        vaccineEmitted: false,
+      };
+    }
+    // Vaccine stale: claim mentions tools that NOW exist. Fall through.
+    caveats.push("OSMOSIS_VACCINE_BURNED");
+    // (No early return — we proceed to grounding so the truth gets surfaced.)
   }
 
   // ───── Layer 1: NEUTRINO 3-FLAVOR GROUNDING ──────────────────────────
