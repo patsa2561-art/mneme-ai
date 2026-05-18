@@ -105,6 +105,7 @@ import { V1942_ALIAS_TOOLS } from "./_v1942_discoverability_aliases.js";
 import { V1942_PROOF_INVERSION_TOOLS } from "./_v1942_proof_inversion.js";
 import { V1944_OSMOSIS_TOOLS } from "./_v1944_osmosis.js";
 import { V1948_CHRONOSHEAF_TOOLS } from "./_v1948_chronosheaf.js";
+import { V1949_CHRONOSHEAF_P5_TOOLS } from "./_v1949_chronosheaf_p5.js";
 import { dnaSearchTool } from "./_dna_tool.js";
 import { genomeTools } from "./_genome_tools.js";
 import { toolMetaTools } from "./_tool_meta.js";
@@ -214,6 +215,7 @@ export function buildAllTools(): MnemeTool[] {
     ...V1942_PROOF_INVERSION_TOOLS,
     ...V1944_OSMOSIS_TOOLS,
     ...V1948_CHRONOSHEAF_TOOLS,
+    ...V1949_CHRONOSHEAF_P5_TOOLS,
     constitutionTool,
     dnaSearchTool,
     ...genomeTools,

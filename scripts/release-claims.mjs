@@ -205,6 +205,23 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.49": {
+    headline: "🌌 CHRONOSHEAF P5 — 12 new MCP tools (7 primitive surfaces + 4 HMAC-chained storage + 1 bonus audit_release_claim). Every P2 primitive AI-agent-callable. .mneme/chronosheaf/* HMAC-chained per APOSTILLE pattern with atomic writes + tamper-detected replay.",
+    tools: [
+      "mneme.chronosheaf.persistence",
+      "mneme.chronosheaf.rg_flow",
+      "mneme.chronosheaf.probe_next",
+      "mneme.chronosheaf.transport",
+      "mneme.chronosheaf.critical_edge",
+      "mneme.chronosheaf.reflect",
+      "mneme.chronosheaf.section",
+      "mneme.chronosheaf.storage_persist",
+      "mneme.chronosheaf.storage_read",
+      "mneme.chronosheaf.storage_verify",
+      "mneme.chronosheaf.storage_stats",
+      "mneme.chronosheaf.audit_release_claim",
+    ],
+  },
   "2.19.48": {
     headline: "🌌 CHRONOSHEAF P3 + P4 + 5 MCP TOOLS — P3 base space + P4 live ChronoSheafUpdate 7-step algorithm + 5 MCP tools. System test catches the v2.19.40 honesty bug class. 78/78 deep tests pass sub-1s.",
     tools: [

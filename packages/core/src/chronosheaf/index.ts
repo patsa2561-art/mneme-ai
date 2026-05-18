@@ -30,6 +30,9 @@ export * as aczel from "./aczel.js";
 export * as baseSpace from "./base_space.js";
 export * as liveUpdate from "./live_update.js";
 
+// v2.19.49 — P5 storage: HMAC-chained .mneme/chronosheaf/* persistence
+export * as storage from "./storage.js";
+
 export type { PainEntry, PainTopology, PrimitiveTag } from "./pain_catalog.js";
 export type { Site, SheafCover, Section0, Section1, SheafResult } from "./sheaf.js";
 export type { RGState, RGStep, Relevance } from "./rg_flow.js";
