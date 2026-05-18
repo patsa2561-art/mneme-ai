@@ -925,3 +925,9 @@ export * as vaccineOsmosis from "./vaccine_osmosis/index.js";
 //       (max-plus) semiring + Aczel anti-foundation bisimulation. No AI tool worldwide
 //       composes this set of primitives at the spec level.
 export * as chronosheaf from "./chronosheaf/index.js";
+
+// v2.19.51 — VERIFY CACHE (concurrency-coalescing memo for the verify hot path).
+//   Kills the 9x latency regression user reported on v2.19.49. 50 parallel
+//   identical verifies now resolve as 1 compute + 49 promise-coalesced awaiters.
+//   Generic — any `() => Promise<T>` can be wrapped. See packages/core/src/verify_cache/.
+export * as verifyCache from "./verify_cache/index.js";

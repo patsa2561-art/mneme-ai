@@ -125,9 +125,34 @@ import { antivirusTools } from "./_antivirus.js";
 import { whatsNewTool } from "./_whats_new.js";
 import { retrievalLabTools } from "./_retrieval_lab.js";
 
+// v2.19.51 — module-level memo for the catalog spread. Pure function;
+// only changes when the source tree changes (npm install / hot-reload).
+// 30s TTL: short enough to pick up dev-loop edits in `tsc -b -w`,
+// long enough that 50-parallel verify storms hit the cache 49 times.
+// Caches a FROZEN snapshot so callers can't mutate the cached array.
+let _allToolsCache: { tools: readonly MnemeTool[]; ts: number } | null = null;
+const ALL_TOOLS_TTL_MS = 30_000;
+
+/** For tests + ritual cleanup. Clears the memo. */
+export function _resetBuildAllToolsCache(): void { _allToolsCache = null; }
+
 /** All Mneme tools, in display order. The capabilities syllabus comes first
- *  so AI clients that read tool lists top-down see it immediately. */
+ *  so AI clients that read tool lists top-down see it immediately.
+ *
+ *  v2.19.51: memoized for ALL_TOOLS_TTL_MS to kill the 9x parallel-verify
+ *  regression. Returns a defensive copy so callers can sort/mutate without
+ *  poisoning the cache. */
 export function buildAllTools(): MnemeTool[] {
+  const now = Date.now();
+  if (_allToolsCache && (now - _allToolsCache.ts) < ALL_TOOLS_TTL_MS) {
+    return _allToolsCache.tools.slice();
+  }
+  const fresh = _buildAllToolsUncached();
+  _allToolsCache = { tools: Object.freeze(fresh.slice()), ts: now };
+  return fresh;
+}
+
+function _buildAllToolsUncached(): MnemeTool[] {
   return [
     capabilitiesTool,
     understandIntentTool,

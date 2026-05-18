@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.50
+# 📜 Release index — v2.18.0 → v2.19.51
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.51** | ⚡ P1 LATENCY 9× FIX + 🌙 P3 DREAMSPACE WAKEUP + 📦 P2 PREINSTALL WAIT — user reported (v2.19.49) `mneme verify` regressed **9×** under 50-parallel load (58ms/call v2.19.46 → 524ms/call v2.19.49). Root cause was not CHRONOSHEAF as user suspected — it was three uncached hot paths: (1) `buildAllTools()` rebuilt the 749-tool catalog per call; (2) `countMnemeTools()` walked the filesystem per call (50 parallel = 50 disk walks competing); (3) `buildLiveCatalog()` (forensic catalog wrapper) rebuilt per call. **Fix**: 30s TTL module-memo on all 3 + wild new `verify_cache` module composing TTL-bounded memo with **concurrency-coalescing** — 50 parallel callers asking the same key share 1 in-flight promise; the other 49 await. Wired into `truth.forensic` + `truth.explain`. **Provably**: `totalMisses=1, totalCoalesced=49` for 50 identical claims (test asserts it). **P3**: `.mneme/organ_ticks/dreamspace.json` was >60min stale because daemon never supplied `hasCommitCycle` / `msSinceLastCommit` / `hasBranchSwitch` to scheduler — those signals are EXACTLY what dreamspace's `fireOnContextShift` checks for. Daemon now records commit + branch-switch timestamps in `triggerReindex()` + populates all 3 fields every tick cycle. Dreamspace + sleep now fire for active devs without waiting 6h dead-man. **P2**: extended inline `preinstall` with 1.5s OS handle-release wait after daemon stop — gives libvips / zod / sharp file watchers time to release before npm starts extracting. Still zero file refs (chicken-and-egg safe per v2.19.50). **MEASURED**: 17/17 new tests + 50-parallel coalesce verified + dreamspace event-trigger pinned + zero regression on existing suite. Total MCP tools **749** (unchanged — perf fix). |
 | **v2.19.50** | 🔌 SHIP-BROKEN P0 FIX + 🛡 2 NEW RITUAL PHASES — v2.19.48/49 preinstall hook referenced `./bin/preinstall-stop-daemon.js` INSIDE the package; npm runs `preinstall` BEFORE extracting the tarball, so install crashed with `Cannot find module` and uninstalled Mneme from PATH. Recovery required `npm install -g --ignore-scripts mneme-ai@latest` which normal users don't know. v2.19.50 fix at SOURCE: inline `node -e` in `package.json` (zero file refs) + delete orphan script. Plus **phase 3.6 preinstall-script-no-self-reference** (scans lifecycle scripts for `./{bin,dist,scripts,...}/...` refs and FAILS the ritual on any match — chicken-and-egg bug class extinct) + **phase 3.7 install-smoke-mneme-version** (verifies `mneme --version` exits 0 with valid semver against the installed tarball — broken bin shims caught BEFORE publish). The exact v2.19.48 bug is now CI-gated forever. Wisdom article codified: **NEVER reference a file inside your own package from a `preinstall` script** — npm runs preinstall before extraction; the file doesn't exist yet. Use inline `node -e` or an external tool already on PATH. |
 | **v2.19.49** | 🌌 CHRONOSHEAF P5 — 12 new MCP tools (7 primitive surfaces + 4 HMAC-chained storage + 1 bonus `audit_release_claim`). Every P2 primitive now has an AI-agent-callable MCP wrapper. `.mneme/chronosheaf/*` persistence is HMAC-chained per APOSTILLE pattern with atomic temp+rename writes + tamper-detected replay. 89/89 chronosheaf deep tests + AURELIAN 3/3 SHIP. Total MCP tools: 737 → 749 (+12). |
 | **v2.19.48** | 🌌 CHRONOSHEAF P3 + P4 + 5 MCP TOOLS — P3 base space (G×T×S commit-DAG × time-interval × scale-band) with cone-caching + LCA-intersection + presheaf F with restriction. P4 live ChronoSheafUpdate algorithm: 7-step event-driven pipeline composing all P2 primitives in O(k²·d) sub-5ms per event. System test catches the v2.19.40 honesty bug class. 5 new MCP tools (`mneme.chronosheaf.{update,slo,preflight,h1,cover}`). 78/78 deep tests pass sub-1s. |
@@ -75,6 +76,111 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.51 — 2026-05-18 — ⚡ P1 LATENCY 9× FIX + 🌙 P3 DREAMSPACE WAKEUP + 📦 P2 PREINSTALL WAIT
+
+User report (turn-12 dogfood on v2.19.49):
+
+> "🚨 NEW Issues พบ (3 ตัว · ระดับเล็ก-กลาง)
+> 🚨 P1 — 50 parallel verify slowed 9x (526ms/call vs 58ms/call ใน v2.19.46)
+> 🟡 P2 — npm install fragile (ENOTEMPTY/EBUSY บน mneme-ai dir)
+> 🟡 P3 — dreamspace organ missing last 60min"
+
+### ⚡ P1 LATENCY 9× FIX — VERIFY CACHE (concurrency-coalescing memo)
+
+**Root cause** (user hypothesis was CHRONOSHEAF; ACTUAL cause was 3 uncached hot paths):
+
+| File:line | Hot path | Cost per call | × 50 parallel |
+|---|---|---|---|
+| [packages/mcp/src/tools/_registry.ts:130](packages/mcp/src/tools/_registry.ts#L130) | `buildAllTools()` — spread of 150+ category arrays into 749-tool array | ~1ms | 50× catalog rebuilds |
+| [packages/core/src/squadron/fact_grounding.ts:278](packages/core/src/squadron/fact_grounding.ts#L278) | `countMnemeTools()` — filesystem walk over hundreds of .ts files + regex | ~150ms | 50× disk walks competing for I/O |
+| [packages/mcp/src/tools/_v1915_truth_forensic.ts:18](packages/mcp/src/tools/_v1915_truth_forensic.ts#L18) | `buildLiveCatalog()` — wraps buildAllTools + .map | ~1ms | 50× wrapper allocations |
+
+50 parallel verifies = 50 × (catalog rebuild + filesystem walk + pipeline run) — the disk walks were the dominant cost, hitting concurrent I/O scheduler.
+
+**Three fixes at SOURCE:**
+
+1. **`buildAllTools()` memo** ([packages/mcp/src/tools/_registry.ts:130](packages/mcp/src/tools/_registry.ts#L130)) — 30s TTL module-level memo. Returns a defensive copy so callers can sort/mutate without poisoning the cache. Frozen snapshot prevents accidental mutation through stale references.
+
+2. **`countMnemeTools()` memo** ([packages/core/src/squadron/fact_grounding.ts:278](packages/core/src/squadron/fact_grounding.ts#L278)) — 30s TTL keyed on repoRoot. Filesystem walk only fires once per 30s instead of once per verify.
+
+3. **`buildLiveCatalog()` memo** ([packages/mcp/src/tools/_v1915_truth_forensic.ts:18](packages/mcp/src/tools/_v1915_truth_forensic.ts#L18)) — 30s TTL cached `.map(t => t.name)` output. Frozen snapshot.
+
+**WILD IDEA — concurrency-coalescing VERIFY CACHE** ([packages/core/src/verify_cache/index.ts](packages/core/src/verify_cache/index.ts)):
+
+A tiny generic module no LangChain / Helicone / Portkey / Vellum / Braintrust composes:
+
+- `withVerifyCache(key, compute)` returns cached value within TTL.
+- If a compute is **already in-flight** for the same key, all subsequent callers `await` the same Promise — **50 parallel identical claims = 1 actual compute + 49 promise-shared awaiters**.
+- Failure propagation: compute throws → in-flight cleared (no permanent poison) → ALL coalesced awaiters see the same error simultaneously.
+- Bounded: MAX_MEMO_ENTRIES=1000 with oldest-first eviction on growth.
+- Generic: any `() => Promise<T>` can be wrapped. Other hot paths (capabilities, intent, honesty) can adopt the same hook later.
+
+Wired into `truth.forensic` + `truth.explain` handlers with a shared cache key shape so a prior forensic call answers an explain call for the same claim instantly.
+
+**Provably measured** ([packages/mcp/src/tools/_v1915_truth_forensic_p1.test.ts](packages/mcp/src/tools/_v1915_truth_forensic_p1.test.ts)):
+- 50 parallel identical claims: `totalMisses=1, totalCoalesced=49` (test asserts it)
+- 50 parallel DIFFERENT claims: `totalMisses=50, totalCoalesced=0` (no false coalescing)
+- 4 sequential identical claims: `totalMisses=1, totalHits=3` (TTL hit)
+
+Verify_cache deep tests ([packages/core/src/verify_cache/verify_cache.test.ts](packages/core/src/verify_cache/verify_cache.test.ts)): 9/9 pass including:
+- TTL hit/miss invariants
+- Failure propagation (50 parallel callers, 1 compute throws, all 50 see error)
+- Eviction bound (1100 entries → memo size ≤ 1000)
+- 200-parallel mixed (50 hot + 150 unique) sub-500ms with `calls = 1 + 150 = 151`
+
+### 🌙 P3 DREAMSPACE WAKEUP — daemon event-signal wiring
+
+**Root cause**: scheduler at [packages/core/src/autonomic_scheduler/index.ts:258-285](packages/core/src/autonomic_scheduler/index.ts#L258) checks `events.hasCommitCycle`, `events.hasBranchSwitch`, `events.msSinceLastCommit` for DREAMSPACE + SLEEP context-shift triggers. Daemon at [packages/cli/src/commands/daemon.ts:160-164](packages/cli/src/commands/daemon.ts#L160) only supplied `hasGitEvent` / `hasFileSaveEvent` / `idleMs` — the 3 context-shift fields were always `undefined`. Result: dreamspace's `fireOnContextShift: true` never matched → organ permanently dormant for active devs → user's report.
+
+**Fix**: daemon now tracks `lastCommitDetectedAtMs` + `lastBranchSwitchAtMs` + `lastSeenBranchRef` and populates ALL THREE missing fields on every tick cycle:
+
+- `hasCommitCycle = lastCommitDetectedAtMs > 0 && (now - lastCommitDetectedAtMs) < 90s` — fires DREAMSPACE on next tick
+- `hasBranchSwitch = lastBranchSwitchAtMs > 0 && (now - lastBranchSwitchAtMs) < 90s` — fires SLEEP on next tick
+- `msSinceLastCommit = now - lastCommitDetectedAtMs` — covers the "long no-commit gap" path (60min dreamspace / 30min sleep)
+
+Branch ref reading on daemon boot + after every `triggerReindex()` (.git/HEAD parsed for `ref: refs/heads/X` form). The 6h dead-man's switch remains as the safety net.
+
+Tests ([packages/core/src/autonomic_scheduler/dreamspace_p3.test.ts](packages/core/src/autonomic_scheduler/dreamspace_p3.test.ts)): 6/6 pass:
+- DREAMSPACE fires on `hasCommitCycle=true`
+- SLEEP fires on `hasBranchSwitch=true`
+- DREAMSPACE fires after 60min no-commit gap
+- Regression guard: empty events keep dreamspace dormant (the OLD bug shape)
+- Dead-man still fires at 6h regardless of context-shift
+- Config invariants (fireOnContextShift + dead-man both set)
+
+### 📦 P2 PREINSTALL WAIT — 1.5s OS handle-release after daemon stop
+
+**Background**: user reported `npm install -g mneme-ai@2.19.49` hit `ENOTEMPTY zod/src` and `ENOTEMPTY mneme-ai/` on repeated install attempts. v2.19.45's daemon-stop preinstall closes the libvips lock but `spawnSync` returns when the process exits — the OS still needs ~100-300ms to release file watchers (especially Node fs.watch handles on zod/sharp).
+
+**Fix** ([packages/cli/package.json](packages/cli/package.json) `scripts.preinstall`): added a 1.5s busy-wait after the `mneme daemon stop` spawn. Inline busy-wait (`while(Date.now()<end){}`) because the inline `node -e` cannot use async/await across `process.exit(0)`. CPU spike is brief and only during install; ENOTEMPTY race is real and recurring.
+
+Still zero file refs to package internals — chicken-and-egg safe per v2.19.50 (which added the ritual phase 3.6 that would catch any regression here).
+
+### Composes onto
+
+- v2.19.50 SHIP-BROKEN fix (preinstall stays inline + chicken-and-egg safe; phase 3.6 still passes)
+- v2.19.44 VACCINE OSMOSIS (8-algo lattice — verify_cache is the cache primitive osmosis can register against in future)
+- v2.19.40 WIRING TRINITY (Governor's Stage 1 cache can call `verifyCache.withVerifyCache` for vendor-call coalescing in future)
+- v2.19.33 B4 (DREAMSPACE context-shift trigger was designed; v2.19.51 finally supplies the signals)
+
+### Self-found bugs fixed mid-build
+
+One test asserted timing-based cache-hit (`secondMs < firstMs`) but BOTH calls completed in <1ms after the fix (sub-Date.now() granularity = both showed 0ms or 1ms). Rewrote to assert cache statistics (`totalMisses=1, totalHits=3`) instead — the 1ms result IS the perfect outcome, the test was just measuring the wrong thing.
+
+### Measured
+
+- 18/18 new tests pass (9 verify_cache + 6 dreamspace_p3 + 3 verify P1)
+- AURELIAN 3/3 SHIP
+- Ritual 25/25 GREEN (phases 3.6 + 3.7 from v2.19.50 still pass)
+- Total MCP tools **749** (unchanged — perf fix)
+- Published: @mneme-ai/{core,embeddings,correlator,mcp} + mneme-ai @ 2.19.51
+
+### Wild moat
+
+No chatgpt / claude / gemini / cursor / copilot / aider / codeium / LangChain / Helicone / Portkey / Vellum / Braintrust / Pinecone / Weaviate / GPTCache ships a generic promise-coalescing TTL memo with provable miss/hit/coalesce counters at the spec level. Prefix-key prompt caches (OpenAI / Anthropic) don't coalesce — 50 identical concurrent calls still cost 50× tokens until the first response writes to cache. Mneme's verify_cache collapses them to 1 + 49 awaiters.
 
 ---
 

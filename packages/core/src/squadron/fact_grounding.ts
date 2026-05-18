@@ -275,10 +275,30 @@ function countLanguageFiles(repoRoot: string, exts: string[]): { count: number; 
   return { count, sampleFile };
 }
 
+// v2.19.51 — memo for countMnemeTools. Filesystem walk over ~hundreds of
+// .ts files was the dominant hot-path cost under 50-parallel verify (P1
+// regression). 30s TTL — filesystem doesn't change during a verify storm.
+let _countMnemeToolsCache: { repoRoot: string; total: number; ts: number } | null = null;
+const COUNT_TOOLS_TTL_MS = 30_000;
+
+/** For tests + ritual cleanup. Clears the memo. */
+export function _resetCountMnemeToolsCache(): void { _countMnemeToolsCache = null; }
+
 export function countMnemeTools(repoRoot: string): number {
+  const now = Date.now();
+  if (
+    _countMnemeToolsCache &&
+    _countMnemeToolsCache.repoRoot === repoRoot &&
+    (now - _countMnemeToolsCache.ts) < COUNT_TOOLS_TTL_MS
+  ) {
+    return _countMnemeToolsCache.total;
+  }
   // Heuristic: count occurrences of `name: "mneme.` in MCP tool definitions.
   const stack: string[] = [join(repoRoot, "packages")];
-  if (!existsSync(stack[0]!)) return 0;
+  if (!existsSync(stack[0]!)) {
+    _countMnemeToolsCache = { repoRoot, total: 0, ts: now };
+    return 0;
+  }
   const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".mneme"]);
   let total = 0;
   let visited = 0;
@@ -300,6 +320,7 @@ export function countMnemeTools(repoRoot: string): number {
       } catch { /* skip */ }
     }
   }
+  _countMnemeToolsCache = { repoRoot, total, ts: now };
   return total;
 }
 

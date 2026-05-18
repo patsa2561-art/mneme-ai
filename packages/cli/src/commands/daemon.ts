@@ -151,16 +151,39 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   let organHealth: Awaited<ReturnType<typeof import("@mneme-ai/core").autonomicScheduler.runTickCycle>>["newHealth"] = [];
   let lastReflexEventMs = 0;
   let lastUserActivityMs = Date.now();
+  // v2.19.51 P3 fix — supply commit-cycle + branch-switch signals to scheduler
+  // so DREAMSPACE + SLEEP context-shift triggers actually fire for active devs.
+  // Before: daemon only set hasGitEvent (covers REFLEX/HORMONAL); the
+  // hasCommitCycle / msSinceLastCommit / hasBranchSwitch fields were undefined
+  // so dreamspace's `fireOnContextShift` never matched → organ went dormant
+  // for entire sessions until the 6h dead-man finally fired.
+  let lastCommitDetectedAtMs = 0;
+  let lastBranchSwitchAtMs = 0;
+  let lastSeenBranchRef: string | null = null;
   const recordUserActivity = () => { lastUserActivityMs = Date.now(); };
+
+  // Boot-time: try to read current branch ref so we can detect switches.
+  try {
+    const headFile = join(repoRoot, ".git", "HEAD");
+    if (existsSync(headFile)) {
+      const headBody = readFileSync(headFile, "utf8").trim();
+      lastSeenBranchRef = headBody.startsWith("ref: ") ? headBody.slice(5).trim() : headBody;
+    }
+  } catch { /* non-fatal — branch detection just won't fire */ }
 
   const tickAllOrgans = async () => {
     try {
       const { autonomicScheduler } = await import("@mneme-ai/core");
       const nowMs = Date.now();
+      const msSinceLastCommit = lastCommitDetectedAtMs > 0 ? (nowMs - lastCommitDetectedAtMs) : Number.POSITIVE_INFINITY;
       const events = {
         hasGitEvent: (nowMs - lastReflexEventMs) < 90_000, // git event in last 90s
         hasFileSaveEvent: false, // future: hook fs.watch for non-.git files
         idleMs: nowMs - lastUserActivityMs,
+        // v2.19.51 P3 — context-shift signals for DREAMSPACE + SLEEP.
+        hasCommitCycle: lastCommitDetectedAtMs > 0 && (nowMs - lastCommitDetectedAtMs) < 90_000,
+        msSinceLastCommit: Number.isFinite(msSinceLastCommit) ? msSinceLastCommit : undefined,
+        hasBranchSwitch: lastBranchSwitchAtMs > 0 && (nowMs - lastBranchSwitchAtMs) < 90_000,
       };
       // Caller-supplied invoker writes a minimal ledger marker per organ
       // (full per-organ logic is in MCP wrappers; daemon's job is to TICK).
@@ -214,6 +237,20 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
       reindexCount++;
       // v2.19.28 — surface git event to scheduler so REFLEX + HORMONAL fire on next tick.
       lastReflexEventMs = Date.now();
+      // v2.19.51 P3 — record commit-cycle + branch-switch timestamps so
+      // DREAMSPACE + SLEEP context-shift triggers fire on next tick cycle.
+      lastCommitDetectedAtMs = Date.now();
+      try {
+        const headFile = join(repoRoot, ".git", "HEAD");
+        if (existsSync(headFile)) {
+          const headBody = readFileSync(headFile, "utf8").trim();
+          const currentRef = headBody.startsWith("ref: ") ? headBody.slice(5).trim() : headBody;
+          if (lastSeenBranchRef !== null && currentRef !== lastSeenBranchRef) {
+            lastBranchSwitchAtMs = Date.now();
+          }
+          lastSeenBranchRef = currentRef;
+        }
+      } catch { /* branch detection optional; commit-cycle still fires */ }
       recordUserActivity();
       try {
         spawnSync("mneme", ["index", "--cap", "1000"], { cwd: repoRoot, stdio: "ignore" });

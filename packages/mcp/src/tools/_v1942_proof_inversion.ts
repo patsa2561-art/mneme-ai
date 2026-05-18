@@ -45,9 +45,14 @@ export const proofMintTool: MnemeTool = {
 };
 
 export const proofVerifyTool: MnemeTool = {
-  name: "mneme.proof.verify",
+  // v2.19.51 — renamed from `mneme.proof.verify` to fix collision with v2.19.10
+  // PROOF-CARRYING WRAPPER's `mneme.proof.verify` (different domain: chain
+  // verification vs savings-cert verification). Both shipped in the registry
+  // since v2.19.42; the Map collision silently dropped one. v2.19.51 keeps
+  // the v2.19.10 name canonical + renames savings verifier to a domain-clear name.
+  name: "mneme.proof.verify_savings",
   category: "audit",
-  description: "🪙 PROOF OF SAVING — verify a savings certificate. Recomputes Merkle root + HMAC + arithmetic invariants. Auditors can run this OFFLINE in ~5ms.",
+  description: "🪙 PROOF OF SAVING — verify a savings certificate. Recomputes Merkle root + HMAC + arithmetic invariants. Auditors can run this OFFLINE in ~5ms. (Renamed in v2.19.51 from mneme.proof.verify to disambiguate from v2.19.10 proof-carrying chain verifier.)",
   whenToUse: "Procurement / audit / billing reconciliation. Pass the cert + the original decisions list.",
   triggers: ["proof verify", "verify savings cert"],
   inputSchema: { type: "object", properties: { cert: { type: "object" }, decisions: { type: "array" } }, required: ["cert", "decisions"] },

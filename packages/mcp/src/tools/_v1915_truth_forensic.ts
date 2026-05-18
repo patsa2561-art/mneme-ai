@@ -15,10 +15,24 @@
 
 import type { MnemeTool } from "./_types.js";
 
+// v2.19.51 — catalog memo (30s TTL). Was rebuilt per verify call;
+// 50-parallel verifies hit this 50× before. Now: 1 build + 49 hits.
+let _liveCatalogCache: { catalog: readonly string[]; ts: number } | null = null;
+const LIVE_CATALOG_TTL_MS = 30_000;
+
 async function buildLiveCatalog(): Promise<string[]> {
+  const now = Date.now();
+  if (_liveCatalogCache && (now - _liveCatalogCache.ts) < LIVE_CATALOG_TTL_MS) {
+    return _liveCatalogCache.catalog.slice();
+  }
   const { buildAllTools } = await import("./_registry.js");
-  return buildAllTools().map((t) => t.name);
+  const fresh = buildAllTools().map((t) => t.name);
+  _liveCatalogCache = { catalog: Object.freeze(fresh.slice()), ts: now };
+  return fresh;
 }
+
+/** For tests + ritual cleanup. */
+export function _resetLiveCatalogCache(): void { _liveCatalogCache = null; }
 
 export const truthForensicTool: MnemeTool = {
   name: "mneme.truth.forensic",
@@ -45,20 +59,29 @@ export const truthForensicTool: MnemeTool = {
   pitfalls: ["UNKNOWN ≠ ACCEPTED — Mneme refuses to auto-accept untested claims. Add a specific tool name / count / version / file path to make the claim testable."],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
-    const catalog = await buildLiveCatalog();
-    const installedVersion = (args["installedVersion"] as string | undefined)
-      ?? (() => { try { return String(require("../../package.json").version); } catch { return undefined; } })();
-    const { existsSync } = await import("node:fs");
-    const { resolve: pathResolve } = await import("node:path");
-    const repoRoot = process.cwd();
-    const r = core.truthForensic.forensicVerify({
-      claim: String(args["claim"]),
-      groundTruth: {
-        mcpCatalog: catalog,
-        ...(installedVersion ? { installedVersion } : {}),
-        fileExists: (p: string) => existsSync(pathResolve(repoRoot, p)),
-      },
-      externalRefutationsFound: args["externalRefutationsFound"] as number | undefined,
+    const claim = String(args["claim"]);
+    const extRefs = args["externalRefutationsFound"] as number | undefined;
+    const versionOverride = args["installedVersion"] as string | undefined;
+    // v2.19.51 — concurrency-coalesce identical claims. 50 parallel = 1 compute.
+    // Key includes externalRefutationsFound + versionOverride so different ground-truth
+    // overrides don't collide.
+    const cacheKey = core.verifyCache.claimKey(claim, `forensic|er=${extRefs ?? ""}|v=${versionOverride ?? ""}`);
+    const r = await core.verifyCache.withVerifyCache(cacheKey, async () => {
+      const catalog = await buildLiveCatalog();
+      const installedVersion = versionOverride
+        ?? (() => { try { return String(require("../../package.json").version); } catch { return undefined; } })();
+      const { existsSync } = await import("node:fs");
+      const { resolve: pathResolve } = await import("node:path");
+      const repoRoot = process.cwd();
+      return core.truthForensic.forensicVerify({
+        claim,
+        groundTruth: {
+          mcpCatalog: catalog,
+          ...(installedVersion ? { installedVersion } : {}),
+          fileExists: (p: string) => existsSync(pathResolve(repoRoot, p)),
+        },
+        externalRefutationsFound: extRefs,
+      });
     });
     return { data: r, wisdom: core.truthForensic.formatForensicLine(r), confidence: { level: "high" } };
   },
@@ -133,18 +156,24 @@ export const truthExplainTool: MnemeTool = {
   pitfalls: ["The explanation is plain English — designed for non-engineers."],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
-    const catalog = await buildLiveCatalog();
-    const installedVersion = (() => { try { return String(require("../../package.json").version); } catch { return undefined; } })();
-    const { existsSync } = await import("node:fs");
-    const { resolve: pathResolve } = await import("node:path");
-    const repoRoot = process.cwd();
-    const r = core.truthForensic.forensicVerify({
-      claim: String(args["claim"]),
-      groundTruth: {
-        mcpCatalog: catalog,
-        ...(installedVersion ? { installedVersion } : {}),
-        fileExists: (p: string) => existsSync(pathResolve(repoRoot, p)),
-      },
+    const claim = String(args["claim"]);
+    // v2.19.51 — share verdict cache with truth.forensic (same key shape) so
+    // a prior forensic call for the same claim returns instantly here.
+    const cacheKey = core.verifyCache.claimKey(claim, `forensic|er=|v=`);
+    const r = await core.verifyCache.withVerifyCache(cacheKey, async () => {
+      const catalog = await buildLiveCatalog();
+      const installedVersion = (() => { try { return String(require("../../package.json").version); } catch { return undefined; } })();
+      const { existsSync } = await import("node:fs");
+      const { resolve: pathResolve } = await import("node:path");
+      const repoRoot = process.cwd();
+      return core.truthForensic.forensicVerify({
+        claim,
+        groundTruth: {
+          mcpCatalog: catalog,
+          ...(installedVersion ? { installedVersion } : {}),
+          fileExists: (p: string) => existsSync(pathResolve(repoRoot, p)),
+        },
+      });
     });
     return { data: { verdict: r.verdict, explanation: r.explanation, certificate: r.certificate }, wisdom: core.truthForensic.formatForensicLine(r), confidence: { level: "high" } };
   },
