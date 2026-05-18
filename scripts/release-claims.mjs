@@ -205,6 +205,23 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.40": {
+    headline: "🧠🦴🕸 WIRING TRINITY — 3 modules wiring all 13 token-saving primitives into one auto-operation layer. TOKEN GOVERNOR (5-stage cascade: cache → local → cheap → expensive → lie-tax via 12-callback context). PROMPT FOSSIL (the first AI tool with prompt-git diff-based reuse; REUSE / DIFF / MISS bands; freshness-tuned file-volatility decay; HMAC-chained store). GANGLION (the black-sheep wiring innovation — self-rewiring synapse graph where every primitive bids in a Vickrey-style auction; Hebbian rule strengthens winners + decays losers; graph evolves to user's actual workflow; replay-deterministic HMAC-chained update log). 12 new MCP tools + 53 deep tests + 3000+ fuzz iterations.",
+    tools: [
+      "mneme.governor.govern",
+      "mneme.governor.aggregate",
+      "mneme.governor.verify",
+      "mneme.fossil.mint",
+      "mneme.fossil.lookup",
+      "mneme.fossil.diff_prompt",
+      "mneme.fossil.stats",
+      "mneme.ganglion.classify",
+      "mneme.ganglion.auction",
+      "mneme.ganglion.record",
+      "mneme.ganglion.preferred",
+      "mneme.ganglion.stats",
+    ],
+  },
   "2.19.39": {
     headline: "🟡 N2 ROOT-CAUSE + 🟢 README POLISH — ACGV arithmetic layer abstain (status='skipped' when results.length===0) plus defensive guard in runACGVAsync (constraints.length>0 before PASSTHROUGH→FUSION upgrade) plus VAGUE-IDENTIFIER PARADOX SNIFFER in truth_forensic that catches 'X exists AND X does not exist' even without typed shape. Plus README hero rewrite — short cool sentence + AI-agent install block. No new MCP tools (fix at source extends existing forensicVerify + checkArithmetic contracts); 16 regression tests + 1100-iter fuzz pinned forever.",
     tools: [],

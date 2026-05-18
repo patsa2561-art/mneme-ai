@@ -895,3 +895,11 @@ export * as vendorGhost from "./vendor_ghost/index.js";
 export * as trinityVote from "./trinity_vote/index.js";
 export * as insuranceMarket from "./insurance_market/index.js";
 export * as vendorBoomerang from "./vendor_boomerang/index.js";
+
+// v2.19.40 — WIRING TRINITY (meta-orchestrator + prompt git + self-rewiring synapse graph)
+//   TOKEN GOVERNOR — 5-stage cascade wiring the 13 primitives into one auto-operation layer
+//   PROMPT FOSSIL  — embedding-keyed prompt cache with diff-mode replay (saves 60-90% on similar prompts)
+//   GANGLION       — self-rewiring synapse graph; primitives bid; Hebbian rule strengthens winners
+export * as tokenGovernor from "./token_governor/index.js";
+export * as promptFossil from "./prompt_fossil/index.js";
+export * as ganglion from "./ganglion/index.js";
