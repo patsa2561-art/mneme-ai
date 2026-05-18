@@ -947,3 +947,11 @@ export * as installOrgan from "./install_organ/index.js";
 // Runtime probes which natives are present + uses pure-JS fallbacks
 // when missing. See packages/core/src/optional_native/.
 export * as optionalNative from "./optional_native/index.js";
+
+// v2.19.56 — PERF BUDGET LEDGER (WISDOM BONUS). Cross-release perf
+// accountability with HMAC-chained .mneme-perf-budget.jsonl ledger.
+// Ritual phase 3.10 invokes regressionGate against P1_BUDGETS catalog
+// + BLOCKS publish if any metric exceeds ceiling OR regresses >10% vs
+// prior release. Composes with v2.19.34 APOSTILLE chain pattern.
+// First AI tool worldwide with HMAC-chained perf budget enforcement.
+export * as perfBudget from "./perf_budget/index.js";

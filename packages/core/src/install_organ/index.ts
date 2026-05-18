@@ -27,7 +27,7 @@
  * probe + handoff signal. The combination is unique. First-mover forever.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, unlinkSync, statSync, openSync, closeSync, appendFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, unlinkSync, statSync, openSync, closeSync, appendFileSync, writeFile as writeFileAsync, appendFile as appendFileAsync } from "node:fs";
 import { join } from "node:path";
 import { homedir, hostname, platform } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -111,7 +111,12 @@ export function ensureOrganDirs(): void {
 export function registerHeartbeat(role: MnemeRole, holdsPaths?: string[]): { intervalId: NodeJS.Timeout | null; beatPath: string } {
   ensureOrganDirs();
   const beatPath = join(heartbeatDir(), `${process.pid}.beat`);
-  const writeOne = () => {
+  // v2.19.56 — first write is SYNC so the beat file exists by the time the
+  // function returns (callers can assume registration is visible). Subsequent
+  // periodic writes use the ASYNC fire-and-forget variant so the daemon's
+  // event loop never blocks on filesystem latency. Fallback to sync if
+  // async writeFile is unavailable in the runtime.
+  const writeOne = (mode: "sync" | "async" = "async") => {
     const beat: Heartbeat = {
       v: PROTOCOL_VERSION,
       pid: process.pid,
@@ -124,13 +129,26 @@ export function registerHeartbeat(role: MnemeRole, holdsPaths?: string[]): { int
       platform: platform(),
       ...(holdsPaths && holdsPaths.length > 0 ? { holdsPaths } : {}),
     };
-    try { writeFileSync(beatPath, JSON.stringify(beat), { encoding: "utf8", mode: 0o600 }); } catch { /* best-effort */ }
+    const body = JSON.stringify(beat);
+    if (mode === "sync") {
+      try { writeFileSync(beatPath, body, { encoding: "utf8", mode: 0o600 }); } catch { /* best-effort */ }
+      return;
+    }
+    // Async fire-and-forget — never blocks the event loop. Errors are swallowed
+    // because the next beat (5s later) will retry; one missed beat is harmless.
+    try {
+      writeFileAsync(beatPath, body, { encoding: "utf8", mode: 0o600 }, () => { /* error → next tick retries */ });
+    } catch {
+      // If async writeFile is somehow unavailable, fall back to sync
+      try { writeFileSync(beatPath, body, { encoding: "utf8", mode: 0o600 }); } catch { /* */ }
+    }
   };
-  // Write once immediately + every interval
-  writeOne();
+  // v2.19.56 — first write SYNC so listHeartbeats() can see this process
+  // immediately. Subsequent writes async (non-blocking).
+  writeOne("sync");
   let intervalId: NodeJS.Timeout | null = null;
   try {
-    intervalId = setInterval(writeOne, HEARTBEAT_INTERVAL_MS);
+    intervalId = setInterval(() => writeOne("async"), HEARTBEAT_INTERVAL_MS);
     if (intervalId.unref) intervalId.unref(); // don't keep event loop alive
   } catch { /* setInterval not available in some test envs */ }
   // Append spawn event to lineage
@@ -190,6 +208,36 @@ export function classifyHeartbeats(now: number = Date.now()): HeartbeatStatus[] 
     out.push({ beat, ageMs, pidAlive, status });
   }
   return out;
+}
+
+/**
+ * v2.19.56 — CHEAP HEARTBEAT-ACTIVITY PROBE.
+ *
+ * The 18x P1 latency regression in v2.19.54 was caused by autonomic_breath_hook
+ * calling classifyHeartbeats() on EVERY CLI startup — which does readdirSync +
+ * readFileSync × N + isPidAlive × N. With 50 parallel `mneme verify` each doing
+ * this on cold start, contention hit ~18s. This probe replaces the full scan
+ * with a single statSync on the heartbeat dir — ~1ms even under heavy contention.
+ *
+ * Semantics: if ANY heartbeat file was written within the last `thresholdMs`,
+ * we know another Mneme process is alive + writing. That's enough to throttle
+ * a respawn race without reading every beat file.
+ *
+ * Returns:
+ *   - true  → recent activity detected (throttle the caller)
+ *   - false → no recent activity OR dir doesn't exist OR stat failed (caller can proceed)
+ *
+ * Conservative: errors → false (don't over-throttle).
+ */
+export function recentHeartbeatActivity(thresholdMs: number, now: number = Date.now()): boolean {
+  try {
+    const dir = heartbeatDir();
+    if (!existsSync(dir)) return false;
+    const st = statSync(dir);
+    return (now - st.mtimeMs) < thresholdMs;
+  } catch {
+    return false;
+  }
 }
 
 /** Cross-platform "is this PID alive right now?" — does NOT signal it. */

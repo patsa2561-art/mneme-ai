@@ -84,23 +84,26 @@ export async function ensureAutonomicBreath(opts: { cwd: string; commandName: st
   if (!decision.shouldRespawn) {
     return { action: "already_alive", ms: Date.now() - t0 };
   }
-  // v2.19.53 — RESPAWN THROTTLE. If ANY daemon heartbeat exists less
-  // than RESPAWN_THROTTLE_MS old, another CLI command just respawned
-  // the daemon; piling on creates the orphan-storm the user reported
-  // (10+ node.exe holding libvips DLL). Skip silently.
+  // v2.19.53/56 — RESPAWN THROTTLE (cheap-probe variant).
+  //
+  // v2.19.53 read every heartbeat file + did process.kill probes — that
+  // turned out to be the source of v2.19.54's 18x P1 latency regression
+  // (50 parallel CLIs each doing readdirSync + readFileSync × N + kill probe).
+  //
+  // v2.19.56 replaces it with a single statSync on the heartbeat dir mtime.
+  // If ANY heartbeat was written in the last RESPAWN_THROTTLE_MS, throttle.
+  // ~1ms per call vs ~360ms before. Fallback: if the cheap probe throws or
+  // install_organ isn't available, fall through to detached respawn (the
+  // OLD behaviour) so we never DEADLOCK a fresh install.
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const core = require("@mneme-ai/core") as typeof import("@mneme-ai/core");
-    const beats = core.installOrgan.classifyHeartbeats();
     const RESPAWN_THROTTLE_MS = 2_000;
-    const recentDaemon = beats.find((b) =>
-      (b.beat.role === "daemon-attached" || b.beat.role === "daemon" || b.beat.role === "autonomic-respawn")
-      && b.ageMs < RESPAWN_THROTTLE_MS && b.pidAlive,
-    );
-    if (recentDaemon) {
+    if (typeof core.installOrgan.recentHeartbeatActivity === "function"
+        && core.installOrgan.recentHeartbeatActivity(RESPAWN_THROTTLE_MS)) {
       return { action: "throttled", ms: Date.now() - t0 };
     }
-  } catch { /* install_organ optional — fall through */ }
+  } catch { /* install_organ optional — fall through to legacy respawn */ }
   // SILENT detached respawn — we are not allowed to print anything
   // during a normal command invocation. The daemon binary is `mneme
   // daemon start`. Spawn detached so it survives our parent process.

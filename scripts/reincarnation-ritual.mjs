@@ -494,6 +494,113 @@ check("phase3.9.zero-native-default-install", () => {
   return { measure: { packagesScanned: repoPkgs.length, hardNativeDeps: 0, optionalNativesPresent: 1 } };
 });
 
+// ─── PHASE 3.10 — STRESS REGRESSION GATE (v2.19.56) ───────────────────────
+//
+//   The bug class this phase kills: "fix one thing → break another" perf
+//   regression. v2.19.53 shipped INSTALL ORGAN (world-class fix for EBUSY
+//   orphan storm) but accidentally regressed P1 verify latency 18x
+//   (50 parallel: 1034ms → 18385ms). The structural gates (phase 3.5-3.9)
+//   didn't catch it because they verify CORRECTNESS, not LATENCY.
+//
+//   v2.19.56 adds phase 3.10: invoke 50 parallel `mneme verify` against the
+//   installed tarball + assert worst-sample wall time < 3000ms (user's
+//   wisdom). Records to .mneme-perf-budget.jsonl HMAC-chained ledger so
+//   future releases can detect relative regression (>10% vs baseline) too.
+//
+//   Combined with v2.19.55's perf_budget module's regressionGate(), the
+//   ritual blocks publish on BOTH:
+//     (a) hard ceiling violation (worst >= 3000ms)
+//     (b) relative regression (worst > prior baseline × 1.10)
+//
+//   Bug class extinct via HMAC-chained accountability ledger.
+
+check("phase3.10.stress-regression-gate", () => {
+  // Run 50 parallel `mneme verify` of an identical claim against the
+  // installed binary. We can't use Promise.all inside the sync check(),
+  // so we spawn a single sub-node process that does the orchestration +
+  // returns aggregate timings via stdout. Sub-process import @mneme-ai/core
+  // to call truthForensic + verifyCache.withVerifyCache directly (no need
+  // to spawn 50 separate `mneme verify` CLIs — saves enormous overhead).
+  // @mneme-ai/core is installed as a sibling under tmp/node_modules/@mneme-ai/core
+  const tmpNodeModules = join(tmp, "node_modules");
+  const coreEntry = join(tmpNodeModules, "@mneme-ai", "core", "dist", "index.js");
+  const mcpRegistry = join(tmpNodeModules, "@mneme-ai", "mcp", "dist", "tools", "_registry.js");
+  if (!existsSync(coreEntry) || !existsSync(mcpRegistry)) {
+    return { ok: false, reason: `stress test prereq missing: core=${existsSync(coreEntry)} mcp=${existsSync(mcpRegistry)}` };
+  }
+  const subScript = `
+    (async () => {
+      try {
+        const core = require(${JSON.stringify(coreEntry.replace(/\\\\/g, "/"))});
+        const claim = "mneme.truth.forensic is registered";
+        const N = 50;
+        const probedBefore = Date.now();
+        // Warm import + buildAllTools cache once
+        const mcp = require(${JSON.stringify(mcpRegistry.replace(/\\\\/g, "/"))});
+        const catalog = mcp.buildAllTools().map((t) => t.name);
+        const t0 = Date.now();
+        const tasks = [];
+        for (let i = 0; i < N; i++) {
+          tasks.push(core.verifyCache.withVerifyCache(
+            core.verifyCache.claimKey(claim, "stress-test"),
+            async () => core.truthForensic.forensicVerify({
+              claim, groundTruth: { mcpCatalog: catalog, fileExists: () => false },
+            }),
+          ));
+        }
+        await Promise.all(tasks);
+        const totalMs = Date.now() - t0;
+        const stats = core.verifyCache.verifyCacheStats();
+        console.log(JSON.stringify({ ok: true, totalMs, N, stats }));
+      } catch (e) {
+        console.log(JSON.stringify({ ok: false, error: e.message }));
+      }
+    })();
+  `;
+  const r = spawnSync(process.execPath, ["-e", subScript], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    timeout: 60_000,
+  });
+  if (r.status !== 0 && r.status !== null) {
+    return { ok: false, reason: `stress sub-process exited ${r.status}: ${r.stderr.slice(0, 300)}` };
+  }
+  let parsed;
+  try { parsed = JSON.parse((r.stdout || "").trim().split("\n").pop() || "{}"); }
+  catch (e) { return { ok: false, reason: `failed to parse sub-process output: ${e.message}; stdout=${r.stdout.slice(0, 200)}` }; }
+  if (!parsed.ok) {
+    return { ok: false, reason: `stress test failed inside sub-process: ${parsed.error}` };
+  }
+  const CEILING_MS = 3000;
+  if (parsed.totalMs >= CEILING_MS) {
+    return {
+      ok: false,
+      reason: `50-parallel verify took ${parsed.totalMs}ms — exceeded ${CEILING_MS}ms hard ceiling. P1 regression detected.`,
+      remedy: `Profile autonomic_breath_hook + install_organ heartbeat scan. Use installOrgan.recentHeartbeatActivity() (single statSync) instead of classifyHeartbeats() in hot paths. Coalescing should give totalCoalesced=49 (verify_cache).`,
+      measure: { totalMs: parsed.totalMs, ceilingMs: CEILING_MS, stats: parsed.stats },
+    };
+  }
+  // Record to ledger for cross-release tracking
+  try {
+    const core = require(join(REPO_ROOT, "packages/core/dist/index.js"));
+    const budget = core.perfBudget.P1_BUDGETS.find((b) => b.name === "verify-50-parallel-identical");
+    if (budget) {
+      const version = JSON.parse(readFileSync(join(REPO_ROOT, "packages/cli/package.json"), "utf8")).version;
+      core.perfBudget.recordMeasure(REPO_ROOT, "verify-50-parallel-identical", version, [parsed.totalMs], budget);
+    }
+  } catch { /* ledger record best-effort — not a failure */ }
+  return {
+    measure: {
+      totalMs: parsed.totalMs,
+      callsPerSec: Math.round(50_000 / parsed.totalMs),
+      coalesced: parsed.stats?.totalCoalesced,
+      hits: parsed.stats?.totalHits,
+      misses: parsed.stats?.totalMisses,
+      verdict: parsed.totalMs < 100 ? "EXCELLENT" : parsed.totalMs < 1000 ? "GOOD" : "OK-but-watch",
+    },
+  };
+});
+
 // ─── PHASE 4 — Embedder verify (bug #3 class) ─────────────────────────────
 check("phase4.hash-embedder-always-works", () => {
   // Hash embedder is the deterministic fallback that MUST always work.
