@@ -970,3 +970,12 @@ export * as shepherd from "./shepherd/index.js";
 // Already re-exported from packages/core/src/muscle_memory/index.ts itself
 // so the existing `muscleMemory` namespace (line 724) sees them for free.
 // 9th world-first: UDS daemon bypass for CLI cold-start elimination.
+
+// v2.19.60 — PUBLISH VERIFIER. User identified a real critical bug class:
+// v2.19.58 published 4/5 packages but forgot @mneme-ai/embeddings →
+// mneme-ai@2.19.58 referenced a version that didn't exist on npm →
+// 100% ETARGET for users. This module exposes probeRegistry + probeAllForVersion
+// + diagnoseInstallable so AI agents + shepherd can verify completeness
+// BEFORE telling users to install. 10th world-first: callable npm-registry
+// lockstep verification.
+export * as publishVerifier from "./publish_verifier/index.js";

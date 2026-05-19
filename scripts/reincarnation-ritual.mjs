@@ -675,6 +675,80 @@ check("phase3.10c.user-perceived-stress-gate", () => {
   };
 });
 
+// ─── PHASE 3.11 — PUBLISH-COMPLETENESS GATE (v2.19.60) ────────────────────
+//
+//   The bug class this phase kills: v2.19.58 published 4/5 packages but
+//   FORGOT @mneme-ai/embeddings. The meta-package mneme-ai@2.19.58
+//   referenced a version that didn't exist on npm → 100% ETARGET for
+//   every user trying `npm install -g mneme-ai@latest`. The bug
+//   repeated for v2.19.59. CI never caught it because phases 1-3.10
+//   test against locally-packed tarballs, not the npm registry.
+//
+//   Phase 3.11 (PRE-publish) verifies workspace version consistency —
+//   all 5 packages MUST be at the same version + the meta-package's
+//   lockstep deps must match. This catches "I bumped 4/5" before
+//   publish, the most likely cause of the ETARGET bug class.
+//
+//   The POST-publish gate (npm install in clean env after publish)
+//   lives in scripts/publish-all.mjs since it requires the npm publish
+//   itself to have happened.
+
+check("phase3.11.workspace-version-lockstep", () => {
+  const PACKAGES = [
+    { name: "@mneme-ai/core",       path: "packages/core" },
+    { name: "@mneme-ai/embeddings", path: "packages/embeddings" },
+    { name: "@mneme-ai/correlator", path: "packages/correlator" },
+    { name: "@mneme-ai/mcp",        path: "packages/mcp" },
+    { name: "mneme-ai",             path: "packages/cli" },
+  ];
+  const versions = {};
+  const internalDepIssues = [];
+  for (const pkg of PACKAGES) {
+    const pkgPath = join(REPO_ROOT, pkg.path, "package.json");
+    if (!existsSync(pkgPath)) return { ok: false, reason: `${pkg.name}: package.json not found at ${pkgPath}` };
+    let json;
+    try { json = JSON.parse(readFileSync(pkgPath, "utf8")); }
+    catch (e) { return { ok: false, reason: `${pkg.name}: parse error: ${e.message}` }; }
+    versions[pkg.name] = json.version;
+    // Check internal dep versions match this package's version
+    for (const depBlock of ["dependencies", "optionalDependencies", "peerDependencies"]) {
+      const deps = json[depBlock] || {};
+      for (const [depName, depRange] of Object.entries(deps)) {
+        if (depName.startsWith("@mneme-ai/") || depName === "mneme-ai") {
+          // Internal dep — must match this package's version exactly (lockstep)
+          if (depRange !== json.version) {
+            internalDepIssues.push({
+              pkg: pkg.name,
+              dep: depName,
+              expected: json.version,
+              actual: depRange,
+              in: depBlock,
+            });
+          }
+        }
+      }
+    }
+  }
+  const uniqueVersions = [...new Set(Object.values(versions))];
+  if (uniqueVersions.length !== 1) {
+    return {
+      ok: false,
+      reason: `workspace version mismatch — must all be identical (lockstep) but found: ${JSON.stringify(versions, null, 2)}`,
+      remedy: `Bump ALL 5 package.jsons to the same version, then re-run ritual. The v2.19.58 ETARGET bug was caused by partial-bump (4/5 done, 1 forgotten).`,
+      measure: { versions, uniqueVersions },
+    };
+  }
+  if (internalDepIssues.length > 0) {
+    return {
+      ok: false,
+      reason: `${internalDepIssues.length} internal dep version mismatch(es) — lockstep violated`,
+      remedy: `Every @mneme-ai/* and mneme-ai dep across all 5 packages must reference the SAME version as this release. Update the offending package.json fields then re-run.`,
+      measure: { issues: internalDepIssues, packageVersion: uniqueVersions[0] },
+    };
+  }
+  return { measure: { version: uniqueVersions[0], packageCount: PACKAGES.length, allLockstep: true } };
+});
+
 // ─── PHASE 4 — Embedder verify (bug #3 class) ─────────────────────────────
 check("phase4.hash-embedder-always-works", () => {
   // Hash embedder is the deterministic fallback that MUST always work.

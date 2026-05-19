@@ -128,6 +128,7 @@ import { V1952_CACHE_COALESCE_TOOLS } from "./_v1952_cache_coalesce.js";
 import { V1953_INSTALL_ORGAN_TOOLS } from "./_v1953_install_organ.js";
 import { V1955_OPTIONAL_NATIVE_TOOLS } from "./_v1955_optional_native.js";
 import { V1957_SHEPHERD_TOOLS } from "./_v1957_shepherd.js";
+import { V1960_PUBLISH_VERIFIER_TOOLS } from "./_v1960_publish_verifier.js";
 
 // v2.19.51 — module-level memo for the catalog spread. Pure function;
 // only changes when the source tree changes (npm install / hot-reload).
@@ -280,6 +281,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...V1953_INSTALL_ORGAN_TOOLS,
     ...V1955_OPTIONAL_NATIVE_TOOLS,
     ...V1957_SHEPHERD_TOOLS,
+    ...V1960_PUBLISH_VERIFIER_TOOLS,
   ];
 }
 

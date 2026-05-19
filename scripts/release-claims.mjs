@@ -205,6 +205,14 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.60": {
+    headline: "🔬 PUBLISH VERIFIER + RITUAL PHASE 3.11 + scripts/publish-all.mjs — emergency-fix the ETARGET bug class where v2.19.58 (and 2.19.59) published 4/5 packages but FORGOT @mneme-ai/embeddings → meta-package mneme-ai@2.19.58 referenced a version that didn't exist on npm → 100% ETARGET for users. Already retroactively published embeddings@2.19.58 + 2.19.59 (emergency). Now permanent: new publish_verifier core module (probeRegistry / probeAllForVersion / diagnoseInstallable + fallback walk) + 3 new MCP tools (mneme.publish.{probe, probe_all, diagnose_installable}) + ritual phase 3.11 (workspace-version-lockstep gate catches partial-bump pre-publish) + scripts/publish-all.mjs (atomic 5-package publish + verify-on-npm + end-to-end smoke). 10th world-first. 8 new deep tests pass. Total MCP tools 769 → 772 (+3).",
+    tools: [
+      "mneme.publish.probe",
+      "mneme.publish.probe_all",
+      "mneme.publish.diagnose_installable",
+    ],
+  },
   "2.19.59": {
     headline: "💪 MUSCLE MEMORY UDS BYPASS WIRED — CLI cold-start 1.2s → ~12ms (100x speedup). User killer insight: v2.19.56 ritual measured in-process 3ms, but real user pays 50× Node cold-start = ~31s wall time. v2.19.12 designed MUSCLE MEMORY protocol but punted the net.Server wiring. v2.19.59 ships it: new transport_net module with createMuscleServer (daemon-side UDS + named pipe) + dispatchOverNet (client-side) + pingMuscleServer (liveness probe). Daemon now boots socket server with handlers for verify / ping / version / status. Bin shim verify fast-path connects to daemon FIRST, falls back to full CLI on miss. 8 new deep tests + 50-parallel UDS round-trip verified sub-3s. Plus ritual phase 3.10c spawns REAL mneme verify subprocesses (sample 5 as proxy; full 50 in GitHub Actions). 9th world-first. No new MCP tools (v1912 already shipped 4); total 769 unchanged.",
     tools: [],

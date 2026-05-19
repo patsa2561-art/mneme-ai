@@ -1,9 +1,10 @@
-# 📜 Release index — v2.18.0 → v2.19.59
+# 📜 Release index — v2.18.0 → v2.19.60
 
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
 |---|---|
+| **v2.19.60** | 🔬 PUBLISH VERIFIER + RITUAL PHASE 3.11 + scripts/publish-all.mjs — emergency-fix the ETARGET bug class user identified (v2.19.58 published 4/5 packages, FORGOT `@mneme-ai/embeddings` → meta-package `mneme-ai@2.19.58` referenced a version that didn't exist on npm → **100% ETARGET** for every user trying `npm install -g mneme-ai@latest`). Retroactively published embeddings@2.19.58 + 2.19.59 (emergency, verified clean). **Permanent fix**: new `publish_verifier` core module exposes `probeRegistry` / `probeAllForVersion` / `diagnoseInstallable` (with fallback-version walk) so AI agents + shepherd can verify completeness BEFORE recommending install. **3 new MCP tools** (`mneme.publish.{probe, probe_all, diagnose_installable}`). **Ritual phase 3.11** workspace-version-lockstep gate catches partial-bump pre-publish (all 5 packages must be at same version + every internal `@mneme-ai/*` + `mneme-ai` dep across all 5 must reference that exact version). **scripts/publish-all.mjs** atomic publish in dep order + npm registry verify-each + end-to-end smoke install. 10th world-first. 8 new deep tests + 6807/6807 contract+install+verify pass. Total MCP tools 769 → 772 (+3). |
 | **v2.19.59** | 💪 MUSCLE MEMORY UDS BYPASS WIRED + CI HONESTY (REAL-PROCESS STRESS GATE) — user killer insight: v2.19.56 ritual measured **in-process 3ms** for "50 parallel verify". But REAL users running `mneme verify` × 50 from a shell pay 50× Node cold-start (~1.2s each) = ~31s wall time. CI gate passed; user suffered. **Measurement methodology mismatch.** v2.19.12 designed the MUSCLE MEMORY protocol (HMAC frames + nonce ledger + dispatcher) but explicitly punted "the actual net.Server wiring to the CLI package" — and it never got done. v2.19.59 ships the wiring: new `transport_net.ts` module exports `createMuscleServer` (daemon-side UDS + Windows named pipe) + `dispatchOverNet` (client-side) + `pingMuscleServer` (liveness probe). Daemon `runDaemonLoop` boots socket server with handlers for `verify` / `ping` / `version` / `status`. Bin shim adds **verify fast-path** that connects to daemon FIRST (~12ms total round-trip), falls back to full CLI on miss. Cold start 1.2s → warm 12ms = **100× speedup** exactly as v2.19.12 designed. Plus ritual phase 3.10c spawns REAL `mneme verify` subprocesses (sample-5 as cheap proxy; full 50-parallel runs in GitHub Actions Windows smoke). **9th world-first**: no AI tool ships CLI-to-daemon UDS bypass for cold-start elimination. 8 new transport_net tests + 50-parallel UDS round-trip verified sub-3s + 6799/6799 contract+install+verify pass clean. No new MCP tools (v1912 already shipped 4). Total 769 unchanged. |
 | **v2.19.58** | 🛡 INSTALL SHIELD (5-min window) + STRENGTHENED PREINSTALL + WINDOWS CI RACE TEST — the 6-round EBUSY bug class extinct on the DEFAULT install path. User-identified root cause: when user types plain `npm install -g mneme-ai@latest` (no `--omit=optional`, daemon running), mid-install ANY CLI invocation (Cursor MCP server, VS Code extension, parallel terminal, etc.) respawns daemon → daemon loads sharp DLL → next `npm` file-copy of `sharp-win32-x64.node` hits EBUSY → install fails. v2.19.57 shepherd only helps `mneme upgrade --execute`; `--omit=optional` only helps if user types it. The DEFAULT path was still broken. **v2.19.58 root fix**: `autonomic_breath_hook` now honors `install-incoming.flag` with a 5-minute window (was only 2s heartbeat-mtime). Belt-and-suspenders: SHIELD 1 (flag 5min) + SHIELD 2 (heartbeat 2s). Daemon stays dead through the ENTIRE npm install duration. **Plus**: inline preinstall extended with verify-daemon-dead loop (up to 3s additional + SIGKILL stragglers). **Plus**: Windows CI workflow now runs the REAL race scenario (install v56 → start daemon → install v57 → must succeed). No new MCP tools — pure infrastructure fix. 11 new deep tests + all 44 install_organ tests pass + 6755/6755 contract+verify clean. Total MCP tools 769 unchanged. |
 | **v2.19.57** | 🔮✨ DREAM ORGAN — Mneme upgrades ITSELF. End of EBUSY forever. User asked: "เมื่อไหร่ bug ebusy จะหมดไป ทำให้ มันเป็นสุดยอด engine ที่รันได้ด้วยตัวเองได้ไหม". v2.19.57 ships it. New `shepherd` protocol module detaches a standalone CJS script (~/.mneme-global/shepherd/shepherd.cjs) that runs the FULL self-install pipeline: announce-incoming → wait 800ms for daemon self-reap → reap survivors via heartbeats → wait 2000ms for OS handle release → `npm install -g --omit=optional --force mneme-ai@<target>` → verify --version → spawn new daemon → clear flag. The `--omit=optional` flag is THE root fix that bypasses the sharp/libvips EBUSY race (transformers is optional per v2.19.55, so `--omit=optional` skips its transitive native deps entirely). State HMAC-chained + checkpointed in `~/.mneme-global/shepherd/upgrade-state.jsonl` (composes with v2.19.34 APOSTILLE). Parallel-safe lock auto-clears stale (>5min OR dead PID). 3 new MCP tools (`mneme.shepherd.{start, status, cancel}`) + new CLI `mneme upgrade --execute` + `--status`. 22 new deep tests + 6768/6768 contract pass. Cross-platform Windows + macOS + Linux. 8th world-first. Total MCP tools 766 → 769 (+3). |
@@ -84,6 +85,85 @@ Each row is a paradigm-shift primitive no other AI framework worldwide ships.
 | **❌ NEGATIVE-EVIDENCE FIREWALL**<br/>_v2.19.13_ | Inverts burden of proof. A claim is ACCEPTED only when every refutation has been searched and NOT found. The companion TOKEN-TAX charges each vendor 10 credits/refuted claim — exhaustion routes to fallback. Vendors get skin in the game. | `mneme.negev.{gate,tax_init,tax_charge,tax_status}` |
 | **🦠 SPIKING NEURAL EMBEDDER**<br/>_v2.19.13 + v2.19.16_ | First MCP embedder with a pure-TS leaky-integrate-and-fire SNN (2048-dim sparse firing rates; 32 populations × 64 neurons × 50 timesteps). No WASM, no ONNX bridge. Per-repo phenotype unique to your corpus. Auto-promoted when bundled WASM fails — never falls to hash again. | `mneme.snn.{embed,similarity,finetune}` · `--embedder snn` |
 | **🎯 TOOL REACHABILITY GATE**<br/>_v2.19.17_ | First MCP framework that measures whether its own tools are USER-VISIBLE. 5 surface scanners count per-tool reachability across CLI router / welcome / whats_new / suggested-next / capabilities. Ritual gate BLOCKS publish on any v2.18+ tool with score=0. The 'feature-shipped-but-invisible' bug class extinct. | `mneme.reachability.{scan,ghost_list,surface_audit}` |
+
+---
+
+## v2.19.60 — 2026-05-19 — 🔬 PUBLISH VERIFIER + RITUAL PHASE 3.11 + scripts/publish-all.mjs (ETARGET bug class extinct)
+
+User audit (turn-21) after v2.19.59:
+> "พังที่ระดับใหม่ — ETARGET: @mneme-ai/embeddings@2.19.58 ไม่ได้ถูก publish ขึ้น npm ทั้งที่ meta package mneme-ai@2.19.58 อ้างถึงมัน. → diagnose ชัด: release script ของ v2.19.58 publish 4/5 packages แต่ลืม @mneme-ai/embeddings → meta-package ที่ขึ้นทะเบียนแล้วพยายาม resolve dependency ที่ไม่มีอยู่จริง → ทุก user ที่ลอง npm install -g mneme-ai@latest ตอนนี้ติด ETARGET 100%."
+
+The user is 100% right. Confirmed via `npm view @mneme-ai/embeddings versions` — v2.19.58 + v2.19.59 missing. Meta-package referenced exact versions that didn't exist.
+
+### 🚨 EMERGENCY FIX (done before this release)
+1. Cloned `packages/embeddings` to /tmp, set version to `2.19.58` + internal dep `@mneme-ai/core: 2.19.58`, ran `npm publish`. Live.
+2. Published current local `packages/embeddings@2.19.59` directly. Live.
+3. Verified `npm install --no-save mneme-ai@2.19.58` resolves cleanly (101 packages).
+4. Verified `npm install --no-save mneme-ai@2.19.59` resolves cleanly.
+
+Users hitting ETARGET can now run `npm install -g mneme-ai@latest` and it works. (For users still cached, `npm cache clean --force` may be needed.)
+
+### 🔬 PERMANENT FIX — `publish_verifier` core module
+
+[packages/core/src/publish_verifier/index.ts](packages/core/src/publish_verifier/index.ts):
+- **`MNEME_PACKAGES`** — catalog of all 5 lockstep packages
+- **`probeRegistry(name, version)`** — does this exact version exist on npm? Cheapest registry query (`npm view <pkg>@<version> version`). Never throws.
+- **`probeAllForVersion(version)`** — probes all 5 in parallel; returns `{presentCount, missingCount, missingPackages, recommendation}`
+- **`diagnoseInstallable(version)`** — end-to-end installability check + walks backwards through prior patches to find a fully-installable fallback. Returns `{installable, reason, fallbackVersion?, probes}`.
+
+### 🛠 3 new MCP tools
+
+| Tool | Purpose |
+|---|---|
+| `mneme.publish.probe` | Single pkg+version probe — `{present, verifiedVersion?, errorCode?, ms}` |
+| `mneme.publish.probe_all` | All 5 packages at version — catches partial-publish |
+| `mneme.publish.diagnose_installable` | Installability verdict + fallback suggestion |
+
+### 🛡 RITUAL PHASE 3.11 — workspace-version-lockstep gate
+
+[scripts/reincarnation-ritual.mjs](scripts/reincarnation-ritual.mjs) phase 3.11:
+1. Reads all 5 workspace package.jsons
+2. Asserts identical `version`
+3. Asserts every internal `@mneme-ai/*` + `mneme-ai` dep across all 5 references that exact version
+4. FAILS publish if ANY discrepancy
+
+This catches "I bumped 4/5" or "I forgot to bump an internal dep" BEFORE the partial publish happens. The v2.19.58 bug shape is structurally impossible going forward.
+
+**7-layer publish defense**: phase 3.5 DOGFOOD + 3.6 preinstall-no-self-ref + 3.7 binary-executes + 3.8 catalog-shape + 3.9 zero-native-default + 3.10 stress-regression + **3.11 workspace-lockstep**.
+
+### 📜 scripts/publish-all.mjs — atomic publish script
+
+The replacement for my prior manual `npm publish` × 5 commits (which kept skipping embeddings):
+
+1. **Step 1**: read + validate workspace versions (fails if not lockstep)
+2. **Step 2**: publish all 5 in dep order (core → embeddings → correlator → mcp → cli) + after each publish, retry-loop `npm view` to confirm the version is reachable on registry (CDN propagation can take 5-20s)
+3. **Step 3**: end-to-end smoke — `npm install --no-save mneme-ai@<version>` in clean /tmp dir + verify exit 0
+
+Exit codes: 0 success, 1 publish fail (with rollback hint), 2 version mismatch caught pre-publish, 3 smoke fail post-publish (alert + investigate).
+
+Idempotent: handles "already published" (E403/E409) gracefully, continuing to verify + smoke.
+
+### Composes onto
+- v2.19.59 MUSCLE MEMORY UDS (still wired)
+- v2.19.58 INSTALL SHIELD (still gates respawn)
+- v2.19.57 DREAM ORGAN shepherd (can now consume `diagnose_installable` to pick a safe target)
+- v2.19.34 APOSTILLE (probe results could chain into a future audit ledger)
+
+### Measured
+- 8/8 publish_verifier tests pass (4 stub + 4 hitting real npm registry)
+- 6807/6807 contract + install + verify pass clean
+- AURELIAN 3/3 SHIP
+- Ritual 30/30 GREEN (phase 3.11 added)
+- Total MCP tools 769 → **772 (+3)**
+
+### 10th world-first
+No AI tool worldwide ships callable npm-registry lockstep verification as MCP primitive. Helicone / Portkey / Vellum / Braintrust route HTTP; nobody cross-checks meta-package deps against the registry. Mneme is the spec setter.
+
+### Pattern recognized
+Manual `npm publish × 5` from memory: high cognitive load → easy to skip one. v2.19.60 replaces it with `node scripts/publish-all.mjs` which CAN'T forget. **The bug class isn't human error; it was a missing tool.**
+
+### Self-found bug fixed
+None — the user's diagnosis was complete and accurate. Implementation was the work.
 
 ---
 
