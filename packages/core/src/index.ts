@@ -989,3 +989,20 @@ export * as publishVerifier from "./publish_verifier/index.js";
 // loaded DLL out of the way; Windows allows it; npm gets clean slate).
 // 11th world-first. See packages/core/src/dll_eviction/.
 export * as dllEviction from "./dll_eviction/index.js";
+
+// v2.19.62 — PHOENIX PHASE 1. User's architectural vision (PHOENIX P1-P7):
+// turn Mneme into a swarm-intelligence organism that NEVER hits EBUSY again.
+// Phase 1 ships:
+//   - DLL EXTRACTION ORGAN (P3): copies libvips DLLs to per-PID %TEMP%/mneme-
+//     vips-{pid}/ + redirects PATH/DYLD_LIBRARY_PATH/LD_LIBRARY_PATH.
+//     The disjoint-resource-set invariant: ∀ daemon i,j: handles(i) ∩ handles(j) = ∅.
+//     EBUSY becomes structurally impossible because no daemon holds the
+//     canonical node_modules install-time DLL path anymore.
+//   - 3 PRIORITY-1 ORGAN BOTS (P5): Custodian (periodic cleanup) + Sentinel
+//     (HMAC chain + handle-leak integrity) + Surgeon (latency-driven restart).
+//     Pure verdicts; caller commits. Composable into custom schedulers.
+//   - PHOENIX SCOUT (P4 step 1): passive npm registry probe. Pure observation.
+//     Never mutates state; the Queen consumes the verdict in Phase 2.
+// 12th world-first: per-PID DLL hostage extraction as a callable npm package
+// primitive. See packages/core/src/phoenix/.
+export * as phoenix from "./phoenix/index.js";

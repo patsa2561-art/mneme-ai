@@ -205,6 +205,19 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.62": {
+    headline: "🔥 PHOENIX PHASE 1 — DLL EXTRACTION ORGAN + 3 AUTO-BOTS + SCOUT — user's PHOENIX PROTOCOL P3+P5+P4 vision shipped. The architectural fix that makes EBUSY structurally impossible at SOURCE (not just survivable like v2.19.45-61): COPY libvips DLLs to per-PID %TEMP%/mneme-vips-{pid}/ + prepend tmpdir to PATH (Windows) / DYLD_LIBRARY_PATH (macOS) / LD_LIBRARY_PATH (Linux). Disjoint-resource-set invariant: ∀ daemon i,j: handles(i) ∩ handles(j) = ∅. npm install can write libvips-42.dll in node_modules at any time because NO daemon holds the canonical install-time path anymore. Plus 3 priority-1 organ bots (Custodian / Sentinel / Surgeon) wired into daemon loop on independent cadences (5min / 10min / 5min). Plus PHOENIX Scout (passive npm registry probe; pure observation; the Queen consumes verdicts in Phase 2). 8 new MCP tools surfaces (extract_dll / dll_cleanup / dll_sweep / custodian_sweep / sentinel_probe / surgeon_diagnose / scout_poll / organs_tick). 64 deep tests pass. 12th world-first: per-PID DLL hostage extraction as callable npm package primitive. Electron + VS Code use this trick INTERNALLY but nobody ships it as a reusable primitive. Total MCP tools 775 → 783 (+8).",
+    tools: [
+      "mneme.phoenix.extract_dll",
+      "mneme.phoenix.dll_cleanup",
+      "mneme.phoenix.dll_sweep",
+      "mneme.phoenix.custodian_sweep",
+      "mneme.phoenix.sentinel_probe",
+      "mneme.phoenix.surgeon_diagnose",
+      "mneme.phoenix.scout_poll",
+      "mneme.phoenix.organs_tick",
+    ],
+  },
   "2.19.61": {
     headline: "🪄 DLL EVICTION ORGAN — the WILD rename-sideways trick that ends EBUSY at SOURCE. User-identified 7-round root cause: daemon holds libvips-42.dll, Windows IGNORES SIGTERM (Node.js default), OS holds DLL handle 5-30s after death. The fix nobody else does: rename the locked DLL to libvips-42.dll.locked-<ts>-<pid> (Windows allows this — same trick Windows Installer uses to update loaded system DLLs). npm gets clean slate to write fresh file. No process needs to die. Plus taskkill /F /IM mneme.exe (Windows-correct kill that bypasses ignored SIGTERM) + DLL probe retry loop + stale .mneme-ai-* staging cleanup. 4 composable primitives + composed evictAndProbe pipeline + 3 new MCP tools. Plus --format=human flag for backward-compat shell scripts. Plus Windows CI workflow now warms DLL cache before testing race (real-user reproduction). 19 new deep tests + 11th world-first (rename-loaded-DLL-sideways as npm install primitive). Total MCP tools 772 → 775 (+3).",
     tools: [

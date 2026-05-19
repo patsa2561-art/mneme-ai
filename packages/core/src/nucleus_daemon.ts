@@ -41,6 +41,14 @@ const HEARTBEAT_WRITE_EVERY_TICK = 1;            // write heartbeat every tick
 // drift conditions (version, integrity) and pushes auto-action inbox
 // messages so the next MCP-connected AI surfaces + executes them.
 const CARETAKER_PASS_EVERY = 30;                 // ~15 min at 30s tick interval
+// v2.19.62 PHOENIX P5 — 3 priority-1 organs run on independent cadences.
+// CUSTODIAN every 10 ticks (~5 min @ 30s tick): sweep orphan DLL tmpdirs +
+// stale .locked-* files. Light-weight cleanup, safe to fire often.
+// SENTINEL every 20 ticks (~10 min): HMAC chain integrity + handle leak.
+// SURGEON every 10 ticks (~5 min): latency-based restart verdict.
+const PHOENIX_CUSTODIAN_EVERY = 10;
+const PHOENIX_SENTINEL_EVERY = 20;
+const PHOENIX_SURGEON_EVERY = 10;
 
 export interface DaemonHeartbeat {
   pid: number;
@@ -386,6 +394,50 @@ export async function runDaemonLoop(
         await supernova.runCycle("oracle_dream", async () => {
           const { dreamCycle } = await import("./oracle/index.js");
           dreamCycle(repoRoot);
+        });
+      }
+
+      // v2.19.62 PHOENIX P5 — 3 priority-1 organ bots running on independent
+      // cadences. All three are pure-verdict functions; the daemon commits
+      // any side-effects (heartbeat write, notifier broadcast, organ restart).
+      //
+      // Custodian (every 10 ticks ~5min): sweep orphan DLL tmpdirs + stale
+      //   .locked-* files. Light-weight cleanup, safe to fire often.
+      if (tickCount > 0 && tickCount % PHOENIX_CUSTODIAN_EVERY === 0) {
+        await supernova.runCycle("phoenix_custodian", async () => {
+          const { runCustodianCycle } = await import("./phoenix/organs.js");
+          runCustodianCycle();
+        });
+      }
+      // Sentinel (every 20 ticks ~10min): HMAC chain integrity + handle leak.
+      //   Critical-broken verdict pushes a notifier; the heartbeat ledger is
+      //   the implicit caller-side commit (next tick re-checks).
+      if (tickCount > 0 && tickCount % PHOENIX_SENTINEL_EVERY === 0) {
+        await supernova.runCycle("phoenix_sentinel", async () => {
+          const { runSentinelCycle } = await import("./phoenix/organs.js");
+          const r = runSentinelCycle();
+          if (r.recommendation === "critical-chain-broken") {
+            try {
+              const { buildAllNotifiers, notifyAll } = await import("./notifier/index.js");
+              const all = buildAllNotifiers(repoRoot);
+              await notifyAll({
+                id: `phoenix-sentinel-${Date.now()}`,
+                title: "🔬 Mneme Sentinel: HMAC chain integrity broken",
+                body: `Sentinel organ detected chain break at index ${r.hmacChainBrokenAt ?? "?"}. Audit immediately.`,
+                severity: "warning",
+              }, all);
+            } catch { /* best-effort */ }
+          }
+        });
+      }
+      // Surgeon (every 10 ticks ~5min): latency-driven restart verdict.
+      //   Currently runs on EMPTY stats — Phase 2 wires in real per-organ
+      //   latency metrics from the supernova ledger. This is the no-op
+      //   scaffold that establishes the cadence + supervised-cycle pattern.
+      if (tickCount > 0 && tickCount % PHOENIX_SURGEON_EVERY === 0) {
+        await supernova.runCycle("phoenix_surgeon", async () => {
+          const { runSurgeonCycle } = await import("./phoenix/organs.js");
+          runSurgeonCycle([]);
         });
       }
 
