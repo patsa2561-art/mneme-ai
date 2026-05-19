@@ -42,9 +42,59 @@ The full list of commands the user might want auto-executed is in Steps 1-7 belo
 npm install -g mneme-ai
 ```
 
-### Step 1A.0 — Zero-DLL ultralight install (LOCAL only — npm 10 bug warning)
+### Step 1A.0 — Zero-DLL ultralight install (two production paths + four specced wild ones)
 
 `mneme-ai` ships `@huggingface/transformers` as an **optional** dependency for the bundled WASM embedder. npm installs it by default — which drags `sharp` + `libvips` (~467MB of native DLLs) into `node_modules` and is the root cause of the historical EBUSY install bug class. **Mneme runs perfectly without it** by falling back through the embedder chain: `OpenAI → Ollama → bundled WASM (skipped) → hash`. Users without an OpenAI key + without Ollama land on the deterministic hash embedder (★★ quality) instead of bundled WASM (★★★) — every other Mneme tool works identically.
+
+#### ⭐ Recommended global zero-DLL install — `@lite` dist-tag (v2.19.69+)
+
+```bash
+npm install -g mneme-ai@lite
+```
+
+This resolves via npm's dist-tag mechanism to `mneme-ai@X.Y.Z-lite`, a parallel-published variant of every release with `optionalDependencies` stripped at the manifest level. **Works for global installs** (it does not depend on the broken `--omit=optional` flag — it ships a manifest with no optionals to omit):
+
+  - **Install size**: ~5MB instead of ~467MB
+  - **Install time**: ~5-10s instead of ~60-90s
+  - **EBUSY risk**: structurally zero (no native DLLs)
+  - **Trade**: bundled WASM embedder unavailable; falls back through OpenAI → Ollama → hash
+
+When the user wants the bundled embedder back, switch to the default tag:
+
+```bash
+npm install -g mneme-ai@latest    # or simply: npm install -g mneme-ai
+```
+
+Full spec: [docs/wild_workarounds/01_two_dist_tags.md](wild_workarounds/01_two_dist_tags.md).
+
+#### Alternative — `MNEME_LITE=1` postinstall self-prune
+
+For CI pipelines that pin a specific version (`npm install -g mneme-ai@2.19.69`) and cannot use dist-tag selection, set `MNEME_LITE=1` in the environment:
+
+```bash
+MNEME_LITE=1 npm install -g mneme-ai
+```
+
+npm still downloads the 467MB tree, but the `postinstall` hook deletes the optional-dep subdirectories before handing control back. Final on-disk footprint: ~5MB. Full spec: [docs/wild_workarounds/02_postinstall_prune.md](wild_workarounds/02_postinstall_prune.md).
+
+#### Local install (also works, for per-project tools)
+
+```bash
+mkdir mneme-tool && cd mneme-tool && npm init -y && npm install mneme-ai --omit=optional
+# binary now at ./node_modules/.bin/mneme — alias or PATH it
+```
+
+The `--omit=optional` flag IS honoured for local installs on npm 10 — only the global path silently ignores it. Use this when you want a per-project Mneme tied to one repo's package.json.
+
+#### Four more specced workarounds for future cycles
+
+These are designed + sketched but not yet shipped: [Bootstrap Prelude](wild_workarounds/03_bootstrap_prelude.md) (2KB stub + CDN-hosted runtime), [Private npm Registry Mirror](wild_workarounds/04_private_registry.md) (localhost protocol-layer mirror), [Bun-Compile Portable Binary](wild_workarounds/05_bun_compile.md) (single-file native exe), [Node Loader Hook](wild_workarounds/07_loader_hook.md) (lazy-load native deps at module-resolver level). Index: [docs/wild_workarounds/README.md](wild_workarounds/README.md).
+
+AI agent decision rule:
+  - User wants global install, smallest possible → `npm install -g mneme-ai@lite`
+  - User CI pins a version + wants slim → `MNEME_LITE=1 npm install -g mneme-ai@X.Y.Z`
+  - User wants per-project + smallest → local `npm install mneme-ai --omit=optional`
+  - User wants full quality → `npm install -g mneme-ai` (default)
 
 #### Local install (works) — when you can use one
 

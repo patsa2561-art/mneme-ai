@@ -464,12 +464,18 @@ A user just shared this repo with you and asked you to install Mneme. **Follow t
 npm install -g mneme-ai
 ```
 
-> **Ultralight install (works LOCAL only — npm 10 has a global-install bug with `--omit=optional`):** for a per-project ~5MB install without the bundled WASM embedder (transformers + sharp + libvips), use a local install pattern instead of `-g`. Mneme falls back to deterministic hash / OpenAI / Ollama — every other tool works identically.
+> **Ultralight zero-DLL install — `@lite` dist-tag (v2.19.69+):**
 > ```bash
-> mkdir mneme-tool && cd mneme-tool && npm init -y && npm install mneme-ai --omit=optional
-> # binary now at ./node_modules/.bin/mneme — alias it or add to PATH
+> npm install -g mneme-ai@lite   # ~5MB, ~5-10s, no native DLLs, no EBUSY ever
 > ```
-> ⚠ `npm install -g mneme-ai --omit=optional` does NOT skip optionals on npm 10 (reproduced 2026-05-19; the flag is silently ignored for global installs). Use the local pattern above, the Docker fallback (Step 1B), or rely on the v2.19.65 EBUSY fix that makes the global install path safe even with the full 467MB tree. Full rationale: [Step 1A.0 in AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md#step-1a0--zero-dll-ultralight-install-local-only--npm-10-bug-warning).
+> Works for GLOBAL installs (does not depend on the broken npm 10 `--omit=optional` flag — it ships a parallel-published variant with `optionalDependencies` stripped at the manifest level). The bundled WASM embedder is unavailable in lite mode; the runtime falls back through OpenAI → Ollama → deterministic hash. Switch back with `npm install -g mneme-ai@latest`.
+>
+> **Other zero-DLL paths** when `@lite` isn't an option:
+> - CI with version-pinned install: `MNEME_LITE=1 npm install -g mneme-ai@X.Y.Z` (downloads then prunes, same 5MB on-disk result)
+> - Per-project local install: `mkdir tool && cd tool && npm init -y && npm install mneme-ai --omit=optional` (the `--omit=optional` flag is honoured for LOCAL installs even on npm 10)
+> - Three more workarounds specced for future cycles: [Bootstrap Prelude, Private Registry Mirror, Bun-Compile binary, Node Loader Hook](docs/wild_workarounds/README.md)
+>
+> Full rationale: [docs/wild_workarounds/](docs/wild_workarounds/) — seven workarounds ranked by ROI, two production-ready today.
 
 > **AI agents on Windows:** if the install fails with `EBUSY ... libvips-42.dll`, an older Mneme daemon is holding the DLL. Run `mneme daemon stop` (PowerShell) or `cmd //c "taskkill /F /IM mneme.exe /T"` (Git Bash) once, wait ~2s, then re-run the install. v2.19.65 makes this scenario rare (daemons now load libvips from `%TEMP%`), but a still-alive daemon from an older version will reproduce the failure. Full recovery contract: [Step 1A.1 in AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md#step-1a1--if-install-fails-with-ebusy-on-windows-v21965-makes-this-rare-recovery-if-it-still-happens).
 
