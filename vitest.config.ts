@@ -32,6 +32,14 @@ export default defineConfig({
     hookTimeout: 30_000,
     pool: "forks",
     reporters: ["default"],
+    // v2.19.74 — load the global setup that installs per-worker
+    // unhandledRejection + uncaughtException handlers.  Without these,
+    // an unhandled rejection in ANY test path kills the tinypool
+    // worker process + bubbles up as
+    //   "Unhandled 'error' event ... Worker exited unexpectedly"
+    // which previously aborted the full CI run on ubuntu-24.04-arm.
+    // See tests/vitest-setup.ts for the rationale.
+    setupFiles: ["tests/vitest-setup.ts"],
     server: {
       // Vite's pre-bundler tries to resolve every import including Node
       // built-ins. Newer builtins like `node:sqlite` (Node 22.5+) aren't
