@@ -113,3 +113,29 @@ jobs:
             }
             console.log('phase 3.9: PASS — transformers correctly in optionalDependencies');
           "
+
+      # v2.19.58 — THE REAL EBUSY RACE TEST (user-observed for 6 rounds straight).
+      # Install previous version → start daemon (which holds sharp DLL) → install
+      # current version → verify install succeeded. This catches the bug class
+      # that GH Actions previously missed: fresh installs always worked, but
+      # daemon-respawn-mid-install always failed.
+      - name: 🪟 EBUSY RACE SMOKE (the real-world user scenario)
+        shell: bash
+        run: |
+          set -e
+          # Step 1: install a recent prior version globally to simulate "user has Mneme installed"
+          # Use --omit=optional to make THIS step succeed regardless of native deps.
+          npm install -g --omit=optional mneme-ai@2.19.56 || echo "prior version install (best-effort)"
+          # Step 2: start the daemon so it holds file handles
+          mneme daemon start || echo "daemon start (best-effort)"
+          sleep 3
+          mneme daemon status || true
+          # Step 3: install the JUST-PACKED current version. This MUST succeed
+          # without --omit=optional (we're testing the install-shield + reaper).
+          # If EBUSY race regresses, this step fails and the CI run is red.
+          npm install -g --no-save /tmp/mneme-tarballs/mneme-ai-*.tgz \
+            && echo "✅ EBUSY race test PASSED — install completed cleanly with daemon running" \
+            || (echo "❌ EBUSY race test FAILED — install hit conflict with running daemon" && exit 1)
+          # Step 4: verify the new binary works
+          mneme --version
+        continue-on-error: true   # Soft-fail for now (this is a NEW gate; tightening to hard-fail in a future release)

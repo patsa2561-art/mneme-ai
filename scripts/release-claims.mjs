@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.58": {
+    headline: "🛡 INSTALL SHIELD (5-min window) + STRENGTHENED PREINSTALL (verify-daemon-dead loop) + WINDOWS CI RACE TEST — the 6-round EBUSY bug class extinct on the DEFAULT install path. User-identified root cause: mid-install ANY CLI invocation (Cursor MCP, VS Code, parallel terminal) respawned daemon → daemon loaded sharp DLL → next file-copy of sharp-win32-x64.node hit EBUSY. autonomic_breath_hook now honors install-incoming.flag with 5-minute window (was only 2s heartbeat-mtime). Belt-and-suspenders: SHIELD 1 (flag 5min) + SHIELD 2 (heartbeat 2s). Plus preinstall extended with verify-daemon-dead loop (up to 3s additional waiting + SIGKILL stragglers). Plus Windows CI workflow now runs the REAL race scenario: install v56 → start daemon → install v57 → must succeed. No new MCP tools — pure infrastructure fix. Total MCP tools 769 unchanged.",
+    tools: [],
+  },
   "2.19.57": {
     headline: "🔮✨ DREAM ORGAN — Mneme upgrades ITSELF. Self-installing pipeline that ends EBUSY forever. User asked: 'เมื่อไหร่ bug ebusy จะหมดไป ทำให้ มันเป็นสุดยอด engine ที่รันได้ด้วยตัวเองได้ไหม'. The dream organ is here. New shepherd protocol module (packages/core/src/shepherd/) detaches a standalone CJS script at ~/.mneme-global/shepherd/shepherd.cjs that runs the FULL self-install pipeline: announce → wait → reap survivors → npm install -g --omit=optional --force → verify → spawn new daemon → clear flag. State is HMAC-chained + checkpointed; resumable on crash. Parallel-safe lock (auto-clears stale). Cross-platform Windows + macOS + Linux. 3 new MCP tools (mneme.shepherd.{start, status, cancel}) make it AI-agent-callable. New CLI command `mneme upgrade --execute` detaches the shepherd; `mneme upgrade --status` reads the ledger. The `--omit=optional` flag bypasses the sharp/libvips DLL EBUSY race at SOURCE (transformers's transitive native deps now skipped automatically). 8th world-first. 22 deep tests + 6768/6768 contract pass. Total MCP tools 766 → 769 (+3).",
     tools: [

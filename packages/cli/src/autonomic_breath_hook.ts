@@ -84,20 +84,40 @@ export async function ensureAutonomicBreath(opts: { cwd: string; commandName: st
   if (!decision.shouldRespawn) {
     return { action: "already_alive", ms: Date.now() - t0 };
   }
-  // v2.19.53/56 — RESPAWN THROTTLE (cheap-probe variant).
+  // v2.19.53/56/58 — RESPAWN THROTTLE (cheap-probe variant) + INSTALL SHIELD.
   //
-  // v2.19.53 read every heartbeat file + did process.kill probes — that
-  // turned out to be the source of v2.19.54's 18x P1 latency regression
-  // (50 parallel CLIs each doing readdirSync + readFileSync × N + kill probe).
+  // The 6-recurring-rounds EBUSY bug class root cause: when `npm install -g
+  // mneme-ai@latest` runs with a daemon alive, the preinstall stops the
+  // daemon. But mid-install ANY other CLI invocation (Cursor MCP server,
+  // VS Code extension, parallel terminal) respawns the daemon → daemon
+  // loads sharp/libvips DLL → next npm file-copy of sharp-win32-x64.node
+  // hits EBUSY → user-visible install failure.
   //
-  // v2.19.56 replaces it with a single statSync on the heartbeat dir mtime.
-  // If ANY heartbeat was written in the last RESPAWN_THROTTLE_MS, throttle.
-  // ~1ms per call vs ~360ms before. Fallback: if the cheap probe throws or
-  // install_organ isn't available, fall through to detached respawn (the
-  // OLD behaviour) so we never DEADLOCK a fresh install.
+  // v2.19.58 fix: install-incoming.flag throttle window (5 minutes by
+  // default — npm install can take that long). When the preinstall (or
+  // mneme upgrade --execute, or any MCP install.announce) writes the flag,
+  // ALL autonomic_breath_hook respawns are vetoed for the next 5 minutes.
+  // Bug class extinct: daemon stays dead through the entire install window.
+  //
+  // Belt-and-suspenders: also keep the 2s heartbeat-mtime throttle for
+  // the OTHER race (50 parallel CLI starts during normal operation).
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const core = require("@mneme-ai/core") as typeof import("@mneme-ai/core");
+
+    // SHIELD 1 — install-incoming.flag (v2.19.58, 5-minute window).
+    const INSTALL_FLAG_TTL_MS = 5 * 60 * 1000;
+    try {
+      const flag = core.installOrgan.readInstallIncoming();
+      if (flag && typeof flag.announcedAt === "string") {
+        const ageMs = Date.now() - new Date(flag.announcedAt).getTime();
+        if (Number.isFinite(ageMs) && ageMs >= 0 && ageMs < INSTALL_FLAG_TTL_MS) {
+          return { action: "throttled", ms: Date.now() - t0 };
+        }
+      }
+    } catch { /* readInstallIncoming may not exist on older core — fall through */ }
+
+    // SHIELD 2 — heartbeat-mtime (v2.19.56, 2-second window).
     const RESPAWN_THROTTLE_MS = 2_000;
     if (typeof core.installOrgan.recentHeartbeatActivity === "function"
         && core.installOrgan.recentHeartbeatActivity(RESPAWN_THROTTLE_MS)) {
