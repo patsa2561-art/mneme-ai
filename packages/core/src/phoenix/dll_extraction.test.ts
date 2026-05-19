@@ -167,13 +167,36 @@ describe("v2.19.62 dll_extraction with synthetic libvips dir", () => {
     }
   });
 
-  it("idempotent — second extract refreshes existing tmpdir", () => {
+  it("idempotent + fast-path — second extract is a no-op (v2.19.64)", () => {
     const plan = planExtraction({ packageRoot: testRoot });
     const r1 = extractAndRedirect(plan!);
-    const r2 = extractAndRedirect(plan!);
     expect(r1.ok).toBe(true);
+    expect(r1.filesCopied).toBe(2);
+    // Second call hits the fast-path: env already set + tmpdir exists → skip
+    const r2 = extractAndRedirect(plan!);
     expect(r2.ok).toBe(true);
-    expect(r2.filesCopied).toBe(r1.filesCopied);
+    expect(r2.filesCopied).toBe(0); // fast-path skips re-copy
+    expect(r2.durationMs).toBeLessThan(50); // ~1ms typical, generous bound
+  });
+
+  it("fast-path does NOT prepend PATH twice (v2.19.64 unbounded-growth fix)", () => {
+    const plan = planExtraction({ packageRoot: testRoot });
+    extractAndRedirect(plan!);
+    const envAfter1 = process.env[plan!.envVar] ?? "";
+    extractAndRedirect(plan!);
+    const envAfter2 = process.env[plan!.envVar] ?? "";
+    expect(envAfter2).toBe(envAfter1); // exactly equal — no double-prepend
+  });
+
+  it("third-party env modification still triggers re-prepend (graceful recovery)", () => {
+    const plan = planExtraction({ packageRoot: testRoot });
+    extractAndRedirect(plan!);
+    // Simulate another module clobbering the env var
+    process.env[plan!.envVar] = "/some/other/path";
+    const r = extractAndRedirect(plan!);
+    expect(r.ok).toBe(true);
+    const env = process.env[plan!.envVar] ?? "";
+    expect(env.startsWith(plan!.tmpDir)).toBe(true);
   });
 });
 

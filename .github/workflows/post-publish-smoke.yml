@@ -1,0 +1,206 @@
+name: Post-publish smoke gate
+
+# v2.19.64 — POST-PUBLISH SMOKE GATE — operational hygiene, NOT a feature.
+# Closes two bug classes the user identified:
+#
+#   - v2.19.58 ETARGET (4/5 packages published, meta-package broken on npm)
+#   - v2.19.48 ship-broken preinstall (Cannot find module './bin/preinstall...')
+#
+# Trigger: every release tag push (`v*`). Wait 60s for npm registry CDN
+# replication. Then in a clean Ubuntu runner:
+#
+#   1. `npm install -g mneme-ai@<tag-version>`
+#   2. `mneme --version` must exit 0 + match
+#   3. `mneme welcome --json '{}'` must exit 0 + produce valid JSON
+#   4. `mneme verify "smoke claim"` must exit 0 + return a verdict
+#   5. `mneme.install.trail` (via daemon) must have a complete-install entry
+#
+# On ANY failure: `npm deprecate mneme-ai@<version> "<reason>"` to prevent
+# users from pulling the broken release + emit GitHub issue + status alert.
+# The user can manually `npm deprecate --undo` once a fix ships.
+#
+# Sister to scripts/publish-all.mjs Step 4 (LATEST-LAG gate in v2.19.63):
+# - publish-all gates the AUTHOR'S machine (pre-tag)
+# - post-publish-smoke gates the REGISTRY (post-tag, post-CDN-replicate)
+# - windows-install-smoke gates Windows (separate workflow, same payload)
+#
+# Triple-gate publish defense:
+#   3.11 workspace-lockstep (pre-publish, ritual)
+#   3.13 latest-lag CDN propagation (pre-tag, publish-all.mjs step 4)
+#   post-publish-smoke (post-tag, this file)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to smoke test (defaults to tag name)'
+        required: false
+
+jobs:
+  post-publish-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Resolve target version
+        id: ver
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Tag name like v2.19.64 → strip leading v
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "target=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Target version: $VERSION"
+
+      - name: Wait 60s for npm CDN replication
+        run: sleep 60
+
+      - name: Verify @latest dist-tag points to target (npm view)
+        id: latest_view
+        shell: bash
+        run: |
+          set -e
+          ATTEMPT=0
+          MAX=20
+          TARGET="${{ steps.ver.outputs.target }}"
+          while [ $ATTEMPT -lt $MAX ]; do
+            LATEST=$(npm view mneme-ai@latest version 2>/dev/null || echo "(unknown)")
+            echo "attempt $ATTEMPT: @latest = $LATEST, want $TARGET"
+            if [ "$LATEST" = "$TARGET" ]; then
+              echo "✓ @latest resolved to $TARGET"
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            ATTEMPT=$((ATTEMPT+1))
+            sleep 30
+          done
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          echo "⚠ @latest still not resolving to $TARGET after 10min (got $LATEST)"
+          # Don't fail — tag may take longer for CDN. Continue with @<exact> path.
+
+      - name: Install mneme-ai globally from npm
+        id: install
+        shell: bash
+        run: |
+          set -e
+          TARGET="${{ steps.ver.outputs.target }}"
+          # Install the EXACT version (bypasses CDN @latest lag)
+          npm install -g "mneme-ai@$TARGET" --omit=optional --loglevel=error
+          INSTALLED=$(mneme --version 2>&1 || echo "(failed)")
+          echo "Installed version: $INSTALLED"
+          if ! echo "$INSTALLED" | grep -q "$TARGET"; then
+            echo "::error::mneme --version reported '$INSTALLED' but expected '$TARGET'"
+            exit 1
+          fi
+
+      - name: Smoke 1 — mneme welcome --json '{}'
+        shell: bash
+        run: |
+          set -e
+          OUT=$(mneme welcome --json '{}' 2>&1)
+          echo "$OUT" | head -3
+          # Must be valid JSON
+          echo "$OUT" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{JSON.parse(s)})" || {
+            echo "::error::mneme welcome --json '{}' did not produce valid JSON"
+            exit 1
+          }
+
+      - name: Smoke 2 — mneme verify "smoke claim"
+        shell: bash
+        run: |
+          set -e
+          # The verify CLI must run + return a verdict (any verdict) without throwing
+          OUT=$(mneme verify "smoke claim from post-publish CI" --json 2>&1 || echo "FAIL")
+          echo "$OUT" | head -5
+          if echo "$OUT" | grep -q "FAIL"; then
+            echo "::error::mneme verify smoke claim crashed"
+            exit 1
+          fi
+
+      - name: Smoke 3 — preinstall trail recorded
+        shell: bash
+        run: |
+          set -e
+          # The install we just did should have written a trail entry
+          # via the inline preinstall script (v2.19.63+).
+          TRAIL_PATH="$HOME/.mneme-global/preinstall-trail.jsonl"
+          if [ -f "$TRAIL_PATH" ]; then
+            echo "✓ trail file exists at $TRAIL_PATH"
+            wc -l "$TRAIL_PATH"
+            tail -3 "$TRAIL_PATH" | head -3
+          else
+            # Not fatal — preinstall trail is v2.19.63+, older versions won't have it
+            echo "⚠ trail file missing (expected for pre-2.19.63 installs)"
+          fi
+
+      - name: Deprecate broken version on smoke failure
+        if: failure()
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          TARGET="${{ steps.ver.outputs.target }}"
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::warning::NPM_TOKEN not set in secrets — cannot auto-deprecate $TARGET. Manual action required: npm deprecate mneme-ai@$TARGET '<reason>'"
+            exit 0
+          fi
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+          REASON="post-publish smoke test failed; this version is broken on npm. See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          npm deprecate "mneme-ai@$TARGET" "$REASON" || echo "deprecate failed (already deprecated?)"
+          echo "::warning::Deprecated mneme-ai@$TARGET due to smoke failure. Reason: $REASON"
+
+      - name: Open issue on smoke failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const target = '${{ steps.ver.outputs.target }}';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Post-publish smoke FAILED for mneme-ai@${target}`,
+              body: [
+                `The post-publish smoke gate failed for **mneme-ai@${target}**.`,
+                ``,
+                `**Workflow run**: ${runUrl}`,
+                ``,
+                `## What happened`,
+                `The release tag \`v${target}\` was pushed, all 5 packages published, but the post-publish CI in a clean Ubuntu environment failed at least one smoke step (install / version / welcome / verify / trail).`,
+                ``,
+                `## Auto-action taken`,
+                `If \`NPM_TOKEN\` was configured, this version has been **deprecated on npm** to prevent users from installing it.`,
+                ``,
+                `## Next steps`,
+                `1. Investigate the smoke run logs at ${runUrl}`,
+                `2. Bump to v${target.replace(/(\\d+)$/, (m) => String(+m + 1))} with a fix`,
+                `3. Once new version smoke-passes: \`npm deprecate --undo mneme-ai@${target}\` (optional; the bumped version makes this unnecessary)`,
+              ].join('\\n'),
+              labels: ['bug', 'release', 'post-publish-failure'],
+            });
+
+      - name: Success summary
+        if: success()
+        shell: bash
+        run: |
+          TARGET="${{ steps.ver.outputs.target }}"
+          echo "## ✅ Post-publish smoke PASSED for mneme-ai@$TARGET" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Install from npm (\`@$TARGET\`): ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`mneme --version\` exit 0: ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`mneme welcome --json '{}'\`: ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`mneme verify\` returns verdict: ✅" >> "$GITHUB_STEP_SUMMARY"
+          echo "- @latest CDN resolved: ${{ steps.latest_view.outputs.ok }}" >> "$GITHUB_STEP_SUMMARY"

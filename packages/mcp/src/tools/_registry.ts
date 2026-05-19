@@ -132,6 +132,7 @@ import { V1960_PUBLISH_VERIFIER_TOOLS } from "./_v1960_publish_verifier.js";
 import { V1961_DLL_EVICTION_TOOLS } from "./_v1961_dll_eviction.js";
 import { V1962_PHOENIX_TOOLS } from "./_v1962_phoenix.js";
 import { V1963_HARDENING_TOOLS } from "./_v1963_hardening.js";
+import { V1964_WASM_CHRYSALIS_TOOLS } from "./_v1964_wasm_chrysalis.js";
 
 // v2.19.51 — module-level memo for the catalog spread. Pure function;
 // only changes when the source tree changes (npm install / hot-reload).
@@ -288,6 +289,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...V1961_DLL_EVICTION_TOOLS,
     ...V1962_PHOENIX_TOOLS,
     ...V1963_HARDENING_TOOLS,
+    ...V1964_WASM_CHRYSALIS_TOOLS,
   ];
 }
 

@@ -145,8 +145,16 @@ export function planExtraction(opts?: { packageRoot?: string; pid?: number }): E
 }
 
 /** Execute the extraction: copy DLLs to per-PID tmp dir + prepend to PATH.
- *  Idempotent — re-running just refreshes the tmp dir. Safe-default — if
- *  any step fails, returns ok=false but never throws. */
+ *  Idempotent + FAST-PATH — re-running:
+ *    1. If env var already starts with our tmpDir AND tmpDir exists → ~0ms return
+ *    2. Per-file: if dst exists with matching size+mtime → skip copy (saves
+ *       ~50-200ms per call for 12MB libvips)
+ *  Safe-default — if any step fails, returns ok=false but never throws.
+ *
+ *  v2.19.64 HOTFIX: the original was idempotent in INTENT but not in COST —
+ *  re-ran copyFileSync + env prepend every call. With cross_encoder warmup
+ *  + bundled embedder defense-in-depth firing on cold CLI verifies, this
+ *  was the 18× cold-start regression user caught. */
 export function extractAndRedirect(plan?: ExtractionPlan): ExtractionResult {
   const t0 = Date.now();
   const livePlan = plan ?? planExtraction();
@@ -161,6 +169,22 @@ export function extractAndRedirect(plan?: ExtractionPlan): ExtractionResult {
       durationMs: Date.now() - t0,
       ok: false,
       error: "no libvips dir found (sharp may not be installed)",
+    };
+  }
+  const sep = process.platform === "win32" ? ";" : ":";
+  const currentEnv = process.env[livePlan.envVar] ?? "";
+  // FAST PATH #1 — env already redirected + tmpdir present → bail out in ~1ms
+  // The most common case after the first call in a process lifetime.
+  if (currentEnv.startsWith(livePlan.tmpDir + sep) && existsSync(livePlan.tmpDir)) {
+    return {
+      v: PROTOCOL_VERSION,
+      plan: livePlan,
+      filesCopied: 0,
+      bytesCopied: 0,
+      filesFailed: 0,
+      envVarSet: livePlan.envVar,
+      durationMs: Date.now() - t0,
+      ok: true,
     };
   }
   try { mkdirSync(livePlan.tmpDir, { recursive: true, mode: 0o700 }); } catch (e) {
@@ -179,20 +203,37 @@ export function extractAndRedirect(plan?: ExtractionPlan): ExtractionResult {
   let filesCopied = 0;
   let bytesCopied = 0;
   let filesFailed = 0;
+  let filesSkipped = 0;
   for (const { src, dst } of livePlan.files) {
     try {
-      copyFileSync(src, dst);
-      filesCopied++;
-      try { bytesCopied += statSync(dst).size; } catch { /* */ }
+      // FAST PATH #2 — dst exists with matching size + mtime → skip copy
+      // (libvips DLLs are 12MB+; re-copying every call burned cold-start time)
+      let skip = false;
+      try {
+        if (existsSync(dst)) {
+          const srcStat = statSync(src);
+          const dstStat = statSync(dst);
+          if (srcStat.size === dstStat.size && srcStat.mtimeMs <= dstStat.mtimeMs) {
+            skip = true;
+            filesSkipped++;
+            bytesCopied += dstStat.size;
+          }
+        }
+      } catch { /* fall through to copy */ }
+      if (!skip) {
+        copyFileSync(src, dst);
+        filesCopied++;
+        try { bytesCopied += statSync(dst).size; } catch { /* */ }
+      }
     } catch {
       filesFailed++;
     }
   }
-  // Prepend tmp dir to the platform's library-search env var
-  const sep = process.platform === "win32" ? ";" : ":";
-  const currentEnv = process.env[livePlan.envVar] ?? "";
-  const newEnv = `${livePlan.tmpDir}${sep}${currentEnv}`;
-  process.env[livePlan.envVar] = newEnv;
+  // Only prepend if not already prepended (avoid unbounded PATH growth)
+  if (!currentEnv.startsWith(livePlan.tmpDir + sep)) {
+    const newEnv = `${livePlan.tmpDir}${sep}${currentEnv}`;
+    process.env[livePlan.envVar] = newEnv;
+  }
   return {
     v: PROTOCOL_VERSION,
     plan: livePlan,
@@ -201,7 +242,7 @@ export function extractAndRedirect(plan?: ExtractionPlan): ExtractionResult {
     filesFailed,
     envVarSet: livePlan.envVar,
     durationMs: Date.now() - t0,
-    ok: filesCopied > 0 && filesFailed === 0,
+    ok: (filesCopied + filesSkipped) > 0 && filesFailed === 0,
   };
 }
 

@@ -990,6 +990,18 @@ export * as publishVerifier from "./publish_verifier/index.js";
 // 11th world-first. See packages/core/src/dll_eviction/.
 export * as dllEviction from "./dll_eviction/index.js";
 
+// v2.19.64 — THE WASM CHRYSALIS. User's architectural endgame post v2.19.63
+// audit: "ลบ DLL ออกจากโลก. compile ทุก stack เป็น .wasm ก้อนเดียว". The
+// invariant: handles(WASM file on disk) = ∅ post-instantiation. Native DLLs
+// require kernel-level file section + lazy page-fault from disk forever →
+// EBUSY structurally unavoidable. WASM bytes deserialize once into V8 heap
+// → disk file useless after that → npm overwrite during execution is fine.
+// THIS module ships the PRIMITIVES + invariant verifier + HMAC-chained
+// launch manifest. Full bun-compile WASM build of the Mneme stack is the
+// next sprint. 13th world-first: WASM-blob launcher + handle-closure
+// invariant + cryptographic manifest as a callable npm primitive.
+export * as wasmChrysalis from "./wasm_chrysalis/index.js";
+
 // v2.19.63 — DOCTOR organ. User caught a NEW bug class: dual install
 // locations from multiple Node version managers (nvm4w + nvm-windows +
 // Volta + system Node), each with its own npm prefix → its own node_modules
