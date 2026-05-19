@@ -66,7 +66,11 @@ function runPruner(binDir: string, env: Record<string, string> = {}): PrunerResu
     encoding: "utf8",
     timeout: 20_000,
     windowsHide: true,
-    env: { ...process.env, ...env },
+    // v2.19.71: postinstall now does TWO jobs (lite-prune + dual-install
+    // detection).  These tests exercise JOB 1 only; pass through
+    // MNEME_SKIP_DUAL_CHECK=1 so the second job is silent + doesn't
+    // pollute the real ~/.mneme-global with marker files during tests.
+    env: { ...process.env, MNEME_SKIP_DUAL_CHECK: "1", ...env },
   });
   return {
     exitCode: r.status ?? -1,
@@ -159,6 +163,23 @@ describe("postinstall-mneme-lite — MNEME_LITE=1 pruner", () => {
     expect(r.exitCode).toBe(0);
     // Garbage was NOT a truthy value, so target stays untouched.
     expect(existsSync(join(sandbox, "node_modules", "@huggingface"))).toBe(true);
+  });
+
+  it("CI environments (CI=true) silence JOB 2 dual-install check", () => {
+    // Just verify it doesn't crash + still exit 0 with CI flag set.
+    const { sandbox, binDir } = buildSandbox([]);
+    sandboxDir = sandbox;
+    copyPruner(binDir);
+    // Note: we drop the default MNEME_SKIP_DUAL_CHECK so JOB 2 would
+    // normally fire — but CI=true should silence it independently.
+    const r = spawnSync(process.execPath, [join(binDir, "postinstall-mneme-lite.cjs")], {
+      encoding: "utf8",
+      timeout: 20_000,
+      windowsHide: true,
+      env: { ...process.env, CI: "true", MNEME_LITE: "" },
+    });
+    expect(r.status ?? -1).toBe(0);
+    expect(r.stdout, "CI=true should suppress dual-install warning").not.toMatch(/dual-install detected/);
   });
 
   it("read the pruner source — `process.exit(0)` is the only exit path (master invariant)", () => {

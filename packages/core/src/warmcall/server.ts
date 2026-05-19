@@ -57,8 +57,13 @@ export async function startWarmCallServer(opts: {
   /** Called whenever an unexpected error happens — typically a
    *  malformed frame from a buggy client.  Best-effort logging. */
   onError?: (err: unknown) => void;
+  /** Override the socket path.  Defaults to warmcallSocketPath() (the
+   *  per-user, per-OS canonical location the bin shim talks to).  Tests
+   *  pass a unique tmp path here to avoid colliding with a real daemon
+   *  + with other parallel tests. */
+  socketPath?: string;
 }): Promise<WarmCallServer> {
-  const socketPath = warmcallSocketPath();
+  const socketPath = opts.socketPath ?? warmcallSocketPath();
 
   // POSIX: stale socket files survive crashes; unlink first.  Windows
   // named pipes are auto-cleaned when the holding process dies.
@@ -172,12 +177,24 @@ async function runRequestFrame(
   }
 
   // Intercept process.exit so a misbehaving tool can't kill the daemon.
+  // Captured-exit-code is stashed on the interceptor; the throw is purely
+  // a control-flow signal — NOT a real error.  See N6 bug report
+  // 2026-05-19: prior versions wrote that signal to stderr, leaking
+  // "warmcall: warmcall: process.exit intercepted" on every `mneme
+  // --version` (commander calls exit(0) after printing the version,
+  // which the interceptor would translate into a fake stderr line).
   const exitInterceptor = installExitInterceptor((code) => { exitCode = code; });
 
   try {
     await opts.run(["node", "mneme", ...req.argv]);
   } catch (err: any) {
-    if (err && typeof err === "object" && "exitCode" in err && typeof (err as any).exitCode === "number") {
+    if (err instanceof WarmCallExitSignal) {
+      // N6 fix — the exit-intercept signal is daemon-internal control
+      // flow, not an error.  The exit code is ALREADY set via onExit
+      // when the interceptor was triggered; do NOT overwrite it, do NOT
+      // write anything to stderr.
+      // Keep exitCode as captured (already updated by onExit).
+    } else if (err && typeof err === "object" && "exitCode" in err && typeof (err as any).exitCode === "number") {
       // commander.exitOverride throws a CommanderError with .exitCode.
       exitCode = (err as any).exitCode;
     } else {
@@ -208,17 +225,42 @@ function writeFrameSafe(sock: Socket, frame: Frame): void {
   } catch { /* swallow — peer may have disconnected */ }
 }
 
+/** N6 fix (v2.19.71) — sentinel class for the exit-intercept control
+ *  signal.  Distinguishing it from a generic Error means the catch
+ *  block in `runRequestFrame` can recognise it as INTERNAL mechanism
+ *  and suppress the stderr leak that previously appeared on every
+ *  `mneme --version` invocation through the warm path.
+ *
+ *  IMPORTANT: this class is NOT exported.  Subclassing it from outside
+ *  the module would let a hostile tool inside the daemon's heap fake
+ *  a clean exit.  The class is module-local so only the interceptor
+ *  can construct it. */
+class WarmCallExitSignal extends Error {
+  public readonly capturedExitCode: number;
+  constructor(code: number) {
+    super(`warmcall internal: process.exit(${code}) intercepted`);
+    this.name = "WarmCallExitSignal";
+    this.capturedExitCode = code;
+  }
+}
+
 /** Install a process.exit() trap that captures the exit code without
- *  actually exiting the daemon.  Uninstall() restores the real exit. */
+ *  actually exiting the daemon.  Uninstall() restores the real exit.
+ *
+ *  The trap throws a WarmCallExitSignal (sentinel class) so the
+ *  surrounding `runRequestFrame` catch block can distinguish it from
+ *  a genuine error and suppress the misleading stderr leak. */
 function installExitInterceptor(onExit: (code: number) => void): { uninstall: () => void } {
   const original = process.exit.bind(process);
   // Cast through unknown so TypeScript doesn't complain about the
   // type-level signature change.
   (process as unknown as { exit: (code?: number) => never }).exit = ((code?: number) => {
-    onExit(typeof code === "number" ? code : 0);
-    // Throw so the caller's try/catch (commander.exitOverride) unwinds
-    // up to the warmcall finally block.
-    throw new Error("warmcall: process.exit intercepted");
+    const captured = typeof code === "number" ? code : 0;
+    onExit(captured);
+    // Throw the sentinel — not a generic Error — so the warmcall
+    // catch block recognises this as internal control flow and does
+    // NOT prefix-decorate the message into stderr.
+    throw new WarmCallExitSignal(captured);
   }) as unknown as (code?: number) => never;
   return {
     uninstall: () => {

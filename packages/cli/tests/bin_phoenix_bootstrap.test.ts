@@ -232,6 +232,11 @@ describe("CLI PHOENIX P3 bootstrap (bin/mneme.js)", () => {
       encoding: "utf8",
       timeout: 10_000,
       windowsHide: true,
+      // v2.19.71 — disable WARM CALL so this test exercises ONLY the
+      // local bin/mneme.js fast path.  Without this, an old daemon
+      // running on the dev machine could intercept and inject N6-class
+      // stderr leaks into our test result.
+      env: { ...process.env, MNEME_WARMCALL: "0" },
     });
     const elapsedMs = Date.now() - start;
     expect(r.status, `--version stderr: ${(r.stderr ?? "").slice(0, 300)}`).toBe(0);

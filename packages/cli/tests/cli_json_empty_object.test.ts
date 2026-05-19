@@ -29,6 +29,11 @@ function runMneme(args: string[]): { exitCode: number; stdout: string; stderr: s
     encoding: "utf8",
     timeout: 60_000,
     windowsHide: true,
+    // v2.19.71 — disable WARM CALL so this test exercises only the
+    // local commander tree (the unit under test).  Without this, an
+    // older daemon on the dev machine could short-circuit our argv
+    // before the local code runs.
+    env: { ...process.env, MNEME_WARMCALL: "0" },
   });
   return { exitCode: r.status ?? -1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
