@@ -464,11 +464,12 @@ A user just shared this repo with you and asked you to install Mneme. **Follow t
 npm install -g mneme-ai
 ```
 
-> **Ultralight install (recommended on Windows / low-bandwidth):** add `--omit=optional` to skip the ~155MB bundled WASM embedder (transformers + sharp + libvips). Mneme falls back to the deterministic hash embedder, OpenAI, or Ollama — every other tool works identically.
+> **Ultralight install (works LOCAL only — npm 10 has a global-install bug with `--omit=optional`):** for a per-project ~5MB install without the bundled WASM embedder (transformers + sharp + libvips), use a local install pattern instead of `-g`. Mneme falls back to deterministic hash / OpenAI / Ollama — every other tool works identically.
 > ```bash
-> npm install -g mneme-ai --omit=optional   # ~5MB, ~10s, structurally zero EBUSY risk
+> mkdir mneme-tool && cd mneme-tool && npm init -y && npm install mneme-ai --omit=optional
+> # binary now at ./node_modules/.bin/mneme — alias it or add to PATH
 > ```
-> Full Gap 3 rationale: [Step 1A.0 in AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md#step-1a0--zero-dll-ultralight-install-recommended-on-windows--low-bandwidth--first-impression-ux).
+> ⚠ `npm install -g mneme-ai --omit=optional` does NOT skip optionals on npm 10 (reproduced 2026-05-19; the flag is silently ignored for global installs). Use the local pattern above, the Docker fallback (Step 1B), or rely on the v2.19.65 EBUSY fix that makes the global install path safe even with the full 467MB tree. Full rationale: [Step 1A.0 in AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md#step-1a0--zero-dll-ultralight-install-local-only--npm-10-bug-warning).
 
 > **AI agents on Windows:** if the install fails with `EBUSY ... libvips-42.dll`, an older Mneme daemon is holding the DLL. Run `mneme daemon stop` (PowerShell) or `cmd //c "taskkill /F /IM mneme.exe /T"` (Git Bash) once, wait ~2s, then re-run the install. v2.19.65 makes this scenario rare (daemons now load libvips from `%TEMP%`), but a still-alive daemon from an older version will reproduce the failure. Full recovery contract: [Step 1A.1 in AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md#step-1a1--if-install-fails-with-ebusy-on-windows-v21965-makes-this-rare-recovery-if-it-still-happens).
 

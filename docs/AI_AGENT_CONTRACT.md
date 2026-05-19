@@ -42,32 +42,41 @@ The full list of commands the user might want auto-executed is in Steps 1-7 belo
 npm install -g mneme-ai
 ```
 
-### Step 1A.0 — Zero-DLL ultralight install (recommended on Windows + low-bandwidth + first-impression UX)
+### Step 1A.0 — Zero-DLL ultralight install (LOCAL only — npm 10 bug warning)
 
-`mneme-ai` ships `@huggingface/transformers` as an **optional** dependency for the bundled WASM embedder. npm installs it by default — which drags `sharp` + `libvips` (~155MB of native DLLs) into `node_modules` and is the entire reason the EBUSY install bug class exists at all. **Mneme runs perfectly without it** by falling back through the embedder chain: `OpenAI → Ollama → bundled WASM (skipped) → hash`. Users without an OpenAI key + without Ollama land on the deterministic hash embedder (★★ quality) instead of bundled WASM (★★★) — every other Mneme tool works identically.
+`mneme-ai` ships `@huggingface/transformers` as an **optional** dependency for the bundled WASM embedder. npm installs it by default — which drags `sharp` + `libvips` (~467MB of native DLLs) into `node_modules` and is the root cause of the historical EBUSY install bug class. **Mneme runs perfectly without it** by falling back through the embedder chain: `OpenAI → Ollama → bundled WASM (skipped) → hash`. Users without an OpenAI key + without Ollama land on the deterministic hash embedder (★★ quality) instead of bundled WASM (★★★) — every other Mneme tool works identically.
 
-If the user does not need bundled WASM embeddings (most don't — Ollama is the recommended local-free path):
+#### Local install (works) — when you can use one
 
 ```bash
-npm install -g mneme-ai --omit=optional
+mkdir mneme-tool && cd mneme-tool && npm init -y && npm install mneme-ai --omit=optional
+# binary is now at ./node_modules/.bin/mneme — alias or PATH it
 ```
 
-This skips `@huggingface/transformers` + `sharp` + `libvips` entirely:
-  - **Install size**: ~5MB instead of ~155MB
-  - **Install time**: ~10s instead of ~60-90s
+This skips `@huggingface/transformers` + `sharp` + `libvips` cleanly:
+  - **Install size**: ~5MB instead of ~467MB
+  - **Install time**: ~3-5s instead of ~60-90s
   - **EBUSY risk**: structurally zero (no native DLLs to lock)
   - **Trade**: no bundled WASM embedder; `mneme.embedder.autodiagnose` will recommend Ollama if user wants ★★★+ quality
 
 When the user later wants the bundled embedder back:
 
 ```bash
-npm install -g @huggingface/transformers   # adds it on demand
+npm install @huggingface/transformers   # adds it on demand to the same local install
 ```
 
-AI agent decision rule:
-  - User says "fast / lightweight / minimal" → use `--omit=optional`
-  - User says "best quality, willing to wait" → use the plain `npm install -g mneme-ai` (default optional deps)
-  - User on Windows + unknown preference → **prefer `--omit=optional`** then offer to install the embedder later
+#### ⚠ Global install (`npm install -g`) and `--omit=optional` — npm 10 bug
+
+**Empirically reproduced 2026-05-19 on npm 10.9.4 / Node 22.22.1 / Windows 11:** `npm install -g mneme-ai --omit=optional` and `NPM_CONFIG_OMIT=optional npm install -g mneme-ai` and `npm install -g mneme-ai --no-optional` all **silently install the optional `@huggingface/transformers` tree anyway** (467MB on disk verified). The flag is honoured for LOCAL installs but ignored for GLOBAL. This is an upstream npm bug — Mneme cannot fix it from a package.json. **Do not document `npm install -g --omit=optional` to users as a working zero-DLL path.**
+
+What actually works on global installs:
+  - **v2.19.65+ ships the CLI Phoenix P3 bootstrap + the daemon DLL extraction** — every Mneme process loads libvips from `%TEMP%/mneme-vips-{pid}/` instead of `node_modules`, so the EBUSY-on-upgrade scenario is structurally fixed regardless of whether the optional deps are present.
+  - If the user needs the smaller install: tell them to use the LOCAL install pattern above (per-project `node_modules`), or to install via Docker (Step 1B), or to wait for a future `mneme-ai-lite` distribution split.
+
+AI agent decision rule (revised):
+  - User wants global install (the README default) → use plain `npm install -g mneme-ai`. Rely on the v2.19.65 EBUSY fix + the v2.19.66 recovery contract (Step 1A.1).
+  - User explicitly says "no native deps / smallest possible / Docker-style" → use the LOCAL install pattern above OR the Docker fallback (Step 1B).
+  - Do NOT promise that `--omit=optional` will skip transformers in a global install on npm 10. It will not.
 
 ### Step 1A.1 — If install fails with `EBUSY` on Windows (v2.19.65+ makes this rare; recovery if it still happens)
 
