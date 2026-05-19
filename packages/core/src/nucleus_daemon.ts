@@ -132,6 +132,20 @@ export async function runDaemonLoop(
   repoRoot: string,
   opts: { intervalMs?: number; onTick?: (state: { tickCount: number; banner: string }) => void } = {},
 ): Promise<void> {
+  // v2.19.63 PHOENIX P3 AUTO-FIRE — the missing wiring v2.19.62 forgot.
+  // MUST run BEFORE any code path can transitively require('sharp') or
+  // load libvips. The cross-encoder warmup below + every dynamic import
+  // of @huggingface/transformers depends on this happening first.
+  // Idempotent + non-throwing: extractAndRedirect returns ok=false on
+  // missing sharp install (which is the default since v2.19.55) and
+  // never throws. Also installs the on-exit cleanup handler so the
+  // per-PID tmpdir is reaped when this daemon dies.
+  try {
+    const { extractAndRedirect, installCleanupOnExit } = await import("./phoenix/dll_extraction.js");
+    extractAndRedirect();
+    installCleanupOnExit();
+  } catch { /* BE:silent-by-design — phoenix is non-fatal at boot */ }
+
   ensureDir(repoRoot);
 
   // Atomic PID-file write (refuse if already alive).

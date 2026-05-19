@@ -990,6 +990,25 @@ export * as publishVerifier from "./publish_verifier/index.js";
 // 11th world-first. See packages/core/src/dll_eviction/.
 export * as dllEviction from "./dll_eviction/index.js";
 
+// v2.19.63 — DOCTOR organ. User caught a NEW bug class: dual install
+// locations from multiple Node version managers (nvm4w + nvm-windows +
+// Volta + system Node), each with its own npm prefix → its own node_modules
+// → potentially different mneme-ai version. PATH order decides which shim
+// runs. DOCTOR enumerates all candidate npm prefixes, finds every mneme-ai
+// install, identifies version conflicts, suggests exact remediation commands.
+// NEVER mutates filesystem — pure observation. User's fs is sacred.
+export * as doctor from "./doctor/index.js";
+
+// v2.19.63 — PHOENIX HARDENING. User caught v2.19.62 install path "passed"
+// only because daemon died from unrelated watchdog (not preinstall pipeline).
+// This module fixes the forensic gap: HMAC-chained ~/.mneme-global/preinstall-
+// trail.jsonl records every preinstall step (start / flag / kill / heartbeat-
+// reap / dll-rename / staging-sweep / end). Verifiable: AI agents + CI can
+// PROVE preinstall ran (or prove it didn't). Inline preinstall script writes
+// trail entries; this module reads + verifies the chain. Composes with
+// v2.19.62 P5 Sentinel organ (chain-integrity verdict).
+export * as preinstallTrail from "./preinstall_trail/index.js";
+
 // v2.19.62 — PHOENIX PHASE 1. User's architectural vision (PHOENIX P1-P7):
 // turn Mneme into a swarm-intelligence organism that NEVER hits EBUSY again.
 // Phase 1 ships:

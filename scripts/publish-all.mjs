@@ -161,7 +161,67 @@ if (SKIP_SMOKE) {
   }
 }
 
-log("🎉", `publish-all v${TARGET_VERSION} COMPLETE — all 5 packages live + verified + smoke passed`);
+// ─── STEP 4 — LATEST-LAG GATE (v2.19.63) ──────────────────────────────────
+// `npm view <pkg> version` hits the origin registry; `npm install <pkg>@latest`
+// hits a CDN edge (Cloudflare / fastly). After publish, edges replicate the
+// `latest` dist-tag with ~5-15min lag. Users running `npm install -g mneme-ai
+// @latest` in this window get the PREVIOUS version → confusing "did the
+// release ship?" experience. This gate retries `npm view mneme-ai@latest
+// version` AND end-to-end `npm install mneme-ai@latest` in a clean dir
+// until both resolve to TARGET_VERSION. Backoff up to ~10min. BLOCKS the
+// "publish complete" message.
+log("⏳", "step 4/5: LATEST-LAG gate — verify @latest dist-tag resolves to new version across CDN");
+let latestOk = false;
+let latestSeen = "(none)";
+const LATEST_GATE_MAX_ATTEMPTS = 20; // 10s + 20s + ... + 60s + 6×60s = ~600s = 10min cap
+for (let attempt = 1; attempt <= LATEST_GATE_MAX_ATTEMPTS; attempt++) {
+  const v = spawnSync("npm", ["view", "mneme-ai@latest", "version"], {
+    encoding: "utf8", shell: process.platform === "win32", windowsHide: true, timeout: 30_000,
+  });
+  if (v.status === 0) {
+    latestSeen = (v.stdout || "").trim();
+    if (latestSeen === TARGET_VERSION) {
+      latestOk = true;
+      log("✅", `mneme-ai@latest now resolves to ${TARGET_VERSION} (attempt ${attempt})`);
+      break;
+    }
+  }
+  const wait = Math.min(attempt * 10_000, 60_000); // 10s → 60s cap
+  log("   ", dim(`attempt ${attempt}/${LATEST_GATE_MAX_ATTEMPTS}: @latest = ${latestSeen}, want ${TARGET_VERSION} — waiting ${wait/1000}s for CDN propagation`));
+  await sleep(wait);
+}
+if (!latestOk) {
+  log("⚠️", `LATEST-LAG gate: @latest still resolves to ${latestSeen} after 10min (want ${TARGET_VERSION})`);
+  log("   ", dim("Tag is published BUT CDN edges haven't caught up. Users hitting `@latest` may pull the previous version for a while."));
+  log("   ", dim(`Workaround for users: \`npm install -g mneme-ai@${TARGET_VERSION}\` to pin the exact version.`));
+  // Don't exit non-zero — the tag IS published, just slow CDN. But emit warning.
+} else {
+  // Belt-and-suspenders: verify end-to-end install via @latest resolves correctly
+  const latestSmokeDir = join(tmpdir(), `mneme-latest-smoke-${process.pid}-${Date.now()}`);
+  try {
+    mkdirSync(latestSmokeDir, { recursive: true });
+    writeFileSync(join(latestSmokeDir, "package.json"), JSON.stringify({ name: "latest-smoke", version: "1.0.0" }, null, 2));
+    const installR = spawnSync("npm", ["install", "--no-save", "--omit=optional", "mneme-ai@latest"], {
+      cwd: latestSmokeDir, encoding: "utf8", shell: process.platform === "win32", windowsHide: true, timeout: 300_000,
+    });
+    if (installR.status === 0) {
+      const installedPkg = JSON.parse(readFileSync(join(latestSmokeDir, "node_modules", "mneme-ai", "package.json"), "utf8"));
+      if (installedPkg.version === TARGET_VERSION) {
+        log("✅", `end-to-end \`mneme-ai@latest\` install resolved to ${TARGET_VERSION} — CDN propagation verified`);
+      } else {
+        log("⚠️", `\`@latest\` view says ${TARGET_VERSION} but install resolved to ${installedPkg.version} — CDN inconsistency`);
+      }
+    } else {
+      log("⚠️", `end-to-end \`@latest\` install failed (exit ${installR.status}) — origin says ${TARGET_VERSION} but install path broken`);
+    }
+  } catch (e) {
+    log("⚠️", `LATEST-LAG end-to-end probe threw: ${e.message}`);
+  } finally {
+    try { rmSync(latestSmokeDir, { recursive: true, force: true }); } catch { /* */ }
+  }
+}
+
+log("🎉", `publish-all v${TARGET_VERSION} COMPLETE — all ${PACKAGES_IN_DEP_ORDER.length} packages live + verified + smoke passed${latestOk ? " + @latest propagated" : " (⚠ @latest still propagating)"}`);
 process.exit(0);
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }

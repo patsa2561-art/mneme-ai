@@ -157,6 +157,14 @@ export class BundledEmbedder implements EmbeddingProvider {
     let finalDevice: string | null = null;
     let lastError: string | null = null;
     try {
+      // v2.19.63 PHOENIX P3 defense-in-depth — fire DLL extraction here too
+      // in case bundled embedder loads in a non-daemon process (CLI verify,
+      // test harness, custom MCP host). Idempotent — daemon-boot already
+      // ran this; no-op when env var already prepended with our tmpdir.
+      try {
+        const { extractAndRedirect } = await import("@mneme-ai/core").then((m) => m.phoenix.dllExtraction);
+        extractAndRedirect();
+      } catch { /* BE:silent-by-design */ }
       const transformers = (await import("@huggingface/transformers")) as unknown as {
         pipeline: (task: string, model: string, opts: Record<string, unknown>) => Promise<unknown>;
         env: Record<string, unknown>;

@@ -49,6 +49,12 @@ async function loadPipeline(modelId: string): Promise<PipelineLike | null> {
   if (cachedPipeline && cachedModelId === modelId) return cachedPipeline;
   if (Date.now() - lastLoadFailedAt < LOAD_RETRY_COOLDOWN_MS) return null;
   try {
+    // v2.19.63 PHOENIX P3 defense-in-depth — fire DLL extraction before
+    // transformers loads sharp/libvips. Idempotent + non-throwing.
+    try {
+      const { extractAndRedirect } = await import("../phoenix/dll_extraction.js");
+      extractAndRedirect();
+    } catch { /* BE:silent-by-design */ }
     const transformers = (await import("@huggingface/transformers")) as unknown as {
       pipeline: (task: string, model: string, opts?: { dtype?: string }) => Promise<PipelineLike>;
     };

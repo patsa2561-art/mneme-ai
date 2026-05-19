@@ -205,6 +205,15 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.63": {
+    headline: "🔥 PHOENIX HARDENING -- 4 fixes for the bug classes user caught after v2.19.62. (1) AUTO-FIRE DLL extraction at daemon boot (the missing wiring v2.19.62 forgot -- P3 was MCP-only, never fired automatically -- now hooks into runDaemonLoop BEFORE any sharp/libvips require + defense-in-depth at every dynamic-import site). (2) PREINSTALL TRAIL HMAC-chained ledger at ~/.mneme-global/preinstall-trail.jsonl (PROVES preinstall ran -- v2.19.62 install path passed by accident; this fixes the forensic gap). (3) DOCTOR organ + multi-Node-manager prefix scanner (detects user's REAL bug: dual install at C:\\nvm4w\\nodejs vs C:\\Users\\...\\nvm\\v22.22.1 with version drift -- never auto-deletes, suggests exact remediation). (4) LATEST-LAG gate in publish-all.mjs (blocks publish-complete message until npm @latest CDN propagation catches up; warns + provides @<exact-version> workaround). Plus 4 new MCP tools: mneme.install.{trail,trail_verify} + mneme.doctor.scan + mneme.phoenix.extract_status. Total MCP tools 783 -> 787 (+4). 53 new deep tests pass (19 trail + 15 doctor + plus 4 AURELIAN). Honest accountability: v2.19.62 PHOENIX P3 was unverified in production -- user proved daemon happened to die from unrelated watchdog. v2.19.63 closes the forensic loop + wires the missing trigger.",
+    tools: [
+      "mneme.install.trail",
+      "mneme.install.trail_verify",
+      "mneme.doctor.scan",
+      "mneme.phoenix.extract_status",
+    ],
+  },
   "2.19.62": {
     headline: "🔥 PHOENIX PHASE 1 — DLL EXTRACTION ORGAN + 3 AUTO-BOTS + SCOUT — user's PHOENIX PROTOCOL P3+P5+P4 vision shipped. The architectural fix that makes EBUSY structurally impossible at SOURCE (not just survivable like v2.19.45-61): COPY libvips DLLs to per-PID %TEMP%/mneme-vips-{pid}/ + prepend tmpdir to PATH (Windows) / DYLD_LIBRARY_PATH (macOS) / LD_LIBRARY_PATH (Linux). Disjoint-resource-set invariant: ∀ daemon i,j: handles(i) ∩ handles(j) = ∅. npm install can write libvips-42.dll in node_modules at any time because NO daemon holds the canonical install-time path anymore. Plus 3 priority-1 organ bots (Custodian / Sentinel / Surgeon) wired into daemon loop on independent cadences (5min / 10min / 5min). Plus PHOENIX Scout (passive npm registry probe; pure observation; the Queen consumes verdicts in Phase 2). 8 new MCP tools surfaces (extract_dll / dll_cleanup / dll_sweep / custodian_sweep / sentinel_probe / surgeon_diagnose / scout_poll / organs_tick). 64 deep tests pass. 12th world-first: per-PID DLL hostage extraction as callable npm package primitive. Electron + VS Code use this trick INTERNALLY but nobody ships it as a reusable primitive. Total MCP tools 775 → 783 (+8).",
     tools: [
