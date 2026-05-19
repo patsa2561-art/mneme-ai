@@ -2524,6 +2524,19 @@ export async function run(argv: string[]): Promise<void> {
 
   // ─── MneMeiosis Lineage commands (v1.19.0) ─────────────────────────
   registerWelcomeCommand(program);
+
+  // ─── v2.19.75 — `mneme cheatsheet` (10-line user-facing quick start) ─
+  // The single-screen "what do I actually type?" guide for users who
+  // don't memorise the 711-tool catalog.  Repo-aware: examples
+  // reference the current branch + hot file when available.
+  program
+    .command("cheatsheet")
+    .description("Single-screen 10-command quick reference. Repo-aware examples — copy-paste ready.")
+    .option("--json", "Machine-readable output.")
+    .action(async (opts: { json?: boolean }) => {
+      const { cheatsheetCommand } = await import("./commands/cheatsheet.js");
+      cheatsheetCommand({ cwd: process.cwd(), json: !!opts.json });
+    });
   registerSporeCommands(program);
   registerLinCommands(program);
   // ─── NUCLEUS Infinity Wisdom Brain (v1.21.0) ──────────────────────

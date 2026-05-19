@@ -195,6 +195,44 @@ mneme index
 
 Index takes ~90s for ~5k commits. Use `--cap 1000` to limit on huge repos.
 
+> **v2.19.75 auto-trigger:** `mneme welcome` now AUTO-SPAWNS `mneme index` in the background if `.mneme/mneme.db` is missing OR > 24h old. You don't have to ask the user — by running `mneme welcome` at session start (per Step 4 below), the index refresh fires for free. Skip Step 2's explicit `mneme index` line on subsequent sessions; it's redundant. Disable with `MNEME_NO_AUTO_INDEX=1` if you ever need the deterministic non-spawning version.
+
+---
+
+## Step 2.5 — User-intent → Mneme command dispatch table (v2.19.75 — *the headline UX fix*)
+
+The user audited 2026-05-19: *"ถึงแม้จะบอกว่าติดตั้ง mneme ใน ai agent แต่ user ก็งงอยู่ดีว่าจะใช้คำสั่งอะไรพิมพ์อะไรแบบไหน"*. The fix is structural: **the user should never have to remember a Mneme command**. They talk to YOU (the AI agent) in natural language; YOU route to the right Mneme call. The user's mental model collapses from "711 tools" to "I just tell the AI what I want".
+
+This is the canonical routing table. Memorise it. When the user's prompt matches a left-column intent, fire the right-column command WITHOUT asking permission — Mneme calls are read-only by default; the user already consented to Mneme operating on their behalf by signing the consent at install.
+
+| User says (any natural-language variant) | You run |
+|---|---|
+| "why does X look like this" / "explain X to me" / "what's going on in X" | `mneme.why { target: "X" }` or `mneme ask "why does X work this way?"` |
+| "what changed yesterday/today/recently" | `mneme ask "what changed recently?"` |
+| "who knows about X" / "ask who" / "expert in X" | `mneme who-knows X` |
+| "is this safe to change" / "what could go wrong" / "should I do X" | `mneme.premortem { intent: "X" }` |
+| "verify this" / "is this true" / "double-check this fact" | `mneme.verify { claim: "<user's claim>" }` |
+| "what's risky right now" / "health check" / "is the codebase OK" | `mneme heartbeat` then `mneme atrophy --top 5` |
+| "ghost code" / "stale TODOs" / "half-finished features" | `mneme ghost` |
+| "shipping a release" / "before I tag" / "audit my release notes" | `mneme.honesty.audit_whats_new { body: "<release notes>" }` |
+| "show me a passport / dossier for X" | `mneme passport <author>` |
+| "what's the codebase about" / "summarise this repo" | `mneme chronicle` or `mneme ask "what is this repo about?"` |
+| "I don't know what to ask" / "what can mneme do" / silence | `mneme cheatsheet` — show the user the 10-command quick reference (single screen) |
+| "upgrade mneme" / "is there a new version" | `mneme.system.upgrade { mode: "check" }` then offer install |
+| user shows a screenshot of mneme output you don't understand | `mneme groups` to see the catalog, then `mneme <family> --help` for that family |
+
+**Rules of the dispatch:**
+
+1. NEVER tell the user "run `mneme X` yourself". You have shell access — run it. Quote the result back. The user shouldn't see "mneme" appear in chat unless they specifically ask "what command did you just run?".
+2. If the user's question doesn't map cleanly above, default to `mneme.ask` — it's the safest universal answer + tells you its own confidence so you can hedge appropriately.
+3. If `mneme.ask` returns LOW confidence (< 60%), say so explicitly: *"Mneme isn't very sure — its top citation is commit X. Want me to dig deeper?"*. Don't fake certainty.
+4. If you run a Mneme call and it errors, do NOT loop. Surface the error to the user verbatim + suggest `mneme doctor`.
+5. The first call of every session SHOULD be `mneme.welcome` (per Step 4) — that's also where the auto-index fires, so subsequent calls have fresh memory to query.
+
+**Why this works:**
+
+The user's vocabulary stays English/Thai/whatever-they-speak. Mneme's vocabulary stays the 711-tool catalog. You are the translator. The user's experience becomes: "I asked, I got an answer, I didn't have to learn anything." That's the "super simple flow ที่ข้างในเต็มไปด้วยพลังสุดยอด" the user asked for on 2026-05-19.
+
 > **What `mneme init` does silently for the user (v1.11.1+):** auto-enables HMAC-SHA-256 tamper-evident audit log · writes `.mneme/.gitignore` to exclude the audit secret · prints one line confirming "Security on by default."
 >
 > **After Step 2, briefly tell the user (1-2 sentences):** *"Mneme is installed and indexed. Security is on by default — every state-changing action goes into a tamper-evident audit log at `.mneme/audit.log`. Run `mneme security status` to inspect, or `mneme security off` to disable."* Don't make this a wall of text.

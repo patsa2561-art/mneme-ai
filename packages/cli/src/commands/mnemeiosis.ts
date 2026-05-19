@@ -49,6 +49,65 @@ export function registerWelcomeCommand(program: Command): void {
       const version = resolveMnemeVersion();
       const w = lineage.buildWelcome(process.cwd(), version);
       lineage.markWelcomeShown(process.cwd(), version);
+
+      // v2.19.75 — AUTO-INDEX TRIGGER.  Users don't remember `mneme
+      // index`.  AI agents calling `mneme welcome` (per the AI agent
+      // contract Step 0+ ritual) get an auto-indexer fired for free
+      // if the index is missing or stale (>24h).  Fire-and-forget
+      // detached spawn — never blocks welcome, never errors out.
+      // The user audited 2026-05-19: "ai agent ต้องรู้ว่า ให้พิม mneme
+      // index เอง" — this closes that loop by making welcome itself
+      // the trigger.  Idempotent: subsequent welcomes inside the
+      // 24h window see a fresh index + skip the spawn.
+      try {
+        const { fs, path, child_process } = await Promise.all([
+          import("node:fs"), import("node:path"), import("node:child_process"),
+        ]).then(([fs, path, cp]) => ({ fs, path, child_process: cp }));
+        const dbPath = path.join(process.cwd(), ".mneme", "mneme.db");
+        let shouldIndex = false;
+        let reason = "";
+        if (!fs.existsSync(dbPath)) {
+          shouldIndex = true;
+          reason = "no index yet";
+        } else {
+          try {
+            const ageMs = Date.now() - fs.statSync(dbPath).mtimeMs;
+            if (ageMs > 24 * 60 * 60 * 1000) {
+              shouldIndex = true;
+              reason = `index ${Math.round(ageMs / (60 * 60 * 1000))}h old (>24h staleness threshold)`;
+            }
+          } catch { /* */ }
+        }
+        // User opt-out (covers CI / read-only filesystems / debugging).
+        if (process.env["MNEME_NO_AUTO_INDEX"] === "1") shouldIndex = false;
+        if (shouldIndex) {
+          // Spawn detached so welcome returns immediately + the index
+          // job runs in the background.  Output redirected to a log
+          // file the user can inspect via `mneme status` later.
+          const logDir = path.join(process.cwd(), ".mneme");
+          if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+          const logPath = path.join(logDir, "auto-index.log");
+          const logFd = fs.openSync(logPath, "a");
+          try {
+            const child = child_process.spawn(
+              process.execPath,
+              [process.argv[1] ?? "mneme", "index"],
+              { detached: true, stdio: ["ignore", logFd, logFd], windowsHide: true },
+            );
+            child.unref();
+            fs.appendFileSync(
+              logPath,
+              `\n[${new Date().toISOString()}] auto-index triggered by welcome — reason: ${reason}\n`,
+            );
+          } finally {
+            try { fs.closeSync(logFd); } catch { /* */ }
+          }
+          // Stash a marker on the welcome payload so the AI agent
+          // surfaces a one-liner about the auto-fired index.
+          (w as { autoIndexTriggered?: { reason: string; logPath: string } }).autoIndexTriggered = { reason, logPath };
+        }
+      } catch { /* welcome must never fail because of auto-index plumbing */ }
+
       out(opts, w, [
         `Mneme v${version} ${w.freshInstall ? "— fresh install" : "— welcome back"}`,
         "",
@@ -59,8 +118,11 @@ export function registerWelcomeCommand(program: Command): void {
           `  ${name}: ${def.enabled ? "ON" : "OFF"}`,
           ...def.defaultsApplied.map((d) => `    • ${d}`),
         ]),
+        ...(((w as unknown as { autoIndexTriggered?: { reason: string } }).autoIndexTriggered
+          ? ["", `Auto-index fired in background (${(w as unknown as { autoIndexTriggered: { reason: string } }).autoIndexTriggered!.reason}) — tail .mneme/auto-index.log for progress.`]
+          : []) as string[]),
         "",
-        "Next: mneme.capabilities · mneme lin status · mneme spore status",
+        "Next: mneme.capabilities · mneme cheatsheet · mneme groups",
       ]);
     });
 }
