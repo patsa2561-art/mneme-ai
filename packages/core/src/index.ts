@@ -964,3 +964,9 @@ export * as perfBudget from "./perf_budget/index.js";
 // HMAC-chained ledger; resumable on crash. Parallel-safe lock.
 // Cross-platform Windows + macOS + Linux. 8th world-first.
 export * as shepherd from "./shepherd/index.js";
+
+// v2.19.59 — MUSCLE MEMORY now exports createMuscleServer + dispatchOverNet
+// + pingMuscleServer (the missing net.Server transport that v2.19.12 punted).
+// Already re-exported from packages/core/src/muscle_memory/index.ts itself
+// so the existing `muscleMemory` namespace (line 724) sees them for free.
+// 9th world-first: UDS daemon bypass for CLI cold-start elimination.

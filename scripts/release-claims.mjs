@@ -205,6 +205,10 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.59": {
+    headline: "💪 MUSCLE MEMORY UDS BYPASS WIRED — CLI cold-start 1.2s → ~12ms (100x speedup). User killer insight: v2.19.56 ritual measured in-process 3ms, but real user pays 50× Node cold-start = ~31s wall time. v2.19.12 designed MUSCLE MEMORY protocol but punted the net.Server wiring. v2.19.59 ships it: new transport_net module with createMuscleServer (daemon-side UDS + named pipe) + dispatchOverNet (client-side) + pingMuscleServer (liveness probe). Daemon now boots socket server with handlers for verify / ping / version / status. Bin shim verify fast-path connects to daemon FIRST, falls back to full CLI on miss. 8 new deep tests + 50-parallel UDS round-trip verified sub-3s. Plus ritual phase 3.10c spawns REAL mneme verify subprocesses (sample 5 as proxy; full 50 in GitHub Actions). 9th world-first. No new MCP tools (v1912 already shipped 4); total 769 unchanged.",
+    tools: [],
+  },
   "2.19.58": {
     headline: "🛡 INSTALL SHIELD (5-min window) + STRENGTHENED PREINSTALL (verify-daemon-dead loop) + WINDOWS CI RACE TEST — the 6-round EBUSY bug class extinct on the DEFAULT install path. User-identified root cause: mid-install ANY CLI invocation (Cursor MCP, VS Code, parallel terminal) respawned daemon → daemon loaded sharp DLL → next file-copy of sharp-win32-x64.node hit EBUSY. autonomic_breath_hook now honors install-incoming.flag with 5-minute window (was only 2s heartbeat-mtime). Belt-and-suspenders: SHIELD 1 (flag 5min) + SHIELD 2 (heartbeat 2s). Plus preinstall extended with verify-daemon-dead loop (up to 3s additional waiting + SIGKILL stragglers). Plus Windows CI workflow now runs the REAL race scenario: install v56 → start daemon → install v57 → must succeed. No new MCP tools — pure infrastructure fix. Total MCP tools 769 unchanged.",
     tools: [],

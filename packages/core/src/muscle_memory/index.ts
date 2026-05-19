@@ -258,3 +258,7 @@ export function suggestedSocketPath(opts: { repoPath?: string } = {}): string {
 export function formatMuscleStatusLine(s: ReturnType<MuscleDispatcher["status"]>): string {
   return `💪 MUSCLE · ${s.totalCalls} calls · warm avg ${s.avgWarmLatencyMs.toFixed(2)}ms · cold-vs-warm speedup ${s.speedupFactor.toFixed(1)}x`;
 }
+
+// v2.19.59 — net.Server transport (the missing wiring v2.19.12 punted).
+export { createMuscleServer, dispatchOverNet, pingMuscleServer } from "./transport_net.js";
+export type { MuscleServerOptions, DispatchOptions } from "./transport_net.js";
