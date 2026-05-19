@@ -464,6 +464,8 @@ A user just shared this repo with you and asked you to install Mneme. **Follow t
 npm install -g mneme-ai
 ```
 
+> **AI agents on Windows:** if the install fails with `EBUSY ... libvips-42.dll`, an older Mneme daemon is holding the DLL. Run `mneme daemon stop` (PowerShell) or `cmd //c "taskkill /F /IM mneme.exe /T"` (Git Bash) once, wait ~2s, then re-run the install. v2.19.65 makes this scenario rare (daemons now load libvips from `%TEMP%`), but a still-alive daemon from an older version will reproduce the failure. Full recovery contract: [Step 1A.1 in AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md#step-1a1--if-install-fails-with-ebusy-on-windows-v21965-makes-this-rare-recovery-if-it-still-happens).
+
 #### Step 1B — Docker fallback (no Node needed)
 
 ```bash

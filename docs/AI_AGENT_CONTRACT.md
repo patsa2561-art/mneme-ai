@@ -42,6 +42,45 @@ The full list of commands the user might want auto-executed is in Steps 1-7 belo
 npm install -g mneme-ai
 ```
 
+### Step 1A.1 — If install fails with `EBUSY` on Windows (v2.19.65+ makes this rare; recovery if it still happens)
+
+Symptom (real npm error you may see in your shell output):
+```
+npm error EBUSY: resource busy or locked, copyfile
+'.../node_modules/mneme-ai/node_modules/@img/sharp-win32-x64/lib/libvips-42.dll'
+```
+
+Cause: an existing Mneme daemon (or a stale `mneme.exe` from a previous AI agent session) holds the libvips DLL, so npm cannot overwrite it. v2.19.65 makes the daemon load DLLs from `%TEMP%/mneme-vips-{pid}/` instead, which eliminates this class of lock — but a daemon from an older Mneme version that is still alive will reproduce the failure.
+
+**AI agent recovery (deterministic, ~5 commands, idempotent):**
+
+```powershell
+# PowerShell (preferred on Windows — taskkill behaves correctly)
+mneme daemon stop 2>$null
+taskkill /F /IM mneme.exe /T 2>$null
+Start-Sleep -Seconds 2
+npm install -g mneme-ai@latest
+```
+
+```bash
+# POSIX shell or Git Bash on Windows — wmic/taskkill via cmd
+mneme daemon stop 2>/dev/null || true
+cmd //c "taskkill /F /IM mneme.exe /T" 2>/dev/null || true
+sleep 2
+npm install -g mneme-ai@latest
+```
+
+If EBUSY persists after the recovery sequence, the lock is held by a tool OTHER than the Mneme daemon (typically: a `node.exe` that loaded `sharp` from `node_modules` and is still alive). Surface the failure to the user with the offending PID — do NOT silently retry forever. The user's open IDE (Cursor / VS Code / WebStorm extension that wraps Mneme) is the most common holder.
+
+```powershell
+# Find any process still holding the DLL after recovery
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*mneme*' } | Select-Object ProcessId, CommandLine
+```
+
+Tell the user verbatim: *"Mneme upgrade is blocked by PID `<n>` (`<commandLine>`). Close that tool, then ask me to retry."* Then stop. Do not fall back to `--force` or `--ignore-scripts` without consent — those bypass the preinstall daemon-stop hook and are the path that historically corrupted the install on v2.19.48.
+
+After successful install, jump back to Step 2.
+
 ## Step 1B — Docker fallback (no Node needed)
 
 ```bash
