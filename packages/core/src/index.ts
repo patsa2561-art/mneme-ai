@@ -979,3 +979,13 @@ export * as shepherd from "./shepherd/index.js";
 // BEFORE telling users to install. 10th world-first: callable npm-registry
 // lockstep verification.
 export * as publishVerifier from "./publish_verifier/index.js";
+
+// v2.19.61 — DLL EVICTION ORGAN. User identified the actual root cause
+// (7 rounds): daemon holds libvips-42.dll via sharp; Windows ignores
+// SIGTERM (Node.js default); even after process death OS holds DLL handle
+// 5-30s. Three primitives compose: windowsTaskKill (taskkill /F = real
+// kill on Windows) + probeWritable (fs.openSync 'r+' retry loop confirms
+// OS released handle) + evictByRenameSideways (THE WILD ONE: rename
+// loaded DLL out of the way; Windows allows it; npm gets clean slate).
+// 11th world-first. See packages/core/src/dll_eviction/.
+export * as dllEviction from "./dll_eviction/index.js";

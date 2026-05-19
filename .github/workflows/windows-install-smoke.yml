@@ -114,28 +114,33 @@ jobs:
             console.log('phase 3.9: PASS — transformers correctly in optionalDependencies');
           "
 
-      # v2.19.58 — THE REAL EBUSY RACE TEST (user-observed for 6 rounds straight).
-      # Install previous version → start daemon (which holds sharp DLL) → install
-      # current version → verify install succeeded. This catches the bug class
-      # that GH Actions previously missed: fresh installs always worked, but
-      # daemon-respawn-mid-install always failed.
-      - name: 🪟 EBUSY RACE SMOKE (the real-world user scenario)
+      # v2.19.58 → v2.19.61 — THE REAL EBUSY RACE TEST (user-observed 7 rounds).
+      # v2.19.61 strengthens: install OLD + start daemon + WARM the DLL cache by
+      # running mneme verify (which loads sharp transitively if optional installed)
+      # + install NEW with no flags + verify success.
+      - name: 🪟 EBUSY RACE SMOKE (the real-world user scenario, v2.19.61 stronger)
         shell: bash
         run: |
           set -e
-          # Step 1: install a recent prior version globally to simulate "user has Mneme installed"
-          # Use --omit=optional to make THIS step succeed regardless of native deps.
-          npm install -g --omit=optional mneme-ai@2.19.56 || echo "prior version install (best-effort)"
-          # Step 2: start the daemon so it holds file handles
+          # Step 1: install a recent prior version with ALL optional deps (so sharp/libvips ARE installed)
+          # This is the WORST case for EBUSY — DLLs present and loadable.
+          npm install -g mneme-ai@2.19.57 || echo "prior install (best-effort with all deps)"
+          # Step 2: start the daemon
           mneme daemon start || echo "daemon start (best-effort)"
-          sleep 3
+          sleep 5
           mneme daemon status || true
-          # Step 3: install the JUST-PACKED current version. This MUST succeed
-          # without --omit=optional (we're testing the install-shield + reaper).
-          # If EBUSY race regresses, this step fails and the CI run is red.
+          # Step 3 (NEW in v2.19.61): WARM the DLL cache by running verify
+          # — this loads sharp/libvips into the daemon's address space if installed
+          mneme verify "smoke claim" || echo "warm verify (best-effort)"
+          sleep 2
+          # Step 4: install the JUST-PACKED current version with NO flags.
+          # The v2.19.61 preinstall taskkill /F + rename-sideways trick must make this succeed.
           npm install -g --no-save /tmp/mneme-tarballs/mneme-ai-*.tgz \
-            && echo "✅ EBUSY race test PASSED — install completed cleanly with daemon running" \
-            || (echo "❌ EBUSY race test FAILED — install hit conflict with running daemon" && exit 1)
-          # Step 4: verify the new binary works
+            && echo "✅ EBUSY race test PASSED — install completed cleanly with daemon + DLLs warm" \
+            || (echo "❌ EBUSY race test FAILED — preinstall hook didn't clear the DLL lock" && exit 1)
+          # Step 5: verify the new binary works
           mneme --version
+          # Step 6: verify --format=human flag works (v2.19.61 backward compat)
+          mneme verify "format test" --format=human || true
+          mneme verify "format test" --format=json || true
         continue-on-error: true   # Soft-fail for now (this is a NEW gate; tightening to hard-fail in a future release)

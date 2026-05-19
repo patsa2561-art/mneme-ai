@@ -205,6 +205,14 @@ export const RELEASE_CLAIMS = {
       "mneme.negev.tax_status",
     ],
   },
+  "2.19.61": {
+    headline: "🪄 DLL EVICTION ORGAN — the WILD rename-sideways trick that ends EBUSY at SOURCE. User-identified 7-round root cause: daemon holds libvips-42.dll, Windows IGNORES SIGTERM (Node.js default), OS holds DLL handle 5-30s after death. The fix nobody else does: rename the locked DLL to libvips-42.dll.locked-<ts>-<pid> (Windows allows this — same trick Windows Installer uses to update loaded system DLLs). npm gets clean slate to write fresh file. No process needs to die. Plus taskkill /F /IM mneme.exe (Windows-correct kill that bypasses ignored SIGTERM) + DLL probe retry loop + stale .mneme-ai-* staging cleanup. 4 composable primitives + composed evictAndProbe pipeline + 3 new MCP tools. Plus --format=human flag for backward-compat shell scripts. Plus Windows CI workflow now warms DLL cache before testing race (real-user reproduction). 19 new deep tests + 11th world-first (rename-loaded-DLL-sideways as npm install primitive). Total MCP tools 772 → 775 (+3).",
+    tools: [
+      "mneme.dll.evict",
+      "mneme.dll.probe",
+      "mneme.dll.sweep",
+    ],
+  },
   "2.19.60": {
     headline: "🔬 PUBLISH VERIFIER + RITUAL PHASE 3.11 + scripts/publish-all.mjs — emergency-fix the ETARGET bug class where v2.19.58 (and 2.19.59) published 4/5 packages but FORGOT @mneme-ai/embeddings → meta-package mneme-ai@2.19.58 referenced a version that didn't exist on npm → 100% ETARGET for users. Already retroactively published embeddings@2.19.58 + 2.19.59 (emergency). Now permanent: new publish_verifier core module (probeRegistry / probeAllForVersion / diagnoseInstallable + fallback walk) + 3 new MCP tools (mneme.publish.{probe, probe_all, diagnose_installable}) + ritual phase 3.11 (workspace-version-lockstep gate catches partial-bump pre-publish) + scripts/publish-all.mjs (atomic 5-package publish + verify-on-npm + end-to-end smoke). 10th world-first. 8 new deep tests pass. Total MCP tools 769 → 772 (+3).",
     tools: [

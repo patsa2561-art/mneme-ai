@@ -278,6 +278,7 @@ export function registerVerifyCommand(program: Command): void {
     .command("verify <claim...>")
     .description("Fast truth-check on a claim. Plain-English verdict (TRUSTWORTHY / MIXED / REFUTED / IMPOSSIBLE) anchored to the ACGV pipeline. Pass --explain for the math; --json for machine output.")
     .option("--json", "Structured JSON output for AI agents.")
+    .option("--format <fmt>", "v2.19.61 backward-compat alias: 'human' = friendly text (default), 'json' = same as --json. Explicit override of TTY auto-detect for shell scripts that grep TRUSTWORTHY/REFUTED.", "human")
     .option("--explain", "Surface the ACGV layer breakdown (Chandrasekhar / Neutrino / Godel / Vaccine).")
     .option("--counter-evidence <points>", "Pipe-separated counter-points to feed the Confession layer.")
     .option("--engine <name>", "'z3' = use Z3 SAT (requires optional z3-solver); 'propositional' = fast path (default 'z3' when available).", "z3")
@@ -293,8 +294,12 @@ How to read the verdict:
   REFUTED      Mneme found contradictory evidence -- retract the claim
   IMPOSSIBLE   Godel SAT proof: no repo state can satisfy this claim -- formal refute
 `)
-    .action(async (claimWords: string[], opts: { json?: boolean; explain?: boolean; counterEvidence?: string; engine?: string }) => {
+    .action(async (claimWords: string[], opts: { json?: boolean; format?: string; explain?: boolean; counterEvidence?: string; engine?: string }) => {
       const claim = claimWords.join(" ");
+      // v2.19.61 — --format=json is an explicit alias for --json (backward
+      // compat for user shell scripts that grep specific verdict strings).
+      // --format=human (default) forces human output even if user piped stdout.
+      if (opts.format === "json") opts.json = true;
       const { acgv, acgvExplain } = await import("@mneme-ai/core");
       const counter = opts.counterEvidence ? opts.counterEvidence.split("|").map((s) => s.trim()).filter(Boolean) : undefined;
       const result = opts.engine === "propositional"
