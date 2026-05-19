@@ -49,7 +49,7 @@ client request: `npm install -g mneme-ai@lite`
   → tarball at https://registry.npmjs.org/mneme-ai/-/mneme-ai-X.Y.Z-lite.tgz
   → manifest has optionalDependencies: undefined
   → npm SKIPS the optional tree (because there is none to skip)
-  → install completes in ~5MB
+  → install completes in ~65MB
 ```
 
 ## Why this works where `--omit=optional` doesn't
@@ -59,21 +59,27 @@ manifest is fetched. The npm 10 global-install bug is that the filter
 isn't applied in that code path. We sidestep the filter entirely by
 shipping a manifest that has no optional deps to filter.
 
-## Verified empirically (post-publish smoke)
+## Verified empirically (v2.19.69-lite, Windows 11 / Node 22.22.1 / npm 10.9.4, 2026-05-19)
 
 ```
 npm install -g mneme-ai@lite
-  → 5.0MB on-disk verified by walking node_modules
+  → 64.7MB on-disk verified by walking node_modules
+  → 6.2s elapsed (vs ~60s for the full @latest install)
   → no @huggingface/transformers, no @img/sharp-*, no sharp, no onnxruntime-*
-  → mneme --version exits 0 with "X.Y.Z-lite"
+  → mneme --version exits 0 with "2.19.69-lite"
   → mneme welcome --json '{}' returns valid JSON
-  → mneme verify "<claim>" exits with the expected JSON verdict
-  → embedder chain logs "bundled-wasm: unavailable (lite variant); falling back to hash"
+  → mneme verify "smoke claim" returns proper MIXED verdict (lite runtime works)
+  → embedder chain falls back to hash (no bundled WASM in this flavor)
 ```
+
+The 64.7MB number reflects ALL transitive deps the runtime needs (commander, kleur,
+@mneme-ai/{core,correlator,mcp}, typescript at dev-dep level, @modelcontextprotocol,
+zod, protobufjs, hono, tar) — only the native-DLL-pulling subtree (transformers + sharp +
+libvips + onnxruntime-*) is gone. Compared to the 467MB full install: **7.2× smaller**.
 
 ## Tradeoffs
 
-- ✅ Install size 467MB → 5MB
+- ✅ Install size 467MB → 65MB (7.2× smaller)
 - ✅ Install time 60-90s → 5-10s
 - ✅ EBUSY risk structurally zero (no native DLLs)
 - ❌ Bundled WASM embedder unavailable (★★★ tier missing from the chain)

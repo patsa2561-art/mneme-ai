@@ -2,10 +2,11 @@
 
 > npm 10.x silently ignores `--omit=optional` for global installs (reproduced
 > 2026-05-19, npm 10.9.4 / Node 22.22.1 / Windows 11). This directory tracks
-> seven different ways to give users a ~5MB zero-DLL install path despite
-> the upstream npm bug. Ordered by "production today" → "specced for next
-> cycle". Each spec doc is self-contained so the next maintainer can pick
-> any one up cold.
+> seven different ways to give users a zero-DLL install path despite
+> the upstream npm bug.  Empirically verified: `@lite` dist-tag delivers 65MB
+> (7.2× smaller than full); `MNEME_LITE=1` postinstall delivers 98MB (4.8×
+> smaller). Ordered by "production today" → "specced for next cycle". Each
+> spec doc is self-contained so the next maintainer can pick any one up cold.
 
 | # | Idea | Status | Spec | Implementation |
 |---|---|---|---|---|

@@ -8,9 +8,13 @@
 
 npm runs the package's `postinstall` script AFTER the dependency tree is
 on disk. We hijack that hook to remove the optional-dep tree if the user
-opted in via `MNEME_LITE=1`. npm still downloads 467MB, but ~462MB gets
+opted in via `MNEME_LITE=1`. npm still downloads 467MB, but ~364MB gets
 deleted before npm hands control back to the user — final on-disk
-footprint is ~5MB.
+footprint is ~98MB (4.8× smaller than the full 467MB install; ~33MB
+larger than the `@lite` dist-tag path at 65MB because some transitive
+postinstalls — notably `onnxruntime-node@1.21.0` — re-fetch a small
+runtime AFTER our prune step. The 33MB difference is acceptable; both
+paths eliminate the EBUSY risk and the multi-hundred-MB native DLLs).
 
 ## Why this exists alongside #1
 
@@ -74,15 +78,15 @@ this hook". Three safeguards enforce it:
 5. garbage value (e.g. "garbage") → no-op (treated as false)
 6. source-grep: zero `throw`, every `process.exit` is exit 0
 
-# Real install via the workspace tarballs:
-MNEME_LITE=1 npm install -g mneme-ai
-  → install completes (467MB download)
-  → postinstall logs:
-       [mneme-lite] MNEME_LITE=1 → pruned 6/6 optional-dep directories, 462.4MB freed.
-       [mneme-lite] removed: @huggingface (78.2MB), @img (372.1MB), sharp (8.4MB),
-                    onnxruntime-common (0.5MB), onnxruntime-node (2.9MB),
-                    onnxruntime-web (0.3MB)
-  → final on-disk: ~5.1MB
+# Real install verified empirically (v2.19.69, Windows 11 / Node 22.22.1 / npm 10.9.4, 2026-05-19):
+MNEME_LITE=1 npm install -g mneme-ai@latest
+  → install completes in ~8s
+  → postinstall logs (visible with `--foreground-scripts`):
+       [mneme-lite] MNEME_LITE=1 → pruned 6/6 optional-dep directories, 363.8MB freed.
+       [mneme-lite] removed: @huggingface (46.4MB), @img (19.0MB), sharp (0.5MB),
+                    onnxruntime-common (0.5MB), onnxruntime-node (207.8MB),
+                    onnxruntime-web (89.6MB)
+  → final on-disk: ~98MB
 ```
 
 ## Tradeoffs

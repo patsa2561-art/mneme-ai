@@ -54,8 +54,8 @@ npm install -g mneme-ai@lite
 
 This resolves via npm's dist-tag mechanism to `mneme-ai@X.Y.Z-lite`, a parallel-published variant of every release with `optionalDependencies` stripped at the manifest level. **Works for global installs** (it does not depend on the broken `--omit=optional` flag — it ships a manifest with no optionals to omit):
 
-  - **Install size**: ~5MB instead of ~467MB
-  - **Install time**: ~5-10s instead of ~60-90s
+  - **Install size**: ~65MB instead of ~467MB (empirically verified 2026-05-19: 64.7MB on-disk, 7.2× smaller)
+  - **Install time**: ~6s instead of ~60-90s
   - **EBUSY risk**: structurally zero (no native DLLs)
   - **Trade**: bundled WASM embedder unavailable; falls back through OpenAI → Ollama → hash
 
@@ -75,7 +75,7 @@ For CI pipelines that pin a specific version (`npm install -g mneme-ai@2.19.69`)
 MNEME_LITE=1 npm install -g mneme-ai
 ```
 
-npm still downloads the 467MB tree, but the `postinstall` hook deletes the optional-dep subdirectories before handing control back. Final on-disk footprint: ~5MB. Full spec: [docs/wild_workarounds/02_postinstall_prune.md](wild_workarounds/02_postinstall_prune.md).
+npm still downloads the 467MB tree, but the `postinstall` hook deletes the optional-dep subdirectories before handing control back. Final on-disk footprint: ~98MB (363.8MB freed at postinstall, empirically verified 2026-05-19; ~33MB larger than the `@lite` dist-tag path because `onnxruntime-node`'s own postinstall re-fetches a small runtime AFTER ours — acceptable since both paths eliminate the EBUSY risk and the multi-hundred-MB DLLs). Full spec: [docs/wild_workarounds/02_postinstall_prune.md](wild_workarounds/02_postinstall_prune.md).
 
 #### Local install (also works, for per-project tools)
 

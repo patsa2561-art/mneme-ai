@@ -466,12 +466,12 @@ npm install -g mneme-ai
 
 > **Ultralight zero-DLL install — `@lite` dist-tag (v2.19.69+):**
 > ```bash
-> npm install -g mneme-ai@lite   # ~5MB, ~5-10s, no native DLLs, no EBUSY ever
+> npm install -g mneme-ai@lite   # 65MB on-disk, ~6s, no native DLLs, no EBUSY ever
 > ```
-> Works for GLOBAL installs (does not depend on the broken npm 10 `--omit=optional` flag — it ships a parallel-published variant with `optionalDependencies` stripped at the manifest level). The bundled WASM embedder is unavailable in lite mode; the runtime falls back through OpenAI → Ollama → deterministic hash. Switch back with `npm install -g mneme-ai@latest`.
+> Works for GLOBAL installs (does not depend on the broken npm 10 `--omit=optional` flag — it ships a parallel-published variant with `optionalDependencies` stripped at the manifest level). Empirically verified 2026-05-19: 64.7MB on-disk, 6.2s install, no `@huggingface` / `@img` / `sharp` / `onnxruntime-*` present. **7.2× smaller** than the 467MB full install. The bundled WASM embedder is unavailable in lite mode; the runtime falls back through OpenAI → Ollama → deterministic hash. Switch back with `npm install -g mneme-ai@latest`.
 >
 > **Other zero-DLL paths** when `@lite` isn't an option:
-> - CI with version-pinned install: `MNEME_LITE=1 npm install -g mneme-ai@X.Y.Z` (downloads then prunes, same 5MB on-disk result)
+> - CI with version-pinned install: `MNEME_LITE=1 npm install -g mneme-ai@X.Y.Z` (downloads then prunes 363.8MB at postinstall; final ~98MB on-disk)
 > - Per-project local install: `mkdir tool && cd tool && npm init -y && npm install mneme-ai --omit=optional` (the `--omit=optional` flag is honoured for LOCAL installs even on npm 10)
 > - Three more workarounds specced for future cycles: [Bootstrap Prelude, Private Registry Mirror, Bun-Compile binary, Node Loader Hook](docs/wild_workarounds/README.md)
 >
