@@ -118,7 +118,23 @@ function handleConnection(
     for (const f of frames) {
       if (f && (f as Frame & { type: string }).type === "run" && !handled) {
         handled = true;
-        void runRequestFrame(sock, f as Frame & { type: "run" }, opts);
+        // v2.19.73 CI-stability fix: previously this was `void
+        // runRequestFrame(...)` which discarded the returned promise.
+        // If the promise rejected (which the inner try/catch should
+        // prevent, but defence-in-depth) the rejection became an
+        // UNHANDLED PROMISE REJECTION — Node 22+ kills the worker on
+        // those, which is what crashed the tinypool worker on the
+        // ubuntu-24.04-arm CI runner.  Explicit .catch() never lets
+        // any future bug in runRequestFrame propagate beyond the
+        // socket boundary.
+        runRequestFrame(sock, f as Frame & { type: "run" }, opts).catch((err) => {
+          try { opts.onError?.(err); } catch { /* */ }
+          try {
+            writeFrameSafe(sock, { type: "stderr", data: `warmcall: internal error: ${err?.message ?? String(err)}\n` });
+            writeFrameSafe(sock, { type: "exit", code: 1 });
+          } catch { /* */ }
+          try { sock.end(); } catch { /* */ }
+        });
         break;
       }
     }

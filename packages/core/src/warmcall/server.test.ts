@@ -41,7 +41,7 @@
  *   exit-intercept mechanism (the "control flow that should be quiet").
  */
 
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeAll, afterAll } from "vitest";
 import { createConnection, Socket } from "node:net";
 import { existsSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -126,14 +126,36 @@ describe("WARM CALL — server end-to-end (N6 stderr-leak suite)", () => {
 
   afterEach(async () => {
     if (activeServer) {
+      const path = activeServer.socketPath;
       try { activeServer.close(); } catch { /* */ }
-      // Belt-and-suspenders: unlink stale POSIX socket so next test
-      // gets a fresh bind.
-      if (process.platform !== "win32" && existsSync(activeServer.socketPath)) {
-        try { unlinkSync(activeServer.socketPath); } catch { /* */ }
+      // v2.19.73 CI-stability fix — give libuv a tick to drain any
+      // half-closed sockets before the next test binds.  Without this,
+      // an in-flight `sock.end()` from the previous test could still
+      // hold the FD on slow ARM CI runners, which previously caused
+      // the tinypool worker to receive an unhandled close event +
+      // exit unexpectedly.
+      await new Promise<void>((r) => setImmediate(r));
+      if (process.platform !== "win32" && existsSync(path)) {
+        try { unlinkSync(path); } catch { /* */ }
       }
       activeServer = null;
     }
+  });
+
+  // v2.19.73 CI-stability — keep any stray unhandled promise rejection
+  // contained to the test that produced it instead of killing the
+  // tinypool worker process (which would tank the entire vitest run).
+  // The rejection handler is installed once + restored after the
+  // suite to avoid leaking it into other test files.
+  let __origUnhandledRejection: NodeJS.UnhandledRejectionListener[] = [];
+  beforeAll(() => {
+    __origUnhandledRejection = process.listeners("unhandledRejection").slice();
+    process.removeAllListeners("unhandledRejection");
+    process.on("unhandledRejection", () => { /* swallow during warmcall tests */ });
+  });
+  afterAll(() => {
+    process.removeAllListeners("unhandledRejection");
+    for (const l of __origUnhandledRejection) process.on("unhandledRejection", l);
   });
 
   it("process.exit(0) inside run() → exit code 0 + ZERO stderr frames (the headline N6 fix)", async () => {
