@@ -42,6 +42,33 @@ The full list of commands the user might want auto-executed is in Steps 1-7 belo
 npm install -g mneme-ai
 ```
 
+### Step 1A.0 — Zero-DLL ultralight install (recommended on Windows + low-bandwidth + first-impression UX)
+
+`mneme-ai` ships `@huggingface/transformers` as an **optional** dependency for the bundled WASM embedder. npm installs it by default — which drags `sharp` + `libvips` (~155MB of native DLLs) into `node_modules` and is the entire reason the EBUSY install bug class exists at all. **Mneme runs perfectly without it** by falling back through the embedder chain: `OpenAI → Ollama → bundled WASM (skipped) → hash`. Users without an OpenAI key + without Ollama land on the deterministic hash embedder (★★ quality) instead of bundled WASM (★★★) — every other Mneme tool works identically.
+
+If the user does not need bundled WASM embeddings (most don't — Ollama is the recommended local-free path):
+
+```bash
+npm install -g mneme-ai --omit=optional
+```
+
+This skips `@huggingface/transformers` + `sharp` + `libvips` entirely:
+  - **Install size**: ~5MB instead of ~155MB
+  - **Install time**: ~10s instead of ~60-90s
+  - **EBUSY risk**: structurally zero (no native DLLs to lock)
+  - **Trade**: no bundled WASM embedder; `mneme.embedder.autodiagnose` will recommend Ollama if user wants ★★★+ quality
+
+When the user later wants the bundled embedder back:
+
+```bash
+npm install -g @huggingface/transformers   # adds it on demand
+```
+
+AI agent decision rule:
+  - User says "fast / lightweight / minimal" → use `--omit=optional`
+  - User says "best quality, willing to wait" → use the plain `npm install -g mneme-ai` (default optional deps)
+  - User on Windows + unknown preference → **prefer `--omit=optional`** then offer to install the embedder later
+
 ### Step 1A.1 — If install fails with `EBUSY` on Windows (v2.19.65+ makes this rare; recovery if it still happens)
 
 Symptom (real npm error you may see in your shell output):

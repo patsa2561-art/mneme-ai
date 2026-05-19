@@ -114,33 +114,50 @@ jobs:
             console.log('phase 3.9: PASS — transformers correctly in optionalDependencies');
           "
 
-      # v2.19.58 → v2.19.61 — THE REAL EBUSY RACE TEST (user-observed 7 rounds).
-      # v2.19.61 strengthens: install OLD + start daemon + WARM the DLL cache by
-      # running mneme verify (which loads sharp transitively if optional installed)
-      # + install NEW with no flags + verify success.
-      - name: 🪟 EBUSY RACE SMOKE (the real-world user scenario, v2.19.61 stronger)
+      # v2.19.58 → v2.19.61 → v2.19.67 — THE REAL EBUSY RACE TEST (user-observed 7+ rounds).
+      # v2.19.65 added CLI Phoenix P3 bootstrap (bin/mneme.js) + ESM __dirname
+      # fix in dll_extraction.ts → daemons now load libvips from %TEMP%, not
+      # node_modules → the canonical install-time path is never held.
+      # v2.19.67 promotes this gate from soft-fail to HARD-FAIL because the
+      # killer scenario was reproduced empirically and is now extinct.
+      - name: 🪟 EBUSY RACE SMOKE — install-while-daemon-running (HARD-FAIL, v2.19.67)
         shell: bash
         run: |
           set -e
           # Step 1: install a recent prior version with ALL optional deps (so sharp/libvips ARE installed)
           # This is the WORST case for EBUSY — DLLs present and loadable.
-          npm install -g mneme-ai@2.19.57 || echo "prior install (best-effort with all deps)"
+          npm install -g mneme-ai@2.19.57
           # Step 2: start the daemon
           mneme daemon start || echo "daemon start (best-effort)"
           sleep 5
           mneme daemon status || true
-          # Step 3 (NEW in v2.19.61): WARM the DLL cache by running verify
+          # Step 3: WARM the DLL cache by running verify
           # — this loads sharp/libvips into the daemon's address space if installed
           mneme verify "smoke claim" || echo "warm verify (best-effort)"
           sleep 2
           # Step 4: install the JUST-PACKED current version with NO flags.
-          # The v2.19.61 preinstall taskkill /F + rename-sideways trick must make this succeed.
-          npm install -g --no-save /tmp/mneme-tarballs/mneme-ai-*.tgz \
-            && echo "✅ EBUSY race test PASSED — install completed cleanly with daemon + DLLs warm" \
-            || (echo "❌ EBUSY race test FAILED — preinstall hook didn't clear the DLL lock" && exit 1)
+          # v2.19.65+ Phoenix P3 + the v2.19.61 preinstall taskkill must make
+          # this succeed even with the daemon ALIVE and DLLs WARM.  This is the
+          # exact scenario user reproduced 8 times in the v40-v64 audit;
+          # post-v2.19.65 it MUST pass on every CI run.
+          npm install -g --no-save /tmp/mneme-tarballs/mneme-ai-*.tgz
+          echo "✅ EBUSY race test PASSED — install completed cleanly with daemon + DLLs warm"
           # Step 5: verify the new binary works
           mneme --version
           # Step 6: verify --format=human flag works (v2.19.61 backward compat)
           mneme verify "format test" --format=human || true
           mneme verify "format test" --format=json || true
-        continue-on-error: true   # Soft-fail for now (this is a NEW gate; tightening to hard-fail in a future release)
+          # Step 7 (NEW in v2.19.67): verify CLI Phoenix bootstrap actually fired —
+          # if the dist file regressed __dirname back to CJS, this would catch it.
+          node -e "
+            const r = require('child_process').spawnSync(process.execPath, [
+              require.resolve('mneme-ai/bin/mneme.js'), 'phoenix', 'extract_status', '--json', '{}'
+            ], { encoding: 'utf8', timeout: 30000 });
+            const out = r.stdout || '';
+            const ok = /\"dllExtracted\":true/.test(out) || /\"libDir\":null/.test(out);
+            if (!ok) {
+              console.error('PHOENIX P3 status did not report dllExtracted/libDir; raw output: ' + out.slice(0, 400));
+              process.exit(1);
+            }
+            console.log('✅ Phoenix P3 status verified: ' + (out.match(/\"wisdom\":\"[^\"]+/)?.[0] || 'ok'));
+          "
