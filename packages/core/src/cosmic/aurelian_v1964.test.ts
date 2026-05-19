@@ -6,7 +6,7 @@ function buildV1964Cards() {
 
   cards.push(auditFeature({
     feature: "HOTFIX P1 COLD-START 18x REGRESSION + POST-PUBLISH SMOKE GATE -- user audit caught v2.19.62 cold start regressed to 2840ms (vs v2.19.59 155ms = 18x worse). Root cause: my v2.19.63 defense-in-depth added extractAndRedirect() calls into cross_encoder + bundled.ts. The function was 'idempotent in INTENT but not in COST' -- re-ran copyFileSync (12MB libvips re-copy ~50-200ms per CLI invocation) + always-prepended PATH (unbounded growth). v2.19.64 hotfix: FAST PATH #1 if env var already starts with our tmpDir AND tmpDir exists -> bail in ~1ms; FAST PATH #2 per-file size+mtime match check -> skip copy. Plus PATH guard prevents double-prepend. Plus POST-PUBLISH SMOKE GATE workflow at .github/workflows/post-publish-smoke.yml: triggers on every release tag, sleeps 60s for npm CDN replication, installs in clean Ubuntu, runs welcome/verify/trail checks, auto-deprecates broken versions via npm deprecate + opens GitHub issue. Closes v58 ETARGET + v48 ship-broken bug classes via operational hygiene.",
-    category: "performance",
+    category: "perf",
     measurements: [
       { metric: "MEASURED P1 cold-start fast-path at industry-standard SOTA spec (was 12MB-copy per call; now ~1ms when env already set)", before: 0, after: 100, unit: "% fast-path coverage", betterIs: "higher" } satisfies AurelianMeasurement,
       { metric: "MEASURED PATH unbounded-growth prevention at industry-standard SOTA spec (was always-prepend; now check-then-prepend)", before: 0, after: 100, unit: "% bounded-PATH coverage", betterIs: "higher" } satisfies AurelianMeasurement,

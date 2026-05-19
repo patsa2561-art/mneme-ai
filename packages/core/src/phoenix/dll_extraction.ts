@@ -40,6 +40,7 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath as __mneme_fileURLToPath } from "node:url";
 
 const PROTOCOL_VERSION = 1;
 
@@ -88,14 +89,35 @@ export function findLibvipsDir(packageRoot?: string): string | null {
   const key = `${process.platform}:${process.arch}`;
   const subdir = archMap[key];
   if (!subdir) return null;
-  const candidate = join(root, "node_modules", "@img", subdir, "lib");
-  return existsSync(candidate) ? candidate : null;
+  // Empirical (v2.19.64 install on Windows): sharp ships libvips DLLs inside
+  // @img/sharp-{archKey}/lib rather than the split @img/sharp-libvips-{archKey}
+  // layout some sharp docs describe.  The old code only checked the split
+  // layout, so findLibvipsDir returned null and the daemon's extractAndRedirect
+  // became a no-op even though the DLLs were right there — explaining why
+  // mneme.phoenix.extract_status reported `dllExtracted: false` in v2.19.64.
+  // Probe BOTH layouts; first hit wins so behaviour is preserved on any
+  // sharp release that does use the libvips-prefixed dir.
+  const libvipsPrefixed = join(root, "node_modules", "@img", subdir, "lib");
+  if (existsSync(libvipsPrefixed)) return libvipsPrefixed;
+  // Fall back to the flat @img/sharp-{archKey}/lib layout used by current sharp.
+  const flatSubdir = subdir.replace(/^sharp-libvips-/, "sharp-");
+  const flat = join(root, "node_modules", "@img", flatSubdir, "lib");
+  return existsSync(flat) ? flat : null;
 }
 
 /** Find the package's node_modules root by walking up from this file's
- *  location. Returns null if we're not in a node_modules tree. */
+ *  location. Returns null if we're not in a node_modules tree.
+ *  ESM build of this module: __dirname is undefined, so we recover the
+ *  module's directory from import.meta.url instead (with a CommonJS-fallback
+ *  guard for environments that still expose __dirname). */
 function findPackageRoot(): string | null {
-  let dir = __dirname;
+  let dir: string;
+  try {
+    dir = dirname(__mneme_fileURLToPath(import.meta.url));
+  } catch {
+    try { dir = typeof __dirname === "string" ? __dirname : process.cwd(); }
+    catch { dir = process.cwd(); }
+  }
   for (let i = 0; i < 10; i++) {
     if (existsSync(join(dir, "node_modules", "@img"))) return dir;
     const parent = dirname(dir);

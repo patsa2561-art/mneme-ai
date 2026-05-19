@@ -19,6 +19,65 @@ process.emit = function (name, data, ...rest) {
   return originalEmit.call(this, name, data, ...rest);
 };
 
+// ── PHOENIX P3 — CLI BOOT DLL EXTRACTION (v2.19.65 patch) ──────────────
+// Why it exists: nucleus_daemon.ts calls extractAndRedirect() at line 145 to
+// move libvips DLLs to a per-PID tmpdir BEFORE sharp loads, so the daemon
+// does not hold the canonical node_modules DLL handle and `npm install -g`
+// can overwrite freely.  But every `mneme <cmd>` CLI invocation went the
+// other way: it static-imported `dist/index.js` which transitively pulls
+// sharp from node_modules — locking the DLL on every CLI run, including
+// the ones the user types repeatedly between upgrades.  Empirically
+// observed: phoenix.extract_status reports `dllExtracted: false` on any
+// CLI process in v2.19.64; the install-trail ledger is empty; EBUSY
+// reproduces on `npm install -g mneme-ai@latest` 100% of the time.
+// This block closes that gap: every bin shim run extracts and redirects
+// BEFORE the dist module load that ultimately requires sharp.  Idempotent
+// (env-var sentinel) and silent on failure (Phoenix is non-fatal at boot).
+const __mnemePhoenixBootstrap = async () => {
+  if (process.env.MNEME_PHOENIX_CLI_EXTRACTED === "1") return;
+  process.env.MNEME_PHOENIX_CLI_EXTRACTED = "1";
+  try {
+    const fastArg = process.argv[2];
+    if (process.argv.length === 3 && (fastArg === "--version" || fastArg === "-V")) return;
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const os = await import("node:os");
+    const url = await import("node:url");
+    const platform = process.platform;
+    const arch = process.arch;
+    const archKey = platform + "-" + arch;
+    let dir = path.dirname(url.fileURLToPath(import.meta.url));
+    let libDir = null;
+    // Empirical: on Windows the libvips DLLs live in @img/sharp-{archKey}/lib (no
+    // "libvips-" prefix).  Some sharp releases also publish @img/sharp-libvips-{archKey},
+    // so probe both layouts at every walk-up step so the patch works across versions.
+    const libDirNames = ["sharp-" + archKey, "sharp-libvips-" + archKey];
+    outer: for (let i = 0; i < 12 && dir !== path.dirname(dir); i++) {
+      for (const name of libDirNames) {
+        const candidate = path.join(dir, "node_modules", "@img", name, "lib");
+        if (fs.existsSync(candidate)) { libDir = candidate; break outer; }
+      }
+      dir = path.dirname(dir);
+    }
+    if (!libDir) return;
+    const tmpDir = path.join(os.tmpdir(), "mneme-vips-" + process.pid);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    for (const f of fs.readdirSync(libDir)) {
+      if (f.endsWith(".dll") || f.endsWith(".dylib") || f.endsWith(".so")) {
+        try { fs.copyFileSync(path.join(libDir, f), path.join(tmpDir, f)); } catch { /* per-file non-fatal */ }
+      }
+    }
+    const envVar = platform === "win32" ? "PATH" : platform === "darwin" ? "DYLD_LIBRARY_PATH" : "LD_LIBRARY_PATH";
+    const sep = platform === "win32" ? ";" : ":";
+    process.env[envVar] = tmpDir + sep + (process.env[envVar] || "");
+    process.on("exit", () => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* non-fatal */ } });
+  } catch { /* phoenix non-fatal */ }
+};
+
+// Fire it synchronously via top-level await so subsequent dist/index.js
+// load already sees the redirected env var.
+await __mnemePhoenixBootstrap();
+
 // ── v0.39 HPC fast path ────────────────────────────────────────────────
 // Several common invocations don't need the 50+ command modules to load.
 // Short-circuiting them here drops cold-start from ~8-13 s on Windows
