@@ -29,7 +29,7 @@
  * keystroke = AI sees Mneme's current state without any tool call.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, platform } from "node:os";
 import { spawn } from "node:child_process";
@@ -113,17 +113,47 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
   // emitted "[AUTO-ACTION] upgrade to 1.27.2 (you're on 1.27.2)" --
   // a self-loop the AI would honor under the EXECUTE NOW contract.
   const vPath = join(repoRoot, ".mneme/version-check.json");
+  const memoPath = join(repoRoot, ".mneme/CURRENT_VERSION.md");
   if (existsSync(vPath)) {
     try {
       const v = JSON.parse(readFileSync(vPath, "utf8")) as { current?: string; latest?: string };
-      status.version.latest = v.latest ?? null;
+
+      // v2.19.72 N5-DEEP SELF-HEAL: if the cache record was written
+      // for a DIFFERENT installed version than the one running now
+      // (user just upgraded), the cache's `latest` field is meaningless
+      // — it may point at the version we just installed, leading
+      // pulse to show "v<new> (latest: v<new>)" or false update-available
+      // banners.  Worse: AI agents reading the auto-generated
+      // CURRENT_VERSION.md memo would see "Installed: v<old>" forever.
+      //
+      // Self-heal: delete both files and treat as no-cache.  The next
+      // checkVersion() call will fetch fresh from npm + rebuild both.
+      //
+      // This makes the postinstall step unnecessary for cache hygiene
+      // (a postinstall script can't know which repos have stale `.mneme/`
+      // dirs anyway — pulse runs in the actual repo on every CLI
+      // invocation, so the self-heal fires exactly where it's needed).
       if (
-        v.latest &&
+        typeof v.current === "string" &&
         status.version.current &&
         status.version.current !== "unknown" &&
-        semverGt(v.latest, status.version.current)
+        v.current !== status.version.current
       ) {
-        status.version.updateAvailable = true;
+        try { unlinkSync(vPath); } catch { /* BE:silent-by-design */ }
+        try { if (existsSync(memoPath)) unlinkSync(memoPath); } catch { /* BE:silent-by-design */ }
+        // Skip the cache-based update-available check — we have no
+        // valid cache.  status.version.latest stays null until the
+        // next checkVersion() call repopulates it.
+      } else {
+        status.version.latest = v.latest ?? null;
+        if (
+          v.latest &&
+          status.version.current &&
+          status.version.current !== "unknown" &&
+          semverGt(v.latest, status.version.current)
+        ) {
+          status.version.updateAvailable = true;
+        }
       }
     } catch { /* BE:silent-by-design  ignore  */ }
   }

@@ -34,13 +34,21 @@ describe("pulse", () => {
     expect(out).toContain("[/MNEME PULSE]");
   });
 
-  it("update-available state surfaces an [AUTO-ACTION]", () => {
-    // v1.27.3: comparison is now LIVE-current vs cached-latest using
-    // semver. Use a far-future version so this test is still
-    // meaningful regardless of what live Mneme is running at.
+  it("update-available state surfaces an [AUTO-ACTION]", async () => {
+    // v2.19.72 N5-deep: cache.current MUST match the live installed
+    // version for pulse to TRUST the cache.  If they differ, the
+    // self-heal block deletes the cache (the user just upgraded and
+    // we have no fresh data yet).  This test pins the
+    // "cache-current-matches-live → trusted → latest field used to
+    // surface update-available" half of the contract.  The
+    // "cache-current-mismatches-live → self-heal" half is pinned by
+    // a dedicated test below.
+    const { readLiveMnemeVersion } = await import("./version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return; // can't run this assertion without a live version
     writeFileSync(
       join(repo, ".mneme/version-check.json"),
-      JSON.stringify({ current: "1.0.0", latest: "9999.0.0" }),
+      JSON.stringify({ current: live, latest: "9999.0.0" }),
       "utf8",
     );
     const s = collectPulseStatus(repo);
@@ -52,26 +60,71 @@ describe("pulse", () => {
     expect(out).toContain("mneme.system.upgrade");
   });
 
+  // v2.19.72 N5-DEEP regression — the self-heal half of the contract.
+  // After an `npm install -g mneme-ai@<new>` finishes, the running
+  // process resolves a NEW package.json (live current = <new>) but
+  // .mneme/version-check.json still records `current = <old>` because
+  // the cache TTL is 1h and nothing invalidates it on install.
+  // Pre-fix: pulse would read `latest` from a cache whose `current`
+  // field is meaningless, potentially showing
+  // "v<new> (latest: v<new>)" or false update-available banners,
+  // AND leaving a stale CURRENT_VERSION.md for AI agents to read.
+  // Post-fix: the stale cache + memo are deleted; pulse treats it
+  // as no-cache; next checkVersion() refetches + repopulates.
+  it("v2.19.72 N5-deep: stale cache (current != live) is self-healed (cache + memo deleted)", async () => {
+    const { readLiveMnemeVersion } = await import("./version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return;
+    // SIMULATE: cache was written when v<old> was installed.  User has
+    // since upgraded to live, but cache file + memo are stale.
+    const cachePath = join(repo, ".mneme/version-check.json");
+    const memoPath = join(repo, ".mneme/CURRENT_VERSION.md");
+    writeFileSync(cachePath, JSON.stringify({ current: "0.0.1-old", latest: "9999.0.0" }), "utf8");
+    writeFileSync(memoPath, "# stale memo — Installed: v0.0.1-old\n", "utf8");
+    // Sanity check the setup landed.
+    expect(existsSync(cachePath)).toBe(true);
+    expect(existsSync(memoPath)).toBe(true);
+    // Run pulse — triggers the self-heal.
+    const s = collectPulseStatus(repo);
+    // The stale cache + memo MUST be gone.
+    expect(existsSync(cachePath), "stale version-check.json must be deleted on cache.current mismatch").toBe(false);
+    expect(existsSync(memoPath), "stale CURRENT_VERSION.md must be deleted alongside the cache").toBe(false);
+    // No false update-available signal — we have no valid cache.
+    expect(s.version.updateAvailable).toBe(false);
+    expect(s.version.latest, "latest must be null when cache was invalidated").toBeNull();
+    // Live current is still reported correctly (read from package.json,
+    // independent of the cache).
+    expect(s.version.current).toBe(live);
+  });
+
   // v1.27.3 (HOTFIX): regression tests for the AUTO-ACTION self-loop
   // bug. If `latest <= live current`, the pulse must NOT emit an
   // AUTO-ACTION upgrade notice -- otherwise an AI honoring the
   // EXECUTE NOW contract will call mneme.system.upgrade in a loop.
-  it("v1.27.3 regression: stale cache (latest == live current) emits NO AUTO-ACTION", async () => {
+  it("v1.27.3 + v2.19.72 regression: stale cache (current != live) emits NO AUTO-ACTION (now via self-heal)", async () => {
     const { readLiveMnemeVersion } = await import("./version_check.js");
     const live = readLiveMnemeVersion();
     if (live === "unknown") return; // skip if we can't determine live version
+    // SIMULATE: cache says "current=0.0.1-old, latest=<live>" — but
+    // live IS <live>.  The upgrade was completed; the cache wasn't
+    // refreshed.  Without the v1.27.3 fix, this would emit an
+    // "upgrade to <live> (you're on <live>)" self-loop notice.
+    //
+    // v2.19.72 N5-deep: the cache is now ALSO self-healed (deleted)
+    // when current != live, so we additionally assert latest === null
+    // after the call.  The "no AUTO-ACTION" invariant is preserved
+    // via a stronger guarantee — there's no cache at all to misread.
     writeFileSync(
       join(repo, ".mneme/version-check.json"),
-      // SIMULATE: cache says "current=1.0.0, latest=<live>" -- but live IS <live>.
-      // The upgrade was completed; the cache wasn't refreshed. Without the
-      // v1.27.3 fix, this would emit an "upgrade to <live> (you're on <live>)"
-      // self-loop notice.
-      JSON.stringify({ current: "1.0.0", latest: live }),
+      JSON.stringify({ current: "0.0.1-old", latest: live }),
       "utf8",
     );
     const s = collectPulseStatus(repo);
     expect(s.version.current).toBe(live);
-    expect(s.version.latest).toBe(live);
+    // Pre-v2.19.72 this was `live` because pulse trusted the cache's
+    // latest field regardless of cache.current vintage.  Post-fix the
+    // cache is deleted because cache.current !== live, so latest is null.
+    expect(s.version.latest).toBeNull();
     expect(s.version.updateAvailable).toBe(false);
     expect(s.notable.some((n) => n.level === "action" && n.text.includes("is available"))).toBe(false);
   });
@@ -228,11 +281,14 @@ describe("pulse", () => {
     });
   });
 
-  it("renders all expected counters in quiet mode when notable", () => {
-    // v1.27.3: comparison uses semver (not just !==). Use a far-future
-    // valid-semver latest so updateAvailable fires regardless of which
-    // version of Mneme is running this test.
-    writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({ current: "1.0.0", latest: "9999.0.0" }), "utf8");
+  it("renders all expected counters in quiet mode when notable", async () => {
+    // v2.19.72 N5-deep: cache.current MUST match live for pulse to
+    // trust it.  Use the live version so the self-heal doesn't fire +
+    // updateAvailable signal lands in the rendered output.
+    const { readLiveMnemeVersion } = await import("./version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return;
+    writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({ current: live, latest: "9999.0.0" }), "utf8");
     const s = collectPulseStatus(repo);
     const out = renderPulse(s);
     expect(out).toMatch(/mneme v[\w.]+/);

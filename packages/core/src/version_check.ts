@@ -88,18 +88,25 @@ function readCache(repoRoot: string): CachedRecord | null {
 /** v1.32.0 -- PHOTONICS hook. Call this when the local mneme version
  *  has shifted (e.g., right after a successful `mneme upgrade`). It
  *  wipes the version-check cache so the next pulse fetches fresh and
- *  the AI agent stops seeing stale "v(old) (latest: vX)" lines. */
-export function invalidateOnVersionShift(repoRoot: string): { invalidated: boolean } {
+ *  the AI agent stops seeing stale "v(old) (latest: vX)" lines.
+ *
+ *  v2.19.72 N5-deep fix: ALSO wipe .mneme/CURRENT_VERSION.md.  The
+ *  memo file is regenerated from the cache record at every fresh
+ *  fetch, so leaving the stale memo on disk lets AI agents reading
+ *  the workspace see "Installed: v<old>" forever between pulses.
+ *  Deleting it forces the next checkVersion call to regenerate it
+ *  with the live version. */
+export function invalidateOnVersionShift(repoRoot: string): { invalidated: boolean; reason?: string } {
   try {
     const cached = readCache(repoRoot);
     const live = readLiveMnemeVersion();
     if (!cached || cached.current === live) return { invalidated: false };
-    // Local version has shifted -> wipe the cache.
-    const path = join(repoRoot, CACHE_FILE);
-    try {
-      if (existsSync(path)) unlinkSync(path);
-    } catch { /* */ }
-    return { invalidated: true };
+    // Local version has shifted -> wipe the cache AND the auto-generated memo.
+    const cachePath = join(repoRoot, CACHE_FILE);
+    const memoPath = join(repoRoot, CURRENT_VERSION_MEMO);
+    try { if (existsSync(cachePath)) unlinkSync(cachePath); } catch { /* */ }
+    try { if (existsSync(memoPath)) unlinkSync(memoPath); } catch { /* */ }
+    return { invalidated: true, reason: `cache was v${cached.current}, live is v${live}` };
   } catch { return { invalidated: false }; }
 }
 
