@@ -78,6 +78,112 @@ const __mnemePhoenixBootstrap = async () => {
 // load already sees the redirected env var.
 await __mnemePhoenixBootstrap();
 
+// ── v2.19.70 MUSCLE MEMORY 2.0 — WARM CALL fast path ────────────────────
+// If the daemon is alive AND the user's command is on the WARM CALL
+// allowlist, talk to the daemon over a UDS / named pipe and let IT run
+// the command in its already-warm V8 heap.  Empirically 13-40× faster
+// than the cold path because we skip loading dist/index.js + 50+
+// command modules + the commander tree.
+//
+// Idempotent + fail-safe: short connect timeout (75ms) means the
+// fallback to the cold path is almost free if the daemon is dead.
+//
+// Set MNEME_WARMCALL=0 to disable + force the cold path (debugging).
+async function __mnemeWarmCallAttempt() {
+  if (process.env.MNEME_WARMCALL === "0") return false;
+  const argv = process.argv.slice(2);
+  if (argv.length === 0) return false;
+  const head = argv[0];
+  // Inline allowlist — must match WARMCALL_ALLOWLIST in
+  // packages/core/src/warmcall/index.ts.  Kept tiny so the cold-path
+  // overhead of this check is negligible when the user IS on the cold
+  // path (e.g. `mneme upgrade`).
+  const ALLOW = new Set([
+    "welcome", "status", "groups", "capabilities", "version",
+    "--version", "-V", "doctor", "browse",
+    "verify", "ask", "why", "premortem", "honesty", "phoenix", "system",
+  ]);
+  if (!ALLOW.has(head)) return false;
+  const FORBIDDEN = new Set(["--install", "--uninstall", "--apply", "--force-cold", "--reset", "--rotate"]);
+  for (const a of argv) if (FORBIDDEN.has(a)) return false;
+
+  // Compute the warmcall socket path — must match warmcallSocketPath()
+  // in packages/core/src/warmcall/index.ts.
+  const net = await import("node:net");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const ui = os.userInfo ? os.userInfo() : { uid: -1, username: "default" };
+  let suffix;
+  if (typeof ui.uid === "number" && ui.uid >= 0) suffix = String(ui.uid);
+  else if (typeof ui.username === "string" && ui.username.length > 0) suffix = ui.username.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 32);
+  else suffix = "default";
+  const sockPath = process.platform === "win32"
+    ? `\\\\.\\pipe\\mneme-warmcall-${suffix}`
+    : path.join(os.tmpdir(), `mneme-warmcall-${suffix}.sock`);
+
+  return await new Promise((resolve) => {
+    let connectDone = false;
+    let exitCode = 0;
+    let buf = "";
+    const client = net.createConnection({ path: sockPath, timeout: 75 });
+
+    const fallback = () => { try { client.destroy(); } catch { /* */ } resolve(false); };
+
+    client.once("connect", () => {
+      connectDone = true;
+      try {
+        client.setTimeout(0); // disable post-connect timeout
+        const req = {
+          v: 1,
+          type: "run",
+          cwd: process.cwd(),
+          argv,
+          env: {
+            TERM: process.env.TERM || "",
+            FORCE_COLOR: process.env.FORCE_COLOR || "",
+            NO_COLOR: process.env.NO_COLOR || "",
+          },
+        };
+        client.write(JSON.stringify(req) + "\n");
+      } catch { fallback(); }
+    });
+
+    client.on("timeout", () => { if (!connectDone) fallback(); });
+    client.on("error", () => { if (!connectDone) fallback(); });
+
+    client.setEncoding("utf8");
+    client.on("data", (chunk) => {
+      buf += chunk;
+      let nl;
+      while ((nl = buf.indexOf("\n")) !== -1) {
+        const line = buf.slice(0, nl);
+        buf = buf.slice(nl + 1);
+        if (!line.trim()) continue;
+        try {
+          const f = JSON.parse(line);
+          if (f.type === "stdout") process.stdout.write(f.data);
+          else if (f.type === "stderr") process.stderr.write(f.data);
+          else if (f.type === "exit") exitCode = typeof f.code === "number" ? f.code : 0;
+        } catch { /* drop malformed frames */ }
+      }
+    });
+
+    client.on("end", () => { if (connectDone) { process.exit(exitCode); } else { fallback(); } });
+    client.on("close", () => { if (connectDone) { process.exit(exitCode); } else { fallback(); } });
+  });
+}
+
+// Try warm call.  If it returns false (not eligible, or daemon dead),
+// drop through to the existing fast-path / full-CLI logic below.
+const __warmCallHandled = await __mnemeWarmCallAttempt();
+if (__warmCallHandled === true) {
+  // The warm call handled stdin/stdout streaming + already called
+  // process.exit(...) from the close/end handlers.  We should never
+  // reach this line, but if we do, just exit cleanly.
+  // eslint-disable-next-line no-empty
+  // (no-op)
+}
+
 // ── v0.39 HPC fast path ────────────────────────────────────────────────
 // Several common invocations don't need the 50+ command modules to load.
 // Short-circuiting them here drops cold-start from ~8-13 s on Windows

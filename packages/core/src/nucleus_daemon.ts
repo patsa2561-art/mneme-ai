@@ -189,6 +189,37 @@ export async function runDaemonLoop(
     } catch { /* BE:silent-by-design  ignore  */ }
   })();
 
+  // v2.19.70 — WARM CALL listener (MUSCLE MEMORY 2.0).  Binds a UDS /
+  // named pipe so allowlisted CLI commands (welcome, status, verify,
+  // ask, …) run in the daemon's already-warm V8 heap instead of paying
+  // the ~2s cold start of a fresh node process.  Empirically 13-40×
+  // faster on the first user-visible call after daemon boot.  Falls
+  // back transparently to the cold path if the listener fails to bind.
+  let warmCallServer: { close(): void } | null = null;
+  void (async () => {
+    try {
+      const { startWarmCallServer } = await import("./warmcall/server.js");
+      // The CLI lives at the meta-package name "mneme-ai" once published
+      // (NOT "@mneme-ai/cli" — that name doesn't exist on npm; the CLI
+      // package is just called "mneme-ai" per packages/cli/package.json).
+      // Resolved at runtime to avoid a circular packages/core ↔ packages/cli
+      // compile-time dep.
+      let cli: { run?: (argv: string[]) => Promise<void> } | null = null;
+      try { cli = (await import("mneme-ai" as string)) as { run?: (argv: string[]) => Promise<void> }; }
+      catch { /* not present in this install (e.g. running from a
+        workspace where the meta-package isn't on the module path) */ }
+      if (!cli || typeof cli.run !== "function") {
+        // CLI not available — stay silent.  WARM CALL is a perf
+        // optimisation; daemon must work without it.
+        return;
+      }
+      warmCallServer = await startWarmCallServer({
+        run: cli.run,
+        onError: () => { /* BE:silent-by-design — ignore client-side errors */ },
+      });
+    } catch { /* BE:silent-by-design — WARM CALL never blocks daemon */ }
+  })();
+
   // v1.27.6 -- ONE-SHOT MIGRATION: clean OLD "daemon"-source mutation-
   // milestone entries from the inbox. Pre-v1.27.5 every milestone was
   // pushed with source="daemon" (no dedup). v1.27.5 switched to source=
@@ -209,6 +240,7 @@ export async function runDaemonLoop(
 
   // Cleanup on shutdown — remove PID file so next `start` can succeed.
   const cleanup = () => {
+    try { warmCallServer?.close(); } catch { /* */ }
     try { unlinkSync(pidFilePath(repoRoot)); } catch { /* BE:silent-by-design  ignore  */ }
   };
   process.on("SIGTERM", () => { cleanup(); process.exit(0); });
