@@ -2687,6 +2687,81 @@ export async function run(argv: string[]): Promise<void> {
       await honestyCommand({ cwd: process.cwd(), mode: "verify", svgPath: opts.svg, certJson: opts.cert, json: !!opts.json });
     });
 
+  // v2.19.87 — #8 WHISTLEBLOWER
+  const whistle = program.command("whistle").description("🕵️ AI Whistleblower — scan AI output for dangerous commands / secrets / PII / compliance evasion. Verbs: scan · audit.");
+  whistle.command("scan").description("🕵️ Scan AI output text for compliance flags. Exit code 2 on block-severity findings.")
+    .option("--text <t>").option("--file <p>").option("--vendor <v>").option("--json")
+    .action(async (o: { text?: string; file?: string; vendor?: string; json?: boolean }) => {
+      const { whistleCommand } = await import("./commands/outliers.js");
+      await whistleCommand({ cwd: process.cwd(), mode: "scan", text: o.text, filePath: o.file, vendor: o.vendor, json: !!o.json });
+    });
+  whistle.command("audit").description("🕵️ Show the HMAC-chained incident audit log.")
+    .option("--limit <n>", "default 20", (v) => parseInt(v, 10)).option("--json")
+    .action(async (o: { limit?: number; json?: boolean }) => {
+      const { whistleCommand } = await import("./commands/outliers.js");
+      await whistleCommand({ cwd: process.cwd(), mode: "audit", limit: o.limit, json: !!o.json });
+    });
+
+  // v2.19.87 — #9 AI FUNERAL
+  program.command("funeral")
+    .description("⚰️ AI Funeral — read a dead/archived repo's git history and emit a literary eulogy + ASCII tombstone + SVG memorial card + tweet thread. No LLM call; pure git-log truth.")
+    .argument("[repo-path]", "Path to the repo (default: cwd).")
+    .option("--archived", "Mark the repo as explicitly archived (changes the cause-of-death line).")
+    .option("--output <p>", "Write the SVG memorial card here.")
+    .option("--tweet", "Print a copy-pasteable 3-tweet thread.")
+    .option("--json")
+    .action(async (repoPath: string | undefined, o: { archived?: boolean; output?: string; tweet?: boolean; json?: boolean }) => {
+      const { funeralCommand } = await import("./commands/outliers.js");
+      await funeralCommand({ cwd: process.cwd(), repoPath, archived: !!o.archived, output: o.output, tweet: !!o.tweet, json: !!o.json });
+    });
+
+  // v2.19.87 — #10 SOCRATIC (Reverse Stack Overflow)
+  program.command("socratic")
+    .description("❓ Reverse Stack Overflow — read your code, emit 3 humble hypothesis questions about WHY you wrote it that way. The AI asks; the human answers. LLM-free.")
+    .option("--file <p>", "Code file to analyse.")
+    .option("--text <t>", "Inline code instead of a file.")
+    .option("--picked <h_id>", "Record which hypothesis was correct (Mneme learns).")
+    .option("--explain <e>", "User's own explanation (optional, paired with --picked).")
+    .option("--json")
+    .action(async (o: { file?: string; text?: string; picked?: string; explain?: string; json?: boolean }) => {
+      const { socraticCommand } = await import("./commands/outliers.js");
+      await socraticCommand({ cwd: process.cwd(), filePath: o.file, text: o.text, pickedHypothesisId: o.picked, userExplanation: o.explain, json: !!o.json });
+    });
+
+  // v2.19.87 — #11 DEP DEATH PREDICTOR (singular `dep` to avoid
+  // collision with the existing `deps` namespace).
+  const dep = program.command("dep").description("💀 Dependency Death Predictor — multi-signal mortality score for npm packages. Sub: predict.");
+  dep.command("predict")
+    .description("💀 Predict whether an npm package will be abandoned within 18 months. Exit code 2 on dead/moribund bands.")
+    .argument("<package>", "npm package name.")
+    .option("--json")
+    .action(async (pkg: string, o: { json?: boolean }) => {
+      const { depsPredictCommand } = await import("./commands/outliers.js");
+      await depsPredictCommand({ cwd: process.cwd(), packageName: pkg, json: !!o.json });
+    });
+
+  // v2.19.87 — #12 AI CONFESSIONAL
+  const confess = program.command("confess").description("⛪ AI Confessional — submit an anonymous, scrubbed confession card for an AI hallucination. Verbs: submit (default) · list.");
+  confess.command("submit", { isDefault: true })
+    .description("⛪ Record a confession + render a shareable SVG card.")
+    .requiredOption("--vendor <v>", "AI vendor that lied (claude-ai / chatgpt / gemini / ...).")
+    .option("--question <q>", "What the user originally asked (optional).")
+    .requiredOption("--ai-answer <a>", "The wrong / hallucinated AI answer.")
+    .requiredOption("--truth <t>", "What should have been said.")
+    .option("--category <c>", "math / fact / code / history / science / policy / other.")
+    .option("--output <p>", "Write the confession SVG card here.")
+    .option("--json")
+    .action(async (o: { vendor: string; question?: string; aiAnswer: string; truth: string; category?: string; output?: string; json?: boolean }) => {
+      const { confessCommand } = await import("./commands/outliers.js");
+      await confessCommand({ cwd: process.cwd(), mode: "submit", vendor: o.vendor, question: o.question, aiAnswer: o.aiAnswer, truth: o.truth, category: o.category, output: o.output, json: !!o.json });
+    });
+  confess.command("list").description("⛪ List confessions on the local wall.")
+    .option("--limit <n>", "default 20", (v) => parseInt(v, 10)).option("--json")
+    .action(async (o: { limit?: number; json?: boolean }) => {
+      const { confessCommand } = await import("./commands/outliers.js");
+      await confessCommand({ cwd: process.cwd(), mode: "list", limit: o.limit, json: !!o.json });
+    });
+
   cert
     .command("list")
     .description("🏆 List all Honesty Certificates ever minted on this machine.")

@@ -1062,3 +1062,21 @@ export * as honestyCert from "./honesty_cert/index.js";
 // pulse.jsonl events by time + vendor to show honesty-over-time.
 // Pure read-side; no new ledger.
 export * as timeMachine from "./time_machine/index.js";
+
+// v2.19.87 — FIVE OUTLIERS (the wild ones):
+// #8  WHISTLEBLOWER       Loyal-to-user proxy scanner: flags AI suggestions
+//                         that are illegal / dangerous / leak secrets / etc.
+// #9  AI FUNERAL          Reads git history of a dead/archived repo,
+//                         generates literary eulogy + ASCII tombstone +
+//                         SVG memorial card + tweet thread.
+// #10 SOCRATIC (Reverse Stack Overflow)  Code -> 3 humble hypothesis
+//                         questions for the human; LLM-free.
+// #11 DEP MORTALITY       Multi-signal score for whether an npm package
+//                         is about to be abandoned.
+// #12 AI CONFESSIONAL     Anonymous, scrubbed, shareable confession card
+//                         for AI hallucinations.
+export * as whistleblower from "./whistleblower/index.js";
+export * as funeral from "./funeral/index.js";
+export * as socratic from "./socratic/index.js";
+export * as depMortality from "./dep_mortality/index.js";
+export * as aiConfessional from "./ai_confessional/index.js";
