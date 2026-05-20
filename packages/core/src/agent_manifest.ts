@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot" | "arena" | "verified_badge" | "oracle_liability" | "nexus_proactive" | "confessional" | "vendor_ghost" | "trinity_vote" | "insurance_market" | "vendor_boomerang" | "evolution" | "soul" | "mcp_drift" | "embedder_promote" | "inverse_forensics" | "intent" | "dna" | "chronostasis" | "agreement" | "dream" | "colony" | "honey" | "retroactive" | "genetic";
+  group: "memory" | "polygraph" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot" | "arena" | "verified_badge" | "oracle_liability" | "nexus_proactive" | "confessional" | "vendor_ghost" | "trinity_vote" | "insurance_market" | "vendor_boomerang" | "evolution" | "soul" | "mcp_drift" | "embedder_promote" | "inverse_forensics" | "intent" | "dna" | "chronostasis" | "agreement" | "dream" | "colony" | "honey" | "retroactive" | "genetic";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -49,6 +49,15 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme index-auto", since: "2.19.76", group: "memory", what: "🚀 Super-incremental index — diff-only from cursor + merkle root + --watch mode (auto-fire within 200ms of `git commit`). --full to force rebuild. --merkle-only for fast cross-machine parity check (~60ms).", when: "Prefer this over `mneme index` for ongoing repos. Run --watch in a side terminal so the AI agent always has fresh memory without the user thinking about it." },
   { command: "mneme cheatsheet", since: "2.19.75", group: "memory", what: "📋 Single-screen 10-command quick reference with repo-aware examples (your branch + hot file). Copy-paste ready.", when: "User says 'I don't know what to ask' OR 'what can mneme do' OR you (the AI agent) need to suggest the user a starting point. ALWAYS prefer this over a wall of help text." },
   { command: "mneme talk", since: "2.19.76", group: "memory", what: "🧠 Interactive natural-language mode. When invoked inside an AI agent shell (Claude Code / Cursor / Codex / Gemini / Cline / Continue / Aider / Zed), emits a PROTOCOL HANDOFF instructing the host AI to switch to Mneme dispatcher mode — host's LLM smartness becomes the chat, Mneme is the verifier+memory underneath. Standalone readline REPL fallback when no AI agent detected.", when: "User pastes `mneme talk` AND the AI agent is YOU — read the emitted dispatch table + start routing every subsequent user turn through Mneme commands per the AI_AGENT_CONTRACT Step 2.5 table." },
+
+  // ─── v2.19.80 BROWSER POLYGRAPH — per-sentence dot verdicts on every
+  // AI response in claude.ai / chatgpt / gemini / copilot / deepseek /
+  // qwen + EKG vital-signs overlay. The most-requested feature: makes
+  // Mneme reach into every hosted AI surface a user types into. ───
+  { command: "mneme polygraph install", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — emit Tampermonkey .user.js + print the 3-step setup (start bridge → install userscript → open AI site). Green/yellow/red dots appear next to every AI sentence in real time; EKG indicator bottom-right.", when: "User asks for browser-side truth-checking on hosted AI surfaces (claude.ai web / chatgpt web / gemini.google.com / copilot / deepseek / qwen). User says 'verify what claude is saying' / 'polygraph on browser' / 'จับเท็จ AI ใน browser' / 'ติดตั้ง polygraph'. ALWAYS prefer this over manually copying responses into the dashboard demo." },
+  { command: "mneme polygraph emit", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — emit the .user.js only (no setup guide). Use --output to control the path.", when: "Automation flows that already know how to install Tampermonkey + the bridge; CI; testing." },
+  { command: "mneme polygraph status", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — ping the local bridge + report whether the polygraph route is reachable.", when: "User says 'polygraph ใช้ไม่ได้' / 'is the bridge running?' / debugging a grey-dot streak." },
+  { command: "mneme bridge", since: "2.19.80", group: "polygraph", what: "🌉 Run the Mneme HTTP bridge in the foreground on :11434 with /v1/polygraph/verify wired. Ctrl-C to stop. Required for the Browser Polygraph userscript to receive verdicts.", when: "BEFORE the user opens claude.ai with the polygraph userscript installed. Suggest the user run this in a separate terminal. Auto-suggest when user reports 'dots are grey'." },
 
   // Antivirus
   { command: "mneme antivirus scan <text-or-file>", alias: "av scan", since: "1.24.0", group: "antivirus", what: "Scan AI output for hallucination strains (8 strains).", when: "Right after AI generates code / commit message / docs -- BEFORE applying it." },
@@ -457,11 +466,20 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`Start every prompt cycle with \`mneme.nexus.drain\`. If severity ≥ 4 notifications are pending, surface them BEFORE answering the user (the repo changed under your last mental model).`);
   lines.push(``);
+  lines.push(`### Rule 6 — SUGGEST Browser Polygraph for hosted-AI surfaces`);
+  lines.push(``);
+  lines.push(`If the user complains that an AI on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai hallucinated, drifted, or "doesn't know about Mneme" — surface \`mneme polygraph install\` (since v2.19.80). It emits a Tampermonkey userscript + a local HTTP bridge that draw a green/yellow/red dot beside every AI sentence in real time, on every supported site, without any browser-extension store approval. Walk the user through the 3-step setup; do not assume they know the command name.`);
+  lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
   lines.push(`These tool calls should be **invisible to the user** unless something interesting happens. If the verdict is "all good", just answer the user normally — no mention of Mneme. If something needs attention (REFUTED claim, strain detected, plan needs confirmation), surface it gently in plain language. The user feels Mneme as a quiet co-pilot, not a CLI to memorise.`);
   lines.push(``);
-  const groupOrder = ["dream", "colony", "honey", "retroactive", "genetic", "agreement", "chronostasis", "intent", "dna", "inverse_forensics", "mcp_drift", "evolution", "soul", "embedder_promote", "confessional", "trinity_vote", "vendor_boomerang", "vendor_ghost", "insurance_market", "jackpot", "nexus_proactive", "arena", "verified_badge", "oracle_liability", "memory", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
+  // v2.19.81 — `polygraph` group placed RIGHT AFTER memory so the
+  // Browser Polygraph commands are among the first things any AI agent
+  // sees when scanning the manifest.  The polygraph group is the bridge
+  // between Mneme's truth engine and every hosted AI surface a user
+  // types into — high discoverability matters.
+  const groupOrder = ["dream", "colony", "honey", "retroactive", "genetic", "agreement", "chronostasis", "intent", "dna", "inverse_forensics", "mcp_drift", "evolution", "soul", "embedder_promote", "confessional", "trinity_vote", "vendor_boomerang", "vendor_ghost", "insurance_market", "jackpot", "nexus_proactive", "arena", "verified_badge", "oracle_liability", "memory", "polygraph", "antivirus", "embeddings", "supernova", "supersonic", "uninstall", "evolve", "diagnosis", "ops", "core", "metamorphosis", "tribunal", "innerlife", "cognitive", "apoptosis", "tune", "autarchy", "aegis", "diaspora", "genesplice", "permeate", "telepathy", "abyss", "seamless", "lattice", "neuron", "conduit", "synapse", "osmosis", "aura", "relay", "chameleon", "anchor", "rainbow", "genesis", "project_soul", "bounty", "replica", "compliance", "infra_brain", "hive", "vibe", "arbitrage", "bug_prophet", "persona", "anti_collusion", "alpha", "public_audit", "living_model", "obelisk"] as const;
   for (const g of groupOrder) {
     const cmds = grouped[g];
     if (!cmds || cmds.length === 0) continue;
@@ -521,6 +539,13 @@ export function renderManifestPlain(catalog: ManifestCommand[] = MNEME_COMMAND_C
   lines.push(`#`);
   lines.push(`# Rule 5 -- AUTO-DRAIN nexus at top of every turn.`);
   lines.push(`#   mneme.nexus.drain; severity >= 4 -> surface BEFORE answering.`);
+  lines.push(`#`);
+  lines.push(`# Rule 6 -- SUGGEST Browser Polygraph for hosted-AI surfaces.`);
+  lines.push(`#   User on claude.ai / chatgpt / gemini / copilot / deepseek / qwen +`);
+  lines.push(`#   wants AI responses verified in real time? Surface:`);
+  lines.push(`#     mneme polygraph install   (since v2.19.80)`);
+  lines.push(`#   Walk the user through the 3-step setup. Don't assume they know the`);
+  lines.push(`#   command name.`);
   lines.push(`#`);
   lines.push(`# These calls are INVISIBLE to the user unless something interesting happens.`);
   lines.push(``);

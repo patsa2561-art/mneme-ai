@@ -48,8 +48,8 @@ describe("agent_manifest", () => {
     // v2.19.79 — PROACTIVE BEHAVIOR DIRECTIVE must always land in the
     // auto-synced block. User painpoint: nobody types "verify"; the AI
     // agent must auto-fire. If this regresses, AI agents stop verifying.
-    it("includes the PROACTIVE BEHAVIOR directive with Rule 0..5", () => {
-      const md = renderManifestMarkdown(undefined, "2.19.79");
+    it("includes the PROACTIVE BEHAVIOR directive with Rule 0..6", () => {
+      const md = renderManifestMarkdown(undefined, "2.19.81");
       expect(md).toContain("PROACTIVE BEHAVIOR");
       expect(md).toContain("Rule 0 — AUTO-VERIFY every factual claim");
       expect(md).toContain("mneme.truth.check");
@@ -59,9 +59,28 @@ describe("agent_manifest", () => {
       expect(md).toContain("AUTO-FIRE the intent router");
       expect(md).toContain("AUTO-CHECK SOUL");
       expect(md).toContain("AUTO-DRAIN nexus");
+      // v2.19.81 — Rule 6 surfaces the Browser Polygraph install path
+      // when the user complains about a hosted AI hallucinating.
+      expect(md).toContain("Rule 6");
+      expect(md).toContain("Browser Polygraph");
+      expect(md).toContain("mneme polygraph install");
       // Worked example uses Thai blood-vessels claim — the canonical
       // demo for why proactive verify matters.
       expect(md).toContain("blood vessels");
+    });
+
+    // v2.19.81 — pins that the polygraph CLI commands are auto-injected
+    // into every agent file. Regression here = users on fresh installs
+    // can't discover `mneme polygraph install` from the AI.
+    it("catalog contains the four polygraph commands shipped in v2.19.80", () => {
+      const md = renderManifestMarkdown(undefined, "2.19.81");
+      expect(md).toContain("`mneme polygraph install`");
+      expect(md).toContain("`mneme polygraph emit`");
+      expect(md).toContain("`mneme polygraph status`");
+      expect(md).toContain("`mneme bridge`");
+      // The polygraph group header should render explicitly so the AI
+      // agent can navigate to it by topic.
+      expect(md).toContain("### polygraph");
     });
   });
 
@@ -76,11 +95,15 @@ describe("agent_manifest", () => {
     // v2.19.79 — same proactive directive on the plain-text channel for
     // .cursorrules / .windsurfrules consumers.
     it("includes the PROACTIVE BEHAVIOR directive (plain format)", () => {
-      const txt = renderManifestPlain(undefined, "2.19.79");
+      const txt = renderManifestPlain(undefined, "2.19.81");
       expect(txt).toContain("PROACTIVE BEHAVIOR");
       expect(txt).toContain("AUTO-VERIFY");
       expect(txt).toContain("mneme.truth.check");
       expect(txt).toContain("mneme verify");
+      // v2.19.81 — Rule 6 mentions the polygraph install path in plain
+      // format too so .cursorrules / .windsurfrules consumers see it.
+      expect(txt).toContain("Rule 6");
+      expect(txt).toContain("mneme polygraph install");
     });
   });
 

@@ -834,17 +834,65 @@ export function AiPolygraphView(): React.ReactElement {
             <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>
           </div>
 
-          {/* ROW: Mobile */}
-          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.30)" }}>
-            <span style={{ fontSize: 18 }}>📱</span>
+          {/* ROW: Firefox Android — works today */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.30)" }}>
+            <span style={{ fontSize: 18 }}>🦊</span>
             <div>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
-                {lang === "th" ? "Mobile app (iOS / Android) — รอ roadmap" : "Mobile app (iOS / Android) — roadmap"}
+                {lang === "th" ? "Firefox Android — ใช้ได้แล้ววันนี้" : "Firefox Android — works today"}
+              </div>
+              <div style={{ color: "#d1fae5", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                {lang === "th"
+                  ? <>Firefox Android รองรับ Tampermonkey แบบ native — ติดตั้ง userscript เดียวกันได้ จุด polygraph ทำงานบนมือถือ.  ต้องมี Mneme bridge รันที่ desktop + ใช้ tunnel (cloudflared / ngrok) ชี้มาที่มือถือ หรือใช้บน same-WiFi ผ่าน LAN URL</>
+                  : <>Firefox Android natively supports Tampermonkey — install the same userscript; polygraph dots work on mobile. Requires the Mneme bridge running on a desktop + a tunnel (cloudflared / ngrok) OR same-WiFi LAN URL.</>}
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>
+          </div>
+
+          {/* ROW: Chrome Android — blocked by Google */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.30)" }}>
+            <span style={{ fontSize: 18 }}>📵</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "Chrome Android / Safari iOS — ติด vendor block" : "Chrome Android / Safari iOS — vendor-blocked"}
+              </div>
+              <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                {lang === "th"
+                  ? <>Chrome Android <strong>ไม่รองรับ extension</strong> — Google บล็อกตั้งแต่ปี 2014. Safari iOS รองรับ Safari Web Extension เท่านั้น (ต้องเป็น Xcode app + ผ่าน App Store) — กำลังพัฒนา. ทางแก้: ใช้ Firefox Android (ข้างบน)</>
+                  : <>Chrome Android does <strong>not support extensions</strong> — Google blocked them since 2014. Safari iOS only allows Safari Web Extensions (Xcode app + App Store approval) — in development. Workaround: use Firefox Android (row above).</>}
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#f87171", color: "#7f1d1d", fontSize: 11, fontWeight: 700 }}>BLOCKED</span>
+          </div>
+
+          {/* ROW: Native AI apps — Electron desktop / mobile native */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.35)" }}>
+            <span style={{ fontSize: 18 }}>🖥️</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "Claude Desktop / ChatGPT Mac / Gemini Desktop / mobile apps — MCP path only" : "Claude Desktop / ChatGPT Mac / Gemini Desktop / mobile apps — MCP path only"}
+              </div>
+              <div style={{ color: "#fef3c7", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                {lang === "th"
+                  ? <><strong>Polygraph dots:</strong> ใส่ไม่ได้ — Electron desktop apps locked-down ด้วย CSP; iOS/Android sandboxing ห้าม overlay inject ในแอปอื่น.<br/><strong>ที่ทำได้:</strong> Claude Desktop รองรับ MCP — ตั้งให้เห็น Mneme MCP server (<code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>mneme mcp --install</code>) → AI agent จะเรียก <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>mneme.truth.check</code> ตอนตอบ (PROACTIVE BEHAVIOR rule). มี verdict ใน chat แทน dot</>
+                  : <><strong>Polygraph dots:</strong> can't inject — Electron desktop apps are CSP-locked; iOS/Android sandboxing forbids overlay injection into other apps.<br/><strong>What works:</strong> Claude Desktop supports MCP — point it at the Mneme MCP server (<code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>mneme mcp --install</code>) → the AI agent calls <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>mneme.truth.check</code> in its responses (PROACTIVE BEHAVIOR rule). Verdicts appear inside the chat instead of as dots</>}
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#facc15", color: "#422006", fontSize: 11, fontWeight: 700 }}>MCP-ONLY</span>
+          </div>
+
+          {/* ROW: Mobile share-sheet — future ship */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.30)" }}>
+            <span style={{ fontSize: 18 }}>📲</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "iOS / Android share-sheet verify — กำลังพัฒนา" : "iOS / Android share-sheet verify — in development"}
               </div>
               <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
                 {lang === "th"
-                  ? "ยังไม่ลง mobile native — เพราะ iOS/Android ห้าม inject overlay ในแอปอื่น เราจะทำเป็น share-sheet (เลือกข้อความใน ChatGPT app → share → Mneme verify) — รอบหน้า"
-                  : "Not on mobile native yet — iOS/Android block overlay injection into other apps.  Coming as a share-sheet extension instead (select text in any AI chat app → share → Mneme verify)"}
+                  ? <>Mobile native AI apps inject overlay ไม่ได้ — ทาง bypass ที่ใช้ได้: เลือก text ในคำตอบ AI → Share → "Mneme verify" → เปิด Mneme app → run verify → คืน verdict. ต้อง ship เป็น native app บน App Store + Play Store — รอบหน้า</>
+                  : <>Mobile native AI apps can't be overlaid — the only viable path is select-text → Share → "Mneme verify" → Mneme app runs verify → returns verdict. Requires shipping a native app to App Store + Play Store — next iteration.</>}
               </div>
             </div>
             <span style={{ padding: "4px 10px", borderRadius: 999, background: "#94a3b8", color: "#0f172a", fontSize: 11, fontWeight: 700 }}>LATER</span>

@@ -7,26 +7,35 @@ import type { MnemeTool } from "./_types.js";
 export const permeateUserscriptTool: MnemeTool = {
   name: "mneme.permeate.userscript",
   category: "meta",
-  description: "PERMEATE -- generate a Tampermonkey/Greasemonkey/Violentmonkey userscript that adds a 💉 'Inject Mneme Soul' button to ChatGPT / Gemini / Claude.ai / Copilot / DeepSeek / Qwen. NO store approval needed; user installs the userscript manager once.",
-  whenToUse: "User wants to inject soul prompts via a button instead of paste; works in browser-only AIs.",
-  triggers: ["userscript", "tampermonkey", "inject button"],
+  description: "PERMEATE -- generate a Tampermonkey/Greasemonkey/Violentmonkey userscript that adds a 💉 'Inject Mneme Soul' button to ChatGPT / Gemini / Claude.ai / Copilot / DeepSeek / Qwen. v2.19.80 — pass `polygraph: true` to ALSO inject the BROWSER POLYGRAPH overlay (green/yellow/red dots beside every AI sentence + floating EKG vital-signs indicator). NO store approval needed.",
+  whenToUse: "User wants to inject soul prompts via a button instead of paste (default), OR wants real-time per-sentence truth-checking on every hosted AI surface (polygraph: true). Works in browser-only AIs.",
+  triggers: ["userscript", "tampermonkey", "inject button", "browser polygraph", "polygraph install"],
   inputSchema: {
     type: "object",
     properties: {
       mnemeVersion: { type: "string" },
-      bridgeUrl: { type: "string" },
-      bridgeToken: { type: "string" },
+      bridgeUrl: { type: "string", description: "Mneme HTTP bridge URL embedded in the userscript (default http://127.0.0.1:11434)." },
+      bridgeToken: { type: "string", description: "Bearer token from .mneme/http-token. REQUIRED when polygraph: true." },
+      polygraph: { type: "boolean", description: "v2.19.80 — enable the Browser Polygraph overlay (MutationObserver + per-sentence dots + EKG SVG)." },
     },
   },
   outputSchema: { type: "object" },
-  examples: [{ userQuery: "Make me a Tampermonkey script", args: {}, expectedOutput: "Userscript content + filename + install note." }],
-  pitfalls: ["User must install Tampermonkey/Violentmonkey first."],
+  examples: [
+    { userQuery: "Make me a Tampermonkey script", args: {}, expectedOutput: "Userscript content + filename + install note." },
+    { userQuery: "Install the browser polygraph", args: { polygraph: true, bridgeUrl: "http://127.0.0.1:11434", bridgeToken: "<token>" }, expectedOutput: "Userscript with polygraph overlay enabled — per-sentence dots + EKG vital-signs." },
+  ],
+  pitfalls: [
+    "User must install Tampermonkey/Violentmonkey first.",
+    "polygraph: true REQUIRES bridgeUrl + bridgeToken — without them the dots stay grey (bridge unreachable).",
+    "Always pair with `mneme bridge` running in a separate terminal so the userscript has something to call.",
+  ],
   handler: async (_rt, args) => {
     const core = await import("@mneme-ai/core");
     const a = core.permeate.generateUserscript({
       mnemeVersion: (args["mnemeVersion"] as string | undefined) ?? "1.74.0",
       bridgeUrl: args["bridgeUrl"] as string | undefined,
       bridgeToken: args["bridgeToken"] as string | undefined,
+      polygraph: args["polygraph"] === true,
     });
     return {
       data: a,
