@@ -587,10 +587,47 @@ export function ReadmePage(props: { onLaunchDashboard: () => void }) {
             <button onClick={props.onLaunchDashboard} style={{ ...S.btnPrimary, background: "#8957e5" }}>
               {t("cta_demo")}
             </button>
+            {/* v2.19.79 — IDEA #1 fast-track CTA.  Direct deep-link
+                to #polygraph so visitors can jump straight to the
+                AI Polygraph live demo from the hero, no clicks needed
+                inside the dashboard.  Red theme + pulsing dot to
+                visually signal "live verifier". */}
+            <a
+              href="#polygraph"
+              onClick={(e) => { e.preventDefault(); window.location.hash = "#polygraph"; props.onLaunchDashboard(); }}
+              style={{
+                ...S.btnPrimary,
+                background: "linear-gradient(180deg, #ef4444, #b91c1c)",
+                boxShadow: "0 0 24px rgba(239, 68, 68, 0.35)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+              }}
+              aria-label="Try the AI Polygraph live demo"
+            >
+              <span
+                style={{
+                  width: 8, height: 8, borderRadius: 999,
+                  background: "#fff",
+                  boxShadow: "0 0 8px #fff",
+                  animation: "polygraph-cta-pulse 1.4s ease-in-out infinite",
+                }}
+              />
+              🔴 Try AI Polygraph →
+            </a>
             <a href="https://github.com/patsa2561-art/mneme-ai" style={S.btnGhost} target="_blank" rel="noopener">
               {t("cta_github")}
             </a>
           </div>
+          {/* keyframes for the polygraph CTA dot pulse — scoped here so
+              the README page is self-contained */}
+          <style>{`
+            @keyframes polygraph-cta-pulse {
+              0%, 100% { opacity: 1; transform: scale(1); }
+              50%      { opacity: 0.45; transform: scale(1.25); }
+            }
+          `}</style>
           <div style={S.heroMeta}>
             v{__APP_VERSION__} · 9255+ {t("meta_tests")} · 184 {t("meta_mcp")} · {t("meta_cosmic")}{" "}
             {cosmic === null ? <span style={{ color: "#666" }}>{t("meta_checking")}</span>
