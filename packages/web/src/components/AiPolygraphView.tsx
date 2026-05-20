@@ -535,7 +535,7 @@ export function AiPolygraphView(): React.ReactElement {
             { n: 1, en: "Install Tampermonkey (one click)",            th: "ติดตั้ง Tampermonkey (คลิกเดียว)",      cmd: "https://tampermonkey.net" },
             { n: 2, en: 'Enable "Allow User Scripts"',                 th: 'เปิด "Allow User Scripts"',              cmd: "chrome://extensions/ → Tampermonkey → Details" },
             { n: 3, en: "Install Mneme (terminal)",                   th: "ติดตั้ง Mneme (terminal)",                cmd: "npm install -g mneme-ai" },
-            { n: 4, en: "Run autosetup (terminal)",                   th: "รัน autosetup (terminal)",                cmd: "mneme polygraph autosetup" },
+            { n: 4, en: "Run autosetup + auto-start on login (terminal)", th: "รัน autosetup + เปิดเองตอน login (terminal)", cmd: "mneme polygraph autosetup --persist" },
             { n: 5, en: 'Click "Install" in Tampermonkey prompt',     th: 'กด "Install" ใน Tampermonkey popup',    cmd: lang === "th" ? "(ขึ้นอัตโนมัติในเบราว์เซอร์)" : "(opens automatically)" },
             { n: 6, en: "Open chatgpt.com — ask anything factual",    th: "เปิด chatgpt.com — ลองถามอะไรก็ได้",     cmd: lang === "th" ? "เห็น ● มุมล่างขวา = พร้อมใช้" : "● in bottom-right = ready" },
           ].map((s) => (

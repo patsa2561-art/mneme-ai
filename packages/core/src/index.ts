@@ -1092,3 +1092,8 @@ export * as gauntlet from "./gauntlet/index.js";
 export * as aiJury from "./ai_jury/index.js";
 export * as provenance from "./provenance/index.js";
 export * as lieStream from "./lie_stream/index.js";
+
+// v2.19.89 — BRIDGE SERVICE (auto-start on login). Cross-platform OS
+// service registration so the polygraph bridge spawns at boot/login
+// without the user typing anything ever again.
+export * as bridgeService from "./bridge_service/index.js";

@@ -2552,14 +2552,15 @@ export async function run(argv: string[]): Promise<void> {
 
   polygraph
     .command("autosetup", { isDefault: true })
-    .description("🔴 ONE-COMMAND seamless install — spawns bridge in background + emits userscript + opens .user.js so Tampermonkey prompts. AI agents fire this when user says 'install polygraph'.")
+    .description("🔴 ONE-COMMAND seamless install — spawns bridge in background + emits userscript + opens .user.js so Tampermonkey prompts. Pass --persist to ALSO register bridge as an OS service that auto-starts on every login (recommended: never type this command again).")
     .option("--output <path>", "Where to write the .user.js file.")
     .option("--bridge-url <url>", "Mneme bridge URL embedded in the userscript.")
     .option("--skip-open", "Don't auto-open the .user.js.")
+    .option("--persist", "Register bridge as an OS service so it auto-starts at every login (Windows schtasks / macOS launchd / Linux systemd-user). Recommended.")
     .option("--json", "Machine-readable output.")
-    .action(async (opts: { output?: string; bridgeUrl?: string; skipOpen?: boolean; json?: boolean }) => {
+    .action(async (opts: { output?: string; bridgeUrl?: string; skipOpen?: boolean; persist?: boolean; json?: boolean }) => {
       const { polygraphCommand } = await import("./commands/polygraph.js");
-      await polygraphCommand({ cwd: process.cwd(), mode: "autosetup", output: opts.output, bridgeUrl: opts.bridgeUrl, skipOpen: !!opts.skipOpen, json: !!opts.json });
+      await polygraphCommand({ cwd: process.cwd(), mode: "autosetup", output: opts.output, bridgeUrl: opts.bridgeUrl, skipOpen: !!opts.skipOpen, persist: !!opts.persist, json: !!opts.json });
     });
 
   polygraph
@@ -2873,9 +2874,9 @@ export async function run(argv: string[]): Promise<void> {
   // Foreground HTTP server on :17741 (default).  Browser userscripts +
   // ChatGPT Custom GPT Actions + Zapier hit this for per-sentence
   // polygraph verification.  Ctrl-C to stop.
-  program
+  const bridgeCmd = program
     .command("bridge")
-    .description("Run the Mneme HTTP bridge in the foreground (polygraph + future protocols). Ctrl-C to stop. Pass --detach to run in background.")
+    .description("Run the Mneme HTTP bridge in the foreground (polygraph + future protocols). Ctrl-C to stop. Pass --detach to run in background. v2.19.89 — `bridge service install` registers auto-start on login (never type this again).")
     .option("--port <n>", "Port to listen on (default: 17741).", (v) => parseInt(v, 10))
     .option("--host <h>", "Host to bind to (default: 127.0.0.1 — localhost only).")
     .option("--detach", "Run the bridge as a detached background process. PID saved to .mneme/bridge.pid; logs to .mneme/bridge.log.")
@@ -2883,6 +2884,53 @@ export async function run(argv: string[]): Promise<void> {
     .action(async (opts: { port?: number; host?: string; detach?: boolean; json?: boolean }) => {
       const { bridgeCommand } = await import("./commands/bridge.js");
       await bridgeCommand({ cwd: process.cwd(), port: opts.port, host: opts.host, detach: !!opts.detach, json: !!opts.json });
+    });
+
+  // v2.19.89 — `mneme bridge service` cross-platform OS-service verbs.
+  // Auto-starts the bridge on every login so the user never types
+  // `mneme polygraph autosetup` again after first install.
+  const bridgeService = bridgeCmd
+    .command("service")
+    .description("🔁 Register the bridge as an OS service that auto-starts at every login. Sub: install · uninstall · status.");
+
+  bridgeService.command("install")
+    .description("🔁 Install bridge auto-start (Windows schtasks · macOS launchd · Linux systemd --user). USER-scope; no sudo / admin required.")
+    .option("--json", "Machine-readable result.")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.bridgeService.installBridgeService();
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      const badge = r.ok ? "✅" : "❌";
+      process.stdout.write(`🔁 MNEME BRIDGE SERVICE\n\n  ${badge}  ${r.method} (${r.platform})\n  ${r.detail}\n`);
+      if (r.unitPath) process.stdout.write(`  unit:  ${r.unitPath}\n`);
+      if (r.manualFallback) process.stdout.write(`\n  manual fallback:\n    ${r.manualFallback}\n`);
+      if (r.ok) process.stdout.write(`\n  Done. The Mneme bridge will now spawn automatically on every login.\n  Never type 'mneme polygraph autosetup' again.\n`);
+      if (!r.ok) process.exit(1);
+    });
+
+  bridgeService.command("uninstall")
+    .description("🔁 Remove bridge auto-start. The bridge can still be started manually with `mneme bridge --detach`.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.bridgeService.uninstallBridgeService();
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      const badge = r.ok ? "✅" : "❌";
+      process.stdout.write(`🔁 MNEME BRIDGE SERVICE — uninstall\n\n  ${badge}  ${r.detail}\n`);
+      if (!r.ok) process.exit(1);
+    });
+
+  bridgeService.command("status")
+    .description("🔁 Is the bridge auto-start service installed + running?")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const s = core.bridgeService.bridgeServiceStatus();
+      if (opts.json) { process.stdout.write(JSON.stringify(s, null, 2) + "\n"); return; }
+      const installedBadge = s.installed ? "✅ installed" : "❌ not installed";
+      const runningBadge   = s.running   ? "🟢 running"   : "⚪ not running";
+      process.stdout.write(`🔁 MNEME BRIDGE SERVICE — status\n\n  ${installedBadge}\n  ${runningBadge}\n  method:  ${s.method} (${s.platform})\n  ${s.unitPath ? "unit:    " + s.unitPath + "\n" : ""}  ${s.detail}\n`);
+      if (s.reinstallHint) process.stdout.write(`\n  start now:  ${s.reinstallHint}\n`);
     });
 
   // ─── v2.19.76 — `mneme talk` (REPL + AI-agent protocol handoff) ───

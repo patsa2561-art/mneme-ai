@@ -30,6 +30,10 @@ export interface PolygraphCommandOptions {
   json?: boolean;
   /** v2.19.82 — `autosetup` mode skips opening the .user.js if true. */
   skipOpen?: boolean;
+  /** v2.19.89 — also register the bridge as an OS service that
+   *  auto-starts on every login.  After this, the user NEVER has to
+   *  run `mneme polygraph autosetup` again. */
+  persist?: boolean;
   // v2.19.86 — TIME-MACHINE POLYGRAPH (IDEA #4) args.
   windowDays?: number;
   bucketHours?: number;
@@ -179,11 +183,26 @@ async function runAutosetup(opts: PolygraphCommandOptions): Promise<void> {
     }, null, 2) + "\n");
     return;
   }
+  // 6) v2.19.89 — Auto-start service registration (--persist).
+  let serviceLine = "";
+  if (opts.persist) {
+    try {
+      const core2 = await import("@mneme-ai/core");
+      const r = core2.bridgeService.installBridgeService();
+      serviceLine = r.ok
+        ? `  🔁 auto-start: ✅ ${r.method} · ${r.detail}\n`
+        : `  🔁 auto-start: ❌ ${r.method} · ${r.detail}\n${r.manualFallback ? `     manual:    ${r.manualFallback}\n` : ""}`;
+    } catch (e) {
+      serviceLine = `  🔁 auto-start: ❌ ${(e as Error).message}\n`;
+    }
+  }
   // 5) Human-readable summary tells user EXACTLY the two remaining clicks.
   process.stdout.write(`${BANNER} — autosetup complete\n\n`);
   process.stdout.write(`  🌉 bridge:     ${status.alive ? "already running" : `started (pid ${bridgePid})`}  ·  ${status.url}\n`);
   process.stdout.write(`  📜 userscript: ${emitted.path}\n`);
-  process.stdout.write(`  🪟 opened:     ${opened ? "yes (Tampermonkey should prompt now)" : "no (open the .user.js manually)"}\n\n`);
+  process.stdout.write(`  🪟 opened:     ${opened ? "yes (Tampermonkey should prompt now)" : "no (open the .user.js manually)"}\n`);
+  if (serviceLine) process.stdout.write(serviceLine);
+  process.stdout.write(`\n`);
   process.stdout.write(`  TWO MANUAL STEPS REMAIN (the AI agent cannot click in your browser):\n\n`);
   process.stdout.write(`    1. Install Tampermonkey once: https://tampermonkey.net\n`);
   process.stdout.write(`       (free; one-time; Chrome / Firefox / Edge / Safari)\n\n`);

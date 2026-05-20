@@ -2,9 +2,9 @@
 
 <img src="./assets/title.svg" alt="μνήμη · Mneme" width="720">
 
-# The truth layer for any AI you use. 🔴
+# The bolt-on brain for any AI — memory that lasts, truth you can verify. 🧠 🔴
 
-<sub>Live polygraph dots on claude.ai / chatgpt / gemini · World Pulse globe · Honesty Certificate · git-blame for AI-written lines · 14-verb Truth Suite.<br/>
+<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> Mneme = persistent AI memory across sessions + a 14-verb Truth Suite that polygraphs every claim live (dots on claude.ai / chatgpt / gemini · World Pulse globe · Honesty Cert · git-blame for AI code).<br/>
 Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> arms everything in 60 seconds.</sub>
 
 <br/><br/>
@@ -22,8 +22,9 @@ Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> a
 3. Open a terminal and run:
    ```
    npm install -g mneme-ai
-   mneme polygraph autosetup
+   mneme polygraph autosetup --persist
    ```
+   *(`--persist` registers the bridge as an OS service — auto-starts on every login, never type this command again.)*
 4. When the `.user.js` opens in your browser, click **Install / Reinstall** on the Tampermonkey page.
 5. Open https://chatgpt.com — look for "● MNEME POLYGRAPH" at the bottom-right; ask any factual question.
 
@@ -37,8 +38,9 @@ Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> a
 3. เปิด terminal แล้วรัน:
    ```
    npm install -g mneme-ai
-   mneme polygraph autosetup
+   mneme polygraph autosetup --persist
    ```
+   *(`--persist` ลงทะเบียน bridge เป็น OS service — เปิดเครื่องครั้งหน้า bridge เปิดเองอัตโนมัติ ไม่ต้องพิมพ์คำสั่งนี้อีกเลย)*
 4. เมื่อไฟล์ `.user.js` เปิดในเบราว์เซอร์ กด **Install / Reinstall** ในหน้า Tampermonkey
 5. เปิด https://chatgpt.com — มองหา "● MNEME POLYGRAPH" มุมล่างขวา ลองถามคำถามที่มีตัวเลขหรือชื่อเฉพาะดูได้เลย
 
