@@ -2,10 +2,10 @@
 
 <img src="./assets/title.svg" alt="μνήμη · Mneme" width="720">
 
-# Your AI has goldfish memory. <br/> Mneme is the bolt-on brain. 🧠
+# Every AI lies. Mneme is the only tool that catches it live. 🔴
 
-<sub><b>Pronounced NEE-meh</b> · μνήμη = memory in Greek · the layer your AI was supposed to have all along<br/>
-Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.</sub>
+<sub>14-verb Truth Suite — Browser Polygraph dots on claude.ai · World Pulse globe · Sandbag detector · Honesty Certificate · Truth Swarm (fires every audit organ in parallel) · git-blame for AI-written lines.<br/>
+Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> arms everything in 60 seconds.</sub>
 
 <br/>
 
