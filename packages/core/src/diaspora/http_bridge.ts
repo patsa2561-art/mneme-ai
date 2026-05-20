@@ -232,9 +232,13 @@ export interface PolygraphVerifyResult {
   engine?: string;
 }
 
-/** Start the HTTP bridge. Returns a handle the caller stops on shutdown. */
+/** Start the HTTP bridge. Returns a handle the caller stops on shutdown.
+ *  v2.19.82 — default port changed 11434 → 17741. The old default
+ *  collided with Ollama (which ships :11434 out of the box) — many
+ *  Mneme users have both running and the bridge would `EACCES`. 17741
+ *  is unused by any common dev tool. */
 export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers): Promise<BridgeHandle> {
-  const port = opts.port ?? 11434;
+  const port = opts.port ?? 17741;
   const host = opts.host ?? "127.0.0.1";
   const token = opts.noAuth ? "" : ensureToken(opts.repoRoot);
   const baseUrl = `http://${host}:${port}`;

@@ -17,15 +17,19 @@
 import { writeFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { spawn } from "node:child_process";
+import { platform } from "node:os";
 
 const BANNER = "🔴 MNEME POLYGRAPH";
 
 export interface PolygraphCommandOptions {
   cwd: string;
-  mode: "install" | "emit" | "status";
+  mode: "install" | "emit" | "status" | "autosetup";
   output?: string;
   bridgeUrl?: string;
   json?: boolean;
+  /** v2.19.82 — `autosetup` mode skips opening the .user.js if true. */
+  skipOpen?: boolean;
 }
 
 function ensureBridgeToken(cwd: string): string {
@@ -51,7 +55,7 @@ async function emitUserscript(opts: PolygraphCommandOptions): Promise<{ path: st
   const core = await import("@mneme-ai/core");
   const version = await loadMnemeVersion();
   const token = ensureBridgeToken(opts.cwd);
-  const bridgeUrl = opts.bridgeUrl || "http://127.0.0.1:11434";
+  const bridgeUrl = opts.bridgeUrl || "http://127.0.0.1:17741";
   const artifact = core.permeate.generateUserscript({
     mnemeVersion: version,
     bridgeUrl,
@@ -64,7 +68,7 @@ async function emitUserscript(opts: PolygraphCommandOptions): Promise<{ path: st
 }
 
 async function bridgeStatus(opts: PolygraphCommandOptions): Promise<{ alive: boolean; url: string; error?: string }> {
-  const url = opts.bridgeUrl || "http://127.0.0.1:11434";
+  const url = opts.bridgeUrl || "http://127.0.0.1:17741";
   try {
     const res = await fetch(url + "/v1/ping", { signal: AbortSignal.timeout(1500) });
     return { alive: res.ok, url };
@@ -73,7 +77,77 @@ async function bridgeStatus(opts: PolygraphCommandOptions): Promise<{ alive: boo
   }
 }
 
+/** v2.19.82 — Open a file path with the OS default handler.  Used by
+ *  autosetup to fire Tampermonkey for the emitted .user.js, and to open
+ *  the Tampermonkey install page when the user hasn't installed it yet.
+ *  Returns true on a clean handoff; false if the open command failed. */
+function openWithOsDefault(target: string): boolean {
+  try {
+    const opener =
+      platform() === "darwin" ? "open"
+      : platform() === "win32" ? "explorer"
+      : "xdg-open";
+    const child = spawn(opener, [target], { detached: true, stdio: "ignore" });
+    child.unref();
+    return true;
+  } catch { return false; }
+}
+
+function parseBridgePort(url: string | undefined): number | undefined {
+  if (!url) return undefined;
+  try { return parseInt(new URL(url).port || "0", 10) || undefined; } catch { return undefined; }
+}
+
+async function runAutosetup(opts: PolygraphCommandOptions): Promise<void> {
+  // 1) Bridge: start detached if not already alive.  Thread the port
+  //    from --bridge-url through to the spawn so it doesn't fall back
+  //    to the default (which collides with Ollama on many machines).
+  const status = await bridgeStatus(opts);
+  let bridgePid: number | null = null;
+  if (!status.alive) {
+    const { spawnDetachedBridge } = await import("./bridge.js");
+    const port = parseBridgePort(opts.bridgeUrl);
+    const r = await spawnDetachedBridge({ cwd: opts.cwd, port });
+    bridgePid = r.pid;
+    // Tiny grace window so the next status probe sees it.
+    await new Promise((r) => setTimeout(r, 800));
+  }
+  // 2) Userscript: emit to repo root (or --output).
+  const emitted = await emitUserscript(opts);
+  // 3) Hand off to OS: open the .user.js so Tampermonkey prompts.
+  const opened = opts.skipOpen ? false : openWithOsDefault(emitted.path);
+  // 4) JSON early-return for AI-agent consumers.
+  if (opts.json) {
+    process.stdout.write(JSON.stringify({
+      ok: true,
+      mode: "autosetup",
+      bridge: { alreadyRunning: status.alive, pid: bridgePid, url: status.url },
+      userscript: { path: emitted.path, bytes: emitted.bytes, opened },
+      manualStepsRemaining: [
+        "Install Tampermonkey at https://tampermonkey.net (one-time, browser).",
+        "When Tampermonkey prompts to install the userscript, click Install.",
+        "Open claude.ai / chatgpt.com / gemini.google.com — polygraph dots will appear.",
+      ],
+    }, null, 2) + "\n");
+    return;
+  }
+  // 5) Human-readable summary tells user EXACTLY the two remaining clicks.
+  process.stdout.write(`${BANNER} — autosetup complete\n\n`);
+  process.stdout.write(`  🌉 bridge:     ${status.alive ? "already running" : `started (pid ${bridgePid})`}  ·  ${status.url}\n`);
+  process.stdout.write(`  📜 userscript: ${emitted.path}\n`);
+  process.stdout.write(`  🪟 opened:     ${opened ? "yes (Tampermonkey should prompt now)" : "no (open the .user.js manually)"}\n\n`);
+  process.stdout.write(`  TWO MANUAL STEPS REMAIN (the AI agent cannot click in your browser):\n\n`);
+  process.stdout.write(`    1. Install Tampermonkey once: https://tampermonkey.net\n`);
+  process.stdout.write(`       (free; one-time; Chrome / Firefox / Edge / Safari)\n\n`);
+  process.stdout.write(`    2. When Tampermonkey asks "Install this script?", click Install.\n\n`);
+  process.stdout.write(`  THEN: open claude.ai / chatgpt.com / gemini.google.com — polygraph dots\n`);
+  process.stdout.write(`  appear next to every AI sentence; EKG pulses bottom-right.\n`);
+}
+
 export async function polygraphCommand(opts: PolygraphCommandOptions): Promise<void> {
+  if (opts.mode === "autosetup") {
+    return await runAutosetup(opts);
+  }
   if (opts.mode === "status") {
     const status = await bridgeStatus(opts);
     if (opts.json) { process.stdout.write(JSON.stringify(status, null, 2) + "\n"); return; }
@@ -82,7 +156,7 @@ export async function polygraphCommand(opts: PolygraphCommandOptions): Promise<v
     process.stdout.write(`  alive:  ${status.alive ? "✅ yes" : "❌ no"}\n`);
     if (status.error) process.stdout.write(`  error:  ${status.error}\n`);
     if (!status.alive) {
-      process.stdout.write(`\n  start the bridge:  mneme bridge\n`);
+      process.stdout.write(`\n  start the bridge:  mneme bridge  (or:  mneme polygraph autosetup)\n`);
     }
     return;
   }

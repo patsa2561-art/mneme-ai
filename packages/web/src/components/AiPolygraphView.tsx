@@ -822,13 +822,14 @@ export function AiPolygraphView(): React.ReactElement {
                   : <>Green/yellow/red dots appear next to every sentence of every AI response on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai <strong>in real time</strong> + a floating EKG vital-signs indicator bottom-right. Runs on Tampermonkey (free), zero store approval needed.</>}
               </div>
               <div style={{ color: "#86efac", fontSize: 11, marginTop: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", padding: 8, borderRadius: 6, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(52,211,153,0.30)" }}>
-                {lang === "th" ? "# Terminal 1 — start the bridge" : "# Terminal 1 — start the bridge"}<br/>
-                $ mneme bridge<br/>
+                {lang === "th" ? "# v2.19.82 — คำสั่งเดียวจบ (ai agent run ให้ได้เลย)" : "# v2.19.82 — one command (AI agent can run this for you)"}<br/>
+                $ mneme polygraph autosetup<br/>
                 <br/>
-                {lang === "th" ? "# Terminal 2 — emit the userscript" : "# Terminal 2 — emit the userscript"}<br/>
-                $ mneme polygraph install<br/>
+                {lang === "th"
+                  ? "# ทำให้: bridge ในหลังบ้าน + .user.js เปิดอัตโนมัติ → Tampermonkey prompt"
+                  : "# Does: bridge in background + .user.js auto-opened → Tampermonkey prompts"}<br/>
                 <br/>
-                {lang === "th" ? "# จากนั้น double-click .user.js → Tampermonkey ติดตั้งอัตโนมัติ → เปิด claude.ai" : "# Then double-click the .user.js → Tampermonkey installs → open claude.ai"}
+                {lang === "th" ? "# คุณคลิก 2 ที่ใน browser: 1) ติดตั้ง Tampermonkey 2) กด Install" : "# You click 2 things in browser: 1) install Tampermonkey 2) click Install"}
               </div>
             </div>
             <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>

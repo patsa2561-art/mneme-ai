@@ -2544,36 +2544,40 @@ export async function run(argv: string[]): Promise<void> {
   // Tampermonkey .user.js that hits the local Mneme bridge in real time.
   program
     .command("polygraph")
-    .description("Browser Polygraph: emit Tampermonkey userscript for per-sentence dots on claude.ai / chatgpt / gemini / copilot / deepseek / qwen.")
-    .argument("[subcommand]", "install (default) · emit · status", "install")
+    .description("Browser Polygraph: per-sentence truth dots on claude.ai / chatgpt / gemini / copilot / deepseek / qwen. v2.19.82 — `autosetup` is the one-command seamless install AI agents should prefer.")
+    .argument("[subcommand]", "autosetup (recommended — does everything) · install · emit · status", "autosetup")
     .option("--output <path>", "Where to write the .user.js file (default: ./mneme-polygraph-<version>.user.js).")
-    .option("--bridge-url <url>", "Mneme bridge URL embedded in the userscript (default: http://127.0.0.1:11434).")
+    .option("--bridge-url <url>", "Mneme bridge URL embedded in the userscript (default: http://127.0.0.1:17741).")
+    .option("--skip-open", "Autosetup mode only — don't auto-open the .user.js with the OS default handler.")
     .option("--json", "Machine-readable output.")
-    .action(async (subcommand: string, opts: { output?: string; bridgeUrl?: string; json?: boolean }) => {
+    .action(async (subcommand: string, opts: { output?: string; bridgeUrl?: string; skipOpen?: boolean; json?: boolean }) => {
       const { polygraphCommand } = await import("./commands/polygraph.js");
-      const mode = (subcommand === "emit" || subcommand === "status") ? subcommand : "install";
+      const allowed = new Set(["install", "emit", "status", "autosetup"]);
+      const mode = allowed.has(subcommand) ? subcommand : "autosetup";
       await polygraphCommand({
         cwd: process.cwd(),
-        mode: mode as "install" | "emit" | "status",
+        mode: mode as "install" | "emit" | "status" | "autosetup",
         output: opts.output,
         bridgeUrl: opts.bridgeUrl,
+        skipOpen: !!opts.skipOpen,
         json: !!opts.json,
       });
     });
 
   // ─── v2.19.80 — `mneme bridge` (HTTP bridge with polygraph handler) ──
-  // Foreground HTTP server on :11434 (default).  Browser userscripts +
+  // Foreground HTTP server on :17741 (default).  Browser userscripts +
   // ChatGPT Custom GPT Actions + Zapier hit this for per-sentence
   // polygraph verification.  Ctrl-C to stop.
   program
     .command("bridge")
-    .description("Run the Mneme HTTP bridge in the foreground (polygraph + future protocols). Ctrl-C to stop.")
-    .option("--port <n>", "Port to listen on (default: 11434).", (v) => parseInt(v, 10))
+    .description("Run the Mneme HTTP bridge in the foreground (polygraph + future protocols). Ctrl-C to stop. Pass --detach to run in background.")
+    .option("--port <n>", "Port to listen on (default: 17741).", (v) => parseInt(v, 10))
     .option("--host <h>", "Host to bind to (default: 127.0.0.1 — localhost only).")
+    .option("--detach", "Run the bridge as a detached background process. PID saved to .mneme/bridge.pid; logs to .mneme/bridge.log.")
     .option("--json", "Machine-readable startup line.")
-    .action(async (opts: { port?: number; host?: string; json?: boolean }) => {
+    .action(async (opts: { port?: number; host?: string; detach?: boolean; json?: boolean }) => {
       const { bridgeCommand } = await import("./commands/bridge.js");
-      await bridgeCommand({ cwd: process.cwd(), port: opts.port, host: opts.host, json: !!opts.json });
+      await bridgeCommand({ cwd: process.cwd(), port: opts.port, host: opts.host, detach: !!opts.detach, json: !!opts.json });
     });
 
   // ─── v2.19.76 — `mneme talk` (REPL + AI-agent protocol handoff) ───

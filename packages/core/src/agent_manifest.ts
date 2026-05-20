@@ -54,10 +54,11 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   // AI response in claude.ai / chatgpt / gemini / copilot / deepseek /
   // qwen + EKG vital-signs overlay. The most-requested feature: makes
   // Mneme reach into every hosted AI surface a user types into. ───
-  { command: "mneme polygraph install", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — emit Tampermonkey .user.js + print the 3-step setup (start bridge → install userscript → open AI site). Green/yellow/red dots appear next to every AI sentence in real time; EKG indicator bottom-right.", when: "User asks for browser-side truth-checking on hosted AI surfaces (claude.ai web / chatgpt web / gemini.google.com / copilot / deepseek / qwen). User says 'verify what claude is saying' / 'polygraph on browser' / 'จับเท็จ AI ใน browser' / 'ติดตั้ง polygraph'. ALWAYS prefer this over manually copying responses into the dashboard demo." },
-  { command: "mneme polygraph emit", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — emit the .user.js only (no setup guide). Use --output to control the path.", when: "Automation flows that already know how to install Tampermonkey + the bridge; CI; testing." },
+  { command: "mneme polygraph autosetup", since: "2.19.82", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — ONE-COMMAND SEAMLESS INSTALL. Spawns `mneme bridge --detach` in background (PID saved to .mneme/bridge.pid + logs to .mneme/bridge.log), emits the userscript, and opens the .user.js with the OS default handler so Tampermonkey prompts to install. User only has to do TWO manual browser-side clicks (install Tampermonkey once + click Install in the userscript prompt). PREFER this over the 3-step `install` flow.", when: "User asks for browser-side polygraph / truth-check on hosted AI / 'ติดตั้ง polygraph' / 'install polygraph' / 'จับเท็จ AI ใน claude / chatgpt / gemini'. This is THE command AI agents should run on the user's behalf — they don't have to remember 3 commands." },
+  { command: "mneme polygraph install", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — emit Tampermonkey .user.js + print the 3-step manual setup guide (start bridge → install userscript → open AI site). Prefer `mneme polygraph autosetup` when you can — it does all 3 steps for the user.", when: "Use only when the user explicitly wants to walk through the steps themselves. Otherwise prefer `mneme polygraph autosetup`." },
+  { command: "mneme polygraph emit", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — emit the .user.js only (no setup guide, no bridge start). Use --output to control the path.", when: "Automation flows that already know how to install Tampermonkey + the bridge; CI; testing." },
   { command: "mneme polygraph status", since: "2.19.80", group: "polygraph", what: "🔴 BROWSER POLYGRAPH — ping the local bridge + report whether the polygraph route is reachable.", when: "User says 'polygraph ใช้ไม่ได้' / 'is the bridge running?' / debugging a grey-dot streak." },
-  { command: "mneme bridge", since: "2.19.80", group: "polygraph", what: "🌉 Run the Mneme HTTP bridge in the foreground on :11434 with /v1/polygraph/verify wired. Ctrl-C to stop. Required for the Browser Polygraph userscript to receive verdicts.", when: "BEFORE the user opens claude.ai with the polygraph userscript installed. Suggest the user run this in a separate terminal. Auto-suggest when user reports 'dots are grey'." },
+  { command: "mneme bridge", since: "2.19.80", group: "polygraph", what: "🌉 Run the Mneme HTTP bridge with /v1/polygraph/verify wired. Default port v2.19.82+ is :17741 (changed from :11434 to avoid Ollama collision). Foreground by default (Ctrl-C to stop); `--detach` spawns as background process (PID saved to .mneme/bridge.pid, logs to .mneme/bridge.log). v2.19.82 — `mneme polygraph autosetup` calls this with --detach automatically; prefer that command.", when: "Standalone foreground use only. For seamless install prefer `mneme polygraph autosetup`. Auto-suggest when user reports 'dots are grey' AFTER the userscript is already installed." },
 
   // Antivirus
   { command: "mneme antivirus scan <text-or-file>", alias: "av scan", since: "1.24.0", group: "antivirus", what: "Scan AI output for hallucination strains (8 strains).", when: "Right after AI generates code / commit message / docs -- BEFORE applying it." },
@@ -466,9 +467,9 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`Start every prompt cycle with \`mneme.nexus.drain\`. If severity ≥ 4 notifications are pending, surface them BEFORE answering the user (the repo changed under your last mental model).`);
   lines.push(``);
-  lines.push(`### Rule 6 — SUGGEST Browser Polygraph for hosted-AI surfaces`);
+  lines.push(`### Rule 6 — RUN \`mneme polygraph autosetup\` FOR the user, don't make them remember commands`);
   lines.push(``);
-  lines.push(`If the user complains that an AI on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai hallucinated, drifted, or "doesn't know about Mneme" — surface \`mneme polygraph install\` (since v2.19.80). It emits a Tampermonkey userscript + a local HTTP bridge that draw a green/yellow/red dot beside every AI sentence in real time, on every supported site, without any browser-extension store approval. Walk the user through the 3-step setup; do not assume they know the command name.`);
+  lines.push(`If the user complains that an AI on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai hallucinated, OR the user says they want browser-side truth-checking / "polygraph" / "ติดตั้ง polygraph" / "verify ใน browser" — **YOU** (the AI agent) MUST run \`mneme polygraph autosetup\` on the user's behalf via the Bash tool (since v2.19.82). It is the ONE command that does the full seamless install: spawns the bridge in the background (PID saved), emits the .user.js, and opens it so Tampermonkey prompts to install. Do NOT make the user remember three separate commands (\`bridge\` + \`polygraph install\` + double-click). After running it, tell the user the TWO unavoidable browser-side manual steps that remain (install Tampermonkey once at https://tampermonkey.net + click "Install" in the Tampermonkey prompt). That is the entire workflow.`);
   lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
@@ -540,12 +541,15 @@ export function renderManifestPlain(catalog: ManifestCommand[] = MNEME_COMMAND_C
   lines.push(`# Rule 5 -- AUTO-DRAIN nexus at top of every turn.`);
   lines.push(`#   mneme.nexus.drain; severity >= 4 -> surface BEFORE answering.`);
   lines.push(`#`);
-  lines.push(`# Rule 6 -- SUGGEST Browser Polygraph for hosted-AI surfaces.`);
+  lines.push(`# Rule 6 -- RUN \`mneme polygraph autosetup\` FOR the user.`);
   lines.push(`#   User on claude.ai / chatgpt / gemini / copilot / deepseek / qwen +`);
-  lines.push(`#   wants AI responses verified in real time? Surface:`);
-  lines.push(`#     mneme polygraph install   (since v2.19.80)`);
-  lines.push(`#   Walk the user through the 3-step setup. Don't assume they know the`);
-  lines.push(`#   command name.`);
+  lines.push(`#   wants AI responses verified in real time? YOU (the AI agent) run:`);
+  lines.push(`#     mneme polygraph autosetup   (since v2.19.82)`);
+  lines.push(`#   This ONE command: spawns the bridge in the background, emits the`);
+  lines.push(`#   userscript, and opens it so Tampermonkey prompts. The user only`);
+  lines.push(`#   has to click TWO things in the browser (install Tampermonkey once`);
+  lines.push(`#   at https://tampermonkey.net, then click Install in the prompt).`);
+  lines.push(`#   Don't make the user remember three commands.`);
   lines.push(`#`);
   lines.push(`# These calls are INVISIBLE to the user unless something interesting happens.`);
   lines.push(``);
