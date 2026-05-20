@@ -209,14 +209,70 @@ async function fetchSoulFromBridge() {
   //      the EKG corner shows a "● bridge sleeping" hint. Never throws.
   const polygraphBlock = opts.polygraph && opts.bridgeUrl
     ? `
-// ── BROWSER POLYGRAPH (v2.19.80) ───────────────────────────────────
+// ── BROWSER POLYGRAPH (v2.19.80, port-ladder rendezvous v2.19.83) ──
 // Verifies each sentence of every AI response in real time via the local
 // Mneme HTTP bridge. Renders green/yellow/red dots inline + a floating
 // EKG vital-signs indicator. Never throws — bridge offline = grey dots.
+//
+// PORT-LADDER RENDEZVOUS (v2.19.83): the bridge may have walked the
+// ladder 17741..17750 because some other process held an earlier port
+// (Ollama / sibling Mneme install / sandbox). The userscript probes
+// the SAME ladder in parallel; whichever port responds wins and is
+// cached via GM_setValue. Cache invalidates automatically on failure
+// so a bridge restart on a different port re-resolves transparently.
 (function polygraph() {
   'use strict';
-  const POLYGRAPH_BRIDGE = ${JSON.stringify(opts.bridgeUrl)};
-  const POLYGRAPH_TOKEN  = ${JSON.stringify(opts.bridgeToken ?? "")};
+  const POLYGRAPH_BRIDGE_HINT  = ${JSON.stringify(opts.bridgeUrl)};
+  const POLYGRAPH_TOKEN        = ${JSON.stringify(opts.bridgeToken ?? "")};
+  const POLYGRAPH_LADDER_BASE  = 17741;
+  const POLYGRAPH_LADDER_SIZE  = 10;
+  let POLYGRAPH_BRIDGE = POLYGRAPH_BRIDGE_HINT; // mutable — resolved by ladder probe
+
+  function gmGet(key, def) { try { return GM_getValue(key, def); } catch { return def; } }
+  function gmSet(key, val) { try { GM_setValue(key, val); } catch {} }
+
+  function probePing(url) {
+    return new Promise((resolve) => {
+      try {
+        GM_xmlhttpRequest({
+          method: 'GET',
+          url: url + '/v1/ping',
+          timeout: 600,
+          onload: (r) => { try { const j = JSON.parse(r.responseText); resolve(j && j.ok === true); } catch { resolve(false); } },
+          onerror:   () => resolve(false),
+          ontimeout: () => resolve(false),
+        });
+      } catch { resolve(false); }
+    });
+  }
+
+  async function resolveBridgeUrl() {
+    // 1) cached port from prior probe — try first (warm path, no scan).
+    const cached = gmGet('mneme.bridge.port', 0);
+    if (cached) {
+      const url = 'http://127.0.0.1:' + cached;
+      if (await probePing(url)) return url;
+    }
+    // 2) hinted port from generation-time embed.
+    if (await probePing(POLYGRAPH_BRIDGE_HINT)) {
+      const m = /:(\\d+)$/.exec(POLYGRAPH_BRIDGE_HINT);
+      if (m) gmSet('mneme.bridge.port', parseInt(m[1], 10));
+      return POLYGRAPH_BRIDGE_HINT;
+    }
+    // 3) cold scan — probe the full ladder in parallel. First alive wins.
+    const probes = [];
+    for (let i = 0; i < POLYGRAPH_LADDER_SIZE; i++) {
+      const p = POLYGRAPH_LADDER_BASE + i;
+      probes.push((async () => ({ port: p, alive: await probePing('http://127.0.0.1:' + p) }))());
+    }
+    const results = await Promise.all(probes);
+    const winner = results.find(r => r.alive);
+    if (winner) {
+      gmSet('mneme.bridge.port', winner.port);
+      return 'http://127.0.0.1:' + winner.port;
+    }
+    return null; // no bridge anywhere — dots stay grey
+  }
 
   // Per-vendor response container selectors. Try each — first match wins.
   // Fallbacks are intentionally loose so a vendor UI shuffle doesn't
@@ -275,28 +331,35 @@ async function fetchSoulFromBridge() {
   const verifyCache = new Map(); // sentence → verdict (in-session memo)
   function verifyOne(sentence) {
     if (verifyCache.has(sentence)) return Promise.resolve(verifyCache.get(sentence));
+    if (!POLYGRAPH_BRIDGE) return Promise.resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge offline — run \`mneme polygraph autosetup\`' });
     return new Promise((resolve) => {
-      try {
-        GM_xmlhttpRequest({
-          method: 'POST',
-          url: POLYGRAPH_BRIDGE + '/v1/polygraph/verify',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + POLYGRAPH_TOKEN,
-          },
-          data: JSON.stringify({ sentence, vendor: SITE }),
-          timeout: 4000,
-          onload: (r) => {
-            try {
-              const v = JSON.parse(r.responseText);
-              verifyCache.set(sentence, v);
-              resolve(v);
-            } catch { resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'parse-error' }); }
-          },
-          onerror:   () => resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge offline' }),
-          ontimeout: () => resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge timeout' }),
-        });
-      } catch { resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'GM_xhr unavailable' }); }
+      const fire = (url, retried) => {
+        try {
+          GM_xmlhttpRequest({
+            method: 'POST',
+            url: url + '/v1/polygraph/verify',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + POLYGRAPH_TOKEN,
+            },
+            data: JSON.stringify({ sentence, vendor: SITE }),
+            timeout: 4000,
+            onload: (r) => {
+              try {
+                const v = JSON.parse(r.responseText);
+                verifyCache.set(sentence, v);
+                resolve(v);
+              } catch { resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'parse-error' }); }
+            },
+            // On error/timeout: re-resolve the ladder ONCE (bridge may
+            // have restarted on a different port).  Avoids the user
+            // having to reload the page when they re-run autosetup.
+            onerror:   () => retried ? resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge offline' }) : (gmSet('mneme.bridge.port', 0), resolveBridgeUrl().then((u) => u ? (POLYGRAPH_BRIDGE = u, fire(u, true)) : resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge offline' }))),
+            ontimeout: () => retried ? resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge timeout' }) : (gmSet('mneme.bridge.port', 0), resolveBridgeUrl().then((u) => u ? (POLYGRAPH_BRIDGE = u, fire(u, true)) : resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'bridge timeout' }))),
+          });
+        } catch { resolve({ verdict: 'unknown', color: 'grey', confidence: 0, oneLine: 'GM_xhr unavailable' }); }
+      };
+      fire(POLYGRAPH_BRIDGE, false);
     });
   }
 
@@ -462,12 +525,15 @@ async function fetchSoulFromBridge() {
     }, 350);
   }
 
-  function bootPolygraph() {
+  async function bootPolygraph() {
     ekgInit();
+    // Resolve the bridge BEFORE the first MutationObserver fire so dots
+    // get real verdicts on the very first AI response instead of greys.
+    POLYGRAPH_BRIDGE = await resolveBridgeUrl();
     const obs = new MutationObserver(onMutation);
     obs.observe(document.body, { childList: true, subtree: true, characterData: true });
     onMutation();
-    console.log('[Mneme] Polygraph armed — site=' + SITE + ' · bridge=' + POLYGRAPH_BRIDGE);
+    console.log('[Mneme] Polygraph armed — site=' + SITE + ' · bridge=' + (POLYGRAPH_BRIDGE || 'OFFLINE (run: mneme polygraph autosetup)'));
   }
   // Defer to document-idle so the AI page's initial DOM is settled.
   if (document.readyState === 'complete' || document.readyState === 'interactive') bootPolygraph();

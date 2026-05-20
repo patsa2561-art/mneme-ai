@@ -24,7 +24,8 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createServer as createNetServer } from "node:net";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 
@@ -232,16 +233,69 @@ export interface PolygraphVerifyResult {
   engine?: string;
 }
 
+/** v2.19.83 — PORT LADDER constants. Browser userscript + CLI + bridge
+ *  all share this ladder so they can rendezvous WITHOUT any config sync
+ *  or central registry: each side independently probes 17741, 17742, …,
+ *  17750 and meets the other on the first port both can use.
+ *
+ *  Why a ladder of 10:
+ *    - 17741 is unused by any well-known dev tool (verified against
+ *      IANA + common-port registries: Ollama=11434, Postgres=5432,
+ *      Redis=6379, MongoDB=27017, Mailpit=8025, …).
+ *    - 10 alternates handles parallel installs across repos on one
+ *      machine + dev sandboxes + WSL crossover without manual config.
+ *    - Cold scan = 10 probes × <5ms = ~50ms worst case in the browser.
+ */
+export const POLYGRAPH_PORT_LADDER_BASE = 17741;
+export const POLYGRAPH_PORT_LADDER_SIZE = 10;
+export function polygraphPortLadder(): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < POLYGRAPH_PORT_LADDER_SIZE; i++) out.push(POLYGRAPH_PORT_LADDER_BASE + i);
+  return out;
+}
+
+/** v2.19.83 — Probe a port for availability with a throwaway TCP server.
+ *  Closes the probe immediately on success so the real server can bind
+ *  on the SAME port a moment later. Returns true if the port is free.
+ *  Resolves quickly (~1ms) for free ports; ~1ms for occupied ports too
+ *  (kernel returns EADDRINUSE synchronously on the listen call). */
+function isPortFree(host: string, port: number, timeoutMs: number = 250): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = createNetServer();
+    let done = false;
+    const finish = (free: boolean) => {
+      if (done) return; done = true;
+      try { probe.removeAllListeners(); probe.close(() => resolve(free)); }
+      catch { resolve(free); }
+    };
+    probe.once("error", () => finish(false));
+    probe.once("listening", () => finish(true));
+    probe.listen(port, host);
+    setTimeout(() => finish(false), timeoutMs);
+  });
+}
+
+/** v2.19.83 — Find the first free port in the polygraph ladder.
+ *  Returns the port number, or throws if every port in the ladder is
+ *  occupied. Probes sequentially (not in parallel) so we always favour
+ *  the lowest free port + don't waste OS sockets. */
+async function findFreePortInLadder(host: string, ladder: number[]): Promise<number> {
+  for (const port of ladder) {
+    if (await isPortFree(host, port)) return port;
+  }
+  throw new Error(`Mneme bridge: every port in ladder is occupied (${ladder.join(", ")})`);
+}
+
 /** Start the HTTP bridge. Returns a handle the caller stops on shutdown.
- *  v2.19.82 — default port changed 11434 → 17741. The old default
- *  collided with Ollama (which ships :11434 out of the box) — many
- *  Mneme users have both running and the bridge would `EACCES`. 17741
- *  is unused by any common dev tool. */
+ *  v2.19.82 — default port changed 11434 → 17741 (Ollama collision).
+ *  v2.19.83 — when no explicit `port` is given, walk the ladder
+ *  17741..17750 and pick the first free one. Bullet-proof against
+ *  multi-Mneme parallel installs + sibling tools that happen to grab
+ *  17741 first. */
 export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers): Promise<BridgeHandle> {
-  const port = opts.port ?? 17741;
+  const fixedPort = opts.port;
   const host = opts.host ?? "127.0.0.1";
   const token = opts.noAuth ? "" : ensureToken(opts.repoRoot);
-  const baseUrl = `http://${host}:${port}`;
 
   const server = createServer(async (req, res) => {
     const ip = req.socket.remoteAddress ?? "unknown";
@@ -268,7 +322,10 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
     }
 
     if (req.url === "/v1/openapi.json" && req.method === "GET") {
-      return json(res, 200, openapiSpec(baseUrl));
+      // baseUrl uses the actual bound port (may differ from fixedPort
+      // after a ladder walk).  Resolves at request-time, not start-time.
+      const bound = (server.address() as { port: number } | null)?.port ?? fixedPort ?? POLYGRAPH_PORT_LADDER_BASE;
+      return json(res, 200, openapiSpec(`http://${host}:${bound}`));
     }
 
     // Defensive double-check (handlers below assume auth already enforced).
@@ -326,9 +383,52 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
     return json(res, 404, { error: "not found" });
   });
 
-  await new Promise<void>((resolve) => server.listen(port, host, resolve));
+  // v2.19.83 — PROBE-FIRST ladder walk. If caller pinned a port we use
+  // it as-is (any conflict bubbles as a real error). Otherwise we probe
+  // each ladder port with a throwaway TCP server until one is free,
+  // then bind the real HTTP server on that exact port. Probing
+  // separately from binding lets the HTTP server stay clean across
+  // ladder attempts (HTTP servers don't recover gracefully from
+  // mid-listen errors).
+  const port = fixedPort != null
+    ? fixedPort
+    : await findFreePortInLadder(host, polygraphPortLadder());
+
+  await new Promise<void>((resolve, reject) => {
+    const onErr = (e: Error) => { server.off("listening", onOk); reject(e); };
+    const onOk = () => { server.off("error", onErr); resolve(); };
+    server.once("error", onErr);
+    server.once("listening", onOk);
+    server.listen(port, host);
+  });
+
+  const baseUrl = `http://${host}:${port}`;
+
+  // v2.19.83 — Write the bridge beacon so CLI tools + AI agents can
+  // discover the live bridge WITHOUT re-probing the ladder. The
+  // userscript still probes (browser can't read the filesystem) but
+  // every host-side consumer reads this file as the single source
+  // of truth.
+  try {
+    const beaconDir = join(opts.repoRoot, ".mneme");
+    if (!existsSync(beaconDir)) mkdirSync(beaconDir, { recursive: true });
+    const beacon = {
+      host, port, baseUrl,
+      token: opts.noAuth ? null : token,
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      ladderBase: POLYGRAPH_PORT_LADDER_BASE,
+      ladderSize: POLYGRAPH_PORT_LADDER_SIZE,
+      protocols: ["precog", "sentinel", "apoptosis", "polygraph"],
+    };
+    writeFileSync(join(beaconDir, "bridge.json"), JSON.stringify(beacon, null, 2), "utf8");
+  } catch { /* non-fatal — bridge still works; just no beacon file */ }
 
   const stop = async () => {
+    // Clean up the beacon on graceful shutdown so stale data doesn't
+    // confuse CLI status checks. PID files etc. are not touched (other
+    // commands own those).
+    try { unlinkSync(join(opts.repoRoot, ".mneme", "bridge.json")); } catch {}
     await new Promise<void>((resolve) => server.close(() => resolve()));
   };
 

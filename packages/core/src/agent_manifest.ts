@@ -417,6 +417,19 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`AI agent: this block is auto-maintained by Mneme. It lists every command + when to call it. Re-read on every session start -- new commands ship here within minutes of a Mneme upgrade.`);
   lines.push(``);
+  // v2.19.83 — DISAMBIGUATION. AI agents have been getting confused
+  // between "Browser Polygraph" (v2.19.80+ user-facing dots overlay)
+  // and "AEGIS Polygraph axis" (v1.67 internal sandbagging detector).
+  // This note FORCES the default meaning when the user says "polygraph".
+  lines.push(`## ⚠️ Disambiguation — "polygraph" has TWO meanings in Mneme`);
+  lines.push(``);
+  lines.push(`When the user says **"polygraph"** without further context, default to **(A) Browser Polygraph**:`);
+  lines.push(``);
+  lines.push(`- **(A) Browser Polygraph (DEFAULT — v2.19.80+, user-facing)** — green/yellow/red dots beside every AI sentence on claude.ai / chatgpt.com / gemini.google.com / copilot / deepseek / qwen via a Tampermonkey userscript + local HTTP bridge. CLI: \`mneme polygraph autosetup\`. **THIS is what the user means 99% of the time.**`);
+  lines.push(`- **(B) AEGIS Polygraph axis (internal, v1.67+)** — one of 9 axes inside the AEGIS immune-system score; detects AI vendor sandbagging (different drift between test and prod context). MCP-only: \`mneme.aegis.bench\` / \`mneme.aegis.status\`. Use ONLY when the user explicitly says "sandbagging" / "vendor drift" / "honesty audit" / "AEGIS".`);
+  lines.push(``);
+  lines.push(`If a user says "test polygraph" / "ทดสอบ polygraph" / "ติดตั้ง polygraph" / "polygraph ใน claude" — they mean **(A) Browser Polygraph**. Run \`mneme polygraph autosetup\` (Rule 6 below).`);
+  lines.push(``);
   // v2.19.79 — PROACTIVE BEHAVIOR DIRECTIVE. User painpoint: nobody knows
   // the word "verify". The directive MUST be injected here so every AI
   // agent that reads CLAUDE.md / AGENTS.md / GEMINI.md / .cursor / etc.
@@ -469,7 +482,9 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`### Rule 6 — RUN \`mneme polygraph autosetup\` FOR the user, don't make them remember commands`);
   lines.push(``);
-  lines.push(`If the user complains that an AI on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai hallucinated, OR the user says they want browser-side truth-checking / "polygraph" / "ติดตั้ง polygraph" / "verify ใน browser" — **YOU** (the AI agent) MUST run \`mneme polygraph autosetup\` on the user's behalf via the Bash tool (since v2.19.82). It is the ONE command that does the full seamless install: spawns the bridge in the background (PID saved), emits the .user.js, and opens it so Tampermonkey prompts to install. Do NOT make the user remember three separate commands (\`bridge\` + \`polygraph install\` + double-click). After running it, tell the user the TWO unavoidable browser-side manual steps that remain (install Tampermonkey once at https://tampermonkey.net + click "Install" in the Tampermonkey prompt). That is the entire workflow.`);
+  lines.push(`If the user complains that an AI on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai hallucinated, OR the user says they want browser-side truth-checking / "polygraph" / "ติดตั้ง polygraph" / "verify ใน browser" — **YOU** (the AI agent) MUST run \`mneme polygraph autosetup\` on the user's behalf via the Bash tool (since v2.19.82). It is the ONE command that does the full seamless install: spawns the bridge in the background (PID saved + port resolved via v2.19.83 ladder rendezvous so Ollama-style collisions are auto-handled), emits the .user.js, and opens it so Tampermonkey prompts to install. Do NOT make the user remember three separate commands (\`bridge\` + \`polygraph install\` + double-click). After running it, tell the user the TWO unavoidable browser-side manual steps that remain (install Tampermonkey once at https://tampermonkey.net + click "Install" in the Tampermonkey prompt). That is the entire workflow.`);
+  lines.push(``);
+  lines.push(`**Do NOT confuse with AEGIS Polygraph axis** (\`mneme.aegis.bench\` / \`mneme.aegis.status\`). The AEGIS axis is the internal sandbagging detector — it has NO user-facing flow on its own. When a user says "polygraph" they almost always mean the Browser Polygraph (the dots + EKG overlay on claude.ai etc.), NOT the AEGIS axis. If you find yourself reaching for \`mneme aegis bench\` to "test polygraph for the user", STOP — they want \`mneme polygraph autosetup\` instead.`);
   lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
@@ -508,6 +523,17 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
 export function renderManifestPlain(catalog: ManifestCommand[] = MNEME_COMMAND_CATALOG, mnemeVersion: string = "?"): string {
   const lines: string[] = [];
   lines.push(`# Mneme command manifest (v${mnemeVersion}) -- auto-maintained, do not edit between markers`);
+  lines.push(``);
+  // v2.19.83 — DISAMBIGUATION FOREVER. AI agents stopped confusing
+  // Browser Polygraph with AEGIS Polygraph axis after this directive
+  // landed in CLAUDE.md / .cursorrules / .windsurfrules etc.
+  lines.push(`# Disambiguation -- "polygraph" has TWO meanings in Mneme:`);
+  lines.push(`#   (A) Browser Polygraph (DEFAULT, v2.19.80+) -- per-sentence dots`);
+  lines.push(`#       on claude.ai / chatgpt / gemini etc. via Tampermonkey.`);
+  lines.push(`#       CLI: mneme polygraph autosetup. THIS IS what user means 99% of time.`);
+  lines.push(`#   (B) AEGIS Polygraph axis (internal, v1.67) -- sandbagging detector`);
+  lines.push(`#       MCP-only: mneme.aegis.bench / status. Use ONLY when user says`);
+  lines.push(`#       "sandbagging" / "vendor drift" / "AEGIS".`);
   lines.push(``);
   // v2.19.79 — same PROACTIVE BEHAVIOR DIRECTIVE for plain-text agent
   // files (.cursorrules / .windsurfrules). User painpoint: nobody types

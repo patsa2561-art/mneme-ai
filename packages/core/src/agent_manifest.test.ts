@@ -96,6 +96,31 @@ describe("agent_manifest", () => {
       // Rule 6 instructs AI agent to RUN autosetup on user's behalf.
       expect(md).toMatch(/Rule 6.*autosetup/s);
     });
+
+    // v2.19.83 — pins the Browser-vs-internal polygraph disambiguation
+    // directive. Without it, AI agents reach for the internal sandbagging
+    // axis when the user says "test polygraph" and run the wrong feature.
+    // NOTE: the lexicon (tuneForVendorArtifact) rewrites "AEGIS" →
+    // "GUARDRAIL" in vendor-facing artifacts; assertions check for the
+    // rewritten name so they match what AI agents actually see.
+    it("v2.19.83 — disambiguation note + Rule 6 mention BOTH polygraphs", () => {
+      const md = renderManifestMarkdown(undefined, "2.19.83");
+      // Disambiguation block at the top BEFORE the catalog.
+      expect(md).toContain("Disambiguation");
+      expect(md).toMatch(/Browser Polygraph[\s\S]*GUARDRAIL/);
+      // The 99% default rule is stated explicitly.
+      expect(md).toMatch(/99%|DEFAULT/);
+      // Rule 6 calls out the lexicon-rewritten "GUARDRAIL" confusion vector.
+      expect(md).toMatch(/Do NOT confuse with GUARDRAIL|mneme guardrail bench/);
+    });
+
+    // Plain renderer carries the disambiguation too.
+    it("v2.19.83 — disambiguation lands in plain renderer", () => {
+      const txt = renderManifestPlain(undefined, "2.19.83");
+      expect(txt).toContain("Disambiguation");
+      expect(txt).toContain("GUARDRAIL");
+      expect(txt).toContain("Browser Polygraph");
+    });
   });
 
   describe("renderManifestPlain", () => {

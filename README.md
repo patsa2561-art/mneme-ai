@@ -60,6 +60,27 @@ Install once. Auto-upgrades forever. Works offline. Local-first. FIPS-approved.<
 
 <div align="center">
 
+### 🔴 NEW v2.19.83 — Browser Polygraph (ONE-COMMAND seamless install)
+
+<sub>Green / yellow / red dot beside <b>every AI sentence</b> on claude.ai · chatgpt.com · gemini.google.com · copilot.microsoft.com · chat.deepseek.com · chat.qwenlm.ai — <b>in real time</b>, plus a floating EKG vital-signs indicator bottom-right. Works on every supported site; zero browser-extension store approval needed.</sub>
+
+```bash
+$ mneme polygraph autosetup
+# ↑ bridge spawned in background · userscript emitted · .user.js auto-opened
+# Then click 2 things in your browser:
+#   1. Install Tampermonkey once (https://tampermonkey.net)
+#   2. Click "Install" in the Tampermonkey prompt
+# Done. Open claude.ai → polygraph dots appear.
+```
+
+<sub>🔥 v2.19.83 also ships the <b>port-ladder rendezvous</b>: bridge + userscript independently walk ports 17741..17750, so Ollama / sibling Mneme installs / port squatters never break the install. Zero config, zero collision. AI agents in <code>Claude Code / Cursor / Cline / Continue / Zed</code> read PROACTIVE BEHAVIOR Rule 6 in <code>CLAUDE.md</code> and run <code>mneme polygraph autosetup</code> for you the moment you say "ติดตั้ง polygraph" / "polygraph on browser" — you never have to remember the command name.</sub>
+
+</div>
+
+---
+
+<div align="center">
+
 ### One sentence does it all
 
 Tell your AI: <i>"Mneme, verify that..."</i> · <i>"send my brain to my phone"</i> · <i>"clone to a browser AI on this PC"</i> · <i>"upgrade Mneme"</i>

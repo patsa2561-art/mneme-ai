@@ -347,4 +347,63 @@ describe("v1.72 Diaspora D4 · HTTP Bridge + OpenAPI", () => {
     expect(body.protocols).toContain("polygraph");
     await handle.stop();
   });
+
+  // v2.19.83 — Port ladder rendezvous. Bridge walks 17741..17750 to dodge
+  // Ollama / sibling Mneme installs / port squatters. Userscript probes
+  // the same ladder client-side. They meet on the same port.
+  describe("v2.19.83 · port ladder rendezvous", () => {
+    it("polygraphPortLadder() returns 10 ports starting at 17741", async () => {
+      const mod = await import("./http_bridge.js");
+      const ladder = mod.polygraphPortLadder();
+      expect(ladder.length).toBe(10);
+      expect(ladder[0]).toBe(17741);
+      expect(ladder[9]).toBe(17750);
+    });
+
+    it("walks the ladder when a port is occupied", async () => {
+      // Squat 17741 with a dummy TCP server.
+      const net = await import("node:net");
+      const squatter = net.createServer(() => {});
+      await new Promise<void>((resolve, reject) => {
+        squatter.once("error", reject);
+        squatter.listen(17741, "127.0.0.1", () => resolve());
+      });
+      try {
+        const handle = await startBridge({ repoRoot: r, noAuth: true }, {
+          polygraphVerify: () => ({ verdict: "trustworthy", color: "green", confidence: 1, oneLine: "ok", latencyMs: 0 }),
+        });
+        // Bridge MUST have walked past the squatter.
+        expect(handle.port).not.toBe(17741);
+        expect(handle.port).toBeGreaterThanOrEqual(17742);
+        expect(handle.port).toBeLessThanOrEqual(17750);
+        await handle.stop();
+      } finally {
+        await new Promise<void>((resolve) => squatter.close(() => resolve()));
+      }
+    });
+
+    it("writes .mneme/bridge.json beacon with the bound port + protocols + pid", async () => {
+      const { readFileSync, existsSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const handle = await startBridge({ repoRoot: r, noAuth: true }, {
+        polygraphVerify: () => ({ verdict: "trustworthy", color: "green", confidence: 1, oneLine: "ok", latencyMs: 0 }),
+      });
+      const beaconPath = join(r, ".mneme", "bridge.json");
+      expect(existsSync(beaconPath)).toBe(true);
+      const beacon = JSON.parse(readFileSync(beaconPath, "utf8")) as {
+        host: string; port: number; baseUrl: string; pid: number;
+        ladderBase: number; ladderSize: number; protocols: string[];
+      };
+      expect(beacon.host).toBe("127.0.0.1");
+      expect(beacon.port).toBe(handle.port);
+      expect(beacon.baseUrl).toBe(handle.baseUrl);
+      expect(beacon.pid).toBe(process.pid);
+      expect(beacon.ladderBase).toBe(17741);
+      expect(beacon.ladderSize).toBe(10);
+      expect(beacon.protocols).toContain("polygraph");
+      await handle.stop();
+      // Graceful stop wipes the beacon so stale info doesn't fool the CLI.
+      expect(existsSync(beaconPath)).toBe(false);
+    });
+  });
 });

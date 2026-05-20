@@ -68,13 +68,41 @@ async function emitUserscript(opts: PolygraphCommandOptions): Promise<{ path: st
 }
 
 async function bridgeStatus(opts: PolygraphCommandOptions): Promise<{ alive: boolean; url: string; error?: string }> {
-  const url = opts.bridgeUrl || "http://127.0.0.1:17741";
-  try {
-    const res = await fetch(url + "/v1/ping", { signal: AbortSignal.timeout(1500) });
-    return { alive: res.ok, url };
-  } catch (e) {
-    return { alive: false, url, error: (e as Error).message };
+  // v2.19.83 — port ladder rendezvous. Honour explicit --bridge-url first;
+  // otherwise read .mneme/bridge.json (beacon written by startBridge);
+  // otherwise probe the ladder 17741..17750 and use the first live port.
+  if (opts.bridgeUrl) {
+    try {
+      const res = await fetch(opts.bridgeUrl + "/v1/ping", { signal: AbortSignal.timeout(1500) });
+      return { alive: res.ok, url: opts.bridgeUrl };
+    } catch (e) { return { alive: false, url: opts.bridgeUrl, error: (e as Error).message }; }
   }
+  const beaconPath = join(opts.cwd, ".mneme", "bridge.json");
+  if (existsSync(beaconPath)) {
+    try {
+      const beacon = JSON.parse(readFileSync(beaconPath, "utf8")) as { baseUrl?: string };
+      if (beacon.baseUrl) {
+        const res = await fetch(beacon.baseUrl + "/v1/ping", { signal: AbortSignal.timeout(800) });
+        if (res.ok) return { alive: true, url: beacon.baseUrl };
+      }
+    } catch { /* fall through to ladder probe */ }
+  }
+  // Cold-scan the ladder in parallel.
+  const probes = [];
+  for (let i = 0; i < 10; i++) {
+    const port = 17741 + i;
+    const url = `http://127.0.0.1:${port}`;
+    probes.push((async () => {
+      try {
+        const res = await fetch(url + "/v1/ping", { signal: AbortSignal.timeout(400) });
+        return { url, alive: res.ok };
+      } catch { return { url, alive: false }; }
+    })());
+  }
+  const results = await Promise.all(probes);
+  const winner = results.find((r) => r.alive);
+  if (winner) return { alive: true, url: winner.url };
+  return { alive: false, url: "http://127.0.0.1:17741", error: "no bridge alive on ladder 17741..17750" };
 }
 
 /** v2.19.82 — Open a file path with the OS default handler.  Used by
@@ -99,18 +127,22 @@ function parseBridgePort(url: string | undefined): number | undefined {
 }
 
 async function runAutosetup(opts: PolygraphCommandOptions): Promise<void> {
-  // 1) Bridge: start detached if not already alive.  Thread the port
-  //    from --bridge-url through to the spawn so it doesn't fall back
-  //    to the default (which collides with Ollama on many machines).
-  const status = await bridgeStatus(opts);
+  // 1) Bridge: start detached if not already alive.  v2.19.83 — when no
+  //    fixed port is requested, let the bridge walk the ladder
+  //    17741..17750 to dodge Ollama / sibling Mneme installs / squatters.
+  //    After spawning, re-poll status so we report the ACTUAL bound port
+  //    (which may be 17742+ if the ladder walked).
+  let status = await bridgeStatus(opts);
   let bridgePid: number | null = null;
   if (!status.alive) {
     const { spawnDetachedBridge } = await import("./bridge.js");
     const port = parseBridgePort(opts.bridgeUrl);
     const r = await spawnDetachedBridge({ cwd: opts.cwd, port });
     bridgePid = r.pid;
-    // Tiny grace window so the next status probe sees it.
+    // Tiny grace window so the bridge has time to bind + write beacon.
     await new Promise((r) => setTimeout(r, 800));
+    // Re-poll so the printed URL reflects the actual ladder-walked port.
+    status = await bridgeStatus(opts);
   }
   // 2) Userscript: emit to repo root (or --output).
   const emitted = await emitUserscript(opts);
