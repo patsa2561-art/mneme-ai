@@ -85,6 +85,31 @@ Want more **green/red**? Ask questions related to your indexed repo, or about sp
 
 ---
 
+## 🔄 Updating Mneme + Polygraph
+
+Mneme ships a new version every time a feature lands on npm (often several times a day). The CLI auto-checks on every prompt — when you see **"v2.19.X is available"** in the pulse banner, run these three commands:
+
+```bash
+# 1. Upgrade the Mneme CLI + core libs
+npm install -g mneme-ai@latest
+
+# 2. Re-run autosetup (restarts the bridge + emits a fresh userscript)
+mneme polygraph autosetup --persist
+
+# 3. When the Tampermonkey page opens → click "Reinstall"
+#    (the version bump in the userscript is what triggers Tampermonkey
+#     to show "Reinstall" instead of "Install".)
+```
+
+**Why three steps?**
+- `npm install` → pulls in the new CLI + lens engine + bridge handlers.
+- `autosetup` → restarts the running bridge with the new binary AND writes a fresh `.user.js` to disk.
+- `Reinstall` → Tampermonkey holds the OLD copy of the script in your browser; it only picks up the new version when you click Reinstall.
+
+> 🤖 **Working with an AI agent (Claude Code / Cursor / Continue / etc.)?** Just say *"upgrade Mneme"* — the agent will read `CLAUDE.md` / `AGENTS.md` (auto-injected on install), see the upgrade rule, and run all three steps for you.
+
+---
+
 ## 🛠 Troubleshooting
 
 | Symptom | Fix |

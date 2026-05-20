@@ -85,6 +85,31 @@ Mneme เป็น truth engine ที่เน้น **repo + indexed memory** 
 
 ---
 
+## 🔄 อัปเดต Mneme + Polygraph
+
+Mneme ขึ้นเวอร์ชั่นใหม่ทุกครั้งที่ feature ใหม่ลง npm (วันละหลายครั้งเลย). CLI จะเช็คให้เองทุกๆ prompt — ถ้าพี่เห็นใน pulse บอกว่า **"v2.19.X is available"** ให้ทำ 3 ขั้นนี้:
+
+```bash
+# 1. อัปเกรด Mneme CLI + core libs
+npm install -g mneme-ai@latest
+
+# 2. รัน autosetup ใหม่ (จะ restart bridge + เขียน .user.js ใหม่)
+mneme polygraph autosetup --persist
+
+# 3. เมื่อ Tampermonkey เด้งหน้า popup ขึ้นมา → กด "Reinstall"
+#    (version bump ของ userscript นั่นแหละทำให้ Tampermonkey
+#     แสดงปุ่ม "Reinstall" แทน "Install")
+```
+
+**ทำไมต้อง 3 ขั้น?**
+- `npm install` → ดึง CLI + lens engine + bridge handler ตัวใหม่
+- `autosetup` → restart bridge ที่กำลังทำงานด้วย binary ใหม่ + เขียน userscript ตัวใหม่ลงดิสก์
+- `Reinstall` → Tampermonkey เก็บ userscript ตัวเก่าไว้ใน browser, มันจะอัปเดตให้เฉพาะตอนกด Reinstall
+
+> 🤖 **คุยกับ AI agent (Claude Code / Cursor / etc.) อยู่?** บอกว่า *"upgrade Mneme"* — AI agent ที่อ่าน `CLAUDE.md` / `AGENTS.md` จะเห็น rule นี้แล้วทำให้ 3 ขั้นเองทันที
+
+---
+
 ## 🛠 ปัญหาที่เจอบ่อย
 
 | อาการ | แก้ |

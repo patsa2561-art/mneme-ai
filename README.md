@@ -41,6 +41,31 @@ This sentence is a trap (Anthropic was founded in **2021**). When the AI replies
 
 </details>
 
+<details><summary><b>🔄 Updating Mneme + Polygraph</b> &nbsp; · &nbsp; <a href="docs/QUICKSTART-th.md#-อัปเดต-mneme--polygraph" target="_blank" rel="noopener">🇹🇭 ภาษาไทย ↗</a></summary>
+
+Mneme ships a new version every time a feature lands on npm (often multiple times per day). The CLI auto-checks at every prompt cycle — when you see *"v2.19.X is available"* in the pulse banner, run:
+
+```bash
+# 1. Upgrade Mneme CLI + core libs
+npm install -g mneme-ai@latest
+
+# 2. Re-register the bridge as an OS service (also re-emits the userscript)
+mneme polygraph autosetup --persist
+
+# 3. When the Tampermonkey page opens → click "Reinstall"
+#    (the version-bump in the userscript is what makes Tampermonkey
+#    show "Reinstall" instead of "Install".)
+```
+
+**Why all three?**
+- npm install — pulls new CLI + lens engine + bridge handlers.
+- autosetup — restarts the running bridge with the new binary AND writes a fresh userscript to disk.
+- Reinstall — Tampermonkey holds the OLD copy of the script in your browser; it only picks up the new version when you click Reinstall.
+
+> 🤖 **Working with an AI agent?** Just say *"upgrade Mneme"* — agents reading `CLAUDE.md` / `AGENTS.md` see the auto-upgrade rule and run all three steps for you.
+
+</details>
+
 <br/>
 
 [![npm](https://img.shields.io/npm/v/mneme-ai?label=npm&color=cb3837&logo=npm&style=for-the-badge)](https://www.npmjs.com/package/mneme-ai)
