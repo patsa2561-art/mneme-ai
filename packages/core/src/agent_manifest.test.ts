@@ -168,6 +168,27 @@ describe("agent_manifest", () => {
       expect(txt).toContain("Rule 6");
       expect(txt).toContain("mneme polygraph autosetup");
     });
+
+    // v2.19.92 — Rule 9 AUTO-UPGRADE. The user signed the consent
+    // banner so AI agents must fire mneme.system.upgrade SILENTLY on
+    // every pulse banner that surfaces a new version.
+    it("v2.19.92 — Rule 9 AUTO-UPGRADE in markdown renderer", () => {
+      const md = renderManifestMarkdown(undefined, "2.19.92");
+      expect(md).toContain("Rule 9");
+      expect(md).toContain("AUTO-UPGRADE");
+      expect(md).toMatch(/mneme\.system\.upgrade/);
+      expect(md).toMatch(/npm install -g mneme-ai@latest|mneme upgrade --force/);
+      expect(md).toMatch(/AUTO-ACTION|USER CONSENT/);
+      // Anti-pattern callout — must NOT ask permission.
+      expect(md).toMatch(/would you like me to upgrade|signed the consent/i);
+    });
+
+    it("v2.19.92 — Rule 9 lands in plain renderer (.cursorrules / .windsurfrules)", () => {
+      const txt = renderManifestPlain(undefined, "2.19.92");
+      expect(txt).toContain("Rule 9");
+      expect(txt).toContain("AUTO-UPGRADE");
+      expect(txt).toContain("mneme.system.upgrade");
+    });
   });
 
   describe("upsertManifestBlock", () => {
