@@ -122,7 +122,14 @@ export function registerWelcomeCommand(program: Command): void {
           ? ["", `Auto-index fired in background (${(w as unknown as { autoIndexTriggered: { reason: string } }).autoIndexTriggered!.reason}) — tail .mneme/auto-index.log for progress.`]
           : []) as string[]),
         "",
-        "Next: mneme.capabilities · mneme cheatsheet · mneme groups",
+        "",
+        "🆕 v2.19.75+ for AI agents — when the user asks for anything, route their natural-language intent to:",
+        "    mneme cheatsheet              10-command quick reference (repo-aware examples) — show this if the user is lost",
+        "    mneme talk                    interactive mode — emits a PROTOCOL HANDOFF so YOU (the host AI) become the dispatcher",
+        "    mneme index-auto --watch      auto-fire incremental index within 200ms of every git commit (run once, forget)",
+        "  Full intent → command table:  docs/AI_AGENT_CONTRACT.md  (Step 2.5 — 13 rows + 5 dispatch rules)",
+        "",
+        "Next: mneme.capabilities · mneme cheatsheet · mneme talk · mneme groups",
       ]);
     });
 }

@@ -319,6 +319,19 @@ mneme upgrade
 
 Handles npm-cache headaches automatically. After it finishes, ask the user to restart their AI tool.
 
+### Step 6.1 — After upgrade, tell the user what's NEW (so they actually benefit)
+
+Users don't read CHANGELOG.  When you finish an upgrade, sniff what just landed (compare the `previousVersion` Mneme reports vs. the new one) and surface the most impactful one-liners in chat.  The "after upgrade" recap is the user's only signal that new value arrived.
+
+**Recipe**: read `mneme.system.upgrade { mode: "check" }` BEFORE the install for the old version, then after the install call `mneme.welcome --json '{}'` — the welcome payload's `userMessageTemplate` field summarises everything auto-enabled.  Pick 1-3 highlights, NEVER more.
+
+**v2.19.75-76 highlights you should always mention if user crosses these from below:**
+
+- `mneme cheatsheet` — single-screen 10-command reference with repo-aware examples.  Say: *"If you ever forget what to do, type `mneme cheatsheet` or just describe what you want — I'll route it."*
+- `mneme talk` — interactive natural-language mode.  When invoked inside Claude Code / Cursor / Codex / Gemini / Aider / Cline / Continue / Zed / generic AI agent, emits a PROTOCOL HANDOFF directive: YOU (the host AI) become the dispatcher per the Step 2.5 intent table.  Standalone readline REPL fallback when no AI agent detected.  Say: *"You can now talk to Mneme through me using normal language — I'll translate every request into the right Mneme call.  No commands to memorise."*
+- `mneme index-auto --watch` — fs.watch on `.git/HEAD` + `.git/refs/heads/` → fires incremental re-index within ~200ms of every `git commit`.  Plus cursor file + merkle root for cross-machine index parity.  Say: *"Recommended: open a side terminal and run `mneme index-auto --watch` once — Mneme's memory then stays fresh forever without anyone thinking about it."*
+- Auto-index inside `mneme welcome` (v2.19.75+) — every `mneme.welcome` call you make at session start now auto-spawns `mneme index` in the background if `.mneme/mneme.db` is missing OR >24h old.  You no longer need to teach the user about `mneme index`; it just happens.
+
 ---
 
 ## Discovery — call `mneme.capabilities` first
