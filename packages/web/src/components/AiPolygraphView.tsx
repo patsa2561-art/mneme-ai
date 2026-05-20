@@ -809,20 +809,29 @@ export function AiPolygraphView(): React.ReactElement {
             <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>
           </div>
 
-          {/* ROW: Browser extension */}
-          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.35)" }}>
+          {/* ROW: Browser polygraph userscript — LIVE in v2.19.80 */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.45)" }}>
             <span style={{ fontSize: 18 }}>🌐</span>
             <div>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
-                {lang === "th" ? "Browser extension (Chrome / Firefox / Safari) — กำลังจะมา" : "Browser extension (Chrome / Firefox / Safari) — coming"}
+                {lang === "th" ? "Browser Polygraph userscript (Tampermonkey) — ใช้ได้แล้ววันนี้ v2.19.80" : "Browser Polygraph userscript (Tampermonkey) — works today, v2.19.80"}
               </div>
-              <div style={{ color: "#fef3c7", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+              <div style={{ color: "#d1fae5", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
                 {lang === "th"
-                  ? <>แถบจับเท็จลอยทับ chat.openai.com / claude.ai / gemini.google.com / x.com (Grok) <strong>โดยอัตโนมัติ</strong> — ไม่ต้องเปิด demo, ไม่ต้องสลับแท็บ ทำงานบนทุก AI chat ที่คุณใช้อยู่ ทั้งฟรีและเสียเงิน</>
-                  : <>Auto-overlay the truth meter on chat.openai.com / claude.ai / gemini.google.com / x.com (Grok) — <strong>no demo to open</strong>, no tab switching, works on every AI chat you already use, both free and paid tiers</>}
+                  ? <>จุดเขียว/เหลือง/แดงโผล่หน้าทุกประโยคของคำตอบ AI บน claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai <strong>แบบ real-time</strong> + EKG vital-signs ที่มุมล่างขวา ทำงานบน Tampermonkey free, ไม่ต้องรอ Chrome Web Store approval</>
+                  : <>Green/yellow/red dots appear next to every sentence of every AI response on claude.ai / chatgpt.com / gemini.google.com / copilot.microsoft.com / chat.deepseek.com / chat.qwenlm.ai <strong>in real time</strong> + a floating EKG vital-signs indicator bottom-right. Runs on Tampermonkey (free), zero store approval needed.</>}
+              </div>
+              <div style={{ color: "#86efac", fontSize: 11, marginTop: 8, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", padding: 8, borderRadius: 6, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(52,211,153,0.30)" }}>
+                {lang === "th" ? "# Terminal 1 — start the bridge" : "# Terminal 1 — start the bridge"}<br/>
+                $ mneme bridge<br/>
+                <br/>
+                {lang === "th" ? "# Terminal 2 — emit the userscript" : "# Terminal 2 — emit the userscript"}<br/>
+                $ mneme polygraph install<br/>
+                <br/>
+                {lang === "th" ? "# จากนั้น double-click .user.js → Tampermonkey ติดตั้งอัตโนมัติ → เปิด claude.ai" : "# Then double-click the .user.js → Tampermonkey installs → open claude.ai"}
               </div>
             </div>
-            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#facc15", color: "#422006", fontSize: 11, fontWeight: 700 }}>SOON</span>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>
           </div>
 
           {/* ROW: Mobile */}

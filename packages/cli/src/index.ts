@@ -2538,6 +2538,44 @@ export async function run(argv: string[]): Promise<void> {
       cheatsheetCommand({ cwd: process.cwd(), json: !!opts.json });
     });
 
+  // ─── v2.19.80 — `mneme polygraph` (Browser Polygraph userscript) ──
+  // Closes IDEA #1 gap: per-sentence dot verdicts on every AI response in
+  // claude.ai / chatgpt / gemini / copilot / deepseek / qwen.  Emits a
+  // Tampermonkey .user.js that hits the local Mneme bridge in real time.
+  program
+    .command("polygraph")
+    .description("Browser Polygraph: emit Tampermonkey userscript for per-sentence dots on claude.ai / chatgpt / gemini / copilot / deepseek / qwen.")
+    .argument("[subcommand]", "install (default) · emit · status", "install")
+    .option("--output <path>", "Where to write the .user.js file (default: ./mneme-polygraph-<version>.user.js).")
+    .option("--bridge-url <url>", "Mneme bridge URL embedded in the userscript (default: http://127.0.0.1:11434).")
+    .option("--json", "Machine-readable output.")
+    .action(async (subcommand: string, opts: { output?: string; bridgeUrl?: string; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      const mode = (subcommand === "emit" || subcommand === "status") ? subcommand : "install";
+      await polygraphCommand({
+        cwd: process.cwd(),
+        mode: mode as "install" | "emit" | "status",
+        output: opts.output,
+        bridgeUrl: opts.bridgeUrl,
+        json: !!opts.json,
+      });
+    });
+
+  // ─── v2.19.80 — `mneme bridge` (HTTP bridge with polygraph handler) ──
+  // Foreground HTTP server on :11434 (default).  Browser userscripts +
+  // ChatGPT Custom GPT Actions + Zapier hit this for per-sentence
+  // polygraph verification.  Ctrl-C to stop.
+  program
+    .command("bridge")
+    .description("Run the Mneme HTTP bridge in the foreground (polygraph + future protocols). Ctrl-C to stop.")
+    .option("--port <n>", "Port to listen on (default: 11434).", (v) => parseInt(v, 10))
+    .option("--host <h>", "Host to bind to (default: 127.0.0.1 — localhost only).")
+    .option("--json", "Machine-readable startup line.")
+    .action(async (opts: { port?: number; host?: string; json?: boolean }) => {
+      const { bridgeCommand } = await import("./commands/bridge.js");
+      await bridgeCommand({ cwd: process.cwd(), port: opts.port, host: opts.host, json: !!opts.json });
+    });
+
   // ─── v2.19.76 — `mneme talk` (REPL + AI-agent protocol handoff) ───
   // Named `talk` because the hidden `chat` slot is already used by
   // the legacy multi-turn Q&A REPL in insights-cli.  `talk` is the

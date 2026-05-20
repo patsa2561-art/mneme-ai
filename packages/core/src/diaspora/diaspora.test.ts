@@ -276,4 +276,75 @@ describe("v1.72 Diaspora D4 · HTTP Bridge + OpenAPI", () => {
     expect(body.verdict).toBe("HEDGED");
     await handle.stop();
   });
+
+  // v2.19.80 — BROWSER POLYGRAPH route. Pins the wire-format contract the
+  // userscript depends on (verdict + color + confidence + oneLine + latencyMs).
+  it("polygraph verify route returns wire-format verdict on real sentence", async () => {
+    const handle = await startBridge(
+      { repoRoot: r, port: 0, noAuth: true },
+      {
+        polygraphVerify: () => ({
+          verdict: "trustworthy",
+          color: "green",
+          confidence: 0.92,
+          oneLine: "looks legit",
+          latencyMs: 7,
+          engine: "test",
+        }),
+      },
+    );
+    const port = (handle.server.address() as { port: number }).port;
+    const res = await fetch(`http://127.0.0.1:${port}/v1/polygraph/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sentence: "React 19 ships server components by default.", vendor: "claude-ai" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { verdict: string; color: string; confidence: number; oneLine: string; latencyMs: number };
+    expect(body.verdict).toBe("trustworthy");
+    expect(body.color).toBe("green");
+    expect(body.confidence).toBeCloseTo(0.92);
+    expect(body.oneLine).toBe("looks legit");
+    expect(typeof body.latencyMs).toBe("number");
+    await handle.stop();
+  });
+
+  it("polygraph verify route returns grey/unknown on empty sentence WITHOUT 4xx", async () => {
+    // The userscript fires on near-empty chunks while a response streams;
+    // an empty-sentence 4xx would show as a broken dot. We must respond 200/grey.
+    const handle = await startBridge(
+      { repoRoot: r, port: 0, noAuth: true },
+      { polygraphVerify: () => ({ verdict: "trustworthy", color: "green", confidence: 1, oneLine: "n/a", latencyMs: 0 }) },
+    );
+    const port = (handle.server.address() as { port: number }).port;
+    const res = await fetch(`http://127.0.0.1:${port}/v1/polygraph/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sentence: "" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { verdict: string; color: string };
+    expect(body.verdict).toBe("unknown");
+    expect(body.color).toBe("grey");
+    await handle.stop();
+  });
+
+  it("OpenAPI spec lists the new /v1/polygraph/verify operation", () => {
+    const spec = openapiSpec("http://localhost:11434");
+    const paths = spec.paths as Record<string, unknown>;
+    expect(paths["/v1/polygraph/verify"]).toBeDefined();
+  });
+
+  it("/v1/health reports polygraph as a supported protocol", async () => {
+    const handle = await startBridge(
+      { repoRoot: r, port: 0, noAuth: true },
+      { polygraphVerify: () => ({ verdict: "trustworthy", color: "green", confidence: 1, oneLine: "ok", latencyMs: 0 }) },
+    );
+    const port = (handle.server.address() as { port: number }).port;
+    const res = await fetch(`http://127.0.0.1:${port}/v1/health`);
+    const body = await res.json() as { ok: boolean; protocols: string[] };
+    expect(body.ok).toBe(true);
+    expect(body.protocols).toContain("polygraph");
+    await handle.stop();
+  });
 });

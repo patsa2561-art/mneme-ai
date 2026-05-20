@@ -47,6 +47,83 @@ describe("v1.74 Permeate P1 · Userscript Generator", () => {
     expect(a.installNote).toContain("Tampermonkey");
     expect(a.installNote).toContain("💉");
   });
+
+  // v2.19.80 — Browser Polygraph mode pins the contract the userscript
+  // depends on when riding alongside the soul-injector.
+  describe("v2.19.80 · Browser Polygraph mode", () => {
+    it("polygraph mode injects EKG + dot + verifyOne pipeline when polygraph=true", () => {
+      const a = generateUserscript({
+        mnemeVersion: "2.19.80",
+        bridgeUrl: "http://127.0.0.1:11434",
+        bridgeToken: "tok_xyz",
+        polygraph: true,
+      });
+      expect(a.content).toContain("BROWSER POLYGRAPH");
+      expect(a.content).toContain("GM_xmlhttpRequest"); // privileged bridge call
+      expect(a.content).toContain("/v1/polygraph/verify");
+      expect(a.content).toContain("mneme-polygraph-ekg"); // EKG canvas
+      expect(a.content).toContain("mneme-polygraph-dot"); // inline dot class
+      expect(a.content).toContain("RESPONSE_SELECTORS"); // per-vendor adapters
+      expect(a.content).toContain("ekgPulse");           // waveform pulse fn
+    });
+
+    it("polygraph block is OMITTED by default (backward-compat)", () => {
+      const a = generateUserscript({ mnemeVersion: "2.19.80" });
+      expect(a.content).not.toContain("BROWSER POLYGRAPH");
+      expect(a.content).not.toContain("mneme-polygraph-ekg");
+    });
+
+    it("polygraph mode embeds the bridge URL + token verbatim", () => {
+      const a = generateUserscript({
+        mnemeVersion: "2.19.80",
+        bridgeUrl: "http://127.0.0.1:17741",
+        bridgeToken: "test_token_xyz",
+        polygraph: true,
+      });
+      expect(a.content).toContain("\"http://127.0.0.1:17741\"");
+      expect(a.content).toContain("\"test_token_xyz\"");
+    });
+
+    it("polygraph filename signals which artifact this is", () => {
+      const a = generateUserscript({
+        mnemeVersion: "2.19.80",
+        bridgeUrl: "http://127.0.0.1:11434",
+        bridgeToken: "tok",
+        polygraph: true,
+      });
+      expect(a.filename).toMatch(/mneme-polygraph.*\.user\.js$/);
+    });
+
+    it("emitted userscript is syntactically valid JavaScript", () => {
+      const a = generateUserscript({
+        mnemeVersion: "2.19.80",
+        bridgeUrl: "http://127.0.0.1:11434",
+        bridgeToken: "tok",
+        polygraph: true,
+      });
+      // Userscript bodies use GM_* identifiers + `unsafeWindow` that don't
+      // resolve in raw Node — so wrap as a Function (parser only) instead
+      // of executing.  Any syntax error throws.
+      expect(() => new Function(a.content)).not.toThrow();
+    });
+
+    it("targets all 6 AI surfaces in RESPONSE_SELECTORS", () => {
+      const a = generateUserscript({
+        mnemeVersion: "2.19.80",
+        bridgeUrl: "http://127.0.0.1:11434",
+        bridgeToken: "tok",
+        polygraph: true,
+      });
+      // Each per-vendor selector key must be present so a UI shuffle on
+      // one site doesn't blind us on the others.
+      expect(a.content).toMatch(/'chatgpt':\s*\[/);
+      expect(a.content).toMatch(/'gemini':\s*\[/);
+      expect(a.content).toMatch(/'claude-ai':\s*\[/);
+      expect(a.content).toMatch(/'copilot':\s*\[/);
+      expect(a.content).toMatch(/'deepseek':\s*\[/);
+      expect(a.content).toMatch(/'qwen':\s*\[/);
+    });
+  });
 });
 
 // ─── P2 BOOKMARKLET GENERATOR ────────────────────────────────────────

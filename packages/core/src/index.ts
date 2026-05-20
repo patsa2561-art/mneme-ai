@@ -1037,3 +1037,10 @@ export * as preinstallTrail from "./preinstall_trail/index.js";
 // 12th world-first: per-PID DLL hostage extraction as a callable npm package
 // primitive. See packages/core/src/phoenix/.
 export * as phoenix from "./phoenix/index.js";
+
+// v2.19.80 — BROWSER POLYGRAPH (closes IDEA #1 gap: per-sentence dot
+// verdicts on streaming AI responses in claude.ai / chatgpt / gemini /
+// copilot / deepseek / qwen via Tampermonkey userscript + local HTTP
+// bridge). Composes ACGV truth engine with diaspora bridge + permeate
+// userscript. See [[project-mneme-v2-19-80]].
+export * as polygraph from "./polygraph/index.js";
