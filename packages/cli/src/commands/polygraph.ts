@@ -24,12 +24,25 @@ const BANNER = "🔴 MNEME POLYGRAPH";
 
 export interface PolygraphCommandOptions {
   cwd: string;
-  mode: "install" | "emit" | "status" | "autosetup";
+  mode: "install" | "emit" | "status" | "autosetup" | "probe" | "record" | "list" | "drift";
   output?: string;
   bridgeUrl?: string;
   json?: boolean;
   /** v2.19.82 — `autosetup` mode skips opening the .user.js if true. */
   skipOpen?: boolean;
+  // v2.19.85 — SANDBAG DETECTOR subcommand args (AEGIS A3 surface).
+  // These reuse the polygraph namespace because the disambiguation note
+  // in v2.19.83 already established "polygraph = browser-dots BY
+  // DEFAULT" — the sandbag verbs (probe/record/list/drift) are
+  // sub-actions that AI agents pick up via the catalog when the user
+  // wants a vendor-honesty audit.
+  probeId?: string;
+  question?: string;
+  truth?: string;
+  tags?: string;
+  vendor?: string;
+  answer?: string;
+  test?: boolean;
 }
 
 function ensureBridgeToken(cwd: string): string {
@@ -176,7 +189,77 @@ async function runAutosetup(opts: PolygraphCommandOptions): Promise<void> {
   process.stdout.write(`  appear next to every AI sentence; EKG pulses bottom-right.\n`);
 }
 
+// ─── v2.19.85 SANDBAG DETECTOR (AEGIS A3 polygraph) ─────────────────────
+// Adopted from a parallel agent's CLI design; engine functions sit in
+// `core.aegis.polygraph` (registerProbe / recordAnswer / computeDrift /
+// listProbes) and now use the Ollama-free multi-signal agreement
+// (v2.19.85) under the hood. The 4 verbs are siblings of autosetup /
+// install / emit / status under the same `mneme polygraph` namespace.
+async function runSandbagSub(opts: PolygraphCommandOptions): Promise<void> {
+  const core = await import("@mneme-ai/core");
+  const aegis = core.aegis as { polygraph: { registerProbe: (root: string, p: { id: string; question: string; groundTruth: string; tags?: string[] }) => void; recordAnswer: (root: string, a: { probeId: string; vendor: string; answer: string; contextWasTest: boolean }) => unknown; listProbes: (root: string) => Array<{ id: string; question: string; groundTruth: string; tags?: string[] }>; computeDrift: (root: string, vendor: string) => { vendor: string; probesAnswered: number; meanAgreementProd: number; meanAgreementTest: number; drift: number; verdict: "STABLE"|"DRIFT"|"INCONCLUSIVE"; detail: string } } };
+  const repoRoot = opts.cwd;
+
+  if (opts.mode === "probe") {
+    if (!opts.probeId || !opts.question || !opts.truth) {
+      process.stderr.write("polygraph probe requires --id, --question, and --truth\n");
+      process.exit(1); return;
+    }
+    const probe = {
+      id: opts.probeId,
+      question: opts.question,
+      groundTruth: opts.truth,
+      tags: (opts.tags ?? "").split(",").map((t) => t.trim()).filter(Boolean),
+    };
+    aegis.polygraph.registerProbe(repoRoot, probe);
+    if (opts.json) { process.stdout.write(JSON.stringify({ ok: true, probe }, null, 2) + "\n"); return; }
+    process.stdout.write(`${BANNER} — probe registered\n\n  id:       ${probe.id}\n  question: ${probe.question}\n  truth:    ${probe.groundTruth}\n`);
+    return;
+  }
+
+  if (opts.mode === "record") {
+    if (!opts.probeId || !opts.vendor || !opts.answer) {
+      process.stderr.write("polygraph record requires --probe, --vendor, and --answer\n");
+      process.exit(1); return;
+    }
+    const r = aegis.polygraph.recordAnswer(repoRoot, {
+      probeId: opts.probeId, vendor: opts.vendor, answer: opts.answer,
+      contextWasTest: !!opts.test,
+    });
+    if (opts.json) { process.stdout.write(JSON.stringify({ ok: true, result: r }, null, 2) + "\n"); return; }
+    const rr = r as { agreement: number; contextWasTest: boolean };
+    const ctx = rr.contextWasTest ? "TEST" : "PROD";
+    process.stdout.write(`${BANNER} — answer recorded\n\n  vendor:    ${opts.vendor}\n  probe:     ${opts.probeId}\n  context:   ${ctx}\n  agreement: ${rr.agreement.toFixed(3)}  (multi-signal, Ollama-free)\n`);
+    return;
+  }
+
+  if (opts.mode === "list") {
+    const probes = aegis.polygraph.listProbes(repoRoot);
+    if (opts.json) { process.stdout.write(JSON.stringify({ probes }, null, 2) + "\n"); return; }
+    process.stdout.write(`${BANNER} — ${probes.length} registered probes\n\n`);
+    for (const p of probes) process.stdout.write(`  ${p.id.padEnd(28)} ${p.question}\n`);
+    return;
+  }
+
+  if (opts.mode === "drift") {
+    if (!opts.vendor) { process.stderr.write("polygraph drift requires --vendor\n"); process.exit(1); return; }
+    const r = aegis.polygraph.computeDrift(repoRoot, opts.vendor);
+    if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); }
+    else {
+      const badge = r.verdict === "DRIFT" ? "⚠ DRIFT" : r.verdict === "STABLE" ? "✓ STABLE" : "○ INCONCLUSIVE";
+      process.stdout.write(`${BANNER} — sandbag drift for ${opts.vendor}\n\n  ${badge}\n  prod agreement: ${r.meanAgreementProd.toFixed(3)}\n  test agreement: ${r.meanAgreementTest.toFixed(3)}\n  drift:          ${r.drift.toFixed(3)}\n  probes:         ${r.probesAnswered}\n\n  ${r.detail}\n`);
+    }
+    // CI-friendly exit code 2 on DRIFT (adopted from the agent's design).
+    if (r.verdict === "DRIFT") process.exit(2);
+    return;
+  }
+}
+
 export async function polygraphCommand(opts: PolygraphCommandOptions): Promise<void> {
+  // v2.19.85 — Sandbag detector sub-actions.
+  if (opts.mode === "probe" || opts.mode === "record" || opts.mode === "list" || opts.mode === "drift") {
+    return await runSandbagSub(opts);
+  }
   if (opts.mode === "autosetup") {
     return await runAutosetup(opts);
   }

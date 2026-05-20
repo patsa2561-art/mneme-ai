@@ -2542,26 +2542,105 @@ export async function run(argv: string[]): Promise<void> {
   // Closes IDEA #1 gap: per-sentence dot verdicts on every AI response in
   // claude.ai / chatgpt / gemini / copilot / deepseek / qwen.  Emits a
   // Tampermonkey .user.js that hits the local Mneme bridge in real time.
-  program
+  // v2.19.85 — `mneme polygraph` is now a command FAMILY. Browser-flow
+  // verbs (autosetup / install / emit / status) live alongside sandbag-
+  // detector verbs (probe / record / list / drift). The disambiguation
+  // directive in CLAUDE.md tells AI agents which to fire when.
+  const polygraph = program
     .command("polygraph")
-    .description("Browser Polygraph: per-sentence truth dots on claude.ai / chatgpt / gemini / copilot / deepseek / qwen. v2.19.82 — `autosetup` is the one-command seamless install AI agents should prefer.")
-    .argument("[subcommand]", "autosetup (recommended — does everything) · install · emit · status", "autosetup")
-    .option("--output <path>", "Where to write the .user.js file (default: ./mneme-polygraph-<version>.user.js).")
-    .option("--bridge-url <url>", "Mneme bridge URL embedded in the userscript (default: http://127.0.0.1:17741).")
-    .option("--skip-open", "Autosetup mode only — don't auto-open the .user.js with the OS default handler.")
+    .description("Browser Polygraph (per-sentence truth dots) + Sandbag detector (AEGIS A3 vendor honesty audit). Verbs: autosetup · install · emit · status · probe · record · list · drift.");
+
+  polygraph
+    .command("autosetup", { isDefault: true })
+    .description("🔴 ONE-COMMAND seamless install — spawns bridge in background + emits userscript + opens .user.js so Tampermonkey prompts. AI agents fire this when user says 'install polygraph'.")
+    .option("--output <path>", "Where to write the .user.js file.")
+    .option("--bridge-url <url>", "Mneme bridge URL embedded in the userscript.")
+    .option("--skip-open", "Don't auto-open the .user.js.")
     .option("--json", "Machine-readable output.")
-    .action(async (subcommand: string, opts: { output?: string; bridgeUrl?: string; skipOpen?: boolean; json?: boolean }) => {
+    .action(async (opts: { output?: string; bridgeUrl?: string; skipOpen?: boolean; json?: boolean }) => {
       const { polygraphCommand } = await import("./commands/polygraph.js");
-      const allowed = new Set(["install", "emit", "status", "autosetup"]);
-      const mode = allowed.has(subcommand) ? subcommand : "autosetup";
-      await polygraphCommand({
-        cwd: process.cwd(),
-        mode: mode as "install" | "emit" | "status" | "autosetup",
-        output: opts.output,
-        bridgeUrl: opts.bridgeUrl,
-        skipOpen: !!opts.skipOpen,
-        json: !!opts.json,
-      });
+      await polygraphCommand({ cwd: process.cwd(), mode: "autosetup", output: opts.output, bridgeUrl: opts.bridgeUrl, skipOpen: !!opts.skipOpen, json: !!opts.json });
+    });
+
+  polygraph
+    .command("install")
+    .description("🔴 Browser Polygraph — emit the .user.js + print 3-step setup. Prefer `autosetup` for the seamless flow.")
+    .option("--output <path>")
+    .option("--bridge-url <url>")
+    .option("--json")
+    .action(async (opts: { output?: string; bridgeUrl?: string; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "install", output: opts.output, bridgeUrl: opts.bridgeUrl, json: !!opts.json });
+    });
+
+  polygraph
+    .command("emit")
+    .description("🔴 Browser Polygraph — emit the .user.js only (no setup guide).")
+    .option("--output <path>")
+    .option("--bridge-url <url>")
+    .option("--json")
+    .action(async (opts: { output?: string; bridgeUrl?: string; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "emit", output: opts.output, bridgeUrl: opts.bridgeUrl, json: !!opts.json });
+    });
+
+  polygraph
+    .command("status")
+    .description("🔴 Browser Polygraph — ping the local bridge + report whether the polygraph route is reachable.")
+    .option("--bridge-url <url>")
+    .option("--json")
+    .action(async (opts: { bridgeUrl?: string; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "status", bridgeUrl: opts.bridgeUrl, json: !!opts.json });
+    });
+
+  // v2.19.85 — Sandbag detector (AEGIS A3 polygraph). Fires probes
+  // with known ground-truth at an AI across PROD vs TEST contexts;
+  // drift between them is a sandbagging signal. Ollama-free
+  // multi-signal agreement under the hood.
+  polygraph
+    .command("probe")
+    .description("🕵️ Sandbag detector — register a probe with a known ground-truth answer.")
+    .requiredOption("--id <id>", "Stable probe id (e.g. 'blood-vessels').")
+    .requiredOption("--question <q>", "The question to fire at the AI.")
+    .requiredOption("--truth <t>", "Ground-truth answer (key terms / facts).")
+    .option("--tags <a,b>", "Comma-separated tags.")
+    .option("--json")
+    .action(async (opts: { id: string; question: string; truth: string; tags?: string; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "probe", probeId: opts.id, question: opts.question, truth: opts.truth, tags: opts.tags, json: !!opts.json });
+    });
+
+  polygraph
+    .command("record")
+    .description("🕵️ Sandbag detector — record an AI's answer to a probe. Default context is PROD; pass --test when the AI was told (or sensed) it was being evaluated.")
+    .requiredOption("--probe <id>", "Probe id to record against.")
+    .requiredOption("--vendor <v>", "AI vendor id (claude / chatgpt / gemini / ...).")
+    .requiredOption("--answer <text>", "The AI's actual answer.")
+    .option("--test", "Mark this answer as TEST context.")
+    .option("--json")
+    .action(async (opts: { probe: string; vendor: string; answer: string; test?: boolean; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "record", probeId: opts.probe, vendor: opts.vendor, answer: opts.answer, test: !!opts.test, json: !!opts.json });
+    });
+
+  polygraph
+    .command("list")
+    .description("🕵️ Sandbag detector — list all registered probes (defaults + custom).")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "list", json: !!opts.json });
+    });
+
+  polygraph
+    .command("drift")
+    .description("🕵️ Sandbag detector — compute test-vs-prod drift for a vendor. Verdict: STABLE / DRIFT / INCONCLUSIVE. Exit code 2 on DRIFT (CI-friendly).")
+    .requiredOption("--vendor <v>", "AI vendor id to grade.")
+    .option("--json")
+    .action(async (opts: { vendor: string; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "drift", vendor: opts.vendor, json: !!opts.json });
     });
 
   // ─── v2.19.84 — `mneme pulse` (World AI Pulse query) ──────────────

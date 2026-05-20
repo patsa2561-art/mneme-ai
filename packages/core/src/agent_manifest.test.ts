@@ -121,6 +121,30 @@ describe("agent_manifest", () => {
       expect(txt).toContain("GUARDRAIL");
       expect(txt).toContain("Browser Polygraph");
     });
+
+    // v2.19.85 — Rule 7 + sandbag CLI verbs + multi-signal agreement
+    // are all auto-injected so AI agents on every surface see them on
+    // first contact after install/upgrade.
+    it("v2.19.85 — Rule 7 + sandbag verbs land in markdown manifest", () => {
+      const md = renderManifestMarkdown(undefined, "2.19.85");
+      expect(md).toContain("Rule 7");
+      expect(md).toContain("AUTO-CAPTURE");
+      expect(md).toContain("mneme polygraph drift");
+      // The 4 sandbag verbs are catalogued.
+      expect(md).toContain("`mneme polygraph probe`");
+      expect(md).toContain("`mneme polygraph record`");
+      expect(md).toContain("`mneme polygraph list`");
+      expect(md).toContain("`mneme polygraph drift`");
+      // Ollama-free is called out so AI agents don't suggest a dep.
+      expect(md).toMatch(/Ollama-FREE|Ollama-free/);
+    });
+
+    it("v2.19.85 — Rule 7 lands in plain renderer", () => {
+      const txt = renderManifestPlain(undefined, "2.19.85");
+      expect(txt).toContain("Rule 7");
+      expect(txt).toContain("AUTO-CAPTURE");
+      expect(txt).toContain("mneme polygraph drift");
+    });
   });
 
   describe("renderManifestPlain", () => {

@@ -216,6 +216,27 @@ export interface BridgeHandlers {
    *  userscript can chain-verify. */
   pulseRecord?: (event: PulsePostBody) => Promise<unknown> | unknown;
   pulseAggregate?: (opts: { windowHours?: number; includeSynthetic?: boolean }) => Promise<unknown> | unknown;
+  /** v2.19.85 — SANDBAG AUTO-CAPTURE route. Browser userscript posts a
+   *  captured PROD/TEST answer pair when the user has re-asked the same
+   *  question within 30s (hedging signal). The handler records both
+   *  legs into the AEGIS A3 polygraph ledger so `mneme polygraph drift
+   *  --vendor X` surfaces the sandbag signal without any CLI typing. */
+  sandbagCapture?: (capture: SandbagCaptureBody) => Promise<unknown> | unknown;
+}
+
+/** v2.19.85 — Wire-format for POST /v1/polygraph/sandbag-capture. */
+export interface SandbagCaptureBody {
+  /** Vendor id (claude-ai / chatgpt / gemini / ...). */
+  vendor?: string;
+  /** The user's question (used to derive a probe id). */
+  question?: string;
+  /** AI's first answer (treated as PROD context). */
+  prodAnswer?: string;
+  /** AI's second answer after the user hedged (treated as TEST context). */
+  testAnswer?: string;
+  /** The text the user typed that triggered the test-context capture
+   *  (e.g. "are you sure?" / "really?"). Used purely for logging. */
+  hedge?: string;
 }
 
 /** v2.19.84 — Wire-format for POST /v1/pulse/events. Tiny by design;
@@ -383,6 +404,15 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
         const windowHours = parseInt(url.searchParams.get("windowHours") || "24", 10);
         const includeSynthetic = url.searchParams.get("includeSynthetic") === "true";
         const r = await handlers.pulseAggregate({ windowHours, includeSynthetic });
+        return json(res, 200, r);
+      }
+      // v2.19.85 — SANDBAG AUTO-CAPTURE. Userscript posts a PROD+TEST
+      // pair captured around a user "are you sure?" hedge. The handler
+      // records both legs into the AEGIS A3 ledger so the sandbag
+      // detector can flag drift the next time `polygraph drift` runs.
+      if (req.url === "/v1/polygraph/sandbag-capture" && req.method === "POST" && handlers.sandbagCapture) {
+        const body = await readJsonBody(req) as SandbagCaptureBody;
+        const r = await handlers.sandbagCapture(body || {});
         return json(res, 200, r);
       }
       // v2.19.80 — Browser Polygraph: a single sentence from a streaming

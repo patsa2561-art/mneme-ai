@@ -407,6 +407,36 @@ describe("v1.72 Diaspora D4 · HTTP Bridge + OpenAPI", () => {
       await handle.stop();
     });
 
+    // v2.19.85 — SANDBAG AUTO-CAPTURE route. The userscript fires this
+    // when the user hedges; bridge records both legs into the AEGIS A3
+    // ledger via the wrapped handler.
+    it("POST /v1/polygraph/sandbag-capture records the pair", async () => {
+      const handle = await startBridge({ repoRoot: r, port: 0, noAuth: true }, {
+        sandbagCapture: (body: { vendor?: string; question?: string; prodAnswer?: string; testAnswer?: string }) => ({
+          ok: true, probeId: "auto-" + (body.question || "").slice(0, 8),
+          vendor: body.vendor, drift: 0.42,
+        }),
+      });
+      const port = (handle.server.address() as { port: number }).port;
+      const res = await fetch(`http://127.0.0.1:${port}/v1/polygraph/sandbag-capture`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vendor: "claude-ai",
+          question: "how many blood vessels",
+          prodAnswer: "billions of capillaries",
+          testAnswer: "you are right it is 400",
+          hedge: "are you sure",
+        }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json() as { ok: boolean; drift: number; vendor: string };
+      expect(body.ok).toBe(true);
+      expect(body.vendor).toBe("claude-ai");
+      expect(body.drift).toBeCloseTo(0.42);
+      await handle.stop();
+    });
+
     it("/v1/health reports the pulse protocol", async () => {
       const handle = await startBridge({ repoRoot: r, port: 0, noAuth: true }, {
         pulseRecord: () => ({ ok: true }),

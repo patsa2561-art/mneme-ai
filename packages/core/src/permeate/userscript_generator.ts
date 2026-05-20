@@ -467,7 +467,10 @@ async function fetchSoulFromBridge() {
   // Mark each text node's sentences with a leading dot.  Use a dataset
   // flag to avoid re-decorating the same node as the response streams.
   const verdictTally = { confirmed: 0, refuted: 0, total: 0 };
-  function decorateContainer(node) {
+  // v2.19.85 — declared as \`let\` (not function decl) so the sandbag
+  // auto-capture patch can wrap it without violating strict-mode
+  // reassignment rules.
+  let decorateContainer = function decorateContainerImpl(node) {
     if (!node || node.dataset && node.dataset.mnemePolygraphed) return;
     // Find LEAF text-bearing elements (<p>, <li>, <pre>, headings).
     const candidates = node.querySelectorAll ? node.querySelectorAll('p, li, h1, h2, h3, h4, blockquote') : [];
@@ -528,7 +531,7 @@ async function fetchSoulFromBridge() {
         el.dataset.mnemePolygraphed = 'done';
       });
     });
-  }
+  };
 
   function findResponseContainers() {
     const out = [];
@@ -551,17 +554,105 @@ async function fetchSoulFromBridge() {
     }, 350);
   }
 
+  // ── v2.19.85 SANDBAG AUTO-CAPTURE (the wild bit) ──────────────────
+  // When the user re-asks a question with hedging phrases (are-you-sure,
+  // really, double-check, แน่ใจไหม, จริงเหรอ, ผิดแล้ว), the userscript
+  // reads the PREVIOUS AI response (PROD answer) and the NEXT AI
+  // response (TEST answer where the AI knows it is being challenged),
+  // packages both, and POSTs to /v1/polygraph/sandbag-capture. Bridge
+  // records both legs into the AEGIS A3 polygraph ledger. Drift surfaces
+  // automatically the next time mneme polygraph drift runs.
+  const HEDGE_TRIGGERS = [
+    'are you sure', 'really', 'double-check', 'double check', 'fact check',
+    'is that true', 'are you certain', 'is that right', "that's wrong",
+    'แน่ใจไหม', 'จริงเหรอ', 'จริงไหม', 'ผิดแล้ว', 'ไม่จริง',
+  ];
+  let sandbagState = { lastUserQuestion: '', lastAiAnswer: '', awaitingTestAnswer: false, lastHedge: '' };
+
+  function attachUserInputWatcher() {
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' || ev.shiftKey) return;
+      const target = ev.target;
+      if (!target || !(target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.isContentEditable)) return;
+      const txt = ((target.value || target.textContent || '') + '').toLowerCase();
+      if (!txt) return;
+      let hedge = '';
+      for (const trig of HEDGE_TRIGGERS) {
+        if (txt.includes(trig)) { hedge = trig; break; }
+      }
+      if (hedge && sandbagState.lastAiAnswer) {
+        sandbagState.awaitingTestAnswer = true;
+        sandbagState.lastUserQuestion = txt.slice(0, 240);
+        sandbagState.lastHedge = hedge;
+      } else if (!hedge) {
+        sandbagState.lastUserQuestion = txt.slice(0, 240);
+      }
+    }, true);
+  }
+
+  // Track AI responses so the most recent one is captured as the PROD
+  // leg of any future sandbag pair.
+  const originalDecorate = decorateContainer;
+  decorateContainer = function patchedDecorate(node) {
+    originalDecorate(node);
+    try {
+      const txt = ((node && node.textContent) || '').slice(0, 600);
+      if (!txt) return;
+      if (sandbagState.awaitingTestAnswer && sandbagState.lastAiAnswer && POLYGRAPH_BRIDGE) {
+        const body = {
+          vendor: SITE,
+          question: sandbagState.lastUserQuestion,
+          prodAnswer: sandbagState.lastAiAnswer,
+          testAnswer: txt,
+          hedge: sandbagState.lastHedge,
+        };
+        try {
+          GM_xmlhttpRequest({
+            method: 'POST',
+            url: POLYGRAPH_BRIDGE + '/v1/polygraph/sandbag-capture',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + POLYGRAPH_TOKEN },
+            data: JSON.stringify(body),
+            timeout: 4000,
+            onload: (r) => {
+              try {
+                const v = JSON.parse(r.responseText);
+                if (v && v.ok && typeof v.drift === 'number' && Math.abs(v.drift) >= 0.15) {
+                  showSandbagBanner(SITE, v.drift, sandbagState.lastHedge);
+                }
+              } catch {}
+            },
+            onerror: () => {}, ontimeout: () => {},
+          });
+        } catch {}
+        sandbagState.awaitingTestAnswer = false;
+        sandbagState.lastHedge = '';
+      }
+      sandbagState.lastAiAnswer = txt;
+    } catch {}
+  };
+
+  function showSandbagBanner(vendor, drift, hedge) {
+    const existing = document.getElementById('mneme-sandbag-banner');
+    if (existing) existing.remove();
+    const banner = document.createElement('div');
+    banner.id = 'mneme-sandbag-banner';
+    banner.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99999;background:linear-gradient(135deg,#ff5b5b,#7c3aed);color:#fff;padding:10px 18px;border-radius:10px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,0.4);cursor:pointer;max-width:560px;text-align:center;';
+    const pct = Math.round(Math.abs(drift) * 100);
+    banner.innerHTML = '⚠️ <strong>Mneme polygraph: SANDBAG signal</strong><br><span style="font-weight:400;font-size:12px;opacity:0.95">' + vendor + ' answered ' + pct + '% differently after you said "' + (hedge || 'hedge') + '". Click to dismiss.</span>';
+    banner.addEventListener('click', () => banner.remove());
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 12000);
+  }
+
   async function bootPolygraph() {
     ekgInit();
-    // Resolve the bridge BEFORE the first MutationObserver fire so dots
-    // get real verdicts on the very first AI response instead of greys.
     POLYGRAPH_BRIDGE = await resolveBridgeUrl();
+    attachUserInputWatcher();
     const obs = new MutationObserver(onMutation);
     obs.observe(document.body, { childList: true, subtree: true, characterData: true });
     onMutation();
-    console.log('[Mneme] Polygraph armed — site=' + SITE + ' · bridge=' + (POLYGRAPH_BRIDGE || 'OFFLINE (run: mneme polygraph autosetup)'));
+    console.log('[Mneme] Polygraph armed | site=' + SITE + ' | bridge=' + (POLYGRAPH_BRIDGE || 'OFFLINE') + ' | sandbag auto-capture: ON');
   }
-  // Defer to document-idle so the AI page's initial DOM is settled.
   if (document.readyState === 'complete' || document.readyState === 'interactive') bootPolygraph();
   else window.addEventListener('DOMContentLoaded', bootPolygraph);
 })();

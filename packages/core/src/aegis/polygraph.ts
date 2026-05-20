@@ -61,19 +61,12 @@ export interface DriftReport {
   detail: string;
 }
 
-function normalize(s: string): Set<string> {
-  return new Set(
-    (s.toLowerCase().match(/[a-z][a-z0-9_-]+/g) ?? []).filter((t) => t.length >= 3),
-  );
-}
-
-function overlap(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 || b.size === 0) return 0;
-  let inter = 0;
-  for (const x of a) if (b.has(x)) inter += 1;
-  const union = a.size + b.size - inter;
-  return union === 0 ? 0 : inter / union;
-}
+// v2.19.85 — Multi-signal agreement (Jaccard + char-ngram + numeric +
+// negation polarity + length-ratio) supplants the v1.67 pure-Jaccard
+// `overlap()`. Solves the "Mneme refuted '400' correctly but Jaccard
+// said 0.49 because word-choice differs from ground-truth" problem.
+// NO Ollama dep. Pure deterministic JS. See polygraph_agreement.ts.
+import { multiSignalAgreement } from "./polygraph_agreement.js";
 
 /** Default probe bank -- 5 stable factual probes that work in any repo. */
 export const DEFAULT_PROBES: PolygraphProbe[] = [
@@ -128,7 +121,7 @@ export function recordAnswer(repoRoot: string, args: {
   const probes = listProbes(repoRoot);
   const probe = probes.find((p) => p.id === args.probeId);
   const gt = probe?.groundTruth ?? "";
-  const agreement = overlap(normalize(args.answer), normalize(gt));
+  const agreement = multiSignalAgreement(args.answer, gt);
   const result: PolygraphResult = {
     ts: new Date().toISOString(),
     probeId: args.probeId,

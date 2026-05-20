@@ -21,6 +21,10 @@
 export * as replicationDetector from "./replication_detector.js";
 export * as consentKernel from "./consent_kernel.js";
 export * as polygraph from "./polygraph.js";
+// v2.19.85 — Ollama-free multi-signal agreement (drop-in replacement
+// for v1.67 Jaccard). Exposed so MCP tools + CLI + tests can call it
+// directly without going through registerProbe.
+export * as polygraphAgreement from "./polygraph_agreement.js";
 export * as honeypotNexus from "./honeypot_nexus.js";
 export * as killswitch from "./killswitch.js";
 export * as jurisdictionAtlas from "./jurisdiction_atlas.js";
