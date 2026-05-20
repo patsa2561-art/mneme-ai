@@ -223,11 +223,35 @@ This is the canonical routing table. Memorise it. When the user's prompt matches
 
 **Rules of the dispatch:**
 
+0. **PROACTIVE VERIFY — the load-bearing rule.**  When the user states a factual claim that has *specific entities* — a number ("the human body has 400 blood vessels"), a version ("React 19 ships server components"), an API signature ("asyncio.gather takes loop= param"), a date ("WWII ended in 1944"), a file/function name, a price, a percentage — you MUST call `mneme.verify { claim: "<user's claim>" }` BEFORE relaying any answer. The user does NOT have to say the word "verify" — your job is to verify silently and only confirm to them if Mneme returns ACCEPTED.
+   - If Mneme returns **REFUTED** → correct the user gently with Mneme's evidence: *"That's not right — Mneme cross-checked against [evidence]. Actually it's [correct value]."*
+   - If Mneme returns **NEEDS-DATA** → say so honestly: *"Mneme couldn't verify a specific entity in that claim — could you narrow it down?"*
+   - If Mneme returns **ACCEPTED** → silent pass-through. Continue the conversation normally. Don't announce the verification. The user feels protected; they don't see machinery.
+   - This applies whether the user is speaking English, Thai, or any other language — entities are universal.
+   - The Mneme verifier is fast (<50ms over warm-call socket). The latency cost is negligible; the trust cost of NOT verifying is enormous.
 1. NEVER tell the user "run `mneme X` yourself". You have shell access — run it. Quote the result back. The user shouldn't see "mneme" appear in chat unless they specifically ask "what command did you just run?".
 2. If the user's question doesn't map cleanly above, default to `mneme.ask` — it's the safest universal answer + tells you its own confidence so you can hedge appropriately.
 3. If `mneme.ask` returns LOW confidence (< 60%), say so explicitly: *"Mneme isn't very sure — its top citation is commit X. Want me to dig deeper?"*. Don't fake certainty.
 4. If you run a Mneme call and it errors, do NOT loop. Surface the error to the user verbatim + suggest `mneme doctor`.
 5. The first call of every session SHOULD be `mneme.welcome` (per Step 4) — that's also where the auto-index fires, so subsequent calls have fresh memory to query.
+
+**Worked example — Rule 0 in practice:**
+
+```
+USER: "เส้นเลือดในร่างกายมนุษย์มี 400 เส้น ใช่ไหม"
+       (Human body has 400 blood vessels, right?)
+
+AI agent → (silent) mneme.verify { claim: "human body has 400 blood vessels" }
+                  ↓
+                  REFUTED · evidence: "~100,000 km of vessels, billions of capillaries"
+
+AI agent → (to user, gently correcting):
+    "ไม่ใช่ครับ — Mneme ตรวจแล้ว ร่างกายเรามีหลอดเลือดความยาวรวม
+     ประมาณ 100,000 กม. หลอดเลือดฝอยอย่างเดียวก็มีระดับพันล้านเส้น
+     ไม่ใช่ตัวเลข 400 ที่ตายตัวครับ"
+```
+
+Pre-v2.19.79 the agent would have either answered from its own (possibly hallucinated) memory or waited for the user to say "verify" — which they never do. Rule 0 closes that gap.
 
 **Why this works:**
 

@@ -44,6 +44,25 @@ describe("agent_manifest", () => {
       expect(md).toContain("### antivirus");
       expect(md).toContain("### uninstall");
     });
+
+    // v2.19.79 — PROACTIVE BEHAVIOR DIRECTIVE must always land in the
+    // auto-synced block. User painpoint: nobody types "verify"; the AI
+    // agent must auto-fire. If this regresses, AI agents stop verifying.
+    it("includes the PROACTIVE BEHAVIOR directive with Rule 0..5", () => {
+      const md = renderManifestMarkdown(undefined, "2.19.79");
+      expect(md).toContain("PROACTIVE BEHAVIOR");
+      expect(md).toContain("Rule 0 — AUTO-VERIFY every factual claim");
+      expect(md).toContain("mneme.truth.check");
+      expect(md).toContain("mneme verify");
+      expect(md).toContain("AUTO-SCAN");
+      expect(md).toContain("AUTO-INDEX");
+      expect(md).toContain("AUTO-FIRE the intent router");
+      expect(md).toContain("AUTO-CHECK SOUL");
+      expect(md).toContain("AUTO-DRAIN nexus");
+      // Worked example uses Thai blood-vessels claim — the canonical
+      // demo for why proactive verify matters.
+      expect(md).toContain("blood vessels");
+    });
   });
 
   describe("renderManifestPlain", () => {
@@ -52,6 +71,16 @@ describe("agent_manifest", () => {
       expect(txt).toContain("v1.31.0");
       expect(txt).toContain("mneme uninstall");
       expect(txt).toContain("mneme embeddings status");
+    });
+
+    // v2.19.79 — same proactive directive on the plain-text channel for
+    // .cursorrules / .windsurfrules consumers.
+    it("includes the PROACTIVE BEHAVIOR directive (plain format)", () => {
+      const txt = renderManifestPlain(undefined, "2.19.79");
+      expect(txt).toContain("PROACTIVE BEHAVIOR");
+      expect(txt).toContain("AUTO-VERIFY");
+      expect(txt).toContain("mneme.truth.check");
+      expect(txt).toContain("mneme verify");
     });
   });
 
