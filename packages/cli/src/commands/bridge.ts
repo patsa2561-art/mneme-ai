@@ -118,6 +118,20 @@ export async function bridgeCommand(opts: BridgeCommandOptions): Promise<void> {
     });
   };
 
+  // v2.19.84 — WORLD AI PULSE handlers. Bridge appends each event to the
+  // HMAC-chained pulse ledger; aggregator returns 24-hour stats with an
+  // optional synthetic-event blend for empty-state demos.
+  const pulseRecord = (input: { vendor?: string; color?: "green"|"yellow"|"red"|"grey"; regionTimezone?: string; topicHash?: string; confidence?: number }) => {
+    return core.worldPulse.recordPulseEvent(repoRoot, input);
+  };
+  const pulseAggregate = (opts: { windowHours?: number; includeSynthetic?: boolean }) => {
+    let events = core.worldPulse.readPulseEvents(repoRoot);
+    if (opts.includeSynthetic && events.length < 24) {
+      events = [...events, ...core.worldPulse.synthesizePulseEvents({ count: 240, spanMinutes: 60 })];
+    }
+    return core.worldPulse.aggregatePulse(events, { windowHours: opts.windowHours });
+  };
+
   // Precog / Sentinel / Apoptosis handlers are intentionally NOT wired yet
   // (the browser polygraph is the v2.19.80 scope).  Other consumers can
   // pass their own handlers when they start the bridge from code.
@@ -129,6 +143,8 @@ export async function bridgeCommand(opts: BridgeCommandOptions): Promise<void> {
     },
     {
       polygraphVerify,
+      pulseRecord,
+      pulseAggregate,
     },
   );
 

@@ -1044,3 +1044,11 @@ export * as phoenix from "./phoenix/index.js";
 // bridge). Composes ACGV truth engine with diaspora bridge + permeate
 // userscript. See [[project-mneme-v2-19-80]].
 export * as polygraph from "./polygraph/index.js";
+
+// v2.19.84 — WORLD AI PULSE. Local-first, HMAC-chained anonymous
+// telemetry: every Browser Polygraph verdict becomes a pulse event
+// (vendor + color + IANA timezone, NEVER sentence text). Dashboard's
+// "World Pulse" view renders a Canvas-2D rotating globe + leaderboard
+// + topic heatmap from these events. Synthetic stream powers the
+// empty-state demo. See [[project-mneme-v2-19-84]].
+export * as worldPulse from "./world_pulse/index.js";

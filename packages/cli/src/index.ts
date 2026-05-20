@@ -2564,6 +2564,32 @@ export async function run(argv: string[]): Promise<void> {
       });
     });
 
+  // ─── v2.19.84 — `mneme pulse` (World AI Pulse query) ──────────────
+  // Read-side surface for the HMAC-chained pulse ledger. Browser
+  // polygraph writes events; this command queries the aggregate +
+  // verifies chain integrity + seeds synthetic events for demos.
+  program
+    .command("pulse")
+    .description("World AI Pulse: 24h aggregate of browser polygraph verdicts (vendor leaderboard + timezone heatmap). HMAC-chained, local-only.")
+    .argument("[subcommand]", "show (default) · events · verify · synth", "show")
+    .option("--window-hours <n>", "Window for `show` aggregate (default: 24).", (v) => parseInt(v, 10))
+    .option("--limit <n>", "How many events for `events` (default: 20).", (v) => parseInt(v, 10))
+    .option("--count <n>", "How many events for `synth` (default: 240).", (v) => parseInt(v, 10))
+    .option("--json", "Machine-readable output.")
+    .action(async (subcommand: string, opts: { windowHours?: number; limit?: number; count?: number; json?: boolean }) => {
+      const { pulseCommand } = await import("./commands/pulse.js");
+      const allowed = new Set(["show", "events", "verify", "synth"]);
+      const mode = allowed.has(subcommand) ? subcommand : "show";
+      await pulseCommand({
+        cwd: process.cwd(),
+        mode: mode as "show" | "events" | "verify" | "synth",
+        windowHours: opts.windowHours,
+        limit: opts.limit,
+        count: opts.count,
+        json: !!opts.json,
+      });
+    });
+
   // ─── v2.19.80 — `mneme bridge` (HTTP bridge with polygraph handler) ──
   // Foreground HTTP server on :17741 (default).  Browser userscripts +
   // ChatGPT Custom GPT Actions + Zapier hit this for per-sentence

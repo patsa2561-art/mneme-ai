@@ -382,10 +382,46 @@ describe("v1.72 Diaspora D4 · HTTP Bridge + OpenAPI", () => {
       }
     });
 
+    // v2.19.84 — WORLD AI PULSE routes round-trip end-to-end.
+    it("POST /v1/pulse/events records to ledger; GET /v1/pulse/aggregate returns stats", async () => {
+      const handle = await startBridge({ repoRoot: r, port: 0, noAuth: true }, {
+        pulseRecord: (e: { vendor?: string; color?: "green"|"yellow"|"red"|"grey"; regionTimezone?: string }) =>
+          ({ recorded: true, vendor: e.vendor ?? "x", color: e.color ?? "grey" }),
+        pulseAggregate: () => ({ total: 7, byColor: { green: 4, yellow: 2, red: 1, grey: 0 } }),
+      });
+      const port = (handle.server.address() as { port: number }).port;
+      const post = await fetch(`http://127.0.0.1:${port}/v1/pulse/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendor: "claude-ai", color: "green", regionTimezone: "Asia/Bangkok" }),
+      });
+      expect(post.status).toBe(200);
+      const body = await post.json() as { recorded: boolean; vendor: string; color: string };
+      expect(body.recorded).toBe(true);
+      expect(body.vendor).toBe("claude-ai");
+      const get = await fetch(`http://127.0.0.1:${port}/v1/pulse/aggregate?windowHours=24`);
+      expect(get.status).toBe(200);
+      const agg = await get.json() as { total: number; byColor: { green: number } };
+      expect(agg.total).toBe(7);
+      expect(agg.byColor.green).toBe(4);
+      await handle.stop();
+    });
+
+    it("/v1/health reports the pulse protocol", async () => {
+      const handle = await startBridge({ repoRoot: r, port: 0, noAuth: true }, {
+        pulseRecord: () => ({ ok: true }),
+      });
+      const port = (handle.server.address() as { port: number }).port;
+      const res = await fetch(`http://127.0.0.1:${port}/v1/health`);
+      const body = await res.json() as { protocols: string[] };
+      expect(body.protocols).toContain("pulse");
+      await handle.stop();
+    });
+
     it("writes .mneme/bridge.json beacon with the bound port + protocols + pid", async () => {
       const { readFileSync, existsSync } = await import("node:fs");
       const { join } = await import("node:path");
-      const handle = await startBridge({ repoRoot: r, noAuth: true }, {
+      const handle = await startBridge({ repoRoot: r, port: 0, noAuth: true }, {
         polygraphVerify: () => ({ verdict: "trustworthy", color: "green", confidence: 1, oneLine: "ok", latencyMs: 0 }),
       });
       const beaconPath = join(r, ".mneme", "bridge.json");

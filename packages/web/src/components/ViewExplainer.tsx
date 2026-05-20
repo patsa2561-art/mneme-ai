@@ -118,6 +118,16 @@ const EXPLAINERS: Record<ViewMode, Explainer> = {
       "Refuted sentences show the contradicting evidence (file:line / spec / git history) — citations, not opinions.",
     ],
   },
+  pulse: {
+    title: "World AI Pulse (IDEA #2)",
+    oneLine: "OSIRIS-style rotating globe — every blip is a Browser Polygraph verdict from someone's real AI chat, in real time.",
+    whyCare: "Aggregate, anonymous truth-meter for the AI industry. Watch hallucinations being caught LIVE worldwide; see which AI vendor's honesty pulse is strongest in your timezone.",
+    bullets: [
+      "Globe rotates auto + drag to spin. Click a blip to see the verdict; tooltip per city.",
+      "Vendor honesty leaderboard ranks claude.ai / chatgpt / gemini / copilot / deepseek / qwen by trustworthy% over 24h.",
+      "Topic heatmap clusters identical claims (6-byte hash, never sentence text) so you can see what AI gets asked about — and where it slips up.",
+    ],
+  },
 };
 
 interface Props {

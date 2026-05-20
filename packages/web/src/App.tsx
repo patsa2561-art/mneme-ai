@@ -11,6 +11,7 @@ import { ScrubberView } from "./components/ScrubberView";
 import { AntivirusLabView } from "./components/AntivirusLabView";
 import { RetrievalLabView } from "./components/RetrievalLabView";
 import { AiPolygraphView } from "./components/AiPolygraphView";
+import { WorldPulseView } from "./components/WorldPulseView";
 import { DemonStackView } from "./components/DemonStackView";
 import { DetailPanel } from "./components/DetailPanel";
 // LimitsPanel + LiveWisdomPanel moved into MetricsTopBar (v1.19.3).
@@ -71,7 +72,7 @@ function readShowReadme(): boolean {
       "#dashboard",
       "#demon", "#graph", "#atrophy", "#influence",
       "#ecosystems", "#dna", "#scrubber",
-      "#antivirus", "#retrieval", "#polygraph",
+      "#antivirus", "#retrieval", "#polygraph", "#pulse",
     ]);
     if (VIEW_HASHES.has(window.location.hash)) return false;
     // Clean up the legacy v2.14 sticky preference so users get the new
@@ -90,7 +91,7 @@ function initialViewFromHash(): ViewMode {
     const known: readonly ViewMode[] = [
       "demon", "graph", "atrophy", "influence",
       "ecosystems", "dna", "scrubber",
-      "antivirus", "retrieval", "polygraph",
+      "antivirus", "retrieval", "polygraph", "pulse",
     ];
     if ((known as readonly string[]).includes(h)) return h as ViewMode;
     return "demon";
@@ -343,6 +344,8 @@ export function App() {
             />
           ) : view === "polygraph" ? (
             <AiPolygraphView />
+          ) : view === "pulse" ? (
+            <WorldPulseView />
           ) : !scrubbed ? (
             <EmptyState onLoadClick={() => setLoadOpen(true)} />
           ) : view === "graph" ? (

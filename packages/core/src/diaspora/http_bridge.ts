@@ -210,6 +210,22 @@ export interface BridgeHandlers {
    *  ACGV / runACGV and return a normalised polygraph verdict that the
    *  userscript renders as a coloured dot inline with the sentence. */
   polygraphVerify?: (input: { sentence: string; context?: string; vendor?: string }) => Promise<PolygraphVerifyResult> | PolygraphVerifyResult;
+  /** v2.19.84 — WORLD AI PULSE. Browser userscript fires fire-and-forget
+   *  events here (one per rendered dot); the daemon appends to the
+   *  HMAC-chained pulse ledger. Returns the recorded event so the
+   *  userscript can chain-verify. */
+  pulseRecord?: (event: PulsePostBody) => Promise<unknown> | unknown;
+  pulseAggregate?: (opts: { windowHours?: number; includeSynthetic?: boolean }) => Promise<unknown> | unknown;
+}
+
+/** v2.19.84 — Wire-format for POST /v1/pulse/events. Tiny by design;
+ *  the browser fires hundreds of these per session. */
+export interface PulsePostBody {
+  vendor?: string;
+  color?: "green" | "yellow" | "red" | "grey";
+  regionTimezone?: string;
+  topicHash?: string;
+  confidence?: number;
 }
 
 /** v2.19.80 — Wire-format verdict for the browser polygraph. Kept tiny
@@ -318,7 +334,7 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
     }
 
     if (req.url === "/v1/health" && req.method === "GET") {
-      return json(res, 200, { ok: true, version: "1.72.0", protocols: ["precog", "sentinel", "apoptosis", "polygraph"] });
+      return json(res, 200, { ok: true, version: "1.72.0", protocols: ["precog", "sentinel", "apoptosis", "polygraph", "pulse"] });
     }
 
     if (req.url === "/v1/openapi.json" && req.method === "GET") {
@@ -350,6 +366,23 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
         const body = await readJsonBody(req) as { claim?: string };
         if (typeof body.claim !== "string") return json(res, 400, { error: "claim field required" });
         const r = await handlers.apoptosis(body.claim);
+        return json(res, 200, r);
+      }
+      // v2.19.84 — WORLD AI PULSE record. Browser userscript fires one
+      // event per dot it renders. Fire-and-forget; we never block the
+      // userscript on this round-trip.
+      if (req.url === "/v1/pulse/events" && req.method === "POST" && handlers.pulseRecord) {
+        const body = await readJsonBody(req) as PulsePostBody;
+        const r = await handlers.pulseRecord(body || {});
+        return json(res, 200, r);
+      }
+      // v2.19.84 — WORLD AI PULSE aggregate. Dashboard "World Pulse"
+      // view calls this on mount + every 5s to refresh the globe.
+      if (req.url?.startsWith("/v1/pulse/aggregate") && req.method === "GET" && handlers.pulseAggregate) {
+        const url = new URL(req.url, "http://x");
+        const windowHours = parseInt(url.searchParams.get("windowHours") || "24", 10);
+        const includeSynthetic = url.searchParams.get("includeSynthetic") === "true";
+        const r = await handlers.pulseAggregate({ windowHours, includeSynthetic });
         return json(res, 200, r);
       }
       // v2.19.80 — Browser Polygraph: a single sentence from a streaming
@@ -419,7 +452,7 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
       startedAt: new Date().toISOString(),
       ladderBase: POLYGRAPH_PORT_LADDER_BASE,
       ladderSize: POLYGRAPH_PORT_LADDER_SIZE,
-      protocols: ["precog", "sentinel", "apoptosis", "polygraph"],
+      protocols: ["precog", "sentinel", "apoptosis", "polygraph", "pulse"],
     };
     writeFileSync(join(beaconDir, "bridge.json"), JSON.stringify(beacon, null, 2), "utf8");
   } catch { /* non-fatal — bridge still works; just no beacon file */ }

@@ -40,6 +40,7 @@ const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string; 
   { id: "antivirus",  label: "Antivirus Lab",  symbol: "💉",  hint: "AI fabricates commits / functions / packages. Catches 8 hallucination strains before merge.", group: "labs" },
   { id: "retrieval",  label: "Retrieval Lab",  symbol: "🧪",  hint: "RAG quality varies. Mneme tries multiple search configs and picks the best per repo.", group: "labs" },
   { id: "polygraph",  label: "AI Polygraph",   symbol: "🔴",  hint: "Live truth-meter over every AI response. Green / yellow / red dot per sentence, streaming. The browser extension flagship demo.", group: "labs" },
+  { id: "pulse",      label: "World Pulse",    symbol: "🌍",  hint: "OSIRIS-style rotating globe — every blip is a Browser Polygraph verdict from a user's AI chat. Vendor honesty leaderboard + topic heatmap.", group: "labs" },
   // History
   { id: "atrophy",    label: "Atrophy",        symbol: "⏳",  hint: "Bus factor / orphaned code. Files where the original author left or hasn't touched in months.", group: "history" },
 ];

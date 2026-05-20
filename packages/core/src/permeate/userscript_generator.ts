@@ -492,6 +492,32 @@ async function fetchSoulFromBridge() {
         ekgVerdicts.push({ ...verdict, sentence: first });
         ekgPulse(verdict.color);
         ekgTally(verdictTally.confirmed, verdictTally.refuted, verdictTally.total);
+        // v2.19.84 — WORLD AI PULSE: fire-and-forget anonymous event so
+        // the dashboard globe pulses live. NEVER sends sentence text;
+        // only color + vendor + IANA timezone (browser) + 6-byte topic
+        // hash from the sentence's first 24 chars. Bridge-side ledger
+        // is HMAC-chained, local-only by default.
+        try {
+          const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || '';
+          // Tiny topic hash: 6 hex chars from sum-mod of code points.
+          let h = 0;
+          const s24 = first.slice(0, 24);
+          for (let i = 0; i < s24.length; i++) h = ((h * 31) + s24.charCodeAt(i)) >>> 0;
+          const topicHash = h.toString(16).padStart(6, '0').slice(0, 6);
+          if (POLYGRAPH_BRIDGE) {
+            GM_xmlhttpRequest({
+              method: 'POST',
+              url: POLYGRAPH_BRIDGE + '/v1/pulse/events',
+              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + POLYGRAPH_TOKEN },
+              data: JSON.stringify({ vendor: SITE, color: verdict.color, regionTimezone: tz, topicHash, confidence: verdict.confidence }),
+              timeout: 2000,
+              // Truly fire-and-forget — we DON'T resolve on this. If it
+              // fails, the dashboard just won't see this event; the dot
+              // still rendered locally.
+              onload: () => {}, onerror: () => {}, ontimeout: () => {},
+            });
+          }
+        } catch {}
         try {
           // Insert dot before the first text node (safer than prepending
           // HTML which would mangle React refs).
