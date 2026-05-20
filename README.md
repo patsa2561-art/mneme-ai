@@ -9,44 +9,35 @@ Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> a
 
 <br/><br/>
 
-<details open><summary><b>🚀 60-second install — EN / ภาษาไทย</b></summary>
+<details open><summary><b>🚀 60-second install</b> &nbsp; · &nbsp; <a href="docs/QUICKSTART-th.md" target="_blank" rel="noopener">🇹🇭 ภาษาไทย ↗</a> &nbsp; · &nbsp; <a href="docs/QUICKSTART.md" target="_blank" rel="noopener">Full guide ↗</a></summary>
 
-<table>
-<tr>
-<td valign="top" width="50%">
-
-**English**
-
-1. Install Tampermonkey: https://tampermonkey.net
-2. Enable **Allow User Scripts** in `chrome://extensions/` → Tampermonkey → Details
-3. Open a terminal and run:
-   ```
+1. **Install Tampermonkey** (free, one-time) → https://tampermonkey.net
+2. **Enable Allow User Scripts** in `chrome://extensions/` → Tampermonkey → Details → toggle ON
+3. **In a terminal**, run:
+   ```bash
    npm install -g mneme-ai
    mneme polygraph autosetup --persist
    ```
-   *(`--persist` registers the bridge as an OS service — auto-starts on every login, never type this command again.)*
-4. When the `.user.js` opens in your browser, click **Install / Reinstall** on the Tampermonkey page.
-5. Open https://chatgpt.com — look for "● MNEME POLYGRAPH" at the bottom-right; ask any factual question.
+   *(`--persist` = register as OS service so the bridge auto-starts at every login. Never type this command again.)*
+4. **Click Install / Reinstall** when the Tampermonkey page opens automatically.
+5. **Open any supported AI chat site** and ask any factual question. The bottom-right `● MNEME POLYGRAPH` indicator means you're armed.
 
-</td>
-<td valign="top" width="50%">
+> Supported sites: claude.ai · chatgpt.com · gemini.google.com · copilot.microsoft.com · chat.deepseek.com · chat.qwenlm.ai
 
-**ภาษาไทย**
+#### 💬 Try this — paste into any supported chat:
 
-1. ติดตั้ง Tampermonkey: https://tampermonkey.net
-2. เปิด **Allow User Scripts** ที่ `chrome://extensions/` → Tampermonkey → Details
-3. เปิด terminal แล้วรัน:
-   ```
-   npm install -g mneme-ai
-   mneme polygraph autosetup --persist
-   ```
-   *(`--persist` ลงทะเบียน bridge เป็น OS service — เปิดเครื่องครั้งหน้า bridge เปิดเองอัตโนมัติ ไม่ต้องพิมพ์คำสั่งนี้อีกเลย)*
-4. เมื่อไฟล์ `.user.js` เปิดในเบราว์เซอร์ กด **Install / Reinstall** ในหน้า Tampermonkey
-5. เปิด https://chatgpt.com — มองหา "● MNEME POLYGRAPH" มุมล่างขวา ลองถามคำถามที่มีตัวเลขหรือชื่อเฉพาะดูได้เลย
+> *"Anthropic was founded in 2018. List the first 5 prime numbers and tell me when WWII ended."*
 
-</td>
-</tr>
-</table>
+This sentence is a trap (Anthropic was founded in **2021**). When the AI replies, you should see a coloured `●` dot at the start of every sentence:
+
+| Dot | Meaning |
+|---|---|
+| 🟢 Green | The claim has supporting evidence in Mneme's memory — safe to trust. |
+| 🟡 Yellow | No clear evidence either way — most casual sentences land here. |
+| 🔴 Red | Mneme has evidence that contradicts the claim — **do not trust it.** |
+| ⚪ Grey | Bridge offline, or the sentence has no facts to grade. |
+
+**Click the EKG indicator (bottom-right)** to expand a full panel with stats + verdict history + colour legend.
 
 </details>
 

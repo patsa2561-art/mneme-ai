@@ -144,6 +144,52 @@ async function fetchSoulFromBridge() {
     }
   }
 
+  // v2.19.90 — friendly help modal when the clipboard doesn't have a
+  // soul prompt (the old alert just said "wrong format" and confused users).
+  function showSoulHelpModal() {
+    if (document.getElementById('mneme-soul-help')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'mneme-soul-help';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;padding:20px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;';
+    const card = document.createElement('div');
+    card.style.cssText = 'max-width:520px;width:100%;background:#0a0a0e;border:1px solid #7c3aed;border-radius:14px;padding:24px;color:#e6e6e6;box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+    card.innerHTML = \`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <strong style="color:#c4b5fd;font-size:15px">💉 Mneme Soul Injector — what is this?</strong>
+        <span id="mneme-soul-help-close" style="cursor:pointer;color:#9ba1a6;font-size:16px">✕</span>
+      </div>
+      <p style="margin:0 0 12px 0;font-size:13px;color:#cbd5e1;line-height:1.55">
+        A <strong style="color:#c4b5fd">"Soul Prompt"</strong> is a compressed brain-transfer: it gives a fresh AI chat your Mneme context — recent decisions, indexed memory, reasoning history — in a single paste.
+      </p>
+      <p style="margin:0 0 12px 0;font-size:13px;color:#cbd5e1;line-height:1.55">
+        This button auto-pastes that text into the chat input. <strong>Different feature from the green/yellow/red polygraph dots</strong> — those work automatically without this button.
+      </p>
+      <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:14px;margin-bottom:14px">
+        <div style="color:#c4b5fd;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">How to use</div>
+        <ol style="margin:0;padding-left:22px;font-size:12px;line-height:1.7;color:#e6e6e6">
+          <li>In your terminal:
+            <code style="background:rgba(124,58,237,0.18);padding:1px 6px;border-radius:4px;color:#ddd6fe;font-family:ui-monospace,Menlo,monospace">mneme.genesplice.soul-prompt</code> (via MCP) or
+            <code style="background:rgba(124,58,237,0.18);padding:1px 6px;border-radius:4px;color:#ddd6fe;font-family:ui-monospace,Menlo,monospace">mneme talk</code>
+          </li>
+          <li>Copy the full output (starts with <code style="font-family:ui-monospace,Menlo,monospace">🧬 MNEME SOUL PROMPT</code>) to your clipboard.</li>
+          <li>Click this button — the soul is pasted into the chat. Press Send.</li>
+        </ol>
+      </div>
+      <div style="font-size:11px;color:#fbbf24;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.20);padding:10px 12px;border-radius:6px;line-height:1.5">
+        💡 <strong>Why use this?</strong> You started a fresh chat and want the AI to know everything Mneme has learned about your repo — without re-explaining.
+      </div>
+      <div style="text-align:right;margin-top:14px">
+        <button id="mneme-soul-help-ok" style="background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-weight:600;cursor:pointer;font-family:inherit">Got it</button>
+      </div>
+    \`;
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    function close() { overlay.remove(); }
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.getElementById('mneme-soul-help-close')?.addEventListener('click', close);
+    document.getElementById('mneme-soul-help-ok')?.addEventListener('click', close);
+  }
+
   function makeButton() {
     const btn = document.createElement('button');
     btn.textContent = '💉 Inject Mneme Soul';
@@ -156,18 +202,19 @@ async function fetchSoulFromBridge() {
       box-shadow: 0 4px 14px rgba(124,58,237,0.4);
       font-size: 13px;
     \`;
-    btn.title = 'Paste a Mneme soul prompt to inject into the chat input';
+    btn.title = 'Inject a Mneme Soul Prompt into the chat input (click for help)';
     btn.onclick = async () => {
       let soul;
       try { soul = await navigator.clipboard.readText(); }
-      catch { soul = prompt('Paste your Mneme soul prompt:'); }
+      catch { soul = null; }
       if (!soul || !soul.includes('MNEME SOUL PROMPT')) {
-        alert('That does not look like a Mneme soul prompt. Copy the full text starting with "# 🧬 MNEME SOUL PROMPT".');
+        // v2.19.90 — friendly help modal instead of cryptic alert
+        showSoulHelpModal();
         return;
       }
       const el = findInput();
       if (!el) {
-        alert('Could not find the chat input on this page. The site UI may have changed.');
+        alert('Could not find the chat input on this page. The site UI may have changed — try refreshing.');
         return;
       }
       injectText(el, soul);
@@ -437,21 +484,64 @@ async function fetchSoulFromBridge() {
     if (existing) { existing.remove(); return; }
     const panel = document.createElement('div');
     panel.id = 'mneme-polygraph-panel';
-    panel.style.cssText = 'position:fixed;bottom:80px;right:14px;z-index:99999;width:380px;max-height:60vh;overflow:auto;background:#0a0a0e;border:1px solid #f38020;border-radius:10px;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#e6e6e6;font-size:11px;line-height:1.5;box-shadow:0 10px 40px rgba(0,0,0,0.6);';
-    let html = '<div style="display:flex;justify-content:space-between;margin-bottom:10px"><strong style="color:#f7d34c">🔴 MNEME POLYGRAPH — session readout</strong><span style="cursor:pointer;color:#9ba1a6" id="mneme-polygraph-close">✕</span></div>';
+    panel.style.cssText = 'position:fixed;bottom:80px;right:14px;z-index:99999;width:420px;max-height:75vh;overflow:auto;background:#0a0a0e;border:1px solid #f38020;border-radius:10px;padding:16px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;color:#e6e6e6;font-size:12px;line-height:1.55;box-shadow:0 10px 40px rgba(0,0,0,0.6);';
+    // v2.19.90 — clearer header + plain-language legend so users
+    // understand what the panel is telling them. The verdict list at
+    // the bottom is now labelled correctly.
+    let html = '';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    html += '  <strong style="color:#f7d34c;font-size:13px">🔴 Mneme Polygraph</strong>';
+    html += '  <span style="cursor:pointer;color:#9ba1a6;font-size:14px" id="mneme-polygraph-close">✕</span>';
+    html += '</div>';
+    html += '<div style="color:#9ba1a6;font-size:11px;margin-bottom:12px;line-height:1.5">This panel grades every sentence the AI wrote against your local Mneme memory. Each grade is a coloured dot. Here\\'s what the colours mean:</div>';
+    // Legend
+    html += '<div style="display:grid;grid-template-columns:14px 1fr;gap:6px 10px;font-size:11px;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">';
+    html += '  <span style="color:#3fb950;font-size:14px;line-height:1">●</span><span><strong style="color:#3fb950">GREEN</strong> &nbsp; <span style="color:#cbd5e1">the AI\\'s claim matches Mneme\\'s evidence — safe.</span></span>';
+    html += '  <span style="color:#f7d34c;font-size:14px;line-height:1">●</span><span><strong style="color:#f7d34c">YELLOW</strong> &nbsp; <span style="color:#cbd5e1">no clear evidence either way — needs more specifics (most casual sentences land here).</span></span>';
+    html += '  <span style="color:#ff5b5b;font-size:14px;line-height:1">●</span><span><strong style="color:#ff5b5b">RED</strong> &nbsp; <span style="color:#cbd5e1">Mneme\\'s evidence contradicts the AI — DO NOT trust this claim.</span></span>';
+    html += '  <span style="color:#6e7681;font-size:14px;line-height:1">●</span><span><strong style="color:#6e7681">GREY</strong> &nbsp; <span style="color:#cbd5e1">bridge offline, or the sentence is too short / has no facts to grade.</span></span>';
+    html += '</div>';
+    // Stats badge
+    if (ekgVerdicts.length > 0) {
+      const g = ekgVerdicts.filter(function(v){return v.color==='green';}).length;
+      const y = ekgVerdicts.filter(function(v){return v.color==='yellow';}).length;
+      const r = ekgVerdicts.filter(function(v){return v.color==='red';}).length;
+      const gr = ekgVerdicts.filter(function(v){return v.color==='grey';}).length;
+      html += '<div style="display:flex;gap:8px;justify-content:space-between;font-size:11px;padding:8px 12px;background:rgba(243,128,32,0.08);border-radius:6px;border:1px solid rgba(243,128,32,0.25);margin-bottom:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">';
+      html += '  <span><span style="color:#3fb950">●</span> ' + g + ' green</span>';
+      html += '  <span><span style="color:#f7d34c">●</span> ' + y + ' yellow</span>';
+      html += '  <span><span style="color:#ff5b5b">●</span> ' + r + ' red</span>';
+      html += '  <span><span style="color:#6e7681">●</span> ' + gr + ' grey</span>';
+      html += '</div>';
+    }
+    // Tip about when red/green appears
+    html += '<div style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.20);padding:8px 10px;border-radius:6px;margin-bottom:12px;line-height:1.5">';
+    html += '💡 <strong>When will RED/GREEN appear?</strong><br/>';
+    html += 'Mneme matches the AI\\'s sentence against <em>your indexed code/repo</em> + the multi-signal truth engine. Most general-knowledge sentences score YELLOW because Mneme can\\'t prove or disprove them. Ask about code, repo files, package versions, or specific facts that conflict with your repo — that\\'s where RED/GREEN light up.';
+    html += '</div>';
+    // Verdict history
     if (ekgVerdicts.length === 0) {
-      html += '<div style="color:#9ba1a6">No sentences scored yet. Ask the AI a factual question — polygraph dots will appear inline.</div>';
+      html += '<div style="color:#9ba1a6;font-size:11px;padding:14px 12px;background:rgba(255,255,255,0.02);border-radius:6px;text-align:center">No sentences scored yet.<br/>Ask the AI a question — dots appear inline next to each sentence.</div>';
     } else {
+      html += '<div style="color:#9ba1a6;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Recent verdicts (newest first)</div>';
       for (const v of ekgVerdicts.slice(-50).reverse()) {
         const dotColor = v.color === 'green' ? '#3fb950' : v.color === 'red' ? '#ff5b5b' : v.color === 'yellow' ? '#f7d34c' : '#6e7681';
-        html += '<div style="padding:6px 0;border-bottom:1px solid #1a1a22"><span style="color:' + dotColor + ';font-size:14px">●</span> <span style="color:#9ba1a6">' + (v.color || 'grey').toUpperCase() + '</span> · ' + (v.oneLine || '') + '<br><span style="color:#666;font-size:10px">' + (v.sentence || '').slice(0, 140) + '</span></div>';
+        const label = v.color === 'green' ? 'verified' : v.color === 'red' ? 'refuted' : v.color === 'yellow' ? 'no evidence' : 'not graded';
+        html += '<div style="padding:8px 4px;border-bottom:1px solid #1a1a22;font-size:11px">';
+        html += '  <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+        html += '    <span style="color:' + dotColor + ';font-size:14px">●</span>';
+        html += '    <strong style="color:' + dotColor + ';text-transform:lowercase">' + label + '</strong>';
+        html += '    <span style="color:#666;font-size:10px">· ' + (v.oneLine || '') + '</span>';
+        html += '  </div>';
+        html += '  <div style="color:#9ba1a6;font-size:10px;padding-left:20px;line-height:1.4">' + (v.sentence || '').slice(0, 160) + '</div>';
+        html += '</div>';
       }
     }
     panel.innerHTML = html;
     document.body.appendChild(panel);
     const closeBtn = document.getElementById('mneme-polygraph-close');
-    if (closeBtn) closeBtn.onclick = (e) => { e.stopPropagation(); panel.remove(); };
-    panel.addEventListener('click', (e) => e.stopPropagation());
+    if (closeBtn) closeBtn.onclick = function(e) { e.stopPropagation(); panel.remove(); };
+    panel.addEventListener('click', function(e){ e.stopPropagation(); });
   }
 
   // ── DOT injection ──
