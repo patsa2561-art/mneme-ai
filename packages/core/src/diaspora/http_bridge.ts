@@ -222,6 +222,11 @@ export interface BridgeHandlers {
    *  legs into the AEGIS A3 polygraph ledger so `mneme polygraph drift
    *  --vendor X` surfaces the sandbag signal without any CLI typing. */
   sandbagCapture?: (capture: SandbagCaptureBody) => Promise<unknown> | unknown;
+  /** v2.19.86 — IDEA #3 — Honesty Certificate mint + verify routes. */
+  honestyMint?: (input: { vendor: string; windowDays?: number; validDays?: number }) => Promise<unknown> | unknown;
+  honestyVerify?: (input: { cert?: unknown; svg?: string }) => Promise<unknown> | unknown;
+  /** v2.19.86 — IDEA #4 — Time-Machine Polygraph timeline series. */
+  timelineSeries?: (input: { vendor: string; windowDays?: number; bucketHours?: number }) => Promise<unknown> | unknown;
 }
 
 /** v2.19.85 — Wire-format for POST /v1/polygraph/sandbag-capture. */
@@ -404,6 +409,32 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
         const windowHours = parseInt(url.searchParams.get("windowHours") || "24", 10);
         const includeSynthetic = url.searchParams.get("includeSynthetic") === "true";
         const r = await handlers.pulseAggregate({ windowHours, includeSynthetic });
+        return json(res, 200, r);
+      }
+      // v2.19.86 — IDEA #3 — Honesty Certificate mint. Dashboard "Mint
+      // cert" button POSTs vendor + windowDays; we read the pulse
+      // aggregate, compute the Wilson-LB tier, sign, return cert + SVG.
+      if (req.url === "/v1/honesty/mint" && req.method === "POST" && handlers.honestyMint) {
+        const body = await readJsonBody(req) as { vendor?: string; windowDays?: number; validDays?: number };
+        if (typeof body.vendor !== "string") return json(res, 400, { error: "vendor field required" });
+        const r = await handlers.honestyMint(body as { vendor: string; windowDays?: number; validDays?: number });
+        return json(res, 200, r);
+      }
+      // v2.19.86 — IDEA #3 — Honesty Certificate verify (accepts either
+      // a parsed JSON cert OR the raw SVG string with embedded payload).
+      if (req.url === "/v1/honesty/verify" && req.method === "POST" && handlers.honestyVerify) {
+        const body = await readJsonBody(req) as { cert?: unknown; svg?: string };
+        const r = await handlers.honestyVerify(body || {});
+        return json(res, 200, r);
+      }
+      // v2.19.86 — IDEA #4 — Time-Machine timeline series.
+      if (req.url?.startsWith("/v1/polygraph/timeline") && req.method === "GET" && handlers.timelineSeries) {
+        const url = new URL(req.url, "http://x");
+        const vendor = url.searchParams.get("vendor");
+        if (!vendor) return json(res, 400, { error: "vendor query param required" });
+        const windowDays = parseInt(url.searchParams.get("windowDays") || "30", 10);
+        const bucketHours = parseInt(url.searchParams.get("bucketHours") || "24", 10);
+        const r = await handlers.timelineSeries({ vendor, windowDays, bucketHours });
         return json(res, 200, r);
       }
       // v2.19.85 — SANDBAG AUTO-CAPTURE. Userscript posts a PROD+TEST

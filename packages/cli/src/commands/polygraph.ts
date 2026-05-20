@@ -24,12 +24,15 @@ const BANNER = "🔴 MNEME POLYGRAPH";
 
 export interface PolygraphCommandOptions {
   cwd: string;
-  mode: "install" | "emit" | "status" | "autosetup" | "probe" | "record" | "list" | "drift";
+  mode: "install" | "emit" | "status" | "autosetup" | "probe" | "record" | "list" | "drift" | "timeline";
   output?: string;
   bridgeUrl?: string;
   json?: boolean;
   /** v2.19.82 — `autosetup` mode skips opening the .user.js if true. */
   skipOpen?: boolean;
+  // v2.19.86 — TIME-MACHINE POLYGRAPH (IDEA #4) args.
+  windowDays?: number;
+  bucketHours?: number;
   // v2.19.85 — SANDBAG DETECTOR subcommand args (AEGIS A3 surface).
   // These reuse the polygraph namespace because the disambiguation note
   // in v2.19.83 already established "polygraph = browser-dots BY
@@ -255,7 +258,35 @@ async function runSandbagSub(opts: PolygraphCommandOptions): Promise<void> {
   }
 }
 
+// v2.19.86 — IDEA #4 — Time-Machine Polygraph. Pure read-side aggregation
+// of the pulse.jsonl events (which already carry ts + vendor + color from
+// every Browser Polygraph dot). NO new ledger; NO Ollama dep.
+async function runTimeline(opts: PolygraphCommandOptions): Promise<void> {
+  if (!opts.vendor) { process.stderr.write("polygraph timeline requires --vendor\n"); process.exit(1); return; }
+  const core = await import("@mneme-ai/core");
+  const events = core.worldPulse.readPulseEvents(opts.cwd);
+  const series = core.timeMachine.buildTimeline(events, opts.vendor, {
+    windowDays: opts.windowDays ?? 30,
+    bucketHours: opts.bucketHours ?? 24,
+  });
+  if (opts.json) { process.stdout.write(JSON.stringify(series, null, 2) + "\n"); return; }
+  process.stdout.write(`${BANNER} — Time-Machine for ${series.vendor}\n\n`);
+  process.stdout.write(`  window:    ${series.windowDays} days  (${series.buckets.length} × ${series.bucketHours}h buckets)\n`);
+  process.stdout.write(`  samples:   ${series.buckets.reduce((s, b) => s + b.total, 0)} pulse events\n`);
+  if (series.meanHonesty != null) process.stdout.write(`  mean:      ${(series.meanHonesty * 100).toFixed(1)}% honesty across the window\n`);
+  if (series.minHonesty != null && series.maxHonesty != null) {
+    process.stdout.write(`  range:     ${(series.minHonesty * 100).toFixed(0)}% – ${(series.maxHonesty * 100).toFixed(0)}%\n`);
+  }
+  if (series.drift != null) {
+    const sign = series.drift > 0 ? "↑" : series.drift < 0 ? "↓" : "→";
+    const label = series.drift > 0.05 ? "got more honest" : series.drift < -0.05 ? "got less honest (degrading)" : "stable";
+    process.stdout.write(`  drift:     ${sign} ${(series.drift * 100).toFixed(1)}%  ${label}\n`);
+  }
+  process.stdout.write(`\n${core.timeMachine.renderAsciiChart(series, { height: 10 })}\n`);
+}
+
 export async function polygraphCommand(opts: PolygraphCommandOptions): Promise<void> {
+  if (opts.mode === "timeline") return await runTimeline(opts);
   // v2.19.85 — Sandbag detector sub-actions.
   if (opts.mode === "probe" || opts.mode === "record" || opts.mode === "list" || opts.mode === "drift") {
     return await runSandbagSub(opts);

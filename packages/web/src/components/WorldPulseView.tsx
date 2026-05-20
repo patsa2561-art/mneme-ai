@@ -171,10 +171,14 @@ export function WorldPulseView(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [aggregate, setAggregate] = useState<PulseAggregate | null>(null);
   const [bridgeAlive, setBridgeAlive] = useState<boolean>(false);
+  const [bridgeUrl, setBridgeUrl] = useState<string | null>(null);
   const [rotation, setRotation] = useState<number>(0);
   const [dragging, setDragging] = useState<boolean>(false);
   const dragStateRef = useRef<{ startX: number; startRot: number }>({ startX: 0, startRot: 0 });
   const blipsRef = useRef<Blip[]>([]);
+  // v2.19.86 — Mint Cert modal state.
+  const [mintingVendor, setMintingVendor] = useState<string | null>(null);
+  const [mintResult, setMintResult] = useState<{ svg: string; certId: string; band: string; honestyPct: number; sampleSize: number } | null>(null);
 
   const lang = useMemo<"en" | "th">(() => {
     try { const v = localStorage.getItem("mneme-lang"); if (v === "th" || v === "en") return v; return /^th/i.test(navigator.language || "") ? "th" : "en"; }
@@ -203,6 +207,7 @@ export function WorldPulseView(): JSX.Element {
       const bridge = await probeBridge();
       if (cancelled) return;
       setBridgeAlive(!!bridge);
+      setBridgeUrl(bridge);
       if (bridge) {
         try {
           const res = await fetch(bridge + "/v1/pulse/aggregate?windowHours=24&includeSynthetic=true", {
@@ -405,6 +410,52 @@ export function WorldPulseView(): JSX.Element {
         .slice(0, 6)
     : [];
 
+  // v2.19.86 — Mint Honesty Certificate via bridge.
+  async function mintCertFor(vendor: string) {
+    if (!bridgeUrl) {
+      alert(lang === "th"
+        ? "ต้องรัน `mneme bridge` ก่อน (หรือใช้ `mneme polygraph autosetup`) เพื่อ mint cert จากเครื่องของคุณ"
+        : "Bridge offline — run `mneme bridge` (or `mneme polygraph autosetup`) first to mint the cert from your local pulse ledger.");
+      return;
+    }
+    setMintingVendor(vendor);
+    setMintResult(null);
+    try {
+      const res = await fetch(bridgeUrl + "/v1/honesty/mint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendor, windowDays: 30, validDays: 30 }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const data = await res.json() as { ok: boolean; cert?: { certId: string; band: string; honestyPct: number; sampleSize: number }; svg?: string };
+      if (data.ok && data.cert && data.svg) {
+        setMintResult({
+          svg: data.svg,
+          certId: data.cert.certId,
+          band: data.cert.band,
+          honestyPct: data.cert.honestyPct,
+          sampleSize: data.cert.sampleSize,
+        });
+      }
+    } catch (e) {
+      alert("Mint failed: " + (e as Error).message);
+      setMintingVendor(null);
+    }
+  }
+
+  function copyToClipboard(s: string) {
+    try { navigator.clipboard.writeText(s); } catch {}
+  }
+
+  function downloadSvg(svg: string, vendor: string) {
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `mneme-cert-${vendor}.svg`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function onMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     setDragging(true);
     dragStateRef.current = { startX: e.clientX, startRot: rotation };
@@ -487,9 +538,23 @@ export function WorldPulseView(): JSX.Element {
               const refutePct = stats.total > 0 ? Math.round((stats.red / stats.total) * 100) : 0;
               return (
                 <div key={vendor} style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, alignItems: "center" }}>
                     <span style={{ color: "#fff", fontWeight: 600 }}>{vendor}</span>
-                    <span style={{ color: "#9ba1a6", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>{stats.total}</span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ color: "#9ba1a6", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11 }}>{stats.total}</span>
+                      {bridgeAlive && stats.total > 0 && (
+                        <button
+                          onClick={() => mintCertFor(vendor)}
+                          title={lang === "th" ? "ออก Mneme Honesty Certificate สำหรับ vendor นี้" : "Mint Mneme Honesty Certificate for this vendor"}
+                          style={{
+                            background: "linear-gradient(135deg, #f7d34c, #f38020)",
+                            color: "#0a0a0e", border: 0,
+                            padding: "2px 8px", borderRadius: 4, fontSize: 10,
+                            fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                          }}
+                        >🏆 Mint cert</button>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", background: "rgba(255,255,255,0.04)" }}>
                     <div style={{ width: `${honestyPct}%`, background: "#3fb950" }} />
@@ -547,6 +612,57 @@ export function WorldPulseView(): JSX.Element {
           </div>
         </aside>
       </div>
+
+      {/* v2.19.86 — Mint Cert modal. Shows the embedded SVG + copy / download. */}
+      {mintingVendor && (
+        <div
+          onClick={() => { setMintingVendor(null); setMintResult(null); }}
+          style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 640, width: "100%", background: "#0a0a0e", border: "1px solid rgba(243,128,32,0.4)", borderRadius: 12, padding: 24, color: "#e6e6e6" }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#f7d34c" }}>
+                🏆 {lang === "th" ? `Mneme Honesty Certificate — ${mintingVendor}` : `Mneme Honesty Certificate — ${mintingVendor}`}
+              </h2>
+              <span style={{ cursor: "pointer", color: "#9ba1a6", fontSize: 20 }} onClick={() => { setMintingVendor(null); setMintResult(null); }}>✕</span>
+            </div>
+            {!mintResult ? (
+              <div style={{ padding: 24, textAlign: "center", color: "#9ba1a6" }}>
+                {lang === "th" ? "กำลังสร้าง certificate..." : "Minting…"}
+              </div>
+            ) : (
+              <>
+                <div style={{ background: "#1a1a22", borderRadius: 8, padding: 14, marginBottom: 12 }} dangerouslySetInnerHTML={{ __html: mintResult.svg }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12, color: "#9ba1a6", marginBottom: 14, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                  <div>tier: <span style={{ color: "#fff" }}>{mintResult.band.toUpperCase()}</span></div>
+                  <div>cert: <span style={{ color: "#fff" }}>{mintResult.certId}</span></div>
+                  <div>honesty: <span style={{ color: "#fff" }}>{(mintResult.honestyPct * 100).toFixed(1)}%</span></div>
+                  <div>samples: <span style={{ color: "#fff" }}>{mintResult.sampleSize}</span></div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={() => downloadSvg(mintResult.svg, mintingVendor)} style={{ background: "#f38020", color: "#0a0a0e", border: 0, padding: "8px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    ⬇ {lang === "th" ? "ดาวน์โหลด SVG" : "Download SVG"}
+                  </button>
+                  <button onClick={() => copyToClipboard(mintResult.svg)} style={{ background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", padding: "8px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    📋 {lang === "th" ? "คัดลอก SVG" : "Copy SVG"}
+                  </button>
+                  <button onClick={() => copyToClipboard(`<img src="data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(mintResult.svg)))}" alt="Mneme Honesty Certificate" />`)} style={{ background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", padding: "8px 14px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    🔗 {lang === "th" ? "คัดลอก embed code" : "Copy embed code"}
+                  </button>
+                </div>
+                <p style={{ marginTop: 14, fontSize: 11, color: "#9ba1a6", lineHeight: 1.5 }}>
+                  {lang === "th"
+                    ? <>SVG นี้มี cert payload ฝังอยู่ใน <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 5px", borderRadius: 3 }}>data-cert</code> attribute. ใครก็ verify ได้ด้วย <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 5px", borderRadius: 3 }}>mneme cert verify --svg cert.svg</code> (ถ้า key เดียวกัน)</>
+                    : <>The SVG embeds the cert payload in its <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 5px", borderRadius: 3 }}>data-cert</code> attribute. Anyone with the same pulse key can re-verify via <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 5px", borderRadius: 3 }}>mneme cert verify --svg cert.svg</code></>}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

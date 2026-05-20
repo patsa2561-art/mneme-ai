@@ -2643,6 +2643,59 @@ export async function run(argv: string[]): Promise<void> {
       await polygraphCommand({ cwd: process.cwd(), mode: "drift", vendor: opts.vendor, json: !!opts.json });
     });
 
+  // v2.19.86 — IDEA #4 — Time-Machine Polygraph timeline.
+  polygraph
+    .command("timeline")
+    .description("🕰️ Time-Machine Polygraph — bucket the local pulse ledger by time + render honesty-over-time for a vendor (ASCII chart + JSON). NO Ollama dep — reads existing pulse.jsonl events.")
+    .requiredOption("--vendor <v>", "AI vendor id (claude-ai / chatgpt / gemini / ...).")
+    .option("--window-days <n>", "How many days back to chart (default 30).", (v) => parseInt(v, 10))
+    .option("--bucket-hours <n>", "Hours per bucket (default 24 = daily).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { vendor: string; windowDays?: number; bucketHours?: number; json?: boolean }) => {
+      const { polygraphCommand } = await import("./commands/polygraph.js");
+      await polygraphCommand({ cwd: process.cwd(), mode: "timeline", vendor: opts.vendor, windowDays: opts.windowDays, bucketHours: opts.bucketHours, json: !!opts.json });
+    });
+
+  // v2.19.86 — IDEA #3 — Honesty Certificate family. Namespace is `cert`
+  // (not `honesty`) because `mneme honesty` is already owned by HONESTY
+  // GATE 2.0 (v2.19.42 release-claim auditor — a separate concept).
+  const cert = program
+    .command("cert")
+    .description("🏆 Honesty Certificate — HMAC-signed vendor honesty badge minted from the local pulse ledger. Verbs: mint · verify · list.");
+
+  cert
+    .command("mint")
+    .description("🏆 Mint a Mneme Honesty Certificate for a vendor (Wilson-LB tier band: platinum / gold / silver / bronze / needs-work). Pass --output cert.svg to write the embeddable badge.")
+    .requiredOption("--vendor <v>", "AI vendor id (claude-ai / chatgpt / gemini / ...).")
+    .option("--window-days <n>", "How many days back to compute the score (default 30).", (v) => parseInt(v, 10))
+    .option("--valid-days <n>", "How long the cert stays valid before expiring (default 30).", (v) => parseInt(v, 10))
+    .option("--output <path>", "Write the embeddable SVG here (e.g. cert.svg).")
+    .option("--json")
+    .action(async (opts: { vendor: string; windowDays?: number; validDays?: number; output?: string; json?: boolean }) => {
+      const { honestyCommand } = await import("./commands/honesty.js");
+      await honestyCommand({ cwd: process.cwd(), mode: "mint", vendor: opts.vendor, windowDays: opts.windowDays, validDays: opts.validDays, output: opts.output, json: !!opts.json });
+    });
+
+  cert
+    .command("verify")
+    .description("🏆 Verify a Mneme Honesty Certificate. Pass --svg <path> (extracts embedded payload) or --cert '<json>'. Exit code 2 if invalid.")
+    .option("--svg <path>", "Path to an SVG with embedded cert payload.")
+    .option("--cert <json>", "JSON-stringified cert object.")
+    .option("--json")
+    .action(async (opts: { svg?: string; cert?: string; json?: boolean }) => {
+      const { honestyCommand } = await import("./commands/honesty.js");
+      await honestyCommand({ cwd: process.cwd(), mode: "verify", svgPath: opts.svg, certJson: opts.cert, json: !!opts.json });
+    });
+
+  cert
+    .command("list")
+    .description("🏆 List all Honesty Certificates ever minted on this machine.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const { honestyCommand } = await import("./commands/honesty.js");
+      await honestyCommand({ cwd: process.cwd(), mode: "list", json: !!opts.json });
+    });
+
   // ─── v2.19.84 — `mneme pulse` (World AI Pulse query) ──────────────
   // Read-side surface for the HMAC-chained pulse ledger. Browser
   // polygraph writes events; this command queries the aggregate +

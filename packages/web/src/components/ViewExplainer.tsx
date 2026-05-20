@@ -124,8 +124,18 @@ const EXPLAINERS: Record<ViewMode, Explainer> = {
     whyCare: "Aggregate, anonymous truth-meter for the AI industry. Watch hallucinations being caught LIVE worldwide; see which AI vendor's honesty pulse is strongest in your timezone.",
     bullets: [
       "Globe rotates auto + drag to spin. Click a blip to see the verdict; tooltip per city.",
-      "Vendor honesty leaderboard ranks claude.ai / chatgpt / gemini / copilot / deepseek / qwen by trustworthy% over 24h.",
+      "Vendor honesty leaderboard ranks claude.ai / chatgpt / gemini / copilot / deepseek / qwen by trustworthy% over 24h. v2.19.86 — 🏆 Mint Honesty Certificate button per vendor row.",
       "Topic heatmap clusters identical claims (6-byte hash, never sentence text) so you can see what AI gets asked about — and where it slips up.",
+    ],
+  },
+  timemachine: {
+    title: "Time-Machine Polygraph (IDEA #4)",
+    oneLine: "Did this AI get more honest over time, or did it drift? Daily honesty score for each vendor, charted across 7 / 14 / 30 / 90 days.",
+    whyCare: "Vendors update their models silently. Time-Machine surfaces the moments a model's truthfulness shifted — useful for choosing which AI to trust this week.",
+    bullets: [
+      "Pulls from the same pulse.jsonl that powers the World Pulse globe — zero new ledger, zero new write path.",
+      "Switch vendor / window; the chart re-buckets in <50ms locally.",
+      "CLI mirror: `mneme polygraph timeline --vendor X --window-days 30` (ASCII chart for terminal users).",
     ],
   },
 };

@@ -1052,3 +1052,13 @@ export * as polygraph from "./polygraph/index.js";
 // + topic heatmap from these events. Synthetic stream powers the
 // empty-state demo. See [[project-mneme-v2-19-84]].
 export * as worldPulse from "./world_pulse/index.js";
+
+// v2.19.86 — HONESTY CERTIFICATE (IDEA #3). HMAC-signed vendor honesty
+// badges sourced from the worldPulse aggregate. Self-verifying SVG;
+// shareable; embeddable on any landing page.
+export * as honestyCert from "./honesty_cert/index.js";
+
+// v2.19.86 — TIME-MACHINE POLYGRAPH (IDEA #4). Bucket the existing
+// pulse.jsonl events by time + vendor to show honesty-over-time.
+// Pure read-side; no new ledger.
+export * as timeMachine from "./time_machine/index.js";

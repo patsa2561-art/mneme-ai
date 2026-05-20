@@ -188,6 +188,29 @@ export async function bridgeCommand(opts: BridgeCommandOptions): Promise<void> {
       pulseRecord,
       pulseAggregate,
       sandbagCapture,
+      // v2.19.86 — IDEA #3 + #4 handlers. Both ride on the pulse ledger:
+      // the honesty cert mints from the aggregate; the timeline buckets
+      // the raw events. Zero new write paths.
+      honestyMint: (input: { vendor: string; windowDays?: number; validDays?: number }) => {
+        const events = core.worldPulse.readPulseEvents(repoRoot);
+        const windowDays = input.windowDays ?? 30;
+        const agg = core.worldPulse.aggregatePulse(events, { windowHours: windowDays * 24 });
+        const score = core.honestyCert.computeHonestyScore(agg, input.vendor, { windowDays });
+        const cert = core.honestyCert.mintCert(repoRoot, score, { validDays: input.validDays });
+        const svg = core.honestyCert.renderCertSvg(cert);
+        return { ok: true, cert, score, svg };
+      },
+      honestyVerify: (input: { cert?: unknown; svg?: string }) => {
+        if (typeof input.svg === "string") return core.honestyCert.verifyCertSvg(repoRoot, input.svg);
+        if (input.cert && typeof input.cert === "object") {
+          return core.honestyCert.verifyCert(repoRoot, input.cert as Parameters<typeof core.honestyCert.verifyCert>[1]);
+        }
+        return { valid: false, reason: "malformed" };
+      },
+      timelineSeries: (input: { vendor: string; windowDays?: number; bucketHours?: number }) => {
+        const events = core.worldPulse.readPulseEvents(repoRoot);
+        return core.timeMachine.buildTimeline(events, input.vendor, { windowDays: input.windowDays, bucketHours: input.bucketHours });
+      },
     },
   );
 
