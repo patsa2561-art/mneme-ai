@@ -120,7 +120,11 @@ describe("polygraph · verifyBrowserSentence", () => {
       // but we DO pin the shape + that it didn't crash + latency is reasonable.
       expect(["trustworthy", "mixed", "refuted", "impossible", "unknown"]).toContain(r.verdict);
       expect(["green", "yellow", "red", "grey"]).toContain(r.color);
-      expect(r.engine).toBe("propositional");
+      expect(r.engine).toBe("multi-lens");
+      // v2.19.91 — Multi-lens detector results piggyback on the verdict
+      // so the dashboard can render per-lens icons.
+      expect(r.lenses).toBeDefined();
+      expect(r.lenses!.lenses.length).toBe(6);
       expect(r.latencyMs).toBeGreaterThanOrEqual(0);
       expect(r.latencyMs).toBeLessThan(5000); // sanity bound
     } finally { rmSync(dir, { recursive: true, force: true }); }

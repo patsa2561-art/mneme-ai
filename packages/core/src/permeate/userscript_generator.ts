@@ -479,69 +479,156 @@ async function fetchSoulFromBridge() {
     const el = document.getElementById('mneme-polygraph-tally');
     if (el) el.textContent = confirmed + '✓ ' + refuted + '✗ / ' + total;
   }
+  // v2.19.91 — let users filter the verdict list by colour
+  let ekgFilter = 'all';
   function ekgExpand() {
     const existing = document.getElementById('mneme-polygraph-panel');
     if (existing) { existing.remove(); return; }
     const panel = document.createElement('div');
     panel.id = 'mneme-polygraph-panel';
-    panel.style.cssText = 'position:fixed;bottom:80px;right:14px;z-index:99999;width:420px;max-height:75vh;overflow:auto;background:#0a0a0e;border:1px solid #f38020;border-radius:10px;padding:16px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;color:#e6e6e6;font-size:12px;line-height:1.55;box-shadow:0 10px 40px rgba(0,0,0,0.6);';
-    // v2.19.90 — clearer header + plain-language legend so users
-    // understand what the panel is telling them. The verdict list at
-    // the bottom is now labelled correctly.
+    panel.style.cssText = 'position:fixed;bottom:80px;right:14px;z-index:99999;width:460px;max-height:82vh;overflow:auto;background:linear-gradient(180deg,#0a0a0e 0%,#0d0d14 100%);border:1px solid #f38020;border-radius:14px;padding:18px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;color:#e6e6e6;font-size:12px;line-height:1.55;box-shadow:0 20px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(243,128,32,0.15);';
+    // v2.19.91 — Multi-lens cinematic UI: header + KPI strip + sparkline
+    // + filter chips + card-based verdict list.
+    const filtered = (ekgFilter === 'all') ? ekgVerdicts : ekgVerdicts.filter(function(v){return v.color===ekgFilter;});
+    const g = ekgVerdicts.filter(function(v){return v.color==='green';}).length;
+    const y = ekgVerdicts.filter(function(v){return v.color==='yellow';}).length;
+    const r = ekgVerdicts.filter(function(v){return v.color==='red';}).length;
+    const gr = ekgVerdicts.filter(function(v){return v.color==='grey';}).length;
+    const trustAvg = ekgVerdicts.length === 0 ? 50
+      : Math.round(ekgVerdicts.reduce(function(s,v){return s + (v.lenses && typeof v.lenses.trustScore === 'number' ? v.lenses.trustScore : (v.color==='green'?100:v.color==='yellow'?50:v.color==='red'?0:50));}, 0) / ekgVerdicts.length);
+
     let html = '';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-    html += '  <strong style="color:#f7d34c;font-size:13px">🔴 Mneme Polygraph</strong>';
-    html += '  <span style="cursor:pointer;color:#9ba1a6;font-size:14px" id="mneme-polygraph-close">✕</span>';
+
+    // ── HEADER ──────────────────────────────────────────────────
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+    html += '  <div>';
+    html += '    <strong style="color:#f7d34c;font-size:14px;letter-spacing:0.5px">🔴 MNEME POLYGRAPH</strong>';
+    html += '    <div style="color:#9ba1a6;font-size:10px;margin-top:2px">multi-lens truth check · ' + ekgVerdicts.length + ' sentence' + (ekgVerdicts.length === 1 ? '' : 's') + ' graded</div>';
+    html += '  </div>';
+    html += '  <span id="mneme-polygraph-close" style="cursor:pointer;color:#9ba1a6;font-size:18px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.04)">✕</span>';
     html += '</div>';
-    html += '<div style="color:#9ba1a6;font-size:11px;margin-bottom:12px;line-height:1.5">This panel grades every sentence the AI wrote against your local Mneme memory. Each grade is a coloured dot. Here\\'s what the colours mean:</div>';
-    // Legend
-    html += '<div style="display:grid;grid-template-columns:14px 1fr;gap:6px 10px;font-size:11px;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">';
-    html += '  <span style="color:#3fb950;font-size:14px;line-height:1">●</span><span><strong style="color:#3fb950">GREEN</strong> &nbsp; <span style="color:#cbd5e1">the AI\\'s claim matches Mneme\\'s evidence — safe.</span></span>';
-    html += '  <span style="color:#f7d34c;font-size:14px;line-height:1">●</span><span><strong style="color:#f7d34c">YELLOW</strong> &nbsp; <span style="color:#cbd5e1">no clear evidence either way — needs more specifics (most casual sentences land here).</span></span>';
-    html += '  <span style="color:#ff5b5b;font-size:14px;line-height:1">●</span><span><strong style="color:#ff5b5b">RED</strong> &nbsp; <span style="color:#cbd5e1">Mneme\\'s evidence contradicts the AI — DO NOT trust this claim.</span></span>';
-    html += '  <span style="color:#6e7681;font-size:14px;line-height:1">●</span><span><strong style="color:#6e7681">GREY</strong> &nbsp; <span style="color:#cbd5e1">bridge offline, or the sentence is too short / has no facts to grade.</span></span>';
+
+    // ── TRUST METER ──────────────────────────────────────────────
+    const meterColor = trustAvg >= 70 ? '#3fb950' : trustAvg >= 40 ? '#f7d34c' : '#ff5b5b';
+    html += '<div style="margin-bottom:14px;padding:12px 14px;border-radius:10px;background:rgba(0,0,0,0.30);border:1px solid rgba(255,255,255,0.06)">';
+    html += '  <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ba1a6;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px"><span>session trust score</span><span style="color:'+meterColor+';font-weight:700">' + trustAvg + '/100</span></div>';
+    html += '  <div style="height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + trustAvg + '%;background:linear-gradient(90deg,' + meterColor + ',rgba(255,255,255,0.3));transition:width 400ms ease"></div></div>';
     html += '</div>';
-    // Stats badge
-    if (ekgVerdicts.length > 0) {
-      const g = ekgVerdicts.filter(function(v){return v.color==='green';}).length;
-      const y = ekgVerdicts.filter(function(v){return v.color==='yellow';}).length;
-      const r = ekgVerdicts.filter(function(v){return v.color==='red';}).length;
-      const gr = ekgVerdicts.filter(function(v){return v.color==='grey';}).length;
-      html += '<div style="display:flex;gap:8px;justify-content:space-between;font-size:11px;padding:8px 12px;background:rgba(243,128,32,0.08);border-radius:6px;border:1px solid rgba(243,128,32,0.25);margin-bottom:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">';
-      html += '  <span><span style="color:#3fb950">●</span> ' + g + ' green</span>';
-      html += '  <span><span style="color:#f7d34c">●</span> ' + y + ' yellow</span>';
-      html += '  <span><span style="color:#ff5b5b">●</span> ' + r + ' red</span>';
-      html += '  <span><span style="color:#6e7681">●</span> ' + gr + ' grey</span>';
-      html += '</div>';
+
+    // ── KPI STRIP + FILTER CHIPS ──────────────────────────────────
+    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">';
+    var chips = [
+      { id: 'green',  count: g,  label: 'green',  hex: '#3fb950', bg: 'rgba(63,185,80,0.10)',  ring: 'rgba(63,185,80,0.40)' },
+      { id: 'yellow', count: y,  label: 'yellow', hex: '#f7d34c', bg: 'rgba(247,211,76,0.10)',  ring: 'rgba(247,211,76,0.40)' },
+      { id: 'red',    count: r,  label: 'red',    hex: '#ff5b5b', bg: 'rgba(255,91,91,0.10)',   ring: 'rgba(255,91,91,0.40)' },
+      { id: 'grey',   count: gr, label: 'grey',   hex: '#9ba1a6', bg: 'rgba(155,161,166,0.08)', ring: 'rgba(155,161,166,0.30)' },
+    ];
+    for (var ci = 0; ci < chips.length; ci++) {
+      var c = chips[ci];
+      var active = ekgFilter === c.id;
+      html += '<button data-filter="' + c.id + '" class="mneme-chip" style="cursor:pointer;font-family:inherit;background:' + (active ? c.hex : c.bg) + ';color:' + (active ? '#0a0a0e' : c.hex) + ';border:1px solid ' + c.ring + ';padding:8px 4px;border-radius:8px;text-align:center;font-weight:600;font-size:11px;transition:all 150ms ease">';
+      html += '  <div style="font-size:18px;line-height:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">' + c.count + '</div>';
+      html += '  <div style="font-size:9px;opacity:0.8;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">● ' + c.label + '</div>';
+      html += '</button>';
     }
-    // Tip about when red/green appears
-    html += '<div style="font-size:10px;color:#fbbf24;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.20);padding:8px 10px;border-radius:6px;margin-bottom:12px;line-height:1.5">';
-    html += '💡 <strong>When will RED/GREEN appear?</strong><br/>';
-    html += 'Mneme matches the AI\\'s sentence against <em>your indexed code/repo</em> + the multi-signal truth engine. Most general-knowledge sentences score YELLOW because Mneme can\\'t prove or disprove them. Ask about code, repo files, package versions, or specific facts that conflict with your repo — that\\'s where RED/GREEN light up.';
     html += '</div>';
-    // Verdict history
-    if (ekgVerdicts.length === 0) {
-      html += '<div style="color:#9ba1a6;font-size:11px;padding:14px 12px;background:rgba(255,255,255,0.02);border-radius:6px;text-align:center">No sentences scored yet.<br/>Ask the AI a question — dots appear inline next to each sentence.</div>';
+
+    // ── FILTER LABEL + ALL toggle ─────────────────────────────────
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;color:#9ba1a6;text-transform:uppercase;letter-spacing:0.1em">';
+    html += '  <span>' + (ekgFilter === 'all' ? 'recent verdicts (newest first)' : 'showing ' + ekgFilter + ' only · ' + filtered.length + ' result' + (filtered.length === 1 ? '' : 's')) + '</span>';
+    if (ekgFilter !== 'all') html += '  <button data-filter="all" class="mneme-chip" style="cursor:pointer;font-family:inherit;background:transparent;color:#fed7aa;border:0;font-size:10px;text-transform:uppercase;letter-spacing:0.08em">↺ show all</button>';
+    html += '</div>';
+
+    // ── CARDS ─────────────────────────────────────────────────────
+    if (filtered.length === 0) {
+      if (ekgVerdicts.length === 0) {
+        html += '<div style="color:#9ba1a6;font-size:11px;padding:24px 18px;background:rgba(255,255,255,0.02);border-radius:10px;text-align:center;border:1px dashed rgba(255,255,255,0.10)">';
+        html += '  <div style="font-size:28px;margin-bottom:6px">🎯</div>';
+        html += '  <strong style="color:#fed7aa;font-size:12px">Polygraph is armed</strong><br/>';
+        html += '  <span style="color:#9ba1a6">Ask the AI any factual question — coloured dots will appear beside every sentence and verdicts will land here.</span>';
+        html += '</div>';
+      } else {
+        html += '<div style="color:#9ba1a6;font-size:11px;padding:14px;text-align:center">No verdicts match this filter.</div>';
+      }
     } else {
-      html += '<div style="color:#9ba1a6;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Recent verdicts (newest first)</div>';
-      for (const v of ekgVerdicts.slice(-50).reverse()) {
-        const dotColor = v.color === 'green' ? '#3fb950' : v.color === 'red' ? '#ff5b5b' : v.color === 'yellow' ? '#f7d34c' : '#6e7681';
-        const label = v.color === 'green' ? 'verified' : v.color === 'red' ? 'refuted' : v.color === 'yellow' ? 'no evidence' : 'not graded';
-        html += '<div style="padding:8px 4px;border-bottom:1px solid #1a1a22;font-size:11px">';
-        html += '  <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
-        html += '    <span style="color:' + dotColor + ';font-size:14px">●</span>';
-        html += '    <strong style="color:' + dotColor + ';text-transform:lowercase">' + label + '</strong>';
-        html += '    <span style="color:#666;font-size:10px">· ' + (v.oneLine || '') + '</span>';
+      var LENS_META = {
+        worldFact:   { icon: '🌍', label: 'world-fact' },
+        vibe:        { icon: '🎭', label: 'vibe'       },
+        specificity: { icon: '🔬', label: 'specificity'},
+        risk:        { icon: '⚠️', label: 'risk'       },
+        math:        { icon: '📐', label: 'math'       },
+        citation:    { icon: '📎', label: 'citation'   },
+      };
+      var shown = filtered.slice(-60).reverse();
+      for (var i = 0; i < shown.length; i++) {
+        var v = shown[i];
+        var stripeColor = v.color === 'green' ? '#3fb950' : v.color === 'red' ? '#ff5b5b' : v.color === 'yellow' ? '#f7d34c' : '#6e7681';
+        var verdictLabel = v.color === 'green' ? 'verified' : v.color === 'red' ? 'refuted' : v.color === 'yellow' ? 'no evidence' : 'not graded';
+        var trust = v.lenses && typeof v.lenses.trustScore === 'number' ? v.lenses.trustScore : null;
+        html += '<div style="position:relative;padding:10px 12px 10px 14px;margin-bottom:8px;border-radius:8px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);overflow:hidden">';
+        // Left coloured stripe
+        html += '  <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:' + stripeColor + '"></div>';
+        // Header line
+        html += '  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">';
+        html += '    <div style="display:flex;align-items:center;gap:6px;font-size:11px">';
+        html += '      <span style="color:' + stripeColor + ';font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em">' + verdictLabel + '</span>';
+        if (trust !== null) html += '      <span style="font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#9ba1a6;background:rgba(0,0,0,0.30);padding:1px 6px;border-radius:4px">trust ' + trust + '</span>';
+        html += '    </div>';
+        // Lens icon row
+        if (v.lenses && v.lenses.lenses) {
+          html += '    <div style="display:flex;gap:3px">';
+          for (var li = 0; li < v.lenses.lenses.length; li++) {
+            var L = v.lenses.lenses[li];
+            var lensColor = L.color === 'green' ? '#3fb950' : L.color === 'red' ? '#ff5b5b' : L.color === 'yellow' ? '#f7d34c' : '#6e7681';
+            var opa = L.color === 'grey' ? '0.25' : '1';
+            html += '      <span title="' + (L.icon + ' ' + L.label + ': ' + L.reason).replace(/"/g, '&quot;') + '" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;font-size:11px;background:' + lensColor + '22;border:1px solid ' + lensColor + '55;opacity:' + opa + ';cursor:help">' + L.icon + '</span>';
+          }
+          html += '    </div>';
+        }
         html += '  </div>';
-        html += '  <div style="color:#9ba1a6;font-size:10px;padding-left:20px;line-height:1.4">' + (v.sentence || '').slice(0, 160) + '</div>';
+        // Sentence text (clamped) + reason
+        html += '  <div style="color:#e5e7eb;font-size:11px;line-height:1.5;margin-bottom:4px">' + escapeHtml((v.sentence || '').slice(0, 200)) + '</div>';
+        if (v.oneLine) html += '  <div style="color:#9ba1a6;font-size:10px;font-style:italic">— ' + escapeHtml(v.oneLine) + '</div>';
         html += '</div>';
       }
     }
+
+    // ── FOOTER LEGEND TOGGLE ─────────────────────────────────────
+    html += '<details style="margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);font-size:11px">';
+    html += '  <summary style="cursor:pointer;color:#fed7aa;font-weight:600;font-size:11px;list-style:none">💡 What do the colours + icons mean?</summary>';
+    html += '  <div style="margin-top:10px;font-size:11px;color:#cbd5e1;line-height:1.6">';
+    html += '    <div style="margin-bottom:8px"><strong style="color:#fff">Sentence verdict (left stripe):</strong> green = matches evidence · yellow = no clear evidence · red = contradicted by evidence · grey = not enough text to grade.</div>';
+    html += '    <div style="margin-bottom:6px"><strong style="color:#fff">Lens icons (right of each card):</strong></div>';
+    html += '    <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:10px;line-height:1.5">';
+    html += '      <span>🌍 world-fact</span><span style="color:#9ba1a6">known-fact pattern matched (year of WWII, AI vendor founding, etc).</span>';
+    html += '      <span>🎭 vibe</span><span style="color:#9ba1a6">confidence tone — hedge density vs absolute density.</span>';
+    html += '      <span>🔬 specificity</span><span style="color:#9ba1a6">how falsifiable is the claim (numbers / dates / names).</span>';
+    html += '      <span>⚠️ risk</span><span style="color:#9ba1a6">dangerous commands / secrets / compliance evasion.</span>';
+    html += '      <span>📐 math</span><span style="color:#9ba1a6">inline equations check out arithmetically.</span>';
+    html += '      <span>📎 citation</span><span style="color:#9ba1a6">does the sentence cite a URL / file / commit.</span>';
+    html += '    </div>';
+    html += '    <div style="margin-top:8px;color:#fbbf24">Each lens runs in &lt;1ms · 100% local · no LLM call.</div>';
+    html += '  </div>';
+    html += '</details>';
+
     panel.innerHTML = html;
     document.body.appendChild(panel);
+    // Wire close + filter chips
     const closeBtn = document.getElementById('mneme-polygraph-close');
     if (closeBtn) closeBtn.onclick = function(e) { e.stopPropagation(); panel.remove(); };
+    panel.querySelectorAll('button[data-filter]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var f = btn.getAttribute('data-filter');
+        ekgFilter = (ekgFilter === f && f !== 'all') ? 'all' : f;
+        panel.remove();
+        ekgExpand();
+      });
+    });
     panel.addEventListener('click', function(e){ e.stopPropagation(); });
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // ── DOT injection ──

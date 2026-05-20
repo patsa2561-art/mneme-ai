@@ -1097,3 +1097,10 @@ export * as lieStream from "./lie_stream/index.js";
 // service registration so the polygraph bridge spawns at boot/login
 // without the user typing anything ever again.
 export * as bridgeService from "./bridge_service/index.js";
+
+// v2.19.91 — MULTI-LENS POLYGRAPH. 6 micro-detectors run in parallel
+// per sentence (world-fact / vibe / specificity / risk / math /
+// citation). Replaces the single ACGV-mixed verdict with rich
+// per-lens evidence so users see exactly WHY a sentence scored the
+// way it did. Ollama-free.
+export * as polygraphLenses from "./polygraph_lenses/index.js";

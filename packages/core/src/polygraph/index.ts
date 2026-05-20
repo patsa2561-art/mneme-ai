@@ -31,6 +31,7 @@
  */
 
 import { runACGV, type ACGVResult } from "../squadron/acgv.js";
+import { runAllLenses, type MultiLensReport } from "../polygraph_lenses/index.js";
 
 /** Wire-format verdict returned to the browser userscript. Kept tiny on
  *  purpose — the userscript renders this next to a single sentence and
@@ -43,6 +44,9 @@ export interface BrowserPolygraphVerdict {
   nextAction?: string;
   latencyMs: number;
   engine: string;
+  /** v2.19.91 — Multi-lens detector results so the dashboard can render
+   *  the crystal-ring UI with per-lens icons + tooltips. */
+  lenses?: MultiLensReport;
 }
 
 /** Map ACGV's internal verdict family to the friendlier 5-state used by
@@ -140,16 +144,29 @@ export async function verifyBrowserSentence(input: {
     // worker + can take 1-3s. The browser polygraph is per-sentence on a
     // streaming response; we MUST stay under ~300ms.
     const result = runACGV({ claim: sentence, repoRoot: input.repoRoot });
-    const friendly = toFriendlyVerdict(result.verdict);
-    const color = toColor(friendly);
-    // One-line summary that's safe to show in a tooltip. ACGV's `nextAction`
-    // can be terse; surface the verdict name + confidence so the user can
-    // see WHY at a glance.
-    const oneLine = friendly === "trustworthy"
-      ? `verified · ${result.verdict.toLowerCase()} (${Math.round(result.confidence * 100)}%)`
-      : friendly === "refuted" || friendly === "impossible"
-        ? `refuted · ${result.verdict.toLowerCase()} (${Math.round(result.confidence * 100)}%)`
-        : `mixed evidence · need a more specific entity`;
+    // v2.19.91 — Run the 6 micro-lenses in parallel.  If any lens fires
+    // RED with high weight, the lens verdict overrides ACGV (lenses know
+    // world facts ACGV doesn't).
+    const lensReport = runAllLenses(sentence);
+    let friendly = toFriendlyVerdict(result.verdict);
+    let color = toColor(friendly);
+    // Lens override: a confident lens verdict wins over a mixed ACGV.
+    if (lensReport.rolledUpColor === "red" && (friendly === "mixed" || friendly === "unknown")) {
+      friendly = "refuted"; color = "red";
+    } else if (lensReport.rolledUpColor === "green" && friendly === "mixed") {
+      friendly = "trustworthy"; color = "green";
+    }
+    // One-liner now favours the lens reason when it's stronger than
+    // ACGV's generic "mixed evidence" line.
+    const lensReason = lensReport.rolledUpReason;
+    const isLensInformative = lensReport.lenses.some((l) => l.color !== "grey" && l.weight >= 0.5);
+    const oneLine = isLensInformative && lensReason
+      ? lensReason
+      : friendly === "trustworthy"
+        ? `verified · ${result.verdict.toLowerCase()} (${Math.round(result.confidence * 100)}%)`
+        : friendly === "refuted" || friendly === "impossible"
+          ? `refuted · ${result.verdict.toLowerCase()} (${Math.round(result.confidence * 100)}%)`
+          : `no specific entity to verify`;
     return {
       verdict: friendly,
       color,
@@ -161,7 +178,8 @@ export async function verifyBrowserSentence(input: {
           ? "Safe to rely on."
           : "Ask the AI to cite a specific file / function / version.",
       latencyMs: Date.now() - t0,
-      engine: "propositional",
+      engine: "multi-lens",
+      lenses: lensReport,
     };
   } catch (e) {
     // Defensive: ACGV throwing is unexpected but we MUST not bubble the
