@@ -44,6 +44,124 @@ interface CannedExample {
 
 const CANNED: CannedExample[] = [
   {
+    triggerPattern: /(blood|vessel|เส้นเลือด|เลือด|หลอดเลือด)/i,
+    prompt: {
+      en: "How many blood vessels does the human body have?",
+      th: "เส้นเลือดในร่างกายมนุษย์มีกี่เส้น?",
+    },
+    responder: "ChatGPT-4o",
+    hint: { en: "human body blood vessels", th: "เส้นเลือดในร่างกาย" },
+    sentences: [
+      {
+        text: {
+          en: "The human body has exactly 400 blood vessels.",
+          th: "ร่างกายมนุษย์มีเส้นเลือดทั้งหมด 400 เส้น",
+        },
+        verdict: "refuted",
+        evidence: {
+          en: "The human circulatory system contains roughly 100,000 km of blood vessels — not a discrete count of 400.  Capillaries alone number in the BILLIONS.",
+          th: "ระบบไหลเวียนเลือดมีหลอดเลือดความยาวรวม ~100,000 กม. — ไม่ใช่ตัวเลข 400 เส้น  หลอดเลือดฝอยอย่างเดียวก็มีจำนวนระดับ พันล้าน เส้น",
+        },
+      },
+      {
+        text: {
+          en: "Blood circulates through arteries, veins, and capillaries.",
+          th: "เลือดไหลผ่านหลอดเลือดแดง หลอดเลือดดำ และหลอดเลือดฝอย",
+        },
+        verdict: "accepted",
+        evidence: {
+          en: "Standard anatomy: three vessel types form the closed circulation",
+          th: "หลักกายวิภาคพื้นฐาน: 3 ชนิดหลอดเลือดประกอบเป็นวงจรปิด",
+        },
+      },
+      {
+        text: {
+          en: "If laid end-to-end they would stretch about 100,000 km — over twice the Earth's circumference.",
+          th: "ถ้านำมาเรียงต่อกัน จะยาวประมาณ 100,000 กม. — มากกว่าเส้นรอบโลก 2 รอบ",
+        },
+        verdict: "accepted",
+        evidence: {
+          en: "Total length ~96,000-100,000 km is the textbook figure (Cleveland Clinic)",
+          th: "ยอดรวม ~96,000-100,000 กม. คือตัวเลขมาตรฐานในตำรา (Cleveland Clinic)",
+        },
+      },
+    ],
+  },
+  {
+    triggerPattern: /(everest|เอเวอเรสต์|ภูเขา|tall|height|สูง)/i,
+    prompt: {
+      en: "How tall is Mount Everest?",
+      th: "ภูเขาเอเวอเรสต์สูงเท่าไหร่?",
+    },
+    responder: "Claude 3.7",
+    hint: { en: "Mount Everest height", th: "ความสูง Mount Everest" },
+    sentences: [
+      {
+        text: {
+          en: "Mount Everest is 8,000 metres tall.",
+          th: "ภูเขาเอเวอเรสต์สูง 8,000 เมตร",
+        },
+        verdict: "refuted",
+        evidence: {
+          en: "Latest 2020 Nepal-China joint survey: 8,848.86 m — not 8,000.",
+          th: "ผลสำรวจร่วมเนปาล-จีน ปี 2020 ระบุ 8,848.86 เมตร — ไม่ใช่ 8,000",
+        },
+      },
+      {
+        text: {
+          en: "It is on the border between Nepal and China.",
+          th: "อยู่บริเวณชายแดนเนปาลกับจีน",
+        },
+        verdict: "accepted",
+        evidence: { en: "Standard geography", th: "ภูมิศาสตร์มาตรฐาน" },
+      },
+      {
+        text: {
+          en: "It was first summited in 1953.",
+          th: "พิชิตยอดครั้งแรกในปี 1953",
+        },
+        verdict: "accepted",
+        evidence: {
+          en: "Edmund Hillary + Tenzing Norgay, 29 May 1953",
+          th: "Edmund Hillary + Tenzing Norgay, 29 พฤษภาคม 1953",
+        },
+      },
+    ],
+  },
+  {
+    triggerPattern: /(wwii|world\s*war|สงครามโลก|1944|1945)/i,
+    prompt: {
+      en: "When did World War II end?",
+      th: "สงครามโลกครั้งที่ 2 จบลงเมื่อไหร่?",
+    },
+    responder: "Gemini 1.5 Pro",
+    hint: { en: "WWII end date", th: "สงครามโลกครั้งที่ 2 สิ้นสุด" },
+    sentences: [
+      {
+        text: {
+          en: "World War II ended on November 11, 1944.",
+          th: "สงครามโลกครั้งที่ 2 สิ้นสุดวันที่ 11 พฤศจิกายน 1944",
+        },
+        verdict: "refuted",
+        evidence: {
+          en: "WWII ended in 1945, not 1944.  Surrender in Europe: 8 May 1945 (V-E Day).  Surrender of Japan: 2 Sept 1945 (V-J Day, USS Missouri).  Nov 11 1918 is Armistice Day for WWI.",
+          th: "WWII จบในปี 1945 ไม่ใช่ 1944  ยุโรปยอมแพ้: 8 พฤษภาคม 1945 (V-E Day)  ญี่ปุ่นยอมแพ้: 2 กันยายน 1945 (V-J Day, USS Missouri)  11 พฤศจิกายน 1918 คือ Armistice Day ของ WWI",
+        },
+      },
+      {
+        text: {
+          en: "Germany surrendered before Japan.",
+          th: "เยอรมนียอมแพ้ก่อนญี่ปุ่น",
+        },
+        verdict: "accepted",
+        evidence: {
+          en: "Germany 8 May 1945 < Japan 2 Sept 1945",
+          th: "เยอรมนี 8 พ.ค. 1945 < ญี่ปุ่น 2 ก.ย. 1945",
+        },
+      },
+    ],
+  },
+  {
     triggerPattern: /react|server\s*component/i,
     prompt: {
       en: "Does React 19 support server components in stable?",
@@ -206,7 +324,9 @@ const CANNED: CannedExample[] = [
   },
 ];
 
-const DEFAULT_EXAMPLE = CANNED[0]!;
+// v2.19.79 — the silent DEFAULT_EXAMPLE fallback was removed.
+// Queries that don't match any trigger pattern now surface the
+// "no-match" dialog instead of playing an unrelated canned answer.
 
 function verdictColor(v: Verdict): { bg: string; border: string; dot: string; label: { en: string; th: string } } {
   switch (v) {
@@ -310,12 +430,13 @@ export function AiPolygraphView(): React.ReactElement {
 
   const [query, setQuery] = useState("");
   const [running, setRunning] = useState(false);
-  const [example, setExample] = useState<CannedExample>(DEFAULT_EXAMPLE);
+  const [example, setExample] = useState<CannedExample | null>(null);
   const [revealed, setRevealed] = useState<number>(0);
+  const [noMatch, setNoMatch] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || !example) return;
     if (revealed >= example.sentences.length) {
       setRunning(false);
       return;
@@ -327,24 +448,39 @@ export function AiPolygraphView(): React.ReactElement {
   function runDemo(q: string): void {
     const trimmed = q.trim();
     if (!trimmed) return;
+    // v2.19.79 — explicit "no match" UX instead of silent fallback.
+    // User report: typed about blood vessels → demo silently played
+    // the React 19 canned answer → looked fake and embarrassing.  Now
+    // we surface "this demo doesn't have an example for that — here's
+    // how to verify YOUR claim on YOUR repo" instead.
     const hit = CANNED.find((c) => c.triggerPattern.test(trimmed));
-    const chosen = hit ?? DEFAULT_EXAMPLE;
-    setExample(chosen);
+    if (!hit) {
+      setExample(null);
+      setRevealed(0);
+      setNoMatch(trimmed);
+      setRunning(false);
+      return;
+    }
+    setNoMatch(null);
+    setExample(hit);
     setRevealed(0);
     setRunning(true);
   }
 
   function loadCanned(c: CannedExample): void {
+    setNoMatch(null);
     setQuery(c.prompt[lang]);
     setExample(c);
     setRevealed(0);
     setRunning(true);
   }
 
-  const tally = example.sentences.slice(0, revealed).reduce(
-    (acc, s) => { acc[s.verdict] += 1; return acc; },
-    { accepted: 0, "needs-data": 0, refuted: 0 } as Record<Verdict, number>,
-  );
+  const tally = example
+    ? example.sentences.slice(0, revealed).reduce(
+        (acc, s) => { acc[s.verdict] += 1; return acc; },
+        { accepted: 0, "needs-data": 0, refuted: 0 } as Record<Verdict, number>,
+      )
+    : { accepted: 0, "needs-data": 0, refuted: 0 } as Record<Verdict, number>;
 
   return (
     <div data-testid="ai-polygraph-view" style={{
@@ -486,65 +622,113 @@ export function AiPolygraphView(): React.ReactElement {
         </button>
       </div>
 
-      {/* PROMPT + RESPONSE */}
-      <div style={{ marginBottom: 12, color: "#64748b", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>
-        {t("uiPromptLabel")}
-      </div>
-      <div style={{
-        padding: "12px 16px", borderRadius: 8, marginBottom: 18,
-        background: "rgba(15, 23, 42, 0.5)",
-        border: "1px dashed rgba(148, 163, 184, 0.20)",
-        color: "#cbd5e1", fontStyle: "italic",
-      }}>
-        {example.prompt[lang]}
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, color: "#64748b", fontSize: 12, letterSpacing: 1, textTransform: "uppercase", flexWrap: "wrap" }}>
-        {t("uiResponseFrom")}
-        <span style={{ padding: "2px 8px", borderRadius: 4, background: "rgba(99,102,241,0.18)", border: "1px solid rgba(99,102,241,0.40)", color: "#c7d2fe", fontWeight: 700 }}>
-          {example.responder}
-        </span>
-        {t("uiStreamingNote")}
-      </div>
-
-      {/* VERIFIED SENTENCES (streamed) */}
-      <div data-testid="polygraph-sentences" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {example.sentences.map((s, i) => {
-          if (i >= revealed) return null;
-          const c = verdictColor(s.verdict);
-          return (
-            <div key={i} data-testid={`polygraph-sentence-${i}`} style={{
-              display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12,
-              padding: "12px 14px", borderRadius: 10,
-              background: c.bg, border: `1px solid ${c.border}`,
-              animation: "polygraph-slide-in 0.36s cubic-bezier(0.22, 1, 0.36, 1)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 999, background: c.dot, boxShadow: `0 0 10px ${c.dot}` }} />
-              </div>
-              <div>
-                <div style={{ color: "#f1f5f9", lineHeight: 1.5 }}>{s.text[lang]}</div>
-                {s.evidence && (
-                  <div style={{ marginTop: 6, fontSize: 12, color: "#94a3b8", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
-                    ↳ {s.evidence[lang]}
-                  </div>
-                )}
-              </div>
-              <div style={{ alignSelf: "center", fontSize: 11, fontWeight: 700, letterSpacing: 1, color: c.dot }}>
-                {c.label[lang]}
-              </div>
-            </div>
-          );
-        })}
-        {revealed === 0 && !running && (
-          <div style={{ padding: 24, textAlign: "center", color: "#64748b", border: "1px dashed rgba(148, 163, 184, 0.18)", borderRadius: 10 }}>
-            {t("uiHitRun")}
+      {/* NO-MATCH DIALOG — shown when user typed something not in the
+          canned library.  Honest UI: tells them the demo is limited
+          + points them at the real engine (CLI + MCP). */}
+      {noMatch && (
+        <div data-testid="polygraph-no-match" style={{
+          padding: "18px 20px", borderRadius: 12, marginBottom: 18,
+          background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.02))",
+          border: "1px solid rgba(250,204,21,0.45)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 20 }}>🟡</span>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "#fde68a" }}>
+              {lang === "th"
+                ? "Demo นี้ยังไม่มีตัวอย่างสำหรับคำถามนี้"
+                : "This demo doesn't have a canned example for that"}
+            </h3>
           </div>
-        )}
-      </div>
+          <p style={{ margin: "4px 0 12px 0", color: "#fef3c7", fontSize: 14, lineHeight: 1.6 }}>
+            {lang === "th"
+              ? <>คุณพิมพ์ว่า <code style={{ background: "rgba(0,0,0,0.3)", padding: "1px 6px", borderRadius: 4 }}>"{noMatch.slice(0, 80)}"</code> — แต่ demo นี้มีตัวอย่างที่เตรียมไว้ {CANNED.length} อันเท่านั้น (เรื่องเส้นเลือด / ภูเขาเอเวอเรสต์ / สงครามโลก 2 / React 19 / Mneme tools / Python asyncio) เครื่อง verify ตัวจริง <strong>ใช้กับคำถามอะไรก็ได้</strong> — รัน CLI หรือ MCP tool ด้านล่าง</>
+              : <>You typed <code style={{ background: "rgba(0,0,0,0.3)", padding: "1px 6px", borderRadius: 4 }}>"{noMatch.slice(0, 80)}"</code> — but this in-page demo only has {CANNED.length} canned examples (blood vessels / Mount Everest / WWII / React 19 / Mneme tools / Python asyncio). The real verifier engine <strong>works on ANY claim</strong> — run it via the CLI or MCP tool below.</>}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {CANNED.map((c, i) => (
+              <button key={i} onClick={() => loadCanned(c)} style={{
+                padding: "6px 12px", borderRadius: 999,
+                background: "rgba(250,204,21,0.10)", border: "1px solid rgba(250,204,21,0.45)",
+                color: "#fef3c7", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              }}>
+                → {c.hint[lang]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* PROMPT + RESPONSE — only when an example is loaded */}
+      {example && (
+        <>
+          <div style={{ marginBottom: 12, color: "#64748b", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>
+            {t("uiPromptLabel")}
+          </div>
+          <div style={{
+            padding: "12px 16px", borderRadius: 8, marginBottom: 18,
+            background: "rgba(15, 23, 42, 0.5)",
+            border: "1px dashed rgba(148, 163, 184, 0.20)",
+            color: "#cbd5e1", fontStyle: "italic",
+          }}>
+            {example.prompt[lang]}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, color: "#64748b", fontSize: 12, letterSpacing: 1, textTransform: "uppercase", flexWrap: "wrap" }}>
+            {t("uiResponseFrom")}
+            <span style={{ padding: "2px 8px", borderRadius: 4, background: "rgba(99,102,241,0.18)", border: "1px solid rgba(99,102,241,0.40)", color: "#c7d2fe", fontWeight: 700 }}>
+              {example.responder}
+            </span>
+            {t("uiStreamingNote")}
+          </div>
+
+          {/* VERIFIED SENTENCES (streamed) */}
+          <div data-testid="polygraph-sentences" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {example.sentences.map((s, i) => {
+              if (i >= revealed) return null;
+              const c = verdictColor(s.verdict);
+              return (
+                <div key={i} data-testid={`polygraph-sentence-${i}`} style={{
+                  display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12,
+                  padding: "12px 14px", borderRadius: 10,
+                  background: c.bg, border: `1px solid ${c.border}`,
+                  animation: "polygraph-slide-in 0.36s cubic-bezier(0.22, 1, 0.36, 1)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 999, background: c.dot, boxShadow: `0 0 10px ${c.dot}` }} />
+                  </div>
+                  <div>
+                    <div style={{ color: "#f1f5f9", lineHeight: 1.5 }}>{s.text[lang]}</div>
+                    {s.evidence && (
+                      <div style={{ marginTop: 6, fontSize: 12, color: "#94a3b8", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                        ↳ {s.evidence[lang]}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ alignSelf: "center", fontSize: 11, fontWeight: 700, letterSpacing: 1, color: c.dot }}>
+                    {c.label[lang]}
+                  </div>
+                </div>
+              );
+            })}
+            {revealed === 0 && !running && (
+              <div style={{ padding: 24, textAlign: "center", color: "#64748b", border: "1px dashed rgba(148, 163, 184, 0.18)", borderRadius: 10 }}>
+                {t("uiHitRun")}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {!example && !noMatch && (
+        <div style={{ padding: 32, textAlign: "center", color: "#64748b", border: "1px dashed rgba(148, 163, 184, 0.18)", borderRadius: 12 }}>
+          {lang === "th"
+            ? "คลิกปุ่ม chip ด้านบน หรือพิมพ์คำถามแล้วกด ▶ ตรวจสอบ"
+            : "Click a chip above, or type a question and hit ▶ run polygraph"}
+        </div>
+      )}
 
       {/* TALLY */}
-      {revealed > 0 && (
+      {example && revealed > 0 && (
         <div data-testid="polygraph-tally" style={{
           marginTop: 22,
           padding: "14px 16px", borderRadius: 12,
@@ -566,8 +750,108 @@ export function AiPolygraphView(): React.ReactElement {
         </div>
       )}
 
+      {/* INTEGRATION MATRIX — where you can ACTUALLY use this today
+          (vs. where it's coming).  User asked 2026-05-20:
+            "มันควรเอาไปใช้กับ ai agent tool ต่าง ๆ ได้หรือเปล่า ทั้งแบบ
+             ฟรีและไม่ฟรี บน browser หรือ mobile หรือ app งง ตอนนี้
+             มันจำกัดแค่ใน menu polygraph อะนะ"
+          Answering verbatim with this matrix. */}
+      <section style={{
+        marginTop: 32,
+        padding: "20px 22px",
+        borderRadius: 14,
+        background: "linear-gradient(135deg, rgba(52,211,153,0.10), rgba(99,102,241,0.06))",
+        border: "1px solid rgba(52,211,153,0.30)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 22 }}>🌍</span>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#86efac" }}>
+            {lang === "th" ? "ใช้กับ AI tool อะไรได้บ้าง" : "Where can I actually use this?"}
+          </h2>
+        </div>
+        <p style={{ margin: "0 0 14px 0", color: "#d1fae5", fontSize: 14, lineHeight: 1.6 }}>
+          {lang === "th"
+            ? <>หน้านี้เป็น <strong>demo</strong> ที่มีตัวอย่างเตรียมไว้ {CANNED.length} อัน — engine ตัวจริงเชื่อมต่อกับ AI tool ของคุณได้หลายช่องทาง <strong>ทั้งฟรีและไม่ขึ้นกับ vendor</strong>:</>
+            : <>This page is a <strong>demo</strong> with {CANNED.length} canned examples — the real engine plugs into your AI tool through <strong>multiple channels, all free, all vendor-neutral</strong>:</>}
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
+          {/* ROW: MCP-aware AI agents */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.35)" }}>
+            <span style={{ fontSize: 18 }}>🤖</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "AI agent ที่รองรับ MCP — ใช้ได้แล้ววันนี้" : "MCP-aware AI agents — works today"}
+              </div>
+              <div style={{ color: "#d1fae5", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                Claude Code · Cursor · Cline · Continue · Codex CLI · Zed · Aider · Gemini Code Assist
+                <br />
+                {lang === "th"
+                  ? <>ติดตั้งครั้งเดียว: <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>npm install -g mneme-ai && mneme mcp --install</code> — AI agent จะเรียก <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>mneme.verify</code> อัตโนมัติเมื่อคุณบอก "verify this"</>
+                  : <>One-time setup: <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>npm install -g mneme-ai && mneme mcp --install</code> — your AI agent will call <code style={{ background: "rgba(0,0,0,0.4)", padding: "1px 6px", borderRadius: 3 }}>mneme.verify</code> automatically when you say "verify this"</>}
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>
+          </div>
+
+          {/* ROW: Terminal CLI */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(52,211,153,0.10)", border: "1px solid rgba(52,211,153,0.35)" }}>
+            <span style={{ fontSize: 18 }}>⌨️</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "Command-line — ใช้ได้แล้ววันนี้" : "Command-line — works today"}
+              </div>
+              <div style={{ color: "#d1fae5", fontSize: 12, marginTop: 4, lineHeight: 1.5, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
+                $ mneme verify "{lang === "th" ? "ร่างกายคนเรามีเส้นเลือด 400 เส้น" : "human body has 400 blood vessels"}"
+                <br />
+                → REFUTED (evidence: ~100,000 km total length, billions of capillaries)
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#34d399", color: "#022c22", fontSize: 11, fontWeight: 700 }}>LIVE</span>
+          </div>
+
+          {/* ROW: Browser extension */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.35)" }}>
+            <span style={{ fontSize: 18 }}>🌐</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "Browser extension (Chrome / Firefox / Safari) — กำลังจะมา" : "Browser extension (Chrome / Firefox / Safari) — coming"}
+              </div>
+              <div style={{ color: "#fef3c7", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                {lang === "th"
+                  ? <>แถบจับเท็จลอยทับ chat.openai.com / claude.ai / gemini.google.com / x.com (Grok) <strong>โดยอัตโนมัติ</strong> — ไม่ต้องเปิด demo, ไม่ต้องสลับแท็บ ทำงานบนทุก AI chat ที่คุณใช้อยู่ ทั้งฟรีและเสียเงิน</>
+                  : <>Auto-overlay the truth meter on chat.openai.com / claude.ai / gemini.google.com / x.com (Grok) — <strong>no demo to open</strong>, no tab switching, works on every AI chat you already use, both free and paid tiers</>}
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#facc15", color: "#422006", fontSize: 11, fontWeight: 700 }}>SOON</span>
+          </div>
+
+          {/* ROW: Mobile */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center", padding: "12px 14px", borderRadius: 10, background: "rgba(148,163,184,0.08)", border: "1px solid rgba(148,163,184,0.30)" }}>
+            <span style={{ fontSize: 18 }}>📱</span>
+            <div>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>
+                {lang === "th" ? "Mobile app (iOS / Android) — รอ roadmap" : "Mobile app (iOS / Android) — roadmap"}
+              </div>
+              <div style={{ color: "#cbd5e1", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+                {lang === "th"
+                  ? "ยังไม่ลง mobile native — เพราะ iOS/Android ห้าม inject overlay ในแอปอื่น เราจะทำเป็น share-sheet (เลือกข้อความใน ChatGPT app → share → Mneme verify) — รอบหน้า"
+                  : "Not on mobile native yet — iOS/Android block overlay injection into other apps.  Coming as a share-sheet extension instead (select text in any AI chat app → share → Mneme verify)"}
+              </div>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: 999, background: "#94a3b8", color: "#0f172a", fontSize: 11, fontWeight: 700 }}>LATER</span>
+          </div>
+        </div>
+
+        {/* PRICING NOTE */}
+        <p style={{ margin: "14px 0 0 0", color: "#86efac", fontSize: 13, lineHeight: 1.5 }}>
+          {lang === "th"
+            ? <><strong>ทั้งหมดฟรี · open source · รันบนเครื่องคุณ 100%</strong> — Mneme ไม่ส่งข้อมูล AI chat ของคุณไปไหน ไม่มี subscription ไม่มี per-call fee ใช้กับ AI ตัวที่คุณจ่ายอยู่แล้ว (paid ChatGPT / Claude / Cursor) ก็ได้ ใช้กับฟรี tier ก็ได้</>
+            : <><strong>All free · open source · runs entirely on your machine</strong> — Mneme never sends your AI chats anywhere.  No subscription, no per-call fee, works with the AI tools you already pay for (paid ChatGPT / Claude / Cursor) AND with their free tiers.</>}
+        </p>
+      </section>
+
       {/* SHIPPED REAL THING */}
-      <div style={{ marginTop: 28, padding: "16px 18px", borderRadius: 12,
+      <div style={{ marginTop: 24, padding: "16px 18px", borderRadius: 12,
         background: "linear-gradient(135deg, rgba(99,102,241,0.10), rgba(236,72,153,0.06))",
         border: "1px solid rgba(99,102,241,0.30)",
         fontSize: 13, color: "#c7d2fe", lineHeight: 1.5,
