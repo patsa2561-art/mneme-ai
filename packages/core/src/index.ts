@@ -1080,3 +1080,15 @@ export * as funeral from "./funeral/index.js";
 export * as socratic from "./socratic/index.js";
 export * as depMortality from "./dep_mortality/index.js";
 export * as aiConfessional from "./ai_confessional/index.js";
+
+// v2.19.88 — FIVE JAW-DROP FEATURES (the "Mneme Truth Suite"):
+// #1 TRUTH SWARM         every audit organ fires in parallel against one input.
+// #2 ADVERSARIAL GAUNTLET 60-second canary stress-test with Wilson-LB tier.
+// #3 AI JURY              multi-vendor consensus + dissent log.
+// #4 PROVENANCE GRAPH     `git blame` for AI-generated lines.
+// #5 LIVE LIE STREAM      ticker of every refuted polygraph verdict.
+export * as truthSwarm from "./truth_swarm/index.js";
+export * as gauntlet from "./gauntlet/index.js";
+export * as aiJury from "./ai_jury/index.js";
+export * as provenance from "./provenance/index.js";
+export * as lieStream from "./lie_stream/index.js";

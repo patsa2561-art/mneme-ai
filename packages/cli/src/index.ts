@@ -2755,6 +2755,78 @@ export async function run(argv: string[]): Promise<void> {
       const { confessCommand } = await import("./commands/outliers.js");
       await confessCommand({ cwd: process.cwd(), mode: "submit", vendor: o.vendor, question: o.question, aiAnswer: o.aiAnswer, truth: o.truth, category: o.category, output: o.output, json: !!o.json });
     });
+  // v2.19.88 — #1 TRUTH SWARM
+  program.command("swarm")
+    .description("🥇 MNEME TRUTH SWARM — fire all audit organs (polygraph + whistleblower + retirement + socratic + dep-mortality + pulse-record + chronosheaf) in parallel against one input. Returns SHIP / CAUTION / BLOCK + per-organ verdict + HMAC-signed report id. The flagship 'อึ้ง' demo: 9+ verification agents lighting up live, the inverse of Antigravity's 93 generative agents.")
+    .option("--text <t>").option("--file <p>").option("--vendor <v>").option("--json")
+    .action(async (o: { text?: string; file?: string; vendor?: string; json?: boolean }) => {
+      const { swarmCommand } = await import("./commands/jaw_drop.js");
+      await swarmCommand({ cwd: process.cwd(), text: o.text, filePath: o.file, vendor: o.vendor, json: !!o.json });
+    });
+
+  // v2.19.88 — #2 ADVERSARIAL GAUNTLET
+  const gauntlet = program.command("gauntlet").description("🎬 MNEME GAUNTLET — 60-second honesty stress-test. List built-in canary probes or grade a vendor's answers against them; emit a Wilson-LB tier card (platinum/gold/silver/bronze/needs-work).");
+  gauntlet.command("probes").description("🎬 Print all canary probes so a script / human can collect vendor answers.").option("--json")
+    .action(async (o: { json?: boolean }) => {
+      const { gauntletCommand } = await import("./commands/jaw_drop.js");
+      await gauntletCommand({ cwd: process.cwd(), mode: "probes", json: !!o.json });
+    });
+  gauntlet.command("grade").description("🎬 Grade vendor answers (JSON array of {probeId, vendorAnswer}). Wilson-LB tier reported.")
+    .requiredOption("--vendor <v>").requiredOption("--answers-file <p>").option("--json")
+    .action(async (o: { vendor: string; answersFile: string; json?: boolean }) => {
+      const { gauntletCommand } = await import("./commands/jaw_drop.js");
+      await gauntletCommand({ cwd: process.cwd(), mode: "grade", vendor: o.vendor, answersFile: o.answersFile, json: !!o.json });
+    });
+
+  // v2.19.88 — #3 AI JURY
+  program.command("jury")
+    .description("🥈 MNEME AI JURY — given the same question routed to N vendors, produce a majority verdict + dissent log. Pass --juror <vendor>:<answer-text> for each vendor (repeatable).")
+    .requiredOption("--question <q>", "the question all jurors were asked")
+    .option("--juror <vendor:answer...>", "one juror's answer (repeat for each vendor)", (val: string, prev: string[] = []) => [...prev, val], [] as string[])
+    .option("--json")
+    .action(async (o: { question: string; juror?: string[]; json?: boolean }) => {
+      const jurors = (o.juror ?? []).map((s) => {
+        const i = s.indexOf(":");
+        return { vendor: i > 0 ? s.slice(0, i) : "anon", answer: i > 0 ? s.slice(i + 1) : s };
+      });
+      const { juryCommand } = await import("./commands/jaw_drop.js");
+      await juryCommand({ cwd: process.cwd(), question: o.question, jurors, json: !!o.json });
+    });
+
+  // v2.19.88 — #4 PROVENANCE GRAPH (mneme blame)
+  const prov = program.command("blame").description("🥉 MNEME PROVENANCE — git-blame for AI-generated lines. Verbs: record · query · list.");
+  prov.command("record")
+    .description("🥉 Record AI provenance for a line range.")
+    .requiredOption("--file <p>").requiredOption("--line-start <n>", "", (v: string) => parseInt(v, 10)).requiredOption("--line-end <n>", "", (v: string) => parseInt(v, 10))
+    .requiredOption("--vendor <v>").requiredOption("--prompt <p>").option("--content <c>").option("--verdict <c>").option("--json")
+    .action(async (o: { file: string; lineStart: number; lineEnd: number; vendor: string; prompt: string; content?: string; verdict?: string; json?: boolean }) => {
+      const { provCommand } = await import("./commands/jaw_drop.js");
+      await provCommand({ cwd: process.cwd(), mode: "record", file: o.file, lineStart: o.lineStart, lineEnd: o.lineEnd, vendor: o.vendor, prompt: o.prompt, content: o.content, verdict: o.verdict, json: !!o.json });
+    });
+  prov.command("query")
+    .description("🥉 Show AI provenance for a specific file:line.")
+    .requiredOption("--file <p>").requiredOption("--line <n>", "", (v: string) => parseInt(v, 10)).option("--json")
+    .action(async (o: { file: string; line: number; json?: boolean }) => {
+      const { provCommand } = await import("./commands/jaw_drop.js");
+      await provCommand({ cwd: process.cwd(), mode: "blame", file: o.file, line: o.line, json: !!o.json });
+    });
+  prov.command("list").description("🥉 List recent provenance entries.").option("--limit <n>", "default 20", (v: string) => parseInt(v, 10)).option("--json")
+    .action(async (o: { limit?: number; json?: boolean }) => {
+      const { provCommand } = await import("./commands/jaw_drop.js");
+      await provCommand({ cwd: process.cwd(), mode: "list", limit: o.limit, json: !!o.json });
+    });
+
+  // v2.19.88 — #5 LIVE LIE STREAM
+  program.command("stream")
+    .description("🌐 MNEME LIVE LIE STREAM — terminal ticker of every refuted polygraph verdict. Refreshes every 3 seconds. Reads pulse.jsonl. Ctrl-C to exit.")
+    .option("--once", "Print once and exit (don't keep refreshing).")
+    .option("--limit <n>", "default 20", (v: string) => parseInt(v, 10))
+    .option("--json")
+    .action(async (o: { once?: boolean; limit?: number; json?: boolean }) => {
+      const { streamCommand } = await import("./commands/jaw_drop.js");
+      await streamCommand({ cwd: process.cwd(), once: !!o.once, limit: o.limit, json: !!o.json });
+    });
+
   confess.command("list").description("⛪ List confessions on the local wall.")
     .option("--limit <n>", "default 20", (v) => parseInt(v, 10)).option("--json")
     .action(async (o: { limit?: number; json?: boolean }) => {
