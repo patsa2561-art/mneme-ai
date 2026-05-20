@@ -117,6 +117,25 @@ export function App() {
   const scrubTRef = useRef<number>(scrubT);
   scrubTRef.current = scrubT;
 
+  // v2.19.79 — hashchange listener so deep-links like #polygraph
+  // work AFTER initial mount too (e.g. clicking the README hero CTA
+  // that sets window.location.hash + then expects the dashboard to
+  // navigate).  Without this, the hash changed but the view state
+  // stayed pinned to its initial value, leaving the user on the
+  // wrong tab after the README→dashboard handoff.
+  useEffect(() => {
+    function onHashChange(): void {
+      const next = initialViewFromHash();
+      setView(next);
+      // If the user navigated to a known view-hash from the README
+      // landing, also flip out of the README so they actually see it.
+      const h = (window.location.hash || "").replace(/^#/, "").trim();
+      if (h && h !== "readme") setShowReadme(false);
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   // ─── load demo on first render ────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -243,6 +262,13 @@ export function App() {
         synthetic={!!raw?._demo_synthetic}
         liveMode={!!raw?._liveMode}
         liveSource={raw?._liveSource}
+        onReturnHome={() => {
+          // v2.19.79 — click the logo to leave the dashboard +
+          // return to the README front door.  Clear the deep-link
+          // hash so a subsequent refresh lands on the README too.
+          try { window.location.hash = ""; } catch { /* */ }
+          setShowReadme(true);
+        }}
       />
 
       {view === "graph" && (

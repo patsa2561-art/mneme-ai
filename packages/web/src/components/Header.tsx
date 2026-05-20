@@ -13,6 +13,8 @@ interface HeaderProps {
   synthetic: boolean;
   liveMode?: boolean;
   liveSource?: string;
+  /** v2.19.79 — click the Mneme logo to return to the README home. */
+  onReturnHome?: () => void;
 }
 
 // v1.26.2: hints rewritten in PLAIN ENGLISH (1-line, no jargon) so a
@@ -65,15 +67,38 @@ export function Header({
   synthetic,
   liveMode,
   liveSource,
+  onReturnHome,
 }: HeaderProps) {
+  // v2.19.79 — clicking the Mneme logo returns to the README landing
+  // page so the dashboard is no longer a one-way trip.  User audited
+  // 2026-05-20: "ตรงมุมซ้ายตรงชื่อ logo Mneme ให้กดแล้วกลับไปหน้าแรกได้ด้วย".
+  // Falls back to a no-op when the prop isn't wired (defensive: any
+  // future caller that forgets to pass onReturnHome still renders
+  // safely + just shows a non-clickable brand block).
   return (
     <header className="app-header">
-      <div className="brand">
+      <button
+        type="button"
+        onClick={onReturnHome}
+        disabled={!onReturnHome}
+        className="brand"
+        aria-label="Go to Mneme home"
+        title="Go to Mneme home"
+        style={{
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          color: "inherit",
+          font: "inherit",
+          textAlign: "left",
+          cursor: onReturnHome ? "pointer" : "default",
+        }}
+      >
         <span className="brand-glyph">μνήμη</span>
         <span className="brand-sep">·</span>
         <span className="brand-name">Mneme</span>
         <span className="brand-tag">The Nervous System</span>
-      </div>
+      </button>
 
       <div className="repo-meta" title={generatedAt ? `Generated ${generatedAt}` : ""}>
         <span className="repo-name">{repoName}</span>
