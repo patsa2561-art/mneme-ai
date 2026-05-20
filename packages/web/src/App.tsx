@@ -63,12 +63,38 @@ function readShowReadme(): boolean {
   // where a one-time "Launch dashboard" click in v2.14 stuck users on
   // the dashboard even after we shipped a much better README in v2.15.
   try {
-    if (window.location.hash === "#dashboard") return false;
+    // v2.19.79 — accept ANY known view-hash as a bypass-README signal.
+    // Pre-fix only "#dashboard" worked, which meant deep-links like
+    // "#polygraph" silently dropped the user on the README + the new
+    // view was unreachable without an extra click.
+    const VIEW_HASHES = new Set([
+      "#dashboard",
+      "#demon", "#graph", "#atrophy", "#influence",
+      "#ecosystems", "#dna", "#scrubber",
+      "#antivirus", "#retrieval", "#polygraph",
+    ]);
+    if (VIEW_HASHES.has(window.location.hash)) return false;
     // Clean up the legacy v2.14 sticky preference so users get the new
     // README the first time they visit after the upgrade.
     window.localStorage.removeItem("mneme-show-readme");
     return true;
   } catch { return true; }
+}
+
+/** v2.19.79 — pick the initial view from the URL hash so deep-links
+ *  like `#polygraph` land the user on the right tab instead of the
+ *  default "demon" view.  Falls back to "demon" for unknown hashes. */
+function initialViewFromHash(): ViewMode {
+  try {
+    const h = (window.location.hash || "").replace(/^#/, "").trim();
+    const known: readonly ViewMode[] = [
+      "demon", "graph", "atrophy", "influence",
+      "ecosystems", "dna", "scrubber",
+      "antivirus", "retrieval", "polygraph",
+    ];
+    if ((known as readonly string[]).includes(h)) return h as ViewMode;
+    return "demon";
+  } catch { return "demon"; }
 }
 
 export function App() {
@@ -78,7 +104,7 @@ export function App() {
   const [showReadme, setShowReadme] = useState<boolean>(() => readShowReadme());
   // v1.70 -- default to "demon" (the headline new view) so first-time
   // visitors see PRECOG firewall + protocol stack before anything else.
-  const [view, setView] = useState<ViewMode>("demon");
+  const [view, setView] = useState<ViewMode>(() => initialViewFromHash());
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [loadOpen, setLoadOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState<boolean>(() => !readOnboarded());
