@@ -2537,6 +2537,44 @@ export async function run(argv: string[]): Promise<void> {
       const { cheatsheetCommand } = await import("./commands/cheatsheet.js");
       cheatsheetCommand({ cwd: process.cwd(), json: !!opts.json });
     });
+
+  // ─── v2.19.76 — `mneme talk` (REPL + AI-agent protocol handoff) ───
+  // Named `talk` because the hidden `chat` slot is already used by
+  // the legacy multi-turn Q&A REPL in insights-cli.  `talk` is the
+  // new user-facing interactive mode.
+  //
+  // Hybrid: when invoked inside Claude Code / Cursor / Codex / etc.,
+  // emits a structured directive telling the host AI agent to switch
+  // to Mneme dispatcher mode (uses the AI's LLM smartness).  When run
+  // in a bare terminal, falls back to a standalone readline REPL with
+  // intent routing, hotkey follow-ups, /save playbooks, and genie mode.
+  program
+    .command("talk")
+    .description("Interactive natural-language mode. Auto-detects host AI agent (Claude/Cursor/etc.) for protocol handoff, falls back to readline REPL.")
+    .option("--force-standalone", "Force the standalone REPL even when an AI agent is detected.")
+    .option("--json", "JSON dispatcher mode (machine-readable handoff payload).")
+    .action(async (opts: { forceStandalone?: boolean; json?: boolean }) => {
+      const { talkCommand } = await import("./commands/talk.js");
+      await talkCommand({ cwd: process.cwd(), forceStandalone: !!opts.forceStandalone, json: !!opts.json });
+    });
+
+  // ─── v2.19.76 — `mneme index --auto / --watch / --merkle-only` ────
+  // Super-incremental rebuild: cursor file + diff-only git log + merkle
+  // root for cross-machine index parity.  --watch keeps the process
+  // alive + re-fires on every git HEAD update (~200ms after `git
+  // commit`).  Wraps the existing `mneme index` for the heavy lift.
+  program
+    .command("index-auto")
+    .description("Super-incremental index — diff-only since last cursor + merkle root + optional --watch.")
+    .option("--full", "Force a complete rebuild (ignore cursor).")
+    .option("--watch", "After indexing, stay alive + re-index on every git HEAD update.")
+    .option("--merkle-only", "Skip indexing — just (re-)compute the merkle root.")
+    .option("--quiet", "No banner / colours.")
+    .option("--json", "Machine-readable result.")
+    .action(async (opts: { full?: boolean; watch?: boolean; merkleOnly?: boolean; quiet?: boolean; json?: boolean }) => {
+      const { superIndexCommand } = await import("./commands/index-super.js");
+      await superIndexCommand({ cwd: process.cwd(), ...opts });
+    });
   registerSporeCommands(program);
   registerLinCommands(program);
   // ─── NUCLEUS Infinity Wisdom Brain (v1.21.0) ──────────────────────
