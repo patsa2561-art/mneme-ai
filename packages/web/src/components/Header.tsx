@@ -37,6 +37,7 @@ const VIEWS: Array<{ id: ViewMode; label: string; symbol: string; hint: string; 
   { id: "scrubber",   label: "Scrubber",       symbol: "🧼",  hint: "Prompt injection in pasted content. Paste hostile text, watch it get neutralised live.", group: "labs" },
   { id: "antivirus",  label: "Antivirus Lab",  symbol: "💉",  hint: "AI fabricates commits / functions / packages. Catches 8 hallucination strains before merge.", group: "labs" },
   { id: "retrieval",  label: "Retrieval Lab",  symbol: "🧪",  hint: "RAG quality varies. Mneme tries multiple search configs and picks the best per repo.", group: "labs" },
+  { id: "polygraph",  label: "AI Polygraph",   symbol: "🔴",  hint: "Live truth-meter over every AI response. Green / yellow / red dot per sentence, streaming. The browser extension flagship demo.", group: "labs" },
   // History
   { id: "atrophy",    label: "Atrophy",        symbol: "⏳",  hint: "Bus factor / orphaned code. Files where the original author left or hasn't touched in months.", group: "history" },
 ];

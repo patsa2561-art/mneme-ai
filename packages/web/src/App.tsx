@@ -10,6 +10,7 @@ import { DnaView } from "./components/DnaView";
 import { ScrubberView } from "./components/ScrubberView";
 import { AntivirusLabView } from "./components/AntivirusLabView";
 import { RetrievalLabView } from "./components/RetrievalLabView";
+import { AiPolygraphView } from "./components/AiPolygraphView";
 import { DemonStackView } from "./components/DemonStackView";
 import { DetailPanel } from "./components/DetailPanel";
 // LimitsPanel + LiveWisdomPanel moved into MetricsTopBar (v1.19.3).
@@ -288,6 +289,8 @@ export function App() {
               liveMode={!!raw?._liveMode}
               liveSource={raw?._liveSource}
             />
+          ) : view === "polygraph" ? (
+            <AiPolygraphView />
           ) : !scrubbed ? (
             <EmptyState onLoadClick={() => setLoadOpen(true)} />
           ) : view === "graph" ? (

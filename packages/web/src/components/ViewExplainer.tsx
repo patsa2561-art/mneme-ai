@@ -108,6 +108,16 @@ const EXPLAINERS: Record<ViewMode, Explainer> = {
       "Pareto-frontier view shows quality-vs-latency trade-offs.",
     ],
   },
+  polygraph: {
+    title: "AI Polygraph (IDEA #1)",
+    oneLine: "Live truth-meter overlay for every AI response — green / yellow / red dot per sentence as the verifier streams.",
+    whyCare: "Every LLM hallucinates. The browser extension lands soon; this in-page demo previews the experience using the production `mneme verify` engine under the hood.",
+    bullets: [
+      "Pick a canned prompt or type your own — the demo streams a verified response sentence-by-sentence.",
+      "Real engine: `mneme verify '<claim>'` (CLI) + `mneme.verify` (MCP tool).  Same code path as the upcoming extension.",
+      "Refuted sentences show the contradicting evidence (file:line / spec / git history) — citations, not opinions.",
+    ],
+  },
 };
 
 interface Props {
