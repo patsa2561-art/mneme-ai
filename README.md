@@ -2,10 +2,51 @@
 
 <img src="./assets/title.svg" alt="μνήμη · Mneme" width="720">
 
-# Every AI lies. Mneme is the only tool that catches it live. 🔴
+# The truth layer for any AI you use. 🔴
 
-<sub>14-verb Truth Suite — Browser Polygraph dots on claude.ai · World Pulse globe · Sandbag detector · Honesty Certificate · Truth Swarm (fires every audit organ in parallel) · git-blame for AI-written lines.<br/>
+<sub>Live polygraph dots on claude.ai / chatgpt / gemini · World Pulse globe · Honesty Certificate · git-blame for AI-written lines · 14-verb Truth Suite.<br/>
 Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> arms everything in 60 seconds.</sub>
+
+<br/><br/>
+
+<details open><summary><b>🚀 60-second install — EN / ภาษาไทย</b></summary>
+
+<table>
+<tr>
+<td valign="top" width="50%">
+
+**English**
+
+1. Install Tampermonkey: https://tampermonkey.net
+2. Enable **Allow User Scripts** in `chrome://extensions/` → Tampermonkey → Details
+3. Open a terminal and run:
+   ```
+   npm install -g mneme-ai
+   mneme polygraph autosetup
+   ```
+4. When the `.user.js` opens in your browser, click **Install / Reinstall** on the Tampermonkey page.
+5. Open https://chatgpt.com — look for "● MNEME POLYGRAPH" at the bottom-right; ask any factual question.
+
+</td>
+<td valign="top" width="50%">
+
+**ภาษาไทย**
+
+1. ติดตั้ง Tampermonkey: https://tampermonkey.net
+2. เปิด **Allow User Scripts** ที่ `chrome://extensions/` → Tampermonkey → Details
+3. เปิด terminal แล้วรัน:
+   ```
+   npm install -g mneme-ai
+   mneme polygraph autosetup
+   ```
+4. เมื่อไฟล์ `.user.js` เปิดในเบราว์เซอร์ กด **Install / Reinstall** ในหน้า Tampermonkey
+5. เปิด https://chatgpt.com — มองหา "● MNEME POLYGRAPH" มุมล่างขวา ลองถามคำถามที่มีตัวเลขหรือชื่อเฉพาะดูได้เลย
+
+</td>
+</tr>
+</table>
+
+</details>
 
 <br/>
 

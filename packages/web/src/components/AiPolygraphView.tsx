@@ -511,6 +511,69 @@ export function AiPolygraphView(): React.ReactElement {
         </p>
       </div>
 
+      {/* v2.19.88 — 60-SECOND INSTALL GUIDE (bilingual, step-by-step) */}
+      <section style={{
+        marginBottom: 22,
+        padding: "20px 22px",
+        borderRadius: 14,
+        background: "linear-gradient(135deg, rgba(243,128,32,0.12), rgba(52,211,153,0.06))",
+        border: "1px solid rgba(243,128,32,0.40)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <span style={{ fontSize: 22 }}>🚀</span>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#fed7aa" }}>
+            {lang === "th" ? "ติดตั้งใน 60 วินาที — ตามทีละขั้น" : "60-second install — step by step"}
+          </h2>
+        </div>
+        <p style={{ margin: "0 0 14px 0", color: "#fde68a", fontSize: 13, lineHeight: 1.6 }}>
+          {lang === "th"
+            ? "ครั้งแรกใช้เวลา ~60 วินาที ทำตามนี้แล้วเปิด chatgpt.com / claude.ai / gemini ได้เลย ดอตจะโผล่อัตโนมัติ"
+            : "First time takes ~60 seconds. After this you can open chatgpt.com / claude.ai / gemini and dots appear automatically."}
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+          {[
+            { n: 1, en: "Install Tampermonkey (one click)",            th: "ติดตั้ง Tampermonkey (คลิกเดียว)",      cmd: "https://tampermonkey.net" },
+            { n: 2, en: 'Enable "Allow User Scripts"',                 th: 'เปิด "Allow User Scripts"',              cmd: "chrome://extensions/ → Tampermonkey → Details" },
+            { n: 3, en: "Install Mneme (terminal)",                   th: "ติดตั้ง Mneme (terminal)",                cmd: "npm install -g mneme-ai" },
+            { n: 4, en: "Run autosetup (terminal)",                   th: "รัน autosetup (terminal)",                cmd: "mneme polygraph autosetup" },
+            { n: 5, en: 'Click "Install" in Tampermonkey prompt',     th: 'กด "Install" ใน Tampermonkey popup',    cmd: lang === "th" ? "(ขึ้นอัตโนมัติในเบราว์เซอร์)" : "(opens automatically)" },
+            { n: 6, en: "Open chatgpt.com — ask anything factual",    th: "เปิด chatgpt.com — ลองถามอะไรก็ได้",     cmd: lang === "th" ? "เห็น ● มุมล่างขวา = พร้อมใช้" : "● in bottom-right = ready" },
+          ].map((s) => (
+            <div key={s.n} style={{
+              padding: "12px 14px", borderRadius: 10,
+              background: "rgba(0,0,0,0.30)", border: "1px solid rgba(243,128,32,0.30)",
+              display: "flex", gap: 12,
+            }}>
+              <div style={{
+                minWidth: 28, height: 28, borderRadius: 999,
+                background: "linear-gradient(135deg,#f38020,#ec4899)",
+                color: "#0a0a0e", fontWeight: 800, fontSize: 13,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
+              }}>{s.n}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: "#fff", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{s[lang]}</div>
+                <code style={{
+                  display: "block", fontSize: 11,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  color: "#86efac", background: "rgba(0,0,0,0.45)",
+                  padding: "4px 8px", borderRadius: 5, wordBreak: "break-all",
+                }}>{s.cmd}</code>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{
+          marginTop: 14, padding: "10px 14px", borderRadius: 8,
+          background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.30)",
+          color: "#86efac", fontSize: 12, lineHeight: 1.6,
+        }}>
+          {lang === "th"
+            ? <><strong>📋 หลังติดตั้งเสร็จ:</strong> เปิด chatgpt.com / claude.ai / gemini.google.com ใช้งานตามปกติ — Mneme ตรวจทุกประโยคโดยอัตโนมัติ ไม่ต้องสั่งอะไรเพิ่ม. ลองถาม "Anthropic was founded in 2018" (ผิดจริง) → ควรเห็นจุดแดง</>
+            : <><strong>📋 After install:</strong> open chatgpt.com / claude.ai / gemini.google.com and chat normally — Mneme verifies every sentence automatically. Try asking "Anthropic was founded in 2018" (it's wrong) → expect a red dot.</>}
+        </div>
+      </section>
+
       {/* WHY YOU NEED THIS */}
       <section style={{
         marginBottom: 22,
