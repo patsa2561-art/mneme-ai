@@ -1112,3 +1112,10 @@ export * as polygraphLenses from "./polygraph_lenses/index.js";
 // world's first working "Drift-Guarded ABM" runtime — composes
 // every Mneme primitive (lenses + HMAC chain + soul + jury).
 export * as abmChronicle from "./abm_chronicle/index.js";
+
+// v2.19.94 — LIVE SESSION MIRROR.  Reads the current Claude Code (and
+// pluggable future editors') session jsonl directly from disk so
+// `mneme genesplice transmit` always gets the CURRENT conversation
+// instead of a stale capsule.  Fixes the v2.19.93 bug where transmit
+// returned an 8-day-old session.
+export * as liveSessionMirror from "./live_session_mirror/index.js";

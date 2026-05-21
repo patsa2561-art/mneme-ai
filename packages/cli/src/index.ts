@@ -2933,6 +2933,36 @@ export async function run(argv: string[]): Promise<void> {
       if (s.reinstallHint) process.stdout.write(`\n  start now:  ${s.reinstallHint}\n`);
     });
 
+  // ─── v2.19.94 — `mneme mirror` (LIVE SESSION MIRROR) ──
+  // Reads the current Claude Code conversation jsonl directly so any
+  // cross-vendor / cross-device handoff (`mneme genesplice transmit`,
+  // BEACON, gist) ships the CURRENT brain instead of a stale capsule.
+  // Fixes user-reported bug in v2.19.93 where transmit returned an
+  // 8-day-old session.
+  // Namespace `live` (not `mirror` — that's owned by wild-features.ts).
+  const live = program
+    .command("live")
+    .description("🪞 Live Session Mirror — read the current AI editor's conversation jsonl directly from disk. Verbs: inspect · capture.");
+
+  live
+    .command("inspect")
+    .description("🪞 Show which live AI editor sessions Mneme can see + which one it would pick for the current repo.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const { mirrorCommand } = await import("./commands/mirror.js");
+      await mirrorCommand({ cwd: process.cwd(), mode: "inspect", json: !!opts.json });
+    });
+
+  live
+    .command("capture")
+    .description("🪞 Capture the CURRENT live session as a fresh HMAC-signed capsule + print summary. Pass --json for the full capsule, --last-n to control turn count.")
+    .option("--last-n <n>", "How many recent turns to include (default 25).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { lastN?: number; json?: boolean }) => {
+      const { mirrorCommand } = await import("./commands/mirror.js");
+      await mirrorCommand({ cwd: process.cwd(), mode: "capture", lastN: opts.lastN, json: !!opts.json });
+    });
+
   // ─── v2.19.93 — `mneme abm` (MNEME CHRONICLE — Agent-Based Modeling) ──
   // World's first drift-guarded ABM runtime. Composes polygraph_lenses
   // (drift detection) + HMAC-chained ledgers (birth certs + interventions)
