@@ -169,6 +169,77 @@ $ mneme abm chronicle                        # final report + plain-English narr
 
 </div>
 
+<details><summary><b>📜 What is Chronicle? (plain English)</b> &nbsp; · &nbsp; <a href="docs/QUICKSTART-th.md#-chronicle-คืออะไร-ภาษาบ้านๆ" target="_blank" rel="noopener">🇹🇭 ภาษาไทย แบบบ้านๆ ↗</a></summary>
+
+#### TL;DR
+
+**Imagine you press fast-forward on 100 little people for a year.** Some go bankrupt. Some turn into someone they weren't. Chronicle is the **CCTV + black-box recorder** of that simulation. When a frugal grandma starts buying Lambos in month 7, Chronicle catches it, gently pulls her back, and writes it in a tamper-proof diary.
+
+#### When you'd actually want this
+
+| Vibe | What you'd say to your AI |
+|---|---|
+| 🎮 You're a game dev | *"Run my 20 NPCs for 6 months — which one breaks character first?"* |
+| 📈 You're a trading bot dev | *"Backtest 5 personality types for 2 years — who panic-sells under stress?"* |
+| 🧪 You wire multi-AI systems | *"Stress-test my CrewAI agents for 1 simulated week — will they echo-chamber each other?"* |
+| 🏫 You write a research paper | *"100 agents, 5-year ABM, give me an HMAC-signed event log for peer review."* |
+| 💼 You're a founder | *"100 users with different willingness-to-pay — how does MRR drift over 12 months?"* |
+
+If you're not doing any of those — **you probably won't need this**. And that's fine. Chronicle is a research-grade tool that ships in the same npm package as your daily Polygraph dots. Pay $0 extra, get it the day you need it.
+
+#### Live example — type this, get this back
+
+**You type (to Claude Code / Cursor / Cline):**
+```
+ผม build NPC system มี 3 archetype: frugal grandma / spender teen / risk-taker bro.
+ปล่อยให้รัน 1 ปี game-time ทีหน่อย ใครจะแตก character ก่อน?
+```
+
+**Your AI silently fires (you never type any of this):**
+```bash
+mneme abm genesis  --config agents.json     # ← AI writes agents.json from your spec
+mneme abm simulate --ticks 360              # ← 360 ticks = 1 year (30 ticks ≈ 1 month)
+mneme abm chronicle                         # ← final report
+```
+
+**Chronicle replies (in your terminal):**
+```
+📜 MNEME CHRONICLE — final report
+
+  sim:           sim_m6llDrIE
+  ticks ran:     360  (1y0m0d)
+  agents:        3  (alive=1, died=2)
+  decisions:     720
+  anchors fired: 4    ← Mneme pulled agents back 4 times before collapse
+
+  per-agent:
+    ✓ Frugal Grandma   budget=  420  drift=0.18  anchors=2  reds=3
+    ✗ Spender Teen     budget=-1012  drift=0.10  anchors=0  reds=0   (bankrupt month 7)
+    ✗ Risk-Taker Bro   budget=-1146  drift=0.32  anchors=2  reds=11  (bankrupt month 9)
+
+  📖 narrative:
+  Across 360 ticks (~12 months), 3 agents lived, decided, and drifted.
+  Spender Teen went bankrupt at month 7 — staying in character but
+  outspending income. Risk-Taker Bro drifted hardest (0.32 from birth
+  cert) — 11 panic decisions; anchors recalibrated him twice but
+  collapse won. Frugal Grandma survived because her drift triggered
+  the guardian early.
+```
+
+**Your AI then says (in plain language):**
+> "Spender Teen bankrupted from over-spending in character. Risk-Taker Bro had 11 panic-sell events — anchors saved him twice but he still collapsed at month 9. If you want him to survive a year, pin his `risk` axis below 0.7 or add more anchor passes (try `--anchor-every 15`)."
+
+That's the whole loop. You read a story. Your AI tells you what to tweak. You re-run.
+
+#### What's actually safe about this?
+
+- **Local-only.** No cloud. Your sim, your laptop, your `.mneme/abm/` folder.
+- **Tamper-evident.** Every birth cert + intervention is HMAC-signed. Reviewers can't claim you faked results.
+- **Ollama-free.** No LLM calls during simulation — the decision engine is pure JS. Cheap, fast, deterministic.
+- **Nuke + restart.** `mneme abm reset` wipes everything. Re-run experiments cleanly.
+
+</details>
+
 ---
 
 <div align="center">

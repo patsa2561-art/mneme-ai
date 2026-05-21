@@ -143,6 +143,76 @@ Mneme คือ **AI memory ถาวร + Truth Suite 14 verb**. Polygraph dots
 
 ---
 
+## 📜 Chronicle คืออะไร (ภาษาบ้านๆ)
+
+### TL;DR
+
+**ลองคิดว่าคุณกดปุ่ม fast-forward ใส่คน 100 คนเป็นเวลา 1 ปี.** บางคนล้มละลาย, บางคนกลายเป็นคนละคนกับวันที่เริ่มต้น. **Chronicle** คือ CCTV + กล่องดำของการจำลองนั้น. พอยายแก่ขี้เหนียวเริ่มซื้อรถ Lamborghini ตอนเดือนที่ 7 → Chronicle จับได้ทันที, **ดึงยายกลับมาเป็นยายคนเดิม**, แล้วเขียนลงสมุดบันทึกที่แก้ไขไม่ได้.
+
+### ใช้ตอนไหนถึงจะคุ้ม?
+
+| คุณคือใคร | คุณจะพิมพ์ใส่ AI ว่า |
+|---|---|
+| 🎮 Game dev | *"NPC ของผม 20 ตัว ปล่อย 6 เดือน game-time ทีหน่อย ใครจะแตก character ก่อน?"* |
+| 📈 คนเขียน trading bot | *"backtest 5 personality 2 ปี — strategy ไหน panic-sell ภายใต้ stress?"* |
+| 🧪 คน build multi-AI system | *"stress-test CrewAI agents ของผม 1 อาทิตย์ simulated — มันจะ echo chamber กันมั้ย?"* |
+| 🏫 คนเขียน research paper | *"100 agents, ABM 5 ปี, ขอ HMAC-signed event log ไป submit กับ paper"* |
+| 💼 Founder | *"100 users มี willingness-to-pay ต่างกัน — MRR จะ drift ยังไงใน 12 เดือน?"* |
+
+ถ้าคุณไม่ได้ทำอะไรใน 5 อย่างนี้ — **อาจไม่ต้องใช้เลยก็ได้**. และนั่นก็โอเค. Chronicle อยู่ใน npm package เดียวกับ Polygraph dots ที่คุณใช้ทุกวัน. **จ่าย $0 เพิ่ม, ได้มาในวันที่ต้องใช้**.
+
+### ตัวอย่างจริง — พิมพ์ประโยคนี้, ได้ผลแบบนี้กลับมา
+
+**คุณพิมพ์ใส่ Claude Code / Cursor / Cline:**
+```
+ผมมี NPC system มี 3 archetype: ยายแก่ขี้เหนียว / วัยรุ่นนักช็อป / หนุ่มเสี่ยงสูง
+ปล่อยให้รัน 1 ปี game-time ทีหน่อย ใครจะแตก character ก่อน?
+```
+
+**AI agent ของคุณยิงให้ (คุณไม่ต้องพิมพ์เอง):**
+```bash
+mneme abm genesis  --config agents.json     # ← AI เขียน agents.json จากที่คุณบอก
+mneme abm simulate --ticks 360              # ← 360 ticks = 1 ปี (30 ticks ≈ 1 เดือน)
+mneme abm chronicle                         # ← รายงานสุดท้าย
+```
+
+**Chronicle ตอบกลับใน terminal ของคุณ:**
+```
+📜 MNEME CHRONICLE — รายงานสุดท้าย
+
+  sim:           sim_m6llDrIE
+  ticks ran:     360  (1y0m0d)
+  agents:        3  (รอด=1, ล้มละลาย=2)
+  decisions:     720
+  anchors fired: 4    ← Mneme ดึง agents กลับมา 4 ครั้งก่อนจะพัง
+
+  ต่อตัว:
+    ✓ ยายแก่ขี้เหนียว   budget=  420  drift=0.18  anchors=2  reds=3
+    ✗ วัยรุ่นนักช็อป     budget=-1012  drift=0.10  anchors=0  reds=0   (ล้มเดือน 7)
+    ✗ หนุ่มเสี่ยงสูง     budget=-1146  drift=0.32  anchors=2  reds=11  (ล้มเดือน 9)
+
+  📖 narrative:
+  ใน 360 ticks (~12 เดือน), 3 agents ใช้ชีวิต, ตัดสินใจ, drift.
+  วัยรุ่นนักช็อปล้มเดือน 7 — อยู่ใน character แต่ใช้เกินรายได้.
+  หนุ่มเสี่ยงสูง drift หนักสุด (0.32 จาก birth cert) — panic 11 ครั้ง;
+  anchors ดึงกลับ 2 ครั้งแต่ก็ยังพังเดือน 9. ยายแก่รอดเพราะ
+  guardian ของเธอ trigger เร็ว.
+```
+
+**AI ของคุณจะพูดต่อ (ภาษาบ้านๆ):**
+> "วัยรุ่นนักช็อปล้มเพราะใช้เกินรายได้แต่ยังอยู่ใน character. หนุ่มเสี่ยงสูง panic-sell 11 ครั้ง — anchors ช่วยไว้ 2 ครั้งแต่ก็พังอยู่ดี เดือน 9. ถ้าอยากให้รอด 1 ปี ลด `risk` axis ต่ำกว่า 0.7 หรือเพิ่ม anchor pass บ่อยขึ้น (ลอง `--anchor-every 15`)"
+
+จบ loop. คุณอ่านเรื่องเล่า → AI แนะนำให้แก้ตรงไหน → คุณรันใหม่.
+
+### ปลอดภัยยังไง?
+
+- **Local-only.** ไม่ขึ้น cloud. Sim ของคุณ, laptop ของคุณ, folder `.mneme/abm/` ของคุณ.
+- **แก้ไขไม่ได้.** ทุก birth cert + intervention HMAC-signed. Reviewer แย้งไม่ได้ว่าคุณ fake ผล.
+- **ไม่ต้องใช้ Ollama.** ไม่มี LLM call ระหว่าง simulate — engine เป็น JS ล้วน. ถูก, เร็ว, deterministic.
+- **ล้างใหม่ได้.** `mneme abm reset` เคลียร์หมด. รัน experiment ใหม่ได้สะอาด.
+
+---
+
 ## 📜 ดูเพิ่ม
 
 - [README](../README.md)
