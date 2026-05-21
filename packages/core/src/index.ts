@@ -1265,3 +1265,15 @@ export * as dormancyRegistry from "./dormancy_registry/index.js";
 // placeholders this version (HMAC receipts); full ZK ships v2.24.
 export * as companion from "./companion/index.js";
 export * as conductor from "./conductor/index.js";
+
+// v2.22.1 — 🔬 PHYSICS LATHE. Formal axiom-based verifier for LLM
+// claims that involve physical quantities. Extracts numbers + units
+// from free text, normalises to SI, then checks against (a) a
+// curated set of known physical values (LEO velocity, escape vels,
+// orbital altitudes, delta-v budgets) and (b) hardcoded physics
+// axioms (Tsiolkovsky, Kepler, ideal gas, Stefan-Boltzmann, Newton,
+// circular orbital v, mass-energy). Verdict: CONFIRMED / REFUTED /
+// OUT_OF_AXIOM_SET / INSUFFICIENT_DATA. No LLM is called; the result
+// is deterministic + reproducible. Designed for aerospace + xAI
+// training-data fact-checking where wrong physics is expensive.
+export * as physicsLathe from "./physics_lathe/index.js";

@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`CLI regression — output structure snapshots > \`mneme --help\` snapshot 1`] = `
-"mneme v2.21.8 — μνήμη — memory layer + truth + drift co-pilot
+"mneme v2.22.0 — μνήμη — memory layer + truth + drift co-pilot
 
   5 verbs cover 95% of needs:
     mneme verify-self --score  >  Trust gate (one number 0-100). Run first.

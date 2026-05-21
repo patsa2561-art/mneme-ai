@@ -191,6 +191,18 @@ Every verb gets an auto-derived companion (contract / autospec / doppelganger / 
 
 <div align="center">
 
+### 🔬 Physics Lathe — formal LLM-claim verifier, no LLM in the loop (v2.22.1)
+
+</div>
+
+`mneme physics-check "<claim>"` returns CONFIRMED / REFUTED / OUT_OF_AXIOM_SET against ~10 hardcoded axioms (Tsiolkovsky / Kepler / ideal gas / Stefan-Boltzmann / Newton) + ~10 known values (LEO velocity, escape vels, ISS altitude, delta-v budgets). Catches the "rocket needs 50 km/s to LEO" hallucination class deterministically.
+
+<sub>📘 <a href="docs/PHYSICS_LATHE.md" target="_blank" rel="noopener">Physics Lathe guide →</a> · designed for aerospace + xAI training-data fact-checking · zero LLM dependency.</sub>
+
+---
+
+<div align="center">
+
 ### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
 
 </div>

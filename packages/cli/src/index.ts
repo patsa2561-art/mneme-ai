@@ -3803,6 +3803,21 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.22.1 — PHYSICS LATHE (formal LLM-claim verifier) ──
+  program
+    .command("physics-check")
+    .description("🔬 Verify an LLM claim against physics axioms + known values. Extracts (number, unit) pairs from free text, normalises to SI, runs against Tsiolkovsky / Kepler / ideal gas / Stefan-Boltzmann / Newton + ~10 known values (LEO velocity, escape vels, ISS altitude, delta-v budgets). Verdict: CONFIRMED / REFUTED / OUT_OF_AXIOM_SET / INSUFFICIENT_DATA. NO LLM is called.")
+    .argument("<claim...>", "The claim to verify (e.g. `mneme physics-check 'LEO velocity is 7.8 km/s'`).")
+    .option("--json")
+    .action(async (claim: string[], opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const text = claim.join(" ");
+      const r = core.physicsLathe.physicsCheck(text);
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.physicsLathe.formatReport(r) + "\n");
+      if (r.verdict === "REFUTED") process.exit(2);
+    });
+
   // ─── v2.22.0 — COMPANION + CONDUCTOR (transactional verb engine) ──
   program
     .command("verb")
