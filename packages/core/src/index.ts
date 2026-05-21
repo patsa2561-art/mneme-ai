@@ -1197,3 +1197,9 @@ export * as stillness from "./stillness/index.js";
 // jurisdictional adapter + HMAC audit chain.  Civilizational
 // infrastructure: every human eventually needs this.
 export * as mortuary from "./mortuary/index.js";
+
+// v2.21.3 — EARTHQUAKE ALARM. Silent-model-drift detector for AI
+// vendor APIs. 8-dimensional behavioural fingerprint + rolling
+// baseline + per-dimension z-score drift verdict (STABLE / DRIFTING /
+// BROKEN). Vendor-agnostic askFn pattern. No labels required.
+export * as earthquake from "./earthquake/index.js";

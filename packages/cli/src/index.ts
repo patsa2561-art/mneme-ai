@@ -3676,6 +3676,105 @@ export async function run(argv: string[]): Promise<void> {
       if (!v.ok) process.exit(2);
     });
 
+  // ─── v2.21.3 — `mneme earthquake` (silent-model-drift detector) ──
+  const earthquake = program
+    .command("earthquake")
+    .description("🚨 Earthquake Alarm — silent-model-drift detector. 8-dim behavioural fingerprint + rolling baseline + per-dim z-score drift. Verbs: probe · baseline · drift · fingerprint · threshold · list-alerts.");
+
+  earthquake
+    .command("probe")
+    .description("🚨 Record a vendor probe (prompt + response) + auto-run drift detection. Prompt is hashed for privacy.")
+    .requiredOption("--vendor <v>", "claude / gpt / gemini / cursor / cline / etc.")
+    .requiredOption("--prompt <text>", "The prompt sent to the vendor.")
+    .requiredOption("--response <text>", "The vendor's response (full text).")
+    .option("--json")
+    .action(async (opts: { vendor: string; prompt: string; response: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const rec = core.earthquake.recordProbe(process.cwd(), { vendor: opts.vendor, prompt: opts.prompt, response: opts.response });
+      const report = await core.earthquake.detectDrift(process.cwd(), opts.vendor);
+      if (opts.json) { process.stdout.write(JSON.stringify({ record: rec, report }, null, 2) + "\n"); return; }
+      process.stdout.write(`🚨 Probe recorded: ${rec.id} (${rec.vendor})\n\n`);
+      process.stdout.write(core.earthquake.formatReport(report) + "\n");
+      if (report.verdict === "BROKEN") process.exit(2);
+    });
+
+  earthquake
+    .command("baseline")
+    .description("🚨 Compute + show the rolling baseline (mean + stddev per dim) for a vendor.")
+    .requiredOption("--vendor <v>")
+    .option("--json")
+    .action(async (opts: { vendor: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const b = core.earthquake.computeBaseline(process.cwd(), opts.vendor);
+      if (!b) { process.stderr.write(`✗ No probes recorded for vendor "${opts.vendor}".\n`); process.exit(1); }
+      if (opts.json) { process.stdout.write(JSON.stringify(b, null, 2) + "\n"); return; }
+      process.stdout.write(core.earthquake.formatBaseline(b) + "\n");
+    });
+
+  earthquake
+    .command("drift")
+    .description("🚨 The headline verb. STABLE / DRIFTING / BROKEN verdict + max |z|-score + rationale. Exit code 2 on BROKEN for CI gating.")
+    .requiredOption("--vendor <v>")
+    .option("--json")
+    .action(async (opts: { vendor: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.earthquake.detectDrift(process.cwd(), opts.vendor);
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.earthquake.formatReport(r) + "\n");
+      if (r.verdict === "BROKEN") process.exit(2);
+    });
+
+  earthquake
+    .command("fingerprint")
+    .description("🚨 Compute the 8-dimensional fingerprint of arbitrary text without recording.")
+    .requiredOption("--text <text>", "The text to fingerprint.")
+    .option("--json")
+    .action(async (opts: { text: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const fp = core.earthquake.fingerprint(opts.text);
+      if (opts.json) { process.stdout.write(JSON.stringify(fp, null, 2) + "\n"); return; }
+      process.stdout.write(core.earthquake.formatFingerprint(fp) + "\n");
+    });
+
+  earthquake
+    .command("threshold")
+    .description("🚨 Show or set drift thresholds (driftingZ default 2.0 · brokenZ default 3.5 · baselineWindow default 30 · baselineExcludeFresh default 5).")
+    .option("--drifting-z <n>", "z-score threshold for DRIFTING.", (v) => parseFloat(v))
+    .option("--broken-z <n>", "z-score threshold for BROKEN.", (v) => parseFloat(v))
+    .option("--baseline-window <n>", "Number of probes that anchor the baseline.", (v) => parseInt(v, 10))
+    .option("--baseline-exclude-fresh <n>", "Number of fresh probes excluded from baseline.", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { driftingZ?: number; brokenZ?: number; baselineWindow?: number; baselineExcludeFresh?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const patch: Partial<typeof core.earthquake.getConfig extends (r: string) => infer T ? T : never> = {};
+      if (opts.driftingZ !== undefined) patch.driftingZ = opts.driftingZ;
+      if (opts.brokenZ !== undefined) patch.brokenZ = opts.brokenZ;
+      if (opts.baselineWindow !== undefined) patch.baselineWindow = opts.baselineWindow;
+      if (opts.baselineExcludeFresh !== undefined) patch.baselineExcludeFresh = opts.baselineExcludeFresh;
+      const cfg = Object.keys(patch).length > 0
+        ? core.earthquake.setConfig(process.cwd(), patch)
+        : core.earthquake.getConfig(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(cfg, null, 2) + "\n"); return; }
+      process.stdout.write(`🚨 EARTHQUAKE thresholds\n  driftingZ:              ${cfg.driftingZ}\n  brokenZ:                ${cfg.brokenZ}\n  baselineWindow:         ${cfg.baselineWindow}\n  baselineExcludeFresh:   ${cfg.baselineExcludeFresh}\n`);
+    });
+
+  earthquake
+    .command("list-alerts")
+    .description("🚨 List all DRIFTING / BROKEN alerts emitted by run-probe orchestration.")
+    .option("--vendor <v>", "Filter by vendor.")
+    .option("--json")
+    .action(async (opts: { vendor?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const alerts = core.earthquake.listAlerts(process.cwd(), opts.vendor);
+      if (opts.json) { process.stdout.write(JSON.stringify(alerts, null, 2) + "\n"); return; }
+      if (alerts.length === 0) { process.stdout.write("🚨 No alerts.\n"); return; }
+      process.stdout.write(`🚨 ${alerts.length} alert(s):\n\n`);
+      for (const a of alerts) {
+        const badge = a.verdict === "BROKEN" ? "💥" : "⚡";
+        process.stdout.write(`  ${badge} ${a.ts}  ${a.vendor}  ${a.verdict}  maxZ=${a.maxZ}\n`);
+      }
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs
