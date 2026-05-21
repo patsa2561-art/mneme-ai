@@ -3528,6 +3528,154 @@ export async function run(argv: string[]): Promise<void> {
       process.stdout.write(core.stillness.formatVerdict(v) + "\n");
     });
 
+  // ─── v2.21.2 — `mneme mortuary` (AI inheritance protocol) ──
+  const mortuary = program
+    .command("mortuary")
+    .description("⚱️ AI Mortuary — what happens to your AI when you die. Dead-man switch + scope-partitioned encrypted bundles + jurisdictional adapter + HMAC audit chain.");
+
+  mortuary
+    .command("init")
+    .description("⚱️ Initialise the mortuary. Sets owner, jurisdiction, ping window, grace days, review window.")
+    .requiredOption("--owner <name>")
+    .option("--jurisdiction <code>", "US | EU | TH | JP | GLOBAL", "GLOBAL")
+    .option("--ping-window-days <n>", "Days between required pings (default 30).", (v) => parseInt(v, 10))
+    .option("--grace-days <n>", "Days of grace after a missed ping (default 7).", (v) => parseInt(v, 10))
+    .option("--review-window-days <n>", "Days beneficiaries have to accept/reject (default 30).", (v) => parseInt(v, 10))
+    .action(async (opts: { owner: string; jurisdiction?: string; pingWindowDays?: number; graceDays?: number; reviewWindowDays?: number }) => {
+      const core = await import("@mneme-ai/core");
+      const cfg = core.mortuary.init(process.cwd(), { owner: opts.owner, jurisdiction: opts.jurisdiction as any, pingWindowDays: opts.pingWindowDays, graceDays: opts.graceDays, reviewWindowDays: opts.reviewWindowDays });
+      process.stdout.write(`⚱️ Mortuary initialised for ${cfg.owner} (${cfg.jurisdiction}).\n  Ping every ${cfg.pingWindowDays} days; grace ${cfg.graceDays}; review window ${cfg.reviewWindowDays} days.\n`);
+    });
+
+  mortuary
+    .command("ping")
+    .description("⚱️ Refresh the dead-man switch. Call this whenever you log in / commit / breathe. Missing it triggers the switch.")
+    .action(async () => {
+      const core = await import("@mneme-ai/core");
+      const cfg = core.mortuary.ping(process.cwd());
+      process.stdout.write(`⚱️ Pinged at ${cfg.lastPingAt}.\n`);
+    });
+
+  mortuary
+    .command("status")
+    .description("⚱️ Show dead-man switch status — days until fire, beneficiary count, chain integrity.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const s = core.mortuary.switchStatus(process.cwd());
+      const cfg = core.mortuary.getConfig(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify({ status: s, config: cfg }, null, 2) + "\n"); return; }
+      process.stdout.write(core.mortuary.formatStatus(s, cfg) + "\n");
+    });
+
+  mortuary
+    .command("beneficiary-add")
+    .description("⚱️ Add a beneficiary. They submit an RSA public key (PEM); only they can decrypt their bundle.")
+    .requiredOption("--name <text>")
+    .requiredOption("--pubkey-file <path>", "Path to RSA public key PEM file.")
+    .requiredOption("--scope <list>", "Comma-separated: financial,personal,professional,legal,medical,family or everything.")
+    .requiredOption("--relationship <text>", "spouse / accountant / lawyer / child / friend / etc.")
+    .action(async (opts: { name: string; pubkeyFile: string; scope: string; relationship: string }) => {
+      const core = await import("@mneme-ai/core");
+      const fs = await import("node:fs");
+      const pem = fs.readFileSync(opts.pubkeyFile, "utf8");
+      const scope = opts.scope.split(",").map((s) => s.trim()) as any;
+      const b = core.mortuary.addBeneficiary(process.cwd(), { name: opts.name, publicKeyPem: pem, scope, relationship: opts.relationship });
+      process.stdout.write(`⚱️ Beneficiary added: ${b.id}  ${b.name} (${b.relationship}) — scope: ${b.scope.join(", ")}\n`);
+    });
+
+  mortuary
+    .command("beneficiary-list")
+    .description("⚱️ List all registered beneficiaries.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const list = core.mortuary.listBeneficiaries(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(list, null, 2) + "\n"); return; }
+      process.stdout.write(core.mortuary.formatBeneficiaries(list) + "\n");
+    });
+
+  mortuary
+    .command("beneficiary-remove")
+    .description("⚱️ Remove a beneficiary by id.")
+    .requiredOption("--id <id>")
+    .action(async (opts: { id: string }) => {
+      const core = await import("@mneme-ai/core");
+      core.mortuary.removeBeneficiary(process.cwd(), opts.id);
+      process.stdout.write(`⚱️ Beneficiary ${opts.id} removed.\n`);
+    });
+
+  mortuary
+    .command("keypair")
+    .description("⚱️ (For beneficiaries) Generate an RSA-2048 keypair. Save the private key in a SECURE location (1Password / hardware token); send only the public key to the mortuary owner.")
+    .option("--out-public <path>", "Write public key PEM here.", "beneficiary-public.pem")
+    .option("--out-private <path>", "Write private key PEM here.", "beneficiary-private.pem")
+    .action(async (opts: { outPublic: string; outPrivate: string }) => {
+      const core = await import("@mneme-ai/core");
+      const fs = await import("node:fs");
+      const kp = core.mortuary.generateBeneficiaryKeypair();
+      fs.writeFileSync(opts.outPublic, kp.publicKeyPem);
+      fs.writeFileSync(opts.outPrivate, kp.privateKeyPem);
+      process.stdout.write(`⚱️ Wrote ${opts.outPublic} + ${opts.outPrivate}.\n  ⚠ Treat the private key like cash — anyone with it can decrypt your inheritance bundle.\n`);
+    });
+
+  mortuary
+    .command("simulate-death")
+    .description("⚱️ FOR TESTING — force the switch to fire NOW and generate all encrypted bundles. Use to dry-run the inheritance flow before the real event.")
+    .action(async () => {
+      const core = await import("@mneme-ai/core");
+      const r = core.mortuary.fire(process.cwd(), { force: true, slicePayloads: {
+        personal: "synthetic personal slice — replace with real soul data",
+        family: "synthetic family slice",
+        financial: "synthetic financial slice",
+        professional: "synthetic professional slice",
+        legal: "synthetic legal slice",
+        medical: "synthetic medical slice",
+      }});
+      process.stdout.write(`⚱️ Switch fired (SIMULATED). ${r.bundles.length} bundle(s) generated in .mneme/mortuary/bundles/.\n  Review window ends: ${r.reviewEndsAt}\n`);
+    });
+
+  mortuary
+    .command("respond")
+    .description("⚱️ (For beneficiaries) Accept or reject an inheritance bundle.")
+    .requiredOption("--id <id>", "Beneficiary id.")
+    .requiredOption("--decision <d>", "accept | reject")
+    .action(async (opts: { id: string; decision: string }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.mortuary.respond(process.cwd(), opts.id, opts.decision as any);
+      if (r.ok) process.stdout.write(`⚱️ Response recorded: ${opts.decision}\n`);
+      else process.stderr.write(`✗ ${r.reason}\n`);
+    });
+
+  mortuary
+    .command("will")
+    .description("⚱️ Render a legal will artifact in the owner's declared jurisdiction (US / EU / TH / JP / GLOBAL).")
+    .option("--out <path>", "Write to a file instead of stdout.")
+    .action(async (opts: { out?: string }) => {
+      const core = await import("@mneme-ai/core");
+      const text = core.mortuary.renderWill(process.cwd());
+      if (opts.out) {
+        const fs = await import("node:fs");
+        fs.writeFileSync(opts.out, text, "utf8");
+        process.stdout.write(`⚱️ Wrote ${opts.out}.\n`);
+      } else {
+        process.stdout.write(text + "\n");
+      }
+    });
+
+  mortuary
+    .command("verify-chain")
+    .description("⚱️ Verify the HMAC audit chain integrity. Detects tampering on any historical event.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = core.mortuary.verifyChain(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      const badge = v.ok ? "✓" : "✗";
+      process.stdout.write(`⚱️ Chain ${badge}  ${v.entries} entries; broken-at=${v.brokenAt ?? "(none)"}\n`);
+      if (!v.ok) process.exit(2);
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs

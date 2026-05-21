@@ -1190,3 +1190,10 @@ export * as apoptosisNetwork from "./apoptosis_network/index.js";
 // cool-off receipts, cadence-based state inference. Composes into a
 // single gate() decision: SPEAK | SILENT | DELAY.
 export * as stillness from "./stillness/index.js";
+
+// v2.21.2 — AI MORTUARY. "What happens to your AI when you die?"
+// Six primitives: dead-man switch + beneficiary registry + scope-
+// partitioned bundles + RSA hybrid encryption + review window +
+// jurisdictional adapter + HMAC audit chain.  Civilizational
+// infrastructure: every human eventually needs this.
+export * as mortuary from "./mortuary/index.js";
