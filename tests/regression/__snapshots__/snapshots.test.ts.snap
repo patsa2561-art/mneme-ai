@@ -113,6 +113,8 @@ Commands:
   stillness  >  🤐 Stillness Protocol — gate that decides SPEAK / SILENT / DELAY. Composes silence budget + rules + cadence-state inference + HMAC-signed cool-off receipts.
   mortuary  >  ⚱️ AI Mortuary — what happens to your AI when you die. Dead-man switch + scope-partitioned encrypted bundles + jurisdictional adapter + HMAC audit chain.
   earthquake  >  🚨 Earthquake Alarm — silent-model-drift detector. 8-dim behavioural fingerprint + rolling baseline + per-dim z-score drift. Verbs: probe · baseline · drift · fingerprint · threshold · list-alerts.
+  upgrade-log [options]  >  📜 Show the HMAC-chained upgrade log — every attempt + exit code. Closes the 'silent upgrade fail' concern from the v2.21.6 audit.
+  upgrade-doctor [options]  >  🩺 One-shot 'is it safe to auto-upgrade right now?' — checks: (1) no npm install in parent process tree (race guard), (2) no concurrent upgrade lock, (3) surface most-recent failure with exit code.
   rights [options]  >  📜 Print the Agent Bill of Rights (10 articles). What an AI agent (or paranoid human) is owed by Mneme.
   telemetry  >  📋 Telemetry registry — every Mneme feature that records data, opt-IN by default (Article 2).
   verdict [options] <status>  >  📊 AI agent → Mneme verdict (Article 6 — bilateral trust). Record how the pulse / capsule / tool call felt: ok | concern | reject.

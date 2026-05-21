@@ -57,10 +57,18 @@ describe("consent fabric (v2.21.6)", () => {
       }
     });
 
-    it("flags pulse.hci as pending (criteria undocumented)", () => {
+    it("publishes pulse.hci criteria (Article 3 satisfied as of v2.21.7)", () => {
       const out = formatScoringCriteria();
       expect(out.toLowerCase()).toContain("hci");
-      expect(out.toLowerCase()).toContain("pending");
+      expect(out.toLowerCase()).toContain("selfcheck");
+      expect(out.toLowerCase()).not.toContain("pending");
+    });
+
+    it("also enforces Article 10 — Bill of Rights article on readable versioning", () => {
+      // Article 10 commits to surface upgrade exit codes; v2.21.7 ships
+      // the upgrade_visibility module that does exactly that.
+      const a10 = BILL_OF_RIGHTS_V1.articles.find((x) => x.id.startsWith("art-10"))!;
+      expect(a10.enforcedAt.toLowerCase()).toMatch(/upgrade_visibility|v2\.21\.7/);
     });
   });
 

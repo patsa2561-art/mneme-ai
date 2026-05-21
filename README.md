@@ -299,6 +299,12 @@ mneme receipts verify-chain
 
 <sub>📘 31 module tests + 5 CLI integration · HMAC-chained receipt ledger · `.mneme/consent/{telemetry.json, verdicts.jsonl, receipts.jsonl}` · zero pulse instructions / scoring opacity / opt-out-by-default telemetry survives an `audit-pulse` pass</sub>
 
+**v2.21.7 closes the two deferred concerns**:
+- 🩺 **`mneme upgrade-log`** — HMAC-chained log of every upgrade attempt + npm exit code (e.g. `exit 4294963214` is now persisted, not swallowed). `--verify` audits the chain.
+- 🩺 **`mneme upgrade-doctor`** — one-shot "is auto-upgrade safe right now?": (a) probes parent process tree for active `npm install` / `yarn` / `pnpm`, (b) checks file-lock mutex for concurrent upgrades, (c) surfaces most-recent failure with exit code. Exit 2 on blockers — pulse hooks must consult this before firing `mneme.system.upgrade`.
+- Pulse generator itself was **neutralized in v2.21.7**: `EXECUTE NOW` → `ACTION AVAILABLE`; `[Healthy]` band suffix dropped from `hci=N/100`; `100% compliance lifetime` removed; "say upgrade Mneme" cta replaced with declarative phrasing. CI gate (`pulse_neutralization.test.ts`) blocks regressions.
+- HCI formula published in `mneme rights --criteria` — Article 3 fully satisfied; no opaque grades remain.
+
 ---
 
 <div align="center">

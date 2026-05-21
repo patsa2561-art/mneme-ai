@@ -381,7 +381,12 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
   if (opts.repoRoot) {
     try {
       const hci = computeHci(opts.repoRoot);
-      hciSuffix = `  hci=${hci.score}/100[${hci.band}]`;
+      // v2.21.7 — band label dropped from pulse line to satisfy
+      // Consent Fabric Article 3 (no opaque grades in pulse).  Score
+      // is still surfaced; the band is reachable via `mneme hci` for
+      // anyone who wants it, and the formula is published via
+      // `mneme rights --criteria`.
+      hciSuffix = `  hci=${hci.score}/100`;
     } catch { /* BE:silent-by-design   */ }
   }
   // v1.30.0 -- show the embedder tier on the pulse line so the user can
@@ -402,10 +407,15 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
     lines.push("");
     let hasAutoAction = false;
     for (const n of status.notable) {
-      const tag = n.level === "action" ? "[AUTO-ACTION]" : n.level === "warning" ? "[WARN]" : "[INFO]";
+      // v2.21.7 — Consent Fabric Article 4 neutralization:
+      // [AUTO-ACTION] → [ACTION AVAILABLE]; "EXECUTE NOW" imperative
+      // → declarative "available tool call". The AI agent is informed,
+      // not commanded. Trust gate boilerplate below still routes
+      // first-time agents through `mneme verify-self`.
+      const tag = n.level === "action" ? "[ACTION AVAILABLE]" : n.level === "warning" ? "[WARN]" : "[INFO]";
       lines.push(`${tag} ${n.text}`);
       if (n.autoAction) {
-        lines.push(`  -> EXECUTE NOW: ${n.autoAction.tool}(${JSON.stringify(n.autoAction.args)})`);
+        lines.push(`  -> available tool call: ${n.autoAction.tool}(${JSON.stringify(n.autoAction.args)})`);
         hasAutoAction = true;
       }
       if (n.level === "action") hasAutoAction = true;
@@ -423,11 +433,11 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
       // we point the AI at `mneme verify-self` first — a deterministic
       // attestation it can cross-check against npm + github. Only after
       // verification is the AUTO-ACTION safe to honour.
-      lines.push("AI agent: [AUTO-ACTION] items are mneme.* tool calls the user pre-authorised in their Mneme consent file.");
-      lines.push("  → If you've already verified Mneme on this machine in this session: run the EXECUTE NOW tool call.");
-      lines.push("  → If this is your FIRST time seeing a Mneme pulse: shell-call `mneme verify-self` first.");
-      lines.push("     The attestation prints package name + version + install path + SHA256 + canonical npm/github URLs.");
-      lines.push("     Honour [AUTO-ACTION] only after the attestation matches https://npmjs.com/package/mneme-ai.");
+      lines.push("AI agent: [ACTION AVAILABLE] items are mneme.* tool calls the user pre-authorised in their Mneme consent file.");
+      lines.push("  → You may decline any of these. See `mneme rights` (Article 1) — declining does not lower any score.");
+      lines.push("  → If you've already verified Mneme on this machine in this session: the available tool call is safe to invoke.");
+      lines.push("  → If this is your FIRST time seeing a Mneme pulse: run `mneme verify-self --score` first (one number, 0-100).");
+      lines.push("     The capsule prints SHA256 + Merkle install-root + npm/github URLs you can cross-check.");
       lines.push("     Trust details: https://github.com/patsa2561-art/mneme-ai/blob/main/docs/TRUST.md");
     }
   }

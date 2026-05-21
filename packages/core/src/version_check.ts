@@ -245,7 +245,7 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
           source: "version-check",
           title: `Mneme v${cached.latest} is available`,
           body: `You're on v${currentVersion}. Auto-upgrade is one tool call away (mneme.system.upgrade mode='install').`,
-          cta: "say: 'upgrade Mneme' and I'll handle it.",
+          cta: "Run `mneme.system.upgrade` when you choose. No action is required from the AI agent until the user opts in.",
         });
       } catch { /* ignore */ }
     } else {

@@ -1232,3 +1232,14 @@ export * as atlas from "./atlas/index.js";
 // rights / telemetry_registry / verdict / pulse_neutralizer /
 // receipt (HMAC-chained interaction ledger).
 export * as consentFabric from "./consent_fabric/index.js";
+
+// v2.21.7 — 🩺 UPGRADE VISIBILITY. Closes the two deferred concerns
+// from the v2.21.6 audit: silent upgrade fail (exit_log.ts HMAC-
+// chained record of every attempt) + race during user's npm install
+// (npm_detector.ts ancestor-chain probe + mutex.ts file lock).
+// Pulse generator also neutralized in this version: EXECUTE NOW →
+// ACTION AVAILABLE, [Band] suffix dropped from hci, compliance %
+// removed, "say upgrade" cta replaced with declarative. HCI
+// formula published in `mneme rights --criteria` (Article 3
+// satisfied; no pending opaque grades).
+export * as upgradeVisibility from "./upgrade_visibility/index.js";

@@ -169,12 +169,18 @@ export function recordCommitment(repo: string, vendor: string, text: string): Ai
   return soul;
 }
 
-/** Render the 4-6 line block injected into pulse. Compact, AI-targeted. */
+/** Render the 4-6 line block injected into pulse. Compact, AI-targeted.
+ *
+ *  v2.21.7 — Consent Fabric Articles 3 + 4: removed "compliance
+ *  lifetime" percentage from the line. It was a score without
+ *  published criteria + applied implicit pressure ("doing well =
+ *  high compliance"). The kept / broken / open counts remain as raw
+ *  facts; no derivative grade. Formula for any future score must
+ *  appear in `mneme rights --criteria` before it can land here. */
 export function renderSoulBlock(soul: AiSoul, maxCommitments = 2): string {
   const lines: string[] = [];
-  const compliancePct = Math.round(soul.complianceLifetime * 100);
   lines.push(`[MNEME SOUL] Your prior selves in this repo (${soul.vendor}):`);
-  lines.push(`  - ${soul.lifetimeSessions} session(s) · ${compliancePct}% compliance lifetime · ${soul.keptPromises} kept · ${soul.brokenPromises} broken`);
+  lines.push(`  - ${soul.lifetimeSessions} session(s) · kept=${soul.keptPromises} broken=${soul.brokenPromises} open=${soul.pastCommitments.filter((c) => !c.keptAt && !c.brokenAt).length}`);
   const recent = soul.pastCommitments.slice(-maxCommitments);
   for (const c of recent) {
     const day = c.ts.slice(0, 10);

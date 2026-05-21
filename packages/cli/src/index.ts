@@ -3775,6 +3775,38 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.21.7 — UPGRADE VISIBILITY (race-free + silent-fail-free) ──
+  program
+    .command("upgrade-log")
+    .description("📜 Show the HMAC-chained upgrade log — every attempt + exit code. Closes the 'silent upgrade fail' concern from the v2.21.6 audit.")
+    .option("--json")
+    .option("--verify", "Verify the HMAC chain integrity; exit 1 on tamper.")
+    .action(async (opts: { json?: boolean; verify?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      if (opts.verify) {
+        const v = core.upgradeVisibility.verifyChain(process.cwd());
+        if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+        process.stdout.write(`${v.ok ? "✓ chain intact" : `✗ broken at ${v.brokenAt}: ${v.reason}`}\n`);
+        if (!v.ok) process.exit(1);
+        return;
+      }
+      const all = core.upgradeVisibility.listUpgrades(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(all, null, 2) + "\n"); return; }
+      process.stdout.write(core.upgradeVisibility.formatUpgradeLog(all) + "\n");
+    });
+
+  program
+    .command("upgrade-doctor")
+    .description("🩺 One-shot 'is it safe to auto-upgrade right now?' — checks: (1) no npm install in parent process tree (race guard), (2) no concurrent upgrade lock, (3) surface most-recent failure with exit code.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.upgradeVisibility.upgradeDoctor(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.upgradeVisibility.formatDoctor(r) + "\n");
+      if (!r.ready) process.exit(2);
+    });
+
   // ─── v2.21.6 — CONSENT FABRIC (Bill of Rights + bilateral verdict +
   //                telemetry registry + pulse neutralizer + receipts) ───
   program

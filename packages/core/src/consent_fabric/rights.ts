@@ -108,8 +108,8 @@ export const BILL_OF_RIGHTS_V1: BillOfRights = {
       id: "art-10-readable-versioning",
       right: "Version bumps must publish what changed; silent failures of self-upgrade must surface their exit codes.",
       exerciseHow: "Check `CHANGELOG.md` for the version + run `mneme.system.upgrade` separately to see exit code.",
-      mnemeCommits: "No silent upgrade failures. Exit codes from npm install are stored at `.mneme/upgrade-log.jsonl`.",
-      enforcedAt: "(future v2.21.7 — upgrade_visibility module)",
+      mnemeCommits: "No silent upgrade failures. Exit codes from npm install are stored at `.mneme/upgrade/log.jsonl` (HMAC-chained). Concurrent upgrades blocked by mutex.",
+      enforcedAt: "consent_fabric + upgrade_visibility (v2.21.7)",
     },
   ],
 };
@@ -169,9 +169,14 @@ export const SCORING_CRITERIA: ScoringCriterion[] = [
     formula: "z = |liveMean - baselineMean| / max(stddev, 0.05 * |mean|, 0.05). Bands: < 2 STABLE / 2-3.5 DRIFTING / > 3.5 BROKEN.",
     invokeWith: "mneme earthquake drift --vendor <v>",
   },
-  // NOTE: The pulse "HCI" score is NOT here yet. Article 3 says it MUST
-  // appear here or be retired. v2.21.7 will either publish HCI criteria
-  // or remove the grade.
+  {
+    scoreName: "pulse.hci",
+    measures: "Composite repo-health index (0-100). NOTE: pulse line was redacted in v2.21.7 to show the raw number only — band labels (Healthy/Wobbly/Sick) moved behind explicit `mneme hci`.",
+    inputs: ["selfcheck pass rate", "daemon liveness", "inbox unsent ratio", "antivirus active vaccines", "retrieval trial count", "evolve velocity"],
+    formula: "weighted sum: selfcheck × 0.25 + daemon × 0.20 + inbox × 0.15 + antivirus × 0.15 + retrieval × 0.15 + evolve × 0.10. Bands: ≥90 Robust / ≥75 Healthy / ≥50 Wobbly / ≥30 Sick / else Critical.",
+    invokeWith: "mneme hci",
+    weights: { selfcheck: 0.25, daemon: 0.20, inbox: 0.15, antivirus: 0.15, retrieval: 0.15, evolve: 0.10 },
+  },
 ];
 
 export function getScoringCriteria(): ScoringCriterion[] { return SCORING_CRITERIA; }
@@ -188,8 +193,6 @@ export function formatScoringCriteria(): string {
     if (c.weights) lines.push(`    weights:    ${Object.entries(c.weights).map(([k, v]) => `${k}=${v}`).join(", ")}`);
     lines.push("");
   }
-  lines.push("  ⚠ Pending publication (Article 3 violations to be resolved):");
-  lines.push("    - pulse.hci  (Healthy/Wobbly/Sick grade) — criteria undocumented;");
-  lines.push("      will be published in v2.21.7 or the grade will be retired.");
+  lines.push("  v2.21.7 — Every Mneme score now publishes formula above; Article 3 is fully satisfied.");
   return lines.join("\n");
 }
