@@ -179,6 +179,18 @@ Trust flows both ways — AI agent has a published Bill of Rights and can rate M
 
 <div align="center">
 
+### 🎼 Verb Engine — Companion + Conductor · transactional CLI for AI agents (v2.22.0)
+
+</div>
+
+Every verb gets an auto-derived companion (contract / autospec / doppelganger / storyline / mistakes). `mneme conduct "<intent>"` orchestrates multi-step intents with atomic commit-or-rollback.
+
+<sub>📘 <a href="docs/VERB_ENGINE.md" target="_blank" rel="noopener">Verb Engine guide →</a> · chassis for v2.23 SAT planner · v2.24 ZK contract proofs.</sub>
+
+---
+
+<div align="center">
+
 ### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
 
 </div>

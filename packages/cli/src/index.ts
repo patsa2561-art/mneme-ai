@@ -3803,6 +3803,71 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.22.0 — COMPANION + CONDUCTOR (transactional verb engine) ──
+  program
+    .command("verb")
+    .description("🤖 Per-verb COMPANION — contract + autospec + storyline + outcome stats + common mistakes. AI agents read this BEFORE first use of a verb to invoke it correctly. (Named `verb` to avoid collision with `mneme consent` shortcut.)")
+    .argument("<name...>", "Verb to introspect (e.g. `mneme verb earthquake drift`).")
+    .option("--json")
+    .option("--coverage", "Catalog-wide coverage report (contract / autospec / live-data %).")
+    .allowUnknownOption(true)
+    .action(async (verb: string[], opts: { json?: boolean; coverage?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      if (opts.coverage) {
+        const cov = core.companion.companionableCoverage(process.cwd());
+        if (opts.json) { process.stdout.write(JSON.stringify(cov, null, 2) + "\n"); return; }
+        process.stdout.write(`🤖 COMPANION COVERAGE — ${cov.total} verbs\n`);
+        process.stdout.write(`  contract:  ${(cov.coverageContract * 100).toFixed(1)}%\n`);
+        process.stdout.write(`  autospec:  ${(cov.coverageAutospec * 100).toFixed(1)}%\n`);
+        process.stdout.write(`  live-data: ${(cov.coverageLiveData * 100).toFixed(1)}% (needs opt-IN pheromone)\n`);
+        return;
+      }
+      const phrase = verb.join(" ");
+      const c = core.companion.companionFor(phrase, { repoRoot: process.cwd() });
+      if (!c) { process.stderr.write(`✗ no contract found for "${phrase}". Try \`mneme route "${phrase}"\` or \`mneme bloom --probe ${phrase}\`.\n`); process.exit(1); return; }
+      if (opts.json) { process.stdout.write(JSON.stringify(c, null, 2) + "\n"); return; }
+      process.stdout.write(core.companion.formatCompanion(c) + "\n");
+    });
+
+  program
+    .command("conduct")
+    .description("🎼 TRANSACTIONAL VERB ENGINE — natural-language intent → PLAN → PREVIEW → GATE → EXECUTE → ATTEST. Atomic commit/rollback over multi-step intents. Dry-run by default; pass --commit to actually execute.")
+    .argument("<intent...>", "Plain-English / Thai intent.")
+    .option("--commit", "Actually execute the plan (after preview). Without this flag, runs preview only.")
+    .option("--confirm", "Require explicit confirmation even on safe DEFCON ≥ 4 plans.")
+    .option("--json")
+    .action(async (intent: string[], opts: { commit?: boolean; confirm?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const phrase = intent.join(" ");
+      const p = core.conductor.plan(phrase);
+      if (p.steps.length === 0) {
+        process.stderr.write(`✗ no plan for intent "${phrase}". Try a different phrasing or \`mneme route "${phrase}"\`.\n`);
+        process.exit(1);
+        return;
+      }
+      // Simulator: for v2.22.0 chassis, we treat the doppelganger as a
+      // no-op simulator (no real verb execution from `conduct`). Real
+      // verb execution under conduct is reserved for v2.23.
+      const noopSim: typeof core.conductor.preview extends (r: any, p: any, s: infer S) => any ? S : never = async () => ({ exit: 0 });
+      const pv = await core.conductor.preview(process.cwd(), p, noopSim as any);
+      const gate = core.conductor.defaultGate(p, pv, { requireConfirm: opts.confirm });
+      const planOut = core.conductor.formatPlan(p);
+      const prevOut = core.conductor.formatPreview(pv);
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ plan: p, preview: pv, gate, dryRun: !opts.commit }, null, 2) + "\n");
+        return;
+      }
+      process.stdout.write(planOut + "\n\n" + prevOut + "\n\n");
+      process.stdout.write(`Gate: ${gate.approved ? "✓ approved" : "✗ blocked"}${gate.reason ? `  (${gate.reason})` : ""}\n`);
+      if (!opts.commit) {
+        process.stdout.write(`\n  dry-run only. Pass --commit to execute the plan for real.\n`);
+        return;
+      }
+      const receipt = await core.conductor.execute(process.cwd(), p, pv, noopSim as any, { decision: gate });
+      process.stdout.write("\n" + core.conductor.formatReceipt(receipt) + "\n");
+      if (receipt.outcome !== "committed") process.exit(2);
+    });
+
   // ─── v2.21.7 — UPGRADE VISIBILITY (race-free + silent-fail-free) ──
   program
     .command("upgrade-log")

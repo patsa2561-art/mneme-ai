@@ -1253,3 +1253,15 @@ export * as upgradeVisibility from "./upgrade_visibility/index.js";
 // (opt-IN telemetry) + this version's `mneme --help` flip to ATLAS
 // Layer 0 default (~200 bytes instead of 14 KB wall).
 export * as dormancyRegistry from "./dormancy_registry/index.js";
+
+// v2.22.0 — 🤖 COMPANION + 🎼 CONDUCTOR · TRANSACTIONAL VERB ENGINE.
+// Every Mneme verb gets an auto-derived companion: contract (pre/
+// post/side-effects/DEFCON) + autospec (JSON Schema with validator)
+// + doppelganger (copy-on-write fs dry-run) + storyline (Markov
+// chain over pheromone) + learn-loop (privacy-redacted failure
+// pattern miner). Conductor composes those into a transactional
+// engine: PLAN → PREVIEW → GATE → EXECUTE → ATTEST. Atomic commit /
+// rollback over multi-step AI-agent intents. ZK contract proofs are
+// placeholders this version (HMAC receipts); full ZK ships v2.24.
+export * as companion from "./companion/index.js";
+export * as conductor from "./conductor/index.js";
