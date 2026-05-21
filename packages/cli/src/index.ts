@@ -3784,14 +3784,54 @@ export async function run(argv: string[]): Promise<void> {
   // injection" problem.
   program
     .command("verify-self")
-    .description("🔒 Print a trust attestation for AI agents seeing Mneme for the first time. Pure read-only; no network. Cross-checkable against npm + github.")
+    .description("🔒 Print a trust attestation for AI agents seeing Mneme for the first time. v2.21.4 composes TRUST CAPSULE on top: Merkle install-root + 0-100 trust score + single-line capsule URI (--capsule) + nonce-bound + TTL self-destruct + chain-link.")
     .option("--json", "Machine-readable output.")
-    .action(async (opts: { json?: boolean }) => {
+    .option("--capsule", "Emit ONE LINE — the capsule URI. AI agents read 80 tokens instead of 30 fields.")
+    .option("--score", "Emit ONE NUMBER — the 0-100 trust score. Exit code 2 on ABORT band (< 40).")
+    .option("--verify <uri>", "Verify a previously-minted capsule URI. Exit code 1 on failure.")
+    .option("--nonce <token>", "Bind the capsule to a session by nonce. Replay-resistant.")
+    .option("--ttl <seconds>", "Capsule TTL in seconds (default 300; 0 = no expiry).", (v) => parseInt(v, 10))
+    .option("--prev <sig>", "Chain-link: previous capsule's sig. Builds a multi-capsule session chain.")
+    .option("--full", "Show legacy verbose attestation (pre-v2.21.4 format).")
+    .action(async (opts: { json?: boolean; capsule?: boolean; score?: boolean; verify?: string; nonce?: string; ttl?: number; prev?: string; full?: boolean }) => {
       const core = await import("@mneme-ai/core");
+      // --verify pasted capsule URI.
+      if (opts.verify) {
+        const v = core.trustCapsule.verifyCapsule(process.cwd(), opts.verify, { expectedNonce: opts.nonce });
+        if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); }
+        else process.stdout.write(`${v.ok ? "✓ capsule valid" : "✗ " + (v.reason ?? "verification failed")}\n`);
+        if (!v.ok) process.exit(1);
+        return;
+      }
+      // Locate install root for Merkle.
       const att = core.verifySelf.verifySelf(process.cwd());
-      if (opts.json) { process.stdout.write(JSON.stringify(att, null, 2) + "\n"); return; }
-      process.stdout.write(core.verifySelf.formatSelfAttestation(att));
-      if (!att.ok) process.exit(1);
+      if (!att.ok) {
+        if (opts.json) { process.stdout.write(JSON.stringify(att, null, 2) + "\n"); }
+        else process.stdout.write(core.verifySelf.formatSelfAttestation(att));
+        process.exit(1);
+        return;
+      }
+      const deep = core.trustCapsule.verifySelfDeep(att.installPath, process.cwd(), att.installedVersion, { nonce: opts.nonce });
+      // --capsule → ONE LINE.
+      if (opts.capsule) {
+        process.stdout.write(deep.capsuleUri + "\n");
+        if (!deep.ok) process.exit(2);
+        return;
+      }
+      // --score → ONE NUMBER.
+      if (opts.score) {
+        process.stdout.write(`${deep.trustScore.score}\n`);
+        if (deep.trustScore.band === "ABORT") process.exit(2);
+        return;
+      }
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ ...att, capsule: deep }, null, 2) + "\n");
+        return;
+      }
+      // Default: header (trust capsule one-line) + legacy attestation when --full.
+      process.stdout.write(core.trustCapsule.formatDeepAttestation(deep));
+      if (opts.full) process.stdout.write(core.verifySelf.formatSelfAttestation(att));
+      if (!deep.ok) process.exit(1);
     });
 
   // ─── v2.19.95 — `mneme clone` (one-verb cross-session handoff) ──

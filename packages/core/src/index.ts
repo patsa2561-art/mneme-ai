@@ -1203,3 +1203,13 @@ export * as mortuary from "./mortuary/index.js";
 // baseline + per-dimension z-score drift verdict (STABLE / DRIFTING /
 // BROKEN). Vendor-agnostic askFn pattern. No labels required.
 export * as earthquake from "./earthquake/index.js";
+
+// v2.21.4 — 🔒 TRUST CAPSULE. Discrete, single-line, tamper-evident
+// attestation that composes on top of verify-self. Merkle install-root
+// + 0-100 trust score (signature + drift + path + age) + single-line
+// capsule URI (mneme://attest/v1/...) + nonce-bound + TTL self-
+// destruct + chain-link. AI agents read ONE number, not 30 fields.
+// Musk-style first-principles defenses: TTL makes replay physically
+// impossible (not just cryptographically hard); chain-link forces
+// adversaries to capture an entire session, not one frame.
+export * as trustCapsule from "./trust_capsule/index.js";

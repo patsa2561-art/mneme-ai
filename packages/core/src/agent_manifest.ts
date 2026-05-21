@@ -604,6 +604,23 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme earthquake fingerprint", since: "2.21.3", group: "earthquake", what: "🚨 Compute the 8-dimensional fingerprint of an arbitrary text without recording. Pure / deterministic — same text always produces same fingerprint.", when: "Debug / what-if analysis. Compare two responses head-to-head without polluting the probe ledger." },
   { command: "mneme earthquake threshold", since: "2.21.3", group: "earthquake", what: "🚨 Show or set drift thresholds — driftingZ (default 2.0) + brokenZ (default 3.5) + baseline window + fresh-exclude count. Per-repo config.", when: "Tune sensitivity per vendor / per use case. Strict vendors (cheap reliable ones) → tighter thresholds; experimental vendors → looser." },
   { command: "mneme earthquake list-alerts", since: "2.21.3", group: "earthquake", what: "🚨 List all DRIFTING / BROKEN alerts emitted by runProbe orchestration. Append-only audit trail of every time the alarm fired.", when: "Weekly review. Cross-reference with vendor changelog announcements / bounty trust drops / regression incident reports." },
+
+  // ─── v2.21.4 — 🔒 TRUST CAPSULE.  Composes on top of v2.19.96
+  // verify-self.  AI agents read ONE number (0-100 trust score) instead
+  // of 30 fields.  Single-line capsule URI `mneme://attest/v1/...`
+  // paste-able into pulse / commit / Slack.  Musk-style first-
+  // principles defenses: TTL self-destruct makes replay PHYSICALLY
+  // impossible (not just cryptographically hard); chain-link forces
+  // adversaries to capture an entire session, not one frame; Merkle
+  // install-root catches single-byte tamper anywhere in the install
+  // tree (v2.19.96 hashed only package.json). ───
+  { command: "mneme verify-self --capsule", since: "2.21.4", group: "trust", what: "🔒 Emit ONE LINE — the trust capsule URI `mneme://attest/v1/<ver>/<merkle22>/<ts>/<exp>/<sig22>`. 80 tokens instead of 30 fields. AI agents paste this into pulse banner / commit / Slack to prove they're talking to a real Mneme install.", when: "EVERY pulse cycle that needs trust. Lighter than full attestation — use when context budget matters." },
+  { command: "mneme verify-self --score", since: "2.21.4", group: "trust", what: "🔒 Emit ONE NUMBER — 0-100 trust score. Band: 0-39 ABORT · 40-69 CAUTION · 70-100 TRUST. Components: +40 sig OK · +20 no drift · +20 path sane · +20 recent install. Exit code 2 on ABORT for CI gating.", when: "CI gate that decides 'should I run mneme.* tools at all?'. The cheapest possible trust check." },
+  { command: "mneme verify-self --verify <uri>", since: "2.21.4", group: "trust", what: "🔒 Verify a previously-minted capsule URI (paste from a pulse / commit / Slack). Catches: forged HMAC · expired TTL · nonce mismatch · forged chain link. Exit code 1 on failure.", when: "When an AI agent or human pastes a capsule URI and you want to confirm it came from this install + is fresh + matches the expected session." },
+  { command: "mneme verify-self --nonce <token>", since: "2.21.4", group: "trust", what: "🔒 Bind the minted capsule to a session by nonce. Combined with --verify --nonce on the receiver side, makes the capsule replay-resistant: capturing one capsule from session A is useless in session B.", when: "Multi-step AI agent workflows where a captured intermediate capsule could be replayed by a malicious observer." },
+  { command: "mneme verify-self --ttl <seconds>", since: "2.21.4", group: "trust", what: "🔒 Set capsule time-to-live (default 300 = 5 min; 0 = no expiry). Short TTL closes the replay window by physics, not by crypto.", when: "Hardening — shorter TTL = stronger guarantee. Lengthen only for slow async flows (e.g. legal review, async webhook chain)." },
+  { command: "mneme verify-self --prev <sig>", since: "2.21.4", group: "trust", what: "🔒 Chain-link a new capsule to a previous capsule's sig. AI agents that see multiple capsules in one session verify the chain — capturing one frame is useless without the whole video.", when: "Long-running AI sessions where you want continuous attestation. Each turn mints a capsule with prev=previous-capsule-sig." },
+  { command: "mneme verify-self --full", since: "2.21.4", group: "trust", what: "🔒 Show the legacy pre-v2.21.4 verbose attestation in addition to the trust capsule header. For paranoid humans who want every field.", when: "Auditor review; debugging trust failures." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";

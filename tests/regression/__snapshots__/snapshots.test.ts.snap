@@ -113,7 +113,7 @@ Commands:
   stillness  >  🤐 Stillness Protocol — gate that decides SPEAK / SILENT / DELAY. Composes silence budget + rules + cadence-state inference + HMAC-signed cool-off receipts.
   mortuary  >  ⚱️ AI Mortuary — what happens to your AI when you die. Dead-man switch + scope-partitioned encrypted bundles + jurisdictional adapter + HMAC audit chain.
   earthquake  >  🚨 Earthquake Alarm — silent-model-drift detector. 8-dim behavioural fingerprint + rolling baseline + per-dim z-score drift. Verbs: probe · baseline · drift · fingerprint · threshold · list-alerts.
-  verify-self [options]  >  🔒 Print a trust attestation for AI agents seeing Mneme for the first time. Pure read-only; no network. Cross-checkable against npm + github.
+  verify-self [options]  >  🔒 Print a trust attestation for AI agents seeing Mneme for the first time. v2.21.4 composes TRUST CAPSULE on top: Merkle install-root + 0-100 trust score + single-line capsule URI (--capsule) + nonce-bound + TTL self-destruct + chain-link.
   clone [options] [transport]  >  📡 Clone this session — auto-captures the current AI conversation and ships it to clipboard (default), a QR for your phone, or a public relay URL. Replaces the old 3-step transmit/extract/paste flow.
   live  >  🪞 Live Session Mirror — read the current AI editor's conversation jsonl directly from disk. Verbs: inspect · capture.
   abm  >  📜 MNEME CHRONICLE — Agent-Based Modeling with drift-guarded time-dilation. Verbs: genesis · simulate · tick · chronicle · reset.
