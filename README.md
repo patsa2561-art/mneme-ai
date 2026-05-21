@@ -120,6 +120,24 @@ mneme clone remote    # cross-network:             anonymous short URL + QR (1-d
 
 <div align="center">
 
+### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
+
+</div>
+
+<sub>Three rituals that compose Mneme primitives into named multi-step ceremonies. Each transition is HMAC-signed; the full state is auditable; every phase fires through SUPER NOVA so the IA fabric sees the ritual as a structured stream.</sub>
+
+```bash
+mneme intern start --vendor claude-opus-4-7     # 🎓 6-phase calibration ritual; ends with Citizen AI Tier 1/2/3 cert
+mneme dream-school run                          # 💤 overnight adversarial scenarios on your codebase; morning lessons
+mneme ghost-mentor invoke --query "race condition"  # 👻 fused judgments from N seniors' signed decisions
+```
+
+<sub>📘 <a href="docs/DIGITAL_TALENT.md" target="_blank" rel="noopener">Digital Talent moat doc (5 ideas; 3 inside Mneme, 2 spin-out repos) →</a></sub>
+
+---
+
+<div align="center">
+
 ### 🐝 Swarm + 🏛  GovTech presets — one verb for the audit you'd otherwise hand-roll
 
 </div>

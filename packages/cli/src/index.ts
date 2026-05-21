@@ -2975,6 +2975,138 @@ export async function run(argv: string[]): Promise<void> {
       if (r.verdict === "BLOCK") process.exit(2);
     });
 
+  // ─── v2.19.99 — `mneme intern` (AI INTERNSHIP — 6-week calibration) ──
+  // 6-phase ritual that turns a generic AI agent into one calibrated to
+  // a specific repo. Each transition HMAC-signed. Graduates earn a
+  // Citizen AI Tier 1/2/3 cert.
+  const intern = program
+    .command("intern")
+    .description("🎓 AI Internship — 6-week structural calibration ritual (observation → supervised → autonomous → graduation). Mints a Citizen AI Tier cert on graduation.");
+
+  intern
+    .command("start")
+    .description("🎓 Start the internship for a vendor agent. Snapshots repo soul + decisions for later comparison.")
+    .requiredOption("--vendor <v>", "Vendor / agent id (claude-opus-4-7, gpt-5, etc).")
+    .option("--json")
+    .action(async (opts: { vendor: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const state = await core.intern.start(process.cwd(), { vendor: opts.vendor });
+      if (opts.json) { process.stdout.write(JSON.stringify(state, null, 2) + "\n"); return; }
+      process.stdout.write(core.intern.formatState(state) + "\n");
+    });
+
+  intern
+    .command("advance")
+    .description("🎓 Advance the intern to the next phase. Phases progress: observation → supervised-low → supervised-medium → progressive → near-autonomous → graduated.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const state = await core.intern.advance(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(state, null, 2) + "\n"); return; }
+      process.stdout.write(core.intern.formatState(state) + "\n");
+    });
+
+  intern
+    .command("status")
+    .description("🎓 Show current internship state + which phase the agent is in.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const state = core.intern.loadState(process.cwd());
+      if (!state) { process.stderr.write("No internship in progress. Run `mneme intern start --vendor <id>` to start one.\n"); process.exit(1); return; }
+      if (opts.json) { process.stdout.write(JSON.stringify(state, null, 2) + "\n"); return; }
+      process.stdout.write(core.intern.formatState(state) + "\n");
+    });
+
+  intern
+    .command("graduate")
+    .description("🎓 Graduate the intern + mint Citizen AI Tier cert. Must be in 'near-autonomous' phase first.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const state = await core.intern.graduate(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(state, null, 2) + "\n"); return; }
+      process.stdout.write(core.intern.formatState(state) + "\n");
+    });
+
+  // ─── v2.19.99 — `mneme dream` (DREAM SCHOOL — overnight scenarios) ──
+  // Runs adversarial scenarios against the repo while the dev sleeps.
+  // Wraps CHRONICLE with pre-built disaster scenarios.
+  // Namespace `dream-school` (not `dream` — that's owned by insights-cli).
+  const dream = program
+    .command("dream-school")
+    .description("💤 Dream School — overnight adversarial scenarios on your codebase. Returns top 3 organisational failure-mode lessons.");
+
+  dream
+    .command("run")
+    .description("💤 Run all (or selected) scenarios. Built-ins: aws-region-sunset · dep-deprecation · ddos-launch-day · key-eng-quits · vendor-pricing-3x · compliance-audit.")
+    .option("--scenarios <list>", "Comma-separated scenario ids (default: all).")
+    .option("--json")
+    .action(async (opts: { scenarios?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const list = opts.scenarios ? opts.scenarios.split(",").map((s) => s.trim()) as any : core.dreamSchool.ALL_SCENARIOS;
+      const report = await core.dreamSchool.run(process.cwd(), list);
+      if (opts.json) { process.stdout.write(JSON.stringify(report, null, 2) + "\n"); return; }
+      process.stdout.write(core.dreamSchool.formatReport(report) + "\n");
+    });
+
+  dream
+    .command("report")
+    .description("💤 Show the latest morning report.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.dreamSchool.loadReport(process.cwd());
+      if (!r) { process.stderr.write("No dream report yet. Run `mneme dream run` first.\n"); process.exit(1); return; }
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.dreamSchool.formatReport(r) + "\n");
+    });
+
+  // ─── v2.19.99 — `mneme ghost` (Ghost Mentor — fused senior judgments) ──
+  // Engine only — marketplace ships as a separate repo per build order
+  // in docs/DIGITAL_TALENT.md.
+  // Namespace `ghost-mentor` (not `ghost` — that's owned by insights-cli's stylometric vendor-ghost).
+  const ghost = program
+    .command("ghost-mentor")
+    .description("👻 Ghost Mentor — query N senior developers' fused judgments instead of a generic LLM. Contributors sign decisions with consent + HMAC.");
+
+  ghost
+    .command("contribute")
+    .description("👻 Contribute decisions as a senior dev. Each row signed; consent preserved.")
+    .requiredOption("--id <id>", "Stable contributor id (anonymous handle is fine).")
+    .requiredOption("--name <name>", "Display name shown alongside fused judgments.")
+    .requiredOption("--scope <text>", "Free-text description of what you're granting consent for.")
+    .requiredOption("--decisions <jsonPath>", "Path to a JSON file: [{ ts, context, reasoning, tags: [...] }].")
+    .option("--json")
+    .action(async (opts: { id: string; name: string; scope: string; decisions: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const { readFileSync } = await import("node:fs");
+      const decs = JSON.parse(readFileSync(opts.decisions, "utf8"));
+      const r = await core.ghostMentor.contribute(process.cwd(), {
+        contributorId: opts.id, displayName: opts.name, scope: opts.scope, decisions: decs,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(`👻 Recorded ${r.recorded} decision(s) for ${r.contributor.displayName} (id: ${r.contributor.contributorId})\n`);
+    });
+
+  ghost
+    .command("invoke")
+    .description("👻 Query the ghost. Returns fused advice ranked by relevance + attribution to contributors.")
+    .requiredOption("--query <text>", "Plain-English question.")
+    .option("--tags <list>", "Comma-separated tag filter.")
+    .option("--top-k <n>", "How many decisions to fuse (default 5).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { query: string; tags?: string; topK?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.ghostMentor.invoke(process.cwd(), {
+        query: opts.query,
+        tags: opts.tags ? opts.tags.split(",").map((s) => s.trim()) : undefined,
+        topK: opts.topK,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.ghostMentor.formatAdvice(r) + "\n");
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs

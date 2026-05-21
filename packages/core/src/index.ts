@@ -1157,3 +1157,11 @@ export * as superNova from "./super_nova/index.js";
 // concretely usable instead of "primitives in a list".
 export * as swarm from "./swarm/index.js";
 export * as govtechAudit from "./govtech_audit/index.js";
+
+// v2.19.99 — DIGITAL TALENT moats (the in-Mneme half: #3 AI Internship
+// + #4 Dream School).  Composes existing primitives (soul + polygraph +
+// bounty + ABM/Chronicle) into named, multi-step rituals.  Both wrapped
+// in SUPER NOVA so each ritual phase is an experience-pool event.
+export * as intern from "./intern/index.js";
+export * as dreamSchool from "./dream_school/index.js";
+export * as ghostMentor from "./ghost_mentor/index.js";
