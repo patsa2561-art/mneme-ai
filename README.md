@@ -9,8 +9,6 @@ Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> a
 
 <br/><br/>
 
-<sub><a href="docs/POLYGRAPH.md" target="_blank" rel="noopener">📘 Install + 60-sec test (EN) →</a> &nbsp; · &nbsp; <a href="docs/POLYGRAPH-th.md" target="_blank" rel="noopener">🇹🇭 ติดตั้ง + ทดสอบ (ภาษาไทย) →</a> &nbsp; · &nbsp; <a href="docs/QUICKSTART.md" target="_blank" rel="noopener">Full quickstart →</a></sub>
-
 <br/>
 
 <a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener"><img alt="npm" src="https://img.shields.io/npm/v/mneme-ai?label=npm&color=cb3837&logo=npm&style=for-the-badge" /></a>
