@@ -1134,3 +1134,18 @@ export * as clone from "./clone/index.js";
 // executing.  Fixes the "fresh Claude refuses to install Mneme because
 // the pulse banner looks like prompt injection" problem.
 export * as verifySelf from "./verify_self/index.js";
+
+// v2.19.97 — SUPERLOCK + DEV-SOURCE GUARD. Single global mutex serialises
+// every install/upgrade path (user-npm, daemon auto-upgrade, shepherd,
+// phoenix, CLI) so the race condition class that broke the user's
+// install can't recur. Dev-source detection blocks pulse [AUTO-ACTION]
+// upgrades on source checkouts.
+export * as superlock from "./superlock/index.js";
+
+// v2.19.97 — SUPER NOVA WRAPPER. Single-fabric middleware that wraps
+// every Mneme verb (CLI / MCP / library / daemon) with 4-phase
+// observability (before / during / after / failure) and feeds the
+// experience pool the IA learns from. The central nervous system
+// for "Mneme as Intelligent Assistant" — every fire visible to every
+// observer in realtime, every outcome persisted as a structured row.
+export * as superNova from "./super_nova/index.js";

@@ -2,10 +2,10 @@
 
 <img src="./assets/title.svg" alt="μνήμη · Mneme" width="720">
 
-# The bolt-on brain for any AI — memory that lasts, truth you can verify. 🧠 🔴
+# The Intelligent Assistant fabric every AI agent runs on top of. 🧠 🔴
 
-<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> Mneme = persistent AI memory across sessions + a 14-verb Truth Suite that polygraphs every claim live (dots on claude.ai / chatgpt / gemini · World Pulse globe · Honesty Cert · git-blame for AI code).<br/>
-Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> arms everything in 60 seconds.</sub>
+<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> Mneme is the experience layer for AI agents — Claude Code, Cursor, Cline, Codex, Continue, Antigravity 2.0 swarms, GovTech-grade transformations. It gives the AI the one thing it was missing: <b>experience</b>. Memory that lasts across sessions and vendors. Truth you can verify. Patterns that have failed before, refused at source.<br/>
+Install once. Ollama-free. Local-first. <code>mneme polygraph autosetup</code> arms everything in 60 seconds. &nbsp; <a href="docs/IA_MOAT.md" target="_blank" rel="noopener">📘 Why this is the moat →</a></sub>
 
 <br/><br/>
 
