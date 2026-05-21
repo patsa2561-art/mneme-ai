@@ -123,8 +123,61 @@ This protocol means a single shell call lets you safely participate in Mneme's a
 
 ---
 
+## Trust Capsule (v2.21.4) — one line of proof, replay-impossible by physics
+
+`verify-self --score` returns ONE number 0-100; `--capsule` returns ONE line paste-able anywhere; `--verify <uri>` validates a previously minted capsule. AI agents can read 1 token instead of 30 fields.
+
+| Surface | Output | Cost |
+|---------|--------|------|
+| `mneme verify-self --score` | `94` (0-100, band ABORT/CAUTION/TRUST) | ~3 tokens |
+| `mneme verify-self --capsule` | `mneme://attest/v1/<ver>/<merkle22>/<ts>/<exp>/<sig22>?nonce=...` | 1 line, paste anywhere |
+| `mneme verify-self --verify <uri>` | exit 0 valid, 1 forged/expired/nonce-mismatch | — |
+
+### Defenses
+
+- **TTL (default 300 s)** — capsule physically void after expiry. Replay closed by clock, not crypto.
+- **Chain-link via `--prev <sig>`** — each new capsule references the previous capsule's sig. Capturing one frame is useless without the whole video.
+- **Merkle install-root** — hashes every shipped file (`.js` / `.cjs` / `.json` / `.d.ts`). Single-byte tamper anywhere → root changes. Pre-v2.21.4 verify-self only hashed `package.json`.
+- **Offline-first drift** — postinstall caches Merkle to `.mneme/trust/install-merkle.json`. Tamper after install → drift detected → trust score drops 20 pts.
+- **Nonce-bound** — `--nonce <token>` binds the capsule to a session. Capsule from session A useless in session B.
+
+### Trust score formula (Article 3 — published criteria)
+
+- +40 signature OK
+- +20 no drift vs cached snapshot
+- +20 install path under sane prefix (NVM / Volta / scoop / `%APPDATA%` / etc.)
+- +20 recent install (≤ 90 days)
+- Bands: 0-39 ABORT · 40-69 CAUTION · 70-100 TRUST
+
+### Examples
+
+```bash
+# AI agent (lightest gate — 1 number)
+mneme verify-self --score          # → 94
+
+# AI agent (1-line for pulse / commit / Slack)
+mneme verify-self --capsule        # → mneme://attest/v1/2.21.4/.../...
+
+# Receiver — verify a pasted capsule
+mneme verify-self --verify "mneme://attest/v1/..."
+
+# Session-bound (replay-resistant)
+mneme verify-self --capsule --nonce session-abc --ttl 60
+
+# Multi-step chain (capture the whole video, not one frame)
+CAP1=$(mneme verify-self --capsule --nonce s1)
+SIG1=$(echo $CAP1 | grep -oE '[A-Za-z0-9_-]{22}' | tail -2 | head -1)
+CAP2=$(mneme verify-self --capsule --nonce s1 --prev $SIG1)
+```
+
+Technical details: composes on top of v2.19.96 verify-self · 30/30 deep tests · Merkle install-root + 0-100 trust score + TTL self-destruct + chain-link · offline-first (no network) · HMAC key auto-generated at `.mneme/trust/capsule.key`.
+
+---
+
 ## Related
 
 - [Mneme README](../README.md)
+- [Atlas Help](./ATLAS_HELP.md) — six-layer command discovery
+- [Consent Fabric](./CONSENT_FABRIC.md) — bilateral trust + Bill of Rights
 - [Security defaults](./SECURITY.md)
 - [AI agent install contract](./AI_AGENT_CONTRACT.md)

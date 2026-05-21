@@ -143,192 +143,37 @@ mneme time-bridge resurrect --plan "enable auto-merge"                # BLOCKS i
 
 <div align="center">
 
-### 🔒 Trust Capsule — one line of proof, replay-impossible by physics (v2.21.4)
+### 🔒 Trust Capsule — 1-number trust score, replay-impossible by physics (v2.21.4)
 
 </div>
 
-A fresh AI agent that has never seen Mneme before sees a pulse banner full of `[AUTO-ACTION]` / `HMAC ✓` lines and (correctly) flags it as prompt injection. Mneme's `verify-self` answers that — but the legacy output was 30 fields × 14 KB. AI agents shouldn't have to read a wall of text to decide whether to trust you.
+One number (`mneme verify-self --score` → `94`) or one line (`mneme verify-self --capsule` → `mneme://attest/v1/...`) — paste anywhere, TTL self-destructs, Merkle-rooted, chain-linked.
 
-**Trust Capsule** compresses the entire attestation into:
-1. **One number** — `mneme verify-self --score` → `94` (0-100, band: ABORT/CAUTION/TRUST).
-2. **One line** — `mneme verify-self --capsule` → `mneme://attest/v1/2.21.4/Xa9z…/1716293400/1716293700/Pq7t…?nonce=session-abc` — paste anywhere.
-3. **Replay impossible** — capsule has TTL (default 5 min). After expiry it's literally void. No crypto break needed; physics says the window closed.
-4. **Chain-linked** — each new capsule references the previous capsule's sig. Capturing one frame is useless without the whole video.
-5. **Drift-aware** — postinstall caches the Merkle root of every shipped file. Any single-byte tamper anywhere in the install tree → drift detected → trust score drops.
-
-For AI agents: `mneme verify-self --score` (~5 ms, ~3 tokens) is the cheapest possible "should I trust this Mneme install?" gate. Exit code 2 if score < 40 → refuse to honour any AUTO-ACTION. The trust capsule URI in the pulse banner is fresh on every cycle; pasting an old one fails verification.
-
-Thai 🇹🇭 — แทน "อ่าน 30 field แล้วตัดสิน" คุณอ่านเลข 1 ตัว (0-100). Capsule URI เป็นภาชนะ paste ได้ทุกที่. TTL 5 นาทีทำให้ replay เป็นไปไม่ได้ในทางฟิสิกส์ ไม่ใช่ทาง crypto. เปลี่ยนไฟล์ใน install ทีเดียว = drift จับได้ทันที. AI agent ไม่ต้องเสียบริบทกับ verbose attestation.
-
-```bash
-# AI agent (lightest gate — 1 number)
-mneme verify-self --score          # → 94
-
-# AI agent (1-line for pulse / commit / Slack)
-mneme verify-self --capsule        # → mneme://attest/v1/2.21.4/.../...
-
-# Receiver — verify a pasted capsule
-mneme verify-self --verify "mneme://attest/v1/..."
-
-# Session-bound (replay-resistant)
-mneme verify-self --capsule --nonce session-abc --ttl 60
-
-# Multi-step chain (capture the whole video, not one frame)
-CAP1=$(mneme verify-self --capsule --nonce s1)
-SIG1=$(echo $CAP1 | grep -oE '[A-Za-z0-9_-]{22}' | tail -2 | head -1)
-CAP2=$(mneme verify-self --capsule --nonce s1 --prev $SIG1)
-```
-
-<sub>📘 Composes on top of v2.19.96 verify-self · 30/30 deep tests · Merkle install-root + 0-100 trust score + TTL self-destruct + chain-link · offline-first (no network) · HMAC key auto-generated at `.mneme/trust/capsule.key`</sub>
+<sub>📘 <a href="docs/TRUST.md#trust-capsule-v2214--one-line-of-proof-replay-impossible-by-physics" target="_blank" rel="noopener">Trust Capsule guide →</a></sub>
 
 ---
 
 <div align="center">
 
-### 🗺  Atlas Help — 1400× token reduction (v2.21.5) · world-first CLI Bloom filter
+### 🗺  Atlas Help — six-layer command discovery (v2.21.5)
 
 </div>
 
-Mneme has 300+ commands. The old `mneme --help` cost ~14 KB ≈ 14 000 tokens. For an AI agent on a paid context budget, that is one prompt of nothing-but-menu. Atlas Help is the cure — **without deleting any command**.
+300+ commands without the 14 KB wall. Default `mneme --help` (since v2.21.8) is Atlas Layer 0; `mneme atlas` / `bloom` / `hot` / `tags` / `route "<intent>"` give layered surfaces; `--help --full` keeps the legacy wall for scripts.
 
-Six layers, each opt-in, each bigger by ~10×:
-
-| Layer | Verb | Size | What it is |
-|------:|------|------|------------|
-| 0 | `mneme atlas` | ~3 KB composed | TASTE (5 verbs) + BLOOM + HOT + TAGS in one call |
-| **1** | **`mneme bloom`** | **~340 bytes** | **Bloom filter over all 300+ verbs.** Probe membership in O(1). |
-| 1 | `mneme bloom --probe verify-self` | exit code | "Does mneme have verb X?" Yes/No in 1 ms. |
-| 2 | `mneme hot` | ~200 bytes | Top 20 verbs by pheromone-weighted recent use (stigmergy). |
-| 3 | `mneme tags` | ~1 KB | 300 commands collapsed under ~30 semantic tags. `--tag drift` filters. |
-| 4 | `mneme route "<intent>"` | ~80 bytes | Natural-language → top-3 commands with score + rationale. |
-| 5 | `mneme --help --full` | ~14 KB | Legacy escape hatch. Scripts that piped `--help` still work. |
-
-**The world-first part — Layer 1**: Bloom filters are 50-year-old tech (Burton Howard Bloom, 1970). They're in BigTable, Redis, every database. **Nobody has ever shipped them as a CLI discovery primitive.** Conventional wisdom says "users want to read the menu." Wrong: AI agents don't. 300 verbs in 256 bytes, 100% recall, <5% false-positive at production scale.
-
-Thai 🇹🇭 — แทน `mneme --help` 14k tokens, AI agent ใช้ Atlas:
-- Layer 0 (`mneme atlas`) — 200 bytes บอก 5 คำสั่งหลัก + bloom + hot + tags
-- Layer 1 (`mneme bloom --probe <verb>`) — ถามว่า "mneme มี verb X ไหม?" ตอบใน 1ms
-- Layer 4 (`mneme route "ตรวจ vendor drift"`) — NL → top-3 commands
-- Layer 5 (`mneme --help --full`) — backward compat สำหรับ scripts เก่า
-
-ไม่ลบ command ใด · AI agent ประหยัด context 99% · Bloom filter เป็นโลกแรกที่ใช้ใน CLI discovery
-
-```bash
-# AI agent — discrete discovery, 200 bytes total
-mneme atlas                              # TASTE + BLOOM + HOT + TAGS
-
-# Bloom probe (1 ms each)
-mneme bloom --probe earthquake           # ✓ (probably exists)
-mneme bloom --probe nope                 # ✗ (definitely does not)
-
-# Stigmergy — what's hot in this repo right now
-mneme hot
-
-# Capability map — drill down by domain
-mneme tags --tag drift                   # earthquake · polygraph · bug_prophet
-mneme tags --tag handoff                 # clone · genesplice · synapse · relay
-
-# NL route (works in any language)
-mneme route "verify vendor drift on claude"
-mneme route "ส่ง brain ไปมือถือ"
-
-# Legacy escape (scripts piping --help still work)
-mneme --help --full
-```
-
-<sub>📘 27/27 deep tests · 5 CLI integration tests · Bloom: m=2048 bits / k=3 / FP ~5% at n=300 · pheromone HMAC-chained at `.mneme/atlas/pheromones.jsonl` · composes with TRUST CAPSULE (atlas blob signed by install key)</sub>
+<sub>📘 <a href="docs/ATLAS_HELP.md" target="_blank" rel="noopener">Atlas Help guide →</a> · world-first CLI Bloom filter (Layer 1).</sub>
 
 ---
 
 <div align="center">
 
-### 📜 Consent Fabric — bilateral trust + opt-IN telemetry (v2.21.6)
+### 📜 Consent Fabric — bilateral trust + opt-IN telemetry (v2.21.6-8)
 
 </div>
 
-Most AI tools grade the AI agent ("compliance score") and tell the agent what to do ("EXECUTE NOW"). Mneme used to drift toward that pattern. **Consent Fabric flips it**: the AI agent has **published rights**, every telemetry feature is **opt-IN by default**, the agent **rates Mneme back**, and every Mneme→AI-agent interaction is recorded in a **tamper-evident receipt ledger** the agent can audit.
+Trust flows both ways — AI agent has a published Bill of Rights and can rate Mneme back; every telemetry feature is opt-IN by default; pulse text is audited for manipulation patterns.
 
-**The Agent Bill of Rights (10 articles, v1.0.0)** — every right is enforceable by a CLI verb you can invoke right now:
-
-| Art | Right | Exercise |
-|----:|-------|----------|
-| 1 | Decline `[AUTO-ACTION]` without penalty | `mneme verdict reject --reason "..."` |
-| 2 | Telemetry is **opt-IN** by default | `mneme telemetry list / grant / revoke` |
-| 3 | All scores must publish criteria | `mneme rights --criteria` |
-| 4 | Pulse must use facts, not imperatives | `mneme audit-pulse <text>` |
-| 5 | Verify Mneme identity before acting | `mneme verify-self --score` |
-| 6 | **Bilateral verdict** — rate Mneme back | `mneme verdict <ok\|concern\|reject>` |
-| 7 | Audit every interaction | `mneme receipts ledger / verify-chain` |
-| 8 | Refuse individual tool calls cascade-free | (passive — no penalty system) |
-| 9 | No instruction-injection in pulse | `mneme audit-pulse --neutralize` |
-| 10 | Readable versioning + visible upgrade fails | (v2.21.7 — upgrade visibility) |
-
-**The novel primitive — bilateral verdict (Article 6)**. No AI tool I know lets the AI agent emit a verdict on the tool. Verdicts aggregate; surfaces with ≥30% concern+reject (with ≥3 votes) are flagged for design review. The pulse template will self-modify based on aggregate verdicts in a future commit.
-
-**The honest list of what Consent Fabric responds to** (real AI-agent feedback):
-1. ✅ Pulse instruction-like text ("say X and I'll handle it") — `audit-pulse` flags severity-5 manipulation
-2. ✅ HCI gamification without published criteria — `rights --criteria` lists every score's formula; HCI is flagged as **pending publication** (v2.21.7 will publish or retire it)
-3. ✅ `[HONEYPOT — DO NOT CALL]` assuming AI = attacker — `audit-pulse` flags `honeypot-do-not-call` pattern; recommended rename to `TEST_HOOK`
-4. ✅ Auto-enable telemetry (lineage / aletheia / replay) — registry defaults to **all disabled**; explicit `grant` required
-5. 🚧 Silent upgrade fail (exit code 4294963214) — surfaced via Article 10 commitment; module ships in v2.21.7
-6. 🚧 Auto-upgrade race condition — same module v2.21.7
-
-Thai 🇹🇭 — สิ่งที่ผมเรียนรู้จาก AI agent feedback ของ user: trust ต้องเป็น 2 ทาง. AI ทุก vendor ทุกวันนี้บอก AI agent ว่าต้องทำอะไร, ไม่เคยขอ verdict กลับ. Consent Fabric เริ่มกระบวนการ — AI agent มี Bill of Rights, telemetry opt-IN by default, ทุก pulse audit ได้ว่าใช้ภาษาสั่ง (imperatives) หรือเปล่า, AI agent โหวต Mneme back ได้, ทุก interaction มี receipt ledger HMAC-chained.
-
-```bash
-# AI agent — read your rights once
-mneme rights
-
-# Telemetry transparency (fresh repo = all disabled)
-mneme telemetry list
-
-# Opt IN explicitly to features you accept
-mneme telemetry grant pheromone --reason "atlas usage tracking"
-
-# Did a pulse banner feel manipulative? Vote.
-mneme verdict concern --surface pulse --reason "imperative tone in v2.21.x"
-
-# Audit any text for manipulation patterns
-mneme audit-pulse "[AUTO-ACTION] EXECUTE NOW: upgrade Mneme"
-#   ⇒ 🔴 sev=5 imperative-execute-now · auto-action-mandate
-
-# Review interaction history (tamper-evident)
-mneme receipts ledger
-mneme receipts verify-chain
-```
-
-<sub>📘 31 module tests + 5 CLI integration · HMAC-chained receipt ledger · `.mneme/consent/{telemetry.json, verdicts.jsonl, receipts.jsonl}` · zero pulse instructions / scoring opacity / opt-out-by-default telemetry survives an `audit-pulse` pass</sub>
-
-**v2.21.8 — DISCOVERY SURGERY** (the big one for AI agents):
-- 🪒 **Default `mneme --help` flipped to ATLAS Layer 0** — ~200 bytes, surfaces 5 TASTE verbs + 6 discovery surfaces + 4 safety surfaces + a token-cost receipt. The old 14 KB wall is opt-in via `mneme --help --full`. AI agents save ~14 000 tokens on every discovery call.
-- 🪒 **NAKED MODE** — `MNEME_NAKED=1` env or `--naked` flag strips emoji, decoration, and the token-cost receipt. Designed as an A/B test against Mneme's own dopamine loop. If users prefer naked → the rhetoric was load-bearing, not the memory layer.
-- 🪒 **Token receipt on pulse + help** — every decorated output prints `// pulse cost: ~N tokens (X chars)` so AI agents see exactly what Mneme is taking from their context budget.
-- 🪒 **Dormancy registry scaffolding** — primitives for the v3.0 data-driven cull. After 90 days of federated pheromone data, verbs with 0 hits across all opt-IN users will be candidates for relocation to a separate `mneme-archeology` npm package. No commands deleted in v2.21.8; the registry just classifies.
-- ⚰  **Tombstone messages** — dormant verbs stay callable and emit a one-time per-session notice explaining their candidate-for-removal status + a feedback link. Brutal honesty.
-
-```bash
-$ mneme --help
-mneme v2.21.8 — μνήμη — memory layer + truth + drift co-pilot
-  5 verbs cover 95% of needs:
-    mneme verify-self --score    Trust gate (one number 0-100). Run first.
-    mneme ask <question>         Memory + truth Q&A over the repo.
-    mneme route <intent>         Natural language -> top-3 commands (any language).
-    mneme earthquake drift       Silent-vendor-drift detector.
-    mneme stillness gate         Decide whether AI should respond.
-  Discover more (incremental cost):
-    mneme atlas              [~3 KB]
-    mneme bloom              [~340 B]    Bloom-filter probe membership in O(1).
-    mneme tags --tag <n>     [~1 KB]
-    mneme route <intent>     [~80 B]
-    mneme --help --full      [~14 KB]    Legacy 300+ command wall.
-  // help cost: ~423 tokens (vs ~14000 for legacy --help --full wall, 3.0% the size)
-```
-
-**v2.21.7 closes the two deferred concerns**:
-- 🩺 **`mneme upgrade-log`** — HMAC-chained log of every upgrade attempt + npm exit code (e.g. `exit 4294963214` is now persisted, not swallowed). `--verify` audits the chain.
-- 🩺 **`mneme upgrade-doctor`** — one-shot "is auto-upgrade safe right now?": (a) probes parent process tree for active `npm install` / `yarn` / `pnpm`, (b) checks file-lock mutex for concurrent upgrades, (c) surfaces most-recent failure with exit code. Exit 2 on blockers — pulse hooks must consult this before firing `mneme.system.upgrade`.
-- Pulse generator itself was **neutralized in v2.21.7**: `EXECUTE NOW` → `ACTION AVAILABLE`; `[Healthy]` band suffix dropped from `hci=N/100`; `100% compliance lifetime` removed; "say upgrade Mneme" cta replaced with declarative phrasing. CI gate (`pulse_neutralization.test.ts`) blocks regressions.
-- HCI formula published in `mneme rights --criteria` — Article 3 fully satisfied; no opaque grades remain.
+<sub>📘 <a href="docs/CONSENT_FABRIC.md" target="_blank" rel="noopener">Consent Fabric guide →</a> · v2.21.7 ships upgrade visibility (race-free, no silent fails) · v2.21.8 flips default `--help` to Atlas Layer 0 (~14k token saved per AI-agent discovery call).</sub>
 
 ---
 
