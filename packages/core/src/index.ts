@@ -1165,3 +1165,13 @@ export * as govtechAudit from "./govtech_audit/index.js";
 export * as intern from "./intern/index.js";
 export * as dreamSchool from "./dream_school/index.js";
 export * as ghostMentor from "./ghost_mentor/index.js";
+
+// v2.20.0 — TIME BRIDGE. "Past-you ANNOTATES the future; future-you's AI
+// listens automatically." Seven composable innovations (FRP + DAS +
+// Resurrection + Echo-Killer + Spotlight + Wake Predicates + Generational
+// Tree) that make Mneme the default temporal layer for AI agents.
+// The real moat is NOT crypto (A2A v1.0 commodified that) but:
+//   (1) corpus captured WITHOUT manual effort via super-nova auto-observer
+//   (2) "default temporal layer" position
+//   (3) FORMAT_VERSION = 1 — stable for 20+ years, never breaks
+export * as timeBridge from "./time_bridge/index.js";

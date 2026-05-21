@@ -3107,6 +3107,132 @@ export async function run(argv: string[]): Promise<void> {
       process.stdout.write(core.ghostMentor.formatAdvice(r) + "\n");
     });
 
+  // ─── v2.20.0 — `mneme bridge` (TIME BRIDGE — past-self → future-AI) ──
+  // The temporal layer for AI agents.  Past-you ANNOTATES the future
+  // with future-applicability hints + wake predicates; future-you's AI
+  // reads them automatically when relevance fires.  Structural
+  // resurrection blocks AI from silently regressing past constraints.
+  // Namespace `time-bridge` (not `bridge` — that's owned by the HTTP bridge for polygraph).
+  const bridge = program
+    .command("time-bridge")
+    .description("🕰  Time Bridge — past-you annotates the future; future-you's AI listens automatically. Inscribe · surface · resurrect · tree · fire-watchers · auto-on.");
+
+  bridge
+    .command("inscribe")
+    .description("🕰  Record a decision / constraint / refusal / warning / annotation with future-applicability + optional wake predicates.")
+    .requiredOption("--author <a>", "Who is authoring this inscription (vendor id or human name).")
+    .requiredOption("--kind <k>", "decision | refusal | constraint | warning | annotation")
+    .requiredOption("--headline <text>", "One-line summary the receiving AI sees.")
+    .requiredOption("--reasoning <text>", "Full reasoning the AI may read in detail.")
+    .requiredOption("--applies-when <text>", "Plain-English description of when this matters in the future.")
+    .option("--files <list>", "Comma-separated file paths the signal matches.")
+    .option("--keywords <list>", "Comma-separated keyword signals.")
+    .option("--symbols <list>", "Comma-separated symbol/function names.")
+    .option("--tags <list>", "Comma-separated tags.")
+    .option("--parent <id>", "Parent inscription id for the Generational Tree.")
+    .option("--json")
+    .action(async (opts: { author: string; kind: string; headline: string; reasoning: string; appliesWhen: string; files?: string; keywords?: string; symbols?: string; tags?: string; parent?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const split = (s?: string) => (s ? s.split(",").map((x) => x.trim()) : undefined);
+      const i = await core.timeBridge.inscribe(process.cwd(), {
+        author: opts.author,
+        kind: opts.kind as any,
+        headline: opts.headline,
+        reasoning: opts.reasoning,
+        fra: {
+          appliesWhen: opts.appliesWhen,
+          signals: {
+            files: split(opts.files),
+            keywords: split(opts.keywords),
+            symbols: split(opts.symbols),
+            tags: split(opts.tags),
+          },
+        },
+        parentId: opts.parent,
+        tags: split(opts.tags) ?? [],
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(i, null, 2) + "\n"); return; }
+      process.stdout.write(`🕰  Inscribed ${i.kind} ${i.id} by ${i.author}\n  headline: ${i.headline}\n  applies when: ${i.fra.appliesWhen}\n`);
+    });
+
+  bridge
+    .command("surface")
+    .description("🕰  Find past inscriptions relevant to the current context. Pass file / keywords / tags; returns ranked matches with drift score.")
+    .option("--file <path>", "Current file being touched.")
+    .option("--text <text>", "Text the AI is about to commit / write.")
+    .option("--tags <list>", "Comma-separated tags.")
+    .option("--threshold <n>", "Minimum relevance (default 0.4).", (v) => parseFloat(v))
+    .option("--top-k <n>", "Max results (default 5).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { file?: string; text?: string; tags?: string; threshold?: number; topK?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const matches = await core.timeBridge.surface(process.cwd(), {
+        file: opts.file,
+        text: opts.text,
+        tags: opts.tags ? opts.tags.split(",").map((s) => s.trim()) : undefined,
+        threshold: opts.threshold,
+        topK: opts.topK,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(matches, null, 2) + "\n"); return; }
+      process.stdout.write(core.timeBridge.formatSurfaceMatches(matches) + "\n");
+    });
+
+  bridge
+    .command("resurrect")
+    .description("🕰  Check whether a proposed plan contradicts a past constraint/refusal. Blocks + returns required override text when it does.")
+    .requiredOption("--plan <text>", "The plan the AI is about to execute.")
+    .option("--file <path>")
+    .option("--json")
+    .action(async (opts: { plan: string; file?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = await core.timeBridge.resurrect(process.cwd(), opts.plan, { file: opts.file });
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(core.timeBridge.formatResurrectionVerdict(v) + "\n");
+      if (v.blocked) process.exit(2);
+    });
+
+  bridge
+    .command("fire-watchers")
+    .description("🕰  Check all wake-word predicates against current state. Daemon calls this periodically; CLI on demand.")
+    .option("--file <path>", "Pass the current file context for file-touched predicates.")
+    .option("--json")
+    .action(async (opts: { file?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const fired = await core.timeBridge.fireWatchers(process.cwd(), { file: opts.file });
+      if (opts.json) { process.stdout.write(JSON.stringify(fired, null, 2) + "\n"); return; }
+      if (fired.length === 0) { process.stdout.write("🕰  No wake predicates fired.\n"); return; }
+      process.stdout.write(`🕰  ${fired.length} wake predicate(s) fired:\n`);
+      for (const f of fired) process.stdout.write(`  • ${f.inscription.id}  "${f.predicate.description}"  →  ${f.inscription.headline}\n`);
+    });
+
+  bridge
+    .command("tree")
+    .description("🕰  Show the override-lineage tree starting at a root inscription.")
+    .requiredOption("--root <id>", "Root inscription id.")
+    .option("--json")
+    .action(async (opts: { root: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const t = core.timeBridge.tree(process.cwd(), opts.root);
+      if (!t) { process.stderr.write(`✗ no inscription found with id ${opts.root}\n`); process.exit(1); return; }
+      if (opts.json) { process.stdout.write(JSON.stringify(t, null, 2) + "\n"); return; }
+      const printTree = (n: any, depth = 0) => {
+        process.stdout.write("  ".repeat(depth) + `↳ ${n.inscription.id}  (${n.inscription.kind})  ${n.inscription.headline}\n`);
+        for (const c of n.children) printTree(c, depth + 1);
+      };
+      process.stdout.write("🕰  TIME BRIDGE — generational tree\n\n");
+      printTree(t);
+    });
+
+  bridge
+    .command("auto-on")
+    .description("🕰  Install the SUPER NOVA observer that AUTO-inscribes noteworthy Mneme verbs. The AUTO* property — no manual effort to grow the corpus.")
+    .requiredOption("--author <a>", "Default author for auto-inscriptions (your vendor / human id).")
+    .action(async (opts: { author: string }) => {
+      const core = await import("@mneme-ai/core");
+      core.timeBridge.enableAutoInscription({ repoRoot: process.cwd(), author: opts.author });
+      process.stdout.write(`🕰  Auto-inscription observer installed. Every noteworthy Mneme verb will now auto-inscribe to ${process.cwd()}/.mneme/time_bridge/inscriptions.jsonl\n`);
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs

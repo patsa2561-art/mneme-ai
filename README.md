@@ -120,6 +120,29 @@ mneme clone remote    # cross-network:             anonymous short URL + QR (1-d
 
 <div align="center">
 
+### 🕰  Time Bridge — past-you annotates the future; future-you's AI listens automatically
+
+</div>
+
+<sub>The temporal layer for AI agents. Past-you records a constraint, a refusal, or a "wake me when X happens" predicate; future-you's AI reads it as ambient context the moment relevance fires. <b>Constraint Resurrection</b> structurally blocks the AI from silently regressing decisions your past self fought hard to make.</sub>
+
+```bash
+mneme time-bridge auto-on --author shinnapat                          # one-time: every noteworthy Mneme verb auto-inscribes
+mneme time-bridge inscribe --author me --kind constraint \             # record a constraint with future-applicability
+  --headline "never auto-merge bypass polygraph" \
+  --reasoning "regression 2024" --applies-when "any auto-merge" --keywords "auto-merge"
+mneme time-bridge surface --text "I'll set up auto-merge"             # past-self's voice in the AI's prompt
+mneme time-bridge resurrect --plan "enable auto-merge"                # BLOCKS if plan contradicts past constraints
+```
+
+<sub>Seven world-class innovations: Future-Readable Provenance · Drift-Aware Surface · Constraint Resurrection · Echo-Chamber Killer · Spotlight Auto-Tuning · Wake-Word Predicates · Generational Constraint Tree. The moat is the captured corpus + the default-temporal-layer position + a 20-year format-longevity commitment — not the crypto signature alone.</sub>
+
+<sub>📘 <a href="docs/TIME_BRIDGE.md" target="_blank" rel="noopener">Time Bridge guide →</a></sub>
+
+---
+
+<div align="center">
+
 ### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
 
 </div>
