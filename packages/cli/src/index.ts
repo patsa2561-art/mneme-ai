@@ -3345,6 +3345,58 @@ export async function run(argv: string[]): Promise<void> {
       process.stdout.write(`🧬 Counter-pattern recorded.\n`);
     });
 
+  // v2.21.0 — APOPTOSIS auto-record + federation transport.
+  apoptosis
+    .command("auto-on")
+    .description("🧬 AUTO-RECORD: install a SUPER NOVA observer that auto-records pattern outcomes on every noteworthy verb fire. Corpus grows passively; no manual record() calls needed. THE MOAT — competitors can copy the API but not the captured corpus.")
+    .action(async () => {
+      const core = await import("@mneme-ai/core");
+      core.apoptosisNetwork.enableAutoRecord({ repoRoot: process.cwd() });
+      process.stdout.write(`🧬 APOPTOSIS auto-record observer installed. Every noteworthy Mneme verb will now auto-record an outcome row to ${process.cwd()}/.mneme/apoptosis/patterns.jsonl\n`);
+    });
+
+  apoptosis
+    .command("federation-push")
+    .description("🧬 Push the local apoptosis corpus to a peer Mneme instance. The peer must run a federation receive handler. HMAC-signed bundle; rows individually-signed.")
+    .requiredOption("--peer <url>", "Peer federation endpoint URL.")
+    .option("--json")
+    .action(async (opts: { peer: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.apoptosisNetwork.pushToPeer(process.cwd(), opts.peer);
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(`🧬 Pushed: ${r.accepted} accepted, ${r.rejected} rejected.\n`);
+    });
+
+  apoptosis
+    .command("federation-pull")
+    .description("🧬 Pull a peer's apoptosis corpus and import (dedup'd) into local federation.jsonl.")
+    .requiredOption("--peer <url>", "Peer federation endpoint URL.")
+    .option("--secret <s>", "Peer's shared HMAC secret (for signature verification). Omit to skip verification (NOT recommended for production).")
+    .option("--json")
+    .action(async (opts: { peer: string; secret?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.apoptosisNetwork.pullFromPeer(process.cwd(), opts.peer, opts.secret);
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(`🧬 Pulled: ${r.imported} imported, ${r.skipped} skipped, ${r.rejected} rejected.\n`);
+    });
+
+  apoptosis
+    .command("federation-bundle")
+    .description("🧬 Build a signed federation bundle of the local corpus + print JSON (for manual transport or scripting).")
+    .option("--out <path>", "Write to a file instead of stdout.")
+    .action(async (opts: { out?: string }) => {
+      const core = await import("@mneme-ai/core");
+      const b = core.apoptosisNetwork.buildFederationBundle(process.cwd());
+      const json = JSON.stringify(b, null, 2);
+      if (opts.out) {
+        const fs = await import("node:fs");
+        fs.writeFileSync(opts.out, json, "utf8");
+        process.stdout.write(`🧬 Wrote bundle to ${opts.out} (${b.rowCount} rows, sig ${b.bundleSig.slice(0, 12)}…).\n`);
+      } else {
+        process.stdout.write(json + "\n");
+      }
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs

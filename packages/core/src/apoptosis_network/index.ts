@@ -386,6 +386,167 @@ export function formatVerdict(v: ApoptosisVerdict): string {
   return lines.join("\n");
 }
 
+// ─── AUTO-RECORD via SUPER NOVA observer ────────────────────────────────
+
+import { registerObserver as registerSuperNovaObserver, listObservers as listSuperNovaObservers } from "../super_nova/index.js";
+
+const AUTO_OBSERVER_ID = "apoptosis_auto_recorder";
+const recentFingerprints = new Map<string, number>();   // fp → last record ms
+const AUTO_RECORD_COOLDOWN_MS = 30_000;                  // don't re-record same pattern within 30s
+
+/** Testing helper: reset the cooldown map so back-to-back test cases
+ *  don't suppress each other.  Not exported in production guidance. */
+export function _resetAutoRecordForTests(): void {
+  recentFingerprints.clear();
+}
+
+/** Derive a stable pattern fingerprint from a super-nova event. The
+ *  goal: same verb + similar args + similar failure class → same
+ *  fingerprint, regardless of timestamps / per-call random data. */
+function deriveTokens(verb: string, surface: string, args?: Record<string, unknown>, failureClass?: string): string {
+  const keys = args ? Object.keys(args).sort().join(",") : "";
+  return `${verb}|${surface}|${keys}|${failureClass ?? ""}`;
+}
+
+/** Install a SUPER NOVA observer that AUTO-records pattern outcomes
+ *  on every noteworthy Mneme verb fire. The corpus grows passively;
+ *  no manual calls needed.  Cooldown prevents flood; cap is per-
+ *  fingerprint (different patterns are not blocked by each other). */
+export function enableAutoRecord(opts: { repoRoot: string }): () => void {
+  // Check the registry directly so callers can re-install after a
+  // clearObservers() (typical in tests + per-session re-init).
+  if (listSuperNovaObservers().includes(AUTO_OBSERVER_ID)) return () => { /* */ };
+  return registerSuperNovaObserver({
+    id: AUTO_OBSERVER_ID,
+    phases: ["after", "failure"],
+    onPhase: async (phase, ctx, outcome) => {
+      // Only record noteworthy verbs (skip telemetry / pulses / very
+      // hot paths — recording everything would spam the corpus).
+      const noteworthy = /\.(swarm|govtech|cert\.mint|chronicle|apostille\.mint|guardrail\.consent|intern\.|dream\.|clone\.|time_bridge\.|abm\.|hive\.|polygraph\.|bounty\.)/;
+      if (!noteworthy.test(ctx.verb)) return;
+      const failureClass = outcome?.ok ? undefined : "from-super-nova";
+      const tokens = deriveTokens(ctx.verb, ctx.surface, ctx.args, failureClass);
+      const fp = fingerprint(tokens);
+      const lastMs = recentFingerprints.get(fp) ?? 0;
+      if (Date.now() - lastMs < AUTO_RECORD_COOLDOWN_MS) return;
+      recentFingerprints.set(fp, Date.now());
+      try {
+        await record(ctx.repoRoot ?? opts.repoRoot, {
+          patternTokens: tokens,
+          description: `${ctx.verb} (${phase})`,
+          vendor: ctx.vendor ?? "auto",
+          outcome: outcome?.ok ? "success" : "failure",
+          failureClass: outcome?.errorMessage?.toLowerCase().includes("ebusy") ? "lock-contention"
+            : outcome?.errorMessage?.toLowerCase().includes("enoent") ? "not-found"
+            : "other",
+        });
+      } catch { /* never break the host call */ }
+    },
+  });
+}
+
+// ─── FEDERATION TRANSPORT ───────────────────────────────────────────────
+
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { URL } from "node:url";
+
+export interface FederationBundle {
+  v: 1;
+  ts: string;
+  /** Anonymous sender repo id. */
+  senderId: string;
+  /** Row count for fast preview. */
+  rowCount: number;
+  /** HMAC over canonical-stringified rows + sender + ts. */
+  bundleSig: string;
+  /** The rows themselves (already individually-signed). */
+  rows: PatternRecord[];
+}
+
+/** Build a signed bundle of local rows ready to push to a peer. */
+export function buildFederationBundle(repoRoot: string): FederationBundle {
+  const rows = exportFederationRows(repoRoot);
+  const key = ensureKey(repoRoot);
+  const ts = new Date().toISOString();
+  const senderId = anonymousRepoId(repoRoot);
+  const canonical = `${senderId}|${ts}|${rows.length}|${rows.map((r) => r.fingerprint).join(",")}`;
+  const bundleSig = sign(canonical, key);
+  return { v: 1, ts, senderId, rowCount: rows.length, bundleSig, rows };
+}
+
+/** Verify a received bundle. Returns the verified bundle on success or
+ *  null on signature mismatch / malformed payload. */
+export function verifyBundle(bundle: FederationBundle, peerSharedSecret: string): FederationBundle | null {
+  if (!bundle.v || bundle.v !== 1) return null;
+  const canonical = `${bundle.senderId}|${bundle.ts}|${bundle.rows.length}|${bundle.rows.map((r) => r.fingerprint).join(",")}`;
+  const expected = createHmac("sha256", peerSharedSecret).update(canonical).digest("base64url").slice(0, 22);
+  if (expected !== bundle.bundleSig) return null;
+  return bundle;
+}
+
+/** Push the local bundle to a peer URL. The peer must run a Mneme
+ *  bridge with a federation receive handler. Returns the peer's
+ *  acknowledgement (or throws). */
+export async function pushToPeer(repoRoot: string, peerUrl: string): Promise<{ accepted: number; rejected: number }> {
+  const bundle = buildFederationBundle(repoRoot);
+  const body = JSON.stringify(bundle);
+  const u = new URL(peerUrl);
+  const requestFn = u.protocol === "https:" ? httpsRequest : httpRequest;
+  return new Promise((resolve, reject) => {
+    const req = requestFn({
+      hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80),
+      path: u.pathname + u.search,
+      method: "POST",
+      headers: { "content-type": "application/json", "content-length": String(Buffer.byteLength(body)) },
+      timeout: 10_000,
+    }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (d) => chunks.push(d));
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          resolve(parsed);
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(); reject(new Error("federation push timeout")); });
+    req.write(body);
+    req.end();
+  });
+}
+
+/** Pull from a peer URL — peer responds with its local bundle which
+ *  we then verify + import. Symmetric to pushToPeer. */
+export async function pullFromPeer(repoRoot: string, peerUrl: string, peerSharedSecret?: string): Promise<{ imported: number; skipped: number; rejected: number }> {
+  const u = new URL(peerUrl);
+  const requestFn = u.protocol === "https:" ? httpsRequest : httpRequest;
+  return new Promise((resolve, reject) => {
+    const req = requestFn({
+      hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80),
+      path: u.pathname + u.search, method: "GET", timeout: 10_000,
+    }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (d) => chunks.push(d));
+      res.on("end", () => {
+        try {
+          const bundle = JSON.parse(Buffer.concat(chunks).toString("utf8")) as FederationBundle;
+          if (peerSharedSecret) {
+            const verified = verifyBundle(bundle, peerSharedSecret);
+            if (!verified) return resolve({ imported: 0, skipped: 0, rejected: bundle.rows?.length ?? 0 });
+          }
+          const r = importFederation(repoRoot, bundle.rows ?? []);
+          resolve({ imported: r.imported, skipped: r.skipped, rejected: 0 });
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(); reject(new Error("federation pull timeout")); });
+    req.end();
+  });
+}
+
 export function formatCheckResult(r: PatternCheckResult): string {
   const lines: string[] = [];
   const verb = r.refuse ? "⛔ REFUSED" : r.verdict === "NECROTIC" ? "⚠ CAUTION" : r.verdict === "INFLAMED" ? "⚡ INFLAMED" : "✓ OK";
