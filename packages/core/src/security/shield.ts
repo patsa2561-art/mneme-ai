@@ -76,7 +76,26 @@ interface RateBucket {
 const buckets = new Map<string, RateBucket>();
 const reputation = new Map<string, number>();
 
-const SHELL_META = /[;&|`$<>()\\\n\r"']/;
+// v2.22.3 — tightened shell-metacharacter denylist + explicit traversal
+// detector. Previous regex (v1.x) caught the obvious shell metas; this
+// adds null-byte, NUL escape, additional brace/bracket pairs, and tab
+// characters that some shells re-interpret. The path traversal detector
+// is separate because some legitimate args contain `..` (e.g. relative
+// paths) — only the `../`/`..\` sequence at sensitive surfaces is
+// blocked.
+const SHELL_META = /[;&|`$<>(){}\\\n\r\t"'\0]/;
+const PATH_TRAVERSAL = /(\.\.\/|\.\.\\|%2e%2e)/i;
+
+/** v2.22.3 — exported so other modules (CLI flag validators, MCP tool
+ *  argument scrubbers) can reuse the same denylist without duplicating
+ *  it. Tests cover both. */
+export function containsShellMetaChars(s: string): boolean {
+  return SHELL_META.test(s);
+}
+
+export function containsPathTraversal(s: string): boolean {
+  return PATH_TRAVERSAL.test(s);
+}
 
 function takeRateToken(key: string, perMinute: number, burst: number): { ok: boolean; retryAfterMs?: number } {
   const now = Date.now();

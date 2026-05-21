@@ -15,7 +15,22 @@ import { resolve } from "node:path";
 export async function swarmCommand(opts: { cwd: string; text?: string; filePath?: string; vendor?: string; json?: boolean }): Promise<void> {
   const core = await import("@mneme-ai/core");
   const text = opts.text ?? (opts.filePath ? readFileSync(opts.filePath, "utf8") : "");
-  if (!text) { process.stderr.write("swarm requires --text or --file\n"); process.exit(1); return; }
+  if (!text) { process.stderr.write("swarm requires a claim (positional, --text, or --file)\n"); process.exit(1); return; }
+  // v2.22.3 — explicit truncation warning. Several organs (polygraph,
+  // socratic) sample only the first ~200 chars of the claim. Without
+  // surfacing this, an AI agent could feed a 100k-char document and
+  // think the verdict was computed over the whole text. Now we warn.
+  const SAMPLE_CAP = 200;
+  if (text.length > SAMPLE_CAP * 2) {
+    const sample = Math.min(SAMPLE_CAP, text.length);
+    const note = `⚠ swarm: input is ${text.length} chars; some organs (polygraph / socratic) sample only the first ${sample} for sentence-level checks. Other organs (whistleblower / retirement / chronosheaf) consume the whole text.`;
+    if (opts.json) {
+      // emit a structured warning to stderr so JSON consumers still parse
+      process.stderr.write(JSON.stringify({ warning: "input-truncation", capChars: SAMPLE_CAP, inputChars: text.length, note }) + "\n");
+    } else {
+      process.stderr.write(note + "\n");
+    }
+  }
   const report = await core.truthSwarm.runTruthSwarm({ text, vendor: opts.vendor, repoRoot: resolve(opts.cwd) });
   if (opts.json) { process.stdout.write(JSON.stringify(report, null, 2) + "\n"); }
   else {

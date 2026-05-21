@@ -198,14 +198,15 @@ export async function run(argv: string[]): Promise<void> {
     );
 
   // ─── adversarial — meta-evaluate AI clients against repo memory ───
+  // v2.22.3 — prerequisites surfaced in description; previously hidden.
   program
     .command("adversarial")
-    .description("Meta-evaluate any AI client — Mneme generates probes mixing real history with subtle + wholesale lies; you paste them into your AI; we compute a trust grade based on which contradictions the AI catches.")
+    .description("Meta-evaluate any AI client. PREREQUISITES: (1) must run inside a git repo (use `mneme init` first), (2) probe generation needs HTC abstracts — run `mneme htc-build` once before the first `mneme adversarial` if the repo has no abstracts. Mneme generates probes mixing real history with subtle + wholesale lies; you paste them into your AI; we compute a trust grade based on which contradictions the AI catches.")
     .option("--probes <n>", "number of probes (rounded down to a multiple of 3)", (v) => Number(v), 12)
     .option("--out <path>", "output markdown path (default .mneme/adversarial-probes.md)")
-    .option("--grade <file>", "JSON responses file — switches to grading mode")
+    .option("--grade <file>", "JSON responses file — switches to grading mode (--json flag applies in this mode too)")
     .option("--seed <s>", "deterministic seed", "default")
-    .option("--json", "machine-readable output", false)
+    .option("--json", "machine-readable output (works in both generate + grade modes)", false)
     .action(async (opts: { probes?: number; out?: string; grade?: string; seed?: string; json?: boolean }) => {
       process.exit(
         await adversarialCommand({
@@ -2785,12 +2786,20 @@ export async function run(argv: string[]): Promise<void> {
       await confessCommand({ cwd: process.cwd(), mode: "submit", vendor: o.vendor, question: o.question, aiAnswer: o.aiAnswer, truth: o.truth, category: o.category, output: o.output, json: !!o.json });
     });
   // v2.19.88 — #1 TRUTH SWARM
+  // v2.22.3 — added positional `[claim...]` so `mneme swarm "the claim"` works
+  // alongside `--text`/`--file`. Help previously implied a positional argument
+  // (audit feedback: doc/code drift).
   program.command("swarm")
-    .description("🥇 MNEME TRUTH SWARM — fire all audit organs (polygraph + whistleblower + retirement + socratic + dep-mortality + pulse-record + chronosheaf) in parallel against one input. Returns SHIP / CAUTION / BLOCK + per-organ verdict + HMAC-signed report id. The flagship 'อึ้ง' demo: 9+ verification agents lighting up live, the inverse of Antigravity's 93 generative agents.")
-    .option("--text <t>").option("--file <p>").option("--vendor <v>").option("--json")
-    .action(async (o: { text?: string; file?: string; vendor?: string; json?: boolean }) => {
+    .description("🥇 MNEME TRUTH SWARM — fire 8 audit organs (polygraph + whistleblower + retirement + socratic + dep-mortality + confessional-hook + pulse-record + chronosheaf) in parallel against one input. Returns SHIP / CAUTION / BLOCK + per-organ verdict + HMAC-signed report id.")
+    .argument("[claim...]", "Optional positional claim text (alternative to --text / --file).")
+    .option("--text <t>", "Claim text (alternative to positional claim).")
+    .option("--file <p>", "Read claim text from a file.")
+    .option("--vendor <v>", "Vendor tag for the report.")
+    .option("--json", "Machine-readable output.")
+    .action(async (claim: string[], o: { text?: string; file?: string; vendor?: string; json?: boolean }) => {
       const { swarmCommand } = await import("./commands/jaw_drop.js");
-      await swarmCommand({ cwd: process.cwd(), text: o.text, filePath: o.file, vendor: o.vendor, json: !!o.json });
+      const text = o.text ?? (claim.length > 0 ? claim.join(" ") : undefined);
+      await swarmCommand({ cwd: process.cwd(), text, filePath: o.file, vendor: o.vendor, json: !!o.json });
     });
 
   // v2.19.88 — #2 ADVERSARIAL GAUNTLET

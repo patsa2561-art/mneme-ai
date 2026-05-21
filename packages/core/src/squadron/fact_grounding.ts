@@ -32,6 +32,7 @@ import { safeExecTry } from "../util/safe_exec.js";
 export type FactKind =
   | "language"
   | "tool_count"
+  | "swarm_organ_count"
   | "library_used"
   | "version"
   | "file_exists"
@@ -77,7 +78,16 @@ const LANGUAGE_PATTERNS: { name: string; re: RegExp }[] = [
   { name: "elixir", re: /\b(written\s+in\s+elixir|elixir\s+(?:project|codebase|repo))\b/i },
 ];
 
-const TOOL_COUNT_RE = /\b(?:has|exposes|ships|exports?|provides?|with)\s+(\d+)\s+(?:tools?|commands?|mcp\s+tools?|features?)\b/i;
+// v2.22.3 — broadened tool-count synonyms to match marketing-style claims
+// like "9 verification agents", "8 audit organs", etc. Previously, claims
+// using anything other than tool/command/feature would fall through to
+// PASSTHROUGH ("no extractable facts") even when the claim was factual.
+const TOOL_COUNT_RE = /\b(?:has|exposes|ships|exports?|provides?|with|runs?|fires?|spawn?s?)\s+(\d+)\s+(?:tools?|commands?|mcp\s+tools?|features?|primitives?|modules?|agents?|organs?|verifiers?|auditors?|checkers?|validators?|bots?|workers?)\b/i;
+
+// v2.22.3 — separate counter for verification agents (= truth swarm
+// organs). When a claim says "N verification agents" / "N audit organs"
+// / "N swarm organs", we verify against the ACTUAL truth-swarm catalog.
+const SWARM_ORGAN_COUNT_RE = /\b(?:has|runs?|fires?|exposes|ships|spawn?s?|with)\s+(\d+)\s+(?:verification\s+agents?|audit\s+organs?|swarm\s+organs?|verification\s+organs?|truth\s+(?:swarm\s+)?organs?)\b/i;
 const LIBRARY_USED_RE = /\b(?:depends?\s+on|uses?|built\s+on|requires?|imports?)\s+(?:the\s+)?([a-z][a-z0-9\-_/@.]{1,40})\s*(?:library|package|module|framework)?\b/i;
 const VERSION_RE = /\b(?:version\s+)?v?(\d+\.\d+\.\d+(?:[.-][\w]+)?)\b/g;
 const FILE_PATH_RE = /\b([a-zA-Z0-9_./-]+\.(?:ts|tsx|js|jsx|py|go|rs|java|md|json|ya?ml|toml))\b/g;
@@ -119,16 +129,32 @@ export function extractFactClaims(text: string): FactClaim[] {
     }
   }
 
-  // Tool counts -- only the FIRST hit; multiple "N tools" claims in one
-  // sentence is rare and we treat them as the same claim.
-  const tc = TOOL_COUNT_RE.exec(text);
-  if (tc) {
+  // v2.22.3 — Truth-swarm organ count first; if the claim names verification
+  // agents specifically, we use a different verifier (against the swarm
+  // catalog) than for generic tool counts.
+  const oc = SWARM_ORGAN_COUNT_RE.exec(text);
+  if (oc) {
     out.push({
-      kind: "tool_count",
-      asserted: tc[1]!,
-      raw: tc[0],
-      negated: isNegated(text, tc.index),
+      kind: "swarm_organ_count",
+      asserted: oc[1]!,
+      raw: oc[0],
+      negated: isNegated(text, oc.index),
     });
+  }
+
+  // Tool counts -- only the FIRST hit; multiple "N tools" claims in one
+  // sentence is rare and we treat them as the same claim. Skip when the
+  // claim already matched as a swarm-organ count to avoid double-emission.
+  if (!oc) {
+    const tc = TOOL_COUNT_RE.exec(text);
+    if (tc) {
+      out.push({
+        kind: "tool_count",
+        asserted: tc[1]!,
+        raw: tc[0],
+        negated: isNegated(text, tc.index),
+      });
+    }
   }
 
   // Library used (best-effort; we only verify against package.json). v1.54.0
@@ -283,6 +309,25 @@ const COUNT_TOOLS_TTL_MS = 30_000;
 
 /** For tests + ritual cleanup. Clears the memo. */
 export function _resetCountMnemeToolsCache(): void { _countMnemeToolsCache = null; }
+
+/** v2.22.3 — canonical truth-swarm organ count. Read from the OrganName
+ *  union in truth_swarm/index.ts at build time. Pinned here as a single
+ *  source of truth used by the swarm_organ_count verifier. If the
+ *  catalog grows, update this constant + add a regression test. */
+const TRUTH_SWARM_ORGANS = [
+  "polygraph",
+  "whistleblower",
+  "retirement",
+  "socratic",
+  "dep_mortality",
+  "confessional_hook",
+  "pulse_record",
+  "chronosheaf",
+] as const;
+
+export function countTruthSwarmOrgans(): number {
+  return TRUTH_SWARM_ORGANS.length;
+}
 
 export function countMnemeTools(repoRoot: string): number {
   const now = Date.now();
@@ -481,6 +526,22 @@ export function verifyFacts(repoRoot: string, claims: FactClaim[]): FactCheckRes
         out.push({ claim: c, verdict: "true", groundTruth: String(actual), evidence: `${actual} MCP tool definitions found (within ${Math.round(slack)} of asserted ${asserted})` });
       } else {
         out.push({ claim: c, verdict: "false", groundTruth: String(actual), evidence: `asserted ${asserted}, actual ${actual} (off by ${Math.abs(asserted - actual)})` });
+      }
+      continue;
+    }
+
+    // v2.22.3 — verification-agent / truth-swarm organ count. Verified
+    // against the canonical truth-swarm organ catalog rather than the
+    // generic MCP tool count.  Tolerance ±1 (rounding for marketing-style
+    // phrasing).
+    if (c.kind === "swarm_organ_count") {
+      const asserted = parseInt(c.asserted, 10);
+      const actual = countTruthSwarmOrgans();
+      const slack = 1; // narrow: marketing claims of "9 agents" should be honest within 1
+      if (Math.abs(asserted - actual) <= slack) {
+        out.push({ claim: c, verdict: "true", groundTruth: String(actual), evidence: `${actual} truth-swarm organs registered (asserted ${asserted})` });
+      } else {
+        out.push({ claim: c, verdict: "false", groundTruth: String(actual), evidence: `asserted ${asserted}, actual ${actual} truth-swarm organs registered` });
       }
       continue;
     }
