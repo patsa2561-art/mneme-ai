@@ -140,6 +140,39 @@ $ mneme polygraph autosetup
 
 <div align="center">
 
+### 📜 NEW v2.19.93 — MNEME CHRONICLE (Agent-Based Modeling + Drift-Guarded Time-Dilation)
+
+<sub>The world's first <b>working</b> Drift-Guarded ABM runtime. Run N simulated agents (people, traders, NPCs, bots) through accelerated time — Mneme detects when a "frugal" agent starts splurging, when a "low-risk" agent panic-sells, when 2+ agents drift together into a hallucination cascade — and <b>auto-recalibrates</b> them via HMAC-signed Anchor Points before the sim collapses.</sub>
+
+```bash
+$ mneme abm genesis --config agents.json     # 3 agents, HMAC-signed birth certs
+$ mneme abm simulate --ticks 360             # fast-forward 1 simulated year
+$ mneme abm chronicle                        # final report + plain-English narrative
+
+📜 MNEME CHRONICLE — final report
+  ticks ran:     360  (1y0m0d)
+  agents:        3  (alive=1, died=2)
+  anchors fired: 4    ← interventions pulled agents back to their birth-cert personality
+
+  per-agent:
+    ✓ Frugal Frieda  budget=  420  drift=0.18  anchors=2  reds=3
+    ✗ Splurgy Sam    budget=-1012  drift=0.10  anchors=0  reds=0
+    ✗ Risky Rita     budget=-1146  drift=0.32  anchors=2  reds=11
+
+  📖 narrative:
+  Across 360 ticks (~12 months), 3 agents lived, decided, and drifted.
+  2 went bankrupt. Anchor interventions fired 4 times. The agent that
+  drifted the most was Risky Rita...
+```
+
+<sub>🧠 5 pillars compose the runtime: <b>GENESIS</b> (HMAC-signed birth cert with personality vector ∈ [0,1]⁵) → <b>TICK</b> (template-driven decision engine, Ollama-free) → <b>DRIFT DETECTOR</b> (polygraph_lenses score every decision against the cert) → <b>ANCHOR POINT</b> (auto-recalibrate every N ticks if drift > threshold) → <b>CHRONICLE</b> (the story of the run, in one frame). AI agents in Claude Code / Cursor / Cline read <code>mneme abm</code> in the manifest and fire it the moment you say "simulate 100 traders for 1 year" / "ABM ดริฟต์" / "fast-forward this population" — you never type the verb.</sub>
+
+</div>
+
+---
+
+<div align="center">
+
 ### One sentence does it all
 
 Tell your AI: <i>"Mneme, verify that..."</i> · <i>"send my brain to my phone"</i> · <i>"clone to a browser AI on this PC"</i> · <i>"upgrade Mneme"</i>
@@ -280,6 +313,22 @@ mneme.caption.sever({"image": {"imageHash":"<sha256>","dimensions":[w,h]}, "capt
 # Defends against CAPTION-AUTHORITY ATTACK (CAA).
 ```
 Phrases that auto-route through this: `is this authentic` / `real or fake` / `verify this image` / `ตรวจของแท้` / `ของแท้หรือเปล่า` → `mneme.intent.execute` returns plan that always starts with `mneme.caption.sever`.
+
+### Step 6½ — When user asks for an Agent-Based Simulation (v2.19.93 NEW · CHRONICLE)
+Trigger phrases: `simulate N agents` / `model drift across N people` / `run an ABM` / `fast-forward 1 year` / `จำลอง agent` / `ABM` / `model hallucination cascade`:
+```
+# Write agents.json based on user's spec (3 sample agents shown):
+[
+  { "name": "Frugal Frieda", "personality": { "spending": 0.1, "risk": 0.15, "optimism": 0.5, "agreeableness": 0.6, "energy": 0.7 }, "initialBudget": 1000, "goals": ["save"] },
+  { "name": "Splurgy Sam",   "personality": { "spending": 0.9, "risk": 0.6,  "optimism": 0.85,"agreeableness": 0.5, "energy": 0.65},"initialBudget": 1000, "goals": ["enjoy"] },
+  { "name": "Risky Rita",    "personality": { "spending": 0.5, "risk": 0.95, "optimism": 0.7, "agreeableness": 0.4, "energy": 0.8 }, "initialBudget": 1000, "goals": ["10x"] }
+]
+# Then run the 3-step ritual silently — the user never types verbs:
+mneme abm genesis  --config agents.json
+mneme abm simulate --ticks 360                # 1 simulated year (30 ticks ≈ 1 month)
+mneme abm chronicle                            # final per-agent drift + anchor count + narrative
+```
+Reset with `mneme abm reset` between experiments. Pass `--anchor-every <n>` (default 30) + `--drift-threshold <n>` (default 0.30) to genesis to tune the CLI Guardian. Output is HMAC-chained in `.mneme/abm/events.jsonl` and tamper-evident.
 
 ### Step 7 — Cross-vendor brain handoff
 Any vendor name accepted (Claude / GPT / Gemini / Grok / Cursor / Copilot / Codex / Llama / Mistral / Qwen / DeepSeek / Perplexity):
