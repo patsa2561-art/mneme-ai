@@ -3775,6 +3775,148 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.21.6 — CONSENT FABRIC (Bill of Rights + bilateral verdict +
+  //                telemetry registry + pulse neutralizer + receipts) ───
+  program
+    .command("rights")
+    .description("📜 Print the Agent Bill of Rights (10 articles). What an AI agent (or paranoid human) is owed by Mneme.")
+    .option("--criteria", "Show scoring criteria (Article 3 enforcement — every Mneme score with its formula).")
+    .option("--json")
+    .action(async (opts: { criteria?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      if (opts.criteria) {
+        if (opts.json) { process.stdout.write(JSON.stringify(core.consentFabric.getScoringCriteria(), null, 2) + "\n"); return; }
+        process.stdout.write(core.consentFabric.formatScoringCriteria() + "\n");
+        return;
+      }
+      if (opts.json) { process.stdout.write(JSON.stringify(core.consentFabric.BILL_OF_RIGHTS_V1, null, 2) + "\n"); return; }
+      process.stdout.write(core.consentFabric.formatBillOfRights() + "\n");
+    });
+
+  const telemetry = program
+    .command("telemetry")
+    .description("📋 Telemetry registry — every Mneme feature that records data, opt-IN by default (Article 2).");
+
+  telemetry
+    .command("list")
+    .description("📋 Show what data Mneme COULD collect + what's currently enabled vs disabled.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const rows = core.consentFabric.listTelemetryStatus(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(rows, null, 2) + "\n"); return; }
+      process.stdout.write(core.consentFabric.formatTelemetryStatus(rows) + "\n");
+    });
+
+  telemetry
+    .command("grant")
+    .description("📋 Opt IN to a telemetry feature.")
+    .argument("<feature>", "Feature key (see `mneme telemetry list`).")
+    .option("--reason <text>")
+    .action(async (feature: string, opts: { reason?: string }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.consentFabric.grantTelemetry(process.cwd(), feature, opts.reason);
+      if (!r.ok) { process.stderr.write(`✗ ${r.reason}\n`); process.exit(1); return; }
+      process.stdout.write(`✓ telemetry GRANTED: ${feature}\n`);
+    });
+
+  telemetry
+    .command("revoke")
+    .description("📋 Opt OUT of a telemetry feature.")
+    .argument("<feature>")
+    .option("--reason <text>")
+    .action(async (feature: string, opts: { reason?: string }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.consentFabric.revokeTelemetry(process.cwd(), feature, opts.reason);
+      if (!r.ok) { process.stderr.write(`✗ ${r.reason}\n`); process.exit(1); return; }
+      process.stdout.write(`✓ telemetry REVOKED: ${feature}\n`);
+    });
+
+  program
+    .command("verdict")
+    .description("📊 AI agent → Mneme verdict (Article 6 — bilateral trust). Record how the pulse / capsule / tool call felt: ok | concern | reject.")
+    .argument("<status>", "ok | concern | reject")
+    .option("--surface <s>", "Which Mneme surface (pulse / capsule / tool-call / atlas / etc.).")
+    .option("--reason <text>")
+    .option("--agent <id>", "Agent identifier (vendor / model / session).")
+    .option("--json")
+    .action(async (status: string, opts: { surface?: string; reason?: string; agent?: string; json?: boolean }) => {
+      const valid = ["ok", "concern", "reject"] as const;
+      if (!valid.includes(status as any)) { process.stderr.write(`✗ status must be one of: ${valid.join(", ")}\n`); process.exit(1); return; }
+      const core = await import("@mneme-ai/core");
+      const v = core.consentFabric.submitVerdict(process.cwd(), { status: status as any, surface: opts.surface, reason: opts.reason, agent: opts.agent });
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(`✓ verdict recorded: ${v.id}  status=${v.status}  surface=${v.surface ?? "(none)"}\n`);
+    });
+
+  program
+    .command("verdicts")
+    .description("📊 Aggregate AI-agent verdicts. Surfaces flagged when ≥30% concern + reject (with ≥3 votes) appear for design review.")
+    .option("--status <s>", "Filter (ok | concern | reject).")
+    .option("--surface <s>", "Filter by surface.")
+    .option("--json")
+    .action(async (opts: { status?: string; surface?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const all = core.consentFabric.listVerdicts(process.cwd(), { status: opts.status as any, surface: opts.surface });
+      const agg = core.consentFabric.aggregateVerdicts(all);
+      if (opts.json) { process.stdout.write(JSON.stringify({ verdicts: all, aggregate: agg }, null, 2) + "\n"); return; }
+      process.stdout.write(core.consentFabric.formatVerdictAggregate(agg) + "\n");
+    });
+
+  program
+    .command("audit-pulse")
+    .description("🛡 Audit text for manipulation patterns (imperative verbs, fake user voice, opaque grades, AUTO-ACTION mandates). Returns severity-ranked findings.")
+    .argument("<text...>", "The text to audit.")
+    .option("--neutralize", "Print the neutralized text in addition to the findings.")
+    .option("--json")
+    .action(async (text: string[], opts: { neutralize?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const t = text.join(" ");
+      const findings = core.consentFabric.auditPulseText(t);
+      if (opts.json) {
+        if (opts.neutralize) {
+          const r = core.consentFabric.neutralizePulseText(t);
+          process.stdout.write(JSON.stringify({ findings: r.findings, neutralized: r.neutralized }, null, 2) + "\n");
+        } else {
+          process.stdout.write(JSON.stringify(findings, null, 2) + "\n");
+        }
+        return;
+      }
+      process.stdout.write(core.consentFabric.formatFindings(findings) + "\n");
+      if (opts.neutralize) {
+        const r = core.consentFabric.neutralizePulseText(t);
+        process.stdout.write(`\n  neutralized:\n    ${r.neutralized}\n`);
+      }
+      if (findings.some((f) => f.severity >= 4)) process.exit(2);
+    });
+
+  const receipts = program
+    .command("receipts")
+    .description("📜 Consent fabric — receipt ledger + chain verification (Article 7).");
+
+  receipts
+    .command("ledger", { isDefault: true })
+    .description("📜 Show the last 20 interaction receipts (Mneme→AI-agent events).")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const all = core.consentFabric.listReceipts(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(all, null, 2) + "\n"); return; }
+      process.stdout.write(core.consentFabric.formatReceipts(all) + "\n");
+    });
+
+  receipts
+    .command("verify-chain")
+    .description("📜 Verify the receipt ledger's HMAC chain. Exit 1 on tamper.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = core.consentFabric.verifyChain(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(`${v.ok ? "✓ chain intact" : `✗ broken at index ${v.brokenAt}: ${v.reason}`}\n`);
+      if (!v.ok) process.exit(1);
+    });
+
   // ─── v2.21.5 — `mneme atlas` + `--bloom` / `--hot` / `--tags` / `do` ──
   //
   // ATLAS HELP — six-layer discovery protocol that solves the 300+

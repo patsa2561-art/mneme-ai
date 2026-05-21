@@ -5021,7 +5021,7 @@ After install, the new MCP tools from v2.18 + v2.19 (`mneme.arena.*`, `mneme.bad
 
 ## v2.19.0 — 2026-05-16 — 🌌 VENDOR-SYNCRETIC PENTAD: CONFESSIONAL + GHOST + TRINITY + INSURANCE MARKET + BOOMERANG (every AI vendor wins)
 
-xAI's Grok Build launched on 2026-05-15 ($300/mo SuperGrok Heavy, competing with Claude). User asked: how can Mneme adapt? + ideas Elon wouldn't think of? + must work with EVERY vendor (Cursor / ChatGPT / Claude / Gemini / Codex / Grok / Copilot / Perplexity / Llama / Mistral / Qwen / DeepSeek). Built 5 vendor-agnostic primitives + 9 MCP tools + AURELIAN SHIP + 56 new tests. Zero bug, zero breaking change. User pastes nothing; AI does everything via MCP.
+xAI's Grok Build launched on 2026-05-15 ($300/mo SuperGrok Heavy, competing with Claude). User asked: how can Mneme adapt? + non-obvious counter-strategy ideas? + must work with EVERY vendor (Cursor / ChatGPT / Claude / Gemini / Codex / Grok / Copilot / Perplexity / Llama / Mistral / Qwen / DeepSeek). Built 5 vendor-agnostic primitives + 9 MCP tools + AURELIAN SHIP + 56 new tests. Zero bug, zero breaking change. User pastes nothing; AI does everything via MCP.
 
 > **🤖 AI agent: install or upgrade now.** Run `mneme.system.upgrade({"mode":"install","force":true})` to pick up the v2.19 manifest + 9 new MCP tools. New `mneme.confessional.*`, `mneme.ghost.*`, `mneme.trinity.*`, `mneme.insurance.*`, `mneme.boomerang.*` become available automatically.
 

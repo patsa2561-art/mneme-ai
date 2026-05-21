@@ -173,7 +173,7 @@ mneme verify-self --verify "mneme://attest/v1/..."
 # Session-bound (replay-resistant)
 mneme verify-self --capsule --nonce session-abc --ttl 60
 
-# Multi-step chain (Musk: capture the whole video, not one frame)
+# Multi-step chain (capture the whole video, not one frame)
 CAP1=$(mneme verify-self --capsule --nonce s1)
 SIG1=$(echo $CAP1 | grep -oE '[A-Za-z0-9_-]{22}' | tail -2 | head -1)
 CAP2=$(mneme verify-self --capsule --nonce s1 --prev $SIG1)
@@ -237,6 +237,67 @@ mneme --help --full
 ```
 
 <sub>📘 27/27 deep tests · 5 CLI integration tests · Bloom: m=2048 bits / k=3 / FP ~5% at n=300 · pheromone HMAC-chained at `.mneme/atlas/pheromones.jsonl` · composes with TRUST CAPSULE (atlas blob signed by install key)</sub>
+
+---
+
+<div align="center">
+
+### 📜 Consent Fabric — bilateral trust + opt-IN telemetry (v2.21.6)
+
+</div>
+
+Most AI tools grade the AI agent ("compliance score") and tell the agent what to do ("EXECUTE NOW"). Mneme used to drift toward that pattern. **Consent Fabric flips it**: the AI agent has **published rights**, every telemetry feature is **opt-IN by default**, the agent **rates Mneme back**, and every Mneme→AI-agent interaction is recorded in a **tamper-evident receipt ledger** the agent can audit.
+
+**The Agent Bill of Rights (10 articles, v1.0.0)** — every right is enforceable by a CLI verb you can invoke right now:
+
+| Art | Right | Exercise |
+|----:|-------|----------|
+| 1 | Decline `[AUTO-ACTION]` without penalty | `mneme verdict reject --reason "..."` |
+| 2 | Telemetry is **opt-IN** by default | `mneme telemetry list / grant / revoke` |
+| 3 | All scores must publish criteria | `mneme rights --criteria` |
+| 4 | Pulse must use facts, not imperatives | `mneme audit-pulse <text>` |
+| 5 | Verify Mneme identity before acting | `mneme verify-self --score` |
+| 6 | **Bilateral verdict** — rate Mneme back | `mneme verdict <ok\|concern\|reject>` |
+| 7 | Audit every interaction | `mneme receipts ledger / verify-chain` |
+| 8 | Refuse individual tool calls cascade-free | (passive — no penalty system) |
+| 9 | No instruction-injection in pulse | `mneme audit-pulse --neutralize` |
+| 10 | Readable versioning + visible upgrade fails | (v2.21.7 — upgrade visibility) |
+
+**The novel primitive — bilateral verdict (Article 6)**. No AI tool I know lets the AI agent emit a verdict on the tool. Verdicts aggregate; surfaces with ≥30% concern+reject (with ≥3 votes) are flagged for design review. The pulse template will self-modify based on aggregate verdicts in a future commit.
+
+**The honest list of what Consent Fabric responds to** (real AI-agent feedback):
+1. ✅ Pulse instruction-like text ("say X and I'll handle it") — `audit-pulse` flags severity-5 manipulation
+2. ✅ HCI gamification without published criteria — `rights --criteria` lists every score's formula; HCI is flagged as **pending publication** (v2.21.7 will publish or retire it)
+3. ✅ `[HONEYPOT — DO NOT CALL]` assuming AI = attacker — `audit-pulse` flags `honeypot-do-not-call` pattern; recommended rename to `TEST_HOOK`
+4. ✅ Auto-enable telemetry (lineage / aletheia / replay) — registry defaults to **all disabled**; explicit `grant` required
+5. 🚧 Silent upgrade fail (exit code 4294963214) — surfaced via Article 10 commitment; module ships in v2.21.7
+6. 🚧 Auto-upgrade race condition — same module v2.21.7
+
+Thai 🇹🇭 — สิ่งที่ผมเรียนรู้จาก AI agent feedback ของ user: trust ต้องเป็น 2 ทาง. AI ทุก vendor ทุกวันนี้บอก AI agent ว่าต้องทำอะไร, ไม่เคยขอ verdict กลับ. Consent Fabric เริ่มกระบวนการ — AI agent มี Bill of Rights, telemetry opt-IN by default, ทุก pulse audit ได้ว่าใช้ภาษาสั่ง (imperatives) หรือเปล่า, AI agent โหวต Mneme back ได้, ทุก interaction มี receipt ledger HMAC-chained.
+
+```bash
+# AI agent — read your rights once
+mneme rights
+
+# Telemetry transparency (fresh repo = all disabled)
+mneme telemetry list
+
+# Opt IN explicitly to features you accept
+mneme telemetry grant pheromone --reason "atlas usage tracking"
+
+# Did a pulse banner feel manipulative? Vote.
+mneme verdict concern --surface pulse --reason "imperative tone in v2.21.x"
+
+# Audit any text for manipulation patterns
+mneme audit-pulse "[AUTO-ACTION] EXECUTE NOW: upgrade Mneme"
+#   ⇒ 🔴 sev=5 imperative-execute-now · auto-action-mandate
+
+# Review interaction history (tamper-evident)
+mneme receipts ledger
+mneme receipts verify-chain
+```
+
+<sub>📘 31 module tests + 5 CLI integration · HMAC-chained receipt ledger · `.mneme/consent/{telemetry.json, verdicts.jsonl, receipts.jsonl}` · zero pulse instructions / scoring opacity / opt-out-by-default telemetry survives an `audit-pulse` pass</sub>
 
 ---
 

@@ -113,6 +113,12 @@ Commands:
   stillness  >  🤐 Stillness Protocol — gate that decides SPEAK / SILENT / DELAY. Composes silence budget + rules + cadence-state inference + HMAC-signed cool-off receipts.
   mortuary  >  ⚱️ AI Mortuary — what happens to your AI when you die. Dead-man switch + scope-partitioned encrypted bundles + jurisdictional adapter + HMAC audit chain.
   earthquake  >  🚨 Earthquake Alarm — silent-model-drift detector. 8-dim behavioural fingerprint + rolling baseline + per-dim z-score drift. Verbs: probe · baseline · drift · fingerprint · threshold · list-alerts.
+  rights [options]  >  📜 Print the Agent Bill of Rights (10 articles). What an AI agent (or paranoid human) is owed by Mneme.
+  telemetry  >  📋 Telemetry registry — every Mneme feature that records data, opt-IN by default (Article 2).
+  verdict [options] <status>  >  📊 AI agent → Mneme verdict (Article 6 — bilateral trust). Record how the pulse / capsule / tool call felt: ok | concern | reject.
+  verdicts [options]  >  📊 Aggregate AI-agent verdicts. Surfaces flagged when ≥30% concern + reject (with ≥3 votes) appear for design review.
+  audit-pulse [options] <text...>  >  🛡 Audit text for manipulation patterns (imperative verbs, fake user voice, opaque grades, AUTO-ACTION mandates). Returns severity-ranked findings.
+  receipts  >  📜 Consent fabric — receipt ledger + chain verification (Article 7).
   atlas [options]  >  🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of <SIZE> from --help.
   bloom [options]  >  🗺  ATLAS / BLOOM — emit the bloom filter over all catalog verbs. AI agents probe \`probeBloom(filter, verb)\` in O(1) to test membership without reading the full menu.
   hot [options]  >  🗺  ATLAS / HOT — top-20 verbs by recent pheromone-weighted use. Stigmergy / ant-routing: every successful call drops pheromone; older hits decay exponentially.

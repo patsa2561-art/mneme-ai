@@ -297,7 +297,7 @@ export interface BuildCapsuleOptions {
  *  HMAC key (auto-generated on first call, lives in
  *  `.mneme/trust/capsule.key`).
  *
- *  Musk-style first-principles defenses:
+ *  First-principles defenses:
  *    - TTL: capsule self-destructs after ttlSeconds (default 300).
  *      Replay attack window is physical, not cryptographic.
  *    - chain-link: optional `prev` ties this capsule to predecessor.

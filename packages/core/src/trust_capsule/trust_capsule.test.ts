@@ -237,7 +237,7 @@ describe("trust capsule", () => {
 
   // ─── CAPSULE CHAIN ─────────────────────────────────────────────────
 
-  describe("capsule chain (Musk-style: capture the whole session, not a frame)", () => {
+  describe("capsule chain (capture the whole session, not a frame)", () => {
     it("verifyCapsuleChain accepts a valid 3-capsule chain", () => {
       const c1 = buildCapsule(repo, { version: "1.0.0", merkle: "MERKLEroot1234567890ab" });
       const c2 = buildCapsule(repo, { version: "1.0.0", merkle: "MERKLEroot1234567890ab", prev: c1.capsule.sig });

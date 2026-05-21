@@ -1209,9 +1209,9 @@ export * as earthquake from "./earthquake/index.js";
 // + 0-100 trust score (signature + drift + path + age) + single-line
 // capsule URI (mneme://attest/v1/...) + nonce-bound + TTL self-
 // destruct + chain-link. AI agents read ONE number, not 30 fields.
-// Musk-style first-principles defenses: TTL makes replay physically
-// impossible (not just cryptographically hard); chain-link forces
-// adversaries to capture an entire session, not one frame.
+// First-principles defenses: TTL makes replay physically impossible
+// (not just cryptographically hard); chain-link forces adversaries
+// to capture an entire session, not one frame.
 export * as trustCapsule from "./trust_capsule/index.js";
 
 // v2.21.5 — 🗺 ATLAS HELP. Six-layer discovery protocol that solves
@@ -1222,3 +1222,13 @@ export * as trustCapsule from "./trust_capsule/index.js";
 // index, ~1KB) + INTENT (NL → top-1 command, ~80B) + FULL (legacy
 // escape, ~14KB). AI agents probe O(1) instead of reading walls.
 export * as atlas from "./atlas/index.js";
+
+// v2.21.6 — 📜 CONSENT FABRIC. Trust is bilateral. Most AI tools
+// grade the AI agent and tell the agent what to do; Mneme writes
+// down what the AI agent is OWED (Bill of Rights, 10 articles),
+// accepts the AI agent's VERDICT back on Mneme's own behaviour,
+// audits its own pulse text for manipulative patterns, and treats
+// every telemetry feature as OPT-IN by default. Composes:
+// rights / telemetry_registry / verdict / pulse_neutralizer /
+// receipt (HMAC-chained interaction ledger).
+export * as consentFabric from "./consent_fabric/index.js";
