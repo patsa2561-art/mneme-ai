@@ -3233,6 +3233,118 @@ export async function run(argv: string[]): Promise<void> {
       process.stdout.write(`🕰  Auto-inscription observer installed. Every noteworthy Mneme verb will now auto-inscribe to ${process.cwd()}/.mneme/time_bridge/inscriptions.jsonl\n`);
     });
 
+  // v2.20.2 — external triggers + HTML tree visualizer.
+  bridge
+    .command("cron-register")
+    .description("🕰  Register a cron-style schedule that fires inscriptions tagged with --external-id. Supported schedules: 'every-Nm' / 'daily HH:MM' / 'weekly DOW HH:MM' (UTC).")
+    .requiredOption("--label <text>", "Plain English description (for logs).")
+    .requiredOption("--external-id <id>", "Match wake predicates of kind=external with this id.")
+    .requiredOption("--schedule <s>", "e.g. every-30m / daily 03:00 / weekly 1 09:00")
+    .action(async (opts: { label: string; externalId: string; schedule: string }) => {
+      const core = await import("@mneme-ai/core");
+      core.timeBridgeTriggers.registerCron(process.cwd(), { label: opts.label, externalId: opts.externalId, schedule: opts.schedule });
+      process.stdout.write(`🕰  Cron registered: ${opts.label}  (${opts.schedule})\n`);
+    });
+
+  bridge
+    .command("cron-list")
+    .description("🕰  Show all registered cron specs + last-fired timestamps.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const specs = core.timeBridgeTriggers.listCron(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(specs, null, 2) + "\n"); return; }
+      if (specs.length === 0) { process.stdout.write("🕰  No cron specs registered.\n"); return; }
+      for (const s of specs) process.stdout.write(`  • ${s.label.padEnd(40)} ${s.schedule.padEnd(20)} last=${s.lastFiredAt ?? "never"}\n`);
+    });
+
+  bridge
+    .command("watch")
+    .description("🕰  Start fs.watch on file patterns. When matched files change, file-touched wake predicates fire on the next daemon tick.")
+    .requiredOption("--patterns <list>", "Comma-separated patterns relative to repo root.")
+    .action(async (opts: { patterns: string }) => {
+      const core = await import("@mneme-ai/core");
+      const stop = core.timeBridgeTriggers.startFileWatch(process.cwd(), opts.patterns.split(",").map((s) => s.trim()));
+      process.stdout.write(`🕰  Watching ${opts.patterns}. Ctrl-C to stop.\n`);
+      process.on("SIGINT", () => { stop(); process.exit(0); });
+    });
+
+  bridge
+    .command("tree-html")
+    .description("🕰  Render the override-lineage tree as a self-contained HTML page (offline, no JS framework, 20-year stable format).")
+    .requiredOption("--root <id>", "Root inscription id.")
+    .option("--out <path>", "Output HTML file (default: tree.html in cwd).")
+    .action(async (opts: { root: string; out?: string }) => {
+      const core = await import("@mneme-ai/core");
+      const t = core.timeBridge.tree(process.cwd(), opts.root);
+      const html = core.timeBridgeTriggers.renderTreeHtml(opts.root, t as any);
+      const outPath = opts.out ?? "tree.html";
+      const fs = await import("node:fs");
+      fs.writeFileSync(outPath, html, "utf8");
+      process.stdout.write(`🕰  Wrote ${outPath}\n`);
+    });
+
+  // v2.20.2 — APOPTOSIS NETWORK CLI.
+  const apoptosis = program
+    .command("apoptosis")
+    .description("🧬 APOPTOSIS NETWORK — pattern-level immune system for AI-written code. Refuse-at-source on patterns that failed in N repos × M vendors × T weeks.");
+
+  apoptosis
+    .command("record")
+    .description("🧬 Record one pattern attempt outcome (success / failure / partial).")
+    .requiredOption("--tokens <text>", "Canonical token string identifying the pattern.")
+    .requiredOption("--description <text>", "Human-readable description.")
+    .requiredOption("--vendor <v>", "Vendor that attempted (claude / gpt / gemini / cursor / ...).")
+    .requiredOption("--outcome <o>", "success | failure | partial")
+    .option("--failure-class <c>", "When outcome=failure: not-found / lock-contention / network / permission / race-prevented / validation / other")
+    .action(async (opts: { tokens: string; description: string; vendor: string; outcome: string; failureClass?: string }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.apoptosisNetwork.record(process.cwd(), {
+        patternTokens: opts.tokens, description: opts.description,
+        vendor: opts.vendor, outcome: opts.outcome as any, failureClass: opts.failureClass,
+      });
+      process.stdout.write(`🧬 Recorded ${r.outcome} for pattern ${r.fingerprint.slice(0, 16)}…\n`);
+    });
+
+  apoptosis
+    .command("diagnose")
+    .description("🧬 Diagnose one pattern → HEALTHY / INFLAMED / NECROTIC / APOPTOTIC verdict + signed lineage.")
+    .requiredOption("--tokens <text>")
+    .option("--json")
+    .action(async (opts: { tokens: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = await core.apoptosisNetwork.diagnose(process.cwd(), opts.tokens);
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(core.apoptosisNetwork.formatVerdict(v) + "\n");
+    });
+
+  apoptosis
+    .command("check")
+    .description("🧬 The refuse-at-source check. AI agents should call this BEFORE proposing risky patterns. Exit code 2 on APOPTOTIC.")
+    .requiredOption("--tokens <text>")
+    .option("--json")
+    .action(async (opts: { tokens: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.apoptosisNetwork.checkPattern(process.cwd(), opts.tokens);
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.apoptosisNetwork.formatCheckResult(r) + "\n");
+      if (r.refuse) process.exit(2);
+    });
+
+  apoptosis
+    .command("counter")
+    .description("🧬 Record a surviving counter-pattern for a failed pattern. Surfaces as suggestion on future check() calls.")
+    .requiredOption("--failed <tokens>", "Token string of the failed pattern.")
+    .requiredOption("--success <tokens>", "Token string of the surviving counter-pattern.")
+    .requiredOption("--description <text>", "Human-readable description of the workaround.")
+    .action(async (opts: { failed: string; success: string; description: string }) => {
+      const core = await import("@mneme-ai/core");
+      core.apoptosisNetwork.recordCounterPattern(process.cwd(), {
+        failedTokens: opts.failed, successTokens: opts.success, description: opts.description,
+      });
+      process.stdout.write(`🧬 Counter-pattern recorded.\n`);
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs

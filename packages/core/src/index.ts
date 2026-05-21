@@ -1175,3 +1175,12 @@ export * as ghostMentor from "./ghost_mentor/index.js";
 //   (2) "default temporal layer" position
 //   (3) FORMAT_VERSION = 1 — stable for 20+ years, never breaks
 export * as timeBridge from "./time_bridge/index.js";
+export * as timeBridgeTriggers from "./time_bridge/triggers.js";
+
+// v2.20.2 — APOPTOSIS NETWORK. Pattern-level apoptosis: when a code/
+// decision pattern has failed in N independent repos × M vendors × T
+// weeks, refuse-at-source via soul.check, auto-vaccinate, extract
+// surviving counter-patterns. The "Guinness-grade" Mneme moat — needs
+// cross-repo experience pool + HMAC + multi-vendor + refuse primitive,
+// none of which competitors can stand up in <18 months.
+export * as apoptosisNetwork from "./apoptosis_network/index.js";
