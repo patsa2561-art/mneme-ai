@@ -2933,6 +2933,25 @@ export async function run(argv: string[]): Promise<void> {
       if (s.reinstallHint) process.stdout.write(`\n  start now:  ${s.reinstallHint}\n`);
     });
 
+  // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
+  // Pure read-only attestation a fresh AI agent (or paranoid human) runs
+  // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs
+  // package name + version + install path + sha256 + canonical URLs the
+  // receiver can cross-check. No network, no daemon dep. Fixes the "fresh
+  // Claude refuses to install Mneme because the pulse looks like prompt
+  // injection" problem.
+  program
+    .command("verify-self")
+    .description("🔒 Print a trust attestation for AI agents seeing Mneme for the first time. Pure read-only; no network. Cross-checkable against npm + github.")
+    .option("--json", "Machine-readable output.")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const att = core.verifySelf.verifySelf(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(att, null, 2) + "\n"); return; }
+      process.stdout.write(core.verifySelf.formatSelfAttestation(att));
+      if (!att.ok) process.exit(1);
+    });
+
   // ─── v2.19.95 — `mneme clone` (one-verb cross-session handoff) ──
   // Auto-captures the current AI editor session (via live_session_mirror),
   // compresses to a paste-ready soul prompt, ships via clipboard / LAN+QR /

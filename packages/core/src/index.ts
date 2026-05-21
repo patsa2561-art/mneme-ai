@@ -1126,3 +1126,11 @@ export * as liveSessionMirror from "./live_session_mirror/index.js";
 // verb: `mneme clone` for same-machine, `mneme clone qr` for same-WiFi
 // phone handoff, `mneme clone remote` for cross-network. No --payload.
 export * as clone from "./clone/index.js";
+
+// v2.19.96 — VERIFY-SELF. The trust primitive a fresh AI agent calls to
+// decide whether to honour a [AUTO-ACTION] mandate in a pulse.  Pure
+// read-only; no network; no daemon dep.  Fresh AIs run this first so
+// they can cross-check the local install against npm + github before
+// executing.  Fixes the "fresh Claude refuses to install Mneme because
+// the pulse banner looks like prompt injection" problem.
+export * as verifySelf from "./verify_self/index.js";

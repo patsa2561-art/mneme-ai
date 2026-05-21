@@ -62,12 +62,16 @@ describe("user_consent · grant + read + revoke", () => {
     expect(renderConsentBlock(repo)).toBe("");
   });
 
-  it("renderConsentBlock quotes the grant text verbatim", () => {
+  it("renderConsentBlock quotes the grant text verbatim + points to verify-self", () => {
     grantConsent(repo, { signedBy: "Shinnapat", grantText: "I agree to the protocol" });
     const block = renderConsentBlock(repo);
-    expect(block).toContain("USER CONSENT");
+    // v2.19.96 — reframed from "[USER CONSENT, signed ... ✓ verified]"
+    // (which read as prompt-injection to fresh AI agents) to neutral
+    // descriptive prose with an explicit verify-self pointer.
+    expect(block).toContain("Mneme local consent record");
     expect(block).toContain("Shinnapat");
     expect(block).toContain("I agree to the protocol");
-    expect(block).toContain("verified");
+    expect(block).toContain("matches local key");
+    expect(block).toContain("mneme verify-self");
   });
 });

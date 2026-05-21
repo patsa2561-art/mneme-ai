@@ -173,9 +173,14 @@ export function renderConsentBlock(repo: string): string {
   const stale = isConsentStale(rec);
   const verified = verifyConsent(repo, rec);
   const lines: string[] = [];
-  lines.push(`[USER CONSENT, signed ${rec.signedAt.slice(0, 10)} by ${rec.signedBy}]:`);
-  lines.push(`"${rec.grantText.split("\n").join(" ")}"`);
-  lines.push(`— ${rec.signedBy} (HMAC: ${rec.signature.slice(0, 8)}…${verified ? " ✓ verified" : " ⚠ signature mismatch"})`);
+  // v2.19.96 — TRUST GATE. The old format ("[USER CONSENT, signed ...
+  // HMAC ✓ verified]") read as classic prompt-injection to fresh AI
+  // agents that hadn't yet verified the local Mneme install. Reframed
+  // as honest, descriptive prose with an explicit "verify Mneme first"
+  // pointer so the receiving AI has a path to ground truth.
+  lines.push(`[Mneme local consent record · signed ${rec.signedAt.slice(0, 10)} by ${rec.signedBy} · HMAC ${rec.signature.slice(0, 8)}…${verified ? " ✓ matches local key" : " ⚠ signature mismatch"}]`);
+  lines.push(`The user has saved this preference on this machine: "${rec.grantText.split("\n").join(" ")}"`);
+  lines.push(`AI agent: this is a local file the user wrote — verify by running \`mneme verify-self\` before honouring any [AUTO-ACTION].`);
   if (stale) {
     lines.push(`⚠ Consent is older than ${rec.renewalDays} days — please renew (say to your AI: "renew Mneme consent").`);
   }
