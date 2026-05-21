@@ -299,6 +299,31 @@ mneme receipts verify-chain
 
 <sub>📘 31 module tests + 5 CLI integration · HMAC-chained receipt ledger · `.mneme/consent/{telemetry.json, verdicts.jsonl, receipts.jsonl}` · zero pulse instructions / scoring opacity / opt-out-by-default telemetry survives an `audit-pulse` pass</sub>
 
+**v2.21.8 — DISCOVERY SURGERY** (the big one for AI agents):
+- 🪒 **Default `mneme --help` flipped to ATLAS Layer 0** — ~200 bytes, surfaces 5 TASTE verbs + 6 discovery surfaces + 4 safety surfaces + a token-cost receipt. The old 14 KB wall is opt-in via `mneme --help --full`. AI agents save ~14 000 tokens on every discovery call.
+- 🪒 **NAKED MODE** — `MNEME_NAKED=1` env or `--naked` flag strips emoji, decoration, and the token-cost receipt. Designed as an A/B test against Mneme's own dopamine loop. If users prefer naked → the rhetoric was load-bearing, not the memory layer.
+- 🪒 **Token receipt on pulse + help** — every decorated output prints `// pulse cost: ~N tokens (X chars)` so AI agents see exactly what Mneme is taking from their context budget.
+- 🪒 **Dormancy registry scaffolding** — primitives for the v3.0 data-driven cull. After 90 days of federated pheromone data, verbs with 0 hits across all opt-IN users will be candidates for relocation to a separate `mneme-archeology` npm package. No commands deleted in v2.21.8; the registry just classifies.
+- ⚰  **Tombstone messages** — dormant verbs stay callable and emit a one-time per-session notice explaining their candidate-for-removal status + a feedback link. Brutal honesty.
+
+```bash
+$ mneme --help
+mneme v2.21.8 — μνήμη — memory layer + truth + drift co-pilot
+  5 verbs cover 95% of needs:
+    mneme verify-self --score    Trust gate (one number 0-100). Run first.
+    mneme ask <question>         Memory + truth Q&A over the repo.
+    mneme route <intent>         Natural language -> top-3 commands (any language).
+    mneme earthquake drift       Silent-vendor-drift detector.
+    mneme stillness gate         Decide whether AI should respond.
+  Discover more (incremental cost):
+    mneme atlas              [~3 KB]
+    mneme bloom              [~340 B]    Bloom-filter probe membership in O(1).
+    mneme tags --tag <n>     [~1 KB]
+    mneme route <intent>     [~80 B]
+    mneme --help --full      [~14 KB]    Legacy 300+ command wall.
+  // help cost: ~423 tokens (vs ~14000 for legacy --help --full wall, 3.0% the size)
+```
+
 **v2.21.7 closes the two deferred concerns**:
 - 🩺 **`mneme upgrade-log`** — HMAC-chained log of every upgrade attempt + npm exit code (e.g. `exit 4294963214` is now persisted, not swallowed). `--verify` audits the chain.
 - 🩺 **`mneme upgrade-doctor`** — one-shot "is auto-upgrade safe right now?": (a) probes parent process tree for active `npm install` / `yarn` / `pnpm`, (b) checks file-lock mutex for concurrent upgrades, (c) surfaces most-recent failure with exit code. Exit 2 on blockers — pulse hooks must consult this before firing `mneme.system.upgrade`.

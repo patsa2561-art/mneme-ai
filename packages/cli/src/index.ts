@@ -133,6 +133,34 @@ import { registerToolsCommand, registerBotCommand, registerHealthCommand, regist
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
+  // v2.21.8 — DISCOVERY SURGERY · top-level `--help` short-circuit.
+  //
+  // Default `mneme --help` used to print the full Commander wall —
+  // ~300 commands × 14 KB ≈ 14 000 tokens, which blew out AI-agent
+  // context budgets on every discovery call. ATLAS v2.21.5 shipped
+  // 6 cheaper discovery layers but they were opt-in.
+  //
+  // This intercept routes `mneme --help` (top-level, no other verb) to
+  // ATLAS Layer 0 — ~200 bytes. Anything explicit (`mneme atlas --full`,
+  // `mneme --help --full`, `mneme <verb> --help`) bypasses the
+  // short-circuit and reaches Commander's renderer unchanged.
+  //
+  // Backwards compat: scripts that piped `mneme --help` must opt in
+  // via `mneme --help --full`. Migration banner is emitted in the
+  // short-circuit so existing scripts notice immediately.
+  const slice = argv.slice(2);
+  const isTopHelp = (slice.length === 1 || slice.length === 2)
+    && (slice[0] === "--help" || slice[0] === "-h")
+    && (slice.length === 1 || slice[1] === "--naked");
+  if (isTopHelp) {
+    try {
+      const { renderTopHelpAtlas } = await import("./top_help_atlas.js");
+      const out = await renderTopHelpAtlas({ naked: slice.includes("--naked") });
+      process.stdout.write(out);
+      process.exit(0);
+    } catch { /* fall through to commander on failure */ }
+  }
+
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")

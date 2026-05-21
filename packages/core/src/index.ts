@@ -1243,3 +1243,13 @@ export * as consentFabric from "./consent_fabric/index.js";
 // formula published in `mneme rights --criteria` (Article 3
 // satisfied; no pending opaque grades).
 export * as upgradeVisibility from "./upgrade_visibility/index.js";
+
+// v2.21.8 — ⚰  DORMANCY REGISTRY. Scaffolding for v3.0 data-driven
+// cull. Classifies catalog verbs by usage-over-90-days against a
+// curated TIER_0 whitelist. Dormant verbs stay CALLABLE but emit a
+// tombstone on first invoke per session. The empirical "dormant
+// list" stays empty until federated pheromone data is published.
+// Composes with v2.21.5 atlas (pheromones) + v2.21.6 consent_fabric
+// (opt-IN telemetry) + this version's `mneme --help` flip to ATLAS
+// Layer 0 default (~200 bytes instead of 14 KB wall).
+export * as dormancyRegistry from "./dormancy_registry/index.js";

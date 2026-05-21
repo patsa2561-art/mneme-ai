@@ -494,7 +494,35 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
   // v2.4 -- the pulse is injected into every prompt the user sends to
   // every AI. Route it through the lexicon so demonic vocabulary in
   // pulse strings cannot leak past a vendor classifier.
-  return tuneForVendorArtifact(lines.join("\n"));
+  let out = tuneForVendorArtifact(lines.join("\n"));
+
+  // v2.21.8 — NAKED MODE strips decoration. Composes with MNEME_NAKED=1
+  // env or explicit `opts.naked`. Helps A/B testers compare value
+  // independent of styling (the v2.21.7 audit suggested "the dopamine
+  // loop may be doing the work, not the memory layer" — this is the
+  // measurement primitive).
+  const naked = !!(opts as { naked?: boolean }).naked || process.env.MNEME_NAKED === "1";
+  if (naked) {
+    out = out
+      .replace(/\[MNEME PULSE\]/g, "mneme-pulse:")
+      .replace(/\[MNEME SOUL\]/g, "mneme-soul:")
+      .replace(/\[CHANGED[^\]]*\]/g, "changed:")
+      .replace(/\[INFO\]/g, "info:")
+      .replace(/\[WARN\]/g, "warn:")
+      .replace(/\[ACTION AVAILABLE\]/g, "action:")
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+      .replace(/\s+$/gm, "");
+  }
+
+  // v2.21.8 — TOKEN RECEIPT. Honest measurement of what the pulse
+  // costs an AI agent in context budget. ~4 chars/token approximation
+  // (GPT-class tokenizers; CJK is denser but caller can read raw
+  // length too). Suppressed in NAKED + when result is short.
+  if (!naked && out.length > 40) {
+    const tokens = Math.max(1, Math.round(out.length / 4));
+    out += `\n// pulse cost: ~${tokens} tokens (${out.length} chars). MNEME_NAKED=1 to suppress this banner.`;
+  }
+  return out;
 }
 
 /**
