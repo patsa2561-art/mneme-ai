@@ -120,6 +120,25 @@ mneme clone remote    # cross-network:             anonymous short URL + QR (1-d
 
 <div align="center">
 
+### 🐝 Swarm + 🏛  GovTech presets — one verb for the audit you'd otherwise hand-roll
+
+</div>
+
+<sub>Multi-agent runs (Antigravity 2.0, AutoGen, CrewAI, LangGraph) and regulated-sector deployments (public sector, healthcare, finance) need an audit you can hand to a compliance team. Two preset orchestrators compose the right Mneme primitives behind a single verb and return SHIP / REVIEW / BLOCK.</sub>
+
+```bash
+mneme antigravity       # 🐝 multi-agent swarm audit — pheromone + colony + polygraph + bounty + CHRONICLE cascade + super-nova
+mneme govtech-audit     # 🏛  regulated-sector audit — DLP + apostille + court + consent + compliance log
+```
+
+<sub>🤖 Say *"audit the swarm"* / *"is this swarm safe to ship"* / *"run a govtech audit"* — the AI agent fires the right preset and reads back the verdict in plain language. Both wrapped in SUPER NOVA so the audit itself is part of the IA experience pool.</sub>
+
+<sub>📘 <a href="docs/IA_MOAT.md" target="_blank" rel="noopener">IA fabric moat doc →</a> &nbsp; · &nbsp; 🧑‍🚀 <a href="docs/DIGITAL_TALENT.md" target="_blank" rel="noopener">Digital Talent — 5 standalone moats →</a></sub>
+
+---
+
+<div align="center">
+
 ### One sentence does it all
 
 Tell your AI: <i>"Mneme, verify that..."</i> · <i>"send my brain to my phone"</i> · <i>"clone to a browser AI on this PC"</i> · <i>"upgrade Mneme"</i>

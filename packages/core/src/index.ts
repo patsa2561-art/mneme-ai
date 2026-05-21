@@ -1149,3 +1149,11 @@ export * as superlock from "./superlock/index.js";
 // for "Mneme as Intelligent Assistant" — every fire visible to every
 // observer in realtime, every outcome persisted as a structured row.
 export * as superNova from "./super_nova/index.js";
+
+// v2.19.98 — SWARM + GOVTECH AUDIT orchestrators.  Single-verb presets
+// that compose 6 / 5 existing primitives behind one call, each wrapped
+// with SUPER NOVA so the orchestration itself is an experience-pool
+// event.  These make the Antigravity 2.0 / GovTech positioning
+// concretely usable instead of "primitives in a list".
+export * as swarm from "./swarm/index.js";
+export * as govtechAudit from "./govtech_audit/index.js";

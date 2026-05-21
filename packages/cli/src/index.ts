@@ -2933,6 +2933,48 @@ export async function run(argv: string[]): Promise<void> {
       if (s.reinstallHint) process.stdout.write(`\n  start now:  ${s.reinstallHint}\n`);
     });
 
+  // ─── v2.19.98 — `mneme antigravity` (multi-agent swarm audit preset) ──
+  // One verb composes pheromone + colony + polygraph + bounty +
+  // CHRONICLE cascade + super-nova into a single SHIP / REVIEW / BLOCK
+  // verdict for a 93-subagent / 12-hour swarm run.
+  // Named `antigravity` (not `swarm` — that's owned by truth_swarm).
+  program
+    .command("antigravity")
+    .description("🐝 Antigravity-style swarm audit — one-verb verdict on a multi-agent run (Antigravity 2.0 / AutoGen / CrewAI / LangGraph). Composes pheromone + colony + polygraph + bounty + CHRONICLE cascade + super-nova.")
+    .argument("[mode]", "audit (default)", "audit")
+    .option("--json", "Machine-readable output.")
+    .action(async (mode: string, opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.swarm.auditSwarm(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.swarm.formatSwarmReport(r) + "\n");
+      if (r.verdict === "BLOCK") process.exit(2);
+    });
+
+  // ─── v2.19.98 — `mneme govtech-audit` (regulated-sector preset) ──
+  // One verb composes compliance.dlp + apostille + court.rule +
+  // guardrail.consent + compliance.audit into a single SHIP / REVIEW /
+  // BLOCK verdict for public-sector / regulated AI deployments.
+  program
+    .command("govtech-audit")
+    .description("🏛  GovTech-grade audit — one-verb verdict for regulated-sector AI deployments. Composes DLP + apostille + court rulings + consent receipts + compliance audit log.")
+    .option("--scan-text <text>", "Optional text to DLP-scan during the audit (e.g. an AI-generated commit message or doc).")
+    .option("--json", "Machine-readable output.")
+    .action(async (opts: { scanText?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.govtechAudit.auditGovTech(process.cwd(), {
+        textToScan: opts.scanText,
+        scanDlp: opts.scanText ? ((t: string) => {
+          // Lazy-load DLP scanner only when caller actually provides text.
+          const c = require("@mneme-ai/core");
+          return c.compliance?.scanDlp ? c.compliance.scanDlp(t) : { findings: [] };
+        }) : undefined,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.govtechAudit.formatGovTechReport(r) + "\n");
+      if (r.verdict === "BLOCK") process.exit(2);
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs
