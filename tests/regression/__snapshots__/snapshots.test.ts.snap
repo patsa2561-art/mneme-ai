@@ -113,6 +113,11 @@ Commands:
   stillness  >  🤐 Stillness Protocol — gate that decides SPEAK / SILENT / DELAY. Composes silence budget + rules + cadence-state inference + HMAC-signed cool-off receipts.
   mortuary  >  ⚱️ AI Mortuary — what happens to your AI when you die. Dead-man switch + scope-partitioned encrypted bundles + jurisdictional adapter + HMAC audit chain.
   earthquake  >  🚨 Earthquake Alarm — silent-model-drift detector. 8-dim behavioural fingerprint + rolling baseline + per-dim z-score drift. Verbs: probe · baseline · drift · fingerprint · threshold · list-alerts.
+  atlas [options]  >  🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of <SIZE> from --help.
+  bloom [options]  >  🗺  ATLAS / BLOOM — emit the bloom filter over all catalog verbs. AI agents probe \`probeBloom(filter, verb)\` in O(1) to test membership without reading the full menu.
+  hot [options]  >  🗺  ATLAS / HOT — top-20 verbs by recent pheromone-weighted use. Stigmergy / ant-routing: every successful call drops pheromone; older hits decay exponentially.
+  tags [options]  >  🗺  ATLAS / TAGS — capability index: 300 commands grouped into ~30 semantic tags. Drill down with \`mneme tags --tag <name>\`.
+  route [options] <intent...>  >  🗺  ATLAS / INTENT — natural-language → command router. Tell it what you want; returns top-3 matches with scores. Pure local (no LLM); complements the v0.20 \`mneme do\` dispatcher (which actually executes).
   verify-self [options]  >  🔒 Print a trust attestation for AI agents seeing Mneme for the first time. v2.21.4 composes TRUST CAPSULE on top: Merkle install-root + 0-100 trust score + single-line capsule URI (--capsule) + nonce-bound + TTL self-destruct + chain-link.
   clone [options] [transport]  >  📡 Clone this session — auto-captures the current AI conversation and ships it to clipboard (default), a QR for your phone, or a public relay URL. Replaces the old 3-step transmit/extract/paste flow.
   live  >  🪞 Live Session Mirror — read the current AI editor's conversation jsonl directly from disk. Verbs: inspect · capture.

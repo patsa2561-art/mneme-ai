@@ -3775,6 +3775,82 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.21.5 — `mneme atlas` + `--bloom` / `--hot` / `--tags` / `do` ──
+  //
+  // ATLAS HELP — six-layer discovery protocol that solves the 300+
+  // command / 14k token blast-radius without deleting any command.
+  // Default `mneme --help` still works (backward compat); AI agents
+  // are told to use these layered surfaces instead.
+  program
+    .command("atlas")
+    .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")
+    .option("--json", "Machine-readable output.")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const a = core.atlas.buildAtlas(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(a, null, 2) + "\n"); return; }
+      process.stdout.write(core.atlas.formatAtlas(a) + "\n");
+    });
+
+  program
+    .command("bloom")
+    .description("🗺  ATLAS / BLOOM — emit the bloom filter over all catalog verbs. AI agents probe `probeBloom(filter, verb)` in O(1) to test membership without reading the full menu.")
+    .option("--probe <verb>", "Probe whether a verb exists in the catalog. Exit 0 = yes, 1 = no.")
+    .option("--json")
+    .action(async (opts: { probe?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const f = core.atlas.buildCatalogBloom();
+      if (opts.probe) {
+        const hit = core.atlas.probeBloom(f, opts.probe);
+        if (opts.json) { process.stdout.write(JSON.stringify({ verb: opts.probe, exists: hit }, null, 2) + "\n"); }
+        else process.stdout.write(`${hit ? "✓" : "✗"} ${opts.probe} ${hit ? "(probably exists)" : "(definitely does not exist)"}\n`);
+        if (!hit) process.exit(1);
+        return;
+      }
+      if (opts.json) { process.stdout.write(JSON.stringify(f, null, 2) + "\n"); return; }
+      process.stdout.write(core.atlas.formatBloom(f) + "\n");
+    });
+
+  program
+    .command("hot")
+    .description("🗺  ATLAS / HOT — top-20 verbs by recent pheromone-weighted use. Stigmergy / ant-routing: every successful call drops pheromone; older hits decay exponentially.")
+    .option("--top <n>", "Top N to show (default 20).", (v) => parseInt(v, 10))
+    .option("--tau-days <n>", "Decay half-life in days (default 7).", (v) => parseFloat(v))
+    .option("--json")
+    .action(async (opts: { top?: number; tauDays?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const hot = core.atlas.computeHot(process.cwd(), { topN: opts.top, tauDays: opts.tauDays });
+      if (opts.json) { process.stdout.write(JSON.stringify(hot, null, 2) + "\n"); return; }
+      process.stdout.write(core.atlas.formatHot(hot) + "\n");
+    });
+
+  program
+    .command("tags")
+    .description("🗺  ATLAS / TAGS — capability index: 300 commands grouped into ~30 semantic tags. Drill down with `mneme tags --tag <name>`.")
+    .option("--tag <name>", "Show only commands under this tag.")
+    .option("--json")
+    .action(async (opts: { tag?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const idx = core.atlas.buildTagIndex();
+      if (opts.json) { process.stdout.write(JSON.stringify(idx, null, 2) + "\n"); return; }
+      process.stdout.write(core.atlas.formatTagIndex(idx, { tag: opts.tag }) + "\n");
+    });
+
+  program
+    .command("route")
+    .description("🗺  ATLAS / INTENT — natural-language → command router. Tell it what you want; returns top-3 matches with scores. Pure local (no LLM); complements the v0.20 `mneme do` dispatcher (which actually executes).")
+    .argument("<intent...>", "Plain-English / Thai / etc. intent describing what you want to do.")
+    .option("--top <k>", "Top K matches (default 3).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (intent: string[], opts: { top?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const phrase = intent.join(" ");
+      const matches = core.atlas.routeIntent(phrase, undefined, opts.top ?? 3);
+      if (opts.json) { process.stdout.write(JSON.stringify({ intent: phrase, matches }, null, 2) + "\n"); return; }
+      process.stdout.write(core.atlas.formatIntent(phrase, matches) + "\n");
+      if (matches.length === 0) process.exit(1);
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs

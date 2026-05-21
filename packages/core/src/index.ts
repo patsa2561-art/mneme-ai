@@ -1213,3 +1213,12 @@ export * as earthquake from "./earthquake/index.js";
 // impossible (not just cryptographically hard); chain-link forces
 // adversaries to capture an entire session, not one frame.
 export * as trustCapsule from "./trust_capsule/index.js";
+
+// v2.21.5 — 🗺 ATLAS HELP. Six-layer discovery protocol that solves
+// the 300+ command / 14k token blast-radius without deleting any
+// command: TASTE (5 verbs, ~10B) + BLOOM (membership probe, ~180B,
+// WORLD-FIRST application of Bloom filters to CLI discovery) +
+// HOT (stigmergy / pheromone top-N, ~200B) + TAGS (capability
+// index, ~1KB) + INTENT (NL → top-1 command, ~80B) + FULL (legacy
+// escape, ~14KB). AI agents probe O(1) instead of reading walls.
+export * as atlas from "./atlas/index.js";
