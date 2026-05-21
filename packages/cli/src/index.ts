@@ -2933,6 +2933,66 @@ export async function run(argv: string[]): Promise<void> {
       if (s.reinstallHint) process.stdout.write(`\n  start now:  ${s.reinstallHint}\n`);
     });
 
+  // ─── v2.19.93 — `mneme abm` (MNEME CHRONICLE — Agent-Based Modeling) ──
+  // World's first drift-guarded ABM runtime. Composes polygraph_lenses
+  // (drift detection) + HMAC-chained ledgers (birth certs + interventions)
+  // into a working "Anchor Points / CLI Guardian" research tool. Run N
+  // agents through accelerated time; Mneme detects out-of-character
+  // decisions, auto-recalibrates personalities, and emits a Chronicle
+  // report you can read like a story.
+  const abm = program
+    .command("abm")
+    .description("📜 MNEME CHRONICLE — Agent-Based Modeling with drift-guarded time-dilation. Verbs: genesis · simulate · tick · chronicle · reset.");
+
+  abm
+    .command("genesis")
+    .description("📜 Genesis — create N agents from a config file (name + personality {spending,risk,optimism,agreeableness,energy} + initialBudget + goals). Each gets an HMAC-signed birth certificate.")
+    .requiredOption("--config <path>", "Path to agents.json (array of AgentSeed).")
+    .option("--anchor-every <n>", "How many ticks between anchor passes (default 30).", (v) => parseInt(v, 10))
+    .option("--drift-threshold <n>", "Per-axis drift threshold for intervention (default 0.30).", (v) => parseFloat(v))
+    .option("--json", "Machine-readable output.")
+    .action(async (opts: { config: string; anchorEvery?: number; driftThreshold?: number; json?: boolean }) => {
+      const { abmCommand } = await import("./commands/abm.js");
+      await abmCommand({ cwd: process.cwd(), mode: "genesis", configPath: opts.config, anchorEvery: opts.anchorEvery, driftThreshold: opts.driftThreshold, json: !!opts.json });
+    });
+
+  abm
+    .command("simulate")
+    .description("📜 Simulate — advance N ticks (1 tick ≈ 1 day, 30 ticks = 1 month). Anchor passes fire automatically per the genesis config.")
+    .option("--ticks <n>", "How many ticks to advance (default 30).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { ticks?: number; json?: boolean }) => {
+      const { abmCommand } = await import("./commands/abm.js");
+      await abmCommand({ cwd: process.cwd(), mode: "simulate", ticks: opts.ticks, json: !!opts.json });
+    });
+
+  abm
+    .command("tick")
+    .description("📜 Tick — advance the simulation by exactly ONE tick (every agent makes one decision).")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const { abmCommand } = await import("./commands/abm.js");
+      await abmCommand({ cwd: process.cwd(), mode: "tick", json: !!opts.json });
+    });
+
+  abm
+    .command("chronicle")
+    .description("📜 Chronicle — emit the final report: per-agent drift, anchor count, hallucination cascades, plain-English narrative.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const { abmCommand } = await import("./commands/abm.js");
+      await abmCommand({ cwd: process.cwd(), mode: "chronicle", json: !!opts.json });
+    });
+
+  abm
+    .command("reset")
+    .description("📜 Reset — wipe the local .mneme/abm/ state (birth certs, events, key). Start over.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const { abmCommand } = await import("./commands/abm.js");
+      await abmCommand({ cwd: process.cwd(), mode: "reset", json: !!opts.json });
+    });
+
   // ─── v2.19.76 — `mneme talk` (REPL + AI-agent protocol handoff) ───
   // Named `talk` because the hidden `chat` slot is already used by
   // the legacy multi-turn Q&A REPL in insights-cli.  `talk` is the

@@ -1104,3 +1104,11 @@ export * as bridgeService from "./bridge_service/index.js";
 // per-lens evidence so users see exactly WHY a sentence scored the
 // way it did. Ollama-free.
 export * as polygraphLenses from "./polygraph_lenses/index.js";
+
+// v2.19.93 — MNEME CHRONICLE. Agent-Based Modeling (ABM) + Time-
+// dilation + Drift-Guarded Anchor Points. Runs N simulated agents
+// through accelerated time, detects drift via polygraph_lenses, and
+// auto-recalibrates against HMAC-signed birth certificates. The
+// world's first working "Drift-Guarded ABM" runtime — composes
+// every Mneme primitive (lenses + HMAC chain + soul + jury).
+export * as abmChronicle from "./abm_chronicle/index.js";
