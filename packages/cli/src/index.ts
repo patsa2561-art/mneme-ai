@@ -3803,6 +3803,111 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.22.2 — DIMENSIONAL ORACLE / CHALLENGER LIBRARIAN /
+  //                MISSION RECORDER / OVERSHOOT TRACER ──
+  program
+    .command("dim-check")
+    .description("📐 DIMENSIONAL ORACLE — unit-algebra check on an LLM claim. Catches 'thrust = 9.8 N/m²' (N/m² is pressure, not force). Returns MATCH / MISMATCH / AMBIGUOUS / UNKNOWN_QUANTITY / UNKNOWN_UNIT.")
+    .argument("<claim...>", "Claim to verify.")
+    .option("--json")
+    .action(async (claim: string[], opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.dimensionalOracle.dimensionalCheck(claim.join(" "));
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.dimensionalOracle.formatReport(r) + "\n");
+      if (r.verdict === "MISMATCH") process.exit(2);
+    });
+
+  program
+    .command("failure-check")
+    .description("📚 CHALLENGER LIBRARIAN — cross-check an AI plan against 8 historical aerospace failures (Mars Climate Orbiter, Challenger O-ring, Columbia foam-strike, Apollo 1 fire, Ariane 5 501, Therac-25, Mariner 1, Soyuz 1). Returns SAFE / CAUTION / WARN / BLOCK + root-cause + citation.")
+    .argument("<plan...>", "Plan text to audit.")
+    .option("--json")
+    .action(async (plan: string[], opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = core.challengerLibrarian.crossCheck(plan.join(" "));
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.challengerLibrarian.formatReport(r) + "\n");
+      if (r.verdict === "BLOCK") process.exit(2);
+    });
+
+  program
+    .command("failures")
+    .description("📚 List the 8 historical failures in the librarian catalog.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const list = core.challengerLibrarian.listFailures();
+      if (opts.json) { process.stdout.write(JSON.stringify(list, null, 2) + "\n"); return; }
+      for (const f of list) process.stdout.write(`  ${f.id.padEnd(28)} ${f.date}  ${f.name}\n`);
+    });
+
+  const mission = program
+    .command("mission")
+    .description("🛰  MISSION RECORDER — flight-data-recorder for AI agent decisions. Lamport-counted, HMAC-chained, causal-DAG-linked events.");
+
+  mission
+    .command("record")
+    .description("🛰  Record an event. Default kind=manual; pass --kind / --verb / --cause / --meta-json.")
+    .option("--kind <k>", "event kind (default: manual)", "manual")
+    .option("--verb <v>")
+    .option("--actor <a>")
+    .option("--cause <ids...>", "Parent event IDs (causal DAG).")
+    .option("--meta-json <json>", "JSON meta object.")
+    .option("--json")
+    .action(async (opts: { kind: string; verb?: string; actor?: string; cause?: string[]; metaJson?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      let meta: Record<string, unknown> | undefined;
+      if (opts.metaJson) {
+        try { meta = JSON.parse(opts.metaJson); } catch { process.stderr.write(`✗ invalid --meta-json\n`); process.exit(1); return; }
+      }
+      const ev = core.missionRecorder.recordEvent(process.cwd(), { kind: opts.kind, verb: opts.verb, actor: opts.actor, causedBy: opts.cause, meta });
+      if (opts.json) { process.stdout.write(JSON.stringify(ev, null, 2) + "\n"); return; }
+      process.stdout.write(`✓ recorded ${ev.id} (L${ev.lamport})\n`);
+    });
+
+  mission
+    .command("trace <fromId>")
+    .description("🛰  Walk forward through the causal DAG from <fromId>; returns the ordered chain.")
+    .option("--json")
+    .action(async (fromId: string, opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const chain = core.missionRecorder.traceCausalChain(process.cwd(), fromId);
+      if (opts.json) { process.stdout.write(JSON.stringify(chain, null, 2) + "\n"); return; }
+      process.stdout.write(core.missionRecorder.formatChain(chain) + "\n");
+    });
+
+  mission
+    .command("verify")
+    .description("🛰  Verify the HMAC chain + Lamport monotonicity of the event log.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = core.missionRecorder.verifyChain(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(`${v.ok ? "✓ chain intact" : `✗ broken at ${v.brokenAt}: ${v.reason}`}\n`);
+      if (!v.ok) process.exit(1);
+    });
+
+  program
+    .command("overshoot")
+    .description("🛑 OVERSHOOT TRACER — compare planned verb sequence vs actual recorded execution. Returns ALIGNED / WANDER / OVERSHOOT / RUNAWAY + kill-switch flag.")
+    .requiredOption("--planned <json>", "JSON array of {verb, args} planned steps.")
+    .requiredOption("--actual <json>", "JSON array of {verb, args} actually-executed steps.")
+    .option("--strict-args", "Require args to match too (default).", true)
+    .option("--kill-threshold <n>", "Score threshold above which kill-switch fires (default 0.5).", (v) => parseFloat(v))
+    .option("--json")
+    .action(async (opts: { planned: string; actual: string; strictArgs?: boolean; killThreshold?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      let planned, actual;
+      try { planned = JSON.parse(opts.planned); actual = JSON.parse(opts.actual); }
+      catch { process.stderr.write(`✗ invalid --planned/--actual JSON\n`); process.exit(1); return; }
+      const r = core.overshootTracer.traceOvershoot(planned, actual, { strictArgs: opts.strictArgs, killThreshold: opts.killThreshold });
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.overshootTracer.formatReport(r) + "\n");
+      if (r.killSwitch) process.exit(2);
+    });
+
   // ─── v2.22.1 — PHYSICS LATHE (formal LLM-claim verifier) ──
   program
     .command("physics-check")

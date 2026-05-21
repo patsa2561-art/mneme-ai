@@ -203,6 +203,18 @@ Every verb gets an auto-derived companion (contract / autospec / doppelganger / 
 
 <div align="center">
 
+### 🛡 Safety Quartet — dimensional / historical / forensic / alignment (v2.22.2)
+
+</div>
+
+Four composing primitives: `dim-check` catches unit mismatches (Mars Climate Orbiter class), `failure-check` cross-checks plans against 8 historical aerospace failures (Challenger / Columbia / Therac-25 / Ariane 5 / ...), `mission record` is a Lamport+HMAC+DAG black-box for AI decisions, `overshoot` detects when actual execution diverges from plan.
+
+<sub>📘 <a href="docs/SAFETY_QUARTET.md" target="_blank" rel="noopener">Safety Quartet guide →</a> · 58 deep tests · composes with Conductor / Physics Lathe / Companion.</sub>
+
+---
+
+<div align="center">
+
 ### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
 
 </div>

@@ -1277,3 +1277,36 @@ export * as conductor from "./conductor/index.js";
 // is deterministic + reproducible. Designed for aerospace + xAI
 // training-data fact-checking where wrong physics is expensive.
 export * as physicsLathe from "./physics_lathe/index.js";
+
+// v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
+// LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
+// N/m²" → N/m² is pressure, not force → MISMATCH. Composes with
+// physics_lathe (units parser) and challenger_librarian (Mars
+// Climate Orbiter root-cause matches this primitive).
+export * as dimensionalOracle from "./dimensional_oracle/index.js";
+
+// v2.22.2 — 📚 CHALLENGER LIBRARIAN. Curated knowledge base of 8
+// historical aerospace + safety-critical software failures (Mars
+// Climate Orbiter, Challenger O-ring, Columbia foam-strike, Apollo 1
+// fire, Ariane 5 501, Therac-25, Mariner 1, Soyuz 1). Each entry
+// carries a detector (dimensional / physics-axiom / keyword /
+// structural); detectors delegate to dimensional_oracle + physics_
+// lathe + regex. `crossCheck(plan)` returns ranked matches with
+// citations + avoidance prescriptions.
+export * as challengerLibrarian from "./challenger_librarian/index.js";
+
+// v2.22.2 — 🛰  MISSION RECORDER. Flight-data-recorder pattern for AI
+// agents. Every event monotonic Lamport-counted + HMAC-chain-linked +
+// causal-DAG-linked. Replay engine walks the DAG forward and re-
+// invokes a caller-supplied executor (suitable for read-only verbs).
+// Extends conductor receipts with causal links + chain integrity.
+export * as missionRecorder from "./mission_recorder/index.js";
+
+// v2.22.2 — 🛑 OVERSHOOT TRACER. Compares planned verb sequence
+// (conductor.plan) against actually-executed trace (mission recorder)
+// to detect AI-agent scope creep: extra steps, verb mismatch, arg
+// mutation, missing steps. Returns 0-1 score + ALIGNED/WANDER/
+// OVERSHOOT/RUNAWAY band + configurable kill-switch threshold. The
+// alignment primitive every autonomous agent system has needed and
+// no one ships.
+export * as overshootTracer from "./overshoot_tracer/index.js";
