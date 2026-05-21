@@ -49,6 +49,10 @@ const CARETAKER_PASS_EVERY = 30;                 // ~15 min at 30s tick interval
 const PHOENIX_CUSTODIAN_EVERY = 10;
 const PHOENIX_SENTINEL_EVERY = 20;
 const PHOENIX_SURGEON_EVERY = 10;
+// v2.20.1 — TIME BRIDGE auto-watchers. Fires every 6 ticks (~3 min at
+// 30s interval) — short cadence because wake predicates with date
+// triggers should surface promptly the moment they're due.
+const TIME_BRIDGE_FIRE_EVERY = 6;
 
 export interface DaemonHeartbeat {
   pid: number;
@@ -484,6 +488,35 @@ export async function runDaemonLoop(
         await supernova.runCycle("phoenix_surgeon", async () => {
           const { runSurgeonCycle } = await import("./phoenix/organs.js");
           runSurgeonCycle([]);
+        });
+      }
+
+      // v2.20.1 — TIME BRIDGE auto fire-watchers (every 6 ticks ~3 min).
+      // Past-self's wake predicates fire automatically; fired inscriptions
+      // get persisted (the `fired` flag is set on disk) so the pulse
+      // banner can surface them as [INFO] notable items the very next
+      // render. This is the "AUTO" half of the AUTO-inscription +
+      // AUTO-surface loop that makes TIME BRIDGE feel like an IA.
+      if (tickCount > 0 && tickCount % TIME_BRIDGE_FIRE_EVERY === 0) {
+        await supernova.runCycle("time_bridge_fire_watchers", async () => {
+          const { fireWatchers } = await import("./time_bridge/index.js");
+          const fired = await fireWatchers(repoRoot);
+          if (fired.length > 0) {
+            // Drop a notifier so the next pulse sees the surfaces as a
+            // notable item.
+            try {
+              const { buildAllNotifiers, notifyAll } = await import("./notifier/index.js");
+              const all = buildAllNotifiers(repoRoot);
+              for (const f of fired) {
+                await notifyAll({
+                  id: `time-bridge-wake-${f.inscription.id}-${Date.now()}`,
+                  title: `🕰 Time Bridge wake: ${f.inscription.headline}`,
+                  body: `Past-self left a wake predicate that just fired: "${f.predicate.description}". Reasoning: ${f.inscription.reasoning.slice(0, 240)}`,
+                  severity: "info",
+                }, all);
+              }
+            } catch { /* best-effort */ }
+          }
         });
       }
 

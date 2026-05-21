@@ -34,6 +34,10 @@ import { join } from "node:path";
 import { homedir, platform } from "node:os";
 import { spawn } from "node:child_process";
 import { ackInbox } from "./inbox.js";
+// v2.20.1 — Direct ESM import so the pulse-time surface works in both
+// dist (ESM) and test (vitest) environments. The previous lazy
+// require() returned undefined in ESM context.
+import { recentNotable as timeBridgeRecentNotable } from "./time_bridge/index.js";
 import { renderOracleHint } from "./oracle/index.js";
 import { readLiveMnemeVersion, semverGt } from "./version_check.js";
 import { computeHci } from "./hci.js";
@@ -319,6 +323,25 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       autoAction: { tool: "mneme.antivirus.cert.benchmark", args: {} },
     });
   }
+
+  // v2.20.1 — TIME BRIDGE pulse-time surface. Inject up to 3 notable
+  // inscriptions (recent wake-firings + high-weight constraints) into
+  // the pulse so the AI agent sees past-self's reasoning AS PART OF
+  // its normal context — no manual `mneme time-bridge surface` call
+  // required. This is the "AUTO-surface" half of the IA loop.
+  // collectPulseStatus only has `repoRoot` directly (no opts wrapper).
+  try {
+    const notables = timeBridgeRecentNotable(repoRoot, 3);
+    for (const n of notables) {
+      const safeHeadline = sanitizePromptUserContent(n.headline);
+      const safeReason = sanitizePromptUserContent(n.reason);
+      status.notable.push({
+        level: n.kind === "constraint" || n.kind === "refusal" ? "warning" : "info",
+        text: `🕰 TIME BRIDGE — ${n.kind.toUpperCase()} from ${n.author}: ${safeHeadline}  (${safeReason}; id ${n.id})`,
+      });
+    }
+  } catch { /* time-bridge optional; pulse never breaks on missing */ }
+
   return status;
 }
 

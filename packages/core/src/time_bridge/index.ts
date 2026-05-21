@@ -507,6 +507,60 @@ export async function fireWatchers(repoRoot: string, ctx: SurfaceContext = {}): 
   );
 }
 
+// ─── PULSE-TIME SURFACE (cheap; used by pulse renderer) ───────────────
+
+export interface NotableInscription {
+  id: string;
+  kind: InscriptionKind;
+  headline: string;
+  author: string;
+  ts: string;
+  /** Plain-English why-it-surfaced. */
+  reason: string;
+}
+
+/** Cheap pulse-time helper: surface up to N inscriptions that any AI
+ *  agent should see in their context. Picks fresh-fired wake matches
+ *  + heavily-weighted constraints/refusals. Designed to run in
+ *  sub-10ms even with thousands of inscriptions (sorts by ts + weight,
+ *  no relevance-matching, no DAS).  Idempotent + read-only. */
+export function recentNotable(repoRoot: string, limit: number = 3): NotableInscription[] {
+  const all = loadInscriptions(repoRoot);
+  if (all.length === 0) return [];
+  const out: NotableInscription[] = [];
+
+  // 1. Wake-firings within the last 60 minutes (high-signal events).
+  const cutoffMs = Date.now() - 60 * 60 * 1000;
+  for (const ins of all) {
+    if (!ins.wakes) continue;
+    for (const w of ins.wakes) {
+      if (w.fired && w.firedAt && new Date(w.firedAt).getTime() >= cutoffMs) {
+        out.push({
+          id: ins.id, kind: ins.kind, headline: ins.headline,
+          author: ins.author, ts: w.firedAt,
+          reason: `wake predicate fired: ${w.description}`,
+        });
+      }
+    }
+  }
+
+  // 2. High-weight constraints + refusals (priority knowledge regardless
+  //    of recent activity — fewer than N reach this code path).
+  const constraints = all.filter((i) => i.kind === "constraint" || i.kind === "refusal");
+  constraints.sort((a, b) => (b.fra.initialWeight ?? 0.5) - (a.fra.initialWeight ?? 0.5));
+  for (const ins of constraints) {
+    if (out.find((o) => o.id === ins.id)) continue; // dedup
+    out.push({
+      id: ins.id, kind: ins.kind, headline: ins.headline,
+      author: ins.author, ts: ins.ts,
+      reason: `high-weight ${ins.kind}: ${ins.fra.appliesWhen.slice(0, 80)}`,
+    });
+    if (out.length >= limit) break;
+  }
+
+  return out.slice(0, limit);
+}
+
 // ─── 7. GENERATIONAL TREE ──────────────────────────────────────────────
 
 export interface TreeNode {
