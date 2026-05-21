@@ -1184,3 +1184,9 @@ export * as timeBridgeTriggers from "./time_bridge/triggers.js";
 // cross-repo experience pool + HMAC + multi-vendor + refuse primitive,
 // none of which competitors can stand up in <18 months.
 export * as apoptosisNetwork from "./apoptosis_network/index.js";
+
+// v2.21.1 — STILLNESS PROTOCOL. "AI that decides when NOT to respond."
+// Four primitives: silence budget, declarative rules, HMAC-signed
+// cool-off receipts, cadence-based state inference. Composes into a
+// single gate() decision: SPEAK | SILENT | DELAY.
+export * as stillness from "./stillness/index.js";

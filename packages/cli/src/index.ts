@@ -3397,6 +3397,137 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.21.1 — `mneme stillness` (AI that decides WHEN NOT TO RESPOND) ──
+  const stillness = program
+    .command("stillness")
+    .description("🤐 Stillness Protocol — gate that decides SPEAK / SILENT / DELAY. Composes silence budget + rules + cadence-state inference + HMAC-signed cool-off receipts.");
+
+  stillness
+    .command("budget")
+    .description("🤐 Show or update the silence budget (utterances per day/hour).")
+    .option("--set <n>", "Set max utterances.", (v) => parseInt(v, 10))
+    .option("--refresh <r>", "day | hour")
+    .option("--reset", "Reset consumed counter to 0.")
+    .option("--json")
+    .action(async (opts: { set?: number; refresh?: string; reset?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      let b;
+      if (opts.set !== undefined || opts.refresh || opts.reset) {
+        b = core.stillness.setBudget(process.cwd(), { maxUtterances: opts.set, refresh: opts.refresh as any, reset: opts.reset });
+      } else {
+        b = core.stillness.getBudget(process.cwd());
+      }
+      if (opts.json) { process.stdout.write(JSON.stringify(b, null, 2) + "\n"); return; }
+      process.stdout.write(core.stillness.formatBudget(b) + "\n");
+    });
+
+  stillness
+    .command("rule-add")
+    .description("🤐 Add a silence rule. Matchers: --keywords-all / --keywords-any / --regex. Action: silent | delay-hours-N.")
+    .requiredOption("--rationale <text>", "Plain-English reason (shown in receipts).")
+    .option("--keywords-all <list>")
+    .option("--keywords-any <list>")
+    .option("--regex <text>")
+    .option("--hours <window>", "e.g. 23:00-07:00 (UTC).")
+    .requiredOption("--action <a>", "silent | delay-hours-N (e.g. delay-hours-24).")
+    .action(async (opts: { rationale: string; keywordsAll?: string; keywordsAny?: string; regex?: string; hours?: string; action: string }) => {
+      const core = await import("@mneme-ai/core");
+      let action: any;
+      const delayMatch = /^delay-hours-(\d+)$/.exec(opts.action);
+      if (opts.action === "silent") action = "silent";
+      else if (delayMatch) action = { delayHours: parseInt(delayMatch[1]!, 10) };
+      else { process.stderr.write(`✗ unknown action: ${opts.action}\n`); process.exit(1); return; }
+      const r = core.stillness.addRule(process.cwd(), {
+        rationale: opts.rationale,
+        match: {
+          keywordsAll: opts.keywordsAll?.split(",").map((s) => s.trim()),
+          keywordsAny: opts.keywordsAny?.split(",").map((s) => s.trim()),
+          regex: opts.regex,
+        },
+        hoursWindow: opts.hours,
+        action,
+      });
+      process.stdout.write(`🤐 Rule added: ${r.id} — ${r.rationale}\n`);
+    });
+
+  stillness
+    .command("rule-list")
+    .description("🤐 Show all registered silence rules.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const rules = core.stillness.listRules(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(rules, null, 2) + "\n"); return; }
+      if (rules.length === 0) { process.stdout.write("🤐 No silence rules registered.\n"); return; }
+      for (const r of rules) process.stdout.write(`  ${r.id}  ${r.rationale}  →  ${typeof r.action === "string" ? r.action : `delay ${r.action.delayHours}h`}\n`);
+    });
+
+  stillness
+    .command("rule-remove")
+    .description("🤐 Remove a silence rule by id.")
+    .requiredOption("--id <id>")
+    .action(async (opts: { id: string }) => {
+      const core = await import("@mneme-ai/core");
+      core.stillness.removeRule(process.cwd(), opts.id);
+      process.stdout.write(`🤐 Rule ${opts.id} removed.\n`);
+    });
+
+  stillness
+    .command("gate")
+    .description("🤐 Run the gate decision against a prompt. Returns SPEAK / SILENT / DELAY + signed receipt. Exit code 2 on SILENT/DELAY for CI gating.")
+    .requiredOption("--prompt <text>", "The prompt to evaluate.")
+    .option("--skip-budget")
+    .option("--skip-cadence")
+    .option("--json")
+    .action(async (opts: { prompt: string; skipBudget?: boolean; skipCadence?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const d = core.stillness.gate(process.cwd(), {
+        prompt: opts.prompt,
+        skipBudget: opts.skipBudget,
+        skipCadence: opts.skipCadence,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(d, null, 2) + "\n"); return; }
+      process.stdout.write(core.stillness.formatDecision(d) + "\n");
+      if (d.decision !== "speak") process.exit(2);
+    });
+
+  stillness
+    .command("receipts")
+    .description("🤐 Show cool-off receipts (HMAC-signed audit of every gate decision).")
+    .option("--since-hours <n>", "Only show receipts within the last N hours.", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { sinceHours?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const since = opts.sinceHours ? Date.now() - opts.sinceHours * 3600 * 1000 : undefined;
+      const list = core.stillness.listReceipts(process.cwd(), since);
+      if (opts.json) { process.stdout.write(JSON.stringify(list, null, 2) + "\n"); return; }
+      for (const r of list) process.stdout.write(`  ${r.ts.slice(0, 19)}  ${r.decision.padEnd(7)}  ${r.reason.slice(0, 80)}\n`);
+      if (list.length === 0) process.stdout.write("🤐 No receipts yet.\n");
+    });
+
+  stillness
+    .command("cadence-record")
+    .description("🤐 Record inter-keystroke intervals (ms). Repeatedly callable from an editor hook.")
+    .requiredOption("--intervals <list>", "Comma-separated milliseconds.")
+    .action(async (opts: { intervals: string }) => {
+      const core = await import("@mneme-ai/core");
+      const arr = opts.intervals.split(",").map((s) => parseFloat(s.trim())).filter((v) => Number.isFinite(v) && v >= 0);
+      core.stillness.recordCadence(process.cwd(), arr);
+      process.stdout.write(`🤐 Recorded ${arr.length} sample(s).\n`);
+    });
+
+  stillness
+    .command("cadence-state")
+    .description("🤐 Compute cadence verdict from recent samples — state + CV + should-silence.")
+    .option("--last-n <n>", "Use the last N samples (default 50).", (v) => parseInt(v, 10))
+    .option("--json")
+    .action(async (opts: { lastN?: number; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = core.stillness.inferCadenceState(process.cwd(), opts.lastN);
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(core.stillness.formatVerdict(v) + "\n");
+    });
+
   // ─── v2.19.96 — `mneme verify-self` (trust attestation for fresh AIs) ──
   // Pure read-only attestation a fresh AI agent (or paranoid human) runs
   // BEFORE honouring any [AUTO-ACTION] mandate in a pulse banner. Outputs
