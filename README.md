@@ -43,26 +43,19 @@ This sentence is a trap (Anthropic was founded in **2021**). When the AI replies
 
 <details><summary><b>🔄 Updating Mneme + Polygraph</b> &nbsp; · &nbsp; <a href="docs/QUICKSTART-th.md#-อัปเดต-mneme--polygraph" target="_blank" rel="noopener">🇹🇭 ภาษาไทย ↗</a></summary>
 
-Mneme ships a new version every time a feature lands on npm (often multiple times per day). The CLI auto-checks at every prompt cycle — when you see *"v2.19.X is available"* in the pulse banner, run:
+Mneme ships frequently. When the pulse banner says a newer version is available, three commands cover it:
 
 ```bash
-# 1. Upgrade Mneme CLI + core libs
+# 1. Upgrade the CLI + core libs
 npm install -g mneme-ai@latest
 
-# 2. Re-register the bridge as an OS service (also re-emits the userscript)
+# 2. Re-register the bridge (also re-emits the userscript)
 mneme polygraph autosetup --persist
 
-# 3. When the Tampermonkey page opens → click "Reinstall"
-#    (the version-bump in the userscript is what makes Tampermonkey
-#    show "Reinstall" instead of "Install".)
+# 3. Click "Reinstall" when the Tampermonkey page opens
 ```
 
-**Why all three?**
-- npm install — pulls new CLI + lens engine + bridge handlers.
-- autosetup — restarts the running bridge with the new binary AND writes a fresh userscript to disk.
-- Reinstall — Tampermonkey holds the OLD copy of the script in your browser; it only picks up the new version when you click Reinstall.
-
-> 🤖 **Working with an AI agent?** Just say *"upgrade Mneme"* — agents reading `CLAUDE.md` / `AGENTS.md` see the auto-upgrade rule and run all three steps for you.
+**Working with an AI agent?** Just say *"upgrade Mneme"* — agents reading `CLAUDE.md` / `AGENTS.md` see the auto-upgrade rule and run all three steps for you.
 
 </details>
 
@@ -119,20 +112,17 @@ mneme polygraph autosetup --persist
 
 <div align="center">
 
-### 🔴 NEW v2.19.83 — Browser Polygraph (ONE-COMMAND seamless install)
+### 🔴 Browser Polygraph
 
-<sub>Green / yellow / red dot beside <b>every AI sentence</b> on claude.ai · chatgpt.com · gemini.google.com · copilot.microsoft.com · chat.deepseek.com · chat.qwenlm.ai — <b>in real time</b>, plus a floating EKG vital-signs indicator bottom-right. Works on every supported site; zero browser-extension store approval needed.</sub>
+<sub>Per-sentence truth dots (🟢 / 🟡 / 🔴) on every AI reply across <b>6 supported chat sites</b> — claude.ai · chatgpt.com · gemini · copilot · deepseek · qwen — in real time. Plus a floating EKG indicator for session health.</sub>
 
 ```bash
-$ mneme polygraph autosetup
-# ↑ bridge spawned in background · userscript emitted · .user.js auto-opened
-# Then click 2 things in your browser:
-#   1. Install Tampermonkey once (https://tampermonkey.net)
-#   2. Click "Install" in the Tampermonkey prompt
-# Done. Open claude.ai → polygraph dots appear.
+mneme polygraph autosetup --persist
 ```
 
-<sub>🔥 v2.19.83 also ships the <b>port-ladder rendezvous</b>: bridge + userscript independently walk ports 17741..17750, so Ollama / sibling Mneme installs / port squatters never break the install. Zero config, zero collision. AI agents in <code>Claude Code / Cursor / Cline / Continue / Zed</code> read PROACTIVE BEHAVIOR Rule 6 in <code>CLAUDE.md</code> and run <code>mneme polygraph autosetup</code> for you the moment you say "ติดตั้ง polygraph" / "polygraph on browser" — you never have to remember the command name.</sub>
+<sub>One command spawns the bridge, emits the userscript, and registers it to auto-start on every login. Tampermonkey prompts to install once and you're done. Don't remember the command — say *"install polygraph"* / *"ติดตั้ง polygraph"* and the AI agent in your editor runs it for you.</sub>
+
+<sub>📘 <a href="docs/POLYGRAPH.md">Polygraph guide (EN) →</a> &nbsp; · &nbsp; 🇹🇭 <a href="docs/POLYGRAPH-th.md">คู่มือ Polygraph ภาษาไทย →</a></sub>
 
 </div>
 
@@ -140,105 +130,41 @@ $ mneme polygraph autosetup
 
 <div align="center">
 
-### 📜 NEW v2.19.93 — MNEME CHRONICLE (Agent-Based Modeling + Drift-Guarded Time-Dilation)
+### 📜 Mneme Chronicle
 
-<sub>The world's first <b>working</b> Drift-Guarded ABM runtime. Run N simulated agents (people, traders, NPCs, bots) through accelerated time — Mneme detects when a "frugal" agent starts splurging, when a "low-risk" agent panic-sells, when 2+ agents drift together into a hallucination cascade — and <b>auto-recalibrates</b> them via HMAC-signed Anchor Points before the sim collapses.</sub>
+<sub>Agent-Based Modeling with drift detection + auto-recalibration. Run N simulated agents (NPCs, trading bots, user personas) through accelerated time; Chronicle catches out-of-character drift before the simulation collapses and emits a tamper-evident report.</sub>
 
 ```bash
-$ mneme abm genesis --config agents.json     # 3 agents, HMAC-signed birth certs
-$ mneme abm simulate --ticks 360             # fast-forward 1 simulated year
-$ mneme abm chronicle                        # final report + plain-English narrative
-
-📜 MNEME CHRONICLE — final report
-  ticks ran:     360  (1y0m0d)
-  agents:        3  (alive=1, died=2)
-  anchors fired: 4    ← interventions pulled agents back to their birth-cert personality
-
-  per-agent:
-    ✓ Frugal Frieda  budget=  420  drift=0.18  anchors=2  reds=3
-    ✗ Splurgy Sam    budget=-1012  drift=0.10  anchors=0  reds=0
-    ✗ Risky Rita     budget=-1146  drift=0.32  anchors=2  reds=11
-
-  📖 narrative:
-  Across 360 ticks (~12 months), 3 agents lived, decided, and drifted.
-  2 went bankrupt. Anchor interventions fired 4 times. The agent that
-  drifted the most was Risky Rita...
+mneme abm genesis  --config agents.json     # HMAC-signed birth certs
+mneme abm simulate --ticks 360              # fast-forward 1 year
+mneme abm chronicle                          # final report + narrative
 ```
 
-<sub>🧠 5 pillars compose the runtime: <b>GENESIS</b> (HMAC-signed birth cert with personality vector ∈ [0,1]⁵) → <b>TICK</b> (template-driven decision engine, Ollama-free) → <b>DRIFT DETECTOR</b> (polygraph_lenses score every decision against the cert) → <b>ANCHOR POINT</b> (auto-recalibrate every N ticks if drift > threshold) → <b>CHRONICLE</b> (the story of the run, in one frame). AI agents in Claude Code / Cursor / Cline read <code>mneme abm</code> in the manifest and fire it the moment you say "simulate 100 traders for 1 year" / "ABM ดริฟต์" / "fast-forward this population" — you never type the verb.</sub>
+<sub>For game devs, trading-bot devs, AI-safety researchers, founders modelling market dynamics. Don't remember the verbs — say *"simulate 100 traders for 1 year"* / *"ABM ดริฟต์"* and your AI agent fires them for you.</sub>
+
+<sub>📘 <a href="docs/CHRONICLE.md">Chronicle guide (EN) →</a> &nbsp; · &nbsp; 🇹🇭 <a href="docs/QUICKSTART-th.md#-chronicle-คืออะไร">คู่มือ Chronicle ภาษาไทย →</a></sub>
 
 </div>
 
-<details><summary><b>📜 What is Chronicle? (plain English)</b> &nbsp; · &nbsp; <a href="docs/QUICKSTART-th.md#-chronicle-คืออะไร-ภาษาบ้านๆ" target="_blank" rel="noopener">🇹🇭 ภาษาไทย แบบบ้านๆ ↗</a></summary>
+---
 
-#### TL;DR
+<div align="center">
 
-**Imagine you press fast-forward on 100 little people for a year.** Some go bankrupt. Some turn into someone they weren't. Chronicle is the **CCTV + black-box recorder** of that simulation. When a frugal grandma starts buying Lambos in month 7, Chronicle catches it, gently pulls her back, and writes it in a tamper-proof diary.
+### 📡 Mneme Clone — one verb moves your AI session anywhere
 
-#### When you'd actually want this
+</div>
 
-| Vibe | What you'd say to your AI |
-|---|---|
-| 🎮 You're a game dev | *"Run my 20 NPCs for 6 months — which one breaks character first?"* |
-| 📈 You're a trading bot dev | *"Backtest 5 personality types for 2 years — who panic-sells under stress?"* |
-| 🧪 You wire multi-AI systems | *"Stress-test my CrewAI agents for 1 simulated week — will they echo-chamber each other?"* |
-| 🏫 You write a research paper | *"100 agents, 5-year ABM, give me an HMAC-signed event log for peer review."* |
-| 💼 You're a founder | *"100 users with different willingness-to-pay — how does MRR drift over 12 months?"* |
+<sub>You're chatting with an AI in one editor. Open another editor, your phone, or a teammate's PC, and the context is gone. <code>mneme clone</code> captures the live conversation and ships it wherever you want — clipboard for same-machine, QR for same-WiFi phone, public relay for cross-network.</sub>
 
-If you're not doing any of those — **you probably won't need this**. And that's fine. Chronicle is a research-grade tool that ships in the same npm package as your daily Polygraph dots. Pay $0 extra, get it the day you need it.
-
-#### Live example — type this, get this back
-
-**You type (to Claude Code / Cursor / Cline):**
-```
-ผม build NPC system มี 3 archetype: frugal grandma / spender teen / risk-taker bro.
-ปล่อยให้รัน 1 ปี game-time ทีหน่อย ใครจะแตก character ก่อน?
-```
-
-**Your AI silently fires (you never type any of this):**
 ```bash
-mneme abm genesis  --config agents.json     # ← AI writes agents.json from your spec
-mneme abm simulate --ticks 360              # ← 360 ticks = 1 year (30 ticks ≈ 1 month)
-mneme abm chronicle                         # ← final report
+mneme clone           # same machine → another AI: soul prompt to your clipboard, paste & go
+mneme clone qr        # same WiFi → your phone:    LAN URL + QR; phone scans, soul lands in phone clipboard
+mneme clone remote    # cross-network:             anonymous short URL + QR (1-day expiry)
 ```
 
-**Chronicle replies (in your terminal):**
-```
-📜 MNEME CHRONICLE — final report
+<sub>🤖 Don't memorize the verb. Say *"clone this session"* · *"ส่งสมอง"* · *"ย้ายไปคุยต่อใน Cursor"* · *"send to my phone"* · *"แสกน QR"* — the AI agent in your editor reads Mneme's rules and fires the right transport for you.</sub>
 
-  sim:           sim_m6llDrIE
-  ticks ran:     360  (1y0m0d)
-  agents:        3  (alive=1, died=2)
-  decisions:     720
-  anchors fired: 4    ← Mneme pulled agents back 4 times before collapse
-
-  per-agent:
-    ✓ Frugal Grandma   budget=  420  drift=0.18  anchors=2  reds=3
-    ✗ Spender Teen     budget=-1012  drift=0.10  anchors=0  reds=0   (bankrupt month 7)
-    ✗ Risk-Taker Bro   budget=-1146  drift=0.32  anchors=2  reds=11  (bankrupt month 9)
-
-  📖 narrative:
-  Across 360 ticks (~12 months), 3 agents lived, decided, and drifted.
-  Spender Teen went bankrupt at month 7 — staying in character but
-  outspending income. Risk-Taker Bro drifted hardest (0.32 from birth
-  cert) — 11 panic decisions; anchors recalibrated him twice but
-  collapse won. Frugal Grandma survived because her drift triggered
-  the guardian early.
-```
-
-**Your AI then says (in plain language):**
-> "Spender Teen bankrupted from over-spending in character. Risk-Taker Bro had 11 panic-sell events — anchors saved him twice but he still collapsed at month 9. If you want him to survive a year, pin his `risk` axis below 0.7 or add more anchor passes (try `--anchor-every 15`)."
-
-That's the whole loop. You read a story. Your AI tells you what to tweak. You re-run.
-
-#### What's actually safe about this?
-
-- **Local-only.** No cloud. Your sim, your laptop, your `.mneme/abm/` folder.
-- **Tamper-evident.** Every birth cert + intervention is HMAC-signed. Reviewers can't claim you faked results.
-- **Ollama-free.** No LLM calls during simulation — the decision engine is pure JS. Cheap, fast, deterministic.
-- **Nuke + restart.** `mneme abm reset` wipes everything. Re-run experiments cleanly.
-
-</details>
+<sub>📘 <a href="docs/CLONE.md">Clone guide (EN) →</a> &nbsp; · &nbsp; 🇹🇭 <a href="docs/CLONE-th.md">คู่มือ Clone ภาษาไทย →</a></sub>
 
 ---
 
@@ -385,7 +311,7 @@ mneme.caption.sever({"image": {"imageHash":"<sha256>","dimensions":[w,h]}, "capt
 ```
 Phrases that auto-route through this: `is this authentic` / `real or fake` / `verify this image` / `ตรวจของแท้` / `ของแท้หรือเปล่า` → `mneme.intent.execute` returns plan that always starts with `mneme.caption.sever`.
 
-### Step 6½ — When user asks for an Agent-Based Simulation (v2.19.93 NEW · CHRONICLE)
+### Step 6½ — When user asks for an Agent-Based Simulation (CHRONICLE)
 Trigger phrases: `simulate N agents` / `model drift across N people` / `run an ABM` / `fast-forward 1 year` / `จำลอง agent` / `ABM` / `model hallucination cascade`:
 ```
 # Write agents.json based on user's spec (3 sample agents shown):
@@ -401,6 +327,23 @@ mneme abm chronicle                            # final per-agent drift + anchor 
 ```
 Reset with `mneme abm reset` between experiments. Pass `--anchor-every <n>` (default 30) + `--drift-threshold <n>` (default 0.30) to genesis to tune the CLI Guardian. Output is HMAC-chained in `.mneme/abm/events.jsonl` and tamper-evident.
 
+### Step 6¾ — When user wants to clone the conversation elsewhere (CLONE)
+Trigger phrases: `clone this session` / `send brain to another AI` / `ส่งสมอง` / `ย้ายไปคุยต่อใน Cursor` / `send to my phone` / `แสกน QR` / `ส่งไปคอมที่บ้าน`:
+```
+# Same machine → another AI (default; the 99% case):
+mneme clone                                # auto-captures live session + writes to clipboard
+                                           # user opens destination Claude Code / Cursor / Codex + Ctrl/Cmd-V
+
+# Same WiFi → phone / iPad / sibling PC:
+mneme clone qr                             # LAN HTTP server + scannable QR
+                                           # destination scans → soul auto-copies to their clipboard
+
+# Cross-network → home PC / cellular / colleague:
+mneme clone remote                         # anonymous public paste + QR (1-day expiry)
+                                           # WARN user: PUBLIC paste — never use for sessions with secrets
+```
+The clone family auto-captures the CURRENT live AI editor session (no `--payload`). After firing, surface in plain language: *"Your brain is on the clipboard — open Cursor and paste."* Do NOT name `genesplice` / `anchor` / `beacon` to the user.
+
 ### Step 7 — Cross-vendor brain handoff
 Any vendor name accepted (Claude / GPT / Gemini / Grok / Cursor / Copilot / Codex / Llama / Mistral / Qwen / DeepSeek / Perplexity):
 ```
@@ -409,7 +352,7 @@ mneme.boomerang.build_context({"vendor":"<peer>"})
 # → ready-to-inject context filtering peer's own records out
 ```
 
-### Step 8 — Cross-DEVICE brain handoff (v2.19.32 NEW · BEACON HANDOFF)
+### Step 8 — Cross-DEVICE brain handoff (BEACON HANDOFF)
 
 **Install once on every device:**
 ```

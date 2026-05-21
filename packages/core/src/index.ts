@@ -1119,3 +1119,10 @@ export * as abmChronicle from "./abm_chronicle/index.js";
 // instead of a stale capsule.  Fixes the v2.19.93 bug where transmit
 // returned an 8-day-old session.
 export * as liveSessionMirror from "./live_session_mirror/index.js";
+
+// v2.19.95 — CLONE — one-verb handoff orchestrator. Wraps live mirror +
+// soul-prompt compression + clipboard / beacon / relay transports into a
+// single facade so the user (and AI agents on their behalf) types one
+// verb: `mneme clone` for same-machine, `mneme clone qr` for same-WiFi
+// phone handoff, `mneme clone remote` for cross-network. No --payload.
+export * as clone from "./clone/index.js";

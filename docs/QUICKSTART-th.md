@@ -87,7 +87,7 @@ Mneme เป็น truth engine ที่เน้น **repo + indexed memory** 
 
 ## 🔄 อัปเดต Mneme + Polygraph
 
-Mneme ขึ้นเวอร์ชั่นใหม่ทุกครั้งที่ feature ใหม่ลง npm (วันละหลายครั้งเลย). CLI จะเช็คให้เองทุกๆ prompt — ถ้าพี่เห็นใน pulse บอกว่า **"v2.19.X is available"** ให้ทำ 3 ขั้นนี้:
+Mneme ออกเวอร์ชั่นใหม่บ่อย. ถ้าใน pulse banner บอกว่ามีเวอร์ชั่นใหม่ — 3 ขั้นจบ:
 
 ```bash
 # 1. อัปเกรด Mneme CLI + core libs
@@ -143,7 +143,7 @@ Mneme คือ **AI memory ถาวร + Truth Suite 14 verb**. Polygraph dots
 
 ---
 
-## 📜 Chronicle คืออะไร (ภาษาบ้านๆ)
+## 📜 Chronicle คืออะไร
 
 ### TL;DR
 
@@ -199,7 +199,7 @@ mneme abm chronicle                         # ← รายงานสุดท
   guardian ของเธอ trigger เร็ว.
 ```
 
-**AI ของคุณจะพูดต่อ (ภาษาบ้านๆ):**
+**AI ของคุณจะพูดต่อ:**
 > "วัยรุ่นนักช็อปล้มเพราะใช้เกินรายได้แต่ยังอยู่ใน character. หนุ่มเสี่ยงสูง panic-sell 11 ครั้ง — anchors ช่วยไว้ 2 ครั้งแต่ก็พังอยู่ดี เดือน 9. ถ้าอยากให้รอด 1 ปี ลด `risk` axis ต่ำกว่า 0.7 หรือเพิ่ม anchor pass บ่อยขึ้น (ลอง `--anchor-every 15`)"
 
 จบ loop. คุณอ่านเรื่องเล่า → AI แนะนำให้แก้ตรงไหน → คุณรันใหม่.

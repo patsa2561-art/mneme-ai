@@ -2933,6 +2933,26 @@ export async function run(argv: string[]): Promise<void> {
       if (s.reinstallHint) process.stdout.write(`\n  start now:  ${s.reinstallHint}\n`);
     });
 
+  // ─── v2.19.95 — `mneme clone` (one-verb cross-session handoff) ──
+  // Auto-captures the current AI editor session (via live_session_mirror),
+  // compresses to a paste-ready soul prompt, ships via clipboard / LAN+QR /
+  // public relay.  NO `--payload`, no remembering `genesplice`.  AI agents
+  // recognise natural-language asks (TH + EN) and fire the right transport.
+  const clone = program
+    .command("clone")
+    .description("📡 Clone this session — auto-captures the current AI conversation and ships it to clipboard (default), a QR for your phone, or a public relay URL. Replaces the old 3-step transmit/extract/paste flow.")
+    .argument("[transport]", "clipboard (default — same machine) · qr (same WiFi phone) · remote (cross-network)", "clipboard")
+    .option("--receiving-vendor <v>", "Vendor tailoring: claude / chatgpt / gemini / cursor / cline / codex.")
+    .option("--last-n <n>", "How many recent turns to include (default 30).", (v) => parseInt(v, 10))
+    .option("--port <n>", "LAN port for `qr` transport (default 7741).", (v) => parseInt(v, 10))
+    .option("--json", "Machine-readable output.")
+    .action(async (transport: string, opts: { receivingVendor?: string; lastN?: number; port?: number; json?: boolean }) => {
+      const allowed = new Set(["clipboard", "qr", "remote"]);
+      const t = (allowed.has(transport) ? transport : "clipboard") as "clipboard" | "qr" | "remote";
+      const { cloneCommand } = await import("./commands/clone.js");
+      await cloneCommand({ cwd: process.cwd(), transport: t, receivingVendor: opts.receivingVendor, lastN: opts.lastN, port: opts.port, json: !!opts.json });
+    });
+
   // ─── v2.19.94 — `mneme mirror` (LIVE SESSION MIRROR) ──
   // Reads the current Claude Code conversation jsonl directly so any
   // cross-vendor / cross-device handoff (`mneme genesplice transmit`,

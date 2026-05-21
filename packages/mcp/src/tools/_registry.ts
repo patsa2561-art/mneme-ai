@@ -57,6 +57,7 @@ import { METRON_TOOLS } from "./_metron_tools.js";
 import { V28_TOOLS } from "./_v28_tools.js";
 import { CLONE_TO_TOOLS } from "./_clone_to_tool.js";
 import { BEACON_TOOLS } from "./_beacon_tool.js";
+import { CLONE_TOOLS } from "./_clone_tools.js";
 import { NEXUS_LOCK_TOOLS } from "./_nexus_lock_tools.js";
 import { COSMIC_TOOLS } from "./_cosmic_tools.js";
 import { V214_PENTAD_TOOLS } from "./_v214_pentad.js";
@@ -201,6 +202,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...V28_TOOLS,
     ...CLONE_TO_TOOLS,
     ...BEACON_TOOLS,
+    ...CLONE_TOOLS,
     ...NEXUS_LOCK_TOOLS,
     ...COSMIC_TOOLS,
     ...V214_PENTAD_TOOLS,
