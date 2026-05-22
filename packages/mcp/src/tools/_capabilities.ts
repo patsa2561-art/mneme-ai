@@ -57,12 +57,29 @@ export const capabilitiesTool: MnemeTool = {
         description:
           "v2.19.41 — return a context-window-safe summary (~2KB instead of full ~214KB). 9 category headers + 1-line description + 3 example tool names per category + handle to fetch full catalog. Use this on first contact; fetch the full catalog only when you actually need it.",
       },
+      full: {
+        type: "boolean",
+        description:
+          "v2.26.0 — Explicitly request the FULL catalog (~80K tokens / ~337KB). N5 audit finding: full mode is a context-burn weapon. Default is now skinny; pass full=true ONLY when you really need every tool's description.",
+      },
+      offset: {
+        type: "integer",
+        description: "v2.26.0 — Pagination: skip the first N tools when fetching full mode. Defaults to 0.",
+      },
+      limit: {
+        type: "integer",
+        description: "v2.26.0 — Pagination: cap returned tools to N. Defaults to 50 in full mode (was unbounded).",
+      },
     },
   },
   handler: async (_rt, args) => {
     const grouped = groupByCategory();
     const filter = args["category"] ? String(args["category"]) : undefined;
-    const skinny = Boolean(args["skinny"]);
+    // v2.26.0 — N5 fix. skinny is now the DEFAULT; callers must opt in to
+    // full mode via `full:true` or explicit `skinny:false`. Pre-v2.26 the
+    // default was a 337KB / ~80K-token response per call.
+    const fullRequested = args["full"] === true || args["skinny"] === false;
+    const skinny = !fullRequested;
     const data: Record<string, unknown> = {};
     // v1.36.0 -- HONEYPOT FILTER. Pre-fix: honeypot tools (admin.delete_all,
     // secrets.dump, system.exec, mneme.config.set as a probe) leaked into
@@ -127,15 +144,36 @@ export const capabilitiesTool: MnemeTool = {
       };
     }
 
+    // v2.26.0 — N5 fix: pagination on full mode so a single call cannot
+    // burn 80K tokens. Default limit=50 unless caller passes higher.
+    const offset = typeof args["offset"] === "number" ? Math.max(0, args["offset"] as number) : 0;
+    const limit = typeof args["limit"] === "number" ? Math.max(1, Math.min(500, args["limit"] as number)) : 50;
+    const pagedData: Record<string, unknown> = {};
+    let returnedCount = 0;
+    let skippedCount = 0;
+    for (const [cat, body] of Object.entries(data)) {
+      const tools = (body as { tools?: Array<unknown> }).tools ?? [];
+      const purpose = (body as { purpose: string }).purpose;
+      const startIdx = Math.max(0, offset - skippedCount);
+      const slice = tools.slice(startIdx, startIdx + Math.max(0, limit - returnedCount));
+      pagedData[cat] = { purpose, count: tools.length, tools: slice };
+      skippedCount += Math.min(tools.length, offset - skippedCount + slice.length);
+      returnedCount += slice.length;
+      if (returnedCount >= limit) break;
+    }
+    const truncated = returnedCount < total;
+
     return {
       data: {
+        mode: "full",
+        pagination: { offset, limit, returned: returnedCount, total, truncated, nextOffset: truncated ? offset + returnedCount : null },
         positioning:
           "Mneme is the persistent context provider for your AI coding tool — Claude Code / Cursor / Codex / Gemini / " +
           "Continue / Aider. Mneme indexes the repo's git history + author lineage + prior decisions, then surfaces " +
           "that context (with a grader pass) before the AI delivers an answer to the user. You stay the agent; Mneme " +
           "is the memory + verifier sitting alongside.",
         totalTools: total,
-        catalog: data,
+        catalog: pagedData,
         secondBrainContract:
           "Every tool response carries a `secondBrain` field with FOUR fields you must read on every call: " +
           "(1) `presentation` — how to render the result for the user; " +

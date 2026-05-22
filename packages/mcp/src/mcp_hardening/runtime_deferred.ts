@@ -100,10 +100,24 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.candor.verify_peer",
   "mneme.candor.audit",
   "mneme.health",
+  "mneme.version",
+  "mneme.verify_self",
   "mneme.system.health",
   // The fuzzer itself must be callable in degraded mode so a non-git
   // CI runner can self-test the MCP surface.
   "mneme.fuzz.run",
   "mneme.fuzz.report",
   "mneme.fuzz.vectors",
+  "mneme.fuzz.verify",        // v2.26.0 — pure HMAC verify; no runtime needed
+  "mneme.codegraph.verify",   // v2.26.0 — pure HMAC chain verify
+  "mneme.codegraph.warn",     // v2.26.0 — reads snapshot file directly
+  // v2.26.0 — peak-gauntlet probes spawn child + need to work standalone
+  "mneme.tune.run",
+  "mneme.tune.report",
+  "mneme.tune.findings",
+  "mneme.tune.suggest_fix",
+  // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
+  "mneme.security.honeypot_status",
+  "mneme.governance.catalog_growth",
+  "mneme.governance.family_count",
 ]);

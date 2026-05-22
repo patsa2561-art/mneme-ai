@@ -28,6 +28,7 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
   CompleteRequestSchema,
+  CancelledNotificationSchema,
   type CallToolResult,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -40,6 +41,10 @@ import { toCallResult, toErrorResult, type MnemeTool, type ToolResponse, type To
 import { log as mcpLog } from "./mcp_hardening/structured_log.js";
 import { evaluateGate as evalHoneypotGate } from "./mcp_hardening/honeypot_gate.js";
 import { makeDeferredRuntimeHolder, isDegraded, STATELESS_TOOL_NAMES, type DeferredRuntime } from "./mcp_hardening/runtime_deferred.js";
+// v2.26.0 — DEEP HARDENING (closes N1-N12 deep findings).
+import { classifyToolName } from "./deep_hardening/name_validator.js";
+import { validateArgs, type ToolInputSchema } from "./deep_hardening/schema_required.js";
+import { cancelManager } from "./deep_hardening/cancel_manager.js";
 import { moleculesContaining } from "./tools/_molecules.js";
 import { recordInvocation } from "./tools/_lifecycle.js";
 import { homeworkForCategory } from "./tools/_homework.js";
@@ -377,19 +382,29 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   }));
 
   // ─── MCP primitives — resources / prompts / completion ──────────────
-  // v2.24.0 — these handlers await the deferred runtime. Pre-v2.24 they
-  // captured `runtime` from the closure, which forced startMcpServer to
-  // resolve buildRuntime before returning (and before initialize could
-  // reply). Now they tolerate a deferred / degraded runtime.
+  // v2.26.0 — N1 fix: listResources doesn't actually USE the runtime,
+  // so we MUST NOT await getRuntime() here (it takes ~10s cold + caused
+  // the deep-finding TIMEOUT). Pass a stub-rt; listResources ignores it.
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
-    const rt = await getRuntime();
-    if (isDegraded(rt)) return { resources: [] };
-    return { resources: listResources(rt) };
+    const stubRt = { meta: { rootPath: opts.cwd } } as Parameters<typeof listResources>[0];
+    return { resources: listResources(stubRt) };
   });
+  // readResource ONLY needs the runtime for certain URIs (constitution,
+  // karma, passport). For static URIs we can answer without awaiting.
+  // To keep the surface predictable + safe, we DO await the runtime here
+  // but with a 1.5s budget — past that we fall back to a degraded reply.
   server.setRequestHandler(ReadResourceRequestSchema, async (req) => {
-    const rt = await getRuntime();
+    const rtPromise = getRuntime();
+    const rt = await Promise.race([
+      rtPromise,
+      new Promise<DeferredRuntime>((resolve) => setTimeout(() => resolve({ degraded: true, reason: "runtime-warmup-pending", cwd: opts.cwd }), 1500)),
+    ]);
     if (isDegraded(rt)) {
-      return { contents: [{ uri: req.params.uri, mimeType: "text/plain", text: `Mneme MCP in degraded mode (${rt.reason}); resource ${req.params.uri} unavailable.` }] };
+      // Static URIs answer without runtime.
+      if (req.params.uri === "mneme://catalog" || req.params.uri.startsWith("mneme://catalog/")) {
+        return { contents: [readResource({ meta: { rootPath: opts.cwd } } as Parameters<typeof readResource>[0], req.params.uri)] };
+      }
+      return { contents: [{ uri: req.params.uri, mimeType: "text/plain", text: `Mneme MCP in degraded/warming mode (${rt.reason}); resource ${req.params.uri} unavailable.` }] };
     }
     return { contents: [readResource(rt, req.params.uri)] };
   });
@@ -408,14 +423,25 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     return getPrompt(req.params.name, args) as never;
   });
   server.setRequestHandler(CompleteRequestSchema, async (req) => {
-    const ref = req.params.ref;
-    const argName = req.params.argument.name;
-    const partial = String(req.params.argument.value ?? "");
-    const toolName = ref.type === "ref/prompt" ? ref.name : "";
-    const values = completeArgument(toolName, argName, partial);
-    return {
-      completion: { values, total: values.length, hasMore: false },
-    };
+    // v2.26.0 — N1 fix: completion/complete previously returned -32603
+    // (internal error) on malformed input. Now we ALWAYS return a valid
+    // CompletionResult shape, even when there is nothing to complete or
+    // the inputs are unexpected. Defensive parsing wraps everything that
+    // touched req.params.* into try-catch returning the empty completion.
+    try {
+      const ref = req.params.ref as { type?: string; name?: string };
+      const argParam = (req.params as { argument?: { name?: string; value?: unknown } }).argument ?? {};
+      const argName = typeof argParam.name === "string" ? argParam.name : "";
+      const partial = argParam.value === undefined ? "" : String(argParam.value);
+      const toolName = ref && ref.type === "ref/prompt" && typeof ref.name === "string" ? ref.name : "";
+      const values = argName ? completeArgument(toolName, argName, partial) : [];
+      return {
+        completion: { values: Array.isArray(values) ? values : [], total: Array.isArray(values) ? values.length : 0, hasMore: false },
+      };
+    } catch {
+      // The empty completion is spec-valid + never crashes the session.
+      return { completion: { values: [], total: 0, hasMore: false } };
+    }
   });
 
   // v1.24.1 — track last tool-call time so the idle nudge below knows
@@ -425,6 +451,24 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
     const callT0 = Date.now();
     idleState.lastToolCallAt = Date.now();
+
+    // v2.26.0 — N3 fix: validate tool name SHAPE before any lookup or
+    // dispatch. The validator runs in microseconds and catches every
+    // malicious shape from the deep-findings audit (empty, control chars,
+    // path-traversal, prototype-pollution keys, emoji, RTL injection,
+    // very long, foreign namespace).
+    const nameVerdict = classifyToolName(req.params.name);
+    if (!nameVerdict.ok) {
+      mcpLog("warn", "call.name_rejected", {
+        rawName: typeof req.params.name === "string" ? req.params.name.slice(0, 80) : String(req.params.name).slice(0, 80),
+        classification: nameVerdict.classification,
+      });
+      return toErrorResult(
+        `invalid tool name (${nameVerdict.classification}): ${nameVerdict.reason}. ` +
+          `Tool names must match ^mneme\\.[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)*$.`,
+      );
+    }
+
     // v1.45.0 (#17 fix) — resolve verb.noun aliases (e.g.,
     // "mneme.security.detect_tool_anomaly" → "mneme.aletheia.immune.scan")
     // before dispatch. Canonical names pass through unchanged.
@@ -482,10 +526,18 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
       );
     }
 
-    // v2.24.0 — deferred runtime. Tool calls during cold-boot await the
-    // shared promise. If degraded (no git repo, etc.) only stateless tools
-    // run; everything else returns a clean isError:true CallToolResult.
-    const rt = await getRuntime();
+    // v2.26.0 — STATELESS FAST-PATH: skip awaiting the deferred runtime
+    // for tools that don't need it. Pre-v2.26 every call to a stateless
+    // tool (mneme.welcome / capabilities / candor / fuzz / tune) waited
+    // ~10s for the runtime to warm. The probes timed out at 5s on FAST
+    // paths because of this. Now: stateless tools use a stub runtime
+    // synchronously + return in milliseconds.
+    let rt: DeferredRuntime;
+    if (tool && STATELESS_TOOL_NAMES.has(tool.name)) {
+      rt = { degraded: true, reason: "stateless-fastpath", cwd: opts.cwd };
+    } else {
+      rt = await getRuntime();
+    }
     if (isDegraded(rt) && tool && !STATELESS_TOOL_NAMES.has(tool.name)) {
       mcpLog("warn", "call.degraded.refused", { tool: tool.name, reason: rt.reason });
       return toErrorResult(
@@ -497,10 +549,36 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     if (tool) {
       try {
         const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+        // v2.26.0 — N2 fix: validate args against the tool's inputSchema.
+        // Pre-v2.26 the server treated `required` as advisory; tools
+        // silently received empty args + crashed or returned junk.
+        const schemaVerdict = validateArgs(args, tool.inputSchema as ToolInputSchema | undefined);
+        if (!schemaVerdict.ok) {
+          mcpLog("warn", "call.schema_violation", {
+            tool: tool.name,
+            violations: schemaVerdict.violations,
+          });
+          return toErrorResult(
+            `${tool.name} rejected: ${schemaVerdict.reason}. ` +
+              `Resend with the required fields populated.`,
+          );
+        }
+        // v2.26.0 — N6 fix: register this call with the cancel manager so
+        // notifications/cancelled can fire AbortController for abort-aware
+        // tools. The id is the JSON-RPC request id when present.
+        const reqId = (req as unknown as { id?: number | string }).id;
+        let abortSignal: AbortSignal | null = null;
+        if (typeof reqId === "number" || typeof reqId === "string") {
+          abortSignal = cancelManager.register(reqId, tool.name);
+        }
         // The next line passes either ToolRuntime or DegradedRuntime to the
         // handler. Stateless tools (e.g. mneme.welcome) tolerate degraded;
         // the gate above blocked stateful tools when degraded.
         const runtime = rt as Parameters<typeof tool.handler>[0];
+        // Make the AbortSignal available to abort-aware handlers via the
+        // args object (under a private __mneme_signal key). Handlers that
+        // don't read it work unchanged.
+        if (abortSignal) (args as Record<string, unknown>)["__mneme_signal"] = abortSignal;
         const rootPath = isDegraded(rt) ? opts.cwd : rt.meta.rootPath;
 
         // v1.18.0 — record observation for ALETHEIA immune profile (best-effort).
@@ -537,8 +615,13 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
           }
         } catch { /* best-effort */ }
         mcpLog("info", "call.ok", { tool: tool.name, dt_ms: Date.now() - callT0 });
+        // v2.26.0 — N6: clean up cancel manager registration on success.
+        if (typeof reqId === "number" || typeof reqId === "string") cancelManager.unregister(reqId);
         return toCallResult(enriched);
       } catch (err) {
+        // v2.26.0 — N6: clean up cancel manager registration on error.
+        const reqIdErr = (req as unknown as { id?: number | string }).id;
+        if (typeof reqIdErr === "number" || typeof reqIdErr === "string") cancelManager.unregister(reqIdErr);
         mcpLog("error", "call.threw", { tool: req.params.name, dt_ms: Date.now() - callT0, err: (err as Error).message });
         return toErrorResult(
           `${req.params.name} failed: ${(err as Error).message}. ` +
@@ -550,6 +633,17 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     // here the tool was known but its handler returned without a value.)
     mcpLog("warn", "call.unreachable_fallthrough", { tool: req.params.name });
     return toErrorResult(`unreachable: ${req.params.name} did not produce a result`);
+  });
+
+  // v2.26.0 — N6 fix: register notifications/cancelled handler. The SDK
+  // dispatches CancelledNotificationSchema to this listener; we map the
+  // request id to its AbortController via cancelManager.
+  server.setNotificationHandler(CancelledNotificationSchema, async (n) => {
+    const params = n.params as { requestId?: number | string; reason?: string } | undefined;
+    const id = params?.requestId;
+    if (typeof id !== "number" && typeof id !== "string") return;
+    const cancelled = cancelManager.cancel(id, params?.reason ?? "client-cancelled");
+    mcpLog("info", "call.cancelled", { id, hit: cancelled, reason: params?.reason });
   });
 
   const transport = new StdioServerTransport();

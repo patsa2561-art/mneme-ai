@@ -33,6 +33,9 @@ import { AUTARCHY_TOOLS } from "./_autarchy_tools.js";
 import { AEGIS_TOOLS } from "./_aegis_tools.js";
 import { MCP_FUZZER_TOOLS } from "./_mcp_fuzzer_tools.js";
 import { CODEGRAPH_TOOLS } from "./_codegraph_tools.js";
+import { N4_MISSING_TOOLS } from "./_n4_missing_tools.js";
+import { N7_N11_GOVERNANCE_TOOLS } from "./_n7_n11_governance.js";
+import { PEAK_GAUNTLET_TOOLS } from "./_peak_gauntlet_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -180,6 +183,9 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...AEGIS_TOOLS,
     ...MCP_FUZZER_TOOLS,
     ...CODEGRAPH_TOOLS,
+    ...N4_MISSING_TOOLS,
+    ...N7_N11_GOVERNANCE_TOOLS,
+    ...PEAK_GAUNTLET_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

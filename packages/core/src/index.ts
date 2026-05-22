@@ -1326,6 +1326,15 @@ export * as mcpFuzzer from "./mcp_fuzzer/index.js";
 // it, when, and refuses to lie about what's there."
 export * as codegraph from "./codegraph/index.js";
 
+// v2.26.0 — 🏆 PEAK PERFORMANCE GAUNTLET / AUTO-OPTIMIZER.
+// The 12 deep-findings probes (N1-N12) from the v2.24.0 audit ship
+// as a self-scoring engine. `runGauntlet({cwd})` spawns the local MCP
+// server, runs every probe, returns an HMAC-signed scorecard with
+// star ratings (0-10) + traffic light + remediation hints + signed
+// chain ledger. Mneme grades its OWN compliance to its own audits.
+// No competitor ships this. CLI: `mneme tune {run,report,suggest_fix}`.
+export * as tune from "./tune/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with
