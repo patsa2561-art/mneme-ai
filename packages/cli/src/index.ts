@@ -3812,6 +3812,129 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.23.1 — MCP-CANDOR/0.1 (vendor-neutral MCP standard) ──
+  const candor = program
+    .command("candor")
+    .description("🤝 MCP-CANDOR/0.1 — vendor-neutral MCP standard for trust + audit + coercion + vaccine federation. Mneme is reference implementation #0; spec is open. Verbs: handshake · spec · vaccines · audit · classify · verify-peer.");
+
+  candor
+    .command("handshake")
+    .description("🤝 Emit this install's CANDOR/0.1 handshake response (trust capsule + endpoints + coercion-clean + sig).")
+    .option("--level <l>", "minimal | standard | federated (default standard)", "standard")
+    .option("--json")
+    .action(async (opts: { level: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const att = core.verifySelf.verifySelf(process.cwd());
+      const deep = core.trustCapsule.verifySelfDeep(att.installPath, process.cwd(), att.installedVersion);
+      const lvl = (["minimal", "standard", "federated"].includes(opts.level) ? opts.level : "standard") as "minimal" | "standard" | "federated";
+      const h = core.mcpCandor.buildHandshake({
+        repoRoot: process.cwd(),
+        identityCapsuleUri: deep.capsuleUri,
+        impl: { name: "mneme-ai", version: att.installedVersion },
+        level: lvl,
+        coercionClean: true,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(h, null, 2) + "\n"); return; }
+      process.stdout.write(core.mcpCandor.formatHandshake(h) + "\n");
+    });
+
+  candor
+    .command("spec")
+    .description("🤝 Print the spec name + version + required-endpoint sets.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const spec = {
+        name: core.mcpCandor.SPEC_NAME,
+        version: core.mcpCandor.SPEC_VERSION,
+        url: core.mcpCandor.SPEC_URL,
+        minimal: core.mcpCandor.REQUIRED_ENDPOINTS_MINIMAL,
+        standard: core.mcpCandor.REQUIRED_ENDPOINTS_STANDARD,
+      };
+      if (opts.json) { process.stdout.write(JSON.stringify(spec, null, 2) + "\n"); return; }
+      process.stdout.write(`🤝 ${spec.name}/${spec.version}\n  url:      ${spec.url}\n  minimal:  ${spec.minimal.join(", ")}\n  standard: ${spec.standard.join(", ")}\n`);
+    });
+
+  candor
+    .command("vaccines")
+    .description("🦠 List the local vaccine registry (CVE-database for AI lies). Composable across CANDOR-compliant servers.")
+    .option("--json")
+    .action(async (opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const list = core.mcpCandor.exportVaccines(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(list, null, 2) + "\n"); return; }
+      process.stdout.write(core.mcpCandor.formatVaccines(list) + "\n");
+    });
+
+  candor
+    .command("vaccines-contribute")
+    .description("🦠 Contribute a new vaccine signature to the local registry. Federated peers can pull it.")
+    .requiredOption("--type <t>", "factual | structural | coercion | drift | other")
+    .requiredOption("--signature <s>")
+    .requiredOption("--description <d>")
+    .option("--signed-by <id>", "default: mneme-ai@<version>")
+    .option("--json")
+    .action(async (opts: { type: string; signature: string; description: string; signedBy?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const att = core.verifySelf.verifySelf(process.cwd());
+      const signedBy = opts.signedBy ?? `mneme-ai@${att.installedVersion}`;
+      const v = core.mcpCandor.contributeVaccine(process.cwd(), {
+        type: opts.type as any, signature: opts.signature, description: opts.description, signedBy,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(`✓ vaccine contributed: ${v.id}  type=${v.type}\n`);
+    });
+
+  candor
+    .command("audit")
+    .description("📜 Show CANDOR audit ledger (last 20 chained receipts) or verify chain integrity.")
+    .option("--verify", "Verify the HMAC chain; exit 1 on tamper.")
+    .option("--json")
+    .action(async (opts: { verify?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      if (opts.verify) {
+        const v = core.mcpCandor.verifyAuditChain(process.cwd());
+        if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+        process.stdout.write(`${v.ok ? "✓ chain intact" : `✗ broken at ${v.brokenAt}: ${v.reason}`}\n`);
+        if (!v.ok) process.exit(1);
+        return;
+      }
+      const list = core.mcpCandor.listAudits(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(list, null, 2) + "\n"); return; }
+      process.stdout.write(core.mcpCandor.formatAudits(list) + "\n");
+    });
+
+  candor
+    .command("classify")
+    .description("📚 Classify text against the coercion taxonomy. CANDOR's `candor.coercion.classify` endpoint.")
+    .argument("<text...>")
+    .option("--json")
+    .action(async (text: string[], opts: { json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const v = core.mcpCandor.classifyCoercion(text.join(" "));
+      if (opts.json) { process.stdout.write(JSON.stringify(v, null, 2) + "\n"); return; }
+      process.stdout.write(`📚 worstTier=${v.worstTier}  matches=[${v.matchedPatternIds.join(", ")}]\n  ${v.rationale}\n`);
+      if (v.worstTier >= 4) process.exit(2);
+    });
+
+  candor
+    .command("verify-peer")
+    .description("🤝 Validate a peer server's handshake JSON against the spec (paste the JSON via --file).")
+    .requiredOption("--file <p>", "Path to a JSON file containing the peer's handshake response.")
+    .option("--json")
+    .action(async (opts: { file: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const fs = await import("node:fs");
+      let payload;
+      try { payload = JSON.parse(fs.readFileSync(opts.file, "utf8")); }
+      catch (e) { process.stderr.write(`✗ could not read/parse ${opts.file}: ${(e as Error).message}\n`); process.exit(1); return; }
+      const r = core.mcpCandor.validateHandshake(payload);
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(`${r.ok ? "✓ valid CANDOR handshake" : `✗ INVALID — ${r.violations.length} violation(s):`}\n`);
+      for (const v of r.violations) process.stdout.write(`  - ${v}\n`);
+      if (!r.ok) process.exit(2);
+    });
+
   // ─── v2.23.0 — DOJO (Six-Master Sparring) + COERCION TAXONOMY ──
   const dojoCmd = program
     .command("dojo")

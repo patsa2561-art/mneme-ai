@@ -1297,6 +1297,16 @@ export * as dojo from "./dojo/index.js";
 // returns ranked matches with tier (1-5) + enforcement-pointer.
 export * as coercionTaxonomy from "./coercion_taxonomy/index.js";
 
+// v2.23.1 — 🤝 MCP-CANDOR/0.1. First-mover vendor-neutral MCP
+// standard for trust + audit + coercion + vaccine federation.
+// CANDOR = Cryptographic Audit · Neutral verdicts · Drift detection
+// · Origin attestation · Receipt ledger. Five mandatory endpoints
+// (handshake / vaccines.list / vaccines.contribute / audit.append /
+// coercion.classify). Mneme is reference implementation #0; spec
+// is open for community adoption. Polishes the 4 diamonds from the
+// v2.22.3 audit into a single textbook-worthy standard.
+export * as mcpCandor from "./mcp_candor/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with

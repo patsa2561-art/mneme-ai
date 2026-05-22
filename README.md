@@ -239,6 +239,18 @@ Eight ranked patterns (Imperative-Mandate / Fake-User-Voice / Opaque-Grade / Com
 
 <div align="center">
 
+### 🤝 MCP-CANDOR/0.1 — vendor-neutral MCP standard (v2.23.1)
+
+</div>
+
+CANDOR = **C**ryptographic Audit · **N**eutral verdicts · **D**rift detection · **O**rigin attestation · **R**eceipt ledger. Five mandatory endpoints (handshake / vaccines.list / vaccines.contribute / audit.append / coercion.classify) compose the 4 audit-diamonds into one open spec. Mneme is reference implementation #0; any MCP server can adopt + federate.
+
+<sub>📘 <a href="docs/MCP_CANDOR.md" target="_blank" rel="noopener">MCP-CANDOR protocol spec →</a> · open citation slot · CLI: `mneme candor handshake / vaccines / audit / classify / verify-peer / spec`.</sub>
+
+---
+
+<div align="center">
+
 ### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
 
 </div>
