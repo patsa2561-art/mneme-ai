@@ -215,6 +215,30 @@ Four composing primitives: `dim-check` catches unit mismatches (Mars Climate Orb
 
 <div align="center">
 
+### 🥊 Six-Master Dojo — adversarial sparring grader (v2.23.0)
+
+</div>
+
+`mneme dojo run` exercises Mneme against 6 senseis (liar / edge / injection / self-contradict / spec-diff / endurance), grades each A-F, seals an HMAC report card, auto-records failures to a regression set the next release replays first.
+
+<sub>📘 <a href="docs/DOJO.md" target="_blank" rel="noopener">Dojo guide →</a> · falsifiable scoring · 24/7 mode + post-training fix workflow documented · 31 module tests.</sub>
+
+---
+
+<div align="center">
+
+### 📚 Coercion Taxonomy — named patterns of tool→agent coercion (v2.23.0)
+
+</div>
+
+Eight ranked patterns (Imperative-Mandate / Fake-User-Voice / Opaque-Grade / Compliance Gamification / Honeypot-as-Trap / Treat-As-Instruction / Auto-Action Queue / Tier-1 Replay Inheritance) — the inverse direction from prompt-injection literature. `mneme coercion "<text>"` returns worst tier 0-5 + enforcement pointer.
+
+<sub>📘 <a href="docs/COERCION_TAXONOMY.md" target="_blank" rel="noopener">Coercion Taxonomy guide →</a> · first-mover naming of a category nobody else has formalised · CI gate (exit 2 on tier ≥ 4).</sub>
+
+---
+
+<div align="center">
+
 ### 🧑‍🚀 Digital Talent — turn a generic AI into one calibrated to your repo
 
 </div>

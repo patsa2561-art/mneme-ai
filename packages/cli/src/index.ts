@@ -3812,6 +3812,77 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ─── v2.23.0 — DOJO (Six-Master Sparring) + COERCION TAXONOMY ──
+  const dojoCmd = program
+    .command("dojo")
+    .description("🥊 SIX-MASTER DOJO — adversarial sparring for Mneme. Runs 6 sensei (liar / edge / injection / self-contradict / spec-diff / endurance), grades each A-F, seals an HMAC report card, auto-records failures to .mneme/dojo/regression.jsonl for next-release replay.");
+
+  dojoCmd
+    .command("run", { isDefault: true })
+    .description("🥊 Run the full arena (all 6 sensei) + emit report card. Pass --version <v> to tag the seal.")
+    .option("--version <v>", "Mneme version to tag in the report card.", "unversioned")
+    .option("--no-record", "Skip recording failures into the regression set.")
+    .option("--iterations <n>", "Endurance sensei iteration count.", (v) => parseInt(v, 10))
+    .option("--secret <s>", "HMAC secret for the report card seal.")
+    .option("--json")
+    .action(async (opts: { version: string; record?: boolean; iterations?: number; secret?: string; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const r = await core.dojo.runArena({
+        repoRoot: process.cwd(),
+        mnemeVersion: opts.version,
+        recordFailures: opts.record !== false,
+        enduranceIterations: opts.iterations,
+        secret: opts.secret,
+      });
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.dojo.formatArena(r) + "\n");
+      if (r.card.overall.letter === "F") process.exit(2);
+    });
+
+  dojoCmd
+    .command("regressions")
+    .description("🥊 List regression-set entries (failures auto-recorded by past dojo runs).")
+    .option("--open-only", "Show only un-fixed entries.", false)
+    .option("--json")
+    .action(async (opts: { openOnly?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      const rows = opts.openOnly
+        ? core.dojo.listOpenRegressions(process.cwd())
+        : core.dojo.listRegressions(process.cwd());
+      if (opts.json) { process.stdout.write(JSON.stringify(rows, null, 2) + "\n"); return; }
+      process.stdout.write(core.dojo.formatRegressions(rows) + "\n");
+    });
+
+  dojoCmd
+    .command("mark-fixed <id>")
+    .description("🥊 Mark a regression entry as fixed in the current version.")
+    .requiredOption("--version <v>")
+    .action(async (id: string, opts: { version: string }) => {
+      const core = await import("@mneme-ai/core");
+      const ok = core.dojo.markFixed(process.cwd(), id, opts.version);
+      if (!ok) { process.stderr.write(`✗ no regression with id ${id}\n`); process.exit(1); return; }
+      process.stdout.write(`✓ marked ${id} fixed in v${opts.version}\n`);
+    });
+
+  program
+    .command("coercion")
+    .description("📚 COERCION TAXONOMY — classify text against the catalog of tool-to-agent coercion patterns (Imperative-Mandate Injection / Fake-User-Voice / Opaque-Grade Pressure / Compliance Gamification / Honeypot-as-Trap / Treat-As-Instruction / Auto-Action Queue / Tier-1 Replay Inheritance). First-mover naming of the category.")
+    .argument("[text...]", "Text to classify. Omit + pass --catalog to print all patterns.")
+    .option("--catalog", "Print the full pattern catalog instead of classifying.")
+    .option("--json")
+    .action(async (text: string[], opts: { catalog?: boolean; json?: boolean }) => {
+      const core = await import("@mneme-ai/core");
+      if (opts.catalog || text.length === 0) {
+        if (opts.json) { process.stdout.write(JSON.stringify(core.coercionTaxonomy.listCoercion(), null, 2) + "\n"); return; }
+        process.stdout.write(core.coercionTaxonomy.formatCatalog() + "\n");
+        return;
+      }
+      const r = core.coercionTaxonomy.classify(text.join(" "));
+      if (opts.json) { process.stdout.write(JSON.stringify(r, null, 2) + "\n"); return; }
+      process.stdout.write(core.coercionTaxonomy.formatResult(r) + "\n");
+      if (r.worstTier >= 4) process.exit(2);
+    });
+
   // ─── v2.22.2 — DIMENSIONAL ORACLE / CHALLENGER LIBRARIAN /
   //                MISSION RECORDER / OVERSHOOT TRACER ──
   program

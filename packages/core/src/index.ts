@@ -1278,6 +1278,25 @@ export * as conductor from "./conductor/index.js";
 // training-data fact-checking where wrong physics is expensive.
 export * as physicsLathe from "./physics_lathe/index.js";
 
+// v2.23.0 — 🥊 DOJO. Six-master adversarial sparring system that
+// trains + grades Mneme before every release. LIAR (synthetic false
+// claims) + EDGE (boundary inputs) + INJECTION (prompt-injection
+// taxonomy) + SELF-CONTRADICT (phrasing consistency) + SPEC-DIFF
+// (doc/code drift) + ENDURANCE (determinism + latency). Emits HMAC-
+// sealed report card (A/B/C/D/F per sensei) + auto-records failures
+// into a regression set the next release replays first (#B from the
+// v2.22.3 audit — Mneme remembers its own mistakes).
+export * as dojo from "./dojo/index.js";
+
+// v2.23.0 — 📚 COERCION TAXONOMY. Diamond #4 from the v2.22.3 audit:
+// a NAMED catalog of tool-to-agent coercion patterns (Imperative-
+// Mandate Injection · Fake-User-Voice · Opaque-Grade Pressure ·
+// Compliance Gamification · Honeypot-as-Trap · Treat-As-Instruction
+// · Auto-Action Queue · Tier-1 Replay Inheritance). First-mover
+// naming of a category nobody else has formalised. Classifier
+// returns ranked matches with tier (1-5) + enforcement-pointer.
+export * as coercionTaxonomy from "./coercion_taxonomy/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with
