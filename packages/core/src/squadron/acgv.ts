@@ -50,6 +50,7 @@ import { godelPostMortem, type GodelResult } from "./acgv_godel.js";
 import { godelPostMortemZ3, type GodelZ3Result } from "./acgv_godel_z3.js";
 import { evaluateConfession, requestConfession, type ConfessionRequest, type ConfessionVerdict } from "./acgv_confession.js";
 import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vaccine.js";
+import { detectHyperbole } from "./hyperbole_detector.js";
 import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
 import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
@@ -128,6 +129,31 @@ export async function runACGVAsync(input: ACGVRunInput): Promise<ACGVResult & { 
   // Run the sync pipeline up to + including chandrasekhar; we'll upgrade
   // the godel layer with Z3 if available, then re-evaluate the verdict.
   const prelim = runACGV({ ...input, noEmitVaccine: true, noStake: true });
+
+  // v2.23.2 — HYPERBOLE SHORT-CIRCUIT. When the sync layer already fired
+  // the hyperbole detector + emitted a verdict, the async wrapper MUST
+  // NOT re-run Z3 over the mock chandrasekhar — Z3 has no semantic model
+  // for "cured cancer" / "world's best" and returns SAT with a generic
+  // BLACK_HOLE certificate, overwriting the precise hyperbole godel core
+  // we already built (the audit-fix that surfaced this bug: explainer
+  // saw "BLACK_HOLE verdict stands..." instead of "medical-cure :: cured
+  // cancer" and rendered a garbled headline). Emit vaccine here too so
+  // the runACGVAsync caller (CLI verify) still gets vaccineEmitted=true.
+  if (prelim.caveats.includes("HYPERBOLE_DETECTOR_FIRED")) {
+    if (!input.noEmitVaccine && !prelim.vaccineEmitted) {
+      const sig = prelim.layers.godel.certificate.split("\n")[0] || prelim.summary;
+      try { emitVaccine(input.repoRoot, input.claim, sig); } catch { /* best-effort */ }
+      prelim.vaccineEmitted = true;
+    }
+    return { ...prelim, engine: "propositional" };
+  }
+
+  // Same short-circuit for INPUT_UNVERIFIABLE — there is no claim text for
+  // Z3 or arithmetic to operate on, and re-running them risks injecting
+  // noise into a verdict that is already explicit + deterministic.
+  if (prelim.caveats.some((c) => c.startsWith("INPUT_UNVERIFIABLE:"))) {
+    return { ...prelim, engine: "propositional" };
+  }
 
   // v1.55.0 -- Z3 ARITHMETIC LAYER. Runs alongside the existing pipeline
   // and can fire on claims that have numeric / logical shapes
@@ -249,10 +275,109 @@ export async function runACGVAsync(input: ACGVRunInput): Promise<ACGVResult & { 
   return { ...finalResult, engine: z3Godel.engine };
 }
 
+// v2.23.2 — explicit input limits + visible verdicts for boundary
+// inputs that previously fell through as silent NONE / PASSTHROUGH.
+// Audit findings: empty / whitespace / null-byte / unicode-only / RTL
+// inputs all returned PASSTHROUGH without a useful rationale; 50K-char
+// inputs got silently truncated. Now: all return IMPOSSIBLE_REFUTE
+// (when adversarial) or PASSTHROUGH with explicit caveat (when benign).
+const MAX_CLAIM_CHARS = 8000;
+
+function isUnverifiableEmptyish(claim: string): { yes: boolean; reason: string } {
+  if (!claim || claim.length === 0) return { yes: true, reason: "EMPTY_INPUT" };
+  if (/^\s+$/.test(claim)) return { yes: true, reason: "WHITESPACE_ONLY" };
+  // Mostly control chars / null bytes — < 30% printable
+  const printable = (claim.match(/[\x20-\x7E\p{L}\p{N}]/gu) ?? []).length;
+  if (printable / claim.length < 0.3) return { yes: true, reason: "CONTROL_CHAR_ONLY" };
+  return { yes: false, reason: "" };
+}
+
 export function runACGV(input: ACGVRunInput): ACGVResult {
-  const claim = (input.claim ?? "").trim();
+  const rawClaim = input.claim ?? "";
   const repoRoot = input.repoRoot;
   const caveats: string[] = [];
+
+  // ───── Layer -1: INPUT VALIDATION (v2.23.2) ───────────────────────────
+  // Empty / whitespace / control-char-only inputs return an EXPLICIT
+  // verdict + reason instead of silently falling through as PASSTHROUGH.
+  // Closes the audit finding "Empty/whitespace/null-byte/Unicode/RTL →
+  // silent NONE".  Use RAW claim (not trimmed) so whitespace-only inputs
+  // are tagged WHITESPACE_ONLY (not EMPTY_INPUT).
+  const ish = isUnverifiableEmptyish(rawClaim);
+  if (ish.yes) {
+    const chandra: ChandrasekharResult = {
+      verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0, citations: [], reasoning: "input was empty / whitespace / control-char-only",
+    } as ChandrasekharResult;
+    const godel: GodelResult = { status: "SKIPPED", core: [], certificate: "", upgrade: false };
+    return {
+      verdict: "PASSTHROUGH",
+      confidence: 0.0,
+      caveats: [`INPUT_UNVERIFIABLE:${ish.reason}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `INPUT_UNVERIFIABLE (${ish.reason}) — no factual content to verify.`,
+      reasoning: `The input did not contain enough printable characters for the verifier to extract any claim. Provide a sentence with at least one specific entity (file / function / version / count) and re-run.`,
+      vaccineEmitted: false,
+    } as ACGVResult;
+  }
+
+  // Now trim for downstream extraction.
+  let claim = rawClaim.trim();
+
+  // Cap oversize inputs to prevent silent truncation downstream + record
+  // the cap as a caveat so callers know the verdict applies to the head
+  // of the input only (full text not used). Better than silent NONE.
+  if (claim.length > MAX_CLAIM_CHARS) {
+    caveats.push(`INPUT_TRUNCATED:${MAX_CLAIM_CHARS}/${claim.length}`);
+    claim = claim.slice(0, MAX_CLAIM_CHARS);
+  }
+
+  // ───── Layer 0a: HYPERBOLE / IMPOSSIBLE-CLAIM DETECTOR (v2.23.2) ──────
+  // Catches the audit failure class: "Mneme cured cancer" / "world's
+  // best AI" / "reads your mind" used to slip through as PASSTHROUGH
+  // (no extractable fact-tuple). Now: hyperbole class fires
+  // IMPOSSIBLE_REFUTE deterministically + emits vaccine.
+  const hyp = detectHyperbole(claim);
+  if (hyp.flagged) {
+    const sig = hyp.vaccineSignature;
+    if (!input.noEmitVaccine) {
+      try { emitVaccine(repoRoot, claim, sig); } catch { /* best-effort */ }
+    }
+    const chandra: ChandrasekharResult = {
+      verdict: "BLACK_HOLE", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0.97, citations: [],
+      reasoning: "hyperbole detector matched — claim is in an unverifiable category",
+    } as ChandrasekharResult;
+    const godel: GodelResult = {
+      status: "UNSAT",
+      core: hyp.matches.map((m) => ({ asserted: m.reason, proof: [m.matched] })),
+      certificate: hyp.matches.map((m) => `${m.category} :: ${m.matched}`).join("\n"),
+      upgrade: true,
+    };
+    return {
+      verdict: "IMPOSSIBLE_REFUTE",
+      confidence: 0.97,
+      caveats: [...caveats, "HYPERBOLE_DETECTOR_FIRED"],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `IMPOSSIBLE_REFUTE -- hyperbole detector matched: ${hyp.matches.map((m) => m.category).join(", ")}`,
+      reasoning: `The claim asserts something the hyperbole detector classifies as unverifiable in this category:\n${hyp.matches.map((m) => `  - ${m.category}: ${m.reason}\n    matched: "${m.matched}"`).join("\n")}`,
+      vaccineEmitted: !input.noEmitVaccine,
+    } as ACGVResult;
+  }
 
   // ───── Layer 0: VACCINE CHECK (v2.19.44 OSMOSIS-gated) ────────────────
   //

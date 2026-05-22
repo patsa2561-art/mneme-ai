@@ -131,7 +131,18 @@ export function runCli(args: string[], opts: { cwd?: string; timeoutMs?: number 
     // Hand the child an empty stdin so anything that calls `await readline`
     // gets EOF instead of blocking. NO_COLOR keeps snapshots stable.
     input: "",
-    env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0", CI: "1" },
+    // v2.23.2 — disable daemon UDS shortcuts in tests so we always test
+    // the freshly-built dist code, not a stale daemon's cached V8 heap.
+    // Without these, a long-running daemon serves verify/status/etc with
+    // pre-upgrade code and tests for the new behaviour silently fail.
+    env: {
+      ...process.env,
+      NO_COLOR: "1",
+      FORCE_COLOR: "0",
+      CI: "1",
+      MNEME_WARMCALL: "0",
+      MNEME_MUSCLE_BYPASS: "0",
+    },
     maxBuffer: 10 * 1024 * 1024,
   };
   const r = spawnSync(process.execPath, [CLI_BIN, ...args], spawnOpts) as SpawnSyncReturns<string>;

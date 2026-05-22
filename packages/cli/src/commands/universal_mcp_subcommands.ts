@@ -58,8 +58,35 @@ interface ToolLike {
  *   become value-form. Auto-derived args merge with --json args (POSIX
  *   wins on conflict so user can override the JSON-blob).
  */
-function isJsonSchemaObject(schema: unknown): schema is { type?: string; properties?: Record<string, { type?: string; description?: string; default?: unknown }> } {
+function isJsonSchemaObject(schema: unknown): schema is { type?: string; properties?: Record<string, { type?: string; description?: string; default?: unknown }>; required?: string[] } {
   return !!schema && typeof schema === "object" && (schema as { type?: string }).type !== undefined;
+}
+
+/**
+ * v2.23.2 — natural-positional protocol.
+ *
+ *   Audit finding: `mneme verify_claims "text"` returned "too many
+ *   arguments" instead of running the tool. AI agents + humans both
+ *   pass the primary string field as a positional by instinct.
+ *   We pick the FIRST string field (prefer one that's in `required`)
+ *   to be the natural positional. Boolean / number / array / object
+ *   fields keep --flag only (no overload).
+ *
+ *   Picks: draft / claim / text / phrase / query / body / fact / etc.
+ *   Logic: scan required first, then properties in order; first string
+ *   wins. Returns null if no string field exists (then no positional).
+ */
+function pickNaturalPositional(tool: ToolLike): string | null {
+  if (!isJsonSchemaObject(tool.inputSchema)) return null;
+  const props = tool.inputSchema.properties ?? {};
+  const required = tool.inputSchema.required ?? [];
+  const isStringField = (key: string): boolean => {
+    const def = props[key];
+    return !!def && typeof def === "object" && def.type === "string";
+  };
+  for (const key of required) if (isStringField(key)) return key;
+  for (const key of Object.keys(props)) if (isStringField(key)) return key;
+  return null;
 }
 
 function deriveOmniFlags(tool: ToolLike): Array<{ flag: string; description: string; coerce: (v: string) => unknown }> {
@@ -200,29 +227,46 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
         if (parent.commands.find((c) => c.name() === action)) continue;
         try {
           const omniFlags = deriveOmniFlags(tool);
-          const cmd = parent.command(action)
+          const natural = pickNaturalPositional(tool);
+          const cmd = parent.command(natural ? `${action} [${natural}...]` : action)
             .description((tool.description ?? "").slice(0, 200))
             .option("--json [jsonArgs]", "Tool arguments as a JSON object string (or '{}' for none)")
             .option("--pretty", "Pretty-print the output (default: compact JSON)");
           for (const f of omniFlags) {
             cmd.option(f.flag, f.description);
           }
-          cmd.action(async (opts: Record<string, unknown>) => {
+          cmd.action(async (...callArgs: unknown[]) => {
+              // commander signature when a variadic positional is declared:
+              //   action((positionalArr, opts) => ...)
+              // When NOT declared:
+              //   action((opts) => ...)
+              const opts: Record<string, unknown> = (natural ? callArgs[1] : callArgs[0]) as Record<string, unknown>;
+              const positional = natural ? (callArgs[0] as string[]) : undefined;
               let args: Record<string, unknown> = {};
               const jsonOpt = opts["json"];
               if (typeof jsonOpt === "string" && jsonOpt.length > 0) {
                 try { args = JSON.parse(jsonOpt) as Record<string, unknown>; }
-                catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
+                catch (e) {
+                  const err = { error: "json-parse", message: (e as Error).message, tool: tool.name };
+                  process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ --json parse error: ${(e as Error).message}\n`);
+                  process.exit(2);
+                }
               }
               // v2.19.41 OMNI-FLAG: merge POSIX-derived args over JSON-blob args.
               args = mergeArgs(args, opts, omniFlags);
+              // v2.23.2 — natural positional fills the picked string field
+              // only when neither --json nor the explicit --<field> flag set it.
+              if (natural && positional && positional.length > 0 && args[natural] === undefined) {
+                args[natural] = positional.join(" ");
+              }
               try {
                 const result = await tool.handler({ repoRoot: process.cwd() }, args);
                 const out = opts["pretty"] ? JSON.stringify(result, null, 2) : JSON.stringify(result);
                 process.stdout.write(out + "\n");
                 process.exit(0);
               } catch (e) {
-                process.stderr.write(`⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
+                const err = { error: "tool-threw", message: (e as Error).message, tool: tool.name };
+                process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
                 process.exit(1);
               }
             });
@@ -251,26 +295,37 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
     if (findExistingCommand(program, name)) continue;
     try {
       const omniFlags = deriveOmniFlags(tool);
-      const cmd = program.command(name)
+      const natural = pickNaturalPositional(tool);
+      const cmd = program.command(natural ? `${name} [${natural}...]` : name)
         .description((tool.description ?? "").slice(0, 200))
         .option("--json [jsonArgs]", "Tool arguments as a JSON object string (or '{}' for none)")
         .option("--pretty", "Pretty-print the output (default: compact JSON)");
       for (const f of omniFlags) cmd.option(f.flag, f.description);
-      cmd.action(async (opts: Record<string, unknown>) => {
+      cmd.action(async (...callArgs: unknown[]) => {
+          const opts: Record<string, unknown> = (natural ? callArgs[1] : callArgs[0]) as Record<string, unknown>;
+          const positional = natural ? (callArgs[0] as string[]) : undefined;
           let args: Record<string, unknown> = {};
           const jsonOpt = opts["json"];
           if (typeof jsonOpt === "string" && jsonOpt.length > 0) {
             try { args = JSON.parse(jsonOpt) as Record<string, unknown>; }
-            catch (e) { process.stderr.write(`⚠ --json parse error: ${(e as Error).message}\n`); process.exit(2); }
+            catch (e) {
+              const err = { error: "json-parse", message: (e as Error).message, tool: tool.name };
+              process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ --json parse error: ${(e as Error).message}\n`);
+              process.exit(2);
+            }
           }
           args = mergeArgs(args, opts, omniFlags);
+          if (natural && positional && positional.length > 0 && args[natural] === undefined) {
+            args[natural] = positional.join(" ");
+          }
           try {
             const result = await tool.handler({ repoRoot: process.cwd() }, args);
             const out = opts["pretty"] ? JSON.stringify(result, null, 2) : JSON.stringify(result);
             process.stdout.write(out + "\n");
             process.exit(0);
           } catch (e) {
-            process.stderr.write(`⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
+            const err = { error: "tool-threw", message: (e as Error).message, tool: tool.name };
+            process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ tool '${tool.name}' threw: ${(e as Error).message}\n`);
             process.exit(1);
           }
         });

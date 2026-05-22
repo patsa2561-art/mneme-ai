@@ -38,6 +38,22 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
 
   switch (result.verdict) {
     case "IMPOSSIBLE_REFUTE": {
+      // v2.23.2 — hyperbole-class refute gets a specific headline that
+      // quotes the matched phrase + category, so the user sees WHY the
+      // claim was refused, not a generic "an assertion is impossible".
+      if (result.caveats.includes("HYPERBOLE_DETECTOR_FIRED")) {
+        const cert = result.layers.godel.certificate || "";
+        const firstLine = cert.split("\n")[0] || "";
+        const [category = "hyperbole", phrase = ""] = firstLine.split("::").map((s) => s.trim());
+        const quoted = phrase ? `"${phrase}"` : "this claim";
+        return {
+          headline: `REFUTED -- ${quoted} is an unverifiable ${category} claim (${pct} confidence)`,
+          plain: `Mneme's hyperbole detector flagged ${quoted} as ${category}. Claims in this category (medical cure / impossible-physics / impossible-faculty / superlative-absolute) cannot be grounded in repo evidence and are auto-refuted to prevent silent fall-through.`,
+          nextAction: "Drop the unverifiable phrase, or replace it with a citation-grounded statement (file path, version, commit hash).",
+          trafficLight: "black",
+          confidencePct: pct,
+        };
+      }
       const unsatCore = result.layers.godel.core;
       const cited = unsatCore.length > 0 ? unsatCore[0]!.asserted : "an assertion";
       return {
@@ -96,6 +112,48 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
 
     case "PASSTHROUGH":
     default: {
+      // v2.23.2 — explicit headlines for INPUT_UNVERIFIABLE: previously these
+      // landed in the catch-all "no checkable facts" line, which hid the
+      // genuine reason from the user (empty input / whitespace-only / control
+      // chars only / truncated). Now each surfaces its own headline.
+      const inputCaveat = result.caveats.find((c) => c.startsWith("INPUT_UNVERIFIABLE:") || c === "INPUT_TRUNCATED");
+      if (inputCaveat === "INPUT_UNVERIFIABLE:EMPTY_INPUT") {
+        return {
+          headline: `INSUFFICIENT-INPUT -- claim is empty`,
+          plain: `Mneme received an empty claim. There is nothing to verify. This is explicit (not a silent NONE) so AI agents can detect + retry with a real claim.`,
+          nextAction: "Provide a non-empty claim with at least one specific entity (file name, version, function, fact).",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
+      if (inputCaveat === "INPUT_UNVERIFIABLE:WHITESPACE_ONLY") {
+        return {
+          headline: `INSUFFICIENT-INPUT -- claim is whitespace only`,
+          plain: `The input contains only whitespace characters (spaces / tabs / newlines). There is nothing to verify. Returned explicitly so AI agents can distinguish this from "no checkable facts in a real sentence".`,
+          nextAction: "Trim the input and provide a real claim.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
+      if (inputCaveat === "INPUT_UNVERIFIABLE:CONTROL_CHAR_ONLY") {
+        return {
+          headline: `INSUFFICIENT-INPUT -- claim contains only control characters`,
+          plain: `The input contains only non-printable control characters (no printable text). Likely a binary blob or corrupted input. Returned explicitly so AI agents can flag the upstream pipeline.`,
+          nextAction: "Inspect the upstream pipeline producing this input; pass real printable text.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
+      // INPUT_TRUNCATED is informational — flag it but keep PASSTHROUGH headline.
+      if (inputCaveat === "INPUT_TRUNCATED") {
+        return {
+          headline: `NEEDS-DATA -- input was truncated to fit the verifier`,
+          plain: `The claim exceeded the verifier's input cap and was truncated before analysis. ACGV processed the truncated head; the verdict may not reflect content past the cap. Returned explicitly so the user knows analysis was partial.`,
+          nextAction: "Split the claim into smaller verifiable assertions and re-run.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
       return {
         headline: `NEEDS-DATA -- "${truncatedClaim}" has no checkable facts`,
         plain: `The claim is vague or opinion-shaped -- there are no specific entities (file names, version numbers, function names) for Mneme to verify. The legacy 6-bot squadron may still have a view, but ACGV defers.`,
