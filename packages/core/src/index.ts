@@ -1316,6 +1316,16 @@ export * as mcpCandor from "./mcp_candor/index.js";
 // impossible.
 export * as mcpFuzzer from "./mcp_fuzzer/index.js";
 
+// v2.25.0 — 🧬 LIVING SOUL CODEGRAPH. CodeGraph (the competitor)
+// ships a static "Google Maps of Codebase". Mneme ships the same
+// graph PLUS 8 differentiation primitives no competitor has:
+// HMAC-chained provenance per edge · drift sentinel (≤200ms) · time-
+// travel via git · vendor attribution · hallucination vaccine ·
+// Merkle root for cross-machine sync · MCP-CANDOR export · DREAMSPACE
+// proposals. "CodeGraph maps your code. LIVING SOUL knows who touched
+// it, when, and refuses to lie about what's there."
+export * as codegraph from "./codegraph/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with
