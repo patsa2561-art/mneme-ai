@@ -144,6 +144,27 @@ export async function verifyBrowserSentence(input: {
     // worker + can take 1-3s. The browser polygraph is per-sentence on a
     // streaming response; we MUST stay under ~300ms.
     const result = runACGV({ claim: sentence, repoRoot: input.repoRoot });
+    // v2.28.0 R3 fix — surface INPUT_TRUNCATED / INPUT_UNVERIFIABLE
+    // caveats in the polygraph response so the browser dot tooltip can
+    // show the user WHY the verdict is uncertain. Pre-v2.28 these
+    // caveats were dropped silently before they reached the userscript.
+    const truncated = result.caveats.find((c) => c.startsWith("INPUT_TRUNCATED"));
+    const unverifiable = result.caveats.find((c) => c.startsWith("INPUT_UNVERIFIABLE:"));
+    if (truncated) {
+      return {
+        verdict: "unknown", color: "grey", confidence: 0,
+        oneLine: `input truncated (${truncated.split(":")[1] ?? "over cap"}) — split into smaller sentences`,
+        latencyMs: Date.now() - t0, engine: "input-guard",
+      };
+    }
+    if (unverifiable) {
+      const kind = unverifiable.split(":")[1] ?? "INVALID";
+      return {
+        verdict: "unknown", color: "grey", confidence: 0,
+        oneLine: `unverifiable input: ${kind.toLowerCase().replace(/_/g, " ")}`,
+        latencyMs: Date.now() - t0, engine: "input-guard",
+      };
+    }
     // v2.19.91 — Run the 6 micro-lenses in parallel.  If any lens fires
     // RED with high weight, the lens verdict overrides ACGV (lenses know
     // world facts ACGV doesn't).

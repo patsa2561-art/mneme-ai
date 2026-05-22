@@ -50,6 +50,7 @@ import { godelPostMortem, type GodelResult } from "./acgv_godel.js";
 import { godelPostMortemZ3, type GodelZ3Result } from "./acgv_godel_z3.js";
 import { evaluateConfession, requestConfession, type ConfessionRequest, type ConfessionVerdict } from "./acgv_confession.js";
 import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vaccine.js";
+import { vaccineConflictsWithClaim } from "./vaccine_numeric_guard.js";
 import { detectHyperbole } from "./hyperbole_detector.js";
 import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
@@ -399,6 +400,18 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   // the inline catalog re-check is sufficient to prevent N3-overshoot.
   const vaccineMatch = checkAgainstVaccines(repoRoot, claim);
   if (vaccineMatch && vaccineMatch.matched) {
+    // v2.28.0 R1 fix — NUMERIC-FACT GUARD. Before honoring an AUTO_REFUTE
+    // from the vaccine cache, check whether the vaccine encodes a
+    // numeric fact (e.g. `swarm_organ_count=8`) that conflicts with a
+    // semantically-related numeric fact in the new claim (e.g. "9
+    // verification agents"). If yes, burn the match — the vaccine is
+    // stale for THIS claim. Pre-v2.28 the simhash match alone fired
+    // AUTO_REFUTE 99% on innocent claims with different numbers.
+    const numericConflict = vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, claim);
+    if (numericConflict.conflict) {
+      // Fall through to normal pipeline; the vaccine is stale here.
+      caveats.push(`VACCINE_BURNED_NUMERIC :: ${numericConflict.reason}`);
+    } else {
     // v2.19.44 N3-overshoot guard: extract every mneme.X.Y mention in
     // the claim + see if ANY of them now ground in the live catalog.
     // If yes, the vaccine is stale → burn the hit, fall through.
@@ -434,6 +447,7 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
     // Vaccine stale: claim mentions tools that NOW exist. Fall through.
     caveats.push("OSMOSIS_VACCINE_BURNED");
     // (No early return — we proceed to grounding so the truth gets surfaced.)
+    } // end of numericConflict.conflict == false
   }
 
   // ───── Layer 1: NEUTRINO 3-FLAVOR GROUNDING ──────────────────────────

@@ -96,9 +96,16 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
 function setCors(req: IncomingMessage, res: ServerResponse, customOrigins: string[] = []): void {
   const origin = req.headers.origin ?? "";
   const allow = [...ALLOWED_ORIGINS, ...customOrigins].includes(origin);
-  if (allow) res.setHeader("Access-Control-Allow-Origin", origin);
+  if (allow) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Mneme-Token");
+  // v2.28.0 B14 fix — cache preflight for 1 day to reduce per-sentence
+  // round-trips when the browser polygraph fires N preflights for N
+  // streaming sentences in a row.
+  res.setHeader("Access-Control-Max-Age", "86400");
 }
 
 function json(res: ServerResponse, status: number, body: unknown): void {
@@ -453,14 +460,19 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
       // because this endpoint runs in the user's eye-line and a 500 would
       // surface as a broken dot in their AI chat.
       if (req.url === "/v1/polygraph/verify" && req.method === "POST" && handlers.polygraphVerify) {
-        const body = await readJsonBody(req) as { sentence?: string; context?: string; vendor?: string };
-        const sentence = typeof body.sentence === "string" ? body.sentence.trim() : "";
+        // v2.28.0 B10 fix — accept `claim`, `text`, OR `sentence` as the
+        // payload field. Pre-v2.28 the bridge required `sentence` ONLY;
+        // a POST with `{claim:"..."}` returned engine:"noop" + made it
+        // look like the polygraph was a stub. Now all three aliases work.
+        const body = await readJsonBody(req) as { sentence?: string; claim?: string; text?: string; context?: string; vendor?: string };
+        const rawSentence = body.sentence ?? body.claim ?? body.text ?? "";
+        const sentence = typeof rawSentence === "string" ? rawSentence.trim() : "";
         if (!sentence) {
           // Never 4xx for empty input — the userscript will fire on
           // nearly-empty chunks while a response streams; respond grey.
           return json(res, 200, {
             verdict: "unknown", color: "grey", confidence: 0,
-            oneLine: "empty sentence — nothing to verify",
+            oneLine: "empty sentence — pass `sentence`, `claim`, or `text` field with text to verify",
             latencyMs: 0, engine: "noop",
           } satisfies PolygraphVerifyResult);
         }

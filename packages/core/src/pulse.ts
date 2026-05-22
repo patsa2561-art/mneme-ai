@@ -188,9 +188,24 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     try {
       const lines = readFileSync(inboxPath, "utf8").trim().split("\n").filter(Boolean);
       let unsent = 0;
+      // v2.28.0 fix — STALE-INBOX SUPPRESSION. The audit (2026-05-22)
+      // reported "header v2.27.0 vs inbox 'you on v2.26.1'" — a stale
+      // version-check entry from before the upgrade was still surfacing.
+      // We now suppress any inbox entry whose body says
+      //   "You're on v<X>"  AND  <X> !== current installed version.
+      const currentVer = status.version.current;
+      const isStaleVersionEntry = (e: { source?: string; body?: string; title?: string }): boolean => {
+        if (!currentVer || currentVer === "unknown") return false;
+        const text = `${e.title ?? ""} ${e.body ?? ""}`;
+        const m = text.match(/You'?re on v(\d+\.\d+\.\d+)/i);
+        if (m && m[1] !== currentVer) return true;
+        return false;
+      };
       for (const ln of lines) {
         try {
-          const e = JSON.parse(ln) as { sent?: boolean; id?: string; priority?: string; title?: string; body?: string; cta?: string; autoAction?: { tool: string; args?: Record<string, unknown> } };
+          const e = JSON.parse(ln) as { sent?: boolean; id?: string; source?: string; priority?: string; title?: string; body?: string; cta?: string; autoAction?: { tool: string; args?: Record<string, unknown> } };
+          // Skip stale upgrade banners that reference the wrong installed version
+          if (isStaleVersionEntry(e)) continue;
           if (e && e.sent === false) {
             unsent++;
             if (e.autoAction && typeof e.autoAction.tool === "string" && e.id && e.title) {
