@@ -81,6 +81,26 @@ export class OllamaEmbedder implements EmbeddingProvider {
     }
   }
 
+  /**
+   * v2.27.0 — TAGS-ONLY verify. Returns ok=true iff /api/tags responds AND
+   * the configured model is in the catalog. Does NOT do a sanity embed
+   * (that's the job of the first real embed call). Used by auto-detect
+   * to avoid the cold-start timeout that was downgrading users to bundled.
+   */
+  async verifyTags(): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const tags = await this.fetchWithTimeout(`${this.baseUrl}/api/tags`, { method: "GET" });
+      if (!tags.ok) return { ok: false, reason: `HTTP ${tags.status} on /api/tags` };
+      const list = (await tags.json()) as { models?: Array<{ name: string }> };
+      const have = (list.models ?? []).map((m) => m.name);
+      const matches = have.some((n) => n === this.model || n.startsWith(this.model + ":"));
+      if (!matches) return { ok: false, reason: `model '${this.model}' not pulled (have: ${have.join(", ")})` };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, reason: (err as Error).message };
+    }
+  }
+
   async embed(texts: string[]): Promise<Float32Array[]> {
     if (texts.length === 0) return [];
 

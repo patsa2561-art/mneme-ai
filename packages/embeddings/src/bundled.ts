@@ -173,7 +173,14 @@ export class BundledEmbedder implements EmbeddingProvider {
       (transformers.env as Record<string, unknown>)["allowRemoteModels"] = true;
       for (const device of ["cpu", "wasm", "webgpu", "auto"]) {
         try {
-          await transformers.pipeline("feature-extraction", this.model, { device });
+          // v2.27.0 fix (E6+E7): specify dtype explicitly. This:
+          //   (a) silences the "dtype not specified" stderr noise that
+          //       was leaking transformers.js debug output;
+          //   (b) uses the QUANTIZED q8 model (~22MB) instead of fp32
+          //       (~90MB) — closes the wasted-RAM finding.
+          //   Override via env MNEME_BUNDLED_DTYPE.
+          const dtype = process.env["MNEME_BUNDLED_DTYPE"] ?? "q8";
+          await transformers.pipeline("feature-extraction", this.model, { device, dtype });
           devicesAttempted.push({ device, ok: true });
           finalDevice = device;
           break;
@@ -371,8 +378,11 @@ export class BundledEmbedder implements EmbeddingProvider {
     let lastErr: Error | null = null;
     for (const device of order) {
       try {
+        // v2.27.0 — pass dtype explicitly (closes E6 wasted-RAM + E7 stderr leak).
+        const dtype = process.env["MNEME_BUNDLED_DTYPE"] ?? "q8";
         const pipeline = await transformers.pipeline("feature-extraction", this.model, {
           device,
+          dtype,
           progress_callback: progressCb,
         });
         // Winner!  Persist for next session.

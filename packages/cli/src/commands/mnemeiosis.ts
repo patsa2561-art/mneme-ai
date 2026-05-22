@@ -291,13 +291,14 @@ export function registerLinCommands(program: Command): void {
 
   lin
     .command("crystallize")
-    .description("Manually checkpoint the current session (no-op when no MCP server is running).")
+    .alias("tick")
+    .description("Manually checkpoint the current session (no-op when no MCP server is running). v2.27.0: `mneme lin tick` is an alias.")
     .option("--topic <s>", "Optional topic label.")
     .option("--json", "JSON output.")
     .action(async (opts: { topic?: string } & CommonOpts) => {
       const r = lineage.crystallize(process.cwd(), { endReason: "manual", topic: opts.topic });
       if (!r) {
-        out(opts, { error: "no active session" }, ["⚠ No active MCP session — nothing to crystallize."]);
+        out(opts, { error: "no active session", ran: false }, ["⚠ No active MCP session — nothing to crystallize. (Lineage tick is a no-op when MCP server isn't running.)"]);
         return;
       }
       lineage.addToTree(process.cwd(), r.chromosome);

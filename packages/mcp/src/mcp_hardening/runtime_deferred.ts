@@ -117,6 +117,11 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.tune.findings",
   "mneme.tune.suggest_fix",
   "mneme.tune.probe.long_sleep",  // v2.26.1 — abort-aware probe tool
+  // v2.27.0 — TRUTH GATE surfaces are stateless reads
+  "mneme.truth_gate.run",
+  "mneme.truth_gate.report",
+  "mneme.truth_gate.claims",
+  "mneme.truth_gate.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

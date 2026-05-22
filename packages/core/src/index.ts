@@ -1335,6 +1335,15 @@ export * as codegraph from "./codegraph/index.js";
 // No competitor ships this. CLI: `mneme tune {run,report,suggest_fix}`.
 export * as tune from "./tune/index.js";
 
+// v2.27.0 — 🟢 MARKETING TRUTH GATE. Every marketing claim in the
+// README / CHANGELOG / docs is bound to a measurable probe. The gate
+// reconciles claim vs measured + emits an HMAC-signed truth matrix
+// that ships next to each release. World-first: no AI tool in the
+// world auto-reconciles its own marketing copy against live behavior.
+// Composes with PEAK GAUNTLET (spec conformance) for full truth-in-
+// release coverage.
+export * as truthGate from "./truth_gate/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with

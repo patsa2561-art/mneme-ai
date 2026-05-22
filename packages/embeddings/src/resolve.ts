@@ -78,22 +78,34 @@ export async function resolveEmbedder(opts: ResolveOptions = {}): Promise<Embedd
     return new OpenAIEmbedder({ apiKey, model: opts.model, baseUrl: opts.baseUrl });
   }
 
-  // 2. Ollama — only if a SHORT sanity embed succeeds. We had real users
-  //    where /api/tags responded but /api/embeddings hung for minutes; that
-  //    used to surface as a hard error. Now we just fall through silently.
+  // 2. Ollama — v2.27.0 fix: detect via TAGS-ONLY check, not a sanity embed.
+  //    Pre-v2.27 we called verify() which does a 1-token embed; the embed
+  //    blocks while the model loads into memory (~30-90s for nomic on first
+  //    call) and we'd time out at 10s → silently fall through to Bundled
+  //    EVEN WHEN OLLAMA WAS AVAILABLE. Result: embedder downgraded from
+  //    ★★★★ to ★★★, 25% recall drop. Now: we only check (a) /api/tags
+  //    responds and (b) the model is in the catalog. The real embed
+  //    happens lazily on first index call where the user expects latency.
+  //
+  //    Allow override via env: MNEME_AUTO_EMBEDDER_PROBE=embed forces the
+  //    old behavior for callers who want to wait for warmup.
   const ollama = new OllamaEmbedder({
     model: opts.model,
     baseUrl: opts.baseUrl,
-    timeoutMs: 10_000, // short for the auto-detect probe — full timeout used after
+    timeoutMs: 8_000,
   });
   if (await ollama.ping()) {
-    const ver = await ollama.verify();
-    if (ver.ok) {
-      // Reset to the normal long timeout for the real workload.
-      return new OllamaEmbedder({ model: opts.model, baseUrl: opts.baseUrl });
+    const probeKind = process.env["MNEME_AUTO_EMBEDDER_PROBE"] ?? "tags";
+    if (probeKind === "embed") {
+      const ver = await ollama.verify();
+      if (ver.ok) return new OllamaEmbedder({ model: opts.model, baseUrl: opts.baseUrl });
+    } else {
+      // Tags-only probe: fast + the user's Ollama is detected even on cold.
+      const tagsOk = await ollama.verifyTags();
+      if (tagsOk.ok) {
+        return new OllamaEmbedder({ model: opts.model, baseUrl: opts.baseUrl });
+      }
     }
-    // Ollama is reachable but unhealthy — explicitly skip and try the next step.
-    // We swallow the reason: the user picked auto, they want it to JUST WORK.
   }
 
   // 3. Bundled WASM (MiniLM) — ★★★, ~25MB auto-download. We wrap it so
