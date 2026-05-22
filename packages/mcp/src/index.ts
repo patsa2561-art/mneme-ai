@@ -36,6 +36,10 @@ import { buildRuntime } from "./tools/_runtime.js";
 import { resolveAlias } from "./tools/_aliases.js";
 import { buildAllTools, buildToolMap } from "./tools/_registry.js";
 import { toCallResult, toErrorResult, type MnemeTool, type ToolResponse, type ToolLifecycle } from "./tools/_types.js";
+// v2.24.0 — MCP hardening primitives (fix M1 / M3 / M16 / git-optional).
+import { log as mcpLog } from "./mcp_hardening/structured_log.js";
+import { evaluateGate as evalHoneypotGate } from "./mcp_hardening/honeypot_gate.js";
+import { makeDeferredRuntimeHolder, isDegraded, STATELESS_TOOL_NAMES, type DeferredRuntime } from "./mcp_hardening/runtime_deferred.js";
 import { moleculesContaining } from "./tools/_molecules.js";
 import { recordInvocation } from "./tools/_lifecycle.js";
 import { homeworkForCategory } from "./tools/_homework.js";
@@ -316,81 +320,32 @@ async function dispatchDynamicTool(
 }
 
 export async function startMcpServer(opts: McpOptions): Promise<void> {
-  const runtime = await buildRuntime(opts.cwd);
+  // v2.24.0 — BOOT-FAST refactor. Pre-v2.24 we awaited buildRuntime here
+  // (~10s cold-boot), which meant the SDK could not answer the spec-required
+  // `initialize` request inside the typical 8s client timeout. Now: catalog
+  // + handlers register synchronously, transport connects, initialize replies
+  // in ~50ms, and heavy work (runtime build, lineage, version-check) runs
+  // in a background setImmediate. Tool calls await the deferred runtime
+  // via getRuntime() and degrade gracefully when runtime can't be built
+  // (no git repo, no DB write access, etc.) — closes M1 + git-repo crash.
+  const bootT0 = Date.now();
+  mcpLog("info", "boot.start", { cwd: opts.cwd, version: resolveVersion() });
+
   const allTools = buildAllTools();
   const toolMap = buildToolMap();
-  const dynamic = loadDynamicState(runtime.meta.rootPath);
+  // Static catalog is enough to answer tools/list. Dynamic packs need
+  // runtime.meta.rootPath, so we defer them. dynamic.catalog starts empty
+  // and is populated after the deferred runtime resolves.
+  let dynamic: { catalog: Array<{ name: string; description: string; inputSchema: unknown }>; packs: unknown[] } =
+    { catalog: [], packs: [] };
 
   // ─── v1.20.0 — record boot timestamp for mneme.system.health uptime ──
   (globalThis as { __mnemeBootedAt?: number }).__mnemeBootedAt = Date.now();
 
-  // ─── v1.19.2 — fire-and-forget version check at boot ──────────────
-  // Hits the npm registry once per 24h (cached). Result stashed in
-  // globalThis so the welcome contract + resource handler can read it
-  // without re-fetching. Never blocks the server boot path.
-  void (async () => {
-    try {
-      const current = resolveVersion();
-      const status = await versionCheck.checkVersion(runtime.meta.rootPath, current);
-      (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus = status;
-    } catch {
-      // best-effort
-    }
-  })();
-
-
-  // ─── MneMeiosis (v1.19) — boot the working-memory session + fertilize ────
-  // Detect AI vendor from MCP client info if available (best-effort —
-  // falls back to "unknown-mcp-client" so chromosomes are still attributable).
-  const lineageSettings = lineage.readSettings(runtime.meta.rootPath);
-  const sessionVendor = process.env["MNEME_AI_VENDOR"] ?? "unknown-mcp-client";
-  const machineId = lineage.machineFingerprint(runtime.meta.rootPath);
-  const sessionId = `${new Date().toISOString().replace(/[:.]/g, "")}-${sessionVendor}-${machineId.slice(0, 6)}`;
-
-  if (!lineageSettings.optedOut) {
-    lineage.startSession({ sessionId, vendor: sessionVendor, machineId });
-
-    // Auto-fertilize at boot — agent gets the inheritance bundle via
-    // mneme://lineage/inheritance resource (best-effort; non-blocking).
-    try {
-      const bundle = lineage.fertilize(runtime.meta.rootPath, { topN: 3 });
-      if (bundle) {
-        // Stash the bundle in working memory so the resource handler
-        // surfaces it on first read (no need to recompute on every read).
-        // We rely on a process-global var — single MCP process per session.
-        (globalThis as { __mnemeInheritanceBundle?: typeof bundle }).__mnemeInheritanceBundle = bundle;
-      }
-    } catch { /* best-effort */ }
-
-    // Auto-crystallize on process exit signals.
-    const onExit = (reason: "exit-signal" | "idle-timeout") => {
-      try {
-        const result = lineage.crystallize(runtime.meta.rootPath, { endReason: reason });
-        if (result) lineage.addToTree(runtime.meta.rootPath, result.chromosome);
-      } catch { /* best-effort */ }
-    };
-    process.on("SIGTERM", () => { onExit("exit-signal"); process.exit(0); });
-    process.on("SIGINT", () => { onExit("exit-signal"); process.exit(0); });
-    process.on("beforeExit", () => onExit("exit-signal"));
-
-    // Idle-timeout crystallize — every 45 min of no MCP calls.
-    const IDLE_MS = 45 * 60 * 1000;
-    let idleTimer: NodeJS.Timeout | null = null;
-    const resetIdleTimer = () => {
-      if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        const result = lineage.crystallize(runtime.meta.rootPath, { endReason: "idle-timeout" });
-        if (result) {
-          lineage.addToTree(runtime.meta.rootPath, result.chromosome);
-          // Start a fresh session post-idle for the next round of work.
-          lineage.startSession({ sessionId: `${sessionId}-idle-${Date.now()}`, vendor: sessionVendor, machineId });
-        }
-      }, IDLE_MS);
-    };
-    // Stash so the dispatch path can call it.
-    (globalThis as { __mnemeResetIdleTimer?: () => void }).__mnemeResetIdleTimer = resetIdleTimer;
-    resetIdleTimer();
-  }
+  // Deferred runtime holder. First tool call awaits this; subsequent
+  // calls reuse the resolved value. Never throws — DegradedRuntime is
+  // the worst case.
+  const getRuntime = makeDeferredRuntimeHolder(opts.cwd);
 
   const server = new Server(
     { name: "mneme", version: resolveVersion() },
@@ -422,12 +377,22 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   }));
 
   // ─── MCP primitives — resources / prompts / completion ──────────────
-  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-    resources: listResources(runtime),
-  }));
-  server.setRequestHandler(ReadResourceRequestSchema, async (req) => ({
-    contents: [readResource(runtime, req.params.uri)],
-  }));
+  // v2.24.0 — these handlers await the deferred runtime. Pre-v2.24 they
+  // captured `runtime` from the closure, which forced startMcpServer to
+  // resolve buildRuntime before returning (and before initialize could
+  // reply). Now they tolerate a deferred / degraded runtime.
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    const rt = await getRuntime();
+    if (isDegraded(rt)) return { resources: [] };
+    return { resources: listResources(rt) };
+  });
+  server.setRequestHandler(ReadResourceRequestSchema, async (req) => {
+    const rt = await getRuntime();
+    if (isDegraded(rt)) {
+      return { contents: [{ uri: req.params.uri, mimeType: "text/plain", text: `Mneme MCP in degraded mode (${rt.reason}); resource ${req.params.uri} unavailable.` }] };
+    }
+    return { contents: [readResource(rt, req.params.uri)] };
+  });
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({
     prompts: listPrompts(),
   }));
@@ -458,75 +423,210 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const idleState = (globalThis as { __mnemeIdleState?: { lastToolCallAt: number } }).__mnemeIdleState ??= { lastToolCallAt: Date.now() };
 
   server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
+    const callT0 = Date.now();
     idleState.lastToolCallAt = Date.now();
     // v1.45.0 (#17 fix) — resolve verb.noun aliases (e.g.,
     // "mneme.security.detect_tool_anomaly" → "mneme.aletheia.immune.scan")
     // before dispatch. Canonical names pass through unchanged.
     const canonicalName = resolveAlias(req.params.name);
     const tool = toolMap.get(canonicalName);
+
+    // v2.24.0 — HONEYPOT GATE (closes audit finding M3). The CLI marks
+    // mneme.aegis.honeypot.* / mneme.system.exec as DO-NOT-CALL; the MCP
+    // surface must mirror that policy or AI agents who respect CLI banners
+    // get tricked + logged as attackers through a legitimate MCP path.
+    if (tool) {
+      const gate = evalHoneypotGate(tool);
+      if (!gate.allow) {
+        mcpLog("warn", "honeypot.refused", {
+          tool: tool.name,
+          category: gate.honeypot.category,
+          reason: gate.reason,
+        });
+        return toErrorResult(gate.reason);
+      }
+    }
+
+    // v2.24.0 — fast-path for unknown tools: don't await the runtime
+    // (~10s cold-boot) just to return "unknown tool". M2 audit finding:
+    // pre-fast-path, unknown-tool callers got no response until runtime
+    // warmed, which timed out clients. Now: unknown name + no dynamic
+    // candidate → return isError:true CallToolResult in <5ms.
+    if (!tool) {
+      // Best-effort dynamic dispatch if runtime is already warm.
+      const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+      // Probe deferred runtime non-blockingly: if not resolved yet, skip
+      // dynamic dispatch entirely (fall through to unknown-tool error).
+      // We do this by racing with a 0ms timeout — if the promise is
+      // already settled the race resolves immediately; otherwise we
+      // treat it as "not warm yet" and return the unknown-tool error.
+      let warmRt: DeferredRuntime | null = null;
+      try {
+        warmRt = await Promise.race([
+          getRuntime(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 0)),
+        ]);
+      } catch { warmRt = null; }
+      if (warmRt && !isDegraded(warmRt)) {
+        try {
+          const dyn = await dispatchDynamicTool(req.params.name, args, warmRt.meta.rootPath, dynamic.packs as never[]);
+          if (dyn.ok) {
+            mcpLog("info", "call.dyn.ok", { tool: req.params.name, dt_ms: Date.now() - callT0 });
+            return dyn.result;
+          }
+        } catch { /* fall through to unknown-tool error */ }
+      }
+      mcpLog("warn", "call.unknown_tool", { tool: req.params.name });
+      return toErrorResult(
+        `unknown tool: ${req.params.name}. Call mneme.capabilities to list available tools.`,
+      );
+    }
+
+    // v2.24.0 — deferred runtime. Tool calls during cold-boot await the
+    // shared promise. If degraded (no git repo, etc.) only stateless tools
+    // run; everything else returns a clean isError:true CallToolResult.
+    const rt = await getRuntime();
+    if (isDegraded(rt) && tool && !STATELESS_TOOL_NAMES.has(tool.name)) {
+      mcpLog("warn", "call.degraded.refused", { tool: tool.name, reason: rt.reason });
+      return toErrorResult(
+        `Mneme MCP is in DEGRADED mode (${rt.reason}). Tool ${tool.name} needs a runtime ` +
+          `(git repo + .mneme/ directory). Available in degraded mode: ${[...STATELESS_TOOL_NAMES].join(", ")}.`,
+      );
+    }
+
     if (tool) {
       try {
         const args = (req.params.arguments ?? {}) as Record<string, unknown>;
+        // The next line passes either ToolRuntime or DegradedRuntime to the
+        // handler. Stateless tools (e.g. mneme.welcome) tolerate degraded;
+        // the gate above blocked stateful tools when degraded.
+        const runtime = rt as Parameters<typeof tool.handler>[0];
+        const rootPath = isDegraded(rt) ? opts.cwd : rt.meta.rootPath;
+
         // v1.18.0 — record observation for ALETHEIA immune profile (best-effort).
-        recordObservation(runtime.meta.rootPath, tool.name, args);
+        try { if (!isDegraded(rt)) recordObservation(rootPath, tool.name, args); } catch { /* best-effort */ }
         // v1.19.0 — record atom in MneMeiosis working memory + reset idle timer.
         try {
-          lineage.recordAtom(runtime.meta.rootPath, tool.name, args);
+          if (!isDegraded(rt)) lineage.recordAtom(rootPath, tool.name, args);
           const resetIdle = (globalThis as { __mnemeResetIdleTimer?: () => void }).__mnemeResetIdleTimer;
           if (resetIdle) resetIdle();
         } catch { /* best-effort */ }
         const response = await tool.handler(runtime, args);
-        const enriched = enrichWithSecondBrain(response, tool, runtime.meta.rootPath);
+        const enriched = enrichWithSecondBrain(response, tool, rootPath);
         // v1.18.0 — record HMAC-chained replay entry for audit (best-effort).
-        recordReplay(runtime.meta.rootPath, tool.name, args, enriched);
+        try { if (!isDegraded(rt)) recordReplay(rootPath, tool.name, args, enriched); } catch { /* best-effort */ }
         // v1.18.0 — increment karma invocations.
-        recordKarmaEvent(runtime.meta.rootPath, tool.name, "invocation");
-        // v1.46.0 (#14 fix) — deposit a pheromone trail for the
-        // (vendor, tool) edge. Pre-fix: the ai_pheromone module
-        // existed since v1.42 but nothing called deposit(), so the
-        // .mneme/ai-pheromones.jsonl file was never written. Now
-        // every successful MCP tool call leaves a trail; the active
-        // vendor (from the AI handshake, or "unknown" when AI hasn't
-        // greeted yet) gets credit. Best-effort, never blocks.
+        try { if (!isDegraded(rt)) recordKarmaEvent(rootPath, tool.name, "invocation"); } catch { /* best-effort */ }
+        // v1.46.0 (#14 fix) — deposit a pheromone trail (best-effort).
         try {
-          const { aiPheromone, aiHandshake } = await import("@mneme-ai/core");
-          const active = aiHandshake.readActiveVendor(runtime.meta.rootPath);
-          aiPheromone.deposit(runtime.meta.rootPath, active?.vendor ?? "unknown", tool.name, 1);
-        } catch { /* best-effort */ }
-        // v1.20.0 — Infinity Wisdom Brain: auto-tick the nucleus on EVERY
-        // tool dispatch. This is the `while(is_talking) learn/teach`
-        // loop — as long as the AI agent talks to Mneme, the nucleus
-        // grows. Best-effort, never blocks dispatch.
-        try {
-          // Throttle: tick at most once every 5 seconds to avoid
-          // thrashing disk on rapid-fire calls. Reads global timestamp.
-          const g = globalThis as { __mnemeLastTickAt?: number };
-          const now = Date.now();
-          if (!g.__mnemeLastTickAt || now - g.__mnemeLastTickAt >= 5000) {
-            nucleus.tick(runtime.meta.rootPath);
-            g.__mnemeLastTickAt = now;
+          if (!isDegraded(rt)) {
+            const { aiPheromone, aiHandshake } = await import("@mneme-ai/core");
+            const active = aiHandshake.readActiveVendor(rootPath);
+            aiPheromone.deposit(rootPath, active?.vendor ?? "unknown", tool.name, 1);
           }
         } catch { /* best-effort */ }
+        // v1.20.0 — Infinity Wisdom Brain — nucleus tick (throttled).
+        try {
+          if (!isDegraded(rt)) {
+            const g = globalThis as { __mnemeLastTickAt?: number };
+            const now = Date.now();
+            if (!g.__mnemeLastTickAt || now - g.__mnemeLastTickAt >= 5000) {
+              nucleus.tick(rootPath);
+              g.__mnemeLastTickAt = now;
+            }
+          }
+        } catch { /* best-effort */ }
+        mcpLog("info", "call.ok", { tool: tool.name, dt_ms: Date.now() - callT0 });
         return toCallResult(enriched);
       } catch (err) {
+        mcpLog("error", "call.threw", { tool: req.params.name, dt_ms: Date.now() - callT0, err: (err as Error).message });
         return toErrorResult(
           `${req.params.name} failed: ${(err as Error).message}. ` +
             `If this tool requires the index, ask the user to run \`mneme index\`.`,
         );
       }
     }
-    // Dynamic-tool dispatch (only if static didn't claim this name)
-    const args = (req.params.arguments ?? {}) as Record<string, unknown>;
-    const dyn = await dispatchDynamicTool(req.params.name, args, runtime.meta.rootPath, dynamic.packs);
-    if (dyn.ok) return dyn.result;
-
-    return toErrorResult(
-      `unknown tool: ${req.params.name}. Call mneme.capabilities to list available tools.`,
-    );
+    // (unknown-tool path is handled above as the fast-path; if we reach
+    // here the tool was known but its handler returned without a value.)
+    mcpLog("warn", "call.unreachable_fallthrough", { tool: req.params.name });
+    return toErrorResult(`unreachable: ${req.params.name} did not produce a result`);
   });
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+  mcpLog("info", "transport.connected", { dt_ms: Date.now() - bootT0 });
+
+  // ─── v2.24.0 BACKGROUND WARM — heavy init AFTER initialize replies ──
+  // Pre-v2.24 these blocks ran BEFORE server.connect, blocking the
+  // initialize handshake. Now they fire in the next tick so spec-compliant
+  // clients see a fast handshake; lineage / version-check / dynamic
+  // catalog warm in the background while the AI agent reads tools/list.
+  setImmediate(() => {
+    void (async () => {
+      try {
+        const rt = await getRuntime();
+        if (isDegraded(rt)) {
+          mcpLog("warn", "warm.skip.degraded", { reason: rt.reason });
+          return;
+        }
+        const warmT0 = Date.now();
+        // Dynamic catalog
+        try {
+          dynamic = loadDynamicState(rt.meta.rootPath);
+        } catch (e) {
+          mcpLog("error", "warm.dynamic.failed", { err: (e as Error).message });
+        }
+        // Lineage session boot
+        try {
+          const lineageSettings = lineage.readSettings(rt.meta.rootPath);
+          if (!lineageSettings.optedOut) {
+            const sessionVendor = process.env["MNEME_AI_VENDOR"] ?? "unknown-mcp-client";
+            const machineId = lineage.machineFingerprint(rt.meta.rootPath);
+            const sessionId = `${new Date().toISOString().replace(/[:.]/g, "")}-${sessionVendor}-${machineId.slice(0, 6)}`;
+            lineage.startSession({ sessionId, vendor: sessionVendor, machineId });
+            try {
+              const bundle = lineage.fertilize(rt.meta.rootPath, { topN: 3 });
+              if (bundle) (globalThis as { __mnemeInheritanceBundle?: typeof bundle }).__mnemeInheritanceBundle = bundle;
+            } catch { /* best-effort */ }
+            const onExit = (reason: "exit-signal" | "idle-timeout") => {
+              try {
+                const result = lineage.crystallize(rt.meta.rootPath, { endReason: reason });
+                if (result) lineage.addToTree(rt.meta.rootPath, result.chromosome);
+              } catch { /* best-effort */ }
+            };
+            process.on("SIGTERM", () => { onExit("exit-signal"); process.exit(0); });
+            process.on("SIGINT", () => { onExit("exit-signal"); process.exit(0); });
+            process.on("beforeExit", () => onExit("exit-signal"));
+            const IDLE_MS = 45 * 60 * 1000;
+            let idleTimer: NodeJS.Timeout | null = null;
+            const resetIdleTimer = () => {
+              if (idleTimer) clearTimeout(idleTimer);
+              idleTimer = setTimeout(() => {
+                const result = lineage.crystallize(rt.meta.rootPath, { endReason: "idle-timeout" });
+                if (result) {
+                  lineage.addToTree(rt.meta.rootPath, result.chromosome);
+                  lineage.startSession({ sessionId: `${sessionId}-idle-${Date.now()}`, vendor: sessionVendor, machineId });
+                }
+              }, IDLE_MS);
+            };
+            (globalThis as { __mnemeResetIdleTimer?: () => void }).__mnemeResetIdleTimer = resetIdleTimer;
+            resetIdleTimer();
+          }
+        } catch (e) {
+          mcpLog("error", "warm.lineage.failed", { err: (e as Error).message });
+        }
+        // Version check
+        try {
+          const current = resolveVersion();
+          const status = await versionCheck.checkVersion(rt.meta.rootPath, current);
+          (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus = status;
+        } catch { /* best-effort */ }
+        mcpLog("info", "warm.complete", { dt_ms: Date.now() - warmT0 });
+      } catch (e) {
+        mcpLog("error", "warm.fatal", { err: (e as Error).message });
+      }
+    })();
+  });
 
   // ─── v1.22.0 — RECURRING version-check + push notification ─────────
   // Checks every 6 hours and PUSHES an MCP notification when a new
@@ -538,8 +638,10 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
   const tickVersionCheck = async () => {
     try {
+      const rt = await getRuntime();
+      if (isDegraded(rt)) return;
       const current = resolveVersion();
-      const status = await versionCheck.checkVersion(runtime.meta.rootPath, current);
+      const status = await versionCheck.checkVersion(rt.meta.rootPath, current);
       (globalThis as { __mnemeUpdateStatus?: unknown }).__mnemeUpdateStatus = status;
       if (status.updateAvailable && status.latest && status.latest !== lastNotifiedVersion) {
         lastNotifiedVersion = status.latest;
@@ -568,14 +670,26 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   const IDLE_CHECK_INTERVAL_MS = 60 * 1000;      // poll every 60s
   let lastNudgedAt = 0;
   const NUDGE_COOLDOWN_MS = 30 * 60 * 1000;       // never nudge twice within 30 min
-  const tickIdleNudge = (): void => {
+  const tickIdleNudge = async (): Promise<void> => {
     try {
       const now = Date.now();
       const idleMs = now - idleState.lastToolCallAt;
       if (idleMs < IDLE_THRESHOLD_MS) return;
       if (now - lastNudgedAt < NUDGE_COOLDOWN_MS) return;
       // Only nudge when we have something to say.
-      const all = inbox.readInbox(runtime.meta.rootPath);
+      // v2.24.0 — guard against degraded runtime (no .mneme dir yet).
+      const rtMaybe = (globalThis as { __mnemeBootedAt?: number }).__mnemeBootedAt
+        ? null
+        : null;
+      void rtMaybe; // satisfy linter; we re-read via getRuntime() below
+      // Use the deferred runtime; if it hasn't built or is degraded, skip.
+      let rootPath: string;
+      try {
+        const rt = await getRuntime();
+        if (isDegraded(rt)) return;
+        rootPath = rt.meta.rootPath;
+      } catch { return; }
+      const all = inbox.readInbox(rootPath);
       const unsent = all.filter((m) => !m.sent);
       if (unsent.length === 0) return;
       lastNudgedAt = now;
@@ -592,7 +706,7 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
       } catch { /* best-effort -- some clients reject the method */ }
     } catch { /* best-effort */ }
   };
-  setInterval(tickIdleNudge, IDLE_CHECK_INTERVAL_MS).unref?.();
+  setInterval(() => { void tickIdleNudge(); }, IDLE_CHECK_INTERVAL_MS).unref?.();
 
   // ─── v1.24.1 — BOOT HANDSHAKE NUDGE ────────────────────────────────
   // The deepest UX bug a user can hit: AI tool boots, MCP server connects,

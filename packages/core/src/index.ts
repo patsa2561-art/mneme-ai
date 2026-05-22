@@ -1307,6 +1307,15 @@ export * as coercionTaxonomy from "./coercion_taxonomy/index.js";
 // v2.22.3 audit into a single textbook-worthy standard.
 export * as mcpCandor from "./mcp_candor/index.js";
 
+// v2.24.0 — 🎯 MCP FUZZER. 108 attack vectors × 9 categories with HMAC-
+// chained tamper-evident report card + Intelligent Second Brain wisdom
+// layer + CVE posture mapping. Self-fuzzes the Mneme MCP server in
+// addition to providing a vendor-agnostic engine that any MCP server can
+// be pointed at. Closes the MCP-INITIALIZE-TIMEOUT + HONEYPOT-EXPOSURE
+// audit findings + makes regression of those classes structurally
+// impossible.
+export * as mcpFuzzer from "./mcp_fuzzer/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with
