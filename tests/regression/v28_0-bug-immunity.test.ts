@@ -31,8 +31,12 @@ describe("R1 — vaccine numeric guard (PINNED)", () => {
     // vaccine must have been BURNED by the numeric guard.
     expect(r.combined).not.toMatch(/matches a known lie pattern/i);
   });
-  it("benign claim 'Mneme is at version 2.27.0' returns TRUSTWORTHY", () => {
-    const r = runCli(["verify", "Mneme is at version 2.27.0"], { cwd: REPO_ROOT });
+  it("benign current-version claim returns TRUSTWORTHY", async () => {
+    // Read live installed version + assert verify of "Mneme is at version <X>" passes.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "packages/core/package.json"), "utf8")) as { version: string };
+    const r = runCli(["verify", `Mneme is at version ${pkg.version}`], { cwd: REPO_ROOT });
     expect(r.combined).toMatch(/TRUSTWORTHY/i);
   });
 });
@@ -45,10 +49,14 @@ describe("R1 — vaccine numeric guard (PINNED)", () => {
  * AND emitVaccine is gated, so subsequent runs get the same result.
  */
 describe("R2 — verify determinism (PINNED)", () => {
-  it("5 consecutive runs of TRUE claim agree", () => {
+  it("5 consecutive runs of TRUE claim agree", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "packages/core/package.json"), "utf8")) as { version: string };
+    const claim = `Mneme is at version ${pkg.version}`;
     const verdicts: string[] = [];
     for (let i = 0; i < 5; i++) {
-      const r = runCli(["verify", "Mneme is at version 2.27.0"], { cwd: REPO_ROOT });
+      const r = runCli(["verify", claim], { cwd: REPO_ROOT });
       const m = r.combined.match(/(TRUSTWORTHY|MIXED|REFUTED|IMPOSSIBLE|UNCERTAIN)/);
       verdicts.push(m ? m[1]! : "NONE");
     }

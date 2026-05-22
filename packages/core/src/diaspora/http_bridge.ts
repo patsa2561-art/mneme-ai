@@ -26,8 +26,39 @@
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+
+/**
+ * v2.28.1 — B-ver fix. Pre-v2.28.1 the bridge advertised the hardcoded
+ * version "1.72.0" on /v1/health forever. Real installed version drifted
+ * (Mneme v2.27.0, bridge claimed v1.72.0). Pull from the installed
+ * @mneme-ai/core package.json at the moment of the response. Cached for
+ * 60s to avoid repeated FS reads under heavy traffic.
+ */
+let __bridgeVersionCache: { value: string; expiresAt: number } | null = null;
+function bridgeVersion(): string {
+  const now = Date.now();
+  if (__bridgeVersionCache && __bridgeVersionCache.expiresAt > now) return __bridgeVersionCache.value;
+  let value = "0.0.0";
+  try {
+    // Walk up from this file (dist/diaspora/http_bridge.js) to find package.json
+    const here = dirname(fileURLToPath(import.meta.url));
+    for (let i = 0; i < 6; i++) {
+      const candidate = join(here, ...Array(i).fill(".."), "package.json");
+      if (existsSync(candidate)) {
+        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { version?: string; name?: string };
+        if (pkg.version && (pkg.name === "@mneme-ai/core" || pkg.name === "mneme-ai" || pkg.name?.startsWith("@mneme-ai"))) {
+          value = pkg.version;
+          break;
+        }
+      }
+    }
+  } catch { /* best-effort */ }
+  __bridgeVersionCache = { value, expiresAt: now + 60_000 };
+  return value;
+}
 
 const TOKEN_FILE = ".mneme/http-token";
 // v2.19.80 — Browser Polygraph userscript runs on ALL major AI surfaces;
@@ -60,15 +91,43 @@ function ensureToken(repoRoot: string): string {
 interface RateLimitEntry { count: number; windowStart: number; }
 const rateLimiter = new Map<string, RateLimitEntry>();
 
-function checkRateLimit(ip: string, perMinute = 60): boolean {
+/**
+ * v2.28.1 — PER-ROUTE ADAPTIVE RATE LIMIT (closes B12).
+ *
+ * Pre-v2.28.1: single 60/min cap for every endpoint. Streaming-AI
+ * sentences blew through it at ~50 burst (B12 finding: 49/100 ok).
+ * Health-check probes shared the same budget as the polygraph verify
+ * route — bad neighbor problem.
+ *
+ * Fix: route-class caps. Browser-polygraph clients legitimately fire
+ * many requests per second; ping endpoints should never be rate-
+ * limited at all. The key now includes the route class.
+ */
+function routeClass(url: string | undefined): "ping" | "polygraph" | "default" {
+  if (!url) return "default";
+  if (url === "/v1/ping") return "ping";
+  if (url.startsWith("/v1/polygraph/")) return "polygraph";
+  return "default";
+}
+
+const ROUTE_CAPS: Record<"ping" | "polygraph" | "default", number> = {
+  ping: 6000,          // 100/sec — health probes never blocked
+  polygraph: 600,      // 10/sec — streaming AI sentences
+  default: 60,         // 1/sec  — everything else
+};
+
+function checkRateLimit(ip: string, url: string | undefined): boolean {
+  const cls = routeClass(url);
+  const cap = ROUTE_CAPS[cls];
+  const key = `${ip}|${cls}`;
   const now = Date.now();
   const window = 60_000;
-  const e = rateLimiter.get(ip);
+  const e = rateLimiter.get(key);
   if (!e || now - e.windowStart > window) {
-    rateLimiter.set(ip, { count: 1, windowStart: now });
+    rateLimiter.set(key, { count: 1, windowStart: now });
     return true;
   }
-  if (e.count >= perMinute) return false;
+  if (e.count >= cap) return false;
   e.count += 1;
   return true;
 }
@@ -84,11 +143,29 @@ function isAuthorized(req: IncomingMessage, token: string): boolean {
   } catch { return false; }
 }
 
+/**
+ * v2.28.1 — B11 fix. Pre-v2.28.1 a malformed JSON POST surfaced as
+ * a 500 with the raw parser error (e.g. "Unexpected token } in JSON
+ * at position 23") which both (a) used the wrong HTTP status (5xx
+ * means server error; this is a client error → 400 per RFC 9110)
+ * and (b) leaked parser internals.
+ *
+ * Now `readJsonBody` THROWS a typed JsonParseError so the handler can
+ * map it to a clean 400 with a sanitized message — no parser internals.
+ */
+export class JsonParseError extends Error {
+  constructor(public readonly cause: unknown) { super("invalid JSON body"); this.name = "JsonParseError"; }
+}
+
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", (chunk) => { data += chunk; if (data.length > 65536) { req.destroy(); reject(new Error("payload too large")); } });
-    req.on("end", () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); } });
+    req.on("end", () => {
+      if (!data) return resolve({});
+      try { resolve(JSON.parse(data)); }
+      catch (e) { reject(new JsonParseError(e)); }
+    });
     req.on("error", reject);
   });
 }
@@ -348,10 +425,25 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
 
   const server = createServer(async (req, res) => {
     const ip = req.socket.remoteAddress ?? "unknown";
-    if (!checkRateLimit(ip)) return json(res, 429, { error: "rate-limited" });
 
+    // v2.28.1 — B14 FIX: CORS-FIRST middleware. Pre-v2.28.1 the rate
+    // limit check ran BEFORE CORS headers were set; preflight that
+    // got rate-limited returned 429 with NO Access-Control-Allow-Origin
+    // → browser blocked the polygraph entirely. Now CORS headers are
+    // set on EVERY response (including 429 / 500 / 401) so the
+    // browser always sees the headers it needs.
     setCors(req, res, opts.extraCorsOrigins);
+
+    // v2.28.1 — B14 FIX (continued): OPTIONS preflight is EXEMPT from
+    // rate-limiting. Browser fires one preflight per CORS-cross-origin
+    // request; with streaming AI sentences this could easily hit 50
+    // preflights in 20ms + trip the rate limiter, blocking the whole
+    // demo. Preflight is metadata-only, never carries a body — safe to
+    // skip the rate counter.
     if (req.method === "OPTIONS") { res.statusCode = 204; return res.end(); }
+
+    // v2.28.1 — B12 FIX: per-route rate limit (see checkRateLimit).
+    if (!checkRateLimit(ip, req.url)) return json(res, 429, { error: "rate-limited", route: routeClass(req.url) });
 
     // v1.84 Bug R5-1: /v1/health used to short-circuit auth and leak
     // version + protocols + repo fingerprint to any unauthenticated
@@ -367,7 +459,20 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
     }
 
     if (req.url === "/v1/health" && req.method === "GET") {
-      return json(res, 200, { ok: true, version: "1.72.0", protocols: ["precog", "sentinel", "apoptosis", "polygraph", "pulse"] });
+      // v2.28.1 B-ver fix — version pulled from package.json at request
+      // time (60s cache). Pre-v2.28.1 the value was hardcoded "1.72.0";
+      // bridge ver drifted from installed Mneme.
+      return json(res, 200, {
+        ok: true,
+        version: bridgeVersion(),
+        protocols: ["precog", "sentinel", "apoptosis", "polygraph", "pulse"],
+        // v2.28.1 — honest surface inventory. Pre-v2.28.1 the OpenAPI
+        // advertised 5 paths but the user audit said "5/799 tools" as
+        // if Mneme was hiding tools. The truth: most Mneme tools are
+        // MCP-only by design; the HTTP bridge ships the 5 routes that
+        // benefit from cross-vendor HTTP access (polygraph + telemetry).
+        httpSurface: { routes: 8, note: "Mneme MCP exposes 800+ tools over stdio; the HTTP bridge ships the 8 routes that benefit from cross-vendor HTTP access." },
+      });
     }
 
     if (req.url === "/v1/openapi.json" && req.method === "GET") {
@@ -483,7 +588,15 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
         return json(res, 200, out);
       }
     } catch (e) {
-      return json(res, 500, { error: (e as Error).message });
+      // v2.28.1 B11 fix — JsonParseError → 400, NOT 500. Pre-v2.28.1
+      // any malformed JSON returned HTTP 500 (server error) with the
+      // raw parser message. Now: client errors get client status codes
+      // + sanitized messages.
+      if (e instanceof JsonParseError) {
+        return json(res, 400, { error: "invalid JSON body — POST a valid JSON object" });
+      }
+      // Otherwise: real server error. Don't leak stack traces.
+      return json(res, 500, { error: "internal error", hint: "check `mneme bridge --help` or open an issue" });
     }
 
     return json(res, 404, { error: "not found" });

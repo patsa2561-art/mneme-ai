@@ -13,8 +13,16 @@ describe("R1 — numericsInSignature (BUG IMMUNITY)", () => {
   it("extracts integer from `key=N` shape", () => {
     expect(numericsInSignature("IMPOSSIBLE_REFUTE :: swarm_organ_count=8")).toEqual([{ key: "swarm_organ_count", value: 8 }]);
   });
-  it("extracts version major from `key=2.19.34` shape", () => {
-    expect(numericsInSignature("BLACK_HOLE :: version=2.19.34")).toEqual([{ key: "version", value: 2 }]);
+  it("packs multi-segment version `key=2.19.34` into single comparable integer", () => {
+    const r = numericsInSignature("BLACK_HOLE :: version=2.19.34");
+    expect(r.length).toBe(1);
+    expect(r[0]!.key).toBe("version");
+    expect(r[0]!.value).toBe(2 * 1_000_000 + 19 * 1_000 + 34); // 2019034
+  });
+  it("packed values differ for adjacent versions (2.27.0 vs 2.28.0)", () => {
+    const a = numericsInSignature("X :: version=2.27.0")[0]!.value;
+    const b = numericsInSignature("X :: version=2.28.0")[0]!.value;
+    expect(a).not.toBe(b);
   });
   it("returns empty when no numerics", () => {
     expect(numericsInSignature("HYPERBOLE :: cured cancer")).toEqual([]);
@@ -30,9 +38,10 @@ describe("R1 — numericsInClaim (BUG IMMUNITY)", () => {
     const r = numericsInClaim("Mneme has 9 verification agents");
     expect(r.some((n) => n.value === 9 && /verification|agents/.test(n.key))).toBe(true);
   });
-  it("extracts vN.M version shape", () => {
+  it("extracts vN.M version shape (packed into single comparable int)", () => {
     const r = numericsInClaim("Mneme v2.27.0 is great");
-    expect(r.some((n) => n.value === 2 && n.key === "version")).toBe(true);
+    const expected = 2 * 1_000_000 + 27 * 1_000 + 0; // 2027000
+    expect(r.some((n) => n.value === expected && n.key === "version")).toBe(true);
   });
   it("returns empty for prose without numbers", () => {
     expect(numericsInClaim("a quick brown fox").length).toBe(0);

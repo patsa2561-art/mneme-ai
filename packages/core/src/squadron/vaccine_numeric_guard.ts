@@ -30,6 +30,25 @@ interface ExtractedNumeric {
  * number ONLY (the major version); structural matching for
  * full semver is the caller's job.
  */
+/**
+ * v2.28.1 — pack multi-part numerics ("2.27.0") into a single comparable
+ * integer using ⨯1e3 per segment. So 2.27.0 → 2*1e6 + 27*1e3 + 0 = 2027000;
+ * 2.28.0 → 2028000. Different versions get DIFFERENT packed numbers, so
+ * the numeric-conflict check fires correctly across semver mismatches.
+ * Pre-v2.28.1 we only took the major number → "2.27.0" and "2.28.0" were
+ * both treated as `2` and the guard let the wrong vaccine through.
+ */
+function packMultipart(raw: string): number {
+  const parts = raw.split(".").map((p) => Number(p)).filter((n) => Number.isFinite(n));
+  if (parts.length === 0) return Number(raw);
+  // 4-segment max (a.b.c.d); cap each segment at 999 so packing stays unique.
+  let n = 0;
+  for (let i = 0; i < Math.min(parts.length, 4); i++) {
+    n = n * 1000 + Math.min(999, Math.max(0, parts[i]!));
+  }
+  return n;
+}
+
 export function numericsInSignature(signature: string): ExtractedNumeric[] {
   const out: ExtractedNumeric[] = [];
   // Match `key=value` pairs; key is identifier-ish, value is number-ish
@@ -38,9 +57,7 @@ export function numericsInSignature(signature: string): ExtractedNumeric[] {
   while ((m = re.exec(signature)) !== null) {
     const key = m[1]!;
     const raw = m[2]!;
-    // For semver-like strings, take FIRST segment
-    const first = raw.includes(".") ? raw.split(".")[0]! : raw;
-    const n = Number(first);
+    const n = packMultipart(raw);
     if (Number.isFinite(n)) out.push({ key, value: n });
   }
   return out;
@@ -64,14 +81,20 @@ export function numericsInClaim(claim: string): ExtractedNumeric[] {
   let m: RegExpExecArray | null;
   while ((m = re1.exec(claim)) !== null) {
     const raw = m[1]!;
-    const first = raw.includes(".") ? raw.split(".")[0]! : raw;
-    const n = Number(first);
+    const n = packMultipart(raw);
     if (Number.isFinite(n)) out.push({ key: m[2]!.toLowerCase(), value: n });
   }
-  // Pattern 2: "v2.27.0" → version=2
+  // Pattern 2: "v2.27.0" → version packed-to-2027000 (full semver compare)
   const reV = /\bv?(\d+)(?:\.\d+)+/g;
   while ((m = reV.exec(claim)) !== null) {
-    const n = Number(m[1]!);
+    const full = m[0]!.replace(/^v/i, "");
+    const n = packMultipart(full);
+    if (Number.isFinite(n)) out.push({ key: "version", value: n });
+  }
+  // Pattern 3: standalone "version 2.27.0" → key=version
+  const reV2 = /\bversion\s+(\d+(?:\.\d+)*)/gi;
+  while ((m = reV2.exec(claim)) !== null) {
+    const n = packMultipart(m[1]!);
     if (Number.isFinite(n)) out.push({ key: "version", value: n });
   }
   return out;
