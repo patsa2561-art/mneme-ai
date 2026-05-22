@@ -50,6 +50,10 @@ class MiniClient {
   private buf = "";
   private pending = new Map<number | string, (r: JsonRpcReply) => void>();
   private nextId = 1;
+  // v2.26.1 — collect notifications (responses without an id) so probes
+  // can verify server-pushed events like notifications/message + the
+  // boot-handshake nudge.
+  private notifications: JsonRpcReply[] = [];
 
   constructor(target: ProbeTarget) {
     const node = process.execPath;
@@ -87,6 +91,9 @@ class MiniClient {
           const k = r.id as number | string;
           const next = this.pending.get(k);
           if (next) { this.pending.delete(k); next(r); }
+        } else if (r.method) {
+          // Server-pushed notification (no id) — collect for probes.
+          this.notifications.push(r);
         }
       } catch { /* skip */ }
     }
@@ -106,6 +113,11 @@ class MiniClient {
   /** Send raw line (for transport-layer probes). */
   sendRaw(line: string): void {
     try { this.child.stdin.write(line + (line.endsWith("\n") ? "" : "\n")); } catch { /* ignore */ }
+  }
+
+  /** v2.26.1 — read collected notifications since session start. */
+  collectedNotifications(): ReadonlyArray<JsonRpcReply> {
+    return this.notifications;
   }
 
   async close(): Promise<void> {
@@ -277,29 +289,64 @@ const PROBES: Finding[] = [
       };
     },
   },
-  // N6 — cancellation honored
+  // N6 — cancellation honored end-to-end
   {
     id: "N6",
-    title: "notifications/cancelled cleans up in-flight call registry",
-    spec: "MCP §cancellation — server MUST honor cancellation notifications.",
-    sinceVersion: "v2.26.0",
-    remediation: ["cancelManager (packages/mcp/src/deep_hardening/cancel_manager.ts) + handler in startMcpServer."],
+    title: "notifications/cancelled propagates AbortSignal to handlers (end-to-end)",
+    spec: "MCP §cancellation — server MUST honor cancellation; abort-aware handlers SHOULD short-circuit.",
+    sinceVersion: "v2.26.1",
+    remediation: [
+      "cancelManager (packages/mcp/src/deep_hardening/cancel_manager.ts) + handler in startMcpServer.",
+      "Tool handlers read args.__mneme_signal (AbortSignal) and abort early — see mneme.tune.probe.long_sleep.",
+    ],
     probe: async (target) => {
       const t0 = Date.now();
       const c = await initClient(target);
-      // Fire a tool call but don't wait; send cancel; verify the server doesn't crash.
       const before = await c.send("tools/list", {}, 3000);
-      c.sendRaw(JSON.stringify({ jsonrpc: "2.0", id: 999998, method: "tools/call", params: { name: "mneme.welcome", arguments: {} } }));
-      // Immediately send cancellation for id 999998
-      c.sendRaw(JSON.stringify({ jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: 999998, reason: "tune-probe" } }));
-      // Server must still answer subsequent tools/list
-      await new Promise((r) => setTimeout(r, 200));
+      // Pillar 1: abort-aware end-to-end test. Call long_sleep(2500ms),
+      // immediately send cancellation, expect a response in <800ms with
+      // data.aborted === true.
+      const probeId = 999998;
+      // Send the call ourselves so we can correlate id with cancellation.
+      const sleepFrame = JSON.stringify({ jsonrpc: "2.0", id: probeId, method: "tools/call", params: { name: "mneme.tune.probe.long_sleep", arguments: { sleepMs: 2500 } } });
+      // Register a pending handler manually
+      const sleepReplyPromise = new Promise<JsonRpcReply | null>((resolve) => {
+        const timer = setTimeout(() => resolve(null), 4000);
+        (c as unknown as { pending: Map<number | string, (r: JsonRpcReply) => void> }).pending.set(probeId, (r: JsonRpcReply) => { clearTimeout(timer); resolve(r); });
+        c.sendRaw(sleepFrame);
+      });
+      // 10ms after sending, fire the cancellation notification
+      await new Promise((r) => setTimeout(r, 10));
+      c.sendRaw(JSON.stringify({ jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: probeId, reason: "tune-probe" } }));
+      const tCancel0 = Date.now();
+      const sleepReply = await sleepReplyPromise;
+      const tCancel = Date.now() - tCancel0;
+      // Pillar 2: server still alive — accepts subsequent calls.
       const after = await c.send("tools/list", {}, 3000);
       await c.close();
-      const ok = before && after;
+      // Parse the long_sleep reply
+      let abortedEcho = false;
+      let sleepDtMs = -1;
+      const text = ((sleepReply?.result as { content?: Array<{ text?: string }> })?.content?.[0]?.text) ?? "";
+      try {
+        const parsed = JSON.parse(text) as { data?: { aborted?: boolean; dtMs?: number } };
+        abortedEcho = parsed.data?.aborted === true;
+        sleepDtMs = typeof parsed.data?.dtMs === "number" ? parsed.data!.dtMs! : -1;
+      } catch { /* fallthrough */ }
+      const aliveAfter = !!after;
+      // 10★ = abort fired + dt < 800ms + server alive after
+      // 8★  = abort fired but late, OR server alive but abort not propagated
+      // 5★  = server alive only
+      // 0★  = server died
+      let stars: number;
+      if (!aliveAfter) stars = 0;
+      else if (abortedEcho && sleepDtMs > 0 && sleepDtMs < 800) stars = 10;
+      else if (abortedEcho) stars = 8;
+      else stars = 5;
+      void before;
       return {
-        stars: ok ? 9 : 3,
-        evidence: ok ? "server alive after cancellation notification + accepts subsequent calls" : "server unresponsive after cancellation",
+        stars,
+        evidence: `abortedEcho=${abortedEcho} sleepDtMs=${sleepDtMs}ms cancelRoundTrip=${tCancel}ms aliveAfter=${aliveAfter}`,
         dtMs: Date.now() - t0,
       };
     },
@@ -351,18 +398,42 @@ const PROBES: Finding[] = [
       };
     },
   },
-  // N9 — server notifications during session
+  // N9 — server notifications during session (capture + verify)
   {
     id: "N9",
-    title: "Server emits notifications/message during session (logging works)",
+    title: "Server emits notifications/message during session (boot-handshake captured)",
     spec: "MCP §logging — server SHOULD push notifications when capabilities include logging.",
-    sinceVersion: "v2.24.0",
-    remediation: ["Existing — server pushes boot-handshake nudge + idle nudges."],
-    probe: async (_target) => {
-      // Best-effort: assume the server's boot handshake nudge fires within
-      // ~3-4s. Stars=8 by default (we don't always catch the notification
-      // in the probe window). v2.26.x could expand this.
-      return { stars: 8, evidence: "boot-handshake nudge wired in startMcpServer" };
+    sinceVersion: "v2.26.1",
+    remediation: [
+      "Boot-handshake nudge fires 3s after server.connect() — see startMcpServer.",
+      "Idle nudge fires after IDLE_THRESHOLD_MS when inbox has unsent messages.",
+    ],
+    probe: async (target) => {
+      const t0 = Date.now();
+      const c = await initClient(target);
+      // The boot-handshake nudge fires at +3s after connect (BOOT_HANDSHAKE_DELAY_MS).
+      // Wait ~4s to catch it; also exercise the session with a couple of tool calls.
+      const r1 = await c.send("tools/call", { name: "mneme.welcome", arguments: {} }, 4000);
+      await new Promise((r) => setTimeout(r, 3500));
+      const r2 = await c.send("tools/list", {}, 3000);
+      const notifs = c.collectedNotifications();
+      await c.close();
+      const hasMessage = notifs.some((n) => n.method === "notifications/message");
+      const dataIncludesMneme = notifs.some((n) => {
+        const p = n.params as { data?: string } | undefined;
+        return typeof p?.data === "string" && /mneme/i.test(p.data);
+      });
+      void r1; void r2;
+      let stars: number;
+      if (hasMessage && dataIncludesMneme) stars = 10;
+      else if (hasMessage) stars = 8;
+      else stars = 4;
+      return {
+        stars,
+        evidence: `captured ${notifs.length} notification(s); notifications/message=${hasMessage}; mneme-branded=${dataIncludesMneme}`,
+        detail: { methods: notifs.map((n) => n.method).slice(0, 5) },
+        dtMs: Date.now() - t0,
+      };
     },
   },
   // N10 — invalid arg types rejected

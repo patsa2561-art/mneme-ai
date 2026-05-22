@@ -448,9 +448,13 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   // when to push a notifications/message ping. Updated on EVERY dispatch.
   const idleState = (globalThis as { __mnemeIdleState?: { lastToolCallAt: number } }).__mnemeIdleState ??= { lastToolCallAt: Date.now() };
 
-  server.setRequestHandler(CallToolRequestSchema, async (req): Promise<CallToolResult> => {
+  server.setRequestHandler(CallToolRequestSchema, async (req, extra): Promise<CallToolResult> => {
     const callT0 = Date.now();
     idleState.lastToolCallAt = Date.now();
+    // v2.26.1 — pull the JSON-RPC request id from the SDK's `extra` arg
+    // (the SDK strips it from `req` before handing it to user handlers).
+    // We need the id to wire notifications/cancelled → AbortController.
+    const sdkReqId = (extra as unknown as { requestId?: number | string } | undefined)?.requestId;
 
     // v2.26.0 — N3 fix: validate tool name SHAPE before any lookup or
     // dispatch. The validator runs in microseconds and catches every
@@ -563,13 +567,12 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
               `Resend with the required fields populated.`,
           );
         }
-        // v2.26.0 — N6 fix: register this call with the cancel manager so
-        // notifications/cancelled can fire AbortController for abort-aware
-        // tools. The id is the JSON-RPC request id when present.
-        const reqId = (req as unknown as { id?: number | string }).id;
+        // v2.26.1 — N6 fix: register this call with the cancel manager.
+        // The id comes from the SDK's `extra` arg (not `req` — the SDK
+        // strips it before handing to user handlers).
         let abortSignal: AbortSignal | null = null;
-        if (typeof reqId === "number" || typeof reqId === "string") {
-          abortSignal = cancelManager.register(reqId, tool.name);
+        if (typeof sdkReqId === "number" || typeof sdkReqId === "string") {
+          abortSignal = cancelManager.register(sdkReqId, tool.name);
         }
         // The next line passes either ToolRuntime or DegradedRuntime to the
         // handler. Stateless tools (e.g. mneme.welcome) tolerate degraded;
@@ -615,13 +618,12 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
           }
         } catch { /* best-effort */ }
         mcpLog("info", "call.ok", { tool: tool.name, dt_ms: Date.now() - callT0 });
-        // v2.26.0 — N6: clean up cancel manager registration on success.
-        if (typeof reqId === "number" || typeof reqId === "string") cancelManager.unregister(reqId);
+        // v2.26.1 — N6: clean up cancel manager registration on success.
+        if (typeof sdkReqId === "number" || typeof sdkReqId === "string") cancelManager.unregister(sdkReqId);
         return toCallResult(enriched);
       } catch (err) {
-        // v2.26.0 — N6: clean up cancel manager registration on error.
-        const reqIdErr = (req as unknown as { id?: number | string }).id;
-        if (typeof reqIdErr === "number" || typeof reqIdErr === "string") cancelManager.unregister(reqIdErr);
+        // v2.26.1 — N6: clean up cancel manager registration on error.
+        if (typeof sdkReqId === "number" || typeof sdkReqId === "string") cancelManager.unregister(sdkReqId);
         mcpLog("error", "call.threw", { tool: req.params.name, dt_ms: Date.now() - callT0, err: (err as Error).message });
         return toErrorResult(
           `${req.params.name} failed: ${(err as Error).message}. ` +

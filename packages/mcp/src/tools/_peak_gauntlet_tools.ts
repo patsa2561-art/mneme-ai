@@ -114,6 +114,52 @@ export const tuneFindingsTool: MnemeTool = {
   },
 };
 
+/**
+ * v2.26.1 — abort-aware probe tool used by the N6 cancellation finding.
+ * Reads `args.__mneme_signal` (an AbortSignal injected by the dispatcher)
+ * + short-circuits if the signal fires during the sleep. This proves end-
+ * to-end that the cancel manager's AbortController reaches handlers that
+ * opt-in.
+ */
+export const tuneProbeLongSleepTool: MnemeTool = {
+  name: "mneme.tune.probe.long_sleep",
+  category: "meta",
+  description:
+    "Probe-only — sleep for up to N ms, returning early if the dispatcher-injected AbortSignal fires. Used by the " +
+    "N6 cancellation probe to verify end-to-end abort propagation. Default sleep is 2500ms; the probe sends a " +
+    "cancellation immediately + expects this tool to return in <500ms with `aborted:true`.",
+  whenToUse: "Internal probe surface. Don't call directly.",
+  triggers: [],
+  inputSchema: {
+    type: "object",
+    properties: {
+      sleepMs: { type: "integer", description: "Max sleep duration in ms (default 2500)." },
+    },
+  },
+  outputSchema: { type: "object" },
+  handler: async (_rt, args) => {
+    const sleepMs = typeof args["sleepMs"] === "number" ? Math.max(1, Math.min(30_000, args["sleepMs"] as number)) : 2500;
+    const signal = args["__mneme_signal"] as AbortSignal | undefined;
+    const t0 = Date.now();
+    const aborted = await new Promise<boolean>((resolve) => {
+      let done = false;
+      const finish = (wasAborted: boolean) => { if (!done) { done = true; resolve(wasAborted); } };
+      const timer = setTimeout(() => finish(false), sleepMs);
+      if (signal) {
+        if (signal.aborted) { clearTimeout(timer); finish(true); return; }
+        signal.addEventListener("abort", () => { clearTimeout(timer); finish(true); }, { once: true });
+      }
+    });
+    const dtMs = Date.now() - t0;
+    return {
+      data: { aborted, dtMs, sleepMs },
+      wisdom: aborted ? `🛑 short-circuited by abort signal after ${dtMs}ms (max ${sleepMs}ms)` : `slept ${dtMs}ms / ${sleepMs}ms`,
+      followUp: [],
+      confidence: { level: "high" as const },
+    };
+  },
+};
+
 export const tuneSuggestFixTool: MnemeTool = {
   name: "mneme.tune.suggest_fix",
   category: "meta",
@@ -163,4 +209,5 @@ export const PEAK_GAUNTLET_TOOLS: MnemeTool[] = [
   tuneReportTool,
   tuneFindingsTool,
   tuneSuggestFixTool,
+  tuneProbeLongSleepTool,
 ];
