@@ -187,6 +187,11 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.zzzzz.status",
   "mneme.zzzzz.verdict",
   "mneme.zzzzz.verify",
+  // v2.40.0 — ARGUS-10 surfaces are pure functions (no runtime needed).
+  "mneme.argus.search",
+  "mneme.argus.eyes",
+  "mneme.argus.hydra",
+  "mneme.argus.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

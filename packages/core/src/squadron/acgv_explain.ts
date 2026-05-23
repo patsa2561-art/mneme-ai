@@ -38,6 +38,20 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
 
   switch (result.verdict) {
     case "IMPOSSIBLE_REFUTE": {
+      // v2.40.0 — INPUT_TAMPERED: hostile codepoints (BIDI override / null
+      // byte / tag-character LLM smuggle) deserve their own headline so the
+      // user sees the hazard kind, not a generic "an assertion is impossible".
+      const tamperCaveat = result.caveats.find((c) => c.startsWith("INPUT_TAMPERED:"));
+      if (tamperCaveat) {
+        const kinds = tamperCaveat.slice("INPUT_TAMPERED:".length);
+        return {
+          headline: `REFUTED -- input contains hostile codepoints (${kinds}) (${pct})`,
+          plain: `Mneme's input-hygiene layer detected BLOCK-severity hazards in this claim: ${kinds.replace(/\+/g, ", ")}. These are categorical attacks (Trojan-source BIDI override / NUL byte injection / Unicode-tag prompt-smuggling) — the verifier refuses to evaluate hostile input.`,
+          nextAction: "Strip the hostile codepoints from the input. If a tool produced this text, treat that tool as compromised.",
+          trafficLight: "black",
+          confidencePct: pct,
+        };
+      }
       // v2.23.2 — hyperbole-class refute gets a specific headline that
       // quotes the matched phrase + category, so the user sees WHY the
       // claim was refused, not a generic "an assertion is impossible".

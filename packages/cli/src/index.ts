@@ -130,7 +130,7 @@ import { registerGenomePoolCommands } from "./commands/genome-pool.js";
 import { registerStigmergyCommands } from "./commands/stigmergy.js";
 import { registerChimeraCommands } from "./commands/chimera.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand, registerVerifyCommand, registerAutobootCommand, registerAskCommand, registerCovenantCommand } from "./commands/demo.js";
-import { registerHonestCommand, registerDoctorCommand, registerWiringProofCommand, registerZzzzzCommand } from "./commands/v236_commands.js";
+import { registerHonestCommand, registerDoctorCommand, registerWiringProofCommand, registerZzzzzCommand, registerArgusCommand } from "./commands/v236_commands.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -4736,6 +4736,8 @@ export async function run(argv: string[]): Promise<void> {
   registerWiringProofCommand(program);
   // v2.39.0 — Zzzzz-PROBE (The Sleepwalking Oracle)
   registerZzzzzCommand(program);
+  // v2.40.0 — ARGUS-10 (10-eyed memory search)
+  registerArgusCommand(program);
 
   // v2.19.8 — UNIVERSAL MCP SUBCOMMAND AUTO-ROUTER
   // Reads the MCP tool catalog and auto-registers `mneme <family> <action>`

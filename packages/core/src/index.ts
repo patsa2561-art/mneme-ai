@@ -395,6 +395,16 @@ export * as acgvGodel from "./squadron/acgv_godel.js";
 export * as acgvConfession from "./squadron/acgv_confession.js";
 export * as acgvVaccine from "./squadron/acgv_vaccine.js";
 export * as acgvStake from "./squadron/acgv_stake.js";
+// v2.40.0 — INPUT HYGIENE (Layer -1) + NUMBER PARAPHRASE BRIDGE.
+// Closes D4 (BIDI override) + D5 (number paraphrase) + D6 (null byte) +
+// D8 (Thai NFC/NFD denormalized) at the ACGV entry point.
+export * as acgvInputHygiene from "./squadron/acgv_input_hygiene.js";
+export * as acgvNumberBridge from "./squadron/acgv_number_bridge.js";
+// v2.40.0 — ARGUS-10: 10-eyed memory search. 5 surface (lex/phon/shape) +
+// 5 truth (Mneme-unique: homoglyph / number-paraphrase / embedding /
+// HMAC provenance / honest-mirror penalty) + HYDRA autospawn from AV
+// strains + softmax-rebalancing Guardian. HMAC-signed audit frame.
+export * as argus10 from "./argus10/index.js";
 // v1.52.0 -- Z3 SAT formal upgrade (optional z3-solver dep) + plain-English
 // explainer. The Z3 layer turns Godel post-mortem into court-grade proof
 // when z3-solver is installed; otherwise gracefully falls back to the

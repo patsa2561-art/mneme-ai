@@ -416,3 +416,99 @@ export function registerZzzzzCommand(program: Command): void {
       }
     });
 }
+
+/**
+ * v2.40.0 — `mneme argus` CLI surface.
+ *
+ *   mneme argus eyes                     List the 10-eye bundle + weights.
+ *   mneme argus search --query "..." --candidates "a||b||c"
+ *                                         10-eyed weighted search;
+ *                                         "||"-separated candidates.
+ *   mneme argus hydra --strains <json>   Spawn HYDRA eyes from strain JSON.
+ *   mneme argus verify --in <json> --out <json>
+ *                                         Offline HMAC verify of a result.
+ */
+export function registerArgusCommand(program: Command): void {
+  const a = program.command("argus").description("👁×10 ARGUS-10 — 10-eyed memory search (5 surface + 5 truth) with softmax-rebalancing Guardian + HMAC-signed audit frame. Pure stateless.");
+
+  a.command("eyes")
+    .description("List the 10-eye bundle with nominal weights + layers.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const surface = core.argus10.SURFACE_EYES.map((e) => ({ id: e.id, layer: e.layer, weight: e.weight }));
+        const truth = core.argus10.TRUTH_EYES.map((e) => ({ id: e.id, layer: e.layer, weight: e.weight }));
+        const sum = [...surface, ...truth].reduce((s, e) => s + e.weight, 0);
+        writeJson({ ok: true, surface, truth, totalWeight: Number(sum.toFixed(3)) });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  a.command("search")
+    .description("Rank candidates against a query with 10 eyes.")
+    .option("--query <query>", "User query.")
+    .option("--candidates <list>", "Candidates separated by '||' (e.g. 'a||b||c').")
+    .option("--topK <n>", "Cap returned candidates.")
+    .action(async (opts: { query?: string; candidates?: string; topK?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const q = opts.query ?? "";
+        const cands = (opts.candidates ?? "").split("||").map((s) => s.trim()).filter(Boolean);
+        if (!q || cands.length === 0) {
+          writeJson({ ok: false, error: "pass --query AND --candidates 'a||b||c'" });
+          process.exitCode = 1;
+          return;
+        }
+        const result = await core.argus10.argusSearch({
+          query: q,
+          candidates: cands.map((t) => ({ text: t })),
+          repoRoot: process.cwd(),
+          ...(opts.topK ? { topK: parseInt(opts.topK, 10) } : {}),
+        });
+        writeJson({ ok: true, result });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  a.command("hydra")
+    .description("Spawn HYDRA eyes from AV strains (JSON array).")
+    .option("--strains <json>", "JSON array of {name,regex,precision,recall} strains.")
+    .action(async (opts: { strains?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const arr = opts.strains ? JSON.parse(opts.strains) : [];
+        const eyes = core.argus10.autoSpawnHydra(arr);
+        writeJson({ ok: true, spawned: eyes.length, eyes: eyes.map((e) => ({ id: e.id, weight: e.weight, layer: e.layer })) });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  a.command("verify")
+    .description("Offline HMAC verify of a pasted ArgusSearchResult given its input.")
+    .option("--in <json>", "ArgusSearchInput JSON.")
+    .option("--out <json>", "ArgusSearchResult JSON.")
+    .action(async (opts: { in?: string; out?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        if (!opts.in || !opts.out) {
+          writeJson({ ok: false, error: "pass --in and --out" });
+          process.exitCode = 1;
+          return;
+        }
+        const inp = JSON.parse(opts.in) as Parameters<typeof core.argus10.verifyArgusResult>[0];
+        const outRes = JSON.parse(opts.out) as Parameters<typeof core.argus10.verifyArgusResult>[1];
+        const ok = core.argus10.verifyArgusResult(inp, outRes);
+        writeJson({ ok });
+        if (!ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+}

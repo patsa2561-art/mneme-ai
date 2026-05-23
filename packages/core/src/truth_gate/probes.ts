@@ -173,9 +173,10 @@ const probes: Probe[] = [
     kind: "string",
     description: "Live embedder tier returned by `mneme embeddings status`.",
     run: async (ctx) => {
-      const { resolveEmbedder } = await import("@mneme-ai/embeddings");
       try {
-        const e = await resolveEmbedder({ provider: "auto" });
+        // v2.40.0 — type-erased dynamic import (cross-package; avoid build-time cycle).
+        const mod = await import("@mneme-ai/embeddings" as string) as { resolveEmbedder: (o: { provider: string }) => Promise<{ name: string; dimensions: number }> };
+        const e = await mod.resolveEmbedder({ provider: "auto" });
         return { value: e.name, evidence: `live embedder = ${e.name} (${e.dimensions} dims)` };
       } catch (err) {
         return { value: null, evidence: `embedder resolve failed: ${(err as Error).message}` };
@@ -257,8 +258,9 @@ const probes: Probe[] = [
     kind: "numeric",
     description: "Live MCP tool count.",
     run: async () => {
-      const { buildAllTools } = await import("@mneme-ai/mcp");
-      const all = buildAllTools();
+      // v2.40.0 — type-erased dynamic import (cross-package; avoid build-time cycle).
+      const mod = await import("@mneme-ai/mcp" as string) as { buildAllTools: () => Array<{ name: string }> };
+      const all = mod.buildAllTools();
       return { value: all.length, evidence: `${all.length} tools in catalog` };
     },
   },

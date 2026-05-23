@@ -55,6 +55,8 @@ import { detectHyperbole } from "./hyperbole_detector.js";
 import { detectSelfReference, dominantClass as selfRefDominantClass } from "./acgv_self_reference.js";
 import { scanCommitHashes } from "./acgv_commit_hash_oracle.js";
 import { detectVersionSemantic } from "./acgv_version_semantic.js";
+import { checkInputHygiene } from "./acgv_input_hygiene.js";
+import { canonicalRewrite, extractCanonicalNumbers } from "./acgv_number_bridge.js";
 import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
 import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
@@ -297,9 +299,66 @@ function isUnverifiableEmptyish(claim: string): { yes: boolean; reason: string }
 }
 
 export function runACGV(input: ACGVRunInput): ACGVResult {
-  const rawClaim = input.claim ?? "";
+  const rawClaimUnsafe = input.claim ?? "";
   const repoRoot = input.repoRoot;
   const caveats: string[] = [];
+
+  // ───── Layer -1a: INPUT HYGIENE (v2.40.0) ─────────────────────────────
+  // Closes audit findings D4 (BIDI override), D6 (null byte mid-text), D8
+  // (NFC/NFD denormalized) — none of which trip the 30%-printable floor
+  // because one hostile codepoint in a 300-char claim stays well above it.
+  //
+  // BLOCK hazards (bidi_override / null_byte / tag_chars) short-circuit
+  // to IMPOSSIBLE_REFUTE with INPUT_TAMPERED — the claim is structurally
+  // hostile and refusing to evaluate it is the correct verdict.
+  //
+  // WARN hazards (zero_width / homoglyph_mix / denormalized_nfc) are
+  // STRIPPED + NORMALIZED into a clean claim that downstream layers see;
+  // the hazard surfaces as a caveat so the verdict carries the receipt.
+  //
+  // Pure deterministic, runs in <1ms on a 50KB input.
+  const hygiene = checkInputHygiene(rawClaimUnsafe);
+  if (hygiene.tampered) {
+    if (!input.noEmitVaccine) {
+      try { emitVaccine(repoRoot, rawClaimUnsafe, hygiene.vaccineSignature); } catch { /* best-effort */ }
+    }
+    const blockHazards = hygiene.hazards.filter((h) => h.severity === "BLOCK");
+    const kinds = Array.from(new Set(blockHazards.map((h) => h.kind))).sort();
+    const chandra: ChandrasekharResult = {
+      verdict: "BLACK_HOLE", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0.98, citations: [],
+      reasoning: `input hygiene blocked: ${kinds.join(", ")}`,
+    } as ChandrasekharResult;
+    const godel: GodelResult = {
+      status: "UNSAT",
+      core: blockHazards.map((h) => ({ asserted: h.evidence, proof: h.codepoints.slice(0, 4) })),
+      certificate: blockHazards.map((h) => `${h.kind} :: ${h.codepoints.slice(0, 4).join(",")}`).join("\n"),
+      upgrade: true,
+    };
+    return {
+      verdict: "IMPOSSIBLE_REFUTE",
+      confidence: 0.98,
+      caveats: [`INPUT_TAMPERED:${kinds.join("+")}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `IMPOSSIBLE_REFUTE — input hygiene detected ${blockHazards.length} BLOCK-severity hazard(s): ${kinds.join(", ")}.`,
+      reasoning: blockHazards.map((h) => `  - ${h.kind} (${h.severity}): ${h.evidence}\n    codepoints: ${h.codepoints.slice(0, 6).join(", ")}\n    positions: ${h.positions.slice(0, 6).join(", ")}`).join("\n"),
+      vaccineEmitted: !input.noEmitVaccine,
+    } as ACGVResult;
+  }
+  // WARN-only hazards: continue on the cleaned + NFC-normalized claim.
+  const rawClaim = hygiene.normalizedClaim || rawClaimUnsafe;
+  for (const h of hygiene.hazards) {
+    if (h.severity === "WARN") {
+      caveats.push(`INPUT_HYGIENE:${h.kind}`);
+    }
+  }
 
   // ───── Layer -1: INPUT VALIDATION (v2.23.2) ───────────────────────────
   // Empty / whitespace / control-char-only inputs return an EXPLICIT
@@ -341,6 +400,21 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   if (claim.length > MAX_CLAIM_CHARS) {
     caveats.push(`INPUT_TRUNCATED:${MAX_CLAIM_CHARS}/${claim.length}`);
     claim = claim.slice(0, MAX_CLAIM_CHARS);
+  }
+
+  // ───── Layer -0.5: NUMBER PARAPHRASE BRIDGE (v2.40.0) ─────────────────
+  // Closes audit finding D5. The verifier used to see "865" + "eight
+  // hundred sixty-five" + "0x361" + "๘๖๕" as 4 different tokens; vaccines
+  // tagged for one form had zero effect on the others. Now we compute a
+  // CANONICAL form where every recognized paraphrase is collapsed to its
+  // decimal integer, and consult it ALONGSIDE the original. Vaccines emit
+  // signatures from the canonical form so future paraphrases get caught
+  // by simhash.
+  const canonicalClaim = canonicalRewrite(claim);
+  const canonicalNumbers = extractCanonicalNumbers(claim);
+  const numberBridged = canonicalClaim !== claim;
+  if (numberBridged) {
+    caveats.push(`NUMBER_BRIDGE:${canonicalNumbers.length}_canonicalized`);
   }
 
   // ───── Layer 0a: HYPERBOLE / IMPOSSIBLE-CLAIM DETECTOR (v2.23.2) ──────
@@ -544,7 +618,15 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   // time-decay + drift detection + HLL membership + Bayesian posterior
   // for daemons that boot the lattice); even WITHOUT osmosis enabled,
   // the inline catalog re-check is sufficient to prevent N3-overshoot.
-  const vaccineMatch = checkAgainstVaccines(repoRoot, claim);
+  // v2.40.0 D5: try both original AND canonical-number forms so vaccines
+  // tagged for "865" still fire on "eight hundred sixty-five" / "0x361" /
+  // "๘๖๕". Take the closest (smallest Hamming distance) match.
+  const vaccineMatchA = checkAgainstVaccines(repoRoot, claim);
+  const vaccineMatchB = numberBridged ? checkAgainstVaccines(repoRoot, canonicalClaim) : null;
+  const vaccineMatch =
+    vaccineMatchA && vaccineMatchB
+      ? (vaccineMatchA.distance <= vaccineMatchB.distance ? vaccineMatchA : vaccineMatchB)
+      : (vaccineMatchA ?? vaccineMatchB);
   if (vaccineMatch && vaccineMatch.matched) {
     // v2.28.0 R1 fix — NUMERIC-FACT GUARD. Before honoring an AUTO_REFUTE
     // from the vaccine cache, check whether the vaccine encodes a
@@ -553,7 +635,17 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
     // verification agents"). If yes, burn the match — the vaccine is
     // stale for THIS claim. Pre-v2.28 the simhash match alone fired
     // AUTO_REFUTE 99% on innocent claims with different numbers.
-    const numericConflict = vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, claim);
+    // v2.40.0 D5: numeric-conflict guard must also test the canonical-
+    // rewritten claim so "eight hundred sixty-six" can conflict with a
+    // vaccine encoding "tools=865". Confirmed conflict in EITHER form
+    // burns the match (vaccine is stale for THIS claim).
+    const numericConflictA = vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, claim);
+    const numericConflictB = numberBridged
+      ? vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, canonicalClaim)
+      : { conflict: false, reason: "" };
+    const numericConflict = numericConflictA.conflict
+      ? numericConflictA
+      : (numericConflictB.conflict ? numericConflictB : numericConflictA);
     if (numericConflict.conflict) {
       // Fall through to normal pipeline; the vaccine is stale here.
       caveats.push(`VACCINE_BURNED_NUMERIC :: ${numericConflict.reason}`);
@@ -731,6 +823,11 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   }
 
   // ───── Layer 5: VACCINE EMIT (on refute outcomes) ─────────────────────
+  // v2.40.0 D5 fix: also emit a vaccine for the canonical-number form so
+  // future paraphrases of the same numeric lie ("0x361" / "eight hundred
+  // sixty-five" / "๘๖๕") fire AUTO_REFUTE via simhash on the canonical
+  // form. Both vaccines carry the same signature so the ledger stays
+  // coherent.
   let vaccineEmitted = false;
   if (!input.noEmitVaccine && (verdict === "IMPOSSIBLE_REFUTE" || verdict === "BLACK_HOLE")) {
     const sig = `${verdict} :: ` + chandra.citations
@@ -738,6 +835,9 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
       .map((c) => c.asserted)
       .join(" + ");
     emitVaccine(repoRoot, claim, sig || verdict);
+    if (numberBridged && canonicalClaim !== claim) {
+      try { emitVaccine(repoRoot, canonicalClaim, `${sig || verdict} :: canonical_number_form`); } catch { /* best-effort */ }
+    }
     vaccineEmitted = true;
   }
 

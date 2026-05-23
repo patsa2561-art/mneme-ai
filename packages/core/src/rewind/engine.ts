@@ -410,7 +410,7 @@ export async function runRewind(
     const runAt = new Date().toISOString();
     const totalMs = Date.now() - t0;
     const body = {
-      spec: { name: "MNEME-REWIND-CARD" as const, version: "1.0" },
+      spec: { name: "MNEME-REWIND-CARD" as const, version: "1.0" as const },
       capsuleId: capsule.id,
       vendor, vendorVersion, runAt, totalMs,
       meanCorrectness: round3(meanCorrectness),

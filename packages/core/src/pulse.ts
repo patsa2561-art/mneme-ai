@@ -431,7 +431,7 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
   let toolsSuffix = "";
   // v2.38.0 — renderPulse doesn't take _toolCountRepoRoot as a top-level arg;
   // it's on opts. Resolve here so the tool-count + cache paths work.
-  const _toolCountRepoRoot = opts._toolCountRepoRoot ?? process.cwd();
+  const _toolCountRepoRoot = (opts as { _toolCountRepoRoot?: string; repoRoot?: string })._toolCountRepoRoot ?? opts.repoRoot ?? process.cwd();
   try {
     // pulse.ts is sync + ESM. Loading buildAllTools() from @mneme-ai/mcp
     // sync is fragile across vitest/Node/built-dist surfaces. Instead

@@ -115,7 +115,7 @@ export async function runFlywheel(input: RunInput): Promise<FlywheelReport> {
 
   // ── HMAC-sign + persist ────────────────────────────────────────────
   const body = {
-    spec: { name: "MNEME-FLYWHEEL" as const, version: "1.0" },
+    spec: { name: "MNEME-FLYWHEEL" as const, version: "1.0" as const },
     startedAt, finishedAt, totalMs,
     harvestCounts,
     fusedCount: fused.length,

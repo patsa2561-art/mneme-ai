@@ -1,3 +1,9 @@
+// v2.40.0 — top-level static import so the number-paraphrase bridge is
+// available in ESM. Lazy-load pattern used pre-v2.40 broke under
+// "type": "module" — `require` is undefined and the dynamic import is
+// async, blocking the sync API.
+import { extractCanonicalNumbers } from "./acgv_number_bridge.js";
+
 /**
  * v2.28.0 — VACCINE NUMERIC-FACT GUARD.
  *
@@ -73,6 +79,10 @@ export function numericsInSignature(signature: string): ExtractedNumeric[] {
  * INVALIDATE legitimate vaccine matches. The guard is OPT-IN per
  * vaccine: it ONLY fires when the vaccine itself encodes a numeric
  * fact (so unrelated vaccines are unaffected).
+ *
+ * v2.40.0 D5: also walks the canonical-number bridge so paraphrased
+ * numbers ("eight hundred sixty-six tools" / "๘๖๖ tools" / "0x362
+ * tools") feed the same numeric-conflict check.
  */
 export function numericsInClaim(claim: string): ExtractedNumeric[] {
   const out: ExtractedNumeric[] = [];
@@ -97,6 +107,26 @@ export function numericsInClaim(claim: string): ExtractedNumeric[] {
     const n = packMultipart(m[1]!);
     if (Number.isFinite(n)) out.push({ key: "version", value: n });
   }
+  // v2.40.0 D5: walk the canonical-number bridge for ANY non-digit forms
+  // present in the claim (English/Thai/Roman/hex/Thai-digits/etc). We
+  // pair each canonical number with the IMMEDIATELY-FOLLOWING word so
+  // "eight hundred sixty-five tools" still produces {key:"tools", value:865}.
+  try {
+    const canon = extractCanonicalNumbers(claim);
+    for (const n of canon) {
+      // Skip pure-decimal hits already covered by Pattern 1.
+      if (n.form === "decimal") continue;
+      // Find the next word after the number span (Latin OR Thai).
+      const tail = claim.slice(n.end).match(/^\s*([a-zA-Z฀-๿][a-zA-Z_฀-๿-]+)/);
+      if (tail && tail[1]) {
+        out.push({ key: tail[1].toLowerCase(), value: n.value });
+      } else {
+        // No following word — register under generic "qty" so version-style
+        // numerics still conflict-check correctly via the family bridge.
+        out.push({ key: "qty", value: n.value });
+      }
+    }
+  } catch { /* bridge unavailable; fall through to pre-v2.40 behavior */ }
   return out;
 }
 

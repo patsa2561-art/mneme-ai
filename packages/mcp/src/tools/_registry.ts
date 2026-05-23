@@ -47,6 +47,7 @@ import { MNEMNET_TOOLS } from "./_mnemnet_tools.js";
 import { PULSECOST_TOOLS } from "./_pulsecost_tools.js";
 import { COERCION_AUDIT_TOOLS } from "./_coercion_audit_tools.js";
 import { ZZZZZ_TOOLS } from "./_zzzzz_tools.js";
+import { ARGUS10_TOOLS } from "./_argus10_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -208,6 +209,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...PULSECOST_TOOLS,
     ...COERCION_AUDIT_TOOLS,
     ...ZZZZZ_TOOLS,
+    ...ARGUS10_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,
