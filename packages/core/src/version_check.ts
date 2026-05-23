@@ -286,7 +286,14 @@ export async function checkVersion(repoRoot: string, currentVersion: string): Pr
         source: "version-check",
         title: `Mneme v${fetchResult.version} is available`,
         body: `You're on v${currentVersion}. Auto-upgrade is one tool call away (mneme.system.upgrade mode='install').`,
-        cta: "say: 'upgrade Mneme' and I'll handle it.",
+        // v2.35.0 — N5 fix. Pre-v2.21.7 cta was the instruction-shape
+        // "say 'upgrade Mneme' and I'll handle it" which v2.21.7 explicitly
+        // neutralised + the consent_fabric/pulse_neutralizer added a regression
+        // gate for. The string came back through this version_check code
+        // path in v2.31-2.34 because the fix lived in the pulse renderer,
+        // not the inbox writer. Now declarative + factual — fake-user-voice
+        // pattern eliminated at the source.
+        cta: "Available tool call: mneme.system.upgrade with mode='install'.",
       });
     } catch { /* ignore */ }
   } else {

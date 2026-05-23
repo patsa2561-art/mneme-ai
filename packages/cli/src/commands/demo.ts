@@ -339,7 +339,23 @@ How to read the verdict:
           fileExists: (p: string) => existsSync(pathResolve(repoRoot, p)),
         },
       });
-      // v2.19.42 N3 FIX — forensic-FIRST routing.
+      // v2.35.0 WIRING FIX — preserve ACGV Layer-0 explicit verdicts.
+      //
+      // v2.34.0 shipped SELF_PARADOX / SELF_REFERENCE / FAKE_COMMIT_HASH /
+      // INPUT_TRUNCATED caveats in the ACGV pipeline + explainer headlines,
+      // BUT the forensic-merge logic below would overwrite those headlines
+      // with FORENSIC-ACCEPTED whenever ACGV returned PASSTHROUGH (which
+      // self-paradox + self-ref + truncated all do — they're category errors,
+      // not falsehoods). User-visible bug N3 / R3 / R1 came from this
+      // wiring gap: my Layer-0b/0c verdicts were CORRECT in core but the CLI
+      // overrode them. Fix: when ACGV emits an explicit Layer-0 caveat,
+      // SHORT-CIRCUIT the forensic merge entirely.
+      const layer0Caveats = ["SELF_PARADOX_DETECTED", "SELF_REFERENCE_DETECTED"];
+      const layer0Prefixes = ["INPUT_TRUNCATED", "FAKE_COMMIT_HASH", "INPUT_UNVERIFIABLE", "HYPERBOLE_DETECTOR_FIRED"];
+      const hasLayer0Verdict = (result.caveats ?? []).some((c) =>
+        layer0Caveats.includes(c) || layer0Prefixes.some((p) => c.startsWith(p))
+      );
+      // v2.19.42 N3 FIX — forensic-FIRST routing (Layer-0 short-circuit applied).
       //
       // Pre-v2.19.42 bug: ACGV's legacy sniffers don't recognise the
       // "mneme.X.Y is registered" assertion shape, so claims like
@@ -361,6 +377,13 @@ How to read the verdict:
       // language-of-implementation).
       const mutable = explained as unknown as { headline?: string; plain?: string; trafficLight?: string };
       const acgvWeak = result.verdict === "PASSTHROUGH" || result.verdict === "LIMBO";
+      // v2.35.0 — when ACGV Layer 0b/0c emitted an explicit caveat
+      // (SELF_PARADOX / SELF_REFERENCE / INPUT_TRUNCATED / FAKE_COMMIT_HASH /
+      // INPUT_UNVERIFIABLE / HYPERBOLE_DETECTOR_FIRED), the forensic
+      // sniffer must NOT overwrite the headline — those are explicit
+      // category errors / input-bound flags and the headline tells the
+      // user something forensic can't add to.
+      if (!hasLayer0Verdict) {
       if (forensic.verdict === "REJECTED") {
         mutable.headline = `❌ FORENSIC-REJECTED — claim contains refuted assertion(s).`;
         mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
@@ -396,6 +419,7 @@ How to read the verdict:
         mutable.plain = (mutable.plain ?? "") + "\n\n" + forensic.explanation;
         if (mutable.trafficLight === "green") mutable.trafficLight = "yellow";
       }
+      } // close v2.35.0 !hasLayer0Verdict guard
       // Stash the forensic result on the JSON output (AI agents can read it)
       (result as unknown as { forensic?: typeof forensic }).forensic = forensic;
 

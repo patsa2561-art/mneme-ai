@@ -33,7 +33,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "
 import { join } from "node:path";
 import { homedir, platform } from "node:os";
 import { spawn } from "node:child_process";
-import { ackInbox } from "./inbox.js";
+import { ackInbox, isDisplayableUnsent } from "./inbox.js";
 // v2.20.1 — Direct ESM import so the pulse-time surface works in both
 // dist (ESM) and test (vitest) environments. The previous lazy
 // require() returned undefined in ESM context.
@@ -204,15 +204,20 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       for (const ln of lines) {
         try {
           const e = JSON.parse(ln) as { sent?: boolean; id?: string; source?: string; priority?: string; title?: string; body?: string; cta?: string; autoAction?: { tool: string; args?: Record<string, unknown> } };
-          // Skip stale upgrade banners that reference the wrong installed version
+          // v2.35.0 — N2 fix. Use the canonical isDisplayableUnsent
+          // helper from inbox.ts so pulse + CLI use the SAME filter.
+          // Pre-v2.35 the pulse inlined `isStaleVersionEntry` which
+          // diverged from the CLI's logic → pulse said "1 unread" while
+          // CLI said empty. Now there's one filter; both call it.
+          if (!isDisplayableUnsent(e as never, currentVer ?? undefined)) continue;
+          // Also keep the older isStaleVersionEntry guard as defense-in-depth
+          // for shapes the displayable filter doesn't yet recognise.
           if (isStaleVersionEntry(e)) continue;
-          if (e && e.sent === false) {
-            unsent++;
-            if (e.autoAction && typeof e.autoAction.tool === "string" && e.id && e.title) {
-              inboxAutoActions.push({ id: e.id, title: e.title, body: e.body, tool: e.autoAction.tool, args: e.autoAction.args ?? {} });
-            } else if ((e.priority === "critical" || e.priority === "high") && e.id && e.title) {
-              inboxPriority.push({ id: e.id, priority: e.priority, title: e.title, body: e.body, cta: e.cta });
-            }
+          unsent++;
+          if (e.autoAction && typeof e.autoAction.tool === "string" && e.id && e.title) {
+            inboxAutoActions.push({ id: e.id, title: e.title, body: e.body, tool: e.autoAction.tool, args: e.autoAction.args ?? {} });
+          } else if ((e.priority === "critical" || e.priority === "high") && e.id && e.title) {
+            inboxPriority.push({ id: e.id, priority: e.priority, title: e.title, body: e.body, cta: e.cta });
           }
         } catch { /* BE:silent-by-design  skip  */ }
       }
@@ -223,6 +228,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
       Object.defineProperty(status.inbox, "_priority", { value: inboxPriority, enumerable: false });
     } catch { /* BE:silent-by-design  ignore  */ }
   }
+
 
   // Antivirus
   const avStatsPath = join(repoRoot, ".mneme/antivirus/stats.json");

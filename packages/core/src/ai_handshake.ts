@@ -274,7 +274,29 @@ export function recordCliActivity(repoRoot: string, command: string, vendorHint?
     if (alreadyToday) return;
 
     mkdirSync(join(root, ".mneme"), { recursive: true });
-    appendFileSync(path, JSON.stringify({ at: new Date().toISOString(), vendor, command, day: dayKey }) + "\n");
+    // v2.35.0 — R7 fix. Add HMAC chain link per row. Each new row's
+    // `prev` field references the previous row's `hmac`; verifyCliActivity
+    // (below) walks the chain + reports the first broken link. Tamper-
+    // evident audit trail without changing the existing schema's other
+    // fields (vendor/command/day stay as-is). Old rows without hmac fields
+    // are treated as the GENESIS chain start (`prev` = SEED).
+    const SEED = "0".repeat(64);
+    const HMAC_KEY = process.env["MNEME_CLI_ACTIVITY_KEY"] ?? "mneme-cli-activity-v1";
+    let prev = SEED;
+    if (existsSync(path)) {
+      try {
+        const lines = readFileSync(path, "utf8").split("\n").filter((l) => l.trim());
+        for (let i = lines.length - 1; i >= 0; i--) {
+          try {
+            const last = JSON.parse(lines[i]!) as { hmac?: string };
+            if (typeof last.hmac === "string" && last.hmac.length === 64) { prev = last.hmac; break; }
+          } catch { /* skip malformed */ }
+        }
+      } catch { /* best-effort */ }
+    }
+    const body = { at: new Date().toISOString(), vendor, command, day: dayKey, prev };
+    const hmac = createHash("sha256").update(`${HMAC_KEY}|${JSON.stringify(body)}`).digest("hex");
+    appendFileSync(path, JSON.stringify({ ...body, hmac }) + "\n");
     // v1.46.0 (#14 fix) -- mirror the activity into the pheromone trail
     // so trails capture CLI usage too, not just MCP. Best-effort.
     try { depositPheromone(root, vendor, `cli:${command}`, 1); } catch { /* BE:silent-by-design   */ }
@@ -301,6 +323,48 @@ export function listHandshakes(repoRoot: string, vendor?: string): { vendor: str
     out.sort((a, b) => (a.greetedAt < b.greetedAt ? 1 : -1));
     return out;
   } catch { return []; }
+}
+
+/**
+ * v2.35.0 — R7 fix. Verify the HMAC chain of cli-activity.jsonl. Walks
+ * every row, recomputes hmac vs `prev`, and reports the first index
+ * where the chain breaks. Rows missing `hmac` are treated as the
+ * legacy genesis prefix (allowed; chain starts at first hmac'd row).
+ *
+ * Returns:
+ *   { ok: true, lines: N }                 — full chain verifies
+ *   { ok: false, brokenAt: I, reason }     — chain breaks at row I
+ *   { ok: true, lines: 0 }                 — file missing (clean repo)
+ */
+export function verifyCliActivity(repoRoot: string): { ok: boolean; lines: number; brokenAt?: number; reason?: string } {
+  const path = join(resolve(repoRoot), CLI_ACTIVITY_FILE);
+  if (!existsSync(path)) return { ok: true, lines: 0 };
+  const SEED = "0".repeat(64);
+  const HMAC_KEY = process.env["MNEME_CLI_ACTIVITY_KEY"] ?? "mneme-cli-activity-v1";
+  let prev = SEED;
+  let lines = 0;
+  let crossedGenesis = false;
+  try {
+    const rows = readFileSync(path, "utf8").split("\n").filter((l) => l.trim());
+    for (let i = 0; i < rows.length; i++) {
+      let row: { hmac?: string; prev?: string; at: string; vendor: string; command: string; day: number };
+      try { row = JSON.parse(rows[i]!); } catch { return { ok: false, lines, brokenAt: i, reason: "row not parseable as JSON" }; }
+      if (typeof row.hmac !== "string") {
+        // Legacy row (no HMAC) — allowed before the first HMAC row.
+        if (crossedGenesis) return { ok: false, lines, brokenAt: i, reason: "legacy row appears AFTER first HMAC-chained row (gap)" };
+        lines++;
+        continue;
+      }
+      crossedGenesis = true;
+      const expected = createHash("sha256").update(`${HMAC_KEY}|${JSON.stringify({ at: row.at, vendor: row.vendor, command: row.command, day: row.day, prev: row.prev ?? prev })}`).digest("hex");
+      if (expected !== row.hmac) return { ok: false, lines, brokenAt: i, reason: "hmac mismatch" };
+      prev = row.hmac;
+      lines++;
+    }
+  } catch (e) {
+    return { ok: false, lines, reason: `read failed: ${(e as Error).message}` };
+  }
+  return { ok: true, lines };
 }
 
 /** List recent CLI activity (for diagnostics + soul-render). */
