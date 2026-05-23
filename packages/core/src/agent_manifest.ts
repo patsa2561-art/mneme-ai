@@ -34,7 +34,7 @@ export interface ManifestCommand {
   /** When the AI should call it ("if user asks…", "before risky op…"). */
   when: string;
   /** Bucket for grouping in the rendered output. */
-  group: "memory" | "polygraph" | "pulse" | "cert" | "abm_chronicle" | "live_mirror" | "clone" | "trust" | "ia_fabric" | "digital_talent" | "time_bridge" | "apoptosis_network" | "stillness" | "mortuary" | "earthquake" | "atlas" | "consent_fabric" | "upgrade_visibility" | "discovery_surgery" | "companion" | "conductor" | "physics_lathe" | "dimensional_oracle" | "challenger_librarian" | "mission_recorder" | "overshoot_tracer" | "dojo" | "coercion_taxonomy" | "mcp_candor" | "time_machine" | "whistleblower" | "funeral" | "socratic" | "dep_mortality" | "ai_confessional" | "truth_swarm" | "gauntlet" | "ai_jury" | "provenance" | "lie_stream" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot" | "arena" | "verified_badge" | "oracle_liability" | "nexus_proactive" | "confessional" | "vendor_ghost" | "trinity_vote" | "insurance_market" | "vendor_boomerang" | "evolution" | "soul" | "mcp_drift" | "embedder_promote" | "inverse_forensics" | "intent" | "dna" | "chronostasis" | "agreement" | "dream" | "colony" | "honey" | "retroactive" | "genetic";
+  group: "memory" | "polygraph" | "pulse" | "cert" | "abm_chronicle" | "live_mirror" | "clone" | "trust" | "ia_fabric" | "digital_talent" | "time_bridge" | "apoptosis_network" | "stillness" | "mortuary" | "earthquake" | "atlas" | "consent_fabric" | "upgrade_visibility" | "discovery_surgery" | "companion" | "conductor" | "physics_lathe" | "dimensional_oracle" | "challenger_librarian" | "mission_recorder" | "overshoot_tracer" | "dojo" | "coercion_taxonomy" | "mcp_candor" | "codegraph" | "mcp_fuzzer" | "truth_gate" | "peak_gauntlet" | "conclave" | "time_machine" | "whistleblower" | "funeral" | "socratic" | "dep_mortality" | "ai_confessional" | "truth_swarm" | "gauntlet" | "ai_jury" | "provenance" | "lie_stream" | "antivirus" | "evolve" | "ops" | "uninstall" | "supernova" | "embeddings" | "supersonic" | "diagnosis" | "core" | "cognitive" | "apoptosis" | "autarchy" | "aegis" | "metamorphosis" | "tribunal" | "innerlife" | "tune" | "diaspora" | "genesplice" | "permeate" | "telepathy" | "abyss" | "seamless" | "lattice" | "neuron" | "conduit" | "synapse" | "osmosis" | "aura" | "relay" | "chameleon" | "anchor" | "rainbow" | "project_soul" | "bounty" | "replica" | "compliance" | "infra_brain" | "genesis" | "hive" | "vibe" | "arbitrage" | "bug_prophet" | "persona" | "anti_collusion" | "alpha" | "public_audit" | "living_model" | "obelisk" | "jackpot" | "arena" | "verified_badge" | "oracle_liability" | "nexus_proactive" | "confessional" | "vendor_ghost" | "trinity_vote" | "insurance_market" | "vendor_boomerang" | "evolution" | "soul" | "mcp_drift" | "embedder_promote" | "inverse_forensics" | "intent" | "dna" | "chronostasis" | "agreement" | "dream" | "colony" | "honey" | "retroactive" | "genetic";
 }
 
 /** The static catalog. Every new command MUST be added here in the same
@@ -734,6 +734,53 @@ export const MNEME_COMMAND_CATALOG: ManifestCommand[] = [
   { command: "mneme candor audit [--verify]", since: "2.23.1", group: "mcp_candor", what: "📜 Show CANDOR audit ledger (last 20 HMAC-chained receipts). --verify checks chain integrity.", when: "Periodic audit; before trusting historical decision chain." },
   { command: "mneme candor classify <text>", since: "2.23.1", group: "mcp_candor", what: "📚 Classify text against the coercion taxonomy via `candor.coercion.classify` endpoint. Worst tier 0-5. Exit 2 on tier ≥ 4.", when: "CI gating; AI-agent self-check on tool output." },
   { command: "mneme candor verify-peer --file <p>", since: "2.23.1", group: "mcp_candor", what: "🤝 Validate a peer server's handshake JSON against the spec. Exit 2 on invalid.", when: "Before federating with another MCP server; spec-conformance audit." },
+
+  // ─── v2.24.0 — 🎯 MCP FUZZER. 108 attack vectors × HMAC-chained
+  // report card + Intelligent Second Brain. World-first: only MCP
+  // server that ships its own deep-findings probe as a callable npm
+  // primitive. Subsumes invariantlabs/mcp-scan + Cisco mcp-scanner. ──
+  { command: "mneme fuzz vectors [category]", since: "2.24.0", group: "mcp_fuzzer", what: "🎯 List the 108 attack vectors (id + title + category + severity + CVE refs). Filter by category: handshake / schema / method / tool / resource / prompt / policy / concurrency / transport.", when: "Audit prep; CI gate design; documenting which classes are pinned." },
+  { command: "mneme fuzz run [--json '{filter,failFast,timeoutMs}']", since: "2.24.0", group: "mcp_fuzzer", what: "🎯 Fire all 108 vectors (or a filtered subset) at the live MCP server. Returns HMAC-signed report card with traffic light + CVE posture + remediation hints.", when: "Pre-release self-fuzz; after MCP-tool surface changes." },
+  { command: "mneme fuzz report [--json '{limit}']", since: "2.24.0", group: "mcp_fuzzer", what: "🎯 Read the latest signed report card or list last N ledger entries from .mneme/mcp_fuzzer/.", when: "After fuzz.run; building a regression timeline." },
+  { command: "mneme fuzz verify --json '{card,prevChainLink}'", since: "2.24.0", group: "mcp_fuzzer", what: "🎯 Verify a fuzz report card's HMAC offline (no re-run required).", when: "Cross-machine attestation; CI artifact verify." },
+
+  // ─── v2.25.0 — 🧬 LIVING SOUL CODEGRAPH. Mneme's answer to the
+  // CodeGraph competitor — same file/symbol graph + 10 differentiators
+  // (HMAC-chained provenance · Merkle root · drift sentinel · vendor
+  // attribution · hallucination vaccine · time-travel hint · MCP-native). ──
+  { command: "mneme codegraph build", since: "2.25.0", group: "codegraph", what: "🧬 Build the LIVING SOUL graph (file deps + symbol refs). Every edge HMAC-attested; Merkle root for cross-machine sync. Returns stats + signature.", when: "First contact in a repo; after a major refactor; weekly refresh." },
+  { command: "mneme codegraph query --json '{kind,pathContains,symbol,edgeKinds,warningsOnly,limit}'", since: "2.25.0", group: "codegraph", what: "🧬 Filter nodes + edges. `warningsOnly:true` returns hallucination-vaccine-flagged edges.", when: "AI agent reasoning about who-calls-what / which files depend on X." },
+  { command: "mneme codegraph drift [--record]", since: "2.25.0", group: "codegraph", what: "🧬 Detect broken / stale edges since last build. Severity ladder: missing-file=high, edge-stale=low.", when: "Before applying any AI-suggested edit; daemon-tick gate." },
+  { command: "mneme codegraph root", since: "2.25.0", group: "codegraph", what: "🧬 Return Merkle root + signature. Two installs with same root = identical graphs without transferring them.", when: "Cross-machine sync; federated trust graph." },
+  { command: "mneme codegraph verify", since: "2.25.0", group: "codegraph", what: "🧬 Verify HMAC chain integrity across all edges. Detects tampering at first-broken-index.", when: "After cross-machine transport; periodic integrity audit." },
+  { command: "mneme codegraph warn --edgeId <id> --reason <s>", since: "2.25.0", group: "codegraph", what: "🧬 Mark an edge as hallucination-vaccine warning. Future AI agents see the warning before re-proposing it.", when: "When an AI hallucinated a function call / import that doesn't exist." },
+
+  // ─── v2.26.0 — 🏆 PEAK PERFORMANCE GAUNTLET / AUTO-OPTIMIZER.
+  // Mneme grades its OWN compliance via 12 deep-findings probes; HMAC-
+  // signed scorecard offline-verifiable. ──
+  { command: "mneme tune run", since: "2.26.0", group: "peak_gauntlet", what: "🏆 PEAK GAUNTLET — run all 12 N1-N12 deep-findings probes against the live MCP server. Returns HMAC-signed scorecard (star 0-10 per finding, aggregate 0-100, traffic light + remediation hints).", when: "Pre-release self-grade; nightly governance audit." },
+  { command: "mneme tune report [--json '{limit}']", since: "2.26.0", group: "peak_gauntlet", what: "🏆 PEAK GAUNTLET — read latest scorecard or list N ledger entries.", when: "After tune.run; periodic check." },
+  { command: "mneme tune findings", since: "2.26.0", group: "peak_gauntlet", what: "🏆 PEAK GAUNTLET — list the 12 finding definitions (N1..N12) with title + spec + sinceVersion + remediation.", when: "Audit prep; documenting what's scored." },
+  { command: "mneme tune suggest_fix --findingId <Nk>", since: "2.26.0", group: "peak_gauntlet", what: "🏆 PEAK GAUNTLET — given a finding id, return step-by-step remediation + concrete commands + source-file pointer.", when: "After tune.run flags a sub-9-star finding." },
+
+  // ─── v2.27.0 — 🟢 MARKETING TRUTH GATE. Every marketing claim bound
+  // to a measurable probe; HMAC-signed reconciliation matrix. World-
+  // first: no AI tool auto-reconciles its own marketing copy vs live
+  // behavior. ──
+  { command: "mneme truth_gate run", since: "2.27.0", group: "truth_gate", what: "🟢 TRUTH GATE — run every probe + reconcile against claim catalog. Returns HMAC-signed truth matrix with verdict per claim (pass/drift/refuted/unmeasured) + truth score 0-100.", when: "Pre-release; periodic audit; after editing marketing copy." },
+  { command: "mneme truth_gate report [--json '{limit}']", since: "2.27.0", group: "truth_gate", what: "🟢 TRUTH GATE — read latest matrix or list N ledger entries.", when: "After truth_gate.run; release-note prep; cross-machine sync." },
+  { command: "mneme truth_gate claims", since: "2.27.0", group: "truth_gate", what: "🟢 TRUTH GATE — list every claim binding (id + source + text + probe + severity).", when: "Adding a new marketing claim; reviewing what's measured." },
+  { command: "mneme truth_gate verify --json '{matrix,prevChainLink}'", since: "2.27.0", group: "truth_gate", what: "🟢 TRUTH GATE — verify a pasted truth matrix's HMAC offline.", when: "Cross-machine attestation; release artifact verification." },
+
+  // ─── v2.29.0 — 🏛 MNEME CONCLAVE. Cross-vendor Byzantine consensus +
+  // 💎 ANTI-EVAL-AWARENESS ENGINE (AEAE). Closes Q1 of the 2026 AI-
+  // eval research gap; world-first eval-mode detection via variant
+  // consistency. ──
+  { command: "mneme conclave run <claim> --json '{vendors,bftThreshold,bftStrict,weightBy,aeae,mockOnly}'", since: "2.29.0", group: "conclave", what: "🏛 MNEME CONCLAVE — fire ONE claim at N vendors in parallel; AEAE rewrites into 5 variants (verbatim/paraphrase/decoy/casual) + each fans out to every vendor; weighted Byzantine vote returns CONSENSUS / DISSENT / AWARENESS_DETECTED / INSUFFICIENT_RESPONDERS. HMAC-signed; offline-verifiable.", when: "High-stakes claims; second-opinion on single-vendor verdict; reproducible cross-vendor benchmark; eval-awareness audit." },
+  { command: "mneme conclave report [--json '{limit}']", since: "2.29.0", group: "conclave", what: "🏛 MNEME CONCLAVE — read latest verdict or list N ledger entries from .mneme/conclave/.", when: "After conclave.run; replaying a prior verdict; building a leaderboard." },
+  { command: "mneme conclave dissent [--json '{limit}']", since: "2.29.0", group: "conclave", what: "🏛 MNEME CONCLAVE — read the federated dissent corpus. Every DISSENT outcome appends to .mneme/conclave/dissent_corpus.jsonl, seeding the Q2 cross-vendor disagreement dataset.", when: "Building a hallucination dataset; analysing vendor disagreement patterns." },
+  { command: "mneme conclave weights --json '{vendors}'", since: "2.29.0", group: "conclave", what: "🏛 MNEME CONCLAVE — show per-vendor Aletheia trust weight (cached). Source: aletheia karma OR bounty leaderboard; defaults 0.5 neutral.", when: "Auditing why a vendor's vote counts more / less." },
+  { command: "mneme conclave verify --json '{verdict,prevChainLink}'", since: "2.29.0", group: "conclave", what: "🏛 MNEME CONCLAVE — verify a pasted ConsensusVerdict's HMAC chain offline.", when: "Cross-machine attestation; replay receipts." },
 ];
 
 const SENTINEL_BEGIN = "<!-- BEGIN MNEME MANIFEST (auto-managed -- do not edit) -->";
