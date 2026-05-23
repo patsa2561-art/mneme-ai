@@ -162,5 +162,20 @@ export function emitVaccine(
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     appendFileSync(vaccinePath(repoRoot), JSON.stringify(vaccine) + "\n", "utf8");
   } catch { /* best-effort */ }
+
+  // v2.31.0 — HGP composition. Best-effort: every refuted claim also
+  // becomes a Hallucination Genome Project record (deterministic
+  // CVE-style HGP-ID). Vendor attribution is unavailable from this
+  // call-site; downstream callers can use the HGP API directly with
+  // vendor info when known. We import lazily to avoid cycles +
+  // swallow any failure so vaccine emission stays the hard path.
+  try {
+    void import("../hgp/index.js").then((hgp) => {
+      try {
+        hgp.recordHallucination(repoRoot, { claim, signature });
+      } catch { /* best-effort */ }
+    }).catch(() => { /* best-effort */ });
+  } catch { /* best-effort */ }
+
   return vaccine;
 }

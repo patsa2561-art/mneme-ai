@@ -1364,6 +1364,21 @@ export * as conclave from "./conclave/index.js";
 // first eval-aware-defeating probe.
 export * as honestMirror from "./honest_mirror/index.js";
 
+// v2.31.0 — 🪄 REWIND (Time-Capsule Regression Replay). Pin a set of
+// past git commits as a Capsule, fire that Capsule at every new vendor
+// release, emit an HMAC-signed VendorRegressionCard with per-intent-
+// class regression detection. Composes with HONEST MIRROR via the
+// same suggestedAletheiaWeight feedback loop into CONCLAVE.
+export * as rewind from "./rewind/index.js";
+
+// v2.31.0 — 🧬 HGP (Hallucination Genome Project). Every ACGV-refuted
+// claim earns a deterministic CVE-style HGP-ID (HGP-YYYY-NNNNN). Same
+// hallucination shape from different users hashes to the SAME id,
+// building a federated catalog of vendor-attributed lies. Federation
+// default OFF (CONSENT FABRIC). Composes with ACGV vaccine emission
+// via a best-effort hook in squadron/acgv_vaccine.
+export * as hgp from "./hgp/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with

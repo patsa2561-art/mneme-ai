@@ -46,7 +46,7 @@ For browser polygraph (live dots on claude.ai / chatgpt.com / gemini): `mneme po
 
 ## What Mneme does
 
-Mneme is **8 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification.
+Mneme is **10 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification.
 
 | # | Primitive | One-line | Full doc |
 |---|-----------|----------|----------|
@@ -58,6 +58,8 @@ Mneme is **8 primitives** every AI agent can call. Each has discrete pinned test
 | 6 | 🟢 **TRUTH GATE** (v2.27) | Every marketing claim auto-reconciled against a measurable probe. World-first. | [EN](docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-) · [TH](docs/FUNCTIONS-TH.md#6-marketing-vs-reality-v2270--truth-gate-) |
 | 7 | 🏛 **CONCLAVE + AEAE** (v2.29) | Cross-vendor Byzantine consensus + the crown-jewel Anti-Eval-Awareness Engine that detects vendors playing eval theater. | [EN](docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-) · [TH](docs/FUNCTIONS-TH.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-) |
 | 8 | 💎 **HONEST MIRROR** (v2.30) | The structural answer to eval-awareness: tests vendors on YOUR OWN past git commits — vendors can't tell it's an eval because the probes ARE real work. Closes the truth-tunes-trust loop with CONCLAVE. | [EN](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-) · [TH](docs/FUNCTIONS-TH.md#9-honest-mirror-v2300--ตรวจ-vendor-ด้วยงานจริง-) |
+| 9 | 🪄 **REWIND** (v2.31) | Time-Capsule Regression Replay: pin past commits as a Capsule + fire it at every vendor release → per-intent-class Vendor Regression Card (HMAC-signed, shareable). Your repo = personal SWE-bench that vendors CAN'T pre-train on. | [EN](docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-) · [TH](docs/FUNCTIONS-TH.md#10-rewind-v2310--time-capsule-regression-replay-) |
+| 10 | 🧬 **HGP** (v2.31) | Hallucination Genome Project: every ACGV-refuted claim earns a deterministic CVE-style ID (`HGP-YYYY-NNNNN`). Same lie shape across users → same ID → vendor-attributed federated catalog. Federation OPT-IN. | [EN](docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-) · [TH](docs/FUNCTIONS-TH.md#11-hgp-v2310--hallucination-genome-project-) |
 
 ---
 
@@ -83,6 +85,7 @@ Things no competitor ships, all measurable, all in production:
 
 ## What's new (recent releases)
 
+- **v2.31.0** 🪄 REWIND + 🧬 HGP — Time-Capsule Regression Replay (your repo becomes a personal SWE-bench vendors can't pre-train on) + Hallucination Genome Project (CVE-style HGP-YYYY-NNNNN IDs for every refuted claim). Both compose with CONCLAVE Aletheia weights. ([REWIND](docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-) · [HGP](docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-))
 - **v2.30.0** 💎 HONEST MIRROR — Tests vendors on YOUR OWN past git commits. Vendors can't tell it's an eval. Closes the truth-tunes-trust loop with CONCLAVE. ([docs](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-))
 - **v2.29.1** 📘 Docs refresh + agent manifest sync (22 commands added so AI agents discover every new family).
 - **v2.29.0** 🏛 MNEME CONCLAVE — Cross-vendor Byzantine consensus + AEAE. Closes Q1 of the 2026 AI-eval research gap. ([docs](docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-))

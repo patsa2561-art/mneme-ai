@@ -135,6 +135,21 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.honest_mirror.artifacts",
   "mneme.honest_mirror.weights",
   "mneme.honest_mirror.verify",
+  // v2.31.0 — REWIND surfaces are stateless reads (Capsules + cards
+  // are pure git + HMAC; replay function is supplied by the caller).
+  "mneme.rewind.run",
+  "mneme.rewind.card",
+  "mneme.rewind.capsules",
+  "mneme.rewind.regression",
+  "mneme.rewind.verify",
+  // v2.31.0 — HGP surfaces are stateless reads (local registry +
+  // append-only ledger; federation is opt-in stub).
+  "mneme.hgp.record",
+  "mneme.hgp.lookup",
+  "mneme.hgp.top",
+  "mneme.hgp.severity",
+  "mneme.hgp.federate_status",
+  "mneme.hgp.federate_join",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

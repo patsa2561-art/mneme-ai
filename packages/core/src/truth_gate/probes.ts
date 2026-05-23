@@ -294,6 +294,70 @@ const probes: Probe[] = [
     },
   },
 
+  // ── REWIND regression history (v2.31.0) ─────────────────────────
+  // Did we record any vendor regression card recently? Returns the
+  // count of cards on disk — bound to the claim "Mneme tracks vendor
+  // regression as YOU release". null when no card exists yet.
+  {
+    id: "probe.rewind.card_count",
+    kind: "numeric",
+    description: "Number of REWIND VendorRegressionCards on disk. 0 = none run yet. null = directory missing.",
+    run: async (ctx) => {
+      try {
+        const p = join(ctx.cwd, ".mneme", "rewind", "cards.jsonl");
+        if (!existsSync(p)) return { value: null, evidence: "no rewind cards yet (run `mneme rewind run` first)" };
+        const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
+        return { value: lines.length, evidence: `${lines.length} regression card(s) recorded` };
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
+  // ── HGP local registry (v2.31.0) ─────────────────────────────────
+  // Does HGP have a registry on disk? Returns the number of distinct
+  // HGP-IDs. 0 = no hallucinations recorded. null when directory
+  // missing.
+  {
+    id: "probe.hgp.registry_size",
+    kind: "numeric",
+    description: "Number of distinct HGP-IDs in the local registry. 0 = clean (or never recorded). null = directory missing.",
+    run: async (ctx) => {
+      try {
+        const p = join(ctx.cwd, ".mneme", "hgp", "registry.jsonl");
+        if (!existsSync(p)) return { value: null, evidence: "no HGP registry yet (vaccine emission auto-fills it)" };
+        const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
+        const ids = new Set<string>();
+        for (const ln of lines) {
+          try { const j = JSON.parse(ln) as { hgpId?: string }; if (j.hgpId) ids.add(j.hgpId); } catch { /* skip */ }
+        }
+        return { value: ids.size, evidence: `${ids.size} distinct HGP-IDs (${lines.length} ledger lines)` };
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
+  // ── HGP federation default OFF (v2.31.0) ─────────────────────────
+  // Marketing claim: "HGP federation is opt-in / private-by-default".
+  // Probe returns 0 when consent.optIn is false (the expected default),
+  // 1 when opted in. Bound to a claim asserting EXPECTED=0.
+  {
+    id: "probe.hgp.federation_default_off",
+    kind: "numeric",
+    description: "0 when HGP federation consent is OFF (default per CONSENT FABRIC); 1 when user opted in.",
+    run: async (ctx) => {
+      try {
+        const p = join(ctx.cwd, ".mneme", "hgp", "consent.json");
+        if (!existsSync(p)) return { value: 0, evidence: "no consent file = OFF (default)" };
+        const j = JSON.parse(readFileSync(p, "utf8")) as { optIn?: boolean };
+        return { value: j.optIn ? 1 : 0, evidence: `optIn=${Boolean(j.optIn)}` };
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── stderr volume per session (M16 probe) ─────────────────────────
   {
     id: "probe.stderr.session_bytes",

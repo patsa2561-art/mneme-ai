@@ -123,6 +123,54 @@ How it works:
 
 ---
 
+## 10. REWIND (v2.31.0) — Time-Capsule Regression Replay 🪄
+
+> Your repo is a personal benchmark vendors **CANNOT** pre-train on. Pin past commits as a **Capsule**, fire it at every new vendor release, get an HMAC-signed **Vendor Regression Card** with per-intent-class regression detection.
+
+How it works:
+1. `mneme rewind run --json '{vendors:["claude-opus-4-7","gpt-5"]}'` walks past N commits (default 100)
+2. Each commit gets an intent fingerprint (`category × surface × sizeBucket × topic-simhash`) — clusters similar work
+3. Commit subject DP-scrubbed → blind-replay to each vendor (no "EVAL:" header — vendor sees a normal task with original timestamp)
+4. Vendor reply scored vs the accepted diff (cosine embed if available; 3-char-min Jaccard fallback)
+5. Card compared to prior card for SAME vendor (different version) → `regression | stable | improvement | new` + worst/best intent class
+6. `suggestedAletheiaWeight` written to the same `.mneme/aletheia/honest_mirror_weights.json` HONEST MIRROR uses → CONCLAVE picks it up automatically (truth-tunes-trust loop)
+
+| Command | What | When |
+|---|---|---|
+| `mneme rewind run --json '{vendors,range,count,seed,reuseCapsuleId}'` | Seal Capsule → blind-replay → emit VendorRegressionCard | After a vendor releases a new model; periodic regression audit. |
+| `mneme rewind card --json '{seq,markdown:true}'` | Read latest card / list ledger / render shareable markdown | Sharing a card; post-mortem. |
+| `mneme rewind capsules` | List pinned capsule ids (the time-capsules) | Picking a capsule to replay against a new vendor release. |
+| `mneme rewind regression` | At-a-glance: latest card per vendor + status | Routing pre-flight. |
+| `mneme rewind verify --json '{card}'` | Offline HMAC verify | Cross-machine attestation. |
+
+**Why competitors can't copy this:** SWE-bench / HumanEval / MBPP are frozen public snapshots — vendors train on them, so they no longer measure ability. YOUR repo is private, scoped to YOUR domain, and never in any training set. Mneme is the only CLI sitting inside YOUR repo with the audit chain to issue a tamper-evident regression card.
+
+---
+
+## 11. HGP (v2.31.0) — Hallucination Genome Project 🧬
+
+> Every ACGV-refuted claim earns a **CVE-style HGP-ID** (`HGP-YYYY-NNNNN`). Same hallucination shape from different users hashes to the **same** id — a cross-user catalog of vendor-attributed lies. Federation is **OPT-IN**.
+
+How it works:
+1. ACGV's vaccine layer refutes a claim → `recordHallucination()` fires automatically (best-effort hook in `squadron/acgv_vaccine.ts`)
+2. 64-bit simhash of the claim + year → deterministic `HGP-YYYY-NNNNN` id (collision → suffix `-A`, `-B`, …)
+3. Append-only ledger at `.mneme/hgp/registry.jsonl` — every observation is a delta record, loader collapses by id
+4. Severity = `0.6 × log-saturated observe-count + 0.4 × vendor-spread` ∈ [0, 1]
+5. Federation **off by default** (CONSENT FABRIC). v2.31.0 ships local-only registry + opt-in scaffolding; the federated push envelope lands in v2.32.x
+
+| Command | What | When |
+|---|---|---|
+| `mneme hgp record --json '{claim,signature,vendor}'` | Record a hallucination + get HGP-ID | Manually attributing an external hallucination. (ACGV auto-fires for refutes.) |
+| `mneme hgp lookup --json '{hgpId}'` | Fetch a record by HGP-ID | User typed an HGP-ID. |
+| `mneme hgp top [--json '{n}']` | Top-N most-severe hallucinations | Dashboard / public roll-up. |
+| `mneme hgp severity --json '{vendor,windowDays,allVendors}'` | Per-vendor severity in window | Audit a vendor's recent footprint; vendor selection. |
+| `mneme hgp federate_status` | Read opt-in status + local count | Consent audit. |
+| `mneme hgp federate_join --json '{optIn,endpoint}'` | Toggle federation opt-in | User explicitly opts in. |
+
+**Why no AI vendor can host this:** vendors have a conflict of interest (each wants its own model to win) + can't be trusted by users to keep hallucination data private. Mneme is local-first + vendor-neutral + already has the audit chain. Same role NVD / MITRE play for CVEs.
+
+---
+
 ## 8. Daily Helpers
 
 | Command | What |

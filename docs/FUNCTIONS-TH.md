@@ -123,6 +123,54 @@
 
 ---
 
+## 10. REWIND (v2.31.0) — Time-Capsule Regression Replay 🪄
+
+> Repo ของคุณ = **personal benchmark** ที่ vendor pre-train ไม่ได้ (เพราะ private). Pin past commits เป็น **Capsule** → ยิงใส่ทุก vendor release ใหม่ → ได้ **Vendor Regression Card** (HMAC-signed) ที่มี per-intent-class regression detection.
+
+วิธีทำงาน:
+1. `mneme rewind run --json '{vendors:["claude-opus-4-7","gpt-5"]}'` ดึง N commits ย้อนหลัง (default 100)
+2. แต่ละ commit ได้ intent fingerprint (`category × surface × sizeBucket × topic-simhash`) — จัด cluster งานคล้ายๆ กัน
+3. Commit subject DP-scrub → blind-replay ไปทุก vendor (ไม่มี "EVAL:" header — vendor เห็น task ปกติ + timestamp เดิม)
+4. คำตอบ vendor เทียบกับ diff จริง (cosine embed ถ้ามี; ไม่งั้น 3-char-min Jaccard fallback)
+5. การ์ดเทียบกับการ์ดเก่าของ vendor เดียวกัน (version ต่าง) → `regression | stable | improvement | new` + worst/best intent class
+6. `suggestedAletheiaWeight` เขียนลง `.mneme/aletheia/honest_mirror_weights.json` ตัวเดียวกับที่ HONEST MIRROR ใช้ → CONCLAVE หยิบไปใช้อัตโนมัติ (truth-tunes-trust loop)
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme rewind run --json '{vendors,range,count,seed,reuseCapsuleId}'` | Seal Capsule → blind-replay → ออก VendorRegressionCard | หลัง vendor ปล่อย model version ใหม่; periodic regression audit |
+| `mneme rewind card --json '{seq,markdown:true}'` | อ่านการ์ดล่าสุด / list ledger / render markdown แชร์ได้ | แชร์การ์ด; post-mortem |
+| `mneme rewind capsules` | List capsule ids ที่ pin ไว้ (time-capsules) | เลือก capsule มา replay กับ vendor release ใหม่ |
+| `mneme rewind regression` | สรุปด่วน: การ์ดล่าสุดของแต่ละ vendor + สถานะ | Routing pre-flight |
+| `mneme rewind verify --json '{card}'` | ตรวจ HMAC offline | Cross-machine attestation |
+
+**ทำไมคู่แข่งทำตามไม่ได้:** SWE-bench / HumanEval / MBPP เป็น public snapshot ที่ vendor เอาไป train แล้ว → วัด ability ไม่ได้แล้ว. Repo ของคุณ = private, ตรงกับ domain คุณ, และไม่อยู่ใน training set ของใคร. Mneme = CLI ตัวเดียวที่อยู่ใน repo คุณ + มี audit chain ออก regression card ที่ tamper-evident ได้.
+
+---
+
+## 11. HGP (v2.31.0) — Hallucination Genome Project 🧬
+
+> ทุก claim ที่ ACGV refute จะได้ **HGP-ID style CVE** (`HGP-YYYY-NNNNN`). Hallucination หน้าตาเดียวกันจาก user คนละคน → ได้ id เดียวกัน → catalog cross-user ของ "vendor ไหนโกหกอะไร". Federation = **OPT-IN** (default OFF).
+
+วิธีทำงาน:
+1. ACGV vaccine layer refute claim → `recordHallucination()` ทำงานอัตโนมัติ (best-effort hook ใน `squadron/acgv_vaccine.ts`)
+2. 64-bit simhash ของ claim + ปี → deterministic id `HGP-YYYY-NNNNN` (ชนกัน → suffix `-A`, `-B`, …)
+3. Append-only ledger ที่ `.mneme/hgp/registry.jsonl` — ทุก observation เป็น delta record, loader collapse ด้วย id
+4. Severity = `0.6 × log-saturated observe-count + 0.4 × vendor-spread` ∈ [0, 1]
+5. Federation **OFF default** (CONSENT FABRIC). v2.31.0 ship local-only registry + opt-in scaffolding; federated push envelope จริงๆ ลง v2.32.x
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme hgp record --json '{claim,signature,vendor}'` | บันทึก hallucination + ได้ HGP-ID | Manual attribute hallucination ภายนอก (ACGV auto-fire สำหรับ refute) |
+| `mneme hgp lookup --json '{hgpId}'` | ดึง record จาก HGP-ID | User พิมพ์ HGP-ID มา |
+| `mneme hgp top [--json '{n}']` | Top-N hallucination severity สูงสุด | Dashboard / public roll-up |
+| `mneme hgp severity --json '{vendor,windowDays,allVendors}'` | Per-vendor severity ใน time window | ตรวจ vendor recent footprint; vendor selection |
+| `mneme hgp federate_status` | อ่าน opt-in + local count | Consent audit |
+| `mneme hgp federate_join --json '{optIn,endpoint}'` | Toggle opt-in | User opt-in เอง |
+
+**ทำไม vendor ไหนก็ host แทนไม่ได้:** vendor มี conflict of interest (อยาก model ตัวเองชนะ) + user เชื่อใจให้เก็บ hallucination data ไม่ได้. Mneme = local-first + vendor-neutral + มี audit chain อยู่แล้ว. บทบาทเดียวกับ NVD / MITRE สำหรับ CVE.
+
+---
+
 ## 8. ตัวช่วยทุกวัน
 
 | คำสั่ง | ทำอะไร |

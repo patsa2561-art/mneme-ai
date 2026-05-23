@@ -142,4 +142,32 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.honest_mirror.recent_calibration",
     severity: "info",
   },
+  // ── v2.31.0 REWIND + HGP claims ────────────────────────────────────
+  {
+    id: "claim.rewind.card_count_known",
+    source: "v2.31.0 release notes",
+    text: "REWIND VendorRegressionCard ledger exists (or is honestly empty on first install)",
+    kind: "numeric",
+    asserted: { value: 0, op: ">=", unit: "cards" },
+    probeId: "probe.rewind.card_count",
+    severity: "info",
+  },
+  {
+    id: "claim.hgp.registry_size_known",
+    source: "v2.31.0 release notes",
+    text: "HGP local registry has a non-negative count of distinct HGP-IDs (zero on first install is honest)",
+    kind: "numeric",
+    asserted: { value: 0, op: ">=", unit: "ids" },
+    probeId: "probe.hgp.registry_size",
+    severity: "info",
+  },
+  {
+    id: "claim.hgp.federation_default_off",
+    source: "v2.31.0 release notes",
+    text: "HGP federation is opt-in / private-by-default (CONSENT FABRIC)",
+    kind: "numeric",
+    asserted: { value: 0, op: "=", unit: "boolean" },
+    probeId: "probe.hgp.federation_default_off",
+    severity: "block",
+  },
 ];
