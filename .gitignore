@@ -38,9 +38,9 @@ desktop.ini
 *.swo
 .~lock.*
 
-
 # >>> mneme auto-managed (do not edit between sentinels) <<<
 # AI tooling artifacts -- never commit. Mneme manages this block.
+.mneme-ritual-receipt.json
 # <<< mneme auto-managed >>>
 # Mneme Lineage — never push the private key
 .mneme/lineage/identity/private.pem
@@ -50,4 +50,7 @@ desktop.ini
 .brain-*
 .test-*.mjs
 .test-machine2/
-assets/8*.jpg
+# v2.38.0 — removed `assets/8*.jpg` pattern (it was silently ignoring
+# the author portrait at assets/87643.jpg — confirmed via `git check-
+# ignore -v`). Profile photo is intentionally tracked.
+
