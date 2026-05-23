@@ -156,7 +156,7 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 
 <div align="center">
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/author.jpg" width="180" height="240" style="border-radius: 12px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
+<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github.com/patsa2561-art.png" width="180" height="180" style="border-radius: 50%; border: 3px solid #00d4ff;" alt="Shinnapat Phunsriphatchalakul" /></a>
 
 ### Shinnapat Phunsriphatchalakul
 
@@ -202,12 +202,10 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 | <img src="https://img.shields.io/badge/-Email-EA4335?logo=gmail&logoColor=white" /> | **<a href="mailto:patsa2561@gmail.com" target="_blank" rel="noopener">patsa2561@gmail.com</a>** |
 | <img src="https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white" /> | **<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener">@patsa2561-art</a>** (open an issue, drop a DM via profile) |
 | <img src="https://img.shields.io/badge/-npm-cb3837?logo=npm&logoColor=white" /> | **<a href="https://www.npmjs.com/~mneme_npm" target="_blank" rel="noopener">@mneme_npm</a>** |
-| <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | *<a href="docs/AUTHOR.md" target="_blank" rel="noopener">see AUTHOR.md</a>* (handle on request — email me first to verify) |
-| <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | *<a href="docs/AUTHOR.md" target="_blank" rel="noopener">see AUTHOR.md</a>* (number on request — email me first) |
+| <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | *handle on request — email me first to verify* |
+| <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | *number on request — email me first* |
 
 <sub>**Open to:** collaboration on truth-infrastructure / AI safety / cross-vendor consensus protocols · consulting for safety-critical AI deployments · full-time roles where the bottleneck is trust, not capability.</sub>
-
-<sub>📄 Full bio + project history + work-style notes: <a href="docs/AUTHOR.md" target="_blank" rel="noopener"><b>docs/AUTHOR.md</b></a></sub>
 
 </div>
 
@@ -220,7 +218,6 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 - 📘 Functions (EN): <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener">docs/FUNCTIONS-EN.md</a>
 - 📗 ฟังก์ชั่น (ไทย): <a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener">docs/FUNCTIONS-TH.md</a>
 - 🤖 AI Agent Contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">docs/AI_AGENT_CONTRACT.md</a>
-- 👤 Author / Contact: <a href="docs/AUTHOR.md" target="_blank" rel="noopener">docs/AUTHOR.md</a>
 - 📜 CHANGELOG: <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>
 - 📃 License: <a href="LICENSE" target="_blank" rel="noopener">MIT</a>
 
