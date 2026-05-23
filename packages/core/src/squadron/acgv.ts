@@ -53,6 +53,7 @@ import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vac
 import { vaccineConflictsWithClaim } from "./vaccine_numeric_guard.js";
 import { detectHyperbole } from "./hyperbole_detector.js";
 import { detectSelfReference, dominantClass as selfRefDominantClass } from "./acgv_self_reference.js";
+import { metaSelfVerify } from "./meta_self_verifier.js";
 import { scanCommitHashes } from "./acgv_commit_hash_oracle.js";
 import { detectVersionSemantic } from "./acgv_version_semantic.js";
 import { checkInputHygiene } from "./acgv_input_hygiene.js";
@@ -454,6 +455,53 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
       summary: `IMPOSSIBLE_REFUTE -- hyperbole detector matched: ${hyp.matches.map((m) => m.category).join(", ")}`,
       reasoning: `The claim asserts something the hyperbole detector classifies as unverifiable in this category:\n${hyp.matches.map((m) => `  - ${m.category}: ${m.reason}\n    matched: "${m.matched}"`).join("\n")}`,
       vaccineEmitted: !input.noEmitVaccine,
+    } as ACGVResult;
+  }
+
+  // ───── Layer 0a2: META-SELF-VERIFIER (v2.42.0) ────────────────────────
+  // Closes R1 (audit "Mneme verify self-claim returned IMPOSSIBLE for 17
+  // versions"). The pre-v2.42 self-reference detector ate ALL Mneme-
+  // mentions-Mneme inputs as paradox. But "Mneme is a CLI tool" is a
+  // CHECKABLE FACT, not a paradox. The meta-verifier routes self-claims
+  // to a TRUE/FALSE corpus of atomic Mneme capability shapes — strong
+  // match → SUPPORTED / REFUTED (with citation); no match → fall through
+  // to the paradox layer.
+  const msv = metaSelfVerify(claim);
+  if (msv.matched && (msv.verdict === "SUPPORTED" || msv.verdict === "REFUTED")) {
+    const isRefuted = msv.verdict === "REFUTED";
+    const chandra: ChandrasekharResult = {
+      verdict: isRefuted ? "BLACK_HOLE" : "FUSION",
+      mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: msv.confidence,
+      citations: [],
+      reasoning: msv.evidence,
+    } as ChandrasekharResult;
+    const godel: GodelResult = {
+      status: isRefuted ? "UNSAT" : "SKIPPED",
+      core: isRefuted ? [{ asserted: msv.evidence, proof: [msv.closestFalse?.text ?? ""] }] : [],
+      certificate: msv.evidence,
+      upgrade: false,
+    };
+    if (isRefuted && !input.noEmitVaccine) {
+      try { emitVaccine(repoRoot, claim, `META_SELF_REFUTE :: ${msv.closestFalse?.text}`); } catch { /* best-effort */ }
+    }
+    return {
+      verdict: isRefuted ? "BLACK_HOLE" : "FUSION",
+      confidence: msv.confidence,
+      caveats: [...caveats, `META_SELF_VERIFIED:${msv.verdict}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: isRefuted
+        ? `META_SELF_REFUTE — self-claim about Mneme contradicts known capability: ${msv.evidence}`
+        : `META_SELF_SUPPORT — self-claim about Mneme matches known capability: ${msv.evidence}`,
+      reasoning: `${msv.evidence}\nCorpus matches:\n  TRUE:  ${msv.closestTrue?.text ?? "(none above threshold)"}\n  FALSE: ${msv.closestFalse?.text ?? "(none above threshold)"}`,
+      vaccineEmitted: isRefuted && !input.noEmitVaccine,
     } as ACGVResult;
   }
 

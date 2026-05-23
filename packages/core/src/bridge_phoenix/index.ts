@@ -138,3 +138,16 @@ export async function tickWatchdog(repoRoot: string, state: WatchdogState, cliBi
   state.consecutiveFailures = 0;
   return { probe, respawned: respawn };
 }
+
+// v2.42.0 — CROSS-PROCESS WATCHDOG (closes R8). The in-band watchdog
+// above can't help when the daemon ITSELF dies. The cross-process
+// version registers an OS-level scheduled task that probes + respawns
+// independently of the Mneme daemon process.
+export {
+  installCrossProcessWatchdog,
+  uninstallCrossProcessWatchdog,
+  detectMechanism,
+  type WatchdogMechanism,
+  type InstallOptions as CrossProcessInstallOptions,
+  type InstallResult as CrossProcessInstallResult,
+} from "./cross_process.js";
