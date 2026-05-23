@@ -33,7 +33,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  try { await bridge.close(); } catch { /* */ }
+  try { await bridge.stop(); } catch { /* */ }
   try { rmSync(repoRoot, { recursive: true, force: true }); } catch { /* */ }
 });
 

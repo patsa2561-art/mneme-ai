@@ -154,7 +154,12 @@ function isAuthorized(req: IncomingMessage, token: string): boolean {
  * map it to a clean 400 with a sanitized message — no parser internals.
  */
 export class JsonParseError extends Error {
-  constructor(public readonly cause: unknown) { super("invalid JSON body"); this.name = "JsonParseError"; }
+  public override readonly cause: unknown;
+  constructor(cause: unknown) {
+    super("invalid JSON body");
+    this.name = "JsonParseError";
+    this.cause = cause;
+  }
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {

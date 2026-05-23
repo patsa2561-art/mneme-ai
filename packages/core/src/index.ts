@@ -1344,6 +1344,16 @@ export * as tune from "./tune/index.js";
 // release coverage.
 export * as truthGate from "./truth_gate/index.js";
 
+// v2.29.0 — 🏛 MNEME CONCLAVE: Byzantine consensus across N AI vendors.
+// Closes Q1 of the AI-eval research gap (only academic until now).
+// Plus ANTI-EVAL-AWARENESS ENGINE (AEAE) — the crown jewel that
+// addresses the Opus-4.6-style "vendor detects eval + flips" problem.
+// AEAE rewrites the claim into N variants; vendors that give
+// inconsistent stances across variants get flagged. World-first: no
+// production tool ships cross-vendor Byzantine consensus + eval-
+// awareness detection in one primitive.
+export * as conclave from "./conclave/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with

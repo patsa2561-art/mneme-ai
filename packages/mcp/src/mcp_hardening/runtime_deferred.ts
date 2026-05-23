@@ -122,6 +122,13 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.truth_gate.report",
   "mneme.truth_gate.claims",
   "mneme.truth_gate.verify",
+  // v2.29.0 — CONCLAVE surfaces are stateless reads (verdict pure
+  // function of vendors + claim + AEAE config).
+  "mneme.conclave.run",
+  "mneme.conclave.report",
+  "mneme.conclave.dissent",
+  "mneme.conclave.weights",
+  "mneme.conclave.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",
