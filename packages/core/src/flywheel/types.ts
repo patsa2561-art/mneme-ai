@@ -34,7 +34,8 @@ export type SignalSource =
   | "hgp"
   | "command_history"
   | "primitive_registry"
-  | "marketing_diff";
+  | "marketing_diff"
+  | "citizen_court";
 
 export interface RawFinding {
   /** Source primitive + finding id (stable per source). */

@@ -42,6 +42,10 @@ import { HONEST_MIRROR_TOOLS } from "./_honest_mirror_tools.js";
 import { REWIND_TOOLS } from "./_rewind_tools.js";
 import { HGP_TOOLS } from "./_hgp_tools.js";
 import { FLYWHEEL_TOOLS } from "./_flywheel_tools.js";
+import { CITIZEN_COURT_TOOLS } from "./_citizen_court_tools.js";
+import { MNEMNET_TOOLS } from "./_mnemnet_tools.js";
+import { PULSECOST_TOOLS } from "./_pulsecost_tools.js";
+import { COERCION_AUDIT_TOOLS } from "./_coercion_audit_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -198,6 +202,10 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...REWIND_TOOLS,
     ...HGP_TOOLS,
     ...FLYWHEEL_TOOLS,
+    ...CITIZEN_COURT_TOOLS,
+    ...MNEMNET_TOOLS,
+    ...PULSECOST_TOOLS,
+    ...COERCION_AUDIT_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

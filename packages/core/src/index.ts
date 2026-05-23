@@ -1379,6 +1379,36 @@ export * as rewind from "./rewind/index.js";
 // via a best-effort hook in squadron/acgv_vaccine.
 export * as hgp from "./hgp/index.js";
 
+// v2.33.0 — 🛐 CITIZEN COURT — The AI Honesty Citizen Court. User
+// accepts/rejects an AI suggestion → 1-second reveal of N other
+// vendors' answers → user votes which was most truthful →
+// HMAC-signed verdict → local Honesty Score Card (HSC) per vendor
+// with Wilson-LB on truthful-vote rate + IDE color-dot band. Distinct
+// from v2.19 ARENA-audit `confessional` — this is participatory HCI.
+export * as citizenCourt from "./citizen_court/index.js";
+
+// v2.33.0 — 🕸 MNEMNET — federated AI-honesty network. DP-noised
+// (Laplace mechanism) envelopes per local node aggregate into a
+// Public Honesty Court HSC that no single user can game. Consent
+// OPT-IN (CONSENT FABRIC). v2.33.0 ships local aggregator + opt-in
+// scaffolding; federated endpoint protocol envelope lands v2.34.x.
+export * as mnemnet from "./mnemnet/index.js";
+
+// v2.33.0 — 📐 PULSECOST — MCP context-budget extension v0.1.
+// Three optional headers (X-Context-Available-Tokens request +
+// X-Context-Used-Tokens / X-Context-Trimmed response) let agents
+// budget context across many tool calls per turn. Mneme ships the
+// reference implementation + spec markdown for ratification.
+export * as pulsecost from "./pulsecost/index.js";
+
+// v2.33.0 — 🪤 COERCION audit — Tool-to-Agent Coercion-by-Design
+// taxonomy (USENIX Security 2027 paper class). 8 patterns codified
+// from v2.21.6 CONSENT FABRIC self-audit + HMAC-signed per-source +
+// multi-source roll-up envelope so any researcher can survey N MCP
+// servers and publish the taxonomy with tamper-evident attestation.
+// (Coexists with the older `coercion_taxonomy` 5-tier CLI module.)
+export * as coercion from "./coercion/index.js";
+
 // v2.32.0 — 🌀 FLYWHEEL — self-reflective release organ. 5-stage
 // pipeline (HARVEST → FUSE → PRESCRIBE → EXECUTE → RECIPROCITY) that
 // consumes signal from every audit primitive (TRUTH GATE + PEAK

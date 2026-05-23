@@ -23,7 +23,7 @@ import { fuse, distinctClusterCount } from "./fuse.js";
 import { prescribe } from "./prescribe.js";
 import {
   harvestTruthGate, harvestGauntlet, harvestHonestMirror, harvestRewind,
-  harvestHgp, harvestMarketing, harvestLiveness,
+  harvestHgp, harvestMarketing, harvestLiveness, harvestCitizenCourt,
 } from "./harvest.js";
 import type { PrimitiveSnapshot } from "./liveness.js";
 import { applyToAletheiaWeights } from "./reciprocity.js";
@@ -72,6 +72,7 @@ export async function runFlywheel(input: RunInput): Promise<FlywheelReport> {
     hgp: harvestHgp(repoRoot, perSourceLimit),
     marketing_diff: harvestMarketing(repoRoot, knownClaimIds),
     primitive_registry: harvestLiveness(repoRoot, primitives, minDeleteAge),
+    citizen_court: harvestCitizenCourt(repoRoot, perSourceLimit),
     command_history: [], // surfaced via the personal_cheatsheet API, not as findings
   };
   const allRaw = Object.values(harvest).flat();

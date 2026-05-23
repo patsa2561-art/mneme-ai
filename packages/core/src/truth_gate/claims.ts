@@ -180,4 +180,23 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.flywheel.health",
     severity: "info",
   },
+  // ── v2.33.0 CITIZEN COURT + MNEMNET claims ────────────────────────
+  {
+    id: "claim.citizen_court.verdict_count_known",
+    source: "v2.33.0 release notes",
+    text: "CITIZEN COURT verdict ledger reports a non-negative count (zero on fresh install is honest)",
+    kind: "numeric",
+    asserted: { value: 0, op: ">=", unit: "verdicts" },
+    probeId: "probe.citizen_court.verdict_count",
+    severity: "info",
+  },
+  {
+    id: "claim.mnemnet.federation_default_off",
+    source: "v2.33.0 release notes",
+    text: "MNEMNET federation is opt-in / private-by-default (CONSENT FABRIC)",
+    kind: "numeric",
+    asserted: { value: 0, op: "=", unit: "boolean" },
+    probeId: "probe.mnemnet.federation_default_off",
+    severity: "block",
+  },
 ];

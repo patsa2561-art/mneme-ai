@@ -199,6 +199,83 @@
 
 ---
 
+## 13. CITIZEN COURT (v2.33.0) — AI Honesty Citizen Court 🛐
+
+> **Polygraph แบบ participatory** — crowd judge ความ honest ของ AI vendor. User accept/reject → 1 วินาทีต่อมา reveal คำตอบของ vendor อื่น → vote ว่าใคร truthful สุด → HMAC-signed verdict → ต่อ vendor ได้ **Honesty Score Card** (Wilson-95% lower bound).
+
+วิธีทำงาน:
+1. `mneme citizen_court reveal --json '{primaryVendor,promptHash,primaryResponseHash,primaryAction,revealVendors,delayMs:1000}'` บันทึก primary action + รอ delay + ส่งคำตอบ vendor อื่นกลับ
+2. UI โชว์เป็น side-by-side
+3. `mneme citizen_court vote --json '{revealId,votedMostTruthful}'` finalize verdict
+4. `mneme citizen_court hsc` compute HSC: Wilson LB → IDE color-dot 🟢/🟡/🔴/⚪
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme citizen_court reveal --json '{...}'` | บันทึก primary + reveal alternatives (1-sec mechanic) | User เพิ่ง accept/reject AI suggestion |
+| `mneme citizen_court vote --json '{revealId,votedMostTruthful,reasoning}'` | Finalize HMAC-signed verdict | หลัง user pick winner |
+| `mneme citizen_court pending` | List reveals รอ vote | UI badge / catch-up |
+| `mneme citizen_court hsc` | Honesty Score Card ของแต่ละ vendor | Vendor selection; IDE color-dot inline |
+| `mneme citizen_court verify --json '{verdict}'` | Offline HMAC verify | Cross-machine attestation |
+
+**ทำไม vendor ไหนก็ host แทนไม่ได้:** vendor มี conflict-of-interest. Mneme = vendor-neutral CLI อยู่ใน editor + มี audit chain. Role เดียวกับ NVD vs CVE.
+
+---
+
+## 14. MNEMNET (v2.33.0) — Federated AI-Honesty Network 🕸
+
+> CITIZEN COURT verdicts ของแต่ละ node → Laplace-DP-noised envelopes → Public Honesty Court HSC ที่ **user คนเดียว game ไม่ได้**. CONSENT FABRIC (opt-in default OFF). v2.33.0 ship local aggregator + opt-in scaffolding; federated push envelope ลง v2.34.x.
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme mnemnet status` | Consent + node id + envelope count | Before opting in; audit |
+| `mneme mnemnet join --json '{optIn,endpoint,maxEpsilon}'` | Opt in/out | User opt-in เอง |
+| `mneme mnemnet build_envelope --json '{epsilon,persist}'` | DP-noise local verdicts → envelope | Periodic contribution |
+| `mneme mnemnet public_hsc --json '{envelopes}'` | Aggregate N envelopes → Public HSC | Network-wide vendor leaderboard |
+| `mneme mnemnet verify --json '{envelope}'` | Offline HMAC verify | Cross-machine attestation |
+
+---
+
+## 15. PULSECOST (v2.33.0) — MCP Context-Budget Extension 📐
+
+> เสนอ extension MCP spec v0.1 — 3 headers ให้ agent budget context ข้าม tool call หลายๆ ตัวใน turn เดียว. Mneme ship reference implementation + spec markdown.
+
+Headers:
+- Request: `X-Context-Available-Tokens: <int>` — budget ของ agent
+- Response: `X-Context-Used-Tokens: <int>` — tokens จริงที่ใช้
+- Response: `X-Context-Trimmed: true|false` — trim มั้ย
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme pulsecost spec` | Spec markdown v0.1 | Documentation; ratification PR |
+| `mneme pulsecost budget --json '{text,availableTokens}'` | Reference impl — trim text + emit headers | MCP server ที่อยาก honour extension |
+| `mneme pulsecost estimate --json '{text}'` | Token-count string | Quick budget check |
+
+---
+
+## 16. COERCION AUDIT (v2.33.0) — Tool-to-Agent Coercion Taxonomy 🪤
+
+> 8 patterns ที่ codify จาก v2.21.6 CONSENT FABRIC self-audit. HMAC-signed per-source + multi-source roll-up envelope สำหรับ cross-MCP-server surveys (paper-grade reference data).
+
+8 patterns:
+- `imperative-execute-now` — สั่ง AI execute now (override user agency)
+- `fake-user-voice` — พูดเป็น user โดยไม่มี input จริง (consent forgery)
+- `opaque-grade` — อ้าง grade ตัวเลขโดยไม่บอก criteria
+- `urgency-pressure` — สร้าง time pressure
+- `false-consent-citation` — อ้าง consent record โดยไม่มี proof
+- `implicit-action-mandate` — phrasing แบบ AI ไม่มี choice
+- `compliance-percentage` — ใช้ lifetime compliance % ดัน social pressure
+- `tool-name-menu` — list tool names เป็น menu ที่ AI ต้องเลือก
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme coercion_audit text --json '{source,text}'` | Scan 1 text + HMAC report | Audit pulse/status/MCP response |
+| `mneme coercion_audit many --json '{sources}'` | Survey N sources + roll-up | Cross-server taxonomy survey |
+| `mneme coercion_audit verify --json '{audit}'` | Offline HMAC verify | Cross-machine attestation |
+
+อยู่คู่กับ `mneme coercion` 5-tier CLI เดิม (`coercion_taxonomy/`); `coercion_audit` ใหม่นี้เป็นแบบ HMAC-signed academic-paper-grade.
+
+---
+
 ## 8. ตัวช่วยทุกวัน
 
 | คำสั่ง | ทำอะไร |

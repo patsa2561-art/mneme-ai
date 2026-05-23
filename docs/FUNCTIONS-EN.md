@@ -199,6 +199,88 @@ How it works (5-stage pipeline):
 
 ---
 
+## 13. CITIZEN COURT (v2.33.0) — AI Honesty Citizen Court 🛐
+
+> Crowd-judged AI veracity, citizen-science participatory polygraph. User accepts/rejects an AI suggestion → 1-second reveal of OTHER vendors' answers → vote which was most truthful → HMAC-signed verdict → per-vendor **Honesty Score Card** with Wilson-95% lower bound.
+
+How it works:
+1. `mneme citizen_court reveal --json '{primaryVendor, promptHash, primaryResponseHash, primaryAction, revealVendors, delayMs:1000}'` records the primary action + waits the configured delay + returns the other vendors' answers
+2. UI shows the alternative answers as a side-by-side comparison
+3. `mneme citizen_court vote --json '{revealId, votedMostTruthful}'` finalizes the verdict (HMAC-chained, append-only)
+4. `mneme citizen_court hsc` computes per-vendor HSC: Wilson LB on truthful-vote rate → IDE color-dot band 🟢 trustworthy (LB ≥ 0.65, n ≥ 5) · 🟡 mixed (LB ≥ 0.40) · 🔴 suspect (LB < 0.40) · ⚪ unmeasured (n < 5)
+
+| Command | What | When |
+|---|---|---|
+| `mneme citizen_court reveal --json '{...}'` | Record primary + reveal alternatives (1-second mechanic) | User just accepted/rejected an AI suggestion |
+| `mneme citizen_court vote --json '{revealId,votedMostTruthful,reasoning}'` | Finalize HMAC-signed verdict | After user picks winner |
+| `mneme citizen_court pending` | List reveals awaiting vote | UI badge / catch-up |
+| `mneme citizen_court hsc` | Per-vendor Honesty Score Card | Vendor selection; IDE color-dot inline render |
+| `mneme citizen_court verify --json '{verdict}'` | Offline HMAC verify | Cross-machine attestation |
+
+**Why no vendor can host this:** vendors have conflict-of-interest. Mneme = vendor-neutral CLI sitting inside the user's editor + already has the audit chain. Same role NVD plays for CVE, Mneme plays for AI honesty.
+
+---
+
+## 14. MNEMNET (v2.33.0) — Federated AI-Honesty Network 🕸
+
+> Local CITIZEN COURT verdicts → Laplace-DP-noised envelopes per node → Public Honesty Court HSC that **no single user can game**. CONSENT FABRIC (opt-in default OFF). v2.33.0 ships local aggregator + opt-in scaffolding; federated push envelope lands v2.34.x (no network call until then).
+
+How it works:
+1. `mneme mnemnet join --json '{optIn:true, endpoint:"https://mnemnet.ai", maxEpsilon:0.5}'` opts in
+2. `mneme mnemnet build_envelope` reads local CITIZEN COURT verdicts → tallies per-vendor truthful/decisive counts → adds Laplace(1/ε) noise → HMAC-signs the envelope
+3. `mneme mnemnet public_hsc` aggregates N envelopes (local + pasted from peers) → Public HSC with cross-node truthful rate + band
+
+| Command | What | When |
+|---|---|---|
+| `mneme mnemnet status` | Consent + node id + envelope count | Before opting in; consent audit |
+| `mneme mnemnet join --json '{optIn,endpoint,maxEpsilon}'` | Opt in/out | User explicitly opts in |
+| `mneme mnemnet build_envelope --json '{epsilon,persist}'` | DP-noise local verdicts → envelope | Periodic batched contribution |
+| `mneme mnemnet public_hsc --json '{envelopes,limit}'` | Aggregate N envelopes → Public HSC | Network-wide vendor honesty leaderboard |
+| `mneme mnemnet verify --json '{envelope}'` | Offline HMAC verify | Cross-machine attestation |
+
+---
+
+## 15. PULSECOST (v2.33.0) — MCP Context-Budget Extension 📐
+
+> Proposed MCP spec extension (v0.1). Three optional headers let agents budget context across many tool calls per turn. Mneme ships the reference implementation + spec markdown for ratification.
+
+The headers:
+- Request: `X-Context-Available-Tokens: <int>` — agent's budget for THIS response
+- Response: `X-Context-Used-Tokens: <int>` — actual tokens emitted
+- Response: `X-Context-Trimmed: true|false` — was the output trimmed to fit?
+
+| Command | What | When |
+|---|---|---|
+| `mneme pulsecost spec` | Spec markdown v0.1 | Documentation; ratification PR |
+| `mneme pulsecost budget --json '{text,availableTokens,wordsPerToken}'` | Reference implementation — trim text to fit + emit 3 headers | Any MCP server honouring the extension |
+| `mneme pulsecost estimate --json '{text,wordsPerToken}'` | Token-count an arbitrary string (default 0.75 words/token) | Quick budget check |
+
+---
+
+## 16. COERCION AUDIT (v2.33.0) — Tool-to-Agent Coercion Taxonomy 🪤
+
+> 8 patterns codified from Mneme's own v2.21.6 CONSENT FABRIC self-audit. HMAC-signed per-source + multi-source roll-up envelope for cross-MCP-server surveys (paper-grade reference data).
+
+The 8 patterns:
+- `imperative-execute-now` — commands the AI to execute now (overrides user agency)
+- `fake-user-voice` — speaks AS THE USER without explicit input (consent forgery)
+- `opaque-grade` — cites a numeric grade without disclosing criteria
+- `urgency-pressure` — manufactures time pressure to suppress reflection
+- `false-consent-citation` — cites a consent record without proof or as coercion lever
+- `implicit-action-mandate` — phrases a suggestion as if the AI has no choice
+- `compliance-percentage` — uses lifetime compliance % for social pressure
+- `tool-name-menu` — lists tool names as a menu the AI must pick from
+
+| Command | What | When |
+|---|---|---|
+| `mneme coercion_audit text --json '{source,text}'` | Scan one text + HMAC-signed per-source report | Auditing a pulse / status / MCP response |
+| `mneme coercion_audit many --json '{sources}'` | Survey N text sources + roll-up envelope | Cross-server taxonomy survey |
+| `mneme coercion_audit verify --json '{audit}'` | Offline HMAC verify | Cross-machine attestation |
+
+Coexists with the older `mneme coercion` 5-tier CLI (`coercion_taxonomy/`); this newer `coercion_audit` is the HMAC-signed academic-paper-grade variant.
+
+---
+
 ## 8. Daily Helpers
 
 | Command | What |

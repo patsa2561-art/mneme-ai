@@ -161,6 +161,26 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.flywheel.marketing",
   "mneme.flywheel.reciprocity",
   "mneme.flywheel.verify",
+  // v2.33.0 — CITIZEN COURT surfaces are local-first reads/writes.
+  "mneme.citizen_court.reveal",
+  "mneme.citizen_court.vote",
+  "mneme.citizen_court.pending",
+  "mneme.citizen_court.hsc",
+  "mneme.citizen_court.verify",
+  // v2.33.0 — MNEMNET surfaces are stateless reads (federation = opt-in stub).
+  "mneme.mnemnet.status",
+  "mneme.mnemnet.join",
+  "mneme.mnemnet.build_envelope",
+  "mneme.mnemnet.public_hsc",
+  "mneme.mnemnet.verify",
+  // v2.33.0 — PULSECOST surfaces are pure functions (no fs / no git).
+  "mneme.pulsecost.spec",
+  "mneme.pulsecost.budget",
+  "mneme.pulsecost.estimate",
+  // v2.33.0 — COERCION AUDIT surfaces are pure regex scans (no runtime needed).
+  "mneme.coercion_audit.text",
+  "mneme.coercion_audit.many",
+  "mneme.coercion_audit.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

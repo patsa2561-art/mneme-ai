@@ -50,6 +50,12 @@ function clusterKeys(f: RawFinding): string[] {
     if (file) keys.push(`marketing:${file}`);
   } else if (f.source === "command_history") {
     keys.push(`cmd:${f.id}`);
+  } else if (f.source === "citizen_court") {
+    // v2.33.0 — CITIZEN COURT loss findings cluster by vendor so they
+    // fuse with HONEST MIRROR + REWIND vendor signals (same vendor →
+    // same cluster → +30% composition bonus).
+    const v = (f.detail?.["vendor"] as string | undefined) ?? "";
+    if (v) keys.push(`vendor:${v}`);
   }
   // Always include the (source, id) self-key as a fallback so isolated
   // findings still get a stable cluster id.

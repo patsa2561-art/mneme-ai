@@ -338,6 +338,45 @@ const probes: Probe[] = [
     },
   },
 
+  // ── CITIZEN COURT honesty corpus (v2.33.0) ────────────────────────
+  // Did we record any CITIZEN COURT verdicts? null = no verdicts yet.
+  // This is bound to a claim that asserts a non-negative count — fresh
+  // installs honestly report 0; populated installs show the size.
+  {
+    id: "probe.citizen_court.verdict_count",
+    kind: "numeric",
+    description: "Number of CITIZEN COURT verdicts on disk. 0 = none yet. null = directory missing.",
+    run: async (ctx) => {
+      try {
+        const p = join(ctx.cwd, ".mneme", "citizen_court", "verdicts.jsonl");
+        if (!existsSync(p)) return { value: null, evidence: "no citizen_court directory (run reveal+vote first)" };
+        const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
+        return { value: lines.length, evidence: `${lines.length} verdict(s) recorded` };
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
+  // ── MNEMNET federation default OFF (v2.33.0) ─────────────────────
+  // Marketing claim: MNEMNET federation is opt-in (CONSENT FABRIC).
+  // Returns 0 when consent.optIn is false (the expected default).
+  {
+    id: "probe.mnemnet.federation_default_off",
+    kind: "numeric",
+    description: "0 when MNEMNET federation consent is OFF (default per CONSENT FABRIC); 1 when user opted in.",
+    run: async (ctx) => {
+      try {
+        const p = join(ctx.cwd, ".mneme", "mnemnet", "consent.json");
+        if (!existsSync(p)) return { value: 0, evidence: "no consent file = OFF (default)" };
+        const j = JSON.parse(readFileSync(p, "utf8")) as { optIn?: boolean };
+        return { value: j.optIn ? 1 : 0, evidence: `optIn=${Boolean(j.optIn)}` };
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── FLYWHEEL health (v2.32.0) ────────────────────────────────────
   // Latest FLYWHEEL health score. 100 = no blocking actions, system
   // healthy. null = no flywheel report on file yet.

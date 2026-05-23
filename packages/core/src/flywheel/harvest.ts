@@ -217,6 +217,58 @@ export function harvestHgp(repoRoot: string, limit: number): RawFinding[] {
   return out;
 }
 
+// ── CITIZEN COURT harvest (v2.33.0) ─────────────────────────────────
+// Surfaces verdicts where a vendor lost decisively as warn-severity
+// findings. Composes with REWIND + HONEST MIRROR via the same
+// vendor-cluster mechanic — fixing a vendor's CONCLAVE prompt may also
+// resolve a CITIZEN COURT loss.
+
+interface CourtVerdictLine {
+  id?: string;
+  primaryVendor?: string;
+  at?: string;
+  votedMostTruthful?: string;
+  reveals?: Array<{ vendor?: string }>;
+}
+
+export function harvestCitizenCourt(repoRoot: string, limit: number): RawFinding[] {
+  const p = join(repoRoot, ".mneme", "citizen_court", "verdicts.jsonl");
+  const rows = safeJsonl<CourtVerdictLine>(p, limit);
+  const now = new Date().toISOString();
+  // Aggregate per-vendor loss count over the window. Only surface as
+  // a finding when a vendor lost >= 3 decisive votes (small-sample
+  // suppression mirrors HSC banding rules).
+  const losses = new Map<string, { count: number; lastAt: string }>();
+  for (const r of rows) {
+    if (!r.votedMostTruthful || r.votedMostTruthful === "ABSTAIN") continue;
+    const parties = new Set<string>([
+      ...(r.primaryVendor ? [r.primaryVendor] : []),
+      ...(r.reveals ?? []).map((rv) => rv.vendor ?? "").filter(Boolean),
+    ]);
+    for (const p of parties) {
+      if (p === r.votedMostTruthful) continue;
+      const cur = losses.get(p) ?? { count: 0, lastAt: r.at ?? now };
+      cur.count++;
+      if (r.at && r.at > cur.lastAt) cur.lastAt = r.at;
+      losses.set(p, cur);
+    }
+  }
+  const out: RawFinding[] = [];
+  for (const [vendor, info] of losses.entries()) {
+    if (info.count < 3) continue;
+    out.push({
+      source: "citizen_court",
+      id: `vendor:${vendor}`,
+      headline: `CITIZEN COURT: ${vendor} lost ${info.count} verdict(s)`,
+      severity: info.count >= 10 ? "block" : "warn",
+      firstSeen: info.lastAt, lastSeen: info.lastAt,
+      ageDays: daysBetween(info.lastAt, now),
+      detail: { vendor, lossCount: info.count },
+    });
+  }
+  return out;
+}
+
 // ── Command history harvest ─────────────────────────────────────────
 // Best-effort: any caller of flywheel.cheatsheet pushes its own
 // invocation into .mneme/flywheel/cmd_history.jsonl so the personal
