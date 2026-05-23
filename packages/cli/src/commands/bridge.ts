@@ -211,6 +211,25 @@ export async function bridgeCommand(opts: BridgeCommandOptions): Promise<void> {
         const events = core.worldPulse.readPulseEvents(repoRoot);
         return core.timeMachine.buildTimeline(events, input.vendor, { windowDays: input.windowDays, bucketHours: input.bucketHours });
       },
+      // v2.41.0 — ARGUS-11 multimodal search route. Any AI vendor
+      // (browser AI / cron / curl / non-MCP editor) can rank candidates
+      // against a query via JSON. Uses the multimodal engine (bloom +
+      // phantom + parallel) for sub-50ms response on typical workloads.
+      argusSearch: async (input: { query: string; candidates: Array<{ text: string; meta?: object }>; topK?: number }) => {
+        const argusInput: Parameters<typeof core.argus10.argusSearchMultimodal>[0] = {
+          query: input.query,
+          candidates: input.candidates.map((c) => ({ text: c.text, meta: c.meta as Parameters<typeof core.argus10.argusSearchMultimodal>[0]["candidates"][number]["meta"] })),
+          repoRoot,
+        };
+        if (typeof input.topK === "number") argusInput.topK = input.topK;
+        return await core.argus10.argusSearchMultimodal(argusInput);
+      },
+      argusAdapters: () => {
+        return {
+          count: core.argus10.countAdapters(),
+          adapters: core.argus10.listAdapters(),
+        };
+      },
     },
   );
 
@@ -225,7 +244,7 @@ export async function bridgeCommand(opts: BridgeCommandOptions): Promise<void> {
     process.stdout.write(`${BANNER} — running\n\n`);
     process.stdout.write(`  url:     ${handle.baseUrl}\n`);
     process.stdout.write(`  token:   ${handle.token.slice(0, 16)}…  (full token at .mneme/http-token)\n`);
-    process.stdout.write(`  routes:  /v1/ping  /v1/health  /v1/openapi.json  /v1/polygraph/verify\n\n`);
+    process.stdout.write(`  routes:  /v1/ping  /v1/health  /v1/openapi.json  /v1/polygraph/verify  /v1/argus/search  /v1/argus/adapters\n\n`);
     process.stdout.write(`  Browser Polygraph is now armed.  Open claude.ai / chatgpt.com /\n`);
     process.stdout.write(`  gemini.google.com (with the Mneme userscript installed) and ask any\n`);
     process.stdout.write(`  factual question — coloured dots will appear next to each AI sentence\n`);

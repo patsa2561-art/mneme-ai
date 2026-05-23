@@ -511,4 +511,55 @@ export function registerArgusCommand(program: Command): void {
         process.exitCode = 1;
       }
     });
+
+  // v2.41.0 — multimodal subcommand: candidates can be JSON with image+code meta.
+  a.command("multimodal")
+    .description("ARGUS-11 multimodal search — text + image + code in one ranked result. Includes bloom pre-filter + PHANTOM EYE lazy eval + parallel fan-out. Pass --candidates-json for full Candidate objects with meta.")
+    .option("--query <query>", "User query.")
+    .option("--candidates <list>", "Plain '||'-separated text candidates.")
+    .option("--candidates-json <json>", "JSON array of {text, meta:{codeText?, imageBytes?, imagePath?, vendor?, recencyDays?}}.")
+    .option("--topK <n>", "Cap returned candidates.")
+    .option("--skip-bloom", "Skip the bloom pre-filter.")
+    .option("--skip-phantom", "Skip phantom-eye optimization (always run all eyes).")
+    .action(async (opts: { query?: string; candidates?: string; candidatesJson?: string; topK?: string; skipBloom?: boolean; skipPhantom?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const q = opts.query ?? "";
+        if (!q) { writeJson({ ok: false, error: "pass --query" }); process.exitCode = 1; return; }
+        let cands: Array<{ text: string; meta?: object }> = [];
+        if (opts.candidatesJson) cands = JSON.parse(opts.candidatesJson) as Array<{ text: string; meta?: object }>;
+        else if (opts.candidates) cands = opts.candidates.split("||").map((s) => s.trim()).filter(Boolean).map((t) => ({ text: t }));
+        if (cands.length === 0) { writeJson({ ok: false, error: "pass --candidates or --candidates-json" }); process.exitCode = 1; return; }
+        const input: Parameters<typeof core.argus10.argusSearchMultimodal>[0] = {
+          query: q,
+          candidates: cands.map((c) => ({ text: c.text, meta: c.meta as Parameters<typeof core.argus10.argusSearchMultimodal>[0]["candidates"][number]["meta"] })),
+          repoRoot: process.cwd(),
+        };
+        if (opts.topK) input.topK = parseInt(opts.topK, 10);
+        const r = await core.argus10.argusSearchMultimodal(input, {
+          ...(opts.skipBloom ? { skipBloom: true } : {}),
+          ...(opts.skipPhantom ? { skipPhantom: true } : {}),
+        });
+        writeJson({ ok: true, result: r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  a.command("adapters")
+    .description("List ARGUS-11 vendor adapters (editors / web AIs / direct HTTP).")
+    .option("--transport <t>", "Filter: mcp | http-bridge | userscript | cli.")
+    .action(async (opts: { transport?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const t = opts.transport as "mcp" | "http-bridge" | "userscript" | "cli" | undefined;
+        const list = t ? core.argus10.adaptersByTransport(t) : core.argus10.listAdapters();
+        const live = list.filter((x) => x.status === "live").length;
+        writeJson({ ok: true, total: list.length, live, adapters: list });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
 }

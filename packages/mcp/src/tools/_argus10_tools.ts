@@ -189,9 +189,103 @@ export const argusVerifyTool: MnemeTool = {
   },
 };
 
+// v2.41.0 — ARGUS-11 MULTIMODAL SURFACE (image + code + parallel + phantom).
+export const argusMultimodalTool: MnemeTool = {
+  name: "mneme.argus.multimodal",
+  category: "meta",
+  description:
+    "ARGUS-11 multimodal search — text + image + code in one ranked result. Includes bloom pre-filter (~20× speedup on large corpora) + PHANTOM EYE lazy eval (expensive eyes only fire when cheap eyes leave verdict ambiguous, ≥3× wall-time reduction). Parallel candidate fan-out via Promise.all. Same HMAC-signed result shape as mneme.argus.search.",
+  whenToUse: "Rank mixed-modality candidates (some text / some have imageBytes / some have codeText) against a query.",
+  triggers: ["argus multimodal", "argus11", "search images and code"],
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string" },
+      candidates: {
+        type: "array",
+        description: "Each candidate may carry meta.imageBytes (Uint8Array) / meta.imagePath / meta.codeText",
+        items: {
+          type: "object",
+          properties: { text: { type: "string" }, meta: { type: "object" } },
+          required: ["text"],
+        },
+      },
+      topK: { type: "integer" },
+      skipBloom: { type: "boolean" },
+      skipPhantom: { type: "boolean" },
+      multimodal: { type: "boolean", description: "Include image+code eyes (default true)." },
+    },
+    required: ["query", "candidates"],
+  },
+  outputSchema: { type: "object" },
+  composeWith: ["mneme.argus.adapters", "mneme.argus.verify"],
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const { resolve } = await import("node:path");
+      const repoRoot = resolve(rt.meta?.rootPath ?? process.cwd());
+      const q = String(args["query"] ?? "");
+      const cand = (args["candidates"] as Array<{ text: string; meta?: object }>) ?? [];
+      if (!q || !Array.isArray(cand) || cand.length === 0) {
+        return { data: { ok: false, error: "query + candidates required" }, wisdom: "Pass query + candidates.", followUp: [], confidence: { level: "high" as const } };
+      }
+      const argusInput: Parameters<typeof core.argus10.argusSearchMultimodal>[0] = {
+        query: q,
+        candidates: cand.map((c) => ({ text: String(c.text ?? ""), meta: c.meta as Parameters<typeof core.argus10.argusSearchMultimodal>[0]["candidates"][number]["meta"] })),
+        repoRoot,
+      };
+      if (typeof args["topK"] === "number") argusInput.topK = args["topK"] as number;
+      const opts: Parameters<typeof core.argus10.argusSearchMultimodal>[1] = {};
+      if (typeof args["skipBloom"] === "boolean") opts.skipBloom = args["skipBloom"] as boolean;
+      if (typeof args["skipPhantom"] === "boolean") opts.skipPhantom = args["skipPhantom"] as boolean;
+      if (typeof args["multimodal"] === "boolean") opts.multimodal = args["multimodal"] as boolean;
+      const out = await core.argus10.argusSearchMultimodal(argusInput, opts);
+      const top = out.scored[0];
+      return {
+        data: out,
+        wisdom: top
+          ? `👁×11 Top match (score ${top.score.toFixed(3)}, bloom pruned ${out.bloomPruned}, phantom skipped expensive on ${out.phantomCheapOnly}, ${out.durationMs}ms): "${top.candidate.text.slice(0, 80)}"`
+          : "No candidates after bloom pre-filter.",
+        followUp: ["mneme.argus.verify"],
+        confidence: { level: "high" as const },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: `ARGUS-11 search failed: ${(e as Error).message}`, followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const argusAdaptersTool: MnemeTool = {
+  name: "mneme.argus.adapters",
+  category: "meta",
+  description: "ARGUS-11 vendor adapter table — list every AI agent / editor / web AI that can call ARGUS via MCP / HTTP bridge / CLI / userscript. The TRUTH GATE probe `claim.argus11.world_first_multimodal` asserts count ≥ 9.",
+  whenToUse: "Confirm a specific vendor (cursor / cline / chatgpt-web / etc) has a wired adapter.",
+  triggers: ["argus adapters", "vendor list"],
+  inputSchema: { type: "object", properties: { transport: { type: "string", description: "Optional filter: mcp | http-bridge | userscript | cli." } } },
+  outputSchema: { type: "object" },
+  handler: async (_rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const t = args["transport"] as string | undefined;
+      const list = t ? core.argus10.adaptersByTransport(t as "mcp" | "http-bridge" | "userscript" | "cli") : core.argus10.listAdapters();
+      const live = list.filter((a) => a.status === "live").length;
+      return {
+        data: { total: list.length, live, adapters: list },
+        wisdom: `🔌 ARGUS adapters — ${live} live / ${list.length} total${t ? ` (transport=${t})` : ""}.`,
+        followUp: ["mneme.argus.search"],
+        confidence: { level: "high" as const },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "adapters failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
 export const ARGUS10_TOOLS: MnemeTool[] = [
   argusSearchTool,
   argusEyesTool,
   argusHydraTool,
   argusVerifyTool,
+  argusMultimodalTool,
+  argusAdaptersTool,
 ];

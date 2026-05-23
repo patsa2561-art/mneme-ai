@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/title.svg" alt="μνήμη · Mneme" width="720">
+<img src="../assets/title.svg" alt="μνήμη · Mneme" width="720">
 
 # The Intelligent Assistant fabric every AI agent runs on top of. 🧠 🔴
 

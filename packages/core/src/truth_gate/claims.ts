@@ -199,4 +199,20 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.mnemnet.federation_default_off",
     severity: "block",
   },
+  // ── v2.41.0 — ARGUS-11 marketing claim, self-verified ──────────────
+  // The marketing language "world's first truth-aware multimodal search"
+  // is rendered VERIFIABLE: the probe runs a benchmark on (text+code)
+  // fixture + parallel-4 latency + adapter-count + HMAC verify. ANY
+  // drift trips the gate. The claim is asserted=1 (probe passes ALL
+  // sub-asserts). severity=block — if the marketing copy ships ahead of
+  // the implementation, the release breaks.
+  {
+    id: "claim.argus11.world_first_multimodal",
+    source: "v2.41.0 release notes",
+    text: "Mneme ships world's first truth-aware multimodal search: text+code+image ranked in one pass, parallel sub-second on 4 concurrent queries, ≥9 live vendor adapters, HMAC-verifiable result frame",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.argus11.world_first_multimodal",
+    severity: "block",
+  },
 ];

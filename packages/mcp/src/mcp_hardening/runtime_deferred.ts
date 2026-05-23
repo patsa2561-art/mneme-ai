@@ -192,6 +192,9 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.argus.eyes",
   "mneme.argus.hydra",
   "mneme.argus.verify",
+  // v2.41.0 — ARGUS-11 multimodal + adapters are pure functions too.
+  "mneme.argus.multimodal",
+  "mneme.argus.adapters",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

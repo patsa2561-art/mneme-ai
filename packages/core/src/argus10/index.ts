@@ -44,3 +44,32 @@ export {
 export {
   argusSearch, verifyArgusResult,
 } from "./engine.js";
+
+// v2.41.0 — multimodal surface.
+export {
+  argusSearchMultimodal,
+  type ArgusMultimodalOptions,
+  type ArgusMultimodalResult,
+} from "./engine_multimodal.js";
+
+export {
+  MULTIMODAL_EYES,
+  EYE_11_image_modality,
+  EYE_12_code_modality,
+  lexCode, diceMultiset, popcount64,
+} from "./eyes_multimodal.js";
+
+export {
+  buildBloom, membershipFraction, prefilterCandidates,
+  type BloomFilter,
+} from "./bloom_prefilter.js";
+
+export {
+  phantomDecide, partitionEyes, CHEAP_EYE_IDS, EXPENSIVE_EYE_IDS,
+  type PhantomDecision,
+} from "./phantom_eye.js";
+
+export {
+  VENDOR_ADAPTERS, listAdapters, countAdapters, findAdapter, adaptersByTransport,
+  type VendorAdapter, type VendorTransport,
+} from "./vendor_adapters.js";

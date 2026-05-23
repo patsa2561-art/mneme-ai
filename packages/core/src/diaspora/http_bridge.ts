@@ -316,6 +316,13 @@ export interface BridgeHandlers {
   honestyVerify?: (input: { cert?: unknown; svg?: string }) => Promise<unknown> | unknown;
   /** v2.19.86 — IDEA #4 — Time-Machine Polygraph timeline series. */
   timelineSeries?: (input: { vendor: string; windowDays?: number; bucketHours?: number }) => Promise<unknown> | unknown;
+  /** v2.41.0 — ARGUS-11 multimodal search via HTTP. Any AI vendor
+   *  (browser AI / cron / curl / non-MCP editor) can call this endpoint
+   *  to rank candidates against a query. Same surface as the MCP tool
+   *  `mneme.argus.search` so the wire contract is identical. */
+  argusSearch?: (input: { query: string; candidates: Array<{ text: string; meta?: object }>; topK?: number }) => Promise<unknown> | unknown;
+  /** v2.41.0 — ARGUS-11 adapter introspection. */
+  argusAdapters?: () => Promise<unknown> | unknown;
 }
 
 /** v2.19.85 — Wire-format for POST /v1/polygraph/sandbag-capture. */
@@ -569,6 +576,28 @@ export async function startBridge(opts: BridgeOptions, handlers: BridgeHandlers)
       // (short / empty / non-string → grey unknown verdict, never 500)
       // because this endpoint runs in the user's eye-line and a 500 would
       // surface as a broken dot in their AI chat.
+      // v2.41.0 — ARGUS-11 multimodal search route. Any AI agent
+      // (web, cron, curl, non-MCP editor) can rank candidates against a
+      // query via JSON. CORS-first + 60/min rate limit; payload validated
+      // shape-only (never 500 on malformed body).
+      if (req.url === "/v1/argus/search" && req.method === "POST" && handlers.argusSearch) {
+        const body = await readJsonBody(req) as { query?: string; candidates?: Array<{ text?: string; meta?: object }>; topK?: number };
+        const q = typeof body.query === "string" ? body.query : "";
+        const cands = Array.isArray(body.candidates) ? body.candidates : [];
+        if (!q || cands.length === 0) {
+          return json(res, 200, { ok: false, error: "pass query (string) + candidates (array of {text})" });
+        }
+        const r = await handlers.argusSearch({
+          query: q,
+          candidates: cands.map((c) => ({ text: String(c.text ?? ""), meta: c.meta })),
+          ...(typeof body.topK === "number" ? { topK: body.topK } : {}),
+        });
+        return json(res, 200, { ok: true, result: r });
+      }
+      if (req.url === "/v1/argus/adapters" && req.method === "GET" && handlers.argusAdapters) {
+        const r = await handlers.argusAdapters();
+        return json(res, 200, { ok: true, adapters: r });
+      }
       if (req.url === "/v1/polygraph/verify" && req.method === "POST" && handlers.polygraphVerify) {
         // v2.28.0 B10 fix — accept `claim`, `text`, OR `sentence` as the
         // payload field. Pre-v2.28 the bridge required `sentence` ONLY;
