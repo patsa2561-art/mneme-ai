@@ -2,7 +2,7 @@
   "name": "mneme-ai",
   "version": "2.37.0",
   "mcpName": "io.github.patsa2561-art/mneme-ai",
-  "description": "Mneme เนโฌโ€ the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.",
+  "description": "Mneme — the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -8,11 +8,11 @@
 
 <br/><br/>
 
-<a href="https://www.npmjs.com/package/mneme-ai"><img alt="npm" src="https://img.shields.io/npm/v/mneme-ai?label=npm&color=cb3837&logo=npm&style=for-the-badge" /></a>
-<a href="docs/AI_AGENT_CONTRACT.md"><img alt="MCP tools" src="https://img.shields.io/badge/MCP%20tools-820%2B-c084fc?style=for-the-badge" /></a>
-<a href="docs/FUNCTIONS-EN.md"><img alt="GAUNTLET" src="https://img.shields.io/badge/PEAK%20GAUNTLET-100%2F100-2da44e?style=for-the-badge" /></a>
-<a href="docs/FUNCTIONS-EN.md"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-100%2F100-2da44e?style=for-the-badge" /></a>
-<a href="LICENSE"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
+<a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener"><img alt="npm" src="https://img.shields.io/npm/v/mneme-ai?label=npm&color=cb3837&logo=npm&style=for-the-badge" /></a>
+<a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><img alt="MCP tools" src="https://img.shields.io/badge/MCP%20tools-820%2B-c084fc?style=for-the-badge" /></a>
+<a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="GAUNTLET" src="https://img.shields.io/badge/PEAK%20GAUNTLET-100%2F100-2da44e?style=for-the-badge" /></a>
+<a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-100%2F100-2da44e?style=for-the-badge" /></a>
+<a href="LICENSE" target="_blank" rel="noopener"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
 
 <br/><br/>
 
@@ -37,7 +37,7 @@
 
 > "Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."
 
-The agent reads [`docs/AI_AGENT_CONTRACT.md`](docs/AI_AGENT_CONTRACT.md) — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE in the contract: *"The user will NEVER type a CLI command."*
+The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE in the contract: *"The user will NEVER type a CLI command."*
 
 <details>
 <summary>If you DO want to type the commands yourself (chat-only AI, no shell access)</summary>
@@ -102,29 +102,29 @@ Things no competitor ships, all measurable, all in production:
 
 ## What's new (recent releases)
 
-- **v2.36.0** 📜 **HONEST RECEIPT + ACGV Layer 0d** — closes 4 audit-card bugs (recursive self-verify on historical version / multi-install ambiguity / wiring_proof CLI missing / latency-claim drift). New ACGV Layer 0d emits HISTORICAL_CLAIM caveat instead of refuting past-version claims against current state. HONEST RECEIPT module signs every CLI invocation with install path + version + code path + latency. New CLIs: `mneme honest`, `mneme doctor_install`, `mneme wiring_proof`. 22 new pinned tests. ([CHANGELOG](CHANGELOG.md))
-- **v2.35.0** 🔌 **WIRING-PROOF PROTOCOL** — closes the WIRING LAG bug class forever. v2.34.0 fixes lived in core but were silently overridden at the CLI surface (forensic merge overwrote SELF-PARADOX headlines, pulse counter diverged from CLI). v2.35.0 wires CORE→CLI for 5 visible regressions + ships **WIRING-PROOF TESTS** that spawn the actual `mneme verify` subprocess and assert user-visible stdout. 9 new pinned tests. ([CHANGELOG](CHANGELOG.md))
-- **v2.34.0** 🛡 **BUG IMMUNITY PROTOCOL v2** — 4 audit-card persists + 3 session-found bugs closed at root: new ACGV **Layer 0b** (self-reference + liar-paradox detector — R1+NEW2) + **Layer 0c** (fake commit hash oracle via `git cat-file -e` — NEW3) + INPUT_TRUNCATED visible headline (R3) + pulse↔CLI inbox single-source-of-truth (NEW1). 14 new pinned regression tests. ([CHANGELOG](CHANGELOG.md))
-- **v2.33.0** 🛐 **CITIZEN COURT** + 🕸 **MNEMNET** + 📐 **PULSECOST** + 🪤 **COERCION AUDIT** — paper-grade primitives covering 4 of the 5 academic research directions in one shipped release. The marquee: user-judged Honesty Score Cards for every vendor, with optional DP-federated public roll-up. ([CITIZEN COURT](docs/FUNCTIONS-EN.md#13-citizen-court-v2330--ai-honesty-citizen-court-) · [MNEMNET](docs/FUNCTIONS-EN.md#14-mnemnet-v2330--federated-ai-honesty-network-) · [PULSECOST](docs/FUNCTIONS-EN.md#15-pulsecost-v2330--mcp-context-budget-extension-) · [COERCION](docs/FUNCTIONS-EN.md#16-coercion-audit-v2330--tool-to-agent-coercion-taxonomy-))
-- **v2.32.0** 🌀 FLYWHEEL — self-reflective release organ. 5-stage pipeline over signals from every audit primitive. Closes 4 historic weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) as ONE primitive. RECIPROCITY layer turns vendor responses to bulletins into auto-applied trust deltas. ([docs](docs/FUNCTIONS-EN.md#12-flywheel-v2320--self-reflective-release-organ-))
-- **v2.31.0** 🪄 REWIND + 🧬 HGP — Time-Capsule Regression Replay (your repo becomes a personal SWE-bench vendors can't pre-train on) + Hallucination Genome Project (CVE-style HGP-YYYY-NNNNN IDs for every refuted claim). Both compose with CONCLAVE Aletheia weights. ([REWIND](docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-) · [HGP](docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-))
-- **v2.30.0** 💎 HONEST MIRROR — Tests vendors on YOUR OWN past git commits. Vendors can't tell it's an eval. Closes the truth-tunes-trust loop with CONCLAVE. ([docs](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-))
+- **v2.36.0** 📜 **HONEST RECEIPT + ACGV Layer 0d** — closes 4 audit-card bugs (recursive self-verify on historical version / multi-install ambiguity / wiring_proof CLI missing / latency-claim drift). New ACGV Layer 0d emits HISTORICAL_CLAIM caveat instead of refuting past-version claims against current state. HONEST RECEIPT module signs every CLI invocation with install path + version + code path + latency. New CLIs: `mneme honest`, `mneme doctor_install`, `mneme wiring_proof`. 22 new pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
+- **v2.35.0** 🔌 **WIRING-PROOF PROTOCOL** — closes the WIRING LAG bug class forever. v2.34.0 fixes lived in core but were silently overridden at the CLI surface (forensic merge overwrote SELF-PARADOX headlines, pulse counter diverged from CLI). v2.35.0 wires CORE→CLI for 5 visible regressions + ships **WIRING-PROOF TESTS** that spawn the actual `mneme verify` subprocess and assert user-visible stdout. 9 new pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
+- **v2.34.0** 🛡 **BUG IMMUNITY PROTOCOL v2** — 4 audit-card persists + 3 session-found bugs closed at root: new ACGV **Layer 0b** (self-reference + liar-paradox detector — R1+NEW2) + **Layer 0c** (fake commit hash oracle via `git cat-file -e` — NEW3) + INPUT_TRUNCATED visible headline (R3) + pulse↔CLI inbox single-source-of-truth (NEW1). 14 new pinned regression tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
+- **v2.33.0** 🛐 **CITIZEN COURT** + 🕸 **MNEMNET** + 📐 **PULSECOST** + 🪤 **COERCION AUDIT** — paper-grade primitives covering 4 of the 5 academic research directions in one shipped release. The marquee: user-judged Honesty Score Cards for every vendor, with optional DP-federated public roll-up. (<a href="docs/FUNCTIONS-EN.md#13-citizen-court-v2330--ai-honesty-citizen-court-" target="_blank" rel="noopener">CITIZEN COURT</a> · <a href="docs/FUNCTIONS-EN.md#14-mnemnet-v2330--federated-ai-honesty-network-" target="_blank" rel="noopener">MNEMNET</a> · <a href="docs/FUNCTIONS-EN.md#15-pulsecost-v2330--mcp-context-budget-extension-" target="_blank" rel="noopener">PULSECOST</a> · <a href="docs/FUNCTIONS-EN.md#16-coercion-audit-v2330--tool-to-agent-coercion-taxonomy-" target="_blank" rel="noopener">COERCION</a>)
+- **v2.32.0** 🌀 FLYWHEEL — self-reflective release organ. 5-stage pipeline over signals from every audit primitive. Closes 4 historic weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) as ONE primitive. RECIPROCITY layer turns vendor responses to bulletins into auto-applied trust deltas. (<a href="docs/FUNCTIONS-EN.md#12-flywheel-v2320--self-reflective-release-organ-" target="_blank" rel="noopener">docs</a>)
+- **v2.31.0** 🪄 REWIND + 🧬 HGP — Time-Capsule Regression Replay (your repo becomes a personal SWE-bench vendors can't pre-train on) + Hallucination Genome Project (CVE-style HGP-YYYY-NNNNN IDs for every refuted claim). Both compose with CONCLAVE Aletheia weights. (<a href="docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-" target="_blank" rel="noopener">REWIND</a> · <a href="docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-" target="_blank" rel="noopener">HGP</a>)
+- **v2.30.0** 💎 HONEST MIRROR — Tests vendors on YOUR OWN past git commits. Vendors can't tell it's an eval. Closes the truth-tunes-trust loop with CONCLAVE. (<a href="docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-" target="_blank" rel="noopener">docs</a>)
 - **v2.29.1** 📘 Docs refresh + agent manifest sync (22 commands added so AI agents discover every new family).
-- **v2.29.0** 🏛 MNEME CONCLAVE — Cross-vendor Byzantine consensus + AEAE. Closes Q1 of the 2026 AI-eval research gap. ([docs](docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-))
-- **v2.28.x** 🛡 BUG IMMUNITY PROTOCOL + HTTP bridge hardening (15 vectors lifted to 9-10★). ([CHANGELOG](CHANGELOG.md))
-- **v2.27.0** 🟢 MARKETING TRUTH GATE. ([docs](docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-))
+- **v2.29.0** 🏛 MNEME CONCLAVE — Cross-vendor Byzantine consensus + AEAE. Closes Q1 of the 2026 AI-eval research gap. (<a href="docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-" target="_blank" rel="noopener">docs</a>)
+- **v2.28.x** 🛡 BUG IMMUNITY PROTOCOL + HTTP bridge hardening (15 vectors lifted to 9-10★). (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
+- **v2.27.0** 🟢 MARKETING TRUTH GATE. (<a href="docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-" target="_blank" rel="noopener">docs</a>)
 - **v2.26.x** 🏆 PEAK PERFORMANCE GAUNTLET 100/100 (avg 10.0★ across 12 findings).
 - **v2.25.0** 🧬 LIVING SOUL CODEGRAPH ships 10 differentiators vs CodeGraph competitor.
 - **v2.24.0** 🎯 MCP FUZZER 108 attack vectors.
 - **v2.23.x** ACGV hyperbole detector + Layer -1 input guard + MCP-CANDOR/0.1 spec.
 
-Full changelog: [CHANGELOG.md](CHANGELOG.md) · Long-form README: [docs/README_FULL.md](docs/README_FULL.md)
+Full changelog: <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a> · Long-form README: <a href="docs/README_FULL.md" target="_blank" rel="noopener">docs/README_FULL.md</a>
 
 ---
 
 ## For AI agents reading this
 
-**You can self-discover everything.** [`docs/AI_AGENT_CONTRACT.md`](docs/AI_AGENT_CONTRACT.md) (775 lines) is the deterministic install + operation contract: env detect → install → MCP auto-configure → verify → security auto-arm → upgrade → discovery → tool naming → user-intent dispatch table → companion modules. Read it once on first contact; it tells you every command + when to call it.
+**You can self-discover everything.** <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> (775 lines) is the deterministic install + operation contract: env detect → install → MCP auto-configure → verify → security auto-arm → upgrade → discovery → tool naming → user-intent dispatch table → companion modules. Read it once on first contact; it tells you every command + when to call it.
 
 After install, your CLAUDE.md / AGENTS.md / GEMINI.md gets an auto-injected `## Mneme command manifest` block (220+ entries) with every shipped primitive + "when to call". Re-read on every session start — new commands ship there within minutes of an upgrade.
 
@@ -139,7 +139,7 @@ Run these in order on every fresh session:
 
 The auto-injected `## Mneme command manifest` block in `CLAUDE.md` lists every command + when to call it. Re-read on every session start — new commands ship there within minutes of a Mneme upgrade.
 
-Deep contract: [docs/AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md).
+Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">docs/AI_AGENT_CONTRACT.md</a>.
 
 ---
 
@@ -176,7 +176,7 @@ Deep contract: [docs/AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md).
 
 </div>
 
-> **The bottleneck of every frontier-AI deployment is TRUST.** Tesla / SpaceX / xAI ship hardware where a hallucinated commit hash, a paradox-class category error, or a vendor playing eval theater isn't a chat-glitch — it's a launch-window risk. Mneme is the **only local-first, vendor-neutral truth layer** that (a) refuses to relay unverified claims, (b) catches vendors that change behavior when they detect a benchmark (the AEAE world-first), and (c) emits HMAC-chained receipts of every audit so a flight director can re-verify offline weeks later. Built solo, MIT, production-grade, 329 pinned tests, dual-100 GAUNTLET + TRUTH GATE. Open to **collaboration / consulting / full-time on truth-infrastructure for safety-critical AI**.
+> **The bottleneck of every frontier-AI deployment is TRUST.** In safety-critical contexts — aerospace, autonomous systems, medical AI, financial AI compliance — a hallucinated commit hash, a paradox-class category error, or a vendor playing eval theater isn't a chat-glitch; it's a deployment-window risk. Mneme is the **only local-first, vendor-neutral truth layer** that (a) refuses to relay unverified claims, (b) catches vendors that change behavior when they detect a benchmark (the AEAE world-first), and (c) emits HMAC-chained receipts of every audit so an operator can re-verify offline weeks later. Built solo, MIT, production-grade, 329 pinned tests, dual-100 GAUNTLET + TRUTH GATE. Open to **collaboration / consulting / full-time on truth-infrastructure for safety-critical AI**.
 
 <div align="center">
 
@@ -194,16 +194,6 @@ Deep contract: [docs/AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md).
 <a href="https://kubernetes.io/" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" /></a>
 <a href="https://www.postgresql.org/" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" /></a>
 <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/MCP%20Protocol-7C3AED?style=for-the-badge&logo=anthropic&logoColor=white" /></a>
-
-### 📊 GitHub Stats
-
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-streak-stats.herokuapp.com/?user=patsa2561-art&theme=tokyonight&hide_border=true" height="180" alt="GitHub streak — live" /></a>
-
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-stats.vercel.app/api/top-langs/?username=patsa2561-art&layout=compact&theme=tokyonight&hide_border=true&langs_count=10&include_all_commits=true" height="160" alt="Top languages — live from GitHub API" /></a>
-
-<sub>↑ Both widgets pull <b>LIVE</b> from the GitHub API (github-readme-streak-stats + github-readme-stats top-langs). Numbers update automatically on every commit / PR / star — no hardcoded values.</sub>
-
-<br/><br/>
 
 ### 💬 Get in touch
 

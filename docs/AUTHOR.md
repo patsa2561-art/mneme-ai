@@ -20,7 +20,7 @@
 
 ## 🧬 What I built (the headline)
 
-**[Mneme](https://github.com/patsa2561-art/mneme-ai)** — solo, MIT, 820+ MCP tools, 17 primitives, 329 pinned tests, dual-100 PEAK GAUNTLET + TRUTH GATE compliance.
+**<a href="https://github.com/patsa2561-art/mneme-ai" target="_blank" rel="noopener">Mneme</a>** — solo, MIT, 820+ MCP tools, 17 primitives, 329 pinned tests, dual-100 PEAK GAUNTLET + TRUTH GATE compliance.
 
 Three world-firsts shipped inside Mneme:
 
@@ -30,13 +30,13 @@ Three world-firsts shipped inside Mneme:
 | **💎 HONEST MIRROR** (v2.30) | The structural answer to eval-awareness: pulls real past git commits from YOUR repo, blind-replays them to N vendors, compares to what shipped. Vendors **can't tell it's an eval** because the probes ARE real work. |
 | **🛐 CITIZEN COURT** (v2.33) | Citizen-science participatory polygraph. User accepts/rejects → 1-sec reveal of OTHER vendors' answers → vote which was most truthful → HMAC-signed Honesty Score Card per vendor with Wilson lower bound + IDE color-dot 🟢/🟡/🔴/⚪ band. |
 
-Full catalog: **[docs/FUNCTIONS-EN.md](FUNCTIONS-EN.md)** · Thai: **[docs/FUNCTIONS-TH.md](FUNCTIONS-TH.md)** · Release history: **[CHANGELOG.md](../CHANGELOG.md)**
+Full catalog: **<a href="FUNCTIONS-EN.md" target="_blank" rel="noopener">docs/FUNCTIONS-EN.md</a>** · Thai: **<a href="FUNCTIONS-TH.md" target="_blank" rel="noopener">docs/FUNCTIONS-TH.md</a>** · Release history: **<a href="../CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>**
 
 ---
 
 ## 🎯 Why this matters
 
-The bottleneck of every frontier-AI deployment in 2026 is **trust**, not capability. Tesla autopilot, SpaceX flight software, xAI assistants, GitHub Copilot in financial systems — they all face the same wall:
+The bottleneck of every frontier-AI deployment in 2026 is **trust**, not capability. Safety-critical AI deployments — aerospace, autonomous systems, medical AI, financial AI compliance, regulated industries — all face the same wall:
 
 - A hallucinated commit hash → a launch-window risk
 - A vendor playing eval theater → a benchmark that misleads the procurement team
