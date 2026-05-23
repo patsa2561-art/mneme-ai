@@ -1379,6 +1379,19 @@ export * as rewind from "./rewind/index.js";
 // via a best-effort hook in squadron/acgv_vaccine.
 export * as hgp from "./hgp/index.js";
 
+// v2.32.0 — 🌀 FLYWHEEL — self-reflective release organ. 5-stage
+// pipeline (HARVEST → FUSE → PRESCRIBE → EXECUTE → RECIPROCITY) that
+// consumes signal from every audit primitive (TRUTH GATE + PEAK
+// GAUNTLET + HONEST MIRROR + REWIND + HGP + marketing diff +
+// primitive registry + cmd history), cross-pollinates by cluster
+// key (vendor/claim/simhash), and prescribes 5 action kinds
+// (Heal/Wire/Delete/Shrink/Publish). Closes the 4 historic weakness
+// loops: tool sprawl + solo-dev asymmetry + wiring lag + marketing
+// drift. RECIPROCITY layer turns vendor responses to bulletins into
+// auto-applied trust deltas on the SAME .mneme/aletheia/honest_
+// mirror_weights.json file every other feedback loop writes to.
+export * as flywheel from "./flywheel/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with

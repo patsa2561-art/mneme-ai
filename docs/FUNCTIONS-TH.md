@@ -171,6 +171,34 @@
 
 ---
 
+## 12. FLYWHEEL (v2.32.0) — Self-Reflective Release Organ 🌀
+
+> Primitive เดียวที่แก้ **4 จุดอ่อนยุคก่อน** ของ Mneme พร้อมกัน (tool sprawl + solo-dev ตามไม่ทันคู่แข่ง + wiring lag + marketing drift) ด้วยการกินสัญญาณจากทุก audit primitive ที่มีอยู่ + สั่ง action แบบ concrete.
+
+วิธีทำงาน (5-stage pipeline):
+1. **HARVEST** — ดึง raw findings จาก `truth_gate/matrix.jsonl` + `tune/scorecard.jsonl` + `honest_mirror/reports.jsonl` + `rewind/cards.jsonl` + `hgp/registry.jsonl` + scan README/docs หา marketing claim ที่ยังไม่ bound + check primitive registry เทียบกับ `flywheel/primitive_ledger.jsonl` หา primitive ที่ dormant.
+2. **FUSE** — Cross-pollinate ด้วย cluster key (vendor / claim / simhash / file). Cross-source partners ได้ **+30% composition bonus** — fix finding ที่ fuse แล้ว = ฆ่า root cause 2+ ตัวพร้อมกัน.
+3. **PRESCRIBE** — 5 action kinds: `Heal` (unbound claim → PR draft) · `Wire` (dormant primitive ที่มี partner → CLI/MCP wiring) · `Delete` (dormant ไม่มี partner → ลบ) · `Shrink` (personal cheatsheet) · `Publish` (Vendor Bulletin .md).
+4. **EXECUTE** — emit HMAC-signed `FlywheelReport` + apply RECIPROCITY trust deltas ไป `.mneme/aletheia/honest_mirror_weights.json` (file เดียวกับที่ทุก feedback loop เขียนลง — CONCLAVE auto-pick up).
+5. **RECIPROCITY** — บันทึก vendor response ต่อ bulletin ที่โพสไป (`fix` ใน 7 วัน → +0.05 · `acknowledge` → +0.01 · `ignore` 30+ วัน → −0.10 · `disputed` → 0.00). **Living negotiation organ** กับ AI vendor ecosystem.
+
+| คำสั่ง | ทำอะไร | เมื่อไหร่ |
+|---|---|---|
+| `mneme flywheel run [--json '{perSourceLimit,minDeleteAge,dryRun}']` | 5-stage audit แบบเต็ม | Pre-release self-audit; ดู action ที่ priority สูงสุดข้ามทุก audit primitive ใน list เดียว |
+| `mneme flywheel report [--json '{limit}']` | Report ล่าสุดหรือ N ledger entries | Trend analysis; replay prior audit |
+| `mneme flywheel cheatsheet [--json '{markdown}']` | Personal cheatsheet (auto-shrink เหลือ 3 cmds) | User ถาม "ควรรู้คำสั่งอะไรบ้าง" / อยาก cheatsheet สั้นสุด. Fresh install = global top-5 |
+| `mneme flywheel bulletin [--json '{hgpTopN}']` | Vendor Bulletin .md ที่แชร์ได้ | หลัง flywheel.run; พร้อมโพสสาธารณะกดดัน vendor |
+| `mneme flywheel liveness --json '{name,shippedAt}'` | Heartbeat primitive / อ่าน lastSeen map | Mark primitive ว่า alive หลัง production invocation แรก |
+| `mneme flywheel marketing` | List marketing claim ที่ยังไม่ bound probe | Pre-release marketing reconciliation |
+| `mneme flywheel reciprocity --json '{vendor,bulletinSeq,response,reactionDays}'` | บันทึก vendor response + auto-apply trust delta | หลัง vendor ตอบ (หรือ ignore) bulletin ที่โพสไป |
+| `mneme flywheel verify --json '{report}'` | Offline HMAC verify | Cross-machine attestation |
+
+**Wild fusion algorithm**: Composite Score = `severity × freshness × (1 + composition_bonus)` ที่ `composition_bonus = min(0.3, 0.1 × cross-source-partners)`. Claim REFUTED จาก `truth_gate` ที่มี vendor name ตรงกับ `vendorCounts` ใน HGP entry → boost score เพราะ fix อันเดียวแก้ทั้งสอง. Findings ใน cluster เดียวกัน = 1 action — ไม่สแปม.
+
+**ทำไมคู่แข่งทำตามไม่ได้**: ทุก feedback loop ใน Cursor/Continue/Copilot เป็น internal (vendor-controlled). FLYWHEEL feed กลับเข้า `honest_mirror_weights.json` file เดียวกับที่ CONCLAVE auto-read — **vendor-neutral by construction**. RECIPROCITY layer ทำให้ทั้ง AI vendor industry เล่นเกม negotiation จริงๆ — ignore Mneme bulletin = trust cost วัดได้.
+
+---
+
 ## 8. ตัวช่วยทุกวัน
 
 | คำสั่ง | ทำอะไร |

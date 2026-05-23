@@ -41,6 +41,7 @@ import { CONCLAVE_TOOLS } from "./_conclave_tools.js";
 import { HONEST_MIRROR_TOOLS } from "./_honest_mirror_tools.js";
 import { REWIND_TOOLS } from "./_rewind_tools.js";
 import { HGP_TOOLS } from "./_hgp_tools.js";
+import { FLYWHEEL_TOOLS } from "./_flywheel_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -196,6 +197,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...HONEST_MIRROR_TOOLS,
     ...REWIND_TOOLS,
     ...HGP_TOOLS,
+    ...FLYWHEEL_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

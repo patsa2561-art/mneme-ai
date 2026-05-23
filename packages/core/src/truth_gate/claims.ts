@@ -170,4 +170,14 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.hgp.federation_default_off",
     severity: "block",
   },
+  // ── v2.32.0 FLYWHEEL claim ─────────────────────────────────────────
+  {
+    id: "claim.flywheel.health_known",
+    source: "v2.32.0 release notes",
+    text: "FLYWHEEL self-audit health is a known non-negative number on first install (or improves to ≥ 0 after first run)",
+    kind: "numeric",
+    asserted: { value: 0, op: ">=", unit: "score" },
+    probeId: "probe.flywheel.health",
+    severity: "info",
+  },
 ];

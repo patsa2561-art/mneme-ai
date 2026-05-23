@@ -150,6 +150,17 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.hgp.severity",
   "mneme.hgp.federate_status",
   "mneme.hgp.federate_join",
+  // v2.32.0 — FLYWHEEL surfaces are stateless reads. flywheel.run
+  // walks file ledgers + MCP catalog; no runtime/git required for
+  // the audit pass (REWIND/HGP/HONEST MIRROR fill in when present).
+  "mneme.flywheel.run",
+  "mneme.flywheel.report",
+  "mneme.flywheel.cheatsheet",
+  "mneme.flywheel.bulletin",
+  "mneme.flywheel.liveness",
+  "mneme.flywheel.marketing",
+  "mneme.flywheel.reciprocity",
+  "mneme.flywheel.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

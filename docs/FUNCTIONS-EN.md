@@ -171,6 +171,34 @@ How it works:
 
 ---
 
+## 12. FLYWHEEL (v2.32.0) — Self-Reflective Release Organ 🌀
+
+> The single primitive that fixes 4 historic Mneme weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) by consuming signals from every OTHER audit primitive and prescribing concrete actions.
+
+How it works (5-stage pipeline):
+1. **HARVEST** — pull raw findings from `truth_gate/matrix.jsonl` + `tune/scorecard.jsonl` + `honest_mirror/reports.jsonl` + `rewind/cards.jsonl` + `hgp/registry.jsonl` + scan README/docs for unbound marketing claims + check primitive registry against `flywheel/primitive_ledger.jsonl` for dormant primitives.
+2. **FUSE** — cross-pollinate by cluster key (vendor / claim / simhash / file). Cross-source partners get a **+30% composition bonus** — fixing a fused finding kills 2+ root causes at once.
+3. **PRESCRIBE** — 5 action kinds: `Heal` (unbound claim → PR draft) · `Wire` (dormant primitive with cross-source partners → CLI/MCP wiring) · `Delete` (dormant + no partners → remove) · `Shrink` (personal cheatsheet) · `Publish` (Vendor Bulletin .md).
+4. **EXECUTE** — emit HMAC-signed `FlywheelReport` + apply RECIPROCITY trust deltas to `.mneme/aletheia/honest_mirror_weights.json` (the same file every other feedback loop writes to — CONCLAVE auto-picks up).
+5. **RECIPROCITY** — record vendor responses to past bulletins (`fix` within 7d → +0.05 · `acknowledge` → +0.01 · `ignore` 30d+ → −0.10 · `disputed` → 0.00). Living negotiation organ with the AI vendor ecosystem.
+
+| Command | What | When |
+|---|---|---|
+| `mneme flywheel run [--json '{perSourceLimit,minDeleteAge,dryRun}']` | Full 5-stage audit | Pre-release self-audit; highest-priority action across all 5 primitives in one list. |
+| `mneme flywheel report [--json '{limit}']` | Latest report or N ledger entries | Trend analysis; replaying a prior audit. |
+| `mneme flywheel cheatsheet [--json '{markdown}']` | Personal cheatsheet (auto-shrinks to 3 cmds) | User asks "what should I know" / wants SHORTEST cheatsheet. Fresh install = global top-5. |
+| `mneme flywheel bulletin [--json '{hgpTopN}']` | Shareable Vendor Bulletin .md | After flywheel.run; post publicly for vendor accountability pressure. |
+| `mneme flywheel liveness --json '{name,shippedAt}'` | Heartbeat a primitive / read lastSeen map | Marking a primitive alive after first production invocation. |
+| `mneme flywheel marketing` | List unbound marketing claims | Pre-release marketing reconciliation. |
+| `mneme flywheel reciprocity --json '{vendor,bulletinSeq,response,reactionDays}'` | Record vendor response + auto-apply trust delta | After a vendor responds to (or ignores) a posted bulletin. |
+| `mneme flywheel verify --json '{report}'` | Offline HMAC verify | Cross-machine attestation. |
+
+**The wild fusion algorithm**: Composite Score = `severity × freshness × (1 + composition_bonus)` where `composition_bonus = min(0.3, 0.1 × cross-source-partners)`. A `truth_gate` REFUTED claim on a vendor name that ALSO appears in an HGP entry's `vendorCounts` gets boosted because fixing one kills both. Findings in the same cluster get ONE action — no spam.
+
+**Why competitors can't copy this**: every feedback loop in Cursor/Continue/Copilot is internal (vendor-controlled). FLYWHEEL feeds back into the SAME `honest_mirror_weights.json` file that CONCLAVE auto-reads — vendor-neutral by construction. The RECIPROCITY layer turns the entire AI vendor industry into a live negotiation game where ignoring a Mneme bulletin has a measurable trust cost.
+
+---
+
 ## 8. Daily Helpers
 
 | Command | What |

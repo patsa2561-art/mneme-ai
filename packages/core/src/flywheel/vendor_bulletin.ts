@@ -1,0 +1,140 @@
+/**
+ * v2.32.0 — Vendor Bulletin generator.
+ *
+ * Renders a shareable .md document from REWIND regression cards +
+ * HGP top-N + HONEST MIRROR perVendor data. This is the asymmetric
+ * leverage primitive: every user that posts a bulletin makes Mneme
+ * a force-multiplier vs funded competitors.
+ */
+
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+interface RewindCardLine {
+  seq?: number;
+  runAt?: string;
+  vendor?: string;
+  vendorVersion?: string;
+  regression?: string;
+  delta?: number;
+  weight?: number;
+  headline?: string;
+}
+
+interface HgpLine {
+  hgpId?: string;
+  severity?: number;
+  observeCount?: number;
+  vendorCounts?: Record<string, number>;
+  sample?: string;
+  lastSeen?: string;
+}
+
+interface MirrorLedgerLine {
+  finishedAt?: string;
+  perVendor?: Array<{ vendor?: string; delta?: number; weight?: number }>;
+}
+
+function readJsonl<T>(p: string, limit: number): T[] {
+  if (!existsSync(p)) return [];
+  try {
+    const body = readFileSync(p, "utf8");
+    const lines = body.split("\n").filter(Boolean).slice(-limit);
+    const out: T[] = [];
+    for (const ln of lines) { try { out.push(JSON.parse(ln) as T); } catch { /* skip */ } }
+    return out;
+  } catch { return []; }
+}
+
+export interface BulletinData {
+  generatedAt: string;
+  rewindRegressions: RewindCardLine[];
+  hgpTop: HgpLine[];
+  mirrorLatest: MirrorLedgerLine | null;
+}
+
+export function gatherBulletinData(repoRoot: string, hgpTopN = 5): BulletinData {
+  const rewind = readJsonl<RewindCardLine>(join(repoRoot, ".mneme", "rewind", "cards.jsonl"), 500)
+    .filter((c) => c.regression === "regression");
+  const hgpAll = readJsonl<HgpLine>(join(repoRoot, ".mneme", "hgp", "registry.jsonl"), 5000);
+  // Collapse HGP by id (delta-ledger pattern), sort by severity, take top-N.
+  const byId = new Map<string, HgpLine>();
+  for (const r of hgpAll) {
+    if (!r.hgpId) continue;
+    const cur = byId.get(r.hgpId);
+    if (!cur) { byId.set(r.hgpId, { ...r }); continue; }
+    cur.lastSeen = (r.lastSeen ?? cur.lastSeen);
+    cur.observeCount = (cur.observeCount ?? 0) + (r.observeCount ?? 0);
+    cur.vendorCounts = { ...cur.vendorCounts };
+    for (const [v, c] of Object.entries(r.vendorCounts ?? {})) {
+      cur.vendorCounts![v] = (cur.vendorCounts![v] ?? 0) + c;
+    }
+  }
+  const hgpTop = Array.from(byId.values()).sort((a, b) => (b.severity ?? 0) - (a.severity ?? 0)).slice(0, hgpTopN);
+
+  const mirrorRows = readJsonl<MirrorLedgerLine>(join(repoRoot, ".mneme", "honest_mirror", "reports.jsonl"), 50);
+  const mirrorLatest = mirrorRows[mirrorRows.length - 1] ?? null;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    rewindRegressions: rewind,
+    hgpTop,
+    mirrorLatest,
+  };
+}
+
+export function renderBulletinMarkdown(data: BulletinData): string {
+  const lines: string[] = [];
+  lines.push(`# 📡 Mneme Vendor Bulletin`);
+  lines.push(``);
+  lines.push(`> Auto-generated from Mneme HONEST MIRROR + REWIND + HGP signals on ${data.generatedAt}.`);
+  lines.push(``);
+  if (data.rewindRegressions.length > 0) {
+    lines.push(`## 🪄 Vendor Regressions (REWIND)`);
+    lines.push(``);
+    lines.push(`| vendor | version | Δcorrectness | weight | seq |`);
+    lines.push(`|---|---|---|---|---|`);
+    for (const r of data.rewindRegressions.slice(0, 10)) {
+      lines.push(`| ${r.vendor ?? "?"} | ${r.vendorVersion ?? "?"} | ${((r.delta ?? 0) * 100).toFixed(1)}% | ${r.weight ?? "?"} | ${r.seq ?? "?"} |`);
+    }
+    lines.push(``);
+  } else {
+    lines.push(`## 🪄 Vendor Regressions (REWIND)`);
+    lines.push(``);
+    lines.push(`No regressions on file. Run \`mneme rewind run --vendors ...\` to generate.`);
+    lines.push(``);
+  }
+  if (data.hgpTop.length > 0) {
+    lines.push(`## 🧬 Top Hallucinations (HGP)`);
+    lines.push(``);
+    lines.push(`| HGP-ID | severity | observations | top vendor(s) | sample |`);
+    lines.push(`|---|---|---|---|---|`);
+    for (const h of data.hgpTop) {
+      const topVendors = Object.entries(h.vendorCounts ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([v, c]) => `${v}×${c}`)
+        .join(", ");
+      lines.push(`| \`${h.hgpId}\` | ${(h.severity ?? 0).toFixed(2)} | ${h.observeCount ?? 0} | ${topVendors || "—"} | ${(h.sample ?? "").replace(/\|/g, "/").slice(0, 80)} |`);
+    }
+    lines.push(``);
+  } else {
+    lines.push(`## 🧬 Top Hallucinations (HGP)`);
+    lines.push(``);
+    lines.push(`No hallucinations recorded. Mneme has not yet seen this vendor lie about anything checkable.`);
+    lines.push(``);
+  }
+  if (data.mirrorLatest) {
+    lines.push(`## 💎 Calibration (HONEST MIRROR)`);
+    lines.push(``);
+    lines.push(`| vendor | calibration Δ | aletheia weight |`);
+    lines.push(`|---|---|---|`);
+    for (const v of data.mirrorLatest.perVendor ?? []) {
+      lines.push(`| ${v.vendor ?? "?"} | ${((v.delta ?? 0) * 100).toFixed(1)}% | ${v.weight ?? "?"} |`);
+    }
+    lines.push(``);
+  }
+  lines.push(`---`);
+  lines.push(`Generated by [Mneme](https://github.com/patsa2561-art/mneme-ai) FLYWHEEL · post this publicly to apply asymmetric pressure on vendor accountability.`);
+  return lines.join("\n");
+}

@@ -46,7 +46,7 @@ For browser polygraph (live dots on claude.ai / chatgpt.com / gemini): `mneme po
 
 ## What Mneme does
 
-Mneme is **10 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification.
+Mneme is **11 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification.
 
 | # | Primitive | One-line | Full doc |
 |---|-----------|----------|----------|
@@ -60,6 +60,7 @@ Mneme is **10 primitives** every AI agent can call. Each has discrete pinned tes
 | 8 | 💎 **HONEST MIRROR** (v2.30) | The structural answer to eval-awareness: tests vendors on YOUR OWN past git commits — vendors can't tell it's an eval because the probes ARE real work. Closes the truth-tunes-trust loop with CONCLAVE. | [EN](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-) · [TH](docs/FUNCTIONS-TH.md#9-honest-mirror-v2300--ตรวจ-vendor-ด้วยงานจริง-) |
 | 9 | 🪄 **REWIND** (v2.31) | Time-Capsule Regression Replay: pin past commits as a Capsule + fire it at every vendor release → per-intent-class Vendor Regression Card (HMAC-signed, shareable). Your repo = personal SWE-bench that vendors CAN'T pre-train on. | [EN](docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-) · [TH](docs/FUNCTIONS-TH.md#10-rewind-v2310--time-capsule-regression-replay-) |
 | 10 | 🧬 **HGP** (v2.31) | Hallucination Genome Project: every ACGV-refuted claim earns a deterministic CVE-style ID (`HGP-YYYY-NNNNN`). Same lie shape across users → same ID → vendor-attributed federated catalog. Federation OPT-IN. | [EN](docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-) · [TH](docs/FUNCTIONS-TH.md#11-hgp-v2310--hallucination-genome-project-) |
+| 11 | 🌀 **FLYWHEEL** (v2.32) | Self-reflective release organ. 5-stage pipeline (HARVEST → FUSE → PRESCRIBE → EXECUTE → RECIPROCITY) over every other audit primitive's signal. Closes 4 historic weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) with ONE primitive that auto-shrinks personal cheatsheet + flags dormant primitives + extracts unbound marketing claims + renders shareable vendor bulletin + records vendor reciprocity → trust deltas. | [EN](docs/FUNCTIONS-EN.md#12-flywheel-v2320--self-reflective-release-organ-) · [TH](docs/FUNCTIONS-TH.md#12-flywheel-v2320--self-reflective-release-organ-) |
 
 ---
 
@@ -85,6 +86,7 @@ Things no competitor ships, all measurable, all in production:
 
 ## What's new (recent releases)
 
+- **v2.32.0** 🌀 FLYWHEEL — self-reflective release organ. 5-stage pipeline over signals from every audit primitive. Closes 4 historic weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) as ONE primitive. RECIPROCITY layer turns vendor responses to bulletins into auto-applied trust deltas. ([docs](docs/FUNCTIONS-EN.md#12-flywheel-v2320--self-reflective-release-organ-))
 - **v2.31.0** 🪄 REWIND + 🧬 HGP — Time-Capsule Regression Replay (your repo becomes a personal SWE-bench vendors can't pre-train on) + Hallucination Genome Project (CVE-style HGP-YYYY-NNNNN IDs for every refuted claim). Both compose with CONCLAVE Aletheia weights. ([REWIND](docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-) · [HGP](docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-))
 - **v2.30.0** 💎 HONEST MIRROR — Tests vendors on YOUR OWN past git commits. Vendors can't tell it's an eval. Closes the truth-tunes-trust loop with CONCLAVE. ([docs](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-))
 - **v2.29.1** 📘 Docs refresh + agent manifest sync (22 commands added so AI agents discover every new family).

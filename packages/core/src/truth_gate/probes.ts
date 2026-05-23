@@ -338,6 +338,30 @@ const probes: Probe[] = [
     },
   },
 
+  // ── FLYWHEEL health (v2.32.0) ────────────────────────────────────
+  // Latest FLYWHEEL health score. 100 = no blocking actions, system
+  // healthy. null = no flywheel report on file yet.
+  {
+    id: "probe.flywheel.health",
+    kind: "numeric",
+    description: "Latest FLYWHEEL health score 0..100 (100 = no blocking actions across all 5 audit primitives). null = no report yet.",
+    run: async (ctx) => {
+      try {
+        const p = join(ctx.cwd, ".mneme", "flywheel", "reports.jsonl");
+        if (!existsSync(p)) return { value: null, evidence: "no FLYWHEEL report yet (run `mneme flywheel run`)" };
+        const lines = readFileSync(p, "utf8").split("\n").filter(Boolean);
+        if (lines.length === 0) return { value: null, evidence: "empty FLYWHEEL ledger" };
+        try {
+          const last = JSON.parse(lines[lines.length - 1]!) as { health?: number };
+          if (typeof last.health !== "number") return { value: null, evidence: "malformed FLYWHEEL ledger row" };
+          return { value: last.health, evidence: `health = ${last.health}/100` };
+        } catch (e) { return { value: null, evidence: `parse failed: ${(e as Error).message}` }; }
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── HGP federation default OFF (v2.31.0) ─────────────────────────
   // Marketing claim: "HGP federation is opt-in / private-by-default".
   // Probe returns 0 when consent.optIn is false (the expected default),
