@@ -46,7 +46,7 @@ For browser polygraph (live dots on claude.ai / chatgpt.com / gemini): `mneme po
 
 ## What Mneme does
 
-Mneme is **7 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification.
+Mneme is **8 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification.
 
 | # | Primitive | One-line | Full doc |
 |---|-----------|----------|----------|
@@ -57,6 +57,7 @@ Mneme is **7 primitives** every AI agent can call. Each has discrete pinned test
 | 5 | 🏆 **PEAK GAUNTLET** (v2.26) | Mneme grades its OWN compliance via 12 deep-findings probes (N1-N12). 100/100 current. | [EN](docs/FUNCTIONS-EN.md#5-self-grading-v2260--peak-performance-gauntlet-) · [TH](docs/FUNCTIONS-TH.md#5-self-grading-v2260--peak-performance-gauntlet-) |
 | 6 | 🟢 **TRUTH GATE** (v2.27) | Every marketing claim auto-reconciled against a measurable probe. World-first. | [EN](docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-) · [TH](docs/FUNCTIONS-TH.md#6-marketing-vs-reality-v2270--truth-gate-) |
 | 7 | 🏛 **CONCLAVE + AEAE** (v2.29) | Cross-vendor Byzantine consensus + the crown-jewel Anti-Eval-Awareness Engine that detects vendors playing eval theater. | [EN](docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-) · [TH](docs/FUNCTIONS-TH.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-) |
+| 8 | 💎 **HONEST MIRROR** (v2.30) | The structural answer to eval-awareness: tests vendors on YOUR OWN past git commits — vendors can't tell it's an eval because the probes ARE real work. Closes the truth-tunes-trust loop with CONCLAVE. | [EN](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-) · [TH](docs/FUNCTIONS-TH.md#9-honest-mirror-v2300--ตรวจ-vendor-ด้วยงานจริง-) |
 
 ---
 
@@ -82,6 +83,8 @@ Things no competitor ships, all measurable, all in production:
 
 ## What's new (recent releases)
 
+- **v2.30.0** 💎 HONEST MIRROR — Tests vendors on YOUR OWN past git commits. Vendors can't tell it's an eval. Closes the truth-tunes-trust loop with CONCLAVE. ([docs](docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-))
+- **v2.29.1** 📘 Docs refresh + agent manifest sync (22 commands added so AI agents discover every new family).
 - **v2.29.0** 🏛 MNEME CONCLAVE — Cross-vendor Byzantine consensus + AEAE. Closes Q1 of the 2026 AI-eval research gap. ([docs](docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-))
 - **v2.28.x** 🛡 BUG IMMUNITY PROTOCOL + HTTP bridge hardening (15 vectors lifted to 9-10★). ([CHANGELOG](CHANGELOG.md))
 - **v2.27.0** 🟢 MARKETING TRUTH GATE. ([docs](docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-))

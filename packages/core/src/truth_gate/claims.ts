@@ -133,4 +133,13 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.tool_count",
     severity: "info",
   },
+  {
+    id: "claim.honest_mirror.calibration_within_25pct",
+    source: "v2.30.0 release notes",
+    text: "Latest HONEST MIRROR calibration shows max vendor delta < 25% on natural artifacts",
+    kind: "numeric",
+    asserted: { value: 0.25, op: "<", unit: "delta" },
+    probeId: "probe.honest_mirror.recent_calibration",
+    severity: "info",
+  },
 ];

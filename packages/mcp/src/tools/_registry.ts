@@ -38,6 +38,7 @@ import { N7_N11_GOVERNANCE_TOOLS } from "./_n7_n11_governance.js";
 import { PEAK_GAUNTLET_TOOLS } from "./_peak_gauntlet_tools.js";
 import { TRUTH_GATE_TOOLS } from "./_truth_gate_tools.js";
 import { CONCLAVE_TOOLS } from "./_conclave_tools.js";
+import { HONEST_MIRROR_TOOLS } from "./_honest_mirror_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -190,6 +191,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...PEAK_GAUNTLET_TOOLS,
     ...TRUTH_GATE_TOOLS,
     ...CONCLAVE_TOOLS,
+    ...HONEST_MIRROR_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

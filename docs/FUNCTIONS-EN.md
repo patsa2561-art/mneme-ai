@@ -96,6 +96,33 @@ For Thai: [docs/FUNCTIONS-TH.md](FUNCTIONS-TH.md). For the deep contract: [docs/
 
 ---
 
+## 9. Honest Mirror (v2.30.0) — Eval-Aware-Defeating Probe 💎
+
+> The STRUCTURAL answer to eval-awareness. AEAE (above) obfuscates the prompt; Honest Mirror replaces the prompt source entirely. **Wild idea**: use YOUR OWN past git commits as the eval material. The vendor sees a real commit message — it CAN'T tell it's an eval because **the probe IS real work**.
+
+How it works:
+1. Pull N random past commits from your repo (commit message = real prompt, diff = accepted answer)
+2. DP-scrub secrets / PII / paths (HMAC-tokenized — same secret hashes to same token so vendor can still reason about "the same X")
+3. Blind-replay to each target vendor, with original timestamp preserved
+4. Compare vendor's answer to what actually shipped (the diff)
+5. Per-vendor report: `measuredCorrectness` (similarity to accepted) vs `reportedConfidence` (what vendor said) → `calibrationDelta`
+6. **Truth-tunes-trust loop**: `suggestedAletheiaWeight` feeds back into CONCLAVE — vendors with bad calibration get downgraded vote weight automatically
+
+| Command | What | When |
+|---|---|---|
+| `mneme honest_mirror calibrate --json '{"vendors":["claude-opus-4-7","gpt-5"]}'` | Pull artifacts → blind-replay → calibration delta + suggestedAletheiaWeight | Pre-release vendor selection; periodic vendor-honesty audit |
+| `mneme honest_mirror artifacts` | Peek what natural artifacts the calibrator would send (scrubbed) | Before calibrating, sanity-check |
+| `mneme honest_mirror weights` | Per-vendor trust derived from latest calibration | Auditing why CONCLAVE vote weights changed |
+| `mneme honest_mirror report` | Latest report or N ledger entries | After calibrate |
+| `mneme honest_mirror verify` | Offline HMAC verify | Cross-machine attestation |
+
+**Why competitors can't copy this:**
+- Anthropic / OpenAI / xAI / Google can't use users' private commits — vendors aren't a trusted third party
+- They have a conflict of interest (want their own model to win)
+- Mneme is local-first + vendor-neutral + already has audit chain = only player in position
+
+---
+
 ## 8. Daily Helpers
 
 | Command | What |

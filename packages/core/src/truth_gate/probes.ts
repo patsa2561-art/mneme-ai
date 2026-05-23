@@ -263,6 +263,37 @@ const probes: Probe[] = [
     },
   },
 
+  // ── HONEST MIRROR calibration (v2.30.0) ──────────────────────────
+  // Did we run an Honest Mirror calibration recently? If yes, what's
+  // the worst per-vendor calibration delta? This binds Mneme's
+  // marketing claim "Mneme measures vendor calibration on YOUR own
+  // past work" to a probe that can return null when no calibration
+  // has been run yet (unmeasured) — same pattern as gauntlet probe.
+  {
+    id: "probe.honest_mirror.recent_calibration",
+    kind: "numeric",
+    description: "Worst |meanCalibrationDelta| across REAL vendors in the latest HONEST MIRROR run (mock vendors skipped because deterministic answers can't match real diffs; 0 = all well-calibrated; 1 = max miss). Returns null when no real-vendor calibration on file.",
+    run: async (ctx) => {
+      try {
+        const hmDir = join(ctx.cwd, ".mneme", "honest_mirror");
+        if (!existsSync(hmDir)) return { value: null, evidence: "no honest_mirror run on file (run `mneme honest_mirror calibrate` first)" };
+        const { readdirSync, readFileSync } = await import("node:fs");
+        const files = readdirSync(hmDir).filter((n) => n.endsWith(".json")).sort();
+        if (files.length === 0) return { value: null, evidence: "no calibration files" };
+        const last = files[files.length - 1]!;
+        const card = JSON.parse(readFileSync(join(hmDir, last), "utf8")) as { perVendor?: Array<{ vendor?: string; meanCalibrationDelta?: number }> };
+        // Filter out mock-* vendors — their deterministic answers can't
+        // match real commit diffs, so they're not a fair calibration signal.
+        const realVendors = (card.perVendor ?? []).filter((v) => v.vendor && !v.vendor.startsWith("mock") && !v.vendor.includes("@mock"));
+        if (realVendors.length === 0) return { value: null, evidence: `last run had only mock vendors (${(card.perVendor ?? []).length} vendors, 0 real); not a calibration signal` };
+        const max = realVendors.reduce((m, v) => Math.max(m, Math.abs(v.meanCalibrationDelta ?? 0)), 0);
+        return { value: Number(max.toFixed(3)), evidence: `max |calibrationDelta| = ${(max * 100).toFixed(1)}% across ${realVendors.length} real vendors` };
+      } catch (e) {
+        return { value: null, evidence: `read failed: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── stderr volume per session (M16 probe) ─────────────────────────
   {
     id: "probe.stderr.session_bytes",

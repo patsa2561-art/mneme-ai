@@ -1354,6 +1354,16 @@ export * as truthGate from "./truth_gate/index.js";
 // awareness detection in one primitive.
 export * as conclave from "./conclave/index.js";
 
+// v2.30.0 — 💎 HONEST MIRROR. The structural answer to eval-awareness
+// (Anthropic confirmed Opus 4.6 detects benchmarks). Uses NATURAL
+// WORKPLACE ARTIFACTS (real git commits / chat history) as the eval
+// material itself — vendors CANNOT distinguish probes from real work
+// because the probes ARE real work. Composes with CONCLAVE via the
+// suggestedAletheiaWeight feedback loop: vendors with bad calibration
+// on the user's own past work get downgraded automatically. World-
+// first eval-aware-defeating probe.
+export * as honestMirror from "./honest_mirror/index.js";
+
 // v2.22.2 — 📐 DIMENSIONAL ORACLE. Pure unit-algebra check on any
 // LLM claim. Catches the Mars-Climate-Orbiter class: "thrust = 9.8
 // N/m²" → N/m² is pressure, not force → MISMATCH. Composes with

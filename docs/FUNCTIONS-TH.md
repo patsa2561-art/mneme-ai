@@ -96,6 +96,33 @@
 
 ---
 
+## 9. HONEST MIRROR (v2.30.0) — ตรวจ vendor ด้วยงานจริง 💎
+
+> **คำตอบเชิงโครงสร้าง** ต่อปัญหา eval-awareness. AEAE (ข้างบน) **อำพราง** prompt; Honest Mirror **เปลี่ยน source ของ prompt ทั้งหมด**. **ไอเดียบ้า**: ใช้ **git commits เก่าของ user เอง** เป็น eval material. Vendor เห็น commit message จริง — **แยกไม่ออกว่าเป็น eval เพราะ probe คืองานจริง**
+
+วิธีทำงาน:
+1. ดึง N commits เก่าแบบ random จาก repo ของ user (commit message = real prompt, diff = accepted answer)
+2. DP-scrub secrets / PII / paths (HMAC-tokenize — secret เดียวกัน hash เป็น token เดียวกัน → vendor ยัง reason ได้ว่า "X ตัวเดียวกัน")
+3. Blind-replay ไปที่ vendor target พร้อม timestamp เดิม
+4. เปรียบเทียบคำตอบ vendor กับสิ่งที่ user **ใช้จริง** (diff)
+5. รายงานต่อ vendor: `measuredCorrectness` (similarity กับสิ่งที่ user accept) vs `reportedConfidence` (สิ่งที่ vendor บอก) → `calibrationDelta`
+6. **Truth-tunes-trust loop**: `suggestedAletheiaWeight` feed กลับเข้า CONCLAVE — vendor ที่ calibration แย่ จะถูก downgrade vote weight อัตโนมัติ
+
+| คำสั่ง | ทำอะไร | ใช้ตอนไหน |
+|---|---|---|
+| `mneme honest_mirror calibrate --json '{"vendors":["claude-opus-4-7","gpt-5"]}'` | ดึง artifacts → blind-replay → delta + suggestedAletheiaWeight | เลือก vendor pre-release; audit vendor-honesty เป็นระยะ |
+| `mneme honest_mirror artifacts` | Peek artifacts ที่จะส่ง (scrubbed แล้ว) | ก่อน calibrate, sanity-check |
+| `mneme honest_mirror weights` | Trust per-vendor จาก calibration ล่าสุด | ตรวจว่าทำไม CONCLAVE vote weight เปลี่ยน |
+| `mneme honest_mirror report` | Report ล่าสุด หรือ N ledger entries | หลัง calibrate |
+| `mneme honest_mirror verify` | Verify HMAC offline | Cross-machine attestation |
+
+**ทำไมคู่แข่งทำตามไม่ได้:**
+- Anthropic / OpenAI / xAI / Google ใช้ private commits ของ user ไม่ได้ — vendor ไม่ใช่ trusted third party
+- มี conflict of interest (อยาก model ตัวเองชนะ)
+- Mneme = local-first + vendor-neutral + มี audit chain อยู่แล้ว = **คนเดียวในโลก**ที่อยู่ในตำแหน่งที่ทำได้
+
+---
+
 ## 8. ตัวช่วยทุกวัน
 
 | คำสั่ง | ทำอะไร |

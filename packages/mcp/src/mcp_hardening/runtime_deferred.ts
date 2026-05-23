@@ -129,6 +129,12 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.conclave.dissent",
   "mneme.conclave.weights",
   "mneme.conclave.verify",
+  // v2.30.0 — HONEST MIRROR surfaces are stateless reads
+  "mneme.honest_mirror.calibrate",
+  "mneme.honest_mirror.report",
+  "mneme.honest_mirror.artifacts",
+  "mneme.honest_mirror.weights",
+  "mneme.honest_mirror.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

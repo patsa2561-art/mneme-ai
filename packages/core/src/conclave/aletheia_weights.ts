@@ -18,10 +18,20 @@ const TTL_MS = 30_000;
 function defaultWeight(): number { return 0.5; }
 
 function read(repoRoot: string, vendor: string): number {
-  // Try multiple sources in priority order:
-  //   1. .mneme/aletheia/karma.json   (per-tool but we treat per-vendor too)
-  //   2. .mneme/bounty/leaderboard.json (vendor falseRate → 1 - falseRate)
-  //   3. default neutral prior
+  // Priority order — most recent + most calibrated wins:
+  //   1. .mneme/aletheia/honest_mirror_weights.json (v2.30.0 — calibration
+  //      against user's own past work; truth-tunes-trust loop)
+  //   2. .mneme/aletheia/karma.json
+  //   3. .mneme/bounty/leaderboard.json
+  //   4. default 0.5 neutral
+  try {
+    const hmPath = join(repoRoot, ".mneme", "aletheia", "honest_mirror_weights.json");
+    if (existsSync(hmPath)) {
+      const j = JSON.parse(readFileSync(hmPath, "utf8")) as Record<string, { trust?: number; source?: string; at?: string }>;
+      const v = j[vendor];
+      if (v && typeof v.trust === "number") return clamp01(v.trust);
+    }
+  } catch { /* ignore */ }
   try {
     const karmaPath = join(repoRoot, ".mneme", "aletheia", "karma.json");
     if (existsSync(karmaPath)) {
