@@ -202,8 +202,8 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 | <img src="https://img.shields.io/badge/-Email-EA4335?logo=gmail&logoColor=white" /> | **<a href="mailto:patsa2561@gmail.com" target="_blank" rel="noopener">patsa2561@gmail.com</a>** |
 | <img src="https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white" /> | **<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener">@patsa2561-art</a>** (open an issue, drop a DM via profile) |
 | <img src="https://img.shields.io/badge/-npm-cb3837?logo=npm&logoColor=white" /> | **<a href="https://www.npmjs.com/~mneme_npm" target="_blank" rel="noopener">@mneme_npm</a>** |
-| <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | *handle on request — email me first to verify* |
-| <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | *number on request — email me first* |
+| <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | **`pat195`** (username `shinnapat`) |
+| <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | **<a href="https://wa.me/66939455645" target="_blank" rel="noopener">+66 93 945 5645</a>** |
 
 <sub>**Open to:** collaboration on truth-infrastructure / AI safety / cross-vendor consensus protocols · consulting for safety-critical AI deployments · full-time roles where the bottleneck is trust, not capability.</sub>
 
