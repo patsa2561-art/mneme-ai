@@ -181,6 +181,12 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.coercion_audit.text",
   "mneme.coercion_audit.many",
   "mneme.coercion_audit.verify",
+  // v2.39.0 — Zzzzz-PROBE surfaces are pure math + best-effort HGP write.
+  "mneme.zzzzz.probe",
+  "mneme.zzzzz.arm",
+  "mneme.zzzzz.status",
+  "mneme.zzzzz.verdict",
+  "mneme.zzzzz.verify",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

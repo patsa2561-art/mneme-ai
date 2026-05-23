@@ -1418,6 +1418,16 @@ export * as coercion from "./coercion/index.js";
 // storm. Daemon integrates via tickWatchdog() per cycle.
 export * as bridgePhoenix from "./bridge_phoenix/index.js";
 
+// v2.39.0 — 💎 Zzzzz-PROBE (The Sleepwalking Oracle) — multi-modal
+// anti-entropy detector. 4 text signals (Shannon entropy / Zipf
+// deviation / repetition / sentence-variance) + 5 image signals
+// (pHash / Laplacian-variance / color-histogram-entropy / JPEG-quant
+// fingerprint / distinct-color count) + OS-polygraph classifier.
+// REFUTED / IMPOSSIBLE_REFUTE auto-emit an HGP-YYYY-NNNNN id (auto-
+// composes with HGP via lazy import). Honest scope: no GPU, no ML
+// model — pure deterministic math measurable in <50ms on real inputs.
+export * as zzzzzProbe from "./zzzzz_probe/index.js";
+
 // v2.36.0 — 📜 HONEST RECEIPT — every CLI invocation can emit an
 // HMAC-signed receipt of what ACTUALLY ran (install path + resolved
 // version + code path + latency). Closes the marketing-vs-reality

@@ -306,4 +306,113 @@ export function registerWiringProofCommand(program: Command): void {
     });
 }
 
-// (intentionally no further exports)
+/**
+ * v2.39.0 — `mneme zzzzz` CLI surface.
+ *
+ *   mneme zzzzz probe --text "..." | --image <path> | --code "..."
+ *   mneme zzzzz arm [--reason "..."]
+ *   mneme zzzzz status
+ *   mneme zzzzz verdict [--limit N]
+ *   mneme zzzzz verify <jsonReport>
+ */
+export function registerZzzzzCommand(program: Command): void {
+  const z = program.command("zzzzz").description("💎 Zzzzz-PROBE (The Sleepwalking Oracle) — multi-modal anti-entropy detector. 4 text + 5 image signals. REFUTED → auto-HGP id.");
+
+  z.command("probe")
+    .description("Probe text / code / image for AI-generation signals.")
+    .option("--text <text>", "Text/code to analyze.")
+    .option("--image <path>", "Image file path to analyze.")
+    .option("--code <code>", "Code snippet to analyze (alias for --text but modality=code).")
+    .option("--vendor <vendor>", "Vendor id for HGP attribution.")
+    .action(async (opts: { text?: string; image?: string; code?: string; vendor?: string }) => {
+      try {
+        const { readFileSync, existsSync } = await import("node:fs");
+        const core = await import("@mneme-ai/core");
+        const repoRoot = process.cwd();
+        let input: Parameters<typeof core.zzzzzProbe.probeArtifact>[0];
+        if (opts.image) {
+          if (!existsSync(opts.image)) {
+            writeJson({ ok: false, error: `image not found: ${opts.image}` });
+            process.exitCode = 1;
+            return;
+          }
+          input = { modality: "image", imageBytes: new Uint8Array(readFileSync(opts.image)) };
+        } else if (opts.code) {
+          input = { modality: "code", text: opts.code };
+        } else if (opts.text) {
+          input = { modality: "text", text: opts.text };
+        } else {
+          writeJson({ ok: false, error: "pass --text, --code, or --image <path>" });
+          process.exitCode = 1;
+          return;
+        }
+        if (opts.vendor) input.vendor = opts.vendor;
+        const report = await core.zzzzzProbe.probeArtifact(input, repoRoot);
+        writeJson({ ok: true, report });
+        if (report.verdict === "REFUTED" || report.verdict === "IMPOSSIBLE_REFUTE") process.exitCode = 2;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  z.command("arm")
+    .description("Mark Zzzzz-PROBE armed (advisory).")
+    .option("--reason <reason>", "Free-form reason.")
+    .action(async (opts: { reason?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const state = core.zzzzzProbe.arm(process.cwd(), opts.reason);
+        writeJson({ ok: true, state });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  z.command("status")
+    .description("Show armed state + OS polygraph classification + ledger size + last verdict.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const repoRoot = process.cwd();
+        const armed = core.zzzzzProbe.isArmed(repoRoot);
+        const ledger = core.zzzzzProbe.readLedger(repoRoot, 10000);
+        const os = await core.zzzzzProbe.classifyOS();
+        writeJson({ ok: true, armed, ledgerSize: ledger.length, last: ledger[ledger.length - 1] ?? null, os });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  z.command("verdict")
+    .description("Read N most-recent reports from the Zzzzz ledger.")
+    .option("--limit <n>", "How many reports. Default 20.", "20")
+    .action(async (opts: { limit?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const limit = parseInt(opts.limit ?? "20", 10);
+        const list = core.zzzzzProbe.readLedger(process.cwd(), Number.isFinite(limit) ? limit : 20);
+        writeJson({ ok: true, count: list.length, reports: list });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  z.command("verify <reportJson>")
+    .description("Offline HMAC verify of a pasted ZzzzzReport (JSON string).")
+    .action(async (reportJson: string) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = JSON.parse(reportJson) as Parameters<typeof core.zzzzzProbe.verifyReport>[0];
+        const v = core.zzzzzProbe.verifyReport(r);
+        writeJson(v);
+        if (!v.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+}
