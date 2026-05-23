@@ -156,7 +156,7 @@ Deep contract: [docs/AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md).
 
 <div align="center">
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github.com/patsa2561-art.png" width="140" height="140" style="border-radius: 50%; border: 3px solid #00d4ff;" alt="Shinnapat Phunsriphatchalakul" /></a>
+<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/author.jpg" width="180" height="240" style="border-radius: 12px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
 
 ### Shinnapat Phunsriphatchalakul
 
@@ -197,12 +197,11 @@ Deep contract: [docs/AI_AGENT_CONTRACT.md](docs/AI_AGENT_CONTRACT.md).
 
 ### 📊 GitHub Stats
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-stats.vercel.app/api?username=patsa2561-art&show_icons=true&theme=tokyonight&hide_border=true&count_private=true&include_all_commits=true&rank_icon=github" height="180" alt="GitHub stats — live from GitHub API" /></a>
 <a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-streak-stats.herokuapp.com/?user=patsa2561-art&theme=tokyonight&hide_border=true" height="180" alt="GitHub streak — live" /></a>
 
 <a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-stats.vercel.app/api/top-langs/?username=patsa2561-art&layout=compact&theme=tokyonight&hide_border=true&langs_count=10&include_all_commits=true" height="160" alt="Top languages — live from GitHub API" /></a>
 
-<sub>↑ All three widgets pull <b>LIVE</b> from the GitHub API (github-readme-stats + github-readme-streak-stats). Numbers update automatically on every commit / PR / star — no hardcoded values, no manual refresh.</sub>
+<sub>↑ Both widgets pull <b>LIVE</b> from the GitHub API (github-readme-streak-stats + github-readme-stats top-langs). Numbers update automatically on every commit / PR / star — no hardcoded values.</sub>
 
 <br/><br/>
 

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github.com/patsa2561-art.png" width="180" height="180" style="border-radius: 50%; border: 4px solid #00d4ff;" alt="Shinnapat Phunsriphatchalakul" /></a>
+<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="../assets/author.jpg" width="220" height="300" style="border-radius: 14px; border: 4px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
 
 ### Shinnapat Phunsriphatchalakul
 
@@ -79,14 +79,13 @@ This is the kind of infrastructure layer that lets a flight director, a CISO, a 
 
 <div align="center">
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-stats.vercel.app/api?username=patsa2561-art&show_icons=true&theme=tokyonight&hide_border=true&count_private=true&include_all_commits=true&rank_icon=github" height="200" alt="GitHub stats" /></a>
 <a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-streak-stats.herokuapp.com/?user=patsa2561-art&theme=tokyonight&hide_border=true" height="200" alt="GitHub streak" /></a>
 
 <br/>
 
 <a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github-readme-stats.vercel.app/api/top-langs/?username=patsa2561-art&layout=compact&theme=tokyonight&hide_border=true&langs_count=10&include_all_commits=true" height="170" alt="Top languages" /></a>
 
-<sub>↑ All three widgets pull <b>LIVE</b> from the GitHub API via <a href="https://github.com/anuraghazra/github-readme-stats" target="_blank" rel="noopener">github-readme-stats</a> + <a href="https://github.com/DenverCoder1/github-readme-streak-stats" target="_blank" rel="noopener">github-readme-streak-stats</a>. Numbers update automatically on every commit / PR / star — no hardcoded values.</sub>
+<sub>↑ Both widgets pull <b>LIVE</b> from the GitHub API via <a href="https://github.com/DenverCoder1/github-readme-streak-stats" target="_blank" rel="noopener">github-readme-streak-stats</a> + <a href="https://github.com/anuraghazra/github-readme-stats" target="_blank" rel="noopener">github-readme-stats</a>. Numbers update automatically on every commit / PR / star — no hardcoded values.</sub>
 
 </div>
 
