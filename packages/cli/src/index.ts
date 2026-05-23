@@ -130,6 +130,7 @@ import { registerGenomePoolCommands } from "./commands/genome-pool.js";
 import { registerStigmergyCommands } from "./commands/stigmergy.js";
 import { registerChimeraCommands } from "./commands/chimera.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand, registerVerifyCommand, registerAutobootCommand, registerAskCommand, registerCovenantCommand } from "./commands/demo.js";
+import { registerHonestCommand, registerDoctorCommand, registerWiringProofCommand } from "./commands/v236_commands.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -4728,6 +4729,11 @@ export async function run(argv: string[]): Promise<void> {
   registerAutobootCommand(program);
   registerAskCommand(program);
   registerCovenantCommand(program);
+  // v2.36.0 — closes audit-card gaps #14 (wiring_proof CLI missing),
+  // #4/#16/#19 (multi-install ambiguity), #22 (latency claim drift).
+  registerHonestCommand(program);
+  registerDoctorCommand(program);
+  registerWiringProofCommand(program);
 
   // v2.19.8 — UNIVERSAL MCP SUBCOMMAND AUTO-ROUTER
   // Reads the MCP tool catalog and auto-registers `mneme <family> <action>`

@@ -351,7 +351,7 @@ How to read the verdict:
       // overrode them. Fix: when ACGV emits an explicit Layer-0 caveat,
       // SHORT-CIRCUIT the forensic merge entirely.
       const layer0Caveats = ["SELF_PARADOX_DETECTED", "SELF_REFERENCE_DETECTED"];
-      const layer0Prefixes = ["INPUT_TRUNCATED", "FAKE_COMMIT_HASH", "INPUT_UNVERIFIABLE", "HYPERBOLE_DETECTOR_FIRED"];
+      const layer0Prefixes = ["INPUT_TRUNCATED", "FAKE_COMMIT_HASH", "INPUT_UNVERIFIABLE", "HYPERBOLE_DETECTOR_FIRED", "HISTORICAL_CLAIM", "FUTURE_VERSION_CLAIM"];
       const hasLayer0Verdict = (result.caveats ?? []).some((c) =>
         layer0Caveats.includes(c) || layer0Prefixes.some((p) => c.startsWith(p))
       );

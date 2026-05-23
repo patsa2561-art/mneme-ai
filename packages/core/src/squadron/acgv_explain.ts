@@ -170,6 +170,32 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
           confidencePct: pct,
         };
       }
+      // v2.36.0 — HISTORICAL_CLAIM + FUTURE_VERSION_CLAIM headlines
+      // (audit-card bug #1). Surface the version mismatch explicitly so
+      // the user understands the verifier isn't refuting the CONTENT,
+      // it's flagging a version-semantic category error.
+      const histCaveat = result.caveats.find((c) => c.startsWith("HISTORICAL_CLAIM:"));
+      if (histCaveat) {
+        const parts = histCaveat.replace("HISTORICAL_CLAIM:", "");
+        return {
+          headline: `HISTORICAL-CLAIM -- claim cites past version (${parts})`,
+          plain: `The claim describes behavior from a PAST version of Mneme. The current installed state may or may not match — that's not what the claim asserts. To verify a historical claim, either git-checkout the cited version first, or restate in present tense (e.g. "does Mneme CURRENTLY do X").`,
+          nextAction: "Either git-checkout the cited version to verify the claim against that snapshot, or restate the claim in present tense.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
+      const futCaveat = result.caveats.find((c) => c.startsWith("FUTURE_VERSION_CLAIM:"));
+      if (futCaveat) {
+        const parts = futCaveat.replace("FUTURE_VERSION_CLAIM:", "");
+        return {
+          headline: `FUTURE-VERSION -- claim cites version ahead of installed (${parts})`,
+          plain: `The claim cites a Mneme version NEWER than what's installed. The verifier cannot check state that doesn't exist yet. Upgrade Mneme first, or restate the claim with a current version reference.`,
+          nextAction: "Upgrade Mneme (`mneme.system.upgrade`) or restate the claim against an installed version.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
       if (srCaveat === "SELF_REFERENCE_DETECTED") {
         return {
           headline: `SELF-REFERENCE -- claim refers to itself; no independent ground truth`,

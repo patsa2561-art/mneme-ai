@@ -1409,6 +1409,16 @@ export * as pulsecost from "./pulsecost/index.js";
 // (Coexists with the older `coercion_taxonomy` 5-tier CLI module.)
 export * as coercion from "./coercion/index.js";
 
+// v2.36.0 — 📜 HONEST RECEIPT — every CLI invocation can emit an
+// HMAC-signed receipt of what ACTUALLY ran (install path + resolved
+// version + code path + latency). Closes the marketing-vs-reality
+// drift class for install/version/latency claims. snapshotInstall()
+// walks every npm prefix (DOCTOR ORGAN style) + detects multi-version
+// installs that cause ambiguous `mneme --version` output (audit-card
+// bugs #4/#16/#19). Latency telemetry + aggregateLatency() expose
+// real median/p95 + path histogram (#22).
+export * as honestReceipt from "./honest_receipt/index.js";
+
 // v2.32.0 — 🌀 FLYWHEEL — self-reflective release organ. 5-stage
 // pipeline (HARVEST → FUSE → PRESCRIBE → EXECUTE → RECIPROCITY) that
 // consumes signal from every audit primitive (TRUTH GATE + PEAK

@@ -54,6 +54,7 @@ import { vaccineConflictsWithClaim } from "./vaccine_numeric_guard.js";
 import { detectHyperbole } from "./hyperbole_detector.js";
 import { detectSelfReference, dominantClass as selfRefDominantClass } from "./acgv_self_reference.js";
 import { scanCommitHashes } from "./acgv_commit_hash_oracle.js";
+import { detectVersionSemantic } from "./acgv_version_semantic.js";
 import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
 import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
@@ -422,6 +423,64 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
         ? `SELF_PARADOX — '${sref.matches[0]!.matched.slice(0, 60)}'... is logically self-referential and outside the truth-functional fragment.`
         : `SELF_REFERENCE — the claim refers to itself; independent verification is undefined.`,
       reasoning: sref.matches.map((m) => `  - ${m.class}: ${m.reason} (matched: "${m.matched}")`).join("\n"),
+      vaccineEmitted: false,
+    } as ACGVResult;
+  }
+
+  // ───── Layer 0d: VERSION-SEMANTIC DETECTOR (v2.36.0) ──────────────────
+  // Closes audit-card bug #1 — when a claim cites a Mneme version
+  // OLDER than installed, refuting it against the current state is a
+  // category error (the claim is historical). Now we surface
+  // HISTORICAL_CLAIM caveat + PASSTHROUGH with calibrated confidence
+  // instead of REFUTED 57%.
+  //
+  // Pure-defensive — version parsing failures fall through to no-op.
+  const versionSem = detectVersionSemantic(claim, repoRoot);
+  if (versionSem.matched && versionSem.classification === "historical") {
+    const chandra: ChandrasekharResult = {
+      verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0.60, citations: [],
+      reasoning: versionSem.reason,
+    } as ChandrasekharResult;
+    const godel: GodelResult = { status: "SKIPPED", core: [], certificate: "", upgrade: false };
+    return {
+      verdict: "PASSTHROUGH",
+      confidence: 0.60,
+      caveats: [...caveats, `HISTORICAL_CLAIM:v${versionSem.matches[0]!.major}.${versionSem.matches[0]!.minor}.${versionSem.matches[0]!.patch} vs installed v${versionSem.installedVersion}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `HISTORICAL_CLAIM — claim cites v${versionSem.matches[0]!.major}.${versionSem.matches[0]!.minor}.${versionSem.matches[0]!.patch} (PAST); installed is v${versionSem.installedVersion}. Refuting against current state is a category error.`,
+      reasoning: `${versionSem.reason}\n\nThe claim describes behavior from a past version of Mneme. The CURRENT state of the repo may or may not match — that's not what the claim asserts. To verify a historical claim, run \`git checkout v${versionSem.matches[0]!.major}.${versionSem.matches[0]!.minor}.${versionSem.matches[0]!.patch}\` first, or restate the claim in present tense ("does Mneme currently X").`,
+      vaccineEmitted: false,
+    } as ACGVResult;
+  }
+  if (versionSem.matched && versionSem.classification === "future") {
+    const chandra: ChandrasekharResult = {
+      verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0.20, citations: [],
+      reasoning: versionSem.reason,
+    } as ChandrasekharResult;
+    const godel: GodelResult = { status: "SKIPPED", core: [], certificate: "", upgrade: false };
+    return {
+      verdict: "PASSTHROUGH",
+      confidence: 0.20,
+      caveats: [...caveats, `FUTURE_VERSION_CLAIM:v${versionSem.matches[0]!.major}.${versionSem.matches[0]!.minor}.${versionSem.matches[0]!.patch} vs installed v${versionSem.installedVersion}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `FUTURE_VERSION_CLAIM — claim cites v${versionSem.matches[0]!.major}.${versionSem.matches[0]!.minor}.${versionSem.matches[0]!.patch} but installed is v${versionSem.installedVersion}. Cannot verify state that doesn't exist yet.`,
+      reasoning: versionSem.reason,
       vaccineEmitted: false,
     } as ACGVResult;
   }
