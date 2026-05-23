@@ -30,7 +30,16 @@
 
 ---
 
-## Install (60 seconds)
+## Install (60 seconds — you don't type the commands)
+
+**Tell your AI agent (Claude Code / Cursor / Codex / Continue / Cline / Zed / Aider) one sentence:**
+
+> "Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."
+
+The agent reads [`docs/AI_AGENT_CONTRACT.md`](docs/AI_AGENT_CONTRACT.md) — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE in the contract: *"The user will NEVER type a CLI command."*
+
+<details>
+<summary>If you DO want to type the commands yourself (chat-only AI, no shell access)</summary>
 
 ```bash
 npm install -g mneme-ai
@@ -40,7 +49,9 @@ mneme mcp --install         # auto-detects Claude Code / Cursor / Codex / Contin
 
 Restart your AI tool. First MCP call: `mneme.welcome` → loads install handoff + recent changes.
 
-For browser polygraph (live dots on claude.ai / chatgpt.com / gemini): `mneme polygraph autosetup`.
+</details>
+
+For browser polygraph (live dots on claude.ai / chatgpt.com / gemini), tell your AI agent: *"set up Mneme browser polygraph"* — it runs `mneme polygraph autosetup` for you.
 
 ---
 
@@ -112,12 +123,18 @@ Full changelog: [CHANGELOG.md](CHANGELOG.md) · Long-form README: [docs/README_F
 
 ## For AI agents reading this
 
+**You can self-discover everything.** [`docs/AI_AGENT_CONTRACT.md`](docs/AI_AGENT_CONTRACT.md) (775 lines) is the deterministic install + operation contract: env detect → install → MCP auto-configure → verify → security auto-arm → upgrade → discovery → tool naming → user-intent dispatch table → companion modules. Read it once on first contact; it tells you every command + when to call it.
+
+After install, your CLAUDE.md / AGENTS.md / GEMINI.md gets an auto-injected `## Mneme command manifest` block (220+ entries) with every shipped primitive + "when to call". Re-read on every session start — new commands ship there within minutes of an upgrade.
+
 Run these in order on every fresh session:
 
 1. `mneme.welcome` — install handoff + what changed since last session
 2. `mneme.capabilities` (skinny mode is default; ~3KB) — tool catalog
 3. Before relaying any factual claim with specific entities: `mneme.truth.check { claim }` OR `mneme verify "..."`
 4. For high-stakes claims: `mneme.conclave.run` with 3+ vendors for cross-vendor consensus
+
+**MANDATE from the contract** (non-negotiable): *"The user will NEVER type a CLI command. They speak natural language. You — the AI agent — execute every command on their behalf."* If you have shell access, USE IT. If you're chat-only, tell the user once then continue with what you CAN do.
 
 The auto-injected `## Mneme command manifest` block in `CLAUDE.md` lists every command + when to call it. Re-read on every session start — new commands ship there within minutes of a Mneme upgrade.
 
