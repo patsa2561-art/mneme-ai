@@ -449,21 +449,28 @@ export function registerArgusCommand(program: Command): void {
   a.command("search")
     .description("Rank candidates against a query with 10 eyes.")
     .option("--query <query>", "User query.")
-    .option("--candidates <list>", "Candidates separated by '||' (e.g. 'a||b||c').")
+    .option("--candidates <list>", "Plain text candidates separated by '||' (e.g. 'a||b||c').")
+    .option("--candidates-json <json>", "JSON array of {text, meta?} candidates for rich metadata (vendor / recencyDays / inHmacChain / source).")
     .option("--topK <n>", "Cap returned candidates.")
-    .action(async (opts: { query?: string; candidates?: string; topK?: string }) => {
+    .action(async (opts: { query?: string; candidates?: string; candidatesJson?: string; topK?: string }) => {
       try {
         const core = await import("@mneme-ai/core");
         const q = opts.query ?? "";
-        const cands = (opts.candidates ?? "").split("||").map((s) => s.trim()).filter(Boolean);
+        let cands: Array<{ text: string; meta?: object }> = [];
+        if (opts.candidatesJson) {
+          try { cands = JSON.parse(opts.candidatesJson) as Array<{ text: string; meta?: object }>; }
+          catch (e) { writeJson({ ok: false, error: `--candidates-json invalid: ${(e as Error).message}` }); process.exitCode = 1; return; }
+        } else if (opts.candidates) {
+          cands = opts.candidates.split("||").map((s) => s.trim()).filter(Boolean).map((t) => ({ text: t }));
+        }
         if (!q || cands.length === 0) {
-          writeJson({ ok: false, error: "pass --query AND --candidates 'a||b||c'" });
+          writeJson({ ok: false, error: "pass --query AND (--candidates 'a||b||c' OR --candidates-json '[{\"text\":\"a\"}]')" });
           process.exitCode = 1;
           return;
         }
         const result = await core.argus10.argusSearch({
           query: q,
-          candidates: cands.map((t) => ({ text: t })),
+          candidates: cands.map((c) => ({ text: String(c.text ?? ""), meta: c.meta as Parameters<typeof core.argus10.argusSearch>[0]["candidates"][number]["meta"] })),
           repoRoot: process.cwd(),
           ...(opts.topK ? { topK: parseInt(opts.topK, 10) } : {}),
         });

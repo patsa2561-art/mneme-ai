@@ -56,10 +56,35 @@ export const EYE_1_bigram_dice: Eye = {
 const VISUAL_CONFUSE_PAIRS = new Set<string>([
   // Thai look-alikes
   "รล", "ลร", "นม", "มน", "บผ", "ผบ", "ปบ", "บป", "ฉจ", "จฉ",
-  // Cyrillic/Latin lookalikes (D5 ARGUS demonstrates this)
-  "ое", "ео", "eо", "оe", // Cyrillic 'о' (U+043E)
-  "aа", "аa",             // Cyrillic 'а' (U+0430)
-  "cс", "сc",             // Cyrillic 'с' (U+0441)
+  // v2.43.0 — full Cyrillic↔Latin homoglyph table. Each pair below is
+  // (latin, cyrillic) ordered both ways for substCost lookup. The cost
+  // for these substitutions is 0.3 (visual_confuse) instead of 1.0, so
+  // Damerau-Lev on "Mneme" vs "Mnеme" (Cyrillic 'е') sees distance 0.3
+  // not 2.0 — making the homoglyph candidate score above leetspeak.
+  "eе", "еe",   // Latin 'e' (U+0065) ↔ Cyrillic 'е' (U+0435)
+  "oо", "оo",   // Latin 'o' (U+006F) ↔ Cyrillic 'о' (U+043E)
+  "aа", "аa",   // Latin 'a' (U+0061) ↔ Cyrillic 'а' (U+0430)
+  "cс", "сc",   // Latin 'c' (U+0063) ↔ Cyrillic 'с' (U+0441)
+  "pр", "рp",   // Latin 'p' (U+0070) ↔ Cyrillic 'р' (U+0440)
+  "xх", "хx",   // Latin 'x' (U+0078) ↔ Cyrillic 'х' (U+0445)
+  "yу", "уy",   // Latin 'y' (U+0079) ↔ Cyrillic 'у' (U+0443)
+  "EЕ", "ЕE",   // uppercase Latin/Cyrillic E
+  "OО", "ОO",
+  "AА", "АA",
+  "CС", "СC",
+  "PР", "РP",
+  "XХ", "ХX",
+  "YУ", "УY",
+  "HН", "НH",
+  "TТ", "ТT",
+  "MМ", "МM",
+  "KК", "КK",
+  "BВ", "ВB",
+  // Greek↔Latin
+  "vν", "νv",   // Latin 'v' ↔ Greek 'ν'
+  "oο", "οo",   // Latin 'o' ↔ Greek 'ο'
+  "pρ", "ρp",   // Latin 'p' ↔ Greek 'ρ'
+  "aα", "αa",   // Latin 'a' ↔ Greek 'α'
 ]);
 const PHONETIC_CLASS_PAIRS = new Set<string>([
   // Thai initial consonant groups (กลุ่มอักษรกลาง/สูง/ต่ำ partial)

@@ -18,10 +18,14 @@
 import type { Eye, EyeId, Candidate, EyeSignal } from "./types.js";
 
 export interface AvStrainLike {
-  /** Strain id (used as the new eye's name). */
-  name: string;
+  /** Strain name (used as the new eye's id). `id` is also accepted as alias. */
+  name?: string;
+  /** Strain id alias — when user passes only `id`, we use it as the name. */
+  id?: string;
   /** Regex (string form; we new RegExp inside HYDRA). */
-  regex: string;
+  regex?: string;
+  /** Pattern alias for `regex` (compat with antivirus strain shape). */
+  pattern?: string;
   /** Measured precision on the gap-scan corpus. */
   precision: number;
   /** Measured recall on the gap-scan corpus. */
@@ -32,14 +36,25 @@ export interface AvStrainLike {
 
 /**
  * Spawn one HYDRA eye from a strain. Pure function; no I/O.
+ *
+ * v2.43.0 — DEFENSIVE: closes audit bug "HYDRA Cannot read properties of
+ * undefined (reading 'replace')" when user JSON had `id` instead of `name`
+ * OR omitted `regex`. Accepts `id` as name alias + `pattern` as regex
+ * alias; missing both → graceful return null (NOT TypeError).
  */
 export function spawnHydraEye(strain: AvStrainLike): Eye | null {
-  if (strain.precision < 0.9) return null;
+  if (typeof strain.precision !== "number" || strain.precision < 0.9) return null;
   if ((strain.recall ?? 0) < 0.5) return null;
+  // Name fallback chain: name → id → "anonymous"
+  const nameRaw = strain.name ?? strain.id ?? "anonymous";
+  // Regex fallback chain: regex → pattern → reject (no fingerprint = useless eye)
+  const regexRaw = strain.regex ?? strain.pattern;
+  if (typeof regexRaw !== "string" || regexRaw.length === 0) return null;
   let re: RegExp;
-  try { re = new RegExp(strain.regex, "iu"); }
+  try { re = new RegExp(regexRaw, "iu"); }
   catch { return null; }
-  const id: EyeId = `EYE_HYDRA_${strain.name.replace(/[^a-zA-Z0-9_]/g, "_")}`;
+  const safeName = String(nameRaw).replace(/[^a-zA-Z0-9_]/g, "_") || "anonymous";
+  const id: EyeId = `EYE_HYDRA_${safeName}`;
   const eye: Eye = {
     id,
     layer: "hydra",
@@ -50,7 +65,7 @@ export function spawnHydraEye(strain: AvStrainLike): Eye | null {
       // Compose query side too — if BOTH query and candidate match the
       // same strain shape, we treat that as a strong co-membership signal.
       return hit
-        ? { raw: 1.0, reason: `strain match: ${strain.name}` }
+        ? { raw: 1.0, reason: `strain match: ${nameRaw}` }
         : { raw: 0, reason: "no strain match" };
     },
   };

@@ -275,13 +275,16 @@ ran on top (compliance-grade evidence quorum).
 // ─── mneme verify (v1.52.0 friendly UX) ──────────────────────────────
 export function registerVerifyCommand(program: Command): void {
   program
-    .command("verify <claim...>")
+    .command("verify [claim...]")
     .description("Fast truth-check on a claim. Plain-English verdict (TRUSTWORTHY / MIXED / REFUTED / IMPOSSIBLE) anchored to the ACGV pipeline. Pass --explain for the math; --json for machine output.")
     .option("--json", "Structured JSON output for AI agents.")
     .option("--format <fmt>", "v2.19.61 backward-compat alias: 'human' = friendly text (default), 'json' = same as --json. Explicit override of TTY auto-detect for shell scripts that grep TRUSTWORTHY/REFUTED.", "human")
     .option("--explain", "Surface the ACGV layer breakdown (Chandrasekhar / Neutrino / Godel / Vaccine).")
     .option("--counter-evidence <points>", "Pipe-separated counter-points to feed the Confession layer.")
     .option("--engine <name>", "'z3' = use Z3 SAT (requires optional z3-solver); 'propositional' = fast path (default 'z3' when available).", "z3")
+    .option("--stdin", "v2.43.0 — read the claim from stdin (preserves hostile codepoints that the shell strips from argv: BIDI override / NUL byte / control chars).")
+    .option("--hex <hex>", "v2.43.0 — accept the claim as hex-encoded UTF-8 (use when the shell drops hostile codepoints).")
+    .option("--base64 <b64>", "v2.43.0 — accept the claim as base64-encoded UTF-8 (use when the shell drops hostile codepoints).")
     .addHelpText("after", `
 Examples:
   $ mneme verify "the codebase is healthy"
@@ -294,8 +297,36 @@ How to read the verdict:
   REFUTED      Mneme found contradictory evidence -- retract the claim
   IMPOSSIBLE   Godel SAT proof: no repo state can satisfy this claim -- formal refute
 `)
-    .action(async (claimWords: string[], opts: { json?: boolean; format?: string; explain?: boolean; counterEvidence?: string; engine?: string }) => {
-      const claim = claimWords.join(" ");
+    .action(async (claimWords: string[], opts: { json?: boolean; format?: string; explain?: boolean; counterEvidence?: string; engine?: string; stdin?: boolean; hex?: string; base64?: string }) => {
+      // v2.43.0 — multi-source claim resolution. Priority:
+      //   1. --hex (lossless hostile-char input)
+      //   2. --base64 (lossless hostile-char input)
+      //   3. --stdin (lossless hostile-char input)
+      //   4. positional args (default; shell may strip BIDI/NUL)
+      let claim = "";
+      if (opts.hex && opts.hex.length > 0) {
+        try { claim = Buffer.from(opts.hex.replace(/\s+/g, ""), "hex").toString("utf8"); }
+        catch (e) { process.stdout.write(`error: --hex decode failed: ${(e as Error).message}\n`); process.exitCode = 1; return; }
+      } else if (opts.base64 && opts.base64.length > 0) {
+        try { claim = Buffer.from(opts.base64, "base64").toString("utf8"); }
+        catch (e) { process.stdout.write(`error: --base64 decode failed: ${(e as Error).message}\n`); process.exitCode = 1; return; }
+      } else if (opts.stdin === true) {
+        // Read stdin synchronously (small claims; ≤ 8K cap downstream anyway)
+        try {
+          const chunks: Buffer[] = [];
+          for await (const c of process.stdin) chunks.push(c as Buffer);
+          claim = Buffer.concat(chunks).toString("utf8");
+        } catch (e) {
+          process.stdout.write(`error: --stdin read failed: ${(e as Error).message}\n`);
+          process.exitCode = 1; return;
+        }
+      } else {
+        claim = (claimWords ?? []).join(" ");
+      }
+      if (!claim || claim.length === 0) {
+        process.stdout.write(`error: empty claim. Pass positional args, --stdin, --hex, or --base64.\n`);
+        process.exitCode = 1; return;
+      }
       // v2.19.61 — --format=json is an explicit alias for --json (backward
       // compat for user shell scripts that grep specific verdict strings).
       // --format=human (default) forces human output even if user piped stdout.

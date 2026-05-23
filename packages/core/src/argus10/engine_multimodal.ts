@@ -153,12 +153,20 @@ export async function argusSearchMultimodal(
     for (const b of breakdown) {
       if (b.raw !== null && b.weight > 0) weightedSum += b.weight * b.raw;
     }
+    // v2.43.0 — EXACT-AFTER-FOLD BONUS (+0.30 additive). When EYE_6
+    // returned raw=1.0 with "EXACT after homoglyph fold" reason, the
+    // candidate is provably equivalent to the query up to cross-script
+    // confusables. This deserves a flat +0.30 score bonus so the
+    // homoglyph candidate ALWAYS out-ranks leetspeak digit-substitutions
+    // (which surface-eyes naturally favor due to byte-level similarity).
+    const eye6 = breakdown.find((b) => b.id === "EYE_6_homoglyph_collapse");
+    const exactAfterFoldBonus = eye6 && eye6.raw === 1.0 && /EXACT after homoglyph fold/.test(eye6.reason) ? 0.30 : 0;
     const hb = hydraBonus(litHydra);
     const days = Math.max(0.5, cand.meta?.recencyDays ?? 365);
     const recencyBoost = Math.max(1.0, Math.min(1.5, 1 + Math.log10(1 + 1 / days)));
     const hm = honestMirrorMultiplier(input.repoRoot, cand.meta?.vendor);
     const honestM = Math.max(0.5, Math.min(1.5, hm));
-    const score = weightedSum * hb * recencyBoost * honestM;
+    const score = (weightedSum + exactAfterFoldBonus) * hb * recencyBoost * honestM;
 
     return {
       candidate: cand,

@@ -48,6 +48,20 @@ function fold(s: string): string {
   return cyrillicGreekToLatin(safeNormalize(s)).toLowerCase();
 }
 
+// v2.43.0 — leetspeak-shape detector: digit substituted for visually
+// similar letter (1→l, 3→e, 0→o, 5→s, 4→a, 7→t, 8→b, 9→g, 2→z). When
+// candidate contains digit-substituted letters but DOESN'T look like a
+// real number-bearing claim, ARGUS treats it as an adversarial spoof —
+// homoglyph-folded match against a clean query should beat it.
+const LEETSPEAK_PAIRS = /[a-z][0-9][a-z]|[a-z][0-9]$|^[0-9][a-z]/i;
+function looksLikeLeetspeak(s: string): boolean {
+  // Heuristic: digit AMONG letters but no obvious numeric phrase (year, version, count word)
+  if (!LEETSPEAK_PAIRS.test(s)) return false;
+  // Exclude legitimate numbers: years (4-digit), versions, counts followed by word
+  if (/\b\d{4,}\b|\bv?\d+\.\d+|\b\d+\s+[a-z]{2,}/i.test(s)) return false;
+  return true;
+}
+
 export const EYE_6_homoglyph_collapse: Eye = {
   id: "EYE_6_homoglyph_collapse",
   layer: "truth",
@@ -57,7 +71,21 @@ export const EYE_6_homoglyph_collapse: Eye = {
     const fq = fold(q);
     const fc = fold(c.text);
     if (fq.length === 0 || fc.length === 0) return { raw: 0, reason: "empty after fold" };
-    if (fq === fc) return { raw: 1.0, reason: "exact after homoglyph fold" };
+    // v2.43.0 — leetspeak adversarial penalty: when candidate is leet
+    // but query isn't, EYE_6 returns 0 even if folds match. The intent
+    // is to make "Mneme" query rank "Mnеme" (real homoglyph) ABOVE
+    // "Mnem3" (digit substitution).
+    if (looksLikeLeetspeak(c.text) && !looksLikeLeetspeak(q)) {
+      return { raw: 0, reason: "candidate is leetspeak digit-substitution; not a homoglyph" };
+    }
+    if (fq === fc) {
+      // v2.43.0 — EXACT-AFTER-FOLD BONUS: when the only difference between
+      // query and candidate is a homoglyph (Cyrillic/Greek/full-width)
+      // letter, the candidate IS the query — saturate the eye at 1.0.
+      // The engine's fusion + weight handle the rest. The signal carries
+      // a flag the engine can read to apply an extra ranking boost.
+      return { raw: 1.0, reason: "EXACT after homoglyph fold (cross-script equivalence)" };
+    }
     if (fc.includes(fq) || fq.includes(fc)) return { raw: 0.8, reason: "containment after fold" };
     // Fall back to bigram-Dice on folded form (catches partial matches).
     const A = new Set<string>();
@@ -71,6 +99,9 @@ export const EYE_6_homoglyph_collapse: Eye = {
     return { raw, reason: `folded-dice=${inter}` };
   },
 };
+
+// v2.43.0 export the leetspeak helper for tests and other eyes.
+export { looksLikeLeetspeak };
 
 // ─── EYE_7 — number paraphrase bridge ──────────────────────────────────
 //

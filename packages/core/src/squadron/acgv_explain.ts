@@ -172,6 +172,22 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
           confidencePct: pct,
         };
       }
+      // v2.43.0 — NUMBER_BRIDGE headline. When the claim contains a
+      // canonicalizable number form (English words / Thai numerals /
+      // hex / Roman / etc), surface that fact explicitly so the user
+      // doesn't see "no checkable facts" when the verifier DID detect
+      // a number — it just couldn't ground it without context.
+      const numBridgeCaveat = result.caveats.find((c) => c.startsWith("NUMBER_BRIDGE:"));
+      if (numBridgeCaveat) {
+        const n = parseInt(numBridgeCaveat.match(/NUMBER_BRIDGE:(\d+)/)?.[1] ?? "0", 10) || 0;
+        return {
+          headline: `NUMBER-BRIDGE -- ${n} canonicalized number(s) detected; add context (file / version / tool count) to ground them`,
+          plain: `The verifier recognized ${n} numeric paraphrase(s) in the claim (e.g. "eight hundred sixty-five" → 865, "0x361" → 865, "๘๖๕" → 865). The canonical form is registered so any vaccine emitted for one paraphrase will catch the others — but for THIS claim we don't yet have a grounding context. Restate with a verifiable anchor (e.g. "Mneme has N MCP tools as of v2.41.0") so the fact-grounder can check.`,
+          nextAction: "Restate the claim with a concrete reference: tool count + version, or file path + line, or commit hash + author.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
       // v2.34.0 — SELF_REFERENCE + SELF_PARADOX headlines (regression-card
       // bugs R1 + NEW2). The verdict is PASSTHROUGH so we land here.
       const srCaveat = result.caveats.find((c) => c === "SELF_REFERENCE_DETECTED" || c === "SELF_PARADOX_DETECTED");
