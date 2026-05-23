@@ -164,14 +164,6 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 
 <sub>Designer + sole maintainer of <b>Mneme</b> — the local-first, vendor-neutral truth-infrastructure layer that bolts an elephant brain onto every AI agent. 17 primitives shipped solo · 820+ MCP tools · world-first cross-vendor Byzantine consensus + Anti-Eval-Awareness Engine + HMAC-chained audit receipts.</sub>
 
-<br/>
-
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/GitHub-patsa2561--art-181717?style=for-the-badge&logo=github&logoColor=white" /></a>
-<a href="https://www.npmjs.com/~mneme_npm" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/npm-mneme__npm-cb3837?style=for-the-badge&logo=npm&logoColor=white" /></a>
-<a href="mailto:patsa2561@gmail.com" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/Email-patsa2561%40gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white" /></a>
-
-<br/>
-
 ### 💼 Why this matters (a short pitch)
 
 </div>
