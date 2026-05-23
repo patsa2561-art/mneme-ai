@@ -223,6 +223,49 @@ export function countUnsent(repoRoot: string): number {
   return readInbox(repoRoot).filter((m) => !m.sent).length;
 }
 
+/**
+ * v2.34.0 — NEW1 fix: SINGLE SOURCE OF TRUTH for the pulse/CLI inbox
+ * count. Same filter pulse.ts applies (skip sent entries + skip stale
+ * version banners whose advertised "you're on vX.Y.Z" no longer matches
+ * the current installed version). Both pulse and `mneme inbox` CLI MUST
+ * call this helper so their counts agree forever.
+ *
+ * Pre-v2.34: pulse counted `sent === false` + stale-version filter;
+ * `mneme inbox` CLI applied DIFFERENT filtering. Result: pulse said
+ * "1 unread" while CLI said "Inbox is empty".
+ *
+ * Post-v2.34: both use `countUnsentDisplayable(repoRoot, currentVer)`.
+ * Pinned regression test asserts equality.
+ */
+export function countUnsentDisplayable(repoRoot: string, currentVer?: string): number {
+  const all = readInbox(repoRoot);
+  return all.filter((m) => isDisplayableUnsent(m, currentVer)).length;
+}
+
+/**
+ * Strict predicate: is this message both UNSENT and CURRENTLY DISPLAYABLE?
+ * Currently displayable = not flagged as a stale-version banner whose
+ * advertised target version no longer matches `currentVer`.
+ */
+export function isDisplayableUnsent(m: InboxMessage, currentVer?: string): boolean {
+  if (m.sent) return false;
+  if (!currentVer) return true;
+  // Stale-version detection — matches pulse.ts's isStaleVersionEntry shape.
+  const text = `${m.title ?? ""}\n${m.body ?? ""}`;
+  const onVer = text.match(/You'?re on v(\d+\.\d+\.\d+)/i);
+  if (onVer && onVer[1] !== currentVer) return false;
+  return true;
+}
+
+/**
+ * v2.34.0 — readable list of displayable unsent messages. Same filter
+ * as countUnsentDisplayable. CLI uses this so its display matches the
+ * pulse counter.
+ */
+export function listDisplayableUnsent(repoRoot: string, currentVer?: string): InboxMessage[] {
+  return readInbox(repoRoot).filter((m) => isDisplayableUnsent(m, currentVer));
+}
+
 /** Read all messages currently in the inbox (sent + unsent). */
 export function readInbox(repoRoot: string): InboxMessage[] {
   const path = inboxPath(repoRoot);

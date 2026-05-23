@@ -52,6 +52,8 @@ import { evaluateConfession, requestConfession, type ConfessionRequest, type Con
 import { checkAgainstVaccines, emitVaccine, type VaccineMatch } from "./acgv_vaccine.js";
 import { vaccineConflictsWithClaim } from "./vaccine_numeric_guard.js";
 import { detectHyperbole } from "./hyperbole_detector.js";
+import { detectSelfReference, dominantClass as selfRefDominantClass } from "./acgv_self_reference.js";
+import { scanCommitHashes } from "./acgv_commit_hash_oracle.js";
 import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
 import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
@@ -376,6 +378,91 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
       },
       summary: `IMPOSSIBLE_REFUTE -- hyperbole detector matched: ${hyp.matches.map((m) => m.category).join(", ")}`,
       reasoning: `The claim asserts something the hyperbole detector classifies as unverifiable in this category:\n${hyp.matches.map((m) => `  - ${m.category}: ${m.reason}\n    matched: "${m.matched}"`).join("\n")}`,
+      vaccineEmitted: !input.noEmitVaccine,
+    } as ACGVResult;
+  }
+
+  // ───── Layer 0b: SELF-REFERENCE + LIAR-PARADOX DETECTOR (v2.34.0) ─────
+  // Closes regression-card bugs R1 (recursive self-verify IMPOSSIBLE 99%)
+  // + NEW2 (paradox "This statement is false" returned NONE). Self-
+  // referential claims are a CATEGORY ERROR — not BLACK_HOLE-false. We
+  // surface them with their own verdict + caveat so the downstream
+  // pipeline never wrongly fires IMPOSSIBLE_REFUTE on them.
+  const sref = detectSelfReference(claim);
+  if (sref.flagged) {
+    const dom = selfRefDominantClass(sref.matches)!;
+    const isParadox = dom === "self_paradox";
+    const chandra: ChandrasekharResult = {
+      verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: isParadox ? 0.85 : 0.50,
+      citations: [],
+      reasoning: isParadox
+        ? "self-referential paradox — claim is outside truth-functional logic"
+        : "self-reference — claim cannot be evaluated by independent grounding",
+    } as ChandrasekharResult;
+    const godel: GodelResult = {
+      status: isParadox ? "UNSAT" : "SKIPPED",
+      core: sref.matches.map((m) => ({ asserted: m.reason, proof: [m.matched] })),
+      certificate: sref.matches.map((m) => `${m.class} :: ${m.matched}`).join("\n"),
+      upgrade: isParadox,
+    };
+    return {
+      verdict: "PASSTHROUGH", // not IMPOSSIBLE_REFUTE — category error, not falsehood
+      confidence: isParadox ? 0.85 : 0.50,
+      caveats: [...caveats, isParadox ? "SELF_PARADOX_DETECTED" : "SELF_REFERENCE_DETECTED"],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: isParadox
+        ? `SELF_PARADOX — '${sref.matches[0]!.matched.slice(0, 60)}'... is logically self-referential and outside the truth-functional fragment.`
+        : `SELF_REFERENCE — the claim refers to itself; independent verification is undefined.`,
+      reasoning: sref.matches.map((m) => `  - ${m.class}: ${m.reason} (matched: "${m.matched}")`).join("\n"),
+      vaccineEmitted: false,
+    } as ACGVResult;
+  }
+
+  // ───── Layer 0c: COMMIT-HASH ORACLE (v2.34.0) ─────────────────────────
+  // Closes regression-card bug NEW3 — fake commit hashes ("commit
+  // a1b2c3d4 fixed auth") used to return NONE because the verifier had
+  // no path to check git. Now we scan for hash-shaped substrings + run
+  // `git cat-file -e <hash>` BEFORE the expensive Chandrasekhar/Godel
+  // path so a fake-hash claim short-circuits in <50ms.
+  const hashOracle = scanCommitHashes(claim, repoRoot);
+  if (hashOracle.scanned && hashOracle.hasFakeHash) {
+    if (!input.noEmitVaccine) {
+      try { emitVaccine(repoRoot, claim, hashOracle.vaccineSignature); } catch { /* best-effort */ }
+    }
+    const fakes = hashOracle.matches.filter((m) => !m.exists);
+    const chandra: ChandrasekharResult = {
+      verdict: "BLACK_HOLE", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0.98, citations: [],
+      reasoning: `commit-hash oracle: ${fakes.length} hash(es) not in git log`,
+    } as ChandrasekharResult;
+    const godel: GodelResult = {
+      status: "UNSAT",
+      core: fakes.map((f) => ({ asserted: `commit ${f.hash} exists`, proof: [`git cat-file -e ${f.hash} → not found`] })),
+      certificate: hashOracle.reason,
+      upgrade: true,
+    };
+    return {
+      verdict: "IMPOSSIBLE_REFUTE",
+      confidence: 0.98,
+      caveats: [...caveats, `FAKE_COMMIT_HASH:${fakes.map((f) => f.hash).join(",")}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `IMPOSSIBLE_REFUTE -- ${fakes.length} fake commit hash(es): ${fakes.map((f) => f.hash).join(", ")}`,
+      reasoning: `The claim cites ${fakes.length} commit hash(es) that do NOT exist in this repository's git log. This is the classic AI-vendor hallucination shape — the vendor invented a SHA to make a fix story sound concrete.\n\nFake hashes: ${fakes.map((f) => f.hash).join(", ")}\n${hashOracle.matches.filter((m) => m.exists).length > 0 ? `Real hashes also cited: ${hashOracle.matches.filter((m) => m.exists).map((m) => m.hash + (m.summary ? " — " + m.summary : "")).join(", ")}` : "No real hashes in this claim."}`,
       vaccineEmitted: !input.noEmitVaccine,
     } as ACGVResult;
   }

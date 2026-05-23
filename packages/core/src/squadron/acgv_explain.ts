@@ -116,7 +116,7 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
       // landed in the catch-all "no checkable facts" line, which hid the
       // genuine reason from the user (empty input / whitespace-only / control
       // chars only / truncated). Now each surfaces its own headline.
-      const inputCaveat = result.caveats.find((c) => c.startsWith("INPUT_UNVERIFIABLE:") || c === "INPUT_TRUNCATED");
+      const inputCaveat = result.caveats.find((c) => c.startsWith("INPUT_UNVERIFIABLE:") || c.startsWith("INPUT_TRUNCATED"));
       if (inputCaveat === "INPUT_UNVERIFIABLE:EMPTY_INPUT") {
         return {
           headline: `INSUFFICIENT-INPUT -- claim is empty`,
@@ -145,11 +145,36 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
         };
       }
       // INPUT_TRUNCATED is informational — flag it but keep PASSTHROUGH headline.
-      if (inputCaveat === "INPUT_TRUNCATED") {
+      // v2.34.0 R3 fix: include the truncation ratio in the headline so the
+      // user sees "50K → 8K (16%)" at a glance instead of just "truncated".
+      if (inputCaveat?.startsWith("INPUT_TRUNCATED")) {
+        const m = inputCaveat.match(/INPUT_TRUNCATED:(\d+)\/(\d+)/);
+        const ratio = m ? `${m[1]} of ${m[2]} chars analysed (${Math.round((parseInt(m[1]!, 10) / parseInt(m[2]!, 10)) * 100)}%)` : "input truncated";
         return {
-          headline: `NEEDS-DATA -- input was truncated to fit the verifier`,
-          plain: `The claim exceeded the verifier's input cap and was truncated before analysis. ACGV processed the truncated head; the verdict may not reflect content past the cap. Returned explicitly so the user knows analysis was partial.`,
+          headline: `NEEDS-DATA -- input truncated · ${ratio}`,
+          plain: `The claim exceeded the verifier's input cap and was truncated. ACGV processed the head only; the verdict does NOT reflect content past the cap. Explicit headline (not silent) so the user knows analysis was partial.`,
           nextAction: "Split the claim into smaller verifiable assertions and re-run.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
+      // v2.34.0 — SELF_REFERENCE + SELF_PARADOX headlines (regression-card
+      // bugs R1 + NEW2). The verdict is PASSTHROUGH so we land here.
+      const srCaveat = result.caveats.find((c) => c === "SELF_REFERENCE_DETECTED" || c === "SELF_PARADOX_DETECTED");
+      if (srCaveat === "SELF_PARADOX_DETECTED") {
+        return {
+          headline: `SELF-PARADOX -- claim is logically self-referential (outside truth-functional logic)`,
+          plain: `This is the liar-paradox shape ("this statement is false" / "I am lying"). It is NEITHER true NOR false in classical logic — it's a CATEGORY ERROR. Mneme refuses to assign IMPOSSIBLE_REFUTE because that would be falsely classifying a paradox as a falsehood.`,
+          nextAction: "Rephrase the claim as a non-self-referential assertion, or accept that the paradox is a feature of the input not a fact about the world.",
+          trafficLight: "yellow",
+          confidencePct: pct,
+        };
+      }
+      if (srCaveat === "SELF_REFERENCE_DETECTED") {
+        return {
+          headline: `SELF-REFERENCE -- claim refers to itself; no independent ground truth`,
+          plain: `The claim asserts a fact about itself (e.g. "this claim verifies itself", "X is verified by X"). There is no INDEPENDENT verification path — circular self-reference. Mneme returns PASSTHROUGH with calibrated 50% confidence, NOT IMPOSSIBLE_REFUTE — the claim is a category error, not a falsehood.`,
+          nextAction: "Restate the claim with an external referent (e.g. cite a specific file, version, or fact that doesn't include the claim itself).",
           trafficLight: "yellow",
           confidencePct: pct,
         };
