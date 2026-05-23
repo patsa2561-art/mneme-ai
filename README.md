@@ -156,7 +156,7 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 
 <div align="center">
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="https://github.com/patsa2561-art.png" width="180" height="180" style="border-radius: 50%; border: 3px solid #00d4ff;" alt="Shinnapat Phunsriphatchalakul" /></a>
+<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/87643.jpg" width="200" height="260" style="border-radius: 14px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
 
 ### Shinnapat Phunsriphatchalakul
 
@@ -168,7 +168,7 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 
 </div>
 
-> **The bottleneck of every frontier-AI deployment is TRUST.** In safety-critical contexts — aerospace, autonomous systems, medical AI, financial AI compliance — a hallucinated commit hash, a paradox-class category error, or a vendor playing eval theater isn't a chat-glitch; it's a deployment-window risk. Mneme is the **only local-first, vendor-neutral truth layer** that (a) refuses to relay unverified claims, (b) catches vendors that change behavior when they detect a benchmark (the AEAE world-first), and (c) emits HMAC-chained receipts of every audit so an operator can re-verify offline weeks later. Built solo, MIT, production-grade, 329 pinned tests, dual-100 GAUNTLET + TRUTH GATE. Open to **collaboration / consulting / full-time on truth-infrastructure for safety-critical AI**.
+> **The bottleneck of every frontier-AI deployment is TRUST.** In production AI — autonomous systems, medical AI, financial AI compliance, regulated industries — a hallucinated commit hash, a paradox-class category error, or a vendor playing eval theater isn't a chat-glitch; it's a deployment risk. Mneme is the **only local-first, vendor-neutral truth layer** that (a) refuses to relay unverified claims, (b) catches vendors that change behavior when they detect a benchmark (the AEAE world-first), and (c) emits HMAC-chained receipts of every audit so an operator can re-verify offline weeks later. Built solo, MIT, production-grade, 329+ pinned tests, dual-100 GAUNTLET + TRUTH GATE. Open to **collaboration / consulting / full-time on truth-infrastructure for production AI**.
 
 <div align="center">
 

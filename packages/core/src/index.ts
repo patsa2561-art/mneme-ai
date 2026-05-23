@@ -1409,6 +1409,15 @@ export * as pulsecost from "./pulsecost/index.js";
 // (Coexists with the older `coercion_taxonomy` 5-tier CLI module.)
 export * as coercion from "./coercion/index.js";
 
+// v2.38.0 — 🌉 BRIDGE PHOENIX — watchdog that probes the HTTP bridge
+// (default :17741) every tick + respawns `mneme bridge --detach` after
+// N consecutive failed pings. Closes the audit-card finding "bridge
+// doesn't phoenix-restart — daemon dies 3 rounds, bridge dies with it,
+// user must rerun bridge --detach manually." Defensive: probe never
+// throws; respawn never crashes the caller; cooldown prevents respawn-
+// storm. Daemon integrates via tickWatchdog() per cycle.
+export * as bridgePhoenix from "./bridge_phoenix/index.js";
+
 // v2.36.0 — 📜 HONEST RECEIPT — every CLI invocation can emit an
 // HMAC-signed receipt of what ACTUALLY ran (install path + resolved
 // version + code path + latency). Closes the marketing-vs-reality

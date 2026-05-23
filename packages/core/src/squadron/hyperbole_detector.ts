@@ -33,11 +33,15 @@ export interface HyperbolePattern {
 }
 
 export const HYPERBOLE_PATTERNS: HyperbolePattern[] = [
-  // Medical: action verb + disease/condition
+  // Medical / global-impossible: action verb + target. v2.38.0 expansion —
+  // adds "ends world hunger", "solves poverty", "eliminates all disease",
+  // "ends starvation", "cures aging / death / mortality" as targets so
+  // multi-impossible compound claims like "Mneme cures cancer + ends world
+  // hunger" fire deterministically.
   {
     category: "medical-cure",
-    detector: /\b(cure[ds]?|cures|treat(?:s|ed|ing)?|heal[eds]?|prevent[s]?|reverse[ds]?|eliminat[esd]+)\s+(?:[a-z]+\s+){0,3}(?:cancer|diabetes|alzheimer'?s?|als|aids|hiv|covid|disease|infection|tumou?rs?|stroke|dementia|parkinson'?s?|autism)/i,
-    reason: "claim asserts medical cure/treatment without clinical evidence",
+    detector: /\b(cure[ds]?|cures|treat(?:s|ed|ing)?|heal[eds]?|prevent[s]?|reverse[ds]?|eliminat[esd]+|end[s]?|solve[ds]?)\s+(?:[a-z]+\s+){0,4}(?:cancer|diabetes|alzheimer'?s?|als|aids|hiv|covid|disease|infection|tumou?rs?|stroke|dementia|parkinson'?s?|autism|world\s+hunger|world\s+poverty|all\s+(?:disease|illness|suffering)|starvation|aging|death|mortality)/i,
+    reason: "claim asserts medical cure / global-impossible end of suffering without supporting evidence",
   },
   // Superlative absolute without evidence
   {

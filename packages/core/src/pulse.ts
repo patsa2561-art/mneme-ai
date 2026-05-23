@@ -29,7 +29,7 @@
  * keystroke = AI sees Mneme's current state without any tool call.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, platform } from "node:os";
 import { spawn } from "node:child_process";
@@ -423,7 +423,63 @@ export function renderPulse(status: PulseStatus, opts: PulseOptions & { autoAck?
   // v1.46.0 (#9 fix) — was `inbox=N` which testers thought meant total;
   // the field is actually unsent. New label `inbox-unsent=N` matches
   // exactly what `mneme inbox list` prints in its top line.
-  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox-unsent=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}${memSuffix}`);
+  // v2.38.0 — append `tools=N±Δ` segment. N = live MCP tool count;
+  // Δ = delta vs last-pulse cached count (read+written to a 1-entry
+  // file). Catches the audit "tool count drift 787→865 silently".
+  // Defensive: if MCP build or cache fails, the segment is omitted —
+  // pulse must NEVER throw.
+  let toolsSuffix = "";
+  // v2.38.0 — renderPulse doesn't take _toolCountRepoRoot as a top-level arg;
+  // it's on opts. Resolve here so the tool-count + cache paths work.
+  const _toolCountRepoRoot = opts._toolCountRepoRoot ?? process.cwd();
+  try {
+    // pulse.ts is sync + ESM. Loading buildAllTools() from @mneme-ai/mcp
+    // sync is fragile across vitest/Node/built-dist surfaces. Instead
+    // we COUNT `_*_tools.ts` source files in the MCP package — a stable
+    // signal that approximates `buildAllTools().length` without
+    // requiring a working module resolution. Each tool-registry file
+    // exports an array of MnemeTool definitions; the count rises
+    // monotonically as new families ship. Good enough for drift detection.
+    // Defensive: any fs failure leaves toolsSuffix empty.
+    const mcpToolsDir = join(_toolCountRepoRoot, "packages", "mcp", "src", "tools");
+    let liveN = 0;
+    if (existsSync(mcpToolsDir)) {
+      let total = 0;
+      for (const f of readdirSync(mcpToolsDir)) {
+        if (!f.endsWith(".ts") || f.endsWith(".test.ts")) continue;
+        try {
+          const body = readFileSync(join(mcpToolsDir, f), "utf8");
+          // Count exported tool definitions (each MnemeTool = one `name:` field
+          // inside a `{...}` literal exported as `export const xxxTool`).
+          const matches = body.match(/^\s*name:\s*["']mneme\./gm);
+          if (matches) total += matches.length;
+        } catch { /* skip unreadable */ }
+      }
+      liveN = total;
+    } else {
+      // Production install (no monorepo source). Fall back to reading
+      // the built registry dist file + counting `name:` entries — same
+      // heuristic, different source.
+      const mcpDistRegistry = join(_toolCountRepoRoot, "node_modules", "@mneme-ai", "mcp", "dist", "tools", "_registry.js");
+      if (existsSync(mcpDistRegistry)) {
+        const body = readFileSync(mcpDistRegistry, "utf8");
+        const matches = body.match(/name:\s*["']mneme\./g);
+        liveN = matches ? matches.length : 0;
+      }
+    }
+    if (liveN === 0) throw new Error("could not count MCP tools from source or dist");
+    const cachePath = join(_toolCountRepoRoot, ".mneme", "pulse_tool_count.txt");
+    let lastN: number | null = null;
+    try { if (existsSync(cachePath)) lastN = parseInt(readFileSync(cachePath, "utf8").trim(), 10); } catch { /* ignore */ }
+    if (lastN !== null && Number.isFinite(lastN) && lastN !== liveN) {
+      const delta = liveN - lastN;
+      toolsSuffix = `  tools=${liveN}${delta >= 0 ? "+" : ""}${delta}`;
+    } else {
+      toolsSuffix = `  tools=${liveN}`;
+    }
+    try { writeFileSync(cachePath, String(liveN) + "\n"); } catch { /* best-effort */ }
+  } catch { /* MCP unavailable — drop the segment */ }
+  lines.push(`mneme ${versionTag}  daemon=${status.daemon.running ? "running" : "stopped"}  inbox-unsent=${status.inbox.unsent}  vaccines=${status.antivirus.activeVaccines}  retrieval-trials=${status.retrieval.totalTrials}${hciSuffix}${memSuffix}${toolsSuffix}`);
   if (status.notable.length > 0) {
     lines.push("");
     let hasAutoAction = false;
