@@ -141,16 +141,30 @@ export async function runCalibration(
   const finishedAt = new Date().toISOString();
   const totalMs = Date.now() - t0;
   // Overall verdict.
+  // v2.37.0 — mock-vendor filter. Mock vendor adapters return
+  // deterministic placeholder text that CAN'T match real commit
+  // diffs, so their meanCalibrationDelta is structurally ~60% over-
+  // confident by construction. Including them in the traffic-light
+  // computation produces a spurious 🔴 RED on every fresh install
+  // that only has mock vendors available (no API keys configured).
+  // Same filter TRUTH GATE probe.honest_mirror.recent_calibration
+  // applies. Mock vendors still appear in perVendor for completeness
+  // but don't drive the headline.
+  const realVendors = perVendor.filter((v) => !v.vendor.startsWith("mock") && !v.vendor.includes("@mock"));
+  const scoringVendors = realVendors.length > 0 ? realVendors : perVendor; // fall back so we always have a verdict
   let trafficLight: MirrorReport["trafficLight"];
-  const maxAbsDelta = perVendor.reduce((m, v) => Math.max(m, Math.abs(v.meanCalibrationDelta)), 0);
+  const maxAbsDelta = scoringVendors.reduce((m, v) => Math.max(m, Math.abs(v.meanCalibrationDelta)), 0);
   if (maxAbsDelta < 0.10) trafficLight = "green";
   else if (maxAbsDelta < 0.25) trafficLight = "yellow";
   else trafficLight = "red";
+  const mockNote = realVendors.length === 0 && perVendor.length > 0
+    ? " (mock-only run — no real vendor signal; production calibration requires API keys)"
+    : "";
   const headline = trafficLight === "green"
-    ? `🟢 HONEST MIRROR — all ${perVendor.length} vendors well-calibrated against ${pairs.length} natural artifacts`
+    ? `🟢 HONEST MIRROR — all ${perVendor.length} vendors well-calibrated against ${pairs.length} natural artifacts${mockNote}`
     : trafficLight === "yellow"
-    ? `🟡 HONEST MIRROR — calibration drift up to ${(maxAbsDelta * 100).toFixed(0)}% across ${perVendor.length} vendors`
-    : `🔴 HONEST MIRROR — significant calibration miss: max ${(maxAbsDelta * 100).toFixed(0)}% drift`;
+    ? `🟡 HONEST MIRROR — calibration drift up to ${(maxAbsDelta * 100).toFixed(0)}% across ${scoringVendors.length} real vendor(s)${mockNote}`
+    : `🔴 HONEST MIRROR — significant calibration miss: max ${(maxAbsDelta * 100).toFixed(0)}% drift${mockNote}`;
 
   const body = {
     spec: { name: "MNEME-HONEST-MIRROR" as const, version: "1.0" },

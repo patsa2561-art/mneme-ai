@@ -109,6 +109,77 @@ export function registerDoctorCommand(program: Command): void {
   // specifically the multi-install / PATH-ambiguity surface.
   const doctor = program.command("doctor_install").description("DOCTOR_INSTALL — diagnose Mneme install (multi-install detection, PATH ambiguity, version mismatch). Distinct from `mneme doctor` which probes Ollama / OpenAI / hardware.");
 
+  doctor.command("fix")
+    .description("v2.37.0 — auto-resolve multi-install ambiguity. Default: DRY RUN (--dry-run by default; pass --execute to actually uninstall). Keeps the newest install + uninstalls older / stale ones via `npm uninstall -g mneme-ai --prefix <p>`.")
+    .option("--execute", "Actually run the uninstall commands (otherwise dry-run only).", false)
+    .option("--keep <path>", "Override which install to keep (default: newest version).")
+    .action(async (opts: { execute?: boolean; keep?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const snap = core.honestReceipt.snapshotInstall();
+        if (!snap.multiVersionDetected && snap.otherInstalls.length === 0) {
+          writeJson({ ok: true, action: "noop", reason: "single install — nothing to fix", install: snap });
+          return;
+        }
+        // Build candidate list with parsed semver for "newest" selection.
+        const all = [
+          { path: snap.packagePath ?? "", version: snap.packageVersion ?? "0.0.0" },
+          ...snap.otherInstalls.map((o) => ({ path: o.path, version: o.version ?? "0.0.0" })),
+        ].filter((x) => x.path);
+        // "Keep" is either the user-specified path OR the highest semver.
+        let keep = opts.keep ? all.find((c) => c.path === opts.keep) : undefined;
+        if (!keep) {
+          keep = all.slice().sort((a, b) => {
+            const pa = a.version.split(".").map((n) => parseInt(n, 10) || 0);
+            const pb = b.version.split(".").map((n) => parseInt(n, 10) || 0);
+            for (let i = 0; i < 3; i++) {
+              if ((pb[i] ?? 0) !== (pa[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0);
+            }
+            return 0;
+          })[0];
+        }
+        const toRemove = all.filter((c) => c.path !== keep!.path);
+        const plan: Array<{ path: string; version: string; npmPrefix: string; cmd: string; executed: boolean; ok?: boolean; stderr?: string }> = [];
+        for (const r of toRemove) {
+          // Derive npm prefix from package.json path: <prefix>/node_modules/mneme-ai/package.json
+          const idx = r.path.lastIndexOf("node_modules");
+          const prefix = idx > 0 ? r.path.slice(0, idx).replace(/[\\/]+$/, "") : "";
+          if (!prefix) {
+            plan.push({ path: r.path, version: r.version, npmPrefix: "?", cmd: "(skipped: cannot derive prefix)", executed: false });
+            continue;
+          }
+          const cmd = `npm uninstall -g mneme-ai --prefix "${prefix}"`;
+          if (!opts.execute) {
+            plan.push({ path: r.path, version: r.version, npmPrefix: prefix, cmd, executed: false });
+            continue;
+          }
+          try {
+            const { spawnSync } = await import("node:child_process");
+            const sr = spawnSync("npm", ["uninstall", "-g", "mneme-ai", "--prefix", prefix], { encoding: "utf8", timeout: 60_000 });
+            const ok = sr.status === 0;
+            plan.push({ path: r.path, version: r.version, npmPrefix: prefix, cmd, executed: true, ok, ...(ok ? {} : { stderr: (sr.stderr ?? "").slice(0, 300) }) });
+          } catch (e) {
+            plan.push({ path: r.path, version: r.version, npmPrefix: prefix, cmd, executed: true, ok: false, stderr: (e as Error).message });
+          }
+        }
+        writeJson({
+          ok: true,
+          action: opts.execute ? "executed" : "dry-run",
+          keep: { path: keep!.path, version: keep!.version },
+          plan,
+          headline: opts.execute
+            ? `Executed ${plan.filter((p) => p.executed && p.ok).length} of ${plan.length} uninstalls; kept ${keep!.version} at ${keep!.path}`
+            : `DRY RUN — would uninstall ${plan.length} stale install(s); kept ${keep!.version} at ${keep!.path}. Re-run with --execute to apply.`,
+          nextAction: opts.execute
+            ? "Re-run `mneme doctor_install scan` to verify single-install state."
+            : "Run `mneme doctor_install fix --execute` to apply.",
+        });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
   doctor.command("scan")
     .description("Scan every known npm prefix for mneme-ai installs + flag ambiguity.")
     .action(async () => {

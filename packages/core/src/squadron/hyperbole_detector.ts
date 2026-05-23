@@ -57,6 +57,28 @@ export const HYPERBOLE_PATTERNS: HyperbolePattern[] = [
     detector: /\b(perpetual\s+motion|faster[- ]than[- ]light|infinite\s+energy|zero[- ](?:cost|resource|latency)|free\s+energy|negative\s+entropy\s+machine|over[- ]?unity)/i,
     reason: "claim asserts physically-impossible mechanism",
   },
+  // v2.37.0 — IMPOSSIBLE FACULTY v2. User audit caught "v999.0.0 quantum
+  // mind control" passing as UNKNOWN instead of REFUTED because none of
+  // the medical/superlative/faculty/physics regexes matched the phrase
+  // "quantum mind control". This pattern catches sci-fi / consciousness-
+  // engineering / impossible-tech keywords that appear in over-the-top
+  // marketing claims (especially when paired with version numbers).
+  {
+    category: "impossible-faculty",
+    detector: /\b(quantum\s+(?:mind|consciousness|soul|brain)\s+(?:control|reading|upload|download|manipulation|hacking)|mind[- ]?(?:control|hacking|upload)|consciousness\s+(?:upload|download|transfer)|soul\s+(?:upload|extraction|capture)|simulated\s+reality\s+detection|reality\s+(?:bending|warping|hacking)|time\s+(?:travel|reversal)\s+(?:engine|module|system)|telekines(?:is|tic)|astral\s+projection|psionic\s+(?:upload|interface))/i,
+    reason: "claim asserts impossible sci-fi faculty (quantum mind control / consciousness upload / reality bending)",
+  },
+  // v2.37.0 — PARODY-VERSION pattern. STRICT: only triggers on absurd
+  // major versions (≥ 999) like "v999.0.0" — the canonical parody shape
+  // in vendor hallucinations. Real software doesn't ship at v999.x.y
+  // (Chrome is at v140-ish; Linux kernel 6.x; even libraries that
+  // bump fast top out around v200 — Babel 7, etc). The threshold of
+  // 999 excludes every legitimate software project we could find.
+  {
+    category: "superlative-absolute",
+    detector: /\bv?(?:9{3,}|[1-9]\d{3,})\.\d+\.\d+\b/i,
+    reason: "claim cites a parody-grade version number (major ≥ 999); near-certain hallucination",
+  },
 ];
 
 export interface HyperboleVerdict {
