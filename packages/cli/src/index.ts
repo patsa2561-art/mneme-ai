@@ -4728,6 +4728,48 @@ export async function run(argv: string[]): Promise<void> {
   // v2.46.0 — NEMESIS (Anti-Identity-Lie Engine + EU AI Act Article 50)
   registerNemesisCommand(program);
 
+  // v2.48.0 — Top-level `mneme dev_tooling` CLI (B5 fix: WIRING LAG class).
+  // v2.45 shipped detectDevTooling() in core; v2.47 exposed it as MCP +
+  // `mneme nemesis detect_tooling` subcommand — but users expect the
+  // top-level verb. This adds `mneme dev_tooling [detect|cleanse]`.
+  const dt = program.command("dev_tooling").description("v2.48 — Top-level surface for DEV-TOOLING DETECTOR (v2.45) + RETROACTIVE CLEANSE (v2.45). Closes WIRING LAG class: feature shipped in core but no top-level CLI verb.");
+  dt.command("detect")
+    .description("Detect whether CWD (or --path) is an AI-dev scratch folder vs customer git repo.")
+    .option("--path <dir>", "Folder to check (default cwd).")
+    .option("--json", "Force JSON output (default).")
+    .action(async (opts: { path?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const path = opts.path ?? process.cwd();
+        const r = core.autoInit.detectDevTooling(path);
+        process.stdout.write(JSON.stringify({ ok: true, path, result: r }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  dt.command("cleanse")
+    .description("Retroactive cleanse of AI-fingerprint files from git history. DRY-RUN default.")
+    .option("--mode <m>", "scan | uncommit | filter-repo", "scan")
+    .option("--execute", "Actually mutate (default dry-run).", false)
+    .option("--confirm", "Required for filter-repo (destructive).", false)
+    .action(async (opts: { mode?: string; execute?: boolean; confirm?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.cleanse({
+          repoRoot: process.cwd(),
+          mode: (opts.mode ?? "scan") as "scan" | "uncommit" | "filter-repo",
+          dryRun: !opts.execute,
+          confirm: Boolean(opts.confirm),
+        });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.19.8 — UNIVERSAL MCP SUBCOMMAND AUTO-ROUTER
   // Reads the MCP tool catalog and auto-registers `mneme <family> <action>`
   // for every MCP tool. Closes the "no CLI route for shipped MCP tool" bug

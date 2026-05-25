@@ -409,6 +409,10 @@ export * as acgvAutoNumberGround from "./squadron/auto_number_ground.js";
 // the init step disappear (silent + idempotent + dev-folder-aware).
 export * as autoInit from "./auto_init/index.js";
 export { cleanse, type CleanseInput, type CleanseResult, type CleanseFinding, type CleanseMode } from "./auto_init/retroactive_cleanse.js";
+// v2.48.0 — RELEASE GATE: MANDATORY probe-coverage check (refuses tag
+// when new tool ships without TRUTH GATE probe binding). Closes the
+// "feature velocity > probe velocity" bug class at the release script.
+export * as releaseGate from "./release_gate/probe_coverage.js";
 // v2.46.0 — NEMESIS: world's first Anti-Identity-Lie Engine for AI agents.
 // 5 organs: FINGERPRINTER (41-feature vendor classifier from arxiv 2601.17406)
 // + LIE DETECTOR (claim vs detected with HMAC verdict) + ARTICLE 50 AUTO-STAMP

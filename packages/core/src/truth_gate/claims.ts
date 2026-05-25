@@ -209,6 +209,21 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.nemesis.world_first_agent_fingerprinter",
     severity: "block",
   },
+  // ── v2.48.0 — NEMESIS classify accuracy on REAL (held-out) corpus ───
+  // F7 from v2.47 audit: pre-v2.48 the only accuracy probe ran on the
+  // SEED corpus (100% by construction). Real-world bugs (B1: header-less
+  // diff) slipped through because seed always had headers. This new
+  // probe runs a 7-fixture held-out corpus with header-less + naturalistic
+  // variation; requires ≥85% accuracy. Severity=block → drift breaks tag.
+  {
+    id: "claim.nemesis.real_accuracy_85",
+    source: "v2.48.0 release notes",
+    text: "NEMESIS calibrated classifier achieves ≥85% accuracy on a HELD-OUT real-corpus-shaped fixture set (header-less diffs + natural variation) — not just the seed corpus",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.nemesis.classify_accuracy_real_corpus",
+    severity: "block",
+  },
   // ── v2.45.0 — AUTO-INIT zero-command-install self-verify ────────────
   {
     id: "claim.auto_init.zero_command",

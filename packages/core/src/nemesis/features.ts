@@ -29,8 +29,24 @@ function shannonEntropyNormalized(counts: number[]): number {
 }
 
 /**
- * Parse a unified diff into per-file added/removed line counts +
- * collected added-line text.
+ * v2.48.0 — UNIVERSAL DIFF PARSER. Handles every diff format encountered
+ * in the wild:
+ *
+ *   1. Standard `git diff` output with `diff --git a/x b/x` headers
+ *   2. GitHub API raw diff (no diff-git header; just hunks `@@ -1,3 +1,5 @@`)
+ *   3. GitLab API raw diff (same as GitHub)
+ *   4. Patch files (`Index: foo` legacy SVN format)
+ *   5. HEADER-LESS RAW (just `+`/`-` lines — common in test fixtures,
+ *      clipboards, AI-pasted snippets)
+ *
+ * Root-cause fix for B1 (v2.47 audit): the pre-v2.48 parser required a
+ * `diff --git` header to set `current`. Without one, ALL `+` lines were
+ * IGNORED. Result: classifier saw `conditional_density=0` for any test
+ * fixture that lacked the header, and defaulted to the lowest-mean
+ * vendor (copilot).
+ *
+ * Fallback strategy: if no header found in the whole input but there
+ * are `+` lines, synthesize an "anonymous" file so + and - lines count.
  */
 function parseDiff(diff: string): {
   perFile: Map<string, { added: number; removed: number }>;
@@ -41,21 +57,50 @@ function parseDiff(diff: string): {
   const addedLines: string[] = [];
   const removedLines: string[] = [];
   let current: { added: number; removed: number } | null = null;
-  let currentName = "";
-  for (const ln of diff.split("\n")) {
-    const m = ln.match(/^diff --git a\/(\S+) b\/(\S+)/);
-    if (m) {
-      currentName = m[2]!;
+  let anonymousCreated = false;
+  const ensureAnonymous = () => {
+    if (!current) {
       current = { added: 0, removed: 0 };
-      perFile.set(currentName, current);
+      perFile.set("__anonymous__", current);
+      anonymousCreated = true;
+    }
+    return current;
+  };
+  for (const ln of diff.split("\n")) {
+    // Recognize multiple header formats.
+    const gitHeader = ln.match(/^diff --git a\/(\S+) b\/(\S+)/);
+    if (gitHeader) {
+      current = { added: 0, removed: 0 };
+      perFile.set(gitHeader[2]!, current);
+      anonymousCreated = false;
       continue;
     }
-    if (!current) continue;
+    // SVN/legacy
+    const svnHeader = ln.match(/^Index: (\S+)/);
+    if (svnHeader) {
+      current = { added: 0, removed: 0 };
+      perFile.set(svnHeader[1]!, current);
+      anonymousCreated = false;
+      continue;
+    }
+    // Hunk header alone (GitHub/GitLab raw) — ensures we have a current
+    // file to count into. If we're already counting, leave it alone.
+    if (/^@@ /.test(ln)) {
+      if (!current || anonymousCreated) {
+        current = { added: 0, removed: 0 };
+        const fname = `__hunk_${perFile.size}__`;
+        perFile.set(fname, current);
+        anonymousCreated = false;
+      }
+      continue;
+    }
     if (ln.startsWith("+") && !ln.startsWith("+++")) {
-      current.added++;
+      const cur = ensureAnonymous();
+      cur.added++;
       addedLines.push(ln.slice(1));
     } else if (ln.startsWith("-") && !ln.startsWith("---")) {
-      current.removed++;
+      const cur = ensureAnonymous();
+      cur.removed++;
       removedLines.push(ln.slice(1));
     }
   }

@@ -48,6 +48,15 @@ export {
   type KeyResolution, type KeySource,
 } from "./key_management.js";
 
+// v2.48.0 — bug extinction protocol additions.
+export {
+  reconcileVendor, type ReconcileInput, type ReconcileVerdict,
+} from "./vendor_reconcile.js";
+export {
+  computeWeightDelta, applyToConclave,
+  type VerdictInput, type WeightDelta, type ApplyResult,
+} from "./nemesis_to_conclave.js";
+
 // v1.61 NEMESIS PROTOCOL (Tier 5 — weekly adversarial audit) lives in
 // nemesis.ts alongside the new v2.46.0 ANTI-IDENTITY-LIE ENGINE. Both
 // export through this barrel so downstream consumers (MCP `nemesis.generate`

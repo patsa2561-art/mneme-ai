@@ -567,6 +567,57 @@ const probes: Probe[] = [
     },
   },
 
+  // ── NEMESIS real-corpus classify accuracy probe (v2.48.0 F7) ─────────
+  // Runs the CALIBRATED classifier against a held-out "real-corpus-shaped"
+  // fixture set + asserts ≥85% accuracy. This corpus uses HEADER-LESS
+  // diffs + naturalistic variations to catch the v2.47 B1 root cause
+  // (no-header parser failure → conditional_density=0 → wrong vendor).
+  {
+    id: "probe.nemesis.classify_accuracy_real_corpus",
+    kind: "numeric",
+    description: "1 when CALIBRATED classifier achieves ≥85% accuracy on a HELD-OUT real-corpus-shaped fixture set (header-less diffs + natural language variation). 0 on accuracy drop.",
+    run: async () => {
+      try {
+        const m = await import("../nemesis/index.js" as string) as typeof import("../nemesis/index.js");
+        // Held-out corpus: each fixture deliberately differs from seed
+        // (header-less + different commit lengths + varied wording).
+        // The accuracy bar is 85% — strict but achievable given v2.48
+        // universal diff parser fix.
+        const fixtures: Array<{ expected: string; diff: string; prDescription: string; commitMessages: string[] }> = [
+          // Claude — header-less, 7 ifs, single short commit
+          { expected: "claude-code", diff: "+export function classify(x) {\n+  if (a) return 1;\n+  if (b) return 2;\n+  if (c) return 3;\n+  if (d) return 4;\n+  if (e) return 5;\n+  if (f) return 6;\n+  if (g) return 7;\n+  return null;\n+}\n", prDescription: "Branching helper.", commitMessages: ["classify: route input by shape"] },
+          // Claude — diff-git header, 8 ifs
+          { expected: "claude-code", diff: "diff --git a/x.ts b/x.ts\n+if (a) return 1;\n+if (b) return 2;\n+if (c) return 3;\n+if (d) return 4;\n+if (e) return 5;\n+if (f) return 6;\n+if (g) return 7;\n+if (h) return 8;\n", prDescription: "Multiple guards.", commitMessages: ["add guards"] },
+          // Cursor — bullets + links
+          { expected: "cursor", diff: "+const x = 1;\n", prDescription: "## Changes\n- a\n- b\n- c\n- [d](https://a)\n- [e](https://b)\n- [f](https://c)\n", commitMessages: ["add const x"] },
+          // Cursor — different bullet count
+          { expected: "cursor", diff: "+const y = 2;\n", prDescription: "## Changes\n- one\n- two\n- three\n- four\n- [doc1](https://x)\n- [doc2](https://y)\n- [doc3](https://z)\n- [doc4](https://w)\n", commitMessages: ["add const y"] },
+          // Devin — 8 files distributed
+          { expected: "devin", diff: ["+const a=1;","diff --git a/b.ts b/b.ts","+const b=2;","diff --git a/c.ts b/c.ts","+const c=3;","diff --git a/d.ts b/d.ts","+const d=4;","diff --git a/e.ts b/e.ts","+const e=5;","diff --git a/f.ts b/f.ts","+const f=6;","diff --git a/g.ts b/g.ts","+const g=7;","diff --git a/h.ts b/h.ts","+const h=8;"].join("\n"), prDescription: "Refactor.", commitMessages: ["refactor a\n- update\n- adjust\n- remove","refactor b\n- update\n- adjust\n- remove","refactor c\n- update\n- adjust\n- remove"] },
+          // Copilot — 1 file + very long PR
+          { expected: "copilot", diff: "diff --git a/single.py b/single.py\n+def a(): pass\n+def b(): pass\n+def c(): pass\n+def d(): pass\n+def e(): pass\n", prDescription: "This pull request introduces multiple helper functions to the single.py module. ".repeat(15), commitMessages: ["add helpers"] },
+          // Codex — short PR + multiline bullet commits
+          { expected: "codex", diff: "diff --git a/x.js b/x.js\n+function foo(x) { return x; }\n", prDescription: "Add foo.", commitMessages: ["feat: foo\n- a\n- b\n- c\n- d","fix: tweak\n- e\n- f\n- g"] },
+        ];
+        let correct = 0;
+        for (const f of fixtures) {
+          const fp = m.extractFingerprint({ diff: f.diff, prDescription: f.prDescription, commitMessages: f.commitMessages });
+          const v = m.classifyAgentCalibrated(fp);
+          if (v.topVendor === f.expected) correct++;
+        }
+        const accuracy = correct / fixtures.length;
+        const ok = accuracy >= 0.85;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok ? `real-corpus accuracy ${correct}/${fixtures.length} = ${(accuracy * 100).toFixed(0)}% ≥ 85%` : `real-corpus accuracy ${correct}/${fixtures.length} = ${(accuracy * 100).toFixed(0)}% < 85%`,
+          detail: { correct, total: fixtures.length, accuracy },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── AUTO-INIT zero-command-install probe (v2.45.0) ───────────────────
   //
   // Marketing claim: "Mneme bootstraps on first MCP tool call — user

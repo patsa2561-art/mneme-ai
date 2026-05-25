@@ -26,9 +26,30 @@ import type {
   Article50Stamp, Article50StampInput, StampResult, VerifyStampResult,
 } from "./types.js";
 
-const HMAC_KEY = process.env["MNEME_NEMESIS_KEY"] ?? "MNEME-NEMESIS-DEFAULT-KEY-v2.46";
+// v2.48.0 — WARMCACHE: resolve HMAC key once per process so single-call
+// (git hook UX) hits <100ms. Pre-v2.48 git hook = 984ms because the
+// crypto module + key resolution happened cold every call.
+let _keyCache: string | null = null;
+function getHmacKey(): string {
+  if (_keyCache) return _keyCache;
+  _keyCache = process.env["MNEME_NEMESIS_KEY"] ?? "MNEME-NEMESIS-DEFAULT-KEY-v2.46";
+  return _keyCache;
+}
+// Test-only reset (used by v48 retry of cold-path measurement).
+export function __resetWarmCacheForTest(): void { _keyCache = null; }
+
 const REGIME = "EU-AI-ACT-2024";
 const ARTICLE = "50";
+
+/**
+ * v2.48.0 — B2 fix: Number.isFinite guard before clamping. Math.max/min
+ * propagate NaN, so pre-v2.48 confidence=NaN survived the clamp + leaked
+ * into the stamp body as the literal string "NaN".
+ */
+function safeConfidence(c: unknown): number {
+  if (typeof c !== "number" || !Number.isFinite(c)) return 0;
+  return Math.max(0, Math.min(1, c));
+}
 
 function canonicalStampBody(s: Omit<Article50Stamp, "hmac">, message: string): string {
   // Order matters for HMAC; we sort keys explicitly.
@@ -57,12 +78,12 @@ export function stampArticle50(input: Article50StampInput): StampResult {
   }
   const at = new Date().toISOString();
   const contentType = input.contentType ?? "text/x-source-code";
-  const confidence = Math.max(0, Math.min(1, input.confidence ?? 0));
+  const confidence = safeConfidence(input.confidence);
   const message = input.message ?? "";
   const body: Omit<Article50Stamp, "hmac"> = {
     at, vendor: input.vendor, confidence, contentType, regime: REGIME, article: ARTICLE,
   };
-  const hmac = createHmac("sha256", HMAC_KEY).update(canonicalStampBody(body, message)).digest("hex").slice(0, 32);
+  const hmac = createHmac("sha256", getHmacKey()).update(canonicalStampBody(body, message)).digest("hex").slice(0, 32);
   const stamp: Article50Stamp = { ...body, hmac };
   const block = [
     "",
@@ -111,7 +132,7 @@ export function verifyStamp(stampedMessage: string): VerifyStampResult {
   const body: Omit<Article50Stamp, "hmac"> = {
     at, vendor, confidence: confidenceNum, contentType, regime: REGIME, article: ARTICLE,
   };
-  const expected = createHmac("sha256", HMAC_KEY).update(canonicalStampBody(body, message)).digest("hex").slice(0, 32);
+  const expected = createHmac("sha256", getHmacKey()).update(canonicalStampBody(body, message)).digest("hex").slice(0, 32);
   if (expected !== hmac) return { valid: false, reason: "HMAC mismatch — stamp was tampered" };
   return { valid: true, parsed: { ...body, hmac } };
 }

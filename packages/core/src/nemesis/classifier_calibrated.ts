@@ -119,6 +119,27 @@ function softmaxTop(scores: Partial<Record<VendorId, number>>): { topVendor: Ven
  * calibration corpus is unavailable.
  */
 export function classifyAgentCalibrated(fp: Fingerprint): AgentVerdict {
+  // v2.48.0 — LOW-SIGNAL GUARD: when the fingerprint has no real signal
+  // (no added/removed lines + no PR description + no commits), the
+  // classifier should NOT commit to a vendor with high confidence. The
+  // Mahalanobis math always picks a winner when given an all-zero vector
+  // (the vendor with the smallest mean wins), producing false-positive
+  // 99% confidence on garbage/empty inputs (v2.47 B1 cluster).
+  const fpObj0 = fp as unknown as Record<string, number>;
+  const totalSignal =
+    Number(fpObj0["added_lines"] ?? 0) +
+    Number(fpObj0["removed_lines"] ?? 0) +
+    Number(fpObj0["pr_desc_length_chars"] ?? 0) +
+    Number(fpObj0["commit_count"] ?? 0);
+  if (totalSignal < 3) {
+    return {
+      topVendor: "unknown",
+      confidence: 0,
+      scores: {},
+      reasoning: `low-signal guard (total signal ${totalSignal} < 3) — refusing to commit to a vendor on empty/garbage input`,
+    };
+  }
+
   const { scores, discrim } = scoreCalibrated(fp);
   if (Object.keys(scores).length === 0) {
     // Fallback to heuristic; tag the reasoning so callers know
