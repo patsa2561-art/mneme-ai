@@ -93,9 +93,9 @@ No. The MIT version ships everything. A future Enterprise tier (SSO, SBOM signin
 
 **`NEE-meh`** — the "M" is silent, like in "mnemonic". Two syllables.
 
-### Why not just use Sourcegraph / Sentry / [other tool]?
+### How does Mneme relate to Sourcegraph / Sentry / [other tools]?
 
-Mneme is local-first, MIT-licensed, AI-assistant-native (MCP), and applies a unique quant-finance lens (Sprint 5). That said, we deliberately do not put competitor names in the README — Mneme stands on its own design.
+Mneme is local-first, MIT-licensed, AI-assistant-native (MCP), and applies a quant-finance lens (Sprint 5). We deliberately keep the README focused on Mneme's own design rather than side-by-side comparisons — Mneme stands on its own positioning.
 
 ═══════════════════════════════════════════════════════════════════════════════
 

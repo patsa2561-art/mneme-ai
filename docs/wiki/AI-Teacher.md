@@ -14,7 +14,7 @@ Today's AI coding tools — Claude Code, Cursor, Codex, Copilot, Continue — ar
 - 📦 **Carry institutional knowledge in their context window** — compressed enough to fit
 - 🔬 **Tell which retrieved fact actually supports their answer** — citation grounding
 
-Mneme is the **archive** that gives them all of this. Not a competitor in the editor — the memory layer underneath.
+Mneme is the **archive** that gives them all of this. Lives at a different layer than the editor — the memory layer underneath.
 
 ═══════════════════════════════════════════════════════════════════════════════
 

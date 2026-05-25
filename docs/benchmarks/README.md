@@ -4,13 +4,12 @@
 
 ## Why this benchmark exists
 
-When every AI vendor ships native "repo memory" — Claude, OpenAI, Cursor, Continue — **none of them can be the neutral auditor**:
+When every AI vendor ships native "repo memory" — Claude, OpenAI, Cursor, Continue — the neutral-auditor role naturally sits outside each vendor's own product surface:
 
-- Anthropic can't grade Anthropic.
-- OpenAI can't grade OpenAI.
-- Cursor's bundled memory is locked to Cursor.
+- A vendor's own memory implementation evaluates the same vendor.
+- Bundled memory layers are scoped to their host editor.
 
-Mneme is the only memory implementation maintained by no AI vendor — and the only one that can publish a fair public leaderboard.
+Mneme is a memory implementation that lives outside any single AI vendor — well-positioned to publish a public leaderboard.
 
 ## Methodology
 

@@ -1,6 +1,6 @@
-# 🧑‍🚀 Digital Talent — five black-sheep moats Mneme can build alone
+# 🧑‍🚀 Digital Talent — five durable design positions Mneme can build on
 
-**Premise:** the "AI talent" market today is recruiters posting Python roles, courses selling LangChain certificates, and LinkedIn skills badges. None of it captures the real signal — **what an engineer has actually decided, what they have refused, and what scarred them**. Mneme already records all three for every dev who uses it. That data, applied to the talent market, opens five moats nobody else can build because they don't have the substrate.
+**Premise:** the "AI talent" market today is recruiters posting Python roles, courses selling LangChain certificates, and LinkedIn skills badges. None of it captures the real signal — **what an engineer has actually decided, what they have refused, and what scarred them**. Mneme already records all three for every dev who uses it. That data, applied to the talent market, opens five durable design positions that build on this substrate.
 
 These are **standalone product opportunities** (separate brand, separate repo, optionally Mneme-as-a-dep). All five share the same engine: HMAC-signed decision provenance + cross-vendor experience pool + refuse-at-source primitives.
 

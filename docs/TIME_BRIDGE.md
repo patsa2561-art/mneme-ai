@@ -124,7 +124,7 @@ When `mneme time-bridge auto-on` is active, SUPER NOVA's observer hooks every fi
 - `mneme.intern.start | graduate`
 - `mneme.dream.run`
 
-No manual `inscribe` call. The corpus grows every day you use Mneme. **Competitors can copy the API tomorrow — they cannot copy the corpus.**
+No manual `inscribe` call. The corpus grows every day you use Mneme. **The API is open; the corpus accumulates with time of use — compounding becomes the durable signal.**
 
 ---
 

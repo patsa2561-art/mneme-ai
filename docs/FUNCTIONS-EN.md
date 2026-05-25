@@ -70,7 +70,7 @@ For Thai: [docs/FUNCTIONS-TH.md](FUNCTIONS-TH.md). For the deep contract: [docs/
 
 ## 6. Marketing Reconciliation (v2.27.0) — TRUTH GATE 🟢
 
-> Every marketing claim bound to a measurable probe. World-first: no AI tool auto-reconciles its own marketing copy vs live behavior.
+> Every marketing claim bound to a measurable probe. Auto-reconciles marketing copy against live behavior — drift trips a CI failure, not a customer-discovered surprise.
 
 | Command | What | When |
 |---|---|---|
@@ -116,10 +116,10 @@ How it works:
 | `mneme honest_mirror report` | Latest report or N ledger entries | After calibrate |
 | `mneme honest_mirror verify` | Offline HMAC verify | Cross-machine attestation |
 
-**Why competitors can't copy this:**
-- Anthropic / OpenAI / xAI / Google can't use users' private commits — vendors aren't a trusted third party
-- They have a conflict of interest (want their own model to win)
-- Mneme is local-first + vendor-neutral + already has audit chain = only player in position
+**Why this design holds:**
+- Uses YOUR private commits as ground truth — never leaves your repo
+- Sits outside any single AI vendor's product surface — vendor-neutral by construction
+- Mneme is local-first + already has the audit chain — composes into a role no vendor could occupy themselves
 
 ---
 
@@ -143,7 +143,7 @@ How it works:
 | `mneme rewind regression` | At-a-glance: latest card per vendor + status | Routing pre-flight. |
 | `mneme rewind verify --json '{card}'` | Offline HMAC verify | Cross-machine attestation. |
 
-**Why competitors can't copy this:** SWE-bench / HumanEval / MBPP are frozen public snapshots — vendors train on them, so they no longer measure ability. YOUR repo is private, scoped to YOUR domain, and never in any training set. Mneme is the only CLI sitting inside YOUR repo with the audit chain to issue a tamper-evident regression card.
+**Why this design holds:** SWE-bench / HumanEval / MBPP are frozen public snapshots — vendors train on them, so they no longer measure ability. YOUR repo is private, scoped to YOUR domain, and never in any training set. Mneme sits inside YOUR repo with the audit chain to issue a tamper-evident regression card — using the only ground truth that hasn't been contaminated.
 
 ---
 
@@ -167,7 +167,7 @@ How it works:
 | `mneme hgp federate_status` | Read opt-in status + local count | Consent audit. |
 | `mneme hgp federate_join --json '{optIn,endpoint}'` | Toggle federation opt-in | User explicitly opts in. |
 
-**Why no AI vendor can host this:** vendors have a conflict of interest (each wants its own model to win) + can't be trusted by users to keep hallucination data private. Mneme is local-first + vendor-neutral + already has the audit chain. Same role NVD / MITRE play for CVEs.
+**Why this design fits Mneme:** the role calls for a registry that's vendor-neutral, local-first, and ships with an audit chain — the same role NVD / MITRE play for CVEs. Mneme already composes these three properties.
 
 ---
 
@@ -195,7 +195,7 @@ How it works (5-stage pipeline):
 
 **The wild fusion algorithm**: Composite Score = `severity × freshness × (1 + composition_bonus)` where `composition_bonus = min(0.3, 0.1 × cross-source-partners)`. A `truth_gate` REFUTED claim on a vendor name that ALSO appears in an HGP entry's `vendorCounts` gets boosted because fixing one kills both. Findings in the same cluster get ONE action — no spam.
 
-**Why competitors can't copy this**: every feedback loop in Cursor/Continue/Copilot is internal (vendor-controlled). FLYWHEEL feeds back into the SAME `honest_mirror_weights.json` file that CONCLAVE auto-reads — vendor-neutral by construction. The RECIPROCITY layer turns the entire AI vendor industry into a live negotiation game where ignoring a Mneme bulletin has a measurable trust cost.
+**Why this design holds**: every feedback loop in Cursor / Continue / Copilot is internal to its own vendor. FLYWHEEL feeds back into the SAME `honest_mirror_weights.json` file that CONCLAVE auto-reads — vendor-neutral by construction. The RECIPROCITY layer turns AI honesty into a measurable signal where ignoring a Mneme bulletin has a quantifiable trust cost.
 
 ---
 
@@ -217,7 +217,7 @@ How it works:
 | `mneme citizen_court hsc` | Per-vendor Honesty Score Card | Vendor selection; IDE color-dot inline render |
 | `mneme citizen_court verify --json '{verdict}'` | Offline HMAC verify | Cross-machine attestation |
 
-**Why no vendor can host this:** vendors have conflict-of-interest. Mneme = vendor-neutral CLI sitting inside the user's editor + already has the audit chain. Same role NVD plays for CVE, Mneme plays for AI honesty.
+**Why this design fits Mneme:** the role calls for a vendor-neutral CLI sitting inside the user's editor with an audit chain already in place. Same role NVD plays for CVE, Mneme plays for AI honesty.
 
 ---
 

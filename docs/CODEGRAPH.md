@@ -2,7 +2,7 @@
 
 > CodeGraph maps your code. Mneme's LIVING SOUL knows **who** touched it, **when**, **why**, and refuses to lie about what's there.
 
-The competitor (`@colbymchenry/codegraph` v0.8.0) ships a static "Google Maps of Codebase" — file imports + function references — and stops there. Mneme ships the same graph plus 8 differentiation primitives no competitor has.
+A typical static codegraph (e.g. `@colbymchenry/codegraph` v0.8.0) renders file imports + function references — a "Google Maps of Codebase". Mneme ships the same graph plus 8 differentiation primitives layered on top.
 
 ## What's in v2.25.0
 

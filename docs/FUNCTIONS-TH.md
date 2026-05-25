@@ -70,7 +70,7 @@
 
 ## 6. Marketing vs Reality (v2.27.0) — TRUTH GATE 🟢
 
-> ทุก marketing claim ผูกกับ measurable probe. **World-first:** ไม่มี AI tool ไหน auto-reconcile marketing copy ตัวเองกับ live behavior
+> ทุก marketing claim ผูกกับ measurable probe. Auto-reconcile marketing copy กับ live behavior — drift จะ trip CI failure ไม่ใช่ customer ค้นเจอเอง
 
 | คำสั่ง | ทำอะไร | ใช้ตอนไหน |
 |---|---|---|
@@ -116,10 +116,10 @@
 | `mneme honest_mirror report` | Report ล่าสุด หรือ N ledger entries | หลัง calibrate |
 | `mneme honest_mirror verify` | Verify HMAC offline | Cross-machine attestation |
 
-**ทำไมคู่แข่งทำตามไม่ได้:**
-- Anthropic / OpenAI / xAI / Google ใช้ private commits ของ user ไม่ได้ — vendor ไม่ใช่ trusted third party
-- มี conflict of interest (อยาก model ตัวเองชนะ)
-- Mneme = local-first + vendor-neutral + มี audit chain อยู่แล้ว = **คนเดียวในโลก**ที่อยู่ในตำแหน่งที่ทำได้
+**ทำไม design นี้ถึงยืนระยะ:**
+- ใช้ private commits ของคุณเป็น ground truth — ข้อมูลไม่ออกจาก repo
+- อยู่นอก surface ของ AI vendor ใดๆ — vendor-neutral by construction
+- Mneme = local-first + audit chain อยู่แล้ว — compose เข้ากับตำแหน่งที่ vendor เองทำเองไม่สะดวก
 
 ---
 
@@ -143,7 +143,7 @@
 | `mneme rewind regression` | สรุปด่วน: การ์ดล่าสุดของแต่ละ vendor + สถานะ | Routing pre-flight |
 | `mneme rewind verify --json '{card}'` | ตรวจ HMAC offline | Cross-machine attestation |
 
-**ทำไมคู่แข่งทำตามไม่ได้:** SWE-bench / HumanEval / MBPP เป็น public snapshot ที่ vendor เอาไป train แล้ว → วัด ability ไม่ได้แล้ว. Repo ของคุณ = private, ตรงกับ domain คุณ, และไม่อยู่ใน training set ของใคร. Mneme = CLI ตัวเดียวที่อยู่ใน repo คุณ + มี audit chain ออก regression card ที่ tamper-evident ได้.
+**ทำไม design นี้ถึงยืนระยะ:** SWE-bench / HumanEval / MBPP เป็น public snapshot ที่ vendor เอาไป train แล้ว → วัด ability ไม่ได้แล้ว. Repo ของคุณ = private, ตรงกับ domain คุณ, ไม่อยู่ใน training set ของใคร. Mneme อยู่ใน repo คุณ + มี audit chain ออก regression card ที่ tamper-evident — ใช้ ground truth ที่ยังไม่ถูก contaminate.
 
 ---
 
@@ -167,7 +167,7 @@
 | `mneme hgp federate_status` | อ่าน opt-in + local count | Consent audit |
 | `mneme hgp federate_join --json '{optIn,endpoint}'` | Toggle opt-in | User opt-in เอง |
 
-**ทำไม vendor ไหนก็ host แทนไม่ได้:** vendor มี conflict of interest (อยาก model ตัวเองชนะ) + user เชื่อใจให้เก็บ hallucination data ไม่ได้. Mneme = local-first + vendor-neutral + มี audit chain อยู่แล้ว. บทบาทเดียวกับ NVD / MITRE สำหรับ CVE.
+**ทำไม design นี้ถึงเหมาะกับ Mneme:** ต้องการตัวกลางที่ vendor-neutral + local-first + มี audit chain — Mneme อยู่ในตำแหน่งที่ compose สามอย่างนี้เข้าด้วยกัน. บทบาทเดียวกับ NVD / MITRE สำหรับ CVE.
 
 ---
 
@@ -195,7 +195,7 @@
 
 **Wild fusion algorithm**: Composite Score = `severity × freshness × (1 + composition_bonus)` ที่ `composition_bonus = min(0.3, 0.1 × cross-source-partners)`. Claim REFUTED จาก `truth_gate` ที่มี vendor name ตรงกับ `vendorCounts` ใน HGP entry → boost score เพราะ fix อันเดียวแก้ทั้งสอง. Findings ใน cluster เดียวกัน = 1 action — ไม่สแปม.
 
-**ทำไมคู่แข่งทำตามไม่ได้**: ทุก feedback loop ใน Cursor/Continue/Copilot เป็น internal (vendor-controlled). FLYWHEEL feed กลับเข้า `honest_mirror_weights.json` file เดียวกับที่ CONCLAVE auto-read — **vendor-neutral by construction**. RECIPROCITY layer ทำให้ทั้ง AI vendor industry เล่นเกม negotiation จริงๆ — ignore Mneme bulletin = trust cost วัดได้.
+**ทำไม design นี้ถึงยืนระยะ**: feedback loop ของแต่ละ vendor เป็น internal ของตัวเอง. FLYWHEEL feed กลับเข้า `honest_mirror_weights.json` file เดียวกับที่ CONCLAVE auto-read — **vendor-neutral by construction**. RECIPROCITY layer ทำให้ AI honesty เป็น signal ที่วัดได้ — ignore Mneme bulletin = trust cost วัดได้.
 
 ---
 
@@ -217,7 +217,7 @@
 | `mneme citizen_court hsc` | Honesty Score Card ของแต่ละ vendor | Vendor selection; IDE color-dot inline |
 | `mneme citizen_court verify --json '{verdict}'` | Offline HMAC verify | Cross-machine attestation |
 
-**ทำไม vendor ไหนก็ host แทนไม่ได้:** vendor มี conflict-of-interest. Mneme = vendor-neutral CLI อยู่ใน editor + มี audit chain. Role เดียวกับ NVD vs CVE.
+**ทำไม design นี้ถึงเหมาะกับ Mneme:** ต้องการตัวกลาง vendor-neutral + อยู่ใน editor + มี audit chain. Role เดียวกับ NVD vs CVE.
 
 ---
 

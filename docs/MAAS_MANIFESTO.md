@@ -2,7 +2,7 @@
 
 > *"If everyone else's MaaS is selling 'a simulated brain in the cloud', Mneme's MaaS sells 'an immune system and an instinct, distributed everywhere'."*
 
-This document brands and consolidates a thesis Mneme already delivers in code, but never explicitly named: **Mneme is not building a competitor to OpenAI / Anthropic / Google. Mneme is building the *layer underneath them all* — a different category of MaaS the Big Tech model can never offer.**
+This document brands and consolidates a thesis Mneme already delivers in code, but never explicitly named: **Mneme is not at the same layer as OpenAI / Anthropic / Google. Mneme is building the *layer underneath them all* — a different category of MaaS that sits orthogonal to model providers and works alongside them.**
 
 ---
 
@@ -43,13 +43,13 @@ This is not MaaS-as-in-someone-else's-brain. This is **Myself as a Service** —
 
 ---
 
-## Why no one else can build this
+## Why this design fits Mneme
 
-### 1. Big Tech has a structural conflict of interest
+### 1. Big Tech ships products with embedded incentives — Mneme is structurally neutral
 
-Cloud bills scale with token volume. Microsoft / Google / AWS make MORE money the bigger your LLM call. They will **never** ship a Bayesian-on-CPU REPLICA, or a P2P INFRA AS AI, or a SOUL gate that reduces unnecessary AI calls. It hurts their P&L.
+Cloud bills scale with token volume. The natural business of cloud providers is to grow LLM call volume. A Bayesian-on-CPU REPLICA, a P2P INFRA AS AI, or a SOUL gate that *reduces* unnecessary AI calls each cut against that grain.
 
-Mneme is **MIT-licensed, local-first, free**. The business model isn't tokens — it's *making AI safer for users who already have AI*.
+Mneme is **MIT-licensed, local-first, free**. The business model isn't tokens — it's *making AI safer for users who already have AI*. That orthogonal incentive is the design anchor.
 
 ### 2. The market is busy chasing the gen-AI hype curve
 

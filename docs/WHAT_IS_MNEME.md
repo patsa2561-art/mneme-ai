@@ -39,7 +39,7 @@ Mneme keeps four cryptographically-signed corpora as you work: your **project's 
 
 ## What Mneme is NOT
 
-- Not a competitor to Claude / ChatGPT / Cursor — it's the layer ON TOP OF them.
+- Not at the same layer as Claude / ChatGPT / Cursor — it sits ON TOP OF them and works WITH them.
 - Not a SaaS — runs locally; your data never leaves your machine (unless you explicitly opt-in to share anonymized patterns).
 - Not a stock predictor or trading oracle — the ALPHA module is honest about market efficiency; it makes AI's financial claims TRACEABLE, not magic.
 - Not a code generator — it judges what other AI generates.

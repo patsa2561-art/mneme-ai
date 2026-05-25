@@ -196,7 +196,7 @@ Add `--explain` to any of them to get a plain-English narrative on top, generate
 
 ## 📝 Spotlight — VS Code extension
 
-> **The codebase whispers; the editor listens.** *No competitor ships this signal inline.*
+> **The codebase whispers; the editor listens.** *Inline signal of this depth is rare in code-memory tools.*
 
 <details>
 <summary><b>📖 Atrophy Lens — knows which functions still live in someone's head, inline</b></summary>

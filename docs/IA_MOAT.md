@@ -75,7 +75,7 @@ Public-sector AI transformation requires (per the GovTech reference talk):
 
 ---
 
-## The wild idea that even the Magnificent 7 can't copy
+## The wild idea this composition unlocks
 
 **APOPTOSIS-AS-A-SERVICE for AI patterns.**
 
@@ -92,8 +92,8 @@ When the Mneme experience pool sees that a specific code/decision pattern has no
 
 This is the closing loop: AI doesn't just remember mistakes, **the swarm collectively refuses to make them again.** It's an immune system for AI-written code.
 
-**Why nobody else can ship this in <2 years**:
-- Requires cross-repo experience pool (Mneme has it; competitors don't)
+**Why this composition is durable**:
+- Requires cross-repo experience pool (Mneme has it accumulated)
 - Requires HMAC-signed audit chain (Mneme has APOSTILLE + soul chain)
 - Requires multi-vendor reach (Mneme reaches Claude/GPT/Gemini/Cursor/Cline/Continue/Codex/Antigravity 2.0)
 - Requires refuse-at-source primitive (Mneme has SOUL + Whistleblower + Polygraph + Antivirus vaccines)
