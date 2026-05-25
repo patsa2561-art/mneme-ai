@@ -41,26 +41,9 @@ const id = mneme.nemesis.classify({ diff, prDescription, commitMessages });
 const bench = await mneme.benchmark.vsCli();         // proves the speedup on your hardware
 ```
 
-- 📑 [SDK index (bilingual)](docs/sdk/README.md) · 🚀 [Quick start EN](docs/sdk/QUICKSTART-EN.md) / [TH](docs/sdk/QUICKSTART-TH.md) · 📘 Design [EN](docs/sdk/DESIGN.md) / [TH](docs/sdk/DESIGN-TH.md) · 🔄 Migration [EN](docs/sdk/MIGRATION.md) / [TH](docs/sdk/MIGRATION-TH.md) · 📚 [Docs index](docs/README.md)
+- 📑 <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index (bilingual)</a> · 🚀 Quick start <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/QUICKSTART-TH.md" target="_blank" rel="noopener">TH</a> · 📘 Design <a href="docs/sdk/DESIGN.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/DESIGN-TH.md" target="_blank" rel="noopener">TH</a> · 🔄 Migration <a href="docs/sdk/MIGRATION.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/MIGRATION-TH.md" target="_blank" rel="noopener">TH</a> · 📚 <a href="docs/README.md" target="_blank" rel="noopener">Docs index</a>
 
----
-
-### 🌟 v2.54 — World-class premium
-
-Live-introspectable primitives:
-
-```
-mneme strategy rfc            # 3 RFC drafts (W3C / ECMA / NIST)
-mneme strategy pricing        # 4 tiers (Free / Pro / Enterprise / Sovereign)
-mneme indispensability        # 6-criterion 0..100 score
-mneme perf budget             # 5-op in-process performance suite
-mneme catalog count           # signed catalog envelope (no count drift)
-mneme nemesis lethe_forget    # GDPR Art 17 forget with Merkle exclusion proof
-mneme nemesis gavel_pack      # court-admissible bundle (THEMIS + EU stamp + SIBYL)
-mneme nemesis nimbus_publish  # federated trust mesh (per-org leaderboard pub/sub)
-```
-
-Full docs landing: <a href="docs/README.md" target="_blank" rel="noopener"><b>docs/README.md</b></a>
+📜 Past releases (v2.18 → v2.54 — World-class premium, MILLION DOLLAR SECRET diamonds, NEMESIS, audit fixes, ฯลฯ): <a href="CHANGELOG.md" target="_blank" rel="noopener"><b>CHANGELOG.md</b></a>
 
 </div>
 
