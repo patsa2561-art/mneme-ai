@@ -54,3 +54,21 @@ desktop.ini
 # the author portrait at assets/87643.jpg — confirmed via `git check-
 # ignore -v`). Profile photo is intentionally tracked.
 
+
+# BEGIN MNEME AUTO-INIT (do not edit between sentinels) — v2.45.0+
+.mneme/
+CLAUDE.md
+AGENTS.md
+.cursorrules
+.windsurfrules
+.windsurf/
+.cursor/
+.continuerc
+GEMINI.md
+.aider.conf.yml
+.aider.chat.history.md
+.aider.input.history
+.mneme/lie-vaccines.jsonl
+.mneme/cli-activity.jsonl
+.mneme/honest_mirror_weights.json
+# END MNEME AUTO-INIT

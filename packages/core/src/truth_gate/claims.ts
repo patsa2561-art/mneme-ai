@@ -199,6 +199,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.mnemnet.federation_default_off",
     severity: "block",
   },
+  // ── v2.45.0 — AUTO-INIT zero-command-install self-verify ────────────
+  {
+    id: "claim.auto_init.zero_command",
+    source: "v2.45.0 release notes",
+    text: "Mneme bootstraps on first MCP tool call — user never needs to run `mneme init` manually; idempotent + dev-tooling-folder-aware",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.auto_init.zero_command_install_works",
+    severity: "block",
+  },
   // ── v2.44.0 — SEAMLESS PROTOCOL self-verify ─────────────────────────
   // Marketing claim: Mneme verify accepts hostile input seamlessly via
   // multiple lossless paths (stdin / hex / base64 / clipboard / file).

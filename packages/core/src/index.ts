@@ -403,6 +403,12 @@ export * as acgvNumberBridge from "./squadron/acgv_number_bridge.js";
 // v2.44.0 — SEAMLESS PROTOCOL: shell-strip detective + auto-number-grounding.
 export * as acgvShellStripDetective from "./squadron/shell_strip_detective.js";
 export * as acgvAutoNumberGround from "./squadron/auto_number_ground.js";
+// v2.45.0 — AUTO-INIT: idempotent bootstrap on every MCP call + RETROACTIVE
+// CLEANSE of AI-fingerprint files from git history + DEV-TOOLING DETECTOR.
+// Closes the audit "user must run mneme init manually" caveat by making
+// the init step disappear (silent + idempotent + dev-folder-aware).
+export * as autoInit from "./auto_init/index.js";
+export { cleanse, type CleanseInput, type CleanseResult, type CleanseFinding, type CleanseMode } from "./auto_init/retroactive_cleanse.js";
 // v2.40.0 — ARGUS-10: 10-eyed memory search. 5 surface (lex/phon/shape) +
 // 5 truth (Mneme-unique: homoglyph / number-paraphrase / embedding /
 // HMAC provenance / honest-mirror penalty) + HYDRA autospawn from AV

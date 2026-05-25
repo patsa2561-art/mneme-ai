@@ -195,6 +195,11 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   // v2.41.0 — ARGUS-11 multimodal + adapters are pure functions too.
   "mneme.argus.multimodal",
   "mneme.argus.adapters",
+  // v2.45.0 — AUTO-INIT + RETROACTIVE CLEANSE. bootstrap touches fs but
+  // never throws (returns ok:false on error); cleanse needs git but is
+  // defensive about missing git too. Both safe to call before runtime.
+  "mneme.system.bootstrap",
+  "mneme.system.cleanse_history",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

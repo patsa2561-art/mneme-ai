@@ -652,6 +652,21 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   await server.connect(transport);
   mcpLog("info", "transport.connected", { dt_ms: Date.now() - bootT0 });
 
+  // ─── v2.45.0 AUTO-INIT — idempotent bootstrap fires after handshake ──
+  // Closes the audit caveat "user must run mneme init manually". Runs in
+  // <50ms on the hot path (already-init); silently no-ops in dev-tooling
+  // folders. NEVER throws.
+  setImmediate(() => {
+    try {
+      void import("@mneme-ai/core").then((core) => {
+        try {
+          const autoInit = (core as { autoInit?: { autoInitSilent: (cwd: string) => void } }).autoInit;
+          if (autoInit?.autoInitSilent) autoInit.autoInitSilent(opts.cwd);
+        } catch { /* best-effort */ }
+      }).catch(() => { /* best-effort */ });
+    } catch { /* best-effort */ }
+  });
+
   // ─── v2.24.0 BACKGROUND WARM — heavy init AFTER initialize replies ──
   // Pre-v2.24 these blocks ran BEFORE server.connect, blocking the
   // initialize handshake. Now they fire in the next tick so spec-compliant

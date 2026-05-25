@@ -454,6 +454,65 @@ const probes: Probe[] = [
     },
   },
 
+  // ── AUTO-INIT zero-command-install probe (v2.45.0) ───────────────────
+  //
+  // Marketing claim: "Mneme bootstraps on first MCP tool call — user
+  // never needs `mneme init`". The probe runs autoInit twice on a tmp
+  // git repo + asserts:
+  //   (a) first call ok=true + created .mneme/ + .gitignore
+  //   (b) second call ok=true + alreadyInit=true (idempotent)
+  //   (c) dev-tooling folder skip works (no poisoning of scratch dirs)
+  // Returns 1 when ALL three properties hold; 0 on any miss.
+  {
+    id: "probe.auto_init.zero_command_install_works",
+    kind: "numeric",
+    description: "1 when AUTO-INIT (a) bootstraps on first call, (b) is idempotent, (c) skips dev-tooling scratch folders. 0 on any miss.",
+    run: async () => {
+      try {
+        const failures: string[] = [];
+        const ai = await import("../auto_init/index.js" as string) as {
+          autoInit: (cwd: string) => { ok: boolean; created: string[]; alreadyInit?: boolean; skippedReason?: string };
+          detectDevTooling: (cwd: string) => { isDevTooling: boolean };
+        };
+        // Build a tmp git repo
+        const { mkdtempSync, writeFileSync, mkdirSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const { execSync } = await import("node:child_process");
+        const repo = mkdtempSync(join(tmpdir(), "tg-autoinit-"));
+        try {
+          execSync("git init --quiet", { cwd: repo, stdio: "ignore" });
+        } catch { /* offline ok */ }
+        // (a) first call
+        const r1 = ai.autoInit(repo);
+        if (!r1.ok) failures.push(`first call ok=false: ${(r1 as { reason?: string }).reason}`);
+        // (b) idempotent
+        const r2 = ai.autoInit(repo);
+        if (!r2.ok || !r2.alreadyInit) failures.push("idempotent path returned alreadyInit=false");
+        // (c) dev-tooling skip
+        const tooling = mkdtempSync(join(tmpdir(), "tg-tooling-"));
+        writeFileSync(join(tooling, "CLAUDE.md"), "");
+        writeFileSync(join(tooling, "AGENTS.md"), "");
+        writeFileSync(join(tooling, ".cursorrules"), "");
+        mkdirSync(join(tooling, ".mneme"), { recursive: true });
+        const det = ai.detectDevTooling(tooling);
+        if (!det.isDevTooling) failures.push("dev-tooling detector missed scratch folder");
+        const r3 = ai.autoInit(tooling);
+        if (!r3.ok || !r3.skippedReason) failures.push("autoInit didn't skip dev-tooling folder");
+        const ok = failures.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? "first-call bootstraps ✓ · idempotent ✓ · dev-tooling skip ✓"
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── SEAMLESS PROTOCOL probe (v2.44.0) ────────────────────────────────
   //
   // Marketing claim: "Mneme verify accepts hostile input seamlessly via
