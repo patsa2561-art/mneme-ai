@@ -732,6 +732,27 @@ export function registerNemesisCommand(program: Command): void {
   // v2.46.0 — relocated `mneme nemesis` engineering-friction-detector
   // (was top-level in v2.45) into `nemesis pairs` subcommand so the
   // parent `nemesis` namespace hosts both legacy + new functionality.
+  n.command("cleanse_ledger")
+    .description("v2.50.0 — RETROACTIVE LEDGER CLEANSE: coerce historical embedder-leak rows in .mneme/cli-activity.jsonl to vendor:'unknown' + re-chain HMACs + back up original to .pre-v50.bak. Idempotent.")
+    .option("--dry-run", "Compute the plan without writing.", false)
+    .option("--no-rechain", "Skip HMAC re-chaining (drops prev/hmac fields).", false)
+    .action(async (opts: { dryRun?: boolean; rechain?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const km = core.nemesis.resolveHmacKey(process.cwd());
+        const r = core.nemesis.cleanseLedger({
+          repoRoot: process.cwd(),
+          hmacKey: (opts.rechain === false) ? undefined : km.key,
+          dryRun: opts.dryRun ?? false,
+        });
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
   n.command("pairs")
     .description("Engineering friction detector — pairs of authors who consistently revert/rewrite each other's work (use for team formation, NOT performance reviews).")
     .option("--top <n>", "show top-N friction pairs", (v) => Number(v), 5)

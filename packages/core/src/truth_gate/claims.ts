@@ -209,6 +209,22 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.nemesis.world_first_agent_fingerprinter",
     severity: "block",
   },
+  // ── v2.50.0 — VENDOR ALLOWLIST GUARD self-verify ────────────────────
+  // B4 from user audit: cli-activity.jsonl wrote vendor:"ollama" — an
+  // embedder/backend name leaking into the agent-vendor field. Root cause:
+  // ai_handshake.autoDetectVendor returned "ollama" via rule 5b when
+  // Claude Code wasn't matched. Fix: VENDOR ALLOWLIST GUARD at write
+  // path coerces embedder names to "unknown" + logs to embedder_leak.jsonl.
+  // This probe asserts the last 100 cli-activity rows ALL pass the guard.
+  {
+    id: "claim.activity.vendor_field_never_embedder",
+    source: "v2.50.0 release notes",
+    text: "cli-activity.jsonl vendor field NEVER contains embedder/backend names (ollama / openai / gemini / etc) — VENDOR ALLOWLIST GUARD catches at write time",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.activity.vendor_field_never_embedder",
+    severity: "block",
+  },
   // ── v2.48.0 — NEMESIS classify accuracy on REAL (held-out) corpus ───
   // F7 from v2.47 audit: pre-v2.48 the only accuracy probe ran on the
   // SEED corpus (100% by construction). Real-world bugs (B1: header-less

@@ -567,6 +567,53 @@ const probes: Probe[] = [
     },
   },
 
+  // ── ACTIVITY ledger never contains embedder names (v2.50.0) ─────────
+  //
+  // Closes B4 audit class (Ollama leaks as vendor in cli-activity.jsonl).
+  // The probe reads the last 100 entries from cli-activity.jsonl + asserts
+  // NONE of them have vendor ∈ EMBEDDER_LEAK_SIGNATURES.
+  //
+  // Returns 1 when ledger is clean OR doesn't exist; 0 when any row has
+  // a polluted vendor field.
+  {
+    id: "probe.activity.vendor_field_never_embedder",
+    kind: "numeric",
+    description: "1 when last 100 cli-activity.jsonl rows ALL have vendor ∈ AGENT_VENDOR_ALLOWLIST. 0 when any row contains an embedder/backend name (ollama / openai / gemini / etc).",
+    run: async (ctx) => {
+      try {
+        const { existsSync, readFileSync } = await import("node:fs");
+        const { join } = await import("node:path");
+        const path = join(ctx.cwd, ".mneme", "cli-activity.jsonl");
+        if (!existsSync(path)) {
+          return { value: 1, evidence: "no cli-activity ledger yet — clean by absence" };
+        }
+        const mod = await import("../nemesis/vendor_allowlist.js" as string) as typeof import("../nemesis/vendor_allowlist.js");
+        const lines = readFileSync(path, "utf8").split("\n").filter(Boolean);
+        const last100 = lines.slice(-100);
+        const leaked: string[] = [];
+        for (const ln of last100) {
+          try {
+            const row = JSON.parse(ln) as { vendor?: string };
+            if (typeof row.vendor === "string") {
+              const g = mod.guardVendor(row.vendor);
+              if (g.leakDetected) leaked.push(row.vendor);
+            }
+          } catch { /* skip malformed */ }
+        }
+        const ok = leaked.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? `last ${last100.length} rows clean (no embedder names in vendor field)`
+            : `BLOCKED: ${leaked.length} rows contain embedder name in vendor field (e.g. "${leaked[0]}"). VENDOR ALLOWLIST GUARD should have caught these at write time.`,
+          detail: { totalRows: lines.length, leakedCount: leaked.length, examples: leaked.slice(0, 5) },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── NEMESIS real-corpus classify accuracy probe (v2.48.0 F7) ─────────
   // Runs the CALIBRATED classifier against a held-out "real-corpus-shaped"
   // fixture set + asserts ≥85% accuracy. This corpus uses HEADER-LESS

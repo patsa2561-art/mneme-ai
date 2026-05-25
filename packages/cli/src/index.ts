@@ -4777,15 +4777,86 @@ export async function run(argv: string[]): Promise<void> {
         process.exitCode = 1;
       }
     });
-  const probeParent = program.command("probe").description("v2.49 — TRUTH GATE probe utilities.");
-  probeParent.command("coverage")
-    .description("Cross-check tool catalog vs claim catalog; report uncovered tools.")
+  // v2.49.0 — `mneme probe coverage` (formal verb + subcommand).
+  // v2.50.0 — Multi-alias: `probe` / `gate` / `coverage` / `probecoverage`
+  // / `probe_coverage` all default to running the coverage gate.
+  const runCoverageGate = async (): Promise<void> => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const r = core.releaseGate.crossCheckFromDisk(process.cwd());
+      process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      if (!r.ok) process.exitCode = 1;
+    } catch (e) {
+      process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+      process.exitCode = 1;
+    }
+  };
+  const probeParent = program.command("probe").description("v2.49 — TRUTH GATE probe utilities. Default action = coverage gate.").action(runCoverageGate);
+  probeParent.command("coverage").description("Cross-check tool catalog vs claim catalog; report uncovered tools.").action(runCoverageGate);
+  // v2.50.0 — top-level aliases for the coverage gate.
+  for (const alias of ["gate", "coverage", "probecoverage", "probe_coverage"]) {
+    program
+      .command(alias)
+      .description(`v2.50 alias for \`mneme probe coverage\` — run the TRUTH GATE probe-coverage gate.`)
+      .action(runCoverageGate);
+  }
+  // v2.50.0 — heat-map CLI for tracking alias misses + auto-promotion.
+  const aliasMisses = program.command("alias_misses").description("v2.50 — read/promote `.mneme/alias_misses.jsonl` so unknown-verbs typed by users can become real aliases in next release.");
+  aliasMisses.command("report")
+    .description("Read the alias-misses ledger + rank by frequency.")
     .action(async () => {
       try {
-        const core = await import("@mneme-ai/core");
-        const r = core.releaseGate.crossCheckFromDisk(process.cwd());
-        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
-        if (!r.ok) process.exitCode = 1;
+        const { existsSync, readFileSync } = await import("node:fs");
+        const { join } = await import("node:path");
+        const path = join(process.cwd(), ".mneme", "alias_misses.jsonl");
+        if (!existsSync(path)) {
+          process.stdout.write(JSON.stringify({ ok: true, total: 0, top: [] }) + "\n");
+          return;
+        }
+        const lines = readFileSync(path, "utf8").split("\n").filter(Boolean);
+        const counts = new Map<string, number>();
+        for (const ln of lines) {
+          try {
+            const j = JSON.parse(ln) as { verb: string };
+            if (j.verb) counts.set(j.verb, (counts.get(j.verb) ?? 0) + 1);
+          } catch { /* */ }
+        }
+        const top = Array.from(counts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 20)
+          .map(([verb, count]) => ({ verb, count }));
+        process.stdout.write(JSON.stringify({ ok: true, total: lines.length, top }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  aliasMisses.command("promote")
+    .description("Generate an alias-promotion patch suggestion based on top missed verbs (read-only; print to stdout).")
+    .option("--top <n>", "Number of top misses to promote", "5")
+    .action(async (opts: { top?: string }) => {
+      try {
+        const { existsSync, readFileSync } = await import("node:fs");
+        const { join } = await import("node:path");
+        const path = join(process.cwd(), ".mneme", "alias_misses.jsonl");
+        if (!existsSync(path)) { process.stdout.write(JSON.stringify({ ok: true, suggestions: [] }) + "\n"); return; }
+        const lines = readFileSync(path, "utf8").split("\n").filter(Boolean);
+        const counts = new Map<string, number>();
+        for (const ln of lines) {
+          try {
+            const j = JSON.parse(ln) as { verb: string };
+            if (j.verb) counts.set(j.verb, (counts.get(j.verb) ?? 0) + 1);
+          } catch { /* */ }
+        }
+        const topN = parseInt(opts.top ?? "5", 10);
+        const top = Array.from(counts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, topN)
+          .map(([verb, count]) => ({
+            verb, count,
+            suggestedPatch: `program.command(${JSON.stringify(verb)}).description("v2.51 alias auto-promoted from alias_misses ledger (typed ${count}× by users).").action(<handler>);`,
+          }));
+        process.stdout.write(JSON.stringify({ ok: true, suggestions: top }, null, 2) + "\n");
       } catch (e) {
         process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
         process.exitCode = 1;

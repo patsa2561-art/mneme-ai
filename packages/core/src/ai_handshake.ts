@@ -82,28 +82,51 @@ export function autoDetectVendor(repoRoot: string): { vendor: string; reason: st
   if (explicit && /^[a-z0-9._-]{1,64}$/i.test(explicit)) {
     return { vendor: explicit, reason: "MNEME_AI_VENDOR env var" };
   }
-  // 2) Anthropic / Claude Code env signals
-  if (process.env["ANTHROPIC_API_KEY"] || process.env["CLAUDE_CODE_SESSION"]) {
-    return { vendor: "claude-opus-4-7", reason: "Anthropic env signal" };
+  // v2.50.0 — B4 ROOT-CAUSE FIX: Claude Code sets CLAUDECODE=1 (not
+  // CLAUDE_CODE_SESSION). Pre-v2.50 the Anthropic rule never matched
+  // Claude Code → fell through to OLLAMA rule when Ollama was running
+  // → vendor field polluted with "ollama" (embedder leak class).
+  if (process.env["CLAUDECODE"] === "1" || process.env["CLAUDE_CODE_SSE_PORT"] || process.env["CLAUDE_CODE_ENTRYPOINT"]) {
+    return { vendor: "claude-code", reason: "Claude Code env signal (CLAUDECODE / CLAUDE_CODE_*)" };
   }
-  // 3) OpenAI / Codex env signals
+  // 2) Anthropic / Claude Code session-based env signals
+  if (process.env["CLAUDE_CODE_SESSION"]) {
+    return { vendor: "claude-code", reason: "CLAUDE_CODE_SESSION env" };
+  }
+  if (process.env["ANTHROPIC_API_KEY"]) {
+    return { vendor: "claude-code", reason: "ANTHROPIC_API_KEY env" };
+  }
+  // 3) OpenAI / Codex env signals (Codex CLI specifically)
+  if (process.env["CODEX_AGENT"] || process.env["OPENAI_CODEX"]) {
+    return { vendor: "codex", reason: "Codex env signal" };
+  }
   if (process.env["OPENAI_API_KEY"]) {
-    return { vendor: "openai-gpt", reason: "OPENAI_API_KEY env" };
+    return { vendor: "codex", reason: "OPENAI_API_KEY env (Codex assumption)" };
   }
   // 4) Cursor / Continue env signals
   if (process.env["CURSOR_TRACE_ID"] || process.env["CURSOR_AGENT"]) {
     return { vendor: "cursor", reason: "Cursor env signal" };
   }
   if (process.env["CONTINUE_DEV"]) return { vendor: "continue", reason: "Continue env signal" };
+  // 4b) Devin / Copilot signals (added v2.50)
+  if (process.env["DEVIN_SESSION"] || process.env["DEVIN_API_KEY"]) {
+    return { vendor: "devin", reason: "Devin env signal" };
+  }
+  if (process.env["COPILOT_AGENT"] || process.env["GH_COPILOT_TOKEN"] || process.env["GITHUB_COPILOT_CLI"]) {
+    return { vendor: "copilot", reason: "Copilot env signal" };
+  }
   // 5) Gemini CLI signal
   if (process.env["GEMINI_API_KEY"] || process.env["GOOGLE_API_KEY"]) {
-    return { vendor: "google-gemini", reason: "GEMINI/GOOGLE_API_KEY env" };
+    return { vendor: "gemini-cli", reason: "GEMINI/GOOGLE_API_KEY env" };
   }
-  // 5b) Ollama (local LLM runner — used directly OR as a backend for
-  //      Continue / Cline / Aider). User explicitly asked: this MUST work
-  //      so the demon rampages for self-hosted setups too.
+  // ─── v2.50.0 BACKEND/EMBEDDER signals DEMOTED to lower priority ────
+  // These are NOT agent vendors — they're local-LLM runners / embedders.
+  // We only emit them when nothing else matched, AND we tag them with
+  // the "-backend" suffix so the vendor-allowlist guard recognises +
+  // coerces them to "unknown" at write time.
+  // 5b) Ollama (local LLM runner)
   if (process.env["OLLAMA_HOST"] || process.env["OLLAMA_MODELS"]) {
-    return { vendor: "ollama", reason: "OLLAMA_HOST/OLLAMA_MODELS env" };
+    return { vendor: "ollama-backend", reason: "OLLAMA_HOST/OLLAMA_MODELS env (backend; will coerce to unknown)" };
   }
   // 5c) Aider (uses LITELLM_* / AIDER_* prefixes when running)
   if (process.env["AIDER_MODEL"] || process.env["AIDER_API_KEY"]) {
@@ -251,6 +274,27 @@ export function recordCliActivity(repoRoot: string, command: string, vendorHint?
       if (detected) vendor = detected.vendor;
     }
     if (!vendor) return;  // unknown — never write a misleading record
+    // v2.50.0 — VENDOR ALLOWLIST GUARD. Before writing to cli-activity,
+    // run the candidate vendor through fullGuard(). This catches the
+    // EMBEDDER LEAK class: when autoDetectVendor fell through to
+    // OLLAMA/OPENAI-API rule, the vendor field would be polluted with
+    // a backend/model name. Now those get coerced to "unknown" + the
+    // env_scan v2.46 result becomes the canonical answer when available.
+    try {
+      const { fullGuard } = require("./nemesis/vendor_allowlist.js") as typeof import("./nemesis/vendor_allowlist.js");
+      const { scanEnv } = require("./nemesis/env_scan.js") as typeof import("./nemesis/env_scan.js");
+      const envScan = scanEnv();
+      const guarded = fullGuard({
+        repoRoot: root,
+        candidateVendor: vendor,
+        envScanVendor: envScan.vendor,
+        envScanConfidence: envScan.confidence,
+        writerName: "recordCliActivity",
+      });
+      // Coerce to "unknown" → SKIP write rather than pollute the ledger.
+      if (guarded.vendor === "unknown") return;
+      vendor = guarded.vendor;
+    } catch { /* defensive — if guard unavailable, fall through to legacy behavior */ }
 
     // De-dupe: at most one entry per (vendor, command, day-bucket)
     const path = join(root, CLI_ACTIVITY_FILE);

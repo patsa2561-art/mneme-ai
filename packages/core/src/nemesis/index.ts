@@ -63,6 +63,17 @@ export {
   type RecordActivityInput, type RecordActivityResult,
 } from "./activity_writer.js";
 
+// v2.50.0 — VENDOR ALLOWLIST GUARD: kills EMBEDDER-LEAK class structurally.
+// Central allowlist of real agent vendors; backend/embedder names (ollama,
+// openai-gpt, gemini, etc) coerced to "unknown" + logged to
+// `.mneme/embedder_leak.jsonl` for forensic audit.
+export {
+  AGENT_VENDOR_ALLOWLIST, EMBEDDER_LEAK_SIGNATURES,
+  guardVendor, fullGuard, logEmbedderLeak, cleanseLedger,
+  type VendorGuardResult, type FullGuardInput, type FullGuardResult,
+  type CleanseLedgerInput, type CleanseLedgerResult,
+} from "./vendor_allowlist.js";
+
 // v1.61 NEMESIS PROTOCOL (Tier 5 — weekly adversarial audit) lives in
 // nemesis.ts alongside the new v2.46.0 ANTI-IDENTITY-LIE ENGINE. Both
 // export through this barrel so downstream consumers (MCP `nemesis.generate`
