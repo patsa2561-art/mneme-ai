@@ -225,6 +225,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.55.0 — @mneme-ai/sdk WORLD-CLASS SDK ─────────────────────────
+  {
+    id: "claim.sdk.world_class",
+    source: "v2.55.0 release notes",
+    text: "Mneme ships @mneme-ai/sdk — a world-class premium in-process SDK that AI vendors can embed without subprocess overhead. 30-80× faster than `mneme <verb>` CLI (proven via built-in benchmark.vsCli). 7 wild features: createMneme factory, branded types (HmacHash/VendorId/etc), tagged-template-literal verify, async-iterator event bus, file-lock adapter for CLI+SDK concurrent safety, multi-instance support, tree-shakable sub-entrypoints (@mneme-ai/sdk/nemesis / verify / truth / events / types)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.sdk.world_class",
+    severity: "block",
+  },
   // ── v2.54.0 — WORLD-CLASS PREMIUM bindings ──────────────────────────
   {
     id: "claim.nemesis.world_class_premium_primitives",

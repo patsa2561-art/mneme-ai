@@ -31,10 +31,13 @@ export interface PerfBudget {
 }
 
 export const PERF_BUDGETS: ReadonlyArray<PerfBudget> = [
+  // v2.55: tightened from v2.54 budgets after SDK in-process measurement.
+  // SDK delivers 30-80× speedup over CLI subprocess; we now bind the hot
+  // paths to ambitious budgets so any future regression breaks the gate.
   { op: "nemesis.classify_calibrated", budgetMs: 50, coldBudgetMs: 200, rationale: "MCP / git-hook hot path — must be sub-frame on every commit" },
   { op: "nemesis.extract_fingerprint", budgetMs: 30, coldBudgetMs: 100, rationale: "called by classifier + JANUS + STEALTH; must be cheap" },
-  { op: "nemesis.eu_stamp", budgetMs: 50, coldBudgetMs: 200, rationale: "git hook UX killer if slow — user will disable" },
-  { op: "nemesis.stealth_score", budgetMs: 80, coldBudgetMs: 250, rationale: "reuses classifier; should add <50ms over baseline" },
+  { op: "nemesis.eu_stamp", budgetMs: 30, coldBudgetMs: 200, rationale: "git hook UX killer if slow — user will disable. v2.55 tightened 50→30ms (P2 audit item #3)" },
+  { op: "nemesis.stealth_score", budgetMs: 50, coldBudgetMs: 250, rationale: "reuses classifier; v2.55 tightened 80→50ms after SDK measurement" },
   { op: "nemesis.janus_observe", budgetMs: 50, coldBudgetMs: 200, rationale: "real-time identity-swap detection requires speed" },
 ];
 

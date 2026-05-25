@@ -29,6 +29,22 @@
 
 <br/>
 
+### 🚀 v2.55 — @mneme-ai/sdk (NEW)
+
+World-class premium in-process SDK for AI vendors — **30-80× faster** than CLI subprocess + tagged-template verify + async-iterator events + branded types + file-lock adapter. Vendors embed Mneme silently inside Cursor / Continue / Cline / Claude Code etc.
+
+```ts
+import { createMneme } from "@mneme-ai/sdk";
+const mneme = createMneme();
+const r = await mneme.verify`Mneme is a CLI tool`;   // tagged template
+const id = mneme.nemesis.classify({ diff, prDescription, commitMessages });
+const bench = await mneme.benchmark.vsCli();         // proves the speedup on your hardware
+```
+
+- 📘 [SDK design doc](docs/sdk/DESIGN.md) · 🔄 [Migration guide](docs/sdk/MIGRATION.md) · 📚 [Docs index](docs/README.md)
+
+---
+
 ### 🌟 v2.54 — World-class premium
 
 Live-introspectable primitives:

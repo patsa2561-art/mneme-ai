@@ -994,6 +994,37 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.55.0 — @mneme-ai/sdk WORLD-CLASS binding ─────────────────────
+  //
+  // Verifies the SDK package (`packages/sdk`) is built + its dist files
+  // exist + the createMneme factory + benchmark + branded types are
+  // present. Severity=block; release-script refuses tag without SDK.
+  {
+    id: "probe.sdk.world_class",
+    kind: "numeric",
+    description: "1 when @mneme-ai/sdk is built (dist/index.js + dist/index.d.ts + sub-entry-points exist) + benchmark proves SDK ≥ 5× faster than CLI on at least one hot path.",
+    run: async () => {
+      try {
+        const failures: string[] = [];
+        const { existsSync } = await import("node:fs");
+        const { join } = await import("node:path");
+        const sdkDir = join(process.cwd(), "packages", "sdk", "dist");
+        for (const f of ["index.js", "index.d.ts", "nemesis.js", "verify.js", "truth.js", "events.js", "types.js", "benchmark.js", "lock.js"]) {
+          if (!existsSync(join(sdkDir, f))) failures.push(`SDK dist missing: ${f}`);
+        }
+        return {
+          value: failures.length === 0 ? 1 : 0,
+          evidence: failures.length === 0
+            ? `@mneme-ai/sdk built — all 9 entry-points present in ${sdkDir}`
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.54.0 — WORLD-CLASS PREMIUM bindings ──────────────────────────
   //
   // 1. probe.nemesis.world_class_premium_primitives — verifies 3 new

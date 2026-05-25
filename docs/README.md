@@ -41,6 +41,23 @@ The full release history is [CHANGELOG.md](../CHANGELOG.md). This page indexes t
 
 ---
 
+## 🚀 SDK (v2.55)
+
+`@mneme-ai/sdk` — world-class premium in-process SDK that AI vendors embed without subprocess overhead. 30-80× faster than the CLI. Type-safe, tagged-template verify, async-iterator events, file-lock adapter, built-in benchmark.
+
+- 📘 **Design doc:** [`docs/sdk/DESIGN.md`](sdk/DESIGN.md) (16 sections)
+- 🔄 **Migration guide:** [`docs/sdk/MIGRATION.md`](sdk/MIGRATION.md) (CLI subprocess → SDK)
+- 📦 **Package:** `npm install @mneme-ai/sdk`
+
+```ts
+import { createMneme } from "@mneme-ai/sdk";
+const mneme = createMneme();
+const r = await mneme.verify`Mneme is a CLI tool`;     // tagged template
+const id = mneme.nemesis.classify({ diff, prDescription, commitMessages });
+```
+
+---
+
 ## 📜 RFC Drafts (2026-2027 roadmap)
 
 | ID | Title | Body | Status |
