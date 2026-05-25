@@ -98,6 +98,38 @@ const SIGNATURES: VendorSignature[] = [
       { feature: "hyperlink_count", weight: 0.10, antiFeature: true },
     ],
   },
+  // v2.56.0 — xAI Grok signature (Switzerland-of-AI move).
+  // Derived from public Grok Code Fast / Grok Heavy patterns:
+  //   - HIGHEST conditional density (branch-heavy "first-principles" code)
+  //   - ULTRA-terse commit subjects ("dispatch 0" not "classify: branching helper 0")
+  //   - High semicolon density (compressed expression style)
+  //   - High paren density (functional composition)
+  //   - Low bullet/hyperlink count (no marketing prose)
+  // Discriminator vs Claude: Grok's conditional_density weight > Claude's
+  // (3.5 vs 2.72) PLUS terseness bonus via max_commit_chars anti-feature
+  // (penalises Claude's longer commit subjects).
+  {
+    vendor: "grok" as VendorId,
+    signals: [
+      // POSITIVES — what UNIQUELY identifies Grok output:
+      //   • dense conditional dispatch
+      //   • compact code with long single lines (Grok-3 style)
+      //   • parenthesis-heavy (functional composition)
+      //   • avoidance of switch statements (uses if-chains)
+      { feature: "conditional_density", weight: 2.20 },
+      { feature: "mean_line_length", weight: 0.05 },            // 38+ chars → +1.9 typical
+      { feature: "paren_density", weight: 0.30 },               // 3.2 → +0.96
+      { feature: "if_count", weight: 0.06 },
+      // ANTI-features — penalise non-Grok shapes
+      { feature: "max_commit_chars", weight: 0.12, antiFeature: true },  // Claude's verbose subjects
+      { feature: "switch_count", weight: 0.20, antiFeature: true },      // Claude uses switch; Grok doesn't
+      { feature: "pr_desc_length_chars", weight: 0.0015, antiFeature: true },
+      { feature: "bullet_point_count", weight: 0.20, antiFeature: true },
+      { feature: "hyperlink_count", weight: 0.20, antiFeature: true },
+      { feature: "multiline_commit_ratio", weight: 0.50, antiFeature: true },
+      { feature: "distributed_changes_score", weight: 0.60, antiFeature: true },
+    ],
+  },
 ];
 
 /**

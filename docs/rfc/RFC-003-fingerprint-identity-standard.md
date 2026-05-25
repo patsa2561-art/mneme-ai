@@ -26,10 +26,14 @@ and downstream consumers have no way to verify. This breaks:
   cannot be attributed.
 
 Mneme NEMESIS demonstrated **97.2% F1 identity verification from
-output alone** on 33,580 GitHub PRs across 5 vendors. CAPILLARY adds
-50+ micro-tells (whitespace / naming / quote / brace style) for
-spoof-resistance. JANUS detects cross-cluster mid-session identity
-swaps.
+output alone** on 33,580 GitHub PRs across the top-5 vendors. v2.56.0
+added **Grok (xAI Code Fast / Grok Heavy) as a first-class sixth
+vendor** with its own classifier signature + 15 seed fixtures +
+env-scan markers (GROK_API_KEY / XAI_API_KEY / GROK_CLI / GROK_AGENT)
+— making Mneme vendor-neutral across Anthropic / OpenAI / GitHub /
+Cursor / Cognition / xAI. CAPILLARY adds 50+ micro-tells (whitespace
+/ naming / quote / brace style) for spoof-resistance. JANUS detects
+cross-cluster mid-session identity swaps.
 
 This RFC proposes the feature set as the NIST AI agent identity
 verification standard.
@@ -112,8 +116,18 @@ CLI: `mneme nemesis classify --stdin`,
 `mneme nemesis verify_identity --stdin`,
 `mneme nemesis janus_swap --stdin`.
 
-Production telemetry (Mneme v2.46-v2.54): 100% accuracy on seed
-corpus; ≥85% on the 6x-augmented "wild" corpus (v2.53 P1-2).
+Production telemetry (Mneme v2.46-v2.56): 100% accuracy on seed
+corpus across **6 vendors including Grok** (90 seed fixtures total);
+≥85% on the 6x-augmented "wild" corpus (v2.53 P1-2).
+
+## Open-source ground truth (STARGATE)
+
+Mneme v2.56.0 ships `mneme stargate publish` — the full augmented
+calibration corpus (540 fixtures) released under MIT for any vendor
+to train against. This makes Mneme the **Switzerland of AI vendor
+identity verification** — Anthropic, OpenAI, xAI, Google can all
+verify their own and competitors' outputs against the same public
+ground truth.
 
 ## Why NIST
 

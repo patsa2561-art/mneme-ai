@@ -44,9 +44,10 @@ describe("v2.50.0 B4 — VENDOR ALLOWLIST GUARD (PINNED)", () => {
     expect(r.vendor).toBe("unknown");
   });
 
-  it("B4.3 guardVendor flags openai-gpt / gemini / grok / mistral as leaks", async () => {
+  it("B4.3 guardVendor flags openai-gpt / gemini / mistral as leaks (v56: grok promoted to first-class)", async () => {
     const m = await import("../../packages/core/src/nemesis/vendor_allowlist.js");
-    for (const v of ["openai-gpt", "google-gemini", "xai-grok", "mistral", "deepseek", "llama2"]) {
+    // v2.56.0 — xai-grok REMOVED from this list (promoted to AGENT_VENDOR_ALLOWLIST)
+    for (const v of ["openai-gpt", "google-gemini", "mistral", "deepseek", "llama2"]) {
       const r = m.guardVendor(v);
       expect(r.leakDetected, `${v} should be flagged`).toBe(true);
       expect(r.vendor).toBe("unknown");

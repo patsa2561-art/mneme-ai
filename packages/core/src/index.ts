@@ -422,6 +422,12 @@ export {
   getCatalogCount, verifyCatalogCount, renderCatalogLine,
   type CatalogCount,
 } from "./catalog_count.js";
+// v2.56.0 — xAI / GROK / SpaceX ALIGNMENT package.
+//   🚀 LAUNCH WINDOW  — SpaceX-style GO/NO-GO release aggregator
+//   🔥 DRAGON EJECT   — emergency rollback + GAVEL-grade forensic bundle
+//   🛡 STARGATE       — open-source publish augmented calibration corpus
+export * as xaiAlignment from "./xai_alignment/index.js";
+
 // v2.54.0 — World-class premium additions (Tier 2 / Tier 3 audit):
 //   🎯 PERF BUDGET — deterministic in-process performance ceiling per op.
 //   🏛 INDISPENSABILITY — 6-criterion measurable score (vs strategy doc).

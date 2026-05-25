@@ -106,8 +106,32 @@ function devinFixture(seed: number): Fixture {
 }
 
 /**
- * The seed corpus: 15 fixtures per vendor × 5 vendors = 75 total. Each
- * fixture is deterministic (seeded) so the corpus is reproducible.
+ * v2.56.0 — Grok fixtures. xAI Grok Code Fast / Grok Heavy pattern:
+ *   - Terse PR descriptions (1 line, no marketing prose)
+ *   - High conditional density (branch-heavy architecture)
+ *   - Short commit subjects (first-principles "do X" verbs)
+ *   - Low bullet count, low hyperlink count (no decoration)
+ */
+function grokFixture(seed: number): Fixture {
+  const condCount = 7 + (seed % 5); // higher than claude (5-9 range)
+  const diffLines: string[] = ["diff --git a/route.ts b/route.ts"];
+  diffLines.push(`+export function dispatch${seed}(req: Request) {`);
+  for (let i = 0; i < condCount; i++) {
+    diffLines.push(`+  if (req.kind === "${"abcde"[i % 5]}${i}") return handle${i}(req);`);
+  }
+  diffLines.push("+  throw new Error('unhandled');");
+  diffLines.push("+}");
+  return {
+    diff: diffLines.join("\n"),
+    prDescription: "Route by kind.",
+    commitMessages: [`dispatch ${seed}`],
+  };
+}
+
+/**
+ * The seed corpus: 15 fixtures per vendor × 6 vendors (v2.56 added Grok)
+ * = 90 total. Each fixture is deterministic (seeded) so the corpus is
+ * reproducible.
  */
 export function buildSeedCorpus(): CorpusEntry[] {
   const out: CorpusEntry[] = [];
@@ -117,6 +141,7 @@ export function buildSeedCorpus(): CorpusEntry[] {
     out.push({ vendor: "copilot",      fixture: copilotFixture(s) });
     out.push({ vendor: "cursor",       fixture: cursorFixture(s) });
     out.push({ vendor: "devin",        fixture: devinFixture(s) });
+    out.push({ vendor: "grok",         fixture: grokFixture(s) });
   }
   return out;
 }

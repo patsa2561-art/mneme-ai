@@ -48,6 +48,12 @@ const MARKERS: EnvMarker[] = [
   // We only flag codex when OPENAI_API_KEY + a CODEX-specific marker.
   { key: "OPENAI_CODEX", vendor: "codex" },
   { key: "CODEX_AGENT", vendor: "codex" },
+  // v2.56.0 — xAI Grok env markers (Grok Code Fast / Grok CLI / Grok Heavy)
+  { key: "GROK_API_KEY", vendor: "grok" as VendorId },
+  { key: "XAI_API_KEY", vendor: "grok" as VendorId },
+  { key: "GROK_CLI", vendor: "grok-cli" as VendorId },
+  { key: "GROK_CODE_FAST", vendor: "grok-code-fast" as VendorId },
+  { key: "GROK_AGENT", vendor: "grok" as VendorId },
 ];
 
 export interface EnvScanResult {

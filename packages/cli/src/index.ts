@@ -4908,6 +4908,127 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.56.0 — xAI / GROK / SpaceX ALIGNMENT — 3 wild primitives.
+  const launchParent = program
+    .command("launch_window")
+    .description("🚀 v2.56 — SpaceX-style GO/NO-GO release verdict aggregator. Runs TRUTH GATE + PEAK GAUNTLET subset + PERF BUDGET + INDISPENSABILITY + WIRING LAG + PROBE COVERAGE + SDK BUILT gates → single status + HMAC certificate.")
+    .option("--fast", "skip slow gates (truth_gate subset)", false)
+    .action(async (opts: { fast?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const v = await core.xaiAlignment.evaluateLaunchWindow({ cwd: process.cwd(), fast: opts.fast ?? false });
+        process.stdout.write(JSON.stringify(v, null, 2) + "\n");
+        process.stderr.write(core.xaiAlignment.renderLaunchBanner(v) + "\n");
+        if (v.status !== "GO") process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  launchParent.command("check")
+    .description("Alias for `mneme launch_window` default action.")
+    .option("--fast", "skip slow gates", false)
+    .action(async (opts: { fast?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const v = await core.xaiAlignment.evaluateLaunchWindow({ cwd: process.cwd(), fast: opts.fast ?? false });
+        process.stdout.write(JSON.stringify(v, null, 2) + "\n");
+        if (v.status !== "GO") process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
+  const dragonParent = program
+    .command("dragon")
+    .description("🔥 v2.56 — emergency rollback primitive (DRAGON EJECT). Use `mneme dragon eject <commit> --rationale '...' [--confirm]`.");
+  dragonParent.command("eject <commit>")
+    .description("Eject (revert) a doomed commit + emit GAVEL-grade forensic bundle. Dry-run by default; --confirm to execute.")
+    .requiredOption("--rationale <text>", "WHY are we ejecting? (one-line audit trail)")
+    .option("--probe <id...>", "Failing probe id(s)")
+    .option("--test <id...>", "Failing test id(s)")
+    .option("--perf <op...>", "Perf budget violation(s)")
+    .option("--confirm", "Execute the real eject (default: dry-run)", false)
+    .action(async (commit: string, opts: { rationale: string; probe?: string[]; test?: string[]; perf?: string[]; confirm?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.xaiAlignment.dragonEject({
+          repoRoot: process.cwd(),
+          commit,
+          reason: {
+            rationale: opts.rationale,
+            failingProbes: opts.probe ?? [],
+            failingTests: opts.test ?? [],
+            perfViolations: opts.perf ?? [],
+          },
+          dryRun: !opts.confirm,
+          confirm: opts.confirm ?? false,
+        });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  dragonParent.command("chain")
+    .description("Verify the DRAGON eject ledger HMAC chain.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chain = core.xaiAlignment.verifyDragonChain(process.cwd());
+        const events = core.xaiAlignment.listEjects(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: chain.ok, chain, eventCount: events.length, events }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
+  const stargateParent = program
+    .command("stargate")
+    .description("🛡 v2.56 — open-source publish of the augmented calibration corpus (MIT-licensed). Make Mneme the Switzerland of AI vendor identity verification.");
+  stargateParent.command("publish")
+    .description("Build + (optionally) write the corpus bundle. Use --out <path> + --format json|jsonl|md.")
+    .option("--out <path>", "Output file path")
+    .option("--format <fmt>", "Output format: json | jsonl | md", "json")
+    .option("--version <v>", "Mneme version label for the bundle", "2.56.0")
+    .action(async (opts: { out?: string; format?: "json" | "jsonl" | "md"; version?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.xaiAlignment.publishStargate({
+          outPath: opts.out,
+          format: opts.format ?? "json",
+          mnemeVersion: opts.version ?? "2.56.0",
+        });
+        const { bundle, ...rest } = r;
+        process.stdout.write(JSON.stringify({ ...rest, fixtureCount: bundle?.fixtureCount, vendors: bundle?.vendors, augmentationKinds: bundle?.augmentationKinds, contentSha256: bundle?.contentSha256, hmac: bundle?.hmac, citation: bundle?.citation, fixturesPreview: bundle?.fixtures.slice(0, 1) }, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  stargateParent.command("verify")
+    .description("Verify a STARGATE bundle envelope offline. Use --stdin.")
+    .option("--stdin", "Read bundle JSON from stdin")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chunks: Buffer[] = [];
+        for await (const c of process.stdin) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks).toString("utf8").trim();
+        if (!body) { process.stdout.write(JSON.stringify({ ok: false, error: "pass bundle JSON via stdin" }) + "\n"); process.exitCode = 1; return; }
+        const r = core.xaiAlignment.verifyStargateBundle(JSON.parse(body));
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.53.0 — CATALOG COUNT single source of truth.
   const catalogParent = program
     .command("catalog")

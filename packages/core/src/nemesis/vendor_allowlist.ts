@@ -46,6 +46,16 @@ export const AGENT_VENDOR_ALLOWLIST: ReadonlySet<string> = new Set([
   "jules",                  // Google's coding agent
   "qoder",
   "windsurf",
+  // v2.56.0 — xAI coding agents (grok-code-fast + Grok Heavy as IDE assistant).
+  // Pre-v2.56 these were flagged as EMBEDDER LEAK (wrong — Grok ships
+  // actual coding-agent surface). Now first-class agent vendors.
+  "grok",
+  "grok-cli",
+  "grok-code",
+  "grok-code-fast",
+  "grok-heavy",
+  "xai-grok",
+  "xai",
   // Legacy / alternate spellings that map to top-5
   "claude-opus-4-7",
   "claude-opus",
@@ -67,7 +77,9 @@ export const EMBEDDER_LEAK_SIGNATURES: ReadonlySet<string> = new Set([
   "ollama", "ollama-backend",
   "openai-gpt", "openai", "gpt", "gpt-4", "gpt-5",
   "google-gemini", "gemini",
-  "xai-grok", "grok",
+  // v2.56.0 — REMOVED "grok" / "xai-grok" from leak signatures (they are
+  // legitimate coding agents per xAI Grok Code Fast / Grok Heavy product).
+  // See AGENT_VENDOR_ALLOWLIST above for canonical list.
   "mistral",
   "deepseek",
   "anthropic",  // bare "anthropic" without "-claude-code" suffix = API key not agent

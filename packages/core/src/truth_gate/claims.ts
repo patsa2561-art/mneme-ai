@@ -225,6 +225,43 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.56.0 — xAI / GROK / SpaceX ALIGNMENT ─────────────────────────
+  {
+    id: "claim.xai.grok_first_class",
+    source: "v2.56.0 release notes",
+    text: "Mneme treats Grok (xAI's coding agent) as a first-class vendor: in AGENT_VENDOR_ALLOWLIST + removed from EMBEDDER_LEAK_SIGNATURES + classifier signature added + 15 seed-corpus fixtures + env_scan markers (GROK_API_KEY / XAI_API_KEY / GROK_CLI / GROK_CODE_FAST / GROK_AGENT)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.xai.grok_first_class",
+    severity: "block",
+  },
+  {
+    id: "claim.xai.launch_window_ready",
+    source: "v2.56.0 release notes",
+    text: "Mneme ships LAUNCH WINDOW — a SpaceX-style GO/NO-GO release verdict aggregator that runs ALL gates (TRUTH GATE subset + PERF BUDGET + INDISPENSABILITY + WIRING LAG + PROBE COVERAGE + SDK BUILT) and emits a single status + HMAC-signed certificate + ASCII countdown banner",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.xai.launch_window_ready",
+    severity: "block",
+  },
+  {
+    id: "claim.xai.dragon_chain_intact",
+    source: "v2.56.0 release notes",
+    text: "Mneme ships DRAGON EJECT — emergency rollback primitive that emits a GAVEL-grade forensic bundle (Merkle proof binding rationale + reverted diff) + HMAC-chained eject ledger. Chain integrity is verifiable offline",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.xai.dragon_chain_intact",
+    severity: "block",
+  },
+  {
+    id: "claim.xai.stargate_bundle_seal",
+    source: "v2.56.0 release notes",
+    text: "Mneme ships STARGATE — open-source publisher for the augmented calibration corpus (15 fixtures × 6 vendors × 6 augmentations = 540 fixtures), MIT-licensed, with SHA-256 content seal + HMAC attestation. Makes Mneme the Switzerland of AI vendor identity verification (any vendor may train against the same public ground truth)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.xai.stargate_bundle_seal",
+    severity: "block",
+  },
   // ── v2.55.0 — @mneme-ai/sdk WORLD-CLASS SDK ─────────────────────────
   {
     id: "claim.sdk.world_class",

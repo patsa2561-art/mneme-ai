@@ -65,6 +65,20 @@ export interface NimbusCard {
   };
   /** Optional sticky note for human readers. */
   note?: string;
+  /**
+   * v2.56.0 — Optional cluster topology (xAI Colossus, SpaceX Starbase
+   * cluster, etc). When set, consumers can group cards by physical
+   * cluster + measure per-cluster reputation independently. Naming is
+   * open — caller can use "colossus" / "starbase" / arbitrary slug.
+   */
+  cluster?: {
+    /** Cluster slug (lowercase, ≤32 chars). */
+    name: string;
+    /** Optional region / location tag. */
+    region?: string;
+    /** Optional cluster role: "training" / "inference" / "edge" / arbitrary. */
+    role?: string;
+  };
   /** Card-level HMAC. */
   hmac: string;
 }
@@ -82,6 +96,8 @@ export interface PublishInput {
   expiresAtIso?: string;
   revocationRef?: string;
   note?: string;
+  /** v2.56.0 — optional cluster topology. */
+  cluster?: NimbusCard["cluster"];
   persist?: boolean;
 }
 
@@ -114,6 +130,7 @@ export function publishCard(input: PublishInput): PublishResult {
         revocationRef: input.revocationRef,
       },
       note: input.note,
+      cluster: input.cluster,
     };
     const card: NimbusCard = { ...cardBody, hmac: hmacOf(cardBody) };
     if (input.persist !== false) {

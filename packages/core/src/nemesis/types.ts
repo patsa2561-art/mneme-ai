@@ -12,6 +12,11 @@ export type VendorId =
   | "copilot"
   | "cursor"
   | "devin"
+  // v2.56.0 — xAI / Grok coding agents (Switzerland-of-AI move)
+  | "grok"
+  | "grok-cli"
+  | "grok-code-fast"
+  | "grok-heavy"
   | "unknown";
 
 export interface Fixture {

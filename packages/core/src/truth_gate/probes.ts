@@ -485,11 +485,14 @@ const probes: Probe[] = [
         // tuned to match the documented signature shape from the paper:
         const vendorTests = [
           {
+            // v2.56.0 — Claude fixture updated post-Grok-addition.
+            // Adds switch-case (Grok doesn't emit switch) + longer commit
+            // subject (Grok ultra-terse) to discriminate from Grok.
             expected: "claude-code",
             fixture: {
-              diff: "diff --git a/a.ts b/a.ts\n+if (a) {}\n+if (b) {}\n+if (c) {}\n+if (d) {}\n+if (e) {}\n+if (f) {}\n+if (g) {}\n",
-              prDescription: "Branching helper.",
-              commitMessages: ["x"],
+              diff: "diff --git a/a.ts b/a.ts\n+function classify(x) {\n+  switch (x.kind) {\n+    case 'a': if (x.v) return 1; break;\n+    case 'b': if (x.v) return 2; break;\n+    case 'c': if (x.v) return 3; break;\n+    case 'd': if (x.v) return 4; break;\n+    case 'e': if (x.v) return 5; break;\n+    case 'f': if (x.v) return 6; break;\n+  }\n+  return null;\n+}\n",
+              prDescription: "Branching helper with switch/case dispatch.",
+              commitMessages: ["classify: branching helper for kind-dispatch"],
             },
           },
           {
@@ -988,6 +991,96 @@ const probes: Probe[] = [
             : `BLOCKED: ${failures.slice(0, 5).join("; ")}${failures.length > 5 ? ` (+${failures.length - 5} more)` : ""}`,
           detail: { failures },
         };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
+  // ── v2.56.0 — xAI / GROK / SpaceX ALIGNMENT bindings ────────────────
+  //
+  // 1. probe.xai.grok_first_class — Grok in allowlist + NOT in leak list
+  //    + classifier has Grok signature + corpus has Grok fixtures.
+  // 2. probe.xai.launch_window_ready — `evaluateLaunchWindow({fast:true})`
+  //    completes + returns GO or HOLD (not crashed).
+  // 3. probe.xai.dragon_chain_intact — DRAGON ledger chain verifies.
+  // 4. probe.xai.stargate_bundle_seal — STARGATE bundle SHA + HMAC round-trip.
+  {
+    id: "probe.xai.grok_first_class",
+    kind: "numeric",
+    description: "1 when Grok is first-class agent vendor: in allowlist + NOT in leak signatures + classifier has Grok signature + seed corpus has Grok fixtures.",
+    run: async () => {
+      try {
+        const failures: string[] = [];
+        const nemesis = await import("../nemesis/index.js" as string) as typeof import("../nemesis/index.js");
+        const { AGENT_VENDOR_ALLOWLIST, EMBEDDER_LEAK_SIGNATURES } = nemesis;
+        if (!AGENT_VENDOR_ALLOWLIST.has("grok")) failures.push("grok missing from AGENT_VENDOR_ALLOWLIST");
+        if (!AGENT_VENDOR_ALLOWLIST.has("xai-grok")) failures.push("xai-grok missing from AGENT_VENDOR_ALLOWLIST");
+        if (EMBEDDER_LEAK_SIGNATURES.has("grok")) failures.push("grok STILL flagged as embedder leak");
+        if (EMBEDDER_LEAK_SIGNATURES.has("xai-grok")) failures.push("xai-grok STILL flagged as embedder leak");
+        const seed = nemesis.buildSeedCorpus();
+        const grokFixtures = seed.filter((s) => s.vendor === "grok");
+        if (grokFixtures.length < 10) failures.push(`only ${grokFixtures.length} Grok fixtures in seed corpus (need ≥10)`);
+        // Classifier signature presence
+        const { SIGNATURES } = nemesis;
+        const hasGrokSig = SIGNATURES.some((s) => (s as { vendor: string }).vendor === "grok");
+        if (!hasGrokSig) failures.push("classifier SIGNATURES missing grok entry");
+        return {
+          value: failures.length === 0 ? 1 : 0,
+          evidence: failures.length === 0
+            ? `Grok first-class — allowlist ✓ · not-in-leak ✓ · ${grokFixtures.length} fixtures ✓ · classifier signature ✓`
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.xai.launch_window_ready",
+    kind: "numeric",
+    description: "1 when evaluateLaunchWindow({fast:true}) completes + returns GO or HOLD (NOT thrown). NO-GO is a different signal (release should hold) but the probe itself still passes.",
+    run: async (ctx) => {
+      try {
+        const { evaluateLaunchWindow } = await import("../xai_alignment/index.js" as string) as typeof import("../xai_alignment/index.js");
+        const v = await evaluateLaunchWindow({ cwd: ctx.cwd, fast: true });
+        return {
+          value: 1,
+          evidence: `LAUNCH WINDOW ${v.status} · ${v.gates.length} gates · ${v.totalLatencyMs}ms`,
+          detail: { status: v.status, goRate: v.goRate },
+        };
+      } catch (e) {
+        return { value: 0, evidence: `LAUNCH WINDOW threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.xai.dragon_chain_intact",
+    kind: "numeric",
+    description: "1 when DRAGON eject ledger (.mneme/xai_alignment/dragon/eject_events.jsonl) HMAC chain verifies OR is absent (no ejects yet).",
+    run: async (ctx) => {
+      try {
+        const { verifyDragonChain } = await import("../xai_alignment/index.js" as string) as typeof import("../xai_alignment/index.js");
+        const r = verifyDragonChain(ctx.cwd);
+        return { value: r.ok ? 1 : 0, evidence: r.ok ? `${r.rows} eject events chain ok` : `BROKEN at row ${r.brokenAt}: ${r.reason}` };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.xai.stargate_bundle_seal",
+    kind: "numeric",
+    description: "1 when buildStargateBundle + verifyStargateBundle round-trip + bundle has ≥6 vendors + ≥6 augmentation kinds.",
+    run: async () => {
+      try {
+        const { buildStargateBundle, verifyStargateBundle } = await import("../xai_alignment/index.js" as string) as typeof import("../xai_alignment/index.js");
+        const b = buildStargateBundle("test-2.56.0");
+        if (b.vendors.length < 6) return { value: 0, evidence: `only ${b.vendors.length} vendors (need ≥6 incl Grok)` };
+        if (b.augmentationKinds.length < 6) return { value: 0, evidence: `only ${b.augmentationKinds.length} augmentation kinds (need ≥6)` };
+        const v = verifyStargateBundle(b);
+        return { value: v.ok ? 1 : 0, evidence: v.ok ? `STARGATE ${b.fixtureCount} fixtures · ${b.vendors.length} vendors · seal ok` : v.reason };
       } catch (e) {
         return { value: null, evidence: `probe threw: ${(e as Error).message}` };
       }
