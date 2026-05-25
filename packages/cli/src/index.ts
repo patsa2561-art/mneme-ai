@@ -130,7 +130,7 @@ import { registerGenomePoolCommands } from "./commands/genome-pool.js";
 import { registerStigmergyCommands } from "./commands/stigmergy.js";
 import { registerChimeraCommands } from "./commands/chimera.js";
 import { registerToolsCommand, registerBotCommand, registerHealthCommand, registerDemoCommand, registerVerifyCommand, registerAutobootCommand, registerAskCommand, registerCovenantCommand } from "./commands/demo.js";
-import { registerHonestCommand, registerDoctorCommand, registerWiringProofCommand, registerZzzzzCommand, registerArgusCommand } from "./commands/v236_commands.js";
+import { registerHonestCommand, registerDoctorCommand, registerWiringProofCommand, registerZzzzzCommand, registerArgusCommand, registerNemesisCommand } from "./commands/v236_commands.js";
 import { ui } from "./ui.js";
 
 export async function run(argv: string[]): Promise<void> {
@@ -380,27 +380,14 @@ export async function run(argv: string[]): Promise<void> {
       );
     });
 
-  // ─── nemesis — engineering friction detector ────────────────────────
-  program
-    .command("nemesis")
-    .description("Engineering friction detector — pairs of authors who consistently revert/rewrite each other's work (use for team formation, NOT performance reviews)")
-    .option("--top <n>", "show top-N friction pairs", (v) => Number(v), 5)
-    .option("--window <days>", "consider only events within N days", (v) => Number(v), 365)
-    .option("--author <email>", "filter pairs containing this author")
-    .option("--json", "machine-readable output", false)
-    .option("--verbose", "expand the details tier", false)
-    .action(async (opts: { top?: number; window?: number; author?: string; json?: boolean; verbose?: boolean }) => {
-      process.exit(
-        await nemesisCommand({
-          cwd: process.cwd(),
-          topN: opts.top,
-          windowDays: opts.window,
-          authorFilter: opts.author,
-          json: opts.json,
-          verbose: opts.verbose,
-        }),
-      );
-    });
+  // ─── nemesis pairs — engineering friction detector (relocated from
+  // top-level to subcommand in v2.46.0 so the NEMESIS Anti-Identity-Lie
+  // Engine subcommands can share the parent `nemesis` namespace) ──────
+  // The v2.46.0 registerNemesisCommand creates the `nemesis` parent +
+  // adds classify / verify_identity / eu_stamp / verify_stamp /
+  // install_hook / env_scan subcommands. We attach `pairs` here as the
+  // 7th subcommand so the friction-detector surface stays accessible.
+  program.hook("preAction", (_thisCmd, _actionCmd) => { /* noop */ });
 
   // ─── nervous-system — repo-level neural map ─────────────────────────
   program
@@ -4738,6 +4725,8 @@ export async function run(argv: string[]): Promise<void> {
   registerZzzzzCommand(program);
   // v2.40.0 — ARGUS-10 (10-eyed memory search)
   registerArgusCommand(program);
+  // v2.46.0 — NEMESIS (Anti-Identity-Lie Engine + EU AI Act Article 50)
+  registerNemesisCommand(program);
 
   // v2.19.8 — UNIVERSAL MCP SUBCOMMAND AUTO-ROUTER
   // Reads the MCP tool catalog and auto-registers `mneme <family> <action>`

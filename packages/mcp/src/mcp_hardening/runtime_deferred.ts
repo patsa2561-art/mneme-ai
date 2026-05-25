@@ -200,6 +200,16 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   // defensive about missing git too. Both safe to call before runtime.
   "mneme.system.bootstrap",
   "mneme.system.cleanse_history",
+  // v2.46.0 — NEMESIS organs all pure-function-or-defensive-fs.
+  "mneme.nemesis.fingerprint",
+  "mneme.nemesis.classify",
+  "mneme.nemesis.env_scan",
+  "mneme.nemesis.verify_identity",
+  "mneme.nemesis.eu_stamp",
+  "mneme.nemesis.verify_stamp",
+  "mneme.nemesis.install_hook",
+  "mneme.nemesis.drift_check",
+  "mneme.nemesis.replay_check",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

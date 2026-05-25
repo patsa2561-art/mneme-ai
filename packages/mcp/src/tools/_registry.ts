@@ -49,6 +49,7 @@ import { COERCION_AUDIT_TOOLS } from "./_coercion_audit_tools.js";
 import { ZZZZZ_TOOLS } from "./_zzzzz_tools.js";
 import { ARGUS10_TOOLS } from "./_argus10_tools.js";
 import { AUTO_INIT_TOOLS } from "./_auto_init_tools.js";
+import { NEMESIS_TOOLS } from "./_nemesis_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -212,6 +213,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...ZZZZZ_TOOLS,
     ...ARGUS10_TOOLS,
     ...AUTO_INIT_TOOLS,
+    ...NEMESIS_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

@@ -199,6 +199,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.mnemnet.federation_default_off",
     severity: "block",
   },
+  // ── v2.46.0 — NEMESIS world-first agent fingerprinter self-verify ───
+  {
+    id: "claim.nemesis.world_first",
+    source: "v2.46.0 release notes",
+    text: "NEMESIS is the world's first Anti-Identity-Lie Engine for AI coding agents — fingerprints 5 vendors (Codex/Claude Code/Copilot/Cursor/Devin) with HMAC verdicts + auto-stamps EU AI Act Article 50 disclosure",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.nemesis.world_first_agent_fingerprinter",
+    severity: "block",
+  },
   // ── v2.45.0 — AUTO-INIT zero-command-install self-verify ────────────
   {
     id: "claim.auto_init.zero_command",

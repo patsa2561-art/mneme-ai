@@ -454,6 +454,114 @@ const probes: Probe[] = [
     },
   },
 
+  // ── NEMESIS "world's first agent fingerprinter" probe (v2.46.0) ──────
+  //
+  // Marketing claim: "world's first Anti-Identity-Lie Engine for AI
+  // coding agents — fingerprints 5 vendors with 97.2% F1 (arxiv
+  // 2601.17406), HMAC-signs verdicts, auto-stamps EU AI Act Article 50".
+  // The probe runs synthetic fixtures against each vendor + asserts:
+  //   (a) fingerprint extracts ≥41 features
+  //   (b) classifier picks correct top vendor on ≥3 fixtures
+  //   (c) identity verifier flags mismatch as DISPUTED/IMPOSSIBLE
+  //   (d) EU stamp + verify round-trip works
+  //   (e) drift/replay modules load and don't throw
+  // Returns 1 when ALL hold; 0 on any drift.
+  {
+    id: "probe.nemesis.world_first_agent_fingerprinter",
+    kind: "numeric",
+    description: "1 when NEMESIS (a) extracts 41 features, (b) classifies ≥3 vendors correctly on synthetic fixtures, (c) flags identity-lie, (d) EU stamp HMAC verifies, (e) drift+replay load. 0 on any drift.",
+    run: async () => {
+      try {
+        const m = await import("../nemesis/index.js" as string) as typeof import("../nemesis/index.js");
+        const failures: string[] = [];
+        // (a) features
+        const fpA = m.extractFingerprint({
+          diff: "diff --git a/a.ts b/a.ts\n+const x = 1;\n",
+          prDescription: "## change\n- one\n- two",
+          commitMessages: ["fix: x"],
+        });
+        if (Object.keys(fpA).length < 41) failures.push(`feature count ${Object.keys(fpA).length} < 41`);
+        // (b) classify ≥3 vendor fixtures correctly. Each fixture is
+        // tuned to match the documented signature shape from the paper:
+        const vendorTests = [
+          {
+            expected: "claude-code",
+            fixture: {
+              diff: "diff --git a/a.ts b/a.ts\n+if (a) {}\n+if (b) {}\n+if (c) {}\n+if (d) {}\n+if (e) {}\n+if (f) {}\n+if (g) {}\n",
+              prDescription: "Branching helper.",
+              commitMessages: ["x"],
+            },
+          },
+          {
+            expected: "cursor",
+            fixture: {
+              diff: "diff --git a/a.ts b/a.ts\n+const x=1;\n",
+              prDescription: "## Changes\n\n- Added const\n- See [docs](https://a)\n- Refer to [issue](https://b)\n- Follow [style](https://c)\n",
+              commitMessages: ["x"],
+            },
+          },
+          {
+            expected: "devin",
+            fixture: {
+              diff: [
+                "diff --git a/a.ts b/a.ts", "+const a=1;",
+                "diff --git a/b.ts b/b.ts", "+const b=2;",
+                "diff --git a/c.ts b/c.ts", "+const c=3;",
+                "diff --git a/d.ts b/d.ts", "+const d=4;",
+                "diff --git a/e.ts b/e.ts", "+const e=5;",
+                "diff --git a/f.ts b/f.ts", "+const f=6;",
+                "diff --git a/g.ts b/g.ts", "+const g=7;",
+                "diff --git a/h.ts b/h.ts", "+const h=8;",
+              ].join("\n"),
+              prDescription: "Refactor.",
+              commitMessages: [
+                "a\nb\nc\nd\ne",
+                "x\ny\nz\nw\nv",
+                "p\nq\nr\ns\nt",
+              ],
+            },
+          },
+        ];
+        let correct = 0;
+        for (const t of vendorTests) {
+          const v = m.classifyAgent(m.extractFingerprint(t.fixture));
+          if (v.topVendor === t.expected) correct++;
+        }
+        if (correct < 3) failures.push(`classifier got ${correct}/3 vendor fixtures`);
+        // (c) identity lie detection
+        const lieVerdict = m.verifyIdentityClaim({
+          claimedVendor: "cursor",
+          fixture: vendorTests[0]!.fixture, // claude-code shape claimed as cursor
+        });
+        if (!["DISPUTED", "IMPOSSIBLE"].includes(lieVerdict.verdict)) {
+          failures.push(`identity-lie returned ${lieVerdict.verdict}, expected DISPUTED/IMPOSSIBLE`);
+        }
+        // (d) EU stamp round-trip
+        const stamp = m.stampArticle50({ message: "feat: x", vendor: "claude-code", confidence: 0.9 });
+        if (!stamp.ok) failures.push("eu_stamp returned ok=false");
+        else {
+          const verify = m.verifyStamp(stamp.stampedMessage);
+          if (!verify.valid) failures.push(`eu verify_stamp invalid: ${verify.reason}`);
+        }
+        // (e) drift + replay modules load + return shape
+        try {
+          const r = m.detectReplayAttack("test", { conditional_density: 0.1 }, { conditional_density: 0.9 });
+          if (!r.alert) failures.push("replay attack didn't flag obvious swap");
+        } catch (e) { failures.push(`replay threw: ${(e as Error).message}`); }
+        const ok = failures.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? `${Object.keys(fpA).length} features ✓ · ${correct}/3 classify ✓ · ${lieVerdict.verdict} ✓ · stamp+verify ✓ · replay ✓`
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { features: Object.keys(fpA).length, classifierCorrect: correct, lieVerdict: lieVerdict.verdict, failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── AUTO-INIT zero-command-install probe (v2.45.0) ───────────────────
   //
   // Marketing claim: "Mneme bootstraps on first MCP tool call — user

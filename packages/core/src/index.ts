@@ -409,6 +409,14 @@ export * as acgvAutoNumberGround from "./squadron/auto_number_ground.js";
 // the init step disappear (silent + idempotent + dev-folder-aware).
 export * as autoInit from "./auto_init/index.js";
 export { cleanse, type CleanseInput, type CleanseResult, type CleanseFinding, type CleanseMode } from "./auto_init/retroactive_cleanse.js";
+// v2.46.0 — NEMESIS: world's first Anti-Identity-Lie Engine for AI agents.
+// 5 organs: FINGERPRINTER (41-feature vendor classifier from arxiv 2601.17406)
+// + LIE DETECTOR (claim vs detected with HMAC verdict) + ARTICLE 50 AUTO-STAMP
+// (EU AI Act Aug 2026 compliance) + MODEL DRIFT TIMELINE (per-vendor variance)
+// + REPLAY ATTACK DETECTOR (stealth-upgrade/downgrade). Composes ARGUS pattern
+// matching + Mneme HMAC chain. Auto-installs git pre-commit hook for
+// machine-readable disclosure on every commit.
+export * as nemesis from "./nemesis/index.js";
 // v2.40.0 — ARGUS-10: 10-eyed memory search. 5 surface (lex/phon/shape) +
 // 5 truth (Mneme-unique: homoglyph / number-paraphrase / embedding /
 // HMAC provenance / honest-mirror penalty) + HYDRA autospawn from AV
@@ -451,8 +459,12 @@ export * as covenant from "./covenant/covenant.js";
 export * as forecast from "./forecast/forecast.js";
 // v1.60 -- TIER 4: Whisper Net (P2P wisdom federation)
 export * as whisper from "./whisper/whisper.js";
-// v1.61 -- TIER 5: Nemesis Protocol (weekly adversarial audit)
-export * as nemesis from "./nemesis/nemesis.js";
+// v1.61 -- TIER 5: Nemesis Protocol (weekly adversarial audit) — REMOVED
+// duplicate `export * as nemesis` in v2.46.0; the v2.46 NEMESIS Anti-
+// Identity-Lie Engine namespace (line ~419) RE-EXPORTS all v1.61 Tier 5
+// surface (generateProbes / gradeRun / recordRun / readRuns / trendFor +
+// types) from nemesis/nemesis.js so downstream `_tier_tools.ts` keeps
+// working unchanged. One namespace, two coherent primitives.
 // v1.62 -- TIER 6: Recursive Soul (cross-session AI accountability)
 export * as recursiveSoul from "./recursive_soul/recursive_soul.js";
 // v1.63 -- TIER 7: Time-River (counterfactual history)

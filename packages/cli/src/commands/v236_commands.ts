@@ -570,3 +570,155 @@ export function registerArgusCommand(program: Command): void {
       }
     });
 }
+
+/**
+ * v2.46.0 — `mneme nemesis` CLI surface.
+ *
+ *   mneme nemesis classify          --stdin / --json
+ *   mneme nemesis verify_identity   --stdin / --claim X
+ *   mneme nemesis eu_stamp          --message X --vendor Y
+ *   mneme nemesis verify_stamp      --stamped <text>
+ *   mneme nemesis install_hook      [--execute]
+ *   mneme nemesis env_scan
+ */
+export function registerNemesisCommand(program: Command): void {
+  const n = program.command("nemesis").description("👁 NEMESIS — world's first Anti-Identity-Lie Engine for AI agents. 5 organs: fingerprinter / lie detector / EU AI Act Article 50 stamper / model drift timeline / replay attack detector.");
+
+  async function readStdinJson(): Promise<{ diff?: string; prDescription?: string; commitMessages?: string[]; claimedVendor?: string; fixture?: { diff?: string; prDescription?: string; commitMessages?: string[] } } | null> {
+    try {
+      const chunks: Buffer[] = [];
+      for await (const c of process.stdin) chunks.push(c as Buffer);
+      const body = Buffer.concat(chunks).toString("utf8").trim();
+      if (!body) return null;
+      return JSON.parse(body);
+    } catch { return null; }
+  }
+
+  n.command("classify")
+    .description("Predict the AI vendor from a diff/PR/commits fixture (--stdin: pass JSON {diff,prDescription,commitMessages}).")
+    .option("--stdin", "Read JSON fixture from stdin.")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON fixture" }); process.exitCode = 1; return; }
+        const fp = core.nemesis.extractFingerprint({ diff: f.diff ?? "", prDescription: f.prDescription ?? "", commitMessages: f.commitMessages ?? [] });
+        const v = core.nemesis.classifyAgent(fp);
+        writeJson({ ok: true, result: v, fingerprint: fp });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("verify_identity")
+    .description("Compare claimed vendor vs detected fingerprint; HMAC-signed verdict.")
+    .option("--stdin", "Read JSON {claimedVendor, fixture:{diff,prDescription,commitMessages}} from stdin.")
+    .option("--claim <vendor>", "Claimed vendor (if not via stdin).")
+    .action(async (opts: { stdin?: boolean; claim?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        const claimedVendor = opts.claim ?? f?.claimedVendor ?? "";
+        const fixture = f?.fixture ?? { diff: f?.diff ?? "", prDescription: f?.prDescription ?? "", commitMessages: f?.commitMessages ?? [] };
+        if (!claimedVendor) { writeJson({ ok: false, error: "pass --claim <vendor> or --stdin with claimedVendor" }); process.exitCode = 1; return; }
+        const r = core.nemesis.verifyIdentityClaim({ claimedVendor, fixture: { diff: fixture.diff ?? "", prDescription: fixture.prDescription ?? "", commitMessages: fixture.commitMessages ?? [] } });
+        writeJson({ ok: true, result: r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("eu_stamp")
+    .description("Append EU AI Act Article 50 disclosure block to a message; HMAC-signed.")
+    .option("--message <text>", "The commit message / content to stamp.")
+    .option("--vendor <v>", "Vendor that produced the content (claude-code / codex / cursor / copilot / devin).")
+    .option("--confidence <n>", "Attribution confidence 0..1.", "0.9")
+    .action(async (opts: { message?: string; vendor?: string; confidence?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.stampArticle50({
+          message: opts.message ?? "",
+          vendor: opts.vendor ?? "",
+          confidence: parseFloat(opts.confidence ?? "0.9"),
+        });
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("verify_stamp")
+    .description("Verify a pasted EU AI Act Article 50 stamped message (HMAC check).")
+    .option("--stamped <text>", "Stamped message text.")
+    .action(async (opts: { stamped?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.verifyStamp(opts.stamped ?? "");
+        writeJson(r);
+        if (!r.valid) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("install_hook")
+    .description("Install git prepare-commit-msg hook that auto-stamps every commit with EU AI Act Article 50 disclosure. DRY-RUN default.")
+    .option("--execute", "Actually install (default: dry-run shows the plan only).", false)
+    .action(async (opts: { execute?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.installPreCommitHook({ repoRoot: process.cwd(), dryRun: !opts.execute });
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("env_scan")
+    .description("Scan process.env for AI-vendor signature markers.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        writeJson({ ok: true, result: core.nemesis.scanEnv() });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // v2.46.0 — relocated `mneme nemesis` engineering-friction-detector
+  // (was top-level in v2.45) into `nemesis pairs` subcommand so the
+  // parent `nemesis` namespace hosts both legacy + new functionality.
+  n.command("pairs")
+    .description("Engineering friction detector — pairs of authors who consistently revert/rewrite each other's work (use for team formation, NOT performance reviews).")
+    .option("--top <n>", "show top-N friction pairs", (v) => Number(v), 5)
+    .option("--window <days>", "consider only events within N days", (v) => Number(v), 365)
+    .option("--author <email>", "filter pairs containing this author")
+    .option("--json", "machine-readable output", false)
+    .option("--verbose", "expand the details tier", false)
+    .action(async (opts: { top?: number; window?: number; author?: string; json?: boolean; verbose?: boolean }) => {
+      try {
+        const { nemesisCommand } = await import("./nemesis.js");
+        process.exit(
+          await nemesisCommand({
+            cwd: process.cwd(),
+            topN: opts.top,
+            windowDays: opts.window,
+            authorFilter: opts.author,
+            json: opts.json,
+            verbose: opts.verbose,
+          }),
+        );
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+}
