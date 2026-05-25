@@ -41,7 +41,7 @@ const id = mneme.nemesis.classify({ diff, prDescription, commitMessages });
 const bench = await mneme.benchmark.vsCli();         // proves the speedup on your hardware
 ```
 
-- 📘 [SDK design doc](docs/sdk/DESIGN.md) · 🔄 [Migration guide](docs/sdk/MIGRATION.md) · 📚 [Docs index](docs/README.md)
+- 📑 [SDK index (bilingual)](docs/sdk/README.md) · 🚀 [Quick start EN](docs/sdk/QUICKSTART-EN.md) / [TH](docs/sdk/QUICKSTART-TH.md) · 📘 Design [EN](docs/sdk/DESIGN.md) / [TH](docs/sdk/DESIGN-TH.md) · 🔄 Migration [EN](docs/sdk/MIGRATION.md) / [TH](docs/sdk/MIGRATION-TH.md) · 📚 [Docs index](docs/README.md)
 
 ---
 

@@ -41,13 +41,20 @@ The full release history is [CHANGELOG.md](../CHANGELOG.md). This page indexes t
 
 ---
 
-## 🚀 SDK (v2.55)
+## 🚀 SDK (v2.55) — `@mneme-ai/sdk`
 
-`@mneme-ai/sdk` — world-class premium in-process SDK that AI vendors embed without subprocess overhead. 30-80× faster than the CLI. Type-safe, tagged-template verify, async-iterator events, file-lock adapter, built-in benchmark.
+World-class premium in-process SDK that AI vendors embed without subprocess overhead. 30-80× faster than the CLI. Type-safe, tagged-template verify, async-iterator events, file-lock adapter, built-in benchmark.
 
-- 📘 **Design doc:** [`docs/sdk/DESIGN.md`](sdk/DESIGN.md) (16 sections)
-- 🔄 **Migration guide:** [`docs/sdk/MIGRATION.md`](sdk/MIGRATION.md) (CLI subprocess → SDK)
-- 📦 **Package:** `npm install @mneme-ai/sdk`
+**Bilingual docs (TH + EN):**
+
+| Doc | English | ภาษาไทย |
+|---|---|---|
+| 📑 SDK index page | [docs/sdk/README.md](sdk/README.md) | (same — bilingual) |
+| 🚀 Quick start (8 use cases) | [QUICKSTART-EN.md](sdk/QUICKSTART-EN.md) | [QUICKSTART-TH.md](sdk/QUICKSTART-TH.md) |
+| 📘 Design doc (16 sections) | [DESIGN.md](sdk/DESIGN.md) | [DESIGN-TH.md](sdk/DESIGN-TH.md) |
+| 🔄 Migration (CLI → SDK) | [MIGRATION.md](sdk/MIGRATION.md) | [MIGRATION-TH.md](sdk/MIGRATION-TH.md) |
+
+📦 **Install:** `npm install @mneme-ai/sdk`
 
 ```ts
 import { createMneme } from "@mneme-ai/sdk";
