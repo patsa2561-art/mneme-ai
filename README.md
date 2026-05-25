@@ -194,7 +194,18 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 
 <div align="center">
 
-### 💬 Get in touch
+### 🤝 Support · Partnership · Collaboration
+
+> **Interested in supporting Mneme, partnering on truth-infrastructure, or exploring something together?**
+> Reach me on any of the channels below — I read every one.
+>
+> **สนใจ support / ร่วมเป็น partner / collaborate?** ทักได้ทุก channel ด้านล่างเลยครับ — อ่านทุกข้อความ
+
+<sub>Whether you're a vendor wanting to embed Mneme inside your product · an enterprise needing safety-critical AI guardrails · a researcher building on the corpus · a regulator exploring AI-disclosure tooling · or just someone with a sharp question — **the inbox is open.**</sub>
+
+---
+
+### 💬 Channels
 
 | Channel | Handle |
 |---|---|
@@ -204,7 +215,7 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 | <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | **`pat195`** (username `shinnapat`) |
 | <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | **<a href="https://wa.me/66939455645" target="_blank" rel="noopener">+66 93 945 5645</a>** |
 
-<sub>**Open to:** collaboration on truth-infrastructure / AI safety / cross-vendor consensus protocols · consulting for safety-critical AI deployments · full-time roles where the bottleneck is trust, not capability.</sub>
+<sub>**Open to:** collaboration on truth-infrastructure / AI safety / cross-vendor consensus protocols · consulting for safety-critical AI deployments · vendor partnerships (embed Mneme inside Cursor / Continue / Cline / Claude Code / Grok-CLI / etc) · enterprise compliance for EU AI Act Article 50 · full-time roles where the bottleneck is trust, not capability.</sub>
 
 </div>
 
