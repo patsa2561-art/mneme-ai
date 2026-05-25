@@ -137,6 +137,27 @@ export {
   type JanusTransition, type JanusSessionResult,
 } from "./janus.js";
 
+// v2.54.0 — World-class premium additions:
+//   🧠 LETHE  — GDPR forget primitive (Merkle exclusion proof)
+//   ⚖ GAVEL  — court-admissible bundle (THEMIS + EU stamp + SIBYL + Merkle tree)
+//   🌐 NIMBUS — federated trust mesh (consent-fabric leaderboard pub/sub)
+export {
+  buildMerkleTree, buildInclusionProof, verifyInclusionProof,
+  forgetRow, verifyForgetReceipt, listForgetReceipts,
+  type MerkleProofStep, type MerkleTree,
+  type ForgetReceipt, type ForgetInput, type ForgetResult,
+} from "./lethe.js";
+export {
+  buildGavelBundle, verifyGavelBundle,
+  type GavelBundle, type GavelBundleInput, type BundleArtifact, type GavelVerifyResult,
+} from "./gavel.js";
+export {
+  publishCard, verifyCard, subscribeCard,
+  computeCrossOrgReputation, listPublished, listSubscriptions,
+  type NimbusCard, type NimbusVendorEntry, type PublishInput, type PublishResult,
+  type SubscriptionEntry, type SubscribeInput, type CrossOrgReputation,
+} from "./nimbus.js";
+
 // v2.50.0 — VENDOR ALLOWLIST GUARD: kills EMBEDDER-LEAK class structurally.
 // Central allowlist of real agent vendors; backend/embedder names (ollama,
 // openai-gpt, gemini, etc) coerced to "unknown" + logged to

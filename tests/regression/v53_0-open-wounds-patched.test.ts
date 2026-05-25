@@ -379,12 +379,15 @@ describe("v2.53.0 P1-4 CLI flag normalization (PINNED)", () => {
         || /--max/.test(block) || /--since-ms/.test(block) || /--min-z/.test(block)
         || /--no-persist/.test(block) || /--tournament-id/.test(block) || /--not-vendor/.test(block)
         || /--min-stars/.test(block) || /--session-id/.test(block) || /--max-commits/.test(block)
-        || /--threshold/.test(block) || /--model/.test(block) || /--webhook/.test(block);
+        || /--threshold/.test(block) || /--model/.test(block) || /--webhook/.test(block)
+        || /--ledger/.test(block) || /--row/.test(block) || /--jurisdiction/.test(block)
+        || /--org-tag/.test(block);
       // Status / read-only / environment-driven verbs are allowed to take no input.
-      // install_hook  = filesystem-only side effect
-      // env_scan      = reads process.env, no JSON input
-      // cleanse_ledger = filesystem-only operation (has --dry-run flag)
-      const noInputAllowed = /status|board|chain|replay|check|verify|install_hook|env_scan|cleanse_ledger/i.test(name);
+      // install_hook    = filesystem-only side effect
+      // env_scan        = reads process.env, no JSON input
+      // cleanse_ledger  = filesystem-only operation (has --dry-run flag)
+      // nimbus_reputation = read-only aggregator over subscribed cards
+      const noInputAllowed = /status|board|chain|replay|check|verify|install_hook|env_scan|cleanse_ledger|nimbus_reputation/i.test(name);
       if (!hasInput && !noInputAllowed) {
         missing.push(name);
       }

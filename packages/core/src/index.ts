@@ -422,6 +422,24 @@ export {
   getCatalogCount, verifyCatalogCount, renderCatalogLine,
   type CatalogCount,
 } from "./catalog_count.js";
+// v2.54.0 — World-class premium additions (Tier 2 / Tier 3 audit):
+//   🎯 PERF BUDGET — deterministic in-process performance ceiling per op.
+//   🏛 INDISPENSABILITY — 6-criterion measurable score (vs strategy doc).
+//   📜 STRATEGY — RFC drafts + pricing tiers as introspectable primitive.
+export {
+  runPerfBudget, renderPerfBudgetReport,
+  PERF_BUDGETS,
+  type PerfBudget, type PerfMeasurement, type PerfBudgetReport,
+} from "./perf_budget.js";
+export {
+  evaluateIndispensability, renderIndispensabilityReport,
+  type CriterionStatus, type CriterionScore, type IndispensabilityReport,
+} from "./indispensability.js";
+export {
+  getStrategyReport, renderPricingTable, renderRfcIndex,
+  PRICING_TIERS, RFC_DRAFTS,
+  type PricingTier, type RfcDraft, type StrategyReport,
+} from "./strategy.js";
 // v2.46.0 — NEMESIS: world's first Anti-Identity-Lie Engine for AI agents.
 // 5 organs: FINGERPRINTER (41-feature vendor classifier from arxiv 2601.17406)
 // + LIE DETECTOR (claim vs detected with HMAC verdict) + ARTICLE 50 AUTO-STAMP

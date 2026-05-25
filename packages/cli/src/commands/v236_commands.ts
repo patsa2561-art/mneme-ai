@@ -1130,6 +1130,139 @@ export function registerNemesisCommand(program: Command): void {
       }
     });
 
+  // ──────────────────────────────────────────────────────────────────
+  //  v2.54.0 — World-class premium NEMESIS additions
+  //    🧠 LETHE  — GDPR forget with Merkle exclusion proof
+  //    ⚖ GAVEL  — court-admissible bundle pack
+  //    🌐 NIMBUS — federated trust mesh
+  // ──────────────────────────────────────────────────────────────────
+
+  n.command("lethe_forget")
+    .description("🧠 LETHE — GDPR Art 17 forget: replace a row in a JSONL ledger with a sentinel + emit a Merkle inclusion-proof receipt that the row WAS there + is NOW erased. Pure cryptographic; idempotent backup to .pre-lethe.bak.")
+    .requiredOption("--ledger <path>", "Repo-relative path to the JSONL ledger (e.g. .mneme/cli-activity.jsonl)")
+    .requiredOption("--row <n>", "0-based row index to forget", (v) => Number(v))
+    .option("--jurisdiction <tag>", "GDPR jurisdiction tag", "EU-GDPR-Art17")
+    .option("--dry-run", "Build receipt without rewriting the ledger", false)
+    .action(async (opts: { ledger: string; row: number; jurisdiction?: string; dryRun?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.forgetRow({
+          repoRoot: process.cwd(),
+          ledgerRelative: opts.ledger,
+          rowIndex: opts.row,
+          jurisdiction: opts.jurisdiction,
+          dryRun: opts.dryRun ?? false,
+        });
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("lethe_verify")
+    .description("🧠 LETHE — verify a forget receipt cryptographically (HMAC + inclusion-proof reconstructs original root). Use --stdin with the receipt JSON.")
+    .option("--stdin", "Read ForgetReceipt JSON from stdin")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = opts.stdin ? await readStdinJson() : null;
+        if (!r) { writeJson({ ok: false, error: "pass --stdin with receipt JSON" }); process.exitCode = 1; return; }
+        const v = core.nemesis.verifyForgetReceipt(r as Parameters<typeof core.nemesis.verifyForgetReceipt>[0]);
+        writeJson(v);
+        if (!v.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("gavel_pack")
+    .description("⚖ GAVEL — bind THEMIS alibi + EU stamp + SIBYL reveal into a single court-admissible bundle. Use --stdin with JSON {commitRef, alibi, stamp?, sibylReveal?, jurisdiction?, attorneyNote?}.")
+    .option("--stdin", "Read bundle input JSON from stdin")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const j = opts.stdin ? await readStdinJson() : null;
+        if (!j) { writeJson({ ok: false, error: "pass --stdin with bundle input JSON" }); process.exitCode = 1; return; }
+        const r = core.nemesis.buildGavelBundle(j as Parameters<typeof core.nemesis.buildGavelBundle>[0]);
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("gavel_verify")
+    .description("⚖ GAVEL — verify a bundle: bundle HMAC + Merkle root reconstruction + per-artifact signature. Use --stdin.")
+    .option("--stdin", "Read GavelBundle JSON from stdin")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const j = opts.stdin ? await readStdinJson() : null;
+        if (!j) { writeJson({ ok: false, error: "pass --stdin with bundle JSON" }); process.exitCode = 1; return; }
+        const r = core.nemesis.verifyGavelBundle(j as Parameters<typeof core.nemesis.verifyGavelBundle>[0]);
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("nimbus_publish")
+    .description("🌐 NIMBUS — publish a leaderboard card to the local pub-store (HMAC-signed, expires in 90 days by default). Use --stdin with JSON {orgTag, topByElo?, topByHonesty?, sharedScopes?, expiresAtIso?, note?}.")
+    .option("--stdin", "Read publish input JSON from stdin")
+    .option("--org-tag <name>", "Override org tag (if not via stdin)")
+    .action(async (opts: { stdin?: boolean; orgTag?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const j = opts.stdin ? await readStdinJson() : null;
+        const orgTag = opts.orgTag ?? (j as { orgTag?: string } | null)?.orgTag;
+        if (!orgTag) { writeJson({ ok: false, error: "orgTag required (--org-tag or via stdin)" }); process.exitCode = 1; return; }
+        const input = { ...(j ?? {}), repoRoot: process.cwd(), orgTag };
+        const r = core.nemesis.publishCard(input as Parameters<typeof core.nemesis.publishCard>[0]);
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("nimbus_subscribe")
+    .description("🌐 NIMBUS — subscribe to a foreign org's leaderboard card. Verifies HMAC + expiry. Use --stdin with the card JSON; optional --trust <0..1>.")
+    .option("--stdin", "Read NimbusCard JSON from stdin")
+    .option("--trust <n>", "Local trust weight for this org (0..1)", (v) => Number(v), 0.5)
+    .action(async (opts: { stdin?: boolean; trust?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const card = opts.stdin ? await readStdinJson() : null;
+        if (!card) { writeJson({ ok: false, error: "pass --stdin with NimbusCard JSON" }); process.exitCode = 1; return; }
+        const r = core.nemesis.subscribeCard({ repoRoot: process.cwd(), card: card as Parameters<typeof core.nemesis.subscribeCard>[0]["card"], trustWeight: opts.trust });
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("nimbus_reputation")
+    .description("🌐 NIMBUS — compute cross-org weighted vendor reputation from all subscribed cards. Ranked list with confidence.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.computeCrossOrgReputation(process.cwd());
+        writeJson({ ok: true, vendors: r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
   n.command("cleanse_ledger")
     .description("v2.50.0 — RETROACTIVE LEDGER CLEANSE: coerce historical embedder-leak rows in .mneme/cli-activity.jsonl to vendor:'unknown' + re-chain HMACs + back up original to .pre-v50.bak. Idempotent.")
     .option("--dry-run", "Compute the plan without writing.", false)

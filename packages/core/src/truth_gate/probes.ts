@@ -994,6 +994,121 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.54.0 — WORLD-CLASS PREMIUM bindings ──────────────────────────
+  //
+  // 1. probe.nemesis.world_class_premium_primitives — verifies 3 new
+  //    NEMESIS extensions (LETHE / GAVEL / NIMBUS) wire + functional.
+  // 2. probe.perf.budgets_met — runs the 5-op in-process perf budget;
+  //    fails if any op exceeds its budget.
+  // 3. probe.strategy.tier3_complete — verifies STRATEGY + INDISPENSABILITY
+  //    primitives exist + return their documented shape.
+  {
+    id: "probe.nemesis.world_class_premium_primitives",
+    kind: "numeric",
+    description: "1 when LETHE + GAVEL + NIMBUS all execute + return their documented shape in-process. 0 on any miss.",
+    run: async () => {
+      try {
+        const failures: string[] = [];
+        const nemesis = await import("../nemesis/index.js" as string) as typeof import("../nemesis/index.js");
+        // LETHE — Merkle tree + inclusion proof round-trip
+        try {
+          const rows = ["row1", "row2", "row3", "row4"];
+          const tree = nemesis.buildMerkleTree(rows);
+          const proof = nemesis.buildInclusionProof(rows, 2);
+          if (!proof) failures.push("LETHE: buildInclusionProof returned null");
+          else {
+            const ok = nemesis.verifyInclusionProof(proof.leafHash, proof.proof, tree.root);
+            if (!ok) failures.push("LETHE: inclusion proof did not verify");
+          }
+        } catch (e) { failures.push(`LETHE threw: ${(e as Error).message}`); }
+        // GAVEL — bundle round-trip
+        try {
+          const fixture = { diff: "+const x=1;\n", prDescription: "## Changes\n- a\n- b\n- c\n", commitMessages: ["x"] };
+          const alibi = nemesis.verifyAlibi({ notVendor: "codex", fixture });
+          const r = nemesis.buildGavelBundle({ commitRef: "tg-probe", alibi });
+          if (!r.ok || !r.bundle) failures.push(`GAVEL build: ${r.reason}`);
+          else {
+            const v = nemesis.verifyGavelBundle(r.bundle);
+            if (!v.ok) failures.push(`GAVEL verify: ${v.reason}`);
+          }
+        } catch (e) { failures.push(`GAVEL threw: ${(e as Error).message}`); }
+        // NIMBUS — publish + verify card
+        try {
+          const r = nemesis.publishCard({
+            repoRoot: process.cwd(),
+            orgTag: "tg-probe-org",
+            topByElo: [{ vendor: "claude-code", elo: 1500, n: 100 }],
+            topByHonesty: [{ vendor: "claude-code", falseRateLB: 0.05, n: 100 }],
+            persist: false,
+          });
+          if (!r.ok || !r.card) failures.push(`NIMBUS publish: ${r.reason}`);
+          else {
+            const v = nemesis.verifyCard(r.card);
+            if (!v.ok) failures.push(`NIMBUS verify: ${v.reason}`);
+          }
+        } catch (e) { failures.push(`NIMBUS threw: ${(e as Error).message}`); }
+
+        const ok = failures.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? "LETHE ✓ · GAVEL ✓ · NIMBUS ✓"
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.perf.budgets_met",
+    kind: "numeric",
+    description: "1 when all 5 perf budgets are met (warm-mean < budget). 0 when any op regresses past its budget.",
+    run: async () => {
+      try {
+        const { runPerfBudget } = await import("../perf_budget.js" as string) as typeof import("../perf_budget.js");
+        const r = runPerfBudget();
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok
+            ? `5/5 perf budgets met (${r.measurements.map((m) => `${m.op.split(".")[1]}=${m.warmMeanMs}ms`).join(", ")})`
+            : `BLOCKED: ${r.failing.join("; ")}`,
+          detail: { measurements: r.measurements },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.strategy.tier3_complete",
+    kind: "numeric",
+    description: "1 when strategy primitive ships ≥3 RFC drafts + ≥4 pricing tiers + indispensability score ≥0.5.",
+    run: async (ctx) => {
+      try {
+        const failures: string[] = [];
+        const { getStrategyReport } = await import("../strategy.js" as string) as typeof import("../strategy.js");
+        const r = getStrategyReport();
+        if (r.rfcDrafts.length < 3) failures.push(`only ${r.rfcDrafts.length} RFC drafts (need ≥3)`);
+        if (r.pricing.length < 4) failures.push(`only ${r.pricing.length} pricing tiers (need ≥4)`);
+        const { evaluateIndispensability } = await import("../indispensability.js" as string) as typeof import("../indispensability.js");
+        const ind = evaluateIndispensability(ctx.cwd);
+        if (ind.overallScore < 0.5) failures.push(`indispensability ${ind.overallScore} < 0.5`);
+        const ok = failures.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? `${r.rfcDrafts.length} RFC drafts · ${r.pricing.length} pricing tiers · indispensability ${(ind.overallScore * 100).toFixed(0)}%`
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { rfcCount: r.rfcDrafts.length, pricingCount: r.pricing.length, indispensability: ind.overallScore },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.53.0 — PATCH OPEN WOUNDS (P0/P1) binding ──────────────────────
   //
   // Verifies all 8 audit-driven patches are wired + functional:

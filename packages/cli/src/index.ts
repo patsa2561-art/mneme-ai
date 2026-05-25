@@ -4828,6 +4828,86 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.54.0 — STRATEGY primitive (RFC drafts + pricing tiers).
+  const strategyParent = program
+    .command("strategy")
+    .description("v2.54 — strategy primitive: RFC drafts + pricing tiers + roadmap. Default action = full report.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        process.stdout.write(JSON.stringify(core.getStrategyReport(), null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  strategyParent.command("rfc")
+    .description("v2.54 — list RFC drafts (W3C / ECMA / NIST) with status + standards-body target.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        process.stdout.write(JSON.stringify({ rfcDrafts: core.RFC_DRAFTS, rendered: core.renderRfcIndex() }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  strategyParent.command("pricing")
+    .description("v2.54 — list pricing tiers (Free local / Pro Federation / Enterprise / Sovereign).")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        process.stdout.write(JSON.stringify({ pricing: core.PRICING_TIERS, rendered: core.renderPricingTable() }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
+  // v2.54.0 — PERF BUDGET primitive.
+  const perfParent = program
+    .command("perf")
+    .description("v2.54 P2 — performance budget primitive. Default action = run budgets.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.runPerfBudget();
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  perfParent.command("budget")
+    .description("Run the in-process perf budget suite; reports warm mean / p95 / cold-first per op + pass/fail.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.runPerfBudget();
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
+  // v2.54.0 — INDISPENSABILITY measurable checklist.
+  program
+    .command("indispensability")
+    .description("v2.54 Tier-3 — score Mneme against the 6-criterion indispensability checklist (UX degradation / onboarding / cost / switching / trust / regulator). Weighted 0..100.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.evaluateIndispensability(process.cwd());
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.53.0 — CATALOG COUNT single source of truth.
   const catalogParent = program
     .command("catalog")

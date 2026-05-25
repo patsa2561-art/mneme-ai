@@ -23,9 +23,28 @@
 <td align="center" width="25%"><a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><b>📘 Functions (EN)</b></a><br/><sub>What Mneme does, in 5 minutes</sub></td>
 <td align="center" width="25%"><a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener"><b>📗 ฟังก์ชั่น (ไทย)</b></a><br/><sub>อ่านจบใน 5 นาที</sub></td>
 <td align="center" width="25%"><a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><b>🤖 AI Agent Contract</b></a><br/><sub>Deep install + protocol</sub></td>
-<td align="center" width="25%"><a href="#-author--contact" target="_blank" rel="noopener"><b>👤 Contact me</b></a><br/><sub>Author · stack · DM</sub></td>
+<td align="center" width="25%"><a href="docs/README.md" target="_blank" rel="noopener"><b>📚 Docs index</b></a><br/><sub>Primitives · RFCs · pricing · indispensability</sub></td>
 </tr>
 </table>
+
+<br/>
+
+### 🌟 v2.54 — World-class premium
+
+Live-introspectable primitives:
+
+```
+mneme strategy rfc            # 3 RFC drafts (W3C / ECMA / NIST)
+mneme strategy pricing        # 4 tiers (Free / Pro / Enterprise / Sovereign)
+mneme indispensability        # 6-criterion 0..100 score
+mneme perf budget             # 5-op in-process performance suite
+mneme catalog count           # signed catalog envelope (no count drift)
+mneme nemesis lethe_forget    # GDPR Art 17 forget with Merkle exclusion proof
+mneme nemesis gavel_pack      # court-admissible bundle (THEMIS + EU stamp + SIBYL)
+mneme nemesis nimbus_publish  # federated trust mesh (per-org leaderboard pub/sub)
+```
+
+Full docs landing: <a href="docs/README.md" target="_blank" rel="noopener"><b>docs/README.md</b></a>
 
 </div>
 

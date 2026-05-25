@@ -225,6 +225,34 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.54.0 — WORLD-CLASS PREMIUM bindings ──────────────────────────
+  {
+    id: "claim.nemesis.world_class_premium_primitives",
+    source: "v2.54.0 release notes",
+    text: "Mneme ships 3 world-class premium NEMESIS extensions inspired by v2.53 audit Tier-2/3: LETHE (GDPR forget with Merkle exclusion proof), GAVEL (court-admissible bundle binding THEMIS + EU stamp + SIBYL via Merkle tree), NIMBUS (federated trust mesh: per-org HMAC-signed leaderboard cards + cross-org weighted reputation)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.nemesis.world_class_premium_primitives",
+    severity: "block",
+  },
+  {
+    id: "claim.perf.budgets_met",
+    source: "v2.54.0 release notes",
+    text: "Mneme's 5 hot-path operations (extract_fingerprint / classify_calibrated / eu_stamp / stealth_score / janus_observe) stay within published per-op performance budgets; release-script gate refuses tag on regression",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.perf.budgets_met",
+    severity: "block",
+  },
+  {
+    id: "claim.strategy.tier3_complete",
+    source: "v2.54.0 release notes",
+    text: "Mneme ships strategy primitive with ≥3 RFC drafts (W3C disclosure block / ECMA cross-vendor handoff / NIST fingerprint-identity standard), ≥4 pricing tiers (Free / Pro / Enterprise / Sovereign), and a measurable indispensability score (6-criterion weighted checklist) ≥0.5",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.strategy.tier3_complete",
+    severity: "block",
+  },
   // ── v2.53.0 — PATCH OPEN WOUNDS (P0/P1) binding ─────────────────────
   // Closes the 8-finding session audit: HMAC default key / probe coverage
   // 14.2% / WIRING LAG class / EU stamp 700-984ms / classify accuracy
