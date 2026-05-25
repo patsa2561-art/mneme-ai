@@ -400,6 +400,9 @@ export * as acgvStake from "./squadron/acgv_stake.js";
 // D8 (Thai NFC/NFD denormalized) at the ACGV entry point.
 export * as acgvInputHygiene from "./squadron/acgv_input_hygiene.js";
 export * as acgvNumberBridge from "./squadron/acgv_number_bridge.js";
+// v2.44.0 — SEAMLESS PROTOCOL: shell-strip detective + auto-number-grounding.
+export * as acgvShellStripDetective from "./squadron/shell_strip_detective.js";
+export * as acgvAutoNumberGround from "./squadron/auto_number_ground.js";
 // v2.40.0 — ARGUS-10: 10-eyed memory search. 5 surface (lex/phon/shape) +
 // 5 truth (Mneme-unique: homoglyph / number-paraphrase / embedding /
 // HMAC provenance / honest-mirror penalty) + HYDRA autospawn from AV

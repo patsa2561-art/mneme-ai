@@ -73,3 +73,9 @@ export {
   VENDOR_ADAPTERS, listAdapters, countAdapters, findAdapter, adaptersByTransport,
   type VendorAdapter, type VendorTransport,
 } from "./vendor_adapters.js";
+
+// v2.44.0 — Homoglyph attack banner (per-candidate cross-script detection).
+export {
+  detectHomoglyphAttacks, formatBanner,
+  type HomoglyphAttack, type Script as HomoglyphScript,
+} from "./homoglyph_banner.js";

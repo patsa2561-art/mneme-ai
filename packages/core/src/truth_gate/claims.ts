@@ -199,6 +199,19 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.mnemnet.federation_default_off",
     severity: "block",
   },
+  // ── v2.44.0 — SEAMLESS PROTOCOL self-verify ─────────────────────────
+  // Marketing claim: Mneme verify accepts hostile input seamlessly via
+  // multiple lossless paths (stdin / hex / base64 / clipboard / file).
+  // The probe asserts all 3 v2.44 innovations are wired + behave.
+  {
+    id: "claim.seamless.protocol_complete",
+    source: "v2.44.0 release notes",
+    text: "Mneme's SEAMLESS PROTOCOL wires shell-strip-detective + auto-number-grounding + homoglyph-attack-banner so hostile input never silently fails",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.seamless.protocol_complete",
+    severity: "block",
+  },
   // ── v2.41.0 — ARGUS-11 marketing claim, self-verified ──────────────
   // The marketing language "world's first truth-aware multimodal search"
   // is rendered VERIFIABLE: the probe runs a benchmark on (text+code)

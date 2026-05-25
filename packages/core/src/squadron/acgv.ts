@@ -58,6 +58,7 @@ import { scanCommitHashes } from "./acgv_commit_hash_oracle.js";
 import { detectVersionSemantic } from "./acgv_version_semantic.js";
 import { checkInputHygiene } from "./acgv_input_hygiene.js";
 import { canonicalRewrite, extractCanonicalNumbers } from "./acgv_number_bridge.js";
+import { tryAutoGroundNumber } from "./auto_number_ground.js";
 import { liveMnemeToolNames } from "./fact_grounding.js";
 import { noteBotOutcome } from "./acgv_stake.js";
 import { primeResonance, twoWitnessAgreement, prtfCertificate, type PRTFResult } from "./acgv_prtf.js";
@@ -416,6 +417,69 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   const numberBridged = canonicalClaim !== claim;
   if (numberBridged) {
     caveats.push(`NUMBER_BRIDGE:${canonicalNumbers.length}_canonicalized`);
+  }
+  // v2.44.0 — AUTO-NUMBER-GROUNDING: when claim has "Mneme has N <noun>"
+  // shape AND we can resolve a live count, return an explicit verdict
+  // instead of letting NUMBER_BRIDGE end as a caveat. Turns informational
+  // caveat into actionable REFUTED/SUPPORTED.
+  if (numberBridged || canonicalNumbers.length > 0) {
+    try {
+      const grounded = tryAutoGroundNumber(claim, repoRoot);
+      if (grounded.grounded && grounded.verdict === "REFUTED") {
+        const sig = `AUTO_NUMBER_REFUTE :: ${grounded.noun}=${grounded.claimedValue} vs actual=${grounded.expected}`;
+        if (!input.noEmitVaccine) {
+          try { emitVaccine(repoRoot, claim, sig); } catch { /* best-effort */ }
+        }
+        return {
+          verdict: "IMPOSSIBLE_REFUTE",
+          confidence: 0.95,
+          caveats: [...caveats, `AUTO_NUMBER_REFUTE:${grounded.noun}=${grounded.claimedValue}vs${grounded.expected}`],
+          layers: {
+            vaccineMatch: null,
+            grounding: [],
+            chandrasekhar: {
+              verdict: "BLACK_HOLE", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+              confidence: 0.95, citations: [],
+              reasoning: grounded.evidence ?? sig,
+            } as ChandrasekharResult,
+            godel: {
+              status: "UNSAT",
+              core: [{ asserted: `${grounded.noun}=${grounded.claimedValue}`, proof: [`live count=${grounded.expected}`] }],
+              certificate: sig,
+              upgrade: true,
+            },
+            confession: null,
+            confessionRequest: null,
+          },
+          summary: `AUTO_NUMBER_REFUTE — claim says ${grounded.claimedValue} ${grounded.noun}; live count is ${grounded.expected}.`,
+          reasoning: grounded.evidence ?? sig,
+          vaccineEmitted: !input.noEmitVaccine,
+        } as ACGVResult;
+      }
+      // Soft support (within tolerance) → FUSION with caveat
+      if (grounded.grounded && grounded.verdict === "SUPPORTED") {
+        return {
+          verdict: "FUSION",
+          confidence: 0.88,
+          caveats: [...caveats, `AUTO_NUMBER_SUPPORT:${grounded.noun}=${grounded.claimedValue}~${grounded.expected}`],
+          layers: {
+            vaccineMatch: null,
+            grounding: [],
+            chandrasekhar: {
+              verdict: "FUSION", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+              confidence: 0.88, citations: [],
+              reasoning: grounded.evidence ?? "",
+            } as ChandrasekharResult,
+            godel: { status: "SKIPPED", core: [], certificate: "", upgrade: false },
+            confession: null,
+            confessionRequest: null,
+          },
+          summary: `AUTO_NUMBER_SUPPORT — claim's ${grounded.claimedValue} ${grounded.noun} matches live count ${grounded.expected}.`,
+          reasoning: grounded.evidence ?? "",
+          vaccineEmitted: false,
+        } as ACGVResult;
+      }
+    } catch { /* best-effort; fall through to standard pipeline */ }
   }
 
   // ───── Layer 0a: HYPERBOLE / IMPOSSIBLE-CLAIM DETECTOR (v2.23.2) ──────

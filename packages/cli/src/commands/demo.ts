@@ -285,6 +285,8 @@ export function registerVerifyCommand(program: Command): void {
     .option("--stdin", "v2.43.0 — read the claim from stdin (preserves hostile codepoints that the shell strips from argv: BIDI override / NUL byte / control chars).")
     .option("--hex <hex>", "v2.43.0 — accept the claim as hex-encoded UTF-8 (use when the shell drops hostile codepoints).")
     .option("--base64 <b64>", "v2.43.0 — accept the claim as base64-encoded UTF-8 (use when the shell drops hostile codepoints).")
+    .option("--clipboard", "v2.44.0 — read the claim from the OS clipboard (pbpaste / xclip / Get-Clipboard); preserves all Unicode losslessly.")
+    .option("--file <path>", "v2.44.0 — read the claim from a UTF-8 file (preserves hostile codepoints, useful for very long claims).")
     .addHelpText("after", `
 Examples:
   $ mneme verify "the codebase is healthy"
@@ -297,12 +299,15 @@ How to read the verdict:
   REFUTED      Mneme found contradictory evidence -- retract the claim
   IMPOSSIBLE   Godel SAT proof: no repo state can satisfy this claim -- formal refute
 `)
-    .action(async (claimWords: string[], opts: { json?: boolean; format?: string; explain?: boolean; counterEvidence?: string; engine?: string; stdin?: boolean; hex?: string; base64?: string }) => {
-      // v2.43.0 — multi-source claim resolution. Priority:
-      //   1. --hex (lossless hostile-char input)
-      //   2. --base64 (lossless hostile-char input)
-      //   3. --stdin (lossless hostile-char input)
-      //   4. positional args (default; shell may strip BIDI/NUL)
+    .action(async (claimWords: string[], opts: { json?: boolean; format?: string; explain?: boolean; counterEvidence?: string; engine?: string; stdin?: boolean; hex?: string; base64?: string; clipboard?: boolean; file?: string }) => {
+      // v2.44.0 — SEAMLESS PROTOCOL multi-source claim resolution.
+      // Priority (all paths preserve hostile codepoints losslessly):
+      //   1. --hex / --base64        (explicit encoded forms)
+      //   2. --file <path>           (file content)
+      //   3. --clipboard             (OS clipboard via pbpaste/xclip/Get-Clipboard)
+      //   4. --stdin                 (explicit stdin)
+      //   5. STDIN AUTO-FALLBACK     (no args + non-TTY stdin → auto-read)
+      //   6. positional args         (default; shell may strip hostile chars)
       let claim = "";
       if (opts.hex && opts.hex.length > 0) {
         try { claim = Buffer.from(opts.hex.replace(/\s+/g, ""), "hex").toString("utf8"); }
@@ -310,23 +315,62 @@ How to read the verdict:
       } else if (opts.base64 && opts.base64.length > 0) {
         try { claim = Buffer.from(opts.base64, "base64").toString("utf8"); }
         catch (e) { process.stdout.write(`error: --base64 decode failed: ${(e as Error).message}\n`); process.exitCode = 1; return; }
-      } else if (opts.stdin === true) {
-        // Read stdin synchronously (small claims; ≤ 8K cap downstream anyway)
+      } else if (opts.file && opts.file.length > 0) {
+        try {
+          const { readFileSync, existsSync } = await import("node:fs");
+          if (!existsSync(opts.file)) { process.stdout.write(`error: --file path not found: ${opts.file}\n`); process.exitCode = 1; return; }
+          claim = readFileSync(opts.file, "utf8");
+        } catch (e) { process.stdout.write(`error: --file read failed: ${(e as Error).message}\n`); process.exitCode = 1; return; }
+      } else if (opts.clipboard === true) {
+        try {
+          const { spawnSync } = await import("node:child_process");
+          const platform = process.platform;
+          let r: { status: number | null; stdout?: string; stderr?: string };
+          if (platform === "darwin") {
+            r = spawnSync("pbpaste", [], { encoding: "utf8", timeout: 5000 });
+          } else if (platform === "win32") {
+            r = spawnSync("powershell", ["-NoProfile", "-Command", "Get-Clipboard -Raw"], { encoding: "utf8", timeout: 5000 });
+          } else {
+            // Try xclip first then xsel
+            r = spawnSync("xclip", ["-selection", "clipboard", "-o"], { encoding: "utf8", timeout: 5000 });
+            if (r.status !== 0) r = spawnSync("xsel", ["--clipboard", "--output"], { encoding: "utf8", timeout: 5000 });
+          }
+          if (r.status !== 0) {
+            process.stdout.write(`error: clipboard read failed (${platform}). Install pbpaste/xclip/xsel.\n`);
+            process.exitCode = 1; return;
+          }
+          claim = (r.stdout ?? "").replace(/\r\n$/, "");
+        } catch (e) { process.stdout.write(`error: --clipboard failed: ${(e as Error).message}\n`); process.exitCode = 1; return; }
+      } else if (opts.stdin === true || ((claimWords?.length ?? 0) === 0 && !process.stdin.isTTY)) {
+        // v2.44.0 STDIN AUTO-FALLBACK: when called with NO positional args
+        // AND stdin is non-TTY (pipe/redirect), auto-read stdin. This is
+        // the standard Unix convention so `echo "claim" | mneme verify`
+        // just works without --stdin.
         try {
           const chunks: Buffer[] = [];
           for await (const c of process.stdin) chunks.push(c as Buffer);
           claim = Buffer.concat(chunks).toString("utf8");
         } catch (e) {
-          process.stdout.write(`error: --stdin read failed: ${(e as Error).message}\n`);
+          process.stdout.write(`error: stdin read failed: ${(e as Error).message}\n`);
           process.exitCode = 1; return;
         }
       } else {
         claim = (claimWords ?? []).join(" ");
       }
       if (!claim || claim.length === 0) {
-        process.stdout.write(`error: empty claim. Pass positional args, --stdin, --hex, or --base64.\n`);
+        process.stdout.write(`error: empty claim. Pass positional args, pipe via stdin, or use --stdin / --hex / --base64 / --clipboard / --file.\n`);
         process.exitCode = 1; return;
       }
+      // v2.44.0 SHELL-STRIP DETECTIVE: warn when claim mentions hostile
+      // chars (BIDI / null / override) but contains none — the user
+      // probably meant to test hostile input and the shell stripped it.
+      try {
+        const { detectShellStrip } = await import("@mneme-ai/core").then((m) => (m as { acgvShellStripDetective?: { detectShellStrip: (s: string) => { suspicious: boolean; hint: string } } }).acgvShellStripDetective ?? { detectShellStrip: () => ({ suspicious: false, hint: "" }) });
+        const ssd = detectShellStrip(claim);
+        if (ssd.suspicious && !opts.json) {
+          process.stderr.write(ssd.hint + "\n\n");
+        }
+      } catch { /* best-effort */ }
       // v2.19.61 — --format=json is an explicit alias for --json (backward
       // compat for user shell scripts that grep specific verdict strings).
       // --format=human (default) forces human output even if user piped stdout.

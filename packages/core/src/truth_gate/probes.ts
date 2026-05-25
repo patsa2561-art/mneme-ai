@@ -454,6 +454,65 @@ const probes: Probe[] = [
     },
   },
 
+  // ── SEAMLESS PROTOCOL probe (v2.44.0) ────────────────────────────────
+  //
+  // Marketing claim: "Mneme verify accepts hostile input seamlessly via
+  // any of 6 lossless paths (stdin / hex / base64 / clipboard / file /
+  // positional)". The probe asserts:
+  //   (a) shell_strip_detective module loads + detects BIDI mention
+  //   (b) auto_number_ground module loads + grounds against live state
+  //   (c) homoglyph_banner module loads + detects Cyrillic attack
+  // Probe returns 1 when ALL three innovations are wired; 0 on any miss.
+  {
+    id: "probe.seamless.protocol_complete",
+    kind: "numeric",
+    description: "1 when SEAMLESS PROTOCOL is fully wired (shell-strip detective + auto-number-ground + homoglyph-banner all callable + correct).",
+    run: async (ctx) => {
+      try {
+        const failures: string[] = [];
+        // (a) shell strip detective
+        try {
+          const ssd = await import("../squadron/shell_strip_detective.js" as string) as {
+            detectShellStrip: (s: string) => { suspicious: boolean };
+          };
+          if (!ssd.detectShellStrip("Mneme verifies <BIDI> claims").suspicious) {
+            failures.push("shell_strip_detective did not flag BIDI mention");
+          }
+        } catch (e) { failures.push(`shell_strip_detective import failed: ${(e as Error).message}`); }
+        // (b) auto number ground
+        try {
+          const ang = await import("../squadron/auto_number_ground.js" as string) as {
+            tryAutoGroundNumber: (s: string, c: string) => { grounded: boolean; verdict?: string };
+          };
+          const r = ang.tryAutoGroundNumber("Mneme has 99999999 tools", ctx.cwd);
+          if (!r.grounded || r.verdict !== "REFUTED") {
+            failures.push("auto_number_ground did not refute impossible count");
+          }
+        } catch (e) { failures.push(`auto_number_ground import failed: ${(e as Error).message}`); }
+        // (c) homoglyph banner
+        try {
+          const hb = await import("../argus10/homoglyph_banner.js" as string) as {
+            detectHomoglyphAttacks: (c: ReadonlyArray<{ text: string }>) => Array<{ script: string }>;
+          };
+          const r = hb.detectHomoglyphAttacks([{ text: "Mn" + String.fromCodePoint(0x0435) + "me" }]);
+          if (r.length === 0 || r[0]!.script !== "cyrillic") {
+            failures.push("homoglyph_banner did not detect Cyrillic attack");
+          }
+        } catch (e) { failures.push(`homoglyph_banner import failed: ${(e as Error).message}`); }
+        const ok = failures.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? "shell-strip ✓ + auto-number-ground ✓ + homoglyph-banner ✓"
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── ARGUS-11 multimodal "world's first" probe (v2.41.0) ──────────────
   //
   // Marketing claim: "world's first truth-aware multimodal search".
