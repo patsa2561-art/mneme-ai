@@ -20,10 +20,11 @@
 
 <table>
 <tr>
-<td align="center" width="25%"><a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><b>📘 Functions (EN)</b></a><br/><sub>What Mneme does, in 5 minutes</sub></td>
-<td align="center" width="25%"><a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener"><b>📗 ฟังก์ชั่น (ไทย)</b></a><br/><sub>อ่านจบใน 5 นาที</sub></td>
-<td align="center" width="25%"><a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><b>🤖 AI Agent Contract</b></a><br/><sub>Deep install + protocol</sub></td>
-<td align="center" width="25%"><a href="docs/README.md" target="_blank" rel="noopener"><b>📚 Docs index</b></a><br/><sub>Primitives · RFCs · pricing · indispensability</sub></td>
+<td align="center" width="20%"><a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><b>📘 Functions (EN)</b></a><br/><sub>What Mneme does, in 5 minutes</sub></td>
+<td align="center" width="20%"><a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener"><b>📗 ฟังก์ชั่น (ไทย)</b></a><br/><sub>อ่านจบใน 5 นาที</sub></td>
+<td align="center" width="20%"><a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><b>🤖 AI Agent Contract</b></a><br/><sub>Deep install + protocol</sub></td>
+<td align="center" width="20%"><a href="docs/README.md" target="_blank" rel="noopener"><b>📚 Docs index</b></a><br/><sub>Primitives · RFCs · pricing · indispensability</sub></td>
+<td align="center" width="20%"><a href="#-author--contact"><b>👤 Author & Contact</b></a><br/><sub>Scroll down to author bio</sub></td>
 </tr>
 </table>
 
