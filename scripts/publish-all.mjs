@@ -49,6 +49,8 @@ const PACKAGES_IN_DEP_ORDER = [
   { name: "@mneme-ai/embeddings", path: "packages/embeddings" },
   { name: "@mneme-ai/correlator", path: "packages/correlator" },
   { name: "@mneme-ai/mcp",        path: "packages/mcp" },
+  // v2.55.0 — SDK depends only on core, can publish before cli.
+  { name: "@mneme-ai/sdk",        path: "packages/sdk" },
   { name: "mneme-ai",             path: "packages/cli" },
 ];
 
