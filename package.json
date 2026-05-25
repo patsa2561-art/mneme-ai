@@ -1,6 +1,6 @@
 {
   "name": "mneme-monorepo",
-  "version": "2.54.0",
+  "version": "2.55.0",
   "private": true,
   "type": "module",
   "description": "Mneme — the memory layer for your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS, all in one graph.",
@@ -10,13 +10,14 @@
     "packages/cli",
     "packages/mcp",
     "packages/correlator",
+    "packages/sdk",
     "packages/web",
     "packages/vscode"
   ],
   "scripts": {
-    "build": "tsc -b packages/core packages/embeddings packages/mcp packages/correlator packages/cli",
-    "build:watch": "tsc -b -w packages/core packages/embeddings packages/mcp packages/correlator packages/cli",
-    "clean": "tsc -b --clean packages/core packages/embeddings packages/mcp packages/correlator packages/cli && rimraf packages/*/dist coverage tests/.tmp",
+    "build": "tsc -b packages/core packages/embeddings packages/mcp packages/correlator packages/cli packages/sdk",
+    "build:watch": "tsc -b -w packages/core packages/embeddings packages/mcp packages/correlator packages/cli packages/sdk",
+    "clean": "tsc -b --clean packages/core packages/embeddings packages/mcp packages/correlator packages/cli packages/sdk && rimraf packages/*/dist coverage tests/.tmp",
     "dev": "node packages/cli/bin/mneme.js",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,0 +1,69 @@
+{
+  "name": "@mneme-ai/sdk",
+  "version": "2.55.0",
+  "description": "World-class premium SDK for Mneme — in-process native API for AI vendor embedding. 30-80× faster than CLI subprocess.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./nemesis": {
+      "import": "./dist/nemesis.js",
+      "types": "./dist/nemesis.d.ts"
+    },
+    "./verify": {
+      "import": "./dist/verify.js",
+      "types": "./dist/verify.d.ts"
+    },
+    "./truth": {
+      "import": "./dist/truth.js",
+      "types": "./dist/truth.d.ts"
+    },
+    "./events": {
+      "import": "./dist/events.js",
+      "types": "./dist/events.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/patsa2561-art/mneme-ai.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/patsa2561-art/mneme-ai#readme",
+  "bugs": {
+    "url": "https://github.com/patsa2561-art/mneme-ai/issues"
+  },
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "keywords": [
+    "ai",
+    "memory",
+    "verification",
+    "fingerprint",
+    "eu-ai-act",
+    "hmac",
+    "sdk",
+    "in-process",
+    "native"
+  ],
+  "dependencies": {
+    "@mneme-ai/core": "2.55.0"
+  },
+  "engines": {
+    "node": ">=22.13.0 <25.0.0"
+  }
+}
