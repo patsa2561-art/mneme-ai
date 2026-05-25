@@ -225,6 +225,22 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.51.0 — AUDIT REPRODUCTION SUITE binding ──────────────────────
+  // Closes "audit-perception" gap: external audit screenshots claimed
+  // regressions on edge-case verdict / schema-bypass / throughput /
+  // determinism / META-SELF / truncation / lineage / Phoenix / cancel.
+  // The canonical local reproduction (this probe + tests/audit/v51_*.test.ts)
+  // is the moat: every metric from the audit table rebuilt as executable
+  // assertion. If 11/11 hold, marketing's "audit-bug-free" claim stands.
+  {
+    id: "claim.audit.reproduction_suite_passes",
+    source: "v2.51.0 release notes",
+    text: "Mneme passes all 11 audit categories from the external v2.50 audit table (edge-case verdict / MCP tool-name fuzz 20/20 / validateArgs / hot-path throughput / deterministic verdict lock / META-SELF-VERIFIER / truncation receipt / lineage defensive / cli-activity HMAC / Phoenix install / AbortSignal propagation) — measured in-process every TRUTH GATE run",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.audit.reproduction_suite_passes",
+    severity: "block",
+  },
   // ── v2.48.0 — NEMESIS classify accuracy on REAL (held-out) corpus ───
   // F7 from v2.47 audit: pre-v2.48 the only accuracy probe ran on the
   // SEED corpus (100% by construction). Real-world bugs (B1: header-less

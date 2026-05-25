@@ -148,8 +148,10 @@ const STOPWORDS = new Set([
   "no",
 ]);
 
-/** Tokenise text → lowercase words, ≥2 chars, stopwords removed. */
+/** Tokenise text → lowercase words, ≥2 chars, stopwords removed.
+ *  v2.51.0 (R4 defensive): null/undefined/non-string → []. */
 export function tokenizeForLineage(s: string): string[] {
+  if (typeof s !== "string") return [];
   return s
     .toLowerCase()
     .replace(/[^a-z0-9_\s]+/g, " ")
@@ -157,9 +159,11 @@ export function tokenizeForLineage(s: string): string[] {
     .filter((t) => t.length >= 2 && !STOPWORDS.has(t));
 }
 
-/** Bigrams (consecutive token pairs) — captures "fix bug" vs "bug fix". */
+/** Bigrams (consecutive token pairs) — captures "fix bug" vs "bug fix".
+ *  v2.51.0 (R4 defensive): null/undefined/non-array → empty set. */
 export function bigrams(tokens: string[]): Set<string> {
   const out = new Set<string>();
+  if (!Array.isArray(tokens)) return out;
   for (let i = 0; i < tokens.length - 1; i++) {
     out.add(`${tokens[i]} ${tokens[i + 1]}`);
   }
@@ -170,8 +174,9 @@ export function bigrams(tokens: string[]): Set<string> {
  *  Bigrams alone are too brittle on short commit messages — a single
  *  word overlap (e.g. shared topic "payment") should still register some
  *  continuity.  We blend both signals.
- */
+ *  v2.51.0 (R4 defensive): null/undefined either side → 0. */
 export function intentSimilarity(a: string, b: string): number {
+  if (typeof a !== "string" || typeof b !== "string") return 0;
   if (!a.trim() || !b.trim()) return 0;
   const ta = tokenizeForLineage(a);
   const tb = tokenizeForLineage(b);
@@ -196,11 +201,13 @@ function jaccardUnigram(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersect / union;
 }
 
-/** Resolve `<file>` or `<file>:<funcName>` → { filePath, functionFilter }. */
+/** Resolve `<file>` or `<file>:<funcName>` → { filePath, functionFilter }.
+ *  v2.51.0 (R4 defensive): null/undefined/non-string → empty path. */
 export function parseTarget(target: string): {
   filePath: string;
   functionFilter?: string;
 } {
+  if (typeof target !== "string") return { filePath: "" };
   // Windows paths can contain `:` after drive letter, but our targets are
   // always repo-relative — split on the LAST colon only when the suffix
   // looks like a function name (alphanumeric / underscore / $).
@@ -228,7 +235,8 @@ export interface WalkInput {
   abstractsByHash?: Map<string, string>;
 }
 
-/** Pure ownership walker — testable without a real store. */
+/** Pure ownership walker — testable without a real store.
+ *  v2.51.0 (R4 defensive): null/undefined input or non-array commits → empty result. */
 export function walkOwnership(input: WalkInput): {
   ownership: Map<string, number>;
   timeline: Array<{
@@ -246,6 +254,8 @@ export function walkOwnership(input: WalkInput): {
   }> = [];
   let weights = new Map<string, number>();
   let priorIntent = "";
+
+  if (!input || !Array.isArray(input.commits)) return { ownership: weights, timeline };
 
   for (let i = 0; i < input.commits.length; i++) {
     const { commit, diffSize } = input.commits[i]!;
@@ -316,7 +326,8 @@ export function inferRoles(
   commits: CommitForLineage[],
 ): Map<string, OwnershipShare["role"]> {
   const roles = new Map<string, OwnershipShare["role"]>();
-  if (commits.length === 0) return roles;
+  if (!Array.isArray(commits) || commits.length === 0) return roles;
+  if (!(ownership instanceof Map)) return roles;
   const firstAuthor = commits[0]!.commit.authorEmail;
   // For each owner, find their largest contribution diff.
   const maxDiff = new Map<string, number>();
@@ -352,7 +363,7 @@ const ROLE_PHRASES: Record<OwnershipShare["role"], string> = {
 };
 
 export function buildNarrative(ownership: OwnershipShare[]): string {
-  if (ownership.length === 0) return "No ownership data — nobody has been credited.";
+  if (!Array.isArray(ownership) || ownership.length === 0) return "No ownership data — nobody has been credited.";
   const top = ownership.slice(0, 3);
   const pieces = top.map(
     (o) => `${o.percent.toFixed(0)}% ${o.name || o.author}'s ${ROLE_PHRASES[o.role]}`,
@@ -374,6 +385,29 @@ export function buildLineageReport(
   store: MnemeStore,
   opts: LineageOptions,
 ): LineageReport {
+  // v2.51.0 (R4 defensive): missing opts / opts.target / opts.cwd → empty report.
+  if (!opts || typeof opts !== "object" || typeof opts.target !== "string") {
+    return {
+      target: typeof opts?.target === "string" ? opts.target : "",
+      resolvedFilePath: "",
+      totalCommits: 0,
+      ownership: [],
+      narrative: "buildLineageReport: invalid opts — expected { cwd, target } shape.",
+      timeline: [],
+      headsUp: "no target provided",
+    };
+  }
+  if (!store || typeof store !== "object" || !("db" in store)) {
+    return {
+      target: opts.target,
+      resolvedFilePath: opts.target,
+      totalCommits: 0,
+      ownership: [],
+      narrative: "buildLineageReport: store unavailable — pass an open MnemeStore.",
+      timeline: [],
+      headsUp: "store missing",
+    };
+  }
   const { filePath, functionFilter } = parseTarget(opts.target);
   const depth = Math.max(1, opts.depth ?? 20);
 
@@ -531,9 +565,11 @@ export function buildLineageReport(
 }
 
 /** Helper exposed for tests — accept a list of file changes and assert
- *  whether `path` was touched. */
+ *  whether `path` was touched.
+ *  v2.51.0 (R4 defensive): null/undefined either side → false. */
 export function fileChangesIncludePath(changes: FileChange[], path: string): boolean {
-  return changes.some((c) => c.path === path);
+  if (!Array.isArray(changes) || typeof path !== "string") return false;
+  return changes.some((c) => c?.path === path);
 }
 
 function round(n: number, places: number): number {
