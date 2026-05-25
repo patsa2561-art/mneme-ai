@@ -1035,6 +1035,101 @@ export function registerNemesisCommand(program: Command): void {
       }
     });
 
+  // ──────────────────────────────────────────────────────────────────
+  //  v2.53.0 — PATCH OPEN WOUNDS (P0/P1)
+  //  Adds key wizard, augmented-corpus accuracy probe, JANUS organ,
+  //  release-gate threshold knob, wiring-lag gate, catalog count.
+  // ──────────────────────────────────────────────────────────────────
+
+  n.command("key_setup")
+    .description("v2.53 P0-1 HMAC key wizard — generate a 64-char hex key in .mneme/nemesis/hmac.key (mode 0600) OR ~/.mneme/nemesis/hmac.key. Idempotent (skips if env var already set or key already present).")
+    .option("--target <where>", "Where to write: 'repo' (default) or 'user'", (v) => v as "repo" | "user", "repo")
+    .option("--force", "Overwrite existing key (dangerous — invalidates past receipts)", false)
+    .option("--dry-run", "Compute path + key length without writing", false)
+    .action(async (opts: { target?: "repo" | "user"; force?: boolean; dryRun?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.runKeyWizard({
+          repoRoot: process.cwd(),
+          target: opts.target ?? "repo",
+          force: opts.force ?? false,
+          dryRun: opts.dryRun ?? false,
+        });
+        writeJson(r);
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("key_check")
+    .description("v2.53 P0-1 — verify HMAC key permissions + STRICT mode status.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const perms = core.nemesis.checkKeyPermissions(process.cwd());
+        let strict: { ok: boolean; usingDefault: boolean; message: string } | { error: string };
+        try { strict = core.nemesis.strictKeyCheck(process.cwd()); }
+        catch (e) { strict = { error: (e as Error).message }; }
+        writeJson({ ok: perms.ok, permissions: perms, strict });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("classify_augmented")
+    .description("v2.53 P1-2 — evaluate calibrated classifier on 6x-augmented corpus (header-less + naturalistic + sparse + dense + whitespace noise). Reports per-kind accuracy + sample failures.")
+    .option("--max-failing <n>", "Max failures to surface", (v) => Number(v), 10)
+    .action(async (opts: { maxFailing?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.evaluateAugmentedAccuracy({ maxFailing: opts.maxFailing ?? 10 });
+        writeJson({ ok: r.accuracy >= 0.85, ...r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("janus_observe")
+    .description("v2.53 P1-3 JANUS — locate which vendor cluster a fixture's fingerprint sits in (basin + margin to second-nearest). Use --stdin with JSON {diff, prDescription, commitMessages}.")
+    .option("--stdin", "Read fixture from stdin")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON fixture" }); process.exitCode = 1; return; }
+        const obs = core.nemesis.observe({ diff: f.diff ?? "", prDescription: f.prDescription ?? "", commitMessages: f.commitMessages ?? [] });
+        writeJson({ ok: true, observation: obs });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("janus_swap")
+    .description("v2.53 P1-3 JANUS — given a SEQUENCE of fixtures (JSON array), detect cross-cluster boundary transitions ('Eve started looking like Codex mid-session'). HMAC-signed verdict.")
+    .option("--stdin", "Read JSON {fixtures: [{diff, prDescription, commitMessages}, ...]} from stdin")
+    .option("--min-margin <n>", "Minimum margin to second-nearest for swap to count", (v) => Number(v), 0.5)
+    .action(async (opts: { stdin?: boolean; minMargin?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        const fixtures = (f as { fixtures?: Array<{ diff?: string; prDescription?: string; commitMessages?: string[] }> } | null)?.fixtures;
+        if (!Array.isArray(fixtures) || fixtures.length < 2) {
+          writeJson({ ok: false, error: "fixtures array of ≥2 required" }); process.exitCode = 1; return;
+        }
+        const obs = fixtures.map((fx) => core.nemesis.observe({ diff: fx.diff ?? "", prDescription: fx.prDescription ?? "", commitMessages: fx.commitMessages ?? [] }));
+        const r = core.nemesis.detectIdentitySwap(obs, { minMargin: opts.minMargin });
+        writeJson({ ok: true, swap: r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
   n.command("cleanse_ledger")
     .description("v2.50.0 — RETROACTIVE LEDGER CLEANSE: coerce historical embedder-leak rows in .mneme/cli-activity.jsonl to vendor:'unknown' + re-chain HMACs + back up original to .pre-v50.bak. Idempotent.")
     .option("--dry-run", "Compute the plan without writing.", false)

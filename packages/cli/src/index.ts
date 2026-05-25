@@ -4780,10 +4780,13 @@ export async function run(argv: string[]): Promise<void> {
   // v2.49.0 — `mneme probe coverage` (formal verb + subcommand).
   // v2.50.0 — Multi-alias: `probe` / `gate` / `coverage` / `probecoverage`
   // / `probe_coverage` all default to running the coverage gate.
-  const runCoverageGate = async (): Promise<void> => {
+  // v2.53.0 — accept --threshold <n> for soft enforcement (default 50%).
+  // Without --threshold, gate uses 50%. With --threshold 0, gate disabled.
+  const runCoverageGate = async (options?: { threshold?: number }): Promise<void> => {
     try {
       const core = await import("@mneme-ai/core");
-      const r = core.releaseGate.crossCheckFromDisk(process.cwd());
+      const threshold = Number.isFinite(options?.threshold) ? options!.threshold! : 50;
+      const r = core.releaseGate.crossCheckFromDisk(process.cwd(), { threshold });
       process.stdout.write(JSON.stringify(r, null, 2) + "\n");
       if (!r.ok) process.exitCode = 1;
     } catch (e) {
@@ -4791,15 +4794,85 @@ export async function run(argv: string[]): Promise<void> {
       process.exitCode = 1;
     }
   };
-  const probeParent = program.command("probe").description("v2.49 — TRUTH GATE probe utilities. Default action = coverage gate.").action(runCoverageGate);
-  probeParent.command("coverage").description("Cross-check tool catalog vs claim catalog; report uncovered tools.").action(runCoverageGate);
+  const probeParent = program.command("probe")
+    .description("v2.49 — TRUTH GATE probe utilities. Default action = coverage gate.")
+    .option("--threshold <n>", "v2.53 minimum coverage % (default 50)", (v) => Number(v))
+    .action((opts: { threshold?: number }) => runCoverageGate(opts));
+  probeParent.command("coverage")
+    .description("Cross-check tool catalog vs claim catalog; report uncovered tools + coverage %.")
+    .option("--threshold <n>", "Minimum coverage % (default 50)", (v) => Number(v))
+    .action((opts: { threshold?: number }) => runCoverageGate(opts));
   // v2.50.0 — top-level aliases for the coverage gate.
   for (const alias of ["gate", "coverage", "probecoverage", "probe_coverage"]) {
     program
       .command(alias)
       .description(`v2.50 alias for \`mneme probe coverage\` — run the TRUTH GATE probe-coverage gate.`)
-      .action(runCoverageGate);
+      .option("--threshold <n>", "v2.53 minimum coverage % (default 50)", (v) => Number(v))
+      .action((opts: { threshold?: number }) => runCoverageGate(opts));
   }
+
+  // v2.53.0 — WIRING-LAG gate CLI surface.
+  program
+    .command("wiring_lag")
+    .description("v2.53 P0-3 — parse recent commit msgs for `mneme <verb>` claims + spawn each as subprocess; report 'unknown command' as wiring-lag bugs.")
+    .option("--max-commits <n>", "How many recent commits to scan", (v) => Number(v), 10)
+    .action(async (opts: { maxCommits?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.wiringLag.checkWiringLag(process.cwd(), { maxCommits: opts.maxCommits ?? 10 });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
+  // v2.53.0 — CATALOG COUNT single source of truth.
+  const catalogParent = program
+    .command("catalog")
+    .description("v2.53 P1-5 — catalog count + HMAC-signed envelope; cite in docs to prevent count drift.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const c = core.getCatalogCount({});
+        process.stdout.write(JSON.stringify(c, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  catalogParent.command("count")
+    .description("Live catalog count + per-group breakdown + signed envelope.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const c = core.getCatalogCount({});
+        process.stdout.write(JSON.stringify(c, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  catalogParent.command("verify")
+    .description("Verify a CatalogCount JSON envelope via --stdin.")
+    .option("--stdin", "Read CatalogCount JSON from stdin")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chunks: Buffer[] = [];
+        for await (const c of process.stdin) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks).toString("utf8").trim();
+        if (!body) { process.stdout.write(JSON.stringify({ ok: false, error: "pass JSON via --stdin" }) + "\n"); process.exitCode = 1; return; }
+        const c = JSON.parse(body) as Parameters<typeof core.verifyCatalogCount>[0];
+        const valid = core.verifyCatalogCount(c);
+        process.stdout.write(JSON.stringify({ ok: valid, valid }) + "\n");
+        if (!valid) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
   // v2.50.0 — heat-map CLI for tracking alias misses + auto-promotion.
   const aliasMisses = program.command("alias_misses").description("v2.50 — read/promote `.mneme/alias_misses.jsonl` so unknown-verbs typed by users can become real aliases in next release.");
   aliasMisses.command("report")

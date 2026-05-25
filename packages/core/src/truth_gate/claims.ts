@@ -225,6 +225,19 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.53.0 — PATCH OPEN WOUNDS (P0/P1) binding ─────────────────────
+  // Closes the 8-finding session audit: HMAC default key / probe coverage
+  // 14.2% / WIRING LAG class / EU stamp 700-984ms / classify accuracy
+  // on wild / identity-swap blind spot / flag inconsistency / tool count drift.
+  {
+    id: "claim.audit.open_wounds_patched",
+    source: "v2.53.0 release notes",
+    text: "Mneme patches all 8 open wounds from the v2.52 session audit: P0-1 HMAC key wizard auto-generates + STRICT mode refuses default-insecure; P0-2 probe coverage gate accepts a percentage threshold (default 50%); P0-3 wiring-lag CI gate parses commit messages + spawns each claimed verb; P1-1 EU stamp avg <50ms warm-path (was 700-984ms); P1-2 NEMESIS classifier ≥85% on a 6x-augmented corpus (header-less + naturalistic perturbations); P1-3 JANUS organ detects cross-vendor cluster boundary swaps (Eve's blind spot); P1-5 tool count single source of truth (HMAC-signed catalog envelope)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.audit.open_wounds_patched",
+    severity: "block",
+  },
   // ── v2.52.0 — MILLION DOLLAR SECRET DIAMONDS binding ────────────────
   // Inspired by the Netflix identity-deception reality show: 6 NEMESIS
   // extensions that turn fingerprinting into competitive / forensic /

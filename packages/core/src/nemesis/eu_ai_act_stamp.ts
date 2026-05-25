@@ -29,9 +29,24 @@ import type {
 // v2.48.0 — WARMCACHE: resolve HMAC key once per process so single-call
 // (git hook UX) hits <100ms. Pre-v2.48 git hook = 984ms because the
 // crypto module + key resolution happened cold every call.
+//
+// v2.53.0 — Hardened: when MNEME_NEMESIS_STRICT=1 set + no production key
+// configured, throw at first call so receipts never silently use the
+// default-insecure key. Plus warm `crypto` import once at module load
+// to avoid lazy-init latency on the first stamp call (was 700-984ms).
+import { createHash as _warmCryptoLoad } from "node:crypto";
+void _warmCryptoLoad; // force crypto module resolution at import time
+
 let _keyCache: string | null = null;
 function getHmacKey(): string {
   if (_keyCache) return _keyCache;
+  // STRICT mode: refuse silently using default-insecure key
+  if (process.env["MNEME_NEMESIS_STRICT"] === "1") {
+    const envKey = process.env["MNEME_NEMESIS_KEY"];
+    if (typeof envKey !== "string" || envKey.length < 16) {
+      throw new Error("MNEME_NEMESIS_STRICT=1 set + MNEME_NEMESIS_KEY missing/short — refusing to issue EU stamp with default-insecure key");
+    }
+  }
   _keyCache = process.env["MNEME_NEMESIS_KEY"] ?? "MNEME-NEMESIS-DEFAULT-KEY-v2.46";
   return _keyCache;
 }

@@ -413,6 +413,15 @@ export { cleanse, type CleanseInput, type CleanseResult, type CleanseFinding, ty
 // when new tool ships without TRUTH GATE probe binding). Closes the
 // "feature velocity > probe velocity" bug class at the release script.
 export * as releaseGate from "./release_gate/probe_coverage.js";
+// v2.53.0 — WIRING-LAG CI gate. Parses recent commit messages for
+// `mneme <verb>` claims + spawns each as subprocess + reports unknown verbs.
+export * as wiringLag from "./release_gate/wiring_lag.js";
+// v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
+// does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
+export {
+  getCatalogCount, verifyCatalogCount, renderCatalogLine,
+  type CatalogCount,
+} from "./catalog_count.js";
 // v2.46.0 — NEMESIS: world's first Anti-Identity-Lie Engine for AI agents.
 // 5 organs: FINGERPRINTER (41-feature vendor classifier from arxiv 2601.17406)
 // + LIE DETECTOR (claim vs detected with HMAC verdict) + ARTICLE 50 AUTO-STAMP

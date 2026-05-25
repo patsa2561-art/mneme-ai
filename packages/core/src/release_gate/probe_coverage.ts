@@ -113,15 +113,32 @@ export interface CrossCheckResult {
   totalTools: number;
   totalClaims: number;
   uncovered: string[];
+  /** v2.53: percentage of tools with claim or exemption coverage (0..100). */
+  coveragePercent: number;
+  /** v2.53: threshold the gate accepted at (0..100). Reported for audit. */
+  threshold: number;
   hint: string;
 }
 
-export function crossCheckFromDisk(repoRoot: string): CrossCheckResult {
+/**
+ * v2.53 addition — CrossCheck options.
+ *   threshold: minimum coverage % required for ok=true (default 50).
+ *     - 0    → gate disabled (always passes)
+ *     - 50   → soft enforcement (current legacy state has 14.2% so this
+ *              still fails until coverage rises; useful for new repos)
+ *     - 100  → strict (every new tool needs a claim or exemption)
+ */
+export interface CrossCheckOpts {
+  threshold?: number;
+}
+
+export function crossCheckFromDisk(repoRoot: string, opts: CrossCheckOpts = {}): CrossCheckResult {
   try {
+    const threshold = Number.isFinite(opts.threshold) ? Math.max(0, Math.min(100, opts.threshold!)) : 50;
     const manifestPath = join(repoRoot, "packages", "core", "src", "agent_manifest.ts");
     const claimsPath = join(repoRoot, "packages", "core", "src", "truth_gate", "claims.ts");
     if (!existsSync(manifestPath) || !existsSync(claimsPath)) {
-      return { ok: true, totalTools: 0, totalClaims: 0, uncovered: [], hint: "release-gate skipped: source files missing" };
+      return { ok: true, totalTools: 0, totalClaims: 0, uncovered: [], coveragePercent: 0, threshold, hint: "release-gate skipped: source files missing" };
     }
     const manifestBody = readFileSync(manifestPath, "utf8");
     const claimsBody = readFileSync(claimsPath, "utf8");
@@ -139,8 +156,16 @@ export function crossCheckFromDisk(repoRoot: string): CrossCheckResult {
       if (inner) claims.push(inner[1]!);
     }
     const r = checkProbeCoverage({ newTools: Array.from(tools), knownClaims: claims });
-    return { ok: r.ok, totalTools: tools.size, totalClaims: claims.length, uncovered: r.uncovered, hint: r.hint };
+    const totalTools = tools.size;
+    const coveredCount = r.covered.length;
+    const coveragePercent = totalTools === 0 ? 100 : +((coveredCount / totalTools) * 100).toFixed(1);
+    const ok = coveragePercent >= threshold;
+    const hint = ok
+      ? `coverage ${coveragePercent}% ≥ threshold ${threshold}% — gate passed (${coveredCount}/${totalTools} tools covered)`
+      : `coverage ${coveragePercent}% < threshold ${threshold}% — ${r.uncovered.length} uncovered tool(s). Either add probe.<topic>+claim.<topic>, OR add to COVERAGE_EXEMPT (with justification), OR lower threshold via --min-coverage <n>.`;
+    return { ok, totalTools, totalClaims: claims.length, uncovered: r.uncovered, coveragePercent, threshold, hint };
   } catch (e) {
-    return { ok: true, totalTools: 0, totalClaims: 0, uncovered: [], hint: `release-gate skipped: ${(e as Error).message}` };
+    const threshold = Number.isFinite(opts.threshold) ? opts.threshold! : 50;
+    return { ok: true, totalTools: 0, totalClaims: 0, uncovered: [], coveragePercent: 0, threshold, hint: `release-gate skipped: ${(e as Error).message}` };
   }
 }

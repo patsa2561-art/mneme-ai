@@ -118,6 +118,25 @@ export {
   type CommitOpts, type CommitResult, type RevealOpts, type RevealResult,
 } from "./sibyl.js";
 
+// v2.53.0 — Open-wound patches (P0/P1).
+//   P0-1 HMAC key setup wizard + STRICT mode
+//   P1-2 CORPUS AUGMENTER (header-less / naturalistic 5x perturbation)
+//   P1-3 JANUS organ (cross-cluster identity-swap detector)
+export {
+  runKeyWizard, checkKeyPermissions, strictKeyCheck,
+  type KeyWizardResult, type KeyWizardOpts,
+} from "./key_setup.js";
+export {
+  applyAugmentation, buildAugmentedCorpus,
+  evaluateAugmentedAccuracy, computeAugmentedStats,
+  type AugmentedEntry, type AugmentationKind, type AugmentedAccuracyReport,
+} from "./corpus_augmenter.js";
+export {
+  locateBasin, observe, detectIdentitySwap, verifyJanusResult,
+  type ClusterDistance, type JanusBasin, type JanusObservation,
+  type JanusTransition, type JanusSessionResult,
+} from "./janus.js";
+
 // v2.50.0 — VENDOR ALLOWLIST GUARD: kills EMBEDDER-LEAK class structurally.
 // Central allowlist of real agent vendors; backend/embedder names (ollama,
 // openai-gpt, gemini, etc) coerced to "unknown" + logged to
