@@ -548,11 +548,16 @@ const probes: Probe[] = [
           const r = m.detectReplayAttack("test", { conditional_density: 0.1 }, { conditional_density: 0.9 });
           if (!r.alert) failures.push("replay attack didn't flag obvious swap");
         } catch (e) { failures.push(`replay threw: ${(e as Error).message}`); }
+        // v2.47.0 (f) calibrated classifier accuracy on seed corpus ≥95%
+        try {
+          const acc = m.evaluateSeedAccuracy();
+          if (acc.accuracy < 0.95) failures.push(`calibrated accuracy ${acc.accuracy.toFixed(3)} < 0.95 on seed corpus (${acc.correct}/${acc.total})`);
+        } catch (e) { failures.push(`accuracy probe threw: ${(e as Error).message}`); }
         const ok = failures.length === 0;
         return {
           value: ok ? 1 : 0,
           evidence: ok
-            ? `${Object.keys(fpA).length} features ✓ · ${correct}/3 classify ✓ · ${lieVerdict.verdict} ✓ · stamp+verify ✓ · replay ✓`
+            ? `${Object.keys(fpA).length} features ✓ · ${correct}/3 classify ✓ · ${lieVerdict.verdict} ✓ · stamp+verify ✓ · replay ✓ · seed accuracy ≥95% ✓`
             : `BLOCKED: ${failures.join("; ")}`,
           detail: { features: Object.keys(fpA).length, classifierCorrect: correct, lieVerdict: lieVerdict.verdict, failures },
         };

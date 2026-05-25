@@ -210,6 +210,9 @@ export const STATELESS_TOOL_NAMES: ReadonlySet<string> = new Set([
   "mneme.nemesis.install_hook",
   "mneme.nemesis.drift_check",
   "mneme.nemesis.replay_check",
+  // v2.47.0 — production-grade additions.
+  "mneme.nemesis.calibration_status",
+  "mneme.nemesis.detect_tooling",
   // v2.26.0 — governance + N7 + N11 surfaces are stateless reads
   "mneme.security.honeypot_status",
   "mneme.governance.catalog_growth",

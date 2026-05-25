@@ -266,6 +266,57 @@ export const nemesisReplayTool: MnemeTool = {
   },
 };
 
+// v2.47.0 — production-grade additions: calibrated classifier + dev-tooling
+// detector + learning loop status + key management.
+
+export const nemesisCalibrationStatusTool: MnemeTool = {
+  name: "mneme.nemesis.calibration_status",
+  category: "meta",
+  description: "v2.47 — NEMESIS calibration status: seed corpus size, ledger size, per-vendor counts, MNEME_NEMESIS_LEARN opt-in state, calibrated-accuracy on seed corpus.",
+  whenToUse: "Verify NEMESIS classifier is calibrated + assess corpus health.",
+  triggers: ["nemesis calibration", "nemesis stats"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  handler: async (rt) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const status = core.nemesis.calibrationStatus(repoRootOf(rt));
+      const acc = core.nemesis.evaluateSeedAccuracy();
+      return {
+        data: { ok: true, status, accuracy: acc },
+        wisdom: `corpus ${status.totalCount} fixtures · accuracy ${(acc.accuracy * 100).toFixed(1)}%`,
+        followUp: [], confidence: { level: "high" as const },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "calibration_status failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const nemesisDetectToolingTool: MnemeTool = {
+  name: "mneme.nemesis.detect_tooling",
+  category: "meta",
+  description: "v2.47 — Detect whether the current directory is an AI-dev scratch folder (NOT a customer repo) vs a real git repo. Heuristic: !isGitRepo && ≥3 AI-fingerprint files at root. NEMESIS skips auto-stamping in such folders.",
+  whenToUse: "Verify your CWD before installing the git hook OR before running NEMESIS scans.",
+  triggers: ["nemesis detect tooling", "dev tooling"],
+  inputSchema: { type: "object", properties: { path: { type: "string" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const path = typeof args["path"] === "string" ? (args["path"] as string) : repoRootOf(rt);
+      const r = core.autoInit.detectDevTooling(path);
+      return {
+        data: { ok: true, result: r },
+        wisdom: r.isDevTooling ? `⚠ ${path} looks like an AI-dev folder: ${r.reason}` : `✓ ${path} ${r.reason}`,
+        followUp: [], confidence: { level: "high" as const },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "detect_tooling failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
 export const NEMESIS_TOOLS: MnemeTool[] = [
   nemesisFingerprintTool,
   nemesisClassifyTool,
@@ -276,4 +327,7 @@ export const NEMESIS_TOOLS: MnemeTool[] = [
   nemesisInstallHookTool,
   nemesisDriftTool,
   nemesisReplayTool,
+  // v2.47.0 production-grade
+  nemesisCalibrationStatusTool,
+  nemesisDetectToolingTool,
 ];

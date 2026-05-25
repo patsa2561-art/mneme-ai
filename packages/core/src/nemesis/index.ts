@@ -29,6 +29,25 @@ export { installPreCommitHook, type InstallHookInput, type InstallHookResult } f
 export { recordFingerprint, readTimeline, computeVariance, type DriftEntry, type VarianceResult } from "./drift_timeline.js";
 export { detectReplayAttack, type ReplayResult } from "./replay_attack.js";
 
+// v2.47.0 — CALIBRATED CLASSIFIER + SELF-CALIBRATING LEARNING LOOP +
+// production-grade HMAC key management.
+export {
+  buildSeedCorpus, computeStats, seedStats,
+  type CorpusEntry, type VendorStats,
+} from "./calibration_corpus.js";
+export {
+  classifyAgentCalibrated, evaluateSeedAccuracy,
+  type AccuracyReport,
+} from "./classifier_calibrated.js";
+export {
+  appendCalibrationEntry, readCalibrationLedger, recomputeStats, calibrationStatus,
+  type CalibrationStatus, type AppendResult,
+} from "./learning_loop.js";
+export {
+  resolveHmacKey, generateProductionKey,
+  type KeyResolution, type KeySource,
+} from "./key_management.js";
+
 // v1.61 NEMESIS PROTOCOL (Tier 5 — weekly adversarial audit) lives in
 // nemesis.ts alongside the new v2.46.0 ANTI-IDENTITY-LIE ENGINE. Both
 // export through this barrel so downstream consumers (MCP `nemesis.generate`

@@ -595,15 +595,17 @@ export function registerNemesisCommand(program: Command): void {
   }
 
   n.command("classify")
-    .description("Predict the AI vendor from a diff/PR/commits fixture (--stdin: pass JSON {diff,prDescription,commitMessages}).")
+    .description("Predict the AI vendor from a diff/PR/commits fixture (--stdin: pass JSON {diff,prDescription,commitMessages}). v2.47+ uses CALIBRATED log-likelihood classifier (≥95% accuracy on seed corpus).")
     .option("--stdin", "Read JSON fixture from stdin.")
-    .action(async (opts: { stdin?: boolean }) => {
+    .option("--json", "Force JSON output (default already JSON).")
+    .option("--heuristic", "Use v2.46.0 heuristic classifier instead of v2.47 calibrated.")
+    .action(async (opts: { stdin?: boolean; json?: boolean; heuristic?: boolean }) => {
       try {
         const core = await import("@mneme-ai/core");
         const f = opts.stdin ? await readStdinJson() : null;
-        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON fixture" }); process.exitCode = 1; return; }
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON fixture {diff,prDescription,commitMessages}" }); process.exitCode = 1; return; }
         const fp = core.nemesis.extractFingerprint({ diff: f.diff ?? "", prDescription: f.prDescription ?? "", commitMessages: f.commitMessages ?? [] });
-        const v = core.nemesis.classifyAgent(fp);
+        const v = opts.heuristic ? core.nemesis.classifyAgent(fp) : core.nemesis.classifyAgentCalibrated(fp);
         writeJson({ ok: true, result: v, fingerprint: fp });
       } catch (e) {
         writeJson({ ok: false, error: (e as Error).message });
@@ -683,10 +685,44 @@ export function registerNemesisCommand(program: Command): void {
 
   n.command("env_scan")
     .description("Scan process.env for AI-vendor signature markers.")
+    .option("--json", "Force JSON output (default already JSON).")
     .action(async () => {
       try {
         const core = await import("@mneme-ai/core");
         writeJson({ ok: true, result: core.nemesis.scanEnv() });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // v2.47.0 — detect dev-tooling folder (CLI verb wiring closed audit gap).
+  n.command("detect_tooling")
+    .description("v2.47 — Detect whether the current (or --path) folder is an AI-dev scratch folder vs a real git repo. Heuristic: !isGitRepo && ≥3 AI-fingerprint files at root.")
+    .option("--path <dir>", "Folder to check (default: process.cwd()).")
+    .option("--json", "Force JSON output.")
+    .action(async (opts: { path?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const path = opts.path ?? process.cwd();
+        const r = core.autoInit.detectDevTooling(path);
+        writeJson({ ok: true, path, result: r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // v2.47.0 — calibration status (corpus size, accuracy, opt-in state).
+  n.command("calibration_status")
+    .description("v2.47 — Show NEMESIS calibration corpus size, learning-loop opt-in state, and ≥95% seed accuracy probe.")
+    .option("--json", "Force JSON output.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const status = core.nemesis.calibrationStatus(process.cwd());
+        const accuracy = core.nemesis.evaluateSeedAccuracy();
+        writeJson({ ok: true, result: { ...status, accuracy } });
       } catch (e) {
         writeJson({ ok: false, error: (e as Error).message });
         process.exitCode = 1;
