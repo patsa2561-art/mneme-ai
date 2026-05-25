@@ -993,6 +993,84 @@ const probes: Probe[] = [
       }
     },
   },
+
+  // ── v2.52.0 — MILLION DOLLAR SECRET DIAMONDS binding ─────────────────
+  //
+  // Verifies all 6 diamonds (STEALTH SCORE / CAPILLARY / COLOSSEUM /
+  // MOLT / THEMIS / SIBYL) are wired + functional in-process. Returns 1
+  // when every diamond's core function executes + returns its documented
+  // shape; 0 on any failure. Severity=block in claim catalog so release
+  // tag refuses to advance if a diamond regresses.
+  {
+    id: "probe.nemesis.million_dollar_diamonds",
+    kind: "numeric",
+    description: "1 when all 6 Million Dollar Secret diamonds (STEALTH / CAPILLARY / COLOSSEUM / MOLT / THEMIS / SIBYL) execute + return their documented shape in-process. 0 on any miss.",
+    run: async () => {
+      try {
+        const failures: string[] = [];
+        const nemesis = await import("../nemesis/index.js" as string) as typeof import("../nemesis/index.js");
+        const { mkdtempSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const fx = { diff: "+const x = 1;\n", prDescription: "## Changes\n- a\n- b\n", commitMessages: ["add x"] };
+
+        // 💎1 STEALTH
+        try {
+          const v = nemesis.computeStealthScore(fx);
+          if (typeof v.stealthScore !== "number" || !v.band) failures.push("D1 STEALTH shape invalid");
+        } catch (e) { failures.push(`D1 STEALTH threw: ${(e as Error).message}`); }
+
+        // 💎2 CAPILLARY
+        try {
+          const p = nemesis.extractMicroProfile(fx.diff);
+          if (Object.keys(p.features).length < 50) failures.push(`D2 CAPILLARY only ${Object.keys(p.features).length} features (<50)`);
+        } catch (e) { failures.push(`D2 CAPILLARY threw: ${(e as Error).message}`); }
+
+        // 💎3 COLOSSEUM
+        try {
+          const dir = mkdtempSync(join(tmpdir(), "tg-d3-"));
+          const contenders = [
+            { realVendor: "claude-code", fixture: { diff: "+if(a){}\n+if(b){}\n+if(c){}\n", prDescription: "", commitMessages: ["x"] } },
+            { realVendor: "cursor", fixture: { diff: "+x=1\n", prDescription: "## Changes\n- a\n- b\n- c\n", commitMessages: ["x"] } },
+          ];
+          const r = nemesis.runTournament(dir, contenders, { persist: false });
+          if (r.events.length === 0 || !r.hmac) failures.push("D3 COLOSSEUM tournament empty");
+        } catch (e) { failures.push(`D3 COLOSSEUM threw: ${(e as Error).message}`); }
+
+        // 💎4 MOLT
+        try {
+          const dir = mkdtempSync(join(tmpdir(), "tg-d4-"));
+          const v = nemesis.detectMolt(dir, "nonexistent");
+          if (typeof v.molted !== "boolean" || typeof v.hmac !== "string") failures.push("D4 MOLT shape invalid");
+        } catch (e) { failures.push(`D4 MOLT threw: ${(e as Error).message}`); }
+
+        // 💎5 THEMIS
+        try {
+          const v = nemesis.verifyAlibi({ notVendor: "codex", fixture: fx });
+          if (!v.verdict || typeof v.alibiStrength !== "number") failures.push("D5 THEMIS shape invalid");
+        } catch (e) { failures.push(`D5 THEMIS threw: ${(e as Error).message}`); }
+
+        // 💎6 SIBYL
+        try {
+          const dir = mkdtempSync(join(tmpdir(), "tg-d6-"));
+          const c = nemesis.commitIdentity(dir, { identity: { vendor: "claude-code" }, persist: false });
+          const check = nemesis.verifyCommitmentReveal(c.commitment, { identity: { vendor: "claude-code" }, nonce: c.nonce });
+          if (!check.ok) failures.push("D6 SIBYL commit/reveal round-trip failed");
+        } catch (e) { failures.push(`D6 SIBYL threw: ${(e as Error).message}`); }
+
+        const ok = failures.length === 0;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? "6/6 diamonds wired + functional: STEALTH ✓ · CAPILLARY ✓ · COLOSSEUM ✓ · MOLT ✓ · THEMIS ✓ · SIBYL ✓"
+            : `BLOCKED: ${failures.join("; ")}`,
+          detail: { failures },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
 ];
 
 export const ALL_PROBES: ReadonlyArray<Probe> = probes;

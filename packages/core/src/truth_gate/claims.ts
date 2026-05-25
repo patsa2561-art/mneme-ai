@@ -225,6 +225,19 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.52.0 — MILLION DOLLAR SECRET DIAMONDS binding ────────────────
+  // Inspired by the Netflix identity-deception reality show: 6 NEMESIS
+  // extensions that turn fingerprinting into competitive / forensic /
+  // privacy primitives.
+  {
+    id: "claim.nemesis.million_dollar_diamonds",
+    source: "v2.52.0 release notes",
+    text: "Mneme ships 6 NEMESIS extensions (STEALTH SCORE / CAPILLARY 50+ micro-tells / COLOSSEUM auto-tournament with 3-axis HMAC leaderboard / MOLT silent model-rotation detector / THEMIS alibi verifier / SIBYL ZK identity commitment) — each functional in-process every TRUTH GATE run",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.nemesis.million_dollar_diamonds",
+    severity: "block",
+  },
   // ── v2.51.0 — AUDIT REPRODUCTION SUITE binding ──────────────────────
   // Closes "audit-perception" gap: external audit screenshots claimed
   // regressions on edge-case verdict / schema-bypass / throughput /

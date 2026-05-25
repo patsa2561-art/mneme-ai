@@ -732,6 +732,309 @@ export function registerNemesisCommand(program: Command): void {
   // v2.46.0 — relocated `mneme nemesis` engineering-friction-detector
   // (was top-level in v2.45) into `nemesis pairs` subcommand so the
   // parent `nemesis` namespace hosts both legacy + new functionality.
+  // ──────────────────────────────────────────────────────────────────
+  //  v2.52.0 — Million Dollar Secret diamonds (1-6)
+  //  Each diamond inspired by the Netflix identity-deception show:
+  //  contestants who hide their identity vs. behavioral-fingerprint
+  //  detection. NEMESIS turned into a competitive primitive game.
+  // ──────────────────────────────────────────────────────────────────
+
+  // Diamond 1 — STEALTH SCORE + anonymity-credit ledger
+  n.command("stealth_score")
+    .description("💎1 STEALTH SCORE — inverse of fingerprint confidence. 0=obvious, 1=ghost. Pair with anonymity-credit ledger for tamper-evident anonymity budget. Use --stdin with JSON {diff, prDescription, commitMessages}.")
+    .option("--stdin", "Read fixture JSON from stdin")
+    .option("--earn", "Earn anonymity credits when band ≥ stealth")
+    .option("--context <ref>", "Context ref for ledger row (commit sha / file path)", "stealth_score-cli")
+    .action(async (opts: { stdin?: boolean; earn?: boolean; context?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON fixture {diff, prDescription, commitMessages}" }); process.exitCode = 1; return; }
+        const verdict = core.nemesis.computeStealthScore({ diff: f.diff ?? "", prDescription: f.prDescription ?? "", commitMessages: f.commitMessages ?? [] });
+        const out: Record<string, unknown> = { ok: true, verdict };
+        if (opts.earn) {
+          const earn = core.nemesis.earnAnonymityCredits(process.cwd(), verdict, opts.context ?? "cli");
+          out.earned = earn;
+        }
+        writeJson(out);
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("stealth_spend")
+    .description("💎1 STEALTH SCORE — spend anonymity credits to record an anonymization action. Refuses on insufficient balance.")
+    .requiredOption("--amount <n>", "Credits to spend", (v) => Number(v))
+    .requiredOption("--context <ref>", "What you spent it on (commit sha / disclosure)")
+    .action(async (opts: { amount: number; context: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const out = core.nemesis.spendAnonymityCredits(process.cwd(), opts.amount, opts.context);
+        writeJson({ ok: !out.rejected, ...out });
+        if (out.rejected) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("stealth_status")
+    .description("💎1 STEALTH SCORE — current anonymity-credit balance + total earned/spent + last 10 ledger rows.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const out = core.nemesis.stealthCreditStatus(process.cwd());
+        const chain = core.nemesis.verifyStealthLedger(process.cwd());
+        writeJson({ ok: chain.ok, ...out, chain });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // Diamond 2 — CAPILLARY micro-tell fingerprinter
+  n.command("capillary")
+    .description("💎2 CAPILLARY — extract 50+ MICRO style tells (whitespace / quote / naming / comma / brace) from a diff. Spoof-resistant: vendors must mimic all 50+ tells coherently to fake another vendor. Use --stdin with JSON {diff}.")
+    .option("--stdin", "Read JSON {diff} from stdin")
+    .option("--top <n>", "Show top-N non-zero features", (v) => Number(v), 15)
+    .action(async (opts: { stdin?: boolean; top?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON {diff: '...'}" }); process.exitCode = 1; return; }
+        const profile = core.nemesis.extractMicroProfile(f.diff ?? "");
+        const entries = (Object.entries(profile.features) as Array<[string, number]>).filter(([, v]) => v !== 0).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+        const top = entries.slice(0, opts.top ?? 15);
+        writeJson({ ok: true, language: profile.language, totalLines: profile.totalLines, totalFeatures: Object.keys(profile.features).length, nonZeroFeatures: entries.length, top: Object.fromEntries(top), allFeatures: profile.features });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("anti_capillary")
+    .description("💎2 ANTI-CAPILLARY — given current diff + target vendor profile, suggest rewrites to mask source vendor's micro-tells (privacy primitive). Use --stdin with JSON {current: {diff}, target: {diff}}.")
+    .option("--stdin", "Read JSON from stdin")
+    .option("--max <n>", "Max hints to return", (v) => Number(v), 10)
+    .action(async (opts: { stdin?: boolean; max?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON {current: {diff}, target: {diff}}" }); process.exitCode = 1; return; }
+        const cur = core.nemesis.extractMicroProfile((f as { current?: { diff?: string } }).current?.diff ?? "");
+        const tgt = core.nemesis.extractMicroProfile((f as { target?: { diff?: string } }).target?.diff ?? "");
+        const distance = core.nemesis.microDistance(cur, tgt);
+        const hints = core.nemesis.suggestAntiCapillary(cur, tgt, { maxHints: opts.max ?? 10 });
+        writeJson({ ok: true, distance, hintsCount: hints.length, hints });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // Diamond 3 — COLOSSEUM auto-tournament + 3-axis leaderboard
+  n.command("colosseum")
+    .description("💎3 COLOSSEUM — auto-tournament: each contender wears every other vendor's disguise + NEMESIS classifies. ELO + 3-axis (deception/detectability/mimicry) HMAC leaderboard. Use --stdin with JSON {contenders: [{realVendor, alias?, fixture: {diff, prDescription, commitMessages}}, ...]}.")
+    .option("--stdin", "Read contenders JSON from stdin")
+    .option("--no-persist", "Run dry; do not write to .mneme/nemesis/colosseum/")
+    .option("--tournament-id <id>", "Override tournament id")
+    .action(async (opts: { stdin?: boolean; persist?: boolean; tournamentId?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const f = opts.stdin ? await readStdinJson() : null;
+        if (!f) { writeJson({ ok: false, error: "pass --stdin with JSON {contenders: [{realVendor, alias?, fixture:{...}}]}" }); process.exitCode = 1; return; }
+        const contenders = (f as { contenders?: unknown }).contenders;
+        if (!Array.isArray(contenders) || contenders.length < 2) {
+          writeJson({ ok: false, error: "contenders must be an array of ≥ 2" });
+          process.exitCode = 1; return;
+        }
+        const result = core.nemesis.runTournament(process.cwd(), contenders as Parameters<typeof core.nemesis.runTournament>[1], { tournamentId: opts.tournamentId, persist: opts.persist !== false });
+        writeJson({ ok: true, tournamentId: result.tournamentId, rounds: result.rounds, champion: result.champion, leaderboard: result.leaderboard, hmac: result.hmac, eventCount: result.events.length });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("colosseum_board")
+    .description("💎3 COLOSSEUM — read current leaderboard (signed) + total events.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const b = core.nemesis.readColosseumLeaderboard(process.cwd());
+        const chain = core.nemesis.verifyColosseumChain(process.cwd());
+        writeJson({ ok: chain.ok, ...b, chain });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("colosseum_replay")
+    .description("💎3 COLOSSEUM — spectator mode: replay last N events from the tournament chain.")
+    .option("--n <n>", "Number of events to replay", (v) => Number(v), 20)
+    .action(async (opts: { n?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const events = core.nemesis.spectatorReplay(process.cwd(), opts.n ?? 20);
+        writeJson({ ok: true, eventCount: events.length, events });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // Diamond 4 — MOLT silent model-rotation detector
+  n.command("molt")
+    .description("💎4 MOLT — silent-model-rotation detector. Reads drift-<vendor>.jsonl ledger, splits into prior/post windows, surfaces dominant Welch-style feature shifts (z≥3.0). HMAC-signed forensic verdict. Use --vendor + (optional) --since-ms / --min-z.")
+    .requiredOption("--vendor <id>", "Vendor to inspect (e.g. cursor, claude-code)")
+    .option("--since-ms <ms>", "Filter entries newer than this epoch ms", (v) => Number(v))
+    .option("--min-z <n>", "Minimum z-score for shift to be dominant", (v) => Number(v), 3.0)
+    .option("--webhook <url>", "POST signed verdict JSON to this URL on molt detected")
+    .action(async (opts: { vendor: string; sinceMs?: number; minZ?: number; webhook?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const v = core.nemesis.detectMolt(process.cwd(), opts.vendor, {
+          sinceMs: opts.sinceMs,
+          minZ: opts.minZ ?? 3.0,
+        });
+        const out: Record<string, unknown> = { ok: true, verdict: v };
+        if (opts.webhook && v.molted) {
+          const w = await core.nemesis.emitMoltWebhook(v, opts.webhook);
+          out.webhook = w;
+        }
+        writeJson(out);
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("molt_verify")
+    .description("💎4 MOLT — verify the HMAC on a MoltVerdict JSON. Use --stdin with a verdict body.")
+    .option("--stdin", "Read MoltVerdict JSON from stdin")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const v = opts.stdin ? await readStdinJson() : null;
+        if (!v) { writeJson({ ok: false, error: "pass --stdin with MoltVerdict JSON" }); process.exitCode = 1; return; }
+        const valid = core.nemesis.verifyMoltVerdict(v as Parameters<typeof core.nemesis.verifyMoltVerdict>[0]);
+        writeJson({ ok: valid, valid });
+        if (!valid) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // Diamond 5 — THEMIS alibi verifier
+  n.command("themis")
+    .description("💎5 THEMIS — alibi verifier: prove a fixture is NOT vendor X. Returns star-rated evidence + HMAC-signed ALIBI_CONFIRMED/DENIED/INCONCLUSIVE. EU AI Act compliance defense primitive. Use --stdin with JSON {notVendor, fixture}.")
+    .option("--stdin", "Read JSON {notVendor, fixture:{diff, prDescription, commitMessages}} from stdin")
+    .option("--not-vendor <id>", "Override: vendor you are denying (if not via stdin)")
+    .option("--min-stars <n>", "Minimum stars to include feature in evidence", (v) => Number(v), 3)
+    .action(async (opts: { stdin?: boolean; notVendor?: string; minStars?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const j = opts.stdin ? await readStdinJson() : null;
+        const notVendor = opts.notVendor ?? (j as { notVendor?: string } | null)?.notVendor;
+        if (!notVendor) { writeJson({ ok: false, error: "missing notVendor (pass --not-vendor or via --stdin JSON)" }); process.exitCode = 1; return; }
+        const fixture = (j as { fixture?: { diff?: string; prDescription?: string; commitMessages?: string[] } } | null)?.fixture;
+        if (!fixture) { writeJson({ ok: false, error: "missing fixture (pass via --stdin JSON)" }); process.exitCode = 1; return; }
+        const r = core.nemesis.verifyAlibi({
+          notVendor,
+          fixture: { diff: fixture.diff ?? "", prDescription: fixture.prDescription ?? "", commitMessages: fixture.commitMessages ?? [] },
+          minStars: opts.minStars,
+        });
+        writeJson({ ok: true, result: r });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("themis_verify")
+    .description("💎5 THEMIS — verify HMAC on a ThemisResult JSON. Use --stdin.")
+    .option("--stdin", "Read ThemisResult JSON from stdin")
+    .action(async (opts: { stdin?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const j = opts.stdin ? await readStdinJson() : null;
+        if (!j) { writeJson({ ok: false, error: "pass --stdin with ThemisResult JSON" }); process.exitCode = 1; return; }
+        const valid = core.nemesis.verifyAlibiSignature(j as Parameters<typeof core.nemesis.verifyAlibiSignature>[0]);
+        writeJson({ ok: valid, valid });
+        if (!valid) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  // Diamond 6 — SIBYL ZK identity commitment
+  n.command("sibyl_commit")
+    .description("💎6 SIBYL — commit identity at session start (hash-commitment: SHA-256(identity||nonce||sessionId)). Returns commitment + nonce (save it; needed to reveal). Supports nested commits via --no-* flags.")
+    .requiredOption("--vendor <id>", "Vendor identity to commit")
+    .option("--model <name>", "Optional model identity to nest in commit")
+    .option("--version <v>", "Optional version identity to nest in commit")
+    .option("--session-id <id>", "Override session id (default auto)")
+    .option("--no-persist", "Do not persist commitment to .mneme/nemesis/sibyl/")
+    .action(async (opts: { vendor: string; model?: string; version?: string; sessionId?: string; persist?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.commitIdentity(process.cwd(), {
+          identity: { vendor: opts.vendor, model: opts.model, version: opts.version },
+          sessionId: opts.sessionId,
+          persist: opts.persist !== false,
+        });
+        writeJson({ ok: true, commitment: r.commitment, nonce: r.nonce, identitySnapshot: r.identitySnapshot, hint: "SAVE the nonce — it is required at reveal time and is NOT recoverable." });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("sibyl_reveal")
+    .description("💎6 SIBYL — reveal identity at session end. Recomputes commitment hash from (identity, nonce, sessionId) and verifies it matches the original. Use --stdin with JSON {sessionId, identity, nonce}.")
+    .option("--stdin", "Read reveal JSON from stdin")
+    .option("--no-persist", "Do not persist the reveal to chain")
+    .action(async (opts: { stdin?: boolean; persist?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const j = opts.stdin ? await readStdinJson() : null;
+        if (!j) { writeJson({ ok: false, error: "pass --stdin with JSON {sessionId, identity:{vendor[,model][,version]}, nonce}" }); process.exitCode = 1; return; }
+        const payload = j as { sessionId?: string; identity?: { vendor?: string; model?: string; version?: string }; nonce?: string };
+        if (!payload.sessionId || !payload.identity || !payload.nonce) {
+          writeJson({ ok: false, error: "sessionId / identity / nonce all required" }); process.exitCode = 1; return;
+        }
+        const r = core.nemesis.revealIdentity(process.cwd(), {
+          sessionId: payload.sessionId,
+          identity: { vendor: payload.identity.vendor ?? "", model: payload.identity.model, version: payload.identity.version },
+          nonce: payload.nonce,
+          persist: opts.persist !== false,
+        });
+        writeJson({ ok: r.matches, ...r });
+        if (!r.matches) process.exitCode = 1;
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
+  n.command("sibyl_chain")
+    .description("💎6 SIBYL — verify HMAC chain on commitments + reveals; list open (un-revealed) commitments.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chain = core.nemesis.verifySibylChain(process.cwd());
+        const open = core.nemesis.listOpenCommitments(process.cwd());
+        writeJson({ ok: chain.ok, chain, openCommitments: open });
+      } catch (e) {
+        writeJson({ ok: false, error: (e as Error).message });
+        process.exitCode = 1;
+      }
+    });
+
   n.command("cleanse_ledger")
     .description("v2.50.0 — RETROACTIVE LEDGER CLEANSE: coerce historical embedder-leak rows in .mneme/cli-activity.jsonl to vendor:'unknown' + re-chain HMACs + back up original to .pre-v50.bak. Idempotent.")
     .option("--dry-run", "Compute the plan without writing.", false)

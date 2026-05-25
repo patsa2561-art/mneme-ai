@@ -63,6 +63,61 @@ export {
   type RecordActivityInput, type RecordActivityResult,
 } from "./activity_writer.js";
 
+// v2.52.0 — STEALTH SCORE (Million Dollar Secret diamond #1) — inverse
+// of fingerprint confidence + anonymity-credit HMAC ledger.
+export {
+  computeStealthScore,
+  earnAnonymityCredits, spendAnonymityCredits,
+  stealthCreditStatus, verifyStealthLedger,
+  type StealthVerdict,
+} from "./stealth_score.js";
+
+// v2.52.0 — CAPILLARY (Million Dollar Secret diamond #2) — micro-tell
+// fingerprinter at whitespace/quote/naming/comma level + ANTI-CAPILLARY
+// style-rewrite suggestion engine (the first AI-coding-agent micro-fingerprinter).
+export {
+  extractMicroProfile, microDistance,
+  suggestAntiCapillary, listCapillaryFeatures,
+  type MicroProfile, type AntiCapillaryHint,
+} from "./capillary.js";
+
+// v2.52.0 — COLOSSEUM (Million Dollar Secret diamond #3) — auto-tournament
+// of N contenders × M disguise targets + 3-axis HMAC-signed ELO leaderboard
+// (deception / detectability / mimicry) + spectator replay.
+export {
+  runTournament,
+  readColosseumLeaderboard, verifyColosseumChain, spectatorReplay,
+  type ContenderFixture, type MatchEvent, type VendorScore, type TournamentResult,
+} from "./colosseum.js";
+
+// v2.52.0 — MOLT (Million Dollar Secret diamond #4) — silent model-rotation
+// detector. Per-feature Welch-style comparison of pre/post fingerprint
+// distributions; HMAC-signed forensic verdict + optional webhook emit.
+export {
+  detectMolt, verifyMoltVerdict, emitMoltWebhook,
+  type FeatureShift, type MoltVerdict,
+} from "./molt.js";
+
+// v2.52.0 — THEMIS (Million Dollar Secret diamond #5) — alibi verifier
+// ("I am NOT vendor X") + star-rated evidence + compliance bundle pairing.
+export {
+  verifyAlibi, verifyAlibiSignature,
+  buildComplianceBundle, verifyComplianceBundle,
+  type AlibiEvidenceItem, type AlibiVerdict, type ThemisResult,
+  type ThemisInput, type ComplianceBundle,
+} from "./themis.js";
+
+// v2.52.0 — SIBYL (Million Dollar Secret diamond #6) — ZK-style identity
+// commitment: commit at session-start (sealed), reveal at end. Hash-commitment
+// branch (SHA-256(identity || nonce || sessionId)) — locks identity against
+// mid-session switching. Supports nested commitments (vendor/model/version mask).
+export {
+  commitIdentity, revealIdentity, verifySibylChain,
+  verifyCommitmentReveal, listOpenCommitments,
+  type SibylIdentity, type SibylCommitment, type SibylReveal,
+  type CommitOpts, type CommitResult, type RevealOpts, type RevealResult,
+} from "./sibyl.js";
+
 // v2.50.0 — VENDOR ALLOWLIST GUARD: kills EMBEDDER-LEAK class structurally.
 // Central allowlist of real agent vendors; backend/embedder names (ollama,
 // openai-gpt, gemini, etc) coerced to "unknown" + logged to
