@@ -57,6 +57,12 @@ export {
   type VerdictInput, type WeightDelta, type ApplyResult,
 } from "./nemesis_to_conclave.js";
 
+// v2.49.0 — B4 actual wire: write-path canonical record.
+export {
+  recordActivityReconciled,
+  type RecordActivityInput, type RecordActivityResult,
+} from "./activity_writer.js";
+
 // v1.61 NEMESIS PROTOCOL (Tier 5 — weekly adversarial audit) lives in
 // nemesis.ts alongside the new v2.46.0 ANTI-IDENTITY-LIE ENGINE. Both
 // export through this barrel so downstream consumers (MCP `nemesis.generate`

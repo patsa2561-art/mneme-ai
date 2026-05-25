@@ -4728,6 +4728,70 @@ export async function run(argv: string[]): Promise<void> {
   // v2.46.0 — NEMESIS (Anti-Identity-Lie Engine + EU AI Act Article 50)
   registerNemesisCommand(program);
 
+  // v2.49.0 — B5 MULTI-ALIAS + F7 probe-coverage CLI + AUTO-ALIAS RESOLVER.
+  // Closes wiring-lag-of-wiring-lag-fix: v2.48 shipped one verb; users
+  // typed natural aliases (dev/detect/tool_detect) — all unknown. v2.49
+  // wires every alias to the same handler.
+  const devToolingDetect = async (path: string): Promise<void> => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const r = core.autoInit.detectDevTooling(path);
+      process.stdout.write(JSON.stringify({ ok: true, path, result: r }, null, 2) + "\n");
+    } catch (e) {
+      process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+      process.exitCode = 1;
+    }
+  };
+  // Aliases: `mneme detect`, `mneme tool_detect`, `mneme dev` (with no
+  // sub) — all route to dev-tooling detect on current CWD.
+  for (const alias of ["detect", "tool_detect"]) {
+    program
+      .command(alias)
+      .description(`v2.49 alias for \`mneme dev_tooling detect\` — detect AI-dev scratch folder vs customer git repo.`)
+      .option("--path <dir>", "Folder to check (default cwd).")
+      .action(async (opts: { path?: string }) => devToolingDetect(opts.path ?? process.cwd()));
+  }
+  // `mneme dev` parent — has `detect` subcommand AND default action.
+  const devParent = program
+    .command("dev")
+    .description("v2.49 short alias for `mneme dev_tooling` — short-form access to DEV-TOOLING DETECTOR + RETROACTIVE CLEANSE.")
+    .option("--path <dir>", "Folder to check (default cwd).")
+    .action(async (opts: { path?: string }) => devToolingDetect(opts.path ?? process.cwd()));
+  devParent.command("detect")
+    .description("Detect AI-dev folder.")
+    .option("--path <dir>", "Folder.")
+    .action(async (opts: { path?: string }) => devToolingDetect(opts.path ?? process.cwd()));
+
+  // v2.49.0 — F7 surface: `mneme release check` + `mneme probe coverage`.
+  const releaseParent = program.command("release").description("v2.49 — release-time gates including MANDATORY probe-coverage check.");
+  releaseParent.command("check")
+    .description("Run the probe-coverage gate (refuses tag when new tool lacks TRUTH GATE probe binding).")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.releaseGate.crossCheckFromDisk(process.cwd());
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  const probeParent = program.command("probe").description("v2.49 — TRUTH GATE probe utilities.");
+  probeParent.command("coverage")
+    .description("Cross-check tool catalog vs claim catalog; report uncovered tools.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.releaseGate.crossCheckFromDisk(process.cwd());
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.48.0 — Top-level `mneme dev_tooling` CLI (B5 fix: WIRING LAG class).
   // v2.45 shipped detectDevTooling() in core; v2.47 exposed it as MCP +
   // `mneme nemesis detect_tooling` subcommand — but users expect the
@@ -4942,8 +5006,39 @@ export async function run(argv: string[]): Promise<void> {
         }
       }
     }
-    // Restore writeErr so the genuine error surfaces.
+    // v2.49.0 — AUTO-ALIAS RESOLVER. Before bailing with a cryptic
+    // "unknown command" error, intercept the message + run Levenshtein
+    // fuzzy match against all registered top-level verbs + print
+    // suggestions. Closes the wiring-lag-at-keyboard-surface class.
     restoreWriteErr();
+    const unknownMatch = /unknown command (?:'|")([^'"]+)(?:'|")/i.exec(message);
+    if (unknownMatch && unknownMatch[1]) {
+      const typed = unknownMatch[1];
+      try {
+        const { suggestCommands, printSuggestions, logMissedAlias } = await import("./alias_resolver.js");
+        // Gather all registered top-level command names.
+        const known: string[] = [];
+        for (const c of (program as unknown as { commands: Array<{ _name?: string; name?: () => string }> }).commands) {
+          const name = (c.name?.() ?? c._name) as string | undefined;
+          if (name) known.push(name);
+        }
+        const suggestions = suggestCommands(typed, known, { topN: 5 });
+        const winner = printSuggestions(typed, suggestions);
+        try { logMissedAlias(process.cwd(), typed); } catch { /* */ }
+        // Optional auto-run via env var
+        if (winner && process.env["MNEME_AUTO_ALIAS"] === "1") {
+          process.stderr.write(`\n→ MNEME_AUTO_ALIAS=1 set — auto-running \`mneme ${winner}\`...\n\n`);
+          const restArgs = argv.slice(argv.findIndex((a) => a === typed) + 1);
+          try {
+            await program.parseAsync(["node", "mneme", winner, ...restArgs]);
+            process.exit(0);
+          } catch {
+            process.exit(1);
+          }
+        }
+        process.exit(1);
+      } catch { /* fall through to generic error */ }
+    }
     ui.error(message);
     process.exit(1);
   }

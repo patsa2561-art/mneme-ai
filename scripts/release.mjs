@@ -90,6 +90,42 @@ if (touched.length === 0) {
 console.log(`bumped ${touched.length} file(s) to ${version}:`);
 for (const t of touched) console.log(`  ${t}`);
 
+// v2.49.0 — MANDATORY PROBE-COVERAGE GATE (skip with --skip-probe-coverage in
+// emergencies only). Reads packages/core/dist/release_gate/probe_coverage.js
+// + asserts every new mneme.<verb>.<sub> tool has a TRUTH GATE claim binding.
+// Refuses to tag when uncovered — closes "feature velocity > probe velocity"
+// bug class STRUCTURALLY at the release script level.
+const skipProbeCoverage = args.includes("--skip-probe-coverage") || args.includes("--force-coverage");
+if (!skipProbeCoverage) {
+  try {
+    const distPath = "packages/core/dist/release_gate/probe_coverage.js";
+    if (existsSync(distPath)) {
+      const mod = await import("../" + distPath);
+      const r = mod.crossCheckFromDisk(process.cwd());
+      if (!r.ok) {
+        console.error("");
+        console.error("🛑 PROBE-COVERAGE GATE REFUSED RELEASE");
+        console.error(`   ${r.uncovered.length} tool(s) lack TRUTH GATE probe binding:`);
+        for (const t of r.uncovered.slice(0, 10)) console.error(`     • ${t}`);
+        if (r.uncovered.length > 10) console.error(`     ... + ${r.uncovered.length - 10} more`);
+        console.error("");
+        console.error(`   ${r.hint}`);
+        console.error("");
+        console.error("   Emergency bypass: re-run with --skip-probe-coverage (logged + audited).");
+        console.error("");
+        process.exit(7);
+      }
+      console.log(`✓ probe-coverage gate: ${r.totalTools} tools all bound to TRUTH GATE claims`);
+    } else {
+      console.log("⚠ probe-coverage gate: skipped (dist not built; run `npm run build` first for full safety)");
+    }
+  } catch (e) {
+    console.error(`⚠ probe-coverage gate: failed to run (${e.message}); proceeding`);
+  }
+} else {
+  console.log("⚠ probe-coverage gate: BYPASSED via --skip-probe-coverage (emergency only)");
+}
+
 // Sync lockfile (cheap, no install).
 try {
   execSync("npm install --package-lock-only --silent", { stdio: "inherit" });
