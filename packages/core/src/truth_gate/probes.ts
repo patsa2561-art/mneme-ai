@@ -1070,6 +1070,95 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.58.0 — REAL 100% COVERAGE + LIVING LAB bindings ──────────────
+  //
+  // 1. probe.coverage.real_100_percent — strict-100% gate using all 3
+  //    sources (claim + READONLY pattern + AUTOPROBE empirical).
+  // 2. probe.autoprobe.fresh — last_run.json HMAC valid + fresh (≤24h).
+  // 3. probe.living_lab.heartbeat_fresh — daemon heartbeat ≤10min stale
+  //    (NULL when daemon was never started — not a failure).
+  // 4. probe.living_lab.no_open_findings — open findings = release blocker.
+  {
+    id: "probe.coverage.real_100_percent",
+    kind: "numeric",
+    description: "1 when probe_coverage gate accepts repo with STRICT threshold=100 across all 3 sources (claim + READONLY pattern + AUTOPROBE empirical).",
+    run: async (ctx) => {
+      try {
+        const { crossCheckFromDisk } = await import("../release_gate/probe_coverage.js" as string) as typeof import("../release_gate/probe_coverage.js");
+        const r = crossCheckFromDisk(ctx.cwd, { threshold: 100 });
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok
+            ? `coverage ${r.coveragePercent}% at strict-100 threshold (${r.totalTools} tools, 0 uncovered)`
+            : `coverage ${r.coveragePercent}% < 100% (${r.uncovered.length} uncovered — run \`mneme autoprobe run\` to refresh empirical evidence)`,
+          detail: { coveragePercent: r.coveragePercent, uncovered: r.uncovered.length, totalTools: r.totalTools },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.autoprobe.fresh",
+    kind: "numeric",
+    description: "1 when .mneme/autoprobe/last_run.json exists + HMAC verifies + age ≤24h.",
+    run: async (ctx) => {
+      try {
+        const { loadFreshAutoprobeReport } = await import("../release_gate/autoprobe.js" as string) as typeof import("../release_gate/autoprobe.js");
+        const r = loadFreshAutoprobeReport(ctx.cwd);
+        if (!r) return { value: 0, evidence: "no fresh AUTOPROBE report — run `mneme autoprobe run`" };
+        return {
+          value: r.brokenCount === 0 ? 1 : 0,
+          evidence: r.brokenCount === 0
+            ? `AUTOPROBE ${r.invocableCount}/${r.totalTested} invocable (fresh, HMAC verified)`
+            : `${r.brokenCount}/${r.totalTested} tools broken`,
+          detail: { totalTested: r.totalTested, invocableCount: r.invocableCount, brokenCount: r.brokenCount },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.living_lab.heartbeat_fresh",
+    kind: "numeric",
+    description: "1 when LIVING LAB heartbeat is ≤10min stale. NULL (not failure) when daemon was never started — release-time check is via no_open_findings.",
+    run: async (ctx) => {
+      try {
+        const { readHeartbeat, isHeartbeatFresh } = await import("../living_lab/index.js" as string) as typeof import("../living_lab/index.js");
+        const hb = readHeartbeat(ctx.cwd);
+        if (!hb) return { value: null, evidence: "no heartbeat — daemon not started (optional in non-prod repos)" };
+        const fresh = isHeartbeatFresh(ctx.cwd);
+        return {
+          value: fresh ? 1 : 0,
+          evidence: fresh ? `heartbeat fresh (uptime ${Math.round(hb.uptimeMs / 1000)}s · ${hb.ticksRun} ticks)` : `heartbeat stale (>10min)`,
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.living_lab.no_open_findings",
+    kind: "numeric",
+    description: "1 when LIVING LAB findings ledger has 0 open findings + chain HMAC verifies. Open findings = release blocker.",
+    run: async (ctx) => {
+      try {
+        const { openFindings, verifyFindingChain } = await import("../living_lab/index.js" as string) as typeof import("../living_lab/index.js");
+        const open = openFindings(ctx.cwd);
+        const chainOk = verifyFindingChain(ctx.cwd);
+        const ok = open.length === 0 && chainOk;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok ? `0 open findings · chain ok` : open.length > 0 ? `${open.length} open finding(s) blocking release: ${open.map((f) => f.tool).join(", ")}` : "finding chain HMAC mismatch",
+          detail: { openCount: open.length, chainOk },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.56.0 — xAI / GROK / SpaceX ALIGNMENT bindings ────────────────
   //
   // 1. probe.xai.grok_first_class — Grok in allowlist + NOT in leak list

@@ -130,5 +130,5 @@ export function createMneme(opts: MnemeInstanceOpts = {}): MnemeSdk {
 }
 
 /** SDK metadata for telemetry / about. */
-export const SDK_VERSION = "2.57.0";
+export const SDK_VERSION = "2.58.0";
 export const SDK_DESCRIPTION = "World-class premium in-process SDK for Mneme — 30-80× faster than CLI subprocess.";

@@ -132,7 +132,7 @@ export async function evaluateLaunchWindow(opts: LaunchWindowOpts = {}): Promise
     "probe_coverage", 1.0,
     async () => {
       const m = await import("../release_gate/probe_coverage.js" as string) as typeof import("../release_gate/probe_coverage.js");
-      return m.crossCheckFromDisk(cwd, { threshold: 50 });
+      return m.crossCheckFromDisk(cwd, { threshold: 100 });
     },
     (r) => ({
       ok: r.ok,

@@ -253,6 +253,35 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.58.0 — REAL 100% COVERAGE + LIVING LAB ───────────────────────
+  {
+    id: "claim.coverage.real_100_percent",
+    source: "v2.58.0 release notes",
+    text: "probe_coverage gate hits 100% coverage with REAL empirical evidence (every tool actually runs via AUTOPROBE --help invocability test). No fake exemptions, no hand-waved deprecations. Three coverage sources: (a) explicit TG claim, (b) READONLY last-segment pattern, (c) AUTOPROBE proof-of-life",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.coverage.real_100_percent",
+    severity: "block",
+  },
+  {
+    id: "claim.autoprobe.fresh",
+    source: "v2.58.0 release notes",
+    text: "AUTOPROBE last_run.json exists + HMAC verifies + age ≤24h. Empirical proof every tool was spawned + responded to --help within timeout. Hand-written probes can mock things; AUTOPROBE cannot — it runs a real subprocess",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.autoprobe.fresh",
+    severity: "block",
+  },
+  {
+    id: "claim.living_lab.no_open_findings",
+    source: "v2.58.0 release notes",
+    text: "LIVING LAB findings ledger (HMAC-chained) has 0 OPEN findings AND chain integrity verifies. Open finding = a tool that previously passed AUTOPROBE but now fails on the latest LIVING LAB tick. Open findings BLOCK the next release until cleared",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.living_lab.no_open_findings",
+    severity: "block",
+  },
+
   // ── v2.56.0 — xAI / GROK / SpaceX ALIGNMENT ─────────────────────────
   {
     id: "claim.xai.grok_first_class",

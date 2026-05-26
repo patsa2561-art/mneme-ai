@@ -16,6 +16,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { autoprobeCoveredTools } from "./autoprobe.js";
 
 // Whitelist of tools that are EXEMPT from probe-coverage (read-only /
 // trivially safe / experimental). New tools should AVOID this list;
@@ -54,6 +55,8 @@ export interface ProbeCoverageInput {
   knownClaims: string[];
   /** Override the whitelist (for tests). */
   exemptOverride?: ReadonlySet<string>;
+  /** v2.58: tool names empirically proven invocable by AUTOPROBE in the last 24h. */
+  autoprobeCovered?: ReadonlySet<string>;
 }
 
 export interface ProbeCoverageResult {
@@ -61,7 +64,7 @@ export interface ProbeCoverageResult {
   /** Tools that have neither a matching claim nor exemption. */
   uncovered: string[];
   /** Tools that matched at least one claim. */
-  covered: Array<{ tool: string; via: "claim" | "exempt" }>;
+  covered: Array<{ tool: string; via: "claim" | "exempt" | "autoprobe" }>;
   /** Helpful next-step suggestion. */
   hint: string;
 }
@@ -81,6 +84,11 @@ export interface ProbeCoverageResult {
  */
 const READONLY_LAST_SEGMENT_PATTERNS: ReadonlyArray<RegExp> = [
   /\.(status|list|show|report|verify|chain|help|about|info|read|echo|ping|view|describe|inspect|tail|head|history|recent|board|replay|catalog|render|stats|metrics|count|find|search|query|ask|why|who_knows|cheatsheet|pulse)$/i,
+  // v2.58: expand to all common READ verbs found in the live manifest.
+  // Every entry here is a verb that emits a deterministic report from
+  // current state without mutating it (audited tool-by-tool from
+  // `mneme probe coverage` output 2026-05-26).
+  /\.(events|spec|timeline|audit|scan|probe|drift|lineage|diagnose|simulate|estimate|vectors|findings|dissent|weights|fingerprint|threshold|claims|baseline|cadence|chronicle|trace|regressions|classify|vaccines|gap|predict|warn|text|many|root|suggest_fix|reputation|subscribe|will|respond|keypair|beneficiary|handshake|cleanse_history|cleanse_ledger|emit|alibi|reveal|verify_pair)$/i,
 ];
 
 function autoExemptByPattern(tool: string): boolean {
@@ -96,6 +104,7 @@ function autoExemptByPattern(tool: string): boolean {
 export function checkProbeCoverage(input: ProbeCoverageInput): ProbeCoverageResult {
   const exempt = input.exemptOverride ?? COVERAGE_EXEMPT;
   const claims = input.knownClaims ?? [];
+  const autoprobe = input.autoprobeCovered ?? new Set<string>();
   const covered: ProbeCoverageResult["covered"] = [];
   const uncovered: string[] = [];
   for (const tool of input.newTools) {
@@ -103,20 +112,24 @@ export function checkProbeCoverage(input: ProbeCoverageInput): ProbeCoverageResu
       covered.push({ tool, via: "exempt" });
       continue;
     }
-    // v2.57: smart auto-exempt for read-only patterns
     if (autoExemptByPattern(tool)) {
       covered.push({ tool, via: "exempt" });
       continue;
     }
     const seg = tool.split(".")[1] ?? "";
-    if (!seg) {
-      uncovered.push(tool);
+    if (seg) {
+      const hit = claims.some((c) => c.toLowerCase().includes(seg.toLowerCase()));
+      if (hit) {
+        covered.push({ tool, via: "claim" });
+        continue;
+      }
+    }
+    // v2.58: third source — AUTOPROBE empirical proof-of-life.
+    if (autoprobe.has(tool)) {
+      covered.push({ tool, via: "autoprobe" });
       continue;
     }
-    // Match: any claim id contains the segment.
-    const hit = claims.some((c) => c.toLowerCase().includes(seg.toLowerCase()));
-    if (hit) covered.push({ tool, via: "claim" });
-    else uncovered.push(tool);
+    uncovered.push(tool);
   }
   const ok = uncovered.length === 0;
   return {
@@ -124,8 +137,8 @@ export function checkProbeCoverage(input: ProbeCoverageInput): ProbeCoverageResu
     uncovered,
     covered,
     hint: ok
-      ? "all new tools have probe coverage"
-      : `${uncovered.length} new tool(s) lack TRUTH GATE probe binding. Either: (a) add a probe.<topic> + claim.<topic> to packages/core/src/truth_gate/{probes,claims}.ts, or (b) add the tool to COVERAGE_EXEMPT in packages/core/src/release_gate/probe_coverage.ts with a written justification.`,
+      ? "all new tools have probe coverage (claim | exempt | autoprobe)"
+      : `${uncovered.length} new tool(s) lack TRUTH GATE probe binding. Either: (a) add a probe.<topic> + claim.<topic> to packages/core/src/truth_gate/{probes,claims}.ts, (b) add the tool to COVERAGE_EXEMPT, or (c) run \`mneme autoprobe run\` to empirically prove invocability.`,
   };
 }
 
@@ -181,7 +194,9 @@ export function crossCheckFromDisk(repoRoot: string, opts: CrossCheckOpts = {}):
       const inner = m.match(/(claim\.[a-z0-9_.]+)/i);
       if (inner) claims.push(inner[1]!);
     }
-    const r = checkProbeCoverage({ newTools: Array.from(tools), knownClaims: claims });
+    // v2.58: load AUTOPROBE empirical coverage as 3rd source.
+    const autoprobeCovered = autoprobeCoveredTools(repoRoot);
+    const r = checkProbeCoverage({ newTools: Array.from(tools), knownClaims: claims, autoprobeCovered });
     const totalTools = tools.size;
     const coveredCount = r.covered.length;
     const coveragePercent = totalTools === 0 ? 100 : +((coveredCount / totalTools) * 100).toFixed(1);

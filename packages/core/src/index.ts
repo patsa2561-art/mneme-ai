@@ -420,6 +420,14 @@ export * as wiringLag from "./release_gate/wiring_lag.js";
 // commit-message parsing). Reports per-feature surface coverage across
 // core / sdk / cli / tg-claim — false-positive immune.
 export * as wiringDoctor from "./release_gate/wiring_doctor.js";
+// v2.58.0 — AUTOPROBE: empirical proof-of-life coverage. Spawns
+// `mneme <tool> --help` for every uncovered tool; persists HMAC-signed
+// report consumed by probe_coverage as a 3rd source.
+export * as autoprobe from "./release_gate/autoprobe.js";
+// v2.58.0 — LIVING LAB: 24/7 autonomous test bot. Continuous fuzz with
+// active-learning tool selection + HMAC-chained findings ledger + safe
+// proposal/commit-to-branch flow (never touches main).
+export * as livingLab from "./living_lab/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {
