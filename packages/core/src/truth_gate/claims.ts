@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.64.0 — DIFFERENTIAL ARENA (multi-vendor consensus) ───────────
+  {
+    id: "claim.diff_arena.consensus_round_trip",
+    source: "v2.64.0 release notes",
+    text: "DIFFERENTIAL ARENA orchestrates parallel multi-vendor asks + computes 4-axis consensus (Jaccard bigram + numeric agreement + sentiment + length) + identifies outliers correctly on the canonical fixture (Claude+GPT agree on 'removed legacy context API', Gemini disagrees with 'RSC default' → gemini surfaces as #1 outlier). HMAC-signed AskResult envelope verifies. First multi-vendor consensus-by-default primitive in the MCP ecosystem",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.diff_arena.consensus_round_trip",
+    severity: "block",
+  },
+  {
+    id: "claim.diff_arena.ledger_chain_intact",
+    source: "v2.64.0 release notes",
+    text: "DIFFERENTIAL ARENA rounds ledger is HMAC-chained — every ask + per-vendor-response row's HMAC depends on previous row's HMAC. Tamper-evident audit of every multi-vendor round",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.diff_arena.ledger_chain_intact",
+    severity: "block",
+  },
+
   // ── v2.63.0 — TIME-CRYSTAL (federated agent wisdom) ─────────────────
   {
     id: "claim.time_crystal.fingerprint_clusters",

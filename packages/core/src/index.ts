@@ -451,6 +451,10 @@ export * as mirrage from "./mirrage/index.js";
 // + Wilson-LB ranking + recency decay + env grounding + gotcha
 // auto-detection + HMAC-chained ledger.
 export * as timeCrystal from "./time_crystal/index.js";
+// v2.64.0 — DIFFERENTIAL ARENA: multi-vendor consensus by default.
+// Pluggable adapters (mock/http/cli) + parallel runner + 4-axis
+// consensus + outlier diagnosis + HMAC-chained rounds ledger.
+export * as diffArena from "./diff_arena/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

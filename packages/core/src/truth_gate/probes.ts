@@ -1070,6 +1070,56 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.64.0 — DIFFERENTIAL ARENA (multi-vendor consensus) ───────────
+  //
+  // 1. probe.diff_arena.consensus_round_trip — 3 mock vendors with
+  //    deterministic responses → consensus computed + outlier identified
+  //    + HMAC envelope verifies.
+  // 2. probe.diff_arena.ledger_chain_intact — HMAC chain on live ledger.
+  {
+    id: "probe.diff_arena.consensus_round_trip",
+    kind: "numeric",
+    description: "1 when DIFF-ARENA orchestrates 3 mock-vendor parallel asks, computes 4-axis consensus, produces a verified HMAC envelope, and identifies an outlier on disagreement.",
+    run: async () => {
+      try {
+        const m = await import("../diff_arena/index.js" as string) as typeof import("../diff_arena/index.js");
+        const claude = m.mockAdapter({ name: "claude", responder: () => "React 19 removed the legacy context API and added the use() hook." });
+        const gpt = m.mockAdapter({ name: "gpt", responder: () => "React 19's main change is removing the legacy context API." });
+        const gemini = m.mockAdapter({ name: "gemini", responder: () => "React 19 makes server components the default RSC by default everywhere." });
+        const r = await m.diffArenaAsk({
+          prompt: "What's React 19's biggest change?",
+          vendors: [claude, gpt, gemini],
+          noLedger: true,
+        });
+        if (r.responses.length !== 3) return { value: 0, evidence: `expected 3 responses, got ${r.responses.length}` };
+        if (!m.verifyAskResult(r)) return { value: 0, evidence: "envelope HMAC failed" };
+        const outlier = r.consensus.outliers[0]?.vendor;
+        // Expect gemini to be the most-outlier vendor (RSC default disagrees with the other two).
+        if (outlier !== "gemini") return { value: 0, evidence: `expected gemini as outlier, got ${outlier}` };
+        return { value: 1, evidence: `3 vendors · consensus=${r.consensus.agreement} (${(r.consensus.score * 100).toFixed(0)}%) · outlier=${outlier}` };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.diff_arena.ledger_chain_intact",
+    kind: "numeric",
+    description: "1 when DIFF-ARENA rounds ledger HMAC chain verifies (or is absent — first-run).",
+    run: async (ctx) => {
+      try {
+        const m = await import("../diff_arena/index.js" as string) as typeof import("../diff_arena/index.js");
+        const r = m.verifyLedgerChain(ctx.cwd);
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok ? `chain intact (${r.rows} entries)` : `broken at row ${r.brokenAt}`,
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.63.0 — TIME-CRYSTAL (federated agent wisdom) ─────────────────
   //
   // 1. probe.time_crystal.fingerprint_clusters — synonym phrasings of the

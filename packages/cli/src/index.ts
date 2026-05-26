@@ -4878,6 +4878,62 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.64.0 — DIFFERENTIAL ARENA: multi-vendor consensus by default.
+  const diffArenaParent = program
+    .command("diff_arena")
+    .description("v2.64 — multi-vendor consensus. Default action = audit ledger.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.diffArena.verifyLedgerChain(process.cwd());
+        const rows = core.diffArena.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, rows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-10) }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  diffArenaParent.command("ask")
+    .description("Ask the same prompt to multiple vendors in parallel; return consensus + suggested answer. Default: 2 mock vendors (offline demo).")
+    .requiredOption("--prompt <text>", "Prompt to send")
+    .option("--vendors <list>", "Comma-separated vendor specs. Format: 'name:kind' where kind=mock. Real http/cli wiring needs JS config.", (v) => v.split(",").map((s) => s.trim()).filter(Boolean), ["claude:mock", "gpt:mock", "gemini:mock"])
+    .option("--banner", "Render ASCII banner instead of JSON")
+    .action(async (opts: { prompt: string; vendors?: string[]; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const vendors = (opts.vendors ?? ["claude:mock", "gpt:mock", "gemini:mock"]).map((spec) => {
+          const [name, kind] = spec.split(":");
+          if (kind === "mock") return core.diffArena.mockAdapter({ name: name ?? "unknown" });
+          throw new Error(`CLI only supports mock vendors; got '${kind}'. For http/cli adapters use the SDK programmatically.`);
+        });
+        const r = await core.diffArena.diffArenaAsk({
+          prompt: opts.prompt,
+          vendors,
+          cwd: process.cwd(),
+        });
+        if (opts.banner) process.stdout.write(core.diffArena.renderArenaBanner(r) + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  diffArenaParent.command("audit")
+    .description("Verify HMAC-chained rounds ledger + last N entries.")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.diffArena.verifyLedgerChain(process.cwd());
+        const rows = core.diffArena.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.63.0 — TIME-CRYSTAL: federated agent wisdom.
   // When agent A hits problem P → "342 agents saw same in 7 days; 89%
   // used X; 11% tried Y but broke on pnpm".
