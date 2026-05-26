@@ -438,6 +438,11 @@ export * as sdkAuditor from "./release_gate/sdk_surface_auditor.js";
 // risk-scores them + computes transitive bypass graph + pins HMAC
 // snapshot for drift detection. First MCP security auditor.
 export * as skeletonKey from "./skeleton_key/index.js";
+// v2.61.0 — PASSPORT: capability-based security for MCP tools. HMAC-
+// signed passports gate sensitive ops; trust score fused from NEMESIS
+// + HONEST_MIRROR + STEALTH; delegation chain + HMAC-chained audit
+// ledger + revocation cascade.
+export * as passport from "./passport/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

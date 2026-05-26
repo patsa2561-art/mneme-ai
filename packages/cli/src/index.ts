@@ -4878,6 +4878,121 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.61.0 — PASSPORT: capability-based security for MCP.
+  // Agents request HMAC-signed passports before sensitive tool calls;
+  // trust score gates issuance; delegation chain + revocation cascade
+  // + HMAC-chained audit ledger.
+  const passportParent = program
+    .command("capability")
+    .description("v2.61 — capability-based security. Default action = audit ledger.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.passport.verifyLedgerChain(process.cwd());
+        const rows = core.passport.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, rows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-10) }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  passportParent.command("request")
+    .description("Request a passport for a sensitive tool. Trust score must clear tier threshold.")
+    .requiredOption("--tool <name>", "Tool name (e.g. shell.exec)")
+    .requiredOption("--agent <id>", "Requesting agent identifier")
+    .option("--tier <t>", "Explicit risk tier (safe/read/write/network/destructive). Default: auto-classify from tool name.")
+    .option("--env-confidence <n>", "Trust signal: NEMESIS env-scan confidence 0..1", (v) => Number(v))
+    .option("--identity-verdict <v>", "Trust signal: NEMESIS verify_identity (CONFIRMED|DISPUTED|IMPOSSIBLE|INCONCLUSIVE)")
+    .option("--hm-weight <n>", "Trust signal: HONEST_MIRROR weight 0..1", (v) => Number(v))
+    .option("--stealth <n>", "Trust signal: STEALTH score 0..1 (inverted)", (v) => Number(v))
+    .option("--history <n>", "Trust signal: historical approval rate 0..1", (v) => Number(v))
+    .option("--scope <list>", "Comma-separated scope sub-restrictions", (v) => v.split(",").map((s) => s.trim()).filter(Boolean))
+    .option("--parent <token>", "Parent passport token (for delegation)")
+    .action(async (opts: { tool: string; agent: string; tier?: string; envConfidence?: number; identityVerdict?: string; hmWeight?: number; stealth?: number; history?: number; scope?: string[]; parent?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const trustInputs: import("@mneme-ai/core").passport.TrustInputs = {
+          envScanConfidence: opts.envConfidence,
+          identityVerdict: opts.identityVerdict as "CONFIRMED" | "DISPUTED" | "IMPOSSIBLE" | "INCONCLUSIVE" | undefined,
+          honestMirrorWeight: opts.hmWeight,
+          stealthScore: opts.stealth,
+          historicalApprovalRate: opts.history,
+        };
+        const r = core.passport.issuePassport({
+          tool: opts.tool,
+          agent: opts.agent,
+          tier: opts.tier as import("@mneme-ai/core").passport.RiskTier | undefined,
+          trustInputs,
+          scope: opts.scope,
+          parent: opts.parent,
+          cwd: process.cwd(),
+        });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  passportParent.command("verify")
+    .description("Verify a passport token (HMAC + TTL + revocation + optional expected tool/scope).")
+    .requiredOption("--token <t>", "Passport token to verify")
+    .option("--tool <name>", "Optional expected tool")
+    .option("--scope <list>", "Optional expected scope (comma-separated; all must be present)", (v) => v.split(",").map((s) => s.trim()).filter(Boolean))
+    .action(async (opts: { token: string; tool?: string; scope?: string[] }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.passport.verifyPassport({ token: opts.token, expectedTool: opts.tool, expectedScope: opts.scope, cwd: process.cwd() });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.valid) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  passportParent.command("revoke")
+    .description("Revoke a passport. Cascade revoke = also revokes every delegated descendant (default).")
+    .option("--token <t>", "Passport token")
+    .option("--jti <id>", "Direct jti (when you don't have the token)")
+    .option("--no-cascade", "Disable cascade revoke of descendants")
+    .action(async (opts: { token?: string; jti?: string; cascade?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.passport.revokePassport({ token: opts.token, jti: opts.jti, cascade: opts.cascade !== false, cwd: process.cwd() });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  passportParent.command("audit")
+    .description("Verify the HMAC-chained passport ledger + show last N entries.")
+    .option("--limit <n>", "How many entries to show", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.passport.verifyLedgerChain(process.cwd());
+        const rows = core.passport.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  passportParent.command("policy")
+    .description("Show the current default policy (tier → minTrust + ttlMs).")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        process.stdout.write(JSON.stringify({ policy: core.passport.DEFAULT_POLICY }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.60.0 — SKELETON KEY: MCP server security auditor.
   // First MCP security audit tool in the ecosystem. Discovers MCP
   // servers in Claude Desktop / Cursor / Continue / Cline configs +

@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.61.0 — PASSPORT (capability-based security for MCP) ──────────
+  {
+    id: "claim.passport.issue_verify_revoke_round_trip",
+    source: "v2.61.0 release notes",
+    text: "PASSPORT capability-based security primitive: issuePassport with high trust returns HMAC-signed token + correct TTL → verifyPassport reports valid → revokePassport with cascade=true succeeds → re-verify reports revoked. End-to-end round-trip works on a fresh ledger. First capability-based security layer for MCP",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.passport.issue_verify_revoke_round_trip",
+    severity: "block",
+  },
+  {
+    id: "claim.passport.ledger_chain_intact",
+    source: "v2.61.0 release notes",
+    text: "PASSPORT audit ledger is HMAC-chained — every issue/verify/revoke entry's HMAC depends on the previous row's HMAC. Tamper-evident; chain verification can detect any mid-stream edit. Court-admissible audit trail",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.passport.ledger_chain_intact",
+    severity: "block",
+  },
+
   // ── v2.60.0 — SKELETON KEY (MCP security auditor) ───────────────────
   {
     id: "claim.skeleton_key.audit_runs",

@@ -1070,6 +1070,66 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.61.0 — PASSPORT (capability-based security for MCP) ──────────
+  //
+  // 1. probe.passport.issue_verify_revoke_round_trip — end-to-end:
+  //    issue with high trust → verify VALID → revoke with cascade →
+  //    re-verify INVALID(revoked).
+  // 2. probe.passport.ledger_chain_intact — HMAC chain integrity on
+  //    the live passport audit ledger.
+  {
+    id: "probe.passport.issue_verify_revoke_round_trip",
+    kind: "numeric",
+    description: "1 when PASSPORT issue→verify→revoke→re-verify round-trips correctly on a temp ledger: HMAC valid, TTL > 0, revoke cascades, re-verify reports revoked.",
+    run: async () => {
+      try {
+        const m = await import("../passport/index.js" as string) as typeof import("../passport/index.js");
+        const { mkdtempSync, rmSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const cwd = mkdtempSync(join(tmpdir(), "mneme-pp-probe-"));
+        try {
+          const issued = m.issuePassport({
+            tool: "shell.exec",
+            agent: "probe-agent",
+            trustInputs: { envScanConfidence: 0.95, identityVerdict: "CONFIRMED", honestMirrorWeight: 0.95 },
+            cwd,
+          });
+          if (!issued.ok || !issued.passport) return { value: 0, evidence: `issue failed: ${issued.hint}` };
+          const v = m.verifyPassport({ token: issued.passport.token, expectedTool: "shell.exec", cwd });
+          if (!v.valid) return { value: 0, evidence: `verify failed: ${v.reason}` };
+          if (typeof v.ttlMs !== "number" || v.ttlMs <= 0) return { value: 0, evidence: `bad ttl: ${v.ttlMs}` };
+          const rev = m.revokePassport({ token: issued.passport.token, cascade: true, cwd });
+          if (!rev.ok) return { value: 0, evidence: `revoke failed: ${rev.hint}` };
+          const v2 = m.verifyPassport({ token: issued.passport.token, cwd });
+          if (v2.valid || v2.reason !== "revoked") return { value: 0, evidence: `post-revoke verify wrong: ${v2.reason}` };
+          return { value: 1, evidence: `round-trip ok (tier=${issued.tier?.name} trust=${(issued.trust?.score ?? 0) * 100 | 0}%)` };
+        } finally {
+          rmSync(cwd, { recursive: true, force: true });
+        }
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.passport.ledger_chain_intact",
+    kind: "numeric",
+    description: "1 when the PASSPORT audit ledger HMAC chain verifies (or is absent — first-run). Detects tampering of issue/verify/revoke history.",
+    run: async (ctx) => {
+      try {
+        const m = await import("../passport/index.js" as string) as typeof import("../passport/index.js");
+        const r = m.verifyLedgerChain(ctx.cwd);
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok ? `chain intact (${r.rows} entries)` : `broken at row ${r.brokenAt}`,
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.60.0 — SKELETON KEY (MCP security auditor) ───────────────────
   //
   // First MCP security auditor in the ecosystem. Discovers MCP servers
