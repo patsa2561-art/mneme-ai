@@ -433,6 +433,11 @@ export * as livingLab from "./living_lab/index.js";
 // gates) to catch the v2.58 blind-spot bug class (gate said wired but
 // external surface was missing).
 export * as sdkAuditor from "./release_gate/sdk_surface_auditor.js";
+// v2.60.0 — SKELETON KEY: MCP server security auditor. Discovers MCP
+// servers in Claude Desktop / Cursor / Continue / Cline configs +
+// risk-scores them + computes transitive bypass graph + pins HMAC
+// snapshot for drift detection. First MCP security auditor.
+export * as skeletonKey from "./skeleton_key/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

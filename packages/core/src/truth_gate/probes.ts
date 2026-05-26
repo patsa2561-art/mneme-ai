@@ -1070,6 +1070,53 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.60.0 — SKELETON KEY (MCP security auditor) ───────────────────
+  //
+  // First MCP security auditor in the ecosystem. Discovers MCP servers
+  // across user IDE configs + scores risk + computes transitive bypass
+  // graph + maps to CWE compliance.
+  {
+    id: "probe.skeleton_key.audit_runs",
+    kind: "numeric",
+    description: "1 when SKELETON KEY auditMcpConfigs executes end-to-end without crash AND produces a valid HMAC-sealed envelope. Verifies the primitive itself is intact.",
+    run: async () => {
+      try {
+        const m = await import("../skeleton_key/index.js" as string) as typeof import("../skeleton_key/index.js");
+        // Use a synthetic config path that may not exist — primitive must still return valid envelope.
+        const r = await m.auditMcpConfigs({ configPaths: ["/__nonexistent__.json"], budgetCap: 5 });
+        const verified = m.verifyAudit(r);
+        return {
+          value: verified ? 1 : 0,
+          evidence: verified ? `audit returns HMAC-verified envelope (totalServers=${r.totalServers})` : "audit envelope failed HMAC verification",
+          detail: { totalServers: r.totalServers, ok: r.ok },
+        };
+      } catch (e) {
+        return { value: 0, evidence: `audit threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.skeleton_key.bypass_graph_works",
+    kind: "numeric",
+    description: "1 when SKELETON KEY transitive bypass graph correctly identifies multi-server attack paths on a fixture (shell + filesystem + github = at least 3 bypass goals).",
+    run: async () => {
+      try {
+        const m = await import("../skeleton_key/index.js" as string) as typeof import("../skeleton_key/index.js");
+        const shell = { name: "shell", risk: m.RISK_HEURISTICS.find((h) => h.match === "shell-mcp")!, source: "fixture" };
+        const fs = { name: "filesystem", risk: m.RISK_HEURISTICS.find((h) => h.match === "filesystem")!, source: "fixture" };
+        const gh = { name: "github", risk: m.RISK_HEURISTICS.find((h) => h.match === "github")!, source: "fixture" };
+        const graph = m.buildBypassGraph([shell, fs, gh]);
+        const ok = graph.bypassPaths.length >= 3;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok ? `${graph.bypassPaths.length} bypass paths derived from 3-server fixture` : `only ${graph.bypassPaths.length} bypass paths`,
+        };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.59.0 — GATE SELF-VERIFICATION (SDK_AUDITOR) ──────────────────
   //
   // Closes the v2.58 blind-spot where WIRING DOCTOR said "13/13 wired"

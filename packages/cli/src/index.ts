@@ -4878,6 +4878,104 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.60.0 — SKELETON KEY: MCP server security auditor.
+  // First MCP security audit tool in the ecosystem. Discovers MCP
+  // servers in Claude Desktop / Cursor / Continue / Cline configs +
+  // risk-scores them + computes transitive bypass graph + pins HMAC
+  // snapshot for drift detection.
+  const skeletonKeyParent = program
+    .command("skeleton_key")
+    .description("v2.60 — MCP server security auditor. Default action = audit.")
+    .option("--budget <n>", "risk budget cap (default 5.0)", (v) => Number(v), 5.0)
+    .option("--empirical", "spawn each MCP server + read tools/list (slow, accurate)", false)
+    .action(async (opts: { budget?: number; empirical?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = await core.skeletonKey.auditMcpConfigs({ budgetCap: opts.budget, empiricalProbe: opts.empirical });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  skeletonKeyParent.command("audit")
+    .description("Full MCP audit: discover servers, score risk, compute bypass graph, render banner.")
+    .option("--budget <n>", "risk budget cap (default 5.0)", (v) => Number(v), 5.0)
+    .option("--empirical", "spawn each MCP server + read tools/list (slow, accurate)", false)
+    .option("--banner", "render ASCII banner instead of JSON", false)
+    .action(async (opts: { budget?: number; empirical?: boolean; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = await core.skeletonKey.auditMcpConfigs({ budgetCap: opts.budget, empiricalProbe: opts.empirical });
+        if (opts.banner) process.stdout.write(core.skeletonKey.renderAuditBanner(r) + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  skeletonKeyParent.command("recommend")
+    .description("Concrete config changes to reduce risk surface.")
+    .option("--budget <n>", "risk budget cap (default 5.0)", (v) => Number(v), 5.0)
+    .action(async (opts: { budget?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const a = await core.skeletonKey.auditMcpConfigs({ budgetCap: opts.budget });
+        const recs = core.skeletonKey.buildRecommendations(a);
+        process.stdout.write(JSON.stringify({ ok: recs.length === 0, count: recs.length, recommendations: recs }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  skeletonKeyParent.command("pin")
+    .description("Snapshot the current MCP config (HMAC-signed). Future drift checks compare against this.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const snap = core.skeletonKey.pinConfigSnapshot(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: true, snapshot: snap }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  skeletonKeyParent.command("drift")
+    .description("Compare current MCP config vs pinned snapshot. Detects silent tampering.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.skeletonKey.detectConfigDrift(process.cwd());
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  skeletonKeyParent.command("probe")
+    .description("Empirically spawn ONE MCP server + read its tools/list. Reveals real capabilities (not name-heuristic).")
+    .requiredOption("--server <name>", "MCP server name to probe (must match a discovered config entry)")
+    .action(async (opts: { server: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const all = core.skeletonKey.discoverServers(core.skeletonKey.defaultConfigPaths());
+        const found = all.find((s) => s.name === opts.server);
+        if (!found || !found.command) {
+          process.stdout.write(JSON.stringify({ ok: false, hint: `server '${opts.server}' not found in any discovered config (or has no command)` }) + "\n");
+          process.exitCode = 1;
+          return;
+        }
+        const r = await core.skeletonKey.probeServer({ name: found.name, command: found.command, args: found.args, env: found.env });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.59.0 — SDK SURFACE AUDITOR: gate-self-verification.
   // Empirically imports @mneme-ai/sdk + checks the external public
   // surface matches WIRING DOCTOR's claims. Closes the v2.58 blind-spot

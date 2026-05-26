@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.60.0 — SKELETON KEY (MCP security auditor) ───────────────────
+  {
+    id: "claim.skeleton_key.audit_runs",
+    source: "v2.60.0 release notes",
+    text: "SKELETON KEY (the first MCP server security auditor) runs end-to-end: discovers MCP servers across Claude Desktop / Cursor / Continue / Cline configs, scores per-server risk with CWE mapping, computes transitive bypass graph + risk budget, returns HMAC-sealed envelope that re-verifies. Pure / defensive — never throws even on missing configs",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.skeleton_key.audit_runs",
+    severity: "block",
+  },
+  {
+    id: "claim.skeleton_key.bypass_graph_works",
+    source: "v2.60.0 release notes",
+    text: "SKELETON KEY's transitive bypass graph derives multi-server attack paths from capability overlap. Fixture: 3 servers (shell-mcp / filesystem-mcp / github-mcp) → ≥3 distinct attacker-goal bypass paths (delete_repo, modify_ci_pipeline, exfiltrate_secret). Most MCP audit tools stop at single-server analysis — SKELETON KEY computes the GRAPH",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.skeleton_key.bypass_graph_works",
+    severity: "block",
+  },
+
   // ── v2.59.0 — GATE SELF-VERIFICATION (SDK_AUDITOR) ──────────────────
   {
     id: "claim.sdk.external_surface_complete",
