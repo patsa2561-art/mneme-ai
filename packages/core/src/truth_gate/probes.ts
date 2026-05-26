@@ -1070,6 +1070,56 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.59.0 — GATE SELF-VERIFICATION (SDK_AUDITOR) ──────────────────
+  //
+  // Closes the v2.58 blind-spot where WIRING DOCTOR said "13/13 wired"
+  // but external `import { letheForget } from "@mneme-ai/sdk"` was
+  // undefined. SDK_AUDITOR empirically imports the SDK + checks the
+  // public surface; cross-check vs WIRING DOCTOR detects gate contradictions.
+  {
+    id: "probe.sdk.external_surface_complete",
+    kind: "numeric",
+    description: "1 when SDK_AUDITOR empirically confirms all expected external surfaces (lethe/gavel/nimbus + NemesisSdk methods) are present in @mneme-ai/sdk top-level exports.",
+    run: async (ctx) => {
+      try {
+        const { auditSdkSurface } = await import("../release_gate/sdk_surface_auditor.js" as string) as typeof import("../release_gate/sdk_surface_auditor.js");
+        const r = await auditSdkSurface({ cwd: ctx.cwd });
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok
+            ? `${r.okCount}/${r.totalChecked} features present in external SDK surface (${r.totalExports} top-level exports)`
+            : `BLOCKED: ${r.brokenCount} features missing from external SDK — ${r.findings.filter((f) => !f.present).map((f) => f.feature).join(", ")}`,
+          detail: { okCount: r.okCount, brokenCount: r.brokenCount, totalExports: r.totalExports },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.gate.consistency",
+    kind: "numeric",
+    description: "1 when WIRING DOCTOR and SDK_AUDITOR agree on every feature. Contradictions = gates disagree on the same fact = blind-spot bug class.",
+    run: async (ctx) => {
+      try {
+        const { diagnose } = await import("../release_gate/wiring_doctor.js" as string) as typeof import("../release_gate/wiring_doctor.js");
+        const { auditSdkSurface, crossCheckGates } = await import("../release_gate/sdk_surface_auditor.js" as string) as typeof import("../release_gate/sdk_surface_auditor.js");
+        const wd = diagnose(ctx.cwd);
+        const auditor = await auditSdkSurface({ cwd: ctx.cwd });
+        const consistency = crossCheckGates(wd, auditor);
+        return {
+          value: consistency.ok ? 1 : 0,
+          evidence: consistency.ok
+            ? `gates agree on all ${auditor.totalChecked} features`
+            : `BLOCKED: ${consistency.contradictions.length} contradiction(s) — ${consistency.contradictions.map((c) => `${c.feature}: WD=${c.wiringDoctorSays} / SA=${c.sdkAuditorSays}`).join(" || ")}`,
+          detail: { contradictions: consistency.contradictions.length },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.58.0 — REAL 100% COVERAGE + LIVING LAB bindings ──────────────
   //
   // 1. probe.coverage.real_100_percent — strict-100% gate using all 3

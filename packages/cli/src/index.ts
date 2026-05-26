@@ -4878,6 +4878,56 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.59.0 — SDK SURFACE AUDITOR: gate-self-verification.
+  // Empirically imports @mneme-ai/sdk + checks the external public
+  // surface matches WIRING DOCTOR's claims. Closes the v2.58 blind-spot
+  // bug class (WIRING DOCTOR said wired but external `import { ... }
+  // from "@mneme-ai/sdk"` returned undefined).
+  const sdkAuditorParent = program
+    .command("sdk_auditor")
+    .description("v2.59 — empirically audit @mneme-ai/sdk external public surface; default = run + persist + report.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = await core.sdkAuditor.auditSdkSurface({ cwd: process.cwd() });
+        core.sdkAuditor.persistAuditorReport(process.cwd(), r);
+        process.stdout.write(JSON.stringify({ ok: r.ok, totalExports: r.totalExports, okCount: r.okCount, brokenCount: r.brokenCount, broken: r.findings.filter((f) => !f.present) }, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  sdkAuditorParent.command("run")
+    .description("v2.59 — same as `mneme sdk_auditor` default.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = await core.sdkAuditor.auditSdkSurface({ cwd: process.cwd() });
+        core.sdkAuditor.persistAuditorReport(process.cwd(), r);
+        process.stdout.write(JSON.stringify({ ok: r.ok, totalExports: r.totalExports, okCount: r.okCount, brokenCount: r.brokenCount, broken: r.findings.filter((f) => !f.present) }, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  sdkAuditorParent.command("consistency")
+    .description("v2.59 — cross-check SDK_AUDITOR vs WIRING DOCTOR for gate-agreement (contradictions = release block).")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const wd = core.wiringDoctor.diagnose(process.cwd());
+        const auditor = await core.sdkAuditor.auditSdkSurface({ cwd: process.cwd() });
+        const r = core.sdkAuditor.crossCheckGates(wd, auditor);
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.58.0 — LIVING LAB primitive: 24/7 autonomous test bot.
   const livingLabParent = program
     .command("living_lab")

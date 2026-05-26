@@ -428,6 +428,11 @@ export * as autoprobe from "./release_gate/autoprobe.js";
 // active-learning tool selection + HMAC-chained findings ledger + safe
 // proposal/commit-to-branch flow (never touches main).
 export * as livingLab from "./living_lab/index.js";
+// v2.59.0 — SDK SURFACE AUDITOR: empirically import @mneme-ai/sdk and
+// check public export surface; cross-check WIRING DOCTOR (gates verifying
+// gates) to catch the v2.58 blind-spot bug class (gate said wired but
+// external surface was missing).
+export * as sdkAuditor from "./release_gate/sdk_surface_auditor.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

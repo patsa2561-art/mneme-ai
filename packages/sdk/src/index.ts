@@ -125,10 +125,45 @@ export function createMneme(opts: MnemeInstanceOpts = {}): MnemeSdk {
     benchmark,
     events: (kinds?: MnemeEventKind[]) => subscribeEvents(kinds),
     opts: Object.freeze({ ...opts }),
-    version: "2.57.0",
+    version: "2.59.0",
   };
 }
 
 /** SDK metadata for telemetry / about. */
-export const SDK_VERSION = "2.58.0";
+export const SDK_VERSION = "2.59.0"; // bumped from 2.58.0
 export const SDK_DESCRIPTION = "World-class premium in-process SDK for Mneme — 30-80× faster than CLI subprocess.";
+
+/**
+ * v2.59.0 — Top-level standalone surfaces for LETHE / GAVEL / NIMBUS.
+ *
+ * Pre-v2.59 these were ONLY callable via `createMneme().lethe.forget()`.
+ * External developers writing `import { letheForget } from "@mneme-ai/sdk"`
+ * got undefined. WIRING DOCTOR was checking the internal NemesisSdk
+ * class file (which DID have these methods) instead of the external
+ * `index.ts` surface, so the gate said "13/13 wired" while the actual
+ * external API was missing 3 surfaces.
+ *
+ * Fix: re-export the core implementations directly. They are stateless +
+ * accept an explicit `repoRoot` arg, so callers don't need a Mneme
+ * instance.
+ */
+import * as coreAll from "@mneme-ai/core";
+
+export const letheForget = coreAll.nemesis.forgetRow;
+export const verifyForgetReceipt = coreAll.nemesis.verifyForgetReceipt;
+export const gavelPack = coreAll.nemesis.buildGavelBundle;
+export const verifyGavelBundle = coreAll.nemesis.verifyGavelBundle;
+export const nimbusPublish = coreAll.nemesis.publishCard;
+
+/** v2.59 — top-level convenience groups (parallel to createMneme().lethe etc). */
+export const lethe = {
+  forget: coreAll.nemesis.forgetRow,
+  verify: coreAll.nemesis.verifyForgetReceipt,
+};
+export const gavel = {
+  pack: coreAll.nemesis.buildGavelBundle,
+  verify: coreAll.nemesis.verifyGavelBundle,
+};
+export const nimbus = {
+  publish: coreAll.nemesis.publishCard,
+};

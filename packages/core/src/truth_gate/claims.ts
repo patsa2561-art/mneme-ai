@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.59.0 — GATE SELF-VERIFICATION (SDK_AUDITOR) ──────────────────
+  {
+    id: "claim.sdk.external_surface_complete",
+    source: "v2.59.0 release notes",
+    text: "@mneme-ai/sdk's external public surface (what `import { ... } from \"@mneme-ai/sdk\"` returns) has every expected feature: standalone `letheForget` / `gavelPack` / `nimbusPublish` functions + convenience groups `lethe` / `gavel` / `nimbus` + NemesisSdk class with janusObserve / janusSwap / stealthScore / capillary / alibi / sibylCommit / sibylReveal methods. SDK_AUDITOR empirically imports the SDK + verifies — no static grep that can mock",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.sdk.external_surface_complete",
+    severity: "block",
+  },
+  {
+    id: "claim.gate.consistency",
+    source: "v2.59.0 release notes",
+    text: "WIRING DOCTOR and SDK_AUDITOR agree on every feature. Pre-v2.59 WIRING DOCTOR reported '13/13 wired' but external `import { letheForget } from \"@mneme-ai/sdk\"` was undefined (gate checked internal class file instead of external surface). v2.59 cross-checks both gates: contradictions = release block",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.gate.consistency",
+    severity: "block",
+  },
+
   // ── v2.58.0 — REAL 100% COVERAGE + LIVING LAB ───────────────────────
   {
     id: "claim.coverage.real_100_percent",

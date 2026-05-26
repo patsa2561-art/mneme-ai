@@ -19,6 +19,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { loadFreshAuditorReport } from "./sdk_surface_auditor.js";
 
 export type SurfaceStatus = "present" | "missing" | "unknown";
 
@@ -168,6 +169,8 @@ export function diagnose(repoRoot: string, opts: { features?: string[] } = {}): 
   const cliNemesis = readIfExists(join(repoRoot, "packages/cli/src/commands/v236_commands.ts"));
   const cliBody = cliTop + "\n" + cliNemesis;
   const claimsBody = readIfExists(join(repoRoot, "packages/core/src/truth_gate/claims.ts"));
+  // v2.59: pull in empirical SDK_AUDITOR report when available.
+  const auditor = loadFreshAuditorReport(repoRoot);
 
   const reports: FeatureReport[] = [];
   for (const f of features) {
@@ -181,7 +184,23 @@ export function diagnose(repoRoot: string, opts: { features?: string[] } = {}): 
       continue;
     }
     const core = checkSurface(coreBody, fixture.coreExportRegex);
-    const sdk = checkSurface(sdkBody, fixture.sdkMethodRegex);
+    // v2.59: SDK check uses BOTH static grep AND empirical SDK_AUDITOR
+    // report (when fresh). Empirical wins on disagreement — fresher,
+    // catches the v2.58 blind-spot where static grep saw the class
+    // method but external import surface was missing.
+    const sdkStatic = checkSurface(sdkBody, fixture.sdkMethodRegex);
+    let sdk = sdkStatic;
+    if (auditor) {
+      const finding = auditor.findings.find((x) => x.feature === f);
+      if (finding) {
+        if (finding.present) {
+          sdk = { status: "present", evidence: `empirical: ${finding.evidence}` };
+        } else {
+          // Empirical wins: external surface really is missing.
+          sdk = { status: "missing", evidence: `empirical: ${finding.evidence}` };
+        }
+      }
+    }
     const cli = checkSurface(cliBody, fixture.cliVerbRegex);
     const tg = checkSurface(claimsBody, fixture.tgClaimRegex);
     const ok = core.status === "present" && sdk.status === "present" && cli.status === "present" && tg.status === "present";
