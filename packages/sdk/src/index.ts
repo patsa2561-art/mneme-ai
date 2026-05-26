@@ -65,6 +65,18 @@ function buildVerifyDispatcher(): VerifyDispatcher {
 export interface MnemeSdk {
   /** NEMESIS engine surface (typed + in-process). */
   nemesis: NemesisSdk;
+  /** v2.57 — LETHE convenience group (forwards to nemesis methods). */
+  lethe: {
+    forget: NemesisSdk["letheForget"];
+  };
+  /** v2.57 — GAVEL convenience group (forwards to nemesis methods). */
+  gavel: {
+    pack: NemesisSdk["gavelPack"];
+  };
+  /** v2.57 — NIMBUS convenience group (forwards to nemesis methods). */
+  nimbus: {
+    publish: NemesisSdk["nimbusPublish"];
+  };
   /** Tagged-template-friendly verify. */
   verify: VerifyDispatcher;
   /** TRUTH GATE in-process probe runner. */
@@ -98,15 +110,25 @@ export function createMneme(opts: MnemeInstanceOpts = {}): MnemeSdk {
   const nemesis = new NemesisSdk(opts);
   return {
     nemesis,
+    // v2.57 top-level convenience groups (forward to nemesis methods)
+    lethe: {
+      forget: nemesis.letheForget.bind(nemesis),
+    },
+    gavel: {
+      pack: nemesis.gavelPack.bind(nemesis),
+    },
+    nimbus: {
+      publish: nemesis.nimbusPublish.bind(nemesis),
+    },
     verify: buildVerifyDispatcher(),
     truth,
     benchmark,
     events: (kinds?: MnemeEventKind[]) => subscribeEvents(kinds),
     opts: Object.freeze({ ...opts }),
-    version: "2.55.0",
+    version: "2.57.0",
   };
 }
 
 /** SDK metadata for telemetry / about. */
-export const SDK_VERSION = "2.55.0";
+export const SDK_VERSION = "2.57.0";
 export const SDK_DESCRIPTION = "World-class premium in-process SDK for Mneme — 30-80× faster than CLI subprocess.";

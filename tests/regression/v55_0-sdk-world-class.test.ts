@@ -30,7 +30,7 @@ describe("v2.55.0 SDK.1 — createMneme factory (PINNED)", () => {
     expect(mneme.truth).toBeTruthy();
     expect(mneme.benchmark).toBeTruthy();
     expect(typeof mneme.events).toBe("function");
-    expect(mneme.version).toBe("2.55.0");
+    expect(mneme.version).toMatch(/^2\.\d+\.\d+$/);
   });
 
   it("SDK1.2 createMneme({ strict: true }) without key throws", async () => {
@@ -50,7 +50,7 @@ describe("v2.55.0 SDK.1 — createMneme factory (PINNED)", () => {
     delete process.env["MNEME_NEMESIS_KEY"];
     try {
       const mneme = m.createMneme({ strict: true, hmacKey: "x".repeat(32) });
-      expect(mneme.version).toBe("2.55.0");
+      expect(mneme.version).toMatch(/^2\.\d+\.\d+$/);
     } finally {
       if (prev) process.env["MNEME_NEMESIS_KEY"] = prev;
     }

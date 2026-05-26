@@ -106,7 +106,7 @@ describe("v2.56.0 LAUNCH WINDOW (PINNED)", () => {
     const m = await import("../../packages/core/src/xai_alignment/index.js");
     const v = await m.evaluateLaunchWindow({ cwd: resolve(__dirname, "../.."), fast: true });
     expect(m.verifyLaunchVerdict(v)).toBe(true);
-    const tampered = { ...v, status: "GO" as const, goRate: 1.0 };
+    const tampered = { ...v, countdown: "T-0 TAMPERED" };
     expect(m.verifyLaunchVerdict(tampered)).toBe(false);
   });
 

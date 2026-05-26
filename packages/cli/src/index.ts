@@ -5029,6 +5029,152 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // ──────────────────────────────────────────────────────────────────
+  //  v2.57.0 — Top-level surface promotion (no `nemesis` prefix needed)
+  //  + WIRING DOCTOR primitive (AST-level per-feature check)
+  // ──────────────────────────────────────────────────────────────────
+
+  // 🧠 LETHE top-level alias
+  const letheParent = program
+    .command("lethe")
+    .description("🧠 v2.57 — LETHE alias (forwards to `mneme nemesis lethe_forget`). GDPR Art 17 forget primitive.");
+  letheParent.command("forget")
+    .description("Forget a row from a JSONL ledger. Use --ledger <p> --row <n> [--dry-run].")
+    .requiredOption("--ledger <p>", "Repo-relative ledger path")
+    .requiredOption("--row <n>", "Row index (0-based)", (v) => Number(v))
+    .option("--jurisdiction <t>", "GDPR jurisdiction tag", "EU-GDPR-Art17")
+    .option("--dry-run", "Build receipt without rewriting", false)
+    .action(async (opts: { ledger: string; row: number; jurisdiction?: string; dryRun?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.forgetRow({ repoRoot: process.cwd(), ledgerRelative: opts.ledger, rowIndex: opts.row, jurisdiction: opts.jurisdiction, dryRun: opts.dryRun ?? false });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+  letheParent.command("verify")
+    .description("Verify a ForgetReceipt cryptographically. Use --stdin.")
+    .option("--stdin", "Read receipt JSON from stdin")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chunks: Buffer[] = []; for await (const c of process.stdin) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks).toString("utf8").trim();
+        if (!body) { process.stdout.write(JSON.stringify({ ok: false, error: "pass receipt JSON via stdin" }) + "\n"); process.exitCode = 1; return; }
+        const v = core.nemesis.verifyForgetReceipt(JSON.parse(body));
+        process.stdout.write(JSON.stringify(v, null, 2) + "\n"); if (!v.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+
+  // ⚖ GAVEL top-level alias
+  const gavelParent = program
+    .command("gavel")
+    .description("⚖ v2.57 — GAVEL alias (forwards to `mneme nemesis gavel_pack/verify`). Court-admissible bundle.");
+  gavelParent.command("pack")
+    .description("Bind THEMIS + EU stamp + SIBYL into court-admissible Merkle bundle. Use --stdin.")
+    .option("--stdin", "Read bundle input JSON from stdin")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chunks: Buffer[] = []; for await (const c of process.stdin) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks).toString("utf8").trim();
+        if (!body) { process.stdout.write(JSON.stringify({ ok: false, error: "pass bundle input JSON via stdin" }) + "\n"); process.exitCode = 1; return; }
+        const r = core.nemesis.buildGavelBundle(JSON.parse(body));
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n"); if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+  gavelParent.command("verify")
+    .description("Verify bundle HMAC + Merkle root + per-artifact signature. Use --stdin.")
+    .option("--stdin", "Read bundle JSON from stdin")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chunks: Buffer[] = []; for await (const c of process.stdin) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks).toString("utf8").trim();
+        if (!body) { process.stdout.write(JSON.stringify({ ok: false, error: "pass bundle JSON via stdin" }) + "\n"); process.exitCode = 1; return; }
+        const v = core.nemesis.verifyGavelBundle(JSON.parse(body));
+        process.stdout.write(JSON.stringify(v, null, 2) + "\n"); if (!v.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+
+  // 🌐 NIMBUS top-level alias
+  const nimbusParent = program
+    .command("nimbus")
+    .description("🌐 v2.57 — NIMBUS alias (forwards to `mneme nemesis nimbus_*`). Federated trust mesh.");
+  nimbusParent.command("publish")
+    .description("Publish leaderboard card to local pub-store. Use --stdin or --org-tag.")
+    .option("--stdin", "Read publish input JSON from stdin")
+    .option("--org-tag <name>", "Org tag (alternative to --stdin)")
+    .action(async (opts: { stdin?: boolean; orgTag?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        let j: { orgTag?: string } | null = null;
+        if (opts.stdin) {
+          const chunks: Buffer[] = []; for await (const c of process.stdin) chunks.push(c as Buffer);
+          const body = Buffer.concat(chunks).toString("utf8").trim();
+          if (body) j = JSON.parse(body);
+        }
+        const orgTag = opts.orgTag ?? j?.orgTag;
+        if (!orgTag) { process.stdout.write(JSON.stringify({ ok: false, error: "orgTag required (--org-tag or via stdin)" }) + "\n"); process.exitCode = 1; return; }
+        const input = { ...(j ?? {}), repoRoot: process.cwd(), orgTag };
+        const r = core.nemesis.publishCard(input as Parameters<typeof core.nemesis.publishCard>[0]);
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n"); if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+  nimbusParent.command("subscribe")
+    .description("Subscribe to foreign org's card. Verifies HMAC + expiry. --trust <0..1> optional.")
+    .option("--stdin", "Read card JSON from stdin")
+    .option("--trust <n>", "Local trust weight (0..1)", (v) => Number(v), 0.5)
+    .action(async (opts: { trust?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const chunks: Buffer[] = []; for await (const c of process.stdin) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks).toString("utf8").trim();
+        if (!body) { process.stdout.write(JSON.stringify({ ok: false, error: "pass card JSON via stdin" }) + "\n"); process.exitCode = 1; return; }
+        const r = core.nemesis.subscribeCard({ repoRoot: process.cwd(), card: JSON.parse(body), trustWeight: opts.trust });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n"); if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+  nimbusParent.command("reputation")
+    .description("Compute cross-org weighted vendor reputation from subscribed cards.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.nemesis.computeCrossOrgReputation(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: true, vendors: r }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+
+  // 🤯 WIRING DOCTOR — AST-level per-feature surface check
+  program
+    .command("wiring_doctor")
+    .description("🤯 v2.57 — WIRING DOCTOR: scan core / sdk / cli source for per-feature surface coverage (core export · SDK method · CLI verb · TG claim). Replaces commit-msg parsing with structural verification.")
+    .option("--features <list...>", "Features to check (default: lethe / gavel / nimbus / janus / stargate / dragon / launch_window)")
+    .action(async (opts: { features?: string[] }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.wiringDoctor.diagnose(process.cwd(), { features: opts.features });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n"); process.exitCode = 1;
+      }
+    });
+
   // v2.53.0 — CATALOG COUNT single source of truth.
   const catalogParent = program
     .command("catalog")

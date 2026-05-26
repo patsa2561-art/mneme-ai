@@ -40,8 +40,44 @@ export interface WiringLagResult {
 }
 
 /**
- * Parse `git log -N --format` output + extract every `mneme <verb> [subverb]`
- * claim. Returns deduplicated list of verbs.
+ * Stop-words that follow "Mneme" in natural prose, never CLI verbs.
+ * v2.57 fix: pre-v2.57 the extractor matched `mneme <next-word>` greedily
+ * and treated "Mneme is the X" / "Mneme ships Y" as CLI claims, then
+ * spawned `mneme is --help` (unknown command). Whole gate was false-
+ * positive on every doc commit. This list kills the bug class.
+ */
+const PROSE_STOPWORDS: ReadonlySet<string> = new Set([
+  // English copula / common verbs
+  "is", "isn", "are", "aren", "was", "were", "be", "been", "being",
+  "has", "have", "had", "having",
+  "does", "do", "did", "doing", "doesn", "don", "didn",
+  "will", "would", "could", "should", "shall", "may", "might", "must", "can",
+  // English motion / position
+  "inside", "outside", "on", "off", "in", "into", "onto", "at", "to", "from",
+  "for", "with", "without", "between", "through", "across", "around",
+  // English transitive verbs typical in prose about Mneme
+  "ships", "ship", "runs", "ran", "makes", "made", "uses", "used", "needs", "needed",
+  "treats", "treat", "knows", "knew", "calls", "called", "becomes", "became",
+  "stands", "stood", "lives", "lived", "sits", "sat", "wraps", "wrapped",
+  "exposes", "exposed", "adds", "added", "removes", "removed",
+  // Determiners / pronouns
+  "the", "a", "an", "this", "that", "these", "those", "its", "their", "your", "our", "my", "his", "her", "all", "any", "some",
+  // Negation / modal helpers
+  "not", "no", "never", "always", "only", "even", "still", "yet",
+  // Conjunctions
+  "and", "or", "but", "so", "if", "then", "when", "while",
+  // Common adjectives that follow "Mneme"
+  "first", "last", "next", "now", "today", "tomorrow",
+  // Existing commit-prefix words (kept from pre-v2.57)
+  "release", "version", "init", "log", "diff", "status", "push", "config",
+  // Strategy / marketing prose words
+  "as", "primitive", "of", "by", "via", "per",
+]);
+
+/**
+ * v2.57 fix: only extract verbs from BACKTICK-wrapped strings or from
+ * explicit CLI markers (` $ mneme X` / `Run: mneme X` / `CLI: mneme X`).
+ * Free-text "Mneme is the X" → no longer captured.
  */
 export function extractClaimedVerbs(repoRoot: string, opts: { maxCommits?: number } = {}): { verbs: ClaimedVerb[]; scannedCommits: number } {
   const maxCommits = opts.maxCommits ?? 10;
@@ -50,7 +86,7 @@ export function extractClaimedVerbs(repoRoot: string, opts: { maxCommits?: numbe
       encoding: "utf8", timeout: 8000,
     });
     const entries = log.split("--MNEMESPLIT--").filter((s) => s.trim());
-    const verbs = new Map<string, ClaimedVerb>(); // key = full
+    const verbs = new Map<string, ClaimedVerb>();
     let scanned = 0;
     for (const e of entries) {
       const lines = e.trim().split("\n");
@@ -59,20 +95,31 @@ export function extractClaimedVerbs(repoRoot: string, opts: { maxCommits?: numbe
       if (!sha) continue;
       scanned++;
       const body = lines.slice(1).join("\n");
-      // Match `mneme <verb> [subverb]` — exclude commit prefix words
-      const matches = body.match(/`?mneme\s+([a-z_][a-z0-9_]*)(?:\s+([a-z_][a-z0-9_]*))?`?/gi) ?? [];
-      for (const m of matches) {
-        const inner = m.match(/mneme\s+([a-z_][a-z0-9_]*)(?:\s+([a-z_][a-z0-9_]*))?/i);
-        if (!inner) continue;
-        const verb = inner[1]!.toLowerCase();
-        const subverb = inner[2]?.toLowerCase();
-        // Skip common false-positives (commit subject prefixes / placeholders)
-        if (["release", "version", "init", "log", "diff", "status", "push", "config"].includes(verb)) continue;
+
+      // Strategy 1: backtick-wrapped — `mneme <verb> [subverb]`
+      const tickMatches = body.matchAll(/`mneme\s+([a-z_][a-z0-9_]*)(?:\s+([a-z_][a-z0-9_]*))?[^`]*`/gi);
+      // Strategy 2: explicit CLI marker — `$ mneme ...` / `Run: mneme ...` / `CLI: mneme ...`
+      const cliMarkers = body.matchAll(/(?:^|\s)(?:\$|Run:|CLI:|Use:|cmd:)\s*mneme\s+([a-z_][a-z0-9_]*)(?:\s+([a-z_][a-z0-9_]*))?/gim);
+
+      const collect = (m: RegExpMatchArray): void => {
+        const verb = m[1]?.toLowerCase();
+        const subverb = m[2]?.toLowerCase();
+        if (!verb) return;
+        if (PROSE_STOPWORDS.has(verb)) return;
+        if (subverb && PROSE_STOPWORDS.has(subverb)) {
+          // verb might be real, subverb is prose noise → use verb-only
+          const full = `mneme ${verb}`;
+          if (!verbs.has(full)) verbs.set(full, { full, verb, source: { sha: sha.slice(0, 7), subject } });
+          return;
+        }
         const full = subverb ? `mneme ${verb} ${subverb}` : `mneme ${verb}`;
         if (!verbs.has(full)) {
           verbs.set(full, { full, verb, subverb, source: { sha: sha.slice(0, 7), subject } });
         }
-      }
+      };
+
+      for (const m of tickMatches) collect(m);
+      for (const m of cliMarkers) collect(m);
     }
     return { verbs: Array.from(verbs.values()), scannedCommits: scanned };
   } catch (e) {

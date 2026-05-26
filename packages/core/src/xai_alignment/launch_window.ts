@@ -140,7 +140,7 @@ export async function evaluateLaunchWindow(opts: LaunchWindowOpts = {}): Promise
     }),
   ));
 
-  // Gate 4: WIRING LAG (fast subset: 3 commits)
+  // Gate 4: WIRING LAG (fast subset: 3 commits) — v2.57 false-positive-fixed
   gates.push(await gateFromAggregator(
     "wiring_lag", 1.0,
     async () => {
@@ -150,6 +150,19 @@ export async function evaluateLaunchWindow(opts: LaunchWindowOpts = {}): Promise
     (r) => ({
       ok: r.ok,
       evidence: r.ok ? `${r.workingCount}/${r.totalClaims} verbs work` : `BROKEN: ${r.brokenCount}/${r.totalClaims}`,
+    }),
+  ));
+
+  // Gate 4b (v2.57): WIRING DOCTOR — AST-level per-feature surface check
+  gates.push(await gateFromAggregator(
+    "wiring_doctor", 1.5,
+    async () => {
+      const m = await import("../release_gate/wiring_doctor.js" as string) as typeof import("../release_gate/wiring_doctor.js");
+      return m.diagnose(cwd);
+    },
+    (r) => ({
+      ok: r.ok,
+      evidence: r.ok ? `${r.summary.healthy}/${r.summary.total} features wired across core/sdk/cli/tg` : `${r.summary.broken}/${r.summary.total} features missing surface — run \`mneme wiring_doctor\` to drill in`,
     }),
   ));
 

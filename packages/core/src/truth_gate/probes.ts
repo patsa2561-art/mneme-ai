@@ -997,6 +997,79 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.57.0 — WIRING DOCTOR + extractor false-positive fix ──────────
+  //
+  // 1. probe.wiring.doctor_all_features_healthy — every recent primitive
+  //    has full surface coverage (core / sdk / cli / tg-claim).
+  // 2. probe.wiring.lag_extractor_no_false_positives — extractor only
+  //    matches backtick-wrapped or explicit CLI markers (skips prose).
+  // 3. probe.coverage.smart_auto_exemption — read-only patterns
+  //    auto-exempt without manual COVERAGE_EXEMPT entry.
+  {
+    id: "probe.wiring.doctor_all_features_healthy",
+    kind: "numeric",
+    description: "1 when WIRING DOCTOR reports 13/13 features with full surface coverage (core export + SDK method + CLI verb + TG claim).",
+    run: async (ctx) => {
+      try {
+        const { diagnose } = await import("../release_gate/wiring_doctor.js" as string) as typeof import("../release_gate/wiring_doctor.js");
+        const r = diagnose(ctx.cwd);
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok
+            ? `${r.summary.healthy}/${r.summary.total} features fully wired`
+            : `${r.summary.broken}/${r.summary.total} feature(s) missing surface — ${r.features.filter((f) => !f.ok).map((f) => f.feature).join(", ")}`,
+          detail: { summary: r.summary },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.wiring.lag_extractor_no_false_positives",
+    kind: "numeric",
+    description: "1 when wiring_lag extractor REJECTS natural-prose 'mneme is/ships/inside' patterns + ONLY accepts backtick-wrapped or explicit CLI markers.",
+    run: async (ctx) => {
+      try {
+        const { extractClaimedVerbs } = await import("../release_gate/wiring_lag.js" as string) as typeof import("../release_gate/wiring_lag.js");
+        // Use repo's own history as the corpus
+        const r = extractClaimedVerbs(ctx.cwd, { maxCommits: 8 });
+        // No verb should match a prose stop-word
+        const stopwords = ["is", "are", "ships", "inside", "is_the", "for", "as", "primitive"];
+        const bad = r.verbs.filter((v) => stopwords.includes(v.verb));
+        return {
+          value: bad.length === 0 ? 1 : 0,
+          evidence: bad.length === 0
+            ? `${r.verbs.length} verbs extracted from ${r.scannedCommits} commits, all real CLI verbs`
+            : `BLOCKED: extracted prose words: ${bad.map((b) => b.verb).join(", ")}`,
+          detail: { totalVerbs: r.verbs.length, scannedCommits: r.scannedCommits },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.coverage.smart_auto_exemption",
+    kind: "numeric",
+    description: "1 when probe_coverage gate accepts repo's actual state (coverage% ≥ threshold 50%) after smart auto-exemption of read-only patterns.",
+    run: async (ctx) => {
+      try {
+        const { crossCheckFromDisk } = await import("../release_gate/probe_coverage.js" as string) as typeof import("../release_gate/probe_coverage.js");
+        const r = crossCheckFromDisk(ctx.cwd, { threshold: 50 });
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok
+            ? `coverage ${r.coveragePercent}% ≥ threshold ${r.threshold}% (smart auto-exemption active)`
+            : `coverage ${r.coveragePercent}% < threshold ${r.threshold}%`,
+          detail: { coveragePercent: r.coveragePercent, threshold: r.threshold, uncovered: r.uncovered.length },
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.56.0 — xAI / GROK / SpaceX ALIGNMENT bindings ────────────────
   //
   // 1. probe.xai.grok_first_class — Grok in allowlist + NOT in leak list

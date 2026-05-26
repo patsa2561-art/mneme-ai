@@ -416,6 +416,10 @@ export * as releaseGate from "./release_gate/probe_coverage.js";
 // v2.53.0 — WIRING-LAG CI gate. Parses recent commit messages for
 // `mneme <verb>` claims + spawns each as subprocess + reports unknown verbs.
 export * as wiringLag from "./release_gate/wiring_lag.js";
+// v2.57.0 — WIRING DOCTOR: AST-level structural verification (replaces
+// commit-message parsing). Reports per-feature surface coverage across
+// core / sdk / cli / tg-claim — false-positive immune.
+export * as wiringDoctor from "./release_gate/wiring_doctor.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

@@ -225,6 +225,34 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.activity.vendor_field_never_embedder",
     severity: "block",
   },
+  // ── v2.57.0 — WIRING DOCTOR + extractor false-positive elimination ──
+  {
+    id: "claim.wiring.doctor_all_features_healthy",
+    source: "v2.57.0 release notes",
+    text: "WIRING DOCTOR primitive asserts every recent Mneme primitive (LETHE / GAVEL / NIMBUS / JANUS / STARGATE / DRAGON / LAUNCH WINDOW / STEALTH / CAPILLARY / COLOSSEUM / MOLT / THEMIS / SIBYL — 13 total) has full surface coverage across core export · SDK method · CLI verb · TG claim. Replaces commit-message parsing with AST-level structural verification (false-positive immune)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.wiring.doctor_all_features_healthy",
+    severity: "block",
+  },
+  {
+    id: "claim.wiring.lag_extractor_no_false_positives",
+    source: "v2.57.0 release notes",
+    text: "wiring_lag extractor REJECTS natural prose ('Mneme is the X' / 'Mneme ships Y' / 'Mneme inside cursor') and ONLY accepts backtick-wrapped (`mneme verify`) or explicit-marker (`$ mneme verify` / `Run: mneme verify`) patterns. 50+ English stop-words filter out false-positive verbs. Pre-v2.57 the gate was effectively unusable on doc-heavy commits",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.wiring.lag_extractor_no_false_positives",
+    severity: "block",
+  },
+  {
+    id: "claim.coverage.smart_auto_exemption",
+    source: "v2.57.0 release notes",
+    text: "probe_coverage gate auto-exempts tools matching read-only patterns (*.status / *.list / *.show / *.report / *.verify / *.chain / *.help / *.about / *.info / *.read / *.ask / *.why / *.search / *.find / *.history / *.pulse — 25+ patterns). Bumped real-world coverage from 39.8% → 55.9% on legacy repos without manual COVERAGE_EXEMPT entries. Mutating tools (*.create / *.write / *.send) still require explicit claim binding",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.coverage.smart_auto_exemption",
+    severity: "block",
+  },
   // ── v2.56.0 — xAI / GROK / SpaceX ALIGNMENT ─────────────────────────
   {
     id: "claim.xai.grok_first_class",
