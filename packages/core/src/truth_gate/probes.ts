@@ -1070,6 +1070,54 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.62.0 — MIRRAGE (live conscience via MCP reverse-channel) ─────
+  //
+  // 1. probe.mirrage.scans_with_nudges — on a synthetic "React 19 always"
+  //    fixture, scanDraft fires at least one nudge AND the nudge is
+  //    suggestion-or-higher.
+  // 2. probe.mirrage.ledger_chain_intact — HMAC chain on the live nudge ledger.
+  {
+    id: "probe.mirrage.scans_with_nudges",
+    kind: "numeric",
+    description: "1 when MIRRAGE detects refutable claims on a synthetic absolute-claim fixture and grades them at suggestion level or higher.",
+    run: async () => {
+      try {
+        const m = await import("../mirrage/index.js" as string) as typeof import("../mirrage/index.js");
+        const r = m.scanDraft({
+          draft: "React 19 always ships server components by default.",
+          agent: "probe-agent",
+          noLedger: true,
+          noFatigueGate: true,
+        });
+        const fired = r.nudges.length > 0;
+        const highEnough = r.nudges.some((n) => ["suggestion", "warning", "block", "reject"].includes(n.level));
+        return {
+          value: fired && highEnough ? 1 : 0,
+          evidence: fired ? `${r.nudges.length} nudge(s) — levels: ${r.nudges.map((n) => n.level).join(",")}` : "no nudges fired",
+        };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.mirrage.ledger_chain_intact",
+    kind: "numeric",
+    description: "1 when MIRRAGE nudge ledger HMAC chain verifies (or is absent — first-run).",
+    run: async (ctx) => {
+      try {
+        const m = await import("../mirrage/index.js" as string) as typeof import("../mirrage/index.js");
+        const r = m.verifyLedgerChain(ctx.cwd);
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok ? `chain intact (${r.rows} entries)` : `broken at row ${r.brokenAt}`,
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.61.0 — PASSPORT (capability-based security for MCP) ──────────
   //
   // 1. probe.passport.issue_verify_revoke_round_trip — end-to-end:

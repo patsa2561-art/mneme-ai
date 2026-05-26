@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.62.0 — MIRRAGE (live conscience via MCP reverse-channel) ─────
+  {
+    id: "claim.mirrage.scans_with_nudges",
+    source: "v2.62.0 release notes",
+    text: "MIRRAGE detects refutable claims in agent drafts via lightweight heuristic (hedge density - absolute density + entity density). On the synthetic 'React 19 always ships server components by default' fixture, at least one nudge fires at suggestion-or-higher level. Conscience ladder grades by 5 tiers (hint/suggestion/warning/block/reject); blocking tiers refuse ship until retract",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.mirrage.scans_with_nudges",
+    severity: "block",
+  },
+  {
+    id: "claim.mirrage.ledger_chain_intact",
+    source: "v2.62.0 release notes",
+    text: "MIRRAGE nudge ledger is HMAC-chained — every scan + ack + broadcast row's HMAC depends on the previous row's HMAC. Tamper-evident; court-admissible record of what the agent was warned about + when",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.mirrage.ledger_chain_intact",
+    severity: "block",
+  },
+
   // ── v2.61.0 — PASSPORT (capability-based security for MCP) ──────────
   {
     id: "claim.passport.issue_verify_revoke_round_trip",

@@ -443,6 +443,10 @@ export * as skeletonKey from "./skeleton_key/index.js";
 // + HONEST_MIRROR + STEALTH; delegation chain + HMAC-chained audit
 // ledger + revocation cascade.
 export * as passport from "./passport/index.js";
+// v2.62.0 — MIRRAGE: live conscience for AI agents. Reverse-channel ACGV
+// nudges via 5-level conscience ladder + nudge-fatigue gating +
+// cross-agent wisdom broadcast + HMAC-chained nudge ledger.
+export * as mirrage from "./mirrage/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

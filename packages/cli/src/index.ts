@@ -4878,6 +4878,108 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.62.0 — MIRRAGE: live conscience for AI agents via MCP reverse-channel.
+  // Agent calls `mneme.mirrage.scan {draft}` BEFORE shipping; per-sentence
+  // nudges (5-level conscience ladder) + suggested edit + ship-block on
+  // critical findings.
+  const mirrageParent = program
+    .command("mirrage")
+    .description("v2.62 — live conscience. Default action = ledger audit.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.mirrage.verifyLedgerChain(process.cwd());
+        const rows = core.mirrage.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, rows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-10) }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  mirrageParent.command("scan")
+    .description("Scan a draft for refutable claims. Returns per-sentence nudges + suggested edit + ship-block decision.")
+    .requiredOption("--draft <text>", "Draft text (or use --stdin)")
+    .requiredOption("--agent <id>", "Requesting agent identifier")
+    .option("--cursor <n>", "Streaming mode: only scan sentences ending before this offset", (v) => Number(v))
+    .option("--min-risk <n>", "Risk threshold below which no nudge is emitted (default 0.30)", (v) => Number(v), 0.30)
+    .option("--banner", "Render ASCII banner instead of JSON")
+    .action(async (opts: { draft: string; agent: string; cursor?: number; minRisk?: number; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.mirrage.scanDraft({
+          draft: opts.draft,
+          agent: opts.agent,
+          cursorPos: opts.cursor,
+          minRisk: opts.minRisk ?? 0.30,
+          cwd: process.cwd(),
+        });
+        if (opts.banner) process.stdout.write(core.mirrage.renderBanner(r) + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (r.blocksShip) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  mirrageParent.command("ack")
+    .description("Acknowledge a nudge (closes alert + bumps fatigue counter + optional cross-agent wisdom broadcast).")
+    .requiredOption("--scan-id <id>", "Scan id from a prior scan")
+    .requiredOption("--nudge-id <id>", "Nudge id within that scan")
+    .requiredOption("--agent <id>", "Acknowledging agent")
+    .option("--broadcast", "Append lesson to cross-agent wisdom feed")
+    .option("--sentence <text>", "Sentence (required if --broadcast)")
+    .option("--level <l>", "Conscience level (hint/suggestion/warning/block/reject)")
+    .option("--reason <r>", "Why the agent acked")
+    .option("--fingerprint <fp>", "Fingerprint hash (for fatigue gating)")
+    .action(async (opts: { scanId: string; nudgeId: string; agent: string; broadcast?: boolean; sentence?: string; level?: string; reason?: string; fingerprint?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.mirrage.acknowledgeNudge({
+          scanId: opts.scanId,
+          nudgeId: opts.nudgeId,
+          agent: opts.agent,
+          broadcast: opts.broadcast === true,
+          sentence: opts.sentence,
+          level: opts.level as import("@mneme-ai/core").mirrage.NudgeLevel | undefined,
+          reason: opts.reason,
+          fingerprint: opts.fingerprint,
+          cwd: process.cwd(),
+        });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  mirrageParent.command("wisdom")
+    .description("Show cross-agent wisdom feed (lessons broadcast after nudge acks).")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const rows = core.mirrage.readWisdom(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: true, total: rows.length, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  mirrageParent.command("audit")
+    .description("Verify the HMAC-chained nudge ledger + last N entries.")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.mirrage.verifyLedgerChain(process.cwd());
+        const rows = core.mirrage.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.61.0 — PASSPORT: capability-based security for MCP.
   // Agents request HMAC-signed passports before sensitive tool calls;
   // trust score gates issuance; delegation chain + revocation cascade
