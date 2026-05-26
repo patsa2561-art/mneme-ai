@@ -1070,6 +1070,63 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.66.0 — REFLOG (time-machine — final primitive) ───────────────
+  //
+  // 1. probe.reflog.checkpoint_rewind_round_trip — create 2 checkpoints
+  //    with a file change between, rewind preview returns the change as
+  //    toRevert, HMAC verifies, ledger intact.
+  // 2. probe.reflog.ledger_chain_intact — HMAC chain on the live ledger.
+  {
+    id: "probe.reflog.checkpoint_rewind_round_trip",
+    kind: "numeric",
+    description: "1 when REFLOG round-trips on a fresh temp repo: 2 checkpoints around a file edit, rewindPreview returns toRevert containing the edited file, HMAC envelope verifies.",
+    run: async () => {
+      try {
+        const m = await import("../reflog/index.js" as string) as typeof import("../reflog/index.js");
+        const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const cwd = mkdtempSync(join(tmpdir(), "mneme-rf-probe-"));
+        try {
+          writeFileSync(join(cwd, "a.txt"), "v1");
+          const cp1 = m.createCheckpoint({ cwd });
+          // mutate
+          writeFileSync(join(cwd, "a.txt"), "v2 mutated");
+          m.createCheckpoint({ cwd });
+          // preview rewind to cp1
+          const r = m.rewindPreview({ cwd, checkpointId: cp1.checkpoint.id });
+          if (!r.ok) return { value: 0, evidence: `proposal not ok: ${r.summary}` };
+          if (r.toRevert.length !== 1 || r.toRevert[0]!.path !== "a.txt") {
+            return { value: 0, evidence: `expected toRevert=[a.txt], got ${JSON.stringify(r.toRevert.map((x) => x.path))}` };
+          }
+          if (!m.verifyRewindProposal(r)) return { value: 0, evidence: "proposal HMAC failed" };
+          return { value: 1, evidence: `rewind proposes ${r.toRevert.length} file(s) to revert, target=${r.targetCheckpoint.id}` };
+        } finally {
+          rmSync(cwd, { recursive: true, force: true });
+        }
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.reflog.ledger_chain_intact",
+    kind: "numeric",
+    description: "1 when REFLOG ledger HMAC chain verifies (or is absent — first-run).",
+    run: async (ctx) => {
+      try {
+        const m = await import("../reflog/index.js" as string) as typeof import("../reflog/index.js");
+        const r = m.verifyLedgerChain(ctx.cwd);
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok ? `chain intact (${r.rows} entries)` : `broken at row ${r.brokenAt}`,
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.65.0 — SWARM BUS (cross-agent message bus) ───────────────────
   //
   // 1. probe.swarm_bus.broadcast_drain_handoff — end-to-end on a fresh

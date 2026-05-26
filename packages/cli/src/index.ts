@@ -4878,6 +4878,92 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.66.0 — REFLOG: cross-session time-machine.
+  const reflogParent = program
+    .command("reflog")
+    .description("v2.66 — time-machine: per-file checkpoints + selective rewind. Default = list checkpoints.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const list = core.reflog.listCheckpoints(process.cwd());
+        const led = core.reflog.verifyLedgerChain(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, checkpoints: list, ledger: led }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  reflogParent.command("checkpoint")
+    .description("Create an HMAC-signed checkpoint of all tracked files with pheromone tag.")
+    .option("--label <text>", "Optional label (e.g. 'before refactor')")
+    .option("--include <list>", "Comma-separated include globs", (v) => v.split(",").map((s) => s.trim()).filter(Boolean), ["**/*"])
+    .option("--exclude <list>", "Comma-separated additional exclude globs", (v) => v.split(",").map((s) => s.trim()).filter(Boolean), [])
+    .option("--max-files <n>", "Max files to track (default 5000)", (v) => Number(v), 5000)
+    .action(async (opts: { label?: string; include?: string[]; exclude?: string[]; maxFiles?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.reflog.createCheckpoint({ cwd: process.cwd(), label: opts.label, include: opts.include, exclude: opts.exclude, maxFiles: opts.maxFiles });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  reflogParent.command("list")
+    .description("List all checkpoints with timestamps + pheromone tags.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const list = core.reflog.listCheckpoints(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: true, count: list.length, checkpoints: list }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  reflogParent.command("rewind")
+    .description("PREVIEW a rewind proposal (dry-run by design). Returns toRevert + toKeep with HMAC proof. Apply manually via your IDE.")
+    .option("--since <window>", "Time window like '2h', '30m', '1d'")
+    .option("--checkpoint <id>", "Specific checkpoint id")
+    .option("--include <list>", "Comma-separated include globs", (v) => v.split(",").map((s) => s.trim()).filter(Boolean), [])
+    .option("--exclude <list>", "Comma-separated exclude globs (e.g. 'tests/**')", (v) => v.split(",").map((s) => s.trim()).filter(Boolean), [])
+    .option("--pheromone <name>", "Only rewind files where target checkpoint pheromone equals this")
+    .option("--banner", "Render ASCII banner instead of JSON")
+    .action(async (opts: { since?: string; checkpoint?: string; include?: string[]; exclude?: string[]; pheromone?: string; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.reflog.rewindPreview({
+          cwd: process.cwd(),
+          since: opts.since,
+          checkpointId: opts.checkpoint,
+          include: opts.include,
+          exclude: opts.exclude,
+          pheromone: opts.pheromone,
+        });
+        if (opts.banner) process.stdout.write(core.reflog.renderRewindBanner(r) + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  reflogParent.command("audit")
+    .description("Verify HMAC-chained reflog ledger + last N entries.")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.reflog.verifyLedgerChain(process.cwd());
+        const rows = core.reflog.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.65.0 — SWARM BUS: cross-agent message bus.
   const swarmBusParent = program
     .command("swarm_bus")

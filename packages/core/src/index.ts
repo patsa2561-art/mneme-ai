@@ -459,6 +459,10 @@ export * as diffArena from "./diff_arena/index.js";
 // Per-agent inbox + Lamport causal order + artifact HMAC verify +
 // channel ACL via passport + handoff narrative + HMAC-chained ledger.
 export * as swarmBus from "./swarm_bus/index.js";
+// v2.66.0 — REFLOG: cross-session time-machine. HMAC-signed per-file
+// checkpoints + AI pheromone tagging + path-predicate filter +
+// dry-run rewind proposal + HMAC-chained ledger. Closes the septet.
+export * as reflog from "./reflog/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

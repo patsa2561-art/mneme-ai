@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.66.0 — REFLOG (time-machine, final primitive) ────────────────
+  {
+    id: "claim.reflog.checkpoint_rewind_round_trip",
+    source: "v2.66.0 release notes",
+    text: "REFLOG round-trips on a fresh temp repo: 2 HMAC-signed per-file checkpoints with AI pheromone tag around a file edit, rewindPreview returns toRevert containing exactly the edited file with target SHA matching cp1, valid HMAC envelope. Time-machine works as designed; closes the 7-primitive septet",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.reflog.checkpoint_rewind_round_trip",
+    severity: "block",
+  },
+  {
+    id: "claim.reflog.ledger_chain_intact",
+    source: "v2.66.0 release notes",
+    text: "REFLOG ledger is HMAC-chained — every checkpoint + rewind_preview row's HMAC depends on previous row's HMAC. Same canonical-JSON convention as PASSPORT/MIRRAGE/TIME-CRYSTAL/DIFF-ARENA/SWARM-BUS. Tamper-evident time-machine history",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.reflog.ledger_chain_intact",
+    severity: "block",
+  },
+
   // ── v2.65.0 — SWARM BUS (cross-agent message bus) ───────────────────
   {
     id: "claim.swarm_bus.broadcast_drain_handoff",
