@@ -4878,6 +4878,129 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.65.0 — SWARM BUS: cross-agent message bus.
+  const swarmBusParent = program
+    .command("swarm_bus")
+    .description("v2.65 — cross-agent message bus. Default action = audit ledger.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.swarmBus.verifyLedgerChain(process.cwd());
+        const rows = core.swarmBus.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, rows: led.rows, brokenAt: led.brokenAt, channels: core.swarmBus.listChannels(process.cwd()), recent: rows.slice(-10) }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("subscribe")
+    .description("Subscribe an agent to a channel. Auto-creates public channel if not exists.")
+    .requiredOption("--channel <name>", "Channel name")
+    .requiredOption("--agent <id>", "Agent id")
+    .option("--passport <token>", "Capability passport (required for private channels)")
+    .action(async (opts: { channel: string; agent: string; passport?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = await core.swarmBus.subscribe({ channel: opts.channel, agent: opts.agent, passportToken: opts.passport, cwd: process.cwd() });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("broadcast")
+    .description("Broadcast a message to a channel. Optional artifact HMAC for tamper-evident handoffs.")
+    .requiredOption("--channel <name>", "Channel name")
+    .requiredOption("--from <agent>", "Sender agent id")
+    .requiredOption("--text <text>", "Message text")
+    .option("--artifact-path <path>", "Optional relative path to artifact")
+    .option("--artifact-hmac <hash>", "Optional HMAC/SHA of artifact for tamper detection")
+    .option("--passport <token>", "Capability passport (required for private channels)")
+    .action(async (opts: { channel: string; from: string; text: string; artifactPath?: string; artifactHmac?: string; passport?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = await core.swarmBus.broadcast({ channel: opts.channel, from: opts.from, text: opts.text, artifactPath: opts.artifactPath, artifactHmac: opts.artifactHmac, passportToken: opts.passport, cwd: process.cwd() });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("drain")
+    .description("Drain (pop) pending messages for an agent. Returns inbox content + clears it.")
+    .requiredOption("--agent <id>", "Agent id")
+    .option("--channel <name>", "Optional channel filter")
+    .option("--limit <n>", "Max messages to drain", (v) => Number(v))
+    .option("--banner", "Render ASCII inbox banner")
+    .action(async (opts: { agent: string; channel?: string; limit?: number; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.swarmBus.drain({ agent: opts.agent, channel: opts.channel, limit: opts.limit, cwd: process.cwd() });
+        if (opts.banner) process.stdout.write(core.swarmBus.renderInbox(r.messages) + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("peek")
+    .description("Peek at an agent's inbox without consuming.")
+    .requiredOption("--agent <id>", "Agent id")
+    .action(async (opts: { agent: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const messages = core.swarmBus.peekInbox(process.cwd(), opts.agent);
+        process.stdout.write(JSON.stringify({ ok: true, count: messages.length, messages }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("handoff")
+    .description("Render the agent → agent → agent handoff chain for a channel with HMAC proof per step.")
+    .requiredOption("--channel <name>", "Channel name")
+    .option("--banner", "Render ASCII")
+    .action(async (opts: { channel: string; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.swarmBus.auditHandoff(process.cwd(), opts.channel);
+        if (opts.banner) process.stdout.write(r.rendered + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("channels")
+    .description("List all channels with kind + subscriber count + Lamport clock.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const channels = core.swarmBus.listChannels(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: true, count: channels.length, channels }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  swarmBusParent.command("audit")
+    .description("Verify HMAC-chained bus ledger + show last N entries.")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.swarmBus.verifyLedgerChain(process.cwd());
+        const rows = core.swarmBus.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.64.0 — DIFFERENTIAL ARENA: multi-vendor consensus by default.
   const diffArenaParent = program
     .command("diff_arena")

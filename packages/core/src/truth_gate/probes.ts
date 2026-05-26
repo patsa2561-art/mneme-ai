@@ -1070,6 +1070,59 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.65.0 — SWARM BUS (cross-agent message bus) ───────────────────
+  //
+  // 1. probe.swarm_bus.broadcast_drain_handoff — end-to-end on a fresh
+  //    temp ledger: subscribe → broadcast → drain → handoff narrative.
+  // 2. probe.swarm_bus.ledger_chain_intact — HMAC chain on live ledger.
+  {
+    id: "probe.swarm_bus.broadcast_drain_handoff",
+    kind: "numeric",
+    description: "1 when SWARM BUS round-trips end-to-end on a fresh temp ledger: 2 agents subscribe → 1 broadcasts → other drains the message → handoff narrative renders the agent chain with HMAC proof.",
+    run: async () => {
+      try {
+        const m = await import("../swarm_bus/index.js" as string) as typeof import("../swarm_bus/index.js");
+        const { mkdtempSync, rmSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const cwd = mkdtempSync(join(tmpdir(), "mneme-sb-probe-"));
+        try {
+          await m.subscribe({ channel: "probe", agent: "a", cwd });
+          await m.subscribe({ channel: "probe", agent: "b", cwd });
+          const b = await m.broadcast({ channel: "probe", from: "a", text: "hello", cwd });
+          if (!b.ok || b.deliveredTo.length !== 1) return { value: 0, evidence: `broadcast failed: ${b.hint}` };
+          const d = m.drain({ agent: "b", cwd });
+          if (d.messages.length !== 1) return { value: 0, evidence: `drain expected 1 message, got ${d.messages.length}` };
+          if (!m.verifyMessage(d.messages[0]!)) return { value: 0, evidence: "message HMAC failed" };
+          const h = m.auditHandoff(cwd, "probe");
+          if (h.steps.length !== 1) return { value: 0, evidence: `expected 1 handoff step, got ${h.steps.length}` };
+          return { value: 1, evidence: `subscribe→broadcast→drain→handoff ok (${h.chain.join(" → ")})` };
+        } finally {
+          rmSync(cwd, { recursive: true, force: true });
+        }
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.swarm_bus.ledger_chain_intact",
+    kind: "numeric",
+    description: "1 when SWARM BUS ledger HMAC chain verifies (or is absent — first-run).",
+    run: async (ctx) => {
+      try {
+        const m = await import("../swarm_bus/index.js" as string) as typeof import("../swarm_bus/index.js");
+        const r = m.verifyLedgerChain(ctx.cwd);
+        return {
+          value: r.ok ? 1 : 0,
+          evidence: r.ok ? `chain intact (${r.rows} entries)` : `broken at row ${r.brokenAt}`,
+        };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.64.0 — DIFFERENTIAL ARENA (multi-vendor consensus) ───────────
   //
   // 1. probe.diff_arena.consensus_round_trip — 3 mock vendors with

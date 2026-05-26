@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.65.0 — SWARM BUS (cross-agent message bus) ───────────────────
+  {
+    id: "claim.swarm_bus.broadcast_drain_handoff",
+    source: "v2.65.0 release notes",
+    text: "SWARM BUS cross-agent message bus round-trips end-to-end: 2 agents subscribe → 1 broadcasts → other drains → message HMAC verifies → handoff narrative renders the Claude→Cursor chain with HMAC proof per step. First vendor-agnostic multi-agent message broker in the MCP ecosystem; not framework-locked",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.swarm_bus.broadcast_drain_handoff",
+    severity: "block",
+  },
+  {
+    id: "claim.swarm_bus.ledger_chain_intact",
+    source: "v2.65.0 release notes",
+    text: "SWARM BUS bus ledger is HMAC-chained — every subscribe + broadcast + drain row's HMAC depends on previous row's HMAC. Tamper-evident audit of every cross-agent handoff",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.swarm_bus.ledger_chain_intact",
+    severity: "block",
+  },
+
   // ── v2.64.0 — DIFFERENTIAL ARENA (multi-vendor consensus) ───────────
   {
     id: "claim.diff_arena.consensus_round_trip",
