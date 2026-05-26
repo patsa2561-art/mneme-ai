@@ -50,28 +50,49 @@ const bench = await mneme.benchmark.vsCli();         // proves the speedup on yo
 
 ---
 
-## Install (60 seconds — you don't type the commands)
+## Install in 60 seconds — you don't type the commands
 
-**Tell your AI agent (Claude Code / Cursor / Codex / Continue / Cline / Zed / Aider) one sentence:**
+**Just one sentence to any AI agent you already use:**
 
 > "Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."
 
-The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE in the contract: *"The user will NEVER type a CLI command."*
+The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE: *"The user will NEVER type a CLI command."*
+
+---
+
+### 🛠 Shell-native agents — they install Mneme for you
+
+Drop the sentence above into any of these. They have shell access + can read the contract.
+
+<table>
+<tr><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td><td align="center"><b>🟡 Cline</b></td></tr>
+<tr><td align="center"><b>⚡ Zed</b></td><td align="center"><b>🤖 Aider</b></td><td align="center"><b>💎 Gemini CLI</b></td><td align="center"><b>🚀 Grok CLI</b></td><td align="center"><b>🧬 Jules / Windsurf</b></td></tr>
+</table>
+
+### 🌐 Browser-only AIs — one-click polygraph (no shell needed)
+
+For chat surfaces without shell access — ChatGPT · Claude.ai · Gemini · Copilot · DeepSeek · Qwen · Grok web — Mneme ships a Tampermonkey userscript that lights up live truth-dots inline as the AI answers.
+
+> Tell ANY agent: *"set up Mneme browser polygraph for me"* — it runs `mneme polygraph autosetup` and walks you through the 2 unavoidable browser-side clicks (install Tampermonkey once + click "Install" in the script prompt).
+
+<table>
+<tr><td align="center"><b>💬 ChatGPT</b></td><td align="center"><b>🟠 Claude.ai</b></td><td align="center"><b>💎 Gemini</b></td><td align="center"><b>🔵 Copilot Chat</b></td><td align="center"><b>🐋 DeepSeek</b></td><td align="center"><b>🇨🇳 Qwen</b></td><td align="center"><b>⚡ Grok web</b></td></tr>
+</table>
 
 <details>
-<summary>If you DO want to type the commands yourself (chat-only AI, no shell access)</summary>
+<summary>If you actually want to type the commands yourself</summary>
 
 ```bash
 npm install -g mneme-ai
 mneme init                  # one-time per repo
-mneme mcp --install         # auto-detects Claude Code / Cursor / Codex / Continue
+mneme mcp --install         # auto-detects Claude Code / Cursor / Codex / Continue / Cline / Gemini CLI / Grok CLI
 ```
 
 Restart your AI tool. First MCP call: `mneme.welcome` → loads install handoff + recent changes.
 
-</details>
+For browser polygraph manually: `mneme polygraph autosetup`.
 
-For browser polygraph (live dots on claude.ai / chatgpt.com / gemini), tell your AI agent: *"set up Mneme browser polygraph"* — it runs `mneme polygraph autosetup` for you.
+</details>
 
 ---
 
