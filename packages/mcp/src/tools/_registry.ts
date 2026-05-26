@@ -53,6 +53,7 @@ import { NEMESIS_TOOLS } from "./_nemesis_tools.js";
 import { SKELETON_KEY_TOOLS } from "./_skeleton_key_tools.js";
 import { CAPABILITY_PASSPORT_TOOLS } from "./_passport_tools.js";
 import { MIRRAGE_TOOLS } from "./_mirrage_tools.js";
+import { TIME_CRYSTAL_TOOLS } from "./_time_crystal_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -220,6 +221,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...SKELETON_KEY_TOOLS,
     ...CAPABILITY_PASSPORT_TOOLS,
     ...MIRRAGE_TOOLS,
+    ...TIME_CRYSTAL_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

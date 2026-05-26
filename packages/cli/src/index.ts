@@ -4878,6 +4878,109 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.63.0 — TIME-CRYSTAL: federated agent wisdom.
+  // When agent A hits problem P → "342 agents saw same in 7 days; 89%
+  // used X; 11% tried Y but broke on pnpm".
+  const timeCrystalParent = program
+    .command("time_crystal")
+    .description("v2.63 — federated agent wisdom. Default action = stats summary.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const stats = core.timeCrystal.contributorStats(process.cwd());
+        const led = core.timeCrystal.verifyLedgerChain(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, ledger: led, ...stats }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  timeCrystalParent.command("lookup")
+    .description("Look up wisdom for a problem (returns ranked approaches + gotchas + related buckets).")
+    .requiredOption("--problem <text>", "Problem description")
+    .option("--env <kv...>", "Env hints (e.g. node=22 pm=npm)", (val: string, prev: string[] = []) => prev.concat([val]), [])
+    .option("--top <n>", "Max approaches", (v) => Number(v), 5)
+    .option("--banner", "Render ASCII banner instead of JSON")
+    .action(async (opts: { problem: string; env?: string[]; top?: number; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const envMap: Record<string, string> = {};
+        for (const e of opts.env ?? []) {
+          const [k, v] = e.split("=");
+          if (k && v) envMap[k] = v;
+        }
+        const r = core.timeCrystal.lookupWisdom({
+          problem: opts.problem,
+          env: Object.keys(envMap).length > 0 ? envMap : undefined,
+          topN: opts.top ?? 5,
+          cwd: process.cwd(),
+        });
+        if (opts.banner) process.stdout.write(core.timeCrystal.renderLookupBanner(r) + "\n");
+        else process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  timeCrystalParent.command("contribute")
+    .description("Contribute a (problem, approach, outcome) record. Anyone using Mneme MCP contributes back.")
+    .requiredOption("--problem <text>", "Problem description")
+    .requiredOption("--approach <text>", "What you tried")
+    .requiredOption("--outcome <s>", "success / failure / partial")
+    .requiredOption("--agent <id>", "Reporting agent identifier")
+    .option("--env <kv...>", "Env hints (node=22 pm=npm)", (val: string, prev: string[] = []) => prev.concat([val]), [])
+    .option("--note <text>", "Free-text gotcha hint")
+    .action(async (opts: { problem: string; approach: string; outcome: string; agent: string; env?: string[]; note?: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const envMap: Record<string, string> = {};
+        for (const e of opts.env ?? []) {
+          const [k, v] = e.split("=");
+          if (k && v) envMap[k] = v;
+        }
+        const r = core.timeCrystal.contribute({
+          problem: opts.problem,
+          approach: opts.approach,
+          outcome: opts.outcome as import("@mneme-ai/core").timeCrystal.Outcome,
+          agent: opts.agent,
+          env: Object.keys(envMap).length > 0 ? envMap : undefined,
+          note: opts.note,
+          cwd: process.cwd(),
+        });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  timeCrystalParent.command("stats")
+    .description("Show contributor stats: total contributions, distinct agents, top problems.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const stats = core.timeCrystal.contributorStats(process.cwd());
+        process.stdout.write(JSON.stringify(stats, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  timeCrystalParent.command("audit")
+    .description("Verify HMAC-chained wisdom ledger + show last N entries.")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.timeCrystal.verifyLedgerChain(process.cwd());
+        const rows = core.timeCrystal.readLedger(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent: rows.slice(-(opts.limit ?? 20)) }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.62.0 — MIRRAGE: live conscience for AI agents via MCP reverse-channel.
   // Agent calls `mneme.mirrage.scan {draft}` BEFORE shipping; per-sentence
   // nudges (5-level conscience ladder) + suggested edit + ship-block on

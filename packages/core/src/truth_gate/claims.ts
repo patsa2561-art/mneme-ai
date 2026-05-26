@@ -253,6 +253,26 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.smart_auto_exemption",
     severity: "block",
   },
+  // ── v2.63.0 — TIME-CRYSTAL (federated agent wisdom) ─────────────────
+  {
+    id: "claim.time_crystal.fingerprint_clusters",
+    source: "v2.63.0 release notes",
+    text: "TIME-CRYSTAL canonical problem fingerprinting clusters synonym phrasings via entity slotting (PKG/VER/PATH/HASH/TSERR) + stop-word filter + token sort + SHA-256. Two agents typing 'Cannot find module @types/node' and 'TypeScript Error TS2307: Cannot find module @types/node' produce canonical token sets with ≥ 0.4 Jaccard similarity — enabling cross-bucket discovery via the RELATED list",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.time_crystal.fingerprint_clusters",
+    severity: "block",
+  },
+  {
+    id: "claim.time_crystal.contribute_lookup_round_trip",
+    source: "v2.63.0 release notes",
+    text: "TIME-CRYSTAL contribute → lookup round-trip works end-to-end on a fresh temp ledger: 3 contributions across 2 approaches produce a ranked LookupResult with ≥1 approach + auto-detected gotcha (where applicable) + valid HMAC envelope + intact HMAC-chained ledger. The first federated agent wisdom store in the MCP ecosystem",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.time_crystal.contribute_lookup_round_trip",
+    severity: "block",
+  },
+
   // ── v2.62.0 — MIRRAGE (live conscience via MCP reverse-channel) ─────
   {
     id: "claim.mirrage.scans_with_nudges",

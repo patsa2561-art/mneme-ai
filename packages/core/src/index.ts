@@ -447,6 +447,10 @@ export * as passport from "./passport/index.js";
 // nudges via 5-level conscience ladder + nudge-fatigue gating +
 // cross-agent wisdom broadcast + HMAC-chained nudge ledger.
 export * as mirrage from "./mirrage/index.js";
+// v2.63.0 — TIME-CRYSTAL: federated agent wisdom. Problem fingerprint
+// + Wilson-LB ranking + recency decay + env grounding + gotcha
+// auto-detection + HMAC-chained ledger.
+export * as timeCrystal from "./time_crystal/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

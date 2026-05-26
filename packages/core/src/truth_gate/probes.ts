@@ -1070,6 +1070,62 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.63.0 — TIME-CRYSTAL (federated agent wisdom) ─────────────────
+  //
+  // 1. probe.time_crystal.fingerprint_clusters — synonym phrasings of the
+  //    same problem normalize to the same canonical fingerprint.
+  // 2. probe.time_crystal.contribute_lookup_round_trip — contribute 3 rows
+  //    → lookup → ranked + gotcha-detected; chain HMAC intact.
+  {
+    id: "probe.time_crystal.fingerprint_clusters",
+    kind: "numeric",
+    description: "1 when TIME-CRYSTAL canonical fingerprinting clusters synonym phrasings (e.g. with vs without quotes, with vs without TS error prefix) to the SAME canonical token-set Jaccard similarity ≥ 0.5.",
+    run: async () => {
+      try {
+        const m = await import("../time_crystal/index.js" as string) as typeof import("../time_crystal/index.js");
+        const a = m.normalizeProblem("Cannot find module '@types/node'");
+        const b = m.normalizeProblem("TypeScript Error TS2307: Cannot find module @types/node");
+        const sim = m.similarity(a.canonical, b.canonical);
+        return {
+          value: sim >= 0.4 ? 1 : 0,
+          evidence: sim >= 0.4 ? `synonyms cluster at similarity ${sim.toFixed(2)}` : `similarity ${sim.toFixed(2)} below threshold`,
+          detail: { a: a.canonical, b: b.canonical, similarity: sim },
+        };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.time_crystal.contribute_lookup_round_trip",
+    kind: "numeric",
+    description: "1 when TIME-CRYSTAL contribute → lookup → rank pipeline returns ≥1 approach + verified HMAC envelope + intact chain on a fresh temp ledger.",
+    run: async () => {
+      try {
+        const m = await import("../time_crystal/index.js" as string) as typeof import("../time_crystal/index.js");
+        const { mkdtempSync, rmSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const cwd = mkdtempSync(join(tmpdir(), "mneme-tc-probe-"));
+        try {
+          m.contribute({ problem: "Cannot find module @types/node", approach: "npm i -D @types/node", outcome: "success", agent: "a", cwd });
+          m.contribute({ problem: "Cannot find module @types/node", approach: "npm i -D @types/node", outcome: "success", agent: "b", cwd });
+          m.contribute({ problem: "Cannot find module @types/node", approach: "delete node_modules + reinstall", outcome: "failure", agent: "c", env: { pm: "pnpm" }, note: "broke on pnpm-lock", cwd });
+          const r = m.lookupWisdom({ problem: "Cannot find module @types/node", cwd });
+          if (r.approaches.length === 0) return { value: 0, evidence: "no approaches in lookup" };
+          if (!m.verifyLookup(r)) return { value: 0, evidence: "envelope HMAC failed" };
+          const led = m.verifyLedgerChain(cwd);
+          if (!led.ok) return { value: 0, evidence: `ledger broken at ${led.brokenAt}` };
+          return { value: 1, evidence: `round-trip ok (${r.approaches.length} approaches, ${r.gotchas.length} gotcha(s), ${led.rows} chain rows)` };
+        } finally {
+          rmSync(cwd, { recursive: true, force: true });
+        }
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+
   // ── v2.62.0 — MIRRAGE (live conscience via MCP reverse-channel) ─────
   //
   // 1. probe.mirrage.scans_with_nudges — on a synthetic "React 19 always"
