@@ -443,6 +443,11 @@ export * as skeletonKey from "./skeleton_key/index.js";
 // findings ledger. Healthy → trigger crawl_planner; broken → wisdom_space
 // root-cause + heal. Cytoplasm that self-monitors the whole organism.
 export * as protoplasm from "./protoplasm/index.js";
+// v2.69.0 — GROK BRIDGE: Truth-Provider-as-a-Service for xAI / Grok.
+// 8 primitives (Black Box / Contra-RAG / Elon Chronostasis / Colossus Probe /
+// Constitutional Double / Starlink MNEMNET / Compliance Edition / Truth Oracle)
+// composed into one drop-in layer.
+export * as grokBridge from "./grok_bridge/index.js";
 // v2.61.0 — PASSPORT: capability-based security for MCP tools. HMAC-
 // signed passports gate sensitive ops; trust score fused from NEMESIS
 // + HONEST_MIRROR + STEALTH; delegation chain + HMAC-chained audit

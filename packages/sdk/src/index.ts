@@ -191,3 +191,33 @@ export const protoplasm = {
   verifyChain: coreAll.protoplasm.verifyChain,
   registry: coreAll.protoplasm.snapshotRegistry,
 };
+
+/**
+ * v2.69 — GROK BRIDGE top-level exports.
+ *
+ * Drop-in "Truth-Provider-as-a-Service" for xAI / Grok integration.
+ *
+ *   import { createTruthOracle } from "@mneme-ai/sdk";
+ *   const oracle = createTruthOracle({ hmacKey: process.env.GROK_HMAC_KEY! });
+ *   const v = await oracle.preVerify({ text: draft, meta: { modelVersion, promptHash } });
+ *   if (v.verdict === "REFUSED") return refuseResponse(v.suggestedEdit);
+ */
+export const createTruthOracle = coreAll.grokBridge.createTruthOracle;
+export const GrokBlackBox = coreAll.grokBridge.GrokBlackBox;
+export const ElonChronostasis = coreAll.grokBridge.ElonChronostasis;
+export const StarlinkMnemnet = coreAll.grokBridge.StarlinkMnemnet;
+export const constitutionalCheck = coreAll.grokBridge.constitutionalCheck;
+export const contraRagSearch = coreAll.grokBridge.contraRagSearch;
+export const wrapColossusInference = coreAll.grokBridge.wrapColossusInference;
+export const runComplianceEdition = coreAll.grokBridge.runComplianceEdition;
+
+export const grok = {
+  oracle: coreAll.grokBridge.createTruthOracle,
+  blackBox: coreAll.grokBridge.GrokBlackBox,
+  contraRag: coreAll.grokBridge.contraRagSearch,
+  elonClaims: coreAll.grokBridge.ElonChronostasis,
+  wrapInference: coreAll.grokBridge.wrapColossusInference,
+  constitutional: coreAll.grokBridge.constitutionalCheck,
+  starlink: coreAll.grokBridge.StarlinkMnemnet,
+  compliance: coreAll.grokBridge.runComplianceEdition,
+};
