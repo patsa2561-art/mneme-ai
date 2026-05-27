@@ -27,6 +27,24 @@ import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
   {
+    id: "claim.protoplasm.wal_survives_sigkill",
+    source: "v2.67.0 release notes",
+    text: "PROTOPLASM WAL ledger survives SIGKILL — state persists to disk before RAM update; new process can replay baselines from .mneme/protoplasm/wal.jsonl after uncatchable kill",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.protoplasm.wal_chain_valid",
+    severity: "block",
+  },
+  {
+    id: "claim.protoplasm.seamless_boot_zero_config",
+    source: "v2.67.0 release notes",
+    text: "PROTOPLASM seamless boot — atom activates on any Mneme tool call without user config; heartbeat.json written automatically",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.protoplasm.heartbeat_present_or_first_run",
+    severity: "warn",
+  },
+  {
     id: "claim.tokens.capabilities_lt_25k",
     source: "README · positioning",
     text: "Mneme keeps mneme.capabilities response under 25K bytes (skinny default)",

@@ -1985,6 +1985,43 @@ const probes: Probe[] = [
       }
     },
   },
+  // v2.67.0 — PROTOPLASM probes
+  {
+    id: "probe.protoplasm.wal_chain_valid",
+    kind: "boolean",
+    description: "PROTOPLASM WAL HMAC chain integrity (or honestly empty on fresh install)",
+    async run(ctx) {
+      try {
+        const { Wal } = await import("../protoplasm/wal.js");
+        const walDir = join(ctx.cwd, ".mneme", "protoplasm");
+        const walPath = join(walDir, "wal.jsonl");
+        if (!existsSync(walPath)) return { value: 1, evidence: "no WAL yet — fresh install honest" };
+        const key = process.env["MNEME_PROTOPLASM_KEY"] ?? "dev-protoplasm-key";
+        const wal = new Wal(walDir, key);
+        const v = wal.verify();
+        return { value: v.ok ? 1 : 0, evidence: v.ok ? `WAL chain OK · ${v.rows} rows` : `WAL chain BROKEN at row ${v.brokenAt}` };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
+  {
+    id: "probe.protoplasm.heartbeat_present_or_first_run",
+    kind: "boolean",
+    description: "PROTOPLASM heartbeat is fresh OR repo never invoked Mneme (honest first run)",
+    async run(ctx) {
+      try {
+        const hbPath = join(ctx.cwd, ".mneme", "protoplasm", "heartbeat.json");
+        if (!existsSync(hbPath)) return { value: 1, evidence: "no heartbeat yet — first invocation will create one" };
+        const hb = JSON.parse(readFileSync(hbPath, "utf8")) as { ts?: string };
+        if (!hb.ts) return { value: 0, evidence: "heartbeat malformed (no ts)" };
+        const ageMs = Date.now() - new Date(hb.ts).getTime();
+        return { value: ageMs < 24 * 60 * 60 * 1000 ? 1 : 0, evidence: `heartbeat age ${Math.floor(ageMs / 1000)}s` };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
 ];
 
 export const ALL_PROBES: ReadonlyArray<Probe> = probes;

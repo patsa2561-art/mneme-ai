@@ -5561,6 +5561,62 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.67.0 — PROTOPLASM: live atom embedded in every function. Per-
+  // function super_quan probe (statistical + quantum-inspired) with HMAC-
+  // chained findings ledger. Healthy → trigger crawl_planner; broken →
+  // wisdom_space root-cause + heal. Cytoplasm that self-monitors.
+  const protoplasmParent = program
+    .command("protoplasm")
+    .description("v2.67 — PROTOPLASM live-atom probe. Default action = report.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.protoplasm.manualProbeReport(core.protoplasm.DEFAULT_PROTOPLASM_CONFIG);
+        process.stdout.write(JSON.stringify({ ok: true, report: r }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  protoplasmParent.command("report")
+    .description("Show current ledger health + last 10 findings")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.protoplasm.manualProbeReport(core.protoplasm.DEFAULT_PROTOPLASM_CONFIG);
+        process.stdout.write(JSON.stringify({ ok: true, report: r }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  protoplasmParent.command("verify_chain")
+    .description("Verify HMAC chain integrity on findings ledger")
+    .option("--ledger <path>", "ledger path", ".mneme/protoplasm/findings.jsonl")
+    .action(async (opts: { ledger: string }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.protoplasm.verifyChain(opts.ledger, process.env["MNEME_PROTOPLASM_KEY"] ?? "dev-protoplasm-key");
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+        if (!r.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  protoplasmParent.command("registry")
+    .description("Snapshot in-process probe registry (which functions are wrapped + sample counts)")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const snap = core.protoplasm.snapshotRegistry();
+        process.stdout.write(JSON.stringify({ ok: true, totalFunctions: snap.length, registry: snap.map((s) => ({ fnId: s.fnId, samples: s.samples })) }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.59.0 — SDK SURFACE AUDITOR: gate-self-verification.
   // Empirically imports @mneme-ai/sdk + checks the external public
   // surface matches WIRING DOCTOR's claims. Closes the v2.58 blind-spot

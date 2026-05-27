@@ -167,3 +167,27 @@ export const gavel = {
 export const nimbus = {
   publish: coreAll.nemesis.publishCard,
 };
+
+/**
+ * v2.67 — PROTOPLASM top-level exports.
+ *
+ * Embed `withSuperQuanProbe` in any function to enable continuous health
+ * monitoring. Findings stream to HMAC-chained ledger; orchestrator routes
+ * broken → wisdom_space root-cause, healthy → crawl_planner.
+ *
+ *   import { withSuperQuanProbe, startProtoplasm } from "@mneme-ai/sdk";
+ *   const safe = withSuperQuanProbe("auth.lookup", lookup);
+ *   startProtoplasm({ onBroken: (v) => alert(v.diagnosis?.hypothesis) });
+ */
+export const withSuperQuanProbe = coreAll.protoplasm.withSuperQuanProbe;
+export const startProtoplasm = coreAll.protoplasm.startOrchestrator;
+export const protoplasmReport = coreAll.protoplasm.manualProbeReport;
+export const verifyProtoplasmChain = coreAll.protoplasm.verifyChain;
+
+export const protoplasm = {
+  probe: coreAll.protoplasm.withSuperQuanProbe,
+  start: coreAll.protoplasm.startOrchestrator,
+  report: coreAll.protoplasm.manualProbeReport,
+  verifyChain: coreAll.protoplasm.verifyChain,
+  registry: coreAll.protoplasm.snapshotRegistry,
+};

@@ -438,6 +438,11 @@ export * as sdkAuditor from "./release_gate/sdk_surface_auditor.js";
 // risk-scores them + computes transitive bypass graph + pins HMAC
 // snapshot for drift detection. First MCP security auditor.
 export * as skeletonKey from "./skeleton_key/index.js";
+// v2.67.0 — PROTOPLASM: live atom embedded in every function. Per-function
+// super_quan probe (statistical + quantum-inspired) with HMAC-chained
+// findings ledger. Healthy → trigger crawl_planner; broken → wisdom_space
+// root-cause + heal. Cytoplasm that self-monitors the whole organism.
+export * as protoplasm from "./protoplasm/index.js";
 // v2.61.0 — PASSPORT: capability-based security for MCP tools. HMAC-
 // signed passports gate sensitive ops; trust score fused from NEMESIS
 // + HONEST_MIRROR + STEALTH; delegation chain + HMAC-chained audit

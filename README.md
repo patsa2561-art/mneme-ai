@@ -16,6 +16,20 @@
 
 <br/><br/>
 
+### 🦠 NEW in v2.67.0 — **PROTOPLASM** Live Atom
+
+Every wrapped function gets a per-call statistical + quantum-inspired health probe. Findings stream to an HMAC-chained ledger. **Survives uncatchable SIGKILL / SIGSEGV / OS reboot** via 5-strategy fusion (WAL · PARASITE · GHOST CELL · PHOENIX HOOK · SEAMLESS BOOT). Zero config — atom activates on the first Mneme tool call.
+
+```ts
+import { withSuperQuanProbe } from "@mneme-ai/sdk";
+const safe = withSuperQuanProbe("auth.lookup", lookupUser);
+// That's it. State survives kill. HMAC-signed forever.
+```
+
+📖 **Detail**: <a href="docs/protoplasm/README.md" target="_blank" rel="noopener">docs/protoplasm/</a> · <a href="docs/protoplasm/DESIGN.md" target="_blank" rel="noopener">DESIGN spec</a>
+
+<br/>
+
 ### 📖 Start here
 
 <table>
