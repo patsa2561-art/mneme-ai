@@ -171,8 +171,17 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
         "version": async () => ({ version: (await import("../../package.json", { with: { type: "json" } })).default.version }),
         "status": async () => ({ daemonPid: process.pid, startedAt, reindexCount }),
         "verify": async (_cmd, args) => {
-          const claim = String(args["claim"] ?? "");
+          let claim = String(args["claim"] ?? "");
           if (!claim) throw new Error("verify: missing 'claim' arg");
+          // v2.71.0 — HOMOGRAPH GUARD (Vuln #1 closure): canonicalize input
+          // BEFORE verify so "٢.70.0" (Arabic-Indic digit) no longer bypasses
+          // version-claim refutation. Annotate flags in returned explanation.
+          let homographFlags: string[] = [];
+          try {
+            const c = core.protoplasm.canonicalize(claim);
+            homographFlags = c.flags;
+            if (c.flags.length > 0 && c.canonical !== claim) claim = c.canonical;
+          } catch { /* canonicalize optional */ }
           // Use buildAllTools (memoized in v2.19.51) + forensicVerify (pure)
           const mcp = await import("@mneme-ai/mcp/tools/registry");
           const catalog = mcp.buildAllTools().map((t) => t.name);
@@ -183,7 +192,10 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
               fileExists: () => false,
             },
           });
-          return { verdict: r.verdict, explanation: r.explanation };
+          const annotatedExplanation = homographFlags.length > 0
+            ? `${r.explanation}\n⚠ HOMOGRAPH GUARD: input contained ${homographFlags.join(", ")} — verified on canonical form`
+            : r.explanation;
+          return { verdict: r.verdict, explanation: annotatedExplanation, homographFlags };
         },
       },
     });

@@ -34,3 +34,11 @@ export type {
 // 4. STRS
 export { runStrs, strsBadgeUrl, STRS_PROBE_SET_V1 } from "./strs.js";
 export type { StrsProbe, StrsRunResult, StrsReport, StrsRunOptions, VerifyFn } from "./strs.js";
+
+// 5. HOMOGRAPH GUARD — closes v2.70 vuln #1 (Unicode bypass)
+export { canonicalize, shouldReVerify } from "./homograph_guard.js";
+export type { CanonicalizeResult } from "./homograph_guard.js";
+
+// 6. INPUT SIZE GUARD — closes v2.70 vuln #2 (silent 28K reject)
+export { checkInputSize, emitEnvelope, detectInputSource } from "./input_size_guard.js";
+export type { SizeCheckResult, InputSource, CheckInputSizeOptions } from "./input_size_guard.js";

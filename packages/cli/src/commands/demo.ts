@@ -361,6 +361,23 @@ How to read the verdict:
         process.stdout.write(`error: empty claim. Pass positional args, pipe via stdin, or use --stdin / --hex / --base64 / --clipboard / --file.\n`);
         process.exitCode = 1; return;
       }
+
+      // v2.71.0 — INPUT SIZE GUARD (Vuln #2 closure):
+      // Fail-loud envelope when input too large for chosen source. Detects
+      // argv-mode at ≥24K, suggests stdin. Never silently exits 0 bytes.
+      try {
+        const coreMod = await import("@mneme-ai/core") as { protoplasm?: { checkInputSize?: (s: string, o: { source: "argv" | "stdin" | "file" | "unknown"; allowTruncate?: boolean }) => { ok: boolean; envelope: { ok: boolean; error?: string; sizeReceived: number; sizeLimit: number; hint?: string } } } };
+        const checkInputSize = coreMod.protoplasm?.checkInputSize;
+        if (checkInputSize) {
+          const source: "argv" | "stdin" | "file" = opts.stdin || opts.hex || opts.base64 || opts.clipboard ? "stdin" : opts.file ? "file" : "argv";
+          const sz = checkInputSize(claim, { source, allowTruncate: false });
+          if (!sz.ok) {
+            // Fail-loud JSON envelope — distinct exit code 2
+            process.stdout.write(JSON.stringify({ verdict: "INPUT_TOO_LARGE", ...sz.envelope }, null, 2) + "\n");
+            process.exitCode = 2; return;
+          }
+        }
+      } catch { /* size guard is best-effort */ }
       // v2.44.0 SHELL-STRIP DETECTIVE: warn when claim mentions hostile
       // chars (BIDI / null / override) but contains none — the user
       // probably meant to test hostile input and the shell stripped it.
@@ -375,6 +392,33 @@ How to read the verdict:
       // compat for user shell scripts that grep specific verdict strings).
       // --format=human (default) forces human output even if user piped stdout.
       if (opts.format === "json") opts.json = true;
+
+      // v2.71.0 — HOMOGRAPH GUARD (Vuln #1 closure):
+      // Canonicalize input BEFORE verification. Closes the "٢.70.0" bypass
+      // where Arabic-Indic / Bengali / Thai / fullwidth / math-bold digits
+      // produced MIXED instead of REFUTED. Verdict now runs on normalized
+      // form; original + flags annotated in JSON output for transparency.
+      let homographFlags: string[] = [];
+      let homographTransforms: string[] = [];
+      try {
+        const coreMod = await import("@mneme-ai/core") as { protoplasm?: { canonicalize?: (s: string) => { canonical: string; flags: string[]; transformations: string[] } } };
+        const canonicalize = coreMod.protoplasm?.canonicalize;
+        if (canonicalize) {
+          const c = canonicalize(claim);
+          homographFlags = c.flags;
+          homographTransforms = c.transformations;
+          if (c.flags.length > 0 && c.canonical !== claim) {
+            if (!opts.json) {
+              process.stderr.write(`⚠ HOMOGRAPH GUARD: input contained ${c.flags.join(", ")} — verifying against canonical form\n`);
+            }
+            claim = c.canonical;
+          }
+        }
+      } catch (e) {
+        // canonicalize is best-effort — never block verify
+        if (process.env.MNEME_DEBUG === "1") process.stderr.write(`homograph guard error: ${(e as Error).message}\n`);
+      }
+
       const { acgv, acgvExplain } = await import("@mneme-ai/core");
       const counter = opts.counterEvidence ? opts.counterEvidence.split("|").map((s) => s.trim()).filter(Boolean) : undefined;
       const result = opts.engine === "propositional"
@@ -502,7 +546,20 @@ How to read the verdict:
       (result as unknown as { forensic?: typeof forensic }).forensic = forensic;
 
       if (opts.json) {
-        process.stdout.write(JSON.stringify({ verdict: result.verdict, confidence: result.confidence, headline: explained.headline, plain: explained.plain, nextAction: explained.nextAction, trafficLight: explained.trafficLight, engine: (result as { engine?: string }).engine ?? "propositional", acgv: result }, null, 2) + "\n");
+        const homographAnnotation = homographFlags.length > 0
+          ? { homographGuard: { flags: homographFlags, transformations: homographTransforms, verdictRunOnCanonicalForm: true } }
+          : {};
+        process.stdout.write(JSON.stringify({
+          verdict: result.verdict,
+          confidence: result.confidence,
+          headline: explained.headline,
+          plain: explained.plain,
+          nextAction: explained.nextAction,
+          trafficLight: explained.trafficLight,
+          engine: (result as { engine?: string }).engine ?? "propositional",
+          acgv: result,
+          ...homographAnnotation,
+        }, null, 2) + "\n");
         return;
       }
 
