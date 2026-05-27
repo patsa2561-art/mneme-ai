@@ -65,3 +65,20 @@ export { drainHealQueue, registerWithPhoenix, PROTOPLASM_REVIVABLE } from "./pho
 export type { PhoenixHookContext, HealQueueEntry, RevivableSpec } from "./phoenix_hook.js";
 export { autoWrapModule, autoWrapModuleProxy, autoWrapClass } from "./auto_wrap.js";
 export type { AutoWrapOptions } from "./auto_wrap.js";
+
+// v2.68.0 — extension primitives:
+//   USB SOUL      → portable WAL via mount detection
+//   HYDRA QUORUM  → file-lock based primary-secondary failover
+//   LAN GOSSIP    → UDP multicast peer discovery + HMAC-signed gossip
+//   TS AUTO-WRAP  → static scan + non-AST regex rewrite of exports
+//   CRIU PICKLE   → Linux CRIU snapshot/restore (Linux-only)
+export { syncTo, syncFrom, pickMount, verifyMount } from "./usb_soul.js";
+export type { UsbSoulResult } from "./usb_soul.js";
+export { statusHydra, tryBecomePrimary, refreshPrimary, releasePrimary, startHydraHeartbeat, HYDRA_TUNING } from "./hydra_quorum.js";
+export type { HydraStatus, HydraRole } from "./hydra_quorum.js";
+export { LanGossip, GOSSIP_TUNING } from "./lan_gossip.js";
+export type { GossipSummary, GossipFrame, PeerRecord, GossipOptions } from "./lan_gossip.js";
+export { scanSourceFile, scanDirectory, rewriteSourceFile } from "./ts_auto_wrap.js";
+export type { ScanResult, ScannedExport, RewriteResult } from "./ts_auto_wrap.js";
+export { probeCriu, snapshot as criuSnapshot, restore as criuRestore } from "./criu_pickle.js";
+export type { CriuAvailability, CriuSnapshotResult, CriuRestoreResult } from "./criu_pickle.js";
