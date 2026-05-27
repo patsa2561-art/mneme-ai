@@ -82,3 +82,10 @@ export { scanSourceFile, scanDirectory, rewriteSourceFile } from "./ts_auto_wrap
 export type { ScanResult, ScannedExport, RewriteResult } from "./ts_auto_wrap.js";
 export { probeCriu, snapshot as criuSnapshot, restore as criuRestore } from "./criu_pickle.js";
 export type { CriuAvailability, CriuSnapshotResult, CriuRestoreResult } from "./criu_pickle.js";
+
+// v2.70.0 — SUPER QUAN: 4 research-grade primitives
+//   1. DECOHERENCE  — verdict half-life (truth shelf life)
+//   2. NEGSPACE     — HMAC audit as negative knowledge graph
+//   3. CHSH WITNESS — structural eval-aware bluff detector (paper-grade)
+//   4. STRS         — self-test reproducibility score
+export * from "./super_quan/index.js";
