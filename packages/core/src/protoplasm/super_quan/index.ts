@@ -42,3 +42,18 @@ export type { CanonicalizeResult } from "./homograph_guard.js";
 // 6. INPUT SIZE GUARD — closes v2.70 vuln #2 (silent 28K reject)
 export { checkInputSize, emitEnvelope, detectInputSource } from "./input_size_guard.js";
 export type { SizeCheckResult, InputSource, CheckInputSizeOptions } from "./input_size_guard.js";
+
+// 7. PRISM — closes v2.70 vuln #3 (multi-lens scope narrow → 86% claims got 0 lenses)
+export {
+  runPrism, lensFakeAuthority, lensFakeCommit, lensStatisticalReality,
+  lensMagicNumber, lensNullInformation,
+} from "./prism.js";
+export type { PrismResult, PrismVerdict, LensResult, FakeCommitOptions } from "./prism.js";
+
+// 8. TIDE GUARD — closes v2.70 vuln #1 (rate limit removed regression)
+export { TideGuard, DEFAULT_TIDE } from "./tide_guard.js";
+export type { TideGuardConfig, TideRequest, TideDecision } from "./tide_guard.js";
+
+// 9. CULL — closes v2.70 vuln #4 (process leak — 6 procs per session)
+export { Cull, DEFAULT_CULL } from "./cull.js";
+export type { CullConfig, CullHeartbeat, CullReport, CullPolicy } from "./cull.js";
