@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 📊 NEW in v2.81.0 — **HONESTY CREDIT SCORE** (the truth axis ERC-8004 can't see)
+### 🏛 NEW in v2.82.0 — **TRUST FABRIC complete** (7 diamonds, all on the NOTARY spine)
+
+The Memory+Truth+Audit layer — the one axis no connectivity standard (MCP/A2A/x402/ERC-8004) owns and no single vendor structurally can — now ships its full diamond set, each an Ed25519-signed, offline-verifiable primitive: **💰 Truth-Staking** (money backs a claim with a time-lock — slashed if refuted in-window), **🛡 Mesh Immune System** (cross-agent injection/collusion firewall — quarantines a poisoned hop + every hop downstream), **🌉 BGP Notarizing Router** (route MCP↔A2A↔x402↔ERC-8004 signing every hop), **🧠 BYOB** (user-owned portable brain capsule, CRDT-merged across vendors), **📡 Live Truth CDN** (signed federated fact-invalidation that overrides training cutoff), **📡 Sovereign Edge Mesh** (cloud-free signed peer mesh), **🌙 Idle-Time Compounding** (consolidate verified claims into axioms while idle). `mneme stake|mesh|route|brain|factwatch|edge|compound`. TG 69/69.
+
+### 📊 v2.81.0 — **HONESTY CREDIT SCORE** (the truth axis ERC-8004 can't see)
 
 On-chain reputation (ERC-8004) measures *did the agent finish the job / pay?* — nobody measures *does the agent tell the **truth**?* in a portable way. HONESTY CREDIT SCORE is a **Wilson-95%-lower-bound** honesty score from an agent's *verified* claim record (small/under-measured agents score low — reputation can't be faked), wrapped in an **Ed25519-signed NOTARY receipt**. Before delegating work/code/payment to another agent (over A2A / x402 / anything), you **verify its score offline** and decide. A vendor **can't self-promote** — forging the band breaks the signature. `mneme creditscore score|verify`. Diamond 💎5 of the TRUST FABRIC.
 

@@ -26,6 +26,50 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.82.0 — TRUST FABRIC batch: 💎6 💎7 💎1 💎2 💎8 💎9 💎10 (all on the NOTARY spine) ──
+  {
+    id: "claim.truth_stake.slash_on_refute_in_window",
+    source: "v2.82.0 — TRUTH-STAKING (💎6)",
+    text: "Truth-Staking fuses payment × verification × time-lock: a stake behind a claim is SLASHED iff the claim is refuted within the time-lock window, RETURNED if it survives unrefuted, PENDING inside the window; a late refutation does not slash (the claim crystallized). The stake + resolution are Ed25519-signed NOTARY receipts verifiable offline. Diamond 💎6.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.truth_stake.slash_on_refute_in_window", severity: "block",
+  },
+  {
+    id: "claim.mesh_immune.contagion_quarantine",
+    source: "v2.82.0 — MESH IMMUNE SYSTEM (💎7)",
+    text: "The Mesh Immune System is a cross-agent firewall: it quarantines prompt-injection / collusion / self-replication messages and propagates the infection downstream (a poisoned A2A hop quarantines every later hop — closing the agent-supply-chain attack class), while benign messages pass. Diamond 💎7.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.mesh_immune.contagion_quarantine", severity: "block",
+  },
+  {
+    id: "claim.bgp_router.notarized_route_verifies",
+    source: "v2.82.0 — BGP NOTARIZING ROUTER (💎1)",
+    text: "The BGP notarizing router routes a request across protocol boundaries (MCP↔A2A↔x402↔ERC-8004) signing EVERY hop as a prev-chained NOTARY receipt; verifyRoute confirms OFFLINE that every hop signs, the chain is intact, and the protocols actually connect (hop[i].to == hop[i+1].from). Tampering a hop, reordering, or a protocol discontinuity all fail. The first cross-protocol notarizing router. Diamond 💎1.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.bgp_router.notarized_route_verifies", severity: "block",
+  },
+  {
+    id: "claim.byob.portable_capsule_crdt",
+    source: "v2.82.0 — BYOB portable brain (💎2)",
+    text: "BYOB is a user-owned, Ed25519-signed memory capsule any vendor can load + write back, tamper-evident (a secret edit breaks the signature). Its CRDT merge (union by item id, last-write-wins by ts, vendors unioned) is commutative + idempotent + associative — vendors editing the brain in parallel converge regardless of merge order. Diamond 💎2.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.byob.portable_capsule_crdt", severity: "block",
+  },
+  {
+    id: "claim.truth_cdn.signed_fact_invalidation",
+    source: "v2.82.0 — LIVE TRUTH CDN (💎8)",
+    text: "The Live Truth CDN is a federated fact-invalidation feed that overrides training cutoff: observing a fact change emits a signed invalidation that any subscriber verifies offline + applies if newer; stale and forged invalidations are ignored; unchanged values emit nothing. Diamond 💎8.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.truth_cdn.signed_fact_invalidation", severity: "block",
+  },
+  {
+    id: "claim.edge_mesh.signed_peer_cards",
+    source: "v2.82.0 — SOVEREIGN EDGE MESH (💎9)",
+    text: "The Sovereign Edge Mesh is a cloud-free, local-first agent mesh: peer cards carry LAN-only endpoints, are Ed25519-signed + verify offline (tampering fails), and gossip-merge dedups by peer (latest issuedAt wins) while dropping forged cards. Discover + trust peers with no cloud. Diamond 💎9.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.edge_mesh.signed_peer_cards", severity: "block",
+  },
+  {
+    id: "claim.idle_compound.consolidate_axioms",
+    source: "v2.82.0 — IDLE-TIME COMPOUNDING (💎10)",
+    text: "Idle-Time Compounding turns idle time into compounding advantage: near-duplicate verified TRUE claims consolidate into fewer higher-support axioms, FALSE claims contradicting an axiom are pruned, UNVERIFIED claims are not promoted, and the consolidation is deterministic + idempotent (a fixed point). The agent wakes with a smaller, stronger truth base. Diamond 💎10.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.idle_compound.consolidate_axioms", severity: "block",
+  },
+
   // ── v2.81.0 — HONESTY CREDIT SCORE (portable, signed "credit bureau for AI honesty") ──
   {
     id: "claim.honesty.portable_signed_score",

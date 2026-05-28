@@ -4492,6 +4492,45 @@ export async function run(argv: string[]): Promise<void> {
       }));
     });
 
+  // v2.82.0 — TRUST FABRIC batch (💎6 💎7 💎1 💎2 💎8 💎9 💎10). 7 families, all on
+  // the NOTARY spine. Complex inputs (hops/capsules/receipts/claims) via --in JSON or --file.
+  {
+    const tf: Array<{ name: string; desc: string }> = [
+      { name: "stake", desc: "💰 TRUTH-STAKING (💎6) — money backs the words. actions: create | resolve." },
+      { name: "mesh", desc: "🛡 MESH IMMUNE (💎7) — cross-agent injection/collusion firewall. actions: scan | trace." },
+      { name: "bgp", desc: "🌉 BGP ROUTER (💎1) — notarize every cross-protocol hop (MCP↔A2A↔x402↔ERC-8004). actions: notarize | verify." },
+      { name: "brain", desc: "🧠 BYOB (💎2) — portable signed memory capsule. actions: pack | merge." },
+      { name: "factwatch", desc: "📡 LIVE TRUTH CDN (💎8) — signed federated fact invalidation. actions: observe | apply." },
+      { name: "edge", desc: "📡 SOVEREIGN EDGE MESH (💎9) — cloud-free signed peer mesh. actions: card | merge." },
+      { name: "compound", desc: "🌙 IDLE-COMPOUND (💎10) — consolidate verified claims into axioms. actions: consolidate." },
+    ];
+    for (const { name, desc } of tf) {
+      program
+        .command(`${name} <action>`)
+        .description(desc)
+        .option("--staker <s>").option("--claim <c>").option("--amount-micros <n>", "", (v) => Number(v)).option("--deadline-ms <n>", "", (v) => Number(v))
+        .option("--refuted").option("--at <n>", "", (v) => Number(v))
+        .option("--text <t>").option("--request-id <id>").option("--owner <o>").option("--vendor <v>")
+        .option("--fact <f>").option("--new-value <v>").option("--known-value <v>").option("--observed-by <a>")
+        .option("--peer <p>").option("--lan-url <u>").option("--threshold <n>", "", (v) => Number(v))
+        .option("--in <json>", "structured JSON input (hops / capsules / receipts / claims)")
+        .option("--file <path>", "read structured JSON input from file ('-' = stdin)")
+        .option("--json", "machine-readable output", false)
+        .action(async (action: string, opt: Record<string, unknown>) => {
+          const { trustFabricCommand } = await import("./commands/trustfabric.js");
+          process.exit(await trustFabricCommand({
+            cwd: process.cwd(), family: name, action,
+            staker: opt["staker"] as string, claim: opt["claim"] as string, amountMicros: opt["amountMicros"] as number, deadlineMs: opt["deadlineMs"] as number,
+            refuted: !!opt["refuted"], at: opt["at"] as number,
+            text: opt["text"] as string, requestId: opt["requestId"] as string, owner: opt["owner"] as string, vendor: opt["vendor"] as string,
+            fact: opt["fact"] as string, newValue: opt["newValue"] as string, knownValue: opt["knownValue"] as string, observedBy: opt["observedBy"] as string,
+            peer: opt["peer"] as string, lanUrl: opt["lanUrl"] as string, threshold: opt["threshold"] as number,
+            jsonInput: opt["in"] as string, file: opt["file"] as string, json: !!opt["json"],
+          }));
+        });
+    }
+  }
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")
