@@ -101,11 +101,26 @@ export function extractClaimedVerbs(repoRoot: string, opts: { maxCommits?: numbe
       // Strategy 2: explicit CLI marker — `$ mneme ...` / `Run: mneme ...` / `CLI: mneme ...`
       const cliMarkers = body.matchAll(/(?:^|\s)(?:\$|Run:|CLI:|Use:|cmd:)\s*mneme\s+([a-z_][a-z0-9_]*)(?:\s+([a-z_][a-z0-9_]*))?/gim);
 
+      // v2.73.0 — DEFERRAL EXCLUSION (closes wiring-lag false positive).
+      // A commit line like "CLI verb `mneme grok` (deferred — covered by
+      // SDK)" is NOT claiming the verb works — it is explicitly saying it
+      // does NOT exist yet. Pre-v2.73 the extractor flagged it as a broken
+      // wired verb (the v2.70 `mneme grok` false positive that NO-GO'd the
+      // launch window). We now skip any claim whose trailing context (≤80
+      // chars after the match) carries a deferral / future qualifier.
+      const DEFERRAL_RE = /\b(deferred?|deferral|planned|not\s+(?:yet|implemented|wired|shipped)|future|roadmap|todo|upcoming|coming\s+soon|will\s+ship|next\s+release|stub|placeholder|wip)\b/i;
+      const isDeferred = (m: RegExpMatchArray): boolean => {
+        if (typeof m.index !== "number") return false;
+        const after = body.slice(m.index + m[0].length, m.index + m[0].length + 80);
+        return DEFERRAL_RE.test(after);
+      };
+
       const collect = (m: RegExpMatchArray): void => {
         const verb = m[1]?.toLowerCase();
         const subverb = m[2]?.toLowerCase();
         if (!verb) return;
         if (PROSE_STOPWORDS.has(verb)) return;
+        if (isDeferred(m)) return; // explicitly marked deferred/planned → not a wiring claim
         if (subverb && PROSE_STOPWORDS.has(subverb)) {
           // verb might be real, subverb is prose noise → use verb-only
           const full = `mneme ${verb}`;

@@ -88,20 +88,30 @@ function ensureToken(repoRoot: string): string {
   return t;
 }
 
-interface RateLimitEntry { count: number; windowStart: number; }
+interface RateLimitEntry {
+  /** Per-minute sustained-rate counter. */
+  minCount: number; minStart: number;
+  /** v2.73 — per-second burst counter (closes the burst-bypass vuln). */
+  secCount: number; secStart: number;
+}
 const rateLimiter = new Map<string, RateLimitEntry>();
 
 /**
  * v2.28.1 — PER-ROUTE ADAPTIVE RATE LIMIT (closes B12).
+ * v2.73.0 — DUAL-WINDOW BURST GUARD (closes the burst-bypass vuln).
  *
  * Pre-v2.28.1: single 60/min cap for every endpoint. Streaming-AI
  * sentences blew through it at ~50 burst (B12 finding: 49/100 ok).
- * Health-check probes shared the same budget as the polygraph verify
- * route — bad neighbor problem.
  *
- * Fix: route-class caps. Browser-polygraph clients legitimately fire
- * many requests per second; ping endpoints should never be rate-
- * limited at all. The key now includes the route class.
+ * v2.28.1 fix: route-class caps. But a SINGLE 60-second window with a
+ * 600 cap let an attacker fire 500 requests in 98ms (≈5,100 req/sec)
+ * and stay under the per-MINUTE budget — the rate limit was effectively
+ * a no-op against sub-second floods (v2.72 vuln #1).
+ *
+ * v2.73 fix: EACH route now has BOTH a per-minute sustained cap AND a
+ * per-second burst cap. A flood trips the per-second cap immediately;
+ * legitimate streaming AI (sentences arrive at human-reading pace,
+ * ~1-5/sec) stays well under both. Either window exceeding → 429.
  */
 function routeClass(url: string | undefined): "ping" | "polygraph" | "default" {
   if (!url) return "default";
@@ -110,26 +120,48 @@ function routeClass(url: string | undefined): "ping" | "polygraph" | "default" {
   return "default";
 }
 
-const ROUTE_CAPS: Record<"ping" | "polygraph" | "default", number> = {
-  ping: 6000,          // 100/sec — health probes never blocked
-  polygraph: 600,      // 10/sec — streaming AI sentences
-  default: 60,         // 1/sec  — everything else
+interface RouteCap { perMin: number; perSec: number; }
+const ROUTE_CAPS: Record<"ping" | "polygraph" | "default", RouteCap> = {
+  // health probes: generous but still burst-bounded (no infinite flood).
+  ping:      { perMin: 6000, perSec: 200 },
+  // streaming AI sentences: 10/sec sustained is plenty for a human-paced
+  // stream; 25/sec burst absorbs a brief flurry. A 500-in-98ms flood
+  // (≈5,100/sec) trips perSec after the 25th request.
+  polygraph: { perMin: 600,  perSec: 25 },
+  // everything else: tight.
+  default:   { perMin: 60,   perSec: 10 },
 };
 
 function checkRateLimit(ip: string, url: string | undefined): boolean {
   const cls = routeClass(url);
-  const cap = ROUTE_CAPS[cls];
+  const caps = ROUTE_CAPS[cls];
   const key = `${ip}|${cls}`;
   const now = Date.now();
-  const window = 60_000;
-  const e = rateLimiter.get(key);
-  if (!e || now - e.windowStart > window) {
-    rateLimiter.set(key, { count: 1, windowStart: now });
-    return true;
+  let e = rateLimiter.get(key);
+  if (!e) {
+    e = { minCount: 0, minStart: now, secCount: 0, secStart: now };
+    rateLimiter.set(key, e);
   }
-  if (e.count >= cap) return false;
-  e.count += 1;
+  // Roll the windows independently.
+  if (now - e.minStart > 60_000) { e.minCount = 0; e.minStart = now; }
+  if (now - e.secStart > 1_000)  { e.secCount = 0; e.secStart = now; }
+  // Reject if EITHER window is already at its cap (check before increment
+  // so the Nth request that would exceed is the one that gets blocked).
+  if (e.minCount >= caps.perMin) return false;
+  if (e.secCount >= caps.perSec) return false;
+  e.minCount += 1;
+  e.secCount += 1;
   return true;
+}
+
+/** v2.73 — test seam: reset the rate limiter (used by pinned tests). */
+export function __resetRateLimiterForTest(): void {
+  rateLimiter.clear();
+}
+
+/** v2.73 — introspection for tests: current caps. */
+export function __rateCapsForTest(): Record<string, RouteCap> {
+  return ROUTE_CAPS;
 }
 
 function isAuthorized(req: IncomingMessage, token: string): boolean {

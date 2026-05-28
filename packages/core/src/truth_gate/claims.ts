@@ -26,6 +26,34 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.73.0 — close 3 v2.72 vulns (rate-limit burst / homograph HTTP / multi-lens scope) ──
+  {
+    id: "claim.bridge.rate_limit_burst_guard",
+    source: "v2.73.0 release notes — vuln #1 closure",
+    text: "HTTP bridge rate limit has a per-SECOND burst cap in addition to per-minute. A sub-second flood (e.g. 100 requests in <1s on the polygraph route) is capped at 25/sec — exactly 25 pass, the rest get 429. Pre-v2.73 only a 600/min window existed, so a 500-in-98ms flood slipped through entirely.",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.bridge.rate_limit_burst_guard",
+    severity: "block",
+  },
+  {
+    id: "claim.polygraph.homograph_canonical_http_path",
+    source: "v2.73.0 release notes — vuln #2 closure",
+    text: "The HTTP polygraph path (verifyBrowserSentence) canonicalizes Unicode-digit homographs (Arabic-Indic ٢, fullwidth ２, etc) to ASCII via the HOMOGRAPH GUARD in the SHARED core engine — so '٢+٢=٥' is refuted by the math lens exactly as '2+2=5' is. Pre-v2.73 the guard ran only in the CLI command layer; the HTTP path saw raw Unicode digits and returned grey/unknown.",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.polygraph.homograph_canonical_http_path",
+    severity: "block",
+  },
+  {
+    id: "claim.polygraph.lenses_always_run",
+    source: "v2.73.0 release notes — vuln #3 closure",
+    text: "The polygraph runs all 6 micro-lenses on EVERY non-empty sentence (on the canonical form), even generic/short claims that the heavy-ACGV prefilter skips. A claim hiding 'rm -rf /' or a wrong equation is caught by the risk/math lens regardless of the prefilter. Pre-v2.73 generic claims returned grey with 0 lenses (the prefilter short-circuited before lenses ran).",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.polygraph.lenses_always_run",
+    severity: "block",
+  },
   {
     id: "claim.protoplasm.wal_survives_sigkill",
     source: "v2.67.0 release notes",

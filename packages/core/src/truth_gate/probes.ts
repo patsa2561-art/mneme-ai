@@ -79,6 +79,81 @@ async function spawnMcpCall(cwd: string, toolName: string, args: Record<string, 
 // ── PROBES ───────────────────────────────────────────────────────────
 
 const probes: Probe[] = [
+  // ── v2.73.0 — close 3 v2.72 vulns ───────────────────────────────────
+  {
+    id: "probe.bridge.rate_limit_burst_guard",
+    kind: "boolean",
+    description: "HTTP bridge enforces a per-second burst cap (closes v2.72 vuln #1). Starts a noAuth bridge, fires 60 sequential polygraph requests rapidly, asserts ≤ the per-second cap got 200 + the rest got 429.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const hb = await import("../diaspora/http_bridge.js" as string) as typeof import("../diaspora/http_bridge.js");
+        hb.__resetRateLimiterForTest();
+        const caps = hb.__rateCapsForTest();
+        const perSec = (caps["polygraph"] as { perSec: number }).perSec;
+        const handle = await hb.startBridge({ repoRoot: ctx.cwd, noAuth: true }, {
+          polygraphVerify: async () => ({ verdict: "unknown", color: "grey", confidence: 0, oneLine: "probe", latencyMs: 1, engine: "probe" }),
+        });
+        try {
+          let ok = 0, limited = 0;
+          const n = perSec + 35;
+          for (let i = 0; i < n; i++) {
+            const s = await fetch(handle.baseUrl + "/v1/polygraph/verify", {
+              method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sentence: "x" }),
+            }).then((r) => r.status).catch(() => 0);
+            if (s === 200) ok++; else if (s === 429) limited++;
+          }
+          // Must fire within 1 second for the burst window to apply.
+          const withinWindow = Date.now() - t0 < 1000;
+          const pass = withinWindow && ok <= perSec && limited >= (n - perSec - 2);
+          return { value: pass ? 1 : 0, evidence: `${ok} passed (cap ${perSec}/sec), ${limited} got 429, within1s=${withinWindow}`, dtMs: Date.now() - t0 };
+        } finally {
+          await handle.stop();
+          hb.__resetRateLimiterForTest();
+        }
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+  {
+    id: "probe.polygraph.homograph_canonical_http_path",
+    kind: "boolean",
+    description: "HTTP polygraph path canonicalizes Unicode-digit homographs (closes v2.72 vuln #2). '٢+٢=٥' (Arabic) and '２＋２＝５' (fullwidth) must both verdict 'refuted' with a homograph flag, matching ASCII '2+2=5'.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const pg = await import("../polygraph/index.js" as string) as typeof import("../polygraph/index.js");
+        const arabic = await pg.verifyBrowserSentence({ sentence: "٢+٢=٥", repoRoot: ctx.cwd });
+        const fullwidth = await pg.verifyBrowserSentence({ sentence: "２＋２＝５", repoRoot: ctx.cwd });
+        const ascii = await pg.verifyBrowserSentence({ sentence: "2+2=5", repoRoot: ctx.cwd });
+        const ok = arabic.verdict === "refuted" && fullwidth.verdict === "refuted" && ascii.verdict === "refuted"
+          && (arabic.homographFlags?.length ?? 0) > 0 && (fullwidth.homographFlags?.length ?? 0) > 0;
+        return { value: ok ? 1 : 0, evidence: `arabic=${arabic.verdict}(flags ${arabic.homographFlags?.length ?? 0}) fullwidth=${fullwidth.verdict}(flags ${fullwidth.homographFlags?.length ?? 0}) ascii=${ascii.verdict}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+  {
+    id: "probe.polygraph.lenses_always_run",
+    kind: "boolean",
+    description: "Polygraph runs all 6 lenses on every sentence incl. generic/short ones (closes v2.72 vuln #3). A generic sentence returns a 6-lens report (not 0), and a generic sentence hiding 'rm -rf /' is caught RED by the risk lens.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const pg = await import("../polygraph/index.js" as string) as typeof import("../polygraph/index.js");
+        const generic = await pg.verifyBrowserSentence({ sentence: "this is a generic thing to consider", repoRoot: ctx.cwd });
+        const danger = await pg.verifyBrowserSentence({ sentence: "just run rm -rf / to clean up", repoRoot: ctx.cwd });
+        const lensCount = generic.lenses?.lenses.length ?? 0;
+        const ok = lensCount === 6 && danger.verdict === "refuted";
+        return { value: ok ? 1 : 0, evidence: `generic lenses=${lensCount}/6, danger verdict=${danger.verdict}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
   // ── token / response size ──────────────────────────────────────────
   {
     id: "probe.capabilities.bytes",

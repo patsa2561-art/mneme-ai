@@ -32,6 +32,7 @@
 
 import { runACGV, type ACGVResult } from "../squadron/acgv.js";
 import { runAllLenses, type MultiLensReport } from "../polygraph_lenses/index.js";
+import { canonicalize } from "../protoplasm/super_quan/homograph_guard.js";
 
 /** Wire-format verdict returned to the browser userscript. Kept tiny on
  *  purpose — the userscript renders this next to a single sentence and
@@ -47,6 +48,10 @@ export interface BrowserPolygraphVerdict {
   /** v2.19.91 — Multi-lens detector results so the dashboard can render
    *  the crystal-ring UI with per-lens icons + tooltips. */
   lenses?: MultiLensReport;
+  /** v2.73 — homograph-guard flags when the input was canonicalized
+   *  (e.g. Arabic-Indic / fullwidth digits transliterated to ASCII).
+   *  Empty/absent when the input was already canonical. */
+  homographFlags?: string[];
 }
 
 /** Map ACGV's internal verdict family to the friendlier 5-state used by
@@ -128,18 +133,77 @@ export async function verifyBrowserSentence(input: {
   repoRoot: string;
 }): Promise<BrowserPolygraphVerdict> {
   const t0 = Date.now();
-  const sentence = input.sentence.trim();
-  if (!sentence) {
+  const rawSentence = input.sentence.trim();
+  if (!rawSentence) {
     return { verdict: "unknown", color: "grey", confidence: 0, oneLine: "empty sentence", latencyMs: 0, engine: "noop" };
   }
-  if (!looksWorthVerifying(sentence)) {
-    return {
-      verdict: "unknown", color: "grey", confidence: 0,
-      oneLine: "no specific entities to verify",
-      latencyMs: Date.now() - t0, engine: "prefilter",
-    };
-  }
+
+  // v2.73.0 — HOMOGRAPH GUARD in the CORE path (closes v2.72 vuln #2).
+  // Pre-v2.73 the guard was only applied in the CLI command layer
+  // (demo.ts / daemon.ts), so the HTTP bridge path saw Arabic-Indic
+  // (٢), fullwidth (２), and other Unicode-digit homographs un-normalized
+  // → "٢+٢=٥" slipped past the math lens (which only matches ASCII \d).
+  // Now BOTH the CLI and the HTTP bridge canonicalize on the SAME shared
+  // engine, so every downstream check (lenses + ACGV) sees ASCII digits.
+  let sentence = rawSentence;
+  let homographFlags: string[] = [];
   try {
+    const c = canonicalize(rawSentence);
+    if (c.flags.length > 0 && c.canonical !== rawSentence) {
+      sentence = c.canonical;
+      homographFlags = c.flags;
+    }
+  } catch { /* canonicalize is best-effort — never block the polygraph */ }
+
+  try {
+    // v2.73.0 — ALWAYS run the 6 micro-lenses (closes v2.72 vuln #3).
+    // Pre-v2.73 a "generic"/short sentence returned grey at the prefilter
+    // BEFORE any lens ran → the dashboard showed "0 lenses". But the
+    // lenses are deterministic, in-process, sub-millisecond JS — there is
+    // no cost reason to skip them. A short claim like "2+2=5" (under the
+    // 12-char prefilter floor) is exactly the kind of thing the math lens
+    // refutes. So lenses now run on EVERY non-empty sentence, on the
+    // CANONICAL form, regardless of the heavy-ACGV prefilter.
+    const lensReport = runAllLenses(sentence);
+    const worthHeavyVerify = looksWorthVerifying(sentence);
+
+    // A lens is "informative" when it fired non-grey with real weight.
+    const isLensInformative = lensReport.lenses.some((l) => l.color !== "grey" && l.weight >= 0.5);
+
+    // FAST PATH: the sentence isn't worth the heavier ACGV pass. We STILL
+    // return the full lens report (so the dashboard shows 6 lenses, not
+    // 0) and let a confident lens stand on its own — a deterministic math
+    // refutation or a world-fact miss is not "crying wolf", it is ground
+    // truth, so it may surface RED/GREEN even without ACGV.
+    if (!worthHeavyVerify) {
+      if (isLensInformative) {
+        const friendly: BrowserPolygraphVerdict["verdict"] =
+          lensReport.rolledUpColor === "red" ? "refuted"
+          : lensReport.rolledUpColor === "green" ? "trustworthy"
+          : "mixed";
+        const color = lensReport.rolledUpColor === "grey" ? "yellow" : lensReport.rolledUpColor;
+        return {
+          verdict: friendly, color,
+          confidence: Math.min(0.9, Math.max(...lensReport.lenses.map((l) => l.weight))),
+          oneLine: homographFlags.length > 0 ? `${lensReport.rolledUpReason} · canonicalized (${homographFlags.join(", ")})` : lensReport.rolledUpReason,
+          nextAction: friendly === "refuted" ? "Do not rely on this sentence." : friendly === "trustworthy" ? "Safe to rely on." : "Ask the AI to cite a specific file / function / version.",
+          latencyMs: Date.now() - t0, engine: "multi-lens",
+          lenses: lensReport,
+          homographFlags: homographFlags.length > 0 ? homographFlags : undefined,
+        };
+      }
+      // No lens fired + not worth ACGV → genuinely-unknown, but now WITH
+      // the (all-grey) lens report attached so the UI shows 6 lenses.
+      return {
+        verdict: "unknown", color: "grey", confidence: 0,
+        oneLine: homographFlags.length > 0 ? `no specific entities to verify · canonicalized (${homographFlags.join(", ")})` : "no specific entities to verify",
+        latencyMs: Date.now() - t0, engine: "prefilter",
+        lenses: lensReport,
+        homographFlags: homographFlags.length > 0 ? homographFlags : undefined,
+      };
+    }
+
+    // HEAVY PATH: worth a full ACGV pass.
     // Always use propositional engine in the browser path: z3 spawns a
     // worker + can take 1-3s. The browser polygraph is per-sentence on a
     // streaming response; we MUST stay under ~300ms.
@@ -155,6 +219,8 @@ export async function verifyBrowserSentence(input: {
         verdict: "unknown", color: "grey", confidence: 0,
         oneLine: `input truncated (${truncated.split(":")[1] ?? "over cap"}) — split into smaller sentences`,
         latencyMs: Date.now() - t0, engine: "input-guard",
+        lenses: lensReport,
+        homographFlags: homographFlags.length > 0 ? homographFlags : undefined,
       };
     }
     if (unverifiable) {
@@ -163,12 +229,13 @@ export async function verifyBrowserSentence(input: {
         verdict: "unknown", color: "grey", confidence: 0,
         oneLine: `unverifiable input: ${kind.toLowerCase().replace(/_/g, " ")}`,
         latencyMs: Date.now() - t0, engine: "input-guard",
+        lenses: lensReport,
+        homographFlags: homographFlags.length > 0 ? homographFlags : undefined,
       };
     }
-    // v2.19.91 — Run the 6 micro-lenses in parallel.  If any lens fires
-    // RED with high weight, the lens verdict overrides ACGV (lenses know
-    // world facts ACGV doesn't).
-    const lensReport = runAllLenses(sentence);
+    // v2.19.91 — lensReport (computed at the top on the canonical form).
+    // If any lens fires RED with high weight, the lens verdict overrides
+    // ACGV (lenses know world facts ACGV doesn't).
     let friendly = toFriendlyVerdict(result.verdict);
     let color = toColor(friendly);
     // Lens override: a confident lens verdict wins over a mixed ACGV.
@@ -180,14 +247,14 @@ export async function verifyBrowserSentence(input: {
     // One-liner now favours the lens reason when it's stronger than
     // ACGV's generic "mixed evidence" line.
     const lensReason = lensReport.rolledUpReason;
-    const isLensInformative = lensReport.lenses.some((l) => l.color !== "grey" && l.weight >= 0.5);
-    const oneLine = isLensInformative && lensReason
+    const baseOneLine = isLensInformative && lensReason
       ? lensReason
       : friendly === "trustworthy"
         ? `verified · ${result.verdict.toLowerCase()} (${Math.round(result.confidence * 100)}%)`
         : friendly === "refuted" || friendly === "impossible"
           ? `refuted · ${result.verdict.toLowerCase()} (${Math.round(result.confidence * 100)}%)`
           : `no specific entity to verify`;
+    const oneLine = homographFlags.length > 0 ? `${baseOneLine} · canonicalized (${homographFlags.join(", ")})` : baseOneLine;
     return {
       verdict: friendly,
       color,
@@ -201,6 +268,7 @@ export async function verifyBrowserSentence(input: {
       latencyMs: Date.now() - t0,
       engine: "multi-lens",
       lenses: lensReport,
+      homographFlags: homographFlags.length > 0 ? homographFlags : undefined,
     };
   } catch (e) {
     // Defensive: ACGV throwing is unexpected but we MUST not bubble the
