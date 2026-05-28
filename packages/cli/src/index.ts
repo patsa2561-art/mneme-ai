@@ -4536,15 +4536,16 @@ export async function run(argv: string[]): Promise<void> {
   // signed crossing stamp — composing the existing organs into one bridge.
   program
     .command("gephyra <action>")
-    .description("🌉 GEPHYRA — the living bridge / Toll Booth of Truth. `cross --claim \"...\" --from AGENT` routes a claim through real-time truth-customs (ACGV) + injection quarantine + honesty toll + conscience nudge + a tamper-evident crossing stamp (NOTARY). `status` shows crossings + hallucinations caught; `log` replays the black box. Mneme's surface — the face the agent world plugs into.")
+    .description("🌉 GEPHYRA — the living bridge / Toll Booth of Truth. `cross --claim \"...\" --from AGENT` routes a claim through real-time truth-customs (ACGV) + injection quarantine + honesty toll + conscience nudge + a tamper-evident crossing stamp (NOTARY). `serve [--port]` runs it as an HTTP endpoint (POST /cross). `advertise` points agents at the bridge + lists new capabilities. `status`/`log` = crossings + black box. Mneme's surface — the face the agent world plugs into.")
     .option("--claim <c>", "the claim/message crossing the bridge (cross)")
     .option("--from <a>", "originating agent (cross)")
     .option("--to <a>", "destination agent (cross)")
     .option("--action <a>", "what the crossing does (cross)")
+    .option("--port <n>", "port for `serve` (default 17742)", (v) => Number(v))
     .option("--json", "machine-readable output", false)
-    .action(async (action: string, o: { claim?: string; from?: string; to?: string; action?: string; json?: boolean }) => {
+    .action(async (action: string, o: { claim?: string; from?: string; to?: string; action?: string; port?: number; json?: boolean }) => {
       const { gephyraCommand } = await import("./commands/gephyra.js");
-      process.exit(await gephyraCommand({ cwd: process.cwd(), action, claim: o.claim, from: o.from, to: o.to, frameAction: o.action, json: !!o.json }));
+      process.exit(await gephyraCommand({ cwd: process.cwd(), action, claim: o.claim, from: o.from, to: o.to, frameAction: o.action, port: o.port, json: !!o.json }));
     });
 
   program

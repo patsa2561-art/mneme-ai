@@ -9,13 +9,14 @@
  */
 
 import { writeSync } from "node:fs";
+import { createServer } from "node:http";
 import * as core from "@mneme-ai/core";
 
 function out(s: string): void { try { writeSync(1, s); } catch { process.stdout.write(s); } }
 
 export interface GephyraOpts {
   cwd: string; action: string;
-  claim?: string; from?: string; to?: string; frameAction?: string; json?: boolean;
+  claim?: string; from?: string; to?: string; frameAction?: string; port?: number; json?: boolean;
 }
 
 export async function gephyraCommand(o: GephyraOpts): Promise<number> {
@@ -54,6 +55,38 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
     return 0;
   }
 
-  out(`✗ Unknown gephyra action "${o.action}". Try: cross | status | log\n`);
+  if (o.action === "advertise") {
+    const adv = g.gephyraAdvertisement(o.cwd, core.agentManifest.MNEME_COMMAND_CATALOG as Array<{ command: string }>);
+    if (o.json) { out(JSON.stringify(adv, null, 2) + "\n"); return 0; }
+    out(adv.text + "\n");
+    return 0;
+  }
+
+  if (o.action === "serve") {
+    const port = o.port ?? 17742; // 17741 is the existing polygraph bridge
+    const server = createServer((req, res) => {
+      if (req.method !== "POST" || !req.url || !req.url.startsWith("/cross")) {
+        res.writeHead(404, { "content-type": "application/json" }); res.end(JSON.stringify({ error: "POST /cross" })); return;
+      }
+      let body = "";
+      req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
+      req.on("end", () => {
+        void g.handleCrossRequest(o.cwd, body).then((r) => {
+          res.writeHead(r.status, { "content-type": "application/json" });
+          res.end(JSON.stringify(r.body));
+        }).catch((e: Error) => {
+          res.writeHead(500, { "content-type": "application/json" }); res.end(JSON.stringify({ error: e.message }));
+        });
+      });
+    });
+    server.on("error", (e) => { out(`✗ GEPHYRA serve failed: ${(e as Error).message}\n`); process.exit(1); });
+    server.listen(port, () => {
+      out(`🌉 GEPHYRA serving on :${port}  | POST /cross {claim, fromAgent} → truth-customs + signed crossing\n  (Ctrl-C to stop. Truth engine: 7-layer ACGV. Every crossing is recorded + stamped.)\n`);
+    });
+    await new Promise<void>(() => { /* run until killed */ });
+    return 0;
+  }
+
+  out(`✗ Unknown gephyra action "${o.action}". Try: cross | status | log | advertise | serve\n`);
   return 2;
 }

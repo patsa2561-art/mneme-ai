@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🌉 NEW in v2.83.0 — **GEPHYRA** (γέφυρα, "bridge") — the Toll Booth of Truth
+### 🌉 NEW in v2.84.0 — **GEPHYRA Phase 2** (serve-as-endpoint + auto-advertise)
+
+GEPHYRA now runs as an **HTTP endpoint** (`mneme gephyra serve` → `POST /cross {claim, fromAgent}` → truth-customs + a signed crossing) and **auto-advertises itself to AI agents**: a new manifest **Rule 12** + `mneme.gephyra.advertise` tell every agent (on session start, automatically) to route factual claims + cross-agent (A2A) traffic through `mneme.gephyra.cross` and **auto-detect any capability added since it last checked** (`newCapabilitiesSince` diffs the live catalog) — so new Mneme functions are surfaced through the bridge and the user benefits without ever asking. Silent + automatic. TG 71/71.
+
+### 🌉 v2.83.0 — **GEPHYRA** (γέφυρα, "bridge") — the Toll Booth of Truth
 
 Every router/gateway/bridge in history forwards bytes without caring whether they're true. **GEPHYRA is the first bridge that inspects the *truth* of what crosses it in real time** — and it's the **surface** the agent world plugs into (Mneme is the brain; GEPHYRA is the face). A claim crossing the bridge gets **truth-customs**: a refuted claim is **corrected before it reaches the far side**, an injection is **quarantined** (never crosses), the sender's **honesty band** sets scrutiny, an overconfident claim gets a **conscience nudge** back, and every crossing leaves a **tamper-evident NOTARY stamp** that verifies offline. It composes Mneme's organs (mesh-immune + honesty-score + 7-layer ACGV + flight-recorder + NOTARY) into **one signed crossing** — and **never throws**: if the truth engine is down, traffic crosses flagged rather than dropped. The user just gets the correct answer; the 4-protocol / 3-vendor complexity is hidden under one neutral, self-verifying bridge. `mneme gephyra cross|status|log` · MCP `mneme.gephyra.cross` (agents route claims through it automatically). TG 70/70.
 

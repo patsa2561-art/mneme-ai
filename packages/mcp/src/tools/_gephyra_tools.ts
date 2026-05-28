@@ -77,4 +77,25 @@ export const gephyraStatusTool: MnemeTool = {
   },
 };
 
-export const GEPHYRA_TOOLS: MnemeTool[] = [gephyraCrossTool, gephyraStatusTool];
+export const gephyraAdvertiseTool: MnemeTool = {
+  name: "mneme.gephyra.advertise",
+  category: "meta",
+  description:
+    "🌉 GEPHYRA — auto-advertise: returns the routing directive (point factual claims + A2A traffic through mneme.gephyra.cross) PLUS the capabilities that are NEW since this agent last checked (auto-detected by diffing the live catalog). Call it on session start so you automatically route the user's traffic through truth-customs and surface anything new.",
+  whenToUse: "On session start / first GEPHYRA contact — learn to route through the bridge + what's new since last time.",
+  triggers: ["gephyra advertise", "what's new on the bridge", "should I route through gephyra"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  handler: async (rt) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const adv = core.gephyra.gephyraAdvertisement(cwd, core.agentManifest.MNEME_COMMAND_CATALOG as Array<{ command: string }>);
+      return { data: adv, wisdom: adv.text, followUp: ["mneme.gephyra.cross"], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "advertise failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const GEPHYRA_TOOLS: MnemeTool[] = [gephyraCrossTool, gephyraStatusTool, gephyraAdvertiseTool];

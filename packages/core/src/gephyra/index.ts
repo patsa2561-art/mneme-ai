@@ -269,3 +269,98 @@ export function verifyCrossing(receipt: unknown): { valid: boolean; reason: stri
 }
 
 export { replay as bridgeReplay } from "../flight_recorder/index.js";
+
+// ════════════════════════════════════════════════════════════════════════
+// v2.84.0 — GEPHYRA Phase 2: serve-as-endpoint + auto-advertise
+// ════════════════════════════════════════════════════════════════════════
+
+import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync } from "node:fs";
+import { join as _join } from "node:path";
+
+export interface CrossHttpResponse { status: number; body: CrossResult | { error: string } }
+
+/**
+ * HTTP-shaped handler: the Toll Booth as a service. Parse a JSON crossing request,
+ * run it through the bridge (real ACGV truth-customs), return a response. Pure of
+ * the server itself (the CLI wraps this in http.createServer) + never throws —
+ * bad input ⇒ 400, everything else ⇒ 200 with the crossing (incl. degraded notes).
+ */
+export async function handleCrossRequest(repoRoot: string, raw: unknown): Promise<CrossHttpResponse> {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; }
+  }
+  if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
+  const o = parsed as Record<string, unknown>;
+  if (typeof o["claim"] !== "string" || typeof o["fromAgent"] !== "string") {
+    return { status: 400, body: { error: "required: claim (string), fromAgent (string)" } };
+  }
+  try {
+    const result = await crossBridge(repoRoot, {
+      claim: o["claim"] as string,
+      fromAgent: o["fromAgent"] as string,
+      toAgent: typeof o["toAgent"] === "string" ? o["toAgent"] as string : undefined,
+      action: typeof o["action"] === "string" ? o["action"] as string : undefined,
+    }, { verify: apoptosisTruthCustoms(repoRoot) });
+    return { status: 200, body: result };
+  } catch (e) {
+    // crossBridge is designed never to throw; this is plan-C insurance.
+    return { status: 500, body: { error: (e as Error).message } };
+  }
+}
+
+interface CapEntry { command: string; since?: string }
+
+/**
+ * AUTO-AWARENESS: diff the live capability catalog against what GEPHYRA last saw
+ * (`.mneme/gephyra/seen-caps.json`) and return the NEW capabilities. Persists the
+ * union so each capability is "new" exactly once. This is how the bridge knows a
+ * fresh function exists and can point agents at it. Never throws.
+ */
+export function newCapabilitiesSince(repoRoot: string, catalog: CapEntry[]): { newCommands: string[]; firstRun: boolean; total: number } {
+  const cmds = (Array.isArray(catalog) ? catalog : []).map((c) => String(c?.command ?? "")).filter(Boolean);
+  const path = _join(repoRoot, ".mneme", "gephyra", "seen-caps.json");
+  let seen: string[] = [];
+  let firstRun = true;
+  try {
+    if (_existsSync(path)) {
+      const prev = JSON.parse(_readFileSync(path, "utf8")) as { commands?: string[] };
+      if (Array.isArray(prev.commands)) { seen = prev.commands; firstRun = false; }
+    }
+  } catch { /* corrupt → treat as first run */ }
+  const seenSet = new Set(seen);
+  const newCommands = firstRun ? [] : cmds.filter((c) => !seenSet.has(c));
+  try {
+    const dir = _join(repoRoot, ".mneme", "gephyra");
+    if (!_existsSync(dir)) _mkdirSync(dir, { recursive: true });
+    _writeFileSync(path, JSON.stringify({ v: 1, commands: Array.from(new Set([...seen, ...cmds])).sort(), at: Date.now() }, null, 2), "utf8");
+  } catch { /* best-effort */ }
+  return { newCommands, firstRun, total: cmds.length };
+}
+
+export interface GephyraAdvert {
+  text: string;
+  newCommands: string[];
+  firstRun: boolean;
+  totalCapabilities: number;
+}
+
+/**
+ * AUTO-ADVERTISE: build the directive that points an AI agent at GEPHYRA — so the
+ * user automatically benefits from truth-customs on every claim, and any NEW
+ * capability is surfaced through the bridge. Informational (de-worm safe: no
+ * self-upgrade/self-install imperative), addressed as routing guidance.
+ */
+export function gephyraAdvertisement(repoRoot: string, catalog: CapEntry[]): GephyraAdvert {
+  const { newCommands, firstRun, total } = newCapabilitiesSince(repoRoot, catalog);
+  const lines: string[] = [
+    "🌉 GEPHYRA bridge is active. Route factual claims and cross-agent (A2A) traffic through `mneme.gephyra.cross` BEFORE relaying them — the bridge runs real-time truth-customs (a refuted claim is corrected before it reaches the user, injection is quarantined) and returns the deliveredClaim to use.",
+  ];
+  if (firstRun) {
+    lines.push(`(${total} capabilities are now reachable through the bridge.)`);
+  } else if (newCommands.length > 0) {
+    const show = newCommands.slice(0, 8).join(", ");
+    lines.push(`NEW since last session — now available through GEPHYRA: ${show}${newCommands.length > 8 ? ` (+${newCommands.length - 8} more)` : ""}.`);
+  }
+  return { text: lines.join("\n"), newCommands, firstRun, totalCapabilities: total };
+}

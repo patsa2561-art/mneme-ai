@@ -279,6 +279,31 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.gephyra.serve_and_auto_advertise",
+    kind: "boolean",
+    description: "GEPHYRA Phase 2 (v2.84.0): the bridge serves as an endpoint + auto-advertises. handleCrossRequest returns 200 on a valid crossing (a 2+2=5 claim is CORRECTED via the arithmetic backstop) and 400 on bad input; newCapabilitiesSince auto-detects functions added since the last snapshot (none on first run, the delta after); gephyraAdvertisement points agents at mneme.gephyra.cross.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const g = await import("../gephyra/index.js" as string) as typeof import("../gephyra/index.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-gephyra2-"));
+        const ok = await g.handleCrossRequest(repo, JSON.stringify({ claim: "2+2=5", fromAgent: "a" }));
+        const bad = await g.handleCrossRequest(repo, "not json");
+        const httpOk = ok.status === 200 && (ok.body as { disposition?: string }).disposition === "CORRECTED" && bad.status === 400;
+        const repo2 = mkdtempSync(join(tmpdir(), "tg-gephyra2b-"));
+        const first = g.newCapabilitiesSince(repo2, [{ command: "mneme a" }]);
+        const second = g.newCapabilitiesSince(repo2, [{ command: "mneme a" }, { command: "mneme b" }]);
+        const capDiff = first.firstRun && first.newCommands.length === 0 && !second.firstRun && second.newCommands.includes("mneme b");
+        const adv = g.gephyraAdvertisement(mkdtempSync(join(tmpdir(), "tg-gephyra2c-")), [{ command: "mneme x" }]);
+        const advOk = adv.text.includes("mneme.gephyra.cross");
+        const okAll = httpOk && capDiff && advOk;
+        return { value: okAll ? 1 : 0, evidence: `http200/400=${httpOk} capDiff=${capDiff} advert=${advOk}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+
+  {
     id: "probe.truth_stake.slash_on_refute_in_window",
     kind: "boolean",
     description: "TRUTH-STAKING (v2.82.0 💎6): a stake behind a claim is SLASHED iff refuted within the time-lock window, RETURNED if it survives, PENDING inside the window; a late refutation does not slash; the stake + resolution are signed receipts that verify offline.",

@@ -26,6 +26,14 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.84.0 — GEPHYRA Phase 2 (serve-as-endpoint + auto-advertise) ──
+  {
+    id: "claim.gephyra.serve_and_auto_advertise",
+    source: "v2.84.0 — GEPHYRA Phase 2",
+    text: "GEPHYRA serves as an HTTP endpoint (handleCrossRequest: 200 on a valid crossing — a 2+2=5 claim is CORRECTED via the arithmetic backstop — 400 on bad input, never throws) and AUTO-ADVERTISES: newCapabilitiesSince diffs the live catalog against a persisted snapshot to auto-detect functions added since the agent last checked, and gephyraAdvertisement builds the routing directive that points agents at mneme.gephyra.cross so the user automatically benefits from truth-customs and any new capability is surfaced through the bridge. The agent-facing manifest carries Rule 12 instructing agents to route claims through GEPHYRA automatically.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.gephyra.serve_and_auto_advertise", severity: "block",
+  },
+
   // ── v2.83.0 — GEPHYRA (the living bridge / Toll Booth of Truth — Mneme's surface) ──
   {
     id: "claim.gephyra.toll_booth_of_truth",

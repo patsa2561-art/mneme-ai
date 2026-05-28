@@ -15,7 +15,7 @@ import { describe, it, expect } from "vitest";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { crossBridge, bridgeStatus, verifyCrossing, defaultTruthCustoms, type TruthVerdict, type CrossDeps } from "./index.js";
+import { crossBridge, bridgeStatus, verifyCrossing, defaultTruthCustoms, handleCrossRequest, newCapabilitiesSince, gephyraAdvertisement, type TruthVerdict, type CrossDeps } from "./index.js";
 
 const repo = () => mkdtempSync(join(tmpdir(), "mneme-gephyra-"));
 const verifier = (verdict: TruthVerdict, corrected?: string): CrossDeps => ({ verify: async () => ({ verdict, corrected }) });
@@ -87,6 +87,39 @@ describe("v2.83.0 GEPHYRA — crossings (PINNED)", () => {
     expect(s.unverified).toBe(1);
     expect(s.hallucinationsCaught).toBe(2);
     expect(s.chainValid).toBe(true);
+  });
+});
+
+describe("v2.84.0 GEPHYRA Phase 2 — serve + auto-advertise (PINNED)", () => {
+  it("P1 handleCrossRequest: 200 on valid, 400 on bad input, never throws", async () => {
+    const r = repo();
+    const ok = await handleCrossRequest(r, JSON.stringify({ claim: "2+2=5", fromAgent: "a" }));
+    expect(ok.status).toBe(200);
+    expect((ok.body as { disposition?: string }).disposition).toBe("CORRECTED"); // arithmetic backstop
+    expect((await handleCrossRequest(r, "not json")).status).toBe(400);
+    expect((await handleCrossRequest(r, JSON.stringify({ fromAgent: "a" }))).status).toBe(400); // missing claim
+    expect((await handleCrossRequest(r, { claim: "x", fromAgent: "a" })).status).toBe(200); // object form
+  });
+  it("P2 newCapabilitiesSince: first run = none-new (baseline), then detects the delta", () => {
+    const r = repo();
+    const cat = [{ command: "mneme a" }, { command: "mneme b" }];
+    const first = newCapabilitiesSince(r, cat);
+    expect(first.firstRun).toBe(true);
+    expect(first.newCommands).toEqual([]); // first run: snapshot only, nothing "new"
+    const second = newCapabilitiesSince(r, [...cat, { command: "mneme c" }, { command: "mneme d" }]);
+    expect(second.firstRun).toBe(false);
+    expect(second.newCommands.sort()).toEqual(["mneme c", "mneme d"]);
+    // idempotent: re-seeing the same catalog yields no new
+    expect(newCapabilitiesSince(r, [...cat, { command: "mneme c" }, { command: "mneme d" }]).newCommands).toEqual([]);
+  });
+  it("P3 gephyraAdvertisement points agents at the bridge + surfaces new caps", () => {
+    const r = repo();
+    const a1 = gephyraAdvertisement(r, [{ command: "mneme x" }]);
+    expect(a1.text).toContain("mneme.gephyra.cross");
+    expect(a1.firstRun).toBe(true);
+    const a2 = gephyraAdvertisement(r, [{ command: "mneme x" }, { command: "mneme gephyra cross" }]);
+    expect(a2.newCommands).toContain("mneme gephyra cross");
+    expect(a2.text).toMatch(/NEW since last session/);
   });
 });
 
