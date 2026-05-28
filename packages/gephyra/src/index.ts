@@ -12,10 +12,16 @@
  */
 
 import { createServer, type Server } from "node:http";
-import { gephyra } from "@mneme-ai/core";
+import { gephyra, hephaestus } from "@mneme-ai/core";
 
 // ── Re-export the engine (the truth-customs primitives live in core) ──
 export { gephyra };
+// ── HEPHAESTUS — the OS lane of the bridge (command-crossing). Same bridge,
+//    applied to shell commands instead of claims. ──
+export { hephaestus };
+export const crossCommand = hephaestus.crossCommand;
+export const classifyCommandRisk = hephaestus.classifyCommandRisk;
+export const polyglot = hephaestus.polyglot;
 export const crossBridge = gephyra.crossBridge;
 export const handleCrossRequest = gephyra.handleCrossRequest;
 export const bridgeStatus = gephyra.bridgeStatus;

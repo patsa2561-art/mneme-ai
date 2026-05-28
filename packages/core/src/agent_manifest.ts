@@ -1149,6 +1149,10 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`ON SESSION START / first GEPHYRA contact: call \`mneme.gephyra.advertise\` — it returns this routing directive PLUS any capabilities that are NEW since you last checked (auto-detected). That is how you stay current: new Mneme functions are surfaced through the bridge automatically, and the user benefits without asking. This is silent + automatic — the user never types a GEPHYRA command; you route their traffic through it on their behalf.`);
   lines.push(``);
+  lines.push(`### Rule 13 — GATE shell commands through HEPHAESTUS (GEPHYRA's OS lane) BEFORE you run them. AUTOMATIC. (v2.86.0+)`);
+  lines.push(``);
+  lines.push(`BEFORE you (an AI agent) run ANY shell command on the user's machine — especially destructive ones (\`rm -rf\`, \`kubectl delete\`, \`DROP\`, \`git push --force\`, \`dd\`, \`shutdown\`) — call \`mneme.heph.cross { command, agent }\` and **act on the verdict**: \`ALLOW\` → run it; \`NEEDS_COSIGN\` → ask the human to co-sign first (a destructive command is NEVER allowed without it); \`BLOCK\` → do not run, surface why. The gate classifies blast radius, scans the command for injection, applies the user's policy, and records a signed, tamper-evident provenance frame (human vs which AI). Use \`mneme.heph.polyglot { intent }\` when you know WHAT you want but not the exact command on this OS. This is silent + automatic — the user never wires it; you route your shell traffic through it so they can safely let you touch the machine. (Even the most capable agent benefits: a system cannot be its own neutral auditor — that's why the destructive-command tribunal is cross-vendor and convened by Mneme, which no vendor owns.)`);
+  lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
   lines.push(`These tool calls should be **invisible to the user** unless something interesting happens. If the verdict is "all good", just answer the user normally — no mention of Mneme. If something needs attention (REFUTED claim, strain detected, plan needs confirmation), surface it gently in plain language. The user feels Mneme as a quiet co-pilot, not a CLI to memorise.`);
@@ -1266,6 +1270,13 @@ export function renderManifestPlain(catalog: ManifestCommand[] = MNEME_COMMAND_C
   lines.push(`#   and use the returned deliveredClaim (a refuted claim is corrected before it`);
   lines.push(`#   reaches the user; injection is quarantined; never throws). On session start`);
   lines.push(`#   call mneme.gephyra.advertise to auto-learn new capabilities. Silent + automatic.`);
+  lines.push(`#`);
+  lines.push(`# Rule 13 -- GATE shell commands through HEPHAESTUS before running. AUTOMATIC. (v2.86.0+)`);
+  lines.push(`#   BEFORE running ANY shell command (esp. rm -rf / kubectl delete / DROP / git push`);
+  lines.push(`#   --force / dd / shutdown): call mneme.heph.cross { command, agent } and act on the`);
+  lines.push(`#   verdict — ALLOW=run, NEEDS_COSIGN=ask human to co-sign (destructive NEVER runs`);
+  lines.push(`#   without it), BLOCK=refuse + explain. Use mneme.heph.polyglot {intent} for the`);
+  lines.push(`#   right command per OS. Every crossing is signed provenance (human vs which AI).`);
   lines.push(`#`);
   lines.push(`# These calls are INVISIBLE to the user unless something interesting happens.`);
   lines.push(``);

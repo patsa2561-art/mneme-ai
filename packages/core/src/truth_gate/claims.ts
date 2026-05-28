@@ -26,6 +26,14 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.86.0 — HEPHAESTUS (GEPHYRA's OS lane — the command Toll Booth) ──
+  {
+    id: "claim.hephaestus.destructive_gate",
+    source: "v2.86.0 — HEPHAESTUS",
+    text: "HEPHAESTUS is GEPHYRA's OS lane: a command crossing into the machine is risk-classified (read/write/destructive), policy- and tribunal-gated, output-immune-scanned, and recorded as a signed tamper-evident provenance frame (human vs which AI). The SAFETY INVARIANT holds — a destructive command is NEVER ALLOW without an explicit human co-sign; a cross-vendor tribunal (uncorrelated errors; Mneme the neutral convener) BLOCKs a destructive op on split/danger; injection-laced commands are blocked; the tribunal failing closed on a destructive op. Decision-first, execution-optional. Composes flight_recorder + notary + mesh_immune; never throws.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.hephaestus.destructive_gate", severity: "block",
+  },
+
   // ── v2.84.0 — GEPHYRA Phase 2 (serve-as-endpoint + auto-advertise) ──
   {
     id: "claim.gephyra.serve_and_auto_advertise",

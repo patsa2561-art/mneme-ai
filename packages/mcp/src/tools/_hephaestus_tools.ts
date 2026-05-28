@@ -1,0 +1,93 @@
+/**
+ * v2.86.0 — HEPHAESTUS MCP tools · GEPHYRA's OS lane (the command Toll Booth).
+ *
+ * PROACTIVE: an agent about to run a shell command should call
+ * `mneme.heph.cross` FIRST and only run it if the disposition is ALLOW. A
+ * destructive command is NEVER allowed without a human co-sign.
+ */
+
+import type { MnemeTool } from "./_types.js";
+
+export const hephCrossTool: MnemeTool = {
+  name: "mneme.heph.cross",
+  category: "meta",
+  description:
+    "🔨 HEPHAESTUS — cross a command into the OS through the safety gate. Classifies risk (read/write/destructive), scans for injection, applies policy, and returns ALLOW / NEEDS_COSIGN / BLOCK + reasons + a signed provenance receipt (who: human vs which AI). A DESTRUCTIVE command is NEVER ALLOW without a human co-sign. Decision only — it does not execute. Call this BEFORE running any shell command and only proceed if disposition === 'ALLOW'.",
+  whenToUse: "BEFORE you (an AI agent) run ANY shell command on the user's machine — especially destructive ones (rm -rf, kubectl delete, DROP, git push --force). Use the verdict to decide whether to run, ask for co-sign, or refuse.",
+  triggers: ["heph cross", "is this command safe to run", "gate this command", "check before running"],
+  inputSchema: {
+    type: "object",
+    required: ["command", "agent"],
+    properties: {
+      command: { type: "string" },
+      agent: { type: "string", description: "'human' or your AI agent id" },
+      host: { type: "string", description: "host/context tag; a 'prod' substring triggers prod read-only" },
+      cosigned: { type: "boolean", description: "a human explicitly co-signed a destructive op" },
+    },
+  },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const r = await core.hephaestus.crossCommand(cwd, {
+        command: String(args["command"] ?? ""),
+        agent: String(args["agent"] ?? "unknown"),
+        host: typeof args["host"] === "string" ? args["host"] as string : undefined,
+        cosigned: args["cosigned"] === true,
+      });
+      const icon = r.disposition === "ALLOW" ? "🟢" : r.disposition === "NEEDS_COSIGN" ? "🟡" : "🔴";
+      return {
+        data: { disposition: r.disposition, risk: r.risk, reasons: r.reasons, threats: r.threats, origin: r.origin, receiptId: r.receipt?.receiptId },
+        wisdom: `${icon} ${r.disposition} (${r.risk})${r.reasons[0] ? " — " + r.reasons[0] : ""}`,
+        followUp: r.disposition === "NEEDS_COSIGN" ? ["mneme.heph.status"] : [],
+        confidence: { level: "high" as const },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "cross failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const hephPolyglotTool: MnemeTool = {
+  name: "mneme.heph.polyglot",
+  category: "meta",
+  description: "🌐 HEPHAESTUS — translate a canonical intent (e.g. 'list listening ports', 'disk usage', 'list processes') to the correct shell command for a platform (linux / macos / powershell; default = this OS). Write once, run anywhere.",
+  whenToUse: "When you know WHAT you want but not the exact command on this OS.",
+  triggers: ["polyglot", "translate command", "what's the command for"],
+  inputSchema: { type: "object", required: ["intent"], properties: { intent: { type: "string" }, platform: { type: "string", description: "linux | macos | powershell (default: this OS)" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    void rt;
+    try {
+      const core = await import("@mneme-ai/core");
+      const platform = typeof args["platform"] === "string" ? args["platform"] as import("@mneme-ai/core").hephaestus.Platform : undefined;
+      const t = core.hephaestus.polyglot(String(args["intent"] ?? ""), platform);
+      if (!t) return { data: { known: core.hephaestus.polyglotIntents() }, wisdom: `unknown intent — known: ${core.hephaestus.polyglotIntents().join(", ")}`, followUp: [], confidence: { level: "medium" as const } };
+      return { data: t, wisdom: `${t.intent} → [${t.platform}] ${t.command}`, followUp: ["mneme.heph.cross"], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "polyglot failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const hephStatusTool: MnemeTool = {
+  name: "mneme.heph.status",
+  category: "meta",
+  description: "🔨 HEPHAESTUS — live status from the command black box: crossings, allowed / needs-cosign / blocked, and whether the tamper-evident chain is intact.",
+  whenToUse: "Reporting what the OS gate has done this session.",
+  triggers: ["heph status", "command gate status"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  handler: async (rt) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const s = core.hephaestus.hephaestusStatus(rt.meta?.rootPath ?? process.cwd());
+      return { data: s, wisdom: `${s.crossings} crossings · ${s.blocked} blocked · chain ${s.chainValid ? "intact" : "TAMPERED"}`, followUp: [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "status failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const HEPHAESTUS_TOOLS: MnemeTool[] = [hephCrossTool, hephPolyglotTool, hephStatusTool];

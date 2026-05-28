@@ -4548,6 +4548,25 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await gephyraCommand({ cwd: process.cwd(), action, claim: o.claim, from: o.from, to: o.to, frameAction: o.action, port: o.port, json: !!o.json }));
     });
 
+  // v2.86.0 — HEPHAESTUS (GEPHYRA's OS lane). The neutral substrate a shell + AI
+  // run ON: a command CROSSES it (risk → policy → tribunal → immune → signed
+  // provenance) before touching the machine. Decision-first, execution-optional.
+  program
+    .command("heph <action>")
+    .aliases(["hephaestus"])
+    .description("🔨 HEPHAESTUS — GEPHYRA's OS lane: a command crosses the bridge (risk-classify · policy · cross-vendor tribunal · output immune-scan · signed provenance) before it touches the machine. `cross --command \"...\" --agent X` decides ALLOW/NEEDS_COSIGN/BLOCK; `run` executes IF allowed (guarded); `polyglot --intent \"...\"` translates to this OS's shell; `status`. Destructive is NEVER allowed without a human co-sign.")
+    .option("--command <c>", "the command crossing into the OS")
+    .option("--agent <a>", "who is asking — 'human' or an AI id (claude/grok/…)")
+    .option("--host <h>", "host/context tag (a 'prod' substring triggers prod read-only)")
+    .option("--cosign", "a human co-sign is provided for a destructive op", false)
+    .option("--intent <i>", "canonical intent for polyglot translation")
+    .option("--set <policy>", "plain-language policy for `policy` (e.g. 'destructive must co-sign; prod is read-only')")
+    .option("--json", "machine-readable output", false)
+    .action(async (action: string, o: { command?: string; agent?: string; host?: string; cosign?: boolean; intent?: string; set?: string; json?: boolean }) => {
+      const { hephCommand } = await import("./commands/heph.js");
+      process.exit(await hephCommand({ cwd: process.cwd(), action, command: o.command, agent: o.agent, host: o.host, cosign: !!o.cosign, intent: o.intent, policyText: o.set, json: !!o.json }));
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")

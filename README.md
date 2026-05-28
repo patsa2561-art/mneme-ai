@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🌉 NEW in v2.85.0 — **GEPHYRA Phase 3** (`@mneme-ai/gephyra` — the bridge graduates to a deployable package)
+### 🔨 NEW in v2.86.0 — **HEPHAESTUS** (GEPHYRA's OS lane — the command Toll Booth)
+
+**What it is:** the neutral substrate a shell + AI run *on*. Before any command touches the machine it **crosses** HEPHAESTUS — risk-classified (read/write/destructive), policy-gated, optionally judged by a **cross-vendor tribunal** (a system can't audit itself — Mneme, owned by no vendor, convenes Grok+Gemini+Claude), output immune-scanned, and recorded as a **signed, tamper-evident provenance frame** (human vs which AI). **What it does:** a destructive command is **never allowed without a human co-sign**; you write an intent once and it translates to any OS's shell (polyglot). Decision-first, execution-optional — it doesn't compete with the runner, it's the gate the runner must pass. `mneme heph cross|run|polyglot|status`; MCP `mneme.heph.cross` (agents gate their shell commands automatically). TG 72/72.
+
+### 🌉 v2.85.0 — **GEPHYRA Phase 3** (`@mneme-ai/gephyra` — the bridge graduates to a deployable package)
 
 GEPHYRA is now its own published package, **`@mneme-ai/gephyra`** — the deployable **surface** of Mneme that anyone can run standalone in front of any agent/protocol: `npx @mneme-ai/gephyra serve` exposes `POST /cross {claim, fromAgent}` (real-time truth-customs + a signed crossing) and `GET /status`. The truth-customs engine stays in `@mneme-ai/core` (where it's tested + composed from every Mneme organ); the new package thinly re-exports it and adds the HTTP server + the `gephyra` bin + a `startServer()` API — no circular deps, nothing in the CLI/MCP changes. **Mneme = the brain; GEPHYRA = the face the agent world plugs into.** 7 packages now publish atomically.
 

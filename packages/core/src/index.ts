@@ -809,6 +809,7 @@ export * as truthCdn from "./truth_cdn/index.js";
 export * as edgeMesh from "./edge_mesh/index.js";
 export * as idleCompound from "./idle_compound/index.js";
 export * as gephyra from "./gephyra/index.js";
+export * as hephaestus from "./hephaestus/index.js";
 export * as agent from "./agent/index.js";
 export * as selfcheck from "./selfcheck/index.js";
 export * as integrations from "./integrations/index.js";
