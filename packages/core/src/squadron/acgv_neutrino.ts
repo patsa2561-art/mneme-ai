@@ -28,7 +28,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { safeExecTry } from "../util/safe_exec.js";
-import { countMnemeTools, isLibraryInPackageJson, type FactClaim } from "./fact_grounding.js";
+import { countMnemeTools, isLibraryInPackageJson, libraryReferencedInRepo, type FactClaim } from "./fact_grounding.js";
 
 export interface FlavorScore {
   /** 0-1 score for how well this flavor grounds the claim entity. */
@@ -203,7 +203,17 @@ export function neutrinoSubstrate(repoRoot: string, claim: FactClaim): FlavorSco
     if (isLibraryInPackageJson(repoRoot, claim.asserted)) {
       return { score: 1.0, evidence: `${claim.asserted} listed in root or workspace package.json` };
     }
-    return { score: 0, evidence: `${claim.asserted} not in any root or workspace package.json` };
+    // v2.76.0 R1 FIX — package.json is NOT authoritative. A "library" can be an
+    // Ollama model (bge-m3), a Python/other-ecosystem package, a transitive dep,
+    // or a runtime string reference; the claim's SUBJECT may also be a DIFFERENT
+    // project. So absence from package.json must NOT score 0 (which feeds the
+    // GÖDEL unsat-core → a false IMPOSSIBLE_REFUTE). Check lockfile + tracked
+    // source; if referenced → 1.0; else NEUTRAL 0.5 (cannot confirm or refute).
+    const ref = libraryReferencedInRepo(repoRoot, claim.asserted);
+    if (ref.found) {
+      return { score: 1.0, evidence: `${claim.asserted} referenced in ${ref.sampleFile} (runtime model / non-npm / transitive library)` };
+    }
+    return { score: 0.5, evidence: `${claim.asserted} not in package.json and not referenced in this repo — package.json is not authoritative for non-npm libraries or other projects; cannot confirm or refute` };
   }
   // File claim -- existsSync at a few likely paths.
   if (claim.kind === "file_exists") {

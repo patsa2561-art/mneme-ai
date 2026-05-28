@@ -233,6 +233,21 @@ export async function bridgeCommand(opts: BridgeCommandOptions): Promise<void> {
     },
   );
 
+  // v2.76.0 — DECLARED-HANDLE LEASE: the bridge is a long-running process that
+  // can hold node_modules / native handles too, so it registers a heartbeat
+  // (with the DLLs it holds) — the cmd.exe-safe preinstall PID-lease reap then
+  // reaps it + Handle-Oracles its exact handles, same as the nucleus daemon.
+  let bridgeBeat: { intervalId: NodeJS.Timeout | null; beatPath: string } | null = null;
+  try {
+    let held: string[] = [];
+    try { held = core.phoenix.dllExtraction.heldNativeLibs(); } catch { /* best-effort */ }
+    bridgeBeat = core.installOrgan.registerHeartbeat("bridge", held);
+    const drop = () => { try { if (bridgeBeat) core.installOrgan.deregisterHeartbeat("bridge", bridgeBeat.intervalId, "bridge-exit"); } catch { /* */ } };
+    process.on("exit", drop);
+    process.on("SIGTERM", () => { drop(); process.exit(0); });
+    process.on("SIGINT", () => { drop(); process.exit(0); });
+  } catch { /* heartbeat is best-effort; bridge still serves */ }
+
   if (opts.json) {
     process.stdout.write(JSON.stringify({
       ok: true,

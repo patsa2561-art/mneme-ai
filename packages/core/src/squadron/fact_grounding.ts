@@ -492,6 +492,44 @@ function functionExistsInRepo(repoRoot: string, name: string): { found: boolean;
   return { found: false, sampleFile: null };
 }
 
+/**
+ * v2.76.0 — Is a library/model REFERENCED anywhere in the repo, beyond
+ * package.json? package.json is NOT authoritative: Ollama models (`bge-m3`),
+ * Python/other-ecosystem packages, transitive deps, and runtime string
+ * references all live OUTSIDE the npm dependency list. Scans lockfiles
+ * (transitive npm) + tracked source/config (runtime + non-npm). A substring
+ * match is sufficient here — the goal is to AVOID falsely refuting a TRUE
+ * "uses X" claim; erring toward "referenced" is the safe direction.
+ */
+export function libraryReferencedInRepo(repoRoot: string, lib: string): { found: boolean; sampleFile: string | null } {
+  const needle = lib.toLowerCase();
+  if (needle.length < 2) return { found: false, sampleFile: null };
+  for (const lf of ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"]) {
+    const p = join(repoRoot, lf);
+    if (existsSync(p)) {
+      try { if (readFileSync(p, "utf8").toLowerCase().includes(needle)) return { found: true, sampleFile: lf }; } catch { /* */ }
+    }
+  }
+  const stack: string[] = [join(repoRoot, "packages"), join(repoRoot, "src")];
+  const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".mneme", "coverage", ".next", ".turbo"]);
+  const EXT = /\.(ts|js|tsx|jsx|mjs|cjs|json|ya?ml|toml|py|rs|go|md)$/;
+  let visited = 0;
+  while (stack.length > 0 && visited < 6000) {
+    const path = stack.pop()!;
+    let entries: string[]; try { entries = readdirSync(path); } catch { continue; }
+    for (const n of entries) {
+      if (SKIP_DIRS.has(n)) continue;
+      const full = join(path, n); visited++;
+      let s; try { s = statSync(full); } catch { continue; }
+      if (s.isDirectory()) { stack.push(full); continue; }
+      if (!EXT.test(n) || n.endsWith(".d.ts")) continue;
+      if (s.size > 2_000_000) continue;
+      try { if (readFileSync(full, "utf8").toLowerCase().includes(needle)) return { found: true, sampleFile: full.slice(repoRoot.length + 1) }; } catch { /* */ }
+    }
+  }
+  return { found: false, sampleFile: null };
+}
+
 export function verifyFacts(repoRoot: string, claims: FactClaim[]): FactCheckResult[] {
   const root = resolve(repoRoot);
   const out: FactCheckResult[] = [];
@@ -547,11 +585,21 @@ export function verifyFacts(repoRoot: string, claims: FactClaim[]): FactCheckRes
     }
 
     if (c.kind === "library_used") {
-      const present = isLibraryInPackageJson(root, c.asserted);
-      if (present) {
+      if (isLibraryInPackageJson(root, c.asserted)) {
         out.push({ claim: c, verdict: "true", groundTruth: `${c.asserted} in package.json`, evidence: "matched dependencies or devDependencies" });
+        continue;
+      }
+      // v2.76.0 R1 FIX — package.json is NOT authoritative. A library can be an
+      // Ollama model (bge-m3), a transitive dep, a Python/other-ecosystem package,
+      // or a runtime string reference — and the claim's SUBJECT may be a DIFFERENT
+      // project entirely. So absence from package.json is NEVER proof of
+      // impossibility. Check the lockfile + tracked source before deciding, and
+      // degrade to UNVERIFIABLE (never "false" → IMPOSSIBLE) when unseen.
+      const ref = libraryReferencedInRepo(root, c.asserted);
+      if (ref.found) {
+        out.push({ claim: c, verdict: "true", groundTruth: `${c.asserted} referenced in ${ref.sampleFile}`, evidence: "found in tracked source / lockfile (runtime model / non-npm / transitive library)" });
       } else {
-        out.push({ claim: c, verdict: "false", groundTruth: `${c.asserted} NOT in package.json`, evidence: "scanned dependencies + devDependencies" });
+        out.push({ claim: c, verdict: "unverifiable", groundTruth: null, evidence: `${c.asserted} is not an npm dependency and is not referenced in this repo; package.json is not authoritative for non-npm libraries (Ollama models / other ecosystems) or for other projects — cannot prove impossible` });
       }
       continue;
     }

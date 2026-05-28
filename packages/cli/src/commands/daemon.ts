@@ -131,8 +131,13 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   let heartbeatHandle: { intervalId: NodeJS.Timeout | null; beatPath: string } | null = null;
   let installFlagWatcher: import("node:fs").FSWatcher | null = null;
   try {
-    const { installOrgan } = await import("@mneme-ai/core");
-    heartbeatHandle = installOrgan.registerHeartbeat("daemon-attached");
+    const { installOrgan, phoenix } = await import("@mneme-ai/core");
+    // v2.76.0 — DECLARED-HANDLE LEASE: record the native DLLs this daemon holds
+    // (or could once sharp loads) so the cmd.exe-safe preinstall PID-lease reap
+    // can Handle-Oracle the EXACT handles it leaves behind. Best-effort.
+    let held: string[] = [];
+    try { held = phoenix.dllExtraction.heldNativeLibs(); } catch { /* best-effort */ }
+    heartbeatHandle = installOrgan.registerHeartbeat("daemon-attached", held);
 
     // v2.19.54 — PREDICTIVE INSTALL SIGNAL. Watch the install-incoming flag
     // file. When ANY installer (preinstall hook or `mneme upgrade`) announces

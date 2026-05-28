@@ -29,6 +29,7 @@
  */
 
 import type { Command } from "commander";
+import { parseJsonArg } from "../util/json_arg.js";
 
 interface ToolLike {
   name: string;
@@ -245,10 +246,11 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
               let args: Record<string, unknown> = {};
               const jsonOpt = opts["json"];
               if (typeof jsonOpt === "string" && jsonOpt.length > 0) {
-                try { args = JSON.parse(jsonOpt) as Record<string, unknown>; }
-                catch (e) {
-                  const err = { error: "json-parse", message: (e as Error).message, tool: tool.name };
-                  process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ --json parse error: ${(e as Error).message}\n`);
+                const parsed = parseJsonArg(jsonOpt); // v2.76.0 — Windows cmd.exe-tolerant
+                if (parsed.ok) { args = parsed.value as Record<string, unknown>; }
+                else {
+                  const err = { error: "json-parse", message: parsed.error, tool: tool.name };
+                  process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ --json parse error: ${parsed.error}\n`);
                   process.exit(2);
                 }
               }
@@ -307,10 +309,11 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
           let args: Record<string, unknown> = {};
           const jsonOpt = opts["json"];
           if (typeof jsonOpt === "string" && jsonOpt.length > 0) {
-            try { args = JSON.parse(jsonOpt) as Record<string, unknown>; }
-            catch (e) {
-              const err = { error: "json-parse", message: (e as Error).message, tool: tool.name };
-              process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ --json parse error: ${(e as Error).message}\n`);
+            const parsed = parseJsonArg(jsonOpt); // v2.76.0 — Windows cmd.exe-tolerant
+            if (parsed.ok) { args = parsed.value as Record<string, unknown>; }
+            else {
+              const err = { error: "json-parse", message: parsed.error, tool: tool.name };
+              process.stderr.write(opts["json"] !== undefined ? JSON.stringify(err) + "\n" : `⚠ --json parse error: ${parsed.error}\n`);
               process.exit(2);
             }
           }

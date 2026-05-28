@@ -129,14 +129,19 @@ describe("acgv_neutrino · groundClaim", () => {
     }
   });
 
-  it("missing library grounds substrate at 0", () => {
+  // v2.76.0 R1 FIX — an absent library grounds at NEUTRAL 0.5, never 0.
+  // package.json is not authoritative (Ollama models / other ecosystems /
+  // other projects), and substrate 0 fed the GÖDEL unsat-core → a false
+  // IMPOSSIBLE_REFUTE of true claims like "X uses bge-m3".
+  it("missing library grounds substrate at NEUTRAL 0.5 (not 0)", () => {
     const claims: import("./fact_grounding.js").FactClaim[] = [{
       kind: "library_used",
       asserted: "this-library-does-not-exist-xyz",
       raw: "depends on this-library-does-not-exist-xyz",
     }];
     const result = groundClaim(repo, claims[0]!);
-    expect(result.substrate.score).toBe(0);
+    expect(result.substrate.score).toBe(0.5);
+    expect(result.substrate.score).not.toBe(0);
   });
 });
 

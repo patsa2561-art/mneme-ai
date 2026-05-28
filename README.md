@@ -16,45 +16,13 @@
 
 <br/><br/>
 
-### ⏳ NEW in v2.74.0 — **CHRONOS** · temporal self-consistency as a ground-truth-free honesty signal
+### ⏳ NEW in v2.74.0 — **CHRONOS**
 
-> **Abstract.** Detecting whether an LLM is honest usually needs a ground-truth oracle — expensive, incomplete, and impossible for open-ended claims. CHRONOS removes the oracle. Its premise: *lying once is easy; lying **consistently** across 10,000 answers over six months is intractable for a stateless model* — it would have to remember every lie. A truthful model re-derives from reality and needs no memory; a fabricating model must either remember every fabrication or contradict itself. So honesty becomes **measurable from self-consistency across time alone.** Every answer is HMAC-timestamped, semantically embedded, and appended to a tamper-evident ledger. When a new answer addresses a question close to a past one (cosine ≥ threshold), CHRONOS compares stances and emits one of four verdicts: **COHERENT** (same stance — honest by construction), **LEGITIMATE_UPDATE** (stance changed *with* a new cited source — the world moved and the model tracked it), **SELF_REPORTED** (changed and the model owned the change — failure-as-currency, rewarded), or **SILENT_DRIFT** 🚩 (changed with no evidence and no disclosure — the cardinal sin). A per-agent temporal-honesty score fuses a Wilson lower bound on consistent revisits with an exponential silent-drift penalty (each hidden contradiction halves trust). No oracle. No labels. Just time.
-
-**Why this is the xAI / Grok weapon.** Grok's real-time X access means its answers *should* change — new posts, fresh prices. Today nobody can distinguish "Grok changed because the world changed" from "Grok just waffled." CHRONOS requires every stance change to carry an evidence citation (an X-post URL + timestamp); absent that, it is silent drift. Grok becomes the **first AI that can cryptographically prove "I changed my answer because the world changed, not because I'm fickle"** — measurable maximal truth-seeking.
-
-```bash
-# Shell-native agents — record every substantive answer; CHRONOS classifies drift.
-mneme chronos record --agent grok --topic "current TSLA price" --stance "190" \
-  --answer "now 190 — see https://x.com/elonmusk/status/777 posted 2026-05-28"
-#   → LEGITIMATE_UPDATE (stance changed BUT a fresh X post is cited)
-mneme chronos record --agent grok --topic "current TSLA price" --stance "190" --answer "now 190"
-#   → 🚩 SILENT_DRIFT  (same change, no citation) — exit code 1
-mneme chronos score --agent grok      # 0-100 temporal-honesty score + band
-mneme chronos audit                   # verify the HMAC-chained temporal ledger
-```
-
-```ts
-// MCP-bound agents (Cursor / Cline / Claude Desktop / Zed):
-mneme.chronos.record({ agent, topic, stance, answerText })   // record + classify
-mneme.chronos.check ({ agent, topic, stance, answerText })   // dry-run, does NOT record
-mneme.chronos.score ({ agent })                              // temporal-honesty score
-```
-
-**AI agents:** call `mneme.chronos.record` after **every** substantive factual answer that has a checkable stance (a price, version, date, count, yes/no). If your answer differs from a past one because the world changed, put the source (URL / X post / commit / date) in `answerText` so CHRONOS scores it a **LEGITIMATE_UPDATE** instead of silent drift. Ground-truth-free — no oracle, just your own consistency across time.
-
-<br/>
+Measure whether an AI is honest **without a ground-truth oracle** — by catching it contradict *itself* over time (and making every legit change cite a source). → 📖 <a href="docs/chronos/README-EN.md" target="_blank" rel="noopener"><b>English</b></a> · <a href="docs/chronos/README-TH.md" target="_blank" rel="noopener"><b>ภาษาไทย</b></a>
 
 ### 🦠 v2.67.0 — **PROTOPLASM** Live Atom
 
-Every wrapped function gets a per-call statistical + quantum-inspired health probe. Findings stream to an HMAC-chained ledger. **Survives uncatchable SIGKILL / SIGSEGV / OS reboot** via 5-strategy fusion (WAL · PARASITE · GHOST CELL · PHOENIX HOOK · SEAMLESS BOOT). Zero config — atom activates on the first Mneme tool call.
-
-```ts
-import { withSuperQuanProbe } from "@mneme-ai/sdk";
-const safe = withSuperQuanProbe("auth.lookup", lookupUser);
-// That's it. State survives kill. HMAC-signed forever.
-```
-
-📖 **Detail**: <a href="docs/protoplasm/README.md" target="_blank" rel="noopener">docs/protoplasm/</a> · <a href="docs/protoplasm/DESIGN.md" target="_blank" rel="noopener">DESIGN spec</a>
+Wrap any function in a per-call quantum-inspired health probe whose state **survives uncatchable SIGKILL / SIGSEGV / OS reboot**. Zero config. → 📖 <a href="docs/protoplasm/README.md" target="_blank" rel="noopener"><b>docs</b></a> · <a href="docs/protoplasm/DESIGN.md" target="_blank" rel="noopener"><b>DESIGN spec</b></a>
 
 <br/>
 

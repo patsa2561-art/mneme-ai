@@ -107,10 +107,15 @@ describe("fact_grounding · verifyFacts — library used", () => {
     expect(results[0]!.verdict).toBe("true");
   });
 
-  it("FALSE when library not in package.json", () => {
+  // v2.76.0 R1 FIX — package.json is NOT authoritative for non-npm libraries
+  // (Ollama models / other ecosystems) or for claims about a DIFFERENT project,
+  // so "absent from package.json" must degrade to UNVERIFIABLE, never "false"
+  // (which fed the GÖDEL unsat-core → a false IMPOSSIBLE_REFUTE of a true claim).
+  it("UNVERIFIABLE (not false) when library is absent from package.json AND unreferenced", () => {
     writeFileSync(join(repo, "package.json"), JSON.stringify({ name: "x", version: "1.0.0", dependencies: {} }));
     const results = verifyFacts(repo, [{ kind: "library_used", asserted: "express", raw: "uses express" }]);
-    expect(results[0]!.verdict).toBe("false");
+    expect(results[0]!.verdict).toBe("unverifiable");
+    expect(results[0]!.verdict).not.toBe("false");
   });
 });
 

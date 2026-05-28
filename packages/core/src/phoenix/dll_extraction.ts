@@ -105,6 +105,35 @@ export function findLibvipsDir(packageRoot?: string): string | null {
   return existsSync(flat) ? flat : null;
 }
 
+/**
+ * v2.76.0 — DECLARED-HANDLE LEASE. The native DLL/.node paths this install
+ * holds (or could hold once sharp loads). A long-running Mneme process records
+ * these in its heartbeat lease so the preinstall reaper can run the Handle-
+ * Oracle on the EXACT handles a dead daemon held — not just static path
+ * guesses — covering non-standard install layouts (nvm / volta / custom prefix)
+ * with zero risk of the cmd.exe-fragile cmdline-match path. Best-effort, never
+ * throws; empty when sharp/libvips isn't present (the default opt-out tree).
+ */
+export function heldNativeLibs(packageRoot?: string): string[] {
+  const out: string[] = [];
+  try {
+    const dir = findLibvipsDir(packageRoot);
+    if (dir) {
+      try {
+        for (const f of readdirSync(dir)) {
+          if (/\.(dll|dylib|node|so(?:\.\d+)*)$/i.test(f)) out.push(join(dir, f));
+        }
+      } catch { /* dir vanished — best-effort */ }
+    }
+    const root = packageRoot ?? findPackageRoot();
+    if (root) {
+      const sharpNode = join(root, "node_modules", "sharp", "build", "Release", `sharp-${process.platform}-${process.arch}.node`);
+      if (existsSync(sharpNode)) out.push(sharpNode);
+    }
+  } catch { /* best-effort */ }
+  return Array.from(new Set(out));
+}
+
 /** Find the package's node_modules root by walking up from this file's
  *  location. Returns null if we're not in a node_modules tree.
  *  ESM build of this module: __dirname is undefined, so we recover the

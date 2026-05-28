@@ -331,10 +331,17 @@ function runPreinstall(opts) {
   }
 
   // 3. PID-LEASE: kill every daemon that leased a heartbeat (authoritative).
+  //    v2.76.0 — also harvest each lease's DECLARED held DLLs (holdsPaths) so
+  //    the Handle-Oracle (step 5) targets the EXACT handles a dead daemon held,
+  //    not just static path guesses — works for any install layout, cmd-safe.
   const leases = readHeartbeatLeases(beatDir);
   const leasePids = leases.map((l) => l.pid).filter((p) => p !== process.pid);
   result.leasePids = leasePids.slice();
-  for (const l of leases) { if (l.beatFile) { try { fs.unlinkSync(l.beatFile); } catch { /* */ } } }
+  const leaseHeldPaths = [];
+  for (const l of leases) {
+    if (Array.isArray(l.holdsPaths)) for (const p of l.holdsPaths) { if (typeof p === "string" && p.length > 0) leaseHeldPaths.push(p); }
+    if (l.beatFile) { try { fs.unlinkSync(l.beatFile); } catch { /* */ } }
+  }
   const killedLease = killFn(leasePids);
 
   // 4. CMDLINE-MATCH: the real node.exe fix — kill daemons NOT in the
@@ -346,22 +353,26 @@ function runPreinstall(opts) {
   result.killedPids = killedLease.concat(killedCmd).filter((k) => k.killed).map((k) => k.pid);
   trail("daemons-reaped", true, { lease: leasePids.length, cmdline: cmdlinePids.length, killed: result.killedPids.length });
 
-  // 5. HANDLE-ORACLE: deterministically wait for the native DLLs to free,
-  //    then rename-sideways only if the lock genuinely persists.
+  // 5. HANDLE-ORACLE: deterministically wait for the native DLLs to free, then
+  //    rename-sideways only if the lock genuinely persists. The path set is the
+  //    UNION of static candidates (npm global layouts) + the exact paths the
+  //    dead daemons DECLARED they held (leaseHeldPaths) — deduped.
   let renamed = 0;
   const dllPrefixes = o.npmGlobalDirs || defaultNpmGlobalDirs(home);
-  for (const pkgDir of dllPrefixes) {
-    for (const dll of libvipsDllCandidates(pkgDir, IS_WIN)) {
-      let present = false;
-      try { present = fs.existsSync(dll); } catch { /* */ }
-      if (!present) continue;
-      const gate = waitForHandleRelease(dll, { tries: 40, intervalMs: 50 });
-      result.handleOracle.push({ dll, released: gate.released, attempts: gate.attempts });
-      if (!gate.released) {
-        // Lock never freed — fall back to the v2.19.61 rename-sideways trick
-        // so npm can lay down the new DLL beside the locked (orphaned) one.
-        try { fs.renameSync(dll, dll + ".locked-" + Date.now() + "-" + process.pid); renamed++; } catch { /* */ }
-      }
+  const dllSet = new Set();
+  for (const pkgDir of dllPrefixes) for (const dll of libvipsDllCandidates(pkgDir, IS_WIN)) dllSet.add(dll);
+  for (const p of leaseHeldPaths) dllSet.add(p);
+  result.handleOracleTargets = dllSet.size;
+  for (const dll of dllSet) {
+    let present = false;
+    try { present = fs.existsSync(dll); } catch { /* */ }
+    if (!present) continue;
+    const gate = waitForHandleRelease(dll, { tries: 40, intervalMs: 50 });
+    result.handleOracle.push({ dll, released: gate.released, attempts: gate.attempts });
+    if (!gate.released) {
+      // Lock never freed — fall back to the v2.19.61 rename-sideways trick
+      // so npm can lay down the new DLL beside the locked (orphaned) one.
+      try { fs.renameSync(dll, dll + ".locked-" + Date.now() + "-" + process.pid); renamed++; } catch { /* */ }
     }
   }
   result.renamed = renamed;

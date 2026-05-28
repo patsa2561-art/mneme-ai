@@ -17,6 +17,55 @@ const DEFAULT_DIMS = 768;
 const DEFAULT_URL = "http://127.0.0.1:11434";
 const DEFAULT_TIMEOUT_MS = 180_000;
 const RETRYABLE_FETCH = ["fetch failed", "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "EAI_AGAIN", "socket hang up"];
+// v2.76.0 — Ollama sometimes returns 5xx (model still loading / transient OOM)
+// OR a NaN-poisoned embedding on a SPECIFIC input (observed with bge-m3 on
+// certain text, e.g. "...may encrypt where feasible..."). These are NOT fatal:
+// retry, then sanitize + retry, then substitute a SAME-DIMENSION deterministic
+// vector so one bad chunk never aborts a whole index. Server-DOWN (network)
+// errors still propagate — those are real outages, not bad inputs.
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const EMBED_MAX_ATTEMPTS = 3;
+const EMBED_SANITIZE_CHARS = 8192;
+
+/** A vector is usable iff it is non-empty and every element is a finite number
+ *  (no NaN / ±Infinity — the bge-m3 failure mode). */
+function isFiniteVec(v: number[] | Float32Array | undefined | null): v is number[] {
+  if (!v || v.length === 0) return false;
+  for (let i = 0; i < v.length; i++) { const x = v[i]!; if (!Number.isFinite(x)) return false; }
+  return true;
+}
+
+/** Strip control chars + hard-truncate. Some model inputs trigger a 500/NaN;
+ *  a sanitized retry usually succeeds before we resort to the fallback vector. */
+function sanitizeForEmbed(text: string): string {
+  // Drop C0/C1 control chars (keep tab/LF/CR) by codepoint, then truncate.
+  let out = "";
+  for (const ch of text) {
+    const x = ch.codePointAt(0) ?? 0;
+    if (x === 9 || x === 10 || x === 13 || (x >= 32 && !(x >= 127 && x <= 159))) out += ch;
+    if (out.length >= EMBED_SANITIZE_CHARS) break;
+  }
+  return out;
+}
+
+/** Deterministic FNV-1a bag-of-features vector, L2-normalized to `dim`. Used
+ *  ONLY as a last-resort substitute for an input the model cannot embed, so
+ *  the index stays dimension-consistent + the run completes. Same algorithm
+ *  shape as the hash-tier embedder; reproducible per (text, dim). */
+function fallbackVector(text: string, dim: number): Float32Array {
+  const v = new Float32Array(dim);
+  const toks = (text.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+  for (const t of toks) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    let sgn = 0x811c9dc5; for (let i = 0; i < t.length; i++) { sgn ^= t.charCodeAt(i) + 7; sgn = Math.imul(sgn, 0x01000193) >>> 0; }
+    v[h % dim] += (sgn & 1) === 0 ? 1 : -1;
+  }
+  let norm = 0; for (let i = 0; i < dim; i++) norm += v[i]! * v[i]!;
+  norm = Math.sqrt(norm);
+  if (norm > 0) for (let i = 0; i < dim; i++) v[i]! /= norm;
+  return v;
+}
 
 interface BatchResp {
   embeddings?: number[][];
@@ -112,59 +161,107 @@ export class OllamaEmbedder implements EmbeddingProvider {
         if (this.onItemDone) this.onItemDone(texts.length, texts.length);
         return vecs;
       } catch (err) {
-        // 404 → server is older Ollama without /api/embed; switch to singular.
-        // Other errors propagate immediately so the user sees them.
-        if (!(err instanceof OllamaNotFoundError)) throw err;
-        this.batchEndpointBroken = true;
+        // 404 → older Ollama without /api/embed; switch to singular permanently.
+        if (err instanceof OllamaNotFoundError) { this.batchEndpointBroken = true; }
+        // v2.76.0 — a 5xx OR a NaN-poisoned embedding in the batch is NOT fatal:
+        // fall through to SINGULAR for THIS batch so the one bad input is
+        // isolated + retried/fallback'd (without disabling the fast batch path).
+        else if (!(err instanceof OllamaBatchUnhealthyError)) throw err;
       }
     }
 
-    // Fallback: singular endpoint with per-item progress so the user never
-    // sees a frozen progress bar while a batch crunches.
+    // Fallback: singular endpoint, per-input — isolates a bad chunk, gives
+    // per-item progress, and lets embedOne retry / sanitize / substitute so one
+    // input that the model 500s/NaNs on can never abort the whole index.
     const out: Float32Array[] = [];
     for (let i = 0; i < texts.length; i++) {
-      out.push(await this.embedOne(texts[i]!));
+      out.push(await this.embedOne(texts[i]!, { allowFallback: true }));
       if (this.onItemDone) this.onItemDone(i + 1, texts.length);
     }
     return out;
   }
 
+  /** How many inputs got a deterministic fallback vector because the model
+   *  could not embed them (transparency — never silently fake a clean run). */
+  private degradedCount = 0;
+  embedStats(): { degraded: number } { return { degraded: this.degradedCount }; }
+
   private async embedBatch(texts: string[]): Promise<Float32Array[]> {
-    const res = await this.fetchWithTimeout(`${this.baseUrl}/api/embed`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: this.model, input: texts }),
-    });
-    if (res.status === 404) {
-      throw new OllamaNotFoundError("/api/embed not available on this Ollama version");
+    let res: Response | null = null;
+    // Retry the batch on transient 5xx/429 (model still loading / momentary OOM).
+    for (let attempt = 1; attempt <= EMBED_MAX_ATTEMPTS; attempt++) {
+      res = await this.fetchWithTimeout(`${this.baseUrl}/api/embed`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: this.model, input: texts }),
+      });
+      if (res.status === 404) throw new OllamaNotFoundError("/api/embed not available on this Ollama version");
+      if (res.ok) break;
+      if (RETRYABLE_STATUS.has(res.status) && attempt < EMBED_MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+        continue;
+      }
+      // Non-retryable, or retries exhausted → isolate via singular (NOT fatal).
+      throw new OllamaBatchUnhealthyError(`batch HTTP ${res.status}`);
     }
-    if (!res.ok) {
-      throw new Error(`Ollama embed failed (${res.status}): ${await res.text()}`);
+    const json = (await res!.json()) as BatchResp;
+    if (!json.embeddings || !Array.isArray(json.embeddings) || json.embeddings.length !== texts.length) {
+      throw new OllamaBatchUnhealthyError("batch returned missing/mismatched embeddings");
     }
-    const json = (await res.json()) as BatchResp;
-    if (!json.embeddings || !Array.isArray(json.embeddings)) {
-      throw new Error("Ollama batch endpoint returned no embeddings");
-    }
-    if (json.embeddings.length !== texts.length) {
-      throw new Error(
-        `Ollama returned ${json.embeddings.length} embeddings for ${texts.length} inputs`,
-      );
+    // A single NaN-poisoned vector (the bge-m3 failure mode) must not silently
+    // enter the index — drop to singular so ONLY the bad input is repaired.
+    if (!json.embeddings.every((v) => isFiniteVec(v))) {
+      throw new OllamaBatchUnhealthyError("batch contained a NaN/non-finite embedding");
     }
     return json.embeddings.map((v) => Float32Array.from(v));
   }
 
-  private async embedOne(text: string): Promise<Float32Array> {
-    const res = await this.fetchWithTimeout(`${this.baseUrl}/api/embeddings`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: this.model, prompt: text }),
-    });
-    if (!res.ok) {
-      throw new Error(`Ollama embed failed (${res.status}): ${await res.text()}`);
+  /**
+   * Embed ONE input, robust to the bge-m3 "500 / NaN on a specific input" bug.
+   * Retries transient 5xx, validates against NaN, then sanitizes + retries.
+   * With allowFallback (indexer path) a persistently-unembeddable input yields a
+   * deterministic SAME-DIMENSION vector so the run completes; without it
+   * (verify path) it throws so a real outage still surfaces. Network errors
+   * always propagate — those are a down server, not a bad input.
+   */
+  private async embedOne(text: string, opts: { allowFallback?: boolean } = {}): Promise<Float32Array> {
+    const post = async (prompt: string): Promise<{ ok: boolean; status: number; vec?: number[] }> => {
+      const res = await this.fetchWithTimeout(`${this.baseUrl}/api/embeddings`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: this.model, prompt }),
+      });
+      if (!res.ok) return { ok: false, status: res.status };
+      const json = (await res.json()) as SingularResp;
+      return { ok: true, status: 200, vec: json.embedding };
+    };
+    let lastStatus = 0;
+    for (let attempt = 1; attempt <= EMBED_MAX_ATTEMPTS; attempt++) {
+      const r = await post(text);
+      lastStatus = r.status;
+      if (r.ok && isFiniteVec(r.vec)) return Float32Array.from(r.vec!);
+      // Retry on a retryable status OR a NaN/empty embedding (the bge-m3 case).
+      const retryable = !r.ok ? RETRYABLE_STATUS.has(r.status) : true; // ok-but-NaN is retryable too
+      if (retryable && attempt < EMBED_MAX_ATTEMPTS) { await new Promise((res) => setTimeout(res, 400 * attempt)); continue; }
+      if (!r.ok && !RETRYABLE_STATUS.has(r.status)) break; // hard non-retryable HTTP error
     }
-    const json = (await res.json()) as SingularResp;
-    if (!json.embedding) throw new Error("Ollama returned no embedding");
-    return Float32Array.from(json.embedding);
+    // Last resort #1 — a sanitized retry (control chars / over-long inputs are a
+    // common trigger for the model-side 500/NaN).
+    const cleaned = sanitizeForEmbed(text);
+    if (cleaned !== text && cleaned.length > 0) {
+      const r = await post(cleaned);
+      if (r.ok && isFiniteVec(r.vec)) return Float32Array.from(r.vec!);
+    }
+    // Last resort #2 — same-dimension deterministic substitute so the index
+    // stays consistent + the run finishes. Only on the indexer path.
+    if (opts.allowFallback) {
+      this.degradedCount++;
+      if (this.degradedCount === 1) {
+        process.stderr.write(`⚠ ollama:${this.model} could not embed an input (HTTP ${lastStatus}/NaN) — substituting a deterministic vector for that chunk so indexing continues. (mneme embeddings status shows the count.)\n`);
+      }
+      return fallbackVector(text, this.dimensions);
+    }
+    throw new Error(`Ollama embed failed for an input (last HTTP ${lastStatus}; embedding was missing or NaN even after a sanitized retry).`);
   }
 
   private async fetchWithTimeout(url: string, init: RequestInit, attempt = 0): Promise<Response> {
@@ -216,6 +313,11 @@ export class OllamaEmbedder implements EmbeddingProvider {
 
 /** Internal sentinel for "server doesn't support /api/embed yet". */
 class OllamaNotFoundError extends Error {}
+
+/** v2.76.0 — "the batch endpoint responded but the result is unhealthy"
+ *  (5xx after retries, length mismatch, or a NaN-poisoned vector). Signals
+ *  embed() to isolate via the singular path WITHOUT disabling batch forever. */
+class OllamaBatchUnhealthyError extends Error {}
 
 /** Translate any fetch/server error into a (reason, remedy) pair the CLI can show.
  *  Decoupled from CLI rendering so we can also use it in MCP / programmatic callers. */

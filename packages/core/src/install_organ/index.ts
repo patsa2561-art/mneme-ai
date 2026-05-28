@@ -44,6 +44,7 @@ export type MnemeRole =
   | "indexer"
   | "mcp-server"
   | "nucleus"
+  | "bridge"
   | "child-script";
 
 export interface Heartbeat {

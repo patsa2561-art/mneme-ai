@@ -165,8 +165,12 @@ const probes: Probe[] = [
         // PowerShell pipe → 'Select-Object' is not recognized). Both = hard gates.
         const lengthOk = pre.length > 200 && pre.length < 8000;
         const noDoubleQuote = !body.includes('"');
-        const ok = inlineNodeE && noFileRef && daemonReap && handleOracle && lengthOk && noDoubleQuote;
-        return { value: ok ? 1 : 0, evidence: ok ? `inline node -e, no file ref, heartbeat PID reap + Handle-Oracle, ${pre.length} chars (<8000), 0 double-quotes` : `inline=${inlineNodeE} noFileRef=${noFileRef} daemonReap=${daemonReap} handleOracle=${handleOracle} len=${pre.length}(ok=${lengthOk}) noDQ=${noDoubleQuote}`, dtMs: Date.now() - t0 };
+        // v2.76.0 — DECLARED-HANDLE LEASE: the inline harvests each dead
+        // daemon's declared holdsPaths so the Handle-Oracle targets the EXACT
+        // held DLLs (root-cause fix; no risky cmdline-match in the inline).
+        const holdsPathsAware = /holdsPaths/.test(pre);
+        const ok = inlineNodeE && noFileRef && daemonReap && handleOracle && lengthOk && noDoubleQuote && holdsPathsAware;
+        return { value: ok ? 1 : 0, evidence: ok ? `inline node -e, no file ref, heartbeat PID reap + holdsPaths Handle-Oracle, ${pre.length} chars (<8000), 0 double-quotes` : `inline=${inlineNodeE} noFileRef=${noFileRef} daemonReap=${daemonReap} handleOracle=${handleOracle} len=${pre.length}(ok=${lengthOk}) noDQ=${noDoubleQuote} holdsPaths=${holdsPathsAware}`, dtMs: Date.now() - t0 };
       } catch (e) {
         return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
       }

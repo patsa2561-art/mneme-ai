@@ -68,7 +68,18 @@ interface VaccineRow {
   simhash: string;
   sample?: string;
   refuteCount?: number;
+  signature?: string;
 }
+
+// v2.76.0 R1 FIX — vaccine signatures created by the now-fixed library
+// impossibility bug. Before v2.76, a `library_used=X` claim absent from
+// package.json was wrongly graded IMPOSSIBLE_REFUTE and VACCINATED — even
+// though X could be an Ollama model / non-npm / other-project library. Those
+// poisoned vaccines then made the Bayesian prior AUTO_REFUTE true claims by
+// simhash similarity. Library impossibility is NOT provable from package.json,
+// so EVERY such vaccine is suspect → ignore them (neutralizes pre-existing
+// poison for upgrading users without a destructive migration).
+const QUARANTINED_SIGNATURE = /library_used=/i;
 
 function readVaccines(repoRoot: string): VaccineRow[] {
   const p = join(repoRoot, ".mneme/squadron/lie-vaccines.jsonl");
@@ -76,7 +87,8 @@ function readVaccines(repoRoot: string): VaccineRow[] {
   try {
     return readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => {
       try { return JSON.parse(l) as VaccineRow; } catch { return null; }
-    }).filter((x): x is VaccineRow => x !== null);
+    }).filter((x): x is VaccineRow => x !== null)
+      .filter((v) => !(typeof v.signature === "string" && QUARANTINED_SIGNATURE.test(v.signature)));
   } catch { return []; }
 }
 

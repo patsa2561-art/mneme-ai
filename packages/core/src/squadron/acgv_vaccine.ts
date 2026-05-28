@@ -127,6 +127,14 @@ export function checkAgainstVaccines(repoRoot: string, claim: string): VaccineMa
   const h = simhash64(claim);
   let best: VaccineMatch | null = null;
   for (const v of vaccines) {
+    // v2.76.0 R1 FIX — QUARANTINE the now-known-buggy `library_used=X`
+    // impossibility class. Pre-v2.76, a library absent from package.json was
+    // wrongly graded IMPOSSIBLE_REFUTE and vaccinated — even when X is an Ollama
+    // model / non-npm / another-project library. Those poisoned vaccines then
+    // AUTO_REFUTE true claims by simhash similarity (the user's R1 bug:
+    // "meaningdiff uses bge-m3" → 99% refuted). Library impossibility is not
+    // provable from package.json, so never honour such a vaccine match.
+    if (typeof v.signature === "string" && /library_used=/i.test(v.signature)) continue;
     const d = hammingDistance(h, v.simhash);
     if (d < 0) continue;
     if (d <= MATCH_RADIUS && (best === null || d < best.distance)) {
