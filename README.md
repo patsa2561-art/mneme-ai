@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### ⏳ NEW in v2.74.0 — **CHRONOS**
+### 🖥 NEW in v2.77.0 — **Interactive TUI** (`mneme` with no args)
+
+Don't memorize commands. Just run `mneme` in a terminal: a full-screen menu opens — **type plain language**, ↑↓ to navigate every capability, **Enter** to run. Zero-dependency, zero memorization. (Also `mneme ui`; `MNEME_NO_UI=1` opts out.)
+
+### ⏳ v2.74.0 — **CHRONOS**
 
 Measure whether an AI is honest **without a ground-truth oracle** — by catching it contradict *itself* over time (and making every legit change cite a source). → 📖 <a href="docs/chronos/README-EN.md" target="_blank" rel="noopener"><b>English</b></a> · <a href="docs/chronos/README-TH.md" target="_blank" rel="noopener"><b>ภาษาไทย</b></a>
 

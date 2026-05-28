@@ -162,6 +162,18 @@ export async function run(argv: string[]): Promise<void> {
     } catch { /* fall through to commander on failure */ }
   }
 
+  // v2.77.0 — INTERACTIVE-BY-DEFAULT. Bare `mneme` in a real terminal launches
+  // the full-screen TUI (type plain language → run any capability, zero
+  // memorization). Non-TTY (pipes / CI / scripts) keep the classic behavior, so
+  // nothing automated breaks. `MNEME_NO_UI=1` opts out.
+  if (slice.length === 0 && process.stdout.isTTY && process.stdin.isTTY && process.env["MNEME_NO_UI"] !== "1") {
+    try {
+      const { uiCommand } = await import("./commands/ui.js");
+      await uiCommand({ cwd: process.cwd(), version: getVersion() });
+      return;
+    } catch { /* fall through to commander default on any failure */ }
+  }
+
   const program = new Command()
     .name("mneme")
     .description("μνήμη — the memory layer of your codebase. Knows the WHY, the WHAT, the WHERE-IT-BREAKS.")
@@ -4359,6 +4371,17 @@ export async function run(argv: string[]): Promise<void> {
   // command / 14k token blast-radius without deleting any command.
   // Default `mneme --help` still works (backward compat); AI agents
   // are told to use these layered surfaces instead.
+  // v2.77.0 — INTERACTIVE TUI. Type plain language → the right capability
+  // surfaces; ↑↓ navigate every command; Enter runs it. Zero memorization.
+  program
+    .command("ui")
+    .aliases(["menu", "tui"])
+    .description("🖥  Interactive full-screen menu — type plain language to search every capability, ↑↓ to navigate, Enter to run. Zero command memorization. (Needs a real terminal.)")
+    .action(async () => {
+      const { uiCommand } = await import("./commands/ui.js");
+      await uiCommand({ cwd: process.cwd(), version: getVersion() });
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")
