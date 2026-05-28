@@ -30,6 +30,7 @@ import { scanMessage, quarantineDecision, type MeshThreat } from "../mesh_immune
 import { type HonestyBand } from "../honesty_score/index.js";
 import { record, replay, readCdr, type RecordedFrame } from "../flight_recorder/index.js";
 import { verifyReceipt, type NotaryReceipt } from "../notary/index.js";
+import { crossCommand as hephCrossCommand, type CrossCommandResult, type CrossCommandDeps } from "../hephaestus/index.js";
 
 export type TruthVerdict = "TRUSTWORTHY" | "REFUTED" | "MIXED" | "UNVERIFIED";
 export type Disposition = "PASS" | "CORRECTED" | "QUARANTINED" | "UNVERIFIED";
@@ -271,6 +272,61 @@ export function verifyCrossing(receipt: unknown): { valid: boolean; reason: stri
 export { replay as bridgeReplay } from "../flight_recorder/index.js";
 
 // ════════════════════════════════════════════════════════════════════════
+// v2.87.0 — PHASE 4: MCP tool-call routing (truth-customs for ANY tool call).
+//   The "one endpoint" core: a tool call is routed to the right lane —
+//   HEPHAESTUS for commands (shell/exec), GEPHYRA truth-customs for claims/
+//   answers — before it runs. (HONEST SCOPE: this is the routing + decision
+//   layer; a full transport-level MCP proxy that forwards to upstream servers
+//   is a separate future release. `gephyra serve` exposes it over HTTP.)
+// ════════════════════════════════════════════════════════════════════════
+
+const SHELL_TOOL_RE = /shell|exec|run[_-]?command|bash|terminal|process|spawn|system|cmd|kubectl|docker|git\b/i;
+
+export interface ToolCallRoute {
+  lane: "hephaestus" | "gephyra" | "passthrough";
+  /** allow = run it · gate = needs co-sign · block = refuse. */
+  action: "allow" | "gate" | "block";
+  reason: string;
+  command?: CrossCommandResult;
+  claim?: CrossResult;
+}
+
+/**
+ * Route an MCP tool call through truth-customs. Shell/command-shaped calls (by
+ * tool name or an `args.command`) cross HEPHAESTUS (risk/policy/tribunal gate);
+ * calls carrying a `claim`/`text`/`answer` cross GEPHYRA (verify/correct); anything
+ * else passes through. Returns a routing verdict + the lane's signed crossing.
+ * Never throws.
+ */
+export async function routeToolCall(
+  repoRoot: string,
+  input: { tool: string; args?: Record<string, unknown>; agent: string },
+  deps: { heph?: CrossCommandDeps; gephyra?: CrossDeps } = {},
+): Promise<ToolCallRoute> {
+  const tool = String(input.tool ?? "");
+  const args = (input.args ?? {}) as Record<string, unknown>;
+  const agent = String(input.agent ?? "unknown");
+
+  const cmdArg = typeof args["command"] === "string" ? args["command"] as string
+    : typeof args["cmd"] === "string" ? args["cmd"] as string : null;
+  if (cmdArg || SHELL_TOOL_RE.test(tool)) {
+    const command = cmdArg ?? `${tool} ${Object.values(args).filter((v) => typeof v === "string").join(" ")}`.trim();
+    const cr = await hephCrossCommand(repoRoot, { command, agent, host: typeof args["host"] === "string" ? args["host"] as string : undefined, cosigned: args["cosigned"] === true }, deps.heph);
+    return { lane: "hephaestus", action: cr.disposition === "ALLOW" ? "allow" : cr.disposition === "BLOCK" ? "block" : "gate", reason: cr.reasons[0] ?? cr.disposition, command: cr };
+  }
+
+  const claim = typeof args["claim"] === "string" ? args["claim"] as string
+    : typeof args["text"] === "string" ? args["text"] as string
+    : typeof args["answer"] === "string" ? args["answer"] as string : null;
+  if (claim) {
+    const cb = await crossBridge(repoRoot, { claim, fromAgent: agent, action: tool }, deps.gephyra);
+    return { lane: "gephyra", action: cb.disposition === "QUARANTINED" ? "block" : "allow", reason: `${cb.disposition} (${cb.verdict})`, claim: cb };
+  }
+
+  return { lane: "passthrough", action: "allow", reason: "no command or claim to inspect" };
+}
+
+// ════════════════════════════════════════════════════════════════════════
 // v2.84.0 — GEPHYRA Phase 2: serve-as-endpoint + auto-advertise
 // ════════════════════════════════════════════════════════════════════════
 
@@ -305,6 +361,40 @@ export async function handleCrossRequest(repoRoot: string, raw: unknown): Promis
     return { status: 200, body: result };
   } catch (e) {
     // crossBridge is designed never to throw; this is plan-C insurance.
+    return { status: 500, body: { error: (e as Error).message } };
+  }
+}
+
+export interface McpCallHttpResponse { status: number; body: ToolCallRoute | { error: string } }
+
+/**
+ * Phase 4 — GEPHYRA as an MCP-proxy endpoint. An agent points its MCP client at
+ * `{ "mcpServers": { "gephyra": { "url": ".../mcp" } } }`; every tool call is
+ * POSTed here as `{ tool, args?, agent }` and routed through truth-customs
+ * (HEPHAESTUS for shell/command calls · GEPHYRA for claim-bearing calls ·
+ * passthrough otherwise). Returns the routing verdict (allow/gate/block) + the
+ * lane's signed crossing. Pure of the server; never throws.
+ */
+export async function handleMcpCallRequest(repoRoot: string, raw: unknown, deps: { heph?: CrossCommandDeps; gephyra?: CrossDeps } = {}): Promise<McpCallHttpResponse> {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; }
+  }
+  if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
+  const o = parsed as Record<string, unknown>;
+  if (typeof o["tool"] !== "string" || typeof o["agent"] !== "string") {
+    return { status: 400, body: { error: "required: tool (string), agent (string); optional: args (object)" } };
+  }
+  try {
+    const route = await routeToolCall(repoRoot, {
+      tool: o["tool"] as string,
+      args: (o["args"] && typeof o["args"] === "object") ? o["args"] as Record<string, unknown> : undefined,
+      agent: o["agent"] as string,
+    }, deps);
+    // A blocked crossing is a successful inspection — surface 200 with action:"block"
+    // so the proxying client can decide; we never throw a 5xx for a refusal.
+    return { status: 200, body: route };
+  } catch (e) {
     return { status: 500, body: { error: (e as Error).message } };
   }
 }

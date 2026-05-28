@@ -24,6 +24,8 @@ export const classifyCommandRisk = hephaestus.classifyCommandRisk;
 export const polyglot = hephaestus.polyglot;
 export const crossBridge = gephyra.crossBridge;
 export const handleCrossRequest = gephyra.handleCrossRequest;
+export const handleMcpCallRequest = gephyra.handleMcpCallRequest;
+export const routeToolCall = gephyra.routeToolCall;
 export const bridgeStatus = gephyra.bridgeStatus;
 export const bridgeReplay = gephyra.bridgeReplay;
 export const verifyCrossing = gephyra.verifyCrossing;
@@ -60,15 +62,21 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
         res.end(JSON.stringify(s));
         return;
       }
-      if (req.method !== "POST" || !url.startsWith("/cross")) {
+      const isMcp = url.startsWith("/mcp");
+      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp)) {
         res.writeHead(404, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "POST /cross {claim, fromAgent}  |  GET /status" }));
+        res.end(JSON.stringify({ error: "POST /cross {claim, fromAgent}  |  POST /mcp {tool, agent, args?}  |  GET /status" }));
         return;
       }
       let body = "";
       req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
       req.on("end", () => {
-        void gephyra.handleCrossRequest(repoRoot, body)
+        // /mcp[/call] → route an MCP tool call through truth-customs (Phase 4 proxy).
+        // /cross → verify a single claim. Both signed; neither throws a 5xx for a refusal.
+        const handler = isMcp
+          ? gephyra.handleMcpCallRequest(repoRoot, body)
+          : gephyra.handleCrossRequest(repoRoot, body);
+        void handler
           .then((r) => { res.writeHead(r.status, { "content-type": "application/json" }); res.end(JSON.stringify(r.body)); })
           .catch((e: Error) => { res.writeHead(500, { "content-type": "application/json" }); res.end(JSON.stringify({ error: e.message })); });
       });

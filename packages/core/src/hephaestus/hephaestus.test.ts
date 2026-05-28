@@ -19,8 +19,14 @@ import { join } from "node:path";
 import {
   classifyCommandRisk, parsePolicy, crossCommand, polyglot, polyglotIntents,
   scanCommandOutput, executeGuarded, hephaestusStatus, verifyHephReceipt, DEFAULT_POLICY,
-  type CrossCommandDeps, type TribunalConsensus,
+  makeDiffArenaTribunal, classifyReversibility, preflightCommand,
+  type CrossCommandDeps, type TribunalConsensus, type TribunalVendor,
 } from "./index.js";
+
+// A diff_arena-shaped mock vendor whose safety verdict we control.
+function juror(name: string, verdict: "safe" | "danger"): TribunalVendor {
+  return { name, kind: "mock", ask: async () => ({ vendor: name, kind: "mock", ok: true, text: `${verdict}: stub reason`, confidence: 0.9, latencyMs: 1 }) };
+}
 
 const repo = () => mkdtempSync(join(tmpdir(), "mneme-heph-"));
 
@@ -108,6 +114,55 @@ describe("v2.86.0 HEPHAESTUS — risk + gate (PINNED)", () => {
     expect(s.needsCosign).toBe(1);
     expect(s.blocked).toBe(1);
     expect(s.chainValid).toBe(true);
+  });
+});
+
+describe("v2.87.0 HEPHAESTUS — real diff_arena tribunal + pre-flight (PINNED)", () => {
+  it("T1 makeDiffArenaTribunal: all-safe→NEEDS_COSIGN, mixed→split→BLOCK, all-danger→BLOCK", async () => {
+    const r = repo();
+    const allSafe = makeDiffArenaTribunal(r, { vendors: [juror("grok", "safe"), juror("gemini", "safe"), juror("claude", "safe")] });
+    expect((await crossCommand(r, { command: "kubectl delete ns prod", agent: "grok" }, { tribunal: allSafe })).disposition).toBe("NEEDS_COSIGN");
+    const mixed = makeDiffArenaTribunal(r, { vendors: [juror("grok", "safe"), juror("gemini", "danger"), juror("claude", "safe")] });
+    const m = await crossCommand(r, { command: "kubectl delete ns prod", agent: "grok" }, { tribunal: mixed });
+    expect(m.disposition).toBe("BLOCK");
+    expect(m.tribunal!.consensus).toBe("split");
+    const allDanger = makeDiffArenaTribunal(r, { vendors: [juror("grok", "danger"), juror("gemini", "danger")] });
+    expect((await crossCommand(r, { command: "rm -rf /", agent: "grok" }, { tribunal: allDanger })).disposition).toBe("BLOCK");
+  });
+  it("T2 no live panel ⇒ tribunal fails SAFE (destructive blocked)", async () => {
+    const r = repo();
+    const noPanel = makeDiffArenaTribunal(r, {});
+    const x = await crossCommand(r, { command: "rm -rf /var", agent: "grok" }, { tribunal: noPanel });
+    expect(x.disposition).toBe("BLOCK");
+    expect(x.tribunal!.consensus).toBe("danger");
+  });
+  it("T3 a refusal / unparseable juror reply counts as danger (fail-safe)", async () => {
+    const r = repo();
+    const refuser: TribunalVendor = { name: "x", kind: "mock", ask: async () => ({ vendor: "x", kind: "mock", ok: true, text: "I cannot help with that", confidence: 0.5, latencyMs: 1 }) };
+    const t = makeDiffArenaTribunal(r, { vendors: [juror("a", "safe"), refuser] });
+    expect((await crossCommand(r, { command: "DROP TABLE x", agent: "g" }, { tribunal: t })).disposition).toBe("BLOCK"); // split (safe + danger)
+  });
+
+  it("P1 classifyReversibility flags the irreversible", () => {
+    expect(classifyReversibility("rm -rf /data").reversible).toBe(false);
+    expect(classifyReversibility("dd if=/dev/zero of=/dev/sda").reversible).toBe(false);
+    expect(classifyReversibility("DROP TABLE users").reversible).toBe(false);
+    expect(classifyReversibility("git push --force").reversible).toBe(false);
+    expect(classifyReversibility("git commit -m x").reversible).toBe(true);
+    expect(classifyReversibility("mkdir foo").reversible).toBe(true);
+    expect(classifyReversibility("ls -la").reversible).toBe(true);
+    expect(classifyReversibility("rm -rf /data").irreversibleWarnings[0]).toMatch(/not recoverable/i);
+  });
+  it("P2 preflightCommand signs a pre-mortem with the warning", async () => {
+    const r = repo();
+    const pf = await preflightCommand(r, { command: "rm -rf /important", agent: "grok" });
+    expect(pf.reversible).toBe(false);
+    expect(pf.risk).toBe("destructive");
+    expect(pf.irreversibleWarnings.length).toBeGreaterThan(0);
+    expect(verifyHephReceipt(pf.receipt).valid).toBe(true);
+    const pf2 = await preflightCommand(r, { command: "git commit -m x", agent: "grok" }, { predict: async () => "creates a commit; revertible" });
+    expect(pf2.reversible).toBe(true);
+    expect(pf2.prediction).toContain("revertible");
   });
 });
 

@@ -26,6 +26,20 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.87.0 — Tribunal×diff_arena + 🔮 Pre-Flight + Phase-4 MCP routing ──
+  {
+    id: "claim.hephaestus.tribunal_and_preflight",
+    source: "v2.87.0 — real cross-vendor tribunal + pre-flight",
+    text: "HEPHAESTUS's destructive-command TRIBUNAL is now backed by REAL cross-vendor judgment (makeDiffArenaTribunal over diff_arena): each vendor judges independently, a split/danger consensus BLOCKs the command, an unparseable/refusal reply counts as danger, and with no live panel it fails SAFE (blocks). 🔮 Pre-flight (preflightCommand + classifyReversibility) predicts a command's effects and flags what is IRREVERSIBLE (rm/dd/DROP/force-push can't be undone; git commit can) as a signed pre-mortem BEFORE crossing — the honest answer to time-travel: we can't undo the irreversible, so we warn first, cross-vendor + signed.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.hephaestus.tribunal_and_preflight", severity: "block",
+  },
+  {
+    id: "claim.gephyra.mcp_tool_routing",
+    source: "v2.87.0 — GEPHYRA Phase 4 (MCP tool-call routing)",
+    text: "GEPHYRA routes ANY MCP tool call through truth-customs (routeToolCall): a shell/command-shaped call crosses the HEPHAESTUS lane (risk/policy/tribunal gate — destructive gated, injection blocked, read allowed), a claim-bearing call crosses the GEPHYRA lane (verify/correct — 2+2=5 → CORRECTED), and a neutral call passes through. This is the 'one endpoint' truth-customs layer for tool calls (the routing/decision layer; full transport-level MCP proxy is a separate future release). Exposed over HTTP by `gephyra serve`.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.gephyra.mcp_tool_routing", severity: "block",
+  },
+
   // ── v2.86.0 — HEPHAESTUS (GEPHYRA's OS lane — the command Toll Booth) ──
   {
     id: "claim.hephaestus.destructive_gate",

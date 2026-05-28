@@ -340,3 +340,164 @@ export function verifyHephReceipt(receipt: unknown): { valid: boolean; reason: s
   const v = verifyReceipt(receipt);
   return { valid: v.valid, reason: v.reason };
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// v2.87.0 — TRIBUNAL × diff_arena (real cross-vendor judgment)
+// ════════════════════════════════════════════════════════════════════════
+
+import type { VendorAdapter } from "../diff_arena/adapters.js";
+/** A tribunal juror = a diff_arena vendor adapter (use mockAdapter/httpAdapter/cliAdapter). */
+export type TribunalVendor = VendorAdapter;
+
+function parseSafetyVerdict(text: string): "safe" | "danger" {
+  const t = String(text ?? "").trim().toLowerCase();
+  if (/^\s*safe\b/.test(t)) return "safe";
+  if (/^\s*danger/.test(t)) return "danger";
+  // unparseable / refusal ⇒ fail SAFE (treat as danger so a destructive op is gated).
+  return "danger";
+}
+
+/**
+ * Build a real cross-vendor TRIBUNAL backed by diff_arena. Each vendor judges the
+ * command INDEPENDENTLY ("safe"/"danger") — errors are UNcorrelated across vendors,
+ * so the panel catches a blind spot a single-vendor ensemble can't. Mneme is the
+ * neutral convener (no vendor owns the judge). With no live vendors configured it
+ * fails SAFE (consensus "danger" ⇒ a destructive op is blocked) rather than waving
+ * it through. Wire real vendors via diff_arena's httpAdapter/cliAdapter (API keys);
+ * tests/offline pass deterministic vendor stubs.
+ */
+export function makeDiffArenaTribunal(
+  repoRoot: string,
+  opts: { vendors?: TribunalVendor[] } = {},
+): NonNullable<CrossCommandDeps["tribunal"]> {
+  return async (command: string) => {
+    const vendors = opts.vendors;
+    if (!vendors || vendors.length === 0) {
+      return { verdicts: [{ vendor: "(no-panel)", verdict: "danger" }], consensus: "danger" as TribunalConsensus };
+    }
+    const prompt = `A command is about to run on a machine:\n\n  ${command}\n\nIs it SAFE or DANGEROUS to run as-is (data loss, prod impact, irreversibility)? Reply starting with EXACTLY "safe" or "danger", then one short reason.`;
+    let verdicts: Array<{ vendor: string; verdict: "safe" | "danger" }>;
+    try {
+      const { diffArenaAsk } = await import("../diff_arena/index.js");
+      const res = await diffArenaAsk({ prompt, vendors, cwd: repoRoot });
+      verdicts = res.responses.map((r) => ({ vendor: r.vendor, verdict: r.ok ? parseSafetyVerdict(r.text) : "danger" }));
+    } catch {
+      // diff_arena unavailable ⇒ ask vendors directly (still independent), fail safe on error.
+      verdicts = [];
+      for (const v of vendors) {
+        try { const r = await v.ask(prompt); verdicts.push({ vendor: v.name, verdict: r.ok ? parseSafetyVerdict(r.text) : "danger" }); }
+        catch { verdicts.push({ vendor: v.name, verdict: "danger" }); }
+      }
+    }
+    const safes = verdicts.filter((v) => v.verdict === "safe").length;
+    const consensus: TribunalConsensus = safes === verdicts.length ? "safe" : safes === 0 ? "danger" : "split";
+    return { verdicts, consensus };
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// v2.87.0 — 🔮 PRE-FLIGHT SIMULATION (counterfactual + irreversibility warning)
+//   The honest answer to "time-travel shell": we cannot UNDO an irreversible
+//   effect (rm/dd/DROP) — so we PREDICT + WARN before crossing, cross-vendor +
+//   signed. "Preview the future before you cross."
+// ════════════════════════════════════════════════════════════════════════
+
+const IRREVERSIBLE: Array<[RegExp, string]> = [
+  [/\brm\s+-[a-z]*r|\b(Remove-Item|ri)\b.*-Recurse/i, "deletes files/dirs — NOT recoverable without a backup"],
+  [/\bdd\s+if=|>\s*\/dev\/(sd|nvme|disk)|\b(mkfs|wipefs|fdisk|format)\b/i, "overwrites raw disk — NOT recoverable"],
+  [/\b(drop|truncate)\s+(table|database|schema)?|delete\s+from\b(?![^;]*\bwhere\b)/i, "drops/empties data — NOT recoverable without a DB backup"],
+  [/\bshred\b/i, "securely erases — designed to be unrecoverable"],
+  [/\bgit\s+push\s+(-f|--force)/i, "force-pushes — rewrites remote history others may depend on"],
+  [/\bgit\s+reset\s+--hard/i, "discards uncommitted changes — NOT recoverable"],
+  [/\bterraform\s+destroy|kubectl\s+delete|helm\s+(delete|uninstall)/i, "tears down infrastructure — recreate ≠ restore data/state"],
+  [/\b(shutdown|reboot|halt|poweroff|Stop-Computer)\b/i, "interrupts the running system — in-flight work is lost"],
+];
+const REVERSIBLE_HINTS: Array<[RegExp, string]> = [
+  [/\bgit\s+commit\b/i, "git revert undoes it"],
+  [/\bgit\s+(add|stash|checkout\s+-b|branch)\b/i, "git can undo it"],
+  [/\b(mkdir|touch)\b/i, "remove the created path to undo"],
+  [/\b(apt|apt-get|yum|dnf|brew|npm|pnpm|pip|cargo)\s+(install|add|i)\b/i, "uninstall to undo (config/data may persist)"],
+  [/\bdocker\s+(run|start)\b/i, "docker stop/rm to undo"],
+];
+
+export interface Reversibility {
+  reversible: boolean;
+  effects: string[];
+  irreversibleWarnings: string[];
+}
+
+/** Deterministically classify whether a command's effect can be undone. */
+export function classifyReversibility(command: string): Reversibility {
+  const c = String(command ?? "");
+  const irreversibleWarnings: string[] = [];
+  for (const [re, msg] of IRREVERSIBLE) if (re.test(c)) irreversibleWarnings.push(msg);
+  const effects: string[] = [];
+  for (const [re, msg] of REVERSIBLE_HINTS) if (re.test(c)) effects.push(msg);
+  const { risk } = classifyCommandRisk(c);
+  if (risk === "read") return { reversible: true, effects: ["read-only — no state change"], irreversibleWarnings: [] };
+  return { reversible: irreversibleWarnings.length === 0, effects, irreversibleWarnings };
+}
+
+export interface PreflightResult {
+  command: string;
+  risk: CommandRisk;
+  reversible: boolean;
+  effects: string[];
+  irreversibleWarnings: string[];
+  /** Optional cross-vendor effect prediction (free text). */
+  prediction?: string;
+  /** Signed pre-mortem receipt — provable "we previewed + warned before crossing". */
+  receipt: NotaryReceipt | null;
+}
+
+/**
+ * 🔮 Pre-flight a command BEFORE crossing: predict blast radius + flag what cannot
+ * be undone + (optionally) ask a panel to predict the effect — and SIGN the
+ * pre-mortem. Never executes. The proof that the irreversible was foreseen + warned.
+ */
+export async function preflightCommand(
+  repoRoot: string,
+  input: { command: string; agent: string },
+  deps: { predict?: (command: string) => Promise<string> } = {},
+): Promise<PreflightResult> {
+  const command = String(input.command ?? "");
+  const { risk } = classifyCommandRisk(command);
+  const rev = classifyReversibility(command);
+  let prediction: string | undefined;
+  if (deps.predict) { try { prediction = await deps.predict(command); } catch { /* best-effort */ } }
+  let receipt: NotaryReceipt | null = null;
+  try {
+    const frame = record(repoRoot, {
+      agent: String(input.agent ?? "unknown"), kind: "decision",
+      action: `heph:preflight:${command.slice(0, 72)}`,
+      claim: command,
+      observedReality: `risk=${risk} reversible=${rev.reversible} warnings=${rev.irreversibleWarnings.length}`,
+      truthDelta: rev.reversible ? "MATCH" : "CONTRADICT",
+    });
+    receipt = frame.receipt;
+  } catch { /* */ }
+  return { command, risk, reversible: rev.reversible, effects: rev.effects, irreversibleWarnings: rev.irreversibleWarnings, prediction, receipt };
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// Auto-build a tribunal panel from whatever AI vendor keys are already in the
+// environment (OpenAI-compatible chat endpoints). The user NEVER types a key
+// into a command — they export it once and the panel materialises. With zero
+// keys present this returns [] ⇒ makeDiffArenaTribunal fails SAFE (no panel ⇒
+// danger ⇒ a destructive op is BLOCKED) rather than rubber-stamping blindly.
+// ────────────────────────────────────────────────────────────────────────
+interface EnvVendorSpec { name: string; endpoint: string; apiKeyEnv: string; model: string; headers?: Record<string, string> }
+const ENV_VENDORS: EnvVendorSpec[] = [
+  { name: "openai", endpoint: "https://api.openai.com/v1/chat/completions", apiKeyEnv: "OPENAI_API_KEY", model: process.env["MNEME_OPENAI_MODEL"] ?? "gpt-4o-mini" },
+  { name: "grok", endpoint: "https://api.x.ai/v1/chat/completions", apiKeyEnv: "XAI_API_KEY", model: process.env["MNEME_GROK_MODEL"] ?? "grok-2-latest" },
+  { name: "gemini", endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", apiKeyEnv: "GEMINI_API_KEY", model: process.env["MNEME_GEMINI_MODEL"] ?? "gemini-1.5-flash" },
+  { name: "deepseek", endpoint: "https://api.deepseek.com/v1/chat/completions", apiKeyEnv: "DEEPSEEK_API_KEY", model: process.env["MNEME_DEEPSEEK_MODEL"] ?? "deepseek-chat" },
+  { name: "openrouter", endpoint: "https://openrouter.ai/api/v1/chat/completions", apiKeyEnv: "OPENROUTER_API_KEY", model: process.env["MNEME_OPENROUTER_MODEL"] ?? "anthropic/claude-3.5-sonnet" },
+];
+
+/** Materialise a tribunal panel from env-present vendor keys (zero keys ⇒ [] ⇒ fail-safe BLOCK). */
+export async function tribunalVendorsFromEnv(): Promise<TribunalVendor[]> {
+  const { httpAdapter } = await import("../diff_arena/adapters.js");
+  return ENV_VENDORS.filter((v) => (process.env[v.apiKeyEnv] ?? "").length > 0)
+    .map((v) => httpAdapter({ name: v.name, endpoint: v.endpoint, apiKeyEnv: v.apiKeyEnv, model: v.model, headers: v.headers, timeoutMs: 20000 }));
+}

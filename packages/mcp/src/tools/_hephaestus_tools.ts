@@ -12,8 +12,8 @@ export const hephCrossTool: MnemeTool = {
   name: "mneme.heph.cross",
   category: "meta",
   description:
-    "🔨 HEPHAESTUS — cross a command into the OS through the safety gate. Classifies risk (read/write/destructive), scans for injection, applies policy, and returns ALLOW / NEEDS_COSIGN / BLOCK + reasons + a signed provenance receipt (who: human vs which AI). A DESTRUCTIVE command is NEVER ALLOW without a human co-sign. Decision only — it does not execute. Call this BEFORE running any shell command and only proceed if disposition === 'ALLOW'.",
-  whenToUse: "BEFORE you (an AI agent) run ANY shell command on the user's machine — especially destructive ones (rm -rf, kubectl delete, DROP, git push --force). Use the verdict to decide whether to run, ask for co-sign, or refuse.",
+    "🔨 HEPHAESTUS — cross a command into the OS through the safety gate. Classifies risk (read/write/destructive), scans for injection, applies policy, and returns ALLOW / NEEDS_COSIGN / BLOCK + reasons + a signed provenance receipt (who: human vs which AI). A DESTRUCTIVE command is NEVER ALLOW without a human co-sign. Set tribunal=true to convene a REAL cross-vendor panel (from env API keys OPENAI_API_KEY/XAI_API_KEY/GEMINI_API_KEY/DEEPSEEK_API_KEY/OPENROUTER_API_KEY) to judge a destructive op — uncorrelated judges, fail-SAFE to BLOCK when no panel is reachable. Decision only — it does not execute. Call this BEFORE running any shell command and only proceed if disposition === 'ALLOW'.",
+  whenToUse: "BEFORE you (an AI agent) run ANY shell command on the user's machine — especially destructive ones (rm -rf, kubectl delete, DROP, git push --force). Use the verdict to decide whether to run, ask for co-sign, or refuse. Add tribunal=true on a destructive op for an independent cross-vendor verdict.",
   triggers: ["heph cross", "is this command safe to run", "gate this command", "check before running"],
   inputSchema: {
     type: "object",
@@ -23,6 +23,7 @@ export const hephCrossTool: MnemeTool = {
       agent: { type: "string", description: "'human' or your AI agent id" },
       host: { type: "string", description: "host/context tag; a 'prod' substring triggers prod read-only" },
       cosigned: { type: "boolean", description: "a human explicitly co-signed a destructive op" },
+      tribunal: { type: "boolean", description: "convene a REAL cross-vendor tribunal from env API keys (no keys ⇒ fail-safe BLOCK on destructive)" },
     },
   },
   outputSchema: { type: "object" },
@@ -30,16 +31,20 @@ export const hephCrossTool: MnemeTool = {
     try {
       const core = await import("@mneme-ai/core");
       const cwd = rt.meta?.rootPath ?? process.cwd();
+      const deps: Parameters<typeof core.hephaestus.crossCommand>[2] = {};
+      if (args["tribunal"] === true) {
+        deps.tribunal = core.hephaestus.makeDiffArenaTribunal(cwd, { vendors: await core.hephaestus.tribunalVendorsFromEnv() });
+      }
       const r = await core.hephaestus.crossCommand(cwd, {
         command: String(args["command"] ?? ""),
         agent: String(args["agent"] ?? "unknown"),
         host: typeof args["host"] === "string" ? args["host"] as string : undefined,
         cosigned: args["cosigned"] === true,
-      });
+      }, deps);
       const icon = r.disposition === "ALLOW" ? "🟢" : r.disposition === "NEEDS_COSIGN" ? "🟡" : "🔴";
       return {
-        data: { disposition: r.disposition, risk: r.risk, reasons: r.reasons, threats: r.threats, origin: r.origin, receiptId: r.receipt?.receiptId },
-        wisdom: `${icon} ${r.disposition} (${r.risk})${r.reasons[0] ? " — " + r.reasons[0] : ""}`,
+        data: { disposition: r.disposition, risk: r.risk, reasons: r.reasons, threats: r.threats, origin: r.origin, tribunal: r.tribunal, receiptId: r.receipt?.receiptId },
+        wisdom: `${icon} ${r.disposition} (${r.risk})${r.reasons[0] ? " — " + r.reasons[0] : ""}${r.tribunal ? ` · tribunal=${r.tribunal.consensus}` : ""}`,
         followUp: r.disposition === "NEEDS_COSIGN" ? ["mneme.heph.status"] : [],
         confidence: { level: "high" as const },
       };
@@ -71,6 +76,43 @@ export const hephPolyglotTool: MnemeTool = {
   },
 };
 
+export const hephPreflightTool: MnemeTool = {
+  name: "mneme.heph.preflight",
+  category: "meta",
+  description:
+    "🔮 HEPHAESTUS PRE-FLIGHT — preview a command's blast radius BEFORE crossing: risk + whether the effect is REVERSIBLE + an explicit list of what CANNOT be undone (rm -rf, dd, DROP/TRUNCATE, git push --force, terraform destroy, …) + a signed pre-mortem receipt. NEVER executes. The honest answer to 'can you undo it?': we can't un-delete, so we predict + warn + SIGN first. Call this on any command whose effect you're unsure is recoverable.",
+  whenToUse: "BEFORE running a command that might destroy data or be impossible to undo. Read irreversibleWarnings back to the user and get explicit confirmation before proceeding.",
+  triggers: ["heph preflight", "preview command", "what will this command do", "is this reversible", "blast radius"],
+  inputSchema: {
+    type: "object",
+    required: ["command"],
+    properties: {
+      command: { type: "string" },
+      agent: { type: "string", description: "'human' or your AI agent id" },
+    },
+  },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const pf = await core.hephaestus.preflightCommand(cwd, {
+        command: String(args["command"] ?? ""),
+        agent: String(args["agent"] ?? "human"),
+      });
+      const icon = pf.reversible ? "🟢" : "🔴";
+      return {
+        data: { command: pf.command, risk: pf.risk, reversible: pf.reversible, effects: pf.effects, irreversibleWarnings: pf.irreversibleWarnings, receiptId: pf.receipt?.receiptId },
+        wisdom: `${icon} ${pf.reversible ? "REVERSIBLE" : "IRREVERSIBLE"} (${pf.risk})${pf.irreversibleWarnings[0] ? " — " + pf.irreversibleWarnings[0] : ""}`,
+        followUp: pf.reversible ? ["mneme.heph.cross"] : ["mneme.heph.cross"],
+        confidence: { level: "high" as const },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "preflight failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
 export const hephStatusTool: MnemeTool = {
   name: "mneme.heph.status",
   category: "meta",
@@ -90,4 +132,4 @@ export const hephStatusTool: MnemeTool = {
   },
 };
 
-export const HEPHAESTUS_TOOLS: MnemeTool[] = [hephCrossTool, hephPolyglotTool, hephStatusTool];
+export const HEPHAESTUS_TOOLS: MnemeTool[] = [hephCrossTool, hephPreflightTool, hephPolyglotTool, hephStatusTool];

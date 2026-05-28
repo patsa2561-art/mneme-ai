@@ -4536,7 +4536,7 @@ export async function run(argv: string[]): Promise<void> {
   // signed crossing stamp — composing the existing organs into one bridge.
   program
     .command("gephyra <action>")
-    .description("🌉 GEPHYRA — the living bridge / Toll Booth of Truth. `cross --claim \"...\" --from AGENT` routes a claim through real-time truth-customs (ACGV) + injection quarantine + honesty toll + conscience nudge + a tamper-evident crossing stamp (NOTARY). `serve [--port]` runs it as an HTTP endpoint (POST /cross). `advertise` points agents at the bridge + lists new capabilities. `status`/`log` = crossings + black box. Mneme's surface — the face the agent world plugs into.")
+    .description("🌉 GEPHYRA — the living bridge / Toll Booth of Truth. `cross --claim \"...\" --from AGENT` routes a claim through real-time truth-customs (ACGV) + injection quarantine + honesty toll + conscience nudge + a tamper-evident crossing stamp (NOTARY). `serve [--port]` runs it as an HTTP endpoint (POST /cross to verify a claim · POST /mcp to proxy any MCP tool call through truth-customs — shell→HEPHAESTUS, claim→GEPHYRA). `advertise` points agents at the bridge + lists new capabilities. `status`/`log` = crossings + black box. Mneme's surface — the face the agent world plugs into.")
     .option("--claim <c>", "the claim/message crossing the bridge (cross)")
     .option("--from <a>", "originating agent (cross)")
     .option("--to <a>", "destination agent (cross)")
@@ -4554,7 +4554,7 @@ export async function run(argv: string[]): Promise<void> {
   program
     .command("heph <action>")
     .aliases(["hephaestus"])
-    .description("🔨 HEPHAESTUS — GEPHYRA's OS lane: a command crosses the bridge (risk-classify · policy · cross-vendor tribunal · output immune-scan · signed provenance) before it touches the machine. `cross --command \"...\" --agent X` decides ALLOW/NEEDS_COSIGN/BLOCK; `run` executes IF allowed (guarded); `polyglot --intent \"...\"` translates to this OS's shell; `status`. Destructive is NEVER allowed without a human co-sign.")
+    .description("🔨 HEPHAESTUS — GEPHYRA's OS lane: a command crosses the bridge (risk-classify · policy · cross-vendor tribunal · output immune-scan · signed provenance) before it touches the machine. `cross --command \"...\" --agent X` decides ALLOW/NEEDS_COSIGN/BLOCK; `preflight \"<command>\"` previews blast-radius + flags what cannot be undone, signed, WITHOUT running; `run` executes IF allowed (guarded); `polyglot --intent \"...\"` translates to this OS's shell; `status`. For a REAL cross-vendor tribunal on a destructive command set env API keys (OPENAI_API_KEY/XAI_API_KEY/GEMINI_API_KEY/…) and call `cross \"<command>\" --tribunal`. Destructive is NEVER allowed without a human co-sign.")
     .option("--command <c>", "the command crossing into the OS")
     .option("--agent <a>", "who is asking — 'human' or an AI id (claude/grok/…)")
     .option("--host <h>", "host/context tag (a 'prod' substring triggers prod read-only)")

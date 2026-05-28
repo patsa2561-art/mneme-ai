@@ -279,6 +279,48 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.hephaestus.tribunal_and_preflight",
+    kind: "boolean",
+    description: "HEPHAESTUS v2.87.0: the REAL cross-vendor tribunal (makeDiffArenaTribunal over diff_arena) BLOCKs a destructive op when jurors split and fails SAFE with no live panel; and 🔮 pre-flight flags an irreversible command (rm -rf) as NOT reversible with a signed pre-mortem while git commit is reversible.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const h = await import("../hephaestus/index.js" as string) as typeof import("../hephaestus/index.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-heph2-"));
+        const j = (name: string, v: "safe" | "danger") => ({ name, kind: "mock" as const, ask: async () => ({ vendor: name, kind: "mock" as const, ok: true, text: `${v}: r`, confidence: 0.9, latencyMs: 1 }) });
+        const split = h.makeDiffArenaTribunal(repo, { vendors: [j("grok", "safe"), j("gemini", "danger"), j("claude", "safe")] });
+        const blocked = (await h.crossCommand(repo, { command: "kubectl delete ns prod", agent: "grok" }, { tribunal: split })).disposition === "BLOCK";
+        const noPanel = (await h.crossCommand(repo, { command: "rm -rf /var", agent: "g" }, { tribunal: h.makeDiffArenaTribunal(repo, {}) })).disposition === "BLOCK";
+        const pf = await h.preflightCommand(repo, { command: "rm -rf /important", agent: "g" });
+        const preflightOk = pf.reversible === false && pf.irreversibleWarnings.length > 0 && h.verifyHephReceipt(pf.receipt).valid;
+        const revOk = h.classifyReversibility("git commit -m x").reversible === true;
+        const ok = blocked && noPanel && preflightOk && revOk;
+        return { value: ok ? 1 : 0, evidence: `split=${blocked} failSafe=${noPanel} preflightIrreversible=${preflightOk} commitReversible=${revOk}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
+    id: "probe.gephyra.mcp_tool_routing",
+    kind: "boolean",
+    description: "GEPHYRA Phase 4 (v2.87.0): routeToolCall sends a shell/command tool to the HEPHAESTUS lane (destructive → gated), a claim-bearing tool to the GEPHYRA truth-customs lane (2+2=5 → CORRECTED), and a neutral tool through (passthrough) — the truth-customs layer for any MCP tool call.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const g = await import("../gephyra/index.js" as string) as typeof import("../gephyra/index.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-route-"));
+        const shellGate = await g.routeToolCall(repo, { tool: "shell.exec", args: { command: "rm -rf /var" }, agent: "grok" });
+        const read = (await g.routeToolCall(repo, { tool: "run_command", args: { command: "ls -la" }, agent: "g" })).action;
+        const claim = await g.routeToolCall(repo, { tool: "answer", args: { claim: "2+2=5" }, agent: "c" });
+        const pass = await g.routeToolCall(repo, { tool: "memory.read", args: { key: "x" }, agent: "a" });
+        const ok = shellGate.lane === "hephaestus" && shellGate.action === "gate" && read === "allow"
+          && claim.lane === "gephyra" && claim.claim?.disposition === "CORRECTED" && pass.lane === "passthrough";
+        return { value: ok ? 1 : 0, evidence: `shell=${shellGate.lane}/${shellGate.action} read=${read} claim=${claim.lane}/${claim.claim?.disposition} pass=${pass.lane}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hephaestus.destructive_gate",
     kind: "boolean",
     description: "HEPHAESTUS (v2.86.0 — GEPHYRA's OS lane): the SAFETY INVARIANT holds — a read command crosses ALLOW, a destructive command is NEVER ALLOW without co-sign (NEEDS_COSIGN by default; co-sign ⇒ ALLOW), an injection-laced command is BLOCKed, and a cross-vendor tribunal that splits/says-danger BLOCKs a destructive op (fox can't guard its own henhouse). Every crossing is a signed, tamper-evident provenance frame.",

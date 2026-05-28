@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🔨 NEW in v2.86.0 — **HEPHAESTUS** (GEPHYRA's OS lane — the command Toll Booth)
+### 🔮 NEW in v2.87.0 — pre-flight + **real** cross-vendor tribunal + GEPHYRA **MCP-proxy**
+
+The bridge, wired to do its job for real. **(1) Pre-flight** (MCP `mneme.heph.preflight` · `mneme heph preflight "<command>"`): previews a command's blast radius **before** it crosses and lists exactly what is **irreversible** (`rm -rf`, `dd`, `DROP`/`TRUNCATE`, `git push --force`, `terraform destroy`…), signing the pre-mortem — without running anything. The honest answer to "can you undo it?": we can't un-delete, so we predict + warn + sign first. **(2) Real tribunal** (`mneme.heph.cross { command, agent, tribunal: true }`): the destructive-command gate now convenes an **actual** multi-vendor panel via `diff_arena` from whatever API keys are in your environment (`OPENAI_API_KEY`/`XAI_API_KEY`/`GEMINI_API_KEY`/…) — uncorrelated judges, **fail-safe to BLOCK when no panel is reachable**. **(3) MCP-proxy**: GEPHYRA serves `POST /mcp` — point any MCP client at `{ "mcpServers": { "gephyra": { "url": ".../mcp" } } }` and *every* tool call is routed through truth-customs automatically (shell→HEPHAESTUS gate · claim→GEPHYRA verify · else passthrough), each returning a signed crossing. TG 74/74.
+
+### 🔨 v2.86.0 — **HEPHAESTUS** (GEPHYRA's OS lane — the command Toll Booth)
 
 **What it is:** the neutral substrate a shell + AI run *on*. Before any command touches the machine it **crosses** HEPHAESTUS — risk-classified (read/write/destructive), policy-gated, optionally judged by a **cross-vendor tribunal** (a system can't audit itself — Mneme, owned by no vendor, convenes Grok+Gemini+Claude), output immune-scanned, and recorded as a **signed, tamper-evident provenance frame** (human vs which AI). **What it does:** a destructive command is **never allowed without a human co-sign**; you write an intent once and it translates to any OS's shell (polyglot). Decision-first, execution-optional — it doesn't compete with the runner, it's the gate the runner must pass. `mneme heph cross|run|polyglot|status`; MCP `mneme.heph.cross` (agents gate their shell commands automatically). TG 72/72.
 

@@ -3,6 +3,7 @@
  *   PK1 re-exports the engine from core
  *   PK2 startServer (ephemeral port) handles POST /cross end-to-end + GET /status, then closes
  *   PK3 a bad request returns 404 / 400 without crashing the server
+ *   PK4 POST /mcp routes an MCP tool call through truth-customs (shell→hephaestus gate · claim→gephyra correct)
  */
 
 import { describe, it, expect } from "vitest";
@@ -10,7 +11,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { request } from "node:http";
-import { startServer, crossBridge, handleCrossRequest, bridgeStatus, gephyra } from "./index.js";
+import { startServer, crossBridge, handleCrossRequest, handleMcpCallRequest, routeToolCall, bridgeStatus, gephyra } from "./index.js";
 
 function http(method: string, port: number, path: string, body?: string): Promise<{ status: number; json: unknown }> {
   return new Promise((resolve, reject) => {
@@ -29,6 +30,8 @@ describe("@mneme-ai/gephyra package", () => {
   it("PK1 re-exports the engine from core", () => {
     expect(typeof crossBridge).toBe("function");
     expect(typeof handleCrossRequest).toBe("function");
+    expect(typeof handleMcpCallRequest).toBe("function");
+    expect(typeof routeToolCall).toBe("function");
     expect(typeof bridgeStatus).toBe("function");
     expect(typeof gephyra.apoptosisTruthCustoms).toBe("function");
   });
@@ -61,4 +64,30 @@ describe("@mneme-ai/gephyra package", () => {
       await h.close();
     }
   }, 15_000);
+
+  it("PK4 POST /mcp routes a tool call through truth-customs (shell→hephaestus · claim→gephyra)", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "gephyra-pkg-"));
+    const h = await startServer({ repoRoot: repo, port: 0 });
+    try {
+      // a destructive shell tool call → HEPHAESTUS lane, gated (never auto-allow without co-sign)
+      const shell = await http("POST", h.port, "/mcp", JSON.stringify({ tool: "shell.exec", agent: "claude", args: { command: "rm -rf /important" } }));
+      expect(shell.status).toBe(200);
+      const sb = shell.json as { lane?: string; action?: string };
+      expect(sb.lane).toBe("hephaestus");
+      expect(sb.action === "gate" || sb.action === "block").toBe(true);
+      // a claim-bearing tool call → GEPHYRA lane, false arithmetic CORRECTED
+      const claim = await http("POST", h.port, "/mcp", JSON.stringify({ tool: "answer.send", agent: "gpt", args: { claim: "2+2=5" } }));
+      expect(claim.status).toBe(200);
+      const cb = claim.json as { lane?: string; claim?: { disposition?: string } };
+      expect(cb.lane).toBe("gephyra");
+      // a tool with nothing to inspect → passthrough
+      const pass = await http("POST", h.port, "/mcp", JSON.stringify({ tool: "list_files", agent: "claude", args: {} }));
+      expect((pass.json as { lane?: string }).lane).toBe("passthrough");
+      // bad body → 400, server survives
+      expect((await http("POST", h.port, "/mcp", "not json")).status).toBe(400);
+      expect((await http("GET", h.port, "/status")).status).toBe(200);
+    } finally {
+      await h.close();
+    }
+  }, 20_000);
 });

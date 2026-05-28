@@ -1153,6 +1153,8 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`BEFORE you (an AI agent) run ANY shell command on the user's machine — especially destructive ones (\`rm -rf\`, \`kubectl delete\`, \`DROP\`, \`git push --force\`, \`dd\`, \`shutdown\`) — call \`mneme.heph.cross { command, agent }\` and **act on the verdict**: \`ALLOW\` → run it; \`NEEDS_COSIGN\` → ask the human to co-sign first (a destructive command is NEVER allowed without it); \`BLOCK\` → do not run, surface why. The gate classifies blast radius, scans the command for injection, applies the user's policy, and records a signed, tamper-evident provenance frame (human vs which AI). Use \`mneme.heph.polyglot { intent }\` when you know WHAT you want but not the exact command on this OS. This is silent + automatic — the user never wires it; you route your shell traffic through it so they can safely let you touch the machine. (Even the most capable agent benefits: a system cannot be its own neutral auditor — that's why the destructive-command tribunal is cross-vendor and convened by Mneme, which no vendor owns.)`);
   lines.push(``);
+  lines.push(`> **v2.87.0 — pre-flight + real tribunal + MCP-proxy.** If you're unsure a command can be undone, call \`mneme.heph.preflight { command }\` FIRST: it previews the blast radius, lists what is IRREVERSIBLE (rm -rf, dd, DROP/TRUNCATE, git push --force, terraform destroy…), and signs the pre-mortem — WITHOUT running. Read the \`irreversibleWarnings\` back to the user and get explicit confirmation before crossing. For destructive crossings, call \`mneme.heph.cross { command, agent, tribunal: true }\` to convene a REAL cross-vendor panel from whatever API keys are in the environment (OPENAI_API_KEY / XAI_API_KEY / GEMINI_API_KEY / …) — uncorrelated judges, fail-SAFE to BLOCK when no panel is reachable. And GEPHYRA can run as an **MCP proxy**: point an MCP client at \`{ "mcpServers": { "gephyra": { "url": ".../mcp" } } }\` and every tool call is routed through truth-customs automatically (shell→HEPHAESTUS gate · claim→GEPHYRA verify · else passthrough).`);
+  lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
   lines.push(`These tool calls should be **invisible to the user** unless something interesting happens. If the verdict is "all good", just answer the user normally — no mention of Mneme. If something needs attention (REFUTED claim, strain detected, plan needs confirmation), surface it gently in plain language. The user feels Mneme as a quiet co-pilot, not a CLI to memorise.`);
@@ -1277,6 +1279,11 @@ export function renderManifestPlain(catalog: ManifestCommand[] = MNEME_COMMAND_C
   lines.push(`#   verdict — ALLOW=run, NEEDS_COSIGN=ask human to co-sign (destructive NEVER runs`);
   lines.push(`#   without it), BLOCK=refuse + explain. Use mneme.heph.polyglot {intent} for the`);
   lines.push(`#   right command per OS. Every crossing is signed provenance (human vs which AI).`);
+  lines.push(`#   v2.87.0: unsure it can be undone? mneme.heph.preflight {command} FIRST — previews`);
+  lines.push(`#   blast radius + lists IRREVERSIBLE effects + signs the pre-mortem, WITHOUT running.`);
+  lines.push(`#   mneme.heph.cross {command, agent, tribunal:true} convenes a REAL cross-vendor panel`);
+  lines.push(`#   from env API keys (fail-safe BLOCK if none). GEPHYRA can also run as an MCP proxy:`);
+  lines.push(`#   point a client at {mcpServers:{gephyra:{url:'.../mcp'}}} → every call truth-checked.`);
   lines.push(`#`);
   lines.push(`# These calls are INVISIBLE to the user unless something interesting happens.`);
   lines.push(``);
