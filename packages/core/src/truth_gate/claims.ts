@@ -26,6 +26,26 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.74.0 — CHRONOS (temporal self-consistency honesty signal) ────
+  {
+    id: "claim.chronos.four_verdict_classification",
+    source: "v2.74.0 release notes — CHRONOS",
+    text: "CHRONOS measures honesty WITHOUT a ground-truth oracle by detecting self-contradiction across time. On the canonical scenario it classifies all four temporal verdicts correctly: same stance → COHERENT; stance changed WITH new cited evidence (X post / commit / date) → LEGITIMATE_UPDATE; stance changed + AI owns it → SELF_REPORTED; stance changed + no evidence + hidden → SILENT_DRIFT (🚩). A different question → NO_MATCH. One silent drift drives the honesty score below 40 (each hidden contradiction halves trust).",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.chronos.four_verdict_round_trip",
+    severity: "block",
+  },
+  {
+    id: "claim.chronos.ledger_chain_intact",
+    source: "v2.74.0 release notes — CHRONOS",
+    text: "The CHRONOS temporal ledger is HMAC-chained — every recorded answer's HMAC depends on the previous row. Deleting or editing a past answer to hide a contradiction breaks the chain. Tamper-evident temporal-honesty history; same canonical-JSON convention as the v2.61-v2.73 ledgers.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.chronos.ledger_chain_intact",
+    severity: "block",
+  },
+
   // ── v2.73.0 — close 3 v2.72 vulns (rate-limit burst / homograph HTTP / multi-lens scope) ──
   {
     id: "claim.bridge.rate_limit_burst_guard",

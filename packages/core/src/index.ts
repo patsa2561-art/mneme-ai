@@ -473,6 +473,12 @@ export * as swarmBus from "./swarm_bus/index.js";
 // checkpoints + AI pheromone tagging + path-predicate filter +
 // dry-run rewind proposal + HMAC-chained ledger. Closes the septet.
 export * as reflog from "./reflog/index.js";
+// v2.74.0 — CHRONOS: temporal self-consistency as a ground-truth-free
+// honesty signal. Records every answer (HMAC-timestamp + semantic embed)
+// to an append-only ledger; flags SILENT DRIFT (stance change with no new
+// evidence) vs LEGITIMATE_UPDATE (change + cited evidence). The Grok/xAI
+// "prove I changed because the world changed, not because I'm fickle" weapon.
+export * as chronos from "./chronos/index.js";
 // v2.53.0 — CATALOG COUNT: single source of truth for "how many tools
 // does Mneme ship?". HMAC-signed envelope so docs can cite + prove.
 export {

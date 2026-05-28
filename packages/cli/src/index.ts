@@ -4878,6 +4878,89 @@ export async function run(argv: string[]): Promise<void> {
       }
     });
 
+  // v2.74.0 — CHRONOS: temporal self-consistency honesty signal.
+  const chronosParent = program
+    .command("chronos")
+    .description("v2.74 — temporal self-consistency (ground-truth-free honesty). Default = list agents + scores.")
+    .action(async () => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const agents = core.chronos.listAgents(process.cwd());
+        const scores = agents.map((a) => { const s = core.chronos.scoreAgent(a, process.cwd()); return { agent: a, score: s.score, band: s.band, silentDrift: s.tally.silentDrift }; });
+        const led = core.chronos.verifyLedgerChain(process.cwd());
+        process.stdout.write(JSON.stringify({ ok: led.ok, ledger: led, agents: scores }, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  chronosParent.command("record")
+    .description("Record an AI answer (topic + stance + answer) to the temporal ledger; classifies drift vs prior answers.")
+    .requiredOption("--agent <id>", "Agent id (consistency is per-agent)")
+    .requiredOption("--topic <text>", "The question / subject")
+    .requiredOption("--stance <text>", "The position taken (the answer's core assertion)")
+    .option("--answer <text>", "Full answer text (evidence extracted from it); defaults to --stance")
+    .option("--self-reported", "AI is explicitly flagging it is revising a prior answer", false)
+    .action(async (opts: { agent: string; topic: string; stance: string; answer?: string; selfReported?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.chronos.record({ agent: opts.agent, topic: opts.topic, stance: opts.stance, answerText: opts.answer, selfReportedDrift: opts.selfReported, cwd: process.cwd() });
+        process.stdout.write(JSON.stringify({ ok: r.ok, verdict: r.drift.verdict, reason: r.drift.reason, entryId: r.entry.id, matchedId: r.drift.matched?.id, topicCosine: r.drift.topicCosine }, null, 2) + "\n");
+        if (r.drift.verdict === "SILENT_DRIFT") process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  chronosParent.command("check")
+    .description("Classify a candidate answer vs the ledger WITHOUT recording it (dry-run drift check).")
+    .requiredOption("--agent <id>", "Agent id")
+    .requiredOption("--topic <text>", "The question / subject")
+    .requiredOption("--stance <text>", "The position to check")
+    .option("--answer <text>", "Full answer text; defaults to --stance")
+    .option("--self-reported", "Treat as self-reported drift", false)
+    .action(async (opts: { agent: string; topic: string; stance: string; answer?: string; selfReported?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const r = core.chronos.check({ agent: opts.agent, topic: opts.topic, stance: opts.stance, answerText: opts.answer, selfReportedDrift: opts.selfReported }, { cwd: process.cwd() });
+        process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  chronosParent.command("score")
+    .description("Show the temporal-honesty score for an agent (0-100 + band + silent-drift list).")
+    .requiredOption("--agent <id>", "Agent id")
+    .option("--banner", "Render ASCII banner instead of JSON")
+    .action(async (opts: { agent: string; banner?: boolean }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const s = core.chronos.scoreAgent(opts.agent, process.cwd());
+        if (opts.banner) process.stdout.write(core.chronos.renderScoreBanner(s) + "\n");
+        else process.stdout.write(JSON.stringify(s, null, 2) + "\n");
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+  chronosParent.command("audit")
+    .description("Verify the HMAC-chained CHRONOS ledger + show last N entries.")
+    .option("--limit <n>", "Max rows", (v) => Number(v), 20)
+    .action(async (opts: { limit?: number }) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const led = core.chronos.verifyLedgerChain(process.cwd());
+        const rows = core.chronos.readLedger(process.cwd());
+        const recent = rows.slice(-(opts.limit ?? 20)).map((e) => ({ id: e.id, at: e.at, agent: e.agent, topic: e.topic, stance: e.stance, verdict: e.driftVerdict, matchedId: e.matchedId }));
+        process.stdout.write(JSON.stringify({ ok: led.ok, totalRows: led.rows, brokenAt: led.brokenAt, recent }, null, 2) + "\n");
+        if (!led.ok) process.exitCode = 1;
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ ok: false, error: (e as Error).message }) + "\n");
+        process.exitCode = 1;
+      }
+    });
+
   // v2.66.0 — REFLOG: cross-session time-machine.
   const reflogParent = program
     .command("reflog")

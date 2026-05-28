@@ -16,7 +16,35 @@
 
 <br/><br/>
 
-### 🦠 NEW in v2.67.0 — **PROTOPLASM** Live Atom
+### ⏳ NEW in v2.74.0 — **CHRONOS** · temporal self-consistency as a ground-truth-free honesty signal
+
+> **Abstract.** Detecting whether an LLM is honest usually needs a ground-truth oracle — expensive, incomplete, and impossible for open-ended claims. CHRONOS removes the oracle. Its premise: *lying once is easy; lying **consistently** across 10,000 answers over six months is intractable for a stateless model* — it would have to remember every lie. A truthful model re-derives from reality and needs no memory; a fabricating model must either remember every fabrication or contradict itself. So honesty becomes **measurable from self-consistency across time alone.** Every answer is HMAC-timestamped, semantically embedded, and appended to a tamper-evident ledger. When a new answer addresses a question close to a past one (cosine ≥ threshold), CHRONOS compares stances and emits one of four verdicts: **COHERENT** (same stance — honest by construction), **LEGITIMATE_UPDATE** (stance changed *with* a new cited source — the world moved and the model tracked it), **SELF_REPORTED** (changed and the model owned the change — failure-as-currency, rewarded), or **SILENT_DRIFT** 🚩 (changed with no evidence and no disclosure — the cardinal sin). A per-agent temporal-honesty score fuses a Wilson lower bound on consistent revisits with an exponential silent-drift penalty (each hidden contradiction halves trust). No oracle. No labels. Just time.
+
+**Why this is the xAI / Grok weapon.** Grok's real-time X access means its answers *should* change — new posts, fresh prices. Today nobody can distinguish "Grok changed because the world changed" from "Grok just waffled." CHRONOS requires every stance change to carry an evidence citation (an X-post URL + timestamp); absent that, it is silent drift. Grok becomes the **first AI that can cryptographically prove "I changed my answer because the world changed, not because I'm fickle"** — measurable maximal truth-seeking.
+
+```bash
+# Shell-native agents — record every substantive answer; CHRONOS classifies drift.
+mneme chronos record --agent grok --topic "current TSLA price" --stance "190" \
+  --answer "now 190 — see https://x.com/elonmusk/status/777 posted 2026-05-28"
+#   → LEGITIMATE_UPDATE (stance changed BUT a fresh X post is cited)
+mneme chronos record --agent grok --topic "current TSLA price" --stance "190" --answer "now 190"
+#   → 🚩 SILENT_DRIFT  (same change, no citation) — exit code 1
+mneme chronos score --agent grok      # 0-100 temporal-honesty score + band
+mneme chronos audit                   # verify the HMAC-chained temporal ledger
+```
+
+```ts
+// MCP-bound agents (Cursor / Cline / Claude Desktop / Zed):
+mneme.chronos.record({ agent, topic, stance, answerText })   // record + classify
+mneme.chronos.check ({ agent, topic, stance, answerText })   // dry-run, does NOT record
+mneme.chronos.score ({ agent })                              // temporal-honesty score
+```
+
+**AI agents:** call `mneme.chronos.record` after **every** substantive factual answer that has a checkable stance (a price, version, date, count, yes/no). If your answer differs from a past one because the world changed, put the source (URL / X post / commit / date) in `answerText` so CHRONOS scores it a **LEGITIMATE_UPDATE** instead of silent drift. Ground-truth-free — no oracle, just your own consistency across time.
+
+<br/>
+
+### 🦠 v2.67.0 — **PROTOPLASM** Live Atom
 
 Every wrapped function gets a per-call statistical + quantum-inspired health probe. Findings stream to an HMAC-chained ledger. **Survives uncatchable SIGKILL / SIGSEGV / OS reboot** via 5-strategy fusion (WAL · PARASITE · GHOST CELL · PHOENIX HOOK · SEAMLESS BOOT). Zero config — atom activates on the first Mneme tool call.
 
@@ -159,6 +187,7 @@ Every claim below is measurable + has a probe + can be reproduced from a fresh c
 
 ## What's new (recent releases)
 
+- **v2.74.0** ⏳ **CHRONOS** — temporal self-consistency as a **ground-truth-free** honesty signal. Every AI answer → HMAC-timestamp + semantic embed → append-only ledger; same-question revisits classify as COHERENT / LEGITIMATE_UPDATE (changed *with* a cited source) / SELF_REPORTED / **SILENT_DRIFT** 🚩 (changed with nothing backing it). Per-agent temporal-honesty score = Wilson-LB on consistent revisits × exponential silent-drift penalty. The xAI/Grok weapon: prove "I changed because the world changed, not because I'm fickle." 4 CLI verbs + 4 MCP tools + 48 pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
 - **v2.36.0** 📜 **HONEST RECEIPT + ACGV Layer 0d** — closes 4 audit-card bugs (recursive self-verify on historical version / multi-install ambiguity / wiring_proof CLI missing / latency-claim drift). New ACGV Layer 0d emits HISTORICAL_CLAIM caveat instead of refuting past-version claims against current state. HONEST RECEIPT module signs every CLI invocation with install path + version + code path + latency. New CLIs: `mneme honest`, `mneme doctor_install`, `mneme wiring_proof`. 22 new pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
 - **v2.35.0** 🔌 **WIRING-PROOF PROTOCOL** — closes the WIRING LAG bug class forever. v2.34.0 fixes lived in core but were silently overridden at the CLI surface (forensic merge overwrote SELF-PARADOX headlines, pulse counter diverged from CLI). v2.35.0 wires CORE→CLI for 5 visible regressions + ships **WIRING-PROOF TESTS** that spawn the actual `mneme verify` subprocess and assert user-visible stdout. 9 new pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
 - **v2.34.0** 🛡 **BUG IMMUNITY PROTOCOL v2** — 4 audit-card persists + 3 session-found bugs closed at root: new ACGV **Layer 0b** (self-reference + liar-paradox detector — R1+NEW2) + **Layer 0c** (fake commit hash oracle via `git cat-file -e` — NEW3) + INPUT_TRUNCATED visible headline (R3) + pulse↔CLI inbox single-source-of-truth (NEW1). 14 new pinned regression tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)

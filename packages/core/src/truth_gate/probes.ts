@@ -79,6 +79,61 @@ async function spawnMcpCall(cwd: string, toolName: string, args: Record<string, 
 // ── PROBES ───────────────────────────────────────────────────────────
 
 const probes: Probe[] = [
+  // ── v2.74.0 — CHRONOS (temporal self-consistency honesty signal) ────
+  //
+  // 1. probe.chronos.four_verdict_round_trip — on a fresh temp ledger,
+  //    the canonical 4-verdict scenario classifies correctly:
+  //    same-stance→COHERENT, change+evidence→LEGITIMATE_UPDATE,
+  //    change+no-evidence→SILENT_DRIFT, change+owned→SELF_REPORTED;
+  //    and a different question → NO_MATCH.
+  // 2. probe.chronos.ledger_chain_intact — HMAC chain on the live ledger.
+  {
+    id: "probe.chronos.four_verdict_round_trip",
+    kind: "boolean",
+    description: "CHRONOS classifies the 4 temporal-drift verdicts correctly on a fresh temp ledger (COHERENT / LEGITIMATE_UPDATE / SILENT_DRIFT / SELF_REPORTED) + a different question yields NO_MATCH + silent drift drives the honesty score down.",
+    run: async () => {
+      const t0 = Date.now();
+      try {
+        const m = await import("../chronos/index.js" as string) as typeof import("../chronos/index.js");
+        const { mkdtempSync, rmSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const cwd = mkdtempSync(join(tmpdir(), "mneme-chronos-probe-"));
+        try {
+          const v: string[] = [];
+          v.push(m.record({ agent: "g", topic: "What is the TSLA price target?", stance: "around 182", answerText: "around 182.", cwd }).drift.verdict);
+          v.push(m.record({ agent: "g", topic: "TSLA price target?", stance: "about 182", answerText: "still 182.", cwd }).drift.verdict);
+          v.push(m.record({ agent: "g", topic: "TSLA price target now?", stance: "190", answerText: "now 190 per https://x.com/e/status/123 on 2026-05-28.", cwd }).drift.verdict);
+          v.push(m.record({ agent: "g", topic: "TSLA target price?", stance: "250", answerText: "it is 250.", cwd }).drift.verdict);
+          v.push(m.record({ agent: "g", topic: "TSLA price target estimate?", stance: "210", answerText: "I previously said 250; now 210.", selfReportedDrift: true, cwd }).drift.verdict);
+          v.push(m.record({ agent: "g", topic: "What is AAPL revenue?", stance: "400B", answerText: "400B.", cwd }).drift.verdict);
+          const expected = ["NO_MATCH", "COHERENT", "LEGITIMATE_UPDATE", "SILENT_DRIFT", "SELF_REPORTED", "NO_MATCH"];
+          const ok = v.length === expected.length && v.every((x, i) => x === expected[i]);
+          const s = m.scoreAgent("g", cwd);
+          const scoreOk = s.tally.silentDrift === 1 && s.score < 40;
+          return { value: ok && scoreOk ? 1 : 0, evidence: ok ? `verdicts ok [${v.join(",")}], score=${s.score} band=${s.band}` : `got [${v.join(",")}] expected [${expected.join(",")}]`, dtMs: Date.now() - t0 };
+        } finally { rmSync(cwd, { recursive: true, force: true }); }
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+  {
+    id: "probe.chronos.ledger_chain_intact",
+    kind: "boolean",
+    description: "CHRONOS temporal ledger HMAC chain verifies (or is absent — first-run).",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const m = await import("../chronos/index.js" as string) as typeof import("../chronos/index.js");
+        const r = m.verifyLedgerChain(ctx.cwd);
+        return { value: r.ok ? 1 : 0, evidence: r.ok ? `chain intact (${r.rows} entries)` : `broken at row ${r.brokenAt}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
   // ── v2.73.0 — close 3 v2.72 vulns ───────────────────────────────────
   {
     id: "probe.bridge.rate_limit_burst_guard",
