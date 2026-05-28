@@ -4531,6 +4531,22 @@ export async function run(argv: string[]): Promise<void> {
     }
   }
 
+  // v2.83.0 — GEPHYRA (γέφυρα, "bridge"): the Toll Booth of Truth. Routes a claim
+  // through truth-customs (real ACGV) + immune + honesty toll + conscience + a
+  // signed crossing stamp — composing the existing organs into one bridge.
+  program
+    .command("gephyra <action>")
+    .description("🌉 GEPHYRA — the living bridge / Toll Booth of Truth. `cross --claim \"...\" --from AGENT` routes a claim through real-time truth-customs (ACGV) + injection quarantine + honesty toll + conscience nudge + a tamper-evident crossing stamp (NOTARY). `status` shows crossings + hallucinations caught; `log` replays the black box. Mneme's surface — the face the agent world plugs into.")
+    .option("--claim <c>", "the claim/message crossing the bridge (cross)")
+    .option("--from <a>", "originating agent (cross)")
+    .option("--to <a>", "destination agent (cross)")
+    .option("--action <a>", "what the crossing does (cross)")
+    .option("--json", "machine-readable output", false)
+    .action(async (action: string, o: { claim?: string; from?: string; to?: string; action?: string; json?: boolean }) => {
+      const { gephyraCommand } = await import("./commands/gephyra.js");
+      process.exit(await gephyraCommand({ cwd: process.cwd(), action, claim: o.claim, from: o.from, to: o.to, frameAction: o.action, json: !!o.json }));
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")

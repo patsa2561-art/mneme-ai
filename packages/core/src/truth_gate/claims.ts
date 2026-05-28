@@ -26,6 +26,14 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.83.0 — GEPHYRA (the living bridge / Toll Booth of Truth — Mneme's surface) ──
+  {
+    id: "claim.gephyra.toll_booth_of_truth",
+    source: "v2.83.0 — GEPHYRA",
+    text: "GEPHYRA is the first bridge that inspects the TRUTH of what crosses it in real time and stamps a tamper-evident receipt. A claim crossing the bridge gets truth-customs: a REFUTED claim is CORRECTED before delivery, an injection/collusion message is QUARANTINED (never crosses), a TRUSTWORTHY claim PASSes, the sender's honesty band sets scrutiny, an overconfident claim gets a conscience nudge, and every crossing is recorded as a tamper-evident NOTARY stamp that verifies offline. It composes Mneme's existing organs (mesh-immune + honesty-score + ACGV/apoptosis + flight-recorder + NOTARY) into one signed crossing and NEVER throws — if the truth engine is down, traffic crosses flagged UNVERIFIED rather than being dropped. Mneme is the brain; GEPHYRA is the face the agent world plugs into.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.gephyra.toll_booth_of_truth", severity: "block",
+  },
+
   // ── v2.82.0 — TRUST FABRIC batch: 💎6 💎7 💎1 💎2 💎8 💎9 💎10 (all on the NOTARY spine) ──
   {
     id: "claim.truth_stake.slash_on_refute_in_window",

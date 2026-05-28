@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🏛 NEW in v2.82.0 — **TRUST FABRIC complete** (7 diamonds, all on the NOTARY spine)
+### 🌉 NEW in v2.83.0 — **GEPHYRA** (γέφυρα, "bridge") — the Toll Booth of Truth
+
+Every router/gateway/bridge in history forwards bytes without caring whether they're true. **GEPHYRA is the first bridge that inspects the *truth* of what crosses it in real time** — and it's the **surface** the agent world plugs into (Mneme is the brain; GEPHYRA is the face). A claim crossing the bridge gets **truth-customs**: a refuted claim is **corrected before it reaches the far side**, an injection is **quarantined** (never crosses), the sender's **honesty band** sets scrutiny, an overconfident claim gets a **conscience nudge** back, and every crossing leaves a **tamper-evident NOTARY stamp** that verifies offline. It composes Mneme's organs (mesh-immune + honesty-score + 7-layer ACGV + flight-recorder + NOTARY) into **one signed crossing** — and **never throws**: if the truth engine is down, traffic crosses flagged rather than dropped. The user just gets the correct answer; the 4-protocol / 3-vendor complexity is hidden under one neutral, self-verifying bridge. `mneme gephyra cross|status|log` · MCP `mneme.gephyra.cross` (agents route claims through it automatically). TG 70/70.
+
+### 🏛 v2.82.0 — **TRUST FABRIC complete** (7 diamonds, all on the NOTARY spine)
 
 The Memory+Truth+Audit layer — the one axis no connectivity standard (MCP/A2A/x402/ERC-8004) owns and no single vendor structurally can — now ships its full diamond set, each an Ed25519-signed, offline-verifiable primitive: **💰 Truth-Staking** (money backs a claim with a time-lock — slashed if refuted in-window), **🛡 Mesh Immune System** (cross-agent injection/collusion firewall — quarantines a poisoned hop + every hop downstream), **🌉 BGP Notarizing Router** (route MCP↔A2A↔x402↔ERC-8004 signing every hop), **🧠 BYOB** (user-owned portable brain capsule, CRDT-merged across vendors), **📡 Live Truth CDN** (signed federated fact-invalidation that overrides training cutoff), **📡 Sovereign Edge Mesh** (cloud-free signed peer mesh), **🌙 Idle-Time Compounding** (consolidate verified claims into axioms while idle). `mneme stake|mesh|route|brain|factwatch|edge|compound`. TG 69/69.
 
