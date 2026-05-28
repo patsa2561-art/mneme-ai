@@ -253,6 +253,37 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.flight_recorder.tamper_evident_replay",
+    kind: "boolean",
+    description: "FLIGHT RECORDER (v2.80.0 💎3, on the NOTARY spine): the AI black box is tamper-evident + replayable + sealable. Recording frames yields a chain that verifies OFFLINE; tampering any frame breaks it; replay pinpoints the first claim-vs-reality CONTRADICTION (the incident); and seal() produces one court-admissible receipt that verifies offline + commits the chain head.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const fr = await import("../flight_recorder/index.js" as string) as typeof import("../flight_recorder/index.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-flight-"));
+        fr.record(repo, { agent: "tg", action: "step 1", claim: "ok", observedReality: "ok" });
+        fr.record(repo, { agent: "tg", action: "step 2", claim: "no bug", observedReality: "bug: refuted" });
+        const chainValid = fr.verifyCdr(repo).valid;
+        const chain = fr.readCdr(repo);
+        const tampered = !chain.length ? false : (await import("../notary/index.js" as string) as typeof import("../notary/index.js"))
+          .verifyChain(chain.map((c, i) => i === 0 ? { ...c, payload: { ...(c.payload as object), action: "X" } } : c)).valid;
+        const rep = fr.replay(repo);
+        const head = chain[chain.length - 1]?.receiptId ?? null;
+        const s = fr.seal(repo);
+        const sealOk = fr.verifySeal(s, head).valid;
+        const ok = chainValid && !tampered && rep.incidentSeq === 1 && rep.counts.contradict === 1 && sealOk;
+        return { value: ok ? 1 : 0, evidence: `chainValid=${chainValid} tamperRejected=${!tampered} incidentSeq=${rep.incidentSeq} contradictions=${rep.counts.contradict} sealOk=${sealOk}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
+  {
     id: "probe.immune.no_worm_directive",
     kind: "boolean",
     description: "WORM-CANARY (v2.78.0 DE-WORM): the block Mneme writes into AI agent-instruction files (CLAUDE.md/AGENTS.md/.cursorrules/.windsurfrules) carries ZERO worm signatures — no imperative addressed to the AI, no auto-exec tool call, no self-replication. Proven by rendering a worst-case version-mismatch notice (one that carries an upgrade autoAction) and scanning it; also confirms the canary still catches the pre-v2.78 payload (positive control).",

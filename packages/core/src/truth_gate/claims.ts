@@ -26,6 +26,17 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.80.0 — FLIGHT RECORDER (tamper-evident, replayable AI black box) ──
+  {
+    id: "claim.flight_recorder.tamper_evident_replay",
+    source: "v2.80.0 release notes — FLIGHT RECORDER (💎3, on the NOTARY spine)",
+    text: "Mneme's AI Flight Recorder is a tamper-evident, replayable black box built on the NOTARY spine: every recorded frame is an Ed25519-signed, chained receipt, so the whole cockpit-data-recorder verifies OFFLINE by any third party (court / insurer / auditor) without trusting Mneme. Tampering any frame breaks the chain; replay() walks frames in causal order and pinpoints the first claim-vs-reality CONTRADICTION (the incident moment); seal() produces ONE court-admissible receipt that verifies offline and commits the chain head. Diamond #3 of the TRUST FABRIC.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.flight_recorder.tamper_evident_replay",
+    severity: "block",
+  },
+
   // ── v2.79.0 — NOTARY (portable, offline-verifiable proof-of-provenance) ──
   {
     id: "claim.notary.portable_offline_verify",

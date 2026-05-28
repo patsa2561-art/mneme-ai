@@ -4427,6 +4427,36 @@ export async function run(argv: string[]): Promise<void> {
       }));
     });
 
+  // v2.80.0 — FLIGHT RECORDER (💎3). The tamper-evident, replayable AI black box,
+  // built on the NOTARY spine — every frame is a signed, chained receipt the
+  // whole recorder verifies offline; seal = one court-admissible artifact.
+  program
+    .command("flight <action>")
+    .description("🛫 FLIGHT RECORDER — the AI black box. record/replay/verify/seal an agent's actions+reasoning+claim-vs-reality as signed, chained receipts (built on NOTARY). actions: record | replay | verify | seal.")
+    .option("--agent <a>", "agent id (record)")
+    .option("--action <text>", "what the agent did (record)")
+    .option("--kind <k>", "action | decision | claim | tool-call | payment | observation", "action")
+    .option("--reasoning <r>", "why — reasoning trace (record)")
+    .option("--claim <c>", "a checkable claim the agent asserted (record)")
+    .option("--reality <o>", "what was actually observed/true (record)")
+    .option("--delta <d>", "explicit MATCH | CONTRADICT | UNVERIFIED (overrides heuristic)")
+    .option("--json", "machine-readable output", false)
+    .action(async (action: string, o: { agent?: string; action?: string; kind?: string; reasoning?: string; claim?: string; reality?: string; delta?: string; json?: boolean }) => {
+      const { flightCommand } = await import("./commands/flight.js");
+      process.exit(await flightCommand({
+        cwd: process.cwd(),
+        action,
+        agent: o.agent,
+        actionText: o.action,
+        frameKind: o.kind,
+        reasoning: o.reasoning,
+        claim: o.claim,
+        reality: o.reality,
+        delta: o.delta,
+        json: !!o.json,
+      }));
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")

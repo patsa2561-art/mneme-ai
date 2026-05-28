@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🪪 NEW in v2.79.0 — **NOTARY** (portable proof you can verify without trusting Mneme)
+### 🛫 NEW in v2.80.0 — **FLIGHT RECORDER** (the tamper-evident AI black box)
+
+When an agent controls a machine, pays via x402, or merges code, an incident needs a court-admissible record. FLIGHT RECORDER logs each frame — **action · reasoning · claim-vs-reality** — as an Ed25519-signed, chained receipt (built on NOTARY), so the whole black box **verifies offline by any third party** (court / insurer / auditor) and any post-hoc edit breaks it. `replay` pinpoints the first claim≠reality **contradiction** (the incident moment); `seal` emits **one court-admissible artifact**. `mneme flight record|replay|verify|seal`. Diamond 💎3 of the TRUST FABRIC.
+
+### 🪪 v2.79.0 — **NOTARY** (portable proof you can verify without trusting Mneme)
 
 2026's agent standards (MCP / A2A / x402 / ERC-8004) all answer *how agents connect, talk, pay, identify* — none answer *"can you trust what an agent said/remembered, and prove it later?"* That **Memory + Truth + Audit** axis is the unowned layer, and only an independent player can own it. NOTARY is its spine: **Ed25519-signed proof receipts** any third party (vendor / auditor / court / insurer) verifies **offline with the public key alone** — no Mneme, no network, no shared secret (Mneme's first asymmetric-crypto primitive; every prior ledger is HMAC). Receipts chain into tamper-evident, attributable history. `mneme notary issue|verify|pubkey`. First of the TRUST FABRIC diamonds (BGP router · BYOB portable memory · AI flight recorder all build on it).
 
