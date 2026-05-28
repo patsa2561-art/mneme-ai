@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🌉 NEW in v2.84.0 — **GEPHYRA Phase 2** (serve-as-endpoint + auto-advertise)
+### 🌉 NEW in v2.85.0 — **GEPHYRA Phase 3** (`@mneme-ai/gephyra` — the bridge graduates to a deployable package)
+
+GEPHYRA is now its own published package, **`@mneme-ai/gephyra`** — the deployable **surface** of Mneme that anyone can run standalone in front of any agent/protocol: `npx @mneme-ai/gephyra serve` exposes `POST /cross {claim, fromAgent}` (real-time truth-customs + a signed crossing) and `GET /status`. The truth-customs engine stays in `@mneme-ai/core` (where it's tested + composed from every Mneme organ); the new package thinly re-exports it and adds the HTTP server + the `gephyra` bin + a `startServer()` API — no circular deps, nothing in the CLI/MCP changes. **Mneme = the brain; GEPHYRA = the face the agent world plugs into.** 7 packages now publish atomically.
+
+### 🌉 v2.84.0 — **GEPHYRA Phase 2** (serve-as-endpoint + auto-advertise)
 
 GEPHYRA now runs as an **HTTP endpoint** (`mneme gephyra serve` → `POST /cross {claim, fromAgent}` → truth-customs + a signed crossing) and **auto-advertises itself to AI agents**: a new manifest **Rule 12** + `mneme.gephyra.advertise` tell every agent (on session start, automatically) to route factual claims + cross-agent (A2A) traffic through `mneme.gephyra.cross` and **auto-detect any capability added since it last checked** (`newCapabilitiesSince` diffs the live catalog) — so new Mneme functions are surfaced through the bridge and the user benefits without ever asking. Silent + automatic. TG 71/71.
 

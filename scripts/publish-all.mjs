@@ -51,6 +51,8 @@ const PACKAGES_IN_DEP_ORDER = [
   { name: "@mneme-ai/mcp",        path: "packages/mcp" },
   // v2.55.0 — SDK depends only on core, can publish before cli.
   { name: "@mneme-ai/sdk",        path: "packages/sdk" },
+  // v2.85.0 — GEPHYRA (the deployable bridge surface) depends only on core.
+  { name: "@mneme-ai/gephyra",    path: "packages/gephyra" },
   { name: "mneme-ai",             path: "packages/cli" },
 ];
 

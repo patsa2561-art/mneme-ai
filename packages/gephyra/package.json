@@ -1,10 +1,13 @@
 {
-  "name": "@mneme-ai/embeddings",
+  "name": "@mneme-ai/gephyra",
   "version": "2.85.0",
-  "description": "Embedding providers (OpenAI, Ollama, bundled-WASM, hash-fallback) for Mneme",
+  "description": "GEPHYRA — the living bridge / Toll Booth of Truth for AI agents. Real-time semantic truth-customs (verify · quarantine injection · honesty toll · conscience nudge · signed crossing) on top of any protocol. The deployable surface of Mneme.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "gephyra": "./dist/bin.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -14,7 +17,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/patsa2561-art/mneme-ai.git",
-    "directory": "packages/embeddings"
+    "directory": "packages/gephyra"
   },
   "homepage": "https://github.com/patsa2561-art/mneme-ai#readme",
   "bugs": {
@@ -29,13 +32,22 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean"
   },
-  "engines": {
-    "node": ">=22.13.0 <25.0.0"
-  },
+  "keywords": [
+    "ai",
+    "bridge",
+    "truth",
+    "verification",
+    "mcp",
+    "a2a",
+    "agent",
+    "notary",
+    "toll-booth-of-truth",
+    "gephyra"
+  ],
   "dependencies": {
     "@mneme-ai/core": "2.85.0"
   },
-  "optionalDependencies": {
-    "@huggingface/transformers": "^3.0.0"
+  "engines": {
+    "node": ">=22.13.0 <25.0.0"
   }
 }
