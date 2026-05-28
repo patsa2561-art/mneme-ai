@@ -223,20 +223,43 @@ describe("v2.75.0 P7 — shipped inline preinstall (chicken-and-egg safe + in sy
     expect(pre).not.toMatch(/require\(['"]\.\.?\//);
   });
 
-  it("P7.2 the shipped inline carries the node.exe fix (cmdline-match) + Handle-Oracle", async () => {
+  it("P7.2 the shipped inline reaps the node.exe daemon by PID + uses the Handle-Oracle", async () => {
     const pkg = JSON.parse((await import("node:fs")).readFileSync(resolve(__dirname, "../package.json"), "utf8"));
     const pre = pkg.scripts.preinstall as string;
-    expect(pre).toMatch(/isDaemon|cmdline-reaped|Get-CimInstance/); // cmdline-match daemon kill
-    expect(pre).toMatch(/handle-oracle|openSync\([^)]*r\+/);        // deterministic Handle-Oracle gate
-    expect(pre).toContain("preinstall-end");                        // completes the trail
+    expect(pre).toMatch(/heartbeats|\.beat|\/PID/);          // node.exe daemon reaped by PID (image-name kill misses it)
+    expect(pre).toMatch(/handle-oracle|openSync\([^)]*r\+/); // deterministic Handle-Oracle gate
+    expect(pre).toContain("preinstall-end");                 // completes the trail
   });
 
-  it("P7.3 LENGTH GUARD: inline fits the Windows cmd.exe ~8191 limit (v2.75.0 shipped 18.5KB → uninstallable)", async () => {
+  it("P7.3 CMD-SAFETY GUARD: inline < 8000 chars AND zero literal double-quotes (v2.75.0=18.5KB, v2.75.1=quote-broke-cmd)", async () => {
     const pkg = JSON.parse((await import("node:fs")).readFileSync(resolve(__dirname, "../package.json"), "utf8"));
     const pre = pkg.scripts.preinstall as string;
-    // npm wraps preinstall in `cmd /d /s /c "..."`; keep a safety margin under 8191.
+    const body = pre.replace(/^node -e /, "").replace(/^"|"$/g, "");
     expect(pre.length).toBeGreaterThan(200);
-    expect(pre.length).toBeLessThan(8000);
+    expect(pre.length).toBeLessThan(8000);          // Windows cmd.exe ~8191 limit
+    expect(body.includes('"')).toBe(false);          // a literal " breaks `cmd /c "node -e \"…\""` quoting
+  });
+
+  it("P7.4 FAITHFUL cmd.exe SMOKE (Windows): the inline runs through `cmd /d /s /c` exit 0 + writes the trail", async () => {
+    if (process.platform !== "win32") return; // the failure mode is Windows-cmd-only
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const { join: pjoin } = await import("node:path");
+    const { spawnSync } = await import("node:child_process");
+    const pkg = JSON.parse(fs.readFileSync(resolve(__dirname, "../package.json"), "utf8"));
+    const value = pkg.scripts.preinstall as string;
+    const sandbox = fs.mkdtempSync(pjoin(os.tmpdir(), "mneme-cmd-smoke-"));
+    try {
+      // Reproduce npm's EXACT Windows invocation: cmd /d /s /c "<preinstall>", verbatim.
+      const r = spawnSync("cmd.exe", ["/d", "/s", "/c", value], {
+        windowsHide: true, windowsVerbatimArguments: true, timeout: 40000, encoding: "utf8",
+        env: { ...process.env, HOME: sandbox, USERPROFILE: sandbox, HOMEDRIVE: "", HOMEPATH: "", npm_package_version: "smoke-rt" },
+      });
+      expect(r.status).toBe(0); // v2.75.0 → "command line is too long"; v2.75.1 → cmd parse error
+      expect(fs.existsSync(pjoin(sandbox, ".mneme-global", "preinstall-trail.jsonl"))).toBe(true);
+    } finally {
+      fs.rmSync(sandbox, { recursive: true, force: true });
+    }
   });
 });
 

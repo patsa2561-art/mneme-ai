@@ -144,7 +144,7 @@ const probes: Probe[] = [
   {
     id: "probe.preinstall.reaps_node_daemon",
     kind: "numeric",
-    description: "The shipped CLI preinstall is a self-contained inline `node -e` (no package-internal file ref) that kills the node.exe daemon by command-line match AND uses a deterministic Handle-Oracle gate — AND is short enough for the Windows cmd.exe ~8191-char command-line limit. Closes the Windows EBUSY upgrade bug where `taskkill /IM mneme.exe` missed `node.exe …mneme.js`.",
+    description: "The shipped CLI preinstall is a self-contained inline `node -e` (no package-internal file ref) that reaps the node.exe daemon by PID via the heartbeat registry AND uses a deterministic Handle-Oracle DLL gate — AND is cmd-safe: short enough for the Windows cmd.exe ~8191-char limit AND contains ZERO literal double-quotes (which break `cmd /c \"node -e \\\"…\\\"\"` quoting and exposed pipes to cmd in v2.75.0/.1).",
     run: async (ctx) => {
       const t0 = Date.now();
       try {
@@ -152,16 +152,21 @@ const probes: Probe[] = [
         if (!existsSync(pkgPath)) return { value: null, evidence: "packages/cli/package.json absent (not the monorepo root)", dtMs: Date.now() - t0 };
         const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { scripts?: { preinstall?: string } };
         const pre = pkg.scripts?.preinstall ?? "";
+        const body = pre.replace(/^node -e /, "").replace(/^"|"$/g, ""); // strip `node -e ` + outer wrapping quotes
         const inlineNodeE = /^node -e /.test(pre);
         const noFileRef = !/node\s+bin\//.test(pre) && !/require\(['"]\.\.?\//.test(pre);
-        const cmdlineMatch = /isDaemon|cmdline-reaped|Get-CimInstance/.test(pre);
+        // node.exe daemon is reaped by PID via the heartbeat registry (image-name
+        // taskkill alone never touched `node.exe …mneme.js`).
+        const daemonReap = /heartbeats|\.beat|\/PID/.test(pre);
         const handleOracle = /handle-oracle|openSync\([^)]*r\+/.test(pre);
-        // Windows cmd.exe caps the command line at ~8191 chars; npm wraps the
-        // preinstall in `cmd /d /s /c "..."`. v2.75.0 shipped an 18.5KB inline
-        // → "command line is too long" → uninstallable on Windows. Hard gate.
+        // Windows cmd.exe caps the command line at ~8191 chars (v2.75.0 shipped
+        // 18.5KB → "command line is too long") AND a literal `"` inside the
+        // `node -e` body breaks cmd quoting, exposing `|`/`>` to cmd (v2.75.1
+        // PowerShell pipe → 'Select-Object' is not recognized). Both = hard gates.
         const lengthOk = pre.length > 200 && pre.length < 8000;
-        const ok = inlineNodeE && noFileRef && cmdlineMatch && handleOracle && lengthOk;
-        return { value: ok ? 1 : 0, evidence: ok ? `inline node -e + cmdline-match + Handle-Oracle, no file ref, ${pre.length} chars (< 8000)` : `inline=${inlineNodeE} noFileRef=${noFileRef} cmdlineMatch=${cmdlineMatch} handleOracle=${handleOracle} len=${pre.length}(lengthOk=${lengthOk})`, dtMs: Date.now() - t0 };
+        const noDoubleQuote = !body.includes('"');
+        const ok = inlineNodeE && noFileRef && daemonReap && handleOracle && lengthOk && noDoubleQuote;
+        return { value: ok ? 1 : 0, evidence: ok ? `inline node -e, no file ref, heartbeat PID reap + Handle-Oracle, ${pre.length} chars (<8000), 0 double-quotes` : `inline=${inlineNodeE} noFileRef=${noFileRef} daemonReap=${daemonReap} handleOracle=${handleOracle} len=${pre.length}(ok=${lengthOk}) noDQ=${noDoubleQuote}`, dtMs: Date.now() - t0 };
       } catch (e) {
         return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
       }

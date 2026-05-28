@@ -50,7 +50,7 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
   {
     id: "claim.preinstall.reaps_node_daemon",
     source: "v2.75.0 release notes — preinstall HANDLE-ORACLE + CMDLINE-MATCH",
-    text: "The Windows EBUSY-on-upgrade root cause: the daemon runs as `node.exe …\\bin\\mneme.js nucleus daemon`, so `taskkill /F /IM mneme.exe` never touched it and it kept libvips-42.dll locked. v2.75.0 ships a preinstall that ALSO kills the daemon by command-line match (closing the node.exe gap) and replaces the blind `wait(300)` with a deterministic Handle-Oracle (fs.openSync 'r+' until the OS confirms the handle is free). It remains a self-contained inline `node -e` with NO package-internal file reference (the v2.19.48/49 chicken-and-egg scar).",
+    text: "The Windows EBUSY-on-upgrade root cause: the daemon runs as `node.exe …\\bin\\mneme.js nucleus daemon`, so `taskkill /F /IM mneme.exe` never touched it and it kept libvips-42.dll locked. The shipped preinstall reaps the daemon by PID via the heartbeat registry (which DOES cover node.exe) and replaces the blind `wait(300)` with a deterministic Handle-Oracle (fs.openSync 'r+' until the OS confirms the handle is free, rename-sideways fallback). It is a self-contained inline `node -e` with NO package-internal file reference (v2.19.48/49 scar), kept cmd-safe — under the Windows ~8191-char command-line limit and with ZERO literal double-quotes (which broke cmd quoting in v2.75.0/.1). The richer cmdline-match reaper (for daemons missing from the registry) lives in the unit-tested + SUPER-QUAN reference module preinstall-mneme.cjs.",
     kind: "numeric",
     asserted: { value: 1, op: "=", tolerance: 0 },
     probeId: "probe.preinstall.reaps_node_daemon",

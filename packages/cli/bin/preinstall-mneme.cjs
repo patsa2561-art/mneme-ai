@@ -38,17 +38,27 @@
  * without running the IO side effects (guarded by require.main === module).
  *
  * RELATIONSHIP TO THE SHIPPED preinstall. This module is the unit-tested +
- * SUPER-QUAN-probed REFERENCE implementation (and a runtime helper for
- * `mneme upgrade`). It is NOT what npm runs at preinstall: the actual
- * `scripts.preinstall` is a LEAN, hand-authored inline `node -e` (a mirror of
- * the same algorithm — image-kill + heartbeat-lease reap + cmdline-match kill
- * + Handle-Oracle + sweep). Why a separate lean copy? npm wraps preinstall in
- * `cmd /d /s /c "..."` and Windows caps that at ~8191 chars — v2.75.0 tried to
- * GENERATE the inline from this full file (18.5 KB) and shipped an
- * uninstallable package ("command line is too long"). The lean inline stays
- * well under the limit; a TG length-guard (probe.preinstall.reaps_node_daemon)
- * + the P7 tests keep it honest. Referencing a package file from preinstall is
- * NOT an option either (the v2.19.48/49 scar: file may not exist pre-extract).
+ * SUPER-QUAN-probed REFERENCE implementation of the FULL reaper (incl. the
+ * cmdline-match daemon kill), AND a runtime helper for `mneme upgrade` (which
+ * runs in a normal node context, free of the cmd.exe constraints below).
+ *
+ * It is NOT what npm runs at preinstall. The shipped `scripts.preinstall` is a
+ * LEAN inline `node -e` that does the cmd-SAFE subset: trail + image-kill +
+ * heartbeat-PID reap (which already covers `node.exe …mneme.js`, since the
+ * daemon registers a .beat) + Handle-Oracle DLL gate + sweep. It deliberately
+ * OMITS the cmdline-match OS-process query, because that needs PowerShell/wmic
+ * with pipes/quotes that DO NOT survive `cmd /d /s /c "node -e \"…\""`:
+ *   • v2.75.0 — generated the inline from this whole 18.5 KB file → exceeded
+ *     the Windows cmd.exe ~8191-char limit → "command line is too long".
+ *   • v2.75.1 — a leaner inline still embedded a PowerShell `… | Select-Object`
+ *     with literal double-quotes; the `"` broke cmd quoting and exposed `|` to
+ *     cmd → "'Select-Object' is not recognized" → uninstallable on Windows.
+ * Lesson: the inline must be < 8000 chars AND contain ZERO literal `"`. Guards:
+ * probe.preinstall.reaps_node_daemon (length + no-double-quote + markers) and
+ * P7 (incl. a faithful `cmd /d /s /c` smoke). Referencing a package file from
+ * preinstall is also out (v2.19.48/49 scar: file may not exist pre-extract).
+ * The cmdline-match safety-net therefore lives HERE, for the `mneme upgrade`
+ * path, not in the npm preinstall.
  */
 
 "use strict";
