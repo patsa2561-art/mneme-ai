@@ -16,7 +16,11 @@
 
 <br/><br/>
 
-### 🛫 NEW in v2.80.0 — **FLIGHT RECORDER** (the tamper-evident AI black box)
+### 📊 NEW in v2.81.0 — **HONESTY CREDIT SCORE** (the truth axis ERC-8004 can't see)
+
+On-chain reputation (ERC-8004) measures *did the agent finish the job / pay?* — nobody measures *does the agent tell the **truth**?* in a portable way. HONESTY CREDIT SCORE is a **Wilson-95%-lower-bound** honesty score from an agent's *verified* claim record (small/under-measured agents score low — reputation can't be faked), wrapped in an **Ed25519-signed NOTARY receipt**. Before delegating work/code/payment to another agent (over A2A / x402 / anything), you **verify its score offline** and decide. A vendor **can't self-promote** — forging the band breaks the signature. `mneme creditscore score|verify`. Diamond 💎5 of the TRUST FABRIC.
+
+### 🛫 v2.80.0 — **FLIGHT RECORDER** (the tamper-evident AI black box)
 
 When an agent controls a machine, pays via x402, or merges code, an incident needs a court-admissible record. FLIGHT RECORDER logs each frame — **action · reasoning · claim-vs-reality** — as an Ed25519-signed, chained receipt (built on NOTARY), so the whole black box **verifies offline by any third party** (court / insurer / auditor) and any post-hoc edit breaks it. `replay` pinpoints the first claim≠reality **contradiction** (the incident moment); `seal` emits **one court-admissible artifact**. `mneme flight record|replay|verify|seal`. Diamond 💎3 of the TRUST FABRIC.
 

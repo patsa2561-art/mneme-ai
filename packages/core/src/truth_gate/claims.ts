@@ -26,6 +26,17 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.81.0 — HONESTY CREDIT SCORE (portable, signed "credit bureau for AI honesty") ──
+  {
+    id: "claim.honesty.portable_signed_score",
+    source: "v2.81.0 release notes — HONESTY CREDIT SCORE (💎5, on the NOTARY spine)",
+    text: "Mneme issues a PORTABLE honesty score — the axis ERC-8004 reputation never touches ('does the agent tell the TRUTH?'). It is a Wilson 95% LOWER bound on an agent's verified true-rate (small/under-measured agents score low by design — reputation can't be faked), wrapped in an Ed25519-signed NOTARY receipt that any agent verifies OFFLINE before delegating (over A2A / x402 / anything). A vendor CANNOT self-promote: forging the band/score in the payload breaks the signature. shouldTrust() gates delegation by band + rejects expired scores + can assert the issuer. Diamond #5 of the TRUST FABRIC.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.honesty.portable_signed_score",
+    severity: "block",
+  },
+
   // ── v2.80.0 — FLIGHT RECORDER (tamper-evident, replayable AI black box) ──
   {
     id: "claim.flight_recorder.tamper_evident_replay",

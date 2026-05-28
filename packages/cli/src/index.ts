@@ -4457,6 +4457,41 @@ export async function run(argv: string[]): Promise<void> {
       }));
     });
 
+  // v2.81.0 — HONESTY CREDIT SCORE (💎5). Portable, signed honesty score an agent
+  // checks before delegating to another agent (the truth axis ERC-8004 misses).
+  // Distinct from `mneme honesty` (static HMAC SVG badge certs).
+  program
+    .command("creditscore <action>")
+    .aliases(["trustscore"])
+    .description("📊 HONESTY CREDIT SCORE — portable, Ed25519-signed honesty score (Wilson-LB on verified true-rate) an agent verifies OFFLINE before delegating to another. actions: score | verify <file|->. Built on NOTARY; a vendor can't self-promote.")
+    .option("--agent <a>", "agent id (score)")
+    .option("--true <n>", "count of claims verified TRUE (score)", (v) => Number(v))
+    .option("--false <n>", "count of claims verified FALSE (score)", (v) => Number(v))
+    .option("--partial <n>", "count of partially-true claims (score)", (v) => Number(v))
+    .option("--sign", "emit a portable signed receipt instead of plain output (score)", false)
+    .option("--ttl-days <d>", "validity window for a signed score (default 90)", (v) => Number(v))
+    .option("--file <path>", "receipt file to verify (use '-' for stdin)")
+    .option("--min <band>", "min band to trust: PLATINUM|GOLD|SILVER|BRONZE (verify)", "SILVER")
+    .option("--issuer <fp>", "assert the issuer fingerprint you trust (verify)")
+    .option("--json", "machine-readable output", false)
+    .action(async (action: string, o: { agent?: string; true?: number; false?: number; partial?: number; sign?: boolean; ttlDays?: number; file?: string; min?: string; issuer?: string; json?: boolean }) => {
+      const { creditScoreCommand } = await import("./commands/creditscore.js");
+      process.exit(await creditScoreCommand({
+        cwd: process.cwd(),
+        action,
+        agent: o.agent,
+        trueCount: o.true,
+        falseCount: o.false,
+        partialCount: o.partial,
+        sign: !!o.sign,
+        ttlDays: o.ttlDays,
+        file: o.file,
+        min: o.min,
+        issuer: o.issuer,
+        json: !!o.json,
+      }));
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")

@@ -800,6 +800,7 @@ export * as notifier from "./notifier/index.js";
 export * as immune from "./immune/index.js";
 export * as notary from "./notary/index.js";
 export * as flightRecorder from "./flight_recorder/index.js";
+export * as honestyScore from "./honesty_score/index.js";
 export * as agent from "./agent/index.js";
 export * as selfcheck from "./selfcheck/index.js";
 export * as integrations from "./integrations/index.js";

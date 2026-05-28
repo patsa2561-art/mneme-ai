@@ -253,6 +253,36 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.honesty.portable_signed_score",
+    kind: "boolean",
+    description: "HONESTY CREDIT SCORE (v2.81.0 💎5, on NOTARY): a Wilson-LB honesty score wraps in a signed receipt that verifies OFFLINE; a small perfect sample scores below a large one (can't fake reputation); forging the band/score in the payload breaks the signature (no vendor self-promotion); and shouldTrust() gates delegation by band.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const h = await import("../honesty_score/index.js" as string) as typeof import("../honesty_score/index.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-honesty-"));
+        const big = h.computeHonestyScore({ agent: "good", trueCount: 500, falseCount: 3 });
+        const small = h.computeHonestyScore({ agent: "small", trueCount: 5, falseCount: 0 });
+        const smallPenalised = small.score < big.score;
+        const receipt = h.issueHonestyReceipt(repo, big);
+        const verified = h.verifyHonestyReceipt(JSON.parse(JSON.stringify(receipt))).valid;
+        const forged = { ...receipt, payload: { ...(receipt.payload as object), score: 99, band: "PLATINUM" } };
+        const forgeRejected = !h.verifyHonestyReceipt(forged).valid;
+        const trustsHigh = h.shouldTrust(receipt, "GOLD").trust;
+        const rejectsLow = !h.shouldTrust(h.issueHonestyReceipt(repo, h.computeHonestyScore({ agent: "liar", trueCount: 20, falseCount: 80 })), "GOLD").trust;
+        const ok = smallPenalised && verified && forgeRejected && trustsHigh && rejectsLow;
+        return { value: ok ? 1 : 0, evidence: `smallPenalised=${smallPenalised} verified=${verified} forgeRejected=${forgeRejected} trustsHigh=${trustsHigh} rejectsLow=${rejectsLow}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
+  {
     id: "probe.flight_recorder.tamper_evident_replay",
     kind: "boolean",
     description: "FLIGHT RECORDER (v2.80.0 💎3, on the NOTARY spine): the AI black box is tamper-evident + replayable + sealable. Recording frames yields a chain that verifies OFFLINE; tampering any frame breaks it; replay pinpoints the first claim-vs-reality CONTRADICTION (the incident); and seal() produces one court-admissible receipt that verifies offline + commits the chain head.",
