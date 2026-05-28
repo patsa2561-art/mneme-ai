@@ -134,6 +134,36 @@ const probes: Probe[] = [
     },
   },
 
+  // ── v2.75.0 — preinstall reaper (HANDLE-ORACLE + CMDLINE-MATCH) ──────
+  //
+  // Binds the Windows-EBUSY root-cause fix to the gate. The shipped
+  // `scripts.preinstall` MUST be a self-contained inline `node -e` (NO
+  // package-internal file ref — the v2.19.48/49 ship-breaking scar) AND
+  // must carry the node.exe daemon fix: cmdline-match daemon kill +
+  // deterministic Handle-Oracle (not a blind sleep).
+  {
+    id: "probe.preinstall.reaps_node_daemon",
+    kind: "numeric",
+    description: "The shipped CLI preinstall is a self-contained inline `node -e` (no package-internal file ref) that kills the node.exe daemon by command-line match AND uses a deterministic Handle-Oracle gate. Closes the Windows EBUSY upgrade bug where `taskkill /IM mneme.exe` missed `node.exe …mneme.js`.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const pkgPath = join(ctx.cwd, "packages", "cli", "package.json");
+        if (!existsSync(pkgPath)) return { value: null, evidence: "packages/cli/package.json absent (not the monorepo root)", dtMs: Date.now() - t0 };
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { scripts?: { preinstall?: string } };
+        const pre = pkg.scripts?.preinstall ?? "";
+        const inlineNodeE = /^node -e /.test(pre);
+        const noFileRef = !/node\s+bin\//.test(pre) && !/require\(['"]\.\.?\//.test(pre);
+        const cmdlineMatch = /selectDaemonPids|matchesMnemeDaemonCmdline/.test(pre);
+        const handleOracle = /waitForHandleRelease|tryExclusiveOpen/.test(pre);
+        const ok = inlineNodeE && noFileRef && cmdlineMatch && handleOracle;
+        return { value: ok ? 1 : 0, evidence: ok ? "inline node -e + cmdline-match daemon kill + Handle-Oracle, no file ref" : `inline=${inlineNodeE} noFileRef=${noFileRef} cmdlineMatch=${cmdlineMatch} handleOracle=${handleOracle}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
   // ── v2.73.0 — close 3 v2.72 vulns ───────────────────────────────────
   {
     id: "probe.bridge.rate_limit_burst_guard",

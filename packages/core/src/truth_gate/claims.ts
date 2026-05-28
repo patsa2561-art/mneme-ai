@@ -46,6 +46,17 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     severity: "block",
   },
 
+  // ── v2.75.0 — preinstall reaper (Windows EBUSY root-cause fix) ──────
+  {
+    id: "claim.preinstall.reaps_node_daemon",
+    source: "v2.75.0 release notes — preinstall HANDLE-ORACLE + CMDLINE-MATCH",
+    text: "The Windows EBUSY-on-upgrade root cause: the daemon runs as `node.exe …\\bin\\mneme.js nucleus daemon`, so `taskkill /F /IM mneme.exe` never touched it and it kept libvips-42.dll locked. v2.75.0 ships a preinstall that ALSO kills the daemon by command-line match (closing the node.exe gap) and replaces the blind `wait(300)` with a deterministic Handle-Oracle (fs.openSync 'r+' until the OS confirms the handle is free). It remains a self-contained inline `node -e` with NO package-internal file reference (the v2.19.48/49 chicken-and-egg scar).",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.preinstall.reaps_node_daemon",
+    severity: "block",
+  },
+
   // ── v2.73.0 — close 3 v2.72 vulns (rate-limit burst / homograph HTTP / multi-lens scope) ──
   {
     id: "claim.bridge.rate_limit_burst_guard",
