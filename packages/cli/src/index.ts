@@ -4398,6 +4398,35 @@ export async function run(argv: string[]): Promise<void> {
       process.exit(await immuneCommand({ cwd: process.cwd(), json: !!opts.json }));
     });
 
+  // v2.79.0 — NOTARY. Portable, offline-verifiable proof-of-provenance receipts
+  // (Ed25519). Verify with a public key alone — no Mneme, no network, no secret.
+  // The TRUST FABRIC spine for cross-protocol routing, portable memory, and the
+  // AI flight recorder.
+  program
+    .command("notary <action>")
+    .description("🪪 NOTARY — Ed25519-signed proof receipts anyone verifies OFFLINE with a public key (no Mneme, no network, no shared secret). actions: pubkey | issue | verify <file|->. Mneme's first asymmetric-crypto primitive.")
+    .option("--subject <s>", "what the receipt attests (issue)")
+    .option("--kind <k>", "claim-verdict | protocol-hop | memory-capsule | reasoning-trace | generic", "generic")
+    .option("--payload <json>", "JSON payload to attest (issue)")
+    .option("--hash-only", "privacy: omit the inline payload, attest only its hash (issue)", false)
+    .option("--prev <id>", "previous receiptId to chain onto (issue)")
+    .option("--file <path>", "receipt file to verify (use '-' for stdin)")
+    .option("--json", "machine-readable output", false)
+    .action(async (action: string, o: { subject?: string; kind?: string; payload?: string; hashOnly?: boolean; prev?: string; file?: string; json?: boolean }) => {
+      const { notaryCommand } = await import("./commands/notary.js");
+      process.exit(await notaryCommand({
+        cwd: process.cwd(),
+        action,
+        subject: o.subject,
+        kind: o.kind,
+        payload: o.payload,
+        noPayload: !!o.hashOnly,
+        prev: o.prev,
+        file: o.file,
+        json: !!o.json,
+      }));
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")

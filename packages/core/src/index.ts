@@ -798,6 +798,7 @@ export * as ingest from "./ingest/index.js";
 export * as pulse from "./pulse.js";
 export * as notifier from "./notifier/index.js";
 export * as immune from "./immune/index.js";
+export * as notary from "./notary/index.js";
 export * as agent from "./agent/index.js";
 export * as selfcheck from "./selfcheck/index.js";
 export * as integrations from "./integrations/index.js";

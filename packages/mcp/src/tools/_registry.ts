@@ -58,6 +58,7 @@ import { DIFF_ARENA_TOOLS } from "./_diff_arena_tools.js";
 import { SWARM_BUS_TOOLS } from "./_swarm_bus_tools.js";
 import { REFLOG_TOOLS } from "./_reflog_tools.js";
 import { CHRONOS_TOOLS } from "./_chronos_tools.js";
+import { NOTARY_TOOLS } from "./_notary_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -230,6 +231,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...SWARM_BUS_TOOLS,
     ...REFLOG_TOOLS,
     ...CHRONOS_TOOLS,
+    ...NOTARY_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,

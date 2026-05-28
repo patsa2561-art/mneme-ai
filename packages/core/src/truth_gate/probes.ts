@@ -285,6 +285,35 @@ const probes: Probe[] = [
     },
   },
 
+  {
+    id: "probe.notary.sign_verify_round_trip",
+    kind: "boolean",
+    description: "NOTARY (v2.79.0 TRUST FABRIC spine): an Ed25519-signed proof receipt verifies OFFLINE with only its embedded public key, survives JSON serialization (third-party verify), and REJECTS tampering — a flipped payload, a forged subject, and a swapped-in foreign issuer key all fail. Mneme's first asymmetric-crypto primitive: verifiable without trusting Mneme.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs");
+        const { tmpdir } = await import("node:os");
+        const { join } = await import("node:path");
+        const n = await import("../notary/index.js" as string) as typeof import("../notary/index.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-notary-"));
+        const repoB = mkdtempSync(join(tmpdir(), "tg-notary-b-"));
+        const r = n.issueReceipt(repo, { kind: "claim-verdict", subject: "tg", payload: { ok: 1 } });
+        const good = n.verifyReceipt(r).valid;
+        const offline = n.verifyReceipt(JSON.parse(JSON.stringify(r))).valid;          // third-party over-the-wire
+        const tampered = n.verifyReceipt({ ...r, payload: { ok: 2 } }).valid;          // must be false
+        const forgedSubject = n.verifyReceipt({ ...r, subject: "evil" }).valid;        // must be false
+        const kpB = n.getIssuerKeyPair(repoB);
+        const forgedIssuer = n.verifyReceipt({ ...r, issuer: kpB.publicKeyB64, issuerFingerprint: kpB.fingerprint }).valid; // must be false
+        const ok = good && offline && !tampered && !forgedSubject && !forgedIssuer;
+        return { value: ok ? 1 : 0, evidence: `good=${good} offline=${offline} tampered=${tampered} forgedSubj=${forgedSubject} forgedIssuer=${forgedIssuer}`, dtMs: Date.now() - t0 };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
   // ── token / response size ──────────────────────────────────────────
   {
     id: "probe.capabilities.bytes",

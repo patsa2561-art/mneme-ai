@@ -26,6 +26,17 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.79.0 — NOTARY (portable, offline-verifiable proof-of-provenance) ──
+  {
+    id: "claim.notary.portable_offline_verify",
+    source: "v2.79.0 release notes — NOTARY (TRUST FABRIC spine)",
+    text: "Mneme issues Ed25519-signed proof receipts that a third party verifies OFFLINE with only the embedded public key — no Mneme instance, no network, no shared secret. This is Mneme's first asymmetric-crypto primitive (every prior ledger is HMAC, which needs the secret to verify). A receipt survives JSON serialization and verifies; tampering with the payload, forging the subject, or swapping in a foreign issuer key all fail the signature. Receipts chain (prev→receiptId) into a tamper-evident, attributable history and are the shared spine for the BGP notarizing router, BYOB portable memory, and the AI Flight Recorder.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", tolerance: 0 },
+    probeId: "probe.notary.sign_verify_round_trip",
+    severity: "block",
+  },
+
   // ── v2.78.0 — DE-WORM + WORM-CANARY (Mneme self-audits against worm behavior) ──
   {
     id: "claim.immune.no_worm_directive",
