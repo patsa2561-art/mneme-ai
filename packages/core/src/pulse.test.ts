@@ -34,15 +34,11 @@ describe("pulse", () => {
     expect(out).toContain("[/MNEME PULSE]");
   });
 
-  it("update-available state surfaces an [AUTO-ACTION]", async () => {
-    // v2.19.72 N5-deep: cache.current MUST match the live installed
-    // version for pulse to TRUST the cache.  If they differ, the
-    // self-heal block deletes the cache (the user just upgraded and
-    // we have no fresh data yet).  This test pins the
-    // "cache-current-matches-live → trusted → latest field used to
-    // surface update-available" half of the contract.  The
-    // "cache-current-mismatches-live → self-heal" half is pinned by
-    // a dedicated test below.
+  it("v2.78.0 DE-WORM: update-available surfaces an INFO notice, NOT an [AUTO-ACTION]", async () => {
+    // Was "surfaces an [AUTO-ACTION]". v2.78.0 makes version availability
+    // purely informational — no level:"action", no autoAction, no EXECUTE NOW.
+    // Upgrades are fully manual: the user is told a new version exists and how
+    // to install it themselves.
     const { readLiveMnemeVersion } = await import("./version_check.js");
     const live = readLiveMnemeVersion();
     if (live === "unknown") return; // can't run this assertion without a live version
@@ -53,11 +49,15 @@ describe("pulse", () => {
     );
     const s = collectPulseStatus(repo);
     expect(s.version.updateAvailable).toBe(true);
-    expect(s.notable.some((n) => n.level === "action")).toBe(true);
+    // The version-available notice is INFO and carries NO autoAction.
+    const upgradeNotice = s.notable.find((n) => n.text.includes("9999.0.0"));
+    expect(upgradeNotice).toBeDefined();
+    expect(upgradeNotice!.level).toBe("info");
+    expect(upgradeNotice!.autoAction).toBeUndefined();
+    expect(s.notable.some((n) => n.level === "action" && n.text.includes("is available"))).toBe(false);
     const out = renderPulse(s);
-    expect(out).toContain("[AUTO-ACTION]");
-    expect(out).toContain("EXECUTE NOW");
-    expect(out).toContain("mneme.system.upgrade");
+    expect(out).not.toContain("[AUTO-ACTION]");
+    expect(out).toContain("mneme upgrade");
   });
 
   // v2.19.72 N5-DEEP regression — the self-heal half of the contract.
@@ -142,7 +142,8 @@ describe("pulse", () => {
     expect(s.version.updateAvailable).toBe(true);
     const upgradeNotice = s.notable.find((n) => n.text.includes("9999.0.0"));
     expect(upgradeNotice).toBeDefined();
-    expect(upgradeNotice!.level).toBe("action");
+    // v2.78.0 DE-WORM — was "action"; version availability is now INFO-only.
+    expect(upgradeNotice!.level).toBe("info");
   });
 
   it("v1.27.3 regression: cache BEHIND live current emits NO AUTO-ACTION (we're ahead of npm)", async () => {

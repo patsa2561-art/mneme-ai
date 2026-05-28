@@ -26,7 +26,7 @@ export { osToastNotifier } from "./os_toast.js";
 export { ttsVoiceNotifier } from "./tts_voice.js";
 export { mobilePushNotifier } from "./mobile_push.js";
 export { emailNotifier } from "./email_smtp.js";
-export { agentFilesNotifier, readMnemeBlock } from "./agent_files.js";
+export { agentFilesNotifier, readMnemeBlock, renderMnemeBlock } from "./agent_files.js";
 export {
   experimentalIpcNotifier, experimentalKeystrokeNotifier,
   EXPERIMENTAL_IPC_ENV, EXPERIMENTAL_KEYSTROKE_ENV, EXPERIMENTAL_KEYSTROKE_ACK,

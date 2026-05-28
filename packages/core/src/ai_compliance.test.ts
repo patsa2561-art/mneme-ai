@@ -112,23 +112,26 @@ describe("ai_compliance · pre-executor + notice rewrite", () => {
     expect(notices[0]!.text).toBe("plain info, no mandate");
   });
 
-  it("queued mandate (mneme.system.upgrade) is enqueued + logged + notice rewritten", async () => {
+  // v2.78.0 DE-WORM — mneme.system.upgrade is NEVER auto-run/auto-queued. It
+  // was the worm: queuing it made the daemon self-upgrade, which failed against
+  // its own Windows file lock and re-fired forever. Upgrades are now fully manual.
+  it("self-upgrade mandate (mneme.system.upgrade) is SKIPPED, never queued (de-wormed)", async () => {
     const notices: PulseNotice[] = [
       { level: "action", text: "Mneme v9.9.9 is available", autoAction: { tool: "mneme.system.upgrade", args: { force: true } } },
     ];
     const r = await preExecuteAutoActions(notices, repo);
     expect(r).toHaveLength(1);
-    expect(r[0]!.outcome).toBe("queued");
-    rewriteNoticesPostExecution(notices, r);
-    expect(notices[0]!.text).toContain("QUEUED");
+    expect(r[0]!.outcome).toBe("skipped");
+    expect(r[0]!.summary).toMatch(/manual-only|de-wormed/i);
+    // mandate stripped so nothing downstream loops on it
     expect(notices[0]!.autoAction).toBeUndefined();
-    // queue file written
-    expect(existsSync(join(repo, ".mneme/auto-action-queue.jsonl"))).toBe(true);
-    // compliance log written with token
+    // NOT queued — no auto-action queue file created for the upgrade
+    expect(existsSync(join(repo, ".mneme/auto-action-queue.jsonl"))).toBe(false);
+    // compliance log records the skip (manual-only)
     const log = readComplianceLog(repo);
     expect(log).toHaveLength(1);
-    expect(log[0]!.outcome).toBe("queued");
-    expect(log[0]!.token).toMatch(/^[a-f0-9]{16}$/);
+    expect(log[0]!.outcome).toBe("skipped");
+    expect(log[0]!.note).toMatch(/manual-only|de-wormed/i);
   });
 
   it("unknown mandate is skipped + notice mandate preserved (AI fallback)", async () => {

@@ -269,33 +269,17 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     status.version.current !== "unknown" &&
     semverGt(status.version.latest, status.version.current)
   ) {
-    // v2.19.97 — DEV-SOURCE GUARD. If mneme is running from a source
-    // checkout (D:\lib_ai_git\packages\cli\bin\mneme.js etc), refuse to
-    // advertise auto-upgrade — that path races with whatever the user
-    // does in another terminal and broke their install (see post-mortem
-    // in superlock/index.ts).  Also drop the action if the global
-    // install/upgrade superlock is currently held by another process.
-    let upgradeGate: { allowed: boolean; reason: string } = { allowed: true, reason: "ok" };
-    try {
-      // Lazy import to avoid circular load in tests.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const sl = require("./superlock/index.js");
-      upgradeGate = sl.autoUpgradeAllowed(process.argv[1]);
-    } catch { /* superlock module unavailable — fall through and allow */ }
-    if (upgradeGate.allowed) {
-      status.notable.push({
-        level: "action",
-        text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). Auto-upgrade now: call mneme.system.upgrade with mode='install', force=true.`,
-        autoAction: { tool: "mneme.system.upgrade", args: { mode: "install", force: true } },
-      });
-    } else {
-      // Still tell the user about the new version, but as an [INFO]
-      // (not [AUTO-ACTION]) so no AI agent fires upgrade automatically.
-      status.notable.push({
-        level: "info",
-        text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). Auto-upgrade is paused (${upgradeGate.reason}). To upgrade manually: run \`npm install -g mneme-ai@latest\` in a separate shell.`,
-      });
-    }
+    // v2.78.0 DE-WORM — version availability is INFORMATION, never an
+    // auto-action. Mneme used to push `level:"action"` + an upgrade autoAction
+    // here, which the agent-files notifier rendered as a self-propagating
+    // "AI agent: run mneme.system.upgrade(...) immediately" directive and the
+    // pulse pre-executor auto-queued (an infinite failing self-upgrade loop on
+    // Windows). Upgrades are fully manual now: tell the user, let them decide.
+    // (The old superlock auto-upgrade gate is gone — we never auto-fire.)
+    status.notable.push({
+      level: "info",
+      text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). To upgrade when you like, run \`mneme upgrade\` (or \`npm install -g mneme-ai@latest\`). Mneme will not upgrade itself.`,
+    });
   }
   if (status.inbox.unsent > 0) {
     status.notable.push({

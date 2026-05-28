@@ -70,14 +70,17 @@ describe("Mneme self-check audit", () => {
     expect(v?.evidence).toContain(live);
   });
 
-  it("version-up-to-date check FAILS only when LIVE current < latest + emits autoAction", async () => {
+  it("v2.78.0 DE-WORM: version-up-to-date FAILS when behind but emits NO autoAction", async () => {
     // Far-future latest -- live current is always less, so this will FAIL.
     writeFileSync(join(repo, ".mneme/version-check.json"),
       JSON.stringify({ current: "0.0.1", latest: "9999.0.0" }), "utf8");
     const r = await runAudit(repo);
     const v = r.verdicts.find((x) => x.name === "version-up-to-date");
     expect(v?.status).toBe("fail");
-    expect(v?.autoAction?.tool).toBe("mneme.system.upgrade");
+    // The self-upgrade directive is gone — upgrades are fully manual now.
+    expect(v?.autoAction).toBeUndefined();
+    // Human-facing fix hint remains.
+    expect(v?.fixHint).toMatch(/mneme upgrade/i);
   });
 
   it("v1.27.3 regression: stale cache where latest == LIVE current passes (no AUTO-ACTION self-loop)", async () => {

@@ -44,7 +44,8 @@ const pulseHookCheck: AuditCheck = {
           status: "fail",
           evidence: s.details,
           fixHint: "Run `mneme hooks repair` (auto-fixes v1.25.2 broken string-shorthand schema).",
-          autoAction: { tool: "mneme.system.upgrade", args: { mode: "install", force: true } },
+          // v2.78.0 DE-WORM — no autoAction. The fix is human-run; Mneme never
+          // emits a self-upgrade/self-install directive aimed at the AI.
         });
       }
       if (s.state === "no-config") {
@@ -145,7 +146,10 @@ const daemonAliveCheck: AuditCheck = {
 const versionUpToDateCheck: AuditCheck = {
   name: "version-up-to-date",
   description: "Installed Mneme version matches npm latest",
-  failSeverity: "action",
+  // v2.78.0 DE-WORM — was "action" (loud + drove the auto-upgrade nag loop).
+  // An available update is informational under the fully-manual policy: surface
+  // it calmly, let the user upgrade when they choose. Never escalates, never loops.
+  failSeverity: "info",
   async run(repoRoot: string) {
     const start = t0();
     const path = join(repoRoot, ".mneme/version-check.json");
@@ -183,8 +187,8 @@ const versionUpToDateCheck: AuditCheck = {
         name: "version-up-to-date", description: "version up to date",
         status: "fail",
         evidence: `installed v${liveCurrent}, npm latest v${data.latest}`,
-        fixHint: "Run `mneme upgrade --force`",
-        autoAction: { tool: "mneme.system.upgrade", args: { mode: "install", force: true } },
+        fixHint: "A newer Mneme is on npm. Run `mneme upgrade` when convenient (fully manual — Mneme will not upgrade itself).",
+        // v2.78.0 DE-WORM — no autoAction. Upgrades are user-initiated only.
       });
     } catch {
       return v(start, {

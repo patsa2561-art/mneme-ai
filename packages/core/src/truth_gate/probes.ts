@@ -252,6 +252,39 @@ const probes: Probe[] = [
     },
   },
 
+  {
+    id: "probe.immune.no_worm_directive",
+    kind: "boolean",
+    description: "WORM-CANARY (v2.78.0 DE-WORM): the block Mneme writes into AI agent-instruction files (CLAUDE.md/AGENTS.md/.cursorrules/.windsurfrules) carries ZERO worm signatures — no imperative addressed to the AI, no auto-exec tool call, no self-replication. Proven by rendering a worst-case version-mismatch notice (one that carries an upgrade autoAction) and scanning it; also confirms the canary still catches the pre-v2.78 payload (positive control).",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const { renderMnemeBlock } = await import("../notifier/agent_files.js" as string) as typeof import("../notifier/agent_files.js");
+        const { scanForWormSignatures, KNOWN_WORM_PAYLOAD } = await import("../immune/worm_canary.js" as string) as typeof import("../immune/worm_canary.js");
+        // Worst case: a notice that DOES carry a self-upgrade autoAction.
+        const block = renderMnemeBlock({
+          id: "version-up-to-date",
+          severity: "info",
+          title: "Mneme update available",
+          body: "installed v0.0.0, npm latest v9.9.9. The user can run `mneme upgrade` when convenient.",
+          autoAction: { tool: "mneme.system.upgrade", args: { mode: "install", force: true } },
+        });
+        const rendered = scanForWormSignatures(block);
+        const control = scanForWormSignatures(KNOWN_WORM_PAYLOAD);
+        const ok = rendered.clean && !control.clean;
+        return {
+          value: ok ? 1 : 0,
+          evidence: ok
+            ? `rendered block clean (0 signatures); canary catches old payload (${control.findings.length})`
+            : `rendered findings=${rendered.findings.map((f) => f.kind).join("|") || "none"}; control clean=${control.clean}`,
+          dtMs: Date.now() - t0,
+        };
+      } catch (e) {
+        return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
+      }
+    },
+  },
+
   // ── token / response size ──────────────────────────────────────────
   {
     id: "probe.capabilities.bytes",

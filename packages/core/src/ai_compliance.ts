@@ -59,6 +59,18 @@ const SAFE_INLINE_MANDATES: Record<string, string[]> = {
  *  safe to run from inside a Mneme subprocess. We queue these for the
  *  daemon to pick up at a safe window. */
 const QUEUED_MANDATES: Set<string> = new Set([
+  // v2.78.0 DE-WORM — `mneme.system.upgrade` is no longer queued here. It is in
+  // NEVER_AUTO_MANDATES below: upgrades are fully manual (user-initiated only).
+  // Queuing it made the daemon self-upgrade at a "safe window", which on Windows
+  // failed against the daemon's own file lock and re-fired forever (the worm loop).
+]);
+
+/** v2.78.0 DE-WORM — mandates Mneme must NEVER auto-execute or auto-queue, no
+ *  matter who emits the autoAction. These are self-modifying / global-install
+ *  operations that, if fired autonomously, make Mneme behave like a self-
+ *  propagating worm. They are surfaced to the human as optional, and the
+ *  attached autoAction is stripped so nothing downstream loops on it. */
+const NEVER_AUTO_MANDATES: Set<string> = new Set([
   "mneme.system.upgrade",
 ]);
 
@@ -260,6 +272,17 @@ export async function preExecuteAutoActions(
     const tool = n.autoAction.tool;
     const args = n.autoAction.args ?? {};
     const ts = new Date().toISOString();
+
+    // v2.78.0 DE-WORM — never auto-run / auto-queue self-modifying global
+    // installs. Strip the mandate so the live pulse + any persistent file see
+    // a calm "manual-only" note instead of an "EXECUTE NOW" directive that
+    // would otherwise re-fire every cycle (the worm loop).
+    if (NEVER_AUTO_MANDATES.has(tool)) {
+      logCompliance(repoRoot, { ts, mandate: tool, args, executor: "pulse-pre-executor", outcome: "skipped", note: "manual-only (de-wormed v2.78.0) — user initiates upgrades" });
+      out.push({ tool, outcome: "skipped", summary: "manual-only (de-wormed) — user runs upgrades", durationMs: 0 });
+      n.autoAction = undefined;
+      continue;
+    }
 
     if (QUEUED_MANDATES.has(tool)) {
       try {

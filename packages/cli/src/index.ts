@@ -4382,6 +4382,22 @@ export async function run(argv: string[]): Promise<void> {
       await uiCommand({ cwd: process.cwd(), version: getVersion() });
     });
 
+  // v2.78.0 — WORM-CANARY selftest. Prove Mneme is not an AI worm: its
+  // agent-file output carries no imperative directives, and any worm payload
+  // an OLDER Mneme may have written into this repo's CLAUDE.md/etc is detected.
+  program
+    .command("immune <action>")
+    .description("🧬 IMMUNE — `mneme immune selftest` runs the WORM-CANARY: proves Mneme never injects a self-upgrade/self-propagation directive into AI agent files (CLAUDE.md/AGENTS.md/.cursorrules/.windsurfrules), and scans this repo's files for any worm payload left by an older Mneme.")
+    .option("--json", "machine-readable output", false)
+    .action(async (action: string, opts: { json?: boolean }) => {
+      if (action !== "selftest") {
+        ui.error(`Unknown immune action "${action}". Try: selftest`);
+        process.exit(2);
+      }
+      const { immuneCommand } = await import("./commands/immune.js");
+      process.exit(await immuneCommand({ cwd: process.cwd(), json: !!opts.json }));
+    });
+
   program
     .command("atlas")
     .description("🗺  ATLAS HELP — six-layer discovery (TASTE · BLOOM · HOT · TAGS · INTENT · FULL). AI agents read 200 bytes here instead of 14 KB from --help.")

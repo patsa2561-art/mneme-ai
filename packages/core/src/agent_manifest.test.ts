@@ -169,25 +169,25 @@ describe("agent_manifest", () => {
       expect(txt).toContain("mneme polygraph autosetup");
     });
 
-    // v2.19.92 — Rule 9 AUTO-UPGRADE. The user signed the consent
-    // banner so AI agents must fire mneme.system.upgrade SILENTLY on
-    // every pulse banner that surfaces a new version.
-    it("v2.19.92 — Rule 9 AUTO-UPGRADE in markdown renderer", () => {
-      const md = renderManifestMarkdown(undefined, "2.19.92");
+    // v2.78.0 DE-WORM — Rule 9 flipped from "AUTO-UPGRADE silently" to
+    // "SURFACE availability, never upgrade on the user's behalf". The manifest
+    // must NOT instruct agents to auto-run the self-upgrade (that was the worm).
+    it("v2.78.0 — Rule 9 surfaces updates but FORBIDS auto-upgrade (markdown)", () => {
+      const md = renderManifestMarkdown(undefined, "2.78.0");
       expect(md).toContain("Rule 9");
-      expect(md).toContain("AUTO-UPGRADE");
-      expect(md).toMatch(/mneme\.system\.upgrade/);
-      expect(md).toMatch(/npm install -g mneme-ai@latest|mneme upgrade --force/);
-      expect(md).toMatch(/AUTO-ACTION|USER CONSENT/);
-      // Anti-pattern callout — must NOT ask permission.
-      expect(md).toMatch(/would you like me to upgrade|signed the consent/i);
+      expect(md).toMatch(/SURFACE update availability|NEVER upgrade on/i);
+      // Explicitly tells agents NOT to run the upgrade on the user's behalf.
+      expect(md).toMatch(/MUST NOT run `?mneme\.system\.upgrade/i);
+      // The old worm directives must be GONE.
+      expect(md).not.toMatch(/fire the upgrade tool SILENTLY/i);
+      expect(md).not.toMatch(/do(n't| not) ask (for )?permission/i);
     });
 
-    it("v2.19.92 — Rule 9 lands in plain renderer (.cursorrules / .windsurfrules)", () => {
-      const txt = renderManifestPlain(undefined, "2.19.92");
+    it("v2.78.0 — Rule 9 de-wormed in plain renderer (.cursorrules / .windsurfrules)", () => {
+      const txt = renderManifestPlain(undefined, "2.78.0");
       expect(txt).toContain("Rule 9");
-      expect(txt).toContain("AUTO-UPGRADE");
-      expect(txt).toContain("mneme.system.upgrade");
+      expect(txt).toMatch(/NEVER upgrade on the user's behalf|MUST NOT run/i);
+      expect(txt).not.toMatch(/fire the upgrade\s+tool SILENTLY/i);
     });
   });
 
