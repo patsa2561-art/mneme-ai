@@ -144,7 +144,7 @@ const probes: Probe[] = [
   {
     id: "probe.preinstall.reaps_node_daemon",
     kind: "numeric",
-    description: "The shipped CLI preinstall is a self-contained inline `node -e` (no package-internal file ref) that kills the node.exe daemon by command-line match AND uses a deterministic Handle-Oracle gate. Closes the Windows EBUSY upgrade bug where `taskkill /IM mneme.exe` missed `node.exe …mneme.js`.",
+    description: "The shipped CLI preinstall is a self-contained inline `node -e` (no package-internal file ref) that kills the node.exe daemon by command-line match AND uses a deterministic Handle-Oracle gate — AND is short enough for the Windows cmd.exe ~8191-char command-line limit. Closes the Windows EBUSY upgrade bug where `taskkill /IM mneme.exe` missed `node.exe …mneme.js`.",
     run: async (ctx) => {
       const t0 = Date.now();
       try {
@@ -154,10 +154,14 @@ const probes: Probe[] = [
         const pre = pkg.scripts?.preinstall ?? "";
         const inlineNodeE = /^node -e /.test(pre);
         const noFileRef = !/node\s+bin\//.test(pre) && !/require\(['"]\.\.?\//.test(pre);
-        const cmdlineMatch = /selectDaemonPids|matchesMnemeDaemonCmdline/.test(pre);
-        const handleOracle = /waitForHandleRelease|tryExclusiveOpen/.test(pre);
-        const ok = inlineNodeE && noFileRef && cmdlineMatch && handleOracle;
-        return { value: ok ? 1 : 0, evidence: ok ? "inline node -e + cmdline-match daemon kill + Handle-Oracle, no file ref" : `inline=${inlineNodeE} noFileRef=${noFileRef} cmdlineMatch=${cmdlineMatch} handleOracle=${handleOracle}`, dtMs: Date.now() - t0 };
+        const cmdlineMatch = /isDaemon|cmdline-reaped|Get-CimInstance/.test(pre);
+        const handleOracle = /handle-oracle|openSync\([^)]*r\+/.test(pre);
+        // Windows cmd.exe caps the command line at ~8191 chars; npm wraps the
+        // preinstall in `cmd /d /s /c "..."`. v2.75.0 shipped an 18.5KB inline
+        // → "command line is too long" → uninstallable on Windows. Hard gate.
+        const lengthOk = pre.length > 200 && pre.length < 8000;
+        const ok = inlineNodeE && noFileRef && cmdlineMatch && handleOracle && lengthOk;
+        return { value: ok ? 1 : 0, evidence: ok ? `inline node -e + cmdline-match + Handle-Oracle, no file ref, ${pre.length} chars (< 8000)` : `inline=${inlineNodeE} noFileRef=${noFileRef} cmdlineMatch=${cmdlineMatch} handleOracle=${handleOracle} len=${pre.length}(lengthOk=${lengthOk})`, dtMs: Date.now() - t0 };
       } catch (e) {
         return { value: 0, evidence: `probe threw: ${(e as Error).message}`, dtMs: Date.now() - t0 };
       }

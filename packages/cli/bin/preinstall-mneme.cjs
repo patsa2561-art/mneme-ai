@@ -36,6 +36,19 @@
  * (preinstall runs before deps are installed) — node builtins only. It is
  * ALSO importable: `require()` exposes the pure functions for the test suite
  * without running the IO side effects (guarded by require.main === module).
+ *
+ * RELATIONSHIP TO THE SHIPPED preinstall. This module is the unit-tested +
+ * SUPER-QUAN-probed REFERENCE implementation (and a runtime helper for
+ * `mneme upgrade`). It is NOT what npm runs at preinstall: the actual
+ * `scripts.preinstall` is a LEAN, hand-authored inline `node -e` (a mirror of
+ * the same algorithm — image-kill + heartbeat-lease reap + cmdline-match kill
+ * + Handle-Oracle + sweep). Why a separate lean copy? npm wraps preinstall in
+ * `cmd /d /s /c "..."` and Windows caps that at ~8191 chars — v2.75.0 tried to
+ * GENERATE the inline from this full file (18.5 KB) and shipped an
+ * uninstallable package ("command line is too long"). The lean inline stays
+ * well under the limit; a TG length-guard (probe.preinstall.reaps_node_daemon)
+ * + the P7 tests keep it honest. Referencing a package file from preinstall is
+ * NOT an option either (the v2.19.48/49 scar: file may not exist pre-extract).
  */
 
 "use strict";

@@ -226,18 +226,17 @@ describe("v2.75.0 P7 — shipped inline preinstall (chicken-and-egg safe + in sy
   it("P7.2 the shipped inline carries the node.exe fix (cmdline-match) + Handle-Oracle", async () => {
     const pkg = JSON.parse((await import("node:fs")).readFileSync(resolve(__dirname, "../package.json"), "utf8"));
     const pre = pkg.scripts.preinstall as string;
-    expect(pre).toMatch(/selectDaemonPids|matchesMnemeDaemonCmdline/);
-    expect(pre).toMatch(/waitForHandleRelease|tryExclusiveOpen/);
-    expect(pre).toContain("runPreinstall()");
+    expect(pre).toMatch(/isDaemon|cmdline-reaped|Get-CimInstance/); // cmdline-match daemon kill
+    expect(pre).toMatch(/handle-oracle|openSync\([^)]*r\+/);        // deterministic Handle-Oracle gate
+    expect(pre).toContain("preinstall-end");                        // completes the trail
   });
 
-  it("P7.3 DRIFT GUARD: the inline equals a fresh projection of the .cjs source (regen if this fails)", async () => {
-    const fs = await import("node:fs");
-    const gen = await import("../../../scripts/gen-preinstall-inline.mjs");
-    const cjs = fs.readFileSync(resolve(__dirname, "../bin/preinstall-mneme.cjs"), "utf8");
-    const expected = gen.buildInlinePreinstall(cjs);
-    const pkg = JSON.parse(fs.readFileSync(resolve(__dirname, "../package.json"), "utf8"));
-    expect(pkg.scripts.preinstall).toBe(expected);
+  it("P7.3 LENGTH GUARD: inline fits the Windows cmd.exe ~8191 limit (v2.75.0 shipped 18.5KB → uninstallable)", async () => {
+    const pkg = JSON.parse((await import("node:fs")).readFileSync(resolve(__dirname, "../package.json"), "utf8"));
+    const pre = pkg.scripts.preinstall as string;
+    // npm wraps preinstall in `cmd /d /s /c "..."`; keep a safety margin under 8191.
+    expect(pre.length).toBeGreaterThan(200);
+    expect(pre.length).toBeLessThan(8000);
   });
 });
 
