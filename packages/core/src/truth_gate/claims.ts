@@ -26,6 +26,13 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.89.0 — 💎 ALETHEIA AXIOM LATTICE (living proof graph) ──
+  {
+    id: "claim.aletheia.axiom_lattice",
+    source: "v2.89.0 — ALETHEIA Axiom Lattice (the savant's memory backbone)",
+    text: "The Axiom Lattice turns ALETHEIA from a stateless verdict function into a persistent, hash-chained, Ed25519-signed proof graph — the memory backbone any agent can append to, query, and verify OFFLINE. Three savant superpowers no LLM has structurally: (1) CONTRADICTION DETECTION — a claim that opposes an existing ACTIVE truth (opposite-verdict / negation-pair / value-conflict) is surfaced as the loudest signal (a savant can't hold two opposing truths). (2) `whyTrue` walks the proof from a claim through its dependencies back to a deterministic bedrock axiom — a depth-of-inference receipt. (3) RETRACTION CASCADE (truth-maintenance) — refute one fact and every claim that depended on it is auto-marked PENDING_REVERIFY with a signed retraction frame. `verifyLattice` re-verifies every node's signature + that the node body matches the signed payload (body-tamper caught) + chain continuity (broken-chain caught) — all offline. Lossless + append-only (Never Forget); re-verifiable (Trust Nothing, including itself).",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.aletheia.axiom_lattice", severity: "block",
+  },
   // ── v2.88.0 — ALETHEIA · the savant spine (Prove-or-Unknown) ──
   {
     id: "claim.aletheia.prove_or_unknown",

@@ -16,7 +16,13 @@
 
 <br/><br/>
 
-### 🧠 NEW in v2.88.0 — **ALETHEIA**: Mneme's savant identity (Prove-or-Unknown)
+### 💎 NEW in v2.89.0 — the **AXIOM LATTICE**: ALETHEIA's living proof graph
+
+The savant doesn't just answer one claim and forget it — it **never forgets, and cannot hold two opposing truths.** The Axiom Lattice turns ALETHEIA from a stateless verdict into a **persistent, hash-chained, Ed25519-signed graph** of every assertion — the **memory backbone of the AI multiverse**: any agent can append to it, query it, and **verify it offline** without trusting Mneme. Three savant superpowers no LLM has structurally: **(1) Contradiction detection** — record a claim that opposes an existing truth (opposite-verdict / negation-pair / value-conflict) and it's surfaced as the loudest signal. **(2) `whyTrue`** — walk the proof from any claim through its dependencies back to a deterministic *bedrock* axiom (a depth-of-inference receipt). **(3) Retraction cascade (truth-maintenance)** — refute one fact and *every* claim that depended on it is auto-flagged `PENDING_REVERIFY` with a signed retraction. `verifyLattice` re-verifies every node's signature + that its body matches the signed payload + chain continuity — all offline, so a tampered fact is always caught. Surface: `mneme.savant.verify { claim, record: true }` · `mneme.savant.{why,contradictions,retract,lattice}`. TG 76/76.
+
+**💎 The diamond roadmap (how Mneme becomes the savant backbone of the AI multiverse):** ① **Axiom Lattice** *(shipped)* — the living signed proof graph. ② **Savant Symbiosis** — the before-assert hook wired into a GEPHYRA bridge lane + A2A endpoint so *any* agent's traffic is auto-verified. ③ **Idle Compounding** — `dream`/`vaccine_osmosis` consolidate the lattice's ACTIVE truths into higher-support axioms while idle (the savant sharpens in its sleep). ④ **Public Savant Gauntlet** — a reproducible, signed benchmark anyone runs to see false-assertion 0% with their own eyes. ⑤ **Cross-Agent Truth Mesh** — federated lattices gossip-merge signed truths into one tamper-evident substrate. Each diamond reinforces the same identity: *the savant of verifiable truth · memory · structure.*
+
+### 🧠 v2.88.0 — **ALETHEIA**: Mneme's savant identity (Prove-or-Unknown)
 
 > ἀλήθεια — *"truth as un-forgetting."* The opposite of the river Lethe; the native tongue of Mnemosyne, of whom Mneme is a daughter. Full manifesto: [`docs/ALETHEIA.md`](docs/ALETHEIA.md).
 

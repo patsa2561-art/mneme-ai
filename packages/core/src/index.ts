@@ -298,6 +298,15 @@ export * as truthKernel from "./truth_kernel/index.js";
 // LLM's structural hallucination/forgetting disability. Superhuman ONLY on the narrow
 // axis truth·memory·structure — and that narrowness is the moat.
 export * as aletheiaSpine from "./truth_kernel/aletheia.js";
+// v2.89.0 — 💎 THE AXIOM LATTICE · ALETHEIA's living proof graph. Turns the savant
+// from a stateless verdict function into a persistent, hash-chained, Ed25519-signed
+// graph of every assertion: contradiction detection (the savant can't hold two
+// opposing truths), retraction cascade / truth-maintenance (refute one fact → every
+// dependent is flagged for re-verification), `whyTrue` proof-walk to bedrock, and
+// `verifyLattice` (offline re-verify every node + the chain). The memory backbone of
+// the AI multiverse — a shared, tamper-evident truth substrate any agent can append
+// to, query, and verify offline.
+export * as aletheiaLattice from "./truth_kernel/lattice.js";
 // v2.6.0 -- WORMHOLE: channel auto-negotiation for cross-device sync.
 // ICE-style: probe every transport in parallel, race-to-success on the
 // live ones, adaptive score (EWMA success × inverse latency × preference)

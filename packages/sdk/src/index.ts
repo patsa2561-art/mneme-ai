@@ -125,12 +125,12 @@ export function createMneme(opts: MnemeInstanceOpts = {}): MnemeSdk {
     benchmark,
     events: (kinds?: MnemeEventKind[]) => subscribeEvents(kinds),
     opts: Object.freeze({ ...opts }),
-    version: "2.88.0",
+    version: "2.89.0",
   };
 }
 
 /** SDK metadata for telemetry / about. */
-export const SDK_VERSION = "2.88.0";
+export const SDK_VERSION = "2.89.0";
 export const SDK_DESCRIPTION = "World-class premium in-process SDK for Mneme — 30-80× faster than CLI subprocess.";
 
 /**

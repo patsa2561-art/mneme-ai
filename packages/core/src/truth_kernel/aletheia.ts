@@ -22,6 +22,7 @@
 
 import { checkTruth, type SensorAdapter, type SensorOutput, type SensorVerdict } from "./index.js";
 import { issueReceipt, verifyReceipt, type NotaryReceipt } from "../notary/index.js";
+import { recordAssertion, type Contradiction } from "./lattice.js";
 
 /** The savant verdict — the ONLY assertion channel. Three-valued by design:
  *  UNKNOWN is a first-class answer, never a fallback for "I'd rather guess". */
@@ -72,6 +73,11 @@ export interface AletheiaResult {
   refusalApplied: string | null;
   /** Ed25519 signature over {claim, verdict, lineage}. null ONLY if signing degraded. */
   receipt: NotaryReceipt | null;
+  /** Present when opts.record persisted this to the Axiom Lattice: any existing
+   *  ACTIVE truths this assertion CONTRADICTS (the loudest signal). [] = none. */
+  contradictions?: Contradiction[];
+  /** The Axiom Lattice node id when opts.record persisted this assertion. */
+  latticeNodeId?: string;
   totalMs: number;
 }
 
@@ -89,6 +95,12 @@ export interface AletheiaOpts {
   issuedAt?: number;
   /** Skip the NOTARY signature (tests / offline). */
   noSign?: boolean;
+  /** Persist this assertion to the Axiom Lattice (the living proof graph) +
+   *  return any contradictions it raises against existing ACTIVE truths. */
+  record?: boolean;
+  /** When recording, declare the lattice node ids this claim's truth rests on
+   *  (truth-maintenance edges — a later retraction cascades through them). */
+  dependsOn?: string[];
 }
 
 const DEFAULTS = { proveThreshold: 0.85, refuteThreshold: 0.15, maxDisagreement: 0.5 };
@@ -168,11 +180,25 @@ export async function assertClaim(repoRoot: string, claim: string, opts: Alethei
     } catch { receipt = null; }
   }
 
-  return {
+  const result: AletheiaResult = {
     claim, verdict, pTrue: tv.pTrue, disagreement: tv.disagreement,
     sensorsConsulted: sensors.length, informational, lineage, evidence, refusalApplied, receipt,
     totalMs: Date.now() - t0,
   };
+
+  // Persist to the Axiom Lattice (living proof graph) + surface contradictions.
+  if (opts.record) {
+    try {
+      const rec = recordAssertion(repoRoot, {
+        claim, verdict, pTrue: tv.pTrue,
+        lineageSummary: lineage.filter((n) => n.verdict === "TRUE" || n.verdict === "FALSE").map((n) => n.sensor),
+      }, { dependsOn: opts.dependsOn, issuedAt: opts.issuedAt });
+      result.contradictions = rec.contradictions;
+      result.latticeNodeId = rec.node.id;
+    } catch { /* lattice persistence is best-effort; the verdict stands */ }
+  }
+
+  return result;
 }
 
 // ════════════════════════════════════════════════════════════════════════

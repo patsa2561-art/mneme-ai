@@ -279,6 +279,36 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.aletheia.axiom_lattice",
+    kind: "boolean",
+    description: "ALETHEIA AXIOM LATTICE (v2.89.0): the savant's living proof graph holds — recording a claim and then its opposite surfaces a CONTRADICTION (the savant can't hold two opposing truths); `whyTrue` walks the proof to a deterministic bedrock axiom; retracting a fact CASCADES (every dependent → PENDING_REVERIFY) with a signed frame; and `verifyLattice` re-verifies the whole chain OFFLINE (clean = ok) while a tampered node body is CAUGHT (Trust Nothing, including itself).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync, writeFileSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const L = await import("../truth_kernel/lattice.js" as string) as typeof import("../truth_kernel/lattice.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-lattice-"));
+        const T = 1_700_000_000_000;
+        const a = L.recordAssertion(repo, { claim: "2+2=4", verdict: "TRUE", pTrue: 1, lineageSummary: ["arithmetic"] }, { issuedAt: T });
+        const b = L.recordAssertion(repo, { claim: "derived", verdict: "TRUE", pTrue: 0.9 }, { issuedAt: T, dependsOn: [a.node.id] });
+        const contra = L.recordAssertion(repo, { claim: "2+2=4", verdict: "FALSE", pTrue: 0, lineageSummary: ["arithmetic"] }, { issuedAt: T });
+        const contradictionOk = contra.contradictions.some((c) => c.kind === "opposite-verdict");
+        const why = L.whyTrue(repo, b.node.id);
+        const whyOk = why.found && why.proof.some((l) => l.includes("bedrock"));
+        const r = L.retract(repo, a.node.id, "refuted", { issuedAt: T });
+        const cascadeOk = r.retracted.includes(a.node.id) && r.cascade.includes(b.node.id) && !!r.retractionReceiptId;
+        const cleanOk = L.verifyLattice(repo).ok;
+        // tamper a node body → must be caught
+        const nodes = L.readLattice(repo);
+        if (nodes[2]) nodes[2].verdict = nodes[2].verdict === "FALSE" ? "TRUE" : "FALSE";
+        writeFileSync(join(repo, ".mneme", "aletheia", "lattice.jsonl"), nodes.map((n) => JSON.stringify(n)).join("\n") + "\n", "utf8");
+        const tamperCaught = L.verifyLattice(repo).ok === false;
+        const ok = contradictionOk && whyOk && cascadeOk && cleanOk && tamperCaught;
+        return { value: ok ? 1 : 0, evidence: `contradiction=${contradictionOk} why=${whyOk} cascade=${cascadeOk} cleanVerify=${cleanOk} tamperCaught=${tamperCaught}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.aletheia.prove_or_unknown",
     kind: "boolean",
     description: "ALETHEIA savant spine (v2.88.0): the Prove-or-Unknown discipline holds — a provable arithmetic truth (2+2=4) → TRUE with a signed lineage, a provable falsehood (2+2=5) → FALSE with a signed lineage, and an UNPROVABLE claim → UNKNOWN (no informational sensor; the gap is NEVER filled with a fabricated TRUE). The Savant Gauntlet scores false-assertion 0% · forget 0% · provability 100% · abstention 100%.",
