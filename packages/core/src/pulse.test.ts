@@ -146,6 +146,25 @@ describe("pulse", () => {
     expect(upgradeNotice!.level).toBe("info");
   });
 
+  it("v2.93.0 WHISPER: the upgrade notice surfaces ONCE then stays quiet (no per-turn nag)", async () => {
+    const { readLiveMnemeVersion } = await import("./version_check.js");
+    const live = readLiveMnemeVersion();
+    if (live === "unknown") return;
+    writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({ current: live, latest: "9999.0.0" }), "utf8");
+    // first turn → whispers once
+    const first = collectPulseStatus(repo);
+    expect(first.notable.some((n) => n.text.includes("9999.0.0"))).toBe(true);
+    // subsequent turns within the cooldown → SILENT (the un-luxurious nag is gone)
+    expect(collectPulseStatus(repo).notable.some((n) => n.text.includes("9999.0.0"))).toBe(false);
+    expect(collectPulseStatus(repo).notable.some((n) => n.text.includes("9999.0.0"))).toBe(false);
+    // but the version state itself is still tracked (the signal isn't lost, just quiet)
+    expect(collectPulseStatus(repo).version.updateAvailable).toBe(true);
+    // a genuinely NEW version re-whispers exactly once
+    writeFileSync(join(repo, ".mneme/version-check.json"), JSON.stringify({ current: live, latest: "9999.0.1" }), "utf8");
+    expect(collectPulseStatus(repo).notable.some((n) => n.text.includes("9999.0.1"))).toBe(true);
+    expect(collectPulseStatus(repo).notable.some((n) => n.text.includes("9999.0.1"))).toBe(false);
+  });
+
   it("v1.27.3 regression: cache BEHIND live current emits NO AUTO-ACTION (we're ahead of npm)", async () => {
     // E.g., user is running a pre-release like 9999.0.1 but npm says
     // latest is 1.0.0. This must NOT trigger an "upgrade" notice --

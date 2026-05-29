@@ -75,6 +75,30 @@ export interface PulseOptions {
   json?: boolean;
 }
 
+/**
+ * v2.93.0 — WHISPER, DON'T NAG. A luxury watch doesn't shout; a tool with soul
+ * tells you something passive (an upgrade is available, an inbox count) ONCE, then
+ * trusts you and stays quiet — it doesn't repeat the same nudge every single turn.
+ * Returns true at most once per `cooldownMs` per `key`; persists the last-whisper
+ * timestamp under `.mneme/pulse/whispered.json`. Best-effort: if it can't persist,
+ * it whispers (better a rare repeat than a crash or total silence). The key encodes
+ * the state (e.g. the version pair / inbox count) so a genuinely NEW thing whispers
+ * again, but the SAME standing notice does not re-nag.
+ */
+function whisperOnce(repoRoot: string, key: string, cooldownMs: number, now: number = Date.now()): boolean {
+  try {
+    const dir = join(repoRoot, ".mneme", "pulse");
+    const p = join(dir, "whispered.json");
+    let m: Record<string, number> = {};
+    if (existsSync(p)) { try { m = JSON.parse(readFileSync(p, "utf8")) as Record<string, number>; } catch { m = {}; } }
+    if (typeof m[key] === "number" && now - m[key]! < cooldownMs) return false; // still within quiet window
+    m[key] = now;
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(p, JSON.stringify(m), "utf8");
+    return true;
+  } catch { return true; }
+}
+
 /** Read the on-disk Mneme state files in parallel. Best-effort -- any
  *  missing file is treated as "feature not active". */
 export function collectPulseStatus(repoRoot: string): PulseStatus {
@@ -276,12 +300,20 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     // pulse pre-executor auto-queued (an infinite failing self-upgrade loop on
     // Windows). Upgrades are fully manual now: tell the user, let them decide.
     // (The old superlock auto-upgrade gate is gone — we never auto-fire.)
-    status.notable.push({
-      level: "info",
-      text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). To upgrade when you like, run \`mneme upgrade\` (or \`npm install -g mneme-ai@latest\`). Mneme will not upgrade itself.`,
-    });
+    // WHISPER, DON'T NAG (v2.93.0): surface the upgrade notice at most once per day
+    // per version-pair, not every turn. A new version re-whispers once; the same
+    // standing "vX available" does not re-nag. Mneme is confident, not needy.
+    if (whisperOnce(repoRoot, `upgrade:${status.version.current}->${status.version.latest}`, 24 * 60 * 60 * 1000)) {
+      status.notable.push({
+        level: "info",
+        text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). To upgrade when you like, run \`mneme upgrade\` (or \`npm install -g mneme-ai@latest\`). Mneme will not upgrade itself.`,
+      });
+    }
   }
-  if (status.inbox.unsent > 0) {
+  // The bare unread-count is a passive nudge — whisper it once per few hours per
+  // distinct count (a NEW message re-whispers), not every turn. The actual HIGH/
+  // CRITICAL inbox CONTENT below is the real signal and is always surfaced.
+  if (status.inbox.unsent > 0 && whisperOnce(repoRoot, `inbox-count:${status.inbox.unsent}`, 6 * 60 * 60 * 1000)) {
     status.notable.push({
       level: "info",
       text: `Mneme has ${status.inbox.unsent} unread inbox message${status.inbox.unsent === 1 ? "" : "s"}. They will surface on your next mneme.* tool call.`,

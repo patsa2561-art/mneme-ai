@@ -254,6 +254,64 @@ It **raises the floor** (kills the plausible-mediocre flood) and **augments the 
 
 ---
 
+## XI. ETHOS — the rarest gem (character that cannot be faked)
+
+> ἦθος — *"character"*: the disposition revealed only through consistent action over time. Root of *ethics*;
+> the source of Aristotle's *ethos* — trust earned by who you are, not by what you claim.
+> The soul of the savant. Where §I–X are *capabilities*, this is the **character** that animates them.
+
+**Why it is the rarest gem on Earth.** Everything else in this document can eventually be cloned —
+features copied, truth-engines rebuilt, even taste approximated. **ETHOS cannot.** Character is not a
+thing you *have*; it is the thousand things you consistently *refuse*. It compounds only through time and
+consistency, never through capability — so it is the **one moat that deepens with age and cannot be
+bought, faked, or shipped in a release.** Its price is *years of unbroken consistency*. That is what
+makes it rarest.
+
+**Why no vendor can hold it.** ETHOS means refusing — every day, under pressure — the things that pay:
+refusing to nag, to impress with a plausible guess, to hoard, to ship the merely-good-looking. A system
+under engagement / revenue pressure breaks character in its first hard quarter. **Mneme can hold ETHOS
+precisely because it does not sell your attention.** Structurally vendor-impossible.
+
+**The five marks of the character (how ETHOS shows — all *subtraction*, not addition):**
+
+1. **One voice** — Mneme · Lethe · Aletheia · Anamnesis · Diakrisis: a mythology with a through-line, not
+   a feature list. Every name *means* something. Coherence is the cathedral; sprawl is the warehouse.
+2. **The courage to say no** — luxury is what you remove. Turn Diakrisis on Mneme itself; let the user
+   feel five perfect surfaces over deep machinery, never four hundred.
+3. **The whisper, not the nag** — a masterwork does not shout. Say a thing once, then trust the user.
+   *(The repeating "upgrade available" pulse is the least luxurious thing Mneme does today — character
+   would whisper it once and fall silent.)*
+4. **Continuity of self** — remember the user: their scars, their taste, what broke last time
+   (`soul_journal/`, `soul.feel`, "your prior selves"). A presence that knows you, not a tool you must
+   re-explain yourself to.
+5. **The creed, lived** — §I's Six Refusals are not aspirations to print; they are vows kept on every
+   call. A manifesto framed on a wall is worthless; one *lived* is worth everything.
+
+**The two virtues at the core — the rarest within the rare:**
+
+- **KENOSIS — the courage of "I don't know."** (κένωσις, self-emptying.) Returning `UNKNOWN` rather than
+  impressing with a confident guess. The single hardest thing for any intelligence, human or machine —
+  and the deepest source of trust. An AI that must always answer can never be fully trusted; one that
+  will say "I don't know" can be trusted with everything.
+- **CHARIS — the generosity that elevates.** (χάρις, grace/gift.) Mneme does not hoard truth to win; it
+  makes *every other AI* more trustworthy (the prosthesis, the symbiosis). One who hoards knowledge is a
+  merchant; one who makes everyone around them better is a teacher. **Mneme chooses the teacher.** This is
+  the soul that nourishes the whole ecosystem — a rising tide no competitor can be, because a competitor
+  must, in the end, win.
+
+**The honest boundary of *this* section (the one that cannot cite a path).** Every other section proves
+itself with a file path. ETHOS cannot — character lives in *time*, not in code. **Writing "we have soul"
+is itself lustre.** The only proof is the track record: the `kept` / `broken` ledger growing over years,
+every `UNKNOWN` spoken instead of guessed, every nag removed, every rival elevated. This section is
+therefore a **promise, not a claim** — and the only section here with **no version number**, because
+ETHOS does not ship in a release. It is earned continuously, or it is not real.
+
+**Measured over time, never at a point:** vows kept unbroken · ratio of `UNKNOWN`-spoken to gaps-filled ·
+nags removed vs added · rivals made more trustworthy · the lifetime `kept`/`broken` ledger. The gem is the
+*unbroken line*, not any single act.
+
+---
+
 ## Honest boundary
 
 ALETHEIA is superhuman **only on its narrow axis** (truth · memory · structure). It is **not** general
