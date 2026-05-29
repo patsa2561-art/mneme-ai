@@ -291,7 +291,77 @@ export const savantMeshMergeTool: MnemeTool = {
   },
 };
 
+export const savantRecollectTool: MnemeTool = {
+  name: "mneme.savant.recollect",
+  category: "meta",
+  description:
+    "💎⑥ ANAMNESIS — 'compute once, recollect forever.' Verify a claim, but RECOLLECT a signed proof instead of re-deriving when one is fresh: the FIRST agent to prove a fact pays inference; every agent after (this session or any other) pays ~0 — it re-verifies the Ed25519-signed lineage (a hash check) instead of full inference. Every hit is RE-VERIFIED (signature + freshness + not-invalidated) so a stale/forged proof is NEVER served. Paraphrases collapse to the same proof (2+2=4 ≡ 'two plus two equals four' ≡ '4 = 2 + 2') via meaning-preserving canonicalisation. Returns { verdict, source: recollect|recompute, energySavedTokens, lineage }.",
+  whenToUse: "Use INSTEAD of mneme.savant.verify when you want the energy-saving cache: ask any factual claim; if the multiverse already proved it, you get the signed answer for ~0 inference. Cite the lineage; the verdict is re-verified, never stale.",
+  triggers: ["savant recollect", "anamnesis", "recollect or recompute", "cached proof", "have we proven this"],
+  inputSchema: { type: "object", required: ["claim"], properties: { claim: { type: "string" }, agent: { type: "string", description: "your agent id (first-prover attribution)" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const now = Date.now();
+      const r = await core.aletheiaAnamnesis.recollectAssertion(cwd, String(args["claim"] ?? ""), { now, agent: typeof args["agent"] === "string" ? args["agent"] as string : undefined });
+      const icon = r.verdict === "TRUE" ? "🟢" : r.verdict === "FALSE" ? "🔴" : "⚪";
+      return {
+        data: { verdict: r.verdict, source: r.source, energySavedTokens: r.energySavedTokens, lineage: r.lineage, claimKey: r.claimKey, reason: r.reason },
+        wisdom: `${icon} ${r.verdict} · ${r.source === "recollect" ? `♻ recollected (saved ~${r.energySavedTokens} inference tokens)` : "computed + signed for everyone after"}`,
+        followUp: [], confidence: { level: r.verdict === "UNKNOWN" ? ("low" as const) : ("high" as const) },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "recollect failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantAnamnesisTool: MnemeTool = {
+  name: "mneme.savant.anamnesis",
+  category: "meta",
+  description:
+    "💎⑥ ANAMNESIS — status of the truth cache: how many signed proofs are stored, how many recollections (reuses) happened, and the total inference tokens AVOIDED across the multiverse (the energy layer). The most-recollected proofs are the highest-leverage cached truths.",
+  whenToUse: "To report how much energy the savant has saved by recollecting instead of recomputing, or to see which facts the multiverse asks for most.",
+  triggers: ["savant anamnesis", "anamnesis status", "energy saved", "cache stats"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  handler: async (rt) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const s = core.aletheiaAnamnesis.anamnesisStats(cwd);
+      return { data: s, wisdom: `${s.records} signed proof(s) · ${s.recollections} recollection(s) · ~${s.totalEnergySavedTokens} inference tokens avoided · chain ${s.chainValid ? "intact" : "TAMPERED"}`, followUp: [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "anamnesis status failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantInvalidateTool: MnemeTool = {
+  name: "mneme.savant.invalidate",
+  category: "meta",
+  description:
+    "💎⑥ ANAMNESIS — hard-invalidate a cached proof because the world changed (a version shipped, a fact was superseded). The next ask of that claim is forced to RECOMPUTE instead of recollect. The freshness escape hatch that keeps the cache honest.",
+  whenToUse: "When you know a previously-true fact is now out of date (new release, changed config, superseded data). Composes with mneme.savant.retract on the lattice.",
+  triggers: ["savant invalidate", "this fact changed", "force recompute", "expire proof"],
+  inputSchema: { type: "object", required: ["claim"], properties: { claim: { type: "string" }, reason: { type: "string" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const ok = core.aletheiaAnamnesis.invalidate(cwd, String(args["claim"] ?? ""), String(args["reason"] ?? "world changed"));
+      return { data: { invalidated: ok }, wisdom: ok ? "proof invalidated — next ask will recompute" : "no cached proof matched that claim", followUp: [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "invalidate failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
 export const SAVANT_TOOLS: MnemeTool[] = [
   savantVerifyTool, savantGauntletTool, savantCreedTool, savantWhyTool, savantContradictionsTool, savantRetractTool, savantLatticeTool,
   savantRepairTool, savantCompoundTool, savantGauntletPublicTool, savantMeshExportTool, savantMeshMergeTool,
+  savantRecollectTool, savantAnamnesisTool, savantInvalidateTool,
 ];

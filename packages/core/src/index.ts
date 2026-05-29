@@ -320,6 +320,14 @@ export * as aletheiaSymbiosis from "./truth_kernel/symbiosis.js";
 export * as aletheiaCompound from "./truth_kernel/compound.js";
 export * as aletheiaGauntlet from "./truth_kernel/gauntlet_public.js";
 export * as aletheiaMesh from "./truth_kernel/truth_mesh.js";
+// v2.91.0 — 💎⑥ ANAMNESIS · "compute once, recollect forever." The energy layer of
+// truth for the AI multiverse: the first AI to PROVE a fact pays the inference; every
+// AI after re-verifies the signed lineage (~0 energy) instead of re-deriving. A
+// recollect-or-recompute gate that RE-VERIFIES every hit (Ed25519 sig + freshness +
+// not-invalidated — never serves a stale/forged proof), keyed by a meaning-PRESERVING
+// canonicalization so paraphrases collapse without false collisions. Feeds proof_of_saving
+// for a signed energy-saved certificate; shares proofs cross-vendor (forgery-defended).
+export * as aletheiaAnamnesis from "./truth_kernel/anamnesis.js";
 // v2.6.0 -- WORMHOLE: channel auto-negotiation for cross-device sync.
 // ICE-style: probe every transport in parallel, race-to-success on the
 // live ones, adaptive score (EWMA success × inverse latency × preference)

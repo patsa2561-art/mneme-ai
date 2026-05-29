@@ -279,6 +279,41 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.aletheia.anamnesis",
+    kind: "boolean",
+    description: "ANAMNESIS (v2.91.0 — compute once, recollect forever): meaning-preserving canonicalisation collapses paraphrases ('2+2=4' ≡ 'two plus two equals four' ≡ '4 = 2 + 2') to ONE proof but NEVER collides different claims ('dog bites man' ≠ 'man bites dog'); recollect-or-recompute proves a fact once then serves it for ~0 energy; every hit is re-verified so a body-tampered/forged cached proof FORCES a recompute (stale-serve-rate 0%); recollections feed a signed energy-saved certificate.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync, readFileSync, writeFileSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const A = await import("../truth_kernel/anamnesis.js" as string) as typeof import("../truth_kernel/anamnesis.js");
+        const T = 1_700_000_000_000;
+        // paraphrase collapse + no false collision
+        const k = (s: string) => A.canonicalClaimKey(s);
+        const collapse = new Set(["2+2=4", "2 + 2 = 4", "two plus two equals four", "4 = 2 + 2"].map(k)).size === 1;
+        const noCollision = k("dog bites man") !== k("man bites dog") && k("2+2=4") !== k("2+2=5");
+        // recollect-or-recompute: compute exactly once across paraphrases
+        const r = mkdtempSync(join(tmpdir(), "tg-anam-"));
+        let calls = 0;
+        const compute = () => { calls++; return Promise.resolve({ verdict: "TRUE" as const, lineage: [{ sensor: "flash", verdict: "TRUE" as const, weight: 1 }], ttlMs: 0, costTokens: 1800 }); };
+        const a = await A.recollectOrCompute(r, "2+2=4", compute, { now: T });
+        const b = await A.recollectOrCompute(r, "two plus two equals four", compute, { now: T + 10 });
+        const recollectOk = a.source === "recompute" && b.source === "recollect" && b.energySavedTokens === 1800 && calls === 1;
+        // energy ledger signed — minted now, while the recollection count is intact
+        const cert = await A.mintEnergyCertificate(r, { windowStartMs: T, windowEndMs: T + 30 }) as { totalTokensSaved?: number; hmac?: string };
+        const energyOk = typeof cert.hmac === "string" && (cert.totalTokensSaved ?? 0) >= 1800;
+        // re-verify every hit: tamper the stored verdict → must recompute (never serve forged)
+        const recRaw = JSON.parse(readFileSync(join(r, ".mneme", "anamnesis", "proofs.jsonl"), "utf8").trim());
+        recRaw.verdict = "FALSE";
+        writeFileSync(join(r, ".mneme", "anamnesis", "proofs.jsonl"), JSON.stringify(recRaw) + "\n", "utf8");
+        const afterTamper = await A.recollectOrCompute(r, "2+2=4", compute, { now: T + 20 });
+        const tamperForcesRecompute = afterTamper.source === "recompute" && afterTamper.reason === "forged";
+        const ok = collapse && noCollision && recollectOk && tamperForcesRecompute && energyOk;
+        return { value: ok ? 1 : 0, evidence: `collapse=${collapse} noCollision=${noCollision} recollect=${recollectOk} tamper→recompute=${tamperForcesRecompute} energySigned=${energyOk}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.aletheia.savant_diamonds",
     kind: "boolean",
     description: "ALETHEIA savant diamonds (v2.90.0): ② SYMBIOSIS repairs a draft (2+2=5 → FALSE-corrected, an unprovable claim → UNVERIFIED-flagged, prose untouched); ③ COMPOUNDING consolidates corroborating ACTIVE truths into a crystallised axiom + quarantines a contested subject; ④ PUBLIC GAUNTLET runs the pinned corpus to false-assert 0% / forget 0% / provable 100% / abstain 100% with a signed report that verifies offline; ⑤ TRUTH MESH exports a signed bundle, merges verified truths, DROPS a claim-swapped forgery, and is idempotent.",

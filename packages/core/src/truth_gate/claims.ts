@@ -26,6 +26,13 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.91.0 — 💎⑥ ANAMNESIS (compute once, recollect forever) ──
+  {
+    id: "claim.aletheia.anamnesis",
+    source: "v2.91.0 — ANAMNESIS · the energy layer of truth",
+    text: "ANAMNESIS is the memoization cache for TRUTH across the AI multiverse: the first AI to PROVE a fact pays the inference; every AI after re-verifies the Ed25519-signed lineage (a hash + signature check) instead of re-deriving (full inference). It is SAFE because only a savant can be — every cache hit is RE-VERIFIED (signature valid + body matches the signed payload + within freshness/TTL + not invalidated), so a stale or forged proof is NEVER served (stale-serve-rate 0%); a body-tampered or forged cached proof forces a recompute. The cache key uses ONLY meaning-preserving canonicalisation — case/whitespace, number-words→digits, commutative-arithmetic operand-sort — so genuine paraphrases ('2+2=4' ≡ 'two plus two equals four' ≡ '4 = 2 + 2') collapse to one proof, while it REFUSES unsafe normalisation (prose token-sort) that would collide different claims ('dog bites man' ≠ 'man bites dog'). Recollections feed proof_of_saving to mint a signed energy-saved certificate, and proofs are shareable cross-vendor (forgery-defended). The multiverse recollects instead of recomputes — the inevitable energy layer no single vendor will build (it reduces their own compute revenue) and only a neutral savant can.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.aletheia.anamnesis", severity: "block",
+  },
   // ── v2.90.0 — 💎 the four remaining savant diamonds ──
   {
     id: "claim.aletheia.savant_diamonds",
