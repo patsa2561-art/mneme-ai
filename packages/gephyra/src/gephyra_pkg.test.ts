@@ -90,4 +90,32 @@ describe("@mneme-ai/gephyra package", () => {
       await h.close();
     }
   }, 20_000);
+
+  it("PK5 POST /savant/verify + /savant/repair — the A2A prosthesis (any agent over HTTP)", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "gephyra-pkg-"));
+    const h = await startServer({ repoRoot: repo, port: 0 });
+    try {
+      // savant verify: a provable falsehood → FALSE with a signed receipt
+      const v = await http("POST", h.port, "/savant/verify", JSON.stringify({ claim: "2+2=5" }));
+      expect(v.status).toBe(200);
+      const vb = v.json as { verdict?: string; receiptId?: string | null };
+      expect(vb.verdict).toBe("FALSE");
+      expect(vb.receiptId).toBeTruthy();
+      // an unprovable claim → UNKNOWN (never guessed)
+      const u = await http("POST", h.port, "/savant/verify", JSON.stringify({ claim: "the 9000th visitor tomorrow wears red" }));
+      expect((u.json as { verdict?: string }).verdict).toBe("UNKNOWN");
+      // savant repair: a draft with a false claim → changed, with a correction marker
+      const r = await http("POST", h.port, "/savant/repair", JSON.stringify({ draft: "The total is 2+2=5." }));
+      expect(r.status).toBe(200);
+      const rb = r.json as { changed?: boolean; falseCount?: number; repaired?: string };
+      expect(rb.changed).toBe(true);
+      expect(rb.falseCount).toBe(1);
+      expect(rb.repaired).toMatch(/FALSE/);
+      // bad body → 400, server survives
+      expect((await http("POST", h.port, "/savant/verify", "not json")).status).toBe(400);
+      expect((await http("GET", h.port, "/status")).status).toBe(200);
+    } finally {
+      await h.close();
+    }
+  }, 20_000);
 });

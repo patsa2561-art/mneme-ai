@@ -279,6 +279,49 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.aletheia.savant_diamonds",
+    kind: "boolean",
+    description: "ALETHEIA savant diamonds (v2.90.0): ② SYMBIOSIS repairs a draft (2+2=5 → FALSE-corrected, an unprovable claim → UNVERIFIED-flagged, prose untouched); ③ COMPOUNDING consolidates corroborating ACTIVE truths into a crystallised axiom + quarantines a contested subject; ④ PUBLIC GAUNTLET runs the pinned corpus to false-assert 0% / forget 0% / provable 100% / abstain 100% with a signed report that verifies offline; ⑤ TRUTH MESH exports a signed bundle, merges verified truths, DROPS a claim-swapped forgery, and is idempotent.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const sym = await import("../truth_kernel/symbiosis.js" as string) as typeof import("../truth_kernel/symbiosis.js");
+        const cmp = await import("../truth_kernel/compound.js" as string) as typeof import("../truth_kernel/compound.js");
+        const gnt = await import("../truth_kernel/gauntlet_public.js" as string) as typeof import("../truth_kernel/gauntlet_public.js");
+        const mesh = await import("../truth_kernel/truth_mesh.js" as string) as typeof import("../truth_kernel/truth_mesh.js");
+        const sp = await import("../truth_kernel/aletheia.js" as string) as typeof import("../truth_kernel/aletheia.js");
+        const T = 1_700_000_000_000;
+        // ② Symbiosis
+        const r2 = mkdtempSync(join(tmpdir(), "tg-sym-"));
+        const rep = await sym.repairDraft(r2, "Note. 2+2=5. The 9000th visitor tomorrow wears red.", { issuedAt: T });
+        const symOk = rep.falseCount === 1 && rep.unknownCount === 1 && /FALSE/.test(rep.repaired) && /UNVERIFIED/.test(rep.repaired) && rep.repaired.includes("Note.");
+        // ③ Compounding
+        const r3 = mkdtempSync(join(tmpdir(), "tg-cmp-"));
+        await sp.assertClaim(r3, "2+2=4", { record: true, issuedAt: T });
+        await sp.assertClaim(r3, "2+2=4", { record: true, issuedAt: T, sensors: [{ id: "x", weight: 2, run: () => ({ sensor: "x", verdict: "TRUE", confidence: 1 }) }] });
+        const c1 = cmp.compoundLattice(r3, { issuedAt: T });
+        const c2 = cmp.compoundLattice(r3, { issuedAt: T });
+        const cmpOk = c1.axioms.length === 1 && c1.axioms[0]!.crystallised && !!c1.receipt && c2.axioms.length === c1.axioms.length;
+        // ④ Public Gauntlet
+        const r4 = mkdtempSync(join(tmpdir(), "tg-gnt-"));
+        const g = await gnt.runPublicGauntlet(r4, { issuedAt: T });
+        const forged = JSON.parse(JSON.stringify(g.receipt)); if (forged?.payload) forged.payload.falseAssertionRate = 0.9;
+        const gntOk = g.passed && g.falseAssertionRate === 0 && g.provability === 1 && gnt.verifyGauntletReport(g.receipt).passed && gnt.verifyGauntletReport(forged).valid === false;
+        // ⑤ Truth Mesh
+        const agentA = mkdtempSync(join(tmpdir(), "tg-mesh-a-"));
+        await sp.assertClaim(agentA, "2+2=4", { record: true, issuedAt: T });
+        const bundle = mesh.exportTruths(agentA, "agentA", { issuedAt: T });
+        const honest = mesh.mergeTruths(mkdtempSync(join(tmpdir(), "tg-mesh-ok-")), bundle, { issuedAt: T });
+        const swapped = JSON.parse(JSON.stringify(bundle)); if (swapped.truths[0]) swapped.truths[0].claim = "2+2=999";
+        const forgedMerge = mesh.mergeTruths(mkdtempSync(join(tmpdir(), "tg-mesh-f-")), swapped, { issuedAt: T });
+        const meshOk = honest.added === 1 && honest.bundleVerified && forgedMerge.rejectedUnsigned === 1 && forgedMerge.added === 0;
+        const ok = symOk && cmpOk && gntOk && meshOk;
+        return { value: ok ? 1 : 0, evidence: `symbiosis=${symOk} compound=${cmpOk} gauntlet=${gntOk} mesh=${meshOk}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.aletheia.axiom_lattice",
     kind: "boolean",
     description: "ALETHEIA AXIOM LATTICE (v2.89.0): the savant's living proof graph holds — recording a claim and then its opposite surfaces a CONTRADICTION (the savant can't hold two opposing truths); `whyTrue` walks the proof to a deterministic bedrock axiom; retracting a fact CASCADES (every dependent → PENDING_REVERIFY) with a signed frame; and `verifyLattice` re-verifies the whole chain OFFLINE (clean = ok) while a tampered node body is CAUGHT (Trust Nothing, including itself).",

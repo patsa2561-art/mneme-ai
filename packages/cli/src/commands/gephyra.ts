@@ -67,14 +67,20 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
     const server = createServer((req, res) => {
       const url = req.url ?? "";
       const isMcp = url.startsWith("/mcp");
-      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp)) {
-        res.writeHead(404, { "content-type": "application/json" }); res.end(JSON.stringify({ error: "POST /cross {claim, fromAgent}  |  POST /mcp {tool, agent, args?}" })); return;
+      const isSavantVerify = url.startsWith("/savant/verify");
+      const isSavantRepair = url.startsWith("/savant/repair");
+      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair)) {
+        res.writeHead(404, { "content-type": "application/json" }); res.end(JSON.stringify({ error: "POST /cross {claim, fromAgent}  |  POST /mcp {tool, agent, args?}  |  POST /savant/verify {claim}  |  POST /savant/repair {draft}" })); return;
       }
       let body = "";
       req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
       req.on("end", () => {
-        // /mcp = Phase 4 MCP-proxy (route any tool call through truth-customs); /cross = single-claim verify.
-        const handler = isMcp ? g.handleMcpCallRequest(o.cwd, body) : g.handleCrossRequest(o.cwd, body);
+        // /savant/* = the savant prosthesis (A2A): verify a claim / repair a draft.
+        // /mcp = Phase 4 MCP-proxy; /cross = single-claim verify.
+        const handler = isSavantVerify ? g.handleSavantRequest(o.cwd, body, "verify")
+          : isSavantRepair ? g.handleSavantRequest(o.cwd, body, "repair")
+          : isMcp ? g.handleMcpCallRequest(o.cwd, body)
+          : g.handleCrossRequest(o.cwd, body);
         void handler.then((r) => {
           res.writeHead(r.status, { "content-type": "application/json" });
           res.end(JSON.stringify(r.body));
@@ -85,7 +91,7 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
     });
     server.on("error", (e) => { out(`✗ GEPHYRA serve failed: ${(e as Error).message}\n`); process.exit(1); });
     server.listen(port, () => {
-      out(`🌉 GEPHYRA serving on :${port}\n  POST /cross {claim, fromAgent}     → truth-customs + signed crossing\n  POST /mcp   {tool, agent, args?}   → route any MCP tool call through truth-customs (shell→HEPHAESTUS · claim→GEPHYRA)\n  (Ctrl-C to stop. Truth engine: 7-layer ACGV. Every crossing is recorded + stamped.)\n`);
+      out(`🌉 GEPHYRA serving on :${port}\n  POST /cross         {claim, fromAgent}  → truth-customs + signed crossing\n  POST /mcp           {tool, agent, args?} → route any MCP tool call through truth-customs\n  POST /savant/verify {claim}             → 🧠 savant prove-or-unknown verdict (TRUE/FALSE/UNKNOWN) + signed lineage\n  POST /savant/repair {draft}             → 🧠 fact-check + repair an agent's draft answer\n  (Ctrl-C to stop. Every crossing is recorded + stamped.)\n`);
     });
     await new Promise<void>(() => { /* run until killed */ });
     return 0;

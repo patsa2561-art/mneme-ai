@@ -184,4 +184,114 @@ export const savantCreedTool: MnemeTool = {
   },
 };
 
-export const SAVANT_TOOLS: MnemeTool[] = [savantVerifyTool, savantGauntletTool, savantCreedTool, savantWhyTool, savantContradictionsTool, savantRetractTool, savantLatticeTool];
+export const savantRepairTool: MnemeTool = {
+  name: "mneme.savant.repair",
+  category: "meta",
+  description:
+    "💎② SAVANT SYMBIOSIS — hand the savant your DRAFT answer; it fact-checks every checkable claim and returns a REPAIRED draft: FALSE claims annotated with the correction + evidence, UNKNOWN claims flagged 'unverified — do not assert as fact', TRUE claims kept, non-claim prose untouched. The before-assert prosthesis: run this on your reply BEFORE it reaches the user, then send the repaired version. If `changed` is true, you should revise.",
+  whenToUse: "Right before you send a factual answer to the user. Pass your full draft; send back the `repaired` text (and never assert the UNKNOWN-flagged parts as fact).",
+  triggers: ["savant repair", "fact-check my answer", "check before sending", "repair draft"],
+  inputSchema: { type: "object", required: ["draft"], properties: { draft: { type: "string", description: "your draft answer (prose + claims)" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const r = await core.aletheiaSymbiosis.repairDraft(cwd, String(args["draft"] ?? ""));
+      return { data: r, wisdom: `${r.changed ? "⚠ revise — " : "✓ "}${r.summary}`, followUp: r.changed ? ["mneme.savant.verify"] : [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "repair failed — send draft unchanged", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantCompoundTool: MnemeTool = {
+  name: "mneme.savant.compound",
+  category: "meta",
+  description:
+    "💎③ IDLE COMPOUNDING — consolidate the Axiom Lattice's ACTIVE truths into higher-support axioms (the savant sharpens in its sleep): subjects whose active truths agree become signed axioms (crystallised once support ≥ 2); subjects whose active truths conflict are quarantined as contested (NOT axioms). Read-only + deterministic + idempotent; returns the savant's current, attestable axiom base.",
+  whenToUse: "On a daemon idle tick, or to report 'what the savant currently holds as proven'. Crystallised axioms are the high-confidence facts you can cite without re-proving.",
+  triggers: ["savant compound", "consolidate truths", "axiom base", "what is proven"],
+  inputSchema: { type: "object", properties: { minSupport: { type: "number", description: "min corroborating truths to crystallise an axiom (default 2)" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const minSupport = typeof args["minSupport"] === "number" ? args["minSupport"] as number : undefined;
+      const r = core.aletheiaCompound.compoundLattice(cwd, minSupport !== undefined ? { minSupport } : {});
+      return { data: r, wisdom: r.summary, followUp: [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "compound failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantGauntletPublicTool: MnemeTool = {
+  name: "mneme.savant.gauntlet_public",
+  category: "meta",
+  description:
+    "💎④ PUBLIC SAVANT GAUNTLET — run the pinned, reproducible public corpus (provable truths · provable falsehoods · genuinely-unprovable claims) through the savant and return a SIGNED report card: false-assertion rate (target 0%), forget rate (0%), provability (100%), abstention (100%). Anyone can rerun it and verify the signed result offline — the falsifiable proof that the savant abstains instead of hallucinating.",
+  whenToUse: "To demonstrate / audit the savant's honesty to a third party. The receipt verifies offline with the public key alone (mneme.notary.verify or verifyGauntletReport).",
+  triggers: ["savant gauntlet public", "prove honesty", "benchmark the savant"],
+  inputSchema: { type: "object", properties: {} },
+  outputSchema: { type: "object" },
+  handler: async (rt) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const r = await core.aletheiaGauntlet.runPublicGauntlet(cwd);
+      return { data: { passed: r.passed, falseAssertionRate: r.falseAssertionRate, forgetRate: r.forgetRate, provability: r.provability, abstentionRate: r.abstentionRate, corpusSize: r.corpusSize, receiptId: r.receipt?.receiptId }, wisdom: r.headline + (r.passed ? " · ✓ PASS (signed)" : " · ✗ did not pass"), followUp: ["mneme.notary.verify"], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "public gauntlet failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantMeshExportTool: MnemeTool = {
+  name: "mneme.savant.mesh_export",
+  category: "meta",
+  description:
+    "💎⑤ CROSS-AGENT TRUTH MESH — export this savant's ACTIVE truths as a SIGNED, portable bundle (each truth carries its own signature). Hand it to a peer agent; they merge it after verifying every signature offline. The federated, vendor-neutral, tamper-evident fact substrate of the AI multiverse.",
+  whenToUse: "To share your proven facts with another agent/instance without a central server.",
+  triggers: ["savant mesh export", "export truths", "share proven facts"],
+  inputSchema: { type: "object", properties: { agent: { type: "string", description: "your agent id (shown in the bundle)" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const b = core.aletheiaMesh.exportTruths(cwd, String(args["agent"] ?? "anon"));
+      return { data: b, wisdom: `exported ${b.truths.length} signed truth(s) from "${b.agent}"`, followUp: ["mneme.savant.mesh_merge"], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "mesh export failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantMeshMergeTool: MnemeTool = {
+  name: "mneme.savant.mesh_merge",
+  category: "meta",
+  description:
+    "💎⑤ CROSS-AGENT TRUTH MESH — merge a peer's signed truth bundle into your Axiom Lattice. Verifies the bundle + every per-truth signature OFFLINE (forged/unsigned truths DROPPED + a swapped claim that doesn't match its signature is dropped), SURFACES any truth that contradicts a local ACTIVE truth (never silently resolved), and skips duplicates (idempotent + commutative). Returns added/duplicate/forged-dropped/conflicts.",
+  whenToUse: "When another agent hands you a truth bundle. Trust only what verifies; review the surfaced conflicts.",
+  triggers: ["savant mesh merge", "merge truths", "import peer facts"],
+  inputSchema: { type: "object", required: ["bundle"], properties: { bundle: { type: "object", description: "a TruthBundle from mneme.savant.mesh_export" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const bundle = args["bundle"] as Parameters<typeof core.aletheiaMesh.mergeTruths>[1];
+      const r = core.aletheiaMesh.mergeTruths(cwd, bundle);
+      return { data: r, wisdom: r.summary, followUp: r.conflicts.length ? ["mneme.savant.contradictions"] : [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "mesh merge failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const SAVANT_TOOLS: MnemeTool[] = [
+  savantVerifyTool, savantGauntletTool, savantCreedTool, savantWhyTool, savantContradictionsTool, savantRetractTool, savantLatticeTool,
+  savantRepairTool, savantCompoundTool, savantGauntletPublicTool, savantMeshExportTool, savantMeshMergeTool,
+];

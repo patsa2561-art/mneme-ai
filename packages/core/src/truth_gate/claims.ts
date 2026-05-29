@@ -26,6 +26,13 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.90.0 — 💎 the four remaining savant diamonds ──
+  {
+    id: "claim.aletheia.savant_diamonds",
+    source: "v2.90.0 — Savant Symbiosis · Idle Compounding · Public Gauntlet · Truth Mesh",
+    text: "The savant becomes the backbone of the AI multiverse via four diamonds, all real + usable by agents and humans: ② SYMBIOSIS — `repairDraft` hands an LLM back a fact-checked draft (FALSE claims corrected with evidence, UNKNOWN claims flagged 'do not assert', TRUE + prose kept), over in-process / MCP `mneme.savant.repair` / HTTP-A2A `POST /savant/{verify,repair}`. ③ IDLE COMPOUNDING — `compoundLattice` consolidates the lattice's ACTIVE truths into higher-support axioms while idle (crystallised at support≥2) and quarantines contested subjects; read-only, deterministic, idempotent, signed. ④ PUBLIC GAUNTLET — a pinned reproducible corpus runs to false-assertion 0% / forget 0% / provability 100% / abstention 100% with a NOTARY-signed report card anyone verifies offline (a tampered card is caught). ⑤ TRUTH MESH — `exportTruths` emits a signed bundle; `mergeTruths` verifies every signature offline (forged + claim-swapped truths DROPPED), surfaces conflicts instead of silently resolving them, and is idempotent/commutative — a federated, vendor-neutral, tamper-evident fact substrate.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.aletheia.savant_diamonds", severity: "block",
+  },
   // ── v2.89.0 — 💎 ALETHEIA AXIOM LATTICE (living proof graph) ──
   {
     id: "claim.aletheia.axiom_lattice",

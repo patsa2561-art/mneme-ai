@@ -307,6 +307,19 @@ export * as aletheiaSpine from "./truth_kernel/aletheia.js";
 // the AI multiverse — a shared, tamper-evident truth substrate any agent can append
 // to, query, and verify offline.
 export * as aletheiaLattice from "./truth_kernel/lattice.js";
+// v2.90.0 — 💎 the remaining savant diamonds (the backbone of the AI multiverse):
+//  ② SYMBIOSIS — before-assert prosthesis: repair an LLM's draft (FALSE→correct,
+//     UNKNOWN→flag, TRUE→keep) over in-process / MCP / HTTP-A2A.
+//  ③ COMPOUNDING — consolidate the lattice's ACTIVE truths into higher-support
+//     axioms while idle (the savant sharpens in its sleep); deterministic + signed.
+//  ④ PUBLIC GAUNTLET — a pinned, reproducible, signed benchmark anyone reruns to see
+//     false-assertion 0% / forget 0% / provability 100% with their own eyes.
+//  ⑤ TRUTH MESH — federated: export signed truth bundles + merge a peer's after
+//     offline signature-verification (forged dropped, conflicts surfaced, idempotent).
+export * as aletheiaSymbiosis from "./truth_kernel/symbiosis.js";
+export * as aletheiaCompound from "./truth_kernel/compound.js";
+export * as aletheiaGauntlet from "./truth_kernel/gauntlet_public.js";
+export * as aletheiaMesh from "./truth_kernel/truth_mesh.js";
 // v2.6.0 -- WORMHOLE: channel auto-negotiation for cross-device sync.
 // ICE-style: probe every transport in parallel, race-to-success on the
 // live ones, adaptive score (EWMA success × inverse latency × preference)

@@ -399,6 +399,38 @@ export async function handleMcpCallRequest(repoRoot: string, raw: unknown, deps:
   }
 }
 
+export interface SavantHttpResponse { status: number; body: unknown }
+
+/**
+ * v2.90.0 — 💎② SAVANT SYMBIOSIS over HTTP/A2A. Any agent (any vendor, any protocol)
+ * POSTs here to use the savant as a before-assert prosthesis:
+ *   POST /savant/verify  { claim }  → { verdict: TRUE|FALSE|UNKNOWN, evidence, lineage, receiptId }
+ *   POST /savant/repair  { draft }  → { repaired, claims, changed, summary }
+ * Pure of the server; never throws (bad input ⇒ 400).
+ */
+export async function handleSavantRequest(repoRoot: string, raw: unknown, mode: "verify" | "repair"): Promise<SavantHttpResponse> {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") {
+    try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; }
+  }
+  if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
+  const o = parsed as Record<string, unknown>;
+  try {
+    if (mode === "verify") {
+      if (typeof o["claim"] !== "string") return { status: 400, body: { error: "required: claim (string)" } };
+      const { assertClaim } = await import("../truth_kernel/aletheia.js");
+      const r = await assertClaim(repoRoot, o["claim"] as string);
+      return { status: 200, body: { verdict: r.verdict, pTrue: r.pTrue, evidence: r.evidence, lineage: r.lineage, refusalApplied: r.refusalApplied, receiptId: r.receipt?.receiptId ?? null } };
+    }
+    if (typeof o["draft"] !== "string") return { status: 400, body: { error: "required: draft (string)" } };
+    const { repairDraft } = await import("../truth_kernel/symbiosis.js");
+    const r = await repairDraft(repoRoot, o["draft"] as string);
+    return { status: 200, body: r };
+  } catch (e) {
+    return { status: 500, body: { error: (e as Error).message } };
+  }
+}
+
 interface CapEntry { command: string; since?: string }
 
 /**
