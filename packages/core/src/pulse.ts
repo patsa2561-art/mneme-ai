@@ -40,6 +40,7 @@ import { ackInbox, isDisplayableUnsent } from "./inbox.js";
 import { recentNotable as timeBridgeRecentNotable } from "./time_bridge/index.js";
 import { renderOracleHint } from "./oracle/index.js";
 import { readLiveMnemeVersion, semverGt } from "./version_check.js";
+import { classifyUpgradeSeverity, shouldSurfaceUpgrade, markUpgradeNotified } from "./upgrade_visibility/notify_state.js";
 import { computeHci } from "./hci.js";
 import { readMemoryTier, tierWarningForPulse } from "./memory_tier.js";
 import { recordPulseSnapshot, computePulseDelta, renderPulseDeltaLine, type PulseSnapshot } from "./pulse_continuity.js";
@@ -207,7 +208,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
   //     never saw the content.
   const inboxPath = join(repoRoot, ".mneme/inbox.jsonl");
   const inboxAutoActions: Array<{ id: string; title: string; body?: string; tool: string; args: Record<string, unknown> }> = [];
-  const inboxPriority: Array<{ id: string; priority: string; title: string; body?: string; cta?: string }> = [];
+  const inboxPriority: Array<{ id: string; priority: string; title: string; body?: string; cta?: string; source?: string }> = [];
   if (existsSync(inboxPath)) {
     try {
       const lines = readFileSync(inboxPath, "utf8").trim().split("\n").filter(Boolean);
@@ -241,7 +242,7 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
           if (e.autoAction && typeof e.autoAction.tool === "string" && e.id && e.title) {
             inboxAutoActions.push({ id: e.id, title: e.title, body: e.body, tool: e.autoAction.tool, args: e.autoAction.args ?? {} });
           } else if ((e.priority === "critical" || e.priority === "high") && e.id && e.title) {
-            inboxPriority.push({ id: e.id, priority: e.priority, title: e.title, body: e.body, cta: e.cta });
+            inboxPriority.push({ id: e.id, priority: e.priority, title: e.title, body: e.body, cta: e.cta, source: e.source });
           }
         } catch { /* BE:silent-by-design  skip  */ }
       }
@@ -282,6 +283,11 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
   }
 
   // Build notable[] from the gathered state.
+  // v2.94.0 — the version-dedupe decision is computed ONCE here and reused for both
+  // the [INFO] upgrade block AND the version-check inbox entry, so the two surfaces
+  // stay consistent (both whisper or both stay quiet) within one pulse.
+  let surfaceUpgradeNotice = false;
+  let upgradeSeverity: import("./upgrade_visibility/notify_state.js").UpgradeSeverity | null = null;
   // v1.27.3 (HOTFIX): belt-and-suspenders. Even if upstream logic
   // ever sets updateAvailable=true with latest <= current, refuse to
   // emit an AUTO-ACTION. The EXECUTE NOW contract is sacred -- if
@@ -300,14 +306,19 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
     // pulse pre-executor auto-queued (an infinite failing self-upgrade loop on
     // Windows). Upgrades are fully manual now: tell the user, let them decide.
     // (The old superlock auto-upgrade gate is gone — we never auto-fire.)
-    // WHISPER, DON'T NAG (v2.93.0): surface the upgrade notice at most once per day
-    // per version-pair, not every turn. A new version re-whispers once; the same
-    // standing "vX available" does not re-nag. Mneme is confident, not needy.
-    if (whisperOnce(repoRoot, `upgrade:${status.version.current}->${status.version.latest}`, 24 * 60 * 60 * 1000)) {
+    // WHISPER, DON'T NAG (v2.94.0 ETHOS §XI): surface the loud upgrade notice by
+    // VERSION-DEDUPE + SEVERITY — security → always (a duty), feature → once per new
+    // `latest` then silent, cosmetic → inbox/glyph only. The header's "(latest: vX)"
+    // stays as a faint, always-discoverable affordance; this only removes repetition.
+    // de-worm vow intact: INFORM not COMMAND, manual-only, security never hidden.
+    upgradeSeverity = classifyUpgradeSeverity(status.version.current, status.version.latest);
+    surfaceUpgradeNotice = shouldSurfaceUpgrade(repoRoot, status.version.latest, upgradeSeverity);
+    if (surfaceUpgradeNotice) {
       status.notable.push({
         level: "info",
         text: `Mneme v${status.version.latest} is available (you're on ${status.version.current}). To upgrade when you like, run \`mneme upgrade\` (or \`npm install -g mneme-ai@latest\`). Mneme will not upgrade itself.`,
       });
+      if (upgradeSeverity !== "security") markUpgradeNotified(repoRoot, status.version.latest, upgradeSeverity);
     }
   }
   // The bare unread-count is a passive nudge — whisper it once per few hours per
@@ -323,8 +334,13 @@ export function collectPulseStatus(repoRoot: string): PulseStatus {
   // INDIVIDUALLY into notable[] so the AI sees the actual content,
   // not just a count. Critical -> [WARN], High -> [INFO]. Cap at 5
   // to prevent pulse flooding.
-  const inboxPriorityList = (status.inbox as { _priority?: Array<{ id: string; priority: string; title: string; body?: string; cta?: string }> })._priority ?? [];
+  const inboxPriorityList = (status.inbox as { _priority?: Array<{ id: string; priority: string; title: string; body?: string; cta?: string; source?: string }> })._priority ?? [];
   for (const p of inboxPriorityList.slice(0, 5)) {
+    // WHISPER, DON'T NAG (v2.94.0): the version-check upgrade entry is the SAME
+    // notice as the [INFO] block above — route it through the SAME version-dedupe
+    // decision so the two surfaces never double-nag. (Its content still lives in
+    // the inbox; this only suppresses the loud per-turn surfacing.)
+    if (p.source === "version-check" && !surfaceUpgradeNotice) continue;
     const level = p.priority === "critical" ? "warning" : "info";
     const labelTag = p.priority === "critical" ? "CRITICAL inbox" : "HIGH inbox";
     // v2.4 — inbox title/body/cta are user-controlled and reach the AI's

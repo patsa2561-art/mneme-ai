@@ -279,6 +279,41 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.pulse.whisper_not_nag",
+    kind: "boolean",
+    description: "WHISPER NOT NAG (v2.94.0 — the first ETHOS action, docs/ALETHEIA.md §XI): the upgrade notice is version-deduped under severity tiers, not re-shouted every turn. A feature bump surfaces ONCE per new `latest` then stays silent (a NEW latest re-whispers once); a security upgrade surfaces ALWAYS (a duty); a cosmetic/patch bump is inbox/glyph-only (never the loud block). Reducing repetition only — the de-worm vow holds (INFORM not COMMAND, manual-only, security never hidden).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const N = await import("../upgrade_visibility/notify_state.js" as string) as typeof import("../upgrade_visibility/notify_state.js");
+        // severity classification from semver delta + explicit security hook
+        const sevOk = N.classifyUpgradeSeverity("2.93.0", "2.94.0") === "feature"
+          && N.classifyUpgradeSeverity("2.93.0", "2.93.1") === "cosmetic"
+          && N.classifyUpgradeSeverity("2.93.0", "2.94.0", { security: true }) === "security";
+        // feature: whisper once per new latest, then silent
+        const r = mkdtempSync(join(tmpdir(), "tg-whisper-"));
+        let featureSurfaces = 0;
+        for (let i = 0; i < 5; i++) {
+          if (N.shouldSurfaceUpgrade(r, "2.94.0", "feature")) { featureSurfaces++; N.markUpgradeNotified(r, "2.94.0", "feature"); }
+        }
+        const featureOnce = featureSurfaces === 1;
+        // a NEW latest re-whispers exactly once
+        let newLatestSurfaces = 0;
+        for (let i = 0; i < 3; i++) { if (N.shouldSurfaceUpgrade(r, "2.95.0", "feature")) { newLatestSurfaces++; N.markUpgradeNotified(r, "2.95.0", "feature"); } }
+        const newLatestOnce = newLatestSurfaces === 1;
+        // security: a duty — surfaces EVERY time even when already notified
+        const r2 = mkdtempSync(join(tmpdir(), "tg-whisper2-"));
+        N.markUpgradeNotified(r2, "2.94.0", "security");
+        const securityAlways = N.shouldSurfaceUpgrade(r2, "2.94.0", "security") && N.shouldSurfaceUpgrade(r2, "2.94.0", "security");
+        // cosmetic: never the loud block
+        const cosmeticNever = N.shouldSurfaceUpgrade(mkdtempSync(join(tmpdir(), "tg-whisper3-")), "2.93.1", "cosmetic") === false;
+        const ok = sevOk && featureOnce && newLatestOnce && securityAlways && cosmeticNever;
+        return { value: ok ? 1 : 0, evidence: `severity=${sevOk} featureOnce=${featureOnce}(${featureSurfaces}) newLatestOnce=${newLatestOnce}(${newLatestSurfaces}) securityAlways=${securityAlways} cosmeticNever=${cosmeticNever}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.aletheia.diakrisis",
     kind: "boolean",
     description: "DIAKRISIS (v2.92.0 — discern genuine from merely-plausible, the second axis): Reject-or-Unknown holds — a high-lustre PROVEN-low-substance artifact (reverted / tests-failed) is REJECTed as a 🪤 TRAP; a low-lustre PROVEN-high-substance artifact is surfaced as a ⛏ GEM (not rejected); lustre is scored from STRUCTURAL signals (hyperbole/absolutism, never an LLM); and the ★ Padgett guard means novel/unproven/aesthetic work returns UNKNOWN, NEVER REJECT (novel-false-reject-rate 0%). It raises the floor without claiming the ceiling.",

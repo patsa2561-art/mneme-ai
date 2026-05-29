@@ -26,6 +26,13 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.94.0 — 🤫 WHISPER NOT NAG (the first ETHOS action · §XI) ──
+  {
+    id: "claim.pulse.whisper_not_nag",
+    source: "v2.94.0 — ETHOS §XI · whisper, don't nag",
+    text: "ETHOS (docs/ALETHEIA.md §XI) is the rarest gem — character, proven only over time, that no vendor under engagement pressure can hold. It cannot ship in a release; the one thing that CAN be done from it is SUBTRACTION. The first ETHOS action: the pulse no longer re-shouts the upgrade notice every turn. It is version-deduped under severity tiers — a SECURITY upgrade surfaces ALWAYS (a duty, never hidden); a FEATURE bump (major/minor delta) whispers ONCE per new `latest` then stays silent (a genuinely new latest re-whispers once); a COSMETIC patch is inbox/glyph-only and never the loud block. The header's '(latest: vX)' remains a faint, always-discoverable affordance — quiet is not hidden. The [INFO] block and the version-check HIGH-inbox entry are routed through the SAME version-dedupe decision so the two surfaces never double-nag. The de-worm vow (v2.78) is intact: INFORM never COMMAND, manual-only, no auto-upgrade, security never suppressed — this only REDUCES repetition. Proving the soul by SUBTRACTION rather than by writing 'we have soul' (which would be lustre); humility and restraint are the luxury signals a system that must impress every turn structurally cannot afford.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.pulse.whisper_not_nag", severity: "block",
+  },
   // ── v2.92.0 — 💎⑦ DIAKRISIS (discern genuine from merely-plausible) ──
   {
     id: "claim.aletheia.diakrisis",

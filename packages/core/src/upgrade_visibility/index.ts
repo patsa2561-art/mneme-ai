@@ -43,6 +43,11 @@ export {
   type DetectionResult,
 } from "./npm_detector.js";
 
+export {
+  classifyUpgradeSeverity, shouldSurfaceUpgrade, upgradeAlreadyNotified, markUpgradeNotified, readNotifyState,
+  type UpgradeSeverity, type NotifyState,
+} from "./notify_state.js";
+
 import { isUpgradeSafeRightNow } from "./npm_detector.js";
 import { isLocked, readLock } from "./mutex.js";
 import { lastFailure, lastSuccess, listUpgrades } from "./exit_log.js";
