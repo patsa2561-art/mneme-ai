@@ -16,7 +16,13 @@
 
 <br/><br/>
 
-### 🔮 NEW in v2.87.0 — pre-flight + **real** cross-vendor tribunal + GEPHYRA **MCP-proxy**
+### 🧠 NEW in v2.88.0 — **ALETHEIA**: Mneme's savant identity (Prove-or-Unknown)
+
+> ἀλήθεια — *"truth as un-forgetting."* The opposite of the river Lethe; the native tongue of Mnemosyne, of whom Mneme is a daughter. Full manifesto: [`docs/ALETHEIA.md`](docs/ALETHEIA.md).
+
+An LLM is the **generalist brain** — fluent, abstracting, and *therefore* lossy, hallucination-prone, forgetful. **ALETHEIA is the opposite cognitive style: a *savant* that refuses to abstract.** It consolidates Mneme's truth-family organs into **one 3-valued assertion channel — `TRUE / FALSE / UNKNOWN`** — under a hard discipline enforced in code: **if it cannot be proven, it says `UNKNOWN` and NEVER fills the gap** (the anti-hallucination vow). Absence of refutation is *not* proof of truth, so the savant **abstains rather than guess**. Every definite verdict carries a **lineage proof tree + an Ed25519 NOTARY signature**. It is superhuman on only **truth · memory · structure** — the axes LLMs are *structurally* weak at — and that narrowness is the moat: it doesn't compete with LLMs, it's the **prosthesis for their disability** (that's why even Grok would embed it). Before an LLM asserts a fact, it asks the savant: `mneme.savant.verify { claim }` → repair on `FALSE`, refuse on `UNKNOWN`. Falsifiable proof — the **Savant Gauntlet**: false-assertion **0%** · forget **0%** · provability **100%**. `mneme.savant.creed` = the Six Refusals + Three Vows. The spine lives in `truth_kernel/` (built on its sensor fusion). TG 75/75.
+
+### 🔮 v2.87.0 — pre-flight + **real** cross-vendor tribunal + GEPHYRA **MCP-proxy**
 
 The bridge, wired to do its job for real. **(1) Pre-flight** (MCP `mneme.heph.preflight` · `mneme heph preflight "<command>"`): previews a command's blast radius **before** it crosses and lists exactly what is **irreversible** (`rm -rf`, `dd`, `DROP`/`TRUNCATE`, `git push --force`, `terraform destroy`…), signing the pre-mortem — without running anything. The honest answer to "can you undo it?": we can't un-delete, so we predict + warn + sign first. **(2) Real tribunal** (`mneme.heph.cross { command, agent, tribunal: true }`): the destructive-command gate now convenes an **actual** multi-vendor panel via `diff_arena` from whatever API keys are in your environment (`OPENAI_API_KEY`/`XAI_API_KEY`/`GEMINI_API_KEY`/…) — uncorrelated judges, **fail-safe to BLOCK when no panel is reachable**. **(3) MCP-proxy**: GEPHYRA serves `POST /mcp` — point any MCP client at `{ "mcpServers": { "gephyra": { "url": ".../mcp" } } }` and *every* tool call is routed through truth-customs automatically (shell→HEPHAESTUS gate · claim→GEPHYRA verify · else passthrough), each returning a signed crossing. TG 74/74.
 

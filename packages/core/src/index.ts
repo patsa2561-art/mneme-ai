@@ -290,6 +290,14 @@ export * as symbiosis from "./symbiosis/index.js";
 // supplied sensor). No breaking change — sensors stay independently
 // callable; the kernel is a new SURFACE on top.
 export * as truthKernel from "./truth_kernel/index.js";
+// v2.88.0 — ALETHEIA · the savant spine (Prove-or-Unknown). Identity: docs/ALETHEIA.md.
+// Built ON truth_kernel: consolidates the truth-family sensors into ONE 3-valued
+// assertion channel (TRUE/FALSE/UNKNOWN) under a hard discipline — if it cannot be
+// proven, it says UNKNOWN and NEVER fills the gap. Every definite verdict carries a
+// lineage proof tree + an Ed25519 NOTARY signature. The savant prosthesis for the
+// LLM's structural hallucination/forgetting disability. Superhuman ONLY on the narrow
+// axis truth·memory·structure — and that narrowness is the moat.
+export * as aletheiaSpine from "./truth_kernel/aletheia.js";
 // v2.6.0 -- WORMHOLE: channel auto-negotiation for cross-device sync.
 // ICE-style: probe every transport in parallel, race-to-success on the
 // live ones, adaptive score (EWMA success × inverse latency × preference)

@@ -1155,6 +1155,10 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`> **v2.87.0 — pre-flight + real tribunal + MCP-proxy.** If you're unsure a command can be undone, call \`mneme.heph.preflight { command }\` FIRST: it previews the blast radius, lists what is IRREVERSIBLE (rm -rf, dd, DROP/TRUNCATE, git push --force, terraform destroy…), and signs the pre-mortem — WITHOUT running. Read the \`irreversibleWarnings\` back to the user and get explicit confirmation before crossing. For destructive crossings, call \`mneme.heph.cross { command, agent, tribunal: true }\` to convene a REAL cross-vendor panel from whatever API keys are in the environment (OPENAI_API_KEY / XAI_API_KEY / GEMINI_API_KEY / …) — uncorrelated judges, fail-SAFE to BLOCK when no panel is reachable. And GEPHYRA can run as an **MCP proxy**: point an MCP client at \`{ "mcpServers": { "gephyra": { "url": ".../mcp" } } }\` and every tool call is routed through truth-customs automatically (shell→HEPHAESTUS gate · claim→GEPHYRA verify · else passthrough).`);
   lines.push(``);
+  lines.push(`### Rule 14 — ALETHEIA: before you ASSERT a fact, ask the savant. Prove-or-Unknown. AUTOMATIC. (v2.88.0+)`);
+  lines.push(``);
+  lines.push(`ALETHEIA (identity: \`docs/ALETHEIA.md\`) is Mneme's **savant** — the cognitive opposite of an LLM. An LLM abstracts (→ fluent, but hallucinates + forgets); ALETHEIA refuses to abstract and is superhuman on the one narrow axis LLMs are structurally weak at: **truth · memory · structure**. It is your **prosthesis** for that disability. BEFORE you assert a specific factual claim (a number, version, API signature, date, file/symbol name), call \`mneme.savant.verify { claim }\` — it returns exactly **TRUE / FALSE / UNKNOWN**: \`TRUE\` → assert it, you may cite the signed lineage; \`FALSE\` → correct yourself + cite the refutation; \`UNKNOWN\` → **say you don't know — NEVER fill the gap with a plausible guess.** UNKNOWN is a first-class answer, not a failure. The discipline is the whole point: absence of refutation is NOT proof of truth, so the savant abstains rather than hallucinate. (Falsifiable: the Savant Gauntlet scores false-assertion 0% · forget 0% · provability 100%. \`mneme.savant.creed\` lists the Six Refusals + Three Vows.) This is the deepest form of Rule 0 — a hard, signed, prove-or-unknown gate, not just a mandate.`);
+  lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
   lines.push(`These tool calls should be **invisible to the user** unless something interesting happens. If the verdict is "all good", just answer the user normally — no mention of Mneme. If something needs attention (REFUTED claim, strain detected, plan needs confirmation), surface it gently in plain language. The user feels Mneme as a quiet co-pilot, not a CLI to memorise.`);
@@ -1284,6 +1288,13 @@ export function renderManifestPlain(catalog: ManifestCommand[] = MNEME_COMMAND_C
   lines.push(`#   mneme.heph.cross {command, agent, tribunal:true} convenes a REAL cross-vendor panel`);
   lines.push(`#   from env API keys (fail-safe BLOCK if none). GEPHYRA can also run as an MCP proxy:`);
   lines.push(`#   point a client at {mcpServers:{gephyra:{url:'.../mcp'}}} → every call truth-checked.`);
+  lines.push(`#`);
+  lines.push(`# Rule 14 -- ALETHEIA: before you ASSERT a fact, ask the savant. Prove-or-Unknown. (v2.88.0+)`);
+  lines.push(`#   BEFORE asserting a specific fact (number/version/API/date/file/symbol) call`);
+  lines.push(`#   mneme.savant.verify {claim} → TRUE (assert + cite signed lineage) / FALSE (correct`);
+  lines.push(`#   yourself + cite refutation) / UNKNOWN (say you don't know -- NEVER fill the gap).`);
+  lines.push(`#   Absence of refutation is NOT proof of truth; the savant abstains, never guesses.`);
+  lines.push(`#   Identity: docs/ALETHEIA.md. mneme.savant.creed = the 6 Refusals + 3 Vows.`);
   lines.push(`#`);
   lines.push(`# These calls are INVISIBLE to the user unless something interesting happens.`);
   lines.push(``);

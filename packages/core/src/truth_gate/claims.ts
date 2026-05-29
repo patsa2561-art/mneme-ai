@@ -26,6 +26,13 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.88.0 — ALETHEIA · the savant spine (Prove-or-Unknown) ──
+  {
+    id: "claim.aletheia.prove_or_unknown",
+    source: "v2.88.0 — ALETHEIA savant spine",
+    text: "ALETHEIA is the savant prosthesis for the LLM's structural hallucination/forgetting disability: it consolidates Mneme's truth-family sensors into ONE 3-valued assertion channel — TRUE / FALSE / UNKNOWN — under a HARD discipline. If it cannot be proven, it says UNKNOWN and NEVER fills the gap (absence of refutation is NOT proof of truth — apoptosis can refute but its HEALTHY does not assert TRUE). A provable arithmetic truth → TRUE, a provable falsehood → FALSE, an unprovable claim → UNKNOWN; every definite verdict carries a lineage proof tree + an Ed25519 NOTARY signature (Refusal 5). The Savant Gauntlet proves it falsifiably: false-assertion rate 0% · forget rate 0% · provability 100% · abstention 100%. Superhuman ONLY on truth·memory·structure — and that narrowness is the moat.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.aletheia.prove_or_unknown", severity: "block",
+  },
   // ── v2.87.0 — Tribunal×diff_arena + 🔮 Pre-Flight + Phase-4 MCP routing ──
   {
     id: "claim.hephaestus.tribunal_and_preflight",

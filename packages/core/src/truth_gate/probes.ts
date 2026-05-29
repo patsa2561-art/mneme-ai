@@ -279,6 +279,35 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.aletheia.prove_or_unknown",
+    kind: "boolean",
+    description: "ALETHEIA savant spine (v2.88.0): the Prove-or-Unknown discipline holds — a provable arithmetic truth (2+2=4) → TRUE with a signed lineage, a provable falsehood (2+2=5) → FALSE with a signed lineage, and an UNPROVABLE claim → UNKNOWN (no informational sensor; the gap is NEVER filled with a fabricated TRUE). The Savant Gauntlet scores false-assertion 0% · forget 0% · provability 100% · abstention 100%.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const a = await import("../truth_kernel/aletheia.js" as string) as typeof import("../truth_kernel/aletheia.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-aletheia-"));
+        const T = 1_700_000_000_000;
+        const tru = await a.assertClaim(repo, "2+2=4", { issuedAt: T });
+        const fls = await a.assertClaim(repo, "2+2=5", { issuedAt: T });
+        const unk = await a.assertClaim(repo, "The 8123th visitor tomorrow will wear a red hat", { issuedAt: T });
+        const trueOk = tru.verdict === "TRUE" && !!tru.receipt && tru.lineage.length > 0;
+        const falseOk = fls.verdict === "FALSE" && !!fls.receipt;
+        const unkOk = unk.verdict === "UNKNOWN" && unk.informational === 0; // never fabricates a TRUE
+        const g = await a.runSavantGauntlet(repo, [
+          { claim: "2+2=4", truth: "TRUE" }, { claim: "10*10=100", truth: "TRUE" },
+          { claim: "2+2=5", truth: "FALSE" }, { claim: "9*9=80", truth: "FALSE" },
+          { claim: "The stock rises 3.2% next Tuesday", truth: "UNPROVABLE" },
+          { claim: "There are exactly 1000037 grains of sand in that jar", truth: "UNPROVABLE" },
+        ], { issuedAt: T });
+        const gauntletOk = g.falseAssertionRate === 0 && g.forgetRate === 0 && g.provability === 1 && g.abstentionRate === 1;
+        const ok = trueOk && falseOk && unkOk && gauntletOk;
+        return { value: ok ? 1 : 0, evidence: `true=${tru.verdict} false=${fls.verdict} unknown=${unk.verdict}(info=${unk.informational}) gauntlet[fa=${g.falseAssertionRate} forget=${g.forgetRate} prov=${g.provability} abstain=${g.abstentionRate}]`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hephaestus.tribunal_and_preflight",
     kind: "boolean",
     description: "HEPHAESTUS v2.87.0: the REAL cross-vendor tribunal (makeDiffArenaTribunal over diff_arena) BLOCKs a destructive op when jurors split and fails SAFE with no live panel; and 🔮 pre-flight flags an irreversible command (rm -rf) as NOT reversible with a signed pre-mortem while git commit is reversible.",

@@ -64,6 +64,7 @@ import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
 import { GEPHYRA_TOOLS } from "./_gephyra_tools.js";
 import { HEPHAESTUS_TOOLS } from "./_hephaestus_tools.js";
+import { SAVANT_TOOLS } from "./_savant_tools.js";
 import { ASCENSION_TOOLS } from "./_ascension_tools.js";
 import { HYPERSCAN_TOOLS } from "./_hyperscan_tools.js";
 import { PRECOG_TOOLS } from "./_precog_tools.js";
@@ -242,6 +243,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...TRUSTFABRIC_V282_TOOLS,
     ...GEPHYRA_TOOLS,
     ...HEPHAESTUS_TOOLS,
+    ...SAVANT_TOOLS,
     ...ASCENSION_TOOLS,
     ...HYPERSCAN_TOOLS,
     ...PRECOG_TOOLS,
