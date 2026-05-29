@@ -26,6 +26,13 @@
 import type { Claim } from "./types.js";
 
 export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
+  // ── v2.92.0 — 💎⑦ DIAKRISIS (discern genuine from merely-plausible) ──
+  {
+    id: "claim.aletheia.diakrisis",
+    source: "v2.92.0 — DIAKRISIS · the discernment axis",
+    text: "DIAKRISIS is the savant's SECOND axis, orthogonal to truth: Aletheia judges true-vs-false; Diakrisis judges genuine-vs-merely-good-looking (a mediocre artifact is not FALSE, it is unremarkable). As AI commoditises execution AND ideas, the bottleneck becomes discernment — and AI floods the world with 'looks good' (product-level hallucination). It is HONEST + asymmetric: it proves what is NOT world-class far more reliably than what IS, so it does NOT mechanise taste. Reject-or-Unknown (the mirror of Prove-or-Unknown): it confidently REJECTs the high-lustre / PROVEN-low-substance trap (Courage Gate); everything else is UNKNOWN — 'passes the floor; the ceiling is the human's.' LUSTRE (how good it LOOKS) is scored from STRUCTURAL signals (hyperbole/absolutism density) and NEVER by asking an LLM 'is this good?' (which would re-import the correlated plausibility bias). SUBSTANCE (how good it IS) is PROVEN only where verifiable (tests passed/failed, reverted/kept revealed-preference, a truth verdict); aesthetic quality is UNKNOWN — it abstains rather than fake a taste score. The Anti-Conservatism (Padgett) guard is load-bearing: REJECT fires ONLY on proven-low substance, NEVER on 'doesn't match past taste' — novel-but-unproven work returns UNKNOWN routed to the human (a Padgett, correct in a notation the teachers don't recognise, must return UNKNOWN not REJECT; novel-false-reject-rate 0%). It raises the floor (kills the plausible-mediocre flood) and augments the ceiling (surfaces undervalued GEMs), never replacing human taste — and deliberately ships NO 'world-class-recognition' metric, because claiming to score the ceiling would itself be the lustre-trap this axis catches.",
+    kind: "numeric", asserted: { value: 1, op: "=", tolerance: 0 }, probeId: "probe.aletheia.diakrisis", severity: "block",
+  },
   // ── v2.91.0 — 💎⑥ ANAMNESIS (compute once, recollect forever) ──
   {
     id: "claim.aletheia.anamnesis",

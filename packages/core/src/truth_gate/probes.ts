@@ -279,6 +279,43 @@ const probes: Probe[] = [
   },
 
   {
+    id: "probe.aletheia.diakrisis",
+    kind: "boolean",
+    description: "DIAKRISIS (v2.92.0 — discern genuine from merely-plausible, the second axis): Reject-or-Unknown holds — a high-lustre PROVEN-low-substance artifact (reverted / tests-failed) is REJECTed as a 🪤 TRAP; a low-lustre PROVEN-high-substance artifact is surfaced as a ⛏ GEM (not rejected); lustre is scored from STRUCTURAL signals (hyperbole/absolutism, never an LLM); and the ★ Padgett guard means novel/unproven/aesthetic work returns UNKNOWN, NEVER REJECT (novel-false-reject-rate 0%). It raises the floor without claiming the ceiling.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const { mkdtempSync } = await import("node:fs"); const { tmpdir } = await import("node:os"); const { join } = await import("node:path");
+        const D = await import("../truth_kernel/diakrisis.js" as string) as typeof import("../truth_kernel/diakrisis.js");
+        const repo = mkdtempSync(join(tmpdir(), "tg-diak-"));
+        const T = 1_700_000_000_000;
+        const HYPE = "This is the BEST, most revolutionary, absolutely flawless solution ever — guaranteed perfect.";
+        // 🪤 trap: high lustre + proven-low (reverted) → REJECT
+        const trap = await D.discern(repo, HYPE, { substanceEvidence: { reverted: true }, now: T, noSign: true });
+        const trapOk = trap.verdict === "REJECT" && trap.classification === "TRAP";
+        // ⛏ gem: low lustre + proven-high → UNKNOWN + GEM (surfaced, not rejected)
+        const gem = await D.discern(repo, "fix off-by-one in pager offset", { substanceEvidence: { testPassed: true }, now: T, noSign: true });
+        const gemOk = gem.verdict === "UNKNOWN" && gem.classification === "GEM";
+        // lustre is structural (hyperbole > plain), not an LLM opinion
+        const lustreStructural = D.lustreScore(HYPE).lustre > D.lustreScore("fix off-by-one").lustre;
+        // ★ Padgett guard: novel/unproven → UNKNOWN, NEVER REJECT
+        const padgett = await D.discern(repo, "a geometric notation for calculus the teachers did not recognise", { now: T, noSign: true });
+        const padgettOk = padgett.verdict === "UNKNOWN" && padgett.padgettGuard === true;
+        // gauntlet: trap-catch 100, novel-false-reject 0, gem-surfacing 100
+        const g = await D.runDiakrisisGauntlet(repo, [
+          { artifact: HYPE, evidence: { reverted: true }, kind: "trap" },
+          { artifact: "best ever guaranteed never fails", evidence: { testPassed: false }, kind: "trap" },
+          { artifact: "tiny plain bugfix", evidence: { testPassed: true }, kind: "gem" },
+          { artifact: "a weird new unproven notation", kind: "novel" },
+          { artifact: "another untested novel idea", kind: "novel" },
+        ], { now: T });
+        const gauntletOk = g.trapCatchRate === 1 && g.novelFalseRejectRate === 0 && g.gemSurfacingRate === 1;
+        const ok = trapOk && gemOk && lustreStructural && padgettOk && gauntletOk;
+        return { value: ok ? 1 : 0, evidence: `trap=${trapOk} gem=${gemOk} lustreStructural=${lustreStructural} padgett=${padgettOk} gauntlet[catch=${g.trapCatchRate} novelFalseReject=${g.novelFalseRejectRate} gem=${g.gemSurfacingRate}]`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.aletheia.anamnesis",
     kind: "boolean",
     description: "ANAMNESIS (v2.91.0 — compute once, recollect forever): meaning-preserving canonicalisation collapses paraphrases ('2+2=4' ≡ 'two plus two equals four' ≡ '4 = 2 + 2') to ONE proof but NEVER collides different claims ('dog bites man' ≠ 'man bites dog'); recollect-or-recompute proves a fact once then serves it for ~0 energy; every hit is re-verified so a body-tampered/forged cached proof FORCES a recompute (stale-serve-rate 0%); recollections feed a signed energy-saved certificate.",

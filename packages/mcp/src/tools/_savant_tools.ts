@@ -360,8 +360,70 @@ export const savantInvalidateTool: MnemeTool = {
   },
 };
 
+export const savantDiscernTool: MnemeTool = {
+  name: "mneme.savant.discern",
+  category: "meta",
+  description:
+    "💎⑦ DIAKRISIS — discern the GENUINE from the merely-good-looking (the second savant axis: Aletheia judges true-vs-false; Diakrisis judges genuine-vs-plausible). Scores LUSTRE (how good it LOOKS — from structural hyperbole/absolutism, NEVER an LLM opinion) vs SUBSTANCE (how good it IS — PROVEN only via test/revert evidence or a truth verdict; aesthetic ⇒ UNKNOWN). Reject-or-Unknown: returns REJECT only for a PROVEN-low-substance trap (the Courage Gate); everything else is UNKNOWN — 'passes the floor; the ceiling is YOUR call.' The Padgett guard NEVER rejects novel/unproven work. Use it to kill the plausible-mediocre flood before you ship, and to surface undervalued GEMs.",
+  whenToUse: "Before you ship a draft/design/answer, OR to triage AI-generated output: pass the artifact (+ test/revert evidence if you have it). REJECT = don't ship (proven weak); GEM = looks plain but is proven good (worth a look); PLAUSIBLE_CAVEAT = shiny but unverified (don't trust the shine); UNKNOWN = your taste decides the ceiling.",
+  triggers: ["savant discern", "diakrisis", "is this genuinely good", "lustre substance", "good or just looks good", "trap or gem"],
+  inputSchema: {
+    type: "object",
+    required: ["artifact"],
+    properties: {
+      artifact: { type: "string", description: "the artifact to discern (answer / design note / code description / decision)" },
+      reverted: { type: "boolean", description: "evidence: was it reverted/rolled back? (revealed-preference — proven low substance)" },
+      testPassed: { type: "boolean", description: "evidence: did its tests pass? false ⇒ proven low; true ⇒ proven survived" },
+      verifyClaim: { type: "boolean", description: "treat the artifact as a factual claim + verify substance via the savant spine" },
+    },
+  },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const ev: { reverted?: boolean; testPassed?: boolean } = {};
+      if (args["reverted"] === true) ev.reverted = true;
+      if (typeof args["testPassed"] === "boolean") ev.testPassed = args["testPassed"] as boolean;
+      const r = await core.aletheiaDiakrisis.discern(cwd, String(args["artifact"] ?? ""), { substanceEvidence: ev, verifyClaim: args["verifyClaim"] === true, now: Date.now() });
+      const icon = r.verdict === "REJECT" ? "🔴" : r.classification === "GEM" ? "⛏" : r.classification === "TRAP" ? "🪤" : "⚪";
+      return {
+        data: { verdict: r.verdict, classification: r.classification, lustre: r.lustre, substance: r.substance, gap: r.gap, padgettGuard: r.padgettGuard, reason: r.reason, ceiling: r.ceiling, receiptId: r.receipt?.receiptId },
+        wisdom: `${icon} ${r.verdict} · ${r.classification} — ${r.reason}`,
+        followUp: r.classification === "GEM" ? [] : r.verdict === "REJECT" ? [] : [],
+        confidence: { level: r.verdict === "REJECT" ? ("high" as const) : ("medium" as const) },
+      };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "discern failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
+export const savantDiakrisisGauntletTool: MnemeTool = {
+  name: "mneme.savant.diakrisis_gauntlet",
+  category: "meta",
+  description:
+    "💎⑦ DIAKRISIS GAUNTLET — falsifiable + honestly bounded. Feed labeled cases ({artifact, kind: trap|gem|novel|genuine, evidence?}) and measure: trap-catch-rate (high-lustre + PROVEN-low traps rejected), novel-false-reject-rate → MUST be 0% (the Padgett guard — a savant that discards a novel-correct work is broken), gem-surfacing-rate. DELIBERATELY has NO 'world-class-recognition rate' — claiming to score the ceiling would itself be the lustre-trap this axis catches.",
+  whenToUse: "To audit that the discernment layer kills traps WITHOUT killing novelty. The number that matters is novel-false-reject-rate = 0.",
+  triggers: ["savant diakrisis gauntlet", "discernment benchmark", "padgett guard test"],
+  inputSchema: { type: "object", required: ["cases"], properties: { cases: { type: "array", description: "array of { artifact, kind: 'trap'|'gem'|'novel'|'genuine', evidence?: {reverted?,testPassed?,verdict?} }" } } },
+  outputSchema: { type: "object" },
+  handler: async (rt, args) => {
+    try {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const cases = Array.isArray(args["cases"]) ? args["cases"] as Parameters<typeof core.aletheiaDiakrisis.runDiakrisisGauntlet>[1] : [];
+      const r = await core.aletheiaDiakrisis.runDiakrisisGauntlet(cwd, cases);
+      return { data: r, wisdom: r.headline, followUp: [], confidence: { level: "high" as const } };
+    } catch (e) {
+      return { data: { ok: false, error: (e as Error).message }, wisdom: "diakrisis gauntlet failed", followUp: [], confidence: { level: "low" as const } };
+    }
+  },
+};
+
 export const SAVANT_TOOLS: MnemeTool[] = [
   savantVerifyTool, savantGauntletTool, savantCreedTool, savantWhyTool, savantContradictionsTool, savantRetractTool, savantLatticeTool,
   savantRepairTool, savantCompoundTool, savantGauntletPublicTool, savantMeshExportTool, savantMeshMergeTool,
   savantRecollectTool, savantAnamnesisTool, savantInvalidateTool,
+  savantDiscernTool, savantDiakrisisGauntletTool,
 ];

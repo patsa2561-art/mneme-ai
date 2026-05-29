@@ -16,7 +16,13 @@
 
 <br/><br/>
 
-### 💎 NEW in v2.91.0 — **ANAMNESIS**: compute once, recollect forever (the energy layer of truth)
+### 💎 NEW in v2.92.0 — **DIAKRISIS**: discern the genuine from the merely-plausible (the second axis)
+
+> διάκρισις — *"discernment / judging-apart."* A **second axis**, orthogonal to Aletheia: Aletheia judges *true vs false*; **Diakrisis judges *genuine vs merely-good-looking*** — a mediocre artifact is not *false*, it is *unremarkable*. Full design: [`docs/ALETHEIA.md §X`](docs/ALETHEIA.md).
+
+When AI commoditises both execution *and* ideas, the bottleneck moves to neither — it moves to **discernment**: telling what is genuinely good from what merely *looks* good. AI produces "looks good" without limit — that flood is **product-level hallucination**. DIAKRISIS is honest and **asymmetric**: it proves what is **NOT** world-class far more reliably than what **IS**, so it does *not* mechanise taste. Its verdict mirrors Prove-or-Unknown → **Reject-or-Unknown:** it confidently **REJECTs** the high-**lustre** (looks-good) / **PROVEN-low-substance** trap (🪤), and for everything else returns **UNKNOWN** — *"passes the floor; the ceiling is the human's."* **Lustre** (how good it *looks*) is scored from **structural** signals (hyperbole/absolutism density) and **never** by asking an LLM "is this good?" (which would re-import the same plausibility bias). **Substance** (how good it *is*) is **proven only where verifiable** (tests, revert/kept revealed-preference, a truth verdict); aesthetic quality is **UNKNOWN** — it abstains rather than fake a taste score. The load-bearing **Anti-Conservatism (Padgett) guard**: REJECT fires *only* on proven-low substance, **never** on "doesn't match past taste" — novel-but-unproven work returns UNKNOWN routed to the human (*a Padgett — correct in a notation the teachers don't recognise — must return UNKNOWN, never REJECT*; novel-false-reject-rate **0%**). It **raises the floor** (kills the plausible-mediocre flood) and **augments the ceiling** (surfaces undervalued 💎 GEMs), and ships **no** "world-class-recognition" metric on purpose — claiming to score the ceiling would itself be the lustre-trap. Surface: `mneme.savant.discern` · `mneme.savant.diakrisis_gauntlet`. **Aletheia = doesn't lie · Diakrisis = doesn't pass off the mediocre as excellent = the complete savant.** TG 79/79.
+
+### 💎 v2.91.0 — **ANAMNESIS**: compute once, recollect forever (the energy layer of truth)
 
 > ἀνάμνησις — Plato's *"recollection"*: the soul does not *learn*, it *recollects* what it already knew. Completes the Greek quartet: **Mneme** (remember) · **Lethe** (forget, provably) · **Aletheia** (truth) · **Anamnesis** (recollect → *do not recompute*).
 

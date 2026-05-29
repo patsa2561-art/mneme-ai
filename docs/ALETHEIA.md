@@ -208,7 +208,14 @@ unre-verifiable proof), **energy-saved** (attributed kWh/tokens, signed by `proo
 
 ---
 
-## X. DIAKRISIS — discern the genuine from the merely-plausible (the second axis)
+## X. DIAKRISIS — discern the genuine from the merely-plausible (the second axis)  ✅ SHIPPED v2.92.0
+
+> **Status: SHIPPED (v2.92.0)** — `packages/core/src/truth_kernel/diakrisis.ts`. `discern` (Reject-or-Unknown;
+> REJECT only on PROVEN-low substance; Padgett guard ⇒ novel/unproven = UNKNOWN, never REJECT), `lustreScore`
+> (structural — hyperbole/absolutism, never an LLM), 2×2 classification (TRAP/GEM/PLAUSIBLE_CAVEAT/PROVEN_GOOD),
+> `runDiakrisisGauntlet` (trap-catch · novel-false-reject→0 · gem-surfacing; no world-class-recognition metric).
+> MCP `mneme.savant.{discern,diakrisis_gauntlet}`. Probe `probe.aletheia.diakrisis` (TG 79/79). NOTARY-signed.
+
 
 > διάκρισις — *"discernment / judging-apart"* (dia "apart" + krisis "to judge"): telling the real from the counterfeit.
 > A **second axis**, orthogonal to Aletheia. Aletheia judges *true vs false*; Diakrisis judges *genuine vs merely-good-looking* — not the same thing: a mediocre app is not *false*, it is *unremarkable*.
@@ -243,7 +250,7 @@ It **raises the floor** (kills the plausible-mediocre flood) and **augments the 
 
 **Reuse / net-new (grep to confirm first — the LETHE lesson).** Reuse `xray/`, `squadron/hyperbole_detector/`, `reflog/`, `outcome_market/`, `karma/`, `adversarial_twins/`, `tribunal/`. **Net-new** = the *gap* as primary signal + the Reject-or-Unknown gate + the Anti-Conservatism Guard. (No `diakrisis/` / `taste/` / `lustre/` module is known to exist — confirm before building.)
 
-**Roadmap row:** `7 · Discern | Lustre–Substance gap + Reject-or-Unknown gate + Anti-Conservatism (Padgett) guard | net-new axis; reuse xray + hyperbole_detector + reflog + outcome_market + adversarial_twins`
+**Roadmap row:** `7 · Discern | Lustre–Substance gap + Reject-or-Unknown gate + Anti-Conservatism (Padgett) guard | ✅ SHIPPED v2.92.0 (truth_kernel/diakrisis.ts) — reuses hyperbole_detector + epistemic_humility + xray + the spine + notary`
 
 ---
 

@@ -328,6 +328,15 @@ export * as aletheiaMesh from "./truth_kernel/truth_mesh.js";
 // canonicalization so paraphrases collapse without false collisions. Feeds proof_of_saving
 // for a signed energy-saved certificate; shares proofs cross-vendor (forgery-defended).
 export * as aletheiaAnamnesis from "./truth_kernel/anamnesis.js";
+// v2.92.0 — 💎⑦ DIAKRISIS · discern the genuine from the merely-plausible. The SECOND
+// savant axis (orthogonal to truth): Aletheia judges true-vs-false; Diakrisis judges
+// genuine-vs-merely-good-looking. Honest + asymmetric — Reject-or-Unknown: confidently
+// REJECTs the high-lustre / PROVEN-low-substance trap; everything else is UNKNOWN
+// ("passes the floor — the ceiling is the human's"). Lustre is scored from STRUCTURAL
+// signals (hyperbole/absolutism, NOT an LLM opinion → no correlated bias); substance is
+// PROVEN-only (test/revert/verdict, aesthetic ⇒ UNKNOWN). The Padgett guard NEVER rejects
+// novel-unproven work — it routes it to the human. Raises the floor; augments the ceiling.
+export * as aletheiaDiakrisis from "./truth_kernel/diakrisis.js";
 // v2.6.0 -- WORMHOLE: channel auto-negotiation for cross-device sync.
 // ICE-style: probe every transport in parallel, race-to-success on the
 // live ones, adaptive score (EWMA success × inverse latency × preference)
