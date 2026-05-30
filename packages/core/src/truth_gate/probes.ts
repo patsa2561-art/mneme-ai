@@ -314,6 +314,37 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hydra.mcp_self_attesting",
+    kind: "boolean",
+    description: "HYDRA MCP surface (v2.101.0 — the last flow): any AI agent calls the whole HYDRA stack straight through MCP, and every result is SELF-ATTESTING — wrapped with a NOTARY (Ed25519) receipt over the SHA-256 of its own data, so the calling model verifies OFFLINE that the tool didn't lie or get tampered between server and model. This probe calls `mneme.hydra.forge` through the REAL MCP JSON-RPC server, then independently verifies the returned `_proof`: the Ed25519 signature must be valid AND sha256(canonical(data minus _proof)) must equal the signed dataHash — output you can check, not output you must believe.",
+    run: async (ctx) => {
+      const t0 = Date.now();
+      try {
+        const canon = (v: unknown): string => {
+          if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null";
+          if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
+          const k = Object.keys(v as Record<string, unknown>).sort();
+          return "{" + k.map((x) => JSON.stringify(x) + ":" + canon((v as Record<string, unknown>)[x])).join(",") + "}";
+        };
+        const { createHash } = await import("node:crypto");
+        const sha = (s: string) => createHash("sha256").update(s, "utf8").digest("hex");
+        const text = "alpha beta alpha beta gamma delta. alpha beta alpha beta gamma delta. ".repeat(8);
+        const raw = await spawnMcpCall(ctx.cwd, "mneme.hydra.forge", { text }, 30000);
+        let parsed: { data?: Record<string, unknown> }; try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+        const data = parsed.data ?? (parsed as Record<string, unknown>);
+        const proof = (data as { _proof?: { dataHash?: string; receipt?: unknown } })._proof;
+        const score = ((data as { gauntlet?: { score?: number } }).gauntlet)?.score;
+        if (!proof || !proof.receipt) return { value: 0, evidence: `no _proof in MCP result (score=${score})`, dtMs: Date.now() - t0 };
+        const core = await import("../notary/receipt.js" as string) as typeof import("../notary/receipt.js");
+        const sig = core.verifyReceipt(proof.receipt);
+        const bare = { ...(data as Record<string, unknown>) }; delete (bare as { _proof?: unknown })._proof;
+        const hashOk = sha(canon(bare)) === proof.dataHash;
+        const ok = score === 100 && sig.valid && hashOk;
+        return { value: ok ? 1 : 0, evidence: `score=${score} sigValid=${sig.valid} dataHashMatches=${hashOk}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hydra.temporal_guarded_replay",
     kind: "boolean",
     description: "HYDRA GUARD × CHAIN fusion (v2.100.0 — every flow wired): the provenance chain computes its OWN atrophy clock and drives the guard. Replaying a past step, an entry added long ago and never touched is STALE and expands only to a signed abstract (cold knowledge redacted; fresh kept byte-exact). Trust is derived deterministically from chain history; only PROVEN-old entries go stale (Padgett: unknown ⇒ fresh). This probe builds a 4-step chain where an ancient phrase ages out while a tip phrase stays fresh, then asserts END-TO-END: guarded expansion redacts the cold phrase, keeps the fresh one byte-exact, and the fusion gauntlet = 100 (deterministic ∧ freshAtTip ∧ provenOnly ∧ stable).",

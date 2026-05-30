@@ -59,6 +59,7 @@ import { SWARM_BUS_TOOLS } from "./_swarm_bus_tools.js";
 import { REFLOG_TOOLS } from "./_reflog_tools.js";
 import { CHRONOS_TOOLS } from "./_chronos_tools.js";
 import { NOTARY_TOOLS } from "./_notary_tools.js";
+import { HYDRA_TOOLS } from "./_hydra_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -238,6 +239,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...REFLOG_TOOLS,
     ...CHRONOS_TOOLS,
     ...NOTARY_TOOLS,
+    ...HYDRA_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,
