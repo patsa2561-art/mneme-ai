@@ -221,20 +221,27 @@ export function renderKnowledgeMap(state: MapState, caps: TermCaps): string {
     const title = gradientText(titleRaw, VIOLET, CYAN, c);
     lines.push(border(box.v) + " " + fitVis(title, inner - 2, c) + " " + border(box.v));
 
-    // ── constellation row: nodes joined by edges ──
-    const nodes = (Array.isArray(state?.nodes) ? state!.nodes! : []).slice(0, 5);
+    // ── constellation rows: nodes joined by edges, WRAPPED greedily so every
+    //    node shows (a node-cell is never split; rows are packed to ≤ width). ──
+    const nodes = (Array.isArray(state?.nodes) ? state!.nodes! : []).slice(0, 12);
     if (nodes.length > 0) {
-      const parts: string[] = [];
+      const edgeRaw = ` ${box.link}${box.link} `;        // visible edge separator
+      const edge = c.color ? fg(DIM, c) + edgeRaw + endColor(c) : edgeRaw;
+      const cap = inner - 2;
+      let row = "", rowVis = 0;
+      const flush = () => { if (row) { lines.push(border(box.v) + " " + padEndVis(row, cap) + " " + border(box.v)); row = ""; rowVis = 0; } };
       for (const n of nodes) {
         const st = STATUS_STYLE[n.status] ?? STATUS_STYLE.idle;
         const glyph = U ? st.u : st.a;
         const lbl = txt(String(n.label ?? "").slice(0, 12), c);
-        parts.push((c.color ? fg(st.rgb, c) + glyph + endColor(c) : glyph) + " " + lbl);
+        const cell = (c.color ? fg(st.rgb, c) + glyph + endColor(c) : glyph) + " " + lbl;
+        const cellVis = 2 + visLen(lbl);              // glyph + space + label
+        const add = (rowVis === 0 ? 0 : edgeRaw.length) + cellVis;
+        if (rowVis > 0 && rowVis + add > cap) flush();
+        row += (rowVis === 0 ? "" : edge) + cell;
+        rowVis += (rowVis === 0 ? 0 : edgeRaw.length) + cellVis;
       }
-      const edge = c.color ? fg(DIM, c) + ` ${box.link}${box.link} ` + endColor(c) : ` ${box.link}${box.link} `;
-      const constellation = parts.join(edge);
-      // wrap is unlikely (≤5 short nodes) but clamp defensively
-      lines.push(border(box.v) + " " + fitVis(constellation, inner - 2, c) + " " + border(box.v));
+      flush();
     }
 
     // ── savings sparkline ──

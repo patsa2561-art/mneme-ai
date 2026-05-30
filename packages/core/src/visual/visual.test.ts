@@ -61,12 +61,29 @@ describe("v2.116 VISUAL KNOWLEDGE MAP — portable, deterministic renderer", () 
     });
   });
 
+  describe("constellation wrapping — every node shows, never overflows", () => {
+    it("many nodes (10) WRAP across rows; every line ≤ width; all node labels present", () => {
+      const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
+      const labels = ["TRUTH", "LOOP", "SAVINGS", "CORTEX", "HYDRA", "GEPHYRA", "NKL", "DISTILL", "FLIGHT", "STAKE"];
+      const st: MapState = { nodes: labels.map((label, k) => ({ label, status: (["ok", "warn", "bad", "idle"] as const)[k % 4]! })), signed: true };
+      const out = renderKnowledgeMap(st, { ...MONO, width: 60 });
+      const rows = out.split("\n");
+      for (const line of rows) expect(line.length).toBeLessThanOrEqual(60);
+      // every label survives the wrap (no node silently dropped)
+      for (const label of labels) expect(out).toContain(label);
+      // 10 node-cells cannot fit one ≤56-col row → the map MUST have used
+      // ≥2 constellation rows (rows containing a node glyph ●/◆/○/✖).
+      const constellationRows = rows.filter((l) => /[●◆○✖]/.test(l)).length;
+      expect(constellationRows).toBeGreaterThanOrEqual(2);
+    });
+  });
+
   describe("PROPERTY — portability holds across a generated space of states × caps", () => {
     it("for 200 generated states: mono has no escapes AND ascii is pure ASCII AND lines bounded", () => {
       const strip = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
       const statuses = ["ok", "warn", "bad", "idle"] as const;
       for (let i = 0; i < 200; i++) {
-        const nNodes = (i % 5) + 1;
+        const nNodes = (i % 9) + 1;
         const nodes = Array.from({ length: nNodes }, (_, k) => ({ label: `N${k}·μ${i}`, status: statuses[(i + k) % 4]! }));
         const spark = Array.from({ length: i % 30 }, (_, k) => (k * 7 + i) % 50);
         const st: MapState = { version: `9.${i}.0`, nodes, savingsSpark: spark, headline: `${i}×−saved ▆▇`, signed: i % 2 === 0 };
