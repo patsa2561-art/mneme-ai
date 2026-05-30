@@ -552,7 +552,13 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
     return {
       verdict: isRefuted ? "BLACK_HOLE" : "FUSION",
       confidence: msv.confidence,
-      caveats: [...caveats, `META_SELF_VERIFIED:${msv.verdict}`],
+      // v2.113 — when a self-claim is REFUTED the chandrasekhar layer has
+      // collapsed (verdict BLACK_HOLE) and godel is UNSAT; surface those
+      // signals as caveats too (not only META_SELF_VERIFIED), so the caveat
+      // list honestly reflects every layer that fired.
+      caveats: isRefuted
+        ? [...caveats, `META_SELF_VERIFIED:${msv.verdict}`, CAVEAT_TAGS.BLACK_HOLE, CAVEAT_TAGS.IMPOSSIBLE]
+        : [...caveats, `META_SELF_VERIFIED:${msv.verdict}`],
       layers: {
         vaccineMatch: null,
         grounding: [],

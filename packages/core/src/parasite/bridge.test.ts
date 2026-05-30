@@ -41,8 +41,10 @@ describe("parasite/bridge · inject", () => {
     const r = injectBridge(repo, "codex", { mnemeVersion: "1.43.0" });
     expect(r.outcome).toBe("injected");
     const content = readFileSync(join(repo, "AGENTS.md"), "utf8");
-    expect(content).toContain("MNEME PARASITE BRIDGE START");
-    expect(content).toContain("MNEME PARASITE BRIDGE END");
+    // The block is laundered for AUP-safety before write (PARASITE → COMPANION),
+    // so the marker ON DISK is the COMPANION form.
+    expect(content).toContain("MNEME COMPANION BRIDGE START");
+    expect(content).toContain("MNEME COMPANION BRIDGE END");
     expect(content).toContain("original content here.");   // preserved
   });
 
@@ -52,7 +54,7 @@ describe("parasite/bridge · inject", () => {
     const r2 = injectBridge(repo, "codex", { mnemeVersion: "1.43.0" });
     expect(r2.outcome).toBe("already-injected");
     const content = readFileSync(join(repo, "AGENTS.md"), "utf8");
-    expect((content.match(/MNEME PARASITE BRIDGE START/g) ?? []).length).toBe(1);
+    expect((content.match(/MNEME COMPANION BRIDGE START/g) ?? []).length).toBe(1);
   });
 
   it("creates .cursor/rules/mneme-bridge.mdc when .cursor/ exists but file doesn't (createIfMissing=true)", () => {
@@ -104,6 +106,7 @@ describe("parasite/bridge · disinfect", () => {
     const r = disinfectBridge(repo, "codex");
     expect(r.outcome).toBe("removed");
     const cleaned = readFileSync(join(repo, "AGENTS.md"), "utf8");
+    expect(cleaned).not.toContain("MNEME COMPANION BRIDGE");
     expect(cleaned).not.toContain("MNEME PARASITE BRIDGE");
     expect(cleaned).toContain("original content above.");
     expect(cleaned).toContain("original content below.");
@@ -139,7 +142,20 @@ describe("parasite/bridge · injectAll", () => {
     const results = injectAll(repo, { mnemeVersion: "1.43.0" });
     const injected = results.filter((r) => r.outcome === "injected");
     expect(injected.length).toBeGreaterThanOrEqual(2);
-    expect(readFileSync(join(repo, "AGENTS.md"), "utf8")).toContain("MNEME PARASITE BRIDGE START");
-    expect(readFileSync(join(repo, "GEMINI.md"), "utf8")).toContain("MNEME PARASITE BRIDGE START");
+    expect(readFileSync(join(repo, "AGENTS.md"), "utf8")).toContain("MNEME COMPANION BRIDGE START");
+    expect(readFileSync(join(repo, "GEMINI.md"), "utf8")).toContain("MNEME COMPANION BRIDGE START");
+  });
+
+  it("LEGACY: detects + disinfects an old raw-PARASITE block (backward compat)", () => {
+    // a block written by a pre-v2.95 (unlaundered) Mneme uses the raw marker
+    const legacy = "# project\n<!-- MNEME PARASITE BRIDGE START -->\nold bridge body\n<!-- MNEME PARASITE BRIDGE END -->\ntail\n";
+    writeFileSync(join(repo, "AGENTS.md"), legacy);
+    // re-inject must see it as already present (not duplicate it)
+    expect(injectBridge(repo, "codex", { mnemeVersion: "1.43.0" }).outcome).toBe("already-injected");
+    // and disinfect must remove the legacy block cleanly
+    expect(disinfectBridge(repo, "codex").outcome).toBe("removed");
+    const cleaned = readFileSync(join(repo, "AGENTS.md"), "utf8");
+    expect(cleaned).not.toContain("MNEME PARASITE BRIDGE");
+    expect(cleaned).toContain("tail");
   });
 });

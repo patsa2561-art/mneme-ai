@@ -6710,6 +6710,25 @@ export async function run(argv: string[]): Promise<void> {
     configureRecursive(program as unknown as Parameters<typeof configureRecursive>[0], wr);
   };
 
+  // v2.113.0 — DEFAULT-HELP for command GROUPS. A command that has subcommands
+  // but no own action handler does NOTHING when invoked bare (e.g. `mneme abm`
+  // / `blame` / `cert` / `whistle` …) — it printed empty output, which is the
+  // root cause of ~25 no-throw "graceful exit + friendly output" failures and
+  // a confusing UX. Walk the tree once and give every such group a default
+  // action that prints its own help (subcommand list). outputHelp() does NOT
+  // exit, so the command still returns gracefully (exit 0). Idempotent: only
+  // attached when there's no existing handler, so leaf commands + groups that
+  // already have a default action are untouched.
+  type Cmdish = { commands?: Cmdish[]; _actionHandler?: unknown; action: (fn: () => void) => unknown; outputHelp: () => void };
+  const ensureGroupHelp = (cmd: Cmdish): void => {
+    const subs = Array.isArray(cmd.commands) ? cmd.commands : [];
+    for (const sub of subs) ensureGroupHelp(sub);
+    if (subs.length > 0 && !cmd._actionHandler) {
+      cmd.action(() => { try { cmd.outputHelp(); } catch { /* never block */ } });
+    }
+  };
+  try { ensureGroupHelp(program as unknown as Cmdish); } catch { /* defensive — never block parse */ }
+
   try {
     await program.parseAsync(argv);
     restoreWriteErr();

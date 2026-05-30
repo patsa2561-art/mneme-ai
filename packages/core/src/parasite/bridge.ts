@@ -46,6 +46,21 @@ import { tuneForVendorArtifact } from "../lexicon/index.js";
 const STATE_FILE = ".mneme/parasite-state.json";
 const SENTINEL_START = "<!-- MNEME PARASITE BRIDGE START -->";
 const SENTINEL_END = "<!-- MNEME PARASITE BRIDGE END -->";
+// v2.113 — the block is laundered through the AUP lexicon before it is written
+// (PARASITE → COMPANION, so the marker never trips a vendor classifier), so the
+// form ON DISK is the LAUNDERED one. The bug this fixes: idempotency + disinfect
+// matched the RAW constant, which never appears in the written file → re-inject
+// was never detected (outcome "injected" instead of "already-injected") and
+// disinfect couldn't find the block. We match the laundered form (what's
+// actually written) AND the raw form (legacy / unlaundered installs).
+const WRITTEN_START = tuneForVendorArtifact(SENTINEL_START);
+const WRITTEN_END = tuneForVendorArtifact(SENTINEL_END);
+/** Is a bridge block (laundered or legacy-raw) present? */
+function hasBridge(s: string): boolean { return s.includes(WRITTEN_START) || s.includes(SENTINEL_START); }
+/** The start marker actually present in `s` (prefer laundered). */
+function startMarkerIn(s: string): string { return s.includes(WRITTEN_START) ? WRITTEN_START : SENTINEL_START; }
+/** The end marker actually present in `s` (prefer laundered). */
+function endMarkerIn(s: string): string { return s.includes(WRITTEN_END) ? WRITTEN_END : SENTINEL_END; }
 
 export type AgentToolId = "cursor" | "cursor-rules" | "continue" | "aider" | "codex" | "gemini" | "windsurf" | "claude-code";
 
@@ -229,7 +244,7 @@ export function detectAgentTools(repoRoot: string): DetectionResult[] {
     const cfgFull = join(repoRoot, tool.configPath);
     let injected = false;
     if (existsSync(cfgFull)) {
-      try { injected = readFileSync(cfgFull, "utf8").includes(SENTINEL_START); }
+      try { injected = hasBridge(readFileSync(cfgFull, "utf8")); }
       catch { injected = false; }
     }
     results.push({
@@ -275,7 +290,7 @@ export function injectBridge(repoRoot: string, toolId: AgentToolId, opts: Inject
   if (existsSync(cfgFull)) {
     try { existing = readFileSync(cfgFull, "utf8"); }
     catch (e) { return { toolId, outcome: "write-failed", configPath: tool.configPath, reason: `read failed: ${(e as Error).message}` }; }
-    if (existing.includes(SENTINEL_START)) {
+    if (hasBridge(existing)) {
       return { toolId, outcome: "already-injected", configPath: tool.configPath };
     }
   } else if (!tool.createIfMissing && !opts.forceCreate) {
@@ -328,16 +343,19 @@ export function disinfectBridge(repoRoot: string, toolId: AgentToolId): Disinfec
   let txt: string;
   try { txt = readFileSync(cfgFull, "utf8"); }
   catch (e) { return { toolId, outcome: "write-failed", configPath: tool.configPath, reason: `read failed: ${(e as Error).message}` }; }
-  if (!txt.includes(SENTINEL_START)) return { toolId, outcome: "not-injected", configPath: tool.configPath };
+  if (!hasBridge(txt)) return { toolId, outcome: "not-injected", configPath: tool.configPath };
 
   // Strip the sentinel-bracketed block + any single trailing blank line.
-  const startIdx = txt.indexOf(SENTINEL_START);
-  const endIdx = txt.indexOf(SENTINEL_END);
+  // Use whichever marker form (laundered or legacy-raw) is actually present.
+  const startMarker = startMarkerIn(txt);
+  const endMarker = endMarkerIn(txt);
+  const startIdx = txt.indexOf(startMarker);
+  const endIdx = txt.indexOf(endMarker);
   if (endIdx === -1 || endIdx < startIdx) {
     return { toolId, outcome: "write-failed", configPath: tool.configPath, reason: "sentinel start present but END marker missing — refusing to corrupt file; remove block manually" };
   }
   const before = txt.slice(0, startIdx).replace(/\n{2,}$/, "\n");
-  const after = txt.slice(endIdx + SENTINEL_END.length).replace(/^\n+/, "");
+  const after = txt.slice(endIdx + endMarker.length).replace(/^\n+/, "");
   const cleaned = before + (before.endsWith("\n") ? "" : "\n") + after;
 
   try { writeFileSync(cfgFull, cleaned); }

@@ -116,6 +116,14 @@ export function numericsInClaim(claim: string): ExtractedNumeric[] {
     for (const n of canon) {
       // Skip pure-decimal hits already covered by Pattern 1.
       if (n.form === "decimal") continue;
+      // v2.113 — skip the bare indefinite article: the English bridge maps
+      // "a"/"an" → 1, which spuriously turns ordinary prose ("a quick brown
+      // fox") into a numeric fact. Only treat "a/an" as a number when it's a
+      // real quantity phrase ("a dozen", "a hundred") — handled by a multi-word
+      // surface, never a lone article. Guards the numeric-vaccine matcher from
+      // false positives on plain text.
+      const surface = typeof (n as { surface?: string }).surface === "string" ? (n as { surface: string }).surface.trim().toLowerCase() : "";
+      if (surface === "a" || surface === "an") continue;
       // Find the next word after the number span (Latin OR Thai).
       const tail = claim.slice(n.end).match(/^\s*([a-zA-Z฀-๿][a-zA-Z_฀-๿-]+)/);
       if (tail && tail[1]) {

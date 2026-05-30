@@ -107,7 +107,10 @@ export function autoDetectVendor(repoRoot: string): { vendor: string; reason: st
     return { vendor: "codex", reason: "Codex env signal" };
   }
   if (process.env["OPENAI_API_KEY"]) {
-    return { vendor: "codex", reason: "OPENAI_API_KEY env (Codex assumption)" };
+    // A raw OPENAI_API_KEY means OpenAI — NOT Codex specifically (Codex sets
+    // CODEX_AGENT/OPENAI_CODEX, handled above). v2.113 — was mislabelled
+    // "codex"; "openai-gpt" is the correct, allowlisted vendor.
+    return { vendor: "openai-gpt", reason: "OPENAI_API_KEY env (OpenAI)" };
   }
   // 4) Cursor / Continue env signals
   if (process.env["CURSOR_TRACE_ID"] || process.env["CURSOR_AGENT"]) {

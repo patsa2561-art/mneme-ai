@@ -223,6 +223,11 @@ export const REQUIRES_ARGS = new Set<string>([
 export const INTERACTIVE_OR_DAEMON = new Set<string>([
   "watch", "chat", "mcp", "guardian", "guard", "init", "setup-free",
   "upgrade", "feedback",
+  // long-running / blocking surfaces (start a server or refresh forever):
+  // `bridge` spawns the HTTP polygraph bridge; `stream` is the live lie
+  // ticker that refreshes every 3s until Ctrl-C. Bare invocation blocks by
+  // design — they are not "graceful exit" commands.
+  "bridge", "stream",
 ]);
 
 /** Smallest valid invocation for commands that need args. */
