@@ -345,6 +345,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.archaeology.signed_provenance",
+    kind: "boolean",
+    description: "DATA ARCHAEOLOGY (v2.107.0 — the honest core of the 'data archaeology' idea, NOT a scraper): every fact that enters the local brain from a public source carries SIGNED, verifiable PROVENANCE (source URL + content hash + time), is distilled from raw content (chatter dropped), and is gated by a robots.txt + rate-limit policy so ingest stays legitimate. NOT dark-web crawling, NOT 'decryption' — accountable knowledge alchemy. This probe asserts the archaeology gauntlet = 100: robots respected ∧ rate-limited ∧ distills ∧ signed-provenance ∧ a forged source is caught ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const A = await import("../archaeology/index.js" as string) as typeof import("../archaeology/index.js");
+        const g = A.archaeologyGauntlet(process.cwd(), 1700000000000);
+        const ok = g.score === 100 && g.robotsRespected && g.rateLimits && g.distills && g.signedProvenance && g.forgeryCaught && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} robots=${g.robotsRespected} rate=${g.rateLimits} distills=${g.distills} signedProvenance=${g.signedProvenance} forgeryCaught=${g.forgeryCaught}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.shell.autopilot",
     kind: "boolean",
     description: "SHELL AUTOPILOT (v2.106.0 — the last piece of the Zero-Effort Flow): after a failed command, a faint phantom recovery suggestion appears; one keystroke runs it (it never auto-runs). The innovation: the recovery LEARNS from the user's own terminal history — a recovery proven on this machine is signed into the Cognitive Cortex and recalled for EVERY agent (any vendor). Built-in deterministic rules are the cold-start; a learned recovery beats them. Hooks generate for Windows (PowerShell) + macOS/Linux (zsh/bash), non-destructive + sentinel-bracketed, never auto-running anything. This probe asserts the autopilot gauntlet = 100 (rules fire ∧ learned-wins ∧ stable signature ∧ safe hooks ∧ total).",

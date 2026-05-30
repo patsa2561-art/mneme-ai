@@ -116,6 +116,20 @@ Built-in rules cover the common failures cold (git no-upstream / rejected, missi
 
 ---
 
+## 5. DATA ARCHAEOLOGY — knowledge with a signed paper-trail
+
+Mneme's edge is **not** "access more data" (anyone can `curl`). It is: **every fact that enters your local brain proves where it came from.** You fetch public content; Mneme distills it into dense facts, signs each with **provenance** (source + content-hash + time), and files them in the cortex (deduped + contradiction-gated). It **never crawls** — it makes what you ingest *accountable*.
+
+```bash
+mneme dig policy "https://site.org/api/x" --robots-file robots.txt   # clear robots BEFORE you fetch (legitimate)
+mneme dig ingest --url "https://research.org/stats" --file fetched.html   # distill → signed facts → cortex
+mneme dig provenance "error rate"        # prove where an ingested fact came from (offline-verify)
+```
+
+**MCP:** `mneme.dig.policy` (check robots before fetching) · `mneme.dig.ingest` (an agent hands its WebFetch'd content + URL → signed provenance facts). What this is **not**: dark-web crawling / aggressive scraping / "decryption" — that's illegal or fantasy. This is *accountable* knowledge alchemy.
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:
