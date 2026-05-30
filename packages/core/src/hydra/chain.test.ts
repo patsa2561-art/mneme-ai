@@ -63,6 +63,22 @@ describe("v2.98 HYDRA PROVENANCE CHAIN", () => {
     expect(g.score).toBe(100);
   });
 
+  it("binds anchor metadata (git commit sha) into the signature — tamper caught", () => {
+    const cb1 = forgeCodebook(C1, { minHits: 2 }).codebook;
+    const cb2 = forgeCodebook(C2, { minHits: 2 }).codebook;
+    let chain: CodebookDelta[] = [];
+    chain = appendToChain(process.cwd(), chain, cb1, 1700000000000, { commit: "abc123", subject: "init" }).chain;
+    chain = appendToChain(process.cwd(), chain, cb2, 1700000000001, { commit: "def456", subject: "add beta" }).chain;
+    expect(verifyChain(chain).ok).toBe(true);
+    expect(chain[1]!.meta!.commit).toBe("def456");
+    // Forge the anchor (claim a different commit produced this state) → caught.
+    const clone: CodebookDelta[] = JSON.parse(JSON.stringify(chain));
+    clone[1]!.meta!.commit = "HACKED";
+    const v = verifyChain(clone);
+    expect(v.ok).toBe(false);
+    expect(v.brokenAt).toBe(1);
+  });
+
   it("STABILITY — total functions never throw on garbage", () => {
     expect(() => verifyChain(null as never)).not.toThrow();
     expect(verifyChain(null as never).ok).toBe(false);

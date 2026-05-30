@@ -12,8 +12,30 @@
  */
 
 import type { Command } from "commander";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+
+/** Run a git command; returns "" on any failure (total — never throws). */
+function git(repoRoot: string, args: string[]): string {
+  try { return execFileSync("git", args, { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 }).trim(); }
+  catch { return ""; }
+}
+
+/** Deterministic corpus = the HEAD tree snapshot (mode type sha\tpath per
+ *  line). Changes exactly when the tracked content changes. "" if no repo. */
+function gitTreeCorpus(repoRoot: string): string {
+  return git(repoRoot, ["ls-tree", "-r", "HEAD"]);
+}
+
+function headMeta(repoRoot: string): Record<string, string> {
+  const commit = git(repoRoot, ["rev-parse", "HEAD"]);
+  const subject = git(repoRoot, ["log", "-1", "--pretty=%s"]);
+  const meta: Record<string, string> = {};
+  if (commit) meta.commit = commit;
+  if (subject) meta.subject = subject.slice(0, 120);
+  return meta;
+}
 
 function writeJson(p: unknown): void { process.stdout.write(JSON.stringify(p, null, 2) + "\n"); }
 function writeText(l: string): void { process.stdout.write(l + "\n"); }
@@ -33,7 +55,7 @@ interface HydraShape {
   expandGuarded: (encoded: string, cb: unknown, trustOf: (sym: string) => string) => string;
   trustFromMap: (map: Record<string, string>) => (sym: string) => string;
   forgeCodebook: (corpus: string, opts?: Record<string, unknown>) => { codebook: unknown };
-  appendToChain: (repoRoot: string, chain: unknown[], next: unknown, at: number) => { chain: unknown[]; delta: { seq: number; added: unknown[]; removed: unknown[] } };
+  appendToChain: (repoRoot: string, chain: unknown[], next: unknown, at: number, meta?: Record<string, string>) => { chain: unknown[]; delta: { seq: number; added: unknown[]; removed: unknown[]; resultHash?: string } };
   verifyChain: (chain: unknown[]) => { ok: boolean; length: number; brokenAt: number; reason: string };
   chainGauntlet: (chain: unknown[]) => { verified: boolean; replayExact: boolean; tamperCaught: boolean; length: number; score: number };
 }
@@ -130,35 +152,103 @@ export function registerHydraCommands(program: Command): void {
     });
 
   h.command("chain")
-    .description("PROVENANCE CHAIN: forge the current corpus's codebook and append a SIGNED delta to .mneme/hydra/chain.json, then verify the WHOLE history offline (Ed25519 sigs + prev→result links + byte-exact replay to every step). Memory with a cryptographic, replayable, tamper-evident history.")
+    .description("PROVENANCE CHAIN: forge the current corpus's codebook and append a SIGNED delta to .mneme/hydra/chain.json, then verify the WHOLE history offline (Ed25519 sigs + prev→result links + byte-exact replay to every step). With --git the corpus is the HEAD tree snapshot and the delta is ANCHORED to the commit sha+subject (signed) — a portable, offline-verifiable record of Mneme's context at each commit (complements git; not a replacement). Idempotent: re-running on the same HEAD appends a no-change delta only if content moved.")
     .option("--file <path>", "corpus file (default: the rendered manifest)")
+    .option("--git", "use the HEAD git-tree snapshot as the corpus + anchor the delta to the commit")
+    .option("--note <text>", "extra note recorded (signed) in the delta meta")
+    .option("--skip-unchanged", "do not append if the corpus codebook is identical to the chain tip")
     .option("--json", "JSON output.")
-    .action(async (opts: { file?: string; json?: boolean }) => {
+    .action(async (opts: { file?: string; git?: boolean; note?: string; skipUnchanged?: boolean; json?: boolean }) => {
       const core = await resolveCore();
       if (!core) { writeText("✗ @mneme-ai/core hydra unavailable."); process.exitCode = 1; return; }
       const repoRoot = process.cwd();
-      const dir = join(repoRoot, ".mneme", "hydra");
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      const chainPath = join(dir, "chain.json");
-      let chain: unknown[] = [];
-      if (existsSync(chainPath)) {
-        try { const parsed = JSON.parse(readFileSync(chainPath, "utf8")); if (Array.isArray(parsed)) chain = parsed; } catch { chain = []; }
+      try {
+        const dir = join(repoRoot, ".mneme", "hydra");
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        const chainPath = join(dir, "chain.json");
+        let chain: unknown[] = [];
+        if (existsSync(chainPath)) {
+          try { const parsed = JSON.parse(readFileSync(chainPath, "utf8")); if (Array.isArray(parsed)) chain = parsed; } catch { chain = []; }
+        }
+        // Build corpus + anchor metadata.
+        let corpus: string;
+        let meta: Record<string, string> = {};
+        if (opts.git) {
+          corpus = gitTreeCorpus(repoRoot);
+          if (!corpus) { if (opts.json) { writeJson({ ok: false, reason: "no git HEAD / not a repo" }); } else { writeText("· skipped: not a git repo (or empty HEAD)"); } return; }
+          meta = headMeta(repoRoot);
+        } else {
+          corpus = corpusFor(opts.file, core.agentManifest);
+        }
+        if (opts.note) meta.note = String(opts.note).slice(0, 200);
+        const cb = core.hydra.forgeCodebook(corpus, {}).codebook;
+        // Idempotency: skip when the new codebook == the chain tip's result.
+        if (opts.skipUnchanged && chain.length > 0) {
+          const tip = core.hydra.verifyChain(chain);
+          const replay = core.hydra.chainGauntlet(chain);
+          const next = core.hydra.appendToChain(repoRoot, [], cb, 1).delta;
+          const tipResult = (chain[chain.length - 1] as { resultHash?: string }).resultHash;
+          if (tip.ok && replay.score === 100 && (next as { resultHash?: string }).resultHash === tipResult) {
+            if (opts.json) { writeJson({ ok: true, skipped: true, reason: "unchanged since tip", length: chain.length }); } else { writeText(`· unchanged since tip — chain stays ${chain.length} link(s)`); }
+            return;
+          }
+        }
+        const appended = core.hydra.appendToChain(repoRoot, chain, cb, Date.now(), Object.keys(meta).length ? meta : undefined);
+        writeFileSync(chainPath, JSON.stringify(appended.chain, null, 2));
+        const g = core.hydra.chainGauntlet(appended.chain);
+        const v = core.hydra.verifyChain(appended.chain);
+        if (opts.json) { writeJson({ gauntlet: g, verify: v, meta, delta: { seq: appended.delta.seq, added: appended.delta.added.length, removed: appended.delta.removed.length }, chainPath }); process.exitCode = g.score === 100 ? 0 : 1; return; }
+        writeText(`HYDRA provenance chain — ${g.length} link(s)`);
+        writeText(``);
+        if (meta.commit) writeText(`  anchor: commit ${meta.commit.slice(0, 10)} "${meta.subject ?? ""}"`);
+        writeText(`  new delta #${appended.delta.seq}: +${appended.delta.added.length} phrases · -${appended.delta.removed.length} phrases (signed)`);
+        writeText(`  verified(offline): ${g.verified ? "✓" : "✗"}  ·  replay-exact: ${g.replayExact ? "✓" : "✗"}  ·  tamper-caught: ${g.tamperCaught ? "✓" : "✗"}`);
+        writeText(`  → ${chainPath}`);
+        writeText(``);
+        writeText(g.score === 100 ? `  ✓ CHAIN 100/100 — ${v.reason}` : `  ✗ CHAIN ${g.score}/100 — broken at delta ${v.brokenAt}: ${v.reason}`);
+        process.exitCode = g.score === 100 ? 0 : 1;
+      } catch (e) {
+        // 108-error rule: provenance must never crash the host (or a commit).
+        if (opts.json) { writeJson({ ok: false, reason: (e as Error).message }); } else { writeText(`· hydra chain skipped (non-fatal): ${(e as Error).message}`); }
       }
-      const corpus = corpusFor(opts.file, core.agentManifest);
-      const cb = core.hydra.forgeCodebook(corpus, {}).codebook;
-      const appended = core.hydra.appendToChain(repoRoot, chain, cb, Date.now());
-      writeFileSync(chainPath, JSON.stringify(appended.chain, null, 2));
-      const g = core.hydra.chainGauntlet(appended.chain);
-      const v = core.hydra.verifyChain(appended.chain);
-      if (opts.json) { writeJson({ gauntlet: g, verify: v, delta: { seq: appended.delta.seq, added: appended.delta.added.length, removed: appended.delta.removed.length }, chainPath }); process.exitCode = g.score === 100 ? 0 : 1; return; }
-      writeText(`HYDRA provenance chain — ${g.length} link(s)`);
-      writeText(``);
-      writeText(`  new delta #${appended.delta.seq}: +${appended.delta.added.length} phrases · -${appended.delta.removed.length} phrases (signed)`);
-      writeText(`  verified(offline): ${g.verified ? "✓" : "✗"}  ·  replay-exact: ${g.replayExact ? "✓" : "✗"}  ·  tamper-caught: ${g.tamperCaught ? "✓" : "✗"}`);
-      writeText(`  → ${chainPath}`);
-      writeText(``);
-      writeText(g.score === 100 ? `  ✓ CHAIN 100/100 — ${v.reason}` : `  ✗ CHAIN ${g.score}/100 — broken at delta ${v.brokenAt}: ${v.reason}`);
-      process.exitCode = g.score === 100 ? 0 : 1;
+    });
+
+  h.command("install-hook")
+    .description("Install a git post-commit hook that runs `mneme hydra chain --git` after every commit — anchoring a signed HYDRA context delta to each commit. Non-blocking + fail-open (never breaks a commit). Sentinel-bracketed: re-installs cleanly, composes with an existing hook.")
+    .option("--uninstall", "remove the Mneme block from the post-commit hook instead")
+    .action(async (opts: { uninstall?: boolean }) => {
+      const repoRoot = process.cwd();
+      const gitDir = git(repoRoot, ["rev-parse", "--git-dir"]);
+      if (!gitDir) { writeText("✗ not a git repo (no .git)"); process.exitCode = 1; return; }
+      const hooksDir = join(repoRoot, gitDir, "hooks");
+      const hookPath = join(hooksDir, "post-commit");
+      const BEGIN = "# >>> mneme hydra chain >>>";
+      const END = "# <<< mneme hydra chain <<<";
+      const block = [
+        BEGIN,
+        "# Auto-anchor a signed HYDRA context delta to this commit. Fail-open + non-blocking.",
+        "# Honors MNEME_CLI_BIN (a path to mneme's bin, run via node) for CI / monorepo / testing.",
+        `if [ -n "$MNEME_CLI_BIN" ]; then node "$MNEME_CLI_BIN" hydra chain --git --skip-unchanged >/dev/null 2>&1 || true;`,
+        `else mneme hydra chain --git --skip-unchanged >/dev/null 2>&1 || true; fi`,
+        END,
+      ].join("\n");
+      let existing = existsSync(hookPath) ? readFileSync(hookPath, "utf8") : "";
+      // Strip any prior Mneme block.
+      const bi = existing.indexOf(BEGIN), ei = existing.indexOf(END);
+      if (bi >= 0 && ei > bi) existing = (existing.slice(0, bi) + existing.slice(ei + END.length)).replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+      if (opts.uninstall) {
+        if (!existsSync(hooksDir)) mkdirSync(hooksDir, { recursive: true });
+        writeFileSync(hookPath, existing.trim() ? existing : "#!/bin/sh\n");
+        writeText("✓ removed the Mneme block from post-commit hook"); return;
+      }
+      if (!existsSync(hooksDir)) mkdirSync(hooksDir, { recursive: true });
+      const head = existing.startsWith("#!") ? "" : "#!/bin/sh\n";
+      const next = (head + existing).trimEnd() + "\n\n" + block + "\n";
+      writeFileSync(hookPath, next);
+      try { chmodSync(hookPath, 0o755); } catch { /* windows: no-op */ }
+      writeText(`✓ installed post-commit hook → ${hookPath}`);
+      writeText(`  every commit now appends a signed HYDRA delta anchored to its sha (fail-open, non-blocking).`);
+      writeText(`  remove with: mneme hydra install-hook --uninstall`);
     });
 
   h.command("verify <artifact>")

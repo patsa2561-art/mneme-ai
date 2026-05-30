@@ -48,8 +48,18 @@ export interface CodebookDelta {
   open: string;
   close: string;
   corpusHash: string;
-  /** NOTARY receipt over { resultHash, seq, prev }. */
+  /** Optional anchor metadata (e.g. git commit sha + subject) — signed into
+   *  the receipt so it is tamper-evident too. */
+  meta?: Record<string, string>;
+  /** NOTARY receipt over { resultHash, seq, prev, baseHash, meta }. */
   receipt: NotaryReceipt;
+}
+
+/** Deterministic JSON for small string maps (sorted keys) — for binding. */
+function canonMeta(m: Record<string, string> | undefined): string {
+  if (!m || typeof m !== "object") return "null";
+  const keys = Object.keys(m).sort();
+  return JSON.stringify(keys.map((k) => [k, m[k]]));
 }
 
 function entriesByPhrase(cb: Codebook): Map<string, CodebookEntry> {
@@ -62,7 +72,7 @@ function entriesByPhrase(cb: Codebook): Map<string, CodebookEntry> {
  * Compute the delta `before → after` (by phrase). Pure; never throws.
  * Signs the delta over its result hash so the chain is attributable.
  */
-export function diffCodebooks(repoRoot: string, before: Codebook | null, after: Codebook, seq: number, prev: string | null, at: number): CodebookDelta {
+export function diffCodebooks(repoRoot: string, before: Codebook | null, after: Codebook, seq: number, prev: string | null, at: number, meta?: Record<string, string>): CodebookDelta {
   const beforeMap = before ? entriesByPhrase(before) : new Map<string, CodebookEntry>();
   const afterMap = entriesByPhrase(after);
   const added: Array<{ phrase: string; hits: number; gain: number }> = [];
@@ -77,11 +87,13 @@ export function diffCodebooks(repoRoot: string, before: Codebook | null, after: 
   const receipt = issueReceipt(repoRoot, {
     kind: "memory-capsule",
     subject: `hydra-chain:${seq}:${resultHash.slice(0, 16)}`,
-    payload: { resultHash, seq, prev, baseHash },
+    payload: { resultHash, seq, prev, baseHash, meta: meta ?? null },
     includePayload: true,
     issuedAt: at,
   });
-  return { v: 1, seq, prev, baseHash, resultHash, added, removed, open: after.open, close: after.close, corpusHash: after.corpusHash, receipt };
+  const d: CodebookDelta = { v: 1, seq, prev, baseHash, resultHash, added, removed, open: after.open, close: after.close, corpusHash: after.corpusHash, receipt };
+  if (meta) d.meta = meta;
+  return d;
 }
 
 /**
@@ -116,11 +128,11 @@ export interface ChainAppendResult {
 }
 
 /** Append a codebook to a chain by diffing against the last one. Total. */
-export function appendToChain(repoRoot: string, chain: CodebookDelta[], next: Codebook, at: number): ChainAppendResult {
+export function appendToChain(repoRoot: string, chain: CodebookDelta[], next: Codebook, at: number, meta?: Record<string, string>): ChainAppendResult {
   const safe = Array.isArray(chain) ? chain : [];
   const last = safe.length > 0 ? safe[safe.length - 1]! : null;
   const before = last ? replayChain(safe, safe.length - 1).codebook : null;
-  const delta = diffCodebooks(repoRoot, before, next, safe.length, last ? last.resultHash : null, at);
+  const delta = diffCodebooks(repoRoot, before, next, safe.length, last ? last.resultHash : null, at, meta);
   return { chain: [...safe, delta], delta };
 }
 
@@ -169,9 +181,13 @@ export function verifyChain(chain: CodebookDelta[]): ChainVerdict {
     if (!d || d.seq !== i || d.prev !== prevResult) return { ok: false, length: chain.length, brokenAt: i, reason: `broken link at ${i}` };
     const v = verifyReceipt(d.receipt);
     if (!v.valid) return { ok: false, length: chain.length, brokenAt: i, reason: `bad signature at ${i}: ${v.reason}` };
-    const payload = (d.receipt as { payload?: { resultHash?: string; seq?: number; prev?: string | null } }).payload;
+    const payload = (d.receipt as { payload?: { resultHash?: string; seq?: number; prev?: string | null; meta?: Record<string, string> | null } }).payload;
     if (!payload || payload.resultHash !== d.resultHash || payload.seq !== d.seq || payload.prev !== d.prev) {
       return { ok: false, length: chain.length, brokenAt: i, reason: `receipt does not bind delta ${i} (tampered)` };
+    }
+    // Anchor metadata (e.g. git commit sha) must match what was signed.
+    if (canonMeta(d.meta) !== canonMeta(payload.meta ?? undefined)) {
+      return { ok: false, length: chain.length, brokenAt: i, reason: `delta ${i} meta does not match signed receipt (tampered anchor)` };
     }
     const r = applyDelta(cb, d);
     if (!r.ok) return { ok: false, length: chain.length, brokenAt: i, reason: `replay broke at ${i}: ${r.reason}` };
