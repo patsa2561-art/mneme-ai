@@ -884,4 +884,14 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.distill.measured_reduction",
     severity: "block",
   },
+  // ── v2.112.0 — NEGATIVE-KNOWLEDGE LEDGER: auto-derived proven dead-ends ──
+  {
+    id: "claim.nkl.proven_dead_end",
+    source: "v2.112.0 release notes",
+    text: "Mneme NKL auto-derives PROVEN dead-ends from the absorb event ledger (a base command failed ≥N times across all history with ZERO successes) so an agent avoids repeating a proven-trap approach (cross-session/cross-vendor); advisory not a hard block (Padgett); gauntlet: detects-dead-end ∧ success-clears ∧ no-premature-condemn ∧ check-consistent ∧ deterministic ∧ total",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.nkl.proven_dead_end",
+    severity: "block",
+  },
 ];

@@ -21,6 +21,8 @@ interface CoreD {
   distill: { distill: (i: unknown) => { brief: string; signature: string; hadError: boolean; measured: { charsBefore: number; charsAfter: number; reductionPct: number; tokEstBefore: number; tokEstAfter: number; tokEstSaved: number; note: string } } };
   cortex: { activeView: (s: unknown) => Map<string, { value: string }> };
   shellAutopilot: { recoveryKey: (sig: string) => string };
+  loopguard: { LOOPGUARD_LEDGER: string; parseLedger: (t: string) => unknown[] };
+  nkl: { checkApproach: (e: unknown[], cmd: string) => { isDeadEnd: boolean; base: string; failures: number } };
 }
 async function core(): Promise<CoreD | null> {
   try { const c = (await import("@mneme-ai/core")) as unknown as CoreD; if (c.distill) return c; } catch { /* */ }
@@ -60,7 +62,14 @@ export function registerDistillCommands(program: Command): void {
       let diff = "";
       if (opts.diffFile) { try { if (existsSync(opts.diffFile)) diff = readFileSync(opts.diffFile, "utf8"); } catch { /* */ } }
       const recall = makeRecall(m, cwd);
-      const r = m.distill.distill({ command: opts.cmd ?? "", output, exitCode: typeof opts.code === "number" ? opts.code : NaN, diff, recall });
+      // AUTO negative-knowledge: derive whether this approach is a proven
+      // dead-end from the absorb ledger (no manual recording, no command).
+      let deadEnd: { isDeadEnd: boolean; base: string; failures: number } | null = null;
+      try {
+        const lp = join(cwd, m.loopguard.LOOPGUARD_LEDGER);
+        if (existsSync(lp)) deadEnd = m.nkl.checkApproach(m.loopguard.parseLedger(readFileSync(lp, "utf8")), opts.cmd ?? "");
+      } catch { /* */ }
+      const r = m.distill.distill({ command: opts.cmd ?? "", output, exitCode: typeof opts.code === "number" ? opts.code : NaN, diff, recall, deadEnd });
       if (opts.json) { writeJson({ brief: r.brief, signature: r.signature, measured: r.measured }); return; }
       writeText(r.brief || "(nothing to distill)");
       const mr = r.measured;

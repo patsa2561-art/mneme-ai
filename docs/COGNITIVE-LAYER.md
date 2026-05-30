@@ -200,6 +200,25 @@ Feed the **brief** to your model instead of the raw log: fewer input tokens, les
 
 ---
 
+## 10. NEGATIVE-KNOWLEDGE LEDGER — auto-learn the dead-ends (the cheapest work is the work you don't do)
+
+Every other memory layer records what *worked*. The rarest, highest-leverage knowledge is the opposite: the approaches **proven** to be dead ends — so no agent walks a trap a past session (or another vendor) already proved.
+
+**Fully automatic — you never type a command:**
+- it **learns** by itself: dead-ends are derived deterministically from the `mneme absorb` ledger that normal use already fills (no manual recording),
+- it **decides** by itself: a *dead end* = a base command that failed ≥N times across all history with **zero** successes (a measured fact, not a guess),
+- it **surfaces** by itself: `mneme.distill.brief` auto-folds a `DEAD-END` line into its brief, and the agent manifest fires the check before a retry.
+
+```
+# (MCP, fired automatically by the agent before a retry)
+mneme.nkl.check { command: "docker build --no-cache" }
+#   → 🚫 DEAD-END: `docker:build` failed 4× & never worked here — try a different approach.
+```
+
+**Advisory, never a hard block (Padgett guard):** "never worked *yet*" might work after a real change — Mneme warns, never forbids. Cross-session + cross-vendor. **MCP:** `mneme.nkl.check` (self-attesting). Composes the LOOPGUARD ledger (§8) + the DISTILL brief (§9).
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:

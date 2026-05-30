@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.nkl.proven_dead_end",
+    kind: "boolean",
+    description: "NEGATIVE-KNOWLEDGE LEDGER (v2.112.0): the cheapest work is the work you don't do. Auto-derives PROVEN dead-ends from the absorb event ledger — a base command that failed ≥N times across all history with ZERO successes — so an agent can avoid repeating a path already proven a trap (cross-session, cross-vendor). Advisory, never a hard block (Padgett guard). This probe asserts the NKL gauntlet = 100: detects-dead-end ∧ success-clears (one success ⇒ not a dead-end) ∧ no-premature-condemn (below threshold) ∧ check-consistent ∧ deterministic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const N = await import("../nkl/index.js" as string) as typeof import("../nkl/index.js");
+        const g = N.nklGauntlet();
+        const ok = g.score === 100 && g.detectsDeadEnd && g.successClears && g.noPrematureCondemn && g.checkConsistent && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} detect=${g.detectsDeadEnd} clears=${g.successClears} noPremature=${g.noPrematureCondemn} consistent=${g.checkConsistent} det=${g.deterministic}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.distill.measured_reduction",
     kind: "boolean",
     description: "DISTILL (v2.111.0 — the honest core of the token-saver, NOT a fabricated 'wisdom score'): compresses a verbose {error log + diff} into the minimal causal BRIEF (one failure line + changed file:line loci + the Cortex's known fix) and reports a MEASURED token-budget receipt. Character reduction is EXACT; the token figure is a LABELED ≈chars/4 estimate (not a vendor tokenizer), never a guess. This probe asserts the distill gauntlet = 100: reduces ∧ measurement-honest (reductionPct matches exact chars; charsAfter==brief.length) ∧ preserves-signal (error class + changed file survive) ∧ folds-known-fix (recalled recovery included) ∧ deterministic ∧ total.",

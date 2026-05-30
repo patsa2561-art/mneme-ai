@@ -41,6 +41,12 @@ import { createHash } from "node:crypto";
 
 import { readSoul, startSession } from "./ai_soul.js";
 import { deposit as depositPheromone } from "./ai_pheromone.js";
+// v2.112 — STATIC imports for the vendor guard. These were previously loaded
+// via require() inside recordCliActivity, which THREW in the ESM dist build
+// (require is undefined in ESM) → the catch swallowed it → the guard was dead
+// code → embedder/backend names (ollama-backend) leaked into cli-activity.jsonl.
+import { fullGuard } from "./nemesis/vendor_allowlist.js";
+import { scanEnv } from "./nemesis/env_scan.js";
 
 const HANDSHAKE_DIR = ".mneme/ai-handshakes";
 const ACTIVE_VENDOR_FILE = ".mneme/active-vendor.json";
@@ -281,8 +287,6 @@ export function recordCliActivity(repoRoot: string, command: string, vendorHint?
     // a backend/model name. Now those get coerced to "unknown" + the
     // env_scan v2.46 result becomes the canonical answer when available.
     try {
-      const { fullGuard } = require("./nemesis/vendor_allowlist.js") as typeof import("./nemesis/vendor_allowlist.js");
-      const { scanEnv } = require("./nemesis/env_scan.js") as typeof import("./nemesis/env_scan.js");
       const envScan = scanEnv();
       const guarded = fullGuard({
         repoRoot: root,

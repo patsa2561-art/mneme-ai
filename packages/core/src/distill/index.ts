@@ -72,6 +72,11 @@ export interface DistillInput {
   /** optional: a known recovery/axiom for the failure signature (CLI/MCP wires
    *  this to the Cortex; pure here). */
   recall?: (signature: string) => string | null;
+  /** optional: a precomputed Negative-Knowledge verdict for THIS command's
+   *  approach (CLI/MCP wires this to the NKL derived from the absorb ledger;
+   *  pure here). When the approach is a proven dead-end, the brief warns the
+   *  agent NOT to retry it — advisory, never a block. */
+  deadEnd?: { isDeadEnd: boolean; base: string; failures: number } | null;
 }
 
 export interface DistillMeasured {
@@ -128,6 +133,12 @@ export function distill(input: DistillInput): DistillResult {
       let known: string | null = null;
       try { known = inp.recall(entry.signature); } catch { known = null; }
       if (known) lines.push(`KNOWN FIX ${known}`);
+    }
+
+    // 4) NEGATIVE knowledge — if this approach is a proven dead end, warn the
+    //    agent NOT to retry it (advisory). Auto-derived from the absorb ledger.
+    if (entry.hadError && inp.deadEnd && inp.deadEnd.isDeadEnd) {
+      lines.push(`DEAD-END \`${inp.deadEnd.base}\` failed ${inp.deadEnd.failures}× & never worked here — try a different approach (advisory)`);
     }
 
     const brief = lines.join("\n");

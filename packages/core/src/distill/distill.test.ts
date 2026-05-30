@@ -56,6 +56,16 @@ describe("v2.111 MNEME DISTILL — signed, measured token-budget receipt", () =>
     expect(extractDiffLoci("--- a/x\n+++ /dev/null\n").length).toBe(0);
   });
 
+  it("folds a NEGATIVE-knowledge dead-end warning into the brief (advisory)", () => {
+    const r = distill({ command: "docker build", output: "error: build failed", exitCode: 1, deadEnd: { isDeadEnd: true, base: "docker:build", failures: 4 } });
+    expect(r.brief).toContain("DEAD-END");
+    expect(r.brief).toContain("docker:build");
+    expect(r.brief).toContain("4×");
+    // a non-dead-end approach adds no warning
+    const r2 = distill({ command: "docker build", output: "error: build failed", exitCode: 1, deadEnd: { isDeadEnd: false, base: "docker:build", failures: 0 } });
+    expect(r2.brief).not.toContain("DEAD-END");
+  });
+
   it("a clean success produces an OK brief, no error noise", () => {
     const r = distill({ command: "npm test", output: "All tests passed", exitCode: 0 });
     expect(r.hadError).toBe(false);

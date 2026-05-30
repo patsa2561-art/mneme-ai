@@ -26,6 +26,12 @@ function recallFor(core: any, cwd: string): (sig: string) => string | null {
   try { const p = join(cwd, ".mneme", "cortex", "store.json"); const store = existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : { v: 1, entries: [] }; view = core.cortex.activeView(store); } catch { /* */ }
   return (sig: string) => { try { const e = view.get(core.shellAutopilot.recoveryKey(sig)); return e && typeof e.value === "string" && e.value.length > 0 ? e.value : null; } catch { return null; } };
 }
+function loadLoopEvents(core: any, cwd: string): any[] {
+  try { const p = join(cwd, core.loopguard.LOOPGUARD_LEDGER); return existsSync(p) ? core.loopguard.parseLedger(readFileSync(p, "utf8")) : []; } catch { return []; }
+}
+function deadEndFor(core: any, cwd: string, command: string): { isDeadEnd: boolean; base: string; failures: number } | null {
+  try { return core.nkl.checkApproach(loadLoopEvents(core, cwd), command); } catch { return null; }
+}
 
 export const DISTILL_TOOLS: MnemeTool[] = [
   {
@@ -46,6 +52,7 @@ export const DISTILL_TOOLS: MnemeTool[] = [
           exitCode: typeof args["exitCode"] === "number" ? (args["exitCode"] as number) : NaN,
           diff: typeof args["diff"] === "string" ? (args["diff"] as string) : "",
           recall: recallFor(core, cwd),
+          deadEnd: deadEndFor(core, cwd, String(args["cmd"] ?? "")),
         });
         const data = await attest(cwd, { brief: r.brief, signature: r.signature, hadError: r.hadError, measured: r.measured });
         return {
