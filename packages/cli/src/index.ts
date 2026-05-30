@@ -116,6 +116,7 @@ import { registerEmbeddingsCommands } from "./commands/embeddings.js";
 import { registerSupernovaCommands } from "./commands/supernova-cli.js";
 import { registerManifestCommands } from "./commands/manifest.js";
 import { registerHydraCommands } from "./commands/hydra.js";
+import { registerWisdomGateCommands } from "./commands/wisdom_gates.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
 import { registerOvernightCommand } from "./commands/overnight.js";
@@ -4892,6 +4893,7 @@ export async function run(argv: string[]): Promise<void> {
   // ─── Manifest (v1.31.0) -- auto-sync command catalog into agent files
   registerManifestCommands(program);
   registerHydraCommands(program);
+  registerWisdomGateCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

@@ -345,6 +345,42 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.cognitive.wisdom_gate",
+    kind: "boolean",
+    description: "COGNITIVE WISDOM GATE (v2.103.0 — the honest core of 'Cognitive Entanglement', NEMESIS × HYDRA): a self-aware authorship signal. Measures how far a diff's coding STYLE sits from an author's own baseline (NEMESIS micro-tells) — but crucially measures its OWN reliability and returns UNKNOWN, refusing to flag, when the style can't be separated from others (prove-or-unknown; never auto-rejects). This probe builds a signature from a consistent author style, confirms a clearly-foreign style is farther than the author's own held-out style, that an unseparable benchmark yields no FLAG, and that the gauntlet = 100 (allow ∧ unknown-when-unseparable ∧ deterministic ∧ signed ∧ stable).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const C = await import("../cognitive_gate/index.js" as string) as typeof import("../cognitive_gate/index.js");
+        const A = (i: number) => `diff --git a/f${i}.ts b/f${i}.ts\n+const x${i} = () => {\n+  const y = 'hi'\n+  return y.length\n+}`;
+        const FOREIGN = `diff --git a/g.ts b/g.ts\n+function bigThing(input) {\n+\tvar result = "X";\n+\tif (input == null) { return "N"; }\n+\treturn result;\n+}`;
+        const authorDiffs = [A(1), A(2), A(3), A(4)];
+        const heldout = A(5);
+        const sig = C.buildCognitiveSignature("author", authorDiffs);
+        const own = C.judgeDiff(sig, heldout);
+        const foreign = C.judgeDiff(sig, FOREIGN);
+        const farther = foreign.deviation > own.deviation;
+        const g = C.cognitiveGauntlet(process.cwd(), authorDiffs, FOREIGN, heldout, 1700000000000);
+        const ok = g.score === 100 && farther && g.allowsAuthor && g.unknownWhenUnseparable && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `gauntlet=${g.score} farther=${farther} ownDev=${own.deviation.toFixed(3)} foreignDev=${foreign.deviation.toFixed(3)} allowsAuthor=${g.allowsAuthor} unknownWhenUnseparable=${g.unknownWhenUnseparable}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
+    id: "probe.branch.oracle_real_signals",
+    kind: "boolean",
+    description: "BRANCH ORACLE (v2.103.0 — the honest 'Multi-Timeline Reasoning', NOT fortune-telling): a signed real-signal snapshot of every branch. Conflict risk is monotonic in file overlap (more files changed on BOTH branch and base since the fork ⇒ ≥ merge-conflict risk), bands are deterministic, the report is Ed25519-signed, and the safest branch is ranked by current signals — never a claim about the future. This probe asserts the branch-oracle gauntlet = 100 (monotonic ∧ deterministic ∧ signed ∧ stable).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const B = await import("../branch_oracle/index.js" as string) as typeof import("../branch_oracle/index.js");
+        const g = B.branchOracleGauntlet(process.cwd(), 1700000000000);
+        const ok = g.score === 100 && g.monotonicConflict && g.deterministic && g.signed && g.stable;
+        return { value: ok ? 1 : 0, evidence: `gauntlet=${g.score} monotonic=${g.monotonicConflict} deterministic=${g.deterministic} signed=${g.signed} stable=${g.stable}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hydra.epigenetic_dormancy",
     kind: "boolean",
     description: "HYDRA EPIGENETIC DORMANCY (v2.102.0 — the image's 'Epigenetic Sleep State' + 'JIT Revival/Demethylation', made real): cold codebook entries are METHYLATED (moved out of the active working set into a cold signed store, so the active footprint shrinks — the enterprise-scale win) and DEMETHYLATE byte-exact on demand (a full revive reconstructs the original codebook with an identical canonical hash). Deterministic tiered memory with a cryptographic lossless-revival proof — NOT lossy, NOT fortune-telling. Three booleans that can't lie: revive-exact ∧ shrinks ∧ signed-binds (Ed25519). This probe sleeps half a forged codebook and asserts the dormancy gauntlet = 100 + stability.",
