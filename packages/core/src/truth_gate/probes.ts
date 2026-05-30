@@ -345,6 +345,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.logpipe.structured_extraction",
+    kind: "boolean",
+    description: "LOGPIPE (v2.109.0): your terminal toil becomes signed, recallable, cross-agent knowledge — automatically. Because terminal output is STRUCTURED, extraction of {intent, error-class, excerpt, success/fail} is DETERMINISTIC (no LLM, no hallucination — the accuracy point). It composes the Cortex (signed fact) + the Shell Autopilot (an error's signature matches, so absorb→suggest closes the loop). This probe asserts the logpipe gauntlet = 100: extracts-error ∧ extracts-success ∧ classifies (oom/module/port/…) ∧ signature-shared-with-autopilot ∧ deterministic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const L = await import("../logpipe/index.js" as string) as typeof import("../logpipe/index.js");
+        const g = L.logpipeGauntlet();
+        const ok = g.score === 100 && g.extractsError && g.extractsSuccess && g.classifies && g.signatureSharedWithAutopilot && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} extractsError=${g.extractsError} classifies=${g.classifies} sigShared=${g.signatureSharedWithAutopilot} deterministic=${g.deterministic}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.entropy.audited_multisource",
     kind: "boolean",
     description: "AUDITED ENTROPY (v2.108.0 — the honest core of 'True Entropy Security', NOT magic unhackability): secrets are MIXED from multiple sources through a cryptographic extractor (defense in depth — strong if ANY source has entropy), sources are health-checked (a stuck source is FLAGGED), and a SIGNED provenance attestation binds the secret's hash to its audited sources without revealing the secret. This probe asserts the entropy gauntlet = 100: mix-deterministic ∧ mix-diverges ∧ defense-in-depth (a stuck source can't weaken the mix) ∧ health-detects-stuck ∧ attestation-binds (a wrong secret is caught) ∧ total.",

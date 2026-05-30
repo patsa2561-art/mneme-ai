@@ -144,6 +144,20 @@ mneme entropy health --file sample.bin                 # catch a stuck/degraded 
 
 ---
 
+## 7. LOGPIPE — your terminal becomes a signed, self-documenting lab notebook
+
+Pipe a command's output in; Mneme **deterministically** extracts `{intent, error-class, excerpt}` (terminal output is structured → no hallucination), files it as a **signed Cortex fact**, and — the closed loop — when it's an error you fixed, teaches the **Shell Autopilot** the recovery.
+
+```bash
+mycmd 2>&1 | mneme absorb --cmd "mycmd" --code $?            # record what happened (signed, recallable)
+echo "fatal: no upstream" | mneme absorb --cmd "git push" --code 1 --fix "git push -u origin HEAD"
+#   → cortex remembers the error AND the fix → next time `git push` fails, the autopilot suggests YOUR fix
+```
+
+**MCP:** `mneme.logpipe.absorb`. Composes §3 Cortex + §4 Autopilot — **ABSORB (learn) → AUTOPILOT (suggest)** — so your daily toil compounds into shared, signed, self-improving knowledge.
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:

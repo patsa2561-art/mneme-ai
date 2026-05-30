@@ -65,6 +65,7 @@ import { CORTEX_TOOLS } from "./_cortex_tools.js";
 import { SHELL_TOOLS } from "./_shell_tools.js";
 import { DIG_TOOLS } from "./_dig_tools.js";
 import { ENTROPY_TOOLS } from "./_entropy_tools.js";
+import { LOGPIPE_TOOLS } from "./_logpipe_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -250,6 +251,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...SHELL_TOOLS,
     ...DIG_TOOLS,
     ...ENTROPY_TOOLS,
+    ...LOGPIPE_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,
