@@ -32,6 +32,10 @@ interface HydraShape {
   guardedGauntlet: (original: string, encoded: string, cb: unknown, trustMap: Record<string, string>) => GuardedShape;
   expandGuarded: (encoded: string, cb: unknown, trustOf: (sym: string) => string) => string;
   trustFromMap: (map: Record<string, string>) => (sym: string) => string;
+  forgeCodebook: (corpus: string, opts?: Record<string, unknown>) => { codebook: unknown };
+  appendToChain: (repoRoot: string, chain: unknown[], next: unknown, at: number) => { chain: unknown[]; delta: { seq: number; added: unknown[]; removed: unknown[] } };
+  verifyChain: (chain: unknown[]) => { ok: boolean; length: number; brokenAt: number; reason: string };
+  chainGauntlet: (chain: unknown[]) => { verified: boolean; replayExact: boolean; tamperCaught: boolean; length: number; score: number };
 }
 interface ManifestShape { renderManifestMarkdown: (c?: unknown, v?: string) => string }
 
@@ -122,6 +126,38 @@ export function registerHydraCommands(program: Command): void {
       writeText(`  fresh ${g.freshCount} · redacted ${g.redactedCount}`);
       writeText(``);
       writeText(g.score === 100 ? `  ✓ GUARDED GAUNTLET 100/100 — lossless when trusted, provably redacted when stale. No leak, no lie.` : `  ✗ GUARDED GAUNTLET ${g.score}/100`);
+      process.exitCode = g.score === 100 ? 0 : 1;
+    });
+
+  h.command("chain")
+    .description("PROVENANCE CHAIN: forge the current corpus's codebook and append a SIGNED delta to .mneme/hydra/chain.json, then verify the WHOLE history offline (Ed25519 sigs + prev→result links + byte-exact replay to every step). Memory with a cryptographic, replayable, tamper-evident history.")
+    .option("--file <path>", "corpus file (default: the rendered manifest)")
+    .option("--json", "JSON output.")
+    .action(async (opts: { file?: string; json?: boolean }) => {
+      const core = await resolveCore();
+      if (!core) { writeText("✗ @mneme-ai/core hydra unavailable."); process.exitCode = 1; return; }
+      const repoRoot = process.cwd();
+      const dir = join(repoRoot, ".mneme", "hydra");
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      const chainPath = join(dir, "chain.json");
+      let chain: unknown[] = [];
+      if (existsSync(chainPath)) {
+        try { const parsed = JSON.parse(readFileSync(chainPath, "utf8")); if (Array.isArray(parsed)) chain = parsed; } catch { chain = []; }
+      }
+      const corpus = corpusFor(opts.file, core.agentManifest);
+      const cb = core.hydra.forgeCodebook(corpus, {}).codebook;
+      const appended = core.hydra.appendToChain(repoRoot, chain, cb, Date.now());
+      writeFileSync(chainPath, JSON.stringify(appended.chain, null, 2));
+      const g = core.hydra.chainGauntlet(appended.chain);
+      const v = core.hydra.verifyChain(appended.chain);
+      if (opts.json) { writeJson({ gauntlet: g, verify: v, delta: { seq: appended.delta.seq, added: appended.delta.added.length, removed: appended.delta.removed.length }, chainPath }); process.exitCode = g.score === 100 ? 0 : 1; return; }
+      writeText(`HYDRA provenance chain — ${g.length} link(s)`);
+      writeText(``);
+      writeText(`  new delta #${appended.delta.seq}: +${appended.delta.added.length} phrases · -${appended.delta.removed.length} phrases (signed)`);
+      writeText(`  verified(offline): ${g.verified ? "✓" : "✗"}  ·  replay-exact: ${g.replayExact ? "✓" : "✗"}  ·  tamper-caught: ${g.tamperCaught ? "✓" : "✗"}`);
+      writeText(`  → ${chainPath}`);
+      writeText(``);
+      writeText(g.score === 100 ? `  ✓ CHAIN 100/100 — ${v.reason}` : `  ✗ CHAIN ${g.score}/100 — broken at delta ${v.brokenAt}: ${v.reason}`);
       process.exitCode = g.score === 100 ? 0 : 1;
     });
 

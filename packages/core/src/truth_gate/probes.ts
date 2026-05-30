@@ -314,6 +314,29 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hydra.provenance_chain",
+    kind: "boolean",
+    description: "HYDRA PROVENANCE CHAIN (v2.98.0 — the deepest fusion: NOTARY × HYDRA): memory with a cryptographic, replayable, byte-exact history. Each codebook evolution is recorded as a SIGNED delta chained to the previous; the chain replays to EVERY step byte-exact (canonical-hash identical, not approximate), verifies OFFLINE with the public key alone (Ed25519 sigs + prev→result links), and is tamper-evident (edit any delta → localized break). This probe builds a 3-link chain over evolving corpora and asserts the chain gauntlet = 100 (verified ∧ replayExact ∧ tamperCaught) + stability (total functions never throw on garbage).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../hydra/index.js" as string) as typeof import("../hydra/index.js");
+        const c1 = "alpha module is here. alpha module works.".repeat(5);
+        const c2 = c1 + "\nbeta helper arrives. beta helper is new.".repeat(5);
+        const c3 = c2 + "\ngamma engine lands. gamma engine is fast.".repeat(5);
+        let chain: import("../hydra/index.js").CodebookDelta[] = [];
+        for (const [i, c] of [c1, c2, c3].entries()) {
+          chain = H.appendToChain(process.cwd(), chain, H.forgeCodebook(c, { minHits: 2 }).codebook, 1700000000000 + i).chain;
+        }
+        const g = H.chainGauntlet(chain);
+        let stable = true;
+        try { H.verifyChain(null as never); H.chainGauntlet(undefined as never); } catch { stable = false; }
+        const ok = g.score === 100 && g.verified && g.replayExact && g.tamperCaught && g.length === 3 && stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} verified=${g.verified} replayExact=${g.replayExact} tamperCaught=${g.tamperCaught} len=${g.length} stable=${stable}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hydra.guarded_time_to_trust",
     kind: "boolean",
     description: "HYDRA GUARD (v2.97.0 — the fusion gem: codebook × atrophy-clock × NOTARY): guarded expansion is byte-lossless for TRUSTED content but provably REDACTS stale/quarantined content to a signed abstract (sha256 + byte-count, never the raw phrase) — so an AI cannot hallucinate from expired memory yet can still verify the redacted region's identity and request re-hydration. Four measurable invariants: fresh-lossless ∧ redaction-sound (raw gone, sha present) ∧ fresh-preserved ∧ deterministic. Total/stable: every guard function is total (never throws; malformed input → fail-closed redact). This probe forges a fixture, marks an entry stale, and asserts the guarded gauntlet = 100.",
