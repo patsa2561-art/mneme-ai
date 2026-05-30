@@ -345,6 +345,24 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.cortex.sovereign_memory_bus",
+    kind: "boolean",
+    description: "THE COGNITIVE CORTEX (v2.104.0 — the honest Sovereign Memory Bus): a local, vendor-neutral, SIGNED, drift-guarded shared memory every AI agent (Grok/GPT/Gemini/Claude/Codex) contributes to + recalls from. Mneme is the LOGIC GATEKEEPER — a contribution that contradicts established memory is QUARANTINED (not silently overwritten), so the mesh can't be poisoned; a declared update supersedes by consent. Every entry is Ed25519-signed + tamper-evident; recall round-trips across agents. This probe runs the cross-agent flow (claude writes → gpt agrees=DUPLICATE → grok conflict=QUARANTINED with memory unchanged → claude declared-update supersedes) and asserts the cortex gauntlet = 100.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const X = await import("../cortex/index.js" as string) as typeof import("../cortex/index.js");
+        const g = X.cortexGauntlet(process.cwd(), 1700000000000);
+        // The magical power: a verifiably-false conflict is resolved BY PROOF;
+        // an opinion stays unresolved (no auto-decide).
+        const rg = await X.reconcileGauntlet(process.cwd(), 1700000000000);
+        const ok = g.score === 100 && g.roundTrip && g.quarantinesConflict && g.signed && g.tamperCaught && g.deterministic && g.stable
+          && rg.score === 100 && rg.proofResolves && rg.opinionUnresolved && rg.signed;
+        return { value: ok ? 1 : 0, evidence: `cortex=${g.score} quarantine=${g.quarantinesConflict} tamper=${g.tamperCaught} · reconcile=${rg.score} proofResolves=${rg.proofResolves} opinionUnresolved=${rg.opinionUnresolved}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.cognitive.wisdom_gate",
     kind: "boolean",
     description: "COGNITIVE WISDOM GATE (v2.103.0 — the honest core of 'Cognitive Entanglement', NEMESIS × HYDRA): a self-aware authorship signal. Measures how far a diff's coding STYLE sits from an author's own baseline (NEMESIS micro-tells) — but crucially measures its OWN reliability and returns UNKNOWN, refusing to flag, when the style can't be separated from others (prove-or-unknown; never auto-rejects). This probe builds a signature from a consistent author style, confirms a clearly-foreign style is farther than the author's own held-out style, that an unseparable benchmark yields no FLAG, and that the gauntlet = 100 (allow ∧ unknown-when-unseparable ∧ deterministic ∧ signed ∧ stable).",

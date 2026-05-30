@@ -46,7 +46,12 @@ export function fingerprintOf(publicKeyB64: string): string {
 }
 
 function notaryDir(repoRoot: string): string {
-  return join(repoRoot, ".mneme", "notary");
+  // Guard: a null/empty repoRoot (extreme garbage from a "total" caller) must
+  // never throw inside join() — default to cwd. Fixes the "issueReceipt
+  // throws on null repoRoot" class for every caller at once (v2.73 principle:
+  // push the fix down into the shared core both layers call).
+  const root = typeof repoRoot === "string" && repoRoot.length > 0 ? repoRoot : ".";
+  return join(root, ".mneme", "notary");
 }
 
 /**
