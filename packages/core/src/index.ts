@@ -279,6 +279,7 @@ export * as gladiator from "./gladiator/index.js";
 // Auto-detect retries blocked calls under a stricter profile. Learner mines
 // flagged-vs-clean corpora to propose new rules. Per-tool opt-out preserved.
 export * as lexicon from "./lexicon/index.js";
+export * as hydra from "./hydra/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

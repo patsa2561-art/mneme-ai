@@ -314,6 +314,26 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hydra.lossless_signed_portable",
+    kind: "boolean",
+    description: "HYDRA (v2.96.0): the self-mined context codebook is forged from Mneme's own corpus, then the live super-bot analytic engine GATES it — compress→expand must be byte-identical (L4 SHA-256 round-trip, a boolean not a similarity score), zero symbol/phrase collisions (L7), deterministic/portable expansion (L6), Ed25519-signed (L5, verify offline) and tamper-evident (swap-after-sign caught). The defensible gem is the CUT — signed × lossless × vendor-neutral on the NOTARY spine — a composition prior-art research found unfilled. This probe forges over a fixture corpus and asserts gauntlet=100 ∧ sig-bound ∧ tamper-caught.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../hydra/index.js" as string) as typeof import("../hydra/index.js");
+        const corpus = ("HMAC-chained ledger is tamper-evident. Ed25519-signed receipt verifies offline. ").repeat(40);
+        const f = H.hydraForge(process.cwd(), corpus, 1700000000000, { minHits: 2 });
+        const g = f.gauntlet;
+        const bound = H.verifyCodebook(f.receipt, f.forge.codebook).bound === true;
+        const tampered = JSON.parse(JSON.stringify(f.forge.codebook));
+        if (tampered.entries[0]) tampered.entries[0].phrase += "X";
+        const tamperCaught = H.verifyCodebook(f.receipt, tampered).bound === false;
+        const ok = g.score === 100 && g.lossless && g.collisions === 0 && g.portable && bound && tamperCaught && f.forge.converged;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} lossless=${g.lossless} collisions=${g.collisions} portable=${g.portable} sigBound=${bound} tamperCaught=${tamperCaught} entries=${g.entries} netRatio=${g.netRatio.toFixed(3)}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.manifest.aup_clean",
     kind: "boolean",
     description: "AUP-GAP CLOSURE (v2.95.0): the manifest block that lands in CLAUDE.md / AGENTS.md is rendered through the lexicon and then AUDITED — it must carry ZERO 'high'/'medium' offensive-cyber triggers (worm / self-propagating / inject(ion) / parasite / exploit / payload / rogue / attack / mutant). Those words used to leak verbatim and trip Anthropic's 'violative cyber content' classifier; the lexicon now launders every one via a case-preserving `smart` rule. Only benign command tokens (polygraph / bridge / guardrail) may remain. This probe makes the gap structurally un-reopenable.",
