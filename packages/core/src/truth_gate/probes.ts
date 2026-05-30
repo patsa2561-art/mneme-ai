@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.visual.portable_render",
+    kind: "boolean",
+    description: "VISUAL KNOWLEDGE MAP (v2.116.0 — the honest core of 'turn the terminal into a visual map', NOT 3D-ray-tracing/spatial-audio/physics fantasy): a PURE, dependency-free renderer (state + terminal-caps → string) that gracefully degrades — truecolor RGB gradients → 256-color → plain Unicode/ASCII — so it is beautiful where it can be and never garbles where it can't (the 'works everywhere, zero config' guarantee). This probe asserts the visual gauntlet = 100: deterministic ∧ mono-emits-ZERO-escapes (pipe/CI-safe) ∧ ascii-mode-is-pure-ASCII (even if the caller passed Unicode) ∧ truecolor-actually-paints-RGB ∧ every-line-bounded-to-width ∧ sparkline-monotonic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const V = await import("../visual/index.js" as string) as typeof import("../visual/index.js");
+        const g = V.visualGauntlet();
+        const ok = g.score === 100 && g.deterministic && g.monoNoEscapes && g.asciiPure && g.truecolorPaints && g.boundedWidth && g.sparklineMonotonic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} det=${g.deterministic} monoNoEsc=${g.monoNoEscapes} asciiPure=${g.asciiPure} truecolor=${g.truecolorPaints} bounded=${g.boundedWidth} spark=${g.sparklineMonotonic}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.treasury.monoid_million_case",
     kind: "boolean",
     description: "TOKEN TREASURY (v2.115.0 — the measurable 'Pay-per-Token-Saved' substrate, NOT a fabricated metric): accumulates the MEASURED (tokensBefore→tokensAfter) deltas that distill/loopguard/nkl actually computed into a signed, append-only ledger. The aggregate is a commutative MONOID (identity = empty, ⊕ = field-wise sum) so it's order-independent + batch-safe. This probe asserts the treasury gauntlet = 100 INCLUDING a real 1,000,000-case discrete-math sweep over a deterministic generator: measurement-honest (saved == before−after exactly) ∧ order-independent ∧ identity ∧ associative ∧ non-negative ∧ million-case-proof (all 1e6 cases satisfy 0≤after≤before AND running fold == closed-form totals) ∧ total. O(N) time, O(1) space.",

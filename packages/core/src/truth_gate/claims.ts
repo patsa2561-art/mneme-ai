@@ -904,4 +904,14 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.treasury.monoid_million_case",
     severity: "block",
   },
+  // ── v2.116.0 — VISUAL KNOWLEDGE MAP: portable, deterministic renderer ──
+  {
+    id: "claim.visual.portable_render",
+    source: "v2.116.0 release notes",
+    text: "Mneme's VISUAL KNOWLEDGE MAP is a pure, dependency-free renderer that gracefully degrades (truecolor RGB gradients → 256-color → plain Unicode/ASCII) so it is beautiful where it can be and never garbles where it can't — the 'works everywhere, zero config' guarantee; gauntlet: deterministic ∧ mono-emits-zero-escapes ∧ ascii-mode-pure-ASCII ∧ truecolor-paints-RGB ∧ line-bounded-to-width ∧ sparkline-monotonic ∧ total. NOT 3D-ray-tracing / spatial-audio / physics fantasy",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.visual.portable_render",
+    severity: "block",
+  },
 ];
