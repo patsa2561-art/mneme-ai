@@ -118,6 +118,7 @@ import { registerManifestCommands } from "./commands/manifest.js";
 import { registerHydraCommands } from "./commands/hydra.js";
 import { registerWisdomGateCommands } from "./commands/wisdom_gates.js";
 import { registerCortexCommands } from "./commands/cortex.js";
+import { registerShellCommands } from "./commands/shell.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
 import { registerOvernightCommand } from "./commands/overnight.js";
@@ -4896,6 +4897,7 @@ export async function run(argv: string[]): Promise<void> {
   registerHydraCommands(program);
   registerWisdomGateCommands(program);
   registerCortexCommands(program);
+  registerShellCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

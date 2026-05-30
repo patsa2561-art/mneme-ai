@@ -345,6 +345,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.shell.autopilot",
+    kind: "boolean",
+    description: "SHELL AUTOPILOT (v2.106.0 — the last piece of the Zero-Effort Flow): after a failed command, a faint phantom recovery suggestion appears; one keystroke runs it (it never auto-runs). The innovation: the recovery LEARNS from the user's own terminal history — a recovery proven on this machine is signed into the Cognitive Cortex and recalled for EVERY agent (any vendor). Built-in deterministic rules are the cold-start; a learned recovery beats them. Hooks generate for Windows (PowerShell) + macOS/Linux (zsh/bash), non-destructive + sentinel-bracketed, never auto-running anything. This probe asserts the autopilot gauntlet = 100 (rules fire ∧ learned-wins ∧ stable signature ∧ safe hooks ∧ total).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../shell_autopilot/index.js" as string) as typeof import("../shell_autopilot/index.js");
+        const g = S.autopilotGauntlet();
+        const ok = g.score === 100 && g.rulesFire && g.learnedWins && g.signatureStable && g.hookSafe && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} rulesFire=${g.rulesFire} learnedWins=${g.learnedWins} signatureStable=${g.signatureStable} hookSafe=${g.hookSafe}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.cortex.sovereign_memory_bus",
     kind: "boolean",
     description: "THE COGNITIVE CORTEX (v2.104.0 — the honest Sovereign Memory Bus): a local, vendor-neutral, SIGNED, drift-guarded shared memory every AI agent (Grok/GPT/Gemini/Claude/Codex) contributes to + recalls from. Mneme is the LOGIC GATEKEEPER — a contribution that contradicts established memory is QUARANTINED (not silently overwritten), so the mesh can't be poisoned; a declared update supersedes by consent. Every entry is Ed25519-signed + tamper-evident; recall round-trips across agents. This probe runs the cross-agent flow (claude writes → gpt agrees=DUPLICATE → grok conflict=QUARANTINED with memory unchanged → claude declared-update supersedes) and asserts the cortex gauntlet = 100.",

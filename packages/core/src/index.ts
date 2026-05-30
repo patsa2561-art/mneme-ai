@@ -283,6 +283,7 @@ export * as hydra from "./hydra/index.js";
 export * as cognitiveGate from "./cognitive_gate/index.js";
 export * as branchOracle from "./branch_oracle/index.js";
 export * as cortex from "./cortex/index.js";
+export * as shellAutopilot from "./shell_autopilot/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

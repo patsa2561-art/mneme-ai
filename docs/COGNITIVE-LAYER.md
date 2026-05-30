@@ -97,6 +97,25 @@ Persisted to `.mneme/cortex/store.json`. Every tool result is NOTARY-self-attest
 
 ---
 
+## 4. SHELL AUTOPILOT — the safety net you never type a command for
+
+The last piece of the Zero-Effort Flow. Install it **once**; then keep working on the same terminal. When a command **fails**, a faint `mneme ↻ <recovery>` appears — one keystroke runs it (it **never** auto-runs anything).
+
+```bash
+mneme shell install            # auto-detects Windows (PowerShell) / macOS (zsh) / Linux (bash)
+mneme shell install --uninstall
+```
+
+**The innovation — it learns from YOUR terminal history (dark data):** when a recovery fixes a failure, teach it once and it's **signed into the cortex** — so it's recalled for *every* agent (any vendor), forever:
+```bash
+mneme shell learn --cmd "git push" --recovery "git push -u origin HEAD"
+# next time `git push` fails the same way → the proven recovery is suggested, for you AND any AI agent
+```
+
+Built-in rules cover the common failures cold (git no-upstream / rejected, missing module, port busy, permission, command-not-found); a *learned* recovery always wins. **MCP:** `mneme.shell.suggest` / `mneme.shell.learn` — an AI agent gets the same flywheel when its own Bash-tool commands fail.
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:

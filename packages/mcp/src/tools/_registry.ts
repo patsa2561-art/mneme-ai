@@ -62,6 +62,7 @@ import { NOTARY_TOOLS } from "./_notary_tools.js";
 import { HYDRA_TOOLS } from "./_hydra_tools.js";
 import { WISDOM_TOOLS } from "./_wisdom_tools.js";
 import { CORTEX_TOOLS } from "./_cortex_tools.js";
+import { SHELL_TOOLS } from "./_shell_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -244,6 +245,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...HYDRA_TOOLS,
     ...WISDOM_TOOLS,
     ...CORTEX_TOOLS,
+    ...SHELL_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,
