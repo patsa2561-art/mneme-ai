@@ -19,13 +19,19 @@ function writeJson(p: unknown): void { process.stdout.write(JSON.stringify(p, nu
 function writeText(l: string): void { process.stdout.write(l + "\n"); }
 
 interface GauntletShape { lossless: boolean; collisions: number; portable: boolean; score: number; entries: number; bytesOriginal: number; bytesCompressed: number; codebookBytes: number; ratio: number; netRatio: number }
+interface CodebookShape { entries: Array<{ sym: string; phrase: string }> }
+interface GuardedShape { freshLossless: boolean; redactionSound: boolean; freshPreserved: boolean; deterministic: boolean; redactedCount: number; freshCount: number; score: number }
 interface HydraShape {
   hydraForge: (repoRoot: string, corpus: string, at: number, opts?: Record<string, unknown>) => {
-    forge: { rounds: unknown[]; converged: boolean };
+    forge: { codebook: CodebookShape; rounds: unknown[]; converged: boolean };
     gauntlet: GauntletShape;
     receipt: unknown; energy: { bytesSaved: number }; portable: unknown; axioms: unknown[];
   };
   verifyCodebook: (receipt: unknown, cb: unknown) => { valid: boolean; bound: boolean; reason: string };
+  compress: (text: string, cb: unknown) => string;
+  guardedGauntlet: (original: string, encoded: string, cb: unknown, trustMap: Record<string, string>) => GuardedShape;
+  expandGuarded: (encoded: string, cb: unknown, trustOf: (sym: string) => string) => string;
+  trustFromMap: (map: Record<string, string>) => (sym: string) => string;
 }
 interface ManifestShape { renderManifestMarkdown: (c?: unknown, v?: string) => string }
 
@@ -89,6 +95,33 @@ export function registerHydraCommands(program: Command): void {
       if (opts.json) { writeJson(g); process.exitCode = g.score === 100 ? 0 : 1; return; }
       writeText(`HYDRA gauntlet: L4 lossless=${g.lossless} L7 collisions=${g.collisions} L6 portable=${g.portable} → ${g.score}/100`);
       writeText(`  ${g.bytesOriginal}B → ${g.bytesCompressed}B (${g.ratio.toFixed(3)}x text · ${g.netRatio.toFixed(3)}x net) · ${g.entries} entries`);
+      process.exitCode = g.score === 100 ? 0 : 1;
+    });
+
+  h.command("guard")
+    .description("Time-To-Trust demo: forge a codebook, mark a fraction of entries STALE, then prove the guarded expansion is lossless for fresh content but provably REDACTS stale content to a signed abstract (an AI can't hallucinate from expired memory). Prints the guarded gauntlet /100.")
+    .option("--file <path>", "corpus file (default: the rendered manifest)")
+    .option("--stale-fraction <f>", "fraction of entries to mark stale (0..1)", (v) => parseFloat(v), 0.25)
+    .option("--json", "JSON output.")
+    .action(async (opts: { file?: string; staleFraction?: number; json?: boolean }) => {
+      const core = await resolveCore();
+      if (!core) { writeText("✗ @mneme-ai/core hydra unavailable."); process.exitCode = 1; return; }
+      const corpus = corpusFor(opts.file, core.agentManifest);
+      const r = core.hydra.hydraForge(process.cwd(), corpus, Date.now(), {});
+      const cb = r.forge.codebook;
+      const encoded = core.hydra.compress(corpus, cb);
+      const frac = Math.min(1, Math.max(0, opts.staleFraction ?? 0.25));
+      const nStale = Math.floor(cb.entries.length * frac);
+      const trustMap: Record<string, string> = {};
+      for (let i = 0; i < nStale; i++) { const e = cb.entries[i]; if (e) trustMap[e.sym] = "stale"; }
+      const g = core.hydra.guardedGauntlet(corpus, encoded, cb, trustMap);
+      if (opts.json) { writeJson(g); process.exitCode = g.score === 100 ? 0 : 1; return; }
+      writeText(`HYDRA guard — Time-To-Trust (stale fraction ${frac})`);
+      writeText(``);
+      writeText(`  fresh-lossless: ${g.freshLossless ? "✓" : "✗"}  ·  redaction-sound: ${g.redactionSound ? "✓" : "✗"}  ·  fresh-preserved: ${g.freshPreserved ? "✓" : "✗"}  ·  deterministic: ${g.deterministic ? "✓" : "✗"}`);
+      writeText(`  fresh ${g.freshCount} · redacted ${g.redactedCount}`);
+      writeText(``);
+      writeText(g.score === 100 ? `  ✓ GUARDED GAUNTLET 100/100 — lossless when trusted, provably redacted when stale. No leak, no lie.` : `  ✗ GUARDED GAUNTLET ${g.score}/100`);
       process.exitCode = g.score === 100 ? 0 : 1;
     });
 

@@ -314,6 +314,29 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hydra.guarded_time_to_trust",
+    kind: "boolean",
+    description: "HYDRA GUARD (v2.97.0 — the fusion gem: codebook × atrophy-clock × NOTARY): guarded expansion is byte-lossless for TRUSTED content but provably REDACTS stale/quarantined content to a signed abstract (sha256 + byte-count, never the raw phrase) — so an AI cannot hallucinate from expired memory yet can still verify the redacted region's identity and request re-hydration. Four measurable invariants: fresh-lossless ∧ redaction-sound (raw gone, sha present) ∧ fresh-preserved ∧ deterministic. Total/stable: every guard function is total (never throws; malformed input → fail-closed redact). This probe forges a fixture, marks an entry stale, and asserts the guarded gauntlet = 100.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../hydra/index.js" as string) as typeof import("../hydra/index.js");
+        const corpus = ("fresh module is current. legacy helper is ancient and stale. ").repeat(30);
+        const f = H.hydraForge(process.cwd(), corpus, 1700000000000, { minHits: 2 });
+        const cb = f.forge.codebook;
+        const encoded = H.compress(corpus, cb);
+        const trustMap: Record<string, "fresh" | "stale" | "quarantined"> = {};
+        if (cb.entries[0]) trustMap[cb.entries[0].sym] = "stale";
+        const g = H.guardedGauntlet(corpus, encoded, cb, trustMap);
+        // stability: a thrown resolver must not crash expandGuarded
+        let stable = true;
+        try { H.expandGuarded(encoded, cb, () => { throw new Error("boom"); }); } catch { stable = false; }
+        const ok = g.score === 100 && g.freshLossless && g.redactionSound && g.freshPreserved && g.deterministic && stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} freshLossless=${g.freshLossless} redactionSound=${g.redactionSound} freshPreserved=${g.freshPreserved} deterministic=${g.deterministic} stableOnThrow=${stable} redacted=${g.redactedCount}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hydra.lossless_signed_portable",
     kind: "boolean",
     description: "HYDRA (v2.96.0): the self-mined context codebook is forged from Mneme's own corpus, then the live super-bot analytic engine GATES it — compress→expand must be byte-identical (L4 SHA-256 round-trip, a boolean not a similarity score), zero symbol/phrase collisions (L7), deterministic/portable expansion (L6), Ed25519-signed (L5, verify offline) and tamper-evident (swap-after-sign caught). The defensible gem is the CUT — signed × lossless × vendor-neutral on the NOTARY spine — a composition prior-art research found unfilled. This probe forges over a fixture corpus and asserts gauntlet=100 ∧ sig-bound ∧ tamper-caught.",
