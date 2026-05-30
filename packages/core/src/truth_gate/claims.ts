@@ -894,4 +894,14 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.nkl.proven_dead_end",
     severity: "block",
   },
+  // ── v2.115.0 — TOKEN TREASURY: signed, monoid token-savings ledger ───
+  {
+    id: "claim.treasury.monoid_million_case",
+    source: "v2.115.0 release notes",
+    text: "Mneme TOKEN TREASURY accumulates MEASURED token-savings deltas (distill/loopguard/nkl) into a signed append-only ledger whose aggregate is a commutative MONOID; proven over a real 1,000,000-case discrete-math sweep (O(N) time, O(1) space): measurement-honest ∧ order-independent ∧ identity ∧ associative ∧ non-negative ∧ all 1e6 cases hold ∧ total — the falsifiable 'Pay-per-Token-Saved' substrate, not a fabricated metric",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.treasury.monoid_million_case",
+    severity: "block",
+  },
 ];

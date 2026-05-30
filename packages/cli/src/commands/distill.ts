@@ -70,6 +70,9 @@ export function registerDistillCommands(program: Command): void {
         if (existsSync(lp)) deadEnd = m.nkl.checkApproach(m.loopguard.parseLedger(readFileSync(lp, "utf8")), opts.cmd ?? "");
       } catch { /* */ }
       const r = m.distill.distill({ command: opts.cmd ?? "", output, exitCode: typeof opts.code === "number" ? opts.code : NaN, diff, recall, deadEnd });
+      // AUTO-RECORD the measured saving into the Token Treasury (the user never
+      // logs anything — `mneme savings` fills itself from normal distill use).
+      try { const { appendSaving } = await import("./savings.js"); appendSaving(cwd, { source: "distill", tokensBefore: r.measured.tokEstBefore, tokensAfter: r.measured.tokEstAfter }); } catch { /* */ }
       if (opts.json) { writeJson({ brief: r.brief, signature: r.signature, measured: r.measured }); return; }
       writeText(r.brief || "(nothing to distill)");
       const mr = r.measured;

@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.treasury.monoid_million_case",
+    kind: "boolean",
+    description: "TOKEN TREASURY (v2.115.0 — the measurable 'Pay-per-Token-Saved' substrate, NOT a fabricated metric): accumulates the MEASURED (tokensBefore→tokensAfter) deltas that distill/loopguard/nkl actually computed into a signed, append-only ledger. The aggregate is a commutative MONOID (identity = empty, ⊕ = field-wise sum) so it's order-independent + batch-safe. This probe asserts the treasury gauntlet = 100 INCLUDING a real 1,000,000-case discrete-math sweep over a deterministic generator: measurement-honest (saved == before−after exactly) ∧ order-independent ∧ identity ∧ associative ∧ non-negative ∧ million-case-proof (all 1e6 cases satisfy 0≤after≤before AND running fold == closed-form totals) ∧ total. O(N) time, O(1) space.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const T = await import("../treasury/index.js" as string) as typeof import("../treasury/index.js");
+        const g = T.treasuryGauntlet();
+        const ok = g.score === 100 && g.measurementHonest && g.orderIndependent && g.identity && g.associative && g.nonNegative && g.millionCaseProof && g.casesProven === 1_000_000 && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} honest=${g.measurementHonest} orderIndep=${g.orderIndependent} monoid=(id:${g.identity},assoc:${g.associative}) nonNeg=${g.nonNegative} cases=${g.casesProven}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.nkl.proven_dead_end",
     kind: "boolean",
     description: "NEGATIVE-KNOWLEDGE LEDGER (v2.112.0): the cheapest work is the work you don't do. Auto-derives PROVEN dead-ends from the absorb event ledger — a base command that failed ≥N times across all history with ZERO successes — so an agent can avoid repeating a path already proven a trap (cross-session, cross-vendor). Advisory, never a hard block (Padgett guard). This probe asserts the NKL gauntlet = 100: detects-dead-end ∧ success-clears (one success ⇒ not a dead-end) ∧ no-premature-condemn (below threshold) ∧ check-consistent ∧ deterministic ∧ total.",

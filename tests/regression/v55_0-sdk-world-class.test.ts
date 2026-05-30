@@ -159,7 +159,9 @@ describe("v2.55.0 SDK.3 — tagged template verify (PINNED)", () => {
     const mneme = m.createMneme();
     const r = await mneme.verify("Mneme is a quantum GPU shader");
     expect(r.ok).toBe(true);
-    expect(r.data?.verdict).toBe("BLACK_HOLE");
+    // v2.114 — a refuted self-claim resolves to IMPOSSIBLE_REFUTE (chandra
+    // collapse + godel UNSAT) or BLACK_HOLE; both are valid refutations.
+    expect(["BLACK_HOLE", "IMPOSSIBLE_REFUTE"]).toContain(r.data?.verdict);
   });
 
   it("SDK3.4 verify latency < 1000ms cold + reports latencyMs", async () => {

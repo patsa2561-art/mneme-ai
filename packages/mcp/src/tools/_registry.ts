@@ -69,6 +69,7 @@ import { LOGPIPE_TOOLS } from "./_logpipe_tools.js";
 import { LOOPGUARD_TOOLS } from "./_loopguard_tools.js";
 import { DISTILL_TOOLS } from "./_distill_tools.js";
 import { NKL_TOOLS } from "./_nkl_tools.js";
+import { TREASURY_TOOLS } from "./_treasury_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -258,6 +259,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...LOOPGUARD_TOOLS,
     ...DISTILL_TOOLS,
     ...NKL_TOOLS,
+    ...TREASURY_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

@@ -124,6 +124,7 @@ import { registerEntropyCommands } from "./commands/entropy.js";
 import { registerAbsorbCommands } from "./commands/absorb.js";
 import { registerLoopguardCommands } from "./commands/loopguard.js";
 import { registerDistillCommands } from "./commands/distill.js";
+import { registerSavingsCommands } from "./commands/savings.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
 import { registerOvernightCommand } from "./commands/overnight.js";
@@ -4908,6 +4909,7 @@ export async function run(argv: string[]): Promise<void> {
   registerAbsorbCommands(program);
   registerLoopguardCommands(program);
   registerDistillCommands(program);
+  registerSavingsCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

@@ -54,6 +54,8 @@ export const DISTILL_TOOLS: MnemeTool[] = [
           recall: recallFor(core, cwd),
           deadEnd: deadEndFor(core, cwd, String(args["cmd"] ?? "")),
         });
+        // AUTO-RECORD the measured saving into the Token Treasury (no manual log).
+        try { const { appendSaving } = await import("./_treasury_tools.js"); appendSaving(cwd, "distill", r.measured.tokEstBefore, r.measured.tokEstAfter); } catch { /* */ }
         const data = await attest(cwd, { brief: r.brief, signature: r.signature, hadError: r.hadError, measured: r.measured });
         return {
           data,

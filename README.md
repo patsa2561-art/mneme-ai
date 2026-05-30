@@ -24,6 +24,8 @@
 
 🧠 **The Sovereign Cognitive Layer** — signed, vendor-neutral, byte-lossless context memory (HYDRA), self-aware wisdom gates, and a shared memory bus every AI agent (Grok / GPT / Gemini / Claude / Codex) contributes to that *heals its own contradictions by proof*. **How to use it →** [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md)
 
+💰 **Pay-per-Token-Saved** — Mneme does deterministic local work to cut what your agent sends to the model (DISTILL compresses a verbose error+diff to its causal brief; LOOPGUARD stops a thrash; NKL skips a proven dead-end), and meters the **measured** saving into a **signed** ledger — so `mneme savings` shows real input-tokens (and USD, at *your* vendor's price) you didn't spend. Falsifiable, not marketing. **The model →** [`docs/BUSINESS-MODEL.md`](docs/BUSINESS-MODEL.md)
+
 ### 📖 Start here
 
 <table>

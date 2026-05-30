@@ -393,14 +393,30 @@ How to read the verdict:
       // --format=human (default) forces human output even if user piped stdout.
       if (opts.format === "json") opts.json = true;
 
+      // v2.115.0 — INPUT-TAMPER PRECEDENCE (closes the v2.43/v2.44 BIDI/NUL
+      // bypass). The homograph guard below CANONICALIZES (and strips) the
+      // input before verification — which silently removed hostile codepoints
+      // (BIDI override / NUL byte) so ACGV's Layer -1 input-hygiene never saw
+      // them, and the claim fell through to a vaccine/passthrough verdict
+      // instead of the correct INPUT_TAMPERED refutation. Fix: if the RAW
+      // claim is structurally hostile (BLOCK-severity tamper), DON'T strip it —
+      // hand the raw claim to ACGV so its input-hygiene flags INPUT_TAMPERED.
+      let inputTampered = false;
+      try {
+        const { acgvInputHygiene } = await import("@mneme-ai/core") as { acgvInputHygiene?: { checkInputHygiene: (s: string) => { tampered: boolean } } };
+        inputTampered = acgvInputHygiene?.checkInputHygiene(claim).tampered === true;
+      } catch { /* best-effort */ }
+
       // v2.71.0 — HOMOGRAPH GUARD (Vuln #1 closure):
       // Canonicalize input BEFORE verification. Closes the "٢.70.0" bypass
       // where Arabic-Indic / Bengali / Thai / fullwidth / math-bold digits
       // produced MIXED instead of REFUTED. Verdict now runs on normalized
       // form; original + flags annotated in JSON output for transparency.
+      // SKIPPED when the input is hostile-tampered (handled above) so the
+      // INPUT_TAMPERED verdict is not silently canonicalized away.
       let homographFlags: string[] = [];
       let homographTransforms: string[] = [];
-      try {
+      if (!inputTampered) try {
         const coreMod = await import("@mneme-ai/core") as { protoplasm?: { canonicalize?: (s: string) => { canonical: string; flags: string[]; transformations: string[] } } };
         const canonicalize = coreMod.protoplasm?.canonicalize;
         if (canonicalize) {
