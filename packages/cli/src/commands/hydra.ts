@@ -58,6 +58,8 @@ interface HydraShape {
   appendToChain: (repoRoot: string, chain: unknown[], next: unknown, at: number, meta?: Record<string, string>) => { chain: unknown[]; delta: { seq: number; added: unknown[]; removed: unknown[]; resultHash?: string } };
   verifyChain: (chain: unknown[]) => { ok: boolean; length: number; brokenAt: number; reason: string };
   chainGauntlet: (chain: unknown[]) => { verified: boolean; replayExact: boolean; tamperCaught: boolean; length: number; score: number };
+  guardedReplay: (chain: unknown[], index: number, halfLifeDeltas: number) => { ok: boolean; codebook: { entries: Array<{ sym: string; phrase: string }> } | null; trust: { trustMap: Record<string, string>; freshCount: number; staleCount: number; atIndex: number }; reason: string };
+  guardedChainGauntlet: (chain: unknown[], halfLifeDeltas: number) => { deterministic: boolean; freshAtTip: boolean; provenOnly: boolean; stable: boolean; score: number };
 }
 interface ManifestShape { renderManifestMarkdown: (c?: unknown, v?: string) => string }
 
@@ -210,6 +212,35 @@ export function registerHydraCommands(program: Command): void {
       } catch (e) {
         // 108-error rule: provenance must never crash the host (or a commit).
         if (opts.json) { writeJson({ ok: false, reason: (e as Error).message }); } else { writeText(`· hydra chain skipped (non-fatal): ${(e as Error).message}`); }
+      }
+    });
+
+  h.command("replay <index>")
+    .description("TEMPORAL GUARDED REPLAY (Guard × Chain fusion): replay the codebook at a past chain step. With --guard, staleness is derived from the chain's OWN history (atrophy) and cold entries would expand only to a signed abstract — the AI gets the shape of old knowledge, not rotten detail. Reads .mneme/hydra/chain.json.")
+    .option("--guard", "derive temporal staleness from chain history + report what would be redacted")
+    .option("--halflife <n>", "atrophy half-life in deltas (entries older than 2× → stale)", (v) => parseInt(v, 10), 3)
+    .option("--json", "JSON output.")
+    .action(async (indexArg: string, opts: { guard?: boolean; halflife?: number; json?: boolean }) => {
+      const core = await resolveCore();
+      if (!core) { writeText("✗ @mneme-ai/core hydra unavailable."); process.exitCode = 1; return; }
+      const chainPath = join(process.cwd(), ".mneme", "hydra", "chain.json");
+      if (!existsSync(chainPath)) { writeText("✗ no chain yet — run `mneme hydra chain --git` first."); process.exitCode = 1; return; }
+      let chain: unknown[] = [];
+      try { const p = JSON.parse(readFileSync(chainPath, "utf8")); if (Array.isArray(p)) chain = p; } catch { writeText("✗ chain.json unreadable"); process.exitCode = 1; return; }
+      const index = Number.isFinite(parseInt(indexArg, 10)) ? parseInt(indexArg, 10) : chain.length - 1;
+      const hl = opts.halflife ?? 3;
+      const r = core.hydra.guardedReplay(chain, index, hl);
+      if (!r.ok || !r.codebook) { if (opts.json) { writeJson(r); } else { writeText(`✗ replay failed: ${r.reason}`); } process.exitCode = 1; return; }
+      if (opts.json) { writeJson({ atIndex: r.trust.atIndex, entries: r.codebook.entries.length, guard: !!opts.guard, fresh: r.trust.freshCount, stale: r.trust.staleCount, halflife: hl }); return; }
+      writeText(`HYDRA replay — codebook at chain step ${r.trust.atIndex} (${r.codebook.entries.length} entries)`);
+      if (opts.guard) {
+        writeText(``);
+        writeText(`  temporal guard (half-life ${hl} deltas): ${r.trust.freshCount} fresh · ${r.trust.staleCount} stale (redacted)`);
+        const staleSyms = Object.keys(r.trust.trustMap);
+        const sample = r.codebook.entries.filter((e) => staleSyms.includes(e.sym)).slice(0, 3);
+        for (const e of sample) writeText(`    ⊘ redacted (cold): "${e.phrase.slice(0, 40).replace(/\n/g, " ")}…"`);
+        writeText(``);
+        writeText(`  ✓ cold knowledge is redacted to a signed abstract — the AI sees its shape, not rotten detail.`);
       }
     });
 

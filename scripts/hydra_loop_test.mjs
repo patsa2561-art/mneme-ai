@@ -56,6 +56,17 @@ try {
   ok("every delta has a signed receipt", chain.every((d) => d.receipt && typeof d.receipt.sig === "string"));
   ok("anchors match the real commit order", chain.every((d, i) => d.meta?.commit === seenCommits[i]));
 
+  // Temporal guarded replay (Guard × Chain fusion) over the real chain.
+  {
+    const r = cli(repo, ["hydra", "replay", "0", "--guard", "--halflife", "1", "--json"]);
+    let p; try { p = JSON.parse(r.out); } catch { p = null; }
+    ok("guarded replay: cli exit 0", r.code === 0);
+    ok("guarded replay: reports fresh+stale counts", p && typeof p.fresh === "number" && typeof p.stale === "number");
+    ok("guarded replay: atIndex within chain", p && p.atIndex >= 0 && p.atIndex < ROUNDS);
+    const tipr = cli(repo, ["hydra", "replay", String(ROUNDS - 1), "--guard", "--halflife", "1", "--json"]);
+    ok("guarded replay at tip: exit 0", tipr.code === 0);
+  }
+
   // Idempotency: same HEAD + --skip-unchanged → no growth.
   const before = chainJson(repo).length;
   cli(repo, ["hydra", "chain", "--git", "--skip-unchanged"]);

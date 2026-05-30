@@ -24,6 +24,7 @@ export * from "./analytic.js";
 export * from "./attest.js";
 export * from "./guard.js";
 export * from "./chain.js";
+export * from "./chain_guard.js";
 
 import type { Codebook } from "./engine.js";
 import { sha256Hex } from "./engine.js";

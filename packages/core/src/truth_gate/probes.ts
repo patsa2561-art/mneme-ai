@@ -314,6 +314,31 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hydra.temporal_guarded_replay",
+    kind: "boolean",
+    description: "HYDRA GUARD × CHAIN fusion (v2.100.0 — every flow wired): the provenance chain computes its OWN atrophy clock and drives the guard. Replaying a past step, an entry added long ago and never touched is STALE and expands only to a signed abstract (cold knowledge redacted; fresh kept byte-exact). Trust is derived deterministically from chain history; only PROVEN-old entries go stale (Padgett: unknown ⇒ fresh). This probe builds a 4-step chain where an ancient phrase ages out while a tip phrase stays fresh, then asserts END-TO-END: guarded expansion redacts the cold phrase, keeps the fresh one byte-exact, and the fusion gauntlet = 100 (deterministic ∧ freshAtTip ∧ provenOnly ∧ stable).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../hydra/index.js" as string) as typeof import("../hydra/index.js");
+        const anc = "ancient axiom holds forever and ever. ".repeat(4);
+        const nw = "brand new thing just landed today hot. ".repeat(4);
+        const steps = [anc, anc + "\nx rule one connects here now. ".repeat(4), anc + "\nx rule one connects here now. ".repeat(4) + "\ny fact two arrives newest one. ".repeat(4), anc + "\nx rule one connects here now. ".repeat(4) + "\ny fact two arrives newest one. ".repeat(4) + "\n" + nw];
+        let chain: import("../hydra/index.js").CodebookDelta[] = [];
+        steps.forEach((c, i) => { chain = H.appendToChain(process.cwd(), chain, H.forgeCodebook(c, { minHits: 2 }).codebook, 1700000000000 + i).chain; });
+        const tipCorpus = steps[steps.length - 1]!;
+        const r = H.guardedReplay(chain, chain.length - 1, 1);
+        const cb = r.codebook!;
+        const guarded = H.expandGuarded(H.compress(tipCorpus, cb), cb, H.trustFromMap(r.trust.trustMap));
+        const coldRedacted = !guarded.includes("ancient axiom holds forever and ever");
+        const freshKept = guarded.includes("brand new thing just landed today hot");
+        const g = H.guardedChainGauntlet(chain, 1);
+        const ok = g.score === 100 && coldRedacted && freshKept && r.trust.staleCount > 0;
+        return { value: ok ? 1 : 0, evidence: `gauntlet=${g.score} coldRedacted=${coldRedacted} freshKept=${freshKept} stale=${r.trust.staleCount} fresh=${r.trust.freshCount} det=${g.deterministic} provenOnly=${g.provenOnly}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hydra.provenance_chain",
     kind: "boolean",
     description: "HYDRA PROVENANCE CHAIN (v2.98.0 — the deepest fusion: NOTARY × HYDRA): memory with a cryptographic, replayable, byte-exact history. Each codebook evolution is recorded as a SIGNED delta chained to the previous; the chain replays to EVERY step byte-exact (canonical-hash identical, not approximate), verifies OFFLINE with the public key alone (Ed25519 sigs + prev→result links), and is tamper-evident (edit any delta → localized break). This probe builds a 3-link chain over evolving corpora and asserts the chain gauntlet = 100 (verified ∧ replayExact ∧ tamperCaught) + stability (total functions never throw on garbage).",
