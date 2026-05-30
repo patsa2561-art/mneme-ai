@@ -129,7 +129,7 @@ export const tuneProbeLongSleepTool: MnemeTool = {
     "N6 cancellation probe to verify end-to-end abort propagation. Default sleep is 2500ms; the probe sends a " +
     "cancellation immediately + expects this tool to return in <500ms with `aborted:true`.",
   whenToUse: "Internal probe surface. Don't call directly.",
-  triggers: [],
+  triggers: ["tune probe long sleep", "abort propagation probe"],
   inputSchema: {
     type: "object",
     properties: {

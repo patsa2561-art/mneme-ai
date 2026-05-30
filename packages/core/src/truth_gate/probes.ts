@@ -359,6 +359,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.loopguard.objective_thrash",
+    kind: "boolean",
+    description: "LOOPGUARD (v2.110.0 — the honest core of 'Terminal Cognitive Telemetry', NOT stress/mood-reading): detects ONE objective, deterministic signal — THRASHING, where the same failure-signature repeats ≥threshold times in a window with no success in between (an agent or human stuck in a loop) — and breaks it by surfacing the Cortex's known recovery. `resume` deterministically reconstructs where a session left off. This probe asserts the loopguard gauntlet = 100: detects-thrash ∧ success-breaks-loop ∧ no-false-alarm-below-threshold ∧ distinct-failures-don't-aggregate ∧ resume-reconstructs (last cmd + unresolved error + recalled fix) ∧ deterministic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const L = await import("../loopguard/index.js" as string) as typeof import("../loopguard/index.js");
+        const g = L.loopguardGauntlet();
+        const ok = g.score === 100 && g.detectsThrash && g.successBreaksLoop && g.noFalseAlarm && g.distinctNotStuck && g.resumeReconstructs && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} thrash=${g.detectsThrash} breaks=${g.successBreaksLoop} noAlarm=${g.noFalseAlarm} distinct=${g.distinctNotStuck} resume=${g.resumeReconstructs} det=${g.deterministic}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.entropy.audited_multisource",
     kind: "boolean",
     description: "AUDITED ENTROPY (v2.108.0 — the honest core of 'True Entropy Security', NOT magic unhackability): secrets are MIXED from multiple sources through a cryptographic extractor (defense in depth — strong if ANY source has entropy), sources are health-checked (a stuck source is FLAGGED), and a SIGNED provenance attestation binds the secret's hash to its audited sources without revealing the secret. This probe asserts the entropy gauntlet = 100: mix-deterministic ∧ mix-diverges ∧ defense-in-depth (a stuck source can't weaken the mix) ∧ health-detects-stuck ∧ attestation-binds (a wrong secret is caught) ∧ total.",

@@ -60,6 +60,10 @@ export function normalize(out: string): string {
 
   // 2. Mask volatile content.
   s = s
+    // Mneme version string "v2.110.0" → <VERSION> (every release bumps this;
+    // masking it makes structure snapshots survive version bumps instead of
+    // red-X'ing on every release — root cause of the stale-since-v2.23.1 drift).
+    .replace(/\bv\d+\.\d+\.\d+(?:-[\w.]+)?\b/g, "v<VERSION>")
     // ISO-ish timestamps "2024-01-01T12:34:56.789Z" → <TS>
     .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?/g, "<TS>")
     // durations: "12.3 ms", "4s", "2 d"

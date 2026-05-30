@@ -8,8 +8,8 @@
  */
 
 import type { Command } from "commander";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
+import { join, dirname } from "node:path";
 
 function writeJson(p: unknown): void { process.stdout.write(JSON.stringify(p, null, 2) + "\n"); }
 function writeText(l: string): void { process.stdout.write(l + "\n"); }
@@ -18,6 +18,7 @@ interface CoreLog {
   logpipe: { extractLogEntry: (c: string, o: string, e: number) => { command: string; exitCode: number; hadError: boolean; errorClass: string; excerpt: string; intent: string; signature: string; kind: string }; formatForCortex: (e: unknown) => { key: string; value: string; kind: "warning" | "fact" } };
   cortex: { contribute: (repo: string, store: unknown, c: unknown, at: number, opts?: unknown) => { store: unknown; result: { verdict: string } } };
   shellAutopilot: { recoveryKey: (sig: string) => string };
+  loopguard: { LOOPGUARD_LEDGER: string; toEvent: (e: unknown, at: number) => unknown };
 }
 async function core(): Promise<CoreLog | null> {
   try { const c = (await import("@mneme-ai/core")) as unknown as CoreLog; if (c.logpipe && c.cortex) return c; } catch { /* */ }
@@ -66,6 +67,13 @@ export function registerAbsorbCommands(program: Command): void {
         store = o2.store; taught = true;
       }
       try { const dir = join(cwd, ".mneme", "cortex"); if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); writeFileSync(cortexPath(cwd), JSON.stringify(store, null, 2)); } catch { /* */ }
+      // feed the LOOPGUARD ledger (objective thrash detection + `mneme resume`)
+      try {
+        const ev = m.loopguard.toEvent(entry, Date.now());
+        const lp = join(cwd, m.loopguard.LOOPGUARD_LEDGER);
+        if (!existsSync(dirname(lp))) mkdirSync(dirname(lp), { recursive: true });
+        appendFileSync(lp, JSON.stringify(ev) + "\n");
+      } catch { /* */ }
       if (opts.json) { writeJson({ entry, cortex: out.result.verdict, taughtAutopilot: taught }); return; }
       writeText(`📥 ${entry.intent}`);
       if (entry.hadError) writeText(`   error[${entry.errorClass}]: ${entry.excerpt}`);

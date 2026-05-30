@@ -41,6 +41,28 @@
  *   leak possible.
  */
 
+// ── Test isolation: strip ambient AI-agent IDENTITY signals ──────────
+// When the suite is run INSIDE an AI agent (Claude Code / Cursor / Cline /
+// Codex / Continue / Copilot / Devin), that host sets identity env vars
+// (CLAUDECODE, CURSOR_TRACE_ID, …). Vendor-detection + isolation unit tests
+// assume a clean environment ("returns null when no signals"; "infers cursor
+// from CURSOR_TRACE_ID") — the ambient host vars make `autoDetectVendor`
+// resolve to the HOST vendor and those tests fail with false negatives that
+// never happen on a clean CI runner. We delete ONLY the agent-identity
+// signals here (NOT API keys or OLLAMA_*, which other subsystems legitimately
+// read); tests that need a specific signal set + restore it themselves.
+for (const k of [
+  "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SESSION", "CLAUDE_CODE_SESSION_ID",
+  "CLAUDE_CODE_SSE_PORT", "CLAUDE_AGENT_SDK_VERSION", "CLAUDE_CODE_ENABLE_TASKS",
+  "CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING", "CLAUDE_CODE_TMPDIR", "CLAUDE_EFFORT",
+  "CURSOR_AGENT", "CURSOR_TRACE_ID", "CLINE_AGENT", "CLINE_TASK_ID",
+  "CODEX_AGENT", "OPENAI_CODEX", "CONTINUE_DEV", "COPILOT_AGENT",
+  "GITHUB_COPILOT_CLI", "GH_COPILOT_TOKEN", "DEVIN_AGENT", "DEVIN_SESSION",
+  "AI_AGENT", "MNEME_AI_VENDOR",
+]) {
+  delete process.env[k];
+}
+
 process.on("unhandledRejection", (reason: unknown) => {
   // Log to stderr so the CI log still shows the underlying error —
   // we just refuse to let it kill the worker.

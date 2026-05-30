@@ -41,7 +41,18 @@ jobs:
               and onnxruntime-node@1.22.0 has a packaging bug where its
               install script requires `adm-zip` without declaring it)
         shell: bash
-        run: npm ci --ignore-scripts || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts)
+        # Three-tier, drift-tolerant install. ROOT CAUSE of the chronic
+        # red-X Pages deploys: every release bumps package.json versions but
+        # the committed package-lock.json lagged a version, so `npm ci`
+        # (which hard-fails on ANY package.json↔lock mismatch) failed — and
+        # heal-lockfile.mjs only repairs registry INTEGRITY drift, never
+        # WORKSPACE-VERSION drift, so the self-heal couldn't recover. Tier 3
+        # (`npm install`, which tolerates drift) makes a forgotten lockfile
+        # bump degrade to a slower install instead of a failed deploy.
+        run: |
+          npm ci --ignore-scripts \
+            || (echo "::warning::lockfile integrity drift -- self-healing"; node scripts/heal-lockfile.mjs && npm ci --ignore-scripts) \
+            || (echo "::warning::lockfile version drift -- falling back to drift-tolerant install"; npm install --ignore-scripts --no-audit --no-fund)
 
       - name: Build dashboard
         run: npm run build --workspace=@mneme-ai/web

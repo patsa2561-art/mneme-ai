@@ -18,11 +18,9 @@
 
 ### 🧠 Mneme is **ALETHEIA** — the savant of verifiable *truth · memory · structure*
 
-> An LLM is the fluent generalist (and *therefore* hallucination-prone + forgetful). Mneme is the **savant**: the prosthesis for that disability — superhuman on the three axes LLMs are structurally weak at, and deliberately nothing else.
->
-> **Aletheia** — it doesn't lie (Prove-or-Unknown: it says `UNKNOWN` rather than guess). · **Diakrisis** — it doesn't pass off the mediocre as excellent. · **Anamnesis** — it remembers, so the multiverse *computes a truth once and recollects it forever*. · **Ethos** (§XI) — the courage of "I don't know" + the generosity that makes **other** AIs more trustworthy: the one moat no engagement-driven vendor can structurally hold.
+> An LLM is a brilliant generalist — and *therefore* prone to hallucinate and forget. Mneme is the **savant** beside it: it **remembers** across sessions and vendors, and it says **`UNKNOWN` instead of guessing**. That's the whole idea.
 
-📖 **The manifesto** (identity · the savant axes · ethos): [`docs/ALETHEIA.md`](docs/ALETHEIA.md)  ·  📜 **Every release, in full detail** (v2.18 → latest): [`CHANGELOG.md`](CHANGELOG.md)
+📖 **The full story** (why a savant beats a generalist · the axes · the ethos) → [`docs/ALETHEIA.md`](docs/ALETHEIA.md)  ·  📜 **Every release** → [`CHANGELOG.md`](CHANGELOG.md)
 
 🧠 **The Sovereign Cognitive Layer** — signed, vendor-neutral, byte-lossless context memory (HYDRA), self-aware wisdom gates, and a shared memory bus every AI agent (Grok / GPT / Gemini / Claude / Codex) contributes to that *heals its own contradictions by proof*. **How to use it →** [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md)
 
@@ -40,9 +38,11 @@
 
 <br/>
 
-### 🚀 v2.55 — @mneme-ai/sdk (NEW)
+### 🚀 `@mneme-ai/sdk` — embed Mneme *in-process*
 
-World-class premium in-process SDK for AI vendors — **30-80× faster** than CLI subprocess + tagged-template verify + async-iterator events + branded types + file-lock adapter. Vendors embed Mneme silently inside Cursor / Continue / Cline / Claude Code etc.
+<a href="https://www.npmjs.com/package/@mneme-ai/sdk" target="_blank" rel="noopener"><img alt="@mneme-ai/sdk on npm" src="https://img.shields.io/npm/v/@mneme-ai/sdk?label=%40mneme-ai%2Fsdk&color=cb3837&logo=npm&style=for-the-badge" /></a>
+
+**The fastest way to put Mneme inside your AI tool.** A premium in-process SDK — **30-80× faster** than the CLI subprocess + tagged-template verify + async-iterator events + branded types + file-lock adapter. Vendors embed Mneme silently inside Cursor / Continue / Cline / Claude Code, etc.
 
 ```ts
 import { createMneme } from "@mneme-ai/sdk";
@@ -54,7 +54,7 @@ const bench = await mneme.benchmark.vsCli();         // proves the speedup on yo
 
 - 📑 <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index (bilingual)</a> · 🚀 Quick start <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/QUICKSTART-TH.md" target="_blank" rel="noopener">TH</a> · 📘 Design <a href="docs/sdk/DESIGN.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/DESIGN-TH.md" target="_blank" rel="noopener">TH</a> · 🔄 Migration <a href="docs/sdk/MIGRATION.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/MIGRATION-TH.md" target="_blank" rel="noopener">TH</a> · 📚 <a href="docs/README.md" target="_blank" rel="noopener">Docs index</a>
 
-📜 Past releases (v2.18 → v2.54 — World-class premium, MILLION DOLLAR SECRET diamonds, NEMESIS, audit fixes, ฯลฯ): <a href="CHANGELOG.md" target="_blank" rel="noopener"><b>CHANGELOG.md</b></a>
+📜 Every release in full detail (v2.18 → latest): <a href="CHANGELOG.md" target="_blank" rel="noopener"><b>CHANGELOG.md</b></a>
 
 </div>
 

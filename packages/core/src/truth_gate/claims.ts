@@ -858,4 +858,17 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.argus11.world_first_multimodal",
     severity: "block",
   },
+  // ── v2.110.0 — LOOPGUARD: objective thrash detection + deterministic resume ──
+  // The honest core of "Terminal Cognitive Telemetry" — NOT stress/mood-reading.
+  // The probe proves the one objective signal (same failure repeated ≥N with no
+  // success between = a thrash) plus `resume` reconstruction, all deterministic.
+  {
+    id: "claim.loopguard.objective_thrash",
+    source: "v2.110.0 release notes",
+    text: "Mneme LOOPGUARD detects objective THRASHING (the same failure-signature repeated ≥threshold times in a window with no success in between — an agent/human stuck in a loop) deterministically, breaks the loop by surfacing the Cortex's known recovery, and `resume` reconstructs where a session left off — all without LLM/mind-reading; gauntlet: thrash ∧ success-breaks-loop ∧ no-false-alarm ∧ distinct-don't-aggregate ∧ resume-reconstructs ∧ deterministic ∧ total",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.loopguard.objective_thrash",
+    severity: "block",
+  },
 ];

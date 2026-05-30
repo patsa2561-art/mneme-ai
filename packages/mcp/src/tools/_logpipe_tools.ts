@@ -6,8 +6,8 @@
  * when X ran" and, on errors, the Shell Autopilot learns the fix. Total.
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import type { MnemeTool } from "./_types.js";
 
@@ -42,6 +42,7 @@ export const LOGPIPE_TOOLS: MnemeTool[] = [
           store = o2.store; taught = true;
         }
         try { const dir = join(cwd, ".mneme", "cortex"); if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); writeFileSync(cortexPath(cwd), JSON.stringify(store, null, 2)); } catch { /* */ }
+        try { const ev = core.loopguard.toEvent(entry, Date.now()); const lp = join(cwd, core.loopguard.LOOPGUARD_LEDGER); if (!existsSync(dirname(lp))) mkdirSync(dirname(lp), { recursive: true }); appendFileSync(lp, JSON.stringify(ev) + "\n"); } catch { /* */ }
         const data = await attest(cwd, { intent: entry.intent, hadError: entry.hadError, errorClass: entry.errorClass, cortex: o.result.verdict, taughtAutopilot: taught });
         return { data, wisdom: `📥 ${entry.intent} → cortex (${o.result.verdict})${taught ? " · taught autopilot" : ""}`, followUp: entry.hadError ? ["mneme.shell.suggest"] : [], confidence: { level: "high" as const } };
       } catch (e) { return low((e as Error).message); }

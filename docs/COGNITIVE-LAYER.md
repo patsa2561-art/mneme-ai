@@ -1,6 +1,6 @@
 # 🧠 The Sovereign Cognitive Layer — HYDRA · Wisdom Gates · Cortex
 
-> How to use everything in the v2.96 → v2.104 arc. Every command works **locally**, is **Ed25519-signed**, is **vendor-neutral** (any AI agent can use + verify it offline), and is **total** (never crashes the host). You do not have to memorise this — AI agents call the MCP tools for you; this page is for when you want to drive it yourself.
+> How to use everything in the v2.96 → v2.110 arc. Every command works **locally**, is **Ed25519-signed**, is **vendor-neutral** (any AI agent can use + verify it offline), and is **total** (never crashes the host). You do not have to memorise this — AI agents call the MCP tools for you; this page is for when you want to drive it yourself.
 
 There are two ways to use all of it:
 
@@ -158,6 +158,28 @@ echo "fatal: no upstream" | mneme absorb --cmd "git push" --code 1 --fix "git pu
 
 ---
 
+## 8. LOOPGUARD — break the loop with knowledge, not blind retries
+
+The honest core of "Terminal Cognitive Telemetry". We do **not** read your stress, your keystrokes, or your mood — that is unmeasurable theatre. We detect **one** objective, deterministic signal: **thrashing** — the *same* failure-signature repeated ≥N times in a window with **no success in between** (you, or an AI agent, are stuck in a loop). That is the moment to stop retrying and surface what's already known.
+
+```bash
+mneme loopguard                 # are you thrashing right now? (reads the `mneme absorb` ledger)
+mneme loopguard --threshold 4 --window 30
+mneme resume                    # where did this session leave off? last command, open error, the known fix
+```
+
+**The killer for AI agents:** an agent silently burns time + tokens retrying a failing approach. `mneme.loopguard.check` is a **boolean an agent asks itself** — *"have I tried this failing thing too many times?"* — computed deterministically from the Logpipe event stream (no LLM). On a thrash it surfaces the recovery the **Cortex** already knows, so the agent breaks the loop with knowledge instead of blind retries.
+
+```
+# the loop closes: absorb (record) → loopguard (detect) → resume (recall the fix)
+git push   # fails…  →  mneme absorb --cmd "git push" --code 1   (×3)
+mneme loopguard        # → 🔁 THRASH: `git push` failed 3× — known recovery: git push -u origin HEAD
+```
+
+**MCP:** `mneme.loopguard.check` (am I looping?) · `mneme.loopguard.resume` (reconstruct where I left off). Composes §3 Cortex + §4 Autopilot + §7 Logpipe. Deterministic: a sequence of events → a verdict, the same every time. Total. The known recovery is **recalled** from the Cortex's learned shell recoveries — so the more you (or any agent) `absorb`, the smarter the loop-break.
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:
@@ -165,6 +187,7 @@ We refused to ship the dangerous theatre from the "magical architecture" wishlis
 - ❌ **No kernel driver / eBPF / process- or VRAM-injection** into other agents — that is malware-class and, for a cloud agent, fantasy. The Cortex is a *clean, safe, cross-vendor protocol* instead.
 - ❌ **No "multi-timeline branch prediction"** ("this branch *will* fix the bug") — unfalsifiable fortune-telling. Branch Oracle reports *present-tense real signals* instead.
 - ❌ **No "quantum cognitive entanglement"** — the Cognitive Gate is *measurable stylometry that knows when it can't tell* instead.
+- ❌ **No stress / keystroke-dynamics / "you're getting frustrated" mood-reading** — unmeasurable theatre. LOOPGUARD detects only *objective thrashing* (the same failure repeated with no success between) instead.
 
 Every feature here is a **boolean that cannot lie** + an **offline-verifiable signature**. That is the whole point.
 
