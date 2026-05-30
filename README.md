@@ -2,9 +2,9 @@
 
 <img src="./assets/title.svg" alt="μνήμη · Mneme" width="640">
 
-# Memory · Truth · Consensus — for every AI agent
+# The Trust & Cost Layer for AI Agents
 
-<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> The brain that bolts onto Claude Code / Cursor / Cline / Codex / Continue / ChatGPT / Gemini. Remembers across sessions + vendors. Refuses to hallucinate. Cross-vendor Byzantine consensus when it matters. <b>Local-first. Vendor-neutral. MIT.</b></sub>
+<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> trust boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions + vendors, and <b>meters the tokens it saves you</b>. The brain that bolts onto Claude Code / Cursor / Cline / Codex / Continue / ChatGPT / Gemini. <b>Vendor-neutral. MIT. Air-gap-ready.</b></sub>
 
 <br/><br/>
 
@@ -25,6 +25,17 @@
 🧠 **The Sovereign Cognitive Layer** — signed, vendor-neutral, byte-lossless context memory (HYDRA), self-aware wisdom gates, and a shared memory bus every AI agent (Grok / GPT / Gemini / Claude / Codex) contributes to that *heals its own contradictions by proof*. **How to use it →** [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md)
 
 💰 **Pay-per-Token-Saved** — Mneme does deterministic local work to cut what your agent sends to the model (DISTILL compresses a verbose error+diff to its causal brief; LOOPGUARD stops a thrash; NKL skips a proven dead-end), and meters the **measured** saving into a **signed** ledger — so `mneme savings` shows real input-tokens (and USD, at *your* vendor's price) you didn't spend. Falsifiable, not marketing. **The model →** [`docs/BUSINESS-MODEL.md`](docs/BUSINESS-MODEL.md)
+
+### 🏛 For the enterprise — Trust, Sovereignty, Cost
+
+|  | What it answers for a CISO / CRO / CFO | In Mneme |
+|---|---|---|
+| 🛡 **Absolute Trust Layer** | *"Every agent verifies before it acts."* | verify-before-act gate + cross-vendor consensus + signed audit trail |
+| 🔒 **Sovereign / Air-Gapped AI** | *"Our code &amp; secrets never leak to the model — with proof."* | **SOVEREIGN EGRESS GUARD** — redacts secrets, trips on honeytoken canaries, Bloom secret-membership, signs an offline-auditable egress certificate |
+| 🌐 **Standard MCP boundary** | *"One governed surface for all our agents."* | local-first, vendor-neutral MCP server + capability passports |
+| 💰 **Value-based cost** | *"Pay only for tokens you actually save."* | the signed, measured savings ledger above |
+
+> Honest by design (DIAKRISIS): every figure is **measured + signed**, never fabricated; USD uses **your** vendor's price. **The pillars, the reframes (Key-Person Risk · Governance Cert · Capital Burn), and what is *not* claimed →** [`docs/ENTERPRISE.md`](docs/ENTERPRISE.md)
 
 ### 📖 Start here
 

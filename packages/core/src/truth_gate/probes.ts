@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.egress.sovereign_guard",
+    kind: "boolean",
+    description: "SOVEREIGN EGRESS GUARD (v2.118.0 — the enterprise 'code/secrets never leak, with proof' gate): a deterministic boundary that pattern-redacts known secret classes, trips on HONEYTOKEN canaries (exfiltration → BLOCK), and catches registered secrets via a Bloom filter (one-way, never stores the secret). This probe asserts the egress gauntlet = 100 incl. a 10,000-secret Bloom no-false-negative sweep: canary→BLOCK ∧ pattern→REDACT (raw key gone) ∧ clean→ALLOW ∧ Bloom-NEVER-false-negatives (every registered secret tests positive) ∧ Bloom-low-false-positive (<5%) ∧ cert-binds-payload-HASH-only (never the secret) ∧ deterministic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const E = await import("../egress/index.js" as string) as typeof import("../egress/index.js");
+        const g = E.egressGauntlet();
+        const ok = g.score === 100 && g.canaryBlocks && g.patternRedacts && g.cleanAllows && g.bloomNoFalseNegative && g.bloomLowFalsePositive && g.certBindsHashOnly && g.deterministic && g.stable && g.membershipCases === 10000;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} canary=${g.canaryBlocks} redact=${g.patternRedacts} clean=${g.cleanAllows} bloomNoFN=${g.bloomNoFalseNegative} bloomLowFP=${g.bloomLowFalsePositive} hashOnly=${g.certBindsHashOnly} cases=${g.membershipCases}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.visual.portable_render",
     kind: "boolean",
     description: "VISUAL KNOWLEDGE MAP (v2.116.0 — the honest core of 'turn the terminal into a visual map', NOT 3D-ray-tracing/spatial-audio/physics fantasy): a PURE, dependency-free renderer (state + terminal-caps → string) that gracefully degrades — truecolor RGB gradients → 256-color → plain Unicode/ASCII — so it is beautiful where it can be and never garbles where it can't (the 'works everywhere, zero config' guarantee). This probe asserts the visual gauntlet = 100: deterministic ∧ mono-emits-ZERO-escapes (pipe/CI-safe) ∧ ascii-mode-is-pure-ASCII (even if the caller passed Unicode) ∧ truecolor-actually-paints-RGB ∧ every-line-bounded-to-width ∧ sparkline-monotonic ∧ total.",

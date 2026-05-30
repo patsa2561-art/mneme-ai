@@ -914,4 +914,14 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.118.0 — SOVEREIGN EGRESS GUARD: code/secrets never leak, with proof ──
+  {
+    id: "claim.egress.sovereign_guard",
+    source: "v2.118.0 release notes",
+    text: "Mneme's SOVEREIGN EGRESS GUARD is a deterministic outbound boundary that pattern-redacts known secret classes, trips on HONEYTOKEN canaries (exfiltration → BLOCK), and catches registered secrets via a one-way Bloom filter that NEVER stores the secret; gauntlet=100 incl. a 10,000-secret no-false-negative sweep: canary→BLOCK ∧ pattern→REDACT (raw key removed) ∧ clean→ALLOW ∧ Bloom-never-false-negatives ∧ Bloom-false-positive<5% ∧ cert-binds-payload-HASH-only ∧ deterministic ∧ total. The honest enterprise 'code never leaks, with proof' gate — NOT DLP-vaporware / kernel-VRAM-injection / 'unhackable' fantasy",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.egress.sovereign_guard",
+    severity: "block",
+  },
 ];
