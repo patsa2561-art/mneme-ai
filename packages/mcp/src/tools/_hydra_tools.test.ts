@@ -12,7 +12,7 @@ describe("v2.101 HYDRA MCP tools — protocol surface + self-attesting results",
   it("exposes the full HYDRA stack as mneme.hydra.* tools", () => {
     expect(HYDRA_TOOLS.map((t) => t.name)).toEqual([
       "mneme.hydra.forge", "mneme.hydra.gauntlet", "mneme.hydra.guard",
-      "mneme.hydra.chain", "mneme.hydra.replay", "mneme.hydra.verify",
+      "mneme.hydra.chain", "mneme.hydra.replay", "mneme.hydra.sleep", "mneme.hydra.verify",
     ]);
     for (const t of HYDRA_TOOLS) { expect(typeof t.handler).toBe("function"); expect(t.inputSchema?.type).toBe("object"); }
   });

@@ -345,6 +345,25 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hydra.epigenetic_dormancy",
+    kind: "boolean",
+    description: "HYDRA EPIGENETIC DORMANCY (v2.102.0 — the image's 'Epigenetic Sleep State' + 'JIT Revival/Demethylation', made real): cold codebook entries are METHYLATED (moved out of the active working set into a cold signed store, so the active footprint shrinks — the enterprise-scale win) and DEMETHYLATE byte-exact on demand (a full revive reconstructs the original codebook with an identical canonical hash). Deterministic tiered memory with a cryptographic lossless-revival proof — NOT lossy, NOT fortune-telling. Three booleans that can't lie: revive-exact ∧ shrinks ∧ signed-binds (Ed25519). This probe sleeps half a forged codebook and asserts the dormancy gauntlet = 100 + stability.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../hydra/index.js" as string) as typeof import("../hydra/index.js");
+        const corpus = "alpha beta gamma delta epsilon. alpha beta gamma delta epsilon. zeta eta theta iota kappa. zeta eta theta iota kappa. ".repeat(8);
+        const cb = H.forgeCodebook(corpus, { minHits: 2 }).codebook;
+        const trustMap: Record<string, "fresh" | "stale" | "quarantined"> = {};
+        cb.entries.forEach((e, i) => { if (i % 2 === 0) trustMap[e.sym] = "stale"; });
+        const g = H.dormancyGauntlet(process.cwd(), cb, trustMap, 1700000000000);
+        const stableOnGarbage = H.dormancyGauntlet(process.cwd(), null as never, {}, 0).score === 0;
+        const ok = g.score === 100 && g.reviveExact && g.shrinks && g.signedBinds && g.deterministic && stableOnGarbage;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} reviveExact=${g.reviveExact} shrinks=${g.shrinks} signedBinds=${g.signedBinds} dormant=${g.dormantCount} active=${g.activeBytes}/${g.fullBytes}B stableOnGarbage=${stableOnGarbage}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hydra.temporal_guarded_replay",
     kind: "boolean",
     description: "HYDRA GUARD × CHAIN fusion (v2.100.0 — every flow wired): the provenance chain computes its OWN atrophy clock and drives the guard. Replaying a past step, an entry added long ago and never touched is STALE and expands only to a signed abstract (cold knowledge redacted; fresh kept byte-exact). Trust is derived deterministically from chain history; only PROVEN-old entries go stale (Padgett: unknown ⇒ fresh). This probe builds a 4-step chain where an ancient phrase ages out while a tip phrase stays fresh, then asserts END-TO-END: guarded expansion redacts the cold phrase, keeps the fresh one byte-exact, and the fusion gauntlet = 100 (deterministic ∧ freshAtTip ∧ provenOnly ∧ stable).",

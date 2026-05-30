@@ -60,6 +60,7 @@ interface HydraShape {
   chainGauntlet: (chain: unknown[]) => { verified: boolean; replayExact: boolean; tamperCaught: boolean; length: number; score: number };
   guardedReplay: (chain: unknown[], index: number, halfLifeDeltas: number) => { ok: boolean; codebook: { entries: Array<{ sym: string; phrase: string }> } | null; trust: { trustMap: Record<string, string>; freshCount: number; staleCount: number; atIndex: number }; reason: string };
   guardedChainGauntlet: (chain: unknown[], halfLifeDeltas: number) => { deterministic: boolean; freshAtTip: boolean; provenOnly: boolean; stable: boolean; score: number };
+  dormancyGauntlet: (repoRoot: string, cb: unknown, trustMap: Record<string, string>, at: number) => { reviveExact: boolean; shrinks: boolean; signedBinds: boolean; deterministic: boolean; stable: boolean; activeBytes: number; fullBytes: number; dormantCount: number; score: number };
 }
 interface ManifestShape { renderManifestMarkdown: (c?: unknown, v?: string) => string }
 
@@ -242,6 +243,33 @@ export function registerHydraCommands(program: Command): void {
         writeText(``);
         writeText(`  ✓ cold knowledge is redacted to a signed abstract — the AI sees its shape, not rotten detail.`);
       }
+    });
+
+  h.command("sleep")
+    .description("EPIGENETIC DORMANCY (sleep state + JIT revival): forge the codebook, put a fraction of entries to sleep (methylate → moved out of the active working set into a cold signed store), and prove a full revive (demethylate) reconstructs the original BYTE-EXACT. The active footprint shrinks; nothing is lost; the split is Ed25519-signed.")
+    .option("--file <path>", "corpus file (default: the rendered manifest)")
+    .option("--dormant-fraction <f>", "fraction of entries to put to sleep (0..1)", (v) => parseFloat(v), 0.5)
+    .option("--json", "JSON output.")
+    .action(async (opts: { file?: string; dormantFraction?: number; json?: boolean }) => {
+      const core = await resolveCore();
+      if (!core) { writeText("✗ @mneme-ai/core hydra unavailable."); process.exitCode = 1; return; }
+      const repoRoot = process.cwd();
+      const corpus = corpusFor(opts.file, core.agentManifest);
+      const cb = core.hydra.forgeCodebook(corpus, {}).codebook as { entries: Array<{ sym: string }> };
+      const frac = Math.min(1, Math.max(0, opts.dormantFraction ?? 0.5));
+      const n = Math.floor(cb.entries.length * frac);
+      const trustMap: Record<string, string> = {};
+      for (let i = 0; i < n; i++) { const e = cb.entries[i]; if (e) trustMap[e.sym] = "stale"; }
+      const g = core.hydra.dormancyGauntlet(repoRoot, cb, trustMap, Date.now());
+      if (opts.json) { writeJson(g); process.exitCode = g.score === 100 ? 0 : 1; return; }
+      const pct = g.fullBytes > 0 ? Math.round((1 - g.activeBytes / g.fullBytes) * 100) : 0;
+      writeText(`HYDRA epigenetic dormancy (sleep fraction ${frac})`);
+      writeText(``);
+      writeText(`  revive-exact: ${g.reviveExact ? "✓" : "✗"}  ·  shrinks: ${g.shrinks ? "✓" : "✗"}  ·  signed-binds: ${g.signedBinds ? "✓" : "✗"}  ·  deterministic: ${g.deterministic ? "✓" : "✗"}`);
+      writeText(`  ${g.dormantCount} entries asleep · active working set ${g.activeBytes}B / ${g.fullBytes}B full (−${pct}%)`);
+      writeText(``);
+      writeText(g.score === 100 ? `  ✓ DORMANCY 100/100 — cold knowledge sleeps small, wakes byte-exact, signed. No loss.` : `  ✗ DORMANCY ${g.score}/100`);
+      process.exitCode = g.score === 100 ? 0 : 1;
     });
 
   h.command("install-hook")

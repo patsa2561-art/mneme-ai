@@ -171,6 +171,30 @@ export const HYDRA_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.hydra.sleep",
+    category: "meta",
+    description: "💤 HYDRA EPIGENETIC DORMANCY — put cold entries to sleep (methylate → moved out of the active working set into a cold signed store) and prove a full revive (demethylate) reconstructs the original BYTE-EXACT. The active footprint shrinks; nothing is lost; the split is Ed25519-signed. Returns the dormancy gauntlet (revive-exact ∧ shrinks ∧ signed-binds ∧ deterministic → /100). NOTARY self-attested.",
+    whenToUse: "Shrink the active context footprint at scale (enterprise repos) by sleeping cold knowledge, while proving it can wake byte-exact on demand.",
+    triggers: ["hydra sleep", "epigenetic dormancy", "dormant memory revive"],
+    inputSchema: { type: "object", properties: { text: { type: "string" }, file: { type: "string" }, dormantFraction: { type: "number", description: "0..1 fraction of entries to sleep (default 0.5)." } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const cwd = rt.meta?.rootPath ?? process.cwd();
+        const corpus = await corpusFor(cwd, args);
+        const cb = core.hydra.forgeCodebook(corpus, {}).codebook;
+        const frac = Math.min(1, Math.max(0, typeof args["dormantFraction"] === "number" ? args["dormantFraction"] as number : 0.5));
+        const n = Math.floor(cb.entries.length * frac);
+        const trustMap: Record<string, "fresh" | "stale" | "quarantined"> = {};
+        for (let i = 0; i < n; i++) { const e = cb.entries[i]; if (e) trustMap[e.sym] = "stale"; }
+        const g = core.hydra.dormancyGauntlet(cwd, cb, trustMap, Date.now());
+        const data = await attest(cwd, "sleep", { dormancy: g, dormantFraction: frac });
+        return { data, wisdom: `dormancy ${g.score}/100 · ${g.dormantCount} asleep · active ${g.activeBytes}/${g.fullBytes}B · revive-exact=${g.reviveExact}`, followUp: [], confidence: { level: "high" as const } };
+      } catch (e) { return lowFail((e as Error).message); }
+    },
+  },
+  {
     name: "mneme.hydra.verify",
     category: "meta",
     description: "✅ HYDRA — verify OFFLINE that a HYDRA result is genuine. Pass a tool result's `_proof` (or a portable artifact) + its `data`/`codebook`: checks the Ed25519 signature AND that the data hash binds to the receipt (no swap-after-sign). This is how ANY vendor confirms a HYDRA tool didn't lie. Pure crypto, no network.",
