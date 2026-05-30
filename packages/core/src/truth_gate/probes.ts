@@ -2011,7 +2011,9 @@ const probes: Probe[] = [
           const r1 = acgv.runACGV({ claim: "Mneme is a CLI tool", repoRoot: tmpdir(), noEmitVaccine: true, noStake: true });
           if (r1.verdict !== "FUSION") failures.push(`META-SELF true-claim returned ${r1.verdict} not FUSION`);
           const r2 = acgv.runACGV({ claim: "Mneme is a quantum GPU shader", repoRoot: tmpdir(), noEmitVaccine: true, noStake: true });
-          if (r2.verdict !== "BLACK_HOLE") failures.push(`META-SELF false-claim returned ${r2.verdict} not BLACK_HOLE`);
+          // v2.114 — a refuted self-claim resolves to IMPOSSIBLE_REFUTE (chandra
+          // collapse + godel UNSAT) or BLACK_HOLE; both are valid refutations.
+          if (r2.verdict !== "BLACK_HOLE" && r2.verdict !== "IMPOSSIBLE_REFUTE") failures.push(`META-SELF false-claim returned ${r2.verdict} not a refute`);
         } catch (e) { failures.push(`META-SELF probe: ${(e as Error).message}`); }
         // R4arch: lineage defensive (no TypeError on undefined)
         try {

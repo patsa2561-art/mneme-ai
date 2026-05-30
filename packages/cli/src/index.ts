@@ -6720,14 +6720,19 @@ export async function run(argv: string[]): Promise<void> {
   // attached when there's no existing handler, so leaf commands + groups that
   // already have a default action are untouched.
   type Cmdish = { commands?: Cmdish[]; _actionHandler?: unknown; action: (fn: () => void) => unknown; outputHelp: () => void };
-  const ensureGroupHelp = (cmd: Cmdish): void => {
+  // IMPORTANT: never attach a default action to the ROOT program — the root has
+  // its own unknown-command handler (the fuzzy "did you mean …?" suggester). If
+  // the root gets a default action, an unknown verb (`mneme verfy`) is consumed
+  // as an argument → "too many arguments" instead of a helpful suggestion.
+  // (v2.114 fix — the v2.113 walker regressed this by including the root.)
+  const ensureGroupHelp = (cmd: Cmdish, isRoot: boolean): void => {
     const subs = Array.isArray(cmd.commands) ? cmd.commands : [];
-    for (const sub of subs) ensureGroupHelp(sub);
-    if (subs.length > 0 && !cmd._actionHandler) {
+    for (const sub of subs) ensureGroupHelp(sub, false);
+    if (!isRoot && subs.length > 0 && !cmd._actionHandler) {
       cmd.action(() => { try { cmd.outputHelp(); } catch { /* never block */ } });
     }
   };
-  try { ensureGroupHelp(program as unknown as Cmdish); } catch { /* defensive — never block parse */ }
+  try { ensureGroupHelp(program as unknown as Cmdish, true); } catch { /* defensive — never block parse */ }
 
   try {
     await program.parseAsync(argv);

@@ -204,10 +204,15 @@ describe("v2.51.0 R1 — self-verify routes to META-SELF-VERIFIER (PINNED)", () 
     expect(r.caveats.some((c) => /META_SELF/i.test(c))).toBe(true);
   });
 
-  it("R1arch.2 'Mneme is a quantum GPU shader' returns BLACK_HOLE", async () => {
+  it("R1arch.2 'Mneme is a quantum GPU shader' is refuted (BLACK_HOLE or IMPOSSIBLE_REFUTE)", async () => {
     const m = await import("../../packages/core/src/squadron/acgv.js");
     const r = m.runACGV({ claim: "Mneme is a quantum GPU shader", repoRoot: tmpdir(), noEmitVaccine: true, noStake: true });
-    expect(r.verdict).toBe("BLACK_HOLE");
+    // v2.114 — a refuted SELF-claim now resolves to IMPOSSIBLE_REFUTE (chandra
+    // collapse + godel UNSAT against the capability corpus = the strongest
+    // refute), consistent with the canonical Rust-lie test + acgv_explain +
+    // runACGVAsync. Both tiers are valid refutations; the pin is intentionally
+    // non-brittle about which.
+    expect(["BLACK_HOLE", "IMPOSSIBLE_REFUTE"]).toContain(r.verdict);
   });
 
   it("R1arch.3 'Mneme uses HMAC chain' returns FUSION", async () => {

@@ -159,7 +159,7 @@ export function buildTagIndex(catalog: ManifestCommand[] = MNEME_COMMAND_CATALOG
   return { v: 1, tags, totalCommands: catalog.length };
 }
 
-export function formatTagIndex(idx: TagIndex, opts: { tag?: string; maxPerTag?: number } = {}): string {
+export function formatTagIndex(idx: TagIndex, opts: { tag?: string; maxPerTag?: number; compact?: boolean } = {}): string {
   const maxPerTag = opts.maxPerTag ?? 6;
   const lines: string[] = [];
   const tags = Object.keys(idx.tags).sort();
@@ -173,6 +173,17 @@ export function formatTagIndex(idx: TagIndex, opts: { tag?: string; maxPerTag?: 
   }
   lines.push(`🗺  ATLAS / TAGS — ${idx.totalCommands} commands across ${tags.length} tags`);
   lines.push("");
+  // v2.114 — COMPACT mode (used by the composed Atlas): with 100+ tags, listing
+  // 6 commands per tag bloated the Atlas to ~12 KB and defeated its purpose as
+  // a lean discovery surface. Compact mode prints just the tag NAMES + counts;
+  // the per-tag command list is one `--tag <name>` drill-down away.
+  if (opts.compact) {
+    const names = tags.map((t) => `${t}(${idx.tags[t]!.length})`).join(" · ");
+    lines.push(`  ${names}`);
+    lines.push("");
+    lines.push(`  Drill down: mneme --tags --tag <name>`);
+    return lines.join("\n");
+  }
   for (const t of tags) {
     const list = idx.tags[t]!;
     const shown = list.slice(0, maxPerTag).map((c) => c.replace(/^mneme\s+/, "")).join(" · ");
@@ -285,6 +296,6 @@ export function formatAtlas(atlas: Atlas): string {
   lines.push("");
   if (atlas.hot.length > 0) lines.push(formatHot(atlas.hot.slice(0, 10)));
   lines.push("");
-  lines.push(formatTagIndex(atlas.tagIndex));
+  lines.push(formatTagIndex(atlas.tagIndex, { compact: true }));
   return lines.join("\n");
 }

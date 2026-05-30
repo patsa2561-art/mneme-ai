@@ -228,6 +228,11 @@ export const INTERACTIVE_OR_DAEMON = new Set<string>([
   // ticker that refreshes every 3s until Ctrl-C. Bare invocation blocks by
   // design — they are not "graceful exit" commands.
   "bridge", "stream",
+  // `index` / `index-auto` are long-running indexers (index-auto has a --watch
+  // mode that never returns); bare invocation can block on embedding/daemon
+  // work well past the harness timeout. They are exercised by the dedicated
+  // memory-index tests, not the no-throw smoke.
+  "index", "index-auto",
 ]);
 
 /** Smallest valid invocation for commands that need args. */

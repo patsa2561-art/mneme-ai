@@ -81,6 +81,17 @@ const FALSE_CORPUS: ReadonlyArray<string> = [
   "Mneme costs money to use",
 ];
 
+// v2.114 — negation detector. The corpus atoms are all POSITIVE statements;
+// a negated self-claim ("Mneme is NOT written in Rust") asserts the OPPOSITE
+// polarity, so a jaccard match against a false atom must FLIP to SUPPORTED
+// (and vice-versa). Without this the verifier was negation-blind: it matched
+// "not written in Rust" to the false atom "written in Rust" and wrongly
+// REFUTED a true claim. We match copula negations only ("not"/"isn't"/n't/
+// "never"/"cannot") — NOT the ambiguous bare "no" (e.g. "no telemetry").
+function hasNegation(s: string): boolean {
+  return /\b(not|never|isn't|aren't|wasn't|weren't|doesn't|don't|didn't|won't|cannot)\b/i.test(s) || /n['’]t\b/i.test(s);
+}
+
 function tokens(s: string): Set<string> {
   const out = new Set<string>();
   for (const w of s.toLowerCase().split(/[^a-z0-9]+/g)) {
@@ -119,24 +130,35 @@ export function metaSelfVerify(claim: string): MetaSelfVerifierResult {
   const f = bestMatch(claim, FALSE_CORPUS);
   // Threshold: 0.30 jaccard is meaningful for short atomic claims.
   const THRESHOLD = 0.30;
-  // If FALSE corpus matches STRONGER than TRUE, REFUTE.
+  // v2.114 — negation-parity flip: a negated claim against a positive corpus
+  // atom asserts the OPPOSITE polarity.
+  const neg = hasNegation(claim);
+  // If FALSE corpus matches STRONGER than TRUE: base verdict REFUTED, but a
+  // negated claim ("Mneme is NOT a database engine") denies a known-false atom
+  // → it is consistent → SUPPORTED.
   if (f.sim > t.sim && f.sim >= THRESHOLD) {
     return {
       matched: true,
-      verdict: "REFUTED",
+      verdict: neg ? "SUPPORTED" : "REFUTED",
       confidence: Math.min(0.95, 0.5 + f.sim * 0.6),
-      evidence: `closest negative atom: "${f.text}" (similarity ${f.sim.toFixed(2)})`,
+      evidence: neg
+        ? `negation flip: claim denies known-false atom "${f.text}" (similarity ${f.sim.toFixed(2)}) → consistent`
+        : `closest negative atom: "${f.text}" (similarity ${f.sim.toFixed(2)})`,
       closestTrue: t.sim >= 0.1 ? t : undefined,
       closestFalse: f,
     };
   }
-  // If TRUE corpus matches strongly, SUPPORT.
+  // If TRUE corpus matches strongly: base verdict SUPPORTED, but a negated
+  // claim ("Mneme is NOT written in TypeScript") denies a known-true atom →
+  // it is a contradiction → REFUTED.
   if (t.sim >= THRESHOLD) {
     return {
       matched: true,
-      verdict: "SUPPORTED",
+      verdict: neg ? "REFUTED" : "SUPPORTED",
       confidence: Math.min(0.95, 0.5 + t.sim * 0.6),
-      evidence: `closest positive atom: "${t.text}" (similarity ${t.sim.toFixed(2)})`,
+      evidence: neg
+        ? `negation flip: claim denies known-true atom "${t.text}" (similarity ${t.sim.toFixed(2)}) → contradiction`
+        : `closest positive atom: "${t.text}" (similarity ${t.sim.toFixed(2)})`,
       closestTrue: t,
       closestFalse: f.sim >= 0.1 ? f : undefined,
     };

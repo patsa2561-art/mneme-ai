@@ -300,10 +300,84 @@ function isUnverifiableEmptyish(claim: string): { yes: boolean; reason: string }
   return { yes: false, reason: "" };
 }
 
+/**
+ * Layer 0 — learned-vaccine fast path. Returns an AUTO_REFUTE verdict when a
+ * known lie-shape matches (and the match isn't stale: numeric-conflict guard +
+ * live-catalog re-check still apply), else null (caller proceeds through the
+ * full pipeline). Pushes burn/match caveats onto `caveats`.
+ *
+ * v2.114 — this runs FIRST (before the 0a hyperbole / meta-self-verify
+ * detectors), as the "Layer 0: VACCINE CHECK" design header always intended.
+ * It had drifted to AFTER meta-self-verify, so a vaccinated SELF-claim ("Mneme
+ * is written in Rust") returned BLACK_HOLE again instead of the cheap learned
+ * AUTO_REFUTE. The stale-guards are unchanged, so moving it earlier is safe.
+ */
+function tryVaccineAutoRefute(
+  repoRoot: string,
+  claim: string,
+  canonicalClaim: string,
+  numberBridged: boolean,
+  caveats: string[],
+): ACGVResult | null {
+  const vaccineMatchA = checkAgainstVaccines(repoRoot, claim);
+  const vaccineMatchB = numberBridged ? checkAgainstVaccines(repoRoot, canonicalClaim) : null;
+  const vaccineMatch =
+    vaccineMatchA && vaccineMatchB
+      ? (vaccineMatchA.distance <= vaccineMatchB.distance ? vaccineMatchA : vaccineMatchB)
+      : (vaccineMatchA ?? vaccineMatchB);
+  if (!(vaccineMatch && vaccineMatch.matched)) return null;
+  // NUMERIC-FACT GUARD (v2.28) — burn a stale numeric vaccine.
+  const numericConflictA = vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, claim);
+  const numericConflictB = numberBridged
+    ? vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, canonicalClaim)
+    : { conflict: false, reason: "" };
+  const numericConflict = numericConflictA.conflict
+    ? numericConflictA
+    : (numericConflictB.conflict ? numericConflictB : numericConflictA);
+  if (numericConflict.conflict) {
+    caveats.push(`VACCINE_BURNED_NUMERIC :: ${numericConflict.reason}`);
+    return null;
+  }
+  // N3-OVERSHOOT GUARD (v2.19.44) — burn if a "refuted" tool now grounds live.
+  const mentions = Array.from(claim.matchAll(/\bmneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\b/gi)).map((m) => m[0]);
+  let nowGrounded = 0;
+  if (mentions.length > 0) {
+    try {
+      const live = liveMnemeToolNames(repoRoot);
+      for (const m of mentions) if (live.has(m.toLowerCase())) nowGrounded += 1;
+    } catch { /* best-effort; if helper missing, fall through to old behaviour */ }
+  }
+  if (nowGrounded === 0) {
+    caveats.push(CAVEAT_TAGS.AUTO_REFUTE);
+    return {
+      verdict: "AUTO_REFUTE",
+      confidence: 0.99,
+      caveats,
+      layers: {
+        vaccineMatch,
+        grounding: [],
+        chandrasekhar: { verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0, confidence: 0, citations: [], reasoning: "skipped: vaccine match" },
+        godel: { status: "SKIPPED", core: [], certificate: "skipped: vaccine match", upgrade: false },
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `AUTO_REFUTE -- matches known lie pattern (vaccine ${vaccineMatch.vaccine.id}, distance ${vaccineMatch.distance})`,
+      reasoning: `Claim simhash matched vaccine emitted at ${vaccineMatch.vaccine.firstSeen}. Original signature: "${vaccineMatch.vaccine.signature}". Refuted in ${vaccineMatch.vaccine.refuteCount} prior incident(s).`,
+      vaccineEmitted: false,
+    } as ACGVResult;
+  }
+  caveats.push("OSMOSIS_VACCINE_BURNED");
+  return null;
+}
+
 export function runACGV(input: ACGVRunInput): ACGVResult {
   const rawClaimUnsafe = input.claim ?? "";
   const repoRoot = input.repoRoot;
   const caveats: string[] = [];
+  // A valid vaccine match short-circuits to AUTO_REFUTE in the Layer-0
+  // fast-path below; if we reach the full pipeline the vaccine either didn't
+  // match or was burned (stale), so the final result carries no vaccine match.
+  const vaccineMatch: VaccineMatch | null = null;
 
   // ───── Layer -1a: INPUT HYGIENE (v2.40.0) ─────────────────────────────
   // Closes audit findings D4 (BIDI override), D6 (null byte mid-text), D8
@@ -532,6 +606,16 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   // to the paradox layer.
   const msv = metaSelfVerify(claim);
   if (msv.matched && (msv.verdict === "SUPPORTED" || msv.verdict === "REFUTED")) {
+    // v2.114 — learned-vaccine fast path for SELF-claims only. A self-claim
+    // that was refuted+vaccinated before short-circuits to AUTO_REFUTE in
+    // microseconds (the "2nd call is instant" guarantee) WITHOUT preempting the
+    // structural detectors (hyperbole / self-reference / paradox) that run
+    // before this block — those keep precedence for non-self claims. The
+    // full-pipeline vaccine check (below, for everything else) is unchanged.
+    {
+      const vax = tryVaccineAutoRefute(repoRoot, claim, canonicalClaim, numberBridged, caveats);
+      if (vax) return vax;
+    }
     const isRefuted = msv.verdict === "REFUTED";
     const chandra: ChandrasekharResult = {
       verdict: isRefuted ? "BLACK_HOLE" : "FUSION",
@@ -544,26 +628,37 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
       status: isRefuted ? "UNSAT" : "SKIPPED",
       core: isRefuted ? [{ asserted: msv.evidence, proof: [msv.closestFalse?.text ?? ""] }] : [],
       certificate: msv.evidence,
-      upgrade: false,
+      // A refuted self-claim has a real UNSAT proof (chandra collapse + godel
+      // contradiction against the capability corpus) — that IS the upgrade.
+      upgrade: isRefuted,
     };
     if (isRefuted && !input.noEmitVaccine) {
       try { emitVaccine(repoRoot, claim, `META_SELF_REFUTE :: ${msv.closestFalse?.text}`); } catch { /* best-effort */ }
     }
+    // v2.114 — PRTF second witness on the fast-path. There is no neutrino
+    // grounding here (the meta-verifier matched the capability corpus
+    // directly), so PRTF carries no signal — we still emit the layer + an
+    // honest PRTF_NO_GROUNDING caveat rather than omit the second witness.
+    const metaPrtf = primeResonance([]);
     return {
-      verdict: isRefuted ? "BLACK_HOLE" : "FUSION",
+      // v2.114 — taxonomy: chandra BLACK_HOLE + godel UNSAT = IMPOSSIBLE_REFUTE
+      // (the strongest refutation), NOT a bare BLACK_HOLE. A refuted self-claim
+      // about Mneme has BOTH signals, so it is impossible-refuted.
+      verdict: isRefuted ? "IMPOSSIBLE_REFUTE" : "FUSION",
       confidence: msv.confidence,
       // v2.113 — when a self-claim is REFUTED the chandrasekhar layer has
       // collapsed (verdict BLACK_HOLE) and godel is UNSAT; surface those
       // signals as caveats too (not only META_SELF_VERIFIED), so the caveat
       // list honestly reflects every layer that fired.
       caveats: isRefuted
-        ? [...caveats, `META_SELF_VERIFIED:${msv.verdict}`, CAVEAT_TAGS.BLACK_HOLE, CAVEAT_TAGS.IMPOSSIBLE]
-        : [...caveats, `META_SELF_VERIFIED:${msv.verdict}`],
+        ? [...caveats, `META_SELF_VERIFIED:${msv.verdict}`, CAVEAT_TAGS.BLACK_HOLE, CAVEAT_TAGS.IMPOSSIBLE, "PRTF_NO_GROUNDING"]
+        : [...caveats, `META_SELF_VERIFIED:${msv.verdict}`, "PRTF_NO_GROUNDING"],
       layers: {
         vaccineMatch: null,
         grounding: [],
         chandrasekhar: chandra,
         godel,
+        prtf: metaPrtf,
         confession: null,
         confessionRequest: null,
       },
@@ -718,92 +813,15 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
     } as ACGVResult;
   }
 
-  // ───── Layer 0: VACCINE CHECK (v2.19.44 OSMOSIS-gated) ────────────────
-  //
-  // N3-overshoot bug (v2.19.42): vaccine simhash matched a TRUE claim
-  // (`mneme.truth.forensic is registered`) because the cache stored an
-  // entry from a prior unrelated refutation. AUTO_REFUTE fired 99% on
-  // a TRUE claim. Root cause: cache returned without checking source.
-  //
-  // v2.19.44 fix: before returning AUTO_REFUTE, extract any
-  // `mneme.X.Y` tool names mentioned in the claim and verify each
-  // against the LIVE catalog (countMnemeTools + extractFactClaims
-  // surface a fast snapshot). If any "previously refuted" tool is now
-  // grounded, BURN the cache hit + fall through to PASSTHROUGH so the
-  // normal forensic / chandrasekhar / godel layers do the real work.
-  //
-  // This composes onto the new VACCINE OSMOSIS lattice (which adds
-  // time-decay + drift detection + HLL membership + Bayesian posterior
-  // for daemons that boot the lattice); even WITHOUT osmosis enabled,
-  // the inline catalog re-check is sufficient to prevent N3-overshoot.
-  // v2.40.0 D5: try both original AND canonical-number forms so vaccines
-  // tagged for "865" still fire on "eight hundred sixty-five" / "0x361" /
-  // "๘๖๕". Take the closest (smallest Hamming distance) match.
-  const vaccineMatchA = checkAgainstVaccines(repoRoot, claim);
-  const vaccineMatchB = numberBridged ? checkAgainstVaccines(repoRoot, canonicalClaim) : null;
-  const vaccineMatch =
-    vaccineMatchA && vaccineMatchB
-      ? (vaccineMatchA.distance <= vaccineMatchB.distance ? vaccineMatchA : vaccineMatchB)
-      : (vaccineMatchA ?? vaccineMatchB);
-  if (vaccineMatch && vaccineMatch.matched) {
-    // v2.28.0 R1 fix — NUMERIC-FACT GUARD. Before honoring an AUTO_REFUTE
-    // from the vaccine cache, check whether the vaccine encodes a
-    // numeric fact (e.g. `swarm_organ_count=8`) that conflicts with a
-    // semantically-related numeric fact in the new claim (e.g. "9
-    // verification agents"). If yes, burn the match — the vaccine is
-    // stale for THIS claim. Pre-v2.28 the simhash match alone fired
-    // AUTO_REFUTE 99% on innocent claims with different numbers.
-    // v2.40.0 D5: numeric-conflict guard must also test the canonical-
-    // rewritten claim so "eight hundred sixty-six" can conflict with a
-    // vaccine encoding "tools=865". Confirmed conflict in EITHER form
-    // burns the match (vaccine is stale for THIS claim).
-    const numericConflictA = vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, claim);
-    const numericConflictB = numberBridged
-      ? vaccineConflictsWithClaim(vaccineMatch.vaccine.signature, canonicalClaim)
-      : { conflict: false, reason: "" };
-    const numericConflict = numericConflictA.conflict
-      ? numericConflictA
-      : (numericConflictB.conflict ? numericConflictB : numericConflictA);
-    if (numericConflict.conflict) {
-      // Fall through to normal pipeline; the vaccine is stale here.
-      caveats.push(`VACCINE_BURNED_NUMERIC :: ${numericConflict.reason}`);
-    } else {
-    // v2.19.44 N3-overshoot guard: extract every mneme.X.Y mention in
-    // the claim + see if ANY of them now ground in the live catalog.
-    // If yes, the vaccine is stale → burn the hit, fall through.
-    const mentions = Array.from(claim.matchAll(/\bmneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\b/gi)).map((m) => m[0]);
-    let nowGrounded = 0;
-    if (mentions.length > 0) {
-      try {
-        const live = liveMnemeToolNames(repoRoot);
-        for (const m of mentions) if (live.has(m.toLowerCase())) nowGrounded += 1;
-      } catch { /* best-effort; if helper missing, fall through to old behaviour */ }
-    }
-    if (nowGrounded === 0) {
-      // Vaccine still valid: no claimed-refuted tool is in the live
-      // catalog → keep the AUTO_REFUTE short-circuit.
-      caveats.push(CAVEAT_TAGS.AUTO_REFUTE);
-      return {
-        verdict: "AUTO_REFUTE",
-        confidence: 0.99,
-        caveats,
-        layers: {
-          vaccineMatch,
-          grounding: [],
-          chandrasekhar: { verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0, confidence: 0, citations: [], reasoning: "skipped: vaccine match" },
-          godel: { status: "SKIPPED", core: [], certificate: "skipped: vaccine match", upgrade: false },
-          confession: null,
-          confessionRequest: null,
-        },
-        summary: `AUTO_REFUTE -- matches known lie pattern (vaccine ${vaccineMatch.vaccine.id}, distance ${vaccineMatch.distance})`,
-        reasoning: `Claim simhash matched vaccine emitted at ${vaccineMatch.vaccine.firstSeen}. Original signature: "${vaccineMatch.vaccine.signature}". Refuted in ${vaccineMatch.vaccine.refuteCount} prior incident(s).`,
-        vaccineEmitted: false,
-      };
-    }
-    // Vaccine stale: claim mentions tools that NOW exist. Fall through.
-    caveats.push("OSMOSIS_VACCINE_BURNED");
-    // (No early return — we proceed to grounding so the truth gets surfaced.)
-    } // end of numericConflict.conflict == false
+  // ───── Layer 0: VACCINE CHECK (learned fast-path) ─────────────────────
+  // For non-self / non-structural claims: a known lie-shape refuted before
+  // short-circuits to AUTO_REFUTE. Runs AFTER the structural detectors
+  // (hyperbole / self-reference / paradox / version / commit-hash) so those
+  // authoritative, claim-specific verdicts keep precedence; stale matches are
+  // burned inside (numeric-conflict + live-catalog re-check).
+  {
+    const vaxResult = tryVaccineAutoRefute(repoRoot, claim, canonicalClaim, numberBridged, caveats);
+    if (vaxResult) return vaxResult;
   }
 
   // ───── Layer 1: NEUTRINO 3-FLAVOR GROUNDING ──────────────────────────

@@ -69,7 +69,11 @@ export function explain(result: ACGVResult, claim: string): ExplainedVerdict {
         };
       }
       const unsatCore = result.layers.godel.core;
-      const cited = unsatCore.length > 0 ? unsatCore[0]!.asserted : "an assertion";
+      const citedRaw = unsatCore.length > 0 ? unsatCore[0]!.asserted : "an assertion";
+      // v2.114 — the godel core's `asserted` can be a full evidence sentence
+      // (e.g. from META_SELF_VERIFY), which blew the headline past its ≤120
+      // contract. Cap it so the headline stays one-line.
+      const cited = citedRaw.length > 50 ? citedRaw.slice(0, 47).trimEnd() + "..." : citedRaw;
       return {
         headline: `REFUTED -- ${cited} is impossible in this repo (${pct} confidence)`,
         plain: `This claim cannot be true. Mneme proved that ${cited} contradicts what's actually on disk + in git history (no matching files, no commits, no package.json entry). The proof is formal, not heuristic.`,
