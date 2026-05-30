@@ -8,10 +8,27 @@
  * of blind retries. `resume` reconstructs where a prior session left off. Total.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, openSync, readSync, closeSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import type { MnemeTool } from "./_types.js";
+
+/** Bounded tail read of the append-only ledger (only the recent trailing
+ *  window is ever needed; partial leading line dropped). Total: error → "". */
+function readTail(path: string, maxBytes = 262_144): string {
+  try {
+    const size = statSync(path).size;
+    if (size <= maxBytes) return readFileSync(path, "utf8");
+    const fd = openSync(path, "r");
+    try {
+      const buf = Buffer.allocUnsafe(maxBytes);
+      readSync(fd, buf, 0, maxBytes, size - maxBytes);
+      const s = buf.toString("utf8");
+      const nl = s.indexOf("\n");
+      return nl >= 0 ? s.slice(nl + 1) : s;
+    } finally { closeSync(fd); }
+  } catch { return ""; }
+}
 
 function sha256(s: string): string { return createHash("sha256").update(s, "utf8").digest("hex"); }
 function canon(v: unknown): string { if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "null"; if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]"; const k = Object.keys(v as Record<string, unknown>).sort(); return "{" + k.map((x) => JSON.stringify(x) + ":" + canon((v as Record<string, unknown>)[x])).join(",") + "}"; }
@@ -22,7 +39,7 @@ const low = (m: string) => ({ data: { ok: false, error: m }, wisdom: m, followUp
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function loadEvents(core: any, cwd: string): any[] {
-  try { const p = join(cwd, core.loopguard.LOOPGUARD_LEDGER); if (!existsSync(p)) return []; return core.loopguard.parseLedger(readFileSync(p, "utf8")); } catch { return []; }
+  try { const p = join(cwd, core.loopguard.LOOPGUARD_LEDGER); if (!existsSync(p)) return []; return core.loopguard.parseLedger(readTail(p)); } catch { return []; }
 }
 function recallFor(core: any, cwd: string): (sig: string) => string | null {
   let view = new Map<string, { value: string }>();

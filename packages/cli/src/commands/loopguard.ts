@@ -10,11 +10,29 @@
  */
 
 import type { Command } from "commander";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, openSync, readSync, closeSync } from "node:fs";
 import { join } from "node:path";
 
 function writeJson(p: unknown): void { process.stdout.write(JSON.stringify(p, null, 2) + "\n"); }
 function writeText(l: string): void { process.stdout.write(l + "\n"); }
+
+/** Read only the last `maxBytes` of the append-only ledger (it grows without
+ *  limit; we only ever need the recent trailing window). A partial leading
+ *  line is dropped — parseLedger skips malformed lines. Total: error → "". */
+function readTail(path: string, maxBytes = 262_144): string {
+  try {
+    const size = statSync(path).size;
+    if (size <= maxBytes) return readFileSync(path, "utf8");
+    const fd = openSync(path, "r");
+    try {
+      const buf = Buffer.allocUnsafe(maxBytes);
+      readSync(fd, buf, 0, maxBytes, size - maxBytes);
+      const s = buf.toString("utf8");
+      const nl = s.indexOf("\n");
+      return nl >= 0 ? s.slice(nl + 1) : s;
+    } finally { closeSync(fd); }
+  } catch { return ""; }
+}
 
 interface CoreLG {
   loopguard: {
@@ -32,7 +50,7 @@ async function core(): Promise<CoreLG | null> {
 }
 
 function loadEvents(m: CoreLG, cwd: string): unknown[] {
-  try { const p = join(cwd, m.loopguard.LOOPGUARD_LEDGER); if (!existsSync(p)) return []; return m.loopguard.parseLedger(readFileSync(p, "utf8")); } catch { return []; }
+  try { const p = join(cwd, m.loopguard.LOOPGUARD_LEDGER); if (!existsSync(p)) return []; return m.loopguard.parseLedger(readTail(p)); } catch { return []; }
 }
 function loadStore(cwd: string): unknown {
   try { const p = join(cwd, ".mneme", "cortex", "store.json"); if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch { /* */ }

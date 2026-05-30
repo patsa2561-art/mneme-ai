@@ -180,9 +180,31 @@ mneme loopguard        # → 🔁 THRASH: `git push` failed 3× — known recove
 
 ---
 
+## 9. DISTILL — send the signal, not the raw logs (with a measured, signed receipt)
+
+The honest core of the "token-saver". On a debug loop you'd otherwise re-feed the model a 2 KB error log + a full diff *every iteration* (the "950 thinking tokens" trap). DISTILL turns that into the **minimal causal brief** the model actually needs — and emits a **measured, signable receipt** of the reduction.
+
+```bash
+mycmd 2>&1 | mneme distill --cmd "mycmd" --code $? --diff-file change.diff
+#   → FAIL ran `mycmd` [oom]
+#       ↳ RuntimeError: CUDA out of memory
+#     CHANGED train.py:L85, cfg.py:L12
+#     KNOWN FIX torch.cuda.empty_cache()        ← recalled from the Cortex
+#
+#     📉 1060→163 chars (−84.6%) · ≈265→41 tok est (saved ≈224)
+```
+
+Feed the **brief** to your model instead of the raw log: fewer input tokens, less to reason about, same causal signal. **MCP:** `mneme.distill.brief` (self-attesting). Composes §7 Logpipe (extract) + §3 Cortex (recall), deterministically — no LLM.
+
+**Honest by design (DIAKRISIS):** the character reduction is **exact**; the token figure is a **labeled ≈chars/4 estimate** (not a vendor BPE tokenizer); there is **no fabricated "wisdom score"**. Mneme reports the *real per-call* numbers, signed so they're falsifiable. It reduces the **input context** you feed the model (measurable) — it does not, and cannot, claim to reduce the model's internal chain-of-thought.
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:
+
+- ❌ **No "990/1000 Wisdom score" / "Sorcerer Supreme" / "<500 tokens guaranteed"** (the token-saver wishlist) — unmeasured marketing. DISTILL reports only the *exact* character reduction + a *labeled* token estimate, per call, signed.
 
 - ❌ **No kernel driver / eBPF / process- or VRAM-injection** into other agents — that is malware-class and, for a cloud agent, fantasy. The Cortex is a *clean, safe, cross-vendor protocol* instead.
 - ❌ **No "multi-timeline branch prediction"** ("this branch *will* fix the bug") — unfalsifiable fortune-telling. Branch Oracle reports *present-tense real signals* instead.

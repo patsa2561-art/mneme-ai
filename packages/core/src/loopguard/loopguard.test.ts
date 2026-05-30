@@ -100,6 +100,36 @@ describe("v2.110 MNEME LOOPGUARD — objective thrash detection + deterministic 
     expect(g.score).toBe(100);
   });
 
+  it("REAL-USE: unsorted events are handled (detectStuck sorts by time)", () => {
+    const evs = [
+      ev("git push", "git:push:1:no-upstream", true, T + 2000),
+      ev("git push", "git:push:1:no-upstream", true, T),
+      ev("git push", "git:push:1:no-upstream", true, T + 1000),
+    ];
+    expect(detectStuck(evs, { now: T + 2500 }).stuck).toBe(true);
+  });
+
+  it("REAL-USE: a thrash is found amid unrelated noise", () => {
+    const evs = [
+      ev("ls", "", false, T),
+      ev("npm test", "npm:test:1:", true, T + 500),
+      ev("git push", "git:push:1:no-upstream", true, T + 1000),
+      ev("cat x", "", false, T + 1200),
+      ev("git push", "git:push:1:no-upstream", true, T + 1500),
+      ev("git push", "git:push:1:no-upstream", true, T + 2000),
+    ];
+    const v = detectStuck(evs, { now: T + 2500 });
+    expect(v.stuck).toBe(true);
+    expect(v.signature).toBe("git:push:1:no-upstream");
+    expect(v.repeats).toBe(3);
+  });
+
+  it("REAL-USE: parseLedger tolerates a partial leading line (tail-read drop)", () => {
+    const good = JSON.stringify(toEvent({ command: "git push", signature: "s", hadError: true }, T));
+    const text = `:1:no-upstream","hadError":true}\n${good}\n${good}\n`; // 1st line is junk
+    expect(parseLedger(text).length).toBe(2);
+  });
+
   it("STABILITY — total on garbage", () => {
     expect(() => detectStuck(null as never)).not.toThrow();
     expect(detectStuck(null as never).stuck).toBe(false);

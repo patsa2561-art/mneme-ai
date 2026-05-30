@@ -20,6 +20,7 @@ import { existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { scanEnv } from "./env_scan.js";
 import { reconcileVendor } from "./vendor_reconcile.js";
+import { guardVendor } from "./vendor_allowlist.js";
 
 export interface RecordActivityInput {
   claimedVendor: string;
@@ -61,11 +62,17 @@ export function recordActivityReconciled(
     const dir = join(repoRoot, ".mneme");
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     const path = join(dir, "cli-activity.jsonl");
+    // FINAL GATE: no embedder/backend name (ollama / openai / gemini / …) may
+    // ever reach the vendor field — guardVendor coerces a leak to "unknown".
+    // (v2.111 — seals the v2.50 leak at its actual write site; ai_handshake
+    // can surface "ollama-backend" but it must NOT be persisted as a vendor.)
+    const vendorGuard = guardVendor(String(reconciled.canonical));
+    const envVendorGuard = guardVendor(String(envScan.vendor));
     const row = {
       at: new Date().toISOString(),
-      vendor: reconciled.canonical,
+      vendor: vendorGuard.vendor,
       claimedVendor: input.claimedVendor,
-      envVendor: envScan.vendor,
+      envVendor: envVendorGuard.vendor,
       action: input.action,
       divergent: reconciled.divergent,
       source: reconciled.source,
@@ -75,7 +82,7 @@ export function recordActivityReconciled(
     appendFileSync(path, JSON.stringify(row) + "\n");
     return {
       ok: true,
-      canonicalVendor: String(reconciled.canonical),
+      canonicalVendor: vendorGuard.vendor,
       divergent: reconciled.divergent,
       source: reconciled.source,
       path,

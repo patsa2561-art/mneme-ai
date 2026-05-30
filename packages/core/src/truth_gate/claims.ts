@@ -871,4 +871,17 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.loopguard.objective_thrash",
     severity: "block",
   },
+  // ── v2.111.0 — DISTILL: measured, signed token-budget receipt ────────
+  // The honest core of the "token-saver": compress verbose context to the
+  // causal brief + report a MEASURED reduction (exact chars; labeled token
+  // estimate). NOT a fabricated wisdom score.
+  {
+    id: "claim.distill.measured_reduction",
+    source: "v2.111.0 release notes",
+    text: "Mneme DISTILL compresses a verbose {error log + diff} into the minimal causal brief (failure line + changed file:line loci + the Cortex's known fix) and reports a MEASURED token-budget receipt — character reduction EXACT, token figure a LABELED ≈chars/4 estimate, never a fabricated score; gauntlet: reduces ∧ measurement-honest ∧ preserves-signal ∧ folds-known-fix ∧ deterministic ∧ total",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.distill.measured_reduction",
+    severity: "block",
+  },
 ];

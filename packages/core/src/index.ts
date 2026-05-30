@@ -288,6 +288,7 @@ export * as archaeology from "./archaeology/index.js";
 export * as entropy from "./entropy/index.js";
 export * as logpipe from "./logpipe/index.js";
 export * as loopguard from "./loopguard/index.js";
+export * as distill from "./distill/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

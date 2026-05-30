@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.distill.measured_reduction",
+    kind: "boolean",
+    description: "DISTILL (v2.111.0 — the honest core of the token-saver, NOT a fabricated 'wisdom score'): compresses a verbose {error log + diff} into the minimal causal BRIEF (one failure line + changed file:line loci + the Cortex's known fix) and reports a MEASURED token-budget receipt. Character reduction is EXACT; the token figure is a LABELED ≈chars/4 estimate (not a vendor tokenizer), never a guess. This probe asserts the distill gauntlet = 100: reduces ∧ measurement-honest (reductionPct matches exact chars; charsAfter==brief.length) ∧ preserves-signal (error class + changed file survive) ∧ folds-known-fix (recalled recovery included) ∧ deterministic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const D = await import("../distill/index.js" as string) as typeof import("../distill/index.js");
+        const g = D.distillGauntlet();
+        const ok = g.score === 100 && g.reduces && g.measurementHonest && g.preservesSignal && g.foldsKnownFix && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} reduces=${g.reduces} honest=${g.measurementHonest} signal=${g.preservesSignal} knownFix=${g.foldsKnownFix} det=${g.deterministic}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.entropy.audited_multisource",
     kind: "boolean",
     description: "AUDITED ENTROPY (v2.108.0 — the honest core of 'True Entropy Security', NOT magic unhackability): secrets are MIXED from multiple sources through a cryptographic extractor (defense in depth — strong if ANY source has entropy), sources are health-checked (a stuck source is FLAGGED), and a SIGNED provenance attestation binds the secret's hash to its audited sources without revealing the secret. This probe asserts the entropy gauntlet = 100: mix-deterministic ∧ mix-diverges ∧ defense-in-depth (a stuck source can't weaken the mix) ∧ health-detects-stuck ∧ attestation-binds (a wrong secret is caught) ∧ total.",
