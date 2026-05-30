@@ -72,3 +72,9 @@ GEMINI.md
 .mneme/cli-activity.jsonl
 .mneme/honest_mirror_weights.json
 # END MNEME AUTO-INIT
+
+# workflow-agent scratch files (never commit)
+/test_*.js
+/test_*.mjs
+/verify_*.js
+/*_exploit.*
