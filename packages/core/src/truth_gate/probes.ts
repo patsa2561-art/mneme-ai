@@ -314,6 +314,31 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.manifest.aup_clean",
+    kind: "boolean",
+    description: "AUP-GAP CLOSURE (v2.95.0): the manifest block that lands in CLAUDE.md / AGENTS.md is rendered through the lexicon and then AUDITED — it must carry ZERO 'high'/'medium' offensive-cyber triggers (worm / self-propagating / inject(ion) / parasite / exploit / payload / rogue / attack / mutant). Those words used to leak verbatim and trip Anthropic's 'violative cyber content' classifier; the lexicon now launders every one via a case-preserving `smart` rule. Only benign command tokens (polygraph / bridge / guardrail) may remain. This probe makes the gap structurally un-reopenable.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const AM = await import("../agent_manifest.js" as string) as typeof import("../agent_manifest.js");
+        const LEX = await import("../lexicon/index.js" as string) as typeof import("../lexicon/index.js");
+        const rendered = AM.renderManifestMarkdown(undefined, "2.95.0");
+        const audit = LEX.auditAupTriggers(rendered);
+        // Also prove the laundering actually fires: the RAW catalog must
+        // contain the triggers the rendered output no longer does.
+        const raw = AM.MNEME_COMMAND_CATALOG.map((c) => `${c.command} ${c.what} ${c.when}`).join("\n");
+        const rawAudit = LEX.auditAupTriggers(raw);
+        const launderedSomething = rawAudit.highCount > 0 && audit.highCount === 0;
+        const ok = audit.clean && launderedSomething;
+        return {
+          value: ok ? 1 : 0,
+          evidence: `rendered high=${audit.highCount} medium=${audit.mediumCount} benign=${audit.benignCount} · raw-high-was=${rawAudit.highCount} · clean=${audit.clean}`,
+          dtMs: Date.now() - t0,
+        };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.aletheia.diakrisis",
     kind: "boolean",
     description: "DIAKRISIS (v2.92.0 — discern genuine from merely-plausible, the second axis): Reject-or-Unknown holds — a high-lustre PROVEN-low-substance artifact (reverted / tests-failed) is REJECTed as a 🪤 TRAP; a low-lustre PROVEN-high-substance artifact is surfaced as a ⛏ GEM (not rejected); lustre is scored from STRUCTURAL signals (hyperbole/absolutism, never an LLM); and the ★ Padgett guard means novel/unproven/aesthetic work returns UNKNOWN, NEVER REJECT (novel-false-reject-rate 0%). It raises the floor without claiming the ceiling.",

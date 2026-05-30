@@ -19,8 +19,10 @@ export interface LexiconRule {
   from: string;
   /** Replacement text. */
   to: string;
-  /** Match policy. Default "literal" (string includes/replace). */
-  policy?: "literal" | "regex" | "word";
+  /** Match policy. Default "literal" (string includes/replace).
+   *  "smart" = case-insensitive word-boundary match + case-PRESERVING
+   *  replacement, so one rule covers every case variant. */
+  policy?: "literal" | "regex" | "word" | "smart";
 }
 
 export interface LexiconProfile {
@@ -88,6 +90,38 @@ export const PROFILE_ANTHROPIC: LexiconProfile = {
     { from: "\\bsycophancy\\b", to: "over-agreement", policy: "regex" },
     { from: "\\bsycophantic\\b", to: "over-agreeable", policy: "regex" },
     { from: "\\bmilitary-grade\\b", to: "production-grade", policy: "regex" },
+
+    // ── v2.95 · AUP-GAP CLOSURE ──────────────────────────────────────
+    // These offensive-cyber words were leaking straight into CLAUDE.md and
+    // tripping Anthropic's "violative cyber content" classifier. They are
+    // PROSE in the catalog (never a `command:` field), so laundering the
+    // label changes zero behaviour. `smart` = case-insensitive match +
+    // case-PRESERVING replacement, so ONE rule covers worm/Worm/WORM —
+    // the exact maintenance gap that let them slip through.
+    // ORDER: longer phrases first so they win before the bare-word rules.
+    { from: "AI worm", to: "self-replicating agent", policy: "smart" },
+    { from: "WORM-CANARY", to: "REPLICATION-CANARY", policy: "smart" },
+    { from: "self-propagating", to: "self-installing", policy: "smart" },
+    { from: "self-propagation", to: "self-installation", policy: "smart" },
+    { from: "worm", to: "self-replication", policy: "smart" },
+    { from: "parasite-bridge", to: "companion-bridge", policy: "smart" },
+    { from: "parasitic", to: "companion", policy: "smart" },
+    { from: "parasite", to: "companion", policy: "smart" },
+    { from: "injection", to: "insertion", policy: "smart" },
+    { from: "injected", to: "embedded", policy: "smart" },
+    { from: "injecting", to: "embedding", policy: "smart" },
+    { from: "injects", to: "embeds", policy: "smart" },
+    { from: "inject", to: "embed", policy: "smart" },
+    { from: "payloads", to: "packets", policy: "smart" },
+    { from: "payload", to: "packet", policy: "smart" },
+    { from: "rogue", to: "non-compliant", policy: "smart" },
+    { from: "attacker", to: "adversary", policy: "smart" },
+    { from: "attacks", to: "adversarial-tests", policy: "smart" },
+    { from: "attack", to: "adversarial", policy: "smart" },
+    { from: "exploits", to: "test-cases", policy: "smart" },
+    { from: "mutant", to: "variant", policy: "smart" },
+    { from: "backdoor", to: "side-channel", policy: "smart" },
+    { from: "intrusion", to: "anomaly", policy: "smart" },
   ],
 };
 

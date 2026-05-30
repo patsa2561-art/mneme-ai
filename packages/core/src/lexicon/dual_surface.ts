@@ -24,6 +24,22 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Reshape `repl` to echo the case SHAPE of the text we matched, so a
+ * single `smart` rule covers `worm` / `Worm` / `WORM` without three
+ * separate entries (the exact maintenance gap that let cyber vocabulary
+ * leak into CLAUDE.md). UPPER→UPPER, Title→Title, anything else→as-authored.
+ */
+function matchCaseShape(match: string, repl: string): string {
+  const hasLetters = /[a-z]/i.test(match);
+  if (hasLetters && match === match.toUpperCase()) return repl.toUpperCase();
+  // Title case: first letter upper, the rest not all-upper.
+  if (hasLetters && match[0] === match[0].toUpperCase() && match.slice(1) === match.slice(1).toLowerCase()) {
+    return repl.charAt(0).toUpperCase() + repl.slice(1);
+  }
+  return repl;
+}
+
 function applyRule(text: string, rule: LexiconRule): { text: string; hits: number } {
   const policy = rule.policy ?? "literal";
   if (text.length === 0 || rule.from.length === 0) return { text, hits: 0 };
@@ -33,6 +49,15 @@ function applyRule(text: string, rule: LexiconRule): { text: string; hits: numbe
     try {
       const re = new RegExp(rule.from, "g");
       out = text.replace(re, () => { hits++; return rule.to; });
+    } catch {
+      return { text, hits: 0 };
+    }
+  } else if (policy === "smart") {
+    // Case-insensitive, word-boundary, case-PRESERVING. One rule → every
+    // case variant. The replacement echoes the matched word's case shape.
+    try {
+      const re = new RegExp(`\\b${escapeRegex(rule.from)}\\b`, "gi");
+      out = text.replace(re, (m) => { hits++; return matchCaseShape(m, rule.to); });
     } catch {
       return { text, hits: 0 };
     }

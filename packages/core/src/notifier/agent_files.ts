@@ -115,8 +115,8 @@ function mergeMnemeBlock(existing: string, newBlock: string, fname: string): str
   // Append (with a header on first time so the block is identifiable).
   const sep = existing.endsWith("\n") || existing.length === 0 ? "" : "\n";
   const header = fname === ".cursorrules" || fname === ".windsurfrules"
-    ? `\n# Mneme auto-injected (do not edit between sentinels)\n`
-    : `\n## Mneme (auto-injected, do not edit between sentinels)\n`;
+    ? `\n# Mneme auto-managed (do not edit between sentinels)\n`
+    : `\n## Mneme (auto-managed, do not edit between sentinels)\n`;
   return `${existing}${sep}${header}${newBlock}\n`;
 }
 

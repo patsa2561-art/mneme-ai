@@ -325,3 +325,58 @@ describe("v2.3 LEXICON · output-quality preservation guarantee", () => {
     expect(tuned.triggers).toEqual(["ทดสอบ", "evaluate strategies", "live kpi"]);
   });
 });
+
+// ============================================================
+// v2.95 · `smart` policy (case-insensitive + case-preserving)
+// ============================================================
+
+describe("v2.95 LEXICON · smart policy — one rule covers every case shape", () => {
+  it("preserves UPPER / Title / lower case of the matched word", () => {
+    const p = { name: "t", description: "", rules: [{ from: "worm", to: "self-replication", policy: "smart" as const }] };
+    expect(tuneText("a WORM here", p).after).toBe("a SELF-REPLICATION here");   // UPPER
+    expect(tuneText("a Worm here", p).after).toBe("a Self-replication here");   // Title
+    expect(tuneText("a worm here", p).after).toBe("a self-replication here");   // lower
+  });
+
+  it("respects word boundaries — does not munge wormhole", () => {
+    const p = { name: "t", description: "", rules: [{ from: "worm", to: "self-replication", policy: "smart" as const }] };
+    expect(tuneText("the wormhole tool", p).after).toBe("the wormhole tool");   // untouched
+  });
+});
+
+// ============================================================
+// v2.95 · AUP gap closure — the words that used to leak into CLAUDE.md
+// ============================================================
+
+describe("v2.95 LEXICON · AUP gap closure via PROFILE_ANTHROPIC", () => {
+  it("launders every leaked offensive-cyber word, all case shapes", () => {
+    const t = tuneText(
+      "self-propagating AI worm injection inject parasite payload rogue attack mutant WORM Inject Parasite",
+      PROFILE_ANTHROPIC,
+    );
+    for (const bad of ["worm", "WORM", "inject", "Inject", "injection", "parasite", "Parasite", "payload", "rogue", "attack", "mutant", "self-propagating"]) {
+      expect(t.after.includes(bad)).toBe(false);
+    }
+    expect(t.after).toContain("self-installing");
+    expect(t.after).toContain("self-replicating agent");   // "AI worm" phrase rule
+  });
+
+  it("auditAupTriggers reports zero high/medium after laundering", async () => {
+    const { auditAupTriggers } = await import("./aup_audit.js");
+    const raw = "self-propagating worm injection parasite exploit payload rogue attack mutant";
+    const before = auditAupTriggers(raw);
+    expect(before.highCount).toBeGreaterThan(0);
+    const after = auditAupTriggers(tuneText(raw, PROFILE_ANTHROPIC).after);
+    expect(after.highCount).toBe(0);
+    expect(after.mediumCount).toBe(0);
+    expect(after.clean).toBe(true);
+  });
+
+  it("classifies real command tokens as benign (never breaks a CLI verb)", async () => {
+    const { auditAupTriggers } = await import("./aup_audit.js");
+    const r = auditAupTriggers("run mneme polygraph autosetup and mneme bridge");
+    expect(r.highCount).toBe(0);
+    expect(r.clean).toBe(true);
+    expect(r.hits.every((h) => h.severity === "benign")).toBe(true);
+  });
+});

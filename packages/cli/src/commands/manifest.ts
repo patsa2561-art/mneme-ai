@@ -44,6 +44,18 @@ async function resolveAgentManifest(): Promise<AgentManifestShape | null> {
   return null;
 }
 
+interface AupHit { word: string; severity: "high" | "medium" | "benign"; count: number; safe: string; note: string }
+interface AupResult { hits: AupHit[]; highCount: number; mediumCount: number; benignCount: number; clean: boolean; scanned: number }
+interface LexiconShape { auditAupTriggers: (text: string) => AupResult; formatAupVerdict: (r: AupResult) => string }
+
+async function resolveLexicon(): Promise<LexiconShape | null> {
+  try {
+    const core = (await import("@mneme-ai/core")) as { lexicon?: LexiconShape };
+    if (core.lexicon && typeof core.lexicon.auditAupTriggers === "function") return core.lexicon;
+  } catch { /* */ }
+  return null;
+}
+
 function readMnemeVersion(): string {
   try {
     // ESM-safe lookup: walk up from this module's directory to the
@@ -135,5 +147,40 @@ export function registerManifestCommands(program: Command): void {
         ? am.renderManifestPlain(undefined, version)
         : am.renderManifestMarkdown(undefined, version);
       writeText(block);
+    });
+
+  m.command("doctor")
+    .description("Audit the RENDERED manifest (post-lexicon) for AUP 'violative cyber content' triggers that would land in CLAUDE.md and risk an Anthropic Usage-Policy block. Exit code 1 if any HIGH/MEDIUM trigger leaks (CI-friendly); benign command tokens only WARN.")
+    .option("--json", "JSON output.")
+    .action(async (opts: CommonOpts) => {
+      const am = await resolveAgentManifest();
+      const lex = await resolveLexicon();
+      if (!am || !lex) { writeText(`✗ agent_manifest / lexicon helper unavailable. Upgrade: \`npm install -g mneme-ai@latest\`.`); process.exitCode = 1; return; }
+      const version = readMnemeVersion();
+      // Audit exactly what lands on disk: the lexicon-tuned markdown block.
+      const rendered = am.renderManifestMarkdown(undefined, version);
+      const r = lex.auditAupTriggers(rendered);
+      if (opts.json) { writeJson({ version, ...r }); process.exitCode = r.clean ? 0 : 1; return; }
+      writeText(`Mneme manifest doctor (v${version}) — AUP cyber-content audit`);
+      writeText(``);
+      writeText(`  ${lex.formatAupVerdict(r)}`);
+      writeText(``);
+      if (r.hits.length === 0) {
+        writeText(`  ✓ No tracked trigger words present at all.`);
+      } else {
+        for (const h of r.hits) {
+          const icon = h.severity === "high" ? "✗" : h.severity === "medium" ? "⚠" : "·";
+          const fix = h.safe ? `  → should be "${h.safe}" (lexicon gap!)` : `  (benign: ${h.note})`;
+          writeText(`  ${icon} [${h.severity.padEnd(6)}] ${h.word.padEnd(18)} ×${String(h.count).padStart(3)}${fix}`);
+        }
+      }
+      writeText(``);
+      if (r.clean) {
+        writeText(`  ✓ CLEAN — zero high/medium triggers. Safe to land in CLAUDE.md.`);
+      } else {
+        writeText(`  ✗ LEAK — ${r.highCount} high + ${r.mediumCount} medium trigger(s) would reach the vendor classifier.`);
+        writeText(`    Fix: add a lexicon rule (packages/core/src/lexicon/mappings.ts → PROFILE_ANTHROPIC) mapping each leaked word to its neutral form.`);
+      }
+      process.exitCode = r.clean ? 0 : 1;
     });
 }

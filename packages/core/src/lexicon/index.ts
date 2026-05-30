@@ -20,6 +20,7 @@ export * from "./mappings.js";
 export * from "./dual_surface.js";
 export * from "./auto_detect.js";
 export * from "./learner.js";
+export * from "./aup_audit.js";
 
 import type { LexiconProfile, LexiconRule } from "./mappings.js";
 import { profileByName, BUILTIN_PROFILES } from "./mappings.js";

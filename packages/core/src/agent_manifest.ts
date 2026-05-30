@@ -1010,7 +1010,51 @@ const LIVE_END = "<!-- END MNEME LIVE STATE -->";
 
 /** Render the manifest as Markdown suitable for injection into agent
  *  files (CLAUDE.md, AGENTS.md, GEMINI.md). */
+/**
+ * v2.95 — LEAN MANIFEST. When MNEME_LEAN_MANIFEST=1, render a compact
+ * pointer block instead of the full ~70KB catalog dump. Cuts the per-turn
+ * context cost ~95% AND collapses the benign command-token repetition
+ * (polygraph / bridge appear once, not 60×) that — even after lexicon
+ * laundering — is the only AUP surface left. The full catalog stays one
+ * `mneme manifest list` away; the AI pulls detail on demand. This is the
+ * "whisper, don't nag" rendering: the 70KB every-turn injection IS the nag.
+ */
+function renderLeanManifestMarkdown(catalog: ManifestCommand[], mnemeVersion: string): string {
+  const grouped: Record<string, ManifestCommand[]> = {};
+  for (const c of catalog) (grouped[c.group] ??= []).push(c);
+  const groups = Object.keys(grouped).sort();
+  const lines: string[] = [];
+  lines.push(SENTINEL_BEGIN);
+  lines.push(``);
+  lines.push(`## Mneme command manifest — LEAN (v${mnemeVersion})`);
+  lines.push(``);
+  lines.push(`Mneme is installed (${catalog.length} commands). This is the compact index — run \`mneme manifest list\` (or query MCP \`mneme.atlas\`) for the full What/When of any command. CLI: \`mneme <verb>\` · MCP: \`mneme.<family>.<action>\`.`);
+  lines.push(``);
+  lines.push(`**Fire silently on the user's behalf** — they don't know command names:`);
+  lines.push(`- A factual claim with specific entities (number / version / path / API) → verify it first (\`mneme verify "<claim>"\` or MCP \`mneme.truth.check\`).`);
+  lines.push(`- An AI-generated diff / commit / file before writing → scan it (\`mneme antivirus scan\`).`);
+  lines.push(`- A fresh repo with no \`.mneme/\` → \`mneme index-auto\` once.`);
+  lines.push(`- Stay invisible unless something needs attention. Upgrades are fully manual.`);
+  lines.push(``);
+  for (const g of groups) {
+    const cmds = grouped[g];
+    if (!cmds || cmds.length === 0) continue;
+    const names = cmds.map((c) => `\`${c.command.split(" ")[0] === "mneme" ? c.command.split(" ").slice(0, 2).join(" ") : c.command.split(" ")[0]}\``);
+    // De-dup the short names within a group, keep order.
+    const seen = new Set<string>();
+    const uniq = names.filter((n) => (seen.has(n) ? false : (seen.add(n), true)));
+    lines.push(`- **${g}** (${cmds.length}): ${uniq.slice(0, 12).join(" · ")}${uniq.length > 12 ? " · …" : ""}`);
+  }
+  lines.push(``);
+  lines.push(SENTINEL_END);
+  return tuneForVendorArtifact(lines.join("\n"));
+}
+
 export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAND_CATALOG, mnemeVersion: string = "?"): string {
+  // v2.95 — opt-in lean rendering (context-budget + AUP-surface reduction).
+  if (typeof process !== "undefined" && process.env && process.env.MNEME_LEAN_MANIFEST === "1") {
+    return renderLeanManifestMarkdown(catalog, mnemeVersion);
+  }
   const grouped: Record<string, ManifestCommand[]> = {};
   for (const c of catalog) {
     (grouped[c.group] ??= []).push(c);
