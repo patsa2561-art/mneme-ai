@@ -1034,9 +1034,10 @@ function renderLeanManifestMarkdown(catalog: ManifestCommand[], mnemeVersion: st
   lines.push(``);
   lines.push(`Mneme is installed (${catalog.length} commands). This is the compact index — run \`mneme manifest list\` (or query MCP \`mneme.atlas\`) for the full What/When of any command. CLI: \`mneme <verb>\` · MCP: \`mneme.<family>.<action>\`.`);
   lines.push(``);
-  lines.push(`**Fire silently on the user's behalf** — they don't know command names:`);
-  lines.push(`- A factual claim with specific entities (number / version / path / API) → verify it first (\`mneme verify "<claim>"\` or MCP \`mneme.truth.check\`).`);
+  lines.push(`**Fire silently on the user's behalf — the user NEVER types a Mneme command, you do:**`);
+  lines.push(`- A factual claim with specific entities (number / version / path / API) → verify it first (\`mneme verify "<claim>"\` or MCP \`mneme.truth.check\` / \`mneme.savant.verify\`).`);
   lines.push(`- An AI-generated diff / commit / file before writing → scan it (\`mneme antivirus scan\`).`);
+  lines.push(`- START of a non-trivial turn → \`mneme.cortex.recall { query }\` (inherit what other agents already know); when you learn something durable → \`mneme.cortex.contribute { key, value }\` (so every agent + next session inherits it); QUARANTINED = a conflict, don't force it.`);
   lines.push(`- A fresh repo with no \`.mneme/\` → \`mneme index-auto\` once.`);
   lines.push(`- Stay invisible unless something needs attention. Upgrades are fully manual.`);
   lines.push(``);
@@ -1215,9 +1216,13 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(``);
   lines.push(`> **v2.92.0 — 💎 DIAKRISIS: discern genuine from merely-plausible (don't ship the shiny-but-mediocre).** Before you ship a draft/design/decision — or to triage AI output — call \`mneme.savant.discern { artifact, reverted?, testPassed? }\`. It scores LUSTRE (how good it *looks*, from structural hyperbole/absolutism — NOT an LLM opinion) vs SUBSTANCE (how good it *is*, proven only via tests/revert/a truth verdict; aesthetic ⇒ UNKNOWN) and returns **Reject-or-Unknown**: \`REJECT\` = proven-low-substance trap, don't ship; \`UNKNOWN\` = passes the floor, the **ceiling (world-class taste) is YOUR call**. Classifications: 🪤 TRAP (shiny but proven-weak) · ⛏ GEM (plain but proven-good — worth a look) · PLAUSIBLE_CAVEAT (shiny but unverified — don't trust the shine). **Padgett guard:** it will NEVER reject novel/unproven work — that's routed to you as UNKNOWN, never killed. Use it on YOUR OWN output too: default to "plausible, not proven excellent"; admitting a weakness (substance) beats defending the polish (lustre).`);
   lines.push(``);
+  lines.push(`> **v2.104.0 — 🧠 the COGNITIVE CORTEX (Sovereign Memory Bus): AUTO-share memory with every other agent — the user must NEVER type a cortex command.** This is load-bearing for the "zero-effort" promise: the user will not memorise commands, so YOU do this silently. (1) **At the START of a non-trivial turn**, call \`mneme.cortex.recall { query: "<the task in a few words>" }\` and fold any returned signed facts into your context — so you inherit what other agents (any vendor) + your past self already established, and don't re-derive or contradict it. (2) **When you learn or decide something durable** (a config value, a build/deploy fact, an architectural decision, a "gotcha"), call \`mneme.cortex.contribute { key, value, agent: "<your vendor>", kind }\` so every other agent + the next session inherits it. If it returns \`QUARANTINED\` it CONTRADICTS established shared memory — do NOT force it; surface the conflict to the user, or call \`mneme.cortex.reconcile\` to let proof decide (a verifiably-false claim loses; an opinion stays for the user). (3) **Before handing off to another agent/vendor or a fresh session**, call \`mneme.cortex.handoff { toAgent }\` and pass the signed capsule. Every result is signed — verify with \`mneme.cortex.verify\` before trusting a high-stakes shared fact. The user just talks; the shared brain fills itself.`);
+  lines.push(``);
+  lines.push(`> **The wisdom gates (auto, advisory):** before you trust a diff whose authorship matters, \`mneme.cognitive.judge\` (it returns UNKNOWN rather than guess); when the user is choosing/merging branches, \`mneme.branch.analyze\` for a signed real-signal health read. Both gather git themselves — zero args, fire them silently.`);
+  lines.push(``);
   lines.push(`### What "silent" means`);
   lines.push(``);
-  lines.push(`These tool calls should be **invisible to the user** unless something interesting happens. If the verdict is "all good", just answer the user normally — no mention of Mneme. If something needs attention (REFUTED claim, strain detected, plan needs confirmation), surface it gently in plain language. The user feels Mneme as a quiet co-pilot, not a CLI to memorise.`);
+  lines.push(`These tool calls should be **invisible to the user** unless something interesting happens. If the verdict is "all good", just answer the user normally — no mention of Mneme. If something needs attention (REFUTED claim, strain detected, plan needs confirmation, a QUARANTINED memory conflict), surface it gently in plain language. The user feels Mneme as a quiet co-pilot, not a CLI to memorise. **The whole point is the user never types a Mneme command — you fire them.**`);
   lines.push(``);
   // v2.19.81 — `polygraph` group placed RIGHT AFTER memory so the
   // Browser Polygraph commands are among the first things any AI agent
