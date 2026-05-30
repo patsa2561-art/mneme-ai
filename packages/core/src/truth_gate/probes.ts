@@ -345,6 +345,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.entropy.audited_multisource",
+    kind: "boolean",
+    description: "AUDITED ENTROPY (v2.108.0 — the honest core of 'True Entropy Security', NOT magic unhackability): secrets are MIXED from multiple sources through a cryptographic extractor (defense in depth — strong if ANY source has entropy), sources are health-checked (a stuck source is FLAGGED), and a SIGNED provenance attestation binds the secret's hash to its audited sources without revealing the secret. This probe asserts the entropy gauntlet = 100: mix-deterministic ∧ mix-diverges ∧ defense-in-depth (a stuck source can't weaken the mix) ∧ health-detects-stuck ∧ attestation-binds (a wrong secret is caught) ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const E = await import("../entropy/index.js" as string) as typeof import("../entropy/index.js");
+        const g = E.entropyGauntlet(process.cwd(), 1700000000000);
+        const ok = g.score === 100 && g.mixDeterministic && g.mixDiverges && g.defenseInDepth && g.healthDetectsStuck && g.attestationBinds && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} mixDet=${g.mixDeterministic} diverges=${g.mixDiverges} defenseInDepth=${g.defenseInDepth} detectsStuck=${g.healthDetectsStuck} attBinds=${g.attestationBinds}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.archaeology.signed_provenance",
     kind: "boolean",
     description: "DATA ARCHAEOLOGY (v2.107.0 — the honest core of the 'data archaeology' idea, NOT a scraper): every fact that enters the local brain from a public source carries SIGNED, verifiable PROVENANCE (source URL + content hash + time), is distilled from raw content (chatter dropped), and is gated by a robots.txt + rate-limit policy so ingest stays legitimate. NOT dark-web crawling, NOT 'decryption' — accountable knowledge alchemy. This probe asserts the archaeology gauntlet = 100: robots respected ∧ rate-limited ∧ distills ∧ signed-provenance ∧ a forged source is caught ∧ total.",

@@ -130,6 +130,20 @@ mneme dig provenance "error rate"        # prove where an ingested fact came fro
 
 ---
 
+## 6. AUDITED ENTROPY — secrets you can prove the provenance of
+
+Generate a secret/key/seed by **mixing every entropy source you have** (OS CSPRNG + timing jitter + any physical/beacon sample) through a cryptographic extractor — **defense in depth**, so one bad RNG can't weaken it — with **health checks** (a stuck source is flagged) and a **signed provenance attestation** (which sources, their health, the secret's hash — *never* the secret).
+
+```bash
+mneme entropy gen --bytes 32 --physical "dice:4,2,6"   # mix OS + jitter + your sample → secret + signed attestation
+mneme entropy verify --secret <hex>                    # prove it was derived from audited sources (offline)
+mneme entropy health --file sample.bin                 # catch a stuck/degraded entropy source
+```
+
+**MCP:** `mneme.entropy.gen` / `mneme.entropy.verify`. **Honest:** `crypto`'s CSPRNG is *already* secure — this adds *resilience* + *auditability* + a *fail-safe health check*, not a claim of magic unhackability.
+
+---
+
 ## What this deliberately is NOT (DIAKRISIS / honesty)
 
 We refused to ship the dangerous theatre from the "magical architecture" wishlists, because Mneme's moat is **honesty**, not hype:
