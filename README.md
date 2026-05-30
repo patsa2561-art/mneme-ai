@@ -24,6 +24,8 @@
 
 📖 **The manifesto** (identity · the savant axes · ethos): [`docs/ALETHEIA.md`](docs/ALETHEIA.md)  ·  📜 **Every release, in full detail** (v2.18 → latest): [`CHANGELOG.md`](CHANGELOG.md)
 
+🧠 **The Sovereign Cognitive Layer** — signed, vendor-neutral, byte-lossless context memory (HYDRA), self-aware wisdom gates, and a shared memory bus every AI agent (Grok / GPT / Gemini / Claude / Codex) contributes to that *heals its own contradictions by proof*. **How to use it →** [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md)
+
 ### 📖 Start here
 
 <table>
