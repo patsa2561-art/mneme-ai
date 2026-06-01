@@ -924,6 +924,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.firewall.injection_defense",
     severity: "block",
   },
+  // ── v2.137.0 — STELE: the signed, delta-syncable capability inscription (membrane pillar 1) ──
+  {
+    id: "claim.stele.capability_inscription",
+    source: "v2.137.0 release notes",
+    text: "Mneme's STELE is a signed, merkle-rooted, delta-syncable inscription of its whole capability surface — pillar 1 of the membrane that makes 'an AI agent doesn't know a tool exists / holds a stale manifest' a structural impossibility, not a persuasion problem. Every capability is a content-addressed leaf rolled into a merkle root (tamper-evident: edit one ⇒ the root changes); an agent holding root R pulls ONLY the delta (added/changed/removed) — O(delta) tokens, 0 if the roots match — and can PROVE its surface is current + complete (the root is NOTARY-signed at the CLI/MCP boundary). This replaces the giant, stale, O(all-tools) manifest dumped into CLAUDE.md, and an OpenAPI/MCP tools-list snapshot (which has no freshness or completeness proof and no incremental sync). steleGauntlet=100: root deterministic + order-independent ∧ changes on edit/add ∧ 0-token delta when roots match ∧ delta returns ONLY changed ∧ detects removed ∧ detects a tampered held leaf ∧ delta cheaper than full ∧ verify catches stale/tampered ∧ deterministic ∧ total. HONEST (DIAKRISIS): the win is the delta-sync + the merkle freshness/completeness proof (genuinely novel for an agent-capability manifest), NOT the name; 'can't NOT know' holds only because the agent CALLS the stele on boot — it pairs with the activation membrane.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.stele.capability_inscription",
+    severity: "block",
+  },
   // ── v2.136.0 — ELLEIPSIS: the omission/completeness gate (a vendor won't build it) ──
   {
     id: "claim.elleipsis.completeness_gate",

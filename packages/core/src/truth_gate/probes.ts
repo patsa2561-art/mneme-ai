@@ -415,6 +415,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.stele.capability_inscription",
+    kind: "boolean",
+    description: "STELE (v2.137.0 — pillar 1 of the membrane: a signed, merkle-rooted, delta-syncable inscription of Mneme's whole capability surface). Closes 'an agent doesn't know a tool exists / holds a stale manifest' structurally: every capability is a content-addressed leaf rolled into a merkle root (tamper-evident); an agent holding root R pulls only the delta (added/changed/removed) — O(delta) tokens, 0 if roots match — and can PROVE its surface is current + complete. This probe asserts steleGauntlet=100: root deterministic + order-independent ∧ root changes on edit ∧ on add ∧ 0-token delta when roots match ∧ delta returns ONLY changed (not O(all)) ∧ detects removed ∧ detects a tampered held leaf ∧ delta cheaper than full ∧ verify catches stale/tampered ∧ deterministic ∧ total. HONEST: the win is delta-sync + the merkle freshness/completeness proof (novel for an agent-capability manifest); 'can't NOT know' holds only because the agent CALLS the stele on boot — it pairs with the activation membrane (pillar 3).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../stele/index.js" as string) as typeof import("../stele/index.js");
+        const g = S.steleGauntlet();
+        const ok = g.score === 100 && g.rootDeterministic && g.rootChangesOnEdit && g.rootChangesOnAdd && g.upToDateWhenRootsMatch && g.deltaReturnsOnlyChanged && g.detectsRemoved && g.detectsTamperedLeaf && g.deltaCheaperThanFull && g.verifyCatchesStale && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} merkle=${g.rootDeterministic} delta=${g.deltaReturnsOnlyChanged} upToDate=${g.upToDateWhenRootsMatch} tamper=${g.detectsTamperedLeaf} cheaper=${g.deltaCheaperThanFull}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.elleipsis.completeness_gate",
     kind: "boolean",
     description: "ELLEIPSIS (v2.136.0 — the omission/completeness gate; the diamond a model vendor won't build). Everyone checks if what the AI SAID is true (hallucination); ELLEIPSIS checks what it SILENTLY LEFT OUT — it extracts the checkable asks from the user's request and reports COVERED / UNADDRESSED / VIOLATED (a 'don't do X' the AI did) / UNKNOWN against the output. This probe asserts elleipsisGauntlet=100: extracts multiple asks ∧ flags a dropped requirement (UNADDRESSED) ∧ does NOT false-flag a covered one ∧ catches a violated prohibition ∧ respects an honored prohibition (subject preserved) ∧ abstains to UNKNOWN on ambiguous signal (never fabricates a gap) ∧ score-math ∧ deterministic ∧ total. HONEST: a coverage HEURISTIC with prove-or-unknown — it surfaces a likely gap to LOOK at and abstains when unsure; it does NOT claim to catch every omission (impossible from NL).",

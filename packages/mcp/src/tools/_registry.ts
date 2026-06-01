@@ -83,6 +83,7 @@ import { FIREWALL_TOOLS } from "./_firewall_tools.js";
 import { RAIL_TOOLS } from "./_rail_tools.js";
 import { BOOT_TOOLS } from "./_boot_tools.js";
 import { ELLEIPSIS_TOOLS } from "./_elleipsis_tools.js";
+import { STELE_TOOLS } from "./_stele_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -286,6 +287,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...RAIL_TOOLS,
     ...BOOT_TOOLS,
     ...ELLEIPSIS_TOOLS,
+    ...STELE_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,
