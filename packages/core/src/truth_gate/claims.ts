@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.124.0 — OUTLINE: read structure cheap, edit exact (token reduction) ──
+  {
+    id: "claim.outline.skeleton_region_exact",
+    source: "v2.124.0 release notes",
+    text: "Mneme's OUTLINE lets any AI agent (vendor-neutral, via CLI or MCP) read a code file's structural SKELETON — every symbol + EXACT line range, bodies elided — for a fraction of the tokens instead of loading the whole file, then fetch the byte-EXACT slice only where it edits; outlineGauntlet=100: reduction-real ∧ navigable (every top-level symbol present) ∧ region-byte-exact (verbatim substring of source) ∧ region-by-line-exact ∧ mask-length-preserved ∧ deterministic ∧ total. The skeleton is honestly LOSSY (orientation), the region fetch byte-exact (editing); token figures a labelled ≈chars/4 estimate of INPUT context. The honest fix for context-loading hyper-inflation — NOT a kernel hook, NOT 'understand code without seeing it', NOT holographic/quantum fantasy",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.outline.skeleton_region_exact",
+    severity: "block",
+  },
   // ── v2.122.0 — BEQUEST: Second Brain Inheritance (knowledge survival) ──
   {
     id: "claim.bequest.inheritance_math_sound",

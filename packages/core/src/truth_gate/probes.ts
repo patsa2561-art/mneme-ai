@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.outline.skeleton_region_exact",
+    kind: "boolean",
+    description: "OUTLINE (v2.124.0 — the honest fix for context-loading hyper-inflation): an agent reads a file's structural SKELETON (every symbol + exact line range, bodies elided) for a fraction of the tokens, then fetches the byte-EXACT slice only where it edits. This probe asserts outlineGauntlet=100: reduction-real (skeleton materially smaller) ∧ navigable (every top-level symbol present in the rendered skeleton) ∧ region-byte-exact (extractRegion(symbol) is a verbatim substring of the source) ∧ region-by-line-exact ∧ mask-length-preserved (string/comment masking keeps line/col mapping) ∧ deterministic ∧ total. The skeleton is honestly LOSSY (orientation); the region fetch is byte-exact (editing). NOT a kernel hook, NOT 'understand code without seeing it'.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const O = await import("../outline/index.js" as string) as typeof import("../outline/index.js");
+        const g = O.outlineGauntlet();
+        const ok = g.score === 100 && g.reductionReal && g.navigable && g.regionByteExact && g.regionByLineExact && g.maskLengthPreserved && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} reduction=${g.reductionPct}% navigable=${g.navigable} regionExact=${g.regionByteExact} byLine=${g.regionByLineExact} maskLen=${g.maskLengthPreserved}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.bequest.inheritance_math_sound",
     kind: "boolean",
     description: "BEQUEST — Second Brain Inheritance (v2.122.0): the knowledge-survival math is honest + falsifiable, not a fabricated metric. Survival S(u)=1−∏(1−fluency) (reliability redundancy), completeness/orphaned = mass-weighted survival, and a greedy min-heir set-cover. This probe asserts bequestGauntlet=100 over a 4,000-case sweep: survival-identity (0 holders→0, f=1→1, two 0.5→0.75) ∧ survival-monotone (raising fluency / adding a heir never lowers survival) ∧ completeness-identity (orphaned = total−surviving exact) ∧ capsule-tamper-evident ∧ inheritance-verifies (good claim ok, wrong hash rejected) ∧ set-cover ≥ (1−1/e)·OPT vs brute force ∧ deterministic ∧ total.",
