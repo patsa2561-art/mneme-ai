@@ -44,8 +44,8 @@
 |---|---|---|
 | 🧬 **Second Brain · Inheritance** | *"What happens to our knowledge when a key person (or agent) leaves?"* | **`mneme bequest`** — capture a departing expert's knowledge as a signed Succession Capsule, verify a successor inherited it intact, and report **orphaned knowledge** (no living heir) + the minimum heirs to assign |
 | 🛡 **Absolute Trust Layer** | *"Every agent verifies before it acts."* | verify-before-act gate + cross-vendor consensus + signed audit trail |
-| 🔒 **Sovereign / Air-Gapped AI** | *"Our code &amp; secrets never leak to the model — with proof."* | **SOVEREIGN EGRESS GUARD** — redacts secrets, trips on honeytoken canaries, Bloom secret-membership, signs an offline-auditable egress certificate |
-| 🌐 **Standard MCP boundary** | *"One governed surface for all our agents."* | local-first, vendor-neutral MCP server + capability passports |
+| 🔒 **Sovereign / Air-Gapped AI** | *"Our code &amp; secrets never leak to the model — with proof."* | **SOVEREIGN EGRESS GUARD** (redacts secrets, honeytoken canaries, Bloom membership, signed egress cert) **+ CONTEXT BLINDING** (`mneme blind` — real identifier names → reversible local placeholders, secrets removed: the provider only ever sees structurally-valid but meaningless code; the map never leaves your machine) |
+| 🌐 **The Context Gateway (Standard MCP boundary)** | *"One governed surface every agent crosses — and we meter what it saves."* | local-first, vendor-neutral MCP server + capability passports; every crossing is outlined / blinded / verified and the **measured** token saving is metered into a signed ledger (`mneme savings`) — value-based, not seat-based |
 | 💰 **Value-based cost** | *"Pay only for tokens you actually save."* | the signed, measured savings ledger above |
 
 > Honest by design (DIAKRISIS): every figure is **measured + signed**, never fabricated; USD uses **your** vendor's price. **The pillars, the reframes (Key-Person Risk · Governance Cert · Capital Burn), and what is *not* claimed →** [`docs/ENTERPRISE.md`](docs/ENTERPRISE.md)

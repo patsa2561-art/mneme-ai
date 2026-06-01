@@ -39,7 +39,17 @@ The result is a verdict (`ALLOW` / `REDACT` / `BLOCK`), the **safe redacted payl
 
 > This is the honest core of "air-gapped / sovereign AI": a provable boundary you control. It is **not** a claim that any model is "unhackable," and it does not touch the OS kernel or a GPU's memory.
 
-### 3. 🌐 Standard MCP boundary — *"one governed surface for all our agents"*
+#### Context Blinding — the model never sees your real names (`mneme blind`)
+
+Sometimes you *must* use a hosted model, but the org cannot have its real identifiers reach the provider. **CONTEXT BLINDING** is the fast, honest answer:
+
+- Before code leaves, `mneme blind` **removes secret literals** and replaces sensitive identifier names (`SecretFinancialEngine` → `MZ1`, `userPasswordHash` → `MZ2`) with **reversible placeholders** via a deterministic, collision-free map that **stays on your machine**.
+- The model sees **structurally-valid but business-meaningless** code — it reasons over the structure (all it needs) and its reply references the placeholders, which `mneme unblind` maps back to your real names with **100% fidelity** (proven: round-trip-exact, bijection, structure-preserved).
+- So a provider employee — or an attacker reading the chat history on the cloud — sees syntactic nonsense; your machine restores reality.
+
+> Honest scope: this is **structure-preserving pseudonymization** (millisecond-fast, reversible) — **not** zero-knowledge or homomorphic encryption (those are still too slow to run on real codebases in 2026), and **not** an OS-level intercept (Mneme never hooks your agent's tools — the agent calls `blind` by choice). The code's *structure* stays visible to the model; its *names and secrets* do not.
+
+### 3. 🌐 The Context Gateway — *"one governed surface every agent crosses"*
 
 Mneme is a local-first **MCP server** every agent connects to, plus **capability passports** (short-lived, scoped, signed tokens that gate sensitive tool calls). Instead of N agents each wired to N tools with N security postures, you get **one** governed, audited surface — vendor-neutral and self-hostable.
 

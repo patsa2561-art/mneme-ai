@@ -76,6 +76,7 @@ import { EXEC_TOOLS } from "./_exec_tools.js";
 import { BEQUEST_TOOLS } from "./_bequest_tools.js";
 import { OUTLINE_TOOLS } from "./_outline_tools.js";
 import { SCAFFOLD_TOOLS } from "./_scaffold_tools.js";
+import { BLIND_TOOLS } from "./_blind_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -272,6 +273,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...BEQUEST_TOOLS,
     ...OUTLINE_TOOLS,
     ...SCAFFOLD_TOOLS,
+    ...BLIND_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

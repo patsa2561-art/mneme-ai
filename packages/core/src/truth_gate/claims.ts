@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.127.0 — CONTEXT BLINDING: code's real names + secrets never reach the model ──
+  {
+    id: "claim.blind.reversible_structure_preserving",
+    source: "v2.127.0 release notes",
+    text: "Mneme's CONTEXT BLINDING is the honest, fast core of 'code never leaks to the model': before code is sent to a hosted model, secret literals are REMOVED and sensitive identifier names become reversible local placeholders (SecretFinancialEngine → MZ1) via a deterministic collision-free map kept ONLY on the user's machine; the model reasons over the preserved STRUCTURE, its reply is inverse-mapped back to the real names with 100% fidelity. blindGauntlet=100: round-trip-exact ∧ names-not-leaked ∧ bijection ∧ secrets-gone (removed, not in the map) ∧ structure-preserved ∧ edit-round-trips ∧ deterministic ∧ total. It is pseudonymization (ms-fast), NOT ZKP/FHE (too slow to run in real time in 2026) and NOT a kernel hook (malware); the code's structure stays visible (the model needs it) — names + secrets do not. Composes with the EGRESS guard",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.blind.reversible_structure_preserving",
+    severity: "block",
+  },
   // ── v2.126.0 — SCAFFOLD: honest Blueprint Inflation for known templates ──
   {
     id: "claim.scaffold.known_template_deterministic",

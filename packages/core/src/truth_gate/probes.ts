@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.blind.reversible_structure_preserving",
+    kind: "boolean",
+    description: "CONTEXT BLINDING (v2.127.0 — the honest, fast core of 'code never leaks to the model'): before code is sent to a hosted model, secret literals are REMOVED and sensitive identifier names become reversible local placeholders; the model sees valid-but-meaningless code, the map stays local, the reply restores the real names. This probe asserts blindGauntlet=100: round-trip-exact (unblind(blind(src),map)===src for blinded names) ∧ names-not-leaked (no protected real name in the blinded payload) ∧ bijection (distinct id↔distinct placeholder) ∧ secrets-gone (removed, not in the map) ∧ structure-preserved (keyword/brace counts unchanged) ∧ edit-round-trips (a model edit on placeholders restores to real names) ∧ deterministic ∧ total. HONEST: pseudonymization, NOT ZKP/FHE (too slow in 2026) and NOT a kernel hook; the code's STRUCTURE is still visible (the model needs it) — names + secrets are not.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const B = await import("../blind/index.js" as string) as typeof import("../blind/index.js");
+        const g = B.blindGauntlet();
+        const ok = g.score === 100 && g.roundTripExact && g.namesNotLeaked && g.bijection && g.secretsGone && g.structurePreserved && g.editRoundTrips && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} roundTrip=${g.roundTripExact} noLeak=${g.namesNotLeaked} bijection=${g.bijection} secretsGone=${g.secretsGone} structure=${g.structurePreserved}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.scaffold.known_template_deterministic",
     kind: "boolean",
     description: "SCAFFOLD (v2.126.0 — the HONEST core of 'Blueprint Inflation'): an agent emits a compact spec for a KNOWN template; Mneme expands it into deterministic boilerplate locally, saving OUTPUT tokens. This probe asserts scaffoldGauntlet=100: ts-model-valid (interface + CRUD repo + every field, balanced delimiters) ∧ test-skeleton-valid ∧ config-round-trips ∧ expansion-real (code ≫ spec, >50% output saving) ∧ REFUSES-unknown (an unknown kind returns ok:false with an honest message, NEVER guesses) ∧ deterministic ∧ total. HONEST scope: boilerplate only — it does NOT generate arbitrary novel business logic (information theory forbids reconstructing 2,000 lines of new logic from a 35-token spec); it leaves TODO markers where real logic goes.",
