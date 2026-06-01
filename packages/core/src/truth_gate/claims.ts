@@ -944,6 +944,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.139.0 — PCE: Proof-Carrying Edit (diamond 2 of 3) ──
+  {
+    id: "claim.pce.proof_carrying_edit",
+    source: "v2.139.0 release notes",
+    text: "Mneme's PCE (Proof-Carrying Edit) makes an AI's diff travel with a SIGNED certificate of what it statically does and does NOT do — the way proof-carrying code (Necula 1996) made a binary carry a machine-checkable proof of its safety properties. Before an edit is applied/committed, PCE analyses the unified diff and binds, into a NOTARY-signed passport: the paths it touches, whether every path stays inside a declared scope (out-of-scope ⇒ BLOCK), the dangerous primitives it introduces (eval / childProcess / fsDelete / network / dynamicImport), its add/delete balance + a mass-deletion flag, and whether it adds a secret-looking literal (⇒ BLOCK) — with a verdict PASS / REVIEW / BLOCK. A reviewer or CI verifies the passport OFFLINE: it re-derives the properties from the diff and checks they match the signed claim, so it trusts the ANALYSIS without re-running it or trusting the author; tampering with EITHER the diff (hash mismatch) or the certificate (properties/verdict mismatch) is caught. pceGauntlet=100: parses a diff ∧ detects out-of-scope ∧ allows in-scope ∧ inventories introduced primitives ∧ catches an added secret ∧ flags mass deletion ∧ BLOCKs a forbidden primitive ∧ verify catches a tampered diff ∧ verify catches a forged cert ∧ verify accepts a genuine pair ∧ deterministic ∧ total. HONEST (DIAKRISIS): this is STATIC lexical+structural analysis — it proves declared, checkable, falsifiable properties, NOT total runtime safety; the value is the signed, offline-verifiable binding of analysis ⇄ this exact diff (scope/secret/balance are exact; the primitive inventory is a signal to LOOK, and a novel obfuscation can still hide a primitive from a lexical scan). A model vendor won't ship this — it surfaces what the model's edit touches/sneaks in, on the BUYER's side of the table.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.pce.proof_carrying_edit",
+    severity: "block",
+  },
   // ── v2.136.0 — ELLEIPSIS: the omission/completeness gate (a vendor won't build it) ──
   {
     id: "claim.elleipsis.completeness_gate",

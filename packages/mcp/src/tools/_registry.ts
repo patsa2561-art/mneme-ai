@@ -85,6 +85,7 @@ import { BOOT_TOOLS } from "./_boot_tools.js";
 import { ELLEIPSIS_TOOLS } from "./_elleipsis_tools.js";
 import { STELE_TOOLS } from "./_stele_tools.js";
 import { AXIA_TOOLS } from "./_axia_tools.js";
+import { PCE_TOOLS } from "./_pce_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -290,6 +291,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...ELLEIPSIS_TOOLS,
     ...STELE_TOOLS,
     ...AXIA_TOOLS,
+    ...PCE_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

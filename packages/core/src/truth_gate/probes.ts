@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.pce.proof_carrying_edit",
+    kind: "boolean",
+    description: "PCE (v2.139.0 — Proof-Carrying Edit, diamond 2 of 3). Proof-carrying code made a binary travel with a machine-checkable proof of its safety properties; PCE does the same for an AI's diff — it analyses the diff STATICALLY and emits a SIGNED certificate of what it does/doesn't do (touched paths, scope-containment, introduced dangerous primitives, add/delete balance, secret literals) that a reviewer/CI verifies OFFLINE: re-derive the properties from the diff + check they match the signed claim, so the ANALYSIS is trusted without re-running it or trusting the author. This probe asserts pceGauntlet=100: parses a diff ∧ detects an out-of-scope edit ∧ allows an in-scope one ∧ inventories introduced primitives ∧ catches an added secret ∧ flags mass deletion ∧ BLOCKs a forbidden primitive ∧ verify catches a tampered diff ∧ verify catches a forged cert ∧ verify accepts a genuine pair ∧ deterministic ∧ total. HONEST: static lexical+structural analysis — proves declared, checkable properties, NOT total runtime safety (a novel obfuscation can hide a primitive from a lexical scan); scope/secret/balance are exact, the primitive inventory is a signal to LOOK.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../pce/index.js" as string) as typeof import("../pce/index.js");
+        const g = P.pceGauntlet();
+        const ok = g.score === 100 && g.parsesDiff && g.detectsOutOfScope && g.allowsInScope && g.inventoriesPrimitives && g.catchesAddedSecret && g.flagsMassDeletion && g.blocksForbidden && g.verifyCatchesTamperedDiff && g.verifyCatchesForgedCert && g.verifyAcceptsGenuine && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} scope=${g.detectsOutOfScope} primitives=${g.inventoriesPrimitives} secret=${g.catchesAddedSecret} tamperedDiff=${g.verifyCatchesTamperedDiff} forgedCert=${g.verifyCatchesForgedCert}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.elleipsis.completeness_gate",
     kind: "boolean",
     description: "ELLEIPSIS (v2.136.0 — the omission/completeness gate; the diamond a model vendor won't build). Everyone checks if what the AI SAID is true (hallucination); ELLEIPSIS checks what it SILENTLY LEFT OUT — it extracts the checkable asks from the user's request and reports COVERED / UNADDRESSED / VIOLATED (a 'don't do X' the AI did) / UNKNOWN against the output. This probe asserts elleipsisGauntlet=100: extracts multiple asks ∧ flags a dropped requirement (UNADDRESSED) ∧ does NOT false-flag a covered one ∧ catches a violated prohibition ∧ respects an honored prohibition (subject preserved) ∧ abstains to UNKNOWN on ambiguous signal (never fabricates a gap) ∧ score-math ∧ deterministic ∧ total. HONEST: a coverage HEURISTIC with prove-or-unknown — it surfaces a likely gap to LOOK at and abstains when unsure; it does NOT claim to catch every omission (impossible from NL).",
