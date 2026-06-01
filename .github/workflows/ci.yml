@@ -40,7 +40,7 @@ jobs:
           - os: windows-11-arm
             node: '24'   # windows-11-arm runner doesn't ship Node 24 yet — re-add when available
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 50
 
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 50
       - uses: actions/setup-node@v4
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
