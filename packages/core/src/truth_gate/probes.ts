@@ -375,7 +375,7 @@ const probes: Probe[] = [
   {
     id: "probe.egress.sovereign_guard",
     kind: "boolean",
-    description: "SOVEREIGN EGRESS GUARD (v2.118.0 — the enterprise 'code/secrets never leak, with proof' gate): a deterministic boundary that pattern-redacts known secret classes, trips on HONEYTOKEN canaries (exfiltration → BLOCK), and catches registered secrets via a Bloom filter (one-way, never stores the secret). This probe asserts the egress gauntlet = 100 incl. a 10,000-secret Bloom no-false-negative sweep: canary→BLOCK ∧ pattern→REDACT (raw key gone) ∧ clean→ALLOW ∧ Bloom-NEVER-false-negatives (every registered secret tests positive) ∧ Bloom-low-false-positive (<5%) ∧ cert-binds-payload-HASH-only (never the secret) ∧ deterministic ∧ total.",
+    description: "SOVEREIGN EGRESS GUARD (v2.118 + v2.119 — the enterprise 'code/secrets never leak, with proof' gate): a deterministic boundary that pattern-redacts known secret classes, trips on HONEYTOKEN canaries (exfiltration → BLOCK), catches registered secrets via a one-way Bloom filter (never stores the secret), AND (v2.119) catches an UNREGISTERED high-entropy key via a Shannon-entropy structural layer + scans arbitrarily large payloads in bounded memory (streaming). This probe asserts the egress gauntlet = 100 incl. a 10,000-secret Bloom no-false-negative sweep: canary→BLOCK ∧ pattern→REDACT (raw key gone) ∧ clean→ALLOW ∧ Bloom-NEVER-false-negatives ∧ Bloom-low-false-positive (<5%) ∧ cert-binds-payload-HASH-only ∧ entropy-catches-unregistered-key ∧ entropy-spares-prose (no false positive) ∧ shannonEntropy-math-sound ∧ streaming-equals-whole-payload ∧ deterministic ∧ total.",
     run: async (ctx) => {
       const t0 = Date.now(); void ctx;
       try {

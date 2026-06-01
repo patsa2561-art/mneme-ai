@@ -14,15 +14,31 @@
  */
 
 import type { Command } from "commander";
-import { existsSync, readFileSync, mkdirSync, appendFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, appendFileSync, writeFileSync, openSync, readSync, closeSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { randomBytes } from "node:crypto";
+
+/** Bounded-memory chunked file reader (one buffer at a time). Secrets/canaries
+ *  are ASCII, so a rare UTF-8 split only affects non-ASCII glyphs in the echoed
+ *  redacted output, never detection. */
+function* readFileChunks(path: string, size = 65536): Generator<string> {
+  const fd = openSync(path, "r");
+  try {
+    const buf = Buffer.allocUnsafe(size); let n: number;
+    while ((n = readSync(fd, buf, 0, size, null)) > 0) yield buf.toString("utf8", 0, n);
+  } finally { closeSync(fd); }
+}
 
 function writeJson(p: unknown): void { process.stdout.write(JSON.stringify(p, null, 2) + "\n"); }
 function writeText(l: string): void { process.stdout.write(l + "\n"); }
 
+type EgressR = { verdict: string; redactedPayload: string; secretsRedacted: number; canariesTripped: string[]; bloomHits: number; entropySuspects: number; residualRisk: number; findings: Array<{ kind: string; count: number }>; contentHash: string; note: string };
 interface CoreE {
-  egress: { scanEgress: (i: unknown) => { verdict: string; redactedPayload: string; secretsRedacted: number; canariesTripped: string[]; bloomHits: number; residualRisk: number; findings: Array<{ kind: string; count: number }>; contentHash: string; note: string }; buildSecretBloom: (s: string[], o?: unknown) => unknown };
+  egress: {
+    scanEgress: (i: unknown) => EgressR;
+    scanEgressChunked: (chunks: Iterable<string>, o?: unknown) => EgressR;
+    buildSecretBloom: (s: string[], o?: unknown) => unknown;
+  };
   notary?: { issueReceipt: (cwd: string, o: unknown) => unknown };
 }
 async function core(): Promise<CoreE | null> {
@@ -48,23 +64,31 @@ export function registerEgressCommands(program: Command): void {
     .description("Scan an outbound payload (stdin / --file / --text). Verdict ALLOW | REDACT | BLOCK + signed cert. Exit 2 on BLOCK (CI-gate).")
     .option("--text <t>", "payload inline (else stdin).")
     .option("--file <p>", "read payload from a file.")
+    .option("--stream", "stream --file in bounded memory (for very large payloads).")
+    .option("--no-entropy", "disable the Shannon-entropy structural layer (layer 4).")
     .option("--json", "JSON output (redacted payload + signed cert).")
-    .action(async (opts: { text?: string; file?: string; json?: boolean }) => {
+    .action(async (opts: { text?: string; file?: string; stream?: boolean; entropy?: boolean; json?: boolean }) => {
       const m = await core(); if (!m) { writeText("✗ core unavailable"); process.exitCode = 1; return; }
       const cwd = process.cwd();
-      let payload = typeof opts.text === "string" ? opts.text : "";
-      if (!payload && opts.file) { try { if (existsSync(opts.file)) payload = readFileSync(opts.file, "utf8"); } catch { /* */ } }
-      if (!payload) payload = await readStdin();
       const canaries = readLines(join(cwd, CANARY_FILE));
       const secrets = readLines(join(cwd, SECRETS_FILE));
       const secretBloom = secrets.length > 0 ? m.egress.buildSecretBloom(secrets, { m: 1 << 16, k: 5 }) : undefined;
-      const r = m.egress.scanEgress({ payload, canaries, secretBloom });
+      const entropy = opts.entropy === false ? { enabled: false } : undefined; // commander: --no-entropy ⇒ entropy=false
+      let r: EgressR;
+      if (opts.stream && opts.file && existsSync(opts.file)) {
+        r = m.egress.scanEgressChunked(readFileChunks(opts.file), { canaries, secretBloom, entropy });
+      } else {
+        let payload = typeof opts.text === "string" ? opts.text : "";
+        if (!payload && opts.file) { try { if (existsSync(opts.file)) payload = readFileSync(opts.file, "utf8"); } catch { /* */ } }
+        if (!payload) payload = await readStdin();
+        r = m.egress.scanEgress({ payload, canaries, secretBloom, entropy });
+      }
       let receipt: unknown = null;
       try { receipt = m.notary?.issueReceipt(cwd, { kind: "claim-verdict", subject: `egress:${r.verdict}`, payload: { verdict: r.verdict, contentHash: r.contentHash, secretsRedacted: r.secretsRedacted, canariesTripped: r.canariesTripped.length, bloomHits: r.bloomHits, residualRisk: r.residualRisk }, includePayload: true }); } catch { /* */ }
-      if (opts.json) { writeJson({ verdict: r.verdict, secretsRedacted: r.secretsRedacted, canariesTripped: r.canariesTripped.length, bloomHits: r.bloomHits, residualRisk: r.residualRisk, findings: r.findings, contentHash: r.contentHash, redactedPayload: r.redactedPayload, signed: receipt, note: r.note }); }
+      if (opts.json) { writeJson({ verdict: r.verdict, secretsRedacted: r.secretsRedacted, canariesTripped: r.canariesTripped.length, bloomHits: r.bloomHits, entropySuspects: r.entropySuspects, residualRisk: r.residualRisk, findings: r.findings, contentHash: r.contentHash, redactedPayload: r.redactedPayload, signed: receipt, note: r.note }); }
       else {
         const icon = r.verdict === "BLOCK" ? "🛑" : r.verdict === "REDACT" ? "✂️" : "✓";
-        writeText(`${icon} EGRESS ${r.verdict} — ${r.secretsRedacted} secret(s) redacted · ${r.canariesTripped.length} canary tripwire(s) · ${r.bloomHits} registered-secret hit(s) · residual risk ${r.residualRisk}`);
+        writeText(`${icon} EGRESS ${r.verdict} — ${r.secretsRedacted} secret(s) redacted · ${r.canariesTripped.length} canary tripwire(s) · ${r.bloomHits} registered-secret hit(s) · ${r.entropySuspects} suspected (entropy) · residual risk ${r.residualRisk}`);
         for (const f of r.findings) writeText(`   • ${f.kind}: ${f.count}`);
         if (r.verdict === "BLOCK") writeText(`   🛑 HONEYTOKEN TRIPPED — an org canary appeared in an outbound payload. This is an exfiltration signal; DO NOT send.`);
         if (receipt) writeText(`   ✓ signed egress certificate (binds payload hash ${r.contentHash.slice(0, 12)}… — verify offline with the NOTARY public key)`);

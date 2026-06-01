@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scanEgress, buildSecretBloom, bloomTest, egressGauntlet, type BloomFilter } from "./index.js";
+import { scanEgress, buildSecretBloom, bloomTest, egressGauntlet, shannonEntropy, entropySuspect, scanEgressChunked, type BloomFilter } from "./index.js";
 
 // ── skeleton: the three layers behave at the contract level ──────────────
 describe("v2.118 SOVEREIGN EGRESS GUARD — skeleton", () => {
@@ -111,8 +111,88 @@ describe("v2.118 EGRESS — integration", () => {
     expect(g.bloomNoFalseNegative).toBe(true);
     expect(g.bloomLowFalsePositive).toBe(true);
     expect(g.certBindsHashOnly).toBe(true);
+    expect(g.entropyCatchesUnregistered).toBe(true);
+    expect(g.entropySparesProse).toBe(true);
+    expect(g.entropyMathSound).toBe(true);
+    expect(g.streamEqualsWhole).toBe(true);
     expect(g.deterministic).toBe(true);
     expect(g.stable).toBe(true);
     expect(g.membershipCases).toBe(10_000);
+  });
+});
+
+// ── v2.119: LAYER 4 — Shannon-entropy structural detection ───────────────
+describe("v2.119 EGRESS — entropy/structural layer", () => {
+  it("shannonEntropy is 0 for a constant and log2(n) for n equiprobable symbols", () => {
+    expect(shannonEntropy("aaaaaa")).toBe(0);
+    expect(Math.abs(shannonEntropy("abcd") - 2.0)).toBeLessThan(1e-9);   // 4 symbols → 2 bits
+    expect(Math.abs(shannonEntropy("abcdefgh") - 3.0)).toBeLessThan(1e-9); // 8 → 3 bits
+    expect(shannonEntropy("")).toBe(0);
+  });
+
+  it("catches a high-entropy unregistered key that matches NO regex and is in NO Bloom", () => {
+    const key = "aB3xK9mQ2pL5vN8wR4tZ7cJ1fH6dG0sY";
+    const r = scanEgress({ payload: `connect with ${key} now` });
+    expect(r.entropySuspects).toBeGreaterThanOrEqual(1);
+    expect(r.verdict).toBe("REDACT");
+    expect(r.redactedPayload).not.toContain(key);
+  });
+
+  it("does NOT false-positive on ordinary prose, paths, URLs, or version strings", () => {
+    const r = scanEgress({ payload: "the authentication module was refactored cleanly in commit yesterday afternoon" });
+    expect(r.entropySuspects).toBe(0);
+    expect(r.verdict).toBe("ALLOW");
+    expect(scanEgress({ payload: "see https://example.com/docs/getting-started-guide-page" }).entropySuspects).toBe(0);
+    expect(scanEgress({ payload: "edit /usr/local/lib/node_modules/some-package/index.js now" }).entropySuspects).toBe(0);
+    expect(scanEgress({ payload: "bumped to version 12.34.567 across all packages" }).entropySuspects).toBe(0);
+  });
+
+  it("entropy layer can be disabled via { enabled: false }", () => {
+    const key = "aB3xK9mQ2pL5vN8wR4tZ7cJ1fH6dG0sY";
+    const r = scanEgress({ payload: `connect with ${key} now`, entropy: { enabled: false } });
+    expect(r.entropySuspects).toBe(0);
+    expect(r.verdict).toBe("ALLOW");
+  });
+
+  it("entropySuspect honours minLen and threshold knobs", () => {
+    expect(entropySuspect("short1A")).toBe(false);                       // < default minLen 20
+    expect(entropySuspect("aB3xK9mQ2pL5vN8wR4tZ7cJ1fH6dG0sY")).toBe(true);
+    expect(entropySuspect("aB3xK9mQ2pL5vN8wR4tZ", { threshold: 99 })).toBe(false); // impossible threshold
+  });
+});
+
+// ── v2.119: STREAMING MODE — bounded-memory scan equals whole-payload ────
+describe("v2.119 EGRESS — streaming mode", () => {
+  const split = (s: string, n: number) => { const a: string[] = []; for (let i = 0; i < s.length; i += n) a.push(s.slice(i, i + n)); return a; };
+
+  it("a secret straddling chunk boundaries is still caught (chunked == whole)", () => {
+    const payload = "word ".repeat(2000) + "AKIA1234567890ABCDEF" + " word".repeat(2000);
+    const whole = scanEgress({ payload });
+    const streamed = scanEgressChunked(split(payload, 7), { windowBytes: 1024 });
+    expect(streamed.verdict).toBe(whole.verdict);
+    expect(streamed.secretsRedacted).toBe(whole.secretsRedacted);
+    expect(streamed.redactedPayload).toBe(whole.redactedPayload);
+    expect(streamed.contentHash).toBe(whole.contentHash);
+  });
+
+  it("a canary straddling chunk boundaries still BLOCKs", () => {
+    const canary = "mneme-canary-prod-deadbeef";
+    const payload = "x".repeat(3000) + " " + canary + " " + "y".repeat(3000);
+    const streamed = scanEgressChunked(split(payload, 5), { canaries: [canary], windowBytes: 512 });
+    expect(streamed.verdict).toBe("BLOCK");
+    expect(streamed.canariesTripped).toContain(canary);
+  });
+
+  it("clean streamed payload → ALLOW", () => {
+    const payload = "the quick brown fox ".repeat(500);
+    const streamed = scanEgressChunked(split(payload, 3), { windowBytes: 256 });
+    expect(streamed.verdict).toBe("ALLOW");
+    expect(streamed.contentHash).toBe(scanEgress({ payload }).contentHash);
+  });
+
+  it("is TOTAL on garbage chunk input", () => {
+    expect(() => scanEgressChunked(null as never)).not.toThrow();
+    expect(() => scanEgressChunked([null as never, undefined as never])).not.toThrow();
+    expect(scanEgressChunked([]).verdict).toBe("ALLOW");
   });
 });

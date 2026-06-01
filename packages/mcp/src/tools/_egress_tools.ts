@@ -38,7 +38,7 @@ export const EGRESS_TOOLS: MnemeTool[] = [
         const secrets = readLines(join(cwd, ".mneme", "egress", "secrets.txt"));
         const secretBloom = secrets.length > 0 ? core.egress.buildSecretBloom(secrets, { m: 1 << 16, k: 5 }) : undefined;
         const r = core.egress.scanEgress({ payload: String(args["payload"] ?? ""), canaries, secretBloom });
-        const data = await attest(cwd, { verdict: r.verdict, redactedPayload: r.redactedPayload, secretsRedacted: r.secretsRedacted, canariesTripped: r.canariesTripped.length, bloomHits: r.bloomHits, residualRisk: r.residualRisk, findings: r.findings, contentHash: r.contentHash, note: r.note });
+        const data = await attest(cwd, { verdict: r.verdict, redactedPayload: r.redactedPayload, secretsRedacted: r.secretsRedacted, canariesTripped: r.canariesTripped.length, bloomHits: r.bloomHits, entropySuspects: r.entropySuspects, residualRisk: r.residualRisk, findings: r.findings, contentHash: r.contentHash, note: r.note });
         return {
           data,
           wisdom: r.verdict === "BLOCK"
