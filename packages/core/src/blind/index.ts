@@ -87,7 +87,12 @@ function redactSecrets(text: string): { text: string; count: number } {
 
 function pickPrefix(src: string): string {
   for (const p of ["MZ", "MZZ", "ZBLND", "QQX"]) { if (!new RegExp(`\\b${p}\\d+\\b`).test(src)) return p; }
-  return "ZBLNDX";
+  // last-resort fallback: extend with X's until it too is collision-free, so a
+  // pathological source containing ALL the candidates above can never alias a
+  // placeholder (which would silently break the reversible map). Bounded + total.
+  let p = "ZBLNDX";
+  for (let i = 0; i < 16 && new RegExp(`\\b${p}\\d+\\b`).test(src); i++) p += "X";
+  return p;
 }
 
 /** Blind a payload before it leaves for a hosted model. Deterministic + total. */

@@ -387,6 +387,34 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.policy.deterministic_gate",
+    kind: "boolean",
+    description: "DYNAMIC POLICY ENFORCEMENT (v2.131.0 — Layer-2 of the Context Rail): the deterministic, fail-closed access gate the rail consults before any local context crosses to a model. This probe asserts policyGauntlet=100: denies the .env family at any depth ∧ nested secret dirs / .aws / .ssh ∧ pem/key/id_rsa ∧ secret CONTENT even on an innocent path ∧ allows ordinary source ∧ enforces an agent allow-list ∧ enforces a byte cap ∧ glob soundness (** crosses dirs, * does not) ∧ fail-closed (an invalid deny-regex is skipped, errors DENY) ∧ deterministic ∧ total. HONEST: governs what the rail will RELAY, not OS file permissions — a deterministic relay gate, not a sandbox.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../policy/index.js" as string) as typeof import("../policy/index.js");
+        const g = P.policyGauntlet();
+        const ok = g.score === 100 && g.deniesEnv && g.deniesNestedSecret && g.deniesPem && g.allowsBenign && g.deniesSecretContent && g.deniesDisallowedAgent && g.allowsAllowedAgent && g.deniesOversize && g.globSound && g.failClosed && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} env=${g.deniesEnv} content=${g.deniesSecretContent} agent=${g.deniesDisallowedAgent} glob=${g.globSound} failClosed=${g.failClosed}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
+    id: "probe.rail.governed_traversal",
+    kind: "boolean",
+    description: "THE CONTEXT RAIL (v2.131.0 — the 'Visa rail' of AI context): the single governed pipe composing policy · firewall · blind (ingress) and egress · settlement (egress) into one signed receipt. This probe asserts railGauntlet=100: ingress BLOCKs at the policy gate (nothing crosses) ∧ neutralizes an injected dependency ∧ blinds secret literals (removed) ∧ round-trips masked names ∧ ALLOWs benign code ∧ egress BLOCKs a tripped honeytoken canary ∧ REDACTs a pattern secret ∧ ALLOWs clean output + drafts a settlement tx with the correct sentHash ∧ reports byte savings honestly (delta = safe − raw exactly, never invented) ∧ binds hashes to the actual payloads ∧ deterministic (no timestamps in core) ∧ total (hostile input fails closed). HONEST: a deterministic composition with a signed receipt — NOT a 100% guarantee against novel prompt-injection (the firewall data/instruction boundary is the always-on catch-all) and NOT homomorphic encryption; the token-savings headline belongs to outline/scaffold/channel.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const R = await import("../rail/index.js" as string) as typeof import("../rail/index.js");
+        const g = R.railGauntlet();
+        const ok = g.score === 100 && g.ingressBlocksPolicy && g.ingressNeutralizesInjection && g.ingressBlindsSecrets && g.ingressRoundTrips && g.ingressAllowsBenign && g.egressBlocksCanary && g.egressRedactsSecret && g.egressAllowsClean && g.egressDraftsTx && g.savingsHonest && g.hashesBind && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} policyBlock=${g.ingressBlocksPolicy} neutralize=${g.ingressNeutralizesInjection} blind=${g.ingressBlindsSecrets} roundtrip=${g.ingressRoundTrips} canary=${g.egressBlocksCanary} tx=${g.egressDraftsTx}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.settlement.signed_chain_audit",
     kind: "boolean",
     description: "SETTLEMENT LEDGER (v2.129.0 — the honest 'Stripe of AI Context / settlement layer'): a hash-chained, offline-auditable record of every AI↔local context exchange (blinded-payload hash + names/secrets hidden + local-verify verdict + tokens metered). This probe asserts settlementGauntlet=100: chain-verifies-offline ∧ tamper-localized (editing one tx breaks the chain AT that seq) ∧ reorder-detected ∧ statement-sums (tokens/% blinded/% locally-verified computed correctly) ∧ USD+fee-only-from-the-user-rate (never invented) ∧ deterministic ∧ total. The achievable peak of the image's 'SVE'/settlement vision — an audit + metering substrate, NOT homomorphic encryption.",

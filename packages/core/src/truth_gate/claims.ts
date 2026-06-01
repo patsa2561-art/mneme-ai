@@ -924,6 +924,25 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.firewall.injection_defense",
     severity: "block",
   },
+  // ── v2.131.0 — THE CONTEXT RAIL + DYNAMIC POLICY ENFORCEMENT (the "Visa rail" of AI context) ──
+  {
+    id: "claim.rail.governed_traversal",
+    source: "v2.131.0 release notes",
+    text: "Mneme is the CONTEXT RAIL — the single governed pipe every payload crosses between a local workspace and a hosted model, the honest 'Visa rail' of AI context. It unifies the seven Context-Gateway layers Mneme already ships into ONE auditable traversal: ingress (local→wire) = policy-gate → neutralize any injection a file planted + wrap as untrusted DATA → blind secret literals + sensitive identifier names (reverse map stays local); egress (wire→local) = secret-leak guard (honeytoken/bloom/pattern/entropy) → metered into the signed settlement ledger. Each crossing emits an Ed25519 receipt. railGauntlet=100: ingress BLOCKs at the policy gate (nothing crosses) ∧ neutralizes an injected dependency ∧ removes secret literals ∧ round-trips masked names ∧ ALLOWs benign code ∧ egress BLOCKs a tripped honeytoken ∧ REDACTs a pattern secret ∧ ALLOWs clean output + drafts a settlement tx with the correct sentHash ∧ reports byte savings honestly (delta = safe − raw exactly, never invented) ∧ hashes bind to the actual payloads ∧ deterministic ∧ total (hostile input fails closed). HONEST: a deterministic composition of proven layers with a signed receipt — NOT a 100% guarantee against novel prompt-injection (the firewall data/instruction boundary is the always-on catch-all, not a silver bullet), NOT homomorphic encryption, and NOT a claim that every model must speak one format (that is positioning, not a code guarantee). The token-SAVINGS headline belongs to outline/scaffold/channel (which meter into the treasury); the rail reports its own byte delta truthfully (can be ~0 or slightly negative because safety wrapping adds bytes)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.rail.governed_traversal",
+    severity: "block",
+  },
+  {
+    id: "claim.policy.deterministic_gate",
+    source: "v2.131.0 release notes",
+    text: "Mneme's DYNAMIC POLICY ENFORCEMENT (mneme.policy.json) is the deterministic, fail-closed access gate the Context Rail consults before any local context crosses to a model — Layer 2 of the rail. It denies known secret/PII surfaces by path-glob (.env family at any depth, **/secrets/**, .aws/.ssh, *.pem/*.key/id_rsa), by content pattern (AWS/GitHub/OpenAI/Slack keys, PEM private-key blocks, Thai national-id), by an optional agent allow-list, and by a byte cap. policyGauntlet=100: denies the .env family ∧ nested secret dirs ∧ pem/key ∧ secret CONTENT on an innocent path ∧ allows ordinary source ∧ enforces the agent allow-list ∧ enforces the byte cap ∧ glob soundness (** crosses dirs, * does not) ∧ fail-closed (an invalid deny-regex is skipped, an error DENYs) ∧ deterministic ∧ total. HONEST: this governs what the rail will RELAY to a model, NOT OS file permissions — a deterministic relay gate, not a sandbox",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.policy.deterministic_gate",
+    severity: "block",
+  },
   // ── v2.129.0 — SETTLEMENT LEDGER: the honest "Stripe of AI Context" audit/metering layer ──
   {
     id: "claim.settlement.signed_chain_audit",

@@ -53,6 +53,15 @@ Sometimes you *must* use a hosted model, but the org cannot have its real identi
 
 Mneme is a local-first **MCP server** every agent connects to, plus **capability passports** (short-lived, scoped, signed tokens that gate sensitive tool calls). Instead of N agents each wired to N tools with N security postures, you get **one** governed, audited surface — vendor-neutral and self-hostable.
 
+#### 🛤 THE CONTEXT RAIL — the *Visa rail* of AI context (`mneme rail`)
+
+The gateway, made into a single transaction primitive. Like Visa for a card swipe, the rail doesn't conjure value — it **authorizes, screens for fraud, and clears the transfer with a signed record**. Mneme already ships seven Context-Gateway layers (policy · firewall · blind · outline · egress · channel · settlement); the rail unifies them into **one governed traversal with one tamper-evident receipt**, in two directions:
+
+- **`mneme rail ingress`** (local → model): the deterministic, **fail-closed** policy gate (`mneme policy` / `mneme.policy.json`) clears the payload → the firewall **neutralizes** any prompt-injection a file planted and wraps it as untrusted DATA → blinding **removes secret literals and masks sensitive identifier names** (the reverse map stays on your machine). What crosses the wire is policy-cleared, injection-safe, and name/secret-blinded.
+- **`mneme rail egress`** (model → disk): the egress guard screens the model's output for **secret leakage** (honeytoken canaries · one-way Bloom membership · pattern · entropy) and the transaction is **metered into the signed settlement ledger** before anything touches disk.
+
+Vendor-neutral — the same rail for Claude, GPT, Gemini, Grok, or a local model (CLI `mneme rail` for shell agents; MCP `mneme.rail.traverse` for protocol agents, self-attesting). Proven by `railGauntlet()=100` ∧ `policyGauntlet()=100` ∧ a 5-lens adversarial review (security-bypass · totality · value-passing · future-error · correctness-gap → independent verification; the confirmed findings — a Unicode-homoglyph path bypass, a ReDoS vector in user policy regexes, a shared-ledger seq off-by-one, silent stdin truncation — were all fixed at root).
+
 ### 4. 💰 Value-based cost — *"pay only for the tokens you actually save"*
 
 Mneme does deterministic local work that shrinks what your agent sends to the model — **DISTILL** (compress a verbose error+diff to its causal brief), **LOOPGUARD** (stop a thrash before it burns retries), **NKL** (skip a proven dead-end) — and meters each **measured** reduction into a **signed, append-only ledger** whose aggregate is a commutative monoid (proven over a 1,000,000-case sweep). `mneme savings` reports the cumulative input-tokens saved, and the USD figure uses **your** vendor's price-per-1k. Falsifiable, not marketing → [`BUSINESS-MODEL.md`](BUSINESS-MODEL.md).
@@ -79,6 +88,7 @@ The same proven engines, framed for the decision a buyer is making, each a real 
 DIAKRISIS — discernment — is a feature, not a disclaimer. Mneme deliberately refuses the things that *sound* enterprise but cannot be proven:
 
 - ❌ It does **not** make any model "unhackable" or guarantee zero hallucination. It makes a model's claims **checkable** and a payload's secrets **redactable, with proof**.
+- ❌ The Context Rail is **not** a 100% guarantee against *novel* prompt-injection (an open adversarial problem — the firewall's data/instruction boundary is the always-on, attack-agnostic catch-all, i.e. defense-in-depth, not a silver bullet), **not** homomorphic encryption (refused — too slow in 2026), **not** a "tree-sitter AST" (it's a deterministic structural scanner — we never call it more), and **not** a claim that "every model must speak our format / we own the standard" (that's positioning, never a code guarantee). It IS a deterministic composition of proven layers with a signed, offline-verifiable receipt.
 - ❌ The egress guard does **not** read kernel memory, inject into a GPU, or intercept network cables. It is a deterministic content boundary you place in front of egress.
 - ❌ Token figures are a **labelled `≈chars/4` estimate** of *input* context (not a vendor tokenizer, no claim about the model's internal reasoning); USD uses a price **you** supply.
 - ❌ The "flight-risk" / "liability" frames are **present-tense signals from real history**, not fortune-telling about the future.
