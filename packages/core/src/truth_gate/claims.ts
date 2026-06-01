@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.120.0 — EXEC value layer: real signals framed for a CXO, honest ROI math ──
+  {
+    id: "claim.exec.roi_math_sound",
+    source: "v2.120.0 release notes",
+    text: "Mneme's EXEC layer frames REAL signals for an executive (key-person/bus-factor risk from atrophy, talent map from stigmergy, governance/promise-debt from promise, realized value from the treasury ledger, MCP attack surface from skeleton_key) and adds one new piece of honest math — the ROI projection = (MEASURED tokens-saved per reduction) × (user team × usage × months) × (user vendor price); execGauntlet=100 over a 5,000-case sweep: zero-team⇒zero ∧ zero-rate⇒zero ∧ monotonic-in-team ∧ monotonic-in-price ∧ USD-identity-exact ∧ realized-USD-exact ∧ deterministic ∧ total. $ figures only from user-supplied rates, always labelled — NOT a business forecast / fabricated metric",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.exec.roi_math_sound",
+    severity: "block",
+  },
   // ── v2.118.0 — SOVEREIGN EGRESS GUARD: code/secrets never leak, with proof ──
   {
     id: "claim.egress.sovereign_guard",

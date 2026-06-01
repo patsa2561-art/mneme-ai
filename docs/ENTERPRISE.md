@@ -39,16 +39,18 @@ Mneme does deterministic local work that shrinks what your agent sends to the mo
 
 ---
 
-## Enterprise reframes of existing capabilities
+## Enterprise reframes — now runnable (`mneme exec`)
 
-The same engines, named for the decision a buyer is making. Nothing here is a new claim — it is the existing, tested capability framed for the org chart.
+The same proven engines, framed for the decision a buyer is making, each a real CLI verb that calls the underlying git/ledger signal. Nothing here is a new claim or a forecast: present-tense signals from real history, and **dollar figures appear only when you supply your own rate** (always labelled "your rate × measured signal"). Every report is NOTARY-signed.
 
-| Engine | Enterprise frame | The honest read |
+| Command | Enterprise frame | The honest signal it computes |
 |---|---|---|
-| Knowledge-atrophy clock | **Key-Person Dependency & Flight Risk** | which areas of the codebase only one person still understands — a real signal from git history, not a prediction of who will quit |
-| Cultural-alpha / stigmergy | **Talent Mapping** | who actually collaborates with whom, derived from commit traces |
-| Promise-debt / governance | **Governance Gatekeeper / Tech-Debt Liability** | decisions compiled into runnable checkers that gate future commits; a signed record of which were violated |
-| Visual knowledge map | **Capital Burn vs Asset Value** | a present-tense, signed snapshot of system state — a status surface, not a forecast |
+| `mneme exec keyperson [--replacement-cost N]` | **Key-Person Dependency & Flight Risk** | files with **no live expert** (bus-factor = 1) + knowledge concentration, from the atrophy/Ebbinghaus model over git history — not a prediction of who will quit |
+| `mneme exec talent [--top N]` | **Talent Mapping** | who actually collaborates with whom (shared files + synchrony + carry-on), from git traces — org-chart truth, not self-report |
+| `mneme exec governance [--debt-cost N]` | **Governance / Tech-Debt Liability** | open + stale **promises** mined from commit/PR text and tracked through git history |
+| `mneme exec burn [--price-per-1k N]` | **Realized Value (asset side)** | input-context tokens Mneme has **actually** saved (the signed ledger) → USD at *your* vendor price |
+| `mneme exec roi --team N --per-dev M [--price-per-1k P]` | **ROI Projection** (Pay-per-Token-Saved) | the **measured** per-reduction saving rate × *your* team/usage/price — a transparent projection (proven monotonic, zero-bounded, dollar-identity-exact over a 5,000-case sweep), never a business forecast |
+| `mneme exec mcp-audit [--budget N]` | **Agent MCP Attack Surface** (Pillar 3) | the MCP servers wired into your agents, per-server risk, and the transitive bypass budget — the governed-boundary check (exits non-zero over budget) |
 
 ---
 
