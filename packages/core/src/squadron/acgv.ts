@@ -338,6 +338,19 @@ function tryVaccineAutoRefute(
     caveats.push(`VACCINE_BURNED_NUMERIC :: ${numericConflict.reason}`);
     return null;
   }
+  // VERSION-GROUNDING GUARD (v2.122) — NEVER let a learned vaccine refute a TRUE
+  // current-version self-claim ("Mneme is at version <installed>"). A vaccine
+  // learned from a once-stale version claim over-generalises to the claim SHAPE
+  // and would refute the correct version too; burn it when the cited version IS
+  // the installed one, so the claim falls through to the forensic which grounds
+  // it to TRUSTWORTHY. Additive + narrow: only ever removes a FALSE refutation,
+  // never adds one (stale/future versions are NOT "current" and still refute).
+  try {
+    if (detectVersionSemantic(claim, repoRoot).classification === "current") {
+      caveats.push("VACCINE_BURNED_VERSION_CURRENT");
+      return null;
+    }
+  } catch { /* version parsing must never throw; fall through */ }
   // N3-OVERSHOOT GUARD (v2.19.44) — burn if a "refuted" tool now grounds live.
   const mentions = Array.from(claim.matchAll(/\bmneme\.[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\b/gi)).map((m) => m[0]);
   let nowGrounded = 0;
@@ -767,6 +780,36 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
         confessionRequest: null,
       },
       summary: `FUTURE_VERSION_CLAIM — claim cites v${versionSem.matches[0]!.major}.${versionSem.matches[0]!.minor}.${versionSem.matches[0]!.patch} but installed is v${versionSem.installedVersion}. Cannot verify state that doesn't exist yet.`,
+      reasoning: versionSem.reason,
+      vaccineEmitted: false,
+    } as ACGVResult;
+  }
+  // v2.123 — CURRENT version: the claim cites the INSTALLED version, so it is
+  // TRUE. Previously there was no "current" branch, so the claim fell through to
+  // harmonic/Chandrasekhar grounding and COLLAPSED to BLACK_HOLE (a bare version
+  // number has no harmonic mass). Return PASSTHROUGH (weak) so the forensic
+  // layer — which grounds the version against package.json + ACCEPTS it — drives
+  // the final verdict to TRUSTWORTHY. Never refute the install's own version.
+  if (versionSem.matched && versionSem.classification === "current") {
+    const chandra: ChandrasekharResult = {
+      verdict: "UNKNOWN_MASS", mass: 0, density: 0, rhoCritLow: 0, rhoCritHigh: 0,
+      confidence: 0.90, citations: [],
+      reasoning: versionSem.reason,
+    } as ChandrasekharResult;
+    const godel: GodelResult = { status: "SKIPPED", core: [], certificate: "", upgrade: false };
+    return {
+      verdict: "PASSTHROUGH",
+      confidence: 0.90,
+      caveats: [...caveats, `CURRENT_VERSION_CONFIRMED:v${versionSem.installedVersion}`],
+      layers: {
+        vaccineMatch: null,
+        grounding: [],
+        chandrasekhar: chandra,
+        godel,
+        confession: null,
+        confessionRequest: null,
+      },
+      summary: `CURRENT_VERSION_CONFIRMED — claim cites the installed version v${versionSem.installedVersion}; grounded by the forensic layer against package.json.`,
       reasoning: versionSem.reason,
       vaccineEmitted: false,
     } as ACGVResult;

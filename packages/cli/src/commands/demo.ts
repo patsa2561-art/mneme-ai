@@ -457,13 +457,14 @@ How to read the verdict:
       const { existsSync } = await import("node:fs");
       const { resolve: pathResolve } = await import("node:path");
       const mcpCatalog = buildAllTools().map((t: { name: string }) => t.name);
-      const pkgVersion = (() => {
-        try {
-          const pkg = require("../../package.json");
-          return String(pkg.version);
-        } catch {
-          return undefined;
-        }
+      // ESM-safe version read. The previous `require("../../package.json")`
+      // THREW in the pure-ESM dist (require is undefined) → pkgVersion was
+      // ALWAYS undefined → installedVersion was never passed to the forensic →
+      // a TRUE current-version claim could not be grounded ("no installedVersion
+      // supplied" → UNKNOWN instead of TRUSTWORTHY). Same ESM-dead-code class as
+      // the v2.112 embedder leak + v2.117 map footer.
+      const pkgVersion = await (async () => {
+        try { const { getVersion } = await import("../version.js"); const v = getVersion(); return v && v !== "0.0.0" ? v : undefined; } catch { return undefined; }
       })();
       const repoRoot = process.cwd();
       const forensic = truthForensic.forensicVerify({

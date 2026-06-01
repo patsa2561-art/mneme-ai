@@ -190,17 +190,29 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
           // Use buildAllTools (memoized in v2.19.51) + forensicVerify (pure)
           const mcp = await import("@mneme-ai/mcp/tools/registry");
           const catalog = mcp.buildAllTools().map((t) => t.name);
+          // v2.123 — supply the INSTALLED version as ground truth so a TRUE
+          // current-version self-claim ("Mneme is at version <installed>")
+          // grounds to TRUSTWORTHY instead of UNKNOWN. Without this the forensic
+          // reported "no installedVersion supplied" and a correct claim could
+          // never be confirmed (and a stale learned vaccine would refute it).
+          let installedVersion: string | undefined;
+          try { const v = (await import("../version.js")).getVersion(); if (v && v !== "0.0.0") installedVersion = v; } catch { /* optional */ }
           const r = core.truthForensic.forensicVerify({
             claim,
             groundTruth: {
               mcpCatalog: catalog,
+              ...(installedVersion ? { installedVersion } : {}),
               fileExists: () => false,
             },
           });
           const annotatedExplanation = homographFlags.length > 0
             ? `${r.explanation}\n⚠ HOMOGRAPH GUARD: input contained ${homographFlags.join(", ")} — verified on canonical form`
             : r.explanation;
-          return { verdict: r.verdict, explanation: annotatedExplanation, homographFlags };
+          // v2.123 — stamp the daemon's code version so the thin client can
+          // REFUSE a stale daemon (one running older code than the CLI) and fall
+          // back to fresh in-process logic. A version-mismatched daemon was
+          // serving stale verify verdicts (e.g. refuting the CURRENT version).
+          return { verdict: r.verdict, explanation: annotatedExplanation, homographFlags, daemonVersion: installedVersion };
         },
       },
     });

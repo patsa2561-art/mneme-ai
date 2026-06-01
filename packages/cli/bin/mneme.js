@@ -217,7 +217,16 @@ if (process.argv.length === 3 && (arg === "--version" || arg === "-V")) {
     import("node:net"),
     import("node:crypto"),
     import("node:path"),
-  ]).then(([netMod, cryptoMod, pathMod]) => {
+    import("node:fs"),
+    import("node:url"),
+  ]).then(([netMod, cryptoMod, pathMod, fsMod, urlMod]) => {
+    // v2.123 — this CLI's own version, read cheaply. Used to REFUSE a stale
+    // daemon (one running older code) so it can't serve stale verify verdicts.
+    let ownVersion = null;
+    try {
+      const here = pathMod.dirname(urlMod.fileURLToPath(import.meta.url));
+      ownVersion = JSON.parse(fsMod.readFileSync(pathMod.join(here, "..", "package.json"), "utf8")).version;
+    } catch {}
     // Compute the SAME socket path the daemon uses (suggestedSocketPath logic).
     // Inlined here to avoid loading @mneme-ai/core (which is the whole point).
     const tag = cryptoMod.createHmac("sha256", "mneme-muscle-path")
@@ -273,6 +282,12 @@ if (process.argv.length === 3 && (arg === "--version" || arg === "-V")) {
       try {
         const reply = JSON.parse(buf.slice(0, nl));
         if (reply.ok) {
+          // v2.123 — REFUSE a stale daemon: if it runs a different code version
+          // than this CLI (or doesn't report one), its cached verdict may be
+          // wrong (e.g. an old daemon refuting the CURRENT version). Fall back
+          // to fresh in-process logic instead of trusting it.
+          const dv = reply.data && reply.data.daemonVersion;
+          if (ownVersion && dv !== ownVersion) { resolved = false; fallback("stale-daemon:" + String(dv) + "!=" + ownVersion); return; }
           process.stdout.write(JSON.stringify(reply.data, null, 2) + "\n");
           process.exit(0);
         } else {
