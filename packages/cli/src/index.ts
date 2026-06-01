@@ -141,6 +141,7 @@ import { registerElleipsisCommands } from "./commands/elleipsis.js";
 import { registerSteleCommands } from "./commands/stele.js";
 import { registerAxiaCommands } from "./commands/axia.js";
 import { registerPceCommands } from "./commands/pce.js";
+import { attachRegretOracle } from "./commands/regret.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
 import { registerOvernightCommand } from "./commands/overnight.js";
@@ -2033,7 +2034,7 @@ export async function run(argv: string[]): Promise<void> {
     });
 
   // ─── Sprint 4 killer commands ────────────────────────────────────────
-  program
+  const regretCmd = program
     .command("regret", { hidden: true })
     .description("Surface commits that were shipped and immediately fixed/reverted")
     .option("--window-days <n>", "follow-up window", (v) => Number(v), 7)
@@ -2047,6 +2048,9 @@ export async function run(argv: string[]): Promise<void> {
         }),
       );
     });
+  // 💎 v2.140.0 — attach the REGRET ORACLE calibration as subcommands
+  // (`regret score|record|vendors`); bare `regret` stays the git revert lister.
+  attachRegretOracle(regretCmd);
 
   program
     .command("bus-factor", { hidden: true })

@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.regret.oracle_calibration",
+    kind: "boolean",
+    description: "REGRET ORACLE (v2.140.0 — diamond 3 of 3, the last). A signed, cross-vendor CALIBRATION of how often an edit carrying a given signal was ACTUALLY regretted later (reverted / test failed). The honest opposite of fortune-telling: it is backward-looking — fed real recorded OUTCOMES, it builds a per-signal base-rate table with a Wilson 95% interval and, to score a new edit, reports the Wilson LOWER bound of the riskiest matching signal (\"≥ this often, proven, here\") and ABSTAINS to UNKNOWN when support is thin. This probe asserts regretGauntlet=100: a proven-risky signal scores HIGH ∧ a proven-safe one scores LOW ∧ abstains UNKNOWN under low support (even at 100% point rate) ∧ the lower bound is conservative (below the point rate) ∧ Wilson tightens with more data ∧ drivers sorted by proven risk ∧ cross-vendor comparison works ∧ the note says 'historical base rate' not 'will' ∧ deterministic ∧ total. HONEST: a calibrated historical base rate with a confidence interval — NOT a prediction of a specific future and NOT a causal claim; a thin/under-measured signal scores LOW by construction, so it cannot be gamed into a scary number.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const R = await import("../regret/index.js" as string) as typeof import("../regret/index.js");
+        const g = R.regretGauntlet();
+        const ok = g.score === 100 && g.riskySignalScoresHigh && g.safeSignalScoresLow && g.abstainsOnLowSupport && g.lowerBoundConservative && g.wilsonTightensWithData && g.driversSortedByProvenRisk && g.crossVendorComparison && g.historicalNotPrediction && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} high=${g.riskySignalScoresHigh} low=${g.safeSignalScoresLow} abstain=${g.abstainsOnLowSupport} conservativeLB=${g.lowerBoundConservative} crossVendor=${g.crossVendorComparison} notPrediction=${g.historicalNotPrediction}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.pce.proof_carrying_edit",
     kind: "boolean",
     description: "PCE (v2.139.0 — Proof-Carrying Edit, diamond 2 of 3). Proof-carrying code made a binary travel with a machine-checkable proof of its safety properties; PCE does the same for an AI's diff — it analyses the diff STATICALLY and emits a SIGNED certificate of what it does/doesn't do (touched paths, scope-containment, introduced dangerous primitives, add/delete balance, secret literals) that a reviewer/CI verifies OFFLINE: re-derive the properties from the diff + check they match the signed claim, so the ANALYSIS is trusted without re-running it or trusting the author. This probe asserts pceGauntlet=100: parses a diff ∧ detects an out-of-scope edit ∧ allows an in-scope one ∧ inventories introduced primitives ∧ catches an added secret ∧ flags mass deletion ∧ BLOCKs a forbidden primitive ∧ verify catches a tampered diff ∧ verify catches a forged cert ∧ verify accepts a genuine pair ∧ deterministic ∧ total. HONEST: static lexical+structural analysis — proves declared, checkable properties, NOT total runtime safety (a novel obfuscation can hide a primitive from a lexical scan); scope/secret/balance are exact, the primitive inventory is a signal to LOOK.",
