@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.128.0 — CONTEXT-STATE CHANNEL: the honest L2 for an AI edit/debug loop ──
+  {
+    id: "claim.channel.state_channel_loop",
+    source: "v2.128.0 release notes",
+    text: "Mneme's CONTEXT-STATE CHANNEL is the honest 'L2 Lightning' for an AI edit/debug loop: the agent opens a channel over files (Mneme holds the working copy locally), sends tiny diff ops, gets COMPACT deltas back (ok + one-line brief + structural check — not the whole file re-streamed), and commits ONCE (the settlement). channelGauntlet=100: applies-region ∧ applies-text ∧ working-byte-exact ∧ catches-broken-structure ∧ rejects-bad-op (working unchanged) ∧ commit-byte-exact ∧ diff-compact ∧ savings-real (multi-op loop beats the naive re-stream) ∧ deterministic ∧ total. Composes with OUTLINE (orient) + BLIND (hide names) for an off-the-wire loop. HONEST: the saving is on the LOOP overhead (re-streaming files+outputs each turn) — real + compounding — not magic; the model still reasons each step; the core check is structural (a real compile/test is the CLI's spawn)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.channel.state_channel_loop",
+    severity: "block",
+  },
   // ── v2.127.0 — CONTEXT BLINDING: code's real names + secrets never reach the model ──
   {
     id: "claim.blind.reversible_structure_preserving",
