@@ -98,6 +98,8 @@ const bench = await mneme.benchmark.vsCli();         // proves the speedup on yo
 
 The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines of deterministic steps — and runs everything on your behalf: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak natural language; the AI handles the tooling.** That's the MANDATE: *"The user will NEVER type a CLI command."*
 
+> **Already have Mneme and a newer version is out?** Same deal — just tell your agent in plain words: ***"update Mneme to the latest."*** It runs the upgrade for you and confirms the new version. You never memorise a command — and Mneme **never upgrades itself behind your back**; it waits for you to ask.
+
 ---
 
 ### 🛠 Shell-native agents — they install Mneme for you
@@ -105,8 +107,8 @@ The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopene
 Drop the sentence above into any of these. They have shell access + can read the contract.
 
 <table>
-<tr><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td><td align="center"><b>🟡 Cline</b></td></tr>
-<tr><td align="center"><b>⚡ Zed</b></td><td align="center"><b>🤖 Aider</b></td><td align="center"><b>💎 Gemini CLI</b></td><td align="center"><b>🚀 Grok CLI</b></td><td align="center"><b>🧬 Jules / Windsurf</b></td></tr>
+<tr><td align="center"><b>🚀 Grok CLI (xAI)</b></td><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td></tr>
+<tr><td align="center"><b>🟡 Cline</b></td><td align="center"><b>⚡ Zed</b></td><td align="center"><b>🤖 Aider</b></td><td align="center"><b>💎 Gemini CLI</b></td><td align="center"><b>🧬 Jules / Windsurf</b></td></tr>
 </table>
 
 ### 🌐 Browser-only AIs — one-click polygraph (no shell needed)
@@ -116,7 +118,7 @@ For chat surfaces without shell access — ChatGPT · Claude.ai · Gemini · Cop
 > Tell ANY agent: *"set up Mneme browser polygraph for me"* — it runs `mneme polygraph autosetup` and walks you through the 2 unavoidable browser-side clicks (install Tampermonkey once + click "Install" in the script prompt).
 
 <table>
-<tr><td align="center"><b>💬 ChatGPT</b></td><td align="center"><b>🟠 Claude.ai</b></td><td align="center"><b>💎 Gemini</b></td><td align="center"><b>🔵 Copilot Chat</b></td><td align="center"><b>🐋 DeepSeek</b></td><td align="center"><b>🇨🇳 Qwen</b></td><td align="center"><b>⚡ Grok web</b></td></tr>
+<tr><td align="center"><b>⚡ Grok (xAI)</b></td><td align="center"><b>💬 ChatGPT</b></td><td align="center"><b>🟠 Claude.ai</b></td><td align="center"><b>💎 Gemini</b></td><td align="center"><b>🔵 Copilot Chat</b></td><td align="center"><b>🐋 DeepSeek</b></td><td align="center"><b>🇨🇳 Qwen</b></td></tr>
 </table>
 
 <details>
