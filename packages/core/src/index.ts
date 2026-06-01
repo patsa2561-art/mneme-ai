@@ -303,6 +303,7 @@ export * as settlement from "./settlement/index.js";
 export * as firewall from "./firewall/index.js";
 export * as policy from "./policy/index.js";
 export * as rail from "./rail/index.js";
+export * as boot from "./boot/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

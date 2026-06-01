@@ -415,6 +415,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.boot.activation_cortex",
+    kind: "boolean",
+    description: "ACTIVATION CORTEX (v2.133.0 — the honest fix for the 'install and hope' problem): after an agent installs Mneme it often doesn't know WHEN to use the tools, so they sit idle. `mneme boot` / `mneme.boot` returns a structured task→tool DECISION TABLE + the four boundary capabilities + cortex recall, and the compact form is advertised via the standardized MCP `instructions` field on connect. This probe asserts bootGauntlet=100: the decision table is non-trivial + well-formed ∧ the instructions field fits the MCP 2KB budget ∧ is NON-imperative (the documented-to-fail 'you MUST' pattern is absent — imperative shouting does not make agents comply) ∧ has a stable head+tail ∧ the packet is deterministic ∧ task-ranking never drops a row ∧ cortex facts are capped ∧ the SessionStart hook config is valid JSON ∧ total. HONEST: a structured session-start decision table is genuinely not standardized in MCP (novel as a primitive), but reliable activation comes from the `instructions` field + an opt-in SessionStart hook — publishing the table does not by itself guarantee invocation.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const B = await import("../boot/index.js" as string) as typeof import("../boot/index.js");
+        const g = B.bootGauntlet();
+        const ok = g.score === 100 && g.tableNonEmpty && g.rowsWellFormed && g.instructionsWithinBudget && g.instructionsNonImperative && g.instructionsHasHeadAndTail && g.packetDeterministic && g.rankStableNeverDrops && g.cortexFactsCapped && g.hookValidJson && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} rows=${B.DECISION_TABLE.length} instrBudget=${g.instructionsWithinBudget} nonImperative=${g.instructionsNonImperative} deterministic=${g.packetDeterministic} hook=${g.hookValidJson}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.settlement.signed_chain_audit",
     kind: "boolean",
     description: "SETTLEMENT LEDGER (v2.129.0 — the honest 'Stripe of AI Context / settlement layer'): a hash-chained, offline-auditable record of every AI↔local context exchange (blinded-payload hash + names/secrets hidden + local-verify verdict + tokens metered). This probe asserts settlementGauntlet=100: chain-verifies-offline ∧ tamper-localized (editing one tx breaks the chain AT that seq) ∧ reorder-detected ∧ statement-sums (tokens/% blinded/% locally-verified computed correctly) ∧ USD+fee-only-from-the-user-rate (never invented) ∧ deterministic ∧ total. The achievable peak of the image's 'SVE'/settlement vision — an audit + metering substrate, NOT homomorphic encryption.",

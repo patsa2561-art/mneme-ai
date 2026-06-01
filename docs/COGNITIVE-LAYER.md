@@ -13,6 +13,24 @@ Everything below is real, measured, and honest about its limits (it returns `UNK
 
 ---
 
+## 0. ⚡ ACTIVATION CORTEX — `mneme boot` (start here)
+
+The honest fix for "install and hope": after your agent installs Mneme, it often doesn't know *when* to reach for which tool, so the tools sit idle. `mneme boot` is the **session-start handshake** — it returns a **task→tool decision table** (for each common moment, the Mneme tool to use + why), the four boundary capabilities, and **live cortex recall**.
+
+```bash
+mneme boot                              # human-readable activation digest (capabilities + decision table)
+mneme boot --task "fix the auth bug"    # rank the table for the task + recall relevant shared memory
+mneme boot --json                       # full signed packet
+mneme boot --emit-hook-config           # opt-in: print the .claude/settings.json SessionStart hook snippet
+```
+
+- **AI agents** call `mneme.boot { task }` (MCP) first thing — it's self-attesting, and the compact table is **also advertised on connect via the standardized MCP `instructions` field** (the sanctioned, Claude-Code-consumed surface, ≤2 KB), so even before any tool call the agent sees *when* to use Mneme.
+- **Hands-free activation:** run `mneme boot --emit-hook-config` once and paste it into `.claude/settings.json`. A Claude Code **SessionStart hook** then runs `mneme boot --hook` at every session start and injects the decision table into the agent's context. This is the *only* mechanism that reliably forces activation — and it's **opt-in**; Mneme never installs a hook for you.
+
+**Honest (DIAKRISIS):** a structured session-start decision table is genuinely not standardized anywhere in MCP — but the rows are **signals, not commands**. Imperative "you MUST call X" wording is documented to fail; reliable activation comes from the `instructions` field + the opt-in hook, not from shouting. Publishing the table makes the agent *able* to use Mneme well; the hook makes it *happen* automatically.
+
+---
+
 ## 1. HYDRA — signed, lossless, portable context memory
 
 HYDRA forges a **codebook** from a corpus (your manifest, axioms, any text) that is *provably lossless* (`compress→expand` is byte-identical), *Ed25519-signed*, and *works the same on every AI vendor* (a deterministic engine expands it before any model sees it).

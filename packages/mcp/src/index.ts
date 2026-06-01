@@ -20,6 +20,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { boot as coreBoot } from "@mneme-ai/core";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -352,9 +353,18 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   // the worst case.
   const getRuntime = makeDeferredRuntimeHolder(opts.cwd);
 
+  // v2.133.0 — ACTIVATION CORTEX: populate the sanctioned MCP `instructions`
+  // field (Claude Code reads it, ≤2KB, "similar to skills") with the compact,
+  // NON-imperative task→tool decision table. This is the highest-leverage,
+  // standards-based way to tell the agent WHEN to reach for Mneme on connect —
+  // most servers leave this empty. Full table + cortex recall via `mneme.boot`.
+  let bootInstructions = "";
+  try { bootInstructions = coreBoot.renderBootInstructions(resolveVersion()); } catch { /* best-effort */ }
+
   const server = new Server(
     { name: "mneme", version: resolveVersion() },
     {
+      ...(bootInstructions ? { instructions: bootInstructions } : {}),
       capabilities: {
         tools: {},
         // v1.18.0 — Mneme advertises 4 MCP primitives + tools (was: tools only).

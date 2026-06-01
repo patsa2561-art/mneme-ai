@@ -81,6 +81,7 @@ import { CHANNEL_TOOLS } from "./_channel_tools.js";
 import { SETTLEMENT_TOOLS } from "./_settlement_tools.js";
 import { FIREWALL_TOOLS } from "./_firewall_tools.js";
 import { RAIL_TOOLS } from "./_rail_tools.js";
+import { BOOT_TOOLS } from "./_boot_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -282,6 +283,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...SETTLEMENT_TOOLS,
     ...FIREWALL_TOOLS,
     ...RAIL_TOOLS,
+    ...BOOT_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

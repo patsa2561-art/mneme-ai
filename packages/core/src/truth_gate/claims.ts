@@ -924,6 +924,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.firewall.injection_defense",
     severity: "block",
   },
+  // ── v2.133.0 — THE ACTIVATION CORTEX (the honest fix for "install and hope") ──
+  {
+    id: "claim.boot.activation_cortex",
+    source: "v2.133.0 release notes",
+    text: "Mneme's ACTIVATION CORTEX (`mneme boot` / `mneme.boot`) is the honest fix for the 'install and hope' problem — after an agent installs Mneme it often doesn't know WHEN to use the tools, so they sit idle. Boot returns a structured task→tool DECISION TABLE (each common session moment → the Mneme tool to reach for + why), the four boundary capabilities, and live cortex recall; the compact form is advertised via the STANDARDIZED MCP `instructions` field on connect (the sanctioned, Claude-Code-consumed surface, ≤2KB). bootGauntlet=100: the table is non-trivial + well-formed ∧ the instructions field fits the 2KB budget ∧ is NON-imperative (the documented-to-fail 'you MUST' pattern is absent) ∧ stable head+tail ∧ deterministic packet ∧ task-ranking never drops a row ∧ cortex facts capped ∧ valid SessionStart hook config ∧ total. HONEST (DIAKRISIS): a structured session-start decision table is genuinely not standardized in the MCP spec (novel as a primitive — competitive research found no equivalent), but reliable activation comes from the `instructions` field + an OPT-IN SessionStart hook (`mneme boot --emit-hook-config`); publishing the table does not by itself force invocation, and Mneme never self-registers a host hook.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.boot.activation_cortex",
+    severity: "block",
+  },
   // ── v2.131.0 — THE CONTEXT RAIL + DYNAMIC POLICY ENFORCEMENT (the "Visa rail" of AI context) ──
   {
     id: "claim.rail.governed_traversal",
