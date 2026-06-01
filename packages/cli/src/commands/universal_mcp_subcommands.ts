@@ -179,6 +179,29 @@ function findExistingCommand(program: Command, name: string): Command | undefine
   return undefined;
 }
 
+/**
+ * v2.134.0 — SECURITY FIX: detect a "self-dispatching" legacy command, i.e. one
+ * declared like `mneme heph <action>` that takes a free-form `<action>`
+ * positional AND has its own action handler AND its own options. Mounting a
+ * same-named MCP child onto such a parent makes the PARENT greedily consume the
+ * child's `--flags` during its own option parsing, so the child action runs with
+ * EMPTY args. For `heph cross --command "rm -rf /"` that meant the command never
+ * reached the classifier → it was graded a harmless "write" → a DESTRUCTIVE
+ * command slipped the gate. (Also affected gephyra/flight/creditscore/notary —
+ * every gate invoked via its documented `--flag` path.) When the legacy command
+ * is self-dispatching, it is left AUTHORITATIVE for the CLI; the MCP tools remain
+ * fully available over the MCP protocol (agents don't go through this router).
+ */
+function isSelfDispatchingCommand(cmd: Command): boolean {
+  try {
+    const c = cmd as unknown as { registeredArguments?: unknown[]; _args?: unknown[]; _actionHandler?: unknown };
+    const args = Array.isArray(c.registeredArguments) ? c.registeredArguments : (Array.isArray(c._args) ? c._args : []);
+    const hasPositional = args.length > 0;
+    const hasAction = typeof c._actionHandler === "function";
+    return hasPositional && hasAction;
+  } catch { return false; }
+}
+
 export function registerUniversalMcpSubcommands(program: Command, tools: ToolLike[]): RouterStats {
   const families = groupByFamily(tools);
   let actionCount = 0;
@@ -203,6 +226,16 @@ export function registerUniversalMcpSubcommands(program: Command, tools: ToolLik
     // including DREAMSPACE).
     try {
       const existing = findExistingCommand(program, family);
+      // v2.134.0 SECURITY FIX — never mount MCP children onto a self-dispatching
+      // legacy command (`X <action>` + options + action): the parent would
+      // swallow the child's --flags, silently dropping e.g. a destructive
+      // `--command` so the gate classifies an empty string as harmless. The
+      // legacy command owns the CLI for this family; MCP tools stay available
+      // over the protocol. (The lesson behind the v2.134 e2e gate tests.)
+      if (existing && isSelfDispatchingCommand(existing)) {
+        if (!mountedOnExisting.includes(`${family} (legacy-owned)`)) mountedOnExisting.push(`${family} (legacy-owned)`);
+        continue;
+      }
       let parent: Command;
       if (existing) {
         parent = existing;

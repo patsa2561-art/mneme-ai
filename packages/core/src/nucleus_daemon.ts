@@ -152,12 +152,29 @@ export async function runDaemonLoop(
 
   ensureDir(repoRoot);
 
-  // Atomic PID-file write (refuse if already alive).
+  // v2.134.0 — ATOMIC singleton acquire (closes the daemon-runaway race).
+  // Pre-v2.134 this was check-then-write (TOCTOU): two `nucleus daemon` starts
+  // racing both saw "no live pid" and both wrote the file → duplicate daemons,
+  // which under repeated auto-spawns piled up (the ~300-process red flag). Now
+  // the pid file is created with O_EXCL ('wx' = fail if it already exists), so
+  // exactly ONE concurrent starter wins. The loser re-checks liveness: a LIVE
+  // owner → refuse; a STALE file (dead owner) → reclaim it once.
   const existingPid = getDaemonPid(repoRoot);
   if (existingPid !== null) {
     throw new Error(`nucleus daemon already running (pid ${existingPid})`);
   }
-  writeFileSync(pidFilePath(repoRoot), String(process.pid), "utf8");
+  try {
+    writeFileSync(pidFilePath(repoRoot), String(process.pid), { encoding: "utf8", flag: "wx" });
+  } catch {
+    // lost the create race OR a stale pid file remains.
+    const winner = getDaemonPid(repoRoot); // liveness-checked
+    if (winner !== null && winner !== process.pid) {
+      throw new Error(`nucleus daemon already running (pid ${winner})`);
+    }
+    // stale file from a dead owner — reclaim it atomically.
+    try { unlinkSync(pidFilePath(repoRoot)); } catch { /* */ }
+    writeFileSync(pidFilePath(repoRoot), String(process.pid), { encoding: "utf8", flag: "wx" });
+  }
 
   const startedAt = new Date().toISOString();
   let tickCount = 0;

@@ -4574,7 +4574,7 @@ export async function run(argv: string[]): Promise<void> {
   // run ON: a command CROSSES it (risk → policy → tribunal → immune → signed
   // provenance) before touching the machine. Decision-first, execution-optional.
   program
-    .command("heph <action>")
+    .command("heph <action> [cmd...]")
     .aliases(["hephaestus"])
     .description("🔨 HEPHAESTUS — GEPHYRA's OS lane: a command crosses the bridge (risk-classify · policy · cross-vendor tribunal · output immune-scan · signed provenance) before it touches the machine. `cross --command \"...\" --agent X` decides ALLOW/NEEDS_COSIGN/BLOCK; `preflight \"<command>\"` previews blast-radius + flags what cannot be undone, signed, WITHOUT running; `run` executes IF allowed (guarded); `polyglot --intent \"...\"` translates to this OS's shell; `status`. For a REAL cross-vendor tribunal on a destructive command set env API keys (OPENAI_API_KEY/XAI_API_KEY/GEMINI_API_KEY/…) and call `cross \"<command>\" --tribunal`. Destructive is NEVER allowed without a human co-sign.")
     .option("--command <c>", "the command crossing into the OS")
@@ -4584,9 +4584,13 @@ export async function run(argv: string[]): Promise<void> {
     .option("--intent <i>", "canonical intent for polyglot translation")
     .option("--set <policy>", "plain-language policy for `policy` (e.g. 'destructive must co-sign; prod is read-only')")
     .option("--json", "machine-readable output", false)
-    .action(async (action: string, o: { command?: string; agent?: string; host?: string; cosign?: boolean; intent?: string; set?: string; json?: boolean }) => {
+    .action(async (action: string, cmd: string[], o: { command?: string; agent?: string; host?: string; cosign?: boolean; intent?: string; set?: string; json?: boolean }) => {
       const { hephCommand } = await import("./commands/heph.js");
-      process.exit(await hephCommand({ cwd: process.cwd(), action, command: o.command, agent: o.agent, host: o.host, cosign: !!o.cosign, intent: o.intent, policyText: o.set, json: !!o.json }));
+      // v2.134.0 — accept the command as a trailing positional too, so BOTH
+      // documented forms work: `heph cross --command "X"` AND `heph cross "X"` /
+      // `heph preflight "X"`. The explicit --command flag wins when both given.
+      const positionalCmd = Array.isArray(cmd) && cmd.length ? cmd.join(" ") : undefined;
+      process.exit(await hephCommand({ cwd: process.cwd(), action, command: o.command ?? positionalCmd, agent: o.agent, host: o.host, cosign: !!o.cosign, intent: o.intent, policyText: o.set, json: !!o.json }));
     });
 
   program

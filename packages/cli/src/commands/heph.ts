@@ -24,12 +24,18 @@ export async function hephCommand(o: HephOpts): Promise<number> {
   const h = core.hephaestus;
   const policy = o.policyText ? h.parsePolicy(o.policyText) : undefined;
 
+  // v2.134.0 — agent defaults to "ai" (lenient, matching the MCP tool) so the
+  // DOCUMENTED `heph cross --command "..."` form classifies the command instead
+  // of hard-refusing on a missing --agent. The command itself is still required
+  // (no command → nothing to gate). This closes the security hole where the
+  // documented invocation path silently let a destructive command through.
   if (o.action === "cross" || o.action === "run") {
-    if (!o.command || !o.agent) { out("✗ requires --command and --agent\n"); return 2; }
-    const r = await h.crossCommand(o.cwd, { command: o.command, agent: o.agent, host: o.host, cosigned: !!o.cosign }, { policy });
+    if (!o.command) { out("✗ requires --command \"<the command>\"\n"); return 2; }
+    const agent = o.agent && o.agent.trim() ? o.agent : "ai";
+    const r = await h.crossCommand(o.cwd, { command: o.command, agent, host: o.host, cosigned: !!o.cosign }, { policy });
     const icon = r.disposition === "ALLOW" ? "🟢" : r.disposition === "NEEDS_COSIGN" ? "🟡" : "🔴";
     if (o.action === "run") {
-      const ex = await h.executeGuarded(o.cwd, { command: o.command, agent: o.agent, disposition: r.disposition });
+      const ex = await h.executeGuarded(o.cwd, { command: o.command, agent, disposition: r.disposition });
       if (o.json) { out(JSON.stringify({ crossing: r, exec: ex }, null, 2) + "\n"); return ex.ran ? (ex.exitCode ?? 0) : 1; }
       out(`🔨 HEPHAESTUS run — ${icon} ${r.disposition} (${r.risk})\n`);
       for (const x of r.reasons) out(`   • ${x}\n`);
@@ -44,6 +50,19 @@ export async function hephCommand(o: HephOpts): Promise<number> {
     if (r.tribunal) out(`   ⚖ tribunal: ${r.tribunal.consensus} (${r.tribunal.verdicts.map((v) => `${v.vendor}=${v.verdict}`).join(", ")})\n`);
     out(`   stamp: ${r.receipt ? r.receipt.receiptId.slice(0, 16) + "… (verifies offline)" : "(unsigned)"}\n`);
     return r.disposition === "BLOCK" ? 1 : 0;
+  }
+
+  if (o.action === "preflight") {
+    // preview blast-radius + flag what cannot be undone, signed, WITHOUT running.
+    const command = o.command ?? "";
+    if (!command) { out("✗ requires --command \"<the command>\" (or: heph preflight \"<command>\")\n"); return 2; }
+    const pf = await h.preflightCommand(o.cwd, { command, agent: o.agent && o.agent.trim() ? o.agent : "ai" });
+    if (o.json) { out(JSON.stringify(pf, null, 2) + "\n"); return pf.reversible ? 0 : 2; }
+    out(`🔭 HEPHAESTUS preflight — risk ${pf.risk}  ·  ${pf.reversible ? "reversible" : "IRREVERSIBLE ⚠"}\n`);
+    for (const e of pf.effects) out(`   • ${e}\n`);
+    for (const w of pf.irreversibleWarnings) out(`   🛑 IRREVERSIBLE: ${w}\n`);
+    out(`   stamp: ${pf.receipt ? pf.receipt.receiptId.slice(0, 16) + "… (verifies offline)" : "(unsigned)"}\n`);
+    return pf.reversible ? 0 : 2;
   }
 
   if (o.action === "polyglot") {

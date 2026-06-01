@@ -222,11 +222,27 @@ export function apoptosisTruthCustoms(repoRoot: string): NonNullable<CrossDeps["
     const { detect } = await import("../apoptosis/index.js");
     const rep = detect(repoRoot, claim);
     const v = rep.verdict;
+    // v2.134.0 SAVANT-ALIGNED FIX — prove-or-unknown at the bridge.
+    // HEALTHY only means "no layer flagged a problem"; absence of refutation is
+    // NOT proof of truth (the savant's lineage says exactly this). Pre-v2.134 the
+    // bridge labelled EVERY HEALTHY claim TRUSTWORTHY, so a false world-fact like
+    // "the human body has 400 blood vessels" (which Mneme cannot positively check
+    // without a world-knowledge oracle) crossed 🟢 TRUSTWORTHY — over-claiming.
+    // Now TRUSTWORTHY requires POSITIVE grounding by ≥2 independent layers; a
+    // single weak grounding (or none) crosses UNVERIFIED — honest "I found no
+    // problem but cannot prove it true." NECROTIC/APOPTOTIC→REFUTED stays (a
+    // real refutation is positive evidence of falsehood). Errs to the SAFE side:
+    // it never upgrades a falsehood, only downgrades an unproven "truthful".
+    const positivelyProven = v === "HEALTHY" && rep.grounded >= 2;
     const verdict: TruthVerdict =
-      v === "HEALTHY" ? "TRUSTWORTHY" :
       (v === "NECROTIC" || v === "APOPTOTIC") ? "REFUTED" :
-      v === "INFLAMED" ? "MIXED" : "UNVERIFIED";
-    return { verdict, evidence: rep.headline };
+      v === "INFLAMED" ? "MIXED" :
+      positivelyProven ? "TRUSTWORTHY" :
+      "UNVERIFIED";
+    const evidence = (v === "HEALTHY" && !positivelyProven)
+      ? `UNKNOWN -- no refutation found (${rep.grounded}/${rep.grounded >= 1 ? rep.grounded : 1} layer grounded), but absence of refutation is NOT proof of truth; not positively verified.`
+      : rep.headline;
+    return { verdict, evidence };
   };
 }
 

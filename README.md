@@ -34,6 +34,12 @@
 
 ### 🏛 For the enterprise — Trust, Sovereignty, Cost
 
+> **The boardroom one-liner.** Your teams are already letting AI agents read your code, touch your machines, and call hosted models. The question your CISO, CFO, and GC are all really asking is the same one: *"Can we prove what crossed the wire, that it was safe, and what it cost — after the fact, offline, without trusting the vendor?"* Mneme is the **governed boundary** that makes the answer **yes, with a signed receipt.** It sits on the local machine, vendor-neutral and MIT — so adopting it doesn't pick a side in the model wars; it makes *whatever* model you use safe to run at speed.
+>
+> **Why a builder/owner cares:** ship faster *because* the guardrails are automatic — the agent's destructive command needs a human co-sign, its prompt-injection is neutralized before it's read, your secrets are blinded before they leave, and every token saved is metered into a ledger your CFO can audit. **Speed and safety stop being a trade-off.**
+>
+> **Why it's credible, not a pitch deck:** every claim below maps to a runnable command + a deterministic test; every release ships **only** when the Truth Gate is 100/100 and the full suite is green; every dollar figure uses **your** vendor's price (never an invented number). When Mneme can't prove something, it says **`UNKNOWN`** instead of guessing — *that discipline is the product.*
+
 |  | What it answers for a CISO / CRO / CFO | In Mneme |
 |---|---|---|
 | 🧬 **Second Brain · Inheritance** | *"What happens to our knowledge when a key person (or agent) leaves?"* | **`mneme bequest`** — capture a departing expert's knowledge as a signed Succession Capsule, verify a successor inherited it intact, and report **orphaned knowledge** (no living heir) + the minimum heirs to assign |
