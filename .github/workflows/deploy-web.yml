@@ -10,9 +10,19 @@ on:
   #      With concurrency: cancel-in-progress, the tag run cancelled
   #      the main run that WOULD have succeeded, leaving zero good
   #      deploys per release.
-  # Now every main push redeploys; tags don't trigger anything.
+  # 2026-06-01 — PATHS FILTER (the durable fix for the red-X cascade). Previously
+  # this fired on EVERY main push — including the dozens of pure-code/doc releases
+  # that never touch the dashboard — so each one queued a deploy behind the
+  # free-tier runner backlog, where the next push's concurrency cancelled it
+  # (conclusion `cancelled` = the red X). The deployed SITE only changes when
+  # `packages/web/**` changes, so deploy ONLY then (or on demand). Most releases
+  # now trigger ZERO deploy runs → the queue stops backing up and the cascade
+  # ends. Force a redeploy any time with the workflow_dispatch button.
   push:
     branches: [main]
+    paths:
+      - "packages/web/**"
+      - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 permissions:

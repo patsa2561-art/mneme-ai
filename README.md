@@ -4,7 +4,7 @@
 
 # The Trust & Cost Layer for AI Agents
 
-<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> trust boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions + vendors, and <b>meters the tokens it saves you</b>. The brain that bolts onto Claude Code / Cursor / Cline / Codex / Continue / ChatGPT / Gemini. <b>Vendor-neutral. MIT. Air-gap-ready.</b></sub>
+<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> trust boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions + vendors, and <b>meters the tokens it saves you</b>. The brain that bolts onto any AI coding agent or chat assistant. <b>Vendor-neutral. MIT. Air-gap-ready.</b></sub>
 
 <br/><br/>
 
