@@ -130,6 +130,7 @@ import { registerEgressCommands } from "./commands/egress.js";
 import { registerExecCommands } from "./commands/exec.js";
 import { registerBequestCommands } from "./commands/bequest.js";
 import { registerOutlineCommands } from "./commands/outline.js";
+import { registerScaffoldCommands } from "./commands/scaffold.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
 import { registerOvernightCommand } from "./commands/overnight.js";
@@ -4920,6 +4921,7 @@ export async function run(argv: string[]): Promise<void> {
   registerExecCommands(program);
   registerBequestCommands(program);
   registerOutlineCommands(program);
+  registerScaffoldCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

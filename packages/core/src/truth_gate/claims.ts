@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.126.0 — SCAFFOLD: honest Blueprint Inflation for known templates ──
+  {
+    id: "claim.scaffold.known_template_deterministic",
+    source: "v2.126.0 release notes",
+    text: "Mneme's SCAFFOLD is the HONEST core of 'Blueprint Inflation': an agent emits a compact spec for a KNOWN template (ts-model + CRUD, test-skeleton, config) and Mneme deterministically expands it into boilerplate locally — saving OUTPUT tokens (e.g. a 26-token spec → ~184 tokens of code, 7× expansion, 85.9% output saved). scaffoldGauntlet=100: ts-model-valid (interface + CRUD + every field, balanced) ∧ test-skeleton-valid ∧ config-round-trips ∧ expansion-real (>50% output saving) ∧ REFUSES-unknown-kind (ok:false honest, never guesses) ∧ deterministic ∧ total. HONEST scope: BOILERPLATE only — it does NOT generate arbitrary novel business logic (information theory forbids 2000 lines from a 35-token spec) and leaves TODO markers where the real logic goes",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.scaffold.known_template_deterministic",
+    severity: "block",
+  },
   // ── v2.124.0 — OUTLINE: read structure cheap, edit exact (token reduction) ──
   {
     id: "claim.outline.skeleton_region_exact",

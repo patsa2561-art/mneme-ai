@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.scaffold.known_template_deterministic",
+    kind: "boolean",
+    description: "SCAFFOLD (v2.126.0 — the HONEST core of 'Blueprint Inflation'): an agent emits a compact spec for a KNOWN template; Mneme expands it into deterministic boilerplate locally, saving OUTPUT tokens. This probe asserts scaffoldGauntlet=100: ts-model-valid (interface + CRUD repo + every field, balanced delimiters) ∧ test-skeleton-valid ∧ config-round-trips ∧ expansion-real (code ≫ spec, >50% output saving) ∧ REFUSES-unknown (an unknown kind returns ok:false with an honest message, NEVER guesses) ∧ deterministic ∧ total. HONEST scope: boilerplate only — it does NOT generate arbitrary novel business logic (information theory forbids reconstructing 2,000 lines of new logic from a 35-token spec); it leaves TODO markers where real logic goes.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../scaffold/index.js" as string) as typeof import("../scaffold/index.js");
+        const g = S.scaffoldGauntlet();
+        const ok = g.score === 100 && g.tsModelValid && g.testSkeletonValid && g.configRoundTrips && g.expansionReal && g.refusesUnknown && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} tsModel=${g.tsModelValid} test=${g.testSkeletonValid} config=${g.configRoundTrips} expansion=${g.expansionReal} refuses=${g.refusesUnknown}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.outline.skeleton_region_exact",
     kind: "boolean",
     description: "OUTLINE (v2.124 + v2.125 — the honest fix for context-loading hyper-inflation): an agent reads a file's structural SKELETON (every symbol + exact line range, bodies elided) for a fraction of the tokens, then fetches the byte-EXACT slice(s) only where it edits. MULTI-LANGUAGE (TS/JS + Python indent-scoped + Go + Rust + Java/C) + multi-region. This probe asserts outlineGauntlet=100: reduction-real ∧ navigable ∧ region-byte-exact ∧ region-by-line-exact ∧ multi-region-exact ∧ python-indent (class+nested methods via indentation) ∧ go-brace ∧ rust-brace (fn inside impl at depth≥1; lifetimes don't break masking) ∧ mask-length-preserved ∧ deterministic ∧ total. The skeleton is honestly LOSSY (orientation); the region fetch is byte-exact (editing) in EVERY language. NOT a kernel hook, NOT 'understand code without seeing it', NOT lossless 'Code-DNA folding'.",
