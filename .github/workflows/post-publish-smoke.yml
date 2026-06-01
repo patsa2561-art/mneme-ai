@@ -15,9 +15,11 @@ name: Post-publish smoke gate
 #   4. `mneme verify "smoke claim"` must exit 0 + return a verdict
 #   5. `mneme.install.trail` (via daemon) must have a complete-install entry
 #
-# On ANY failure: `npm deprecate mneme-ai@<version> "<reason>"` to prevent
-# users from pulling the broken release + emit GitHub issue + status alert.
-# The user can manually `npm deprecate --undo` once a fix ships.
+# On failure (after 5 install+version retries to rule out CDN lag): emit a
+# GitHub issue for HUMAN review. v2.136.0 — this gate is ADVISORY and NO LONGER
+# auto-deprecates: a CI smoke can be a false positive, and deprecating a
+# published version is a destructive, user-facing decision that belongs to a
+# human, never to a flaky job. Deprecate by hand only if genuinely broken.
 #
 # Sister to scripts/publish-all.mjs Step 4 (LATEST-LAG gate in v2.19.63):
 # - publish-all gates the AUTHOR'S machine (pre-tag)
@@ -91,18 +93,26 @@ jobs:
           echo "⚠ @latest still not resolving to $TARGET after 10min (got $LATEST)"
           # Don't fail — tag may take longer for CDN. Continue with @<exact> path.
 
-      - name: Install mneme-ai globally from npm
+      - name: Install mneme-ai globally from npm (retry for CDN lag)
         id: install
         shell: bash
         run: |
           set -e
           TARGET="${{ steps.ver.outputs.target }}"
-          # Install the EXACT version (bypasses CDN @latest lag)
-          npm install -g "mneme-ai@$TARGET" --omit=optional --loglevel=error
-          INSTALLED=$(mneme --version 2>&1 || echo "(failed)")
-          echo "Installed version: $INSTALLED"
+          # v2.136.0 — retry install + version up to 5×: a fresh publish can lag
+          # the registry CDN for a minute, which previously produced a FALSE smoke
+          # failure (and, if NPM_TOKEN were set, a spurious deprecate of a GOOD
+          # release). A real break still fails after the retries.
+          INSTALLED="(failed)"
+          for ATTEMPT in 1 2 3 4 5; do
+            npm install -g "mneme-ai@$TARGET" --omit=optional --loglevel=error || { echo "install attempt $ATTEMPT failed, retrying…"; sleep 20; continue; }
+            INSTALLED=$(mneme --version 2>&1 || echo "(failed)")
+            echo "attempt $ATTEMPT — installed version: $INSTALLED"
+            if echo "$INSTALLED" | grep -q "$TARGET"; then echo "✓ version matches"; break; fi
+            echo "version mismatch (got '$INSTALLED', want '$TARGET') — retrying…"; sleep 20
+          done
           if ! echo "$INSTALLED" | grep -q "$TARGET"; then
-            echo "::error::mneme --version reported '$INSTALLED' but expected '$TARGET'"
+            echo "::error::mneme --version reported '$INSTALLED' but expected '$TARGET' after 5 attempts"
             exit 1
           fi
 
@@ -146,21 +156,21 @@ jobs:
             echo "⚠ trail file missing (expected for pre-2.19.63 installs)"
           fi
 
-      - name: Deprecate broken version on smoke failure
+      - name: Smoke failure — surface, do NOT auto-deprecate
         if: failure()
         shell: bash
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           TARGET="${{ steps.ver.outputs.target }}"
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "::warning::NPM_TOKEN not set in secrets — cannot auto-deprecate $TARGET. Manual action required: npm deprecate mneme-ai@$TARGET '<reason>'"
-            exit 0
-          fi
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
-          REASON="post-publish smoke test failed; this version is broken on npm. See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          npm deprecate "mneme-ai@$TARGET" "$REASON" || echo "deprecate failed (already deprecated?)"
-          echo "::warning::Deprecated mneme-ai@$TARGET due to smoke failure. Reason: $REASON"
+          # v2.136.0 — REMOVED the auto-`npm deprecate` on smoke failure. Reasons:
+          #   (1) a CI smoke can be a FALSE positive (CDN lag, runner flake, a
+          #       transient) — auto-deprecating a GOOD published release on that
+          #       is self-harm that reaches every user.
+          #   (2) deprecating a published version is a destructive, user-facing
+          #       decision — it belongs to a human, never to a flaky job.
+          # The smoke is now ADVISORY: it opens an issue so a human can review the
+          # logs and decide. If a version is genuinely broken, deprecate it by hand:
+          #   npm deprecate mneme-ai@<version> "<reason>"   (and `--undo` to reverse)
+          echo "::warning::Post-publish smoke for mneme-ai@$TARGET failed — review the logs. NOT auto-deprecating (advisory only; deprecation is a human decision)."
 
       - name: Open issue on smoke failure
         if: failure()
@@ -179,15 +189,15 @@ jobs:
                 `**Workflow run**: ${runUrl}`,
                 ``,
                 `## What happened`,
-                `The release tag \`v${target}\` was pushed, all 5 packages published, but the post-publish CI in a clean Ubuntu environment failed at least one smoke step (install / version / welcome / verify / trail).`,
+                `The release tag \`v${target}\` was pushed, all packages published, but the post-publish CI in a clean Ubuntu environment failed at least one smoke step (install / version / welcome / verify) — after 5 install+version retries (so it is NOT just CDN lag).`,
                 ``,
-                `## Auto-action taken`,
-                `If \`NPM_TOKEN\` was configured, this version has been **deprecated on npm** to prevent users from installing it.`,
+                `## This is ADVISORY — nothing was auto-changed on npm`,
+                `As of v2.136.0 the smoke gate does **NOT** auto-deprecate. A CI smoke can be a false positive, and deprecating a published version is a human decision. **No npm dist-tag or deprecation was changed.** Review the logs and decide.`,
                 ``,
                 `## Next steps`,
                 `1. Investigate the smoke run logs at ${runUrl}`,
-                `2. Bump to v${target.replace(/(\\d+)$/, (m) => String(+m + 1))} with a fix`,
-                `3. Once new version smoke-passes: \`npm deprecate --undo mneme-ai@${target}\` (optional; the bumped version makes this unnecessary)`,
+                `2. If genuinely broken, bump to the next version with a fix (the new \`@latest\` supersedes this one for all users)`,
+                `3. ONLY if you confirm it's broken AND want to block installs: \`npm deprecate mneme-ai@${target} "<reason>"\` (reverse with \`--undo\`) — manual, your call`,
               ].join('\\n'),
               labels: ['bug', 'release', 'post-publish-failure'],
             });
