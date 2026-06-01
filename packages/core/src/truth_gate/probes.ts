@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.settlement.signed_chain_audit",
+    kind: "boolean",
+    description: "SETTLEMENT LEDGER (v2.129.0 — the honest 'Stripe of AI Context / settlement layer'): a hash-chained, offline-auditable record of every AI↔local context exchange (blinded-payload hash + names/secrets hidden + local-verify verdict + tokens metered). This probe asserts settlementGauntlet=100: chain-verifies-offline ∧ tamper-localized (editing one tx breaks the chain AT that seq) ∧ reorder-detected ∧ statement-sums (tokens/% blinded/% locally-verified computed correctly) ∧ USD+fee-only-from-the-user-rate (never invented) ∧ deterministic ∧ total. The achievable peak of the image's 'SVE'/settlement vision — an audit + metering substrate, NOT homomorphic encryption.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../settlement/index.js" as string) as typeof import("../settlement/index.js");
+        const g = S.settlementGauntlet();
+        const ok = g.score === 100 && g.chainVerifiesOffline && g.tamperLocalized && g.reorderDetected && g.statementSums && g.feedMatchesUserRate && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} chain=${g.chainVerifiesOffline} tamper=${g.tamperLocalized} reorder=${g.reorderDetected} sums=${g.statementSums} userRate=${g.feedMatchesUserRate}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.channel.state_channel_loop",
     kind: "boolean",
     description: "CONTEXT-STATE CHANNEL (v2.128.0 — the honest 'L2 Lightning' for an AI edit/debug loop): the agent opens a channel, sends tiny diff ops, gets compact deltas (not the whole file re-streamed), commits once. This probe asserts channelGauntlet=100: applies-region ∧ applies-text ∧ working-byte-exact ∧ catches-broken-structure (an unbalanced edit is flagged via masked brace-balance) ∧ rejects-bad-op (leaves working unchanged) ∧ commit-byte-exact ∧ diff-compact (a one-line change in a big file summarizes to ≪ the file) ∧ savings-real (a multi-op loop beats the naive re-stream baseline) ∧ deterministic ∧ total. HONEST: the saving is on the LOOP overhead (re-streaming files+outputs each turn); the model still reasons each step; the core check is structural (a real compile/test is the CLI's spawn).",

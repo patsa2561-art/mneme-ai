@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.129.0 — SETTLEMENT LEDGER: the honest "Stripe of AI Context" audit/metering layer ──
+  {
+    id: "claim.settlement.signed_chain_audit",
+    source: "v2.129.0 release notes",
+    text: "Mneme's CONTEXT TRANSACTION SETTLEMENT LEDGER is the honest core of the image's 'Stripe of AI Context / Global Settlement Layer / Context Transaction Fee' — a hash-chained, offline-auditable record of every AI↔local context exchange (the blinded payload's hash + names/secrets hidden + the local-verify verdict + tokens metered), each signed (CLI/MCP add an Ed25519 NOTARY signature over the chain head). settlementGauntlet=100: chain-verifies-offline ∧ tamper-localized (editing one tx breaks the chain at that exact seq) ∧ reorder/insert/remove-detected ∧ statement-sums-correct ∧ USD+fee-only-from-the-user-supplied-rate (never invented) ∧ deterministic ∧ total. It is the achievable peak of the image's 'SVE' vision — an AUDIT + METERING substrate a CISO and a CFO can both verify offline — NOT homomorphic 'compute on ciphertext' encryption (which is too slow in 2026 and, taken literally as 'the AI obeys results it cannot read', is a contradiction). Composes EGRESS + BLIND + CHANNEL + OUTLINE + TREASURY",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.settlement.signed_chain_audit",
+    severity: "block",
+  },
   // ── v2.128.0 — CONTEXT-STATE CHANNEL: the honest L2 for an AI edit/debug loop ──
   {
     id: "claim.channel.state_channel_loop",

@@ -299,6 +299,7 @@ export * as outline from "./outline/index.js";
 export * as scaffold from "./scaffold/index.js";
 export * as blind from "./blind/index.js";
 export * as channel from "./channel/index.js";
+export * as settlement from "./settlement/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while
