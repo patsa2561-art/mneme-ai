@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.bequest.inheritance_math_sound",
+    kind: "boolean",
+    description: "BEQUEST — Second Brain Inheritance (v2.122.0): the knowledge-survival math is honest + falsifiable, not a fabricated metric. Survival S(u)=1−∏(1−fluency) (reliability redundancy), completeness/orphaned = mass-weighted survival, and a greedy min-heir set-cover. This probe asserts bequestGauntlet=100 over a 4,000-case sweep: survival-identity (0 holders→0, f=1→1, two 0.5→0.75) ∧ survival-monotone (raising fluency / adding a heir never lowers survival) ∧ completeness-identity (orphaned = total−surviving exact) ∧ capsule-tamper-evident ∧ inheritance-verifies (good claim ok, wrong hash rejected) ∧ set-cover ≥ (1−1/e)·OPT vs brute force ∧ deterministic ∧ total.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const B = await import("../bequest/index.js" as string) as typeof import("../bequest/index.js");
+        const g = B.bequestGauntlet();
+        const ok = g.score === 100 && g.survivalIdentity && g.survivalMonotone && g.completenessIdentity && g.capsuleTamperEvident && g.inheritanceVerifies && g.setCoverBeatsBound && g.deterministic && g.stable && g.cases === 4000;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} survId=${g.survivalIdentity} mono=${g.survivalMonotone} compId=${g.completenessIdentity} tamper=${g.capsuleTamperEvident} verify=${g.inheritanceVerifies} setcover=${g.setCoverBeatsBound} cases=${g.cases}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.exec.roi_math_sound",
     kind: "boolean",
     description: "EXEC value layer (v2.120.0 — the CXO/CFO surface): the ROI projection is honest math, not a fabricated metric. projectRoi = (Mneme's MEASURED tokens-saved per reduction) × (user team × usage × months) × (user vendor price). This probe asserts execGauntlet = 100 over a 5,000-case deterministic sweep: zero-team⇒zero ∧ zero-measured-rate⇒zero ∧ monotonic-in-team ∧ monotonic-in-price ∧ USD-identity-exact (usd = tokens/1000×price) ∧ realized-USD-exact ∧ deterministic ∧ total. The enterprise verbs (keyperson/talent/governance/burn) wrap already-proven git/ledger engines; this proves the one new piece of math.",

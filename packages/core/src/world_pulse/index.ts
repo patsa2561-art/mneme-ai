@@ -239,7 +239,7 @@ function weightedPick<T>(items: Array<{ w: number } & T>, rng: () => number): T 
 /** Generate a synthetic event stream for the dashboard demo + empty state.
  *  Deterministic when `seed` is provided so the visual stays stable
  *  between dashboard reloads in test/demo mode. */
-export function synthesizePulseEvents(opts: { count?: number; spanMinutes?: number; seed?: number } = {}): PulseEvent[] {
+export function synthesizePulseEvents(opts: { count?: number; spanMinutes?: number; seed?: number; nowMs?: number } = {}): PulseEvent[] {
   const count = opts.count ?? 240;
   const span = (opts.spanMinutes ?? 60) * 60_000;
   // Mulberry32 PRNG — fast, small, seedable.
@@ -251,7 +251,11 @@ export function synthesizePulseEvents(opts: { count?: number; spanMinutes?: numb
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const now = Date.now();
+  // The base time defaults to the live clock so a seeded demo stream still looks
+  // "recent". For a FULLY-deterministic stream (e.g. a snapshot test) pass an
+  // explicit nowMs — otherwise two back-to-back seeded calls would straddle a ms
+  // and the timestamps would drift.
+  const now = opts.nowMs ?? Date.now();
   const out: PulseEvent[] = [];
   for (let i = 0; i < count; i++) {
     const ts = now - Math.floor(rng() * span);

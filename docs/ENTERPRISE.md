@@ -17,6 +17,16 @@ An agent that can call tools can do damage. Mneme sits in front as a **verify-be
 - **Command gating** — destructive shell actions are risk-classified and (for irreversible ones) require human co-sign.
 - **Signed audit trail** — every verdict, every crossing, every gated command leaves a tamper-evident, **offline-verifiable** receipt (the NOTARY / FLIGHT RECORDER spine). A court, an insurer, or a CISO can verify the log *without trusting Mneme*.
 
+#### The Second Brain that is *inherited* (`mneme bequest`)
+
+Detecting key-person risk isn't enough — knowledge has to *survive* the person. BEQUEST is the inheritance + accounting layer on top of Mneme's atrophy signal:
+
+- **Survival, measured.** For each unit of knowledge (a file, a decision), Mneme computes a **survival** score `S(u) = 1 − ∏(1 − fluencyₐ)` over everyone who still understands it (reliability-theory redundancy applied to people: two half-fluent holders ⇒ 0.75 survival; *zero* holders ⇒ 0 = **orphaned**). The org-level number is mass-weighted **completeness** and the dollar-able quantity is **orphaned knowledge mass** — knowledge with no living heir.
+- **Succession capsules.** `mneme bequest capture --holder <expert>` mints a **signed** capsule of that expert's at-risk knowledge (files + reasoning + a content hash). A successor runs `mneme bequest claim`, Mneme re-reads the material and **verifies it transferred intact** (a transfer-integrity proof — honestly *not* a claim of deep comprehension), and signs an heir receipt.
+- **Who to assign.** `mneme bequest status` runs a greedy **minimum-heir set-cover** (it beats the classic `(1−1/e)` bound) so a manager sees *"assign these 3 people and you cover 95% of orphaned knowledge."*
+
+This is the honest core of an *inheritable* Second Brain: a fresh composition of standard, checkable building blocks (`bequestGauntlet` = 100), **not** an unfalsifiable "novel theorem." Dollar exposure appears only from a rate you supply.
+
 ### 2. 🔒 Sovereign / Air-Gapped AI — *"our code & secrets never leak to the model, with proof"*
 
 This is the **SOVEREIGN EGRESS GUARD** (`mneme egress` / `mneme.egress.guard`) — the gem of the enterprise tier. Before any local context (source, logs, config) crosses to a hosted model or another agent, it crosses a deterministic boundary with three layers:

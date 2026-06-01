@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.122.0 — BEQUEST: Second Brain Inheritance (knowledge survival) ──
+  {
+    id: "claim.bequest.inheritance_math_sound",
+    source: "v2.122.0 release notes",
+    text: "Mneme's BEQUEST (Second Brain Inheritance) turns key-person-risk DETECTION into knowledge SURVIVAL: survival S(u)=1−∏(1−fluency) (reliability redundancy over git-derived holders), inheritance completeness + ORPHANED mass = mass-weighted survival, signed succession capsules with a transfer-integrity proof, and a greedy minimum-heir set-cover that beats the (1−1/e) bound; bequestGauntlet=100 over a 4,000-case sweep: survival-identity ∧ survival-monotone ∧ completeness-identity (orphaned=total−surviving exact) ∧ capsule-tamper-evident ∧ inheritance-verifies ∧ set-cover≥(1−1/e)·OPT ∧ deterministic ∧ total. A fresh COMPOSITION of standard, checkable building blocks — NOT a fabricated metric or an unfalsifiable 'novel theorem'; $ only from user-supplied rates",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.bequest.inheritance_math_sound",
+    severity: "block",
+  },
   // ── v2.120.0 — EXEC value layer: real signals framed for a CXO, honest ROI math ──
   {
     id: "claim.exec.roi_math_sound",

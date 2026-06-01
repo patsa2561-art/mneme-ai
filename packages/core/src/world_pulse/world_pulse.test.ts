@@ -141,8 +141,10 @@ describe("world_pulse · synthesizePulseEvents", () => {
   });
 
   it("deterministic when seed is fixed", () => {
-    const a = synthesizePulseEvents({ count: 30, seed: 7 });
-    const b = synthesizePulseEvents({ count: 30, seed: 7 });
+    // Pin nowMs so the base time can't straddle a clock tick between the two
+    // calls (the rng is seeded; only the wall clock could differ).
+    const a = synthesizePulseEvents({ count: 30, seed: 7, nowMs: 1_700_000_000_000 });
+    const b = synthesizePulseEvents({ count: 30, seed: 7, nowMs: 1_700_000_000_000 });
     expect(a.map((e) => `${e.ts}|${e.vendor}|${e.color}`).join(","))
       .toBe(b.map((e) => `${e.ts}|${e.vendor}|${e.color}`).join(","));
   });

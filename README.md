@@ -30,6 +30,7 @@
 
 |  | What it answers for a CISO / CRO / CFO | In Mneme |
 |---|---|---|
+| 🧬 **Second Brain · Inheritance** | *"What happens to our knowledge when a key person (or agent) leaves?"* | **`mneme bequest`** — capture a departing expert's knowledge as a signed Succession Capsule, verify a successor inherited it intact, and report **orphaned knowledge** (no living heir) + the minimum heirs to assign |
 | 🛡 **Absolute Trust Layer** | *"Every agent verifies before it acts."* | verify-before-act gate + cross-vendor consensus + signed audit trail |
 | 🔒 **Sovereign / Air-Gapped AI** | *"Our code &amp; secrets never leak to the model — with proof."* | **SOVEREIGN EGRESS GUARD** — redacts secrets, trips on honeytoken canaries, Bloom secret-membership, signs an offline-auditable egress certificate |
 | 🌐 **Standard MCP boundary** | *"One governed surface for all our agents."* | local-first, vendor-neutral MCP server + capability passports |
