@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.138.0 — AXIA: the signed, offline-verifiable Value Ledger (membrane pillar 2) ──
+  {
+    id: "claim.axia.value_ledger",
+    source: "v2.138.0 release notes",
+    text: "Mneme's AXIA is a signed, hash-chained, OFFLINE-verifiable Value Ledger — pillar 2 of the membrane. It fuses the value events Mneme's organs actually produced (tokens saved from the treasury, destructive commands GATED by HEPHAESTUS/CERBERUS, secrets redacted by egress, injections neutralized by the firewall, claims corrected by the savant/gephyra, omissions flagged by elleipsis) into one number a CFO / CISO / insurer / auditor verifies with a public key, WITHOUT trusting Mneme. axiaGauntlet=100: the hash chain verifies offline ∧ tampering is localized to the exact record seq ∧ per-kind counts are correct ∧ the USD figure is derived ONLY from tokens-saved × the user-supplied price-per-1k (null when no price is given) ∧ there is NO damage-$ field ∧ the counts are framed 'destructive GATED' not 'attacks prevented' ∧ deterministic ∧ total. HONEST (DIAKRISIS — this is exactly where vaporware lives): every count is a FACT of an event that happened, signed — NOT 'attacks prevented' (a gate can be a false-positive co-sign, and you cannot prove what an un-run command would have done) and NEVER '$X of damage prevented' (an unprovable counterfactual). The only dollar figure is tokens-saved × YOUR rate, on the same basis as the treasury.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.axia.value_ledger",
+    severity: "block",
+  },
   // ── v2.136.0 — ELLEIPSIS: the omission/completeness gate (a vendor won't build it) ──
   {
     id: "claim.elleipsis.completeness_gate",

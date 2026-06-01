@@ -307,6 +307,7 @@ export * as boot from "./boot/index.js";
 export * as cerberus from "./cerberus/index.js";
 export * as elleipsis from "./elleipsis/index.js";
 export * as stele from "./stele/index.js";
+export * as axia from "./axia/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

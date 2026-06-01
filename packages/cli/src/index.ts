@@ -139,6 +139,7 @@ import { registerRailCommands } from "./commands/rail.js";
 import { registerBootCommands } from "./commands/boot.js";
 import { registerElleipsisCommands } from "./commands/elleipsis.js";
 import { registerSteleCommands } from "./commands/stele.js";
+import { registerAxiaCommands } from "./commands/axia.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
 import { registerOvernightCommand } from "./commands/overnight.js";
@@ -4942,6 +4943,7 @@ export async function run(argv: string[]): Promise<void> {
   registerBootCommands(program);
   registerElleipsisCommands(program);
   registerSteleCommands(program);
+  registerAxiaCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

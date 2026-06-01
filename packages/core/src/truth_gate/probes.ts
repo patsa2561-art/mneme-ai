@@ -429,6 +429,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.axia.value_ledger",
+    kind: "boolean",
+    description: "AXIA (v2.138.0 — pillar 2 of the membrane: the Value Ledger). One signed, hash-chained, OFFLINE-verifiable summary that fuses the value events Mneme's organs actually produced — tokens saved (treasury), destructive commands GATED (HEPHAESTUS/CERBERUS), secrets redacted (egress), injections neutralized (firewall), claims corrected (savant/gephyra), omissions flagged (elleipsis) — into a number an auditor/insurer/CFO checks with a public key, WITHOUT trusting Mneme. This probe asserts axiaGauntlet=100: chain verifies offline ∧ tamper localized to the exact seq ∧ per-kind counts correct ∧ USD ONLY from the user-supplied rate (null otherwise) ∧ NO damage-$ field ∧ counts say 'GATED' not 'attacks prevented' ∧ deterministic ∧ total. HONEST (DIAKRISIS — this is exactly where vaporware lives): counts are FACTS of events that happened, never 'attacks prevented' (a gate may be a false-positive co-sign); the ONLY $ is tokens-saved × the price-per-1k YOU pass — there is NO '$X of damage prevented' (an unprovable counterfactual).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const A = await import("../axia/index.js" as string) as typeof import("../axia/index.js");
+        const g = A.axiaGauntlet();
+        const ok = g.score === 100 && g.chainVerifiesOffline && g.tamperLocalized && g.countsByKind && g.usdOnlyFromUserRate && g.noDamageDollar && g.gatedNotPrevented && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} chain=${g.chainVerifiesOffline} tamper=${g.tamperLocalized} usdOnlyFromRate=${g.usdOnlyFromUserRate} noDamage$=${g.noDamageDollar} gatedNotPrevented=${g.gatedNotPrevented}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.elleipsis.completeness_gate",
     kind: "boolean",
     description: "ELLEIPSIS (v2.136.0 — the omission/completeness gate; the diamond a model vendor won't build). Everyone checks if what the AI SAID is true (hallucination); ELLEIPSIS checks what it SILENTLY LEFT OUT — it extracts the checkable asks from the user's request and reports COVERED / UNADDRESSED / VIOLATED (a 'don't do X' the AI did) / UNKNOWN against the output. This probe asserts elleipsisGauntlet=100: extracts multiple asks ∧ flags a dropped requirement (UNADDRESSED) ∧ does NOT false-flag a covered one ∧ catches a violated prohibition ∧ respects an honored prohibition (subject preserved) ∧ abstains to UNKNOWN on ambiguous signal (never fabricates a gap) ∧ score-math ∧ deterministic ∧ total. HONEST: a coverage HEURISTIC with prove-or-unknown — it surfaces a likely gap to LOOK at and abstains when unsure; it does NOT claim to catch every omission (impossible from NL).",
