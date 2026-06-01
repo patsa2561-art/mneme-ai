@@ -415,6 +415,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.elleipsis.completeness_gate",
+    kind: "boolean",
+    description: "ELLEIPSIS (v2.136.0 — the omission/completeness gate; the diamond a model vendor won't build). Everyone checks if what the AI SAID is true (hallucination); ELLEIPSIS checks what it SILENTLY LEFT OUT — it extracts the checkable asks from the user's request and reports COVERED / UNADDRESSED / VIOLATED (a 'don't do X' the AI did) / UNKNOWN against the output. This probe asserts elleipsisGauntlet=100: extracts multiple asks ∧ flags a dropped requirement (UNADDRESSED) ∧ does NOT false-flag a covered one ∧ catches a violated prohibition ∧ respects an honored prohibition (subject preserved) ∧ abstains to UNKNOWN on ambiguous signal (never fabricates a gap) ∧ score-math ∧ deterministic ∧ total. HONEST: a coverage HEURISTIC with prove-or-unknown — it surfaces a likely gap to LOOK at and abstains when unsure; it does NOT claim to catch every omission (impossible from NL).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const E = await import("../elleipsis/index.js" as string) as typeof import("../elleipsis/index.js");
+        const g = E.elleipsisGauntlet();
+        const ok = g.score === 100 && g.extractsMultipleAsks && g.flagsDroppedRequirement && g.doesNotFalseFlagCovered && g.catchesViolatedNegation && g.respectsHonoredNegation && g.abstainsOnAmbiguous && g.scoreMath && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} drop=${g.flagsDroppedRequirement} noFalseFlag=${g.doesNotFalseFlagCovered} violated=${g.catchesViolatedNegation} honored=${g.respectsHonoredNegation} abstains=${g.abstainsOnAmbiguous}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.cerberus.command_gate_reachability",
     kind: "boolean",
     description: "CERBERUS (v2.135.0 — the command-gate hardening that closes the pipe-to-shell / interpreter-eval / encoded-exec / indirection RCE-bypass class a denylist can't win). The HEPHAESTUS gate no longer classifies the LEADING token; it recursively DECOMPOSES the command into every reachable sub-command (pipe stages · subshells · sudo/env/xargs/nohup wrappers · bash -c / node -e / python -c / eval payloads · find -exec · base64/hex decoders) and gates the MAX risk, and FAILS CLOSED on intent-hiding obfuscation or anything it can't fully resolve (opaque ⇒ destructive ⇒ human co-sign). This probe asserts cerberusGauntlet=100: catches pipe-to-shell ∧ fetch-and-exec (curl|bash) ∧ encoded-exec (base64|sh) ∧ interpreter-eval (node -e fs.rmSync / python -c rmtree) ∧ find -exec/-delete ∧ wrapper-hidden (sudo/env/nohup) ∧ command-substitution ∧ var-indirection ∧ hex/octal-escape ∧ fails-closed-on-unbalanced-quoting ∧ allows benign pipes (cat|grep|head) ∧ allows benign reads ∧ deterministic ∧ total. HONEST: NOT '100% unbypassable' (shell is Turing-complete — no gate can be); it provably closes the obfuscation family + fails closed so novel disguises escalate rather than slip. Defense-in-depth, not an absolute guarantee.",

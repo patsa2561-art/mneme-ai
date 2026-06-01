@@ -924,6 +924,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.firewall.injection_defense",
     severity: "block",
   },
+  // ── v2.136.0 — ELLEIPSIS: the omission/completeness gate (a vendor won't build it) ──
+  {
+    id: "claim.elleipsis.completeness_gate",
+    source: "v2.136.0 release notes",
+    text: "Mneme's ELLEIPSIS is the savant of COMPLETENESS — the diamond a model vendor structurally won't build, because it surfaces what their model silently FAILED to do. Everyone checks whether what an AI said is true (hallucination); almost nobody guards what it OMITTED — a dropped requirement, a skipped edge case, a 'don't touch X' it touched. ELLEIPSIS holds the ground truth the vendor doesn't optimise for — the USER'S REQUEST — and deterministically extracts the checkable asks, reporting each against the AI's output as COVERED / UNADDRESSED / VIOLATED / UNKNOWN + a completeness score. elleipsisGauntlet=100: extracts multiple asks ∧ flags a dropped requirement ∧ does NOT false-flag a covered one ∧ catches a VIOLATED prohibition ∧ respects an HONORED one (context-disambiguated: 'left X untouched' ≠ 'refactored X') ∧ abstains to UNKNOWN on ambiguity ∧ score-math ∧ deterministic ∧ total. HONEST (DIAKRISIS): a coverage HEURISTIC with prove-or-unknown — it surfaces a likely gap to LOOK at, never fabricates one, and does NOT claim to catch every omission (impossible from natural language). It is on the BUYER'S side of the table (the user/enterprise pays for tokens + bears the risk), which is exactly why a vendor won't ship it and Mneme will.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.elleipsis.completeness_gate",
+    severity: "block",
+  },
   // ── v2.135.0 — CERBERUS: the command-gate hardening (RCE-bypass class closed) ──
   {
     id: "claim.cerberus.command_gate_reachability",
