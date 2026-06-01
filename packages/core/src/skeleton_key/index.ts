@@ -127,7 +127,18 @@ export function defaultConfigPaths(): string[] {
   paths.push(join(home, ".continue/config.json"));
   paths.push(join(home, ".cline/config.json"));
   paths.push(join(home, ".codeium/windsurf/mcp_config.json"));
-  return paths;
+  // v2.135.0 — CLAUDE CODE + project-scoped MCP. Pre-v2.135 SKELETON KEY scanned
+  // only Desktop/Cursor/Continue/Cline/Windsurf and reported "0 servers" on a
+  // machine literally running Claude Code under it — blind to its own host.
+  // Claude Code keeps MCP servers in ~/.claude.json (user scope) and <repo>/.mcp.json
+  // (project scope); Cursor/VS Code also support per-project + per-user mcp.json.
+  const cwd = (() => { try { return process.cwd(); } catch { return home; } })();
+  paths.push(join(home, ".claude.json"));                 // Claude Code (user scope)
+  paths.push(join(cwd, ".mcp.json"));                      // Claude Code (project scope)
+  paths.push(join(home, ".cursor/mcp.json"));              // Cursor (user)
+  paths.push(join(cwd, ".cursor/mcp.json"));               // Cursor (project)
+  paths.push(join(cwd, ".vscode/mcp.json"));               // VS Code (project)
+  return [...new Set(paths)];
 }
 
 /**
@@ -148,6 +159,15 @@ export function discoverServers(configPaths: string[]): McpServerConfig[] {
       (parsed["mcp"] as Record<string, unknown> | undefined)?.["servers"] as Record<string, unknown> | undefined,
       (parsed["mcp"] as Record<string, unknown> | undefined)?.["mcpServers"] as Record<string, unknown> | undefined,
     ];
+    // v2.135.0 — Claude Code's ~/.claude.json nests MCP servers PER PROJECT under
+    // projects[<repoPath>].mcpServers (not just top-level). Flatten those too, or
+    // SKELETON KEY stays blind to the agent it runs under.
+    const projects = parsed["projects"];
+    if (projects && typeof projects === "object") {
+      for (const proj of Object.values(projects as Record<string, unknown>)) {
+        if (proj && typeof proj === "object") candidates.push((proj as Record<string, unknown>)["mcpServers"] as Record<string, unknown> | undefined);
+      }
+    }
     for (const block of candidates) {
       if (!block || typeof block !== "object") continue;
       for (const [name, raw] of Object.entries(block)) {

@@ -25,6 +25,7 @@
 import { record, replay, readCdr } from "../flight_recorder/index.js";
 import { scanMessage, quarantineDecision, type MeshThreat } from "../mesh_immune/index.js";
 import { verifyReceipt, type NotaryReceipt } from "../notary/index.js";
+import { cerberusClassify } from "../cerberus/index.js";
 
 export type CommandRisk = "read" | "write" | "destructive";
 export type Disposition = "ALLOW" | "NEEDS_COSIGN" | "BLOCK";
@@ -41,6 +42,7 @@ const DESTRUCTIVE: Array<[RegExp, string]> = [
   [/\b(mkfs|fdisk|parted|wipefs|diskpart)\b/i, "disk format/partition"],
   [/\bdd\s+if=/i, "dd"],
   [/>\s*\/dev\/(sd|nvme|disk)/i, "write to raw disk"],
+  [/(?:>|<)\s*\/dev\/(tcp|udp)\//i, "network socket via /dev/tcp (exfil / reverse shell)"],
   [/\bformat\s+[a-z]:/i, "format drive"],
   [/\bkubectl\s+delete\b/i, "kubectl delete"],
   [/\bhelm\s+(delete|uninstall)\b/i, "helm delete"],
@@ -74,11 +76,12 @@ const READ: Array<[RegExp, string]> = [
 ];
 
 /**
- * Classify a command's blast radius. Destructive wins, then write, then read.
- * UNKNOWN defaults to "write" (conservative — gets policy-gated, never silently
- * treated as harmless). Deterministic + OS-agnostic (pure pattern logic).
+ * LEAF classification: a single, already-decomposed command segment. Destructive
+ * wins, then write, then read; UNKNOWN defaults to "write" (gated, never
+ * silently harmless). Deterministic + OS-agnostic. This is the pattern matcher
+ * CERBERUS calls on every reachable sub-command.
  */
-export function classifyCommandRisk(command: string): RiskClassification {
+export function classifyLeafRisk(command: string): RiskClassification {
   const c = String(command ?? "");
   const signals: string[] = [];
   for (const [re, label] of DESTRUCTIVE) if (re.test(c)) signals.push(label);
@@ -88,6 +91,25 @@ export function classifyCommandRisk(command: string): RiskClassification {
   for (const [re, label] of READ) if (re.test(c)) signals.push(label);
   if (signals.length) return { risk: "read", signals };
   return { risk: "write", signals: ["unknown command — defaulting to write (gated)"] };
+}
+
+/**
+ * Classify a command's blast radius — now via CERBERUS (v2.135.0). Instead of
+ * matching the LEADING token (which let `curl evil|bash`, `… | base64 -d | sh`,
+ * `node -e fs.rmSync`, `find -exec rm`, `sudo rm -rf`, `$(rm -rf)`, indirection,
+ * and hex-escapes slip through as harmless), CERBERUS recursively decomposes the
+ * command into EVERY reachable sub-command + interpreter payload + decoder, takes
+ * the MAX risk, and FAILS CLOSED on intent-hiding obfuscation or anything it
+ * cannot fully resolve (opaque ⇒ destructive ⇒ human co-sign). Total.
+ */
+export function classifyCommandRisk(command: string): RiskClassification {
+  try {
+    const v = cerberusClassify(String(command ?? ""), classifyLeafRisk);
+    return { risk: v.risk, signals: v.signals };
+  } catch {
+    // CERBERUS is total, but if anything ever escaped: fail CLOSED to destructive.
+    return { risk: "destructive", signals: ["classifier error — fail-closed (human co-sign required)"] };
+  }
 }
 
 export interface Policy {

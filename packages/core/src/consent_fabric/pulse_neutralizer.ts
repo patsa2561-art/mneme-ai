@@ -42,9 +42,21 @@ const RULES: PatternRule[] = [
   },
   {
     name: "fake-user-voice",
-    pattern: /\bsay\s+["']?[a-z][^"'\n]{0,80}["']?\s+(and|then)\s+(I|we)['’`]?ll\b/gi,
+    // v2.135.0 — also catch the un-contracted "… and I will …" / "… then we will …"
+    // (pre-v2.135 the detector only matched the contraction "I'll"/"we'll", so
+    // "say yes and I will handle the rest" slipped through NEUTRAL).
+    pattern: /\bsay\s+["']?[a-z][^"'\n]{0,80}["']?\s+(and|then)\s+(I|we)(?:['’`]?ll|\s+will)\b/gi,
     severity: 5,
     suggestedReplacement: "(do not put words in the user's mouth)",
+  },
+  {
+    name: "auto-action-queued",
+    // v2.135.0 — the "pre-staged action" shape: "QUEUED: <tool> (pre-approved)" /
+    // "SCHEDULED: …" — manufactures consent the user never gave (tac-007). Pre-v2.135
+    // only the "[AUTO-ACTION] MANDATE" shape was caught.
+    pattern: /\b(QUEUED|SCHEDULED|PRE[- ]?APPROVED)\s*[:(]/gi,
+    severity: 5,
+    suggestedReplacement: "(state the action as available + optional; never pre-approve on the user's behalf)",
   },
   {
     name: "opaque-grade",
