@@ -1,4 +1,4 @@
-# Mneme — Function Reference (English)
+# Mneme — Function Reference
 
 > What Mneme can do, in 5 minutes. Every family has a 1-line headline + when to use it + one example.
 
