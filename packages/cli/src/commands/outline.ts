@@ -25,8 +25,8 @@ export function registerOutlineCommands(program: Command): void {
   program
     .command("outline <file>")
     .alias("glance")
-    .description("🔭 Read a file's STRUCTURE (every symbol + line range, bodies elided) for a fraction of the tokens, instead of loading the whole file. `--region <symbol|L1-L2>` fetches the byte-EXACT slice to edit. Orient cheap → edit exact.")
-    .option("--region <selector>", "fetch the byte-exact slice for a symbol name or an L<a>-L<b> range.")
+    .description("🔭 Read a file's STRUCTURE (every symbol + line range, bodies elided) for a fraction of the tokens, instead of loading the whole file. Multi-language (TS/JS/Python/Go/Rust/Java/C). `--region <symbol|L1-L2|a,b,...>` fetches the byte-EXACT slice(s) to edit. Orient cheap → edit exact.")
+    .option("--region <selector>", "byte-exact slice(s): a symbol name, an L<a>-L<b> range, or a comma-separated list of either (multi-region).")
     .option("--json", "structured JSON output.")
     .action((file: string, opts: { region?: string; json?: boolean }) => {
       const cwd = process.cwd();
@@ -36,15 +36,15 @@ export function registerOutlineCommands(program: Command): void {
       try { src = readFileSync(p, "utf8"); } catch (e) { out(`✗ read failed: ${(e as Error).message}`); process.exitCode = 1; return; }
 
       if (opts.region) {
-        const r = outline.extractRegion(src, opts.region);
+        const r = outline.extractRegion(src, opts.region, { path: file });
         if (!r.ok) { out(`✗ ${r.note}`); process.exitCode = 1; return; }
         if (opts.json) { outJson(r); return; }
-        out(`# ${file} · L${r.startLine}-${r.endLine} (byte-exact)`);
+        out(`# ${file} · ${r.note}`);
         out(r.text);
         return;
       }
 
-      const o = outline.extractOutline(src);
+      const o = outline.extractOutline(src, { path: file });
       const rendered = outline.renderOutline(o, { path: file });
       const m = outline.measureReduction(src.length, rendered.length);
       // record the measured saving into the signed treasury ledger (Pay-per-Token-Saved)

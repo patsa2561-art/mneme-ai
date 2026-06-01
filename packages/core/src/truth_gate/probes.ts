@@ -375,14 +375,14 @@ const probes: Probe[] = [
   {
     id: "probe.outline.skeleton_region_exact",
     kind: "boolean",
-    description: "OUTLINE (v2.124.0 — the honest fix for context-loading hyper-inflation): an agent reads a file's structural SKELETON (every symbol + exact line range, bodies elided) for a fraction of the tokens, then fetches the byte-EXACT slice only where it edits. This probe asserts outlineGauntlet=100: reduction-real (skeleton materially smaller) ∧ navigable (every top-level symbol present in the rendered skeleton) ∧ region-byte-exact (extractRegion(symbol) is a verbatim substring of the source) ∧ region-by-line-exact ∧ mask-length-preserved (string/comment masking keeps line/col mapping) ∧ deterministic ∧ total. The skeleton is honestly LOSSY (orientation); the region fetch is byte-exact (editing). NOT a kernel hook, NOT 'understand code without seeing it'.",
+    description: "OUTLINE (v2.124 + v2.125 — the honest fix for context-loading hyper-inflation): an agent reads a file's structural SKELETON (every symbol + exact line range, bodies elided) for a fraction of the tokens, then fetches the byte-EXACT slice(s) only where it edits. MULTI-LANGUAGE (TS/JS + Python indent-scoped + Go + Rust + Java/C) + multi-region. This probe asserts outlineGauntlet=100: reduction-real ∧ navigable ∧ region-byte-exact ∧ region-by-line-exact ∧ multi-region-exact ∧ python-indent (class+nested methods via indentation) ∧ go-brace ∧ rust-brace (fn inside impl at depth≥1; lifetimes don't break masking) ∧ mask-length-preserved ∧ deterministic ∧ total. The skeleton is honestly LOSSY (orientation); the region fetch is byte-exact (editing) in EVERY language. NOT a kernel hook, NOT 'understand code without seeing it', NOT lossless 'Code-DNA folding'.",
     run: async (ctx) => {
       const t0 = Date.now(); void ctx;
       try {
         const O = await import("../outline/index.js" as string) as typeof import("../outline/index.js");
         const g = O.outlineGauntlet();
-        const ok = g.score === 100 && g.reductionReal && g.navigable && g.regionByteExact && g.regionByLineExact && g.maskLengthPreserved && g.deterministic && g.stable;
-        return { value: ok ? 1 : 0, evidence: `score=${g.score} reduction=${g.reductionPct}% navigable=${g.navigable} regionExact=${g.regionByteExact} byLine=${g.regionByLineExact} maskLen=${g.maskLengthPreserved}`, dtMs: Date.now() - t0 };
+        const ok = g.score === 100 && g.reductionReal && g.navigable && g.regionByteExact && g.regionByLineExact && g.multiRegionExact && g.pythonIndent && g.goBrace && g.rustBrace && g.maskLengthPreserved && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} reduction=${g.reductionPct}% py=${g.pythonIndent} go=${g.goBrace} rust=${g.rustBrace} multi=${g.multiRegionExact} regionExact=${g.regionByteExact}`, dtMs: Date.now() - t0 };
       } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
     },
   },

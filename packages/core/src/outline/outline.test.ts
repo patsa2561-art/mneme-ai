@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { maskCode, extractOutline, renderOutline, extractRegion, measureReduction, outlineGauntlet } from "./index.js";
+import { maskCode, extractOutline, renderOutline, extractRegion, measureReduction, outlineGauntlet, detectLang } from "./index.js";
 
 const SRC = `import { x } from "y";
 
@@ -94,14 +94,79 @@ describe("v2.124 OUTLINE — measured reduction", () => {
   });
 });
 
-describe("v2.124 OUTLINE — gauntlet", () => {
-  it("outlineGauntlet() = 100", () => {
+describe("v2.125 OUTLINE — multi-language", () => {
+  it("detectLang maps extensions", () => {
+    expect(detectLang("a.ts")).toBe("ts");
+    expect(detectLang("a.py")).toBe("python");
+    expect(detectLang("a.go")).toBe("go");
+    expect(detectLang("a.rs")).toBe("rust");
+    expect(detectLang("a.unknownext")).toBe("generic");
+  });
+  it("Python: indent-scoped — finds class + nested methods + top-level def with body ranges", () => {
+    const py = `import os\nclass Repo:\n    def __init__(self, base):\n        self.base = base\n    def fetch(self, id):\n        return self.base + id\ndef top(x):\n    return x * 2\n`;
+    const o = extractOutline(py, { lang: "python" });
+    const names = o.symbols.map((s) => s.name);
+    expect(names).toContain("Repo");
+    expect(names).toContain("fetch");
+    expect(names).toContain("top");
+    const fetch = o.symbols.find((s) => s.name === "fetch")!;
+    expect(fetch.endLine).toBeGreaterThan(fetch.startLine); // indent-delimited body
+    // region fetch is byte-exact regardless of language
+    const r = extractRegion(py, "fetch", { lang: "python" });
+    expect(r.ok).toBe(true);
+    expect(py.includes(r.text)).toBe(true);
+    expect(r.text).toContain("def fetch");
+  });
+  it("Go: brace-scoped — finds struct, receiver method, func", () => {
+    const go = `package main\ntype Server struct {\n\taddr string\n}\nfunc (s *Server) Start() error {\n\treturn nil\n}\nfunc main() {}\n`;
+    const names = extractOutline(go, { lang: "go" }).symbols.map((s) => s.name);
+    expect(names).toContain("Server");
+    expect(names).toContain("Start");
+    expect(names).toContain("main");
+  });
+  it("Rust: finds struct, impl, fn inside impl (depth ≥ 1), and lifetimes don't break masking", () => {
+    const rs = `pub struct Point { x: i32 }\nimpl Point {\n    pub fn new(x: i32) -> Self {\n        let c = 'a';\n        Point { x }\n    }\n}\npub fn dist<'a>(p: &'a Point) -> i32 { p.x }\n`;
+    const names = extractOutline(rs, { lang: "rust" }).symbols.map((s) => s.name);
+    expect(names).toContain("Point");
+    expect(names).toContain("new");  // fn inside impl
+    expect(names).toContain("dist");
+  });
+  it("detects language from path", () => {
+    const py = `def f(x):\n    return x\n`;
+    expect(extractOutline(py, { path: "x.py" }).lang).toBe("python");
+  });
+});
+
+describe("v2.125 OUTLINE — multi-region fetch", () => {
+  const SRC2 = `export function a() { return 1; }\nexport function b() { return 2; }\nexport function c() { return 3; }\n`;
+  it("comma-separated selectors return multiple byte-exact slices, sorted", () => {
+    const r = extractRegion(SRC2, "c,a", { lang: "ts" });
+    expect(r.ok).toBe(true);
+    expect(r.slices?.length).toBe(2);
+    expect(r.text).toContain("function a");
+    expect(r.text).toContain("function c");
+    // first slice is `a` (sorted by line), exact substring
+    expect(SRC2).toContain("function a() { return 1; }");
+  });
+  it("mixes symbol names and line ranges", () => {
+    const r = extractRegion(SRC2, "a,L3-L3", { lang: "ts" });
+    expect(r.ok).toBe(true);
+    expect(r.slices?.length).toBe(2);
+  });
+});
+
+describe("v2.125 OUTLINE — gauntlet", () => {
+  it("outlineGauntlet() = 100 (multi-lang + multi-region)", () => {
     const g = outlineGauntlet();
     expect(g.score).toBe(100);
     expect(g.reductionReal).toBe(true);
     expect(g.navigable).toBe(true);
     expect(g.regionByteExact).toBe(true);
     expect(g.regionByLineExact).toBe(true);
+    expect(g.multiRegionExact).toBe(true);
+    expect(g.pythonIndent).toBe(true);
+    expect(g.goBrace).toBe(true);
+    expect(g.rustBrace).toBe(true);
     expect(g.maskLengthPreserved).toBe(true);
     expect(g.deterministic).toBe(true);
     expect(g.stable).toBe(true);

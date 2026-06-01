@@ -19,7 +19,7 @@ export const OUTLINE_TOOLS: MnemeTool[] = [
   {
     name: "mneme.outline.file",
     category: "memory",
-    description: "🔭 OUTLINE — read a code file's STRUCTURE for a fraction of the tokens instead of loading the whole file. Returns the skeleton (every import/function/class/interface/type/const/method with its signature + EXACT line range, bodies elided) + a measured token reduction. Pass `region` (a symbol name or 'L<a>-L<b>') to get the byte-EXACT slice to edit. Orient cheap (skeleton) → edit exact (region). Self-attesting. The honest fix for context-loading hyper-inflation — NOT a kernel hook, NOT 'understand code without seeing it'.",
+    description: "🔭 OUTLINE — read a code file's STRUCTURE for a fraction of the tokens instead of loading the whole file. MULTI-LANGUAGE (TS/JS/Python/Go/Rust/Java/C, auto-detected by extension). Returns the skeleton (every symbol with its signature + EXACT line range, bodies elided) + a measured token reduction. Pass `region` (a symbol name, an 'L<a>-L<b>' range, or a COMMA-SEPARATED list for multi-region) to get the byte-EXACT slice(s) to edit. Orient cheap (skeleton) → edit exact (region). Self-attesting. The honest fix for context-loading hyper-inflation — NOT a kernel hook, NOT 'understand code without seeing it'.",
     whenToUse: "BEFORE reading a code file in full to orient yourself: call mneme.outline.file { path } to learn its shape cheaply, then call again with { path, region: '<symbol>' } to load only the part you'll edit. Especially for large files where a raw read would burn thousands of tokens.",
     triggers: ["outline", "skeleton", "structure of file", "what's in this file", "read less of the file", "save tokens reading", "glance at file"],
     inputSchema: { type: "object", required: ["path"], properties: { path: { type: "string", description: "path to the code file (relative to the repo root)" }, region: { type: "string", description: "optional: a symbol name or 'L<a>-L<b>' range to fetch the byte-exact slice instead of the skeleton" } } },
@@ -33,14 +33,15 @@ export const OUTLINE_TOOLS: MnemeTool[] = [
         if (!fs.existsSync(p)) return low(`file not found: ${String(args["path"])}`);
         const src = fs.readFileSync(p, "utf8");
 
+        const relPath = String(args["path"]);
         if (args["region"]) {
-          const r = core.outline.extractRegion(src, String(args["region"]));
+          const r = core.outline.extractRegion(src, String(args["region"]), { path: relPath });
           const data = await attest(cwd, { ok: r.ok, mode: "region", path: args["path"], region: r.selector, startLine: r.startLine, endLine: r.endLine, text: r.text, note: r.note });
           return { data, wisdom: r.ok ? `🔭 byte-exact slice ${args["path"]} L${r.startLine}-${r.endLine}.` : `🔭 ${r.note}`, followUp: [], confidence: { level: r.ok ? "high" as const : "low" as const } };
         }
 
-        const o = core.outline.extractOutline(src);
-        const rendered = core.outline.renderOutline(o, { path: String(args["path"]) });
+        const o = core.outline.extractOutline(src, { path: relPath });
+        const rendered = core.outline.renderOutline(o, { path: relPath });
         const m = core.outline.measureReduction(src.length, rendered.length);
         const data = await attest(cwd, { mode: "skeleton", path: args["path"], symbolCount: o.symbolCount, totalLines: o.totalLines, outline: rendered, measure: m });
         return {
