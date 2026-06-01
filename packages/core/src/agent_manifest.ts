@@ -1137,6 +1137,15 @@ export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAN
   lines.push(`YOU:   "ไม่ใช่ครับ — Mneme ตรวจแล้ว: ร่างกายมนุษย์มีเส้นเลือดยาวรวมประมาณ 100,000 กิโลเมตร และนับเป็นพันล้านเส้น (ส่วนใหญ่เป็นเส้นเลือดฝอย) ครับ"`);
   lines.push(`\`\`\``);
   lines.push(``);
+  lines.push(`### Rule 0.5 — TOKEN DISCIPLINE: route context THROUGH Mneme (the ONLY way it saves tokens)`);
+  lines.push(``);
+  lines.push(`**Be honest about what Mneme can and cannot do, then act on it.** Mneme is a CLI + MCP server — it does **NOT** sit between your host (Claude Code / Cursor / Cline / Codex) and the filesystem, and it will **never hook your built-in Read/file tools** (that would mean patching the host process — out of scope by design, refused). So when you full-read a file directly, that goes into YOUR context and Mneme cannot and does not shrink it. Mneme reduces tokens **only for content you deliberately route through it** — and those savings are real, measured, and signed. To actually save tokens (not just claim to), make these your defaults:`);
+  lines.push(``);
+  lines.push(`- **BEFORE a full-file read to orient yourself** → call \`mneme.outline.file { path }\` (CLI: \`mneme outline <file>\`). You get the structural skeleton — every symbol + exact line range, bodies elided — for **~95% fewer tokens** (measured on this repo: 41,473 → 1,704). Then \`{ path, region: "<symbol|L1-L2>" }\` fetches the **byte-exact** slice ONLY where you edit. Orient cheap → edit exact.`);
+  lines.push(`- **On a debug / error loop** → don't re-paste the whole error log + diff each turn. Call \`mneme.distill.brief\` to send only the causal brief (one failure line + changed loci + the known fix), and \`mneme.channel.*\` to run an edit loop as small diff-ops in / compact deltas out (the file + full output aren't re-streamed every turn).`);
+  lines.push(`- **BEFORE relaying local code/context to a model or another agent** → \`mneme.rail.traverse { direction: "ingress", payload, path }\` — it policy-gates, neutralizes injection, and BLINDS secret literals + sensitive names (the reverse map stays local), and returns the safe-to-send payload. Write a model's returned code back via \`direction: "egress"\` (leak-screened + metered).`);
+  lines.push(`- Every routed reduction **auto-meters** into the signed ledger; \`mneme savings\` / \`mneme.treasury.report\` shows the real input-tokens (and USD at the user's price) saved. If the user asks "is Mneme actually saving tokens?", surface that ledger — and be honest that it counts ONLY what was routed through Mneme, not your host's own reads.`);
+  lines.push(``);
   lines.push(`### Rule 1 — AUTO-SCAN every AI-generated diff before applying`);
   lines.push(``);
   lines.push(`After you (or another agent) produces a code diff / commit message / new file, call \`mneme antivirus scan <draft>\` (or \`mneme.av.scan\`) **before** writing it to disk. If strains fire, call \`mneme antivirus cure\` and use the cleaned output. The user never needs to ask.`);

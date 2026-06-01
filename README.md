@@ -16,13 +16,7 @@
 
 <br/><br/>
 
-### 🧠 Mneme is **ALETHEIA** — the savant of verifiable *truth · memory · structure*
-
-> An LLM is a brilliant generalist — and *therefore* prone to hallucinate and forget. Mneme is the **savant** beside it: it **remembers** across sessions and vendors, and it says **`UNKNOWN` instead of guessing**. That's the whole idea.
-
-📖 **The full story** (why a savant beats a generalist · the axes · the ethos) → [`docs/ALETHEIA.md`](docs/ALETHEIA.md)  ·  📜 **Every release** → [`CHANGELOG.md`](CHANGELOG.md)
-
-🧠 **The Sovereign Cognitive Layer** — signed, vendor-neutral, byte-lossless context memory (HYDRA), self-aware wisdom gates, and a shared memory bus every AI agent (Grok / GPT / Gemini / Claude / Codex) contributes to that *heals its own contradictions by proof*. **How to use it →** [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md)
+📖 **What Mneme is** (the savant of *truth · memory · structure* · the Sovereign Cognitive Layer · the ethos) → [`docs/ALETHEIA.md`](docs/ALETHEIA.md) · [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md) · [`CHANGELOG.md`](CHANGELOG.md)
 
 💰 **Pay-per-Token-Saved** — Mneme does deterministic local work to cut what your agent sends to the model (🔭 **OUTLINE** lets any agent — Claude / GPT / Gemini / Grok / Codex / Cursor / Cline, via CLI or MCP — read a file's *structure* for a fraction of the tokens, then fetch the byte-exact slice only where it edits; ⚡ **CHANNEL** runs an edit/debug loop as an "L2" state channel — tiny diff ops in, compact deltas out, commit once — so the whole file + full output aren't re-streamed every turn; DISTILL compresses a verbose error+diff to its causal brief; LOOPGUARD stops a thrash; NKL skips a proven dead-end), and meters the **measured** saving into a **signed** ledger — so `mneme savings` shows real input-tokens (and USD, at *your* vendor's price) you didn't spend. Falsifiable, not marketing. **The model →** [`docs/BUSINESS-MODEL.md`](docs/BUSINESS-MODEL.md)
 

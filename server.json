@@ -7,7 +7,7 @@
     "url": "https://github.com/patsa2561-art/mneme-ai",
     "source": "github"
   },
-  "version": "2.131.0",
+  "version": "2.132.0",
   "packages": [
     {
       "registryType": "npm",

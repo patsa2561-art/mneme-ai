@@ -9,12 +9,14 @@ name: Windows install smoke
 # workflow to scripts/reincarnation-ritual.mjs (which runs on the
 # author's machine pre-publish). This is the cross-platform companion.
 
+# v2.132.0 — RUNNER-LOAD REDUCTION: Windows runners are the scarcest + cost 2×
+# minutes. Run this release smoke-test on RELEASE tags + on demand only — not on
+# every main push and every PR, which were saturating the free concurrent-job
+# budget and leaving the important Pages deploy stuck `queued` (then cancelled by
+# the next push → the recurring red X). Release-time coverage is what matters here.
 on:
   push:
-    branches: [main]
     tags: ['v*']
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

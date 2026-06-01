@@ -110,6 +110,18 @@ describe("v2.131 · DYNAMIC POLICY ENFORCEMENT", () => {
     expect(d.verdict).toBe("ALLOW"); // unsafe pattern skipped
   });
 
+  it("denies secrets on Windows UNC / extended-length / drive paths (#10)", () => {
+    const p = defaultPolicy();
+    // backslash separators are normalized; the basename / nested-dir match still fires
+    expect(checkPolicy({ path: "\\\\server\\share\\.env" }, p).verdict).toBe("DENY");
+    expect(checkPolicy({ path: "\\\\?\\C:\\proj\\.env" }, p).verdict).toBe("DENY");
+    expect(checkPolicy({ path: "C:\\proj\\config\\.env.production" }, p).verdict).toBe("DENY");
+    expect(checkPolicy({ path: "\\\\server\\secrets\\token.txt" }, p).verdict).toBe("DENY");
+    expect(checkPolicy({ path: "\\\\host\\share\\keys\\server.pem" }, p).verdict).toBe("DENY");
+    // a benign UNC source file is still allowed
+    expect(checkPolicy({ path: "\\\\server\\share\\src\\main.ts", content: "x" }, p).verdict).toBe("ALLOW");
+  });
+
   it("violation records carry the matched rule for audit", () => {
     const d = checkPolicy({ path: "config/.env" }, defaultPolicy());
     expect(d.violations[0]?.kind).toBe("path");

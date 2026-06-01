@@ -11,11 +11,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  getIssuerKeyPair, issueReceipt, verifyReceipt, verifyChain,
+  getIssuerKeyPair, _resetIssuerKeyCache, issueReceipt, verifyReceipt, verifyChain,
   notarizeProtocolReceipt, canonicalJson, type NotaryReceipt,
 } from "./index.js";
 
@@ -29,6 +29,27 @@ describe("v2.79.0 N1 — issuer keypair (PINNED)", () => {
     expect(a.publicKeyB64).toBe(b.publicKeyB64);
     expect(a.fingerprint).toBe(b.fingerprint);
     expect(a.fingerprint).toMatch(/^[0-9a-f]{16}$/);
+  });
+  it("N1.3 read-only fs: a consistent issuer key + receipts that cross-verify (v2.132 fix)", () => {
+    // Simulate an unwritable .mneme/notary by rooting it under an existing FILE
+    // (mkdir under a file path fails on every OS) → persistence silently fails.
+    const dir = tmpRepo();
+    const asFile = join(dir, "ro.flag");
+    writeFileSync(asFile, "x");
+    const roRoot = join(asFile, "nested"); // notaryDir(roRoot) can never be created
+    _resetIssuerKeyCache();
+    const a = getIssuerKeyPair(roRoot);
+    const b = getIssuerKeyPair(roRoot);
+    // pre-fix: a≠b (fresh ephemeral key each call). post-fix: memoized → identical.
+    expect(a.fingerprint).toBe(b.fingerprint);
+    // key was NOT persisted (the fs was unwritable) — proving we're on the RO path.
+    expect(existsSync(join(roRoot, ".mneme", "notary", "issuer.key"))).toBe(false);
+    // and two receipts signed in this process cross-verify against the same issuer.
+    const r1 = issueReceipt(roRoot, { kind: "claim-verdict", subject: "s1", payload: { a: 1 } });
+    const r2 = issueReceipt(roRoot, { kind: "claim-verdict", subject: "s2", payload: { b: 2 }, prev: r1.receiptId });
+    expect(verifyReceipt(r1).valid).toBe(true);
+    expect(verifyReceipt(r2).valid).toBe(true);
+    expect(r1.issuerFingerprint).toBe(r2.issuerFingerprint);
   });
   it("N1.2 different repos get different keys", () => {
     expect(getIssuerKeyPair(tmpRepo()).fingerprint).not.toBe(getIssuerKeyPair(tmpRepo()).fingerprint);

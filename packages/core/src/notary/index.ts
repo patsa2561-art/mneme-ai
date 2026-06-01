@@ -8,6 +8,7 @@
  */
 export {
   getIssuerKeyPair,
+  _resetIssuerKeyCache,
   publicKeyToB64,
   publicKeyFromB64,
   fingerprintOf,

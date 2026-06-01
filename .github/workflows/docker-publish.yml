@@ -12,9 +12,13 @@ name: Publish Docker image to GHCR
 # the image is in place; the npm publish in `release.yml` is the
 # upstream dependency for the version-tagged builds.
 
+# v2.132.0 — RUNNER-LOAD REDUCTION: build+push per RELEASE (tags) + on demand,
+# NOT on every main commit. The per-commit `:edge` build saturated the free
+# concurrent-job budget and left the important Pages deploy stuck `queued`
+# (then cancelled by the next push → red X). A per-release image is the right
+# cadence; use workflow_dispatch for an ad-hoc edge build.
 on:
   push:
-    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 

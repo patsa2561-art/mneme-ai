@@ -20,9 +20,15 @@ permissions:
   pages: write
   id-token: write
 
+# v2.132.0 — cancel-in-progress is now FALSE (the official GitHub Pages pattern).
+# ROOT CAUSE of the recurring red-X: runs were sitting `queued` (account-level
+# runner starvation), and the NEXT main push cancelled the queued deploy via the
+# shared `pages` concurrency group → conclusion `cancelled` (a red X). With
+# `false`, a queued deploy COMPLETES when a runner frees up instead of being
+# cancelled — the latest commit still wins because deploys run in push order.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
