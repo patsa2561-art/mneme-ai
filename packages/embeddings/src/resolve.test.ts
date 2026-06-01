@@ -11,15 +11,25 @@ import { OllamaEmbedder } from "./ollama.js";
 
 describe("resolveEmbedder — auto fallback ladder (never blocks user)", () => {
   const origKey = process.env["OPENAI_API_KEY"];
+  const origProbe = process.env["MNEME_AUTO_EMBEDDER_PROBE"];
 
   beforeEach(() => {
     delete process.env["OPENAI_API_KEY"];
+    // Pin the EMBED probe so these tests exercise (and deterministically mock)
+    // ollama.verify() — the v0.19 fallthrough path they pin. Otherwise the
+    // default "tags" probe calls verifyTags(), which a REAL Ollama running on
+    // the dev machine answers OK, defeating the verify()=fail mock.
+    process.env["MNEME_AUTO_EMBEDDER_PROBE"] = "embed";
     vi.spyOn(OllamaEmbedder.prototype, "ping").mockResolvedValue(false);
+    // also neutralise the tags probe so a real local Ollama can't leak through.
+    vi.spyOn(OllamaEmbedder.prototype, "verifyTags").mockResolvedValue({ ok: false, reason: "mocked-off" });
   });
 
   afterEach(() => {
     if (origKey !== undefined) process.env["OPENAI_API_KEY"] = origKey;
     else delete process.env["OPENAI_API_KEY"];
+    if (origProbe !== undefined) process.env["MNEME_AUTO_EMBEDDER_PROBE"] = origProbe;
+    else delete process.env["MNEME_AUTO_EMBEDDER_PROBE"];
     vi.restoreAllMocks();
   });
 

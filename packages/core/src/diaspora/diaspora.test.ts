@@ -361,24 +361,34 @@ describe("v1.72 Diaspora D4 · HTTP Bridge + OpenAPI", () => {
     });
 
     it("walks the ladder when a port is occupied", async () => {
-      // Squat 17741 with a dummy TCP server.
+      // Squat 17741 with a dummy TCP server. If 17741 is ALREADY occupied (e.g.
+      // a parallel bridge test or a running daemon), the precondition "the base
+      // port is occupied" is already satisfied — so we just proceed and still
+      // assert the bridge walked past it. This keeps the test parallel-safe.
       const net = await import("node:net");
-      const squatter = net.createServer(() => {});
-      await new Promise<void>((resolve, reject) => {
-        squatter.once("error", reject);
-        squatter.listen(17741, "127.0.0.1", () => resolve());
-      });
+      let squatter: import("node:net").Server | null = net.createServer(() => {});
+      try {
+        await new Promise<void>((resolve, reject) => {
+          squatter!.once("error", reject);
+          squatter!.listen(17741, "127.0.0.1", () => resolve());
+        });
+      } catch (e) {
+        // EADDRINUSE → someone else already holds 17741. Precondition met.
+        try { squatter!.close(); } catch { /* */ }
+        squatter = null;
+        if ((e as NodeJS.ErrnoException)?.code !== "EADDRINUSE") throw e;
+      }
       try {
         const handle = await startBridge({ repoRoot: r, noAuth: true }, {
           polygraphVerify: () => ({ verdict: "trustworthy", color: "green", confidence: 1, oneLine: "ok", latencyMs: 0 }),
         });
-        // Bridge MUST have walked past the squatter.
+        // Bridge MUST have walked past the (occupied) base port 17741.
         expect(handle.port).not.toBe(17741);
         expect(handle.port).toBeGreaterThanOrEqual(17742);
         expect(handle.port).toBeLessThanOrEqual(17750);
         await handle.stop();
       } finally {
-        await new Promise<void>((resolve) => squatter.close(() => resolve()));
+        if (squatter) await new Promise<void>((resolve) => squatter!.close(() => resolve()));
       }
     });
 

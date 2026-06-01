@@ -2,7 +2,7 @@
 // Every vector gets ONE discrete pinned test. If any fails the bug is back.
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { startBridge, JsonParseError } from "./http_bridge.js";
+import { startBridge, JsonParseError, __resetRateLimiterForTest, __rateCapsForTest } from "./http_bridge.js";
 import type { BridgeHandle } from "./http_bridge.js";
 import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -119,22 +119,29 @@ describe("HTTP bridge — B0..B-paths PINNED IMMUNITY", () => {
     expect(j.error!.toLowerCase()).not.toContain("position");
   });
 
-  // B12 — per-route rate limit is generous on polygraph
-  it("B12: polygraph route handles 100 sequential POSTs without 429", async () => {
-    let ok = 0;
-    let rateLimited = 0;
-    for (let i = 0; i < 100; i++) {
-      const r = await fetch(`${baseUrl}/v1/polygraph/verify`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ sentence: `claim ${i}` }),
-      });
-      if (r.status === 200) ok++;
-      if (r.status === 429) rateLimited++;
-    }
-    // Polygraph cap is 600/min — 100 sequential MUST all pass.
-    expect(ok).toBeGreaterThanOrEqual(99);
-    expect(rateLimited).toBeLessThanOrEqual(1);
+  // B12 — per-route anti-flood (v2.28.1): the polygraph perSec cap absorbs a
+  // burst UP TO the cap and rejects a flood beyond it. (A concurrent fan-out
+  // lands in the same second deterministically, so this is timing-robust.)
+  it("B12: polygraph perSec cap absorbs a burst and rate-limits a flood", async () => {
+    __resetRateLimiterForTest();
+    const caps = __rateCapsForTest().polygraph;
+    const statuses = await Promise.all(
+      Array.from({ length: 100 }, (_, i) =>
+        fetch(`${baseUrl}/v1/polygraph/verify`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ sentence: `claim ${i}` }),
+        }).then((r) => r.status),
+      ),
+    );
+    const ok = statuses.filter((s) => s === 200).length;
+    const rateLimited = statuses.filter((s) => s === 429).length;
+    // a legitimate flurry up to the cap is served...
+    expect(ok).toBeGreaterThanOrEqual(1);
+    expect(ok).toBeLessThanOrEqual(caps.perSec + 5); // ...but NOT all 100 (flood capped near perSec)
+    // ...and the flood beyond the cap is rejected (the anti-flood actually fires).
+    expect(rateLimited).toBeGreaterThan(0);
+    expect(ok + rateLimited).toBe(100);
   });
 
   // B14 — CORS headers set even when rate-limited (preflight exempt)
@@ -164,14 +171,17 @@ describe("HTTP bridge — B0..B-paths PINNED IMMUNITY", () => {
     expect(blocked).toBe(0);
   });
 
-  // B15 — response sizes for real claims are not stubs
+  // B15 — response sizes for real claims are not stubs (reset the limiter first
+  // so a prior burst test can't leave this single request rate-limited).
   it("B15: real claim response is richer than 24-byte stub", async () => {
+    __resetRateLimiterForTest();
     const r = await fetch(`${baseUrl}/v1/polygraph/verify`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ sentence: "this is a real test claim with content" }),
     });
     const text = await r.text();
+    expect(r.status).toBe(200);
     expect(text.length).toBeGreaterThan(50);
   });
 

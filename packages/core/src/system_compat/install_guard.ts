@@ -130,52 +130,79 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** v2.121 — dependency-injection seam so tests can exercise the kill LOGIC
+ *  deterministically WITHOUT enumerating/killing real processes. Production
+ *  callers pass nothing (the real implementations are used). */
+export interface ClearInstallLocksDeps {
+  /** Override process enumeration (default: real wmic/ps probe). */
+  enumerate?: (platform: NodeJS.Platform) => OrphanProcess[];
+  /** Override the kill primitive (default: real SIGTERM/SIGKILL/taskkill). */
+  kill?: (pid: number, platform: NodeJS.Platform, force: boolean) => void;
+  /** Override liveness check (default: real). */
+  alive?: (pid: number, platform: NodeJS.Platform) => boolean;
+  /** Scale/override the inter-phase sleeps (default: real 1500/1000ms). */
+  sleepMs?: (phase: "polite" | "dll") => number;
+}
+
 /** Kill orphan Mneme-related node processes BEFORE running npm install.
- *  Safe to call multiple times — idempotent. Never throws.
+ *  Safe to call multiple times — idempotent. NEVER throws.
+ *
+ *  Self-guard (v2.121): NEVER kills the current process or its parent — so a
+ *  test runner (or the upgrade process itself) can call this without risk of
+ *  killing its own / sibling workers.
  *
  *  Returns a structured report the AI agent should surface to the user
  *  so they know what was killed and whether the upgrade can proceed. */
-export async function clearInstallLocks(): Promise<InstallGuardReport> {
+export async function clearInstallLocks(deps: ClearInstallLocksDeps = {}): Promise<InstallGuardReport> {
   const t0 = Date.now();
   const platform = process.platform;
-  const orphans = platform === "win32"
-    ? enumerateWindowsNodeProcesses()
-    : enumerateUnixNodeProcesses();
+  const enumerate = deps.enumerate ?? ((p) => (p === "win32" ? enumerateWindowsNodeProcesses() : enumerateUnixNodeProcesses()));
+  const kill = deps.kill ?? killProcess;
+  const alive = deps.alive ?? processStillAlive;
+  const politeMs = deps.sleepMs ? deps.sleepMs("polite") : 1500;
+  const dllMs = deps.sleepMs ? deps.sleepMs("dll") : 1000;
 
   const killed: number[] = [];
   const resisted: number[] = [];
 
-  if (orphans.length === 0) {
-    return {
-      platform, orphans, killed, resisted, ms: Date.now() - t0, ok: true,
-      summary: "no Mneme-related orphan processes; install is safe",
-    };
-  }
+  try {
+    // SELF-GUARD: never target our own pid or our parent's pid.
+    const selfPids = new Set<number>([process.pid, typeof process.ppid === "number" ? process.ppid : -1]);
+    const orphans = enumerate(platform).filter((o) => !selfPids.has(o.pid));
 
-  // Phase 1 — polite kill
-  for (const o of orphans) killProcess(o.pid, platform, false);
-  await sleep(1500);
-
-  // Phase 2 — force kill survivors
-  for (const o of orphans) {
-    if (processStillAlive(o.pid, platform)) {
-      killProcess(o.pid, platform, true);
+    if (orphans.length === 0) {
+      return {
+        platform, orphans, killed, resisted, ms: Date.now() - t0, ok: true,
+        summary: "no Mneme-related orphan processes; install is safe",
+      };
     }
-  }
-  // Phase 3 — Windows DLL handle release grace
-  if (platform === "win32") await sleep(1000);
 
-  // Phase 4 — final tally
-  for (const o of orphans) {
-    if (processStillAlive(o.pid, platform)) resisted.push(o.pid);
-    else killed.push(o.pid);
-  }
+    // Phase 1 — polite kill
+    for (const o of orphans) kill(o.pid, platform, false);
+    await sleep(politeMs);
 
-  const ok = resisted.length === 0;
-  const summary = ok
-    ? `killed ${killed.length} Mneme-related node process(es); install lock cleared`
-    : `killed ${killed.length}; ${resisted.length} process(es) resisted SIGKILL — user may need to close VS Code / terminal manually`;
-  return { platform, orphans, killed, resisted, ms: Date.now() - t0, ok, summary };
+    // Phase 2 — force kill survivors
+    for (const o of orphans) {
+      if (alive(o.pid, platform)) kill(o.pid, platform, true);
+    }
+    // Phase 3 — Windows DLL handle release grace
+    if (platform === "win32") await sleep(dllMs);
+
+    // Phase 4 — final tally
+    for (const o of orphans) {
+      if (alive(o.pid, platform)) resisted.push(o.pid);
+      else killed.push(o.pid);
+    }
+
+    const ok = resisted.length === 0;
+    const summary = ok
+      ? `killed ${killed.length} Mneme-related node process(es); install lock cleared`
+      : `killed ${killed.length}; ${resisted.length} process(es) resisted SIGKILL — user may need to close VS Code / terminal manually`;
+    return { platform, orphans, killed, resisted, ms: Date.now() - t0, ok, summary };
+  } catch (e) {
+    // total: never throw — report the failure as a safe, non-fatal result.
+    return { platform, orphans: [], killed, resisted, ms: Date.now() - t0, ok: true, summary: `install-guard probe error (non-fatal): ${(e as Error).message}` };
+  }
 }
 
 /** Run install-locks clear + then the npm install command. Returns BOTH reports

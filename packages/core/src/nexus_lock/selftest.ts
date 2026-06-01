@@ -32,6 +32,11 @@ export interface SelfTestResult {
 export function runSelfTests(): SelfTestResult[] {
   const out: SelfTestResult[] = [];
   const baseInput: SoulPromptV2Input = {
+    // Pin generation time so the "same input → same sig" determinism check is
+    // genuinely deterministic — buildSoulPromptV2 embeds `generatedAt` (from
+    // nowMs ?? Date.now()) in the signed text, so without a fixed nowMs two
+    // back-to-back builds straddling a clock tick produce different sigs.
+    nowMs: 1_747_900_800_000, // 2025-05-22T08:00:00Z, fixed
     receivingVendor: "gemini",
     originatingVendor: "claude-opus-4-7",
     currentMnemeVersion: "2.10.0",
