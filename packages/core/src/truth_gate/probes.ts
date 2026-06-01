@@ -373,6 +373,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.firewall.injection_defense",
+    kind: "boolean",
+    description: "STRUCTURAL CONTEXT FIREWALL (v2.130.0 — Indirect Prompt Injection / OWASP LLM01 defense): before an agent ingests untrusted file content, Mneme neutralizes known injection patterns + wraps the content as untrusted DATA. This probe asserts firewallGauntlet=100 on a labeled corpus: catalog-recall=100% (every known-injection sample caught) ∧ benign-false-positive-rate=0% ∧ neutralization-sound (the imperative text is removed from the sanitized copy) ∧ boundary-wraps (fortify applies the untrusted-data boundary) ∧ benign-preserved (benign content kept verbatim) ∧ blocks-destructive (rm -rf / exfiltration → verdict 'blocked') ∧ deterministic ∧ total. HONEST: 100% is on the KNOWN catalog + zero FP on the benign set (a closed, tested corpus); prompt injection is an open adversarial problem, so the data/instruction boundary is the always-on catch-all for UNKNOWN attacks — defense-in-depth, not an absolute guarantee.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const F = await import("../firewall/index.js" as string) as typeof import("../firewall/index.js");
+        const g = F.firewallGauntlet();
+        const ok = g.score === 100 && g.catalogRecall === 100 && g.benignFalsePositiveRate === 0 && g.neutralizationSound && g.boundaryWraps && g.benignPreserved && g.blocksDestructive && g.deterministic && g.stable;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} recall=${g.catalogRecall}% benignFP=${g.benignFalsePositiveRate}% neutralize=${g.neutralizationSound} boundary=${g.boundaryWraps} blocksDestructive=${g.blocksDestructive}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.settlement.signed_chain_audit",
     kind: "boolean",
     description: "SETTLEMENT LEDGER (v2.129.0 — the honest 'Stripe of AI Context / settlement layer'): a hash-chained, offline-auditable record of every AI↔local context exchange (blinded-payload hash + names/secrets hidden + local-verify verdict + tokens metered). This probe asserts settlementGauntlet=100: chain-verifies-offline ∧ tamper-localized (editing one tx breaks the chain AT that seq) ∧ reorder-detected ∧ statement-sums (tokens/% blinded/% locally-verified computed correctly) ∧ USD+fee-only-from-the-user-rate (never invented) ∧ deterministic ∧ total. The achievable peak of the image's 'SVE'/settlement vision — an audit + metering substrate, NOT homomorphic encryption.",

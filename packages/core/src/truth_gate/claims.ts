@@ -914,6 +914,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.visual.portable_render",
     severity: "block",
   },
+  // ── v2.130.0 — STRUCTURAL CONTEXT FIREWALL: Indirect Prompt Injection (OWASP LLM01) defense ──
+  {
+    id: "claim.firewall.injection_defense",
+    source: "v2.130.0 release notes",
+    text: "Mneme's STRUCTURAL CONTEXT FIREWALL defends against Indirect Prompt Injection (OWASP LLM01 — the #1 LLM risk): before an agent ingests untrusted file content (a dependency, a fetched page, an external commit), known injection patterns hidden in comments/strings (override / role-impersonation / destructive-command / exfiltration / covert / tool-injection) are NEUTRALIZED in place, and the content is WRAPPED in an untrusted-DATA boundary so the model treats it as data, never commands. firewallGauntlet=100 on a labeled corpus: catalog-recall=100% ∧ benign-false-positive=0% ∧ neutralization-sound ∧ boundary-wraps ∧ benign-preserved ∧ blocks-destructive ∧ deterministic ∧ total. HONEST: the 100% is on the KNOWN catalog + zero false-positives on the benign set (a closed, tested corpus) — prompt injection is an OPEN adversarial problem, so NO detector is 100% against unknown future attacks; the data/instruction boundary is the always-on, attack-agnostic catch-all. Defense-in-depth, NOT an absolute guarantee",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.firewall.injection_defense",
+    severity: "block",
+  },
   // ── v2.129.0 — SETTLEMENT LEDGER: the honest "Stripe of AI Context" audit/metering layer ──
   {
     id: "claim.settlement.signed_chain_audit",

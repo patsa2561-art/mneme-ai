@@ -502,7 +502,21 @@ export function runACGV(input: ACGVRunInput): ACGVResult {
   const canonicalClaim = canonicalRewrite(claim);
   const canonicalNumbers = extractCanonicalNumbers(claim);
   const numberBridged = canonicalClaim !== claim;
-  if (numberBridged) {
+  // v2.130.0 — CURRENT-VERSION ORDERING FIX: a claim that cites the INSTALLED
+  // version ("Mneme is at version <installed>") is TRUE. Its only "numbers" are
+  // the correct version digits, so the NUMBER_BRIDGE layer must NOT fire — its
+  // caveat triggers demo.ts's layer-0 short-circuit, which blocks the forensic
+  // layer (already ACCEPTED for the live version) from promoting the verdict to
+  // TRUSTWORTHY. This produced the v28 spurious MIXED. Narrow + additive: only
+  // suppresses number-bridge when the cited version EXACTLY equals the installed
+  // one; historical / future / stale claims are untouched (still bridged + handled
+  // by the version-semantic layer below). Version parsing must never throw.
+  let isCurrentVersionClaim = false;
+  try {
+    const vsEarly = detectVersionSemantic(claim, repoRoot);
+    isCurrentVersionClaim = vsEarly.matched && vsEarly.classification === "current";
+  } catch { /* leave false */ }
+  if (numberBridged && !isCurrentVersionClaim) {
     caveats.push(`NUMBER_BRIDGE:${canonicalNumbers.length}_canonicalized`);
   }
   // v2.44.0 — AUTO-NUMBER-GROUNDING: when claim has "Mneme has N <noun>"
