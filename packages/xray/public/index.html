@@ -125,6 +125,7 @@
   .bitem .arr{color:#c2c6cd}
   .bitem.muted{cursor:default;color:var(--sub)}.bitem.muted:hover{background:none}
   .lock{margin-right:4px}
+  .boardnote{font-size:12.5px;color:var(--sub);margin:0 0 14px;line-height:1.5}.boardnote b{color:var(--ink2);font-weight:600}
   .signincta{border:1px dashed var(--line);border-radius:var(--r);padding:28px;text-align:center;color:var(--sub);font-size:14px;line-height:1.7;background:var(--soft)}
   .signincta b{color:var(--ink)}
   .listfoot{display:flex;justify-content:space-between;align-items:center;padding:14px 4px 0;font-size:13px}
@@ -287,6 +288,7 @@
 
   <div class="board">
     <div class="tabs"><button id="tabBoard" class="tab on">Recently X-rayed</button><button id="tabMine" class="tab" style="display:none">My repos</button></div>
+    <p class="boardnote" id="boardnote">🌍 <b>Public</b> — recent X-Rays of <b>public</b> repos, visible to everyone. Private repos never appear here.</p>
     <div id="board"></div>
   </div>
 </div>
@@ -408,8 +410,14 @@ async function openReport(fp, isPrivate){
     if(signed&&signed.report){ render(signed); window.scrollTo({top:0,behavior:"smooth"}); }
   }catch{}
 }
-document.getElementById("tabBoard").addEventListener("click",e=>{tab="board";setTab(e.target);loadList();});
-document.getElementById("tabMine").addEventListener("click",e=>{tab="mine";setTab(e.target);loadList();});
+function updateBoardNote(){
+  const n=document.getElementById("boardnote"); if(!n) return;
+  n.innerHTML = tab==="mine"
+    ? "🔒 <b>Private to you</b> — only someone with your key sees these. Includes your private/local repos."
+    : "🌍 <b>Public</b> — recent X-Rays of <b>public</b> repos, visible to everyone. Private repos never appear here.";
+}
+document.getElementById("tabBoard").addEventListener("click",e=>{tab="board";setTab(e.target);updateBoardNote();loadList();});
+document.getElementById("tabMine").addEventListener("click",e=>{tab="mine";setTab(e.target);updateBoardNote();loadList();});
 function setTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");}
 
 document.getElementById("f").addEventListener("submit", async e=>{
@@ -524,7 +532,7 @@ document.getElementById("localpack").addEventListener("click", async ()=>{
   }catch(ex){ err.textContent="Could not reach the local agent. Run: npx @mneme-ai/xray bridge"; err.style.display="block"; }
   finally{ btn.disabled=false; btn.textContent="📦 Pack"; }
 });
-document.getElementById("copyr").textContent = "© " + new Date().getFullYear() + " Mneme · MIT";
+document.getElementById("copyr").textContent = "© " + new Date().getFullYear() + " Mneme";
 detectBridge();
 refreshKeyState();
 loadList();
