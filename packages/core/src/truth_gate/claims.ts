@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.149.0 — CANON: the Accountability-Record Standard (moat #2) ──
+  {
+    id: "claim.canon.accountability_standard",
+    source: "v2.149.0 release notes",
+    text: "Mneme's CANON is the Accountability-Record Standard (moat #2 — the 'NVD/Visa-of-AI'): a single, VERSIONED, Ed25519 OFFLINE-verifiable record format for 'an AI did/decided X, here's the proof' that ANY third party (auditor / insurer / regulator / competitor) can emit AND verify with the public key alone, WITHOUT trusting or running Mneme. It sits on the NOTARY spine (asymmetric — no shared secret, unlike the HMAC apostille ledger), binds the underlying payload by HASH (proves what was decided without exposing it), and chains by lineage. canonGauntlet=100: builds a conformant record ∧ canonicalize is deterministic + field-order-independent + sig-excluded ∧ tampering with any field breaks the recordId (tamper-evident) ∧ a v1 verifier accepts CANON/1.x ∧ rejects CANON/2.0 with a clear reason (version policy) ∧ a non-conformant record names the missing field ∧ a record from a DIFFERENT issuer still conforms + verifies (vendor-neutral) ∧ the payload is bound by hash, not exposed ∧ deterministic ∧ total. CLI `mneme canon emit|verify|spec`; MCP `mneme.canon.emit` / `mneme.canon.verify` (self-attesting). HONEST (DIAKRISIS): this is the buildable, measurable SUBSTRATE of a standard (a versioned schema + a canonicalizer + an offline conformance/version verifier + the Ed25519 signature at the boundary) — it is NOT, by itself, 'the world adopted our standard' (adoption is a market outcome, not a code guarantee). What is proven is exactly the property a standard NEEDS: a record that is conformant, tamper-evident, version-compatible, and verifiable by anyone. A model is not a moat; if the canonical FORMAT auditors/insurers accept is Mneme's, everyone must speak it.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.canon.accountability_standard",
+    severity: "block",
+  },
   // ── v2.148.0 — SIEGE: the Adversarial Self-Bounty (moat #3) ──
   {
     id: "claim.siege.bypass_resistance",

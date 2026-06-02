@@ -318,6 +318,7 @@ export * as agentGovernor from "./governor/index.js";
 export * as intentGateway from "./intent_gateway/index.js";
 export * as mycelium from "./mycelium/index.js";
 export * as siege from "./siege/index.js";
+export * as canon from "./canon/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

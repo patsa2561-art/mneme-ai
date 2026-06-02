@@ -148,6 +148,7 @@ import { registerGovernCommands } from "./commands/govern.js";
 import { registerGatewayCommands } from "./commands/gateway.js";
 import { registerMyceliumCommands } from "./commands/mycelium.js";
 import { registerSiegeCommands } from "./commands/siege.js";
+import { registerCanonCommands } from "./commands/canon.js";
 import { attachRegretOracle } from "./commands/regret.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
@@ -4964,6 +4965,7 @@ export async function run(argv: string[]): Promise<void> {
   registerGatewayCommands(program);
   registerMyceliumCommands(program);
   registerSiegeCommands(program);
+  registerCanonCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

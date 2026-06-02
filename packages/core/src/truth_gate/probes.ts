@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.canon.accountability_standard",
+    kind: "boolean",
+    description: "CANON (v2.149.0 — the Accountability-Record Standard, moat #2). A versioned, Ed25519 OFFLINE-verifiable record format for 'an AI did/decided X, here's the proof' that ANY third party (auditor/insurer/regulator/competitor) can emit + verify with the public key alone, without trusting Mneme — the neutral 'NVD/Visa-of-AI' format on the NOTARY spine. This probe asserts canonGauntlet=100: builds a conformant record ∧ canonicalize is deterministic + field-order-independent + excludes the sig ∧ tampering with ANY field breaks the recordId (tamper-evident) ∧ a v1 verifier accepts CANON/1.x ∧ rejects CANON/2.0 with a clear reason (version policy) ∧ a non-conformant record names the missing field ∧ a record from a DIFFERENT issuer (a competitor) still conforms + verifies (vendor-neutral) ∧ the payload is bound by hash, not exposed ∧ deterministic ∧ total. HONEST: this is the buildable, measurable substrate of a standard (versioned schema + canonicalizer + offline conformance/version verifier + Ed25519 sig at the boundary); it is NOT, by itself, 'the world adopted our standard' (adoption is a market outcome) — what's proven is the property a standard needs: conformant, tamper-evident, version-compatible, verifiable by anyone.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const C = await import("../canon/index.js" as string) as typeof import("../canon/index.js");
+        const g = C.canonGauntlet();
+        const ok = g.score === 100 && g.buildsConformant && g.canonicalizeDeterministic && g.tamperBreaksRecordId && g.versionCompatibleAccepts && g.versionMismatchRejected && g.missingFieldNamed && g.vendorNeutral && g.bindsPayloadByHash && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} conformant=${g.buildsConformant} tamper=${g.tamperBreaksRecordId} versionPolicy=${g.versionMismatchRejected} vendorNeutral=${g.vendorNeutral} bindsByHash=${g.bindsPayloadByHash}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.siege.bypass_resistance",
     kind: "boolean",
     description: "SIEGE (v2.148.0 — the Adversarial Self-Bounty, moat #3). A command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score: fire the attack corpus at a gate, measure how many destructive payloads it withstands vs lets through, report a Wilson-LOWER-bound resistance score + band (FORTRESS/STRONG/WEAK/BREACHED). Every new bypass folds back into the corpus → the gate gets provably harder. This probe asserts siegeGauntlet=100: measures resistance ∧ DISCRIMINATES a sound gate (FORTRESS) from a naive leading-token denylist (low LB — it misses the obfuscation family) ∧ the Wilson LB is conservative (below the point rate) ∧ reports the bypasses (incl. obfuscated) ∧ self-hardens (a found bypass grows the corpus, dedup'd) ∧ per-class breakdown ∧ deterministic ∧ total. HONEST: measures resistance vs a KNOWN, growing corpus — NOT a proof of 'unbreakable' (an open adversarial problem; a novel attack not in the corpus is not yet measured — which is why the corpus self-hardens + the score is a LOWER bound, never a point estimate).",
