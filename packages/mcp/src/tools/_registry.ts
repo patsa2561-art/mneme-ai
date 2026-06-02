@@ -96,6 +96,7 @@ import { GATEWAY_TOOLS } from "./_gateway_tools.js";
 import { MYCELIUM_TOOLS } from "./_mycelium_tools.js";
 import { SIEGE_TOOLS } from "./_siege_tools.js";
 import { CANON_TOOLS } from "./_canon_tools.js";
+import { MOAT_TOOLS } from "./_moat_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -312,6 +313,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...MYCELIUM_TOOLS,
     ...SIEGE_TOOLS,
     ...CANON_TOOLS,
+    ...MOAT_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

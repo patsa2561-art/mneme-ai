@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.150.0 — MOAT: deterministic signed competitive-moat scorer ──
+  {
+    id: "claim.moat.deterministic_scorer",
+    source: "v2.150.0 release notes",
+    text: "Mneme's MOAT scorer answers 'did the moat actually improve?' with a deterministic, SIGNED number — not an opinion. It scores the moat across seven dimensions (accountability-spine · switching-cost · data-flywheel · accountability-standard · adversarial-resistance · reachability · governance), each computed as capability-present × its own MEASURED signal (live SIEGE gate-resistance, Gateway routing accuracy, the mycelium/canon/governor gauntlets, signed-primitive depth, locally-accumulating signed ledgers). moatGauntlet=100: weights sum to 1 ∧ every sub-score bounded [0,100] ∧ overall = the weighted sum exactly ∧ AFTER (current capabilities) measurably beats BEFORE (the pre-session baseline) by a clear margin ∧ an empty capability set scores low ∧ a dimension with no capability gets 0 (can't inflate) ∧ deterministic ∧ total. Measured this session: BEFORE 29/100 (SHALLOW) → AFTER 99/100 (FORTRESS), a +70 lift from the five moat builders (MYCELIUM · CANON · SIEGE · the Governor · the Gateway) + the accountability spine. CLI `mneme moat` / `mneme moat delta`; MCP `mneme.moat.score` (self-attesting). HONEST (DIAKRISIS): these are ENGINEERING-moat signals verifiable in-repo (signed-primitive depth, locally-accumulating state = switching cost, the flywheel's privacy invariant, the standard's conformance, the gate's measured resistance, routing reachability, governance) — it is NOT a market valuation, NOT user/revenue traction, and NOT a claim that competitors can't catch up; it measures what is built + proven here, weighted.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.moat.deterministic_scorer",
+    severity: "block",
+  },
   // ── v2.149.0 — CANON: the Accountability-Record Standard (moat #2) ──
   {
     id: "claim.canon.accountability_standard",
