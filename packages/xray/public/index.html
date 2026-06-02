@@ -28,10 +28,14 @@
   h1{font-size:54px;line-height:1.04;font-weight:700;margin:18px 0 14px;letter-spacing:-.035em;color:var(--ink)}
   .lede{color:var(--sub);font-size:19px;line-height:1.55;max-width:500px;margin:0 auto;font-weight:400}
   form{display:flex;gap:10px;margin:38px auto 10px;max-width:600px}
-  input{flex:1;padding:0 18px;height:54px;border:1px solid var(--line);border-radius:var(--rs);
+  input{flex:1;padding:0 18px;height:54px;border:1.5px solid #d3d6dd;border-radius:var(--rs);
     font-size:16px;color:var(--ink);outline:none;background:#fff;transition:border-color .18s, box-shadow .18s}
-  input::placeholder{color:#b7bbc2}
+  input::placeholder{color:#aeb2ba}
   input:focus{border-color:var(--a);box-shadow:0 0 0 4px var(--a-soft)}
+  .btnhelp{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 26px;margin:14px auto 0;max-width:640px;
+    color:var(--sub);font-size:13px;line-height:1.5}
+  .btnhelp b{color:var(--ink2);font-weight:600}
+  .keyhelp{font-size:12.5px;color:var(--sub);margin:12px 0 0;line-height:1.5;text-align:center}
   button{height:54px;padding:0 24px;border:0;border-radius:var(--rs);background:var(--ink);color:#fff;
     font-size:15.5px;font-weight:560;cursor:pointer;transition:transform .12s, opacity .18s, background .18s;white-space:nowrap}
   button:hover{background:#22232c}
@@ -126,6 +130,8 @@
   .pactions{display:flex;gap:10px;flex-wrap:wrap;padding:16px 30px;background:var(--soft);border-bottom:1px solid var(--line2)}
   .pre{max-height:440px;overflow:auto;margin:0;padding:20px 30px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:#4b5059}
   .pwhy{padding:13px 30px;font-size:12.5px;color:var(--sub);background:var(--soft)}
+  .paste-hint{align-self:center;font-size:12.5px;color:var(--sub)}
+  .paste-hint b{color:var(--ink2);font-weight:560}
   /* local bridge panel */
   .localbox{max-width:560px;margin:22px auto 0;border:1px solid var(--line);border-radius:var(--rs);padding:18px 20px;background:var(--soft);display:none;text-align:left}
   .localbox.on{display:block}
@@ -181,19 +187,19 @@
     <p class="lede">Paste a public repo. Get a signed, reproducible X-Ray — dependencies, secrets, bus factor, vitality, complexity. No source leaves the machine. No AI guesses anything.</p>
     <form id="f">
       <input id="u" placeholder="https://github.com/owner/repo" autocomplete="off" spellcheck="false" />
-      <button id="go" type="submit">X-Ray</button>
-      <button id="packgo" type="button" class="ghostbtn" title="Build a prioritized, secret-redacted, token-budgeted context pack to paste into ChatGPT/Claude">📦 AI Pack</button>
+      <button id="go" type="submit" title="Health report: dependencies, secrets, risk, who-to-ask">X-Ray</button>
+      <button id="packgo" type="button" class="ghostbtn" title="Bundle the whole repo into one AI-ready text you paste into any AI chat">📦 AI Pack</button>
     </form>
-    <p class="hint">Every number is <b>reproducible</b> from git / AST / npm metadata and sealed with an <b>offline-verifiable</b> signature.</p>
-    <div class="steps">
-      <span><b>1</b> Paste a public repo URL</span>
-      <span><b>2</b> Get a signed grade in seconds</span>
-      <span><b>3</b> Private repo? run <code>npx mneme-xray ./path --publish</code> — source never leaves your machine</span>
+    <div class="btnhelp">
+      <span><b>X-Ray</b> — instant health report: dependencies, secrets, risk &amp; who-to-ask.</span>
+      <span><b>📦 AI Pack</b> — bundle the whole repo into one text to paste into any AI chat.</span>
     </div>
+    <p class="hint">Every number is <b>reproducible</b> from git, code &amp; package metadata and sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private folder? run <code>npx @mneme-ai/xray bridge</code> and Browse below.</span></p>
     <details class="keybox">
-      <summary>Have an X-Ray key? Sign in to keep your reports</summary>
+      <summary>🔖 Optional — save your reports</summary>
+      <div class="keyhelp">A “key” is simply a password you make up (no sign-up). Use the same one any time to find your reports under <b>My repos</b>.</div>
       <div class="keyrow">
-        <input id="key" placeholder="your key (any secret string you choose)" autocomplete="off" />
+        <input id="key" placeholder="make up a password — e.g. my-secret-123" autocomplete="off" />
         <button id="savekey" type="button">Save</button>
         <span id="keystate" class="kstate"></span>
       </div>
@@ -220,7 +226,7 @@
     <div id="board"></div>
   </div>
 </div>
-<footer>Mneme — the trust &amp; cost layer for code. Deterministic. Signed. Local-first.</footer>
+<footer>Mneme — the trust &amp; cost layer for code. Deterministic · Signed · Local-first.<br/><span id="copyr">© Mneme</span></footer>
 
 <script src="/card.js"></script>
 <script>
@@ -244,11 +250,13 @@ function mountShare(r){
   }
   const badge = `${origin}/badge/${badgeTarget}.svg`;
   const md = `[![Mneme X-Ray](${badge})](${link})`;
+  const ogimg = `${origin}/og/${r.fingerprint}.png`;
   el.innerHTML = `
     <img class="badgeimg" src="${badge}" alt="X-Ray badge"/>
-    <button class="sbtn" data-copy="${esc(md)}">Copy badge markdown</button>
-    <button class="sbtn ghost" data-copy="${esc(link)}">Copy permalink</button>
-    <a class="sbtn ghost" href="${link}" target="_blank" rel="noopener">Open ↗</a>`;
+    <button class="sbtn" data-copy="${esc(md)}">Copy badge for README</button>
+    <button class="sbtn ghost" data-copy="${esc(link)}">Copy share link</button>
+    <a class="sbtn ghost" href="${link}" target="_blank" rel="noopener">Open ↗</a>
+    <a class="sbtn ghost" href="${ogimg}" target="_blank" rel="noopener" title="The preview image shown when you share the link on X/Slack/LinkedIn">🖼 Preview image</a>`;
   el.querySelectorAll("[data-copy]").forEach(b=>b.addEventListener("click",async()=>{
     try{ await navigator.clipboard.writeText(b.dataset.copy); const t=b.textContent; b.textContent="Copied ✓"; setTimeout(()=>b.textContent=t,1200);}catch{}
   }));
@@ -364,7 +372,7 @@ document.getElementById("localgo").addEventListener("click", async ()=>{
   }catch(ex){ err.textContent="Could not reach the local agent. Run: npx @mneme-ai/xray bridge"; err.style.display="block"; }
   finally{ btn.disabled=false; btn.textContent="Scan local"; }
 });
-// ---- AI CONTEXT PACK (beats gitingest: prioritized · budgeted · secret-redacted) ----
+// ---- AI CONTEXT PACK (prioritized · budgeted · secret-redacted · fits any model) ----
 function renderPack(p){
   const md = p.markdown || "";
   document.getElementById("packout").innerHTML = `
@@ -378,13 +386,14 @@ function renderPack(p){
       </div>
     </div>
     <div class="pactions">
-      <button class="sbtn" id="pcopy">Copy for ChatGPT / Claude</button>
+      <button class="sbtn" id="pcopy">📋 Copy for your AI</button>
       <button class="sbtn ghost" id="pdl">Download .md</button>
+      <span class="paste-hint">→ paste into <b>any</b> AI chat (ChatGPT · Claude · Grok · Gemini · Copilot…) so it understands your whole codebase</span>
     </div>
-    <div class="pwhy">Unlike a raw dump (gitingest): prioritized by real signals, secret-redacted, and budgeted so it actually fits the model — not millions of unusable tokens.</div>
+    <div class="pwhy">Smarter than a raw repo dump: prioritized by real signals, secret-redacted, and budgeted so it actually fits the model — not millions of unusable tokens.</div>
     <pre class="pre">${esc(md.slice(0,20000))}${md.length>20000?"\n\n… (truncated preview — Copy/Download for the full pack)":""}</pre>
   </div>`;
-  document.getElementById("pcopy").addEventListener("click",async e=>{try{await navigator.clipboard.writeText(md);e.target.textContent="Copied ✓";setTimeout(()=>e.target.textContent="Copy for ChatGPT / Claude",1400);}catch{}});
+  document.getElementById("pcopy").addEventListener("click",async e=>{try{await navigator.clipboard.writeText(md);e.target.textContent="Copied ✓ — paste into any AI";setTimeout(()=>e.target.textContent="📋 Copy for your AI",1600);}catch{}});
   document.getElementById("pdl").addEventListener("click",()=>{const b=new Blob([md],{type:"text/markdown"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(p.repoName||"repo").replace(/\W+/g,"-")+"-context-pack.md";a.click();});
 }
 document.getElementById("packgo").addEventListener("click", async ()=>{
@@ -435,6 +444,7 @@ document.getElementById("localpack").addEventListener("click", async ()=>{
   }catch(ex){ err.textContent="Could not reach the local agent. Run: npx @mneme-ai/xray bridge"; err.style.display="block"; }
   finally{ btn.disabled=false; btn.textContent="📦 Pack"; }
 });
+document.getElementById("copyr").textContent = "© " + new Date().getFullYear() + " Mneme · MIT";
 detectBridge();
 refreshKeyState();
 loadList();
