@@ -8,7 +8,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const ALLOWED = /^https:\/\/(github\.com|gitlab\.com|bitbucket\.org)\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(\.git)?\/?$/;
+// owner/repo, OR deeper (GitLab nested subgroups: group/subgroup/repo). >=2 segments.
+const ALLOWED = /^https:\/\/(github\.com|gitlab\.com|bitbucket\.org)\/[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)+\/?$/;
 
 export function isAllowedPublicUrl(url: string): boolean {
   if (/@|:\/\/[^/]*:[^/]*@/.test(url.replace("https://", ""))) return false; // reject embedded creds

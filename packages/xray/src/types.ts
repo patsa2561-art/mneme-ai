@@ -24,14 +24,26 @@ export interface XRaySubject {
   commitHash: string;
 }
 
-/** Dependency mortality — "which of your dependencies are dying". */
+/** Dependency mortality + license/supply-chain risk. */
 export interface DepsBlock {
   total: number;
   byBand: Record<"thriving" | "healthy" | "watch" | "moribund" | "dead", number>;
   /** Worst offenders first — name + band + 18-month abandonment probability + a known successor. */
   atRisk: Array<{ name: string; band: string; probability18mo: number; successor: string | null }>;
+  /** License class counts (permissive / copyleft / unknown). */
+  licenses: Record<"permissive" | "weak-copyleft" | "strong-copyleft" | "unknown", number>;
+  /** Deps whose license is copyleft/unknown — a commercial-use review flag. */
+  licenseFlags: Array<{ name: string; license: string; class: string }>;
   /** True when npm metadata could not be fetched for some deps (honest degradation). */
   partial: boolean;
+  note: string;
+}
+
+/** Change-coupling (temporal coupling) — files that change together. */
+export interface CouplingBlock {
+  windowDays: number;
+  /** Strongest co-change pairs. hidden = different directories (a non-obvious dependency). */
+  pairs: Array<{ a: string; b: string; coChanges: number; confidence: number; hidden: boolean }>;
   note: string;
 }
 
@@ -86,11 +98,15 @@ export interface ComplexityBlock {
   note: string;
 }
 
-/** Behavioral hotspots — change-frequency × size (refactor-ROI targets). */
+/** Behavioral hotspots — change-frequency × size (refactor-ROI targets).
+ *  Each hotspot also names the primary author (who to ask = onboarding signal),
+ *  and `trend` is per-bucket commit activity (oldest→newest) for a sparkline. */
 export interface HotspotsBlock {
   windowDays: number;
   filesConsidered: number;
-  hotspots: Array<{ file: string; changes: number; loc: number; score: number }>;
+  hotspots: Array<{ file: string; changes: number; loc: number; score: number; expert: string; authors: number }>;
+  /** commit counts per equal time bucket, oldest → newest (sparkline). */
+  trend: number[];
   note: string;
 }
 
@@ -114,6 +130,7 @@ export interface XRayReport {
   age: AgeBlock;
   complexity: ComplexityBlock;
   hotspots: HotspotsBlock;
+  coupling: CouplingBlock;
   /** sha256 over the canonicalised metric blocks — a tamper-evident content id. */
   fingerprint: string;
 }

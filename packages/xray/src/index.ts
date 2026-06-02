@@ -18,3 +18,6 @@ export { defaultFetcher, type MetaFetcher } from "./battery/deps.js";
 export { publishReport, type PublishResult } from "./publish.js";
 export { createXRayServer } from "./server.js";
 export { CosmicMonitor, computeStatus, cosmicBadgeSvg, type CosmicStatus, type Sample } from "./cosmic.js";
+export { runBridge } from "./bridge.js";
+export { analyzeCoupling } from "./battery/coupling.js";
+export { licenseClass } from "./battery/deps.js";

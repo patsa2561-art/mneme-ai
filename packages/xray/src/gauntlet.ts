@@ -21,12 +21,13 @@ function cleanFixture(): XRayReport {
     subject: { kind: "git-url", ref: "https://github.com/acme/widget", repoName: "acme/widget", commitHash: "abc123def456" },
     generatedAt: "2026-01-01T00:00:00.000Z",
     summary: { headline: "Mixed", grade: "C", signalsRun: 5, bullets: ["🔑 No credential patterns found in tracked files."] },
-    deps: { total: 12, byBand: { thriving: 8, healthy: 2, watch: 1, moribund: 1, dead: 0 }, atRisk: [{ name: "request", band: "dead", probability18mo: 0.9, successor: "got" }], partial: false, note: "1 dying." },
+    deps: { total: 12, byBand: { thriving: 8, healthy: 2, watch: 1, moribund: 1, dead: 0 }, atRisk: [{ name: "request", band: "dead", probability18mo: 0.9, successor: "got" }], licenses: { permissive: 11, "weak-copyleft": 0, "strong-copyleft": 1, unknown: 0 }, licenseFlags: [{ name: "some-gpl-lib", license: "GPL-3.0", class: "strong-copyleft" }], partial: false, note: "1 dying." },
     secrets: { filesScanned: 40, totalFindings: 0, excludedTestHits: 3, byKind: {}, hits: [], worstVerdict: "ALLOW", note: "clean" },
     busFactor: { authors: 5, singleOwnerFilePct: 22.5, fragileFiles: [{ file: "src/core.ts", topAuthorShare: 0.9, commits: 30 }], topContributorShare: 41.2, busFactor: 2, note: "5 authors" },
     age: { bornAt: "2020-01-01", lastCommitAt: "2026-01-01", lifespan: "6 years", lifespanDays: 2192, totalCommits: 1200, totalAuthors: 5, dormant: false, vitality: "active", note: "active" },
     complexity: { filesAnalysed: 40, totalSymbols: 320, hotspots: [{ file: "src/core.ts", symbol: "function handleRequest(req, res)", bodyLines: 180, startLine: 12 }], maxDepth: 4, note: "hotspot" },
-    hotspots: { windowDays: 365, filesConsidered: 40, hotspots: [{ file: "src/core.ts", changes: 30, loc: 400, score: 12000 }], note: "Hotspot: src/core.ts — changed 30× and 400 lines." },
+    hotspots: { windowDays: 365, filesConsidered: 40, hotspots: [{ file: "src/core.ts", changes: 30, loc: 400, score: 12000, expert: "alice@acme.dev", authors: 3 }], trend: [2, 4, 6, 3, 8, 5, 7, 9], note: "Hotspot: src/core.ts — changed 30× and 400 lines." },
+    coupling: { windowDays: 365, pairs: [{ a: "src/core.ts", b: "src/api/routes.ts", coChanges: 12, confidence: 0.8, hidden: true }], note: "src/core.ts ⇄ src/api/routes.ts change together 80%." },
     fingerprint: "deadbeef",
   };
 }

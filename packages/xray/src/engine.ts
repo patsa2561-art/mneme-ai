@@ -13,6 +13,7 @@ import { analyzeBusFactor } from "./battery/busfactor.js";
 import { analyzeAge } from "./battery/age.js";
 import { analyzeComplexity } from "./battery/complexity.js";
 import { analyzeHotspots } from "./battery/hotspots.js";
+import { analyzeCoupling } from "./battery/coupling.js";
 import { shallowClone } from "./clone.js";
 import { headCommit, repoNameFromUrl, repoNameFromPath } from "./util.js";
 
@@ -51,10 +52,11 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
     const age = analyzeAge(repoPath, now);
     const complexity = analyzeComplexity(repoPath, maxFiles);
     const hotspots = analyzeHotspots(repoPath, now);
+    const coupling = analyzeCoupling(repoPath, now);
 
-    const summary = grade({ deps, secrets, busFactor, age, complexity, hotspots });
+    const summary = grade({ deps, secrets, busFactor, age, complexity, hotspots, coupling });
 
-    const blocks = { deps, secrets, busFactor, age, complexity, hotspots };
+    const blocks = { deps, secrets, busFactor, age, complexity, hotspots, coupling };
     const fingerprint = createHash("sha256")
       .update(JSON.stringify({ subject: { repoName: subject.repoName, commitHash: subject.commitHash }, blocks }))
       .digest("hex");
@@ -73,7 +75,7 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
 }
 
 /** Deterministic 0-100 health score → letter grade, with one-line bullets. */
-function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "complexity" | "hotspots">): XRaySummary {
+function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "complexity" | "hotspots" | "coupling">): XRaySummary {
   let score = 100;
   const bullets: string[] = [];
   let signalsRun = 0;
@@ -94,16 +96,20 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
     );
   }
 
-  // deps
+  // deps (mortality + license)
   if (b.deps.total > 0) {
     signalsRun++;
     const dying = b.deps.byBand.moribund + b.deps.byBand.dead;
+    const strongCopyleft = b.deps.licenses["strong-copyleft"];
     score -= Math.min(20, dying * 5);
+    score -= Math.min(10, strongCopyleft * 5); // GPL/AGPL in a commercial codebase = real risk
     bullets.push(
       dying === 0
         ? `📦 ${b.deps.total} deps, none dying.`
         : `💀 ${dying} of ${b.deps.total} deps are dying${b.deps.atRisk[0]?.successor ? ` (e.g. ${b.deps.atRisk[0].name} → ${b.deps.atRisk[0].successor})` : ""}.`,
     );
+    const copyleft = b.deps.licenses["strong-copyleft"] + b.deps.licenses["weak-copyleft"];
+    if (copyleft > 0) bullets.push(`⚖️ ${copyleft} copyleft-licensed dep(s)${b.deps.licenseFlags[0] ? ` (e.g. ${b.deps.licenseFlags[0].name}: ${b.deps.licenseFlags[0].license})` : ""} — review for commercial use.`);
   }
 
   // bus factor
@@ -143,7 +149,14 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
   if (b.hotspots.hotspots.length > 0) {
     signalsRun++;
     const h = b.hotspots.hotspots[0];
-    bullets.push(`🔥 Refactor first: ${h.file} — changed ${h.changes}× · ${h.loc} lines (churn × size).`);
+    bullets.push(`🔥 Refactor first: ${h.file} — changed ${h.changes}× · ${h.loc} lines${h.expert ? ` (ask: ${h.expert})` : ""}.`);
+  }
+
+  // change-coupling — informational (hidden dependencies)
+  if (b.coupling.pairs.length > 0) {
+    signalsRun++;
+    const c = b.coupling.pairs[0];
+    bullets.push(`🔗 ${c.a} ⇄ ${c.b} change together ${Math.round(c.confidence * 100)}%${c.hidden ? " (hidden cross-dir coupling)" : ""}.`);
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));

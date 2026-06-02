@@ -109,7 +109,18 @@
   .muted{color:var(--sub)}
   /* crisper section separation */
   .card .top{background:linear-gradient(#fff,#fcfcfd)}
-  .row .k{font-weight:560}
+  .row .k{font-weight:560;display:flex;flex-direction:column;gap:3px}
+  .kdesc{font-size:11px;color:var(--sub);text-transform:none;letter-spacing:0;font-weight:400;line-height:1.3}
+  .spark{font-family:ui-monospace,Menlo,monospace;letter-spacing:1px;color:var(--a)}
+  /* local-folder bridge panel */
+  .localbox{max-width:560px;margin:18px auto 0;border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--soft);display:none}
+  .localbox.on{display:block}
+  .localbox .lh{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:560}
+  .localdot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+  .localrow{display:flex;gap:8px;margin-top:10px}
+  .localrow input{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:ui-monospace,Menlo,monospace}
+  .localrow button{padding:11px 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer;font-size:14px}
+  .localhint{font-size:12px;color:var(--sub);margin-top:8px}
   /* ---- mobile / cross-browser responsive ---- */
   @media (max-width:680px){
     .wrap{padding:0 16px}
@@ -156,6 +167,14 @@
         <span id="keystate" class="kstate"></span>
       </div>
     </details>
+    <div class="localbox" id="localbox">
+      <div class="lh"><span class="localdot"></span>Local agent detected — scan a folder on <b>this machine</b> (source never leaves it)</div>
+      <div class="localrow">
+        <input id="localpath" placeholder="/absolute/path/to/your/repo  (git or not)" autocomplete="off" spellcheck="false" />
+        <button id="localgo" type="button">Scan local</button>
+      </div>
+      <div class="localhint">Private code? This reads it locally and shows the signed result here — nothing is uploaded.</div>
+    </div>
     <p class="err" id="err" style="display:none"></p>
   </header>
 
@@ -287,6 +306,30 @@ document.getElementById("f").addEventListener("submit", async e=>{
   }catch(ex){ err.textContent = String(ex); err.style.display="block"; }
   finally{ go.disabled=false; go.textContent="X-Ray"; }
 });
+// ---- LOCAL BRIDGE: detect the local agent + scan a folder (code never uploaded) ----
+const BRIDGE = "http://127.0.0.1:7799";
+async function detectBridge(){
+  try{
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);
+    const r=await fetch(BRIDGE+"/bridge/ping",{signal:ctrl.signal}); clearTimeout(t);
+    if(r.ok){ document.getElementById("localbox").classList.add("on"); }
+  }catch{ /* no local agent — silent */ }
+}
+document.getElementById("localgo").addEventListener("click", async ()=>{
+  const p=document.getElementById("localpath").value.trim();
+  const err=document.getElementById("err"), btn=document.getElementById("localgo");
+  err.style.display="none"; document.getElementById("out").innerHTML="";
+  if(!p) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Scanning…';
+  try{
+    const res=await fetch(BRIDGE+"/bridge/xray",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path:p})});
+    const data=await res.json();
+    if(!res.ok){ err.textContent=data.error||"local scan failed"; err.style.display="block"; }
+    else { render(data); window.scrollTo({top:0,behavior:"smooth"}); }
+  }catch(ex){ err.textContent="Could not reach the local agent. Run: npx @mneme-ai/xray bridge"; err.style.display="block"; }
+  finally{ btn.disabled=false; btn.textContent="Scan local"; }
+});
+detectBridge();
 refreshKeyState();
 loadList();
 </script>

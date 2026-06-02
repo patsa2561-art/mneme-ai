@@ -12,7 +12,9 @@ import { buildXRay } from "./engine.js";
 import { sealXRay, verifyXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
 import { publishReport } from "./publish.js";
+import { runBridge } from "./bridge.js";
 import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 
 function flagVal(args: string[], name: string): string | undefined {
   const i = args.indexOf(name);
@@ -21,6 +23,34 @@ function flagVal(args: string[], name: string): string | undefined {
 
 async function main() {
   const args = process.argv.slice(2);
+
+  // `bridge` — run the local agent so the website can scan local folders
+  if (args[0] === "bridge") {
+    runBridge(parseInt(flagVal(args, "--port") || process.env.XRAY_BRIDGE_PORT || "7799", 10));
+    return;
+  }
+
+  // `ci-gate` — fail CI if a changed file is a high hotspot (enterprise gate)
+  if (args[0] === "ci-gate") {
+    const path = args.find((a, i) => i > 0 && !a.startsWith("--") && a !== flagVal(args, "--changed")) || ".";
+    const threshold = parseInt(flagVal(args, "--threshold") || "3", 10); // top-N hotspots are "high"
+    const report = await buildXRay({ repoPath: path });
+    const top = report.hotspots.hotspots.slice(0, threshold).map((h) => h.file);
+    let changed = (flagVal(args, "--changed") || "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (changed.length === 0) {
+      // derive from the last commit if not supplied
+      const r = spawnSync("git", ["diff", "--name-only", "HEAD~1", "HEAD"], { cwd: path, encoding: "utf8" });
+      changed = (r.stdout || "").split("\n").map((s) => s.trim()).filter(Boolean);
+    }
+    const hits = changed.filter((f) => top.includes(f));
+    if (hits.length) {
+      process.stdout.write(`⚠️  CI GATE: changed files touch top-${threshold} hotspots — review carefully:\n${hits.map((h) => "   🔥 " + h).join("\n")}\n`);
+      process.exit(2);
+    }
+    process.stdout.write(`✓ CI GATE: no changed file is a top-${threshold} hotspot.\n`);
+    return;
+  }
+
   const target = args.find((a) => !a.startsWith("--") && a !== flagVal(args, "--server") && a !== flagVal(args, "--token"));
   const asJson = args.includes("--json");
   const noSign = args.includes("--no-sign");
