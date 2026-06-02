@@ -178,6 +178,9 @@ mneme polygraph autosetup   # browser truth-dots (optional)
 **✨ What sets it apart** — NEMESIS anti-identity-lie engine, ×11 ARGUS multimodal search, the Context Rail, the Activation Cortex, HMAC-chained everything, self-honest marketing (every claim binds to a probe).
 **→ <a href="docs/WHAT-SETS-MNEME-APART.md" target="_blank" rel="noopener">The full breakdown</a>**
 
+**🏛 The Agent Governor** — set a Charter once; your AI agents run inside it 24/7 as a continuous **auto-operation batch**; you approve only the genuinely-irreversible escalations. The signed governance kernel that sits *under* any orchestrator (Claude Code · Cursor · Astra · AutoGen).
+**→ <a href="docs/AGENT-GOVERNOR.md" target="_blank" rel="noopener">How a CEO uses it (commands + agent wiring)</a>**
+
 </td>
 <td width="50%" valign="top">
 

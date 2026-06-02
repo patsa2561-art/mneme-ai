@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.governor.agent_governance",
+    kind: "boolean",
+    description: "THE AGENT GOVERNOR (v2.145.0 — the capstone). An orchestrator-agnostic governance kernel: ratify a Charter once, then run a fleet's action queue as a continuous AUTO-OPERATION BATCH — autonomous + audited actions flow without per-step human input; only irreversible / out-of-envelope / forbidden escalate; a circuit-breaker pauses the fleet on mission drift. Folds CERBERUS · CRUCIBLE · TELOS · REGRET · ELLEIPSIS into one verdict. This probe asserts governorGauntlet=100, and the load-bearing property is THE SAFETY INVARIANT: an irreversible / destructive / out-of-scope / over-budget / forbidden / drift-divergent / failed-shadow action can NEVER be ALLOW_AUTONOMOUS. Also: clean actions run autonomous ∧ caution signals get ALLOW_WITH_AUDIT ∧ the auto-batch flows (autonomous run, escalations queued) ∧ the circuit-breaker trips on DIVERGENT mid-batch + stops ∧ budget stops the batch ∧ SAGA compensates the reversible executed steps newest-first (irreversible un-compensable) ∧ the Living Charter widens the envelope on clean evidence + narrows on a regret (never auto-widens to destructive) ∧ deterministic ∧ total. HONEST: the Governor DECIDES + SEQUENCES + ESCALATES + COMPENSATES — it does NOT execute the agent's work (orchestrator's job; Mneme is the kernel). 'Fully autonomous' = the safe/reversible flow runs untouched, only the genuinely-irreversible escalates — autonomy bounded by a mechanical signed envelope, never self-installing.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const G = await import("../governor/index.js" as string) as typeof import("../governor/index.js");
+        const g = G.governorGauntlet();
+        const ok = g.score === 100 && g.safetyInvariant && g.allowsCleanAutonomous && g.auditsCautionSignals && g.batchAutoFlows && g.breakerTripsOnDivergent && g.budgetStops && g.sagaCompensatesReversibleOnly && g.livingEnvelopeWidensAndNarrows && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} safetyInvariant=${g.safetyInvariant} batchFlows=${g.batchAutoFlows} breaker=${g.breakerTripsOnDivergent} saga=${g.sagaCompensatesReversibleOnly} envelope=${g.livingEnvelopeWidensAndNarrows}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.perfcore.correctness_preserving_accel",
     kind: "boolean",
     description: "PERFCORE (v2.144.0 — High-Performance Core, Missing Links #3). A command-gate that goes faster WITH A PROOF it changed zero verdicts. CERBERUS's cost is the recursive explode(); a command with no decomposition/opacity surface has one reachable command (itself) + no opacity, so its verdict reduces by construction to classifyLeafRisk — PERFCORE returns that in O(1), skipping the machinery; any doubt defers to the full path (fail-safe). This probe asserts perfGauntlet=100: verdicts UNCHANGED across the attack+benign corpus (mismatches===0 — THE invariant) ∧ the fast-path fires on simple commands ∧ adversarial/obfuscated commands DEFER to the full path ∧ a dangerous-but-simple command (rm -rf /) still classifies destructive ∧ the memo returns identical verdicts ∧ a speedup is measured ∧ deterministic ∧ total. HONEST: correctness is GATED (0 verdict changes, proven), speed is MEASURED (a real, reproducible, signed benchmark — `mneme perf accel` showed ~10× on a realistic 5k-command mix in this repo, NOT a fixed claim); the fast-path skips the DECOMPOSITION, never the danger detection.",

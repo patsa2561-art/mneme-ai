@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.145.0 — THE AGENT GOVERNOR: orchestrator-agnostic autonomous governance kernel (capstone) ──
+  {
+    id: "claim.governor.agent_governance",
+    source: "v2.145.0 release notes",
+    text: "Mneme's AGENT GOVERNOR is the capstone: an orchestrator-agnostic, signed governance kernel that sits UNDER any agent platform (Astra / Claude Code / Tycoon / AutoGen / CrewAI) and makes a fleet of autonomous agents provably safe + accountable — automatically, as a continuous batch, with the human in the loop ONLY for genuinely-irreversible actions. You ratify a Charter once (mission · scopeGlobs · riskEnvelope · budget · forbidden); then `governBatch` runs the fleet's action queue as a continuous AUTO-OPERATION BATCH — autonomous + audited actions flow without per-step human input, only irreversible / out-of-envelope / forbidden actions escalate, and a circuit-breaker pauses the whole fleet on mission drift (TELOS DIVERGENT) / regret spike / escalation thrash. Each action's verdict (`governAction` → ALLOW_AUTONOMOUS / ALLOW_WITH_AUDIT / ESCALATE_HUMAN / BLOCK) folds the gate signals — CERBERUS command-risk · CRUCIBLE shadow verdict · TELOS drift · REGRET band · ELLEIPSIS completeness · irreversibility — into one decision. governorGauntlet=100, and the load-bearing property is THE SAFETY INVARIANT: an irreversible / destructive / out-of-scope / over-budget / forbidden / drift-divergent / failed-shadow action can NEVER be ALLOW_AUTONOMOUS. Also proven: clean→autonomous ∧ caution→ALLOW_WITH_AUDIT ∧ the auto-batch flows (autonomous run, escalations queued) ∧ the circuit-breaker trips on DIVERGENT mid-batch + stops ∧ the budget stops the batch ∧ SAGA auto-compensation reverses the executed REVERSIBLE steps newest-first (irreversible steps un-compensable — they required sign-off up front) ∧ the Living Charter widens the autonomy envelope on clean evidence + narrows on a regret (never auto-widens to destructive) ∧ deterministic ∧ total. CLI `mneme govern charter-init|decide|batch|amend` + MCP `mneme.govern.decide` / `mneme.govern.batch` (orchestrator-agnostic, self-attesting). HONEST (DIAKRISIS): the Governor DECIDES + SEQUENCES + ESCALATES + COMPENSATES — it does NOT execute the agent's work (that's the orchestrator's job; Mneme is the kernel, not the executor). 'Fully autonomous' means the safe/reversible/in-envelope flow runs untouched while only the genuinely-irreversible escalates — autonomy bounded by a mechanical, signed envelope, never by Mneme self-installing. It is buyer-side governance every orchestrator needs and won't build (it conflicts with their autonomy pitch) — the moat.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.governor.agent_governance",
+    severity: "block",
+  },
   // ── v2.138.0 — AXIA: the signed, offline-verifiable Value Ledger (membrane pillar 2) ──
   {
     id: "claim.axia.value_ledger",
