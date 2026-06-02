@@ -13,8 +13,9 @@
  *   POST /bridge/xray { path }   → build local X-Ray → raw-free gate → sign → return
  */
 import { createServer, type ServerResponse } from "node:http";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { buildXRay } from "./engine.js";
 import { sealXRay } from "./sign.js";
@@ -51,6 +52,24 @@ export function runBridge(port = 7799): void {
     const url = new URL(req.url || "/", "http://127.0.0.1");
     if (req.method === "GET" && url.pathname === "/bridge/ping") {
       return json(res, 200, { ok: true, agent: "mneme-xray-bridge", version: version() });
+    }
+    // folder browser — list sub-directories so the website can pick a LOCAL
+    // folder by clicking (no path typing). Works for non-git folders too.
+    if (req.method === "GET" && url.pathname === "/bridge/ls") {
+      try {
+        const reqd = url.searchParams.get("path");
+        const here = reqd && existsSync(reqd) && statSync(reqd).isDirectory() ? reqd : homedir();
+        const entries = readdirSync(here, { withFileTypes: true })
+          .filter((e) => { try { return e.isDirectory() && !e.name.startsWith("."); } catch { return false; } })
+          .map((e) => join(here, e.name))
+          .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+          .slice(0, 500)
+          .map((p) => ({ name: p.slice(here.length).replace(/^[\\/]/, ""), path: p, isRepo: existsSync(join(p, ".git")) || existsSync(join(p, "package.json")) }));
+        const parent = dirname(here);
+        return json(res, 200, { path: here, parent: parent !== here ? parent : null, isRepo: existsSync(join(here, ".git")) || existsSync(join(here, "package.json")), dirs: entries });
+      } catch (e) {
+        return json(res, 400, { error: (e as Error).message });
+      }
     }
     if (req.method === "POST" && url.pathname === "/bridge/xray") {
       let body = "";

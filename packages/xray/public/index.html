@@ -135,6 +135,16 @@
   .localrow input{flex:1;height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-family:ui-monospace,Menlo,monospace}
   .localrow button{height:44px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer;font-size:13.5px}
   .localhint{font-size:12px;color:var(--sub);margin-top:9px}
+  .picker{display:none;margin-top:12px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+  .picker.on{display:block}
+  .pkbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);font-size:12.5px}
+  .pkbar .cur{flex:1;min-width:0;font-family:ui-monospace,Menlo,monospace;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;text-align:left}
+  .pkbar .pick{height:32px;padding:0 12px;border:0;border-radius:8px;background:var(--green);color:#fff;font-size:12.5px;cursor:pointer;width:auto}
+  .pklist{max-height:230px;overflow:auto}
+  .pkrow{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:13.5px}
+  .pkrow:last-child{border-bottom:0}.pkrow:hover{background:var(--soft)}
+  .pkrow .ic{width:18px;text-align:center}
+  .pkrow .repobadge{margin-left:auto;font-size:10.5px;color:var(--a);background:var(--a-soft);border-radius:6px;padding:2px 7px;font-weight:600}
   footer{padding:40px 0 70px;text-align:center;color:#aab0b8;font-size:13px}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid currentColor;border-top-color:transparent;
     border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px;opacity:.9}
@@ -192,10 +202,12 @@
       <div class="lh"><span class="localdot"></span>Local agent detected — scan a folder on <b>this machine</b> (source never leaves it)</div>
       <div class="localrow">
         <input id="localpath" placeholder="/absolute/path/to/your/repo  (git or not)" autocomplete="off" spellcheck="false" />
-        <button id="localgo" type="button">Scan local</button>
+        <button id="localbrowse" type="button" class="ghostbtn">📂 Browse</button>
+        <button id="localgo" type="button">Scan</button>
         <button id="localpack" type="button" class="ghostbtn">📦 Pack</button>
       </div>
-      <div class="localhint">Private code? This reads it locally and shows the signed result here — nothing is uploaded.</div>
+      <div class="picker" id="picker"></div>
+      <div class="localhint">Not on git? No problem — Browse to any folder. It reads locally and shows the signed result here; nothing is uploaded.</div>
     </div>
     <p class="err" id="err" style="display:none"></p>
   </header>
@@ -388,6 +400,26 @@ document.getElementById("packgo").addEventListener("click", async ()=>{
     else { renderPack(data); window.scrollTo({top:document.getElementById("packout").offsetTop-20,behavior:"smooth"}); }
   }catch(ex){ err.textContent=String(ex); err.style.display="block"; }
   finally{ btn.disabled=false; btn.textContent="📦 AI Pack"; }
+});
+// ---- folder browser (pick a LOCAL folder by clicking, even non-git) ----
+let pickerOpen=false;
+async function browseTo(path){
+  const pk=document.getElementById("picker");
+  try{
+    const q = path?("?path="+encodeURIComponent(path)):"";
+    const d = await (await fetch(BRIDGE+"/bridge/ls"+q)).json();
+    if(d.error){ pk.innerHTML=`<div class="pkrow muted">${esc(d.error)}</div>`; return; }
+    const up = d.parent?`<div class="pkrow" data-go="${esc(d.parent)}"><span class="ic">⬆️</span><span>.. up</span></div>`:"";
+    const rows = (d.dirs||[]).map(x=>`<div class="pkrow" data-go="${esc(x.path)}"><span class="ic">📁</span><span class="nm" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</span>${x.isRepo?'<span class="repobadge">project</span>':""}</div>`).join("");
+    pk.innerHTML=`<div class="pkbar"><span class="cur" title="${esc(d.path)}">${esc(d.path)}</span><button type="button" class="pick" data-pick="${esc(d.path)}">Use this folder</button></div><div class="pklist">${up}${rows||'<div class="pkrow muted">(no sub-folders)</div>'}</div>`;
+    pk.querySelectorAll("[data-go]").forEach(n=>n.addEventListener("click",()=>browseTo(n.dataset.go)));
+    pk.querySelector("[data-pick]").addEventListener("click",e=>{ document.getElementById("localpath").value=e.target.dataset.pick; pk.classList.remove("on"); pickerOpen=false; });
+  }catch{ pk.innerHTML='<div class="pkrow muted">Could not list folders — is the agent running? npx @mneme-ai/xray bridge</div>'; }
+}
+document.getElementById("localbrowse").addEventListener("click",()=>{
+  const pk=document.getElementById("picker");
+  pickerOpen=!pickerOpen; pk.classList.toggle("on",pickerOpen);
+  if(pickerOpen) browseTo(document.getElementById("localpath").value.trim()||"");
 });
 document.getElementById("localpack").addEventListener("click", async ()=>{
   const p=document.getElementById("localpath").value.trim();
