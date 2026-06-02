@@ -141,6 +141,7 @@ import { registerElleipsisCommands } from "./commands/elleipsis.js";
 import { registerSteleCommands } from "./commands/stele.js";
 import { registerAxiaCommands } from "./commands/axia.js";
 import { registerPceCommands } from "./commands/pce.js";
+import { registerHauntCommands } from "./commands/haunt.js";
 import { attachRegretOracle } from "./commands/regret.js";
 import { registerTrustCommands } from "./commands/trust.js";
 import { registerNuclearCommands } from "./commands/nuclear-cli.js";
@@ -4950,6 +4951,7 @@ export async function run(argv: string[]): Promise<void> {
   registerSteleCommands(program);
   registerAxiaCommands(program);
   registerPceCommands(program);
+  registerHauntCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
   // ─── Wisdom reactor (v1.33.0) -- five nuclear-physics formulas as Mneme metrics

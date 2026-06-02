@@ -944,6 +944,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.141.0 — HAUNT: "Code Haunting" / Git Telepathy ──
+  {
+    id: "claim.haunt.code_haunting",
+    source: "v2.141.0 release notes",
+    text: "Mneme's HAUNT ('Code Haunting' / Git Telepathy) makes the ghost of the commit that last touched a region audible: given a file (+ optional line range + the symptom from an alert), it gathers real git facts and returns one plain-language report — who changed it, when (age in days), the INTENT they recorded ('temporary fix', 'แก้ขัดไปก่อน' — detected in EN *and* TH), the safeguards the code lacks for that symptom (no caching / no timeout / await-in-loop / unbounded query), and the team knowledge already shared about that area (pulled from the Cortex, so the right tip surfaces just-in-time). It replaces the manual `git blame` → read-old-commits → guess-why dig with an instant, signed report. hauntGauntlet=100: extracts a temporary-fix intent in EN ∧ in TH ∧ flags a missing cache / await-in-loop on a perf symptom ∧ resolves last-touched author + subject + short hash ∧ computes age in days ∧ returns UNKNOWN (no fabricated author/reason) on empty history ∧ CLEAR on a recent safeguarded commit ∧ surfaces related team knowledge ∧ never over-claims causation ∧ deterministic ∧ total. HONEST (DIAKRISIS): it SURFACES + CORRELATES real recorded git facts + intent phrases — a candidate to LOOK at, NOT a proven cause and NOT fortune-telling; the missing-safeguard flags are lexical signals, not a static analyzer's proof; with no history it abstains to UNKNOWN. (The incremental no-rescan index and the just-in-time knowledge store it composes with already shipped as `index-auto` and the Cortex/osmosis — HAUNT is the missing synthesis that makes them audible at the moment of a symptom.)",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.haunt.code_haunting",
+    severity: "block",
+  },
   // ── v2.140.0 — REGRET ORACLE: signed cross-vendor regret calibration (diamond 3 of 3) ──
   {
     id: "claim.regret.oracle_calibration",

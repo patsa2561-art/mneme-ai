@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.haunt.code_haunting",
+    kind: "boolean",
+    description: "HAUNT (v2.141.0 — 'Code Haunting' / Git Telepathy). When a region acts up, it surfaces the ghost of the commit that last touched it: who/when, the INTENT recorded ('temporary fix' / 'แก้ขัดไปก่อน', detected EN+TH), the safeguards it lacks for the symptom (no-cache / no-timeout / await-in-loop), and the team knowledge already shared (from the Cortex) — one report instead of a manual git-blame dig. This probe asserts hauntGauntlet=100: extracts a temporary-fix intent in EN ∧ in TH ∧ flags a missing cache / await-in-loop on a perf symptom ∧ resolves last-touched author+subject+short-hash ∧ computes age in days ∧ returns UNKNOWN with no fabricated author/reason on empty history ∧ CLEAR on a recent safeguarded commit ∧ surfaces related team knowledge ∧ never over-claims causation (narrative says 'candidate, not a proven cause') ∧ deterministic ∧ total. HONEST: it SURFACES + CORRELATES real git facts + recorded intent — a candidate to LOOK at, NOT a proven cause and NOT fortune-telling; the safeguard flags are lexical signals, not a static analyzer's proof.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../haunt/index.js" as string) as typeof import("../haunt/index.js");
+        const g = H.hauntGauntlet();
+        const ok = g.score === 100 && g.extractsTemporaryFixEN && g.extractsTemporaryFixTH && g.flagsMissingCacheOnPerf && g.lastTouchedResolved && g.ageComputed && g.unknownOnEmptyHistory && g.clearOnCleanRecent && g.surfacesKnowledge && g.noCausationOverclaim && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} intentEN=${g.extractsTemporaryFixEN} intentTH=${g.extractsTemporaryFixTH} risk=${g.flagsMissingCacheOnPerf} lastTouched=${g.lastTouchedResolved} unknown=${g.unknownOnEmptyHistory} noOverclaim=${g.noCausationOverclaim}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.regret.oracle_calibration",
     kind: "boolean",
     description: "REGRET ORACLE (v2.140.0 — diamond 3 of 3, the last). A signed, cross-vendor CALIBRATION of how often an edit carrying a given signal was ACTUALLY regretted later (reverted / test failed). The honest opposite of fortune-telling: it is backward-looking — fed real recorded OUTCOMES, it builds a per-signal base-rate table with a Wilson 95% interval and, to score a new edit, reports the Wilson LOWER bound of the riskiest matching signal (\"≥ this often, proven, here\") and ABSTAINS to UNKNOWN when support is thin. This probe asserts regretGauntlet=100: a proven-risky signal scores HIGH ∧ a proven-safe one scores LOW ∧ abstains UNKNOWN under low support (even at 100% point rate) ∧ the lower bound is conservative (below the point rate) ∧ Wilson tightens with more data ∧ drivers sorted by proven risk ∧ cross-vendor comparison works ∧ the note says 'historical base rate' not 'will' ∧ deterministic ∧ total. HONEST: a calibrated historical base rate with a confidence interval — NOT a prediction of a specific future and NOT a causal claim; a thin/under-measured signal scores LOW by construction, so it cannot be gamed into a scary number.",

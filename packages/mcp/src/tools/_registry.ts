@@ -87,6 +87,7 @@ import { STELE_TOOLS } from "./_stele_tools.js";
 import { AXIA_TOOLS } from "./_axia_tools.js";
 import { PCE_TOOLS } from "./_pce_tools.js";
 import { REGRET_TOOLS } from "./_regret_tools.js";
+import { HAUNT_TOOLS } from "./_haunt_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -294,6 +295,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...AXIA_TOOLS,
     ...PCE_TOOLS,
     ...REGRET_TOOLS,
+    ...HAUNT_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,
