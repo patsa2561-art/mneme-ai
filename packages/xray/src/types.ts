@@ -110,6 +110,17 @@ export interface HotspotsBlock {
   note: string;
 }
 
+/** Repo executable-surface security — CERBERUS command-risk + FIREWALL injection. */
+export interface SecurityBlock {
+  commandsScanned: number;
+  writeCount: number;
+  /** destructive commands found in build/CI/scripts (curl|bash, rm -rf, …). */
+  destructive: Array<{ command: string; where: string; signals: string[] }>;
+  injectionFindings: number;
+  injectionWhere: string[];
+  note: string;
+}
+
 export interface XRaySummary {
   headline: string;
   grade: Grade;
@@ -131,6 +142,7 @@ export interface XRayReport {
   complexity: ComplexityBlock;
   hotspots: HotspotsBlock;
   coupling: CouplingBlock;
+  security: SecurityBlock;
   /** sha256 over the canonicalised metric blocks — a tamper-evident content id. */
   fingerprint: string;
 }

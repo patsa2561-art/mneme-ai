@@ -14,6 +14,7 @@ import { analyzeAge } from "./battery/age.js";
 import { analyzeComplexity } from "./battery/complexity.js";
 import { analyzeHotspots } from "./battery/hotspots.js";
 import { analyzeCoupling } from "./battery/coupling.js";
+import { analyzeSecurity } from "./battery/security.js";
 import { shallowClone } from "./clone.js";
 import { headCommit, repoNameFromUrl, repoNameFromPath } from "./util.js";
 
@@ -53,10 +54,11 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
     const complexity = analyzeComplexity(repoPath, maxFiles);
     const hotspots = analyzeHotspots(repoPath, now);
     const coupling = analyzeCoupling(repoPath, now);
+    const security = analyzeSecurity(repoPath, maxFiles);
 
-    const summary = grade({ deps, secrets, busFactor, age, complexity, hotspots, coupling });
+    const summary = grade({ deps, secrets, busFactor, age, complexity, hotspots, coupling, security });
 
-    const blocks = { deps, secrets, busFactor, age, complexity, hotspots, coupling };
+    const blocks = { deps, secrets, busFactor, age, complexity, hotspots, coupling, security };
     const fingerprint = createHash("sha256")
       .update(JSON.stringify({ subject: { repoName: subject.repoName, commitHash: subject.commitHash }, blocks }))
       .digest("hex");
@@ -75,7 +77,7 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
 }
 
 /** Deterministic 0-100 health score → letter grade, with one-line bullets. */
-function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "complexity" | "hotspots" | "coupling">): XRaySummary {
+function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "complexity" | "hotspots" | "coupling" | "security">): XRaySummary {
   let score = 100;
   const bullets: string[] = [];
   let signalsRun = 0;
@@ -112,11 +114,12 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
     if (copyleft > 0) bullets.push(`⚖️ ${copyleft} copyleft-licensed dep(s)${b.deps.licenseFlags[0] ? ` (e.g. ${b.deps.licenseFlags[0].name}: ${b.deps.licenseFlags[0].license})` : ""} — review for commercial use.`);
   }
 
-  // bus factor
+  // bus factor — real key-person risk, but inherent to solo projects, so it's a
+  // notch, not a fail.
   if (b.busFactor.authors > 0) {
     signalsRun++;
-    if (b.busFactor.busFactor <= 1) score -= 15;
-    if (b.busFactor.singleOwnerFilePct >= 50) score -= 10;
+    if (b.busFactor.busFactor <= 1) score -= 10;
+    if (b.busFactor.singleOwnerFilePct >= 60) score -= 6;
     bullets.push(
       b.busFactor.busFactor <= 1
         ? `🚌 Bus factor 1 — one person holds ${b.busFactor.topContributorShare}% of commits.`
@@ -137,7 +140,7 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
   if (b.complexity.filesAnalysed > 0) {
     signalsRun++;
     const huge = b.complexity.hotspots.filter((h) => h.bodyLines >= 150).length;
-    score -= Math.min(10, huge * 2);
+    score -= Math.min(8, huge * 2);
     bullets.push(
       b.complexity.hotspots[0]
         ? `🧩 Largest symbol ${b.complexity.hotspots[0].bodyLines} lines (${b.complexity.hotspots[0].file}).`
@@ -157,6 +160,19 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
     signalsRun++;
     const c = b.coupling.pairs[0];
     bullets.push(`🔗 ${c.a} ⇄ ${c.b} change together ${Math.round(c.confidence * 100)}%${c.hidden ? " (hidden cross-dir coupling)" : ""}.`);
+  }
+
+  // security — CERBERUS command-risk + FIREWALL injection on the repo
+  if (b.security.commandsScanned > 0 || b.security.injectionFindings > 0) {
+    signalsRun++;
+    // a "review" signal — destructive commands in CI are often intentional
+    // cleanup; we flag, but don't auto-fail the repo on them.
+    score -= Math.min(8, b.security.destructive.length * 2);
+    score -= Math.min(10, b.security.injectionFindings * 5); // injection is a stronger signal
+
+    if (b.security.destructive.length) bullets.push(`🛡 ${b.security.destructive.length} destructive build/CI command(s) — e.g. ${b.security.destructive[0].where}.`);
+    else if (b.security.injectionFindings) bullets.push(`🛡 ${b.security.injectionFindings} possible prompt-injection in docs.`);
+    else bullets.push(`🛡 ${b.security.commandsScanned} build/CI commands checked — no destructive ones.`);
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));

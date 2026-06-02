@@ -20,6 +20,7 @@
     Complexity: "The biggest, most tangled code.",
     Hotspots: "Where bugs hide — refactor these first.",
     Coupling: "Files that secretly change together.",
+    Security: "Dangerous commands in build/CI + doc prompt-injection.",
   };
   const kcell = (label) => `<div class="k">${label}${INFO[label] ? `<span class="kdesc">${INFO[label]}</span>` : ""}</div>`;
 
@@ -42,6 +43,9 @@
     const lic = (dep.licenses) || { permissive: 0, "weak-copyleft": 0, "strong-copyleft": 0, unknown: 0 };
     const licChips = (dep.licenseFlags || []).slice(0, 5).map((l) => `<span class="chip ${l.class === "strong-copyleft" ? "bad" : "warn"}">${esc(l.name)} · ${esc(l.license)}</span>`).join("");
     const spark = sparkline(hs.trend || []);
+    const secu = r.security || { destructive: [], commandsScanned: 0, injectionFindings: 0 };
+    const secuChips = (secu.destructive || []).slice(0, 5).map((d) => `<span class="chip bad">${esc(d.where)}: ${esc(d.command).slice(0, 38)}</span>`).join("")
+      || (secu.injectionFindings ? (secu.injectionWhere || []).slice(0, 4).map((w) => `<span class="chip warn">injection: ${esc(w)}</span>`).join("") : `<span class="chip">${secu.commandsScanned || 0} cmds · clean</span>`);
 
     const share = opts.share ? `<div class="share" id="share"></div>` : "";
 
@@ -60,6 +64,7 @@
         <div class="row">${kcell("Complexity")}<div class="v"><span class="big">${cx.totalSymbols}</span> symbols · ${cx.filesAnalysed} files · max depth ${cx.maxDepth}<div class="chips">${hot}</div></div></div>
         <div class="row">${kcell("Hotspots")}<div class="v"><span class="muted">refactor-ROI · churn × size · last ${hs.windowDays||365}d</span> ${spark}<div class="chips">${hsChips}</div></div></div>
         <div class="row">${kcell("Coupling")}<div class="v"><span class="muted">${(cp.pairs||[]).length} coupled pair(s) · hidden = cross-directory</span><div class="chips">${cpChips}</div></div></div>
+        <div class="row">${kcell("Security")}<div class="v"><span class="big">${(secu.destructive||[]).length}</span> destructive cmd(s) · ${secu.commandsScanned||0} checked${secu.injectionFindings?` · ${secu.injectionFindings} doc injection`:""}<div class="chips">${secuChips}</div></div></div>
       </div>
       <div class="foot">${verified}<span>fingerprint <code>${esc(String(r.fingerprint).slice(0, 28))}…</code></span></div>
       ${share}

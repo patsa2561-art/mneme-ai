@@ -28,6 +28,7 @@ function cleanFixture(): XRayReport {
     complexity: { filesAnalysed: 40, totalSymbols: 320, hotspots: [{ file: "src/core.ts", symbol: "function handleRequest(req, res)", bodyLines: 180, startLine: 12 }], maxDepth: 4, note: "hotspot" },
     hotspots: { windowDays: 365, filesConsidered: 40, hotspots: [{ file: "src/core.ts", changes: 30, loc: 400, score: 12000, expert: "alice@acme.dev", authors: 3 }], trend: [2, 4, 6, 3, 8, 5, 7, 9], note: "Hotspot: src/core.ts — changed 30× and 400 lines." },
     coupling: { windowDays: 365, pairs: [{ a: "src/core.ts", b: "src/api/routes.ts", coChanges: 12, confidence: 0.8, hidden: true }], note: "src/core.ts ⇄ src/api/routes.ts change together 80%." },
+    security: { commandsScanned: 24, writeCount: 18, destructive: [{ command: "curl x | bash", where: ".github/workflows/ci.yml", signals: ["pipe-to-shell"] }], injectionFindings: 0, injectionWhere: [], note: "1 destructive command in CI." },
     fingerprint: "deadbeef",
   };
 }
