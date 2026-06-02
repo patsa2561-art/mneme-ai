@@ -141,6 +141,8 @@ Mneme cuts what your agent sends to the model by doing deterministic local work 
 
 The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> and runs everything: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak; the AI does the tooling.** Need an update later? Say *"update Mneme to the latest"* — and Mneme **never upgrades itself behind your back.**
 
+> ⚠️ **One manual step:** after `mneme mcp --install`, **restart your AI tool once** (quit &amp; reopen) so it loads Mneme's MCP tools — this is how MCP works in every client, not a Mneme quirk. The only prerequisite is **Node.js + npm** (needed for `npm install -g`).
+
 <table>
 <tr><td align="center" colspan="5"><sub><b>Shell-native agents install it for you</b> — drop the sentence into any of these</sub></td></tr>
 <tr><td align="center"><b>🚀 Grok CLI</b></td><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td></tr>
