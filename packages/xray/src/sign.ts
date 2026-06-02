@@ -5,6 +5,7 @@
  * "every number is signed, no AI guessed it" guarantee.
  */
 import { notary } from "@mneme-ai/core";
+import { createHash } from "node:crypto";
 import type { XRayReport, SignedXRay } from "./types.js";
 
 export function sealXRay(repoRoot: string, report: XRayReport, issuedAt?: number): SignedXRay {
@@ -20,5 +21,14 @@ export function sealXRay(repoRoot: string, report: XRayReport, issuedAt?: number
 
 export function verifyXRay(signed: SignedXRay): { valid: boolean; reason: string } {
   const r = notary.verifyReceipt(signed.receipt);
-  return { valid: r.valid, reason: r.reason };
+  if (!r.valid) return { valid: false, reason: r.reason };
+  // BIND the outer report to the signature: verifyReceipt only checks the
+  // receipt's own inline payload, so we must confirm signed.report hashes to
+  // the receipt's payloadHash — otherwise a tampered outer report would pass.
+  const rec = signed.receipt as { payloadHash?: string };
+  const h = createHash("sha256").update(notary.canonicalJson(signed.report)).digest("hex");
+  if (!rec.payloadHash || rec.payloadHash !== h) {
+    return { valid: false, reason: "report does not match the signed payloadHash (tampered)" };
+  }
+  return { valid: true, reason: r.reason };
 }

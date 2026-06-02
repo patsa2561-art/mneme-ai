@@ -18,6 +18,19 @@
 
 ---
 
+## 🩻 See it in 5 seconds — the Repo X-Ray
+
+Don't take the claims on faith. **Paste any public repo and watch Mneme grade it** — dependencies dying, secrets leaking, bus factor, vitality, complexity — every number **reproducible** and sealed with an **offline-verifiable signature**. No AI guesses anything. Your source never leaves your machine.
+
+```bash
+npm run -w @mneme-ai/xray serve        # → open http://localhost:8787, paste a repo
+npx mneme-xray ./your-repo             # private repo? analyse locally — nothing uploaded
+```
+
+> **On the web:** open the page → paste a public `https://github.com/owner/repo` → read the grade. **Private repo:** `mneme-xray ./path --publish` analyses on *your* machine and sends only the signed, raw-free report. **[Deploy your own 24/7 (DigitalOcean, one command) →](packages/xray/README.md)**
+
+---
+
 ## One picture
 
 You're already letting AI agents read your code, touch your machine, and call hosted models. **Mneme is the local membrane every one of those actions crosses** — screened, gated, and signed — so you can move at full speed *and* prove what happened, offline, without trusting the vendor.

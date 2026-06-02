@@ -2,19 +2,33 @@
 /**
  * mneme-xray — run an X-Ray from the terminal.
  *   mneme-xray <path|https-git-url> [--json] [--no-sign]
+ *   mneme-xray <path> --publish [--server URL] [--token KEY]
+ *
+ * --publish is THE BRIDGE for private repos: analyse locally, then send ONLY
+ * the signed, raw-free report to a Lighthouse server (source never leaves).
+ * Server/token may also come from env XRAY_SERVER / XRAY_TOKEN.
  */
 import { buildXRay } from "./engine.js";
 import { sealXRay, verifyXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
+import { publishReport } from "./publish.js";
 import { existsSync } from "node:fs";
+
+function flagVal(args: string[], name: string): string | undefined {
+  const i = args.indexOf(name);
+  return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : undefined;
+}
 
 async function main() {
   const args = process.argv.slice(2);
-  const target = args.find((a) => !a.startsWith("--"));
+  const target = args.find((a) => !a.startsWith("--") && a !== flagVal(args, "--server") && a !== flagVal(args, "--token"));
   const asJson = args.includes("--json");
   const noSign = args.includes("--no-sign");
+  const doPublish = args.includes("--publish");
+  const server = flagVal(args, "--server") || process.env.XRAY_SERVER || "";
+  const token = flagVal(args, "--token") || process.env.XRAY_TOKEN || "";
   if (!target) {
-    process.stderr.write("usage: mneme-xray <path|https-git-url> [--json] [--no-sign]\n");
+    process.stderr.write("usage: mneme-xray <path|https-git-url> [--json] [--no-sign] [--publish --server URL --token KEY]\n");
     process.exit(2);
   }
 
@@ -29,7 +43,18 @@ async function main() {
   }
 
   const repoRootForKey = isUrl ? process.cwd() : (existsSync(target) ? target : process.cwd());
-  const signed = noSign ? { report, receipt: null } : sealXRay(repoRootForKey, report);
+  const signed = (noSign && !doPublish) ? { report, receipt: null } : sealXRay(repoRootForKey, report);
+
+  if (doPublish) {
+    if (!server || !token) {
+      process.stderr.write("✗ --publish needs --server URL and --token KEY (or env XRAY_SERVER / XRAY_TOKEN)\n");
+      process.exit(2);
+    }
+    const pr = await publishReport(server, token, signed);
+    if (!pr.ok) { process.stderr.write(`✗ publish failed: ${pr.error}\n`); process.exit(1); }
+    process.stdout.write(`✓ published ${report.subject.repoName} → ${server}\n  profile ${pr.profileId}  ·  fingerprint ${pr.fingerprint?.slice(0, 24)}…\n  (source never left this machine — only the signed, raw-free report was sent)\n`);
+    return;
+  }
 
   if (asJson) {
     process.stdout.write(JSON.stringify(signed, null, 2) + "\n");

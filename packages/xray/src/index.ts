@@ -15,3 +15,5 @@ export { xrayLeaksRaw, type LeakVerdict } from "./privacy.js";
 export { xrayGauntlet, type XRayGauntlet } from "./gauntlet.js";
 export { isAllowedPublicUrl } from "./clone.js";
 export { defaultFetcher, type MetaFetcher } from "./battery/deps.js";
+export { publishReport, type PublishResult } from "./publish.js";
+export { createXRayServer } from "./server.js";
