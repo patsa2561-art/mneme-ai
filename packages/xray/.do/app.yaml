@@ -1,0 +1,33 @@
+# DigitalOcean App Platform spec for the Mneme X-Ray server (24/7).
+# Deploy:  doctl apps create --spec packages/xray/.do/app.yaml
+# (or paste into the DO dashboard → Apps → Create → "Import from App Spec")
+name: mneme-xray
+region: sgp        # Singapore — closest to a Thailand-based operator
+services:
+  - name: xray
+    dockerfile_path: packages/xray/Dockerfile
+    source_dir: /
+    github:
+      repo: patsa2561-art/mneme-ai
+      branch: main
+      deploy_on_push: true
+    http_port: 8787
+    instance_size_slug: basic-xxs     # cheapest; scale up if clone load grows
+    instance_count: 1
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 15
+      period_seconds: 30
+    envs:
+      - key: PORT
+        value: "8787"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: XRAY_DATA_DIR
+        value: "/data"
+    routes:
+      - path: /
+# NOTE: App Platform containers have an ephemeral filesystem — the board.jsonl
+# at /data resets on redeploy. For a durable board, either (a) run this image on
+# a DO Droplet with a mounted volume at /data, or (b) swap recordBoard/readBoard
+# for a managed Postgres ($DATABASE_URL). The X-Ray engine itself is stateless.
