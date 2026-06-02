@@ -14,20 +14,38 @@ export function analyzeBusFactor(repoPath: string): BusFactorBlock {
   if (!isGitRepo(repoPath)) return emptyBlock("Not a git repository — authorship/bus-factor signals unavailable.");
   // One line per (commit, file): "<authorEmail>\t<file>". --no-renames keeps paths stable.
   const raw = git(repoPath, [
-    "log", "--no-merges", "--pretty=format:C%H%x09%ae", "--name-only", "-n", "4000",
+    "log", "--no-merges", "--no-renames", "--pretty=format:C%H%x09%ae", "--name-only", "-n", "3000",
   ]);
   if (!raw.trim()) {
     return emptyBlock("No commit history available.");
   }
 
+  // A commit touching a huge number of files is a merge/vendoring/generated
+  // sweep — it does NOT signal real per-file ownership and, on monorepos like
+  // mattermost (22k commits), folding it makes the map explode (~120s → ~3s).
+  // We still count it toward author totals; we just skip it for file-ownership.
+  const MAX_FILES_PER_COMMIT = 100;
   const fileAuthors = new Map<string, Map<string, number>>(); // file -> author -> commits
   const authorCommits = new Map<string, number>(); // author -> total commits
   const allAuthors = new Set<string>();
   let curAuthor = "";
+  let curFiles: string[] = [];
   let totalCommits = 0;
+
+  const flush = () => {
+    if (curAuthor && curFiles.length > 0 && curFiles.length <= MAX_FILES_PER_COMMIT) {
+      for (const file of curFiles) {
+        let m = fileAuthors.get(file);
+        if (!m) { m = new Map(); fileAuthors.set(file, m); }
+        m.set(curAuthor, (m.get(curAuthor) ?? 0) + 1);
+      }
+    }
+    curFiles = [];
+  };
 
   for (const line of raw.split("\n")) {
     if (line.startsWith("C")) {
+      flush();
       const tab = line.indexOf("\t");
       curAuthor = tab >= 0 ? line.slice(tab + 1).trim() : "";
       if (curAuthor) {
@@ -38,11 +56,10 @@ export function analyzeBusFactor(repoPath: string): BusFactorBlock {
       continue;
     }
     const file = line.trim();
-    if (!file || SKIP_DIR.test(file) || !curAuthor) continue;
-    let m = fileAuthors.get(file);
-    if (!m) { m = new Map(); fileAuthors.set(file, m); }
-    m.set(curAuthor, (m.get(curAuthor) ?? 0) + 1);
+    if (!file || SKIP_DIR.test(file)) continue;
+    curFiles.push(file);
   }
+  flush();
 
   if (totalCommits === 0) return emptyBlock("No authored commits found.");
 

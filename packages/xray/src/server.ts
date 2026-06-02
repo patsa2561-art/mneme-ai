@@ -191,6 +191,18 @@ function serveStatic(res: ServerResponse, file: string) {
 const GRADE_COLOR: Record<string, string> = { A: "#16a34a", B: "#65a30d", C: "#d97706", D: "#ea580c", F: "#dc2626" };
 const xesc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
+/** Rasterise an SVG to PNG (X/Twitter don't render SVG og:image). Fail-safe:
+ *  returns null if the optional rasteriser isn't available, so callers fall
+ *  back to serving the SVG and the server never breaks. */
+async function renderPng(svg: string): Promise<Buffer | null> {
+  try {
+    const mod = (await import("@resvg/resvg-js")) as { Resvg: new (s: string, o?: unknown) => { render: () => { asPng: () => Buffer } } };
+    return new mod.Resvg(svg, { fitTo: { mode: "width", value: 1200 } }).render().asPng();
+  } catch {
+    return null;
+  }
+}
+
 function sendSvg(res: ServerResponse, svg: string, maxAgeSec = 300) {
   res.writeHead(200, {
     "content-type": "image/svg+xml; charset=utf-8",
@@ -255,7 +267,7 @@ function reportPageWithOg(signed: SignedXRay, origin: string): string {
   const title = `${r.subject.repoName} — Grade ${r.summary.grade} · Mneme X-Ray`;
   const desc = (r.summary.bullets || []).slice(0, 4).map((b) => b.replace(/[^\x20-\x7E]/g, "").trim()).join(" · ") || r.summary.headline;
   const url = `${origin}/r/${r.fingerprint}`;
-  const img = `${origin}/og/${r.fingerprint}.svg`;
+  const img = `${origin}/og/${r.fingerprint}.png`;   // X/Twitter need raster (PNG); falls back to SVG if rasteriser down
   const og = [
     `<meta property="og:type" content="website"/>`,
     `<meta property="og:title" content="${xesc(title)}"/>`,
@@ -308,12 +320,18 @@ export function createXRayServer(monitor?: CosmicMonitor) {
       return sendSvg(res, badgeSvg(grade));
     }
 
-    // social card (og:image) — /og/<fingerprint>.svg
-    if (req.method === "GET" && url.pathname.startsWith("/og/") && url.pathname.endsWith(".svg")) {
-      const fp = decodeURIComponent(url.pathname.slice("/og/".length, -4));
+    // social card (og:image) — /og/<fingerprint>.svg  (vector) or .png (X/Twitter)
+    if (req.method === "GET" && url.pathname.startsWith("/og/") && (url.pathname.endsWith(".svg") || url.pathname.endsWith(".png"))) {
+      const png = url.pathname.endsWith(".png");
+      const fp = decodeURIComponent(url.pathname.slice("/og/".length, png ? -4 : -4));
       const signed = getReport(fp);
       if (!signed || getReportMeta(fp)?.visibility === "private") return send(res, 404, { error: "not found" });
-      return sendSvg(res, socialCardSvg(signed.report));
+      const svg = socialCardSvg(signed.report);
+      if (!png) return sendSvg(res, svg);
+      const buf = await renderPng(svg);          // X/Twitter need raster
+      if (!buf) return sendSvg(res, svg);          // fail-safe: serve SVG if rasteriser unavailable
+      res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=300", "access-control-allow-origin": "*" });
+      return res.end(buf);
     }
 
     // shareable permalink — /r/<fingerprint> (server-renders OG meta for social previews)
@@ -365,7 +383,8 @@ export function createXRayServer(monitor?: CosmicMonitor) {
         return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs (no credentials) are accepted. For private repos, run mneme-xray locally." });
       }
       try {
-        const report = await buildXRay({ gitUrl });
+        // hosted scan: bound the file battery so a huge monorepo can't hog the box
+        const report = await buildXRay({ gitUrl, maxFiles: 2500 });
         const leak = xrayLeaksRaw(report);
         if (leak.leaks) return send(res, 500, { error: "internal: report failed raw-free gate", reasons: leak.reasons });
         const signed = sealXRay(process.cwd(), report);
