@@ -944,6 +944,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.142.0 — CRUCIBLE: the File-level Settlement Gate (shadow build/test) ──
+  {
+    id: "claim.crucible.settlement_gate",
+    source: "v2.142.0 release notes",
+    text: "Mneme's CRUCIBLE is the File-level Settlement Gate: before an AI's diff is allowed to touch the real working tree, it is applied in a SHADOW git worktree (which shares .git — cheap, not a full copy, and not a kernel sandbox), built + tested THERE with the user's own verify command, and merged to the real disk ONLY if the shadow verification PASSES — with an Ed25519-signed receipt either way. It is proof-carrying shadow execution: a reviewer/CI trusts the RESULT ('built + tested green in a shadow, then merged') and a failing diff never reaches the real tree. crucibleGauntlet=100, and the load-bearing property is the SAFETY INVARIANT realTreeWritten ⟺ verdict===MERGE: a passing shadow MERGEs ∧ a failing one ROLLs BACK ∧ a failure NEVER writes the real tree ∧ review-mode never auto-writes ∧ any internal error fails CLOSED (no write) ∧ the plan extracts touched paths ∧ a failure brief is pulled from the verify output ∧ the invariant holds across exit codes 0/1/2/127/-1/255/137 ∧ deterministic ∧ total. The CLI `mneme crucible --diff <patch> --verify \"npm test\" [--merge]` does the git worktree + the verify spawn; exit 2 if not merged. HONEST (DIAKRISIS): it proves YOUR build/test passed in a shadow with the diff applied — NOT that the code is bug-free (it is exactly as strong as the verify command) and NOT a security sandbox (a malicious build script still executes — pair it with the HEPHAESTUS command gate). The realized 'File-level Shadow Copy' (the correct call over a kernel-space sandbox); the mechanical guarantee is that the real tree is written iff the shadow verdict is MERGE.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.crucible.settlement_gate",
+    severity: "block",
+  },
   // ── v2.141.0 — HAUNT: "Code Haunting" / Git Telepathy ──
   {
     id: "claim.haunt.code_haunting",

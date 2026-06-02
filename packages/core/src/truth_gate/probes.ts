@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.crucible.settlement_gate",
+    kind: "boolean",
+    description: "CRUCIBLE (v2.142.0 — the File-level Settlement Gate). Before an AI's diff touches the real working tree, it is applied in a SHADOW git worktree (shares .git, not a kernel sandbox), built + tested THERE, and merged to the real disk ONLY if the shadow verification PASSES — signed receipt either way. This probe asserts crucibleGauntlet=100, and the load-bearing property is the SAFETY INVARIANT: a passing shadow verdict MERGEs (realTreeWritten=true) ∧ a failing one ROLLs BACK (realTreeWritten=false) ∧ a fail NEVER writes the real tree ∧ review-mode never writes ∧ any error fails CLOSED (no write) ∧ the plan extracts touched paths ∧ a failure brief is pulled from verify output ∧ realTreeWritten ⟺ MERGE across many exit codes (0/1/2/127/-1/255/137) ∧ deterministic ∧ total. HONEST: it proves YOUR build/test passed in a shadow with the diff applied — NOT that the code is bug-free (as strong as your verify command) and NOT a security sandbox (a malicious build script still runs — pair with the HEPHAESTUS command gate). The mechanical guarantee: the real tree is written iff the shadow verdict is MERGE.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const C = await import("../crucible/index.js" as string) as typeof import("../crucible/index.js");
+        const g = C.crucibleGauntlet();
+        const ok = g.score === 100 && g.passMerges && g.failRollsBack && g.failNeverWritesRealTree && g.reviewModeNeverWrites && g.errorFailsClosed && g.planExtractsTouchedPaths && g.extractsFailureBrief && g.invariantHoldsAcrossExitCodes && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} failNeverWrites=${g.failNeverWritesRealTree} invariant=${g.invariantHoldsAcrossExitCodes} failClosed=${g.errorFailsClosed} review=${g.reviewModeNeverWrites}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.haunt.code_haunting",
     kind: "boolean",
     description: "HAUNT (v2.141.0 — 'Code Haunting' / Git Telepathy). When a region acts up, it surfaces the ghost of the commit that last touched it: who/when, the INTENT recorded ('temporary fix' / 'แก้ขัดไปก่อน', detected EN+TH), the safeguards it lacks for the symptom (no-cache / no-timeout / await-in-loop), and the team knowledge already shared (from the Cortex) — one report instead of a manual git-blame dig. This probe asserts hauntGauntlet=100: extracts a temporary-fix intent in EN ∧ in TH ∧ flags a missing cache / await-in-loop on a perf symptom ∧ resolves last-touched author+subject+short-hash ∧ computes age in days ∧ returns UNKNOWN with no fabricated author/reason on empty history ∧ CLEAR on a recent safeguarded commit ∧ surfaces related team knowledge ∧ never over-claims causation (narrative says 'candidate, not a proven cause') ∧ deterministic ∧ total. HONEST: it SURFACES + CORRELATES real git facts + recorded intent — a candidate to LOOK at, NOT a proven cause and NOT fortune-telling; the safeguard flags are lexical signals, not a static analyzer's proof.",
