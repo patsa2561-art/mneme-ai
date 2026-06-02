@@ -315,6 +315,7 @@ export * as crucible from "./crucible/index.js";
 export * as drift from "./drift/index.js";
 export * as perfcore from "./perfcore/index.js";
 export * as agentGovernor from "./governor/index.js";
+export * as intentGateway from "./intent_gateway/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
 // v2.3 LEXICON so Mneme can speak each vendor's preferred dialect while

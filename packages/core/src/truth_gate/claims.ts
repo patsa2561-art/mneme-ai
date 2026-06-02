@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.146.0 — THE INTENT GATEWAY: free NL → the right Mneme command (measured) ──
+  {
+    id: "claim.gateway.intent_routing",
+    source: "v2.146.0 release notes",
+    text: "Mneme's INTENT GATEWAY fixes the load-bearing weakness — a user types FREE natural language (any language, EN/Thai), never memorizes a command, and the Gateway picks the RIGHT Mneme command for the best result. It is a curated bilingual concept-map for the high-value intents users actually type + an IDF-weighted full-catalog fallback for the long tail + ABSTENTION (CLARIFY/UNKNOWN — a confidently-wrong route is worse than a question) + entity extraction (budget/forbidden/scope) that compiles a runnable invocation (e.g. 'ดูแลเรื่องงบ 50000 ห้ามโพสต์ด่าใคร' → `mneme govern charter-init --budget 50000 --forbidden \"…\"`). gatewayGauntlet=100, whose centerpiece is a MEASURED, signed, re-runnable before→after accuracy benchmark: the Gateway's top-1 accuracy on a labeled EN+Thai corpus BEATS the old keyword router by a wide margin (measured 100% vs 13% in-repo) ∧ it nails the exact cases the old router failed (mission-drift→telos, stop-the-bots→govern, test-this-diff→crucible, who-wrote-this→haunt, in EN AND Thai) ∧ bilingual ∧ abstains on gibberish ∧ extracts entities + compiles the invocation ∧ deterministic ∧ total. CLI `mneme gateway \"<free text>\"` (+ `gateway bench`); MCP `mneme.gateway.route` (self-attesting). HONEST (DIAKRISIS): 100% NL routing is impossible (language is ambiguous) — the target is HIGH top-1 accuracy on the corpus + abstention on the rest, never a confident misfire; and the deepest truth is that the LLM agent calling Mneme is itself the best router — this Gateway is the deterministic, MEASURED fallback (chat-only / offline / low-confidence) and the proof the routing works, while the MANDATE in the manifest + `mneme boot` is what makes agents reach for Mneme at all.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.gateway.intent_routing",
+    severity: "block",
+  },
   // ── v2.145.0 — THE AGENT GOVERNOR: orchestrator-agnostic autonomous governance kernel (capstone) ──
   {
     id: "claim.governor.agent_governance",

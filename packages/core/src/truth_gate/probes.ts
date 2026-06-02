@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.gateway.intent_routing",
+    kind: "boolean",
+    description: "THE INTENT GATEWAY (v2.146.0). The fix for the load-bearing weakness: a user types FREE natural language (any language, EN/Thai), never memorizes a command, and the Gateway picks the RIGHT Mneme command. A curated bilingual concept-map (the high-value intents) + an IDF-weighted full-catalog fallback + abstention (CLARIFY/UNKNOWN — never a confident misfire) + entity extraction (budget/forbidden/scope → a compiled invocation). This probe asserts gatewayGauntlet=100, whose centerpiece is a MEASURED before→after accuracy benchmark: the Gateway's top-1 accuracy on a labeled EN+Thai corpus BEATS the old keyword router by a wide margin (measured 100% vs 13%) ∧ it nails the specific cases the old router failed (mission-drift→telos, stop-bots→govern, test-diff→crucible, who-wrote→haunt, in EN AND Thai) ∧ bilingual ∧ abstains on gibberish ∧ extracts entities + compiles the invocation ∧ deterministic ∧ total. HONEST: 100% NL routing is impossible (language is ambiguous) — the target is high top-1 accuracy + abstention on the rest; the LLM agent is itself the best router, this is the deterministic, measured fallback + the mandate that makes agents use Mneme at all.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const G = await import("../intent_gateway/index.js" as string) as typeof import("../intent_gateway/index.js");
+        const g = G.gatewayGauntlet();
+        const ok = g.score === 100 && g.beatsOldRouter && g.highTop1Accuracy && g.nailsPreviouslyFailedCases && g.bilingual && g.abstainsOnGibberish && g.extractsEntities && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} beatsOld=${g.beatsOldRouter} highAcc=${g.highTop1Accuracy} nailsCases=${g.nailsPreviouslyFailedCases} bilingual=${g.bilingual} entities=${g.extractsEntities}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.governor.agent_governance",
     kind: "boolean",
     description: "THE AGENT GOVERNOR (v2.145.0 — the capstone). An orchestrator-agnostic governance kernel: ratify a Charter once, then run a fleet's action queue as a continuous AUTO-OPERATION BATCH — autonomous + audited actions flow without per-step human input; only irreversible / out-of-envelope / forbidden escalate; a circuit-breaker pauses the fleet on mission drift. Folds CERBERUS · CRUCIBLE · TELOS · REGRET · ELLEIPSIS into one verdict. This probe asserts governorGauntlet=100, and the load-bearing property is THE SAFETY INVARIANT: an irreversible / destructive / out-of-scope / over-budget / forbidden / drift-divergent / failed-shadow action can NEVER be ALLOW_AUTONOMOUS. Also: clean actions run autonomous ∧ caution signals get ALLOW_WITH_AUDIT ∧ the auto-batch flows (autonomous run, escalations queued) ∧ the circuit-breaker trips on DIVERGENT mid-batch + stops ∧ budget stops the batch ∧ SAGA compensates the reversible executed steps newest-first (irreversible un-compensable) ∧ the Living Charter widens the envelope on clean evidence + narrows on a regret (never auto-widens to destructive) ∧ deterministic ∧ total. HONEST: the Governor DECIDES + SEQUENCES + ESCALATES + COMPENSATES — it does NOT execute the agent's work (orchestrator's job; Mneme is the kernel). 'Fully autonomous' = the safe/reversible flow runs untouched, only the genuinely-irreversible escalates — autonomy bounded by a mechanical signed envelope, never self-installing.",
