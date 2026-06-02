@@ -400,7 +400,7 @@ async function loadList(reset=true){
     const data=await fetchPage(offset);
     loaded=loaded.concat(data.items||[]);
     if(loaded.length===0){
-      el.innerHTML=`<div class="bitem muted">${tab==="mine"?"No reports yet. Run an X-Ray while signed in, or <code>mneme-xray ./repo --publish</code> a private repo.":"No reports yet — be the first."}</div>`;
+      el.innerHTML=`<div class="bitem muted">${tab==="mine"?"Nothing here yet — run an <b>X-Ray</b> or <b>📦 AI Pack</b> above and it appears here automatically. (Private folder? use the local Browse panel.)":"No reports yet — be the first."}</div>`;
       return;
     }
     const more = (data.offset+data.limit) < data.total;
