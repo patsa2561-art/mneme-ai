@@ -21,7 +21,20 @@
     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     font-feature-settings:"cv11","ss01";letter-spacing:-0.011em}
   ::selection{background:var(--a-soft)}
-  .wrap{max-width:720px;margin:0 auto;padding:0 24px}
+  .wrap{max-width:720px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+  /* decorative comets — only on wide screens (desktop / iPad landscape) */
+  .comet{position:fixed;pointer-events:none;z-index:0;opacity:0;display:none}
+  .comet-a{top:9%;right:3.5vw}
+  .comet-b{bottom:7%;left:3vw}
+  @media (min-width:1180px){
+    .comet{display:block;animation:cometIn 1.2s ease .3s forwards}
+    .comet-a{animation:cometIn 1.2s ease .3s forwards, driftA 16s ease-in-out 1.5s infinite alternate}
+    .comet-b{animation:cometIn 1.2s ease .6s forwards, driftB 19s ease-in-out 2s infinite alternate}
+  }
+  @keyframes cometIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+  @keyframes driftA{from{transform:translate(0,0) rotate(0deg)}to{transform:translate(-14px,18px) rotate(-3deg)}}
+  @keyframes driftB{from{transform:translate(0,0) rotate(0deg)}to{transform:translate(16px,-14px) rotate(3deg)}}
+  @media (prefers-reduced-motion:reduce){.comet{animation:none!important;opacity:1!important}}
   /* hero */
   header{padding:96px 0 40px;text-align:center}
   .mark{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--sub);font-weight:600}
@@ -36,6 +49,9 @@
     color:var(--sub);font-size:13px;line-height:1.5}
   .btnhelp b{color:var(--ink2);font-weight:600}
   .keyhelp{font-size:12.5px;color:var(--sub);margin:12px 0 0;line-height:1.5;text-align:center}
+  .keymsg{margin:12px auto 0;max-width:520px;text-align:center;font-size:13px;line-height:1.55;color:#166534;
+    background:#f0fdf4;border:1px solid #dcfce7;border-radius:10px;padding:11px 14px}
+  .keymsg b{color:#14532d;font-weight:640}
   button{height:54px;padding:0 24px;border:0;border-radius:var(--rs);background:var(--ink);color:#fff;
     font-size:15.5px;font-weight:560;cursor:pointer;transition:transform .12s, opacity .18s, background .18s;white-space:nowrap}
   button:hover{background:#22232c}
@@ -180,6 +196,23 @@
 </style>
 </head>
 <body>
+<!-- decorative comets — desktop / iPad only, hidden on narrow screens -->
+<div class="comet comet-a" aria-hidden="true">
+  <svg viewBox="0 0 300 300" width="300" height="300"><defs>
+    <linearGradient id="ta" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0b0f" stop-opacity=".62"/><stop offset="1" stop-color="#0b0b0f" stop-opacity="0"/></linearGradient></defs>
+    <path d="M262 44 Q150 118 30 252 Q150 132 252 54 Z" fill="url(#ta)"/>
+    <circle cx="262" cy="44" r="15" fill="#0b0b0f" opacity=".12"/>
+    <circle cx="262" cy="44" r="7.5" fill="#0b0b0f"/>
+  </svg>
+</div>
+<div class="comet comet-b" aria-hidden="true">
+  <svg viewBox="0 0 300 300" width="220" height="220"><defs>
+    <linearGradient id="tb" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0b0b0f" stop-opacity=".5"/><stop offset="1" stop-color="#0b0b0f" stop-opacity="0"/></linearGradient></defs>
+    <path d="M38 256 Q150 182 270 48 Q150 168 48 246 Z" fill="url(#tb)"/>
+    <circle cx="38" cy="256" r="12" fill="#0b0b0f" opacity=".12"/>
+    <circle cx="38" cy="256" r="6" fill="#0b0b0f"/>
+  </svg>
+</div>
 <div class="wrap">
   <header>
     <div class="mark">Mneme · Repo X-Ray</div>
@@ -203,6 +236,7 @@
         <button id="savekey" type="button">Save</button>
         <span id="keystate" class="kstate"></span>
       </div>
+      <div id="keymsg" class="keymsg" style="display:none"></div>
     </details>
     <div class="localbox" id="localbox">
       <div class="lh"><span class="localdot"></span>Local agent detected — scan a folder on <b>this machine</b> (source never leaves it)</div>
@@ -271,13 +305,23 @@ async function profileId(token){
 function refreshKeyState(){
   const k=getKey(), st=document.getElementById("keystate"), tab=document.getElementById("tabMine");
   document.getElementById("key").value = k;
-  st.textContent = k ? "signed in ✓" : "";
+  st.textContent = k ? "saved ✓" : "";
   tab.style.display = k ? "inline-block" : "none";
 }
 document.getElementById("savekey").addEventListener("click", ()=>{
   const k=document.getElementById("key").value.trim();
-  if(k) localStorage.setItem("xrayKey",k); else localStorage.removeItem("xrayKey");
-  refreshKeyState(); loadList();
+  const msg=document.getElementById("keymsg");
+  if(k){
+    localStorage.setItem("xrayKey",k);
+    refreshKeyState();
+    msg.innerHTML='✓ Saved. From now on, every <b>X-Ray</b> or <b>AI Pack</b> you run is kept under <b>My repos</b> — open it any time with this same key.';
+    msg.style.display="block";
+    tab="mine"; setTab(document.getElementById("tabMine")); loadList();
+  } else {
+    localStorage.removeItem("xrayKey"); refreshKeyState();
+    msg.innerHTML='Signed out. Reports are no longer saved.'; msg.style.display="block";
+    tab="board"; setTab(document.getElementById("tabBoard")); loadList();
+  }
 });
 
 let tab="board", offset=0, loaded=[];
