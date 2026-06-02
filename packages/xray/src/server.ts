@@ -31,7 +31,8 @@ import { createHash } from "node:crypto";
 import { buildXRay } from "./engine.js";
 import { sealXRay, verifyXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
-import { isAllowedPublicUrl } from "./clone.js";
+import { isAllowedPublicUrl, shallowClone } from "./clone.js";
+import { buildContextPack } from "./pack.js";
 import { CosmicMonitor, cosmicBadgeSvg, signCosmicStatus } from "./cosmic.js";
 import type { SignedXRay, XRayReport } from "./types.js";
 
@@ -396,6 +397,25 @@ export function createXRayServer(monitor?: CosmicMonitor) {
       } catch (e) {
         return send(res, 502, { error: (e as Error).message.slice(0, 300) });
       }
+    }
+
+    // AI CONTEXT PACK — prioritized, budgeted, secret-redacted repo→AI text.
+    // Public repos only here (the pack contains code, so it is RETURNED to the
+    // user and never stored). Private repos use the local bridge.
+    if (req.method === "POST" && url.pathname === "/api/pack") {
+      if (rateLimited("pack:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      let body: { gitUrl?: string; budget?: number };
+      try { body = JSON.parse(await readBody(req) || "{}"); } catch { return send(res, 400, { error: "invalid JSON" }); }
+      const gitUrl = (body.gitUrl || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs. For private repos, run the local bridge." });
+      let handle: { path: string; dispose: () => void } | null = null;
+      try {
+        handle = shallowClone(gitUrl);
+        const pack = buildContextPack(handle.path, { budget: Math.min(200_000, body.budget || 120_000) });
+        return send(res, 200, pack);
+      } catch (e) {
+        return send(res, 502, { error: (e as Error).message.slice(0, 300) });
+      } finally { if (handle) handle.dispose(); }
     }
 
     // THE BRIDGE — a local agent publishes a report it built on a PRIVATE repo.

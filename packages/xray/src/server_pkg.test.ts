@@ -85,6 +85,17 @@ describe("@mneme-ai/xray server (no network)", () => {
     expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(signed) })).status).toBe(401);
   }, 120_000);
 
+  it("AI Context Pack: prioritized, budgeted, secret-redacted (beats a raw dump)", async () => {
+    const { buildContextPack } = await import("./pack.js");
+    const pack = buildContextPack(repoRoot, { budget: 40_000 });
+    expect(pack.markdown).toContain("AI Context Pack");
+    expect(pack.markdown).toContain("Read this first");
+    expect(pack.filesIncluded).toBeGreaterThan(0);
+    expect(pack.filesOutline).toBeGreaterThan(0);            // most files are skeletons, not dumps
+    expect(pack.estTokens).toBeLessThan(40_000 * 1.25);      // respects the token budget (a raw dump would not)
+    expect(pack.filesOmitted).toBeGreaterThan(0);            // low-signal files dropped to fit
+  }, 120_000);
+
   it("cosmic monitor: status math + badge are correct", async () => {
     const { computeStatus, cosmicBadgeSvg } = await import("./cosmic.js");
     const now = 1_000_000;

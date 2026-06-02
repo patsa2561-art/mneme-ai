@@ -103,6 +103,16 @@
   .sbtn{padding:8px 13px;border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:9px;
     font-size:13px;cursor:pointer;text-decoration:none}
   .sbtn.ghost{background:#fff;color:var(--ink)}
+  .ghostbtn{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .ghostbtn:hover{border-color:var(--ink)}
+  .packcard{border:1px solid var(--line);border-radius:18px;margin-top:30px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03),0 8px 30px rgba(0,0,0,.04);animation:rise .3s ease}
+  .packcard .ptop{padding:22px 28px;border-bottom:1px solid var(--line)}
+  .packcard .ptop b{font-size:18px}
+  .pstats{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px;color:var(--sub);font-size:13.5px}
+  .pstats .pn{color:var(--ink);font-weight:640}
+  .pactions{display:flex;gap:10px;flex-wrap:wrap;padding:16px 28px;background:var(--soft);border-bottom:1px solid var(--line)}
+  .pre{max-height:420px;overflow:auto;margin:0;padding:18px 28px;font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:pre-wrap;word-break:break-word;color:#374151}
+  .pwhy{padding:12px 28px;font-size:12.5px;color:var(--sub);background:var(--soft)}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #fff;border-top-color:transparent;
     border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px}
   @keyframes s{to{transform:rotate(360deg)}}
@@ -152,6 +162,7 @@
     <form id="f">
       <input id="u" placeholder="https://github.com/owner/repo" autocomplete="off" spellcheck="false" />
       <button id="go" type="submit">X-Ray</button>
+      <button id="packgo" type="button" class="ghostbtn" title="Build a prioritized, secret-redacted, token-budgeted context pack to paste into ChatGPT/Claude">📦 AI Pack</button>
     </form>
     <p class="hint">Every number is <b>reproducible</b> from git / AST / npm metadata and sealed with an <b>offline-verifiable</b> signature.</p>
     <div class="steps">
@@ -172,6 +183,7 @@
       <div class="localrow">
         <input id="localpath" placeholder="/absolute/path/to/your/repo  (git or not)" autocomplete="off" spellcheck="false" />
         <button id="localgo" type="button">Scan local</button>
+        <button id="localpack" type="button" class="ghostbtn">📦 Pack</button>
       </div>
       <div class="localhint">Private code? This reads it locally and shows the signed result here — nothing is uploaded.</div>
     </div>
@@ -179,6 +191,7 @@
   </header>
 
   <div id="out"></div>
+  <div id="packout"></div>
 
   <div class="board">
     <div class="tabs"><button id="tabBoard" class="tab on">Recently X-rayed</button><button id="tabMine" class="tab" style="display:none">My repos</button></div>
@@ -328,6 +341,57 @@ document.getElementById("localgo").addEventListener("click", async ()=>{
     else { render(data); window.scrollTo({top:0,behavior:"smooth"}); }
   }catch(ex){ err.textContent="Could not reach the local agent. Run: npx @mneme-ai/xray bridge"; err.style.display="block"; }
   finally{ btn.disabled=false; btn.textContent="Scan local"; }
+});
+// ---- AI CONTEXT PACK (beats gitingest: prioritized · budgeted · secret-redacted) ----
+function renderPack(p){
+  const md = p.markdown || "";
+  document.getElementById("packout").innerHTML = `
+  <div class="packcard">
+    <div class="ptop"><b>📦 AI Context Pack — ${esc(p.repoName||"repo")}</b>
+      <div class="pstats">
+        <span><span class="pn">~${(p.estTokens||0).toLocaleString()}</span> tokens (fits your model)</span>
+        <span><span class="pn">${p.filesIncluded||0}</span> files (${p.filesFull||0} full · ${p.filesOutline||0} outline)</span>
+        <span><span class="pn">${p.secretsRedacted||0}</span> secrets redacted</span>
+        ${p.filesOmitted?`<span><span class="pn">${p.filesOmitted}</span> low-signal files omitted</span>`:""}
+      </div>
+    </div>
+    <div class="pactions">
+      <button class="sbtn" id="pcopy">Copy for ChatGPT / Claude</button>
+      <button class="sbtn ghost" id="pdl">Download .md</button>
+    </div>
+    <div class="pwhy">Unlike a raw dump (gitingest): prioritized by real signals, secret-redacted, and budgeted so it actually fits the model — not millions of unusable tokens.</div>
+    <pre class="pre">${esc(md.slice(0,20000))}${md.length>20000?"\n\n… (truncated preview — Copy/Download for the full pack)":""}</pre>
+  </div>`;
+  document.getElementById("pcopy").addEventListener("click",async e=>{try{await navigator.clipboard.writeText(md);e.target.textContent="Copied ✓";setTimeout(()=>e.target.textContent="Copy for ChatGPT / Claude",1400);}catch{}});
+  document.getElementById("pdl").addEventListener("click",()=>{const b=new Blob([md],{type:"text/markdown"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=(p.repoName||"repo").replace(/\W+/g,"-")+"-context-pack.md";a.click();});
+}
+document.getElementById("packgo").addEventListener("click", async ()=>{
+  const u=document.getElementById("u").value.trim();
+  const err=document.getElementById("err"), btn=document.getElementById("packgo");
+  err.style.display="none"; document.getElementById("out").innerHTML=""; document.getElementById("packout").innerHTML="";
+  if(!u){ err.textContent="Paste a public repo URL (or use the local agent panel for a private folder)."; err.style.display="block"; return; }
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Packing…';
+  try{
+    const res=await fetch("/api/pack",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({gitUrl:u})});
+    const data=await res.json();
+    if(!res.ok){ err.textContent=data.error||"pack failed"; err.style.display="block"; }
+    else { renderPack(data); window.scrollTo({top:document.getElementById("packout").offsetTop-20,behavior:"smooth"}); }
+  }catch(ex){ err.textContent=String(ex); err.style.display="block"; }
+  finally{ btn.disabled=false; btn.textContent="📦 AI Pack"; }
+});
+document.getElementById("localpack").addEventListener("click", async ()=>{
+  const p=document.getElementById("localpath").value.trim();
+  const err=document.getElementById("err"), btn=document.getElementById("localpack");
+  err.style.display="none"; document.getElementById("out").innerHTML=""; document.getElementById("packout").innerHTML="";
+  if(!p) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>Packing…';
+  try{
+    const res=await fetch(BRIDGE+"/bridge/pack",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path:p})});
+    const data=await res.json();
+    if(!res.ok){ err.textContent=data.error||"local pack failed"; err.style.display="block"; }
+    else { renderPack(data); window.scrollTo({top:document.getElementById("packout").offsetTop-20,behavior:"smooth"}); }
+  }catch(ex){ err.textContent="Could not reach the local agent. Run: npx @mneme-ai/xray bridge"; err.style.display="block"; }
+  finally{ btn.disabled=false; btn.textContent="📦 Pack"; }
 });
 detectBridge();
 refreshKeyState();

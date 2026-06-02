@@ -30,6 +30,26 @@ async function main() {
     return;
   }
 
+  // `pack` — produce an AI Context Pack (prioritized, budgeted, secret-redacted)
+  if (args[0] === "pack") {
+    const { buildContextPack } = await import("./pack.js");
+    const tgt = args.find((a, i) => i > 0 && !a.startsWith("--") && a !== flagVal(args, "--budget") && a !== flagVal(args, "-o")) || ".";
+    const budget = parseInt(flagVal(args, "--budget") || "120000", 10);
+    let pack;
+    if (/^https:\/\//.test(tgt)) {
+      const { shallowClone } = await import("./clone.js");
+      const h = shallowClone(tgt);
+      try { pack = buildContextPack(h.path, { budget }); } finally { h.dispose(); }
+    } else {
+      if (!existsSync(tgt)) { process.stderr.write(`✗ path not found: ${tgt}\n`); process.exit(1); }
+      pack = buildContextPack(tgt, { budget });
+    }
+    const out = flagVal(args, "-o");
+    if (out) { const { writeFileSync } = await import("node:fs"); writeFileSync(out, pack.markdown); process.stdout.write(`✓ wrote ${out} — ${pack.note}\n`); }
+    else process.stdout.write(pack.markdown);
+    return;
+  }
+
   // `ci-gate` — fail CI if a changed file is a high hotspot (enterprise gate)
   if (args[0] === "ci-gate") {
     const path = args.find((a, i) => i > 0 && !a.startsWith("--") && a !== flagVal(args, "--changed")) || ".";

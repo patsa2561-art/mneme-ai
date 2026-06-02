@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { buildXRay } from "./engine.js";
 import { sealXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
+import { buildContextPack } from "./pack.js";
 
 const ALLOW = [
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
@@ -63,6 +64,22 @@ export function runBridge(port = 7799): void {
           const signed = sealXRay(existsSync(path) ? path : process.cwd(), report);
           process.stdout.write(`  ✓ local X-Ray: ${path} → grade ${report.summary.grade} (source never left this machine)\n`);
           return json(res, 200, signed);
+        } catch (e) {
+          return json(res, 500, { error: (e as Error).message.slice(0, 300) });
+        }
+      });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/bridge/pack") {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        try {
+          const { path, budget } = JSON.parse(body || "{}") as { path?: string; budget?: number };
+          if (!path || !existsSync(path)) return json(res, 400, { error: "path does not exist on this machine: " + (path || "(empty)") });
+          const pack = buildContextPack(path, { budget: budget || 120_000 });
+          process.stdout.write(`  ✓ local AI Context Pack: ${path} → ~${pack.estTokens} tokens (${pack.secretsRedacted} secrets redacted; source never left this machine)\n`);
+          return json(res, 200, pack);
         } catch (e) {
           return json(res, 500, { error: (e as Error).message.slice(0, 300) });
         }

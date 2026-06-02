@@ -19,5 +19,6 @@ export { publishReport, type PublishResult } from "./publish.js";
 export { createXRayServer } from "./server.js";
 export { CosmicMonitor, computeStatus, cosmicBadgeSvg, type CosmicStatus, type Sample } from "./cosmic.js";
 export { runBridge } from "./bridge.js";
+export { buildContextPack, type ContextPack } from "./pack.js";
 export { analyzeCoupling } from "./battery/coupling.js";
 export { licenseClass } from "./battery/deps.js";
