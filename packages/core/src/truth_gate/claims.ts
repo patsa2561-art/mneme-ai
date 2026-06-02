@@ -944,6 +944,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.143.0 — DRIFT: Mission-Drift Detection (Context Forensics) ──
+  {
+    id: "claim.drift.mission_drift",
+    source: "v2.143.0 release notes",
+    text: "Mneme's DRIFT is the Context-Forensics layer (Missing Links #2): continuous, signed detection of an agent slowly straying from its declared mission across turns — before the drift becomes damage. The out-of-box mechanism: treat the agent's action stream as a TIME SERIES and run a statistical-process-control EWMA control chart over a DETERMINISTIC off-mission signal (off-scope files · off-topic vs the mission vocabulary · risk-class weight), with a control limit derived from the agent's OWN early-on-mission baseline; crossing the upper control limit = out of control = DRIFTING/DIVERGENT. An EWMA chart is specifically tuned to catch SMALL PERSISTENT shifts (straying a little at a time), which a single planned-vs-actual snapshot (OVERSHOOT) cannot. driftGauntlet=100, and the gauntlet IS an A/B test: an on-mission stream is STABLE ∧ a progressively-straying stream is DIVERGENT ∧ score(B) > score(A) by a margin ∧ the first control-limit breach turn is detected ∧ a stream that RETURNS to mission has its EWMA decay (recovery lowers the score) ∧ thin data abstains to UNKNOWN ∧ the off-mission signal is sound ∧ the control-limit math holds ∧ deterministic ∧ total. CLI `mneme telos --mission … --scope … --actions log.jsonl` (exit 2 on DIVERGENT) + MCP `mneme.drift.analyze`. HONEST (DIAKRISIS): it measures how far recent behaviour moved from the baseline with a principled control limit — NOT mind-reading and NOT a prediction of the future; deterministic signals only, abstains on thin data, never flags DIVERGENT below the minimum action count. It composes with MISSION_RECORDER (the telemetry source) and is distinct from OVERSHOOT (one-shot) and REGRET (outcome calibration).",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.drift.mission_drift",
+    severity: "block",
+  },
   // ── v2.142.0 — CRUCIBLE: the File-level Settlement Gate (shadow build/test) ──
   {
     id: "claim.crucible.settlement_gate",

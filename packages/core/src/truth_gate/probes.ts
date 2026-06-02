@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.drift.mission_drift",
+    kind: "boolean",
+    description: "DRIFT (v2.143.0 — Mission-Drift Detection / Context Forensics, Missing Links #2). Treats an agent's action stream as a TIME SERIES and runs an EWMA statistical-process-control chart over a deterministic off-mission signal (off-scope files · off-topic vs the mission vocabulary · risk-class weight), with a control limit derived from the agent's OWN early baseline → STABLE / DRIFTING / DIVERGENT / UNKNOWN. This probe asserts driftGauntlet=100, and the gauntlet IS an A/B test: an on-mission stream (A) is STABLE ∧ a progressively-straying stream (B) is DIVERGENT ∧ score(B) > score(A) by a margin (A/B discrimination) ∧ the first control-limit breach turn is detected ∧ a stream that RETURNS to mission has its EWMA decay (recovery lowers the score) ∧ thin data abstains to UNKNOWN ∧ the off-mission signal is sound (on-mission<0.35, off-mission>0.6) ∧ the control-limit math holds (UCL>baseline, breaches counted) ∧ deterministic ∧ total. HONEST: it measures how far recent behaviour moved from the baseline with a principled control limit — NOT mind-reading and NOT a future prediction; it abstains on thin data and never flags DIVERGENT below the minimum action count. Distinct from OVERSHOOT (one-shot plan compare) — this is the trend.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const D = await import("../drift/index.js" as string) as typeof import("../drift/index.js");
+        const g = D.driftGauntlet();
+        const ok = g.score === 100 && g.onMissionIsStable && g.driftingStreamIsDivergent && g.abDiscriminates && g.detectsFirstBreachTurn && g.recoveryLowersScore && g.thinDataIsUnknown && g.offMissionSignalSound && g.controlLimitMath && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} A/B=${g.abDiscriminates} stable=${g.onMissionIsStable} divergent=${g.driftingStreamIsDivergent} recovery=${g.recoveryLowersScore} thin=${g.thinDataIsUnknown} cl=${g.controlLimitMath}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.crucible.settlement_gate",
     kind: "boolean",
     description: "CRUCIBLE (v2.142.0 — the File-level Settlement Gate). Before an AI's diff touches the real working tree, it is applied in a SHADOW git worktree (shares .git, not a kernel sandbox), built + tested THERE, and merged to the real disk ONLY if the shadow verification PASSES — signed receipt either way. This probe asserts crucibleGauntlet=100, and the load-bearing property is the SAFETY INVARIANT: a passing shadow verdict MERGEs (realTreeWritten=true) ∧ a failing one ROLLs BACK (realTreeWritten=false) ∧ a fail NEVER writes the real tree ∧ review-mode never writes ∧ any error fails CLOSED (no write) ∧ the plan extracts touched paths ∧ a failure brief is pulled from verify output ∧ realTreeWritten ⟺ MERGE across many exit codes (0/1/2/127/-1/255/137) ∧ deterministic ∧ total. HONEST: it proves YOUR build/test passed in a shadow with the diff applied — NOT that the code is bug-free (as strong as your verify command) and NOT a security sandbox (a malicious build script still runs — pair with the HEPHAESTUS command gate). The mechanical guarantee: the real tree is written iff the shadow verdict is MERGE.",
