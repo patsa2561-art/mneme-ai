@@ -66,6 +66,16 @@ describe("@mneme-ai/xray server (no network)", () => {
     const full = await (await fetch(`${base}/api/report/${report.fingerprint}`)).json();
     expect(full.report.fingerprint).toBe(report.fingerprint);
 
+    // growth engine: badge SVG, og card, and a permalink with server-rendered OG
+    const badge = await fetch(`${base}/badge/${report.fingerprint}.svg`);
+    expect(badge.headers.get("content-type")).toMatch(/svg/);
+    expect(await badge.text()).toContain("mneme x-ray");
+    const og = await fetch(`${base}/og/${report.fingerprint}.svg`);
+    expect(og.status).toBe(200);
+    const perma = await (await fetch(`${base}/r/${report.fingerprint}`)).text();
+    expect(perma).toContain('property="og:title"');
+    expect(perma).toContain("Mneme X-Ray");
+
     // tampering the report breaks the signature → ingest refuses
     const tampered = { receipt: signed.receipt, report: { ...report, summary: { ...report.summary, grade: "A" } } };
     const bad = await fetch(`${base}/api/ingest`, {

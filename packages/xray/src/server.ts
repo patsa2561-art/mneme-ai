@@ -157,8 +157,95 @@ function listProfile(profileId: string, limit = 100): unknown[] {
 function serveStatic(res: ServerResponse, file: string) {
   const path = join(PUBLIC_DIR, file);
   if (!existsSync(path)) { send(res, 404, { error: "not found" }); return; }
-  const type = file.endsWith(".html") ? "text/html; charset=utf-8" : file.endsWith(".svg") ? "image/svg+xml" : "text/plain";
+  const type = file.endsWith(".html") ? "text/html; charset=utf-8"
+    : file.endsWith(".svg") ? "image/svg+xml"
+    : file.endsWith(".js") ? "text/javascript; charset=utf-8"
+    : "text/plain";
   send(res, 200, readFileSync(path, "utf8"), type);
+}
+
+// ---- the growth engine: shareable badges + social cards + permalinks ----
+const GRADE_COLOR: Record<string, string> = { A: "#16a34a", B: "#65a30d", C: "#d97706", D: "#ea580c", F: "#dc2626" };
+const xesc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+
+function sendSvg(res: ServerResponse, svg: string, maxAgeSec = 300) {
+  res.writeHead(200, {
+    "content-type": "image/svg+xml; charset=utf-8",
+    "cache-control": `public, max-age=${maxAgeSec}`,
+    "access-control-allow-origin": "*",
+  });
+  res.end(svg);
+}
+
+/** shields-style flat badge: "mneme x-ray | <grade>". */
+function badgeSvg(grade: string): string {
+  const color = GRADE_COLOR[grade] || "#6b7280";
+  const label = "mneme x-ray", val = grade || "?";
+  const lw = 78, vw = 26, w = lw + vw, h = 20;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" role="img" aria-label="${label}: ${val}">
+<linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>
+<clipPath id="r"><rect width="${w}" height="${h}" rx="3" fill="#fff"/></clipPath>
+<g clip-path="url(#r)"><rect width="${lw}" height="${h}" fill="#0a0a0a"/><rect x="${lw}" width="${vw}" height="${h}" fill="${color}"/><rect width="${w}" height="${h}" fill="url(#s)"/></g>
+<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+<text x="${lw / 2}" y="14">${label}</text><text x="${lw + vw / 2}" y="14" font-weight="bold">${val}</text></g></svg>`;
+}
+
+/** 1200×630 social card for og:image (white, one big grade). NOTE: some platforms
+ *  (notably X/Twitter) do not render SVG og:image; Discord/Slack/LinkedIn do. A PNG
+ *  rasteriser is the future upgrade. */
+function socialCardSvg(r: XRayReport): string {
+  const color = GRADE_COLOR[r.summary.grade] || "#6b7280";
+  const bullets = (r.summary.bullets || []).slice(0, 5);
+  const lines = bullets.map((b, i) => `<text x="90" y="${330 + i * 46}" font-size="26" fill="#374151">${xesc(b.replace(/[^\x20-\x7E]/g, "").trim())}</text>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#ffffff"/><rect x="0" y="0" width="1200" height="8" fill="${color}"/>
+<text x="90" y="120" font-family="Verdana,sans-serif" font-size="26" letter-spacing="4" fill="#6b7280">MNEME · REPO X-RAY</text>
+<rect x="90" y="160" width="120" height="120" rx="24" fill="${color}"/>
+<text x="150" y="252" font-family="Verdana,sans-serif" font-size="74" font-weight="bold" fill="#fff" text-anchor="middle">${xesc(r.summary.grade)}</text>
+<text x="240" y="232" font-family="Verdana,sans-serif" font-size="46" font-weight="bold" fill="#0a0a0a">${xesc(r.subject.repoName)}</text>
+<text x="240" y="272" font-family="Verdana,sans-serif" font-size="24" fill="#6b7280">${xesc(r.summary.headline)}</text>
+${lines}
+<text x="90" y="590" font-family="Verdana,sans-serif" font-size="20" fill="#16a34a">✓ deterministic · signed · offline-verifiable — no AI guessed any number</text></svg>`;
+}
+
+/** latest stored report fingerprint for a repo slug like "github/owner/repo". */
+function latestByRepoSlug(slug: string): { fingerprint: string; grade: string } | null {
+  try {
+    if (!existsSync(BOARD_FILE())) return null;
+    const ownerRepo = slug.split("/").slice(1).join("/").toLowerCase();
+    const host = slug.split("/")[0].toLowerCase();
+    const lines = rf(BOARD_FILE(), "utf8").trim().split("\n").filter(Boolean).reverse();
+    for (const l of lines) {
+      const row = JSON.parse(l) as { ref?: string; fingerprint?: string; grade?: string };
+      const ref = String(row.ref || "").toLowerCase();
+      if (ref.includes(host) && ref.includes(ownerRepo) && row.fingerprint) {
+        return { fingerprint: row.fingerprint, grade: String(row.grade || "?") };
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function reportPageWithOg(signed: SignedXRay, origin: string): string {
+  const tpl = readFileSync(join(PUBLIC_DIR, "report.html"), "utf8");
+  const r = signed.report;
+  const title = `${r.subject.repoName} — Grade ${r.summary.grade} · Mneme X-Ray`;
+  const desc = (r.summary.bullets || []).slice(0, 4).map((b) => b.replace(/[^\x20-\x7E]/g, "").trim()).join(" · ") || r.summary.headline;
+  const url = `${origin}/r/${r.fingerprint}`;
+  const img = `${origin}/og/${r.fingerprint}.svg`;
+  const og = [
+    `<meta property="og:type" content="website"/>`,
+    `<meta property="og:title" content="${xesc(title)}"/>`,
+    `<meta property="og:description" content="${xesc(desc)}"/>`,
+    `<meta property="og:url" content="${xesc(url)}"/>`,
+    `<meta property="og:image" content="${xesc(img)}"/>`,
+    `<meta name="twitter:card" content="summary_large_image"/>`,
+    `<meta name="twitter:title" content="${xesc(title)}"/>`,
+    `<meta name="twitter:description" content="${xesc(desc)}"/>`,
+    `<meta name="twitter:image" content="${xesc(img)}"/>`,
+    `<meta name="description" content="${xesc(desc)}"/>`,
+  ].join("\n");
+  return tpl.replace("<title>Mneme · Repo X-Ray</title>", `<title>${xesc(title)}</title>`).replace("<!--OGMETA-->", og);
 }
 
 export function createXRayServer() {
@@ -171,6 +258,33 @@ export function createXRayServer() {
     if (req.method === "GET" && url.pathname === "/api/board") return send(res, 200, { board: readBoard() });
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) return serveStatic(res, "index.html");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
+    if (req.method === "GET" && url.pathname === "/card.js") return serveStatic(res, "card.js");
+
+    // embeddable badge — /badge/<fingerprint>.svg OR /badge/github/owner/repo.svg
+    if (req.method === "GET" && url.pathname.startsWith("/badge/") && url.pathname.endsWith(".svg")) {
+      const target = decodeURIComponent(url.pathname.slice("/badge/".length, -4));
+      let grade = "?";
+      if (FP_RE.test(target)) { grade = getReport(target)?.report.summary.grade ?? "?"; }
+      else { grade = latestByRepoSlug(target)?.grade ?? "?"; }
+      return sendSvg(res, badgeSvg(grade));
+    }
+
+    // social card (og:image) — /og/<fingerprint>.svg
+    if (req.method === "GET" && url.pathname.startsWith("/og/") && url.pathname.endsWith(".svg")) {
+      const fp = decodeURIComponent(url.pathname.slice("/og/".length, -4));
+      const signed = getReport(fp);
+      if (!signed) return send(res, 404, { error: "not found" });
+      return sendSvg(res, socialCardSvg(signed.report));
+    }
+
+    // shareable permalink — /r/<fingerprint> (server-renders OG meta for social previews)
+    if (req.method === "GET" && url.pathname.startsWith("/r/")) {
+      const fp = decodeURIComponent(url.pathname.slice("/r/".length).replace(/\/$/, ""));
+      const signed = getReport(fp);
+      const origin = `${(req.headers["x-forwarded-proto"] as string) || "http"}://${req.headers.host || "localhost"}`;
+      if (!signed) return send(res, 200, readFileSync(join(PUBLIC_DIR, "report.html"), "utf8"), "text/html; charset=utf-8");
+      return send(res, 200, reportPageWithOg(signed, origin), "text/html; charset=utf-8");
+    }
 
     // deep-view: fetch a stored full signed report by fingerprint
     if (req.method === "GET" && url.pathname.startsWith("/api/report/")) {

@@ -1,0 +1,32 @@
+# One-click "Deploy to DigitalOcean" template for the Mneme X-Ray server.
+# Powers the button:
+#   https://cloud.digitalocean.com/apps/new?repo=https://github.com/patsa2561-art/mneme-ai/tree/main
+# The user clicks → authorizes GitHub → DO builds packages/xray/Dockerfile → gives a live https URL.
+# No command line required.
+spec:
+  name: mneme-xray
+  region: sgp
+  services:
+    - name: xray
+      dockerfile_path: packages/xray/Dockerfile
+      source_dir: /
+      github:
+        repo: patsa2561-art/mneme-ai
+        branch: main
+        deploy_on_push: true
+      http_port: 8787
+      instance_size_slug: basic-xxs
+      instance_count: 1
+      health_check:
+        http_path: /api/health
+        initial_delay_seconds: 15
+        period_seconds: 30
+      envs:
+        - key: PORT
+          value: "8787"
+        - key: HOST
+          value: "0.0.0.0"
+        - key: XRAY_DATA_DIR
+          value: "/data"
+      routes:
+        - path: /

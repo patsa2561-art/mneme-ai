@@ -27,7 +27,19 @@ npm run -w @mneme-ai/xray serve        # → open http://localhost:8787, paste a
 npx mneme-xray ./your-repo             # private repo? analyse locally — nothing uploaded
 ```
 
-> **On the web:** open the page → paste a public `https://github.com/owner/repo` → read the grade. **Private repo:** `mneme-xray ./path --publish` analyses on *your* machine and sends only the signed, raw-free report. **[Deploy your own 24/7 (DigitalOcean, one command) →](packages/xray/README.md)**
+> **On the web:** open the page → paste a public `https://github.com/owner/repo` → read the grade. **Private repo:** `mneme-xray ./path --publish` analyses on *your* machine and sends only the signed, raw-free report.
+
+**Get your own live URL in one click** — no command line. Click below, authorize GitHub, and DigitalOcean gives you a public `https://…ondigitalocean.app` URL. Then *anyone* (your team, a CEO, an investor) just opens it — **zero install**:
+
+<a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/patsa2561-art/mneme-ai/tree/main" target="_blank" rel="noopener"><img src="https://www.deploy.do/do-btn-blue.svg" alt="Deploy to DigitalOcean" height="42"/></a>
+
+Embed the grade in any README — a signed, self-updating badge that links back to the full report:
+
+```md
+[![Mneme X-Ray](https://YOUR-APP.ondigitalocean.app/badge/github/owner/repo.svg)](https://YOUR-APP.ondigitalocean.app/r/<fingerprint>)
+```
+
+<sub>Details & self-host options → **[packages/xray](packages/xray/README.md)**</sub>
 
 ---
 
