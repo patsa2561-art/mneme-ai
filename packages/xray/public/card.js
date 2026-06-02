@@ -56,6 +56,10 @@
         <div><div class="repo">${esc(r.subject.repoName)}</div>
           <div class="head">${esc(s.headline)} · ${s.signalsRun} signals · @ ${esc(String(r.subject.commitHash).slice(0, 10))}</div></div>
       </div>
+      <div class="trustbar">
+        <span class="hgauge"><span class="hdot"></span>0% hallucination risk</span>
+        <span class="htext">Every number is computed from git, code &amp; package metadata — <b>no AI guessed anything</b>. ${s.signalsRun} deterministic signals${verified ? ` · <b>signed</b>, verifies offline` : ""}.</span>
+      </div>
       <div class="rows">
         <div class="row">${kcell("Dependencies")}<div class="v"><span class="big">${dep.total}</span> total · ${dep.byBand.dead + dep.byBand.moribund} dying · ${(lic["strong-copyleft"] + lic["weak-copyleft"])} copyleft<div class="chips">${depChips}${licChips}</div></div></div>
         <div class="row">${kcell("Secrets")}<div class="v"><span class="big">${sec.totalFindings}</span> in production code · ${sec.filesScanned} files${sec.excludedTestHits ? ` · <span class="muted">+${sec.excludedTestHits} in tests/docs (excluded)</span>` : ""}<div class="chips">${secChips}</div></div></div>
