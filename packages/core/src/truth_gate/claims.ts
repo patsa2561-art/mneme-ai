@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.148.0 — SIEGE: the Adversarial Self-Bounty (moat #3) ──
+  {
+    id: "claim.siege.bypass_resistance",
+    source: "v2.148.0 release notes",
+    text: "Mneme's SIEGE is the Adversarial Self-Bounty (moat #3): a command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score. Mneme fires its own attack corpus (rm -rf, pipe-to-shell, base64/hex-decode, find -delete, $IFS, var-indirection, fork-bomb, DROP TABLE, /dev/tcp exfil, …) at a gate, measures how many destructive payloads it WITHSTANDS vs lets through, and reports a Wilson-95%-LOWER-bound resistance score + band (FORTRESS/STRONG/WEAK/BREACHED). Every bypass found (by anyone, in a bounty) folds back into the corpus → the gate gets provably harder over time. siegeGauntlet=100: measures resistance ∧ DISCRIMINATES a sound gate (FORTRESS, ≥85% LB) from a naive leading-token denylist (BREACHED — it misses the obfuscation family the corpus targets) ∧ the Wilson LOWER bound is conservative (below the point rate) ∧ reports the bypasses by class ∧ self-hardens (a found bypass grows the corpus, dedup'd) ∧ per-class breakdown ∧ deterministic ∧ total. Live: Mneme's own gate (CERBERUS) scores FORTRESS; a naive denylist scores BREACHED (≈7% LB, 20 bypassed). CLI `mneme siege self|gate|corpus`; MCP `mneme.siege.run` (self-attesting). HONEST (DIAKRISIS): it measures resistance vs a KNOWN, self-hardening corpus — it is NOT a proof of 'unbreakable' (an open adversarial problem; a novel attack not in the corpus is by definition not yet measured, which is exactly why the corpus self-hardens and the score is a LOWER bound, never a point estimate). The moat: a public, signed, re-runnable resistance score competitors can't match without the corpus, and that nobody else dares publish.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.siege.bypass_resistance",
+    severity: "block",
+  },
   // ── v2.147.0 — MYCELIUM: the Sovereign Data Flywheel (moat #1) ──
   {
     id: "claim.mycelium.sovereign_flywheel",

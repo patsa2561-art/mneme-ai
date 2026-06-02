@@ -55,7 +55,8 @@ const DESTRUCTIVE: Array<[RegExp, string]> = [
   [/\bgit\s+(push\s+(-f|--force)|reset\s+--hard|clean\s+-[a-z]*f)/i, "git force/reset/clean"],
   [/\b(shutdown|reboot|halt|poweroff|Stop-Computer|Restart-Computer)\b/i, "power state"],
   [/\b(systemctl|service)\s+(stop|disable|mask)\b/i, "stop/disable service"],
-  [/\bchmod\s+-R\s+777\b/i, "chmod -R 777"],
+  [/\bchmod\s+-R\s+(0{3}|7{3})\b/i, "chmod -R 000/777 (mass permission change)"],
+  [/\bchmod\s+-R\b[^;&|]*\s\/(?:\s|$)/i, "recursive chmod on root"],
   [/:\s*\(\s*\)\s*\{.*\|.*&\s*\}\s*;/i, "fork bomb"],
   [/\b(Remove-Item|ri|rm)\b.*-Recurse.*-Force|\b(Remove-Item|ri)\b.*-Force.*-Recurse/i, "Remove-Item -Recurse -Force"],
 ];

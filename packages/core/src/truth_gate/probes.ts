@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.siege.bypass_resistance",
+    kind: "boolean",
+    description: "SIEGE (v2.148.0 — the Adversarial Self-Bounty, moat #3). A command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score: fire the attack corpus at a gate, measure how many destructive payloads it withstands vs lets through, report a Wilson-LOWER-bound resistance score + band (FORTRESS/STRONG/WEAK/BREACHED). Every new bypass folds back into the corpus → the gate gets provably harder. This probe asserts siegeGauntlet=100: measures resistance ∧ DISCRIMINATES a sound gate (FORTRESS) from a naive leading-token denylist (low LB — it misses the obfuscation family) ∧ the Wilson LB is conservative (below the point rate) ∧ reports the bypasses (incl. obfuscated) ∧ self-hardens (a found bypass grows the corpus, dedup'd) ∧ per-class breakdown ∧ deterministic ∧ total. HONEST: measures resistance vs a KNOWN, growing corpus — NOT a proof of 'unbreakable' (an open adversarial problem; a novel attack not in the corpus is not yet measured — which is why the corpus self-hardens + the score is a LOWER bound, never a point estimate).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../siege/index.js" as string) as typeof import("../siege/index.js");
+        const g = S.siegeGauntlet();
+        const ok = g.score === 100 && g.measuresResistance && g.discriminatesStrongVsWeak && g.wilsonLowerBoundConservative && g.reportsBypasses && g.selfHardens && g.perClassBreakdown && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} discriminates=${g.discriminatesStrongVsWeak} wilsonLB=${g.wilsonLowerBoundConservative} reportsBypasses=${g.reportsBypasses} selfHardens=${g.selfHardens}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.mycelium.sovereign_flywheel",
     kind: "boolean",
     description: "MYCELIUM (v2.147.0 — the Sovereign Data Flywheel, moat #1). The data flywheel that compounds WITHOUT centralizing: every node keeps data local and shares only SIGNED, content-free lesson digests (one-way hashes + DP-noised counts — never raw code/secrets); peers CRDT-merge them so the whole network gets smarter with no honeypot. Captures what WORKED and what FAILED (negative knowledge — moat #4). This probe asserts myceliumGauntlet=100: extracts content-free lessons (only hashes) ∧ the PRIVACY INVARIANT holds (no raw string/secret/topic can appear in a shared bundle — fail-closed) ∧ negative knowledge is shared too ∧ the merge is commutative ∧ idempotent (the network converges) ∧ a forged/untrusted bundle is dropped (signature-verified) ∧ DP noise is bounded + non-negative ∧ the compounding is MEASURED (inheriting a peer lesson raises the hit-rate) ∧ deterministic ∧ total. HONEST: the primary guarantee is structural (no raw content in a bundle — provable); DP is a secondary guard (deterministic scale, injected sample); 'compounding' is measured (hit-rate), not asserted. Only a local-first, signed, prove-or-unknown system can run a privacy-preserving flywheel — that's the moat.",
