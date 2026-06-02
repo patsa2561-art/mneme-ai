@@ -43,51 +43,62 @@ describe("@mneme-ai/xray server (no network)", () => {
     expect((await bad.json()).error).toMatch(/public/i);
 
     const board = await (await fetch(`${base}/api/board`)).json();
-    expect(Array.isArray(board.board)).toBe(true);
+    expect(Array.isArray(board.items)).toBe(true);
+    expect(typeof board.total).toBe("number");
   }, 30_000);
 
-  it("THE BRIDGE: publishes a locally-built signed report; rejects tampered/leaking", async () => {
+  it("THE BRIDGE + PRIVACY: private report is owner-only, never on the public board", async () => {
     await start();
-    // build a real report on THIS repo locally, sign it (the local-agent step)
+    // local-path report → visibility PRIVATE (a bank's repo, analysed locally)
     const report = await buildXRay({ repoPath: repoRoot });
     const signed = sealXRay(repoRoot, report);
     const token = "test-key-123";
 
-    // publish via the client → server verifies signature + raw-free, files under profile
     const pr = await publishReport(base, token, signed);
     expect(pr.ok).toBe(true);
     expect(pr.fingerprint).toBe(report.fingerprint);
 
-    // it now appears in that token's profile
+    // appears in the OWNER's profile (aggregated by repo: first/last/count)
     const prof = await (await fetch(`${base}/api/profile/${pr.profileId}`)).json();
-    expect(prof.reports.some((x: { fingerprint: string }) => x.fingerprint === report.fingerprint)).toBe(true);
+    const mine = prof.items.find((x: { fingerprint: string; count: number; firstAt: string; lastAt: string }) => x.fingerprint === report.fingerprint);
+    expect(mine).toBeTruthy();
+    expect(mine.count).toBeGreaterThanOrEqual(1);
+    expect(mine.firstAt).toBeTruthy();
 
-    // deep-view: the full signed report is retrievable by fingerprint
-    const full = await (await fetch(`${base}/api/report/${report.fingerprint}`)).json();
-    expect(full.report.fingerprint).toBe(report.fingerprint);
+    // PRIVACY: a private report needs the owner's key — anonymous fetch = 404 (existence hidden)
+    expect((await fetch(`${base}/api/report/${report.fingerprint}`)).status).toBe(404);
+    const owner = await fetch(`${base}/api/report/${report.fingerprint}`, { headers: { authorization: "Bearer " + token } });
+    expect(owner.status).toBe(200);
+    expect((await owner.json()).report.fingerprint).toBe(report.fingerprint);
 
-    // growth engine: badge SVG, og card, and a permalink with server-rendered OG
-    const badge = await fetch(`${base}/badge/${report.fingerprint}.svg`);
-    expect(badge.headers.get("content-type")).toMatch(/svg/);
-    expect(await badge.text()).toContain("mneme x-ray");
-    const og = await fetch(`${base}/og/${report.fingerprint}.svg`);
-    expect(og.status).toBe(200);
+    // PRIVACY: never on the public board, and its og/permalink leak nothing
+    const board = await (await fetch(`${base}/api/board`)).json();
+    expect(board.items.some((x: { fingerprint: string }) => x.fingerprint === report.fingerprint)).toBe(false);
+    expect((await fetch(`${base}/og/${report.fingerprint}.svg`)).status).toBe(404);
     const perma = await (await fetch(`${base}/r/${report.fingerprint}`)).text();
-    expect(perma).toContain('property="og:title"');
-    expect(perma).toContain("Mneme X-Ray");
+    expect(perma).not.toContain("og:title");           // repo name never injected for private
+    expect(perma).not.toContain(report.subject.repoName);
 
-    // tampering the report breaks the signature → ingest refuses
+    // tampering the report breaks the signature → ingest refuses (422); no token → 401
     const tampered = { receipt: signed.receipt, report: { ...report, summary: { ...report.summary, grade: "A" } } };
-    const bad = await fetch(`${base}/api/ingest`, {
-      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token },
-      body: JSON.stringify(tampered),
-    });
-    expect(bad.status).toBe(422);
-
-    // missing token → 401
-    const noTok = await fetch(`${base}/api/ingest`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(signed),
-    });
-    expect(noTok.status).toBe(401);
+    expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(tampered) })).status).toBe(422);
+    expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(signed) })).status).toBe(401);
   }, 120_000);
+
+  it("cosmic monitor: status math + badge are correct", async () => {
+    const { computeStatus, cosmicBadgeSvg } = await import("./cosmic.js");
+    const now = 1_000_000;
+    const samples = [
+      { ts: now - 3000, ok: true, latencyMs: 10 },
+      { ts: now - 2000, ok: true, latencyMs: 30 },
+      { ts: now - 1000, ok: false, latencyMs: 8000 },
+      { ts: now, ok: true, latencyMs: 20 },
+    ];
+    const st = computeStatus(samples, "http://x:8081/", now, 60_000);
+    expect(st.checks).toBe(4);
+    expect(st.uptimePct).toBe(75);     // 3 of 4 ok
+    expect(st.up).toBe(true);          // last sample ok
+    expect(cosmicBadgeSvg(st)).toContain("cosmic link");
+    expect(cosmicBadgeSvg({ ...st, up: false })).toContain("down");
+  });
 });

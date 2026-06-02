@@ -81,7 +81,23 @@
   .tab{background:none;border:0;padding:4px 0;margin-right:16px;font-size:13px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent}
   .tab.on{color:var(--ink);border-bottom-color:var(--ink)}
-  .bitem{cursor:pointer} .bitem:hover{opacity:.7}
+  .listbox{max-height:430px;overflow:auto;border:1px solid var(--line);border-radius:14px}
+  .bitem{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--soft);font-size:14.5px;cursor:pointer}
+  .bitem:last-child{border-bottom:0}
+  .bitem:hover{background:var(--soft)}
+  .bitem .bg{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;flex:none}
+  .bitem .nm{font-weight:560;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bitem .dates{display:flex;gap:14px;color:var(--sub);font-size:12.5px;white-space:nowrap}
+  .bitem .dates b{color:var(--ink);font-weight:560}
+  .bitem .cnt{color:var(--sub);font-size:12.5px;white-space:nowrap;min-width:56px;text-align:right}
+  .bitem .arr{color:var(--sub)}
+  .bitem.muted{cursor:default;color:var(--sub)}
+  .bitem.muted:hover{background:none}
+  .lock{margin-right:4px}
+  .listfoot{display:flex;justify-content:space-between;align-items:center;padding:12px 4px 0;font-size:13px}
+  .moreb{padding:8px 16px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer;font-size:13px}
+  .moreb:hover{border-color:var(--ink)}
+  @media (max-width:680px){ .bitem .dates{display:none} .bitem .cnt{min-width:auto} }
   .share{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 28px;border-top:1px solid var(--line)}
   .badgeimg{height:20px}
   .sbtn{padding:8px 13px;border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:9px;
@@ -90,6 +106,30 @@
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #fff;border-top-color:transparent;
     border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px}
   @keyframes s{to{transform:rotate(360deg)}}
+  .muted{color:var(--sub)}
+  /* crisper section separation */
+  .card .top{background:linear-gradient(#fff,#fcfcfd)}
+  .row .k{font-weight:560}
+  /* ---- mobile / cross-browser responsive ---- */
+  @media (max-width:680px){
+    .wrap{padding:0 16px}
+    header{padding:48px 0 26px}
+    h1{font-size:32px}
+    .lede{font-size:16px}
+    form{flex-direction:column}
+    button{width:100%}
+    .steps{gap:8px 12px;font-size:12.5px}
+    .card .top{flex-direction:row;gap:14px;padding:18px}
+    .grade{width:56px;height:56px;font-size:28px;border-radius:14px}
+    .top .repo{font-size:17px}
+    .rows{padding:4px 18px 10px}
+    .row{flex-direction:column;gap:4px;padding:13px 0}
+    .row .k{width:auto}
+    .foot,.share{padding:14px 18px}
+    .share{gap:8px}
+    .sbtn{flex:1;text-align:center}
+  }
+  @media (max-width:380px){ h1{font-size:27px} .grade{width:48px;height:48px;font-size:24px} }
 </style>
 </head>
 <body>
@@ -178,30 +218,51 @@ document.getElementById("savekey").addEventListener("click", ()=>{
   refreshKeyState(); loadList();
 });
 
-let tab="board";
-function itemsHTML(rows){
-  return (rows||[]).map(b=>
-    `<div class="bitem" data-fp="${esc(b.fingerprint)}"><span class="bg ${gC(b.grade)}">${esc(b.grade)}</span><span class="nm">${esc(b.repoName)}</span><span class="hd">${b.visibility==="private"?"🔒 ":""}${esc(b.headline)}</span></div>`
-  ).join("");
+let tab="board", offset=0, loaded=[];
+const PAGE=20;
+function fmtDate(s){ if(!s) return "—"; const d=new Date(s); return isNaN(d)?"—":d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
+function rowHTML(b){
+  const lock = b.visibility==="private" ? '<span class="lock" title="private — only you can open this">🔒</span>' : "";
+  const scans = b.count>1 ? `${b.count} scans` : `1 scan`;
+  return `<div class="bitem" data-fp="${esc(b.fingerprint)}" data-priv="${b.visibility==="private"?1:0}">
+    <span class="bg ${gC(b.grade)}">${esc(b.grade)}</span>
+    <span class="nm">${lock}${esc(b.repoName)}</span>
+    <span class="dates"><span>first <b>${fmtDate(b.firstAt)}</b></span><span>latest <b>${fmtDate(b.lastAt)}</b></span></span>
+    <span class="cnt">${scans}</span><span class="arr">↗</span></div>`;
 }
-async function loadList(){
+async function fetchPage(off){
+  if(tab==="mine"){
+    const k=getKey(); if(!k) return {items:[],total:0};
+    const id=await profileId(k);
+    return await (await fetch(`/api/profile/${id}?offset=${off}&limit=${PAGE}`)).json();
+  }
+  return await (await fetch(`/api/board?offset=${off}&limit=${PAGE}`)).json();
+}
+async function loadList(reset=true){
   const el=document.getElementById("board");
+  if(reset){ offset=0; loaded=[]; el.innerHTML='<div class="bitem muted">Loading…</div>'; }
   try{
-    if(tab==="mine"){
-      const id=await profileId(getKey());
-      const {reports}=await (await fetch("/api/profile/"+id)).json();
-      el.innerHTML=itemsHTML(reports)||`<div class="bitem" style="color:var(--sub)">No reports yet. Run an X-Ray while signed in, or <code>mneme-xray ./repo --publish</code>.</div>`;
-    }else{
-      const {board}=await (await fetch("/api/board")).json();
-      el.innerHTML=itemsHTML(board)||`<div class="bitem" style="color:var(--sub)">No reports yet — be the first.</div>`;
+    const data=await fetchPage(offset);
+    loaded=loaded.concat(data.items||[]);
+    if(loaded.length===0){
+      el.innerHTML=`<div class="bitem muted">${tab==="mine"?"No reports yet. Run an X-Ray while signed in, or <code>mneme-xray ./repo --publish</code> a private repo.":"No reports yet — be the first."}</div>`;
+      return;
     }
-    el.querySelectorAll(".bitem[data-fp]").forEach(n=>n.addEventListener("click",()=>openReport(n.dataset.fp)));
-  }catch{}
+    const more = (data.offset+data.limit) < data.total;
+    el.innerHTML = `<div class="listbox">${loaded.map(rowHTML).join("")}</div>`
+      + `<div class="listfoot"><span class="muted">${loaded.length} of ${data.total} repos</span>${more?'<button class="moreb" id="moreb">Load more</button>':""}</div>`;
+    el.querySelectorAll(".bitem[data-fp]").forEach(n=>n.addEventListener("click",()=>openReport(n.dataset.fp, n.dataset.priv==="1")));
+    const mb=document.getElementById("moreb"); if(mb) mb.addEventListener("click",()=>{ offset+=PAGE; loadList(false); });
+  }catch{ el.innerHTML='<div class="bitem muted">Could not load.</div>'; }
 }
-async function openReport(fp){
+async function openReport(fp, isPrivate){
   if(!fp) return;
   try{
-    const signed=await (await fetch("/api/report/"+encodeURIComponent(fp))).json();
+    const headers={}; const k=getKey();
+    if(isPrivate && k) headers.authorization="Bearer "+k;   // private: authenticated fetch, never a public link
+    const res=await fetch("/api/report/"+encodeURIComponent(fp),{headers});
+    if(!res.ok){ alert(isPrivate?"This is a private report — open it while signed in with the key that created it.":"Report not found."); return; }
+    const signed=await res.json();
     if(signed&&signed.report){ render(signed); window.scrollTo({top:0,behavior:"smooth"}); }
   }catch{}
 }

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cosmic Link · Status · Mneme</title>
+<link rel="icon" href="/favicon.svg" />
+<style>
+  :root{--ink:#0a0a0a;--sub:#6b7280;--line:#ececec;--soft:#fafafa;--green:#16a34a;--red:#dc2626;--a:#4f46e5}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:680px;margin:0 auto;padding:46px 20px 70px}
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
+  .mark{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--sub)}
+  .home{font-size:13px;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:8px 13px}
+  h1{font-size:30px;font-weight:680;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{color:var(--sub);margin:0 0 26px}
+  .card{border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03),0 8px 30px rgba(0,0,0,.04)}
+  .hero{display:flex;align-items:center;gap:18px;padding:26px 28px;border-bottom:1px solid var(--line)}
+  .pulse{width:16px;height:16px;border-radius:50%;flex:none}
+  .pulse.up{background:var(--green);box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:p 2s infinite}
+  .pulse.down{background:var(--red)}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}70%{box-shadow:0 0 0 12px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+  .state{font-size:26px;font-weight:680}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr)}
+  .cell{padding:22px 28px;border-right:1px solid var(--soft);border-bottom:1px solid var(--soft)}
+  .cell:nth-child(3n){border-right:0}
+  .cell .n{font-size:26px;font-weight:680}
+  .cell .l{font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin-top:3px}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 28px;background:var(--soft);font-size:13px;color:var(--sub);flex-wrap:wrap}
+  .verified{display:inline-flex;align-items:center;gap:7px;color:var(--green);font-weight:560}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .badgerow{margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--sub)}
+  .badgerow img{height:20px}
+  @media (max-width:560px){ .grid{grid-template-columns:repeat(3,1fr)} .cell{padding:16px 14px} .cell .n{font-size:20px} .hero{padding:20px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav"><span class="mark">Mneme · Cosmic Link</span><a class="home" href="/">Repo X-Ray →</a></div>
+  <h1>Cosmic Link — live status</h1>
+  <p class="sub">Measured by the Mneme X-Ray server probing the cosmic-link server, then <b>signed</b> so the uptime is verifiable, not just claimed.</p>
+  <div class="card" id="card"><div class="hero"><div class="pulse"></div><div class="state">Loading…</div></div></div>
+  <div class="badgerow" id="badgerow"></div>
+</div>
+<script>
+const esc=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function ms(n){ n=Math.round(n||0); return n+" ms"; }
+function ago(ts){ if(!ts) return "—"; const s=Math.round((Date.now()-ts)/1000); return s<60?s+"s ago":Math.round(s/60)+"m ago"; }
+async function load(){
+  try{
+    const st=await (await fetch("/api/cosmic/status")).json();
+    if(st.configured===false){ document.getElementById("card").innerHTML='<div class="hero"><div class="pulse down"></div><div class="state">monitor not enabled</div></div>'; return; }
+    const up=st.up;
+    document.getElementById("card").innerHTML=`
+      <div class="hero"><div class="pulse ${up?"up":"down"}"></div>
+        <div><div class="state">${up?"Operational":"Down"}</div>
+        <div style="color:var(--sub);font-size:14px">${esc(st.url)} · last check ${ago(st.lastCheck)}</div></div></div>
+      <div class="grid">
+        <div class="cell"><div class="n">${st.uptimePct}%</div><div class="l">uptime (window)</div></div>
+        <div class="cell"><div class="n">${st.checks}</div><div class="l">probes</div></div>
+        <div class="cell"><div class="n">${ms(st.p50Ms)}</div><div class="l">latency p50</div></div>
+        <div class="cell"><div class="n">${ms(st.p95Ms)}</div><div class="l">latency p95</div></div>
+        <div class="cell"><div class="n">${up?"●":"○"}</div><div class="l">current</div></div>
+        <div class="cell"><div class="n">15s</div><div class="l">probe interval</div></div>
+      </div>
+      <div class="foot"><span class="verified">● Ed25519 — signed liveness, verifies offline</span><span>since ${st.sinceTs?new Date(st.sinceTs).toLocaleString():"—"}</span></div>`;
+    document.getElementById("badgerow").innerHTML=`Embed: <img src="/badge/cosmic.svg"/> <code>![cosmic](${location.origin}/badge/cosmic.svg)</code>`;
+  }catch(e){ document.getElementById("card").innerHTML='<div class="hero"><div class="pulse down"></div><div class="state">error loading status</div></div>'; }
+}
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>

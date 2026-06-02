@@ -76,15 +76,19 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
   const bullets: string[] = [];
   let signalsRun = 0;
 
-  // secrets — heaviest
+  // secrets — a high-confidence BLOCK (strong leak signal) weighs heavily; mere
+  // pattern matches are a "review" flag with a small, capped penalty, because
+  // regex matching has a real false-positive rate (broad api-key patterns, a
+  // security repo's own sample data). We never auto-fail a repo on pattern noise.
   if (b.secrets.filesScanned > 0) {
     signalsRun++;
-    if (b.secrets.worstVerdict === "BLOCK") score -= 40;
-    else if (b.secrets.totalFindings > 0) score -= Math.min(25, b.secrets.totalFindings * 3);
+    if (b.secrets.worstVerdict === "BLOCK") score -= 35;
+    else if (b.secrets.totalFindings > 0) score -= Math.min(8, b.secrets.totalFindings);
+    const exTail = b.secrets.excludedTestHits > 0 ? ` (+${b.secrets.excludedTestHits} in tests/docs, excluded)` : "";
     bullets.push(
       b.secrets.totalFindings === 0
-        ? "🔑 No credential patterns found in tracked files."
-        : `🔑 ${b.secrets.totalFindings} possible secret(s) in ${Object.keys(b.secrets.byKind).length} kind(s) — review now.`,
+        ? `🔑 No credential patterns in production code${exTail}.`
+        : `🔑 ${b.secrets.totalFindings} credential-pattern match(es) in production code — review${exTail}.`,
     );
   }
 
@@ -128,7 +132,7 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
     score -= Math.min(10, huge * 2);
     bullets.push(
       b.complexity.hotspots[0]
-        ? `🧩 Largest function ${b.complexity.hotspots[0].bodyLines} lines (${b.complexity.hotspots[0].file}).`
+        ? `🧩 Largest symbol ${b.complexity.hotspots[0].bodyLines} lines (${b.complexity.hotspots[0].file}).`
         : `🧩 ${b.complexity.totalSymbols} symbols analysed.`,
     );
   }

@@ -22,7 +22,7 @@ function cleanFixture(): XRayReport {
     generatedAt: "2026-01-01T00:00:00.000Z",
     summary: { headline: "Mixed", grade: "C", signalsRun: 5, bullets: ["🔑 No credential patterns found in tracked files."] },
     deps: { total: 12, byBand: { thriving: 8, healthy: 2, watch: 1, moribund: 1, dead: 0 }, atRisk: [{ name: "request", band: "dead", probability18mo: 0.9, successor: "got" }], partial: false, note: "1 dying." },
-    secrets: { filesScanned: 40, totalFindings: 0, byKind: {}, hits: [], worstVerdict: "ALLOW", note: "clean" },
+    secrets: { filesScanned: 40, totalFindings: 0, excludedTestHits: 3, byKind: {}, hits: [], worstVerdict: "ALLOW", note: "clean" },
     busFactor: { authors: 5, singleOwnerFilePct: 22.5, fragileFiles: [{ file: "src/core.ts", topAuthorShare: 0.9, commits: 30 }], topContributorShare: 41.2, busFactor: 2, note: "5 authors" },
     age: { bornAt: "2020-01-01", lastCommitAt: "2026-01-01", lifespan: "6 years", lifespanDays: 2192, totalCommits: 1200, totalAuthors: 5, dormant: false, vitality: "active", note: "active" },
     complexity: { filesAnalysed: 40, totalSymbols: 320, hotspots: [{ file: "src/core.ts", symbol: "function handleRequest(req, res)", bodyLines: 180, startLine: 12 }], maxDepth: 4, note: "hotspot" },

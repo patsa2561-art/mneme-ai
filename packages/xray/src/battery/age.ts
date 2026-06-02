@@ -6,10 +6,15 @@
  * a core bug to fix separately. Reading the first/last commit dates ourselves
  * is exact and dependency-free.
  */
-import { git } from "../util.js";
+import { git, isGitRepo } from "../util.js";
 import type { AgeBlock } from "../types.js";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
+const NOT_GIT: AgeBlock = {
+  bornAt: "", lastCommitAt: "", lifespan: "n/a", lifespanDays: 0,
+  totalCommits: 0, totalAuthors: 0, dormant: false, vitality: "active",
+  note: "Not a git repository — history/vitality signals unavailable (deps, secrets, complexity still analysed).",
+};
 
 function humanSpan(days: number): string {
   if (days < 1) return "less than a day";
@@ -23,6 +28,7 @@ function humanSpan(days: number): string {
 }
 
 export function analyzeAge(repoPath: string, now: number): AgeBlock {
+  if (!isGitRepo(repoPath)) return NOT_GIT;
   const first = git(repoPath, ["log", "--reverse", "--format=%aI", "--max-parents=0"]).split("\n")[0]?.trim()
     || git(repoPath, ["log", "--reverse", "--format=%aI"]).split("\n")[0]?.trim();
   const last = git(repoPath, ["log", "-1", "--format=%aI"]).trim();

@@ -32,6 +32,7 @@ import { buildXRay } from "./engine.js";
 import { sealXRay, verifyXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
 import { isAllowedPublicUrl } from "./clone.js";
+import { CosmicMonitor, cosmicBadgeSvg, signCosmicStatus } from "./cosmic.js";
 import type { SignedXRay, XRayReport } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -98,11 +99,17 @@ function recordBoard(signed: SignedXRay) {
   } catch { /* board is best-effort */ }
 }
 
-function readBoard(limit = 30): unknown[] {
+function readBoardRows(): Array<Record<string, unknown>> {
   try {
     if (!existsSync(BOARD_FILE())) return [];
-    const lines = rf(BOARD_FILE(), "utf8").trim().split("\n").filter(Boolean);
-    return lines.slice(-limit).reverse().map((l) => JSON.parse(l));
+    return rf(BOARD_FILE(), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, unknown>);
+  } catch { return []; }
+}
+function readProfileRows(profileId: string): Array<Record<string, unknown>> {
+  try {
+    const p = join(PROFILES_DIR(), profileId + ".jsonl");
+    if (!existsSync(p)) return [];
+    return rf(p, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as Record<string, unknown>);
   } catch { return []; }
 }
 
@@ -113,13 +120,17 @@ function summaryOf(r: XRayReport, visibility: "public" | "private") {
   };
 }
 
-/** Persist the full signed report by fingerprint (idempotent) for deep-view. */
-function saveReport(signed: SignedXRay) {
+interface ReportMeta { visibility: "public" | "private"; profileId: string }
+
+/** Persist the full signed report + a tiny meta sidecar (visibility/owner) for
+ *  access control. Idempotent by fingerprint. */
+function saveReport(signed: SignedXRay, visibility: "public" | "private" = "public", profileId = "") {
   try {
     if (!existsSync(REPORTS_DIR())) mkdirSync(REPORTS_DIR(), { recursive: true });
-    if (FP_RE.test(signed.report.fingerprint)) {
-      writeFileSync(join(REPORTS_DIR(), signed.report.fingerprint + ".json"), JSON.stringify(signed));
-    }
+    const fp = signed.report.fingerprint;
+    if (!FP_RE.test(fp)) return;
+    writeFileSync(join(REPORTS_DIR(), fp + ".json"), JSON.stringify(signed));
+    writeFileSync(join(REPORTS_DIR(), fp + ".meta.json"), JSON.stringify({ visibility, profileId } satisfies ReportMeta));
   } catch { /* best-effort */ }
 }
 function getReport(fingerprint: string): SignedXRay | null {
@@ -129,31 +140,43 @@ function getReport(fingerprint: string): SignedXRay | null {
     return existsSync(p) ? (JSON.parse(rf(p, "utf8")) as SignedXRay) : null;
   } catch { return null; }
 }
+function getReportMeta(fingerprint: string): ReportMeta | null {
+  try {
+    if (!FP_RE.test(fingerprint)) return null;
+    const p = join(REPORTS_DIR(), fingerprint + ".meta.json");
+    return existsSync(p) ? (JSON.parse(rf(p, "utf8")) as ReportMeta) : null;
+  } catch { return null; }
+}
+
+/** Group raw scan-event rows by repo → first-seen + last-seen + scan count +
+ *  the latest grade/fingerprint. Newest activity first. Powers the listview. */
+function aggregateByRepo(rows: Array<Record<string, unknown>>) {
+  const map = new Map<string, { repoName: string; ref: string; firstAt: string; lastAt: string; count: number; grade: string; fingerprint: string; visibility: string }>();
+  for (const r of rows) {
+    const key = String(r.repoName || r.ref || r.fingerprint);
+    const at = String(r.at || "");
+    const e = map.get(key);
+    if (!e) {
+      map.set(key, { repoName: String(r.repoName || ""), ref: String(r.ref || ""), firstAt: at, lastAt: at, count: 1, grade: String(r.grade || "?"), fingerprint: String(r.fingerprint || ""), visibility: String(r.visibility || "public") });
+    } else {
+      e.count++;
+      if (at < e.firstAt) e.firstAt = at;
+      if (at >= e.lastAt) { e.lastAt = at; e.grade = String(r.grade || e.grade); e.fingerprint = String(r.fingerprint || e.fingerprint); }
+    }
+  }
+  return [...map.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+}
+
+function page<T>(items: T[], offset: number, limit: number) {
+  const o = Math.max(0, offset | 0), l = Math.min(100, Math.max(1, limit | 0));
+  return { items: items.slice(o, o + l), total: items.length, offset: o, limit: l };
+}
 function recordProfile(profileId: string, r: XRayReport, visibility: "public" | "private") {
   try {
     if (!existsSync(PROFILES_DIR())) mkdirSync(PROFILES_DIR(), { recursive: true });
     appendFileSync(join(PROFILES_DIR(), profileId + ".jsonl"), JSON.stringify(summaryOf(r, visibility)) + "\n");
   } catch { /* best-effort */ }
 }
-function listProfile(profileId: string, limit = 100): unknown[] {
-  try {
-    const p = join(PROFILES_DIR(), profileId + ".jsonl");
-    if (!existsSync(p)) return [];
-    // de-dup by fingerprint, newest wins
-    const seen = new Set<string>();
-    const out: Array<Record<string, unknown>> = [];
-    for (const l of rf(p, "utf8").trim().split("\n").filter(Boolean).reverse()) {
-      const row = JSON.parse(l) as Record<string, unknown>;
-      const fp = String(row.fingerprint);
-      if (seen.has(fp)) continue;
-      seen.add(fp);
-      out.push(row);
-      if (out.length >= limit) break;
-    }
-    return out;
-  } catch { return []; }
-}
-
 function serveStatic(res: ServerResponse, file: string) {
   const path = join(PUBLIC_DIR, file);
   if (!existsSync(path)) { send(res, 404, { error: "not found" }); return; }
@@ -248,17 +271,33 @@ function reportPageWithOg(signed: SignedXRay, origin: string): string {
   return tpl.replace("<title>Mneme · Repo X-Ray</title>", `<title>${xesc(title)}</title>`).replace("<!--OGMETA-->", og);
 }
 
-export function createXRayServer() {
+export function createXRayServer(monitor?: CosmicMonitor) {
   return createServer(async (req, res) => {
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
     if (req.method === "OPTIONS") return send(res, 204, "");
     if (req.method === "GET" && url.pathname === "/api/health") return send(res, 200, { ok: true, ts: Date.now() });
-    if (req.method === "GET" && url.pathname === "/api/board") return send(res, 200, { board: readBoard() });
+    if (req.method === "GET" && url.pathname === "/api/board") {
+      const offset = parseInt(url.searchParams.get("offset") || "0", 10);
+      const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+      return send(res, 200, page(aggregateByRepo(readBoardRows()), offset, limit));
+    }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) return serveStatic(res, "index.html");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
     if (req.method === "GET" && url.pathname === "/card.js") return serveStatic(res, "card.js");
+    if (req.method === "GET" && url.pathname === "/cosmic") return serveStatic(res, "cosmic.html");
+
+    // COSMIC MONITOR (additive superpower for the cosmic-link server) — measured + signed
+    if (req.method === "GET" && url.pathname === "/badge/cosmic.svg") {
+      if (!monitor) return sendSvg(res, cosmicBadgeSvg({ url: "", up: false, lastCheck: null, uptimePct: 0, checks: 0, p50Ms: 0, p95Ms: 0, sinceTs: null, windowMs: 0 }), 30);
+      return sendSvg(res, cosmicBadgeSvg(monitor.status()), 30);
+    }
+    if (req.method === "GET" && url.pathname === "/api/cosmic/status") {
+      if (!monitor) return send(res, 200, { configured: false, note: "cosmic monitor not enabled on this instance" });
+      const st = monitor.status();
+      return send(res, 200, { ...st, attestation: signCosmicStatus(process.cwd(), st) });
+    }
 
     // embeddable badge — /badge/<fingerprint>.svg OR /badge/github/owner/repo.svg
     if (req.method === "GET" && url.pathname.startsWith("/badge/") && url.pathname.endsWith(".svg")) {
@@ -273,7 +312,7 @@ export function createXRayServer() {
     if (req.method === "GET" && url.pathname.startsWith("/og/") && url.pathname.endsWith(".svg")) {
       const fp = decodeURIComponent(url.pathname.slice("/og/".length, -4));
       const signed = getReport(fp);
-      if (!signed) return send(res, 404, { error: "not found" });
+      if (!signed || getReportMeta(fp)?.visibility === "private") return send(res, 404, { error: "not found" });
       return sendSvg(res, socialCardSvg(signed.report));
     }
 
@@ -281,23 +320,40 @@ export function createXRayServer() {
     if (req.method === "GET" && url.pathname.startsWith("/r/")) {
       const fp = decodeURIComponent(url.pathname.slice("/r/".length).replace(/\/$/, ""));
       const signed = getReport(fp);
+      const meta = getReportMeta(fp);
       const origin = `${(req.headers["x-forwarded-proto"] as string) || "http"}://${req.headers.host || "localhost"}`;
-      if (!signed) return send(res, 200, readFileSync(join(PUBLIC_DIR, "report.html"), "utf8"), "text/html; charset=utf-8");
+      // private (or unknown) → serve the bare shell with NO OG meta, so the repo
+      // name never leaks; the page's API fetch will 404 for anyone but the owner.
+      if (!signed || meta?.visibility === "private") {
+        return send(res, 200, readFileSync(join(PUBLIC_DIR, "report.html"), "utf8"), "text/html; charset=utf-8");
+      }
       return send(res, 200, reportPageWithOg(signed, origin), "text/html; charset=utf-8");
     }
 
-    // deep-view: fetch a stored full signed report by fingerprint
+    // deep-view: fetch a stored full signed report by fingerprint.
+    // PRIVATE reports are access-controlled: only the owning key may fetch them,
+    // and we return 404 (not 403) so their very existence isn't revealed.
     if (req.method === "GET" && url.pathname.startsWith("/api/report/")) {
       const fp = decodeURIComponent(url.pathname.slice("/api/report/".length));
       const signed = getReport(fp);
-      return signed ? send(res, 200, signed) : send(res, 404, { error: "report not found" });
+      if (!signed) return send(res, 404, { error: "report not found" });
+      const meta = getReportMeta(fp);
+      if (meta?.visibility === "private") {
+        const tok = bearer(req);
+        if (!tok || profileIdFromToken(tok) !== meta.profileId) return send(res, 404, { error: "report not found" });
+      }
+      return send(res, 200, signed);
     }
 
-    // a profile's reports (raw-free summaries). id is the profile hash, not the token.
+    // a profile's reports — aggregated by repo (first/last seen + count), paged.
+    // id is the profile hash; knowing it is required to list. Private items live
+    // ONLY here, never on the public board.
     if (req.method === "GET" && url.pathname.startsWith("/api/profile/")) {
       const id = decodeURIComponent(url.pathname.slice("/api/profile/".length));
       if (!/^[a-f0-9]{8,32}$/.test(id)) return send(res, 400, { error: "bad profile id" });
-      return send(res, 200, { profileId: id, reports: listProfile(id) });
+      const offset = parseInt(url.searchParams.get("offset") || "0", 10);
+      const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+      return send(res, 200, { profileId: id, ...page(aggregateByRepo(readProfileRows(id)), offset, limit) });
     }
 
     if (req.method === "POST" && url.pathname === "/api/xray") {
@@ -313,10 +369,9 @@ export function createXRayServer() {
         const leak = xrayLeaksRaw(report);
         if (leak.leaks) return send(res, 500, { error: "internal: report failed raw-free gate", reasons: leak.reasons });
         const signed = sealXRay(process.cwd(), report);
-        recordBoard(signed);
-        saveReport(signed);
-        // if the caller is signed in (sent a token), also file it under their profile
         const tok = bearer(req);
+        recordBoard(signed); // public repos are public by definition
+        saveReport(signed, "public", tok ? profileIdFromToken(tok) : "");
         if (tok) recordProfile(profileIdFromToken(tok), report, "public");
         return send(res, 200, signed);
       } catch (e) {
@@ -342,7 +397,7 @@ export function createXRayServer() {
       const v = verifyXRay(signed);
       if (!v.valid) return send(res, 422, { error: "signature does not verify: " + v.reason });
       const visibility = signed.report.subject.kind === "git-url" ? "public" : "private";
-      saveReport(signed);
+      saveReport(signed, visibility, profileIdFromToken(tok));
       recordProfile(profileIdFromToken(tok), signed.report, visibility);
       if (visibility === "public") recordBoard(signed);
       return send(res, 200, { ok: true, profileId: profileIdFromToken(tok), fingerprint: signed.report.fingerprint });
@@ -362,9 +417,16 @@ export function createXRayServer() {
 // run when invoked directly (npm run serve / node dist/server.js)
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedDirectly) {
-  const server = createXRayServer();
+  // COSMIC MONITOR — observe the cosmic-link server over localhost (additive,
+  // never touches it). Disable with COSMIC_URL=off.
+  const cosmicUrl = process.env.COSMIC_URL ?? "http://127.0.0.1:8081/";
+  const monitor = cosmicUrl && cosmicUrl !== "off"
+    ? new CosmicMonitor(cosmicUrl, join(dataDir(), "cosmic-samples.jsonl"))
+    : undefined;
+  if (monitor) monitor.start(15000);
+  const server = createXRayServer(monitor);
   server.listen(PORT, HOST, () => {
-    process.stdout.write(`Mneme X-Ray server on http://${HOST}:${PORT}  (data: ${dataDir()})\n`);
+    process.stdout.write(`Mneme X-Ray server on http://${HOST}:${PORT}  (data: ${dataDir()})${monitor ? `  · cosmic monitor → ${cosmicUrl}` : ""}\n`);
   });
   process.on("SIGTERM", () => server.close(() => process.exit(0)));
   process.on("SIGINT", () => server.close(() => process.exit(0)));

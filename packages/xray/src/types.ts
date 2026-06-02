@@ -38,7 +38,10 @@ export interface DepsBlock {
 /** Secret / credential leak scan (values are NEVER stored — only kind + count + location). */
 export interface SecretsBlock {
   filesScanned: number;
+  /** Credential-pattern matches in PRODUCTION code (drives the grade). */
   totalFindings: number;
+  /** Matches in test/fixture/doc files — intentional sample data, not leaks. */
+  excludedTestHits: number;
   byKind: Record<string, number>;
   /** Redacted hits: kind + file + line. The secret value is never present. */
   hits: Array<{ kind: string; file: string; line: number }>;

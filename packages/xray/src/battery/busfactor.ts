@@ -4,13 +4,14 @@
  * file: the share of its commits held by its single top author. A file with
  * one dominant author is fragile (knowledge dies if that person leaves).
  */
-import { git } from "../util.js";
+import { git, isGitRepo } from "../util.js";
 import type { BusFactorBlock } from "../types.js";
 
 const SKIP_DIR = /(^|\/)(node_modules|\.git|dist|build|vendor|\.next|coverage)(\/|$)/;
 const DOMINANCE = 0.8; // a file is "single-owner" when its top author holds >= 80% of its commits
 
 export function analyzeBusFactor(repoPath: string): BusFactorBlock {
+  if (!isGitRepo(repoPath)) return emptyBlock("Not a git repository — authorship/bus-factor signals unavailable.");
   // One line per (commit, file): "<authorEmail>\t<file>". --no-renames keeps paths stable.
   const raw = git(repoPath, [
     "log", "--no-merges", "--pretty=format:C%H%x09%ae", "--name-only", "-n", "4000",

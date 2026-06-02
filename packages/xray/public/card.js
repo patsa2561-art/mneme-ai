@@ -28,7 +28,7 @@
       </div>
       <div class="rows">
         <div class="row"><div class="k">Dependencies</div><div class="v"><span class="big">${dep.total}</span> total · ${dep.byBand.dead + dep.byBand.moribund} dying<div class="chips">${depChips}</div></div></div>
-        <div class="row"><div class="k">Secrets</div><div class="v"><span class="big">${sec.totalFindings}</span> finding(s) in ${sec.filesScanned} files<div class="chips">${secChips}</div></div></div>
+        <div class="row"><div class="k">Secrets</div><div class="v"><span class="big">${sec.totalFindings}</span> in production code · ${sec.filesScanned} files${sec.excludedTestHits ? ` · <span class="muted">+${sec.excludedTestHits} in tests/docs (excluded)</span>` : ""}<div class="chips">${secChips}</div></div></div>
         <div class="row"><div class="k">Bus factor</div><div class="v"><span class="big">${bf.busFactor}</span> · top author ${pct(bf.topContributorShare)} · ${pct(bf.singleOwnerFilePct)} files single-owner<div class="chips">${fragile}</div></div></div>
         <div class="row"><div class="k">Vitality</div><div class="v"><span class="big">${esc(age.vitality)}</span> · ${esc(age.lifespan)} old · ${age.totalCommits} commits · ${age.totalAuthors} authors</div></div>
         <div class="row"><div class="k">Complexity</div><div class="v"><span class="big">${cx.totalSymbols}</span> symbols · ${cx.filesAnalysed} files · max depth ${cx.maxDepth}<div class="chips">${hot}</div></div></div>

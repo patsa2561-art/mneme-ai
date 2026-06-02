@@ -17,15 +17,20 @@ export function isAllowedPublicUrl(url: string): boolean {
 
 export interface CloneHandle { path: string; dispose: () => void }
 
-/** Shallow-clone (depth 200 so authorship/age signals are meaningful, but fast). */
-export function shallowClone(url: string, depth = 200): CloneHandle {
+/**
+ * Blobless clone: FULL commit history (so age / commit-count / bus-factor are
+ * ACCURATE) but file blobs are fetched lazily — fast, like a shallow clone,
+ * without truncating history. A `--depth N` clone would cap commits at N and
+ * report a wrong "first commit" / age for any active repo; blob:none does not.
+ */
+export function shallowClone(url: string): CloneHandle {
   if (!isAllowedPublicUrl(url)) {
     throw new Error("Only public github.com / gitlab.com / bitbucket.org URLs (no credentials) are accepted.");
   }
   const dir = mkdtempSync(join(tmpdir(), "mneme-xray-"));
-  const r = spawnSync("git", ["clone", "--depth", String(depth), "--no-tags", "--single-branch", url.trim(), dir], {
+  const r = spawnSync("git", ["clone", "--filter=blob:none", "--no-tags", "--single-branch", url.trim(), dir], {
     encoding: "utf8",
-    timeout: 120_000,
+    timeout: 180_000,
     maxBuffer: 64 * 1024 * 1024,
   });
   const dispose = () => { try { rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ } };
