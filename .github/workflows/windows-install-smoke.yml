@@ -86,14 +86,17 @@ jobs:
           cd /tmp/mneme-install-test
           # Should report transformers as MISSING (since we did --no-save without optional)
           # but Mneme runtime should still work fine via hash fallback.
+          # @mneme-ai/core is ESM-only ("type":"module", exports."." has only an
+          # "import" condition) — so it MUST be loaded via dynamic import(), not
+          # require() (CJS require throws ERR_PACKAGE_PATH_NOT_EXPORTED). This
+          # matches how the CLI actually consumes core.
           node -e "
-            const core = require('@mneme-ai/core');
-            core.optionalNative.installStatus().then(s => {
+            import('@mneme-ai/core').then(core => core.optionalNative.installStatus()).then(s => {
               console.log('available:', s.available.map(p => p.name).join(','));
               console.log('missing:', s.missing.map(p => p.name).join(','));
-              if (!s.recommendation) throw new Error('no recommendation');
+              if (!s.recommendation) { console.error('FAIL: no recommendation'); process.exit(1); }
               console.log('recommendation:', s.recommendation);
-            });
+            }).catch(e => { console.error('FAIL:', e && e.message); process.exit(1); });
           "
 
       - name: Run ritual phase 3.9 enforcement check
