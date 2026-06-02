@@ -1,5 +1,7 @@
 # @mneme-ai/xray — Repo X-Ray
 
+**Live: https://xray.mneme-ai.space** — paste any public repo, get a signed health X-Ray in seconds (no install).
+
 A **signed, raw-free, deterministic X-Ray of any repo.** Paste a public git URL (or point the CLI at a local path) and get a graded report: dependency mortality, secret leaks, bus factor, vitality, and complexity hotspots.
 
 Three guarantees, by construction:
@@ -8,12 +10,25 @@ Three guarantees, by construction:
 2. **Private.** Public repos are shallow-cloned to a temp dir, analysed, and **deleted**. The report is **raw-free** — it carries only metrics, counts, line numbers, symbol names, and hashes, never a line of source. `xrayLeaksRaw()` proves it (gauntlet-enforced). Private repos never leave your machine: run the CLI locally.
 3. **Verifiable.** The whole report is sealed with an **Ed25519 NOTARY receipt** any third party verifies **offline** with the embedded public key — no Mneme instance, no network, no shared secret.
 
-## CLI
+## CLI (local / private repos — nothing uploaded)
 
 ```bash
-mneme-xray .                                   # local repo (nothing uploaded)
-mneme-xray https://github.com/owner/repo       # public repo
-mneme-xray https://github.com/owner/repo --json
+npx @mneme-ai/xray .                                  # local folder (git OR not) — analysed in place
+npx @mneme-ai/xray https://github.com/owner/repo      # public repo
+npx @mneme-ai/xray ./private-repo --publish \
+    --server https://xray.mneme-ai.space --token YOUR_KEY   # send ONLY the signed, raw-free report
+```
+
+The CLI works on any local folder — including one that isn't a git repo (git
+signals are simply skipped). Source never leaves your machine; `--publish` sends
+only the raw-free, signed report to your private dashboard.
+
+## Embed a badge
+
+A signed, self-updating grade for any README — links back to the full report:
+
+```md
+[![Mneme X-Ray](https://xray.mneme-ai.space/badge/github/owner/repo.svg)](https://xray.mneme-ai.space/r/<fingerprint>)
 ```
 
 ## Server (the "Lighthouse")
@@ -34,7 +49,11 @@ Env: `PORT` (8787) · `HOST` (0.0.0.0) · `XRAY_DATA_DIR` (./.xray-data).
 
 ## Deploy 24/7 on DigitalOcean
 
-**App Platform:** `doctl apps create --spec packages/xray/.do/app.yaml` (auto-deploys on push to `main`).
+**One click (no command line)** — authorize GitHub, get a public `…ondigitalocean.app` URL:
+
+[![Deploy to DigitalOcean](https://www.deploy.do/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/patsa2561-art/mneme-ai/tree/main)
+
+**App Platform (CLI):** `doctl apps create --spec packages/xray/.do/app.yaml` (auto-deploys on push to `main`).
 
 **Droplet (durable board):**
 ```bash

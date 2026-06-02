@@ -18,28 +18,9 @@
 
 ---
 
-## 🩻 See it in 5 seconds — the Repo X-Ray
+## 🩻 Try it live
 
-Don't take the claims on faith. **Paste any public repo and watch Mneme grade it** — dependencies dying, secrets leaking, bus factor, vitality, complexity — every number **reproducible** and sealed with an **offline-verifiable signature**. No AI guesses anything. Your source never leaves your machine.
-
-```bash
-npm run -w @mneme-ai/xray serve        # → open http://localhost:8787, paste a repo
-npx mneme-xray ./your-repo             # private repo? analyse locally — nothing uploaded
-```
-
-> **On the web:** open the page → paste a public `https://github.com/owner/repo` → read the grade. **Private repo:** `mneme-xray ./path --publish` analyses on *your* machine and sends only the signed, raw-free report.
-
-**Get your own live URL in one click** — no command line. Click below, authorize GitHub, and DigitalOcean gives you a public `https://…ondigitalocean.app` URL. Then *anyone* (your team, a CEO, an investor) just opens it — **zero install**:
-
-<a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/patsa2561-art/mneme-ai/tree/main" target="_blank" rel="noopener"><img src="https://www.deploy.do/do-btn-blue.svg" alt="Deploy to DigitalOcean" height="42"/></a>
-
-Embed the grade in any README — a signed, self-updating badge that links back to the full report:
-
-```md
-[![Mneme X-Ray](https://YOUR-APP.ondigitalocean.app/badge/github/owner/repo.svg)](https://YOUR-APP.ondigitalocean.app/r/<fingerprint>)
-```
-
-<sub>Details & self-host options → **[packages/xray](packages/xray/README.md)**</sub>
+Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **[xray.mneme-ai.space](https://xray.mneme-ai.space)** &nbsp;·&nbsp; <sub>[how it works + self-host →](packages/xray/README.md)</sub>
 
 ---
 

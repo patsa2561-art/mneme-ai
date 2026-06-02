@@ -12,6 +12,7 @@ import { scanSecrets } from "./battery/secrets.js";
 import { analyzeBusFactor } from "./battery/busfactor.js";
 import { analyzeAge } from "./battery/age.js";
 import { analyzeComplexity } from "./battery/complexity.js";
+import { analyzeHotspots } from "./battery/hotspots.js";
 import { shallowClone } from "./clone.js";
 import { headCommit, repoNameFromUrl, repoNameFromPath } from "./util.js";
 
@@ -49,10 +50,11 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
     const busFactor = analyzeBusFactor(repoPath);
     const age = analyzeAge(repoPath, now);
     const complexity = analyzeComplexity(repoPath, maxFiles);
+    const hotspots = analyzeHotspots(repoPath, now);
 
-    const summary = grade({ deps, secrets, busFactor, age, complexity });
+    const summary = grade({ deps, secrets, busFactor, age, complexity, hotspots });
 
-    const blocks = { deps, secrets, busFactor, age, complexity };
+    const blocks = { deps, secrets, busFactor, age, complexity, hotspots };
     const fingerprint = createHash("sha256")
       .update(JSON.stringify({ subject: { repoName: subject.repoName, commitHash: subject.commitHash }, blocks }))
       .digest("hex");
@@ -71,7 +73,7 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
 }
 
 /** Deterministic 0-100 health score → letter grade, with one-line bullets. */
-function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "complexity">): XRaySummary {
+function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "complexity" | "hotspots">): XRaySummary {
   let score = 100;
   const bullets: string[] = [];
   let signalsRun = 0;
@@ -135,6 +137,13 @@ function grade(b: Pick<XRayReport, "deps" | "secrets" | "busFactor" | "age" | "c
         ? `🧩 Largest symbol ${b.complexity.hotspots[0].bodyLines} lines (${b.complexity.hotspots[0].file}).`
         : `🧩 ${b.complexity.totalSymbols} symbols analysed.`,
     );
+  }
+
+  // hotspots — informational (refactor-ROI guidance, not a risk penalty)
+  if (b.hotspots.hotspots.length > 0) {
+    signalsRun++;
+    const h = b.hotspots.hotspots[0];
+    bullets.push(`🔥 Refactor first: ${h.file} — changed ${h.changes}× · ${h.loc} lines (churn × size).`);
   }
 
   score = Math.max(0, Math.min(100, Math.round(score)));

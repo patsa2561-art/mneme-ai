@@ -86,6 +86,14 @@ export interface ComplexityBlock {
   note: string;
 }
 
+/** Behavioral hotspots — change-frequency × size (refactor-ROI targets). */
+export interface HotspotsBlock {
+  windowDays: number;
+  filesConsidered: number;
+  hotspots: Array<{ file: string; changes: number; loc: number; score: number }>;
+  note: string;
+}
+
 export interface XRaySummary {
   headline: string;
   grade: Grade;
@@ -105,6 +113,7 @@ export interface XRayReport {
   busFactor: BusFactorBlock;
   age: AgeBlock;
   complexity: ComplexityBlock;
+  hotspots: HotspotsBlock;
   /** sha256 over the canonicalised metric blocks — a tamper-evident content id. */
   fingerprint: string;
 }
