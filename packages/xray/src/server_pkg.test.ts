@@ -8,6 +8,17 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+
+// EXACT mirror of the browser's authHeader() in public/index.html — the one
+// choke-point that wraps any key in an ASCII-safe envelope.
+function clientAuthHeader(token: string): string {
+  const bytes = new TextEncoder().encode(token);
+  let bin = ""; for (const b of bytes) bin += String.fromCharCode(b);
+  const b64url = Buffer.from(bin, "binary").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return "Bearer b64:" + b64url;
+}
+const profileIdOf = (t: string) => createHash("sha256").update("mneme-xray-profile:" + t).digest("hex").slice(0, 16);
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 // isolate the server's data dir so the bridge test doesn't touch real data
@@ -83,6 +94,42 @@ describe("@mneme-ai/xray server (no network)", () => {
     const tampered = { receipt: signed.receipt, report: { ...report, summary: { ...report.summary, grade: "A" } } };
     expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(tampered) })).status).toBe(422);
     expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(signed) })).status).toBe(401);
+  }, 120_000);
+
+  it("UNICODE KEY: a Thai/emoji key never crashes fetch and keeps the same identity", async () => {
+    await start();
+    const key = "กุญแจลับ-🔑-密钥";   // Thai + emoji + CJK — all > ISO-8859-1
+
+    // THE BUG (documented): the OLD header `Bearer <rawKey>` has code points > 255,
+    // which fetch() rejects with "String contains non ISO-8859-1 code point".
+    const rawHeader = "Bearer " + key;
+    expect([...rawHeader].some((c) => c.charCodeAt(0) > 255)).toBe(true);
+
+    // THE FIX: the envelope is pure ISO-8859-1 — fetch can never throw on it.
+    const safe = clientAuthHeader(key);
+    expect([...safe].every((c) => c.charCodeAt(0) < 256)).toBe(true);
+
+    // END-TO-END: ingest a signed report with the enveloped header → accepted,
+    // and the server resolves it to the SAME identity as the raw key (no orphan).
+    const report = await buildXRay({ repoPath: repoRoot });
+    const signed = sealXRay(repoRoot, report);
+    const ing = await fetch(`${base}/api/ingest`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: safe },
+      body: JSON.stringify(signed),
+    });
+    expect(ing.status).toBe(200);
+    const body = await ing.json();
+    expect(body.ok).toBe(true);
+    expect(body.profileId).toBe(profileIdOf(key));   // identity == hash of the ORIGINAL key
+
+    // the owner can open it with the enveloped header; anonymous cannot (private)
+    const owner = await fetch(`${base}/api/report/${report.fingerprint}`, { headers: { authorization: safe } });
+    expect(owner.status).toBe(200);
+    expect((await fetch(`${base}/api/report/${report.fingerprint}`)).status).toBe(404);
+
+    // a legacy bare ASCII bearer still resolves to its own identity (back-compat)
+    expect(profileIdOf("ascii-legacy-key")).toHaveLength(16);
   }, 120_000);
 
   it("AI Context Pack: prioritized, budgeted, secret-redacted (beats a raw dump)", async () => {

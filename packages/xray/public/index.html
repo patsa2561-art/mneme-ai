@@ -330,6 +330,16 @@ function mountShare(r){
 
 // ---- key / profile (optional sign-in; the key is a secret string the user chooses) ----
 const getKey = () => localStorage.getItem("xrayKey") || "";
+// HEADER-SAFE AUTH — an HTTP header value must be ISO-8859-1, but a key can be
+// Thai/emoji/any Unicode. We wrap it in an ASCII-safe envelope the server
+// unwraps to the SAME identity, so fetch() can never throw on a non-Latin1 key.
+// Every authenticated request MUST build its header through this one function.
+function authHeader(token){
+  const bytes = new TextEncoder().encode(token);
+  let bin = ""; for(const b of bytes) bin += String.fromCharCode(b);
+  const b64url = btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return "Bearer b64:" + b64url;
+}
 async function profileId(token){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("mneme-xray-profile:"+token));
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,16);
@@ -403,7 +413,7 @@ async function openReport(fp, isPrivate){
   if(!fp) return;
   try{
     const headers={}; const k=getKey();
-    if(isPrivate && k) headers.authorization="Bearer "+k;   // private: authenticated fetch, never a public link
+    if(isPrivate && k) headers.authorization=authHeader(k);   // private: authenticated fetch, never a public link
     const res=await fetch("/api/report/"+encodeURIComponent(fp),{headers});
     if(!res.ok){ alert(isPrivate?"This is a private report — open it while signed in with the key that created it.":"Report not found."); return; }
     const signed=await res.json();
@@ -429,7 +439,7 @@ document.getElementById("f").addEventListener("submit", async e=>{
   go.disabled=true; go.innerHTML='<span class="spin"></span>X-raying…';
   try{
     const headers={"content-type":"application/json"};
-    const k=getKey(); if(k) headers.authorization="Bearer "+k;   // also files under your profile
+    const k=getKey(); if(k) headers.authorization=authHeader(k);   // also files under your profile
     const res = await fetch("/api/xray",{method:"POST",headers,body:JSON.stringify({gitUrl:u})});
     const data = await res.json();
     if(!res.ok){ err.textContent = data.error || "failed"; err.style.display="block"; }

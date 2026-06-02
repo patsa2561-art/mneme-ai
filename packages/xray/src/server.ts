@@ -51,9 +51,27 @@ const HOST = process.env.HOST || "0.0.0.0";
 function profileIdFromToken(token: string): string {
   return createHash("sha256").update("mneme-xray-profile:" + token).digest("hex").slice(0, 16);
 }
+/**
+ * Recover the caller's token from the Authorization header.
+ *
+ * An HTTP header value MUST be ISO-8859-1, but a user's key may be any Unicode
+ * (Thai, emoji, …). The client therefore wraps non-ASCII keys in an ASCII-safe
+ * envelope `b64:<base64url-of-utf8>`; we transparently unwrap it back to the
+ * EXACT original token, so the profile id is identical to the raw key — no
+ * existing report orphans. A legacy bare ASCII token (no prefix) still works.
+ * This makes the "non ISO-8859-1 header" crash class structurally impossible.
+ */
 function bearer(req: IncomingMessage): string | null {
   const h = (req.headers.authorization || "").trim();
-  return h.toLowerCase().startsWith("bearer ") ? h.slice(7).trim() : null;
+  if (!h.toLowerCase().startsWith("bearer ")) return null;
+  let tok = h.slice(7).trim();
+  if (tok.startsWith("b64:")) {
+    try {
+      const b64 = tok.slice(4).replace(/-/g, "+").replace(/_/g, "/");
+      tok = Buffer.from(b64, "base64").toString("utf8");
+    } catch { return null; }
+  }
+  return tok || null;
 }
 const FP_RE = /^[a-f0-9]{16,64}$/;
 
