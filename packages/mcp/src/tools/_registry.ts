@@ -93,6 +93,7 @@ import { DRIFT_TOOLS } from "./_drift_tools.js";
 import { PERFCORE_TOOLS } from "./_perfcore_tools.js";
 import { GOVERNOR_TOOLS } from "./_governor_tools.js";
 import { GATEWAY_TOOLS } from "./_gateway_tools.js";
+import { MYCELIUM_TOOLS } from "./_mycelium_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -306,6 +307,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...PERFCORE_TOOLS,
     ...GOVERNOR_TOOLS,
     ...GATEWAY_TOOLS,
+    ...MYCELIUM_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

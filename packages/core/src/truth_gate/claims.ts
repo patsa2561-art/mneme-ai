@@ -934,6 +934,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.stele.capability_inscription",
     severity: "block",
   },
+  // ── v2.147.0 — MYCELIUM: the Sovereign Data Flywheel (moat #1) ──
+  {
+    id: "claim.mycelium.sovereign_flywheel",
+    source: "v2.147.0 release notes",
+    text: "Mneme's MYCELIUM is the Sovereign Data Flywheel — the moat-builder that fixes Mneme's weakest dimension (no data flywheel) the way only a local-first, signed system can: it compounds WITHOUT centralizing data. Every node keeps its data LOCAL and shares only SIGNED, content-free lesson digests (one-way hashes + DP-noised counts — never raw code or secrets); peers CRDT-merge them, so the whole network gets smarter with NO central honeypot to breach. It captures BOTH what worked AND what FAILED (negative knowledge — the only AI memory that gets more valuable from failures). myceliumGauntlet=100: extracts content-free lessons (hashes only) ∧ the PRIVACY INVARIANT holds — no raw string/secret/topic can appear in a shared bundle (fail-closed) ∧ negative knowledge is shared ∧ the merge is commutative ∧ idempotent (the network provably converges) ∧ a forged/untrusted bundle is dropped (signature-verified) ∧ DP noise is bounded + non-negative ∧ the compounding is MEASURED (inheriting a peer lesson raises the hit-rate) ∧ deterministic ∧ total. CLI `mneme mycelium bundle|merge|status`; MCP `mneme.mycelium.bundle` / `mneme.mycelium.merge` (self-attesting). HONEST (DIAKRISIS): the primary guarantee is STRUCTURAL + provable (a bundle carries no raw content — only hashes + counts); DP is a secondary guard (deterministic scale, injected sample, real randomness added at the CLI share boundary); 'compounding' is a measured hit-rate, not a claim. A centralized competitor's business requires hoarding data; Mneme's architecture is the one design that can run a privacy-preserving flywheel — that's the moat.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.mycelium.sovereign_flywheel",
+    severity: "block",
+  },
   // ── v2.146.0 — THE INTENT GATEWAY: free NL → the right Mneme command (measured) ──
   {
     id: "claim.gateway.intent_routing",

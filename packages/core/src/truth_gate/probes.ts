@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.mycelium.sovereign_flywheel",
+    kind: "boolean",
+    description: "MYCELIUM (v2.147.0 — the Sovereign Data Flywheel, moat #1). The data flywheel that compounds WITHOUT centralizing: every node keeps data local and shares only SIGNED, content-free lesson digests (one-way hashes + DP-noised counts — never raw code/secrets); peers CRDT-merge them so the whole network gets smarter with no honeypot. Captures what WORKED and what FAILED (negative knowledge — moat #4). This probe asserts myceliumGauntlet=100: extracts content-free lessons (only hashes) ∧ the PRIVACY INVARIANT holds (no raw string/secret/topic can appear in a shared bundle — fail-closed) ∧ negative knowledge is shared too ∧ the merge is commutative ∧ idempotent (the network converges) ∧ a forged/untrusted bundle is dropped (signature-verified) ∧ DP noise is bounded + non-negative ∧ the compounding is MEASURED (inheriting a peer lesson raises the hit-rate) ∧ deterministic ∧ total. HONEST: the primary guarantee is structural (no raw content in a bundle — provable); DP is a secondary guard (deterministic scale, injected sample); 'compounding' is measured (hit-rate), not asserted. Only a local-first, signed, prove-or-unknown system can run a privacy-preserving flywheel — that's the moat.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const M = await import("../mycelium/index.js" as string) as typeof import("../mycelium/index.js");
+        const g = M.myceliumGauntlet();
+        const ok = g.score === 100 && g.extractsContentFreeLessons && g.privacyInvariantNoRawLeak && g.sharesNegativeKnowledge && g.mergeIsCommutative && g.mergeIsIdempotent && g.forgedBundleDropped && g.dpNoiseBounded && g.compoundingMeasured && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} privacy=${g.privacyInvariantNoRawLeak} negKnowledge=${g.sharesNegativeKnowledge} commutative=${g.mergeIsCommutative} idempotent=${g.mergeIsIdempotent} forgedDropped=${g.forgedBundleDropped} compounding=${g.compoundingMeasured}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.gateway.intent_routing",
     kind: "boolean",
     description: "THE INTENT GATEWAY (v2.146.0). The fix for the load-bearing weakness: a user types FREE natural language (any language, EN/Thai), never memorizes a command, and the Gateway picks the RIGHT Mneme command. A curated bilingual concept-map (the high-value intents) + an IDF-weighted full-catalog fallback + abstention (CLARIFY/UNKNOWN — never a confident misfire) + entity extraction (budget/forbidden/scope → a compiled invocation). This probe asserts gatewayGauntlet=100, whose centerpiece is a MEASURED before→after accuracy benchmark: the Gateway's top-1 accuracy on a labeled EN+Thai corpus BEATS the old keyword router by a wide margin (measured 100% vs 13%) ∧ it nails the specific cases the old router failed (mission-drift→telos, stop-bots→govern, test-diff→crucible, who-wrote→haunt, in EN AND Thai) ∧ bilingual ∧ abstains on gibberish ∧ extracts entities + compiles the invocation ∧ deterministic ∧ total. HONEST: 100% NL routing is impossible (language is ambiguous) — the target is high top-1 accuracy + abstention on the rest; the LLM agent is itself the best router, this is the deterministic, measured fallback + the mandate that makes agents use Mneme at all.",
