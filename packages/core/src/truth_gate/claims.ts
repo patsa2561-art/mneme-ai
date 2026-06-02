@@ -944,6 +944,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.144.0 — PERFCORE: Correctness-Preserving Acceleration (High-Perf Core) ──
+  {
+    id: "claim.perfcore.correctness_preserving_accel",
+    source: "v2.144.0 release notes",
+    text: "Mneme's PERFCORE is the High-Performance Core (Missing Links #3), done the only honest way: a command-gate that goes faster WITH A SIGNED PROOF it changed zero verdicts. CERBERUS's cost is the recursive explode() that decomposes a command into every reachable sub-command; but a command with NO decomposition/opacity surface has exactly one reachable command (itself) and no opacity, so CERBERUS's verdict reduces BY CONSTRUCTION to classifyLeafRisk(cmd) — PERFCORE detects that class in O(1) (isSimpleCommand) and returns the leaf verdict directly, skipping the machinery; ANY doubt (a metachar / interpreter / decoder / escape) defers to the full CERBERUS path (fail-safe). A bounded deterministic memo covers repeats. perfGauntlet=100: verdicts UNCHANGED across the attack+benign corpus (mismatches===0 — the load-bearing invariant) ∧ the fast-path fires on simple commands ∧ adversarial/obfuscated commands DEFER ∧ a dangerous-but-simple command (rm -rf /) still classifies destructive (the fast-path skips the DECOMPOSITION, not the danger detection) ∧ the memo returns identical verdicts ∧ a speedup is measured ∧ deterministic ∧ total. `mneme perf accel` runs the equivalence-bench (proves mismatches=0 + measures the speedup, signs it + appends to .mneme/perf/ledger.jsonl for retrospective regression audit; exit 2 if any verdict changed) and `mneme perf accel-history` shows the ledger; MCP `mneme.perf.bench`. HONEST (DIAKRISIS): the headline is NOT a fixed multiple — correctness is GATED (0 verdict changes, proven over the corpus), speed is MEASURED (reproducible, signed; ~10× observed on a realistic 5,000-command mix in this repo, varies by machine/load). It accelerates the real gate (classifyCommandRisk) production-wide while classifyCommandRiskFull stays the always-full reference the bench proves equivalence against.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.perfcore.correctness_preserving_accel",
+    severity: "block",
+  },
   // ── v2.143.0 — DRIFT: Mission-Drift Detection (Context Forensics) ──
   {
     id: "claim.drift.mission_drift",

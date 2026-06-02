@@ -90,6 +90,7 @@ import { REGRET_TOOLS } from "./_regret_tools.js";
 import { HAUNT_TOOLS } from "./_haunt_tools.js";
 import { CRUCIBLE_TOOLS } from "./_crucible_tools.js";
 import { DRIFT_TOOLS } from "./_drift_tools.js";
+import { PERFCORE_TOOLS } from "./_perfcore_tools.js";
 import { FLIGHT_RECORDER_TOOLS } from "./_flight_tools.js";
 import { CREDITSCORE_TOOLS } from "./_creditscore_tools.js";
 import { TRUSTFABRIC_V282_TOOLS } from "./_trustfabric_v282_tools.js";
@@ -300,6 +301,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...HAUNT_TOOLS,
     ...CRUCIBLE_TOOLS,
     ...DRIFT_TOOLS,
+    ...PERFCORE_TOOLS,
     ...FLIGHT_RECORDER_TOOLS,
     ...CREDITSCORE_TOOLS,
     ...TRUSTFABRIC_V282_TOOLS,

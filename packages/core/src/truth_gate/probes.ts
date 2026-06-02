@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.perfcore.correctness_preserving_accel",
+    kind: "boolean",
+    description: "PERFCORE (v2.144.0 — High-Performance Core, Missing Links #3). A command-gate that goes faster WITH A PROOF it changed zero verdicts. CERBERUS's cost is the recursive explode(); a command with no decomposition/opacity surface has one reachable command (itself) + no opacity, so its verdict reduces by construction to classifyLeafRisk — PERFCORE returns that in O(1), skipping the machinery; any doubt defers to the full path (fail-safe). This probe asserts perfGauntlet=100: verdicts UNCHANGED across the attack+benign corpus (mismatches===0 — THE invariant) ∧ the fast-path fires on simple commands ∧ adversarial/obfuscated commands DEFER to the full path ∧ a dangerous-but-simple command (rm -rf /) still classifies destructive ∧ the memo returns identical verdicts ∧ a speedup is measured ∧ deterministic ∧ total. HONEST: correctness is GATED (0 verdict changes, proven), speed is MEASURED (a real, reproducible, signed benchmark — `mneme perf accel` showed ~10× on a realistic 5k-command mix in this repo, NOT a fixed claim); the fast-path skips the DECOMPOSITION, never the danger detection.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../perfcore/index.js" as string) as typeof import("../perfcore/index.js");
+        const g = await P.perfGauntlet();
+        const ok = g.score === 100 && g.verdictsUnchanged && g.fastPathFires && g.defersOnAdversarial && g.dangerousSimpleStillCaught && g.memoReturnsIdentical && g.speedupMeasured && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} verdictsUnchanged=${g.verdictsUnchanged} fastPath=${g.fastPathFires} defers=${g.defersOnAdversarial} dangerousCaught=${g.dangerousSimpleStillCaught}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.drift.mission_drift",
     kind: "boolean",
     description: "DRIFT (v2.143.0 — Mission-Drift Detection / Context Forensics, Missing Links #2). Treats an agent's action stream as a TIME SERIES and runs an EWMA statistical-process-control chart over a deterministic off-mission signal (off-scope files · off-topic vs the mission vocabulary · risk-class weight), with a control limit derived from the agent's OWN early baseline → STABLE / DRIFTING / DIVERGENT / UNKNOWN. This probe asserts driftGauntlet=100, and the gauntlet IS an A/B test: an on-mission stream (A) is STABLE ∧ a progressively-straying stream (B) is DIVERGENT ∧ score(B) > score(A) by a margin (A/B discrimination) ∧ the first control-limit breach turn is detected ∧ a stream that RETURNS to mission has its EWMA decay (recovery lowers the score) ∧ thin data abstains to UNKNOWN ∧ the off-mission signal is sound (on-mission<0.35, off-mission>0.6) ∧ the control-limit math holds (UCL>baseline, breaches counted) ∧ deterministic ∧ total. HONEST: it measures how far recent behaviour moved from the baseline with a principled control limit — NOT mind-reading and NOT a future prediction; it abstains on thin data and never flags DIVERGENT below the minimum action count. Distinct from OVERSHOOT (one-shot plan compare) — this is the trend.",

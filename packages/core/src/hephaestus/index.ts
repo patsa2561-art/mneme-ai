@@ -26,6 +26,7 @@ import { record, replay, readCdr } from "../flight_recorder/index.js";
 import { scanMessage, quarantineDecision, type MeshThreat } from "../mesh_immune/index.js";
 import { verifyReceipt, type NotaryReceipt } from "../notary/index.js";
 import { cerberusClassify } from "../cerberus/index.js";
+import { isSimpleCommand } from "../perfcore/index.js";
 
 export type CommandRisk = "read" | "write" | "destructive";
 export type Disposition = "ALLOW" | "NEEDS_COSIGN" | "BLOCK";
@@ -102,12 +103,31 @@ export function classifyLeafRisk(command: string): RiskClassification {
  * the MAX risk, and FAILS CLOSED on intent-hiding obfuscation or anything it
  * cannot fully resolve (opaque ⇒ destructive ⇒ human co-sign). Total.
  */
-export function classifyCommandRisk(command: string): RiskClassification {
+export function classifyCommandRiskFull(command: string): RiskClassification {
   try {
     const v = cerberusClassify(String(command ?? ""), classifyLeafRisk);
     return { risk: v.risk, signals: v.signals };
   } catch {
     // CERBERUS is total, but if anything ever escaped: fail CLOSED to destructive.
+    return { risk: "destructive", signals: ["classifier error — fail-closed (human co-sign required)"] };
+  }
+}
+
+/**
+ * v2.144.0 — PERFCORE correctness-preserving fast-path. A command with NO
+ * decomposition/opacity surface has exactly one reachable command (itself) and
+ * no opacity, so CERBERUS's verdict reduces by construction to the leaf verdict
+ * — return it directly in O(1), skipping the recursive `explode()`. ANY doubt
+ * (a metachar / interpreter / decoder / escape) ⇒ the full CERBERUS path. The
+ * `perfGauntlet` proves this changes ZERO verdicts over the attack+benign corpus
+ * (and a signed benchmark measures the speedup). Total — fail-closed on error.
+ */
+export function classifyCommandRisk(command: string): RiskClassification {
+  try {
+    const c = String(command ?? "");
+    if (isSimpleCommand(c)) return classifyLeafRisk(c); // provably ≡ full for simple commands
+    return classifyCommandRiskFull(c);
+  } catch {
     return { risk: "destructive", signals: ["classifier error — fail-closed (human co-sign required)"] };
   }
 }
