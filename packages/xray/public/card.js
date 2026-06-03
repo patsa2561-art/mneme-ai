@@ -24,11 +24,40 @@
   };
   const kcell = (label) => `<div class="k">${label}${INFO[label] ? `<span class="kdesc">${INFO[label]}</span>` : ""}</div>`;
 
+  // TRIAGE — curate the 8 signals into attention(critical/warn/info) vs clear,
+  // each with PROVENANCE. Mirrors packages/xray/src/triage.ts (the tested source
+  // of truth + its A/B gauntlet); kept compact for the browser. 100% traceable.
+  function triageOf(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+    const A = [];
+    const sec = r.secrets || {}, su = r.security || {}, dep = r.deps || {}, bf = r.busFactor || {}, age = r.age || {}, cx = r.complexity || {}, hs = r.hotspots || {}, cp = r.coupling || {};
+    if (num(sec.filesScanned) > 0) {
+      if (sec.worstVerdict === "BLOCK") A.push({ s: "Secrets", sev: "critical", f: `${num(sec.totalFindings)} credential leak(s) in production code`, p: `secrets · ${num(sec.filesScanned)} files · ${sec.hits && sec.hits[0] ? sec.hits[0].file + ":" + sec.hits[0].line : "—"}` });
+      else if (num(sec.totalFindings) > 0) A.push({ s: "Secrets", sev: "warn", f: `${num(sec.totalFindings)} credential-pattern match(es) to review`, p: `secrets · ${num(sec.filesScanned)} files · value never stored` });
+    }
+    if ((su.destructive || []).length > 0) A.push({ s: "Security", sev: "critical", f: `${su.destructive.length} destructive build/CI command(s)`, p: `CERBERUS · ${su.destructive[0].where}` });
+    else if (num(su.injectionFindings) > 0) A.push({ s: "Security", sev: "warn", f: `${num(su.injectionFindings)} possible prompt-injection in docs`, p: `FIREWALL · ${(su.injectionWhere || [])[0] || "doc"}` });
+    const dying = num((dep.byBand || {}).moribund) + num((dep.byBand || {}).dead);
+    const copyleft = num((dep.licenses || {})["strong-copyleft"]) + num((dep.licenses || {})["weak-copyleft"]);
+    if (dying > 0) A.push({ s: "Dependencies", sev: dying >= 3 ? "critical" : "warn", f: `${dying} of ${num(dep.total)} deps dying`, p: `deps · ${dep.atRisk && dep.atRisk[0] ? dep.atRisk[0].name + "→" + (dep.atRisk[0].successor || "?") : "npm metadata"}` });
+    else if (copyleft > 0) A.push({ s: "Dependencies", sev: "warn", f: `${copyleft} copyleft dep(s) — review for commercial use`, p: `deps · ${dep.licenseFlags && dep.licenseFlags[0] ? dep.licenseFlags[0].name + ":" + dep.licenseFlags[0].license : "license scan"}` });
+    if (num(bf.authors) > 0 && num(bf.busFactor) <= 1) A.push({ s: "Bus factor", sev: "warn", f: `bus factor 1 — one person holds ${num(bf.topContributorShare)}% of commits`, p: `git authorship · ${num(bf.singleOwnerFilePct)}% files single-owner` });
+    if (age.vitality === "archived") A.push({ s: "Vitality", sev: "critical", f: `archived — no longer maintained`, p: `git history · last ${age.lastCommitAt || "?"}` });
+    else if (age.vitality === "dormant") A.push({ s: "Vitality", sev: "warn", f: `dormant — ${age.lifespan || ""} old, stalled`, p: `git history · last ${age.lastCommitAt || "?"}` });
+    if ((cx.hotspots || []).filter((h) => num(h.bodyLines) >= 150).length > 0) A.push({ s: "Complexity", sev: "info", f: `large symbol(s) ≥150 lines`, p: `AST · ${cx.hotspots[0] ? cx.hotspots[0].bodyLines + "L " + cx.hotspots[0].file : ""}` });
+    if ((hs.hotspots || []).length > 0) { const h = hs.hotspots[0]; A.push({ s: "Hotspots", sev: "info", f: `refactor first: ${h.file}`, p: `churn×size · ${num(h.changes)}× · ${num(h.loc)}L${h.expert ? " · ask " + h.expert : ""}` }); }
+    if ((cp.pairs || []).some((p) => p.hidden)) { const p = cp.pairs.find((x) => x.hidden); A.push({ s: "Coupling", sev: "info", f: `hidden cross-dir coupling: ${p.a} ⇄ ${p.b}`, p: `co-change · ${Math.round(num(p.confidence) * 100)}%` }); }
+    const rank = { critical: 0, warn: 1, info: 2 };
+    A.sort((a, b) => rank[a.sev] - rank[b.sev]);
+    return A;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     const r = signed.report, s = r.summary;
     const dep = r.deps, sec = r.secrets, bf = r.busFactor, age = r.age, cx = r.complexity;
     const verified = signed.receipt ? '<span class="verified"><span class="dot"></span>Ed25519 — verifies offline</span>' : "unsigned";
+    const tri = triageOf(r);
 
     const depChips = (dep.atRisk || []).slice(0, 6).map((d) =>
       `<span class="chip ${d.band === "dead" ? "bad" : "warn"}">${esc(d.name)} · ${d.band}${d.successor ? ` → ${esc(d.successor)}` : ""}</span>`).join("") || `<span class="chip">none dying</span>`;
@@ -56,10 +85,16 @@
         <div><div class="repo">${esc(r.subject.repoName)}</div>
           <div class="head">${esc(s.headline)} · ${s.signalsRun} signals · @ ${esc(String(r.subject.commitHash).slice(0, 10))}</div></div>
       </div>
-      <div class="trustbar">
-        <span class="hgauge"><span class="hdot"></span>0 numbers from AI</span>
-        <span class="htext"><b>${s.signalsRun} deterministic signals</b> across <b>${(sec.filesScanned || 0).toLocaleString()} files</b> — every figure is computed from git, code &amp; package metadata, <b>not one guessed by an AI</b>. Re-run this commit → identical numbers${verified ? ` · <b>signed</b>, verifies offline` : ""}.</span>
+      <div class="membrane">
+        <div class="mp"><span class="mpk">① CAPABILITY</span><span class="mpv">${s.signalsRun} deterministic signals · ${(sec.filesScanned || 0).toLocaleString()} files scanned</span></div>
+        <div class="mp"><span class="mpk">② ACTIVATION</span><span class="mpv">${tri.length ? `${tri.length} signal(s) need attention` : `all signals clear`}</span></div>
+        <div class="mp"><span class="mpk">③ VALUE</span><span class="mpv"><span class="hdot"></span>0 numbers from AI · ${verified ? "signed, verifies offline" : "unsigned"}</span></div>
       </div>
+      <div class="trustbar"><span class="htext"><b>Every figure is computed from git, code &amp; package metadata — not one guessed by an AI.</b> Re-run this commit → identical numbers${verified ? ` · <b>signed</b>, verifies offline with the embedded public key` : ""}.</span></div>
+      ${tri.length ? `<div class="triage">
+        <div class="triage-h">🔺 Needs attention (${tri.length}) <span class="triage-sub">— curated &amp; severity-ranked; every line is traceable to its source</span></div>
+        ${tri.map((t) => `<div class="ti ${t.sev}"><span class="ti-sev">${t.sev}</span><div class="ti-body"><div class="ti-f"><b>${esc(t.s)}</b> — ${esc(t.f)}</div><div class="ti-p">↳ ${esc(t.p)}</div></div></div>`).join("")}
+      </div>` : `<div class="triage clearall">✓ No critical or warning signals — all ${s.signalsRun} checks clear.</div>`}
       <div class="rows">
         <div class="row">${kcell("Dependencies")}<div class="v"><span class="big">${dep.total}</span> total · ${dep.byBand.dead + dep.byBand.moribund} dying · ${(lic["strong-copyleft"] + lic["weak-copyleft"])} copyleft<div class="chips">${depChips}${licChips}</div></div></div>
         <div class="row">${kcell("Secrets")}<div class="v"><span class="big">${sec.totalFindings}</span> in production code · ${sec.filesScanned} files${sec.excludedTestHits ? ` · <span class="muted">+${sec.excludedTestHits} in tests/docs (excluded)</span>` : ""}<div class="chips">${secChips}</div></div></div>

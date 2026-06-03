@@ -1014,6 +1014,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.membrane.fusion",
     severity: "block",
   },
+  // ── v2.165.0 — TRUSTLESS MCP: proof-carrying tool results ──
+  {
+    id: "claim.trustless.proof_carrying",
+    source: "v2.165.0 release notes",
+    text: "Mneme's TRUSTLESS MCP makes a tool result PROOF-CARRYING: it attaches an Ed25519 `_proof` over the SHA-256 of the result's data, so the calling model verifies it OFFLINE (with the embedded public key — no network, no trusting Mneme) instead of having to BELIEVE plain JSON. trustlessGauntlet=100: a genuine result verifies ∧ a tampered `data` is caught ∧ a proof stolen from another result is rejected ∧ a result with no `_proof` is honestly reported unverifiable ∧ re-wrapping signs the data not the old proof ∧ total. ★MEASURED A/B (20 results/group, half tampered): group A (PLAIN, today's MCP) = 0/10 verifiable, 0/10 tamper-detected — you can only TRUST; group B (PROOF-CARRYING) = 10/10 verifiable, 10/10 tamper-detected — you VERIFY. HONEST (DIAKRISIS): the proof attests PROVENANCE + INTEGRITY (who produced it + that the exact bytes weren't altered — the asymmetric-crypto property every prior MCP result lacks), NOT that the answer is semantically CORRECT (a tool can sign a wrong answer). Opt-in server-wide via MNEME_TRUSTLESS=1; verify any result with mneme.mcp.verify.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.trustless.proof_carrying",
+    severity: "block",
+  },
   // ── v2.144.0 — PERFCORE: Correctness-Preserving Acceleration (High-Perf Core) ──
   {
     id: "claim.perfcore.correctness_preserving_accel",

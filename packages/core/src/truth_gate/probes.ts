@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.trustless.proof_carrying",
+    kind: "boolean",
+    description: "TRUSTLESS MCP (v2.165.0 — proof-carrying tool results). Every result can carry an Ed25519 `_proof` over the SHA-256 of its data so the calling model verifies it OFFLINE instead of trusting plain JSON. This probe asserts trustlessGauntlet=100: genuine result verifies ∧ tampered data caught ∧ stolen/swapped proof rejected ∧ no-proof = honestly unverifiable ∧ A/B measured (plain 0/0, proof 100%/100%) ∧ re-wrap signs data not old proof ∧ total. HONEST: attests PROVENANCE + INTEGRITY (who produced it + not altered), NOT semantic correctness (a tool can sign a wrong answer).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const T = await import("../trustless/index.js" as string) as typeof import("../trustless/index.js");
+        const g = T.trustlessGauntlet();
+        const failed = g.checks.filter((c) => !c.pass).map((c) => c.name);
+        return { value: g.score === 100 ? 1 : 0, evidence: `score=${g.score} A(plain)=${g.ab.plain.verifiable}/${g.ab.plain.tamperDetected} B(proof)=${g.ab.proofed.verifiable}/${g.ab.proofed.tamperDetected}${failed.length ? ` failed=[${failed.join(", ")}]` : ""}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.membrane.fusion",
     kind: "boolean",
     description: "MEMBRANE (v2.164.0 — the capstone that fuses the three membrane pillars into ONE signed packet an AI agent crosses at session start). CAPABILITY (STELE — merkle-rooted delta-sync), ACTIVATION (BOOT — when→tool table), VALUE (AXIA — hash-chained, offline-verifiable ledger), sealed by one Ed25519 receipt. This probe asserts membraneGauntlet=100: fuses all three pillars faithfully ∧ a cold agent is told the full surface is the delta ∧ a current agent (held root == live root) pulls 0 tokens ∧ the AXIA value is measured + chain-valid ∧ no fabricated value (no events ⇒ all zero, USD null) ∧ USD only from a user-supplied price ∧ deterministic ∧ total ∧ honest framing present. HONEST (DIAKRISIS): the win is the FUSION + the offline-verifiable proof, NOT a new analysis — all three roots already exist + each scores 100; AXIA's discipline carries through (counts are FACTS of events, never 'attacks prevented', never an invented $ damage).",

@@ -54,7 +54,7 @@ import { recordObservation, recordKarmaEvent } from "./tools/_aletheia.js";
 import { listResources, readResource } from "./mcp_primitives/resources.js";
 import { listPrompts, getPrompt } from "./mcp_primitives/prompts.js";
 import { completeArgument } from "./mcp_primitives/completion.js";
-import { lineage, versionCheck, karmaStreaks, nucleus, inbox } from "@mneme-ai/core";
+import { lineage, versionCheck, karmaStreaks, nucleus, inbox, trustless } from "@mneme-ai/core";
 
 // v2.19.15 — re-export buildAllTools so the CLI's `mneme verify` can wire
 // the TRUTH FORENSIC PIPELINE against the live MCP catalog without depending
@@ -129,8 +129,18 @@ function enrichWithSecondBrain(
   // (and downstream user) feel the value at inference time.
   const enrichedWisdom = wrapWithGlow(repoRoot, response.wisdom, tool.name, existing?.autoActions);
 
+  // TRUSTLESS MCP (opt-in via MNEME_TRUSTLESS): attach an Ed25519 `_proof` over
+  // the result's data so the calling model can VERIFY it offline (mneme.mcp.verify)
+  // instead of trusting it. Default OFF so the result shape is unchanged unless a
+  // deployment opts in. Total — proofWrap degrades to the bare data on any error.
+  const data =
+    process.env.MNEME_TRUSTLESS && response.data && typeof response.data === "object"
+      ? trustless.proofWrap(repoRoot, tool.name, response.data as Record<string, unknown>)
+      : response.data;
+
   return {
     ...response,
+    data,
     wisdom: enrichedWisdom,
     secondBrain: {
       presentation: existing?.presentation,

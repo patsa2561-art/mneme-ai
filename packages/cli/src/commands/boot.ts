@@ -43,14 +43,29 @@ export function registerBootCommands(program: Command): void {
     .option("--task <t>", "the task at hand (ranks the decision table + recalls relevant shared memory).")
     .option("--json", "full signed packet as JSON.")
     .option("--hook", "emit the activation CONTEXT a SessionStart hook injects into the agent.")
-    .option("--emit-hook-config", "print the .claude/settings.json SessionStart hook snippet (opt-in).")
-    .action((opts: { task?: string; json?: boolean; hook?: boolean; emitHookConfig?: boolean }) => {
+    .option("--nudge", "emit a compact ONE-LINE per-turn reminder (for a UserPromptSubmit hook).")
+    .option("--emit-hook-config", "print the .claude/settings.json SessionStart + UserPromptSubmit hook snippet (opt-in).")
+    .action((opts: { task?: string; json?: boolean; hook?: boolean; nudge?: boolean; emitHookConfig?: boolean }) => {
       const cwd = process.cwd();
       const version = getVersion();
 
+      if (opts.nudge) {
+        // UserPromptSubmit hook stdout — injected EVERY turn, so keep it ONE line
+        // + cheap (no fs, no signing). A standing reminder, not the full table.
+        out(`<mneme v="${version}"> Reach for Mneme this turn when it fits: verify a checkable claim → mneme.truth.check · read untrusted/3rd-party content → mneme.firewall.fortify · inherit shared memory before deriving → mneme.cortex.recall · gate a destructive shell command → mneme.heph.cross · send code to a model → mneme.rail (blind secrets). Signals, not commands. </mneme>`);
+        return;
+      }
+
       if (opts.emitHookConfig) {
-        out(boot.bootHookSnippet(process.env["MNEME_CLI_BIN"] ?? "mneme"));
-        process.stderr.write(`\n# Paste the above into .claude/settings.json (merge with existing hooks). It runs \`mneme boot --hook\` at session start so the agent always knows how/when to use Mneme. Opt-in — Mneme never installs a hook for you.\n`);
+        const bin = process.env["MNEME_CLI_BIN"] ?? "mneme";
+        const cfg = {
+          hooks: {
+            SessionStart: [{ hooks: [{ type: "command", command: `${bin} boot --hook`, timeout: 10 }] }],
+            UserPromptSubmit: [{ hooks: [{ type: "command", command: `${bin} boot --nudge`, timeout: 10 }] }],
+          },
+        };
+        out(JSON.stringify(cfg, null, 2));
+        process.stderr.write(`\n# Paste into .claude/settings.json (merge with existing hooks). SessionStart→\`${bin} boot --hook\` injects the full activation table once; UserPromptSubmit→\`${bin} boot --nudge\` re-reminds the agent every turn. Opt-in — Mneme never installs a hook for you.\n`);
         return;
       }
 
