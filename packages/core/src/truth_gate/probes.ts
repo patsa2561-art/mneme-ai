@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.matrix.pipe_integrity",
+    kind: "boolean",
+    description: "MATRIX RAIL (v2.166.0 — the local-first, gRPC-ready pipe core). ANY payload flows byte-identical through ordered, compressed, hash-manifested frames, or the rail says why (never silent corruption); gRPC's 4MB cap is bypassed by auto-chunk + reassemble-with-integrity-check. This probe asserts matrixGauntlet=100: 7/7 pathological payloads round-trip byte-identical (0B/1B/all-NUL/50KB+5MB binary/unicode/nested) ∧ 5/5 corruption classes caught (dropped/reordered/duplicate/flipped/manifest-tamper) ∧ 0-byte still flows ∧ size A/B measured (~−98.5% wire on a sample) ∧ deterministic ∧ total. HONEST: guarantees delivery integrity + a real zlib compression win, NOT semantic correctness; size A/B = raw-JSON vs gzipped-frame (not a Protobuf-specific number).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const M = await import("../matrix/index.js" as string) as typeof import("../matrix/index.js");
+        const g = M.matrixGauntlet();
+        const failed = g.checks.filter((c) => !c.pass).map((c) => c.name);
+        return { value: g.score === 100 ? 1 : 0, evidence: `score=${g.score} pipe=${g.pipe.passed}/${g.pipe.cases} corruption=${g.corruption.caught}/${g.corruption.cases} wire=-${g.ab.savedPct}%${failed.length ? ` failed=[${failed.join(", ")}]` : ""}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.trustless.proof_carrying",
     kind: "boolean",
     description: "TRUSTLESS MCP (v2.165.0 — proof-carrying tool results). Every result can carry an Ed25519 `_proof` over the SHA-256 of its data so the calling model verifies it OFFLINE instead of trusting plain JSON. This probe asserts trustlessGauntlet=100: genuine result verifies ∧ tampered data caught ∧ stolen/swapped proof rejected ∧ no-proof = honestly unverifiable ∧ A/B measured (plain 0/0, proof 100%/100%) ∧ re-wrap signs data not old proof ∧ total. HONEST: attests PROVENANCE + INTEGRITY (who produced it + not altered), NOT semantic correctness (a tool can sign a wrong answer).",

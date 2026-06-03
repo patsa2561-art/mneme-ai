@@ -1014,6 +1014,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.membrane.fusion",
     severity: "block",
   },
+  // ── v2.166.0 — MATRIX RAIL: the gRPC-ready pipe core ──
+  {
+    id: "claim.matrix.pipe_integrity",
+    source: "v2.166.0 release notes",
+    text: "Mneme's MATRIX RAIL is the local-first, gRPC-ready pipe core: ANY payload (0 bytes → tens of MB, raw binary, unicode, deeply-nested JSON) flows through ordered, compressed (zlib), hash-manifested frames and arrives BYTE-IDENTICAL, or the rail says exactly why — it never silently corrupts. gRPC's 4MB message cap is not a wall: a large payload auto-splits into frames and reassembles with a full integrity check (sha256 manifest + length + exactly-once coverage). matrixGauntlet=100: 7/7 pathological payloads round-trip byte-identical (empty, 1-byte, all-NUL, 50KB & 5MB high-entropy binary, unicode/emoji, deeply-nested) ∧ 5/5 corruption classes CAUGHT (dropped, reordered, duplicated, flipped-byte, manifest-tamper) with no silent pass ∧ a 0-byte payload still produces a flowable frame ∧ the size A/B is measured (a representative context packet ~50KB JSON → ~0.7KB wire, −98.5%) ∧ deterministic ∧ total. HONEST (DIAKRISIS): the guarantee is DELIVERY INTEGRITY (any-size, byte-identical, corruption-caught) + a real zlib compression win — NOT semantic correctness, and the size A/B measures raw-JSON-utf8 vs gzipped-frame bytes (a built-in compression win), not a Protobuf-specific number (measured separately once @grpc/grpc-js wraps this core). Transport-agnostic + gRPC-ready by construction.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.matrix.pipe_integrity",
+    severity: "block",
+  },
   // ── v2.165.0 — TRUSTLESS MCP: proof-carrying tool results ──
   {
     id: "claim.trustless.proof_carrying",

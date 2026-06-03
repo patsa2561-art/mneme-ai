@@ -141,6 +141,7 @@ import { registerElleipsisCommands } from "./commands/elleipsis.js";
 import { registerSteleCommands } from "./commands/stele.js";
 import { registerMembraneCommands } from "./commands/membrane.js";
 import { registerTrustlessCommands } from "./commands/trustless.js";
+import { registerMatrixCommands } from "./commands/matrix.js";
 import { registerAxiaCommands } from "./commands/axia.js";
 import { registerPceCommands } from "./commands/pce.js";
 import { registerHauntCommands } from "./commands/haunt.js";
@@ -4961,6 +4962,7 @@ export async function run(argv: string[]): Promise<void> {
   registerSteleCommands(program);
   registerMembraneCommands(program);
   registerTrustlessCommands(program);
+  registerMatrixCommands(program);
   registerAxiaCommands(program);
   registerPceCommands(program);
   registerHauntCommands(program);
