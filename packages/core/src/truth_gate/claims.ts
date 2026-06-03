@@ -1004,6 +1004,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.axia.value_ledger",
     severity: "block",
   },
+  // ── v2.164.0 — MEMBRANE: the capstone that fuses the three membrane pillars ──
+  {
+    id: "claim.membrane.fusion",
+    source: "v2.164.0 release notes",
+    text: "Mneme's MEMBRANE is the capstone that FUSES the three membrane pillars — CAPABILITY (STELE: a merkle-rooted, delta-syncable surface), ACTIVATION (BOOT: a when→tool decision table), and VALUE (AXIA: a hash-chained, offline-verifiable value ledger) — into ONE packet an AI agent crosses at session start, sealed with ONE Ed25519 receipt a third party verifies offline. It answers the three STRUCTURAL reasons an installed tool stays idle: the agent doesn't KNOW what exists (STELE delta), doesn't know WHEN to use it (BOOT table), and can't PROVE the value it created (AXIA ledger). membraneGauntlet=100: fuses all three pillars faithfully ∧ a cold agent is told the full surface is the delta ∧ a current agent (held root == live root) pulls 0 tokens ∧ the AXIA value is measured + chain-valid ∧ no fabricated value (no events ⇒ all zero, USD null) ∧ USD only from a user-supplied price ∧ deterministic ∧ total ∧ honest framing present. HONEST (DIAKRISIS): the win is the FUSION + the offline-verifiable proof, NOT a new analysis — all three roots already exist and each scores 100 on its own gauntlet; AXIA's discipline carries through (counts are FACTS of events GATED/SAVED/REDACTED, never 'attacks prevented', never an invented $ damage — the only dollar figure is tokens-saved × the price-per-1k you supply).",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.membrane.fusion",
+    severity: "block",
+  },
   // ── v2.144.0 — PERFCORE: Correctness-Preserving Acceleration (High-Perf Core) ──
   {
     id: "claim.perfcore.correctness_preserving_accel",

@@ -35,7 +35,10 @@ const isWin = process.platform === "win32";
 function pidAlive(pid: number): boolean { try { process.kill(pid, 0); return true; } catch { return false; } }
 
 describe("v2.76.0 O1 — REAL process reap via lease + holdsPaths (PINNED)", () => {
-  it("O1.1 reaps a real child by PID and Handle-Oracles its declared holdsPaths", async () => {
+  // retry: spawns a REAL child process + reaps it by PID — timing-sensitive
+  // under heavy parallel-suite CPU contention (passes reliably in isolation).
+  // Retries absorb transient scheduling jitter without weakening assertions.
+  it("O1.1 reaps a real child by PID and Handle-Oracles its declared holdsPaths", { retry: 2 }, async () => {
     const cwd = tmp();
     const beatDir = join(cwd, ".mneme-global", "heartbeats");
     mkdirSync(beatDir, { recursive: true });

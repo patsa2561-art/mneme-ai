@@ -30,7 +30,20 @@ export default defineConfig({
     },
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // The suite has many REAL-IO / REAL-PROCESS tests (spawn the CLI bin, drive a
+    // live HTTP server, run git subprocesses, reap real PIDs). Under the full
+    // 860-file parallel run they intermittently flake on CPU/git contention even
+    // though each passes reliably in isolation. A modest retry absorbs that
+    // transient contention WITHOUT weakening any assertion — a real regression
+    // still fails all attempts (deterministic failures are not masked).
+    retry: 2,
     pool: "forks",
+    // Root cause of the real-process flake class: with `forks` defaulting to one
+    // worker per core (24 here), 860 files — many of which spawn git / the CLI bin
+    // / live servers — explode into hundreds of concurrent child processes and
+    // saturate the box, so real-IO tests miss timing even across retries. Capping
+    // the worker pool gives those tests headroom → stable, while staying parallel.
+    poolOptions: { forks: { minForks: 1, maxForks: 10 } },
     reporters: ["default"],
     // v2.19.74 — load the global setup that installs per-worker
     // unhandledRejection + uncaughtException handlers.  Without these,

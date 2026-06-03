@@ -79,12 +79,17 @@ const PROSE_STOPWORDS: ReadonlySet<string> = new Set([
  * explicit CLI markers (` $ mneme X` / `Run: mneme X` / `CLI: mneme X`).
  * Free-text "Mneme is the X" → no longer captured.
  */
-export function extractClaimedVerbs(repoRoot: string, opts: { maxCommits?: number } = {}): { verbs: ClaimedVerb[]; scannedCommits: number } {
+export function extractClaimedVerbs(repoRoot: string, opts: { maxCommits?: number; commitLog?: string } = {}): { verbs: ClaimedVerb[]; scannedCommits: number } {
   const maxCommits = opts.maxCommits ?? 10;
   try {
-    const log = execSync(`git -C "${repoRoot}" log -${maxCommits} --format="%H%n%s%n%b%n--MNEMESPLIT--"`, {
-      encoding: "utf8", timeout: 8000,
-    });
+    // Test seam: callers may inject the raw log (same `%H%n%s%n%b%n--MNEMESPLIT--`
+    // format) to exercise the extractor deterministically — production omits it
+    // and reads live git history exactly as before.
+    const log = typeof opts.commitLog === "string"
+      ? opts.commitLog
+      : execSync(`git -C "${repoRoot}" log -${maxCommits} --format="%H%n%s%n%b%n--MNEMESPLIT--"`, {
+          encoding: "utf8", timeout: 8000,
+        });
     const entries = log.split("--MNEMESPLIT--").filter((s) => s.trim());
     const verbs = new Map<string, ClaimedVerb>();
     let scanned = 0;

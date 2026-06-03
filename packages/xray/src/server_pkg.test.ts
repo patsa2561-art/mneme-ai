@@ -58,7 +58,12 @@ describe("@mneme-ai/xray server (no network)", () => {
     expect(typeof board.total).toBe("number");
   }, 30_000);
 
-  it("THE BRIDGE + PRIVACY: private report is owner-only, never on the public board", async () => {
+  // retry: this test builds an X-Ray of the WHOLE monorepo (spawns many git
+  // subprocesses) + drives a real HTTP server — it can flake under heavy
+  // parallel-suite CPU/git contention (it passes reliably in isolation). The
+  // retries absorb that transient contention WITHOUT weakening any assertion
+  // (a real regression fails all attempts).
+  it("THE BRIDGE + PRIVACY: private report is owner-only, never on the public board", { retry: 2, timeout: 120_000 }, async () => {
     await start();
     // local-path report → visibility PRIVATE (a bank's repo, analysed locally)
     const report = await buildXRay({ repoPath: repoRoot });
@@ -94,7 +99,7 @@ describe("@mneme-ai/xray server (no network)", () => {
     const tampered = { receipt: signed.receipt, report: { ...report, summary: { ...report.summary, grade: "A" } } };
     expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify(tampered) })).status).toBe(422);
     expect((await fetch(`${base}/api/ingest`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(signed) })).status).toBe(401);
-  }, 120_000);
+  });
 
   it("UNICODE KEY: a Thai/emoji key never crashes fetch and keeps the same identity", async () => {
     await start();

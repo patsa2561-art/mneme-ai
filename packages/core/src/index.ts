@@ -307,6 +307,7 @@ export * as boot from "./boot/index.js";
 export * as cerberus from "./cerberus/index.js";
 export * as elleipsis from "./elleipsis/index.js";
 export * as stele from "./stele/index.js";
+export * as membrane from "./membrane/index.js";
 export * as axia from "./axia/index.js";
 export * as pce from "./pce/index.js";
 export * as regret from "./regret/index.js";

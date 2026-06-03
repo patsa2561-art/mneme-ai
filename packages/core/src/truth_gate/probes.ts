@@ -443,6 +443,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.membrane.fusion",
+    kind: "boolean",
+    description: "MEMBRANE (v2.164.0 — the capstone that fuses the three membrane pillars into ONE signed packet an AI agent crosses at session start). CAPABILITY (STELE — merkle-rooted delta-sync), ACTIVATION (BOOT — when→tool table), VALUE (AXIA — hash-chained, offline-verifiable ledger), sealed by one Ed25519 receipt. This probe asserts membraneGauntlet=100: fuses all three pillars faithfully ∧ a cold agent is told the full surface is the delta ∧ a current agent (held root == live root) pulls 0 tokens ∧ the AXIA value is measured + chain-valid ∧ no fabricated value (no events ⇒ all zero, USD null) ∧ USD only from a user-supplied price ∧ deterministic ∧ total ∧ honest framing present. HONEST (DIAKRISIS): the win is the FUSION + the offline-verifiable proof, NOT a new analysis — all three roots already exist + each scores 100; AXIA's discipline carries through (counts are FACTS of events, never 'attacks prevented', never an invented $ damage).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const M = await import("../membrane/index.js" as string) as typeof import("../membrane/index.js");
+        const g = M.membraneGauntlet();
+        const failed = g.checks.filter((c) => !c.pass).map((c) => c.name);
+        return { value: g.score === 100 ? 1 : 0, evidence: `score=${g.score} checks=${g.checks.length}${failed.length ? ` failed=[${failed.join(", ")}]` : " (all pass)"}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.moat.deterministic_scorer",
     kind: "boolean",
     description: "MOAT (v2.150.0 — the deterministic, signed competitive-moat scorer). Answers 'did the moat improve?' with a NUMBER computed from real present capabilities × their measured signals (SIEGE resistance, Gateway accuracy, the mycelium/canon/governor gauntlets, signed-primitive depth, locally-accumulating ledgers = switching cost). This probe asserts moatGauntlet=100: the dimension weights sum to 1 ∧ every sub-score is bounded [0,100] ∧ the overall is exactly the weighted sum ∧ AFTER (current caps) measurably beats BEFORE (pre-session baseline) by a clear margin ∧ an empty capability set scores low ∧ a dimension with no capability gets 0 credit (can't inflate) ∧ deterministic ∧ total. Measured this session: BEFORE 29/100 (SHALLOW) → AFTER 99/100 (FORTRESS), Δ+70. HONEST: engineering-moat signals verifiable in-repo (each = capability-present × its own gauntlet) — NOT a market valuation, NOT traction, NOT an 'uncatchable' claim.",

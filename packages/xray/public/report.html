@@ -34,7 +34,8 @@
   .spark{font-family:ui-monospace,Menlo,monospace;letter-spacing:1px;color:var(--a)}
   .muted{color:var(--sub)}
   .row .v{font-size:15px;color:var(--ink2)}.row .v .big{font-weight:660;color:var(--ink);font-size:16px}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:148px;overflow-y:auto}
+  .chips::-webkit-scrollbar{width:8px}.chips::-webkit-scrollbar-thumb{background:#d7dbe0;border-radius:8px}
   .chip{font-size:12px;padding:4px 10px;border-radius:8px;background:var(--soft);border:1px solid var(--line);color:#5c616b}
   .chip.bad{background:#fff1f3;border-color:#ffe0e6;color:var(--red)}.chip.warn{background:#fff8ed;border-color:#fde6cc;color:#b45309}
   .foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 30px;background:var(--soft);font-size:13px;color:var(--sub);flex-wrap:wrap}

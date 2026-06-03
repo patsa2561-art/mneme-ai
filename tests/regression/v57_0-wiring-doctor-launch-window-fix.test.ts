@@ -39,12 +39,15 @@ describe("v2.57.0 W1 — wiring_lag extractor false-positive fix (PINNED)", () =
   });
 
   it("W1.2 backtick-wrapped `mneme verify` STILL extracted", async () => {
-    // Verify via stop-word list — the extractor logic itself
     const m = await import("../../packages/core/src/release_gate/wiring_lag.js");
-    // Pull from this repo; expect to find `mneme launch_window` etc. (commits ship those)
-    const r = m.extractClaimedVerbs(REPO_ROOT, { maxCommits: 15 });
-    // At least 1 real CLI verb should still be present
+    // Deterministic: inject a controlled commit log (same git format) so the test
+    // proves the extractor STILL catches a real backtick-wrapped verb — without
+    // coupling to whatever happens to be in the repo's recent commit history (a
+    // verb-less docs/UI sprint must not make this pinned test flap).
+    const commitLog = "abc1234\nfeat: wire it up\nShips `mneme verify` end to end for users.\n--MNEMESPLIT--";
+    const r = m.extractClaimedVerbs(REPO_ROOT, { commitLog });
     expect(r.verbs.length).toBeGreaterThanOrEqual(1);
+    expect(r.verbs.some((v) => v.verb === "verify")).toBe(true);
   });
 
   it("W1.3 checkWiringLag returns ok=true with current repo history", async () => {

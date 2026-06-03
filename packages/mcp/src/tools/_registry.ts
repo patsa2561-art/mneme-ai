@@ -84,6 +84,7 @@ import { RAIL_TOOLS } from "./_rail_tools.js";
 import { BOOT_TOOLS } from "./_boot_tools.js";
 import { ELLEIPSIS_TOOLS } from "./_elleipsis_tools.js";
 import { STELE_TOOLS } from "./_stele_tools.js";
+import { MEMBRANE_TOOLS } from "./_membrane_tools.js";
 import { AXIA_TOOLS } from "./_axia_tools.js";
 import { PCE_TOOLS } from "./_pce_tools.js";
 import { REGRET_TOOLS } from "./_regret_tools.js";
@@ -301,6 +302,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...BOOT_TOOLS,
     ...ELLEIPSIS_TOOLS,
     ...STELE_TOOLS,
+    ...MEMBRANE_TOOLS,
     ...AXIA_TOOLS,
     ...PCE_TOOLS,
     ...REGRET_TOOLS,
