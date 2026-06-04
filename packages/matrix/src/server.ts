@@ -20,7 +20,7 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { trustless, matrix } from "@mneme-ai/core";
+import { trustless, matrix, firewall } from "@mneme-ai/core";
 import { buildRuntime, buildToolMap } from "@mneme-ai/mcp";
 import { buildSearchIndex, searchTools, type SearchIndex } from "./search.js";
 import { createRequire } from "node:module";
@@ -84,22 +84,33 @@ export function buildImpl(cwd: string, touch: () => void = () => {}) {
     try {
       // infra self-test fast-paths — no runtime, no registry (so the wire can be
       // proven for any-size data without building the heavy store/embedder).
-      if (tool === "matrix.ping") return { ok: true, data_json: JSON.stringify({ pong: true, version: version() }), wisdom: "pong", proof_json: "", error: "" };
-      if (tool === "matrix.echo") return { ok: true, data_json: argsJson || "{}", wisdom: "echo", proof_json: "", error: "" };
+      if (tool === "matrix.ping") return { ok: true, data_json: JSON.stringify({ pong: true, version: version() }), wisdom: "pong", proof_json: "", error: "", customs_json: "" };
+      if (tool === "matrix.echo") return { ok: true, data_json: argsJson || "{}", wisdom: "echo", proof_json: "", error: "", customs_json: "" };
+      // CONTEXT CUSTOMS — screen the incoming args for prompt-injection BEFORE the
+      // tool ever sees them (the honest core of the "customs/judicial" idea: detect +
+      // record, no ZK fantasy). Advisory by default; MNEME_RAIL_STRICT=1 quarantines
+      // (refuses execution) on a block-severity hit. firewall is deterministic.
+      const scan = firewall.scanInjection(argsJson || "");
+      const quarantined = scan.verdict === "blocked";
+      const customs = { screened: true, verdict: scan.verdict, quarantined, findings: scan.findings.slice(0, 5).map((f) => ({ category: f.category, severity: f.severity, line: f.line })) };
+      const customs_json = JSON.stringify(customs);
+      if (quarantined && process.env["MNEME_RAIL_STRICT"] === "1") {
+        return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `quarantined: prompt-injection in args (${scan.findings[0]?.category ?? "override"})`, customs_json };
+      }
       const t = toolMap.get(tool);
-      if (!t) return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `unknown tool: ${tool}` };
+      if (!t) return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `unknown tool: ${tool}`, customs_json };
       const rt = await getRuntime();
-      if (!rt) return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `runtime unavailable: ${runtimeErr}` };
+      if (!rt) return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `runtime unavailable: ${runtimeErr}`, customs_json };
       let args: Record<string, unknown> = {};
-      try { args = argsJson ? (JSON.parse(argsJson) as Record<string, unknown>) : {}; } catch { return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: "args_json is not valid JSON" }; }
+      try { args = argsJson ? (JSON.parse(argsJson) as Record<string, unknown>) : {}; } catch { return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: "args_json is not valid JSON", customs_json }; }
       const resp = await t.handler(rt, args);
       const data = (resp?.data ?? {}) as Record<string, unknown>;
       // proof-per-message: bind the response data to an offline-verifiable Ed25519 receipt
       const wrapped = trustless.proofWrap(cwd, `matrix:${tool}`, typeof data === "object" && data ? data : { value: data }) as Record<string, unknown>;
       const proof = wrapped["_proof"];
-      return { ok: true, data_json: JSON.stringify(data), wisdom: String(resp?.wisdom ?? ""), proof_json: JSON.stringify(proof ?? null), error: "" };
+      return { ok: true, data_json: JSON.stringify(data), wisdom: String(resp?.wisdom ?? ""), proof_json: JSON.stringify(proof ?? null), error: "", customs_json };
     } catch (e) {
-      return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: (e as Error).message };
+      return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: (e as Error).message, customs_json: "" };
     }
   }
 

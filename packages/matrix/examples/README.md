@@ -21,6 +21,12 @@ call any of the ~1000 tools without hard-coding a single name. `Invoke`'s proof 
 every result **verifiable, not trusted**. (`mneme matrix search "<intent>"` runs the
 same wisdom index locally from the CLI.)
 
+**[`agent.py`](agent.py) is the COMPLETE reference agent** — it runs the whole loop
+above (Health → Search → ListTools → Invoke → **offline Ed25519 proof verification in
+pure Python**) and prints each step. Start the rail, then:
+`python agent.py --intent "is this repo safe to depend on"`. It also surfaces the
+**Context Customs** verdict (the rail screens every Invoke's args for prompt-injection).
+
 The reference clients each do the core round-trips — **Health**, a unary **Invoke**
 (the typed door; the reply carries an Ed25519 proof you verify offline), the
 **ListTools/Search** discovery pair, and the **ContextStream** delta channel (open

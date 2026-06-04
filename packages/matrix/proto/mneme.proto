@@ -59,7 +59,7 @@ message DeltaAck {
 }
 
 message ToolRequest  { string tool = 1; string args_json = 2; string held_root = 3; }
-message ToolResponse { bool ok = 1; string data_json = 2; string wisdom = 3; string proof_json = 4; string error = 5; }
+message ToolResponse { bool ok = 1; string data_json = 2; string wisdom = 3; string proof_json = 4; string error = 5; string customs_json = 6; }
 
 // One frame of the Matrix pipe (mirrors @mneme-ai/core matrix.Frame).
 message Frame {

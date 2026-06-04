@@ -19,7 +19,7 @@ function MatrixClientCtor(): any {
 }
 
 export interface MatrixClient { _c: grpc.Client; close: () => void }
-export interface ToolReply { ok: boolean; data_json: string; wisdom: string; proof_json: string; error: string }
+export interface ToolReply { ok: boolean; data_json: string; wisdom: string; proof_json: string; error: string; customs_json: string }
 
 export function connect(addr: string): MatrixClient {
   const Ctor = MatrixClientCtor();
