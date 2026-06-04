@@ -1034,6 +1034,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.trustless.proof_carrying",
     severity: "block",
   },
+  // ── v2.168.0 — ADAMAS: QEC-inspired self-healing memory ──
+  {
+    id: "claim.adamas.self_healing_memory",
+    source: "v2.168.0 release notes",
+    text: "Mneme's ADAMAS is QEC-inspired self-healing memory: a fact is encoded with a real MDS erasure code (a Cauchy matrix over GF(256), the Reed-Solomon family) into K data + M parity shards, each SHA-256-sealed under a block root; a per-shard syndrome locates any corrupted/tampered/missing shard and the code recovers the original BYTE-IDENTICAL while ≥K of the K+M shards survive (tolerates up to M bad shards). Past M it returns UNRECOVERABLE and refuses to guess (prove-or-unknown — it never emits a wrong value). adamasGauntlet=100: healthy encode→decode is byte-identical across sizes (0B/unicode/5KB) ∧ recovers byte-identical with 1..M corrupted shards and names which it healed ∧ refuses beyond M (UNRECOVERABLE) ∧ NEVER emits a wrong value past tolerance ∧ erasure (missing shards, not just flipped bytes) recovers when survivors ≥ K ∧ the block root catches coordinated tamper (rewrite bytes AND per-shard hash) ∧ repair() yields a fresh fully-healthy block ∧ GF(256) every nonzero element is invertible ∧ deterministic ∧ total. HONEST (DIAKRISIS): this is a classical, deterministic, textbook MDS code — NOT a qubit and NOT 'quantum hardware'; the substance is provable self-healing + tamper-evidence (measured), and the genuine future-proofing is that QEC is the real classical→quantum bridge concept (stabilizer codes). Composes with NOTARY (signs the block) + HYDRA + the cortex.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.adamas.self_healing_memory",
+    severity: "block",
+  },
   // ── v2.144.0 — PERFCORE: Correctness-Preserving Acceleration (High-Perf Core) ──
   {
     id: "claim.perfcore.correctness_preserving_accel",

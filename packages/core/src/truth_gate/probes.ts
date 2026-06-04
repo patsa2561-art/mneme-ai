@@ -513,6 +513,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.adamas.self_healing_memory",
+    kind: "boolean",
+    description: "ADAMAS (v2.168.0 — QEC-inspired self-healing memory). A fact is encoded with a real MDS erasure code (a Cauchy matrix over GF(256), the Reed-Solomon family) into K data + M parity shards under a SHA-256 block root; a per-shard syndrome locates corruption/tamper/loss and the code recovers the original BYTE-IDENTICAL while ≥K shards survive (tolerates up to M bad), else UNRECOVERABLE (never a guess). This probe asserts adamasGauntlet=100: healthy round-trip byte-identical (0B/unicode/large) ∧ self-heals 1..M corrupted shards byte-identical + names them ∧ refuses beyond M ∧ NEVER emits a wrong value past tolerance ∧ erasure (missing shards) recovers when survivors ≥ K ∧ block root catches coordinated tamper (bytes+hash) ∧ repair() yields a fresh healthy block ∧ GF(256) is a field (every nonzero invertible) ∧ deterministic ∧ total. HONEST (DIAKRISIS): a classical, deterministic, textbook MDS code — NOT a qubit, NOT quantum hardware; the substance is provable self-healing + tamper-evidence, and the future-proofing is honest (QEC/stabilizer codes are the real classical→quantum bridge).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const A = await import("../adamas/index.js" as string) as typeof import("../adamas/index.js");
+        const g = A.adamasGauntlet();
+        const ok = g.score === 100 && g.checks.every((c) => c.pass);
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} checks=${g.checks.filter((c) => c.pass).length}/${g.checks.length} [${g.checks.filter((c) => !c.pass).map((c) => c.name).join(",") || "all pass"}]`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.siege.bypass_resistance",
     kind: "boolean",
     description: "SIEGE (v2.148.0 — the Adversarial Self-Bounty, moat #3). A command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score: fire the attack corpus at a gate, measure how many destructive payloads it withstands vs lets through, report a Wilson-LOWER-bound resistance score + band (FORTRESS/STRONG/WEAK/BREACHED). Every new bypass folds back into the corpus → the gate gets provably harder. This probe asserts siegeGauntlet=100: measures resistance ∧ DISCRIMINATES a sound gate (FORTRESS) from a naive leading-token denylist (low LB — it misses the obfuscation family) ∧ the Wilson LB is conservative (below the point rate) ∧ reports the bypasses (incl. obfuscated) ∧ self-hardens (a found bypass grows the corpus, dedup'd) ∧ per-class breakdown ∧ deterministic ∧ total. HONEST: measures resistance vs a KNOWN, growing corpus — NOT a proof of 'unbreakable' (an open adversarial problem; a novel attack not in the corpus is not yet measured — which is why the corpus self-hardens + the score is a LOWER bound, never a point estimate).",
