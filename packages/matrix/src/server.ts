@@ -22,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { trustless, matrix } from "@mneme-ai/core";
 import { buildRuntime, buildToolMap } from "@mneme-ai/mcp";
+import { buildSearchIndex, searchTools, type SearchIndex } from "./search.js";
 import { createRequire } from "node:module";
 import { writeFileSync, rmSync, mkdirSync, existsSync } from "node:fs";
 
@@ -63,6 +64,11 @@ const fromWire = (w: WireFrame): matrix.Frame => ({ id: String(w.id), seq: Numbe
  *  `touch` is called on every request so the server can self-reap when idle. */
 export function buildImpl(cwd: string, touch: () => void = () => {}) {
   const toolMap = buildToolMap();
+  // the WISDOM SEARCH INDEX — built once (lazily) from the tool registry's curated
+  // triggers + descriptions, so an agent can find a tool by intent over gRPC.
+  let searchIndex: SearchIndex | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getIndex = (): SearchIndex => (searchIndex ??= buildSearchIndex([...toolMap.values()] as any));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let runtime: any = null;
   let runtimeErr = "";
@@ -108,6 +114,41 @@ export function buildImpl(cwd: string, touch: () => void = () => {}) {
     // unary
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Health: (_call: any, cb: any) => { touch(); cb(null, { ok: true, version: version(), tools: toolMap.size, note: "Matrix Rail — 127.0.0.1, proof-carrying, chunked pipe, delta channel", trustless: true }); },
+    // SELF-DESCRIBING DISCOVERY — return the full tool surface + each tool's JSON
+    // Schema so a gRPC client (any language) can use everything WITHOUT prior knowledge.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ListTools: (call: any, cb: any) => {
+      touch();
+      try {
+        const r = call.request ?? {};
+        const q = String(r.query ?? "").trim().toLowerCase();
+        const limit = Number(r.limit ?? 0) || 0;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let all = [...toolMap.values()].map((t: any) => ({
+          name: String(t.name ?? ""),
+          category: String(t.category ?? ""),
+          description: String(t.description ?? ""),
+          input_schema_json: (() => { try { return JSON.stringify(t.inputSchema ?? {}); } catch { return "{}"; } })(),
+        })).filter((t) => t.name);
+        all.sort((a, b) => a.name.localeCompare(b.name));
+        const total = all.length;
+        if (q) all = all.filter((t) => t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+        const matched = all.length;
+        if (limit > 0) all = all.slice(0, limit);
+        cb(null, { tools: all, total, returned: all.length, _matched: matched });
+      } catch (e) { cb(null, { tools: [], total: 0, returned: 0, error: (e as Error).message }); }
+    },
+    // THE WISDOM SEARCH — intent → ranked tool hits (BM25 + curated-trigger boost).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Search: (call: any, cb: any) => {
+      touch();
+      try {
+        const r = call.request ?? {};
+        const limit = Number(r.limit ?? 0) || 8;
+        const hits = searchTools(getIndex(), String(r.intent ?? ""), limit);
+        cb(null, { hits, considered: toolMap.size });
+      } catch (e) { cb(null, { hits: [], considered: 0, error: (e as Error).message }); }
+    },
     // CONTEXT STREAM (Phase 2) — the delta channel. Per channel_id, hold a doc;
     // the opening snapshot sets the base, each op applies a splice + replies with a
     // COMPACT ack (hash + sizes, never the whole doc). Byte-exact + measured saving.

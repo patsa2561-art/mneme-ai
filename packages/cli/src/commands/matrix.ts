@@ -89,6 +89,38 @@ export function registerMatrixCommands(program: Command): void {
       if (g.score !== 100) process.exitCode = 2;
     });
 
+  m.command("search <intent...>")
+    .description("🧠 WISDOM SEARCH — type what you WANT in plain language; get the right Mneme tool(s) ranked (BM25 + curated-trigger wisdom, no LLM). The autonomous-discovery path an agent uses to pick a tool by intent.")
+    .option("--limit <n>", "max hits (default 8)", "8")
+    .option("--json", "JSON output.")
+    .action(async (intent: string[], opts: { limit?: string; json?: boolean }) => {
+      const wire = await loadWire(); if (!wire) { process.exitCode = 2; return; }
+      // search runs LOCALLY off the tool registry — no server needed.
+      const w = wire as unknown as { buildSearchIndex: (t: unknown[]) => unknown; searchTools: (i: unknown, q: string, n?: number) => Array<{ name: string; description: string; score: number; why: string }> };
+      const { buildToolMap } = await import("@mneme-ai/mcp" as string) as { buildToolMap: () => Map<string, unknown> };
+      const tools = [...buildToolMap().values()];
+      const idx = w.buildSearchIndex(tools);
+      const hits = w.searchTools(idx, intent.join(" "), parseInt(opts.limit ?? "8", 10));
+      if (opts.json) { out(JSON.stringify(hits, null, 2)); return; }
+      if (!hits.length) { out(`no tool matched “${intent.join(" ")}” — try different words`); return; }
+      out(`🧠 intent: “${intent.join(" ")}”`);
+      for (const h of hits) out(`  ${h.score.toFixed(2)}  ${h.name}  — ${h.why}\n        ${h.description.slice(0, 90)}`);
+    });
+
+  m.command("tools [query]")
+    .description("📚 List the discoverable tool surface (name + category) — optionally filtered. The CLI peer of the gRPC ListTools self-describing discovery.")
+    .option("--limit <n>", "max (default 40)", "40")
+    .action(async (query: string | undefined, opts: { limit?: string }) => {
+      const { buildToolMap } = await import("@mneme-ai/mcp" as string) as { buildToolMap: () => Map<string, { name: string; category?: string; description?: string }> };
+      const q = (query ?? "").toLowerCase();
+      let all = [...buildToolMap().values()].filter((t) => t.name);
+      const total = all.length;
+      if (q) all = all.filter((t) => t.name.toLowerCase().includes(q) || String(t.category ?? "").toLowerCase().includes(q) || String(t.description ?? "").toLowerCase().includes(q));
+      all.sort((a, b) => a.name.localeCompare(b.name));
+      out(`📚 ${all.length}${q ? `/${total}` : ""} tool(s)${q ? ` matching “${query}”` : ""}:`);
+      for (const t of all.slice(0, parseInt(opts.limit ?? "40", 10))) out(`  ${t.name}  · ${t.category ?? ""}`);
+    });
+
   m.command("bench <file>")
     .description("Measure a file's wire cost: raw JSON utf8 bytes vs the rail's compressed frames.")
     .option("--json", "JSON output.")

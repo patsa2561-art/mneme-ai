@@ -49,6 +49,21 @@ export function verifyReply(reply: ToolReply): { verified: boolean; reason: stri
   } catch (e) { return { verified: false, reason: (e as Error).message }; }
 }
 
+export interface ToolInfoWire { name: string; category: string; description: string; input_schema_json: string }
+export interface ToolHitWire { name: string; category: string; description: string; score: number; why: string }
+
+/** ListTools — self-describing discovery: the full tool surface + each JSON Schema. */
+export function listTools(client: MatrixClient, query = "", limit = 0): Promise<{ tools: ToolInfoWire[]; total: number; returned: number }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Promise((resolve, reject) => (client._c as any).ListTools({ query, limit }, (e: Error | null, r: { tools: ToolInfoWire[]; total: number; returned: number }) => (e ? reject(e) : resolve(r))));
+}
+
+/** Search — intent → ranked tool hits (the autonomous-discovery path). */
+export function search(client: MatrixClient, intent: string, limit = 8): Promise<{ hits: ToolHitWire[]; considered: number }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Promise((resolve, reject) => (client._c as any).Search({ intent, limit }, (e: Error | null, r: { hits: ToolHitWire[]; considered: number }) => (e ? reject(e) : resolve(r))));
+}
+
 /** Unary Invoke — the typed door to any tool. */
 export function invoke(client: MatrixClient, tool: string, argsJson = "{}", heldRoot = ""): Promise<ToolReply> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

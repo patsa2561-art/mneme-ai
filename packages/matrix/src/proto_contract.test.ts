@@ -13,11 +13,11 @@ describe("Matrix proto — the cross-language contract", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pkg = grpc.loadPackageDefinition(protoLoader.loadSync(PROTO, { keepCase: true })) as any;
 
-  it("exposes the Matrix service with all four RPCs", () => {
+  it("exposes the Matrix service with all RPCs incl discovery + search", () => {
     const svc = pkg.mneme?.Matrix?.service;
     expect(svc).toBeTruthy();
     const methods = Object.keys(svc);   // proto-loader keys the definition by method name
-    for (const rpc of ["Invoke", "Pipe", "ContextStream", "Health"]) expect(methods).toContain(rpc);
+    for (const rpc of ["Invoke", "Pipe", "ContextStream", "Health", "ListTools", "Search"]) expect(methods).toContain(rpc);
   });
 
   it("ContextStream is a bidi stream (client + server streaming)", () => {
@@ -30,7 +30,7 @@ describe("Matrix proto — the cross-language contract", () => {
     // proto-loader with keepCase keeps snake_case; the quickstarts use these exact names.
     const def = protoLoader.loadSync(PROTO, { keepCase: true });
     const names = Object.keys(def);
-    for (const t of ["mneme.ToolRequest", "mneme.ToolResponse", "mneme.Frame", "mneme.DeltaMsg", "mneme.DeltaAck", "mneme.HealthReply"]) {
+    for (const t of ["mneme.ToolRequest", "mneme.ToolResponse", "mneme.Frame", "mneme.DeltaMsg", "mneme.DeltaAck", "mneme.HealthReply", "mneme.ToolInfo", "mneme.ListToolsReply", "mneme.ToolHit", "mneme.SearchReply"]) {
       expect(names).toContain(t);
     }
   });

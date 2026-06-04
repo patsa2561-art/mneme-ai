@@ -21,8 +21,28 @@ service Matrix {
   // not the packet" — byte-exact, with a measured byte saving over re-sending.
   rpc ContextStream (stream DeltaMsg) returns (stream DeltaAck);
 
+  // SELF-DESCRIBING DISCOVERY — an AI agent that connects over gRPC (any language,
+  // any process) lists the ENTIRE tool surface + each tool's JSON Schema here, so it
+  // can use every function WITHOUT knowing names in advance. The gRPC peer of MCP's
+  // tools/list. Optional `query` filters by name/category/description.
+  rpc ListTools (ListToolsRequest) returns (ListToolsReply);
+
+  // THE WISDOM SEARCH — intent → the right tool(s). An agent that knows what the
+  // user WANTS (plain language) but not the tool name searches here. BM25 retrieval
+  // boosted by each tool's curated `triggers` (when-to-use wisdom) + proven usage.
+  // Deterministic, no LLM. The autonomous-discovery core.
+  rpc Search (SearchRequest) returns (SearchReply);
+
   rpc Health (HealthRequest) returns (HealthReply);
 }
+
+message ListToolsRequest { string query = 1; uint32 limit = 2; }
+message ToolInfo { string name = 1; string category = 2; string description = 3; string input_schema_json = 4; }
+message ListToolsReply { repeated ToolInfo tools = 1; uint32 total = 2; uint32 returned = 3; }
+
+message SearchRequest { string intent = 1; uint32 limit = 2; }
+message ToolHit { string name = 1; string category = 2; string description = 3; double score = 4; string why = 5; }
+message SearchReply { repeated ToolHit hits = 1; uint32 considered = 2; }
 
 message DeltaMsg {
   string channel_id = 1;  // logical channel (lets one connection multiplex docs)

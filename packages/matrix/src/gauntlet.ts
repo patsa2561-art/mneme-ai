@@ -4,7 +4,7 @@
  * Honest numbers, not adjectives.
  */
 import { createMatrixServer } from "./server.js";
-import { connect, health, invoke, pipeInvoke } from "./client.js";
+import { connect, health, invoke, pipeInvoke, listTools, search } from "./client.js";
 import { createHash } from "node:crypto";
 
 function entropy(n: number, seed = 1): Uint8Array {
@@ -56,6 +56,16 @@ export async function grpcGauntlet(): Promise<GrpcGauntlet> {
     const bad = await invoke(client, "no.such.tool");
     const stillUp = await health(client);
     checks.push({ name: "unknown tool fails cleanly, server stays up", pass: bad.ok === false && stillUp.ok === true, detail: bad.error.slice(0, 40) });
+
+    // 6) SELF-DESCRIBING — ListTools returns the surface + JSON schemas over the wire
+    const lt = await listTools(client, "", 5);
+    const schemaOk = lt.tools.length > 0 && lt.tools.every((t) => typeof t.name === "string" && t.name.length > 0 && typeof t.input_schema_json === "string");
+    checks.push({ name: "ListTools is self-describing (names + JSON schema)", pass: lt.total > 0 && schemaOk, detail: `${lt.total} tools advertised; sample schema len ${lt.tools[0]?.input_schema_json?.length ?? 0}` });
+
+    // 7) AUTONOMOUS DISCOVERY — Search maps a plain intent → a ranked, relevant tool
+    const sr = await search(client, "verify a claim is actually true", 5);
+    const found = sr.hits.length > 0 && /truth|verify|retire|savant|check/i.test(sr.hits[0]?.name ?? "");
+    checks.push({ name: "Search maps intent → the right tool (no LLM)", pass: found, detail: sr.hits.length ? `#1 ${sr.hits[0].name} (${sr.hits[0].why})` : "no hits" });
 
     const pass = checks.every((c) => c.pass);
     return { score: pass ? 100 : 0, metrics, checks };

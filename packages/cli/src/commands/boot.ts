@@ -19,6 +19,36 @@ import { getVersion } from "../version.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 
+/**
+ * Auto-ensure the Matrix Rail (gRPC) is up as a SIDE-EFFECT of activation — so any
+ * AI agent that boots Mneme (the manifest tells it to, first thing) makes the full
+ * tool surface reachable over gRPC for cross-process / other-language clients,
+ * WITHOUT the user knowing any command and WITHOUT a hook being installed.
+ *
+ * Anti-worm-safe (Rule 9): this fires only when an agent ACTIVELY activates Mneme in
+ * a live session — it is loopback-only, idempotent (no pile-up), reversible, and never
+ * touches the install / never registers a persistent OS service. Opt out with
+ * MNEME_NO_MATRIX=1. Best-effort + silent: a failure never blocks boot.
+ */
+function autoEnsureMatrix(cwd: string): void {
+  if (process.env["MNEME_NO_MATRIX"] === "1") return;
+  try {
+    // already up? (pid-alive check — avoids spawning anything on the common path)
+    const disc = join(cwd, ".mneme", "matrix.json");
+    if (existsSync(disc)) {
+      const j = JSON.parse(readFileSync(disc, "utf8")) as { pid?: number };
+      if (j.pid) { try { process.kill(j.pid, 0); return; } catch { /* stale → (re)ensure */ } }
+    }
+    const bin = process.argv[1];
+    if (!bin) return;
+    // delegate to the idempotent, fail-open `matrix ensure` (handles the lazy-load of
+    // the optional @mneme-ai/matrix + spawns the loopback server detached).
+    void import("node:child_process").then(({ spawn }) => {
+      try { spawn(process.execPath, [bin, "matrix", "ensure"], { cwd, detached: true, stdio: "ignore" }).unref(); } catch { /* best-effort */ }
+    }).catch(() => { /* best-effort */ });
+  } catch { /* best-effort — never block boot */ }
+}
+
 function readCortexStore(cwd: string): { v: 1; entries: unknown[] } {
   try {
     const p = join(cwd, ".mneme", "cortex", "store.json");
@@ -71,6 +101,11 @@ export function registerBootCommands(program: Command): void {
         process.stderr.write(`\n# Paste into .claude/settings.json (merge with existing hooks). SessionStart→\`${bin} boot --hook\` injects the full activation table once; UserPromptSubmit→\`${bin} boot --nudge\` re-reminds the agent every turn. Opt-in — Mneme never installs a hook for you.\n`);
         return;
       }
+
+      // Reached only on a REAL activation (--nudge + --emit-hook-config returned above):
+      // bring the Matrix Rail up so the full tool surface is reachable over gRPC the
+      // instant any agent activates Mneme — hands-free, no user command, anti-worm-safe.
+      autoEnsureMatrix(cwd);
 
       const packet = boot.buildBootPacket({
         version,
