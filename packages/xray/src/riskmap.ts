@@ -80,6 +80,38 @@ export function buildRiskMap(report: unknown): RiskMap {
   return { nodes, edges, maxRisk, W: MAP_W, H: MAP_H, note: nodes.length ? `${nodes.length} flagged file(s), ${edges.length} coupling link(s)` : "no per-file risk signals in this repo" };
 }
 
+// ─── BLAST RADIUS — "touch this file → what historically changed with it" ────
+// Pure history, NOT prediction: from the report's temporal-coupling pairs (files
+// that changed together in git), verbatim. Honest framing: "when you changed A,
+// these changed too N% of the time" — a measured co-change rate, not a guess.
+export interface BlastPartner { file: string; confidence: number; coChanges: number; hidden: boolean }
+export interface BlastTarget { file: string; reach: number; partners: BlastPartner[] }
+
+export function buildBlastRadius(report: unknown, maxTargets = 6, maxPartners = 5): { targets: BlastTarget[]; note: string } {
+  const r = (report && typeof report === "object" ? report : {}) as Record<string, unknown>;
+  const cp = (r["coupling"] || {}) as Record<string, unknown>;
+  const pairs = (Array.isArray(cp["pairs"]) ? cp["pairs"] : []) as Array<Record<string, unknown>>;
+  const adj = new Map<string, BlastPartner[]>();
+  const add = (from: string, to: string, conf: number, co: number, hidden: boolean) => {
+    if (!from || !to || from === to) return;
+    if (!adj.has(from)) adj.set(from, []);
+    adj.get(from)!.push({ file: to, confidence: conf, coChanges: co, hidden });
+  };
+  for (const p of pairs) {
+    const a = str(p?.["a"]), b = str(p?.["b"]); if (!a || !b) continue;
+    const conf = clamp(num(p?.["confidence"]), 0, 1), co = num(p?.["coChanges"]), hidden = !!p?.["hidden"];
+    add(a, b, conf, co, hidden); add(b, a, conf, co, hidden);
+  }
+  const targets: BlastTarget[] = [...adj.entries()].map(([file, ps]) => {
+    ps.sort((x, y) => (y.confidence - x.confidence) || (y.coChanges - x.coChanges) || x.file.localeCompare(y.file));
+    const reach = ps.reduce((s, x) => s + x.confidence, 0);
+    return { file, reach, partners: ps.slice(0, maxPartners) };
+  });
+  targets.sort((a, b) => (b.reach - a.reach) || (b.partners.length - a.partners.length) || a.file.localeCompare(b.file));
+  const top = targets.slice(0, maxTargets);
+  return { targets: top, note: top.length ? `${top.length} file(s) with historical change-coupling` : "no temporal coupling measured (files change independently)" };
+}
+
 // ─── gauntlet (the 100,000-case stress test) ─────────────────────────────────
 export interface GauntletCheck { name: string; pass: boolean; detail: string }
 export interface RiskMapGauntlet { score: number; iterations: number; checks: GauntletCheck[] }
@@ -100,27 +132,34 @@ function randomReport(rnd: () => number): unknown {
 
 export function riskMapGauntlet(iterations = 100_000): RiskMapGauntlet {
   const rnd = lcg(1234567);
-  let threw = 0, badCoord = 0, badRange = 0, badEdge = 0, overCap = 0;
+  let threw = 0, badCoord = 0, badRange = 0, badEdge = 0, overCap = 0, badBlast = 0;
   for (let i = 0; i < iterations; i++) {
+    const rep = randomReport(rnd);
     let m: RiskMap;
-    try { m = buildRiskMap(randomReport(rnd)); } catch { threw++; continue; }
+    try { m = buildRiskMap(rep); } catch { threw++; continue; }
     if (m.nodes.length > MAP_CAP) overCap++;
     for (const n of m.nodes) {
       if (!Number.isFinite(n.x) || !Number.isFinite(n.y) || n.x < 0 || n.x > MAP_W || n.y < 0 || n.y > MAP_H) badCoord++;
       if (!(n.risk >= 0 && n.risk <= 1) || !(n.size >= 0 && n.size <= 1)) badRange++;
     }
     for (const e of m.edges) if (e.a < 0 || e.b < 0 || e.a >= m.nodes.length || e.b >= m.nodes.length || e.a === e.b) badEdge++;
+    // BLAST RADIUS stressed on the same random report
+    try {
+      const br = buildBlastRadius(rep);
+      for (const t of br.targets) { if (typeof t.file !== "string" || !t.file) badBlast++; for (const p of t.partners) if (!(p.confidence >= 0 && p.confidence <= 1) || typeof p.file !== "string" || p.file === t.file) badBlast++; }
+    } catch { threw++; }
   }
-  // determinism: a fixed report renders identically twice
+  // determinism: a fixed report renders identically twice (map + blast)
   const fixed = randomReport(lcg(42));
-  const det = JSON.stringify(buildRiskMap(fixed)) === JSON.stringify(buildRiskMap(fixed));
+  const det = JSON.stringify(buildRiskMap(fixed)) === JSON.stringify(buildRiskMap(fixed)) && JSON.stringify(buildBlastRadius(fixed)) === JSON.stringify(buildBlastRadius(fixed));
   const checks: GauntletCheck[] = [
     { name: "TOTAL", pass: threw === 0, detail: `0 throws over ${iterations.toLocaleString()} random reports (got ${threw})` },
     { name: "COORDS-IN-BOX", pass: badCoord === 0, detail: `every node coordinate finite + inside ${MAP_W}×${MAP_H} (violations ${badCoord})` },
     { name: "RANGE-0-1", pass: badRange === 0, detail: `risk + size always in [0,1] (violations ${badRange})` },
     { name: "EDGES-VALID", pass: badEdge === 0, detail: `every edge references two distinct existing nodes (violations ${badEdge})` },
     { name: "CAP", pass: overCap === 0, detail: `node count never exceeds ${MAP_CAP} (violations ${overCap})` },
-    { name: "DETERMINISTIC", pass: det, detail: "same report → byte-identical map" },
+    { name: "BLAST-VALID", pass: badBlast === 0, detail: `blast-radius partners valid (conf∈[0,1], distinct files) (violations ${badBlast})` },
+    { name: "DETERMINISTIC", pass: det, detail: "same report → byte-identical map + blast" },
   ];
   const passed = checks.filter((c) => c.pass).length;
   return { score: Math.round((passed / checks.length) * 100), iterations, checks };
