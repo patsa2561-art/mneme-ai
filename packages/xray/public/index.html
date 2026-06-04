@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Mneme · Repo X-Ray</title>
+<script>/* apply saved text size before paint (no flash); persists across browser restarts */
+(function(){try{var s=localStorage.getItem("xray-fs")||"s";document.documentElement.className=(document.documentElement.className+" fs-"+s).trim();}catch(e){}})();</script>
 <link rel="icon" href="/favicon.svg" />
 <style>
   :root{
@@ -119,6 +121,32 @@
   .blast .blp{display:flex;gap:6px;flex-wrap:wrap}
   .blast .blpill{font-size:11.5px;background:#eef0ff;color:#3a3df0;border-radius:20px;padding:2px 9px;font-family:ui-monospace,Menlo,monospace}
   .blast .blpill.hidden{background:#fff1f3;color:#be123c}
+  /* ── text size (3 standard sizes, persisted) — zoom scales the whole page proportionally ── */
+  html.fs-m{zoom:1.12}html.fs-l{zoom:1.26}
+  .fontpick{position:fixed;top:14px;right:14px;z-index:60;display:flex;gap:2px;align-items:center;background:rgba(255,255,255,.82);backdrop-filter:saturate(1.6) blur(10px);-webkit-backdrop-filter:saturate(1.6) blur(10px);border:1px solid #ececef;border-radius:999px;padding:3px;box-shadow:0 1px 2px rgba(11,11,20,.05)}
+  .fontpick button{border:0;background:transparent;color:#8b8f98;cursor:pointer;border-radius:999px;width:30px;height:28px;font-weight:700;line-height:1;display:grid;place-items:center;font-family:inherit;transition:background .15s,color .15s}
+  .fontpick button:nth-child(1){font-size:11px}.fontpick button:nth-child(2){font-size:13px}.fontpick button:nth-child(3){font-size:16px}
+  .fontpick button[aria-pressed="true"]{background:#0b0b0f;color:#fff}
+  @media (max-width:640px){.fontpick{top:8px;right:8px}}
+  /* ── verify-signature proof modal ── */
+  .vfmodal{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;background:rgba(11,11,20,.46);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);padding:20px}
+  .vfbox{position:relative;width:min(560px,100%);background:#fff;border-radius:22px;padding:30px 30px 22px;box-shadow:0 30px 90px -20px rgba(11,11,20,.5);animation:vfpop .22s cubic-bezier(.2,.8,.2,1)}
+  @keyframes vfpop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+  .vfclose{position:absolute;top:14px;right:14px;border:0;background:#f3f3f5;width:30px;height:30px;border-radius:50%;cursor:pointer;color:#6b7280;font-size:14px}
+  .vfhero{display:flex;gap:16px;align-items:flex-start;margin-bottom:18px}
+  .vfseal{flex-shrink:0;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff}
+  .vfbox.ok .vfseal{background:linear-gradient(135deg,#22c55e,#15803d)}.vfbox.bad .vfseal{background:linear-gradient(135deg,#fb7185,#be123c)}
+  .vfbig{font-size:21px;font-weight:760;color:#0b0b0f;letter-spacing:-.02em}
+  .vfsub{font-size:13px;color:#8b8f98;line-height:1.5;margin-top:3px}
+  .vfmatch{border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .vfmatch.y{background:#f0fdf4;border:1px solid #bbf7d0}.vfmatch.n{background:#fff1f3;border:1px solid #fecdd3}
+  .vfmatch-h{font-weight:680;font-size:14px;color:#0b0b0f;margin-bottom:8px}
+  .vfhash{display:flex;gap:10px;font-size:12px;color:#6b7280;align-items:center;margin:2px 0}
+  .vfhash span{width:84px;flex-shrink:0}.vfhash code{font-family:ui-monospace,Menlo,monospace;color:#0b0b0f;background:rgba(0,0,0,.05);padding:1px 6px;border-radius:6px}
+  .vfwhy{font-size:12px;color:#4b5563;line-height:1.5;margin-top:9px}
+  .vfr{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-top:1px solid #f3f3f5;font-size:12.5px}
+  .vfk{color:#8b8f98}.vfv{color:#33333b;text-align:right}.vfv.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;word-break:break-all}
+  .vffoot{font-size:11.5px;color:#8b8f98;line-height:1.5;margin-top:14px;padding-top:12px;border-top:1px solid #f3f3f5}
   .trustbar{display:flex;align-items:center;gap:14px;padding:13px 30px;background:#f0fdf4;border-bottom:1px solid #dcfce7;flex-wrap:wrap}
   .hgauge{display:inline-flex;align-items:center;gap:8px;font-weight:680;color:#15803d;font-size:14px;white-space:nowrap}
   .hdot{width:10px;height:10px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.16)}
@@ -334,6 +362,15 @@
 </style>
 </head>
 <body>
+<div class="fontpick" role="group" aria-label="Text size">
+  <button type="button" data-fs="s" title="Small text">A</button>
+  <button type="button" data-fs="m" title="Medium text">A</button>
+  <button type="button" data-fs="l" title="Large text">A</button>
+</div>
+<script>/* text-size selector — sets <html> class + remembers the choice */
+(function(){function apply(s){document.documentElement.className=document.documentElement.className.replace(/\bfs-[sml]\b/g,"").trim()+" fs-"+s;document.querySelectorAll(".fontpick button").forEach(function(b){b.setAttribute("aria-pressed",String(b.getAttribute("data-fs")===s));});}
+var cur=(localStorage.getItem("xray-fs")||"s");apply(cur);
+document.querySelectorAll(".fontpick button").forEach(function(b){b.addEventListener("click",function(){var s=b.getAttribute("data-fs");try{localStorage.setItem("xray-fs",s);}catch(e){}apply(s);});});})();</script>
 <!-- grand meteor-impact illustration — moved to the bottom showcase -->
 <div class="comet comet-a" aria-hidden="true" style="display:none">
   <svg viewBox="0 0 360 420" width="360" height="420">

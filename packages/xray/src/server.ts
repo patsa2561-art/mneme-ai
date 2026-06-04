@@ -251,17 +251,39 @@ function badgeSvg(grade: string): string {
  *  rasteriser is the future upgrade. */
 function socialCardSvg(r: XRayReport): string {
   const color = GRADE_COLOR[r.summary.grade] || "#6b7280";
-  const bullets = (r.summary.bullets || []).slice(0, 5);
-  const lines = bullets.map((b, i) => `<text x="90" y="${330 + i * 46}" font-size="26" fill="#374151">${xesc(b.replace(/[^\x20-\x7E]/g, "").trim())}</text>`).join("");
+  // SVG <text> does not wrap — clip every string to a width budget so nothing
+  // ever bleeds off the right edge (the bug that made the card look broken).
+  const ascii = (s: string) => String(s || "").replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
+  const clip = (s: string, n: number) => { const a = ascii(s); return a.length > n ? a.slice(0, n - 1).trimEnd() + "…" : a; };
+  const repo = clip(r.subject.repoName, 26);
+  const head = clip(r.summary.headline, 64);
+  // four hard metrics (always present, never overflow) → a clean stat strip
+  const bf = r.busFactor || ({} as XRayReport["busFactor"]);
+  const stat = (x: number, lbl: string) => ({ x, lbl });
+  const stats = [
+    stat(r.secrets?.totalFindings ?? 0, "secrets"),
+    stat(bf.busFactor ?? 0, "bus factor"),
+    stat((r.security?.destructive || []).length, "risky cmds"),
+    stat(r.deps?.byBand?.dead ?? 0, "dead deps"),
+  ];
+  const sx = 92, sgap = 256;
+  const statCells = stats.map((s, i) => `
+<text x="${sx + i * sgap}" y="424" font-family="Verdana,sans-serif" font-size="64" font-weight="bold" fill="#0a0a0a">${s.x}</text>
+<text x="${sx + i * sgap}" y="456" font-family="Verdana,sans-serif" font-size="22" fill="#8b8f98">${s.lbl}</text>`).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-<rect width="1200" height="630" fill="#ffffff"/><rect x="0" y="0" width="1200" height="8" fill="${color}"/>
-<text x="90" y="120" font-family="Verdana,sans-serif" font-size="26" letter-spacing="4" fill="#6b7280">MNEME · REPO X-RAY</text>
-<rect x="90" y="160" width="120" height="120" rx="24" fill="${color}"/>
-<text x="150" y="252" font-family="Verdana,sans-serif" font-size="74" font-weight="bold" fill="#fff" text-anchor="middle">${xesc(r.summary.grade)}</text>
-<text x="240" y="232" font-family="Verdana,sans-serif" font-size="46" font-weight="bold" fill="#0a0a0a">${xesc(r.subject.repoName)}</text>
-<text x="240" y="272" font-family="Verdana,sans-serif" font-size="24" fill="#6b7280">${xesc(r.summary.headline)}</text>
-${lines}
-<text x="90" y="590" font-family="Verdana,sans-serif" font-size="20" fill="#16a34a">✓ deterministic · signed · offline-verifiable — no AI guessed any number</text></svg>`;
+<defs><filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="${color}" flood-opacity="0.28"/></filter></defs>
+<rect width="1200" height="630" fill="#ffffff"/><rect x="0" y="0" width="1200" height="10" fill="${color}"/>
+<text x="92" y="118" font-family="Verdana,sans-serif" font-size="24" letter-spacing="5" fill="#9aa0aa">MNEME · REPO X-RAY</text>
+<rect x="92" y="150" width="128" height="128" rx="28" fill="${color}" filter="url(#sh)"/>
+<text x="156" y="246" font-family="Verdana,sans-serif" font-size="80" font-weight="bold" fill="#fff" text-anchor="middle">${xesc(r.summary.grade)}</text>
+<text x="248" y="222" font-family="Verdana,sans-serif" font-size="48" font-weight="bold" fill="#0a0a0a">${xesc(repo)}</text>
+<text x="248" y="264" font-family="Verdana,sans-serif" font-size="25" fill="#6b7280">${xesc(head)}</text>
+<line x1="92" y1="330" x2="1108" y2="330" stroke="#eef0f2" stroke-width="2"/>
+${statCells}
+<line x1="92" y1="520" x2="1108" y2="520" stroke="#eef0f2" stroke-width="2"/>
+<text x="92" y="572" font-family="Verdana,sans-serif" font-size="22" fill="#16a34a">✓ deterministic · Ed25519-signed · verifiable offline</text>
+<text x="92" y="600" font-family="Verdana,sans-serif" font-size="18" fill="#aeb2ba">re-running this commit yields the identical fingerprint — no AI guessed any number</text>
+<text x="1108" y="600" font-family="ui-monospace,Menlo,monospace" font-size="16" fill="#c2c6cd" text-anchor="end">${xesc(clip(r.fingerprint, 24))}</text></svg>`;
 }
 
 /** latest stored report fingerprint for a repo slug like "github/owner/repo". */

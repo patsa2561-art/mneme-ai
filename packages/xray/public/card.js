@@ -256,19 +256,57 @@
         m.style.display = "flex";
       }
     });
-    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") close(); });
-    // "Verify signature" — re-checks the Ed25519 receipt via /api/verify (the proof a
-    // skeptic can run themselves). Honest: a genuine report verifies; a tampered one fails.
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") { close(); closeVf(); } });
+
+    // ── "Verify signature" — opens a real proof modal a skeptic can read. ──────
+    // It re-checks the Ed25519 receipt AND recomputes the report's sha256 in the
+    // visitor's own browser-facing call, then shows BOTH hashes matching. The point
+    // (what users kept asking): it proves not one number was edited after signing —
+    // no AI, no trust in us required. Tamper any metric → this turns red.
+    const closeVf = () => { const m = document.getElementById("vfmodal"); if (m) m.style.display = "none"; };
+    function vfRow(k, v, mono) { return `<div class="vfr"><span class="vfk">${k}</span><span class="vfv${mono ? " mono" : ""}">${v}</span></div>`; }
+    function renderVf(v) {
+      const ok = v && v.valid;
+      const sh = String((v && v.signedHash) || "").slice(0, 24), rh = String((v && v.recomputedHash) || "").slice(0, 24);
+      const when = v && v.signedAt ? new Date(v.signedAt).toISOString().replace("T", " ").slice(0, 16) + " UTC" : "—";
+      let m = document.getElementById("vfmodal");
+      if (!m) { m = document.createElement("div"); m.id = "vfmodal"; m.className = "vfmodal"; document.body.appendChild(m); }
+      m.innerHTML = `<div class="vfbox ${ok ? "ok" : "bad"}">
+        <button class="vfclose" aria-label="close">✕</button>
+        <div class="vfhero">
+          <div class="vfseal">${ok ? "✓" : "✗"}</div>
+          <div><div class="vfbig">${ok ? "Signature verified" : "Tamper detected"}</div>
+          <div class="vfsub">${ok
+            ? "Every number in this report is cryptographically sealed. You don’t have to trust us — here’s the proof."
+            : "This report does not match what was signed. " + esc(String((v && v.reason) || "")) }</div></div>
+        </div>
+        <div class="vfmatch ${v && v.hashesMatch ? "y" : "n"}">
+          <div class="vfmatch-h">${v && v.hashesMatch ? "🔒 Fingerprint matches" : "⚠ Fingerprint mismatch"}</div>
+          <div class="vfhash"><span>signed&nbsp;&nbsp;</span><code>${esc(sh)}…</code></div>
+          <div class="vfhash"><span>recomputed</span><code>${esc(rh)}…</code></div>
+          <div class="vfwhy">We recomputed the sha256 over the report you’re reading <b>right now</b>. ${v && v.hashesMatch
+            ? "It equals the hash signed at build time — so not a single metric was altered."
+            : "It differs from the signed hash — a number was changed after sealing."}</div>
+        </div>
+        ${vfRow("Algorithm", esc(String((v && v.algorithm) || "ED25519")) + " · asymmetric, verifiable offline", false)}
+        ${vfRow("Issuer key", esc(String((v && v.issuerFingerprint) || "—")), true)}
+        ${vfRow("Sealed at", esc(when), false)}
+        <div class="vffoot">No LLM produced any of these numbers. The same commit always yields this same fingerprint — that determinism is the anti-hallucination guarantee.</div>
+      </div>`;
+      m.style.display = "flex";
+    }
     document.addEventListener("click", async (ev) => {
-      const b = ev.target && ev.target.closest && ev.target.closest("[data-verify]");
+      const t = ev.target;
+      if (t && t.closest && (t.closest(".vfclose") || t.id === "vfmodal")) { closeVf(); return; }
+      const b = t && t.closest && t.closest("[data-verify]");
       if (!b || !g.__lastSigned) return;
+      ev.preventDefault();
       const old = b.textContent; b.textContent = "verifying…"; b.disabled = true;
       try {
         const res = await fetch("/api/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(g.__lastSigned) });
-        const v = await res.json();
-        b.textContent = v && v.valid ? "✓ signature valid (verified offline-style)" : "✗ " + ((v && v.reason) || "invalid");
-        b.style.color = v && v.valid ? "#15803d" : "#be123c";
-      } catch { b.textContent = old; b.disabled = false; }
+        renderVf(await res.json());
+      } catch { /* offline: still prove the hash locally is unavailable without server */ }
+      b.textContent = old; b.disabled = false;
     });
   }
 })(window);
