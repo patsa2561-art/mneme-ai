@@ -16,11 +16,13 @@
  * and clamped inside the viewBox. Proven over 100,000 random reports (the gauntlet).
  */
 
-export interface RiskNode { id: number; file: string; risk: number; size: number; ownerPct: number; churn: number; x: number; y: number }
+export interface RiskNode { id: number; file: string; risk: number; size: number; ownerPct: number; churn: number; r: number; x: number; y: number }
 export interface RiskEdge { a: number; b: number; weight: number; hidden: boolean }
 export interface RiskMap { nodes: RiskNode[]; edges: RiskEdge[]; maxRisk: number; W: number; H: number; note: string }
 
-export const MAP_W = 920, MAP_H = 460, MAP_CAP = 24;
+export const MAP_W = 960, MAP_H = 520, MAP_CAP = 22;
+/** Node display radius from its size signal (also the basis for spacing). */
+export const nodeRadius = (size: number): number => 17 + clamp(size, 0, 1) * 30;
 const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
 const num = (x: unknown): number => (Number.isFinite(Number(x)) ? Number(x) : 0);
 const str = (x: unknown): string => (typeof x === "string" ? x : "");
@@ -54,14 +56,17 @@ export function buildRiskMap(report: unknown): RiskMap {
   entries = entries.slice(0, MAP_CAP);
   const indexOf = new Map(entries.map((e, i) => [e.file, i]));
 
-  // 3) DETERMINISTIC golden-angle spiral — highest-risk (index 0) nearest centre
-  const cxC = MAP_W / 2, cyC = MAP_H / 2, GOLD = 2.399963229728653;
+  // 3) DETERMINISTIC sunflower (golden-angle phyllotaxis) scaled to FILL the canvas —
+  // even spacing edge-to-edge, no central clump; highest-risk (index 0) nearest centre.
+  const cxC = MAP_W / 2, cyC = MAP_H / 2, GOLD = 2.399963229728653, PAD = 64;
+  const RX = MAP_W / 2 - PAD, RY = MAP_H / 2 - PAD;
+  const n = entries.length;
   const nodes: RiskNode[] = entries.map((e, i) => {
+    const frac = n <= 1 ? 0 : Math.sqrt((i + 0.5) / n); // even area distribution → fills the ellipse
     const ang = i * GOLD;
-    const rad = 26 + 30 * Math.sqrt(i);
-    const x = clamp(cxC + rad * Math.cos(ang), 40, MAP_W - 40);
-    const y = clamp(cyC + rad * Math.sin(ang) * 0.56, 36, MAP_H - 36);
-    return { id: i, file: e.file, risk: e.risk, size: e.size, ownerPct: e.ownerPct, churn: e.churn, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+    const x = clamp(cxC + RX * frac * Math.cos(ang), PAD, MAP_W - PAD);
+    const y = clamp(cyC + RY * frac * Math.sin(ang), PAD, MAP_H - PAD);
+    return { id: i, file: e.file, risk: e.risk, size: e.size, ownerPct: e.ownerPct, churn: e.churn, r: nodeRadius(e.size), x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
   });
 
   // 4) edges = coupling pairs whose BOTH files are nodes (verbatim confidence)

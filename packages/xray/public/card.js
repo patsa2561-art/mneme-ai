@@ -113,7 +113,8 @@
   function riskMapHTML(r) {
     const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0), strv = (x) => (typeof x === "string" ? x : "");
     const bf = r.busFactor || {}, hs = r.hotspots || {}, cx = r.complexity || {}, cp = r.coupling || {};
-    const W = 920, H = 460, CAP = 24, byFile = new Map();
+    const W = 960, H = 520, CAP = 22, PAD = 64, byFile = new Map();
+    const nodeR = (size) => 17 + Math.min(1, Math.max(0, size)) * 30;
     const touch = (f) => { f = strv(f); if (!f) return null; if (!byFile.has(f)) byFile.set(f, { o: 0, c: 0, l: 0 }); return byFile.get(f); };
     (bf.fragileFiles || []).forEach((x) => { const n = touch(x && x.file); if (n) n.o = Math.max(n.o, Math.min(1, Math.max(0, num(x.topAuthorShare)))); });
     (hs.hotspots || []).forEach((x) => { const n = touch(x && x.file); if (n) { n.c = Math.max(n.c, num(x.changes)); n.l = Math.max(n.l, num(x.loc)); } });
@@ -121,21 +122,23 @@
     const pairs = cp.pairs || []; pairs.forEach((p) => { touch(p && p.a); touch(p && p.b); });
     if (!byFile.size) return "";
     const mc = Math.max(1, ...[...byFile.values()].map((v) => v.c)), ml = Math.max(1, ...[...byFile.values()].map((v) => v.l));
-    let es = [...byFile.entries()].map(([file, v]) => ({ file, risk: Math.min(1, Math.max(0, v.o)), size: Math.min(1, Math.max(v.c / mc, v.l / ml)), churn: v.c }));
+    let es = [...byFile.entries()].map(([file, v]) => ({ file, risk: Math.min(1, Math.max(0, v.o)), size: Math.min(1, Math.max(v.c / mc, v.l / ml)), ownerPct: v.o, churn: v.c }));
     es.sort((a, b) => (b.risk - a.risk) || (b.size - a.size) || a.file.localeCompare(b.file));
     es = es.slice(0, CAP);
     const idx = new Map(es.map((e, i) => [e.file, i]));
-    const cxC = W / 2, cyC = H / 2, GOLD = 2.399963229728653;
-    const nodes = es.map((e, i) => { const ang = i * GOLD, rad = 26 + 30 * Math.sqrt(i); return { ...e, i, x: Math.min(W - 40, Math.max(40, cxC + rad * Math.cos(ang))), y: Math.min(H - 36, Math.max(36, cyC + rad * Math.sin(ang) * 0.56)) }; });
+    const cxC = W / 2, cyC = H / 2, GOLD = 2.399963229728653, RX = W / 2 - PAD, RY = H / 2 - PAD, N = es.length;
+    const nodes = es.map((e, i) => { const frac = N <= 1 ? 0 : Math.sqrt((i + 0.5) / N), ang = i * GOLD; return { ...e, i, r: nodeR(e.size), x: Math.min(W - PAD, Math.max(PAD, cxC + RX * frac * Math.cos(ang))), y: Math.min(H - PAD, Math.max(PAD, cyC + RY * frac * Math.sin(ang))) }; });
     const base = (f) => { const p = String(f).split("/"); return p[p.length - 1]; };
     const edges = [];
     pairs.forEach((p) => { const a = idx.get(strv(p && p.a)), b = idx.get(strv(p && p.b)); if (a === undefined || b === undefined || a === b) return; edges.push({ a, b, w: Math.min(1, Math.max(0, num(p.confidence))), hidden: !!(p && p.hidden) }); });
-    const edgeSvg = edges.map((e) => { const A = nodes[e.a], B = nodes[e.b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2 - 24; return `<path d="M${A.x.toFixed(1)} ${A.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${B.x.toFixed(1)} ${B.y.toFixed(1)}" fill="none" stroke="${e.hidden ? "#e11d48" : "#9aa0ad"}" stroke-width="${(0.6 + e.w * 2.2).toFixed(2)}" stroke-opacity="${(0.18 + e.w * 0.5).toFixed(2)}"${e.hidden ? ' stroke-dasharray="5 4"' : ""}/>`; }).join("");
-    const nodeSvg = nodes.map((n) => { const rad = 7 + n.size * 20, col = riskColor(n.risk), showLabel = n.i < 8 || n.risk >= 0.7; return `<g><circle cx="${n.x}" cy="${n.y}" r="${(rad + 7).toFixed(1)}" fill="${col}" opacity="0.14"/><circle cx="${n.x}" cy="${n.y}" r="${rad.toFixed(1)}" fill="${col}" opacity="0.92"/>${showLabel ? `<text x="${n.x}" y="${(n.y + rad + 12).toFixed(1)}" text-anchor="middle" font-size="11" fill="#5b6068" font-family="ui-monospace,Menlo,monospace">${esc(base(n.file)).slice(0, 22)}${n.ownerPct >= 0.5 ? ` ${Math.round(n.ownerPct * 100)}%` : ""}</text>` : ""}</g>`; }).join("");
+    const edgeSvg = edges.map((e) => { const A = nodes[e.a], B = nodes[e.b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2 - 30; return `<path d="M${A.x.toFixed(1)} ${A.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${B.x.toFixed(1)} ${B.y.toFixed(1)}" fill="none" stroke="${e.hidden ? "#e11d48" : "#7c83f6"}" stroke-width="${(1 + e.w * 2.6).toFixed(2)}" stroke-opacity="${(0.22 + e.w * 0.5).toFixed(2)}" stroke-linecap="round"${e.hidden ? ' stroke-dasharray="6 5"' : ""}/>`; }).join("");
+    // glossy spheres: soft glow + body + top-left highlight + white rim
+    const nodeSvg = nodes.map((n) => { const R = n.r, col = riskColor(n.risk), showLabel = n.i < 9 || n.risk >= 0.65; const lbl = esc(base(n.file)).slice(0, 24) + (n.ownerPct >= 0.5 ? ` · ${Math.round(n.ownerPct * 100)}%` : ""); const lw = lbl.length * 6.4 + 14, ly = n.y + R + 7;
+      return `<g><circle cx="${n.x}" cy="${n.y}" r="${(R + 11).toFixed(1)}" fill="${col}" opacity="0.12"/><circle cx="${n.x}" cy="${n.y}" r="${R.toFixed(1)}" fill="${col}" opacity="0.95"/><circle cx="${(n.x - R * 0.3).toFixed(1)}" cy="${(n.y - R * 0.32).toFixed(1)}" r="${(R * 0.52).toFixed(1)}" fill="#ffffff" opacity="0.22"/><circle cx="${n.x}" cy="${n.y}" r="${R.toFixed(1)}" fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.7"/>${showLabel ? `<g><rect x="${(n.x - lw / 2).toFixed(1)}" y="${ly.toFixed(1)}" width="${lw.toFixed(1)}" height="19" rx="9.5" fill="#ffffff" opacity="0.92" stroke="#ececef"/><text x="${n.x}" y="${(ly + 13).toFixed(1)}" text-anchor="middle" font-size="11.5" fill="#33333b" font-family="ui-monospace,Menlo,monospace">${lbl}</text></g>` : ""}</g>`; }).join("");
     const owned = nodes.filter((n) => n.risk >= 0.6).length;
     return `<div class="riskmap">
-      <div class="rmhead">🗺 Risk map — <b>if an owner leaves, the red nodes lose their only expert</b></div>
-      <div class="rmsub">${nodes.length} flagged file(s) · ${edges.length} coupling link(s)${owned ? ` · ${owned} single-owner hotspot(s)` : ""} — node colour = key-person risk · size = churn · line = files that change together. Every node is verbatim from the signed report.</div>
+      <div class="rmhead">🗺 Risk map — <b>if an owner leaves, the red files lose their only expert</b></div>
+      <div class="rmsub">${nodes.length} flagged file(s) · ${edges.length} coupling link(s)${owned ? ` · <b style="color:#be123c">${owned} single-owner hotspot${owned > 1 ? "s" : ""}</b>` : ""} — colour = key-person risk · size = churn · line = files that change together. Every node is verbatim from the signed report.</div>
       <svg class="rmsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="repository risk map">${edgeSvg}${nodeSvg}</svg>
       <div class="rmleg"><span><i style="background:#16a34a"></i>shared / low risk</span><span><i style="background:#d97706"></i>concentrated</span><span><i style="background:#e11d48"></i>single-owner (key-person)</span><span><i class="dash"></i>hidden cross-dir coupling</span></div>
     </div>`;
