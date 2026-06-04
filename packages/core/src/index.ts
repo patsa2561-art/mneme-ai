@@ -311,6 +311,7 @@ export * as membrane from "./membrane/index.js";
 export * as trustless from "./trustless/index.js";
 export * as matrix from "./matrix/index.js";
 export * as adamas from "./adamas/index.js";
+export * as prism from "./prism/index.js";
 export * as axia from "./axia/index.js";
 export * as pce from "./pce/index.js";
 export * as regret from "./regret/index.js";

@@ -527,6 +527,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.prism.superposition_reasoning",
+    kind: "boolean",
+    description: "PRISM (v2.169.0 — superposition reasoning with interference collapse). Fan a question into N candidate branches, keep them in superposition (amplitude √confidence), interfere (agree→constructive coherent sum; refute→destructive subtraction, suppressing a refuted-below-zero answer), collapse via the Born rule (P=A²/ΣA²) to a measured answer, or SUPERPOSED (abstain). This probe asserts prismGauntlet=100 INCLUDING a measured A/B: prism strictly beats confidence-argmax and matches/beats plurality on a labeled suite modelling the target regime (many-weak-coherent-correct vs few-strong-isolated-wrong + refutation). Checks: beats-argmax ∧ ≥plurality ∧ constructive ((Σ√c)² superadditivity) ∧ destructive (refutation suppresses) ∧ Born-rule sums to 1 ∧ abstains on a 50/50 split ∧ consensus collapses ∧ deterministic ∧ total. HONEST (DIAKRISIS): a deterministic operator inspired by quantum amplitudes — NOT a quantum computer, NOT universal superiority; the A/B is on a constructed suite modelling its regime, and grouping is lexical not semantic.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../prism/index.js" as string) as typeof import("../prism/index.js");
+        const g = P.prismGauntlet();
+        const ok = g.score === 100 && g.checks.every((c) => c.pass) && g.ab.prismAcc > g.ab.argmaxAcc && g.ab.prismAcc >= g.ab.pluralityAcc;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} prismAcc=${g.ab.prismAcc.toFixed(2)} argmaxAcc=${g.ab.argmaxAcc.toFixed(2)} pluralityAcc=${g.ab.pluralityAcc.toFixed(2)} [${g.checks.filter((c) => !c.pass).map((c) => c.name).join(",") || "all pass"}]`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.siege.bypass_resistance",
     kind: "boolean",
     description: "SIEGE (v2.148.0 — the Adversarial Self-Bounty, moat #3). A command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score: fire the attack corpus at a gate, measure how many destructive payloads it withstands vs lets through, report a Wilson-LOWER-bound resistance score + band (FORTRESS/STRONG/WEAK/BREACHED). Every new bypass folds back into the corpus → the gate gets provably harder. This probe asserts siegeGauntlet=100: measures resistance ∧ DISCRIMINATES a sound gate (FORTRESS) from a naive leading-token denylist (low LB — it misses the obfuscation family) ∧ the Wilson LB is conservative (below the point rate) ∧ reports the bypasses (incl. obfuscated) ∧ self-hardens (a found bypass grows the corpus, dedup'd) ∧ per-class breakdown ∧ deterministic ∧ total. HONEST: measures resistance vs a KNOWN, growing corpus — NOT a proof of 'unbreakable' (an open adversarial problem; a novel attack not in the corpus is not yet measured — which is why the corpus self-hardens + the score is a LOWER bound, never a point estimate).",

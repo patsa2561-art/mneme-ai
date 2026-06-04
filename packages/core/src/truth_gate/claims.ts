@@ -1044,6 +1044,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.adamas.self_healing_memory",
     severity: "block",
   },
+  // ── v2.169.0 — PRISM: superposition reasoning with interference collapse ──
+  {
+    id: "claim.prism.superposition_reasoning",
+    source: "v2.169.0 release notes",
+    text: "Mneme's PRISM is superposition reasoning with interference collapse: fan a question into N candidate branches (over the Matrix rail — parallel), keep them in superposition with amplitude √confidence, let them INTERFERE (agreeing branches add coherently — A=Σ√c, so (Σ√c)² > Σc and many weak-but-agreeing branches outweigh a few strong-but-isolated; refuting branches SUBTRACT — a refuted-below-zero answer is suppressed = destructive interference), then COLLAPSE via the Born rule P=A²/ΣA² to a measured answer — or return SUPERPOSED (abstain) when the top probability doesn't clear the threshold AND beat #2 by a margin (prove-or-unknown — never a confident wrong pick). prismGauntlet=100 with a MEASURED A/B: on a labeled suite modelling the target regime (many-weak-coherent-correct vs few-strong-isolated-wrong, plus refutation, plus few-strong-correct vs many-weak-wrong) prism scores 100% vs confidence-argmax ~29% vs plurality ~86% — it strictly beats both. Checks: beats-argmax ∧ ≥plurality ∧ constructive ((Σ√c)² superadditivity) ∧ destructive (refutation suppresses) ∧ Born-rule (probs sum to 1) ∧ abstain (50/50 → SUPERPOSED) ∧ consensus collapses with high coherence ∧ deterministic ∧ total. HONEST (DIAKRISIS): a deterministic scoring operator INSPIRED by quantum amplitudes — NOT a quantum computer and NOT a claim of universal superiority; the A/B is measured on a constructed suite that models the regime it targets, and answer grouping is LEXICAL (canonical-equal), not semantic paraphrase. The Matrix rail provides the parallel branches; PRISM is the recombination brain.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.prism.superposition_reasoning",
+    severity: "block",
+  },
   // ── v2.144.0 — PERFCORE: Correctness-Preserving Acceleration (High-Perf Core) ──
   {
     id: "claim.perfcore.correctness_preserving_accel",
