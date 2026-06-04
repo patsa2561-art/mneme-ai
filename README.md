@@ -200,6 +200,9 @@ await mneme.verify`Mneme is a CLI tool`;
 ```
 **→ <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index</a>** · <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">Quick start</a>
 
+**🆕 New (v2.187 → v2.190)** — the **Matrix gRPC rail** is self-describing (`ListTools` + a no-LLM **Wisdom Search**: intent → the right tool of ~1000) and screens every call (**Context Customs**); the CLI now bundles it all + a `mneme xray` repo auditor whose **Context Air Quality** scores how clean a codebase is for an AI to work in. Each is deterministic, signed, and 100k-gauntlet-tested.
+**→ <a href="CHANGELOG.md" target="_blank" rel="noopener">What the new functions do (CHANGELOG)</a>**
+
 **📜 Every release** (v2.18 → latest), with its honest DIAKRISIS verdict.
 **→ <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>**
 

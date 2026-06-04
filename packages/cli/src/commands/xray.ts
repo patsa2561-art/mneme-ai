@@ -24,6 +24,7 @@ interface XRayApi {
   buildActionPlan: (r: unknown, max?: number) => { items: Array<{ sev: string; icon: string; title: string; detail: string; source: string }>; note: string };
   buildMomentum: (r: unknown) => { verdict: string; note: string };
   buildOnboarding: (r: unknown, max?: number) => { steps: Array<{ file: string; why: string }>; note: string };
+  buildAirQuality: (r: unknown) => { score: number; band: string; pollutants: Array<{ name: string; detail: string }> };
 }
 interface XRayReportLike {
   subject: { repoName: string; ref: string; commitHash: string; branch?: string };
@@ -68,6 +69,9 @@ export function registerXrayCommands(program: Command): void {
       out(`🩻 X-RAY · ${report.subject.repoName}${report.subject.branch ? ` @ ${report.subject.branch}` : ""}   [ ${s.grade} ]`);
       out(`   ${s.headline} · ${s.signalsRun} deterministic signals · @ ${String(report.subject.commitHash).slice(0, 10)}`);
       for (const b of s.bullets.slice(0, 6)) out(`   • ${b}`);
+
+      const aq = api.buildAirQuality(report);
+      out(`\n🫁 Context Air Quality: ${aq.score}/100 (${aq.band}) — how clean this repo is for an AI to work in${aq.pollutants.length ? ` · top: ${aq.pollutants.slice(0, 3).map((p) => p.name).join(", ")}` : ""}`);
 
       const mo = api.buildMomentum(report);
       if (mo.verdict !== "unknown") out(`\n📈 Momentum: ${mo.verdict} — ${mo.note}`);
