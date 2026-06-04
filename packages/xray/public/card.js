@@ -52,12 +52,58 @@
     return A;
   }
 
+  // VERDICT — turn the accurate metrics into a DECISION a human can act on:
+  // "should I trust / adopt / inherit this repo, and what do I do about it?"
+  // Every line is derived 100% from a signed metric (no new data, no AI guess).
+  function synthesizeVerdict(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+    const dep = r.deps || {}, sec = r.secrets || {}, bf = r.busFactor || {}, age = r.age || {}, cx = r.complexity || {}, su = r.security || {}, hs = r.hotspots || {};
+    const dying = num((dep.byBand || {}).dead) + num((dep.byBand || {}).moribund);
+    const copyleft = num((dep.licenses || {})["strong-copyleft"]) + num((dep.licenses || {})["weak-copyleft"]);
+    const secrets = num(sec.totalFindings), destructive = (su.destructive || []).length;
+    const soloPct = num(bf.singleOwnerFilePct), topShare = num(bf.topContributorShare), busF = num(bf.busFactor);
+    const symbols = num(cx.totalSymbols), codeFiles = num(cx.filesAnalysed);
+    const isDocs = symbols < 30 && (codeFiles === 0 || symbols / Math.max(1, codeFiles) < 1.5);
+    const kind = isDocs ? "Docs / content repo" : "Code project";
+
+    // the takeaways — what it means + what to DO, severity-ranked, action-first
+    const T = [];
+    if (sec.worstVerdict === "BLOCK" && secrets > 0) T.push({ t: "bad", x: `🔴 ${secrets} live secret${secrets > 1 ? "s" : ""} in production code — rotate them now and add a pre-commit secret scan${sec.hits && sec.hits[0] ? ` (e.g. ${esc(sec.hits[0].file)}:${sec.hits[0].line})` : ""}.` });
+    else if (secrets > 0) T.push({ t: "warn", x: `🟠 ${secrets} credential-pattern match${secrets > 1 ? "es" : ""} to review in production code.` });
+    if (destructive > 0) T.push({ t: "bad", x: `🔴 ${destructive} destructive command${destructive > 1 ? "s" : ""} in build/CI (${esc((su.destructive[0] || {}).where || "ci")}) — audit before trusting this pipeline.` });
+    else if (num(su.injectionFindings) > 0) T.push({ t: "warn", x: `🟠 ${num(su.injectionFindings)} possible prompt-injection in docs — sanitize before feeding to an AI.` });
+    if (dying > 0) { const a = (dep.atRisk || [])[0]; T.push({ t: "warn", x: `🟠 ${dying} dependency${dying > 1 ? "ies" : "y"} dying/abandoned — plan a migration${a && a.successor ? ` (e.g. ${esc(a.name)} → ${esc(a.successor)})` : ""}.` }); }
+    if (copyleft > 0) T.push({ t: "warn", x: `🟠 ${copyleft} dependency${copyleft > 1 ? "ies" : "y"} with copyleft/unknown license — check before commercial use.` });
+    if (age.vitality === "archived" || age.dormant) T.push({ t: "warn", x: `🟠 No recent activity (${esc(age.vitality || "stalled")}) — may be unmaintained; pin a version if you depend on it.` });
+    else if (age.vitality === "active") T.push({ t: "ok", x: `✅ Actively maintained — ${num(age.totalCommits).toLocaleString()} commits over ${esc(age.lifespan || "its life")}, ${num(age.totalAuthors)} contributors. Low abandonment risk.` });
+    if (busF <= 1 && num(bf.authors) > 0) T.push({ t: "warn", x: `🟠 Key-person risk: one author owns ${topShare}% of commits${soloPct ? ` and ${soloPct}% of files have a single owner` : ""}. If they leave, those areas stall — spread reviews + document.` });
+    else if (soloPct >= 40) { const ff = (bf.fragileFiles || []).slice(0, 3).map((x) => esc(x.file)).join(", "); T.push({ t: "warn", x: `🟠 ${soloPct}% of files have a single owner — pair-review the fragile ones${ff ? `: ${ff}` : ""}.` }); }
+    if (secrets === 0 && destructive === 0 && dying === 0 && copyleft === 0) T.push({ t: "ok", x: `✅ Clean to adopt — no leaked secrets, no dying/risky-licensed deps, no destructive CI.` });
+    if ((hs.hotspots || [])[0] && !isDocs) { const h = hs.hotspots[0]; T.push({ t: "info", x: `ℹ️ If you change one thing first, it's <b>${esc(h.file)}</b> (highest churn×size)${h.expert ? ` — ${esc(h.expert)} knows it best` : ""}.` }); }
+
+    // the headline DECISION (worst-signal-wins)
+    const hasRed = secrets > 0 || destructive > 0;
+    const stale = age.vitality === "archived" || age.dormant;
+    const keyrisk = busF <= 1 || soloPct >= 60;
+    let tone, head;
+    if (hasRed) { tone = "bad"; head = "⚠️ Exposed risk — fix the red items before you trust this repo"; }
+    else if (stale) { tone = "warn"; head = "🪦 Looks unmaintained — risky to depend on without pinning"; }
+    else if (dying > 0) { tone = "warn"; head = "Adopt with care — aging dependencies need a migration plan"; }
+    else if (keyrisk) { tone = "warn"; head = "✅ Maintained — but ⚠️ concentrated in one person (key-person risk)"; }
+    else if (age.vitality === "active") { tone = "ok"; head = `✅ Healthy & actively maintained — safe to build on`; }
+    else { tone = "neutral"; head = `Reviewed — ${T.length} thing${T.length === 1 ? "" : "s"} to know below`; }
+
+    const top = T.slice(0, 5);
+    return { tone, head, kind, takeaways: top };
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     const r = signed.report, s = r.summary;
     const dep = r.deps, sec = r.secrets, bf = r.busFactor, age = r.age, cx = r.complexity;
     const verified = signed.receipt ? '<span class="verified"><span class="dot"></span>Ed25519 — verifies offline</span>' : "unsigned";
     const tri = triageOf(r);
+    const vd = synthesizeVerdict(r);
 
     const depChips = (dep.atRisk || []).slice(0, 6).map((d) =>
       `<span class="chip ${d.band === "dead" ? "bad" : "warn"}">${esc(d.name)} · ${d.band}${d.successor ? ` → ${esc(d.successor)}` : ""}</span>`).join("") || `<span class="chip">none dying</span>`;
@@ -85,6 +131,11 @@
         <div><div class="repo">${esc(r.subject.repoName)}${r.subject.branch ? ` <span class="repobr">@ ${esc(r.subject.branch)}</span>` : ""}</div>
           ${r.subject.kind === "git-url" ? `<a class="repourl" href="${esc(r.subject.ref)}" target="_blank" rel="noopener">${esc(r.subject.ref)} ↗</a>` : `<div class="repourl">${esc(r.subject.ref)}</div>`}
           <div class="head">${esc(s.headline)} · ${s.signalsRun} signals · @ ${esc(String(r.subject.commitHash).slice(0, 10))}</div></div>
+      </div>
+      <div class="verdict v-${vd.tone}">
+        <div class="vhead">${esc(vd.head)}</div>
+        <div class="vkind">${esc(vd.kind)} · what this means for you ↓</div>
+        <ul class="vlist">${vd.takeaways.map((t) => `<li class="vt-${t.t}">${t.x}</li>`).join("")}</ul>
       </div>
       <div class="membrane">
         <div class="mp"><span class="mpk">① CAPABILITY</span><span class="mpv">${s.signalsRun} deterministic signals · ${(sec.filesScanned || 0).toLocaleString()} files scanned</span></div>

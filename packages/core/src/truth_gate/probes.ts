@@ -541,6 +541,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.goldilocks.habitable_zone",
+    kind: "boolean",
+    description: "GOLDILOCKS (v2.174 — config-fragility / habitable-zone analyzer). The honest engineering core of 'cosmic fine-tuning': given a numeric config + range + a deterministic pass/fail oracle, bisect to each pass→fail boundary to find the working band + the margin to the nearest cliff → ROBUST / TIGHT / KNIFE-EDGE / UNSTABLE. This probe asserts goldilocksGauntlet=100: ROBUST centered band [10,90] ∧ TIGHT near a cliff ∧ KNIFE-EDGE on the boundary ∧ UNSTABLE when current already fails (no guess) ∧ open far edge for a one-sided threshold ∧ all-pass → open/ROBUST ∧ ranks most-fragile first ∧ zoneFromSamples infers from discrete probes ∧ total. HONEST: deterministic bisection on a supplied oracle (not cosmology); assumes a roughly-contiguous passing region around current.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const G = await import("../goldilocks/index.js" as string) as typeof import("../goldilocks/index.js");
+        const g = G.goldilocksGauntlet();
+        const ok = g.score === 100 && g.checks.every((c) => c.pass);
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} checks=${g.checks.filter((c) => c.pass).length}/${g.checks.length} [${g.checks.filter((c) => !c.pass).map((c) => c.name).join(",") || "all pass"}]`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.siege.bypass_resistance",
     kind: "boolean",
     description: "SIEGE (v2.148.0 — the Adversarial Self-Bounty, moat #3). A command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score: fire the attack corpus at a gate, measure how many destructive payloads it withstands vs lets through, report a Wilson-LOWER-bound resistance score + band (FORTRESS/STRONG/WEAK/BREACHED). Every new bypass folds back into the corpus → the gate gets provably harder. This probe asserts siegeGauntlet=100: measures resistance ∧ DISCRIMINATES a sound gate (FORTRESS) from a naive leading-token denylist (low LB — it misses the obfuscation family) ∧ the Wilson LB is conservative (below the point rate) ∧ reports the bypasses (incl. obfuscated) ∧ self-hardens (a found bypass grows the corpus, dedup'd) ∧ per-class breakdown ∧ deterministic ∧ total. HONEST: measures resistance vs a KNOWN, growing corpus — NOT a proof of 'unbreakable' (an open adversarial problem; a novel attack not in the corpus is not yet measured — which is why the corpus self-hardens + the score is a LOWER bound, never a point estimate).",

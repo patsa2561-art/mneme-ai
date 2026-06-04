@@ -1054,6 +1054,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.prism.superposition_reasoning",
     severity: "block",
   },
+  // ── v2.174 — GOLDILOCKS: config-fragility / habitable-zone analyzer ──
+  {
+    id: "claim.goldilocks.habitable_zone",
+    source: "v2.174 release notes",
+    text: "Mneme's GOLDILOCKS is the honest engineering core of the 'cosmic fine-tuning' idea: sensitivity analysis / boundary-finding, NOT cosmology. Given a numeric config value, a range, and a deterministic pass/fail oracle, it bisects outward from the current value to each pass→fail boundary to find the HABITABLE ZONE (the band where the system works) + the margin to the nearest cliff, and returns ROBUST / TIGHT / KNIFE-EDGE / UNSTABLE. goldilocksGauntlet=100: finds a two-sided band [10,90] with a centered ROBUST margin ∧ flags TIGHT near a cliff ∧ KNIFE-EDGE on the boundary ∧ UNSTABLE (never guesses) when the current value already fails ∧ one-sided threshold leaves the far edge OPEN ∧ all-pass → both edges open/ROBUST ∧ ranks the most-fragile param first ∧ zoneFromSamples infers the band from discrete probes ∧ total (a throwing oracle is treated as fail). CLI `mneme goldilocks scan --cmd '… {v} …'` (a real shell pass/fail oracle); MCP `mneme.goldilocks.zone` (from probe samples, self-attesting). HONEST (DIAKRISIS): deterministic bisection on an oracle YOU supply; assumes the passing region is roughly contiguous around current (finds the nearest cliff each side; a non-contiguous pass set yields the LOCAL band, stated). The reckless 'multiverse auto-merge' idea was REFUSED (the safe selection-filter already exists as CRUCIBLE + PRISM + the Governor); 'self-awareness telemetry' folds into this fragility report.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.goldilocks.habitable_zone",
+    severity: "block",
+  },
   // ── v2.144.0 — PERFCORE: Correctness-Preserving Acceleration (High-Perf Core) ──
   {
     id: "claim.perfcore.correctness_preserving_accel",
