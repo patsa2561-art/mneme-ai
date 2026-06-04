@@ -1,0 +1,35 @@
+// THE MATRIX RAIL — Mneme's local-first gRPC contract.
+// One typed door (Invoke) to every Mneme function + one chunked bidi pipe (Pipe)
+// so ANY-size payload flows byte-identical, past gRPC's 4MB message cap.
+syntax = "proto3";
+package mneme;
+
+service Matrix {
+  // Generic gateway — maps 1:1 to the tool registry. Every current AND future
+  // tool is reachable here with no schema change. Response carries a TRUSTLESS proof.
+  rpc Invoke (ToolRequest) returns (ToolResponse);
+
+  // The chunked bidi pipe: a client streams the request as ordered, manifested
+  // frames; the server reassembles (full integrity check), processes, and streams
+  // the response back as frames. Each frame is small (<256KB) so the 4MB cap is
+  // never hit, regardless of total payload size.
+  rpc Pipe (stream Frame) returns (stream Frame);
+
+  rpc Health (HealthRequest) returns (HealthReply);
+}
+
+message ToolRequest  { string tool = 1; string args_json = 2; string held_root = 3; }
+message ToolResponse { bool ok = 1; string data_json = 2; string wisdom = 3; string proof_json = 4; string error = 5; }
+
+// One frame of the Matrix pipe (mirrors @mneme-ai/core matrix.Frame).
+message Frame {
+  string id = 1;          // sha256 of the whole ORIGINAL payload (== integrity manifest)
+  uint32 seq = 2;         // 0-based order
+  uint32 total = 3;       // total frame count
+  uint32 orig_bytes = 4;  // original (decompressed) length
+  bool gz = 5;            // data is gzip-compressed
+  bytes data = 6;         // the (possibly compressed) slice
+}
+
+message HealthRequest {}
+message HealthReply { bool ok = 1; string version = 2; uint32 tools = 3; string note = 4; }

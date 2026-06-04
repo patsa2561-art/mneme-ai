@@ -53,6 +53,8 @@ const PACKAGES_IN_DEP_ORDER = [
   { name: "@mneme-ai/sdk",        path: "packages/sdk" },
   // v2.85.0 — GEPHYRA (the deployable bridge surface) depends only on core.
   { name: "@mneme-ai/gephyra",    path: "packages/gephyra" },
+  // v2.167.0 — MATRIX (the gRPC wire server) depends on core + mcp (both above).
+  { name: "@mneme-ai/matrix",     path: "packages/matrix" },
   { name: "mneme-ai",             path: "packages/cli" },
 ];
 

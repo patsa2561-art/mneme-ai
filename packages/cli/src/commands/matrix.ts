@@ -11,6 +11,7 @@
  */
 import type { Command } from "commander";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { matrix } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -32,6 +33,59 @@ export function registerMatrixCommands(program: Command): void {
       for (const c of g.checks) out(`  ${c.pass ? "✓" : "✗"} ${c.name} — ${c.detail}`);
       out("");
       out(`  The pipe is transport-agnostic (gRPC-ready). A large payload auto-splits into frames — gRPC's 4MB cap is not a wall. Every frame is hash-manifested; corruption is caught, never silently passed.`);
+      if (g.score !== 100) process.exitCode = 2;
+    });
+
+  // The gRPC wire server lives in the optional @mneme-ai/matrix package (it pulls
+  // @grpc/grpc-js). Lazy-import + fail-open so the core CLI never hard-depends on it.
+  interface Wire {
+    createMatrixServer: (o: { port: number }) => Promise<{ port: number; stop: () => Promise<void> }>;
+    grpcGauntlet: () => Promise<{ score: number; checks: Array<{ name: string; pass: boolean; detail: string }>; metrics: Record<string, number> }>;
+  }
+  async function loadWire(): Promise<Wire | null> {
+    try { return (await import("@mneme-ai/matrix" as string)) as unknown as Wire; }
+    catch { out("🛰 the gRPC wire server needs @mneme-ai/matrix — install it: npm i @mneme-ai/matrix"); return null; }
+  }
+
+  m.command("serve")
+    .description("Serve the Matrix Rail gRPC wire server on 127.0.0.1 (loopback only). Any AI agent / language connects to reach every Mneme function over HTTP/2 + Protobuf.")
+    .option("--port <n>", "port (default 50561)", "50561")
+    .action(async (opts: { port?: string }) => {
+      const wire = await loadWire(); if (!wire) { process.exitCode = 2; return; }
+      const srv = await wire.createMatrixServer({ port: parseInt(opts.port ?? "50561", 10) });
+      out(`🛰 Matrix Rail gRPC on 127.0.0.1:${srv.port} (loopback · proof-carrying · chunked pipe). Ctrl-C to stop.`);
+      process.on("SIGINT", () => { srv.stop().then(() => process.exit(0)); });
+      process.on("SIGTERM", () => { srv.stop().then(() => process.exit(0)); });
+    });
+
+  m.command("ensure")
+    .description("Idempotent zero-command auto-start: if the rail is already running (live pid in .mneme/matrix.json) do nothing, else spawn it detached. Safe to call every session (e.g. from a SessionStart hook) — never piles up processes.")
+    .option("--port <n>", "port (default 50561)", "50561")
+    .action(async (opts: { port?: string }) => {
+      const cwd = process.cwd();
+      const disc = join(cwd, ".mneme", "matrix.json");
+      // already up? (pid-alive check prevents the duplicate-process pile-up class)
+      try {
+        if (existsSync(disc)) {
+          const j = JSON.parse(readFileSync(disc, "utf8")) as { pid?: number; port?: number };
+          if (j.pid) { try { process.kill(j.pid, 0); out(`🛰 Matrix Rail already up on 127.0.0.1:${j.port}`); return; } catch { /* stale pid → fall through to (re)start */ } }
+        }
+      } catch { /* */ }
+      const wire = await loadWire(); if (!wire) { return; } // fail-open: message printed
+      const { spawn } = await import("node:child_process");
+      const child = spawn(process.execPath, [process.argv[1] ?? "", "matrix", "serve", "--port", opts.port ?? "50561"], { cwd, detached: true, stdio: "ignore" });
+      child.unref();
+      out(`🛰 Matrix Rail starting (detached) on 127.0.0.1:${opts.port ?? "50561"} — agents read .mneme/matrix.json`);
+    });
+
+  m.command("wire-test")
+    .description("Live gRPC self-test: spin up the server on an ephemeral loopback port, round-trip (incl a 5MB+ payload through the chunked pipe), measure, shut down.")
+    .action(async () => {
+      const wire = await loadWire(); if (!wire) { process.exitCode = 2; return; }
+      const g = await wire.grpcGauntlet();
+      out(`🛰 MATRIX gRPC wire-test — ${g.score}/100`);
+      for (const c of g.checks) out(`  ${c.pass ? "✓" : "✗"} ${c.name} — ${c.detail}`);
+      out(`  metrics: health ${g.metrics.healthMs}ms · ping ${g.metrics.pingMs}ms · ${(g.metrics.largePayloadBytes / 1e6).toFixed(1)}MB round-trip ${g.metrics.roundTripMs}ms`);
       if (g.score !== 100) process.exitCode = 2;
     });
 

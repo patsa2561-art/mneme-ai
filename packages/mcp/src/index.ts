@@ -60,6 +60,9 @@ import { lineage, versionCheck, karmaStreaks, nucleus, inbox, trustless } from "
 // the TRUTH FORENSIC PIPELINE against the live MCP catalog without depending
 // on internal tools/_registry path.
 export { buildAllTools, buildToolMap, groupByCategory } from "./tools/_registry.js";
+// v2.167.0 — re-export the runtime builder so @mneme-ai/matrix (the gRPC wire
+// server) can bridge Invoke → the same tool registry the MCP server dispatches.
+export { buildRuntime } from "./tools/_runtime.js";
 
 export interface McpOptions {
   cwd: string;

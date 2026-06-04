@@ -124,8 +124,13 @@ discipline as `membraneGauntlet`/`trustlessGauntlet` (=100, measured).
 ## 5. Phased roadmap (each phase ships measured + gated, never a big-bang)
 
 - **Phase 0 (this doc):** the contract + the DIAKRISIS scope. ✅
-- **Phase 1:** `packages/core` proto + a `127.0.0.1` gRPC server that wraps the EXISTING
-  tool registry via `Invoke` (zero new business logic) + `grpcGauntlet` size/latency A/B.
+- **Phase 0.5 — pipe core (v2.166):** `packages/core/src/matrix` — chunk/reassemble/integrity/
+  size-A/B, transport-agnostic. matrixGauntlet=100; any payload byte-identical, −98.5% wire. ✅
+- **Phase 1 — gRPC wire server (v2.167):** `packages/matrix` (`@grpc/grpc-js` + proto-loader) —
+  a `127.0.0.1`-only server: `Invoke` bridges to the SAME tool registry via `buildRuntime` +
+  `buildToolMap` (all ~1,038 tools, zero new logic), proof-carrying; `Pipe` (bidi, chunked) flows
+  any-size data past the 4MB cap. `grpcGauntlet`=100 LIVE: 5MB+ round-trips byte-identical. CLI
+  `mneme matrix serve` / `wire-test`. Fail-open (optional package; MCP/CLI never depend on it). ✅
 - **Phase 2:** `ContextStream` bidi delta channel (carry `mneme channel`) + treasury metering.
 - **Phase 3:** language quickstarts (Python/Go/Rust gRPC clients) so any-vendor agents connect.
 - **Phase 4:** the membrane/trustless proofs default-on over the rail.
@@ -133,6 +138,37 @@ discipline as `membraneGauntlet`/`trustlessGauntlet` (=100, measured).
 Refused forever (with reasons in §0): Lightning L2, global sharding, FHE.
 
 ---
+
+## 5.5 Usage — ZERO-COMMAND, auto-wired into every agent
+
+The user should never type a command. The rail wires itself:
+
+1. **It auto-starts.** When Mneme is installed (per the README) and its daemon runs, the
+   daemon brings the rail up on `127.0.0.1` and writes a tiny discovery file:
+   ```json
+   // .mneme/matrix.json
+   { "host": "127.0.0.1", "port": 50561, "pid": 12345, "version": "2.167.0", "proto": "…/mneme.proto" }
+   ```
+   (Manual fallback only if you ever need it: `mneme matrix serve` / `mneme matrix wire-test`.)
+
+2. **Every agent already knows.** The Mneme manifest is auto-synced into **CLAUDE.md ·
+   AGENTS.md · GEMINI.md · .cursor/rules · .cursorrules · .windsurfrules** — so Claude Code,
+   Codex, Gemini, Cursor, Windsurf (and any MCP/CLI agent) are told the rail exists + where the
+   discovery file is, with no user action. MCP-connected agents also reach it through the MCP
+   `instructions` field + the SessionStart/UserPromptSubmit hooks.
+
+3. **An agent connects in 4 lines** (any language — read the port from `.mneme/matrix.json`):
+   ```js
+   import { connect, invoke, pipeInvoke } from "@mneme-ai/matrix";
+   const { port } = JSON.parse(fs.readFileSync(".mneme/matrix.json", "utf8"));
+   const m = connect(`127.0.0.1:${port}`);
+   const r = await invoke(m, "mneme.truth.check", JSON.stringify({ claim }));  // any of ~1,038 tools
+   // huge payload? pipeInvoke streams it chunked, byte-identical, past the 4MB cap.
+   ```
+   Python/Go/Rust agents use their own gRPC client against the same `proto/mneme.proto`.
+
+4. **Same guarantees as MCP/CLI.** Every reply carries a TRUSTLESS `_proof` (verify offline);
+   loopback-only keeps it air-gapped; if the rail is down, fall back to MCP/CLI — nothing breaks.
 
 ## 6. For AI agents reading this
 

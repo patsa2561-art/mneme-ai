@@ -60,7 +60,10 @@ export function registerBootCommands(program: Command): void {
         const bin = process.env["MNEME_CLI_BIN"] ?? "mneme";
         const cfg = {
           hooks: {
-            SessionStart: [{ hooks: [{ type: "command", command: `${bin} boot --hook`, timeout: 10 }] }],
+            SessionStart: [{ hooks: [
+              { type: "command", command: `${bin} boot --hook`, timeout: 10 },
+              { type: "command", command: `${bin} matrix ensure`, timeout: 10 },
+            ] }],
             UserPromptSubmit: [{ hooks: [{ type: "command", command: `${bin} boot --nudge`, timeout: 10 }] }],
           },
         };
