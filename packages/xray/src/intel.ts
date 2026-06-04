@@ -187,6 +187,30 @@ export function buildOnboarding(report: unknown, max = 8): { steps: OnboardingSt
   return { steps, note: `${steps.length}-step reading order (most-connected first)` };
 }
 
+// ─── GEM 4 · MOMENTUM ─────────────────────────────────────────────────────────
+// "Is this repo speeding up or slowing down?" — from the report's OWN commit-activity
+// time-series (hotspots.trend, oldest→newest buckets). Compares the recent half to the
+// earlier half. A single-scan momentum read (NOT a multi-scan risk trend — that needs
+// tracking history, which TrackerHub already records). Measured, honest, abstains on
+// thin data.
+export type MomentumVerdict = "accelerating" | "steady" | "slowing" | "winding-down" | "unknown";
+export interface Momentum { verdict: MomentumVerdict; ratio: number; recent: number; earlier: number; buckets: number[]; note: string }
+
+export function buildMomentum(report: unknown): Momentum {
+  const r = (report && typeof report === "object" ? report : {}) as Record<string, unknown>;
+  const hs = (r["hotspots"] || {}) as Record<string, unknown>;
+  const buckets = (Array.isArray(hs["trend"]) ? hs["trend"] : []).map((x) => Math.max(0, num(x)));
+  const total = buckets.reduce((s, x) => s + x, 0);
+  if (buckets.length < 4 || total === 0) return { verdict: "unknown", ratio: 0, recent: 0, earlier: 0, buckets, note: "not enough commit-activity history to read momentum" };
+  const mid = Math.floor(buckets.length / 2);
+  const earlier = buckets.slice(0, mid).reduce((s, x) => s + x, 0);
+  const recent = buckets.slice(mid).reduce((s, x) => s + x, 0);
+  const ratio = recent / Math.max(1, earlier);
+  const verdict: MomentumVerdict = ratio >= 1.25 ? "accelerating" : ratio >= 0.75 ? "steady" : ratio >= 0.4 ? "slowing" : "winding-down";
+  const pct = Math.round(ratio * 100);
+  return { verdict, ratio, recent, earlier, buckets, note: `recent activity is ${pct}% of the earlier period` };
+}
+
 // ─── gauntlet (the 100,000-case stress test) ─────────────────────────────────
 export interface IntelCheck { name: string; pass: boolean; detail: string }
 export interface IntelGauntlet { score: number; iterations: number; checks: IntelCheck[] }
@@ -208,7 +232,7 @@ function randomReport(rnd: () => number): unknown {
 
 export function intelGauntlet(iterations = 100_000): IntelGauntlet {
   const rnd = lcg(987654321);
-  let threw = 0, badSev = 0, badSrc = 0, badKs = 0, badOnb = 0;
+  let threw = 0, badSev = 0, badSrc = 0, badKs = 0, badOnb = 0, badMo = 0;
   const SEV = new Set(["high", "med", "low"]);
   for (let i = 0; i < iterations; i++) {
     const rep = randomReport(rnd);
@@ -219,17 +243,21 @@ export function intelGauntlet(iterations = 100_000): IntelGauntlet {
       for (const k of keystones) { if (!(k.ownerPct >= KEYSTONE_OWNER && k.ownerPct <= 1) || !Number.isFinite(k.score) || k.reach < 0 || typeof k.file !== "string" || !k.file) badKs++; }
       const { steps } = buildOnboarding(rep);
       for (const s of steps) { if (typeof s.file !== "string" || !s.file || s.connections < 0 || s.changes < 0 || !s.why) badOnb++; }
+      const mo = buildMomentum(rep);
+      const MOK = new Set(["accelerating", "steady", "slowing", "winding-down", "unknown"]);
+      if (!MOK.has(mo.verdict) || !Number.isFinite(mo.ratio) || mo.recent < 0 || mo.earlier < 0) badMo++;
     } catch { threw++; }
   }
   const fixed = randomReport(lcg(2024));
-  const det = JSON.stringify(buildActionPlan(fixed)) === JSON.stringify(buildActionPlan(fixed)) && JSON.stringify(buildKeystones(fixed)) === JSON.stringify(buildKeystones(fixed)) && JSON.stringify(buildOnboarding(fixed)) === JSON.stringify(buildOnboarding(fixed));
+  const det = JSON.stringify(buildActionPlan(fixed)) === JSON.stringify(buildActionPlan(fixed)) && JSON.stringify(buildKeystones(fixed)) === JSON.stringify(buildKeystones(fixed)) && JSON.stringify(buildOnboarding(fixed)) === JSON.stringify(buildOnboarding(fixed)) && JSON.stringify(buildMomentum(fixed)) === JSON.stringify(buildMomentum(fixed));
   const checks: IntelCheck[] = [
     { name: "TOTAL", pass: threw === 0, detail: `0 throws over ${iterations.toLocaleString()} random reports (got ${threw})` },
     { name: "SEV-VALID", pass: badSev === 0, detail: `every action item severity ∈ {high,med,low} (violations ${badSev})` },
     { name: "TRACEABLE", pass: badSrc === 0, detail: `every action item has a title + source + detail (violations ${badSrc})` },
     { name: "KEYSTONE-SOUND", pass: badKs === 0, detail: `keystones: owner≥${KEYSTONE_OWNER}, finite score, named file (violations ${badKs})` },
     { name: "ONBOARDING-SOUND", pass: badOnb === 0, detail: `onboarding steps: named file, non-negative metrics, a reason (violations ${badOnb})` },
-    { name: "DETERMINISTIC", pass: det, detail: "same report → byte-identical plan + keystones + onboarding" },
+    { name: "MOMENTUM-SOUND", pass: badMo === 0, detail: `momentum: valid verdict, finite ratio, non-negative sums (violations ${badMo})` },
+    { name: "DETERMINISTIC", pass: det, detail: "same report → byte-identical plan + keystones + onboarding + momentum" },
   ];
   const passed = checks.filter((c) => c.pass).length;
   return { score: Math.round((passed / checks.length) * 100), iterations, checks };

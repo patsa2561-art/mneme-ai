@@ -112,6 +112,28 @@ export function buildBlastRadius(report: unknown, maxTargets = 6, maxPartners = 
   return { targets: top, note: top.length ? `${top.length} file(s) with historical change-coupling` : "no temporal coupling measured (files change independently)" };
 }
 
+// ─── DEEP RIPPLE — 2-hop blast (the full reach of an edit) ───────────────────
+// Direct co-changes are 1 hop; the files THOSE pull are the 2nd hop. Honest: the
+// 2nd hop is a weaker, indirect signal (we label it so). Pure set algebra over the
+// coupling graph — deterministic, no double counting (total = direct + indirect).
+export interface DeepBlast { file: string; direct: number; indirect: number; total: number }
+
+export function buildDeepBlast(report: unknown): DeepBlast | null {
+  const r = (report && typeof report === "object" ? report : {}) as Record<string, unknown>;
+  const cp = (r["coupling"] || {}) as Record<string, unknown>;
+  const pairs = (Array.isArray(cp["pairs"]) ? cp["pairs"] : []) as Array<Record<string, unknown>>;
+  const adj = new Map<string, Set<string>>();
+  for (const p of pairs) { const a = str(p?.["a"]), b = str(p?.["b"]); if (!a || !b || a === b) continue; if (!adj.has(a)) adj.set(a, new Set()); if (!adj.has(b)) adj.set(b, new Set()); adj.get(a)!.add(b); adj.get(b)!.add(a); }
+  if (!adj.size) return null;
+  // pick the file with the most direct partners (the widest blast origin); deterministic tiebreak by name
+  let top = ""; let best = -1;
+  for (const [f, s] of [...adj.entries()].sort((x, y) => x[0].localeCompare(y[0]))) { if (s.size > best) { best = s.size; top = f; } }
+  const direct = adj.get(top) || new Set<string>();
+  const indirect = new Set<string>();
+  for (const d of direct) for (const e of (adj.get(d) || new Set<string>())) if (e !== top && !direct.has(e)) indirect.add(e);
+  return { file: top, direct: direct.size, indirect: indirect.size, total: direct.size + indirect.size };
+}
+
 // ─── gauntlet (the 100,000-case stress test) ─────────────────────────────────
 export interface GauntletCheck { name: string; pass: boolean; detail: string }
 export interface RiskMapGauntlet { score: number; iterations: number; checks: GauntletCheck[] }
@@ -143,15 +165,17 @@ export function riskMapGauntlet(iterations = 100_000): RiskMapGauntlet {
       if (!(n.risk >= 0 && n.risk <= 1) || !(n.size >= 0 && n.size <= 1)) badRange++;
     }
     for (const e of m.edges) if (e.a < 0 || e.b < 0 || e.a >= m.nodes.length || e.b >= m.nodes.length || e.a === e.b) badEdge++;
-    // BLAST RADIUS stressed on the same random report
+    // BLAST RADIUS + DEEP RIPPLE stressed on the same random report
     try {
       const br = buildBlastRadius(rep);
       for (const t of br.targets) { if (typeof t.file !== "string" || !t.file) badBlast++; for (const p of t.partners) if (!(p.confidence >= 0 && p.confidence <= 1) || typeof p.file !== "string" || p.file === t.file) badBlast++; }
+      const db = buildDeepBlast(rep);
+      if (db && (db.direct < 0 || db.indirect < 0 || db.total !== db.direct + db.indirect || typeof db.file !== "string" || !db.file)) badBlast++;
     } catch { threw++; }
   }
-  // determinism: a fixed report renders identically twice (map + blast)
+  // determinism: a fixed report renders identically twice (map + blast + deep)
   const fixed = randomReport(lcg(42));
-  const det = JSON.stringify(buildRiskMap(fixed)) === JSON.stringify(buildRiskMap(fixed)) && JSON.stringify(buildBlastRadius(fixed)) === JSON.stringify(buildBlastRadius(fixed));
+  const det = JSON.stringify(buildRiskMap(fixed)) === JSON.stringify(buildRiskMap(fixed)) && JSON.stringify(buildBlastRadius(fixed)) === JSON.stringify(buildBlastRadius(fixed)) && JSON.stringify(buildDeepBlast(fixed)) === JSON.stringify(buildDeepBlast(fixed));
   const checks: GauntletCheck[] = [
     { name: "TOTAL", pass: threw === 0, detail: `0 throws over ${iterations.toLocaleString()} random reports (got ${threw})` },
     { name: "COORDS-IN-BOX", pass: badCoord === 0, detail: `every node coordinate finite + inside ${MAP_W}×${MAP_H} (violations ${badCoord})` },

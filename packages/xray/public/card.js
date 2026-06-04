@@ -160,11 +160,33 @@
     let targets = [...adj.entries()].map(([file, ps]) => { ps.sort((x, y) => y.c - x.c || x.file.localeCompare(y.file)); return { file, reach: ps.reduce((s, x) => s + x.c, 0), partners: ps.slice(0, 5) }; });
     targets.sort((a, b) => b.reach - a.reach || a.file.localeCompare(b.file));
     targets = targets.slice(0, 6);
+    // DEEP RIPPLE (2-hop) — mirrors riskmap.ts buildDeepBlast. The widest-blast file +
+    // the files reached indirectly through its partners. 2nd hop = weaker, labelled so.
+    const dadj = new Map();
+    pairs.forEach((p) => { const a = strv(p && p.a), b = strv(p && p.b); if (!a || !b || a === b) return; if (!dadj.has(a)) dadj.set(a, new Set()); if (!dadj.has(b)) dadj.set(b, new Set()); dadj.get(a).add(b); dadj.get(b).add(a); });
+    let dtop = "", dbest = -1; [...dadj.entries()].sort((x, y) => x[0].localeCompare(y[0])).forEach(([f, s]) => { if (s.size > dbest) { dbest = s.size; dtop = f; } });
+    let deepLine = "";
+    if (dtop) { const dir = dadj.get(dtop), ind = new Set(); dir.forEach((d) => (dadj.get(d) || new Set()).forEach((e) => { if (e !== dtop && !dir.has(e)) ind.add(e); })); deepLine = `<div class="bldeep">🌊 <b>Full ripple depth:</b> editing <code>${esc(base(dtop))}</code> touches <b>${dir.size}</b> file${dir.size > 1 ? "s" : ""} directly${ind.size ? ` + <b>${ind.size}</b> more indirectly (2 hops) = <b>${dir.size + ind.size}</b> total reach` : ""}.</div>`; }
     return `<div class="blast">
       <div class="blhead">💥 Change impact — <b>edit one file, what historically moves with it</b></div>
       <div class="blsub">Measured from git history (not a prediction): when these files changed, their partners changed too. Review them together to avoid surprise breakage.</div>
       ${targets.map((t) => `<div class="blrow"><span class="blf">✏️ ${esc(base(t.file))}</span><span class="blarrow">→</span><span class="blp">${t.partners.map((p) => `<span class="blpill${p.h ? " hidden" : ""}">${esc(base(p.file))} <b>${Math.round(p.c * 100)}%</b></span>`).join("")}</span></div>`).join("")}
+      ${deepLine}
     </div>`;
+  }
+
+  // MOMENTUM — mirrors packages/xray/src/intel.ts buildMomentum (tested + 100k).
+  // "Is this repo speeding up or slowing down?" from the commit-activity trend.
+  function momentumHTML(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+    const buckets = (((r.hotspots || {}).trend) || []).map((x) => Math.max(0, num(x)));
+    const total = buckets.reduce((s, x) => s + x, 0);
+    if (buckets.length < 4 || total === 0) return "";
+    const mid = Math.floor(buckets.length / 2);
+    const earlier = buckets.slice(0, mid).reduce((s, x) => s + x, 0), recent = buckets.slice(mid).reduce((s, x) => s + x, 0);
+    const ratio = recent / Math.max(1, earlier), pct = Math.round(ratio * 100);
+    const v = ratio >= 1.25 ? { w: "accelerating", i: "🚀", c: "#16a34a" } : ratio >= 0.75 ? { w: "steady", i: "➡️", c: "#3a3df0" } : ratio >= 0.4 ? { w: "slowing", i: "🐢", c: "#d97706" } : { w: "winding down", i: "🍂", c: "#be123c" };
+    return `<div class="momentum"><span class="moi">${v.i}</span><div class="mobody"><div class="moh">Momentum — <b style="color:${v.c}">${v.w}</b></div><div class="mosub">Commit activity over time · recent period is <b>${pct}%</b> of the earlier one ${sparkline(buckets)}</div></div></div>`;
   }
 
   // KEYSTONE RISK — mirrors packages/xray/src/intel.ts buildKeystones (tested + 100k).
@@ -256,6 +278,7 @@
         ${vd.risks.length ? `<details class="vrisks"${vd.risks.length <= 6 ? " open" : ""}><summary>📋 ${vd.risks.length} flagged item${vd.risks.length > 1 ? "s" : ""} — exactly what &amp; where</summary>
           <div class="vrlist">${vd.risks.map((k) => `<div class="vr"><span class="vrg">${k.icon} ${k.g}</span><span class="vrt">${k.t}</span></div>`).join("")}</div></details>` : ""}
       </div>
+      ${momentumHTML(r)}
       ${keystoneHTML(r)}
       ${riskMapHTML(r)}
       ${blastRadiusHTML(r)}

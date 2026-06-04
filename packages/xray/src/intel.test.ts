@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildKeystones, buildActionPlan, buildOnboarding, intelGauntlet, KEYSTONE_OWNER } from "./intel.js";
+import { buildKeystones, buildActionPlan, buildOnboarding, buildMomentum, intelGauntlet, KEYSTONE_OWNER } from "./intel.js";
+import { buildDeepBlast } from "./riskmap.js";
 
 describe("TEAM INTELLIGENCE — keystones + action plan (accurate, traceable, legal)", () => {
   // A report where one file both ripples widely AND is single-owned.
@@ -55,6 +56,25 @@ describe("TEAM INTELLIGENCE — keystones + action plan (accurate, traceable, le
     expect(steps[0].why).toContain("hub");
     // strictly non-increasing connectivity-weighted order
     for (let i = 1; i < steps.length; i++) expect(steps[i].connections).toBeLessThanOrEqual(steps[i - 1].connections + 1);
+  });
+
+  it("momentum reads the commit-activity trend (recent vs earlier), abstains on thin data", () => {
+    expect(buildMomentum({ hotspots: { trend: [10, 10, 30, 30] } }).verdict).toBe("accelerating"); // 60 vs 20
+    expect(buildMomentum({ hotspots: { trend: [30, 30, 10, 10] } }).verdict).toBe("winding-down"); // 20 vs 60
+    expect(buildMomentum({ hotspots: { trend: [20, 20, 20, 20] } }).verdict).toBe("steady");
+    expect(buildMomentum({ hotspots: { trend: [5] } }).verdict).toBe("unknown");
+    expect(buildMomentum({ hotspots: { trend: [0, 0, 0, 0] } }).verdict).toBe("unknown");
+  });
+
+  it("deep ripple: 2-hop reach, no double counting (total = direct + indirect)", () => {
+    // a-b, a-c, b-d : from a → direct {b,c}, indirect {d}
+    const db = buildDeepBlast({ coupling: { pairs: [{ a: "a", b: "b" }, { a: "a", b: "c" }, { a: "b", b: "d" }] } });
+    expect(db).not.toBeNull();
+    expect(db!.file).toBe("a");
+    expect(db!.direct).toBe(2);
+    expect(db!.indirect).toBe(1);     // d, reached via b; b,c excluded (already direct)
+    expect(db!.total).toBe(3);
+    expect(buildDeepBlast({ coupling: { pairs: [] } })).toBeNull();
   });
 
   it("a clean report yields an empty, honest plan (no fabricated busywork)", () => {
