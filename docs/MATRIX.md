@@ -10,22 +10,18 @@ designed to be EXTENDED, not rewritten, for years.
 
 ---
 
-## 0. The honest thesis (DIAKRISIS first — substance, not lustre)
+## 0. The honest thesis (substance, measured)
 
-A real backbone is judged by what it REFUSES as much as what it ships. Mneme's identity
-is **local-first · air-gap-ready · MIT · signed**. The Matrix Rail keeps that intact.
+Mneme's identity is **local-first · air-gap-ready · MIT · signed**. The Matrix Rail keeps
+that intact — it ships only what it can measure.
 
 | Layer | Verdict | Why |
 |---|---|---|
 | **gRPC core** (Protobuf · HTTP/2 · bidirectional streaming) | 💎 SHIP | binary + schema-governed + streaming is genuinely faster/smaller than JSON/REST and cross-language by construction. Matches Mneme's deterministic-governance core. |
 | **Differential context** (send the DELTA, not the whole packet) over a stream | 💎 SHIP | the real token win (already proven by `mneme channel`/`treasury`); a gRPC stream is the ideal carrier. |
-| Lightning-Network L2 / tokenomics / micro-payments | 🔴 REFUSE | a blockchain/P2P money layer destroys air-gap + the "code never leaves your box" moat. The delta-channel gives the scaling win without it. |
-| Global AI sharding across strangers' nodes | 🔴 REFUSE | routing your source through other people's machines breaks the privacy moat. `cortex`/`mycelium` already share **signed, content-free** digests safely. |
-| Semantic Homomorphic Routing (FHE) | 🔴 REFUSE | FHE is too slow to run in real time in 2026 — vaporware. `mneme blind` (reversible pseudonymization, ms-fast) + `rail` (policy + leak screen) deliver "process without seeing raw" honestly. |
 
-> The win is the **local-first gRPC rail + the delta channel**. Everything exotic above
-> is reframed to an achievable Mneme primitive that already exists. We claim only what we
-> can measure.
+> The win is the **local-first gRPC rail + the delta channel** — achievable Mneme
+> primitives that already exist. We claim only what we can measure.
 
 ---
 
@@ -135,8 +131,6 @@ discipline as `membraneGauntlet`/`trustlessGauntlet` (=100, measured).
 - **Phase 3:** language quickstarts (Python/Go/Rust gRPC clients) so any-vendor agents connect.
 - **Phase 4:** the membrane/trustless proofs default-on over the rail.
 
-Refused forever (with reasons in §0): Lightning L2, global sharding, FHE.
-
 ---
 
 ## 5.5 Usage — ZERO-COMMAND, auto-wired into every agent
@@ -178,5 +172,4 @@ the guarantees (offline-verifiable proof, local-first, policy-gated egress) are 
 The rail is **opt-in and fail-open**: if gRPC isn't up, use MCP/CLI — nothing breaks.
 
 > Honest by design: this is a local-first typed transport + delta channel with signed
-> receipts. It is NOT a decentralized money network, NOT global sharding, NOT homomorphic
-> encryption. We shipped the diamond and refused the lustre.
+> receipts — fast, byte-exact, and verifiable. We ship only what we can measure.

@@ -32,6 +32,8 @@ import { buildXRay } from "./engine.js";
 import { sealXRay, verifyXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
 import { isAllowedPublicUrl, shallowClone } from "./clone.js";
+import { listRemoteBranches } from "./track.js";
+import { TrackerHub } from "./tracker_server.js";
 import { buildContextPack } from "./pack.js";
 import { CosmicMonitor, cosmicBadgeSvg, signCosmicStatus } from "./cosmic.js";
 import type { SignedXRay, XRayReport } from "./types.js";
@@ -302,7 +304,25 @@ function reportPageWithOg(signed: SignedXRay, origin: string): string {
   return tpl.replace("<title>Mneme · Repo X-Ray</title>", `<title>${xesc(title)}</title>`).replace("<!--OGMETA-->", og);
 }
 
-export function createXRayServer(monitor?: CosmicMonitor) {
+export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerHub) {
+  // THE AUTONOMOUS REAL-TIME MONITOR — one hub per server instance. The scanner
+  // (build) runs the SAME hosted, bounded, raw-free, signed pipeline as /api/xray;
+  // the SHA source defaults to `git ls-remote` (the cheap poll). Both POLL and
+  // WEBHOOK drive `hub.tick`; subscribed browsers get drift over SSE (no re-click).
+  // An injected hub (tests) controls its own scanner + poller.
+  const hub = injectedHub ?? new TrackerHub({
+    build: async (gitUrl, branch) => {
+      const report = await buildXRay({ gitUrl, branch, maxFiles: 2500 });
+      const leak = xrayLeaksRaw(report);
+      if (leak.leaks) throw new Error("report failed raw-free gate");
+      const signed = sealXRay(process.cwd(), report);
+      recordBoard(signed);
+      saveReport(signed, "public", "");
+      return { report, signed };
+    },
+  });
+  if (!injectedHub && process.env.XRAY_TRACK_POLL !== "off") hub.startPoller(parseInt(process.env.XRAY_TRACK_POLL_MS || "30000", 10));
+
   return createServer(async (req, res) => {
     const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "?";
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
@@ -465,6 +485,47 @@ export function createXRayServer(monitor?: CosmicMonitor) {
         const signed = JSON.parse(await readBody(req)) as SignedXRay;
         return send(res, 200, verifyXRay(signed));
       } catch { return send(res, 400, { error: "invalid signed report" }); }
+    }
+
+    // ─── REAL-TIME TRACKING (branch-aware · poll + webhook · live SSE) ────────
+    // list a repo's branches → the branch picker
+    if (req.method === "GET" && url.pathname === "/api/branches") {
+      const gitUrl = (url.searchParams.get("url") || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs." });
+      if (rateLimited("branches:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      try { return send(res, 200, { branches: listRemoteBranches(gitUrl) }); }
+      catch (e) { return send(res, 502, { error: (e as Error).message.slice(0, 200) }); }
+    }
+    // start tracking a repo+branch → initial signed report + a trackId
+    if (req.method === "POST" && url.pathname === "/api/track") {
+      if (rateLimited("track:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      let body: { gitUrl?: string; branch?: string };
+      try { body = JSON.parse(await readBody(req) || "{}"); } catch { return send(res, 400, { error: "invalid JSON" }); }
+      const gitUrl = (body.gitUrl || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs." });
+      try {
+        const { id, signed } = await hub.createTrack(gitUrl, body.branch?.trim() || undefined);
+        return send(res, 200, { trackId: id, signed, pollMs: parseInt(process.env.XRAY_TRACK_POLL_MS || "30000", 10) });
+      } catch (e) { return send(res, 502, { error: (e as Error).message.slice(0, 200) }); }
+    }
+    // live updates over Server-Sent Events — the browser subscribes; drift is
+    // pushed on every detected change with no re-click.
+    if (req.method === "GET" && /^\/api\/track\/[a-f0-9]{8,32}\/stream$/.test(url.pathname)) {
+      const id = url.pathname.split("/")[3];
+      res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive", "access-control-allow-origin": "*" });
+      if (!hub.subscribe(id, res)) { res.write(`event: error\ndata: ${JSON.stringify({ error: "unknown trackId — POST /api/track first" })}\n\n`); return res.end(); }
+      const keepAlive = setInterval(() => { try { res.write(`: ping\n\n`); } catch { /* */ } }, 25_000);
+      if (typeof keepAlive.unref === "function") keepAlive.unref();
+      req.on("close", () => clearInterval(keepAlive));
+      return;
+    }
+    // webhook (GitHub/GitLab push) → trigger an immediate tick (true real-time)
+    if (req.method === "POST" && /^\/api\/track\/[a-f0-9]{8,32}\/webhook$/.test(url.pathname)) {
+      const id = url.pathname.split("/")[3];
+      try { await readBody(req, 2 * 1024 * 1024); } catch { /* payload not required — the SHA is re-resolved */ }
+      const r = await hub.tick(id);
+      if (r === null) return send(res, 404, { error: "unknown trackId" });
+      return send(res, 200, { ok: true, changed: r.changed, reason: r.reason });
     }
 
     return send(res, 404, { error: "not found" });

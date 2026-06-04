@@ -181,6 +181,25 @@
   .pkrow:last-child{border-bottom:0}.pkrow:hover{background:var(--soft)}
   .pkrow .ic{width:18px;text-align:center}
   .pkrow .repobadge{margin-left:auto;font-size:10.5px;color:var(--a);background:var(--a-soft);border-radius:6px;padding:2px 7px;font-weight:600}
+  /* ── REAL-TIME TRACKING panel — clean + clear ── */
+  .track{max-width:760px;margin:18px auto 0;background:var(--soft);border:1px solid var(--line);border-radius:var(--rs);padding:14px 18px}
+  .track .trow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .track .tlabel{font-size:13px;color:var(--sub);font-weight:560}
+  .track select{height:38px;border:1px solid var(--line);border-radius:9px;padding:0 12px;font-size:13.5px;background:#fff;color:var(--ink2);max-width:260px}
+  .track .tbtn{height:38px;padding:0 16px;border-radius:9px;border:1.5px solid var(--a);background:var(--a);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer}
+  .track .tbtn.off{background:#fff;color:var(--a)}
+  .track .tbtn.stop{border-color:var(--red);background:#fff;color:var(--red)}
+  .track .live{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--green);font-weight:600}
+  .track .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+  .track .drift{margin-top:12px;border-radius:10px;padding:10px 14px;font-size:13.5px;font-weight:560;display:none}
+  .track .drift.degraded{background:#fff1f3;border:1px solid #fecdd6;color:var(--red)}
+  .track .drift.improved{background:#f0fdf4;border:1px solid #bbf7d0;color:var(--green)}
+  .track .drift.changed,.track .drift.stable{background:var(--a-soft);border:1px solid #dfe2ff;color:var(--a)}
+  .track .tl{margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .track .tl .pill{padding:2px 8px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--ink2)}
+  .track .tl .pill.deg{border-color:#fecdd6;color:var(--red)} .track .tl .pill.imp{border-color:#bbf7d0;color:var(--green)}
+  .track .thelp{margin-top:8px;font-size:12px;color:var(--sub)}
   footer{padding:40px 0 70px;text-align:center;color:#aab0b8;font-size:13px}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid currentColor;border-top-color:transparent;
     border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px;opacity:.9}
@@ -295,6 +314,7 @@
     <p class="err" id="err" style="display:none"></p>
   </header>
 
+  <div id="track" class="track" style="display:none"></div>
   <div id="out"></div>
   <div id="packout"></div>
 
@@ -311,9 +331,63 @@
 const gC = g => "g-" + (("ABCDEF".includes(g)) ? g : "C");
 const esc = s => String(s==null?"":s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 
-function render(signed){
+function renderCard(signed){
   document.getElementById("out").innerHTML = window.MnemeXRay.xrayCardHTML(signed, { share: true });
   mountShare(signed.report);
+}
+function render(signed){
+  renderCard(signed);
+  mountTracking(signed.report);
+}
+
+// ── REAL-TIME TRACKING (branch-aware · poll+webhook · live SSE · drift) ──
+const brank = n => /^(main)$/.test(n)?0 : /^(master)$/.test(n)?1 : /^(develop|dev)$/.test(n)?2 : 9;
+function mountTracking(r){
+  const panel = document.getElementById("track");
+  if(!r || r.subject.kind !== "git-url"){ panel.style.display="none"; return; }
+  const gitUrl = r.subject.ref;
+  panel.style.display="block";
+  panel.innerHTML = `<div class="trow">
+    <span class="tlabel">🛰 Live tracking</span>
+    <select id="tbranch"><option value="">loading branches…</option></select>
+    <button id="ttoggle" class="tbtn off">● Track live</button>
+    <span id="tstate" class="tlabel"></span>
+  </div>
+  <div class="thelp">Pick a branch and turn on live tracking — when you, your team, or an AI pushes to it, this report updates itself. No re-click.</div>
+  <div id="tdrift" class="drift"></div>
+  <div id="ttl" class="tl"></div>`;
+  fetch("/api/branches?url="+encodeURIComponent(gitUrl)).then(x=>x.json()).then(d=>{
+    const sel=document.getElementById("tbranch"); if(!sel) return;
+    const names=((d&&d.branches)||[]).map(b=>b.name);
+    if(!names.length){ sel.innerHTML='<option value="">default branch</option>'; return; }
+    names.sort((a,b)=>brank(a)-brank(b)||a.localeCompare(b));
+    sel.innerHTML=names.map(n=>`<option value="${esc(n)}"${n===r.subject.branch?" selected":""}>${esc(n)}</option>`).join("");
+  }).catch(()=>{ const sel=document.getElementById("tbranch"); if(sel) sel.innerHTML='<option value="">default branch</option>'; });
+
+  let es=null; const history=[];
+  const toggle=document.getElementById("ttoggle");
+  const stateEl=()=>document.getElementById("tstate");
+  function stop(){ if(es){es.close();es=null;} toggle.className="tbtn off"; toggle.textContent="● Track live"; stateEl().textContent="stopped"; }
+  function showDrift(d){ const el=document.getElementById("tdrift"); if(!el||!d) return; el.className="drift "+d.drift; el.style.display="block"; el.textContent=((d.highlights&&d.highlights[0])||("changed → grade "+d.gradeTo))+"  ·  just now"; }
+  function pushTL(d){ history.push(d); const el=document.getElementById("ttl"); if(!el) return; el.innerHTML='<span class="tlabel">Timeline</span> '+history.slice(-14).map(h=>{const c=h.drift==="degraded"?"deg":h.drift==="improved"?"imp":""; return '<span class="pill '+c+'">'+esc(h.gradeTo)+(h.newSecretLeaks>0?" 🔴":"")+'</span>';}).join(" "); }
+  function startSSE(id, branch){
+    es=new EventSource("/api/track/"+id+"/stream");
+    toggle.className="tbtn stop"; toggle.textContent="Stop"; toggle.disabled=false;
+    stateEl().innerHTML='<span class="live"><span class="dot"></span>LIVE · '+esc(branch||"default")+'</span>';
+    es.addEventListener("update", ev=>{ try{ const p=JSON.parse(ev.data); renderCard(p.signed); showDrift(p.delta); pushTL(p.delta);}catch{} });
+    // EventSource auto-reconnects on error; keep the LIVE state.
+  }
+  toggle.addEventListener("click", async ()=>{
+    if(es){ stop(); return; }
+    const branch=document.getElementById("tbranch").value||undefined;
+    toggle.disabled=true; toggle.textContent="starting…";
+    try{
+      const res=await fetch("/api/track",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({gitUrl,branch})});
+      const data=await res.json();
+      if(!res.ok){ stateEl().textContent=data.error||"failed"; toggle.disabled=false; toggle.textContent="● Track live"; return; }
+      startSSE(data.trackId, branch);
+    }catch(e){ stateEl().textContent=String(e); toggle.disabled=false; toggle.textContent="● Track live"; }
+  });
 }
 
 // share row: permalink + an embeddable badge (the viral loop)

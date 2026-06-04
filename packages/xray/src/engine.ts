@@ -32,10 +32,10 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
   let subject: XRayReport["subject"];
 
   if (opts.gitUrl) {
-    const h = shallowClone(opts.gitUrl);
+    const h = shallowClone(opts.gitUrl, opts.branch);
     repoPath = h.path;
     dispose = h.dispose;
-    subject = { kind: "git-url", ref: opts.gitUrl.trim(), repoName: repoNameFromUrl(opts.gitUrl), commitHash: "" };
+    subject = { kind: "git-url", ref: opts.gitUrl.trim(), repoName: repoNameFromUrl(opts.gitUrl), commitHash: "", ...(opts.branch ? { branch: opts.branch } : {}) };
   } else if (opts.repoPath) {
     if (!existsSync(opts.repoPath)) throw new Error(`repoPath does not exist: ${opts.repoPath}`);
     repoPath = opts.repoPath;

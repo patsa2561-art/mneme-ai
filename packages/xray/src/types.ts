@@ -22,6 +22,8 @@ export interface XRaySubject {
   repoName: string;
   /** HEAD commit the report was computed at (provenance). */
   commitHash: string;
+  /** Branch analysed, when a specific one was requested (else default branch). */
+  branch?: string;
 }
 
 /** Dependency mortality + license/supply-chain risk. */
@@ -158,6 +160,8 @@ export interface XRayInput {
   repoPath?: string;
   /** Public git URL — shallow-cloned to a temp dir, analysed, then deleted. */
   gitUrl?: string;
+  /** Branch to analyse/track (default: the repo's default branch). */
+  branch?: string;
   /** Override "now" for deterministic tests. */
   now?: number;
   /** Max files to scan for secrets/complexity (perf bound; logged when hit). */
