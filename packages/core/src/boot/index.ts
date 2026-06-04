@@ -52,6 +52,8 @@ export const DECISION_TABLE: readonly DecisionRow[] = [
   { when: "before applying an AI-generated diff / running a destructive shell command", tool: "mneme.swarm  ·  mneme.heph.cross { command }", why: "one signed SHIP/CAUTION/BLOCK verdict; gate a destructive command (NEEDS_COSIGN / BLOCK)" },
   { when: "handing off to another agent / vendor / a fresh session", tool: "mneme.cortex.handoff { toAgent }  ·  CLI: mneme clone", why: "a signed context capsule the receiver verifies offline" },
   { when: "user asks 'how much has Mneme saved me?' / about cost", tool: "mneme.treasury.report  ·  CLI: mneme savings --price-per-1k <usd>", why: "the measured, signed input-tokens (and USD at the user's price) saved — only counts content routed through Mneme" },
+  { when: "user asks if a repo/dependency is safe to build on, how risky/clean a codebase is, or who the key person is", tool: "mneme.xray.scan { gitUrl | repoPath }  ·  CLI: mneme xray", why: "a signed, deterministic repo audit (grade · secrets · bus-factor · coupling) + Context Air Quality + Keystone/Action-plan — no LLM guesses a number" },
+  { when: "you know what the user WANTS but not which of ~1000 tools fits", tool: "mneme.gateway.route { text }  ·  CLI: mneme matrix search \"<intent>\"", why: "intent → the right tool, ranked (BM25 + curated-trigger wisdom, no LLM) — so you never need to memorise tool names" },
 ];
 
 /** The four boundary capabilities, one line each (for the boot packet header). */

@@ -37,6 +37,7 @@ import { N4_MISSING_TOOLS } from "./_n4_missing_tools.js";
 import { N7_N11_GOVERNANCE_TOOLS } from "./_n7_n11_governance.js";
 import { PEAK_GAUNTLET_TOOLS } from "./_peak_gauntlet_tools.js";
 import { TRUTH_GATE_TOOLS } from "./_truth_gate_tools.js";
+import { XRAY_TOOLS } from "./_xray_tools.js";
 import { CONCLAVE_TOOLS } from "./_conclave_tools.js";
 import { HONEST_MIRROR_TOOLS } from "./_honest_mirror_tools.js";
 import { REWIND_TOOLS } from "./_rewind_tools.js";
@@ -446,6 +447,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...V1962_PHOENIX_TOOLS,
     ...V1963_HARDENING_TOOLS,
     ...V1964_WASM_CHRYSALIS_TOOLS,
+    ...XRAY_TOOLS,
   ];
 }
 

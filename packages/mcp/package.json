@@ -47,6 +47,7 @@
   "dependencies": {
     "@mneme-ai/core": "2.190.0",
     "@mneme-ai/embeddings": "2.190.0",
+    "@mneme-ai/xray": "2.190.0",
     "@modelcontextprotocol/sdk": "^1.0.4"
   }
 }
