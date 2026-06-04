@@ -93,8 +93,52 @@
     else if (age.vitality === "active") { tone = "ok"; head = `✅ Healthy & actively maintained — safe to build on`; }
     else { tone = "neutral"; head = `Reviewed — ${T.length} thing${T.length === 1 ? "" : "s"} to know below`; }
 
+    // the concrete RISK ITEMS (what exactly + where) — listed, scrollable if long
+    const risks = [];
+    (sec.hits || []).forEach((h) => risks.push({ g: "Secret", icon: "🔑", t: `${esc(h.kind)} — ${esc(h.file)}:${h.line}` }));
+    (su.destructive || []).forEach((d) => risks.push({ g: "Destructive CI", icon: "💥", t: `${esc(d.where)} — ${esc(String(d.command).slice(0, 80))}` }));
+    (dep.atRisk || []).filter((d) => d.band === "dead" || d.band === "moribund").forEach((d) => risks.push({ g: "Dying dep", icon: "📦", t: `${esc(d.name)} (${esc(d.band)})${d.successor ? ` → ${esc(d.successor)}` : ""}` }));
+    (dep.licenseFlags || []).forEach((l) => risks.push({ g: "License", icon: "⚖️", t: `${esc(l.name)} — ${esc(l.license)}` }));
+    (bf.fragileFiles || []).forEach((f) => risks.push({ g: "Single-owner", icon: "👤", t: `${esc(f.file)} — one author owns ${Math.round((f.topAuthorShare || 0) * 100)}%` }));
+    (su.injectionWhere || []).forEach((w) => risks.push({ g: "Prompt-injection", icon: "🧪", t: esc(w) }));
+
     const top = T.slice(0, 5);
-    return { tone, head, kind, takeaways: top };
+    return { tone, head, kind, takeaways: top, risks };
+  }
+
+  // RISK MAP — mirrors packages/xray/src/riskmap.ts (the tested + 100k-stressed source
+  // of truth). Every node/edge is verbatim from the signed report; nothing invented.
+  function mix(a, b, t) { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join(""); }
+  const riskColor = (t) => (t < 0.5 ? mix("#16a34a", "#d97706", t / 0.5) : mix("#d97706", "#e11d48", (t - 0.5) / 0.5));
+  function riskMapHTML(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0), strv = (x) => (typeof x === "string" ? x : "");
+    const bf = r.busFactor || {}, hs = r.hotspots || {}, cx = r.complexity || {}, cp = r.coupling || {};
+    const W = 920, H = 460, CAP = 24, byFile = new Map();
+    const touch = (f) => { f = strv(f); if (!f) return null; if (!byFile.has(f)) byFile.set(f, { o: 0, c: 0, l: 0 }); return byFile.get(f); };
+    (bf.fragileFiles || []).forEach((x) => { const n = touch(x && x.file); if (n) n.o = Math.max(n.o, Math.min(1, Math.max(0, num(x.topAuthorShare)))); });
+    (hs.hotspots || []).forEach((x) => { const n = touch(x && x.file); if (n) { n.c = Math.max(n.c, num(x.changes)); n.l = Math.max(n.l, num(x.loc)); } });
+    (cx.hotspots || []).forEach((x) => { const n = touch(x && x.file); if (n) n.l = Math.max(n.l, num(x.bodyLines)); });
+    const pairs = cp.pairs || []; pairs.forEach((p) => { touch(p && p.a); touch(p && p.b); });
+    if (!byFile.size) return "";
+    const mc = Math.max(1, ...[...byFile.values()].map((v) => v.c)), ml = Math.max(1, ...[...byFile.values()].map((v) => v.l));
+    let es = [...byFile.entries()].map(([file, v]) => ({ file, risk: Math.min(1, Math.max(0, v.o)), size: Math.min(1, Math.max(v.c / mc, v.l / ml)), churn: v.c }));
+    es.sort((a, b) => (b.risk - a.risk) || (b.size - a.size) || a.file.localeCompare(b.file));
+    es = es.slice(0, CAP);
+    const idx = new Map(es.map((e, i) => [e.file, i]));
+    const cxC = W / 2, cyC = H / 2, GOLD = 2.399963229728653;
+    const nodes = es.map((e, i) => { const ang = i * GOLD, rad = 26 + 30 * Math.sqrt(i); return { ...e, i, x: Math.min(W - 40, Math.max(40, cxC + rad * Math.cos(ang))), y: Math.min(H - 36, Math.max(36, cyC + rad * Math.sin(ang) * 0.56)) }; });
+    const base = (f) => { const p = String(f).split("/"); return p[p.length - 1]; };
+    const edges = [];
+    pairs.forEach((p) => { const a = idx.get(strv(p && p.a)), b = idx.get(strv(p && p.b)); if (a === undefined || b === undefined || a === b) return; edges.push({ a, b, w: Math.min(1, Math.max(0, num(p.confidence))), hidden: !!(p && p.hidden) }); });
+    const edgeSvg = edges.map((e) => { const A = nodes[e.a], B = nodes[e.b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2 - 24; return `<path d="M${A.x.toFixed(1)} ${A.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${B.x.toFixed(1)} ${B.y.toFixed(1)}" fill="none" stroke="${e.hidden ? "#e11d48" : "#9aa0ad"}" stroke-width="${(0.6 + e.w * 2.2).toFixed(2)}" stroke-opacity="${(0.18 + e.w * 0.5).toFixed(2)}"${e.hidden ? ' stroke-dasharray="5 4"' : ""}/>`; }).join("");
+    const nodeSvg = nodes.map((n) => { const rad = 7 + n.size * 20, col = riskColor(n.risk), showLabel = n.i < 8 || n.risk >= 0.7; return `<g><circle cx="${n.x}" cy="${n.y}" r="${(rad + 7).toFixed(1)}" fill="${col}" opacity="0.14"/><circle cx="${n.x}" cy="${n.y}" r="${rad.toFixed(1)}" fill="${col}" opacity="0.92"/>${showLabel ? `<text x="${n.x}" y="${(n.y + rad + 12).toFixed(1)}" text-anchor="middle" font-size="11" fill="#5b6068" font-family="ui-monospace,Menlo,monospace">${esc(base(n.file)).slice(0, 22)}${n.ownerPct >= 0.5 ? ` ${Math.round(n.ownerPct * 100)}%` : ""}</text>` : ""}</g>`; }).join("");
+    const owned = nodes.filter((n) => n.risk >= 0.6).length;
+    return `<div class="riskmap">
+      <div class="rmhead">🗺 Risk map — <b>if an owner leaves, the red nodes lose their only expert</b></div>
+      <div class="rmsub">${nodes.length} flagged file(s) · ${edges.length} coupling link(s)${owned ? ` · ${owned} single-owner hotspot(s)` : ""} — node colour = key-person risk · size = churn · line = files that change together. Every node is verbatim from the signed report.</div>
+      <svg class="rmsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="repository risk map">${edgeSvg}${nodeSvg}</svg>
+      <div class="rmleg"><span><i style="background:#16a34a"></i>shared / low risk</span><span><i style="background:#d97706"></i>concentrated</span><span><i style="background:#e11d48"></i>single-owner (key-person)</span><span><i class="dash"></i>hidden cross-dir coupling</span></div>
+    </div>`;
   }
 
   function xrayCardHTML(signed, opts) {
@@ -136,7 +180,10 @@
         <div class="vhead">${esc(vd.head)}</div>
         <div class="vkind">${esc(vd.kind)} · what this means for you ↓</div>
         <ul class="vlist">${vd.takeaways.map((t) => `<li class="vt-${t.t}">${t.x}</li>`).join("")}</ul>
+        ${vd.risks.length ? `<details class="vrisks"${vd.risks.length <= 6 ? " open" : ""}><summary>📋 ${vd.risks.length} flagged item${vd.risks.length > 1 ? "s" : ""} — exactly what &amp; where</summary>
+          <div class="vrlist">${vd.risks.map((k) => `<div class="vr"><span class="vrg">${k.icon} ${k.g}</span><span class="vrt">${k.t}</span></div>`).join("")}</div></details>` : ""}
       </div>
+      ${riskMapHTML(r)}
       <div class="membrane">
         <div class="mp"><span class="mpk">① CAPABILITY</span><span class="mpv">${s.signalsRun} deterministic signals · ${(sec.filesScanned || 0).toLocaleString()} files scanned</span></div>
         <div class="mp"><span class="mpk">② ATTENTION</span><span class="mpv">${tri.length ? `${tri.length} signal(s) need attention` : `all signals clear`}</span></div>
