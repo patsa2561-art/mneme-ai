@@ -191,6 +191,28 @@
     </div>`;
   }
 
+  // ONBOARDING PATH — mirrors packages/xray/src/intel.ts buildOnboarding (tested + 100k).
+  // "Read files in this order to learn the repo fast" — hub (most-coupled) first.
+  function onboardingHTML(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0), strv = (x) => (typeof x === "string" ? x : "");
+    const baseN = (f) => { const p = String(f).split("/"); return p[p.length - 1] || f; };
+    const cp = r.coupling || {}, hs = r.hotspots || {};
+    const deg = new Map();
+    (cp.pairs || []).forEach((p) => { const a = strv(p && p.a), b = strv(p && p.b); if (!a || !b || a === b) return; if (!deg.has(a)) deg.set(a, new Set()); if (!deg.has(b)) deg.set(b, new Set()); deg.get(a).add(b); deg.get(b).add(a); });
+    const churn = new Map(), expert = new Map();
+    (hs.hotspots || []).forEach((x) => { const f = strv(x && x.file); if (!f) return; churn.set(f, Math.max(churn.get(f) || 0, num(x.changes))); const e = strv(x && x.expert); if (e) expert.set(f, e); });
+    const files = new Set([...deg.keys(), ...churn.keys()]); if (!files.size) return "";
+    const maxC = Math.max(1, ...[...churn.values()]);
+    let steps = [...files].map((file) => { const connections = deg.has(file) ? deg.get(file).size : 0, changes = churn.get(file) || 0; return { file, connections, changes, score: connections * 2 + changes / maxC, expert: expert.get(file) || null }; });
+    steps.sort((a, b) => b.score - a.score || a.file.localeCompare(b.file));
+    steps = steps.slice(0, 8);
+    return `<div class="onboard">
+      <div class="obhead">📖 Onboarding path — <b>read these first to understand the repo fast</b></div>
+      <div class="obsub">A heuristic from git, not a curriculum: the <b>hub</b> (changes with the most files) and busiest files come first — the fastest way for a new dev to grasp the system. Nothing invented.</div>
+      <ol class="oblist">${steps.map((s) => `<li class="obrow"><span class="obf">${esc(baseN(s.file))}</span><span class="obwhy">${s.connections > 0 ? `hub · changes with <b>${s.connections}</b> file${s.connections > 1 ? "s" : ""}` : `busy · <b>${s.changes}</b> changes`}${s.expert ? ` · ask <b>${esc(s.expert)}</b>` : ""}</span></li>`).join("")}</ol>
+    </div>`;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     g.__lastSigned = signed;   // stash for the "Verify signature" proof button
@@ -237,6 +259,7 @@
       ${keystoneHTML(r)}
       ${riskMapHTML(r)}
       ${blastRadiusHTML(r)}
+      ${onboardingHTML(r)}
       <div class="membrane">
         <div class="mp"><span class="mpk">CAPABILITY</span><span class="mpv">${s.signalsRun} deterministic signals · ${(sec.filesScanned || 0).toLocaleString()} files scanned</span></div>
         <div class="mp"><span class="mpk">ATTENTION</span><span class="mpv">${tri.length ? `${tri.length} signal(s) need attention` : `all signals clear`}</span></div>

@@ -17,7 +17,7 @@ export { isAllowedPublicUrl, isSafeBranch } from "./clone.js";
 export { listRemoteBranches, remoteRef, reportDelta, trackerTick, trackGauntlet, type RemoteBranch, type ReportDelta, type Drift, type TrackState, type TickResult } from "./track.js";
 export { TrackerHub, trackId, hubGauntlet, verifyWebhookSig, type SseSink, type BuildFn, type RefFn, type TrackRecord, type HistoryEntry } from "./tracker_server.js";
 export { buildRiskMap, buildBlastRadius, riskMapGauntlet, MAP_W, MAP_H, MAP_CAP, type RiskMap, type RiskNode, type RiskEdge, type BlastTarget, type BlastPartner } from "./riskmap.js";
-export { buildKeystones, buildActionPlan, intelGauntlet, KEYSTONE_OWNER, type Keystone, type ActionItem, type Sev } from "./intel.js";
+export { buildKeystones, buildActionPlan, buildOnboarding, intelGauntlet, KEYSTONE_OWNER, type Keystone, type ActionItem, type Sev, type OnboardingStep } from "./intel.js";
 export { defaultFetcher, type MetaFetcher } from "./battery/deps.js";
 export { publishReport, type PublishResult } from "./publish.js";
 export { createXRayServer } from "./server.js";

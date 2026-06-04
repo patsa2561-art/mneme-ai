@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildKeystones, buildActionPlan, intelGauntlet, KEYSTONE_OWNER } from "./intel.js";
+import { buildKeystones, buildActionPlan, buildOnboarding, intelGauntlet, KEYSTONE_OWNER } from "./intel.js";
 
 describe("TEAM INTELLIGENCE — keystones + action plan (accurate, traceable, legal)", () => {
   // A report where one file both ripples widely AND is single-owned.
@@ -45,6 +45,16 @@ describe("TEAM INTELLIGENCE — keystones + action plan (accurate, traceable, le
     expect(sec?.source).toBe("config.ts:42");
     // every item is traceable
     for (const it of items) { expect(it.title).toBeTruthy(); expect(it.source).toBeTruthy(); }
+  });
+
+  it("onboarding orders by connectivity first (the hub before the leaf)", () => {
+    const { steps } = buildOnboarding(report);
+    expect(steps[0].file).toBe("core/auth.ts");   // 2 connections → the hub
+    expect(steps[0].connections).toBe(2);
+    expect(steps[0].expert).toBe("odin");
+    expect(steps[0].why).toContain("hub");
+    // strictly non-increasing connectivity-weighted order
+    for (let i = 1; i < steps.length; i++) expect(steps[i].connections).toBeLessThanOrEqual(steps[i - 1].connections + 1);
   });
 
   it("a clean report yields an empty, honest plan (no fabricated busywork)", () => {

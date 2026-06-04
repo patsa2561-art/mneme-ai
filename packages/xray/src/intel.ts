@@ -137,6 +137,56 @@ export function buildActionPlan(report: unknown, max = 8): { items: ActionItem[]
   return { items: top, note: top.length ? `${top.length} prioritised action${top.length > 1 ? "s" : ""}` : "No action items — every signal is clear. ✓" };
 }
 
+// ─── GEM 3 · ONBOARDING PATH ──────────────────────────────────────────────────
+// "To understand this repo fast, read files in this order." A heuristic (NOT a
+// curriculum): the most CONNECTED file (changes with the most others = the hub
+// everything touches) and the most ACTIVE file come first. Pure git facts —
+// coupling degree + churn — nothing invented, no LLM.
+export interface OnboardingStep {
+  file: string;
+  /** distinct files it historically changes with (coupling degree). */
+  connections: number;
+  /** times it changed in the analysed window. */
+  changes: number;
+  /** factual top author — who to ask about it. */
+  expert: string | null;
+  /** plain-language reason it's at this position. */
+  why: string;
+}
+
+export function buildOnboarding(report: unknown, max = 8): { steps: OnboardingStep[]; note: string } {
+  const r = (report && typeof report === "object" ? report : {}) as Record<string, unknown>;
+  const cp = (r["coupling"] || {}) as Record<string, unknown>;
+  const hs = (r["hotspots"] || {}) as Record<string, unknown>;
+
+  const deg = new Map<string, Set<string>>();
+  for (const p of arr(cp["pairs"])) { const a = str(p["a"]), b = str(p["b"]); if (!a || !b || a === b) continue; if (!deg.has(a)) deg.set(a, new Set()); if (!deg.has(b)) deg.set(b, new Set()); deg.get(a)!.add(b); deg.get(b)!.add(a); }
+  const churn = new Map<string, number>(), expert = new Map<string, string>();
+  for (const x of arr(hs["hotspots"])) { const f = str(x["file"]); if (!f) continue; churn.set(f, Math.max(churn.get(f) ?? 0, num(x["changes"]))); const e = str(x["expert"]); if (e) expert.set(f, e); }
+
+  const files = new Set<string>([...deg.keys(), ...churn.keys()]);
+  if (!files.size) return { steps: [], note: "not enough coupling/activity history to suggest a reading order" };
+  const maxChurn = Math.max(1, ...[...churn.values()]);
+  const scored = [...files].map((file) => {
+    const connections = deg.get(file)?.size ?? 0;
+    const changes = churn.get(file) ?? 0;
+    // hub-first: connectivity weighted above raw activity
+    const score = connections * 2 + (changes / maxChurn);
+    return { file, connections, changes, score };
+  });
+  scored.sort((a, b) => (b.score - a.score) || a.file.localeCompare(b.file));
+  const steps: OnboardingStep[] = scored.slice(0, max).map((s) => ({
+    file: s.file,
+    connections: s.connections,
+    changes: s.changes,
+    expert: expert.get(s.file) ?? null,
+    why: s.connections > 0
+      ? `the hub — changes with ${s.connections} other file${s.connections > 1 ? "s" : ""}, so it touches the most of the system`
+      : `one of the busiest files — ${s.changes} change${s.changes > 1 ? "s" : ""} in the window`,
+  }));
+  return { steps, note: `${steps.length}-step reading order (most-connected first)` };
+}
+
 // ─── gauntlet (the 100,000-case stress test) ─────────────────────────────────
 export interface IntelCheck { name: string; pass: boolean; detail: string }
 export interface IntelGauntlet { score: number; iterations: number; checks: IntelCheck[] }
@@ -158,7 +208,7 @@ function randomReport(rnd: () => number): unknown {
 
 export function intelGauntlet(iterations = 100_000): IntelGauntlet {
   const rnd = lcg(987654321);
-  let threw = 0, badSev = 0, badSrc = 0, badKs = 0;
+  let threw = 0, badSev = 0, badSrc = 0, badKs = 0, badOnb = 0;
   const SEV = new Set(["high", "med", "low"]);
   for (let i = 0; i < iterations; i++) {
     const rep = randomReport(rnd);
@@ -167,16 +217,19 @@ export function intelGauntlet(iterations = 100_000): IntelGauntlet {
       for (const it of plan.items) { if (!SEV.has(it.sev)) badSev++; if (!it.title || !it.source || typeof it.detail !== "string") badSrc++; }
       const { keystones } = buildKeystones(rep);
       for (const k of keystones) { if (!(k.ownerPct >= KEYSTONE_OWNER && k.ownerPct <= 1) || !Number.isFinite(k.score) || k.reach < 0 || typeof k.file !== "string" || !k.file) badKs++; }
+      const { steps } = buildOnboarding(rep);
+      for (const s of steps) { if (typeof s.file !== "string" || !s.file || s.connections < 0 || s.changes < 0 || !s.why) badOnb++; }
     } catch { threw++; }
   }
   const fixed = randomReport(lcg(2024));
-  const det = JSON.stringify(buildActionPlan(fixed)) === JSON.stringify(buildActionPlan(fixed)) && JSON.stringify(buildKeystones(fixed)) === JSON.stringify(buildKeystones(fixed));
+  const det = JSON.stringify(buildActionPlan(fixed)) === JSON.stringify(buildActionPlan(fixed)) && JSON.stringify(buildKeystones(fixed)) === JSON.stringify(buildKeystones(fixed)) && JSON.stringify(buildOnboarding(fixed)) === JSON.stringify(buildOnboarding(fixed));
   const checks: IntelCheck[] = [
     { name: "TOTAL", pass: threw === 0, detail: `0 throws over ${iterations.toLocaleString()} random reports (got ${threw})` },
     { name: "SEV-VALID", pass: badSev === 0, detail: `every action item severity ∈ {high,med,low} (violations ${badSev})` },
     { name: "TRACEABLE", pass: badSrc === 0, detail: `every action item has a title + source + detail (violations ${badSrc})` },
     { name: "KEYSTONE-SOUND", pass: badKs === 0, detail: `keystones: owner≥${KEYSTONE_OWNER}, finite score, named file (violations ${badKs})` },
-    { name: "DETERMINISTIC", pass: det, detail: "same report → byte-identical plan + keystones" },
+    { name: "ONBOARDING-SOUND", pass: badOnb === 0, detail: `onboarding steps: named file, non-negative metrics, a reason (violations ${badOnb})` },
+    { name: "DETERMINISTIC", pass: det, detail: "same report → byte-identical plan + keystones + onboarding" },
   ];
   const passed = checks.filter((c) => c.pass).length;
   return { score: Math.round((passed / checks.length) * 100), iterations, checks };
