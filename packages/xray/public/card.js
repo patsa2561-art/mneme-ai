@@ -235,6 +235,36 @@
     </div>`;
   }
 
+  // CONTEXT AIR QUALITY — mirrors packages/xray/src/airquality.ts buildAirQuality (tested + 100k).
+  // One breathability number: how clean is this codebase for an AI to work in.
+  function airQualityHTML(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+    const arrn = (x) => (Array.isArray(x) ? x : []);
+    const W = { secrets: 0.24, destructive: 0.16, ownership: 0.14, coupling: 0.2, deprot: 0.1, complexity: 0.16 };
+    const cl = (v) => Math.max(0, Math.min(1, v));
+    const sFind = num((r.secrets || {}).totalFindings), destr = arrn((r.security || {}).destructive).length;
+    const ownerPct = cl(num((r.busFactor || {}).singleOwnerFilePct) / 100);
+    const hidden = arrn((r.coupling || {}).pairs).filter((p) => !!(p && p.hidden)).length;
+    const dead = num(((r.deps || {}).byBand || {}).dead), morib = num(((r.deps || {}).byBand || {}).moribund);
+    const huge = arrn((r.complexity || {}).hotspots).filter((h) => num(h && h.bodyLines) >= 120).length;
+    const imp = { secrets: cl(sFind / 8), destructive: cl(destr / 3), ownership: ownerPct, coupling: cl(hidden / 8), deprot: cl((dead + morib * 0.5) / 8), complexity: cl(huge / 5) };
+    const pollution = Object.keys(W).reduce((s, k) => s + W[k] * imp[k], 0);
+    const score = Math.round(cl(1 - pollution) * 100);
+    const band = score >= 85 ? "Pristine" : score >= 70 ? "Good" : score >= 50 ? "Moderate" : score >= 30 ? "Unhealthy" : "Hazardous";
+    const col = score >= 85 ? "#16a34a" : score >= 70 ? "#65a30d" : score >= 50 ? "#d97706" : score >= 30 ? "#ea580c" : "#e11d48";
+    const lbl = { secrets: "Leaked secrets", destructive: "Destructive commands", ownership: "Knowledge concentration", coupling: "Hidden coupling", deprot: "Dependency rot", complexity: "Oversized functions" };
+    const det = { secrets: `${sFind} secret pattern(s)`, destructive: `${destr} destructive cmd(s)`, ownership: `${Math.round(ownerPct * 100)}% single-owner`, coupling: `${hidden} hidden link(s)`, deprot: `${dead} dead + ${morib} moribund`, complexity: `${huge} oversized fn(s)` };
+    const polls = Object.keys(W).map((k) => ({ k, impact: imp[k] })).filter((p) => p.impact > 0).sort((a, b) => b.impact - a.impact);
+    return `<div class="aq">
+      <div class="aqgauge"><div class="aqring" style="background:conic-gradient(${col} ${score * 3.6}deg,#eef0f2 0)"><div class="aqnum" style="color:${col}">${score}</div></div></div>
+      <div class="aqbody">
+        <div class="aqhead">🫁 Context Air Quality — <b style="color:${col}">${band}</b> <span class="aqof">/100</span></div>
+        <div class="aqsub">How clean this codebase is for an <b>AI to work in</b> — a weighted composite of measured signals. <i>Not a hallucination forecast.</i></div>
+        ${polls.length ? `<div class="aqpolls">${polls.slice(0, 4).map((p) => `<span class="aqpill" title="${esc(det[p.k])}"><i style="background:${p.impact >= 0.66 ? "#e11d48" : p.impact >= 0.33 ? "#d97706" : "#eab308"}"></i>${esc(lbl[p.k])}</span>`).join("")}</div>` : `<div class="aqclean">✓ no measured pollutants — clean air</div>`}
+      </div>
+    </div>`;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     g.__lastSigned = signed;   // stash for the "Verify signature" proof button
@@ -278,6 +308,7 @@
         ${vd.risks.length ? `<details class="vrisks"${vd.risks.length <= 6 ? " open" : ""}><summary>📋 ${vd.risks.length} flagged item${vd.risks.length > 1 ? "s" : ""} — exactly what &amp; where</summary>
           <div class="vrlist">${vd.risks.map((k) => `<div class="vr"><span class="vrg">${k.icon} ${k.g}</span><span class="vrt">${k.t}</span></div>`).join("")}</div></details>` : ""}
       </div>
+      ${airQualityHTML(r)}
       ${momentumHTML(r)}
       ${keystoneHTML(r)}
       ${riskMapHTML(r)}

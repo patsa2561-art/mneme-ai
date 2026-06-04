@@ -18,6 +18,7 @@ export { listRemoteBranches, remoteRef, reportDelta, trackerTick, trackGauntlet,
 export { TrackerHub, trackId, hubGauntlet, verifyWebhookSig, type SseSink, type BuildFn, type RefFn, type TrackRecord, type HistoryEntry } from "./tracker_server.js";
 export { buildRiskMap, buildBlastRadius, buildDeepBlast, riskMapGauntlet, MAP_W, MAP_H, MAP_CAP, type RiskMap, type RiskNode, type RiskEdge, type BlastTarget, type BlastPartner, type DeepBlast } from "./riskmap.js";
 export { buildKeystones, buildActionPlan, buildOnboarding, buildMomentum, intelGauntlet, KEYSTONE_OWNER, type Keystone, type ActionItem, type Sev, type OnboardingStep, type Momentum, type MomentumVerdict } from "./intel.js";
+export { buildAirQuality, airQualityGauntlet, type AirQuality, type AQBand, type Pollutant } from "./airquality.js";
 export { defaultFetcher, type MetaFetcher } from "./battery/deps.js";
 export { publishReport, type PublishResult } from "./publish.js";
 export { createXRayServer } from "./server.js";
