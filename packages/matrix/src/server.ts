@@ -107,7 +107,29 @@ export function buildImpl(cwd: string, touch: () => void = () => {}) {
     },
     // unary
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Health: (_call: any, cb: any) => { touch(); cb(null, { ok: true, version: version(), tools: toolMap.size, note: "Matrix Rail — 127.0.0.1, proof-carrying, chunked pipe" }); },
+    Health: (_call: any, cb: any) => { touch(); cb(null, { ok: true, version: version(), tools: toolMap.size, note: "Matrix Rail — 127.0.0.1, proof-carrying, chunked pipe, delta channel", trustless: true }); },
+    // CONTEXT STREAM (Phase 2) — the delta channel. Per channel_id, hold a doc;
+    // the opening snapshot sets the base, each op applies a splice + replies with a
+    // COMPACT ack (hash + sizes, never the whole doc). Byte-exact + measured saving.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ContextStream: (call: any) => {
+      touch();
+      const channels = new Map<string, matrix.ContextChannel>();
+      call.on("data", (m: { channel_id?: string; snapshot?: boolean; base?: string; op_json?: string }) => {
+        touch();
+        try {
+          const id = String(m.channel_id ?? "default");
+          if (m.snapshot) { channels.set(id, new matrix.ContextChannel(String(m.base ?? ""))); call.write({ ok: true, doc_hash: "", doc_len: String(m.base ?? "").length, delta_bytes: 0, error: "" }); return; }
+          const ch = channels.get(id);
+          if (!ch) { call.write({ ok: false, doc_hash: "", doc_len: 0, delta_bytes: 0, error: "no snapshot for channel — send snapshot:true first" }); return; }
+          const op = JSON.parse(String(m.op_json ?? "{}")) as matrix.SpliceOp;
+          const ack = ch.apply(op);
+          call.write({ ok: ack.ok, doc_hash: ack.docHash, doc_len: ack.docLen, delta_bytes: ack.deltaBytes, error: ack.error ?? "" });
+        } catch (e) { try { call.write({ ok: false, doc_hash: "", doc_len: 0, delta_bytes: 0, error: (e as Error).message }); } catch { /* */ } }
+      });
+      call.on("error", () => { try { call.end(); } catch { /* */ } });
+      call.on("end", () => { try { call.end(); } catch { /* */ } });
+    },
     // bidi stream: client streams request frames → reassemble → invoke → stream reply frames
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Pipe: (call: any) => {

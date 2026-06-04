@@ -156,6 +156,107 @@ export function decodeRequest(bytes: Uint8Array): MatrixRequest | null {
   } catch { return null; }
 }
 
+// ───────────────────── CONTEXT STREAM — the delta channel (Phase 2) ─────────────────────
+// "Send the DELTA, not the whole packet." A long edit/debug loop re-streams the
+// whole context every turn — the compounding token cost the rail is built to kill.
+// ContextStream holds the document on the server; the client streams tiny splice
+// ops, the server applies them + returns a COMPACT ack (a hash + sizes, never the
+// whole doc). Reconstruction is byte-exact (the ack hash == local hash) and the
+// byte saving vs re-sending the full doc each turn is MEASURED. Pure + total.
+
+/** A minimal, total text edit: delete `del` chars at `at`, insert `ins`. */
+export interface SpliceOp { at: number; del: number; ins: string }
+
+/** Apply one splice op to a document. Total — out-of-range is clamped, never throws. */
+export function applySplice(doc: string, op: SpliceOp): string {
+  const s = typeof doc === "string" ? doc : "";
+  const at = Math.max(0, Math.min(s.length, Math.floor(op?.at ?? 0)));
+  const del = Math.max(0, Math.min(s.length - at, Math.floor(op?.del ?? 0)));
+  const ins = typeof op?.ins === "string" ? op.ins : "";
+  return s.slice(0, at) + ins + s.slice(at + del);
+}
+
+export interface DeltaStreamResult {
+  finalDoc: string;
+  finalHash: string;      // sha256(finalDoc) — byte-exact reconstruction proof
+  steps: number;
+  deltaBytes: number;     // bytes actually sent (sum of op JSON) — the channel cost
+  fullResendBytes: number; // bytes if you re-sent the WHOLE doc after each op — the naive cost
+  savedPct: number;       // 1 - deltaBytes/fullResendBytes (0..1)
+  hashes: string[];       // per-step doc hash (the compact acks the server returns)
+}
+
+/** Replay a base doc + a sequence of splice ops; measure delta-vs-full-resend. */
+export function deltaStream(base: string, ops: SpliceOp[]): DeltaStreamResult {
+  let doc = typeof base === "string" ? base : "";
+  let deltaBytes = enc.encode(JSON.stringify({ snapshot: doc })).length; // initial snapshot is sent once
+  let fullResendBytes = 0;
+  const hashes: string[] = [];
+  for (const op of ops ?? []) {
+    deltaBytes += enc.encode(JSON.stringify(op)).length;   // we send only the op
+    doc = applySplice(doc, op);
+    fullResendBytes += enc.encode(doc).length;              // naive loop re-sends the whole doc
+    hashes.push(sha256(enc.encode(doc)));
+  }
+  const finalHash = sha256(enc.encode(doc));
+  const savedPct = fullResendBytes > 0 ? Math.max(0, 1 - deltaBytes / fullResendBytes) : 0;
+  return { finalDoc: doc, finalHash, steps: (ops ?? []).length, deltaBytes, fullResendBytes, savedPct, hashes };
+}
+
+/** A stateful server-side channel: holds the doc, applies ops, returns compact acks. */
+export interface DeltaAck { ok: boolean; docHash: string; docLen: number; deltaBytes: number; error?: string }
+export class ContextChannel {
+  private doc = "";
+  private sent = 0;
+  constructor(base = "") { this.doc = typeof base === "string" ? base : ""; this.sent = enc.encode(JSON.stringify({ snapshot: this.doc })).length; }
+  /** Apply one op; return a COMPACT ack (hash + sizes) — never the whole doc. */
+  apply(op: SpliceOp): DeltaAck {
+    try {
+      const opBytes = enc.encode(JSON.stringify(op)).length;
+      this.sent += opBytes;
+      this.doc = applySplice(this.doc, op);
+      return { ok: true, docHash: sha256(enc.encode(this.doc)), docLen: this.doc.length, deltaBytes: opBytes };
+    } catch (e) { return { ok: false, docHash: "", docLen: this.doc.length, deltaBytes: 0, error: (e as Error).message }; }
+  }
+  snapshot(): string { return this.doc; }
+  bytesSent(): number { return this.sent; }
+}
+
+export interface DeltaGauntlet { score: number; savedPct: number; byteExact: boolean; checks: Array<{ name: string; pass: boolean; detail: string }> }
+
+/** Prove the delta channel: byte-exact reconstruction + a real, measured saving on
+ *  a realistic loop (many small edits on a large doc). Pure + deterministic. */
+export function deltaGauntlet(): DeltaGauntlet {
+  const checks: Array<{ name: string; pass: boolean; detail: string }> = [];
+  // a 40KB doc, then 60 small edits (a realistic debug/edit loop)
+  const base = "function x(){\n" + "  const a = 1;\n".repeat(3000) + "}\n";
+  const ops: SpliceOp[] = [];
+  for (let i = 0; i < 60; i++) ops.push({ at: (i * 53) % base.length, del: i % 3, ins: `/*e${i}*/` });
+  const r = deltaStream(base, ops);
+
+  // 1) byte-exact reconstruction via the stateful channel (server's view) == replay
+  const ch = new ContextChannel(base);
+  let lastAck = "";
+  for (const op of ops) lastAck = ch.apply(op).docHash;
+  const byteExact = ch.snapshot() === r.finalDoc && lastAck === r.finalHash;
+  checks.push({ name: "BYTE-EXACT", pass: byteExact, detail: "stateful channel reconstructs the same doc + final hash as the pure replay" });
+
+  // 2) a real, measured saving (delta stream << re-sending the full doc each turn)
+  checks.push({ name: "MEASURED-SAVING", pass: r.savedPct > 0.9, detail: `delta ${r.deltaBytes}B vs full-resend ${r.fullResendBytes}B → saved ${(r.savedPct * 100).toFixed(1)}%` });
+
+  // 3) compact acks — each ack is tiny (a hash + 2 ints), never the whole doc
+  const ackBytes = enc.encode(JSON.stringify({ ok: true, docHash: r.finalHash, docLen: r.finalDoc.length, deltaBytes: 7 })).length;
+  checks.push({ name: "COMPACT-ACK", pass: ackBytes < r.finalDoc.length, detail: `ack ${ackBytes}B ≪ doc ${r.finalDoc.length}B` });
+
+  // 4) total — out-of-range / garbage ops never throw
+  let total = true;
+  try { applySplice("", { at: 999, del: 999, ins: "x" }); applySplice("abc", { at: -5, del: -2, ins: "" } as SpliceOp); deltaStream("", []); } catch { total = false; }
+  checks.push({ name: "TOTAL", pass: total, detail: "out-of-range / empty ops are clamped, never throw" });
+
+  const passed = checks.filter((c) => c.pass).length;
+  return { score: Math.round((passed / checks.length) * 100), savedPct: r.savedPct, byteExact, checks };
+}
+
 // ─────────────────────────── falsifiable proof ───────────────────────────
 
 export interface MatrixGauntlet {

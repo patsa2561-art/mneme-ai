@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
-import { chunkFrame, reassemble, pipeRoundTrip, wireSize, decodeRequest, matrixGauntlet, type Frame } from "./index.js";
+import { chunkFrame, reassemble, pipeRoundTrip, wireSize, decodeRequest, matrixGauntlet, applySplice, deltaStream, ContextChannel, deltaGauntlet, type Frame } from "./index.js";
 
 const enc = new TextEncoder();
 function entropy(n: number, seed = 1): Uint8Array {
@@ -16,6 +16,26 @@ describe("MATRIX RAIL — the pipe core", () => {
     expect(g.pipe.passed).toBe(g.pipe.cases);
     expect(g.corruption.caught).toBe(g.corruption.cases);
     expect(g.ab.savedPct).toBeGreaterThan(0);
+  });
+
+  it("CONTEXT STREAM (delta channel) — gauntlet 100, byte-exact + measured saving", () => {
+    const g = deltaGauntlet();
+    expect(g.score).toBe(100);
+    expect(g.byteExact).toBe(true);
+    expect(g.savedPct).toBeGreaterThan(0.9);
+    expect(g.checks.every((c) => c.pass)).toBe(true);
+  });
+
+  it("applySplice is total (out-of-range clamped) + deltaStream reconstructs byte-exact", () => {
+    expect(applySplice("hello", { at: 0, del: 1, ins: "H" })).toBe("Hello");
+    expect(applySplice("", { at: 999, del: 999, ins: "x" })).toBe("x");
+    const ops = [{ at: 0, del: 0, ins: "A" }, { at: 1, del: 0, ins: "B" }, { at: 0, del: 1, ins: "" }];
+    const r = deltaStream("z", ops);
+    // stateful channel must match the pure replay byte-for-byte
+    const ch = new ContextChannel("z"); let last = "";
+    for (const op of ops) last = ch.apply(op).docHash;
+    expect(ch.snapshot()).toBe(r.finalDoc);
+    expect(last).toBe(r.finalHash);
   });
 
   it("ANY payload round-trips byte-identical (0B, 1B, 5MB, binary, unicode)", () => {

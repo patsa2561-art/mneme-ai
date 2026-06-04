@@ -127,9 +127,19 @@ discipline as `membraneGauntlet`/`trustlessGauntlet` (=100, measured).
   `buildToolMap` (all ~1,038 tools, zero new logic), proof-carrying; `Pipe` (bidi, chunked) flows
   any-size data past the 4MB cap. `grpcGauntlet`=100 LIVE: 5MB+ round-trips byte-identical. CLI
   `mneme matrix serve` / `wire-test`. Fail-open (optional package; MCP/CLI never depend on it). ✅
-- **Phase 2:** `ContextStream` bidi delta channel (carry `mneme channel`) + treasury metering.
-- **Phase 3:** language quickstarts (Python/Go/Rust gRPC clients) so any-vendor agents connect.
-- **Phase 4:** the membrane/trustless proofs default-on over the rail.
+- **Phase 2 — ContextStream delta channel (v2.172):** a bidi RPC that holds the doc
+  server-side; the client opens with a snapshot then streams tiny **splice ops**, and gets a
+  **COMPACT ack** per op (hash + sizes, never the whole doc) — "send the delta, not the packet".
+  Core `deltaStream`/`ContextChannel`; `deltaGauntlet`=100 — **byte-exact reconstruction +
+  measured >90% byte saving** on a realistic edit loop; live test asserts the server's final
+  doc hash == local replay. ✅
+- **Phase 3 — language quickstarts (v2.172):** runnable Python / Go / Rust gRPC clients in
+  [`packages/matrix/examples/`](../packages/matrix/examples/) (Health · Invoke · ContextStream),
+  + a **proto-contract test** that pins the service/methods/fields the quickstarts target so a
+  breaking proto change fails CI. ✅
+- **Phase 4 — proofs default-on (v2.172):** every `Invoke` reply carries an Ed25519 `_proof`;
+  `Health` advertises `trustless: true`; the client's `verifyReply` checks it **offline** (a
+  genuine reply verifies, a tampered one is rejected). ✅
 
 ---
 
