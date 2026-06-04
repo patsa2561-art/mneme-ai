@@ -67,7 +67,10 @@ RestartSec=3
 WantedBy=multi-user.target
 UNIT
 systemctl daemon-reload
-systemctl enable --now mneme-xray
+# enable for boot, then RESTART unconditionally — `enable --now` does NOT restart an
+# already-running service, so a redeploy would keep serving the OLD in-memory code.
+systemctl enable mneme-xray >/dev/null 2>&1 || true
+systemctl restart mneme-xray
 
 # Caddy — APPEND one sentinel-wrapped block (idempotent); never edits existing blocks
 f=/etc/caddy/Caddyfile

@@ -104,15 +104,19 @@ jobs:
           # failure (and, if NPM_TOKEN were set, a spurious deprecate of a GOOD
           # release). A real break still fails after the retries.
           INSTALLED="(failed)"
-          for ATTEMPT in 1 2 3 4 5; do
-            npm install -g "mneme-ai@$TARGET" --omit=optional --loglevel=error || { echo "install attempt $ATTEMPT failed, retrying…"; sleep 20; continue; }
+          # 8 attempts × 30s ≈ 4 min of CDN-replication tolerance (was 5×20s ≈ 1.7 min):
+          # a fresh publish occasionally takes >2 min to replicate to the install
+          # endpoint, which produced FALSE smoke failures even though @latest already
+          # resolved. A genuine break still fails after the wider window.
+          for ATTEMPT in 1 2 3 4 5 6 7 8; do
+            npm install -g "mneme-ai@$TARGET" --omit=optional --loglevel=error || { echo "install attempt $ATTEMPT failed, retrying…"; sleep 30; continue; }
             INSTALLED=$(mneme --version 2>&1 || echo "(failed)")
             echo "attempt $ATTEMPT — installed version: $INSTALLED"
             if echo "$INSTALLED" | grep -q "$TARGET"; then echo "✓ version matches"; break; fi
-            echo "version mismatch (got '$INSTALLED', want '$TARGET') — retrying…"; sleep 20
+            echo "version mismatch (got '$INSTALLED', want '$TARGET') — retrying…"; sleep 30
           done
           if ! echo "$INSTALLED" | grep -q "$TARGET"; then
-            echo "::error::mneme --version reported '$INSTALLED' but expected '$TARGET' after 5 attempts"
+            echo "::error::mneme --version reported '$INSTALLED' but expected '$TARGET' after 8 attempts"
             exit 1
           fi
 
@@ -132,13 +136,20 @@ jobs:
         shell: bash
         run: |
           set -e
-          # The verify CLI must run + return a verdict (any verdict) without throwing
-          OUT=$(mneme verify "smoke claim from post-publish CI" --json 2>&1 || echo "FAIL")
-          echo "$OUT" | head -5
-          if echo "$OUT" | grep -q "FAIL"; then
-            echo "::error::mneme verify smoke claim crashed"
+          # The verify CLI must run + return a verdict (any verdict) without throwing.
+          # NOTE: assert on the EXIT CODE + JSON validity — NOT a grep for "FAIL"
+          # (a legitimate verdict/explanation can contain the word "fail", which the
+          # old `grep -q FAIL` flagged as a crash → false smoke failure).
+          if ! OUT=$(mneme verify "smoke claim from post-publish CI" --json 2>&1); then
+            echo "$OUT" | head -5
+            echo "::error::mneme verify exited non-zero"
             exit 1
           fi
+          echo "$OUT" | head -5
+          echo "$OUT" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const v=JSON.parse(s);if(!v||typeof v.verdict!=='string')process.exit(1)})" || {
+            echo "::error::mneme verify did not return a JSON verdict"
+            exit 1
+          }
 
       - name: Smoke 3 — preinstall trail recorded
         shell: bash
