@@ -167,6 +167,30 @@
     </div>`;
   }
 
+  // KEYSTONE RISK — mirrors packages/xray/src/intel.ts buildKeystones (tested + 100k).
+  // The novel composite no SonarQube/Snyk computes: a file whose change RIPPLES widely
+  // (temporal coupling) AND is written almost entirely by one author. Both are git facts.
+  function keystoneHTML(r) {
+    const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0), strv = (x) => (typeof x === "string" ? x : "");
+    const baseN = (f) => { const p = String(f).split("/"); return p[p.length - 1] || f; };
+    const pairs = ((r.coupling || {}).pairs) || []; const adj = new Map();
+    const add = (f, t, c) => { if (!f || !t || f === t) return; if (!adj.has(f)) adj.set(f, { reach: 0, parts: new Set() }); const o = adj.get(f); o.reach += Math.min(1, Math.max(0, c)); o.parts.add(t); };
+    pairs.forEach((p) => { const a = strv(p && p.a), b = strv(p && p.b); if (!a || !b) return; const c = num(p.confidence); add(a, b, c); add(b, a, c); });
+    const owner = new Map(); (((r.busFactor || {}).fragileFiles) || []).forEach((x) => { const f = strv(x && x.file); if (f) owner.set(f, Math.max(owner.get(f) || 0, Math.min(1, Math.max(0, num(x.topAuthorShare))))); });
+    const expert = new Map(); (((r.hotspots || {}).hotspots) || []).forEach((x) => { const f = strv(x && x.file), e = strv(x && x.expert); if (f && e) expert.set(f, e); });
+    let ks = [...adj.entries()].map(([file, o]) => ({ file, reach: o.reach, partners: o.parts.size, ownerPct: owner.get(file) || 0, expert: expert.get(file) || null })).filter((k) => k.ownerPct >= 0.6);
+    ks.forEach((k) => { k.score = k.reach * k.ownerPct; });
+    ks.sort((a, b) => b.score - a.score || b.reach - a.reach || a.file.localeCompare(b.file));
+    ks = ks.slice(0, 3);
+    if (!ks.length) return "";
+    return `<div class="keystone">
+      <div class="kshead">🔑 Keystone risk — <b>your single points of catastrophe</b></div>
+      <div class="kssub">Files that <b>ripple widely</b> when changed <b>and</b> are written almost entirely by <b>one person</b>. If that person is away, a wide blast radius has no second expert. Change-coupling × authorship — both measured from git, nothing invented.</div>
+      ${ks.map((k) => `<div class="ksrow"><span class="ksf">${esc(baseN(k.file))}</span><span class="ksmeta">ripples to <b>${k.partners}</b> file${k.partners > 1 ? "s" : ""} · <b>${Math.round(k.ownerPct * 100)}%</b> one author${k.expert ? ` · ask <b>${esc(k.expert)}</b>` : ""}</span></div>`).join("")}
+      <div class="ksact">→ Protect the top path first: document it and pair a second dev <b>before</b> the owner is unavailable.</div>
+    </div>`;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     g.__lastSigned = signed;   // stash for the "Verify signature" proof button
@@ -210,6 +234,7 @@
         ${vd.risks.length ? `<details class="vrisks"${vd.risks.length <= 6 ? " open" : ""}><summary>📋 ${vd.risks.length} flagged item${vd.risks.length > 1 ? "s" : ""} — exactly what &amp; where</summary>
           <div class="vrlist">${vd.risks.map((k) => `<div class="vr"><span class="vrg">${k.icon} ${k.g}</span><span class="vrt">${k.t}</span></div>`).join("")}</div></details>` : ""}
       </div>
+      ${keystoneHTML(r)}
       ${riskMapHTML(r)}
       ${blastRadiusHTML(r)}
       <div class="membrane">
@@ -231,7 +256,7 @@
         <div class="row">${kcell("Coupling")}<div class="v"><span class="muted">${(cp.pairs||[]).length} coupled pair(s) · hidden = cross-directory</span><div class="chips">${cpChips}</div></div></div>
         <div class="row">${kcell("Security")}<div class="v"><span class="big">${(secu.destructive||[]).length}</span> destructive cmd(s) · ${secu.commandsScanned||0} checked${secu.injectionFindings?` · ${secu.injectionFindings} doc injection`:""}<div class="chips">${secuChips}</div></div></div>
       </div>
-      <div class="foot">${verified}<span>fingerprint <code>${esc(String(r.fingerprint).slice(0, 28))}…</code></span></div>
+      <div class="foot${verified ? " foot-v" : ""}"${verified ? ' data-verify role="button" tabindex="0" title="Re-check this report\'s signature"' : ""}>${verified}<span class="footfp">fingerprint <code>${esc(String(r.fingerprint).slice(0, 20))}…</code></span>${verified ? `<span class="footgo">Tamper-proof — click to verify ↗</span>` : ""}</div>
       ${share}
     </div>`;
   }

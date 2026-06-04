@@ -268,22 +268,30 @@ function socialCardSvg(r: XRayReport): string {
   ];
   const sx = 92, sgap = 256;
   const statCells = stats.map((s, i) => `
-<text x="${sx + i * sgap}" y="424" font-family="Verdana,sans-serif" font-size="64" font-weight="bold" fill="#0a0a0a">${s.x}</text>
-<text x="${sx + i * sgap}" y="456" font-family="Verdana,sans-serif" font-size="22" fill="#8b8f98">${s.lbl}</text>`).join("");
+<text x="${sx + i * sgap}" y="406" font-family="Verdana,sans-serif" font-size="62" font-weight="bold" fill="#0a0a0a">${s.x}</text>
+<text x="${sx + i * sgap}" y="438" font-family="Verdana,sans-serif" font-size="22" fill="#8b8f98">${s.lbl}</text>`).join("");
+  const fp = xesc(clip(r.fingerprint, 18));
+  // A 3-ACT STORY no other code-tool's social card tells: ① our VERDICT → ② the
+  // EVIDENCE behind it → ③ the PROOF you can re-run yourself. Claim, then evidence,
+  // then proof. The fingerprint is a top-right watermark (no longer overlapping the
+  // footer — the bug in the previous card). Every string is width-clipped.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
 <defs><filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="${color}" flood-opacity="0.28"/></filter></defs>
 <rect width="1200" height="630" fill="#ffffff"/><rect x="0" y="0" width="1200" height="10" fill="${color}"/>
-<text x="92" y="118" font-family="Verdana,sans-serif" font-size="24" letter-spacing="5" fill="#9aa0aa">MNEME · REPO X-RAY</text>
-<rect x="92" y="150" width="128" height="128" rx="28" fill="${color}" filter="url(#sh)"/>
-<text x="156" y="246" font-family="Verdana,sans-serif" font-size="80" font-weight="bold" fill="#fff" text-anchor="middle">${xesc(r.summary.grade)}</text>
-<text x="248" y="222" font-family="Verdana,sans-serif" font-size="48" font-weight="bold" fill="#0a0a0a">${xesc(repo)}</text>
-<text x="248" y="264" font-family="Verdana,sans-serif" font-size="25" fill="#6b7280">${xesc(head)}</text>
-<line x1="92" y1="330" x2="1108" y2="330" stroke="#eef0f2" stroke-width="2"/>
+<text x="92" y="74" font-family="Verdana,sans-serif" font-size="22" letter-spacing="5" fill="#9aa0aa">MNEME · REPO X-RAY</text>
+<text x="1108" y="74" font-family="ui-monospace,Menlo,monospace" font-size="15" fill="#c8ccd3" text-anchor="end">${fp}…</text>
+<text x="92" y="118" font-family="Verdana,sans-serif" font-size="16" letter-spacing="3" fill="#b6bac2">① THE VERDICT</text>
+<rect x="92" y="138" width="112" height="112" rx="26" fill="${color}" filter="url(#sh)"/>
+<text x="148" y="226" font-family="Verdana,sans-serif" font-size="70" font-weight="bold" fill="#fff" text-anchor="middle">${xesc(r.summary.grade)}</text>
+<text x="232" y="196" font-family="Verdana,sans-serif" font-size="44" font-weight="bold" fill="#0a0a0a">${xesc(repo)}</text>
+<text x="232" y="236" font-family="Verdana,sans-serif" font-size="23" fill="#6b7280">${xesc(head)}</text>
+<text x="92" y="312" font-family="Verdana,sans-serif" font-size="16" letter-spacing="3" fill="#b6bac2">② THE EVIDENCE — measured from git, nothing invented</text>
+<line x1="92" y1="328" x2="1108" y2="328" stroke="#eef0f2" stroke-width="2"/>
 ${statCells}
-<line x1="92" y1="520" x2="1108" y2="520" stroke="#eef0f2" stroke-width="2"/>
-<text x="92" y="572" font-family="Verdana,sans-serif" font-size="22" fill="#16a34a">✓ deterministic · Ed25519-signed · verifiable offline</text>
-<text x="92" y="600" font-family="Verdana,sans-serif" font-size="18" fill="#aeb2ba">re-running this commit yields the identical fingerprint — no AI guessed any number</text>
-<text x="1108" y="600" font-family="ui-monospace,Menlo,monospace" font-size="16" fill="#c2c6cd" text-anchor="end">${xesc(clip(r.fingerprint, 24))}</text></svg>`;
+<line x1="92" y1="478" x2="1108" y2="478" stroke="#eef0f2" stroke-width="2"/>
+<text x="92" y="516" font-family="Verdana,sans-serif" font-size="16" letter-spacing="3" fill="#b6bac2">③ THE PROOF — you don't have to trust us</text>
+<text x="92" y="558" font-family="Verdana,sans-serif" font-size="24" font-weight="bold" fill="#16a34a">✓ deterministic · Ed25519-signed · verifiable offline</text>
+<text x="92" y="592" font-family="Verdana,sans-serif" font-size="19" fill="#9aa0aa">Re-run this commit → the identical fingerprint. No AI guessed any number.</text></svg>`;
 }
 
 /** latest stored report fingerprint for a repo slug like "github/owner/repo". */
