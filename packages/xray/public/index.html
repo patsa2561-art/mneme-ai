@@ -93,21 +93,18 @@
   .riskmap{padding:18px 30px;border-bottom:1px solid #eef0f2;background:linear-gradient(180deg,#fcfcfd,#fff)}
   .riskmap .rmhead{font-size:14.5px;color:#0b0b0f}
   .riskmap .rmsub{font-size:11.5px;color:#8b8f98;margin:4px 0 10px;line-height:1.5}
-  .riskmap .rmsvg{width:100%;height:auto;display:block;border:1px solid #f0f1f3;border-radius:12px;background:radial-gradient(120% 120% at 50% 30%,#fbfbfe,#fff)}
-  .riskmap .rmleg{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:11.5px;color:#5b6068}
+  .riskmap .rmbars{display:flex;flex-direction:column;gap:7px;margin:2px 0 4px}
+  .riskmap .rmbar{display:flex;align-items:center;gap:10px;font-size:12.5px}
+  .riskmap .rmbf{flex:0 0 38%;max-width:38%;font-family:ui-monospace,Menlo,monospace;color:#0b0b0f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .riskmap .rmtrack{flex:1;height:14px;background:#f1f2f4;border-radius:8px;overflow:hidden}
+  .riskmap .rmfill{display:block;height:100%;border-radius:8px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .riskmap .rmval{flex:0 0 40px;text-align:right;font-weight:680;font-variant-numeric:tabular-nums}
+  .riskmap .rmcouple{flex:0 0 30px;font-size:11px;color:#7c83f6;font-weight:600}
+  @media (max-width:560px){.riskmap .rmbf{flex-basis:46%;max-width:46%}}
+  .riskmap .rmleg{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:11.5px;color:#5b6068}
   .riskmap .rmleg span{display:inline-flex;align-items:center;gap:6px}
   .riskmap .rmleg i{width:11px;height:11px;border-radius:50%;display:inline-block}
-  .riskmap .rmleg i.dash{width:18px;height:0;border-radius:0;border-top:2px dashed #e11d48}
   .riskmap .rmsummary{margin-left:auto;color:#8b8f98}
-  .riskmap .rmsvgwrap{position:relative;cursor:zoom-in}
-  .riskmap .rmexpand{position:absolute;top:10px;right:12px;font-size:11px;color:#5b6068;background:#fff;border:1px solid #ececef;border-radius:8px;padding:3px 9px;opacity:.85}
-  .riskmap .rmlist{margin-top:14px;border-top:1px solid #eef0f2;padding-top:12px}
-  .riskmap .rmlt{font-size:12.5px;font-weight:680;color:#be123c;margin-bottom:8px}
-  .riskmap .rmok{color:#15803d;font-weight:560;font-size:13px;border:0;padding-top:0}
-  .riskmap .rmli{display:flex;align-items:baseline;gap:9px;padding:6px 0;font-size:13px;flex-wrap:wrap}
-  .riskmap .rmdot{width:10px;height:10px;border-radius:50%;flex-shrink:0;align-self:center}
-  .riskmap .rmli b{color:#0b0b0f;font-family:ui-monospace,Menlo,monospace}
-  .riskmap .rmwhy{color:#5b6068}
   .rmmodal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(11,11,20,.62);align-items:center;justify-content:center;padding:16px}
   .rmmodal-box{background:#fff;border-radius:16px;max-width:1100px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 24px 80px rgba(0,0,0,.4)}
   .rmmodal-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #eef0f2;font-size:13px;color:#5b6068;position:sticky;top:0;background:#fff}

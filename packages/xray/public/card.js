@@ -110,41 +110,41 @@
   // of truth). Every node/edge is verbatim from the signed report; nothing invented.
   function mix(a, b, t) { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join(""); }
   const riskColor = (t) => (t < 0.5 ? mix("#16a34a", "#d97706", t / 0.5) : mix("#d97706", "#e11d48", (t - 0.5) / 0.5));
+  // RISK MAP — a ranked KEY-PERSON-RISK bar chart (NOT a bubble cloud). Instantly
+  // readable: one row per file, bar length = single-author share (risk if they leave),
+  // colour by severity, worst on top, a "↔N" badge for how many files it's coupled to.
+  // Every value verbatim from the signed report — no AI guessed it, nothing overlaps.
   function riskMapHTML(r) {
     const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0), strv = (x) => (typeof x === "string" ? x : "");
-    const bf = r.busFactor || {}, hs = r.hotspots || {}, cx = r.complexity || {}, cp = r.coupling || {};
-    const W = 960, H = 520, CAP = 22, PAD = 64, byFile = new Map();
-    const nodeR = (size) => 17 + Math.min(1, Math.max(0, size)) * 30;
-    const touch = (f) => { f = strv(f); if (!f) return null; if (!byFile.has(f)) byFile.set(f, { o: 0, c: 0, l: 0 }); return byFile.get(f); };
-    (bf.fragileFiles || []).forEach((x) => { const n = touch(x && x.file); if (n) n.o = Math.max(n.o, Math.min(1, Math.max(0, num(x.topAuthorShare)))); });
-    (hs.hotspots || []).forEach((x) => { const n = touch(x && x.file); if (n) { n.c = Math.max(n.c, num(x.changes)); n.l = Math.max(n.l, num(x.loc)); } });
-    (cx.hotspots || []).forEach((x) => { const n = touch(x && x.file); if (n) n.l = Math.max(n.l, num(x.bodyLines)); });
-    const pairs = cp.pairs || []; pairs.forEach((p) => { touch(p && p.a); touch(p && p.b); });
-    if (!byFile.size) return "";
-    const mc = Math.max(1, ...[...byFile.values()].map((v) => v.c)), ml = Math.max(1, ...[...byFile.values()].map((v) => v.l));
-    let es = [...byFile.entries()].map(([file, v]) => ({ file, risk: Math.min(1, Math.max(0, v.o)), size: Math.min(1, Math.max(v.c / mc, v.l / ml)), ownerPct: v.o, churn: v.c }));
-    es.sort((a, b) => (b.risk - a.risk) || (b.size - a.size) || a.file.localeCompare(b.file));
-    es = es.slice(0, CAP);
-    const idx = new Map(es.map((e, i) => [e.file, i]));
-    const cxC = W / 2, cyC = H / 2, GOLD = 2.399963229728653, RX = W / 2 - PAD, RY = H / 2 - PAD, N = es.length;
-    const nodes = es.map((e, i) => { const frac = N <= 1 ? 0 : Math.sqrt((i + 0.5) / N), ang = i * GOLD; return { ...e, i, r: nodeR(e.size), x: Math.min(W - PAD, Math.max(PAD, cxC + RX * frac * Math.cos(ang))), y: Math.min(H - PAD, Math.max(PAD, cyC + RY * frac * Math.sin(ang))) }; });
-    const base = (f) => { const p = String(f).split("/"); return p[p.length - 1]; };
-    const edges = [];
-    pairs.forEach((p) => { const a = idx.get(strv(p && p.a)), b = idx.get(strv(p && p.b)); if (a === undefined || b === undefined || a === b) return; edges.push({ a, b, w: Math.min(1, Math.max(0, num(p.confidence))), hidden: !!(p && p.hidden) }); });
-    const edgeSvg = edges.map((e) => { const A = nodes[e.a], B = nodes[e.b], mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2 - 30; return `<path d="M${A.x.toFixed(1)} ${A.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${B.x.toFixed(1)} ${B.y.toFixed(1)}" fill="none" stroke="${e.hidden ? "#e11d48" : "#7c83f6"}" stroke-width="${(1 + e.w * 2.6).toFixed(2)}" stroke-opacity="${(0.22 + e.w * 0.5).toFixed(2)}" stroke-linecap="round"${e.hidden ? ' stroke-dasharray="6 5"' : ""}/>`; }).join("");
-    // glossy spheres: soft glow + body + top-left highlight + white rim
-    const nodeSvg = nodes.map((n) => { const R = n.r, col = riskColor(n.risk), showLabel = n.i < 9 || n.risk >= 0.65; const lbl = esc(base(n.file)).slice(0, 24) + (n.ownerPct >= 0.5 ? ` · ${Math.round(n.ownerPct * 100)}%` : ""); const lw = lbl.length * 6.4 + 14, ly = n.y + R + 7;
-      return `<g><circle cx="${n.x}" cy="${n.y}" r="${(R + 11).toFixed(1)}" fill="${col}" opacity="0.12"/><circle cx="${n.x}" cy="${n.y}" r="${R.toFixed(1)}" fill="${col}" opacity="0.95"/><circle cx="${(n.x - R * 0.3).toFixed(1)}" cy="${(n.y - R * 0.32).toFixed(1)}" r="${(R * 0.52).toFixed(1)}" fill="#ffffff" opacity="0.22"/><circle cx="${n.x}" cy="${n.y}" r="${R.toFixed(1)}" fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.7"/>${showLabel ? `<g><rect x="${(n.x - lw / 2).toFixed(1)}" y="${ly.toFixed(1)}" width="${lw.toFixed(1)}" height="19" rx="9.5" fill="#ffffff" opacity="0.92" stroke="#ececef"/><text x="${n.x}" y="${(ly + 13).toFixed(1)}" text-anchor="middle" font-size="11.5" fill="#33333b" font-family="ui-monospace,Menlo,monospace">${lbl}</text></g>` : ""}</g>`; }).join("");
-    const owned = nodes.filter((n) => n.risk >= 0.6).length;
-    // TOP key-person risks as WORDS (the part a CEO/dev reads) — concrete + actionable
-    const topRisk = nodes.filter((n) => n.risk >= 0.5).slice(0, 6);
-    const riskList = topRisk.length ? `<div class="rmlist"><div class="rmlt">⚠️ Top key-person risks — fix these first</div>${topRisk.map((n) => `<div class="rmli"><span class="rmdot" style="background:${riskColor(n.risk)}"></span><b>${esc(base(n.file))}</b><span class="rmwhy">one author owns <b>${Math.round(n.ownerPct * 100)}%</b> of its history — add a reviewer / write docs before they leave</span></div>`).join("")}</div>` : `<div class="rmlist rmok">✓ No single-owner files — knowledge is well spread across the team.</div>`;
+    const bf = r.busFactor || {}, hs = r.hotspots || {}, cp = r.coupling || {};
+    const base = (f) => { const p = String(f).split("/"); return p[p.length - 1] || f; };
+    // coupling degree per file (how many distinct files it changes with)
+    const deg = new Map();
+    (cp.pairs || []).forEach((p) => { const a = strv(p && p.a), b = strv(p && p.b); if (!a || !b || a === b) return; if (!deg.has(a)) deg.set(a, new Set()); if (!deg.has(b)) deg.set(b, new Set()); deg.get(a).add(b); deg.get(b).add(a); });
+    const churn = new Map(); (hs.hotspots || []).forEach((x) => { const f = strv(x && x.file); if (f) churn.set(f, Math.max(churn.get(f) || 0, num(x.changes))); });
+    // the key-person list = files with a measured single-author share, worst-first
+    let files = (bf.fragileFiles || []).map((x) => ({ file: strv(x && x.file), pct: Math.min(1, Math.max(0, num(x.topAuthorShare))), commits: num(x && x.commits) })).filter((x) => x.file);
+    files.sort((a, b) => (b.pct - a.pct) || (b.commits - a.commits) || a.file.localeCompare(b.file));
+    files = files.slice(0, 12);
+    if (!files.length) return `<div class="riskmap"><div class="rmhead">🔑 Key-person risk</div><div class="rmsub">✓ No single-owner files — knowledge is well spread across the team. Nobody is a single point of failure.</div></div>`;
+    const sevColor = (p) => (p >= 0.9 ? "#e11d48" : p >= 0.75 ? "#f97316" : p >= 0.6 ? "#eab308" : "#22c55e");
+    const sevWord = (p) => (p >= 0.9 ? "critical" : p >= 0.75 ? "high" : p >= 0.6 ? "watch" : "ok");
+    const critical = files.filter((f) => f.pct >= 0.9).length;
+    const rows = files.map((f) => {
+      const c = deg.has(f.file) ? deg.get(f.file).size : 0;
+      const col = sevColor(f.pct), pctN = Math.round(f.pct * 100);
+      return `<div class="rmbar" title="${esc(f.file)} — ${pctN}% by one author${c ? `, coupled to ${c} file(s)` : ""}">
+        <span class="rmbf">${esc(base(f.file))}</span>
+        <span class="rmtrack"><span class="rmfill" style="width:${pctN}%;background:${col}"></span></span>
+        <span class="rmval" style="color:${col}">${pctN}%</span>
+        <span class="rmcouple">${c ? `↔${c}` : ""}</span>
+      </div>`;
+    }).join("");
     return `<div class="riskmap">
-      <div class="rmhead">🗺 Risk map — <b>who holds the keys, and what breaks if they leave</b></div>
-      <div class="rmsub"><b>How to read:</b> each circle is a file · <b>red</b> = only one person knows it (key-person risk) · <b>bigger</b> = changes more often · <b>lines</b> = files that always change together. Click the map to enlarge. Every value is verbatim from the signed report — no AI guessed it.</div>
-      <div class="rmsvgwrap rmzoom" title="click to enlarge"><svg class="rmsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="repository risk map">${edgeSvg}${nodeSvg}</svg><span class="rmexpand">⤢ enlarge</span></div>
-      <div class="rmleg"><span><i style="background:#16a34a"></i>shared / safe</span><span><i style="background:#d97706"></i>concentrated</span><span><i style="background:#e11d48"></i>single-owner</span><span><i class="dash"></i>hidden cross-dir coupling</span><span class="rmsummary">${nodes.length} files · ${edges.length} links${owned ? ` · <b style="color:#be123c">${owned} single-owner</b>` : ""}</span></div>
-      ${riskList}
+      <div class="rmhead">🔑 Key-person risk — <b>if one person is away, what's exposed</b></div>
+      <div class="rmsub">Each bar is a file. <b>Longer &amp; redder = more of it was written by a single person</b> — so it's riskier if they leave. <b>↔N</b> = it changes together with N other files. Worst on top. Measured from git history — nothing invented.</div>
+      <div class="rmbars">${rows}</div>
+      <div class="rmleg"><span><i style="background:#e11d48"></i>critical ≥90%</span><span><i style="background:#f97316"></i>high ≥75%</span><span><i style="background:#eab308"></i>watch ≥60%</span><span class="rmsummary">${files.length} owned file(s)${critical ? ` · <b style="color:#be123c">${critical} critical</b>` : ""}</span></div>
     </div>`;
   }
 
