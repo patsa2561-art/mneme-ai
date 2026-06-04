@@ -82,13 +82,14 @@
     <div class="card">
       <div class="top">
         <div class="grade ${gC(s.grade)}">${esc(s.grade)}</div>
-        <div><div class="repo">${esc(r.subject.repoName)}</div>
+        <div><div class="repo">${esc(r.subject.repoName)}${r.subject.branch ? ` <span class="repobr">@ ${esc(r.subject.branch)}</span>` : ""}</div>
+          ${r.subject.kind === "git-url" ? `<a class="repourl" href="${esc(r.subject.ref)}" target="_blank" rel="noopener">${esc(r.subject.ref)} ↗</a>` : `<div class="repourl">${esc(r.subject.ref)}</div>`}
           <div class="head">${esc(s.headline)} · ${s.signalsRun} signals · @ ${esc(String(r.subject.commitHash).slice(0, 10))}</div></div>
       </div>
       <div class="membrane">
         <div class="mp"><span class="mpk">① CAPABILITY</span><span class="mpv">${s.signalsRun} deterministic signals · ${(sec.filesScanned || 0).toLocaleString()} files scanned</span></div>
-        <div class="mp"><span class="mpk">② ACTIVATION</span><span class="mpv">${tri.length ? `${tri.length} signal(s) need attention` : `all signals clear`}</span></div>
-        <div class="mp"><span class="mpk">③ VALUE</span><span class="mpv"><span class="hdot"></span>0 numbers from AI · ${verified ? "signed, verifies offline" : "unsigned"}</span></div>
+        <div class="mp"><span class="mpk">② ATTENTION</span><span class="mpv">${tri.length ? `${tri.length} signal(s) need attention` : `all signals clear`}</span></div>
+        <div class="mp"><span class="mpk">③ HALLUCINATION</span><span class="mpv"><span class="hdot"></span><b>0</b> — every number from real git/code${verified ? ", signed" : ""}</span></div>
       </div>
       <div class="trustbar"><span class="htext"><b>Every figure is computed from git, code &amp; package metadata — not one guessed by an AI.</b> Re-run this commit → identical numbers${verified ? ` · <b>signed</b>, verifies offline with the embedded public key` : ""}.</span></div>
       ${tri.length ? `<div class="triage">

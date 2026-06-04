@@ -66,6 +66,9 @@
   .g-C{background:linear-gradient(135deg,#eaa83a,#c9821a)} .g-D{background:linear-gradient(135deg,#f0742e,#d4571a)}
   .g-F{background:linear-gradient(135deg,#f43f5e,#be123c)}
   .top .repo{font-size:22px;font-weight:640;letter-spacing:-.02em;color:var(--ink);word-break:break-all;line-height:1.2}
+  .top .repobr{font-size:13px;font-weight:600;color:var(--a);background:var(--a-soft);border-radius:6px;padding:1px 7px;vertical-align:middle}
+  .top .repourl{display:inline-block;font-size:12.5px;color:var(--a);text-decoration:none;margin-top:3px;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
+  .top .repourl:hover{text-decoration:underline}
   .top .head{color:var(--sub);font-size:14px;margin-top:4px}
   .trustbar{display:flex;align-items:center;gap:14px;padding:13px 30px;background:#f0fdf4;border-bottom:1px solid #dcfce7;flex-wrap:wrap}
   .hgauge{display:inline-flex;align-items:center;gap:8px;font-weight:680;color:#15803d;font-size:14px;white-space:nowrap}
@@ -202,7 +205,12 @@
   .track .tl{margin-top:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:ui-monospace,Menlo,monospace;font-size:12px}
   .track .tl .pill{padding:2px 8px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--ink2)}
   .track .tl .pill.deg{border-color:#fecdd6;color:var(--red)} .track .tl .pill.imp{border-color:#bbf7d0;color:var(--green)}
-  .track .thelp{margin-top:8px;font-size:12px;color:var(--sub)}
+  .track .thelp{margin-top:8px;font-size:12px;color:var(--sub);line-height:1.5}
+  .track .tfeat{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  @media(max-width:620px){.track .tfeat{grid-template-columns:1fr}}
+  .track .tf{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12px}
+  .track .tf b{display:block;font-size:12.5px;color:var(--ink);margin-bottom:3px}
+  .track .tf span{color:var(--sub);line-height:1.45}
   footer{padding:40px 0 70px;text-align:center;color:#aab0b8;font-size:13px}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid currentColor;border-top-color:transparent;
     border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px;opacity:.9}
@@ -292,10 +300,10 @@
       <span><b>X-Ray</b> — instant health report: dependencies, secrets, risk &amp; who-to-ask.</span>
       <span><b>📦 AI Pack</b> — bundle the whole repo into one text to paste into any AI chat.</span>
     </div>
-    <p class="hint">Every number is <b>reproducible</b> from git, code &amp; package metadata and sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private folder? run <code>npx @mneme-ai/xray bridge</code> and Browse below.</span></p>
+    <p class="hint">Every number is <b>reproducible</b> from git, code &amp; package metadata and sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private repo or a local folder with no public URL? Run <code>npx @mneme-ai/xray bridge</code> on your machine — a <b>Scan a local folder</b> box appears here + your code never leaves your computer.</span></p>
     <details class="keybox">
       <summary>🔖 Optional — save your reports</summary>
-      <div class="keyhelp">A “key” is simply a password you make up (no sign-up). Use the same one any time to find your reports under <b>My repos</b>.</div>
+      <div class="keyhelp">A “key” is just a password you make up (no sign-up). <b>How it works:</b> ① type a key + Save · ② X-Ray any repo above — it's filed under your key automatically · ③ open <b>My repos</b> below to find it anytime, on any device with the same key.</div>
       <div class="keyrow">
         <input id="key" placeholder="make up a password — e.g. my-secret-123" autocomplete="off" />
         <button id="savekey" type="button">Save</button>
@@ -317,9 +325,9 @@
     <p class="err" id="err" style="display:none"></p>
   </header>
 
-  <div id="track" class="track" style="display:none"></div>
   <div id="out"></div>
   <div id="packout"></div>
+  <div id="track" class="track" style="display:none"></div>
 
   <div class="board">
     <div class="tabs"><button id="tabBoard" class="tab on">Recently X-rayed</button><button id="tabMine" class="tab" style="display:none">My repos</button></div>
@@ -351,7 +359,12 @@ function mountTracking(r){
   const gitUrl = r.subject.ref;
   panel.style.display="block";
   panel.innerHTML = `<div class="thead"><span class="ticon">🛰</span><b>Live tracking</b><span class="tnew">new</span></div>
-  <div class="thelp">Turn this one-shot X-Ray into an autonomous monitor. Pick a branch — when you, your team, or an AI pushes to it, this report <b>updates itself</b>. No re-click.</div>
+  <div class="thelp">Turn this one-shot X-Ray into an <b>AI Auditor for your team</b>. Pick a branch and press Track live — when you, a teammate, or an AI pushes, this report <b>re-scans itself</b> and shows what changed. No re-click.</div>
+  <div class="tfeat">
+    <div class="tf"><b>🛡 AI Code Drift</b><span>a new pushed secret, a destructive CI command, a grade drop — flagged the moment it lands</span></div>
+    <div class="tf"><b>🔁 Continuous audit</b><span>re-checked on every push (or every 30s) — 24/7, no one has to click</span></div>
+    <div class="tf"><b>🕰 Time-Machine</b><span>a timeline of how code-health drifted, commit by commit</span></div>
+  </div>
   <div class="trow">
     <span class="tlabel">Branch</span>
     <select id="tbranch"><option value="">loading branches…</option></select>
@@ -359,7 +372,8 @@ function mountTracking(r){
     <span id="tstate" class="tlabel"></span>
   </div>
   <div id="tdrift" class="drift"></div>
-  <div id="ttl" class="tl"></div>`;
+  <div id="ttl" class="tl"></div>
+  <div id="tnote" class="thelp" style="display:none"></div>`;
   fetch("/api/branches?url="+encodeURIComponent(gitUrl)).then(x=>x.json()).then(d=>{
     const sel=document.getElementById("tbranch"); if(!sel) return;
     const names=((d&&d.branches)||[]).map(b=>b.name);
@@ -371,13 +385,15 @@ function mountTracking(r){
   let es=null; const history=[];
   const toggle=document.getElementById("ttoggle");
   const stateEl=()=>document.getElementById("tstate");
-  function stop(){ if(es){es.close();es=null;} toggle.className="tbtn off"; toggle.textContent="● Track live"; stateEl().textContent="stopped"; }
+  const noteEl=()=>document.getElementById("tnote");
+  function stop(){ if(es){es.close();es=null;} toggle.className="tbtn off"; toggle.textContent="● Track live"; stateEl().textContent="stopped"; const n=noteEl(); if(n) n.style.display="none"; }
   function showDrift(d){ const el=document.getElementById("tdrift"); if(!el||!d) return; el.className="drift "+d.drift; el.style.display="block"; el.textContent=((d.highlights&&d.highlights[0])||("changed → grade "+d.gradeTo))+"  ·  just now"; }
   function pushTL(d){ history.push(d); const el=document.getElementById("ttl"); if(!el) return; el.innerHTML='<span class="tlabel">Timeline</span> '+history.slice(-14).map(h=>{const c=h.drift==="degraded"?"deg":h.drift==="improved"?"imp":""; return '<span class="pill '+c+'">'+esc(h.gradeTo)+(h.newSecretLeaks>0?" 🔴":"")+'</span>';}).join(" "); }
   function startSSE(id, branch){
     es=new EventSource("/api/track/"+id+"/stream");
     toggle.className="tbtn stop"; toggle.textContent="Stop"; toggle.disabled=false;
     stateEl().innerHTML='<span class="live"><span class="dot"></span>LIVE · '+esc(branch||"default")+'</span>';
+    const n=noteEl(); if(n){ n.style.display="block"; n.innerHTML='✓ <b>Now monitoring '+esc(branch||"the default branch")+'.</b> Leave this tab open to watch changes appear here live. The monitor keeps running on the server even if you close the tab — come back and X-Ray this same repo to reconnect. <span class="muted">Switching repo or branch starts a separate monitor; a refresh reconnects this view.</span>'; }
     es.addEventListener("update", ev=>{ try{ const p=JSON.parse(ev.data); renderCard(p.signed); showDrift(p.delta); pushTL(p.delta);}catch{} });
     // EventSource auto-reconnects on error; keep the LIVE state.
   }
