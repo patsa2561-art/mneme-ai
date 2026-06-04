@@ -166,14 +166,43 @@
   .paste-hint{align-self:center;font-size:12.5px;color:var(--sub)}
   .paste-hint b{color:var(--ink2);font-weight:560}
   /* local bridge panel */
-  .localbox{max-width:560px;margin:22px auto 0;border:1px solid var(--line);border-radius:var(--rs);padding:18px 20px;background:var(--soft);display:none;text-align:left}
-  .localbox.on{display:block}
+  .localbox{max-width:560px;margin:22px auto 0;border:1px solid var(--line);border-radius:var(--rs);padding:18px 20px;background:var(--soft);display:block;text-align:left}
   .localbox .lh{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:560;color:var(--ink2)}
-  .localdot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,.14)}
+  .localdot{width:9px;height:9px;border-radius:50%;background:#c8ccd2;box-shadow:0 0 0 3px rgba(140,140,150,.12)}
+  .localbox.connected .localdot{background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,.14)}
+  .pickbtn{height:44px;padding:0 18px;border:1.5px solid var(--a);border-radius:10px;background:var(--a);color:#fff;cursor:pointer;font-size:13.5px;font-weight:600}
+  .cmdrow{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .cmdrow code{background:#0b0b0f;color:#e6e6ea;border-radius:8px;padding:8px 12px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+  .orline{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--sub);font-size:12px}
+  .orline::before,.orline::after{content:"";flex:1;height:1px;background:var(--line)}
   .localrow{display:flex;gap:8px;margin-top:12px}
   .localrow input{flex:1;height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-family:ui-monospace,Menlo,monospace}
   .localrow button{height:44px;padding:0 16px;border:0;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer;font-size:13.5px}
-  .localhint{font-size:12px;color:var(--sub);margin-top:9px}
+  .localhint{font-size:12px;color:var(--sub);margin-top:9px;line-height:1.5}
+  .bridgebox{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .bridgebox summary{cursor:pointer;font-size:12.5px;color:var(--a);font-weight:560;list-style:none}
+  .lscard{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 16px;text-align:left}
+  .lscard .lsh{font-size:14px;color:var(--ink);margin-bottom:8px}
+  .lscard .lsrow{display:flex;gap:12px;padding:7px 0;border-top:1px solid var(--line2);font-size:13px}
+  .lscard .lsk{width:110px;color:var(--sub);font-weight:560;flex-shrink:0}
+  .lscard .lsv{color:var(--ink2)} .lscard .lsv.bad{color:var(--red)} .lscard .lsv.ok{color:var(--green)}
+  .lscard .lshits{margin:6px 0;font-size:12px;color:var(--red);font-family:ui-monospace,Menlo,monospace;line-height:1.6}
+  .lscard .lsok{margin:6px 0;font-size:12.5px;color:var(--green)}
+  .lscard .pill{display:inline-block;font-size:11px;background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:1px 8px;color:var(--ink2)}
+  .lscard .lsnote{margin-top:10px;font-size:11.5px;color:var(--sub);line-height:1.5;border-top:1px solid var(--line2);padding-top:9px}
+  /* SHOWCASE — selling points + grand graphic at the bottom */
+  .showcase{max-width:980px;margin:64px auto 0;text-align:center;padding:0 20px}
+  .showcase .sctitle{font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ink);margin:0 0 10px;line-height:1.2}
+  .showcase .sctitle .hl{color:var(--a)}
+  .showcase .scsub{font-size:15px;color:var(--sub);max-width:640px;margin:0 auto 30px;line-height:1.6}
+  .showcase .sc3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left}
+  @media(max-width:760px){.showcase .sc3{grid-template-columns:1fr}}
+  .showcase .sccard{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .showcase .scico{font-size:26px;margin-bottom:8px}
+  .showcase .sccard b{display:block;font-size:15px;color:var(--ink);margin-bottom:6px}
+  .showcase .sccard span{font-size:13px;color:var(--sub);line-height:1.55}
+  .showcase .bigart{margin-top:8px;display:flex;justify-content:center;opacity:.92}
+  @media(max-width:760px){.showcase .bigart svg{width:300px;height:auto}}
   .picker{display:none;margin-top:12px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
   .picker.on{display:block}
   .pkbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);font-size:12.5px}
@@ -240,8 +269,8 @@
 </style>
 </head>
 <body>
-<!-- grand meteor-impact illustration — desktop / iPad only, behind content -->
-<div class="comet comet-a" aria-hidden="true">
+<!-- grand meteor-impact illustration — moved to the bottom showcase -->
+<div class="comet comet-a" aria-hidden="true" style="display:none">
   <svg viewBox="0 0 360 420" width="360" height="420">
     <defs>
       <linearGradient id="mtail" x1="1" y1="0" x2="0" y2="1">
@@ -312,15 +341,25 @@
       <div id="keymsg" class="keymsg" style="display:none"></div>
     </details>
     <div class="localbox" id="localbox">
-      <div class="lh"><span class="localdot"></span>Local agent detected — scan a folder on <b>this machine</b> (source never leaves it)</div>
+      <div class="lh"><span class="localdot" id="localdot"></span><b>Or scan a folder on this computer</b> <span class="muted" id="localhead">— nothing is uploaded</span></div>
       <div class="localrow">
-        <input id="localpath" placeholder="/absolute/path/to/your/repo  (git or not)" autocomplete="off" spellcheck="false" />
-        <button id="localbrowse" type="button" class="ghostbtn">📂 Browse</button>
-        <button id="localgo" type="button">Scan</button>
-        <button id="localpack" type="button" class="ghostbtn">📦 Pack</button>
+        <button id="pickfolder" type="button" class="pickbtn">📂 Choose a folder…</button>
+        <span class="muted" id="picknote">No install, no terminal — your browser asks which folder, the scan runs right here (secrets · dependencies · size).</span>
       </div>
-      <div class="picker" id="picker"></div>
-      <div class="localhint">Not on git? No problem — Browse to any folder. It reads locally and shows the signed result here; nothing is uploaded.</div>
+      <div id="localout"></div>
+      <details class="bridgebox">
+        <summary>Want the FULL report on a local repo (git history, bus factor, vitality)?</summary>
+        <div class="localhint">Run this once on your machine — a tiny local agent reads git + files locally and shows the <b>signed</b> result here. Nothing is uploaded.
+          <div class="cmdrow"><code>npx @mneme-ai/xray bridge</code><button id="copybridge" type="button" class="ghostbtn">Copy</button></div>
+        </div>
+        <div class="localrow" id="bridgerow" style="display:none">
+          <input id="localpath" placeholder="/absolute/path/to/your/repo" autocomplete="off" spellcheck="false" />
+          <button id="localbrowse" type="button" class="ghostbtn">📂 Browse</button>
+          <button id="localgo" type="button">Scan</button>
+          <button id="localpack" type="button" class="ghostbtn">📦 Pack</button>
+        </div>
+        <div class="picker" id="picker"></div>
+      </details>
     </div>
     <p class="err" id="err" style="display:none"></p>
   </header>
@@ -334,10 +373,46 @@
     <p class="boardnote" id="boardnote">🌍 <b>Public</b> — recent X-Rays of <b>public</b> repos, visible to everyone. Private repos never appear here.</p>
     <div id="board"></div>
   </div>
+
+  <!-- SHOWCASE — the selling points (real: this is what Live tracking does) + the grand graphic -->
+  <section class="showcase">
+    <h2 class="sctitle">From a one-shot check to an <span class="hl">AI Auditor for your team</span></h2>
+    <p class="scsub">Turn on Live tracking and X-Ray watches a branch 24/7 — every push, human or AI, is re-scanned and the drift surfaces here. No re-click.</p>
+    <div class="sc3">
+      <div class="sccard"><div class="scico">🛡</div><b>AI Code Drift Detection</b><span>The moment anyone — or an AI — pushes, catch a newly-leaked secret, a destructive CI command, or a grade drop. Malicious or off-architecture code is flagged on arrival.</span></div>
+      <div class="sccard"><div class="scico">🔁</div><b>Continuous Autonomous Audit</b><span>Re-checked on every push (or every 30s) — a 24/7 security &amp; health audit that runs itself. Nobody has to remember to click.</span></div>
+      <div class="sccard"><div class="scico">🕰</div><b>Time-Machine Indexing</b><span>A signed timeline of how code-health drifted, commit by commit — see exactly when a risk entered and who pushed it.</span></div>
+    </div>
+    <div class="bigart" aria-hidden="true">
+      <svg viewBox="0 0 360 420" width="440" height="513">
+        <defs>
+          <linearGradient id="mtail2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0b0f" stop-opacity=".5"/><stop offset="1" stop-color="#0b0b0f" stop-opacity="0"/></linearGradient>
+          <radialGradient id="dust2" cx="50%" cy="60%"><stop offset="0" stop-color="#5b5bf6" stop-opacity=".18"/><stop offset="1" stop-color="#5b5bf6" stop-opacity="0"/></radialGradient>
+          <linearGradient id="rock2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b2c4a"/><stop offset="1" stop-color="#0b0b0f"/></linearGradient>
+        </defs>
+        <path d="M-20 322 Q90 300 150 330 Q175 344 200 330 Q280 300 380 320" fill="none" stroke="#5b5bf6" stroke-width="2" opacity=".4"/>
+        <ellipse cx="172" cy="332" rx="96" ry="24" fill="url(#dust2)"/>
+        <path d="M300 24 Q236 96 196 250 Q244 110 296 40 Z" fill="url(#mtail2)"/>
+        <g transform="translate(196 250)">
+          <polygon points="-34,-6 -18,-34 14,-40 36,-18 30,18 2,34 -28,22" fill="url(#rock2)"/>
+          <g stroke="#5b5bf6" stroke-width="1.3" opacity=".6" fill="none"><path d="M-18 -34 L2 -6 L36 -18"/><path d="M2 -6 L-28 22"/><path d="M2 -6 L2 34"/><path d="M2 -6 L30 18"/></g>
+          <polygon points="-18,-34 14,-40 2,-6" fill="#34356a"/>
+        </g>
+        <g>
+          <polygon points="86,178 110,150 128,170 116,210 92,206" fill="url(#rock2)"/><polygon points="248,170 276,150 296,184 272,206 250,194" fill="url(#rock2)"/>
+          <polygon points="150,128 168,104 186,124 178,156 154,152" fill="url(#rock2)"/>
+          <polygon points="44,256 64,242 74,266 56,278" fill="#0b0b0f"/><polygon points="300,250 318,238 326,262 306,272" fill="#0b0b0f"/>
+          <polygon points="208,150 222,134 234,150 226,170" fill="#0b0b0f" opacity=".82"/>
+        </g>
+        <g fill="#5b5bf6" opacity=".5"><polygon points="130,96 140,90 142,102 132,104"/><polygon points="232,108 242,102 244,114 234,116"/><polygon points="70,150 79,145 81,156 71,158"/><polygon points="286,138 295,133 297,144 287,146"/></g>
+      </svg>
+    </div>
+  </section>
 </div>
 <footer>Mneme — the trust &amp; cost layer for code. Deterministic · Signed · Local-first.<br/><span id="copyr">© Mneme</span></footer>
 
 <script src="/card.js"></script>
+<script src="/local-scan.js"></script>
 <script>
 const gC = g => "g-" + (("ABCDEF".includes(g)) ? g : "C");
 const esc = s => String(s==null?"":s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
@@ -559,9 +634,44 @@ async function detectBridge(){
   try{
     const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),1200);
     const r=await fetch(BRIDGE+"/bridge/ping",{signal:ctrl.signal}); clearTimeout(t);
-    if(r.ok){ document.getElementById("localbox").classList.add("on"); }
-  }catch{ /* no local agent — silent */ }
+    if(r.ok){ // full-report bridge is up → light up the green dot + the bridge row
+      document.getElementById("localbox").classList.add("connected");
+      const h=document.getElementById("localhead"); if(h) h.textContent="— local agent connected · full signed report available";
+      const br=document.getElementById("bridgerow"); if(br) br.style.display="flex";
+    }
+  }catch{ /* no local agent — the zero-install Choose-folder path still works */ }
 }
+// ---- ZERO-INSTALL local scan (File System Access API) — no terminal, no upload ----
+const copyBtn=document.getElementById("copybridge");
+if(copyBtn) copyBtn.addEventListener("click",async()=>{ try{ await navigator.clipboard.writeText("npx @mneme-ai/xray bridge"); const o=copyBtn.textContent; copyBtn.textContent="Copied ✓"; setTimeout(()=>copyBtn.textContent=o,1200);}catch{} });
+function renderLocalScan(r){
+  const s=r.summary, out=document.getElementById("localout"); if(!out) return;
+  const sec=s.secrets, secCls=sec.totalFindings>0?"bad":"ok";
+  const langs=s.langs.map(([e,n])=>`<span class="pill">${esc(e)} ${n}</span>`).join(" ");
+  out.innerHTML=`<div class="lscard">
+    <div class="lsh"><b>📂 ${esc(r.folder)}</b> <span class="muted">— scanned in your browser · ${r.files} files · nothing uploaded</span></div>
+    <div class="lsrow"><span class="lsk">Secrets</span><span class="lsv ${secCls}"><b>${sec.totalFindings}</b> in production code${sec.excludedTestHits?` · ${sec.excludedTestHits} in tests (excluded)`:""}</span></div>
+    ${sec.hits.length?`<div class="lshits">${sec.hits.slice(0,6).map(h=>`<div>🔴 ${esc(h.kind)} — ${esc(h.file)}:${h.line}</div>`).join("")}</div>`:`<div class="lsok">✓ no leaked credentials in production code</div>`}
+    <div class="lsrow"><span class="lsk">Dependencies</span><span class="lsv"><b>${s.deps.total}</b> total · ${s.deps.deps} deps · ${s.deps.devDeps} dev</span></div>
+    <div class="lsrow"><span class="lsk">Size</span><span class="lsv"><b>${s.filesScanned}</b> source files · ${s.loc.toLocaleString()} lines</span></div>
+    <div class="lsrow"><span class="lsk">Languages</span><span class="lsv">${langs||"—"}</span></div>
+    <div class="lsnote">Quick local scan — secrets · dependencies · size, computed <b>in your browser</b> (unsigned, no upload). The full <b>signed</b> report with git history, bus factor &amp; vitality needs a public URL above or the bridge.</div>
+  </div>`;
+}
+const pick=document.getElementById("pickfolder");
+if(pick) pick.addEventListener("click", async ()=>{
+  const note=document.getElementById("picknote");
+  if(!window.MnemeLocalScan || !window.MnemeLocalScan.supported){
+    if(note) note.textContent="Your browser does not support in-page folder access (try Chrome or Edge), or use the FULL report option below.";
+    return;
+  }
+  pick.disabled=true; const o=pick.textContent; pick.innerHTML='<span class="spin"></span>Scanning locally…';
+  try{
+    const r=await window.MnemeLocalScan.pickAndScan();
+    renderLocalScan(r);
+  }catch(e){ if(String(e&&e.name)!=="AbortError" && String(e&&e.message)!=="UNSUPPORTED" && note) note.textContent="Couldn't read that folder: "+String(e&&e.message||e); }
+  finally{ pick.disabled=false; pick.textContent=o; }
+});
 document.getElementById("localgo").addEventListener("click", async ()=>{
   const p=document.getElementById("localpath").value.trim();
   const err=document.getElementById("err"), btn=document.getElementById("localgo");
