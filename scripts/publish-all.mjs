@@ -55,6 +55,9 @@ const PACKAGES_IN_DEP_ORDER = [
   { name: "@mneme-ai/gephyra",    path: "packages/gephyra" },
   // v2.167.0 — MATRIX (the gRPC wire server) depends on core + mcp (both above).
   { name: "@mneme-ai/matrix",     path: "packages/matrix" },
+  // v2.187.0 — XRAY (the repo auditor) depends only on core; now bundled into the
+  // CLI, so it MUST publish before mneme-ai or the install hits ETARGET.
+  { name: "@mneme-ai/xray",       path: "packages/xray" },
   { name: "mneme-ai",             path: "packages/cli" },
 ];
 

@@ -142,6 +142,7 @@ import { registerSteleCommands } from "./commands/stele.js";
 import { registerMembraneCommands } from "./commands/membrane.js";
 import { registerTrustlessCommands } from "./commands/trustless.js";
 import { registerMatrixCommands } from "./commands/matrix.js";
+import { registerXrayCommands } from "./commands/xray.js";
 import { registerAdamasCommands } from "./commands/adamas.js";
 import { registerPrismCommands } from "./commands/prism.js";
 import { registerGoldilocksCommands } from "./commands/goldilocks.js";
@@ -4966,6 +4967,7 @@ export async function run(argv: string[]): Promise<void> {
   registerMembraneCommands(program);
   registerTrustlessCommands(program);
   registerMatrixCommands(program);
+  registerXrayCommands(program);
   registerAdamasCommands(program);
   registerPrismCommands(program);
   registerGoldilocksCommands(program);

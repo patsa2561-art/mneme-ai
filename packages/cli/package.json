@@ -35,7 +35,9 @@
     "@mneme-ai/core": "2.175.0",
     "@mneme-ai/correlator": "2.175.0",
     "@mneme-ai/embeddings": "2.175.0",
+    "@mneme-ai/matrix": "2.175.0",
     "@mneme-ai/mcp": "2.175.0",
+    "@mneme-ai/xray": "2.175.0",
     "commander": "^14.0.3",
     "kleur": "^4.1.5"
   },

@@ -47,7 +47,9 @@
     "mneme"
   ],
   "dependencies": {
-    "@mneme-ai/core": "2.175.0",
+    "@mneme-ai/core": "2.175.0"
+  },
+  "optionalDependencies": {
     "@resvg/resvg-js": "^2.6.2"
   },
   "engines": {
