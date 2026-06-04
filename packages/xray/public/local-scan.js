@@ -51,10 +51,44 @@
     } catch { return { total: 0, deps: 0, devDeps: 0, names: [] }; }
   }
 
-  /** Compose a deterministic local report from already-read files. Pure. */
-  function summarize(files) {
+  // structural complexity — count declared symbols (deterministic, regex-based)
+  const SYMBOL_RE = /\b(function\s+\w+|class\s+\w+|interface\s+\w+|def\s+\w+|func\s+\w+|fn\s+\w+|export\s+(?:const|function|class|default)|=>\s*[{(])/g;
+  function countSymbols(text) { const m = String(text).match(SYMBOL_RE); return m ? m.length : 0; }
+
+  // REAL git signals from .git/logs/HEAD (the reflog — plain text the browser can read).
+  // Each line: <old> <new> <Name> <email> <unixTs> <tz>\t<message>. Honest: this is
+  // HEAD-movement history (commits/resets/merges), a sound approximation of authorship
+  // + activity window without running git or parsing packfiles.
+  function parseGitLog(text) {
+    const authors = {}; let commits = 0, firstTs = 0, lastTs = 0;
+    for (const line of String(text || "").split("\n")) {
+      const m = line.match(/^[0-9a-f]+\s+[0-9a-f]+\s+(.+?)\s+<[^>]*>\s+(\d+)\s/);
+      if (!m) continue;
+      commits++;
+      authors[m[1]] = (authors[m[1]] || 0) + 1;
+      const ts = parseInt(m[2], 10) * 1000;
+      if (!firstTs || ts < firstTs) firstTs = ts;
+      if (ts > lastTs) lastTs = ts;
+    }
+    const names = Object.keys(authors);
+    const top = names.length ? Math.max(...names.map((n) => authors[n])) : 0;
+    return { commits, authors: names.length, topShare: commits ? top / commits : 0, firstTs, lastTs, has: commits > 0 };
+  }
+
+  const GRADES = ["A", "B", "C", "D", "F"];
+  /** A deterministic grade from the signals available IN-BROWSER. Honest: lighter
+   *  than the full server grade (no dep-mortality / hotspots), but real. */
+  function gradeLocal(s) {
+    let pen = 0;
+    if (s.secrets.totalFindings > 0) pen += s.secrets.totalFindings >= 3 ? 4 : s.secrets.totalFindings >= 1 ? 3 : 0; // a leaked secret is severe
+    if (s.git.has) { if (s.git.authors === 1) pen += 1; if (s.git.topShare > 0.8) pen += 1; if (s.ageDays > 0 && s.dormantDays > 365) pen += 1; }
+    return GRADES[Math.min(pen, 4)];
+  }
+
+  /** Compose a deterministic local report from already-read files + .git reflog. Pure. */
+  function summarize(files, gitLog, nowMs) {
     // files: [{ rel, text }]
-    let loc = 0, scanned = 0, testHits = 0;
+    let loc = 0, scanned = 0, testHits = 0, symbols = 0;
     const prodHits = [];
     const langs = {};
     let deps = { total: 0, deps: 0, devDeps: 0, names: [] };
@@ -64,18 +98,25 @@
       if (!TEXT_EXT.test(f.rel)) continue;
       scanned++;
       loc += f.text.split("\n").length;
+      symbols += countSymbols(f.text);
       const ext = (f.rel.match(/\.([a-z0-9]+)$/i) || [, "?"])[1].toLowerCase();
       langs[ext] = (langs[ext] || 0) + 1;
       for (const h of scanSecretsText(f.text, f.rel)) { if (h.isTest) testHits++; else prodHits.push(h); }
     }
-    return {
-      filesScanned: scanned, loc, deps,
+    const git = parseGitLog(gitLog);
+    const now = nowMs || (git.lastTs || 0);
+    const ageDays = git.has && git.firstTs ? Math.max(0, Math.round((git.lastTs - git.firstTs) / 86400000)) : 0;
+    const dormantDays = git.has && git.lastTs && now ? Math.max(0, Math.round((now - git.lastTs) / 86400000)) : 0;
+    const s = {
+      filesScanned: scanned, loc, symbols, deps, git, ageDays, dormantDays,
       secrets: { totalFindings: prodHits.length, excludedTestHits: testHits, hits: prodHits.slice(0, 20) },
       langs: Object.entries(langs).sort((a, b) => b[1] - a[1]).slice(0, 8),
     };
+    s.grade = gradeLocal(s);
+    return s;
   }
 
-  g.MnemeLocalScan = { scanSecretsText, parseDeps, summarize, _patterns: SECRET_PATTERNS };
+  g.MnemeLocalScan = { scanSecretsText, parseDeps, countSymbols, parseGitLog, gradeLocal, summarize, _patterns: SECRET_PATTERNS };
 
   // ── File System Access glue (browser-only; needs a user gesture + HTTPS) ────
   g.MnemeLocalScan.supported = typeof g.showDirectoryPicker === "function";
@@ -99,6 +140,14 @@
     const dir = await g.showDirectoryPicker(); // native picker — user grants ONE folder
     const files = [];
     await readDir(dir, "", files, cap);
-    return { folder: dir.name || "folder", files: files.length, summary: summarize(files) };
+    // REAL git signals: read .git/logs/HEAD (plain text) for authors / commits / age
+    let gitLog = "";
+    try {
+      const gitDir = await dir.getDirectoryHandle(".git");
+      const logsDir = await gitDir.getDirectoryHandle("logs");
+      const headFile = await logsDir.getFileHandle("HEAD");
+      gitLog = await (await headFile.getFile()).text();
+    } catch { /* not a git repo, or no reflog — file signals only */ }
+    return { folder: dir.name || "folder", files: files.length, summary: summarize(files, gitLog, Date.now()) };
   };
 })(typeof window !== "undefined" ? window : globalThis);

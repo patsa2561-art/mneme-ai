@@ -146,6 +146,8 @@
   .listfoot{display:flex;justify-content:space-between;align-items:center;padding:14px 4px 0;font-size:13px}
   .moreb{height:38px;padding:0 18px;border:1px solid var(--line);background:#fff;border-radius:10px;cursor:pointer;font-size:13px;font-weight:540;transition:border-color .15s}
   .moreb:hover{border-color:var(--ink)}
+  .moreb:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line)}
+  .pagenav{display:inline-flex;gap:8px}
   /* share + buttons */
   .share{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:18px 30px;border-top:1px solid var(--line2)}
   .badgeimg{height:20px}
@@ -182,7 +184,9 @@
   .bridgebox{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
   .bridgebox summary{cursor:pointer;font-size:12.5px;color:var(--a);font-weight:560;list-style:none}
   .lscard{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 16px;text-align:left}
-  .lscard .lsh{font-size:14px;color:var(--ink);margin-bottom:8px}
+  .lscard .lstop{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .lscard .lsgrade{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-.02em}
+  .lscard .lsh{font-size:15px;color:var(--ink)}
   .lscard .lsrow{display:flex;gap:12px;padding:7px 0;border-top:1px solid var(--line2);font-size:13px}
   .lscard .lsk{width:110px;color:var(--sub);font-weight:560;flex-shrink:0}
   .lscard .lsv{color:var(--ink2)} .lscard .lsv.bad{color:var(--red)} .lscard .lsv.ok{color:var(--green)}
@@ -190,19 +194,24 @@
   .lscard .lsok{margin:6px 0;font-size:12.5px;color:var(--green)}
   .lscard .pill{display:inline-block;font-size:11px;background:var(--soft);border:1px solid var(--line);border-radius:20px;padding:1px 8px;color:var(--ink2)}
   .lscard .lsnote{margin-top:10px;font-size:11.5px;color:var(--sub);line-height:1.5;border-top:1px solid var(--line2);padding-top:9px}
-  /* SHOWCASE — selling points + grand graphic at the bottom */
-  .showcase{max-width:980px;margin:64px auto 0;text-align:center;padding:0 20px}
-  .showcase .sctitle{font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ink);margin:0 0 10px;line-height:1.2}
+  /* SHOWCASE — selling points; the graphic sits to the SIDE (grid areas, no markup move) */
+  .showcase{max-width:1060px;margin:64px auto 0;padding:0 20px;text-align:left;
+    display:grid;column-gap:36px;row-gap:18px;align-items:center;
+    grid-template-columns:1fr 360px;grid-template-areas:"title art" "sub art" "cards cards"}
+  .showcase .sctitle{grid-area:title;font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ink);margin:0;line-height:1.2}
   .showcase .sctitle .hl{color:var(--a)}
-  .showcase .scsub{font-size:15px;color:var(--sub);max-width:640px;margin:0 auto 30px;line-height:1.6}
-  .showcase .sc3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left}
-  @media(max-width:760px){.showcase .sc3{grid-template-columns:1fr}}
+  .showcase .scsub{grid-area:sub;font-size:15px;color:var(--sub);margin:0;line-height:1.6}
+  .showcase .bigart{grid-area:art;display:flex;justify-content:center;align-self:center;opacity:.95}
+  .showcase .sc3{grid-area:cards;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
   .showcase .sccard{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:20px}
   .showcase .scico{font-size:26px;margin-bottom:8px}
   .showcase .sccard b{display:block;font-size:15px;color:var(--ink);margin-bottom:6px}
   .showcase .sccard span{font-size:13px;color:var(--sub);line-height:1.55}
-  .showcase .bigart{margin-top:8px;display:flex;justify-content:center;opacity:.92}
-  @media(max-width:760px){.showcase .bigart svg{width:300px;height:auto}}
+  @media(max-width:820px){
+    .showcase{grid-template-columns:1fr;grid-template-areas:"title" "sub" "art" "cards"}
+    .showcase .sc3{grid-template-columns:1fr}
+    .showcase .bigart svg{width:300px;height:auto}
+  }
   .picker{display:none;margin-top:12px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
   .picker.on{display:block}
   .pkbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2);font-size:12.5px}
@@ -434,12 +443,7 @@ function mountTracking(r){
   const gitUrl = r.subject.ref;
   panel.style.display="block";
   panel.innerHTML = `<div class="thead"><span class="ticon">🛰</span><b>Live tracking</b><span class="tnew">new</span></div>
-  <div class="thelp">Turn this one-shot X-Ray into an <b>AI Auditor for your team</b>. Pick a branch and press Track live — when you, a teammate, or an AI pushes, this report <b>re-scans itself</b> and shows what changed. No re-click.</div>
-  <div class="tfeat">
-    <div class="tf"><b>🛡 AI Code Drift</b><span>a new pushed secret, a destructive CI command, a grade drop — flagged the moment it lands</span></div>
-    <div class="tf"><b>🔁 Continuous audit</b><span>re-checked on every push (or every 30s) — 24/7, no one has to click</span></div>
-    <div class="tf"><b>🕰 Time-Machine</b><span>a timeline of how code-health drifted, commit by commit</span></div>
-  </div>
+  <div class="thelp">Pick a branch and press <b>Track live</b> — when you, a teammate, or an AI pushes, this report <b>re-scans itself</b> and shows what changed. No re-click. <span class="muted">(What you get → see “AI Auditor for your team” below.)</span></div>
   <div class="trow">
     <span class="tlabel">Branch</span>
     <select id="tbranch"><option value="">loading branches…</option></select>
@@ -461,12 +465,13 @@ function mountTracking(r){
   const toggle=document.getElementById("ttoggle");
   const stateEl=()=>document.getElementById("tstate");
   const noteEl=()=>document.getElementById("tnote");
-  function stop(){ if(es){es.close();es=null;} toggle.className="tbtn off"; toggle.textContent="● Track live"; stateEl().textContent="stopped"; const n=noteEl(); if(n) n.style.display="none"; }
+  function stop(){ if(es){es.close();es=null;} toggle.className="tbtn off"; toggle.textContent="● Track live"; stateEl().textContent="stopped"; const n=noteEl(); if(n) n.style.display="none"; const sel=document.getElementById("tbranch"); if(sel) sel.disabled=false; }
   function showDrift(d){ const el=document.getElementById("tdrift"); if(!el||!d) return; el.className="drift "+d.drift; el.style.display="block"; el.textContent=((d.highlights&&d.highlights[0])||("changed → grade "+d.gradeTo))+"  ·  just now"; }
   function pushTL(d){ history.push(d); const el=document.getElementById("ttl"); if(!el) return; el.innerHTML='<span class="tlabel">Timeline</span> '+history.slice(-14).map(h=>{const c=h.drift==="degraded"?"deg":h.drift==="improved"?"imp":""; return '<span class="pill '+c+'">'+esc(h.gradeTo)+(h.newSecretLeaks>0?" 🔴":"")+'</span>';}).join(" "); }
   function startSSE(id, branch){
     es=new EventSource("/api/track/"+id+"/stream");
     toggle.className="tbtn stop"; toggle.textContent="Stop"; toggle.disabled=false;
+    const sel=document.getElementById("tbranch"); if(sel) sel.disabled=true; // lock branch while LIVE
     stateEl().innerHTML='<span class="live"><span class="dot"></span>LIVE · '+esc(branch||"default")+'</span>';
     const n=noteEl(); if(n){ n.style.display="block"; n.innerHTML='✓ <b>Now monitoring '+esc(branch||"the default branch")+'.</b> Leave this tab open to watch changes appear here live. The monitor keeps running on the server even if you close the tab — come back and X-Ray this same repo to reconnect. <span class="muted">Switching repo or branch starts a separate monitor; a refresh reconnects this view.</span>'; }
     es.addEventListener("update", ev=>{ try{ const p=JSON.parse(ev.data); renderCard(p.signed); showDrift(p.delta); pushTL(p.delta);}catch{} });
@@ -548,7 +553,7 @@ document.getElementById("savekey").addEventListener("click", ()=>{
 });
 
 let tab="board", offset=0, loaded=[];
-const PAGE=20;
+const PAGE=5;
 function fmtDate(s){ if(!s) return "—"; const d=new Date(s); return isNaN(d)?"—":d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
 function rowHTML(b){
   const lock = b.visibility==="private" ? '<span class="lock" title="private — only you can open this">🔒</span>' : "";
@@ -578,16 +583,18 @@ async function loadList(reset=true){
   }
   try{
     const data=await fetchPage(offset);
-    loaded=loaded.concat(data.items||[]);
-    if(loaded.length===0){
-      el.innerHTML=`<div class="bitem muted">${tab==="mine"?"Nothing here yet — run an <b>X-Ray</b> or <b>📦 AI Pack</b> above and it appears here automatically. (Private folder? use the local Browse panel.)":"No reports yet — be the first."}</div>`;
+    const items=data.items||[];
+    if((data.total||0)===0){
+      el.innerHTML=`<div class="bitem muted">${tab==="mine"?"Nothing here yet — run an <b>X-Ray</b> or <b>📦 AI Pack</b> above and it appears here automatically. (Private folder? use the Choose-a-folder panel.)":"No reports yet — be the first."}</div>`;
       return;
     }
-    const more = (data.offset+data.limit) < data.total;
-    el.innerHTML = `<div class="listbox">${loaded.map(rowHTML).join("")}</div>`
-      + `<div class="listfoot"><span class="muted">${loaded.length} of ${data.total} repos</span>${more?'<button class="moreb" id="moreb">Load more</button>':""}</div>`;
+    const start=data.offset+1, end=data.offset+items.length;
+    const hasPrev=data.offset>0, hasNext=(data.offset+data.limit)<data.total;
+    el.innerHTML = `<div class="listbox">${items.map(rowHTML).join("")}</div>`
+      + `<div class="listfoot"><span class="muted">${start}–${end} of ${data.total} repos</span><span class="pagenav"><button class="moreb" id="prevb"${hasPrev?"":" disabled"}>← Prev</button><button class="moreb" id="nextb"${hasNext?"":" disabled"}>Next →</button></span></div>`;
     el.querySelectorAll(".bitem[data-fp]").forEach(n=>n.addEventListener("click",()=>openReport(n.dataset.fp, n.dataset.priv==="1")));
-    const mb=document.getElementById("moreb"); if(mb) mb.addEventListener("click",()=>{ offset+=PAGE; loadList(false); });
+    const pb=document.getElementById("prevb"); if(pb&&hasPrev) pb.addEventListener("click",()=>{ offset=Math.max(0,offset-PAGE); loadList(false); window.scrollTo({top:document.getElementById("board").offsetTop-80,behavior:"smooth"}); });
+    const nb=document.getElementById("nextb"); if(nb&&hasNext) nb.addEventListener("click",()=>{ offset+=PAGE; loadList(false); window.scrollTo({top:document.getElementById("board").offsetTop-80,behavior:"smooth"}); });
   }catch{ el.innerHTML='<div class="bitem muted">Could not load.</div>'; }
 }
 async function openReport(fp, isPrivate){
@@ -648,14 +655,21 @@ function renderLocalScan(r){
   const s=r.summary, out=document.getElementById("localout"); if(!out) return;
   const sec=s.secrets, secCls=sec.totalFindings>0?"bad":"ok";
   const langs=s.langs.map(([e,n])=>`<span class="pill">${esc(e)} ${n}</span>`).join(" ");
+  const g=s.git, vit = !g.has ? "" : (s.dormantDays>365?"dormant":s.dormantDays>120?"slowing":"active");
+  const gitRows = g.has ? `
+    <div class="lsrow"><span class="lsk">Bus factor</span><span class="lsv ${g.authors===1?"bad":""}"><b>${g.authors}</b> author${g.authors===1?" — single point of failure":"s"} · top author ${Math.round(g.topShare*100)}% of ${g.commits} commits</span></div>
+    <div class="lsrow"><span class="lsk">Vitality</span><span class="lsv ${vit==="dormant"?"bad":""}"><b>${vit}</b> · ${s.ageDays}d span · last activity ${s.dormantDays}d ago</span></div>`
+    : `<div class="lsrow"><span class="lsk">Git history</span><span class="lsv muted">— no .git reflog in this folder (bus factor / vitality unavailable)</span></div>`;
   out.innerHTML=`<div class="lscard">
-    <div class="lsh"><b>📂 ${esc(r.folder)}</b> <span class="muted">— scanned in your browser · ${r.files} files · nothing uploaded</span></div>
+    <div class="lstop"><div class="lsgrade g-${("ABCDEF".includes(s.grade)?s.grade:"C")}">${esc(s.grade)}</div>
+      <div><div class="lsh"><b>📂 ${esc(r.folder)}</b></div><div class="muted" style="font-size:12px">scanned in your browser · ${r.files} files · nothing uploaded</div></div></div>
     <div class="lsrow"><span class="lsk">Secrets</span><span class="lsv ${secCls}"><b>${sec.totalFindings}</b> in production code${sec.excludedTestHits?` · ${sec.excludedTestHits} in tests (excluded)`:""}</span></div>
     ${sec.hits.length?`<div class="lshits">${sec.hits.slice(0,6).map(h=>`<div>🔴 ${esc(h.kind)} — ${esc(h.file)}:${h.line}</div>`).join("")}</div>`:`<div class="lsok">✓ no leaked credentials in production code</div>`}
+    ${gitRows}
     <div class="lsrow"><span class="lsk">Dependencies</span><span class="lsv"><b>${s.deps.total}</b> total · ${s.deps.deps} deps · ${s.deps.devDeps} dev</span></div>
-    <div class="lsrow"><span class="lsk">Size</span><span class="lsv"><b>${s.filesScanned}</b> source files · ${s.loc.toLocaleString()} lines</span></div>
+    <div class="lsrow"><span class="lsk">Complexity</span><span class="lsv"><b>${(s.symbols||0).toLocaleString()}</b> symbols · ${s.filesScanned} files · ${s.loc.toLocaleString()} lines</span></div>
     <div class="lsrow"><span class="lsk">Languages</span><span class="lsv">${langs||"—"}</span></div>
-    <div class="lsnote">Quick local scan — secrets · dependencies · size, computed <b>in your browser</b> (unsigned, no upload). The full <b>signed</b> report with git history, bus factor &amp; vitality needs a public URL above or the bridge.</div>
+    <div class="lsnote">Computed <b>in your browser</b> (unsigned, nothing uploaded). Secrets · dependencies · complexity from your files; bus factor &amp; vitality from <code>.git</code> reflog. The full <b>signed</b> report (dep mortality, hotspots, coupling) needs a public URL above or the bridge.</div>
   </div>`;
 }
 const pick=document.getElementById("pickfolder");
