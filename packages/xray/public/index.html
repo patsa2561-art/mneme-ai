@@ -182,8 +182,11 @@
   .pkrow .ic{width:18px;text-align:center}
   .pkrow .repobadge{margin-left:auto;font-size:10.5px;color:var(--a);background:var(--a-soft);border-radius:6px;padding:2px 7px;font-weight:600}
   /* ── REAL-TIME TRACKING panel — clean + clear ── */
-  .track{max-width:760px;margin:18px auto 0;background:var(--soft);border:1px solid var(--line);border-radius:var(--rs);padding:14px 18px}
-  .track .trow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .track{max-width:760px;margin:18px auto 0;background:var(--soft);border:1px solid var(--line);border-top:2px solid var(--a);border-radius:var(--rs);padding:16px 18px;box-shadow:var(--sh-sm)}
+  .track .thead{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink)}
+  .track .ticon{font-size:17px}
+  .track .tnew{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--a);background:var(--a-soft);border-radius:6px;padding:2px 7px}
+  .track .trow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
   .track .tlabel{font-size:13px;color:var(--sub);font-weight:560}
   .track select{height:38px;border:1px solid var(--line);border-radius:9px;padding:0 12px;font-size:13.5px;background:#fff;color:var(--ink2);max-width:260px}
   .track .tbtn{height:38px;padding:0 16px;border-radius:9px;border:1.5px solid var(--a);background:var(--a);color:#fff;font-weight:600;font-size:13.5px;cursor:pointer}
@@ -347,13 +350,14 @@ function mountTracking(r){
   if(!r || r.subject.kind !== "git-url"){ panel.style.display="none"; return; }
   const gitUrl = r.subject.ref;
   panel.style.display="block";
-  panel.innerHTML = `<div class="trow">
-    <span class="tlabel">🛰 Live tracking</span>
+  panel.innerHTML = `<div class="thead"><span class="ticon">🛰</span><b>Live tracking</b><span class="tnew">new</span></div>
+  <div class="thelp">Turn this one-shot X-Ray into an autonomous monitor. Pick a branch — when you, your team, or an AI pushes to it, this report <b>updates itself</b>. No re-click.</div>
+  <div class="trow">
+    <span class="tlabel">Branch</span>
     <select id="tbranch"><option value="">loading branches…</option></select>
     <button id="ttoggle" class="tbtn off">● Track live</button>
     <span id="tstate" class="tlabel"></span>
   </div>
-  <div class="thelp">Pick a branch and turn on live tracking — when you, your team, or an AI pushes to it, this report updates itself. No re-click.</div>
   <div id="tdrift" class="drift"></div>
   <div id="ttl" class="tl"></div>`;
   fetch("/api/branches?url="+encodeURIComponent(gitUrl)).then(x=>x.json()).then(d=>{

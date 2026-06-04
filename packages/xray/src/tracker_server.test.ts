@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { TrackerHub, trackId, hubGauntlet, type SseSink, type BuildFn, type RefFn } from "./tracker_server.js";
+import { createHmac } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { TrackerHub, trackId, hubGauntlet, verifyWebhookSig, type SseSink, type BuildFn, type RefFn } from "./tracker_server.js";
 import type { XRayReport } from "./types.js";
 
 function rep(grade: string, secrets: number, commit: string): XRayReport {
@@ -65,5 +69,35 @@ describe("TrackerHub — autonomous real-time monitor", () => {
   it("trackId is stable + branch-distinct", () => {
     expect(trackId("https://github.com/o/r", "main")).toBe(trackId("https://github.com/o/r", "main"));
     expect(trackId("https://github.com/o/r", "main")).not.toBe(trackId("https://github.com/o/r", "dev"));
+  });
+
+  it("DURABLE: tracks survive a restart (file-backed store)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "xray-store-"));
+    const store = join(dir, "tracks.json");
+    try {
+      const build: BuildFn = async () => { const report = rep("B", 0, "c1"); return { report, signed: { report, receipt: {} } }; };
+      const hub1 = new TrackerHub({ build, refOf: () => "c1", now: () => 1, storePath: store });
+      const { id } = await hub1.createTrack("https://github.com/o/r", "main");
+      hub1.stop();
+      // a brand-new hub (simulating a process restart) reloads the track from disk
+      const hub2 = new TrackerHub({ build, refOf: () => "c1", now: () => 2, storePath: store });
+      const rec = hub2.tracks.get(id);
+      expect(rec).toBeTruthy();
+      expect(rec!.gitUrl).toBe("https://github.com/o/r");
+      expect(rec!.branch).toBe("main");
+      expect(rec!.lastSha).toBe("c1");
+      expect(rec!.subscribers.size).toBe(0);     // live-only, never persisted
+      hub2.stop();
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it("WEBHOOK HMAC: a valid GitHub sha256 signature passes, a forged one is rejected, open mode allows", () => {
+    const secret = "s3cr3t";
+    const body = JSON.stringify({ ref: "refs/heads/main" });
+    const goodSig = "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+    expect(verifyWebhookSig(secret, body, goodSig)).toBe(true);
+    expect(verifyWebhookSig(secret, body, "sha256=deadbeef")).toBe(false);
+    expect(verifyWebhookSig(secret, body, undefined)).toBe(false);
+    expect(verifyWebhookSig(undefined, body, undefined)).toBe(true); // no secret configured → open
   });
 });

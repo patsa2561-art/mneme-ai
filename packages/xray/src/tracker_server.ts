@@ -14,9 +14,23 @@
  * unit-tested deterministically without a network (the real-git path is proven
  * separately in track.test.ts). The HTTP/SSE wiring lives in server.ts.
  */
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { dirname } from "node:path";
 import { remoteRef, reportDelta, type ReportDelta } from "./track.js";
 import type { XRayReport, SignedXRay } from "./types.js";
+
+/** Verify a GitHub-style `sha256=…` HMAC over a raw webhook body. Constant-time.
+ *  Returns true when no secret is configured (open mode) OR the signature matches. */
+export function verifyWebhookSig(secret: string | undefined, rawBody: string, header: string | undefined): boolean {
+  if (!secret) return true;                       // open mode (no secret configured)
+  if (!header) return false;
+  // GitHub/GitLab sign the raw body with HMAC-SHA256 → `sha256=<hex>`.
+  const hmacExpected = "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(header);
+  const b = Buffer.from(hmacExpected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /** A minimal SSE sink — a node ServerResponse satisfies this (testable with a fake). */
 export interface SseSink { write(chunk: string): void; end(): void; on(event: "close", cb: () => void): void }
@@ -34,7 +48,10 @@ export interface TrackRecord {
   history: HistoryEntry[];                 // Time-Machine: drift over time
 }
 
-export interface HubOptions { build: BuildFn; refOf?: RefFn; now?: () => number; maxTracks?: number; maxHistory?: number }
+export interface HubOptions { build: BuildFn; refOf?: RefFn; now?: () => number; maxTracks?: number; maxHistory?: number; storePath?: string }
+
+/** The persisted shape of a track (everything except live SSE subscribers). */
+interface PersistedTrack { id: string; gitUrl: string; branch?: string; lastSha: string; prevReport: XRayReport | null; signed: SignedXRay | null; createdAt: number; lastChangeAt: number; history: HistoryEntry[] }
 
 /** Stable track id from repo+branch, so re-tracking the same target reuses it. */
 export function trackId(gitUrl: string, branch?: string): string {
@@ -49,6 +66,7 @@ export class TrackerHub {
   private readonly now: () => number;
   private readonly maxTracks: number;
   private readonly maxHistory: number;
+  private readonly storePath?: string;
 
   constructor(opts: HubOptions) {
     this.build = opts.build;
@@ -56,6 +74,30 @@ export class TrackerHub {
     this.now = opts.now ?? (() => Date.now());
     this.maxTracks = opts.maxTracks ?? 500;
     this.maxHistory = opts.maxHistory ?? 50;
+    this.storePath = opts.storePath;
+    this.load();
+  }
+
+  /** DURABLE STORE — survive a process restart (the droplet redeploys + restarts
+   *  the service; tracks must NOT vanish). One JSON file at storePath; subscribers
+   *  are live-only and never persisted. Best-effort + total (never throws). */
+  private load(): void {
+    if (!this.storePath || !existsSync(this.storePath)) return;
+    try {
+      const rows = JSON.parse(readFileSync(this.storePath, "utf8")) as PersistedTrack[];
+      for (const r of Array.isArray(rows) ? rows : []) {
+        if (!r || typeof r.id !== "string") continue;
+        this.tracks.set(r.id, { ...r, subscribers: new Set() });
+      }
+    } catch { /* corrupt store → start clean, don't crash the server */ }
+  }
+  private save(): void {
+    if (!this.storePath) return;
+    try {
+      mkdirSync(dirname(this.storePath), { recursive: true });
+      const rows: PersistedTrack[] = [...this.tracks.values()].map((r) => ({ id: r.id, gitUrl: r.gitUrl, branch: r.branch, lastSha: r.lastSha, prevReport: r.prevReport, signed: r.signed, createdAt: r.createdAt, lastChangeAt: r.lastChangeAt, history: r.history }));
+      writeFileSync(this.storePath, JSON.stringify(rows));
+    } catch { /* best-effort */ }
   }
 
   /** Register a repo+branch and run the initial scan. Idempotent per (url,branch). */
@@ -74,6 +116,7 @@ export class TrackerHub {
     record.lastSha = report.subject.commitHash; record.prevReport = report; record.signed = signed;
     record.history.push({ at: t, sha: report.subject.commitHash, grade: report.summary.grade, drift: delta.drift, highlights: delta.highlights });
     this.tracks.set(id, record);
+    this.save();
     return { id, signed, record };
   }
 
@@ -104,6 +147,7 @@ export class TrackerHub {
     rec.prevReport = built.report; rec.signed = built.signed; rec.lastChangeAt = t;
     rec.history.push({ at: t, sha: rec.lastSha, grade: built.report.summary.grade, drift: delta.drift, highlights: delta.highlights });
     if (rec.history.length > this.maxHistory) rec.history.splice(0, rec.history.length - this.maxHistory);
+    this.save();
     this.broadcast(rec, "update", { id, delta, signed: built.signed, at: t });
     return { changed: true, delta, sha: rec.lastSha, reason: delta.drift };
   }

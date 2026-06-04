@@ -33,7 +33,7 @@ import { sealXRay, verifyXRay } from "./sign.js";
 import { xrayLeaksRaw } from "./privacy.js";
 import { isAllowedPublicUrl, shallowClone } from "./clone.js";
 import { listRemoteBranches } from "./track.js";
-import { TrackerHub } from "./tracker_server.js";
+import { TrackerHub, verifyWebhookSig } from "./tracker_server.js";
 import { buildContextPack } from "./pack.js";
 import { CosmicMonitor, cosmicBadgeSvg, signCosmicStatus } from "./cosmic.js";
 import type { SignedXRay, XRayReport } from "./types.js";
@@ -320,6 +320,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       saveReport(signed, "public", "");
       return { report, signed };
     },
+    storePath: join(dataDir(), "tracks.json"),   // durable: survives a redeploy/restart
   });
   if (!injectedHub && process.env.XRAY_TRACK_POLL !== "off") hub.startPoller(parseInt(process.env.XRAY_TRACK_POLL_MS || "30000", 10));
 
@@ -519,10 +520,14 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       req.on("close", () => clearInterval(keepAlive));
       return;
     }
-    // webhook (GitHub/GitLab push) → trigger an immediate tick (true real-time)
+    // webhook (GitHub/GitLab push) → trigger an immediate tick (true real-time).
+    // When XRAY_WEBHOOK_SECRET is set, the raw body's HMAC-SHA256 must match the
+    // x-hub-signature-256 header (forged webhooks rejected); else open mode.
     if (req.method === "POST" && /^\/api\/track\/[a-f0-9]{8,32}\/webhook$/.test(url.pathname)) {
       const id = url.pathname.split("/")[3];
-      try { await readBody(req, 2 * 1024 * 1024); } catch { /* payload not required — the SHA is re-resolved */ }
+      let raw = ""; try { raw = await readBody(req, 2 * 1024 * 1024); } catch { /* SHA is re-resolved from ls-remote anyway */ }
+      const sig = (req.headers["x-hub-signature-256"] || req.headers["x-hub-signature"]) as string | undefined;
+      if (!verifyWebhookSig(process.env.XRAY_WEBHOOK_SECRET, raw, sig)) return send(res, 401, { error: "invalid webhook signature" });
       const r = await hub.tick(id);
       if (r === null) return send(res, 404, { error: "unknown trackId" });
       return send(res, 200, { ok: true, changed: r.changed, reason: r.reason });

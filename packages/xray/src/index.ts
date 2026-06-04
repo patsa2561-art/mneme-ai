@@ -15,7 +15,7 @@ export { xrayLeaksRaw, type LeakVerdict } from "./privacy.js";
 export { xrayGauntlet, type XRayGauntlet } from "./gauntlet.js";
 export { isAllowedPublicUrl, isSafeBranch } from "./clone.js";
 export { listRemoteBranches, remoteRef, reportDelta, trackerTick, trackGauntlet, type RemoteBranch, type ReportDelta, type Drift, type TrackState, type TickResult } from "./track.js";
-export { TrackerHub, trackId, hubGauntlet, type SseSink, type BuildFn, type RefFn, type TrackRecord, type HistoryEntry } from "./tracker_server.js";
+export { TrackerHub, trackId, hubGauntlet, verifyWebhookSig, type SseSink, type BuildFn, type RefFn, type TrackRecord, type HistoryEntry } from "./tracker_server.js";
 export { defaultFetcher, type MetaFetcher } from "./battery/deps.js";
 export { publishReport, type PublishResult } from "./publish.js";
 export { createXRayServer } from "./server.js";
