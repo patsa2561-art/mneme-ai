@@ -90,17 +90,37 @@ risky work waits for your thumb, destructive work is fail-safe by default.
 | Approval | **signed nonce** (hash-bound, one-time, TTL) via `verify-self` capsule chain | replay-proof, command-bound authority transfer |
 | Power | `caffeinate` (mac) · `systemd-inhibit` + `rtcwake` (linux) · `SetThreadExecutionState`/Away-Mode (win) | "breathing" sleep — awake while working, wake-to-poll while idle |
 
-## CLI
+## The user types NOTHING — the AI agent sets it up
+
+The user will never know `mneme pager` commands. They just say *"I want to approve you from
+my phone"* / *"ส่งไป Telegram"* / *"run this overnight, lid closed."* The agent then asks for
+the **only** thing it can't make itself — a Telegram bot — and wires everything in one call:
 
 ```bash
-mneme pager setup --telegram-token <BotFather> --chat-id <your-id>   # once
-mneme pager hook            # → paste the PreToolUse snippet into .claude/settings.json
-mneme pager start           # the loop: breathing-power + Telegram long-poll + dead-man
-mneme pager request --command "npm test" --agent claude-code         # (the hook calls this)
-mneme pager status          # pending queue + Trust-Tide state
-mneme pager approve <id> [--deny]   # local approve (testing without the phone)
+# The USER does ONE thing, once: open Telegram → @BotFather → /newbot → copy the token,
+# and get their chat-id (message @userinfobot). Then the AGENT runs:
+mneme pager autosetup --telegram-token <token> --chat-id <id>
 ```
-MCP: `mneme.pager.scan` (read the pending queue + trust). Boot row advertises it to agents.
+`autosetup` (zero further user steps) — wires the Claude Code **PreToolUse hook** into
+`.claude/settings.json`, sets the **lid-close action to "do nothing"** (so closing the lid
+keeps the agent running + paging), registers a **login auto-start** service, **sends a test
+message** to the phone, and **launches** the long-poll loop in the background. Close the lid
+and walk away.
+
+> **"Press sleep / close the lid → it still reaches Telegram":** the page is sent the
+> *instant* the agent asks (while awake) — so it's already on your phone before you sleep.
+> `autosetup` sets lid-close = *do nothing* so the agent keeps working + paging new questions
+> after you close the lid; if you *force* deep sleep, breathing-power wakes on a timer to
+> flush the queue + process approvals, then sleeps again.
+
+### Lower-level verbs (for scripts / debugging — the user never needs these)
+```bash
+mneme pager status                 # pending queue + Trust-Tide state
+mneme pager approve <id> [--deny]  # local approve (testing without the phone)
+mneme pager start | request | setup | hook   # the pieces autosetup composes
+```
+MCP: `mneme.pager.scan` (read the pending queue + trust). The boot table tells every agent to
+run `autosetup` on the user's natural-language intent.
 
 ## Honest limits (no marketing)
 

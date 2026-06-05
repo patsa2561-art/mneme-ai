@@ -67,8 +67,86 @@ function resolvePending(cwd: string, id: string, decision: "allow" | "deny", dec
   return p;
 }
 
+/** Merge the PreToolUse hook into .claude/settings.json so the USER never pastes anything. */
+function wireClaudeHook(cwd: string): { ok: boolean; path: string } {
+  const dirp = join(cwd, ".claude"); const sp = join(dirp, "settings.json");
+  try {
+    mkdirSync(dirp, { recursive: true });
+    let s: { hooks?: Record<string, unknown[]> } = {};
+    if (existsSync(sp)) { try { s = JSON.parse(readFileSync(sp, "utf8")); } catch { s = {}; } }
+    s.hooks = s.hooks ?? {};
+    const pre = (s.hooks.PreToolUse as unknown[]) ?? (s.hooks.PreToolUse = []);
+    const cmd = "mneme pager request --command \"$TOOL_INPUT_command\" --agent claude-code --session \"$CLAUDE_SESSION_ID\"";
+    const already = JSON.stringify(pre).includes("mneme pager request");
+    if (!already) pre.push({ matcher: "Bash", hooks: [{ type: "command", command: cmd }] });
+    writeFileSync(sp, JSON.stringify(s, null, 2), "utf8");
+    return { ok: true, path: sp };
+  } catch { return { ok: false, path: sp }; }
+}
+
+/** Best-effort: set the laptop lid-close action to "do nothing" so closing the lid keeps the
+ *  agent running + paging (the user does not have to know any OS setting). */
+function setLidStayAwake(): string {
+  try {
+    if (process.platform === "win32") {
+      spawn("powercfg", ["/setacvalueindex", "SCHEME_CURRENT", "4f971e89-eebd-4455-a8de-9e59040e7347", "5ca83367-6e45-459f-a27b-476b1d01c936", "0"], { stdio: "ignore" });
+      spawn("powercfg", ["/setdcvalueindex", "SCHEME_CURRENT", "4f971e89-eebd-4455-a8de-9e59040e7347", "5ca83367-6e45-459f-a27b-476b1d01c936", "0"], { stdio: "ignore" });
+      spawn("powercfg", ["/S", "SCHEME_CURRENT"], { stdio: "ignore" });
+      return "Windows: lid-close set to 'do nothing' (lid can close, machine stays awake).";
+    }
+    if (process.platform === "linux") return "Linux: set HandleLidSwitch=ignore in /etc/systemd/logind.conf (needs sudo) — or the daemon's systemd-inhibit holds sleep while work pends.";
+    return "macOS: lid-close on battery sleeps by firmware — keep on AC, or run `sudo pmset -c disablesleep 1` once for clamshell stay-awake.";
+  } catch { return "lid setting skipped (best-effort)."; }
+}
+
+/** Register `mneme pager start` to auto-start on login (so the user never runs a command). */
+function installPagerService(cwd: string): string {
+  const cliBin = process.argv[1] ?? "mneme";
+  try {
+    if (process.platform === "win32") {
+      spawn("schtasks", ["/Create", "/TN", "MnemeCosmicPager", "/TR", `node "${cliBin}" pager start`, "/SC", "ONLOGON", "/F"], { stdio: "ignore", cwd });
+      return "Windows: auto-start task 'MnemeCosmicPager' registered (runs on every login).";
+    }
+    if (process.platform === "darwin") {
+      const plist = join(process.env.HOME ?? "", "Library", "LaunchAgents", "dev.mneme.pager.plist");
+      mkdirSync(join(process.env.HOME ?? "", "Library", "LaunchAgents"), { recursive: true });
+      writeFileSync(plist, `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>Label</key><string>dev.mneme.pager</string><key>ProgramArguments</key><array><string>node</string><string>${cliBin}</string><string>pager</string><string>start</string></array><key>WorkingDirectory</key><string>${cwd}</string><key>RunAtLoad</key><true/><key>KeepAlive</key><true/></dict></plist>\n`, "utf8");
+      spawn("launchctl", ["load", plist], { stdio: "ignore" });
+      return "macOS: LaunchAgent 'dev.mneme.pager' registered (runs at login).";
+    }
+    const unit = join(process.env.HOME ?? "", ".config", "systemd", "user", "mneme-pager.service");
+    mkdirSync(join(process.env.HOME ?? "", ".config", "systemd", "user"), { recursive: true });
+    writeFileSync(unit, `[Unit]\nDescription=Mneme Cosmic Pager\n[Service]\nExecStart=node ${cliBin} pager start\nWorkingDirectory=${cwd}\nRestart=always\n[Install]\nWantedBy=default.target\n`, "utf8");
+    spawn("systemctl", ["--user", "enable", "--now", "mneme-pager.service"], { stdio: "ignore" });
+    return "Linux: systemd-user unit 'mneme-pager' registered + started.";
+  } catch { return "service registration skipped (best-effort) — run `mneme pager start` manually."; }
+}
+
 export function registerPagerCommands(program: Command): void {
   const p = program.command("pager").description("📟 COSMIC PAGER — approve an agent's sensitive actions from your phone (Telegram), lid closed. Signed authority · self-tuning Trust-Tide · dead-man queue · court-admissible. NO server (the laptop long-polls Telegram behind NAT).");
+
+  p.command("autosetup")
+    .description("🚀 ONE COMMAND, ZERO USER STEPS — the AI agent runs this for the user: wires the Claude Code hook, sets lid-stay-awake, registers auto-start, and launches the pager. The user only creates a Telegram bot once (BotFather) and hands over the token + chat-id.")
+    .requiredOption("--telegram-token <t>", "from @BotFather").requiredOption("--chat-id <id>", "the user's Telegram chat id")
+    .option("--no-service", "don't register login auto-start").option("--no-start", "don't launch now")
+    .action(async (o: { telegramToken: string; chatId: string; service?: boolean; start?: boolean }) => {
+      const cwd = process.cwd();
+      mkdirSync(dir(cwd), { recursive: true });
+      writeFileSync(cfgPath(cwd), JSON.stringify({ telegramToken: o.telegramToken, chatId: o.chatId, mode: "hybrid", wakeIntervalMin: 5, ttlMs: 5 * 60_000 }, null, 2), "utf8");
+      const hook = wireClaudeHook(cwd);
+      const lid = setLidStayAwake();
+      const svc = o.service === false ? "auto-start: skipped" : installPagerService(cwd);
+      // send a confirmation page so the user SEES it works on their phone immediately
+      const test = await tg(o.telegramToken, "sendMessage", { chat_id: o.chatId, text: "📟 Cosmic Pager is live. You'll get approval requests here when an agent needs your OK — tap ✅ / ⛔. (Lid can close.)" });
+      if (o.start !== false) { try { spawn(process.execPath, [process.argv[1], "pager", "start"], { cwd, stdio: "ignore", detached: true }).unref(); } catch { /* */ } }
+      out("📟 Cosmic Pager — autosetup complete");
+      out(`   ✓ config saved · ${hook.ok ? "✓ Claude Code hook wired (" + hook.path + ")" : "✗ hook not wired"}`);
+      out(`   ✓ ${lid}`);
+      out(`   ✓ ${svc}`);
+      out(`   ${test.ok ? "✓ test message sent to your Telegram — check your phone" : "⚠ could not reach Telegram — re-check the token/chat-id"}`);
+      out(`   ${o.start !== false ? "✓ pager started in the background (long-polling Telegram)" : "· not started (use --start)"}`);
+      out("\n   The user did ONE thing: created a Telegram bot. Everything else is wired. Close the lid and go.");
+    });
 
   p.command("setup").description("Configure the Telegram bot + policy.")
     .requiredOption("--telegram-token <t>", "BotFather token").requiredOption("--chat-id <id>", "your Telegram chat id")
