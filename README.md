@@ -31,10 +31,16 @@ Paste any public repo and get a signed, reproducible health X-Ray in seconds —
 
 </div>
 
-**Close the lid. Hit sleep. Don't shut down.** Your AI agent keeps working — and the instant it
-needs a **`yes` / `no` / a typed answer**, it pings your **Telegram in real time**. Tap ✅ / ⛔
-(or type a reply) from anywhere on earth, and the agent **picks up your answer and keeps going —
-for real.** No more babysitting a terminal.
+**Close the lid and walk away.** Your AI agent keeps working — and the instant it needs a
+**`yes` / `no` / a typed answer**, it pings your **Telegram in real time**. Tap ✅ / ⛔ (or type
+a reply) from anywhere on earth, and the agent **picks up your answer and keeps going — for
+real.** No more babysitting a terminal.
+
+> ⚠️ **One hard requirement (all OS):** the laptop must stay **AWAKE with the lid closed** —
+> **NOT** asleep. A truly *sleeping* CPU is halted, so the agent pauses until it wakes (physics,
+> not a bug). `autosetup` sets **lid-close → "do nothing"** for you. **Windows / Linux:** works
+> on battery. **macOS:** the firmware sleeps on lid-close *on battery* regardless — **keep it on
+> AC power** (or an external display) for clamshell stay-awake.
 
 > **How it's different from a hosted "remote control":** there is **no server, no public IP,
 > no cloud session to keep alive.** The brain stays on **your** machine — only a one-line

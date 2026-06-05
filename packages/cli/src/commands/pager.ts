@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import * as https from "node:https";
+import * as http from "node:http";
 import { pager, notary } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -259,6 +260,18 @@ export function registerPagerCommands(program: Command): void {
       out(ok ? "⚠ daemon was down — restarted ✓ (long-polling Telegram again)" : "✗ could not restart — run `mneme pager start`.");
     });
 
+  p.command("tool-schema").description("Emit the `ask_human` function-calling tool (OpenAI/xAI/Anthropic schema) + REST examples — register it with ANY vendor's agent so the model can ask you via Telegram over the local HTTP bridge.")
+    .action(() => {
+      const cwd = process.cwd(); const port = (loadCfg(cwd) as { httpPort?: number }).httpPort ?? 17782;
+      const tool = { type: "function", function: { name: "ask_human", description: "Ask the human user a question and wait for their answer (delivered to their phone via Telegram). Use when you need approval (yes/no), a choice, or a typed value before continuing.", parameters: { type: "object", properties: { question: { type: "string" }, kind: { type: "string", enum: ["approve", "choice", "text"] }, choices: { type: "array", items: { type: "string" } } }, required: ["question"] } } };
+      out("// 1) Register this tool with your agent (OpenAI/xAI/Anthropic function-calling):");
+      out(JSON.stringify(tool, null, 2));
+      out("\n// 2) Your tool-runner implements ask_human by calling the LOCAL bridge (daemon must be running):");
+      out(`//   POST http://127.0.0.1:${port}/pager/ask   {"question":"...","kind":"approve|choice|text","choices":[...]}  -> {id}`);
+      out(`//   GET  http://127.0.0.1:${port}/pager/answer?id=<id>  -> {answer}   (poll until answer != null)`);
+      out("// The human's answer is signed (Proxy-of-Record) + bound to the exact question. Works for Cursor/Cline/Codex/aider/any local Grok·xAI·OpenAI agent.");
+    });
+
   p.command("mode [set]").description("ATTENDED (default — conversational questions stay in chat) vs UNATTENDED (away/lid-closed — the AI's questions auto-route to your phone). Tool/command approvals always route regardless.")
     .action((set?: string) => {
       const cwd = process.cwd(); const cfg = loadCfg(cwd);
@@ -362,6 +375,36 @@ export function registerPagerCommands(program: Command): void {
       let offset = 0;
       const deadmanTick = () => { const st = loadState(cwd); const r = pager.deadmanResolve(st.pendings.filter((x) => x.status === "pending"), Date.now()); for (const res of r.resolved) resolvePending(cwd, res.id, res.decision, "deadman", "policy", Date.now()); };
       setInterval(deadmanTick, (cfg.wakeIntervalMin ?? 5) * 60_000);
+
+      // ── LOCAL HTTP/A2A BRIDGE — the universal channel: ANY local agent (Cursor/Cline/Codex/
+      // aider, or a Grok/xAI/OpenAI tool-runner) can POST to ask the human via Telegram + poll
+      // the signed answer over plain REST. 127.0.0.1 only (never exposed off the machine).
+      const httpPort = (cfg as { httpPort?: number }).httpPort ?? 17782;
+      const server = http.createServer((rq, rs) => {
+        const send = (code: number, obj: unknown) => { rs.writeHead(code, { "content-type": "application/json", "access-control-allow-origin": "*" }); rs.end(JSON.stringify(obj)); };
+        try {
+          const url = new URL(rq.url ?? "/", "http://127.0.0.1");
+          if (rq.method === "GET" && url.pathname === "/health") return send(200, { ok: true, service: "mneme-pager" });
+          if (rq.method === "GET" && url.pathname === "/pager/answer") { const id = url.searchParams.get("id") ?? ""; const st = loadState(cwd); const pp = st.pendings.find((x) => x.req.id === id); return send(200, { id, answer: st.answers?.[id] ?? null, status: pp?.status ?? "unknown" }); }
+          if (rq.method === "POST" && url.pathname === "/pager/ask") {
+            let body = ""; rq.on("data", (d) => (body += d)); rq.on("end", async () => {
+              try {
+                const b = JSON.parse(body || "{}") as { question?: string; kind?: string; choices?: string[]; vendor?: string; agent?: string };
+                const kind = (["approve", "choice", "text"].includes(b.kind ?? "") ? b.kind : "approve") as pager.QuestionKind;
+                const nowL = Date.now(); const nonce = Math.abs([...`${b.question}${nowL}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+                const req = pager.mintQuestion({ rawContext: b.question ?? "", question: b.question ?? "", kind, choices: b.choices, agent: b.agent ?? "agent", session: "http", vendor: b.vendor, nonce, now: nowL, ttlMs: cfg.ttlMs });
+                const tgMessageId = await pageQuestion(cfg, req);
+                const st = loadState(cwd); st.pendings.push({ req, status: "pending", lane: "conservative", tgMessageId }); saveState(cwd, st);
+                send(200, { id: req.id, kind, paged: !!(cfg.telegramToken && cfg.chatId) });
+              } catch (e) { send(400, { error: String((e as Error).message) }); }
+            });
+            return;
+          }
+          send(404, { error: "not found" });
+        } catch (e) { send(500, { error: String((e as Error).message) }); }
+      });
+      server.on("error", () => { /* port in use → another daemon already serving */ });
+      server.listen(httpPort, "127.0.0.1");
       // long-poll loop — handles approve (a:/d:), choice (c:), and typed text replies.
       // SELF-HEALING: each cycle touches a heartbeat; any error is caught + retried (the loop
       // never dies on a transient network blip), so the pager keeps itself alive 24/7.
