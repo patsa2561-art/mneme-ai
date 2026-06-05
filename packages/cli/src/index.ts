@@ -148,6 +148,7 @@ import { registerAccountabilityCommands } from "./commands/accountability.js";
 import { registerWarmCommands } from "./commands/warm.js";
 import { registerGeoCommands } from "./commands/geo.js";
 import { registerHeartbeatCommands } from "./commands/heartbeat.js";
+import { registerReckonCommands } from "./commands/reckon.js";
 import { registerAdamasCommands } from "./commands/adamas.js";
 import { registerPrismCommands } from "./commands/prism.js";
 import { registerGoldilocksCommands } from "./commands/goldilocks.js";
@@ -4978,6 +4979,7 @@ export async function run(argv: string[]): Promise<void> {
   registerWarmCommands(program);
   registerGeoCommands(program);
   registerHeartbeatCommands(program);
+  registerReckonCommands(program);
   registerAdamasCommands(program);
   registerPrismCommands(program);
   registerGoldilocksCommands(program);

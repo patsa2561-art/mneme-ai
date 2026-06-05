@@ -15,7 +15,7 @@
 import type { Command } from "commander";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { geo, commitAttest, awarm, notary } from "@mneme-ai/core";
+import { geo, commitAttest, awarm, notary, cortex } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 const readJsonl = <T>(p: string): T[] => existsSync(p) ? readFileSync(p, "utf8").trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l) as T; } catch { return null; } }).filter(Boolean) as T[] : [];
@@ -24,12 +24,40 @@ const readJson = <T>(p: string, fallback: T): T => { try { return existsSync(p) 
 export interface HeartbeatReport {
   ranAt: number;
   geo: { rawBefore: number; rawAfter: number; axioms: number; reclaimedBytes: number };
+  cortexFed: number;
   verify: { attest: boolean; warm: boolean; geo: boolean; allOk: boolean };
   evolutionHash: string;
 }
 
+/** Ingest the REAL shared memory (cortex active facts) into geo so it metamorphoses with
+ *  age — old cortex memory dissolves to signed abstract→axiom + purges its raw. Deduped. */
+function feedGeoFromCortex(cwd: string): number {
+  const cp = join(cwd, ".mneme", "cortex", "store.json");
+  if (!existsSync(cp)) return 0;
+  let store: { entries?: unknown[] }; try { store = JSON.parse(readFileSync(cp, "utf8")); } catch { return 0; }
+  if (!store || !Array.isArray(store.entries)) return 0;
+  const gp = join(cwd, ".mneme", "geo", "state.json");
+  let g = readJson<geo.GeoState>(gp, geo.emptyGeo());
+  const have = new Set(g.cells.map((c) => c.id));
+  let added = 0;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const active = cortex.activeView(store as any) as Map<string, { key: string; value: string; at?: number }>;
+    for (const e of active.values()) {
+      const id = `cortex:${e.key}`;
+      if (have.has(id) || !e.value) continue;
+      g = geo.seedRaw(g, { id, raw: String(e.value), ts: Number(e.at) || Date.now() });
+      have.add(id); added++;
+    }
+  } catch { /* */ }
+  if (added) { try { mkdirSync(join(cwd, ".mneme", "geo"), { recursive: true }); writeFileSync(gp, JSON.stringify(g), "utf8"); } catch { /* */ } }
+  return added;
+}
+
 /** Run ONE self-maintenance beat. Total + idempotent + safe (no rule rewrite, no kill). */
 export function runHeartbeat(cwd: string, now = Date.now()): HeartbeatReport {
+  // 0) FEED geo from the REAL shared memory (cortex) so it recycles actual memory
+  const cortexFed = feedGeoFromCortex(cwd);
   // 1) METAMORPHOSE memory (geo)
   const gp = join(cwd, ".mneme", "geo", "state.json");
   const gBefore = geo.geoStats(readJson<geo.GeoState>(gp, geo.emptyGeo()));
@@ -49,6 +77,7 @@ export function runHeartbeat(cwd: string, now = Date.now()): HeartbeatReport {
   const report: Omit<HeartbeatReport, "evolutionHash"> = {
     ranAt: now,
     geo: { rawBefore: gBefore.raw, rawAfter: gStats.raw, axioms: gStats.axiom, reclaimedBytes: gStats.rawBytesReclaimed },
+    cortexFed,
     verify: { attest: attestOk, warm: warmOk, geo: geoOk, allOk },
   };
   let evolutionHash = "";
@@ -65,7 +94,7 @@ export function registerHeartbeatCommands(program: Command): void {
   const h = program.command("upkeep").description("💓 SELF-MAINTAINING PULSE — one safe, signed maintenance beat: metamorphose memory + re-verify every ledger + sign an evolution snapshot. The daemon runs this on idle. (It self-maintains, NOT self-rewrites-its-rules.)");
   h.command("run", { isDefault: true }).description("Run one beat now.").action(() => {
     const r = runHeartbeat(process.cwd());
-    out(`💓 beat · geo raw ${r.geo.rawBefore}→${r.geo.rawAfter} · ${r.geo.axioms} axiom(s) · ${r.geo.reclaimedBytes}b reclaimed`);
+    out(`💓 beat · ${r.cortexFed} cortex memories ingested · geo raw ${r.geo.rawBefore}→${r.geo.rawAfter} · ${r.geo.axioms} axiom(s) · ${r.geo.reclaimedBytes}b reclaimed`);
     out(`   ledgers verified: attest ${r.verify.attest ? "✓" : "✗"} · warm ${r.verify.warm ? "✓" : "✗"} · geo ${r.verify.geo ? "✓" : "✗"}${r.verify.allOk ? "" : "  ⚠ TAMPER/DRIFT — investigate"}`);
     out(`   signed evolution snapshot: ${r.evolutionHash.slice(0, 16) || "(unsigned)"}`);
   });

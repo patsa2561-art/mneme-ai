@@ -331,6 +331,7 @@ export * as engagement from "./engagement/index.js";
 export * as agentBenchmark from "./agent_benchmark/index.js";
 export * as awarm from "./awarm/index.js";
 export * as geo from "./geo/index.js";
+export * as reckoning from "./reckoning/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

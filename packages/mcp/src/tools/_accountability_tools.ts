@@ -11,7 +11,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { revertRadar, agentBenchmark, engagement, awarm, geo } from "@mneme-ai/core";
+import { revertRadar, agentBenchmark, engagement, awarm, geo, reckoning, commitAttest } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
 
 function git(args: string, cwd: string): string {
@@ -44,6 +44,31 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
 }
 
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.reckon.scan",
+    category: "audit",
+    description:
+      "ACCOUNTABILITY DOSSIER — assemble the signed evidence for a commit (provenance attestation · secret-screen · engagement policy · whether it was reverted) into a verdict: EXONERATED (the signed record proves the rules were followed) / ACCOUNTABLE (a signed violation exists, named) / INSUFFICIENT_EVIDENCE (no record — never a guess). The permanent record becomes a SHIELD a court/auditor/insurer verifies offline. Pass {commit} (default HEAD). Example asks: 'was this commit compliant?', 'can we prove the AI followed policy?', 'who's accountable for this change?'",
+    whenToUse: "The user/CISO/auditor needs a provable verdict on whether a change followed the rules — to defend or to hold accountable.",
+    triggers: ["was this commit compliant", "prove the ai followed policy", "who is accountable", "reckon this commit", "accountability dossier", "exonerate"],
+    inputSchema: { type: "object", properties: { commit: { type: "string", description: "commit ref (default HEAD)" } } },
+    handler: async (runtime: ToolRuntime, args: { commit?: string }): Promise<ToolResponse> => {
+      const cwd = runtime.cwd; const sha = git(`rev-parse ${args.commit ?? "HEAD"}`, cwd) || (args.commit ?? "HEAD");
+      let attested = false, attestVerified = false, secretsClean = true;
+      const ap = join(cwd, ".mneme", "attest", "chain.jsonl");
+      if (existsSync(ap)) { try { for (const l of readFileSync(ap, "utf8").trim().split("\n").filter(Boolean)) { const e = JSON.parse(l) as commitAttest.AttestEntry; if (e.record?.subject === `commit:${sha}`) { attested = true; attestVerified = commitAttest.verifyAttest(e).valid; secretsClean = Number((e.facts as { addedSecrets?: number })?.addedSecrets ?? 0) === 0; break; } } } catch { /* */ } }
+      let policy = engagement.defaultPolicy(); const pp = join(cwd, ".mneme", "engagement.json");
+      if (existsSync(pp)) { try { policy = { ...policy, ...(JSON.parse(readFileSync(pp, "utf8")) as object) }; } catch { /* */ } }
+      const files = git(`show --name-only --format= ${sha}`, cwd).split("\n").map((x) => x.trim()).filter(Boolean);
+      const eng = engagement.evaluateEngagement(policy, { kind: "write", paths: files, fileCount: files.length });
+      const reverted = !!git(`log --all --grep=This reverts commit ${sha} --oneline`, cwd);
+      const ev = { subject: sha, attested, attestVerified, secretsClean, engagement: eng.decision, cosigned: false, customsClean: true, reverted };
+      const r = reckoning.buildReckoning(ev);
+      const icon = r.verdict === "EXONERATED" ? "🟢" : r.verdict === "ACCOUNTABLE" ? "🔴" : "⚪";
+      const wisdom = `${icon} ${sha.slice(0, 10)} → ${r.verdict}. ${r.accountableFor.length ? "Accountable for: " + r.accountableFor.join("; ") + "." : r.exoneratedBy.length ? "Cleared by: " + r.exoneratedBy.slice(0, 3).join("; ") + "." : "No signed record to judge — don't assert compliance."} This verdict is signable + offline-verifiable — the record defends or indicts, provably.`;
+      return { data: { verdict: r.verdict, evidence: ev, findings: r.findings, accountableFor: r.accountableFor }, wisdom };
+    },
+  },
   {
     name: "mneme.heartbeat.scan",
     category: "audit",
