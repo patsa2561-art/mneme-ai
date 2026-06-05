@@ -8,10 +8,10 @@
 import type { Command } from "commander";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import * as https from "node:https";
 import * as http from "node:http";
-import { pager, notary } from "@mneme-ai/core";
+import { pager, notary, preflight } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 const dir = (cwd: string) => join(cwd, ".mneme", "pager");
@@ -236,6 +236,21 @@ export function registerPagerCommands(program: Command): void {
       ensureDaemon(cwd);                 // AUTO self-heal: if the long-poll daemon is down, revive it
       await page(cfg, req);
       if (o.json) { out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) })); return; }
+      // ── PRE-FLIGHT (Wait-State compute window) — FIRE-AND-FORGET so it NEVER delays the
+      // human's answer or the dead-man timeout. Sends a decision brief; for provably read-only
+      // commands, speculatively pre-runs (time-boxed) so the human approves with foresight.
+      void (async () => {
+        try {
+          const brief = preflight.buildPreflight({ command: o.command, blast });
+          if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: "📊 " + preflight.renderBrief(brief) });
+          if (brief.speculatable) {
+            const r = spawnSync(o.command, { shell: true, timeout: 8000, encoding: "utf8", cwd });
+            const okRun = !r.error && (r.status === 0 || r.status === null);
+            const preview = String(r.stdout || r.stderr || "").trim().slice(0, 280);
+            if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: okRun ? `✅ pre-ran in a safe read-only check — looks clean:\n${preview || "(no output)"}` : `⚠️ heads-up: this would FAIL if approved:\n${preview || r.error?.message || "error"}` });
+          }
+        } catch { /* pre-flight is best-effort; it never affects the decision path */ }
+      })();
       // DUAL-SURFACE BLOCK-AND-WAIT: poll state.answers[id] — written by the phone (daemon) OR
       // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
       const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl; let n = 0;
