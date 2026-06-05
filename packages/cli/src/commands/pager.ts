@@ -114,8 +114,10 @@ function wireClaudeHook(cwd: string): { ok: boolean; path: string } {
     s.hooks = s.hooks ?? {};
     const pre = (s.hooks.PreToolUse as unknown[]) ?? (s.hooks.PreToolUse = []);
     const cmd = "mneme pager request --command \"$TOOL_INPUT_command\" --agent claude-code --session \"$CLAUDE_SESSION_ID\"";
-    const already = JSON.stringify(pre).includes("mneme pager request");
-    if (!already) pre.push({ matcher: "Bash", hooks: [{ type: "command", command: cmd }] });
+    if (!JSON.stringify(pre).includes("mneme pager request")) pre.push({ matcher: "Bash", hooks: [{ type: "command", command: cmd }] });
+    // Stop hook — when a turn ends with a question AND mode=unattended, route it to the phone.
+    const stop = (s.hooks.Stop as unknown[]) ?? (s.hooks.Stop = []);
+    if (!JSON.stringify(stop).includes("mneme pager turn-end")) stop.push({ hooks: [{ type: "command", command: "mneme pager turn-end" }] });
     writeFileSync(sp, JSON.stringify(s, null, 2), "utf8");
     return { ok: true, path: sp };
   } catch { return { ok: false, path: sp }; }
@@ -255,6 +257,50 @@ export function registerPagerCommands(program: Command): void {
       if (daemonAlive(cwd)) { out("✓ pager daemon is alive (heartbeat fresh)."); return; }
       const ok = ensureDaemon(cwd);
       out(ok ? "⚠ daemon was down — restarted ✓ (long-polling Telegram again)" : "✗ could not restart — run `mneme pager start`.");
+    });
+
+  p.command("mode [set]").description("ATTENDED (default — conversational questions stay in chat) vs UNATTENDED (away/lid-closed — the AI's questions auto-route to your phone). Tool/command approvals always route regardless.")
+    .action((set?: string) => {
+      const cwd = process.cwd(); const cfg = loadCfg(cwd);
+      if (set === "attended" || set === "unattended") { writeFileSync(cfgPath(cwd), JSON.stringify({ ...cfg, attend: set }, null, 2), "utf8"); out(`✓ pager mode → ${set}${set === "unattended" ? " — the AI's questions now auto-page your phone" : " — questions stay in chat (you're at the keyboard)"}`); return; }
+      out(`pager mode: ${(cfg as { attend?: string }).attend ?? "attended"} (use \`mneme pager mode unattended\` when you step away)`);
+    });
+
+  p.command("turn-end").description("THE STOP HOOK — classify the AI's finished turn; if it's a question AND mode=unattended, route it to the phone, wait, and feed the answer back so the agent continues. Pass --reply or pipe the assistant's last message on stdin.")
+    .option("--reply <text>", "the assistant's last message").option("--agent <a>", "agent", "claude-code").option("--vendor <v>", "vendor", "claude")
+    .action(async (o: { reply?: string; agent?: string; vendor?: string }) => {
+      const cwd = process.cwd(); const cfg = loadCfg(cwd); const attend = (cfg as { attend?: pager.PagerMode }).attend ?? "attended";
+      let reply = o.reply ?? "";
+      if (!reply) {
+        let stdin = ""; try { stdin = readFileSync(0, "utf8"); } catch { /* no stdin */ }
+        // Claude Code Stop hook passes JSON { transcript_path, … }; else treat stdin as the reply.
+        try {
+          const j = JSON.parse(stdin) as { transcript_path?: string };
+          if (j.transcript_path && existsSync(j.transcript_path)) {
+            const lines = readFileSync(j.transcript_path, "utf8").trim().split("\n");
+            for (let i = lines.length - 1; i >= 0 && !reply; i--) {
+              try { const e = JSON.parse(lines[i]) as { type?: string; message?: { role?: string; content?: unknown } }; const msg = e.message ?? (e as { role?: string; content?: unknown }); if (e.type === "assistant" || msg.role === "assistant") { const ct = msg.content; reply = Array.isArray(ct) ? ct.filter((c: { type?: string }) => c.type === "text").map((c: { text?: string }) => c.text ?? "").join("\n") : String(ct ?? ""); } } catch { /* */ }
+            }
+          } else reply = stdin;
+        } catch { reply = stdin; }
+      }
+      const cls = pager.classifyTurn(reply);
+      const route = pager.decideRoute(cls, attend);
+      if (!route.page) { out("{}"); return; } // let the turn end normally (Claude Code Stop hook: no block)
+      ensureDaemon(cwd);
+      const now = Date.now();
+      const nonce = Math.abs([...`${cls.question}${now}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+      const req = pager.mintQuestion({ rawContext: cls.question, question: cls.question, kind: cls.kind, choices: cls.choices, agent: o.agent ?? "claude-code", session: "turn", vendor: o.vendor, nonce, now, ttlMs: cfg.ttlMs });
+      const tgMessageId = await pageQuestion(cfg, req);
+      const st = loadState(cwd); st.pendings.push({ req, status: "pending", lane: "conservative", tgMessageId }); saveState(cwd, st);
+      const deadline = Date.now() + (cfg.ttlMs ?? 5 * 60_000); let n = 0;
+      for (;;) {
+        const ans = loadState(cwd).answers?.[req.id];
+        if (ans !== undefined) { out(JSON.stringify({ decision: "block", reason: `The user answered on their phone: "${ans}". Continue with this.` })); return; }
+        if (Date.now() > deadline) { out("{}"); return; }
+        if (++n % 20 === 0) ensureDaemon(cwd);
+        await new Promise((r) => setTimeout(r, 500));
+      }
     });
 
   p.command("ask").description("🌐 VENDOR-AGNOSTIC — any agent (any vendor) asks the human a question → Telegram → signed answer back. Kinds: approve (yes/no) · choice (pick-one) · text (typed). Prints {id}; pair with `mneme pager await <id>`.")

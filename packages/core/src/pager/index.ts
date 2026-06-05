@@ -213,6 +213,46 @@ export function resolveRace(local: SurfaceAnswer | null, phone: SurfaceAnswer | 
   return { winner: localWins ? l : p, dismiss: localWins ? "phone" : "local" };
 }
 
+// ─── Diamond 8: TURN ROUTER (what reaches the phone, and as what kind) ────────
+/** Classify an AI's chat turn: is it actually waiting on the human, and if so as what UI?
+ *  This is how the pager decides WHICH questions to send — and renders the right control:
+ *  yes/no buttons (approve) · pick-one buttons (choice) · a typed reply (text). A statement
+ *  (no question) is NOT routed. Deterministic, no LLM. */
+export interface TurnClass { isQuestion: boolean; kind: QuestionKind; choices?: string[]; question: string }
+export function classifyTurn(text: string): TurnClass {
+  const t = String(text ?? "").trim();
+  if (!t) return { isQuestion: false, kind: "text", question: "" };
+  // the operative ask is usually the last question line
+  const lines = t.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+  const qLine = [...lines].reverse().find((l) => l.includes("?") || /\b(should i|shall i|do you want|which|choose|pick|ok to|confirm|proceed)\b/i.test(l)) ?? lines[lines.length - 1] ?? t;
+  const hasQ = /\?|\b(should i|shall i|do you want|which|choose|pick|ok to|confirm|proceed|y\/n|yes\/no)\b/i.test(qLine);
+  if (!hasQ) return { isQuestion: false, kind: "text", question: qLine };
+  // pick-one: numbered/bulleted options, or "A, B, or C"
+  const numbered = t.match(/^\s*(?:\d+[.)]|[-*]|[a-d][.)])\s+(.{1,60})$/gim);
+  if (numbered && numbered.length >= 2) {
+    const choices = numbered.map((m) => m.replace(/^\s*(?:\d+[.)]|[-*]|[a-d][.)])\s+/i, "").trim()).filter(Boolean).slice(0, 8);
+    return { isQuestion: true, kind: "choice", choices, question: qLine };
+  }
+  const orList = qLine.match(/\b([\w-]+(?:\s[\w-]+)?)(?:,\s*([\w-]+(?:\s[\w-]+)?))+,?\s+or\s+([\w-]+(?:\s[\w-]+)?)\??/i);
+  if (orList) { const opts = qLine.replace(/\?$/, "").split(/,\s*|\s+or\s+/i).map((s) => s.trim()).filter(Boolean).slice(-4); if (opts.length >= 2) return { isQuestion: true, kind: "choice", choices: opts, question: qLine }; }
+  // yes/no — only on STRONG signals (avoid false-positives like "What should I name?")
+  const ynStart = /^(should|shall|do|does|did|can|could|may|might|is|are|was|were|will|would|have|has|ok\b)/i;
+  const ynMarker = /\b(y\/n|yes\/no|do you want|ok to|shall i|confirm|proceed)\b/i;
+  const thYn = /(ไหม|มั้ย|หรือไม่|ดีไหม|เอาไหม)\s*\??$/;
+  if (ynStart.test(qLine) || ynMarker.test(qLine) || thYn.test(qLine)) return { isQuestion: true, kind: "approve", question: qLine };
+  // otherwise open-ended (what / how / which-without-options …) → typed reply
+  return { isQuestion: true, kind: "text", question: qLine };
+}
+
+export type PagerMode = "attended" | "unattended";
+/** Decide whether to page a CONVERSATIONAL turn. Attended (you're at the keyboard) → never
+ *  auto-page (questions stay in chat). Unattended (lid closed / away) → page real questions. */
+export function decideRoute(cls: TurnClass, mode: PagerMode): { page: boolean; kind: QuestionKind; reason: string } {
+  if (!cls?.isQuestion) return { page: false, kind: "text", reason: "not a question — nothing to route" };
+  if (mode !== "unattended") return { page: false, kind: cls.kind, reason: "attended: you're at the keyboard — stays in chat" };
+  return { page: true, kind: cls.kind, reason: `unattended: routing a ${cls.kind} question to your phone` };
+}
+
 // ─── gauntlet (scored out of 1000) ────────────────────────────────────────────
 export interface PagerGauntlet { score: number; max: 1000; passed: number; total: number; checks: Array<{ name: string; pass: boolean; detail: string }> }
 
@@ -255,7 +295,16 @@ export function pagerGauntlet(): PagerGauntlet {
   const r2 = buildReceipt(req, "allow", "human", "telegram", "conservative", now);
   const receipt = r1.receiptHash === r2.receiptHash && r1.commandHash === req.commandHash && buildReceipt(req, "deny", "human", "telegram", "conservative", now).receiptHash !== r1.receiptHash;
 
-  const total = (() => { try { decide(null as never, null as never); deadmanResolve(null as never, 0); verifyApproval(null as never, null as never, 0, false); verifyAnswer(null as never, null as never); recordHumanDecision(null as never, "", "", "", 0); resolveRace(null, null); return true; } catch { return false; } })();
+  const total = (() => { try { decide(null as never, null as never); deadmanResolve(null as never, 0); verifyApproval(null as never, null as never, 0, false); verifyAnswer(null as never, null as never); recordHumanDecision(null as never, "", "", "", 0); resolveRace(null, null); classifyTurn(null as never); decideRoute(null as never, "attended"); return true; } catch { return false; } })();
+
+  // 9. TURN ROUTER: classify what to page + as what kind; statement is not routed; mode gates
+  const cYesNo = classifyTurn("I'm ready to deploy. Should I push to prod? (y/n)");
+  const cChoice = classifyTurn("Which environment?\n1. production\n2. staging\n3. local");
+  const cText = classifyTurn("What should I name this release?");
+  const cStatement = classifyTurn("I finished refactoring the auth module and all tests pass.");
+  const routeOK = cYesNo.kind === "approve" && cYesNo.isQuestion && cChoice.kind === "choice" && (cChoice.choices?.length ?? 0) === 3 && cText.kind === "text" && cText.isQuestion && cStatement.isQuestion === false;
+  const modeOK = decideRoute(cYesNo, "attended").page === false && decideRoute(cYesNo, "unattended").page === true && decideRoute(cStatement, "unattended").page === false;
+  const router = routeOK && modeOK;
 
   // 5. ELICITATION: approve / choice / text
   const qApprove = mintQuestion({ rawContext: "deploy", question: "Deploy to prod?", kind: "approve", agent: "a", session: "s", nonce: "1", now });
@@ -294,8 +343,9 @@ export function pagerGauntlet(): PagerGauntlet {
     { name: "ELICIT-TEXT", pass: textOk, detail: "free-text questions accept a typed answer (reject empty)" },
     { name: "PROXY-OF-RECORD", pass: proxy, detail: "the human's answer is signed, vendor-portable, and bound to THIS question (can't be reused/tampered)" },
     { name: "DUAL-SURFACE-RACE", pass: race, detail: "answer from phone OR keyboard — first wins, the other dismisses" },
+    { name: "TURN-ROUTER", pass: router, detail: "classifies a turn → yes-no / pick-one / typed / not-a-question; mode gates conversational paging (attended=stay, unattended=route)" },
     { name: "DETERMINISTIC-FAST", pass: det && determinism, detail: "5,000 mint+verify round-trips, pure + instant; same input → same id" },
-    { name: "TOTAL", pass: total, detail: "never throws on garbage, across all 7 surfaces" },
+    { name: "TOTAL", pass: total, detail: "never throws on garbage, across all surfaces" },
   ];
   const passed = checks.filter((c) => c.pass).length;
   return { score: Math.round((passed / checks.length) * 1000), max: 1000, passed, total: checks.length, checks };
