@@ -21,6 +21,7 @@
  */
 import { createHash, createHmac } from "node:crypto";
 export * from "./matrix.js";
+export * from "./universal.js";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 

@@ -49,3 +49,13 @@ describe("BROADCAST MATRIX — parallel fan-out + first-wins + vendor-agnostic",
   });
   it("MEASURED: broadcastMatrixGauntlet = 100", () => { const g = broadcastMatrixGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass)); expect(g.score).toBe(100); });
 });
+
+import { universalGateGauntlet, parseHookDecision, shimScriptSh } from "./universal.js";
+describe("UNIVERSAL GATE — gate the command, not the agent (every vendor)", () => {
+  it("parses pager decision; fails open on garbage", () => {
+    expect(parseHookDecision('{"hookSpecificOutput":{"permissionDecision":"deny"}}')).toBe("deny");
+    expect(parseHookDecision("not json")).toBe("allow");
+  });
+  it("sh shim execs the real binary on non-deny", () => { expect(shimScriptSh("git", "/usr/bin/git")).toContain('exec "/usr/bin/git"'); });
+  it("MEASURED: universalGateGauntlet = 100", () => { const g = universalGateGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass)); expect(g.score).toBe(100); });
+});

@@ -6,8 +6,9 @@
  * power "breathing". Behind NAT, the laptop reaches OUT to Telegram — NO server, NO public IP.
  */
 import type { Command } from "commander";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, chmodSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import * as https from "node:https";
 import * as http from "node:http";
@@ -24,6 +25,16 @@ function readHookStdin(): { command?: string; session?: string; toolName?: strin
     if (!raw.trim()) return null;
     const j = JSON.parse(raw) as { tool_input?: { command?: string }; session_id?: string; tool_name?: string };
     return { command: j?.tool_input?.command, session: j?.session_id, toolName: j?.tool_name };
+  } catch { return null; }
+}
+/** Resolve the REAL binary for a command (skipping our shim dir), baked into the shim at install. */
+function resolveRealBinary(cmd: string, shimDir: string): string | null {
+  try {
+    const isWin = process.platform === "win32";
+    const r = spawnSync(isWin ? "where" : "command", isWin ? [cmd] : ["-v", cmd], { encoding: "utf8", shell: !isWin });
+    const lines = String(r.stdout || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    for (const p of lines) { if (!p.toLowerCase().startsWith(shimDir.toLowerCase())) return p; }   // skip the shim itself
+    return null;
   } catch { return null; }
 }
 const dir = (cwd: string) => join(cwd, ".mneme", "pager");
@@ -468,6 +479,37 @@ export function registerPagerCommands(program: Command): void {
         if (Date.now() > deadline) { out(JSON.stringify({ id, answer: null, timeout: true })); process.exitCode = 2; return; }
         await new Promise((r) => setTimeout(r, 1500));
       }
+    });
+
+  p.command("shim").description("🌐 UNIVERSAL GATE — gate the COMMAND, not the agent. Installs PATH-first shims for high-risk commands so the approve-from-chat flow works for ANY agent (Claude/Grok/Gemini/Cursor/aider) AND a human — because the shell layer is vendor-neutral. action: install | uninstall | status.")
+    .argument("<action>", "install | uninstall | status")
+    .option("--commands <list>", "comma-separated commands to guard (default: high-risk set)")
+    .action((action: string, o: { commands?: string }) => {
+      const shimDir = join(homedir(), ".mneme", "shims");
+      const isWin = process.platform === "win32";
+      const list = o.commands ? o.commands.split(",").map((s) => s.trim()).filter(Boolean) : [...keryx.DEFAULT_GUARDED];
+      if (action === "status") {
+        const have = existsSync(shimDir) ? readdirSync(shimDir) : [];
+        out(have.length ? `🌐 ${have.length} shim(s) in ${shimDir}: ${have.join(", ")}\n   ensure this is FIRST on PATH for your agent's shell.` : `no shims installed. Run \`mneme pager shim install\`.`);
+        return;
+      }
+      if (action === "uninstall") { if (existsSync(shimDir)) rmSync(shimDir, { recursive: true, force: true }); out(`✓ removed ${shimDir}. (Also remove it from PATH.)`); return; }
+      if (action !== "install") { out("action must be install | uninstall | status"); process.exitCode = 2; return; }
+      mkdirSync(shimDir, { recursive: true });
+      const resolved: string[] = []; const skipped: string[] = [];
+      for (const cmd of list) {
+        const real = resolveRealBinary(cmd, shimDir);
+        if (!real) { skipped.push(cmd); continue; }
+        if (isWin) { writeFileSync(join(shimDir, `${cmd}.ps1`), keryx.shimScriptPs1(cmd, real), "utf8"); writeFileSync(join(shimDir, `${cmd}.cmd`), `@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0${cmd}.ps1" %*\r\n`, "utf8"); }
+        else { const p = join(shimDir, cmd); writeFileSync(p, keryx.shimScriptSh(cmd, real), "utf8"); try { chmodSync(p, 0o755); } catch { /* */ } }
+        resolved.push(cmd);
+      }
+      out(`🌐 UNIVERSAL GATE installed ${resolved.length} shim(s) → ${shimDir}`);
+      if (resolved.length) out(`   guarded: ${resolved.join(", ")}`);
+      if (skipped.length) out(`   skipped (not found on PATH): ${skipped.join(", ")}`);
+      out(isWin ? `   ▶ add to PATH (front): $env:PATH = "${shimDir};" + $env:PATH   (set it in the env your AI agent runs in)`
+        : `   ▶ add to PATH (front): export PATH="${shimDir}:$PATH"   (put this where your AI agent's shell sources it)`);
+      out(`   Now ANY agent (or you) running a guarded command is gated through the pager — vendor-neutral.`);
     });
 
   p.command("approve <id>").description("Approve a pending request locally (testing without the phone).").option("--deny", "deny instead")
