@@ -18,10 +18,11 @@ const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
 
 interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number }
-interface PagerState { trust: pager.TrustState; pendings: pager.Pending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[] }
+interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string> }
+type PagerPending = pager.Pending & { tgMessageId?: number };
 
 const loadCfg = (cwd: string): PagerConfig => { try { return existsSync(cfgPath(cwd)) ? JSON.parse(readFileSync(cfgPath(cwd), "utf8")) : {}; } catch { return {}; } };
-const loadState = (cwd: string): PagerState => { try { return existsSync(statePath(cwd)) ? JSON.parse(readFileSync(statePath(cwd), "utf8")) : { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [] }; } catch { return { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [] }; } };
+const loadState = (cwd: string): PagerState => { try { return existsSync(statePath(cwd)) ? JSON.parse(readFileSync(statePath(cwd), "utf8")) : { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [], decisions: [], answers: {} }; } catch { return { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [], decisions: [], answers: {} }; } };
 const saveState = (cwd: string, s: PagerState): void => { mkdirSync(dir(cwd), { recursive: true }); writeFileSync(statePath(cwd), JSON.stringify(s, null, 2), "utf8"); };
 
 /** Deterministic blast classifier (heph can plug in later for the full gate). */
@@ -54,15 +55,40 @@ async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<void>
   });
 }
 
-function resolvePending(cwd: string, id: string, decision: "allow" | "deny", decidedBy: pager.ApprovalReceipt["decidedBy"], channel: string, now: number): pager.Pending | null {
+/** Resolve a pending with a normalized answer ("allow"/"deny" | a choice | typed text).
+ *  Records BOTH the decision receipt AND the signed, vendor-portable Proxy-of-Record. */
+/** Page a question of any kind. Returns the Telegram message_id (for text force-reply matching). */
+async function pageQuestion(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<number | undefined> {
+  if (!cfg.telegramToken || !cfg.chatId) return undefined;
+  const kind = req.kind ?? "approve"; const q = req.question || req.summary;
+  if (kind === "text") {
+    const r = await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `✍️ *${req.agent}* ถาม:\n${q}\n\n_ตอบกลับข้อความนี้ด้วยการพิมพ์_`, parse_mode: "Markdown", reply_markup: { force_reply: true } });
+    return (r.result as { message_id?: number })?.message_id;
+  }
+  if (kind === "choice") {
+    const rows = (req.choices ?? []).map((c, i) => [{ text: c, callback_data: `c:${req.id}:${i}` }]);
+    await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `🔢 *${req.agent}* ถาม:\n${q}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: rows } });
+    return undefined;
+  }
+  await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `❓ *${req.agent}* ถาม:\n${q}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: [[{ text: "✅ Yes", callback_data: `a:${req.id}:${req.nonce}` }, { text: "⛔ No", callback_data: `d:${req.id}` }]] } });
+  return undefined;
+}
+
+function resolvePending(cwd: string, id: string, answer: string, decidedBy: pager.ApprovalReceipt["decidedBy"], channel: string, now: number, vendor?: string): PagerPending | null {
   const st = loadState(cwd); const p = st.pendings.find((x) => x.req.id === id && x.status === "pending");
   if (!p) return null;
-  p.status = decision === "allow" ? "approved" : "denied";
+  const isApprove = (p.req.kind ?? "approve") === "approve";
+  const allowed = isApprove ? answer === "allow" : true;   // choice/text are "answered", not allow/deny
+  p.status = allowed ? "approved" : "denied";
   st.usedNonces.push(p.req.nonce);
-  const receipt = pager.buildReceipt(p.req, decision, decidedBy, channel, p.lane, now);
+  st.answers = st.answers ?? {}; st.answers[id] = answer;
+  const receipt = pager.buildReceipt(p.req, allowed ? "allow" : "deny", decidedBy, channel, p.lane, now);
   st.receipts.push(receipt);
-  st.trust = pager.updateTrust(st.trust, p.req.klass, decision === "allow" ? "approved" : "denied");
-  try { notary.issueReceipt(cwd, { kind: "claim-verdict", subject: `pager-approval:${id}`, payload: receipt, includePayload: true, issuedAt: now }); } catch { /* */ }
+  if (isApprove) st.trust = pager.updateTrust(st.trust, p.req.klass, allowed ? "approved" : "denied");
+  // ★ Proxy of Record — signed, vendor-portable human decision bound to THIS question.
+  const decision = pager.recordHumanDecision(p.req, answer, channel, vendor ?? p.req.vendor ?? "unknown", now);
+  st.decisions = st.decisions ?? []; st.decisions.push(decision);
+  try { notary.issueReceipt(cwd, { kind: "claim-verdict", subject: `pager-decision:${id}`, payload: decision, includePayload: true, issuedAt: now }); } catch { /* */ }
   saveState(cwd, st);
   return p;
 }
@@ -191,6 +217,33 @@ export function registerPagerCommands(program: Command): void {
       out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) }));
     });
 
+  p.command("ask").description("🌐 VENDOR-AGNOSTIC — any agent (any vendor) asks the human a question → Telegram → signed answer back. Kinds: approve (yes/no) · choice (pick-one) · text (typed). Prints {id}; pair with `mneme pager await <id>`.")
+    .requiredOption("--question <q>", "the question to ask the human")
+    .option("--kind <k>", "approve | choice | text", "approve").option("--choices <list>", "comma-separated options (kind=choice)")
+    .option("--agent <a>", "agent id", "agent").option("--session <s>", "session", "default").option("--vendor <v>", "vendor (claude/cursor/xai/…)", "unknown")
+    .action(async (o: { question: string; kind?: string; choices?: string; agent?: string; session?: string; vendor?: string }) => {
+      const cwd = process.cwd(); const cfg = loadCfg(cwd); const st = loadState(cwd); const now = Date.now();
+      const kind = (["approve", "choice", "text"].includes(o.kind ?? "") ? o.kind : "approve") as pager.QuestionKind;
+      const choices = o.choices ? o.choices.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+      const nonce = Math.abs([...`${o.question}${now}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+      const req = pager.mintQuestion({ rawContext: o.question, question: o.question, kind, choices, agent: o.agent ?? "agent", session: o.session ?? "default", vendor: o.vendor, nonce, now, ttlMs: cfg.ttlMs });
+      const tgMessageId = await pageQuestion(cfg, req);
+      st.pendings.push({ req, status: "pending", lane: "conservative", tgMessageId }); saveState(cwd, st);
+      out(JSON.stringify({ id: req.id, kind, paged: !!(cfg.telegramToken && cfg.chatId) }));
+    });
+
+  p.command("await <id>").description("Block until the human answers on Telegram, then print {answer}. (The daemon must be running to receive the reply.)")
+    .option("--timeout <s>", "seconds", "300")
+    .action(async (id: string, o: { timeout?: string }) => {
+      const cwd = process.cwd(); const deadline = Date.now() + parseInt(o.timeout ?? "300", 10) * 1000;
+      for (;;) {
+        const st = loadState(cwd);
+        if (st.answers && st.answers[id] !== undefined) { out(JSON.stringify({ id, answer: st.answers[id] })); return; }
+        if (Date.now() > deadline) { out(JSON.stringify({ id, answer: null, timeout: true })); process.exitCode = 2; return; }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    });
+
   p.command("approve <id>").description("Approve a pending request locally (testing without the phone).").option("--deny", "deny instead")
     .action((id: string, o: { deny?: boolean }) => { const r = resolvePending(process.cwd(), id, o.deny ? "deny" : "allow", "human", "local", Date.now()); out(r ? `✓ ${o.deny ? "denied" : "approved"} ${id}` : "no such pending request"); });
 
@@ -223,15 +276,22 @@ export function registerPagerCommands(program: Command): void {
       let offset = 0;
       const deadmanTick = () => { const st = loadState(cwd); const r = pager.deadmanResolve(st.pendings.filter((x) => x.status === "pending"), Date.now()); for (const res of r.resolved) resolvePending(cwd, res.id, res.decision, "deadman", "policy", Date.now()); };
       setInterval(deadmanTick, (cfg.wakeIntervalMin ?? 5) * 60_000);
-      // long-poll loop
+      // long-poll loop — handles approve (a:/d:), choice (c:), and typed text replies.
       for (;;) {
-        const r = await tg(cfg.telegramToken, "getUpdates", { offset, timeout: 50, allowed_updates: ["callback_query"] }) as { ok: boolean; result?: Array<{ update_id: number; callback_query?: { id: string; data?: string } }> };
+        const r = await tg(cfg.telegramToken, "getUpdates", { offset, timeout: 50, allowed_updates: ["callback_query", "message"] }) as { ok: boolean; result?: Array<{ update_id: number; callback_query?: { id: string; data?: string }; message?: { text?: string; reply_to_message?: { message_id?: number } } }> };
         if (r.ok && Array.isArray(r.result)) {
           for (const u of r.result) {
             offset = u.update_id + 1;
+            const ack = (t: string) => u.callback_query ? tg(cfg.telegramToken!, "answerCallbackQuery", { callback_query_id: u.callback_query.id, text: t }) : Promise.resolve({ ok: true });
             const data = u.callback_query?.data ?? "";
-            if (data.startsWith("a:")) { const [, id] = data.split(":"); const p2 = resolvePending(cwd, id, "allow", "human", "telegram", Date.now()); if (p2) await tg(cfg.telegramToken, "answerCallbackQuery", { callback_query_id: u.callback_query!.id, text: "✅ approved — running" }); }
-            else if (data.startsWith("d:")) { const [, id] = data.split(":"); const p2 = resolvePending(cwd, id, "deny", "human", "telegram", Date.now()); if (p2) await tg(cfg.telegramToken, "answerCallbackQuery", { callback_query_id: u.callback_query!.id, text: "⛔ denied" }); }
+            if (data.startsWith("a:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "allow", "human", "telegram", Date.now())) await ack("✅ approved — running"); }
+            else if (data.startsWith("d:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "deny", "human", "telegram", Date.now())) await ack("⛔ denied"); }
+            else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.req.id === id && x.status === "pending"); const choice = pp?.req.choices?.[parseInt(idxS, 10)]; if (pp && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) await ack(`✅ ${choice}`); }
+            else if (u.message?.reply_to_message?.message_id) { // typed text answer
+              const mid = u.message.reply_to_message.message_id; const txt = (u.message.text ?? "").trim();
+              const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.tgMessageId === mid && x.status === "pending");
+              if (pp && txt) { resolvePending(cwd, pp.req.id, txt, "human", "telegram", Date.now()); await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `✓ รับคำตอบแล้ว: "${txt}"` }); }
+            }
           }
         }
       }

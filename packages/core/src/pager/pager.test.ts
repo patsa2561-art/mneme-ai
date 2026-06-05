@@ -36,8 +36,8 @@ describe("COSMIC PAGER — approve from your phone; signed authority; self-tunin
     expect(a.commandHash).toBe(req.commandHash);
     expect(buildReceipt(req, "deny", "human", "telegram", "conservative", now).receiptHash).not.toBe(a.receiptHash);
   });
-  it("MEASURED: pagerGauntlet = 100", () => {
-    const g = pagerGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass));
-    expect(g.score).toBe(100);
+  it("MEASURED: pagerGauntlet = 1000/1000 (world-class)", () => {
+    const g = pagerGauntlet(); if (g.score !== 1000) console.error(g.checks.filter((c) => !c.pass));
+    expect(g.score).toBe(1000);
   });
 });

@@ -9,8 +9,9 @@
  * revertGauntlet / benchmarkGauntlet / engagementGauntlet (all 100).
  */
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import * as https from "node:https";
 import { revertRadar, agentBenchmark, engagement, awarm, geo, reckoning, commitAttest, succession, pager } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
 
@@ -43,7 +44,43 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
   return out;
 }
 
+function pagerTg(token: string, method: string, body: object): Promise<{ ok: boolean; result?: unknown }> {
+  return new Promise((resolve) => {
+    const data = JSON.stringify(body);
+    const req = https.request({ hostname: "api.telegram.org", path: `/bot${token}/${method}`, method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(data) }, timeout: 15000 },
+      (res) => { let s = ""; res.on("data", (d) => (s += d)); res.on("end", () => { try { resolve(JSON.parse(s)); } catch { resolve({ ok: false }); } }); });
+    req.on("error", () => resolve({ ok: false })); req.on("timeout", () => { req.destroy(); resolve({ ok: false }); });
+    req.write(data); req.end();
+  });
+}
+
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.pager.ask",
+    category: "audit",
+    description:
+      "ASK THE HUMAN (vendor-agnostic) — any agent of any vendor asks the user a question routed to their phone (Telegram) and gets a SIGNED, court-admissible answer back. kind: 'approve' (yes/no) · 'choice' (pick-one, pass choices[]) · 'text' (typed reply). Only a one-line question + hash leaves the machine. Returns { id }; then poll mneme.pager.scan for the answer (or the daemon resolves it). Example: ask the user to approve a deploy, pick a branch, or type a release name — from any vendor, lid closed.",
+    whenToUse: "You need the human's yes/no, a pick-one, or a typed value while running unattended — page their phone and continue when they answer.",
+    triggers: ["ask the user", "ask the human", "get approval from the user", "ask on telegram", "page the user"],
+    inputSchema: { type: "object", properties: { question: { type: "string" }, kind: { type: "string", enum: ["approve", "choice", "text"] }, choices: { type: "array", items: { type: "string" } }, vendor: { type: "string" } }, required: ["question"] },
+    handler: async (runtime: ToolRuntime, rawArgs: Record<string, unknown>): Promise<ToolResponse> => {
+      const args = rawArgs as { question: string; kind?: pager.QuestionKind; choices?: string[]; vendor?: string };
+      const cwd = runtime.cwd; const cfgP = join(cwd, ".mneme", "pager", "config.json"); const stP = join(cwd, ".mneme", "pager", "state.json");
+      let cfg: { telegramToken?: string; chatId?: string; ttlMs?: number } = {}; try { if (existsSync(cfgP)) cfg = JSON.parse(readFileSync(cfgP, "utf8")); } catch { /* */ }
+      const now = Date.now(); const kind = (args.kind ?? "approve");
+      const nonce = Math.abs([...`${args.question}${now}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+      const req = pager.mintQuestion({ rawContext: args.question, question: args.question, kind, choices: args.choices, agent: (runtime as { agent?: string }).agent ?? "agent", session: "mcp", vendor: args.vendor, nonce, now, ttlMs: cfg.ttlMs });
+      let tgMessageId: number | undefined;
+      if (cfg.telegramToken && cfg.chatId) {
+        if (kind === "text") { const r = await pagerTg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `✍️ ${req.agent} asks:\n${args.question}\n\n_reply to this message_`, parse_mode: "Markdown", reply_markup: { force_reply: true } }); tgMessageId = (r.result as { message_id?: number })?.message_id; }
+        else if (kind === "choice") { await pagerTg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `🔢 ${req.agent} asks:\n${args.question}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: (req.choices ?? []).map((c, i) => [{ text: c, callback_data: `c:${req.id}:${i}` }]) } }); }
+        else { await pagerTg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `❓ ${req.agent} asks:\n${args.question}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: [[{ text: "✅ Yes", callback_data: `a:${req.id}:${req.nonce}` }, { text: "⛔ No", callback_data: `d:${req.id}` }]] } }); }
+      }
+      try { let st: { pendings?: unknown[] } = { pendings: [] }; if (existsSync(stP)) st = JSON.parse(readFileSync(stP, "utf8")); (st.pendings ??= []).push({ req, status: "pending", lane: "conservative", tgMessageId }); mkdirSync(join(cwd, ".mneme", "pager"), { recursive: true }); writeFileSync(stP, JSON.stringify(st, null, 2), "utf8"); } catch { /* */ }
+      const paged = !!(cfg.telegramToken && cfg.chatId);
+      return { data: { id: req.id, kind, paged }, wisdom: paged ? `Asked the user on their phone (${kind}). Poll mneme.pager.scan for { answers["${req.id}"] }; the daemon delivers the signed answer when they tap/type.` : `Pager not configured — run 'mneme pager autosetup --telegram-token <t>' first. Question queued (id ${req.id}).` };
+    },
+  },
   {
     name: "mneme.pager.scan",
     category: "audit",
@@ -55,11 +92,12 @@ export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
     handler: async (runtime: ToolRuntime): Promise<ToolResponse> => {
       const sp = join(runtime.cwd, ".mneme", "pager", "state.json");
       if (!existsSync(sp)) return { data: { active: false }, wisdom: "The Cosmic Pager isn't set up. `mneme pager setup --telegram-token … --chat-id …` then `mneme pager start`." };
-      let st: { pendings?: pager.Pending[]; trust?: pager.TrustState }; try { st = JSON.parse(readFileSync(sp, "utf8")); } catch { return { data: { error: "pager state unreadable" }, wisdom: "pager state corrupt." }; }
+      let st: { pendings?: pager.Pending[]; trust?: pager.TrustState; answers?: Record<string, string> }; try { st = JSON.parse(readFileSync(sp, "utf8")); } catch { return { data: { error: "pager state unreadable" }, wisdom: "pager state corrupt." }; }
       const pend = (st.pendings ?? []).filter((p) => p.status === "pending");
       const trust = st.trust ?? pager.emptyTrust();
       const classes = Object.keys(trust.classes ?? {});
-      return { data: { active: true, pending: pend.map((p) => ({ id: p.req.id, blast: p.req.blast, klass: p.req.klass, summary: p.req.summary, lane: p.lane })), trustedClasses: classes.length }, wisdom: `${pend.length} action(s) awaiting your phone approval${pend.length ? ": " + pend.map((p) => `${p.req.klass} (${p.req.blast})`).join(", ") : ""}. Trust-Tide knows ${classes.length} command-class(es). Destructive actions are never auto-approved (hard ceiling); proven-safe classes auto-allow so the pager stays quiet.` };
+      const answers = st.answers ?? {};
+      return { data: { active: true, pending: pend.map((p) => ({ id: p.req.id, blast: p.req.blast, klass: p.req.klass, summary: p.req.summary, lane: p.lane })), answers, trustedClasses: classes.length }, wisdom: `${pend.length} action(s) awaiting your phone approval${pend.length ? ": " + pend.map((p) => `${p.req.klass} (${p.req.blast})`).join(", ") : ""}. Answered (poll here for your ask): ${Object.keys(answers).length}. Trust-Tide knows ${classes.length} command-class(es). Destructive actions are never auto-approved (hard ceiling).` };
     },
   },
   {

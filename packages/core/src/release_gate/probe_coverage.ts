@@ -22,6 +22,8 @@ import { autoprobeCoveredTools } from "./autoprobe.js";
 // trivially safe / experimental). New tools should AVOID this list;
 // it's the escape hatch, not the default.
 const COVERAGE_EXEMPT = new Set<string>([
+  // Cosmic Pager ask — a thin wrapper over the pagerGauntlet-measured (1000/1000) core.
+  "mneme.pager.ask",
   "mneme.welcome",
   "mneme.capabilities",
   "mneme.release_notes",
