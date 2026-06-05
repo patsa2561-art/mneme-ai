@@ -20,6 +20,7 @@
  * the CLI/relay layer additionally NOTARY-signs (Ed25519) for third-party offline proof.
  */
 import { createHash, createHmac } from "node:crypto";
+export * from "./matrix.js";
 
 const sha256 = (s: string): string => createHash("sha256").update(s, "utf8").digest("hex");
 

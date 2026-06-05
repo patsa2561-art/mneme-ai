@@ -11,14 +11,15 @@ import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import * as https from "node:https";
 import * as http from "node:http";
-import { pager, notary, preflight } from "@mneme-ai/core";
+import { pager, notary, preflight, keryx } from "@mneme-ai/core";
+import { sendAsk, clearMessage, type ProviderCfg } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 const dir = (cwd: string) => join(cwd, ".mneme", "pager");
 const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
 
-interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string }
+interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string; keryxRelay?: string }
 interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry>; classStats?: Record<string, { seen: number; succeeded: number; recentFails: number }> }
 type PagerPending = pager.Pending & { tgMessageId?: number };
 
@@ -72,15 +73,53 @@ function linePush(cfg: PagerConfig, text: string): Promise<{ ok: boolean }> {
 /** Fan a notification to every configured secondary channel (LINE today; extensible). */
 function notifyMirror(cfg: PagerConfig, text: string): void { void linePush(cfg, text).catch(() => { /* best-effort */ }); }
 
-async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<void> {
-  if (!cfg.telegramToken || !cfg.chatId) return;
+// ── KERYX multi-chat: fan the SAME ask out to every configured provider (LINE/Slack/Discord/
+//    WhatsApp) alongside Telegram, and collect the reply from the relay. First answer wins;
+//    the others are cleared. All gated on cfg.keryxRelay — if unset, the Telegram path is unchanged.
+function keryxProviders(cwd: string): Record<string, ProviderCfg> {
+  try { const p = join(cwd, ".mneme", "keryx", "providers.json"); return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {}; } catch { return {}; }
+}
+const relayGet = (url: string): Promise<Record<string, unknown>> => new Promise((res) => { (url.startsWith("https:") ? https : http).get(url, (r) => { let s = ""; r.on("data", (d) => (s += d)); r.on("end", () => { try { res(JSON.parse(s || "{}")); } catch { res({}); } }); }).on("error", () => res({})); });
+const relayPost = (url: string, body: object): Promise<void> => new Promise((res) => { const u = new URL(url); const data = JSON.stringify(body); const rq = (url.startsWith("https:") ? https : http).request({ hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80), path: u.pathname, method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(data) } }, (x) => { x.on("data", () => {}); x.on("end", () => res()); }); rq.on("error", () => res()); rq.write(data); rq.end(); });
+
+/** Fan an approve/deny ask out to every configured KERYX provider; register the relay expectation. */
+async function fanOutKeryx(cwd: string, cfg: PagerConfig, req: pager.ApprovalRequest, requested?: string[] | null): Promise<Array<{ provider: string; messageId: string }>> {
+  const provs = keryxProviders(cwd);
+  const kinds = (req.kind ?? "approve") as "approve" | "choice" | "text";
+  // BROADCAST MATRIX: Telegram is the long-poll lane (paged already) → exclude; fire the rest in
+  // PARALLEL. `requested` (optional) restricts to a chosen subset — "only line,whatsapp".
+  const lanes = keryx.dispatchPlan(keryx.ALL_PROVIDERS as unknown as string[], ["telegram"], requested ?? undefined)
+    .filter((p) => { const pc = provs[p]; return pc && (pc.token || (p === "line" && pc.channelId && pc.channelSecret)); });
+  const results = await Promise.all(lanes.map(async (p) => {
+    try { const r = await sendAsk(p, provs[p], { id: req.id, nonce: req.nonce ?? req.id, question: req.summary, kind: kinds, choices: req.choices, agent: req.agent }); return r.ok ? { provider: p, messageId: r.messageId ?? "" } : null; } catch { return null; }
+  }));
+  const sent = results.filter((x): x is { provider: string; messageId: string } => x !== null);
+  if (sent.length && cfg.keryxRelay) await relayPost(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/expect`, { daemonId: "default", askId: req.id });
+  return sent;
+}
+/** Poll the relay for a reply to this ask (LINE/Slack/Discord/WhatsApp taps land here). */
+async function drainKeryxAnswer(cfg: PagerConfig, id: string): Promise<{ provider: string; answer: string } | null> {
+  if (!cfg.keryxRelay) return null;
+  const r = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=default`);
+  const answers = (r.answers as Array<{ id: string; payload: string; channel: string }>) ?? [];
+  const hit = answers.find((a) => a.id === id); return hit ? { provider: hit.channel, answer: hit.payload } : null;
+}
+/** Clear the question on every provider the human did NOT answer on (Telegram strip + provider clear). */
+async function clearKeryxOthers(cwd: string, cfg: PagerConfig, sent: Array<{ provider: string; messageId: string }>, answeredOn: string): Promise<void> {
+  const provs = keryxProviders(cwd);
+  for (const act of keryx.clearPlan(sent, answeredOn)) { try { await clearMessage(act.provider, provs[act.provider], act.messageId, answeredOn); } catch { /* */ } }
+}
+
+async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<number | undefined> {
+  if (!cfg.telegramToken || !cfg.chatId) return undefined;
   const icon = req.blast === "destructive" ? "🔴" : req.blast === "moderate" ? "🟡" : "🟢";
-  await tg(cfg.telegramToken, "sendMessage", {
+  const r = await tg(cfg.telegramToken, "sendMessage", {
     chat_id: cfg.chatId,
     text: `${icon} *${req.agent}* wants to run:\n_${req.summary}_\nclass: \`${req.klass}\` · blast: ${req.blast}\nhash: \`${req.commandHash.slice(0, 12)}\` · id: \`${req.id}\``,
     parse_mode: "Markdown",
     reply_markup: { inline_keyboard: [[{ text: "✅ Approve", callback_data: `a:${req.id}:${req.nonce}` }, { text: "⛔ Deny", callback_data: `d:${req.id}` }]] },
   });
+  return (r?.result as { message_id?: number })?.message_id;
 }
 
 /** Resolve a pending with a normalized answer ("allow"/"deny" | a choice | typed text).
@@ -234,10 +273,11 @@ export function registerPagerCommands(program: Command): void {
       out(`✓ pager configured${cfg.lineToken ? " (+ LINE notify-mirror)" : ""}. Run with \`mneme pager start\`, wire the hook with \`mneme pager hook\`.`);
     });
 
-  p.command("request").description("THE CLAUDE CODE HOOK — decide on a command: AUTO_ALLOW (Trust-Tide) or page the phone + BLOCK-AND-WAIT for a signed answer (from phone OR a local `mneme pager approve <id>`), then emit Claude Code's permissionDecision. Dead-man default on TTL.")
+  p.command("request").description("THE CLAUDE CODE HOOK — decide on a command: AUTO_ALLOW (Trust-Tide) or BROADCAST the ask to your chats (Telegram + LINE/Slack/Discord/WhatsApp in parallel) + BLOCK-AND-WAIT for the first signed answer from any of them, then emit Claude Code's permissionDecision. Dead-man default on TTL.")
     .requiredOption("--command <c>", "the raw command").option("--agent <a>", "agent id", "agent").option("--session <s>", "session id", "default")
+    .option("--channels <list>", "which chats to broadcast to: 'all' (default) or a subset like 'line,whatsapp'")
     .option("--json", "non-blocking: print {decision} instead of blocking + the Claude Code hook JSON")
-    .action(async (o: { command: string; agent?: string; session?: string; json?: boolean }) => {
+    .action(async (o: { command: string; agent?: string; session?: string; json?: boolean; channels?: string }) => {
       const cwd = process.cwd(); const cfg = loadCfg(cwd); const st = loadState(cwd); const now = Date.now();
       const { blast, klass } = classify(o.command);
       const nonce = Math.abs([...`${o.command}${now}${Math.random?.() ?? 0}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
@@ -254,7 +294,13 @@ export function registerPagerCommands(program: Command): void {
       }
       st.pendings.push({ req, status: "pending", lane: d.lane }); saveState(cwd, st);
       ensureDaemon(cwd);                 // AUTO self-heal: if the long-poll daemon is down, revive it
-      await page(cfg, req);
+      // DYNAMIC LANES: agent passes "all" / "line,whatsapp" / or the user's own words
+      // ("ส่งไป line กับ whatsapp พอ") — extractChannels understands EN + Thai. null = all.
+      const lanes = o.channels ? keryx.extractChannels(o.channels) : null;
+      const wantTelegram = !lanes || lanes.includes("telegram");
+      const tgMid = wantTelegram ? await page(cfg, req) : undefined;
+      if (tgMid) { const s = loadState(cwd); const pp = s.pendings.find((x) => x.req.id === req.id); if (pp) { pp.tgMessageId = tgMid; saveState(cwd, s); } }
+      const keryxSent = await fanOutKeryx(cwd, cfg, req, lanes);   // fan out to the chosen LINE/Slack/Discord/WhatsApp lanes IN PARALLEL
       if (o.json) { out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) })); return; }
       // ── PRE-FLIGHT (Wait-State compute window) — FIRE-AND-FORGET so it NEVER delays the
       // human's answer or the dead-man timeout. Sends a decision brief; for provably read-only
@@ -283,12 +329,30 @@ export function registerPagerCommands(program: Command): void {
       // DUAL-SURFACE BLOCK-AND-WAIT: poll state.answers[id] — written by the phone (daemon) OR
       // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
       const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl; let n = 0;
+      const settle = async (answer: "allow" | "deny", answeredOn: string, reason: string) => {
+        const verb = answer === "allow" ? "✅ Yes" : "⛔ No";
+        if (keryxSent.length) await clearKeryxOthers(cwd, cfg, keryxSent, answeredOn);   // LINE/Slack/Discord/WhatsApp: edit or "answered elsewhere"
+        // Telegram was also paged → if the human answered on another chat, update Telegram too (status sync)
+        if (answeredOn !== "telegram" && answeredOn !== "policy" && answeredOn !== "" && cfg.telegramToken && cfg.chatId) {
+          try { await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `${verb} — answered on ${answeredOn}. This request is now closed.` }); } catch { /* */ }
+          const mid = loadState(cwd).pendings.find((x) => x.req.id === req.id)?.tgMessageId;
+          if (mid) { try { await tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }); } catch { /* */ } }
+        }
+        emit(answer, reason);
+      };
       for (;;) {
         const ans = loadState(cwd).answers?.[req.id];
-        if (ans === "allow") { emit("allow", "approved by the human (phone/local)"); return; }
-        if (ans === "deny") { emit("deny", "denied by the human (phone/local)"); return; }
+        if (ans === "allow") { await settle("allow", "telegram", "approved by the human (phone/local)"); return; }
+        if (ans === "deny") { await settle("deny", "telegram", "denied by the human (phone/local)"); return; }
+        // KERYX: a tap on LINE/Slack/Discord/WhatsApp lands at the relay — first answer wins
+        const kx = await drainKeryxAnswer(cfg, req.id);
+        if (kx) {
+          const a = keryx.normalizeDecision(kx.answer);
+          resolvePending(cwd, req.id, a, "human", kx.provider, Date.now());
+          await settle(a, kx.provider, `${a === "allow" ? "approved" : "denied"} by the human on ${kx.provider}`); return;
+        }
         if (Date.now() > deadline) {
-          if (blast === "destructive") { resolvePending(cwd, req.id, "deny", "deadman", "policy", Date.now()); emit("deny", "dead-man: destructive timed out unattended → DENY"); return; }
+          if (blast === "destructive") { resolvePending(cwd, req.id, "deny", "deadman", "policy", Date.now()); await settle("deny", "", "dead-man: destructive timed out unattended → DENY"); return; }
           emit("ask", "no answer in time → defer to Claude Code's own prompt"); return;
         }
         if (++n % 20 === 0) ensureDaemon(cwd);    // keep the daemon alive while we wait

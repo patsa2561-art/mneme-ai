@@ -44,6 +44,8 @@ function options(spec: AskSpec): Array<[string, string]> {
   return []; // text → no buttons; the user replies free-text
 }
 const title = (spec: AskSpec) => `❓ ${spec.agent} asks${spec.kind === "text" ? " (reply with your answer)" : ""}:\n${spec.question}`;
+/** Compact one-line card text (for LINE template / WhatsApp body, which have tight limits). */
+const cardText = (spec: AskSpec, max: number) => `${spec.agent ? "🤖 " + spec.agent + ": " : ""}${spec.question}`.slice(0, max);
 
 /** Send the ask to ONE provider. Returns the provider message id (for later clearing). */
 export async function sendAsk(provider: string, cfg: ProviderCfg, spec: AskSpec): Promise<{ ok: boolean; messageId?: string; reason?: string }> {
@@ -69,7 +71,7 @@ export async function sendAsk(provider: string, cfg: ProviderCfg, spec: AskSpec)
     if (provider === "line") {
       const token = await lineToken(cfg); if (!token) return { ok: false, reason: "LINE token mint failed (check channelId/secret)" };
       const actions = opts.length ? opts.slice(0, 4).map(([t, d]) => ({ type: "postback", label: t.slice(0, 20), data: d, displayText: t })) : [{ type: "message", label: "reply", text: "(type your answer)" }];
-      const msg = opts.length ? { type: "template", altText: spec.question, template: { type: "buttons", text: spec.question.slice(0, 160), actions } } : { type: "text", text: title(spec) };
+      const msg = opts.length ? { type: "template", altText: spec.question, template: { type: "buttons", text: cardText(spec, 160), actions } } : { type: "text", text: title(spec) };
       // push to a specific user if `to` is set; else broadcast to all friends (personal bot)
       const path = cfg.to ? "/v2/bot/message/push" : "/v2/bot/message/broadcast";
       const payload = cfg.to ? { to: cfg.to, messages: [msg] } : { messages: [msg] };
@@ -77,7 +79,7 @@ export async function sendAsk(provider: string, cfg: ProviderCfg, spec: AskSpec)
       return { ok: r.status < 300, messageId: "", reason: r.status < 300 ? undefined : `HTTP ${r.status}` }; // LINE push/broadcast has no editable id
     }
     if (provider === "whatsapp") {
-      const interactive = opts.length ? { type: "button", body: { text: spec.question.slice(0, 1024) }, action: { buttons: opts.slice(0, 3).map(([t, d]) => ({ type: "reply", reply: { id: d.slice(0, 256), title: t.slice(0, 20) } })) } } : null;
+      const interactive = opts.length ? { type: "button", body: { text: cardText(spec, 1024) }, action: { buttons: opts.slice(0, 3).map(([t, d]) => ({ type: "reply", reply: { id: d.slice(0, 256), title: t.slice(0, 20) } })) } } : null;
       const msg = interactive ? { messaging_product: "whatsapp", to: cfg.to, type: "interactive", interactive } : { messaging_product: "whatsapp", to: cfg.to, type: "text", text: { body: title(spec) } };
       const r = await httpsJson("graph.facebook.com", `/v20.0/${cfg.phoneId}/messages`, { authorization: `Bearer ${cfg.token}` }, msg);
       return { ok: r.status < 300, messageId: "" };

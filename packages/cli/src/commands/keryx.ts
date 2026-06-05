@@ -15,6 +15,19 @@ import { keryx } from "@mneme-ai/core";
 import { sendAsk, clearMessage, type ProvidersConfig, type ProviderCfg, type AskSpec } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
+/** Name shown in the chat = the AI agent the user actually runs (auto-detected), else "Mneme-AI". */
+export function detectAgent(): string {
+  const e = process.env;
+  if (e.CLAUDECODE || e.CLAUDE_CODE) return "Claude Code";
+  if (e.CURSOR_AGENT || e.CURSOR_TRACE_ID) return "Cursor";
+  if (e.GROK || e.XAI_API_KEY) return "Grok";
+  if (e.GEMINI_CLI || e.GEMINI_API_KEY) return "Gemini";
+  if (e.AIDER || e.AIDER_MODEL) return "Aider";
+  if (e.CODEX || e.CODEX_SANDBOX) return "Codex";
+  if (e.CONTINUE) return "Continue";
+  if (e.CLINE) return "Cline";
+  return "Mneme-AI";
+}
 const provPath = (cwd: string) => join(cwd, ".mneme", "keryx", "providers.json");
 const bcastPath = (cwd: string) => join(cwd, ".mneme", "keryx", "broadcasts.json");
 function loadProviders(cwd: string): ProvidersConfig { try { return existsSync(provPath(cwd)) ? JSON.parse(readFileSync(provPath(cwd), "utf8")) : {}; } catch { return {}; } }
@@ -44,6 +57,12 @@ export function registerKeryxCommands(program: Command): void {
     out("  forged by relay (wrong key)? " + keryx.verifyEnvelope("wrong", ask, now + 100).ok + "  ← the relay can route but never fabricate");
   });
 
+  k.command("channels <text...>").description("SMART NL → which chats. Pass the user's own words (EN/Thai) — 'send to line and whatsapp' / 'ส่งไป line กับ whatsapp พอ' / 'ทุกช่อง' — prints the resolved lanes the broadcast will fire to.")
+    .action((text: string[]) => {
+      const lanes = keryx.extractChannels((text ?? []).join(" "));
+      out(lanes ? `→ broadcast to: ${lanes.join(", ")}` : "→ broadcast to: ALL configured chats");
+    });
+
   k.command("providers").description("List configured chat providers (.mneme/keryx/providers.json).").action(() => {
     const c = loadProviders(process.cwd()); const on = keryx.ALL_PROVIDERS.filter((p) => (c as Record<string, ProviderCfg>)[p]?.token);
     out(on.length ? `🏛 connected providers: ${on.join(", ")}` : "no providers configured — add tokens to .mneme/keryx/providers.json (see docs/KERYX.md)");
@@ -51,13 +70,13 @@ export function registerKeryxCommands(program: Command): void {
 
   k.command("broadcast").description("Fan an ask out to ALL connected providers at once (one agent → every chat). Pair with `keryx bridge` to receive the answer + auto-clear the others.")
     .requiredOption("--question <q>", "the question").option("--kind <k>", "approve|choice|text", "approve").option("--choices <list>", "comma-separated (choice)")
-    .option("--relay <url>", "KERYX relay base URL (to register expectation)").option("--daemon <id>", "daemon id", "default").option("--agent <a>", "agent", "agent")
+    .option("--relay <url>", "KERYX relay base URL (to register expectation)").option("--daemon <id>", "daemon id", "default").option("--agent <a>", "agent name shown in chat (default: auto-detected AI agent / Mneme-AI)")
     .action(async (o: { question: string; kind?: string; choices?: string; relay?: string; daemon?: string; agent?: string }) => {
       const cwd = process.cwd(); const cfg = loadProviders(cwd) as Record<string, ProviderCfg>;
       const connected = keryx.ALL_PROVIDERS.filter((p) => cfg[p]?.token);
       if (!connected.length) { out("no providers configured — see `mneme keryx providers`"); process.exitCode = 2; return; }
       const id = Math.abs([...`${o.question}${Date.now()}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
-      const spec: AskSpec = { id, nonce: id, question: o.question, kind: (["approve", "choice", "text"].includes(o.kind ?? "") ? o.kind : "approve") as AskSpec["kind"], choices: o.choices ? o.choices.split(",").map((s) => s.trim()).filter(Boolean) : undefined, agent: o.agent ?? "agent" };
+      const spec: AskSpec = { id, nonce: id, question: o.question, kind: (["approve", "choice", "text"].includes(o.kind ?? "") ? o.kind : "approve") as AskSpec["kind"], choices: o.choices ? o.choices.split(",").map((s) => s.trim()).filter(Boolean) : undefined, agent: o.agent ?? detectAgent() };
       const sent: Bcast["sent"] = [];
       for (const p of connected) { const r = await sendAsk(p, cfg[p], spec); out(`  ${r.ok ? "✓" : "✗"} ${p}${r.messageId ? " (msg " + r.messageId + ")" : ""}${r.reason ? " — " + r.reason : ""}`); if (r.ok) sent.push({ provider: p, messageId: r.messageId ?? "" }); }
       const b = loadBcasts(cwd); b.push({ id, nonce: id, sent, answered: null }); saveBcasts(cwd, b);
@@ -69,7 +88,7 @@ export function registerKeryxCommands(program: Command): void {
     .action(async (provider: string) => {
       const cwd = process.cwd(); const cfg = (loadProviders(cwd) as Record<string, ProviderCfg>)[provider];
       if (!cfg?.token) { out(`✗ no token for ${provider} in .mneme/keryx/providers.json`); process.exitCode = 2; return; }
-      const r = await sendAsk(provider, cfg, { id: "selftest", nonce: "selftest", question: "✅ KERYX test — tap a button to confirm replies reach the relay", kind: "approve", agent: "keryx-test" });
+      const r = await sendAsk(provider, cfg, { id: "selftest", nonce: "selftest", question: "✅ Test — tap a button to confirm replies reach the relay", kind: "approve", agent: detectAgent() });
       out(r.ok ? `✓ sent to ${provider}${r.messageId ? " (msg " + r.messageId + ")" : ""} — check your chat; tap a button + run \`mneme keryx bridge\` to confirm the round-trip.` : `✗ ${provider} send FAILED: ${r.reason ?? "unknown"} — re-check token/channel/id.`);
       if (!r.ok) process.exitCode = 2;
     });

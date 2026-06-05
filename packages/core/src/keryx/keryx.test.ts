@@ -34,3 +34,18 @@ describe("KERYX — the signed gate-as-a-service relay protocol", () => {
     expect(g.score).toBe(100);
   });
 });
+
+import { reduceFirstWins, normalizeDecision, dispatchPlan, toAgentDirective, broadcastMatrixGauntlet } from "./matrix.js";
+describe("BROADCAST MATRIX — parallel fan-out + first-wins + vendor-agnostic", () => {
+  it("first answer across lanes wins; rest ignored", () => {
+    const r = reduceFirstWins([{ provider: "slack", answer: "allow", ts: 200 }, { provider: "line", answer: "deny", ts: 100 }]);
+    expect(r?.winner).toBe("line"); expect(r?.decision).toBe("deny"); expect(r?.ignored).toEqual(["slack"]);
+  });
+  it("normalizes EN+Thai", () => { expect(normalizeDecision("ไม่")).toBe("deny"); expect(normalizeDecision("✅ Yes")).toBe("allow"); });
+  it("parallel dispatch plan dedups + excludes telegram", () => { expect(dispatchPlan(["telegram", "line", "line", "slack"], ["telegram"]).sort()).toEqual(["line", "slack"]); });
+  it("vendor-agnostic directive", () => {
+    expect((toAgentDirective("allow", "ok", "claude").payload as { hookSpecificOutput: { permissionDecision: string } }).hookSpecificOutput.permissionDecision).toBe("allow");
+    expect(toAgentDirective("deny", "x", "grok").humanLine).toMatch(/DENIED/);
+  });
+  it("MEASURED: broadcastMatrixGauntlet = 100", () => { const g = broadcastMatrixGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass)); expect(g.score).toBe(100); });
+});
