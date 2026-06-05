@@ -53,7 +53,7 @@ real.** No more babysitting a terminal.
 
 <sub>**<a href="docs/COSMIC-PAGER.md" target="_blank" rel="noopener">Full 60-second bot guide + spec → docs/COSMIC-PAGER.md</a>**</sub>
 
-🏛 **Not just Telegram — every chat.** **KERYX** is the dumb, *signed* relay so **LINE / Slack / Discord / WhatsApp** can reach your local agent behind NAT too — only a summary+hash crosses, approvals are unforgeable + replay-proof, the brain stays on your machine. **Connect many chats at once: one ask fans out to all, you answer on _any_ one, and it auto-clears on the rest** (first-wins). <sub>**<a href="docs/KERYX.md" target="_blank" rel="noopener">how KERYX works + per-chat setup →</a>**</sub>
+🏛 **Not just Telegram — every chat.** **KERYX** is the dumb, *signed* relay so **LINE / Slack / Discord / WhatsApp** can reach your local agent behind NAT too — only a summary+hash crosses, approvals are unforgeable + replay-proof, the brain stays on your machine. **Connect many chats at once: one ask fans out to all, you answer on _any_ one, and it auto-clears on the rest** (first-wins). <sub>**<a href="docs/KERYX.md" target="_blank" rel="noopener">how KERYX works →</a>** · per-chat setup: <a href="docs/keryx/line.md" target="_blank" rel="noopener">LINE</a> · <a href="docs/keryx/slack.md" target="_blank" rel="noopener">Slack</a> · <a href="docs/keryx/discord.md" target="_blank" rel="noopener">Discord</a> · <a href="docs/keryx/whatsapp.md" target="_blank" rel="noopener">WhatsApp</a></sub>
 
 ---
 
