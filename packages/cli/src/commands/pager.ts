@@ -15,6 +15,17 @@ import { pager, notary, preflight, keryx } from "@mneme-ai/core";
 import { sendAsk, clearMessage, type ProviderCfg } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
+/** Claude Code delivers PreToolUse input as JSON on STDIN (tool_input.command, session_id) —
+ *  NOT via env vars. Read it synchronously (the hook pipes it + closes stdin). */
+function readHookStdin(): { command?: string; session?: string; toolName?: string } | null {
+  try {
+    if (process.stdin.isTTY) return null;                 // manual run, no piped hook JSON
+    const raw = readFileSync(0, "utf8");                  // fd 0 = stdin, read to EOF
+    if (!raw.trim()) return null;
+    const j = JSON.parse(raw) as { tool_input?: { command?: string }; session_id?: string; tool_name?: string };
+    return { command: j?.tool_input?.command, session: j?.session_id, toolName: j?.tool_name };
+  } catch { return null; }
+}
 const dir = (cwd: string) => join(cwd, ".mneme", "pager");
 const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
@@ -170,7 +181,7 @@ function wireClaudeHook(cwd: string): { ok: boolean; path: string } {
     if (existsSync(sp)) { try { s = JSON.parse(readFileSync(sp, "utf8")); } catch { s = {}; } }
     s.hooks = s.hooks ?? {};
     const pre = (s.hooks.PreToolUse as unknown[]) ?? (s.hooks.PreToolUse = []);
-    const cmd = "mneme pager request --command \"$TOOL_INPUT_command\" --agent claude-code --session \"$CLAUDE_SESSION_ID\"";
+    const cmd = "mneme pager request --agent claude-code";   // reads tool_input.command + session_id from the hook's stdin JSON
     if (!JSON.stringify(pre).includes("mneme pager request")) pre.push({ matcher: "Bash", hooks: [{ type: "command", command: cmd }] });
     // Stop hook — when a turn ends with a question AND mode=unattended, route it to the phone.
     const stop = (s.hooks.Stop as unknown[]) ?? (s.hooks.Stop = []);
@@ -274,14 +285,22 @@ export function registerPagerCommands(program: Command): void {
     });
 
   p.command("request").description("THE CLAUDE CODE HOOK — decide on a command: AUTO_ALLOW (Trust-Tide) or BROADCAST the ask to your chats (Telegram + LINE/Slack/Discord/WhatsApp in parallel) + BLOCK-AND-WAIT for the first signed answer from any of them, then emit Claude Code's permissionDecision. Dead-man default on TTL.")
-    .requiredOption("--command <c>", "the raw command").option("--agent <a>", "agent id", "agent").option("--session <s>", "session id", "default")
+    .option("--command <c>", "the raw command (optional — read from the Claude Code hook JSON on stdin if omitted)").option("--agent <a>", "agent id", "agent").option("--session <s>", "session id", "default")
     .option("--channels <list>", "which chats to broadcast to: 'all' (default) or a subset like 'line,whatsapp'")
     .option("--json", "non-blocking: print {decision} instead of blocking + the Claude Code hook JSON")
-    .action(async (o: { command: string; agent?: string; session?: string; json?: boolean; channels?: string }) => {
+    .action(async (o: { command?: string; agent?: string; session?: string; json?: boolean; channels?: string }) => {
       const cwd = process.cwd(); const cfg = loadCfg(cwd); const st = loadState(cwd); const now = Date.now();
-      const { blast, klass } = classify(o.command);
-      const nonce = Math.abs([...`${o.command}${now}${Math.random?.() ?? 0}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
-      const req = pager.mintApprovalRequest({ rawCommand: o.command, summary: o.command.slice(0, 120), agent: o.agent ?? "agent", session: o.session ?? "default", klass, blast, nonce, now, ttlMs: cfg.ttlMs });
+      // Claude Code PreToolUse hooks deliver the tool input as JSON on STDIN (NOT $TOOL_INPUT_command).
+      // Read it: command = tool_input.command, session = session_id. Falls back to --command for manual/testing.
+      const hookIn = readHookStdin();
+      const command = (o.command ?? hookIn?.command ?? "").toString();
+      const session = o.session && o.session !== "default" ? o.session : (hookIn?.session ?? "default");
+      const emitPlain = (decision: "allow" | "deny" | "ask", reason: string) => out(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: decision, permissionDecisionReason: reason } }));
+      if (!command.trim()) { emitPlain("allow", "no command to gate"); return; }   // nothing to decide → don't block the agent
+      o = { ...o, command, session };
+      const { blast, klass } = classify(command);
+      const nonce = Math.abs([...`${command}${now}${Math.random?.() ?? 0}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+      const req = pager.mintApprovalRequest({ rawCommand: command, summary: command.slice(0, 120), agent: o.agent ?? "agent", session, klass, blast, nonce, now, ttlMs: cfg.ttlMs });
       const d = pager.decide(req, st.trust);
       const emit = (decision: "allow" | "deny" | "ask", reason: string) => {
         if (o.json) { out(JSON.stringify({ decision, lane: d.lane, reason, id: req.id })); return; }
@@ -308,15 +327,15 @@ export function registerPagerCommands(program: Command): void {
       void (async () => {
         try {
           const cs0 = loadState(cwd).classStats?.[klass];   // real outcome history (Gap-1 fix)
-          const brief = preflight.buildPreflight({ command: o.command, blast, history: cs0 ? { seen: cs0.seen, succeeded: cs0.succeeded, recentFails: cs0.recentFails } : undefined });
+          const brief = preflight.buildPreflight({ command, blast, history: cs0 ? { seen: cs0.seen, succeeded: cs0.succeeded, recentFails: cs0.recentFails } : undefined });
           if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: "📊 " + preflight.renderBrief(brief) });
           if (brief.speculatable) {
-            const key = preflight.speculativeKey(o.command); const now2 = Date.now();
+            const key = preflight.speculativeKey(command); const now2 = Date.now();
             const cached = loadState(cwd).speculative?.[key];
             let okRun: boolean, preview: string, fromCache = false;
             if (preflight.freshSpeculative(cached, now2)) { okRun = cached!.exitOk; preview = cached!.output; fromCache = true; }   // #3 anticipatory: warm result, no re-run
             else {
-              const r = spawnSync(o.command, { shell: true, timeout: 8000, encoding: "utf8", cwd });
+              const r = spawnSync(command, { shell: true, timeout: 8000, encoding: "utf8", cwd });
               okRun = !r.error && (r.status === 0 || r.status === null); preview = String(r.stdout || r.stderr || "").trim().slice(0, 280);
               try { const s2 = loadState(cwd); s2.speculative = s2.speculative ?? {}; s2.speculative[key] = { commandHash: key, output: preview, exitOk: okRun, ranAt: now2 }; saveState(cwd, s2); } catch { /* */ }
             }
@@ -464,7 +483,7 @@ export function registerPagerCommands(program: Command): void {
   });
 
   p.command("hook").description("Print the Claude Code PreToolUse hook snippet (paste into .claude/settings.json).").action(() => {
-    out(JSON.stringify({ hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "mneme pager request --command \"$TOOL_INPUT_command\" --agent claude-code --session \"$CLAUDE_SESSION_ID\"" }] }] } }, null, 2));
+    out(JSON.stringify({ hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "mneme pager request --agent claude-code" }] }] } }, null, 2));
     out("# AUTO_ALLOW → {\"decision\":\"allow\"}; otherwise paged to your phone and held. Wire your runner to await `mneme pager status`.");
   });
 
