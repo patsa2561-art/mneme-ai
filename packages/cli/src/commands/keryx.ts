@@ -31,6 +31,8 @@ export function detectAgent(): string {
 const provPath = (cwd: string) => join(cwd, ".mneme", "keryx", "providers.json");
 const bcastPath = (cwd: string) => join(cwd, ".mneme", "keryx", "broadcasts.json");
 function loadProviders(cwd: string): ProvidersConfig { try { return existsSync(provPath(cwd)) ? JSON.parse(readFileSync(provPath(cwd), "utf8")) : {}; } catch { return {}; } }
+/** A provider is connected if it has a token — OR (LINE) a channelId+secret to mint one from. */
+function isConnected(p: string, pc?: ProviderCfg): boolean { return !!(pc && (pc.token || (p === "line" && pc.channelId && pc.channelSecret))); }
 interface Bcast { id: string; nonce: string; sent: Array<{ provider: string; messageId: string }>; answered: string | null; answer?: string }
 function loadBcasts(cwd: string): Bcast[] { try { return existsSync(bcastPath(cwd)) ? JSON.parse(readFileSync(bcastPath(cwd), "utf8")) : []; } catch { return []; } }
 function saveBcasts(cwd: string, b: Bcast[]): void { mkdirSync(join(cwd, ".mneme", "keryx"), { recursive: true }); writeFileSync(bcastPath(cwd), JSON.stringify(b, null, 2), "utf8"); }
@@ -64,7 +66,7 @@ export function registerKeryxCommands(program: Command): void {
     });
 
   k.command("providers").description("List configured chat providers (.mneme/keryx/providers.json).").action(() => {
-    const c = loadProviders(process.cwd()); const on = keryx.ALL_PROVIDERS.filter((p) => (c as Record<string, ProviderCfg>)[p]?.token);
+    const c = loadProviders(process.cwd()) as Record<string, ProviderCfg>; const on = keryx.ALL_PROVIDERS.filter((p) => isConnected(p, c[p]));
     out(on.length ? `🏛 connected providers: ${on.join(", ")}` : "no providers configured — add tokens to .mneme/keryx/providers.json (see docs/KERYX.md)");
   });
 
@@ -73,7 +75,7 @@ export function registerKeryxCommands(program: Command): void {
     .option("--relay <url>", "KERYX relay base URL (to register expectation)").option("--daemon <id>", "daemon id", "default").option("--agent <a>", "agent name shown in chat (default: auto-detected AI agent / Mneme-AI)")
     .action(async (o: { question: string; kind?: string; choices?: string; relay?: string; daemon?: string; agent?: string }) => {
       const cwd = process.cwd(); const cfg = loadProviders(cwd) as Record<string, ProviderCfg>;
-      const connected = keryx.ALL_PROVIDERS.filter((p) => cfg[p]?.token);
+      const connected = keryx.ALL_PROVIDERS.filter((p) => isConnected(p, cfg[p]));
       if (!connected.length) { out("no providers configured — see `mneme keryx providers`"); process.exitCode = 2; return; }
       const id = Math.abs([...`${o.question}${Date.now()}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
       const spec: AskSpec = { id, nonce: id, question: o.question, kind: (["approve", "choice", "text"].includes(o.kind ?? "") ? o.kind : "approve") as AskSpec["kind"], choices: o.choices ? o.choices.split(",").map((s) => s.trim()).filter(Boolean) : undefined, agent: o.agent ?? detectAgent() };
@@ -87,7 +89,7 @@ export function registerKeryxCommands(program: Command): void {
   k.command("test-send <provider>").description("PRE-STAGE CHECK — send one real test message to a provider with your token, so you confirm OUTBOUND works BEFORE you demo (catches a bad token/payload early).")
     .action(async (provider: string) => {
       const cwd = process.cwd(); const cfg = (loadProviders(cwd) as Record<string, ProviderCfg>)[provider];
-      if (!cfg?.token) { out(`✗ no token for ${provider} in .mneme/keryx/providers.json`); process.exitCode = 2; return; }
+      if (!isConnected(provider, cfg)) { out(`✗ ${provider} not configured in .mneme/keryx/providers.json (needs token${provider === "line" ? " or channelId+channelSecret" : ""})`); process.exitCode = 2; return; }
       const r = await sendAsk(provider, cfg, { id: "selftest", nonce: "selftest", question: "✅ Test — tap a button to confirm replies reach the relay", kind: "approve", agent: detectAgent() });
       out(r.ok ? `✓ sent to ${provider}${r.messageId ? " (msg " + r.messageId + ")" : ""} — check your chat; tap a button + run \`mneme keryx bridge\` to confirm the round-trip.` : `✗ ${provider} send FAILED: ${r.reason ?? "unknown"} — re-check token/channel/id.`);
       if (!r.ok) process.exitCode = 2;
