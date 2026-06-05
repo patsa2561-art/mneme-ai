@@ -79,6 +79,19 @@ export function renderBrief(b: PreflightBrief): string {
   return `${icon} Pre-flight: ${b.recommendation} · ${b.blast} · ${spec}${tline}${b.warnings.length ? "\n⚠ " + b.warnings.join("; ") : ""}`;
 }
 
+// ─── #3 ANTICIPATORY CACHE — the speculative pre-run result, kept warm ────────
+// When pre-flight pre-runs a read-only command, its output is cached by command-hash. On
+// approve (or a repeat within the freshness window) the result is served INSTANTLY instead of
+// re-running — zero-latency. HONEST: only valid for side-effect-free commands (a writing
+// command's result can't be reused) and only while FRESH (state may have moved on).
+import { createHash as _ch } from "node:crypto";
+export interface SpeculativeEntry { commandHash: string; output: string; exitOk: boolean; ranAt: number }
+export function speculativeKey(command: string): string { return _ch("sha256").update(String(command ?? ""), "utf8").digest("hex"); }
+export function freshSpeculative(e: SpeculativeEntry | undefined | null, now: number, ttlMs = 60_000): boolean {
+  if (!e || typeof e.ranAt !== "number") return false;
+  return now - e.ranAt >= 0 && now - e.ranAt <= ttlMs;
+}
+
 // ─── gauntlet ─────────────────────────────────────────────────────────────────
 export interface PreflightGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function preflightGauntlet(): PreflightGauntlet {
@@ -92,13 +105,18 @@ export function preflightGauntlet(): PreflightGauntlet {
   const unproven = buildPreflight({ command: "git diff", blast: "safe", history: { seen: 1, succeeded: 1 } });
   const unprovenSpeculatable = unproven.speculatable === true; // read-only → can pre-run even if low history
   const det = JSON.stringify(buildPreflight({ command: "ls", blast: "safe" })) === JSON.stringify(buildPreflight({ command: "ls", blast: "safe" }));
-  const total = (() => { try { classifySideEffects(null as never); buildPreflight(null as never); renderBrief(null as never); return true; } catch { return false; } })();
+  // #3 cache: deterministic key, freshness window honoured
+  const k1 = speculativeKey("npm view x"), k2 = speculativeKey("npm view x"), k3 = speculativeKey("npm view y");
+  const entry: SpeculativeEntry = { commandHash: k1, output: "1.0.0", exitOk: true, ranAt: 1000 };
+  const cacheOK = k1 === k2 && k1 !== k3 && freshSpeculative(entry, 1000 + 30_000, 60_000) === true && freshSpeculative(entry, 1000 + 120_000, 60_000) === false && freshSpeculative(null, 0) === false;
+  const total = (() => { try { classifySideEffects(null as never); buildPreflight(null as never); renderBrief(null as never); speculativeKey(null as never); freshSpeculative(null, 0); return true; } catch { return false; } })();
   const checks = [
     { name: "READ-ONLY-DETECTED", pass: readOnly, detail: "npm view / git log / ls are recognised as side-effect-free (safe to pre-run)" },
     { name: "DESTRUCTIVE-NEVER-SPECULATED", pass: destructiveNo && destDanger, detail: "rm / git push / npm install are NOT side-effect-free; destructive → danger, never pre-run" },
     { name: "SHELL-OPERATORS-BLOCK", pass: operatorNo, detail: "a pipe / redirect / chain disqualifies a command from speculation (could hide a write/exfil)" },
     { name: "SAFE-PROVEN-APPROVE", pass: safeOK, detail: "a read-only, historically-clean command → safe-to-approve + speculatable" },
     { name: "READONLY-LOW-HISTORY-OK", pass: unprovenSpeculatable, detail: "a read-only command is speculatable even with thin history (it can't harm)" },
+    { name: "ANTICIPATORY-CACHE", pass: cacheOK, detail: "speculative result is keyed by command-hash + served only while FRESH (zero-latency on approve/repeat)" },
     { name: "DETERMINISTIC", pass: det, detail: "same command → byte-identical brief" },
     { name: "TOTAL", pass: total, detail: "never throws on garbage" },
   ];

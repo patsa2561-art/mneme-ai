@@ -40,4 +40,22 @@ describe("COSMIC PAGER — approve from your phone; signed authority; self-tunin
     const g = pagerGauntlet(); if (g.score !== 1000) console.error(g.checks.filter((c) => !c.pass));
     expect(g.score).toBe(1000);
   });
+
+  it("E2E: a full unattended conversational round — classify → route → ask → answer → signed record", async () => {
+    const { classifyTurn, decideRoute, mintQuestion, verifyAnswer, recordHumanDecision, verifyHumanDecision } = await import("./index.js");
+    // 1) the AI ends a turn with a pick-one question
+    const cls = classifyTurn("I can deploy now. Which environment?\n1. production\n2. staging\n3. local");
+    expect(cls.isQuestion).toBe(true); expect(cls.kind).toBe("choice"); expect(cls.choices).toEqual(["production", "staging", "local"]);
+    // 2) unattended → route it to the phone
+    expect(decideRoute(cls, "unattended").page).toBe(true);
+    expect(decideRoute(cls, "attended").page).toBe(false);
+    // 3) mint the question, the human answers "production"
+    const q = mintQuestion({ rawContext: cls.question, question: cls.question, kind: "choice", choices: cls.choices, agent: "claude-code", session: "s", vendor: "claude", nonce: "n", now });
+    const ans = verifyAnswer(q, "production"); expect(ans.ok).toBe(true); expect(ans.normalized).toBe("production");
+    expect(verifyAnswer(q, "mars").ok).toBe(false);
+    // 4) the answer becomes a signed, vendor-portable Proxy-of-Record bound to THIS question
+    const rec = recordHumanDecision(q, ans.normalized, "telegram", "claude", now);
+    expect(verifyHumanDecision(rec, q.questionHash).ok).toBe(true);
+    expect(verifyHumanDecision(rec, "different-question-hash").ok).toBe(false);
+  });
 });

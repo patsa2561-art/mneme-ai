@@ -18,8 +18,8 @@ const dir = (cwd: string) => join(cwd, ".mneme", "pager");
 const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
 
-interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number }
-interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string> }
+interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string }
+interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry> }
 type PagerPending = pager.Pending & { tgMessageId?: number };
 
 const loadCfg = (cwd: string): PagerConfig => { try { return existsSync(cfgPath(cwd)) ? JSON.parse(readFileSync(cfgPath(cwd), "utf8")) : {}; } catch { return {}; } };
@@ -56,6 +56,22 @@ function tg(token: string, method: string, body: object): Promise<{ ok: boolean;
   });
 }
 
+/** LINE push (outbound notify-mirror). Telegram stays the answer channel (buttons + long-poll
+ *  behind NAT); LINE mirrors the text so LINE users get pinged too. Answer-back over LINE needs
+ *  a webhook (a public endpoint via `gephyra serve` + a tunnel) — honest, not wired here. */
+function linePush(cfg: PagerConfig, text: string): Promise<{ ok: boolean }> {
+  if (!cfg.lineToken || !cfg.lineTo) return Promise.resolve({ ok: false });
+  return new Promise((resolve) => {
+    const data = JSON.stringify({ to: cfg.lineTo, messages: [{ type: "text", text: String(text).slice(0, 4900) }] });
+    const r = https.request({ hostname: "api.line.me", path: "/v2/bot/message/push", method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${cfg.lineToken}`, "content-length": Buffer.byteLength(data) }, timeout: 15000 },
+      (res) => { res.on("data", () => {}); res.on("end", () => resolve({ ok: (res.statusCode ?? 500) < 300 })); });
+    r.on("error", () => resolve({ ok: false })); r.on("timeout", () => { r.destroy(); resolve({ ok: false }); });
+    r.write(data); r.end();
+  });
+}
+/** Fan a notification to every configured secondary channel (LINE today; extensible). */
+function notifyMirror(cfg: PagerConfig, text: string): void { void linePush(cfg, text).catch(() => { /* best-effort */ }); }
+
 async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<void> {
   if (!cfg.telegramToken || !cfg.chatId) return;
   const icon = req.blast === "destructive" ? "🔴" : req.blast === "moderate" ? "🟡" : "🟢";
@@ -71,8 +87,9 @@ async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<void>
  *  Records BOTH the decision receipt AND the signed, vendor-portable Proxy-of-Record. */
 /** Page a question of any kind. Returns the Telegram message_id (for text force-reply matching). */
 async function pageQuestion(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<number | undefined> {
-  if (!cfg.telegramToken || !cfg.chatId) return undefined;
   const kind = req.kind ?? "approve"; const q = req.question || req.summary;
+  notifyMirror(cfg, `❓ ${req.agent} asks (${kind}): ${q}${(req.choices ?? []).length ? "\noptions: " + (req.choices ?? []).join(" / ") : ""}\n(answer on Telegram)`);
+  if (!cfg.telegramToken || !cfg.chatId) return undefined;
   if (kind === "text") {
     const r = await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `✍️ *${req.agent}* ถาม:\n${q}\n\n_ตอบกลับข้อความนี้ด้วยการพิมพ์_`, parse_mode: "Markdown", reply_markup: { force_reply: true } });
     return (r.result as { message_id?: number })?.message_id;
@@ -205,13 +222,16 @@ export function registerPagerCommands(program: Command): void {
       out("\n   The user did ONE thing: created a Telegram bot. Everything else is wired. Close the lid and go.");
     });
 
-  p.command("setup").description("Configure the Telegram bot + policy.")
+  p.command("setup").description("Configure the Telegram bot + policy (+ optional LINE notify-mirror).")
     .requiredOption("--telegram-token <t>", "BotFather token").requiredOption("--chat-id <id>", "your Telegram chat id")
     .option("--mode <m>", "hybrid (default)", "hybrid").option("--wake-min <n>", "RTC wake interval (min)", "5").option("--ttl-min <n>", "approval TTL (min)", "5")
-    .action((o: { telegramToken: string; chatId: string; mode?: string; wakeMin?: string; ttlMin?: string }) => {
+    .option("--line-token <t>", "(optional) LINE channel access token — mirrors questions to LINE").option("--line-to <id>", "(optional) LINE user/group id")
+    .action((o: { telegramToken: string; chatId: string; mode?: string; wakeMin?: string; ttlMin?: string; lineToken?: string; lineTo?: string }) => {
       mkdirSync(dir(process.cwd()), { recursive: true });
-      writeFileSync(cfgPath(process.cwd()), JSON.stringify({ telegramToken: o.telegramToken, chatId: o.chatId, mode: o.mode ?? "hybrid", wakeIntervalMin: parseInt(o.wakeMin ?? "5", 10), ttlMs: parseInt(o.ttlMin ?? "5", 10) * 60_000 }, null, 2), "utf8");
-      out("✓ pager configured. Test with `mneme pager test`, run with `mneme pager start`, wire the hook with `mneme pager hook`.");
+      const cfg: PagerConfig = { ...loadCfg(process.cwd()), telegramToken: o.telegramToken, chatId: o.chatId, mode: o.mode ?? "hybrid", wakeIntervalMin: parseInt(o.wakeMin ?? "5", 10), ttlMs: parseInt(o.ttlMin ?? "5", 10) * 60_000 };
+      if (o.lineToken && o.lineTo) { cfg.lineToken = o.lineToken; cfg.lineTo = o.lineTo; }
+      writeFileSync(cfgPath(process.cwd()), JSON.stringify(cfg, null, 2), "utf8");
+      out(`✓ pager configured${cfg.lineToken ? " (+ LINE notify-mirror)" : ""}. Run with \`mneme pager start\`, wire the hook with \`mneme pager hook\`.`);
     });
 
   p.command("request").description("THE CLAUDE CODE HOOK — decide on a command: AUTO_ALLOW (Trust-Tide) or page the phone + BLOCK-AND-WAIT for a signed answer (from phone OR a local `mneme pager approve <id>`), then emit Claude Code's permissionDecision. Dead-man default on TTL.")
@@ -244,10 +264,16 @@ export function registerPagerCommands(program: Command): void {
           const brief = preflight.buildPreflight({ command: o.command, blast });
           if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: "📊 " + preflight.renderBrief(brief) });
           if (brief.speculatable) {
-            const r = spawnSync(o.command, { shell: true, timeout: 8000, encoding: "utf8", cwd });
-            const okRun = !r.error && (r.status === 0 || r.status === null);
-            const preview = String(r.stdout || r.stderr || "").trim().slice(0, 280);
-            if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: okRun ? `✅ pre-ran in a safe read-only check — looks clean:\n${preview || "(no output)"}` : `⚠️ heads-up: this would FAIL if approved:\n${preview || r.error?.message || "error"}` });
+            const key = preflight.speculativeKey(o.command); const now2 = Date.now();
+            const cached = loadState(cwd).speculative?.[key];
+            let okRun: boolean, preview: string, fromCache = false;
+            if (preflight.freshSpeculative(cached, now2)) { okRun = cached!.exitOk; preview = cached!.output; fromCache = true; }   // #3 anticipatory: warm result, no re-run
+            else {
+              const r = spawnSync(o.command, { shell: true, timeout: 8000, encoding: "utf8", cwd });
+              okRun = !r.error && (r.status === 0 || r.status === null); preview = String(r.stdout || r.stderr || "").trim().slice(0, 280);
+              try { const s2 = loadState(cwd); s2.speculative = s2.speculative ?? {}; s2.speculative[key] = { commandHash: key, output: preview, exitOk: okRun, ranAt: now2 }; saveState(cwd, s2); } catch { /* */ }
+            }
+            if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: okRun ? `✅ pre-ran in a safe read-only check${fromCache ? " (cached · instant)" : ""} — looks clean:\n${preview || "(no output)"}` : `⚠️ heads-up: this would FAIL if approved:\n${preview || "error"}` });
           }
         } catch { /* pre-flight is best-effort; it never affects the decision path */ }
       })();
