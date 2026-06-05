@@ -11,7 +11,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { revertRadar, agentBenchmark, engagement, awarm } from "@mneme-ai/core";
+import { revertRadar, agentBenchmark, engagement, awarm, geo } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
 
 function git(args: string, cwd: string): string {
@@ -44,6 +44,23 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
 }
 
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.geo.scan",
+    category: "audit",
+    description:
+      "GEOLOGICAL MEMORY COMPLIANCE — report the self-cleaning memory ledger: how many raw entries dissolved to abstract/axiom, raw bytes provably destroyed, and whether every purge proof (Ed25519, offline) + the audit chain verify. Memory metamorphoses over time so the WISDOM is kept and the RAW is destroyed — right-to-be-forgotten by construction (GDPR), no database bloat. Example asks: 'is our memory GDPR-compliant?', 'did the raw data get purged?', 'how much raw was reclaimed?'",
+    whenToUse: "The user/CISO wants to confirm raw data is being provably purged (compliance) while the distilled wisdom is retained.",
+    triggers: ["is the memory compliant", "did raw data get purged", "gdpr memory", "right to be forgotten", "self-cleaning memory", "memory bloat"],
+    inputSchema: { type: "object", properties: {} },
+    handler: async (runtime: ToolRuntime): Promise<ToolResponse> => {
+      const p = join(runtime.cwd, ".mneme", "geo", "state.json");
+      if (!existsSync(p)) return { data: { active: false }, wisdom: "The geological memory ledger isn't active here. Seed it with `mneme geo add`, then `mneme geo metamorphose` runs the recycle (or wire it to the daemon idle tick)." };
+      let s: geo.GeoState; try { s = JSON.parse(readFileSync(p, "utf8")) as geo.GeoState; } catch { return { data: { error: "geo state unreadable" }, wisdom: "geo ledger corrupt." }; }
+      const st = geo.geoStats(s), v = geo.verifyGeo(s);
+      const wisdom = `Geological memory: ${st.raw} raw · ${st.abstract} abstract · ${st.axiom} axiom · ${st.purged} purged (${st.rawBytesReclaimed} raw bytes provably destroyed). Compliance: ${v.proofsValid}/${v.proofsTotal} purge proofs valid, audit chain ${v.chainIntact ? "intact" : "BROKEN"}. ${v.ok ? "The raw is provably gone; the distilled wisdom + signed proof remain — right-to-be-forgotten by construction." : "⚠ verification issues — investigate."}`;
+      return { data: { active: true, stats: st, compliance: v }, wisdom };
+    },
+  },
   {
     name: "mneme.warm.scan",
     category: "audit",
