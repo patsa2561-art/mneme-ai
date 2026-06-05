@@ -11,7 +11,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { revertRadar, agentBenchmark, engagement, awarm, geo, reckoning, commitAttest } from "@mneme-ai/core";
+import { revertRadar, agentBenchmark, engagement, awarm, geo, reckoning, commitAttest, succession } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
 
 function git(args: string, cwd: string): string {
@@ -44,6 +44,26 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
 }
 
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.succession.scan",
+    category: "audit",
+    description:
+      "SUCCESSION CAPSULE — when an agent must be halted (loop thrash / policy breach), build a SIGNED capsule that distils its PROVEN wisdom (geo axioms + reliability record) for a successor to inherit, referencing the signed proofs the toxic raw was purged. No brain-drain: kill the bad agent without losing the good learning. ★HONEST: the verdict is HALT_RECOMMENDED and `enforcedBy` is the host orchestrator — Mneme decides + packages + signs, it does NOT cut a host's API or kill its process. Pass {agent}. Example asks: 'safely retire this agent', 'capture its wisdom before we stop it', 'hand off to a successor'.",
+    whenToUse: "An agent needs to be stopped/retired and you want to preserve its proven wisdom + prove the toxic raw is gone, for a clean successor handoff.",
+    triggers: ["retire this agent", "halt the agent safely", "capture wisdom before stopping", "successor handoff", "no brain drain"],
+    inputSchema: { type: "object", properties: { agent: { type: "string", description: "the agent id to build a succession capsule for" }, reason: { type: "string" } } },
+    handler: async (runtime: ToolRuntime, args: { agent?: string; reason?: string }): Promise<ToolResponse> => {
+      const cwd = runtime.cwd; const agent = args.agent ?? "unknown";
+      const g = ((): geo.GeoState => { try { const p = join(cwd, ".mneme", "geo", "state.json"); return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) as geo.GeoState : geo.emptyGeo(); } catch { return geo.emptyGeo(); } })();
+      const axioms = g.cells.filter((c) => c.tier === "axiom" && c.abstract).map((c) => c.abstract as string);
+      const purgeProofRefs = g.cells.filter((c) => c.purgeProof && c.rawHash).map((c) => `geo-purge:${(c.rawHash as string).slice(0, 12)}`);
+      const warm = ((): awarm.WarmState => { try { const p = join(cwd, ".mneme", "awarm", "state.json"); return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) as awarm.WarmState : awarm.emptyState(); } catch { return awarm.emptyState(); } })();
+      const wa = awarm.queryWarm(warm).agents.find((a) => a.agent === agent);
+      const reliability = wa ? { survivalPct: Math.round(wa.survivalRate * 100), band: wa.survivalRate >= 0.9 ? "solid" : wa.survivalRate >= 0.7 ? "watch" : "risky" } : null;
+      const capsule = succession.buildSuccessionCapsule({ agent, reason: args.reason ?? "halt", trigger: "manual", axioms, reliability, purgeProofRefs, ts: 0 });
+      return { data: { capsule }, wisdom: `🛑 ${capsule.haltVerdict} for ${agent} (enforced by the HOST orchestrator — Mneme recommends + packages, it does not kill the runtime). The successor inherits ${capsule.wisdom.length} proven axiom(s)${reliability ? ` + a ${reliability.survivalPct}% reliability record` : ""}, and ${purgeProofRefs.length} signed proof(s) confirm the toxic raw is purged. No brain-drain: the bad agent stops, the good learning survives.` };
+    },
+  },
   {
     name: "mneme.reckon.scan",
     category: "audit",
