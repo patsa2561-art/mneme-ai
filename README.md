@@ -57,6 +57,8 @@ real.** No more babysitting a terminal.
 
 🏗 **MNEME-BC — the Behavioral Compiler (v3.0).** Every vendor emits actions differently (a bash string, a JSON tool-call). MNEME-BC parses *any* of them into **one vendor-neutral Behavioral IR** — typed effect nodes (read / write / delete / network / exec / escalate, each with a risk + the operator that joins a compound `a && b | c`) — and a deterministic **PASS / REVIEW / BLOCK**. It reasons over *what an action does*, not the words, so it's robust where regex is brittle; obfuscation (`eval`, `base64|sh`, `$(…)`) is typed `exec-opaque` and flagged HIGH, never silently cleared. <sub>(honest: a frontend+analyzer that flags + defers to the deep gate + the human — not a "100% jailbreak-proof" claim.) `mneme compile "<cmd>"`</sub>
 
+🛂 **SKILLSCAN — signed provenance for AI agent skills / MCP tools (v3.2).** The #1 supply-chain frontier of 2026: agents install skills/tools from marketplaces that ship poisoned code. Before you trust one, `mneme skillscan <path> --sign` runs an **8-point static scan** (prompt-injection · exfiltration · secret · dangerous-command · obfuscation · external-fetch · credential-access · privilege-escalation — composing the firewall + MNEME-BC + egress), pins it by **content hash**, and mints a **NOTARY-signed provenance receipt any consumer verifies OFFLINE** (and re-hashes to prove the skill is unchanged). <sub>(honest: a static scan + a content-pinned attestation that raises the floor — not a runtime-safety proof; pair with the gate at execution.)</sub>
+
 ---
 
 ## One picture

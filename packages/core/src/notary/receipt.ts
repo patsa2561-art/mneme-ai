@@ -24,6 +24,7 @@ export type ReceiptKind =
   | "protocol-hop"       // a cross-protocol hop (MCP↔A2A↔x402↔ERC-8004) — for the BGP router
   | "memory-capsule"     // a portable brain capsule digest — for BYOB
   | "reasoning-trace"    // an HMAC/reasoning trace digest — for the Flight Recorder
+  | "skill-provenance"   // an 8-point skill/MCP-tool scan verdict + content hash — for SKILLSCAN
   | "generic";
 
 export interface NotaryReceipt {
