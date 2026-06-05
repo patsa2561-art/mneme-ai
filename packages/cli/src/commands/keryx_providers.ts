@@ -10,7 +10,20 @@
  */
 import * as https from "node:https";
 
-export interface ProviderCfg { token?: string; chatId?: string; channel?: string; to?: string; phoneId?: string }
+export interface ProviderCfg { token?: string; chatId?: string; channel?: string; to?: string; phoneId?: string; channelId?: string; channelSecret?: string }
+
+/** LINE: mint a short-lived channel access token from channelId + channelSecret (so the user
+ *  only needs those two — no token-hunting). Returns "" on failure. */
+function mintLineToken(channelId: string, channelSecret: string): Promise<string> {
+  return new Promise((resolve) => {
+    const form = `grant_type=client_credentials&client_id=${encodeURIComponent(channelId)}&client_secret=${encodeURIComponent(channelSecret)}`;
+    const req = https.request({ hostname: "api.line.me", path: "/v2/oauth/accessToken", method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "content-length": Buffer.byteLength(form) }, timeout: 15000 },
+      (res) => { let s = ""; res.on("data", (d) => (s += d)); res.on("end", () => { try { resolve(String(JSON.parse(s).access_token ?? "")); } catch { resolve(""); } }); });
+    req.on("error", () => resolve("")); req.on("timeout", () => { req.destroy(); resolve(""); });
+    req.write(form); req.end();
+  });
+}
+async function lineToken(cfg: ProviderCfg): Promise<string> { return cfg.token || (cfg.channelId && cfg.channelSecret ? await mintLineToken(cfg.channelId, cfg.channelSecret) : ""); }
 export interface ProvidersConfig { telegram?: ProviderCfg; slack?: ProviderCfg; discord?: ProviderCfg; line?: ProviderCfg; whatsapp?: ProviderCfg }
 
 function httpsJson(host: string, path: string, headers: Record<string, string>, body: object): Promise<{ status: number; json: Record<string, unknown> }> {
@@ -34,7 +47,8 @@ const title = (spec: AskSpec) => `❓ ${spec.agent} asks${spec.kind === "text" ?
 
 /** Send the ask to ONE provider. Returns the provider message id (for later clearing). */
 export async function sendAsk(provider: string, cfg: ProviderCfg, spec: AskSpec): Promise<{ ok: boolean; messageId?: string; reason?: string }> {
-  if (!cfg?.token) return { ok: false, reason: "no token" };
+  const lineCreds = provider === "line" && (cfg?.token || (cfg?.channelId && cfg?.channelSecret));
+  if (!cfg?.token && !lineCreds) return { ok: false, reason: "no token" };
   const opts = options(spec);
   try {
     if (provider === "telegram") {
@@ -53,10 +67,14 @@ export async function sendAsk(provider: string, cfg: ProviderCfg, spec: AskSpec)
       return { ok: r.status < 300, messageId: String(r.json.id ?? "") };
     }
     if (provider === "line") {
-      const actions = opts.length ? opts.slice(0, 4).map(([t, d]) => ({ type: "postback", label: t.slice(0, 20), data: d })) : [{ type: "message", label: "reply", text: "(type your answer)" }];
+      const token = await lineToken(cfg); if (!token) return { ok: false, reason: "LINE token mint failed (check channelId/secret)" };
+      const actions = opts.length ? opts.slice(0, 4).map(([t, d]) => ({ type: "postback", label: t.slice(0, 20), data: d, displayText: t })) : [{ type: "message", label: "reply", text: "(type your answer)" }];
       const msg = opts.length ? { type: "template", altText: spec.question, template: { type: "buttons", text: spec.question.slice(0, 160), actions } } : { type: "text", text: title(spec) };
-      const r = await httpsJson("api.line.me", "/v2/bot/message/push", { authorization: `Bearer ${cfg.token}` }, { to: cfg.to, messages: [msg] });
-      return { ok: r.status < 300, messageId: "" }; // LINE push has no editable id
+      // push to a specific user if `to` is set; else broadcast to all friends (personal bot)
+      const path = cfg.to ? "/v2/bot/message/push" : "/v2/bot/message/broadcast";
+      const payload = cfg.to ? { to: cfg.to, messages: [msg] } : { messages: [msg] };
+      const r = await httpsJson("api.line.me", path, { authorization: `Bearer ${token}` }, payload);
+      return { ok: r.status < 300, messageId: "", reason: r.status < 300 ? undefined : `HTTP ${r.status}` }; // LINE push/broadcast has no editable id
     }
     if (provider === "whatsapp") {
       const interactive = opts.length ? { type: "button", body: { text: spec.question.slice(0, 1024) }, action: { buttons: opts.slice(0, 3).map(([t, d]) => ({ type: "reply", reply: { id: d.slice(0, 256), title: t.slice(0, 20) } })) } } : null;
@@ -76,7 +94,7 @@ export async function clearMessage(provider: string, cfg: ProviderCfg, messageId
     if (provider === "telegram" && messageId) { await httpsJson("api.telegram.org", `/bot${cfg.token}/editMessageText`, {}, { chat_id: cfg.chatId, message_id: Number(messageId), text: note }); return; }
     if (provider === "slack" && messageId) { await httpsJson("slack.com", "/api/chat.update", { authorization: `Bearer ${cfg.token}` }, { channel: cfg.channel, ts: messageId, text: note, blocks: [] }); return; }
     if (provider === "discord" && messageId) { await httpsJson("discord.com", `/api/v10/channels/${cfg.channel}/messages/${messageId}`, { authorization: `Bot ${cfg.token}` }, { content: note, components: [] }); return; }
-    if (provider === "line") { await httpsJson("api.line.me", "/v2/bot/message/push", { authorization: `Bearer ${cfg.token}` }, { to: cfg.to, messages: [{ type: "text", text: note }] }); return; }
+    if (provider === "line") { const token = await lineToken(cfg); if (!token) return; const path = cfg.to ? "/v2/bot/message/push" : "/v2/bot/message/broadcast"; const payload = cfg.to ? { to: cfg.to, messages: [{ type: "text", text: note }] } : { messages: [{ type: "text", text: note }] }; await httpsJson("api.line.me", path, { authorization: `Bearer ${token}` }, payload); return; }
     if (provider === "whatsapp") { await httpsJson("graph.facebook.com", `/v20.0/${cfg.phoneId}/messages`, { authorization: `Bearer ${cfg.token}` }, { messaging_product: "whatsapp", to: cfg.to, type: "text", text: { body: note } }); return; }
   } catch { /* clearing is best-effort */ }
 }

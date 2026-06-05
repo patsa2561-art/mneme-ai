@@ -65,28 +65,32 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
   if (o.action === "serve") {
     const port = o.port ?? 17742; // 17741 is the existing polygraph bridge
     const server = createServer((req, res) => {
-      const url = req.url ?? "";
-      const isMcp = url.startsWith("/mcp");
-      const isSavantVerify = url.startsWith("/savant/verify");
-      const isSavantRepair = url.startsWith("/savant/repair");
-      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair)) {
-        res.writeHead(404, { "content-type": "application/json" }); res.end(JSON.stringify({ error: "POST /cross {claim, fromAgent}  |  POST /mcp {tool, agent, args?}  |  POST /savant/verify {claim}  |  POST /savant/repair {draft}" })); return;
-      }
-      let body = "";
-      req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
+      const url = req.url ?? ""; const m = req.method ?? "GET";
+      const reply = (r: { status: number; body: unknown }) => { res.writeHead(r.status, { "content-type": "application/json" }); res.end(JSON.stringify(r.body)); };
+      const kq = new URLSearchParams(url.split("?")[1] ?? "");
+      // GET surfaces
+      if (m === "GET" && url.startsWith("/openapi.json")) { reply({ status: 200, body: g.a2aOpenApi() }); return; }
+      if (m === "GET" && url.startsWith("/keryx/webhook")) { const ch = kq.get("hub.challenge"); if (ch !== null) { res.writeHead(200, { "content-type": "text/plain" }); res.end(ch); return; } reply({ status: 200, body: { ok: true } }); return; }
+      if (m === "GET" && url.startsWith("/keryx/drain")) { void g.handleKeryxRelay(o.cwd, "drain", "", { daemon: kq.get("daemon") ?? "default" }).then(reply).catch((e: Error) => reply({ status: 500, body: { error: e.message } })); return; }
+      const isMcp = url.startsWith("/mcp"), isSV = url.startsWith("/savant/verify"), isSR = url.startsWith("/savant/repair");
+      const isFw = url.startsWith("/firewall"), isRi = url.startsWith("/rail/ingress"), isRe = url.startsWith("/rail/egress"), isRk = url.startsWith("/reckon");
+      const isKExpect = url.startsWith("/keryx/expect"), isKWebhook = url.startsWith("/keryx/webhook");
+      const known = url.startsWith("/cross") || isMcp || isSV || isSR || isFw || isRi || isRe || isRk || isKExpect || isKWebhook;
+      if (m !== "POST" || !known) { reply({ status: 404, body: { error: "POST /cross|/mcp|/savant/verify|/savant/repair|/firewall|/rail/ingress|/rail/egress|/reckon|/keryx/expect|/keryx/webhook/:provider · GET /status|/openapi.json|/keryx/drain" } }); return; }
+      let body = ""; req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
       req.on("end", () => {
-        // /savant/* = the savant prosthesis (A2A): verify a claim / repair a draft.
-        // /mcp = Phase 4 MCP-proxy; /cross = single-claim verify.
-        const handler = isSavantVerify ? g.handleSavantRequest(o.cwd, body, "verify")
-          : isSavantRepair ? g.handleSavantRequest(o.cwd, body, "repair")
+        const provider = isKWebhook ? (url.split("/keryx/webhook/")[1]?.split("?")[0] || "generic") : "";
+        const handler = isSV ? g.handleSavantRequest(o.cwd, body, "verify")
+          : isSR ? g.handleSavantRequest(o.cwd, body, "repair")
+          : isFw ? g.handleA2ARequest(o.cwd, body, "firewall")
+          : isRi ? g.handleA2ARequest(o.cwd, body, "rail-ingress")
+          : isRe ? g.handleA2ARequest(o.cwd, body, "rail-egress")
+          : isRk ? g.handleA2ARequest(o.cwd, body, "reckon")
+          : isKExpect ? g.handleKeryxRelay(o.cwd, "expect", body, {})
+          : isKWebhook ? g.handleKeryxRelay(o.cwd, "webhook", body, { provider }, req.headers as Record<string, string | string[] | undefined>)
           : isMcp ? g.handleMcpCallRequest(o.cwd, body)
           : g.handleCrossRequest(o.cwd, body);
-        void handler.then((r) => {
-          res.writeHead(r.status, { "content-type": "application/json" });
-          res.end(JSON.stringify(r.body));
-        }).catch((e: Error) => {
-          res.writeHead(500, { "content-type": "application/json" }); res.end(JSON.stringify({ error: e.message }));
-        });
+        void handler.then(reply).catch((e: Error) => reply({ status: 500, body: { error: e.message } }));
       });
     });
     server.on("error", (e) => { out(`✗ GEPHYRA serve failed: ${(e as Error).message}\n`); process.exit(1); });
