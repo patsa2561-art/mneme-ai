@@ -200,21 +200,40 @@ export function registerPagerCommands(program: Command): void {
       out("✓ pager configured. Test with `mneme pager test`, run with `mneme pager start`, wire the hook with `mneme pager hook`.");
     });
 
-  p.command("request").description("Decide on a command (used by the agent hook): AUTO_ALLOW / page+hold. Prints a JSON decision.")
+  p.command("request").description("THE CLAUDE CODE HOOK — decide on a command: AUTO_ALLOW (Trust-Tide) or page the phone + BLOCK-AND-WAIT for a signed answer (from phone OR a local `mneme pager approve <id>`), then emit Claude Code's permissionDecision. Dead-man default on TTL.")
     .requiredOption("--command <c>", "the raw command").option("--agent <a>", "agent id", "agent").option("--session <s>", "session id", "default")
-    .action(async (o: { command: string; agent?: string; session?: string }) => {
+    .option("--json", "non-blocking: print {decision} instead of blocking + the Claude Code hook JSON")
+    .action(async (o: { command: string; agent?: string; session?: string; json?: boolean }) => {
       const cwd = process.cwd(); const cfg = loadCfg(cwd); const st = loadState(cwd); const now = Date.now();
       const { blast, klass } = classify(o.command);
       const nonce = Math.abs([...`${o.command}${now}${Math.random?.() ?? 0}`].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
       const req = pager.mintApprovalRequest({ rawCommand: o.command, summary: o.command.slice(0, 120), agent: o.agent ?? "agent", session: o.session ?? "default", klass, blast, nonce, now, ttlMs: cfg.ttlMs });
       const d = pager.decide(req, st.trust);
+      const emit = (decision: "allow" | "deny" | "ask", reason: string) => {
+        if (o.json) { out(JSON.stringify({ decision, lane: d.lane, reason, id: req.id })); return; }
+        // Claude Code PreToolUse hook contract.
+        out(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: decision, permissionDecisionReason: reason } }));
+      };
       if (d.action === "AUTO_ALLOW") {
         st.trust = pager.updateTrust(st.trust, klass, "approved"); st.receipts.push(pager.buildReceipt(req, "allow", "policy-auto", "trust-tide", d.lane, now)); saveState(cwd, st);
-        out(JSON.stringify({ decision: "allow", lane: d.lane, reason: d.reason })); return;
+        emit("allow", `Trust-Tide: ${d.reason}`); return;
       }
       st.pendings.push({ req, status: "pending", lane: d.lane }); saveState(cwd, st);
       await page(cfg, req);
-      out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) }));
+      if (o.json) { out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) })); return; }
+      // DUAL-SURFACE BLOCK-AND-WAIT: poll state.answers[id] — written by the phone (daemon) OR
+      // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
+      const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl;
+      for (;;) {
+        const ans = loadState(cwd).answers?.[req.id];
+        if (ans === "allow") { emit("allow", "approved by the human (phone/local)"); return; }
+        if (ans === "deny") { emit("deny", "denied by the human (phone/local)"); return; }
+        if (Date.now() > deadline) {
+          if (blast === "destructive") { resolvePending(cwd, req.id, "deny", "deadman", "policy", Date.now()); emit("deny", "dead-man: destructive timed out unattended → DENY"); return; }
+          emit("ask", "no answer in time → defer to Claude Code's own prompt"); return;
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
     });
 
   p.command("ask").description("🌐 VENDOR-AGNOSTIC — any agent (any vendor) asks the human a question → Telegram → signed answer back. Kinds: approve (yes/no) · choice (pick-one) · text (typed). Prints {id}; pair with `mneme pager await <id>`.")
@@ -283,10 +302,11 @@ export function registerPagerCommands(program: Command): void {
           for (const u of r.result) {
             offset = u.update_id + 1;
             const ack = (t: string) => u.callback_query ? tg(cfg.telegramToken!, "answerCallbackQuery", { callback_query_id: u.callback_query.id, text: t }) : Promise.resolve({ ok: true });
+            const confirm = (t: string) => tg(cfg.telegramToken!, "sendMessage", { chat_id: cfg.chatId!, text: t }); // visible chat confirmation (a button tap alone only shows a tiny toast)
             const data = u.callback_query?.data ?? "";
-            if (data.startsWith("a:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "allow", "human", "telegram", Date.now())) await ack("✅ approved — running"); }
-            else if (data.startsWith("d:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "deny", "human", "telegram", Date.now())) await ack("⛔ denied"); }
-            else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.req.id === id && x.status === "pending"); const choice = pp?.req.choices?.[parseInt(idxS, 10)]; if (pp && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) await ack(`✅ ${choice}`); }
+            if (data.startsWith("a:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "allow", "human", "telegram", Date.now())) { await ack("✅ approved"); await confirm("✅ อนุมัติแล้ว — คำสั่งถูกปลดล็อก (รันต่อ)"); } }
+            else if (data.startsWith("d:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "deny", "human", "telegram", Date.now())) { await ack("⛔ denied"); await confirm("⛔ ปฏิเสธแล้ว — คำสั่งถูกบล็อก"); } }
+            else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.req.id === id && x.status === "pending"); const choice = pp?.req.choices?.[parseInt(idxS, 10)]; if (pp && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await confirm(`✅ เลือกแล้ว: ${choice}`); } }
             else if (u.message?.reply_to_message?.message_id) { // typed text answer
               const mid = u.message.reply_to_message.message_id; const txt = (u.message.text ?? "").trim();
               const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.tgMessageId === mid && x.status === "pending");
