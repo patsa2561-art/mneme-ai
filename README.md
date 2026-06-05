@@ -53,6 +53,8 @@ real.** No more babysitting a terminal.
 
 <sub>**[Full 60-second bot guide + spec → docs/COSMIC-PAGER.md](docs/COSMIC-PAGER.md)**</sub>
 
+🏛 **Not just Telegram — every chat.** **KERYX** is the dumb, *signed* relay so **LINE / Slack / Discord / WhatsApp** can reach your local agent behind NAT too — only a summary+hash crosses, approvals are unforgeable + replay-proof, the brain stays on your machine. <sub>**<a href="docs/KERYX.md" target="_blank" rel="noopener">how KERYX works →</a>**</sub>
+
 ---
 
 ## One picture

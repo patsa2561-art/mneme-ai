@@ -335,6 +335,7 @@ export * as reckoning from "./reckoning/index.js";
 export * as succession from "./succession/index.js";
 export * as pager from "./pager/index.js";
 export * as preflight from "./preflight/index.js";
+export * as keryx from "./keryx/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
