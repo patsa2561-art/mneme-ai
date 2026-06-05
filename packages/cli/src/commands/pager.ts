@@ -634,19 +634,19 @@ export function registerPagerCommands(program: Command): void {
             const data = u.callback_query?.data ?? "";
             if (data.startsWith("a:") || data.startsWith("d:")) {
               const id = data.split(":")[1]; const cur = findById(id);
-              if (cur && cur.status !== "pending") { await ack("ตอบไปแล้ว"); await confirm(`ℹ️ คำถามนี้ตอบไปแล้ว (${loadState(cwd).answers?.[id] ?? "?"})`); }
-              else { const allow = data.startsWith("a:"); if (resolvePending(cwd, id, allow ? "allow" : "deny", "human", "telegram", Date.now())) { await ack(allow ? "✅ approved" : "⛔ denied"); await stripButtons(id); await confirm(allow ? "✅ อนุมัติแล้ว — คำสั่งถูกปลดล็อก (Claude Code รันต่อ)" : "⛔ ปฏิเสธแล้ว — คำสั่งถูกบล็อก"); } }
+              if (cur && cur.status !== "pending") { await ack("already answered"); await confirm(`ℹ️ Already answered (${loadState(cwd).answers?.[id] ?? "?"}).`); }
+              else { const allow = data.startsWith("a:"); const ag = cur?.req.agent || "the agent"; if (resolvePending(cwd, id, allow ? "allow" : "deny", "human", "telegram", Date.now())) { await ack(allow ? "✅ approved" : "⛔ denied"); await stripButtons(id); await confirm(allow ? `✅ Approved — command unlocked (${ag} is proceeding).` : `⛔ Denied — command blocked (${ag} will not run it).`); } }
             }
             else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const cur = findById(id); const choice = cur?.req.choices?.[parseInt(idxS, 10)];
-              if (cur && cur.status !== "pending") { await ack("ตอบไปแล้ว"); await confirm(`ℹ️ คำถามนี้เลือกไปแล้ว (${loadState(cwd).answers?.[id] ?? "?"})`); }
-              else if (cur && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await stripButtons(id); await confirm(`✅ เลือกแล้ว: ${choice}`); } }
+              if (cur && cur.status !== "pending") { await ack("already answered"); await confirm(`ℹ️ Already chosen (${loadState(cwd).answers?.[id] ?? "?"}).`); }
+              else if (cur && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await stripButtons(id); await confirm(`✅ Chosen: ${choice} (${cur?.req.agent || "the agent"} is proceeding).`); } }
             else if (u.message?.reply_to_message?.message_id) { // typed text answer
               const mid = u.message.reply_to_message.message_id; const txt = (u.message.text ?? "").trim();
               const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.tgMessageId === mid && x.status === "pending");
               const already = st0.pendings.find((x) => x.tgMessageId === mid && x.status !== "pending");
-              if (pp && txt) { resolvePending(cwd, pp.req.id, txt, "human", "telegram", Date.now()); await confirm(`✅ รับคำตอบแล้ว: "${txt}"`); }
-              else if (already) { await confirm(`ℹ️ คำถามนี้ตอบไปแล้วว่า "${st0.answers?.[already.req.id] ?? "?"}" — ถ้าต้องการสั่งใหม่ ให้ agent ถามคำถามใหม่ครับ`); }
-              else if (txt) { await confirm("ℹ️ ไม่พบคำถามที่ยังรอคำตอบสำหรับข้อความนี้ (อาจหมดเวลา) — รอคำถามใหม่ได้เลย"); }
+              if (pp && txt) { resolvePending(cwd, pp.req.id, txt, "human", "telegram", Date.now()); await confirm(`✅ Got your answer: "${txt}" (${pp.req.agent || "the agent"} is proceeding).`); }
+              else if (already) { await confirm(`ℹ️ Already answered "${st0.answers?.[already.req.id] ?? "?"}" — ask a new question to make a new request.`); }
+              else if (txt) { await confirm("ℹ️ No pending question matches this reply (it may have timed out) — waiting for a new one."); }
             }
           }
         }
