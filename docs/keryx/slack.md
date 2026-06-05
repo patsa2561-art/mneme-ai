@@ -1,5 +1,9 @@
 # 🟪 Connect Slack to KERYX
 
+> ✅ **Relay-tested:** Slack sends button taps as `application/x-www-form-urlencoded` (`payload=…`);
+> the KERYX relay auto-decodes that and routes the reply — verified live end-to-end. You only
+> need to create the app + paste two values; follow the steps and it connects.
+
 ## 1. Make a Slack app (~3 min)
 1. **<a href="https://api.slack.com/apps" target="_blank" rel="noopener">api.slack.com/apps</a>** → *Create New App* → *From scratch* → pick your workspace.
 2. **OAuth & Permissions** → *Scopes* → *Bot Token Scopes* → add **`chat:write`** → scroll up → *Install to Workspace* → copy the **Bot User OAuth Token** (`xoxb-…`).

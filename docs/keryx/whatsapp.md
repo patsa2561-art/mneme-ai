@@ -1,5 +1,9 @@
 # 🟢 Connect WhatsApp to KERYX (Cloud API)
 
+> ✅ **Relay-tested:** Meta verifies the webhook with a `GET ?hub.challenge=…` (the relay
+> auto-echoes it) and delivers button taps as a nested `interactive.button_reply.id` (the relay
+> parses it) — both verified live end-to-end. Follow the steps and it connects.
+
 ## 1. Set up WhatsApp Cloud API (~5 min)
 1. **<a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>** → *Create app* → add the **WhatsApp** product.
 2. **WhatsApp → API Setup** → copy the **temporary access token** + the **Phone number ID**, and add **your phone number** as a recipient (verify it).
