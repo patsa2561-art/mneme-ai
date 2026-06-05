@@ -24,6 +24,17 @@ type PagerPending = pager.Pending & { tgMessageId?: number };
 const loadCfg = (cwd: string): PagerConfig => { try { return existsSync(cfgPath(cwd)) ? JSON.parse(readFileSync(cfgPath(cwd), "utf8")) : {}; } catch { return {}; } };
 const loadState = (cwd: string): PagerState => { try { return existsSync(statePath(cwd)) ? JSON.parse(readFileSync(statePath(cwd), "utf8")) : { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [], decisions: [], answers: {} }; } catch { return { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [], decisions: [], answers: {} }; } };
 const saveState = (cwd: string, s: PagerState): void => { mkdirSync(dir(cwd), { recursive: true }); writeFileSync(statePath(cwd), JSON.stringify(s, null, 2), "utf8"); };
+const hbPath = (cwd: string) => join(dir(cwd), "daemon.heartbeat");
+
+/** Is the long-poll daemon alive? (it touches a heartbeat every poll cycle). */
+function daemonAlive(cwd: string): boolean {
+  try { if (!existsSync(hbPath(cwd))) return false; return Date.now() - Number(readFileSync(hbPath(cwd), "utf8")) < 90_000; } catch { return false; }
+}
+/** AUTOMATIC SELF-HEAL: if the daemon is down, spawn it detached. Returns true if alive/spawned. */
+function ensureDaemon(cwd: string): boolean {
+  if (daemonAlive(cwd)) return true;
+  try { mkdirSync(dir(cwd), { recursive: true }); spawn(process.execPath, [process.argv[1], "pager", "start"], { cwd, stdio: "ignore", detached: true }).unref(); return true; } catch { return false; }
+}
 
 /** Deterministic blast classifier (heph can plug in later for the full gate). */
 function classify(cmd: string): { blast: pager.Blast; klass: string } {
@@ -67,11 +78,11 @@ async function pageQuestion(cfg: PagerConfig, req: pager.ApprovalRequest): Promi
   }
   if (kind === "choice") {
     const rows = (req.choices ?? []).map((c, i) => [{ text: c, callback_data: `c:${req.id}:${i}` }]);
-    await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `🔢 *${req.agent}* ถาม:\n${q}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: rows } });
-    return undefined;
+    const r = await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `🔢 *${req.agent}* ถาม:\n${q}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: rows } });
+    return (r.result as { message_id?: number })?.message_id;
   }
-  await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `❓ *${req.agent}* ถาม:\n${q}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: [[{ text: "✅ Yes", callback_data: `a:${req.id}:${req.nonce}` }, { text: "⛔ No", callback_data: `d:${req.id}` }]] } });
-  return undefined;
+  const r = await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `❓ *${req.agent}* ถาม:\n${q}`, parse_mode: "Markdown", reply_markup: { inline_keyboard: [[{ text: "✅ Yes", callback_data: `a:${req.id}:${req.nonce}` }, { text: "⛔ No", callback_data: `d:${req.id}` }]] } });
+  return (r.result as { message_id?: number })?.message_id;
 }
 
 function resolvePending(cwd: string, id: string, answer: string, decidedBy: pager.ApprovalReceipt["decidedBy"], channel: string, now: number, vendor?: string): PagerPending | null {
@@ -219,11 +230,12 @@ export function registerPagerCommands(program: Command): void {
         emit("allow", `Trust-Tide: ${d.reason}`); return;
       }
       st.pendings.push({ req, status: "pending", lane: d.lane }); saveState(cwd, st);
+      ensureDaemon(cwd);                 // AUTO self-heal: if the long-poll daemon is down, revive it
       await page(cfg, req);
       if (o.json) { out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) })); return; }
       // DUAL-SURFACE BLOCK-AND-WAIT: poll state.answers[id] — written by the phone (daemon) OR
       // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
-      const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl;
+      const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl; let n = 0;
       for (;;) {
         const ans = loadState(cwd).answers?.[req.id];
         if (ans === "allow") { emit("allow", "approved by the human (phone/local)"); return; }
@@ -232,8 +244,17 @@ export function registerPagerCommands(program: Command): void {
           if (blast === "destructive") { resolvePending(cwd, req.id, "deny", "deadman", "policy", Date.now()); emit("deny", "dead-man: destructive timed out unattended → DENY"); return; }
           emit("ask", "no answer in time → defer to Claude Code's own prompt"); return;
         }
-        await new Promise((r) => setTimeout(r, 1500));
+        if (++n % 20 === 0) ensureDaemon(cwd);    // keep the daemon alive while we wait
+        await new Promise((r) => setTimeout(r, 500));   // snappy ~realtime local pickup
       }
+    });
+
+  p.command("doctor").description("🩺 SELF-CHECK — is the pager daemon alive? Auto-restart it if not. (Run by the hook automatically; here for manual peace of mind.)")
+    .action(() => {
+      const cwd = process.cwd();
+      if (daemonAlive(cwd)) { out("✓ pager daemon is alive (heartbeat fresh)."); return; }
+      const ok = ensureDaemon(cwd);
+      out(ok ? "⚠ daemon was down — restarted ✓ (long-polling Telegram again)" : "✗ could not restart — run `mneme pager start`.");
     });
 
   p.command("ask").description("🌐 VENDOR-AGNOSTIC — any agent (any vendor) asks the human a question → Telegram → signed answer back. Kinds: approve (yes/no) · choice (pick-one) · text (typed). Prints {id}; pair with `mneme pager await <id>`.")
@@ -296,24 +317,39 @@ export function registerPagerCommands(program: Command): void {
       const deadmanTick = () => { const st = loadState(cwd); const r = pager.deadmanResolve(st.pendings.filter((x) => x.status === "pending"), Date.now()); for (const res of r.resolved) resolvePending(cwd, res.id, res.decision, "deadman", "policy", Date.now()); };
       setInterval(deadmanTick, (cfg.wakeIntervalMin ?? 5) * 60_000);
       // long-poll loop — handles approve (a:/d:), choice (c:), and typed text replies.
+      // SELF-HEALING: each cycle touches a heartbeat; any error is caught + retried (the loop
+      // never dies on a transient network blip), so the pager keeps itself alive 24/7.
       for (;;) {
+       try {
+        try { writeFileSync(hbPath(cwd), String(Date.now()), "utf8"); } catch { /* */ }
         const r = await tg(cfg.telegramToken, "getUpdates", { offset, timeout: 50, allowed_updates: ["callback_query", "message"] }) as { ok: boolean; result?: Array<{ update_id: number; callback_query?: { id: string; data?: string }; message?: { text?: string; reply_to_message?: { message_id?: number } } }> };
         if (r.ok && Array.isArray(r.result)) {
           for (const u of r.result) {
             offset = u.update_id + 1;
             const ack = (t: string) => u.callback_query ? tg(cfg.telegramToken!, "answerCallbackQuery", { callback_query_id: u.callback_query.id, text: t }) : Promise.resolve({ ok: true });
             const confirm = (t: string) => tg(cfg.telegramToken!, "sendMessage", { chat_id: cfg.chatId!, text: t }); // visible chat confirmation (a button tap alone only shows a tiny toast)
+            const stripButtons = (id: string) => { const mid = loadState(cwd).pendings.find((x) => x.req.id === id)?.tgMessageId; return mid ? tg(cfg.telegramToken!, "editMessageReplyMarkup", { chat_id: cfg.chatId!, message_id: mid, reply_markup: { inline_keyboard: [] } }) : Promise.resolve({ ok: true }); };
+            const findById = (id: string) => loadState(cwd).pendings.find((x) => x.req.id === id);
             const data = u.callback_query?.data ?? "";
-            if (data.startsWith("a:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "allow", "human", "telegram", Date.now())) { await ack("✅ approved"); await confirm("✅ อนุมัติแล้ว — คำสั่งถูกปลดล็อก (รันต่อ)"); } }
-            else if (data.startsWith("d:")) { const id = data.split(":")[1]; if (resolvePending(cwd, id, "deny", "human", "telegram", Date.now())) { await ack("⛔ denied"); await confirm("⛔ ปฏิเสธแล้ว — คำสั่งถูกบล็อก"); } }
-            else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.req.id === id && x.status === "pending"); const choice = pp?.req.choices?.[parseInt(idxS, 10)]; if (pp && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await confirm(`✅ เลือกแล้ว: ${choice}`); } }
+            if (data.startsWith("a:") || data.startsWith("d:")) {
+              const id = data.split(":")[1]; const cur = findById(id);
+              if (cur && cur.status !== "pending") { await ack("ตอบไปแล้ว"); await confirm(`ℹ️ คำถามนี้ตอบไปแล้ว (${loadState(cwd).answers?.[id] ?? "?"})`); }
+              else { const allow = data.startsWith("a:"); if (resolvePending(cwd, id, allow ? "allow" : "deny", "human", "telegram", Date.now())) { await ack(allow ? "✅ approved" : "⛔ denied"); await stripButtons(id); await confirm(allow ? "✅ อนุมัติแล้ว — คำสั่งถูกปลดล็อก (Claude Code รันต่อ)" : "⛔ ปฏิเสธแล้ว — คำสั่งถูกบล็อก"); } }
+            }
+            else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const cur = findById(id); const choice = cur?.req.choices?.[parseInt(idxS, 10)];
+              if (cur && cur.status !== "pending") { await ack("ตอบไปแล้ว"); await confirm(`ℹ️ คำถามนี้เลือกไปแล้ว (${loadState(cwd).answers?.[id] ?? "?"})`); }
+              else if (cur && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await stripButtons(id); await confirm(`✅ เลือกแล้ว: ${choice}`); } }
             else if (u.message?.reply_to_message?.message_id) { // typed text answer
               const mid = u.message.reply_to_message.message_id; const txt = (u.message.text ?? "").trim();
               const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.tgMessageId === mid && x.status === "pending");
-              if (pp && txt) { resolvePending(cwd, pp.req.id, txt, "human", "telegram", Date.now()); await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `✓ รับคำตอบแล้ว: "${txt}"` }); }
+              const already = st0.pendings.find((x) => x.tgMessageId === mid && x.status !== "pending");
+              if (pp && txt) { resolvePending(cwd, pp.req.id, txt, "human", "telegram", Date.now()); await confirm(`✅ รับคำตอบแล้ว: "${txt}"`); }
+              else if (already) { await confirm(`ℹ️ คำถามนี้ตอบไปแล้วว่า "${st0.answers?.[already.req.id] ?? "?"}" — ถ้าต้องการสั่งใหม่ ให้ agent ถามคำถามใหม่ครับ`); }
+              else if (txt) { await confirm("ℹ️ ไม่พบคำถามที่ยังรอคำตอบสำหรับข้อความนี้ (อาจหมดเวลา) — รอคำถามใหม่ได้เลย"); }
             }
           }
         }
+       } catch { await new Promise((r) => setTimeout(r, 2000)); } // self-heal: never die on a transient blip
       }
     });
 }

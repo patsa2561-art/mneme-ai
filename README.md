@@ -24,11 +24,17 @@
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **[xray.mneme-ai.space](https://xray.mneme-ai.space)** &nbsp;·&nbsp; <sub>[how it works + self-host →](packages/xray/README.md)</sub>
 
-### 📟 Cosmic Pager — run your AI overnight, approve it from your phone
+<div align="center">
 
-Close the laptop lid. Hit sleep. **Don't shut down.** Your AI agent keeps working — and the
-moment it needs your *yes / no / a typed answer*, it pings your **Telegram in real time**.
-Tap ✅ / ⛔ (or type a reply) from anywhere; the agent continues.
+## 📟 Cosmic Pager
+### Your AI works while you sleep. You approve it from your phone.
+
+</div>
+
+**Close the lid. Hit sleep. Don't shut down.** Your AI agent keeps working — and the instant it
+needs a **`yes` / `no` / a typed answer**, it pings your **Telegram in real time**. Tap ✅ / ⛔
+(or type a reply) from anywhere on earth, and the agent **picks up your answer and keeps going —
+for real.** No more babysitting a terminal.
 
 > **How it's different from a hosted "remote control":** there is **no server, no public IP,
 > no cloud session to keep alive.** The brain stays on **your** machine — only a one-line
