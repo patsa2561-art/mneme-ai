@@ -348,6 +348,7 @@ export async function routeToolCall(
 
 import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync } from "node:fs";
 import { join as _join } from "node:path";
+import { createPublicKey as _createPublicKey, verify as _ed25519Verify } from "node:crypto";
 
 export interface CrossHttpResponse { status: number; body: CrossResult | { error: string } }
 
@@ -523,11 +524,10 @@ function _saveKeryxRelay(repoRoot: string, s: KeryxRelayState): void {
  *  publicKeyHex = the app's Public Key. Returns true iff the signature is valid. */
 export function verifyDiscordSig(publicKeyHex: string, timestamp: string, rawBody: string, signatureHex: string): boolean {
   try {
-    const { createPublicKey, verify } = require("node:crypto") as typeof import("node:crypto");
     if (!publicKeyHex || !signatureHex || !timestamp) return false;
     const der = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKeyHex, "hex")]); // SPKI prefix + raw ed25519 key
-    const key = createPublicKey({ key: der, format: "der", type: "spki" });
-    return verify(null, Buffer.from(timestamp + rawBody, "utf8"), key, Buffer.from(signatureHex, "hex"));
+    const key = _createPublicKey({ key: der, format: "der", type: "spki" });
+    return _ed25519Verify(null, Buffer.from(timestamp + rawBody, "utf8"), key, Buffer.from(signatureHex, "hex"));
   } catch { return false; }
 }
 
