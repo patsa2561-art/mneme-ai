@@ -1,0 +1,107 @@
+/**
+ * Accountability Layer MCP tools (v2.193.0) — all READ-ONLY (probe-coverage exempt):
+ *   mneme.revert.scan      — the regret flywheel: which commits got reverted/hotfixed, per-agent survival
+ *   mneme.agentbench.scan  — cross-vendor reliability ranking (Wilson-LB on survival)
+ *   mneme.engagement.scan  — evaluate an action / the staged change against the repo's engagement policy
+ *
+ * They join git history with the signed attestation ledger (which agent made each
+ * commit) — the unique data only Mneme holds. Underlying logic measured by
+ * revertGauntlet / benchmarkGauntlet / engagementGauntlet (all 100).
+ */
+import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { revertRadar, agentBenchmark, engagement } from "@mneme-ai/core";
+import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
+
+function git(args: string, cwd: string): string {
+  try { return execSync(`git ${args}`, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); } catch { return ""; }
+}
+
+/** Map sha → AI agent from the signed attestation ledger (best-effort). */
+function agentBySha(cwd: string): Map<string, string> {
+  const m = new Map<string, string>();
+  const p = join(cwd, ".mneme", "attest", "chain.jsonl");
+  if (!existsSync(p)) return m;
+  try { for (const l of readFileSync(p, "utf8").trim().split("\n").filter(Boolean)) { const e = JSON.parse(l) as { record?: { subject?: string }; facts?: { agent?: string } }; const sha = String(e.record?.subject ?? "").replace("commit:", ""); if (sha) m.set(sha, String(e.facts?.agent ?? "unknown")); } } catch { /* */ }
+  return m;
+}
+
+/** Read recent commits (with files) joined to the agent ledger. */
+function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
+  const byAgent = agentBySha(cwd);
+  const raw = git(`log -n ${limit} --no-merges --pretty=format:%x01%H%x1f%ct%x1f%s%x1f%b%x02 --name-only`, cwd);
+  if (!raw) return [];
+  const out: revertRadar.CommitLite[] = [];
+  for (const block of raw.split("\x01").filter(Boolean)) {
+    const [head, filesPart = ""] = block.split("\x02");
+    const [sha = "", ct = "0", subject = "", body = ""] = head.split("\x1f");
+    if (!sha) continue;
+    const files = filesPart.split("\n").map((s) => s.trim()).filter(Boolean);
+    out.push({ sha, subject, body, agent: byAgent.get(sha) ?? "unknown", files, ts: (Number(ct) || 0) * 1000 });
+  }
+  return out;
+}
+
+export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.revert.scan",
+    category: "audit",
+    description:
+      "THE REGRET FLYWHEEL — scan git history for commits that were later REVERTED or HOTFIXED (work that did NOT survive), join with the signed attestation ledger (which agent made each commit), and report per-agent SURVIVAL. Everyone measures 'did the test pass now'; this measures 'did the work last'. Example asks: 'which of my commits got reverted?', 'does this agent leave work that survives?', 'how stable is our AI-written code?'",
+    whenToUse: "You want to know whether work (yours or an agent's) actually survived, or which commits were undone.",
+    triggers: ["which commits were reverted", "did the work survive", "regret", "what got rolled back", "agent survival rate", "commit ถูก revert"],
+    inputSchema: { type: "object", properties: { windowDays: { type: "number", description: "hotfix detection window (default 14)" } } },
+    handler: async (runtime: ToolRuntime, args: { windowDays?: number }): Promise<ToolResponse> => {
+      const commits = readCommits(runtime.cwd);
+      if (!commits.length) return { data: { note: "no git history" }, wisdom: "No commits to scan." };
+      const reverts = revertRadar.detectReverts(commits, { windowDays: args.windowDays ?? 14 });
+      const survival = revertRadar.survivalByAgent(commits, reverts);
+      const top = reverts.slice(0, 10).map((r) => ({ sha: r.sha.slice(0, 10), agent: r.agent, kind: r.kind, confidence: r.confidence, survivedDays: r.ageDays }));
+      const wisdom = reverts.length
+        ? `${reverts.length} commit(s) did NOT survive (reverted/hotfixed). Survival by agent: ${survival.map((s) => `${s.agent} ${Math.round(s.survivalRate * 100)}% (${s.regretted}/${s.commits} undone)`).join(", ")}. Honest: explicit reverts are proof; hotfix-window matches are a weaker signal.`
+        : `✓ No reverts/hotfixes detected — the recent work survived.`;
+      return { data: { reverts: top, survival, scanned: commits.length }, wisdom };
+    },
+  },
+  {
+    name: "mneme.agentbench.scan",
+    category: "audit",
+    description:
+      "CROSS-VENDOR RELIABILITY RANKING — rank the AI agents that worked in this repo (any vendor) on the SAME measured outcome: did their work SURVIVE (vs get reverted/hotfixed), with a Wilson 95% LOWER bound so a small sample scores LOW and the ranking can't be gamed. Not synthetic, not vendor PR — from THIS repo's real outcomes. Example asks: 'which AI agent is most reliable here?', 'rank the agents', 'who should I trust with more autonomy?'",
+    whenToUse: "You want a trustworthy, outcome-based ranking of which agents leave work that lasts (e.g. before granting more autonomy).",
+    triggers: ["rank the agents", "which agent is most reliable", "agent reliability", "who should I trust", "vendor benchmark", "agent ไหนน่าเชื่อถือ"],
+    inputSchema: { type: "object", properties: {} },
+    handler: async (runtime: ToolRuntime): Promise<ToolResponse> => {
+      const commits = readCommits(runtime.cwd);
+      const survival = revertRadar.survivalByAgent(commits, revertRadar.detectReverts(commits));
+      const ranked = agentBenchmark.rankAgents(survival);
+      const wisdom = ranked.length
+        ? `Reliability (Wilson-LB on survival): ${ranked.map((r) => `${r.agent} ${r.band}${r.band === "unmeasured" ? "" : ` ${Math.round(r.wilsonLB * 100)}%`} (${r.commits} commits)`).join(", ")}. 'unmeasured' = too few commits to judge (can't be gamed by a lucky streak).`
+        : "No attested commits yet — install `mneme attest install-hook` so future commits are attributed + measured.";
+      return { data: { ranked }, wisdom };
+    },
+  },
+  {
+    name: "mneme.engagement.scan",
+    category: "audit",
+    description:
+      "ROBOTS.TXT FOR AGENTS — evaluate an action (or the current staged change) against the repo's signed Engagement Policy (`.mneme/engagement.json`): forbidden paths, actions needing a human cosign, forbidden licenses, change-size ceiling. Returns ALLOW / NEEDS_COSIGN / BLOCK + the rule that fired. Call this BEFORE a risky action. Pass {kind, paths, license, fileCount}, or nothing to scan the staged diff. Example asks: 'can I push to main?', 'is it ok to touch this file?', 'does this change need approval?'",
+    whenToUse: "BEFORE a write/push/deploy/add-dep, to check it against the org's machine-enforceable engagement rules.",
+    triggers: ["can I push to main", "is this allowed", "engagement policy", "does this need approval", "am I allowed to touch", "ทำได้ไหม"],
+    inputSchema: { type: "object", properties: { kind: { type: "string", description: "action: write | push:main | deploy:prod | add-dep | merge | …" }, paths: { type: "array", items: { type: "string" } }, license: { type: "string" }, fileCount: { type: "number" } } },
+    handler: async (runtime: ToolRuntime, args: { kind?: string; paths?: string[]; license?: string; fileCount?: number }): Promise<ToolResponse> => {
+      const pp = join(runtime.cwd, ".mneme", "engagement.json");
+      let policy = engagement.defaultPolicy();
+      if (existsSync(pp)) { try { policy = { ...policy, ...(JSON.parse(readFileSync(pp, "utf8")) as object) }; } catch { /* default */ } }
+      let paths = args.paths;
+      if (!paths && !args.kind) { const staged = git("diff --cached --name-only", runtime.cwd); paths = staged ? staged.split("\n").filter(Boolean) : git("diff --name-only HEAD", runtime.cwd).split("\n").filter(Boolean); }
+      const action = { kind: args.kind ?? "write", paths, license: args.license, fileCount: args.fileCount ?? (paths?.length ?? 0) };
+      const v = engagement.evaluateEngagement(policy, action);
+      const wisdom = v.decision === "ALLOW"
+        ? `✓ ALLOW — within the engagement policy.`
+        : `${v.decision === "BLOCK" ? "🛑 BLOCK" : "✋ NEEDS_COSIGN"} — ${v.reasons.join("; ")}. ${v.decision === "BLOCK" ? "Do NOT proceed." : "Get a human cosign before proceeding."}`;
+      return { data: { decision: v.decision, reasons: v.reasons, matched: v.matched, action }, wisdom };
+    },
+  },
+];

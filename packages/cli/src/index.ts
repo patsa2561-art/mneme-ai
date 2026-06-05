@@ -144,6 +144,7 @@ import { registerTrustlessCommands } from "./commands/trustless.js";
 import { registerMatrixCommands } from "./commands/matrix.js";
 import { registerXrayCommands } from "./commands/xray.js";
 import { registerAttestCommands } from "./commands/attest.js";
+import { registerAccountabilityCommands } from "./commands/accountability.js";
 import { registerAdamasCommands } from "./commands/adamas.js";
 import { registerPrismCommands } from "./commands/prism.js";
 import { registerGoldilocksCommands } from "./commands/goldilocks.js";
@@ -4970,6 +4971,7 @@ export async function run(argv: string[]): Promise<void> {
   registerMatrixCommands(program);
   registerXrayCommands(program);
   registerAttestCommands(program);
+  registerAccountabilityCommands(program);
   registerAdamasCommands(program);
   registerPrismCommands(program);
   registerGoldilocksCommands(program);

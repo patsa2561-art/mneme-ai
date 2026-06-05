@@ -55,6 +55,8 @@ export const DECISION_TABLE: readonly DecisionRow[] = [
   { when: "user asks if a repo/dependency is safe to build on, how risky/clean a codebase is, or who the key person is", tool: "mneme.xray.scan { gitUrl | repoPath }  ·  CLI: mneme xray", why: "a signed, deterministic repo audit (grade · secrets · bus-factor · coupling) + Context Air Quality + Keystone/Action-plan — no LLM guesses a number" },
   { when: "you know what the user WANTS but not which of ~1000 tools fits", tool: "mneme.gateway.route { text }  ·  CLI: mneme matrix search \"<intent>\"", why: "intent → the right tool, ranked (BM25 + curated-trigger wisdom, no LLM) — so you never need to memorise tool names" },
   { when: "you just made (or are reviewing) a git commit and provenance matters", tool: "mneme.attest.verify  ·  CLI: mneme attest commit / verify / install-hook", why: "sign each commit into a tamper-evident, OFFLINE-verifiable trail (which AI made it · what changed · the screen that ran) — `git log` becomes provable, no trust required" },
+  { when: "BEFORE a risky action (push:main · deploy:prod · add a dependency · touch .env/secrets)", tool: "mneme.engagement.scan { kind, paths, license }", why: "robots.txt-for-agents — check the action against the repo's signed Engagement Policy → ALLOW / NEEDS_COSIGN / BLOCK before you act" },
+  { when: "judging whether work survived, or which agent to trust with more autonomy", tool: "mneme.revert.scan  ·  mneme.agentbench.scan", why: "the regret flywheel: which commits got reverted/hotfixed + a Wilson-LB cross-vendor reliability ranking from THIS repo's real outcomes" },
 ];
 
 /** The four boundary capabilities, one line each (for the boot packet header). */
