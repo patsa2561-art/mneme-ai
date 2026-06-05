@@ -57,6 +57,7 @@ export const DECISION_TABLE: readonly DecisionRow[] = [
   { when: "you just made (or are reviewing) a git commit and provenance matters", tool: "mneme.attest.verify  ·  CLI: mneme attest commit / verify / install-hook", why: "sign each commit into a tamper-evident, OFFLINE-verifiable trail (which AI made it · what changed · the screen that ran) — `git log` becomes provable, no trust required" },
   { when: "BEFORE a risky action (push:main · deploy:prod · add a dependency · touch .env/secrets)", tool: "mneme.engagement.scan { kind, paths, license }", why: "robots.txt-for-agents — check the action against the repo's signed Engagement Policy → ALLOW / NEEDS_COSIGN / BLOCK before you act" },
   { when: "judging whether work survived, or which agent to trust with more autonomy", tool: "mneme.revert.scan  ·  mneme.agentbench.scan", why: "the regret flywheel: which commits got reverted/hotfixed + a Wilson-LB cross-vendor reliability ranking from THIS repo's real outcomes" },
+  { when: "you need the CURRENT accountability picture instantly (survival / reliability / stability)", tool: "mneme.warm.scan", why: "an O(1) read of the always-warm state the attest hook maintains per commit — never recomputed, provably equal to a full rebuild (mneme warm verify)" },
 ];
 
 /** The four boundary capabilities, one line each (for the boot packet header). */

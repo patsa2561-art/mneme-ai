@@ -11,7 +11,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { revertRadar, agentBenchmark, engagement } from "@mneme-ai/core";
+import { revertRadar, agentBenchmark, engagement, awarm } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
 
 function git(args: string, cwd: string): string {
@@ -44,6 +44,23 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
 }
 
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.warm.scan",
+    category: "audit",
+    description:
+      "ALWAYS-WARM ACCOUNTABILITY — an O(1) read of the maintained accountability state (survival % · per-agent reliability · stability), NOT recomputed from git history each time. The post-commit attestation hook folds each commit in as it happens, so the answer is already warm. Provably equal to a from-scratch recompute (the event log is hash-chained + deterministically foldable). Example asks: 'is this repo healthy right now?', 'current survival rate', 'which agent is reliable here' — instantly.",
+    whenToUse: "You want the current accountability picture instantly (survival / reliability / stability) without scanning history.",
+    triggers: ["current survival", "is the repo healthy now", "warm state", "accountability now", "how reliable are the agents now"],
+    inputSchema: { type: "object", properties: {} },
+    handler: async (runtime: ToolRuntime): Promise<ToolResponse> => {
+      const p = join(runtime.cwd, ".mneme", "awarm", "state.json");
+      if (!existsSync(p)) return { data: { warm: false }, wisdom: "The always-warm state isn't initialised. Run `mneme attest install-hook` (auto-maintains it on every commit) or `mneme warm rebuild` once." };
+      let snap: awarm.WarmState; try { snap = JSON.parse(readFileSync(p, "utf8")) as awarm.WarmState; } catch { return { data: { error: "warm state unreadable" }, wisdom: "warm state corrupt — `mneme warm rebuild`." }; }
+      const q = awarm.queryWarm(snap);
+      const wisdom = `(O(1) read) ${q.commits} commits · survival ${q.survivalPct}% · ${q.stability.explicitReverts} explicit reverts. By agent: ${q.agents.map((a) => `${a.agent} ${Math.round(a.survivalRate * 100)}% (${a.survived}/${a.commits})`).join(", ")}. This is a maintained snapshot — provably equal to a full recompute (mneme warm verify).`;
+      return { data: { warm: true, commits: q.commits, survivalPct: q.survivalPct, stability: q.stability, agents: q.agents }, wisdom };
+    },
+  },
   {
     name: "mneme.revert.scan",
     category: "audit",

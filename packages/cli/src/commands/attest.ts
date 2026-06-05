@@ -17,6 +17,7 @@ import { existsSync, mkdirSync, readFileSync, appendFileSync, writeFileSync, chm
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { commitAttest } from "@mneme-ai/core";
+import { updateWarm } from "./warm.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 const DIR = ".mneme/attest";
@@ -89,6 +90,8 @@ export function registerAttestCommands(program: Command): void {
       const entry = commitAttest.attestCommit(cwd, f, prev);
       mkdirSync(join(cwd, DIR), { recursive: true });
       appendFileSync(chainPath(cwd), JSON.stringify(entry) + "\n", "utf8");
+      // fold this commit into the ALWAYS-WARM accountability state (automatic, O(1) reads).
+      updateWarm(cwd, f.sha, f.agent);
       if (opts.json) { out(JSON.stringify(entry, null, 2)); return; }
       out(`🧬 attested ${f.sha.slice(0, 10)} · ${f.agent} · ${entry.record.verdict}${f.addedSecrets ? ` (⚠ ${f.addedSecrets} secret pattern(s))` : ""} · signed + chained`);
     });

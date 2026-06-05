@@ -329,6 +329,7 @@ export * as commitAttest from "./commit_attest/index.js";
 export * as revertRadar from "./revert_radar/index.js";
 export * as engagement from "./engagement/index.js";
 export * as agentBenchmark from "./agent_benchmark/index.js";
+export * as awarm from "./awarm/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
