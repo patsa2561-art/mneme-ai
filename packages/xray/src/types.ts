@@ -123,6 +123,18 @@ export interface SecurityBlock {
   note: string;
 }
 
+/** Code stability — how much recent work was later reverted/hotfixed (did it survive). */
+export interface StabilityBlock {
+  windowDays: number;
+  commits: number;
+  didNotSurvive: number;
+  explicitReverts: number;
+  hotfixSignals: number;
+  survivalPct: number;
+  unstableFiles: Array<{ file: string; reverts: number }>;
+  note: string;
+}
+
 export interface XRaySummary {
   headline: string;
   grade: Grade;
@@ -145,6 +157,8 @@ export interface XRayReport {
   hotspots: HotspotsBlock;
   coupling: CouplingBlock;
   security: SecurityBlock;
+  /** optional so older reports stay valid; the engine always produces it. */
+  stability?: StabilityBlock;
   /** sha256 over the canonicalised metric blocks — a tamper-evident content id. */
   fingerprint: string;
 }

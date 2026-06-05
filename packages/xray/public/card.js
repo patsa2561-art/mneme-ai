@@ -265,6 +265,18 @@
     </div>`;
   }
 
+  // CODE STABILITY — the showcase signal: how much work SURVIVED (revert/hotfix from git).
+  function stabilityHTML(r) {
+    const s = r.stability; if (!s || !s.commits) return "";
+    const col = s.survivalPct >= 95 ? "#16a34a" : s.survivalPct >= 85 ? "#65a30d" : s.survivalPct >= 70 ? "#d97706" : "#e11d48";
+    const base = (f) => { const p = String(f).split("/"); return p[p.length - 1] || f; };
+    return `<div class="stab">
+      <div class="stabhead">🔄 Code Stability — <b style="color:${col}">${s.survivalPct}% survived</b> <span class="staboff">(last ${s.windowDays}d · from git, no AI)</span></div>
+      <div class="stabsub"><b>${s.didNotSurvive}</b> of ${s.commits} recent commits were later <b>reverted or hotfixed</b> (${s.explicitReverts} explicit revert${s.explicitReverts !== 1 ? "s" : ""} = proof · ${s.hotfixSignals} hotfix signal${s.hotfixSignals !== 1 ? "s" : ""} = weaker). Everyone measures "did it ship"; this measures "did it <b>last</b>".</div>
+      ${s.unstableFiles.length ? `<div class="stabfiles">Most-reverted files: ${s.unstableFiles.map((f) => `<span class="stabpill">${esc(base(f.file))} <b>×${f.reverts}</b></span>`).join("")}</div>` : `<div class="stabclean">✓ no repeatedly-reverted files — stable</div>`}
+    </div>`;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     g.__lastSigned = signed;   // stash for the "Verify signature" proof button
@@ -309,6 +321,7 @@
           <div class="vrlist">${vd.risks.map((k) => `<div class="vr"><span class="vrg">${k.icon} ${k.g}</span><span class="vrt">${k.t}</span></div>`).join("")}</div></details>` : ""}
       </div>
       ${airQualityHTML(r)}
+      ${stabilityHTML(r)}
       ${momentumHTML(r)}
       ${keystoneHTML(r)}
       ${riskMapHTML(r)}
