@@ -26,6 +26,8 @@ export const crossBridge = gephyra.crossBridge;
 export const handleCrossRequest = gephyra.handleCrossRequest;
 export const handleMcpCallRequest = gephyra.handleMcpCallRequest;
 export const handleSavantRequest = gephyra.handleSavantRequest;
+export const handleA2ARequest = gephyra.handleA2ARequest;
+export const a2aOpenApi = gephyra.a2aOpenApi;
 export const routeToolCall = gephyra.routeToolCall;
 export const bridgeStatus = gephyra.bridgeStatus;
 export const bridgeReplay = gephyra.bridgeReplay;
@@ -63,21 +65,35 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
         res.end(JSON.stringify(s));
         return;
       }
+      if (req.method === "GET" && url.startsWith("/openapi.json")) {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify(gephyra.a2aOpenApi()));
+        return;
+      }
       const isMcp = url.startsWith("/mcp");
       const isSavantVerify = url.startsWith("/savant/verify");
       const isSavantRepair = url.startsWith("/savant/repair");
-      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair)) {
+      const isFirewall = url.startsWith("/firewall");
+      const isRailIngress = url.startsWith("/rail/ingress");
+      const isRailEgress = url.startsWith("/rail/egress");
+      const isReckon = url.startsWith("/reckon");
+      const isA2A = isFirewall || isRailIngress || isRailEgress || isReckon;
+      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair || isA2A)) {
         res.writeHead(404, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "POST /cross {claim, fromAgent}  |  POST /mcp {tool, agent, args?}  |  POST /savant/verify {claim}  |  POST /savant/repair {draft}  |  GET /status" }));
+        res.end(JSON.stringify({ error: "POST /cross | /mcp | /savant/verify | /savant/repair | /firewall {content} | /rail/ingress {payload} | /rail/egress {payload} | /reckon {evidence}  ·  GET /status | /openapi.json" }));
         return;
       }
       let body = "";
       req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
       req.on("end", () => {
-        // /savant/* → the savant prosthesis (A2A): verify a claim / repair a draft.
-        // /mcp → route an MCP tool call through truth-customs. /cross → verify a single claim.
+        // /savant/* → savant prosthesis. /firewall · /rail/* · /reckon → A2A safety primitives
+        // (trustless-signed). /mcp → MCP tool through truth-customs. /cross → verify a claim.
         const handler = isSavantVerify ? gephyra.handleSavantRequest(repoRoot, body, "verify")
           : isSavantRepair ? gephyra.handleSavantRequest(repoRoot, body, "repair")
+          : isFirewall ? gephyra.handleA2ARequest(repoRoot, body, "firewall")
+          : isRailIngress ? gephyra.handleA2ARequest(repoRoot, body, "rail-ingress")
+          : isRailEgress ? gephyra.handleA2ARequest(repoRoot, body, "rail-egress")
+          : isReckon ? gephyra.handleA2ARequest(repoRoot, body, "reckon")
           : isMcp ? gephyra.handleMcpCallRequest(repoRoot, body)
           : gephyra.handleCrossRequest(repoRoot, body);
         void handler

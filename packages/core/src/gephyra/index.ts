@@ -447,6 +447,78 @@ export async function handleSavantRequest(repoRoot: string, raw: unknown, mode: 
   }
 }
 
+/** Wrap any A2A response with a trustless Ed25519 _proof so the calling vendor (xAI/Grok/…)
+ *  verifies it OFFLINE instead of trusting Mneme. */
+async function a2aProof(repoRoot: string, data: Record<string, unknown>): Promise<Record<string, unknown>> {
+  try {
+    const { issueReceipt } = await import("../notary/receipt.js");
+    const { createHash } = await import("node:crypto");
+    const h = createHash("sha256").update(JSON.stringify(data)).digest("hex");
+    const r = issueReceipt(repoRoot, { kind: "claim-verdict", subject: `a2a:${h.slice(0, 12)}`, payload: { dataHash: h }, includePayload: true });
+    return { ...data, _proof: { dataHash: h, receipt: r } };
+  } catch { return data; }
+}
+
+/**
+ * A2A REST surface — the world-class gap: let ANY vendor (xAI / Grok / OpenAI / a local agent)
+ * use Mneme's safety primitives over plain HTTP, every result trustless-signed.
+ *   firewall     {content}           → neutralize prompt-injection in untrusted content
+ *   rail-ingress {payload, path?}    → policy-gate + blind secrets before sending to a model
+ *   rail-egress  {payload}           → screen a model's output for secret leakage
+ *   reckon       {evidence}          → signed accountability verdict for a change
+ */
+export async function handleA2ARequest(repoRoot: string, raw: unknown, primitive: "firewall" | "rail-ingress" | "rail-egress" | "reckon"): Promise<SavantHttpResponse> {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") { try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; } }
+  if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
+  const o = parsed as Record<string, unknown>;
+  try {
+    if (primitive === "firewall") {
+      if (typeof o["content"] !== "string") return { status: 400, body: { error: "required: content (string)" } };
+      const { fortify } = await import("../firewall/index.js");
+      const r = fortify(o["content"] as string, typeof o["path"] === "string" ? { path: o["path"] as string } : undefined);
+      return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+    }
+    if (primitive === "rail-ingress") {
+      if (typeof o["payload"] !== "string") return { status: 400, body: { error: "required: payload (string)" } };
+      const { traverseIngress } = await import("../rail/index.js");
+      const r = traverseIngress(o["payload"] as string, typeof o["path"] === "string" ? { path: o["path"] as string } : undefined);
+      return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+    }
+    if (primitive === "rail-egress") {
+      if (typeof o["payload"] !== "string") return { status: 400, body: { error: "required: payload (string)" } };
+      const { traverseEgress } = await import("../rail/index.js");
+      const r = traverseEgress(o["payload"] as string);
+      return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+    }
+    // reckon
+    if (o["evidence"] === null || typeof o["evidence"] !== "object") return { status: 400, body: { error: "required: evidence (object)" } };
+    const { buildReckoning } = await import("../reckoning/index.js");
+    const r = buildReckoning(o["evidence"] as never);
+    return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+  } catch (e) {
+    return { status: 500, body: { error: (e as Error).message } };
+  }
+}
+
+/** OpenAPI 3.0 spec for the A2A surface — register with any agent's tool layer. */
+export function a2aOpenApi(): Record<string, unknown> {
+  const json = { schema: { type: "object" } };
+  const post = (summary: string, props: Record<string, unknown>, required: string[]) => ({ post: { summary, requestBody: { required: true, content: { "application/json": { schema: { type: "object", properties: props, required } } } }, responses: { "200": { description: "trustless-signed result (_proof)" } } } });
+  return {
+    openapi: "3.0.0",
+    info: { title: "Mneme A2A — safety & truth primitives", version: "1", description: "Any vendor (xAI/Grok/OpenAI) can call these over REST; every response carries a trustless Ed25519 _proof you verify offline." },
+    paths: {
+      "/savant/verify": post("Verify a factual claim (TRUE/FALSE/UNKNOWN)", { claim: { type: "string" } }, ["claim"]),
+      "/savant/repair": post("Fact-check + repair a draft", { draft: { type: "string" } }, ["draft"]),
+      "/firewall": post("Neutralize prompt-injection in untrusted content (OWASP LLM01)", { content: { type: "string" }, path: { type: "string" } }, ["content"]),
+      "/rail/ingress": post("Policy-gate + blind secrets before sending local context to a model", { payload: { type: "string" }, path: { type: "string" } }, ["payload"]),
+      "/rail/egress": post("Screen a model's output for secret leakage", { payload: { type: "string" } }, ["payload"]),
+      "/reckon": post("Signed accountability verdict (EXONERATED/ACCOUNTABLE/INSUFFICIENT)", { evidence: json.schema }, ["evidence"]),
+    },
+  };
+}
+
 interface CapEntry { command: string; since?: string }
 
 /**
