@@ -104,20 +104,22 @@ function keryxProviders(cwd: string): Record<string, ProviderCfg> {
 const relayGet = (url: string): Promise<Record<string, unknown>> => new Promise((res) => { (url.startsWith("https:") ? https : http).get(url, (r) => { let s = ""; r.on("data", (d) => (s += d)); r.on("end", () => { try { res(JSON.parse(s || "{}")); } catch { res({}); } }); }).on("error", () => res({})); });
 const relayPost = (url: string, body: object): Promise<void> => new Promise((res) => { const u = new URL(url); const data = JSON.stringify(body); const rq = (url.startsWith("https:") ? https : http).request({ hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80), path: u.pathname, method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(data) } }, (x) => { x.on("data", () => {}); x.on("end", () => res()); }); rq.on("error", () => res()); rq.write(data); rq.end(); });
 
-/** Fan an approve/deny ask out to every configured KERYX provider; register the relay expectation. */
-async function fanOutKeryx(cwd: string, cfg: PagerConfig, req: pager.ApprovalRequest, requested?: string[] | null): Promise<Array<{ provider: string; messageId: string }>> {
+/** Fan an approve/deny ask out to every configured KERYX provider IN PARALLEL; the secretary
+ *  retries a failed lane once + reports per-lane delivery. Registers the relay expectation. */
+async function fanOutKeryx(cwd: string, cfg: PagerConfig, req: pager.ApprovalRequest, requested?: string[] | null): Promise<{ sent: Array<{ provider: string; messageId: string }>; attempts: Array<{ provider: string; ok: boolean }> }> {
   const provs = keryxProviders(cwd);
   const kinds = (req.kind ?? "approve") as "approve" | "choice" | "text";
-  // BROADCAST MATRIX: Telegram is the long-poll lane (paged already) → exclude; fire the rest in
-  // PARALLEL. `requested` (optional) restricts to a chosen subset — "only line,whatsapp".
   const lanes = keryx.dispatchPlan(keryx.ALL_PROVIDERS as unknown as string[], ["telegram"], requested ?? undefined)
     .filter((p) => { const pc = provs[p]; return pc && (pc.token || (p === "line" && pc.channelId && pc.channelSecret)); });
-  const results = await Promise.all(lanes.map(async (p) => {
-    try { const r = await sendAsk(p, provs[p], { id: req.id, nonce: req.nonce ?? req.id, question: req.summary, kind: kinds, choices: req.choices, agent: req.agent }); return r.ok ? { provider: p, messageId: r.messageId ?? "" } : null; } catch { return null; }
-  }));
-  const sent = results.filter((x): x is { provider: string; messageId: string } => x !== null);
+  const spec = { id: req.id, nonce: req.nonce ?? req.id, question: req.summary, kind: kinds, choices: req.choices, agent: req.agent };
+  const trySend = async (p: string): Promise<{ provider: string; ok: boolean; messageId: string }> => {
+    try { let r = await sendAsk(p, provs[p], spec); if (!r.ok) r = await sendAsk(p, provs[p], spec); return { provider: p, ok: !!r.ok, messageId: r.messageId ?? "" }; }   // secretary: one retry
+    catch { return { provider: p, ok: false, messageId: "" }; }
+  };
+  const results = await Promise.all(lanes.map(trySend));
+  const sent = results.filter((r) => r.ok).map((r) => ({ provider: r.provider, messageId: r.messageId }));
   if (sent.length && cfg.keryxRelay) await relayPost(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/expect`, { daemonId: "default", askId: req.id });
-  return sent;
+  return { sent, attempts: results.map((r) => ({ provider: r.provider, ok: r.ok })) };
 }
 /** Poll the relay for a reply to this ask (LINE/Slack/Discord/WhatsApp taps land here). */
 async function drainKeryxAnswer(cfg: PagerConfig, id: string): Promise<{ provider: string; answer: string } | null> {
@@ -330,7 +332,15 @@ export function registerPagerCommands(program: Command): void {
       const wantTelegram = !lanes || lanes.includes("telegram");
       const tgMid = wantTelegram ? await page(cfg, req) : undefined;
       if (tgMid) { const s = loadState(cwd); const pp = s.pendings.find((x) => x.req.id === req.id); if (pp) { pp.tgMessageId = tgMid; saveState(cwd, s); } }
-      const keryxSent = await fanOutKeryx(cwd, cfg, req, lanes);   // fan out to the chosen LINE/Slack/Discord/WhatsApp lanes IN PARALLEL
+      const fo = await fanOutKeryx(cwd, cfg, req, lanes);   // fan out to the chosen LINE/Slack/Discord/WhatsApp lanes IN PARALLEL
+      const keryxSent = fo.sent;
+      // ── THE SECRETARY: confirm the broadcast actually reached every chat (delivery report) ──
+      const attempts = [
+        ...(wantTelegram && cfg.telegramToken ? [{ provider: "telegram", ok: !!tgMid }] : []),
+        ...fo.attempts,
+      ];
+      const rep = keryx.deliveryReport(attempts);
+      if (rep.failed.length && cfg.telegramToken && cfg.chatId && tgMid) { try { await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `⚠️ couldn't reach: ${rep.failed.join(", ")} — delivered to: ${rep.delivered.join(", ") || "none"}` }); } catch { /* */ } }
       if (o.json) { out(JSON.stringify({ decision: "pending", id: req.id, lane: d.lane, reason: d.reason, paged: !!(cfg.telegramToken && cfg.chatId) })); return; }
       // ── PRE-FLIGHT (Wait-State compute window) — FIRE-AND-FORGET so it NEVER delays the
       // human's answer or the dead-man timeout. Sends a decision brief; for provably read-only
@@ -360,13 +370,15 @@ export function registerPagerCommands(program: Command): void {
       // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
       const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl; let n = 0;
       const settle = async (answer: "allow" | "deny", answeredOn: string, reason: string) => {
-        const verb = answer === "allow" ? "✅ Yes" : "⛔ No";
         if (keryxSent.length) await clearKeryxOthers(cwd, cfg, keryxSent, answeredOn);   // LINE/Slack/Discord/WhatsApp: edit or "answered elsewhere"
-        // Telegram was also paged → if the human answered on another chat, update Telegram too (status sync)
-        if (answeredOn !== "telegram" && answeredOn !== "policy" && answeredOn !== "" && cfg.telegramToken && cfg.chatId) {
-          try { await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: `${verb} — answered on ${answeredOn}. This request is now closed.` }); } catch { /* */ }
+        // ── THE SECRETARY: post the agent-received RECEIPT so the human SEES the agent got it 100% ──
+        if (answeredOn !== "policy" && answeredOn !== "") {
+          const receipt = keryx.receiptLine(req.agent, answer, answeredOn);
+          if (cfg.telegramToken && cfg.chatId) { try { await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: receipt }); } catch { /* */ } }
+          // confirm on the answered keryx provider too (so the user who tapped LINE/Slack sees it landed)
+          if (answeredOn !== "telegram") { try { await clearMessage(answeredOn, keryxProviders(cwd)[answeredOn], "", req.agent); } catch { /* */ } }
           const mid = loadState(cwd).pendings.find((x) => x.req.id === req.id)?.tgMessageId;
-          if (mid) { try { await tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }); } catch { /* */ } }
+          if (answeredOn !== "telegram" && mid && cfg.telegramToken && cfg.chatId) { try { await tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }); } catch { /* */ } }
         }
         emit(answer, reason);
       };

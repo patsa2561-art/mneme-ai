@@ -84,6 +84,26 @@ export function toAgentDirective(decision: "allow" | "deny" | "ask", reason: str
   return { decision, format: "generic", payload: { decision, reason, source: "mneme-keryx" }, humanLine };
 }
 
+// ─── THE SECRETARY — verify delivery OUT + agent-received IN ──────────────────
+// A broadcast isn't trustworthy unless you can confirm it actually went to each chat, and the
+// user isn't sure their tap landed unless the agent confirms it got it. The secretary closes
+// both gaps: a per-lane delivery report (with retry) + a receipt the agent posts back.
+export interface DeliveryAttempt { provider: string; ok: boolean }
+export interface DeliveryReport { delivered: string[]; failed: string[]; allDelivered: boolean }
+export function deliveryReport(attempts: ReadonlyArray<DeliveryAttempt>): DeliveryReport {
+  const a = (attempts ?? []).filter((x) => x && x.provider);
+  const delivered = a.filter((x) => x.ok).map((x) => x.provider);
+  const failed = a.filter((x) => !x.ok).map((x) => x.provider);
+  return { delivered: Array.from(new Set(delivered)), failed: Array.from(new Set(failed)), allDelivered: failed.length === 0 && delivered.length > 0 };
+}
+/** The receipt the agent posts back so the human SEES their answer reached the agent (100%). */
+export function receiptLine(agent: string, decision: "allow" | "deny", provider: string): string {
+  const who = agent || "the agent";
+  return decision === "deny"
+    ? `⛔ ${who} received your NO (on ${provider}) — stopping; it will NOT run the command.`
+    : `✅ ${who} received your YES (on ${provider}) — proceeding with the command now.`;
+}
+
 // ─── gauntlet ─────────────────────────────────────────────────────────────────
 export interface MatrixGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function broadcastMatrixGauntlet(): MatrixGauntlet {
@@ -105,7 +125,11 @@ export function broadcastMatrixGauntlet(): MatrixGauntlet {
   const nlSmart = nlEn && nlTh && nlAllEn && nlAllTh && nlSingle;
   const claudeFmt = (() => { const d = toAgentDirective("allow", "ok", "claude"); return (d.payload as { hookSpecificOutput?: { permissionDecision?: string } }).hookSpecificOutput?.permissionDecision === "allow" && d.humanLine.includes("APPROVED"); })();
   const genFmt = (() => { const d = toAgentDirective("deny", "nope", "grok"); return d.format === "generic" && (d.payload as { decision?: string }).decision === "deny" && d.humanLine.includes("DENIED"); })();
-  const total = (() => { try { reduceFirstWins(null as never); normalizeDecision(null as never); dispatchPlan(null as never); parseChannels(undefined); extractChannels(null as never); toAgentDirective("ask", "", "gemini"); return true; } catch { return false; } })();
+  const rep = deliveryReport([{ provider: "telegram", ok: true }, { provider: "line", ok: true }, { provider: "slack", ok: false }]);
+  const secretary = rep.delivered.length === 2 && rep.failed.join() === "slack" && rep.allDelivered === false
+    && deliveryReport([{ provider: "telegram", ok: true }]).allDelivered === true
+    && receiptLine("Grok", "allow", "line").includes("received your YES") && receiptLine("Grok", "deny", "slack").includes("NOT run");
+  const total = (() => { try { reduceFirstWins(null as never); normalizeDecision(null as never); dispatchPlan(null as never); parseChannels(undefined); extractChannels(null as never); toAgentDirective("ask", "", "gemini"); deliveryReport(null as never); receiptLine(null as never, "allow", ""); return true; } catch { return false; } })();
   const checks = [
     { name: "FIRST-WINS", pass: firstWins, detail: "the earliest answer across all lanes decides; the rest are ignored" },
     { name: "DECISION-NORMALIZE", pass: denyWords, detail: "Yes/No/ไม่/choices map to allow|deny (EN + Thai)" },
@@ -114,6 +138,7 @@ export function broadcastMatrixGauntlet(): MatrixGauntlet {
     { name: "PARALLEL-DISPATCH-PLAN", pass: plan, detail: "dedup + exclude → the set of lanes to fire AT ONCE (Promise.all)" },
     { name: "DYNAMIC-LANE-SELECT", pass: subset && chans, detail: "agent can target a subset ('line,whatsapp') or all; case-insensitive, unknown ignored" },
     { name: "NL-HUMAN-LANGUAGE", pass: nlSmart, detail: "free EN/Thai → lane set ('ส่งไป line กับ whatsapp พอ' → line+whatsapp; 'ยิงทุกช่อง' → all)" },
+    { name: "SECRETARY-DELIVERY-RECEIPT", pass: secretary, detail: "per-lane delivery report (delivered/failed) + the agent-received receipt the human sees" },
     { name: "VENDOR-CLAUDE", pass: claudeFmt, detail: "Claude gets its native PreToolUse hook payload" },
     { name: "VENDOR-AGNOSTIC", pass: genFmt, detail: "every other vendor gets a generic envelope + a plain directive line" },
     { name: "TOTAL", pass: total, detail: "never throws on garbage" },
