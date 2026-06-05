@@ -56,6 +56,53 @@ export function rankAgents(survival: AgentSurvival[]): AgentReliability[] {
   return out;
 }
 
+// ─── FEDERATION — cross-repo, privacy-preserving ──────────────────────────────
+// Each repo emits a CONTENT-FREE digest (agent name + counts ONLY — never a sha, a
+// path, or any repo content), peers CRDT-merge them, and the benchmark compounds:
+// an agent measured across many repos earns a TIGHTER Wilson-LB. The neutral, signed,
+// cross-vendor reliability layer no single vendor can build.
+export interface BenchmarkDigest {
+  v: 1;
+  agents: Array<{ agent: string; commits: number; survived: number }>;
+  /** an opaque tag for the source repo (e.g. a hash) — never the repo name/path. */
+  repoTag?: string;
+}
+
+/** Build a content-free digest from local survival. NO shas/paths/content leave. */
+export function buildBenchmarkDigest(survival: AgentSurvival[], repoTag?: string): BenchmarkDigest {
+  const agents = (survival ?? []).filter((s) => s && typeof s.agent === "string").map((s) => {
+    const commits = Math.max(0, s.commits | 0);
+    return { agent: s.agent, commits, survived: Math.max(0, commits - Math.max(0, s.regretted | 0)) };
+  });
+  return { v: 1, agents, ...(repoTag ? { repoTag } : {}) };
+}
+
+/** CRDT-merge digests from many repos → a federated reliability ranking. Commutative + idempotent. */
+export function mergeBenchmarkDigests(digests: ReadonlyArray<BenchmarkDigest>): AgentReliability[] {
+  const sum = new Map<string, { commits: number; survived: number }>();
+  // idempotent: dedupe identical (repoTag, agent, commits, survived) contributions
+  const seen = new Set<string>();
+  for (const d of digests ?? []) {
+    if (!d || !Array.isArray(d.agents)) continue;
+    for (const a of d.agents) {
+      if (!a || typeof a.agent !== "string") continue;
+      const key = `${d.repoTag ?? ""}|${a.agent}|${a.commits}|${a.survived}`;
+      if (d.repoTag && seen.has(key)) continue; if (d.repoTag) seen.add(key);
+      const cur = sum.get(a.agent) ?? { commits: 0, survived: 0 };
+      cur.commits += Math.max(0, a.commits | 0); cur.survived += Math.max(0, a.survived | 0);
+      sum.set(a.agent, cur);
+    }
+  }
+  const survival: AgentSurvival[] = [...sum.entries()].map(([agent, v]) => ({ agent, commits: v.commits, regretted: Math.max(0, v.commits - v.survived), survivalRate: v.commits ? v.survived / v.commits : 0, explicit: 0, hotfix: 0 }));
+  return rankAgents(survival);
+}
+
+/** Privacy invariant: a digest must NOT contain any raw repo content/sha/path. */
+export function digestLeaksRaw(digest: BenchmarkDigest, rawNeedles: ReadonlyArray<string>): boolean {
+  const blob = JSON.stringify(digest ?? {});
+  return (rawNeedles ?? []).some((n) => n && blob.includes(n));
+}
+
 // ─── gauntlet ─────────────────────────────────────────────────────────────────
 export interface BenchmarkGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 
@@ -80,6 +127,29 @@ export function benchmarkGauntlet(): BenchmarkGauntlet {
     { name: "UNGAMEABLE-SMALL-N", pass: ungameable, detail: "a perfect 2/2 agent is 'unmeasured', never 'trusted'" },
     { name: "RANKS-BY-OUTCOME", pass: ordered && trusted && lowerBand, detail: "a big-n clean agent outranks a shaky one (measured, not PR)" },
     { name: "DETERMINISTIC", pass: det, detail: "same outcomes → byte-identical ranking" },
+  ];
+  return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
+}
+
+export function federationGauntlet(): BenchmarkGauntlet {
+  // one repo: alice 4/4 → too few to judge. federate 3 repos → 12/12 → measured.
+  const oneRepo: AgentSurvival[] = [{ agent: "alice", commits: 4, regretted: 0, survivalRate: 1, explicit: 0, hotfix: 0 }];
+  const dA = buildBenchmarkDigest(oneRepo, "repoA");
+  const dB = buildBenchmarkDigest(oneRepo, "repoB");
+  const dC = buildBenchmarkDigest(oneRepo, "repoC");
+  const single = rankAgents(oneRepo)[0];
+  const fed = mergeBenchmarkDigests([dA, dB, dC])[0];
+  const compounding = single.band === "unmeasured" && fed.band !== "unmeasured" && fed.commits === 12 && fed.wilsonLB > single.wilsonLB;
+  const commutative = JSON.stringify(mergeBenchmarkDigests([dA, dB])) === JSON.stringify(mergeBenchmarkDigests([dB, dA]));
+  const idempotent = JSON.stringify(mergeBenchmarkDigests([dA, dA, dB])) === JSON.stringify(mergeBenchmarkDigests([dA, dB]));
+  const noRaw = !digestLeaksRaw(dA, ["src/secret.ts", "aaa1111deadbeef", "/home/user/repo"]);
+  const det = JSON.stringify(mergeBenchmarkDigests([dA, dB, dC])) === JSON.stringify(mergeBenchmarkDigests([dA, dB, dC]));
+  const checks = [
+    { name: "COMPOUNDS-ACROSS-REPOS", pass: compounding, detail: "an agent unmeasured in one repo becomes measured across many (Wilson-LB tightens)" },
+    { name: "CRDT-COMMUTATIVE", pass: commutative, detail: "merge order doesn't matter (peers converge)" },
+    { name: "IDEMPOTENT", pass: idempotent, detail: "re-merging the same tagged digest doesn't double-count" },
+    { name: "PRIVACY-NO-RAW", pass: noRaw, detail: "the shared digest contains NO sha / path / repo content — counts only" },
+    { name: "DETERMINISTIC", pass: det, detail: "same digests → byte-identical federated ranking" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
 }

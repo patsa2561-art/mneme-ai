@@ -32,6 +32,12 @@ export const hephCrossTool: MnemeTool = {
       const core = await import("@mneme-ai/core");
       const cwd = rt.meta?.rootPath ?? process.cwd();
       const deps: Parameters<typeof core.hephaestus.crossCommand>[2] = {};
+      // auto-enforce the repo's Engagement Policy (robots.txt-for-agents) at the gate
+      try {
+        const fs = await import("node:fs"); const path = await import("node:path");
+        const pp = path.join(cwd, ".mneme", "engagement.json");
+        if (fs.existsSync(pp)) deps.engagement = { ...core.engagement.defaultPolicy(), ...(JSON.parse(fs.readFileSync(pp, "utf8")) as object) };
+      } catch { /* no policy → gate runs without engagement escalation */ }
       if (args["tribunal"] === true) {
         deps.tribunal = core.hephaestus.makeDiffArenaTribunal(cwd, { vendors: await core.hephaestus.tribunalVendorsFromEnv() });
       }

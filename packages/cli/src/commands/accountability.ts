@@ -8,6 +8,7 @@ import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { revertRadar, agentBenchmark, engagement } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -71,12 +72,31 @@ export function registerAccountabilityCommands(program: Command): void {
       out(`   survival by agent: ${survival.map((s) => `${s.agent} ${Math.round(s.survivalRate * 100)}% (${s.regretted}/${s.commits})`).join(" · ")}`);
     });
 
-  program.command("agentbench").description("📊 CROSS-VENDOR RELIABILITY — rank agents by Wilson-LB survival (small samples are 'unmeasured').")
-    .action(() => {
-      const cwd = process.cwd(); const commits = readCommits(cwd);
-      const ranked = agentBenchmark.rankAgents(revertRadar.survivalByAgent(commits, revertRadar.detectReverts(commits)));
-      if (!ranked.length) { out("no attested commits — run `mneme attest install-hook` first"); return; }
-      out(`📊 Agent reliability (from this repo's real outcomes):`);
-      for (const r of ranked) out(`   ${r.agent.padEnd(12)} · ${r.band.padEnd(11)}${r.band === "unmeasured" ? "" : ` · ${Math.round(r.wilsonLB * 100)}% Wilson-LB`} · ${r.survived}/${r.commits} survived`);
+  const localSurvival = (cwd: string) => agentBenchmark.rankAgents(revertRadar.survivalByAgent(readCommits(cwd), revertRadar.detectReverts(readCommits(cwd))));
+  const localSurvivalRaw = (cwd: string) => revertRadar.survivalByAgent(readCommits(cwd), revertRadar.detectReverts(readCommits(cwd)));
+  const ab = program.command("agentbench").description("📊 CROSS-VENDOR RELIABILITY — rank agents by Wilson-LB survival (small samples are 'unmeasured'). Federate across repos to compound.");
+  ab.command("rank", { isDefault: true }).description("Rank agents from THIS repo's real outcomes.").action(() => {
+    const ranked = localSurvival(process.cwd());
+    if (!ranked.length) { out("no attested commits — run `mneme attest install-hook` first"); return; }
+    out(`📊 Agent reliability (from this repo's real outcomes):`);
+    for (const r of ranked) out(`   ${r.agent.padEnd(12)} · ${r.band.padEnd(11)}${r.band === "unmeasured" ? "" : ` · ${Math.round(r.wilsonLB * 100)}% Wilson-LB`} · ${r.survived}/${r.commits} survived`);
+  });
+  ab.command("bundle").description("Emit a CONTENT-FREE digest (agent + counts only — no shas/paths) to federate across repos.")
+    .option("--out <file>", "write to a file (default: stdout)")
+    .action((opts: { out?: string }) => {
+      const cwd = process.cwd();
+      const tag = createHash("sha256").update(git("rev-list --max-parents=0 HEAD", cwd) || cwd).digest("hex").slice(0, 12);
+      const digest = agentBenchmark.buildBenchmarkDigest(localSurvivalRaw(cwd), tag);
+      const json = JSON.stringify(digest, null, 2);
+      if (opts.out) { writeFileSync(opts.out, json + "\n", "utf8"); out(`✓ wrote content-free digest → ${opts.out} (share it; no repo content leaves).`); }
+      else out(json);
+    });
+  ab.command("merge <files...>").description("Federate digests from many repos → a compounded reliability ranking.")
+    .action((files: string[]) => {
+      const digests = files.filter((f) => existsSync(f)).map((f) => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return null; } }).filter(Boolean);
+      const ranked = agentBenchmark.mergeBenchmarkDigests(digests as never[]);
+      if (!ranked.length) { out("no valid digests"); return; }
+      out(`📊 Federated agent reliability (${digests.length} repo digest(s)):`);
+      for (const r of ranked) out(`   ${r.agent.padEnd(12)} · ${r.band.padEnd(11)}${r.band === "unmeasured" ? "" : ` · ${Math.round(r.wilsonLB * 100)}% Wilson-LB`} · ${r.survived}/${r.commits} survived (across repos)`);
     });
 }

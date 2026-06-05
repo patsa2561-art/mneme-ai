@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankAgents, wilsonLowerBound, benchmarkGauntlet } from "./index.js";
+import { rankAgents, wilsonLowerBound, benchmarkGauntlet, buildBenchmarkDigest, mergeBenchmarkDigests, digestLeaksRaw, federationGauntlet } from "./index.js";
 import type { AgentSurvival } from "../revert_radar/index.js";
 
 describe("AGENT RELIABILITY BENCHMARK — cross-vendor, from real outcomes (Wilson-LB)", () => {
@@ -25,6 +25,26 @@ describe("AGENT RELIABILITY BENCHMARK — cross-vendor, from real outcomes (Wils
   });
   it("MEASURED: benchmarkGauntlet = 100", () => {
     const g = benchmarkGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass));
+    expect(g.score).toBe(100);
+  });
+
+  it("FEDERATION: a content-free digest shares counts only (no raw)", () => {
+    const d = buildBenchmarkDigest([{ agent: "a", commits: 5, regretted: 1, survivalRate: 0.8, explicit: 1, hotfix: 0 }], "repoX");
+    expect(d.agents[0]).toEqual({ agent: "a", commits: 5, survived: 4 });
+    expect(digestLeaksRaw(d, ["src/x.ts", "deadbeef1234", "/home/u"]).valueOf()).toBe(false);
+  });
+  it("FEDERATION: merging repos compounds + is commutative/idempotent", () => {
+    const one: AgentSurvival = { agent: "alice", commits: 4, regretted: 0, survivalRate: 1, explicit: 0, hotfix: 0 };
+    const a = buildBenchmarkDigest([one], "A"), b = buildBenchmarkDigest([one], "B"), c = buildBenchmarkDigest([one], "C");
+    expect(rankAgents([one])[0].band).toBe("unmeasured");
+    const fed = mergeBenchmarkDigests([a, b, c])[0];
+    expect(fed.commits).toBe(12);
+    expect(fed.band).not.toBe("unmeasured");
+    expect(JSON.stringify(mergeBenchmarkDigests([a, b]))).toBe(JSON.stringify(mergeBenchmarkDigests([b, a])));
+    expect(JSON.stringify(mergeBenchmarkDigests([a, a, b]))).toBe(JSON.stringify(mergeBenchmarkDigests([a, b]))); // idempotent
+  });
+  it("MEASURED: federationGauntlet = 100", () => {
+    const g = federationGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass));
     expect(g.score).toBe(100);
   });
 });

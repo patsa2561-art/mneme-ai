@@ -27,6 +27,20 @@ import { scanMessage, quarantineDecision, type MeshThreat } from "../mesh_immune
 import { verifyReceipt, type NotaryReceipt } from "../notary/index.js";
 import { cerberusClassify } from "../cerberus/index.js";
 import { isSimpleCommand } from "../perfcore/index.js";
+import { evaluateEngagement, type EngagementPolicy, type EngagementAction } from "../engagement/index.js";
+
+/** Map a shell command to an Engagement action (best-effort, deterministic). */
+function commandToEngagementAction(command: string): EngagementAction {
+  const c = String(command).toLowerCase();
+  let kind = "run";
+  if (/\bgit\s+push\b/.test(c) && (/(^|\s)(-f|--force)\b/.test(c) || /\bpush\s+--force/.test(c))) kind = "force-push";
+  else if (/\bgit\s+push\b/.test(c) && /\b(origin\s+)?(main|master)\b/.test(c)) kind = "push:main";
+  else if (/\bgit\s+push\b.*--delete\b|\bgit\s+branch\s+-d\b/.test(c)) kind = "delete-branch";
+  else if (/\bdeploy\b/.test(c) && /\bprod/.test(c)) kind = "deploy:prod";
+  // extract path-looking tokens (for forbidPaths) — files with an extension or a slash, or .env*
+  const paths = (String(command).match(/(?:[\w@./-]+\/)?[\w@.-]*\.(?:env|pem|key|json|ya?ml|ts|js|py|go|rs|sh|tf)\b\S*|\.env\S*|[\w./-]*\/(?:secrets|\.ssh|\.aws)\/\S*/gi) ?? []).map((s) => s.trim()).filter(Boolean);
+  return { kind, paths };
+}
 
 export type CommandRisk = "read" | "write" | "destructive";
 export type Disposition = "ALLOW" | "NEEDS_COSIGN" | "BLOCK";
@@ -167,6 +181,9 @@ export interface CrossCommandInput {
 
 export interface CrossCommandDeps {
   policy?: Policy;
+  /** The org's Engagement Policy (robots.txt-for-agents). Enforced at the gate —
+   *  escalate-only: a forbidden path → BLOCK, a sensitive action → NEEDS_COSIGN. */
+  engagement?: EngagementPolicy;
   /** The cross-vendor TRIBUNAL — judge a destructive command via independent
    *  vendors (e.g. via diff_arena adapters). Mneme is the neutral convener.
    *  Returns each vendor's verdict + the consensus. Pluggable; CLI/MCP wire it. */
@@ -250,6 +267,17 @@ export async function crossCommand(repoRoot: string, input: CrossCommandInput, d
     disposition = "ALLOW";
   } else {
     disposition = "ALLOW";
+  }
+
+  // 4b. ENGAGEMENT POLICY — the org's robots.txt-for-agents, enforced at the gate.
+  // It can only ESCALATE (forbidden path → BLOCK · sensitive action → NEEDS_COSIGN);
+  // it never downgrades the CERBERUS/tribunal safety verdict.
+  if (deps.engagement) {
+    try {
+      const ev = evaluateEngagement(deps.engagement, commandToEngagementAction(command));
+      if (ev.decision === "BLOCK" && disposition !== "BLOCK") { disposition = "BLOCK"; for (const r of ev.reasons) reasons.push(`engagement: ${r}`); }
+      else if (ev.decision === "NEEDS_COSIGN" && disposition === "ALLOW" && !input.cosigned) { disposition = "NEEDS_COSIGN"; for (const r of ev.reasons) reasons.push(`engagement: ${r}`); }
+    } catch (e) { degraded.push(`engagement:${(e as Error).message}`); }
   }
 
   if (disposition === "ALLOW" && reasons.length === 0) reasons.push(`${risk} command — allowed`);
