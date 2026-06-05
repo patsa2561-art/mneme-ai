@@ -24,6 +24,8 @@
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **[xray.mneme-ai.space](https://xray.mneme-ai.space)** &nbsp;·&nbsp; <sub>[how it works + self-host →](packages/xray/README.md)</sub>
 
+📟 **Run an agent overnight, approve it from your phone** — lid closed, no server, only a summary+hash leaves the machine, every approval signed. <sub>**Cosmic Pager** → [full spec](docs/COSMIC-PAGER.md)</sub>
+
 ---
 
 ## One picture

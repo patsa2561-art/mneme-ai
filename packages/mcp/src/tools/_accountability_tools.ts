@@ -11,7 +11,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { revertRadar, agentBenchmark, engagement, awarm, geo, reckoning, commitAttest, succession } from "@mneme-ai/core";
+import { revertRadar, agentBenchmark, engagement, awarm, geo, reckoning, commitAttest, succession, pager } from "@mneme-ai/core";
 import type { MnemeTool, ToolRuntime, ToolResponse } from "./_types.js";
 
 function git(args: string, cwd: string): string {
@@ -44,6 +44,24 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
 }
 
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
+  {
+    name: "mneme.pager.scan",
+    category: "audit",
+    description:
+      "COSMIC PAGER status — pending remote-approval requests + the self-tuning Trust-Tide state. The pager lets a human approve an agent's sensitive actions from their phone (Telegram) with the laptop lid closed; only a command SUMMARY + hash leaves the machine, and the approval is a signed, hash-bound, one-time authority transfer. Read this to see what's awaiting human approval + how much each command-class is trusted. Example asks: 'what's waiting for my approval?', 'pager status', 'what did I auto-approve?'",
+    whenToUse: "Check what sensitive actions are queued awaiting the human's phone approval, and the current per-class trust.",
+    triggers: ["what is waiting for approval", "pager status", "pending approvals", "remote approval queue"],
+    inputSchema: { type: "object", properties: {} },
+    handler: async (runtime: ToolRuntime): Promise<ToolResponse> => {
+      const sp = join(runtime.cwd, ".mneme", "pager", "state.json");
+      if (!existsSync(sp)) return { data: { active: false }, wisdom: "The Cosmic Pager isn't set up. `mneme pager setup --telegram-token … --chat-id …` then `mneme pager start`." };
+      let st: { pendings?: pager.Pending[]; trust?: pager.TrustState }; try { st = JSON.parse(readFileSync(sp, "utf8")); } catch { return { data: { error: "pager state unreadable" }, wisdom: "pager state corrupt." }; }
+      const pend = (st.pendings ?? []).filter((p) => p.status === "pending");
+      const trust = st.trust ?? pager.emptyTrust();
+      const classes = Object.keys(trust.classes ?? {});
+      return { data: { active: true, pending: pend.map((p) => ({ id: p.req.id, blast: p.req.blast, klass: p.req.klass, summary: p.req.summary, lane: p.lane })), trustedClasses: classes.length }, wisdom: `${pend.length} action(s) awaiting your phone approval${pend.length ? ": " + pend.map((p) => `${p.req.klass} (${p.req.blast})`).join(", ") : ""}. Trust-Tide knows ${classes.length} command-class(es). Destructive actions are never auto-approved (hard ceiling); proven-safe classes auto-allow so the pager stays quiet.` };
+    },
+  },
   {
     name: "mneme.succession.scan",
     category: "audit",
