@@ -54,6 +54,7 @@ export const DECISION_TABLE: readonly DecisionRow[] = [
   { when: "user asks 'how much has Mneme saved me?' / about cost", tool: "mneme.treasury.report  ·  CLI: mneme savings --price-per-1k <usd>", why: "the measured, signed input-tokens (and USD at the user's price) saved — only counts content routed through Mneme" },
   { when: "user asks if a repo/dependency is safe to build on, how risky/clean a codebase is, or who the key person is", tool: "mneme.xray.scan { gitUrl | repoPath }  ·  CLI: mneme xray", why: "a signed, deterministic repo audit (grade · secrets · bus-factor · coupling) + Context Air Quality + Keystone/Action-plan — no LLM guesses a number" },
   { when: "you know what the user WANTS but not which of ~1000 tools fits", tool: "mneme.gateway.route { text }  ·  CLI: mneme matrix search \"<intent>\"", why: "intent → the right tool, ranked (BM25 + curated-trigger wisdom, no LLM) — so you never need to memorise tool names" },
+  { when: "you just made (or are reviewing) a git commit and provenance matters", tool: "mneme.attest.verify  ·  CLI: mneme attest commit / verify / install-hook", why: "sign each commit into a tamper-evident, OFFLINE-verifiable trail (which AI made it · what changed · the screen that ran) — `git log` becomes provable, no trust required" },
 ];
 
 /** The four boundary capabilities, one line each (for the boot packet header). */
