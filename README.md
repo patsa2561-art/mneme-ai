@@ -24,7 +24,22 @@
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **[xray.mneme-ai.space](https://xray.mneme-ai.space)** &nbsp;·&nbsp; <sub>[how it works + self-host →](packages/xray/README.md)</sub>
 
-📟 **Run an agent overnight, approve it from your phone** — lid closed, no server, only a summary+hash leaves the machine, every approval signed. <sub>**Cosmic Pager** → [full spec](docs/COSMIC-PAGER.md)</sub>
+### 📟 Cosmic Pager — run your AI overnight, approve it from your phone
+
+Close the laptop lid. Hit sleep. **Don't shut down.** Your AI agent keeps working — and the
+moment it needs your *yes / no / a typed answer*, it pings your **Telegram in real time**.
+Tap ✅ / ⛔ (or type a reply) from anywhere; the agent continues.
+
+> **How it's different from a hosted "remote control":** there is **no server, no public IP,
+> no cloud session to keep alive.** The brain stays on **your** machine — only a one-line
+> *summary + hash* ever leaves it (never your code), and every approval is a **signed,
+> court-admissible** transfer of authority.
+
+**Setup is two steps — your AI does the rest:**
+1. In Telegram, message **[@BotFather](https://t.me/BotFather)** → `/newbot` → copy the **token**.
+2. Tell your AI: *"set up phone approvals, here's my token: …"* — it runs `mneme pager autosetup`, which **finds your chat-id, wires the hook, sets lid-stay-awake, and starts paging** automatically. You never type a Mneme command.
+
+<sub>**[Full 60-second bot guide + spec → docs/COSMIC-PAGER.md](docs/COSMIC-PAGER.md)**</sub>
 
 ---
 

@@ -90,6 +90,21 @@ risky work waits for your thumb, destructive work is fail-safe by default.
 | Approval | **signed nonce** (hash-bound, one-time, TTL) via `verify-self` capsule chain | replay-proof, command-bound authority transfer |
 | Power | `caffeinate` (mac) · `systemd-inhibit` + `rtcwake` (linux) · `SetThreadExecutionState`/Away-Mode (win) | "breathing" sleep — awake while working, wake-to-poll while idle |
 
+## Make a Telegram bot (60 seconds, the user's ONLY manual step)
+
+1. Open **Telegram** → search **[@BotFather](https://t.me/BotFather)** (the official one, blue check).
+2. Send `/newbot` → pick a name → pick a username ending in `bot` → BotFather replies with a
+   **token** like `8773377825:AAF…qI`. Copy it.
+3. Open your new bot and tap **START** (so it can message you).
+4. Hand the token to your AI: *"set up phone approvals — token: `…`"*. **Done.** Your AI runs
+   `mneme pager autosetup --telegram-token <token>` — which **discovers your chat-id by itself**
+   (no `@userinfobot` needed), wires everything, and sends a test message to your phone.
+
+> 🔒 **Keep the token private.** Anyone with it can message as your bot. If it ever leaks,
+> `/revoke` in BotFather and re-run autosetup with the new token. (The chat-id is harmless.)
+
+---
+
 ## The user types NOTHING — the AI agent sets it up
 
 The user will never know `mneme pager` commands. They just say *"I want to approve you from

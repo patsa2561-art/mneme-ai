@@ -126,18 +126,35 @@ export function registerPagerCommands(program: Command): void {
   const p = program.command("pager").description("📟 COSMIC PAGER — approve an agent's sensitive actions from your phone (Telegram), lid closed. Signed authority · self-tuning Trust-Tide · dead-man queue · court-admissible. NO server (the laptop long-polls Telegram behind NAT).");
 
   p.command("autosetup")
-    .description("🚀 ONE COMMAND, ZERO USER STEPS — the AI agent runs this for the user: wires the Claude Code hook, sets lid-stay-awake, registers auto-start, and launches the pager. The user only creates a Telegram bot once (BotFather) and hands over the token + chat-id.")
-    .requiredOption("--telegram-token <t>", "from @BotFather").requiredOption("--chat-id <id>", "the user's Telegram chat id")
+    .description("🚀 ONE COMMAND, ZERO USER STEPS — the AI agent runs this for the user: auto-discovers the chat-id, wires the Claude Code hook, sets lid-stay-awake, registers auto-start, and launches the pager. The user only creates a Telegram bot once (BotFather) + taps START — then hands over JUST the token.")
+    .requiredOption("--telegram-token <t>", "from @BotFather").option("--chat-id <id>", "(optional — auto-discovered if you've tapped START on the bot)")
     .option("--no-service", "don't register login auto-start").option("--no-start", "don't launch now")
-    .action(async (o: { telegramToken: string; chatId: string; service?: boolean; start?: boolean }) => {
+    .action(async (o: { telegramToken: string; chatId?: string; service?: boolean; start?: boolean }) => {
       const cwd = process.cwd();
+      // ZERO-BURDEN: auto-discover the chat-id. getUpdates is a CONSUMING queue, so we
+      // long-poll-WAIT for a fresh message (telling the user to message the bot now) — robust
+      // even if a previous run/daemon already drained the old updates.
+      let chatId = o.chatId;
+      if (!chatId) {
+        const ping = await tg(o.telegramToken, "getMe", {}) as { ok: boolean };
+        if (!ping.ok) { out("❌ token ใช้ไม่ได้ (Unauthorized) — ตรวจ token จาก @BotFather อีกครั้ง"); process.exitCode = 2; return; }
+        out("👉 เปิด Telegram → บอตของคุณ → กด START หรือพิมพ์อะไรก็ได้ส่งไป \"ตอนนี้\" (กำลังรอ 45 วิ)…");
+        const deadline = Date.now() + 45_000; let offset = 0; let found: number | null = null;
+        while (Date.now() < deadline && found === null) {
+          const upd = await tg(o.telegramToken, "getUpdates", { offset, timeout: 20 }) as { ok: boolean; result?: Array<{ update_id: number; message?: { chat?: { id?: number } }; my_chat_member?: { chat?: { id?: number } } }> };
+          for (const u of upd.result ?? []) { offset = u.update_id + 1; const id = u.message?.chat?.id ?? u.my_chat_member?.chat?.id; if (typeof id === "number") found = id; }
+        }
+        if (found === null) { out("⚠️ ยังไม่ได้รับข้อความ — ลองรัน autosetup อีกครั้งแล้วพิมพ์หาบอตเลย (หรือใส่ --chat-id เอง)"); process.exitCode = 2; return; }
+        chatId = String(found);
+        out(`✓ auto-discovered chat-id: ${chatId}`);
+      }
       mkdirSync(dir(cwd), { recursive: true });
-      writeFileSync(cfgPath(cwd), JSON.stringify({ telegramToken: o.telegramToken, chatId: o.chatId, mode: "hybrid", wakeIntervalMin: 5, ttlMs: 5 * 60_000 }, null, 2), "utf8");
+      writeFileSync(cfgPath(cwd), JSON.stringify({ telegramToken: o.telegramToken, chatId, mode: "hybrid", wakeIntervalMin: 5, ttlMs: 5 * 60_000 }, null, 2), "utf8");
       const hook = wireClaudeHook(cwd);
       const lid = setLidStayAwake();
       const svc = o.service === false ? "auto-start: skipped" : installPagerService(cwd);
       // send a confirmation page so the user SEES it works on their phone immediately
-      const test = await tg(o.telegramToken, "sendMessage", { chat_id: o.chatId, text: "📟 Cosmic Pager is live. You'll get approval requests here when an agent needs your OK — tap ✅ / ⛔. (Lid can close.)" });
+      const test = await tg(o.telegramToken, "sendMessage", { chat_id: chatId, text: "📟 Cosmic Pager is live. You'll get approval requests here when an agent needs your OK — tap ✅ / ⛔. (Lid can close.)" });
       if (o.start !== false) { try { spawn(process.execPath, [process.argv[1], "pager", "start"], { cwd, stdio: "ignore", detached: true }).unref(); } catch { /* */ } }
       out("📟 Cosmic Pager — autosetup complete");
       out(`   ✓ config saved · ${hook.ok ? "✓ Claude Code hook wired (" + hook.path + ")" : "✗ hook not wired"}`);
