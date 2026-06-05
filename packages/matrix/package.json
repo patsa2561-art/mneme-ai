@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/matrix",
-  "version": "2.194.0",
+  "version": "2.195.0",
   "description": "THE MATRIX RAIL — the local-first gRPC wire server for Mneme. Any AI agent (any language) connects over HTTP/2 + Protobuf to reach every Mneme function through one typed, signed, streaming pipe. Invoke (unary, proof-carrying) + Pipe (bidi, chunked → any-size data flows byte-identical, past gRPC's 4MB cap). Binds 127.0.0.1 only; fail-open; wraps @mneme-ai/core's pipe core.",
   "type": "module",
   "main": "./dist/index.js",
@@ -33,7 +33,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.12.5",
     "@grpc/proto-loader": "^0.7.13",
-    "@mneme-ai/core": "2.194.0",
-    "@mneme-ai/mcp": "2.194.0"
+    "@mneme-ai/core": "2.195.0",
+    "@mneme-ai/mcp": "2.195.0"
   }
 }
