@@ -39,14 +39,48 @@ only as a **signed switchboard** — so even though there's now a public endpoin
 webhook providers), it can't read your code, can't forge an approval, and can't replay one.
 You get LINE/Slack/Discord reach *without* surrendering the privacy model.
 
-## Status & roadmap (honest)
+## Connect your chat — pick one, minimal steps 🎉
 
-- ✅ **Protocol core** — the signed envelope, offline verification, the four guarantees:
-  shipped + measured (`keryxGauntlet=100`).
-- 🔜 **Relay server** — deploys on `gephyra serve` (your DO droplet): receives each provider's
-  webhook, holds a per-daemon queue, and the daemon connects OUT (WS/SSE) to drain it.
-- 🔜 **Provider adapters** — LINE / Slack / Discord webhook → envelope parsers (Telegram already
-  works directly via long-poll, no relay needed).
+Your AI sends the **ask outbound** straight to the chat (push — works behind NAT). Only a
+**reply** is a webhook, and that's the one thing the tiny KERYX relay catches for you.
 
-> The protocol is the load-bearing part (privacy + unforgeability + replay-proofing) and it's
-> done. The relay deployment is plumbing on top — it cannot weaken those guarantees, by design.
+### ⭐ Telegram — zero relay, works right now
+The simplest path; nothing to deploy. Just:
+1. Telegram → **[@BotFather](https://t.me/BotFather)** → `/newbot` → copy the token.
+2. Tell your AI: *"set up phone approvals, token: …"* → it runs `mneme pager autosetup`. **Done.**
+
+### 🟩 LINE · 🟪 Slack · 🟦 Discord · 🟢 WhatsApp — one relay, then one webhook each
+You host the relay once (on a small box / your DO droplet) — it's a dumb, signed switchboard:
+
+1. **Run the relay** (one command, public URL):
+   ```bash
+   mneme gephyra serve --port 17742        # then expose it (a tunnel or your droplet's IP)
+   ```
+2. **Make the chat app + grab its token** (≈2 min each):
+   | Provider | where | token |
+   |---|---|---|
+   | **LINE** | [developers.line.biz](https://developers.line.biz) → Messaging API channel | Channel access token |
+   | **Slack** | [api.slack.com/apps](https://api.slack.com/apps) → Interactivity on | Bot token `xoxb-…` |
+   | **Discord** | [discord.com/developers](https://discord.com/developers/applications) → Bot + Interactions | Bot token |
+   | **WhatsApp** | [developers.facebook.com](https://developers.facebook.com) → WhatsApp Cloud API | Access token |
+3. **Point that app's webhook** at your relay: `https://<your-relay>/keryx/webhook/<provider>`
+   (`/keryx/webhook/line`, `/slack`, `/discord`, `/whatsapp`).
+4. **Give Mneme the token** and you're live — your AI pushes asks to that chat, you tap, the
+   reply flows back through the relay.
+
+> The buttons your AI sends carry a tiny `keryx:<id>:<answer>` tag, so a reply from **any**
+> provider is understood the same way — that's why one relay covers them all.
+
+## Status (honest — no overclaim)
+
+| Piece | State |
+|---|---|
+| **Protocol** (signed envelope · privacy · replay-proof · channel-agnostic) | ✅ shipped + measured (`keryxGauntlet=100`) |
+| **Relay inbound** (webhook → parse → per-daemon queue → drain) | ✅ shipped + system-tested for LINE/Slack/Discord/WhatsApp button replies |
+| **Telegram** (full loop, no relay) | ✅ live-proven |
+| **Per-provider outbound send** (push the ask to LINE/Slack/Discord/WhatsApp) | 🔜 rolling out — needs your provider token to validate live |
+
+> **Trust model (honest):** the relay is *your* server, semi-trusted like Telegram's API. It
+> **can't read your code** (only a summary + hash ever leaves the machine) and **can't alter
+> the ask** (it's signed). It faithfully relays the reply — the same trust you already place in
+> Telegram's servers. Zero-trust-relay for the *answer* is not claimed.

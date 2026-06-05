@@ -501,6 +501,53 @@ export async function handleA2ARequest(repoRoot: string, raw: unknown, primitive
   }
 }
 
+/**
+ * KERYX RELAY (the inbound half) — the only piece that needs a public endpoint. The daemon
+ * SENDS asks OUTBOUND directly to any provider (push works behind NAT); a provider's REPLY,
+ * however, is a webhook → it needs this public relay. The relay receives the webhook, parses
+ * the reply (provider-agnostic), and queues it for the daemon to DRAIN (outbound poll). It
+ * never sees raw code (the ask never came through it) and it's your own server (semi-trusted,
+ * like Telegram's API). Deploy it on `gephyra serve` (your DO droplet).
+ */
+interface KeryxRelayState { v: 1; inbox: Record<string, unknown[]>; askOwner: Record<string, string> }
+function _keryxStatePath(repoRoot: string): string { return _join(repoRoot, ".mneme", "keryx", "relay.json"); }
+function _loadKeryxRelay(repoRoot: string): KeryxRelayState {
+  try { const p = _keryxStatePath(repoRoot); if (_existsSync(p)) { const j = JSON.parse(_readFileSync(p, "utf8")); if (j && typeof j === "object") return { v: 1, inbox: j.inbox ?? {}, askOwner: j.askOwner ?? {} }; } } catch { /* */ }
+  return { v: 1, inbox: {}, askOwner: {} };
+}
+function _saveKeryxRelay(repoRoot: string, s: KeryxRelayState): void {
+  try { const d = _join(repoRoot, ".mneme", "keryx"); if (!_existsSync(d)) _mkdirSync(d, { recursive: true }); _writeFileSync(_keryxStatePath(repoRoot), JSON.stringify(s), "utf8"); } catch { /* */ }
+}
+
+export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain", body: unknown, query: Record<string, string>): Promise<SavantHttpResponse> {
+  const { parseInbound } = await import("../keryx/index.js");
+  const s = _loadKeryxRelay(repoRoot);
+  try {
+    if (action === "expect") {
+      let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
+      const daemonId = String(o["daemonId"] ?? ""), askId = String(o["askId"] ?? "");
+      if (!daemonId || !askId) return { status: 400, body: { error: "required: daemonId, askId" } };
+      s.askOwner[askId] = daemonId; _saveKeryxRelay(repoRoot, s);
+      return { status: 200, body: { ok: true } };
+    }
+    if (action === "webhook") {
+      const provider = String(query["provider"] ?? "generic");
+      const parsed = parseInbound(provider, body);
+      if (!parsed.ok) return { status: 200, body: { ok: false, reason: parsed.reason } };  // 200 so the provider doesn't retry-storm
+      // route to the daemon that owns this ask id (or a sole registered daemon)
+      const owners = Object.values(s.askOwner);
+      const daemonId = (parsed.id && s.askOwner[parsed.id]) || (owners.length === 1 ? owners[0] : "default");
+      const env = { v: 1, kind: "answer", id: parsed.id ?? "", channel: provider, payload: parsed.answer ?? "", relayAttested: true, ts: Date.now() };
+      s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), env]; _saveKeryxRelay(repoRoot, s);
+      return { status: 200, body: { ok: true, routedTo: daemonId, id: parsed.id, answer: parsed.answer } };
+    }
+    // drain
+    const daemonId = String(query["daemon"] ?? "default");
+    const answers = s.inbox[daemonId] ?? []; s.inbox[daemonId] = []; _saveKeryxRelay(repoRoot, s);
+    return { status: 200, body: { answers } };
+  } catch (e) { return { status: 500, body: { error: (e as Error).message } }; }
+}
+
 /** OpenAPI 3.0 spec for the A2A surface — register with any agent's tool layer. */
 export function a2aOpenApi(): Record<string, unknown> {
   const json = { schema: { type: "object" } };

@@ -22,7 +22,7 @@
 
 ## 🩻 Try it live
 
-Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **[xray.mneme-ai.space](https://xray.mneme-ai.space)** &nbsp;·&nbsp; <sub>[how it works + self-host →](packages/xray/README.md)</sub>
+Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>
 
 <div align="center">
 
@@ -51,7 +51,7 @@ real.** No more babysitting a terminal.
 1. In Telegram, message **[@BotFather](https://t.me/BotFather)** → `/newbot` → copy the **token**.
 2. Tell your AI: *"set up phone approvals, here's my token: …"* — it runs `mneme pager autosetup`, which **finds your chat-id, wires the hook, sets lid-stay-awake, and starts paging** automatically. You never type a Mneme command.
 
-<sub>**[Full 60-second bot guide + spec → docs/COSMIC-PAGER.md](docs/COSMIC-PAGER.md)**</sub>
+<sub>**<a href="docs/COSMIC-PAGER.md" target="_blank" rel="noopener">Full 60-second bot guide + spec → docs/COSMIC-PAGER.md</a>**</sub>
 
 🏛 **Not just Telegram — every chat.** **KERYX** is the dumb, *signed* relay so **LINE / Slack / Discord / WhatsApp** can reach your local agent behind NAT too — only a summary+hash crosses, approvals are unforgeable + replay-proof, the brain stays on your machine. <sub>**<a href="docs/KERYX.md" target="_blank" rel="noopener">how KERYX works →</a>**</sub>
 

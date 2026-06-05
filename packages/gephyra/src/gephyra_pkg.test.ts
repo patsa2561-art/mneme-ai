@@ -145,4 +145,24 @@ describe("@mneme-ai/gephyra package", () => {
       await h.close();
     }
   }, 20_000);
+
+  it("PK7 KERYX relay — a button reply from any provider routes to the daemon's drain", async () => {
+    const repo = mkdtempSync(join(tmpdir(), "gephyra-keryx-"));
+    const h = await startServer({ repoRoot: repo, port: 0 });
+    try {
+      expect((await http("POST", h.port, "/keryx/expect", JSON.stringify({ daemonId: "d1", askId: "q1" }))).status).toBe(200);
+      // LINE postback button + Slack action both carry the keryx token
+      const wl = await http("POST", h.port, "/keryx/webhook/line", JSON.stringify({ events: [{ type: "postback", postback: { data: "keryx:q1:production" } }] }));
+      expect((wl.json as { routedTo?: string; answer?: string }).answer).toBe("production");
+      await http("POST", h.port, "/keryx/webhook/discord", JSON.stringify({ data: { custom_id: "keryx:q1:rollback" } }));
+      const d = await http("GET", h.port, "/keryx/drain?daemon=d1");
+      const answers = (d.json as { answers?: Array<{ id: string; payload: string; channel: string }> }).answers ?? [];
+      expect(answers.length).toBe(2);
+      expect(answers.map((a) => `${a.payload}@${a.channel}`)).toEqual(["production@line", "rollback@discord"]);
+      // a second drain is empty (cleared)
+      expect(((await http("GET", h.port, "/keryx/drain?daemon=d1")).json as { answers?: unknown[] }).answers?.length).toBe(0);
+    } finally {
+      await h.close();
+    }
+  }, 20_000);
 });

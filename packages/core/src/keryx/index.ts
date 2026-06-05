@@ -79,6 +79,56 @@ export function envelopeLeaksRaw(e: KeryxEnvelope, rawNeedles: ReadonlyArray<str
   return (rawNeedles ?? []).some((n) => n && blob.includes(n));
 }
 
+// ─── RELAY — the dumb switchboard (pure queue + per-provider webhook parsing) ──
+// KERYX carries an answer id in the button payload it sends (`keryx:<id>:<answer>`), so a
+// reply from ANY provider is parsed the same way. Text replies carry the id via the provider's
+// reply context where available. The relay holds a per-daemon queue; the daemon drains it OUT.
+export interface InboundAnswer { ok: boolean; id: string | null; answer: string | null; provider: string; reason: string }
+
+/** Parse a chat provider's webhook body into a normalized {id, answer}. Provider-agnostic:
+ *  the KERYX button data `keryx:<id>:<answer>` is found wherever the provider puts it. */
+export function parseInbound(provider: string, body: unknown): InboundAnswer {
+  const p = String(provider || "generic").toLowerCase();
+  let parsed: unknown = body;
+  if (typeof body === "string") { try { parsed = JSON.parse(body); } catch { parsed = { _raw: body }; } }
+  const blob = JSON.stringify(parsed ?? {});
+  // 1) the reliable path: our own button token, anywhere in the payload (works for ALL providers)
+  const m = blob.match(/keryx:([A-Za-z0-9_-]{1,64}):([^"\\]{1,200})/);
+  if (m) return { ok: true, id: m[1], answer: m[2], provider: p, reason: "keryx button token" };
+  // 2) provider text-reply fallbacks (id must be supplied out-of-band by the caller)
+  const o = (parsed ?? {}) as Record<string, unknown>;
+  const text = (() => {
+    try {
+      if (p === "line") return (((o.events as Array<{ message?: { text?: string } }>) ?? [])[0]?.message?.text) ?? null;
+      if (p === "slack") return (o.text as string) ?? ((o.event as { text?: string })?.text) ?? null;
+      if (p === "discord") return (o.content as string) ?? ((o.data as { content?: string })?.content) ?? null;
+      if (p === "telegram") return ((o.message as { text?: string })?.text) ?? null;
+      return (o.text as string) ?? (o._raw as string) ?? null;
+    } catch { return null; }
+  })();
+  if (text) return { ok: true, id: null, answer: String(text).trim(), provider: p, reason: "text reply (id matched out-of-band)" };
+  return { ok: false, id: null, answer: null, provider: p, reason: "no answer found in webhook" };
+}
+
+export interface RelayState { v: 1; outbox: Record<string, KeryxEnvelope[]>; inbox: Record<string, KeryxEnvelope[]> }
+export function emptyRelay(): RelayState { return { v: 1, outbox: {}, inbox: {} }; }
+/** Daemon pushes a signed ASK → relay queues it for delivery to the chat (outbox per daemon). */
+export function relayEnqueueAsk(state: RelayState, daemonId: string, ask: KeryxEnvelope): RelayState {
+  const s: RelayState = { v: 1, outbox: { ...state.outbox }, inbox: { ...state.inbox } };
+  s.outbox[daemonId] = [...(s.outbox[daemonId] ?? []), ask]; return s;
+}
+/** Relay queues a verified ANSWER for the daemon to drain (inbox per daemon). */
+export function relayEnqueueAnswer(state: RelayState, daemonId: string, answer: KeryxEnvelope): RelayState {
+  const s: RelayState = { v: 1, outbox: { ...state.outbox }, inbox: { ...state.inbox } };
+  s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), answer]; return s;
+}
+/** Daemon drains its inbox (answers); the relay clears them. Returns [answers, newState]. */
+export function relayDrain(state: RelayState, daemonId: string): { answers: KeryxEnvelope[]; state: RelayState } {
+  const answers = state.inbox?.[daemonId] ?? [];
+  const s: RelayState = { v: 1, outbox: { ...state.outbox }, inbox: { ...state.inbox } };
+  s.inbox[daemonId] = []; return { answers, state: s };
+}
+
 // ─── gauntlet ─────────────────────────────────────────────────────────────────
 export interface KeryxGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function keryxGauntlet(): KeryxGauntlet {
@@ -96,6 +146,20 @@ export function keryxGauntlet(): KeryxGauntlet {
   const answerBound = verifyEnvelope(secret, answer, now + 2000).ok && answer.id === ask.id && answer.commandHash === ask.commandHash;
   const channelAgnostic = ["line", "slack", "discord", "telegram"].every((ch) => verifyEnvelope(secret, buildAsk(secret, { id: "x", channel: ch, summary: "s", rawCommand: "ls", nonce: "n" + ch, now }), now + 1).ok);
   const det = JSON.stringify(buildAsk(secret, { id: "d", channel: "line", summary: "s", rawCommand: "ls", nonce: "n", now })) === JSON.stringify(buildAsk(secret, { id: "d", channel: "line", summary: "s", rawCommand: "ls", nonce: "n", now }));
+  // RELAY: parse a button reply from every provider (the keryx token), + queue round-trip
+  const lineWh = JSON.stringify({ events: [{ type: "postback", postback: { data: "keryx:q1:production" } }] });
+  const slackWh = JSON.stringify({ actions: [{ value: "keryx:q1:production" }] });
+  const discordWh = JSON.stringify({ data: { custom_id: "keryx:q1:production" } });
+  const waWh = JSON.stringify({ messages: [{ button: { payload: "keryx:q1:production" } }] });
+  const parseAll = [lineWh, slackWh, discordWh, waWh].every((b, i) => { const r = parseInbound(["line", "slack", "discord", "whatsapp"][i], b); return r.ok && r.id === "q1" && r.answer === "production"; });
+  const textReply = parseInbound("line", JSON.stringify({ events: [{ message: { text: "deploy now" } }] }));
+  const textOK = textReply.ok && textReply.answer === "deploy now" && textReply.id === null;
+  let rs = emptyRelay();
+  rs = relayEnqueueAsk(rs, "d1", ask);
+  rs = relayEnqueueAnswer(rs, "d1", answer);
+  const drained = relayDrain(rs, "d1");
+  const queueOK = (rs.outbox["d1"] ?? []).length === 1 && drained.answers.length === 1 && (drained.state.inbox["d1"] ?? []).length === 0;
+  const relayTotal = (() => { try { parseInbound("x", null); relayDrain(emptyRelay(), "z"); return true; } catch { return false; } })();
   const total = (() => { try { verifyEnvelope(secret, null as never, 0); envelopeLeaksRaw(null as never, []); sealEnvelope("", null as never); return true; } catch { return false; } })();
 
   const checks = [
@@ -105,6 +169,9 @@ export function keryxGauntlet(): KeryxGauntlet {
     { name: "PRIVACY-NO-RAW", pass: noRaw, detail: "only a human summary + a sha256 command-hash cross the relay — never the raw command/secret" },
     { name: "ANSWER-BOUND", pass: answerBound, detail: "the answer is bound to the exact ask (id + command-hash)" },
     { name: "CHANNEL-AGNOSTIC", pass: channelAgnostic, detail: "the same signed envelope works over LINE / Slack / Discord / Telegram" },
+    { name: "RELAY-PARSE-ALL-PROVIDERS", pass: parseAll, detail: "a button reply parses identically from LINE / Slack / Discord / WhatsApp (the keryx token)" },
+    { name: "RELAY-TEXT-REPLY", pass: textOK, detail: "a free-text reply is extracted (id matched out-of-band)" },
+    { name: "RELAY-QUEUE-ROUNDTRIP", pass: queueOK && relayTotal, detail: "ask enqueued for delivery · answer queued · daemon drains + clears (per-daemon)" },
     { name: "DETERMINISTIC", pass: det, detail: "same inputs → byte-identical envelope" },
     { name: "TOTAL", pass: total, detail: "never throws on garbage" },
   ];
