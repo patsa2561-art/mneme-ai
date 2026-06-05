@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/gephyra",
-  "version": "2.196.0",
+  "version": "2.197.0",
   "description": "GEPHYRA — the living bridge / Toll Booth of Truth for AI agents. Real-time semantic truth-customs (verify · quarantine injection · honesty toll · conscience nudge · signed crossing) on top of any protocol. The deployable surface of Mneme.",
   "type": "module",
   "main": "./dist/index.js",
@@ -45,7 +45,7 @@
     "gephyra"
   ],
   "dependencies": {
-    "@mneme-ai/core": "2.196.0"
+    "@mneme-ai/core": "2.197.0"
   },
   "engines": {
     "node": ">=22.13.0 <25.0.0"
