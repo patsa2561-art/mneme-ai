@@ -71,6 +71,48 @@ You host the relay once (on a small box / your DO droplet) — it's a dumb, sign
 > The buttons your AI sends carry a tiny `keryx:<id>:<answer>` tag, so a reply from **any**
 > provider is understood the same way — that's why one relay covers them all.
 
+## One agent, every chat — answer ONCE, it clears everywhere ✅
+
+**Q: If one AI agent is connected to Telegram + LINE + Slack + Discord + WhatsApp and it asks
+you, does the question go to all of them — and if I tap on one, do the others clear?**
+
+**A: Yes to both.** An ask **fans out to every connected provider at once** (`mneme keryx
+broadcast`). The **first answer wins** (the answer id is one-time), and the question is
+**cleared on every other provider**:
+
+| Provider | how it clears |
+|---|---|
+| **Telegram · Slack · Discord** | the message is **edited** — buttons vanish, replaced by *"✅ answered on \<provider\>"* |
+| **LINE · WhatsApp** | no edit/recall API → a **follow-up** *"answered elsewhere"* is posted; a late tap is **safely ignored** (first-wins dedup) |
+
+`mneme keryx bridge` runs the loop: it drains the relay, marks the first answer, and clears
+the rest. *(Proven end-to-end: a Discord tap → Telegram & Slack edited, LINE notified, the
+duplicate ignored.)*
+
+## Test it per provider (after `mneme keryx providers` shows it connected)
+
+```bash
+mneme keryx broadcast --question "Deploy to prod?" --kind approve --relay https://<your-relay>
+mneme keryx bridge   --relay https://<your-relay>      # in another terminal — receives + clears
+```
+- **Slack:** make a Slack app, enable **Interactivity**, set the Request URL to
+  `https://<relay>/keryx/webhook/slack`, install to your workspace, put the bot token + channel
+  in `.mneme/keryx/providers.json`. Tap a button → it resolves + the other chats clear.
+- **Discord:** create a bot + an Interactions Endpoint URL `…/keryx/webhook/discord`; bot token
+  + channel id in the config. Tap a button.
+- **LINE:** Messaging API channel → webhook `…/keryx/webhook/line`; channel access token + your
+  user id. Tap a template button.
+- **WhatsApp:** Cloud API → webhook `…/keryx/webhook/whatsapp`; access token + phone-number id +
+  your number. Tap an interactive button.
+
+`.mneme/keryx/providers.json` (only fill the chats you use):
+```json
+{ "slack": {"token":"xoxb-…","channel":"C…"},
+  "discord": {"token":"…","channel":"…"},
+  "line": {"token":"…","to":"U…"},
+  "whatsapp": {"token":"…","phoneId":"…","to":"…"} }
+```
+
 ## Status (honest — no overclaim)
 
 | Piece | State |

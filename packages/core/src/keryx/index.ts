@@ -129,6 +129,38 @@ export function relayDrain(state: RelayState, daemonId: string): { answers: Kery
   s.inbox[daemonId] = []; return { answers, state: s };
 }
 
+// ─── MULTICAST + CROSS-PROVIDER CLEAR — the real use-case ─────────────────────
+// One agent connected to many chats: an ask fans out to ALL configured providers at once.
+// The FIRST answer wins (the one-time nonce makes a later tap a no-op), and the question is
+// CLEARED on every other provider so the human never sees a stale, tappable question twice.
+export const ALL_PROVIDERS = ["telegram", "line", "slack", "discord", "whatsapp"] as const;
+export type Provider = (typeof ALL_PROVIDERS)[number];
+
+/** Can this provider's already-sent message be edited/recalled (buttons removed)? Telegram /
+ *  Slack / Discord: yes (clean clear). LINE / WhatsApp: no edit API → we post a follow-up
+ *  "answered elsewhere" instead, and a late tap is safely ignored (one-time nonce). */
+export function canEdit(provider: string): boolean {
+  return provider === "telegram" || provider === "slack" || provider === "discord";
+}
+
+export interface SentMessage { provider: string; messageId: string }
+export interface ClearAction { provider: string; messageId: string; method: "edit" | "notify" }
+/** Given the messages an ask was sent on + which provider the human answered, return the
+ *  clear actions for every OTHER provider (edit where possible, else a follow-up notify). */
+export function clearPlan(sent: ReadonlyArray<SentMessage>, answeredProvider: string): ClearAction[] {
+  return (sent ?? [])
+    .filter((m) => m && m.provider && m.provider !== answeredProvider)
+    .map((m) => ({ provider: m.provider, messageId: String(m.messageId ?? ""), method: canEdit(m.provider) ? "edit" : "notify" as "edit" | "notify" }));
+}
+
+/** Should this incoming answer be accepted? First wins; later ones (already-answered id) are
+ *  ignored — the dedup that makes cross-provider fan-out safe even when a message can't be cleared. */
+export function acceptAnswer(answeredIds: ReadonlySet<string>, id: string): { accept: boolean; reason: string } {
+  if (!id) return { accept: false, reason: "no id" };
+  if (answeredIds && answeredIds.has(id)) return { accept: false, reason: "already answered on another provider — ignored (first wins)" };
+  return { accept: true, reason: "first answer — accepted" };
+}
+
 // ─── gauntlet ─────────────────────────────────────────────────────────────────
 export interface KeryxGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function keryxGauntlet(): KeryxGauntlet {
@@ -160,6 +192,19 @@ export function keryxGauntlet(): KeryxGauntlet {
   const drained = relayDrain(rs, "d1");
   const queueOK = (rs.outbox["d1"] ?? []).length === 1 && drained.answers.length === 1 && (drained.state.inbox["d1"] ?? []).length === 0;
   const relayTotal = (() => { try { parseInbound("x", null); relayDrain(emptyRelay(), "z"); return true; } catch { return false; } })();
+  // MULTICAST + CLEAR: fan-out to all, first wins, clear the rest (edit where possible)
+  const sent: SentMessage[] = [{ provider: "telegram", messageId: "t1" }, { provider: "line", messageId: "l1" }, { provider: "slack", messageId: "s1" }, { provider: "whatsapp", messageId: "w1" }];
+  const plan = clearPlan(sent, "telegram"); // human answered on telegram
+  const planOK = plan.length === 3 && !plan.some((p) => p.provider === "telegram")
+    && plan.find((p) => p.provider === "slack")?.method === "edit"
+    && plan.find((p) => p.provider === "line")?.method === "notify"
+    && plan.find((p) => p.provider === "whatsapp")?.method === "notify";
+  const editability = canEdit("telegram") && canEdit("slack") && canEdit("discord") && !canEdit("line") && !canEdit("whatsapp");
+  const seen2 = new Set<string>();
+  const first = acceptAnswer(seen2, "q1"); seen2.add("q1");
+  const second = acceptAnswer(seen2, "q1");                       // a later tap on another provider
+  const dedupOK = first.accept === true && second.accept === false;
+  const mcTotal = (() => { try { clearPlan(null as never, "x"); acceptAnswer(null as never, ""); canEdit(null as never); return true; } catch { return false; } })();
   const total = (() => { try { verifyEnvelope(secret, null as never, 0); envelopeLeaksRaw(null as never, []); sealEnvelope("", null as never); return true; } catch { return false; } })();
 
   const checks = [
@@ -172,6 +217,8 @@ export function keryxGauntlet(): KeryxGauntlet {
     { name: "RELAY-PARSE-ALL-PROVIDERS", pass: parseAll, detail: "a button reply parses identically from LINE / Slack / Discord / WhatsApp (the keryx token)" },
     { name: "RELAY-TEXT-REPLY", pass: textOK, detail: "a free-text reply is extracted (id matched out-of-band)" },
     { name: "RELAY-QUEUE-ROUNDTRIP", pass: queueOK && relayTotal, detail: "ask enqueued for delivery · answer queued · daemon drains + clears (per-daemon)" },
+    { name: "MULTICAST-CLEAR-PLAN", pass: planOK && editability && mcTotal, detail: "answer on one provider → clear every OTHER (edit Telegram/Slack/Discord, follow-up notify LINE/WhatsApp); the answered one is skipped" },
+    { name: "FIRST-WINS-DEDUP", pass: dedupOK, detail: "the first answer wins; a later tap on another provider is ignored (safe even when a message can't be recalled)" },
     { name: "DETERMINISTIC", pass: det, detail: "same inputs → byte-identical envelope" },
     { name: "TOTAL", pass: total, detail: "never throws on garbage" },
   ];
