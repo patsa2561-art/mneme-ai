@@ -45,6 +45,23 @@ function readCommits(cwd: string, limit = 400): revertRadar.CommitLite[] {
 
 export const ACCOUNTABILITY_TOOLS: MnemeTool[] = [
   {
+    name: "mneme.heartbeat.scan",
+    category: "audit",
+    description:
+      "SELF-MAINTAINING PULSE — read the last signed evolution snapshot: the daemon runs a safe maintenance beat on idle that metamorphoses memory (geo), RE-VERIFIES every signed ledger OFFLINE (attest · always-warm · geo), consolidates wisdom into axioms, and signs a tamper-evident record. Reports whether all ledgers still verify + how much wisdom accrued. HONEST: it self-maintains + self-verifies — it does NOT rewrite its own rules or kill anything. Example asks: 'is Mneme self-maintaining ok?', 'are the ledgers still intact?', 'did anything tamper?'",
+    whenToUse: "You want to confirm the autonomous maintenance is healthy + every signed ledger still verifies (no silent tamper/drift).",
+    triggers: ["is mneme self-maintaining", "heartbeat status", "are the ledgers intact", "self-audit", "did anything tamper"],
+    inputSchema: { type: "object", properties: {} },
+    handler: async (runtime: ToolRuntime): Promise<ToolResponse> => {
+      const p = join(runtime.cwd, ".mneme", "heartbeat", "snapshot.json");
+      if (!existsSync(p)) return { data: { active: false }, wisdom: "No heartbeat yet. The daemon runs one on idle; or run `mneme heartbeat` manually." };
+      let s: { ranAt?: number; verify?: { allOk?: boolean; attest?: boolean; warm?: boolean; geo?: boolean }; geo?: { axioms?: number; reclaimedBytes?: number } };
+      try { s = JSON.parse(readFileSync(p, "utf8")); } catch { return { data: { error: "snapshot unreadable" }, wisdom: "heartbeat snapshot corrupt." }; }
+      const ok = s.verify?.allOk === true;
+      return { data: { active: true, ...s }, wisdom: `Last self-maintenance beat ${s.ranAt ? new Date(s.ranAt).toISOString() : "?"}: every signed ledger ${ok ? "still VERIFIES ✓ (no tamper)" : "⚠ has an issue — investigate"} (attest ${s.verify?.attest ? "✓" : "✗"} · warm ${s.verify?.warm ? "✓" : "✗"} · geo ${s.verify?.geo ? "✓" : "✗"}). ${s.geo?.axioms ?? 0} axiom(s) of wisdom accrued. The system maintains + verifies itself — it does not rewrite its own rules.` };
+    },
+  },
+  {
     name: "mneme.geo.scan",
     category: "audit",
     description:

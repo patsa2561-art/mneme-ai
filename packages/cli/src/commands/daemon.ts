@@ -316,6 +316,18 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
   // Fire once at boot so first tick happens immediately, not 30s later.
   void tickAllOrgans();
 
+  // v2.198.0 — SELF-MAINTAINING HEARTBEAT: on idle, run ONE safe signed maintenance
+  // beat (geo memory metamorphosis + re-verify every ledger + signed evolution snapshot).
+  // Contained + exception-handled + idle-gated; self-maintains, never self-rewrites-rules.
+  const heartbeatLoop = setInterval(() => {
+    try {
+      if (Date.now() - lastUserActivityMs < 5 * 60_000) return; // only when idle ≥ 5 min
+      void import("./heartbeat.js").then(({ runHeartbeat }) => {
+        try { const r = runHeartbeat(repoRoot); appendLog(repoRoot, `[heartbeat] geo raw→${r.geo.rawAfter} · ${r.geo.axioms} axiom · ledgers ${r.verify.allOk ? "ok" : "⚠ TAMPER"}`); } catch (e) { appendLog(repoRoot, `[heartbeat] ${(e as Error).message}`); }
+      }).catch(() => { /* optional */ });
+    } catch { /* never let the heartbeat crash the daemon */ }
+  }, 10 * 60_000); // every 10 min
+
   // Re-index when HEAD changes. Debounce 800ms + dedup against last-seen
   // hash so detached-HEAD checkouts and other ref jiggles don't trigger
   // redundant reindex (v1.9.0 fix for daemon over-trigger bug).
@@ -383,6 +395,7 @@ async function runDaemonLoop(repoRoot: string): Promise<void> {
     appendLog(repoRoot, "daemon stopping");
     clearInterval(heartbeat);
     clearInterval(schedulerLoop);
+    clearInterval(heartbeatLoop);
     if (pendingReindex) clearTimeout(pendingReindex);
     for (const w of watchers) {
       try {

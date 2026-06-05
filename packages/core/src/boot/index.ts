@@ -59,6 +59,7 @@ export const DECISION_TABLE: readonly DecisionRow[] = [
   { when: "judging whether work survived, or which agent to trust with more autonomy", tool: "mneme.revert.scan  ·  mneme.agentbench.scan", why: "the regret flywheel: which commits got reverted/hotfixed + a Wilson-LB cross-vendor reliability ranking from THIS repo's real outcomes" },
   { when: "you need the CURRENT accountability picture instantly (survival / reliability / stability)", tool: "mneme.warm.scan", why: "an O(1) read of the always-warm state the attest hook maintains per commit — never recomputed, provably equal to a full rebuild (mneme warm verify)" },
   { when: "memory holds raw/PII you must purge for compliance, or it's bloating", tool: "mneme.geo.scan  ·  CLI: mneme geo metamorphose | forget <needle> | verify", why: "geological memory: raw dissolves to signed abstract→axiom over time (wisdom kept, raw provably destroyed) — right-to-be-forgotten by construction, no bloat" },
+  { when: "confirming Mneme's autonomous maintenance is healthy + no ledger was tampered", tool: "mneme.heartbeat.scan", why: "the daemon runs a safe signed beat on idle (metamorphose memory + re-verify every ledger offline + sign an evolution snapshot) — self-maintaining, never self-rewriting its rules" },
 ];
 
 /** The four boundary capabilities, one line each (for the boot packet header). */
