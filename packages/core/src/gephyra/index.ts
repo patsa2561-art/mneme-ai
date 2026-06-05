@@ -519,7 +519,19 @@ function _saveKeryxRelay(repoRoot: string, s: KeryxRelayState): void {
   try { const d = _join(repoRoot, ".mneme", "keryx"); if (!_existsSync(d)) _mkdirSync(d, { recursive: true }); _writeFileSync(_keryxStatePath(repoRoot), JSON.stringify(s), "utf8"); } catch { /* */ }
 }
 
-export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain", body: unknown, query: Record<string, string>): Promise<SavantHttpResponse> {
+/** Verify a Discord interaction's Ed25519 signature (required, else Discord rejects the endpoint).
+ *  publicKeyHex = the app's Public Key. Returns true iff the signature is valid. */
+export function verifyDiscordSig(publicKeyHex: string, timestamp: string, rawBody: string, signatureHex: string): boolean {
+  try {
+    const { createPublicKey, verify } = require("node:crypto") as typeof import("node:crypto");
+    if (!publicKeyHex || !signatureHex || !timestamp) return false;
+    const der = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKeyHex, "hex")]); // SPKI prefix + raw ed25519 key
+    const key = createPublicKey({ key: der, format: "der", type: "spki" });
+    return verify(null, Buffer.from(timestamp + rawBody, "utf8"), key, Buffer.from(signatureHex, "hex"));
+  } catch { return false; }
+}
+
+export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain", body: unknown, query: Record<string, string>, headers?: Record<string, string | string[] | undefined>): Promise<SavantHttpResponse> {
   const { parseInbound } = await import("../keryx/index.js");
   const s = _loadKeryxRelay(repoRoot);
   try {
@@ -532,6 +544,23 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
     }
     if (action === "webhook") {
       const provider = String(query["provider"] ?? "generic");
+      // ── Discord: verify Ed25519 (or Discord rejects the endpoint), answer PING with PONG,
+      //    and answer a button (component) interaction with type 7 so the user never sees a
+      //    red "interaction failed" — and the buttons are removed in the same response.
+      if (provider === "discord") {
+        const pub = process.env.KERYX_DISCORD_PUBLIC_KEY ?? "";
+        const sig = String(headers?.["x-signature-ed25519"] ?? ""); const tsHdr = String(headers?.["x-signature-timestamp"] ?? "");
+        const rawBody = typeof body === "string" ? body : JSON.stringify(body ?? {});
+        if (pub) { if (!verifyDiscordSig(pub, tsHdr, rawBody, sig)) return { status: 401, body: { error: "bad signature" } }; }
+        let j: { type?: number } = {}; try { j = typeof body === "string" ? JSON.parse(body) : (body as { type?: number }); } catch { /* */ }
+        if (j?.type === 1) return { status: 200, body: { type: 1 } };                 // PING → PONG
+        const parsedD = parseInbound("discord", body);
+        if (parsedD.ok) {
+          const owners = Object.values(s.askOwner); const daemonId = (parsedD.id && s.askOwner[parsedD.id]) || (owners.length === 1 ? owners[0] : "default");
+          s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), { v: 1, kind: "answer", id: parsedD.id ?? "", channel: "discord", payload: parsedD.answer ?? "", relayAttested: true, ts: Date.now() }]; _saveKeryxRelay(repoRoot, s);
+        }
+        return { status: 200, body: { type: 7, data: { content: `✅ received: ${parsedD.answer ?? "ok"} — recorded.`, components: [] } } }; // UPDATE_MESSAGE: clears buttons, no error
+      }
       const parsed = parseInbound(provider, body);
       if (!parsed.ok) return { status: 200, body: { ok: false, reason: parsed.reason } };  // 200 so the provider doesn't retry-storm
       // route to the daemon that owns this ask id (or a sole registered daemon)

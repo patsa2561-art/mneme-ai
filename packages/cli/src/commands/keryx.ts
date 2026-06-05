@@ -65,6 +65,15 @@ export function registerKeryxCommands(program: Command): void {
       out(`📡 broadcast id ${id} → ${sent.length}/${connected.length} providers. Run \`mneme keryx bridge --relay ${o.relay ?? "<url>"}\` to receive + auto-clear.`);
     });
 
+  k.command("test-send <provider>").description("PRE-STAGE CHECK — send one real test message to a provider with your token, so you confirm OUTBOUND works BEFORE you demo (catches a bad token/payload early).")
+    .action(async (provider: string) => {
+      const cwd = process.cwd(); const cfg = (loadProviders(cwd) as Record<string, ProviderCfg>)[provider];
+      if (!cfg?.token) { out(`✗ no token for ${provider} in .mneme/keryx/providers.json`); process.exitCode = 2; return; }
+      const r = await sendAsk(provider, cfg, { id: "selftest", nonce: "selftest", question: "✅ KERYX test — tap a button to confirm replies reach the relay", kind: "approve", agent: "keryx-test" });
+      out(r.ok ? `✓ sent to ${provider}${r.messageId ? " (msg " + r.messageId + ")" : ""} — check your chat; tap a button + run \`mneme keryx bridge\` to confirm the round-trip.` : `✗ ${provider} send FAILED: ${r.reason ?? "unknown"} — re-check token/channel/id.`);
+      if (!r.ok) process.exitCode = 2;
+    });
+
   k.command("bridge").description("Poll the relay for answers; FIRST answer wins, then CLEAR the question on every other provider (edit Telegram/Slack/Discord · notify LINE/WhatsApp).")
     .requiredOption("--relay <url>", "KERYX relay base URL").option("--daemon <id>", "daemon id", "default").option("--once", "drain once and exit (testing)")
     .action(async (o: { relay: string; daemon?: string; once?: boolean }) => {

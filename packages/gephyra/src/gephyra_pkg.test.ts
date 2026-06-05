@@ -146,6 +146,36 @@ describe("@mneme-ai/gephyra package", () => {
     }
   }, 20_000);
 
+  it("PK8 KERYX Discord — Ed25519 verify + PING→PONG + button→type 7 (no 'interaction failed', stage-ready)", async () => {
+    const { generateKeyPairSync, sign } = await import("node:crypto");
+    const { verifyDiscordSig, handleKeryxRelay } = await import("./index.js");
+    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+    const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).subarray(12).toString("hex"); // strip SPKI prefix → raw 32B
+    const ts = "1700000000"; const raw = JSON.stringify({ type: 1 });
+    const sigHex = sign(null, Buffer.from(ts + raw, "utf8"), privateKey).toString("hex");
+    expect(verifyDiscordSig(pubHex, ts, raw, sigHex)).toBe(true);
+    expect(verifyDiscordSig(pubHex, ts, raw, "00".repeat(64))).toBe(false);   // bad sig rejected (Discord setup needs this)
+
+    const prev = process.env.KERYX_DISCORD_PUBLIC_KEY; process.env.KERYX_DISCORD_PUBLIC_KEY = pubHex;
+    const repo = mkdtempSync(join(tmpdir(), "gephyra-dc-"));
+    try {
+      const hdr = (b: string) => ({ "x-signature-ed25519": sign(null, Buffer.from(ts + b, "utf8"), privateKey).toString("hex"), "x-signature-timestamp": ts });
+      // PING → PONG (type 1)
+      const ping = await handleKeryxRelay(repo, "webhook", raw, { provider: "discord" }, hdr(raw));
+      expect((ping.body as { type?: number }).type).toBe(1);
+      // a button (component) interaction → type 7 (update message, clears buttons, no error) + queued
+      await handleKeryxRelay(repo, "expect", JSON.stringify({ daemonId: "d1", askId: "q1" }), {});
+      const comp = JSON.stringify({ type: 3, data: { custom_id: "keryx:q1:approve" } });
+      const r = await handleKeryxRelay(repo, "webhook", comp, { provider: "discord" }, hdr(comp));
+      expect((r.body as { type?: number }).type).toBe(7);
+      const drained = await handleKeryxRelay(repo, "drain", "", { daemon: "d1" });
+      expect((drained.body as { answers?: Array<{ payload: string }> }).answers?.[0]?.payload).toBe("approve");
+      // a forged signature is rejected
+      const bad = await handleKeryxRelay(repo, "webhook", comp, { provider: "discord" }, { "x-signature-ed25519": "00".repeat(64), "x-signature-timestamp": ts });
+      expect(bad.status).toBe(401);
+    } finally { if (prev === undefined) delete process.env.KERYX_DISCORD_PUBLIC_KEY; else process.env.KERYX_DISCORD_PUBLIC_KEY = prev; }
+  }, 20_000);
+
   it("PK7 KERYX relay — a button reply from any provider routes to the daemon's drain", async () => {
     const repo = mkdtempSync(join(tmpdir(), "gephyra-keryx-"));
     const h = await startServer({ repoRoot: repo, port: 0 });

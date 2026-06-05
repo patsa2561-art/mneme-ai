@@ -89,11 +89,16 @@ export interface InboundAnswer { ok: boolean; id: string | null; answer: string 
  *  the KERYX button data `keryx:<id>:<answer>` is found wherever the provider puts it. */
 export function parseInbound(provider: string, body: unknown): InboundAnswer {
   const p = String(provider || "generic").toLowerCase();
-  let parsed: unknown = body;
-  if (typeof body === "string") { try { parsed = JSON.parse(body); } catch { parsed = { _raw: body }; } }
-  const blob = JSON.stringify(parsed ?? {});
-  // 1) the reliable path: our own button token, anywhere in the payload (works for ALL providers)
-  const m = blob.match(/keryx:([A-Za-z0-9_-]{1,64}):([^"\\]{1,200})/);
+  let raw = typeof body === "string" ? body : JSON.stringify(body ?? {});
+  // Slack Interactivity arrives as application/x-www-form-urlencoded: "payload=<json>"
+  if (/^payload=/.test(raw)) { try { raw = decodeURIComponent(raw.replace(/^payload=/, "").replace(/\+/g, " ")); } catch { /* */ } }
+  let parsed: unknown; try { parsed = JSON.parse(raw); } catch { parsed = { _raw: raw }; }
+  // search the raw + the stringified + a url-decoded copy (covers urlencoded button values)
+  let blob = raw + " " + JSON.stringify(parsed ?? {});
+  try { blob += " " + decodeURIComponent(blob); } catch { /* */ }
+  // 1) the reliable path: our own button token, anywhere in the payload (works for ALL providers:
+  //    LINE postback.data · Slack action.value · Discord custom_id · WhatsApp button_reply.id)
+  const m = blob.match(/keryx:([A-Za-z0-9_-]{1,64}):([^"\\&\s]{1,200})/);
   if (m) return { ok: true, id: m[1], answer: m[2], provider: p, reason: "keryx button token" };
   // 2) provider text-reply fallbacks (id must be supplied out-of-band by the caller)
   const o = (parsed ?? {}) as Record<string, unknown>;

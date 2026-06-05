@@ -89,7 +89,52 @@ broadcast`). The **first answer wins** (the answer id is one-time), and the ques
 the rest. *(Proven end-to-end: a Discord tap → Telegram & Slack edited, LINE notified, the
 duplicate ignored.)*
 
+## ✅ The relay handles each provider's quirk for you
+
+You don't have to fight the per-platform webhook formats — the relay normalizes them:
+**Slack** sends `application/x-www-form-urlencoded` (`payload=…`) → auto-decoded · **Discord**
+sends a `PING` to verify the endpoint → auto-answered with `PONG` · **WhatsApp/Meta** verifies
+with a `GET ?hub.challenge=…` → auto-echoed. (All tested.) The button you send carries
+`keryx:<id>:<answer>`, so a tap from any of them is understood identically.
+
 ## Test it per provider (after `mneme keryx providers` shows it connected)
+
+**Step 0 — make your relay public (once).** On your DO droplet: `mneme gephyra serve --port 17742`
+→ your relay is `http://<droplet-ip>:17742`. (Local box? `cloudflared tunnel --url http://localhost:17742`
+gives an `https://…` URL.) Use that as `<relay>` below.
+
+### 🟪 Slack (easiest)
+1. **api.slack.com/apps** → *Create New App* → *From scratch*.
+2. *OAuth & Permissions* → add bot scope **`chat:write`** → *Install to Workspace* → copy **`xoxb-…`**.
+3. *Interactivity & Shortcuts* → toggle **On** → *Request URL* = `<relay>/keryx/webhook/slack` → Save.
+4. Invite the bot to a channel; copy that channel's id (`C…`).
+5. `.mneme/keryx/providers.json`: `{ "slack": {"token":"xoxb-…","channel":"C…"} }`
+
+### 🟦 Discord
+1. **discord.com/developers** → *New Application* → *Bot* → *Reset Token* → copy. Also copy the **Public Key** (General Information).
+2. Invite the bot to your server (OAuth2 URL, scopes `bot` + `applications.commands`, perm *Send Messages*).
+3. **On the relay, set** `KERYX_DISCORD_PUBLIC_KEY=<public key>` (so the relay can verify Discord's Ed25519 signature — required, else Discord refuses the endpoint).
+4. *General Information* → **Interactions Endpoint URL** = `<relay>/keryx/webhook/discord` → Save (the relay verifies the signature, auto-PONGs the test, and answers a button tap with *type 7* so the user never sees a red "interaction failed").
+5. Copy your channel id. Config: `{ "discord": {"token":"…","channel":"<channelId>"} }`
+
+### 🟩 LINE
+1. **developers.line.biz** → a *Messaging API* channel → copy **Channel access token**.
+2. *Webhook URL* = `<relay>/keryx/webhook/line` → enable *Use webhook*.
+3. Add the bot as a friend; get your user id (`U…`). Config: `{ "line": {"token":"…","to":"U…"} }`
+
+### 🟢 WhatsApp (Cloud API)
+1. **developers.facebook.com** → app → *WhatsApp* → copy the **temporary access token** + **phone-number id**.
+2. *Configuration* → Webhook *Callback URL* = `<relay>/keryx/webhook/whatsapp`, set any *Verify token* → Verify (the relay auto-echoes the challenge) → subscribe to **messages**.
+3. Config: `{ "whatsapp": {"token":"…","phoneId":"…","to":"<your number, e.g. 66…>"} }`
+
+### ✅ Pre-stage check (do this before any live demo)
+Validate each provider's OUTBOUND send with YOUR token first — so nothing surprises you on stage:
+```bash
+mneme keryx test-send slack      # (or discord / line / whatsapp) → a test message should appear in that chat
+```
+If it lands, you're good. If it fails, it prints exactly why (bad token / channel / id) — fix before the demo.
+
+### Then, for any of them:
 
 ```bash
 mneme keryx broadcast --question "Deploy to prod?" --kind approve --relay https://<your-relay>

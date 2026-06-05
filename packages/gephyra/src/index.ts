@@ -28,6 +28,7 @@ export const handleMcpCallRequest = gephyra.handleMcpCallRequest;
 export const handleSavantRequest = gephyra.handleSavantRequest;
 export const handleA2ARequest = gephyra.handleA2ARequest;
 export const handleKeryxRelay = gephyra.handleKeryxRelay;
+export const verifyDiscordSig = gephyra.verifyDiscordSig;
 export const a2aOpenApi = gephyra.a2aOpenApi;
 export const routeToolCall = gephyra.routeToolCall;
 export const bridgeStatus = gephyra.bridgeStatus;
@@ -73,6 +74,12 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
       }
       // KERYX relay (inbound half): daemon registers expectations + drains; providers post webhooks.
       const kq = new URLSearchParams((url.split("?")[1] ?? ""));
+      // WhatsApp (Meta) verifies a webhook with a GET challenge — echo hub.challenge back.
+      if (req.method === "GET" && url.startsWith("/keryx/webhook")) {
+        const ch = kq.get("hub.challenge");
+        if (ch !== null) { res.writeHead(200, { "content-type": "text/plain" }); res.end(ch); return; }
+        res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: true, hint: "POST a provider webhook here" })); return;
+      }
       if (req.method === "GET" && url.startsWith("/keryx/drain")) {
         void gephyra.handleKeryxRelay(repoRoot, "drain", "", { daemon: kq.get("daemon") ?? "default" })
           .then((r) => { res.writeHead(r.status, { "content-type": "application/json" }); res.end(JSON.stringify(r.body)); })
@@ -85,7 +92,7 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
         let kb = ""; req.on("data", (c) => { kb += c; if (kb.length > 1_000_000) req.destroy(); });
         req.on("end", () => {
           const provider = isKeryxWebhook ? (url.split("/keryx/webhook/")[1]?.split("?")[0] || kq.get("provider") || "generic") : "";
-          void gephyra.handleKeryxRelay(repoRoot, isKeryxExpect ? "expect" : "webhook", kb, { provider })
+          void gephyra.handleKeryxRelay(repoRoot, isKeryxExpect ? "expect" : "webhook", kb, { provider }, req.headers as Record<string, string | string[] | undefined>)
             .then((r) => { res.writeHead(r.status, { "content-type": "application/json" }); res.end(JSON.stringify(r.body)); })
             .catch((e: Error) => { res.writeHead(500, { "content-type": "application/json" }); res.end(JSON.stringify({ error: e.message })); });
         });
