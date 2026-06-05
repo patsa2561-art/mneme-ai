@@ -58,6 +58,29 @@ export function registerSkillscanCommands(program: Command): void {
       if (r.verdict === "BLOCK") process.exitCode = 2;
     });
 
+  k.command("card <path>").description("Emit a portable, machine-readable SKILL CARD (capabilities · declared effects · excessive-agency check · risk verdict · content-hash) — the SkillSpector/OpenSSF standard, but NOTARY-signed for OFFLINE verify (no central catalog to trust).")
+    .option("--name <n>", "skill name").option("--purpose <p>", "one-line stated purpose (for the excessive-agency check)")
+    .option("--sign", "NOTARY-sign the card").option("--out <file>", "write the card JSON").option("--json", "print the card as JSON")
+    .action((path: string, o: { name?: string; purpose?: string; sign?: boolean; out?: string; json?: boolean }) => {
+      const { text } = readSkill(path);
+      if (!text.trim()) { out(`✗ nothing to scan at ${path}`); process.exitCode = 2; return; }
+      // fall back to package.json name/description for name/purpose
+      let name = o.name, purpose = o.purpose;
+      try { const pj = JSON.parse(readFileSync(join(path, "package.json"), "utf8")); name = name || pj.name; purpose = purpose || pj.description; } catch { /* */ }
+      const card = skillscan.buildSkillCard({ name: name || basename(path), purpose: purpose || "", content: text });
+      let receipt: unknown = null;
+      if (o.sign || o.out) { try { receipt = notary.issueReceipt(process.cwd(), { kind: "skill-provenance", subject: `skill-card:${card.name}`, payload: card, includePayload: true, issuedAt: Date.now() }); } catch { /* */ } if (o.out && receipt) writeFileSync(o.out, JSON.stringify(receipt, null, 2), "utf8"); }
+      if (o.json) { out(JSON.stringify({ card, receipt }, null, 2)); if (card.verdict === "BLOCK") process.exitCode = 2; return; }
+      const icon = card.verdict === "BLOCK" ? "🔴" : card.verdict === "REVIEW" ? "🟡" : "🟢";
+      out(`🪪 SKILL CARD — ${card.name} · ${icon} ${card.verdict}`);
+      if (card.purpose) out(`   purpose: ${card.purpose}`);
+      out(`   capabilities: ${card.capabilities.length ? card.capabilities.join(", ") : "none declared"}`);
+      if (card.excessiveAgency.flagged) out(`   ⚠ excessive agency: ${card.excessiveAgency.reason}`);
+      if (card.risks.length) out(`   risk checks fired: ${card.risks.join(", ")}`);
+      out(`   sha256 ${card.contentHash.slice(0, 16)}…${receipt ? ` · 🪪 signed${o.out ? " → " + o.out : ""} (verify: mneme skillscan verify)` : ""}`);
+      if (card.verdict === "BLOCK") process.exitCode = 2;
+    });
+
   k.command("verify <receipt>").description("Verify a provenance receipt OFFLINE (Ed25519); with --path, re-hash the skill to confirm it's unchanged.")
     .option("--path <skill>", "re-scan this skill and confirm its content-hash matches the receipt")
     .action((receiptFile: string, o: { path?: string }) => {
