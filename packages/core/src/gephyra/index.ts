@@ -346,7 +346,7 @@ export async function routeToolCall(
 // v2.84.0 — GEPHYRA Phase 2: serve-as-endpoint + auto-advertise
 // ════════════════════════════════════════════════════════════════════════
 
-import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync } from "node:fs";
+import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync, appendFileSync as _appendFileSync } from "node:fs";
 import { join as _join } from "node:path";
 import { createPublicKey as _createPublicKey, verify as _ed25519Verify } from "node:crypto";
 
@@ -382,7 +382,7 @@ export async function handleCrossRequest(repoRoot: string, raw: unknown): Promis
   }
 }
 
-export interface McpCallHttpResponse { status: number; body: ToolCallRoute | { error: string } }
+export interface McpCallHttpResponse { status: number; body: ToolCallRoute | { error: string } | { action: string; gate?: unknown; reason?: string } | (ToolCallRoute & { gate?: unknown }) }
 
 /**
  * Phase 4 — GEPHYRA as an MCP-proxy endpoint. An agent points its MCP client at
@@ -392,6 +392,26 @@ export interface McpCallHttpResponse { status: number; body: ToolCallRoute | { e
  * passthrough otherwise). Returns the routing verdict (allow/gate/block) + the
  * lane's signed crossing. Pure of the server; never throws.
  */
+/** MCP GATEWAY: gate the tool-call (policy + behavioral risk + provenance) and append a
+ *  hash-chained, NOTARY-signed audit frame — the local-first, offline-verifiable alternative to
+ *  a cloud gateway's trust-me audit DB. Returns the gate verdict. */
+export async function mcpGateAndAudit(repoRoot: string, call: { tool: string; agent?: string; args?: unknown }): Promise<{ decision: string; risk: number; reasons: string[]; argsHash: string }> {
+  const { gateCall, appendAuditFrame } = await import("../mcpgate/index.js");
+  const dir = _join(repoRoot, ".mneme", "mcpgate");
+  let policy = {}; try { const pp = _join(dir, "policy.json"); if (_existsSync(pp)) policy = JSON.parse(_readFileSync(pp, "utf8")); } catch { /* */ }
+  const verdict = gateCall(call, policy);
+  try {
+    if (!_existsSync(dir)) _mkdirSync(dir, { recursive: true });
+    const ledger = _join(dir, "audit.jsonl");
+    let prev = null; try { if (_existsSync(ledger)) { const lines = _readFileSync(ledger, "utf8").trim().split("\n").filter(Boolean); if (lines.length) prev = JSON.parse(lines[lines.length - 1]); } } catch { /* */ }
+    const frame = appendAuditFrame(prev, call, verdict, Date.now());
+    _appendFileSync(ledger, JSON.stringify(frame) + "\n");
+    // sign the chain HEAD with NOTARY (Ed25519) — anyone verifies the tip offline, no shared secret
+    try { const { issueReceipt } = await import("../notary/receipt.js"); const rec = issueReceipt(repoRoot, { kind: "reasoning-trace", subject: "mcpgate-audit-head", payload: { frameId: frame.frameId, seq: frame.seq }, includePayload: true, issuedAt: Date.now() }); _writeFileSync(_join(dir, "audit.head.json"), JSON.stringify(rec)); } catch { /* */ }
+  } catch { /* audit is best-effort; never block the gate decision on a write failure */ }
+  return verdict;
+}
+
 export async function handleMcpCallRequest(repoRoot: string, raw: unknown, deps: { heph?: CrossCommandDeps; gephyra?: CrossDeps } = {}): Promise<McpCallHttpResponse> {
   let parsed: unknown = raw;
   if (typeof raw === "string") {
@@ -403,14 +423,15 @@ export async function handleMcpCallRequest(repoRoot: string, raw: unknown, deps:
     return { status: 400, body: { error: "required: tool (string), agent (string); optional: args (object)" } };
   }
   try {
-    const route = await routeToolCall(repoRoot, {
-      tool: o["tool"] as string,
-      args: (o["args"] && typeof o["args"] === "object") ? o["args"] as Record<string, unknown> : undefined,
-      agent: o["agent"] as string,
-    }, deps);
+    const call = { tool: o["tool"] as string, args: (o["args"] && typeof o["args"] === "object") ? o["args"] as Record<string, unknown> : undefined, agent: o["agent"] as string };
+    // MCP GATEWAY: gate + audit every call BEFORE proxying. Block/needs-approval never reach the tool.
+    const gate = await mcpGateAndAudit(repoRoot, call);
+    if (gate.decision === "block") return { status: 200, body: { action: "block", gate, reason: gate.reasons.join("; ") || "blocked by the MCP gateway" } };
+    if (gate.decision === "needs-approval") return { status: 200, body: { action: "needs-approval", gate, reason: "this tool-call needs a human — route it to the pager (mneme pager request)" } };
+    const route = await routeToolCall(repoRoot, call, deps);
     // A blocked crossing is a successful inspection — surface 200 with action:"block"
     // so the proxying client can decide; we never throw a 5xx for a refusal.
-    return { status: 200, body: route };
+    return { status: 200, body: { ...route, gate } };
   } catch (e) {
     return { status: 500, body: { error: (e as Error).message } };
   }

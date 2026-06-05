@@ -154,6 +154,7 @@ import { registerPagerCommands } from "./commands/pager.js";
 import { registerKeryxCommands } from "./commands/keryx.js";
 import { registerCompileCommands } from "./commands/compile.js";
 import { registerSkillscanCommands } from "./commands/skillscan.js";
+import { registerMcpgateCommands } from "./commands/mcpgate.js";
 import { registerAdamasCommands } from "./commands/adamas.js";
 import { registerPrismCommands } from "./commands/prism.js";
 import { registerGoldilocksCommands } from "./commands/goldilocks.js";
@@ -4990,6 +4991,7 @@ export async function run(argv: string[]): Promise<void> {
   registerKeryxCommands(program);
   registerCompileCommands(program);
   registerSkillscanCommands(program);
+  registerMcpgateCommands(program);
   registerAdamasCommands(program);
   registerPrismCommands(program);
   registerGoldilocksCommands(program);

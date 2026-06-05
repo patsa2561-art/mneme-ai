@@ -20,7 +20,7 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { trustless, matrix, firewall } from "@mneme-ai/core";
+import { trustless, matrix, firewall, gephyra } from "@mneme-ai/core";
 import { buildRuntime, buildToolMap } from "@mneme-ai/mcp";
 import { buildSearchIndex, searchTools, type SearchIndex } from "./search.js";
 import { createRequire } from "node:module";
@@ -103,12 +103,21 @@ export function buildImpl(cwd: string, touch: () => void = () => {}) {
       if (!rt) return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `runtime unavailable: ${runtimeErr}`, customs_json };
       let args: Record<string, unknown> = {};
       try { args = argsJson ? (JSON.parse(argsJson) as Record<string, unknown>) : {}; } catch { return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: "args_json is not valid JSON", customs_json }; }
+      // MCP GATEWAY — gate + write a signed audit frame for every gRPC tool call (same engine as
+      // the HTTP MCP-proxy). block / needs-approval never reach the tool. customs carries the verdict.
+      let gate: { decision: string; risk: number; reasons: string[]; argsHash: string } | null = null;
+      try { gate = await gephyra.mcpGateAndAudit(cwd, { tool, agent: "matrix-grpc", args }); } catch { /* gate is best-effort; fail-open to customs */ }
+      if (gate && gate.decision !== "allow") {
+        const cj = JSON.stringify({ ...customs, gate });
+        return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: `${gate.decision}: ${gate.reasons.join("; ") || "MCP gateway"}`, customs_json: cj };
+      }
+      const customsWithGate = JSON.stringify({ ...customs, gate });
       const resp = await t.handler(rt, args);
       const data = (resp?.data ?? {}) as Record<string, unknown>;
       // proof-per-message: bind the response data to an offline-verifiable Ed25519 receipt
       const wrapped = trustless.proofWrap(cwd, `matrix:${tool}`, typeof data === "object" && data ? data : { value: data }) as Record<string, unknown>;
       const proof = wrapped["_proof"];
-      return { ok: true, data_json: JSON.stringify(data), wisdom: String(resp?.wisdom ?? ""), proof_json: JSON.stringify(proof ?? null), error: "", customs_json };
+      return { ok: true, data_json: JSON.stringify(data), wisdom: String(resp?.wisdom ?? ""), proof_json: JSON.stringify(proof ?? null), error: "", customs_json: customsWithGate };
     } catch (e) {
       return { ok: false, data_json: "{}", wisdom: "", proof_json: "", error: (e as Error).message, customs_json: "" };
     }
