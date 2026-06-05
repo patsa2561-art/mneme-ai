@@ -145,6 +145,16 @@ export interface AgentReadyBlock {
   note: string;
 }
 
+/** Script safety — what `npm install` / CI / shell scripts in the repo actually run (supply-chain). */
+export interface ScriptSafetyBlock {
+  score: number;
+  band: "safe" | "review" | "risky";
+  scanned: number;
+  autoRunCount: number;
+  findings: Array<{ where: string; autoRun: boolean; verdict: "PASS" | "REVIEW" | "BLOCK"; effects: string[]; risks: string[] }>;
+  note: string;
+}
+
 export interface XRaySummary {
   headline: string;
   grade: Grade;
@@ -170,6 +180,7 @@ export interface XRayReport {
   /** optional so older reports stay valid; the engine always produces it. */
   stability?: StabilityBlock;
   agentReady?: AgentReadyBlock;
+  scriptSafety?: ScriptSafetyBlock;
   /** sha256 over the canonicalised metric blocks — a tamper-evident content id. */
   fingerprint: string;
 }

@@ -17,6 +17,7 @@ import { analyzeCoupling } from "./battery/coupling.js";
 import { analyzeSecurity } from "./battery/security.js";
 import { analyzeStability } from "./battery/stability.js";
 import { analyzeAgentReadiness } from "./battery/agentready.js";
+import { analyzeScriptSafety } from "./battery/scriptsafety.js";
 import { shallowClone } from "./clone.js";
 import { headCommit, repoNameFromUrl, repoNameFromPath } from "./util.js";
 
@@ -59,10 +60,11 @@ export async function buildXRay(opts: BuildOptions): Promise<XRayReport> {
     const security = analyzeSecurity(repoPath, maxFiles);
     const stability = analyzeStability(repoPath, now);
     const agentReady = analyzeAgentReadiness(repoPath);
+    const scriptSafety = analyzeScriptSafety(repoPath);
 
     const summary = grade({ deps, secrets, busFactor, age, complexity, hotspots, coupling, security });
 
-    const blocks = { deps, secrets, busFactor, age, complexity, hotspots, coupling, security, stability, agentReady };
+    const blocks = { deps, secrets, busFactor, age, complexity, hotspots, coupling, security, stability, agentReady, scriptSafety };
     const fingerprint = createHash("sha256")
       .update(JSON.stringify({ subject: { repoName: subject.repoName, commitHash: subject.commitHash }, blocks }))
       .digest("hex");

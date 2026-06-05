@@ -101,6 +101,7 @@
     (dep.licenseFlags || []).forEach((l) => risks.push({ g: "License", icon: "⚖️", t: `${esc(l.name)} — ${esc(l.license)}` }));
     (bf.fragileFiles || []).forEach((f) => risks.push({ g: "Single-owner", icon: "👤", t: `${esc(f.file)} — one author owns ${Math.round((f.topAuthorShare || 0) * 100)}%` }));
     (su.injectionWhere || []).forEach((w) => risks.push({ g: "Prompt-injection", icon: "🧪", t: esc(w) }));
+    ((r.scriptSafety && r.scriptSafety.findings) || []).filter((f) => f.verdict === "BLOCK").forEach((f) => risks.push({ g: f.autoRun ? "Install script ⚡" : "Script", icon: "📦", t: `${esc(f.where)} — ${esc((f.risks || []).join(", ") || (f.effects || []).join(", "))}` }));
 
     const top = T.slice(0, 5);
     return { tone, head, kind, takeaways: top, risks };
@@ -290,6 +291,21 @@
     </div>`;
   }
 
+  // SUPPLY-CHAIN / SCRIPT SAFETY — what `npm install` + CI + shell scripts actually run (MNEME-BC).
+  function scriptSafetyHTML(r) {
+    const s = r.scriptSafety; if (!s || !s.scanned) return "";
+    const col = s.band === "safe" ? "#16a34a" : s.band === "review" ? "#d97706" : "#e11d48";
+    const lbl = s.band === "safe" ? "SAFE" : s.band === "review" ? "REVIEW" : "RISKY";
+    const chips = (s.findings || []).slice(0, 8).map((f) =>
+      `<span class="archip off">${f.verdict === "BLOCK" ? "🔴" : "🟡"} ${esc(f.where)}${f.autoRun ? " ⚡" : ""}${(f.risks && f.risks.length) ? " · " + esc(f.risks.join(", ")) : (f.effects || []).length ? " · " + esc(f.effects.join(", ")) : ""}</span>`).join("")
+      || `<span class="archip on">✓ ${s.scanned} script(s) scanned — nothing risky</span>`;
+    return `<div class="ar">
+      <div class="arhead">📦 Supply-Chain Safety — <b style="color:${col}">${s.score}/100 · ${lbl}</b> <span class="aroff">(what \`npm install\` + CI scripts run · MNEME-BC, no AI)</span></div>
+      <div class="arsub">${esc(s.note)}${s.autoRunCount ? ` <b>${s.autoRunCount}</b> run automatically on install/CI (⚡ = unreviewed).` : ""}</div>
+      <div class="archips">${chips}</div>
+    </div>`;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     g.__lastSigned = signed;   // stash for the "Verify signature" proof button
@@ -336,6 +352,7 @@
       ${airQualityHTML(r)}
       ${stabilityHTML(r)}
       ${agentReadyHTML(r)}
+      ${scriptSafetyHTML(r)}
       ${momentumHTML(r)}
       ${keystoneHTML(r)}
       ${riskMapHTML(r)}
