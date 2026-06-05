@@ -28,4 +28,5 @@ export { runBridge } from "./bridge.js";
 export { buildContextPack, type ContextPack } from "./pack.js";
 export { analyzeCoupling } from "./battery/coupling.js";
 export { analyzeStability } from "./battery/stability.js";
+export { analyzeAgentReadiness } from "./battery/agentready.js";
 export { licenseClass } from "./battery/deps.js";

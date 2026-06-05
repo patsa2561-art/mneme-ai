@@ -277,6 +277,19 @@
     </div>`;
   }
 
+  // AGENT-READINESS — is this repo safe for an autonomous AI agent to work in?
+  function agentReadyHTML(r) {
+    const a = r.agentReady; if (!a || !a.signals) return "";
+    const col = a.band === "ready" ? "#16a34a" : a.band === "caution" ? "#d97706" : "#e11d48";
+    const lbl = a.band === "ready" ? "READY" : a.band === "caution" ? "CAUTION" : "RISKY";
+    const chip = (s) => `<span class="archip ${s.present ? "on" : "off"}">${s.present ? "✓" : "✗"} ${esc(s.label)}</span>`;
+    return `<div class="ar">
+      <div class="arhead">🤖 Agent-Readiness — <b style="color:${col}">${a.score}/100 · ${lbl}</b> <span class="aroff">(safe for an autonomous AI agent?)</span></div>
+      <div class="arsub">${esc(a.note)}</div>
+      <div class="archips">${a.signals.map(chip).join("")}</div>
+    </div>`;
+  }
+
   function xrayCardHTML(signed, opts) {
     opts = opts || {};
     g.__lastSigned = signed;   // stash for the "Verify signature" proof button
@@ -322,6 +335,7 @@
       </div>
       ${airQualityHTML(r)}
       ${stabilityHTML(r)}
+      ${agentReadyHTML(r)}
       ${momentumHTML(r)}
       ${keystoneHTML(r)}
       ${riskMapHTML(r)}

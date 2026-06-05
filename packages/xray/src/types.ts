@@ -135,6 +135,16 @@ export interface StabilityBlock {
   note: string;
 }
 
+/** Agent-readiness — governance signals that catch an autonomous agent's mistakes. */
+export interface AgentReadyBlock {
+  score: number;
+  band: "ready" | "caution" | "risky";
+  signals: Array<{ key: string; label: string; present: boolean; weight: number }>;
+  present: string[];
+  missing: string[];
+  note: string;
+}
+
 export interface XRaySummary {
   headline: string;
   grade: Grade;
@@ -159,6 +169,7 @@ export interface XRayReport {
   security: SecurityBlock;
   /** optional so older reports stay valid; the engine always produces it. */
   stability?: StabilityBlock;
+  agentReady?: AgentReadyBlock;
   /** sha256 over the canonicalised metric blocks — a tamper-evident content id. */
   fingerprint: string;
 }
