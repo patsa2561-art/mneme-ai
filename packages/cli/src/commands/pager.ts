@@ -297,6 +297,37 @@ export function registerPagerCommands(program: Command): void {
       out(`✓ pager configured${cfg.lineToken ? " (+ LINE notify-mirror)" : ""}. Run with \`mneme pager start\`, wire the hook with \`mneme pager hook\`.`);
     });
 
+  p.command("add-chat <provider>").description("Add a chat lane to the BROADCAST MATRIX (so an approval also fans out to LINE/Slack/Discord/WhatsApp, not just Telegram). Sets the relay + the provider creds in one shot — repeatable + stable.")
+    .option("--relay <url>", "the KERYX relay base URL (where provider replies land; your own or a shared one)")
+    .option("--token <t>", "bot/access token (slack xoxb-… / discord / whatsapp)")
+    .option("--channel <c>", "channel id (slack C… / discord channel id)")
+    .option("--channel-id <id>", "LINE channel id").option("--channel-secret <s>", "LINE channel secret")
+    .option("--to <id>", "LINE user id / WhatsApp recipient number").option("--phone-id <id>", "WhatsApp phone-number id")
+    .action((provider: string, o: { relay?: string; token?: string; channel?: string; channelId?: string; channelSecret?: string; to?: string; phoneId?: string }) => {
+      const cwd = process.cwd(); const p = provider.toLowerCase();
+      if (!keryx.ALL_PROVIDERS.includes(p as never)) { out(`✗ unknown provider "${p}". One of: ${keryx.ALL_PROVIDERS.join(", ")}`); process.exitCode = 2; return; }
+      const entry: ProviderCfg = {};
+      if (o.token) entry.token = o.token; if (o.channel) entry.channel = o.channel;
+      if (o.channelId) entry.channelId = o.channelId; if (o.channelSecret) entry.channelSecret = o.channelSecret;
+      if (o.to) entry.to = o.to; if (o.phoneId) entry.phoneId = o.phoneId;
+      const ok = entry.token || (p === "line" && entry.channelId && entry.channelSecret);
+      if (!ok) { out(`✗ ${p} needs ${p === "line" ? "--channel-id + --channel-secret" : "--token (+ --channel where applicable)"}`); process.exitCode = 2; return; }
+      // 1) provider creds → .mneme/keryx/providers.json
+      const kdir = join(cwd, ".mneme", "keryx"); mkdirSync(kdir, { recursive: true });
+      const kp = join(kdir, "providers.json");
+      let provs: Record<string, ProviderCfg> = {}; try { if (existsSync(kp)) provs = JSON.parse(readFileSync(kp, "utf8")); } catch { /* */ }
+      provs[p] = { ...provs[p], ...entry }; writeFileSync(kp, JSON.stringify(provs, null, 2), "utf8");
+      // 2) relay → pager config (so the wait-loop drains replies)
+      if (o.relay) { const cfg = loadCfg(cwd); cfg.keryxRelay = o.relay.replace(/\/$/, ""); mkdirSync(dir(cwd), { recursive: true }); writeFileSync(cfgPath(cwd), JSON.stringify(cfg, null, 2), "utf8"); }
+      const relay = o.relay || loadCfg(cwd).keryxRelay;
+      const lanes = keryx.ALL_PROVIDERS.filter((x) => { const c = provs[x]; return c && (c.token || (x === "line" && c.channelId && c.channelSecret)); });
+      if (loadCfg(cwd).telegramToken) lanes.unshift("telegram" as never);
+      out(`✓ added ${p} to the broadcast matrix${relay ? ` · relay = ${relay}` : ""}`);
+      out(`   connected lanes now: ${Array.from(new Set(lanes)).join(", ")}`);
+      if (!relay) out("   ⚠ no relay set — replies from LINE/Slack/etc need a relay (re-run with --relay <url>); Telegram works without one.");
+      else { out(`   webhook for this provider → ${relay}/keryx/webhook/${p}`); out(`   verify outbound: mneme keryx test-send ${p}`); }
+    });
+
   p.command("request").description("THE CLAUDE CODE HOOK — decide on a command: AUTO_ALLOW (Trust-Tide) or BROADCAST the ask to your chats (Telegram + LINE/Slack/Discord/WhatsApp in parallel) + BLOCK-AND-WAIT for the first signed answer from any of them, then emit Claude Code's permissionDecision. Dead-man default on TTL.")
     .option("--command <c>", "the raw command (optional — read from the Claude Code hook JSON on stdin if omitted)").option("--agent <a>", "agent id", "agent").option("--session <s>", "session id", "default")
     .option("--channels <list>", "which chats to broadcast to: 'all' (default) or a subset like 'line,whatsapp'")
