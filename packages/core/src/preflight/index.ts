@@ -57,8 +57,8 @@ export function buildPreflight(input: { command: string; blast: Blast; history?:
   const h = input?.history ?? { seen: 0, succeeded: 0 };
   const trust = wilsonLB(h.succeeded, h.seen);
   const warnings: string[] = [];
-  if (blast === "destructive") warnings.push("DESTRUCTIVE — cannot be pre-run; approve only if you are certain");
-  if (!se.sideEffectFree && blast !== "destructive") warnings.push("has side-effects (write/network) — cannot be safely pre-run, only briefed");
+  if (blast === "destructive") warnings.push("this one changes things, so it isn't test-run first — just glance at the command before you approve");
+  if (!se.sideEffectFree && blast !== "destructive") warnings.push("writes/network — shown as a brief (not test-run)");
   if (h.seen === 0) warnings.push("first time this command-class is seen here — no track record yet");
   if ((h.recentFails ?? 0) > 0) warnings.push(`⚠ this command-class FAILED ${h.recentFails}× recently — review carefully before approving`);
   // speculate ONLY when provably read-only AND not destructive.
@@ -71,13 +71,16 @@ export function buildPreflight(input: { command: string; blast: Blast; history?:
   return { command: command.slice(0, 200), blast, sideEffectFree: se.sideEffectFree, speculatable, trust, trustBasis: h.seen ? `${h.succeeded}/${h.seen} of this class ran clean` : "no history yet", recommendation, warnings };
 }
 
-/** Render a one-screen brief for the approval surface (Telegram / console). */
+/** Render a one-screen brief for the approval surface (Telegram / console). Calm + friendly —
+ *  the blast level is already on the approval card, so this stays informative, not alarming. */
 export function renderBrief(b: PreflightBrief): string {
-  if (!b || typeof b !== "object") return "🟡 Pre-flight: review";
-  const icon = b.recommendation === "safe-to-approve" ? "🟢" : b.recommendation === "review" ? "🟡" : "🔴";
-  const spec = b.speculatable ? "pre-run safe (read-only)" : "brief-only (has side-effects)";
-  const tline = b.trust > 0 ? ` · trust ${Math.round(b.trust * 100)}% (${b.trustBasis})` : "";
-  return `${icon} Pre-flight: ${b.recommendation} · ${b.blast} · ${spec}${tline}${b.warnings.length ? "\n⚠ " + b.warnings.join("; ") : ""}`;
+  if (!b || typeof b !== "object") return "🟡 a quick look first";
+  // calm display labels — the internal recommendation value stays the same for the gate
+  const icon = b.recommendation === "safe-to-approve" ? "🟢" : b.recommendation === "review" ? "🟡" : "🟠";
+  const label = b.recommendation === "safe-to-approve" ? "looks fine" : b.recommendation === "review" ? "worth a glance" : "higher-impact";
+  const spec = b.speculatable ? "test-ran it read-only first" : "shown as a brief";
+  const tline = b.trust > 0 ? ` · ${Math.round(b.trust * 100)}% of this class ran clean before` : "";
+  return `${icon} Pre-flight: ${label} · ${spec}${tline}${b.warnings.length ? "\n• " + b.warnings.join("\n• ") : ""}`;
 }
 
 // ─── #3 ANTICIPATORY CACHE — the speculative pre-run result, kept warm ────────
