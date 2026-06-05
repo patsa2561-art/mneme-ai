@@ -29,7 +29,7 @@ export function classifySideEffects(command: string): SideEffectVerdict {
   return { sideEffectFree: reasons.length === 0, reasons };
 }
 
-export interface ClassHistory { seen: number; succeeded: number }
+export interface ClassHistory { seen: number; succeeded: number; recentFails?: number }
 export interface PreflightBrief {
   command: string;
   blast: Blast;
@@ -60,6 +60,7 @@ export function buildPreflight(input: { command: string; blast: Blast; history?:
   if (blast === "destructive") warnings.push("DESTRUCTIVE — cannot be pre-run; approve only if you are certain");
   if (!se.sideEffectFree && blast !== "destructive") warnings.push("has side-effects (write/network) — cannot be safely pre-run, only briefed");
   if (h.seen === 0) warnings.push("first time this command-class is seen here — no track record yet");
+  if ((h.recentFails ?? 0) > 0) warnings.push(`⚠ this command-class FAILED ${h.recentFails}× recently — review carefully before approving`);
   // speculate ONLY when provably read-only AND not destructive.
   const speculatable = se.sideEffectFree && blast !== "destructive";
   let recommendation: PreflightBrief["recommendation"];
@@ -104,6 +105,8 @@ export function preflightGauntlet(): PreflightGauntlet {
   const safeOK = safeBrief.recommendation === "safe-to-approve" && safeBrief.speculatable === true && safeBrief.trust > 0.7;
   const unproven = buildPreflight({ command: "git diff", blast: "safe", history: { seen: 1, succeeded: 1 } });
   const unprovenSpeculatable = unproven.speculatable === true; // read-only → can pre-run even if low history
+  const failWarn = buildPreflight({ command: "npm run build", blast: "moderate", history: { seen: 8, succeeded: 3, recentFails: 5 } });
+  const failWarnOK = failWarn.warnings.some((w) => /FAILED 5/.test(w)) && failWarn.recommendation !== "safe-to-approve";
   const det = JSON.stringify(buildPreflight({ command: "ls", blast: "safe" })) === JSON.stringify(buildPreflight({ command: "ls", blast: "safe" }));
   // #3 cache: deterministic key, freshness window honoured
   const k1 = speculativeKey("npm view x"), k2 = speculativeKey("npm view x"), k3 = speculativeKey("npm view y");
@@ -117,6 +120,7 @@ export function preflightGauntlet(): PreflightGauntlet {
     { name: "SAFE-PROVEN-APPROVE", pass: safeOK, detail: "a read-only, historically-clean command → safe-to-approve + speculatable" },
     { name: "READONLY-LOW-HISTORY-OK", pass: unprovenSpeculatable, detail: "a read-only command is speculatable even with thin history (it can't harm)" },
     { name: "ANTICIPATORY-CACHE", pass: cacheOK, detail: "speculative result is keyed by command-hash + served only while FRESH (zero-latency on approve/repeat)" },
+    { name: "PROACTIVE-FAIL-HISTORY", pass: failWarnOK, detail: "a class that recently FAILED N× surfaces a warning + is never 'safe-to-approve' (real proactive risk, not just sticker)" },
     { name: "DETERMINISTIC", pass: det, detail: "same command → byte-identical brief" },
     { name: "TOTAL", pass: total, detail: "never throws on garbage" },
   ];

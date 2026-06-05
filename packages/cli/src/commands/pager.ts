@@ -19,7 +19,7 @@ const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
 
 interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string }
-interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry> }
+interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry>; classStats?: Record<string, { seen: number; succeeded: number; recentFails: number }> }
 type PagerPending = pager.Pending & { tgMessageId?: number };
 
 const loadCfg = (cwd: string): PagerConfig => { try { return existsSync(cfgPath(cwd)) ? JSON.parse(readFileSync(cfgPath(cwd), "utf8")) : {}; } catch { return {}; } };
@@ -261,7 +261,8 @@ export function registerPagerCommands(program: Command): void {
       // commands, speculatively pre-runs (time-boxed) so the human approves with foresight.
       void (async () => {
         try {
-          const brief = preflight.buildPreflight({ command: o.command, blast });
+          const cs0 = loadState(cwd).classStats?.[klass];   // real outcome history (Gap-1 fix)
+          const brief = preflight.buildPreflight({ command: o.command, blast, history: cs0 ? { seen: cs0.seen, succeeded: cs0.succeeded, recentFails: cs0.recentFails } : undefined });
           if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: "📊 " + preflight.renderBrief(brief) });
           if (brief.speculatable) {
             const key = preflight.speculativeKey(o.command); const now2 = Date.now();
@@ -273,6 +274,8 @@ export function registerPagerCommands(program: Command): void {
               okRun = !r.error && (r.status === 0 || r.status === null); preview = String(r.stdout || r.stderr || "").trim().slice(0, 280);
               try { const s2 = loadState(cwd); s2.speculative = s2.speculative ?? {}; s2.speculative[key] = { commandHash: key, output: preview, exitOk: okRun, ranAt: now2 }; saveState(cwd, s2); } catch { /* */ }
             }
+            // record the real outcome per command-class → next pre-flight is proactive ("failed Nx")
+            if (!fromCache) { try { const s3 = loadState(cwd); s3.classStats = s3.classStats ?? {}; const c3 = s3.classStats[klass] ?? { seen: 0, succeeded: 0, recentFails: 0 }; c3.seen++; if (okRun) c3.succeeded++; else c3.recentFails++; s3.classStats[klass] = c3; saveState(cwd, s3); } catch { /* */ } }
             if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: okRun ? `✅ pre-ran in a safe read-only check${fromCache ? " (cached · instant)" : ""} — looks clean:\n${preview || "(no output)"}` : `⚠️ heads-up: this would FAIL if approved:\n${preview || "error"}` });
           }
         } catch { /* pre-flight is best-effort; it never affects the decision path */ }

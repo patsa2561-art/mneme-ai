@@ -48,7 +48,7 @@ real.** No more babysitting a terminal.
 > court-admissible** transfer of authority.
 
 **Setup is two steps — your AI does the rest:**
-1. In Telegram, message **[@BotFather](https://t.me/BotFather)** → `/newbot` → copy the **token**.
+1. In Telegram, message **<a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>** → `/newbot` → copy the **token**.
 2. Tell your AI: *"set up phone approvals, here's my token: …"* — it runs `mneme pager autosetup`, which **finds your chat-id, wires the hook, sets lid-stay-awake, and starts paging** automatically. You never type a Mneme command.
 
 <sub>**<a href="docs/COSMIC-PAGER.md" target="_blank" rel="noopener">Full 60-second bot guide + spec → docs/COSMIC-PAGER.md</a>**</sub>
