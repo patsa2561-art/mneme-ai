@@ -107,6 +107,40 @@ export function alreadyDecidedReply(ticket: ApprovalTicket, lateSurface: string)
   return `This was already ${verb(ticket)} by ${ticket.decidedBy ?? "human"} on ${ticket.decidedOn ?? "another channel"}${lateSurface ? ` (you tapped on ${lateSurface})` : ""}. Nothing more to do.`;
 }
 
+// ── THE TAP SINK — one deterministic handler for a tap from ANY surface, early/late/duplicate ──
+// The spider's reflex: every vibration on any thread gets a consistent answer. The FIRST decision
+// wins (atomic); every other surface is cleared once; a LATE tap (on a stale button a provider can't
+// remove) gets an "already decided" reply instead of silence. This is what makes it stable across
+// providers that cannot delete their own buttons — a late tap is not a bug, it's just calmed.
+export interface Tap { surface: string; decision: string; at: number; by?: string }
+export interface TapAction { type: "clear" | "reply"; surface: string; text: string; method: "edit" | "notify" }
+export interface TapResult { ticket: ApprovalTicket; outcome: "accepted" | "already-decided" | "invalid"; firstWinner: boolean; actions: TapAction[] }
+function confirmReply(t: ApprovalTicket): string {
+  if (t.kind !== "approve") return `✅ Got your answer: "${t.decision}" — ${t.agent} is proceeding.`;
+  return t.decision === "allow" ? `✅ Approved — ${t.agent} is proceeding.` : `⛔ Denied — ${t.agent} will not run it.`;
+}
+/** Handle one tap deterministically. The CLI executes the returned actions against the providers. */
+export function processTap(ticket: ApprovalTicket, tap: Tap): TapResult {
+  if (!ticket || typeof ticket !== "object" || ticket.decision === undefined) return { ticket, outcome: "invalid", firstWinner: false, actions: [] };
+  const decision = String(tap?.decision ?? "").trim();
+  const surface = String(tap?.surface ?? "");
+  if (!decision || !surface) return { ticket, outcome: "invalid", firstWinner: false, actions: [] };
+  if (ticket.decision === null) {
+    const decided = applyDecision(ticket, { decision, on: surface, by: tap?.by ?? "human", at: Number(tap?.at) || 0 }).ticket;
+    const note = clearedNote(decided);
+    const actions: TapAction[] = []; const done = new Set(decided.cleared ?? []);
+    for (const s of decided.surfaces ?? []) {
+      if (s.provider === surface || done.has(s.provider)) continue;
+      actions.push({ type: "clear", surface: s.provider, text: note, method: surfaceCanEdit(s.provider) ? "edit" : "notify" });
+      done.add(s.provider);
+    }
+    actions.push({ type: "reply", surface, text: confirmReply(decided), method: surfaceCanEdit(surface) ? "edit" : "notify" });
+    return { ticket: markCleared(decided, [...done]), outcome: "accepted", firstWinner: true, actions };
+  }
+  // already decided → late tap on a stale button: calm that thread with an honest reply (no re-action)
+  return { ticket, outcome: "already-decided", firstWinner: false, actions: [{ type: "reply", surface, text: alreadyDecidedReply(ticket, surface), method: "notify" }] };
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface ApprovalMatrixGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function approvalMatrixGauntlet(): ApprovalMatrixGauntlet {
@@ -177,4 +211,55 @@ export function approvalMatrixGauntlet(): ApprovalMatrixGauntlet {
     { name: "INVALID+TOTAL", pass: inv && total, detail: "empty decision → invalid; never throws on garbage/null" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
+}
+
+// ── 100-ROUND STRESS / PROPERTY TEST — chaotic taps from every provider, proven invariant ──────
+export interface ApprovalStress { score: 0 | 100; rounds: number; failures: string[] }
+export function approvalStressGauntlet(rounds = 100): ApprovalStress {
+  const POOL = ["telegram", "line", "slack", "discord", "whatsapp", "computer"];
+  let seed = 0x9e3779b9 >>> 0;                    // deterministic PRNG (no Math.random — reproducible)
+  const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 0x100000000; };
+  const pick = <T>(a: T[]): T => a[Math.floor(rnd() * a.length)];
+  const failures: string[] = [];
+
+  for (let r = 0; r < rounds; r++) {
+    // a random subset of 2–6 surfaces
+    const k = 2 + Math.floor(rnd() * 5);
+    const surfaces = [...new Set(Array.from({ length: k }, () => pick(POOL)))];
+    if (surfaces.length < 2) surfaces.push("telegram", "line");
+    const kind: TicketKind = rnd() < 0.8 ? "approve" : "choice";
+    const t0 = openTicket({ id: "r" + r, command: "do x", agent: "Grok", kind, createdAt: 0, surfaces });
+
+    // a chaotic tap stream: 5–15 taps, random surface (must be one offered), early/late/duplicate
+    const taps: Tap[] = [];
+    const nTaps = 5 + Math.floor(rnd() * 11);
+    for (let i = 0; i < nTaps; i++) taps.push({ surface: pick(surfaces), decision: kind === "approve" ? (rnd() < 0.5 ? "allow" : "deny") : "opt" + Math.floor(rnd() * 3), at: i + 1, by: "human" });
+
+    const run = (start: ApprovalTicket) => {
+      let t = start; const accepts: Tap[] = []; let lateReplies = 0; let firstDecision: string | null = null; let clearSurfaces: string[] = [];
+      for (const tap of taps) {
+        const res = processTap(t, tap); t = res.ticket;
+        if (res.outcome === "accepted") { accepts.push(tap); firstDecision = t.decision; clearSurfaces = res.actions.filter((a) => a.type === "clear").map((a) => a.surface); }
+        else if (res.outcome === "already-decided") { const rep = res.actions.filter((a) => a.type === "reply"); if (rep.length !== 1 || rep[0].surface !== tap.surface) failures.push(`r${r}: late tap reply malformed`); lateReplies++; }
+      }
+      return { t, accepts, lateReplies, firstDecision, clearSurfaces };
+    };
+
+    const a = run(t0);
+    // INVARIANT 1: exactly one tap is accepted (first-wins)
+    if (a.accepts.length !== 1) { failures.push(`r${r}: ${a.accepts.length} accepted (expected 1)`); continue; }
+    // INVARIANT 2: the winner is the FIRST tap in the stream (lowest at) and decision matches + never changes
+    if (a.accepts[0] !== taps[0]) failures.push(`r${r}: winner is not the first tap`);
+    if (a.t.decision !== taps[0].decision) failures.push(`r${r}: final decision ${a.t.decision} ≠ first tap ${taps[0].decision}`);
+    // INVARIANT 3: the clears cover EXACTLY every surface except the decider, each once
+    const expectClear = surfaces.filter((s) => s !== taps[0].surface).sort();
+    if (JSON.stringify([...new Set(a.clearSurfaces)].sort()) !== JSON.stringify(expectClear)) failures.push(`r${r}: clears ${JSON.stringify(a.clearSurfaces)} ≠ expected ${JSON.stringify(expectClear)}`);
+    if (a.clearSurfaces.length !== new Set(a.clearSurfaces).size) failures.push(`r${r}: duplicate clears`);
+    // INVARIANT 4: every tap after the first got an already-decided reply (no silent late taps)
+    if (a.lateReplies !== taps.length - 1) failures.push(`r${r}: ${a.lateReplies} late replies (expected ${taps.length - 1})`);
+    // INVARIANT 5: IDEMPOTENT — replaying the identical stream yields an identical final ticket
+    const b = run(openTicket({ id: "r" + r, command: "do x", agent: "Grok", kind, createdAt: 0, surfaces }));
+    if (JSON.stringify(b.t) !== JSON.stringify(a.t)) failures.push(`r${r}: not idempotent`);
+  }
+  return { score: failures.length === 0 ? 100 : 0, rounds, failures: failures.slice(0, 8) };
 }

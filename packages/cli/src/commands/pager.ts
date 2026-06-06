@@ -6,7 +6,7 @@
  * power "breathing". Behind NAT, the laptop reaches OUT to Telegram — NO server, NO public IP.
  */
 import type { Command } from "commander";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, chmodSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
@@ -62,7 +62,7 @@ type PagerPending = pager.Pending & { tgMessageId?: number };
 
 const loadCfg = (cwd: string): PagerConfig => { try { return existsSync(cfgPath(cwd)) ? JSON.parse(readFileSync(cfgPath(cwd), "utf8")) : {}; } catch { return {}; } };
 const loadState = (cwd: string): PagerState => { try { return existsSync(statePath(cwd)) ? JSON.parse(readFileSync(statePath(cwd), "utf8")) : { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [], decisions: [], answers: {} }; } catch { return { trust: pager.emptyTrust(), pendings: [], usedNonces: [], receipts: [], decisions: [], answers: {} }; } };
-const saveState = (cwd: string, s: PagerState): void => { mkdirSync(dir(cwd), { recursive: true }); writeFileSync(statePath(cwd), JSON.stringify(s, null, 2), "utf8"); };
+const saveState = (cwd: string, s: PagerState): void => { mkdirSync(dir(cwd), { recursive: true }); const p = statePath(cwd); const tmp = p + "." + process.pid + ".tmp"; try { writeFileSync(tmp, JSON.stringify(s, null, 2), "utf8"); renameSync(tmp, p); } catch { writeFileSync(p, JSON.stringify(s, null, 2), "utf8"); } };
 const hbPath = (cwd: string) => join(dir(cwd), "daemon.heartbeat");
 
 /** Is the long-poll daemon alive? (it touches a heartbeat every poll cycle). */
@@ -163,6 +163,30 @@ async function clearOthersFor(cwd: string, cfg: PagerConfig, id: string, answere
     done.add(s.provider);
   }
   const s2 = loadState(cwd); s2.clearedSurfaces = s2.clearedSurfaces ?? {}; s2.clearedSurfaces[id] = [...done]; saveState(cwd, s2);
+}
+
+/** THE SPIDER'S REFLEX — handle a tap from ANY surface (Telegram or a keryx provider). The daemon is
+ *  the SOLE authority, so this is the one place a tap is resolved: FIRST-WINS (resolvePending guards
+ *  on status), then every OTHER surface is cleared once + the human is confirmed on Telegram; a LATE
+ *  tap on an already-decided request (a stale LINE/WhatsApp button that can't be removed) gets an
+ *  honest "already decided" reply instead of silence. Mirrors the 1900-scenario-proven processTap. */
+async function reconcileTap(cwd: string, cfg: PagerConfig, id: string, decision: string, surface: string): Promise<"accepted" | "already" | "none"> {
+  const st = loadState(cwd); const cur = st.pendings.find((x) => x.req.id === id);
+  if (!cur) return "none";
+  const ag = cur.req.agent || "the agent";
+  const tgSay = async (text: string) => { try { if (cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text }); } catch { /* */ } };
+  if (cur.status !== "pending") {                       // LATE TAP — calm the thread, never re-act
+    const ans = st.answers?.[id] ?? "?";
+    if (surface === "telegram") await tgSay(`ℹ️ Already decided (${ans}) — no action needed.`);
+    else { try { await clearMessage(surface, keryxProviders(cwd)[surface], "", `already:${ans}`); } catch { /* */ } }
+    return "already";
+  }
+  if (!resolvePending(cwd, id, decision, "human", surface, Date.now())) return "already";   // lost the race
+  const isApprove = (cur.req.kind ?? "approve") === "approve"; const allow = decision === "allow";
+  try { const mid = loadState(cwd).pendings.find((x) => x.req.id === id)?.tgMessageId; if (mid && cfg.telegramToken && cfg.chatId) await tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }); } catch { /* */ }
+  await clearOthersFor(cwd, cfg, id, surface);          // clear EVERY other surface (idempotent)
+  await tgSay(!isApprove ? `✅ "${decision}" on ${surface} — ${ag} is proceeding.` : allow ? `✅ Approved on ${surface} — ${ag} is proceeding.` : `⛔ Denied on ${surface} — ${ag} will not run it.`);
+  return "accepted";
 }
 
 async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<number | undefined> {
@@ -447,17 +471,13 @@ export function registerPagerCommands(program: Command): void {
         }
         emit(answer, reason);
       };
+      // The DAEMON is the sole authority that drains every surface (Telegram long-poll + the keryx
+      // relay for LINE/Slack/Discord/WhatsApp) and resolves via reconcileTap. This request just waits
+      // for the resolution to land in state.answers — no draining here (that caused lost/late taps).
       for (;;) {
         const ans = loadState(cwd).answers?.[req.id];
-        if (ans === "allow") { await settle("allow", "telegram", "approved by the human (phone/local)"); return; }
-        if (ans === "deny") { await settle("deny", "telegram", "denied by the human (phone/local)"); return; }
-        // KERYX: a tap on LINE/Slack/Discord/WhatsApp lands at the relay — first answer wins
-        const kx = await drainKeryxAnswer(cfg, req.id);
-        if (kx) {
-          const a = keryx.normalizeDecision(kx.answer);
-          resolvePending(cwd, req.id, a, "human", kx.provider, Date.now());
-          await settle(a, kx.provider, `${a === "allow" ? "approved" : "denied"} by the human on ${kx.provider}`); return;
-        }
+        if (ans === "allow") { emit("allow", "approved by the human"); return; }
+        if (ans === "deny") { emit("deny", "denied by the human"); return; }
         if (Date.now() > deadline) {
           if (blast === "destructive") { resolvePending(cwd, req.id, "deny", "deadman", "policy", Date.now()); await settle("deny", "", "dead-man: destructive timed out unattended → DENY"); return; }
           emit("ask", "no answer in time → defer to Claude Code's own prompt"); return;
@@ -591,10 +611,9 @@ export function registerPagerCommands(program: Command): void {
 
   p.command("approve <id>").description("Approve a pending request from THIS computer (in parallel with your phone — the first tap wins, the rest clear).").option("--deny", "deny instead")
     .action(async (id: string, o: { deny?: boolean }) => {
-      const cwd = process.cwd(); const r = resolvePending(cwd, id, o.deny ? "deny" : "allow", "human", "computer", Date.now());
-      if (!r) { out("no such pending request"); return; }
-      try { await clearOthersFor(cwd, loadCfg(cwd), id, "computer"); } catch { /* */ }
-      out(`✓ ${o.deny ? "denied" : "approved"} ${id} on this computer — other surfaces cleared.`);
+      const cwd = process.cwd();
+      const r = await reconcileTap(cwd, loadCfg(cwd), id, o.deny ? "deny" : "allow", "computer");   // same spider reflex as every surface
+      out(r === "accepted" ? `✓ ${o.deny ? "denied" : "approved"} ${id} on this computer — every other surface cleared.` : r === "already" ? `· ${id} was already decided (no-op).` : "no such pending request");
     });
 
   p.command("open").description("💻 Open the local approval page in your browser — approve/reject right here on the computer, in parallel with your phone.")
@@ -705,9 +724,9 @@ export function registerPagerCommands(program: Command): void {
             const findById = (id: string) => loadState(cwd).pendings.find((x) => x.req.id === id);
             const data = u.callback_query?.data ?? "";
             if (data.startsWith("a:") || data.startsWith("d:")) {
-              const id = data.split(":")[1]; const cur = findById(id);
-              if (cur && cur.status !== "pending") { await ack("already answered"); await confirm(`ℹ️ Already answered (${loadState(cwd).answers?.[id] ?? "?"}).`); }
-              else { const allow = data.startsWith("a:"); const ag = cur?.req.agent || "the agent"; if (resolvePending(cwd, id, allow ? "allow" : "deny", "human", "telegram", Date.now())) { await ack(allow ? "✅ approved" : "⛔ denied"); await stripButtons(id); await clearOthersFor(cwd, cfg, id, "telegram"); await confirm(allow ? `✅ Approved — command unlocked (${ag} is proceeding).` : `⛔ Denied — command blocked (${ag} will not run it).`); } }
+              const id = data.split(":")[1]; const allow = data.startsWith("a:");
+              const r = await reconcileTap(cwd, cfg, id, allow ? "allow" : "deny", "telegram");   // unified handler (first-wins + clear-all + late-reply)
+              await ack(r === "accepted" ? (allow ? "✅ approved" : "⛔ denied") : "already answered");
             }
             else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const cur = findById(id); const choice = cur?.req.choices?.[parseInt(idxS, 10)];
               if (cur && cur.status !== "pending") { await ack("already answered"); await confirm(`ℹ️ Already chosen (${loadState(cwd).answers?.[id] ?? "?"}).`); }
@@ -721,6 +740,17 @@ export function registerPagerCommands(program: Command): void {
               else if (txt) { await confirm("ℹ️ No pending question matches this reply (it may have timed out) — waiting for a new one."); }
             }
           }
+        }
+        // ── DRAIN every keryx provider (LINE/Slack/Discord/WhatsApp). The daemon is the SOLE drainer,
+        //    so no answer is lost and a LATE tap on a stale button still gets an honest reply. ──
+        if (cfg.keryxRelay) {
+          try {
+            const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=default`);
+            for (const a of (dr.answers as Array<{ id?: string; payload?: string; channel?: string }>) ?? []) {
+              if (!a?.id) continue;
+              await reconcileTap(cwd, cfg, a.id, keryx.normalizeDecision(String(a.payload ?? "")), a.channel || "line");
+            }
+          } catch { /* relay blip — retry next cycle */ }
         }
        } catch { await new Promise((r) => setTimeout(r, 2000)); } // self-heal: never die on a transient blip
       }
