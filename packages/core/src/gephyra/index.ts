@@ -426,11 +426,11 @@ export async function handleMcpCallRequest(repoRoot: string, raw: unknown, deps:
     const call = { tool: o["tool"] as string, args: (o["args"] && typeof o["args"] === "object") ? o["args"] as Record<string, unknown> : undefined, agent: o["agent"] as string };
     // MCP GATEWAY: gate + audit every call BEFORE proxying. Block/needs-approval never reach the tool.
     const gate = await mcpGateAndAudit(repoRoot, call);
-    if (gate.decision === "block") return { status: 200, body: { action: "block", gate, reason: gate.reasons.join("; ") || "blocked by the MCP gateway" } };
-    if (gate.decision === "needs-approval") return { status: 200, body: { action: "needs-approval", gate, reason: "this tool-call needs a human — route it to the pager (mneme pager request)" } };
+    // truth-customs classification is INSPECTION ONLY (it never executes the underlying tool) — run it
+    // so the response always carries the lane, then overlay the gate decision the client must honor.
     const route = await routeToolCall(repoRoot, call, deps);
-    // A blocked crossing is a successful inspection — surface 200 with action:"block"
-    // so the proxying client can decide; we never throw a 5xx for a refusal.
+    if (gate.decision === "block") return { status: 200, body: { ...route, action: "block", gate, reason: gate.reasons.join("; ") || "blocked by the MCP gateway" } };
+    if (gate.decision === "needs-approval") return { status: 200, body: { ...route, action: "needs-approval", gate, reason: "this tool-call needs a human — route it to the pager (mneme pager request)" } };
     return { status: 200, body: { ...route, gate } };
   } catch (e) {
     return { status: 500, body: { error: (e as Error).message } };
@@ -517,6 +517,59 @@ export async function handleA2ARequest(repoRoot: string, raw: unknown, primitive
     if (o["evidence"] === null || typeof o["evidence"] !== "object") return { status: 400, body: { error: "required: evidence (object)" } };
     const { buildReckoning } = await import("../reckoning/index.js");
     const r = buildReckoning(o["evidence"] as never);
+    return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+  } catch (e) {
+    return { status: 500, body: { error: (e as Error).message } };
+  }
+}
+
+/**
+ * AGENT GOVERNANCE REST surface — the whole governance stack over plain HTTP so ANY vendor
+ * (xAI / Grok / OpenAI / Gemini / Cursor / a local agent — not only MCP clients) can use it.
+ * Every result is trustless-signed (Ed25519 _proof) so the caller verifies it OFFLINE.
+ *   gate        {tool, args?, agent?, policy?}        → gate a tool-call (allow/needs-approval/block)
+ *   cert-build  {agent, task?, model?, frames, approvals?} → a signed Agent Run Certificate (self-contained)
+ *   cert-verify {cert, evidence}                      → verify a certificate offline (re-derive + chain)
+ *   skillscan   {name, purpose, content}              → a skill card (capabilities + excessive-agency)
+ *   insure      {cert, certVerified?, vendorFalseRateLB?} → a signed agent-run liability certificate
+ */
+export async function handleAgentRequest(repoRoot: string, raw: unknown, action: "gate" | "cert-build" | "cert-verify" | "skillscan" | "insure"): Promise<SavantHttpResponse> {
+  let parsed: unknown = raw;
+  if (typeof raw === "string") { try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; } }
+  if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
+  const o = parsed as Record<string, unknown>;
+  const now = (): number => { try { return Date.now(); } catch { return 0; } };
+  try {
+    if (action === "gate") {
+      if (typeof o["tool"] !== "string") return { status: 400, body: { error: "required: tool (string); optional: args, agent, policy" } };
+      const { gateCall } = await import("../mcpgate/index.js");
+      const r = gateCall({ tool: o["tool"] as string, agent: o["agent"] as string | undefined, args: o["args"], run: o["run"] as string | undefined }, (o["policy"] as never) ?? {});
+      return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+    }
+    if (action === "cert-build") {
+      if (!Array.isArray(o["frames"])) return { status: 400, body: { error: "required: frames (AuditFrame[]); optional: agent, task, model, approvals" } };
+      const frames = o["frames"] as Array<{ ts?: number; agent?: string; run?: string }>;
+      const { buildCertificate } = await import("../agentcert/index.js");
+      const ev = { runId: String(o["run"] ?? frames[0]?.run ?? "run"), agent: String(o["agent"] ?? frames[0]?.agent ?? "agent"), model: o["model"] as string | undefined, task: o["task"] as string | undefined, startedAt: Number(frames[0]?.ts) || 0, endedAt: Number(frames[frames.length - 1]?.ts) || 0, auditFrames: frames as never, approvals: (o["approvals"] as never) ?? [] };
+      const cert = buildCertificate(ev as never);
+      return { status: 200, body: await a2aProof(repoRoot, { cert, evidence: ev } as unknown as Record<string, unknown>) };
+    }
+    if (action === "cert-verify") {
+      if (o["cert"] === null || typeof o["cert"] !== "object" || o["evidence"] === null || typeof o["evidence"] !== "object") return { status: 400, body: { error: "required: cert (object), evidence (object)" } };
+      const { verifyCertificate } = await import("../agentcert/index.js");
+      const r = verifyCertificate(o["cert"] as never, o["evidence"] as never);
+      return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+    }
+    if (action === "skillscan") {
+      if (typeof o["name"] !== "string" || typeof o["content"] !== "string") return { status: 400, body: { error: "required: name (string), content (string); optional: purpose" } };
+      const { buildSkillCard } = await import("../skillscan/index.js");
+      const r = buildSkillCard({ name: o["name"] as string, purpose: String(o["purpose"] ?? ""), content: o["content"] as string });
+      return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
+    }
+    // insure
+    if (o["cert"] === null || typeof o["cert"] !== "object") return { status: 400, body: { error: "required: cert (an Agent Run Certificate); optional: certVerified, vendorFalseRateLB" } };
+    const { buildLiabilityCertificate } = await import("../agent_liability/index.js");
+    const r = buildLiabilityCertificate({ cert: o["cert"] as never, certVerified: o["certVerified"] as boolean | undefined, vendorFalseRateLB: o["vendorFalseRateLB"] as number | undefined }, now());
     return { status: 200, body: await a2aProof(repoRoot, r as unknown as Record<string, unknown>) };
   } catch (e) {
     return { status: 500, body: { error: (e as Error).message } };

@@ -8,7 +8,7 @@
 import type { Command } from "commander";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { agentcert, notary } from "@mneme-ai/core";
+import { agentcert, agentLiability, notary } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 
@@ -70,5 +70,27 @@ export function registerAgentcertCommands(program: Command): void {
       const s = cert.summary;
       out(`   → ${cert.agent}${cert.task ? ` · "${cert.task}"` : ""}: ${s.calls} gated calls · ${s.blocked} blocked · insurability ${s.insurability}`);
       if (!sig.valid || !v.valid) process.exitCode = 2;
+    });
+
+  k.command("insure <file>").description("Underwrite an agent run: turn a signed certificate into a liability assessment (coverage band + premium multiplier on the insurer's base rate). Verifies the cert first — an unverified or non-compliant run is declined.")
+    .option("--vendor-false-rate <n>", "the vendor's measured false-rate (Wilson LB, 0..1) — tightens the premium", parseFloat)
+    .option("--out <file>", "write the signed liability certificate").action((file: string, o: { vendorFalseRate?: number; out?: string }) => {
+      if (!existsSync(file)) { out("certificate not found"); process.exitCode = 2; return; }
+      let signed: { payload?: { cert?: agentcert.AgentRunCertificate; evidence?: agentcert.RunEvidence } };
+      try { signed = JSON.parse(readFileSync(file, "utf8")); } catch { out("✗ invalid certificate JSON"); process.exitCode = 2; return; }
+      const cert = signed.payload?.cert, evidence = signed.payload?.evidence;
+      if (!cert || !evidence) { out("✗ certificate has no embedded cert/evidence"); process.exitCode = 2; return; }
+      const sig = notary.verifyReceipt(signed); const v = agentcert.verifyCertificate(cert, evidence);
+      const certVerified = sig.valid && v.valid;
+      const lc = agentLiability.buildLiabilityCertificate({ cert, certVerified, vendorFalseRateLB: o.vendorFalseRate }, Date.now());
+      let outSigned: unknown = lc;
+      try { outSigned = notary.issueReceipt(process.cwd(), { kind: "claim-verdict", subject: `agent-run-liability:${lc.certRunId}`, payload: lc, includePayload: true, issuedAt: Date.now() }); } catch { /* */ }
+      if (o.out) writeFileSync(o.out, JSON.stringify(outSigned, null, 2), "utf8");
+      const ico = lc.coverageBand === "full" ? "🟢" : lc.coverageBand === "standard" ? "🟢" : lc.coverageBand === "conditional" ? "🟡" : "🔴";
+      out(`🛡 AGENT-RUN LIABILITY — ${lc.agent}${cert.task ? ` · "${cert.task}"` : ""} · ${ico} ${lc.coverageBand.toUpperCase()}${lc.insurable ? "" : " (declined)"}`);
+      out(`   cert verified: ${certVerified ? "yes" : "NO"} · risk ${lc.riskScore} · human-oversight ${Math.round(lc.oversightRatio * 100)}% · premium ×${lc.premiumMultiplier} (on the insurer's base rate)`);
+      for (const r of lc.reasons) out(`   • ${r}`);
+      if (lc.insurable) { out(`   conditions: ${lc.conditions.length} · voids: ${lc.voidIf.length}${o.out ? ` · 🛡 signed → ${o.out}` : ""}`); }
+      if (!lc.insurable) process.exitCode = 2;
     });
 }

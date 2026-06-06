@@ -24,6 +24,8 @@
 
 When an AI agent finishes a job, who vouches that it was *governed*? The vendor can't credibly vouch for itself, and a customer/auditor/insurer won't take "trust us." **`mneme agentcert build`** issues one **portable, NOTARY-signed Agent Run Certificate** — the run's MCP-gateway audit chain + human approvals — that **anyone verifies OFFLINE** (no Mneme, no vendor). Its summary **re-derives from the bound evidence**, so the certificate *cannot lie about its own run* (prove, don't claim); a recorded "allow" that carried block-grade risk is caught as a bypassed gate. **Insurance-grade · vendor-neutral · local-first** — the neutral trust layer Grok / xAI / NVIDIA adopt precisely because no vendor can own it. `mneme agentcert verify <cert>`.
 
+**Not on MCP? Use it over HTTP** — `gephyra serve` exposes the whole governance stack as REST for any vendor (xAI / Grok / OpenAI / Gemini / a local agent): `POST /agent/gate` · `/agent/cert/build` · `/agent/cert/verify` · `/agent/skillscan` · `/agent/insure` — every response carries a trustless Ed25519 `_proof` you verify offline. `/agent/insure` underwrites a run into a coverage band + premium multiplier (the honest core of **agent-liability insurance**). <sub>**<a href="docs/agent-http-api.md" target="_blank" rel="noopener">the HTTP API →</a>**</sub>
+
 **Building an agent? Govern it in 5 lines** — wrap your tool executor once and every call is gated + audited + human-approved + certified, with no other change to your code: `const run = gov.guard(myToolExecutor)`. A destructive call throws before it reaches the tool; the run mints a signed certificate. <sub>**<a href="docs/sdk-governance.md" target="_blank" rel="noopener">the @mneme-ai/sdk harness →</a>**</sub>
 
 ## 🩻 Try it live

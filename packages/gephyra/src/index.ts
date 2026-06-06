@@ -27,6 +27,7 @@ export const handleCrossRequest = gephyra.handleCrossRequest;
 export const handleMcpCallRequest = gephyra.handleMcpCallRequest;
 export const handleSavantRequest = gephyra.handleSavantRequest;
 export const handleA2ARequest = gephyra.handleA2ARequest;
+export const handleAgentRequest = gephyra.handleAgentRequest;
 export const handleKeryxRelay = gephyra.handleKeryxRelay;
 export const verifyDiscordSig = gephyra.verifyDiscordSig;
 export const a2aOpenApi = gephyra.a2aOpenApi;
@@ -106,9 +107,15 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
       const isRailEgress = url.startsWith("/rail/egress");
       const isReckon = url.startsWith("/reckon");
       const isA2A = isFirewall || isRailIngress || isRailEgress || isReckon;
-      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair || isA2A)) {
+      // /agent/* — the full governance stack over HTTP for ANY vendor (not only MCP clients)
+      const agentAction = url.startsWith("/agent/gate") ? "gate" as const
+        : url.startsWith("/agent/cert/build") ? "cert-build" as const
+        : url.startsWith("/agent/cert/verify") ? "cert-verify" as const
+        : url.startsWith("/agent/skillscan") ? "skillscan" as const
+        : url.startsWith("/agent/insure") ? "insure" as const : null;
+      if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair || isA2A || agentAction)) {
         res.writeHead(404, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: "POST /cross | /mcp | /savant/verify | /savant/repair | /firewall {content} | /rail/ingress {payload} | /rail/egress {payload} | /reckon {evidence}  ·  GET /status | /openapi.json" }));
+        res.end(JSON.stringify({ error: "POST /cross | /mcp | /savant/verify | /savant/repair | /firewall {content} | /rail/ingress {payload} | /rail/egress {payload} | /reckon {evidence} | /agent/gate {tool,args} | /agent/cert/build {frames} | /agent/cert/verify {cert,evidence} | /agent/skillscan {name,content} | /agent/insure {cert}  ·  GET /status | /openapi.json" }));
         return;
       }
       let body = "";
@@ -122,6 +129,7 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
           : isRailIngress ? gephyra.handleA2ARequest(repoRoot, body, "rail-ingress")
           : isRailEgress ? gephyra.handleA2ARequest(repoRoot, body, "rail-egress")
           : isReckon ? gephyra.handleA2ARequest(repoRoot, body, "reckon")
+          : agentAction ? gephyra.handleAgentRequest(repoRoot, body, agentAction)
           : isMcp ? gephyra.handleMcpCallRequest(repoRoot, body)
           : gephyra.handleCrossRequest(repoRoot, body);
         void handler
