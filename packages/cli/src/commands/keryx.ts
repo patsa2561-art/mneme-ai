@@ -11,7 +11,8 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import * as https from "node:https";
 import * as http from "node:http";
-import { keryx, providerWeb } from "@mneme-ai/core";
+import { keryx, providerWeb, rendezvous } from "@mneme-ai/core";
+import { createHmac } from "node:crypto";
 import { sendAsk, clearMessage, type ProvidersConfig, type ProviderCfg, type AskSpec } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -48,6 +49,41 @@ export function registerKeryxCommands(program: Command): void {
     out(`🏛 KERYX protocol — gauntlet ${g.score}/100 (${g.checks.filter((c) => c.pass).length}/${g.checks.length}). Channel-agnostic, signed, replay-proof, raw-free.`);
     out("   Deploy the relay on `gephyra serve` (your DO droplet); the daemon connects OUT (behind NAT). See docs/KERYX.md.");
   });
+
+  k.command("connect <provider>").description("🔗 ZERO-CONFIG PAIR — link LINE/Slack/Discord/WhatsApp (any provider) by SENDING ONE CODE to your bot from the app itself. No webhook config, no server. The relay sees the code inbound + links this machine. Run via your AI agent — just say which app.")
+    .option("--relay <url>", "the hosted Keryx relay (defaults to your configured one)")
+    .option("--ttl <min>", "code lifetime in minutes (default 10)")
+    .action(async (provider: string, o: { relay?: string; ttl?: string }) => {
+      const cwd = process.cwd(); const dir = join(cwd, ".mneme", "keryx"); mkdirSync(dir, { recursive: true });
+      // stable per-machine daemon id (multi-tenant routing key) + a local signing secret
+      const idPath = join(dir, "daemon-id"); let daemonId = "";
+      try { daemonId = existsSync(idPath) ? readFileSync(idPath, "utf8").trim() : ""; } catch { /* */ }
+      if (!daemonId) { daemonId = "d-" + createHmac("sha256", "mneme-daemon-id").update(cwd + "|" + Date.now()).digest("hex").slice(0, 12); writeFileSync(idPath, daemonId, "utf8"); }
+      const secPath = join(dir, "rendezvous-secret"); let secret = "";
+      try { secret = existsSync(secPath) ? readFileSync(secPath, "utf8").trim() : ""; } catch { /* */ }
+      if (!secret) { secret = createHmac("sha256", "mneme-rdv").update(daemonId + "|" + Date.now()).digest("hex"); writeFileSync(secPath, secret, "utf8"); }
+      const ttlMs = (Number(o.ttl) || 10) * 60_000;
+      // counter from existing pairings (deterministic, no Math.random)
+      const pPath = join(dir, "pairings.json"); let recs: rendezvous.PairingRecord[] = [];
+      try { recs = existsSync(pPath) ? JSON.parse(readFileSync(pPath, "utf8")) : []; } catch { /* */ }
+      const { code, record } = rendezvous.mintPairingCode(daemonId, provider, { now: Date.now(), ttlMs, secret, counter: recs.length });
+      recs.push(record); writeFileSync(pPath, JSON.stringify(recs, null, 2), "utf8");
+      // register with the relay so its inbound webhook can match the code (best-effort — ops layer)
+      const cfg = loadProviders(cwd) as unknown as { keryxRelay?: string };
+      let relay = o.relay || cfg.keryxRelay || "";
+      try { const pc = JSON.parse(readFileSync(join(cwd, ".mneme", "pager", "config.json"), "utf8")); relay = o.relay || cfg.keryxRelay || pc.keryxRelay || ""; } catch { /* */ }
+      let registered = false;
+      if (relay) { const r = await postJson(`${relay.replace(/\/$/, "")}/keryx/pair-register`, { daemonId, record }); registered = !!(r && (r.ok || r.registered)); }
+      const links: Record<string, string> = { line: "https://developers.line.biz (Messaging API → set webhook to the relay)", slack: "your Slack app → Event Subscriptions → the relay URL", discord: "Discord Developer Portal → your bot", whatsapp: "Meta WhatsApp Cloud API → webhook = the relay URL" };
+      out(`🔗 Pair ${provider} — ZERO config on your side:`);
+      out(`   1. Open your ${provider} bot/app${links[provider] ? "  ·  " + links[provider] : ""}`);
+      out(`   2. SEND THIS CODE to the bot, from the ${provider} app:`);
+      out(``);
+      out(`        ${code}`);
+      out(``);
+      out(`   ⏱ expires in ${Math.round(ttlMs / 60000)} min · one-time · signed to THIS machine only`);
+      out(relay ? (registered ? `   ✓ registered with relay ${relay} — the moment you send the code, ${provider} is linked + you'll get approvals there.` : `   ⚠ relay ${relay} did not confirm (its /keryx/pair-register may not be deployed yet) — code minted + saved locally.`) : `   ⚠ no relay configured — set keryxRelay first (Telegram needs none; LINE/Slack/Discord/WhatsApp need the hosted relay).`);
+    });
 
   k.command("web").description("🕸 PROVIDER WEB — the providers woven into the mesh + their capabilities. Any provider (incl. a future one like WeChat) plugs in by declaring 'silk' — no core change.")
     .option("--harvest <provider>", "test-parse an inbound payload from STDIN/--payload for a provider")
