@@ -226,7 +226,7 @@ export function approvalStressGauntlet(rounds = 100): ApprovalStress {
     // a random subset of 2–6 surfaces
     const k = 2 + Math.floor(rnd() * 5);
     const surfaces = [...new Set(Array.from({ length: k }, () => pick(POOL)))];
-    if (surfaces.length < 2) surfaces.push("telegram", "line");
+    while (surfaces.length < 2) { const x = pick(POOL); if (!surfaces.includes(x)) surfaces.push(x); }   // unique, ≥2
     const kind: TicketKind = rnd() < 0.8 ? "approve" : "choice";
     const t0 = openTicket({ id: "r" + r, command: "do x", agent: "Grok", kind, createdAt: 0, surfaces });
 
@@ -236,13 +236,26 @@ export function approvalStressGauntlet(rounds = 100): ApprovalStress {
     for (let i = 0; i < nTaps; i++) taps.push({ surface: pick(surfaces), decision: kind === "approve" ? (rnd() < 0.5 ? "allow" : "deny") : "opt" + Math.floor(rnd() * 3), at: i + 1, by: "human" });
 
     const run = (start: ApprovalTicket) => {
-      let t = start; const accepts: Tap[] = []; let lateReplies = 0; let firstDecision: string | null = null; let clearSurfaces: string[] = [];
+      let t = start; const accepts: Tap[] = []; let lateReplies = 0; let firstDecision: string | null = null; let clearSurfaces: string[] = []; let clearNamesOk = true; let lateNamesOk = true;
       for (const tap of taps) {
         const res = processTap(t, tap); t = res.ticket;
-        if (res.outcome === "accepted") { accepts.push(tap); firstDecision = t.decision; clearSurfaces = res.actions.filter((a) => a.type === "clear").map((a) => a.surface); }
-        else if (res.outcome === "already-decided") { const rep = res.actions.filter((a) => a.type === "reply"); if (rep.length !== 1 || rep[0].surface !== tap.surface) failures.push(`r${r}: late tap reply malformed`); lateReplies++; }
+        if (res.outcome === "accepted") {
+          accepts.push(tap); firstDecision = t.decision;
+          const clears = res.actions.filter((a) => a.type === "clear");
+          clearSurfaces = clears.map((a) => a.surface);
+          // EVERY clear must name the surface that ACTUALLY answered (the winner) — not some other provider
+          if (!clears.every((a) => a.text.includes(tap.surface))) clearNamesOk = false;
+          const reply = res.actions.find((a) => a.type === "reply");
+          if (!reply || reply.surface !== tap.surface) clearNamesOk = false;   // the decider gets a confirm on its own surface
+        } else if (res.outcome === "already-decided") {
+          const rep = res.actions.filter((a) => a.type === "reply");
+          if (rep.length !== 1 || rep[0].surface !== tap.surface) failures.push(`r${r}: late tap reply malformed`);
+          // the late reply must name where it was ACTUALLY decided (the winner's surface), not the late tapper's
+          if (firstDecision !== null && accepts[0] && !rep[0]?.text.includes(accepts[0].surface)) lateNamesOk = false;
+          lateReplies++;
+        }
       }
-      return { t, accepts, lateReplies, firstDecision, clearSurfaces };
+      return { t, accepts, lateReplies, firstDecision, clearSurfaces, clearNamesOk, lateNamesOk };
     };
 
     const a = run(t0);
@@ -255,6 +268,9 @@ export function approvalStressGauntlet(rounds = 100): ApprovalStress {
     const expectClear = surfaces.filter((s) => s !== taps[0].surface).sort();
     if (JSON.stringify([...new Set(a.clearSurfaces)].sort()) !== JSON.stringify(expectClear)) failures.push(`r${r}: clears ${JSON.stringify(a.clearSurfaces)} ≠ expected ${JSON.stringify(expectClear)}`);
     if (a.clearSurfaces.length !== new Set(a.clearSurfaces).size) failures.push(`r${r}: duplicate clears`);
+    // INVARIANT 3b: every cleared surface is told the CORRECT provider that answered (+ late replies too)
+    if (!a.clearNamesOk) failures.push(`r${r}: a clear/confirm named the wrong provider`);
+    if (!a.lateNamesOk) failures.push(`r${r}: a late reply named the wrong provider`);
     // INVARIANT 4: every tap after the first got an already-decided reply (no silent late taps)
     if (a.lateReplies !== taps.length - 1) failures.push(`r${r}: ${a.lateReplies} late replies (expected ${taps.length - 1})`);
     // INVARIANT 5: IDEMPOTENT — replaying the identical stream yields an identical final ticket

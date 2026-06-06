@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { approvalMatrixGauntlet, approvalStressGauntlet, processTap, openTicket } from "./approval_matrix.js";
 describe("APPROVAL MATRIX — authoritative first-wins ticket", () => {
   it("MEASURED: approvalMatrixGauntlet = 100", () => { const g = approvalMatrixGauntlet(); if (g.score !== 100) console.error(g.checks.filter((c) => !c.pass)); expect(g.score).toBe(100); });
-  it("STRESS: 1000 chaotic multi-provider tap streams hold every invariant", () => {
-    for (let i = 0; i < 5; i++) { const s = approvalStressGauntlet(200); if (s.score !== 100) console.error(s.failures); expect(s.score).toBe(100); }
+  it("STRESS: 100,000 chaotic cross-provider tap streams hold every invariant (incl. correct answering-provider name)", () => {
+    const s = approvalStressGauntlet(100000); if (s.score !== 100) console.error(s.failures); expect(s.score).toBe(100); expect(s.rounds).toBe(100000);
   });
   it("the TAP SINK: first wins, others cleared once, a late tap is calmed not silent", () => {
     let t = openTicket({ id: "x", command: "c", agent: "Grok", createdAt: 0, surfaces: ["telegram", "line", "whatsapp", "computer"] });

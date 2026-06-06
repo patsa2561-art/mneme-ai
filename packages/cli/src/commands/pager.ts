@@ -654,6 +654,22 @@ export function registerPagerCommands(program: Command): void {
       let offset = 0;
       const deadmanTick = () => { const st = loadState(cwd); const r = pager.deadmanResolve(st.pendings.filter((x) => x.status === "pending"), Date.now()); for (const res of r.resolved) resolvePending(cwd, res.id, res.decision, "deadman", "policy", Date.now()); };
       setInterval(deadmanTick, (cfg.wakeIntervalMin ?? 5) * 60_000);
+      // ── KERYX DRAIN on a FAST, INDEPENDENT interval (every 3s) — NOT gated behind the 50s Telegram
+      //    long-poll, so a LINE/Slack/Discord/WhatsApp tap is reconciled promptly + consistently.
+      //    The daemon is the SOLE drainer (no lost answers); reconcileTap handles first-wins + clear +
+      //    late-reply. A re-entrancy guard prevents overlapping drains. ──
+      let draining = false;
+      const keryxTick = async () => {
+        if (draining || !cfg.keryxRelay) return; draining = true;
+        try {
+          const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=default`);
+          for (const a of (dr.answers as Array<{ id?: string; payload?: string; channel?: string }>) ?? []) {
+            if (!a?.id) continue;
+            await reconcileTap(cwd, cfg, a.id, keryx.normalizeDecision(String(a.payload ?? "")), a.channel || "line");
+          }
+        } catch { /* relay blip — retry next tick */ } finally { draining = false; }
+      };
+      setInterval(() => { void keryxTick(); }, 3000);
       // daemon-scope helpers (shared by the long-poll loop AND the computer web surface)
       const dStrip = (id: string) => { const mid = loadState(cwd).pendings.find((x) => x.req.id === id)?.tgMessageId; return (mid && cfg.telegramToken && cfg.chatId) ? tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }) : Promise.resolve({ ok: true }); };
       const dConfirm = (t: string) => (cfg.telegramToken && cfg.chatId) ? tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: t }) : Promise.resolve({ ok: true });
@@ -740,17 +756,6 @@ export function registerPagerCommands(program: Command): void {
               else if (txt) { await confirm("ℹ️ No pending question matches this reply (it may have timed out) — waiting for a new one."); }
             }
           }
-        }
-        // ── DRAIN every keryx provider (LINE/Slack/Discord/WhatsApp). The daemon is the SOLE drainer,
-        //    so no answer is lost and a LATE tap on a stale button still gets an honest reply. ──
-        if (cfg.keryxRelay) {
-          try {
-            const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=default`);
-            for (const a of (dr.answers as Array<{ id?: string; payload?: string; channel?: string }>) ?? []) {
-              if (!a?.id) continue;
-              await reconcileTap(cwd, cfg, a.id, keryx.normalizeDecision(String(a.payload ?? "")), a.channel || "line");
-            }
-          } catch { /* relay blip — retry next cycle */ }
         }
        } catch { await new Promise((r) => setTimeout(r, 2000)); } // self-heal: never die on a transient blip
       }
