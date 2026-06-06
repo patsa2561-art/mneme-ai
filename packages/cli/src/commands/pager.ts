@@ -139,7 +139,7 @@ async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<numbe
   const icon = req.blast === "destructive" ? "🔴" : req.blast === "moderate" ? "🟡" : "🟢";
   const r = await tg(cfg.telegramToken, "sendMessage", {
     chat_id: cfg.chatId,
-    text: `${icon} *${req.agent}* wants to run:\n_${req.summary}_\nclass: \`${req.klass}\` · blast: ${req.blast}\nhash: \`${req.commandHash.slice(0, 12)}\` · id: \`${req.id}\``,
+    text: `${icon} *${req.agent}* wants to run:\n_${req.summary}_\nclass: \`${req.klass}\` · blast: ${req.blast}\nhash: \`${req.commandHash.slice(0, 12)}\` · id: \`${req.id}\`\n💻 or approve on your computer: \`mneme pager approve ${req.id}\` _(any surface — first tap wins, the rest clear)_`,
     parse_mode: "Markdown",
     reply_markup: { inline_keyboard: [[{ text: "✅ Approve", callback_data: `a:${req.id}:${req.nonce}` }, { text: "⛔ Deny", callback_data: `d:${req.id}` }]] },
   });

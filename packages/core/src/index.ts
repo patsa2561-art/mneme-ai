@@ -340,6 +340,8 @@ export * as compiler from "./compiler/index.js";
 export * as skillscan from "./skillscan/index.js";
 export * as mcpgate from "./mcpgate/index.js";
 export * as agentcert from "./agentcert/index.js";
+export * as approvalMatrix from "./keryx/approval_matrix.js";
+export * as providerWeb from "./keryx/provider_web.js";
 export * as harness from "./harness/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +

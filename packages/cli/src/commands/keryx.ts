@@ -11,7 +11,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import * as https from "node:https";
 import * as http from "node:http";
-import { keryx } from "@mneme-ai/core";
+import { keryx, providerWeb } from "@mneme-ai/core";
 import { sendAsk, clearMessage, type ProvidersConfig, type ProviderCfg, type AskSpec } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -48,6 +48,20 @@ export function registerKeryxCommands(program: Command): void {
     out(`🏛 KERYX protocol — gauntlet ${g.score}/100 (${g.checks.filter((c) => c.pass).length}/${g.checks.length}). Channel-agnostic, signed, replay-proof, raw-free.`);
     out("   Deploy the relay on `gephyra serve` (your DO droplet); the daemon connects OUT (behind NAT). See docs/KERYX.md.");
   });
+
+  k.command("web").description("🕸 PROVIDER WEB — the providers woven into the mesh + their capabilities. Any provider (incl. a future one like WeChat) plugs in by declaring 'silk' — no core change.")
+    .option("--harvest <provider>", "test-parse an inbound payload from STDIN/--payload for a provider")
+    .option("--payload <json>", "inline inbound payload to harvest").action((o: { harvest?: string; payload?: string }) => {
+      const web = providerWeb.defaultWeb();
+      if (o.harvest) {
+        let payload: unknown = {}; try { payload = JSON.parse(o.payload ?? "{}"); } catch { /* */ }
+        const h = providerWeb.harvestInbound(web, o.harvest, payload);
+        out(h.ok ? `🕸 harvested ${o.harvest}: answer="${h.answer}" id=${h.id ?? "—"}` : `✗ ${o.harvest}: ${h.reason}`); return;
+      }
+      out(`🕸 PROVIDER WEB — ${providerWeb.threads(web).length} threads woven (gauntlet ${providerWeb.providerWebGauntlet().score}/100):`);
+      for (const s of providerWeb.threads(web)) out(`   ${providerWeb.clearMethodFor(web, s.provider) === "edit" ? "✏️ " : "📨"} ${s.provider.padEnd(9)} buttons=${s.capabilities.buttons} edit=${s.capabilities.edit} inbound=${s.capabilities.inbound} verify=${s.capabilities.verify}`);
+      out("   → add a provider (WeChat / Mastodon / a webhook): declare its silk descriptor; the matrix routes + harvests it with zero core change. First tap on ANY surface wins; the rest clear.");
+    });
 
   k.command("demo").description("Show a signed ask→answer round-trip (no network).").action(() => {
     const secret = "demo-daemon-key", now = Date.now();
