@@ -3,69 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>THYMOS — a semantic attention filter that runs in your browser · Mneme</title>
-<meta name="description" content="Paste your goal + a messy pile. THYMOS embeds every line with a real sentence-transformer (MiniLM) running 100% in your browser — nothing uploaded — and pulls what truly matters to the top. Real semantics, not keyword matching.">
+<title>THYMOS — pull what matters out of a messy pile · Mneme</title>
+<meta name="description" content="A filter for your attention. Tell THYMOS your goal, paste a messy pile of notes/tasks/links, and it pulls what matters to the top — using a real sentence model that runs 100% in your browser. Nothing is uploaded.">
 <link rel="icon" href="/favicon.svg">
 <style>
-  :root{--bg:#0b0d12;--panel:#141821;--panel2:#0e121b;--ink:#e8ecf4;--mut:#8b94a7;--line:#222838;--pink:#ff5d8f;--grn:#16c784;--blu:#4ea1ff;--gold:#f7b955}
+  :root{--bg:#ffffff;--soft:#f7f8fa;--ink:#111317;--ink2:#33353c;--sub:#6b7280;--line:#e7e9ee;--pink:#e0316f;--pinks:#fdeef4;--grn:#0a9d62;--blu:#2563eb;--gold:#b7791f;--r:16px;--rs:11px}
   *{box-sizing:border-box}
-  body{margin:0;background:radial-gradient(1100px 560px at 72% -12%,#15202e 0%,var(--bg) 60%);color:var(--ink);font:15px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-  .wrap{max-width:880px;margin:0 auto;padding:30px 18px 80px}
-  .top{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-  a.back{color:var(--mut);text-decoration:none;font-size:13px}a.back:hover{color:var(--ink)}
-  h1{font-size:26px;margin:6px 0 4px;letter-spacing:-.4px}h1 .h{color:var(--pink)}
-  .sub{color:var(--mut);margin:0 0 8px;font-size:15.5px;max-width:640px}
-  .engine{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:6px 0 18px}
-  .engine .led{width:8px;height:8px;border-radius:50%;background:var(--gold);transition:background .3s}
-  .engine.ready .led{background:var(--grn)}.engine.fb .led{background:var(--pink)}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:680px){.grid{grid-template-columns:1fr}}
-  label{display:block;font-size:12.5px;color:var(--mut);margin:0 0 6px;font-weight:600}
-  textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:11px 13px;font:inherit;resize:vertical}
-  #goal{height:70px}#pile{height:200px}
-  .row{display:flex;gap:10px;align-items:center;margin:14px 0 4px;flex-wrap:wrap}
-  button{height:46px;padding:0 22px;border:0;border-radius:10px;background:var(--pink);color:#fff;font-weight:700;font-size:15px;cursor:pointer;transition:transform .1s,filter .15s}
-  button:hover{filter:brightness(1.08)}button:active{transform:scale(.98)}button:disabled{opacity:.55;cursor:default}
-  .ghost{background:transparent;border:1px solid var(--line);color:var(--mut);font-weight:600}
-  .thr{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:13px;margin-left:auto}
+  html{-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:26px 20px 90px}
+  .back{display:inline-block;color:var(--sub);text-decoration:none;font-size:13px;margin-bottom:18px}.back:hover{color:var(--ink)}
+  h1{font-size:30px;line-height:1.15;margin:0 0 6px;letter-spacing:-.6px}h1 .h{color:var(--pink)}
+  .tag{color:var(--sub);font-size:17px;margin:0 0 22px;max-width:560px}
+  /* explainer */
+  .explain{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin:0 0 22px}
+  .explain h2{font-size:14px;letter-spacing:.02em;text-transform:uppercase;color:var(--sub);margin:0 0 8px}
+  .explain p{margin:0 0 14px;color:var(--ink2)}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:620px){.steps{grid-template-columns:1fr}}
+  .step{display:flex;gap:10px;align-items:flex-start}
+  .num{flex:none;width:24px;height:24px;border-radius:50%;background:var(--pink);color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center}
+  .step b{display:block;font-size:14px}.step span{color:var(--sub);font-size:13px}
+  /* engine */
+  .engine{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:0 0 18px;background:#fff}
+  .engine .led{width:8px;height:8px;border-radius:50%;background:var(--gold)}.engine.ready .led{background:var(--grn)}.engine.fb .led{background:var(--pink)}
+  /* form */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:620px){.grid{grid-template-columns:1fr}}
+  label{display:block;font-size:13px;color:var(--ink2);margin:0 0 6px;font-weight:600}
+  textarea{width:100%;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:var(--rs);padding:12px 14px;font:inherit;resize:vertical;transition:border-color .15s,box-shadow .15s}
+  textarea:focus{outline:0;border-color:var(--pink);box-shadow:0 0 0 3px var(--pinks)}
+  #goal{height:74px}#pile{height:210px}
+  .row{display:flex;gap:12px;align-items:center;margin:16px 0 4px;flex-wrap:wrap}
+  button{height:48px;padding:0 24px;border:0;border-radius:var(--rs);background:var(--pink);color:#fff;font-weight:700;font-size:15px;cursor:pointer;transition:transform .1s,filter .15s}
+  button:hover{filter:brightness(1.05)}button:active{transform:scale(.98)}button:disabled{opacity:.5;cursor:default}
+  .ghost{background:#fff;border:1px solid var(--line);color:var(--ink2);font-weight:600}
+  .thr{display:flex;align-items:center;gap:8px;color:var(--sub);font-size:13px;margin-left:auto}
   input[type=range]{accent-color:var(--pink)}
-  .summary{margin:20px 0 8px;font-size:15px;min-height:22px}.summary b{font-size:19px}
-  .item{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 14px;margin:8px 0}
-  .item.drop{opacity:.5}
-  .bar{flex:none;width:54px;height:6px;border-radius:99px;background:#222838;overflow:hidden}
+  .ex{color:var(--sub);font-size:13px;margin-top:8px}.ex a{color:var(--blu);cursor:pointer;text-decoration:none}.ex a:hover{text-decoration:underline}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  /* results */
+  .summary{margin:24px 0 10px;font-size:15.5px;min-height:22px}.summary b{font-size:19px}
+  .item{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--line);border-radius:var(--rs);padding:12px 15px;margin:9px 0}
+  .item.keep{border-color:#cfead9;background:#fbfefc}.item.drop{opacity:.62}
+  .bar{flex:none;width:56px;height:6px;border-radius:99px;background:#eef0f4;overflow:hidden}
   .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blu),var(--pink))}
   .txt{flex:1;min-width:0;overflow-wrap:anywhere}
-  .verdict{flex:none;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px}
-  .keep{background:rgba(22,199,132,.13);color:var(--grn)}.let{background:rgba(139,148,167,.13);color:var(--mut)}
-  .sc{flex:none;color:var(--mut);font-size:12px;font-family:ui-monospace,monospace;width:34px;text-align:right}
-  .honest{border-left:3px solid var(--gold);padding:10px 14px;background:rgba(247,185,85,.06);border-radius:0 10px 10px 0;color:#d7c39a;font-size:13px;margin-top:26px}
-  .mono{font-family:ui-monospace,monospace}
-  .ex{color:var(--mut);font-size:12.5px;margin-top:8px}.ex a{color:var(--blu);cursor:pointer;text-decoration:none}.ex a:hover{text-decoration:underline}
-  .foot{color:var(--mut);font-size:12.5px;margin-top:28px;text-align:center}.foot a{color:var(--blu);text-decoration:none}
-  .spin{width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--blu);border-radius:50%;display:inline-block;animation:s .8s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+  .verdict{flex:none;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .keepv{background:#e6f6ee;color:var(--grn)}.letv{background:#f1f2f5;color:var(--sub)}
+  .sc{flex:none;color:var(--sub);font-size:12px;font-family:ui-monospace,monospace;width:32px;text-align:right}
+  .honest{border-left:3px solid var(--gold);padding:11px 15px;background:#fdf8ee;border-radius:0 10px 10px 0;color:#7a5b14;font-size:13px;margin-top:28px}
+  .foot{color:var(--sub);font-size:12.5px;margin-top:30px;text-align:center}.foot a{color:var(--blu);text-decoration:none}
+  .spin{width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--blu);border-radius:50%;display:inline-block;animation:s .8s linear infinite;vertical-align:-2px}@keyframes s{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><a class="back" href="/">← Mneme · Repo X-Ray</a></div>
-  <h1>💗 <span class="h">THYMOS</span> — what actually matters right now</h1>
-  <p class="sub">Drowning in a pile of notes, tasks, links or search results? Tell THYMOS your goal, paste the pile, and it <b>pulls what truly matters to the top and lets the noise fade</b> — using a real sentence-transformer that understands meaning, not just keywords.</p>
-  <div class="engine" id="engine"><span class="led"></span><span id="engtext">semantic engine: idle (loads on first run, ~25 MB once, then cached)</span></div>
+  <a class="back" href="/">← Mneme · Repo X-Ray</a>
+  <h1>💗 <span class="h">THYMOS</span></h1>
+  <p class="tag">A filter for your attention — it pulls what matters out of a messy pile.</p>
+
+  <div class="explain">
+    <h2>What it is &amp; what it's for</h2>
+    <p>Got a long, messy list — notes, tasks, links, search results — and a goal? THYMOS reads the <b>meaning</b> of each line and surfaces the ones that actually matter for your goal, so you can ignore the rest. It’s a focus tool: less scrolling, less noise.</p>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div><b>Say your goal</b><span>what you’re trying to do right now</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>Paste the pile</b><span>one item per line</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>Hit Triage</b><span>keep the 🧲, drop the rest</span></div></div>
+    </div>
+  </div>
+
+  <div class="engine" id="engine"><span class="led"></span><span id="engtext">semantic engine: loading… (≈25&nbsp;MB once, then cached)</span></div>
 
   <div class="grid">
     <div><label>① Your goal / focus right now</label><textarea id="goal" placeholder="e.g. ship the local-first trust layer for AI agents this week"></textarea></div>
-    <div><label>② The pile — one item per line (notes, tasks, links, ideas…)</label><textarea id="pile" placeholder="refactor the auth module&#10;reply to the recruiter&#10;benchmark the signed-memory protocol&#10;buy cat food&#10;draft the launch post&#10;random cooking video"></textarea></div>
+    <div><label>② The pile — one item per line</label><textarea id="pile" placeholder="refactor the auth module&#10;reply to the recruiter&#10;benchmark the signed-memory protocol&#10;buy cat food&#10;draft the launch post&#10;random cooking video"></textarea></div>
   </div>
   <div class="row">
     <button id="run">🧲 Triage</button>
     <button id="copy" class="ghost">Copy the keepers</button>
     <span class="thr">let-go below <input id="thr" type="range" min="10" max="50" value="22"> <span id="thrv" class="mono">0.22</span></span>
   </div>
-  <p class="ex">no idea? <a id="demo">load an example</a> — then hit Triage. <span class="mono">⌘/Ctrl+Enter</span> in the pile also runs it.</p>
+  <p class="ex">no idea? <a id="demo">load an example</a> — then hit Triage. <span class="mono">⌘/Ctrl + Enter</span> in the pile also runs it.</p>
 
   <div id="summary" class="summary"></div>
   <div id="out"></div>
 
-  <div class="honest" id="honest">★ <b>Honest:</b> THYMOS embeds your goal + each line with <b>all-MiniLM-L6-v2</b> (a real 384-dim sentence-transformer) running <b>100% in your browser</b> via WASM/WebGPU — only the <i>model</i> downloads once from a CDN; <b>your text is never uploaded</b>, there is no server inference and no API key. The score is the cosine similarity of real embeddings (it understands synonyms + paraphrase, not just shared words). It surfaces what matters to <em>your stated goal</em> — it doesn't read your mind.</div>
+  <div class="honest" id="honest">★ <b>How it works, honestly:</b> THYMOS turns your goal and each line into a real 384-dimension embedding with <b>all-MiniLM-L6-v2</b> (a small sentence model) running <b>100% in your browser</b> — only the model downloads once from a CDN; <b>your text is never uploaded</b>, there’s no server and no API key. It ranks by the similarity of meaning (it gets synonyms &amp; paraphrase, not just shared words). It surfaces what fits <em>your stated goal</em> — it doesn’t read your mind, and it’s a small fast model, not a giant one.</div>
 
   <p class="foot">Part of <a href="/">Mneme</a> · the local-first trust &amp; memory layer · <span class="mono">npm i -g mneme-ai</span></p>
 </div>
@@ -76,23 +98,21 @@ let THR=0.22, extractor=null, loading=null, MODE="semantic";
 const eng=$('engine');
 function setEng(t,cls){ $('engtext').innerHTML=t; eng.className="engine"+(cls?" "+cls:""); }
 
-// ── real semantic engine (transformers.js MiniLM, in-browser) ──
 async function loadEngine(){
   if(extractor) return extractor;
   if(loading) return loading;
   loading=(async()=>{
-    setEng('<span class="spin"></span> loading semantic engine (MiniLM, ~25 MB once)…');
+    setEng('<span class="spin"></span> loading semantic engine (MiniLM, ≈25&nbsp;MB once)…');
     const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
     env.allowLocalModels=false;
     const ex = await pipeline('feature-extraction','Xenova/all-MiniLM-L6-v2',{ quantized:true,
-      progress_callback:(p)=>{ if(p&&p.status==='progress'&&p.file&&/onnx|model/.test(p.file)) setEng('<span class="spin"></span> downloading model… '+Math.round(p.progress||0)+'% (cached after this)'); } });
+      progress_callback:(p)=>{ if(p&&p.status==='progress'&&p.file&&/onnx|model/.test(p.file)) setEng('<span class="spin"></span> downloading model… '+Math.round(p.progress||0)+'%'); } });
     extractor=ex; MODE="semantic"; setEng('✓ semantic engine ready · all-MiniLM-L6-v2 · 100% in your browser','ready');
     return ex;
-  })().catch((e)=>{ extractor=null; MODE="fallback"; setEng('⚠ semantic engine unavailable — using an approximate keyword match (offline/blocked CDN). '+(e&&e.message?'':''),'fb'); return null; });
+  })().catch(()=>{ extractor=null; MODE="fallback"; setEng('⚠ semantic engine unavailable — using an approximate keyword match','fb'); return null; });
   return loading;
 }
-function cos(a,b){ let d=0; for(let i=0;i<a.length;i++) d+=a[i]*b[i]; return d; } // embeddings are normalized
-// fallback only: token-cosine (clearly labelled "approximate")
+function cos(a,b){ let d=0; for(let i=0;i<a.length;i++) d+=a[i]*b[i]; return d; }
 function bag(t){const m={};for(const w of (t||'').toLowerCase().split(/[^a-z0-9฀-๿]+/).filter(x=>x.length>1))m[w]=(m[w]||0)+1;return m}
 function tokRes(c,i){const a=bag(c),b=bag(i);let d=0;for(const k in a)d+=a[k]*(b[k]||0);const mg=o=>Math.sqrt(Object.values(o).reduce((s,v)=>s+v*v,0));const dn=mg(a)*mg(b);return dn?d/dn:0}
 
@@ -102,29 +122,25 @@ $('demo').addEventListener('click',()=>{$('goal').value="ship the local-first tr
 async function run(){
   const goal=$('goal').value.trim();
   const lines=$('pile').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  if(!goal||!lines.length){$('summary').innerHTML='<span style="color:var(--mut)">enter a goal + a few lines, then hit Triage.</span>';$('out').innerHTML='';return}
-  $('run').disabled=true; const prevSum=$('summary').innerHTML; $('summary').innerHTML='<span class="spin"></span> embedding + ranking…';
+  if(!goal||!lines.length){$('summary').innerHTML='<span style="color:var(--sub)">enter a goal + a few lines, then hit Triage.</span>';$('out').innerHTML='';return}
+  $('run').disabled=true; $('summary').innerHTML='<span class="spin"></span> reading meaning + ranking…';
   let scores;
   try{
     const ex=await loadEngine();
-    if(ex){
-      const t=await ex([goal,...lines],{pooling:'mean',normalize:true});
-      const v=t.tolist(); const g=v[0];
-      scores=lines.map((t,i)=>Math.max(0,cos(g,v[i+1])));
-    } else { scores=lines.map(t=>tokRes(goal,t)); }
+    if(ex){ const t=await ex([goal,...lines],{pooling:'mean',normalize:true}); const v=t.tolist(); const g=v[0]; scores=lines.map((t,i)=>Math.max(0,cos(g,v[i+1]))); }
+    else { scores=lines.map(t=>tokRes(goal,t)); }
   }catch(e){ MODE="fallback"; setEng('⚠ engine error — approximate keyword match','fb'); scores=lines.map(t=>tokRes(goal,t)); }
-  const eff = MODE==="semantic" ? THR : Math.min(THR,0.12);   // token-cosine lives on a lower scale
+  const eff = MODE==="semantic" ? THR : Math.min(THR,0.12);
   const scored=lines.map((t,i)=>({t,score:Math.round(scores[i]*100)/100,keep:scores[i]>=eff})).sort((a,b)=>b.score-a.score);
   const keep=scored.filter(s=>s.keep),drop=scored.filter(s=>!s.keep);
-  $('summary').innerHTML='🧲 Focus on <b style="color:var(--grn)">'+keep.length+'</b> · 〰 let go of <b>'+drop.length+'</b>'+(keep.length?' &nbsp;—&nbsp; <span style="color:var(--mut)">top: '+keep.slice(0,2).map(k=>'“'+esc(k.t.slice(0,46))+'”').join(', ')+'</span>':'')+(MODE==='fallback'?' <span style="color:var(--pink)">· approximate (keyword) mode</span>':'');
-  $('out').innerHTML=scored.map(s=>'<div class="item'+(s.keep?'':' drop')+'"><div class="bar"><i style="width:'+Math.round(s.score*100)+'%"></i></div><div class="txt">'+esc(s.t)+'</div><span class="sc">'+s.score.toFixed(2)+'</span><span class="verdict '+(s.keep?'keep':'let')+'">'+(s.keep?'🧲 KEEP':'〰 let go')+'</span></div>').join('');
-  window._keepers=keep.map(k=>k.t); $('run').disabled=false; if(!scored.length)$('summary').innerHTML=prevSum;
+  $('summary').innerHTML='🧲 Focus on <b style="color:var(--grn)">'+keep.length+'</b> · 〰 let go of <b>'+drop.length+'</b>'+(keep.length?' &nbsp;—&nbsp; <span style="color:var(--sub)">top: '+keep.slice(0,2).map(k=>'“'+esc(k.t.slice(0,46))+'”').join(', ')+'</span>':'')+(MODE==='fallback'?' <span style="color:var(--pink)">· approximate (keyword) mode</span>':'');
+  $('out').innerHTML=scored.map(s=>'<div class="item '+(s.keep?'keep':'drop')+'"><div class="bar"><i style="width:'+Math.round(s.score*100)+'%"></i></div><div class="txt">'+esc(s.t)+'</div><span class="sc">'+s.score.toFixed(2)+'</span><span class="verdict '+(s.keep?'keepv':'letv')+'">'+(s.keep?'🧲 KEEP':'〰 let go')+'</span></div>').join('');
+  window._keepers=keep.map(k=>k.t); $('run').disabled=false;
 }
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 $('run').addEventListener('click',run);
 $('copy').addEventListener('click',()=>{const k=(window._keepers||[]);if(!k.length)return;navigator.clipboard&&navigator.clipboard.writeText(k.join('\n'));$('copy').textContent='✓ copied '+k.length;setTimeout(()=>$('copy').textContent='Copy the keepers',1400)});
 $('pile').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')run()});
-// warm the engine up front (non-blocking) so the first Triage is instant
 loadEngine();
 </script>
 </body>
