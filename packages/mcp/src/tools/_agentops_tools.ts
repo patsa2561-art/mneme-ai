@@ -113,6 +113,27 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.orbital.weather",
+    category: "audit",
+    description: "🛰 ORBITAL (internal) — fetch REAL, free, public, real-time NOAA space weather (geomagnetic G / radio-blackout R / solar-radiation S scales + planetary Kp) over plain internet and return it parsed + an operational ADVISORY for a space/edge-ops agent: which systems are degraded (GNSS, HF comms, satellite drag) and a suggested APHELION charter tightening (lower maxRisk, require approval for comms/navigation). HONEST: telemetry the agent READS + governs by — NOT a claim that space weather alters the model's mood/cognition.",
+    whenToUse: "When an agent operates a space/edge mission (or APHELION disconnected ops) and should know the space-weather environment that degrades comms/GNSS — to tighten its charter when a storm hits.",
+    triggers: ["space weather", "solar storm", "geomagnetic", "kp index", "is comms degraded", "orbital conditions"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cwd = rt.meta?.rootPath ?? process.cwd();
+      const https = await import("node:https");
+      const getJson = (u: string) => new Promise<unknown>((res, rej) => { const r = https.get(u, (x) => { let b = ""; x.on("data", (c) => (b += c)); x.on("end", () => { try { res(JSON.parse(b)); } catch (e) { rej(e); } }); }); r.on("error", rej); r.setTimeout(8000, () => r.destroy(new Error("timeout"))); });
+      try {
+        const scales = await getJson("https://services.swpc.noaa.gov/products/noaa-scales.json");
+        const kp = await getJson("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json").catch(() => []);
+        const sw = core.orbital.parseSpaceWeather(scales, kp); const adv = core.orbital.spaceWeatherAdvisory(sw);
+        const data = await attest(cwd, { sw: sw as unknown as Record<string, unknown>, advisory: adv as unknown as Record<string, unknown> });
+        return { data, wisdom: `space weather ${adv.level} (${sw.condition}, G${sw.geomagnetic.scale}/R${sw.radioBlackout.scale}/S${sw.solarRadiation.scale}, Kp ${sw.kpIndex ?? "?"})${adv.charterSuggestion ? " — tighten the charter" : ""}`, followUp: adv.charterSuggestion ? ["consider: mneme aphelion amend (lower maxRisk + require approval for comms/nav)"] : [], confidence: ok() };
+      } catch (e) { return { data: { ok: false, error: (e as Error).message }, wisdom: "could not reach NOAA (need internet)", followUp: [], confidence: ok("low") }; }
+    },
+  },
+  {
     name: "mneme.forget.verify",
     category: "audit",
     description: "🗑 PROOF-OF-FORGETTING — verify OFFLINE that a memory store actually forgot what it claims to have forgotten (the inverse of provenance: everyone can prove they KEPT data; this proves data is GONE). Pass a forgetting receipt + the current store [{id, contentHash}]; returns valid iff every attested-forgotten item is absent + the store is in the attested state + the merkle root recomputes. The missing primitive for GDPR Article 17 / EU AI Act right-to-erasure.",

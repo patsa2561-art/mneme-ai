@@ -349,6 +349,7 @@ export * as infraProvenance from "./infra_provenance/index.js";
 export * as forgetting from "./forgetting/index.js";
 export * as aphelion from "./aphelion/index.js";
 export * as dossier from "./dossier/index.js";
+export * as orbital from "./orbital/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
