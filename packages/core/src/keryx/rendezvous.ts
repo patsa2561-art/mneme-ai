@@ -46,13 +46,16 @@ function recordValid(rec: PairingRecord, secret?: string): boolean {
 }
 
 export interface MatchResult { ok: boolean; daemonId?: string; provider?: string; code?: string; reason: string }
-/** Given an inbound message text + the known pairing records, find & verify a code (HMAC·TTL·one-time). */
-export function matchPairingCode(text: string, records: ReadonlyArray<PairingRecord>, opts: { now: number; secret?: string; provider?: string }): MatchResult {
+/** Given an inbound message text + the known pairing records, find & verify a code (HMAC·TTL·one-time).
+ *  `skipSig` is for the RELAY, which trusts records that arrived via authenticated pair-register and
+ *  cannot hold each daemon's minting secret — it still enforces TTL + one-time; the minting daemon
+ *  re-verifies the HMAC when it drains the link. */
+export function matchPairingCode(text: string, records: ReadonlyArray<PairingRecord>, opts: { now: number; secret?: string; provider?: string; skipSig?: boolean }): MatchResult {
   const up = String(text ?? "").toUpperCase();
   const now = Number(opts?.now) || 0;
   for (const rec of records ?? []) {
     if (!rec?.code || !up.includes(rec.code)) continue;
-    if (!recordValid(rec, opts?.secret)) return { ok: false, code: rec.code, reason: "forged record (HMAC mismatch)" };
+    if (!opts?.skipSig && !recordValid(rec, opts?.secret)) return { ok: false, code: rec.code, reason: "forged record (HMAC mismatch)" };
     if (rec.used) return { ok: false, code: rec.code, reason: "code already used (replay)" };
     if (now > rec.exp) return { ok: false, code: rec.code, reason: "code expired" };
     if (opts?.provider && opts.provider !== rec.provider) return { ok: false, code: rec.code, reason: `code is for ${rec.provider}, not ${opts.provider}` };

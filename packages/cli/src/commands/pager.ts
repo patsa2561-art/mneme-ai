@@ -116,6 +116,13 @@ function notifyMirror(cfg: PagerConfig, text: string): void { void linePush(cfg,
 function keryxProviders(cwd: string): Record<string, ProviderCfg> {
   try { const p = join(cwd, ".mneme", "keryx", "providers.json"); return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {}; } catch { return {}; }
 }
+/** This machine's relay routing key (multi-tenant). Set by `mneme keryx connect`; "default" otherwise. */
+function daemonIdOf(cwd: string): string {
+  try { const p = join(cwd, ".mneme", "keryx", "daemon-id"); return existsSync(p) ? (readFileSync(p, "utf8").trim() || "default") : "default"; } catch { return "default"; }
+}
+interface RdvLink { daemonId: string; provider: string; conversation: string; at: number }
+function loadLinks(cwd: string): RdvLink[] { try { const p = join(cwd, ".mneme", "keryx", "links.json"); return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : []; } catch { return []; } }
+function saveLinks(cwd: string, links: RdvLink[]): void { try { mkdirSync(join(cwd, ".mneme", "keryx"), { recursive: true }); writeFileSync(join(cwd, ".mneme", "keryx", "links.json"), JSON.stringify(links, null, 2), "utf8"); } catch { /* */ } }
 const relayGet = (url: string): Promise<Record<string, unknown>> => new Promise((res) => { (url.startsWith("https:") ? https : http).get(url, (r) => { let s = ""; r.on("data", (d) => (s += d)); r.on("end", () => { try { res(JSON.parse(s || "{}")); } catch { res({}); } }); }).on("error", () => res({})); });
 const relayPost = (url: string, body: object): Promise<void> => new Promise((res) => { const u = new URL(url); const data = JSON.stringify(body); const rq = (url.startsWith("https:") ? https : http).request({ hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80), path: u.pathname, method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(data) } }, (x) => { x.on("data", () => {}); x.on("end", () => res()); }); rq.on("error", () => res()); rq.write(data); rq.end(); });
 
@@ -127,13 +134,17 @@ async function fanOutKeryx(cwd: string, cfg: PagerConfig, req: pager.ApprovalReq
   const lanes = keryx.dispatchPlan(keryx.ALL_PROVIDERS as unknown as string[], ["telegram"], requested ?? undefined)
     .filter((p) => { const pc = provs[p]; return pc && (pc.token || (p === "line" && pc.channelId && pc.channelSecret)); });
   const spec = { id: req.id, nonce: req.nonce ?? req.id, question: req.summary, kind: kinds, choices: req.choices, agent: req.agent };
+  const did = daemonIdOf(cwd); const links = loadLinks(cwd);
   const trySend = async (p: string): Promise<{ provider: string; ok: boolean; messageId: string }> => {
-    try { let r = await sendAsk(p, provs[p], spec); if (!r.ok) r = await sendAsk(p, provs[p], spec); return { provider: p, ok: !!r.ok, messageId: r.messageId ?? "" }; }   // secretary: one retry
+    // RENDEZVOUS: if this provider is paired, push to the SPECIFIC linked conversation (precise, not broadcast-to-all)
+    const lk = links.find((l) => l.daemonId === did && l.provider === p);
+    const pc = lk ? { ...provs[p], to: lk.conversation } : provs[p];
+    try { let r = await sendAsk(p, pc, spec); if (!r.ok) r = await sendAsk(p, pc, spec); return { provider: p, ok: !!r.ok, messageId: r.messageId ?? "" }; }   // secretary: one retry
     catch { return { provider: p, ok: false, messageId: "" }; }
   };
   const results = await Promise.all(lanes.map(trySend));
   const sent = results.filter((r) => r.ok).map((r) => ({ provider: r.provider, messageId: r.messageId }));
-  if (sent.length && cfg.keryxRelay) await relayPost(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/expect`, { daemonId: "default", askId: req.id });
+  if (sent.length && cfg.keryxRelay) await relayPost(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/expect`, { daemonId: did, askId: req.id });
   return { sent, attempts: results.map((r) => ({ provider: r.provider, ok: r.ok })) };
 }
 /** Poll the relay for a reply to this ask (LINE/Slack/Discord/WhatsApp taps land here). */
@@ -670,7 +681,8 @@ export function registerPagerCommands(program: Command): void {
       const keryxTick = async () => {
         if (draining || !cfg.keryxRelay) return; draining = true;
         try {
-          const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=default`);
+          const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=${encodeURIComponent(daemonIdOf(cwd))}`);
+          const lk = dr.links as RdvLink[] | undefined; if (Array.isArray(lk)) saveLinks(cwd, lk);   // learn paired conversations (for precise outbound push)
           for (const a of (dr.answers as Array<{ id?: string; payload?: string; channel?: string }>) ?? []) {
             if (!a?.id) continue;
             await reconcileTap(cwd, cfg, a.id, keryx.normalizeDecision(String(a.payload ?? "")), a.channel || "line");

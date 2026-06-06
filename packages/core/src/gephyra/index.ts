@@ -608,11 +608,11 @@ export async function handleAgentRequest(repoRoot: string, raw: unknown, action:
  * never sees raw code (the ask never came through it) and it's your own server (semi-trusted,
  * like Telegram's API). Deploy it on `gephyra serve` (your DO droplet).
  */
-interface KeryxRelayState { v: 1; inbox: Record<string, unknown[]>; askOwner: Record<string, string> }
+interface KeryxRelayState { v: 1; inbox: Record<string, unknown[]>; askOwner: Record<string, string>; pairings?: unknown[]; links?: Array<{ daemonId: string; provider: string; conversation: string; at: number }> }
 function _keryxStatePath(repoRoot: string): string { return _join(repoRoot, ".mneme", "keryx", "relay.json"); }
 function _loadKeryxRelay(repoRoot: string): KeryxRelayState {
-  try { const p = _keryxStatePath(repoRoot); if (_existsSync(p)) { const j = JSON.parse(_readFileSync(p, "utf8")); if (j && typeof j === "object") return { v: 1, inbox: j.inbox ?? {}, askOwner: j.askOwner ?? {} }; } } catch { /* */ }
-  return { v: 1, inbox: {}, askOwner: {} };
+  try { const p = _keryxStatePath(repoRoot); if (_existsSync(p)) { const j = JSON.parse(_readFileSync(p, "utf8")); if (j && typeof j === "object") return { v: 1, inbox: j.inbox ?? {}, askOwner: j.askOwner ?? {}, pairings: j.pairings ?? [], links: j.links ?? [] }; } } catch { /* */ }
+  return { v: 1, inbox: {}, askOwner: {}, pairings: [], links: [] };
 }
 function _saveKeryxRelay(repoRoot: string, s: KeryxRelayState): void {
   try { const d = _join(repoRoot, ".mneme", "keryx"); if (!_existsSync(d)) _mkdirSync(d, { recursive: true }); _writeFileSync(_keryxStatePath(repoRoot), JSON.stringify(s), "utf8"); } catch { /* */ }
@@ -629,10 +629,21 @@ export function verifyDiscordSig(publicKeyHex: string, timestamp: string, rawBod
   } catch { return false; }
 }
 
-export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain", body: unknown, query: Record<string, string>, headers?: Record<string, string | string[] | undefined>): Promise<SavantHttpResponse> {
-  const { parseInbound } = await import("../keryx/index.js");
+export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain" | "pair-register", body: unknown, query: Record<string, string>, headers?: Record<string, string | string[] | undefined>): Promise<SavantHttpResponse> {
+  const { parseInbound, extractInbound } = await import("../keryx/index.js");
+  const rdv = await import("../keryx/rendezvous.js");
   const s = _loadKeryxRelay(repoRoot);
+  s.pairings = s.pairings ?? []; s.links = s.links ?? [];
   try {
+    // ── RENDEZVOUS: a daemon uploads a minted single-use pairing record ──
+    if (action === "pair-register") {
+      let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
+      const rec = o["record"] as { code?: string } | undefined;
+      if (!rec?.code) return { status: 400, body: { error: "required: record{code,...}" } };
+      s.pairings = [...(s.pairings as unknown[]).filter((r) => (r as { code?: string })?.code !== rec.code), rec];   // dedup by code
+      _saveKeryxRelay(repoRoot, s);
+      return { status: 200, body: { ok: true, registered: true } };
+    }
     if (action === "expect") {
       let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
       const daemonId = String(o["daemonId"] ?? ""), askId = String(o["askId"] ?? "");
@@ -659,19 +670,31 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
         }
         return { status: 200, body: { type: 7, data: { content: `✅ received: ${parsedD.answer ?? "ok"} — recorded.`, components: [] } } }; // UPDATE_MESSAGE: clears buttons, no error
       }
+      // ── RENDEZVOUS: is this inbound the user sending a pairing code? → LINK conversation ↔ daemon ──
+      const inb = extractInbound(provider, body);
+      if (inb.text) {
+        const m = rdv.matchPairingCode(inb.text, s.pairings as never[], { now: Date.now(), provider, skipSig: true });
+        if (m.ok && inb.conversation) {
+          const lt = rdv.link({ links: (s.links ?? []) as never[] }, m, inb.conversation, Date.now());
+          s.links = lt.links; s.pairings = rdv.consume(s.pairings as never[], m.code as string); _saveKeryxRelay(repoRoot, s);
+          return { status: 200, body: { ok: true, linked: true, provider, daemonId: m.daemonId } };
+        }
+      }
       const parsed = parseInbound(provider, body);
       if (!parsed.ok) return { status: 200, body: { ok: false, reason: parsed.reason } };  // 200 so the provider doesn't retry-storm
-      // route to the daemon that owns this ask id (or a sole registered daemon)
+      // route to the daemon that owns this ask id, else the conversation's linked daemon, else sole/default
       const owners = Object.values(s.askOwner);
-      const daemonId = (parsed.id && s.askOwner[parsed.id]) || (owners.length === 1 ? owners[0] : "default");
+      const linkedDaemon = inb.conversation ? (s.links ?? []).find((l) => l.provider === provider && l.conversation === inb.conversation)?.daemonId : undefined;
+      const daemonId = (parsed.id && s.askOwner[parsed.id]) || linkedDaemon || (owners.length === 1 ? owners[0] : "default");
       const env = { v: 1, kind: "answer", id: parsed.id ?? "", channel: provider, payload: parsed.answer ?? "", relayAttested: true, ts: Date.now() };
       s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), env]; _saveKeryxRelay(repoRoot, s);
       return { status: 200, body: { ok: true, routedTo: daemonId, id: parsed.id, answer: parsed.answer } };
     }
-    // drain
+    // drain — answers (cleared) + this daemon's current rendezvous links (for outbound push routing)
     const daemonId = String(query["daemon"] ?? "default");
     const answers = s.inbox[daemonId] ?? []; s.inbox[daemonId] = []; _saveKeryxRelay(repoRoot, s);
-    return { status: 200, body: { answers } };
+    const links = (s.links ?? []).filter((l) => l.daemonId === daemonId);
+    return { status: 200, body: { answers, links } };
   } catch (e) { return { status: 500, body: { error: (e as Error).message } }; }
 }
 

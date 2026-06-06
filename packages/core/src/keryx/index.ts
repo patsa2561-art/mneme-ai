@@ -117,6 +117,23 @@ export function parseInbound(provider: string, body: unknown): InboundAnswer {
   return { ok: false, id: null, answer: null, provider: p, reason: "no answer found in webhook" };
 }
 
+/** Extract the message TEXT + the CONVERSATION/source id from a provider webhook — for RENDEZVOUS
+ *  pairing (the conversation is who to push back to) + link-based answer routing. Best-effort/total. */
+export function extractInbound(provider: string, body: unknown): { text: string | null; conversation: string | null } {
+  const p = String(provider || "generic").toLowerCase();
+  let o: Record<string, unknown> = {};
+  try { o = typeof body === "string" ? JSON.parse(body) : ((body as Record<string, unknown>) ?? {}); } catch { o = { _raw: String(body ?? "") }; }
+  const g = (path: Array<string | number>): unknown => path.reduce<unknown>((a, k) => (a && typeof a === "object" ? (a as Record<string, unknown>)[k as string] : undefined), o);
+  try {
+    if (p === "line") { const ev = (o.events as unknown[])?.[0] as Record<string, unknown> | undefined; const src = ev?.source as Record<string, unknown> | undefined; return { text: ((ev?.message as { text?: string })?.text) ?? null, conversation: String(src?.userId ?? src?.groupId ?? src?.roomId ?? "") || null }; }
+    if (p === "slack") { return { text: (o.text as string) ?? ((o.event as { text?: string })?.text) ?? null, conversation: String((o.event as { user?: string; channel?: string })?.user ?? (o.event as { channel?: string })?.channel ?? o.user ?? o.channel_id ?? "") || null }; }
+    if (p === "discord") { return { text: (o.content as string) ?? ((o.data as { content?: string })?.content) ?? null, conversation: String(g(["member", "user", "id"]) ?? g(["author", "id"]) ?? o.channel_id ?? "") || null }; }
+    if (p === "whatsapp") { const msg = g(["entry", 0, "changes", 0, "value", "messages", 0]) as Record<string, unknown> | undefined; return { text: String((msg?.text as { body?: string })?.body ?? "") || null, conversation: String(msg?.from ?? "") || null }; }
+    if (p === "telegram") { return { text: ((o.message as { text?: string })?.text) ?? null, conversation: String(g(["message", "chat", "id"]) ?? g(["message", "from", "id"]) ?? "") || null }; }
+  } catch { /* */ }
+  return { text: (o.text as string) ?? (o._raw as string) ?? null, conversation: String(o.from ?? o.user ?? "") || null };
+}
+
 export interface RelayState { v: 1; outbox: Record<string, KeryxEnvelope[]>; inbox: Record<string, KeryxEnvelope[]> }
 export function emptyRelay(): RelayState { return { v: 1, outbox: {}, inbox: {} }; }
 /** Daemon pushes a signed ASK → relay queues it for delivery to the chat (outbox per daemon). */
