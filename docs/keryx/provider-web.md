@@ -56,3 +56,14 @@ change, no release**. Future providers join the same first-wins matrix automatic
 
 Both layers are pure + deterministic and each scores **100/100** on its gauntlet
 (`approvalMatrixGauntlet`, `providerWebGauntlet`).
+
+## Set up each provider (open in a new tab)
+
+- <a href="line.md" target="_blank" rel="noopener">LINE</a>
+- <a href="slack.md" target="_blank" rel="noopener">Slack</a>
+- <a href="discord.md" target="_blank" rel="noopener">Discord</a>
+- <a href="whatsapp.md" target="_blank" rel="noopener">WhatsApp</a>
+- <a href="universal.md" target="_blank" rel="noopener">Universal Gate — make it work with any agent (Grok / Gemini / Cursor / aider / a human)</a>
+- <a href="../KERYX.md" target="_blank" rel="noopener">The full relay + signed-envelope protocol</a>
+
+Telegram needs no provider doc — `mneme pager autosetup` wires it in one step.

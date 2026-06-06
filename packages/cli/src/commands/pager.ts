@@ -16,6 +16,21 @@ import { pager, notary, preflight, keryx } from "@mneme-ai/core";
 import { sendAsk, clearMessage, type ProviderCfg } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
+
+/** The computer surface — a tiny local approval page (127.0.0.1 only). Approve/reject right on the
+ *  machine you're sitting at, in parallel with your phone; the first tap wins, the rest clear. */
+const PAGER_UI_HTML = `<!doctype html><meta charset=utf-8><title>Mneme — approvals</title><meta name=viewport content="width=device-width,initial-scale=1">
+<style>body{font:15px/1.5 system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#1a1a1a;background:#fafafa}h1{font-size:18px}.card{border:1px solid #e3e3e3;border-radius:12px;padding:14px 16px;margin:12px 0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}.muted{color:#888;font-size:13px}.b{display:inline-block;margin:8px 8px 0 0;padding:9px 18px;border-radius:9px;border:0;font-weight:600;cursor:pointer;color:#fff}.y{background:#16a34a}.n{background:#dc2626}.c{background:#2563eb}.empty{color:#999;text-align:center;margin-top:40px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:6px;animation:p 1.4s infinite}@keyframes p{50%{opacity:.3}}</style>
+<h1><span class=dot></span>Mneme approvals <span class=muted>· this computer</span></h1><div id=app class=empty>loading…</div>
+<script>
+async function load(){try{const r=await fetch('/pager/pending');const {pending}=await r.json();const a=document.getElementById('app');
+if(!pending.length){a.className='empty';a.innerHTML='✓ nothing waiting — your agent is clear.';return}
+a.className='';a.innerHTML=pending.map(p=>{const ico=p.blast==='destructive'?'🟠':p.blast==='moderate'?'🟡':'🟢';
+const btns=p.kind==='approve'?'<button class="b y" onclick="decide(\\''+p.id+'\\',\\'allow\\')">✅ Approve</button><button class="b n" onclick="decide(\\''+p.id+'\\',\\'deny\\')">⛔ Reject</button>':p.kind==='choice'?p.choices.map(c=>'<button class="b c" onclick="decide(\\''+p.id+'\\',\\''+c.replace(/'/g,"")+'\\')">'+c+'</button>').join(''):'<input id="t_'+p.id+'" placeholder="type your answer" style="padding:8px;width:60%"><button class="b c" onclick="decide(\\''+p.id+'\\',document.getElementById(\\'t_'+p.id+'\\').value)">Send</button>';
+return '<div class=card>'+ico+' <b>'+p.agent+'</b><div>'+p.summary+'</div><div class=muted>'+p.kind+' · '+p.blast+'</div>'+btns+'</div>'}).join('')}catch(e){}}
+async function decide(id,answer){await fetch('/pager/decide',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,answer})});load()}
+load();setInterval(load,1500);
+</script>`;
 /** Claude Code delivers PreToolUse input as JSON on STDIN (tool_input.command, session_id) —
  *  NOT via env vars. Read it synchronously (the hook pipes it + closes stdin). */
 function readHookStdin(): { command?: string; session?: string; toolName?: string } | null {
@@ -42,7 +57,7 @@ const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
 
 interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string; keryxRelay?: string }
-interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry>; classStats?: Record<string, { seen: number; succeeded: number; recentFails: number }> }
+interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry>; classStats?: Record<string, { seen: number; succeeded: number; recentFails: number }>; surfaces?: Record<string, Array<{ provider: string; messageId: string }>>; clearedSurfaces?: Record<string, string[]> }
 type PagerPending = pager.Pending & { tgMessageId?: number };
 
 const loadCfg = (cwd: string): PagerConfig => { try { return existsSync(cfgPath(cwd)) ? JSON.parse(readFileSync(cfgPath(cwd), "utf8")) : {}; } catch { return {}; } };
@@ -132,6 +147,22 @@ async function drainKeryxAnswer(cfg: PagerConfig, id: string): Promise<{ provide
 async function clearKeryxOthers(cwd: string, cfg: PagerConfig, sent: Array<{ provider: string; messageId: string }>, answeredOn: string): Promise<void> {
   const provs = keryxProviders(cwd);
   for (const act of keryx.clearPlan(sent, answeredOn)) { try { await clearMessage(act.provider, provs[act.provider], act.messageId, answeredOn); } catch { /* */ } }
+}
+/** AUTHORITATIVE cross-surface reconcile (the Approval Matrix, wired live): clear EVERY surface the
+ *  human did NOT answer on — from ANY process (request loop, long-poll daemon, computer web tap) —
+ *  idempotently, so a tap on Telegram clears LINE/Slack/Discord/WhatsApp and vice-versa, and the
+ *  same surface is never cleared twice. Reads the broadcast surfaces persisted at request time. */
+async function clearOthersFor(cwd: string, cfg: PagerConfig, id: string, answeredOn: string): Promise<void> {
+  const st = loadState(cwd);
+  const sent = st.surfaces?.[id] ?? [];
+  const done = new Set(st.clearedSurfaces?.[id] ?? []);
+  const provs = keryxProviders(cwd);
+  for (const s of sent) {
+    if (!s?.provider || s.provider === answeredOn || done.has(s.provider)) continue;
+    try { await clearMessage(s.provider, provs[s.provider], s.messageId, answeredOn); } catch { /* best-effort */ }
+    done.add(s.provider);
+  }
+  const s2 = loadState(cwd); s2.clearedSurfaces = s2.clearedSurfaces ?? {}; s2.clearedSurfaces[id] = [...done]; saveState(cwd, s2);
 }
 
 async function page(cfg: PagerConfig, req: pager.ApprovalRequest): Promise<number | undefined> {
@@ -365,6 +396,9 @@ export function registerPagerCommands(program: Command): void {
       if (tgMid) { const s = loadState(cwd); const pp = s.pendings.find((x) => x.req.id === req.id); if (pp) { pp.tgMessageId = tgMid; saveState(cwd, s); } }
       const fo = await fanOutKeryx(cwd, cfg, req, lanes);   // fan out to the chosen LINE/Slack/Discord/WhatsApp lanes IN PARALLEL
       const keryxSent = fo.sent;
+      // ★ persist EVERY surface this ask was offered on (incl. Telegram + the computer) so ANY process
+      //   — request loop, long-poll daemon, or the computer web tap — can reconcile + clear the rest.
+      { const s = loadState(cwd); s.surfaces = s.surfaces ?? {}; s.surfaces[req.id] = [...(tgMid ? [{ provider: "telegram", messageId: String(tgMid) }] : []), ...keryxSent]; saveState(cwd, s); }
       // ── THE SECRETARY: confirm the broadcast actually reached every chat (delivery report) ──
       const attempts = [
         ...(wantTelegram && cfg.telegramToken ? [{ provider: "telegram", ok: !!tgMid }] : []),
@@ -401,7 +435,7 @@ export function registerPagerCommands(program: Command): void {
       // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
       const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl; let n = 0;
       const settle = async (answer: "allow" | "deny", answeredOn: string, reason: string) => {
-        if (keryxSent.length) await clearKeryxOthers(cwd, cfg, keryxSent, answeredOn);   // LINE/Slack/Discord/WhatsApp: edit or "answered elsewhere"
+        await clearOthersFor(cwd, cfg, req.id, answeredOn);   // authoritative: clear EVERY other surface, idempotent across processes
         // ── THE SECRETARY: post the agent-received RECEIPT so the human SEES the agent got it 100% ──
         if (answeredOn !== "policy" && answeredOn !== "") {
           const receipt = keryx.receiptLine(req.agent, answer, answeredOn);
@@ -555,8 +589,22 @@ export function registerPagerCommands(program: Command): void {
       out(`   Now ANY agent (or you) running a guarded command is gated through the pager — vendor-neutral.`);
     });
 
-  p.command("approve <id>").description("Approve a pending request locally (testing without the phone).").option("--deny", "deny instead")
-    .action((id: string, o: { deny?: boolean }) => { const r = resolvePending(process.cwd(), id, o.deny ? "deny" : "allow", "human", "local", Date.now()); out(r ? `✓ ${o.deny ? "denied" : "approved"} ${id}` : "no such pending request"); });
+  p.command("approve <id>").description("Approve a pending request from THIS computer (in parallel with your phone — the first tap wins, the rest clear).").option("--deny", "deny instead")
+    .action(async (id: string, o: { deny?: boolean }) => {
+      const cwd = process.cwd(); const r = resolvePending(cwd, id, o.deny ? "deny" : "allow", "human", "computer", Date.now());
+      if (!r) { out("no such pending request"); return; }
+      try { await clearOthersFor(cwd, loadCfg(cwd), id, "computer"); } catch { /* */ }
+      out(`✓ ${o.deny ? "denied" : "approved"} ${id} on this computer — other surfaces cleared.`);
+    });
+
+  p.command("open").description("💻 Open the local approval page in your browser — approve/reject right here on the computer, in parallel with your phone.")
+    .action(() => {
+      const cwd = process.cwd(); ensureDaemon(cwd);
+      const port = (loadCfg(cwd) as { httpPort?: number }).httpPort ?? 17782; const url = `http://127.0.0.1:${port}/pager/ui`;
+      const cmd = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
+      try { spawn(cmd, [url], { shell: process.platform === "win32", stdio: "ignore", detached: true }).unref(); } catch { /* */ }
+      out(`💻 approval page → ${url}  (approve/reject here; the first tap across any surface wins)`);
+    });
 
   p.command("status").description("Pending queue + Trust-Tide state.").action(() => {
     const cwd = process.cwd(); const st = loadState(cwd); const cfg = loadCfg(cwd);
@@ -587,6 +635,9 @@ export function registerPagerCommands(program: Command): void {
       let offset = 0;
       const deadmanTick = () => { const st = loadState(cwd); const r = pager.deadmanResolve(st.pendings.filter((x) => x.status === "pending"), Date.now()); for (const res of r.resolved) resolvePending(cwd, res.id, res.decision, "deadman", "policy", Date.now()); };
       setInterval(deadmanTick, (cfg.wakeIntervalMin ?? 5) * 60_000);
+      // daemon-scope helpers (shared by the long-poll loop AND the computer web surface)
+      const dStrip = (id: string) => { const mid = loadState(cwd).pendings.find((x) => x.req.id === id)?.tgMessageId; return (mid && cfg.telegramToken && cfg.chatId) ? tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }) : Promise.resolve({ ok: true }); };
+      const dConfirm = (t: string) => (cfg.telegramToken && cfg.chatId) ? tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: t }) : Promise.resolve({ ok: true });
 
       // ── LOCAL HTTP/A2A BRIDGE — the universal channel: ANY local agent (Cursor/Cline/Codex/
       // aider, or a Grok/xAI/OpenAI tool-runner) can POST to ask the human via Telegram + poll
@@ -598,6 +649,27 @@ export function registerPagerCommands(program: Command): void {
           const url = new URL(rq.url ?? "/", "http://127.0.0.1");
           if (rq.method === "GET" && url.pathname === "/health") return send(200, { ok: true, service: "mneme-pager" });
           if (rq.method === "GET" && url.pathname === "/pager/answer") { const id = url.searchParams.get("id") ?? ""; const st = loadState(cwd); const pp = st.pendings.find((x) => x.req.id === id); return send(200, { id, answer: st.answers?.[id] ?? null, status: pp?.status ?? "unknown" }); }
+          // ── THE COMPUTER SURFACE — approve/reject right here on the machine you're sitting at,
+          //    in parallel with your phone. First tap on ANY surface wins; the rest clear. ──
+          if (rq.method === "GET" && url.pathname === "/pager/pending") { const st = loadState(cwd); return send(200, { pending: st.pendings.filter((x) => x.status === "pending").map((p) => ({ id: p.req.id, agent: p.req.agent, summary: p.req.summary, blast: p.req.blast, kind: p.req.kind ?? "approve", choices: p.req.choices ?? [] })) }); }
+          if (rq.method === "POST" && url.pathname === "/pager/decide") {
+            let body = ""; rq.on("data", (d) => (body += d)); rq.on("end", async () => {
+              try {
+                const b = JSON.parse(body || "{}") as { id?: string; answer?: string };
+                const id = String(b.id ?? ""); const ans = String(b.answer ?? "");
+                const cur = loadState(cwd).pendings.find((x) => x.req.id === id);
+                if (!cur) return send(404, { error: "no such request" });
+                if (cur.status !== "pending") return send(200, { ok: true, status: cur.status, note: "already decided" });
+                if (!resolvePending(cwd, id, ans, "human", "computer", Date.now())) return send(409, { error: "could not resolve" });
+                await dStrip(id); await clearOthersFor(cwd, cfg, id, "computer");
+                const ag = cur.req.agent || "the agent";
+                await dConfirm(ans === "allow" ? `💻 Approved on the computer — command unlocked (${ag} is proceeding).` : ans === "deny" ? `💻 Denied on the computer — command blocked.` : `💻 Answered on the computer: "${ans}".`);
+                send(200, { ok: true, status: "resolved", answeredOn: "computer" });
+              } catch (e) { send(400, { error: String((e as Error).message) }); }
+            });
+            return;
+          }
+          if (rq.method === "GET" && url.pathname === "/pager/ui") { rs.writeHead(200, { "content-type": "text/html; charset=utf-8" }); rs.end(PAGER_UI_HTML); return; }
           if (rq.method === "POST" && url.pathname === "/pager/ask") {
             let body = ""; rq.on("data", (d) => (body += d)); rq.on("end", async () => {
               try {
@@ -635,11 +707,11 @@ export function registerPagerCommands(program: Command): void {
             if (data.startsWith("a:") || data.startsWith("d:")) {
               const id = data.split(":")[1]; const cur = findById(id);
               if (cur && cur.status !== "pending") { await ack("already answered"); await confirm(`ℹ️ Already answered (${loadState(cwd).answers?.[id] ?? "?"}).`); }
-              else { const allow = data.startsWith("a:"); const ag = cur?.req.agent || "the agent"; if (resolvePending(cwd, id, allow ? "allow" : "deny", "human", "telegram", Date.now())) { await ack(allow ? "✅ approved" : "⛔ denied"); await stripButtons(id); await confirm(allow ? `✅ Approved — command unlocked (${ag} is proceeding).` : `⛔ Denied — command blocked (${ag} will not run it).`); } }
+              else { const allow = data.startsWith("a:"); const ag = cur?.req.agent || "the agent"; if (resolvePending(cwd, id, allow ? "allow" : "deny", "human", "telegram", Date.now())) { await ack(allow ? "✅ approved" : "⛔ denied"); await stripButtons(id); await clearOthersFor(cwd, cfg, id, "telegram"); await confirm(allow ? `✅ Approved — command unlocked (${ag} is proceeding).` : `⛔ Denied — command blocked (${ag} will not run it).`); } }
             }
             else if (data.startsWith("c:")) { const [, id, idxS] = data.split(":"); const cur = findById(id); const choice = cur?.req.choices?.[parseInt(idxS, 10)];
               if (cur && cur.status !== "pending") { await ack("already answered"); await confirm(`ℹ️ Already chosen (${loadState(cwd).answers?.[id] ?? "?"}).`); }
-              else if (cur && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await stripButtons(id); await confirm(`✅ Chosen: ${choice} (${cur?.req.agent || "the agent"} is proceeding).`); } }
+              else if (cur && choice && resolvePending(cwd, id, choice, "human", "telegram", Date.now())) { await ack(`✅ ${choice}`); await stripButtons(id); await clearOthersFor(cwd, cfg, id, "telegram"); await confirm(`✅ Chosen: ${choice} (${cur?.req.agent || "the agent"} is proceeding).`); } }
             else if (u.message?.reply_to_message?.message_id) { // typed text answer
               const mid = u.message.reply_to_message.message_id; const txt = (u.message.text ?? "").trim();
               const st0 = loadState(cwd); const pp = st0.pendings.find((x) => x.tgMessageId === mid && x.status === "pending");
