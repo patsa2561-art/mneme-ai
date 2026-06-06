@@ -30,6 +30,12 @@ Every other memory layer is a perfect-recall database — it hoards everything a
 
 And because it forgets by design, Mneme can do what no memory layer does: **prove it forgot.** Everyone can prove they *kept* data; **Proof-of-Forgetting** mints a signed, offline-verifiable attestation that specific memories are *gone* (absent from the attested store + a merkle root) — the missing primitive for **GDPR Art. 17 / EU AI Act right-to-erasure**. `mneme thymos consolidate --commit` forgets the trivial + mints the proof; `mneme forget verify` checks it. Every new capability here also reaches **every MCP agent automatically** (`mneme.gate` · `mneme.infra.attest` · `mneme.thymos.feel` · `mneme.thymos.resonate` · `mneme.forget.verify`) — no setup, no one teaching them.
 
+## 🛰 APHELION — the agent brain that goes farther than the cloud
+
+Every AI governance layer assumes the cloud is one round-trip away. An agent on **Mars** (4–24 min light-delay), a **severed Starlink** link, or an **air-gapped** facility can't ask Earth before it acts. **APHELION** lets it govern *itself* against a local **charter** (mission · scope · forbidden · max-risk), record every off-grid action to a tamper-evident chain, and — when the link returns — hand back **one signed capsule that proves charter-compliance for the whole disconnected window** (a violation *cannot be hidden*), then **CRDT-merge across the fleet**. Proven end-to-end: a rover goes dark, self-blocks a `self-destruct`, seals a capsule, Earth reconnects and **verifies it offline**. The first governance that doesn't assume a cloud — built on Mneme's local-first, offline-verifiable core. `aphelionGauntlet=100` · `mneme aphelion`. <sub>**<a href="docs/aphelion.md" target="_blank" rel="noopener">the brain beyond the cloud →</a>**</sub>
+
+And every proof an agent can produce — governed · where it ran · what it did offline · what it forgot — bundles into one user-owned **Accountability Dossier** that *anyone verifies offline* with no vendor and no Mneme. Trust stops being "believe the giant" and becomes **"verify anyone."**
+
 ## 🩻 Try it live
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>
