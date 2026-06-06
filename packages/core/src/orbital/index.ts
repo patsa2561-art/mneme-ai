@@ -74,6 +74,20 @@ export function spaceWeatherAdvisory(input: SpaceWeather): OrbitalAdvisory {
   return { level, riskFactor, impacts, charterSuggestion, note: "operational telemetry the agent reads + governs by — not a claim that space weather alters the model." };
 }
 
+// ── the loop: turn a live advisory into a SIGNED APHELION charter amendment ──────────────────────
+export interface CharterLike { mission: string; scope: string[]; forbidden: string[]; maxRisk: number }
+/** Apply an orbital advisory to a charter (deterministic): tighten maxRisk DOWN only, union the
+ *  forbidden actions. Never loosens — space weather can only make an agent more cautious. */
+export function applyAdvisoryToCharter(charter: CharterLike, advisory: OrbitalAdvisory): { charter: CharterLike; changed: boolean; reason: string } {
+  const base: CharterLike = charter ?? { mission: "", scope: [], forbidden: [], maxRisk: 1 };
+  const sug = advisory?.charterSuggestion;
+  if (!sug) return { charter: base, changed: false, reason: "nominal — no change advised" };
+  const maxRisk = Math.min(Number(base.maxRisk ?? 1), Number(sug.lowerMaxRiskTo ?? base.maxRisk ?? 1));   // tighten only
+  const forbidden = [...new Set([...(base.forbidden ?? []), ...(sug.addForbidden ?? [])])];
+  const changed = maxRisk !== base.maxRisk || forbidden.length !== (base.forbidden ?? []).length;
+  return { charter: { mission: base.mission, scope: base.scope ?? [], forbidden, maxRisk }, changed, reason: sug.reason };
+}
+
 // ── overhead satellite (live sub-point → is it in view of an observer) ──────────────────────────
 const R_EARTH = 6371;
 /** Great-circle distance (km) between two lat/lon points (haversine, deterministic). */
@@ -115,13 +129,22 @@ export function orbitalGauntlet(): OrbitalGauntlet {
   const far = isOverhead(13.7, 100.5, 420, -13.7, -79.5);   // opposite side of Earth
   const overheadOK = here.overhead === true && here.groundDistanceKm === 0 && far.overhead === false && here.horizonKm > 2000;
 
-  const total = (() => { try { parseSpaceWeather(null); spaceWeatherAdvisory(null as never); isOverhead(0, 0, 0, 0, 0); groundDistanceKm(0, 0, 0, 0); return true; } catch { return false; } })();
+  // the loop: a storm advisory tightens a charter (down only); quiet leaves it untouched
+  const stormAdv = spaceWeatherAdvisory(parseSpaceWeather({ "0": { G: { Scale: "4" }, R: { Scale: "3" }, S: { Scale: "0" } } }, [{ kp_index: 8 }]));
+  const tightened = applyAdvisoryToCharter({ mission: "m", scope: ["*"], forbidden: ["x"], maxRisk: 0.8 }, stormAdv);
+  const quietApplied = applyAdvisoryToCharter({ mission: "m", scope: ["*"], forbidden: ["x"], maxRisk: 0.8 }, spaceWeatherAdvisory(parseSpaceWeather({ "0": { G: { Scale: "0" }, R: { Scale: "0" }, S: { Scale: "0" } } }, [])));
+  const loopOK = tightened.changed && tightened.charter.maxRisk === 0.4 && tightened.charter.forbidden.includes("hf-transmit") && tightened.charter.forbidden.includes("x")
+    && quietApplied.changed === false && quietApplied.charter.maxRisk === 0.8
+    && applyAdvisoryToCharter({ mission: "m", scope: [], forbidden: [], maxRisk: 0.3 }, stormAdv).charter.maxRisk === 0.3;   // never loosens (0.3 < 0.4)
+
+  const total = (() => { try { parseSpaceWeather(null); spaceWeatherAdvisory(null as never); applyAdvisoryToCharter(null as never, null as never); isOverhead(0, 0, 0, 0, 0); groundDistanceKm(0, 0, 0, 0); return true; } catch { return false; } })();
 
   const checks = [
     { name: "PARSE-QUIET", pass: quietOK, detail: "a real NOAA quiet payload → G0, condition quiet, Kp 3, nominal advisory, no charter change" },
     { name: "STORM-TIGHTENS-CHARTER", pass: stormOK, detail: "a G4/Kp8 storm → severe advisory + a charter suggestion (lower maxRisk, require approval for comms/nav)" },
     { name: "BLACKOUT-FORBIDS-HF", pass: blackoutOK, detail: "an R4 radio blackout adds an hf-transmit forbid to the suggested charter" },
     { name: "OVERHEAD-GEOMETRY", pass: overheadOK, detail: "a satellite at the observer's sub-point is overhead; the antipode is below the horizon (real horizon math)" },
+    { name: "ADVISORY→CHARTER-LOOP", pass: loopOK, detail: "a storm advisory tightens a charter (maxRisk down + forbid union); quiet leaves it untouched; it NEVER loosens" },
     { name: "TOTAL", pass: total, detail: "never throws on garbage/null" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
