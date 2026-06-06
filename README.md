@@ -28,6 +28,10 @@ When an AI agent finishes a job, who vouches that it was *governed*? The vendor 
 
 **Building an agent? Govern it in 5 lines** — wrap your tool executor once and every call is gated + audited + human-approved + certified, with no other change to your code: `const run = gov.guard(myToolExecutor)`. A destructive call throws before it reaches the tool; the run mints a signed certificate. <sub>**<a href="docs/sdk-governance.md" target="_blank" rel="noopener">the @mneme-ai/sdk harness →</a>**</sub>
 
+## 💗 THYMOS — the first AI memory with a heart you can audit
+
+Every other memory layer is a perfect-recall database — it hoards everything and bonds with no one. **THYMOS** gives Mneme an *affective core*: every memory carries a **salience** read from real signals (was it reused? did you react strongly — in English *or* Thai? was it consequential?), and it **decays like a mind** — the trivial fades within a day, what *bonds* survives for a year. The same core is an **attractor**: inbound content is ranked by **resonance** with your vision, so the meaningful is pulled in and the noise repelled. ★The honest part (DIAKRISIS): "feeling" is a **signed, deterministic, measurable** score — salience `0..1`, valence `-1..1`, **bond `0..100`**, retention curves, footprint saved — **not** a claim of sentience. A heart you can *measure*. `thymosGauntlet=100` · `mneme thymos`. <sub>**<a href="docs/thymos.md" target="_blank" rel="noopener">the affective core →</a>**</sub>
+
 ## 🩻 Try it live
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>
