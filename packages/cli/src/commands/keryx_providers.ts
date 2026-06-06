@@ -90,8 +90,16 @@ export async function sendAsk(provider: string, cfg: ProviderCfg, spec: AskSpec)
 
 /** Clear / mark-answered on the providers the human did NOT answer on. Edits where possible. */
 export async function clearMessage(provider: string, cfg: ProviderCfg, messageId: string, answeredOn: string): Promise<void> {
-  if (!cfg?.token) return;
-  const note = `✅ answered on ${answeredOn} — this request is closed.`;
+  // ROOT-CAUSE FIX: LINE has no pre-set `token` (it mints one from channelId+secret) — the old
+  // `if (!cfg?.token) return` silently killed every LINE clear. Allow LINE's minted-credential path.
+  const lineCreds = provider === "line" && (cfg?.token || (cfg?.channelId && cfg?.channelSecret));
+  if (!cfg?.token && !lineCreds) return;
+  // Telegram/Slack/Discord can EDIT the original message away; LINE/WhatsApp cannot delete their own
+  // buttons (no edit/delete API), so tell the human the buttons above are now inactive.
+  const editable = provider === "telegram" || provider === "slack" || provider === "discord";
+  const note = editable
+    ? `✅ answered on ${answeredOn} — this request is closed.`
+    : `✅ answered on ${answeredOn} — this request is closed. (the Yes/No buttons above are now inactive — please ignore them.)`;
   try {
     if (provider === "telegram" && messageId) { await httpsJson("api.telegram.org", `/bot${cfg.token}/editMessageText`, {}, { chat_id: cfg.chatId, message_id: Number(messageId), text: note }); return; }
     if (provider === "slack" && messageId) { await httpsJson("slack.com", "/api/chat.update", { authorization: `Bearer ${cfg.token}` }, { channel: cfg.channel, ts: messageId, text: note, blocks: [] }); return; }
