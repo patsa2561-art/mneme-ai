@@ -53,6 +53,9 @@
   button:hover{background:#22232c}
   button:active{transform:scale(.98)}
   button:disabled{opacity:.5;cursor:default}
+  .thymoslink{display:inline-flex;align-items:center;gap:8px;margin:16px auto 0;padding:9px 16px;border:1px solid var(--line);border-radius:999px;color:var(--ink2);text-decoration:none;font-size:13.5px;font-weight:560;background:var(--soft);transition:border-color .15s,transform .1s}
+  .thymoslink:hover{border-color:#d9b8c6;transform:translateY(-1px)}
+  .thymoswrap{text-align:center}
   .hint{color:var(--sub);font-size:13.5px;text-align:center;line-height:1.6}
   .hint b{color:var(--ink2);font-weight:560}
   .err{color:var(--red);text-align:center;margin-top:18px;font-size:14.5px}
@@ -477,6 +480,7 @@ document.querySelectorAll(".fontpick button").forEach(function(b){b.addEventList
       <span><b>X-Ray</b> — instant health report: dependencies, secrets, risk &amp; who-to-ask.</span>
       <span><b>📦 AI Pack</b> — bundle the whole repo into one text to paste into any AI chat.</span>
     </div>
+    <div class="thymoswrap"><a class="thymoslink" href="/thymos" title="THYMOS — a memory with a heart you can measure">💗 See THYMOS — a memory that forgets like a mind &amp; pulls in what matters &nbsp;→</a></div>
     <p class="hint">Every number is <b>reproducible</b> from git, code &amp; package metadata and sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private repo or a local folder with no public URL? Run <code>npx @mneme-ai/xray bridge</code> on your machine — a <b>Scan a local folder</b> box appears here + your code never leaves your computer.</span></p>
     <details class="keybox">
       <summary>🔖 Optional — save your reports</summary>
