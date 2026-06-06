@@ -160,6 +160,7 @@ import { registerThymosCommands } from "./commands/thymos.js";
 import { registerInfraCommands } from "./commands/infra.js";
 import { registerAphelionCommands } from "./commands/aphelion.js";
 import { registerOrbitalCommands } from "./commands/orbital.js";
+import { registerLiveCommands } from "./commands/live.js";
 import { registerAdamasCommands } from "./commands/adamas.js";
 import { registerPrismCommands } from "./commands/prism.js";
 import { registerGoldilocksCommands } from "./commands/goldilocks.js";
@@ -5002,6 +5003,7 @@ export async function run(argv: string[]): Promise<void> {
   registerInfraCommands(program);
   registerAphelionCommands(program);
   registerOrbitalCommands(program);
+  registerLiveCommands(program);
   registerAdamasCommands(program);
   registerPrismCommands(program);
   registerGoldilocksCommands(program);

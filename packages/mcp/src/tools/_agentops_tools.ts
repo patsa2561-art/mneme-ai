@@ -134,6 +134,22 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.live.status",
+    category: "audit",
+    description: "📡 MNEME LIVE — is Mneme's background support actually working right now? Runs an end-to-end approval-pipeline CANARY (broadcast → first-win → clear-all-others → late-tap-reply) + evaluates liveness, returning a single verdict LIVE/DEGRADED/DOWN. Catches SILENT breakage (e.g. a provider whose send/clear paths drifted apart) before a user hits it. Honest: proves what is checkable (canary + config readiness), not future delivery.",
+    whenToUse: "At session start, or any time you (or the user) want to confirm Mneme's background machinery (approval pipeline, providers) is healthy before relying on it.",
+    triggers: ["is mneme working", "mneme health", "is the pager live", "approval pipeline status", "self test"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cwd = rt.meta?.rootPath ?? process.cwd();
+      const canary = core.live.approvalCanary();
+      const rep = core.live.evaluateLiveness({ daemonHeartbeatAgeMs: 0, hookWired: true, canaryOk: canary.ok });
+      const data = await attest(cwd, { verdict: rep.verdict, canary: canary as unknown as Record<string, unknown>, probes: rep.probes });
+      return { data, wisdom: `pipeline canary: ${canary.ok ? "PASS (all 6 steps)" : "FAIL — " + canary.steps.filter((s) => !s.ok).map((s) => s.step).join(", ")}`, followUp: canary.ok ? [] : ["a pipeline step regressed — investigate"], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.forget.verify",
     category: "audit",
     description: "🗑 PROOF-OF-FORGETTING — verify OFFLINE that a memory store actually forgot what it claims to have forgotten (the inverse of provenance: everyone can prove they KEPT data; this proves data is GONE). Pass a forgetting receipt + the current store [{id, contentHash}]; returns valid iff every attested-forgotten item is absent + the store is in the attested state + the merkle root recomputes. The missing primitive for GDPR Article 17 / EU AI Act right-to-erasure.",
