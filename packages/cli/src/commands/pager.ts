@@ -6,13 +6,13 @@
  * power "breathing". Behind NAT, the laptop reaches OUT to Telegram — NO server, NO public IP.
  */
 import type { Command } from "commander";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, chmodSync, renameSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, chmodSync, renameSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import * as https from "node:https";
 import * as http from "node:http";
-import { pager, notary, preflight, keryx } from "@mneme-ai/core";
+import { pager, notary, preflight, keryx, live } from "@mneme-ai/core";
 import { sendAsk, clearMessage, type ProviderCfg } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -670,6 +670,30 @@ export function registerPagerCommands(program: Command): void {
         } catch { /* relay blip — retry next tick */ } finally { draining = false; }
       };
       setInterval(() => { void keryxTick(); }, 3000);
+      // ── CONTINUOUS SELF-VERIFY — every 60s run the end-to-end pipeline CANARY + snapshot vitals so a
+      //    silent regression is caught + surfaced (the pulse/boot read .mneme/pager/vitals.json). The
+      //    daemon being alive is itself the heal for daemon-down (ensureDaemon revives it on the next
+      //    agent action), so this tick's job is to PROVE correctness + ALERT, not restart blindly. ──
+      const vitalsTick = () => {
+        try {
+          const canary = live.approvalCanary();
+          const provs = keryxProviders(cwd);
+          const rep = live.evaluateLiveness({
+            daemonHeartbeatAgeMs: 0, hookWired: true, canaryOk: canary.ok,
+            relay: cfg.keryxRelay ? { configured: true, reachable: null } : { configured: false, reachable: null },
+            providers: [
+              { name: "telegram", cfg: cfg.telegramToken ? { token: cfg.telegramToken } : null },
+              { name: "line", cfg: (provs.line as never) ?? null }, { name: "slack", cfg: (provs.slack as never) ?? null },
+              { name: "discord", cfg: (provs.discord as never) ?? null }, { name: "whatsapp", cfg: (provs.whatsapp as never) ?? null },
+            ],
+          });
+          try { writeFileSync(join(dir(cwd), "vitals.json"), JSON.stringify({ ts: Date.now(), verdict: rep.verdict, canaryOk: canary.ok, summary: rep.summary, probes: rep.probes }), "utf8"); } catch { /* */ }
+          if (!canary.ok || rep.verdict === "down") {
+            try { appendFileSync(join(cwd, ".mneme", "supernova.jsonl"), JSON.stringify({ ts: new Date().toISOString(), cycle: "vitals_canary", outcome: canary.ok ? "PROVIDER_DOWN" : "CANARY_FAIL", verdict: rep.verdict, detail: rep.summary }) + "\n"); } catch { /* */ }
+          }
+        } catch { /* never let the self-check crash the daemon */ }
+      };
+      setInterval(vitalsTick, 60_000); vitalsTick();
       // daemon-scope helpers (shared by the long-poll loop AND the computer web surface)
       const dStrip = (id: string) => { const mid = loadState(cwd).pendings.find((x) => x.req.id === id)?.tgMessageId; return (mid && cfg.telegramToken && cfg.chatId) ? tg(cfg.telegramToken, "editMessageReplyMarkup", { chat_id: cfg.chatId, message_id: mid, reply_markup: { inline_keyboard: [] } }) : Promise.resolve({ ok: true }); };
       const dConfirm = (t: string) => (cfg.telegramToken && cfg.chatId) ? tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: t }) : Promise.resolve({ ok: true });
