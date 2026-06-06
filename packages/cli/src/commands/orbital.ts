@@ -9,9 +9,12 @@
 import type { Command } from "commander";
 import { get as httpsGet } from "node:https";
 import { get as httpGet } from "node:http";
-import { orbital } from "@mneme-ai/core";
+import { orbital, tle } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
+function fetchText(url: string): Promise<string> {
+  return new Promise((resolve, reject) => { const r = httpsGet(url, (x) => { let b = ""; x.on("data", (c) => (b += c)); x.on("end", () => resolve(b)); }); r.on("error", reject); r.setTimeout(9000, () => r.destroy(new Error("timeout"))); });
+}
 function fetchJson(url: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const lib = url.startsWith("https") ? httpsGet : httpGet;
@@ -44,6 +47,20 @@ export function registerOrbitalCommands(program: Command): void {
         } else out("   🟢 nominal — no charter change advised.");
         out("   (real NOAA telemetry the agent reads + governs by — not a mood/entropy claim)");
       } catch (e) { out(`✗ could not reach NOAA (need internet): ${(e as Error).message}`); process.exitCode = 2; }
+    });
+
+  k.command("tle <catnr>").description("TLE intelligence — fetch a satellite's element set (CelesTrak) + characterize its orbit, staleness + decay risk. e.g. 25544 = ISS, 48274 = a Starlink.")
+    .action(async (catnr: string) => {
+      try {
+        const txt = await fetchText(`https://celestrak.org/NORAD/elements/gp.php?CATNR=${encodeURIComponent(catnr)}&FORMAT=tle`);
+        const L = txt.trim().split("\n").map((s) => s.trim());
+        if (L.length < 3) { out(`✗ no element set for ${catnr} (${(L[0] || "").slice(0, 60)})`); process.exitCode = 2; return; }
+        const el = tle.parseTle(L[1], L[2]); const oi = tle.orbitInfo(el); const st = tle.tleStaleness(el, Date.now()); const dr = tle.decayRisk(el);
+        const sico = st.band === "fresh" ? "🟢" : st.band === "aging" ? "🟡" : "🔴";
+        out(`🛰 ${L[0] || catnr} — ${oi.orbitClass} · period ${oi.periodMin} min · alt ${oi.perigeeAltKm}–${oi.apogeeAltKm} km · inc ${el.inclinationDeg}° · ecc ${oi.eccentricity}`);
+        out(`   element set: ${sico} ${st.band} (${st.ageDays} days old) — ${st.note}`);
+        out(`   decay: ${dr.band === "stable" ? "🟢" : "🟠"} ${dr.band} — ${dr.note}`);
+      } catch (e) { out(`✗ could not reach CelesTrak (need internet): ${(e as Error).message}`); process.exitCode = 2; }
     });
 
   k.command("track").description("Is the ISS overhead you right now? (live position over plain internet).")
