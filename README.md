@@ -20,6 +20,10 @@
 
 ---
 
+## 🎖 The Agent Run Certificate — proof a giant can't issue for itself
+
+When an AI agent finishes a job, who vouches that it was *governed*? The vendor can't credibly vouch for itself, and a customer/auditor/insurer won't take "trust us." **`mneme agentcert build`** issues one **portable, NOTARY-signed Agent Run Certificate** — the run's MCP-gateway audit chain + human approvals — that **anyone verifies OFFLINE** (no Mneme, no vendor). Its summary **re-derives from the bound evidence**, so the certificate *cannot lie about its own run* (prove, don't claim); a recorded "allow" that carried block-grade risk is caught as a bypassed gate. **Insurance-grade · vendor-neutral · local-first** — the neutral trust layer Grok / xAI / NVIDIA adopt precisely because no vendor can own it. `mneme agentcert verify <cert>`.
+
 ## 🩻 Try it live
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>

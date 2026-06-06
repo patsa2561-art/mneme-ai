@@ -25,7 +25,7 @@ const sha = (s: string): string => createHash("sha256").update(String(s ?? ""), 
 function canon(x: unknown): string { try { return JSON.stringify(x, (_k, v) => v, 0) ?? "null"; } catch { return String(x); } }
 
 export type GateDecision = "allow" | "needs-approval" | "block";
-export interface ToolCall { tool: string; agent?: string; args?: unknown; server?: string }
+export interface ToolCall { tool: string; agent?: string; args?: unknown; server?: string; run?: string }
 export interface GatePolicy { allow?: string[]; deny?: string[]; needApproval?: string[]; defaultDecision?: GateDecision }
 export interface ToolProvenance { verdict: "SAFE" | "REVIEW" | "BLOCK" }
 export interface CallVerdict { decision: GateDecision; risk: number; reasons: string[]; argsHash: string }
@@ -69,11 +69,11 @@ export function gateCall(call: ToolCall, policy: GatePolicy = {}, provenance?: T
 }
 
 // ── AUDIT LEDGER — hash-chained, offline-verifiable ───────────────────────────
-export interface AuditFrame { seq: number; ts: number; tool: string; agent: string; argsHash: string; decision: GateDecision; risk: number; prev: string; frameId: string }
-function frameBody(f: Omit<AuditFrame, "frameId">): string { return canon({ seq: f.seq, ts: f.ts, tool: f.tool, agent: f.agent, argsHash: f.argsHash, decision: f.decision, risk: f.risk, prev: f.prev }); }
+export interface AuditFrame { seq: number; ts: number; run: string; tool: string; agent: string; argsHash: string; decision: GateDecision; risk: number; prev: string; frameId: string }
+function frameBody(f: Omit<AuditFrame, "frameId">): string { return canon({ seq: f.seq, ts: f.ts, run: f.run ?? "", tool: f.tool, agent: f.agent, argsHash: f.argsHash, decision: f.decision, risk: f.risk, prev: f.prev }); }
 /** Append a tamper-evident frame: frameId = sha(body); prev links to the last frame's id. */
 export function appendAuditFrame(prev: AuditFrame | null, call: ToolCall, verdict: CallVerdict, now: number): AuditFrame {
-  const base: Omit<AuditFrame, "frameId"> = { seq: prev ? prev.seq + 1 : 0, ts: now, tool: String(call?.tool ?? ""), agent: String(call?.agent ?? "unknown"), argsHash: verdict.argsHash, decision: verdict.decision, risk: verdict.risk, prev: prev?.frameId ?? "" };
+  const base: Omit<AuditFrame, "frameId"> = { seq: prev ? prev.seq + 1 : 0, ts: now, run: String(call?.run ?? ""), tool: String(call?.tool ?? ""), agent: String(call?.agent ?? "unknown"), argsHash: verdict.argsHash, decision: verdict.decision, risk: verdict.risk, prev: prev?.frameId ?? "" };
   return { ...base, frameId: sha(frameBody(base)) };
 }
 export interface ChainVerify { ok: boolean; frames: number; brokenAt: number | null; reason: string }
