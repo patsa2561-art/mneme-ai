@@ -65,6 +65,13 @@ real.** No more babysitting a terminal.
 
 <sub>**<a href="docs/COSMIC-PAGER.md" target="_blank" rel="noopener">Full 60-second bot guide + spec → docs/COSMIC-PAGER.md</a>**</sub>
 
+**Add LINE · Discord · WhatsApp · Slack — send one code, no server, no config:** *(Telegram needs none of this — it's already zero-server.)*
+1. Point that bot's webhook to the Keryx relay — **one URL, once** (in the app's developer console).
+2. Tell your AI *"connect line"* (or discord/whatsapp/slack) — it runs `mneme keryx connect <app>` and shows you a **code**.
+3. **Send that code to your bot from the app itself** → it links this machine instantly. Approvals now reach you there too — the first tap on any app wins, the rest fall quiet.
+
+<sub>**<a href="docs/keryx/provider-web.md" target="_blank" rel="noopener">the relay URL + per-app webhook setup →</a>**</sub>
+
 🌍 **Approve from anywhere — your laptop lid can stay shut.** You're on a train when your agent hits something that needs a human *yes*. One tap reaches you on **Telegram, LINE, Slack, Discord, or WhatsApp** — all at once. The brain never leaves your machine; only a one-line summary + hash crosses, signed and replay-proof. Tap **approve** or **reject** on whichever app is already in your hand — the **first answer wins and the rest fall quiet**, so you never decide twice. Just tell your AI which channels, in plain words (EN/Thai): *"ส่งไป line กับ whatsapp พอ"* / *"broadcast to all"*. A brand-new chat app joins the same web by simply *declaring itself* — the core never changes. <sub>**<a href="docs/keryx/provider-web.md" target="_blank" rel="noopener">the architecture + per-provider setup →</a>**</sub>
 
 🛡 **Every tool-call your agent makes is gated, signed, and yours to prove.** A risky command is judged by *what it does* — not the words it uses — then checked against your policy and the skill's signed provenance, so it runs, **escalates to your phone**, or is blocked. Every decision lands in a **tamper-evident ledger anyone verifies offline** (the arguments are hashed, never stored raw). Local-first, human-in-the-loop from anywhere — a proof, not a trust-me database. <sub>**<a href="docs/agent-http-api.md" target="_blank" rel="noopener">how the gate works →</a>**</sub>
