@@ -279,8 +279,16 @@ function installPagerService(cwd: string): string {
   const cliBin = process.argv[1] ?? "mneme";
   try {
     if (process.platform === "win32") {
-      spawn("schtasks", ["/Create", "/TN", "MnemeCosmicPager", "/TR", `node "${cliBin}" pager start`, "/SC", "ONLOGON", "/F"], { stdio: "ignore", cwd });
-      return "Windows: auto-start task 'MnemeCosmicPager' registered (runs on every login).";
+      // schtasks /Create needs elevation on many machines (Access denied) — the old fire-and-forget
+      // reported success even when it silently failed. Try schtasks, VERIFY, and fall back to a
+      // Startup-folder VBS (current-user, no admin, hidden window) so auto-start actually works.
+      const r = spawnSync("schtasks", ["/Create", "/TN", "MnemeCosmicPager", "/TR", `cmd /c cd /d "${cwd}" && node "${cliBin}" pager start`, "/SC", "ONLOGON", "/F"], { stdio: "ignore" });
+      if (r.status === 0) return "Windows: auto-start task 'MnemeCosmicPager' registered (runs on every login).";
+      const startup = join(process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"), "Microsoft", "Windows", "Start Menu", "Programs", "Startup");
+      mkdirSync(startup, { recursive: true });
+      const vbs = join(startup, "MnemeCosmicPager.vbs");
+      writeFileSync(vbs, `CreateObject("WScript.Shell").Run "cmd /c cd /d ""${cwd}"" && node ""${cliBin}"" pager start", 0, False`, "ascii");
+      return existsSync(vbs) ? "Windows: auto-start added to your Startup folder (runs hidden every login — no admin needed)." : "Windows: could not register auto-start — run `mneme pager start` manually.";
     }
     if (process.platform === "darwin") {
       const plist = join(process.env.HOME ?? "", "Library", "LaunchAgents", "dev.mneme.pager.plist");
