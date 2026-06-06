@@ -39,6 +39,9 @@ export { NemesisSdk } from "./nemesis.js";
 export { verify, verifyTagged, type VerifyOpts, type VerifyResult } from "./verify.js";
 export { runProbe, runAllProbes, listProbes } from "./truth.js";
 export { vsCli as benchVsCli, benchEuStamp, benchClassify, type BenchmarkResult } from "./benchmark.js";
+// 🎖 Drop-in agent governance: wrap a tool executor once → gated + audited + approved + a signed,
+// offline-verifiable Agent Run Certificate. See ./governance.ts.
+export { createGovernor, createHarness, GovernanceBlocked, type Governor, type HarnessOptions, type AgentHarness, type AgentRunCertificate } from "./governance.js";
 
 /**
  * Tagged-template-literal compatible verify dispatcher.

@@ -24,6 +24,8 @@
 
 When an AI agent finishes a job, who vouches that it was *governed*? The vendor can't credibly vouch for itself, and a customer/auditor/insurer won't take "trust us." **`mneme agentcert build`** issues one **portable, NOTARY-signed Agent Run Certificate** — the run's MCP-gateway audit chain + human approvals — that **anyone verifies OFFLINE** (no Mneme, no vendor). Its summary **re-derives from the bound evidence**, so the certificate *cannot lie about its own run* (prove, don't claim); a recorded "allow" that carried block-grade risk is caught as a bypassed gate. **Insurance-grade · vendor-neutral · local-first** — the neutral trust layer Grok / xAI / NVIDIA adopt precisely because no vendor can own it. `mneme agentcert verify <cert>`.
 
+**Building an agent? Govern it in 5 lines** — wrap your tool executor once and every call is gated + audited + human-approved + certified, with no other change to your code: `const run = gov.guard(myToolExecutor)`. A destructive call throws before it reaches the tool; the run mints a signed certificate. <sub>**<a href="docs/sdk-governance.md" target="_blank" rel="noopener">the @mneme-ai/sdk harness →</a>**</sub>
+
 ## 🩻 Try it live
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>
@@ -303,6 +305,7 @@ await mneme.verify`Mneme is a CLI tool`;
 | <img src="https://img.shields.io/badge/-npm-cb3837?logo=npm&logoColor=white" /> | **<a href="https://www.npmjs.com/~mneme_npm" target="_blank" rel="noopener">@mneme_npm</a>** |
 | <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | **`pat195`** (username `shinnapat`) |
 | <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | **<a href="https://wa.me/66939455645" target="_blank" rel="noopener">+66 93 945 5645</a>** |
+| <img src="https://img.shields.io/badge/-Telegram-26A5E4?logo=telegram&logoColor=white" /> | **<a href="https://t.me/devson2561" target="_blank" rel="noopener">@devson2561</a>** |
 
 <sub><b>Open to:</b> truth-infrastructure / AI-safety / cross-vendor consensus collaboration · safety-critical AI consulting · vendor partnerships (embed Mneme inside Cursor / Continue / Cline / Claude Code / Grok CLI) · EU AI Act Article 50 compliance · full-time where the bottleneck is trust, not capability.</sub>
 
