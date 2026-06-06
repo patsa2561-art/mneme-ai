@@ -157,6 +157,7 @@ import { registerSkillscanCommands } from "./commands/skillscan.js";
 import { registerMcpgateCommands } from "./commands/mcpgate.js";
 import { registerAgentcertCommands } from "./commands/agentcert.js";
 import { registerThymosCommands } from "./commands/thymos.js";
+import { registerInfraCommands } from "./commands/infra.js";
 import { registerAdamasCommands } from "./commands/adamas.js";
 import { registerPrismCommands } from "./commands/prism.js";
 import { registerGoldilocksCommands } from "./commands/goldilocks.js";
@@ -4996,6 +4997,7 @@ export async function run(argv: string[]): Promise<void> {
   registerMcpgateCommands(program);
   registerAgentcertCommands(program);
   registerThymosCommands(program);
+  registerInfraCommands(program);
   registerAdamasCommands(program);
   registerPrismCommands(program);
   registerGoldilocksCommands(program);

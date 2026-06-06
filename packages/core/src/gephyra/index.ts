@@ -533,7 +533,7 @@ export async function handleA2ARequest(repoRoot: string, raw: unknown, primitive
  *   skillscan   {name, purpose, content}              → a skill card (capabilities + excessive-agency)
  *   insure      {cert, certVerified?, vendorFalseRateLB?} → a signed agent-run liability certificate
  */
-export async function handleAgentRequest(repoRoot: string, raw: unknown, action: "gate" | "cert-build" | "cert-verify" | "skillscan" | "insure"): Promise<SavantHttpResponse> {
+export async function handleAgentRequest(repoRoot: string, raw: unknown, action: "gate" | "cert-build" | "cert-verify" | "skillscan" | "insure" | "infra"): Promise<SavantHttpResponse> {
   let parsed: unknown = raw;
   if (typeof raw === "string") { try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; } }
   if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
@@ -552,7 +552,19 @@ export async function handleAgentRequest(repoRoot: string, raw: unknown, action:
       const { buildCertificate } = await import("../agentcert/index.js");
       const ev = { runId: String(o["run"] ?? frames[0]?.run ?? "run"), agent: String(o["agent"] ?? frames[0]?.agent ?? "agent"), model: o["model"] as string | undefined, task: o["task"] as string | undefined, startedAt: Number(frames[0]?.ts) || 0, endedAt: Number(frames[frames.length - 1]?.ts) || 0, auditFrames: frames as never, approvals: (o["approvals"] as never) ?? [] };
       const cert = buildCertificate(ev as never);
-      return { status: 200, body: await a2aProof(repoRoot, { cert, evidence: ev } as unknown as Record<string, unknown>) };
+      // INFRA PROVENANCE: bind WHERE+WHEN this run executed into the certificate (rent the muscle, keep the soul)
+      const { captureInfra } = await import("../infra_provenance/index.js");
+      const os = await import("node:os");
+      const infra = captureInfra({ env: process.env, host: os.hostname(), platform: process.platform, arch: process.arch, cpus: os.cpus().length }, Date.now());
+      return { status: 200, body: await a2aProof(repoRoot, { cert, evidence: ev, infra } as unknown as Record<string, unknown>) };
+    }
+    if (action === "infra") {
+      const { captureInfra, dataResidencyCheck } = await import("../infra_provenance/index.js");
+      const os = await import("node:os");
+      const infra = captureInfra({ env: process.env, host: os.hostname(), platform: process.platform, arch: process.arch, cpus: os.cpus().length }, Date.now());
+      const allow = Array.isArray(o["allow"]) ? (o["allow"] as string[]) : null;
+      const residency = allow ? dataResidencyCheck(infra, allow) : null;
+      return { status: 200, body: await a2aProof(repoRoot, { infra, residency } as unknown as Record<string, unknown>) };
     }
     if (action === "cert-verify") {
       if (o["cert"] === null || typeof o["cert"] !== "object" || o["evidence"] === null || typeof o["evidence"] !== "object") return { status: 400, body: { error: "required: cert (object), evidence (object)" } };
