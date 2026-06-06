@@ -370,6 +370,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && url.pathname === "/card.js") return serveStatic(res, "card.js");
     if (req.method === "GET" && url.pathname === "/local-scan.js") return serveStatic(res, "local-scan.js");
     if (req.method === "GET" && url.pathname === "/cosmic") return serveStatic(res, "cosmic.html");
+    if (req.method === "GET" && (url.pathname === "/thymos" || url.pathname === "/thymos.html")) return serveStatic(res, "thymos.html");
 
     // COSMIC MONITOR (additive superpower for the cosmic-link server) — measured + signed
     if (req.method === "GET" && url.pathname === "/badge/cosmic.svg") {

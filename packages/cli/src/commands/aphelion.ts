@@ -48,6 +48,43 @@ export function registerAphelionCommands(program: Command): void {
       out(`   recorded #${last.seq} to the tamper-evident offline ledger (${next.actions.length} action(s) this window).`);
     });
 
+  k.command("amend").description("Amend the autonomy charter MID-FLIGHT — a signed, chain-recorded envelope change (it governs only future actions; it cannot retroactively cover a past violation).")
+    .requiredOption("--node <name>", "this node's id").requiredOption("--reason <r>", "why the charter is changing")
+    .option("--scope <globs...>", "new allowed paths").option("--forbidden <words...>", "new forbidden actions").option("--max-risk <n>", "new risk ceiling", parseFloat).option("--by <who>", "who authorized it", "operator")
+    .action((o: { node: string; reason: string; scope?: string[]; forbidden?: string[]; maxRisk?: number; by: string }) => {
+      const cwd = process.cwd(); const s = loadSession(cwd, o.node);
+      if (!s) { out(`no open session for ${o.node}`); process.exitCode = 2; return; }
+      const cur = aphelion.activeCharterOf(s);
+      const charter = { mission: cur.mission, scope: o.scope ?? cur.scope, forbidden: o.forbidden ?? cur.forbidden, maxRisk: o.maxRisk ?? cur.maxRisk };
+      saveSession(cwd, aphelion.amendCharter(s, { charter, reason: o.reason, by: o.by }, Date.now()));
+      out(`🛰 charter amended by ${o.by} — "${o.reason}" · scope [${charter.scope.join(", ") || "any"}] · forbidden [${charter.forbidden.join(", ") || "none"}] · maxRisk ${charter.maxRisk}`);
+      out("   recorded as a signed amendment in the chain — future actions judge against it; past actions keep their verdicts.");
+    });
+
+  k.command("relay").description("DTN store-and-forward: take custody of a bundle at a relay (orbiter / ground station), or create one. With no --in, wraps the node's sealed capsule.")
+    .requiredOption("--via <node>", "the relay taking custody").option("--in <bundle>", "the incoming bundle").option("--node <name>", "origin node (to create a bundle from its capsule)").option("--out <file>", "write the forwarded bundle")
+    .action((o: { via: string; in?: string; node?: string; out?: string }) => {
+      const cwd = process.cwd();
+      let bundle: aphelion.DtnBundle | null = null;
+      if (o.in && existsSync(o.in)) { try { const j = JSON.parse(readFileSync(o.in, "utf8")); bundle = (j?.payload?.v ? j.payload : j) as aphelion.DtnBundle; } catch { /* */ } }
+      else if (o.node) { const cap = readCapsule(join(dir(cwd), `${o.node}.capsule.json`)); if (cap) bundle = aphelion.createBundle(cap, o.node, Date.now()); }
+      if (!bundle) { out("no bundle/capsule — pass --in <bundle> or --node <name> (after seal)"); process.exitCode = 2; return; }
+      const fwd = aphelion.forwardBundle(bundle, o.via, Date.now());
+      const outPath = o.out ?? join(dir(cwd), `bundle.json`);
+      writeFileSync(outPath, JSON.stringify(fwd, null, 2), "utf8");
+      out(`🛰 custody taken at ${o.via} · path ${fwd.custody.map((h) => h.node).join(" → ")} → ${outPath}`);
+    });
+
+  k.command("deliver <bundle>").description("DTN delivery: verify a bundle that reached home — the custody PATH + the carried capsule both verify OFFLINE.")
+    .action((file: string) => {
+      if (!existsSync(file)) { out("bundle not found"); process.exitCode = 2; return; }
+      let bundle: aphelion.DtnBundle; try { const j = JSON.parse(readFileSync(file, "utf8")); bundle = (j?.payload?.v ? j.payload : j) as aphelion.DtnBundle; } catch { out("✗ invalid bundle JSON"); process.exitCode = 2; return; }
+      const v = aphelion.verifyBundle(bundle);
+      out(v.valid ? `✓ DELIVERED + VERIFIED — ${v.reasons[0]}` : "✗ NOT verified:");
+      if (!v.valid) { for (const r of v.reasons) out("   • " + r); process.exitCode = 2; }
+      else out(`   path: ${v.path.join(" → ")} · custody ${v.custodyOk ? "intact" : "BROKEN"} · payload ${v.capsuleValid ? "valid" : "INVALID"}`);
+    });
+
   k.command("seal").description("Seal the disconnected window into a signed capsule (verify offline on reconnect).")
     .requiredOption("--node <name>", "this node's id").option("--out <file>", "write the signed capsule")
     .action((o: { node: string; out?: string }) => {

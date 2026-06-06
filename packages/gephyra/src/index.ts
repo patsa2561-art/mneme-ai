@@ -113,7 +113,8 @@ export function startServer(opts: { repoRoot?: string; port?: number; host?: str
         : url.startsWith("/agent/cert/verify") ? "cert-verify" as const
         : url.startsWith("/agent/skillscan") ? "skillscan" as const
         : url.startsWith("/agent/insure") ? "insure" as const
-        : url.startsWith("/agent/infra") ? "infra" as const : null;
+        : url.startsWith("/agent/infra") ? "infra" as const
+        : url.startsWith("/agent/aphelion") ? "aphelion" as const : null;
       if (req.method !== "POST" || !(url.startsWith("/cross") || isMcp || isSavantVerify || isSavantRepair || isA2A || agentAction)) {
         res.writeHead(404, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "POST /cross | /mcp | /savant/verify | /savant/repair | /firewall {content} | /rail/ingress {payload} | /rail/egress {payload} | /reckon {evidence} | /agent/gate {tool,args} | /agent/cert/build {frames} | /agent/cert/verify {cert,evidence} | /agent/skillscan {name,content} | /agent/insure {cert} | /agent/infra  ·  GET /status | /openapi.json" }));

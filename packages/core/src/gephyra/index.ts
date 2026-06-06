@@ -533,7 +533,7 @@ export async function handleA2ARequest(repoRoot: string, raw: unknown, primitive
  *   skillscan   {name, purpose, content}              → a skill card (capabilities + excessive-agency)
  *   insure      {cert, certVerified?, vendorFalseRateLB?} → a signed agent-run liability certificate
  */
-export async function handleAgentRequest(repoRoot: string, raw: unknown, action: "gate" | "cert-build" | "cert-verify" | "skillscan" | "insure" | "infra"): Promise<SavantHttpResponse> {
+export async function handleAgentRequest(repoRoot: string, raw: unknown, action: "gate" | "cert-build" | "cert-verify" | "skillscan" | "insure" | "infra" | "aphelion"): Promise<SavantHttpResponse> {
   let parsed: unknown = raw;
   if (typeof raw === "string") { try { parsed = JSON.parse(raw); } catch { return { status: 400, body: { error: "body is not valid JSON" } }; } }
   if (parsed === null || typeof parsed !== "object") return { status: 400, body: { error: "body must be a JSON object" } };
@@ -557,6 +557,18 @@ export async function handleAgentRequest(repoRoot: string, raw: unknown, action:
       const os = await import("node:os");
       const infra = captureInfra({ env: process.env, host: os.hostname(), platform: process.platform, arch: process.arch, cpus: os.cpus().length }, Date.now());
       return { status: 200, body: await a2aProof(repoRoot, { cert, evidence: ev, infra } as unknown as Record<string, unknown>) };
+    }
+    if (action === "aphelion") {
+      // verify a sealed capsule OR a delivered DTN bundle, offline — any vendor's rover/probe
+      const aph = await import("../aphelion/index.js");
+      if (o["bundle"] && typeof o["bundle"] === "object") { const v = aph.verifyBundle(o["bundle"] as never); return { status: 200, body: await a2aProof(repoRoot, v as unknown as Record<string, unknown>) }; }
+      if (o["capsule"] && typeof o["capsule"] === "object") { const v = aph.verifyCapsule(o["capsule"] as never); return { status: 200, body: await a2aProof(repoRoot, v as unknown as Record<string, unknown>) }; }
+      if (Array.isArray(o["actions"])) {
+        let s = aph.openSession({ sessionId: "http", node: String(o["node"] ?? "node"), charter: (o["charter"] as never) ?? { mission: "", scope: [], forbidden: [], maxRisk: 0.7 }, nowMs: Date.now() });
+        for (const a of o["actions"] as Array<{ action: string; risk?: number; path?: string }>) s = aph.recordAction(s, a, Date.now());
+        const capsule = aph.sealCapsule(s); return { status: 200, body: await a2aProof(repoRoot, { capsule, verified: aph.verifyCapsule(capsule).valid } as unknown as Record<string, unknown>) };
+      }
+      return { status: 400, body: { error: "required: one of { capsule } | { bundle } | { charter, actions[] }" } };
     }
     if (action === "infra") {
       const { captureInfra, dataResidencyCheck } = await import("../infra_provenance/index.js");

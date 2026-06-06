@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>THYMOS — a heart you can measure · Mneme</title>
+<meta name="description" content="The first AI memory with a heart you can audit: affective salience decay + resonance. A measurable feeling, not a claim of sentience.">
+<style>
+  :root { --bg:#0b0d12; --panel:#141821; --ink:#e8ecf4; --mut:#8b94a7; --line:#222838; --pink:#ff5d8f; --grn:#16c784; --blu:#4ea1ff; --gold:#f7b955; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(1200px 600px at 70% -10%, #15202e 0%, var(--bg) 60%); color:var(--ink); font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:30px; margin:0 0 4px; letter-spacing:-.5px; }
+  h1 .h { color:var(--pink); }
+  .sub { color:var(--mut); margin:0 0 28px; font-size:16px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin:18px 0; box-shadow:0 1px 0 rgba(255,255,255,.02) inset; }
+  .card h2 { font-size:17px; margin:0 0 4px; }
+  .card p.k { color:var(--mut); margin:0 0 14px; font-size:13.5px; }
+  canvas { width:100%; display:block; border-radius:10px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  input[type=text] { flex:1; min-width:180px; background:#0e121b; border:1px solid var(--line); color:var(--ink); border-radius:9px; padding:9px 12px; font:inherit; }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; color:var(--mut); font-size:12.5px; margin-top:8px; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; vertical-align:middle; margin-right:5px; }
+  .pill { display:inline-block; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .honest { border-left:3px solid var(--gold); padding:10px 14px; background:rgba(247,185,85,.06); border-radius:0 10px 10px 0; color:#d7c39a; font-size:13.5px; }
+  a { color:var(--blu); text-decoration:none; } a:hover { text-decoration:underline; }
+  .foot { color:var(--mut); font-size:12.5px; margin-top:30px; text-align:center; }
+  .big { font-size:26px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💗 <span class="h">THYMOS</span> — a heart you can <em>measure</em></h1>
+  <p class="sub">The first AI memory that forgets like a mind and pulls in what matters — every bit of it a signed, deterministic number. <b>Not a claim of sentience.</b> The math below is exactly the math Mneme runs.</p>
+
+  <!-- 1. DECAY -->
+  <div class="card">
+    <h2>① Salience decay — keep what bonds, forget the noise</h2>
+    <p class="k">Every memory carries a <b>salience</b> (0–1) from real signals — was it reused, did you react strongly (EN or Thai), was it consequential. Salience sets a <b>half-life</b>: the trivial fades within a day, what bonds survives for a year. This is the real curve <span class="mono">strength = 0.5^(elapsed / halfLife)</span>, <span class="mono">halfLife = (0.5 + salience²·547) days</span>.</p>
+    <canvas id="decay" height="260"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--grn)"></span>salience 0.9 — a decision you cared about</span>
+      <span><span class="dot" style="background:var(--gold)"></span>salience 0.5 — a normal note</span>
+      <span><span class="dot" style="background:var(--pink)"></span>salience 0.15 — a throwaway log line</span>
+    </div>
+  </div>
+
+  <!-- 2. RESONANCE MAGNET -->
+  <div class="card">
+    <h2>② Resonance — the core attracts</h2>
+    <p class="k">Type your <b>vision</b>, then inbound items. Each item is pulled toward the core by its <b>resonance</b> (cosine over words) — high resonance is magnetised in, noise is repelled. Same math as <span class="mono">mneme thymos resonate</span>.</p>
+    <div class="row"><input id="core" type="text" value="local-first trust and memory for AI agents" placeholder="your core vision"></div>
+    <div class="row"><input id="items" type="text" value="signed memory for agents, vendor-neutral trust, cheap flights to tokyo, offline governance proof" placeholder="comma-separated inbound items"></div>
+    <canvas id="magnet" height="320"></canvas>
+    <div class="legend"><span><span class="dot" style="background:var(--grn)"></span>pulled in (resonance ≥ 0.12)</span><span><span class="dot" style="background:var(--mut)"></span>repelled</span></div>
+  </div>
+
+  <!-- 3. AFFECT -->
+  <div class="card">
+    <h2>③ Affect read — how strongly did you react? (EN + Thai)</h2>
+    <p class="k">Strong feeling either way sticks — praise <em>and</em> correction. Type anything.</p>
+    <div class="row"><input id="affect" type="text" value="งานนี้เยี่ยมมาก ขอบคุณ!" placeholder="type EN or Thai…"></div>
+    <div class="row" style="margin-top:14px">
+      <div>valence <span id="val" class="big mono">—</span></div>
+      <div style="margin-left:24px">intensity <span id="inten" class="big mono">—</span></div>
+      <div style="margin-left:24px">→ salience <span id="sal" class="pill" style="background:#1d2838;color:var(--blu)">—</span></div>
+    </div>
+  </div>
+
+  <div class="honest">★ <b>Honest (DIAKRISIS):</b> “feeling” here is a measurable salience / valence / bond score derived from observable signals — <b>not</b> qualia or real emotion. The value is a memory that <em>behaves</em> like a mind and that you can <b>audit</b> (<span class="mono">thymosGauntlet = 100</span>). A heart you can measure beats a heart you must take on faith.</div>
+
+  <p class="foot">Part of <a href="/">Mneme</a> — the local-first trust &amp; memory layer · <a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener">npm i -g mneme-ai</a> · <span class="mono">mneme thymos</span></p>
+</div>
+
+<script>
+// ── the REAL thymos math, mirrored deterministically in the browser ──
+const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n||0));
+const DAY=86400000;
+function halfLifeMs(sal){ return (0.5 + clamp(sal,0,1)**2 * 547) * DAY; }
+function strengthAt(sal, elapsedMs){ return clamp(Math.pow(0.5, elapsedMs/halfLifeMs(sal)),0,1); }
+function bag(t){ const m={}; for(const w of (t||'').toLowerCase().split(/[^a-z0-9฀-๿]+/).filter(x=>x.length>1)) m[w]=(m[w]||0)+1; return m; }
+function resonance(core,item){ const a=bag(core),b=bag(item); let dot=0; for(const k in a) dot+=a[k]*(b[k]||0); const mag=o=>Math.sqrt(Object.values(o).reduce((s,v)=>s+v*v,0)); const d=mag(a)*mag(b); return d?clamp(dot/d,0,1):0; }
+const POS=["love","great","excellent","important","amazing","thank","perfect","brilliant","awesome","beautiful","ชอบ","รัก","เยี่ยม","สุดยอด","ดีมาก","สำคัญ","ประทับใจ","ขอบคุณ","เจ๋ง","ปลื้ม"];
+const NEG=["wrong","bad","hate","broken","bug","terrible","angry","sad","awful","fail","ผิด","แย่","เกลียด","ไม่ชอบ","เสียใจ","โกรธ","พัง","บั๊ก","ห่วย","เซ็ง"];
+const BOOST=["very","so","most","really","extremely","มาก","สุด","ที่สุด","โคตร","สุดๆ"];
+function readAffect(t){ t=(t||'').toLowerCase(); const c=w=>w.reduce((n,x)=>n+(t.includes(x)?1:0),0); const pos=c(POS),neg=c(NEG),boost=c(BOOST),bangs=(t.match(/!|ที่สุด/g)||[]).length; const hits=pos+neg; if(!hits&&!boost&&!bangs)return{valence:0,intensity:0}; const valence=hits?clamp((pos-neg)/hits,-1,1):0; const intensity=clamp(hits*0.34+boost*0.18+bangs*0.12,0,1); return{valence:Math.round(valence*100)/100,intensity:Math.round(intensity*100)/100}; }
+function salience(recalls,valence,consequence){ const reuse=recalls/(recalls+3); return Math.round(clamp(0.12+0.34*reuse+0.27*Math.abs(valence)+0.27*consequence,0,1)*1000)/1000; }
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ── ① decay curve ──
+function drawDecay(){ const cv=document.getElementById('decay'); const w=cv.clientWidth, h=260; cv.width=w*devicePixelRatio; cv.height=h*devicePixelRatio; const x=cv.getContext('2d'); x.scale(devicePixelRatio,devicePixelRatio); x.clearRect(0,0,w,h);
+  const pad=36, days=400; const X=d=>pad+(d/days)*(w-pad-10), Y=s=>10+(1-s)*(h-30);
+  x.strokeStyle=css('--line'); x.lineWidth=1; x.fillStyle=css('--mut'); x.font='11px system-ui';
+  for(const s of [0,0.5,1]){ x.beginPath(); x.moveTo(pad,Y(s)); x.lineTo(w-10,Y(s)); x.stroke(); x.fillText(s.toFixed(1),6,Y(s)+3); }
+  for(const d of [0,100,200,300,400]){ x.fillText(d+'d',X(d)-8,h-6); }
+  const series=[[0.9,css('--grn')],[0.5,css('--gold')],[0.15,css('--pink')]];
+  for(const [sal,col] of series){ x.strokeStyle=col; x.lineWidth=2.4; x.beginPath(); for(let d=0; d<=days; d+=2){ const s=strengthAt(sal, d*DAY); const px=X(d),py=Y(s); d===0?x.moveTo(px,py):x.lineTo(px,py);} x.stroke(); }
+  // forget floor
+  x.strokeStyle='rgba(255,93,143,.5)'; x.setLineDash([4,4]); x.beginPath(); x.moveTo(pad,Y(0.18)); x.lineTo(w-10,Y(0.18)); x.stroke(); x.setLineDash([]); x.fillStyle='rgba(255,93,143,.8)'; x.fillText('forget floor 0.18',w-130,Y(0.18)-5);
+}
+
+// ── ② resonance magnet (animated, deterministic targets) ──
+let parts=[], raf=0;
+function buildMagnet(){ const core=document.getElementById('core').value; const items=document.getElementById('items').value.split(',').map(s=>s.trim()).filter(Boolean);
+  parts=items.map((it,i)=>{ const r=resonance(core,it); const ang=(i/Math.max(1,items.length))*Math.PI*2 - Math.PI/2; const pulled=r>=0.12; return { label:it, r, ang, pulled, x:Math.cos(ang)*240, y:Math.sin(ang)*240 }; }); }
+function drawMagnet(t){ const cv=document.getElementById('magnet'); const w=cv.clientWidth,h=320; if(cv.width!==w*devicePixelRatio){cv.width=w*devicePixelRatio;cv.height=h*devicePixelRatio;} const x=cv.getContext('2d'); x.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); x.clearRect(0,0,w,h); const cx=w/2, cy=h/2;
+  // core
+  const pulse=8+Math.sin(t/600)*3; x.fillStyle='rgba(78,161,255,.12)'; x.beginPath(); x.arc(cx,cy,46+pulse,0,7); x.fill();
+  x.fillStyle=css('--blu'); x.beginPath(); x.arc(cx,cy,16,0,7); x.fill(); x.fillStyle='#fff'; x.font='600 11px system-ui'; x.textAlign='center'; x.fillText('CORE',cx,cy+3);
+  for(const p of parts){ // target radius: high resonance → close to core, low → far/repelled
+    const targR = p.pulled ? (46 + (1-p.r)*120) : 150 + (1-p.r)*60;
+    const tx=cx+Math.cos(p.ang)*targR, ty=cy+Math.sin(p.ang)*targR*0.62;
+    p.cxp = (p.cxp==null?tx:p.cxp+(tx-p.cxp)*0.08); p.cyp=(p.cyp==null?ty:p.cyp+(ty-p.cyp)*0.08);
+    x.strokeStyle = p.pulled ? 'rgba(22,199,132,.35)' : 'rgba(139,148,167,.18)'; x.lineWidth=p.pulled?1.6:1; x.beginPath(); x.moveTo(cx,cy); x.lineTo(p.cxp,p.cyp); x.stroke();
+    x.fillStyle = p.pulled ? css('--grn') : css('--mut'); x.beginPath(); x.arc(p.cxp,p.cyp,p.pulled?7:5,0,7); x.fill();
+    x.fillStyle=css('--ink'); x.font='12px system-ui'; x.textAlign='center'; const lbl=p.label.length>26?p.label.slice(0,24)+'…':p.label; x.fillText(lbl + '  ('+p.r.toFixed(2)+')', p.cxp, p.cyp-12);
+  }
+  raf=requestAnimationFrame(drawMagnet);
+}
+
+// ── ③ affect ──
+function updAffect(){ const a=readAffect(document.getElementById('affect').value); document.getElementById('val').textContent=a.valence.toFixed(2); document.getElementById('inten').textContent=a.intensity.toFixed(2); const s=salience(1,a.valence,a.intensity*0.5); const el=document.getElementById('sal'); el.textContent=s.toFixed(3); el.style.color = a.valence>0.2?css('--grn'):a.valence<-0.2?css('--pink'):css('--mut'); document.getElementById('val').style.color = a.valence>0.2?css('--grn'):a.valence<-0.2?css('--pink'):css('--ink'); }
+
+function boot(){ drawDecay(); buildMagnet(); cancelAnimationFrame(raf); drawMagnet(0); updAffect(); }
+['core','items'].forEach(id=>document.getElementById(id).addEventListener('input',()=>buildMagnet()));
+document.getElementById('affect').addEventListener('input',updAffect);
+window.addEventListener('resize',()=>{drawDecay();});
+boot();
+</script>
+</body>
+</html>
