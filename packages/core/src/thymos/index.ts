@@ -92,6 +92,15 @@ export function resonance(core: string, item: string): number {
   const mag = (m: Map<string, number>) => Math.sqrt([...m.values()].reduce((s, v) => s + v * v, 0));
   return round(clamp(dot / (mag(a) * mag(b) || 1), 0, 1));
 }
+/** Deeper resonance: cosine over EMBEDDING vectors (supply them from any embedder — MiniLM, OpenAI,
+ *  Ollama). Falls back to token-cosine via `resonance` when no vectors are available. */
+export function resonanceVec(a: ReadonlyArray<number>, b: ReadonlyArray<number>): number {
+  if (!a?.length || !b?.length || a.length !== b.length) return 0;
+  let dot = 0, ma = 0, mb = 0;
+  for (let i = 0; i < a.length; i++) { const x = Number(a[i]) || 0, y = Number(b[i]) || 0; dot += x * y; ma += x * x; mb += y * y; }
+  const d = Math.sqrt(ma) * Math.sqrt(mb); return d ? round(clamp(dot / d, -1, 1)) : 0;
+}
+
 export interface Attracted { item: string; resonance: number; pulled: boolean }
 /** The core attracts: rank inbound by resonance; items above the threshold are pulled, the rest repelled. */
 export function attract(core: string, items: ReadonlyArray<string>, threshold = 0.12): Attracted[] {

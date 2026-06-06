@@ -346,6 +346,7 @@ export * as harness from "./harness/index.js";
 export * as agentLiability from "./agent_liability/index.js";
 export * as thymos from "./thymos/index.js";
 export * as infraProvenance from "./infra_provenance/index.js";
+export * as forgetting from "./forgetting/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
