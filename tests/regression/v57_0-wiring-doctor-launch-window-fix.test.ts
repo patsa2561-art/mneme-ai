@@ -9,7 +9,7 @@
 // v2.57 closes both at root + adds WIRING DOCTOR primitive +
 // top-level CLI/SDK aliases for LETHE / GAVEL / NIMBUS.
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,11 +20,19 @@ const REPO_ROOT = resolve(__dirname, "../..");
 
 function runMneme(args: string[], opts: { input?: string; cwd?: string } = {}): { stdout: string; stderr: string; status: number } {
   const r = spawnSync(process.execPath, [CLI, ...args], {
-    encoding: "utf8", timeout: 60_000, input: opts.input, cwd: opts.cwd ?? process.cwd(),
+    encoding: "utf8", timeout: 240_000, input: opts.input, cwd: opts.cwd ?? process.cwd(),
     env: { ...process.env, MNEME_WARMCALL: "0", MNEME_MUSCLE_BYPASS: "0", NO_COLOR: "1" },
   });
   return { stdout: r.stdout ?? "", stderr: r.stderr ?? "", status: r.status ?? -1 };
 }
+
+// These gates read the EMPIRICAL autoprobe cache (24h TTL). A stale cache makes them (correctly)
+// report NO-GO. Refresh it with REAL probing so the test is DETERMINISTIC — never by faking
+// "all invocable" (that would mask a real regression). Skips the refresh when the cache is fresh.
+beforeAll(async () => {
+  const { loadFreshAutoprobeReport } = await import("../../packages/core/src/release_gate/autoprobe.js");
+  if (!loadFreshAutoprobeReport(REPO_ROOT)) runMneme(["autoprobe", "run"]);
+}, 240_000);
 
 // ═══════════════════════════════════════════════════════════════════════
 //  W1 — wiring_lag extractor: no false-positives from prose

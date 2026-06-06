@@ -13,7 +13,7 @@
  *   A9 — LAUNCH WINDOW = GO with real-100% coverage
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -24,6 +24,14 @@ import { dirname } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, "../..");
 const CLI = join(REPO, "packages", "cli", "bin", "mneme.js");
+
+// The A9 LAUNCH-WINDOW=GO gate reads the EMPIRICAL autoprobe cache (24h TTL). Refresh it with REAL
+// probing when stale so the test is DETERMINISTIC — never by faking coverage (that would mask a real
+// regression). Fresh cache → this is a no-op.
+beforeAll(async () => {
+  const { loadFreshAutoprobeReport } = await import("../../packages/core/src/release_gate/autoprobe.js");
+  if (!loadFreshAutoprobeReport(REPO)) spawnSync(process.execPath, [CLI, "autoprobe", "run"], { encoding: "utf8", timeout: 240_000, env: { ...process.env, MNEME_WARMCALL: "0", NO_COLOR: "1" } });
+}, 240_000);
 
 function tmp(): string {
   return mkdtempSync(join(tmpdir(), "mneme-v58-"));
