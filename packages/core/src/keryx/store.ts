@@ -43,14 +43,21 @@ interface Resp { cmd(args: string[]): Promise<unknown>; close(): void }
 function respClient(url: string): Resp {
   const u = new URL(url.startsWith("redis") ? url : "redis://" + url);
   const host = u.hostname || "127.0.0.1"; const port = Number(u.port) || 6379; const pass = u.password || "";
-  let sock: ReturnType<typeof netConnect> | null = null; let buf = Buffer.alloc(0);
+  let sock: ReturnType<typeof netConnect> | null = null; let buf = Buffer.alloc(0); let authed = false;
   const waiters: Array<(v: unknown) => void> = []; const errors: Array<(e: Error) => void> = [];
   const ensure = (): Promise<void> => new Promise((res, rej) => {
-    if (sock && !sock.destroyed) return res();
-    sock = netConnect({ host, port }); sock.setNoDelay(true);
+    if (sock && !sock.destroyed && authed) return res();
+    if (sock && !sock.destroyed) { sock.destroy(); }   // half-open/unauthed socket → rebuild cleanly
+    sock = netConnect({ host, port }); sock.setNoDelay(true); authed = false;
     sock.on("data", (d) => { buf = Buffer.concat([buf, d]); parse(); });
-    sock.on("error", (e) => { const w = errors.shift(); if (w) w(e); });
-    sock.on("connect", () => res()); sock.on("error", rej);
+    sock.on("error", (e) => { const w = errors.shift(); if (w) w(e); else rej(e); });
+    sock.on("connect", () => {
+      if (!pass) { authed = true; return res(); }
+      // AUTH on EVERY (re)connect — a server that rebinds/restarts drops the socket; the new one must
+      // re-authenticate or every command after gets NOAUTH. (This bug took down a live deploy once.)
+      waiters.push((v) => { if (v instanceof Error) return rej(v); authed = true; res(); });
+      sock!.write("*2\r\n$4\r\nAUTH\r\n$" + Buffer.byteLength(pass) + "\r\n" + pass + "\r\n");
+    });
   });
   function parse(): void {
     for (;;) {
@@ -72,7 +79,6 @@ function respClient(url: string): Resp {
     const payload = "*" + args.length + "\r\n" + args.map((a) => "$" + Buffer.byteLength(a) + "\r\n" + a + "\r\n").join("");
     return new Promise((res, rej) => { waiters.push((v) => (v instanceof Error ? rej(v) : res(v))); errors.push(rej); sock!.write(payload); });
   };
-  if (pass) void cmd(["AUTH", pass]).catch(() => {});
   return { cmd, close: () => { try { sock?.end(); } catch { /* */ } } };
 }
 
