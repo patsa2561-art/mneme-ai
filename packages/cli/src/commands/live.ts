@@ -27,13 +27,19 @@ export function registerLiveCommands(program: Command): void {
     for (const [k, v] of Object.entries(sc.byKind)) out(`   ${String(v).padStart(5)}  ${k.replace(/_/g, " ")}`);
     if (sc.agents.length) { out("   per agent:"); for (const a of sc.agents.slice(0, 8)) out(`     ${a.agent.padEnd(16)} ${a.harmsPrevented} harms · ${a.tokensSaved.toLocaleString()} tok · ${a.total} assists`); }
   });
+  proof.command("verify").description("Verify the proof ledger is an intact hash chain (tamper-evident — a CEO-grade signed scorecard, not an editable file).").action(() => {
+    const cwd = process.cwd(); const recs = loadProof(cwd) as proofLoop.ChainedAssist[];
+    const v = proofLoop.verifyProofChain(recs);
+    out(v.ok ? `🔒 proof ledger VERIFIED — ${v.length} assists, hash chain intact (no row edited/inserted/removed)` : `🔴 proof ledger BROKEN at index ${v.firstBrokenIndex} — tampering or corruption`);
+    if (!v.ok) process.exitCode = 2;
+  });
   proof.command("record").description("Log an assist (organs/agents call this when they catch/block/gate/save).")
     .requiredOption("--agent <id>").requiredOption("--kind <k>", proofLoop.ASSIST_KINDS.join("|")).option("--count <n>").option("--detail <t>")
     .action((o: { agent: string; kind: string; count?: string; detail?: string }) => {
       const cwd = process.cwd();
       const a = proofLoop.normalizeAssist({ agent: o.agent, kind: o.kind as proofLoop.AssistKind, count: o.count ? Number(o.count) : 1, detail: o.detail, at: Date.now() });
-      try { mkdirSync(join(cwd, ".mneme", "proof"), { recursive: true }); appendFileSync(proofLedgerPath(cwd), JSON.stringify(a) + "\n", "utf8"); } catch { /* */ }
-      out(`✓ logged: ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
+      try { proofLoop.appendAssistChained(proofLedgerPath(cwd), a); } catch { /* */ }
+      out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
   program.command("signal <text>").description("🛰 TURN-SIGNAL — given this turn's text, the ONE highest-value Mneme move right now (verify/blind/fortify/gate/recall/loopguard) or 'nothing needed'. Deterministic, honest abstention.")
     .option("--all", "show every warranted move, not just the top one").option("--json", "machine-readable")

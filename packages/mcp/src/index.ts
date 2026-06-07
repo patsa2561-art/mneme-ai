@@ -623,11 +623,9 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
             const { proofLoop, aiHandshake } = await import("@mneme-ai/core");
             const a = proofLoop.assistFromResult(tool.name, enriched);
             if (a) {
-              const { appendFileSync, mkdirSync } = await import("node:fs");
               const { join: pjoin } = await import("node:path");
               const vendor = aiHandshake.readActiveVendor(rootPath)?.vendor ?? "unknown";
-              mkdirSync(pjoin(rootPath, ".mneme", "proof"), { recursive: true });
-              appendFileSync(pjoin(rootPath, ".mneme", "proof", "ledger.jsonl"), JSON.stringify({ agent: vendor, kind: a.kind, count: a.count, detail: tool.name, at: Date.now() }) + "\n", "utf8");
+              proofLoop.appendAssistChained(pjoin(rootPath, ".mneme", "proof", "ledger.jsonl"), { agent: vendor, kind: a.kind, count: a.count, detail: tool.name, at: Date.now() });
             }
           }
         } catch { /* best-effort */ }
