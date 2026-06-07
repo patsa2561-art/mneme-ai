@@ -14,7 +14,8 @@ function installedVersion(): string { try { return JSON.parse(readFileSync(join(
 import { spawn, spawnSync } from "node:child_process";
 import * as https from "node:https";
 import * as http from "node:http";
-import { pager, notary, preflight, keryx, live } from "@mneme-ai/core";
+import { pager, notary, preflight, keryx, live, opGrant } from "@mneme-ai/core";
+import { createHmac as _hmac } from "node:crypto";
 import { sendAsk, clearMessage, type ProviderCfg } from "./keryx_providers.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -128,6 +129,11 @@ function saveLinks(cwd: string, links: RdvLink[]): void { try { mkdirSync(join(c
 const relayGet = (url: string, headers?: Record<string, string>): Promise<Record<string, unknown>> => new Promise((res) => { (url.startsWith("https:") ? https : http).get(url, { headers: headers ?? {} }, (r) => { let s = ""; r.on("data", (d) => (s += d)); r.on("end", () => { try { res(JSON.parse(s || "{}")); } catch { res({}); } }); }).on("error", () => res({})); });
 /** This machine's secret relay bearer key (set by `mneme keryx connect`); "" if none. */
 function daemonKeyOf(cwd: string): string { try { const p = join(cwd, ".mneme", "keryx", "rendezvous-secret"); return existsSync(p) ? readFileSync(p, "utf8").trim() : ""; } catch { return ""; } }
+// ── OPERATION GRANTS — human pre-approves a scoped plan once; matching commands auto-allow (consumed) ──
+const grantsPath = (cwd: string) => join(dir(cwd), "grants.json");
+function loadGrants(cwd: string): opGrant.OpGrant[] { try { return existsSync(grantsPath(cwd)) ? JSON.parse(readFileSync(grantsPath(cwd), "utf8")) : []; } catch { return []; } }
+function saveGrants(cwd: string, g: opGrant.OpGrant[]): void { try { mkdirSync(dir(cwd), { recursive: true }); writeFileSync(grantsPath(cwd), JSON.stringify(g, null, 2), "utf8"); } catch { /* */ } }
+function grantSecret(cwd: string): string { const p = join(dir(cwd), "grant-secret"); try { if (existsSync(p)) return readFileSync(p, "utf8").trim(); } catch { /* */ } const s = _hmac("sha256", "mneme-grant").update(cwd + "|" + process.pid).digest("hex"); try { mkdirSync(dir(cwd), { recursive: true }); writeFileSync(p, s, "utf8"); } catch { /* */ } return s; }
 const relayPost = (url: string, body: object): Promise<void> => new Promise((res) => { const u = new URL(url); const data = JSON.stringify(body); const rq = (url.startsWith("https:") ? https : http).request({ hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80), path: u.pathname, method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(data) } }, (x) => { x.on("data", () => {}); x.on("end", () => res()); }); rq.on("error", () => res()); rq.write(data); rq.end(); });
 
 /** Fan an approve/deny ask out to every configured KERYX provider IN PARALLEL; the secretary
@@ -323,6 +329,49 @@ function installPagerService(cwd: string): string {
 export function registerPagerCommands(program: Command): void {
   const p = program.command("pager").description("📟 COSMIC PAGER — approve an agent's sensitive actions from your phone (Telegram), lid closed. Signed authority · self-tuning Trust-Tide · dead-man queue · court-admissible. NO server (the laptop long-polls Telegram behind NAT).");
 
+  p.command("grant").description("🔑 OPERATION GRANT — pre-approve a SCOPED plan ONCE (the human taps yes to the whole plan); commands matching its patterns then auto-allow (consumed + audited), while anything off-plan still pages. Informed batch consent, not a bypass — TTL + max-uses + signed.")
+    .requiredOption("--plan <text>", "what this operation does (the human sees + approves this)")
+    .requiredOption("--for <patterns>", "comma-separated command substrings the grant covers (e.g. 'systemctl,caddy,redis-cli')")
+    .option("--ttl <min>", "lifetime in minutes (default 30)")
+    .option("--max <n>", "max commands it may auto-allow (default 25)")
+    .option("--agent <id>", "agent label", "agent")
+    .option("--yes", "you ARE the human at this terminal — skip the phone approval")
+    .action(async (o: { plan: string; for: string; ttl?: string; max?: string; agent?: string; yes?: boolean }) => {
+      const cwd = process.cwd(); const cfg = loadCfg(cwd); const now = Date.now();
+      const patterns = String(o.for).split(",").map((s) => s.trim()).filter(Boolean);
+      if (!patterns.length) { out("✗ --for needs at least one command pattern"); process.exitCode = 2; return; }
+      const ttlMin = Number(o.ttl) || 30; const maxUses = Number(o.max) || 25;
+      if (!o.yes && cfg.telegramToken && cfg.chatId) {
+        // page the WHOLE plan for ONE informed approval
+        const nonce = _hmac("sha256", "grant").update(o.plan + now).digest("hex").slice(0, 16);
+        const req = pager.mintApprovalRequest({ rawCommand: "OPERATION-GRANT", summary: `🔑 OPERATION GRANT — approve this plan?\n${o.plan}\nCovers: ${patterns.join(", ")}\nExpires in ${ttlMin}m · up to ${maxUses} commands`, agent: o.agent ?? "agent", session: "grant", klass: "grant", blast: "moderate", nonce, now, ttlMs: ttlMin * 60_000 });
+        const mid = await page(cfg, req); const st = loadState(cwd); st.pendings.push({ req, status: "pending", lane: "conservative", tgMessageId: mid }); saveState(cwd, st); ensureDaemon(cwd);
+        try { await fanOutKeryx(cwd, cfg, req, null); } catch { /* */ }
+        out("⏳ sent the plan to your phone — tap ✅ to grant…");
+        const deadline = now + ttlMin * 60_000;
+        for (;;) {
+          const ans = loadState(cwd).answers?.[req.id];
+          if (ans === "allow") break;
+          if (ans === "deny") { out("✗ grant denied on your phone."); process.exitCode = 2; return; }
+          if (Date.now() > deadline) { out("✗ no approval in time — grant not created."); process.exitCode = 2; return; }
+          await new Promise((r) => setTimeout(r, 600));
+        }
+      }
+      const g = opGrant.mintGrant(o.plan, patterns, { now: Date.now(), ttlMs: ttlMin * 60_000, maxUses, secret: grantSecret(cwd), by: "human" });
+      saveGrants(cwd, [...opGrant.pruneGrants(loadGrants(cwd), Date.now()), g]);
+      out(`🔑 GRANT ACTIVE — ${g.id}\n   plan: ${g.plan}\n   covers: ${patterns.join(", ")}\n   ${ttlMin}m · ${maxUses} uses · commands matching these patterns now auto-allow (off-plan still pages)`);
+    });
+
+  p.command("grants").description("List active operation grants (the human-pre-approved plans).").action(() => {
+    const cwd = process.cwd(); const live2 = opGrant.pruneGrants(loadGrants(cwd), Date.now());
+    if (!live2.length) { out("no active operation grants."); return; }
+    for (const g of live2) out(`🔑 ${g.id} · "${g.plan}" · covers [${g.patterns.join(", ")}] · uses ${g.uses}/${g.maxUses} · expires ${new Date(g.exp).toISOString()}`);
+  });
+  p.command("revoke-grant <id>").description("Revoke an operation grant by id.").action((id: string) => {
+    const cwd = process.cwd(); const before = loadGrants(cwd); const after = before.filter((g) => g.id !== id);
+    saveGrants(cwd, after); out(after.length < before.length ? `✓ revoked ${id}` : `no grant ${id}`);
+  });
+
   p.command("autosetup")
     .description("🚀 ONE COMMAND, ZERO USER STEPS — the AI agent runs this for the user: auto-discovers the chat-id, wires the Claude Code hook, sets lid-stay-awake, registers auto-start, and launches the pager. The user only creates a Telegram bot once (BotFather) + taps START — then hands over JUST the token.")
     .requiredOption("--telegram-token <t>", "from @BotFather").option("--chat-id <id>", "(optional — auto-discovered if you've tapped START on the bot)")
@@ -432,6 +481,18 @@ export function registerPagerCommands(program: Command): void {
       if (d.action === "AUTO_ALLOW") {
         st.trust = pager.updateTrust(st.trust, klass, "approved"); st.receipts.push(pager.buildReceipt(req, "allow", "policy-auto", "trust-tide", d.lane, now)); saveState(cwd, st);
         emit("allow", `Trust-Tide: ${d.reason}`); return;
+      }
+      // OPERATION GRANT: did the human pre-approve a plan that COVERS this exact command? Auto-allow it
+      // (consume one use, audit), so a pre-approved batch op runs without a tap-per-command — while
+      // anything OUTSIDE the approved patterns still pages. Destructive-but-in-the-plan is allowed only
+      // because the human saw + approved that pattern; off-plan destructive still pages.
+      const grants = loadGrants(cwd);
+      const cover = opGrant.coveringGrant(grants, command, now, grantSecret(cwd));
+      if (cover) {
+        saveGrants(cwd, opGrant.consumeGrant(grants, cover.id));
+        st.receipts.push(pager.buildReceipt(req, "allow", "policy-auto", `op-grant:${cover.id}`, d.lane, now)); saveState(cwd, st);
+        try { notary.issueReceipt(cwd, { kind: "claim-verdict", subject: `op-grant-use:${cover.id}`, payload: command.slice(0, 120), includePayload: true, issuedAt: now }); } catch { /* */ }
+        emit("allow", `Operation grant — pre-approved plan: ${cover.plan} (use ${(cover.uses ?? 0) + 1}/${cover.maxUses})`); return;
       }
       st.pendings.push({ req, status: "pending", lane: d.lane }); saveState(cwd, st);
       ensureDaemon(cwd);                 // AUTO self-heal: if the long-poll daemon is down, revive it
