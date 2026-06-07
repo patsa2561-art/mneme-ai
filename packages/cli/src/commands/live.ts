@@ -41,9 +41,19 @@ export function registerLiveCommands(program: Command): void {
       try { proofLoop.appendAssistChained(proofLedgerPath(cwd), a); } catch { /* */ }
       out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
-  program.command("signal <text>").description("🛰 TURN-SIGNAL — given this turn's text, the ONE highest-value Mneme move right now (verify/blind/fortify/gate/recall/loopguard) or 'nothing needed'. Deterministic, honest abstention.")
+  program.command("signal [text]").description("🛰 TURN-SIGNAL — given this turn's text, the ONE highest-value Mneme move right now (verify/blind/fortify/gate/recall/loopguard) or 'nothing needed'. Deterministic, honest abstention. --bench measures precision/recall/F1 on the labeled corpus.")
     .option("--all", "show every warranted move, not just the top one").option("--json", "machine-readable")
-    .action((text: string, o: { all?: boolean; json?: boolean }) => {
+    .option("--bench", "measure precision/recall/F1 on the labeled EN+Thai corpus")
+    .action((text: string | undefined, o: { all?: boolean; json?: boolean; bench?: boolean }) => {
+      if (o.bench) {
+        const r = turnSignal.recallBenchmark();
+        if (o.json) { out(JSON.stringify(r, null, 2)); return; }
+        out(`🛰 TURN-SIGNAL benchmark (${r.total} labeled turns, EN+Thai + hard negatives):`);
+        out(`   precision ${r.precision} · recall ${r.recall} · F1 ${r.f1} · false-fire ${r.falseFireRate}`);
+        if (r.misses.length) { out("   misses:"); for (const m of r.misses) out(`     expect ${m.expect} got ${m.got} · ${m.text}`); } else out("   ✓ 0 misses on the corpus");
+        return;
+      }
+      if (!text) { out("usage: mneme signal \"<turn text>\"  ·  or: mneme signal --bench"); return; }
       const sigs = turnSignal.detectTurnSignals(text);
       if (o.json) { out(JSON.stringify(sigs, null, 2)); return; }
       if (!sigs.length) { out("· nothing checkable in this turn — no Mneme move needed (abstain)"); return; }

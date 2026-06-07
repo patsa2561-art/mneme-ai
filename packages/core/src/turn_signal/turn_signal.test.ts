@@ -16,3 +16,14 @@ describe("TURN-SIGNAL — per-turn best Mneme move", () => {
     expect(sigs[0].move).toBe("gate");
   });
 });
+import { recallBenchmark } from "./index.js";
+describe("TURN-SIGNAL recall benchmark (measured, not assumed)", () => {
+  it("hits high precision + recall on the labeled EN+Thai corpus incl. hard negatives", () => {
+    const r = recallBenchmark();
+    if (r.misses.length) console.error(r.misses);
+    expect(r.precision).toBeGreaterThanOrEqual(0.95);
+    expect(r.recall).toBeGreaterThanOrEqual(0.95);
+    expect(r.falseFireRate).toBeLessThanOrEqual(0.05);
+    expect(r.total).toBeGreaterThanOrEqual(35);
+  });
+});

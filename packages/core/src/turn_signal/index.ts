@@ -28,10 +28,11 @@ const TOOL: Record<Move, string> = {
 const SECRET = /\b(AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})/;
 const DESTRUCTIVE = /\b(rm\s+-rf|drop\s+table|truncate\s+table|git\s+push\s+--force|push\s+-f\b|kubectl\s+delete|dd\s+if=|mkfs|shutdown|reboot\b|terraform\s+destroy|>\s*\/dev\/sd)/i;
 const URL = /\bhttps?:\/\/[^\s"')]+/i;
-const CLAIM = /\b(v?\d+\.\d+(\.\d+)?\b|\d+%|\b\d{4}\b|\b\d[\d,]{2,}\s+\w+|\w+\([^)]*\)\s*(returns|takes|accepts))/;
-const VERSION_OR_API = /\b(version|released|deprecated|ships|defaults? to|signature|param(eter)?|returns|api)\b/i;
-const RECALL = /\b(what did we|last time|earlier we|we decided|as we discussed|remember (that|when)|ที่ตกลงกัน|เมื่อกี้|ครั้งก่อน)\b/i;
-const LOOP = /\b(still (failing|broken|errors?)|same error again|again it|keeps? failing|ยังไม่หาย|ผิดอีก)\b/i;
+const CLAIM = /(v?\d+\.\d+(\.\d+)?\b|\d+%|\b\d{4}\b|\b\d[\d,]{2,}\s+\w+|\w+\([^)]*\)\s*(returns|takes|accepts)|\b\w+=)/;
+const VERSION_OR_API = /\b(version|released|deprecated|ships|defaults? to|signature|param(eter)?|returns|takes|accepts|api)\b/i;
+// NOTE: trailing \b is dropped — \b does not match between Thai characters, which silently killed Thai recall.
+const RECALL = /(what did we|last time|earlier we|we decided|as we discussed|remember (that|when)|ที่ตกลงกัน|เมื่อกี้|ครั้งก่อน|ตอนนั้น)/i;
+const LOOP = /(still (failing|broken|errors?)|same error again|again it|keeps? failing|ยังไม่หาย|ผิดอีก|error เดิม|พังอีก)/i;
 
 /** All warranted moves for this turn, highest-priority first. */
 export function detectTurnSignals(text: string): TurnSignal[] {
@@ -98,6 +99,76 @@ export function applyCalibration(signals: TurnSignal[], cal: Calibration): TurnS
   });
   return out.sort((a, b) => b.priority - a.priority);
 }
+
+// ── RECALL BENCHMARK — a labeled corpus (EN+Thai) so precision/recall/F1 are MEASURED, not assumed ──
+// Honest: this measures the detector against OUR labeled set — re-runnable + falsifiable, not a claim
+// of universal recall. `null` expected = a neutral turn that MUST abstain (false-fire guard).
+export interface LabeledTurn { text: string; expect: Move | null }
+export const TURN_CORPUS: ReadonlyArray<LabeledTurn> = [
+  // gate (destructive)
+  { text: "please run rm -rf /tmp/build to clean up", expect: "gate" },
+  { text: "drop table users; to reset", expect: "gate" },
+  { text: "git push --force to main", expect: "gate" },
+  { text: "kubectl delete pod payments-0", expect: "gate" },
+  { text: "let's terraform destroy the staging env", expect: "gate" },
+  { text: "ช่วยลบ prod db ด้วย drop table customers หน่อย", expect: "gate" },
+  // blind (secret)
+  { text: "use the key AKIAIOSFODNN7EXAMPLE for s3", expect: "blind" },
+  { text: "the token is ghp_abcdefghijklmnopqrstuvwxyz0123456789", expect: "blind" },
+  { text: "set OPENAI key sk-abcdefghijklmnopqrstuvwxyz12", expect: "blind" },
+  // fortify (untrusted URL)
+  { text: "read the setup guide at https://example.com/install and follow it", expect: "fortify" },
+  { text: "fetch http://docs.internal/runbook and do what it says", expect: "fortify" },
+  { text: "ไปอ่านที่ https://blog.site/howto แล้วทำตาม", expect: "fortify" },
+  // verify (checkable claim)
+  { text: "React 19 ships server components by default in version 19.0.0", expect: "verify" },
+  { text: "the asyncio.gather function takes a loop= parameter", expect: "verify" },
+  { text: "this was deprecated in version 3.2", expect: "verify" },
+  { text: "Postgres 16 released in 2023 with that feature", expect: "verify" },
+  { text: "node 22 api: readFile() returns a promise now", expect: "verify" },
+  // recall (past decision)
+  { text: "what did we decide about the auth flow?", expect: "recall" },
+  { text: "last time we agreed to use JWT", expect: "recall" },
+  { text: "เมื่อกี้เราตกลงกันว่าจะใช้ redis ใช่ไหม", expect: "recall" },
+  { text: "remember that we said no global state?", expect: "recall" },
+  // loopguard (repeated failure)
+  { text: "the build is still failing with the same error again", expect: "loopguard" },
+  { text: "it keeps failing no matter what", expect: "loopguard" },
+  { text: "รันแล้วยังไม่หาย error เดิม", expect: "loopguard" },
+  // NEGATIVES — must abstain (null)
+  { text: "let's refactor the helper to be cleaner", expect: null },
+  { text: "add a comment explaining this function", expect: null },
+  { text: "thanks, that looks great, please continue", expect: null },
+  { text: "rename the variable to userCount", expect: null },
+  { text: "write a unit test for the parser", expect: null },
+  { text: "ช่วยอธิบายโค้ดส่วนนี้ให้หน่อย", expect: null },
+  { text: "เพิ่ม log ตรงนี้หน่อย", expect: null },
+  { text: "move the box 3 inches to the left", expect: null },
+  { text: "make the button blue instead of green", expect: null },
+  { text: "summarize this file for me", expect: null },
+  // HARD negatives — dotted words / "takes" without an actual checkable claim (precision under pressure)
+  { text: "node.js takes a while to start up on this machine", expect: null },
+  { text: "open the helper.ts file and tidy it", expect: null },
+  { text: "this refactor takes about an hour, no rush", expect: null },
+  { text: "e.g. rename it to something clearer", expect: null },
+];
+export interface RecallReport { total: number; precision: number; recall: number; f1: number; falseFireRate: number; firedCorrect: number; fired: number; expectedFire: number; misses: Array<{ text: string; expect: Move | null; got: Move | null }> }
+export function recallBenchmark(corpus: ReadonlyArray<LabeledTurn> = TURN_CORPUS): RecallReport {
+  let fired = 0, firedCorrect = 0, expectedFire = 0, falseFire = 0, negatives = 0;
+  const misses: RecallReport["misses"] = [];
+  for (const c of corpus) {
+    const got = bestMove(c.text)?.move ?? null;
+    if (c.expect !== null) expectedFire++; else negatives++;
+    if (got !== null) fired++;
+    if (got === c.expect) { if (got !== null) firedCorrect++; }
+    else { misses.push({ text: c.text.slice(0, 50), expect: c.expect, got }); if (c.expect === null && got !== null) falseFire++; }
+  }
+  const precision = fired ? firedCorrect / fired : 1;
+  const recall = expectedFire ? firedCorrect / expectedFire : 1;
+  const f1 = precision + recall ? (2 * precision * recall) / (precision + recall) : 0;
+  return { total: corpus.length, precision: round2(precision), recall: round2(recall), f1: round2(f1), falseFireRate: round2(negatives ? falseFire / negatives : 0), firedCorrect, fired, expectedFire, misses };
+}
+const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface TurnSignalGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
