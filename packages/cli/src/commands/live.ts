@@ -9,7 +9,7 @@ import { existsSync, readFileSync, statSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn } from "node:child_process";
-import { live, agentFit, proofLoop } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -34,6 +34,14 @@ export function registerLiveCommands(program: Command): void {
       const a = proofLoop.normalizeAssist({ agent: o.agent, kind: o.kind as proofLoop.AssistKind, count: o.count ? Number(o.count) : 1, detail: o.detail, at: Date.now() });
       try { mkdirSync(join(cwd, ".mneme", "proof"), { recursive: true }); appendFileSync(proofLedgerPath(cwd), JSON.stringify(a) + "\n", "utf8"); } catch { /* */ }
       out(`✓ logged: ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
+    });
+  program.command("signal <text>").description("🛰 TURN-SIGNAL — given this turn's text, the ONE highest-value Mneme move right now (verify/blind/fortify/gate/recall/loopguard) or 'nothing needed'. Deterministic, honest abstention.")
+    .option("--all", "show every warranted move, not just the top one").option("--json", "machine-readable")
+    .action((text: string, o: { all?: boolean; json?: boolean }) => {
+      const sigs = turnSignal.detectTurnSignals(text);
+      if (o.json) { out(JSON.stringify(sigs, null, 2)); return; }
+      if (!sigs.length) { out("· nothing checkable in this turn — no Mneme move needed (abstain)"); return; }
+      for (const s of (o.all ? sigs : sigs.slice(0, 1))) out(`🛰 ${s.move.toUpperCase()} → ${s.tool}\n   ${s.why}  [matched: ${s.evidence}]`);
     });
   program.command("fit").description("🧩 AGENT-FIT — how tightly Mneme integrates with the AI agent you're running (auto-detected) + the exact native wiring. `--all` shows every agent's integration tier.")
     .option("--all", "list every agent's fit tier + wiring").option("--json", "machine-readable")

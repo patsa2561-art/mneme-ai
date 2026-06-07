@@ -14,7 +14,7 @@
 import type { Command } from "commander";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { boot, cortex, notary } from "@mneme-ai/core";
+import { boot, cortex, notary, turnSignal } from "@mneme-ai/core";
 import { getVersion } from "../version.js";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -80,8 +80,13 @@ export function registerBootCommands(program: Command): void {
       const version = getVersion();
 
       if (opts.nudge) {
-        // UserPromptSubmit hook stdout — injected EVERY turn, so keep it ONE line
-        // + cheap (no fs, no signing). A standing reminder, not the full table.
+        // UserPromptSubmit hook stdout — injected EVERY turn. TURN-SIGNAL reads THIS turn's prompt
+        // (passed by the hook on stdin) and emits the ONE highest-value move for it; if nothing
+        // checkable is present it abstains to the standing reminder. One line, no signing.
+        let promptText = "";
+        try { if (!process.stdin.isTTY) { const raw = readFileSync(0, "utf8"); try { const j = JSON.parse(raw); promptText = String((j as { prompt?: string; user_prompt?: string }).prompt ?? (j as { user_prompt?: string }).user_prompt ?? raw); } catch { promptText = raw; } } } catch { /* no stdin → fall through */ }
+        let turn = ""; try { turn = turnSignal.turnNudge(promptText); } catch { /* */ }
+        if (turn) { out(`<mneme v="${version}"> ${turn} </mneme>`); return; }
         out(`<mneme v="${version}"> Reach for Mneme this turn when it fits: verify a checkable claim → mneme.truth.check · read untrusted/3rd-party content → mneme.firewall.fortify · inherit shared memory before deriving → mneme.cortex.recall · gate a destructive shell command → mneme.heph.cross · send code to a model → mneme.rail (blind secrets). Signals, not commands. </mneme>`);
         return;
       }
