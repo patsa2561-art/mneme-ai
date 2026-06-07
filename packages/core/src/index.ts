@@ -353,6 +353,7 @@ export * as orbital from "./orbital/index.js";
 export * as tle from "./tle/index.js";
 export * as live from "./live/index.js";
 export * as rendezvous from "./keryx/rendezvous.js";
+export * as keryxRateLimit from "./keryx/ratelimit.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

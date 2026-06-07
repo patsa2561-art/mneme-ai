@@ -350,6 +350,9 @@ import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync
 import { join as _join } from "node:path";
 import { createPublicKey as _createPublicKey, verify as _ed25519Verify, createHash as _createHash } from "node:crypto";
 const _khash = (key: string): string => _createHash("sha256").update("keryx-key|" + String(key ?? "")).digest("hex");
+// ── DoS guard: in-process token-bucket rate limit for the public relay endpoints (ephemeral, pruned) ──
+const _rlBuckets: Record<string, { tokens: number; last: number }> = {};
+let _rlCalls = 0;
 
 export interface CrossHttpResponse { status: number; body: CrossResult | { error: string } }
 
@@ -642,6 +645,15 @@ export function verifyDiscordSig(publicKeyHex: string, timestamp: string, rawBod
 export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain" | "pair-register", body: unknown, query: Record<string, string>, headers?: Record<string, string | string[] | undefined>): Promise<SavantHttpResponse> {
   const { parseInbound, extractInbound } = await import("../keryx/index.js");
   const rdv = await import("../keryx/rendezvous.js");
+  // ── RATE LIMIT (DoS guard) — per client IP (open endpoints) or daemonId (drain). In-memory, pruned. ──
+  try {
+    const { checkRate, pruneRate, RATE_POLICY } = await import("../keryx/ratelimit.js");
+    const ip = String((headers?.["x-forwarded-for"] as string) ?? "").split(",")[0].trim() || "anon";
+    const rlKey = action === "drain" ? "drain:" + String(query["daemon"] ?? "default") : action + ":" + ip;
+    if ((++_rlCalls % 500) === 0) pruneRate(_rlBuckets, Date.now());
+    const rl = checkRate(_rlBuckets, rlKey, Date.now(), RATE_POLICY[action] ?? { burst: 60, refillPerSec: 2 });
+    if (!rl.allowed) return { status: 429, body: { error: "rate limited", retryAfterMs: rl.retryAfterMs } };
+  } catch { /* limiter must never block a legit request on its own error */ }
   const s = _loadKeryxRelay(repoRoot);
   s.pairings = s.pairings ?? []; s.links = s.links ?? [];
   try {
