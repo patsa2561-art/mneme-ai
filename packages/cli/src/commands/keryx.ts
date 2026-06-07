@@ -85,6 +85,22 @@ export function registerKeryxCommands(program: Command): void {
       out(relay ? (registered ? `   ✓ registered with relay ${relay} — the moment you send the code, ${provider} is linked + you'll get approvals there.` : `   ⚠ relay ${relay} did not confirm (its /keryx/pair-register may not be deployed yet) — code minted + saved locally.`) : `   ⚠ no relay configured — set keryxRelay first (Telegram needs none; LINE/Slack/Discord/WhatsApp need the hosted relay).`);
     });
 
+  k.command("rotate").description("🔑 Rotate this machine's relay key (compromise recovery) — proves the old key, swaps to a fresh one. Existing pairings keep working; the old key can no longer drain.")
+    .option("--relay <url>", "the hosted Keryx relay (defaults to your configured one)")
+    .action(async (o: { relay?: string }) => {
+      const cwd = process.cwd(); const dir = join(cwd, ".mneme", "keryx");
+      const idPath = join(dir, "daemon-id"), secPath = join(dir, "rendezvous-secret");
+      if (!existsSync(idPath) || !existsSync(secPath)) { out("✗ nothing to rotate — run `mneme keryx connect <provider>` first."); process.exitCode = 2; return; }
+      const daemonId = readFileSync(idPath, "utf8").trim(); const oldKey = readFileSync(secPath, "utf8").trim();
+      const newKey = createHmac("sha256", "mneme-rdv-rotate").update(daemonId + "|" + oldKey + "|" + Date.now()).digest("hex");
+      let relay = o.relay || "";
+      try { const pc = JSON.parse(readFileSync(join(cwd, ".mneme", "pager", "config.json"), "utf8")); relay = o.relay || pc.keryxRelay || ""; } catch { /* */ }
+      if (!relay) { out("✗ no relay configured."); process.exitCode = 2; return; }
+      const r = await postJson(`${relay.replace(/\/$/, "")}/keryx/rotate-key`, { daemonId, oldKey, newKey });
+      if (r && (r.ok || r.rotated)) { writeFileSync(secPath, newKey, "utf8"); out(`🔑 key rotated for ${daemonId} — the old key is now dead; this machine keeps its pairings.`); }
+      else { out(`✗ rotation refused by relay: ${JSON.stringify(r)} (old key mismatch?)`); process.exitCode = 2; }
+    });
+
   k.command("web").description("🕸 PROVIDER WEB — the providers woven into the mesh + their capabilities. Any provider (incl. a future one like WeChat) plugs in by declaring 'silk' — no core change.")
     .option("--harvest <provider>", "test-parse an inbound payload from STDIN/--payload for a provider")
     .option("--payload <json>", "inline inbound payload to harvest").action((o: { harvest?: string; payload?: string }) => {

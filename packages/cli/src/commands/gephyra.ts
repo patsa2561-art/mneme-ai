@@ -74,9 +74,9 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
       if (m === "GET" && url.startsWith("/keryx/drain")) { void g.handleKeryxRelay(o.cwd, "drain", "", { daemon: kq.get("daemon") ?? "default" }, req.headers as Record<string, string | string[] | undefined>).then(reply).catch((e: Error) => reply({ status: 500, body: { error: e.message } })); return; }
       const isMcp = url.startsWith("/mcp"), isSV = url.startsWith("/savant/verify"), isSR = url.startsWith("/savant/repair");
       const isFw = url.startsWith("/firewall"), isRi = url.startsWith("/rail/ingress"), isRe = url.startsWith("/rail/egress"), isRk = url.startsWith("/reckon");
-      const isKExpect = url.startsWith("/keryx/expect"), isKWebhook = url.startsWith("/keryx/webhook"), isKPair = url.startsWith("/keryx/pair-register");
-      const known = url.startsWith("/cross") || isMcp || isSV || isSR || isFw || isRi || isRe || isRk || isKExpect || isKWebhook || isKPair;
-      if (m !== "POST" || !known) { reply({ status: 404, body: { error: "POST /cross|/mcp|/savant/verify|/savant/repair|/firewall|/rail/ingress|/rail/egress|/reckon|/keryx/expect|/keryx/pair-register|/keryx/webhook/:provider · GET /status|/openapi.json|/keryx/drain" } }); return; }
+      const isKExpect = url.startsWith("/keryx/expect"), isKWebhook = url.startsWith("/keryx/webhook"), isKPair = url.startsWith("/keryx/pair-register"), isKRotate = url.startsWith("/keryx/rotate-key");
+      const known = url.startsWith("/cross") || isMcp || isSV || isSR || isFw || isRi || isRe || isRk || isKExpect || isKWebhook || isKPair || isKRotate;
+      if (m !== "POST" || !known) { reply({ status: 404, body: { error: "POST /cross|/mcp|/savant/verify|/savant/repair|/firewall|/rail/ingress|/rail/egress|/reckon|/keryx/expect|/keryx/pair-register|/keryx/rotate-key|/keryx/webhook/:provider · GET /status|/openapi.json|/keryx/drain" } }); return; }
       let body = ""; req.on("data", (c) => { body += c; if (body.length > 1_000_000) req.destroy(); });
       req.on("end", () => {
         const provider = isKWebhook ? (url.split("/keryx/webhook/")[1]?.split("?")[0] || "generic") : "";
@@ -88,6 +88,7 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
           : isRk ? g.handleA2ARequest(o.cwd, body, "reckon")
           : isKExpect ? g.handleKeryxRelay(o.cwd, "expect", body, {})
           : isKPair ? g.handleKeryxRelay(o.cwd, "pair-register", body, {})
+          : isKRotate ? g.handleKeryxRelay(o.cwd, "rotate-key", body, {})
           : isKWebhook ? g.handleKeryxRelay(o.cwd, "webhook", body, { provider }, req.headers as Record<string, string | string[] | undefined>)
           : isMcp ? g.handleMcpCallRequest(o.cwd, body)
           : g.handleCrossRequest(o.cwd, body);

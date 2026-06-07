@@ -642,7 +642,7 @@ export function verifyDiscordSig(publicKeyHex: string, timestamp: string, rawBod
   } catch { return false; }
 }
 
-export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain" | "pair-register", body: unknown, query: Record<string, string>, headers?: Record<string, string | string[] | undefined>): Promise<SavantHttpResponse> {
+export async function handleKeryxRelay(repoRoot: string, action: "expect" | "webhook" | "drain" | "pair-register" | "rotate-key", body: unknown, query: Record<string, string>, headers?: Record<string, string | string[] | undefined>): Promise<SavantHttpResponse> {
   const { parseInbound, extractInbound } = await import("../keryx/index.js");
   const rdv = await import("../keryx/rendezvous.js");
   // ── RATE LIMIT (DoS guard) — per client IP (open endpoints) or daemonId (drain). In-memory, pruned. ──
@@ -672,6 +672,16 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
       s.pairings = [...(s.pairings as unknown[]).filter((r) => (r as { code?: string })?.code !== rec.code), rec];   // dedup by code
       _saveKeryxRelay(repoRoot, s);
       return { status: 200, body: { ok: true, registered: true } };
+    }
+    // ── KEY ROTATION: prove the OLD key, swap to a NEW one (compromise recovery, no re-pairing) ──
+    if (action === "rotate-key") {
+      let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
+      const did = String(o["daemonId"] ?? ""), oldKey = String(o["oldKey"] ?? ""), newKey = String(o["newKey"] ?? "");
+      if (!did || !newKey) return { status: 400, body: { error: "required: daemonId, newKey" } };
+      s.keys = s.keys ?? {};
+      if (s.keys[did] && s.keys[did] !== _khash(oldKey)) return { status: 401, body: { error: "old key does not match — cannot rotate" } };
+      s.keys[did] = _khash(newKey); _saveKeryxRelay(repoRoot, s);
+      return { status: 200, body: { ok: true, rotated: true } };
     }
     if (action === "expect") {
       let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
