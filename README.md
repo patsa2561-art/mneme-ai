@@ -14,6 +14,8 @@
 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-100%2F100-2da44e?style=for-the-badge" /></a>
 <a href="LICENSE" target="_blank" rel="noopener"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
 
+<br/><sub><b>New here?</b> → <b><a href="docs/GETTING-STARTED.md" target="_blank" rel="noopener">60-second start</a></b> (one line for your case) · or run <code>mneme quickstart</code>. Don't read the 988-tool list.</sub>
+
 <br/><br/><sub>🛰 <b>The Matrix Rail</b> — one local-first, signed, streaming pipe every AI agent crosses, reachable three ways (<b>MCP · gRPC · CLI</b>) over a single core. The honest "Visa of AI context": authorize → screen → clear, with a tamper-evident receipt, your code never leaving the box. <a href="docs/MATRIX.md">architecture →</a></sub>
 
 </div>

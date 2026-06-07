@@ -41,6 +41,24 @@ export function registerLiveCommands(program: Command): void {
       try { proofLoop.appendAssistChained(proofLedgerPath(cwd), a); } catch { /* */ }
       out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
+  program.command("quickstart").alias("start-here").description("🚀 START HERE — the ONE first-value path for you (auto-detected), not the 988-tool firehose.")
+    .action(() => {
+      const a = agentFit.detectActiveAgent(process.env as Record<string, string | undefined>);
+      out("🚀 Mneme — your 60-second first value:\n");
+      if (a) {
+        out(`You're in ${a.label} (fit ${a.fit}/100). Do ONE of these now:`);
+        out(`  1. Approve risky actions from your phone:  tell me \"set up phone approvals, token: <BotFather token>\"`);
+        out(`     → I run: mneme pager autosetup --telegram-token <token>  (you never type it)`);
+        out(`  2. Verify any claim right now:             mneme verify \"<a factual claim>\"`);
+        out(`  3. See what's worth doing this turn:       mneme signal \"<your task>\"`);
+      } else {
+        out("Pick the line that matches you:");
+        out("  💬 chat with ChatGPT/Gemini/Claude.ai →  mneme polygraph autosetup --persist   (truth dots)");
+        out("  🧑‍💻 code with an AI agent           →  mneme pager autosetup --telegram-token <token>   (approve from phone)");
+        out("  🏢 want proof your agents are governed →  mneme proof   ·   mneme proof verify");
+      }
+      out("\n   more depth when you want it: mneme atlas  ·  full guide: docs/GETTING-STARTED.md");
+    });
   program.command("signal [text]").description("🛰 TURN-SIGNAL — given this turn's text, the ONE highest-value Mneme move right now (verify/blind/fortify/gate/recall/loopguard) or 'nothing needed'. Deterministic, honest abstention. --bench measures precision/recall/F1 on the labeled corpus.")
     .option("--all", "show every warranted move, not just the top one").option("--json", "machine-readable")
     .option("--bench", "measure precision/recall/F1 on the labeled EN+Thai corpus")
