@@ -357,6 +357,7 @@ export * as keryxRateLimit from "./keryx/ratelimit.js";
 export * as keryxStore from "./keryx/store.js";
 export * as opGrant from "./keryx/op_grant.js";
 export * as agentFit from "./agent_fit/index.js";
+export * as proofLoop from "./proof_loop/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

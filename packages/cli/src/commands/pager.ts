@@ -495,6 +495,8 @@ export function registerPagerCommands(program: Command): void {
         emit("allow", `Operation grant — pre-approved plan: ${cover.plan} (use ${(cover.uses ?? 0) + 1}/${cover.maxUses})`); return;
       }
       st.pendings.push({ req, status: "pending", lane: d.lane }); saveState(cwd, st);
+      // LIVE PROOF: a sensitive command held for the human is a recorded assist (attributed to the agent)
+      try { mkdirSync(join(cwd, ".mneme", "proof"), { recursive: true }); appendFileSync(join(cwd, ".mneme", "proof", "ledger.jsonl"), JSON.stringify({ agent: o.agent ?? "agent", kind: "command_gated", count: 1, detail: (req.summary || "").slice(0, 80), at: now }) + "\n", "utf8"); } catch { /* */ }
       ensureDaemon(cwd);                 // AUTO self-heal: if the long-poll daemon is down, revive it
       // DYNAMIC LANES: agent passes "all" / "line,whatsapp" / or the user's own words
       // ("ส่งไป line กับ whatsapp พอ") — extractChannels understands EN + Thai. null = all.
