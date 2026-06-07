@@ -20,7 +20,7 @@ function postForm(host: string, path: string, body: string): Promise<number> { r
 
 export function registerLiveCommands(program: Command): void {
   const proof = program.command("proof").description("📊 LIVE PROOF — a measured, per-agent scorecard of what Mneme actually did for you: hallucinations caught · leaks blocked · injections neutralized · commands gated · tokens saved. The value, counted — not claimed.");
-  proof.action(() => {        // default: the live scorecard
+  proof.command("show", { isDefault: true }).description("the live scorecard").action(() => {        // `mneme proof` → the live scorecard
     const cwd = process.cwd(); const sc = proofLoop.scorecard(loadProof(cwd), { now: Date.now() });
     if (!sc.total && !sc.tokensSaved) { out("📊 No assists recorded yet. Mneme logs one each time it catches/blocks/gates/saves while you work."); return; }
     out(`📊 MNEME LIVE PROOF — ${sc.harmsPrevented} harms prevented · ${sc.tokensSaved.toLocaleString()} tokens saved · ${sc.total} total assists`);
