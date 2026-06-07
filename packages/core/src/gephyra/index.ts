@@ -349,6 +349,7 @@ export async function routeToolCall(
 import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync, appendFileSync as _appendFileSync, renameSync as _renameSync } from "node:fs";
 import { join as _join } from "node:path";
 import { createPublicKey as _createPublicKey, verify as _ed25519Verify, createHash as _createHash } from "node:crypto";
+import { makeRedisStore } from "../keryx/store.js";
 const _khash = (key: string): string => _createHash("sha256").update("keryx-key|" + String(key ?? "")).digest("hex");
 // ── DoS guard: in-process token-bucket rate limit for the public relay endpoints (ephemeral, pruned) ──
 const _rlBuckets: Record<string, { tokens: number; last: number }> = {};
@@ -618,17 +619,42 @@ function _loadKeryxRelay(repoRoot: string): KeryxRelayState {
   try { const p = _keryxStatePath(repoRoot); if (_existsSync(p)) { const j = JSON.parse(_readFileSync(p, "utf8")); if (j && typeof j === "object") return { v: 1, inbox: j.inbox ?? {}, askOwner: j.askOwner ?? {}, pairings: j.pairings ?? [], links: j.links ?? [], keys: j.keys ?? {} }; } } catch { /* */ }
   return { v: 1, inbox: {}, askOwner: {}, pairings: [], links: [], keys: {} };
 }
+/** Prune on every write — no unbounded growth: drop used/expired pairing codes + 90d-stale links. */
+function _pruneKeryxState(s: KeryxRelayState): KeryxRelayState {
+  const now = Date.now();
+  if (Array.isArray(s.pairings)) s.pairings = (s.pairings as Array<{ used?: boolean; exp?: number }>).filter((r) => r && !r.used && (!r.exp || now <= r.exp)).slice(-2000);
+  if (Array.isArray(s.links)) s.links = s.links.filter((l) => l && (!l.at || now - l.at < 90 * 86400_000)).slice(-5000);
+  return s;
+}
 function _saveKeryxRelay(repoRoot: string, s: KeryxRelayState): void {
   try {
     const d = _join(repoRoot, ".mneme", "keryx"); if (!_existsSync(d)) _mkdirSync(d, { recursive: true });
-    // PRUNE on every write — no unbounded growth: drop used/expired pairing codes + stale links (90d).
-    const now = Date.now();
-    if (Array.isArray(s.pairings)) s.pairings = (s.pairings as Array<{ used?: boolean; exp?: number }>).filter((r) => r && !r.used && (!r.exp || now <= r.exp)).slice(-2000);
-    if (Array.isArray(s.links)) s.links = s.links.filter((l) => l && (!l.at || now - l.at < 90 * 86400_000)).slice(-5000);
-    // ATOMIC write (temp + rename) — concurrent webhooks can't read a half-written file.
-    const p = _keryxStatePath(repoRoot); const tmp = p + "." + process.pid + ".tmp";
+    _pruneKeryxState(s);
+    const p = _keryxStatePath(repoRoot); const tmp = p + "." + process.pid + ".tmp";   // ATOMIC: temp + rename
     try { _writeFileSync(tmp, JSON.stringify(s), "utf8"); _renameSync(tmp, p); } catch { _writeFileSync(p, JSON.stringify(s), "utf8"); }
   } catch { /* */ }
+}
+// ── STORE SELECTION — FileStore (default, single node) or RedisStore (shared, HA across N nodes) ──
+let _keryxFileLock: Promise<unknown> = Promise.resolve();
+let _keryxRedis: import("../keryx/store.js").KeryxStore<KeryxRelayState> | null = null;
+function _emptyKeryxState(): KeryxRelayState { return { v: 1, inbox: {}, askOwner: {}, pairings: [], links: [], keys: {} }; }
+function pickKeryxStore(repoRoot: string): import("../keryx/store.js").KeryxStore<KeryxRelayState> {
+  const url = process.env.KERYX_REDIS_URL;
+  if (url) {
+    if (!_keryxRedis) {
+      // lazy single redis client per process; set() prunes before persisting (parity with the file path)
+      const inner = makeRedisStore<KeryxRelayState>(url, process.env.KERYX_REDIS_KEY || "keryx:relay:state", _emptyKeryxState());
+      _keryxRedis = { kind: "redis", get: inner.get, set: (v) => inner.set(_pruneKeryxState(v)), withLock: inner.withLock, close: inner.close };
+    }
+    return _keryxRedis;
+  }
+  // FileStore: get/set the relay.json (prune+atomic already in _saveKeryxRelay) + in-process lock chain
+  return {
+    kind: "file",
+    get: async () => _loadKeryxRelay(repoRoot),
+    set: async (v) => _saveKeryxRelay(repoRoot, v),
+    withLock: <R>(fn: () => Promise<R>): Promise<R> => { const run = _keryxFileLock.then(fn, fn); _keryxFileLock = run.then(() => undefined, () => undefined); return run as Promise<R>; },
+  };
 }
 
 /** Verify a Discord interaction's Ed25519 signature (required, else Discord rejects the endpoint).
@@ -654,8 +680,12 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
     const rl = checkRate(_rlBuckets, rlKey, Date.now(), RATE_POLICY[action] ?? { burst: 60, refillPerSec: 2 });
     if (!rl.allowed) return { status: 429, body: { error: "rate limited", retryAfterMs: rl.retryAfterMs } };
   } catch { /* limiter must never block a legit request on its own error */ }
-  const s = _loadKeryxRelay(repoRoot);
-  s.pairings = s.pairings ?? []; s.links = s.links ?? [];
+  const store = pickKeryxStore(repoRoot);
+  // Every mutation runs inside the store lock — cross-node (Redis) or in-process (File). This is what
+  // lets N relay nodes share state behind a load balancer without losing each other's writes.
+  return store.withLock(async () => {
+  const s = await store.get();
+  s.pairings = s.pairings ?? []; s.links = s.links ?? []; s.keys = s.keys ?? {};
   try {
     // ── RENDEZVOUS: a daemon uploads a minted single-use pairing record ──
     if (action === "pair-register") {
@@ -670,7 +700,7 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
       if (did && key) { const h = _khash(key); if (s.keys[did] && s.keys[did] !== h) return { status: 401, body: { error: "daemonId is claimed by a different key" } }; s.keys[did] = h; }
       else if (did && s.keys[did]) return { status: 401, body: { error: "daemonId requires its key" } };
       s.pairings = [...(s.pairings as unknown[]).filter((r) => (r as { code?: string })?.code !== rec.code), rec];   // dedup by code
-      _saveKeryxRelay(repoRoot, s);
+      await store.set(s);
       return { status: 200, body: { ok: true, registered: true } };
     }
     // ── KEY ROTATION: prove the OLD key, swap to a NEW one (compromise recovery, no re-pairing) ──
@@ -680,14 +710,14 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
       if (!did || !newKey) return { status: 400, body: { error: "required: daemonId, newKey" } };
       s.keys = s.keys ?? {};
       if (s.keys[did] && s.keys[did] !== _khash(oldKey)) return { status: 401, body: { error: "old key does not match — cannot rotate" } };
-      s.keys[did] = _khash(newKey); _saveKeryxRelay(repoRoot, s);
+      s.keys[did] = _khash(newKey); await store.set(s);
       return { status: 200, body: { ok: true, rotated: true } };
     }
     if (action === "expect") {
       let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
       const daemonId = String(o["daemonId"] ?? ""), askId = String(o["askId"] ?? "");
       if (!daemonId || !askId) return { status: 400, body: { error: "required: daemonId, askId" } };
-      s.askOwner[askId] = daemonId; _saveKeryxRelay(repoRoot, s);
+      s.askOwner[askId] = daemonId; await store.set(s);
       return { status: 200, body: { ok: true } };
     }
     if (action === "webhook") {
@@ -705,7 +735,7 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
         const parsedD = parseInbound("discord", body);
         if (parsedD.ok) {
           const owners = Object.values(s.askOwner); const daemonId = (parsedD.id && s.askOwner[parsedD.id]) || (owners.length === 1 ? owners[0] : "default");
-          s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), { v: 1, kind: "answer", id: parsedD.id ?? "", channel: "discord", payload: parsedD.answer ?? "", relayAttested: true, ts: Date.now() }]; _saveKeryxRelay(repoRoot, s);
+          s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), { v: 1, kind: "answer", id: parsedD.id ?? "", channel: "discord", payload: parsedD.answer ?? "", relayAttested: true, ts: Date.now() }]; await store.set(s);
         }
         return { status: 200, body: { type: 7, data: { content: `✅ received: ${parsedD.answer ?? "ok"} — recorded.`, components: [] } } }; // UPDATE_MESSAGE: clears buttons, no error
       }
@@ -715,7 +745,7 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
         const m = rdv.matchPairingCode(inb.text, s.pairings as never[], { now: Date.now(), provider, skipSig: true });
         if (m.ok && inb.conversation) {
           const lt = rdv.link({ links: (s.links ?? []) as never[] }, m, inb.conversation, Date.now());
-          s.links = lt.links; s.pairings = rdv.consume(s.pairings as never[], m.code as string); _saveKeryxRelay(repoRoot, s);
+          s.links = lt.links; s.pairings = rdv.consume(s.pairings as never[], m.code as string); await store.set(s);
           return { status: 200, body: { ok: true, linked: true, provider, daemonId: m.daemonId } };
         }
       }
@@ -726,7 +756,7 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
       const linkedDaemon = inb.conversation ? (s.links ?? []).find((l) => l.provider === provider && l.conversation === inb.conversation)?.daemonId : undefined;
       const daemonId = (parsed.id && s.askOwner[parsed.id]) || linkedDaemon || (owners.length === 1 ? owners[0] : "default");
       const env = { v: 1, kind: "answer", id: parsed.id ?? "", channel: provider, payload: parsed.answer ?? "", relayAttested: true, ts: Date.now() };
-      s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), env]; _saveKeryxRelay(repoRoot, s);
+      s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), env]; await store.set(s);
       return { status: 200, body: { ok: true, routedTo: daemonId, id: parsed.id, answer: parsed.answer } };
     }
     // drain — answers (cleared) + this daemon's links. AUTH: if the daemonId was claimed with a key,
@@ -735,10 +765,11 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
     const daemonId = String(query["daemon"] ?? "default");
     const provedKey = String((headers?.["x-keryx-key"] as string) ?? "");
     if (s.keys?.[daemonId] && s.keys[daemonId] !== _khash(provedKey)) return { status: 200, body: { answers: [], links: [], auth: false } };
-    const answers = s.inbox[daemonId] ?? []; s.inbox[daemonId] = []; _saveKeryxRelay(repoRoot, s);
+    const answers = s.inbox[daemonId] ?? []; s.inbox[daemonId] = []; await store.set(s);
     const links = (s.links ?? []).filter((l) => l.daemonId === daemonId);
     return { status: 200, body: { answers, links } };
   } catch (e) { return { status: 500, body: { error: (e as Error).message } }; }
+  });
 }
 
 /** OpenAPI 3.0 spec for the A2A surface — register with any agent's tool layer. */
