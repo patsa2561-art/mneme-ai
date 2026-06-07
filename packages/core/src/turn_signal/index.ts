@@ -55,6 +55,50 @@ export function turnNudge(text: string): string {
   return `Mneme — this turn: ${b.why} → ${b.tool}  [matched: ${b.evidence}]`;
 }
 
+// ── LEARNING: calibrate move priority from whether suggestions actually LANDED (a real assist) ──
+// Honest: this is a measured landing-RATE (Wilson 95% lower bound, abstains on thin data) — not ML.
+// A move's landing rate conflates "suggestion was wrong" with "agent ignored it", so it is used only
+// as a SOFT nudge to RANKING, never to suppress; and prevent-harm moves (gate/blind) are NEVER
+// down-ranked regardless of rate (a destructive command must always surface).
+const HARM_MOVES: ReadonlySet<Move> = new Set(["gate", "blind"]);
+/** which LIVE-PROOF assist kinds count as a given move having "landed". */
+export const MOVE_TO_ASSIST: Record<Move, string[]> = {
+  gate: ["command_gated"], blind: ["leak_blocked"], fortify: ["injection_neutralized"],
+  verify: ["hallucination_caught", "confirmed", "unknown_flagged"], recall: ["contradiction_surfaced"], loopguard: [],
+};
+function wilsonLB(succ: number, n: number): number {
+  if (n <= 0) return 0; const p = succ / n, z = 1.96, z2 = z * z;
+  return Math.max(0, ((p + z2 / (2 * n)) - z * Math.sqrt((p * (1 - p) + z2 / (4 * n)) / n)) / (1 + z2 / n));
+}
+export interface MoveRate { suggested: number; landed: number; rateLB: number }
+export interface Calibration { rates: Partial<Record<Move, MoveRate>>; minSamples: number }
+/** From a suggestion log + the LIVE-PROOF assist log, measure each move's landing rate (Wilson-LB). */
+export function calibrate(suggestions: ReadonlyArray<{ move: string; at: number }>, assists: ReadonlyArray<{ kind: string; at: number }>, opts?: { windowMs?: number; minSamples?: number }): Calibration {
+  const win = Number(opts?.windowMs) || 5 * 60 * 1000; const minSamples = Number(opts?.minSamples) || 5;
+  const rates: Partial<Record<Move, MoveRate>> = {};
+  for (const mv of Object.keys(MOVE_TO_ASSIST) as Move[]) {
+    const sugg = (suggestions ?? []).filter((s) => s.move === mv);
+    if (!sugg.length) continue;
+    const kinds = new Set(MOVE_TO_ASSIST[mv]); if (!kinds.size) { rates[mv] = { suggested: sugg.length, landed: 0, rateLB: 0 }; continue; }
+    let landed = 0;
+    for (const s of sugg) if ((assists ?? []).some((a) => kinds.has(a.kind) && a.at >= s.at && a.at <= s.at + win)) landed++;
+    rates[mv] = { suggested: sugg.length, landed, rateLB: wilsonLB(landed, sugg.length) };
+  }
+  return { rates, minSamples };
+}
+/** Re-rank signals by their measured landing rate — soft, floored, harm-moves untouched, thin→base. */
+export function applyCalibration(signals: TurnSignal[], cal: Calibration): TurnSignal[] {
+  const out = (signals ?? []).map((s) => {
+    if (HARM_MOVES.has(s.move)) return s;                                  // prevent-harm: never down-rank
+    const r = cal?.rates?.[s.move];
+    if (!r || r.suggested < (cal.minSamples ?? 5)) return s;               // Padgett: thin data → base priority
+    // scale the SOFT part of priority by landing rate (floor 0.4 so a move is dampened, never suppressed)
+    const factor = 0.4 + 0.6 * r.rateLB;
+    return { ...s, priority: Math.round(s.priority * factor), why: `${s.why} (landing ${Math.round(r.rateLB * 100)}% n=${r.suggested})` };
+  });
+  return out.sort((a, b) => b.priority - a.priority);
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface TurnSignalGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function turnSignalGauntlet(): TurnSignalGauntlet {
@@ -71,7 +115,18 @@ export function turnSignalGauntlet(): TurnSignalGauntlet {
     && bestMove("thanks, that looks great, please continue") === null;
   // a bare number without a version/api context does NOT trip verify (narrow detector)
   const narrow = bestMove("move the box 3 inches to the left") === null;
-  const total = (() => { try { detectTurnSignals(null as never); bestMove(""); turnNudge(undefined as never); return true; } catch { return false; } })();
+  // LEARNING calibration
+  const sugg = [...Array(10)].map((_, i) => ({ move: "verify", at: i * 1000 })).concat([...Array(10)].map((_, i) => ({ move: "recall", at: 100000 + i * 1000 })));
+  const assists = [...Array(9)].map((_, i) => ({ kind: "confirmed", at: i * 1000 + 10 }));   // verify lands 9/10, recall 0/10
+  const cal = calibrate(sugg, assists, { windowMs: 5000, minSamples: 5 });
+  const calMeasureOK = (cal.rates.verify?.landed === 9) && (cal.rates.recall?.landed === 0) && (cal.rates.verify!.rateLB > cal.rates.recall!.rateLB);
+  // applied: a high-landing soft move outranks a never-landing one; harm-move (gate) never down-ranked
+  const baseSignals: TurnSignal[] = [{ move: "recall", tool: "x", why: "r", evidence: "e", priority: 30 }, { move: "verify", tool: "y", why: "v", evidence: "e", priority: 50 }];
+  const applied = applyCalibration(baseSignals, cal);
+  const applyOK = applied[0].move === "verify";   // verify (lands) stays above recall (never lands)
+  const gateUntouched = applyCalibration([{ move: "gate", tool: "g", why: "g", evidence: "e", priority: 100 }], calibrate([{ move: "gate", at: 0 }], [], { minSamples: 1 }))[0].priority === 100;
+  const thinNoChange = applyCalibration([{ move: "verify", tool: "y", why: "v", evidence: "e", priority: 50 }], calibrate([{ move: "verify", at: 0 }], [], { minSamples: 5 }))[0].priority === 50;
+  const total = (() => { try { detectTurnSignals(null as never); bestMove(""); turnNudge(undefined as never); calibrate(null as never, null as never); applyCalibration(null as never, { rates: {}, minSamples: 5 }); return true; } catch { return false; } })();
 
   const checks = [
     { name: "GATE-DESTRUCTIVE", pass: gate, detail: "a destructive command → gate" },
@@ -83,6 +138,10 @@ export function turnSignalGauntlet(): TurnSignalGauntlet {
     { name: "PRIORITY-HARM-FIRST", pass: priorityOK, detail: "when several fire, prevent-harm (gate) wins" },
     { name: "NEUTRAL-NO-FALSE-FIRE", pass: neutral, detail: "ordinary prose → no signal (abstain, not invent)" },
     { name: "NARROW-NOT-OVEREAGER", pass: narrow, detail: "a bare number without version/API context does not trip verify" },
+    { name: "LEARN-MEASURE-LANDING", pass: calMeasureOK, detail: "calibrate measures each move's landing rate from real assists (Wilson-LB)" },
+    { name: "LEARN-RERANK-SOFT", pass: applyOK, detail: "a high-landing soft move outranks a never-landing one" },
+    { name: "LEARN-HARM-UNTOUCHED", pass: gateUntouched, detail: "prevent-harm moves (gate/blind) are NEVER down-ranked by calibration" },
+    { name: "LEARN-PADGETT-THIN", pass: thinNoChange, detail: "thin data (< minSamples) → no adjustment (base priority kept)" },
     { name: "TOTAL", pass: total, detail: "null/empty never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

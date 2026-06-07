@@ -12,7 +12,7 @@
  */
 
 import type { Command } from "commander";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { boot, cortex, notary, turnSignal } from "@mneme-ai/core";
 import { getVersion } from "../version.js";
@@ -85,8 +85,20 @@ export function registerBootCommands(program: Command): void {
         // checkable is present it abstains to the standing reminder. One line, no signing.
         let promptText = "";
         try { if (!process.stdin.isTTY) { const raw = readFileSync(0, "utf8"); try { const j = JSON.parse(raw); promptText = String((j as { prompt?: string; user_prompt?: string }).prompt ?? (j as { user_prompt?: string }).user_prompt ?? raw); } catch { promptText = raw; } } } catch { /* no stdin → fall through */ }
-        let turn = ""; try { turn = turnSignal.turnNudge(promptText); } catch { /* */ }
-        if (turn) { out(`<mneme v="${version}"> ${turn} </mneme>`); return; }
+        try {
+          const sigs = turnSignal.detectTurnSignals(promptText);
+          if (sigs.length) {
+            // LEARNING: re-rank by measured landing rate (suggestions that historically led to a real
+            // LIVE-PROOF assist rank higher); harm-moves untouched, thin data → base. Then log this one.
+            const readJsonl = (p: string): Array<Record<string, unknown>> => { try { return readFileSync(p, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
+            const suggestions = readJsonl(join(cwd, ".mneme", "turn", "suggestions.jsonl")) as Array<{ move: string; at: number }>;
+            const assists = readJsonl(join(cwd, ".mneme", "proof", "ledger.jsonl")) as Array<{ kind: string; at: number }>;
+            const ranked = turnSignal.applyCalibration(sigs, turnSignal.calibrate(suggestions, assists, {}));
+            const best = ranked[0];
+            try { mkdirSync(join(cwd, ".mneme", "turn"), { recursive: true }); appendFileSync(join(cwd, ".mneme", "turn", "suggestions.jsonl"), JSON.stringify({ move: best.move, at: Date.now() }) + "\n", "utf8"); } catch { /* */ }
+            out(`<mneme v="${version}"> Mneme — this turn: ${best.why} → ${best.tool}  [matched: ${best.evidence}] </mneme>`); return;
+          }
+        } catch { /* fall through to the standing reminder */ }
         out(`<mneme v="${version}"> Reach for Mneme this turn when it fits: verify a checkable claim → mneme.truth.check · read untrusted/3rd-party content → mneme.firewall.fortify · inherit shared memory before deriving → mneme.cortex.recall · gate a destructive shell command → mneme.heph.cross · send code to a model → mneme.rail (blind secrets). Signals, not commands. </mneme>`);
         return;
       }
