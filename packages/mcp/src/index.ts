@@ -617,6 +617,20 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
         } catch { /* best-effort */ }
         const response = await tool.handler(runtime, args);
         const enriched = enrichWithSecondBrain(response, tool, rootPath);
+        // LIVE PROOF — if this tool call clearly helped, record a measured assist (single wiring point).
+        try {
+          if (!isDegraded(rt)) {
+            const { proofLoop, aiHandshake } = await import("@mneme-ai/core");
+            const a = proofLoop.assistFromResult(tool.name, enriched);
+            if (a) {
+              const { appendFileSync, mkdirSync } = await import("node:fs");
+              const { join: pjoin } = await import("node:path");
+              const vendor = aiHandshake.readActiveVendor(rootPath)?.vendor ?? "unknown";
+              mkdirSync(pjoin(rootPath, ".mneme", "proof"), { recursive: true });
+              appendFileSync(pjoin(rootPath, ".mneme", "proof", "ledger.jsonl"), JSON.stringify({ agent: vendor, kind: a.kind, count: a.count, detail: tool.name, at: Date.now() }) + "\n", "utf8");
+            }
+          }
+        } catch { /* best-effort */ }
         // v1.18.0 — record HMAC-chained replay entry for audit (best-effort).
         try { if (!isDegraded(rt)) recordReplay(rootPath, tool.name, args, enriched); } catch { /* best-effort */ }
         // v1.18.0 — increment karma invocations.

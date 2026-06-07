@@ -59,6 +59,27 @@ export function scorecard(ledger: ReadonlyArray<Assist>, opts?: { agent?: string
   return { windowMs: opts?.sinceMs ?? null, total, harmsPrevented: harms, tokensSaved: tokens, byKind, agents, topAgent: agents[0]?.agent ?? null };
 }
 
+/** Map an MCP tool call (name + its result) → the assist it represents, or null. Heuristic +
+ *  conservative: only returns an assist when the result clearly shows one (a REFUTED verdict, a
+ *  redaction, an injection finding, a quarantine, a gated command, measured tokens saved). Wired at
+ *  the single MCP dispatch point so EVERY tool call is measured live, with zero per-organ plumbing. */
+export function assistFromResult(toolName: string, result: unknown): { kind: AssistKind; count: number } | null {
+  const t = String(toolName || "").toLowerCase();
+  let blob = ""; try { blob = JSON.stringify(result ?? {}).toLowerCase(); } catch { blob = ""; }
+  if (/truth\.check|savant\.verify|gephyra\.cross|retirement\.detect|truth\.gate/.test(t)) {
+    if (/refuted|"false"|impossible|necrotic|apoptotic/.test(blob)) return { kind: "hallucination_caught", count: 1 };
+    if (/unknown|unverified|inconclusive/.test(blob)) return { kind: "unknown_flagged", count: 1 };
+    if (/trustworthy|"true"|confirmed|healthy/.test(blob)) return { kind: "confirmed", count: 1 };
+  }
+  if (/egress|rail\.traverse|blind/.test(t) && /redact|leak|blocked|"block"/.test(blob)) return { kind: "leak_blocked", count: 1 };
+  if (/firewall/.test(t) && /neutraliz|injection|"flagged"|"blocked"/.test(blob)) return { kind: "injection_neutralized", count: 1 };
+  if (/cortex\.contribute/.test(t) && /quarantin/.test(blob)) return { kind: "contradiction_surfaced", count: 1 };
+  if (/heph\.cross|heph\.preflight|swarm/.test(t) && /needs_cosign|needs-cosign|"block"/.test(blob)) return { kind: "command_gated", count: 1 };
+  const m = blob.match(/"tokenssaved":(\d+)|"tokens_saved":(\d+)|"estsaved(?:tokens)?":(\d+)|"reductiontokens":(\d+)/);
+  if (m) { const n = Number(m[1] || m[2] || m[3] || m[4]); if (n > 0) return { kind: "token_saved", count: n }; }
+  return null;
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface ProofLoopGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function proofLoopGauntlet(): ProofLoopGauntlet {
@@ -75,6 +96,14 @@ export function proofLoopGauntlet(): ProofLoopGauntlet {
   const windowOK = scorecard(L, { sinceMs: 100, now: 1450 }).total === 1;   // only the 1400 unknown_flagged is within [1350,1450]
   const tokenNotHarm = !HARM_PREVENTED.has("token_saved") && !HARM_PREVENTED.has("unknown_flagged");   // honest: a saved token / an abstention isn't a "harm prevented"
   const normalizeOK = normalizeAssist({ kind: "bogus" as never, count: -5 }).kind === "confirmed" && normalizeAssist({}).count === 1;
+  // assistFromResult mapping (the live MCP wiring)
+  const mapOK = assistFromResult("mneme.truth.check", { data: { verdict: "REFUTED" } })?.kind === "hallucination_caught"
+    && assistFromResult("mneme.savant.verify", { data: { verdict: "UNKNOWN" } })?.kind === "unknown_flagged"
+    && assistFromResult("mneme.egress.guard", { data: { verdict: "BLOCK", redacted: true } })?.kind === "leak_blocked"
+    && assistFromResult("mneme.firewall.fortify", { data: { findings: ["injection"] } })?.kind === "injection_neutralized"
+    && assistFromResult("mneme.heph.cross", { data: { decision: "NEEDS_COSIGN" } })?.kind === "command_gated"
+    && assistFromResult("mneme.outline.file", { data: { tokensSaved: 4000 } })?.kind === "token_saved"
+    && assistFromResult("mneme.cortex.recall", { data: { facts: [] } }) === null;   // a neutral read → no assist
   const total = (() => { try { scorecard(null as never); recordAssist(null as never, null as never); normalizeAssist(null as never); return true; } catch { return false; } })();
 
   const checks = [
@@ -84,6 +113,7 @@ export function proofLoopGauntlet(): ProofLoopGauntlet {
     { name: "TIME-WINDOW", pass: windowOK, detail: "a sinceMs window counts only assists inside it (today / this hour)" },
     { name: "HONEST-CATEGORIES", pass: tokenNotHarm, detail: "token-saved + unknown-flagged are NOT counted as harms-prevented (no inflation)" },
     { name: "NORMALIZE-TOTAL", pass: normalizeOK, detail: "garbage kind → safe default; missing count → 1" },
+    { name: "MAP-TOOL-RESULT", pass: mapOK, detail: "assistFromResult maps each organ's result → the right assist (REFUTED→caught, UNKNOWN→flagged, BLOCK→leak, injection, gated, tokens) + a neutral read → null" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
