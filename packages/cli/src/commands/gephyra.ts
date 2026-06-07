@@ -71,7 +71,7 @@ export async function gephyraCommand(o: GephyraOpts): Promise<number> {
       // GET surfaces
       if (m === "GET" && url.startsWith("/openapi.json")) { reply({ status: 200, body: g.a2aOpenApi() }); return; }
       if (m === "GET" && url.startsWith("/keryx/webhook")) { const ch = kq.get("hub.challenge"); if (ch !== null) { res.writeHead(200, { "content-type": "text/plain" }); res.end(ch); return; } reply({ status: 200, body: { ok: true } }); return; }
-      if (m === "GET" && url.startsWith("/keryx/drain")) { void g.handleKeryxRelay(o.cwd, "drain", "", { daemon: kq.get("daemon") ?? "default" }).then(reply).catch((e: Error) => reply({ status: 500, body: { error: e.message } })); return; }
+      if (m === "GET" && url.startsWith("/keryx/drain")) { void g.handleKeryxRelay(o.cwd, "drain", "", { daemon: kq.get("daemon") ?? "default" }, req.headers as Record<string, string | string[] | undefined>).then(reply).catch((e: Error) => reply({ status: 500, body: { error: e.message } })); return; }
       const isMcp = url.startsWith("/mcp"), isSV = url.startsWith("/savant/verify"), isSR = url.startsWith("/savant/repair");
       const isFw = url.startsWith("/firewall"), isRi = url.startsWith("/rail/ingress"), isRe = url.startsWith("/rail/egress"), isRk = url.startsWith("/reckon");
       const isKExpect = url.startsWith("/keryx/expect"), isKWebhook = url.startsWith("/keryx/webhook"), isKPair = url.startsWith("/keryx/pair-register");

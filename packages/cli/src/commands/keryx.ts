@@ -73,7 +73,7 @@ export function registerKeryxCommands(program: Command): void {
       let relay = o.relay || cfg.keryxRelay || "";
       try { const pc = JSON.parse(readFileSync(join(cwd, ".mneme", "pager", "config.json"), "utf8")); relay = o.relay || cfg.keryxRelay || pc.keryxRelay || ""; } catch { /* */ }
       let registered = false;
-      if (relay) { const r = await postJson(`${relay.replace(/\/$/, "")}/keryx/pair-register`, { daemonId, record }); registered = !!(r && (r.ok || r.registered)); }
+      if (relay) { const r = await postJson(`${relay.replace(/\/$/, "")}/keryx/pair-register`, { daemonId, record, key: secret }); registered = !!(r && (r.ok || r.registered)); }   // key CLAIMS this daemonId (TOFU) — only this machine can drain it
       const links: Record<string, string> = { line: "https://developers.line.biz (Messaging API → set webhook to the relay)", slack: "your Slack app → Event Subscriptions → the relay URL", discord: "Discord Developer Portal → your bot", whatsapp: "Meta WhatsApp Cloud API → webhook = the relay URL" };
       out(`🔗 Pair ${provider} — ZERO config on your side:`);
       out(`   1. Open your ${provider} bot/app${links[provider] ? "  ·  " + links[provider] : ""}`);

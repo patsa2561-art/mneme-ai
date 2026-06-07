@@ -7,8 +7,10 @@
  */
 import type { Command } from "commander";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, chmodSync, renameSync, appendFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+/** The version on disk (the installed package.json) — used to self-heal a stale survivor daemon. */
+function installedVersion(): string { try { return JSON.parse(readFileSync(join(dirname(process.argv[1] || ""), "..", "package.json"), "utf8")).version || ""; } catch { return ""; } }
 import { spawn, spawnSync } from "node:child_process";
 import * as https from "node:https";
 import * as http from "node:http";
@@ -123,7 +125,9 @@ function daemonIdOf(cwd: string): string {
 interface RdvLink { daemonId: string; provider: string; conversation: string; at: number }
 function loadLinks(cwd: string): RdvLink[] { try { const p = join(cwd, ".mneme", "keryx", "links.json"); return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : []; } catch { return []; } }
 function saveLinks(cwd: string, links: RdvLink[]): void { try { mkdirSync(join(cwd, ".mneme", "keryx"), { recursive: true }); writeFileSync(join(cwd, ".mneme", "keryx", "links.json"), JSON.stringify(links, null, 2), "utf8"); } catch { /* */ } }
-const relayGet = (url: string): Promise<Record<string, unknown>> => new Promise((res) => { (url.startsWith("https:") ? https : http).get(url, (r) => { let s = ""; r.on("data", (d) => (s += d)); r.on("end", () => { try { res(JSON.parse(s || "{}")); } catch { res({}); } }); }).on("error", () => res({})); });
+const relayGet = (url: string, headers?: Record<string, string>): Promise<Record<string, unknown>> => new Promise((res) => { (url.startsWith("https:") ? https : http).get(url, { headers: headers ?? {} }, (r) => { let s = ""; r.on("data", (d) => (s += d)); r.on("end", () => { try { res(JSON.parse(s || "{}")); } catch { res({}); } }); }).on("error", () => res({})); });
+/** This machine's secret relay bearer key (set by `mneme keryx connect`); "" if none. */
+function daemonKeyOf(cwd: string): string { try { const p = join(cwd, ".mneme", "keryx", "rendezvous-secret"); return existsSync(p) ? readFileSync(p, "utf8").trim() : ""; } catch { return ""; } }
 const relayPost = (url: string, body: object): Promise<void> => new Promise((res) => { const u = new URL(url); const data = JSON.stringify(body); const rq = (url.startsWith("https:") ? https : http).request({ hostname: u.hostname, port: u.port || (u.protocol === "https:" ? 443 : 80), path: u.pathname, method: "POST", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(data) } }, (x) => { x.on("data", () => {}); x.on("end", () => res()); }); rq.on("error", () => res()); rq.write(data); rq.end(); });
 
 /** Fan an approve/deny ask out to every configured KERYX provider IN PARALLEL; the secretary
@@ -681,7 +685,8 @@ export function registerPagerCommands(program: Command): void {
       const keryxTick = async () => {
         if (draining || !cfg.keryxRelay) return; draining = true;
         try {
-          const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=${encodeURIComponent(daemonIdOf(cwd))}`);
+          const dk = daemonKeyOf(cwd);
+          const dr = await relayGet(`${cfg.keryxRelay.replace(/\/$/, "")}/keryx/drain?daemon=${encodeURIComponent(daemonIdOf(cwd))}`, dk ? { "x-keryx-key": dk } : undefined);
           const lk = dr.links as RdvLink[] | undefined; if (Array.isArray(lk)) saveLinks(cwd, lk);   // learn paired conversations (for precise outbound push)
           for (const a of (dr.answers as Array<{ id?: string; payload?: string; channel?: string }>) ?? []) {
             if (!a?.id) continue;
@@ -694,8 +699,13 @@ export function registerPagerCommands(program: Command): void {
       //    silent regression is caught + surfaced (the pulse/boot read .mneme/pager/vitals.json). The
       //    daemon being alive is itself the heal for daemon-down (ensureDaemon revives it on the next
       //    agent action), so this tick's job is to PROVE correctness + ALERT, not restart blindly. ──
+      const startVersion = installedVersion();   // capture at boot; if it changes on disk, we're stale
       const vitalsTick = () => {
         try {
+          // SELF-HEAL: a newer Mneme was installed but THIS daemon still runs the old code (the "stale
+          // survivor" class). Exit cleanly → ensureDaemon respawns fresh on the next agent action.
+          const nowV = installedVersion();
+          if (startVersion && nowV && nowV !== startVersion) { try { appendFileSync(join(cwd, ".mneme", "supernova.jsonl"), JSON.stringify({ ts: new Date().toISOString(), cycle: "pager_self_heal", outcome: "STALE_VERSION", from: startVersion, to: nowV }) + "\n"); } catch { /* */ } process.exit(0); }
           const canary = live.approvalCanary();
           const provs = keryxProviders(cwd);
           const rep = live.evaluateLiveness({

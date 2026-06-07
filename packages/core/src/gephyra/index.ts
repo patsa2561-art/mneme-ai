@@ -346,9 +346,10 @@ export async function routeToolCall(
 // v2.84.0 — GEPHYRA Phase 2: serve-as-endpoint + auto-advertise
 // ════════════════════════════════════════════════════════════════════════
 
-import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync, appendFileSync as _appendFileSync } from "node:fs";
+import { existsSync as _existsSync, readFileSync as _readFileSync, writeFileSync as _writeFileSync, mkdirSync as _mkdirSync, appendFileSync as _appendFileSync, renameSync as _renameSync } from "node:fs";
 import { join as _join } from "node:path";
-import { createPublicKey as _createPublicKey, verify as _ed25519Verify } from "node:crypto";
+import { createPublicKey as _createPublicKey, verify as _ed25519Verify, createHash as _createHash } from "node:crypto";
+const _khash = (key: string): string => _createHash("sha256").update("keryx-key|" + String(key ?? "")).digest("hex");
 
 export interface CrossHttpResponse { status: number; body: CrossResult | { error: string } }
 
@@ -608,14 +609,23 @@ export async function handleAgentRequest(repoRoot: string, raw: unknown, action:
  * never sees raw code (the ask never came through it) and it's your own server (semi-trusted,
  * like Telegram's API). Deploy it on `gephyra serve` (your DO droplet).
  */
-interface KeryxRelayState { v: 1; inbox: Record<string, unknown[]>; askOwner: Record<string, string>; pairings?: unknown[]; links?: Array<{ daemonId: string; provider: string; conversation: string; at: number }> }
+interface KeryxRelayState { v: 1; inbox: Record<string, unknown[]>; askOwner: Record<string, string>; pairings?: unknown[]; links?: Array<{ daemonId: string; provider: string; conversation: string; at: number }>; keys?: Record<string, string> }
 function _keryxStatePath(repoRoot: string): string { return _join(repoRoot, ".mneme", "keryx", "relay.json"); }
 function _loadKeryxRelay(repoRoot: string): KeryxRelayState {
-  try { const p = _keryxStatePath(repoRoot); if (_existsSync(p)) { const j = JSON.parse(_readFileSync(p, "utf8")); if (j && typeof j === "object") return { v: 1, inbox: j.inbox ?? {}, askOwner: j.askOwner ?? {}, pairings: j.pairings ?? [], links: j.links ?? [] }; } } catch { /* */ }
-  return { v: 1, inbox: {}, askOwner: {}, pairings: [], links: [] };
+  try { const p = _keryxStatePath(repoRoot); if (_existsSync(p)) { const j = JSON.parse(_readFileSync(p, "utf8")); if (j && typeof j === "object") return { v: 1, inbox: j.inbox ?? {}, askOwner: j.askOwner ?? {}, pairings: j.pairings ?? [], links: j.links ?? [], keys: j.keys ?? {} }; } } catch { /* */ }
+  return { v: 1, inbox: {}, askOwner: {}, pairings: [], links: [], keys: {} };
 }
 function _saveKeryxRelay(repoRoot: string, s: KeryxRelayState): void {
-  try { const d = _join(repoRoot, ".mneme", "keryx"); if (!_existsSync(d)) _mkdirSync(d, { recursive: true }); _writeFileSync(_keryxStatePath(repoRoot), JSON.stringify(s), "utf8"); } catch { /* */ }
+  try {
+    const d = _join(repoRoot, ".mneme", "keryx"); if (!_existsSync(d)) _mkdirSync(d, { recursive: true });
+    // PRUNE on every write — no unbounded growth: drop used/expired pairing codes + stale links (90d).
+    const now = Date.now();
+    if (Array.isArray(s.pairings)) s.pairings = (s.pairings as Array<{ used?: boolean; exp?: number }>).filter((r) => r && !r.used && (!r.exp || now <= r.exp)).slice(-2000);
+    if (Array.isArray(s.links)) s.links = s.links.filter((l) => l && (!l.at || now - l.at < 90 * 86400_000)).slice(-5000);
+    // ATOMIC write (temp + rename) — concurrent webhooks can't read a half-written file.
+    const p = _keryxStatePath(repoRoot); const tmp = p + "." + process.pid + ".tmp";
+    try { _writeFileSync(tmp, JSON.stringify(s), "utf8"); _renameSync(tmp, p); } catch { _writeFileSync(p, JSON.stringify(s), "utf8"); }
+  } catch { /* */ }
 }
 
 /** Verify a Discord interaction's Ed25519 signature (required, else Discord rejects the endpoint).
@@ -638,8 +648,15 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
     // ── RENDEZVOUS: a daemon uploads a minted single-use pairing record ──
     if (action === "pair-register") {
       let o: Record<string, unknown> = {}; if (typeof body === "string") { try { o = JSON.parse(body); } catch { return { status: 400, body: { error: "invalid JSON" } }; } } else if (body && typeof body === "object") o = body as Record<string, unknown>;
-      const rec = o["record"] as { code?: string } | undefined;
+      const rec = o["record"] as { code?: string; daemonId?: string } | undefined;
       if (!rec?.code) return { status: 400, body: { error: "required: record{code,...}" } };
+      const did = String(o["daemonId"] ?? rec.daemonId ?? ""); const key = String(o["key"] ?? "");
+      // ── AUTH (TOFU): a daemonId is CLAIMED by the first key that registers it; later registers must
+      //    present the same key. Closes the hijack where an attacker registers a record under a victim's
+      //    daemonId to redirect their approvals. (No key + unclaimed = legacy/open, e.g. "default".) ──
+      s.keys = s.keys ?? {};
+      if (did && key) { const h = _khash(key); if (s.keys[did] && s.keys[did] !== h) return { status: 401, body: { error: "daemonId is claimed by a different key" } }; s.keys[did] = h; }
+      else if (did && s.keys[did]) return { status: 401, body: { error: "daemonId requires its key" } };
       s.pairings = [...(s.pairings as unknown[]).filter((r) => (r as { code?: string })?.code !== rec.code), rec];   // dedup by code
       _saveKeryxRelay(repoRoot, s);
       return { status: 200, body: { ok: true, registered: true } };
@@ -690,8 +707,12 @@ export async function handleKeryxRelay(repoRoot: string, action: "expect" | "web
       s.inbox[daemonId] = [...(s.inbox[daemonId] ?? []), env]; _saveKeryxRelay(repoRoot, s);
       return { status: 200, body: { ok: true, routedTo: daemonId, id: parsed.id, answer: parsed.answer } };
     }
-    // drain — answers (cleared) + this daemon's current rendezvous links (for outbound push routing)
+    // drain — answers (cleared) + this daemon's links. AUTH: if the daemonId was claimed with a key,
+    // the caller MUST present it (x-keryx-key) — else an attacker who guesses a daemonId could STEAL
+    // the victim's approvals. An unclaimed daemonId (legacy/"default") stays open.
     const daemonId = String(query["daemon"] ?? "default");
+    const provedKey = String((headers?.["x-keryx-key"] as string) ?? "");
+    if (s.keys?.[daemonId] && s.keys[daemonId] !== _khash(provedKey)) return { status: 200, body: { answers: [], links: [], auth: false } };
     const answers = s.inbox[daemonId] ?? []; s.inbox[daemonId] = []; _saveKeryxRelay(repoRoot, s);
     const links = (s.links ?? []).filter((l) => l.daemonId === daemonId);
     return { status: 200, body: { answers, links } };
