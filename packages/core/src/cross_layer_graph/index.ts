@@ -21,6 +21,7 @@ export interface CrossLayerGraph { nodes: GNode[]; edges: GEdge[] }
 export interface SourceFile { path: string; content: string }
 
 const MAX_FILE = 600_000;
+const SQL_KW = new Set(["if", "not", "exists", "table", "temporary", "temp", "as", "select"]);
 const lc = (s: string) => s.toLowerCase();
 const word = (s: string) => s.replace(/[^a-zA-Z0-9_]/g, "");
 
@@ -55,7 +56,7 @@ function extractTables(files: SourceFile[]): GNode[] {
   for (const f of files) {
     const c = f.content.slice(0, MAX_FILE);
     for (const m of c.matchAll(/\bmodel\s+([A-Za-z_]\w*)\s*\{/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Prisma
-    for (const m of c.matchAll(/\bcreate\s+table\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_]\w*)/gi)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // SQL
+    for (const m of c.matchAll(/\bcreate\s+(?:temporary\s+|temp\s+)?table\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_]\w*)/gi)) { const n = m[1]; if (SQL_KW.has(lc(n))) continue; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // SQL (skip keyword false-captures like IF/NOT)
     // Django / SQLAlchemy / TypeORM / Sequelize — an ORM model class is a db table.
     for (const m of c.matchAll(/\bclass\s+([A-Za-z_]\w*)\s*\(\s*[^)]*\b(?:models\.Model|Base|Model|db\.Model)\b/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
     for (const m of c.matchAll(/__tablename__\s*=\s*["']([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }

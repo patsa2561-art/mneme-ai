@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/xray",
-  "version": "3.57.0",
+  "version": "3.58.0",
   "description": "Mneme Repo X-Ray — a signed, raw-free, deterministic X-Ray of any repo. Every number is reproducible from git/AST/metadata and sealed with an offline-verifiable NOTARY receipt. No source code ever leaves the machine; no LLM guesses anything.",
   "type": "module",
   "main": "./dist/index.js",
@@ -47,7 +47,7 @@
     "mneme"
   ],
   "dependencies": {
-    "@mneme-ai/core": "3.57.0"
+    "@mneme-ai/core": "3.58.0"
   },
   "optionalDependencies": {
     "@resvg/resvg-js": "^2.6.2"

@@ -269,6 +269,32 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.testgap.scan",
+    category: "audit",
+    description: "🧪 CRITICAL UNTESTED SURFACE — the cross-layer Test-Gap line-coverage hides: the KEYSTONE functions (sole writers to a DB table), data tables, and API endpoints that NO test file even mentions — the scariest, highest-risk surface in the repo. Pass a `diff` to instead get the untested critical nodes inside THAT change's blast radius (am I about to edit untested critical surface?). Composes the deterministic graph + keystone analysis + a scan of the repo's test files. ★HONEST: 'covered' = a test file MENTIONS the node by name (deterministic heuristic, reliable for distinctive function names, weaker for short table names) — a prove-or-LOOK signal, not true execution coverage.",
+    whenToUse: "Before shipping a change to a critical path, or auditing where to add tests first — find the keystones/tables/endpoints with no test mentioning them. Pass your diff to check if THIS edit reaches untested critical surface.",
+    triggers: ["what's untested", "test gap", "untested critical", "where to add tests", "is this tested", "coverage of the keystones", "am i editing untested code"],
+    inputSchema: { type: "object", properties: { diff: { type: "string" }, base: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      let diff = String(args["diff"] ?? "");
+      if (!diff.trim() && args["base"]) { try { diff = cp.spawnSync("git", ["diff", "--unified=0", `${String(args["base"])}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
+      if (diff.trim()) {
+        const cg = core.testGap.changeTestGap(files, diff);
+        const data = await attest(cwd, { verdict: cg.verdict, reason: cg.reason, untestedKeystones: cg.untestedKeystones, untestedTables: cg.untestedTables, untestedEndpoints: cg.untestedEndpoints });
+        return { data, wisdom: cg.verdict === "GAP" ? `🧪 GAP — ${cg.reason}` : cg.verdict === "EMPTY" ? "no changed functions resolved" : "✓ the critical nodes this change reaches are mentioned by tests", followUp: cg.untestedKeystones.length ? ["write a test for the untested keystone(s) before shipping — it's the sole writer to a table"] : [], confidence: ok() };
+      }
+      const tg = core.testGap.analyzeTestGap(files);
+      const data = await attest(cwd, { testFiles: tg.testFileCount, uncoveredKeystones: tg.uncoveredKeystones.map((k) => ({ name: k.node.name, file: k.node.file, soleWriterOf: k.soleWriterOf })), uncoveredTables: tg.uncoveredTables.map((t) => t.name), uncoveredEndpoints: tg.uncoveredEndpoints.map((e) => `${e.method} ${e.name}`), keystoneCoverage: `${tg.coveredKeystones}/${tg.totalKeystones}` });
+      return { data, wisdom: `${tg.uncoveredKeystones.length} untested keystone(s)${tg.uncoveredKeystones[0] ? ` (top: ${tg.uncoveredKeystones[0].node.name})` : ""} · ${tg.uncoveredTables.length} untested table(s) · keystone coverage ${tg.coveredKeystones}/${tg.totalKeystones}`, followUp: tg.uncoveredKeystones.length ? ["add tests for the untested keystones first — they're the single points of failure no test guards"] : [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.collision.detect",
     category: "audit",
     description: "💥 CROSS-AGENT COLLISION DETECTOR (world-first) — when several agents/branches edit the repo concurrently, find the collisions `git` is BLIND to: two change sets that touch DIFFERENT files but CONVERGE on the same DB table / API endpoint / business rule / function. Pass `changeSets` = [{ agent, diff }]. Returns each pairwise collision + severity: two WRITERS of the same table or two edits to the same function = HIGH (git-invisible data-corruption risk); write/read overlap or a shared file/endpoint = MEDIUM; shared read/rule = LOW. Coordinate BEFORE the agents stomp each other. ★HONEST: detects STRUCTURAL convergence deterministically — a candidate collision to coordinate on, not a proven runtime bug; but it's the cross-layer overlap git can't see.",

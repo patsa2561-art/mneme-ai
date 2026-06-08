@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -234,6 +234,29 @@ export function registerLiveCommands(program: Command): void {
       out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
       for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
       out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
+    });
+
+  program.command("testgap").description("🧪 CRITICAL UNTESTED SURFACE — the keystones / tables / endpoints NO test file mentions (the scariest, line-coverage-hidden surface). --base <ref> to instead check whether a change reaches untested critical surface (exit 2 on a keystone gap).")
+    .option("--base <ref>", "check the diff vs this ref instead of the whole repo").option("--staged")
+    .action((o: { base?: string; staged?: boolean }) => {
+      const cwd = process.cwd(); const files = scanWithDocs(cwd);
+      if (o.base || o.staged) {
+        const args = o.base ? ["diff", "--unified=0", `${o.base}...HEAD`] : ["diff", "--unified=0", "--cached"];
+        const diff = String(spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
+        const cg = testGap.changeTestGap(files, diff);
+        if (cg.verdict !== "GAP") { out(cg.verdict === "EMPTY" ? "(no changed functions resolved)" : "✓ the critical nodes this change reaches are mentioned by tests."); return; }
+        out(`🧪 TEST GAP — ${cg.reason}`);
+        if (cg.untestedKeystones.length) { out(`   🔑 untested KEYSTONES: ${cg.untestedKeystones.join(" · ")}  ⚠️ write a test here first`); process.exitCode = 2; }
+        if (cg.untestedTables.length) out(`   🗄  untested tables: ${cg.untestedTables.join(" · ")}`);
+        if (cg.untestedEndpoints.length) out(`   🌐 untested endpoints: ${cg.untestedEndpoints.join(" · ")}`);
+        return;
+      }
+      const tg = testGap.analyzeTestGap(files);
+      out(`🧪 Critical untested surface (${tg.testFileCount} test files · keystone coverage ${tg.coveredKeystones}/${tg.totalKeystones}):`);
+      if (tg.uncoveredKeystones.length) { out(`   🔑 UNTESTED KEYSTONES (sole writers no test guards) — ${tg.uncoveredKeystones.length}:`); for (const k of tg.uncoveredKeystones.slice(0, 12)) out(`      ${k.node.name}${k.node.file ? ` (${k.node.file})` : ""} — ${k.reason}`); }
+      else out("   🔑 every keystone is mentioned by a test ✓");
+      if (tg.uncoveredTables.length) out(`   🗄  untested tables (code touches them, no test does): ${tg.uncoveredTables.slice(0, 20).map((t) => t.name).join(" · ")}`);
+      out("   honest: 'untested' = no test file mentions it (heuristic, reliable for distinctive names) — a 'write a test here first' signal.");
     });
 
   program.command("collision").description("💥 CROSS-AGENT COLLISION (world-first) — find where concurrent branches/agents COLLIDE across layers (both write the same table, edit the same function) even when their FILES differ — the conflict git is blind to. --branches a,b,c (diffed vs --base).")
