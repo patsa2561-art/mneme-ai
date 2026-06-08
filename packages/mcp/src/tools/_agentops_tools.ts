@@ -222,4 +222,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       return { data, wisdom: `${node.type} "${node.name}" → ${br.tables.length} table(s)${br.tables.length ? " [" + br.tables.map((t) => t.name).join(", ") + "]" : ""} · ${br.endpoints.length} endpoint(s) · ${br.functions.length} function(s) coupled`, followUp: br.tables.length ? ["a DB table is in the blast radius — check the migration/data impact before you ship"] : [], confidence: ok() };
     },
   },
+  {
+    name: "mneme.graph.mermaid",
+    category: "audit",
+    description: "🕸 CROSS-LAYER GRAPH as a Mermaid flowchart you can SHOW the user inline (renders in chat/Markdown/GitHub). The 4 layers (💼 Business ↔ 🌐 API ↔ ⚙ Code ↔ 🗄 Data) become subgraphs; pass a `name` to draw that node's cross-layer blast radius (the focus is highlighted). Deterministic, no LLM — every node/edge derives from a real repo file. Wrap the returned string in a ```mermaid fence.",
+    whenToUse: "When the user asks to SEE/visualize the project structure, a feature's footprint, or what a change touches — render the returned Mermaid so they get a picture, not a wall of text.",
+    triggers: ["show me the graph", "visualize", "draw the architecture", "diagram this", "what does this feature touch", "mermaid"],
+    inputSchema: { type: "object", properties: { name: { type: "string" }, depth: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const focus = args["name"] ? core.crossLayerGraph.resolveNode(g, String(args["name"])) : null;
+      if (args["name"] && !focus) { const data = await attest(cwd, { found: false }); return { data, wisdom: `no node matching "${args["name"]}"`, followUp: [], confidence: ok("low") }; }
+      const mermaid = core.crossLayerGraph.toMermaid(g, focus?.id, { maxDepth: Number(args["depth"]) || 2 });
+      const data = await attest(cwd, { mermaid, focus: focus?.name ?? null });
+      return { data, wisdom: `mermaid flowchart ready${focus ? ` for "${focus.name}"` : " (structural hubs)"} — render it in a \`\`\`mermaid fence for the user`, followUp: [], confidence: ok() };
+    },
+  },
 ];

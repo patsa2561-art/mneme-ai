@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, renderGauntlet } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -36,5 +36,25 @@ describe("cross_layer_graph", () => {
   it("never throws on garbage", () => {
     expect(() => buildCrossLayerGraph(null as never)).not.toThrow();
     expect(() => blastRadius(null as never, "x")).not.toThrow();
+  });
+
+  it("business layer: anchors on a real link, abstains (UNKNOWN) otherwise", () => {
+    const g = buildCrossLayerGraph([
+      ...FILES,
+      { path: "wallet.ts", content: "// feature: wallet bonus\nexport function applyWalletBonus(){ return prisma.wallet.create({data:{}}); }" },
+      { path: "PRD.md", content: "## Feature: wallet bonus\n## Feature: nobody built this one" },
+    ]);
+    const cov = businessCoverage(g);
+    expect(cov.anchored.some((r) => r.name === "wallet bonus")).toBe(true);        // annotation + name anchor
+    expect(cov.orphan.some((r) => r.name === "nobody built this one")).toBe(true); // no anchor → UNKNOWN, not "unimplemented"
+  });
+
+  it("render gauntlet is 100 + renders deterministically + XSS-safe", () => {
+    expect(renderGauntlet().score).toBe(100);
+    const g = buildCrossLayerGraph(FILES);
+    const node = resolveNode(g, "createUserWallet")!;
+    expect(toMermaid(g, node.id)).toBe(toMermaid(g, node.id));                      // deterministic
+    expect(toHtml(g, node.id)).toContain("<svg");
+    expect(toHtml({ nodes: [{ id: "x", type: "function", name: "<script>x</script>" }], edges: [] }, "x")).not.toContain("<script>x");
   });
 });

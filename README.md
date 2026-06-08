@@ -247,7 +247,7 @@ mneme polygraph autosetup   # browser truth-dots (optional)
 **🏛 The Agent Governor** — set a Charter once; your AI agents run inside it 24/7 as a continuous **auto-operation batch**; you approve only the genuinely-irreversible escalations. The signed governance kernel that sits *under* any orchestrator (Claude Code · Cursor · Astra · AutoGen).
 **→ <a href="docs/AGENT-GOVERNOR.md" target="_blank" rel="noopener">How a CEO uses it (commands + agent wiring)</a>**
 
-**🕸 Cross-Layer Blast Radius** — Mneme links your **code ↔ database tables ↔ API endpoints** into one graph (deterministic, no LLM — every edge derives from a real file) so before a change you see what breaks *across layers*: edit a function → which tables it writes **and** which routes reach it. The cross-layer join a single-layer code-graph can't report. `mneme graph blast <name>` · honest: reachable coupling to inspect, not a proven runtime break.
+**🕸 Cross-Layer Graph — and you can *see* it.** Mneme links **💼 business rules ↔ 🌐 API endpoints ↔ ⚙ code ↔ 🗄 database tables** into one graph (deterministic, no LLM — every edge derives from a real file) so before a change you see what breaks *across layers*: edit a function → which tables it writes **and** which routes reach it. Render it **inline in your chat** (`mneme graph mermaid <name>`) or as a **self-contained, offline, signed 4-lane diagram** (`mneme graph view <name>`). Business→code links are anchored only on a real annotation or strong name match — otherwise the rule stays **ORPHAN/UNKNOWN**, never a guessed link. The cross-layer join a single-layer code-graph can't draw. <sub>honest: reachable coupling to inspect, not a proven runtime break.</sub>
 
 </td>
 <td width="50%" valign="top">

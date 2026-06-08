@@ -13,9 +13,9 @@
  * by region (def→next-def), which is a heuristic, not a full AST. The win is the cross-layer JOIN that
  * no single-layer code-graph reports, computed without a model and signable.
  */
-export type NodeType = "function" | "db_table" | "api_endpoint";
+export type NodeType = "function" | "db_table" | "api_endpoint" | "business_rule";
 export interface GNode { id: string; type: NodeType; name: string; file?: string; method?: string }
-export type Relation = "WRITES_TO" | "READS" | "HANDLED_BY" | "CALLS";
+export type Relation = "WRITES_TO" | "READS" | "HANDLED_BY" | "CALLS" | "IMPLEMENTS";
 export interface GEdge { source: string; target: string; relation: Relation }
 export interface CrossLayerGraph { nodes: GNode[]; edges: GEdge[] }
 export interface SourceFile { path: string; content: string }
@@ -89,13 +89,40 @@ function extractFunctions(files: SourceFile[]): Array<GNode & { body: string }> 
   return out;
 }
 
+const STOP = new Set(["the", "a", "an", "and", "or", "to", "of", "for", "in", "on", "with", "is", "are", "be", "as", "by", "at", "must", "should", "shall", "user", "users", "system", "feature", "rule", "story", "when", "then", "if", "that", "this", "it", "can", "will", "ต้อง", "ได้", "ระบบ", "ผู้ใช้", "ฟีเจอร์"]);
+function tokset(s: string): Set<string> {
+  // split camelCase + snake + spaces; keep distinctive tokens (len ≥ 3, not stop-words). Thai kept whole.
+  const parts = String(s).replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_\-/.]/g, " ").split(/\s+/).map(lc).filter(Boolean);
+  return new Set(parts.filter((p) => (p.length >= 3 || /[฀-๿]/.test(p)) && !STOP.has(p)));
+}
+const slug = (s: string) => lc(String(s)).replace(/[^a-z0-9฀-๿]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "rule";
+
+/** Extract candidate business_rule nodes from docs (markdown/txt) — explicit Feature/Rule/Story markers only. */
+function extractBusinessRules(files: SourceFile[]): Array<GNode & { tokens: Set<string>; slug: string }> {
+  const out: Array<GNode & { tokens: Set<string>; slug: string }> = []; const seen = new Set<string>();
+  for (const f of files) {
+    if (!/\.(md|mdx|markdown|txt)$/i.test(f.path)) continue;
+    const c = f.content.slice(0, MAX_FILE);
+    const lines = c.split(/\r?\n/);
+    for (const ln of lines) {
+      // "## Feature: X", "### Rule - X", "- Story: X", "FR-12: X", "@rule id: X"
+      const m = ln.match(/^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:@?(?:feature|rule|story|requirement|epic|use\s*case|ฟีเจอร์|กฎ)\b|FR-\d+|REQ-\d+|US-\d+)\s*[:\-]\s*(.+?)\s*$/i);
+      if (!m) continue; const name = m[1].replace(/[`*_]/g, "").trim(); if (name.length < 3 || name.length > 140) continue;
+      const sg = slug(name); if (seen.has(sg)) continue; seen.add(sg);
+      out.push({ id: `biz:${sg}`, type: "business_rule", name, file: f.path, tokens: tokset(name), slug: sg });
+    }
+  }
+  return out;
+}
+
 /** Build the full cross-layer graph from a set of source files. Pure + deterministic. */
 export function buildCrossLayerGraph(files: ReadonlyArray<SourceFile>): CrossLayerGraph {
   const safe = (files ?? []).filter((f) => f && typeof f.content === "string" && typeof f.path === "string");
   const tables = extractTables(safe as SourceFile[]);
   const endpoints = extractEndpoints(safe as SourceFile[]);
   const fns = extractFunctions(safe as SourceFile[]);
-  const nodes: GNode[] = [...fns.map(({ body: _b, ...n }) => n), ...tables, ...endpoints.map((e) => e.node)];
+  const rules = extractBusinessRules(safe as SourceFile[]);
+  const nodes: GNode[] = [...fns.map(({ body: _b, ...n }) => n), ...tables, ...endpoints.map((e) => e.node), ...rules.map(({ tokens: _t, slug: _s, ...n }) => n)];
   const edges: GEdge[] = [];
   const seen = new Set<string>();
   const addEdge = (source: string, target: string, relation: Relation) => { const k = `${source}|${target}|${relation}`; if (!seen.has(k)) { seen.add(k); edges.push({ source, target, relation }); } };
@@ -109,6 +136,19 @@ export function buildCrossLayerGraph(files: ReadonlyArray<SourceFile>): CrossLay
   // / too-short identifiers (out, get, map, run…) — they manufacture a dense, useless call graph.
   const COMMON = new Set(["out", "get", "set", "run", "map", "log", "cb", "fn", "on", "to", "is", "do", "go", "of", "as", "at", "err", "res", "req", "ctx", "val", "key", "len", "tmp", "max", "min", "sum", "add", "has", "now", "end"]);
   for (const fn of fns) for (const [name, defs] of fnByName) { if (name === fn.name || name.length < 3 || COMMON.has(lc(name))) continue; if (new RegExp(`\\b${name}\\s*\\(`).test(fn.body)) for (const d of defs) addEdge(fn.id, d.id, "CALLS"); }
+  // business_rule → function (IMPLEMENTS) — PROVE-OR-UNKNOWN: link ONLY on a deterministic anchor.
+  //  (1) an explicit code annotation: `@implements <slug>` / `implements: <name>` / `feature: <name>`
+  //  (2) a STRONG name match: the function's name shares ≥2 distinctive tokens with the rule.
+  // No anchor ⇒ NO edge (the rule stays an ORPHAN/UNKNOWN — never a guessed link).
+  for (const r of rules) {
+    for (const fn of fns) {
+      const ann = new RegExp(`(?:@implements|implements?|feature|rule)\\s*[:=]?\\s*["'\`]?(?:${r.slug}|${r.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 60)})`, "i");
+      const annotated = ann.test(fn.body);
+      let strong = false;
+      if (!annotated) { const fnTok = tokset(fn.name); let shared = 0; for (const t of r.tokens) if (fnTok.has(t)) shared++; strong = shared >= 2; }
+      if (annotated || strong) addEdge(r.id, fn.id, "IMPLEMENTS");
+    }
+  }
   return { nodes, edges };
 }
 
@@ -140,15 +180,33 @@ export function resolveNode(graph: CrossLayerGraph, query: string): GNode | null
   return nodes.find((n) => lc(word(n.name)) === q) ?? nodes.find((n) => lc(n.name).includes(lc(query))) ?? null;
 }
 
+export interface BusinessCoverage { total: number; anchored: GNode[]; orphan: GNode[]; coverageRate: number }
+/**
+ * Business-rule coverage — which rules have a DETERMINISTIC code anchor vs which are ORPHAN.
+ * ★HONEST (prove-or-unknown): an orphan rule is UNKNOWN — it may be unimplemented, OR implemented
+ * without a name/annotation anchor. It is NEVER asserted "not implemented" (Padgett guard).
+ */
+export function businessCoverage(graph: CrossLayerGraph): BusinessCoverage {
+  const rules = (graph?.nodes ?? []).filter((n) => n.type === "business_rule");
+  const implemented = new Set((graph?.edges ?? []).filter((e) => e.relation === "IMPLEMENTS").map((e) => e.source));
+  const anchored = rules.filter((r) => implemented.has(r.id)); const orphan = rules.filter((r) => !implemented.has(r.id));
+  return { total: rules.length, anchored, orphan, coverageRate: rules.length ? Math.round((anchored.length / rules.length) * 100) / 100 : 0 };
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface CLGGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function crossLayerGauntlet(): CLGGauntlet {
   const files: SourceFile[] = [
     { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
-    { path: "auth.ts", content: "export async function registerHandler(req, res) {\n  await prisma.user.create({ data: {} });\n  await createUserWallet(req.body.id);\n}\nexport function createUserWallet(uid) {\n  return prisma.wallet.create({ data: { uid } });\n}" },
+    { path: "auth.ts", content: "export async function registerHandler(req, res) {\n  await prisma.user.create({ data: {} });\n  await createUserWallet(req.body.id);\n}\n// feature: new user wallet bonus\nexport function createUserWallet(uid) {\n  return prisma.wallet.create({ data: { uid } });\n}" },
     { path: "routes.ts", content: "router.post(\"/v1/auth/register\", registerHandler);\napp.get(\"/v1/health\", healthCheck);" },
+    { path: "PRD.md", content: "## Feature: new user wallet bonus\nEvery new user gets a wallet.\n\n## Feature: dark mode theme toggle\nUsers can switch theme." },
   ];
   const g = buildCrossLayerGraph(files);
+  const cov = businessCoverage(g);
+  const bizExtract = g.nodes.filter((n) => n.type === "business_rule").length === 2;
+  const bizAnchored = cov.anchored.some((r) => r.name === "new user wallet bonus");        // annotated + name-match
+  const bizOrphan = cov.orphan.some((r) => r.name === "dark mode theme toggle");           // no code anchor → UNKNOWN
   const hasTable = g.nodes.some((n) => n.type === "db_table" && n.name === "Wallet");
   const hasEndpoint = g.nodes.some((n) => n.type === "api_endpoint" && n.name === "/v1/auth/register");
   const hasFn = g.nodes.some((n) => n.type === "function" && n.name === "createUserWallet");
@@ -168,7 +226,11 @@ export function crossLayerGauntlet(): CLGGauntlet {
     { name: "CALL-EDGE", pass: callsEdge, detail: "function → function CALLS (body references the callee)" },
     { name: "CROSS-LAYER-BLAST", pass: crossLayer, detail: "edit createUserWallet → blast radius spans the wallet TABLE + the register ENDPOINT (the cross-layer join no single-layer graph reports)" },
     { name: "NO-HALLUCINATION", pass: noHallucination, detail: "every edge endpoint is a real extracted node — nothing invented" },
+    { name: "BUSINESS-LAYER", pass: bizExtract && bizAnchored, detail: "business_rule extracted from a PRD + IMPLEMENTS-linked to code via a deterministic anchor (annotation / strong name match)" },
+    { name: "PROVE-OR-UNKNOWN", pass: bizOrphan, detail: "a rule with NO code anchor stays ORPHAN/UNKNOWN — never a guessed link (Padgett)" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
 }
+
+export { toMermaid, toHtml, pickSubgraph, renderGauntlet, type SubgraphPick, type RenderGauntlet } from "./render.js";

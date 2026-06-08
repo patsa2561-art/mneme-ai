@@ -5,7 +5,8 @@
  * LIVE / DEGRADED / DOWN — with auto-heal. Catches SILENT breakage before a user ever hits it.
  */
 import type { Command } from "commander";
-import { existsSync, readFileSync, statSync, mkdirSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, statSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn } from "node:child_process";
@@ -44,7 +45,7 @@ export function registerLiveCommands(program: Command): void {
   // ── CROSS-LAYER GRAPH — code ↔ db_table ↔ api_endpoint, deterministic, no LLM ──────────────────
   const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql)$/i;
   const SKIP_DIR = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
-  function scanRepo(root: string, cap = 4000): crossLayerGraph.SourceFile[] {
+  function scanRepo(root: string, cap = 4000, ext: RegExp = SCAN_EXT): crossLayerGraph.SourceFile[] {
     const files: crossLayerGraph.SourceFile[] = []; const stack = [root];
     while (stack.length && files.length < cap) {
       const d = stack.pop()!;
@@ -53,21 +54,43 @@ export function registerLiveCommands(program: Command): void {
         if (SKIP_DIR.has(e)) continue; const p = join(d, e);
         let st; try { st = statSync(p); } catch { continue; }
         if (st.isDirectory()) stack.push(p);
-        else if (SCAN_EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(root.length + 1), content: readFileSync(p, "utf8") }); } catch { /* */ } }
+        else if (ext.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(root.length + 1), content: readFileSync(p, "utf8") }); } catch { /* */ } }
       }
     }
     return files;
   }
   const graph = program.command("graph").description("🕸 CROSS-LAYER GRAPH — link your CODE ↔ DATABASE tables ↔ API endpoints (deterministic, no LLM) and compute a cross-layer BLAST RADIUS: edit a function → see which DB tables AND API routes it reaches. The cross-layer join no single-layer code-graph reports.");
-  graph.command("stats").description("Build the graph from this repo + show node/edge counts by layer.").action(() => {
-    const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));
+  const MD_EXT = /\.(md|mdx|markdown|txt)$/i;
+  const scanWithDocs = (cwd: string) => { const code = scanRepo(cwd); const docs = scanRepo(cwd, 1200, MD_EXT); const seen = new Set(code.map((f) => f.path)); return [...code, ...docs.filter((d) => !seen.has(d.path))]; };
+  graph.command("stats").description("Build the 4-layer graph from this repo + show node/edge counts + business-rule coverage.").action(() => {
+    const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
     const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
     const byRel = (r: string) => g.edges.filter((e) => e.relation === r).length;
+    const cov = crossLayerGraph.businessCoverage(g);
     out(`🕸 Cross-layer graph of ${cwd}:`);
-    out(`   nodes: ${g.nodes.length}  (functions ${byType("function")} · db_tables ${byType("db_table")} · api_endpoints ${byType("api_endpoint")})`);
-    out(`   edges: ${g.edges.length}  (WRITES_TO ${byRel("WRITES_TO")} · READS ${byRel("READS")} · HANDLED_BY ${byRel("HANDLED_BY")} · CALLS ${byRel("CALLS")})`);
-    out("   deterministic · no LLM · every edge derives from a real file. Query impact: mneme graph blast <name>");
+    out(`   nodes: ${g.nodes.length}  (💼 business ${byType("business_rule")} · 🌐 api ${byType("api_endpoint")} · ⚙ functions ${byType("function")} · 🗄 tables ${byType("db_table")})`);
+    out(`   edges: ${g.edges.length}  (WRITES_TO ${byRel("WRITES_TO")} · READS ${byRel("READS")} · HANDLED_BY ${byRel("HANDLED_BY")} · CALLS ${byRel("CALLS")} · IMPLEMENTS ${byRel("IMPLEMENTS")})`);
+    if (cov.total) out(`   business-rule coverage: ${cov.anchored.length}/${cov.total} anchored to code (${Math.round(cov.coverageRate * 100)}%) · ${cov.orphan.length} orphan/UNKNOWN (no deterministic anchor — not asserted "unimplemented")`);
+    out("   deterministic · no LLM · every node+edge from a real file. Visualize: mneme graph view <name> · mneme graph mermaid <name>");
   });
+  graph.command("mermaid [name]").description("Emit a Mermaid flowchart (4 layers as subgraphs) — paste into GitHub/Markdown/this chat to SEE the graph. With a name: that node's blast radius; without: the structural hubs.")
+    .option("--depth <n>", "blast depth (default 2)").action((name: string | undefined, o: { depth?: string }) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const focus = name ? crossLayerGraph.resolveNode(g, name) : null;
+      if (name && !focus) { out(`✗ no node matching "${name}". Try: mneme graph stats`); return; }
+      out("```mermaid"); out(crossLayerGraph.toMermaid(g, focus?.id, o.depth ? { maxDepth: parseInt(o.depth, 10) } : undefined)); out("```");
+    });
+  graph.command("view [name]").description("Write a self-contained, offline HTML visualization (4-lane tiered SVG) — open it in any browser. With a name: that node's cross-layer blast radius.")
+    .option("--out <file>", "output path (default: mneme-graph.html)").option("--depth <n>", "blast depth (default 2)")
+    .action((name: string | undefined, o: { out?: string; depth?: string }) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const focus = name ? crossLayerGraph.resolveNode(g, name) : null;
+      if (name && !focus) { out(`✗ no node matching "${name}". Try: mneme graph stats`); return; }
+      const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort()) + JSON.stringify(g.edges.map((e) => `${e.source}|${e.target}|${e.relation}`).sort())).digest("hex").slice(0, 16);
+      const html = crossLayerGraph.toHtml(g, focus?.id, { fingerprint: fp, maxDepth: o.depth ? parseInt(o.depth, 10) : undefined });
+      const outPath = o.out ?? join(cwd, "mneme-graph.html");
+      try { writeFileSync(outPath, html, "utf8"); out(`🕸 wrote ${outPath} (${(html.length / 1024).toFixed(0)} KB, self-contained · fingerprint ${fp}). Open it in a browser.`); } catch (e) { out(`✗ could not write: ${(e as Error).message}`); }
+    });
   graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
     .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {
       const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));
