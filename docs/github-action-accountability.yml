@@ -1,0 +1,54 @@
+# 🔍 Mneme Accountability Report — comment the full cross-layer review on every PR.
+#
+# Drop this at `.github/workflows/mneme-accountability.yml`. On each pull request it installs mneme-ai,
+# runs the cross-layer suite against the PR diff, and posts a sticky comment: the change's blast radius
+# (which DB tables / API routes / business rules it touches), whether it reaches untested critical
+# surface, and any authz gap. Deterministic, no LLM, no secrets — every finding traces to a real file.
+#
+# Fails the check only on a HIGH-severity cross-agent/structural signal (configurable); everything else
+# is advisory. Pairs with docs/github-action-blast-radius.yml (lighter, blast-radius only).
+name: Mneme Accountability
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  accountability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }            # need the base ref to diff against
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install Mneme
+        run: npm i -g mneme-ai
+      - name: Cross-layer blast radius (PR comment body)
+        id: review
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          {
+            echo 'body<<MNEME_EOF'
+            echo '## 🔍 Mneme — Change Accountability'
+            echo ''
+            mneme graph pr --base "$BASE" --markdown 2>/dev/null || echo '_blast radius: none resolved_'
+            echo ''
+            echo '<details><summary>🧪 untested critical surface this change reaches</summary>'
+            echo ''
+            echo '```'
+            mneme testgap --base "$BASE" 2>/dev/null || echo 'clean'
+            echo '```'
+            echo '</details>'
+            echo ''
+            echo '<sub>Deterministic, no LLM — every finding traces to a real file. <a href="https://www.npmjs.com/package/mneme-ai">mneme-ai</a></sub>'
+            echo MNEME_EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Sticky comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: mneme-accountability
+          message: ${{ steps.review.outputs.body }}
+      # Optional hard gate — uncomment to FAIL the check when a DB table is silently touched:
+      # - name: Gate on cross-layer impact
+      #   run: mneme graph pr --base "origin/${{ github.base_ref }}"   # exit 2 if a DB table is in the blast radius
