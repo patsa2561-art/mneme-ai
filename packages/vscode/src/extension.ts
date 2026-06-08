@@ -35,6 +35,7 @@ import { runAsk } from "./commands/ask.js";
 import { runWhy } from "./commands/why.js";
 import { runAudit } from "./commands/audit.js";
 import { runNervousSystem } from "./commands/nervousSystem.js";
+import { runImpactRadar } from "./commands/impactRadar.js";
 
 let active: ResolvedWorkspace | null = null;
 
@@ -142,6 +143,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     ),
     vscode.commands.registerCommand("mneme.nervousSystem", () =>
       runNervousSystem(active?.repoRoot ?? null),
+    ),
+    vscode.commands.registerCommand("mneme.impactRadar", () =>
+      runImpactRadar(active?.repoRoot ?? null),
     ),
     vscode.commands.registerCommand("mneme.refresh", async () => {
       lens.cache.clear();

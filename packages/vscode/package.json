@@ -3,7 +3,7 @@
   "publisher": "patsa2561-art",
   "displayName": "Mneme เนโฌโ€ Memory layer for your codebase",
   "description": "What your codebase already knows — atrophy lens, AI session audit, nervous system dashboard.",
-  "version": "3.54.0",
+  "version": "3.55.0",
   "private": true,
   "engines": {
     "vscode": "^1.85.0"
@@ -62,6 +62,11 @@
         "category": "Mneme"
       },
       {
+        "command": "mneme.impactRadar",
+        "title": "Mneme: Impact Radar (cross-layer graph of this file)",
+        "category": "Mneme"
+      },
+      {
         "command": "mneme.refresh",
         "title": "Mneme: Refresh",
         "category": "Mneme",
@@ -111,6 +116,9 @@
           "command": "mneme.nervousSystem"
         },
         {
+          "command": "mneme.impactRadar"
+        },
+        {
           "command": "mneme.refresh"
         },
         {
@@ -147,7 +155,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mneme-ai/core": "3.54.0"
+    "@mneme-ai/core": "3.55.0"
   },
   "devDependencies": {
     "@types/node": "^22.2.0",

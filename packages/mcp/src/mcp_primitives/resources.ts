@@ -14,10 +14,23 @@
  * (Mneme Whisper) land in v1.19.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { crossLayerGraph } from "@mneme-ai/core";
 import { buildAllTools, groupByCategory } from "../tools/_registry.js";
 import type { ToolRuntime } from "../tools/_types.js";
+
+// Scan a repo for the cross-layer graph (code + schema + routes + docs). Bounded + dependency-free.
+function scanForGraph(root: string, cap = 4000): crossLayerGraph.SourceFile[] {
+  const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+  const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+  const files: crossLayerGraph.SourceFile[] = []; const stack = [root];
+  while (stack.length && files.length < cap) {
+    const d = stack.pop() as string; let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }
+    for (const e of ents) { if (SKIP.has(e)) continue; const p = join(d, e); let st; try { st = statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(root.length + 1), content: readFileSync(p, "utf8") }); } catch { /* */ } } }
+  }
+  return files;
+}
 
 export interface McpResourceListItem {
   uri: string;
@@ -63,6 +76,12 @@ const STATIC_RESOURCES: McpResourceListItem[] = [
     mimeType: "application/json",
     description: "(v1.19.2) Cached npm-registry version-check result — current vs latest, updateAvailable, lastChecked. Mneme refreshes this every 24h in the background.",
   },
+  {
+    uri: "mneme://graph",
+    name: "Cross-layer graph (code ↔ data ↔ api ↔ business)",
+    mimeType: "application/json",
+    description: "🕸 The whole repo as ONE structured graph: functions ↔ DB tables ↔ API endpoints ↔ business rules, + keystones (single points of failure) + orphans. Deterministic, no LLM. Pull this into context instead of re-deriving the architecture. For one node's blast radius, read mneme://graph/<name>.",
+  },
 ];
 
 export function listResources(rt: ToolRuntime): McpResourceListItem[] {
@@ -82,6 +101,12 @@ export function listResources(rt: ToolRuntime): McpResourceListItem[] {
     name: "Engineer passport (template URI)",
     mimeType: "application/json",
     description: "Replace {email} with an author's email to fetch their dossier (DNA + expertise + telepathy + influence + atrophy).",
+  });
+  out.push({
+    uri: "mneme://graph/{name}",
+    name: "Cross-layer blast radius of one node (template URI)",
+    mimeType: "application/json",
+    description: "Replace {name} with a function / table / endpoint to fetch its cross-layer blast radius (which tables it writes, endpoints reach it, rules it implements).",
   });
   // Suppress unused-runtime warning at compile time — kept for future use.
   void rt;
@@ -160,6 +185,35 @@ export function readResource(rt: ToolRuntime, uri: string): McpResourceContent {
         2,
       ),
     };
+  }
+  // 🕸 CROSS-LAYER GRAPH — the whole repo's code↔data↔api↔business graph as one structured resource an
+  // agent can pull into context (instead of re-deriving it). `mneme://graph` = full graph + health;
+  // `mneme://graph/<name>` = the blast radius of one function/table/endpoint.
+  if (uri === "mneme://graph") {
+    const root = rt?.meta?.rootPath ?? process.cwd();
+    const g = crossLayerGraph.buildCrossLayerGraph(scanForGraph(root));
+    const h = crossLayerGraph.graphHealth(g);
+    const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
+    const payload = {
+      summary: { functions: byType("function"), tables: byType("db_table"), endpoints: byType("api_endpoint"), businessRules: byType("business_rule"), edges: g.edges.length },
+      keystones: h.keystones.slice(0, 25).map((k) => ({ name: k.node.name, file: k.node.file, soleWriterOf: k.soleWriterOf, fanIn: k.fanIn, endpoints: k.reachedByEndpoints })),
+      orphanTables: h.orphanTables.map((t) => t.name), orphanEndpoints: h.orphanEndpoints.map((e) => `${e.method} ${e.name}`),
+      tables: g.nodes.filter((n) => n.type === "db_table").map((n) => n.name),
+      endpoints: g.nodes.filter((n) => n.type === "api_endpoint").map((n) => `${n.method} ${n.name}`),
+      // cross-layer edges only (the within-code CALLS graph is huge — fetch a focused slice for that)
+      crossLayerEdges: g.edges.filter((e) => e.relation !== "CALLS").map((e) => ({ source: e.source.replace(/^fn:[^#]*#/, ""), target: e.target.replace(/^(db|api|biz):/, ""), relation: e.relation })).slice(0, 2000),
+      note: "Deterministic, no LLM — every node/edge derives from a real file. For one node's full blast radius, read mneme://graph/<name>.",
+    };
+    return { uri, mimeType: "application/json", text: JSON.stringify(payload, null, 2) };
+  }
+  if (uri.startsWith("mneme://graph/")) {
+    const name = decodeURIComponent(uri.slice("mneme://graph/".length));
+    const root = rt?.meta?.rootPath ?? process.cwd();
+    const g = crossLayerGraph.buildCrossLayerGraph(scanForGraph(root));
+    const node = crossLayerGraph.resolveNode(g, name);
+    if (!node) return { uri, mimeType: "application/json", text: JSON.stringify({ error: `no function/table/endpoint matching "${name}"`, hint: "read mneme://graph for the full list" }, null, 2) };
+    const br = crossLayerGraph.blastRadius(g, node.id, { maxDepth: 2 });
+    return { uri, mimeType: "application/json", text: JSON.stringify({ node: { type: node.type, name: node.name, file: node.file }, blastRadius: { tables: br.tables.map((t) => t.name), endpoints: br.endpoints.map((e) => `${e.method} ${e.name}`), businessRules: br.rules.map((r) => r.name), functions: br.functions.slice(0, 60).map((f) => f.name), reachable: br.reachable } }, null, 2) };
   }
   throw new Error(`unknown resource URI: ${uri}`);
 }
