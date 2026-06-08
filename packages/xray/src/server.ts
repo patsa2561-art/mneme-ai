@@ -216,7 +216,7 @@ const xesc = (s: string) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;",
 /** OG + Twitter share-card meta tags (absolute URLs to the canonical domain) for a landing page. */
 function ogMeta(title: string, desc: string, path: string): string {
   const base = "https://xray.mneme-ai.space", url = base + path, img = base + "/og.png", t = xesc(title), d = xesc(desc);
-  return `<link rel="canonical" href="${url}"><meta property="og:type" content="website"><meta property="og:site_name" content="Mneme"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:url" content="${url}"><meta property="og:image" content="${img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${t}"><meta name="twitter:description" content="${d}"><meta name="twitter:image" content="${img}">`;
+  return `<link rel="icon" href="/favicon.svg"><link rel="canonical" href="${url}"><meta property="og:type" content="website"><meta property="og:site_name" content="Mneme"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:url" content="${url}"><meta property="og:image" content="${img}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${t}"><meta name="twitter:description" content="${d}"><meta name="twitter:image" content="${img}">`;
 }
 
 /** Rasterise an SVG to PNG (X/Twitter don't render SVG og:image). Fail-safe:
@@ -548,6 +548,15 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
+    if (req.method === "GET" && url.pathname === "/robots.txt") {
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" });
+      return res.end("User-agent: *\nAllow: /\nSitemap: https://xray.mneme-ai.space/sitemap.xml\n");
+    }
+    if (req.method === "GET" && url.pathname === "/sitemap.xml") {
+      const urls = ["/", "/suite", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
+      res.writeHead(200, { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=86400" });
+      return res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
+    }
     if (req.method === "GET" && url.pathname === "/og.png") {            // social share image (binary-safe)
       const p = join(PUBLIC_DIR, "og.png");
       if (!existsSync(p)) return send(res, 404, { error: "not found" });
