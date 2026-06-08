@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -234,6 +234,17 @@ export function registerLiveCommands(program: Command): void {
       out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
       for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
       out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
+    });
+
+  program.command("authz").description("🔒 CROSS-LAYER AUTHZ GAP — endpoints whose handler reaches a WRITE to a SENSITIVE table (accounts/payments/…) with NO auth/guard function on the path. The cross-layer security check linters & per-function SAST can't do. Exit 2 if any gap.")
+    .action(() => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const gaps = authzGap.authzGaps(g); const v = authzGap.authzVerdict(gaps);
+      if (v.clear) { out("🔒 ✓ no cross-layer authz gap (every sensitive-table write path has an auth function on it, or there are none)."); return; }
+      out(`🔒 ${v.count} UNGUARDED write-path(s) to sensitive tables [${v.worstTables.join(", ")}]:`);
+      for (const x of gaps.slice(0, 15)) out(`   ${x.method} ${x.endpoint} → ${x.handler}${x.handlerFile ? ` (${x.handlerFile})` : ""} → writes ${x.sensitiveTables.join(", ")}`);
+      out("   honest: a security SMELL to review FIRST (auth may be middleware — verify), not a proven vuln.");
+      process.exitCode = 2;
     });
 
   program.command("testgap").description("🧪 CRITICAL UNTESTED SURFACE — the keystones / tables / endpoints NO test file mentions (the scariest, line-coverage-hidden surface). --base <ref> to instead check whether a change reaches untested critical surface (exit 2 on a keystone gap).")

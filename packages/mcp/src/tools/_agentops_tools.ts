@@ -269,6 +269,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.authz.scan",
+    category: "audit",
+    description: "🔒 CROSS-LAYER AUTHZ GAP — the highest-stakes hidden bug: an endpoint whose handler reaches a WRITE to a SENSITIVE table (accounts/payments/users/…) with NO auth/guard function anywhere on the call path. Walks endpoint→handler→…→table on the deterministic graph — the cross-layer check linters & per-function SAST can't do. Returns each unguarded write-path. ★HONEST: a security SMELL, not a proven vuln — auth applied as separately-registered MIDDLEWARE is invisible to the call graph, so a flag is a 'review this endpoint's authz FIRST' signal (fast prioritization), not a CVE; sensitive-table + auth-function detection are name-based.",
+    whenToUse: "Auditing a web/API codebase for authorization holes, or reviewing a new endpoint — surface the endpoints that write sensitive data with no visible auth gate, to review first.",
+    triggers: ["authz gap", "unauthenticated write", "missing auth check", "security holes", "endpoints without auth", "authorization audit", "unguarded endpoint"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, _args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const gaps = core.authzGap.authzGaps(g); const v = core.authzGap.authzVerdict(gaps);
+      const data = await attest(cwd, { clear: v.clear, count: v.count, exposedTables: v.worstTables, gaps: gaps.slice(0, 30) });
+      return { data, wisdom: v.clear ? "✓ no cross-layer authz gap found (every sensitive-table write path has an auth function, or there are none)" : `🔒 ${v.count} unguarded write-path(s) to ${v.worstTables.join(", ")}${gaps[0] ? ` · top: ${gaps[0].method} ${gaps[0].endpoint} → ${gaps[0].handler}` : ""}`, followUp: v.clear ? [] : ["review these endpoints' authorization FIRST — a write to a sensitive table with no visible auth gate (may be middleware; verify)"], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.testgap.scan",
     category: "audit",
     description: "🧪 CRITICAL UNTESTED SURFACE — the cross-layer Test-Gap line-coverage hides: the KEYSTONE functions (sole writers to a DB table), data tables, and API endpoints that NO test file even mentions — the scariest, highest-risk surface in the repo. Pass a `diff` to instead get the untested critical nodes inside THAT change's blast radius (am I about to edit untested critical surface?). Composes the deterministic graph + keystone analysis + a scan of the repo's test files. ★HONEST: 'covered' = a test file MENTIONS the node by name (deterministic heuristic, reliable for distinctive function names, weaker for short table names) — a prove-or-LOOK signal, not true execution coverage.",
