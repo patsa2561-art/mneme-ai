@@ -269,6 +269,29 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.collision.detect",
+    category: "audit",
+    description: "💥 CROSS-AGENT COLLISION DETECTOR (world-first) — when several agents/branches edit the repo concurrently, find the collisions `git` is BLIND to: two change sets that touch DIFFERENT files but CONVERGE on the same DB table / API endpoint / business rule / function. Pass `changeSets` = [{ agent, diff }]. Returns each pairwise collision + severity: two WRITERS of the same table or two edits to the same function = HIGH (git-invisible data-corruption risk); write/read overlap or a shared file/endpoint = MEDIUM; shared read/rule = LOW. Coordinate BEFORE the agents stomp each other. ★HONEST: detects STRUCTURAL convergence deterministically — a candidate collision to coordinate on, not a proven runtime bug; but it's the cross-layer overlap git can't see.",
+    whenToUse: "In a multi-agent run (or before merging several in-flight branches): pass every agent's diff to find where two agents will collide at the data/api layer even though their files differ.",
+    triggers: ["will these agents collide", "do these branches conflict", "cross agent collision", "concurrent edits safe", "multi-agent conflict", "merge collision"],
+    inputSchema: { type: "object", properties: { changeSets: { type: "array", items: { type: "object", properties: { agent: { type: "string" }, diff: { type: "string" } } } } }, required: ["changeSets"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const sets = (Array.isArray(args["changeSets"]) ? args["changeSets"] : []).map((s: { agent?: string; diff?: string }) => ({ agent: String(s?.agent ?? "agent"), diff: String(s?.diff ?? "") }));
+      const cols = core.agentCollision.detectCollisions(g, sets);
+      const v = core.agentCollision.collisionVerdict(cols);
+      const data = await attest(cwd, { clear: v.clear, worst: v.worst, count: v.count, collisions: cols.slice(0, 30) });
+      const top = cols[0];
+      return { data, wisdom: v.clear ? "✓ CLEAR — no cross-layer collision between the change sets" : `💥 ${v.worst} — ${v.count} collision(s)${top ? ` · ${top.agents.join(" ⇄ ")}: ${top.reason}` : ""}`, followUp: v.worst === "HIGH" ? ["a HIGH collision (shared table write / same function) — sequence these agents or split the work before they stomp each other"] : [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.scope.verify",
     category: "audit",
     description: "🤝 SCOPE COVENANT (world-first) — verify an autonomous edit stayed within the architectural scope it DECLARED. Pass your `intent` + an `allow` scope ({files, tables, endpoints}) + the `diff` (or a `base` ref). Mneme computes the ACTUAL cross-layer blast radius from the deterministic graph and returns HONORED, or BREACHED naming the exact unpromised file / DB table / API endpoint the edit reached — a SIGNED, offline-verifiable verdict a reviewer/CI/another agent trusts without re-running. The verdict also accrues into your cross-vendor Scope-Fidelity track record. The accountability layer autonomous agents lack: proof you kept your architectural word. ★HONEST: proves STRUCTURAL scope (files + cross-layer nodes reached) vs declared — deterministic, not runtime correctness.",

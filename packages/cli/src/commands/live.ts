@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -234,6 +234,22 @@ export function registerLiveCommands(program: Command): void {
       out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
       for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
       out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
+    });
+
+  program.command("collision").description("💥 CROSS-AGENT COLLISION (world-first) — find where concurrent branches/agents COLLIDE across layers (both write the same table, edit the same function) even when their FILES differ — the conflict git is blind to. --branches a,b,c (diffed vs --base).")
+    .requiredOption("--branches <list>", "comma-separated branches/refs to compare (their in-flight work)").option("--base <ref>", "merge base (default: main)")
+    .action((o: { branches: string; base?: string }) => {
+      const cwd = process.cwd(); const base = o.base ?? "main";
+      const branches = o.branches.split(",").map((s) => s.trim()).filter(Boolean);
+      const sets = branches.map((b) => { const diff = String(spawnSync("git", ["diff", "--unified=0", `${base}...${b}`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""); return { agent: b, diff }; });
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const cols = agentCollision.detectCollisions(g, sets);
+      const v = agentCollision.collisionVerdict(cols);
+      if (v.clear) { out(`✓ CLEAR — no cross-layer collision between ${branches.join(", ")} (vs ${base}).`); return; }
+      out(`💥 ${v.worst} — ${v.count} cross-layer collision(s) git can't see:`);
+      for (const c of cols.slice(0, 15)) out(`   [${c.severity}] ${c.agents[0]} ⇄ ${c.agents[1]}: ${c.reason}`);
+      out("   honest: structural convergence to coordinate on (deterministic), not a proven runtime bug.");
+      if (v.worst === "HIGH") process.exitCode = 2;
     });
 
   const skill = program.command("skill").description("🧩 VERIFIED SKILLS — beyond a skill registry: rank skills by MEASURED effectiveness (did using it lead to success?), not popularity. Pairs with `mneme skillscan` (safe install) + LIVE PROOF (outcomes).");
