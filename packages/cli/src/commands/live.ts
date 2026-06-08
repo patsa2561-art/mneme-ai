@@ -271,19 +271,27 @@ export function registerLiveCommands(program: Command): void {
     });
 
   program.command("collision").description("💥 CROSS-AGENT COLLISION (world-first) — find where concurrent branches/agents COLLIDE across layers (both write the same table, edit the same function) even when their FILES differ — the conflict git is blind to. --branches a,b,c (diffed vs --base).")
-    .requiredOption("--branches <list>", "comma-separated branches/refs to compare (their in-flight work)").option("--base <ref>", "merge base (default: main)")
-    .action((o: { branches: string; base?: string }) => {
+    .requiredOption("--branches <list>", "comma-separated branches/refs to compare (their in-flight work)").option("--base <ref>", "merge base (default: main)").option("--plan", "also compute a safe MERGE ORDER")
+    .action((o: { branches: string; base?: string; plan?: boolean }) => {
       const cwd = process.cwd(); const base = o.base ?? "main";
       const branches = o.branches.split(",").map((s) => s.trim()).filter(Boolean);
       const sets = branches.map((b) => { const diff = String(spawnSync("git", ["diff", "--unified=0", `${base}...${b}`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""); return { agent: b, diff }; });
       const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
       const cols = agentCollision.detectCollisions(g, sets);
       const v = agentCollision.collisionVerdict(cols);
-      if (v.clear) { out(`✓ CLEAR — no cross-layer collision between ${branches.join(", ")} (vs ${base}).`); return; }
-      out(`💥 ${v.worst} — ${v.count} cross-layer collision(s) git can't see:`);
-      for (const c of cols.slice(0, 15)) out(`   [${c.severity}] ${c.agents[0]} ⇄ ${c.agents[1]}: ${c.reason}`);
-      out("   honest: structural convergence to coordinate on (deterministic), not a proven runtime bug.");
-      if (v.worst === "HIGH") process.exitCode = 2;
+      if (!v.clear) {
+        out(`💥 ${v.worst} — ${v.count} cross-layer collision(s) git can't see:`);
+        for (const c of cols.slice(0, 15)) out(`   [${c.severity}] ${c.agents[0]} ⇄ ${c.agents[1]}: ${c.reason}`);
+      } else out(`✓ CLEAR — no cross-layer collision between ${branches.join(", ")} (vs ${base}).`);
+      if (o.plan) {
+        const p = agentCollision.sequenceMerges(g, sets);
+        out("");
+        if (p.unresolvable) out(`   🔀 MERGE PLAN: ⛔ ${p.reason}`);
+        else out(`   🔀 MERGE PLAN: ${p.order.length > 1 ? "merge in order → " + p.order.join(" → ") : p.reason}`);
+        for (const c of p.coordinate) out(`      ⚠️ ${c.agents[0]} ⇄ ${c.agents[1]}: ${c.reason}`);
+      }
+      if (!v.clear) out("   honest: structural convergence to coordinate on (deterministic), not a proven runtime bug.");
+      if (!v.clear && v.worst === "HIGH") process.exitCode = 2;
     });
 
   const skill = program.command("skill").description("🧩 VERIFIED SKILLS — beyond a skill registry: rank skills by MEASURED effectiveness (did using it lead to success?), not popularity. Pairs with `mneme skillscan` (safe install) + LIVE PROOF (outcomes).");

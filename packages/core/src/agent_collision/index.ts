@@ -99,6 +99,57 @@ export function collisionVerdict(collisions: ReadonlyArray<Collision>): { clear:
   return { clear: false, worst, count: collisions.length };
 }
 
+// ── MERGE SEQUENCER — the safe order to land colliding change sets (or "coordinate manually") ─────
+export interface MergePlan {
+  order: string[];                                          // a safe merge order (writers before readers)
+  unresolvable: boolean;
+  cycles: string[][];                                       // mutual write↔read dependencies — no order fixes these
+  coordinate: Array<{ agents: [string, string]; tables: string[]; reason: string }>;   // write-write — must merge the logic by hand
+  reason: string;
+}
+/**
+ * From N concurrent change sets, compute a safe MERGE ORDER: A before B when B READS a table A WRITES
+ * (so B lands after the data it depends on exists). Two WRITERS of the same table can't be auto-ordered
+ * (both change that table's write logic → coordinate by hand). A mutual write↔read dependency is a CYCLE
+ * → unresolvable, must coordinate. ★HONEST: respects write→read data dependencies deterministically — a
+ * coordination AID, not a guarantee of a conflict-free merge.
+ */
+export function sequenceMerges(graph: CrossLayerGraph, changeSets: ReadonlyArray<ChangeSet>): MergePlan {
+  const fps = (changeSets ?? []).map((cs) => footprint(graph, cs));
+  const agents = fps.map((f) => f.agent);
+  const setOf = (a: string[]) => new Set(a);
+  // directed edges: before[a] = set of agents that must come BEFORE a (a depends on them)
+  const before = new Map<string, Set<string>>(agents.map((a) => [a, new Set<string>()]));
+  const coordinate: MergePlan["coordinate"] = [];
+  for (let i = 0; i < fps.length; i++) for (let j = i + 1; j < fps.length; j++) {
+    const a = fps[i], b = fps[j];
+    const aw = setOf(a.writes), bw = setOf(b.writes), ar = setOf(a.reads), br = setOf(b.reads);
+    const aBeforeB = inter(aw, br).length > 0;   // B reads what A writes → A first
+    const bBeforeA = inter(bw, ar).length > 0;   // A reads what B writes → B first
+    const ww = inter(aw, bw);                     // both write the same table
+    if (ww.length) coordinate.push({ agents: [a.agent, b.agent], tables: ww, reason: `both WRITE ${ww.map((t) => "'" + t + "'").join(", ")} — merge the table's write logic by hand` });
+    if (aBeforeB) before.get(b.agent)!.add(a.agent);
+    if (bBeforeA) before.get(a.agent)!.add(b.agent);
+  }
+  // Kahn topological sort (deterministic: pick the alphabetically-first ready node)
+  const remaining = new Set(agents); const order: string[] = [];
+  const indeg = new Map<string, number>(agents.map((a) => [a, before.get(a)!.size]));
+  while (remaining.size) {
+    const ready = [...remaining].filter((a) => [...before.get(a)!].every((d) => !remaining.has(d))).sort();
+    if (!ready.length) break;   // a cycle remains
+    const pick = ready[0]; order.push(pick); remaining.delete(pick);
+  }
+  // anything left = in a cycle; extract the strongly-coupled remainder
+  const cycles: string[][] = remaining.size ? [[...remaining].sort()] : [];
+  const unresolvable = remaining.size > 0;
+  void indeg;
+  const reason = unresolvable
+    ? `mutual write↔read dependency among ${[...remaining].sort().join(", ")} — coordinate manually (no merge order is safe)`
+    : coordinate.length ? `order found, but ${coordinate.length} pair(s) write the same table — coordinate those by hand`
+      : order.length > 1 ? `safe merge order: ${order.join(" → ")}` : "nothing to sequence";
+  return { order: unresolvable ? [] : order, unresolvable, cycles, coordinate, reason };
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface CollisionGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function collisionGauntlet(): CollisionGauntlet {
@@ -122,11 +173,26 @@ export function collisionGauntlet(): CollisionGauntlet {
   // no collision when footprints are disjoint
   const disjoint = detectCollisions(g, [{ agent: "x", diff: dA }, { agent: "y", diff: dC }]);
   const disjointOK = disjoint.length === 0;
-  const total = (() => { try { detectCollisions(null as never, null as never); footprint(null as never, null as never); collisionVerdict(null as never); return true; } catch { return false; } })();
+  // MERGE SEQUENCER: writer (writes Cfg) must merge before reader (reads Cfg) → order [writer, reader]
+  const sg = buildCrossLayerGraph([
+    { path: "schema.prisma", content: "model Cfg { id Int @id }" },
+    { path: "w.ts", content: "export function setCfg(){ return prisma.cfg.update({where:{}}); }" },
+    { path: "r.ts", content: "export function readCfg(){ return prisma.cfg.findMany(); }" },
+  ]);
+  const dW = "--- a/w.ts\n+++ b/w.ts\n@@ -1,1 +1,2 @@ export function setCfg(){\n+x\n";
+  const dR = "--- a/r.ts\n+++ b/r.ts\n@@ -1,1 +1,2 @@ export function readCfg(){\n+x\n";
+  const plan = sequenceMerges(sg, [{ agent: "reader", diff: dR }, { agent: "writer", diff: dW }]);
+  const seqOK = !plan.unresolvable && plan.order.join(",") === "writer,reader";   // writer before reader despite input order
+  // write-write → coordinate (the gauntlet's A & B both write User)
+  const wwPlan = sequenceMerges(g, [{ agent: "claude", diff: dA }, { agent: "gpt", diff: dB }]);
+  const coordOK = wwPlan.coordinate.some((c) => c.tables.includes("User"));
+  const total = (() => { try { detectCollisions(null as never, null as never); footprint(null as never, null as never); collisionVerdict(null as never); sequenceMerges(null as never, null as never); return true; } catch { return false; } })();
   const checks = [
     { name: "WRITE-WRITE-HIGH", pass: highOK, detail: "two agents writing the SAME table from DIFFERENT files → HIGH collision git is blind to" },
     { name: "DISJOINT-CLEAR", pass: cClear && disjointOK, detail: "agents with no cross-layer overlap → no collision (no false alarm)" },
     { name: "VERDICT", pass: verdictOK, detail: "worst-severity rollup across all pairs" },
+    { name: "MERGE-ORDER", pass: seqOK, detail: "the writer of a table merges BEFORE its reader (write→read dependency), regardless of input order" },
+    { name: "COORDINATE-WRITE-WRITE", pass: coordOK, detail: "two writers of the same table → flagged 'coordinate by hand' (no order makes it safe)" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

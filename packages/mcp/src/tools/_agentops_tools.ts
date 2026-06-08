@@ -332,9 +332,10 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const sets = (Array.isArray(args["changeSets"]) ? args["changeSets"] : []).map((s: { agent?: string; diff?: string }) => ({ agent: String(s?.agent ?? "agent"), diff: String(s?.diff ?? "") }));
       const cols = core.agentCollision.detectCollisions(g, sets);
       const v = core.agentCollision.collisionVerdict(cols);
-      const data = await attest(cwd, { clear: v.clear, worst: v.worst, count: v.count, collisions: cols.slice(0, 30) });
+      const plan = core.agentCollision.sequenceMerges(g, sets);   // also compute the safe merge order
+      const data = await attest(cwd, { clear: v.clear, worst: v.worst, count: v.count, collisions: cols.slice(0, 30), mergePlan: { order: plan.order, unresolvable: plan.unresolvable, coordinate: plan.coordinate, reason: plan.reason } });
       const top = cols[0];
-      return { data, wisdom: v.clear ? "✓ CLEAR — no cross-layer collision between the change sets" : `💥 ${v.worst} — ${v.count} collision(s)${top ? ` · ${top.agents.join(" ⇄ ")}: ${top.reason}` : ""}`, followUp: v.worst === "HIGH" ? ["a HIGH collision (shared table write / same function) — sequence these agents or split the work before they stomp each other"] : [], confidence: ok() };
+      return { data, wisdom: v.clear ? "✓ CLEAR — no cross-layer collision between the change sets" : `💥 ${v.worst} — ${v.count} collision(s)${top ? ` · ${top.agents.join(" ⇄ ")}: ${top.reason}` : ""} · plan: ${plan.unresolvable ? "⛔ coordinate manually" : plan.order.join(" → ") || "—"}`, followUp: v.worst === "HIGH" ? [plan.unresolvable ? "unresolvable collision — coordinate manually (mutual write↔read)" : `merge in order: ${plan.order.join(" → ")} (writers before readers)`] : [], confidence: ok() };
     },
   },
   {

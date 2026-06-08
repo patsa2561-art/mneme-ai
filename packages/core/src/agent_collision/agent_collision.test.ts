@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildCrossLayerGraph } from "../cross_layer_graph/index.js";
-import { footprint, detectCollisions, collisionVerdict, collisionGauntlet } from "./index.js";
+import { footprint, detectCollisions, collisionVerdict, sequenceMerges, collisionGauntlet } from "./index.js";
 
 const g = buildCrossLayerGraph([
   { path: "schema.prisma", content: "model User { id Int @id }\nmodel Wallet { id Int @id }\nmodel Audit { id Int @id }" },
@@ -50,8 +50,26 @@ describe("agent_collision", () => {
     expect(v.worst).toBe("HIGH");
   });
 
+  it("merge sequencer: writer of a table merges before its reader", () => {
+    const sg = buildCrossLayerGraph([
+      { path: "schema.prisma", content: "model Cfg { id Int @id }" },
+      { path: "w.ts", content: "export function setCfg(){ return prisma.cfg.update({where:{}}); }" },
+      { path: "r.ts", content: "export function readCfg(){ return prisma.cfg.findMany(); }" },
+    ]);
+    const dW = "--- a/w.ts\n+++ b/w.ts\n@@ -1,1 +1,2 @@ export function setCfg(){\n+x\n";
+    const dR = "--- a/r.ts\n+++ b/r.ts\n@@ -1,1 +1,2 @@ export function readCfg(){\n+x\n";
+    const plan = sequenceMerges(sg, [{ agent: "reader", diff: dR }, { agent: "writer", diff: dW }]);
+    expect(plan.unresolvable).toBe(false);
+    expect(plan.order).toEqual(["writer", "reader"]);     // writer first, despite reader being listed first
+  });
+  it("merge sequencer: two writers of a table → coordinate by hand", () => {
+    const plan = sequenceMerges(g, [{ agent: "claude", diff: dAuth }, { agent: "gpt", diff: dBilling }]);
+    expect(plan.coordinate.some((c) => c.tables.includes("User"))).toBe(true);
+  });
+
   it("never throws on garbage", () => {
     expect(() => detectCollisions(null as never, null as never)).not.toThrow();
     expect(() => footprint(null as never, null as never)).not.toThrow();
+    expect(() => sequenceMerges(null as never, null as never)).not.toThrow();
   });
 });
