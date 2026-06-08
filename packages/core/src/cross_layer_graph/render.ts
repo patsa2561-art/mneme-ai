@@ -120,9 +120,9 @@ export function toHtml(graph: CrossLayerGraph, focusId?: string, opts?: { maxDep
 // DATA is invented: every position encodes a real fact (sector = the node's layer, radius = its real
 // graph distance from the focus). Layout is computed in-page but deterministically (stable sort).
 export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { maxDepth?: number; cap?: number; fingerprint?: string; title?: string; overview?: boolean }): string {
-  // OVERVIEW (galaxy) when asked or when no focus is given — show the whole project's hubs and let the
-  // user click into any node's radar. Otherwise center on the focus node.
-  const overview = !!opts?.overview || (!focusId && opts?.overview !== false);
+  // OVERVIEW (galaxy) ONLY when explicitly asked. The default (no focus) centers on the highest-degree
+  // hub and renders a FOCUSED radar — the visually-rich, verified path (a sparse galaxy can look empty).
+  const overview = opts?.overview === true;
   let center: string | undefined = overview ? undefined : focusId;
   if (!overview && (!center || !(graph?.nodes ?? []).some((n) => n.id === center))) {
     const deg = new Map<string, number>(); for (const e of graph?.edges ?? []) { deg.set(e.source, (deg.get(e.source) ?? 0) + 1); deg.set(e.target, (deg.get(e.target) ?? 0) + 1); }
@@ -146,6 +146,7 @@ export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { m
     "function adj(){var a={};G.edges.forEach(function(e){(a[e.s]=a[e.s]||[]).push(e.t);(a[e.t]=a[e.t]||[]).push(e.s);});return a;}",
     "function bfs(f){var A=adj(),d={};d[f]=0;var q=[f];while(q.length){var x=q.shift();(A[x]||[]).forEach(function(y){if(d[y]==null){d[y]=d[x]+1;q.push(y);}});}return d;}",
     "function el(n,at){var e=document.createElementNS(NS,n);for(var k in at)e.setAttribute(k,at[k]);return e;}",
+    "function emptyMsg(sub){var t=el('text',{x:CX,y:CY-6,['text-anchor']:'middle',fill:'#94a3b8',['font-size']:16,['font-weight']:600});t.textContent='Nothing to map here.';svg.appendChild(t);var t2=el('text',{x:CX,y:CY+20,['text-anchor']:'middle',fill:'#64748b',['font-size']:12.5});t2.textContent=sub||'No functions, DB tables, API routes or rules were found in this repo.';svg.appendChild(t2);var t3=el('text',{x:CX,y:CY+40,['text-anchor']:'middle',fill:'#475569',['font-size']:11.5});t3.textContent='The radar reads JS/TS code, Prisma/SQL schemas, route files and PRD markdown.';svg.appendChild(t3);}",
     "function layout(f){var d=bfs(f),byId={};G.nodes.forEach(function(n){byId[n.id]=n;});",
     "  var groups={};G.nodes.forEach(function(n){var dist=d[n.id];if(dist==null)return;var li=G.order.indexOf(n.type);if(li<0)li=2;var key=n.type;(groups[key]=groups[key]||[]).push(n);});",
     "  var pos={};var present=G.order.filter(function(t){return groups[t]&&groups[t].length;});var span=2*Math.PI/Math.max(1,present.length);",
@@ -153,6 +154,7 @@ export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { m
     "    arr.forEach(function(n,i){var dist=Math.max(1,d[n.id]);var ang=base+span*((i+0.5)/arr.length);var rad=R0+dist*RING;pos[n.id]={x:CX+rad*Math.cos(ang),y:CY+rad*Math.sin(ang),dist:dist,type:n.type};});});",
     "  pos[f]={x:CX,y:CY,dist:0,type:byId[f]?byId[f].type:'function'};return {pos:pos,d:d,byId:byId};}",
     "function draw(f){while(svg.firstChild)svg.removeChild(svg.firstChild);var L=layout(f);var pos=L.pos,byId=L.byId;",
+    "  if(Object.keys(pos).length<=1){emptyMsg('This node has no cross-layer coupling in the scanned files.');return;}",
     "  var maxd=0;for(var k in pos)maxd=Math.max(maxd,pos[k].dist);",
     "  for(var r=1;r<=maxd;r++){svg.appendChild(el('circle',{cx:CX,cy:CY,r:R0+r*RING,fill:'none',stroke:'#1f2937',['stroke-width']:1,opacity:0.5}));}",
     "  var present=G.order.filter(function(t){return G.nodes.some(function(n){return n.type===t&&pos[n.id];});});var span=2*Math.PI/Math.max(1,present.length);",
@@ -167,7 +169,7 @@ export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { m
     "    g.addEventListener('mouseenter',function(ev){tip.style.display='block';tip.style.left=(ev.clientX+12)+'px';tip.style.top=(ev.clientY+12)+'px';tip.innerHTML='<b>'+G.meta[p.type].icon+' '+esc(n.name)+'</b>'+(n.file?'<br><span style=\\'opacity:.6\\'>'+esc(n.file)+'</span>':'')+'<br><span style=\\'opacity:.6\\'>'+ (p.dist===0?'focus':p.dist+' hop'+(p.dist>1?'s':'')+' away')+'</span>';});",
     "    g.addEventListener('mouseleave',function(){tip.style.display='none';});",
     "    g.addEventListener('click',function(){draw(id);setHdr(n.name);});svg.appendChild(g);});}",
-    "function galaxy(){while(svg.firstChild)svg.removeChild(svg.firstChild);var byId={};G.nodes.forEach(function(n){byId[n.id]=n;});",
+    "function galaxy(){while(svg.firstChild)svg.removeChild(svg.firstChild);if(!G.nodes.length){emptyMsg();return;}var byId={};G.nodes.forEach(function(n){byId[n.id]=n;});",
     "  var groups={};G.nodes.forEach(function(n){(groups[n.type]=groups[n.type]||[]).push(n);});",
     "  var present=G.order.filter(function(t){return groups[t]&&groups[t].length;});var span=2*Math.PI/Math.max(1,present.length);var pos={};",
     "  present.forEach(function(t,si){var arr=groups[t].slice().sort(function(a,b){return a.name.localeCompare(b.name);});var base=si*span-Math.PI/2;",

@@ -596,7 +596,10 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         const focus = focusName ? crossLayerGraph.resolveNode(g, focusName) : null;
         const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort())).digest("hex").slice(0, 16);
         const repoName = gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "");
-        const html = crossLayerGraph.toRadarHtml(g, focus?.id, { fingerprint: fp, title: `Impact Radar — ${repoName}`, overview: !focus });
+        // default (no focus) → focused radar on the highest-degree hub (verified-rich render);
+        // ?overview=1 → the project galaxy. Empty/sparse repos draw a friendly "nothing to map" note.
+        const wantOverview = url.searchParams.get("overview") === "1";
+        const html = crossLayerGraph.toRadarHtml(g, focus?.id, { fingerprint: fp, title: `Impact Radar — ${repoName}`, overview: wantOverview });
         return send(res, 200, html, "text/html; charset=utf-8");
       } catch (e) {
         return send(res, 502, { error: (e as Error).message.slice(0, 300) });

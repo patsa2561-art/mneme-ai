@@ -21,10 +21,10 @@ const files = [
 
 const g = crossLayerGraph.buildCrossLayerGraph(files);
 const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort()) + JSON.stringify(g.edges.map((e) => `${e.source}|${e.target}|${e.relation}`).sort())).digest("hex").slice(0, 16);
-// Open in OVERVIEW (galaxy) so the viewer sees the whole 4-layer sample app, then clicks any node
-// to fly into its blast radar.
-const html = crossLayerGraph.toRadarHtml(g, undefined, { fingerprint: fp, title: "Impact Radar — sample app", overview: true });
-const focus = { name: "overview" };
+// Open FOCUSED on createOrderHandler — a guaranteed-rich render that spans all four layers (the
+// viewer can click any node to re-center, or the 'project overview' link for the galaxy).
+const focus = crossLayerGraph.resolveNode(g, "createOrderHandler");
+const html = crossLayerGraph.toRadarHtml(g, focus?.id, { fingerprint: fp, title: "Impact Radar — sample app" });
 mkdirSync("docs/demo", { recursive: true });
 writeFileSync("docs/demo/impact-radar.html", html, "utf8");
 // A static PNG card (focused on createOrderHandler) — the README preview image + a shareable card.
