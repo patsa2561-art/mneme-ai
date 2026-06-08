@@ -129,6 +129,21 @@ export function registerLiveCommands(program: Command): void {
       if (!b.changed) out("   (no changed functions resolved to the graph — a non-code or new-file diff)");
       if (b.tables.length) process.exitCode = 2;
     });
+  graph.command("check").description("🚦 AGENT BLAST-CHECK — before applying an edit, flag any DB table / API route / business rule the diff touches that your request never mentioned. --intent \"<the request>\". Exit 2 on 'review' (a surprise) — gate an agent's auto-apply.")
+    .requiredOption("--intent <text>", "the user's request, verbatim").option("--base <ref>").option("--staged").option("--depth <n>")
+    .action((o: { intent: string; base?: string; staged?: boolean; depth?: string }) => {
+      const cwd = process.cwd();
+      const args = o.base ? ["diff", "--unified=0", `${o.base}...HEAD`] : o.staged ? ["diff", "--unified=0", "--cached"] : ["diff", "--unified=0", "HEAD"];
+      const diff = String(spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const chk = crossLayerGraph.agentBlastCheck(g, diff, o.intent, { maxDepth: o.depth ? parseInt(o.depth, 10) : 1 });
+      if (chk.verdict === "clean") { out("✓ clean — every cross-layer node this change touches was named in the request."); return; }
+      out(`🚦 REVIEW — ${chk.reason}`);
+      if (chk.surpriseTables.length) out(`   🗄  unmentioned tables: ${chk.surpriseTables.map((t) => t.name).join(" · ")}  ⚠️ check before applying`);
+      if (chk.surpriseEndpoints.length) out(`   🌐 unmentioned endpoints: ${chk.surpriseEndpoints.map((e) => `${e.method} ${e.name}`).join(" · ")}`);
+      if (chk.surpriseRules.length) out(`   💼 unmentioned rules: ${chk.surpriseRules.map((r) => r.name).join(" · ")}`);
+      process.exitCode = 2;
+    });
   graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
     .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {
       const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));

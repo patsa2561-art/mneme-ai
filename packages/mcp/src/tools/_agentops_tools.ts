@@ -246,6 +246,29 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.graph.check",
+    category: "audit",
+    description: "🚦 AGENT BLAST-CHECK — the safety gate BEFORE you apply a multi-file edit: pass your `diff` + the user's `intent` (their request, verbatim). Mneme computes the cross-layer blast radius and flags any 🗄 DB table / 🌐 API route / 💼 business rule the change touches that the user NEVER mentioned → verdict 'review' (surface it / route to the human pager). The cross-layer cousin of omission-checking — it catches 'your auth tweak also writes the payments table'. ★HONEST: a name/token-mention heuristic (prove-or-unknown) — a likely-unintended reach to LOOK at, not proof; if the user named it, it's clean.",
+    whenToUse: "BEFORE applying any AI-authored edit that spans multiple files/functions — pass the diff + the user's request to confirm the change doesn't silently reach a table/route/rule the user didn't ask to touch.",
+    triggers: ["is this edit safe to apply", "does my change touch anything unexpected", "blast check", "did i touch something the user didn't ask", "safe to apply this diff"],
+    inputSchema: { type: "object", properties: { diff: { type: "string" }, intent: { type: "string" }, base: { type: "string" }, depth: { type: "number" } }, required: ["intent"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let diff = String(args["diff"] ?? "");
+      if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const chk = core.crossLayerGraph.agentBlastCheck(g, diff, String(args["intent"] ?? ""), { maxDepth: Number(args["depth"]) || 1 });
+      const data = await attest(cwd, { verdict: chk.verdict, reason: chk.reason, surpriseTables: chk.surpriseTables.map((t) => t.name), surpriseEndpoints: chk.surpriseEndpoints.map((e) => `${e.method} ${e.name}`), surpriseRules: chk.surpriseRules.map((r) => r.name) });
+      const hasTable = chk.surpriseTables.length > 0;
+      return { data, wisdom: chk.verdict === "review" ? `⚠️ REVIEW — ${chk.reason}` : "✓ clean — no unmentioned cross-layer reach", followUp: chk.verdict === "review" ? [hasTable ? "a DB table the user didn't mention is touched — route to the human (mneme.pager) before applying" : "surface the unmentioned reach to the user before applying"] : [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.graph.mermaid",
     category: "audit",
     description: "🕸 CROSS-LAYER GRAPH as a Mermaid flowchart you can SHOW the user inline (renders in chat/Markdown/GitHub). The 4 layers (💼 Business ↔ 🌐 API ↔ ⚙ Code ↔ 🗄 Data) become subgraphs; pass a `name` to draw that node's cross-layer blast radius (the focus is highlighted). Deterministic, no LLM — every node/edge derives from a real repo file. Wrap the returned string in a ```mermaid fence.",

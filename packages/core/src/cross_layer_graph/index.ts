@@ -245,6 +245,40 @@ export function diffBlastRadius(graph: CrossLayerGraph, changes: ReadonlyArray<D
   return { origins, tables: all.filter((n) => n.type === "db_table"), endpoints: all.filter((n) => n.type === "api_endpoint"), rules: all.filter((n) => n.type === "business_rule"), functions: all.filter((n) => n.type === "function"), changed: origins.length, reachable: all.length };
 }
 
+// ── AGENT BLAST-CHECK — catch the cross-layer impact the user did NOT ask for ──────────────────
+export interface BlastCheck { verdict: "clean" | "review"; surpriseTables: GNode[]; surpriseEndpoints: GNode[]; surpriseRules: GNode[]; touched: DiffBlast; reason: string }
+/**
+ * Before an agent applies a multi-file edit, compare what the diff TOUCHES across layers against what
+ * the user actually ASKED for: any DB table / API route / business rule in the blast radius whose name
+ * the user never mentioned is a SURPRISE → verdict "review" (surface it / route to the human). This is
+ * the cross-layer cousin of ELLEIPSIS (omission) — it catches the silent 'your auth tweak also writes
+ * the payments table' class. ★HONEST: a name-mention heuristic (prove-or-unknown) — it flags a likely
+ * unintended reach to LOOK at, not a proof of a bug; if the user named the table, it's not a surprise.
+ */
+export function agentBlastCheck(graph: CrossLayerGraph, diff: DiffBlast | ReadonlyArray<DiffChange> | string, intentText: string, opts?: { maxDepth?: number }): BlastCheck {
+  const touched: DiffBlast = (diff && typeof diff === "object" && "origins" in diff) ? diff as DiffBlast : diffBlastRadius(graph, diff as never, opts);
+  const intent = lc(String(intentText ?? ""));
+  const intentTokens = tokset(intentText);
+  const unmentioned = (n: GNode): boolean => {
+    const name = lc(n.name); if (!name) return false;
+    if (intent.includes(name)) return false;                                   // named directly
+    if (n.type === "api_endpoint" && intent.includes(name.replace(/^\/+/, ""))) return false;
+    // a table named "users"/"user" is "mentioned" if the user said either form
+    if (n.type === "db_table" && (intent.includes(name.replace(/s$/, "")) || intent.includes(name + "s"))) return false;
+    // a business RULE is a phrase — count it mentioned if ≥half its distinctive tokens are in the intent
+    if (n.type === "business_rule") { const rt = [...tokset(n.name)]; if (rt.length) { const hit = rt.filter((t) => intentTokens.has(t)).length; if (hit >= Math.ceil(rt.length / 2)) return false; } }
+    return true;
+  };
+  const surpriseTables = touched.tables.filter(unmentioned);
+  const surpriseEndpoints = touched.endpoints.filter(unmentioned);
+  const surpriseRules = touched.rules.filter(unmentioned);
+  const n = surpriseTables.length + surpriseEndpoints.length + surpriseRules.length;
+  const reason = n
+    ? `this change reaches ${n} thing(s) the request didn't mention: ${[...surpriseTables.map((t) => "table " + t.name), ...surpriseEndpoints.map((e) => "endpoint " + e.name), ...surpriseRules.map((r) => "rule " + r.name)].join(", ")}`
+    : "every cross-layer node this change touches was named in the request";
+  return { verdict: n ? "review" : "clean", surpriseTables, surpriseEndpoints, surpriseRules, touched, reason };
+}
+
 /** Render a diff blast radius as a Markdown PR comment (deterministic). */
 export function diffBlastMarkdown(b: DiffBlast, opts?: { repo?: string }): string {
   const L: string[] = ["### 🕸 Cross-Layer Blast Radius"];
@@ -310,7 +344,11 @@ export function crossLayerGauntlet(): CLGGauntlet {
   const db = diffBlastRadius(g, diff);
   const diffOK = changed.some((c) => c.name === "createUserWallet") && db.changed >= 1 && db.tables.some((t) => t.name === "Wallet");
   const mdOK = diffBlastMarkdown(db).includes("Blast Radius") && diffBlastMarkdown(db).includes("Wallet");
-  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); return true; } catch { return false; } })();
+  // agent blast-check: same diff (writes Wallet). "fix the wallet bonus" → clean; "fix the login" → review (surprise: Wallet)
+  const checkClean = agentBlastCheck(g, db, "fix the wallet bonus logic");
+  const checkSurprise = agentBlastCheck(g, db, "fix the login redirect");
+  const checkOK = checkClean.verdict === "clean" && checkSurprise.verdict === "review" && checkSurprise.surpriseTables.some((t) => t.name === "Wallet");
+  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); return true; } catch { return false; } })();
   const checks = [
     { name: "EXTRACT-3-LAYERS", pass: hasTable && hasEndpoint && hasFn, detail: "db_table (Prisma) + api_endpoint (route) + function (decl) all extracted deterministically" },
     { name: "WRITE-EDGE", pass: writeEdge, detail: "function → db_table WRITES_TO (prisma.wallet.create)" },
@@ -321,6 +359,7 @@ export function crossLayerGauntlet(): CLGGauntlet {
     { name: "BUSINESS-LAYER", pass: bizExtract && bizAnchored, detail: "business_rule extracted from a PRD + IMPLEMENTS-linked to code via a deterministic anchor (annotation / strong name match)" },
     { name: "PROVE-OR-UNKNOWN", pass: bizOrphan, detail: "a rule with NO code anchor stays ORPHAN/UNKNOWN — never a guessed link (Padgett)" },
     { name: "PR-DIFF-BLAST", pass: diffOK && mdOK, detail: "a git diff → the change set's union blast radius across layers (the DB table a PR silently touches) + a Markdown PR comment" },
+    { name: "AGENT-BLAST-CHECK", pass: checkOK, detail: "vs the user's intent: a touched table the request didn't name → 'review' (the silent 'your auth fix also writes payments' catch); a named one → 'clean'" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

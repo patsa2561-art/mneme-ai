@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -59,6 +59,16 @@ describe("cross_layer_graph", () => {
     expect(diffBlastMarkdown(b)).toContain("Blast Radius");
     expect(diffBlastMarkdown(b)).toContain("Wallet");
   });
+  it("agent blast-check: flags a touched table the request didn't mention; clean when it did", () => {
+    const g = buildCrossLayerGraph(FILES);
+    const diff = "--- a/auth.ts\n+++ b/auth.ts\n@@ -5,2 +5,3 @@ export function createUserWallet(uid) {\n   return prisma.wallet.create({ data: { uid } });\n+  log(uid);\n }";
+    const surprise = agentBlastCheck(g, diff, "fix the login redirect");      // never mentions wallet
+    expect(surprise.verdict).toBe("review");
+    expect(surprise.surpriseTables.map((t) => t.name)).toContain("Wallet");
+    const clean = agentBlastCheck(g, diff, "tweak the user wallet creation");  // mentions wallet
+    expect(clean.verdict).toBe("clean");
+  });
+
   it("PR blast radius never throws on garbage", () => {
     expect(() => diffBlastRadius(null as never, "garbage")).not.toThrow();
     expect(() => parseChangedSymbols(null as never)).not.toThrow();
