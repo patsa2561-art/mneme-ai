@@ -105,6 +105,54 @@ export function decide(req: ApprovalRequest, state: TrustState, opts: { producti
   return { lane: "conservative", action: "PAGE_HOLD", reason: "unproven or moderate → page + hold for a human (no auto-default)" };
 }
 
+// ── THE DEPUTY — what to do when the human is UNREACHABLE (no tap within the window) ──────────────
+// The pager must never just HANG, and never blanket-DENY everything (that strands safe work). When
+// the human is busy, a risk-calibrated deputy decides — and SIGNS it — exactly like a trusted second
+// who knows the boss's standing orders: proceed on the safe/proven, hold the line on the irreversible.
+export interface DeputyPolicy { allowDestructiveOnTimeout?: boolean; moderateTrust?: number; minSamples?: number }
+export type DeputyBasis = "read-only" | "proven-class" | "failsafe-unproven" | "failsafe-destructive" | "config-override" | "no-request";
+export interface DeputyVerdict { decision: "allow" | "deny"; reason: string; basis: DeputyBasis }
+/**
+ * Decide an unattended timeout. HONEST + SAFE by construction:
+ *  • safe / read-only            → ALLOW  (don't strand low-impact work while the human is away)
+ *  • moderate + PROVEN class      → ALLOW  (the human has approved this class enough — Wilson-LB ≥ threshold)
+ *  • moderate + no track record   → DENY   (fail-safe; it learns once the human decides it a few times)
+ *  • destructive (rm -rf, DROP…)  → DENY   (the irreversible is NEVER auto-approved on a missed tap —
+ *                                           unless the operator EXPLICITLY opts in, which is loudly risky)
+ */
+export function deputyDecide(req: ApprovalRequest, state: TrustState, policy: DeputyPolicy = {}): DeputyVerdict {
+  if (!req || typeof req !== "object") return { decision: "deny", reason: "no request → fail-safe deny", basis: "no-request" };
+  const moderateTrust = policy.moderateTrust ?? 0.7, minSamples = policy.minSamples ?? 5;
+  if (req.blast === "destructive") {
+    if (policy.allowDestructiveOnTimeout) return { decision: "allow", reason: "destructive auto-approved on timeout (operator explicitly opted in — this is risky)", basis: "config-override" };
+    return { decision: "deny", reason: "destructive + you were unreachable → kept SAFE (auto-deny). The irreversible is never auto-approved on a missed tap.", basis: "failsafe-destructive" };
+  }
+  if (req.blast === "safe") return { decision: "allow", reason: "read-only / low-impact + you were busy → Deputy auto-approved (signed). Nothing irreversible.", basis: "read-only" };
+  const c = state?.classes?.[req.klass]; const n = (c?.approvals ?? 0) + (c?.denials ?? 0); const t = classTrust(state, req.klass);
+  if (n >= minSamples && t >= moderateTrust) return { decision: "allow", reason: `you've approved this class ${(t * 100) | 0}% over ${n} times → Deputy auto-approved (proven standing order)`, basis: "proven-class" };
+  return { decision: "deny", reason: "moderate + no track record yet + you were unreachable → kept safe (auto-deny). Decide it a few times and the Deputy will learn to let it through.", basis: "failsafe-unproven" };
+}
+export interface DeputyGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
+export function deputyGauntlet(): DeputyGauntlet {
+  const mk = (blast: Blast, klass = "k"): ApprovalRequest => ({ id: "x", rawCommand: "c", summary: "c", agent: "a", session: "s", klass, blast, nonce: "n", createdAt: 0, ttlMs: 0 } as unknown as ApprovalRequest);
+  const empty = emptyTrust();
+  let proven = empty; for (let i = 0; i < 12; i++) proven = updateTrust(proven, "k", "approved");
+  const safe = deputyDecide(mk("safe"), empty);
+  const destr = deputyDecide(mk("destructive"), proven);                 // even a "proven" destructive class → deny
+  const destrOptIn = deputyDecide(mk("destructive"), empty, { allowDestructiveOnTimeout: true });
+  const modUnproven = deputyDecide(mk("moderate"), empty);
+  const modProven = deputyDecide(mk("moderate"), proven);
+  const checks = [
+    { name: "SAFE-ALLOW", pass: safe.decision === "allow" && safe.basis === "read-only", detail: "read-only work proceeds when the human is away" },
+    { name: "DESTRUCTIVE-FAILSAFE", pass: destr.decision === "deny" && destr.basis === "failsafe-destructive", detail: "irreversible is NEVER auto-approved on a missed tap (even a proven class)" },
+    { name: "DESTRUCTIVE-OPT-IN", pass: destrOptIn.decision === "allow" && destrOptIn.basis === "config-override", detail: "only an explicit operator opt-in can auto-approve destructive — loudly risky" },
+    { name: "MODERATE-UNPROVEN-DENY", pass: modUnproven.decision === "deny", detail: "moderate with no track record → fail-safe deny (learns later)" },
+    { name: "MODERATE-PROVEN-ALLOW", pass: modProven.decision === "allow" && modProven.basis === "proven-class", detail: "moderate becomes auto-allow once the class is proven (standing order)" },
+    { name: "TOTAL", pass: (() => { try { deputyDecide(null as never, null as never); return true; } catch { return false; } })(), detail: "null/garbage never throws" },
+  ];
+  return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
+}
+
 /** Update class trust from an outcome. Approve raises; deny/regret lowers (demotes the lane). */
 export function updateTrust(state: TrustState, klass: string, outcome: "approved" | "denied" | "regret"): TrustState {
   const s: TrustState = { v: 1, classes: { ...(state?.classes ?? {}) } };
@@ -142,7 +190,7 @@ export function batchView(pendings: ReadonlyArray<Pending>): { safe: Pending[]; 
 
 // ─── Diamond 4: COURT-ADMISSIBLE RECEIPT ──────────────────────────────────────
 export interface ApprovalReceipt {
-  reqId: string; commandHash: string; decision: "allow" | "deny"; decidedBy: "human" | "policy-auto" | "deadman";
+  reqId: string; commandHash: string; decision: "allow" | "deny"; decidedBy: "human" | "policy-auto" | "deadman" | "deputy";
   channel: string; lane: Lane; ts: number; receiptHash: string;
 }
 export function buildReceipt(req: ApprovalRequest, decision: "allow" | "deny", decidedBy: ApprovalReceipt["decidedBy"], channel: string, lane: Lane, ts: number): ApprovalReceipt {

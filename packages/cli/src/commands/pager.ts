@@ -59,7 +59,7 @@ const dir = (cwd: string) => join(cwd, ".mneme", "pager");
 const cfgPath = (cwd: string) => join(dir(cwd), "config.json");
 const statePath = (cwd: string) => join(dir(cwd), "state.json");
 
-interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string; keryxRelay?: string }
+interface PagerConfig { telegramToken?: string; chatId?: string; mode?: string; wakeIntervalMin?: number; ttlMs?: number; lineToken?: string; lineTo?: string; httpPort?: number; attend?: string; keryxRelay?: string; deputyMs?: number; deputyAllowDestructive?: boolean }
 interface PagerState { trust: pager.TrustState; pendings: PagerPending[]; usedNonces: string[]; receipts: pager.ApprovalReceipt[]; decisions?: pager.HumanDecisionRecord[]; answers?: Record<string, string>; speculative?: Record<string, preflight.SpeculativeEntry>; classStats?: Record<string, { seen: number; succeeded: number; recentFails: number }>; surfaces?: Record<string, Array<{ provider: string; messageId: string }>>; clearedSurfaces?: Record<string, string[]> }
 type PagerPending = pager.Pending & { tgMessageId?: number };
 
@@ -543,7 +543,17 @@ export function registerPagerCommands(program: Command): void {
       })();
       // DUAL-SURFACE BLOCK-AND-WAIT: poll state.answers[id] — written by the phone (daemon) OR
       // a local `mneme pager approve <id>`. First to answer wins. Dead-man default on TTL.
-      const ttl = cfg.ttlMs ?? 5 * 60_000; const deadline = Date.now() + ttl; let n = 0;
+      // THE DEPUTY WINDOW — how long we wait for a human tap before Mneme decides for itself.
+      // Default 60s (the user's ask: "if no tap in 1 minute, decide"). Risk-calibrated + signed:
+      // safe→allow, moderate-proven→allow, moderate-unproven→deny, destructive→keep-safe deny.
+      const deputyMs = (cfg as { deputyMs?: number }).deputyMs ?? 60_000;
+      const deadline = Date.now() + deputyMs; let n = 0;
+      // ── SURFACE IN THE AI CHAT (not just the phone): Claude Code shows hook stderr to the user,
+      // so they SEE they were paged + that the Deputy will auto-decide — instead of a silent freeze.
+      try {
+        const surfaces = ["the computer", cfg.telegramToken && cfg.chatId ? "Telegram" : "", ...Object.keys(keryxProviders(cwd))].filter(Boolean).join(" · ");
+        process.stderr.write(`📟 Mneme paged you (${surfaces}) for: ${command.slice(0, 80)}\n   Tap approve/deny on any of them. If no tap in ${Math.round(deputyMs / 1000)}s, the Deputy auto-decides by risk (safe→allow · destructive→kept-safe deny).\n`);
+      } catch { /* */ }
       const settle = async (answer: "allow" | "deny", answeredOn: string, reason: string) => {
         await clearOthersFor(cwd, cfg, req.id, answeredOn);   // authoritative: clear EVERY other surface, idempotent across processes
         // ── THE SECRETARY: post the agent-received RECEIPT so the human SEES the agent got it 100% ──
@@ -565,12 +575,39 @@ export function registerPagerCommands(program: Command): void {
         if (ans === "allow") { emit("allow", "approved by the human"); return; }
         if (ans === "deny") { emit("deny", "denied by the human"); return; }
         if (Date.now() > deadline) {
-          if (blast === "destructive") { resolvePending(cwd, req.id, "deny", "deadman", "policy", Date.now()); await settle("deny", "", "dead-man: destructive timed out unattended → DENY"); return; }
-          emit("ask", "no answer in time → defer to Claude Code's own prompt"); return;
+          // ── THE DEPUTY: human unreachable → Mneme makes a SIGNED, risk-calibrated decision instead
+          // of hanging or blanket-denying. Then it tells EVERY surface (phone + computer + AI chat).
+          const stNow = loadState(cwd);
+          const verdict = pager.deputyDecide(req, stNow.trust, { allowDestructiveOnTimeout: (cfg as { deputyAllowDestructive?: boolean }).deputyAllowDestructive });
+          resolvePending(cwd, req.id, verdict.decision, "deputy", "policy", Date.now());
+          try { const s = loadState(cwd); s.trust = pager.updateTrust(s.trust, klass, verdict.decision === "allow" ? "approved" : "denied"); saveState(cwd, s); } catch { /* */ }
+          try { notary.issueReceipt(cwd, { kind: "claim-verdict", subject: `deputy:${verdict.decision}`, payload: { command: command.slice(0, 120), basis: verdict.basis }, includePayload: true, issuedAt: Date.now() }); } catch { /* */ }
+          // BROADCAST the deputy's decision to every provider so no surface is left hanging on stale buttons.
+          const line = `🧠 Deputy — no tap in ${Math.round(deputyMs / 1000)}s → ${verdict.decision.toUpperCase()}: ${verdict.reason}`;
+          if (cfg.telegramToken && cfg.chatId) { try { await tg(cfg.telegramToken, "sendMessage", { chat_id: cfg.chatId, text: line }); } catch { /* */ } }
+          for (const [prov, pcfg] of Object.entries(keryxProviders(cwd))) { try { await clearMessage(prov, pcfg, line, req.agent); } catch { /* */ } }
+          await settle(verdict.decision, "", line);   // clears buttons on all surfaces, emits to the AI chat
+          return;
         }
         if (++n % 20 === 0) ensureDaemon(cwd);    // keep the daemon alive while we wait
         await new Promise((r) => setTimeout(r, 500));   // snappy ~realtime local pickup
       }
+    });
+
+  p.command("deputy").description("🧠 THE DEPUTY — what Mneme does when YOU don't tap. No tap within the window → a SIGNED, risk-calibrated decision (safe→allow · proven-class→allow · unproven→deny · destructive→kept-safe deny) instead of hanging forever. Set the window or (riskily) opt into auto-approving destructive.")
+    .option("--window <seconds>", "seconds to wait for your tap before the Deputy decides (default 60)")
+    .option("--allow-destructive", "DANGER: auto-APPROVE destructive commands (rm -rf, DROP…) on timeout. Off by default — the irreversible should never auto-run unattended.")
+    .option("--safe-destructive", "undo --allow-destructive (back to the safe default: destructive auto-DENIES on timeout)")
+    .action((o: { window?: string; allowDestructive?: boolean; safeDestructive?: boolean }) => {
+      const cwd = process.cwd(); const cfg = loadCfg(cwd);
+      if (o.window !== undefined) { const s = Math.max(5, parseInt(o.window, 10) || 60); cfg.deputyMs = s * 1000; }
+      if (o.allowDestructive) cfg.deputyAllowDestructive = true;
+      if (o.safeDestructive) cfg.deputyAllowDestructive = false;
+      mkdirSync(dir(cwd), { recursive: true }); writeFileSync(cfgPath(cwd), JSON.stringify(cfg, null, 2), "utf8");
+      const win = Math.round((cfg.deputyMs ?? 60_000) / 1000);
+      out(`🧠 Deputy window: ${win}s${o.window === undefined && o.allowDestructive === undefined && o.safeDestructive === undefined ? " (current)" : " ✓ saved"}`);
+      out(`   destructive on timeout: ${cfg.deputyAllowDestructive ? "⚠ AUTO-APPROVE (you opted in — risky)" : "kept-safe AUTO-DENY (recommended)"}`);
+      out(`   on timeout: safe→allow · moderate-proven→allow · moderate-unproven→deny · destructive→${cfg.deputyAllowDestructive ? "allow" : "deny"} — all signed + broadcast to every surface.`);
     });
 
   p.command("doctor").description("🩺 SELF-CHECK — is the pager daemon alive? Auto-restart it if not. (Run by the hook automatically; here for manual peace of mind.)")

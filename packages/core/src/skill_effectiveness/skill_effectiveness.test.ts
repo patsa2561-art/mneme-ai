@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
 import { recordUse, scoreSkill, rankSkills, skillGauntlet } from "./index.js";
+import { deputyDecide, deputyGauntlet, emptyTrust, updateTrust } from "../pager/index.js";
+
+describe("pager deputy (timeout decision)", () => {
+  it("gauntlet is 100", () => expect(deputyGauntlet().score).toBe(100));
+  const mk = (blast: "safe" | "moderate" | "destructive") => ({ id: "x", klass: "k", blast } as never);
+  it("safe → allow; destructive → fail-safe deny (even proven)", () => {
+    let proven = emptyTrust(); for (let i = 0; i < 12; i++) proven = updateTrust(proven, "k", "approved");
+    expect(deputyDecide(mk("safe"), emptyTrust()).decision).toBe("allow");
+    expect(deputyDecide(mk("destructive"), proven).decision).toBe("deny");          // irreversible never auto-runs
+  });
+  it("destructive auto-approves ONLY with explicit opt-in", () => {
+    expect(deputyDecide(mk("destructive"), emptyTrust(), { allowDestructiveOnTimeout: true }).decision).toBe("allow");
+  });
+  it("moderate: unproven→deny, proven→allow (learns)", () => {
+    let proven = emptyTrust(); for (let i = 0; i < 12; i++) proven = updateTrust(proven, "k", "approved");
+    expect(deputyDecide(mk("moderate"), emptyTrust()).decision).toBe("deny");
+    expect(deputyDecide(mk("moderate"), proven).decision).toBe("allow");
+  });
+});
 
 describe("skill_effectiveness", () => {
   it("gauntlet is 100", () => expect(skillGauntlet().score).toBe(100));
