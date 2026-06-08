@@ -129,6 +129,27 @@ export function registerLiveCommands(program: Command): void {
       if (!b.changed) out("   (no changed functions resolved to the graph — a non-code or new-file diff)");
       if (b.tables.length) process.exitCode = 2;
     });
+  graph.command("health").description("🩺 GRAPH HEALTH — cross-layer KEYSTONES (a function that's the SOLE writer to a table + has real fan-in = a single point of failure across layers) + ORPHANS (dead-code candidates: functions nothing calls, tables no code touches, endpoints with no handler).")
+    .action(() => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const h = crossLayerGraph.graphHealth(g);
+      out("🩺 Cross-layer graph health:");
+      if (h.keystones.length) { out(`   🔑 KEYSTONES (single point of failure across layers) — ${h.keystones.length}:`); for (const k of h.keystones.slice(0, 12)) out(`      ${k.node.name}${k.node.file ? ` (${k.node.file})` : ""} — ${k.reason}`); }
+      else out("   🔑 no cross-layer keystones (no sole-writer with fan-in).");
+      if (h.orphanTables.length) out(`   🗄  orphan tables (no code reads/writes — dead schema or dynamic): ${h.orphanTables.map((t) => t.name).join(" · ")}`);
+      if (h.orphanEndpoints.length) out(`   🌐 orphan endpoints (no resolved handler): ${h.orphanEndpoints.slice(0, 20).map((e) => `${e.method} ${e.name}`).join(" · ")}`);
+      out(`   ⚙  dead-code candidate functions: ${h.orphanFunctions.length} (nothing in the scanned files calls them — may be exported/entry-points, so candidates not proof)`);
+      out("   honest: candidates to inspect (deterministic), prove-or-unknown — an orphan may be a public API or dynamically called.");
+    });
+  graph.command("benchmark").alias("accuracy").description("📊 EXTRACTOR ACCURACY — measured precision/recall of the cross-layer extractor on a labeled corpus. Reproducible credibility, not a marketing claim.")
+    .action(() => {
+      const b = crossLayerGraph.extractorBenchmark();
+      out("📊 Cross-layer extractor accuracy (labeled corpus, reproducible):");
+      out(`   nodes:  precision ${Math.round(b.nodePrecision * 100)}%  ·  recall ${Math.round(b.nodeRecall * 100)}%`);
+      out(`   edges:  precision ${Math.round(b.edgePrecision * 100)}%  ·  recall ${Math.round(b.edgeRecall * 100)}%  ·  F1 ${b.f1}`);
+      for (const f of b.fixtures) out(`      ${f.name.padEnd(16)} nodes ${f.nodeHit}/${f.nodeExp} · edges ${f.edgeHit}/${f.edgeExp}${f.edgeSpurious ? ` · ${f.edgeSpurious} spurious` : ""}`);
+      out("   honest: measured on common patterns (JS/Prisma · Python/Django · SQLAlchemy · Go/SQL) — extend the corpus to test more.");
+    });
   graph.command("check").description("🚦 AGENT BLAST-CHECK — before applying an edit, flag any DB table / API route / business rule the diff touches that your request never mentioned. --intent \"<the request>\". Exit 2 on 'review' (a surprise) — gate an agent's auto-apply.")
     .requiredOption("--intent <text>", "the user's request, verbatim").option("--base <ref>").option("--staged").option("--depth <n>")
     .action((o: { intent: string; base?: string; staged?: boolean; depth?: string }) => {

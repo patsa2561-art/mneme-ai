@@ -269,6 +269,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.graph.health",
+    category: "audit",
+    description: "🩺 CROSS-LAYER GRAPH HEALTH — the structural risks in a repo: KEYSTONES (a function that's the SOLE writer to a DB table AND has real fan-in = a single point of failure across layers — break it and that table's writes + every endpoint reaching it break) + ORPHANS (dead-code candidates: functions nothing calls, tables no code touches, endpoints with no handler). Deterministic, no LLM. ★HONEST: candidates to inspect (prove-or-unknown) — an orphan may be an exported public API / entry point / dynamically called.",
+    whenToUse: "When auditing a codebase's structural risk, planning a refactor, or onboarding — to find the single-points-of-failure to protect and the dead code to consider removing.",
+    triggers: ["dead code", "single point of failure", "keystone", "what's risky in this repo", "unused tables", "orphan functions", "structural risk"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, _args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const h = core.crossLayerGraph.graphHealth(g);
+      const data = await attest(cwd, { keystones: h.keystones.slice(0, 20).map((k) => ({ name: k.node.name, file: k.node.file, soleWriterOf: k.soleWriterOf, fanIn: k.fanIn, endpoints: k.reachedByEndpoints })), orphanTables: h.orphanTables.map((t) => t.name), orphanEndpoints: h.orphanEndpoints.map((e) => `${e.method} ${e.name}`), deadCodeFunctionCount: h.orphanFunctions.length });
+      return { data, wisdom: `${h.keystones.length} keystone(s)${h.keystones[0] ? ` (top: ${h.keystones[0].node.name})` : ""} · ${h.orphanTables.length} orphan table(s) · ${h.orphanFunctions.length} dead-code candidate function(s)`, followUp: h.keystones.length ? ["protect the keystones: they're sole-writers — a wrong edit breaks that table + its endpoints"] : [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.graph.mermaid",
     category: "audit",
     description: "🕸 CROSS-LAYER GRAPH as a Mermaid flowchart you can SHOW the user inline (renders in chat/Markdown/GitHub). The 4 layers (💼 Business ↔ 🌐 API ↔ ⚙ Code ↔ 🗄 Data) become subgraphs; pass a `name` to draw that node's cross-layer blast radius (the focus is highlighted). Deterministic, no LLM — every node/edge derives from a real repo file. Wrap the returned string in a ```mermaid fence.",

@@ -204,6 +204,46 @@ export function blastRadius(graph: CrossLayerGraph, originId: string, opts?: { m
   return { origin: originId, tables: hit.filter((n) => n.type === "db_table"), endpoints: hit.filter((n) => n.type === "api_endpoint"), functions: hit.filter((n) => n.type === "function"), rules: hit.filter((n) => n.type === "business_rule"), depth, reachable: hit.length };
 }
 
+// ── GRAPH HEALTH — orphans (dead-code candidates) + cross-layer KEYSTONES ───────────────────────
+export interface Keystone { node: GNode; soleWriterOf: string[]; fanIn: number; reachedByEndpoints: number; reason: string }
+export interface GraphHealth { orphanFunctions: GNode[]; orphanTables: GNode[]; orphanEndpoints: GNode[]; keystones: Keystone[] }
+/**
+ * Deterministic health read of the cross-layer graph:
+ *  • ORPHANS — a function nothing references (dead-code CANDIDATE), a db_table no code reads/writes
+ *    (dead schema or dynamic access), an endpoint with no resolved handler. ★Candidates, not proof:
+ *    an "orphan function" may be an exported public API / entry point / dynamically-called (Padgett).
+ *  • KEYSTONES — a function that is the SOLE writer to a table AND has real fan-in (callers/endpoints):
+ *    a single point of failure ACROSS layers — change it wrong and that table's writes break, and every
+ *    endpoint reaching it. The cross-layer cousin of bus-factor.
+ */
+export function graphHealth(graph: CrossLayerGraph): GraphHealth {
+  const nodes = graph?.nodes ?? []; const edges = graph?.edges ?? [];
+  const inCalls = new Map<string, number>(); const handledFns = new Set<string>(); const handledEndpoints = new Set<string>();
+  const tableTouched = new Set<string>(); const writersOf = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.relation === "CALLS") inCalls.set(e.target, (inCalls.get(e.target) ?? 0) + 1);
+    else if (e.relation === "HANDLED_BY") { handledFns.add(e.target); handledEndpoints.add(e.source); }
+    else if (e.relation === "READS" || e.relation === "WRITES_TO") { tableTouched.add(e.target); if (e.relation === "WRITES_TO") { const a = writersOf.get(e.target) ?? []; a.push(e.source); writersOf.set(e.target, a); } }
+  }
+  const fns = nodes.filter((n) => n.type === "function");
+  const orphanFunctions = fns.filter((n) => (inCalls.get(n.id) ?? 0) === 0 && !handledFns.has(n.id)).sort((a, b) => a.name.localeCompare(b.name));
+  const orphanTables = nodes.filter((n) => n.type === "db_table" && !tableTouched.has(n.id)).sort((a, b) => a.name.localeCompare(b.name));
+  const orphanEndpoints = nodes.filter((n) => n.type === "api_endpoint" && !handledEndpoints.has(n.id)).sort((a, b) => a.name.localeCompare(b.name));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const soleWriterTables = new Map<string, string>();   // writerId → list of tables it solely writes
+  const keyMap = new Map<string, Keystone>();
+  for (const [tableId, writers] of writersOf) { const uniq = [...new Set(writers)]; if (uniq.length === 1) { const w = uniq[0]; soleWriterTables.set(w, ((soleWriterTables.get(w) ?? "") + "," + tableId)); } }
+  for (const [writerId, tableCsv] of soleWriterTables) {
+    const node = byId.get(writerId); if (!node) continue;
+    const tables = tableCsv.split(",").filter(Boolean).map((t) => byId.get(t)?.name || t.replace(/^db:/, ""));
+    const fanIn = inCalls.get(writerId) ?? 0; const reachedByEndpoints = edges.filter((e) => e.relation === "HANDLED_BY" && e.target === writerId).length;
+    // a keystone matters only if something actually depends on it (fan-in or an endpoint)
+    if (fanIn + reachedByEndpoints >= 1) keyMap.set(writerId, { node, soleWriterOf: tables, fanIn, reachedByEndpoints, reason: `sole writer to ${tables.map((t) => "'" + t + "'").join(", ")} · reached by ${fanIn} caller(s) + ${reachedByEndpoints} endpoint(s)` });
+  }
+  const keystones = [...keyMap.values()].sort((a, b) => (b.fanIn + b.reachedByEndpoints) - (a.fanIn + a.reachedByEndpoints) || b.soleWriterOf.length - a.soleWriterOf.length);
+  return { orphanFunctions, orphanTables, orphanEndpoints, keystones };
+}
+
 // ── PR / DIFF blast radius — what a whole change set touches across layers ──────────────────────
 export interface DiffChange { file: string; name: string }
 /**
@@ -313,6 +353,66 @@ export function businessCoverage(graph: CrossLayerGraph): BusinessCoverage {
   return { total: rules.length, anchored, orphan, coverageRate: rules.length ? Math.round((anchored.length / rules.length) * 100) / 100 : 0 };
 }
 
+// ── EXTRACTOR ACCURACY BENCHMARK — measured, not claimed ────────────────────────────────────────
+interface BenchFixture { name: string; files: SourceFile[]; nodes: Array<[NodeType, string]>; edges: Array<[string, string, Relation]> }
+const BENCH_CORPUS: BenchFixture[] = [
+  { name: "js-prisma", files: [
+    { path: "schema.prisma", content: "model User { id Int @id }\nmodel Wallet { id Int @id }" },
+    { path: "auth.ts", content: "export function registerHandler(req,res){ prisma.user.create({data:{}}); createWallet(1); }\nexport function createWallet(uid){ return prisma.wallet.create({data:{uid}}); }" },
+    { path: "routes.ts", content: "router.post(\"/register\", registerHandler);" }],
+    nodes: [["function", "registerHandler"], ["function", "createWallet"], ["db_table", "User"], ["db_table", "Wallet"], ["api_endpoint", "/register"]],
+    edges: [["registerHandler", "User", "WRITES_TO"], ["createWallet", "Wallet", "WRITES_TO"], ["/register", "registerHandler", "HANDLED_BY"]] },   // CALLS excluded from the benchmark scope (within-code graph isn't exhaustively labeled)
+  { name: "python-django", files: [
+    { path: "models.py", content: "class Order(models.Model):\n    total = models.IntegerField()" },
+    { path: "views.py", content: "# feature: place order\n@app.post(\"/orders\")\ndef create_order(req):\n    return Order.objects.create(total=req.total)" },
+    { path: "PRD.md", content: "## Feature: place order" }],
+    nodes: [["function", "create_order"], ["db_table", "Order"], ["api_endpoint", "/orders"], ["business_rule", "place order"]],
+    edges: [["create_order", "Order", "WRITES_TO"], ["place order", "create_order", "IMPLEMENTS"]] },
+  { name: "sqlalchemy-read", files: [
+    { path: "schema.sql", content: "CREATE TABLE invoices (id int)" },
+    { path: "svc.py", content: "def list_invoices(session):\n    return session.query(Invoices).all()" }],
+    nodes: [["function", "list_invoices"], ["db_table", "invoices"]],
+    edges: [["list_invoices", "invoices", "READS"]] },
+  { name: "go-sql", files: [
+    { path: "schema.sql", content: "CREATE TABLE users (id int)" },
+    { path: "main.go", content: "func ListUsers() { db.Query(\"SELECT * FROM users\") }" }],
+    nodes: [["function", "ListUsers"], ["db_table", "users"]],
+    edges: [["ListUsers", "users", "READS"]] },
+];
+export interface ExtractorBenchmark { nodePrecision: number; nodeRecall: number; edgePrecision: number; edgeRecall: number; f1: number; fixtures: Array<{ name: string; nodeHit: number; nodeExp: number; edgeHit: number; edgeExp: number; edgeSpurious: number }> }
+/**
+ * Run the cross-layer extractor against a labeled corpus and MEASURE precision/recall of the nodes +
+ * edges it finds. Honest credibility: "the extractor is X% precise / Y% recall on this corpus" — a
+ * reproducible number, not a marketing claim. (Precision counts only cross-layer + IMPLEMENTS edges;
+ * the dense within-code CALLS graph is excluded from precision since the corpus doesn't label it
+ * exhaustively — that would unfairly punish real calls.)
+ */
+export function extractorBenchmark(): ExtractorBenchmark {
+  let nTP = 0, nExp = 0, nFP = 0, eTP = 0, eExp = 0, eFP = 0;
+  const fixtures: ExtractorBenchmark["fixtures"] = [];
+  const crossRel = (r: Relation) => r === "WRITES_TO" || r === "READS" || r === "HANDLED_BY" || r === "IMPLEMENTS";
+  for (const fx of BENCH_CORPUS) {
+    const g = buildCrossLayerGraph(fx.files);
+    const gotNodes = new Set(g.nodes.map((n) => `${n.type}|${lc(n.name)}`));
+    const expNodes = new Set(fx.nodes.map(([t, n]) => `${t}|${lc(n)}`));
+    let fxNodeHit = 0; for (const k of expNodes) if (gotNodes.has(k)) fxNodeHit++;
+    nTP += fxNodeHit; nExp += expNodes.size; for (const k of gotNodes) if (!expNodes.has(k)) nFP++;
+    // edges: resolve names → matched cross-layer/implements edges
+    const nameOf = new Map(g.nodes.map((n) => [n.id, lc(n.name)]));
+    const gotEdges = new Set(g.edges.filter((e) => crossRel(e.relation)).map((e) => `${nameOf.get(e.source)}>${nameOf.get(e.target)}|${e.relation}`));
+    const expEdges = new Set(fx.edges.map(([s, t, r]) => `${lc(s)}>${lc(t)}|${r}`));
+    let fxEdgeHit = 0; for (const k of expEdges) if (gotEdges.has(k)) fxEdgeHit++;
+    let fxSpur = 0; for (const k of gotEdges) if (!expEdges.has(k)) fxSpur++;
+    eTP += fxEdgeHit; eExp += expEdges.size; eFP += fxSpur;
+    fixtures.push({ name: fx.name, nodeHit: fxNodeHit, nodeExp: expNodes.size, edgeHit: fxEdgeHit, edgeExp: expEdges.size, edgeSpurious: fxSpur });
+  }
+  const nodeRecall = nExp ? nTP / nExp : 1, nodePrecision = nTP + nFP ? nTP / (nTP + nFP) : 1;
+  const edgeRecall = eExp ? eTP / eExp : 1, edgePrecision = eTP + eFP ? eTP / (eTP + eFP) : 1;
+  const f1 = edgePrecision + edgeRecall ? (2 * edgePrecision * edgeRecall) / (edgePrecision + edgeRecall) : 0;
+  const r2 = (x: number) => Math.round(x * 100) / 100;
+  return { nodePrecision: r2(nodePrecision), nodeRecall: r2(nodeRecall), edgePrecision: r2(edgePrecision), edgeRecall: r2(edgeRecall), f1: r2(f1), fixtures };
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface CLGGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function crossLayerGauntlet(): CLGGauntlet {
@@ -348,7 +448,13 @@ export function crossLayerGauntlet(): CLGGauntlet {
   const checkClean = agentBlastCheck(g, db, "fix the wallet bonus logic");
   const checkSurprise = agentBlastCheck(g, db, "fix the login redirect");
   const checkOK = checkClean.verdict === "clean" && checkSurprise.verdict === "review" && checkSurprise.surpriseTables.some((t) => t.name === "Wallet");
-  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); return true; } catch { return false; } })();
+  // graph health: createUserWallet is the SOLE writer to Wallet + reached by registerHandler → a keystone
+  const health = graphHealth(g);
+  const healthOK = health.keystones.some((k) => k.node.name === "createUserWallet" && k.soleWriterOf.includes("Wallet")) && Array.isArray(health.orphanFunctions);
+  // extractor accuracy: measured on the labeled corpus (perfect node + cross-layer edge extraction)
+  const bench = extractorBenchmark();
+  const benchOK = bench.nodePrecision === 1 && bench.nodeRecall === 1 && bench.edgeRecall === 1 && bench.edgePrecision === 1;
+  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); graphHealth(null as never); extractorBenchmark(); return true; } catch { return false; } })();
   const checks = [
     { name: "EXTRACT-3-LAYERS", pass: hasTable && hasEndpoint && hasFn, detail: "db_table (Prisma) + api_endpoint (route) + function (decl) all extracted deterministically" },
     { name: "WRITE-EDGE", pass: writeEdge, detail: "function → db_table WRITES_TO (prisma.wallet.create)" },
@@ -360,6 +466,8 @@ export function crossLayerGauntlet(): CLGGauntlet {
     { name: "PROVE-OR-UNKNOWN", pass: bizOrphan, detail: "a rule with NO code anchor stays ORPHAN/UNKNOWN — never a guessed link (Padgett)" },
     { name: "PR-DIFF-BLAST", pass: diffOK && mdOK, detail: "a git diff → the change set's union blast radius across layers (the DB table a PR silently touches) + a Markdown PR comment" },
     { name: "AGENT-BLAST-CHECK", pass: checkOK, detail: "vs the user's intent: a touched table the request didn't name → 'review' (the silent 'your auth fix also writes payments' catch); a named one → 'clean'" },
+    { name: "KEYSTONE+ORPHAN", pass: healthOK, detail: "the sole writer to a table with real fan-in = a cross-layer KEYSTONE (single point of failure); orphan tables/functions = dead-code candidates (prove-or-unknown)" },
+    { name: "EXTRACTOR-ACCURACY", pass: benchOK, detail: "MEASURED on a labeled corpus: node + cross-layer-edge precision/recall (reproducible, not a claim)" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

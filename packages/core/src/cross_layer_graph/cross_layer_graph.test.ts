@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck, graphHealth, extractorBenchmark } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -73,6 +73,23 @@ describe("cross_layer_graph", () => {
     expect(() => diffBlastRadius(null as never, "garbage")).not.toThrow();
     expect(() => parseChangedSymbols(null as never)).not.toThrow();
     expect(diffBlastMarkdown(diffBlastRadius(buildCrossLayerGraph(FILES), "no diff here"))).toContain("No changed functions");
+  });
+
+  it("graph health: keystone (sole writer + fan-in) + orphan detection", () => {
+    const g = buildCrossLayerGraph([
+      ...FILES,
+      { path: "dead.prisma", content: "model AuditLog { id Int @id }" },          // no code touches it → orphan
+    ]);
+    const h = graphHealth(g);
+    expect(h.keystones.some((k) => k.node.name === "createUserWallet" && k.soleWriterOf.includes("Wallet"))).toBe(true);
+    expect(h.orphanTables.map((t) => t.name)).toContain("AuditLog");
+  });
+  it("extractor benchmark is measured + high on the labeled corpus", () => {
+    const b = extractorBenchmark();
+    expect(b.nodeRecall).toBe(1);
+    expect(b.edgePrecision).toBe(1);
+    expect(b.edgeRecall).toBe(1);
+    expect(b.fixtures.length).toBeGreaterThanOrEqual(4);
   });
 
   it("multi-language: Go func + Rust fn are extracted", () => {
