@@ -88,8 +88,10 @@ fi
 caddy validate --config "\$f" >/dev/null 2>&1 || { echo "Caddyfile validate failed — not reloading"; exit 1; }
 caddy reload --config "\$f" 2>/dev/null || systemctl reload caddy
 
-sleep 2
-code=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/api/health || echo 000)
+# health: retry — a heavy server can take several seconds to bind after restart, so a single
+# immediate curl gives a false 000. Poll for up to ~20s.
+code=000
+for i in \$(seq 1 20); do code=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$PORT/api/health || echo 000); [ "\$code" = "200" ] && break; sleep 1; done
 echo "  local health: \$code"
 systemctl is-active --quiet mneme-cosmic && echo "  ✓ mneme-cosmic STILL running (untouched)" || echo "  (cosmic not present)"
 REMOTE
