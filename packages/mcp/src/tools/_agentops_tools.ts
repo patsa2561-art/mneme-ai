@@ -269,6 +269,51 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.scope.verify",
+    category: "audit",
+    description: "🤝 SCOPE COVENANT (world-first) — verify an autonomous edit stayed within the architectural scope it DECLARED. Pass your `intent` + an `allow` scope ({files, tables, endpoints}) + the `diff` (or a `base` ref). Mneme computes the ACTUAL cross-layer blast radius from the deterministic graph and returns HONORED, or BREACHED naming the exact unpromised file / DB table / API endpoint the edit reached — a SIGNED, offline-verifiable verdict a reviewer/CI/another agent trusts without re-running. The verdict also accrues into your cross-vendor Scope-Fidelity track record. The accountability layer autonomous agents lack: proof you kept your architectural word. ★HONEST: proves STRUCTURAL scope (files + cross-layer nodes reached) vs declared — deterministic, not runtime correctness.",
+    whenToUse: "BEFORE you commit/apply an autonomous multi-file edit (or in CI on a PR): declare the scope you promised the user and confirm the diff didn't silently reach beyond it.",
+    triggers: ["did i stay in scope", "verify my scope", "scope covenant", "did the edit overreach", "is this within scope", "scope check"],
+    inputSchema: { type: "object", properties: { intent: { type: "string" }, allow: { type: "object", properties: { files: { type: "array", items: { type: "string" } }, tables: { type: "array", items: { type: "string" } }, endpoints: { type: "array", items: { type: "string" } } } }, diff: { type: "string" }, base: { type: "string" }, agent: { type: "string" } }, required: ["intent"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let diff = String(args["diff"] ?? "");
+      if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const agent = String(args["agent"] ?? "agent");
+      const v = core.scopeCovenant.verifyScope(g, diff, { agent, intent: String(args["intent"] ?? ""), allow: (args["allow"] as never) ?? {} });
+      // accrue into the cross-vendor scope-fidelity ledger (skip EMPTY)
+      if (v.verdict !== "EMPTY") { try { fs.mkdirSync(path.join(cwd, ".mneme", "scope"), { recursive: true }); fs.appendFileSync(path.join(cwd, ".mneme", "scope", "ledger.jsonl"), JSON.stringify({ agent, honored: v.honored, at: Date.now() }) + "\n", "utf8"); } catch { /* */ } }
+      const data = await attest(cwd, { verdict: v.verdict, honored: v.honored, reason: v.reason, breachFiles: v.breachFiles, breachTables: v.breachTables, breachEndpoints: v.breachEndpoints, reachedTables: v.reachedTables, reachedEndpoints: v.reachedEndpoints });
+      return { data, wisdom: v.verdict === "BREACHED" ? `⚠️ BREACHED — ${v.reason}` : v.verdict === "EMPTY" ? "empty diff — nothing to verify" : "✓ HONORED — the edit stayed within the declared scope", followUp: v.verdict === "BREACHED" ? [v.breachTables.length ? "an unpromised DB table was reached — surface to the human before committing" : "the edit overreached its declared scope — narrow it or re-declare"] : [], confidence: ok() };
+    },
+  },
+  {
+    name: "mneme.scope.fidelity",
+    category: "audit",
+    description: "🤝 SCOPE FIDELITY — the cross-vendor track record of how faithfully each agent keeps the architectural scope it promises (Wilson 95% lower bound over its signed scope-covenant verdicts). EXEMPLARY / RELIABLE / WOBBLY / UNTRUSTED / UNPROVEN. A portable trust signal grounded in real structural evidence — use it to decide which agent to grant more autonomy. Pass `agent` for one, omit for the ranking.",
+    whenToUse: "When deciding how much autonomy to grant an agent, or comparing agents/vendors — ask who actually stays within the scope they declare.",
+    triggers: ["which agent keeps scope", "scope fidelity", "agent trust score", "who overreaches", "rank agents by scope"],
+    inputSchema: { type: "object", properties: { agent: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let led: { agent: string; honored: boolean; at: number }[] = [];
+      try { led = fs.readFileSync(path.join(cwd, ".mneme", "scope", "ledger.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { /* */ }
+      const agent = args["agent"] ? String(args["agent"]) : "";
+      const payload = agent ? core.scopeCovenant.scopeFidelity(led, agent) : core.scopeCovenant.rankFidelity(led);
+      const data = await attest(cwd, { fidelity: payload as never });
+      const top = Array.isArray(payload) ? payload[0] : payload;
+      return { data, wisdom: !led.length ? "no scope-covenant verdicts recorded yet — run mneme.scope.verify first" : Array.isArray(payload) ? `${payload.length} agent(s) tracked${top ? ` · top: ${top.agent} (${top.band}, ${Math.round(top.rateLB * 100)}% floor)` : ""}` : `${payload.agent}: ${payload.band} · ${Math.round(payload.rateLB * 100)}% scope-fidelity floor (${payload.honored}/${payload.total})`, followUp: [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.graph.health",
     category: "audit",
     description: "🩺 CROSS-LAYER GRAPH HEALTH — the structural risks in a repo: KEYSTONES (a function that's the SOLE writer to a DB table AND has real fan-in = a single point of failure across layers — break it and that table's writes + every endpoint reaching it break) + ORPHANS (dead-code candidates: functions nothing calls, tables no code touches, endpoints with no handler). Deterministic, no LLM. ★HONEST: candidates to inspect (prove-or-unknown) — an orphan may be an exported public API / entry point / dynamically called.",

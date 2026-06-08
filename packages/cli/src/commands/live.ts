@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -201,6 +201,39 @@ export function registerLiveCommands(program: Command): void {
       if (br.functions.length) out(`   ⚙  functions (${br.functions.length}): ${br.functions.slice(0, 25).map((f) => f.name).join(" · ")}${br.functions.length > 25 ? " …" : ""}`);
       if (!br.reachable) out("   (nothing coupled — isolated node)");
       out("   honest: reachable COUPLING to inspect (deterministic), not a proven runtime break.");
+    });
+
+  // ── SCOPE COVENANT — verify an edit stayed within its declared architectural scope (signed track record)
+  const scope = program.command("scope").description("🤝 SCOPE COVENANT (world-first) — verify an autonomous edit stayed within the scope it DECLARED, and track each agent's cross-vendor scope-fidelity. The accountability layer autonomous agents lack.");
+  const scopeLedgerPath = (cwd: string) => join(cwd, ".mneme", "scope", "ledger.jsonl");
+  const loadScope = (cwd: string): scopeCovenant.ScopeRecord[] => { try { return _rf(scopeLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
+  scope.command("verify").description("Verify the current diff against a declared scope. Exit 2 on BREACHED.")
+    .requiredOption("--intent <text>", "what you promised to do").option("--allow-files <globs>", "comma-separated file globs you're allowed to touch").option("--allow-tables <names>", "comma-separated DB tables you're allowed to reach").option("--allow-endpoints <paths>", "comma-separated API routes").option("--base <ref>").option("--staged").option("--agent <id>")
+    .action((o: { intent: string; allowFiles?: string; allowTables?: string; allowEndpoints?: string; base?: string; staged?: boolean; agent?: string }) => {
+      const cwd = process.cwd();
+      const args = o.base ? ["diff", "--unified=0", `${o.base}...HEAD`] : o.staged ? ["diff", "--unified=0", "--cached"] : ["diff", "--unified=0", "HEAD"];
+      const diff = String(spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const agent = o.agent ?? "agent";
+      const split = (s?: string) => (s ? s.split(",").map((x) => x.trim()).filter(Boolean) : undefined);
+      const v = scopeCovenant.verifyScope(g, diff, { agent, intent: o.intent, allow: { files: split(o.allowFiles), tables: split(o.allowTables), endpoints: split(o.allowEndpoints) } });
+      if (v.verdict !== "EMPTY") { try { mkdirSync(join(cwd, ".mneme", "scope"), { recursive: true }); appendFileSync(scopeLedgerPath(cwd), JSON.stringify({ agent, honored: v.honored, at: Date.now() }) + "\n", "utf8"); } catch { /* */ } }
+      if (v.verdict === "HONORED") { out(`🤝 HONORED — the edit stayed within the declared scope (${v.changedFiles.length} file(s); reached ${v.reachedTables.length} table(s), ${v.reachedEndpoints.length} endpoint(s)).`); return; }
+      if (v.verdict === "EMPTY") { out("(empty diff — nothing to verify)"); return; }
+      out(`🤝 BREACHED — ${v.reason}`);
+      if (v.breachFiles.length) out(`   📄 unpromised files: ${v.breachFiles.join(" · ")}`);
+      if (v.breachTables.length) out(`   🗄  unpromised tables: ${v.breachTables.join(" · ")}`);
+      if (v.breachEndpoints.length) out(`   🌐 unpromised endpoints: ${v.breachEndpoints.join(" · ")}`);
+      process.exitCode = 2;
+    });
+  scope.command("fidelity [agent]").description("Cross-vendor scope-fidelity: how faithfully each agent keeps the scope it declares (Wilson-LB).")
+    .action((agent: string | undefined) => {
+      const cwd = process.cwd(); const led = loadScope(cwd);
+      if (!led.length) { out("no scope-covenant verdicts yet. Run: mneme scope verify --intent \"...\" --allow-files ..."); return; }
+      if (agent) { const f = scopeCovenant.scopeFidelity(led, agent); out(`🤝 ${f.agent}: ${f.band} · ${Math.round(f.rateLB * 100)}% scope-fidelity floor (${f.honored}/${f.total} honored)`); return; }
+      out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
+      for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
+      out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
     });
 
   const skill = program.command("skill").description("🧩 VERIFIED SKILLS — beyond a skill registry: rank skills by MEASURED effectiveness (did using it lead to success?), not popularity. Pairs with `mneme skillscan` (safe install) + LIVE PROOF (outcomes).");
