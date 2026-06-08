@@ -264,6 +264,38 @@ export function registerLiveCommands(program: Command): void {
       }
     });
 
+  program.command("review").alias("checkup").description("🔍 THE ONE COMMAND — a full Codebase Accountability Report in one shot: cross-layer graph + risk hotspots + authz gaps + untested keystones. (Add --base <ref> for a CHANGE report on a PR: blast radius + commit honesty.) The front door to Mneme's whole cross-layer suite.")
+    .option("--base <ref>", "review a PR diff vs this ref instead of the whole repo").option("--message <m>", "the PR's commit message (for the honesty check)")
+    .action((o: { base?: string; message?: string }) => {
+      const cwd = process.cwd(); const files = scanWithDocs(cwd); const g = crossLayerGraph.buildCrossLayerGraph(files);
+      const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
+      out("┌─────────────────────────────────────────────────────────────");
+      out("│ 🔍 MNEME — CODEBASE ACCOUNTABILITY REPORT");
+      out("│    deterministic · no LLM · every finding traces to a real file");
+      out("└─────────────────────────────────────────────────────────────");
+      out(`🕸 Cross-layer graph: ⚙ ${byType("function")} functions · 🗄 ${byType("db_table")} tables · 🌐 ${byType("api_endpoint")} endpoints · 💼 ${byType("business_rule")} rules`);
+      if (o.base) {
+        const diff = String(spawnSync("git", ["diff", "--unified=0", `${o.base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
+        const b = crossLayerGraph.diffBlastRadius(g, diff);
+        out(`\n🔀 CHANGE BLAST RADIUS (vs ${o.base}): ${b.changed} fn(s) → 🗄 ${b.tables.length} tables · 🌐 ${b.endpoints.length} endpoints · 💼 ${b.rules.length} rules`);
+        if (b.tables.length) out(`     tables touched: ${b.tables.map((t) => t.name).join(", ")}`);
+        if (o.message) { const m = intentImpact.intentImpactMismatch(g, diff, o.message); out(`🏷 Commit honesty: ${m.mismatch ? "⚠️ MISMATCH — " + m.reason : "✓ message matches impact"}`); }
+        const cg = testGap.changeTestGap(files, diff);
+        if (cg.untestedKeystones.length) out(`🧪 Untested in this change: ${cg.untestedKeystones.join(", ")}`);
+        out("");
+      }
+      const risk = riskHotspots.riskHotspots(files, { top: 5 }); const rsum = riskHotspots.riskSummary(risk);
+      out(`\n🎯 RISK HOTSPOTS — ${rsum.critical} CRITICAL · ${rsum.high} HIGH:`);
+      if (risk.length) for (const h of risk) out(`   ${h.band === "CRITICAL" ? "🔴" : h.band === "HIGH" ? "🟠" : "🟡"} ${h.name} — ${h.factors[0]}`);
+      else out("   ✓ none (no keystones or authz gaps)");
+      const authz = authzGap.authzVerdict(authzGap.authzGaps(g));
+      out(`\n🔒 AUTHZ: ${authz.clear ? "✓ no unguarded sensitive-write path" : `⚠️ ${authz.count} unguarded write-path(s) to [${authz.worstTables.join(", ")}]`}`);
+      const tg = testGap.analyzeTestGap(files);
+      out(`🧪 TEST GAP: ${tg.uncoveredKeystones.length} untested keystone(s)${tg.uncoveredKeystones[0] ? ` (e.g. ${tg.uncoveredKeystones[0].node.name})` : ""} · keystone coverage ${tg.coveredKeystones}/${tg.totalKeystones}`);
+      out("\n→ drill in: mneme risk · mneme authz · mneme testgap · mneme graph view <fn> · mneme graph reverse <table>");
+      out("  on a PR/CI: mneme review --base origin/main  ·  mneme graph pr --markdown");
+    });
+
   program.command("risk").description("🎯 RISK HOTSPOTS — the ONE ranked list of the riskiest things in this codebase (keystones × untested × sensitive × authz-gaps, fused). The single answer to 'what should I guard first?'.")
     .option("--top <n>", "show the top N (default 15)").action((o: { top?: string }) => {
       const cwd = process.cwd(); const files = scanWithDocs(cwd);

@@ -289,6 +289,31 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.review",
+    category: "audit",
+    description: "🔍 CODEBASE ACCOUNTABILITY REPORT — the ONE call that runs Mneme's whole cross-layer suite on the repo: the graph (functions↔tables↔endpoints↔rules) + RISK HOTSPOTS + AUTHZ gaps + untested KEYSTONES, in one structured result. (Pass a `base` ref for a CHANGE report on a PR: blast radius + untested-in-change.) The front door — call this first to get the full deterministic picture, then drill in with the specific tools.",
+    whenToUse: "When asked for an overall codebase health/risk review, or onboarding to a repo — get the whole picture in one call before drilling into specific tools.",
+    triggers: ["review this codebase", "full report", "codebase health", "audit the repo", "accountability report", "overall risk"],
+    inputSchema: { type: "object", properties: { base: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
+      const risk = core.riskHotspots.riskHotspots(files, { top: 5 }); const rsum = core.riskHotspots.riskSummary(risk);
+      const authz = core.authzGap.authzVerdict(core.authzGap.authzGaps(g));
+      const tg = core.testGap.analyzeTestGap(files);
+      let change: Record<string, unknown> | null = null;
+      if (args["base"]) { try { const diff = cp.spawnSync("git", ["diff", "--unified=0", `${String(args["base"])}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; const b = core.crossLayerGraph.diffBlastRadius(g, diff); const cg = core.testGap.changeTestGap(files, diff); change = { tablesTouched: b.tables.map((t) => t.name), endpointsTouched: b.endpoints.map((e) => `${e.method} ${e.name}`), untestedKeystones: cg.untestedKeystones }; } catch { /* */ } }
+      const data = await attest(cwd, { graph: { functions: byType("function"), tables: byType("db_table"), endpoints: byType("api_endpoint"), rules: byType("business_rule") }, risk: { critical: rsum.critical, high: rsum.high, top: risk.map((h) => ({ name: h.name, band: h.band, factor: h.factors[0] })) }, authz: { clear: authz.clear, count: authz.count, exposedTables: authz.worstTables }, testGap: { untestedKeystones: tg.uncoveredKeystones.map((k) => k.node.name), keystoneCoverage: `${tg.coveredKeystones}/${tg.totalKeystones}` }, change });
+      return { data, wisdom: `graph ${byType("function")} fns/${byType("db_table")} tables · ${rsum.critical} CRITICAL + ${rsum.high} HIGH risk · authz ${authz.clear ? "clean" : authz.count + " gap(s)"} · ${tg.uncoveredKeystones.length} untested keystone(s)`, followUp: rsum.critical || !authz.clear ? ["drill into the CRITICAL findings: mneme.risk.hotspots / mneme.authz.scan"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.risk.hotspots",
     category: "audit",
     description: "🎯 RISK HOTSPOTS — the ONE ranked answer: 'what is the riskiest thing in this codebase to be careful with?'. Fuses the cross-layer suite's deterministic signals no other tool unifies — a KEYSTONE (sole writer to a table) that is ALSO UNTESTED and ALSO writes a SENSITIVE table and has high fan-in = the scariest node; an endpoint with an AUTHZ GAP = a security hotspot. One weighted score, one ranking, every contributing factor shown (CRITICAL/HIGH/MEDIUM). ★HONEST: a transparent weighted composite of signals (each gauntlet-tested) — a PRIORITIZATION of where to look, not a proof of a bug.",

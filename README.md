@@ -247,6 +247,18 @@ mneme polygraph autosetup   # browser truth-dots (optional)
 **🏛 The Agent Governor** — set a Charter once; your AI agents run inside it 24/7 as a continuous **auto-operation batch**; you approve only the genuinely-irreversible escalations. The signed governance kernel that sits *under* any orchestrator (Claude Code · Cursor · Astra · AutoGen).
 **→ <a href="docs/AGENT-GOVERNOR.md" target="_blank" rel="noopener">How a CEO uses it (commands + agent wiring)</a>**
 
+**🔍 One command — a Codebase Accountability Report.** `npm i -g mneme-ai` then **`mneme review`** maps your repo across layers and prints, in one shot: 🎯 **risk hotspots** (the keystone single-points-of-failure to guard first) · 🔒 **authz gaps** (an endpoint that writes a sensitive table with no auth on the path) · 🧪 **untested keystones** (the scariest, line-coverage-hidden surface). On a PR: `mneme review --base origin/main`. Then drill in — each is its own command and MCP tool your agent calls automatically:
+
+| command | what it answers — *the question nothing else answered* |
+|---|---|
+| `mneme graph reverse <table>` | ⛔ **safe to drop this?** everything that breaks if you remove it (SAFE/RISKY/CRITICAL) |
+| `mneme collision --branches a,b` | 💥 **will these agents/branches collide?** across **different files** — the conflict `git` is blind to |
+| `mneme scope verify` | 🤝 did the agent **stay in the scope it declared?** a signed, cross-vendor *fidelity* record |
+| `mneme commit-check` | 🏷 is this commit **mislabeled?** ("fix typo" that rewrites a payment keystone) |
+| `mneme testgap` · `mneme risk` · `mneme authz` | 🧪🎯🔒 untested keystones · ranked risk · unguarded sensitive writes |
+
+Deterministic · no LLM · signed · works on JS/TS/Python/Go/Rust. The cross-layer **accountability** layer the autonomous-agent era needs — and a vendor can't issue for its own agent. <sub>honest: each is a candidate to inspect, not a proof of a runtime bug.</sub>
+
 **🕸 Cross-Layer Graph — and you can *see* it.** Mneme links **💼 business rules ↔ 🌐 API endpoints ↔ ⚙ code ↔ 🗄 database tables** into one graph (deterministic, no LLM — every edge derives from a real file) so before a change you see what breaks *across layers*: edit a function → which tables it writes **and** which routes reach it. See it as a **🛰 Impact Radar** — *a view no tool has shipped before*: your change sits at the **center**, the four layers fan out as **sectors**, concentric **rings are blast hop-distance**, an animated sweep + pulse ripple outward, and **clicking any node re-centers the radar** — all in one offline, self-contained, signed HTML file (`mneme graph view <name>`).
 
 <a href="https://htmlpreview.github.io/?https://github.com/patsa2561-art/mneme-ai/blob/main/docs/demo/impact-radar.html" target="_blank" rel="noopener"><img src="docs/demo/impact-radar.png" alt="Impact Radar — click to open the live, interactive version" width="100%"></a>
