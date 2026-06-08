@@ -56,6 +56,14 @@
   .thymoslink{display:inline-flex;align-items:center;gap:8px;margin:16px auto 0;padding:9px 16px;border:1px solid var(--line);border-radius:999px;color:var(--ink2);text-decoration:none;font-size:13.5px;font-weight:560;background:var(--soft);transition:border-color .15s,transform .1s}
   .thymoslink:hover{border-color:#d9b8c6;transform:translateY(-1px)}
   .thymoswrap{text-align:center}
+  /* Impact Radar CTA — the one bright, gradient call-to-action */
+  .radarwrap{text-align:center;margin:18px auto 2px}
+  .radarcta{display:inline-flex;align-items:center;gap:10px;padding:13px 24px;border-radius:999px;text-decoration:none;font-size:15px;font-weight:750;color:#04141b;
+    background:linear-gradient(90deg,#22d3ee,#a78bfa);box-shadow:0 6px 22px rgba(34,211,238,.32);transition:transform .12s,box-shadow .15s;letter-spacing:.01em}
+  .radarcta:hover{transform:translateY(-2px) scale(1.015);box-shadow:0 10px 30px rgba(124,140,250,.42)}
+  .radarcta .dot{width:9px;height:9px;border-radius:50%;background:#04141b;box-shadow:0 0 0 4px rgba(4,20,27,.18);animation:radarping 1.8s ease-out infinite}
+  @keyframes radarping{0%{box-shadow:0 0 0 0 rgba(4,20,27,.35)}70%{box-shadow:0 0 0 9px rgba(4,20,27,0)}100%{box-shadow:0 0 0 0 rgba(4,20,27,0)}}
+  .radarsub{display:block;color:var(--sub);font-size:12.5px;margin-top:7px}
   .hint{color:var(--sub);font-size:13.5px;text-align:center;line-height:1.6}
   .hint b{color:var(--ink2);font-weight:560}
   .err{color:var(--red);text-align:center;margin-top:18px;font-size:14.5px}
@@ -479,6 +487,10 @@ document.querySelectorAll(".fontpick button").forEach(function(b){b.addEventList
     <div class="btnhelp">
       <span><b>X-Ray</b> — instant health report: dependencies, secrets, risk &amp; who-to-ask.</span>
       <span><b>📦 AI Pack</b> — bundle the whole repo into one text to paste into any AI chat.</span>
+    </div>
+    <div class="radarwrap">
+      <a class="radarcta" href="/radar" title="Impact Radar — see any repo as a 4-layer map: code ↔ data ↔ api ↔ business"><span class="dot"></span>🛰 See it as an Impact Radar &nbsp;→</a>
+      <span class="radarsub">code ↔ data ↔ api ↔ business in one interactive map · click a node, the blast ripples across every layer</span>
     </div>
     <div class="thymoswrap"><a class="thymoslink" href="/thymos" title="THYMOS — a semantic attention filter that runs in your browser">💗 THYMOS — drowning in a pile? pull what matters to the top (real semantics, in your browser) &nbsp;→</a></div>
     <p class="hint">Every number is <b>reproducible</b> from git, code &amp; package metadata and sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private repo or a local folder with no public URL? Run <code>npx @mneme-ai/xray bridge</code> on your machine — a <b>Scan a local folder</b> box appears here + your code never leaves your computer.</span></p>
