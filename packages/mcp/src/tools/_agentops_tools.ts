@@ -269,6 +269,28 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.commit.check",
+    category: "audit",
+    description: "🏷 INTENT-vs-IMPACT — catch a commit that lies about its own size. Pass the commit `message` + the `diff` (or a `base` ref). If the message CLAIMS a trivial change ('chore', 'fix typo', 'format', 'rename', 'docs'…) but the diff's cross-layer blast radius reaches DB tables / API endpoints / KEYSTONES it never names → MISMATCH (a mislabel / scope-creep hiding a high-risk change behind a trivial-sounding message). Works on existing git history with zero extra input — a commit-honesty audit no other tool does across layers. ★HONEST: a heuristic over the wording + the deterministic blast radius — a likely mislabel to LOOK at, not proof of intent.",
+    whenToUse: "Before committing (or auditing a PR's commits): confirm your trivially-worded commit isn't silently rewriting a payment keystone or touching tables the message doesn't mention.",
+    triggers: ["does my commit message match", "is this commit mislabeled", "intent vs impact", "scope creep in this commit", "commit honesty"],
+    inputSchema: { type: "object", properties: { message: { type: "string" }, diff: { type: "string" }, base: { type: "string" } }, required: ["message"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let diff = String(args["diff"] ?? "");
+      if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const r = core.intentImpact.intentImpactMismatch(g, diff, String(args["message"] ?? ""));
+      const data = await attest(cwd, { mismatch: r.mismatch, severity: r.severity, statedTrivial: r.statedTrivial, reason: r.reason, reachedTables: r.reachedTables, reachedEndpoints: r.reachedEndpoints, keystonesHit: r.keystonesHit });
+      return { data, wisdom: r.mismatch ? `🏷 MISMATCH (${r.severity}) — ${r.reason}` : "✓ the commit message is consistent with its cross-layer impact", followUp: r.mismatch ? ["rewrite the commit message to name what it actually touches (or split the change) — a trivial label is hiding a high-impact edit"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.authz.scan",
     category: "audit",
     description: "🔒 CROSS-LAYER AUTHZ GAP — the highest-stakes hidden bug: an endpoint whose handler reaches a WRITE to a SENSITIVE table (accounts/payments/users/…) with NO auth/guard function anywhere on the call path. Walks endpoint→handler→…→table on the deterministic graph — the cross-layer check linters & per-function SAST can't do. Returns each unguarded write-path. ★HONEST: a security SMELL, not a proven vuln — auth applied as separately-registered MIDDLEWARE is invisible to the call graph, so a flag is a 'review this endpoint's authz FIRST' signal (fast prioritization), not a CVE; sensitive-table + auth-function detection are name-based.",

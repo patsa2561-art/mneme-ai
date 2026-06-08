@@ -365,6 +365,7 @@ export * as scopeCovenant from "./scope_covenant/index.js";
 export * as agentCollision from "./agent_collision/index.js";
 export * as testGap from "./test_gap/index.js";
 export * as authzGap from "./authz_gap/index.js";
+export * as intentImpact from "./intent_impact/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

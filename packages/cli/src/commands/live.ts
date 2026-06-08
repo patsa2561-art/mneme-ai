@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -234,6 +234,20 @@ export function registerLiveCommands(program: Command): void {
       out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
       for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
       out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
+    });
+
+  program.command("commit-check").description("🏷 INTENT-vs-IMPACT — does the commit message match what the change actually touches? Flags a trivial-sounding message ('chore', 'fix typo') that secretly rewrites a keystone or touches unmentioned tables. Exit 2 on mismatch.")
+    .requiredOption("--message <text>", "the commit message").option("--base <ref>").option("--staged")
+    .action((o: { message: string; base?: string; staged?: boolean }) => {
+      const cwd = process.cwd();
+      const args = o.base ? ["diff", "--unified=0", `${o.base}...HEAD`] : o.staged ? ["diff", "--unified=0", "--cached"] : ["diff", "--unified=0", "HEAD"];
+      const diff = String(spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const r = intentImpact.intentImpactMismatch(g, diff, o.message);
+      if (!r.mismatch) { out("🏷 ✓ the commit message is consistent with its cross-layer impact."); return; }
+      out(`🏷 MISMATCH (${r.severity}) — ${r.reason}`);
+      out("   → rename the commit to say what it actually touches, or split it. A trivial label is hiding a high-impact edit.");
+      process.exitCode = 2;
     });
 
   program.command("authz").description("🔒 CROSS-LAYER AUTHZ GAP — endpoints whose handler reaches a WRITE to a SENSITIVE table (accounts/payments/…) with NO auth/guard function on the path. The cross-layer security check linters & per-function SAST can't do. Exit 2 if any gap.")
