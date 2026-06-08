@@ -223,6 +223,29 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.graph.pr",
+    category: "audit",
+    description: "🔀 PR / DIFF BLAST RADIUS — BEFORE you apply a multi-file edit (or to review a PR), find what the WHOLE change set touches across layers. Pass a unified git `diff` (or a `base` ref to diff against HEAD); returns the union blast radius: which 🗄 DB tables, 🌐 API routes & 💼 business rules the changed functions reach — the silent cross-layer impact a per-file view misses. Deterministic, no LLM. Use it to catch 'this edit also touches the payments table' before you ship.",
+    whenToUse: "BEFORE applying a diff that spans multiple files/functions, or when reviewing a PR — to see the cross-layer impact (especially a DB table or endpoint the change touches that the user didn't mention).",
+    triggers: ["what does this pr touch", "blast radius of this diff", "what does this change affect", "review this pr", "cross-layer impact of the diff", "before i apply this"],
+    inputSchema: { type: "object", properties: { diff: { type: "string" }, base: { type: "string" }, depth: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let diff = String(args["diff"] ?? "");
+      if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const b = core.crossLayerGraph.diffBlastRadius(g, diff, { maxDepth: Number(args["depth"]) || 1 });
+      const data = await attest(cwd, { changed: b.changed, tables: b.tables.map((t) => t.name), endpoints: b.endpoints.map((e) => `${e.method} ${e.name}`), rules: b.rules.map((r) => r.name), functionsReached: b.functions.length, markdown: core.crossLayerGraph.diffBlastMarkdown(b) });
+      const cross = b.tables.length + b.endpoints.length + b.rules.length;
+      return { data, wisdom: b.changed ? `diff reaches ${cross} cross-layer node(s): ${b.tables.length} table(s)${b.tables.length ? " [" + b.tables.map((t) => t.name).join(", ") + "]" : ""} · ${b.endpoints.length} endpoint(s) · ${b.rules.length} rule(s)` : "no changed functions resolved to the graph", followUp: b.tables.length ? ["a DB table is touched — check migrations before applying"] : [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.graph.mermaid",
     category: "audit",
     description: "🕸 CROSS-LAYER GRAPH as a Mermaid flowchart you can SHOW the user inline (renders in chat/Markdown/GitHub). The 4 layers (💼 Business ↔ 🌐 API ↔ ⚙ Code ↔ 🗄 Data) become subgraphs; pass a `name` to draw that node's cross-layer blast radius (the focus is highlighted). Deterministic, no LLM — every node/edge derives from a real repo file. Wrap the returned string in a ```mermaid fence.",

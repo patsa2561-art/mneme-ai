@@ -9,7 +9,7 @@ import { existsSync, readFileSync, statSync, mkdirSync, readdirSync, writeFileSy
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
@@ -109,6 +109,25 @@ export function registerLiveCommands(program: Command): void {
           out(`📇 wrote ${outPath} (PNG 1200×630 · fingerprint ${fp}). Drop it in a PR / README / tweet.`);
         } else { writeFileSync(outPath, svg, "utf8"); out(`📇 wrote ${outPath} (SVG 1200×630 · fingerprint ${fp}).`); }
       } catch (e) { out(`✗ could not write: ${(e as Error).message}${/\.png$/i.test(outPath) ? " — try --out card.svg (no rasterizer needed)" : ""}`); }
+    });
+  graph.command("pr").description("🔀 PR BLAST RADIUS — what a whole change set touches across layers. Reads a git diff (default: working changes; --base <ref> for a PR; --staged for the index) → the union blast radius: which DB tables, API routes & business rules this diff reaches. --markdown for a PR comment. Exit 2 if a DB table is touched.")
+    .option("--base <ref>", "diff against this ref (e.g. origin/main) — the PR diff").option("--staged", "diff the staged index").option("--markdown", "emit a Markdown PR comment").option("--depth <n>", "blast depth (default 2)")
+    .action((o: { base?: string; staged?: boolean; markdown?: boolean; depth?: string }) => {
+      const cwd = process.cwd();
+      const args = o.base ? ["diff", "--unified=0", `${o.base}...HEAD`] : o.staged ? ["diff", "--unified=0", "--cached"] : ["diff", "--unified=0", "HEAD"];
+      const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      const diff = String(r.stdout || "");
+      if (!diff.trim()) { out("No diff found. (Try --base origin/main, or --staged, or make some changes.)"); return; }
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const b = crossLayerGraph.diffBlastRadius(g, diff, { maxDepth: o.depth ? parseInt(o.depth, 10) : 1 });
+      if (o.markdown) { out(crossLayerGraph.diffBlastMarkdown(b, { repo: cwd.split(/[\\/]/).pop() })); if (b.tables.length) process.exitCode = 2; return; }
+      out(`🔀 PR blast radius — ${b.changed} changed function(s) cross-layer reach: 💼 ${b.rules.length} rules · 🌐 ${b.endpoints.length} endpoints · 🗄 ${b.tables.length} tables · ⚙ ${b.functions.length} functions:`);
+      if (b.rules.length) out(`   💼 business rules (${b.rules.length}): ${b.rules.map((x) => x.name).join(" · ")}`);
+      if (b.endpoints.length) out(`   🌐 API endpoints (${b.endpoints.length}): ${b.endpoints.map((x) => `${x.method} ${x.name}`).join(" · ")}`);
+      if (b.tables.length) out(`   🗄  DB tables (${b.tables.length}): ${b.tables.map((x) => x.name).join(" · ")}  ⚠️ check migrations`);
+      if (b.functions.length) out(`   ⚙  functions (${b.functions.length}): ${b.functions.slice(0, 25).map((x) => x.name).join(" · ")}${b.functions.length > 25 ? " …" : ""}`);
+      if (!b.changed) out("   (no changed functions resolved to the graph — a non-code or new-file diff)");
+      if (b.tables.length) process.exitCode = 2;
     });
   graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
     .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {

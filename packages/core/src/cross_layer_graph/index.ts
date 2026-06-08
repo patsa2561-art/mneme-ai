@@ -204,6 +204,62 @@ export function blastRadius(graph: CrossLayerGraph, originId: string, opts?: { m
   return { origin: originId, tables: hit.filter((n) => n.type === "db_table"), endpoints: hit.filter((n) => n.type === "api_endpoint"), functions: hit.filter((n) => n.type === "function"), rules: hit.filter((n) => n.type === "business_rule"), depth, reachable: hit.length };
 }
 
+// ── PR / DIFF blast radius — what a whole change set touches across layers ──────────────────────
+export interface DiffChange { file: string; name: string }
+/**
+ * Parse a unified git diff into the set of changed function/symbol names. Deterministic — reads the
+ * hunk-header context (git prints the enclosing def after `@@ … @@`) plus any def added/removed in the
+ * hunk body. Language-agnostic (function/def/func/fn/arrow). Honest: it's "definitions the diff
+ * touched", a conservative superset, not a precise per-statement attribution.
+ */
+export function parseChangedSymbols(diffText: string): DiffChange[] {
+  const out: DiffChange[] = []; const seen = new Set<string>();
+  let file = ""; const lines = String(diffText ?? "").split(/\r?\n/);
+  const NAME = /(?:function\s+|def\s+|func\s+(?:\([^)]*\)\s*)?|fn\s+|(?:export\s+)?(?:const|let|var)\s+)([A-Za-z_]\w*)/g;
+  const add = (n: string) => { const k = `${file}#${n}`; if (file && n && !seen.has(k)) { seen.add(k); out.push({ file, name: n }); } };
+  for (const ln of lines) {
+    const pf = ln.match(/^\+\+\+ b\/(.+)$/); if (pf) { file = pf[1].trim(); continue; }
+    const hh = ln.match(/^@@[^@]*@@\s*(.+)$/); if (hh) { for (const m of hh[1].matchAll(NAME)) add(m[1]); continue; }
+    if (/^[+-]/.test(ln) && !/^[+-]{3}\s/.test(ln)) { for (const m of ln.slice(1).matchAll(NAME)) add(m[1]); }
+  }
+  return out;
+}
+export interface DiffBlast { origins: GNode[]; tables: GNode[]; endpoints: GNode[]; rules: GNode[]; functions: GNode[]; changed: number; reachable: number }
+/**
+ * The cross-layer blast radius of a whole CHANGE SET: the union of every changed function's blast
+ * radius, deduped + categorized. Answers "this PR touches which DB tables / API routes / business
+ * rules?" — the question a reviewer (or an agent about to apply a multi-file edit) must answer.
+ */
+export function diffBlastRadius(graph: CrossLayerGraph, changes: ReadonlyArray<DiffChange> | string, opts?: { maxDepth?: number }): DiffBlast {
+  const list: DiffChange[] = typeof changes === "string" ? parseChangedSymbols(changes) : (changes ?? []).slice();
+  const originIds = new Set<string>(); const origins: GNode[] = [];
+  for (const ch of list) {
+    // prefer a node in the same file; fall back to name match
+    const inFile = (graph?.nodes ?? []).find((n) => n.type === "function" && n.name === ch.name && (n.file === ch.file || (n.file || "").endsWith(ch.file) || (ch.file || "").endsWith(n.file || "")));
+    const node = inFile ?? resolveNode(graph, ch.name);
+    if (node && node.type === "function" && !originIds.has(node.id)) { originIds.add(node.id); origins.push(node); }
+  }
+  const hit = new Map<string, GNode>();
+  for (const o of origins) { const br = blastRadius(graph, o.id, { maxDepth: opts?.maxDepth ?? 1 }); for (const n of [...br.tables, ...br.endpoints, ...br.rules, ...br.functions]) if (!originIds.has(n.id)) hit.set(n.id, n); }
+  const all = [...hit.values()];
+  return { origins, tables: all.filter((n) => n.type === "db_table"), endpoints: all.filter((n) => n.type === "api_endpoint"), rules: all.filter((n) => n.type === "business_rule"), functions: all.filter((n) => n.type === "function"), changed: origins.length, reachable: all.length };
+}
+
+/** Render a diff blast radius as a Markdown PR comment (deterministic). */
+export function diffBlastMarkdown(b: DiffBlast, opts?: { repo?: string }): string {
+  const L: string[] = ["### 🕸 Cross-Layer Blast Radius"];
+  if (!b.changed) { L.push("", "_No changed functions resolved to the cross-layer graph._"); return L.join("\n"); }
+  const crossHits = b.rules.length + b.tables.length + b.endpoints.length;
+  L.push("", `This change set's **${b.changed}** changed function(s) reach **${crossHits}** node(s) in OTHER layers${b.functions.length ? ` (and ${b.functions.length} more functions)` : ""}:`, "");
+  if (b.rules.length) L.push(`- 💼 **Business rules (${b.rules.length}):** ${b.rules.map((r) => r.name).join(" · ")}`);
+  if (b.tables.length) L.push(`- 🗄 **DB tables (${b.tables.length}):** ${b.tables.map((t) => "`" + t.name + "`").join(" · ")}`);
+  if (b.endpoints.length) L.push(`- 🌐 **API endpoints (${b.endpoints.length}):** ${b.endpoints.map((e) => "`" + (e.method ? e.method + " " : "") + e.name + "`").join(" · ")}`);
+  if (!crossHits) L.push(`_No cross-layer coupling — this change set stays within the code layer._`);
+  if (b.tables.length) L.push("", `⚠️ A DB table is in the blast radius — double-check migrations/data impact before merging.`);
+  L.push("", `<sub>Deterministic, no LLM — every edge derives from a real file. Reachable coupling to inspect, not a proven runtime break.${opts?.repo ? ` · ${opts.repo}` : ""}</sub>`);
+  return L.join("\n");
+}
+
 /** Find a node id by a loose name (function name, table name, or endpoint path). First match. */
 export function resolveNode(graph: CrossLayerGraph, query: string): GNode | null {
   const q = lc(word(query)); const nodes = graph?.nodes ?? [];
@@ -248,7 +304,13 @@ export function crossLayerGauntlet(): CLGGauntlet {
   const br = node ? blastRadius(g, node.id) : null;
   const crossLayer = !!br && br.tables.some((t) => t.name === "Wallet") && br.endpoints.some((e) => e.name === "/v1/auth/register");
   const noHallucination = g.edges.every((e) => g.nodes.some((n) => n.id === e.source) && g.nodes.some((n) => n.id === e.target));
-  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); return true; } catch { return false; } })();
+  // PR/diff blast radius: a diff touching createUserWallet → the change set reaches the Wallet table
+  const diff = "--- a/auth.ts\n+++ b/auth.ts\n@@ -10,3 +10,4 @@ export function createUserWallet(uid) {\n   return prisma.wallet.create({ data: { uid } });\n+  // tweak\n }";
+  const changed = parseChangedSymbols(diff);
+  const db = diffBlastRadius(g, diff);
+  const diffOK = changed.some((c) => c.name === "createUserWallet") && db.changed >= 1 && db.tables.some((t) => t.name === "Wallet");
+  const mdOK = diffBlastMarkdown(db).includes("Blast Radius") && diffBlastMarkdown(db).includes("Wallet");
+  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); return true; } catch { return false; } })();
   const checks = [
     { name: "EXTRACT-3-LAYERS", pass: hasTable && hasEndpoint && hasFn, detail: "db_table (Prisma) + api_endpoint (route) + function (decl) all extracted deterministically" },
     { name: "WRITE-EDGE", pass: writeEdge, detail: "function → db_table WRITES_TO (prisma.wallet.create)" },
@@ -258,6 +320,7 @@ export function crossLayerGauntlet(): CLGGauntlet {
     { name: "NO-HALLUCINATION", pass: noHallucination, detail: "every edge endpoint is a real extracted node — nothing invented" },
     { name: "BUSINESS-LAYER", pass: bizExtract && bizAnchored, detail: "business_rule extracted from a PRD + IMPLEMENTS-linked to code via a deterministic anchor (annotation / strong name match)" },
     { name: "PROVE-OR-UNKNOWN", pass: bizOrphan, detail: "a rule with NO code anchor stays ORPHAN/UNKNOWN — never a guessed link (Padgett)" },
+    { name: "PR-DIFF-BLAST", pass: diffOK && mdOK, detail: "a git diff → the change set's union blast radius across layers (the DB table a PR silently touches) + a Markdown PR comment" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

@@ -1,0 +1,39 @@
+# 🕸 Mneme Cross-Layer Blast Radius — comment the cross-layer impact on every PR.
+#
+# Drop this file at `.github/workflows/blast-radius.yml` in any repo. On each pull request it
+# installs mneme-ai, computes the union blast radius of the PR's changed functions across layers
+# (code ↔ DB tables ↔ API routes ↔ business rules), and posts it as a sticky PR comment.
+# Deterministic, no LLM, no secrets — every edge derives from a real file in the diff.
+name: Cross-Layer Blast Radius
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  blast-radius:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # need the base ref to diff against
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Mneme
+        run: npm i -g mneme-ai
+      - name: Compute blast radius
+        id: blast
+        run: |
+          mneme graph pr --base "origin/${{ github.base_ref }}" --markdown > blast.md || true
+          {
+            echo 'body<<MNEME_EOF'
+            cat blast.md
+            echo MNEME_EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Comment on PR (sticky)
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: mneme-blast-radius
+          message: ${{ steps.blast.outputs.body }}

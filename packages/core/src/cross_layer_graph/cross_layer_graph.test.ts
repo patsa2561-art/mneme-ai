@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -49,6 +49,22 @@ describe("cross_layer_graph", () => {
     expect(g.edges.some((e) => e.relation === "WRITES_TO")).toBe(true);                            // User.objects.create
     expect(g.edges.some((e) => e.relation === "IMPLEMENTS")).toBe(true);                           // # feature anchor
   });
+  it("PR blast radius: a diff's changed functions → the DB tables/endpoints it touches", () => {
+    const g = buildCrossLayerGraph(FILES);
+    const diff = "--- a/auth.ts\n+++ b/auth.ts\n@@ -5,2 +5,3 @@ export function createUserWallet(uid) {\n   return prisma.wallet.create({ data: { uid } });\n+  log(uid);\n }";
+    expect(parseChangedSymbols(diff).some((c) => c.name === "createUserWallet")).toBe(true);
+    const b = diffBlastRadius(g, diff);
+    expect(b.changed).toBeGreaterThanOrEqual(1);
+    expect(b.tables.map((t) => t.name)).toContain("Wallet");          // the table the PR silently touches
+    expect(diffBlastMarkdown(b)).toContain("Blast Radius");
+    expect(diffBlastMarkdown(b)).toContain("Wallet");
+  });
+  it("PR blast radius never throws on garbage", () => {
+    expect(() => diffBlastRadius(null as never, "garbage")).not.toThrow();
+    expect(() => parseChangedSymbols(null as never)).not.toThrow();
+    expect(diffBlastMarkdown(diffBlastRadius(buildCrossLayerGraph(FILES), "no diff here"))).toContain("No changed functions");
+  });
+
   it("multi-language: Go func + Rust fn are extracted", () => {
     const go = buildCrossLayerGraph([{ path: "m.go", content: "func ListUsers() {}" }]);
     expect(go.nodes.some((n) => n.name === "ListUsers")).toBe(true);
