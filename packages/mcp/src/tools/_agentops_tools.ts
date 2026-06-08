@@ -200,4 +200,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       return { data, wisdom: ranked.length ? (top ? `proven best: ${top.skillId} (${Math.round(top.rateLB * 100)}% floor)` : `${ranked.length} skill(s) tracked; none PROVEN yet`) : "no skill-outcome data yet — record with mneme.skill.record", followUp: [], confidence: ok() };
     },
   },
+  {
+    name: "mneme.graph.blast",
+    category: "audit",
+    description: "🕸 CROSS-LAYER BLAST RADIUS — before you change a function/table/endpoint, see what ELSE is coupled to it ACROSS layers: CODE (functions) ↔ DATA (db tables, from the Prisma/SQL schema) ↔ API (endpoints, from route files). Pass a name; returns the reachable tables + endpoints + functions. Deterministic, no LLM — every edge derives from a real file in the repo, so nothing is hallucinated. The cross-layer join no single-layer code-graph reports. HONEST: reachable COUPLING to inspect, not a proven runtime break; function bodies are region-approximated, not a full AST.",
+    whenToUse: "BEFORE editing a function, dropping/renaming a DB table, or changing an API route — ask what across the code/data/API layers is coupled to it, so you don't break a table or endpoint you didn't know touched it.",
+    triggers: ["what does this affect", "blast radius", "if i change this what breaks", "what touches this table", "what calls this endpoint", "cross-layer impact"],
+    inputSchema: { type: "object", properties: { name: { type: "string" }, depth: { type: "number" } }, required: ["name"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const node = core.crossLayerGraph.resolveNode(g, String(args["name"] ?? ""));
+      if (!node) { const data = await attest(cwd, { found: false }); return { data, wisdom: `no function/table/endpoint matching "${args["name"]}" in the graph`, followUp: [], confidence: ok("low") }; }
+      const br = core.crossLayerGraph.blastRadius(g, node.id, { maxDepth: Number(args["depth"]) || 2 });
+      const data = await attest(cwd, { origin: { type: node.type, name: node.name, file: node.file }, tables: br.tables.map((t) => t.name), endpoints: br.endpoints.map((e) => `${e.method} ${e.name}`), functions: br.functions.slice(0, 50).map((f) => f.name), reachable: br.reachable });
+      return { data, wisdom: `${node.type} "${node.name}" → ${br.tables.length} table(s)${br.tables.length ? " [" + br.tables.map((t) => t.name).join(", ") + "]" : ""} · ${br.endpoints.length} endpoint(s) · ${br.functions.length} function(s) coupled`, followUp: br.tables.length ? ["a DB table is in the blast radius — check the migration/data impact before you ship"] : [], confidence: ok() };
+    },
+  },
 ];

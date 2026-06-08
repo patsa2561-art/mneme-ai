@@ -5,11 +5,11 @@
  * LIVE / DEGRADED / DOWN — with auto-heal. Catches SILENT breakage before a user ever hits it.
  */
 import type { Command } from "commander";
-import { existsSync, readFileSync, statSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, statSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -41,6 +41,47 @@ export function registerLiveCommands(program: Command): void {
       try { proofLoop.appendAssistChained(proofLedgerPath(cwd), a); } catch { /* */ }
       out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
+  // ── CROSS-LAYER GRAPH — code ↔ db_table ↔ api_endpoint, deterministic, no LLM ──────────────────
+  const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql)$/i;
+  const SKIP_DIR = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+  function scanRepo(root: string, cap = 4000): crossLayerGraph.SourceFile[] {
+    const files: crossLayerGraph.SourceFile[] = []; const stack = [root];
+    while (stack.length && files.length < cap) {
+      const d = stack.pop()!;
+      let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }
+      for (const e of ents) {
+        if (SKIP_DIR.has(e)) continue; const p = join(d, e);
+        let st; try { st = statSync(p); } catch { continue; }
+        if (st.isDirectory()) stack.push(p);
+        else if (SCAN_EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(root.length + 1), content: readFileSync(p, "utf8") }); } catch { /* */ } }
+      }
+    }
+    return files;
+  }
+  const graph = program.command("graph").description("🕸 CROSS-LAYER GRAPH — link your CODE ↔ DATABASE tables ↔ API endpoints (deterministic, no LLM) and compute a cross-layer BLAST RADIUS: edit a function → see which DB tables AND API routes it reaches. The cross-layer join no single-layer code-graph reports.");
+  graph.command("stats").description("Build the graph from this repo + show node/edge counts by layer.").action(() => {
+    const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));
+    const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
+    const byRel = (r: string) => g.edges.filter((e) => e.relation === r).length;
+    out(`🕸 Cross-layer graph of ${cwd}:`);
+    out(`   nodes: ${g.nodes.length}  (functions ${byType("function")} · db_tables ${byType("db_table")} · api_endpoints ${byType("api_endpoint")})`);
+    out(`   edges: ${g.edges.length}  (WRITES_TO ${byRel("WRITES_TO")} · READS ${byRel("READS")} · HANDLED_BY ${byRel("HANDLED_BY")} · CALLS ${byRel("CALLS")})`);
+    out("   deterministic · no LLM · every edge derives from a real file. Query impact: mneme graph blast <name>");
+  });
+  graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
+    .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));
+      const node = crossLayerGraph.resolveNode(g, name);
+      if (!node) { out(`✗ no function/table/endpoint matching "${name}" found in the graph. Try: mneme graph stats`); return; }
+      const br = crossLayerGraph.blastRadius(g, node.id, { maxDepth: o.depth ? parseInt(o.depth, 10) : 2 });
+      out(`🕸 Blast radius of ${node.type} "${node.name}"${node.file ? ` (${node.file})` : ""} — ${br.reachable} coupled node(s):`);
+      if (br.endpoints.length) out(`   🌐 API endpoints (${br.endpoints.length}): ${br.endpoints.map((e) => `${e.method} ${e.name}`).join(" · ")}`);
+      if (br.tables.length) out(`   🗄  DB tables (${br.tables.length}): ${br.tables.map((t) => t.name).join(" · ")}`);
+      if (br.functions.length) out(`   ⚙  functions (${br.functions.length}): ${br.functions.slice(0, 25).map((f) => f.name).join(" · ")}${br.functions.length > 25 ? " …" : ""}`);
+      if (!br.reachable) out("   (nothing coupled — isolated node)");
+      out("   honest: reachable COUPLING to inspect (deterministic), not a proven runtime break.");
+    });
+
   const skill = program.command("skill").description("🧩 VERIFIED SKILLS — beyond a skill registry: rank skills by MEASURED effectiveness (did using it lead to success?), not popularity. Pairs with `mneme skillscan` (safe install) + LIVE PROOF (outcomes).");
   const skillUsesPath = (cwd: string) => join(cwd, ".mneme", "skills", "uses.jsonl");
   const loadUses = (cwd: string): skillEffectiveness.SkillUse[] => { try { return _rf(skillUsesPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
