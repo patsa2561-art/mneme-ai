@@ -454,6 +454,56 @@ function reviewLandingHtml(): string {
     "<script>" + js + "</script></div></body></html>";
 }
 
+/** The HUB — one page that showcases the whole cross-layer suite: live review + radar + the 10 gems. */
+function suiteLandingHtml(): string {
+  const gems = [
+    ["🔍", "Codebase Review", "the one-command report: grade + risk + authz + tests", "mneme review"],
+    ["🛰", "Impact Radar", "see a change ripple across code · data · api · business", "mneme graph view &lt;fn&gt;"],
+    ["⛔", "Drop Safety", "what breaks if you remove this table? SAFE / RISKY / CRITICAL", "mneme graph reverse &lt;table&gt;"],
+    ["💥", "Agent Collision", "two agents/branches colliding across DIFFERENT files — git is blind to it", "mneme collision --branches a,b"],
+    ["🤝", "Scope Covenant", "did the agent stay in the scope it declared? signed, cross-vendor", "mneme scope verify"],
+    ["🏷", "Commit Honesty", "a 'fix typo' that secretly rewrites a payment keystone", "mneme commit-check"],
+    ["🧪", "Test Gap", "the keystone (sole writer to a table) no test even mentions", "mneme testgap"],
+    ["🎯", "Risk Hotspots", "every signal fused into one 'what to guard first' ranking", "mneme risk"],
+    ["🔒", "Authz Gap", "an endpoint that writes a sensitive table with no auth on the path", "mneme authz"],
+    ["🧭", "Onboarding Path", "the real data-flows to read first — orient in a new repo fast", "mneme onboard"],
+  ];
+  const cards = gems.map((x) => "<div class=\"gem\"><div class=\"gi\">" + x[0] + "</div><div class=\"gn\">" + x[1] + "</div><div class=\"gd\">" + x[2] + "</div><code>" + x[3] + "</code></div>").join("");
+  const examples = ["https://github.com/sindresorhus/slugify", "https://github.com/honojs/hono"];
+  const chips = examples.map((u) => "<button class=\"chip\" data-url=\"" + u + "\">" + u.replace(/^https:\/\/github.com\//, "") + "</button>").join("");
+  const js = [
+    "var f=document.getElementById('f'),u=document.getElementById('u'),go=document.getElementById('go'),st=document.getElementById('st'),rep=document.getElementById('rep'),rl=document.getElementById('rl');",
+    "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "function valid(v){return /^https?:\\/\\/(www\\.)?(github|gitlab|bitbucket)\\.(com|org)\\/[^\\s]+\\/[^\\s]+/.test(String(v||'').trim());}",
+    "var GC={A:'#22c55e',B:'#84cc16',C:'#eab308',D:'#f97316',F:'#ef4444'};",
+    "function verdict(gr){return gr<='B'?(gr==='A'?'HEALTHY — accountable across every layer':'SOLID — a few things to guard'):gr==='C'?'NEEDS ATTENTION — real cross-layer risk':'AT RISK — unguarded critical surface';}",
+    "function render(d,url){var gc=GC[d.grade]||'#22d3ee';var h='<div class=card><div class=gradeRow><div class=gradeBadge style=\\'background:'+gc+'\\'>'+d.grade+'</div><div style=flex:1><div class=repo>'+esc(d.repo)+'</div><div class=verdict>'+verdict(d.grade)+'</div><div class=barw><div class=bar style=\\'width:'+d.score+'%;background:'+gc+'\\'></div></div><div class=score>'+d.score+'/100</div></div></div>';",
+    "  var gph=d.graph;h+='<div class=row><b>🕸 graph</b> ⚙ '+gph.functions+' · 🗄 '+gph.tables+' · 🌐 '+gph.endpoints+' · 💼 '+gph.rules+'</div>';",
+    "  h+='<div class=row><b>🎯 risk</b> '+d.risk.critical+' critical · '+d.risk.high+' high';if(d.risk.top&&d.risk.top.length){h+='<ul>';d.risk.top.slice(0,3).forEach(function(r){var ic=r.band==='CRITICAL'?'🔴':r.band==='HIGH'?'🟠':'🟡';h+='<li>'+ic+' <b>'+esc(r.name)+'</b> — '+esc((r.factors&&r.factors[0])||'')+'</li>';});h+='</ul>';}else h+=' ✓ none';h+='</div>';",
+    "  h+='<div class=row><b>🔒 authz</b> '+(d.authz.clear?'✓ clean':'🔴 '+d.authz.count+' unguarded → '+esc((d.authz.exposedTables||[]).join(', ')))+'</div>';",
+    "  h+='<div class=row><b>🧪 tests</b> keystones '+d.testGap.coverage+' guarded'+(d.testGap.untestedKeystones&&d.testGap.untestedKeystones.length?' · ⚠️ untested: '+esc(d.testGap.untestedKeystones.slice(0,4).join(', ')):' ✓')+'</div>';",
+    "  h+='<div class=foot>deterministic · no LLM · fingerprint <code>'+esc(d.fingerprint)+'</code> · <a target=_blank href=\\'/radar?gitUrl='+encodeURIComponent(url)+'\\' style=color:#22d3ee>🛰 see the Impact Radar →</a></div></div>';",
+    "  rep.innerHTML=h;rep.style.display='block';}",
+    "function run(url){url=String(url||'').trim();if(!valid(url)){st.className='err';st.textContent='Paste a public GitHub/GitLab/Bitbucket repo URL.';return;}u.value=url;go.disabled=true;rep.style.display='none';st.className='';st.innerHTML='<span class=spin></span>running the cross-layer suite on '+esc(url.replace(/^https?:\\/\\//,''))+' …';",
+    "  fetch('/api/review?gitUrl='+encodeURIComponent(url)).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(o){if(o.ok&&o.j&&o.j.grade){st.textContent='';render(o.j,url);}else{st.className='err';st.textContent=(o.j&&o.j.error)||'could not review this repo';}}).catch(function(e){st.className='err';st.textContent='network error: '+e.message;}).finally(function(){go.disabled=false;});}",
+    "f.addEventListener('submit',function(e){e.preventDefault();run(u.value);});",
+    "Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){c.addEventListener('click',function(){run(c.getAttribute('data-url'));});});",
+    "var q=new URLSearchParams(location.search).get('gitUrl');if(q)run(q);",
+  ].join("\n");
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Cross-Layer Accountability Suite · Mneme</title>" +
+    "<meta name=\"description\" content=\"The cross-layer accountability layer for the autonomous-agent era. Paste any repo for a graded report; 10 deterministic, signed checks no single-layer tool can do.\">" +
+    "<style>body{margin:0;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:1000px;margin:0 auto;padding:clamp(22px,4vw,56px) 20px}h1{font-size:clamp(30px,5.5vw,52px);margin:0 0 10px;font-weight:850;text-align:center}.grad{background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}.tag{color:#94a3b8;max-width:680px;margin:0 auto;text-align:center;font-size:17px}.inst{text-align:center;margin:16px 0}.inst code{background:#0f1b2e;border:1px solid #2b3a52;border-radius:8px;padding:8px 14px;color:#22d3ee;font-size:15px}form{display:flex;gap:10px;max-width:760px;margin:24px auto 8px;flex-wrap:wrap}input{flex:1;min-width:240px;background:#0f1b2e;border:1px solid #2b3a52;border-radius:12px;padding:15px 16px;color:#e5e7eb;font-size:15px;outline:none}input:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.15)}button.go{background:linear-gradient(90deg,#22d3ee,#0891b2);color:#04141b;border:0;border-radius:12px;padding:15px 26px;font-weight:800;cursor:pointer}button.go:disabled{opacity:.6;cursor:wait}.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.chip{background:transparent;border:1px solid #1f2937;color:#94a3b8;border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}.chip:hover{border-color:#22d3ee;color:#22d3ee}#st{text-align:center;color:#94a3b8;min-height:22px;margin:10px 0}#st.err{color:#fca5a5}#rep{display:none;max-width:820px;margin:0 auto}.card{background:radial-gradient(circle at 30% 0%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:16px;padding:20px;margin:14px 0}.gradeRow{display:flex;gap:18px;align-items:center}.gradeBadge{width:60px;height:60px;border-radius:14px;display:grid;place-items:center;font-size:34px;font-weight:900;color:#04141b;flex:none}.repo{font-size:14px;color:#22d3ee}.verdict{font-size:16px;font-weight:700;margin:2px 0 8px}.barw{height:9px;background:#1f2937;border-radius:999px;overflow:hidden;max-width:340px}.bar{height:100%;border-radius:999px}.score{color:#94a3b8;font-size:12px;margin-top:4px}.row{border-top:1px solid #1f2937;padding:11px 2px}.row ul{margin:6px 0 0;padding-left:18px;color:#cbd5e1}.foot{color:#64748b;font-size:12px;margin-top:12px}code{background:#1f2937;padding:1px 5px;border-radius:4px}.spin{display:inline-block;width:13px;height:13px;border:2px solid #334155;border-top-color:#22d3ee;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}.gems{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:30px 0}.gem{background:#0f1b2e;border:1px solid #1f2937;border-radius:14px;padding:16px;transition:border-color .15s}.gem:hover{border-color:#22d3ee}.gi{font-size:24px}.gn{font-weight:750;margin:6px 0 4px}.gd{color:#94a3b8;font-size:13px;min-height:52px}.gem code{display:block;margin-top:8px;color:#67e8f9;font-size:12.5px;background:#0b1220;padding:6px 8px;border-radius:7px;overflow-x:auto}h2{text-align:center;font-size:24px;margin:38px 0 4px}.sub{text-align:center;color:#94a3b8;margin:0 0 6px}.foot2{text-align:center;color:#64748b;font-size:13px;margin-top:34px}a{color:#22d3ee}</style></head>" +
+    "<body><div class=\"wrap\"><h1>🕸 <span class=\"grad\">Cross-Layer Accountability</span></h1>" +
+    "<p class=\"tag\">The accountability layer for the autonomous-agent era. Mneme links <b>code ↔ database ↔ API ↔ business rules</b> into one deterministic graph — and asks the questions a single-layer tool can't. <b>No LLM in the analysis path</b> — every finding is reproducible and signed.</p>" +
+    "<div class=\"inst\"><code>npm i -g mneme-ai &nbsp;&amp;&amp;&nbsp; mneme review</code></div>" +
+    "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"…or paste a public repo URL to try it now — https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Review →</button></form>" +
+    "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
+    "<h2>The 10 checks</h2><p class=\"sub\">each one answers a question nothing else answered — and your AI agent gets them all as MCP tools, automatically</p>" +
+    "<div class=\"gems\">" + cards + "</div>" +
+    "<p class=\"foot2\">Deterministic · signed · local-first · works on JS/TS · Python · Go · Rust · the source never leaves your machine (the demo clones to a temp dir, scans, and deletes). <br><a href=\"https://www.npmjs.com/package/mneme-ai\">npm</a> · <a href=\"/review\">/review</a> · <a href=\"/radar\">/radar</a> · <sub>honest: each finding is a candidate to inspect, not a proof of a runtime bug.</sub></p>" +
+    "<script>" + js + "</script></div></body></html>";
+}
+
 export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerHub) {
   // THE AUTONOMOUS REAL-TIME MONITOR — one hub per server instance. The scanner
   // (build) runs the SAME hosted, bounded, raw-free, signed pipeline as /api/xray;
@@ -488,6 +538,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) return serveStatic(res, "index.html");
     if (req.method === "GET" && url.pathname === "/radar") return send(res, 200, radarLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
+    if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
     if (req.method === "GET" && url.pathname === "/card.js") return serveStatic(res, "card.js");
     if (req.method === "GET" && url.pathname === "/local-scan.js") return serveStatic(res, "local-scan.js");

@@ -250,7 +250,7 @@ mneme polygraph autosetup   # browser truth-dots (optional)
 **🔍 One command — a Codebase Accountability Report.**
 
 <a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener"><img src="docs/demo/review-card.png" alt="mneme review — a graded Codebase Accountability Report: grade, risk hotspots, authz gaps, untested keystones" width="100%"></a>
-<sub>↑ a real report on a sample app (graded **D** — it has an authz gap + an untested keystone the tool caught). **<a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener">Run it on your repo, live →</a>** · <a href="docs/demo/review-card.svg" target="_blank" rel="noopener">animated version</a></sub>
+<sub>↑ a real report on a sample app (graded **D** — it has an authz gap + an untested keystone the tool caught). **<a href="https://xray.mneme-ai.space/suite" target="_blank" rel="noopener">Try it live + see all 10 checks →</a>** · <a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener">/review</a> · <a href="docs/demo/review-card.svg" target="_blank" rel="noopener">animated</a></sub>
 
 `npm i -g mneme-ai` then **`mneme review`** maps your repo across layers and prints, in one shot: 🎯 **risk hotspots** (the keystone single-points-of-failure to guard first) · 🔒 **authz gaps** (an endpoint that writes a sensitive table with no auth on the path) · 🧪 **untested keystones** (the scariest, line-coverage-hidden surface). On a PR: `mneme review --base origin/main`. Then drill in — each is its own command and MCP tool your agent calls automatically:
 
