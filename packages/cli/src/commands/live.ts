@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -248,6 +248,20 @@ export function registerLiveCommands(program: Command): void {
       out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
       for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
       out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
+    });
+
+  program.command("onboard").alias("tour").description("🧭 ONBOARDING PATH — understand a repo fast: the real data-flows (entry point → handler → functions it calls → tables + rules), sensitive flows first. The guided tour, deterministic.")
+    .option("--top <n>", "show the top N flows (default 12)").action((o: { top?: string }) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const op = onboarding.onboardingPath(g);
+      if (!op.flows.length) { out(`🧭 ${op.note} (${op.entryCount} endpoint(s) found).`); return; }
+      out(`🧭 Onboarding path — ${op.flows.length} flow(s), sensitive first. ${op.note}:`);
+      for (const f of op.flows.slice(0, o.top ? parseInt(o.top, 10) : 12)) {
+        out(`   ${f.sensitive ? "🔶" : "▫️"} ${f.method} ${f.entry}${f.file ? ` (${f.file})` : ""}`);
+        out(`        read: ${f.steps.slice(0, 10).join(" → ")}${f.steps.length > 10 ? " …" : ""}`);
+        if (f.tables.length) out(`        data: ${f.tables.join(", ")}`);
+        if (f.rules.length) out(`        rule: ${f.rules.join(", ")}`);
+      }
     });
 
   program.command("risk").description("🎯 RISK HOTSPOTS — the ONE ranked list of the riskiest things in this codebase (keystones × untested × sensitive × authz-gaps, fused). The single answer to 'what should I guard first?'.")

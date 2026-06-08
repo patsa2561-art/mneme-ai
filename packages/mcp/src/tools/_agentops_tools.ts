@@ -269,6 +269,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.onboard.path",
+    category: "memory",
+    description: "🧭 ONBOARDING PATH — orient yourself in an unfamiliar repo FAST. Returns the codebase's real data-flows: per API entry point, the ordered call chain (handler → the functions it calls) + the DB tables it touches + the business rules it implements — flows that touch sensitive data ordered first. Read these top-to-bottom instead of opening files at random. Deterministic, from the cross-layer graph. ★HONEST: a reading guide derived from entry points + call chains — not the only way to read the code; the step order is a capped breadth-first walk.",
+    whenToUse: "When you (an agent) land in an unfamiliar codebase and need to understand its architecture quickly before working — pull the flows to see how the system actually runs.",
+    triggers: ["how does this codebase work", "where do i start reading", "onboard me", "explain the architecture", "give me a tour", "understand this repo", "main flows"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, _args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const op = core.onboarding.onboardingPath(g);
+      const data = await attest(cwd, { entryCount: op.entryCount, note: op.note, flows: op.flows.slice(0, 25) });
+      return { data, wisdom: op.flows.length ? `${op.flows.length} flow(s) across ${op.entryCount} entry point(s) · start with ${op.flows[0].method} ${op.flows[0].entry} (${op.flows[0].steps.slice(0, 3).join(" → ")}…)` : op.note, followUp: [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.risk.hotspots",
     category: "audit",
     description: "🎯 RISK HOTSPOTS — the ONE ranked answer: 'what is the riskiest thing in this codebase to be careful with?'. Fuses the cross-layer suite's deterministic signals no other tool unifies — a KEYSTONE (sole writer to a table) that is ALSO UNTESTED and ALSO writes a SENSITIVE table and has high fan-in = the scariest node; an endpoint with an AUTHZ GAP = a security hotspot. One weighted score, one ranking, every contributing factor shown (CRITICAL/HIGH/MEDIUM). ★HONEST: a transparent weighted composite of signals (each gauntlet-tested) — a PRIORITIZATION of where to look, not a proof of a bug.",
