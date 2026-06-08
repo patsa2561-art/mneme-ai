@@ -9,7 +9,7 @@ import { existsSync, readFileSync, statSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -41,6 +41,28 @@ export function registerLiveCommands(program: Command): void {
       try { proofLoop.appendAssistChained(proofLedgerPath(cwd), a); } catch { /* */ }
       out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
+  const skill = program.command("skill").description("🧩 VERIFIED SKILLS — beyond a skill registry: rank skills by MEASURED effectiveness (did using it lead to success?), not popularity. Pairs with `mneme skillscan` (safe install) + LIVE PROOF (outcomes).");
+  const skillUsesPath = (cwd: string) => join(cwd, ".mneme", "skills", "uses.jsonl");
+  const loadUses = (cwd: string): skillEffectiveness.SkillUse[] => { try { return _rf(skillUsesPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
+  skill.command("use <skillId>").description("Record a skill use + whether it LANDED (a success/assist followed).")
+    .option("--missed", "the skill did NOT lead to success (default: landed)").option("--agent <id>")
+    .action((skillId: string, o: { missed?: boolean; agent?: string }) => {
+      const cwd = process.cwd(); const u = skillEffectiveness.normalizeUse({ skillId, landed: !o.missed, agent: o.agent, at: Date.now() });
+      try { mkdirSync(join(cwd, ".mneme", "skills"), { recursive: true }); appendFileSync(skillUsesPath(cwd), JSON.stringify(u) + "\n", "utf8"); } catch { /* */ }
+      out(`✓ recorded: ${u.skillId} · ${u.landed ? "landed" : "missed"}`);
+    });
+  skill.command("rank").description("Rank skills by PROVEN effectiveness (Wilson-LB, not popularity).").action(() => {
+    const r = skillEffectiveness.rankSkills(loadUses(process.cwd()));
+    if (!r.length) { out("no skill-use data yet. Record with: mneme skill use <id> [--missed]"); return; }
+    out("🧩 Skills by measured effectiveness (proven first):");
+    for (const s of r) out(`   ${s.band.padEnd(11)} ${String(Math.round(s.rateLB * 100)).padStart(3)}%  ${s.skillId}  (${s.landed}/${s.uses})`);
+    out("   (PROVEN ≥55% Wilson-LB · UNPROVEN = too few uses to judge — not bad)");
+  });
+  skill.command("score <skillId>").description("The measured effectiveness of one skill.").action((skillId: string) => {
+    const s = skillEffectiveness.scoreSkill(loadUses(process.cwd()), skillId);
+    out(`🧩 ${s.skillId}: ${s.band} · ${Math.round(s.rateLB * 100)}% proven-floor (${s.landed}/${s.uses} landed)`);
+  });
+
   program.command("quickstart").alias("start-here").description("🚀 START HERE — the ONE first-value path for you (auto-detected), not the 988-tool firehose.")
     .action(() => {
       const a = agentFit.detectActiveAgent(process.env as Record<string, string | undefined>);

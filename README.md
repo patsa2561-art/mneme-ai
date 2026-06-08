@@ -78,6 +78,8 @@ real.** No more babysitting a terminal.
 
 🛡 **Every tool-call your agent makes is gated, signed, and yours to prove.** A risky command is judged by *what it does* — not the words it uses — then checked against your policy and the skill's signed provenance, so it runs, **escalates to your phone**, or is blocked. Every decision lands in a **tamper-evident ledger anyone verifies offline** (the arguments are hashed, never stored raw). Local-first, human-in-the-loop from anywhere — a proof, not a trust-me database. <sub>**<a href="docs/agent-http-api.md" target="_blank" rel="noopener">how the gate works →</a>**</sub>
 
+🧩 **Your agent's skills, *measured* — not just listed.** Install a skill/playbook and Mneme scans it for injection + secrets and **content-pins it signed** before your agent ever reads it (safe install). Then it does what a registry can't: it **counts whether each skill actually helps** — was it in play when a real success followed? — and ranks them by a **Wilson lower-bound landing rate** → *PROVEN* (trust it) · *INEFFECTIVE* (drop it) · *UNPROVEN* (too few uses to judge — never branded bad). Keep the skills that are *measured to make this agent better, here* — not the popular ones. <sub>Honest: a measured correlation with a confidence interval, not proof of causation. `mneme skill rank` · `mneme skillscan <path>`</sub>
+
 ---
 
 ## One picture

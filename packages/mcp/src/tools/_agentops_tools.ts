@@ -164,4 +164,40 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       return { data, wisdom: v.valid ? `verified — ${v.provenForgotten} item(s) provably forgotten` : `NOT verified: ${v.reasons[0]}`, followUp: [], confidence: ok() };
     },
   },
+  {
+    name: "mneme.skill.record",
+    category: "memory",
+    description: "🧩 VERIFIED SKILLS — record that an installed agent-skill/playbook was IN PLAY this turn + whether it LANDED (a real success/assist followed). A skill registry tells you what exists; this measures which skills actually help. Outcomes accrue into a local ledger that mneme.skill.rank scores by Wilson lower bound. HONEST: a measured correlation (skill-in-play → success-followed), not proof of causation.",
+    whenToUse: "Right after you applied an installed skill/playbook and saw whether it helped — record landed:true if it led to a good result, landed:false if it didn't.",
+    triggers: ["record skill outcome", "this skill helped", "this skill didn't help", "skill landed", "rate this skill"],
+    inputSchema: { type: "object", properties: { skillId: { type: "string" }, landed: { type: "boolean" }, agent: { type: "string" } }, required: ["skillId", "landed"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const u = core.skillEffectiveness.normalizeUse({ skillId: String(args["skillId"] ?? ""), landed: !!args["landed"], agent: args["agent"] as string | undefined, at: Date.now() });
+      try { fs.mkdirSync(path.join(cwd, ".mneme", "skills"), { recursive: true }); fs.appendFileSync(path.join(cwd, ".mneme", "skills", "uses.jsonl"), JSON.stringify(u) + "\n", "utf8"); } catch { /* */ }
+      const data = await attest(cwd, { recorded: u as unknown as Record<string, unknown> });
+      return { data, wisdom: `recorded: ${u.skillId} · ${u.landed ? "landed" : "missed"}`, followUp: ["mneme.skill.rank — see which skills are measured-to-help"], confidence: ok() };
+    },
+  },
+  {
+    name: "mneme.skill.rank",
+    category: "memory",
+    description: "🧩 VERIFIED SKILLS — rank your installed agent-skills/playbooks by MEASURED effectiveness (Wilson-LB landing rate from recorded outcomes), not by popularity or order-of-install. PROVEN (≥55% lower bound) → trust it; INEFFECTIVE → consider dropping; UNPROVEN → too few uses to judge (never branded bad). The axis no skill registry reports: which skills actually make THIS agent better, here.",
+    whenToUse: "When choosing which installed skill to apply, or deciding which playbooks to keep/prune — ask which are proven to help.",
+    triggers: ["which skills work", "rank my skills", "best skill", "skill effectiveness", "which playbook helps"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, _args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let uses: ReturnType<typeof core.skillEffectiveness.normalizeUse>[] = [];
+      try { uses = fs.readFileSync(path.join(cwd, ".mneme", "skills", "uses.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { /* */ }
+      const ranked = core.skillEffectiveness.rankSkills(uses);
+      const data = await attest(cwd, { ranked: ranked as unknown as Record<string, unknown>[] });
+      const top = ranked.find((s) => s.band === "PROVEN");
+      return { data, wisdom: ranked.length ? (top ? `proven best: ${top.skillId} (${Math.round(top.rateLB * 100)}% floor)` : `${ranked.length} skill(s) tracked; none PROVEN yet`) : "no skill-outcome data yet — record with mneme.skill.record", followUp: [], confidence: ok() };
+    },
+  },
 ];
