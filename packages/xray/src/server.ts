@@ -25,7 +25,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf, readdirSync, statSync } from "node:fs";
-import { crossLayerGraph } from "@mneme-ai/core";
+import { crossLayerGraph, riskHotspots, authzGap, testGap } from "@mneme-ai/core";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -417,6 +417,43 @@ var q=new URLSearchParams(location.search).get('gitUrl'); if(q)run(q);
 </body></html>`;
 }
 
+/** The 🔍 Codebase Accountability Report landing — paste a repo URL, get the graded report rendered. */
+function reviewLandingHtml(): string {
+  const examples = ["https://github.com/sindresorhus/slugify", "https://github.com/tiangolo/fastapi", "https://github.com/honojs/hono"];
+  const chips = examples.map((u) => `<button class="chip" data-url="${u}">${u.replace(/^https:\/\/github.com\//, "")}</button>`).join("");
+  const js = [
+    "var f=document.getElementById('f'),u=document.getElementById('u'),go=document.getElementById('go'),st=document.getElementById('st'),rep=document.getElementById('rep');",
+    "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "function valid(v){return /^https?:\\/\\/(www\\.)?(github|gitlab|bitbucket)\\.(com|org)\\/[^\\s]+\\/[^\\s]+/.test(String(v||'').trim());}",
+    "var GC={A:'#22c55e',B:'#84cc16',C:'#eab308',D:'#f97316',F:'#ef4444'};",
+    "function bar(n){var w=Math.round(n/2.5);return '<div class=barw><div class=bar style=\\'width:'+n+'%;background:'+(GC[grade(n)]||'#22d3ee')+'\\'></div></div>';}",
+    "function grade(s){return s>=90?'A':s>=78?'B':s>=62?'C':s>=45?'D':'F';}",
+    "function verdict(gr){return gr<='B'?(gr==='A'?'HEALTHY — accountable across every layer':'SOLID — a few things to guard'):gr==='C'?'NEEDS ATTENTION — real cross-layer risk':'AT RISK — unguarded critical surface';}",
+    "function render(d){var gc=GC[d.grade]||'#22d3ee';var h='';",
+    "  h+='<div class=card><div class=gradeRow><div class=gradeBadge style=\\'background:'+gc+'\\'>'+d.grade+'</div><div><div class=repo>'+esc(d.repo)+'</div><div class=verdict>'+verdict(d.grade)+'</div>'+bar(d.score)+'<div class=score>'+d.score+'/100</div></div></div></div>';",
+    "  var gph=d.graph;h+='<div class=row><b>🕸 Cross-layer graph</b> &nbsp; ⚙ '+gph.functions+' fns · 🗄 '+gph.tables+' tables · 🌐 '+gph.endpoints+' endpoints · 💼 '+gph.rules+' rules</div>';",
+    "  h+='<div class=row><b>🎯 Risk hotspots</b> &nbsp; '+d.risk.critical+' critical · '+d.risk.high+' high';if(d.risk.top&&d.risk.top.length){h+='<ul>';d.risk.top.forEach(function(r){var ic=r.band==='CRITICAL'?'🔴':r.band==='HIGH'?'🟠':'🟡';h+='<li>'+ic+' <b>'+esc(r.name)+'</b> — '+esc((r.factors&&r.factors[0])||'')+'</li>';});h+='</ul>';}else h+=' &nbsp; ✓ none';h+='</div>';",
+    "  h+='<div class=row><b>🔒 Authorization</b> &nbsp; '+(d.authz.clear?'✓ no unguarded sensitive-write path':'🔴 '+d.authz.count+' unguarded write-path(s) → '+esc((d.authz.exposedTables||[]).join(', ')))+'</div>';",
+    "  h+='<div class=row><b>🧪 Test coverage</b> &nbsp; keystones '+d.testGap.coverage+' guarded'+(d.testGap.untestedKeystones&&d.testGap.untestedKeystones.length?' · ⚠️ untested: '+esc(d.testGap.untestedKeystones.slice(0,5).join(', ')):' ✓')+'</div>';",
+    "  h+='<div class=foot>deterministic · no LLM · fingerprint <code>'+esc(d.fingerprint)+'</code> · every finding traces to a real file · re-run to verify</div>';",
+    "  rep.innerHTML=h;rep.style.display='block';}",
+    "function run(url){url=String(url||'').trim();if(!valid(url)){st.className='err';st.textContent='Paste a public GitHub/GitLab/Bitbucket repo URL.';return;}u.value=url;go.disabled=true;rep.style.display='none';st.className='';st.innerHTML='<span class=spin></span>cloning + running the cross-layer suite on '+esc(url.replace(/^https?:\\/\\//,''))+' …';",
+    "  fetch('/api/review?gitUrl='+encodeURIComponent(url)).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(o){if(o.ok&&o.j&&o.j.grade){st.textContent='';st.className='';render(o.j);}else{st.className='err';st.textContent=(o.j&&o.j.error)||'could not review this repo';}}).catch(function(e){st.className='err';st.textContent='network error: '+e.message;}).finally(function(){go.disabled=false;});}",
+    "f.addEventListener('submit',function(e){e.preventDefault();run(u.value);});",
+    "Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){c.addEventListener('click',function(){run(c.getAttribute('data-url'));});});",
+    "var q=new URLSearchParams(location.search).get('gitUrl');if(q)run(q);",
+  ].join("\n");
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Codebase Accountability Report · Mneme</title>" +
+    "<meta name=\"description\" content=\"Paste any public repo → a graded Codebase Accountability Report: risk hotspots, authz gaps, untested keystones. Deterministic, no LLM.\">" +
+    "<style>body{margin:0;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:860px;margin:0 auto;padding:clamp(20px,4vw,52px) 20px}h1{font-size:clamp(28px,5vw,44px);margin:0 0 8px;font-weight:850}.grad{background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}.tag{color:#94a3b8;max-width:640px}form{display:flex;gap:10px;max-width:760px;margin:26px auto 8px;flex-wrap:wrap}input{flex:1;min-width:240px;background:#0f1b2e;border:1px solid #2b3a52;border-radius:12px;padding:15px 16px;color:#e5e7eb;font-size:15px;outline:none}input:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.15)}button.go{background:linear-gradient(90deg,#22d3ee,#0891b2);color:#04141b;border:0;border-radius:12px;padding:15px 26px;font-weight:800;cursor:pointer}button.go:disabled{opacity:.6;cursor:wait}.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.chip{background:transparent;border:1px solid #1f2937;color:#94a3b8;border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}.chip:hover{border-color:#22d3ee;color:#22d3ee}#st{text-align:center;color:#94a3b8;min-height:22px;margin:10px 0}#st.err{color:#fca5a5}.card{background:radial-gradient(circle at 30% 0%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:16px;padding:20px;margin:14px 0}.gradeRow{display:flex;gap:18px;align-items:center}.gradeBadge{width:64px;height:64px;border-radius:14px;display:grid;place-items:center;font-size:36px;font-weight:900;color:#04141b;flex:none}.repo{font-size:15px;color:#22d3ee;font-weight:600}.verdict{font-size:17px;font-weight:700;margin:2px 0 8px}.barw{height:10px;background:#1f2937;border-radius:999px;overflow:hidden;max-width:360px}.bar{height:100%;border-radius:999px}.score{color:#94a3b8;font-size:13px;margin-top:4px}#rep{display:none}.row{border-top:1px solid #1f2937;padding:13px 2px}.row b{color:#e5e7eb}.row ul{margin:8px 0 0;padding-left:18px;color:#cbd5e1}.row li{margin:3px 0}.foot{color:#64748b;font-size:12px;margin-top:14px}code{background:#1f2937;padding:1px 5px;border-radius:4px}.spin{display:inline-block;width:13px;height:13px;border:2px solid #334155;border-top-color:#22d3ee;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}</style></head>" +
+    "<body><div class=\"wrap\"><div style=\"text-align:center\"><h1>🔍 <span class=\"grad\">Codebase Accountability</span></h1>" +
+    "<p class=\"tag\" style=\"margin:0 auto\">Paste any public repo. Get a graded report across layers — <b>risk hotspots</b>, <b>authorization gaps</b>, <b>untested keystones</b> — in seconds. Deterministic, no LLM, nothing to install.</p></div>" +
+    "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Review →</button></form>" +
+    "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
+    "<p class=\"foot\" style=\"text-align:center\">Local + private repos: <code>npm i -g mneme-ai</code> then <code>mneme review</code>. Source is cloned to a temp dir, scanned, and deleted — nothing persists. · <a href=\"/radar\" style=\"color:#22d3ee\">Impact Radar</a></p>" +
+    "<script>" + js + "</script></div></body></html>";
+}
+
 export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerHub) {
   // THE AUTONOMOUS REAL-TIME MONITOR — one hub per server instance. The scanner
   // (build) runs the SAME hosted, bounded, raw-free, signed pipeline as /api/xray;
@@ -450,6 +487,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) return serveStatic(res, "index.html");
     if (req.method === "GET" && url.pathname === "/radar") return send(res, 200, radarLandingHtml(), "text/html; charset=utf-8");
+    if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
     if (req.method === "GET" && url.pathname === "/card.js") return serveStatic(res, "card.js");
     if (req.method === "GET" && url.pathname === "/local-scan.js") return serveStatic(res, "local-scan.js");
@@ -601,6 +639,43 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         const wantOverview = url.searchParams.get("overview") === "1";
         const html = crossLayerGraph.toRadarHtml(g, focus?.id, { fingerprint: fp, title: `Impact Radar — ${repoName}`, overview: wantOverview });
         return send(res, 200, html, "text/html; charset=utf-8");
+      } catch (e) {
+        return send(res, 502, { error: (e as Error).message.slice(0, 300) });
+      } finally { if (handle) handle.dispose(); }
+    }
+
+    // 🔍 CODEBASE ACCOUNTABILITY REPORT — clone a public repo, run the cross-layer suite, return the
+    // graded report as JSON. The /review landing renders it. Source cloned → scanned → DELETED.
+    if (req.method === "GET" && url.pathname === "/api/review") {
+      if (rateLimited("review:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      const gitUrl = (url.searchParams.get("gitUrl") || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs. For private repos, run `mneme review` locally." });
+      let handle: { path: string; dispose: () => void } | null = null;
+      try {
+        handle = shallowClone(gitUrl);
+        const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+        const files: { path: string; content: string }[] = []; const stack = [handle.path];
+        while (stack.length && files.length < 4000) {
+          const d = stack.pop() as string; let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }
+          for (const e of ents) { if (SKIP.has(e)) continue; const p = join(d, e); let st; try { st = statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(handle.path.length + 1), content: readFileSync(p, "utf8") }); } catch { /* */ } } }
+        }
+        const g = crossLayerGraph.buildCrossLayerGraph(files);
+        const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
+        const risk = riskHotspots.riskHotspots(files, { top: 6, graph: g }); const rsum = riskHotspots.riskSummary(risk);
+        const authz = authzGap.authzVerdict(authzGap.authzGaps(g));
+        const tg = testGap.analyzeTestGap(files, { graph: g });
+        let score = 100; score -= rsum.critical * 22; score -= rsum.high * 9; score -= authz.count * 18; score -= Math.min(24, tg.uncoveredKeystones.length * 6); score = Math.max(0, score);
+        const grade = score >= 90 ? "A" : score >= 78 ? "B" : score >= 62 ? "C" : score >= 45 ? "D" : "F";
+        const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort())).digest("hex").slice(0, 16);
+        return send(res, 200, {
+          repo: gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, ""), grade, score,
+          graph: { functions: byType("function"), tables: byType("db_table"), endpoints: byType("api_endpoint"), rules: byType("business_rule") },
+          risk: { critical: rsum.critical, high: rsum.high, top: risk.map((h) => ({ name: h.name, band: h.band, factors: h.factors, file: h.file })) },
+          authz: { clear: authz.clear, count: authz.count, exposedTables: authz.worstTables },
+          testGap: { untestedKeystones: tg.uncoveredKeystones.map((k) => k.node.name), coverage: `${tg.coveredKeystones}/${tg.totalKeystones}` },
+          fingerprint: fp,
+        });
       } catch (e) {
         return send(res, 502, { error: (e as Error).message.slice(0, 300) });
       } finally { if (handle) handle.dispose(); }
