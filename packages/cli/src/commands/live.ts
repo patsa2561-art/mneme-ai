@@ -80,16 +80,18 @@ export function registerLiveCommands(program: Command): void {
       if (name && !focus) { out(`✗ no node matching "${name}". Try: mneme graph stats`); return; }
       out("```mermaid"); out(crossLayerGraph.toMermaid(g, focus?.id, o.depth ? { maxDepth: parseInt(o.depth, 10) } : undefined)); out("```");
     });
-  graph.command("view [name]").description("Write a self-contained, offline HTML visualization (4-lane tiered SVG) — open it in any browser. With a name: that node's cross-layer blast radius.")
-    .option("--out <file>", "output path (default: mneme-graph.html)").option("--depth <n>", "blast depth (default 2)")
-    .action((name: string | undefined, o: { out?: string; depth?: string }) => {
+  graph.command("view [name]").description("Write a self-contained, offline, interactive HTML visualization — open it in any browser. Default = 🛰 IMPACT RADAR (center = your change · sectors = layers · rings = blast hop-distance · animated sweep+pulse · click any node to re-center). --style lanes for the tiered view. With a name: focus on that node.")
+    .option("--out <file>", "output path (default: mneme-graph.html)").option("--depth <n>", "blast depth (default radar 3 / lanes 2)").option("--style <s>", "radar | lanes (default: radar)")
+    .action((name: string | undefined, o: { out?: string; depth?: string; style?: string }) => {
       const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
       const focus = name ? crossLayerGraph.resolveNode(g, name) : null;
       if (name && !focus) { out(`✗ no node matching "${name}". Try: mneme graph stats`); return; }
       const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort()) + JSON.stringify(g.edges.map((e) => `${e.source}|${e.target}|${e.relation}`).sort())).digest("hex").slice(0, 16);
-      const html = crossLayerGraph.toHtml(g, focus?.id, { fingerprint: fp, maxDepth: o.depth ? parseInt(o.depth, 10) : undefined });
+      const depth = o.depth ? parseInt(o.depth, 10) : undefined;
+      const lanes = (o.style ?? "radar").toLowerCase() === "lanes";
+      const html = lanes ? crossLayerGraph.toHtml(g, focus?.id, { fingerprint: fp, maxDepth: depth }) : crossLayerGraph.toRadarHtml(g, focus?.id, { fingerprint: fp, maxDepth: depth });
       const outPath = o.out ?? join(cwd, "mneme-graph.html");
-      try { writeFileSync(outPath, html, "utf8"); out(`🕸 wrote ${outPath} (${(html.length / 1024).toFixed(0)} KB, self-contained · fingerprint ${fp}). Open it in a browser.`); } catch (e) { out(`✗ could not write: ${(e as Error).message}`); }
+      try { writeFileSync(outPath, html, "utf8"); out(`${lanes ? "🕸" : "🛰"} wrote ${outPath} (${(html.length / 1024).toFixed(0)} KB, self-contained ${lanes ? "tiered" : "IMPACT RADAR — click a node to re-center"} · fingerprint ${fp}). Open it in a browser.`); } catch (e) { out(`✗ could not write: ${(e as Error).message}`); }
     });
   graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
     .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {

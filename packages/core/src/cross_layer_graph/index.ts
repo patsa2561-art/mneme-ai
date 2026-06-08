@@ -233,4 +233,4 @@ export function crossLayerGauntlet(): CLGGauntlet {
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
 }
 
-export { toMermaid, toHtml, pickSubgraph, renderGauntlet, type SubgraphPick, type RenderGauntlet } from "./render.js";
+export { toMermaid, toHtml, toRadarHtml, pickSubgraph, renderGauntlet, type SubgraphPick, type RenderGauntlet } from "./render.js";
