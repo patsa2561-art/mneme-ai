@@ -335,6 +335,88 @@ function reportPageWithOg(signed: SignedXRay, origin: string): string {
   return tpl.replace("<title>Mneme · Repo X-Ray</title>", `<title>${xesc(title)}</title>`).replace("<!--OGMETA-->", og);
 }
 
+/** The 🛰 Impact Radar landing page — type a public repo URL, click, and the live radar renders
+ *  inline (the /api/radar HTML is fetched + dropped into an iframe). Self-contained, no framework. */
+function radarLandingHtml(): string {
+  const examples = [
+    ["sindresorhus/slugify", "https://github.com/sindresorhus/slugify"],
+    ["expressjs/express", "https://github.com/expressjs/express"],
+    ["prisma/prisma", "https://github.com/prisma/prisma"],
+    ["honojs/hono", "https://github.com/honojs/hono"],
+  ];
+  const chips = examples.map(([label, u]) => `<button class="chip" data-url="${u}">${label}</button>`).join("");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Impact Radar · Mneme X-Ray</title><meta name="description" content="See any public repo as a 4-layer cross-layer Impact Radar — code ↔ data ↔ api ↔ business. Deterministic, no LLM.">
+<style>
+:root{--cy:#22d3ee;--bg:#0b1220;--pan:#0f1b2e;--mut:#94a3b8;--line:#1f2937}
+*{box-sizing:border-box}body{margin:0;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#e5e7eb}
+.wrap{max-width:1180px;margin:0 auto;padding:clamp(20px,4vw,52px) 20px}
+.hero{text-align:center;margin-bottom:26px}
+h1{font-size:clamp(30px,5vw,46px);margin:0 0 8px;font-weight:850;letter-spacing:-.02em}
+.grad{background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{color:var(--mut);font-size:clamp(14px,2vw,17px);margin:0 auto;max-width:640px}
+.layers{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0 6px;color:var(--mut);font-size:13px}
+.layers span{background:var(--pan);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+form{display:flex;gap:10px;max-width:760px;margin:26px auto 10px;flex-wrap:wrap}
+input{flex:1;min-width:240px;background:var(--pan);border:1px solid #2b3a52;border-radius:12px;padding:15px 16px;color:#e5e7eb;font-size:15px;outline:none}
+input:focus{border-color:var(--cy);box-shadow:0 0 0 3px rgba(34,211,238,.15)}
+button.go{background:linear-gradient(90deg,#22d3ee,#0891b2);color:#04141b;border:0;border-radius:12px;padding:15px 26px;font-weight:800;font-size:15px;cursor:pointer;white-space:nowrap}
+button.go:disabled{opacity:.6;cursor:wait}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px 0 4px}
+.chip{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}
+.chip:hover{border-color:var(--cy);color:var(--cy)}
+#status{text-align:center;color:var(--mut);min-height:22px;font-size:14px;margin:10px 0}
+#status.err{color:#fca5a5}
+.frameWrap{margin-top:14px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--pan);display:none}
+iframe{width:100%;height:78vh;min-height:560px;border:0;display:block;background:var(--bg)}
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:34px}
+.card{background:var(--pan);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.card b{color:#e5e7eb}.card p{color:var(--mut);font-size:13.5px;margin:6px 0 0}
+footer{color:#64748b;font-size:12.5px;text-align:center;margin-top:30px;line-height:1.7}
+code{background:#1f2937;padding:1px 6px;border-radius:5px;color:#cbd5e1}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid #334155;border-top-color:var(--cy);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style></head>
+<body><div class="wrap">
+<div class="hero">
+<h1>🛰 <span class="grad">Impact Radar</span></h1>
+<p class="tag">See <b>any public repo</b> as one cross-layer map — your code, your database tables, your API routes, and your product rules, joined. Pick a node and watch the blast radius ripple across every layer.</p>
+<div class="layers"><span>💼 Business</span><span>🌐 API</span><span>⚙ Code</span><span>🗄 Data</span></div>
+</div>
+<form id="f"><input id="u" type="text" placeholder="https://github.com/owner/repo" autocomplete="off" spellcheck="false"><button class="go" id="go" type="submit">View Radar →</button></form>
+<div class="chips">${chips}</div>
+<div id="status"></div>
+<div class="frameWrap" id="fw"><iframe id="frame" title="Impact Radar"></iframe></div>
+<div class="feat">
+<div class="card"><b>🧭 Cross-layer, not just code</b><p>Most graphs map code to code. This links code ↔ DB tables (from your Prisma/SQL schema) ↔ API routes ↔ business rules (from your PRD) — the join no single-layer tool draws.</p></div>
+<div class="card"><b>🔒 Deterministic · no LLM</b><p>Every node and edge is derived from a real file. Nothing is guessed or hallucinated — a business rule with no code anchor stays honestly <i>unknown</i>.</p></div>
+<div class="card"><b>🗑 Private by construction</b><p>Your repo is shallow-cloned to a temp dir, scanned, and <b>deleted</b> on the spot. Nothing persists on the server. For private repos, run it locally.</p></div>
+</div>
+<footer>
+Local + private repos: <code>npm i -g mneme-ai</code> then <code>mneme graph view &lt;function&gt;</code> · or a shareable card with <code>mneme graph card</code>.<br>
+Honest: the radar shows reachable <i>coupling</i> to inspect, not a proven runtime path · part of <a href="/" style="color:var(--cy)">Mneme Repo X-Ray</a>.
+</footer>
+</div>
+<script>
+var f=document.getElementById('f'),u=document.getElementById('u'),go=document.getElementById('go'),st=document.getElementById('status'),fw=document.getElementById('fw'),frame=document.getElementById('frame');
+function setStatus(msg,err){st.className=err?'err':'';st.innerHTML=msg;}
+function valid(v){return /^https?:\\/\\/(www\\.)?(github|gitlab|bitbucket)\\.(com|org)\\/[^\\s]+\\/[^\\s]+/.test(v.trim());}
+function run(url){
+  url=(url||'').trim(); if(!url){setStatus('Paste a public GitHub / GitLab / Bitbucket repo URL.',true);return;}
+  if(!valid(url)){setStatus('That doesn\\'t look like a public repo URL (e.g. https://github.com/owner/repo).',true);return;}
+  u.value=url; go.disabled=true; setStatus('<span class=spin></span>Cloning + scanning '+url.replace(/^https?:\\/\\//,'')+' …');
+  fetch('/api/radar?gitUrl='+encodeURIComponent(url)).then(function(r){return r.text().then(function(t){return {ok:r.ok,t:t};});}).then(function(o){
+    if(o.ok && o.t.indexOf('id="radar"')>-1){ frame.srcdoc=o.t; fw.style.display='block'; setStatus('✓ radar ready — click any node to re-center.'); fw.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+    else { var msg='Could not build the radar.'; try{msg=JSON.parse(o.t).error||msg;}catch(e){} setStatus(msg,true); }
+  }).catch(function(e){ setStatus('Network error: '+e.message,true); }).finally(function(){ go.disabled=false; });
+}
+f.addEventListener('submit',function(e){e.preventDefault();run(u.value);});
+Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){c.addEventListener('click',function(){run(c.getAttribute('data-url'));});});
+var q=new URLSearchParams(location.search).get('gitUrl'); if(q)run(q);
+</script>
+</body></html>`;
+}
+
 export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerHub) {
   // THE AUTONOMOUS REAL-TIME MONITOR — one hub per server instance. The scanner
   // (build) runs the SAME hosted, bounded, raw-free, signed pipeline as /api/xray;
@@ -367,6 +449,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       return send(res, 200, page(aggregateByRepo(readBoardRows()), offset, limit));
     }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) return serveStatic(res, "index.html");
+    if (req.method === "GET" && url.pathname === "/radar") return send(res, 200, radarLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
     if (req.method === "GET" && url.pathname === "/card.js") return serveStatic(res, "card.js");
     if (req.method === "GET" && url.pathname === "/local-scan.js") return serveStatic(res, "local-scan.js");
