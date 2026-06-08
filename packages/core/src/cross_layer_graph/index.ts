@@ -364,6 +364,44 @@ export function diffBlastMarkdown(b: DiffBlast, opts?: { repo?: string }): strin
   return L.join("\n");
 }
 
+// ── REVERSE IMPACT / DROP SAFETY — what breaks if you REMOVE a table or endpoint ─────────────────
+export interface DropImpact { node: GNode | null; dependentFunctions: string[]; dependentEndpoints: string[]; dependentRules: string[]; keystonesAffected: string[]; safety: "SAFE" | "RISKY" | "CRITICAL"; reason: string }
+/**
+ * The REVERSE blast radius: before you DROP a DB table (or remove an endpoint), everything that
+ * depends on it — every function that reads/writes it, every UPSTREAM caller of those functions, every
+ * endpoint that reaches them, every business rule. The deterministic answer to "is this safe to delete?"
+ * — the migration question that terrifies everyone. SAFE = nothing depends on it · RISKY = code does ·
+ * CRITICAL = a keystone or a live endpoint depends on it. ★HONEST: structural dependents from the graph
+ * (deterministic), not a proof nothing breaks at runtime (dynamic/reflective access is invisible).
+ */
+export function dropImpact(graph: CrossLayerGraph, name: string): DropImpact {
+  const nodes = graph?.nodes ?? []; const edges = graph?.edges ?? []; const byId = new Map(nodes.map((n) => [n.id, n]));
+  // prefer a table/endpoint match for "the thing you'd drop"
+  const target = nodes.find((n) => (n.type === "db_table" || n.type === "api_endpoint") && lc(n.name) === lc(name))
+    ?? nodes.find((n) => (n.type === "db_table" || n.type === "api_endpoint") && lc(n.name).includes(lc(name)))
+    ?? resolveNode(graph, name);
+  if (!target) return { node: null, dependentFunctions: [], dependentEndpoints: [], dependentRules: [], keystonesAffected: [], safety: "SAFE", reason: `no table/endpoint matching "${name}"` };
+  // backward CALLS adjacency (who calls X)
+  const callers = new Map<string, string[]>(); for (const e of edges) if (e.relation === "CALLS") (callers.get(e.target) ?? callers.set(e.target, []).get(e.target))!.push(e.source);
+  const fnIds = new Set<string>();
+  if (target.type === "db_table") { for (const e of edges) if ((e.relation === "READS" || e.relation === "WRITES_TO") && e.target === target.id) fnIds.add(e.source); }
+  else { for (const e of edges) if (e.relation === "HANDLED_BY" && e.source === target.id) fnIds.add(e.target); }   // endpoint → its handlers
+  // add IMMEDIATE upstream callers (depth 1) — the direct dependents + who calls them. Deeper than
+  // that explodes on a dense call graph and stops being actionable; the safety verdict keys on the
+  // direct table-touchers + the keystones/endpoints among them, which is the reliable signal.
+  for (const id of [...fnIds]) for (const c of callers.get(id) ?? []) fnIds.add(c);
+  const epIds = new Set<string>(); for (const e of edges) if (e.relation === "HANDLED_BY" && fnIds.has(e.target)) epIds.add(e.source);
+  const ruleIds = new Set<string>(); for (const e of edges) if (e.relation === "IMPLEMENTS" && fnIds.has(e.target)) ruleIds.add(e.source);
+  const keystoneNames = new Set(graphHealth(graph).keystones.map((k) => k.node.name));
+  const dependentFunctions = [...fnIds].map((id) => byId.get(id)?.name).filter((x): x is string => !!x).sort();
+  const dependentEndpoints = [...epIds].map((id) => { const n = byId.get(id); return n ? `${n.method ? n.method + " " : ""}${n.name}` : ""; }).filter(Boolean).sort();
+  const dependentRules = [...ruleIds].map((id) => byId.get(id)?.name).filter((x): x is string => !!x).sort();
+  const keystonesAffected = dependentFunctions.filter((f) => keystoneNames.has(f));
+  const safety: DropImpact["safety"] = (keystonesAffected.length || dependentEndpoints.length) ? "CRITICAL" : dependentFunctions.length ? "RISKY" : "SAFE";
+  const reason = safety === "SAFE" ? `nothing in the scanned code depends on ${target.type} '${target.name}' — likely safe to remove (verify dynamic access)` : `removing ${target.type} '${target.name}' breaks ${dependentFunctions.length} function(s)${dependentEndpoints.length ? ", " + dependentEndpoints.length + " endpoint(s)" : ""}${keystonesAffected.length ? ", " + keystonesAffected.length + " keystone(s)" : ""}${dependentRules.length ? ", " + dependentRules.length + " business rule(s)" : ""}`;
+  return { node: target, dependentFunctions, dependentEndpoints, dependentRules, keystonesAffected, safety, reason };
+}
+
 /** Find a node id by a loose name (function name, table name, or endpoint path). First match. */
 export function resolveNode(graph: CrossLayerGraph, query: string): GNode | null {
   const q = lc(word(query)); const nodes = graph?.nodes ?? [];
@@ -488,7 +526,10 @@ export function crossLayerGauntlet(): CLGGauntlet {
   const before = buildCrossLayerGraph([{ path: "schema.prisma", content: "model Wallet { id Int @id }" }, { path: "a.ts", content: "export function createUserWallet(uid){ return 1; }" }]);
   const drift = graphDrift(before, g);
   const driftOK = drift.addedCouplings.some((c) => c.to === "Wallet" && c.relation === "WRITES_TO") && graphDrift(g, g).addedCouplings.length === 0;
-  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); graphHealth(null as never); extractorBenchmark(); graphDrift(null as never, null as never); return true; } catch { return false; } })();
+  // drop impact: removing Wallet (written by createUserWallet, reached by registerHandler→endpoint) → CRITICAL
+  const drop = dropImpact(g, "Wallet");
+  const dropOK = drop.safety === "CRITICAL" && drop.dependentFunctions.includes("createUserWallet") && dropImpact(g, "NoSuchTable").safety === "SAFE";
+  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); graphHealth(null as never); extractorBenchmark(); graphDrift(null as never, null as never); dropImpact(null as never, "x"); return true; } catch { return false; } })();
   const checks = [
     { name: "EXTRACT-3-LAYERS", pass: hasTable && hasEndpoint && hasFn, detail: "db_table (Prisma) + api_endpoint (route) + function (decl) all extracted deterministically" },
     { name: "WRITE-EDGE", pass: writeEdge, detail: "function → db_table WRITES_TO (prisma.wallet.create)" },
@@ -503,6 +544,7 @@ export function crossLayerGauntlet(): CLGGauntlet {
     { name: "KEYSTONE+ORPHAN", pass: healthOK, detail: "the sole writer to a table with real fan-in = a cross-layer KEYSTONE (single point of failure); orphan tables/functions = dead-code candidates (prove-or-unknown)" },
     { name: "EXTRACTOR-ACCURACY", pass: benchOK, detail: "MEASURED on a labeled corpus: node + cross-layer-edge precision/recall (reproducible, not a claim)" },
     { name: "GRAPH-DRIFT", pass: driftOK, detail: "the cross-layer couplings that APPEARED/disappeared between two commits — architectural drift (a function reaching a new layer); identical graphs → no drift" },
+    { name: "DROP-IMPACT", pass: dropOK, detail: "reverse blast radius: what breaks if you DROP a table — SAFE/RISKY/CRITICAL deletion safety (a non-existent table is SAFE)" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

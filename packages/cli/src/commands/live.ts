@@ -188,6 +188,20 @@ export function registerLiveCommands(program: Command): void {
       if (chk.surpriseRules.length) out(`   💼 unmentioned rules: ${chk.surpriseRules.map((r) => r.name).join(" · ")}`);
       process.exitCode = 2;
     });
+  graph.command("reverse <name>").alias("drop").description("⛔ DROP SAFETY (reverse blast radius) — before you remove a DB table or endpoint, see EVERYTHING that depends on it: functions, their upstream callers, endpoints, business rules. SAFE / RISKY / CRITICAL. Exit 2 on CRITICAL.")
+    .action((name: string) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const d = crossLayerGraph.dropImpact(g, name);
+      if (!d.node) { out(`✗ no table/endpoint matching "${name}". Try: mneme graph stats`); return; }
+      const ico = d.safety === "SAFE" ? "✅" : d.safety === "RISKY" ? "🟡" : "🔴";
+      out(`${ico} DROP ${d.node.type} "${d.node.name}": ${d.safety} — ${d.reason}`);
+      if (d.keystonesAffected.length) out(`   🔑 keystones broken: ${d.keystonesAffected.join(" · ")}`);
+      if (d.dependentEndpoints.length) out(`   🌐 endpoints affected: ${d.dependentEndpoints.slice(0, 20).join(" · ")}`);
+      if (d.dependentRules.length) out(`   💼 business rules affected: ${d.dependentRules.join(" · ")}`);
+      if (d.dependentFunctions.length) out(`   ⚙  functions depending on it (${d.dependentFunctions.length}): ${d.dependentFunctions.slice(0, 25).join(" · ")}${d.dependentFunctions.length > 25 ? " …" : ""}`);
+      out("   honest: structural dependents (deterministic) — verify dynamic/reflective access too.");
+      if (d.safety === "CRITICAL") process.exitCode = 2;
+    });
   graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
     .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {
       const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));

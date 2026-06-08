@@ -426,6 +426,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.graph.reverse",
+    category: "audit",
+    description: "⛔ DROP SAFETY (reverse blast radius) — BEFORE you remove/rename a DB table or an endpoint, find EVERYTHING that depends on it: the functions that read/write it, their UPSTREAM callers, the endpoints that reach them, the business rules — and a deletion-safety verdict SAFE / RISKY / CRITICAL (CRITICAL = a keystone or a live endpoint depends on it). The deterministic answer to the migration question that terrifies everyone. ★HONEST: structural dependents from the graph — not a proof nothing breaks at runtime (dynamic/reflective access is invisible).",
+    whenToUse: "BEFORE dropping/renaming a DB table or column, or removing an endpoint — confirm what depends on it so you don't break a keystone or a live route.",
+    triggers: ["safe to drop", "what depends on this table", "can i delete this", "remove this endpoint", "drop column impact", "who uses this table", "deletion safety"],
+    inputSchema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const d = core.crossLayerGraph.dropImpact(g, String(args["name"] ?? ""));
+      const data = await attest(cwd, { found: !!d.node, safety: d.safety, reason: d.reason, keystonesAffected: d.keystonesAffected, dependentEndpoints: d.dependentEndpoints, dependentRules: d.dependentRules, dependentFunctionCount: d.dependentFunctions.length });
+      return { data, wisdom: !d.node ? `no table/endpoint matching "${args["name"]}"` : `${d.safety} — ${d.reason}`, followUp: d.safety === "CRITICAL" ? ["CRITICAL: a keystone/endpoint depends on this — write a migration that updates the dependents, don't just drop it"] : [], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.graph.mermaid",
     category: "audit",
     description: "🕸 CROSS-LAYER GRAPH as a Mermaid flowchart you can SHOW the user inline (renders in chat/Markdown/GitHub). The 4 layers (💼 Business ↔ 🌐 API ↔ ⚙ Code ↔ 🗄 Data) become subgraphs; pass a `name` to draw that node's cross-layer blast radius (the focus is highlighted). Deterministic, no LLM — every node/edge derives from a real repo file. Wrap the returned string in a ```mermaid fence.",

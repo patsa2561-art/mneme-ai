@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck, graphHealth, extractorBenchmark, graphDrift } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck, graphHealth, extractorBenchmark, graphDrift, dropImpact } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -84,6 +84,16 @@ describe("cross_layer_graph", () => {
     expect(h.keystones.some((k) => k.node.name === "createUserWallet" && k.soleWriterOf.includes("Wallet"))).toBe(true);
     expect(h.orphanTables.map((t) => t.name)).toContain("AuditLog");
   });
+  it("drop impact (reverse blast): CRITICAL when code/endpoints depend; SAFE for an unused table", () => {
+    const g2 = buildCrossLayerGraph(FILES);
+    const d = dropImpact(g2, "Wallet");
+    expect(d.safety).toBe("CRITICAL");                       // createUserWallet writes it, reached by an endpoint
+    expect(d.dependentFunctions).toContain("createUserWallet");
+    expect(dropImpact(g2, "NoSuchTable").safety).toBe("SAFE");
+    const lonely = buildCrossLayerGraph([{ path: "s.prisma", content: "model Unused { id Int @id }" }]);
+    expect(dropImpact(lonely, "Unused").safety).toBe("SAFE"); // nothing touches it
+  });
+
   it("graph drift: a function reaching a NEW table is flagged; identical graphs → no drift", () => {
     const before = buildCrossLayerGraph([{ path: "s.prisma", content: "model Order { id Int @id }" }, { path: "o.ts", content: "export function createOrder(){ return 1; }" }]);
     const after = buildCrossLayerGraph([{ path: "s.prisma", content: "model Order { id Int @id }" }, { path: "o.ts", content: "export function createOrder(){ return prisma.order.create({data:{}}); }" }]);
