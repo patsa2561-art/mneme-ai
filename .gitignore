@@ -78,3 +78,4 @@ GEMINI.md
 /test_*.mjs
 /verify_*.js
 /*_exploit.*
+scripts/_pub_*.sh
