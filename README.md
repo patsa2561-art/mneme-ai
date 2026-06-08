@@ -247,7 +247,11 @@ mneme polygraph autosetup   # browser truth-dots (optional)
 **🏛 The Agent Governor** — set a Charter once; your AI agents run inside it 24/7 as a continuous **auto-operation batch**; you approve only the genuinely-irreversible escalations. The signed governance kernel that sits *under* any orchestrator (Claude Code · Cursor · Astra · AutoGen).
 **→ <a href="docs/AGENT-GOVERNOR.md" target="_blank" rel="noopener">How a CEO uses it (commands + agent wiring)</a>**
 
-**🔍 One command — a Codebase Accountability Report.** `npm i -g mneme-ai` then **`mneme review`** maps your repo across layers and prints, in one shot: 🎯 **risk hotspots** (the keystone single-points-of-failure to guard first) · 🔒 **authz gaps** (an endpoint that writes a sensitive table with no auth on the path) · 🧪 **untested keystones** (the scariest, line-coverage-hidden surface). On a PR: `mneme review --base origin/main`. Then drill in — each is its own command and MCP tool your agent calls automatically:
+**🔍 One command — a Codebase Accountability Report.**
+
+<a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener"><img src="docs/demo/review-card.svg" alt="mneme review — a graded Codebase Accountability Report: grade, risk hotspots, authz gaps, untested keystones" width="100%"></a>
+
+`npm i -g mneme-ai` then **`mneme review`** maps your repo across layers and prints, in one shot: 🎯 **risk hotspots** (the keystone single-points-of-failure to guard first) · 🔒 **authz gaps** (an endpoint that writes a sensitive table with no auth on the path) · 🧪 **untested keystones** (the scariest, line-coverage-hidden surface). On a PR: `mneme review --base origin/main`. Then drill in — each is its own command and MCP tool your agent calls automatically:
 
 | command | what it answers — *the question nothing else answered* |
 |---|---|
