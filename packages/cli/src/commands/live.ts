@@ -93,6 +93,23 @@ export function registerLiveCommands(program: Command): void {
       const outPath = o.out ?? join(cwd, "mneme-graph.html");
       try { writeFileSync(outPath, html, "utf8"); out(`${lanes ? "🕸" : "🛰"} wrote ${outPath} (${(html.length / 1024).toFixed(0)} KB, self-contained ${lanes ? "tiered" : "IMPACT RADAR — click a node to re-center"} · fingerprint ${fp}). Open it in a browser.`); } catch (e) { out(`✗ could not write: ${(e as Error).message}`); }
     });
+  graph.command("card [name]").description("📇 Export a STATIC share card of the Impact Radar (1200×630, social/OG ratio) — .svg (vector) or .png (rasterized). Great for a PR, a README, or a tweet.")
+    .option("--out <file>", "output path (.png or .svg; default: mneme-radar.png)").option("--depth <n>", "blast depth (default 3)")
+    .action(async (name: string | undefined, o: { out?: string; depth?: string }) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const focus = name ? crossLayerGraph.resolveNode(g, name) : null;
+      if (name && !focus) { out(`✗ no node matching "${name}". Try: mneme graph stats`); return; }
+      const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort())).digest("hex").slice(0, 12);
+      const svg = crossLayerGraph.toRadarSvg(g, focus?.id, { fingerprint: fp, maxDepth: o.depth ? parseInt(o.depth, 10) : undefined });
+      const outPath = o.out ?? join(cwd, "mneme-radar.png");
+      try {
+        if (/\.png$/i.test(outPath)) {
+          const sharp = (await import("sharp")).default;
+          await sharp(Buffer.from(svg)).png().toFile(outPath);
+          out(`📇 wrote ${outPath} (PNG 1200×630 · fingerprint ${fp}). Drop it in a PR / README / tweet.`);
+        } else { writeFileSync(outPath, svg, "utf8"); out(`📇 wrote ${outPath} (SVG 1200×630 · fingerprint ${fp}).`); }
+      } catch (e) { out(`✗ could not write: ${(e as Error).message}${/\.png$/i.test(outPath) ? " — try --out card.svg (no rasterizer needed)" : ""}`); }
+    });
   graph.command("blast <name>").description("Cross-layer blast radius for a function / table / endpoint: what ELSE is coupled to it across all three layers.")
     .option("--depth <n>", "max hops (default: unlimited)").action((name: string, o: { depth?: string }) => {
       const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanRepo(cwd));
@@ -100,6 +117,7 @@ export function registerLiveCommands(program: Command): void {
       if (!node) { out(`✗ no function/table/endpoint matching "${name}" found in the graph. Try: mneme graph stats`); return; }
       const br = crossLayerGraph.blastRadius(g, node.id, { maxDepth: o.depth ? parseInt(o.depth, 10) : 2 });
       out(`🕸 Blast radius of ${node.type} "${node.name}"${node.file ? ` (${node.file})` : ""} — ${br.reachable} coupled node(s):`);
+      if (br.rules.length) out(`   💼 business rules (${br.rules.length}): ${br.rules.map((r) => r.name).join(" · ")}`);
       if (br.endpoints.length) out(`   🌐 API endpoints (${br.endpoints.length}): ${br.endpoints.map((e) => `${e.method} ${e.name}`).join(" · ")}`);
       if (br.tables.length) out(`   🗄  DB tables (${br.tables.length}): ${br.tables.map((t) => t.name).join(" · ")}`);
       if (br.functions.length) out(`   ⚙  functions (${br.functions.length}): ${br.functions.slice(0, 25).map((f) => f.name).join(" · ")}${br.functions.length > 25 ? " …" : ""}`);

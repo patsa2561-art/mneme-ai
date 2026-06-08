@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, renderGauntlet } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -56,5 +56,28 @@ describe("cross_layer_graph", () => {
     expect(toMermaid(g, node.id)).toBe(toMermaid(g, node.id));                      // deterministic
     expect(toHtml(g, node.id)).toContain("<svg");
     expect(toHtml({ nodes: [{ id: "x", type: "function", name: "<script>x</script>" }], edges: [] }, "x")).not.toContain("<script>x");
+  });
+
+  it("blast radius surfaces business rules (the 4th layer)", () => {
+    const g = buildCrossLayerGraph([
+      { path: "o.ts", content: "// feature: place an order\nexport function createOrder(){ return prisma.order.create({data:{}}); }" },
+      { path: "s.prisma", content: "model Order { id Int @id }" },
+      { path: "P.md", content: "## Feature: place an order" },
+    ]);
+    const br = blastRadius(g, resolveNode(g, "createOrder")!.id, { maxDepth: 3 });
+    expect(br.rules.map((r) => r.name)).toContain("place an order");
+    expect(br.tables.map((t) => t.name)).toContain("Order");
+  });
+
+  it("radar (overview galaxy) + static share card render + are deterministic + XSS-safe", () => {
+    const g = buildCrossLayerGraph(FILES);
+    const overview = toRadarHtml(g, undefined, { overview: true });
+    expect(overview).toContain("function galaxy");                                 // galaxy mode present
+    expect(toRadarHtml(g, undefined, { overview: true })).toBe(overview);          // deterministic
+    const node = resolveNode(g, "createUserWallet")!;
+    const card = toRadarSvg(g, node.id, { fingerprint: "fp" });
+    expect(card).toMatch(/^<svg/);
+    expect(card).toBe(toRadarSvg(g, node.id, { fingerprint: "fp" }));              // deterministic
+    expect(toRadarSvg({ nodes: [{ id: "x", type: "function", name: "<script>x</script>" }], edges: [] }, "x")).not.toContain("<script>x");
   });
 });

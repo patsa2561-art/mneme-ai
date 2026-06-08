@@ -24,7 +24,8 @@
  * report. Every persisted report passes xrayLeaksRaw first.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf, readdirSync, statSync } from "node:fs";
+import { crossLayerGraph } from "@mneme-ai/core";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -484,6 +485,36 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         handle = shallowClone(gitUrl);
         const pack = buildContextPack(handle.path, { budget: Math.min(200_000, body.budget || 120_000) });
         return send(res, 200, pack);
+      } catch (e) {
+        return send(res, 502, { error: (e as Error).message.slice(0, 300) });
+      } finally { if (handle) handle.dispose(); }
+    }
+
+    // 🛰 CROSS-LAYER IMPACT RADAR — clone a public repo, build the deterministic 4-layer graph
+    // (code ↔ data ↔ api ↔ business), return the self-contained interactive radar HTML. Linkable:
+    //   GET /api/radar?gitUrl=https://github.com/owner/repo[&focus=<name>]
+    // Source is cloned to a temp dir, scanned, and DELETED in finally — nothing persists.
+    if (req.method === "GET" && url.pathname === "/api/radar") {
+      if (rateLimited("radar:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      const gitUrl = (url.searchParams.get("gitUrl") || "").trim();
+      const focusName = (url.searchParams.get("focus") || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs. For private repos, run mneme graph view locally." });
+      let handle: { path: string; dispose: () => void } | null = null;
+      try {
+        handle = shallowClone(gitUrl);
+        const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql|md|mdx|markdown|txt)$/i;
+        const files: { path: string; content: string }[] = []; const stack = [handle.path];
+        while (stack.length && files.length < 3000) {
+          const d = stack.pop() as string; let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }
+          for (const e of ents) { if (SKIP.has(e)) continue; const p = join(d, e); let st; try { st = statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(handle.path.length + 1), content: readFileSync(p, "utf8") }); } catch { /* */ } } }
+        }
+        const g = crossLayerGraph.buildCrossLayerGraph(files);
+        const focus = focusName ? crossLayerGraph.resolveNode(g, focusName) : null;
+        const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort())).digest("hex").slice(0, 16);
+        const repoName = gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "");
+        const html = crossLayerGraph.toRadarHtml(g, focus?.id, { fingerprint: fp, title: `Impact Radar — ${repoName}`, overview: !focus });
+        return send(res, 200, html, "text/html; charset=utf-8");
       } catch (e) {
         return send(res, 502, { error: (e as Error).message.slice(0, 300) });
       } finally { if (handle) handle.dispose(); }

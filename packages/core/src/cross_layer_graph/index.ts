@@ -81,8 +81,20 @@ function extractFunctions(files: SourceFile[]): Array<GNode & { body: string }> 
     for (const m of c.matchAll(reFn)) marks.push({ name: m[1], idx: m.index ?? 0 });
     for (const m of c.matchAll(reArrow)) marks.push({ name: m[1], idx: m.index ?? 0 });
     marks.sort((a, b) => a.idx - b.idx);
+    // Attach the comment/annotation block immediately ABOVE a def to THAT function (the universal place
+    // a doc/annotation lives) — walk back over contiguous comment/blank lines, bounded by the previous
+    // def. This is what makes `// feature: X` / `@implements X` resolve to the right function.
+    const docStart = (start: number, floor: number): number => {
+      let pos = start, lineEnd = c.lastIndexOf("\n", start - 1);
+      while (lineEnd > floor) {
+        const lineStart = c.lastIndexOf("\n", lineEnd - 1) + 1; const line = c.slice(lineStart, lineEnd).trim();
+        if (line === "" || line.startsWith("//") || line.startsWith("*") || line.startsWith("/*") || line.endsWith("*/")) { pos = lineStart; lineEnd = lineStart - 1; } else break;
+      }
+      return pos;
+    };
+    const bounds = marks.map((m, i) => docStart(m.idx, i > 0 ? marks[i - 1].idx : -1));
     for (let i = 0; i < marks.length; i++) {
-      const start = marks[i].idx; const end = i + 1 < marks.length ? marks[i + 1].idx : c.length;
+      const start = bounds[i]; const end = i + 1 < marks.length ? bounds[i + 1] : c.length;
       out.push({ id: `fn:${f.path}#${marks[i].name}`, type: "function", name: marks[i].name, file: f.path, body: c.slice(start, end) });
     }
   }
@@ -152,7 +164,7 @@ export function buildCrossLayerGraph(files: ReadonlyArray<SourceFile>): CrossLay
   return { nodes, edges };
 }
 
-export interface BlastRadius { origin: string; tables: GNode[]; endpoints: GNode[]; functions: GNode[]; depth: number; reachable: number }
+export interface BlastRadius { origin: string; tables: GNode[]; endpoints: GNode[]; functions: GNode[]; rules: GNode[]; depth: number; reachable: number }
 /**
  * CROSS-LAYER BLAST RADIUS — from a node, the impact closure across all three layers. Edges are
  * treated as bidirectional COUPLING (changing either end can affect the other), BFS with an optional
@@ -171,7 +183,7 @@ export function blastRadius(graph: CrossLayerGraph, originId: string, opts?: { m
   }
   seen.delete(originId);
   const hit = [...seen].map((id) => byId.get(id)).filter((n): n is GNode => !!n);
-  return { origin: originId, tables: hit.filter((n) => n.type === "db_table"), endpoints: hit.filter((n) => n.type === "api_endpoint"), functions: hit.filter((n) => n.type === "function"), depth, reachable: hit.length };
+  return { origin: originId, tables: hit.filter((n) => n.type === "db_table"), endpoints: hit.filter((n) => n.type === "api_endpoint"), functions: hit.filter((n) => n.type === "function"), rules: hit.filter((n) => n.type === "business_rule"), depth, reachable: hit.length };
 }
 
 /** Find a node id by a loose name (function name, table name, or endpoint path). First match. */
@@ -233,4 +245,4 @@ export function crossLayerGauntlet(): CLGGauntlet {
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
 }
 
-export { toMermaid, toHtml, toRadarHtml, pickSubgraph, renderGauntlet, type SubgraphPick, type RenderGauntlet } from "./render.js";
+export { toMermaid, toHtml, toRadarHtml, toRadarSvg, pickSubgraph, renderGauntlet, type SubgraphPick, type RenderGauntlet } from "./render.js";

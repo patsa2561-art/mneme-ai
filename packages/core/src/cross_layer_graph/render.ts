@@ -29,7 +29,7 @@ export function pickSubgraph(graph: CrossLayerGraph, focusId?: string, opts?: { 
   const byId = new Map(nodes.map((n) => [n.id, n]));
   if (focusId && byId.has(focusId)) {
     const br = blastRadius(graph, focusId, { maxDepth: opts?.maxDepth ?? 2 });
-    const keep = new Set<string>([focusId, ...br.tables.map((n) => n.id), ...br.endpoints.map((n) => n.id), ...br.functions.slice(0, cap).map((n) => n.id)]);
+    const keep = new Set<string>([focusId, ...br.rules.map((n) => n.id), ...br.tables.map((n) => n.id), ...br.endpoints.map((n) => n.id), ...br.functions.slice(0, cap).map((n) => n.id)]);
     return { nodes: nodes.filter((n) => keep.has(n.id)), edges: edges.filter((e) => keep.has(e.source) && keep.has(e.target)), focusId };
   }
   // overview: highest-degree nodes (the structural hubs), capped, + edges among them
@@ -119,14 +119,16 @@ export function toHtml(graph: CrossLayerGraph, focusId?: string, opts?: { maxDep
 // the radar on it (self-contained vanilla JS — one file, no framework, no network). Nothing about the
 // DATA is invented: every position encodes a real fact (sector = the node's layer, radius = its real
 // graph distance from the focus). Layout is computed in-page but deterministically (stable sort).
-export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { maxDepth?: number; cap?: number; fingerprint?: string; title?: string }): string {
-  // pick a center: the focus, else the highest-degree node (a radar needs a center).
-  let center = focusId;
-  if (!center || !(graph?.nodes ?? []).some((n) => n.id === center)) {
+export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { maxDepth?: number; cap?: number; fingerprint?: string; title?: string; overview?: boolean }): string {
+  // OVERVIEW (galaxy) when asked or when no focus is given — show the whole project's hubs and let the
+  // user click into any node's radar. Otherwise center on the focus node.
+  const overview = !!opts?.overview || (!focusId && opts?.overview !== false);
+  let center: string | undefined = overview ? undefined : focusId;
+  if (!overview && (!center || !(graph?.nodes ?? []).some((n) => n.id === center))) {
     const deg = new Map<string, number>(); for (const e of graph?.edges ?? []) { deg.set(e.source, (deg.get(e.source) ?? 0) + 1); deg.set(e.target, (deg.get(e.target) ?? 0) + 1); }
     center = [...(graph?.nodes ?? [])].sort((a, b) => (deg.get(b.id) ?? 0) - (deg.get(a.id) ?? 0) || a.id.localeCompare(b.id))[0]?.id;
   }
-  const pick = pickSubgraph(graph, center, { cap: opts?.cap ?? 80, maxDepth: opts?.maxDepth ?? 3 });
+  const pick = overview ? pickSubgraph(graph, undefined, { cap: opts?.cap ?? 110 }) : pickSubgraph(graph, center, { cap: opts?.cap ?? 80, maxDepth: opts?.maxDepth ?? 3 });
   const data = {
     focus: center ?? null,
     nodes: pick.nodes.map((n) => ({ id: n.id, type: n.type, name: (n.type === "api_endpoint" && n.method ? n.method + " " + n.name : n.name).slice(0, 60), file: n.file ?? "" })),
@@ -164,19 +166,90 @@ export function toRadarHtml(graph: CrossLayerGraph, focusId?: string, opts?: { m
     "    if(isF||p.dist<=2){var t=el('text',{x:p.x,y:p.y-(isF?18:12),['font-size']:isF?12:10,['text-anchor']:'middle',fill:'#e5e7eb'});t.textContent=n.name.length>20?n.name.slice(0,19)+'…':n.name;g.appendChild(t);}",
     "    g.addEventListener('mouseenter',function(ev){tip.style.display='block';tip.style.left=(ev.clientX+12)+'px';tip.style.top=(ev.clientY+12)+'px';tip.innerHTML='<b>'+G.meta[p.type].icon+' '+esc(n.name)+'</b>'+(n.file?'<br><span style=\\'opacity:.6\\'>'+esc(n.file)+'</span>':'')+'<br><span style=\\'opacity:.6\\'>'+ (p.dist===0?'focus':p.dist+' hop'+(p.dist>1?'s':'')+' away')+'</span>';});",
     "    g.addEventListener('mouseleave',function(){tip.style.display='none';});",
-    "    g.addEventListener('click',function(){draw(id);document.getElementById('focusName').textContent=n.name;});svg.appendChild(g);});}",
+    "    g.addEventListener('click',function(){draw(id);setHdr(n.name);});svg.appendChild(g);});}",
+    "function galaxy(){while(svg.firstChild)svg.removeChild(svg.firstChild);var byId={};G.nodes.forEach(function(n){byId[n.id]=n;});",
+    "  var groups={};G.nodes.forEach(function(n){(groups[n.type]=groups[n.type]||[]).push(n);});",
+    "  var present=G.order.filter(function(t){return groups[t]&&groups[t].length;});var span=2*Math.PI/Math.max(1,present.length);var pos={};",
+    "  present.forEach(function(t,si){var arr=groups[t].slice().sort(function(a,b){return a.name.localeCompare(b.name);});var base=si*span-Math.PI/2;",
+    "    arr.forEach(function(n,i){var ring=1+(i%4);var inRing=Math.floor(i/4);var ang=base+span*((i+0.6)/arr.length);var rad=90+ring*64+(inRing%2)*26;pos[n.id]={x:CX+rad*Math.cos(ang),y:CY+rad*Math.sin(ang),type:n.type};});});",
+    "  present.forEach(function(t,si){var a=si*span-Math.PI/2;var lx=CX+(W/2-30)*Math.cos(a),ly=CY+(W/2-30)*Math.sin(a);var tl=el('text',{x:lx,y:ly,fill:G.meta[t].color,['font-size']:13,['font-weight']:700,['text-anchor']:'middle'});tl.textContent=G.meta[t].icon+' '+G.meta[t].label.toUpperCase();svg.appendChild(tl);});",
+    "  G.edges.forEach(function(e){var a=pos[e.s],b=pos[e.t];if(!a||!b)return;svg.appendChild(el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:G.rel[e.r]||'#6b7280',['stroke-width']:1,opacity:0.22}));});",
+    "  Object.keys(pos).forEach(function(id){var p=pos[id],n=byId[id];if(!n)return;var g=el('g',{cursor:'pointer'});g.appendChild(el('circle',{cx:p.x,cy:p.y,r:6,fill:G.meta[p.type].color,stroke:'#0b1220',['stroke-width']:1.2}));",
+    "    g.addEventListener('mouseenter',function(ev){tip.style.display='block';tip.style.left=(ev.clientX+12)+'px';tip.style.top=(ev.clientY+12)+'px';tip.innerHTML='<b>'+G.meta[p.type].icon+' '+esc(n.name)+'</b>'+(n.file?'<br><span style=\\'opacity:.6\\'>'+esc(n.file)+'</span>':'')+'<br><span style=\\'opacity:.6;color:#22d3ee\\'>click → its blast radar</span>';});",
+    "    g.addEventListener('mouseleave',function(){tip.style.display='none';});",
+    "    g.addEventListener('click',function(){draw(id);setHdr(n.name);});svg.appendChild(g);});}",
+    "function setHdr(name){document.getElementById('focusName').textContent=name;document.getElementById('ovBtn').style.display=name?'inline':'none';}",
     "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
-    "if(G.focus)draw(G.focus);",
+    "document.getElementById('ovBtn').addEventListener('click',function(){galaxy();setHdr('');});",
+    "if(G.focus){draw(G.focus);setHdr(G.nodes.filter(function(n){return n.id===G.focus;}).map(function(n){return n.name;})[0]||'');}else{galaxy();setHdr('');}",
   ].join("\n");
   return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" + hEsc(title) + " · Mneme</title>" +
     "<style>body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:860px;margin:0 auto;padding:20px}h1{font-size:18px;margin:0 0 2px}.sub{color:#94a3b8;font-size:12px;margin:0 0 10px}.card{background:radial-gradient(circle at 50% 45%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:14px;padding:8px}svg{width:100%;height:auto;display:block}.legend{font-size:12px;color:#94a3b8;margin:10px 2px}.legend b{color:#22d3ee;font-weight:600}#tip{position:fixed;display:none;background:#0f1b2e;border:1px solid #334155;border-radius:8px;padding:6px 9px;font-size:12px;pointer-events:none;max-width:280px;box-shadow:0 6px 20px rgba(0,0,0,.5);z-index:9}footer{margin-top:10px;font-size:11px;color:#64748b}code{background:#1f2937;padding:1px 5px;border-radius:4px}.hint{color:#22d3ee}</style></head>" +
-    "<body><div class=\"wrap\"><h1>🛰 " + hEsc(title) + " — <span id=\"focusName\" class=\"hint\"></span></h1>" +
-    "<p class=\"sub\">CODE ↔ DATA ↔ API ↔ BUSINESS · the center is your change; rings = blast hop-distance; sectors = layers. <span class=\"hint\">Click any node to re-center the radar.</span> Deterministic, no LLM — every position encodes a real fact.</p>" +
+    "<body><div class=\"wrap\"><h1>🛰 " + hEsc(title) + " <span id=\"focusName\" class=\"hint\"></span> <a id=\"ovBtn\" style=\"display:none;cursor:pointer;font-size:12px;color:#22d3ee;margin-left:8px\">⟲ project overview</a></h1>" +
+    "<p class=\"sub\">CODE ↔ DATA ↔ API ↔ BUSINESS · in <b>overview</b> every node is a hub — <span class=\"hint\">click any node to open its blast radar</span> (center = the change · rings = hop-distance · sectors = layers). Deterministic, no LLM — every position encodes a real fact.</p>" +
     "<div class=\"card\"><svg id=\"radar\" viewBox=\"0 0 820 820\" role=\"img\" aria-label=\"" + hEsc(title) + "\"></svg></div>" +
     "<div class=\"legend\">" + ["WRITES_TO", "READS", "HANDLED_BY", "CALLS", "IMPLEMENTS"].map((r) => "<b style=\"color:" + (RELATION_COLOR[r] ?? "#6b7280") + "\">●</b> " + r).join(" &nbsp; ") + "</div>" +
     "<footer>" + pick.nodes.length + " nodes · " + pick.edges.length + " edges" + (fp ? " · fingerprint <code>" + hEsc(fp) + "</code>" : "") + " · honest: reachable coupling to inspect, not a proven runtime break · Mneme Impact Radar</footer>" +
     "<div id=\"tip\"></div>" +
     "<script id=\"mneme-data\" type=\"application/json\">" + json + "</script><script>" + js + "</script></div></body></html>";
+}
+
+// ── static share card (SVG → PNG-able) ────────────────────────────────────────
+function bfsDist(graph: CrossLayerGraph, focus: string): Map<string, number> {
+  const adj = new Map<string, string[]>(); for (const e of graph?.edges ?? []) { (adj.get(e.source) ?? adj.set(e.source, []).get(e.source))!.push(e.target); (adj.get(e.target) ?? adj.set(e.target, []).get(e.target))!.push(e.source); }
+  const d = new Map<string, number>([[focus, 0]]); let q = [focus];
+  while (q.length) { const n: string[] = []; for (const x of q) for (const y of adj.get(x) ?? []) if (!d.has(y)) { d.set(y, (d.get(x) ?? 0) + 1); n.push(y); } q = n; }
+  return d;
+}
+/**
+ * A STATIC, standalone share card (1200×630, OG-ratio) of a node's cross-layer Impact Radar — pure
+ * SVG, no JS/animation, so it rasterizes to PNG and embeds anywhere. Deterministic.
+ */
+export function toRadarSvg(graph: CrossLayerGraph, focusId?: string, opts?: { maxDepth?: number; cap?: number; fingerprint?: string; title?: string }): string {
+  let center = focusId;
+  if (!center || !(graph?.nodes ?? []).some((n) => n.id === center)) {
+    const deg = new Map<string, number>(); for (const e of graph?.edges ?? []) { deg.set(e.source, (deg.get(e.source) ?? 0) + 1); deg.set(e.target, (deg.get(e.target) ?? 0) + 1); }
+    center = [...(graph?.nodes ?? [])].sort((a, b) => (deg.get(b.id) ?? 0) - (deg.get(a.id) ?? 0) || a.id.localeCompare(b.id))[0]?.id;
+  }
+  const pick = pickSubgraph(graph, center, { cap: opts?.cap ?? 70, maxDepth: opts?.maxDepth ?? 3 });
+  const W = 1200, Hh = 630, CX = 820, CY = 320, R0 = 34;
+  const dist = center ? bfsDist({ nodes: pick.nodes, edges: pick.edges }, center) : new Map<string, number>();
+  let maxd = 1; for (const v of dist.values()) maxd = Math.max(maxd, v);
+  const RING = Math.min(86, (270 - R0) / maxd);
+  const present = LAYER_ORDER.filter((t) => pick.nodes.some((n) => n.type === t));
+  const span = (2 * Math.PI) / Math.max(1, present.length);
+  const pos = new Map<string, { x: number; y: number; type: NodeType; d: number }>();
+  present.forEach((t, si) => {
+    // a clean card: keep the few schema/api/business nodes, but cap the (often huge) function fan to the
+    // nearest 22 so the cross-layer story stays legible on a big repo.
+    const all = pick.nodes.filter((n) => n.type === t && dist.has(n.id)).sort((a, b) => (dist.get(a.id)! - dist.get(b.id)!) || a.name.localeCompare(b.name));
+    const arr = t === "function" ? all.slice(0, 22) : all;
+    const base = si * span - Math.PI / 2;
+    arr.forEach((n, i) => { const dd = Math.max(1, dist.get(n.id)!); const ang = base + span * ((i + 0.5) / arr.length); const rad = R0 + dd * RING; pos.set(n.id, { x: CX + rad * Math.cos(ang), y: CY + rad * Math.sin(ang), type: n.type, d: dd }); });
+  });
+  if (center) pos.set(center, { x: CX, y: CY, type: pick.nodes.find((n) => n.id === center)?.type ?? "function", d: 0 });
+  const rings = []; for (let r = 1; r <= maxd; r++) rings.push(`<circle cx="${CX}" cy="${CY}" r="${(R0 + r * RING).toFixed(0)}" fill="none" stroke="#1f2937" stroke-width="1" opacity="0.5"/>`);
+  const sectors = present.map((t, si) => { const a = si * span - Math.PI / 2; const lx = CX + (R0 + maxd * RING + 22) * Math.cos(a), ly = CY + (R0 + maxd * RING + 22) * Math.sin(a); const m = LAYER_META[t]; return `<line x1="${CX}" y1="${CY}" x2="${(CX + (R0 + maxd * RING) * Math.cos(a - span / 2)).toFixed(0)}" y2="${(CY + (R0 + maxd * RING) * Math.sin(a - span / 2)).toFixed(0)}" stroke="#1f2937" opacity="0.4"/><text x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" fill="${m.color}" font-size="15" font-weight="700" text-anchor="middle">${m.icon} ${m.label.toUpperCase()}</text>`; }).join("");
+  const edges = pick.edges.map((e) => { const a = pos.get(e.source), b = pos.get(e.target); if (!a || !b) return ""; const hot = e.source === center || e.target === center; return `<line x1="${a.x.toFixed(0)}" y1="${a.y.toFixed(0)}" x2="${b.x.toFixed(0)}" y2="${b.y.toFixed(0)}" stroke="${RELATION_COLOR[e.relation] ?? "#6b7280"}" stroke-width="${hot ? 2 : 1}" opacity="${hot ? 0.8 : 0.25}"/>`; }).join("");
+  const byId = new Map(pick.nodes.map((n) => [n.id, n]));
+  const nodes = [...pos.entries()].map(([id, p]) => { const n = byId.get(id); if (!n) return ""; const isF = id === center; const m = LAYER_META[p.type]; const label = (n.type === "api_endpoint" && n.method ? n.method + " " + n.name : n.name); const t = label.length > 18 ? label.slice(0, 17) + "…" : label;
+    // label the focus + the few named layers (tables / endpoints / business rules); leave the many
+    // function dots unlabeled so a dense CODE sector stays clean.
+    const showLabel = isF || p.type !== "function";
+    return `<circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${isF ? 12 : 6}" fill="${m.color}" stroke="${isF ? "#22d3ee" : "#0b1220"}" stroke-width="${isF ? 3 : 1.2}"/>${showLabel ? `<text x="${p.x.toFixed(0)}" y="${(p.y - (isF ? 17 : 11)).toFixed(0)}" font-size="${isF ? 13 : 11}" text-anchor="middle" fill="#e5e7eb">${hEsc(t)}</text>` : ""}`; }).join("");
+  const cn = byId.get(center ?? "")?.name ?? "project";
+  const nT = pick.nodes.filter((n) => n.type === "db_table").length, nE = pick.nodes.filter((n) => n.type === "api_endpoint").length, nF = pick.nodes.filter((n) => n.type === "function").length, nB = pick.nodes.filter((n) => n.type === "business_rule").length;
+  const stat = (icon: string, n: number, lbl: string, c: string, y: number) => `<text x="56" y="${y}" font-size="20" fill="${c}">${icon} <tspan font-weight="700">${n}</tspan> <tspan fill="#94a3b8" font-size="15">${lbl}</tspan></text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+<defs><radialGradient id="bg" cx="68%" cy="45%"><stop offset="0%" stop-color="#0f1b2e"/><stop offset="75%" stop-color="#0b1220"/></radialGradient></defs>
+<rect width="${W}" height="${Hh}" fill="url(#bg)"/><rect width="${W}" height="${Hh}" fill="none" stroke="#1f2937" stroke-width="2"/>
+<text x="56" y="84" font-size="34" font-weight="800" fill="#e5e7eb">🛰 Impact Radar</text>
+<text x="56" y="120" font-size="17" fill="#22d3ee">${hEsc(cn.length > 30 ? cn.slice(0, 29) + "…" : cn)}</text>
+<text x="56" y="150" font-size="14" fill="#94a3b8">cross-layer blast radius · code ↔ data ↔ api ↔ business</text>
+${stat("🗄", nT, "tables", "#b45309", 250)}${stat("🌐", nE, "endpoints", "#0891b2", 290)}${stat("⚙", nF, "functions", "#e5e7eb", 330)}${stat("💼", nB, "business rules", "#a78bfa", 370)}
+<text x="56" y="560" font-size="13" fill="#64748b">deterministic · no LLM · signed${opts?.fingerprint ? " " + hEsc(opts.fingerprint) : ""}</text>
+<text x="56" y="584" font-size="13" fill="#64748b">npm i -g mneme-ai · mneme graph view</text>
+${rings}${sectors}${edges}${nodes}</svg>`;
 }
 
 // ── gauntlet ──────────────────────────────────────────────────────────────────
@@ -192,7 +265,8 @@ export function renderGauntlet(): RenderGauntlet {
   const mm = toMermaid(g, focus?.id);
   const html = toHtml(g, focus?.id, { fingerprint: "abc123" });
   const radar = toRadarHtml(g, focus?.id, { fingerprint: "abc123" });
-  const det = toMermaid(g, focus?.id) === mm && toRadarHtml(g, focus?.id, { fingerprint: "abc123" }) === radar;  // deterministic
+  const card = toRadarSvg(g, focus?.id, { fingerprint: "abc123" });
+  const det = toMermaid(g, focus?.id) === mm && toRadarHtml(g, focus?.id, { fingerprint: "abc123" }) === radar && toRadarSvg(g, focus?.id, { fingerprint: "abc123" }) === card;  // deterministic
   const mmOK = mm.startsWith("flowchart") && mm.includes("Wallet") && /subgraph (business_rule|api_endpoint|db_table)/.test(mm);
   const htmlOK = html.includes("<svg") && html.includes("</html>") && html.includes("WRITES_TO") && html.includes("abc123");
   const laneOK = html.includes("DATA") && html.includes("BUSINESS");           // multi-lane present
@@ -206,6 +280,7 @@ export function renderGauntlet(): RenderGauntlet {
     { name: "HTML-SVG", pass: htmlOK, detail: "self-contained offline SVG page with legend + fingerprint" },
     { name: "FOUR-LANES", pass: laneOK, detail: "the 4 layers drawn as horizontal bands (cross-layer picture)" },
     { name: "IMPACT-RADAR", pass: radarOK, detail: "the world-first radar view: center=focus, sectors=layers, rings=hop-distance, animated sweep+pulse, click-to-recenter (self-contained)" },
+    { name: "SHARE-CARD", pass: card.startsWith("<svg") && card.includes("Impact Radar") && card.includes("abc123") && !toRadarSvg({ nodes: [{ id: "x", type: "function", name: "<script>x</script>" }], edges: [] }, "x").includes("<script>x"), detail: "static SVG share card (1200×630, OG-ratio, PNG-able) — deterministic + XSS-safe" },
     { name: "DETERMINISTIC", pass: det, detail: "same graph → byte-identical render (no layout LLM/random)" },
     { name: "XSS-SAFE", pass: noInject, detail: "node names are HTML-escaped — a malicious symbol can't inject script" },
     { name: "TOTAL", pass: safeFocus, detail: "overview + null inputs never throw" },
