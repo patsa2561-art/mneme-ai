@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildCrossLayerGraph } from "../cross_layer_graph/index.js";
-import { intentImpactMismatch, intentImpactGauntlet } from "./index.js";
+import { intentImpactMismatch, intentImpactGauntlet, suggestCommitMessage } from "./index.js";
 
 const g = buildCrossLayerGraph([
   { path: "schema.prisma", content: "model Payment { id Int @id }" },
@@ -32,7 +32,15 @@ describe("intent_impact", () => {
     expect(intentImpactMismatch(g2, d2, "chore: format").mismatch).toBe(false);
   });
 
+  it("suggested message names the real impact + passes its own mismatch check", () => {
+    const s = suggestCommitMessage(g, diff);
+    expect(s.full).toMatch(/payment/i);            // names the table it touches
+    expect(s.type).toBe("feat");                   // reaches a table → feat
+    expect(intentImpactMismatch(g, diff, s.full).mismatch).toBe(false);   // honest by construction
+  });
+
   it("never throws on garbage", () => {
     expect(() => intentImpactMismatch(null as never, "x", "y")).not.toThrow();
+    expect(() => suggestCommitMessage(null as never, "x")).not.toThrow();
   });
 });

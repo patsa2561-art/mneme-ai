@@ -311,6 +311,28 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.commit.suggest",
+    category: "audit",
+    description: "🏷 BLAST-AWARE COMMIT MESSAGE — generate an HONEST commit message FROM the diff's real cross-layer impact (no LLM): a type (feat if it reaches endpoints/tables · refactor if functions-only · test · chore), a scope, and a body listing exactly which DB tables/endpoints/rules it touches. A message generated this way PASSES mneme.commit.check by construction. Pass the `diff` (or a `base` ref). ★HONEST: it states the structural WHAT deterministically — you replace the placeholder with the WHY.",
+    whenToUse: "Right before you commit — generate the impact-accurate message, then add the 'why'. Especially after a multi-file edit where a hand-written message would understate the cross-layer reach.",
+    triggers: ["write my commit message", "suggest a commit message", "generate commit message", "what should my commit say"],
+    inputSchema: { type: "object", properties: { diff: { type: "string" }, base: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      let diff = String(args["diff"] ?? "");
+      if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const s = core.intentImpact.suggestCommitMessage(g, diff);
+      const data = await attest(cwd, { type: s.type, scope: s.scope, subject: s.subject, full: s.full });
+      return { data, wisdom: `suggested: ${s.type}(${s.scope}): ${s.subject}`, followUp: ["replace the placeholder line with the WHY, then commit"], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.commit.check",
     category: "audit",
     description: "🏷 INTENT-vs-IMPACT — catch a commit that lies about its own size. Pass the commit `message` + the `diff` (or a `base` ref). If the message CLAIMS a trivial change ('chore', 'fix typo', 'format', 'rename', 'docs'…) but the diff's cross-layer blast radius reaches DB tables / API endpoints / KEYSTONES it never names → MISMATCH (a mislabel / scope-creep hiding a high-risk change behind a trivial-sounding message). Works on existing git history with zero extra input — a commit-honesty audit no other tool does across layers. ★HONEST: a heuristic over the wording + the deterministic blast radius — a likely mislabel to LOOK at, not proof of intent.",

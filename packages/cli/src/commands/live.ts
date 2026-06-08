@@ -275,6 +275,17 @@ export function registerLiveCommands(program: Command): void {
       out("   honest: a transparent weighted composite of deterministic signals — a prioritization of where to look, not a proof of a bug.");
     });
 
+  program.command("commit-suggest").description("🏷 BLAST-AWARE COMMIT MESSAGE — generate an honest commit message from the current diff's real cross-layer impact (type · scope · which tables/endpoints/rules it touches). Add the 'why' and commit.")
+    .option("--base <ref>").option("--staged")
+    .action((o: { base?: string; staged?: boolean }) => {
+      const cwd = process.cwd();
+      const args = o.base ? ["diff", "--unified=0", `${o.base}...HEAD`] : o.staged ? ["diff", "--unified=0", "--cached"] : ["diff", "--unified=0", "HEAD"];
+      const diff = String(spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const s = intentImpact.suggestCommitMessage(g, diff);
+      out(s.full);
+    });
+
   program.command("commit-check").description("🏷 INTENT-vs-IMPACT — does the commit message match what the change actually touches? Flags a trivial-sounding message ('chore', 'fix typo') that secretly rewrites a keystone or touches unmentioned tables. Exit 2 on mismatch.")
     .requiredOption("--message <text>", "the commit message").option("--base <ref>").option("--staged")
     .action((o: { message: string; base?: string; staged?: boolean }) => {
