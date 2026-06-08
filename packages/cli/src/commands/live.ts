@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -248,6 +248,17 @@ export function registerLiveCommands(program: Command): void {
       out("🤝 Scope fidelity (how faithfully each agent keeps its declared scope):");
       for (const f of scopeCovenant.rankFidelity(led)) out(`   ${f.band.padEnd(10)} ${String(Math.round(f.rateLB * 100)).padStart(3)}%  ${f.agent}  (${f.honored}/${f.total})`);
       out("   EXEMPLARY ≥90% · UNPROVEN = too few verdicts to judge. Signed, deterministic — an agent can't certify its own scope-keeping.");
+    });
+
+  program.command("risk").description("🎯 RISK HOTSPOTS — the ONE ranked list of the riskiest things in this codebase (keystones × untested × sensitive × authz-gaps, fused). The single answer to 'what should I guard first?'.")
+    .option("--top <n>", "show the top N (default 15)").action((o: { top?: string }) => {
+      const cwd = process.cwd(); const files = scanWithDocs(cwd);
+      const hs = riskHotspots.riskHotspots(files, { top: o.top ? parseInt(o.top, 10) : 15 });
+      const sum = riskHotspots.riskSummary(hs);
+      if (!hs.length) { out("🎯 no risk hotspots found (no keystones or authz gaps in the scanned code)."); return; }
+      out(`🎯 Risk hotspots — ${sum.critical} CRITICAL · ${sum.high} HIGH (the riskiest cross-layer nodes, fused):`);
+      for (const h of hs) { const ico = h.band === "CRITICAL" ? "🔴" : h.band === "HIGH" ? "🟠" : "🟡"; out(`   ${ico} [${h.band}] ${h.name}${h.file ? ` (${h.file})` : ""}`); for (const f of h.factors) out(`        · ${f}`); }
+      out("   honest: a transparent weighted composite of deterministic signals — a prioritization of where to look, not a proof of a bug.");
     });
 
   program.command("commit-check").description("🏷 INTENT-vs-IMPACT — does the commit message match what the change actually touches? Flags a trivial-sounding message ('chore', 'fix typo') that secretly rewrites a keystone or touches unmentioned tables. Exit 2 on mismatch.")

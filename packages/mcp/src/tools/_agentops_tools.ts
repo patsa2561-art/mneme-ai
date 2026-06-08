@@ -269,6 +269,28 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.risk.hotspots",
+    category: "audit",
+    description: "🎯 RISK HOTSPOTS — the ONE ranked answer: 'what is the riskiest thing in this codebase to be careful with?'. Fuses the cross-layer suite's deterministic signals no other tool unifies — a KEYSTONE (sole writer to a table) that is ALSO UNTESTED and ALSO writes a SENSITIVE table and has high fan-in = the scariest node; an endpoint with an AUTHZ GAP = a security hotspot. One weighted score, one ranking, every contributing factor shown (CRITICAL/HIGH/MEDIUM). ★HONEST: a transparent weighted composite of signals (each gauntlet-tested) — a PRIORITIZATION of where to look, not a proof of a bug.",
+    whenToUse: "When you (or the user/a CISO/a new dev) ask 'what should I be most careful with / where is the risk concentrated in this repo' — get the single ranked list instead of six separate reports.",
+    triggers: ["riskiest part", "what should i be careful with", "risk hotspots", "where is the risk", "most dangerous code", "what to guard first", "biggest risk in the repo"],
+    inputSchema: { type: "object", properties: { top: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);  // (warm the cache; riskHotspots rebuilds internally)
+      void g;
+      const hs = core.riskHotspots.riskHotspots(files, { top: Number(args["top"]) || 15 });
+      const sum = core.riskHotspots.riskSummary(hs);
+      const data = await attest(cwd, { total: sum.total, critical: sum.critical, high: sum.high, hotspots: hs.map((h) => ({ name: h.name, type: h.type, file: h.file, band: h.band, score: h.score, factors: h.factors })) });
+      return { data, wisdom: !hs.length ? "no risk hotspots found (no keystones or authz gaps)" : `${sum.critical} CRITICAL + ${sum.high} HIGH hotspot(s)${sum.worst ? ` · #1: ${sum.worst.name} (${sum.worst.band}) — ${sum.worst.factors[0]}` : ""}`, followUp: sum.critical ? ["guard the CRITICAL hotspots first — test them + verify their auth before any change"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.commit.check",
     category: "audit",
     description: "🏷 INTENT-vs-IMPACT — catch a commit that lies about its own size. Pass the commit `message` + the `diff` (or a `base` ref). If the message CLAIMS a trivial change ('chore', 'fix typo', 'format', 'rename', 'docs'…) but the diff's cross-layer blast radius reaches DB tables / API endpoints / KEYSTONES it never names → MISMATCH (a mislabel / scope-creep hiding a high-risk change behind a trivial-sounding message). Works on existing git history with zero extra input — a commit-honesty audit no other tool does across layers. ★HONEST: a heuristic over the wording + the deterministic blast radius — a likely mislabel to LOOK at, not proof of intent.",
