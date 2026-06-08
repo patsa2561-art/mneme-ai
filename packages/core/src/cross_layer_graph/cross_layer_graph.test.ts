@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck, graphHealth, extractorBenchmark } from "./index.js";
+import { buildCrossLayerGraph, blastRadius, resolveNode, crossLayerGauntlet, businessCoverage, toMermaid, toHtml, toRadarHtml, toRadarSvg, renderGauntlet, parseChangedSymbols, diffBlastRadius, diffBlastMarkdown, agentBlastCheck, graphHealth, extractorBenchmark, graphDrift } from "./index.js";
 
 const FILES = [
   { path: "schema.prisma", content: "model User {\n id Int @id\n}\nmodel Wallet {\n id Int @id\n}" },
@@ -83,6 +83,14 @@ describe("cross_layer_graph", () => {
     const h = graphHealth(g);
     expect(h.keystones.some((k) => k.node.name === "createUserWallet" && k.soleWriterOf.includes("Wallet"))).toBe(true);
     expect(h.orphanTables.map((t) => t.name)).toContain("AuditLog");
+  });
+  it("graph drift: a function reaching a NEW table is flagged; identical graphs → no drift", () => {
+    const before = buildCrossLayerGraph([{ path: "s.prisma", content: "model Order { id Int @id }" }, { path: "o.ts", content: "export function createOrder(){ return 1; }" }]);
+    const after = buildCrossLayerGraph([{ path: "s.prisma", content: "model Order { id Int @id }" }, { path: "o.ts", content: "export function createOrder(){ return prisma.order.create({data:{}}); }" }]);
+    const d = graphDrift(before, after);
+    expect(d.addedCouplings.some((c) => c.to === "Order" && c.relation === "WRITES_TO")).toBe(true);
+    expect(graphDrift(after, after).addedCouplings.length).toBe(0);               // no drift vs itself
+    expect(graphDrift(after, before).removedCouplings.some((c) => c.to === "Order")).toBe(true);
   });
   it("extractor benchmark is measured + high on the labeled corpus", () => {
     const b = extractorBenchmark();

@@ -141,6 +141,29 @@ export function registerLiveCommands(program: Command): void {
       out(`   ⚙  dead-code candidate functions: ${h.orphanFunctions.length} (nothing in the scanned files calls them — may be exported/entry-points, so candidates not proof)`);
       out("   honest: candidates to inspect (deterministic), prove-or-unknown — an orphan may be a public API or dynamically called.");
     });
+  graph.command("drift").description("⏱ ARCHITECTURAL DRIFT — what cross-layer coupling APPEARED or disappeared since a past commit. --base <ref> (e.g. a tag, origin/main, a sha). Catches 'createOrder now writes the payments table' — a function reaching a new layer it didn't before.")
+    .requiredOption("--base <ref>", "the earlier commit/tag/branch to compare against").option("--max <n>", "max files to read at the base ref (default 2500)").action((o: { base: string; max?: string }) => {
+      const cwd = process.cwd();
+      // read the base snapshot WITHOUT touching the working tree: git ls-tree + git show per file
+      // (cross-platform — avoids tar's Windows-drive-letter-as-host quirk).
+      const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", o.base], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (ls.status !== 0) { out(`✗ unknown ref "${o.base}": ${(ls.stderr || "").trim().slice(0, 140)}`); return; }
+      const cap = o.max ? parseInt(o.max, 10) : 2500;
+      const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && (SCAN_EXT.test(f) || MD_EXT.test(f)) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+      const prevFiles: crossLayerGraph.SourceFile[] = [];
+      for (const f of wanted) { const r = spawnSync("git", ["show", `${o.base}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) prevFiles.push({ path: f, content: r.stdout }); }
+      const prev = crossLayerGraph.buildCrossLayerGraph(prevFiles);
+      const curr = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const d = crossLayerGraph.graphDrift(prev, curr);
+      out(`⏱ Architectural drift since ${o.base} (${prevFiles.length} base files read):`);
+      if (d.addedTables.length) out(`   🗄 + new tables: ${d.addedTables.join(" · ")}`);
+      if (d.removedTables.length) out(`   🗄 − removed tables: ${d.removedTables.join(" · ")}`);
+      if (d.addedEndpoints.length) out(`   🌐 + new endpoints: ${d.addedEndpoints.slice(0, 20).join(" · ")}`);
+      if (d.addedCouplings.length) { out(`   🔗 + NEW cross-layer couplings (${d.addedCouplings.length}):`); for (const c of d.addedCouplings.slice(0, 25)) out(`      ${c.from} —${c.relation}→ ${c.to}`); }
+      if (d.removedCouplings.length) out(`   🔗 − removed couplings (${d.removedCouplings.length}): ${d.removedCouplings.slice(0, 10).map((c) => `${c.from}→${c.to}`).join(" · ")}`);
+      if (!d.addedCouplings.length && !d.removedCouplings.length && !d.addedTables.length && !d.removedTables.length) out("   ✓ no cross-layer structural change — same architecture.");
+      out("   honest: structural coupling deltas to inspect (deterministic), not a value judgement.");
+    });
   graph.command("benchmark").alias("accuracy").description("📊 EXTRACTOR ACCURACY — measured precision/recall of the cross-layer extractor on a labeled corpus. Reproducible credibility, not a marketing claim.")
     .action(() => {
       const b = crossLayerGraph.extractorBenchmark();

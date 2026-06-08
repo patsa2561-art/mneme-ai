@@ -204,6 +204,35 @@ export function blastRadius(graph: CrossLayerGraph, originId: string, opts?: { m
   return { origin: originId, tables: hit.filter((n) => n.type === "db_table"), endpoints: hit.filter((n) => n.type === "api_endpoint"), functions: hit.filter((n) => n.type === "function"), rules: hit.filter((n) => n.type === "business_rule"), depth, reachable: hit.length };
 }
 
+// ── GRAPH DRIFT — architectural change between two points in time ────────────────────────────────
+export interface Coupling { from: string; to: string; relation: Relation; fromType: NodeType; toType: NodeType }
+export interface GraphDrift { addedCouplings: Coupling[]; removedCouplings: Coupling[]; addedTables: string[]; removedTables: string[]; addedEndpoints: string[]; removedEndpoints: string[] }
+const isCross = (r: Relation) => r === "WRITES_TO" || r === "READS" || r === "HANDLED_BY" || r === "IMPLEMENTS";
+function couplingSet(g: CrossLayerGraph): Map<string, Coupling> {
+  const byId = new Map((g?.nodes ?? []).map((n) => [n.id, n])); const out = new Map<string, Coupling>();
+  for (const e of g?.edges ?? []) { if (!isCross(e.relation)) continue; const s = byId.get(e.source), t = byId.get(e.target); if (!s || !t) continue; const c: Coupling = { from: s.name, to: t.name, relation: e.relation, fromType: s.type, toType: t.type }; out.set(`${s.type}:${lc(s.name)}>${t.type}:${lc(t.name)}|${e.relation}`, c); }
+  return out;
+}
+/**
+ * What changed STRUCTURALLY between an earlier graph (prev) and the current one — the cross-layer
+ * couplings that APPEARED or DISAPPEARED. A new `createOrder → payments WRITES_TO` is architectural
+ * drift you want to SEE (a function reaching a new layer it didn't before). Deterministic.
+ */
+export function graphDrift(prev: CrossLayerGraph, curr: CrossLayerGraph): GraphDrift {
+  const a = couplingSet(prev), b = couplingSet(curr);
+  const addedCouplings: Coupling[] = []; const removedCouplings: Coupling[] = [];
+  for (const [k, c] of b) if (!a.has(k)) addedCouplings.push(c);
+  for (const [k, c] of a) if (!b.has(k)) removedCouplings.push(c);
+  const tbl = (g: CrossLayerGraph) => new Set((g?.nodes ?? []).filter((n) => n.type === "db_table").map((n) => n.name));
+  const ep = (g: CrossLayerGraph) => new Set((g?.nodes ?? []).filter((n) => n.type === "api_endpoint").map((n) => (n.method ? n.method + " " : "") + n.name));
+  const pa = tbl(prev), ca = tbl(curr), pe = ep(prev), ce = ep(curr);
+  return {
+    addedCouplings, removedCouplings,
+    addedTables: [...ca].filter((x) => !pa.has(x)), removedTables: [...pa].filter((x) => !ca.has(x)),
+    addedEndpoints: [...ce].filter((x) => !pe.has(x)), removedEndpoints: [...pe].filter((x) => !ce.has(x)),
+  };
+}
+
 // ── GRAPH HEALTH — orphans (dead-code candidates) + cross-layer KEYSTONES ───────────────────────
 export interface Keystone { node: GNode; soleWriterOf: string[]; fanIn: number; reachedByEndpoints: number; reason: string }
 export interface GraphHealth { orphanFunctions: GNode[]; orphanTables: GNode[]; orphanEndpoints: GNode[]; keystones: Keystone[] }
@@ -454,7 +483,11 @@ export function crossLayerGauntlet(): CLGGauntlet {
   // extractor accuracy: measured on the labeled corpus (perfect node + cross-layer edge extraction)
   const bench = extractorBenchmark();
   const benchOK = bench.nodePrecision === 1 && bench.nodeRecall === 1 && bench.edgeRecall === 1 && bench.edgePrecision === 1;
-  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); graphHealth(null as never); extractorBenchmark(); return true; } catch { return false; } })();
+  // drift: a "before" graph without the wallet write → after adds the createUserWallet→Wallet coupling
+  const before = buildCrossLayerGraph([{ path: "schema.prisma", content: "model Wallet { id Int @id }" }, { path: "a.ts", content: "export function createUserWallet(uid){ return 1; }" }]);
+  const drift = graphDrift(before, g);
+  const driftOK = drift.addedCouplings.some((c) => c.to === "Wallet" && c.relation === "WRITES_TO") && graphDrift(g, g).addedCouplings.length === 0;
+  const total = (() => { try { buildCrossLayerGraph(null as never); blastRadius(null as never, "x"); resolveNode(null as never, "x"); diffBlastRadius(null as never, "x"); parseChangedSymbols(null as never); agentBlastCheck(null as never, "x", "y"); graphHealth(null as never); extractorBenchmark(); graphDrift(null as never, null as never); return true; } catch { return false; } })();
   const checks = [
     { name: "EXTRACT-3-LAYERS", pass: hasTable && hasEndpoint && hasFn, detail: "db_table (Prisma) + api_endpoint (route) + function (decl) all extracted deterministically" },
     { name: "WRITE-EDGE", pass: writeEdge, detail: "function → db_table WRITES_TO (prisma.wallet.create)" },
@@ -468,6 +501,7 @@ export function crossLayerGauntlet(): CLGGauntlet {
     { name: "AGENT-BLAST-CHECK", pass: checkOK, detail: "vs the user's intent: a touched table the request didn't name → 'review' (the silent 'your auth fix also writes payments' catch); a named one → 'clean'" },
     { name: "KEYSTONE+ORPHAN", pass: healthOK, detail: "the sole writer to a table with real fan-in = a cross-layer KEYSTONE (single point of failure); orphan tables/functions = dead-code candidates (prove-or-unknown)" },
     { name: "EXTRACTOR-ACCURACY", pass: benchOK, detail: "MEASURED on a labeled corpus: node + cross-layer-edge precision/recall (reproducible, not a claim)" },
+    { name: "GRAPH-DRIFT", pass: driftOK, detail: "the cross-layer couplings that APPEARED/disappeared between two commits — architectural drift (a function reaching a new layer); identical graphs → no drift" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };
