@@ -586,7 +586,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       try {
         handle = shallowClone(gitUrl);
         const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
-        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql|md|mdx|markdown|txt)$/i;
+        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
         const files: { path: string; content: string }[] = []; const stack = [handle.path];
         while (stack.length && files.length < 3000) {
           const d = stack.pop() as string; let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }

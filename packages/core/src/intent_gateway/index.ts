@@ -54,6 +54,9 @@ const CONCEPTS: Concept[] = [
   { command: "mneme savings", triggers: ["how much have you saved", "token savings", "saved us in tokens", "cost saved", "ประหยัดไปเท่าไหร่", "เซฟ token"] },
   { command: "mneme cortex", triggers: ["remember this", "what do we know about", "shared memory", "recall what other agents", "จำไว้", "เรารู้อะไรบ้าง", "ความจำรวม"] },
   { command: "mneme boot", triggers: ["how do i use mneme", "what can mneme do", "where do i start", "get started", "เริ่มยังไง", "mneme ทำอะไรได้", "ใช้ยังไง"] },
+  { command: "mneme graph blast", triggers: ["what breaks if i change", "impact of changing", "blast radius", "what does this affect", "what touches this table", "cross layer impact", "dependency impact", "if i delete this table", "what calls this endpoint", "แก้แล้วกระทบอะไร", "กระทบอะไรบ้าง", "ผลกระทบ", "ลบตารางนี้กระทบ", "อะไรเรียกใช้", "แก้ตรงนี้พังไหม"] },
+  { command: "mneme graph view", triggers: ["show the architecture", "visualize the project", "draw the graph", "see the whole codebase", "diagram this", "impact radar", "map the project", "picture of the system", "ดูภาพรวมโปรเจกต์", "วาดแผนผัง", "เห็นทั้งโปรเจกต์", "เรดาร์", "แผนภาพระบบ", "ดูสถาปัตยกรรม"] },
+  { command: "mneme skill rank", triggers: ["which skills work", "rank my skills", "best skill", "skill effectiveness", "which playbook helps", "are my skills useful", "สกิลไหนได้ผล", "จัดอันดับสกิล", "สกิลไหนดี", "playbook ไหนเวิร์ก"] },
 ];
 
 function tokenize(s: string): string[] {

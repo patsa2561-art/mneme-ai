@@ -211,7 +211,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -233,7 +233,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);

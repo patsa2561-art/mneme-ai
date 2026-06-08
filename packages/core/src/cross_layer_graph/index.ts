@@ -34,13 +34,18 @@ function bodyTouchesTable(body: string, table: string): { hit: boolean; write: b
     new RegExp(`prisma\\.${camel}\\b`),                            // prisma.user.create(...)
     new RegExp(`\\bfrom\\s+["'\`]?${t}\\b`),                       // SQL FROM users
     new RegExp(`\\b(into|update|join|table)\\s+["'\`]?${t}\\b`),   // SQL INSERT INTO / UPDATE / JOIN
-    new RegExp(`\\b${t}(s)?\\.(find|create|update|delete|save|insert|destroy|upsert)\\b`), // ORM repo: userRepo.find / users.create
+    new RegExp(`\\b${t}(s)?\\.(find|create|update|delete|save|insert|destroy|upsert)\\b`), // ORM repo
+    new RegExp(`\\b${t}\\.objects\\b`),                            // Django: User.objects.…
+    new RegExp(`\\bquery\\(\\s*${t}\\b`),                          // SQLAlchemy: session.query(User)
+    new RegExp(`\\b(?:get|filter|select)\\w*\\([^)]*\\b${t}\\b`),  // ORM get/filter referencing the model
   ];
   const hit = patterns.some((re) => re.test(b));
   if (!hit) return { hit: false, write: false };
   const write = new RegExp(`prisma\\.${camel}\\.(create|update|delete|upsert|createmany|updatemany|deletemany)\\b`).test(b)
     || new RegExp(`\\b(insert\\s+into|update|delete\\s+from)\\s+["'\`]?${t}\\b`).test(b)
-    || new RegExp(`\\b${t}\\.(save|insert|update|delete|destroy)\\b`).test(b);
+    || new RegExp(`\\b${t}\\.(save|insert|update|delete|destroy)\\b`).test(b)
+    || new RegExp(`\\b${t}\\.objects\\.(create|update|delete|bulk_create|get_or_create)\\b`).test(b)   // Django write
+    || new RegExp(`\\b(?:add|delete|merge)\\(\\s*${t}\\b`).test(b);                                    // SQLAlchemy session.add(User(...))
   return { hit: true, write };
 }
 
@@ -49,8 +54,12 @@ function extractTables(files: SourceFile[]): GNode[] {
   const out = new Map<string, GNode>();
   for (const f of files) {
     const c = f.content.slice(0, MAX_FILE);
-    for (const m of c.matchAll(/\bmodel\s+([A-Za-z_]\w*)\s*\{/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
-    for (const m of c.matchAll(/\bcreate\s+table\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_]\w*)/gi)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
+    for (const m of c.matchAll(/\bmodel\s+([A-Za-z_]\w*)\s*\{/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Prisma
+    for (const m of c.matchAll(/\bcreate\s+table\s+(?:if\s+not\s+exists\s+)?["'`]?([A-Za-z_]\w*)/gi)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // SQL
+    // Django / SQLAlchemy / TypeORM / Sequelize — an ORM model class is a db table.
+    for (const m of c.matchAll(/\bclass\s+([A-Za-z_]\w*)\s*\(\s*[^)]*\b(?:models\.Model|Base|Model|db\.Model)\b/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
+    for (const m of c.matchAll(/__tablename__\s*=\s*["']([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
+    for (const m of c.matchAll(/@(?:Entity|Table)\s*\(\s*["'`]([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // TypeORM
   }
   return [...out.values()];
 }
@@ -76,10 +85,19 @@ function extractFunctions(files: SourceFile[]): Array<GNode & { body: string }> 
   for (const f of files) {
     const c = f.content.slice(0, MAX_FILE);
     const marks: Array<{ name: string; idx: number }> = [];
-    const reFn = /\b(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_]\w*)/g;
-    const reArrow = /\b(?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?=>/g;
-    for (const m of c.matchAll(reFn)) marks.push({ name: m[1], idx: m.index ?? 0 });
-    for (const m of c.matchAll(reArrow)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    const ext = (f.path.split(".").pop() || "").toLowerCase();
+    if (/^(ts|tsx|js|jsx|mjs|cjs)$/.test(ext) || ext === "") {
+      const reFn = /\b(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_]\w*)/g;
+      const reArrow = /\b(?:export\s+)?(?:const|let|var)\s+([A-Za-z_]\w*)\s*=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?=>/g;
+      for (const m of c.matchAll(reFn)) marks.push({ name: m[1], idx: m.index ?? 0 });
+      for (const m of c.matchAll(reArrow)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    }
+    // MULTI-LANGUAGE — the AI world is mostly Python; Go/Rust/Ruby round it out. Region-based body
+    // extraction is language-agnostic (def→next-def), so only the signature regex differs per language.
+    if (ext === "py") for (const m of c.matchAll(/\bdef\s+([A-Za-z_]\w*)\s*\(/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    if (ext === "go") for (const m of c.matchAll(/\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*\(/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    if (ext === "rs") for (const m of c.matchAll(/\bfn\s+([A-Za-z_]\w*)\s*[(<]/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    if (ext === "rb") for (const m of c.matchAll(/\bdef\s+([A-Za-z_][\w?!]*)/g)) marks.push({ name: m[1].replace(/[?!]$/, ""), idx: m.index ?? 0 });
     marks.sort((a, b) => a.idx - b.idx);
     // Attach the comment/annotation block immediately ABOVE a def to THAT function (the universal place
     // a doc/annotation lives) — walk back over contiguous comment/blank lines, bounded by the previous
@@ -88,7 +106,7 @@ function extractFunctions(files: SourceFile[]): Array<GNode & { body: string }> 
       let pos = start, lineEnd = c.lastIndexOf("\n", start - 1);
       while (lineEnd > floor) {
         const lineStart = c.lastIndexOf("\n", lineEnd - 1) + 1; const line = c.slice(lineStart, lineEnd).trim();
-        if (line === "" || line.startsWith("//") || line.startsWith("*") || line.startsWith("/*") || line.endsWith("*/")) { pos = lineStart; lineEnd = lineStart - 1; } else break;
+        if (line === "" || line.startsWith("//") || line.startsWith("*") || line.startsWith("/*") || line.endsWith("*/") || line.startsWith("#") || line.startsWith("@") || line.startsWith('"""') || line.startsWith("'''")) { pos = lineStart; lineEnd = lineStart - 1; } else break;
       }
       return pos;
     };

@@ -38,6 +38,24 @@ describe("cross_layer_graph", () => {
     expect(() => blastRadius(null as never, "x")).not.toThrow();
   });
 
+  it("multi-language: Python (def + Django ORM + FastAPI) lights up all layers", () => {
+    const g = buildCrossLayerGraph([
+      { path: "app.py", content: "# feature: create user\n@app.post(\"/users\")\ndef create_user(name):\n    return User.objects.create(name=name)" },
+      { path: "models.py", content: "class User(models.Model):\n    name = models.CharField()" },
+      { path: "PRD.md", content: "## Feature: create user" },
+    ]);
+    expect(g.nodes.some((n) => n.type === "function" && n.name === "create_user")).toBe(true);   // Python def
+    expect(g.nodes.some((n) => n.type === "db_table" && n.name === "User")).toBe(true);           // Django model
+    expect(g.edges.some((e) => e.relation === "WRITES_TO")).toBe(true);                            // User.objects.create
+    expect(g.edges.some((e) => e.relation === "IMPLEMENTS")).toBe(true);                           // # feature anchor
+  });
+  it("multi-language: Go func + Rust fn are extracted", () => {
+    const go = buildCrossLayerGraph([{ path: "m.go", content: "func ListUsers() {}" }]);
+    expect(go.nodes.some((n) => n.name === "ListUsers")).toBe(true);
+    const rs = buildCrossLayerGraph([{ path: "m.rs", content: "fn handle_request() {}" }]);
+    expect(rs.nodes.some((n) => n.name === "handle_request")).toBe(true);
+  });
+
   it("business layer: anchors on a real link, abstains (UNKNOWN) otherwise", () => {
     const g = buildCrossLayerGraph([
       ...FILES,
