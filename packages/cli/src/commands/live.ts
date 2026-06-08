@@ -266,34 +266,43 @@ export function registerLiveCommands(program: Command): void {
 
   program.command("review").alias("checkup").description("🔍 THE ONE COMMAND — a full Codebase Accountability Report in one shot: cross-layer graph + risk hotspots + authz gaps + untested keystones. (Add --base <ref> for a CHANGE report on a PR: blast radius + commit honesty.) The front door to Mneme's whole cross-layer suite.")
     .option("--base <ref>", "review a PR diff vs this ref instead of the whole repo").option("--message <m>", "the PR's commit message (for the honesty check)")
-    .action((o: { base?: string; message?: string }) => {
-      const cwd = process.cwd(); const files = scanWithDocs(cwd); const g = crossLayerGraph.buildCrossLayerGraph(files);
+    .option("--json", "emit the report as JSON").action((o: { base?: string; message?: string; json?: boolean }) => {
+      const t0 = Date.now();
+      const cwd = process.cwd(); const files = scanWithDocs(cwd);
+      const g = crossLayerGraph.buildCrossLayerGraph(files);                         // ★ built ONCE, passed to every probe (no rebuilds)
       const byType = (t: string) => g.nodes.filter((n) => n.type === t).length;
-      out("┌─────────────────────────────────────────────────────────────");
-      out("│ 🔍 MNEME — CODEBASE ACCOUNTABILITY REPORT");
-      out("│    deterministic · no LLM · every finding traces to a real file");
-      out("└─────────────────────────────────────────────────────────────");
-      out(`🕸 Cross-layer graph: ⚙ ${byType("function")} functions · 🗄 ${byType("db_table")} tables · 🌐 ${byType("api_endpoint")} endpoints · 💼 ${byType("business_rule")} rules`);
+      const risk = riskHotspots.riskHotspots(files, { top: 6, graph: g }); const rsum = riskHotspots.riskSummary(risk);
+      const authz = authzGap.authzVerdict(authzGap.authzGaps(g));
+      const tg = testGap.analyzeTestGap(files, { graph: g });
+      // ── HEALTH GRADE: a single honest headline from the findings ──
+      let score = 100; score -= rsum.critical * 22; score -= rsum.high * 9; score -= authz.count * 18; score -= Math.min(24, tg.uncoveredKeystones.length * 6); score = Math.max(0, score);
+      const grade = score >= 90 ? "A" : score >= 78 ? "B" : score >= 62 ? "C" : score >= 45 ? "D" : "F";
+      const verdict = grade <= "B" ? (grade === "A" ? "🟢 HEALTHY — accountable across every layer" : "🟢 SOLID — a few things to guard") : grade === "C" ? "🟡 NEEDS ATTENTION — real cross-layer risk" : "🔴 AT RISK — unguarded critical surface";
+      const fp = createHash("sha256").update(JSON.stringify(g.nodes.map((n) => n.id).sort())).digest("hex").slice(0, 12);
+
+      if (o.json) { out(JSON.stringify({ grade, score, verdict, graph: { functions: byType("function"), tables: byType("db_table"), endpoints: byType("api_endpoint"), rules: byType("business_rule") }, risk: { critical: rsum.critical, high: rsum.high, top: risk.map((h) => ({ name: h.name, band: h.band, factor: h.factors[0] })) }, authz: { clear: authz.clear, count: authz.count, exposedTables: authz.worstTables }, testGap: { untestedKeystones: tg.uncoveredKeystones.map((k) => k.node.name), keystoneCoverage: `${tg.coveredKeystones}/${tg.totalKeystones}` }, fingerprint: fp }, null, 2)); return; }
+
+      const bar = (n: number) => "█".repeat(Math.round(n / 5)).padEnd(20, "░");
+      out("╔══════════════════════════════════════════════════════════════╗");
+      out(`║  🔍 MNEME · CODEBASE ACCOUNTABILITY REPORT          grade  ${grade}   ║`);
+      out(`║  ${verdict.padEnd(56)}  ║`);
+      out(`║  health ${bar(score)} ${String(score).padStart(3)}/100         ║`);
+      out("╚══════════════════════════════════════════════════════════════╝");
+      out(`🕸  cross-layer graph   ⚙ ${byType("function")} fns · 🗄 ${byType("db_table")} tables · 🌐 ${byType("api_endpoint")} endpoints · 💼 ${byType("business_rule")} rules`);
       if (o.base) {
         const diff = String(spawnSync("git", ["diff", "--unified=0", `${o.base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || "");
         const b = crossLayerGraph.diffBlastRadius(g, diff);
-        out(`\n🔀 CHANGE BLAST RADIUS (vs ${o.base}): ${b.changed} fn(s) → 🗄 ${b.tables.length} tables · 🌐 ${b.endpoints.length} endpoints · 💼 ${b.rules.length} rules`);
-        if (b.tables.length) out(`     tables touched: ${b.tables.map((t) => t.name).join(", ")}`);
-        if (o.message) { const m = intentImpact.intentImpactMismatch(g, diff, o.message); out(`🏷 Commit honesty: ${m.mismatch ? "⚠️ MISMATCH — " + m.reason : "✓ message matches impact"}`); }
-        const cg = testGap.changeTestGap(files, diff);
-        if (cg.untestedKeystones.length) out(`🧪 Untested in this change: ${cg.untestedKeystones.join(", ")}`);
-        out("");
+        out(`\n🔀  THIS CHANGE (vs ${o.base})   ${b.changed} fn(s) → 🗄 ${b.tables.length} · 🌐 ${b.endpoints.length} · 💼 ${b.rules.length}${b.tables.length ? "   tables: " + b.tables.map((x) => x.name).join(", ") : ""}`);
+        if (o.message) { const m = intentImpact.intentImpactMismatch(g, diff, o.message); out(`    🏷 commit honesty: ${m.mismatch ? "⚠️ MISMATCH — " + m.reason : "✓ matches impact"}`); }
+        const cg = testGap.changeTestGap(files, diff, { graph: g }); if (cg.untestedKeystones.length) out(`    🧪 untested in this change: ${cg.untestedKeystones.join(", ")}`);
       }
-      const risk = riskHotspots.riskHotspots(files, { top: 5 }); const rsum = riskHotspots.riskSummary(risk);
-      out(`\n🎯 RISK HOTSPOTS — ${rsum.critical} CRITICAL · ${rsum.high} HIGH:`);
-      if (risk.length) for (const h of risk) out(`   ${h.band === "CRITICAL" ? "🔴" : h.band === "HIGH" ? "🟠" : "🟡"} ${h.name} — ${h.factors[0]}`);
-      else out("   ✓ none (no keystones or authz gaps)");
-      const authz = authzGap.authzVerdict(authzGap.authzGaps(g));
-      out(`\n🔒 AUTHZ: ${authz.clear ? "✓ no unguarded sensitive-write path" : `⚠️ ${authz.count} unguarded write-path(s) to [${authz.worstTables.join(", ")}]`}`);
-      const tg = testGap.analyzeTestGap(files);
-      out(`🧪 TEST GAP: ${tg.uncoveredKeystones.length} untested keystone(s)${tg.uncoveredKeystones[0] ? ` (e.g. ${tg.uncoveredKeystones[0].node.name})` : ""} · keystone coverage ${tg.coveredKeystones}/${tg.totalKeystones}`);
-      out("\n→ drill in: mneme risk · mneme authz · mneme testgap · mneme graph view <fn> · mneme graph reverse <table>");
-      out("  on a PR/CI: mneme review --base origin/main  ·  mneme graph pr --markdown");
+      out(`\n🎯  RISK HOTSPOTS       ${rsum.critical} critical · ${rsum.high} high`);
+      if (risk.length) for (const h of risk.slice(0, 6)) out(`      ${h.band === "CRITICAL" ? "🔴" : h.band === "HIGH" ? "🟠" : "🟡"} ${h.name.padEnd(28)} ${h.factors[0]}`);
+      else out("      ✓ none — no keystones or authz gaps");
+      out(`\n🔒  AUTHORIZATION       ${authz.clear ? "✓ no unguarded sensitive-write path" : `🔴 ${authz.count} unguarded write-path(s) → ${authz.worstTables.join(", ")}`}`);
+      out(`🧪  TEST COVERAGE       keystones ${tg.coveredKeystones}/${tg.totalKeystones} guarded${tg.uncoveredKeystones.length ? ` · ⚠️ untested: ${tg.uncoveredKeystones.slice(0, 4).map((k) => k.node.name).join(", ")}` : " ✓"}`);
+      out(`\n  deterministic · no LLM · fingerprint ${fp} · ${((Date.now() - t0) / 1000).toFixed(1)}s · re-run to verify`);
+      out("  drill in → mneme risk · authz · testgap · graph view <fn> · graph reverse <table>   ·   on a PR → mneme review --base origin/main");
     });
 
   program.command("risk").description("🎯 RISK HOTSPOTS — the ONE ranked list of the riskiest things in this codebase (keystones × untested × sensitive × authz-gaps, fused). The single answer to 'what should I guard first?'.")

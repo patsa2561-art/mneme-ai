@@ -48,8 +48,8 @@ export interface TestGap {
   totalKeystones: number;
 }
 /** The repo's critical untested surface: keystones / data tables / endpoints no test mentions. */
-export function analyzeTestGap(files: ReadonlyArray<SourceFile>): TestGap {
-  const g = buildCrossLayerGraph(files as SourceFile[]);
+export function analyzeTestGap(files: ReadonlyArray<SourceFile>, opts?: { graph?: CrossLayerGraph }): TestGap {
+  const g = opts?.graph ?? buildCrossLayerGraph(files as SourceFile[]);
   const cov = buildCoverage(files);
   const h = graphHealth(g);
   const touchedTables = new Set(g.edges.filter((e) => e.relation === "WRITES_TO" || e.relation === "READS").map((e) => e.target));
@@ -61,8 +61,8 @@ export function analyzeTestGap(files: ReadonlyArray<SourceFile>): TestGap {
 
 export interface ChangeTestGap { reached: number; untestedTables: string[]; untestedEndpoints: string[]; untestedFunctions: string[]; untestedKeystones: string[]; verdict: "TESTED" | "GAP" | "EMPTY"; reason: string }
 /** For a specific diff: which nodes in its blast radius are UNTESTED (the risk surface to cover first). */
-export function changeTestGap(files: ReadonlyArray<SourceFile>, diff: string | ReadonlyArray<DiffChange>): ChangeTestGap {
-  const g = buildCrossLayerGraph(files as SourceFile[]);
+export function changeTestGap(files: ReadonlyArray<SourceFile>, diff: string | ReadonlyArray<DiffChange>, opts?: { graph?: CrossLayerGraph }): ChangeTestGap {
+  const g = opts?.graph ?? buildCrossLayerGraph(files as SourceFile[]);
   const cov = buildCoverage(files);
   const b = diffBlastRadius(g, diff as never, { maxDepth: 1 });
   if (!b.changed) return { reached: 0, untestedTables: [], untestedEndpoints: [], untestedFunctions: [], untestedKeystones: [], verdict: "EMPTY", reason: "no changed functions resolved to the graph" };

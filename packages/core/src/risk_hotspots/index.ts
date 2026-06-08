@@ -13,7 +13,7 @@
  * proof of a bug. Reliable to the extent its inputs are (keystone = exact; untested = name-mention
  * heuristic; authz = a smell). The value is the fusion: the single list that ranks the danger.
  */
-import { type SourceFile, type GNode, buildCrossLayerGraph, graphHealth } from "../cross_layer_graph/index.js";
+import { type SourceFile, type GNode, type CrossLayerGraph, buildCrossLayerGraph, graphHealth } from "../cross_layer_graph/index.js";
 import { buildCoverage } from "../test_gap/index.js";
 import { authzGaps } from "../authz_gap/index.js";
 
@@ -22,8 +22,8 @@ const SENSITIVE_RE = /\b(account|payment|wallet|password|credential|secret|token
 export type RiskBand = "CRITICAL" | "HIGH" | "MEDIUM";
 export interface Hotspot { name: string; type: GNode["type"] | "endpoint"; file?: string; score: number; band: RiskBand; factors: string[] }
 /** The ranked risk hotspots of a repo — keystones × untested × sensitive × authz, fused. */
-export function riskHotspots(files: ReadonlyArray<SourceFile>, opts?: { top?: number }): Hotspot[] {
-  const g = buildCrossLayerGraph(files as SourceFile[]);
+export function riskHotspots(files: ReadonlyArray<SourceFile>, opts?: { top?: number; graph?: CrossLayerGraph }): Hotspot[] {
+  const g = opts?.graph ?? buildCrossLayerGraph(files as SourceFile[]);
   const health = graphHealth(g);
   const cov = buildCoverage(files);
   const gaps = authzGaps(g);

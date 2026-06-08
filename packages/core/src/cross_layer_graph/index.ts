@@ -166,7 +166,13 @@ export function buildCrossLayerGraph(files: ReadonlyArray<SourceFile>): CrossLay
   // function → function (CALLS) — body references another function's name as a call. Skip ultra-common
   // / too-short identifiers (out, get, map, run…) — they manufacture a dense, useless call graph.
   const COMMON = new Set(["out", "get", "set", "run", "map", "log", "cb", "fn", "on", "to", "is", "do", "go", "of", "as", "at", "err", "res", "req", "ctx", "val", "key", "len", "tmp", "max", "min", "sum", "add", "has", "now", "end"]);
-  for (const fn of fns) for (const [name, defs] of fnByName) { if (name === fn.name || name.length < 3 || COMMON.has(lc(name))) continue; if (new RegExp(`\\b${name}\\s*\\(`).test(fn.body)) for (const d of defs) addEdge(fn.id, d.id, "CALLS"); }
+  // O(F · bodyTokens), NOT O(F²): tokenize each body's call sites ONCE, then look up known functions.
+  // (The old "test every known name against every body" was ~130M regex tests on an 11k-fn repo.)
+  const CALL_RE = /\b([A-Za-z_]\w*)\s*\(/g;
+  for (const fn of fns) {
+    const called = new Set<string>(); for (const m of fn.body.matchAll(CALL_RE)) called.add(m[1]);
+    for (const name of called) { if (name === fn.name || name.length < 3 || COMMON.has(lc(name))) continue; const defs = fnByName.get(name); if (defs) for (const d of defs) addEdge(fn.id, d.id, "CALLS"); }
+  }
   // business_rule → function (IMPLEMENTS) — PROVE-OR-UNKNOWN: link ONLY on a deterministic anchor.
   //  (1) an explicit code annotation: `@implements <slug>` / `implements: <name>` / `feature: <name>`
   //  (2) a STRONG name match: the function's name shares ≥2 distinctive tokens with the rule.
