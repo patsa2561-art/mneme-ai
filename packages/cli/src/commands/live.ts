@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -354,6 +354,31 @@ export function registerLiveCommands(program: Command): void {
       else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
       if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
+    });
+
+  program.command("decay").alias("entanglement").description("📈 ARCHITECTURAL DECAY VELOCITY — is your architecture getting MORE entangled over time? Samples commits since --since, replays the cross-layer graph at each, and reports the trend (ERODING/STABLE/IMPROVING) + coupling velocity per commit + the worst-step commit.")
+    .requiredOption("--since <ref>", "the earlier commit/tag/branch to trend from").option("--samples <n>", "commits to sample (default 6)").option("--max <n>", "max files per commit (default 2000)")
+    .action((o: { since: string; samples?: string; max?: string }) => {
+      const cwd = process.cwd(); const cap = o.max ? parseInt(o.max, 10) : 2000; const N = Math.max(2, o.samples ? parseInt(o.samples, 10) : 6);
+      const log = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an", `${o.since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) { out(`✗ unknown ref "${o.since}": ${(log.stderr || "").trim().slice(0, 140)}`); process.exitCode = 2; return; }
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, ...a] = l.split("\t"); return { sha, author: a.join("\t") }; });
+      if (commits.length < 2) { out(`📈 need ≥2 commits in ${o.since}..HEAD (found ${commits.length}).`); return; }
+      const pick = N >= commits.length ? commits.map((_, i) => i) : Array.from({ length: N }, (_, k) => Math.round((k * (commits.length - 1)) / (N - 1)));
+      const idxs = [...new Set(pick)];
+      const filesAt = (sha: string): crossLayerGraph.SourceFile[] => {
+        const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) return [];
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+        const fs2: crossLayerGraph.SourceFile[] = []; for (const f of wanted) { const r = spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) fs2.push({ path: f, content: r.stdout }); } return fs2;
+      };
+      out(`📈 Sampling ${idxs.length} commits since ${o.since} (replaying the cross-layer graph at each)…`);
+      const snaps = idxs.map((i) => archDecay.measureDebt(filesAt(commits[i].sha), { ref: commits[i].sha.slice(0, 10), author: commits[i].author }));
+      const r = archDecay.decaySeries(snaps);
+      const ico = r.trend === "ERODING" ? "🔴" : r.trend === "IMPROVING" ? "🟢" : "🟡";
+      out(`${ico} ${r.trend} — ${r.reason}`);
+      out(`   couplings ${snaps.map((s) => s.couplings).join(" → ")}  (${r.velocity.couplings >= 0 ? "+" : ""}${r.velocity.couplings.toFixed(1)}/commit)`);
+      if (r.worstStep && r.worstStep.deltaCouplings > 0) { const c = snaps[r.worstStep.toIndex]; out(`   🔺 biggest jump: +${r.worstStep.deltaCouplings} couplings at ${c.ref} (${c.author})`); }
+      out("   honest: a trend over sampled commits — the rate + where it spiked, not a verdict that the architecture is good/bad.");
     });
 
   program.command("bisect-invariant <invariant>").alias("when-broke").description("🕰 ARCHITECTURAL BISECT — git-bisect for a CONTRACT: find the exact commit (+author) where an architectural invariant first broke. e.g. `mneme bisect-invariant 'table credentials private' --since v1.0`. Replays the cross-layer graph across history (binary search). Exit 2 if a breaking commit is found.")

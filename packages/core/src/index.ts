@@ -377,6 +377,7 @@ export * as graphqlSurface from "./graphql_surface/index.js";
 export * as archLock from "./arch_lock/index.js";
 export * as invariants from "./invariants/index.js";
 export * as archBisect from "./arch_bisect/index.js";
+export * as archDecay from "./arch_decay/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

@@ -420,6 +420,30 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.decay",
+    category: "audit",
+    description: "📈 ARCHITECTURAL DECAY VELOCITY — is the architecture getting MORE entangled over time? Samples commits since {since}, replays the cross-layer graph at each, and returns the trend (ERODING/STABLE/IMPROVING) + cross-layer coupling velocity per commit + the worst-step commit (and author). The temporal-trend counterpart to bisect. ★HONEST: a trend over sampled commits, not a forecast and not a value judgment — more coupling isn't always bad; the signal is the RATE and which commit spiked it, computed deterministically.",
+    whenToUse: "When you want to know if the codebase is accruing architectural debt over time, or which commit added the most coupling — a structural-health trend.",
+    triggers: ["architectural decay", "is the architecture eroding", "coupling over time", "technical debt trend", "entanglement velocity", "is it getting harder to change"],
+    inputSchema: { type: "object", properties: { since: { type: "string" }, samples: { type: "number" } }, required: ["since"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const since = String(args["since"] ?? ""); const N = Math.max(2, Number(args["samples"]) || 6);
+      const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i; const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const log = cp.spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an", `${since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: `unknown ref ${since}` }), wisdom: `unknown ref "${since}"`, confidence: ok("low") };
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, ...a] = l.split("\t"); return { sha, author: a.join("\t") }; });
+      if (commits.length < 2) return { data: await attest(cwd, { commits: commits.length }), wisdom: `need ≥2 commits in ${since}..HEAD`, confidence: ok("low") };
+      const idxs = [...new Set((N >= commits.length ? commits.map((_, i) => i) : Array.from({ length: N }, (_, k) => Math.round((k * (commits.length - 1)) / (N - 1)))))];
+      const filesAt = (sha: string) => { const ls = cp.spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) return []; const o: { path: string; content: string }[] = []; for (const f of ls.stdout.split("\n").map((s) => s.trim()).filter((x) => x && EXT.test(x) && !SKIP.has(x.split("/")[0])).slice(0, 2000)) { const r = cp.spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) o.push({ path: f, content: r.stdout }); } return o; };
+      const snaps = idxs.map((i) => core.archDecay.measureDebt(filesAt(commits[i].sha), { ref: commits[i].sha.slice(0, 10), author: commits[i].author }));
+      const r = core.archDecay.decaySeries(snaps);
+      const data = await attest(cwd, { trend: r.trend, reason: r.reason, velocity: r.velocity, couplings: snaps.map((s) => s.couplings), worstStep: r.worstStep });
+      return { data, wisdom: `${r.trend} — ${r.reason}`, followUp: r.trend === "ERODING" && r.worstStep ? [`biggest coupling jump at ${snaps[r.worstStep.toIndex]?.ref} (${snaps[r.worstStep.toIndex]?.author}) — review it`] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.arch.bisect",
     category: "audit",
     description: "🕰 ARCHITECTURAL BISECT — git-bisect for a CONTRACT. Given an architectural invariant (`table <T> private|single-writer|guarded` · `endpoint <path> exists`) and a `since` ref it still held at, binary-searches git history to the EXACT commit (and author) where it first broke — by replaying the deterministic cross-layer graph at each midpoint commit. git blame localizes a line; this localizes a structural PROPERTY. Returns the breaking commit + author, or that it still holds. ★HONEST: replays the structural contract at sampled commits; binary search assumes the property flipped once in the range (held at `since`, violated at HEAD) — finds a real, re-checkable breaking commit, not every flap.",
