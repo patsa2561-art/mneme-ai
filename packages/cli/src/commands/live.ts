@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -187,6 +187,22 @@ export function registerLiveCommands(program: Command): void {
       if (chk.surpriseEndpoints.length) out(`   🌐 unmentioned endpoints: ${chk.surpriseEndpoints.map((e) => `${e.method} ${e.name}`).join(" · ")}`);
       if (chk.surpriseRules.length) out(`   💼 unmentioned rules: ${chk.surpriseRules.map((r) => r.name).join(" · ")}`);
       process.exitCode = 2;
+    });
+  graph.command("prove-drop <table>").description("🧠 PROVABLE DROP SAFETY — proves unsafe_to_drop(table) from real graph facts via the logic engine: UNSAFE with the cited blocker + proof chain, or LIKELY_SAFE (no structural blocker, prove-or-unknown). The provable upgrade of `reverse`. Exit 2 if UNSAFE.")
+    .action((table: string) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const d = graphLogic.dropProof(g, table);
+      const ico = d.verdict === "UNSAFE" ? "🔴" : d.verdict === "LIKELY_SAFE" ? "🟢" : "🟡";
+      out(`${ico} ${d.verdict} — ${d.reason}`);
+      if (d.chain.length) { out("   proof:"); for (const s of d.chain) out(`     ${s.atom}${s.via === "given" ? "  (given)" : "  ⇐ " + s.from.join(" ∧ ")}`); }
+      if (d.verdict === "UNSAFE") process.exitCode = 2;
+    });
+  graph.command("prove-reach <endpoint> <table>").description("🧠 PROVE an endpoint reaches a table THROUGH the call graph (transitive proof chain), via the logic engine.")
+    .action((endpoint: string, table: string) => {
+      const cwd = process.cwd(); const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const r = graphLogic.reachesProof(g, endpoint, table);
+      out(`${r.reachable ? "✅ PROVEN" : "🟡 not proven"} — ${r.reason}`);
+      if (r.chain.length) { out("   proof:"); for (const s of r.chain) out(`     ${s.atom}${s.via === "given" ? "  (given)" : "  ⇐ " + s.from.join(" ∧ ")}`); }
     });
   graph.command("reverse <name>").alias("drop").description("⛔ DROP SAFETY (reverse blast radius) — before you remove a DB table or endpoint, see EVERYTHING that depends on it: functions, their upstream callers, endpoints, business rules. SAFE / RISKY / CRITICAL. Exit 2 on CRITICAL.")
     .action((name: string) => {

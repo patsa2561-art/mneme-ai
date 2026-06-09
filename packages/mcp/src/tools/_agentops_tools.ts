@@ -269,6 +269,32 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.graph.prove",
+    category: "audit",
+    description: "🧠🕸 PROVABLE CROSS-LAYER REASONING — the upgrade from heuristic to PROOF. Instead of a verdict you must trust, this extracts real facts from the cross-layer graph (reads/writes(fn,table) · calls(a,b) · serves(endpoint,fn)) and runs the sound logic engine to PROVE the answer with a proof tree. kind:'drop' {table} → proves unsafe_to_drop(table): UNSAFE with the exact blocking reader/writer/endpoint + proof chain, or LIKELY_SAFE (no structural blocker — UNKNOWN per prove-or-unknown, never a false 'safe'). kind:'reaches' {endpoint, table} → proves the endpoint reaches the table THROUGH the call graph, with the transitive proof. ★HONEST: facts are as good as the deterministic extractor (no dynamic/reflective access); the leap is that the verdict now carries a checkable proof, not just a label.",
+    whenToUse: "BEFORE dropping/renaming a DB table (get a PROVEN-unsafe with the cited blocker, not a guess), or to prove an endpoint actually reaches a table. The provable version of mneme.graph.reverse.",
+    triggers: ["prove it's safe to drop", "prove unsafe to drop", "is it provably safe", "prove this endpoint reaches", "proof not guess", "provable drop safety"],
+    inputSchema: { type: "object", properties: { kind: { type: "string", enum: ["drop", "reaches"] }, table: { type: "string" }, endpoint: { type: "string" } }, required: ["kind"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const kind = String(args["kind"] ?? "drop");
+      if (kind === "reaches") {
+        const r = core.graphLogic.reachesProof(g, String(args["endpoint"] ?? ""), String(args["table"] ?? ""));
+        const data = await attest(cwd, { reachable: r.reachable, reason: r.reason, proof: r.chain.map((s) => `${s.atom}${s.via === "given" ? " (given)" : " ⇐ " + s.from.join(" ∧ ")}`) });
+        return { data, wisdom: `${r.reachable ? "PROVEN reaches" : "not proven"} — ${r.reason}`, followUp: [], confidence: ok(r.reachable ? "high" : "medium") };
+      }
+      const d = core.graphLogic.dropProof(g, String(args["table"] ?? ""));
+      const data = await attest(cwd, { verdict: d.verdict, reason: d.reason, blockers: d.blockers, proof: d.chain.map((s) => `${s.atom}${s.via === "given" ? " (given)" : " ⇐ " + s.from.join(" ∧ ")}`) });
+      return { data, wisdom: `${d.verdict} — ${d.reason}`, followUp: d.verdict === "UNSAFE" ? ["PROVEN unsafe — write a migration that updates the cited reader/writer/endpoint before dropping"] : [], confidence: ok(d.verdict === "UNSAFE" ? "high" : "medium") };
+    },
+  },
+  {
     name: "mneme.logic.check",
     category: "audit",
     description: "🧠 THE LOGIC ENGINE — check whether your REASONING is sound, not whether the facts are true. A deterministic inference engine: forward-chains Horn clauses (when ALL of `when` hold → `then`) over your facts, plus mutual-exclusion constraints (these can't all be true at once). Returns a goal as PROVEN (with the full proof tree) / CONTRADICTED (your premises entail a mutually-exclusive pair — the argument is unsound even if each fact sounds plausible) / UNKNOWN (does not follow — never asserted false). Pass {facts[], rules[{when[],then}], mutexes[{all[]}], goal} OR a compact {program} text (`a`·`a & b => c`·`never: x & y`·`goal: g`). ★HONEST: sound monotone logic — proves what FOLLOWS + catches stated contradictions; it does not invent missing premises (a gap is UNKNOWN). The verdict is mechanical, reproducible, signed.",
