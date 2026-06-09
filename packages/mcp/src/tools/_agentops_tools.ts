@@ -332,6 +332,27 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.graphql.breaking",
+    category: "audit",
+    description: "🔺 GRAPHQL BREAKING-CHANGE — the api-diff for a GraphQL schema. Extracts the operation surface (Query/Mutation/Subscription fields) from SDL (incl extend type + inline gql template literals), diffs it vs a base ref, and flags a REMOVED operation or a CHANGED return type as BREAKING (clients selecting it break); additions are safe. Pass {base} (default origin/main). ★HONEST: SDL-based (the contract clients code against) — a pure code-first schema with no emitted SDL is out of scope; external clients are invisible so a removal is always treated as breaking.",
+    whenToUse: "On a PR that touches a .graphql/.gql schema (or inline gql) — confirm you are not removing or retyping a field clients still query.",
+    triggers: ["graphql breaking change", "graphql schema diff", "removed graphql field", "did i break the graphql schema", "schema breaking change"],
+    inputSchema: { type: "object", properties: { base: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const base = String(args["base"] ?? "origin/main");
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(graphql|gql|ts|tsx|js|jsx|mjs|cjs)$/i;
+      const curr: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && curr.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { curr.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const prev: { path: string; content: string }[] = [];
+      try { const ls = cp.spawnSync("git", ["ls-tree", "-r", "--name-only", base], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }); if (ls.status === 0) for (const f of ls.stdout.split("\n").map((s) => s.trim()).filter((x) => x && EXT.test(x)).slice(0, 3000)) { const r = cp.spawnSync("git", ["show", `${base}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) prev.push({ path: f, content: r.stdout }); } } catch { /* */ }
+      const bc = core.graphqlSurface.graphqlBreaking(prev, curr);
+      const data = await attest(cwd, { added: bc.addedCount, removed: bc.removedCount, retyped: bc.retypedCount, breaking: bc.breaking });
+      return { data, wisdom: bc.breaking.length ? `🔺 ${bc.breaking.length} BREAKING GraphQL change(s) — ${bc.breaking[0].reason}` : `no breaking GraphQL change (+${bc.addedCount} added)`, followUp: bc.breaking.length ? ["a removed/retyped field breaks clients — deprecate and keep it, or version the schema"] : [], confidence: ok(bc.breaking.length ? "high" : "medium") };
+    },
+  },
+  {
     name: "mneme.api.breaking",
     category: "audit",
     description: "🔌 API BREAKING-CHANGE DETECTOR — diff the produced API surface between a base ref and now: which endpoints were added / removed, and crucially which REMOVED endpoints are still CONSUMED (by this repo or a sibling service) → BREAKING, naming the consumer; the rest → POSSIBLY_BREAKING (external clients are invisible). The cross-repo break a normal git diff can't see. Pass {base} (default origin/main). ★HONEST: matched by method + normalized path (params→*); gateway-prefix/dynamic URLs can cause misses; a removed endpoint with no in-repo consumer is POSSIBLY_BREAKING, never falsely cleared.",

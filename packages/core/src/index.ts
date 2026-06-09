@@ -373,6 +373,7 @@ export * as logicEngine from "./logic_engine/index.js";
 export * as graphLogic from "./graph_logic/index.js";
 export * as accuracy from "./accuracy/index.js";
 export * as apiSurface from "./api_surface/index.js";
+export * as graphqlSurface from "./graphql_surface/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

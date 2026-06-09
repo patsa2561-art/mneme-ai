@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -203,6 +203,22 @@ export function registerLiveCommands(program: Command): void {
       const r = graphLogic.reachesProof(g, endpoint, table);
       out(`${r.reachable ? "✅ PROVEN" : "🟡 not proven"} — ${r.reason}`);
       if (r.chain.length) { out("   proof:"); for (const s of r.chain) out(`     ${s.atom}${s.via === "given" ? "  (given)" : "  ⇐ " + s.from.join(" ∧ ")}`); }
+    });
+  graph.command("graphql-diff").description("🔺 GRAPHQL BREAKING-CHANGE — diff the GraphQL operation surface (Query/Mutation/Subscription from SDL) vs --base <ref>: a REMOVED operation or CHANGED return type = BREAKING (clients break). Exit 2 on a breaking change.")
+    .requiredOption("--base <ref>").option("--max <n>").action((o: { base: string; max?: string }) => {
+      const cwd = process.cwd();
+      const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", o.base], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (ls.status !== 0) { out(`✗ unknown ref "${o.base}"`); process.exitCode = 2; return; }
+      const EXT = /\.(graphql|gql|ts|tsx|js|jsx|mjs|cjs)$/i;
+      const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, o.max ? parseInt(o.max, 10) : 3000);
+      const prevFiles: crossLayerGraph.SourceFile[] = [];
+      for (const f of wanted) { const r = spawnSync("git", ["show", `${o.base}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) prevFiles.push({ path: f, content: r.stdout }); }
+      const currFiles = scanRepo(cwd).filter((f) => EXT.test(f.path)).concat(scanRepo(cwd, 600000, /\.(graphql|gql)$/i));
+      const bc = graphqlSurface.graphqlBreaking(prevFiles, currFiles);
+      out(`🔺 GraphQL surface vs ${o.base}: +${bc.addedCount} added · -${bc.removedCount} removed · ~${bc.retypedCount} retyped`);
+      if (!bc.breaking.length) { out("   ✓ no breaking GraphQL change."); return; }
+      for (const b of bc.breaking.slice(0, 25)) out(`   🔴 ${b.reason}`);
+      process.exitCode = 2;
     });
   graph.command("api-diff").alias("breaking").description("🔌 API BREAKING-CHANGE DETECTOR — diff the produced API surface vs --base <ref>: added/removed endpoints, and which REMOVED endpoints are still CONSUMED (BREAKING) by this repo's own callers vs only POSSIBLY breaking. Exit 2 on a BREAKING change.")
     .requiredOption("--base <ref>", "the earlier commit/tag/branch to compare against").option("--max <n>").action((o: { base: string; max?: string }) => {
