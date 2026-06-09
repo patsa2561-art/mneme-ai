@@ -332,6 +332,29 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.api.breaking",
+    category: "audit",
+    description: "🔌 API BREAKING-CHANGE DETECTOR — diff the produced API surface between a base ref and now: which endpoints were added / removed, and crucially which REMOVED endpoints are still CONSUMED (by this repo or a sibling service) → BREAKING, naming the consumer; the rest → POSSIBLY_BREAKING (external clients are invisible). The cross-repo break a normal git diff can't see. Pass {base} (default origin/main). ★HONEST: matched by method + normalized path (params→*); gateway-prefix/dynamic URLs can cause misses; a removed endpoint with no in-repo consumer is POSSIBLY_BREAKING, never falsely cleared.",
+    whenToUse: "On a PR / before a release that touches routes — confirm you're not removing or renaming an endpoint another service still calls.",
+    triggers: ["breaking change", "did i break the api", "removed endpoint", "api surface diff", "is this a breaking change", "what api changed"],
+    inputSchema: { type: "object", properties: { base: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const base = String(args["base"] ?? "origin/main");
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb)$/i;
+      const curr: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && curr.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { curr.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const prev: { path: string; content: string }[] = [];
+      try { const ls = cp.spawnSync("git", ["ls-tree", "-r", "--name-only", base], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }); if (ls.status === 0) { for (const f of ls.stdout.split("\n").map((s) => s.trim()).filter((x) => x && EXT.test(x)).slice(0, 2500)) { const r = cp.spawnSync("git", ["show", `${base}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) prev.push({ path: f, content: r.stdout }); } } } catch { /* */ }
+      if (!prev.length) return { data: await attest(cwd, { error: `could not read base ref "${base}"` }), wisdom: `could not read base ref "${base}" — pass a reachable ref`, confidence: ok("low") };
+      const bc = core.apiSurface.breakingChanges(prev, curr, [{ name: "this repo", files: curr }]);
+      const hard = bc.breaking.filter((b) => b.severity === "BREAKING");
+      const data = await attest(cwd, { added: bc.addedCount, removed: bc.removedCount, breaking: bc.breaking });
+      return { data, wisdom: `+${bc.addedCount} added · -${bc.removedCount} removed · ${hard.length} BREAKING${hard[0] ? " (e.g. " + hard[0].method + " " + hard[0].path + " consumed by " + hard[0].consumedBy.join(", ") + ")" : ""}`, followUp: hard.length ? ["a removed endpoint is still consumed — keep it (or version it) and migrate the consumers first"] : [], confidence: ok(hard.length ? "high" : "medium") };
+    },
+  },
+  {
     name: "mneme.services.graph",
     category: "audit",
     description: "🌐 CROSS-SERVICE CONTRACT GRAPH — the blast radius ACROSS repos/services. Auto-detects services (packages/* · services/* · apps/*) and links each service's PRODUCED endpoints (route defs) to the CONSUMED endpoints other services call (fetch/axios/got/…), by URL path. Returns the inter-service contract edges (who calls whose API) + DANGLING consumers (a call to an endpoint NO service produces — a broken contract or an external API). The org-scale dependency map git & per-repo tools can't see. ★HONEST: deterministic path-matching (params → *) — a contract map to verify, not a proven runtime call; gateway prefixes / dynamic URLs can cause misses.",

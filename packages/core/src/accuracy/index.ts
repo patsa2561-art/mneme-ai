@@ -38,24 +38,32 @@ function prf(dimension: string, expected: Iterable<string>, actual: Iterable<str
 // ── the labeled corpus: each dimension extracts from fixtures and compares to known ground truth ──
 function dimTables(): DimResult {
   const files: SourceFile[] = [
-    { path: "a.prisma", content: "model User { id Int @id }\nmodel Order { id Int @id }" },
-    { path: "b.sql", content: "CREATE TABLE orders (id int);\nCREATE TABLE IF NOT EXISTS items (id int);" },        // 'IF' must NOT be captured
-    { path: "c.py", content: "class Profile(models.Model):\n  pass" },
-    { path: "d.ts", content: "@Entity(\"payments\")\nclass Pay {}" },
-    { path: "neg.ts", content: "const userTable = 1; function makeOrder(){}; const items = [];" },               // none of these are tables
+    { path: "a.prisma", content: "model User { id Int @id }\nmodel Order { id Int @id }" },                      // Prisma
+    { path: "b.sql", content: "CREATE TABLE orders (id int);\nCREATE TABLE IF NOT EXISTS items (id int);\nCREATE TEMPORARY TABLE tmp_join (id int);" },   // SQL (+ temp); 'IF' must NOT be captured
+    { path: "c.py", content: "class Profile(models.Model):\n  __tablename__ = 'profiles_tbl'\n  pass" },          // Django + __tablename__
+    { path: "d.ts", content: "@Entity(\"payments\")\nclass Pay {}" },                                            // TypeORM
+    { path: "e.ts", content: "const Account = sequelize.define(\"Account\", {});\nclass Wallet extends Model {}" }, // Sequelize define + JS extends Model
+    { path: "f.ts", content: "const Note = mongoose.model(\"Note\", noteSchema);" },                             // Mongoose
+    { path: "hard.ts", content: "knex.schema.createTable('legacy_audit', t => {});\nconst T = makeTable(cfg);" },// HARD: knex createTable (no 'create table' literal) + factory → honest miss
+    { path: "neg.ts", content: "const userTable = 1; function makeOrder(){}; const items = [];" },              // none of these are tables (precision)
   ];
   const g = buildCrossLayerGraph(files);
   const actual = g.nodes.filter((n) => n.type === "db_table").map((n) => n.name.toLowerCase());
-  return prf("tables", ["user", "order", "orders", "items", "profile", "payments"], actual);
+  // ground truth includes 'legacy_audit' which we HONESTLY cannot extract (knex createTable) → real recall < 1
+  return prf("tables", ["user", "order", "orders", "items", "tmp_join", "profile", "profiles_tbl", "payments", "account", "wallet", "note", "legacy_audit"], actual);
 }
 function dimEndpoints(): DimResult {
   const files: SourceFile[] = [
-    { path: "r.ts", content: "router.post(\"/v1/charge\", h);\napp.get(\"/users/:id\", h);\nfastify.delete(\"/things/:x\", h);" },
-    { path: "neg.ts", content: "axios.get(\"/external/api\");\nconst x = obj.get(\"key\");\nfetch(\"/data\");" },     // consumers/non-routes, NOT endpoints
+    { path: "r.ts", content: "router.post(\"/v1/charge\", h);\napp.get(\"/users/:id\", h);\nfastify.delete(\"/things/:x\", h);" },     // express/fastify
+    { path: "fast.py", content: "@router.get(\"/v1/list\")\nasync def list_it():\n  pass\n@app.route(\"/flask/save\", methods=[\"POST\"])\ndef save():\n  pass" },  // FastAPI + Flask
+    { path: "nest.ts", content: "@Post(\"/nest/create\")\ncreateThing() {}" },                                  // NestJS
+    { path: "hard.ts", content: "const BASE='/api';\napp.get(BASE + \"/dynamic\", h);\nrouter[method](\"/computed\", h);" },  // HARD: dynamic concat + computed method → honest miss
+    { path: "neg.ts", content: "axios.get(\"/external/api\");\nconst x = obj.get(\"key\");\nfetch(\"/data\");" },  // consumers/non-routes, NOT endpoints (precision)
   ];
   const g = buildCrossLayerGraph(files);
   const actual = g.nodes.filter((n) => n.type === "api_endpoint").map((n) => `${n.method} ${n.name}`);
-  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x"], actual);
+  // includes GET /api/dynamic which we HONESTLY cannot extract (variable concat) → real recall < 1
+  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /api/dynamic"], actual);
 }
 function dimFunctions(): DimResult {
   const files: SourceFile[] = [
@@ -70,14 +78,16 @@ function dimFunctions(): DimResult {
 }
 function dimDataEdges(): DimResult {
   const files: SourceFile[] = [
-    { path: "s.prisma", content: "model User { id Int @id }\nmodel Order { id Int @id }" },
-    { path: "svc.ts", content: "export function makeUser(){ return prisma.user.create({data:{}}); }\nexport function listOrders(){ return prisma.order.findMany(); }\nexport function noop(){ const user = 'hi'; return user; }" },   // noop mentions 'user' but no DB access
+    { path: "s.prisma", content: "model User { id Int @id }\nmodel Order { id Int @id }\nmodel Account { id Int @id }" },
+    { path: "svc.ts", content: "export function makeUser(){ return prisma.user.create({data:{}}); }\nexport function listOrders(){ return prisma.order.findMany(); }\nexport function getBal(){ return db.query('SELECT * FROM account WHERE id=1'); }\nexport function noop(){ const user = 'hi'; return user; }" },   // raw SQL FROM account; noop mentions 'user' but no DB access
+    { path: "hard.ts", content: "export function knexRead(){ return knex('order').where({}); }" },   // HARD: knex query builder (no recognized access shape) → honest miss of knexread->order
   ];
   const g = buildCrossLayerGraph(files);
   const edges = g.edges.filter((e) => e.relation === "WRITES_TO" || e.relation === "READS");
   const byId = new Map(g.nodes.map((n) => [n.id, n.name] as const));
   const actual = edges.map((e) => `${(byId.get(e.source) || "").toLowerCase()}->${(byId.get(e.target) || "").toLowerCase()}`);
-  return prf("data-edges", ["makeuser->user", "listorders->order"], actual);   // noop must NOT link to user
+  // includes knexread->order which we HONESTLY don't match → real recall < 1; noop must NOT link to user (precision)
+  return prf("data-edges", ["makeuser->user", "listorders->order", "getbal->account", "knexread->order"], actual);
 }
 function dimCalls(): DimResult {
   const files: SourceFile[] = [
@@ -90,10 +100,11 @@ function dimCalls(): DimResult {
 }
 function dimConsumers(): DimResult {
   const consumed = extractConsumed([
-    { path: "api.ts", content: "fetch(\"/v1/users/1\");\naxios.post(\"/v1/charge\", b);\nky.get(\"/v1/ping\");\nfetch(\"/styles/app.css\");\nconst s = obj.get('local');" },
+    { path: "api.ts", content: "fetch(\"/v1/users/1\");\naxios.post(\"/v1/charge\", b);\nky.get(\"/v1/ping\");\ngot.post(\"/v1/got\");\nfetch(`/api/${id}`);\nfetch(\"/styles/app.css\");\nconst s = obj.get('local');" },
   ]);
   const actual = consumed.map((c) => c.norm);
-  return prf("consumers", ["/v1/users/1", "/v1/charge", "/v1/ping"], actual);   // .css + local non-path excluded
+  // got + template literal (/api/${id} → /api/*) supported; .css + bare 'local' excluded (precision)
+  return prf("consumers", ["/v1/users/1", "/v1/charge", "/v1/ping", "/v1/got", "/api/*"], actual);
 }
 function dimAuthz(): DimResult {
   const gapped = authzGaps(buildCrossLayerGraph([

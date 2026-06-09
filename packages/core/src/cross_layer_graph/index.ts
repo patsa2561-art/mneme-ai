@@ -39,6 +39,7 @@ function bodyTouchesTable(body: string, table: string): { hit: boolean; write: b
     new RegExp(`\\b${t}\\.objects\\b`),                            // Django: User.objects.…
     new RegExp(`\\bquery\\(\\s*${t}\\b`),                          // SQLAlchemy: session.query(User)
     new RegExp(`\\b(?:get|filter|select)\\w*\\([^)]*\\b${t}\\b`),  // ORM get/filter referencing the model
+    new RegExp(`\\bknex\\(\\s*["'\`]${t}s?["'\`]`),                // knex('users')… query builder
   ];
   const hit = patterns.some((re) => re.test(b));
   if (!hit) return { hit: false, write: false };
@@ -46,7 +47,8 @@ function bodyTouchesTable(body: string, table: string): { hit: boolean; write: b
     || new RegExp(`\\b(insert\\s+into|update|delete\\s+from)\\s+["'\`]?${t}\\b`).test(b)
     || new RegExp(`\\b${t}\\.(save|insert|update|delete|destroy)\\b`).test(b)
     || new RegExp(`\\b${t}\\.objects\\.(create|update|delete|bulk_create|get_or_create)\\b`).test(b)   // Django write
-    || new RegExp(`\\b(?:add|delete|merge)\\(\\s*${t}\\b`).test(b);                                    // SQLAlchemy session.add(User(...))
+    || new RegExp(`\\b(?:add|delete|merge)\\(\\s*${t}\\b`).test(b)                                     // SQLAlchemy session.add(User(...))
+    || new RegExp(`\\bknex\\(\\s*["'\`]${t}s?["'\`]\\s*\\)\\s*\\.\\s*(insert|update|del|delete)\\b`).test(b);   // knex('users').insert(...)
   return { hit: true, write };
 }
 
@@ -61,23 +63,41 @@ function extractTables(files: SourceFile[]): GNode[] {
     for (const m of c.matchAll(/\bclass\s+([A-Za-z_]\w*)\s*\(\s*[^)]*\b(?:models\.Model|Base|Model|db\.Model)\b/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
     for (const m of c.matchAll(/__tablename__\s*=\s*["']([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }
     for (const m of c.matchAll(/@(?:Entity|Table)\s*\(\s*["'`]([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // TypeORM
+    for (const m of c.matchAll(/\b(?:sequelize|db)\.define\s*\(\s*["'`]([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Sequelize
+    for (const m of c.matchAll(/\b(?:mongoose\.model|model)\s*\(\s*["'`]([A-Za-z_]\w*)["'`]\s*,/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Mongoose model('Name', schema)
+    for (const m of c.matchAll(/\bclass\s+([A-Za-z_]\w*)\s+extends\s+\w*Model\b/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // JS class X extends Model (Sequelize/Mongoose/Objection)
   }
   return [...out.values()];
 }
 
 /** Extract api_endpoint nodes + the handler names referenced in each route call. */
 function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: string[] }> {
-  const out: Array<{ node: GNode; handlers: string[] }> = [];
+  const byId = new Map<string, { node: GNode; handlers: Set<string> }>();
+  const add = (method: string, path: string, file: string, handlers: string[]) => {
+    const id = `api:${method} ${path}`; let e = byId.get(id);
+    if (!e) { e = { node: { id, type: "api_endpoint", name: path, method, file }, handlers: new Set() }; byId.set(id, e); }
+    for (const h of handlers) e.handlers.add(h);
+  };
   for (const f of files) {
     const c = f.content.slice(0, MAX_FILE);
-    for (const m of c.matchAll(/\b(?:app|router|fastify|server|api)\.(get|post|put|patch|delete|all)\s*\(\s*["'`]([^"'`]+)["'`]([^)]*)\)/gi)) {
-      const method = m[1].toUpperCase(); const path = m[2]; const argTail = m[3] || "";
-      const id = `api:${method} ${path}`;
-      const handlers = [...argTail.matchAll(/([A-Za-z_]\w*)\s*(?:[,)]|$)/g)].map((x) => x[1]).filter((h) => h && !["req", "res", "next", "ctx"].includes(lc(h)));
-      out.push({ node: { id, type: "api_endpoint", name: path, method, file: f.path }, handlers });
+    // method calls — (?<!@) so a decorator line is handled only by the decorator pass below (no double-count)
+    for (const m of c.matchAll(/(?<!@)\b(?:app|router|fastify|server|api)\.(get|post|put|patch|delete|all)\s*\(\s*["'`]([^"'`]+)["'`]([^)]*)\)/gi)) {
+      const handlers = [...(m[3] || "").matchAll(/([A-Za-z_]\w*)\s*(?:[,)]|$)/g)].map((x) => x[1]).filter((h) => h && !["req", "res", "next", "ctx"].includes(lc(h)));
+      add(m[1].toUpperCase(), m[2], f.path, handlers);
+    }
+    // Python decorators — FastAPI @router.get("/x") / Flask @app.route("/x", methods=["POST"]). The
+    // AI world is largely Python; the decorated function on the next line is captured as the handler.
+    for (const m of c.matchAll(/@(?:app|router|api|bp|blueprint)\.(get|post|put|patch|delete|route)\s*\(\s*["'`]([^"'`]+)["'`]([^)]*)\)\s*(?:\r?\n\s*(?:async\s+)?def\s+([A-Za-z_]\w*))?/gi)) {
+      const verb = m[1].toLowerCase(); let method = verb === "route" ? "GET" : verb.toUpperCase();
+      if (verb === "route") { const mm = (m[3] || "").match(/methods\s*=\s*\[\s*["'`](get|post|put|patch|delete)/i); if (mm) method = mm[1].toUpperCase(); }
+      add(method, m[2], f.path, m[4] ? [m[4]] : []);
+    }
+    // NestJS — @Get("/x") @Post("/y") on a controller method (method name on the next line).
+    for (const m of c.matchAll(/@(Get|Post|Put|Patch|Delete)\s*\(\s*["'`]([^"'`]+)["'`]\s*\)\s*(?:\r?\n\s*(?:async\s+)?([A-Za-z_]\w*)\s*\()?/g)) {
+      add(m[1].toUpperCase(), m[2], f.path, m[3] ? [m[3]] : []);
     }
   }
-  return out;
+  return [...byId.values()].map((e) => ({ node: e.node, handlers: [...e.handlers] }));
 }
 
 /** Extract function nodes + their approximate body region (def → next def). Heuristic, deterministic. */

@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -203,6 +203,24 @@ export function registerLiveCommands(program: Command): void {
       const r = graphLogic.reachesProof(g, endpoint, table);
       out(`${r.reachable ? "✅ PROVEN" : "🟡 not proven"} — ${r.reason}`);
       if (r.chain.length) { out("   proof:"); for (const s of r.chain) out(`     ${s.atom}${s.via === "given" ? "  (given)" : "  ⇐ " + s.from.join(" ∧ ")}`); }
+    });
+  graph.command("api-diff").alias("breaking").description("🔌 API BREAKING-CHANGE DETECTOR — diff the produced API surface vs --base <ref>: added/removed endpoints, and which REMOVED endpoints are still CONSUMED (BREAKING) by this repo's own callers vs only POSSIBLY breaking. Exit 2 on a BREAKING change.")
+    .requiredOption("--base <ref>", "the earlier commit/tag/branch to compare against").option("--max <n>").action((o: { base: string; max?: string }) => {
+      const cwd = process.cwd();
+      const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", o.base], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (ls.status !== 0) { out(`✗ unknown ref "${o.base}": ${(ls.stderr || "").trim().slice(0, 140)}`); process.exitCode = 2; return; }
+      const cap = o.max ? parseInt(o.max, 10) : 2500;
+      const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+      const prevFiles: crossLayerGraph.SourceFile[] = [];
+      for (const f of wanted) { const r = spawnSync("git", ["show", `${o.base}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) prevFiles.push({ path: f, content: r.stdout }); }
+      const currFiles = scanWithDocs(cwd);
+      const bc = apiSurface.breakingChanges(prevFiles, currFiles, [{ name: "this repo", files: currFiles }]);
+      out(`🔌 API surface vs ${o.base}: +${bc.addedCount} added · -${bc.removedCount} removed`);
+      if (!bc.breaking.length) { out("   ✓ no removed/changed endpoints — no breaking change."); return; }
+      const hard = bc.breaking.filter((b) => b.severity === "BREAKING");
+      for (const b of bc.breaking.slice(0, 20)) out(`   ${b.severity === "BREAKING" ? "🔴 BREAKING" : "🟡 possibly"} ${b.method} ${b.path}${b.consumedBy.length ? " — consumed by " + b.consumedBy.join(", ") : ""}`);
+      out("   honest: removed endpoints matched by method+path; external clients are invisible (→ POSSIBLY).");
+      if (hard.length) process.exitCode = 2;
     });
   graph.command("reverse <name>").alias("drop").description("⛔ DROP SAFETY (reverse blast radius) — before you remove a DB table or endpoint, see EVERYTHING that depends on it: functions, their upstream callers, endpoints, business rules. SAFE / RISKY / CRITICAL. Exit 2 on CRITICAL.")
     .action((name: string) => {
