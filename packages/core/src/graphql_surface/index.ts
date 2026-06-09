@@ -26,7 +26,7 @@ export function graphqlSurface(files: ReadonlyArray<SourceFile>): GqlOp[] {
   const out = new Map<string, GqlOp>();
   for (const f of files ?? []) {
     const c = String(f?.content ?? "").slice(0, MAX);
-    // `type Query { … }` / `extend type Mutation { … }` blocks (also inside gql`…` template literals)
+    // SDL: `type Query { … }` / `extend type Mutation { … }` blocks (also inside gql`…` template literals)
     for (const m of c.matchAll(/\b(?:extend\s+)?type\s+(Query|Mutation|Subscription)\s*\{([^}]*)\}/g)) {
       const kind = m[1] as GqlKind; const body = m[2];
       // each field: name (optionalArgs) : ReturnType   — comments/directives tolerated
@@ -34,6 +34,18 @@ export function graphqlSurface(files: ReadonlyArray<SourceFile>): GqlOp[] {
         const name = fm[2]; const type = fm[3]; if (!name) continue;
         const key = `${kind}.${name}`; out.set(key, { kind, name, type, key });
       }
+    }
+    // CODE-FIRST: TypeGraphQL @Query(() => User) someName() / @Mutation(...) — the method name is the operation.
+    for (const m of c.matchAll(/@(Query|Mutation|Subscription)\s*\(((?:[^()]|\([^()]*\))*)\)\s*(?:async\s+)?(\w+)\s*\(/g)) {
+      const kind = m[1] as GqlKind; const name = m[3]; if (!name) continue;
+      const tm = m[2].match(/=>\s*\[?\s*([A-Za-z_]\w*)/); const type = tm ? tm[1] : "Unknown";   // @Query(() => User) / @Query(() => [User])
+      const key = `${kind}.${name}`; if (!out.has(key)) out.set(key, { kind, name, type, key });
+    }
+    // CODE-FIRST: strawberry (Python) @strawberry.mutation / @strawberry.field def name(...)
+    for (const m of c.matchAll(/@strawberry\.(mutation|subscription|field)\s*(?:\([^)]*\))?\s*(?:\r?\n\s*)?def\s+(\w+)\s*\(\s*self[^)]*\)\s*->\s*([A-Za-z_"\[\]]+)?/g)) {
+      const kind: GqlKind = m[1] === "mutation" ? "Mutation" : m[1] === "subscription" ? "Subscription" : "Query";
+      const name = m[2]; if (!name) continue; const type = (m[3] || "Unknown").replace(/["\[\]]/g, "");
+      const key = `${kind}.${name}`; if (!out.has(key)) out.set(key, { kind, name, type, key });
     }
   }
   return [...out.values()].sort((a, b) => a.key.localeCompare(b.key));

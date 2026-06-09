@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -354,6 +354,24 @@ export function registerLiveCommands(program: Command): void {
       else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
       if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
+    });
+
+  program.command("invariants").alias("contracts-check").description("📐 ARCHITECTURAL INVARIANTS — declare your architecture's rules in .mneme/invariants.txt (e.g. `table payments single-writer`, `table credentials private`, `table accounts guarded`, `endpoint POST /v1/charge exists`) and PROVE them each PR: HOLDS / VIOLATED (with counterexample) / UNKNOWN. Exit 2 on any violation.")
+    .action(() => {
+      const cwd = process.cwd(); const invPath = join(cwd, ".mneme", "invariants.txt");
+      if (!existsSync(invPath)) {
+        out("📐 no .mneme/invariants.txt yet. Create it with rules like:");
+        out("   table payments single-writer");
+        out("   table credentials private");
+        out("   table accounts guarded");
+        out("   endpoint POST /v1/charge exists");
+        return;
+      }
+      const inv = invariants.parseInvariants(readFileSync(invPath, "utf8"));
+      const r = invariants.checkInvariants(scanWithDocs(cwd), inv);
+      out(`📐 Architectural invariants — ${r.results.length} rule(s), ${r.violated} violated:`);
+      for (const x of r.results) { const ic = x.status === "HOLDS" ? "✅" : x.status === "VIOLATED" ? "🔴" : "🟡"; out(`   ${ic} [${x.status}] ${x.invariant.raw}${x.counterexample ? "  ← " + x.counterexample : ""}`); if (x.status !== "HOLDS") out(`        ${x.reason}`); }
+      if (r.violated) process.exitCode = 2;
     });
 
   program.command("lock").description("🔒 ARCHITECTURE LOCK — package-lock for your architecture's accountability. With no flag: writes .mneme/architecture.lock.json (the signed cross-layer contract: API surface + authz gaps + keystones). With --check (CI): FAILS (exit 2) when a change REGRESSES the lock — a removed endpoint, a NEW authz gap, a newly-exposed sensitive table — unless you re-lock (a reviewed act).")

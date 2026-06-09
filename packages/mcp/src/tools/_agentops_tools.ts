@@ -420,6 +420,29 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.invariants.check",
+    category: "audit",
+    description: "📐 ARCHITECTURAL INVARIANTS — prove the team's declared architecture rules. Reads .mneme/invariants.txt (DSL: `table <T> single-writer` · `table <T> private` (no endpoint reaches it) · `table <T> guarded` (no unguarded sensitive-write) · `endpoint [METHOD] <path> exists`) and returns a verdict per rule: HOLDS / VIOLATED (with the exact counterexample — the second writer, the endpoint that reaches the private table) / UNKNOWN — derived from the cross-layer graph, never guessed. Design-by-contract for your architecture. ★HONEST: checked against the structural contract the deterministic extractors see (precision 1.0); a VIOLATED carries a real counterexample, UNKNOWN is reported honestly (e.g. single-writer on a table with zero detected writers).",
+    whenToUse: "In CI / on a PR: prove the architectural invariants the team declared still hold — catch a second writer to a single-writer table, an endpoint newly reaching a private table, a new unguarded sensitive write.",
+    triggers: ["architectural invariants", "check my architecture rules", "is the contract upheld", "design by contract", "prove the invariant", "architecture rules"],
+    inputSchema: { type: "object", properties: { rules: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      let text = String(args["rules"] ?? "");
+      if (!text.trim()) { const ip = path.join(cwd, ".mneme", "invariants.txt"); if (fs.existsSync(ip)) text = fs.readFileSync(ip, "utf8"); }
+      if (!text.trim()) return { data: await attest(cwd, { rules: 0 }), wisdom: "no invariants — write .mneme/invariants.txt (table <T> single-writer|private|guarded · endpoint <path> exists)", confidence: ok("low") };
+      const inv = core.invariants.parseInvariants(text);
+      const r = core.invariants.checkInvariants(files, inv);
+      const data = await attest(cwd, { allHold: r.allHold, violated: r.violated, results: r.results.map((x) => ({ rule: x.invariant.raw, status: x.status, counterexample: x.counterexample, reason: x.reason })) });
+      return { data, wisdom: r.allHold ? `✓ all ${r.results.length} architectural invariant(s) hold` : `📐 ${r.violated} invariant(s) VIOLATED: ${r.results.filter((x) => x.status === "VIOLATED").slice(0, 3).map((x) => x.invariant.raw).join("; ")}`, followUp: r.violated ? ["an architectural invariant is violated — fix it (counterexample given) or the rule no longer reflects intent"] : [], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.arch.check",
     category: "audit",
     description: "🔒 ARCHITECTURE LOCK — package-lock for your architecture's accountability. If .mneme/architecture.lock.json exists, compares the current repo against the locked cross-layer contract and reports REGRESSIONS (a removed endpoint = BREAKING; a NEW authz gap or sensitive-table exposure = SECURITY); additions are fine. If no lock exists, returns the contract to write (endpoints + authz gaps + keystones + fingerprint). The lock + its git history is a tamper-evident accountability trail. ★HONEST: a CI gate over the structural contract the deterministic extractors see (precision 1.0); updating the lock is a reviewed human act, not an automated rubber-stamp.",

@@ -67,7 +67,8 @@ function dimEndpoints(): DimResult {
     { path: "main.go", content: "r.GET(\"/gin/ping\", h)\nmux.HandleFunc(\"/mux/raw\", h)" },                     // Go gin + mux
     { path: "rs.rb", content: "resources :books" },                                                              // Rails resources → 7 RESTful routes
     { path: "svc.proto", content: "service Acct {\n  rpc Pay(P) returns (R);\n}" },                              // gRPC rpc → endpoint
-    { path: "openapi.yaml", content: "openapi: 3.0.0\npaths:\n  /spec/items:\n    get:\n      summary: x\n    post:\n      summary: y\n" },  // OpenAPI spec
+    { path: "openapi.yaml", content: "openapi: 3.0.0\npaths:\n  /spec/items:\n    get:\n      summary: x\n    post:\n      summary: y\n" },  // OpenAPI YAML
+    { path: "openapi.json", content: "{\"openapi\":\"3.0.0\",\"paths\":{\"/spec/json\":{\"get\":{},\"delete\":{}}}}" },                  // OpenAPI JSON (structural)
     { path: "trpc.ts", content: "export const r = router({ listThings: publicProcedure.query(() => 1) });" },     // tRPC
     { path: "Prefixed.java", content: "@RequestMapping(\"/api\")\npublic class C {\n  @GetMapping(\"/widgets2\")\n  public List g(){}\n}" },  // Spring class-prefix → /api/widgets2
     { path: "hard.ts", content: "const BASE='/api';\napp.get(BASE + \"/dynamic\", h);\nrouter[method](\"/computed\", h);" },  // HARD: dynamic concat + computed method → honest miss
@@ -76,7 +77,7 @@ function dimEndpoints(): DimResult {
   const g = buildCrossLayerGraph(files);
   const actual = g.nodes.filter((n) => n.type === "api_endpoint").map((n) => `${n.method} ${n.name}`);
   // GET /api/dynamic is HONESTLY unextractable (variable concat) → real recall < 1
-  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /rails/list", "POST /rails/save", "GET /spring/get", "POST /net/post", "GET /laravel/get", "GET /widgets", "POST /widgets", "GET /widgets/:id", "PATCH /widgets/:id", "DELETE /widgets/:id", "ANY /django/items/", "GET /gin/ping", "ANY /mux/raw", "GET /books", "POST /books", "GET /books/new", "GET /books/:id", "GET /books/:id/edit", "PATCH /books/:id", "DELETE /books/:id", "RPC /Acct/Pay", "GET /spec/items", "POST /spec/items", "GET /trpc/listThings", "GET /api/widgets2", "GET /api/dynamic"], actual);
+  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /rails/list", "POST /rails/save", "GET /spring/get", "POST /net/post", "GET /laravel/get", "GET /widgets", "POST /widgets", "GET /widgets/:id", "PATCH /widgets/:id", "DELETE /widgets/:id", "ANY /django/items/", "GET /gin/ping", "ANY /mux/raw", "GET /books", "POST /books", "GET /books/new", "GET /books/:id", "GET /books/:id/edit", "PATCH /books/:id", "DELETE /books/:id", "RPC /Acct/Pay", "GET /spec/items", "POST /spec/items", "GET /spec/json", "DELETE /spec/json", "GET /trpc/listThings", "GET /api/widgets2", "GET /api/dynamic"], actual);
 }
 function dimFunctions(): DimResult {
   const files: SourceFile[] = [

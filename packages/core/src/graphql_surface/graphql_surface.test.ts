@@ -32,6 +32,14 @@ describe("graphql_surface", () => {
     expect(s.map((o) => o.key)).toContain("Mutation.pay");
   });
 
+  it("extracts code-first ops (TypeGraphQL @Query/@Mutation, strawberry)", () => {
+    const s = graphqlSurface([
+      { path: "r.ts", content: "class R { @Query(() => [User]) users(){} @Mutation(() => User) createUser(){} }" },
+      { path: "s.py", content: "@strawberry.mutation\ndef pay(self) -> bool:\n  return True" },
+    ]);
+    expect(s.map((o) => o.key)).toEqual(expect.arrayContaining(["Query.users", "Mutation.createUser", "Mutation.pay"]));
+  });
+
   it("never throws on garbage", () => {
     expect(() => graphqlSurface(null as never)).not.toThrow();
     expect(() => graphqlBreaking(null as never, null as never)).not.toThrow();

@@ -128,15 +128,27 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
       for (const m of c.matchAll(/\bRoute::(apiResource|resource)\s*\(\s*["']([^"']+)["']/g)) for (const [mm, pp] of restRoutes(m[2], m[1] === "apiResource")) add(mm, pp, f.path, []);   // Laravel resource→7 / apiResource→5
     }
     if (ext === "proto") for (const sm of c.matchAll(/\bservice\s+(\w+)\s*\{([^}]*)\}/g)) { const svc = sm[1]; for (const rm of sm[2].matchAll(/\brpc\s+(\w+)\s*\(/g)) add("RPC", `/${svc}/${rm[1]}`, f.path, []); }   // gRPC: rpc → /Service/Method
-    // OpenAPI / Swagger spec (the API CONTRACT itself) — YAML paths: block. Gated by the openapi/swagger marker.
-    if ((ext === "yaml" || ext === "yml" || ext === "json") && /(^|\n)\s*["']?(?:openapi|swagger)["']?\s*:/.test(c)) {
-      let curPath = ""; let inPaths = false;
-      for (const line of c.split(/\r?\n/)) {
-        if (/^\s*paths\s*:/.test(line)) { inPaths = true; continue; }
-        if (!inPaths) continue;
-        if (/^\S/.test(line) && !/^\s*paths\s*:/.test(line)) inPaths = false;   // dedent out of paths
-        const pm = line.match(/^\s+["']?(\/[^\s:"']*)["']?\s*:\s*$/); if (pm) { curPath = pm[1]; continue; }
-        const mm = line.match(/^\s+(get|post|put|patch|delete)\s*:/i); if (mm && curPath) add(mm[1].toUpperCase(), curPath, f.path, []);
+    // OpenAPI / Swagger spec (the API CONTRACT itself). Gated by the openapi/swagger marker.
+    if ((ext === "yaml" || ext === "yml" || ext === "json") && (/(^|\n)\s*(?:openapi|swagger)\s*:/.test(c) || /["'](?:openapi|swagger)["']\s*:/.test(c))) {
+      let parsedJson = false;
+      if (ext === "json") {   // JSON spec → structural walk (robust, exact)
+        try {
+          const spec = JSON.parse(c) as { paths?: Record<string, Record<string, unknown>> };
+          if (spec && spec.paths && typeof spec.paths === "object") {
+            parsedJson = true;
+            for (const [p, ops] of Object.entries(spec.paths)) if (p.startsWith("/") && ops && typeof ops === "object") for (const verb of Object.keys(ops)) if (/^(get|post|put|patch|delete)$/i.test(verb)) add(verb.toUpperCase(), p, f.path, []);
+          }
+        } catch { /* fall through to line-scan */ }
+      }
+      if (!parsedJson) {   // YAML paths: block
+        let curPath = ""; let inPaths = false;
+        for (const line of c.split(/\r?\n/)) {
+          if (/^\s*paths\s*:/.test(line)) { inPaths = true; continue; }
+          if (!inPaths) continue;
+          if (/^\S/.test(line) && !/^\s*paths\s*:/.test(line)) inPaths = false;   // dedent out of paths
+          const pm = line.match(/^\s+["']?(\/[^\s:"']*)["']?\s*:\s*$/); if (pm) { curPath = pm[1]; continue; }
+          const mm = line.match(/^\s+(get|post|put|patch|delete)\s*:/i); if (mm && curPath) add(mm[1].toUpperCase(), curPath, f.path, []);
+        }
       }
     }
     // tRPC — procedures in a router: name: publicProcedure….query/mutation/subscription
