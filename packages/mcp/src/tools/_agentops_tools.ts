@@ -269,6 +269,30 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.services.graph",
+    category: "audit",
+    description: "🌐 CROSS-SERVICE CONTRACT GRAPH — the blast radius ACROSS repos/services. Auto-detects services (packages/* · services/* · apps/*) and links each service's PRODUCED endpoints (route defs) to the CONSUMED endpoints other services call (fetch/axios/got/…), by URL path. Returns the inter-service contract edges (who calls whose API) + DANGLING consumers (a call to an endpoint NO service produces — a broken contract or an external API). The org-scale dependency map git & per-repo tools can't see. ★HONEST: deterministic path-matching (params → *) — a contract map to verify, not a proven runtime call; gateway prefixes / dynamic URLs can cause misses.",
+    whenToUse: "Auditing a microservices monorepo, or before changing/removing an API endpoint that other services may call — see which services consume it across repos.",
+    triggers: ["cross-service", "which service calls which", "inter-service dependencies", "microservice contracts", "who calls this api across services", "broken api contract"],
+    inputSchema: { type: "object", properties: { dirs: { type: "array", items: { type: "string" } } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb)$/i;
+      const scan = (root: string) => { const files: { path: string; content: string }[] = []; const stack = [root]; while (stack.length && files.length < 3000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(root.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } } return files; };
+      let roots: string[] = [];
+      const dirs = Array.isArray(args["dirs"]) ? (args["dirs"] as string[]) : [];
+      if (dirs.length) roots = dirs.map((d) => path.join(cwd, d));
+      else for (const parent of ["packages", "services", "apps"]) { const pp = path.join(cwd, parent); try { for (const e of fs.readdirSync(pp)) { const p = path.join(pp, e); if (fs.statSync(p).isDirectory()) roots.push(p); } } catch { /* */ } }
+      if (!roots.length) return { data: await attest(cwd, { services: 0 }), wisdom: "no service roots found (pass dirs, or run in a monorepo with packages/ services/ apps/)", confidence: ok("low") };
+      const services = roots.map((r) => ({ name: r.slice(cwd.length + 1) || r, files: scan(r) }));
+      const g = core.crossService.crossServiceGraph(services);
+      const data = await attest(cwd, { services: g.services, edges: g.edges.slice(0, 60), dangling: g.dangling.slice(0, 40), producedCounts: Object.fromEntries(g.services.map((s) => [s, g.produced[s].length])) });
+      return { data, wisdom: `${g.services.length} services · ${g.edges.length} cross-service contract(s) · ${g.dangling.length} dangling call(s)`, followUp: g.dangling.length ? ["dangling consumers call an endpoint no service here produces — verify the contract (or it's an external API)"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.onboard.path",
     category: "memory",
     description: "🧭 ONBOARDING PATH — orient yourself in an unfamiliar repo FAST. Returns the codebase's real data-flows: per API entry point, the ordered call chain (handler → the functions it calls) + the DB tables it touches + the business rules it implements — flows that touch sensitive data ordered first. Read these top-to-bottom instead of opening files at random. Deterministic, from the cross-layer graph. ★HONEST: a reading guide derived from entry points + call chains — not the only way to read the code; the step order is a capped breadth-first walk.",

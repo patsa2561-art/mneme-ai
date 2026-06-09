@@ -368,6 +368,7 @@ export * as authzGap from "./authz_gap/index.js";
 export * as intentImpact from "./intent_impact/index.js";
 export * as riskHotspots from "./risk_hotspots/index.js";
 export * as onboarding from "./onboarding/index.js";
+export * as crossService from "./cross_service/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

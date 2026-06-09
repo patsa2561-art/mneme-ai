@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -262,6 +262,24 @@ export function registerLiveCommands(program: Command): void {
         if (f.tables.length) out(`        data: ${f.tables.join(", ")}`);
         if (f.rules.length) out(`        rule: ${f.rules.join(", ")}`);
       }
+    });
+
+  program.command("services").alias("contracts").description("🌐 CROSS-SERVICE CONTRACT GRAPH — across MANY repos/services: which service calls which service's endpoints (producer↔consumer), + DANGLING calls to an endpoint no service produces (a broken contract). The org-scale blast radius git can't see. Use --dirs a,b,c, else auto-detects packages/* services/* apps/*.")
+    .option("--dirs <list>", "comma-separated service roots (each a repo/package)").action((o: { dirs?: string }) => {
+      const cwd = process.cwd();
+      let roots: string[] = [];
+      if (o.dirs) roots = o.dirs.split(",").map((s) => s.trim()).filter(Boolean).map((d) => join(cwd, d));
+      else for (const parent of ["packages", "services", "apps"]) { const pp = join(cwd, parent); if (existsSync(pp)) { try { for (const e of readdirSync(pp)) { const p = join(pp, e); if (statSync(p).isDirectory()) roots.push(p); } } catch { /* */ } } }
+      if (!roots.length) { out("🌐 no service roots found. Pass --dirs svcA,svcB or run in a monorepo with packages/ services/ apps/."); return; }
+      const services = roots.map((r) => ({ name: r.slice(cwd.length + 1) || r, files: scanWithDocs(r) }));
+      const g = crossService.crossServiceGraph(services);
+      out(`🌐 Cross-service contract graph — ${g.services.length} services:`);
+      const prodCount = g.services.map((s) => `${s}: ${g.produced[s].length} produced · ${g.consumed[s].length} consumed`);
+      for (const l of prodCount) out(`   ${l}`);
+      if (g.edges.length) { out(`\n   🔗 inter-service contracts (${g.edges.length}):`); for (const e of g.edges.slice(0, 25)) out(`      ${e.from} → ${e.to}  [${e.method} ${e.path}]`); }
+      else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
+      if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
+      out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
     });
 
   program.command("review").alias("checkup").description("🔍 THE ONE COMMAND — a full Codebase Accountability Report in one shot: cross-layer graph + risk hotspots + authz gaps + untested keystones. (Add --base <ref> for a CHANGE report on a PR: blast radius + commit honesty.) The front door to Mneme's whole cross-layer suite.")
