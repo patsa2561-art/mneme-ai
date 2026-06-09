@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -354,6 +354,35 @@ export function registerLiveCommands(program: Command): void {
       else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
       if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
+    });
+
+  program.command("bisect-invariant <invariant>").alias("when-broke").description("🕰 ARCHITECTURAL BISECT — git-bisect for a CONTRACT: find the exact commit (+author) where an architectural invariant first broke. e.g. `mneme bisect-invariant 'table credentials private' --since v1.0`. Replays the cross-layer graph across history (binary search). Exit 2 if a breaking commit is found.")
+    .requiredOption("--since <ref>", "the earlier commit/tag/branch the invariant still held at").option("--max <n>", "max files to read per sampled commit (default 2500)")
+    .action((invariant: string, o: { since: string; max?: string }) => {
+      const cwd = process.cwd(); const cap = o.max ? parseInt(o.max, 10) : 2500;
+      const log = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an", `${o.since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) { out(`✗ unknown ref "${o.since}": ${(log.stderr || "").trim().slice(0, 140)}`); process.exitCode = 2; return; }
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, ...a] = l.split("\t"); return { sha, author: a.join("\t") }; });
+      if (commits.length < 2) { out(`🕰 need ≥2 commits in ${o.since}..HEAD to bisect (found ${commits.length}).`); return; }
+      const cache = new Map<number, boolean>();
+      const filesAt = (sha: string): crossLayerGraph.SourceFile[] => {
+        const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+        if (ls.status !== 0) return [];
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+        const fs2: crossLayerGraph.SourceFile[] = [];
+        for (const f of wanted) { const r = spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) fs2.push({ path: f, content: r.stdout }); }
+        return fs2;
+      };
+      const holdsAt = (i: number): boolean => { if (cache.has(i)) return cache.get(i)!; const v = archBisect.invariantHoldsAt(filesAt(commits[i].sha), invariant); cache.set(i, v); return v; };
+      out(`🕰 Bisecting "${invariant}" across ${commits.length} commits since ${o.since}…`);
+      const r = archBisect.bisectIndex(commits.length, holdsAt);
+      out(`   (evaluated ${new Set(r.evaluated).size} commit(s) — binary search)`);
+      if (r.breakAt === null) { out(`   ✅ ${r.reason}`); return; }
+      const c = commits[r.breakAt];
+      out(`   🔴 BROKE at commit ${c.sha.slice(0, 10)} by ${c.author}`);
+      out(`      ${r.reason}`);
+      out(`      inspect: git show ${c.sha.slice(0, 10)}`);
+      process.exitCode = 2;
     });
 
   program.command("invariants").alias("contracts-check").description("📐 ARCHITECTURAL INVARIANTS — declare (or MINE) your architecture's rules and PROVE them each PR: HOLDS / VIOLATED (with counterexample) / UNKNOWN. `--mine` auto-discovers the invariants your code already upholds (zero config) and writes them to .mneme/invariants.txt for review. Exit 2 on any violation.")

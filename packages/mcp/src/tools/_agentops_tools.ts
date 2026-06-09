@@ -420,6 +420,31 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.bisect",
+    category: "audit",
+    description: "🕰 ARCHITECTURAL BISECT — git-bisect for a CONTRACT. Given an architectural invariant (`table <T> private|single-writer|guarded` · `endpoint <path> exists`) and a `since` ref it still held at, binary-searches git history to the EXACT commit (and author) where it first broke — by replaying the deterministic cross-layer graph at each midpoint commit. git blame localizes a line; this localizes a structural PROPERTY. Returns the breaking commit + author, or that it still holds. ★HONEST: replays the structural contract at sampled commits; binary search assumes the property flipped once in the range (held at `since`, violated at HEAD) — finds a real, re-checkable breaking commit, not every flap.",
+    whenToUse: "When an invariant is VIOLATED now and you need the root cause: which commit (and who) introduced the architectural regression — instead of manually reading history.",
+    triggers: ["when did this break", "which commit broke the invariant", "who made this reachable", "bisect the architecture", "root cause the regression", "when did the contract break"],
+    inputSchema: { type: "object", properties: { invariant: { type: "string" }, since: { type: "string" } }, required: ["invariant", "since"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const invariant = String(args["invariant"] ?? ""); const since = String(args["since"] ?? "");
+      const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i; const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const log = cp.spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an", `${since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: `unknown ref ${since}` }), wisdom: `unknown ref "${since}"`, confidence: ok("low") };
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, ...a] = l.split("\t"); return { sha, author: a.join("\t") }; });
+      if (commits.length < 2) return { data: await attest(cwd, { commits: commits.length }), wisdom: `need ≥2 commits in ${since}..HEAD (found ${commits.length})`, confidence: ok("low") };
+      const cache = new Map<number, boolean>();
+      const filesAt = (sha: string) => { const ls = cp.spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) return []; const out: { path: string; content: string }[] = []; for (const f of ls.stdout.split("\n").map((s) => s.trim()).filter((x) => x && EXT.test(x) && !SKIP.has(x.split("/")[0])).slice(0, 2500)) { const r = cp.spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) out.push({ path: f, content: r.stdout }); } return out; };
+      const holdsAt = (i: number) => { if (cache.has(i)) return cache.get(i)!; const v = core.archBisect.invariantHoldsAt(filesAt(commits[i].sha), invariant); cache.set(i, v); return v; };
+      const r = core.archBisect.bisectIndex(commits.length, holdsAt);
+      const broke = r.breakAt === null ? null : commits[r.breakAt];
+      const data = await attest(cwd, { invariant, since, commitsScanned: commits.length, evaluated: new Set(r.evaluated).size, breakingCommit: broke ? { sha: broke.sha, author: broke.author } : null, reason: r.reason });
+      return { data, wisdom: broke ? `🕰 "${invariant}" broke at ${broke.sha.slice(0, 10)} by ${broke.author}` : `✓ "${invariant}" ${r.reason}`, followUp: broke ? [`inspect the breaking change: git show ${broke.sha.slice(0, 10)}`] : [], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.invariants.check",
     category: "audit",
     description: "📐 ARCHITECTURAL INVARIANTS — prove the team's declared architecture rules. Reads .mneme/invariants.txt (DSL: `table <T> single-writer` · `table <T> private` (no endpoint reaches it) · `table <T> guarded` (no unguarded sensitive-write) · `endpoint [METHOD] <path> exists`) and returns a verdict per rule: HOLDS / VIOLATED (with the exact counterexample — the second writer, the endpoint that reaches the private table) / UNKNOWN — derived from the cross-layer graph, never guessed. Design-by-contract for your architecture. ★HONEST: checked against the structural contract the deterministic extractors see (precision 1.0); a VIOLATED carries a real counterexample, UNKNOWN is reported honestly (e.g. single-writer on a table with zero detected writers).",
