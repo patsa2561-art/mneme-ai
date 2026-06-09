@@ -43,7 +43,7 @@ export function registerLiveCommands(program: Command): void {
       out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
   // ── CROSS-LAYER GRAPH — code ↔ db_table ↔ api_endpoint, deterministic, no LLM ──────────────────
-  const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql)$/i;
+  const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|prisma|sql)$/i;
   const SKIP_DIR = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
   function scanRepo(root: string, cap = 4000, ext: RegExp = SCAN_EXT): crossLayerGraph.SourceFile[] {
     const files: crossLayerGraph.SourceFile[] = []; const stack = [root];

@@ -44,26 +44,31 @@ function dimTables(): DimResult {
     { path: "d.ts", content: "@Entity(\"payments\")\nclass Pay {}" },                                            // TypeORM
     { path: "e.ts", content: "const Account = sequelize.define(\"Account\", {});\nclass Wallet extends Model {}" }, // Sequelize define + JS extends Model
     { path: "f.ts", content: "const Note = mongoose.model(\"Note\", noteSchema);" },                             // Mongoose
+    { path: "g.rb", content: "class Invoice < ApplicationRecord\nend" },                                          // Rails ActiveRecord
+    { path: "h.java", content: "@Entity\npublic class Customer { }" },                                            // JPA no-arg @Entity
     { path: "hard.ts", content: "knex.schema.createTable('legacy_audit', t => {});\nconst T = makeTable(cfg);" },// HARD: knex createTable (no 'create table' literal) + factory → honest miss
     { path: "neg.ts", content: "const userTable = 1; function makeOrder(){}; const items = [];" },              // none of these are tables (precision)
   ];
   const g = buildCrossLayerGraph(files);
   const actual = g.nodes.filter((n) => n.type === "db_table").map((n) => n.name.toLowerCase());
   // ground truth includes 'legacy_audit' which we HONESTLY cannot extract (knex createTable) → real recall < 1
-  return prf("tables", ["user", "order", "orders", "items", "tmp_join", "profile", "profiles_tbl", "payments", "account", "wallet", "note", "legacy_audit"], actual);
+  return prf("tables", ["user", "order", "orders", "items", "tmp_join", "profile", "profiles_tbl", "payments", "account", "wallet", "note", "invoice", "customer", "legacy_audit"], actual);
 }
 function dimEndpoints(): DimResult {
   const files: SourceFile[] = [
     { path: "r.ts", content: "router.post(\"/v1/charge\", h);\napp.get(\"/users/:id\", h);\nfastify.delete(\"/things/:x\", h);" },     // express/fastify
     { path: "fast.py", content: "@router.get(\"/v1/list\")\nasync def list_it():\n  pass\n@app.route(\"/flask/save\", methods=[\"POST\"])\ndef save():\n  pass" },  // FastAPI + Flask
     { path: "nest.ts", content: "@Post(\"/nest/create\")\ncreateThing() {}" },                                  // NestJS
+    { path: "routes.rb", content: "get '/rails/list'\npost 'rails/save'" },                                     // Rails
+    { path: "Ctrl.java", content: "@GetMapping(\"/spring/get\")\npublic List g(){}" },                          // Spring
+    { path: "Api.cs", content: "[HttpPost(\"/net/post\")]\npublic IActionResult P(){}" },                       // ASP.NET
     { path: "hard.ts", content: "const BASE='/api';\napp.get(BASE + \"/dynamic\", h);\nrouter[method](\"/computed\", h);" },  // HARD: dynamic concat + computed method → honest miss
     { path: "neg.ts", content: "axios.get(\"/external/api\");\nconst x = obj.get(\"key\");\nfetch(\"/data\");" },  // consumers/non-routes, NOT endpoints (precision)
   ];
   const g = buildCrossLayerGraph(files);
   const actual = g.nodes.filter((n) => n.type === "api_endpoint").map((n) => `${n.method} ${n.name}`);
-  // includes GET /api/dynamic which we HONESTLY cannot extract (variable concat) → real recall < 1
-  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /api/dynamic"], actual);
+  // GET /api/dynamic is HONESTLY unextractable (variable concat) → real recall < 1
+  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /rails/list", "POST /rails/save", "GET /spring/get", "POST /net/post", "GET /api/dynamic"], actual);
 }
 function dimFunctions(): DimResult {
   const files: SourceFile[] = [

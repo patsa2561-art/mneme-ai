@@ -66,6 +66,8 @@ function extractTables(files: SourceFile[]): GNode[] {
     for (const m of c.matchAll(/\b(?:sequelize|db)\.define\s*\(\s*["'`]([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Sequelize
     for (const m of c.matchAll(/\b(?:mongoose\.model|model)\s*\(\s*["'`]([A-Za-z_]\w*)["'`]\s*,/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Mongoose model('Name', schema)
     for (const m of c.matchAll(/\bclass\s+([A-Za-z_]\w*)\s+extends\s+\w*Model\b/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // JS class X extends Model (Sequelize/Mongoose/Objection)
+    for (const m of c.matchAll(/\bclass\s+([A-Za-z_]\w*)\s*<\s*(?:ApplicationRecord|ActiveRecord::Base)\b/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // Rails ActiveRecord
+    for (const m of c.matchAll(/@Entity(?!\s*\(\s*["'`])\b[^{;]*?\bclass\s+([A-Za-z_]\w*)/g)) { const n = m[1]; out.set(lc(n), { id: `db:${lc(n)}`, type: "db_table", name: n, file: f.path }); }   // JPA @Entity no-arg form ONLY (the @Entity("name") string form is handled above; lookahead avoids double-capturing the class name as a table)
   }
   return [...out.values()];
 }
@@ -96,6 +98,14 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
     for (const m of c.matchAll(/@(Get|Post|Put|Patch|Delete)\s*\(\s*["'`]([^"'`]+)["'`]\s*\)\s*(?:\r?\n\s*(?:async\s+)?([A-Za-z_]\w*)\s*\()?/g)) {
       add(m[1].toUpperCase(), m[2], f.path, m[3] ? [m[3]] : []);
     }
+    const ext = (f.path.split(".").pop() || "").toLowerCase();
+    const slash = (p: string) => (p.startsWith("/") || p.startsWith("http") ? p : "/" + p);
+    if (ext === "rb") for (const m of c.matchAll(/\b(get|post|put|patch|delete)\s+["']([^"']+)["']/gi)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // Rails routes.rb: get '/users'
+    if (ext === "java" || ext === "kt") for (const m of c.matchAll(/@(Get|Post|Put|Patch|Delete|Request)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?["']([^"']+)["']/g)) add(m[1] === "Request" ? "ANY" : m[1].toUpperCase(), slash(m[2]), f.path, []);   // Spring
+    if (ext === "cs") {
+      for (const m of c.matchAll(/\[Http(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET attribute
+      for (const m of c.matchAll(/\.Map(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET minimal API
+    }
   }
   return [...byId.values()].map((e) => ({ node: e.node, handlers: [...e.handlers] }));
 }
@@ -119,6 +129,9 @@ function extractFunctions(files: SourceFile[]): Array<GNode & { body: string }> 
     if (ext === "go") for (const m of c.matchAll(/\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*\(/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
     if (ext === "rs") for (const m of c.matchAll(/\bfn\s+([A-Za-z_]\w*)\s*[(<]/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
     if (ext === "rb") for (const m of c.matchAll(/\bdef\s+([A-Za-z_][\w?!]*)/g)) marks.push({ name: m[1].replace(/[?!]$/, ""), idx: m.index ?? 0 });
+    if (ext === "kt") for (const m of c.matchAll(/\bfun\s+([A-Za-z_]\w*)\s*\(/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    // Java / C# methods — a modifier, an optional return type, the name, args, then a body brace.
+    if (ext === "java" || ext === "cs") for (const m of c.matchAll(/\b(?:public|private|protected|internal|static|final|async|override|virtual|task)\s+(?:[\w<>\[\],?.\s]+?\s+)?([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{/gi)) { const n = m[1]; if (!["if", "for", "while", "switch", "catch", "return", "new"].includes(lc(n))) marks.push({ name: n, idx: m.index ?? 0 }); }
     marks.sort((a, b) => a.idx - b.idx);
     // Attach the comment/annotation block immediately ABOVE a def to THAT function (the universal place
     // a doc/annotation lives) — walk back over contiguous comment/blank lines, bounded by the previous

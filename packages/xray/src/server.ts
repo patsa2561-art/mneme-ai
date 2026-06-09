@@ -25,7 +25,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf, readdirSync, statSync } from "node:fs";
-import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic } from "@mneme-ai/core";
+import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy } from "@mneme-ai/core";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -472,6 +472,13 @@ function suiteLandingHtml(): string {
     `<div class="hbody" id="hbody"><div class="hload"><span class="spin"></span> cloning a real public repo + running the cross-layer suite, live…</div></div></div>`;
   return suiteShell(hero);
 }
+let _accLine = "";
+function accuracyLine(): string {
+  if (_accLine) return _accLine;
+  const r = accuracy.benchmark();
+  _accLine = `📊 <b>Measured</b> extractor accuracy — precision <b>${(r.microPrecision * 100).toFixed(0)}%</b> · macro-F1 <b>${r.macroF1.toFixed(2)}</b> across ${r.dimensions.length} dimensions on a labeled corpus (it proves the accuracy, doesn't claim it) — <a href="/api/accuracy">audit /api/accuracy</a>`;
+  return _accLine;
+}
 function suiteShell(hero: string): string {
   const gems = [
     ["🔍", "Codebase Review", "the one-command report: grade + risk + authz + tests", "mneme review"],
@@ -523,7 +530,8 @@ function suiteShell(hero: string): string {
     "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
     "<h2>The 10 checks</h2><p class=\"sub\">each one answers a question nothing else answered — and your AI agent gets them all as MCP tools, automatically</p>" +
     "<div class=\"gems\">" + cards + "</div>" +
-    "<p class=\"foot2\">Deterministic · signed · local-first · works on JS/TS · Python · Go · Rust · the source never leaves your machine (the demo clones to a temp dir, scans, and deletes). <br><a href=\"https://www.npmjs.com/package/mneme-ai\">npm</a> · <a href=\"/review\">/review</a> · <a href=\"/radar\">/radar</a> · <sub>honest: each finding is a candidate to inspect, not a proof of a runtime bug.</sub></p>" +
+    "<p class=\"foot2\" style=\"color:#94a3b8;font-size:14px\">" + accuracyLine() + "</p>" +
+    "<p class=\"foot2\">Deterministic · signed · local-first · works on JS/TS · Python · Go · Rust · Ruby · Java · C# · the source never leaves your machine (the demo clones to a temp dir, scans, and deletes). <br><a href=\"https://www.npmjs.com/package/mneme-ai\">npm</a> · <a href=\"/review\">/review</a> · <a href=\"/radar\">/radar</a> · <sub>honest: each finding is a candidate to inspect, not a proof of a runtime bug.</sub></p>" +
     "<script>" + js + "</script></div></body></html>";
 }
 
@@ -563,6 +571,11 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
+    if (req.method === "GET" && url.pathname === "/api/accuracy") {     // measured extractor accuracy (deterministic)
+      const r = accuracy.benchmark();
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "public, max-age=3600", "access-control-allow-origin": "*" });
+      return res.end(JSON.stringify({ macroF1: Number(r.macroF1.toFixed(3)), microPrecision: Number(r.microPrecision.toFixed(3)), microRecall: Number(r.microRecall.toFixed(3)), floor: r.floor, meetsFloor: r.meetsFloor, dimensions: r.dimensions.map((d) => ({ dimension: d.dimension, precision: Number(d.precision.toFixed(3)), recall: Number(d.recall.toFixed(3)) })) }, null, 2));
+    }
     if (req.method === "GET" && url.pathname === "/robots.txt") {
       res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400" });
       return res.end("User-agent: *\nAllow: /\nSitemap: https://xray.mneme-ai.space/sitemap.xml\n");
@@ -713,7 +726,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       try {
         handle = shallowClone(gitUrl);
         const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
-        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|prisma|sql|md|mdx|markdown|txt)$/i;
         const files: { path: string; content: string }[] = []; const stack = [handle.path];
         while (stack.length && files.length < 3000) {
           const d = stack.pop() as string; let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }
@@ -745,7 +758,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       try {
         handle = shallowClone(gitUrl);
         const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
-        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|prisma|sql|md|mdx|markdown|txt)$/i;
+        const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|prisma|sql|md|mdx|markdown|txt)$/i;
         const files: { path: string; content: string }[] = []; const stack = [handle.path];
         while (stack.length && files.length < 4000) {
           const d = stack.pop() as string; let ents: string[] = []; try { ents = readdirSync(d); } catch { continue; }
