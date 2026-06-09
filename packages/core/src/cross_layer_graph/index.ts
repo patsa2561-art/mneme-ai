@@ -106,6 +106,15 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
       for (const m of c.matchAll(/\[Http(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET attribute
       for (const m of c.matchAll(/\.Map(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET minimal API
     }
+    if (ext === "php") {
+      for (const m of c.matchAll(/\bRoute::(get|post|put|patch|delete|any)\s*\(\s*["']([^"']+)["']/gi)) add(m[1].toUpperCase() === "ANY" ? "ANY" : m[1].toUpperCase(), slash(m[2]), f.path, []);   // Laravel
+      for (const m of c.matchAll(/\bRoute::(?:apiResource|resource)\s*\(\s*["']([^"']+)["']/g)) add("GET", slash(m[1]), f.path, []);   // Laravel resource (collection route)
+    }
+    if (ext === "py") for (const m of c.matchAll(/\b(?:path|re_path|url)\s*\(\s*r?["']([^"']+)["']/g)) add("ANY", slash(m[1].replace(/^\^/, "").replace(/\$$/, "")), f.path, []);   // Django urls
+    if (ext === "go") {
+      for (const m of c.matchAll(/\b\w+\.(GET|POST|PUT|PATCH|DELETE)\s*\(\s*["`]([^"`]+)["`]/g)) add(m[1], slash(m[2]), f.path, []);   // gin/echo/chi (uppercase methods)
+      for (const m of c.matchAll(/\.HandleFunc\s*\(\s*["`]([^"`]+)["`]/g)) add("ANY", slash(m[1]), f.path, []);   // net/http + gorilla/mux
+    }
   }
   return [...byId.values()].map((e) => ({ node: e.node, handlers: [...e.handlers] }));
 }
@@ -130,6 +139,7 @@ function extractFunctions(files: SourceFile[]): Array<GNode & { body: string }> 
     if (ext === "rs") for (const m of c.matchAll(/\bfn\s+([A-Za-z_]\w*)\s*[(<]/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
     if (ext === "rb") for (const m of c.matchAll(/\bdef\s+([A-Za-z_][\w?!]*)/g)) marks.push({ name: m[1].replace(/[?!]$/, ""), idx: m.index ?? 0 });
     if (ext === "kt") for (const m of c.matchAll(/\bfun\s+([A-Za-z_]\w*)\s*\(/g)) marks.push({ name: m[1], idx: m.index ?? 0 });
+    if (ext === "php") for (const m of c.matchAll(/\bfunction\s+([A-Za-z_]\w*)\s*\(/g)) marks.push({ name: m[1], idx: m.index ?? 0 });   // PHP
     // Java / C# methods — a modifier, an optional return type, the name, args, then a body brace.
     if (ext === "java" || ext === "cs") for (const m of c.matchAll(/\b(?:public|private|protected|internal|static|final|async|override|virtual|task)\s+(?:[\w<>\[\],?.\s]+?\s+)?([A-Za-z_]\w*)\s*\([^;{]*\)\s*\{/gi)) { const n = m[1]; if (!["if", "for", "while", "switch", "catch", "return", "new"].includes(lc(n))) marks.push({ name: n, idx: m.index ?? 0 }); }
     marks.sort((a, b) => a.idx - b.idx);
