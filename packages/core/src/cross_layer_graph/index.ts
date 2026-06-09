@@ -110,7 +110,15 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
       for (const m of c.matchAll(/\b(get|post|put|patch|delete)\s+["']([^"']+)["']/gi)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // Rails routes.rb: get '/users'
       for (const m of c.matchAll(/\bresources?\s+:(\w+)/g)) for (const [mm, pp] of restRoutes(m[1], false)) add(mm, pp, f.path, []);   // Rails resources :users → 7 routes
     }
-    if (ext === "java" || ext === "kt") for (const m of c.matchAll(/@(Get|Post|Put|Patch|Delete|Request)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?["']([^"']+)["']/g)) add(m[1] === "Request" ? "ANY" : m[1].toUpperCase(), slash(m[2]), f.path, []);   // Spring
+    if (ext === "java" || ext === "kt") {   // Spring — class-level @RequestMapping("/api") prefixes the method mappings
+      const cp = c.match(/@RequestMapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?["']([^"']+)["'][^)]*\)(?:\s*@\w+(?:\([^)]*\))?|\s*(?:public|final|abstract))*\s*class\b/);
+      const prefix = cp ? cp[1] : "";
+      const join = (p: string) => prefix ? ("/" + prefix.replace(/^\/|\/$/g, "") + "/" + p.replace(/^\//, "")).replace(/\/{2,}/g, "/") : slash(p);
+      for (const m of c.matchAll(/@(Get|Post|Put|Patch|Delete|Request)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?["']([^"']+)["']/g)) {
+        if (m[1] === "Request" && m[2] === prefix) continue;   // skip the class-level annotation itself
+        add(m[1] === "Request" ? "ANY" : m[1].toUpperCase(), join(m[2]), f.path, []);
+      }
+    }
     if (ext === "cs") {
       for (const m of c.matchAll(/\[Http(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET attribute
       for (const m of c.matchAll(/\.Map(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET minimal API
@@ -120,6 +128,19 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
       for (const m of c.matchAll(/\bRoute::(apiResource|resource)\s*\(\s*["']([^"']+)["']/g)) for (const [mm, pp] of restRoutes(m[2], m[1] === "apiResource")) add(mm, pp, f.path, []);   // Laravel resource→7 / apiResource→5
     }
     if (ext === "proto") for (const sm of c.matchAll(/\bservice\s+(\w+)\s*\{([^}]*)\}/g)) { const svc = sm[1]; for (const rm of sm[2].matchAll(/\brpc\s+(\w+)\s*\(/g)) add("RPC", `/${svc}/${rm[1]}`, f.path, []); }   // gRPC: rpc → /Service/Method
+    // OpenAPI / Swagger spec (the API CONTRACT itself) — YAML paths: block. Gated by the openapi/swagger marker.
+    if ((ext === "yaml" || ext === "yml" || ext === "json") && /(^|\n)\s*["']?(?:openapi|swagger)["']?\s*:/.test(c)) {
+      let curPath = ""; let inPaths = false;
+      for (const line of c.split(/\r?\n/)) {
+        if (/^\s*paths\s*:/.test(line)) { inPaths = true; continue; }
+        if (!inPaths) continue;
+        if (/^\S/.test(line) && !/^\s*paths\s*:/.test(line)) inPaths = false;   // dedent out of paths
+        const pm = line.match(/^\s+["']?(\/[^\s:"']*)["']?\s*:\s*$/); if (pm) { curPath = pm[1]; continue; }
+        const mm = line.match(/^\s+(get|post|put|patch|delete)\s*:/i); if (mm && curPath) add(mm[1].toUpperCase(), curPath, f.path, []);
+      }
+    }
+    // tRPC — procedures in a router: name: publicProcedure….query/mutation/subscription
+    if (ext === "ts" || ext === "tsx") for (const m of c.matchAll(/(\w+)\s*:\s*(?:public|protected|t\.)?[Pp]rocedure\b[\s\S]{0,200}?\.(query|mutation|subscription)\b/g)) add(m[2] === "mutation" ? "POST" : "GET", `/trpc/${m[1]}`, f.path, []);
     if (ext === "py") for (const m of c.matchAll(/\b(?:path|re_path|url)\s*\(\s*r?["']([^"']+)["']/g)) add("ANY", slash(m[1].replace(/^\^/, "").replace(/\$$/, "")), f.path, []);   // Django urls
     if (ext === "go") {
       for (const m of c.matchAll(/\b\w+\.(GET|POST|PUT|PATCH|DELETE)\s*\(\s*["`]([^"`]+)["`]/g)) add(m[1], slash(m[2]), f.path, []);   // gin/echo/chi (uppercase methods)

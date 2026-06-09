@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -43,7 +43,7 @@ export function registerLiveCommands(program: Command): void {
       out(`✓ logged (signed/chained): ${a.agent} · ${a.kind}${a.count > 1 ? " ×" + a.count : ""}`);
     });
   // ── CROSS-LAYER GRAPH — code ↔ db_table ↔ api_endpoint, deterministic, no LLM ──────────────────
-  const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+  const SCAN_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
   const SKIP_DIR = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
   function scanRepo(root: string, cap = 4000, ext: RegExp = SCAN_EXT): crossLayerGraph.SourceFile[] {
     const files: crossLayerGraph.SourceFile[] = []; const stack = [root];
@@ -354,6 +354,26 @@ export function registerLiveCommands(program: Command): void {
       else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
       if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
+    });
+
+  program.command("lock").description("🔒 ARCHITECTURE LOCK — package-lock for your architecture's accountability. With no flag: writes .mneme/architecture.lock.json (the signed cross-layer contract: API surface + authz gaps + keystones). With --check (CI): FAILS (exit 2) when a change REGRESSES the lock — a removed endpoint, a NEW authz gap, a newly-exposed sensitive table — unless you re-lock (a reviewed act).")
+    .option("--check", "CI gate: compare HEAD against the committed lock, fail on a regression").action((o: { check?: boolean }) => {
+      const cwd = process.cwd(); const lockPath = join(cwd, ".mneme", "architecture.lock.json"); const files = scanWithDocs(cwd);
+      if (o.check) {
+        if (!existsSync(lockPath)) { out("🔒 no .mneme/architecture.lock.json — run `mneme lock` first to capture the contract."); process.exitCode = 2; return; }
+        let locked: archLock.ArchLock; try { locked = JSON.parse(readFileSync(lockPath, "utf8")); } catch { out("🔒 lock file is unreadable."); process.exitCode = 2; return; }
+        const r = archLock.checkLock(locked, files);
+        if (r.ok) { out(`🔒 ✓ architecture lock honored — ${r.addedEndpoints.length} addition(s), 0 regressions.${r.fingerprintMatch ? " (fingerprint matches)" : ""}`); return; }
+        out(`🔒 ✗ ${r.violations.length} REGRESSION(S) vs the locked contract:`);
+        for (const v of r.violations.slice(0, 25)) out(`   ${v.severity === "BREAKING" ? "🔴 BREAKING" : "🟠 SECURITY"} ${v.detail}`);
+        out("   → fix the regression, OR re-run `mneme lock` to approve the new contract (a reviewed, committed act).");
+        process.exitCode = 2; return;
+      }
+      const lock = archLock.buildLock(files);
+      mkdirSync(join(cwd, ".mneme"), { recursive: true });
+      writeFileSync(lockPath, JSON.stringify(lock, null, 2));
+      out(`🔒 wrote .mneme/architecture.lock.json — ${lock.endpoints.length} endpoints · ${lock.authzGaps.length} known authz gap(s) · ${lock.keystones.length} keystone(s) · fingerprint ${lock.fingerprint}`);
+      out("   commit it. In CI run `mneme lock --check` to fail PRs that regress the contract.");
     });
 
   program.command("review").alias("checkup").description("🔍 THE ONE COMMAND — a full Codebase Accountability Report in one shot: cross-layer graph + risk hotspots + authz gaps + untested keystones. (Add --base <ref> for a CHANGE report on a PR: blast radius + commit honesty.) The front door to Mneme's whole cross-layer suite.")

@@ -211,7 +211,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -235,7 +235,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const cwd = rt.meta?.rootPath ?? process.cwd();
       let diff = String(args["diff"] ?? "");
       if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -258,7 +258,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const cwd = rt.meta?.rootPath ?? process.cwd();
       let diff = String(args["diff"] ?? "");
       if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -294,7 +294,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -363,7 +363,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
       const cwd = rt.meta?.rootPath ?? process.cwd(); const base = String(args["base"] ?? "origin/main");
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml)$/i;
       const curr: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && curr.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { curr.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const prev: { path: string; content: string }[] = [];
@@ -386,7 +386,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml)$/i;
       const scan = (root: string) => { const files: { path: string; content: string }[] = []; const stack = [root]; while (stack.length && files.length < 3000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(root.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } } return files; };
       let roots: string[] = [];
       const dirs = Array.isArray(args["dirs"]) ? (args["dirs"] as string[]) : [];
@@ -410,13 +410,39 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, _args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
       const op = core.onboarding.onboardingPath(g);
       const data = await attest(cwd, { entryCount: op.entryCount, note: op.note, flows: op.flows.slice(0, 25) });
       return { data, wisdom: op.flows.length ? `${op.flows.length} flow(s) across ${op.entryCount} entry point(s) · start with ${op.flows[0].method} ${op.flows[0].entry} (${op.flows[0].steps.slice(0, 3).join(" → ")}…)` : op.note, followUp: [], confidence: ok() };
+    },
+  },
+  {
+    name: "mneme.arch.check",
+    category: "audit",
+    description: "🔒 ARCHITECTURE LOCK — package-lock for your architecture's accountability. If .mneme/architecture.lock.json exists, compares the current repo against the locked cross-layer contract and reports REGRESSIONS (a removed endpoint = BREAKING; a NEW authz gap or sensitive-table exposure = SECURITY); additions are fine. If no lock exists, returns the contract to write (endpoints + authz gaps + keystones + fingerprint). The lock + its git history is a tamper-evident accountability trail. ★HONEST: a CI gate over the structural contract the deterministic extractors see (precision 1.0); updating the lock is a reviewed human act, not an automated rubber-stamp.",
+    whenToUse: "In CI / on a PR: gate the change against the committed architecture lock so a removed endpoint or a new authz gap fails the build until re-locked (reviewed).",
+    triggers: ["architecture lock", "did i regress the contract", "lock check", "architecture regression", "contract gate", "lock the architecture"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, _args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const lockPath = path.join(cwd, ".mneme", "architecture.lock.json");
+      if (!fs.existsSync(lockPath)) {
+        const lock = core.archLock.buildLock(files);
+        const data = await attest(cwd, { locked: false, contract: lock });
+        return { data, wisdom: `no lock yet — contract has ${lock.endpoints.length} endpoints · ${lock.authzGaps.length} authz gap(s) · ${lock.keystones.length} keystone(s). Run mneme lock to commit it.`, followUp: ["write .mneme/architecture.lock.json (CLI: mneme lock) so future changes are gated"], confidence: ok() };
+      }
+      let locked; try { locked = JSON.parse(fs.readFileSync(lockPath, "utf8")); } catch { return { data: await attest(cwd, { error: "unreadable lock" }), wisdom: "architecture.lock.json is unreadable", confidence: ok("low") }; }
+      const r = core.archLock.checkLock(locked, files);
+      const data = await attest(cwd, { ok: r.ok, violations: r.violations, addedEndpoints: r.addedEndpoints, removedEndpoints: r.removedEndpoints, fingerprintMatch: r.fingerprintMatch });
+      return { data, wisdom: r.ok ? `✓ architecture lock honored (${r.addedEndpoints.length} additions, 0 regressions)` : `🔒 ${r.violations.length} REGRESSION(S): ${r.violations.slice(0, 3).map((v) => v.detail).join("; ")}`, followUp: r.ok ? [] : ["fix the regression, or re-lock (mneme lock) to approve the new contract — a reviewed act"], confidence: ok("high") };
     },
   },
   {
@@ -430,7 +456,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -457,7 +483,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);  // (warm the cache; riskHotspots rebuilds internally)
@@ -481,7 +507,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const cwd = rt.meta?.rootPath ?? process.cwd();
       let diff = String(args["diff"] ?? "");
       if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -503,7 +529,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const cwd = rt.meta?.rootPath ?? process.cwd();
       let diff = String(args["diff"] ?? "");
       if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -523,7 +549,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, _args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -543,7 +569,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       let diff = String(args["diff"] ?? "");
@@ -569,7 +595,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -595,7 +621,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const cwd = rt.meta?.rootPath ?? process.cwd();
       let diff = String(args["diff"] ?? "");
       if (!diff.trim()) { const base = String(args["base"] ?? "HEAD"); try { diff = cp.spawnSync("git", ["diff", "--unified=0", base.includes("...") || base === "HEAD" ? base : `${base}...HEAD`], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }).stdout || ""; } catch { /* */ } }
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -638,7 +664,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, _args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -658,7 +684,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 4000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
@@ -678,7 +704,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
       const cwd = rt.meta?.rootPath ?? process.cwd();
-      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql|md|mdx|markdown|txt)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql|md|mdx|markdown|txt)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
       const g = core.crossLayerGraph.buildCrossLayerGraph(files);
