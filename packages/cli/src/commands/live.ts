@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -262,6 +262,21 @@ export function registerLiveCommands(program: Command): void {
         if (f.tables.length) out(`        data: ${f.tables.join(", ")}`);
         if (f.rules.length) out(`        rule: ${f.rules.join(", ")}`);
       }
+    });
+
+  program.command("logic [file]").description("🧠 THE LOGIC ENGINE — check whether a reasoning chain is SOUND (not whether facts are true). Pass a program file or --text: facts on a line, rules as `a & b => c`, `never: x & y` for a contradiction, `goal: g`. Verdict PROVEN / CONTRADICTED / UNKNOWN + proof. Exit 2 if not PROVEN.")
+    .option("--text <program>", "inline program instead of a file")
+    .action((file: string | undefined, o: { text?: string }) => {
+      const text = o.text ?? (file && existsSync(file) ? readFileSync(file, "utf8") : "");
+      if (!text.trim()) { out("🧠 give a program: facts, `a & b => c` rules, `never: x & y`, `goal: g`. Via [file] or --text."); process.exitCode = 2; return; }
+      const prog = logicEngine.parseProgram(text);
+      if (!prog.goal) { const r = logicEngine.reason(prog.facts, prog.rules, prog.mutexes); out(r.consistent ? `🧠 consistent · derived ${r.derived.length} fact(s): ${r.derived.join(", ")}` : `🧠 🔴 INCONSISTENT — entails ${r.contradictions.map((c) => c.atoms.join(" ∧ ")).join("; ")}`); if (!r.consistent) process.exitCode = 2; return; }
+      const p = logicEngine.prove(prog.facts, prog.rules, prog.goal, prog.mutexes);
+      const ico = p.status === "PROVEN" ? "✅" : p.status === "CONTRADICTED" ? "🔴" : "🟡";
+      out(`🧠 ${ico} ${p.status} — ${p.reason}`);
+      if (p.chain.length) { out("   proof:"); for (const s of p.chain) out(`     ${s.atom}${s.via === "given" ? "  (given)" : "  ⇐ " + s.from.join(" ∧ ")}`); }
+      if (p.contradictions.length) for (const c of p.contradictions) out(`   ✗ contradiction: ${c.atoms.join(" ∧ ")}${c.note ? " — " + c.note : ""}`);
+      if (p.status !== "PROVEN") process.exitCode = 2;
     });
 
   program.command("services").alias("contracts").description("🌐 CROSS-SERVICE CONTRACT GRAPH — across MANY repos/services: which service calls which service's endpoints (producer↔consumer), + DANGLING calls to an endpoint no service produces (a broken contract). The org-scale blast radius git can't see. Use --dirs a,b,c, else auto-detects packages/* services/* apps/*.")

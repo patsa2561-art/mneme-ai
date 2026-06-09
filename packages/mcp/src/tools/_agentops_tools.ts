@@ -269,6 +269,28 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.logic.check",
+    category: "audit",
+    description: "🧠 THE LOGIC ENGINE — check whether your REASONING is sound, not whether the facts are true. A deterministic inference engine: forward-chains Horn clauses (when ALL of `when` hold → `then`) over your facts, plus mutual-exclusion constraints (these can't all be true at once). Returns a goal as PROVEN (with the full proof tree) / CONTRADICTED (your premises entail a mutually-exclusive pair — the argument is unsound even if each fact sounds plausible) / UNKNOWN (does not follow — never asserted false). Pass {facts[], rules[{when[],then}], mutexes[{all[]}], goal} OR a compact {program} text (`a`·`a & b => c`·`never: x & y`·`goal: g`). ★HONEST: sound monotone logic — proves what FOLLOWS + catches stated contradictions; it does not invent missing premises (a gap is UNKNOWN). The verdict is mechanical, reproducible, signed.",
+    whenToUse: "BEFORE you act on a multi-step justification (yours or another agent's) — encode the argument as facts+rules+goal and confirm the conclusion actually follows and the premises don't contradict. Complements mneme.truth.check (which checks individual facts).",
+    triggers: ["is my reasoning sound", "does this conclusion follow", "check this logic", "are these premises consistent", "logical contradiction", "verify the argument"],
+    inputSchema: { type: "object", properties: { facts: { type: "array", items: { type: "string" } }, rules: { type: "array", items: { type: "object" } }, mutexes: { type: "array", items: { type: "object" } }, goal: { type: "string" }, program: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cwd = rt.meta?.rootPath ?? process.cwd();
+      let facts = (args["facts"] as string[]) || [], rules = (args["rules"] as { when: string[]; then: string }[]) || [], mutexes = (args["mutexes"] as { all: string[] }[]) || [], goal = String(args["goal"] ?? "");
+      if (args["program"]) { const prog = core.logicEngine.parseProgram(String(args["program"])); facts = prog.facts; rules = prog.rules; mutexes = prog.mutexes; goal = goal || prog.goal; }
+      if (goal) {
+        const p = core.logicEngine.prove(facts, rules, goal, mutexes);
+        const data = await attest(cwd, { status: p.status, reason: p.reason, chain: p.chain.map((s) => `${s.atom}${s.via === "given" ? " (given)" : " ⇐ " + s.from.join(" ∧ ")}`), contradictions: p.contradictions });
+        return { data, wisdom: `${p.status} — ${p.reason}`, followUp: p.status === "CONTRADICTED" ? ["your premises are inconsistent — do NOT act on this argument; resolve the contradiction first"] : p.status === "UNKNOWN" ? ["the conclusion does not follow — supply the missing premise/rule or don't assert it"] : [], confidence: ok(p.status === "PROVEN" ? "high" : "medium") };
+      }
+      const r = core.logicEngine.reason(facts, rules, mutexes);
+      const data = await attest(cwd, { consistent: r.consistent, derived: r.derived, contradictions: r.contradictions });
+      return { data, wisdom: r.consistent ? `consistent · derived ${r.derived.length} fact(s)` : `🔴 INCONSISTENT — entails: ${r.contradictions.map((c) => c.atoms.join(" ∧ ")).join("; ")}`, followUp: r.consistent ? [] : ["the facts contradict — the reasoning is unsound"], confidence: ok() };
+    },
+  },
+  {
     name: "mneme.services.graph",
     category: "audit",
     description: "🌐 CROSS-SERVICE CONTRACT GRAPH — the blast radius ACROSS repos/services. Auto-detects services (packages/* · services/* · apps/*) and links each service's PRODUCED endpoints (route defs) to the CONSUMED endpoints other services call (fetch/axios/got/…), by URL path. Returns the inter-service contract edges (who calls whose API) + DANGLING consumers (a call to an endpoint NO service produces — a broken contract or an external API). The org-scale dependency map git & per-repo tools can't see. ★HONEST: deterministic path-matching (params → *) — a contract map to verify, not a proven runtime call; gateway prefixes / dynamic URLs can cause misses.",
