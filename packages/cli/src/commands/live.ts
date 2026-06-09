@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -278,6 +278,15 @@ export function registerLiveCommands(program: Command): void {
         if (f.tables.length) out(`        data: ${f.tables.join(", ")}`);
         if (f.rules.length) out(`        rule: ${f.rules.join(", ")}`);
       }
+    });
+
+  program.command("accuracy").alias("benchmark-suite").description("📊 MEASURED ACCURACY — runs the suite's extractors against a labeled corpus (with tricky negative cases) and prints real precision/recall/F1 per dimension + macro-F1. Proves the accuracy instead of claiming it. Exit 2 if below the committed floor.")
+    .action(() => {
+      const r = accuracy.benchmark();
+      out(`📊 Measured accuracy — macro-F1 ${r.macroF1.toFixed(3)} · micro-precision ${r.microPrecision.toFixed(3)} · micro-recall ${r.microRecall.toFixed(3)} (floor ${r.floor})`);
+      for (const d of r.dimensions) { const ic = d.f1 >= 0.9 ? "✅" : "⚠️"; out(`   ${ic} ${d.dimension.padEnd(13)} P=${d.precision.toFixed(2)} R=${d.recall.toFixed(2)} F1=${d.f1.toFixed(2)}${d.misses.length ? " · miss: " + d.misses.join(", ") : ""}${d.falsePositives.length ? " · FP: " + d.falsePositives.join(", ") : ""}`); }
+      out(r.meetsFloor ? "   ✓ clears the committed floor — measured, falsifiable, re-runnable." : "   ✗ BELOW floor — a real weakness to fix (don't ship a flattering number).");
+      if (!r.meetsFloor) process.exitCode = 2;
     });
 
   program.command("logic [file]").description("🧠 THE LOGIC ENGINE — check whether a reasoning chain is SOUND (not whether facts are true). Pass a program file or --text: facts on a line, rules as `a & b => c`, `never: x & y` for a contradiction, `goal: g`. Verdict PROVEN / CONTRADICTED / UNKNOWN + proof. Exit 2 if not PROVEN.")

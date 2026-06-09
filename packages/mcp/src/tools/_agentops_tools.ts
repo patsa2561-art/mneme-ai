@@ -269,6 +269,21 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.accuracy.report",
+    category: "audit",
+    description: "📊 MEASURED ACCURACY — the metric that forbids self-deception. Runs the suite's extractors against a LABELED corpus with known ground truth (including deliberately tricky NEGATIVE cases) and returns real precision / recall / F1 per dimension (tables · endpoints · functions · data-edges · calls · consumers · authz-gaps · keystones) + macro-F1 + micro-precision. The number is falsifiable and re-runnable — 'deterministic' does not mean 'accurate', so this proves the accuracy instead of claiming it. ★HONEST: measures against this visible corpus (a reproducible lower bound), exactly as strong as the corpus is representative — a number you can audit, not a boast.",
+    whenToUse: "When you (or a buyer) ask 'how accurate is this really?' — surface the measured precision/recall, not a claim. Re-run after any extractor change to catch a regression.",
+    triggers: ["how accurate is it", "precision and recall", "measured accuracy", "is this actually correct", "accuracy benchmark", "prove the accuracy"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt, _args) => {
+      const core = await import("@mneme-ai/core"); const cwd = rt.meta?.rootPath ?? process.cwd();
+      const r = core.accuracy.benchmark();
+      const data = await attest(cwd, { macroF1: Number(r.macroF1.toFixed(3)), microPrecision: Number(r.microPrecision.toFixed(3)), microRecall: Number(r.microRecall.toFixed(3)), floor: r.floor, meetsFloor: r.meetsFloor, dimensions: r.dimensions.map((d) => ({ dimension: d.dimension, precision: Number(d.precision.toFixed(3)), recall: Number(d.recall.toFixed(3)), f1: Number(d.f1.toFixed(3)), misses: d.misses, falsePositives: d.falsePositives })) });
+      return { data, wisdom: `measured macro-F1 ${r.macroF1.toFixed(3)} · micro-precision ${r.microPrecision.toFixed(3)} across ${r.dimensions.length} dimensions${r.meetsFloor ? " — clears the committed floor " + r.floor : " — BELOW floor " + r.floor + ", fix the weak extractor"}`, followUp: r.meetsFloor ? [] : ["a dimension is below floor — improve that extractor, don't ship a flattering number"], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.graph.prove",
     category: "audit",
     description: "🧠🕸 PROVABLE CROSS-LAYER REASONING — the upgrade from heuristic to PROOF. Instead of a verdict you must trust, this extracts real facts from the cross-layer graph (reads/writes(fn,table) · calls(a,b) · serves(endpoint,fn)) and runs the sound logic engine to PROVE the answer with a proof tree. kind:'drop' {table} → proves unsafe_to_drop(table): UNSAFE with the exact blocking reader/writer/endpoint + proof chain, or LIKELY_SAFE (no structural blocker — UNKNOWN per prove-or-unknown, never a false 'safe'). kind:'reaches' {endpoint, table} → proves the endpoint reaches the table THROUGH the call graph, with the transitive proof. ★HONEST: facts are as good as the deterministic extractor (no dynamic/reflective access); the leap is that the verdict now carries a checkable proof, not just a label.",
