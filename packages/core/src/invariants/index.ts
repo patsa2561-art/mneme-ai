@@ -77,6 +77,43 @@ export function checkInvariants(files: ReadonlyArray<SourceFile>, invariants: Re
   return { results, allHold: violated === 0, violated };
 }
 
+// ── INVARIANT MINING — induce the architectural contract the codebase ALREADY upholds ──────────────
+const SENSITIVE_RE = /\b(account|payment|wallet|password|credential|secret|token|admin|role|permission|balance|transaction|billing|card|user|order|invoice|subscription)\b/i;
+export interface MinedInvariant { rule: string; kind: InvKind; confidence: "high" | "medium"; rationale: string }
+/**
+ * Discover the invariants that PROVABLY hold in the repo right now — every table with exactly one writer
+ * (single-writer), every sensitive table with no unguarded write path (guarded), every table no endpoint
+ * reaches (private). Each mined rule is true at mine-time by construction, so checkInvariants on the same
+ * repo returns all-HOLD. The team reviews + keeps the ones that reflect intent; thereafter any PR that
+ * breaks one is caught. ★HONEST: mined invariants are DESCRIPTIVE (what holds now) proposed as
+ * candidates — not every currently-true fact is an intended rule (a 1-writer table may gain a 2nd by
+ * design), so it proposes, a human curates; the rarity is the INDUCTION + proven-at-mine-time.
+ */
+export function mineInvariants(files: ReadonlyArray<SourceFile>): MinedInvariant[] {
+  const g = buildCrossLayerGraph((files ?? []) as SourceFile[]);
+  const tables = g.nodes.filter((n) => n.type === "db_table");
+  const endpoints = g.nodes.filter((n) => n.type === "api_endpoint");
+  const gaps = authzGaps(g);
+  const gappedTables = new Set(gaps.flatMap((x) => x.sensitiveTables.map(lc)));
+  const byId = new Map(g.nodes.map((n) => [n.id, n] as const));
+  const touched = (t: { id: string }) => g.edges.some((e) => (e.relation === "READS" || e.relation === "WRITES_TO") && e.target === t.id);
+  const out: MinedInvariant[] = [];
+  for (const t of tables) {
+    const writers = [...new Set(g.edges.filter((e) => e.relation === "WRITES_TO" && e.target === t.id).map((e) => byId.get(e.source)?.name || "").filter(Boolean))];
+    if (writers.length === 1) out.push({ rule: `table ${t.name} single-writer`, kind: "single-writer", confidence: "high", rationale: `only ${writers[0]} writes it today` });
+    if (SENSITIVE_RE.test(t.name) && !gappedTables.has(lc(t.name)) && touched(t)) out.push({ rule: `table ${t.name} guarded`, kind: "guarded", confidence: "medium", rationale: `sensitive table with no unguarded write path today` });
+    if (touched(t) && !endpoints.some((ep) => reachesProof(g, `${ep.method || ""} ${ep.name}`.trim(), t.name).reachable)) out.push({ rule: `table ${t.name} private`, kind: "private", confidence: "medium", rationale: `used internally; no endpoint reaches it today` });
+  }
+  // stable order, de-duped
+  const seen = new Set<string>();
+  return out.filter((m) => (seen.has(m.rule) ? false : (seen.add(m.rule), true))).sort((a, b) => a.rule.localeCompare(b.rule));
+}
+/** Render mined invariants as a ready-to-commit .mneme/invariants.txt (each rule + its rationale). */
+export function renderMined(mined: ReadonlyArray<MinedInvariant>): string {
+  const head = "# Architectural invariants — mined by Mneme (each held at mine-time). Review + keep the ones that reflect intent.\n";
+  return head + (mined ?? []).map((m) => `${m.rule}   # ${m.confidence}: ${m.rationale}`).join("\n") + "\n";
+}
+
 // ── gauntlet ──────────────────────────────────────────────────────────────────
 export interface InvariantsGauntlet { score: 0 | 100; checks: Array<{ name: string; pass: boolean; detail: string }> }
 export function invariantsGauntlet(): InvariantsGauntlet {
@@ -103,12 +140,19 @@ export function invariantsGauntlet(): InvariantsGauntlet {
   const guardViol = by("table Account guarded").status === "VIOLATED";
   const existHold = by("endpoint POST /v1/charge exists").status === "HOLDS";
   const existViol = by("endpoint GET /v1/nope exists").status === "VIOLATED";
-  const total = (() => { try { checkInvariants(null as never, null as never); parseInvariants(null as never); return true; } catch { return false; } })();
+  // MINING: induce the invariants the repo upholds; they must all HOLD on the same repo (proven-at-mine-time).
+  const mined = mineInvariants(files);
+  const minedHold = checkInvariants(files, parseInvariants(renderMined(mined)));
+  const mineAllHold = mined.length >= 3 && minedHold.violated === 0 && minedHold.results.every((r) => r.status === "HOLDS");
+  const mineExcludesViolations = !mined.some((m) => m.rule === "table Audit single-writer");   // Audit has 2 writers → never mined as single-writer
+  const total = (() => { try { checkInvariants(null as never, null as never); parseInvariants(null as never); mineInvariants(null as never); renderMined(null as never); return true; } catch { return false; } })();
   const checks = [
     { name: "SINGLE-WRITER", pass: swHold && swViol, detail: "single-writer HOLDS for one writer; VIOLATED (names the writers) for two" },
     { name: "PRIVATE-TABLE", pass: privViol && privHold, detail: "private VIOLATED when an endpoint reaches the table (counterexample), HOLDS when none does" },
     { name: "GUARDED-TABLE", pass: guardViol, detail: "guarded VIOLATED when there is an unguarded sensitive-write path" },
     { name: "ENDPOINT-EXISTS", pass: existHold && existViol, detail: "exists HOLDS when the endpoint is in the API surface, VIOLATED when absent" },
+    { name: "MINING-PROVEN-AT-MINE-TIME", pass: mineAllHold, detail: "mined invariants (≥3) all HOLD on the same repo by construction — induced, not guessed" },
+    { name: "MINING-EXCLUDES-VIOLATIONS", pass: mineExcludesViolations, detail: "a table with 2 writers is NEVER mined as single-writer (only true invariants are induced)" },
     { name: "TOTAL", pass: total, detail: "null/garbage never throws" },
   ];
   return { score: checks.every((c) => c.pass) ? 100 : 0, checks };

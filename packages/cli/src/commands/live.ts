@@ -356,15 +356,26 @@ export function registerLiveCommands(program: Command): void {
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
     });
 
-  program.command("invariants").alias("contracts-check").description("📐 ARCHITECTURAL INVARIANTS — declare your architecture's rules in .mneme/invariants.txt (e.g. `table payments single-writer`, `table credentials private`, `table accounts guarded`, `endpoint POST /v1/charge exists`) and PROVE them each PR: HOLDS / VIOLATED (with counterexample) / UNKNOWN. Exit 2 on any violation.")
-    .action(() => {
+  program.command("invariants").alias("contracts-check").description("📐 ARCHITECTURAL INVARIANTS — declare (or MINE) your architecture's rules and PROVE them each PR: HOLDS / VIOLATED (with counterexample) / UNKNOWN. `--mine` auto-discovers the invariants your code already upholds (zero config) and writes them to .mneme/invariants.txt for review. Exit 2 on any violation.")
+    .option("--mine", "auto-discover the invariants the repo currently upholds and write them to .mneme/invariants.txt")
+    .action((o: { mine?: boolean }) => {
       const cwd = process.cwd(); const invPath = join(cwd, ".mneme", "invariants.txt");
+      if (o.mine) {
+        const mined = invariants.mineInvariants(scanWithDocs(cwd));
+        mkdirSync(join(cwd, ".mneme"), { recursive: true });
+        writeFileSync(invPath, invariants.renderMined(mined));
+        out(`📐 mined ${mined.length} architectural invariant(s) the repo upholds today → .mneme/invariants.txt`);
+        for (const m of mined.slice(0, 20)) out(`   ✅ ${m.rule}   # ${m.confidence}: ${m.rationale}`);
+        out("   review + keep the ones that reflect intent, commit it, then `mneme invariants` (or CI) enforces them.");
+        return;
+      }
       if (!existsSync(invPath)) {
         out("📐 no .mneme/invariants.txt yet. Create it with rules like:");
         out("   table payments single-writer");
         out("   table credentials private");
         out("   table accounts guarded");
         out("   endpoint POST /v1/charge exists");
+        out("   …or run `mneme invariants --mine` to auto-discover the ones your code already upholds.");
         return;
       }
       const inv = invariants.parseInvariants(readFileSync(invPath, "utf8"));

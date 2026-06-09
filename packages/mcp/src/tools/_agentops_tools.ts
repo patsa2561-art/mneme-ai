@@ -425,7 +425,7 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     description: "📐 ARCHITECTURAL INVARIANTS — prove the team's declared architecture rules. Reads .mneme/invariants.txt (DSL: `table <T> single-writer` · `table <T> private` (no endpoint reaches it) · `table <T> guarded` (no unguarded sensitive-write) · `endpoint [METHOD] <path> exists`) and returns a verdict per rule: HOLDS / VIOLATED (with the exact counterexample — the second writer, the endpoint that reaches the private table) / UNKNOWN — derived from the cross-layer graph, never guessed. Design-by-contract for your architecture. ★HONEST: checked against the structural contract the deterministic extractors see (precision 1.0); a VIOLATED carries a real counterexample, UNKNOWN is reported honestly (e.g. single-writer on a table with zero detected writers).",
     whenToUse: "In CI / on a PR: prove the architectural invariants the team declared still hold — catch a second writer to a single-writer table, an endpoint newly reaching a private table, a new unguarded sensitive write.",
     triggers: ["architectural invariants", "check my architecture rules", "is the contract upheld", "design by contract", "prove the invariant", "architecture rules"],
-    inputSchema: { type: "object", properties: { rules: { type: "string" } } },
+    inputSchema: { type: "object", properties: { rules: { type: "string" }, mine: { type: "boolean" } } },
     outputSchema: { type: "object" },
     handler: async (rt, args) => {
       const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
@@ -433,6 +433,11 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]); const EXT = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
       const files: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && files.length < 5000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let st; try { st = fs.statSync(p); } catch { continue; } if (st.isDirectory()) stack.push(p); else if (EXT.test(e) && st.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      if (args["mine"]) {   // induce the invariants the repo already upholds (zero config)
+        const mined = core.invariants.mineInvariants(files);
+        const data = await attest(cwd, { mined: mined.map((m) => ({ rule: m.rule, confidence: m.confidence, rationale: m.rationale })), file: core.invariants.renderMined(mined) });
+        return { data, wisdom: `mined ${mined.length} architectural invariant(s) the repo upholds today (proven at mine-time) — review + commit to .mneme/invariants.txt`, followUp: ["keep the mined rules that reflect intent; thereafter any PR that breaks one is caught"], confidence: ok("medium") };
+      }
       let text = String(args["rules"] ?? "");
       if (!text.trim()) { const ip = path.join(cwd, ".mneme", "invariants.txt"); if (fs.existsSync(ip)) text = fs.readFileSync(ip, "utf8"); }
       if (!text.trim()) return { data: await attest(cwd, { rules: 0 }), wisdom: "no invariants — write .mneme/invariants.txt (table <T> single-writer|private|guarded · endpoint <path> exists)", confidence: ok("low") };

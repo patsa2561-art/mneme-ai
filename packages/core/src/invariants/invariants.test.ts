@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseInvariants, checkInvariants, invariantsGauntlet } from "./index.js";
+import { parseInvariants, checkInvariants, invariantsGauntlet, mineInvariants, renderMined } from "./index.js";
 
 const files = [
   { path: "schema.prisma", content: "model Payment { id Int @id }\nmodel Audit { id Int @id }\nmodel Secret { id Int @id }\nmodel Account { id Int @id }" },
@@ -36,8 +36,21 @@ describe("invariants", () => {
     expect(r.allHold).toBe(false);
   });
 
+  it("MINING: induced invariants all HOLD on the same repo (proven at mine-time)", () => {
+    const mined = mineInvariants(files);
+    expect(mined.length).toBeGreaterThanOrEqual(3);
+    const r = checkInvariants(files, parseInvariants(renderMined(mined)));
+    expect(r.violated).toBe(0);
+    expect(r.results.every((x) => x.status === "HOLDS")).toBe(true);
+  });
+
+  it("MINING never induces a false single-writer (Audit has 2 writers)", () => {
+    expect(mineInvariants(files).some((m) => m.rule === "table Audit single-writer")).toBe(false);
+  });
+
   it("never throws on garbage", () => {
     expect(() => checkInvariants(null as never, null as never)).not.toThrow();
     expect(() => parseInvariants(null as never)).not.toThrow();
+    expect(() => mineInvariants(null as never)).not.toThrow();
   });
 });
