@@ -65,13 +65,15 @@ function dimEndpoints(): DimResult {
     { path: "web.php", content: "Route::get('/laravel/get', 'C@i');\nRoute::apiResource('widgets', W::class);" }, // Laravel route + resource
     { path: "urls.py", content: "path('django/items/', views.items)" },                                          // Django
     { path: "main.go", content: "r.GET(\"/gin/ping\", h)\nmux.HandleFunc(\"/mux/raw\", h)" },                     // Go gin + mux
+    { path: "rs.rb", content: "resources :books" },                                                              // Rails resources → 7 RESTful routes
+    { path: "svc.proto", content: "service Acct {\n  rpc Pay(P) returns (R);\n}" },                              // gRPC rpc → endpoint
     { path: "hard.ts", content: "const BASE='/api';\napp.get(BASE + \"/dynamic\", h);\nrouter[method](\"/computed\", h);" },  // HARD: dynamic concat + computed method → honest miss
     { path: "neg.ts", content: "axios.get(\"/external/api\");\nconst x = obj.get(\"key\");\nfetch(\"/data\");" },  // consumers/non-routes, NOT endpoints (precision)
   ];
   const g = buildCrossLayerGraph(files);
   const actual = g.nodes.filter((n) => n.type === "api_endpoint").map((n) => `${n.method} ${n.name}`);
   // GET /api/dynamic is HONESTLY unextractable (variable concat) → real recall < 1
-  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /rails/list", "POST /rails/save", "GET /spring/get", "POST /net/post", "GET /laravel/get", "GET /widgets", "ANY /django/items/", "GET /gin/ping", "ANY /mux/raw", "GET /api/dynamic"], actual);
+  return prf("endpoints", ["POST /v1/charge", "GET /users/:id", "DELETE /things/:x", "GET /v1/list", "POST /flask/save", "POST /nest/create", "GET /rails/list", "POST /rails/save", "GET /spring/get", "POST /net/post", "GET /laravel/get", "GET /widgets", "POST /widgets", "GET /widgets/:id", "PATCH /widgets/:id", "DELETE /widgets/:id", "ANY /django/items/", "GET /gin/ping", "ANY /mux/raw", "GET /books", "POST /books", "GET /books/new", "GET /books/:id", "GET /books/:id/edit", "PATCH /books/:id", "DELETE /books/:id", "RPC /Acct/Pay", "GET /api/dynamic"], actual);
 }
 function dimFunctions(): DimResult {
   const files: SourceFile[] = [

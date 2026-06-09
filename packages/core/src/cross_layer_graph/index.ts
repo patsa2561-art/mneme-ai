@@ -100,7 +100,16 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
     }
     const ext = (f.path.split(".").pop() || "").toLowerCase();
     const slash = (p: string) => (p.startsWith("/") || p.startsWith("http") ? p : "/" + p);
-    if (ext === "rb") for (const m of c.matchAll(/\b(get|post|put|patch|delete)\s+["']([^"']+)["']/gi)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // Rails routes.rb: get '/users'
+    // RESTful resource → the standard route set (Rails 7 / Laravel resource 7 / apiResource 5).
+    const restRoutes = (base: string, api: boolean): Array<[string, string]> => {
+      const b = "/" + base.replace(/^\/+/, ""); const set: Array<[string, string]> = [["GET", b], ["POST", b], ["GET", `${b}/:id`], ["PATCH", `${b}/:id`], ["DELETE", `${b}/:id`]];
+      if (!api) set.push(["GET", `${b}/new`], ["GET", `${b}/:id/edit`]);   // web resources add the form routes
+      return set;
+    };
+    if (ext === "rb") {
+      for (const m of c.matchAll(/\b(get|post|put|patch|delete)\s+["']([^"']+)["']/gi)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // Rails routes.rb: get '/users'
+      for (const m of c.matchAll(/\bresources?\s+:(\w+)/g)) for (const [mm, pp] of restRoutes(m[1], false)) add(mm, pp, f.path, []);   // Rails resources :users → 7 routes
+    }
     if (ext === "java" || ext === "kt") for (const m of c.matchAll(/@(Get|Post|Put|Patch|Delete|Request)Mapping\s*\(\s*(?:value\s*=\s*|path\s*=\s*)?["']([^"']+)["']/g)) add(m[1] === "Request" ? "ANY" : m[1].toUpperCase(), slash(m[2]), f.path, []);   // Spring
     if (ext === "cs") {
       for (const m of c.matchAll(/\[Http(Get|Post|Put|Patch|Delete)\s*\(\s*["']([^"']+)["']/g)) add(m[1].toUpperCase(), slash(m[2]), f.path, []);   // ASP.NET attribute
@@ -108,8 +117,9 @@ function extractEndpoints(files: SourceFile[]): Array<{ node: GNode; handlers: s
     }
     if (ext === "php") {
       for (const m of c.matchAll(/\bRoute::(get|post|put|patch|delete|any)\s*\(\s*["']([^"']+)["']/gi)) add(m[1].toUpperCase() === "ANY" ? "ANY" : m[1].toUpperCase(), slash(m[2]), f.path, []);   // Laravel
-      for (const m of c.matchAll(/\bRoute::(?:apiResource|resource)\s*\(\s*["']([^"']+)["']/g)) add("GET", slash(m[1]), f.path, []);   // Laravel resource (collection route)
+      for (const m of c.matchAll(/\bRoute::(apiResource|resource)\s*\(\s*["']([^"']+)["']/g)) for (const [mm, pp] of restRoutes(m[2], m[1] === "apiResource")) add(mm, pp, f.path, []);   // Laravel resource→7 / apiResource→5
     }
+    if (ext === "proto") for (const sm of c.matchAll(/\bservice\s+(\w+)\s*\{([^}]*)\}/g)) { const svc = sm[1]; for (const rm of sm[2].matchAll(/\brpc\s+(\w+)\s*\(/g)) add("RPC", `/${svc}/${rm[1]}`, f.path, []); }   // gRPC: rpc → /Service/Method
     if (ext === "py") for (const m of c.matchAll(/\b(?:path|re_path|url)\s*\(\s*r?["']([^"']+)["']/g)) add("ANY", slash(m[1].replace(/^\^/, "").replace(/\$$/, "")), f.path, []);   // Django urls
     if (ext === "go") {
       for (const m of c.matchAll(/\b\w+\.(GET|POST|PUT|PATCH|DELETE)\s*\(\s*["`]([^"`]+)["`]/g)) add(m[1], slash(m[2]), f.path, []);   // gin/echo/chi (uppercase methods)
