@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath, injectionTaint, behavioralDiff, securityAudit } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath, injectionTaint, behavioralDiff, securityAudit, mediator } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { createServer as httpCreateServer } from "node:http";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
@@ -751,7 +751,22 @@ jobs:
       if (v.verdict === "BLOCK") process.exitCode = 2;
     });
 
-  program.command("security").alias("appsec").description("🛡 SECURITY POSTURE — the AppSec triad in one pass: AUTHZ GAP (unguarded sensitive WRITE) + EXFIL PATH (sensitive READ to response, no redaction) + INJECTION (request input → dangerous sink, no sanitizer). One verdict (CLEAR / REVIEW / AT-RISK) + a posture 0-100. Exit 2 if AT-RISK.")
+  program.command("mediate").alias("fair-split").description("⚖️ FAIR-DIVISION MEDIATOR — find the fairest agreement between parties who can't (divorce / inheritance / M&A split / partnership). Each party gives point-valuations over the items; for TWO parties it runs Adjusted Winner → an envy-free + equitable + Pareto-optimal split (≤1 item split); for N>2 → proportional. Every fairness property is re-checkable from the parties' own values (the neutrality proof). Pass --file <json> or --json '[{\"name\":\"A\",\"vals\":{\"house\":50,...}},...]'.")
+    .option("--file <path>", "JSON file: [{name, vals:{item:points}}]").option("--json <s>", "inline JSON of the parties")
+    .action((o: { file?: string; json?: string }) => {
+      let parties: mediator.Party[] = [];
+      try { const raw = o.json ? o.json : o.file ? readFileSync(o.file.includes("/") || o.file.includes("\\") ? o.file : join(process.cwd(), o.file), "utf8") : ""; if (!raw) { out("✗ pass --json '[...]' or --file <path> with [{name, vals:{item:points}}]"); process.exitCode = 2; return; } parties = JSON.parse(raw); }
+      catch (e) { out(`✗ invalid JSON: ${(e as Error).message.slice(0, 120)}`); process.exitCode = 2; return; }
+      const r = mediator.mediate(parties);
+      out(`⚖️ ${r.method === "adjusted-winner" ? "Adjusted Winner" : "Proportional"} mediation · ${r.parties.length} parties · ${r.items.length} items\n`);
+      for (const it of r.items) { const shares = Object.entries(r.allocation[it] || {}).filter(([, f]) => (f as number) > 1e-6).map(([p, f]) => (f as number) >= 1 - 1e-6 ? `${p}` : `${p} ${Math.round((f as number) * 100)}%`).join(" / "); out(`   • ${it}  →  ${shares}`); }
+      out(`\n   payoffs (each party's own perceived value): ${Object.entries(r.proof.payoffs).map(([p, v]) => `${p}=${v}`).join(" · ")}`);
+      out(`   ✅ envy-free: ${r.proof.envyFree} · equitable: ${r.proof.equitable} · proportional: ${r.proof.proportional}${r.proof.splitItems.length ? ` · split: ${r.proof.splitItems.join(", ")}` : ""}`);
+      out(`\n   ${r.note}`);
+      out(`   neutrality: every property above is re-checkable from the parties' OWN valuations — the math decided, not a biased AI.`);
+    });
+
+  program.command("appsec").alias("security-posture").description("🛡 SECURITY POSTURE — the AppSec triad in one pass: AUTHZ GAP (unguarded sensitive WRITE) + EXFIL PATH (sensitive READ to response, no redaction) + INJECTION (request input → dangerous sink, no sanitizer). One verdict (CLEAR / REVIEW / AT-RISK) + a posture 0-100. Exit 2 if AT-RISK.")
     .action(() => {
       const cwd = process.cwd(); const files = scanWithDocs(cwd);
       const a = securityAudit.securityAudit(crossLayerGraph.buildCrossLayerGraph(files), files);

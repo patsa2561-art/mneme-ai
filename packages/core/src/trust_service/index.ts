@@ -28,6 +28,7 @@ import { firewall, loadPolicy } from "../arch_firewall/index.js";
 import { composeGate } from "../change_gate/index.js";
 import { scoreReputation, deriveOutcomes } from "../agent_ledger/index.js";
 import { securityAudit } from "../security_audit/index.js";
+import { mediate, type Party } from "../mediator/index.js";
 import { buildCrossLayerGraph, type SourceFile } from "../cross_layer_graph/index.js";
 
 export interface TrustRequest { method: string; path: string; body: Record<string, unknown> }
@@ -40,6 +41,7 @@ export const TRUST_ENDPOINTS = [
   { method: "POST", path: "/change-gate", what: "the one-call gate (PREVENT+VERIFY) — {baselineFiles, currentFiles, code, files, policy?}" },
   { method: "POST", path: "/agent-rep", what: "agent reputation (ACCOUNT) — {records?} | {commits?}" },
   { method: "POST", path: "/security", what: "AppSec posture (authz + exfil + injection) — {files}" },
+  { method: "POST", path: "/mediate", what: "fair-division mediator (envy-free split + neutrality proof) — {parties:[{name,vals}]}" },
 ];
 
 const asFiles = (v: unknown): SourceFile[] => Array.isArray(v) ? (v as unknown[]).map((f) => { const o = (f ?? {}) as Record<string, unknown>; return { path: String(o["path"] ?? ""), content: String(o["content"] ?? "") }; }).filter((f) => f.path) : [];
@@ -74,6 +76,12 @@ export function routeTrust(req: TrustRequest, opts?: { today?: string }): TrustR
     const scar = (body["code"] || body["files"]) ? vaccinate({ code: String(body["code"] ?? ""), files: asStrings(body["files"]) }, scars) : null;
     const g = composeGate(fw, scar);
     return { status: 200, json: { verdict: g.verdict, reasons: g.reasons, firewall: g.firewall, scar: g.scar } };
+  }
+
+  if (path === "/mediate") {
+    const parties = Array.isArray(body["parties"]) ? (body["parties"] as Party[]) : [];
+    const r = mediate(parties);
+    return { status: 200, json: { method: r.method, allocation: r.allocation, proof: r.proof, parties: r.parties, items: r.items, note: r.note } };
   }
 
   if (path === "/security") {

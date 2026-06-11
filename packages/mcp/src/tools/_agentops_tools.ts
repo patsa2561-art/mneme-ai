@@ -652,6 +652,24 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.mediate",
+    category: "audit",
+    description: "⚖️ FAIR-DIVISION MEDIATOR — find the fairest agreement between parties who can't agree (divorce / inheritance / M&A asset split / partnership dissolution / resource sharing). You (the agent) elicit each party's preferences into point-valuations over the items; this returns a provably-fair allocation. Pass {parties:[{name, vals:{item:points}}]}. For TWO parties it runs Adjusted Winner → an allocation that is ENVY-FREE + EQUITABLE + PARETO-OPTIMAL (at most one item split); for N>2 → a proportional split (each ≥ a 1/N share). Returns the allocation + a re-checkable fairness PROOF (envyFree / equitable / proportional / payoffs) — the neutrality receipt: anyone can re-verify from the parties' OWN values that the MATH decided, not a biased AI. ★HONEST: the envy-free + equitable + Pareto guarantee holds for TWO parties with additive valuations (the Adjusted Winner theorem); for N>2 envy-freeness is NP-hard, so it returns a PROPORTIONAL split and says so — it never claims a fairness it can't deliver.",
+    whenToUse: "When two or more parties must split contested items/issues and you want a provably-fair, neutral allocation (not a negotiation the loudest party wins) — elicit their valuations, then call this.",
+    triggers: ["mediate", "fair division", "split fairly", "divorce settlement", "divide assets", "resolve conflict", "envy-free split", "who gets what"],
+    inputSchema: { type: "object", properties: { parties: { type: "array", items: { type: "object" } } }, required: ["parties"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const parties = Array.isArray(args["parties"]) ? (args["parties"] as Array<{ name: string; vals: Record<string, number> }>) : [];
+      if (parties.length < 2) return { data: await attest(cwd, { error: "need ≥2 parties" }), wisdom: "pass {parties:[{name, vals:{item:points}}, ...]} (≥2 parties)", confidence: ok("low") };
+      const r = core.mediator.mediate(parties);
+      const data = await attest(cwd, { method: r.method, allocation: r.allocation, proof: r.proof, parties: r.parties, items: r.items, note: r.note });
+      return { data, wisdom: `⚖️ ${r.method} · ${r.parties.length} parties · payoffs ${Object.entries(r.proof.payoffs).map(([p, v]) => `${p}=${v}`).join("/")} · envy-free=${r.proof.envyFree} equitable=${r.proof.equitable} proportional=${r.proof.proportional}`, followUp: ["present the split + the fairness proof to the parties — every property is re-checkable from their own valuations (neutral by construction)"], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.security.audit",
     category: "audit",
     description: "🛡 SECURITY POSTURE — the AppSec triad in one call. Runs all three deterministic taint checks on the cross-layer graph and fuses them into one verdict + posture: AUTHZ GAP (unguarded sensitive WRITE) + EXFIL PATH (sensitive READ to the response with no redaction) + INJECTION (request input → dangerous sink with no sanitizer). Returns verdict CLEAR / REVIEW / AT-RISK + a posture 0-100 + the unified finding list. The one answer to 'is this codebase safe for an AI to ship from?' ★HONEST: a RELATIVE posture from finding counts (a clean scan ≠ proof of security; a low score ≠ a breach), and each finding is a high-signal CANDIDATE (lexical taint), not a proven exploit. Composes mneme.review (authz) + mneme.arch.exfil + mneme.arch.injection — surfaces where to look first, does not certify.",

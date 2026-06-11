@@ -395,6 +395,7 @@ export * as exfilPath from "./exfil_path/index.js";
 export * as injectionTaint from "./injection_taint/index.js";
 export * as behavioralDiff from "./behavioral_diff/index.js";
 export * as securityAudit from "./security_audit/index.js";
+export * as mediator from "./mediator/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
