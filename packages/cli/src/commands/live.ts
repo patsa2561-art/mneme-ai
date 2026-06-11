@@ -468,14 +468,16 @@ export function registerLiveCommands(program: Command): void {
         const r = archLineage.establishedIndex(hist.length, (i) => archBisect.invariantHoldsAt(filesAt(hist[i].sha), rule));
         if (r.establishedAt === null) return null;
         const c = hist[r.establishedAt];
-        return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt };
+        return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt, flickered: r.flickered };
       };
-      // policies
-      let policyText = ""; const polPath = o.policy || join(cwd, ".mneme", "arch-policy.txt");
-      try { if (existsSync(polPath)) policyText = readFileSync(polPath, "utf8"); } catch { /* */ }
-      const policies = archFirewall.parsePolicy(policyText);
-      out(`🛑 Architectural firewall — holding HEAD against ${baseRef}${policies.length ? ` + ${policies.length} declared policy(ies)` : ""}…`);
-      const v = archFirewall.firewall(filesAt(baseRef), scanWithDocs(cwd), { policies, ageResolver });
+      // policy: .mneme/arch-policy.json (structured) or .mneme/arch-policy.txt (DSL), else default
+      let policyText = "";
+      const polCandidates = o.policy ? [o.policy] : [join(cwd, ".mneme", "arch-policy.json"), join(cwd, ".mneme", "arch-policy.txt")];
+      for (const pp of polCandidates) { try { if (existsSync(pp)) { policyText = readFileSync(pp, "utf8"); break; } } catch { /* */ } }
+      const policy = archFirewall.loadPolicy(policyText);
+      const today = new Date().toISOString().slice(0, 10);
+      out(`🛑 Architectural firewall — holding HEAD against ${baseRef} · policy "${policy.name}"${policy.waivers.length ? ` (${policy.waivers.length} waiver(s))` : ""}…`);
+      const v = archFirewall.firewall(filesAt(baseRef), scanWithDocs(cwd), policy, { ageResolver, today });
       out("");
       out(archFirewall.firewallReport(v));
       out("");

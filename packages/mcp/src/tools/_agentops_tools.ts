@@ -440,15 +440,16 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
       const dlog = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H%x09%aI"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
       const hist = dlog.status === 0 ? dlog.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, date] = l.split("\t"); return { sha, date }; }) : [];
       const headDate = hist.length ? new Date(hist[hist.length - 1].date).getTime() : Date.now();
-      const ageResolver = (rule: string) => { if (hist.length < 2) return null; const r = core.archLineage.establishedIndex(hist.length, (i: number) => core.archBisect.invariantHoldsAt(filesAt(hist[i].sha), rule)); if (r.establishedAt === null) return null; const c = hist[r.establishedAt]; return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt }; };
-      let policyText = ""; const polPath = path.join(cwd, ".mneme", "arch-policy.txt"); try { if (fs.existsSync(polPath)) policyText = fs.readFileSync(polPath, "utf8"); } catch { /* */ }
-      const policies = core.archFirewall.parsePolicy(policyText);
+      const ageResolver = (rule: string) => { if (hist.length < 2) return null; const r = core.archLineage.establishedIndex(hist.length, (i: number) => core.archBisect.invariantHoldsAt(filesAt(hist[i].sha), rule)); if (r.establishedAt === null) return null; const c = hist[r.establishedAt]; return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt, flickered: r.flickered }; };
+      let policyText = ""; for (const pp of [path.join(cwd, ".mneme", "arch-policy.json"), path.join(cwd, ".mneme", "arch-policy.txt")]) { try { if (fs.existsSync(pp)) { policyText = fs.readFileSync(pp, "utf8"); break; } } catch { /* */ } }
+      const policy = core.archFirewall.loadPolicy(policyText);
+      const today = new Date().toISOString().slice(0, 10);
       // current files
       const cur: { path: string; content: string }[] = []; const stack = [cwd];
       while (stack.length && cur.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { cur.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
-      const v = core.archFirewall.firewall(filesAt(baseRef), cur, { policies, ageResolver });
-      const data = await attest(cwd, { verdict: v.verdict, baseline: baseRef, critical: v.critical, warn: v.warn, info: v.info, checkedContracts: v.checkedContracts, violations: v.violations });
-      return { data, wisdom: core.archFirewall.firewallReport(v).split("\n").slice(0, 2 + v.violations.length * 2).join(" · "), followUp: v.verdict === "BLOCK" ? ["BLOCK — do NOT commit this change; it breaks a load-bearing contract. Surface the violation + the contract's age to the user, or ratify by moving the baseline."] : [], confidence: ok(v.verdict === "BLOCK" ? "high" : "medium") };
+      const v = core.archFirewall.firewall(filesAt(baseRef), cur, policy, { ageResolver, today });
+      const data = await attest(cwd, { verdict: v.verdict, baseline: baseRef, policy: v.policyName, blockOn: v.blockOn, critical: v.critical, high: v.high, blocked: v.blocked, waivedCount: v.waivedCount, checkedContracts: v.baselineContracts, findings: v.findings });
+      return { data, wisdom: `${v.verdict} · policy "${v.policyName}" · ${v.findings.length} finding(s) · ${v.blockedBy.length} blocking · ${v.waivedCount} waived${v.findings[0] ? ` · top: [${v.findings[0].finalSeverity}] ${v.findings[0].rule}` : ""}`, followUp: v.verdict === "BLOCK" ? ["BLOCK — do NOT commit this change; it breaks a load-bearing contract. Surface the violation + the contract's age/history to the user, or ratify (move the baseline / add a waiver)."] : [], confidence: ok(v.verdict === "BLOCK" ? "high" : "medium") };
     },
   },
   {

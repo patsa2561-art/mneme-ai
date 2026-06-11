@@ -27,16 +27,35 @@ An AI opens a PR that adds a second writer to `Wallet` → CI runs the firewall 
 
 **Severity is weighted by age:** breaking a contract that has stood for years is a `critical` BLOCK; breaking one that is days old is `info` — normal evolution. The age does the weighting, measured from git, not guessed.
 
-## Policy DSL (`.mneme/arch-policy.txt`)
+## Severity model (5-rung ladder: `info < low < medium < high < critical`)
 
 ```
-# severity prefix is optional (default: warn)
-critical table wallet single-writer
-critical table credentials private
-warn     endpoint POST /admin/payout exists
+final = base(kind or override)  +  age-tier bump  −  (UNKNOWN ? 1 : 0)
+```
+
+- **base** — a `single-writer` / `private` / `guarded` contract starts at `high`, an `exists` contract at `medium`; an architect can pin any rule's base.
+- **age bump** — breaking a long-standing contract escalates it: `+2` if held ≥730d, `+1` if ≥180d. A contract that **flickered** (held, broke, re-held) is less load-bearing, so its bump is **capped at +1**.
+- **UNKNOWN penalty** — a contract that became `UNKNOWN` (its table moved/renamed) is a weaker signal: `−1`.
+
+Every verdict shows its `rationale` (e.g. `base=high, age≥730d ⇒ +2 ⇒ critical`) — the math is auditable, not magic. `blockOn` (default `critical`) is the threshold a non-waived finding must reach to BLOCK.
+
+## Policy DSL (`.mneme/arch-policy.txt`, or structured `.mneme/arch-policy.json`)
+
+```
+name        payments-core
+blockon     critical
+default     single-writer high          # base severity per invariant kind
+agetier     365 2                        # add your own age tiers
+critical    table wallet single-writer   # pin a rule's base severity (enforce override)
+warn        endpoint POST /admin/payout exists
+waive       until=2025-09-01 table wallet single-writer :: dual-writer approved in RFC-42
 ```
 
 A declared severity overrides the age-derived one — the architect has the final say. A declared rule the code does **not** satisfy is itself a violation (not only regressions are caught).
+
+## Waivers — the ratified exception, done right
+
+A `waive` suppresses the block for a rule the architect has knowingly accepted (with a reason — e.g. an RFC). Give it an `until=<date>` and it is **time-boxed**: once expired it is **NOT honoured** — the block comes back and the expired waiver is surfaced loudly, so a "temporary" exception can't quietly become permanent. This is the honest alternative to a silent ignore.
 
 ## Enforcement surfaces
 

@@ -1,6 +1,6 @@
 {
   "name": "@mneme-ai/sdk",
-  "version": "3.89.0",
+  "version": "3.90.0",
   "description": "World-class premium SDK for Mneme — in-process native API for AI vendor embedding. 30-80× faster than CLI subprocess.",
   "type": "module",
   "main": "./dist/index.js",
@@ -61,7 +61,7 @@
     "native"
   ],
   "dependencies": {
-    "@mneme-ai/core": "3.89.0"
+    "@mneme-ai/core": "3.90.0"
   },
   "engines": {
     "node": ">=22.13.0 <25.0.0"
