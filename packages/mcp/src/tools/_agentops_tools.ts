@@ -420,6 +420,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.dead_paths",
+    category: "audit",
+    description: "🪦 ARCHITECTURAL DEAD-PATH DETECTOR — data-flow smells the compiler can't see, from the cross-layer graph: WRITE-ONLY tables (written but never read — a dead write or a deleted reader), READ-ONLY tables (read but never written — external/seed data or a missing writer), and functions reachable from NO API endpoint (architectural dead-code candidates). Deterministic, no LLM. ★HONEST: write/read-only reflects a table's WRITES_TO/READS edges — but a table read AND written inside ONE function registers only as written (the graph emits one relation per function-table pair), so it's a smell to verify, not a verdict; unreachability is only computed when endpoints exist, and 'unreachable from an endpoint' may be a non-HTTP entrypoint (CLI/cron/export), so it's a candidate, not proven dead.",
+    whenToUse: "Before adding a table write (is anyone reading it?), or when hunting removable dead code at the architecture level.",
+    triggers: ["dead code", "dead paths", "write-only table", "read-only table", "unreachable functions", "is this table read", "architectural dead code"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const dp = core.deadPath.deadPaths(core.crossLayerGraph.buildCrossLayerGraph(files));
+      const data = await attest(cwd, { writeOnlyTables: dp.writeOnlyTables, readOnlyTables: dp.readOnlyTables, endpointUnreachableFunctions: dp.endpointUnreachableFunctions.slice(0, 50), unreachableCount: dp.endpointUnreachableFunctions.length, hasEndpoints: dp.hasEndpoints, clean: dp.clean });
+      return { data, wisdom: dp.clean ? "🪦 no architectural dead paths — every table read+written, every function endpoint-reachable" : `🪦 ${dp.writeOnlyTables.length} write-only · ${dp.readOnlyTables.length} read-only table(s) · ${dp.endpointUnreachableFunctions.length} endpoint-unreachable function(s)`, followUp: dp.writeOnlyTables.length ? ["a write-only table is data going in but never out — confirm the reader exists (or that it's an audit/outbox table)"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.arch.contract_map",
     category: "audit",
     description: "🗺 ARCHITECTURE CONTRACT MAP — mine EVERY architectural contract this repo upholds and rank them by AGE = how load-bearing each is: FOUNDATIONAL (years, near-sacred — breaking is high-risk) → RECENT (days, still fragile — safe to revise). The one-call repo-wide view of what an AI agent may touch vs must respect. Pass {since}. Composes invariant-mining + lineage (binary-search each contract's birth) over the deterministic graph replayed across history. ★HONEST: age = how long a contract has continuously held (a load-bearing signal measured from git), not a guess; contracts that can't be aged in the window are omitted.",

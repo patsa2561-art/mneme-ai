@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -439,6 +439,16 @@ export function registerLiveCommands(program: Command): void {
       out(`      ${r.reason}`);
       out(`      inspect: git show ${c.sha.slice(0, 10)}`);
       process.exitCode = 2;
+    });
+
+  program.command("dead-paths").alias("dead-code").description("🪦 ARCHITECTURAL DEAD-PATH DETECTOR — data-flow smells the compiler can't see: WRITE-ONLY tables (written, never read — a dead write or a deleted reader), READ-ONLY tables (read, never written), and functions reachable from NO API endpoint (architectural dead-code candidates). Deterministic from the cross-layer graph.")
+    .action(() => {
+      const cwd = process.cwd(); const d = deadPath.deadPaths(crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd)));
+      if (d.clean) { out("🪦 no architectural dead paths — every table is both read and written, and every function is reachable from an endpoint."); return; }
+      if (d.writeOnlyTables.length) { out(`🪦 ${d.writeOnlyTables.length} WRITE-ONLY table(s) — written but never read (dead write, or the reader was deleted):`); for (const t of d.writeOnlyTables.slice(0, 15)) out(`   ✍️  ${t.name}${t.file ? "  (" + t.file + ")" : ""}`); }
+      if (d.readOnlyTables.length) { out(`\n📖 ${d.readOnlyTables.length} READ-ONLY table(s) — read but never written by this codebase (external/seed data, or a missing writer):`); for (const t of d.readOnlyTables.slice(0, 15)) out(`   📖 ${t.name}${t.file ? "  (" + t.file + ")" : ""}`); }
+      if (d.endpointUnreachableFunctions.length) { out(`\n🚪 ${d.endpointUnreachableFunctions.length} function(s) reachable from NO API endpoint — dead-code candidates (or a non-HTTP entrypoint: CLI / cron / event / export):`); for (const f of d.endpointUnreachableFunctions.slice(0, 20)) out(`   🚪 ${f.name}${f.file ? "  (" + f.file + ")" : ""}`); if (d.endpointUnreachableFunctions.length > 20) out(`   … + ${d.endpointUnreachableFunctions.length - 20} more`); }
+      out(`\n   honest: write/read-only is a high-signal smell to glance at (a table read+written inside ONE function can show write-only); unreachable = a candidate, not proven dead.`);
     });
 
   program.command("contract-map").alias("arch-contracts").description("🗺 ARCHITECTURE CONTRACT MAP — mine EVERY architectural contract your repo upholds and rank them by AGE = how load-bearing each is: 🏛 FOUNDATIONAL (years, near-sacred — breaking is high-risk) → 🐣 RECENT (days, still fragile — safe to revise). One view of what's safe to touch and what isn't. `mneme contract-map --since v1.0`.")
