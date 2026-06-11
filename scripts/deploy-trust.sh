@@ -59,6 +59,9 @@ const server = createServer((req, res) => {
     let body = {}; try { const raw = Buffer.concat(chunks).toString("utf8"); if (raw) body = JSON.parse(raw); } catch { return send(400, { error: "invalid JSON body" }); }
     const path = (req.url || "/").split("?")[0];
     try {
+      if ((path === "/" || path === "/index.html") && (req.method || "GET").toUpperCase() === "GET" && /text\/html/.test(req.headers["accept"] || "")) {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "access-control-allow-origin": "*" }); return res.end(trustService.landingPage());
+      }
       if (path.replace(/\/+$/, "") === "/equiv" && (req.method || "").toUpperCase() === "POST") {
         const spec = Array.isArray(body.args) ? body.args.map((a) => ({ name: String(a.name ?? "x"), type: ["number","int","string","bool"].includes(String(a.type)) ? String(a.type) : "number" })) : [];
         const inputs = equivReceipt.genInputs(spec.length ? spec : [{ name: "x", type: "number" }], { fuzz: Number(body.fuzz) || 1500 });
