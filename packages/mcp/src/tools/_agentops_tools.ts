@@ -420,6 +420,70 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.change.gate",
+    category: "audit",
+    description: "🚦 CHANGE GATE — the ONE call before you (an AI agent) commit. Fuses the SCAR VACCINE (does this change repeat a past mistake without the fix?) and the ARCHITECTURAL FIREWALL (does it break a load-bearing contract?) into a single PASS / WARN / BLOCK verdict + reasons. Pass {baseline} (default main). On BLOCK, do NOT commit — surface the reasons. The productized trust-gate surface of the AI-native SaaS. ★HONEST: as strong as its inputs — the firewall verdict is re-checkable (a violation can be an intended evolution → waivers) and the scar match is a lexical-shape heuristic (a candidate). BLOCK = a load-bearing contract is broken + not waived; WARN = look before committing; PASS = neither gate objected (not a proof the change is correct).",
+    whenToUse: "BEFORE committing/merging any non-trivial change — one call that asks 'is this safe to commit?' and returns a single verdict fusing past-mistake + contract checks.",
+    triggers: ["change gate", "is this safe to commit", "pre-commit gate", "should i commit this", "gate this change", "safe to merge"],
+    inputSchema: { type: "object", properties: { baseline: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const cap = 2000;
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const fileCache = new Map<string, { path: string; content: string }[]>();
+      const filesAt = (sha: string) => { if (fileCache.has(sha)) return fileCache.get(sha)!; const ls = cp.spawnSync("git", ["-C", cwd, "ls-tree", "-r", "--name-only", sha], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) { fileCache.set(sha, []); return []; } const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN.test(f) && !SKIP.has(f.split("/")[0])).slice(0, cap); const o2: { path: string; content: string }[] = []; for (const f of wanted) { const r = cp.spawnSync("git", ["-C", cwd, "show", `${sha}:${f}`], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) o2.push({ path: f, content: r.stdout }); } fileCache.set(sha, o2); return o2; };
+      // current files
+      const cur: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && cur.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { cur.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      // firewall
+      let baseRef = args["baseline"] ? String(args["baseline"]) : "";
+      if (!baseRef) { for (const c of ["main", "origin/main", "master", "HEAD~1"]) { if (cp.spawnSync("git", ["-C", cwd, "rev-parse", "--verify", "-q", c], { encoding: "utf8" }).status === 0) { baseRef = c; break; } } }
+      let fw = null;
+      if (baseRef) {
+        const dlog = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H%x09%aI"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+        const hist = dlog.status === 0 ? dlog.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, date] = l.split("\t"); return { sha, date }; }) : [];
+        const headDate = hist.length ? new Date(hist[hist.length - 1].date).getTime() : Date.now();
+        const ageResolver = (rule: string) => { if (hist.length < 2) return null; const r = core.archLineage.establishedIndex(hist.length, (i: number) => core.archBisect.invariantHoldsAt(filesAt(hist[i].sha), rule)); if (r.establishedAt === null) return null; const c = hist[r.establishedAt]; return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt, flickered: r.flickered }; };
+        let polText = ""; for (const pp of [path.join(cwd, ".mneme", "arch-policy.json"), path.join(cwd, ".mneme", "arch-policy.txt")]) { try { if (fs.existsSync(pp)) { polText = fs.readFileSync(pp, "utf8"); break; } } catch { /* */ } }
+        fw = core.archFirewall.firewall(filesAt(baseRef), cur, core.archFirewall.loadPolicy(polText), { ageResolver, today: new Date().toISOString().slice(0, 10) });
+      }
+      // scar (staged diff)
+      const names = cp.spawnSync("git", ["-C", cwd, "diff", "--cached", "--name-only"], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      const sfiles = names.status === 0 ? names.stdout.split("\n").map((s) => s.trim()).filter(Boolean) : [];
+      const sdiff = cp.spawnSync("git", ["-C", cwd, "diff", "--cached", "--unified=0"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const scode = sdiff.status === 0 ? sdiff.stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1)).join("\n") : "";
+      let scars = [...core.scarVaccine.BUILTIN_SCARS];
+      try { const p = path.join(cwd, ".mneme", "scars.json"); if (fs.existsSync(p)) { const ex = JSON.parse(fs.readFileSync(p, "utf8")); if (Array.isArray(ex)) scars = [...scars, ...ex]; } } catch { /* */ }
+      const scar = (sfiles.length || scode) ? core.scarVaccine.vaccinate({ files: sfiles, code: scode }, scars) : null;
+      const g = core.changeGate.composeGate(fw, scar);
+      const data = await attest(cwd, { verdict: g.verdict, baseline: baseRef, reasons: g.reasons, firewall: g.firewall, scar: g.scar });
+      return { data, wisdom: core.changeGate.gateReport(g).split("\n").join(" · "), followUp: g.verdict === "BLOCK" ? ["BLOCK — do NOT commit; surface the reasons (a load-bearing contract is broken)."] : g.verdict === "WARN" ? ["WARN — look before committing; heed the surfaced scar/contract findings."] : [], confidence: ok(g.verdict === "PASS" ? "medium" : "high") };
+    },
+  },
+  {
+    name: "mneme.equiv.check",
+    category: "audit",
+    description: "⚖️ BEHAVIORAL-EQUIVALENCE RECEIPT — prove a refactor didn't silently change behavior. 'Tests pass' proves little (a test at qty=7 stays green while `>=`→`>` breaks every boundary). Pass the {oldFn, newFn} source (function expressions) + {args:[{name,type}]} (type: number|int|string|bool); it DIFFERENTIALLY TESTS old vs new over boundary-seeded + deterministic-fuzz inputs and returns either a precise COUNTEREXAMPLE or an equivalence verdict wrapped in a signed receipt CI can trust. ★HONEST: equivalence is EMPIRICAL over a finite, boundary-biased sample — a strong signal, NOT a formal proof; sound for PURE functions only (side-effects/IO/DB need a harness you supply). Execution uses node:vm with a frozen minimal context (Math/JSON/etc., no require/process) — adequate for testing YOUR OWN pure refactor, NOT a security boundary against hostile code, and the function must terminate.",
+    whenToUse: "After you (an AI agent) refactor a PURE function and claim behavior is unchanged: prove it before committing, or get the boundary counterexample that disproves it.",
+    triggers: ["equivalence receipt", "did the refactor change behavior", "differential test", "prove behavior unchanged", "refactor equivalence", "behavioral equivalence"],
+    inputSchema: { type: "object", properties: { oldFn: { type: "string" }, newFn: { type: "string" }, args: { type: "array", items: { type: "object" } }, fuzz: { type: "number" } }, required: ["oldFn", "newFn"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const vm = await import("node:vm");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const oldSrc = String(args["oldFn"] || ""); const newSrc = String(args["newFn"] || "");
+      const spec = Array.isArray(args["args"]) ? (args["args"] as Array<Record<string, unknown>>).map((a) => ({ name: String(a["name"] ?? "x"), type: (["number", "int", "string", "bool"].includes(String(a["type"])) ? String(a["type"]) : "number") as "number" | "int" | "string" | "bool" })) : [];
+      if (!oldSrc || !newSrc) return { data: await attest(cwd, { error: "oldFn + newFn required" }), wisdom: "pass {oldFn, newFn} as function-expression source + {args}", confidence: ok("low") };
+      const compile = (src: string) => { const ctx = vm.createContext(Object.freeze({ Math, Number, String, Boolean, Array, Object, JSON, isNaN, parseInt, parseFloat })); const fn = vm.runInContext("(" + src + ")", ctx, { timeout: 1000 }); if (typeof fn !== "function") throw new Error("source is not a function expression"); return fn as (...a: unknown[]) => unknown; };
+      let receipt; try { const oldFn = compile(oldSrc), newFn = compile(newSrc); const inputs = core.equivReceipt.genInputs(spec.length ? spec : [{ name: "x", type: "number" }], { fuzz: Number(args["fuzz"]) || 1500 }); const r = core.equivReceipt.differential(oldFn, newFn, inputs); receipt = core.equivReceipt.buildReceipt("refactor", oldSrc, newSrc, r); }
+      catch (e) { return { data: await attest(cwd, { error: (e as Error).message.slice(0, 160) }), wisdom: `could not evaluate: ${(e as Error).message.slice(0, 120)}`, confidence: ok("low") }; }
+      const data = await attest(cwd, { receipt });   // the attest wrapper adds the Ed25519 _proof over the receipt
+      return { data, wisdom: receipt.equivalent ? `⚖️ EQUIVALENCE RECEIPT — old ≡ new over ${receipt.inputsTested} inputs (incl. boundaries). Signed; attach to the PR.` : `❌ NOT equivalent — counterexample fn(${(receipt.counterexample!.input).join(", ")}) → old=${JSON.stringify(receipt.counterexample!.old)} new=${JSON.stringify(receipt.counterexample!.new)} (a boundary an example test misses)`, followUp: receipt.equivalent ? [] : ["the refactor changed behavior at a boundary input — fix it or it is not a safe refactor"], confidence: ok(receipt.equivalent ? "high" : "high") };
+    },
+  },
+  {
     name: "mneme.scar.check",
     category: "audit",
     description: "🧬 SCAR-TISSUE VACCINE — before you (an AI agent) write/commit a change, check it against the organisation's PAST mistakes so you don't confidently repeat one with zero institutional memory. Pass the proposed change {code, files}. It FIRES the hard-won lesson when the change has the SHAPE of a past bug (its triggers) AND lacks the fix (the antibody), and STAYS SILENT when the antibody is already present or the change is novel — that asymmetry is the point (not 'you touched payments', but 'you touched payments in the shape that double-charged customers in 2023 and haven't added the idempotency key'). The scar corpus = builtin classics + the org's .mneme/scars.json (in production, mined from Mneme's regret / revert / incident-correlation / negative-knowledge ledger). ★HONEST: a LEXICAL-shape heuristic — a high-signal candidate to heed, NOT proof the bug is present (layer semantic similarity in production); a FIRE means 'look, you may be repeating this', and the antibody asymmetry keeps it from being noise.",
