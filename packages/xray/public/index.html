@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<script>/* open every off-page link in a NEW TAB (incl. dynamically-rendered ones); same-page #anchors stay put */
+(function(){function f(r){try{(r.querySelectorAll?r.querySelectorAll("a[href]"):[]).forEach(function(a){var h=a.getAttribute("href")||"";if(h&&h.charAt(0)!=="#"&&h.lastIndexOf("javascript:",0)!==0&&!a.target){a.target="_blank";a.rel="noopener noreferrer";}});}catch(e){}}try{new MutationObserver(function(){f(document.body);}).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}document.addEventListener("DOMContentLoaded",function(){f(document);});})();</script>
 <title>Mneme · Repo X-Ray</title>
 <meta name="description" content="Cross-layer code intelligence — paste any repo for a graded accountability report. Deterministic, no LLM, signed.">
 <link rel="canonical" href="https://xray.mneme-ai.space/">
