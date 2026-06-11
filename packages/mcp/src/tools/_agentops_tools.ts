@@ -420,6 +420,43 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.contract_map",
+    category: "audit",
+    description: "🗺 ARCHITECTURE CONTRACT MAP — mine EVERY architectural contract this repo upholds and rank them by AGE = how load-bearing each is: FOUNDATIONAL (years, near-sacred — breaking is high-risk) → RECENT (days, still fragile — safe to revise). The one-call repo-wide view of what an AI agent may touch vs must respect. Pass {since}. Composes invariant-mining + lineage (binary-search each contract's birth) over the deterministic graph replayed across history. ★HONEST: age = how long a contract has continuously held (a load-bearing signal measured from git), not a guess; contracts that can't be aged in the window are omitted.",
+    whenToUse: "On landing in a repo, to learn its architectural contracts ranked by how load-bearing each is — respect the old ones, revise the young ones.",
+    triggers: ["contract map", "architecture contracts", "rank contracts by age", "what contracts are load bearing", "architecture map", "which rules are sacred"],
+    inputSchema: { type: "object", properties: { since: { type: "string" }, max: { type: "number" }, limit: { type: "number" } }, required: ["since"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const since = String(args["since"] || ""); const cap = Number(args["max"]) || 1500; const limit = Number(args["limit"]) || 25;
+      if (!since) return { data: await attest(cwd, { error: "since required" }), wisdom: "pass {since}", confidence: ok("low") };
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const cur: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && cur.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { cur.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const mined = core.invariants.parseInvariants(core.invariants.renderMined(core.invariants.mineInvariants(cur)));
+      if (!mined.length) return { data: await attest(cwd, { total: 0 }), wisdom: "no architectural contracts mined here", confidence: ok("medium") };
+      const log = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H%x09%an%x09%aI", `${since}..HEAD`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: "unknown ref" }), wisdom: `unknown ref "${since}"`, confidence: ok("low") };
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, author, date] = l.split("\t"); return { sha, author, date }; });
+      if (commits.length < 2) return { data: await attest(cwd, { commits: commits.length }), wisdom: `need ≥2 commits in ${since}..HEAD`, confidence: ok("low") };
+      const fileCache = new Map<string, { path: string; content: string }[]>();
+      const filesAt = (sha: string) => { if (fileCache.has(sha)) return fileCache.get(sha)!; const ls = cp.spawnSync("git", ["-C", cwd, "ls-tree", "-r", "--name-only", sha], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) { fileCache.set(sha, []); return []; } const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN.test(f) && !SKIP.has(f.split("/")[0])).slice(0, cap); const o2: { path: string; content: string }[] = []; for (const f of wanted) { const r = cp.spawnSync("git", ["-C", cwd, "show", `${sha}:${f}`], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) o2.push({ path: f, content: r.stdout }); } fileCache.set(sha, o2); return o2; };
+      const headDate = new Date(commits[commits.length - 1].date).getTime();
+      const records: { rule: string; ageDays: number; band: string; establishedSha?: string; author?: string }[] = [];
+      for (const inv of mined.slice(0, limit)) {
+        const r = core.archLineage.establishedIndex(commits.length, (i: number) => core.archBisect.invariantHoldsAt(filesAt(commits[i].sha), inv.raw));
+        if (r.establishedAt === null) continue;
+        const c = commits[r.establishedAt]; const days = Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000));
+        records.push({ rule: inv.raw, ageDays: days, band: core.archLineage.ageBand(days), establishedSha: c.sha.slice(0, 10), author: c.author });
+      }
+      const map = core.archLineage.rankContracts(records as never);
+      const data = await attest(cwd, { total: map.total, foundational: map.foundational, recent: map.recent, contracts: map.contracts, mostFragile: map.mostFragile });
+      return { data, wisdom: map.total ? `🗺 ${map.total} contract(s) · ${map.foundational} foundational · ${map.recent} recent${map.contracts[0] ? ` · oldest: ${map.contracts[0].rule} (${map.contracts[0].ageDays}d)` : ""}` : "no contract could be aged in this window", followUp: map.foundational ? ["respect the FOUNDATIONAL contracts (breaking one is high-risk); the RECENT ones are safe to revise"] : [], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.arch.lineage",
     category: "audit",
     description: "🌳 INVARIANT LINEAGE — the AGE of an architectural contract: the commit (+author+date) where an invariant was first ESTABLISHED and has held ever since. The mirror of mneme.arch.bisect (which finds where a contract BROKE). Age tells you how load-bearing a contract is: one that has held for years is foundational + near-sacred (breaking it is high-risk), one days old is still fragile. Pass {invariant} (e.g. 'table wallet single-writer') + {since}. Replays the deterministic graph across history (binary search). ★HONEST: 'established' assumes a contract, once it starts holding, keeps holding; a flickering history returns the MOST RECENT establishment and says so; if the invariant doesn't hold at HEAD there is no lineage (use mneme.arch.bisect).",

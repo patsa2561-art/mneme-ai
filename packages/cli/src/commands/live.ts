@@ -441,6 +441,44 @@ export function registerLiveCommands(program: Command): void {
       process.exitCode = 2;
     });
 
+  program.command("contract-map").alias("arch-contracts").description("🗺 ARCHITECTURE CONTRACT MAP — mine EVERY architectural contract your repo upholds and rank them by AGE = how load-bearing each is: 🏛 FOUNDATIONAL (years, near-sacred — breaking is high-risk) → 🐣 RECENT (days, still fragile — safe to revise). One view of what's safe to touch and what isn't. `mneme contract-map --since v1.0`.")
+    .requiredOption("--since <ref>", "the history window to age contracts against").option("--max <n>", "max files per sampled commit (default 1500)").option("--limit <n>", "max contracts to age (default 25)")
+    .action((o: { since: string; max?: string; limit?: string }) => {
+      const cwd = process.cwd(); const cap = o.max ? parseInt(o.max, 10) : 1500; const limit = o.limit ? parseInt(o.limit, 10) : 25;
+      const mined = invariants.parseInvariants(invariants.renderMined(invariants.mineInvariants(scanWithDocs(cwd))));
+      if (!mined.length) { out("🗺 no architectural contracts mined here (no single-writer/private tables or stable endpoints detected)."); return; }
+      const log = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an%x09%aI", `${o.since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) { out(`✗ unknown ref "${o.since}".`); process.exitCode = 2; return; }
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, author, date] = l.split("\t"); return { sha, author, date }; });
+      if (commits.length < 2) { out(`🗺 need ≥2 commits in ${o.since}..HEAD (found ${commits.length}).`); return; }
+      const fileCache = new Map<string, crossLayerGraph.SourceFile[]>();
+      const filesAt = (sha: string): crossLayerGraph.SourceFile[] => {
+        if (fileCache.has(sha)) return fileCache.get(sha)!;
+        const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+        if (ls.status !== 0) { fileCache.set(sha, []); return []; }
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+        const fs2: crossLayerGraph.SourceFile[] = [];
+        for (const f of wanted) { const r = spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) fs2.push({ path: f, content: r.stdout }); }
+        fileCache.set(sha, fs2); return fs2;
+      };
+      const headDate = new Date(commits[commits.length - 1].date).getTime();
+      out(`🗺 Aging ${Math.min(limit, mined.length)} architectural contract(s) across ${commits.length} commits since ${o.since}…`);
+      const records: archLineage.ContractRecord[] = [];
+      for (const inv of mined.slice(0, limit)) {
+        const r = archLineage.establishedIndex(commits.length, (i) => archBisect.invariantHoldsAt(filesAt(commits[i].sha), inv.raw));
+        if (r.establishedAt === null) continue;
+        const c = commits[r.establishedAt]; const days = Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000));
+        records.push({ rule: inv.raw, ageDays: days, band: archLineage.ageBand(days), establishedSha: c.sha.slice(0, 10), author: c.author, sinceBeforeRange: r.sinceBeforeRange });
+      }
+      const map = archLineage.rankContracts(records);
+      if (!map.total) { out("   (no contract could be aged in this window — try a wider --since)"); return; }
+      const ic = (b: string) => b === "FOUNDATIONAL" ? "🏛" : b === "ESTABLISHED" ? "🌳" : b === "MATURING" ? "🌱" : "🐣";
+      out(`\n   ${map.total} contract(s) · ${map.foundational} foundational · ${map.recent} recent — most load-bearing first:`);
+      for (const r of map.contracts) out(`   ${ic(r.band)} ${r.rule}  — held ${r.ageDays}d (${r.band})${r.sinceBeforeRange ? " +" : ""}`);
+      if (map.mostFragile.length) { out(`\n   ⚠️ youngest / most fragile (safe to revise, don't over-rely):`); for (const r of map.mostFragile) out(`      🐣 ${r.rule} (${r.ageDays}d)`); }
+      out(`\n   honest: age = how long the contract has continuously held (load-bearing signal), measured from git — not a guess.`);
+    });
+
   program.command("contract-age <invariant>").alias("invariant-lineage").description("🌳 INVARIANT LINEAGE — the AGE of an architectural contract: the commit (+author+date) where an invariant was first ESTABLISHED and has held ever since. The mirror of bisect (which finds where a contract BROKE). Old contract = load-bearing, near-sacred; young = still fragile. e.g. `mneme lineage 'table wallet single-writer' --since v1.0`. Replays the graph across history (binary search).")
     .requiredOption("--since <ref>", "the earlier ref to search back to").option("--max <n>", "max files per sampled commit (default 2500)")
     .action((invariant: string, o: { since: string; max?: string }) => {
