@@ -463,6 +463,37 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.bdiff",
+    category: "audit",
+    description: "🔬 BEHAVIORAL DIFF LENS — the inversion git can't do, applied ON git (not a replacement). git diffs TEXT, which in the AI age misjudges change both ways: an AI regenerates a file (69% text diff, zero behavior change → git makes you review noise) while a 1-char edit flips behavior (2% text diff → git waves it through). This classifies each changed function by TEXT magnitude × proven BEHAVIOR and surfaces the two traps: 🔇 NOISE (big text, behavior preserved) and 🔴 SILENT-RISK (tiny text, behavior changed — the one to review). Pass {baseline} (default HEAD), optionally {file}. Returns the review set (changed + unknown, silent-risk first) so you review only what behaviorally matters. ★HONEST: a LENS over git, not a replacement (git stays the store of record); the behavior verdict is sound for PURE functions (the equiv engine's scope) and an unverifiable function is UNKNOWN → always routed to review, never assumed safe.",
+    whenToUse: "Reviewing an AI-generated diff: skip the text-noise, focus only on functions whose behavior actually changed (and the dangerous tiny-text-big-behavior ones git hides).",
+    triggers: ["behavioral diff", "what actually changed", "review the diff by behavior", "did behavior change", "git shows noise", "behavioral version control"],
+    inputSchema: { type: "object", properties: { baseline: { type: "string" }, file: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process"); const vm = await import("node:vm");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const baseRef = args["baseline"] ? String(args["baseline"]) : "HEAD";
+      let files: string[] = [];
+      if (args["file"]) files = [String(args["file"]).replace(/\\/g, "/")];
+      else { const r = cp.spawnSync("git", ["-C", cwd, "diff", "--name-only", baseRef], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }); files = r.status === 0 ? r.stdout.split("\n").map((s) => s.trim()).filter((f) => f && /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)) : []; }
+      const compile = (src: string) => { const ctx = vm.createContext(Object.freeze({ Math, Number, String, Boolean, Array, Object, JSON, isNaN, parseInt, parseFloat })); const fn = vm.runInContext("(" + src + ")", ctx, { timeout: 1000 }); if (typeof fn !== "function") throw new Error("nf"); return fn as (...a: unknown[]) => unknown; };
+      const entries: { name: string; file: string; textPct: number; verdict: "PRESERVED" | "CHANGED" | "UNKNOWN" }[] = [];
+      for (const f of files) {
+        const oldR = cp.spawnSync("git", ["-C", cwd, "show", `${baseRef}:${f}`], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
+        let newSrc = ""; try { newSrc = fs.readFileSync(path.join(cwd, f), "utf8"); } catch { continue; }
+        for (const p of core.equivDiff.pairChanged(oldR.status === 0 ? oldR.stdout : "", newSrc)) {
+          const textPct = core.behavioralDiff.textChangeRatio(p.oldSrc, p.newSrc);
+          let verdict: "PRESERVED" | "CHANGED" | "UNKNOWN" = "UNKNOWN";
+          try { const spec = (p.args.length ? p.args : ["x"]).map((n) => ({ name: n, type: "number" as const })); const r = core.equivReceipt.differential(compile(p.oldSrc), compile(p.newSrc), core.equivReceipt.genInputs(spec)); verdict = r.equivalent ? "PRESERVED" : "CHANGED"; } catch { verdict = "UNKNOWN"; }
+          entries.push({ name: `${f} :: ${p.name}`, file: f, textPct, verdict });
+        }
+      }
+      const bd = core.behavioralDiff.classifyBehavioralDiff(entries);
+      const data = await attest(cwd, { headline: bd.headline, total: bd.total, changed: bd.changed, preserved: bd.preserved, unknown: bd.unknown, noise: bd.noise, silentRisk: bd.silentRisk, reviewSet: bd.reviewSet });
+      return { data, wisdom: entries.length ? bd.headline : `no changed top-level functions vs ${baseRef}`, followUp: bd.silentRisk ? [`${bd.silentRisk} SILENT-RISK change(s) — tiny text but behavior CHANGED; review these first (git would wave them through)`] : (bd.noise ? [`${bd.noise} change(s) are pure text-noise (behavior identical) — safe to skim`] : []), confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.equiv.diff",
     category: "audit",
     description: "⚖️ AUTO-EQUIV — the automatic, no-copy-paste version of mneme.equiv.check. For each function changed vs a baseline, it extracts the OLD (from git) and NEW (working tree) automatically, differential-tests each, and reports which refactors are proven behavior-preserving and which silently changed behavior (with the boundary counterexample). Pass {baseline} (default HEAD) and optionally {file}. ★HONEST: extraction is a lexical scanner for top-level function-decl + block-bodied arrow/const (AST-exotic shapes are SKIPPED, never mis-paired); arg types default numeric (use mneme.equiv.check to set types); equivalence is sound for PURE functions, empirical over a boundary-biased sample.",

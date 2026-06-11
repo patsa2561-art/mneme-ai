@@ -393,6 +393,7 @@ export * as trustService from "./trust_service/index.js";
 export * as equivDiff from "./equiv_diff/index.js";
 export * as exfilPath from "./exfil_path/index.js";
 export * as injectionTaint from "./injection_taint/index.js";
+export * as behavioralDiff from "./behavioral_diff/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

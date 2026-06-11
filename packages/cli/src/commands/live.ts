@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath, injectionTaint } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath, injectionTaint, behavioralDiff } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { createServer as httpCreateServer } from "node:http";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
@@ -524,6 +524,38 @@ jobs:
       out(`🚦 Change gate — firewall vs ${baseRef || "(no baseline)"} + scar vaccine vs ${o.working ? "working" : "staged"} diff:\n`);
       out(changeGate.gateReport(g));
       if (g.verdict === "BLOCK") process.exitCode = 2;
+    });
+
+  program.command("bdiff").alias("behavioral-diff").description("🔬 BEHAVIORAL DIFF LENS — the inversion git can't do, ON git: classifies each changed function by TEXT magnitude × proven BEHAVIOR, and surfaces the two traps git misjudges — 🔇 NOISE (big text change, behavior preserved → skim) and 🔴 SILENT-RISK (tiny text change, behavior CHANGED → the one to actually review). Reviews only what behaviorally matters. --baseline <ref> (default HEAD) · --file. --strict exits 2 if any behavior changed.")
+    .option("--baseline <ref>", "compare working tree against this ref (default HEAD)").option("--file <path>", "only this file").option("--strict", "exit 2 if any function's behavior changed")
+    .action((o: { baseline?: string; file?: string; strict?: boolean }) => {
+      const cwd = process.cwd(); const baseRef = o.baseline || "HEAD";
+      let files: string[] = [];
+      if (o.file) files = [o.file.replace(/\\/g, "/")];
+      else { const r = spawnSync("git", ["diff", "--name-only", baseRef], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }); files = r.status === 0 ? r.stdout.split("\n").map((s) => s.trim()).filter((f) => f && /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)) : []; }
+      if (!files.length) { out("🔬 no changed JS/TS files vs " + baseRef + "."); return; }
+      const compile = (src: string) => { const ctx = vmCreateContext(Object.freeze({ Math, Number, String, Boolean, Array, Object, JSON, isNaN, parseInt, parseFloat })); const fn = vmRunInContext("(" + src + ")", ctx, { timeout: 1000 }); if (typeof fn !== "function") throw new Error("nf"); return fn as (...a: unknown[]) => unknown; };
+      const entries: behavioralDiff.BDiffEntry[] = [];
+      for (const f of files) {
+        const oldR = spawnSync("git", ["show", `${baseRef}:${f}`], { cwd, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
+        let newSrc = ""; try { newSrc = readFileSync(join(cwd, f), "utf8"); } catch { continue; }
+        for (const p of equivDiff.pairChanged(oldR.status === 0 ? oldR.stdout : "", newSrc)) {
+          const textPct = behavioralDiff.textChangeRatio(p.oldSrc, p.newSrc);
+          let verdict: behavioralDiff.BehaviorVerdict = "UNKNOWN"; let cex: unknown;
+          try { const spec = (p.args.length ? p.args : ["x"]).map((n) => ({ name: n, type: "number" as const })); const r = equivReceipt.differential(compile(p.oldSrc), compile(p.newSrc), equivReceipt.genInputs(spec)); verdict = r.equivalent ? "PRESERVED" : "CHANGED"; cex = r.counterexample; } catch { verdict = "UNKNOWN"; }
+          entries.push({ name: `${f} :: ${p.name}`, file: f, textPct, verdict, counterexample: cex });
+        }
+      }
+      if (!entries.length) { out("🔬 no top-level functions changed — nothing to behaviorally diff."); return; }
+      const bd = behavioralDiff.classifyBehavioralDiff(entries);
+      out(`🔬 Behavioral diff vs ${baseRef} — git sees text, this sees behavior:\n   ${bd.headline}\n`);
+      const ic = (k: string) => k === "SILENT-RISK" ? "🔴" : k === "CHANGED" ? "🟠" : k === "UNKNOWN" ? "⏭ " : k === "NOISE" ? "🔇" : "✅";
+      for (const e of bd.entries) {
+        const tag = e.klass === "SILENT-RISK" ? " ← tiny text, BEHAVIOR CHANGED (git would wave this through)" : e.klass === "NOISE" ? " ← big text, behavior identical (git made you review noise)" : "";
+        out(`   ${ic(e.klass)} [${e.klass}] ${e.name}  (text ${Math.round(e.textPct * 100)}%)${tag}`);
+      }
+      out(`\n   → review ${bd.reviewSet.length} (SILENT-RISK first); the rest is behavior-preserved. honest: behavior verdict is pure-fn equivalence; UNKNOWN is always routed to review.`);
+      if (o.strict && bd.changed > 0) process.exitCode = 2;
     });
 
   program.command("equiv-diff").alias("auto-equiv").description("⚖️ AUTO-EQUIV — the automatic version of `equiv`: NO copy-paste. For each function you changed, it pulls the OLD (from <baseline>) and NEW (working tree) automatically, differential-tests them, and tells you which refactors are proven behavior-preserving and which silently changed behavior (with the boundary counterexample). --baseline <ref> (default HEAD) · --file <path> to scope. Exit 2 if any changed function's behavior differs.")
