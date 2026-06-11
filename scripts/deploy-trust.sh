@@ -21,7 +21,11 @@ for a in "$@"; do case "$a" in
 esac; done
 [ -z "$HOST" ] && { echo "usage: $0 <user@host> [--key=PATH] [--hostname=H] [--port=N] [--down]"; exit 1; }
 
-if [ -z "$HOSTNAME" ]; then IP="${HOST##*@}"; HOSTNAME="trust.${IP}.nip.io"; fi
+IP="${HOST##*@}"; NIP="trust.${IP}.nip.io"
+# Always keep the zero-DNS nip.io host working; if a custom --hostname is given, bind BOTH
+# (Caddy gets a cert per subject independently — the custom one activates once its A record
+# resolves, while nip.io keeps serving meanwhile, so nothing ever breaks).
+if [ -z "$HOSTNAME" ]; then HOSTNAME="$NIP"; HOSTLINE="$NIP"; else HOSTLINE="$HOSTNAME, $NIP"; fi
 SSH="ssh $KEY -o StrictHostKeyChecking=accept-new $HOST"
 
 if [ "$DOWN" = "1" ]; then
@@ -95,17 +99,18 @@ systemctl enable mneme-trust >/dev/null 2>&1 || true
 systemctl restart mneme-trust
 
 f=/etc/caddy/Caddyfile
-if ! grep -q '# >>> mneme-trust' "\$f"; then
+# replace any existing mneme-trust block (so a re-deploy with a new --hostname takes effect);
+# only our own sentinel-wrapped block is touched — every other Caddy block is left intact.
+sed -i '/# >>> mneme-trust/,/# <<< mneme-trust/d' "\$f"
 cat >> "\$f" <<CADDY
 
 # >>> mneme-trust (added by deploy-trust.sh — safe to remove this block)
-$HOSTNAME {
+$HOSTLINE {
   reverse_proxy 127.0.0.1:$PORT
   encode gzip
 }
 # <<< mneme-trust
 CADDY
-fi
 caddy validate --config "\$f" >/dev/null 2>&1 || { echo "Caddyfile validate failed — not reloading"; exit 1; }
 caddy reload --config "\$f" 2>/dev/null || systemctl reload caddy
 
