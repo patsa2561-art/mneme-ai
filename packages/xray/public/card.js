@@ -126,7 +126,8 @@
     // the key-person list = files with a measured single-author share, worst-first
     let files = (bf.fragileFiles || []).map((x) => ({ file: strv(x && x.file), pct: Math.min(1, Math.max(0, num(x.topAuthorShare))), commits: num(x && x.commits) })).filter((x) => x.file);
     files.sort((a, b) => (b.pct - a.pct) || (b.commits - a.commits) || a.file.localeCompare(b.file));
-    files = files.slice(0, 12);
+    const fragileTotal = files.length;
+    files = files.slice(0, 6);   // journalist cut: the worst 6, not a wall of 12 identical-looking bars
     if (!files.length) return `<div class="riskmap"><div class="rmhead">🔑 Key-person risk</div><div class="rmsub">✓ No single-owner files — knowledge is well spread across the team. Nobody is a single point of failure.</div></div>`;
     const sevColor = (p) => (p >= 0.9 ? "#e11d48" : p >= 0.75 ? "#f97316" : p >= 0.6 ? "#eab308" : "#22c55e");
     const sevWord = (p) => (p >= 0.9 ? "critical" : p >= 0.75 ? "high" : p >= 0.6 ? "watch" : "ok");
@@ -145,7 +146,8 @@
       <div class="rmhead">🔑 Key-person risk — <b>if one person is away, what's exposed</b></div>
       <div class="rmsub">Each bar is a file. <b>Longer &amp; redder = more of it was written by a single person</b> — so it's riskier if they leave. <b>↔N</b> = it changes together with N other files. Worst on top. Measured from git history — nothing invented.</div>
       <div class="rmbars">${rows}</div>
-      <div class="rmleg"><span><i style="background:#e11d48"></i>critical ≥90%</span><span><i style="background:#f97316"></i>high ≥75%</span><span><i style="background:#eab308"></i>watch ≥60%</span><span class="rmsummary">${files.length} owned file(s)${critical ? ` · <b style="color:#be123c">${critical} critical</b>` : ""}</span></div>
+      ${fragileTotal > files.length ? `<div class="rmmore">+ ${fragileTotal - files.length} more single-owner file(s) — showing the ${files.length} highest-risk</div>` : ""}
+      <div class="rmleg"><span><i style="background:#e11d48"></i>critical ≥90%</span><span><i style="background:#f97316"></i>high ≥75%</span><span><i style="background:#eab308"></i>watch ≥60%</span><span class="rmsummary">${fragileTotal} owned file(s)${critical ? ` · <b style="color:#be123c">${critical} critical</b>` : ""}</span></div>
     </div>`;
   }
 
