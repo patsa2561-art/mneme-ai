@@ -420,6 +420,38 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.firewall",
+    category: "audit",
+    description: "🛑 ARCHITECTURAL REGRESSION FIREWALL — the real-time gate for AI-generated change. Mines the contracts the repo upheld at {baseline}, proves which the CURRENT code VIOLATES, weights each by how long it has stood (breaking a contract held for years → critical BLOCK; one days old → info evolution), honours architect-DECLARED policies (.mneme/arch-policy.txt), and returns PASS / WARN / BLOCK. On BLOCK, the calling agent should STOP and surface the violation rather than commit it. Each violation names the offending symbol (counterexample), the commit that established the contract, and how many commits it held through. ★HONEST: a violation is a contract proven to hold at {baseline} and proven violated now (re-checkable, with counterexample) — not a guess; age is measured from git; a BLOCK is a strong signal but a violation can be an intended evolution (ratify by moving the baseline or declaring the policy).",
+    whenToUse: "BEFORE committing/merging AI-generated change: gate it. A BLOCK means the change breaks a load-bearing architectural contract — do not proceed; surface the violation + the contract's history to the user.",
+    triggers: ["architectural firewall", "regression firewall", "does this break the architecture", "pre-merge gate", "block if it breaks a contract", "is this safe to merge"],
+    inputSchema: { type: "object", properties: { baseline: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const cap = 2000;
+      let baseRef = args["baseline"] ? String(args["baseline"]) : "";
+      if (!baseRef) { for (const cand of ["main", "origin/main", "master", "HEAD~1"]) { if (cp.spawnSync("git", ["-C", cwd, "rev-parse", "--verify", "-q", cand], { encoding: "utf8" }).status === 0) { baseRef = cand; break; } } }
+      if (!baseRef) return { data: await attest(cwd, { error: "no baseline" }), wisdom: "could not resolve a baseline ref — pass {baseline}", confidence: ok("low") };
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const fileCache = new Map<string, { path: string; content: string }[]>();
+      const filesAt = (sha: string) => { if (fileCache.has(sha)) return fileCache.get(sha)!; const ls = cp.spawnSync("git", ["-C", cwd, "ls-tree", "-r", "--name-only", sha], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) { fileCache.set(sha, []); return []; } const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN.test(f) && !SKIP.has(f.split("/")[0])).slice(0, cap); const o2: { path: string; content: string }[] = []; for (const f of wanted) { const r = cp.spawnSync("git", ["-C", cwd, "show", `${sha}:${f}`], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) o2.push({ path: f, content: r.stdout }); } fileCache.set(sha, o2); return o2; };
+      const dlog = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H%x09%aI"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+      const hist = dlog.status === 0 ? dlog.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, date] = l.split("\t"); return { sha, date }; }) : [];
+      const headDate = hist.length ? new Date(hist[hist.length - 1].date).getTime() : Date.now();
+      const ageResolver = (rule: string) => { if (hist.length < 2) return null; const r = core.archLineage.establishedIndex(hist.length, (i: number) => core.archBisect.invariantHoldsAt(filesAt(hist[i].sha), rule)); if (r.establishedAt === null) return null; const c = hist[r.establishedAt]; return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt }; };
+      let policyText = ""; const polPath = path.join(cwd, ".mneme", "arch-policy.txt"); try { if (fs.existsSync(polPath)) policyText = fs.readFileSync(polPath, "utf8"); } catch { /* */ }
+      const policies = core.archFirewall.parsePolicy(policyText);
+      // current files
+      const cur: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && cur.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { cur.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const v = core.archFirewall.firewall(filesAt(baseRef), cur, { policies, ageResolver });
+      const data = await attest(cwd, { verdict: v.verdict, baseline: baseRef, critical: v.critical, warn: v.warn, info: v.info, checkedContracts: v.checkedContracts, violations: v.violations });
+      return { data, wisdom: core.archFirewall.firewallReport(v).split("\n").slice(0, 2 + v.violations.length * 2).join(" · "), followUp: v.verdict === "BLOCK" ? ["BLOCK — do NOT commit this change; it breaks a load-bearing contract. Surface the violation + the contract's age to the user, or ratify by moving the baseline."] : [], confidence: ok(v.verdict === "BLOCK" ? "high" : "medium") };
+    },
+  },
+  {
     name: "mneme.arch.dead_paths",
     category: "audit",
     description: "🪦 ARCHITECTURAL DEAD-PATH DETECTOR — data-flow smells the compiler can't see, from the cross-layer graph: WRITE-ONLY tables (written but never read — a dead write or a deleted reader), READ-ONLY tables (read but never written — external/seed data or a missing writer), and functions reachable from NO API endpoint (architectural dead-code candidates). Deterministic, no LLM. ★HONEST: write/read-only reflects a table's WRITES_TO/READS edges — but a table read AND written inside ONE function registers only as written (the graph emits one relation per function-table pair), so it's a smell to verify, not a verdict; unreachability is only computed when endpoints exist, and 'unreachable from an endpoint' may be a non-HTTP entrypoint (CLI/cron/export), so it's a candidate, not proven dead.",

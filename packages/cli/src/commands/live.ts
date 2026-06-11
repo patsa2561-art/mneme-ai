@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -439,6 +439,48 @@ export function registerLiveCommands(program: Command): void {
       out(`      ${r.reason}`);
       out(`      inspect: git show ${c.sha.slice(0, 10)}`);
       process.exitCode = 2;
+    });
+
+  program.command("arch-firewall").alias("regression-firewall").description("🛑 ARCHITECTURAL REGRESSION FIREWALL — the gate for AI-generated change. Mines the contracts your repo upheld at <baseline>, proves which the current code VIOLATES, weights each by how long it has stood (breaking a 2-year contract = critical BLOCK; a 3-day one = info), honours architect-DECLARED policies (.mneme/arch-policy.txt or --policy), and exits non-zero on BLOCK — drop it in CI as a pre-merge gate. Each violation names the offending symbol + the commit that established the contract + how many commits it held through.")
+    .option("--baseline <ref>", "the known-good ref to hold HEAD against (default: main)").option("--policy <file>", "policy DSL file (default .mneme/arch-policy.txt)").option("--max <n>", "max files per sampled commit (default 2000)")
+    .action((o: { baseline?: string; policy?: string; max?: string }) => {
+      const cwd = process.cwd(); const cap = o.max ? parseInt(o.max, 10) : 2000;
+      // resolve baseline ref (default main → origin/main → HEAD~1)
+      let baseRef = o.baseline;
+      if (!baseRef) { for (const cand of ["main", "origin/main", "master", "HEAD~1"]) { if (spawnSync("git", ["rev-parse", "--verify", "-q", cand], { cwd, encoding: "utf8" }).status === 0) { baseRef = cand; break; } } }
+      if (!baseRef) { out("✗ could not resolve a baseline ref — pass --baseline <ref>."); process.exitCode = 2; return; }
+      const fileCache = new Map<string, crossLayerGraph.SourceFile[]>();
+      const filesAt = (sha: string): crossLayerGraph.SourceFile[] => {
+        if (fileCache.has(sha)) return fileCache.get(sha)!;
+        const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+        if (ls.status !== 0) { fileCache.set(sha, []); return []; }
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+        const fs2: crossLayerGraph.SourceFile[] = [];
+        for (const f of wanted) { const r = spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) fs2.push({ path: f, content: r.stdout }); }
+        fileCache.set(sha, fs2); return fs2;
+      };
+      // deep history for the age resolver (oldest→newest); only sampled commits are actually read.
+      const dlog = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%aI"], { cwd, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+      const hist = dlog.status === 0 ? dlog.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, date] = l.split("\t"); return { sha, date }; }) : [];
+      const headDate = hist.length ? new Date(hist[hist.length - 1].date).getTime() : Date.now();
+      const ageResolver = (rule: string): archFirewall.AgeInfo | null => {
+        if (hist.length < 2) return null;
+        const r = archLineage.establishedIndex(hist.length, (i) => archBisect.invariantHoldsAt(filesAt(hist[i].sha), rule));
+        if (r.establishedAt === null) return null;
+        const c = hist[r.establishedAt];
+        return { ageDays: Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000)), establishedAt: c.sha.slice(0, 10), heldThroughCommits: hist.length - r.establishedAt };
+      };
+      // policies
+      let policyText = ""; const polPath = o.policy || join(cwd, ".mneme", "arch-policy.txt");
+      try { if (existsSync(polPath)) policyText = readFileSync(polPath, "utf8"); } catch { /* */ }
+      const policies = archFirewall.parsePolicy(policyText);
+      out(`🛑 Architectural firewall — holding HEAD against ${baseRef}${policies.length ? ` + ${policies.length} declared policy(ies)` : ""}…`);
+      const v = archFirewall.firewall(filesAt(baseRef), scanWithDocs(cwd), { policies, ageResolver });
+      out("");
+      out(archFirewall.firewallReport(v));
+      out("");
+      out(`   honest: every violation is a contract proven to hold at ${baseRef} + proven violated now — re-checkable, not a guess; it may be an intended evolution (ratify by moving the baseline or declaring the policy).`);
+      if (v.verdict === "BLOCK") process.exitCode = 2;
     });
 
   program.command("dead-paths").alias("dead-code").description("🪦 ARCHITECTURAL DEAD-PATH DETECTOR — data-flow smells the compiler can't see: WRITE-ONLY tables (written, never read — a dead write or a deleted reader), READ-ONLY tables (read, never written), and functions reachable from NO API endpoint (architectural dead-code candidates). Deterministic from the cross-layer graph.")
