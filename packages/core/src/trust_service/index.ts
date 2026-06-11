@@ -27,7 +27,8 @@ import { vaccinate, BUILTIN_SCARS, type Scar } from "../scar_vaccine/index.js";
 import { firewall, loadPolicy } from "../arch_firewall/index.js";
 import { composeGate } from "../change_gate/index.js";
 import { scoreReputation, deriveOutcomes } from "../agent_ledger/index.js";
-import { type SourceFile } from "../cross_layer_graph/index.js";
+import { securityAudit } from "../security_audit/index.js";
+import { buildCrossLayerGraph, type SourceFile } from "../cross_layer_graph/index.js";
 
 export interface TrustRequest { method: string; path: string; body: Record<string, unknown> }
 export interface TrustResponse { status: number; json: Record<string, unknown> }
@@ -38,6 +39,7 @@ export const TRUST_ENDPOINTS = [
   { method: "POST", path: "/firewall/check", what: "architectural firewall (VERIFY) — {baselineFiles, currentFiles, policy?}" },
   { method: "POST", path: "/change-gate", what: "the one-call gate (PREVENT+VERIFY) — {baselineFiles, currentFiles, code, files, policy?}" },
   { method: "POST", path: "/agent-rep", what: "agent reputation (ACCOUNT) — {records?} | {commits?}" },
+  { method: "POST", path: "/security", what: "AppSec posture (authz + exfil + injection) — {files}" },
 ];
 
 const asFiles = (v: unknown): SourceFile[] => Array.isArray(v) ? (v as unknown[]).map((f) => { const o = (f ?? {}) as Record<string, unknown>; return { path: String(o["path"] ?? ""), content: String(o["content"] ?? "") }; }).filter((f) => f.path) : [];
@@ -72,6 +74,12 @@ export function routeTrust(req: TrustRequest, opts?: { today?: string }): TrustR
     const scar = (body["code"] || body["files"]) ? vaccinate({ code: String(body["code"] ?? ""), files: asStrings(body["files"]) }, scars) : null;
     const g = composeGate(fw, scar);
     return { status: 200, json: { verdict: g.verdict, reasons: g.reasons, firewall: g.firewall, scar: g.scar } };
+  }
+
+  if (path === "/security") {
+    const files = asFiles(body["files"]);
+    const audit = securityAudit(buildCrossLayerGraph(files), files);
+    return { status: 200, json: { verdict: audit.verdict, posture: audit.posture, counts: audit.counts, findings: audit.findings } };
   }
 
   if (path === "/agent-rep") {

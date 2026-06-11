@@ -652,6 +652,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.security.audit",
+    category: "audit",
+    description: "🛡 SECURITY POSTURE — the AppSec triad in one call. Runs all three deterministic taint checks on the cross-layer graph and fuses them into one verdict + posture: AUTHZ GAP (unguarded sensitive WRITE) + EXFIL PATH (sensitive READ to the response with no redaction) + INJECTION (request input → dangerous sink with no sanitizer). Returns verdict CLEAR / REVIEW / AT-RISK + a posture 0-100 + the unified finding list. The one answer to 'is this codebase safe for an AI to ship from?' ★HONEST: a RELATIVE posture from finding counts (a clean scan ≠ proof of security; a low score ≠ a breach), and each finding is a high-signal CANDIDATE (lexical taint), not a proven exploit. Composes mneme.review (authz) + mneme.arch.exfil + mneme.arch.injection — surfaces where to look first, does not certify.",
+    whenToUse: "Before shipping AI-generated code, or auditing a repo's AppSec exposure: one call for the write/read/input security posture across the whole codebase.",
+    triggers: ["security audit", "appsec", "is this codebase secure", "security posture", "owasp", "vulnerabilities", "is this safe to ship"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const a = core.securityAudit.securityAudit(core.crossLayerGraph.buildCrossLayerGraph(files), files);
+      const data = await attest(cwd, { verdict: a.verdict, posture: a.posture, counts: a.counts, findings: a.findings.slice(0, 50) });
+      return { data, wisdom: `🛡 ${a.verdict} · ${a.posture}/100 · injection ${a.counts.injection} · authz ${a.counts.authz} · exfil ${a.counts.exfil}`, followUp: a.verdict === "AT-RISK" ? ["AT-RISK — fix the injection/authz findings before shipping (parameterize input, add an auth guard)"] : a.verdict === "REVIEW" ? ["REVIEW — add redaction/projection before returning sensitive data"] : [], confidence: ok(a.verdict === "CLEAR" ? "medium" : "high") };
+    },
+  },
+  {
     name: "mneme.arch.injection",
     category: "audit",
     description: "💉 INJECTION TAINT PATH — the input-side of the AppSec triad (authz=write, exfil=read, this=input). Finds functions REACHABLE FROM AN ENDPOINT that feed request input (req.body/params/query) into a dangerous SINK — raw SQL query, exec/eval, child_process, fs, new Function — with NO sanitizer / parameterization / validation on the path → SQL injection, command injection, SSRF, path traversal. The cross-layer graph supplies the filter a linter can't: the sink is reachable from an HTTP endpoint, so it's actually exposed to user input (not a dead utility). ★HONEST: a lexical taint heuristic — flags endpoint-reachable + request-input + dangerous-sink + no-sanitizer-token = a high-signal CANDIDATE, NOT a proof of exploitability (the input may not flow into the sink, or sanitization may use a name the vocabulary misses). Higher recall than authz/exfil by design; review each.",

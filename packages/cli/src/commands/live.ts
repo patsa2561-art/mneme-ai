@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath, injectionTaint, behavioralDiff } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath, injectionTaint, behavioralDiff, securityAudit } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { createServer as httpCreateServer } from "node:http";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
@@ -749,6 +749,18 @@ jobs:
       out("");
       out(`   honest: every violation is a contract proven to hold at ${baseRef} + proven violated now — re-checkable, not a guess; it may be an intended evolution (ratify by moving the baseline or declaring the policy).`);
       if (v.verdict === "BLOCK") process.exitCode = 2;
+    });
+
+  program.command("security").alias("appsec").description("🛡 SECURITY POSTURE — the AppSec triad in one pass: AUTHZ GAP (unguarded sensitive WRITE) + EXFIL PATH (sensitive READ to response, no redaction) + INJECTION (request input → dangerous sink, no sanitizer). One verdict (CLEAR / REVIEW / AT-RISK) + a posture 0-100. Exit 2 if AT-RISK.")
+    .action(() => {
+      const cwd = process.cwd(); const files = scanWithDocs(cwd);
+      const a = securityAudit.securityAudit(crossLayerGraph.buildCrossLayerGraph(files), files);
+      const ic = a.verdict === "AT-RISK" ? "🛑" : a.verdict === "REVIEW" ? "🟠" : "✅";
+      out(`${ic} SECURITY POSTURE: ${a.verdict} · ${a.posture}/100  (injection ${a.counts.injection} · authz ${a.counts.authz} · exfil ${a.counts.exfil})`);
+      if (a.findings.length) { out(""); for (const f of a.findings.slice(0, 25)) out(`   ${f.severity === "critical" ? "🔴" : "🟠"} [${f.category}] ${f.where} — ${f.detail}`); if (a.findings.length > 25) out(`   … + ${a.findings.length - 25} more`); }
+      else out("   no AppSec findings across authz / exfil / injection.");
+      out(`\n   honest: a relative posture from finding counts — a clean scan is not a proof of security; each finding is a high-signal candidate (lexical taint), not a proven exploit.`);
+      if (a.verdict === "AT-RISK") process.exitCode = 2;
     });
 
   program.command("injection-paths").alias("taint").description("💉 INJECTION TAINT PATH — the input-side AppSec check: functions REACHABLE FROM AN ENDPOINT that feed request input (req.body/params/query) into a dangerous SINK (raw SQL / exec / eval / child_process / fs / new Function) with NO sanitizer/parameterization on the path → SQLi / command-injection / SSRF / path-traversal. The graph filter (endpoint-reachable) cuts the noise a linter can't. Exit 2 if any path is found.")
