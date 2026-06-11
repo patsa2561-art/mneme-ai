@@ -36,10 +36,12 @@ echo "→ deploying Trust Gateway to $HOST  (port $PORT, https://$HOSTNAME) — 
 $SSH bash -s <<REMOTE
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-mkdir -p "$DIR"; cd "$DIR"
-[ -f package.json ] || echo '{"name":"mneme-trust-host","private":true,"type":"module"}' > package.json
-echo "  installing mneme-ai@latest (prebuilt — no compile)…"
-npm install --ignore-scripts --no-audit --no-fund -q mneme-ai@latest @mneme-ai/core@latest
+# fresh, dedicated dir — never a leftover repo clone (a stray monorepo package.json
+# would make npm install resolve workspaces instead of a clean node_modules)
+rm -rf "$DIR"; mkdir -p "$DIR"; cd "$DIR"
+echo '{"name":"mneme-trust-host","private":true,"type":"module"}' > package.json
+echo "  installing @mneme-ai/core@latest (prebuilt — no compile)…"
+npm install --ignore-scripts --no-audit --no-fund -q @mneme-ai/core@latest
 
 # standalone server — imports the published @mneme-ai/core; no daemon, no CLI bootstrap
 cat > "$DIR/trust-server.mjs" <<'SERVER'
