@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -354,6 +354,23 @@ export function registerLiveCommands(program: Command): void {
       else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
       if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
+    });
+
+  program.command("coupling").alias("hidden-deps").description("🔗 CHANGE-COUPLING — the HIDDEN dependencies the code conceals but git history reveals: files that always change together. Splits them into STRUCTURAL (the cross-layer graph explains it) vs 🔴 HIDDEN (no graph link — an implicit dependency nothing in the code warns you about). --since <ref> (default HEAD~300).")
+    .option("--since <ref>").option("--support <n>", "min co-changes (default 4)").option("--confidence <n>", "min confidence 0-1 (default 0.5)").option("--top <n>")
+    .action((o: { since?: string; support?: string; confidence?: string; top?: string }) => {
+      const cwd = process.cwd(); const range = o.since ? `${o.since}..HEAD` : "HEAD~300..HEAD";
+      const log = spawnSync("git", ["log", "--no-merges", "--format=%x1e", "--name-only", range], { cwd, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+      if (log.status !== 0) { out(`✗ git log failed for ${range}`); process.exitCode = 2; return; }
+      const changesets = log.stdout.split("\x1e").map((block) => block.split("\n").map((s) => s.trim()).filter((s) => s && SCAN_EXT.test(s))).filter((c) => c.length > 1 && c.length < 60);   // skip huge sweeping commits
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const r = changeCoupling.changeCoupling(changesets, g, { minSupport: o.support ? parseInt(o.support, 10) : 4, minConfidence: o.confidence ? parseFloat(o.confidence) : 0.5, top: o.top ? parseInt(o.top, 10) : 15 });
+      if (!r.pairs.length) { out("🔗 no significant change-coupling found in the window (try a wider --since or lower --support)."); return; }
+      out(`🔗 Change-coupling — ${r.hidden.length} HIDDEN dependency(ies) the code doesn't show:`);
+      for (const p of r.hidden.slice(0, 12)) out(`   🔴 ${p.a}  ⇄  ${p.b}   (changed together ${p.coChanges}× · ${Math.round(p.confidence * 100)}% confidence · NO structural link)`);
+      const structural = r.pairs.filter((p) => p.structural);
+      if (structural.length) { out(`\n   ✅ structural (graph explains these) — ${structural.length}:`); for (const p of structural.slice(0, 6)) out(`      ${p.a} ⇄ ${p.b}  (${p.coChanges}×)`); }
+      out("\n   honest: co-change is a measured correlation; HIDDEN = no structural link FOUND — a high-signal candidate to verify, not proven causation.");
     });
 
   program.command("hotspots").alias("refactor-targets").description("🔥 CROSS-LAYER HOTSPOTS — files that change OFTEN (git churn) AND are entangled across layers (graph) = the highest-leverage refactor targets. --since <ref> for the churn window (default: last 200 commits).")

@@ -420,6 +420,30 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.coupling",
+    category: "audit",
+    description: "🔗 CHANGE-COUPLING — surface the HIDDEN dependencies the code conceals but git history reveals. Files that always change together carry a dependency; the cross-layer graph splits them into STRUCTURAL (the graph explains it — a write to a table another file defines, a call) vs HIDDEN (high co-change confidence but NO graph link — an implicit dependency nothing in the code, no import or call, warns you about — change one, you must remember the other). Pass {since}. ★HONEST: co-change is a measured CORRELATION (support + confidence), not proven causation; HIDDEN means no structural link was FOUND — a high-signal candidate to verify. Needs both history AND a deterministic cross-layer graph, which is why it's rare.",
+    whenToUse: "Before changing a file, or auditing architecture: find the files secretly bound to it that the code doesn't reveal — so you don't break a far-away thing with no visible connection.",
+    triggers: ["hidden dependencies", "what changes together", "change coupling", "implicit dependencies", "files secretly coupled", "what else should i change"],
+    inputSchema: { type: "object", properties: { since: { type: "string" }, support: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const range = args["since"] ? `${String(args["since"])}..HEAD` : "HEAD~300..HEAD";
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const log = cp.spawnSync("git", ["log", "--no-merges", "--format=%x1e", "--name-only", range], { cwd, encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: "git log failed" }), wisdom: `git log failed for ${range}`, confidence: ok("low") };
+      const changesets = log.stdout.split("\x1e").map((b) => b.split("\n").map((s) => s.trim()).filter((s) => s && SCAN.test(s))).filter((c) => c.length > 1 && c.length < 60);
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const r = core.changeCoupling.changeCoupling(changesets, g, { minSupport: Number(args["support"]) || 4, top: 20 });
+      const data = await attest(cwd, { hidden: r.hidden.slice(0, 20), structuralCount: r.pairs.filter((p) => p.structural).length, total: r.pairs.length });
+      return { data, wisdom: r.hidden.length ? `🔗 ${r.hidden.length} HIDDEN dependency(ies)${r.hidden[0] ? ` · top: ${r.hidden[0].a} ⇄ ${r.hidden[0].b} (${r.hidden[0].coChanges}×, no structural link)` : ""}` : `no hidden change-coupling found (${r.pairs.length} structural pairs)`, followUp: r.hidden.length ? ["these files change together but the code shows no link — verify the implicit dependency before changing one in isolation"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.arch.hotspots",
     category: "audit",
     description: "🔥 CROSS-LAYER HOTSPOTS — the ranked refactor hit-list: files that change OFTEN (git churn) AND are entangled ACROSS layers (their code reaches the DB / API / business rules). Sharper than the classic churn × complexity — these are where a change is most likely to ripple across layers and break something far away. Pass {since} for the churn window. ★HONEST: churn × cross-layer-coupling is a PRIORITIZATION signal — a candidate to stabilize, not a proof a file is bad; the refactor judgment is still yours.",
