@@ -484,6 +484,38 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.scar.mine",
+    category: "audit",
+    description: "⛏ SCAR MINING — derive the scar corpus from THIS repo's history so the vaccine carries the org's OWN past pain (the data flywheel made real). Scans fix/revert/hotfix commits + their same-file mistake ancestors and induces scar candidates (triggers = what the mistake added, antibody = what the fix added, lesson = the fix message). Writes them to .mneme/scars.mined.json for review (mine → review → use, like invariants --mine). Pass {maxCommits} to set the window. ★HONEST: a mined scar is a CORRELATION in git (a fix followed a same-file change) — a candidate to review, NOT proven causation; tokens are lexical; curate into .mneme/scars.json before trusting.",
+    whenToUse: "Once per repo (and periodically): bootstrap the org's scar corpus from its real history, then review the candidates.",
+    triggers: ["mine scars", "build scar corpus", "learn from our past incidents", "derive scars from history", "bootstrap the vaccine"],
+    inputSchema: { type: "object", properties: { maxCommits: { type: "number" }, max: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const win = Number(args["maxCommits"]) || 200;
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const log = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H", "-n", String(win)], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: "no git history" }), wisdom: "not a git repo / no history", confidence: ok("low") };
+      const shas = log.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+      const IDENT = /[A-Za-z_][A-Za-z0-9_]{3,}/g;
+      const history: { sha: string; message: string; files: string[]; added: string[] }[] = [];
+      for (const sha of shas) {
+        const show = cp.spawnSync("git", ["-C", cwd, "show", sha, "--no-color", "--format=%x1f%s%x1f", "--unified=0"], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+        if (show.status !== 0) { history.push({ sha, message: "", files: [], added: [] }); continue; }
+        const parts = show.stdout.split("\x1f"); const message = (parts[1] || "").trim(); const body = parts.slice(2).join("\x1f");
+        const files: string[] = []; const added: string[] = [];
+        for (const line of body.split("\n")) { if (line.startsWith("+++ b/")) { const f = line.slice(6).trim(); if (f && SCAN.test(f) && !SKIP.has(f.split("/")[0])) files.push(f); } else if (line.startsWith("+") && !line.startsWith("+++")) { const m = line.slice(1).match(IDENT); if (m) for (const t of m) added.push(t); } }
+        history.push({ sha, message, files, added });
+      }
+      const scars = core.scarMining.mineScars(history, { max: Number(args["max"]) || 40 });
+      try { if (scars.length) { fs.mkdirSync(path.join(cwd, ".mneme"), { recursive: true }); fs.writeFileSync(path.join(cwd, ".mneme", "scars.mined.json"), JSON.stringify(scars, null, 2), "utf8"); } } catch { /* */ }
+      const data = await attest(cwd, { mined: scars.length, scarsFile: ".mneme/scars.mined.json", scars: scars.slice(0, 20) });
+      return { data, wisdom: scars.length ? `⛏ mined ${scars.length} scar candidate(s) → .mneme/scars.mined.json (review, then copy into .mneme/scars.json)${scars[0] ? ` · top: ${scars[0].id} (${scars[0].triggers.join("/")} → ${scars[0].antibodies.join("/")})` : ""}` : "no scar pairs found in history", followUp: scars.length ? ["review .mneme/scars.mined.json (mined scars are git correlations, not proven causation) and curate the good ones into .mneme/scars.json"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.scar.check",
     category: "audit",
     description: "🧬 SCAR-TISSUE VACCINE — before you (an AI agent) write/commit a change, check it against the organisation's PAST mistakes so you don't confidently repeat one with zero institutional memory. Pass the proposed change {code, files}. It FIRES the hard-won lesson when the change has the SHAPE of a past bug (its triggers) AND lacks the fix (the antibody), and STAYS SILENT when the antibody is already present or the change is novel — that asymmetry is the point (not 'you touched payments', but 'you touched payments in the shape that double-charged customers in 2023 and haven't added the idempotency key'). The scar corpus = builtin classics + the org's .mneme/scars.json (in production, mined from Mneme's regret / revert / incident-correlation / negative-knowledge ledger). ★HONEST: a LEXICAL-shape heuristic — a high-signal candidate to heed, NOT proof the bug is present (layer semantic similarity in production); a FIRE means 'look, you may be repeating this', and the antibody asymmetry keeps it from being noise.",

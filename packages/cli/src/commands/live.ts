@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
@@ -539,6 +539,36 @@ jobs:
       catch (e) { out(`✗ could not evaluate: ${(e as Error).message.slice(0, 140)}`); process.exitCode = 2; return; }
       if (receipt.equivalent) { out(`⚖️ EQUIVALENCE RECEIPT — old ≡ new over ${receipt.inputsTested} inputs (incl. boundaries).`); out(`   oldHash=${receipt.oldHash} newHash=${receipt.newHash} · attach to the PR; CI trusts the receipt, not a promise.`); out(`   honest: empirical over a boundary-biased sample (strong signal, not a formal proof); sound for PURE functions.`); }
       else { const c = receipt.counterexample!; out(`❌ NOT EQUIVALENT — behavior changed.`); out(`   counterexample: fn(${c.input.join(", ")}) → old=${JSON.stringify(c.old)}  new=${JSON.stringify(c.new)}`); out(`   (a boundary input an example-based unit test usually misses)`); process.exitCode = 2; }
+    });
+
+  program.command("scar-mine").alias("mine-scars").description("⛏ SCAR MINING — derive the scar corpus from THIS repo's history (fix/revert/hotfix commits + their mistake ancestors) so the vaccine carries your OWN past pain, not just builtin classics. Writes candidates to .mneme/scars.mined.json for review — copy the good ones into .mneme/scars.json. The data flywheel made real.")
+    .option("--max-commits <n>", "history window to scan (default 200)").option("--max <n>", "max scars to emit (default 40)")
+    .action((o: { "maxCommits"?: string; max?: string }) => {
+      const cwd = process.cwd(); const win = o["maxCommits"] ? parseInt(o["maxCommits"], 10) : 200;
+      const log = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H", `-n`, String(win)], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      if (log.status !== 0) { out("✗ not a git repo / no history."); process.exitCode = 2; return; }
+      const shas = log.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+      if (shas.length < 2) { out("⛏ need ≥2 commits to mine scars."); return; }
+      out(`⛏ Scanning ${shas.length} commits for scar pairs (fix/revert → mistake)…`);
+      const history: scarMining.MineCommit[] = [];
+      const IDENT = /[A-Za-z_][A-Za-z0-9_]{3,}/g;
+      for (const sha of shas) {
+        const show = spawnSync("git", ["show", sha, "--no-color", "--format=%x1f%s%x1f", "--unified=0"], { cwd, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
+        if (show.status !== 0) { history.push({ sha, message: "", files: [], added: [] }); continue; }
+        const parts = show.stdout.split("\x1f"); const message = (parts[1] || "").trim(); const body = parts.slice(2).join("\x1f");
+        const files: string[] = []; const added: string[] = [];
+        for (const line of body.split("\n")) {
+          if (line.startsWith("+++ b/")) { const f = line.slice(6).trim(); if (f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])) files.push(f); }
+          else if (line.startsWith("+") && !line.startsWith("+++")) { const m = line.slice(1).match(IDENT); if (m) for (const t of m) added.push(t); }
+        }
+        history.push({ sha, message, files, added });
+      }
+      const scars = scarMining.mineScars(history, { max: o.max ? parseInt(o.max, 10) : 40 });
+      if (!scars.length) { out("⛏ no scar pairs found (no fix/revert commit shared a file with a recent ancestor + introduced new tokens)."); return; }
+      const dir = join(cwd, ".mneme"); try { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, "scars.mined.json"), JSON.stringify(scars, null, 2), "utf8"); } catch (e) { out(`✗ write failed: ${(e as Error).message.slice(0, 120)}`); process.exitCode = 2; return; }
+      out(`\n⛏ mined ${scars.length} scar candidate(s) → .mneme/scars.mined.json (REVIEW, then copy good ones into .mneme/scars.json):`);
+      for (const s of scars.slice(0, 8)) out(`   ${s.severity === "critical" ? "⛔" : "🔴"} ${s.id} — ${s.title}\n        triggers: ${s.triggers.join(", ")}  ·  antibody: ${s.antibodies.join(", ")}`);
+      out(`\n   honest: a mined scar is a CORRELATION in git (a fix followed a same-file change), a candidate to review — not proven causation. Curate before trusting.`);
     });
 
   program.command("scar-check").alias("vaccine").description("🧬 SCAR-TISSUE VACCINE — before a change lands, check it against the org's PAST mistakes (a scar corpus: builtin classics + .mneme/scars.json). FIRES the hard-won lesson when a change has the SHAPE of a past bug AND lacks the fix (antibody); STAYS QUIET when the antibody is already present. Checks the staged diff (or --working). --strict exits 2 on a fire (pre-commit gate).")
