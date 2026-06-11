@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -354,6 +354,20 @@ export function registerLiveCommands(program: Command): void {
       else out("\n   (no cross-service calls matched — services may use a gateway prefix or dynamic URLs)");
       if (g.dangling.length) { out(`\n   ⚠️ DANGLING consumers (${g.dangling.length}) — calls to an endpoint NO service here produces (broken contract or external API):`); for (const d of g.dangling.slice(0, 15)) out(`      ${d.service}: ${d.method} ${d.path}`); }
       out("\n   honest: matched by URL path (params → *), deterministic — a contract map to verify, not a proven runtime call.");
+    });
+
+  program.command("hotspots").alias("refactor-targets").description("🔥 CROSS-LAYER HOTSPOTS — files that change OFTEN (git churn) AND are entangled across layers (graph) = the highest-leverage refactor targets. --since <ref> for the churn window (default: last 200 commits).")
+    .option("--since <ref>", "churn window start (default HEAD~200)").option("--top <n>", "show top N (default 12)").action((o: { since?: string; top?: string }) => {
+      const cwd = process.cwd(); const range = o.since ? `${o.since}..HEAD` : "HEAD~200..HEAD";
+      const log = spawnSync("git", ["log", "--format=", "--name-only", "--no-merges", range], { cwd, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+      const churn: Record<string, number> = {};
+      if (log.status === 0) for (const f of log.stdout.split("\n").map((s) => s.trim()).filter((s) => s && SCAN_EXT.test(s))) churn[f] = (churn[f] || 0) + 1;
+      const g = crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd));
+      const ranked = hotspots.rankHotspots(hotspots.fileCoupling(g), churn, { top: o.top ? parseInt(o.top, 10) : 12 });
+      if (!ranked.length) { out("🔥 no cross-layer hotspots (need files that both changed in the window AND are cross-layer coupled)."); return; }
+      out(`🔥 Cross-layer hotspots (churn × cross-layer coupling) — top ${ranked.length} refactor targets:`);
+      for (const h of ranked) { const ic = h.band === "CRITICAL" ? "🔴" : h.band === "HIGH" ? "🟠" : "🟡"; out(`   ${ic} ${h.file}  — ${h.churn}× changed · ${h.couplingEdges} cross-layer edges${h.keystones ? " · " + h.keystones + " keystone(s)" : ""}`); }
+      out("   honest: churn × cross-layer coupling = a prioritization signal — a candidate to stabilize, not a proof it's bad.");
     });
 
   program.command("decay").alias("entanglement").description("📈 ARCHITECTURAL DECAY VELOCITY — is your architecture getting MORE entangled over time? Samples commits since --since, replays the cross-layer graph at each, and reports the trend (ERODING/STABLE/IMPROVING) + coupling velocity per commit + the worst-step commit.")

@@ -420,6 +420,29 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.hotspots",
+    category: "audit",
+    description: "🔥 CROSS-LAYER HOTSPOTS — the ranked refactor hit-list: files that change OFTEN (git churn) AND are entangled ACROSS layers (their code reaches the DB / API / business rules). Sharper than the classic churn × complexity — these are where a change is most likely to ripple across layers and break something far away. Pass {since} for the churn window. ★HONEST: churn × cross-layer-coupling is a PRIORITIZATION signal — a candidate to stabilize, not a proof a file is bad; the refactor judgment is still yours.",
+    whenToUse: "When deciding what to refactor or harden first — surface the files that are both volatile and cross-layer entangled.",
+    triggers: ["refactor targets", "hotspots", "what should i refactor", "churn and coupling", "most entangled files", "where is the risk concentrated"],
+    inputSchema: { type: "object", properties: { since: { type: "string" }, top: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const range = args["since"] ? `${String(args["since"])}..HEAD` : "HEAD~200..HEAD";
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const churn: Record<string, number> = {};
+      try { const log = cp.spawnSync("git", ["log", "--format=", "--name-only", "--no-merges", range], { cwd, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 }); if (log.status === 0) for (const f of log.stdout.split("\n").map((s) => s.trim()).filter((s) => s && SCAN.test(s))) churn[f] = (churn[f] || 0) + 1; } catch { /* */ }
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const g = core.crossLayerGraph.buildCrossLayerGraph(files);
+      const ranked = core.hotspots.rankHotspots(core.hotspots.fileCoupling(g), churn, { top: Number(args["top"]) || 12 });
+      const data = await attest(cwd, { hotspots: ranked.map((h) => ({ file: h.file, churn: h.churn, couplingEdges: h.couplingEdges, keystones: h.keystones, band: h.band })) });
+      return { data, wisdom: ranked.length ? `${ranked.length} cross-layer hotspot(s) · top: ${ranked[0].file} (${ranked[0].churn}× changed · ${ranked[0].couplingEdges} cross-layer edges)` : "no cross-layer hotspots (need files that both changed AND are cross-layer coupled)", followUp: ranked.filter((h) => h.band === "CRITICAL").length ? ["the CRITICAL hotspots are both volatile and entangled — stabilize/refactor these first"] : [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.arch.decay",
     category: "audit",
     description: "📈 ARCHITECTURAL DECAY VELOCITY — is the architecture getting MORE entangled over time? Samples commits since {since}, replays the cross-layer graph at each, and returns the trend (ERODING/STABLE/IMPROVING) + cross-layer coupling velocity per commit + the worst-step commit (and author). The temporal-trend counterpart to bisect. ★HONEST: a trend over sampled commits, not a forecast and not a value judgment — more coupling isn't always bad; the signal is the RATE and which commit spiked it, computed deterministically.",
