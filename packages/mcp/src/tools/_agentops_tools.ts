@@ -484,6 +484,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.agent.reputation",
+    category: "audit",
+    description: "📊 AGENT REPUTATION (the ACCOUNT layer) — who ships code that LASTS? Derives each author/agent's change outcomes from git (a `git revert` writes a 'This reverts commit <sha>' trailer → reverted; an aged, unreverted change → survived; too-recent → pending) and scores reputation as the Wilson-95% LOWER bound on survival rate — so a small or unproven author scores LOW by construction and can't inflate it with a few lucky commits. Pass {maxCommits, matureDays}. Distinct from `mneme.creditscore` (HONESTY — does the agent tell the truth?); this is DURABILITY (does the agent's code last?). ★HONEST: 'author' from git is a proxy (human/AI/squash); 'survived' = not-yet-reverted past the maturity window, NOT proven-good; revert detection is git's deterministic trailer. A track-record signal, not a verdict on any single change.",
+    whenToUse: "When choosing which agent to delegate to, or surfacing a track-record: rank authors/agents by how often their changes survive vs get reverted, computed from real git history.",
+    triggers: ["agent reputation", "who ships durable code", "track record", "survival rate", "whose changes get reverted", "agent durability"],
+    inputSchema: { type: "object", properties: { maxCommits: { type: "number" }, matureDays: { type: "number" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const win = Number(args["maxCommits"]) || 1500; const mature = Number(args["matureDays"]) || 30;
+      const log = cp.spawnSync("git", ["-C", cwd, "log", "--no-merges", "-n", String(win), "--format=%H%x1f%an%x1f%aI%x1f%B%x1e"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: "no git history" }), wisdom: "not a git repo / no history", confidence: ok("low") };
+      const now = Date.now();
+      const commits = log.stdout.split("\x1e").map((b) => b.trim()).filter(Boolean).map((b) => { const [sha, author, date, message] = b.split("\x1f"); return { sha: (sha || "").trim(), author: (author || "unknown").trim(), message: message || "", ageDays: Math.max(0, Math.round((now - new Date((date || "").trim()).getTime()) / 86400000)) }; }).filter((c) => c.sha);
+      const rep = core.agentLedger.scoreReputation(core.agentLedger.deriveOutcomes(commits, { matureDays: mature })).filter((r) => r.decided > 0);
+      const data = await attest(cwd, { commits: commits.length, matureDays: mature, agents: rep.slice(0, 30) });
+      return { data, wisdom: rep.length ? `📊 ${rep.length} scored author(s) · top: ${rep[0].agent} ${rep[0].score} (${rep[0].band}, ${rep[0].survived}✓/${rep[0].reverted}rev)${rep[rep.length - 1] !== rep[0] ? ` · lowest: ${rep[rep.length - 1].agent} ${rep[rep.length - 1].score}` : ""}` : "no decided outcomes yet (all changes too recent)", followUp: [], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.scar.mine",
     category: "audit",
     description: "⛏ SCAR MINING — derive the scar corpus from THIS repo's history so the vaccine carries the org's OWN past pain (the data flywheel made real). Scans fix/revert/hotfix commits + their same-file mistake ancestors and induces scar candidates (triggers = what the mistake added, antibody = what the fix added, lesson = the fix message). Writes them to .mneme/scars.mined.json for review (mine → review → use, like invariants --mine). Pass {maxCommits} to set the window. ★HONEST: a mined scar is a CORRELATION in git (a fix followed a same-file change) — a candidate to review, NOT proven causation; tokens are lexical; curate into .mneme/scars.json before trusting.",

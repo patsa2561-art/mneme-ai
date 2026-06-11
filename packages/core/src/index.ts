@@ -388,6 +388,7 @@ export * as scarVaccine from "./scar_vaccine/index.js";
 export * as equivReceipt from "./equiv_receipt/index.js";
 export * as changeGate from "./change_gate/index.js";
 export * as scarMining from "./scar_mining/index.js";
+export * as agentLedger from "./agent_ledger/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of

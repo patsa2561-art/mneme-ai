@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
@@ -539,6 +539,25 @@ jobs:
       catch (e) { out(`✗ could not evaluate: ${(e as Error).message.slice(0, 140)}`); process.exitCode = 2; return; }
       if (receipt.equivalent) { out(`⚖️ EQUIVALENCE RECEIPT — old ≡ new over ${receipt.inputsTested} inputs (incl. boundaries).`); out(`   oldHash=${receipt.oldHash} newHash=${receipt.newHash} · attach to the PR; CI trusts the receipt, not a promise.`); out(`   honest: empirical over a boundary-biased sample (strong signal, not a formal proof); sound for PURE functions.`); }
       else { const c = receipt.counterexample!; out(`❌ NOT EQUIVALENT — behavior changed.`); out(`   counterexample: fn(${c.input.join(", ")}) → old=${JSON.stringify(c.old)}  new=${JSON.stringify(c.new)}`); out(`   (a boundary input an example-based unit test usually misses)`); process.exitCode = 2; }
+    });
+
+  program.command("agent-rep").alias("reputation").description("📊 AGENT REPUTATION — who ships code that LASTS? Derives each author's change outcomes from git (a `git revert` writes 'This reverts commit <sha>' → reverted; aged & unreverted → survived; too recent → pending) and scores reputation as the Wilson-95% LOWER bound on survival rate (a small/unproven author scores low by construction). Distinct from honesty (creditscore) — this is durability.")
+    .option("--max-commits <n>", "history window (default 1500)").option("--mature-days <n>", "days before an unreverted change counts as survived (default 30)")
+    .action((o: { "maxCommits"?: string; "matureDays"?: string }) => {
+      const cwd = process.cwd(); const win = o["maxCommits"] ? parseInt(o["maxCommits"], 10) : 1500; const mature = o["matureDays"] ? parseInt(o["matureDays"], 10) : 30;
+      const log = spawnSync("git", ["log", "--no-merges", `-n`, String(win), "--format=%H%x1f%an%x1f%aI%x1f%B%x1e"], { cwd, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+      if (log.status !== 0) { out("✗ not a git repo / no history."); process.exitCode = 2; return; }
+      const now = Date.now();
+      const commits: agentLedger.OutcomeCommit[] = log.stdout.split("\x1e").map((b) => b.trim()).filter(Boolean).map((b) => { const [sha, author, date, message] = b.split("\x1f"); return { sha: (sha || "").trim(), author: (author || "unknown").trim(), message: message || "", ageDays: Math.max(0, Math.round((now - new Date((date || "").trim()).getTime()) / 86400000)) }; }).filter((c) => c.sha);
+      if (commits.length < 5) { out("📊 need ≥5 commits to score reputation."); return; }
+      const rep = agentLedger.scoreReputation(agentLedger.deriveOutcomes(commits, { matureDays: mature }));
+      const decided = rep.filter((r) => r.decided > 0);
+      out(`📊 Agent/author reputation from ${commits.length} commits (durability = Wilson-LB survival rate; mature=${mature}d):\n`);
+      const ic = (b: string) => b === "TRUSTED" ? "🟢" : b === "SOLID" ? "🟦" : b === "WATCH" ? "🟠" : b === "RISKY" ? "🔴" : "⚪";
+      for (const r of decided.slice(0, 15)) out(`   ${ic(r.band)} ${r.agent.padEnd(28).slice(0, 28)} score ${String(r.score).padStart(5)}  ·  ${r.band}  (${r.survived}✓ survived · ${r.reverted} reverted · ${r.decided} decided)`);
+      const pendingOnly = rep.filter((r) => r.decided === 0).length;
+      if (pendingOnly) out(`\n   (${pendingOnly} author(s) with only pending/too-recent changes — not yet scored)`);
+      out(`\n   honest: 'author' is a git proxy (human or AI); 'survived' = not-yet-reverted past ${mature}d, not proven-good; reverts from git's deterministic trailer. A track-record signal, not a verdict on any one change.`);
     });
 
   program.command("scar-mine").alias("mine-scars").description("⛏ SCAR MINING — derive the scar corpus from THIS repo's history (fix/revert/hotfix commits + their mistake ancestors) so the vaccine carries your OWN past pain, not just builtin classics. Writes candidates to .mneme/scars.mined.json for review — copy the good ones into .mneme/scars.json. The data flywheel made real.")
