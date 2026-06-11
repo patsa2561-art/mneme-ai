@@ -4,7 +4,7 @@
 // No daemon, no warm-call, no CLI bootstrap — just the trust suite over HTTP.
 import { createServer } from "node:http";
 import { createContext, runInContext } from "node:vm";
-import { trustService, equivReceipt } from "../../core/dist/index.js";
+import { trustService, equivReceipt } from "@mneme-ai/core";
 
 const PORT = Number(process.env.PORT || 8788);
 const HOST = process.env.HOST || "127.0.0.1";
