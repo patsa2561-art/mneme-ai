@@ -621,6 +621,27 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.exfil",
+    category: "audit",
+    description: "🕳 SENSITIVE-DATA EXFILTRATION PATH — the read-side mirror of the authz gap (mneme.review). Finds endpoints that READ a sensitive table (credentials/token/PII/payment/session) and reach the response with NO redaction/projection step (sanitize / pick / select / serialize / dto / view) on the path → they can over-expose secrets in the response. Deterministic taint-flow on the cross-layer graph (endpoint —HANDLED_BY→ handler —CALLS→ … —READS→ sensitive table). ★HONEST: a lexical taint signal — a high-signal candidate to review (sensitive table read on a path to the response, no redaction-named step found), NOT proof the secret reaches the wire (an ORM may project columns, or redaction may use a name the vocabulary misses). Pairs with the authz gap (write-side) for both directions of sensitive-data risk.",
+    whenToUse: "Auditing data-leak risk, or before exposing an endpoint that touches user/credential/payment data: confirm a redaction/projection step exists before the response.",
+    triggers: ["data leak", "exfiltration", "does this endpoint leak", "over-exposed fields", "sensitive data in response", "pii leak", "redaction missing"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const paths = core.exfilPath.exfilPaths(core.crossLayerGraph.buildCrossLayerGraph(files));
+      const v = core.exfilPath.exfilVerdict(paths);
+      const data = await attest(cwd, { clear: v.clear, count: v.count, worstTables: v.worstTables, paths: paths.slice(0, 40) });
+      return { data, wisdom: v.clear ? "🕳 no exfiltration paths — sensitive reads are redacted/projected before the response" : `🕳 ${v.count} exfiltration path(s) · sensitive: ${v.worstTables.slice(0, 5).join(", ")}${paths[0] ? ` · top: ${paths[0].method} ${paths[0].endpoint}` : ""}`, followUp: v.clear ? [] : ["add a redaction/projection (pick/select/serialize/dto) before returning the sensitive data"], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.arch.dead_paths",
     category: "audit",
     description: "🪦 ARCHITECTURAL DEAD-PATH DETECTOR — data-flow smells the compiler can't see, from the cross-layer graph: WRITE-ONLY tables (written but never read — a dead write or a deleted reader), READ-ONLY tables (read but never written — external/seed data or a missing writer), and functions reachable from NO API endpoint (architectural dead-code candidates). Deterministic, no LLM. ★HONEST: write/read-only reflects a table's WRITES_TO/READS edges — but a table read AND written inside ONE function registers only as written (the graph emits one relation per function-table pair), so it's a smell to verify, not a verdict; unreachability is only computed when endpoints exist, and 'unreachable from an endpoint' may be a non-HTTP entrypoint (CLI/cron/export), so it's a candidate, not proven dead.",

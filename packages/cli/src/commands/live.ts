@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff, exfilPath } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { createServer as httpCreateServer } from "node:http";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
@@ -717,6 +717,17 @@ jobs:
       out("");
       out(`   honest: every violation is a contract proven to hold at ${baseRef} + proven violated now — re-checkable, not a guess; it may be an intended evolution (ratify by moving the baseline or declaring the policy).`);
       if (v.verdict === "BLOCK") process.exitCode = 2;
+    });
+
+  program.command("exfil-paths").alias("leak-paths").description("🕳 SENSITIVE-DATA EXFILTRATION PATH — the read-side mirror of the authz gap: endpoints that READ a sensitive table (credentials/token/PII/payment) and reach the response with NO redaction/projection (sanitize / pick / select / serialize / dto / view) on the path → they can over-expose secrets in the response. Deterministic taint-flow on the cross-layer graph. Exit 2 if any path is found.")
+    .action(() => {
+      const cwd = process.cwd(); const paths = exfilPath.exfilPaths(crossLayerGraph.buildCrossLayerGraph(scanWithDocs(cwd)));
+      if (!paths.length) { out("🕳 no exfiltration paths — every endpoint that reads a sensitive table has a redaction/projection step before the response (or reads none)."); return; }
+      out(`🕳 ${paths.length} EXFILTRATION PATH(S) — sensitive data reaches the response with no redaction:`);
+      for (const p of paths.slice(0, 20)) out(`   🔴 ${p.method} ${p.endpoint} → ${p.handler}${p.handlerFile ? " (" + p.handlerFile + ")" : ""}\n        reads ${p.sensitiveTables.join(", ")} · add a redaction/projection (pick/select/serialize/dto) before returning`);
+      if (paths.length > 20) out(`   … + ${paths.length - 20} more`);
+      out(`\n   honest: a lexical taint signal — a high-signal candidate to review (the sensitive table is read on a path to the response, no redaction-named step found), not proof the secret reaches the wire. Pairs with \`mneme review\` (authz gap = write-side).`);
+      process.exitCode = 2;
     });
 
   program.command("dead-paths").alias("dead-code").description("🪦 ARCHITECTURAL DEAD-PATH DETECTOR — data-flow smells the compiler can't see: WRITE-ONLY tables (written, never read — a dead write or a deleted reader), READ-ONLY tables (read, never written), and functions reachable from NO API endpoint (architectural dead-code candidates). Deterministic from the cross-layer graph.")
