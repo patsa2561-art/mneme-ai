@@ -463,6 +463,38 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.equiv.diff",
+    category: "audit",
+    description: "⚖️ AUTO-EQUIV — the automatic, no-copy-paste version of mneme.equiv.check. For each function changed vs a baseline, it extracts the OLD (from git) and NEW (working tree) automatically, differential-tests each, and reports which refactors are proven behavior-preserving and which silently changed behavior (with the boundary counterexample). Pass {baseline} (default HEAD) and optionally {file}. ★HONEST: extraction is a lexical scanner for top-level function-decl + block-bodied arrow/const (AST-exotic shapes are SKIPPED, never mis-paired); arg types default numeric (use mneme.equiv.check to set types); equivalence is sound for PURE functions, empirical over a boundary-biased sample.",
+    whenToUse: "After you (an agent) refactor functions in a file, before committing: prove which changed functions kept their behavior and catch the one that silently didn't — automatically, no pasting.",
+    triggers: ["auto equiv", "did my refactor change behavior", "equiv on the diff", "check all changed functions", "behavior preserved across the diff"],
+    inputSchema: { type: "object", properties: { baseline: { type: "string" }, file: { type: "string" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process"); const vm = await import("node:vm");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const baseRef = args["baseline"] ? String(args["baseline"]) : "HEAD";
+      let files: string[] = [];
+      if (args["file"]) files = [String(args["file"]).replace(/\\/g, "/")];
+      else { const r = cp.spawnSync("git", ["-C", cwd, "diff", "--name-only", baseRef], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }); files = r.status === 0 ? r.stdout.split("\n").map((s) => s.trim()).filter((f) => f && /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)) : []; }
+      const compile = (src: string) => { const ctx = vm.createContext(Object.freeze({ Math, Number, String, Boolean, Array, Object, JSON, isNaN, parseInt, parseFloat })); const fn = vm.runInContext("(" + src + ")", ctx, { timeout: 1000 }); if (typeof fn !== "function") throw new Error("not a function"); return fn as (...a: unknown[]) => unknown; };
+      const results: Array<{ file: string; name: string; verdict: string; counterexample?: unknown }> = []; let proven = 0, broke = 0, skipped = 0;
+      for (const f of files) {
+        const oldR = cp.spawnSync("git", ["-C", cwd, "show", `${baseRef}:${f}`], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
+        let newSrc = ""; try { newSrc = fs.readFileSync(path.join(cwd, f), "utf8"); } catch { continue; }
+        for (const p of core.equivDiff.pairChanged(oldR.status === 0 ? oldR.stdout : "", newSrc)) {
+          try {
+            const spec = (p.args.length ? p.args : ["x"]).map((n) => ({ name: n, type: "number" as const }));
+            const r = core.equivReceipt.differential(compile(p.oldSrc), compile(p.newSrc), core.equivReceipt.genInputs(spec));
+            if (r.equivalent) { proven++; results.push({ file: f, name: p.name, verdict: "PRESERVED" }); }
+            else { broke++; results.push({ file: f, name: p.name, verdict: "CHANGED", counterexample: r.counterexample }); }
+          } catch { skipped++; results.push({ file: f, name: p.name, verdict: "SKIPPED" }); }
+        }
+      }
+      const data = await attest(cwd, { baseline: baseRef, proven, broke, skipped, changed: results.length, results: results.slice(0, 50) });
+      return { data, wisdom: results.length ? `⚖️ ${proven} preserved · ${broke} changed behavior · ${skipped} skipped${broke ? ` · ⚠️ first break: ${results.find((r) => r.verdict === "CHANGED")!.file}::${results.find((r) => r.verdict === "CHANGED")!.name}` : ""}` : `no changed top-level functions vs ${baseRef}`, followUp: broke ? ["a refactor silently changed behavior at a boundary — fix it or it is not a safe refactor"] : [], confidence: ok(broke ? "high" : "medium") };
+    },
+  },
+  {
     name: "mneme.equiv.check",
     category: "audit",
     description: "⚖️ BEHAVIORAL-EQUIVALENCE RECEIPT — prove a refactor didn't silently change behavior. 'Tests pass' proves little (a test at qty=7 stays green while `>=`→`>` breaks every boundary). Pass the {oldFn, newFn} source (function expressions) + {args:[{name,type}]} (type: number|int|string|bool); it DIFFERENTIALLY TESTS old vs new over boundary-seeded + deterministic-fuzz inputs and returns either a precise COUNTEREXAMPLE or an equivalence verdict wrapped in a signed receipt CI can trust. ★HONEST: equivalence is EMPIRICAL over a finite, boundary-biased sample — a strong signal, NOT a formal proof; sound for PURE functions only (side-effects/IO/DB need a harness you supply). Execution uses node:vm with a frozen minimal context (Math/JSON/etc., no require/process) — adequate for testing YOUR OWN pure refactor, NOT a security boundary against hostile code, and the function must terminate.",

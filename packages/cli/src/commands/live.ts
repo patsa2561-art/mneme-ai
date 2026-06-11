@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService, equivDiff } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
 import { createServer as httpCreateServer } from "node:http";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
@@ -524,6 +524,38 @@ jobs:
       out(`🚦 Change gate — firewall vs ${baseRef || "(no baseline)"} + scar vaccine vs ${o.working ? "working" : "staged"} diff:\n`);
       out(changeGate.gateReport(g));
       if (g.verdict === "BLOCK") process.exitCode = 2;
+    });
+
+  program.command("equiv-diff").alias("auto-equiv").description("⚖️ AUTO-EQUIV — the automatic version of `equiv`: NO copy-paste. For each function you changed, it pulls the OLD (from <baseline>) and NEW (working tree) automatically, differential-tests them, and tells you which refactors are proven behavior-preserving and which silently changed behavior (with the boundary counterexample). --baseline <ref> (default HEAD) · --file <path> to scope. Exit 2 if any changed function's behavior differs.")
+    .option("--baseline <ref>", "compare working tree against this ref (default HEAD)").option("--file <path>", "only this file").option("--working", "use staged vs working instead of <ref> vs working")
+    .action((o: { baseline?: string; file?: string; working?: boolean }) => {
+      const cwd = process.cwd(); const baseRef = o.baseline || "HEAD";
+      let files: string[] = [];
+      if (o.file) files = [o.file.replace(/\\/g, "/")];
+      else { const r = spawnSync("git", ["diff", "--name-only", baseRef], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 }); files = r.status === 0 ? r.stdout.split("\n").map((s) => s.trim()).filter((f) => f && /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)) : []; }
+      if (!files.length) { out("⚖️ no changed JS/TS files to check (vs " + baseRef + ")."); return; }
+      const compile = (src: string) => { const ctx = vmCreateContext(Object.freeze({ Math, Number, String, Boolean, Array, Object, JSON, isNaN, parseInt, parseFloat })); const fn = vmRunInContext("(" + src + ")", ctx, { timeout: 1000 }); if (typeof fn !== "function") throw new Error("not a function"); return fn as (...a: unknown[]) => unknown; };
+      let changed = 0, proven = 0, broke = 0, skipped = 0;
+      out(`⚖️ Auto-equiv — changed functions vs ${baseRef} (args inferred numeric):\n`);
+      for (const f of files) {
+        const oldR = spawnSync("git", ["show", `${baseRef}:${f}`], { cwd, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 });
+        let newSrc = ""; try { newSrc = readFileSync(join(cwd, f), "utf8"); } catch { continue; }
+        const oldSrc = oldR.status === 0 ? oldR.stdout : "";
+        const pairs = equivDiff.pairChanged(oldSrc, newSrc);
+        for (const p of pairs) {
+          changed++;
+          try {
+            const spec = p.args.length ? p.args.map((n) => ({ name: n, type: "number" as const })) : [{ name: "x", type: "number" as const }];
+            const r = equivReceipt.differential(compile(p.oldSrc), compile(p.newSrc), equivReceipt.genInputs(spec));
+            if (r.equivalent) { proven++; out(`   ✅ ${f} :: ${p.name}() — behavior preserved over ${r.inputsTested} inputs`); }
+            else { broke++; const c = r.counterexample!; out(`   ❌ ${f} :: ${p.name}() — BEHAVIOR CHANGED · ${p.name}(${c.input.join(", ")}) → old=${JSON.stringify(c.old)} new=${JSON.stringify(c.new)}`); }
+          } catch (e) { skipped++; out(`   ⏭  ${f} :: ${p.name}() — skipped (couldn't evaluate: ${(e as Error).message.slice(0, 60)})`); }
+        }
+      }
+      if (!changed) { out("   (no top-level functions changed in those files — nothing to differential-test)"); return; }
+      out(`\n   ${proven} preserved · ${broke} changed behavior · ${skipped} skipped, across ${changed} changed function(s).`);
+      out(`   honest: pure-fn equivalence over a boundary-biased sample; args inferred numeric (use \`mneme equiv\` to set types); non-extractable shapes are skipped, never guessed.`);
+      if (broke) process.exitCode = 2;
     });
 
   program.command("equiv").alias("equivalence").description("⚖️ BEHAVIORAL-EQUIVALENCE RECEIPT — prove a refactor of a PURE function didn't silently change behavior. Differential-tests --old vs --new (each a file containing one function expression) over boundary-seeded + fuzz inputs → an equivalence verdict or a precise boundary counterexample. --args 'price:number,qty:int'. Exit 2 if behavior changed.")

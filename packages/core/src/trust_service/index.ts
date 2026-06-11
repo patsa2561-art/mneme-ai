@@ -109,8 +109,13 @@ a{color:#7c83f6}
 <div class="flow"><span class="pill">PREVENT · scar vaccine</span><span class="pill">VERIFY · architectural firewall</span><span class="pill">VERIFY · equivalence receipts</span><span class="pill">ACCOUNT · agent reputation</span></div>
 <div class="card"><b>Endpoints</b> <span class="muted">— POST JSON, get a verdict</span>
 <table><tr><td><b>METHOD</b></td><td><b>PATH</b></td><td><b>WHAT</b></td></tr>${ep}<tr><td><code>POST</code></td><td><code>/equiv</code></td><td>behavioral-equivalence receipt for a pure-fn refactor</td></tr></table></div>
+<div class="card"><b>How it's actually used</b> <span class="muted">— automatic, no copy-paste</span>
+<table><tr><td><b>pre-commit</b></td><td>on <code>git commit</code>, <code>mneme change-gate</code> reads your diff itself → blocks a bad commit</td></tr>
+<tr><td><b>CI / PR-bot</b></td><td><code>mneme ci-init</code> drops a GitHub Action — every PR is gated, the verdict is commented, the build fails on BLOCK</td></tr>
+<tr><td><b>AI agent</b></td><td>the agent that wrote the change calls <code>mneme.change.gate</code> over MCP / this API <b>before</b> committing — it already has the code, so nothing is pasted by hand</td></tr></table>
+<pre style="margin-top:12px">npx mneme-ai change-gate --baseline main      # what your CI runs, automatically</pre></div>
 <div class="card"><b>Try it live — behavioral equivalence</b>
-<p class="muted">Paste two versions of a pure function. The gateway differential-tests them over boundary-seeded inputs and proves they're equivalent — or hands you the exact counterexample. ("Tests pass" never proves this.)</p>
+<p class="muted">👀 <b>This box is a hands-on demo</b> so you can see one engine yourself — real use is automatic (above), never copy-paste. Paste two versions of a pure function: the gateway differential-tests them over boundary-seeded inputs and proves they're equivalent — or hands you the exact counterexample. ("Tests pass" never proves this.)</p>
 <label>OLD function</label><textarea id="o">function(price, qty){ if (qty >= 10) return price*qty*0.8; if (qty >= 5) return price*qty*0.9; return price*qty; }</textarea>
 <label>NEW function (an AI refactor — did it change behavior?)</label><textarea id="n">function(price, qty){ const r = qty > 10 ? 0.8 : qty > 5 ? 0.9 : 1.0; return price*qty*r; }</textarea>
 <label>args (name:type, comma-separated)</label><textarea id="a" style="min-height:38px">price:number, qty:int</textarea>
