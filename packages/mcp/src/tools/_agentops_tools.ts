@@ -420,6 +420,46 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.regressions",
+    category: "audit",
+    description: "🚨 ARCHITECTURAL REGRESSION REPORT (self-diagnosing capstone) — MINE the architectural contracts this repo upheld at a baseline ref {since}, re-prove each against HEAD, and report every one now BROKEN, each bisected to the exact commit (+author) that broke it. The report an AI agent should read BEFORE touching a repo: 'these 3 contracts the codebase used to uphold are now violated; here's when + who.' Composes invariant-mining + checking + git-bisect — needs induced contracts AND a graph replayable across time, both unique to Mneme. ★HONEST: a regression is a contract PROVEN to hold at {since} and PROVEN violated now (re-checkable, with the counterexample) — not a guess; it may also be an intended evolution, so it surfaces the change for a human to judge.",
+    whenToUse: "On landing in a repo, or before a release/merge: find which architectural contracts have silently broken since a known-good ref, and exactly when each broke.",
+    triggers: ["architectural regressions", "what contracts broke", "self diagnose architecture", "what invariants regressed", "incident report", "when did the architecture break"],
+    inputSchema: { type: "object", properties: { since: { type: "string" }, max: { type: "number" } }, required: ["since"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const since = String(args["since"] || ""); const cap = Number(args["max"]) || 2500;
+      if (!since) return { data: await attest(cwd, { error: "since ref required" }), wisdom: "pass {since} — the baseline ref whose contracts HEAD must still uphold", confidence: ok("low") };
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const fileCache = new Map<string, { path: string; content: string }[]>();
+      const filesAt = (sha: string): { path: string; content: string }[] => {
+        if (fileCache.has(sha)) return fileCache.get(sha)!;
+        const ls = cp.spawnSync("git", ["-C", cwd, "ls-tree", "-r", "--name-only", sha], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+        if (ls.status !== 0) { fileCache.set(sha, []); return []; }
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN.test(f) && !SKIP.has(f.split("/")[0])).slice(0, cap);
+        const out2: { path: string; content: string }[] = [];
+        for (const f of wanted) { const r = cp.spawnSync("git", ["-C", cwd, "show", `${sha}:${f}`], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) out2.push({ path: f, content: r.stdout }); }
+        fileCache.set(sha, out2); return out2;
+      };
+      const baselineFiles = filesAt(since);
+      if (!baselineFiles.length) return { data: await attest(cwd, { error: "unknown ref" }), wisdom: `unknown ref "${since}" (or no readable files there)`, confidence: ok("low") };
+      const cur: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && cur.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { cur.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const analysis = core.archRegressions.analyzeRegressions(baselineFiles, cur);
+      const log = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H%x09%an", `${since}..HEAD`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const commits = log.status === 0 ? log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, ...a] = l.split("\t"); return { sha, author: a.join("\t") }; }) : [];
+      const regressions = analysis.regressed.map((reg) => {
+        let brokeAt: { sha: string; author: string } | null = null;
+        if (commits.length >= 2) { const r = core.archBisect.bisectIndex(commits.length, (i: number) => core.archBisect.invariantHoldsAt(filesAt(commits[i].sha), reg.rule)); if (r.breakAt !== null) { const c = commits[r.breakAt]; brokeAt = { sha: c.sha.slice(0, 10), author: c.author }; } }
+        return { rule: reg.rule, reason: reg.reason, counterexample: reg.counterexample, brokeAt };
+      });
+      const data = await attest(cwd, { baselineContracts: analysis.baselineContracts, regressed: regressions, weakened: analysis.weakened.length, stillUpheld: analysis.stillUpheld, clean: analysis.clean });
+      return { data, wisdom: analysis.clean ? `✅ all ${analysis.baselineContracts} architectural contract(s) since ${since} still hold` : `🚨 ${regressions.length}/${analysis.baselineContracts} architectural contract(s) broke since ${since}${regressions[0]?.brokeAt ? ` · first: ${regressions[0].rule} broke at ${regressions[0].brokeAt.sha} by ${regressions[0].brokeAt.author}` : ""}`, followUp: analysis.clean ? [] : ["read each regression's commit + counterexample — it may be a real break or an intended evolution to ratify"], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.arch.coupling",
     category: "audit",
     description: "🔗 CHANGE-COUPLING — surface the HIDDEN dependencies the code conceals but git history reveals. Files that always change together carry a dependency; the cross-layer graph splits them into STRUCTURAL (the graph explains it — a write to a table another file defines, a call) vs HIDDEN (high co-change confidence but NO graph link — an implicit dependency nothing in the code, no import or call, warns you about — change one, you must remember the other). Pass {since}. ★HONEST: co-change is a measured CORRELATION (support + confidence), not proven causation; HIDDEN means no structural link was FOUND — a high-signal candidate to verify. Needs both history AND a deterministic cross-layer graph, which is why it's rare.",

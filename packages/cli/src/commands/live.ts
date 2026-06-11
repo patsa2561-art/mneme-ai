@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -438,6 +438,44 @@ export function registerLiveCommands(program: Command): void {
       out(`   🔴 BROKE at commit ${c.sha.slice(0, 10)} by ${c.author}`);
       out(`      ${r.reason}`);
       out(`      inspect: git show ${c.sha.slice(0, 10)}`);
+      process.exitCode = 2;
+    });
+
+  program.command("regressions").alias("arch-incident").description("🚨 ARCHITECTURAL REGRESSION REPORT — the self-diagnosing capstone: MINE the contracts your repo upheld at <since>, re-prove each at HEAD, and for every one now BROKEN, BISECT git history to the exact commit (+author) that broke it. One signed architectural-incident report — what an AI agent should read before touching the repo. Exit 2 if any contract regressed.")
+    .requiredOption("--since <ref>", "the earlier ref whose architectural contracts HEAD must still uphold").option("--max <n>", "max files per sampled commit (default 2500)")
+    .action((o: { since: string; max?: string }) => {
+      const cwd = process.cwd(); const cap = o.max ? parseInt(o.max, 10) : 2500;
+      const fileCache = new Map<string, crossLayerGraph.SourceFile[]>();
+      const filesAt = (sha: string): crossLayerGraph.SourceFile[] => {
+        if (fileCache.has(sha)) return fileCache.get(sha)!;
+        const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+        if (ls.status !== 0) { fileCache.set(sha, []); return []; }
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+        const fs2: crossLayerGraph.SourceFile[] = [];
+        for (const f of wanted) { const r = spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) fs2.push({ path: f, content: r.stdout }); }
+        fileCache.set(sha, fs2); return fs2;
+      };
+      const baselineFiles = filesAt(o.since);
+      if (!baselineFiles.length) { out(`✗ unknown ref "${o.since}" (or no readable files there).`); process.exitCode = 2; return; }
+      const analysis = archRegressions.analyzeRegressions(baselineFiles, scanWithDocs(cwd));
+      if (!analysis.baselineContracts) { out(`🚨 no architectural contracts could be mined at ${o.since} (nothing to hold HEAD against).`); return; }
+      if (analysis.clean) { out(`✅ all ${analysis.baselineContracts} architectural contract(s) the repo upheld at ${o.since} STILL HOLD at HEAD — no regressions.`); return; }
+      const log = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an", `${o.since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const commits = log.status === 0 ? log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, ...a] = l.split("\t"); return { sha, author: a.join("\t") }; }) : [];
+      out(`🚨 ${analysis.regressed.length} of ${analysis.baselineContracts} architectural contract(s) BROKE since ${o.since}:`);
+      for (const reg of analysis.regressed) {
+        out(`\n   🔴 ${reg.rule}`);
+        out(`      ${reg.reason}${reg.counterexample ? " — " + reg.counterexample : ""}`);
+        if (commits.length >= 2) {
+          const holdsAt = (i: number): boolean => archBisect.invariantHoldsAt(filesAt(commits[i].sha), reg.rule);
+          const r = archBisect.bisectIndex(commits.length, holdsAt);
+          if (r.breakAt !== null) { const c = commits[r.breakAt]; out(`      ⏱ broke at commit ${c.sha.slice(0, 10)} by ${c.author}  (inspect: git show ${c.sha.slice(0, 10)})`); }
+          else out(`      ⏱ ${r.reason}`);
+        }
+      }
+      if (analysis.weakened.length) out(`\n   ⚠️ ${analysis.weakened.length} contract(s) became UNKNOWN (their table/endpoint may have moved/renamed) — not counted as breaks.`);
+      out(`\n   ✅ ${analysis.stillUpheld} contract(s) still hold.`);
+      out(`   honest: a regression is a contract PROVEN to hold at ${o.since} and PROVEN violated now — re-checkable, not a guess (it may also be an intended evolution).`);
       process.exitCode = 2;
     });
 
