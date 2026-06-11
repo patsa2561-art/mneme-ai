@@ -10,8 +10,9 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine, equivReceipt, changeGate, scarMining, agentLedger, trustService } from "@mneme-ai/core";
 import { createContext as vmCreateContext, runInContext as vmRunInContext } from "node:vm";
+import { createServer as httpCreateServer } from "node:http";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -539,6 +540,37 @@ jobs:
       catch (e) { out(`✗ could not evaluate: ${(e as Error).message.slice(0, 140)}`); process.exitCode = 2; return; }
       if (receipt.equivalent) { out(`⚖️ EQUIVALENCE RECEIPT — old ≡ new over ${receipt.inputsTested} inputs (incl. boundaries).`); out(`   oldHash=${receipt.oldHash} newHash=${receipt.newHash} · attach to the PR; CI trusts the receipt, not a promise.`); out(`   honest: empirical over a boundary-biased sample (strong signal, not a formal proof); sound for PURE functions.`); }
       else { const c = receipt.counterexample!; out(`❌ NOT EQUIVALENT — behavior changed.`); out(`   counterexample: fn(${c.input.join(", ")}) → old=${JSON.stringify(c.old)}  new=${JSON.stringify(c.new)}`); out(`   (a boundary input an example-based unit test usually misses)`); process.exitCode = 2; }
+    });
+
+  program.command("trust-serve").alias("trust-gateway").description("🌐 TRUST GATEWAY SERVICE — run Mneme's trust suite as a stateless HTTP service any AI agent (any vendor, any machine, no install) can POST to: POST /change-gate · /scar/check · /firewall/check · /equiv · /agent-rep → a JSON verdict. The AI-native SaaS front door. Binds 127.0.0.1 by default (use --host 0.0.0.0 to expose).")
+    .option("--port <n>", "port (default 8787)").option("--host <h>", "bind host (default 127.0.0.1)")
+    .action(async (o: { port?: string; host?: string }) => {
+      const port = o.port ? parseInt(o.port, 10) : 8787; const host = o.host || "127.0.0.1";
+      const compile = (src: string) => { const ctx = vmCreateContext(Object.freeze({ Math, Number, String, Boolean, Array, Object, JSON, isNaN, parseInt, parseFloat })); const fn = vmRunInContext("(" + src + ")", ctx, { timeout: 1000 }); if (typeof fn !== "function") throw new Error("not a function expression"); return fn as (...a: unknown[]) => unknown; };
+      const server = httpCreateServer((req, res) => {
+        const send = (status: number, json: unknown) => { res.writeHead(status, { "content-type": "application/json", "access-control-allow-origin": "*" }); res.end(JSON.stringify(json)); };
+        const chunks: Buffer[] = []; req.on("data", (c) => { chunks.push(c as Buffer); if (chunks.reduce((n, b) => n + b.length, 0) > 16 * 1024 * 1024) req.destroy(); });
+        req.on("end", () => {
+          let body: Record<string, unknown> = {}; try { const raw = Buffer.concat(chunks).toString("utf8"); if (raw) body = JSON.parse(raw); } catch { return send(400, { error: "invalid JSON body" }); }
+          const path = (req.url || "/").split("?")[0];
+          try {
+            if (path.replace(/\/+$/, "") === "/equiv" && (req.method || "").toUpperCase() === "POST") {
+              const spec = Array.isArray(body["args"]) ? (body["args"] as Array<Record<string, unknown>>).map((a) => ({ name: String(a["name"] ?? "x"), type: (["number", "int", "string", "bool"].includes(String(a["type"])) ? String(a["type"]) : "number") as "number" | "int" | "string" | "bool" })) : [];
+              const inputs = equivReceipt.genInputs(spec.length ? spec : [{ name: "x", type: "number" }], { fuzz: Number(body["fuzz"]) || 1500 });
+              const r = equivReceipt.differential(compile(String(body["oldFn"] || "")), compile(String(body["newFn"] || "")), inputs);
+              return send(200, equivReceipt.buildReceipt("refactor", String(body["oldFn"] || ""), String(body["newFn"] || ""), r));
+            }
+            const r = trustService.routeTrust({ method: req.method || "GET", path, body }, { today: new Date().toISOString().slice(0, 10) });
+            send(r.status, r.json);
+          } catch (e) { send(500, { error: (e as Error).message.slice(0, 200) }); }
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(port, host, () => resolve()));
+      const addr = server.address(); const realPort = typeof addr === "object" && addr ? addr.port : port;
+      out(`🌐 Mneme Trust Gateway live at http://${host}:${realPort}`);
+      out(`   POST /change-gate · /scar/check · /firewall/check · /equiv · /agent-rep · GET /health`);
+      out(`   the AI-native trust SaaS front door — any agent POSTs a change, gets a signed verdict. Ctrl-C to stop.`);
+      out(`   honest: stateless (no git on the server) → the firewall's age-weighting is absent here; the repo-aware CLI does the full version.`);
     });
 
   program.command("agent-rep").alias("reputation").description("📊 AGENT REPUTATION — who ships code that LASTS? Derives each author's change outcomes from git (a `git revert` writes 'This reverts commit <sha>' → reverted; aged & unreverted → survived; too recent → pending) and scores reputation as the Wilson-95% LOWER bound on survival rate (a small/unproven author scores low by construction). Distinct from honesty (creditscore) — this is durability.")
