@@ -104,9 +104,9 @@ export const WARMCALL_ALLOWLIST: ReadonlySet<string> = new Set([
   "status",
   "groups",
   "capabilities",
-  "version",
-  "--version",
-  "-V",
+  // version / --version / -V are intentionally NOT warm-called — a version query
+  // must reflect the running bin's own package.json, never a stale daemon's code
+  // version (the "installed latest but reports old" shadow bug).
   "doctor",
   "browse",
   // — pure-compute query —

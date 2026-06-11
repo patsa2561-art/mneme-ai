@@ -99,8 +99,11 @@ async function __mnemeWarmCallAttempt() {
   // overhead of this check is negligible when the user IS on the cold
   // path (e.g. `mneme upgrade`).
   const ALLOW = new Set([
-    "welcome", "status", "groups", "capabilities", "version",
-    "--version", "-V", "doctor", "browse",
+    // version / --version / -V are DELIBERATELY excluded — a version query must
+    // reflect the bin actually executing (its own package.json), never a warm
+    // daemon running older code. Letting a stale daemon answer --version is the
+    // "installed 3.83 but reports 3.41" bug. Version is read cold + cheap below.
+    "welcome", "status", "groups", "capabilities", "doctor", "browse",
     "verify", "ask", "why", "premortem", "honesty", "phoenix", "system",
   ]);
   if (!ALLOW.has(head)) return false;

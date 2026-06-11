@@ -244,11 +244,14 @@ describe("WARM CALL — server end-to-end (N6 stderr-leak suite)", () => {
     expect(stderrFrames(frames)[0]).toMatch(/not on allowlist/);
   });
 
-  it("string `--version` flag → exit code 0 + version-like stdout + ZERO stderr", async () => {
-    // Real-world repro of the N6 bug.  Commander handles --version by
-    // printing the version then calling process.exit(0).  Pre-N6-fix
-    // this leaked "warmcall: warmcall: process.exit intercepted" on
-    // every `mneme --version` over the warm path.
+  it("a command that prints then process.exit(0) → exit code 0 + clean stdout + ZERO stderr", async () => {
+    // The N6 server contract: a `run` callback that prints then calls
+    // process.exit(0) must yield exit 0 + the stdout, and leak NOTHING to
+    // stderr (pre-N6 this leaked "warmcall: process.exit intercepted").
+    // NOTE: uses `status` (a warm-callable command) — `--version` is
+    // deliberately NOT warm-callable anymore (it must reflect the running
+    // bin's own package.json, never a stale daemon), but the server's
+    // exit-interception contract is identical for any command.
     activeServer = await startWarmCallServer({
       socketPath: uniqueTestSocketPath(),
       run: async () => {
@@ -256,9 +259,17 @@ describe("WARM CALL — server end-to-end (N6 stderr-leak suite)", () => {
         (process.exit as (code?: number) => never)(0);
       },
     });
-    const { frames } = await callWarmCallServer(activeServer, ["--version"]);
+    const { frames } = await callWarmCallServer(activeServer, ["status"]);
     expect(exitFrame(frames)?.code).toBe(0);
     expect(stdoutFrames(frames).join("").trim()).toBe("2.19.71");
     expect(stderrFrames(frames)).toEqual([]);
+  });
+
+  it("version queries are NOT warm-callable — they must reflect the running bin, never a stale daemon", async () => {
+    const { isWarmCallSafe } = await import("./index.js");
+    expect(isWarmCallSafe(["--version"])).toBe(false);
+    expect(isWarmCallSafe(["-V"])).toBe(false);
+    expect(isWarmCallSafe(["version"])).toBe(false);
+    expect(isWarmCallSafe(["status"])).toBe(true);   // still warm-callable
   });
 });

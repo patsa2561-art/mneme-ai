@@ -700,16 +700,40 @@ async function runCaretakerPass(repoRoot: string, tickCount: number): Promise<vo
 
   // 2. Daemon-process vs globally-installed version mismatch.
   //    Means user upgraded mneme but the running daemon is stale code.
+  //    ★SEAMLESS-UPGRADE: when the INSTALLED version is strictly NEWER than this
+  //    running daemon, the daemon GRACEFULLY SELF-EXITS so the next warm-call
+  //    spawns a fresh daemon on the new code — no stale daemon left shadowing the
+  //    install (the "installed 3.83 but everything reports 3.41" bug). It only
+  //    ever steps ASIDE for a newer version (never kills anything, never restarts
+  //    itself) — cooperative + non-invasive, the opposite of an external taskkill.
   try {
     const myVersion = readMneMeVersion();
     const installedVersion = await readGloballyInstalledMnemeVersion();
     if (myVersion && installedVersion && myVersion !== installedVersion) {
+      const semverGt = (a: string, b: string): boolean => {
+        const pa = String(a).split(".").map((n) => parseInt(n, 10) || 0), pb = String(b).split(".").map((n) => parseInt(n, 10) || 0);
+        for (let i = 0; i < 3; i++) { if ((pa[i] || 0) > (pb[i] || 0)) return true; if ((pa[i] || 0) < (pb[i] || 0)) return false; }
+        return false;
+      };
+      if (semverGt(installedVersion, myVersion)) {
+        pushInbox(repoRoot, {
+          id: deterministicId(`daemon-self-exit-${myVersion}-to-${installedVersion}`),
+          priority: "high",
+          source: "caretaker",
+          title: `Nucleus daemon stepping aside — installed v${installedVersion} is newer than this daemon (v${myVersion})`,
+          body: `A newer Mneme is installed; this stale daemon is self-exiting so the next command spawns the new code. Seamless — no action needed.`,
+          cta: "",
+        });
+        setTimeout(() => process.exit(0), 50);   // let the inbox flush, then step aside (next warm-call spawns fresh)
+        return;
+      }
+      // installed is OLDER/equal-but-different (e.g. a dev build): just inform.
       pushInbox(repoRoot, {
         id: deterministicId(`daemon-stale-${myVersion}-vs-${installedVersion}`),
         priority: "high",
         source: "caretaker",
-        title: `Nucleus daemon is running stale code (v${myVersion} vs installed v${installedVersion})`,
-        body: `The daemon process predates the latest \`mneme upgrade\`. Restart it: \`mneme nucleus stop && mneme nucleus daemon --detach\`.`,
+        title: `Nucleus daemon version differs from install (daemon v${myVersion} vs installed v${installedVersion})`,
+        body: `Restart it if unexpected: \`mneme nucleus stop && mneme nucleus daemon --detach\`.`,
         cta: "restart the nucleus daemon",
       });
     }
