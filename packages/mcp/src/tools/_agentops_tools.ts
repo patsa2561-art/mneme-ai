@@ -420,6 +420,36 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.lineage",
+    category: "audit",
+    description: "🌳 INVARIANT LINEAGE — the AGE of an architectural contract: the commit (+author+date) where an invariant was first ESTABLISHED and has held ever since. The mirror of mneme.arch.bisect (which finds where a contract BROKE). Age tells you how load-bearing a contract is: one that has held for years is foundational + near-sacred (breaking it is high-risk), one days old is still fragile. Pass {invariant} (e.g. 'table wallet single-writer') + {since}. Replays the deterministic graph across history (binary search). ★HONEST: 'established' assumes a contract, once it starts holding, keeps holding; a flickering history returns the MOST RECENT establishment and says so; if the invariant doesn't hold at HEAD there is no lineage (use mneme.arch.bisect).",
+    whenToUse: "Before changing or relying on an architectural rule: learn how long it has stood — old contracts are load-bearing and risky to break, young ones are safe to revise.",
+    triggers: ["invariant lineage", "contract age", "how old is this rule", "when was this established", "how long has this held", "is this contract load bearing"],
+    inputSchema: { type: "object", properties: { invariant: { type: "string" }, since: { type: "string" }, max: { type: "number" } }, required: ["invariant", "since"] },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const cp = await import("node:child_process");
+      const cwd = rt.meta?.rootPath ?? process.cwd(); const invariant = String(args["invariant"] || ""); const since = String(args["since"] || ""); const cap = Number(args["max"]) || 2500;
+      if (!invariant || !since) return { data: await attest(cwd, { error: "invariant + since required" }), wisdom: "pass {invariant} and {since}", confidence: ok("low") };
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const log = cp.spawnSync("git", ["-C", cwd, "log", "--reverse", "--no-merges", "--format=%H%x09%an%x09%aI", `${since}..HEAD`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) return { data: await attest(cwd, { error: "unknown ref" }), wisdom: `unknown ref "${since}"`, confidence: ok("low") };
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, author, date] = l.split("\t"); return { sha, author, date }; });
+      if (commits.length < 2) return { data: await attest(cwd, { commits: commits.length }), wisdom: `need ≥2 commits in ${since}..HEAD (found ${commits.length})`, confidence: ok("low") };
+      const cache = new Map<number, boolean>();
+      const filesAt = (sha: string) => { const ls = cp.spawnSync("git", ["-C", cwd, "ls-tree", "-r", "--name-only", sha], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); if (ls.status !== 0) return [] as { path: string; content: string }[]; const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN.test(f) && !SKIP.has(f.split("/")[0])).slice(0, cap); const out2: { path: string; content: string }[] = []; for (const f of wanted) { const r = cp.spawnSync("git", ["-C", cwd, "show", `${sha}:${f}`], { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) out2.push({ path: f, content: r.stdout }); } return out2; };
+      const holdsAt = (i: number): boolean => { if (cache.has(i)) return cache.get(i)!; const v = core.archBisect.invariantHoldsAt(filesAt(commits[i].sha), invariant); cache.set(i, v); return v; };
+      const r = core.archLineage.establishedIndex(commits.length, holdsAt);
+      if (r.establishedAt === null) return { data: await attest(cwd, { establishedAt: null, reason: r.reason }), wisdom: `⚠️ ${r.reason}`, followUp: ["use mneme.arch.bisect to find where it broke"], confidence: ok("medium") };
+      const c = commits[r.establishedAt]; const headDate = new Date(commits[commits.length - 1].date).getTime();
+      const days = Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000));
+      const band = days >= 365 ? "FOUNDATIONAL" : days >= 90 ? "ESTABLISHED" : days >= 14 ? "MATURING" : "RECENT";
+      const data = await attest(cwd, { establishedAt: c.sha.slice(0, 10), author: c.author, date: c.date.slice(0, 10), ageDays: days, band, sinceBeforeRange: r.sinceBeforeRange, flickered: r.flickered });
+      return { data, wisdom: `🌳 "${invariant}" established ${c.sha.slice(0, 10)} by ${c.author} on ${c.date.slice(0, 10)} — held ${days}d · ${band}`, followUp: band === "FOUNDATIONAL" ? ["a load-bearing contract — breaking it is high-risk; treat it as near-sacred"] : [], confidence: ok("high") };
+    },
+  },
+  {
     name: "mneme.arch.regressions",
     category: "audit",
     description: "🚨 ARCHITECTURAL REGRESSION REPORT (self-diagnosing capstone) — MINE the architectural contracts this repo upheld at a baseline ref {since}, re-prove each against HEAD, and report every one now BROKEN, each bisected to the exact commit (+author) that broke it. The report an AI agent should read BEFORE touching a repo: 'these 3 contracts the codebase used to uphold are now violated; here's when + who.' Composes invariant-mining + checking + git-bisect — needs induced contracts AND a graph replayable across time, both unique to Mneme. ★HONEST: a regression is a contract PROVEN to hold at {since} and PROVEN violated now (re-checkable, with the counterexample) — not a guess; it may also be an intended evolution, so it surfaces the change for a human to judge.",

@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -439,6 +439,38 @@ export function registerLiveCommands(program: Command): void {
       out(`      ${r.reason}`);
       out(`      inspect: git show ${c.sha.slice(0, 10)}`);
       process.exitCode = 2;
+    });
+
+  program.command("contract-age <invariant>").alias("invariant-lineage").description("🌳 INVARIANT LINEAGE — the AGE of an architectural contract: the commit (+author+date) where an invariant was first ESTABLISHED and has held ever since. The mirror of bisect (which finds where a contract BROKE). Old contract = load-bearing, near-sacred; young = still fragile. e.g. `mneme lineage 'table wallet single-writer' --since v1.0`. Replays the graph across history (binary search).")
+    .requiredOption("--since <ref>", "the earlier ref to search back to").option("--max <n>", "max files per sampled commit (default 2500)")
+    .action((invariant: string, o: { since: string; max?: string }) => {
+      const cwd = process.cwd(); const cap = o.max ? parseInt(o.max, 10) : 2500;
+      const log = spawnSync("git", ["log", "--reverse", "--no-merges", "--format=%H%x09%an%x09%aI", `${o.since}..HEAD`], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      if (log.status !== 0) { out(`✗ unknown ref "${o.since}": ${(log.stderr || "").trim().slice(0, 140)}`); process.exitCode = 2; return; }
+      const commits = log.stdout.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [sha, author, date] = l.split("\t"); return { sha, author, date }; });
+      if (commits.length < 2) { out(`🌳 need ≥2 commits in ${o.since}..HEAD (found ${commits.length}).`); return; }
+      const cache = new Map<number, boolean>();
+      const filesAt = (sha: string): crossLayerGraph.SourceFile[] => {
+        const ls = spawnSync("git", ["ls-tree", "-r", "--name-only", sha], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+        if (ls.status !== 0) return [];
+        const wanted = ls.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f) && !SKIP_DIR.has(f.split("/")[0])).slice(0, cap);
+        const fs2: crossLayerGraph.SourceFile[] = [];
+        for (const f of wanted) { const r = spawnSync("git", ["show", `${sha}:${f}`], { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }); if (r.status === 0 && r.stdout) fs2.push({ path: f, content: r.stdout }); }
+        return fs2;
+      };
+      const holdsAt = (i: number): boolean => { if (cache.has(i)) return cache.get(i)!; const v = archBisect.invariantHoldsAt(filesAt(commits[i].sha), invariant); cache.set(i, v); return v; };
+      out(`🌳 Tracing the lineage of "${invariant}" across ${commits.length} commits since ${o.since}…`);
+      const r = archLineage.establishedIndex(commits.length, holdsAt);
+      out(`   (evaluated ${new Set(r.evaluated).size} commit(s) — binary search)`);
+      if (r.establishedAt === null) { out(`   ⚠️ ${r.reason}`); process.exitCode = 2; return; }
+      const c = commits[r.establishedAt];
+      const headDate = new Date(commits[commits.length - 1].date).getTime();
+      const days = Math.max(0, Math.round((headDate - new Date(c.date).getTime()) / 86400000));
+      const band = days >= 365 ? "🏛 FOUNDATIONAL" : days >= 90 ? "🌳 ESTABLISHED" : days >= 14 ? "🌱 MATURING" : "🐣 RECENT";
+      out(`   ✅ established at commit ${c.sha.slice(0, 10)} by ${c.author}`);
+      out(`      on ${c.date.slice(0, 10)} — has held for ${days} day(s) · ${band}${r.sinceBeforeRange ? " (held since before " + o.since + ")" : ""}`);
+      if (r.flickered) out(`      ⚠️ ${r.reason}`);
+      out(`      honest: "established" = the contract held from here to HEAD; age = how load-bearing it is, not a guess.`);
     });
 
   program.command("regressions").alias("arch-incident").description("🚨 ARCHITECTURAL REGRESSION REPORT — the self-diagnosing capstone: MINE the contracts your repo upheld at <since>, re-prove each at HEAD, and for every one now BROKEN, BISECT git history to the exact commit (+author) that broke it. One signed architectural-incident report — what an AI agent should read before touching the repo. Exit 2 if any contract regressed.")

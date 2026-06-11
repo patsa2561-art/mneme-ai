@@ -381,6 +381,7 @@ export * as archDecay from "./arch_decay/index.js";
 export * as hotspots from "./hotspots/index.js";
 export * as changeCoupling from "./change_coupling/index.js";
 export * as archRegressions from "./arch_regressions/index.js";
+export * as archLineage from "./arch_lineage/index.js";
 export * as moat from "./moat/index.js";
 // v2.4.0 -- SYMBIOSIS: per-vendor fusion. Voice tuner + intent shaper +
 // per-vendor success ledger + fusion handshake bundle. Layers on top of
