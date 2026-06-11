@@ -621,6 +621,27 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.arch.injection",
+    category: "audit",
+    description: "💉 INJECTION TAINT PATH — the input-side of the AppSec triad (authz=write, exfil=read, this=input). Finds functions REACHABLE FROM AN ENDPOINT that feed request input (req.body/params/query) into a dangerous SINK — raw SQL query, exec/eval, child_process, fs, new Function — with NO sanitizer / parameterization / validation on the path → SQL injection, command injection, SSRF, path traversal. The cross-layer graph supplies the filter a linter can't: the sink is reachable from an HTTP endpoint, so it's actually exposed to user input (not a dead utility). ★HONEST: a lexical taint heuristic — flags endpoint-reachable + request-input + dangerous-sink + no-sanitizer-token = a high-signal CANDIDATE, NOT a proof of exploitability (the input may not flow into the sink, or sanitization may use a name the vocabulary misses). Higher recall than authz/exfil by design; review each.",
+    whenToUse: "AppSec audit, or before exposing an endpoint that handles user input near a query / shell / fs / eval: confirm the input is sanitized/parameterized before the sink.",
+    triggers: ["sql injection", "command injection", "injection", "ssrf", "path traversal", "is this endpoint injectable", "unsanitized input"],
+    inputSchema: { type: "object", properties: {} },
+    outputSchema: { type: "object" },
+    handler: async (rt) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|prisma|sql)$/i;
+      const SKIP = new Set(["node_modules", ".git", "dist", "build", "out", ".next", "coverage", ".mneme", "vendor"]);
+      const files: { path: string; content: string }[] = []; const stack = [cwd];
+      while (stack.length && files.length < 6000) { const d = stack.pop()!; let ents: string[] = []; try { ents = fs.readdirSync(d); } catch { continue; } for (const e of ents) { if (SKIP.has(e)) continue; const p = path.join(d, e); let stt; try { stt = fs.statSync(p); } catch { continue; } if (stt.isDirectory()) stack.push(p); else if (SCAN.test(e) && stt.size < 600_000) { try { files.push({ path: p.slice(cwd.length + 1), content: fs.readFileSync(p, "utf8") }); } catch { /* */ } } } }
+      const paths = core.injectionTaint.injectionPaths(core.crossLayerGraph.buildCrossLayerGraph(files), files);
+      const v = core.injectionTaint.injectionVerdict(paths);
+      const data = await attest(cwd, { clear: v.clear, count: v.count, kinds: v.kinds, paths: paths.slice(0, 40) });
+      return { data, wisdom: v.clear ? "💉 no injection taint paths — endpoint-reachable sinks all have a sanitizer, or none take raw request input" : `💉 ${v.count} injection path(s) · ${v.kinds.slice(0, 3).join("; ")}${paths[0] ? ` · top: ${paths[0].method} ${paths[0].endpoint} → ${paths[0].func}` : ""}`, followUp: v.clear ? [] : ["sanitize / parameterize / validate the request input before the sink (prepared statements, a schema validator, allow-list)"], confidence: ok("medium") };
+    },
+  },
+  {
     name: "mneme.arch.exfil",
     category: "audit",
     description: "🕳 SENSITIVE-DATA EXFILTRATION PATH — the read-side mirror of the authz gap (mneme.review). Finds endpoints that READ a sensitive table (credentials/token/PII/payment/session) and reach the response with NO redaction/projection step (sanitize / pick / select / serialize / dto / view) on the path → they can over-expose secrets in the response. Deterministic taint-flow on the cross-layer graph (endpoint —HANDLED_BY→ handler —CALLS→ … —READS→ sensitive table). ★HONEST: a lexical taint signal — a high-signal candidate to review (sensitive table read on a path to the response, no redaction-named step found), NOT proof the secret reaches the wire (an ORM may project columns, or redaction may use a name the vocabulary misses). Pairs with the authz gap (write-side) for both directions of sensitive-data risk.",
