@@ -284,7 +284,7 @@ await mneme.verify`Mneme is a CLI tool`;
 **→ <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index</a>** · <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">Quick start</a>
 
 **🆕 Flagship — the <a href="docs/ARCHITECTURAL-FIREWALL.md" target="_blank" rel="noopener">Architectural Regression Firewall</a>**: the gate for AI-generated change. Mines the contracts your repo upholds, proves which a change VIOLATES, weights each by how long it has stood (breaking a 2-year contract = BLOCK; a 3-day one = normal evolution), and fails CI / denies the agent with the offending symbol + the contract's history. `mneme arch-firewall --baseline main`.
-**→ <a href="docs/ARCHITECTURAL-FIREWALL.md" target="_blank" rel="noopener">How the firewall works</a>** · <a href="CHANGELOG.md" target="_blank" rel="noopener">What the new functions do (CHANGELOG)</a>
+**→ <a href="docs/ARCHITECTURAL-FIREWALL.md" target="_blank" rel="noopener">How the firewall works</a>** · <a href="docs/AI-NATIVE-SAAS.md" target="_blank" rel="noopener">Mneme as SaaS for the AI multiverse</a> · <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>
 
 **📜 Every release** (v2.18 → latest), with its honest DIAKRISIS verdict.
 **→ <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>**

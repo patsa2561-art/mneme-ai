@@ -420,6 +420,26 @@ export const AGENTOPS_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.scar.check",
+    category: "audit",
+    description: "🧬 SCAR-TISSUE VACCINE — before you (an AI agent) write/commit a change, check it against the organisation's PAST mistakes so you don't confidently repeat one with zero institutional memory. Pass the proposed change {code, files}. It FIRES the hard-won lesson when the change has the SHAPE of a past bug (its triggers) AND lacks the fix (the antibody), and STAYS SILENT when the antibody is already present or the change is novel — that asymmetry is the point (not 'you touched payments', but 'you touched payments in the shape that double-charged customers in 2023 and haven't added the idempotency key'). The scar corpus = builtin classics + the org's .mneme/scars.json (in production, mined from Mneme's regret / revert / incident-correlation / negative-knowledge ledger). ★HONEST: a LEXICAL-shape heuristic — a high-signal candidate to heed, NOT proof the bug is present (layer semantic similarity in production); a FIRE means 'look, you may be repeating this', and the antibody asymmetry keeps it from being noise.",
+    whenToUse: "BEFORE writing or committing a non-trivial change (especially in payments/auth/data paths): inject the org's relevant scar lesson into your context so you apply the known fix instead of re-introducing the bug.",
+    triggers: ["scar check", "have we made this mistake before", "vaccinate the change", "past incident this resembles", "negative knowledge", "did this break before"],
+    inputSchema: { type: "object", properties: { code: { type: "string" }, files: { type: "array", items: { type: "string" } } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      const core = await import("@mneme-ai/core"); const fs = await import("node:fs"); const path = await import("node:path");
+      const cwd = rt.meta?.rootPath ?? process.cwd();
+      const code = typeof args["code"] === "string" ? String(args["code"]) : "";
+      const files = Array.isArray(args["files"]) ? (args["files"] as unknown[]).map((x) => String(x)) : [];
+      let scars = [...core.scarVaccine.BUILTIN_SCARS];
+      try { const p = path.join(cwd, ".mneme", "scars.json"); if (fs.existsSync(p)) { const extra = JSON.parse(fs.readFileSync(p, "utf8")); if (Array.isArray(extra)) scars = [...scars, ...extra]; } } catch { /* */ }
+      const v = core.scarVaccine.vaccinate({ files, code }, scars);
+      const data = await attest(cwd, { fires: v.fires, firing: v.firing.map((h) => ({ id: h.scar.id, severity: h.scar.severity, title: h.scar.title, lesson: h.scar.lesson, antibodies: h.scar.antibodies, score: h.score })), immune: v.immune.map((h) => ({ id: h.scar.id, antibody: h.antibody })), scarsChecked: scars.length });
+      return { data, wisdom: v.fires ? `🧬 ${v.firing.length} scar(s) fired — top: ${v.firing[0].scar.id} (${v.firing[0].scar.severity}). Apply: ${v.firing[0].scar.antibodies.slice(0, 3).join(", ")}` : (v.immune.length ? `✅ resembles ${v.immune[0].scar.id} but the antibody is present — lesson already applied` : "✅ no scar matched — change looks novel"), followUp: v.fires ? v.firing.map((h) => `${h.scar.id}: ${h.scar.lesson}`) : [], confidence: ok(v.fires ? "high" : "medium") };
+    },
+  },
+  {
     name: "mneme.arch.firewall",
     category: "audit",
     description: "🛑 ARCHITECTURAL REGRESSION FIREWALL — the real-time gate for AI-generated change. Mines the contracts the repo upheld at {baseline}, proves which the CURRENT code VIOLATES, weights each by how long it has stood (breaking a contract held for years → critical BLOCK; one days old → info evolution), honours architect-DECLARED policies (.mneme/arch-policy.txt), and returns PASS / WARN / BLOCK. On BLOCK, the calling agent should STOP and surface the violation rather than commit it. Each violation names the offending symbol (counterexample), the commit that established the contract, and how many commits it held through. ★HONEST: a violation is a contract proven to hold at {baseline} and proven violated now (re-checkable, with counterexample) — not a guess; age is measured from git; a BLOCK is a strong signal but a violation can be an intended evolution (ratify by moving the baseline or declaring the policy).",

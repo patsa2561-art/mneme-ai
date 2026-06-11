@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { get as httpsGet, request as httpsRequest } from "node:https";
 import { spawn, spawnSync } from "node:child_process";
-import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall } from "@mneme-ai/core";
+import { live, agentFit, proofLoop, turnSignal, skillEffectiveness, crossLayerGraph, scopeCovenant, agentCollision, testGap, authzGap, intentImpact, riskHotspots, onboarding, crossService, logicEngine, graphLogic, accuracy, apiSurface, graphqlSurface, archLock, invariants, archBisect, archDecay, hotspots, changeCoupling, archRegressions, archLineage, deadPath, archFirewall, scarVaccine } from "@mneme-ai/core";
 import { appendFileSync, readFileSync as _rf } from "node:fs";
 function proofLedgerPath(cwd: string): string { return join(cwd, ".mneme", "proof", "ledger.jsonl"); }
 function loadProof(cwd: string): proofLoop.Assist[] { try { return _rf(proofLedgerPath(cwd), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } }
@@ -439,6 +439,24 @@ export function registerLiveCommands(program: Command): void {
       out(`      ${r.reason}`);
       out(`      inspect: git show ${c.sha.slice(0, 10)}`);
       process.exitCode = 2;
+    });
+
+  program.command("scar-check").alias("vaccine").description("🧬 SCAR-TISSUE VACCINE — before a change lands, check it against the org's PAST mistakes (a scar corpus: builtin classics + .mneme/scars.json). FIRES the hard-won lesson when a change has the SHAPE of a past bug AND lacks the fix (antibody); STAYS QUIET when the antibody is already present. Checks the staged diff (or --working). --strict exits 2 on a fire (pre-commit gate).")
+    .option("--working", "check the working-tree diff instead of staged").option("--strict", "exit 2 if any scar fires (default: advisory, exit 0)")
+    .action((o: { working?: boolean; strict?: boolean }) => {
+      const cwd = process.cwd(); const args = o.working ? ["diff"] : ["diff", "--cached"];
+      const names = spawnSync("git", [...args, "--name-only"], { cwd, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
+      const files = names.status === 0 ? names.stdout.split("\n").map((s) => s.trim()).filter(Boolean) : [];
+      const diff = spawnSync("git", [...args, "--unified=0"], { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const code = diff.status === 0 ? diff.stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1)).join("\n") : "";
+      if (!files.length && !code) { out("🧬 no changes to check (stage some changes, or use --working)."); return; }
+      let scars = [...scarVaccine.BUILTIN_SCARS];
+      try { const p = join(cwd, ".mneme", "scars.json"); if (existsSync(p)) { const extra = JSON.parse(readFileSync(p, "utf8")); if (Array.isArray(extra)) scars = [...scars, ...extra]; } } catch { /* */ }
+      const v = scarVaccine.vaccinate({ files, code }, scars);
+      out(`🧬 Scar-tissue vaccine — ${files.length} changed file(s) vs ${scars.length} scar(s):\n`);
+      out(v.report);
+      if (v.fires) out(`\n   honest: a lexical-shape match — a high-signal candidate to heed, not proof the bug is present. Apply the antibody or confirm it's intended.`);
+      if (o.strict && v.fires) process.exitCode = 2;
     });
 
   program.command("arch-firewall").alias("regression-firewall").description("🛑 ARCHITECTURAL REGRESSION FIREWALL — the gate for AI-generated change. Mines the contracts your repo upheld at <baseline>, proves which the current code VIOLATES, weights each by how long it has stood (breaking a 2-year contract = critical BLOCK; a 3-day one = info), honours architect-DECLARED policies (.mneme/arch-policy.txt or --policy), and exits non-zero on BLOCK — drop it in CI as a pre-merge gate. Each violation names the offending symbol + the commit that established the contract + how many commits it held through.")
