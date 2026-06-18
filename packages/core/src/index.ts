@@ -322,6 +322,7 @@ export * as drift from "./drift/index.js";
 export * as perfcore from "./perfcore/index.js";
 export * as agentGovernor from "./governor/index.js";
 export * as intentGateway from "./intent_gateway/index.js";
+export * as morph from "./morph/index.js";
 export * as mycelium from "./mycelium/index.js";
 export * as siege from "./siege/index.js";
 export * as canon from "./canon/index.js";

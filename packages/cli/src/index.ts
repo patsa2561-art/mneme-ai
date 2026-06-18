@@ -171,6 +171,7 @@ import { registerCrucibleCommands } from "./commands/crucible.js";
 import { registerDriftCommands } from "./commands/drift.js";
 import { registerGovernCommands } from "./commands/govern.js";
 import { registerGatewayCommands } from "./commands/gateway.js";
+import { registerMorphCommands } from "./commands/morph.js";
 import { registerMyceliumCommands } from "./commands/mycelium.js";
 import { registerSiegeCommands } from "./commands/siege.js";
 import { registerCanonCommands } from "./commands/canon.js";
@@ -5014,6 +5015,7 @@ export async function run(argv: string[]): Promise<void> {
   registerDriftCommands(program);
   registerGovernCommands(program);
   registerGatewayCommands(program);
+  registerMorphCommands(program);
   registerMyceliumCommands(program);
   registerSiegeCommands(program);
   registerCanonCommands(program);

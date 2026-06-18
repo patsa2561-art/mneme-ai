@@ -99,6 +99,7 @@ import { DRIFT_TOOLS } from "./_drift_tools.js";
 import { PERFCORE_TOOLS } from "./_perfcore_tools.js";
 import { GOVERNOR_TOOLS } from "./_governor_tools.js";
 import { GATEWAY_TOOLS } from "./_gateway_tools.js";
+import { MORPH_TOOLS } from "./_morph_tools.js";
 import { MYCELIUM_TOOLS } from "./_mycelium_tools.js";
 import { SIEGE_TOOLS } from "./_siege_tools.js";
 import { CANON_TOOLS } from "./_canon_tools.js";
@@ -322,6 +323,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...PERFCORE_TOOLS,
     ...GOVERNOR_TOOLS,
     ...GATEWAY_TOOLS,
+    ...MORPH_TOOLS,
     ...MYCELIUM_TOOLS,
     ...SIEGE_TOOLS,
     ...CANON_TOOLS,

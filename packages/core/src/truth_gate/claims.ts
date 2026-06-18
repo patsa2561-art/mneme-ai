@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.103.0 — MORPH: the polymorphic plug (the agent's single front door) ──
+  {
+    id: "claim.morph.polymorphic_surface",
+    source: "v3.103.0 release notes",
+    text: "Mneme's MORPH is the polymorphic plug — the single front door that makes Mneme attractive to AI agents (Cursor / Cline / Windsurf / Claude Code). Instead of facing 600+ static MCP tools it has never seen, an agent learns ONE tool — `mneme.morph` — states its intent in free natural language (any language, EN/Thai), and MORPH resolves the RIGHT capability and returns the typed NEXT CALL: the concrete MCP tool to invoke + a runnable CLI + the args projected from the sentence (budget/forbidden/scope), or a CLARIFY when unsure. It is the honest realization of the 'schema-morphing plug' — one surface that re-forms to fit whatever the caller needs. morphGauntlet=100: morphs known EN+Thai intents to the expected capability ∧ FAITHFUL (for the same input MORPH's command equals the Gateway's route — it never invents a capability the router didn't resolve) ∧ resolves the concrete MCP tool name (the curated CLI→MCP map) ∧ projects detected entities into the shaped args ∧ a MORPHED result always carries an actionable next call ∧ bilingual ∧ abstains on gibberish ∧ the map is well-formed ∧ deterministic ∧ total. CLI `mneme morph \"<intent>\"`; MCP `mneme.morph` (self-attesting, offline-verifiable); flows through the Matrix gRPC rail automatically (it is a registry tool). HONEST (DIAKRISIS): the 'morphing' is DETERMINISTIC intent→capability resolution + entity projection over the measured Gateway + the manifest — NOT runtime code-gen and NOT model magic; the args projection is a best-effort starting point the agent maps onto the target tool's own schema; the CLI→MCP map is a curated table (an unmapped command → mcpTool=null, the agent uses the CLI invocation). It composes the Intent Gateway — refinement, not a new silo.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.morph.polymorphic_surface",
+    severity: "block",
+  },
   // ── v2.145.0 — THE AGENT GOVERNOR: orchestrator-agnostic autonomous governance kernel (capstone) ──
   {
     id: "claim.governor.agent_governance",

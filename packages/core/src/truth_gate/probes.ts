@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.morph.polymorphic_surface",
+    kind: "boolean",
+    description: "MORPH (v3.103.0 — the polymorphic plug, the agent's single front door). Instead of an AI agent facing 600+ static MCP tools it has never seen, it learns ONE tool — `mneme.morph` — states its intent in free natural language (any language, EN/Thai), and MORPH resolves the RIGHT capability and returns the typed NEXT CALL (the concrete MCP tool to invoke + a runnable CLI + the args projected from the sentence), or CLARIFY when unsure. This probe asserts morphGauntlet=100: morphs known EN+Thai intents to the expected capability ∧ FAITHFUL (never invents a capability the Gateway router did not resolve — for the same input MORPH's command equals the Gateway's) ∧ resolves the concrete MCP tool name (the curated CLI→MCP map) ∧ projects detected entities (budget/forbidden/scope) into the shaped args ∧ a MORPHED result always carries an actionable next call ∧ bilingual ∧ abstains on gibberish (CLARIFY/UNKNOWN, never a misfire) ∧ the map is well-formed ∧ deterministic ∧ total. HONEST (DIAKRISIS): the 'morphing' is DETERMINISTIC intent→capability resolution + entity projection over the measured Gateway + the manifest — NOT runtime code-gen and NOT model magic; the args projection is a best-effort starting point the agent maps onto the target tool's own schema; the CLI→MCP map is a curated table (unmapped → mcpTool=null). Composes the Intent Gateway — refinement, not a new silo.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const M = await import("../morph/index.js" as string) as typeof import("../morph/index.js");
+        const g = M.morphGauntlet();
+        const ok = g.score === 100 && g.morphsKnownIntents && g.faithfulToGateway && g.resolvesMcpTool && g.projectsEntities && g.shapeIsActionable && g.bilingual && g.abstainsOnGibberish && g.mapWellFormed && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} faithful=${g.faithfulToGateway} resolvesMcp=${g.resolvesMcpTool} projects=${g.projectsEntities} actionable=${g.shapeIsActionable} bilingual=${g.bilingual} abstains=${g.abstainsOnGibberish}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.governor.agent_governance",
     kind: "boolean",
     description: "THE AGENT GOVERNOR (v2.145.0 — the capstone). An orchestrator-agnostic governance kernel: ratify a Charter once, then run a fleet's action queue as a continuous AUTO-OPERATION BATCH — autonomous + audited actions flow without per-step human input; only irreversible / out-of-envelope / forbidden escalate; a circuit-breaker pauses the fleet on mission drift. Folds CERBERUS · CRUCIBLE · TELOS · REGRET · ELLEIPSIS into one verdict. This probe asserts governorGauntlet=100, and the load-bearing property is THE SAFETY INVARIANT: an irreversible / destructive / out-of-scope / over-budget / forbidden / drift-divergent / failed-shadow action can NEVER be ALLOW_AUTONOMOUS. Also: clean actions run autonomous ∧ caution signals get ALLOW_WITH_AUDIT ∧ the auto-batch flows (autonomous run, escalations queued) ∧ the circuit-breaker trips on DIVERGENT mid-batch + stops ∧ budget stops the batch ∧ SAGA compensates the reversible executed steps newest-first (irreversible un-compensable) ∧ the Living Charter widens the envelope on clean evidence + narrows on a regret (never auto-widens to destructive) ∧ deterministic ∧ total. HONEST: the Governor DECIDES + SEQUENCES + ESCALATES + COMPENSATES — it does NOT execute the agent's work (orchestrator's job; Mneme is the kernel). 'Fully autonomous' = the safe/reversible flow runs untouched, only the genuinely-irreversible escalates — autonomy bounded by a mechanical signed envelope, never self-installing.",
