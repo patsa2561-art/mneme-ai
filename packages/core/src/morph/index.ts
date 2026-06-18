@@ -264,12 +264,23 @@ export const MORPH_CORPUS: MorphLabeledCase[] = [
   { q: "endpoint นี้ข้อมูลรั่วไหม", expect: "mneme exfil-paths" },
   { q: "review โค้ดทั้งหมดให้หน่อย", expect: "mneme review" },
   { q: "ตรงไหนยังไม่มี test", expect: "mneme testgap" },
+  // more curated capabilities — breadth (EN + Thai)
+  { q: "give me the structure of this file", expect: "mneme outline" },
+  { q: "certify this diff and tell me what it touches", expect: "mneme pce" },
+  { q: "what do we know about the auth module", expect: "mneme cortex" },
+  { q: "any endpoints without auth checks", expect: "mneme authz" },
+  { q: "what changes together with this file", expect: "mneme coupling" },
+  { q: "ดูโครงสร้างไฟล์นี้หน่อย", expect: "mneme outline" },
+  { q: "diff นี้แตะอะไรบ้าง", expect: "mneme graph pr" },
+  { q: "ความลับรั่วไปที่โมเดลไหม", expect: "mneme egress" },
   // genuinely ambiguous — SHOULD abstain (expect=null). A confident route here is a bug.
   { q: "check this", expect: null },
   { q: "do the thing", expect: null },
   { q: "help me", expect: null },
   { q: "fix it", expect: null },
+  { q: "make it better", expect: null },
   { q: "ทำให้หน่อย", expect: null },
+  { q: "ช่วยที", expect: null },
   { q: "asdfghjkl qwerty zzz", expect: null },
 ];
 
