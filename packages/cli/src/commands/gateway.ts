@@ -43,6 +43,20 @@ export function registerGatewayCommands(program: Command): void {
       process.exitCode = r.verdict === "ROUTED" ? 0 : 2;
     });
 
+  g.command("audit")
+    .description("structural integrity of the curated concept map: assert no trigger is shared by two different commands (a silent-misroute bug), and list advisory substring collisions for review.")
+    .option("--json", "JSON output")
+    .action((opts: { json?: boolean }) => {
+      const a = gw.conceptAudit();
+      if (opts.json) { out(JSON.stringify(a, null, 2)); process.exitCode = a.ok ? 0 : 2; return; }
+      out(`${a.ok ? "✓ CLEAN" : "🛑 CONFLICT"} — ${a.conceptCount} concepts · ${a.triggerCount} triggers`);
+      if (a.exactDuplicates.length) { out(`   ${a.exactDuplicates.length} exact-duplicate trigger(s) across DIFFERENT commands (bug):`); for (const d of a.exactDuplicates) out(`     • "${d.trigger}" → ${d.commands.join(" , ")}`); }
+      else out(`   no trigger is shared by two commands (no silent-misroute hazard)`);
+      out(`   ${a.substringCollisions.length} advisory substring collision(s) (the longer trigger wins — usually benign):`);
+      for (const c of a.substringCollisions.slice(0, 8)) out(`     · "${c.trigger}" (${c.ofCommand}) ⊂ "${c.containedIn}" (${c.ofOtherCommand})`);
+      process.exitCode = a.ok ? 0 : 2;
+    });
+
   g.command("bench")
     .description("the signed before→after accuracy benchmark (new Gateway vs the old keyword router) over a labeled EN+Thai corpus.")
     .option("--json", "JSON output")

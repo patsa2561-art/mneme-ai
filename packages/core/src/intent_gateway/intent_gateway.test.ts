@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { route, extractEntities, benchmark, gatewayGauntlet } from "./index.js";
+import { route, extractEntities, benchmark, gatewayGauntlet, conceptAudit } from "./index.js";
 
 describe("v2.146 · THE INTENT GATEWAY", () => {
   it("gauntlet is 100", () => {
@@ -32,7 +32,16 @@ describe("v2.146 · THE INTENT GATEWAY", () => {
     expect(r.invocation).toMatch(/charter-init --budget 50000/);
   });
 
+  it("concept map is structurally clean — no trigger shared by two commands", () => {
+    const a = conceptAudit();
+    expect(a.ok).toBe(true);
+    expect(a.exactDuplicates).toEqual([]);
+    expect(a.conceptCount).toBeGreaterThan(0);
+    expect(a.triggerCount).toBeGreaterThan(a.conceptCount);
+  });
+
   it("is total on hostile input", () => {
+    expect(() => conceptAudit([])).not.toThrow();
     expect(() => route(null as never)).not.toThrow();
     expect(() => extractEntities(undefined as never)).not.toThrow();
     expect(() => benchmark([])).not.toThrow();

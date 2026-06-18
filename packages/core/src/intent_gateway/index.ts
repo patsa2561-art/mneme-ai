@@ -260,6 +260,67 @@ export function benchmark(corpus: ReadonlyArray<LabeledCase> = BENCH_CORPUS): Be
   return { n: corpus.length, newTop1, oldTop1, newAcc: round3(newTop1 / n), oldAcc: round3(oldTop1 / n), abstained, newMisses: newMisses.slice(0, 6) };
 }
 
+// ── concept-map self-audit — structural integrity as the curated map grows ───
+// As the concept map grows (it's hand-edited often), the silent hazard is two
+// DIFFERENT commands sharing a trigger: a query then routes by a coin-flip /
+// tie, a misroute the corpus may not happen to cover. This audit proves the map
+// has no such conflict — a guard for every future edit, not just today's corpus.
+export interface ConceptAudit {
+  conceptCount: number;
+  triggerCount: number;
+  /** the same trigger assigned to ≥2 DIFFERENT commands — a routing bug. */
+  exactDuplicates: Array<{ trigger: string; commands: string[] }>;
+  /** a trigger of one command is a substring of a trigger of ANOTHER — advisory
+   *  (the shorter also fires on the longer's queries; usually benign, sometimes
+   *  the source of a tie). Reported, not failed. */
+  substringCollisions: Array<{ trigger: string; ofCommand: string; containedIn: string; ofOtherCommand: string }>;
+  /** true iff there are no exact-duplicate triggers across different commands. */
+  ok: boolean;
+}
+
+/** Audit the curated concept map for trigger conflicts. Pure + deterministic + total. */
+export function conceptAudit(concepts: ReadonlyArray<{ command: string; triggers: string[] }> = CONCEPTS): ConceptAudit {
+  try {
+    const byTrigger = new Map<string, Set<string>>();
+    let triggerCount = 0;
+    const flat: Array<{ t: string; cmd: string }> = [];
+    for (const c of concepts) {
+      for (const raw of c.triggers ?? []) {
+        const t = String(raw).toLowerCase().trim();
+        if (!t) continue;
+        triggerCount++;
+        flat.push({ t, cmd: c.command });
+        if (!byTrigger.has(t)) byTrigger.set(t, new Set());
+        byTrigger.get(t)!.add(c.command);
+      }
+    }
+    const exactDuplicates: ConceptAudit["exactDuplicates"] = [];
+    for (const [t, cmds] of byTrigger) if (cmds.size > 1) exactDuplicates.push({ trigger: t, commands: [...cmds] });
+
+    const substringCollisions: ConceptAudit["substringCollisions"] = [];
+    for (let i = 0; i < flat.length; i++) {
+      for (let j = 0; j < flat.length; j++) {
+        if (i === j) continue;
+        const a = flat[i]!, b = flat[j]!;
+        if (a.cmd === b.cmd) continue;
+        // a.t (≥4 chars) is a substring of b.t → a will also fire on b's queries
+        if (a.t.length >= 4 && a.t !== b.t && b.t.includes(a.t)) {
+          substringCollisions.push({ trigger: a.t, ofCommand: a.cmd, containedIn: b.t, ofOtherCommand: b.cmd });
+        }
+      }
+    }
+    return {
+      conceptCount: concepts.length,
+      triggerCount,
+      exactDuplicates,
+      substringCollisions: substringCollisions.slice(0, 20),
+      ok: exactDuplicates.length === 0,
+    };
+  } catch {
+    return { conceptCount: 0, triggerCount: 0, exactDuplicates: [], substringCollisions: [], ok: false };
+  }
+}
+
 export interface GatewayGauntlet {
   beatsOldRouter: boolean;
   highTop1Accuracy: boolean;       // ≥ 0.8 on the labeled corpus
@@ -267,6 +328,7 @@ export interface GatewayGauntlet {
   bilingual: boolean;
   abstainsOnGibberish: boolean;
   extractsEntities: boolean;
+  noConflictingConcepts: boolean;  // no exact-duplicate trigger across different commands (structural integrity)
   deterministic: boolean;
   total: boolean;
   score: 0 | 100;
@@ -294,11 +356,13 @@ export function gatewayGauntlet(): GatewayGauntlet {
   const ent = route("ดูแลเรื่องงบ 50000 ห้ามโพสต์ด่าใคร");
   const extractsEntities = ent.entities.budget === 50000 && (ent.entities.forbidden?.length ?? 0) > 0 && ent.command === "mneme govern" && /charter-init --budget 50000/.test(ent.invocation ?? "");
 
+  const noConflictingConcepts = conceptAudit().ok;
+
   const deterministic = JSON.stringify(route("stop all the bots")) === JSON.stringify(route("stop all the bots"));
 
   let total = true;
-  try { route(null as unknown as string); extractEntities(undefined as unknown as string); benchmark([]); route(""); } catch { total = false; }
+  try { route(null as unknown as string); extractEntities(undefined as unknown as string); benchmark([]); route(""); conceptAudit([]); } catch { total = false; }
 
-  const all = beatsOldRouter && highTop1Accuracy && nailsPreviouslyFailedCases && bilingual && abstainsOnGibberish && extractsEntities && deterministic && total;
-  return { beatsOldRouter, highTop1Accuracy, nailsPreviouslyFailedCases, bilingual, abstainsOnGibberish, extractsEntities, deterministic, total, score: all ? 100 : 0 };
+  const all = beatsOldRouter && highTop1Accuracy && nailsPreviouslyFailedCases && bilingual && abstainsOnGibberish && extractsEntities && noConflictingConcepts && deterministic && total;
+  return { beatsOldRouter, highTop1Accuracy, nailsPreviouslyFailedCases, bilingual, abstainsOnGibberish, extractsEntities, noConflictingConcepts, deterministic, total, score: all ? 100 : 0 };
 }
