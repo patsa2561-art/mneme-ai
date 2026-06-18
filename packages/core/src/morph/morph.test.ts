@@ -1,9 +1,29 @@
 import { describe, it, expect } from "vitest";
-import { morph, morphGauntlet, toMcpTool, COMMAND_TO_MCP } from "./index.js";
+import { morph, morphGauntlet, morphPrecision, toMcpTool, COMMAND_TO_MCP, MORPH_CORPUS } from "./index.js";
 
-describe("v3.103 · MORPH — the polymorphic MCP tool", () => {
+describe("v3.104 · MORPH — the polymorphic MCP tool + precision engine", () => {
   it("gauntlet is 100", () => {
     expect(morphGauntlet().score).toBe(100);
+  });
+
+  it("precision engine: ≥97.5% precision-when-routed on the labeled corpus (measured)", () => {
+    const p = morphPrecision();
+    expect(p.precision).toBeGreaterThanOrEqual(0.975);
+    expect(p.misroutes).toEqual([]);
+    // honest trade-off: coverage is reported, not hidden, and is a meaningful majority
+    expect(p.coverage).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("abstains (never confidently wrong) on genuinely ambiguous intents", () => {
+    for (const c of MORPH_CORPUS.filter((x) => x.expect === null)) {
+      expect(morph(c.q).verdict).not.toBe("MORPHED");
+    }
+  });
+
+  it("exposes a transparent confidence basis (via + self-consistency)", () => {
+    const m = morph("who wrote this function last and why");
+    expect(["concept", "catalog"]).toContain(m.basis.via);
+    expect(typeof m.basis.selfConsistent).toBe("boolean");
   });
 
   it("morphs a free-text intent into the right capability + MCP tool", () => {
