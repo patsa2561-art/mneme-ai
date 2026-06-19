@@ -323,6 +323,105 @@ export function morphPrecision(corpus: ReadonlyArray<MorphLabeledCase> = MORPH_C
   };
 }
 
+// ── MORPH PLAN — compound intent → an ordered capability pipeline ────────────
+// A single tool surface is great for ONE intent; real agent requests are often
+// COMPOUND ("review the codebase AND tell me the riskiest part"). PLAN splits a
+// compound intent into clauses on deterministic connectors (EN + Thai), routes
+// each clause through the SAME precision engine (so each step is correct or
+// abstained — never confidently wrong), and returns an ORDERED pipeline of typed
+// next-calls. One sentence in → the whole sequence of calls out. A single-clause
+// intent degrades to a 1-step plan. Pure + deterministic + total.
+
+const CONNECTORS_EN = /\s+(?:and then|then|and also|and|also|;)\s+|\s*,\s+|\s*;\s*/gi;
+const CONNECTORS_TH = ["แล้วก็", "แล้ว", "และก็", "และ", "จากนั้น", "ต่อด้วย"];
+
+/** Split a compound intent into ordered clauses on EN+Thai connectors. Total. */
+export function splitClauses(intent: string): string[] {
+  try {
+    let parts = String(intent ?? "").split(CONNECTORS_EN);
+    // Thai connectors (no word spacing) — split each part further
+    for (const conn of CONNECTORS_TH) {
+      const next: string[] = [];
+      for (const p of parts) for (const seg of p.split(conn)) next.push(seg);
+      parts = next;
+    }
+    const clauses = parts.map((p) => p.trim()).filter((p) => p.length >= 3);
+    return clauses.length ? clauses : [String(intent ?? "").trim()].filter((p) => p.length > 0);
+  } catch { return [String(intent ?? "")]; }
+}
+
+export interface MorphPlanStep { clause: string; result: MorphResult }
+export interface MorphPlanResult {
+  intent: string;
+  multi: boolean;                  // was the intent compound (≥2 clauses)?
+  steps: MorphPlanStep[];
+  /** the ordered, actionable pipeline — only the steps that MORPHED. */
+  plan: Array<{ command: string; mcpTool: string | null; cli: string | null; args: Record<string, unknown> }>;
+  routedCount: number;
+  abstainedCount: number;
+  note: string;
+}
+
+/**
+ * Decompose a (possibly compound) intent into an ordered plan of capability
+ * next-calls. Each clause routes through `morph` (precision engine + abstention),
+ * so every step in the plan is a correct, typed next-call — ambiguous clauses are
+ * dropped from the plan, never guessed. Pure + deterministic + total.
+ */
+export function morphPlan(intent: string, opts?: { catalog?: ManifestCommand[]; minConfidence?: number }): MorphPlanResult {
+  const clauses = splitClauses(intent);
+  const steps: MorphPlanStep[] = clauses.map((clause) => ({ clause, result: morph(clause, opts) }));
+  const plan: MorphPlanResult["plan"] = [];
+  for (const s of steps) {
+    if (s.result.verdict === "MORPHED" && s.result.capability && s.result.shape) {
+      const last = plan[plan.length - 1];
+      if (!last || last.command !== s.result.capability.command) { // collapse consecutive dupes
+        plan.push({ command: s.result.capability.command, mcpTool: s.result.capability.mcpTool, cli: s.result.shape.cli, args: s.result.shape.args });
+      }
+    }
+  }
+  const routedCount = steps.filter((s) => s.result.verdict === "MORPHED").length;
+  return {
+    intent: String(intent ?? ""),
+    // a genuinely compound plan = ≥2 DISTINCT routed capabilities. Spurious splits
+    // (e.g. "who wrote this AND why" → the "why" clause abstains) don't make it multi.
+    multi: plan.length > 1,
+    steps,
+    plan,
+    routedCount,
+    abstainedCount: steps.length - routedCount,
+    note: "MORPH PLAN decomposes a compound intent into an ordered pipeline of typed next-calls; each clause routes through the precision engine (correct or abstained, never confidently wrong). Walk the plan in order.",
+  };
+}
+
+// labeled COMPOUND corpus — the proof PLAN routes each clause correctly + in order
+export interface MorphPlanCase { q: string; expect: string[] }
+export const MORPH_PLAN_CORPUS: MorphPlanCase[] = [
+  { q: "review the whole codebase and tell me the riskiest part", expect: ["mneme review", "mneme risk"] },
+  { q: "is this claim true, then who wrote this function", expect: ["mneme verify", "mneme haunt"] },
+  { q: "is this codebase secure and what is untested", expect: ["mneme appsec", "mneme testgap"] },
+  { q: "give me the structure of this file then certify this diff", expect: ["mneme outline", "mneme pce"] },
+  { q: "ตรวจความปลอดภัย แล้ว บอกจุดเสี่ยงสุด", expect: ["mneme appsec", "mneme risk"] },
+  { q: "ใครแก้โค้ดนี้ และ ข้อความนี้จริงไหม", expect: ["mneme haunt", "mneme verify"] },
+];
+
+export interface MorphPlanPrecision { cases: number; expectedSteps: number; routedSteps: number; correctSteps: number; orderPreserved: number; precision: number }
+/** Measure step-precision + order preservation of PLAN on the compound corpus. Total. */
+export function morphPlanPrecision(corpus: ReadonlyArray<MorphPlanCase> = MORPH_PLAN_CORPUS): MorphPlanPrecision {
+  let expectedSteps = 0, routedSteps = 0, correctSteps = 0, orderPreserved = 0;
+  for (const c of corpus) {
+    expectedSteps += c.expect.length;
+    const r = morphPlan(c.q);
+    const got = r.plan.map((p) => p.command);
+    routedSteps += got.length;
+    for (const g of got) if (c.expect.includes(g)) correctSteps++;
+    // order preserved: the routed commands appear in the same relative order as expected
+    const idx = got.map((g) => c.expect.indexOf(g)).filter((i) => i >= 0);
+    if (idx.every((v, i) => i === 0 || v >= idx[i - 1]!)) orderPreserved++;
+  }
+  return { cases: corpus.length, expectedSteps, routedSteps, correctSteps, orderPreserved, precision: routedSteps > 0 ? round3(correctSteps / routedSteps) : 1 };
+}
+
 // ── falsifiable proof ────────────────────────────────────────────────────────
 export interface MorphGauntlet {
   morphsKnownIntents: boolean;
@@ -337,6 +436,10 @@ export interface MorphGauntlet {
   coverageHonest: boolean;            // routes a meaningful majority (abstention isn't trivially 100%)
   abstainsOnAmbiguous: boolean;       // the ambiguous cases are abstained, not guessed
   calibratedConfidenceTransparent: boolean; // every result exposes its basis
+  planDecomposesCompound: boolean;    // ★ a compound intent yields an ordered multi-step plan
+  planStepPrecisionAtLeast975: boolean; // ★ every routed plan step is correct (MEASURED)
+  planPreservesOrder: boolean;        // the pipeline keeps the clause order
+  singleIntentIsOneStep: boolean;     // a simple intent degrades to a 1-step plan
   deterministic: boolean;
   total: boolean;
   score: 0 | 100;
@@ -382,12 +485,21 @@ export function morphGauntlet(): MorphGauntlet {
 
   const calibratedConfidenceTransparent = (() => { const m = morph("is this claim actually true"); return m.basis && (m.basis.via === "concept" || m.basis.via === "catalog") && typeof m.basis.selfConsistent === "boolean"; })();
 
-  const deterministic = JSON.stringify(morph("stop all the bots")) === JSON.stringify(morph("stop all the bots"));
+  // ★ MORPH PLAN — compound-intent decomposition (measured on the compound corpus)
+  const compound = morphPlan("review the whole codebase and tell me the riskiest part");
+  const planDecomposesCompound = compound.multi && compound.plan.length >= 2 && compound.plan[0]!.command === "mneme review" && compound.plan[1]!.command === "mneme risk";
+  const pp = morphPlanPrecision();
+  const planStepPrecisionAtLeast975 = pp.precision >= 0.975;
+  const planPreservesOrder = pp.orderPreserved === pp.cases;
+  const single = morphPlan("who wrote this function last and why");
+  const singleIntentIsOneStep = !single.multi && single.plan.length === 1 && single.plan[0]!.command === "mneme haunt";
+
+  const deterministic = JSON.stringify(morph("stop all the bots")) === JSON.stringify(morph("stop all the bots")) && JSON.stringify(morphPlan("a and b")) === JSON.stringify(morphPlan("a and b"));
 
   let total = true;
-  try { morph(null as unknown as string); morph(""); morph(undefined as unknown as string); toMcpTool(null); morphPrecision([]); contentOnly(null as unknown as string); }
+  try { morph(null as unknown as string); morph(""); morph(undefined as unknown as string); toMcpTool(null); morphPrecision([]); contentOnly(null as unknown as string); morphPlan(null as unknown as string); morphPlan(""); splitClauses(null as unknown as string); morphPlanPrecision([]); }
   catch { total = false; }
 
-  const all = morphsKnownIntents && faithfulToGateway && resolvesMcpTool && projectsEntities && shapeIsActionable && bilingual && abstainsOnGibberish && mapWellFormed && routedPrecisionAtLeast975 && coverageHonest && abstainsOnAmbiguous && calibratedConfidenceTransparent && deterministic && total;
-  return { morphsKnownIntents, faithfulToGateway, resolvesMcpTool, projectsEntities, shapeIsActionable, bilingual, abstainsOnGibberish, mapWellFormed, routedPrecisionAtLeast975, coverageHonest, abstainsOnAmbiguous, calibratedConfidenceTransparent, deterministic, total, score: all ? 100 : 0 };
+  const all = morphsKnownIntents && faithfulToGateway && resolvesMcpTool && projectsEntities && shapeIsActionable && bilingual && abstainsOnGibberish && mapWellFormed && routedPrecisionAtLeast975 && coverageHonest && abstainsOnAmbiguous && calibratedConfidenceTransparent && planDecomposesCompound && planStepPrecisionAtLeast975 && planPreservesOrder && singleIntentIsOneStep && deterministic && total;
+  return { morphsKnownIntents, faithfulToGateway, resolvesMcpTool, projectsEntities, shapeIsActionable, bilingual, abstainsOnGibberish, mapWellFormed, routedPrecisionAtLeast975, coverageHonest, abstainsOnAmbiguous, calibratedConfidenceTransparent, planDecomposesCompound, planStepPrecisionAtLeast975, planPreservesOrder, singleIntentIsOneStep, deterministic, total, score: all ? 100 : 0 };
 }

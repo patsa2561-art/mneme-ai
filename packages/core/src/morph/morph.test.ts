@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { morph, morphGauntlet, morphPrecision, toMcpTool, COMMAND_TO_MCP, MORPH_CORPUS } from "./index.js";
+import { morph, morphGauntlet, morphPrecision, morphPlan, morphPlanPrecision, splitClauses, toMcpTool, COMMAND_TO_MCP, MORPH_CORPUS } from "./index.js";
 
 describe("v3.104 · MORPH — the polymorphic MCP tool + precision engine", () => {
   it("gauntlet is 100", () => {
@@ -24,6 +24,25 @@ describe("v3.104 · MORPH — the polymorphic MCP tool + precision engine", () =
     const m = morph("who wrote this function last and why");
     expect(["concept", "catalog"]).toContain(m.basis.via);
     expect(typeof m.basis.selfConsistent).toBe("boolean");
+  });
+
+  it("PLAN: decomposes a compound intent into an ordered pipeline", () => {
+    const r = morphPlan("review the whole codebase and tell me the riskiest part");
+    expect(r.multi).toBe(true);
+    expect(r.plan.map((s) => s.command)).toEqual(["mneme review", "mneme risk"]);
+  });
+
+  it("PLAN: step-precision is 100% + order preserved on the compound corpus (measured)", () => {
+    const pp = morphPlanPrecision();
+    expect(pp.precision).toBeGreaterThanOrEqual(0.975);
+    expect(pp.orderPreserved).toBe(pp.cases);
+  });
+
+  it("PLAN: a single intent degrades to one step (no spurious split on 'and why')", () => {
+    const r = morphPlan("who wrote this function last and why");
+    expect(r.multi).toBe(false);
+    expect(r.plan.map((s) => s.command)).toEqual(["mneme haunt"]);
+    expect(() => splitClauses(null as unknown as string)).not.toThrow();
   });
 
   it("morphs a free-text intent into the right capability + MCP tool", () => {

@@ -25,7 +25,7 @@ export const MORPH_TOOLS: MnemeTool[] = [
   {
     name: "mneme.morph",
     category: "meta",
-    description: "🧬 MORPH — the polymorphic plug. Instead of memorizing Mneme's 600+ tools, state your intent in free natural language (any language, EN/Thai) and MORPH resolves the RIGHT capability and returns the typed NEXT CALL: the concrete MCP tool to invoke, a runnable CLI, and args projected from your sentence (budget/forbidden/scope). It abstains (CLARIFY) rather than misfire, and never invents a capability the router didn't resolve. Self-attesting (offline-verifiable proof). Examples: 'is this claim true', 'who wrote this and why', 'ดูแลเรื่องงบ 5 หมื่น ห้ามโพสต์'.",
+    description: "🧬 MORPH — the polymorphic plug. Instead of memorizing Mneme's 600+ tools, state your intent in free natural language (any language, EN/Thai) and MORPH resolves the RIGHT capability and returns the typed NEXT CALL: the concrete MCP tool to invoke, a runnable CLI, and args projected from your sentence (budget/forbidden/scope). It abstains (CLARIFY) rather than misfire, and never invents a capability the router didn't resolve. A COMPOUND intent ('review the codebase AND tell me the riskiest part') is decomposed into an ordered `plan` of typed next-calls — walk them in order. Self-attesting (offline-verifiable proof). Examples: 'is this claim true', 'who wrote this and why', 'ดูแลเรื่องงบ 5 หมื่น ห้ามโพสต์'.",
     whenToUse: "FIRST call when you (an AI agent) want a Mneme capability but aren't sure which tool — describe the intent and MORPH hands back the exact tool + args to call next. The single front door for agents.",
     triggers: ["morph", "what mneme tool do i need", "which capability", "i want to but don't know the tool", "polymorphic", "shape the call for me", "ใช้ tool ไหนดี", "อยากทำ...แต่ไม่รู้ใช้อะไร"],
     inputSchema: { type: "object", required: ["intent"], properties: { intent: { type: "string", description: "what you want, in your own words (any language)" } } },
@@ -36,7 +36,13 @@ export const MORPH_TOOLS: MnemeTool[] = [
         const cwd = rt.meta?.rootPath ?? process.cwd();
         const intent = String(args["intent"] ?? "");
         if (!intent.trim()) return low("morph needs an 'intent' — describe what you want in plain words.");
-        const m = core.morph.morph(intent);
+        const plan = core.morph.morphPlan(intent);
+        const m = plan.steps[0]?.result ?? core.morph.morph(intent);
+        // compound intent → return the ordered pipeline
+        if (plan.multi && plan.plan.length > 1) {
+          const data = await attest(cwd, "morph:plan", { ...(plan as unknown as Record<string, unknown>) });
+          return { data, wisdom: `🧬 morph plan — ${plan.plan.length} steps: ${plan.plan.map((s) => s.mcpTool ?? s.command).join(" → ")}. Walk \`plan\` in order; each step is a typed next-call.`, followUp: plan.plan.map((s) => s.mcpTool).filter((t): t is string => !!t), confidence: { level: "high" as const } };
+        }
         const data = await attest(cwd, `morph:${m.verdict}`, { ...(m as unknown as Record<string, unknown>) });
         const wisdom = m.verdict === "MORPHED" && m.capability
           ? `🧬 morphed → ${m.capability.command}${m.capability.mcpTool ? ` (call ${m.capability.mcpTool})` : ""} · confidence ${(m.confidence * 100).toFixed(0)}%. Next call is shaped in \`shape\` (mcpTool + cli + args).`

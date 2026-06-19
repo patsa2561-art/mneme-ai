@@ -24,10 +24,20 @@ export function registerMorphCommands(program: Command): void {
     .action((intent: string[] | undefined, opts: { json?: boolean }) => {
       const q = Array.isArray(intent) ? intent.join(" ") : String(intent ?? "");
       if (!q.trim()) { out("usage: mneme morph \"<what you want, in your own words>\""); process.exitCode = 2; return; }
-      const m = morphCore.morph(q);
+      const plan = morphCore.morphPlan(q);
+      const m = plan.steps[0]?.result ?? morphCore.morph(q);
       let receipt: unknown = null;
-      try { receipt = notary.issueReceipt(process.cwd(), { kind: "claim-verdict", subject: `morph:${m.verdict}`, payload: { verdict: m.verdict, command: m.capability?.command ?? null, mcpTool: m.capability?.mcpTool ?? null, confidence: m.confidence }, includePayload: true }); } catch { /* */ }
-      if (opts.json) { out(JSON.stringify({ ...m, signed: receipt }, null, 2)); process.exitCode = m.verdict === "MORPHED" ? 0 : 2; return; }
+      try { receipt = notary.issueReceipt(process.cwd(), { kind: "claim-verdict", subject: `morph:${plan.multi ? "plan" : m.verdict}`, payload: { multi: plan.multi, steps: plan.plan.map((s) => s.command), verdict: m.verdict, command: m.capability?.command ?? null, confidence: m.confidence }, includePayload: true }); } catch { /* */ }
+      if (opts.json) { out(JSON.stringify({ ...(plan.multi ? { plan } : m), signed: receipt }, null, 2)); process.exitCode = (plan.multi ? plan.plan.length > 0 : m.verdict === "MORPHED") ? 0 : 2; return; }
+      // compound intent → render the ordered pipeline
+      if (plan.multi && plan.plan.length > 1) {
+        out(`🧬 morph plan — ${plan.plan.length} steps (${plan.routedCount} routed · ${plan.abstainedCount} abstained):`);
+        plan.plan.forEach((s, i) => {
+          out(`   ${i + 1}. ${s.command}${s.mcpTool ? `  →  ${s.mcpTool}` : ""}`);
+          if (s.cli && s.cli !== s.command) out(`      CLI: ${s.cli}`);
+        });
+        process.exitCode = 0; return;
+      }
       if (m.verdict === "MORPHED" && m.capability) {
         out(`🧬 morphed → ${m.capability.command}   (confidence ${(m.confidence * 100).toFixed(0)}%)`);
         if (m.capability.mcpTool) out(`   MCP tool:  ${m.capability.mcpTool}`);
