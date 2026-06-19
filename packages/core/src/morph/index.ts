@@ -100,6 +100,48 @@ export function toMcpTool(command: string | null | undefined): string | null {
   return COMMAND_TO_MCP[key] ?? COMMAND_TO_MCP[command.trim()] ?? null;
 }
 
+/**
+ * Which input arg the free-text INTENT fills for a capability whose MCP tool
+ * takes free text (so the projected next-call uses the REAL arg name, not a
+ * generic placeholder). Verified against the live tool schemas by the MCP test
+ * (a router that checks its own output against the destination's actual schema).
+ */
+export const INTENT_ARG: Readonly<Record<string, string>> = Object.freeze({
+  "mneme verify": "claim",
+  "mneme cortex": "query",
+  "mneme gateway": "text",
+  "mneme telos": "mission",
+  "mneme elleipsis": "request",
+});
+
+/**
+ * The REQUIRED input args of each curated capability's MCP tool (from the live
+ * schema; verified by the MCP test). Used to tell the agent what the intent
+ * could NOT fill (a path / diff / file the agent must supply) — honest about the
+ * gap instead of fabricating a value.
+ */
+export const REQUIRED_ARGS: Readonly<Record<string, string[]>> = Object.freeze({
+  "mneme verify": ["claim"],
+  "mneme telos": ["mission", "actions"],
+  "mneme govern": ["charter", "action"],
+  "mneme crucible": ["diff", "verify"],
+  "mneme haunt": ["file"],
+  "mneme egress": ["payload"],
+  "mneme outline": ["path"],
+  "mneme canon": ["kind", "subject", "verdict"],
+  "mneme elleipsis": ["request"],
+  "mneme pce": ["diff"],
+  "mneme rail": ["direction", "payload"],
+  "mneme blind": ["payload"],
+  "mneme gateway": ["text"],
+  "mneme cortex": ["query"],
+  "mneme decay": ["since"],
+  "mneme equiv": ["oldFn", "newFn"],
+  "mneme mediate": ["parties"],
+});
+
+function twoTokenKey(command: string): string { return String(command || "").trim().split(/\s+/).slice(0, 2).join(" "); }
+
 export type MorphVerdict = "MORPHED" | "CLARIFY" | "UNKNOWN";
 
 export interface MorphCapability {
@@ -116,7 +158,12 @@ export interface MorphCapability {
 export interface MorphShape {
   mcpTool: string | null;
   cli: string | null;
+  /** Args projected onto the target tool's REAL input keys (the free-text intent
+   *  fills the tool's text arg when it has one; entities fill budget/forbidden/scope). */
   args: Record<string, unknown>;
+  /** Required args of the target tool the intent could NOT fill — values the agent
+   *  must supply itself (a path / diff / file). Honest about the gap, never faked. */
+  needs: string[];
 }
 
 export interface MorphCandidate { command: string; mcpTool: string | null; score: number }
@@ -159,14 +206,25 @@ function catalogEntry(command: string, catalog: ManifestCommand[]): ManifestComm
   return catalog.find((c) => c.command === key) ?? catalog.find((c) => c.command.startsWith(key)) ?? null;
 }
 
-function projectArgs(intent: string, entities: GatewayResult["entities"]): Record<string, unknown> {
-  const args: Record<string, unknown> = { intent: String(intent ?? "").slice(0, 500) };
+function projectArgs(command: string, intent: string, entities: GatewayResult["entities"]): Record<string, unknown> {
+  const text = String(intent ?? "").slice(0, 500);
+  const argKey = INTENT_ARG[twoTokenKey(command)];
+  // fill the tool's REAL text arg when it has one; else a generic `intent` hint
+  const args: Record<string, unknown> = argKey ? { [argKey]: text } : { intent: text };
   try {
     if (typeof entities?.budget === "number") args["budget"] = entities.budget;
     if (Array.isArray(entities?.forbidden) && entities.forbidden.length) args["forbidden"] = entities.forbidden;
     if (Array.isArray(entities?.scope) && entities.scope.length) args["scope"] = entities.scope;
   } catch { /* */ }
   return args;
+}
+
+/** Required args the intent could NOT fill (the agent must supply them). Total. */
+function computeNeeds(command: string, args: Record<string, unknown>): string[] {
+  try {
+    const req = REQUIRED_ARGS[twoTokenKey(command)] ?? [];
+    return req.filter((a) => !(a in args));
+  } catch { return []; }
 }
 
 function round3(n: number): number { return Math.round(n * 1e3) / 1e3; }
@@ -224,7 +282,8 @@ export function morph(intent: string, opts?: { catalog?: ManifestCommand[]; minC
       command: r.command, mcpTool,
       what: entry?.what ?? "", when: entry?.when ?? "", since: entry?.since ?? "", group: entry?.group ?? "",
     };
-    const shape: MorphShape = { mcpTool, cli: r.invocation ?? r.command, args: projectArgs(intentStr, r.entities) };
+    const shapeArgs = projectArgs(r.command, intentStr, r.entities);
+    const shape: MorphShape = { mcpTool, cli: r.invocation ?? r.command, args: shapeArgs, needs: computeNeeds(r.command, shapeArgs) };
 
     return { verdict: "MORPHED", intent: intentStr, capability, confidence: conf, basis: { via, selfConsistent, abstainedForPrecision: false }, candidates, shape, entities: r.entities, note: NOTE };
   } catch {
@@ -440,6 +499,8 @@ export interface MorphGauntlet {
   planStepPrecisionAtLeast975: boolean; // ★ every routed plan step is correct (MEASURED)
   planPreservesOrder: boolean;        // the pipeline keeps the clause order
   singleIntentIsOneStep: boolean;     // a simple intent degrades to a 1-step plan
+  argsUseRealToolKeys: boolean;       // ★ projected args use the target tool's REAL arg name (verified vs live schema by the MCP test)
+  surfacesUnfillableNeeds: boolean;   // ★ a value the intent can't fill (a path/diff) is surfaced in shape.needs, never faked
   deterministic: boolean;
   total: boolean;
   score: 0 | 100;
@@ -494,12 +555,22 @@ export function morphGauntlet(): MorphGauntlet {
   const single = morphPlan("who wrote this function last and why");
   const singleIntentIsOneStep = !single.multi && single.plan.length === 1 && single.plan[0]!.command === "mneme haunt";
 
+  // ★ projected args use the target tool's REAL arg name (verify→claim), and the map is well-formed
+  const verifyArgs = morph("is this claim actually true").shape?.args ?? {};
+  const cmdKeys = new Set(Object.keys(COMMAND_TO_MCP));
+  const argsUseRealToolKeys = typeof verifyArgs["claim"] === "string" && !("intent" in verifyArgs)
+    && Object.keys(INTENT_ARG).every((k) => cmdKeys.has(k)) && Object.values(INTENT_ARG).every((v) => typeof v === "string" && v.length > 0)
+    && Object.keys(REQUIRED_ARGS).every((k) => cmdKeys.has(k));
+  // ★ a value the intent cannot fill (a path) is surfaced in needs, not fabricated
+  const outlineShape = morph("give me the structure of this file").shape;
+  const surfacesUnfillableNeeds = !!outlineShape && outlineShape.needs.includes("path") && !("path" in outlineShape.args);
+
   const deterministic = JSON.stringify(morph("stop all the bots")) === JSON.stringify(morph("stop all the bots")) && JSON.stringify(morphPlan("a and b")) === JSON.stringify(morphPlan("a and b"));
 
   let total = true;
   try { morph(null as unknown as string); morph(""); morph(undefined as unknown as string); toMcpTool(null); morphPrecision([]); contentOnly(null as unknown as string); morphPlan(null as unknown as string); morphPlan(""); splitClauses(null as unknown as string); morphPlanPrecision([]); }
   catch { total = false; }
 
-  const all = morphsKnownIntents && faithfulToGateway && resolvesMcpTool && projectsEntities && shapeIsActionable && bilingual && abstainsOnGibberish && mapWellFormed && routedPrecisionAtLeast975 && coverageHonest && abstainsOnAmbiguous && calibratedConfidenceTransparent && planDecomposesCompound && planStepPrecisionAtLeast975 && planPreservesOrder && singleIntentIsOneStep && deterministic && total;
-  return { morphsKnownIntents, faithfulToGateway, resolvesMcpTool, projectsEntities, shapeIsActionable, bilingual, abstainsOnGibberish, mapWellFormed, routedPrecisionAtLeast975, coverageHonest, abstainsOnAmbiguous, calibratedConfidenceTransparent, planDecomposesCompound, planStepPrecisionAtLeast975, planPreservesOrder, singleIntentIsOneStep, deterministic, total, score: all ? 100 : 0 };
+  const all = morphsKnownIntents && faithfulToGateway && resolvesMcpTool && projectsEntities && shapeIsActionable && bilingual && abstainsOnGibberish && mapWellFormed && routedPrecisionAtLeast975 && coverageHonest && abstainsOnAmbiguous && calibratedConfidenceTransparent && planDecomposesCompound && planStepPrecisionAtLeast975 && planPreservesOrder && singleIntentIsOneStep && argsUseRealToolKeys && surfacesUnfillableNeeds && deterministic && total;
+  return { morphsKnownIntents, faithfulToGateway, resolvesMcpTool, projectsEntities, shapeIsActionable, bilingual, abstainsOnGibberish, mapWellFormed, routedPrecisionAtLeast975, coverageHonest, abstainsOnAmbiguous, calibratedConfidenceTransparent, planDecomposesCompound, planStepPrecisionAtLeast975, planPreservesOrder, singleIntentIsOneStep, argsUseRealToolKeys, surfacesUnfillableNeeds, deterministic, total, score: all ? 100 : 0 };
 }

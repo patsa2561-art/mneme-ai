@@ -44,6 +44,7 @@ export function registerMorphCommands(program: Command): void {
         if (m.shape?.cli && m.shape.cli !== m.capability.command) out(`   CLI:       ${m.shape.cli}`);
         const argKeys = Object.keys(m.shape?.args ?? {}).filter((k) => k !== "intent");
         if (argKeys.length) out(`   args:      ${argKeys.map((k) => `${k}=${JSON.stringify((m.shape!.args)[k])}`).join(" · ")}`);
+        if (m.shape?.needs?.length) out(`   you supply: ${m.shape.needs.join(", ")}`);
         if (m.capability.what) out(`   what:      ${m.capability.what.slice(0, 160)}${m.capability.what.length > 160 ? "…" : ""}`);
       } else if (m.verdict === "CLARIFY") {
         out(`❔ Not sure which capability — did you mean one of these?`);
