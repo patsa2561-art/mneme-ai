@@ -446,7 +446,14 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
   // (the agent learns the exact tool from mneme.morph, then calls it). Universal:
   // it's just a shorter tools/list, so it works on every MCP agent.
   const LEAN_NAMES = new Set<string>(LEAN_TOOL_NAMES);
-  const LEAN = process.env["MNEME_LEAN"] === "1" || process.env["MNEME_LEAN"] === "true";
+  // v3.111 — LEAN IS THE DEFAULT (auto, no command/env). The advertised tools/list
+  // is re-sent to the model every request; full = ~130k tok, lean (~10 tools, with
+  // mneme.morph as the front door to the full catalog) = ~3k tok (−98%). So
+  // installing/updating mneme-ai makes every MCP agent lean on its next spawn,
+  // automatically. CallTool still dispatches ANY of the full catalog by name, so
+  // nothing is lost. Opt OUT with MNEME_FULL=1 to advertise the whole catalog.
+  const wantFull = process.env["MNEME_FULL"] === "1" || process.env["MNEME_FULL"] === "true";
+  const LEAN = !wantFull;
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: LEAN

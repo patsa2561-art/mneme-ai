@@ -35,6 +35,21 @@ describe("agent_manifest", () => {
   });
 
   describe("renderManifestMarkdown", () => {
+    // v3.111 — LEAN is the default; these tests verify the FULL manifest content,
+    // which is now opt-in via MNEME_FULL=1.
+    beforeEach(() => { process.env["MNEME_FULL"] = "1"; });
+    afterEach(() => { delete process.env["MNEME_FULL"]; });
+
+    it("v3.111 — LEAN is the DEFAULT (no env): compact pointer, not the full catalog", () => {
+      delete process.env["MNEME_FULL"];
+      const lean = renderManifestMarkdown(undefined, "3.111.0");
+      expect(lean).toContain("LEAN");
+      expect(lean.length).toBeLessThan(20000);                 // ~3k tok, not ~61k
+      const full = (process.env["MNEME_FULL"] = "1", renderManifestMarkdown(undefined, "3.111.0"));
+      delete process.env["MNEME_FULL"];
+      expect(full.length).toBeGreaterThan(lean.length * 3);     // full is much larger
+    });
+
     it("emits sentinel markers + version + groups", () => {
       const md = renderManifestMarkdown(undefined, "1.31.0");
       expect(md).toContain("<!-- BEGIN MNEME MANIFEST");
@@ -173,7 +188,9 @@ describe("agent_manifest", () => {
     // "SURFACE availability, never upgrade on the user's behalf". The manifest
     // must NOT instruct agents to auto-run the self-upgrade (that was the worm).
     it("v2.78.0 — Rule 9 surfaces updates but FORBIDS auto-upgrade (markdown)", () => {
+      process.env["MNEME_FULL"] = "1"; // Rule 9 lives in the full manifest (lean is default since v3.111)
       const md = renderManifestMarkdown(undefined, "2.78.0");
+      delete process.env["MNEME_FULL"];
       expect(md).toContain("Rule 9");
       expect(md).toMatch(/SURFACE update availability|NEVER upgrade on/i);
       // Explicitly tells agents NOT to run the upgrade on the user's behalf.

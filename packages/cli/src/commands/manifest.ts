@@ -83,10 +83,12 @@ export function registerManifestCommands(program: Command): void {
     .description("Sync the Mneme AGENT COMMAND MANIFEST into every agent file (CLAUDE.md, AGENTS.md, .cursor/rules, GEMINI.md, .windsurfrules) so the AI agent in your editor always knows the latest command surface.");
 
   m.command("sync")
-    .description("Write/refresh the manifest block in every supported agent file. Sentinel-bracketed -- re-syncs replace in place without touching the rest of each file.")
+    .description("Write/refresh the manifest block in every supported agent file. Sentinel-bracketed -- re-syncs replace in place without touching the rest of each file. --lean writes the compact index (~3k tok) instead of the full manifest (~61k tok) — the real per-session token cost in Claude Code etc.")
     .option("--json", "JSON output.")
-    .action(async (opts: CommonOpts) => {
+    .option("--lean", "Write the LEAN compact manifest (~95% fewer tokens) — a pointer to mneme.boot / mneme.morph instead of the full command catalog. Same as env MNEME_LEAN=1.", false)
+    .action(async (opts: CommonOpts & { lean?: boolean }) => {
       const repoRoot = process.cwd();
+      if (opts.lean) process.env["MNEME_LEAN_MANIFEST"] = "1"; // honored by renderManifestMarkdown
       const am = await resolveAgentManifest();
       if (!am) {
         const msg = "agent_manifest helper unavailable in this @mneme-ai/core. Upgrade: `npm install -g mneme-ai@latest`.";

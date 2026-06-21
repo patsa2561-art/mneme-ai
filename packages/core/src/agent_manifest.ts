@@ -1099,8 +1099,15 @@ function renderLeanManifestMarkdown(catalog: ManifestCommand[], mnemeVersion: st
 }
 
 export function renderManifestMarkdown(catalog: ManifestCommand[] = MNEME_COMMAND_CATALOG, mnemeVersion: string = "?"): string {
-  // v2.95 — opt-in lean rendering (context-budget + AUP-surface reduction).
-  if (typeof process !== "undefined" && process.env && process.env.MNEME_LEAN_MANIFEST === "1") {
+  // v3.111 — LEAN IS THE DEFAULT (auto, no command). The full manifest is ~61k
+  // tokens loaded into the agent's context EVERY session (the real per-session
+  // cost in Claude Code etc); the lean pointer is ~3k tokens (−95%) and routes
+  // the agent to mneme.boot / mneme.morph for the full surface on demand. So
+  // installing/updating mneme-ai makes every agent file lean automatically —
+  // the user never types a flag. Opt OUT with MNEME_FULL=1 for the full catalog.
+  const wantFull = typeof process !== "undefined" && process.env &&
+    (process.env.MNEME_FULL === "1" || process.env.MNEME_FULL === "true");
+  if (!wantFull) {
     return renderLeanManifestMarkdown(catalog, mnemeVersion);
   }
   const grouped: Record<string, ManifestCommand[]> = {};

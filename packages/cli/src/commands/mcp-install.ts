@@ -34,10 +34,12 @@ export interface McpInstallOptions {
   /** Force-target one tool: claude | cursor | continue | codex */
   tool?: string;
   json?: boolean;
-  /** Wire the agent in LEAN mode (env MNEME_LEAN=1) — advertise ~10 essential
-   *  tools (morph as the front door) instead of ~1100, cutting the per-request
-   *  tool-list context ~97%. Full catalog still callable via morph. */
+  /** Deprecated/no-op: LEAN is now the DEFAULT. Kept for back-compat. */
   lean?: boolean;
+  /** Opt OUT of lean: wire the agent with env MNEME_FULL=1 so the server
+   *  advertises the FULL ~1100-tool catalog + writes the full manifest. Default
+   *  (omitted) is LEAN — ~10 tools advertised, ~3k-token manifest. */
+  full?: boolean;
 }
 
 interface McpServerEntry {
@@ -300,9 +302,22 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
   const codexHint =
     "Codex CLI: run manually — `codex mcp add mneme mneme mcp` (the Codex CLI doesn't expose a config file we can edit).";
 
-  // LEAN: wire the agent with env MNEME_LEAN=1 so the server advertises only the
-  // ~10 essentials (morph front-door) — ~97% less per-request tool-list context.
-  const entry: McpServerEntry = opts.lean ? { ...MNEME_ENTRY, env: { ...(MNEME_ENTRY.env ?? {}), MNEME_LEAN: "1" } } : MNEME_ENTRY;
+  // LEAN IS DEFAULT (the binary advertises ~10 tools + writes the ~3k manifest
+  // unless MNEME_FULL=1). So the default entry needs NO env; --full opts out.
+  const entry: McpServerEntry = opts.full ? { ...MNEME_ENTRY, env: { ...(MNEME_ENTRY.env ?? {}), MNEME_FULL: "1" } } : MNEME_ENTRY;
+  // AUTO "super nova": shrink this repo's agent-file manifests (CLAUDE.md etc) in
+  // the SAME step — install = MCP wired + manifest leaned, no extra command. The
+  // render defaults to lean (MNEME_FULL gates it), so just re-sync. Best-effort.
+  let manifestSync: { refreshed: number } | null = null;
+  if (!opts.dryRun) {
+    try {
+      if (opts.full) process.env["MNEME_FULL"] = "1"; else delete process.env["MNEME_FULL"];
+      const { getVersion } = await import("../version.js");
+      const core = await import("@mneme-ai/core") as { agentManifest?: { syncManifest?: (root: string, o: { mnemeVersion: string }) => Array<{ action: string }> } };
+      const res = core.agentManifest?.syncManifest?.(opts.cwd, { mnemeVersion: getVersion() }) ?? [];
+      manifestSync = { refreshed: res.filter((r) => r.action === "created" || r.action === "replaced").length };
+    } catch { /* best-effort */ }
+  }
   for (const tool of targets) {
     const configPath = tool.resolveConfigPath();
     if (!configPath) {
@@ -351,14 +366,14 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
     }
   }
 
-  // LEAN: surface the MEASURED per-request token cut (real number, not a claim).
+  // LEAN IS DEFAULT — surface the MEASURED per-request token cut unless --full.
   let lean: { fullTools: number; leanTools: number; reductionPct: number; fullApproxTokens: number; leanApproxTokens: number } | null = null;
-  if (opts.lean) {
+  if (!opts.full) {
     try { const { measureLeanReduction } = await import("@mneme-ai/mcp"); lean = await measureLeanReduction(); } catch { /* best-effort */ }
   }
 
   if (opts.json) {
-    process.stdout.write(JSON.stringify({ outcomes, lean, codex: codexHint }, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ mode: opts.full ? "full" : "lean", outcomes, lean, manifestSync, codex: codexHint }, null, 2) + "\n");
     const success = outcomes.some((o) => o.installed || o.alreadyPresent);
     return success ? 0 : 1;
   }
@@ -372,11 +387,18 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
   );
   if (lean) {
     process.stdout.write(
-      kleur.bold().cyan("  🔦 LEAN MODE on") +
-        kleur.dim(` — advertising ${lean.leanTools} tools instead of ${lean.fullTools}: `) +
-        kleur.green().bold(`−${lean.reductionPct}% tool-list context`) +
-        kleur.dim(` (~${lean.fullApproxTokens.toLocaleString()}→~${lean.leanApproxTokens.toLocaleString()} tok/request). Full catalog still reachable via mneme.morph.\n\n`),
+      kleur.bold().cyan("  🔦 LEAN by default") +
+        kleur.dim(` — MCP advertises ${lean.leanTools} tools (not ${lean.fullTools}): `) +
+        kleur.green().bold(`−${lean.reductionPct}%`) +
+        kleur.dim(` (~${lean.fullApproxTokens.toLocaleString()}→~${lean.leanApproxTokens.toLocaleString()} tok/req). Full catalog reachable via mneme.morph.\n`),
     );
+    if (manifestSync) process.stdout.write(
+      kleur.dim(`     + agent-file manifests (CLAUDE.md etc) leaned: ${manifestSync.refreshed} file(s) → ~3k tok (was ~61k). `) +
+        kleur.dim(`(use --full to opt out)\n`),
+    );
+    process.stdout.write("\n");
+  } else if (opts.full) {
+    process.stdout.write(kleur.dim("  ⚙ FULL mode — advertising the whole catalog + full manifest (MNEME_FULL=1).\n\n"));
   }
 
   let anySuccess = false;

@@ -1233,8 +1233,9 @@ export async function run(argv: string[]): Promise<void> {
     .option("--tool <name>", "Force a specific tool: claude-code | cursor | continue")
     .option("--dry-run", "Print what would change, don't write", false)
     .option("--json", "Machine-readable output", false)
-    .option("--lean", "LEAN MODE: wire the agent to advertise only ~10 essential tools (morph is the front door to the full catalog) — cuts the per-request tool-list context ~97%. Sets env MNEME_LEAN=1.", false)
-    .action(async (opts: { install?: boolean; tool?: string; dryRun?: boolean; json?: boolean; lean?: boolean }) => {
+    .option("--lean", "(default, no-op) LEAN is now the default — kept for back-compat.", false)
+    .option("--full", "Opt OUT of lean: advertise the full ~1100-tool catalog + write the full manifest (env MNEME_FULL=1). Default is lean (~10 tools advertised, morph is the front door; ~3k-token manifest).", false)
+    .action(async (opts: { install?: boolean; tool?: string; dryRun?: boolean; json?: boolean; lean?: boolean; full?: boolean }) => {
       if (opts.install) {
         const { mcpInstallCommand } = await import("./commands/mcp-install.js");
         process.exit(
@@ -1243,7 +1244,7 @@ export async function run(argv: string[]): Promise<void> {
             tool: opts.tool,
             dryRun: opts.dryRun,
             json: opts.json,
-            lean: opts.lean,
+            full: opts.full,
           }),
         );
       }
