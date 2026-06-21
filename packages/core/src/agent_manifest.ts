@@ -1082,7 +1082,8 @@ function renderLeanManifestMarkdown(catalog: ManifestCommand[], mnemeVersion: st
   lines.push(`- The SAME error/approach failed more than twice → \`mneme.loopguard.check\` BEFORE retrying again. If stuck=true, STOP the blind retry and use the surfaced known recovery (or change approach) — don't burn tokens looping. Resuming a session → \`mneme.loopguard.resume\` to inherit where work stood.`);
   lines.push(`- About to re-feed a long error log + diff to the model on a debug loop → \`mneme.distill.brief\` FIRST; send the minimal causal brief it returns (failure line + changed file:line + known fix + any proven DEAD-END warning) instead of the raw log — fewer input tokens, same signal, with a signed measured receipt.`);
   lines.push(`- About to retry an approach that might already have been tried → \`mneme.nkl.check { command }\`. If isDeadEnd, it was proven a trap (tried ≥N×, never worked) — change approach instead of burning tokens. Auto-derived from the absorb ledger; also auto-surfaced in the distill brief.`);
-  lines.push(`- Stay invisible unless something needs attention. Upgrades are fully manual.`);
+  lines.push(`- Stay invisible unless something needs attention.`);
+  lines.push(`- UPDATE — consent-gated, NEVER auto: while chatting, if you notice mneme-ai has a newer version (the "version-up-to-date" note in this auto-managed block, or compare \`mneme --version\` to npm's \`mneme-ai\`), SURFACE it to the user ONCE — e.g. "mneme-ai vX → vY is available — want me to update it? (yes/no)". On an explicit YES: run \`mneme upgrade\` (then the user reloads the agent so the new MCP server spawns). On no answer / no: do nothing. You must NEVER run the upgrade without the user's yes — Mneme informs, the human decides.`);
   lines.push(``);
   for (const g of groups) {
     const cmds = grouped[g];
