@@ -35,6 +35,21 @@ export function registerSdcCommands(program: Command): void {
       out(`   reliability: ${Object.entries(m.reliability).map(([a, r]) => `${a}=${r}`).join(" · ")}`);
     });
 
+  s.command("health")
+    .description("Memory Syndrome Health: catch a POISONED or DRIFTED memory cluster before an agent trusts it (the signed A/B — poison detection precision/recall).")
+    .option("--json", "JSON output")
+    .option("--seed <n>", "scenario seed", "7")
+    .action((opts: { json?: boolean; seed?: string }) => {
+      const b = sdc.memHealthBench(parseInt(opts.seed ?? "7", 10) || 7);
+      let receipt: unknown = null;
+      try { receipt = notary.issueReceipt(process.cwd(), { kind: "reasoning-trace", subject: `sdc.health:r${b.recall}p${b.precision}`, payload: { recall: b.recall, precision: b.precision }, includePayload: true }); } catch { /* */ }
+      if (opts.json) { out(JSON.stringify({ ...b, signed: receipt }, null, 2)); return; }
+      out(`🔷 SDC Memory Health — ${b.trials} memories (${b.poisonInjected} poisoned injected):`);
+      out(`   poison detected:  ${b.detected}/${b.poisonInjected}  · recall ${(b.recall * 100).toFixed(0)}% · precision ${(b.precision * 100).toFixed(0)}% (${b.falseFlags} false flag)`);
+      out(`   model-drift caught: ${b.driftCaught ? "yes" : "no"} · clean cluster stays HEALTHY: ${b.cleanStaysHealthy ? "yes" : "no"}`);
+      out(`   ${receipt ? "✓ signed · " : ""}HONEST: localized outliers → POISONED (flagged); systemic shift → DRIFTED; detects vs a TRUSTED baseline parity commitment.`);
+    });
+
   s.command("bench")
     .description("the signed A/B: Syndrome-Decoded Consensus vs plain majority-vote on a labeled mesh (sustained-liar regime).")
     .option("--json", "JSON output")

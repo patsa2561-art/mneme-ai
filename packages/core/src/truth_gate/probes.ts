@@ -605,8 +605,10 @@ const probes: Probe[] = [
       try {
         const S = await import("../sdc/index.js" as string) as typeof import("../sdc/index.js");
         const g = S.sdcGauntlet();
-        const ok = g.score === 100 && g.cleanWhenUnanimous && g.correctsRandomError && g.abstainsOnTie && g.beatsMajorityVote && g.sdcRecoversNearPerfect && g.locatesByzantine && g.robustAcrossSeeds && g.deterministic && g.total;
-        return { value: ok ? 1 : 0, evidence: `score=${g.score} beatsMajority=${g.beatsMajorityVote} recovers=${g.sdcRecoversNearPerfect} locates=${g.locatesByzantine} robust=${g.robustAcrossSeeds}`, dtMs: Date.now() - t0 };
+        const h = S.memHealthGauntlet();
+        const ok = g.score === 100 && g.cleanWhenUnanimous && g.correctsRandomError && g.abstainsOnTie && g.beatsMajorityVote && g.sdcRecoversNearPerfect && g.locatesByzantine && g.robustAcrossSeeds && g.deterministic && g.total
+          && h.score === 100 && h.poisonedDetectedHighRecall && h.lowFalseFlags && h.driftCaught && h.cleanStaysHealthy && h.robustAcrossSeeds;
+        return { value: ok ? 1 : 0, evidence: `consensus score=${g.score} beatsMajority=${g.beatsMajorityVote} locates=${g.locatesByzantine} | memHealth score=${h.score} poisonRecall=${h.poisonedDetectedHighRecall} drift=${h.driftCaught}`, dtMs: Date.now() - t0 };
       } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
     },
   },

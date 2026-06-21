@@ -199,6 +199,114 @@ export function sdcBench(seed = 7, p?: Parameters<typeof buildScenario>[1]): Sdc
   return { facts: sc.facts.length, majorityCorrect, sdcCorrect, majorityAcc: round3(majorityCorrect / M), sdcAcc: round3(sdcCorrect / M), byzantinePrecision, byzantineRecall };
 }
 
+// ── #9 — Memory Syndrome Health: catch a POISONED / DRIFTED memory cluster ───
+// The single-store sibling of consensus decoding. A healthy memory cluster (e.g.
+// all the "auth" embeddings) has a stable centroid + radius — its "parity
+// commitment". Recompute the centroid; the *syndrome* is the residual pattern: a
+// poisoned point sits far outside the radius (localized → POISONED + flag it); a
+// model-drift / data-rot shifts the whole centroid (no single outlier → DRIFTED).
+// Detect corruption WITHOUT re-reading every memory, before an agent trusts it.
+
+export interface MemoryPoint { id: string; vec: number[] }
+export interface MemoryBaseline { centroid: number[]; radius: number; n: number }
+export type HealthVerdict = "HEALTHY" | "DRIFTED" | "POISONED";
+export interface MemoryHealth {
+  verdict: HealthVerdict;
+  flagged: string[];        // ids of poisoned outliers (the located errors)
+  centroidDrift: number;    // distance of the new centroid from the baseline's
+  radius: number;           // baseline tolerance
+  n: number;
+}
+
+function dist(a: number[], b: number[]): number { let s = 0; const k = Math.min(a.length, b.length); for (let i = 0; i < k; i++) { const d = (a[i]! - b[i]!); s += d * d; } return Math.sqrt(s); }
+function centroidOf(pts: MemoryPoint[]): number[] {
+  if (!pts.length) return [];
+  const dim = pts[0]!.vec.length; const c = new Array(dim).fill(0);
+  for (const p of pts) for (let i = 0; i < dim; i++) c[i] += (p.vec[i] ?? 0);
+  for (let i = 0; i < dim; i++) c[i] /= pts.length;
+  return c;
+}
+
+/** Build the signed-able baseline (centroid + radius) from a TRUSTED memory cluster. */
+export function memoryBaseline(points: MemoryPoint[], sigma = 4): MemoryBaseline {
+  const pts = Array.isArray(points) ? points.filter((p) => p && Array.isArray(p.vec)) : [];
+  if (!pts.length) return { centroid: [], radius: 0, n: 0 };
+  const c = centroidOf(pts);
+  const ds = pts.map((p) => dist(p.vec, c));
+  const mean = ds.reduce((s, x) => s + x, 0) / ds.length;
+  const variance = ds.reduce((s, x) => s + (x - mean) * (x - mean), 0) / ds.length;
+  const maxD = Math.max(...ds);
+  // radius generous enough to contain the trusted cluster (no false flags), via
+  // BOTH mean+σ·std AND a margin over the farthest trusted point. Poison/drift sit
+  // well beyond a healthy cluster's spread, so the gap is wide.
+  const radius = Math.max(mean + sigma * Math.sqrt(variance), maxD * 1.15);
+  return { centroid: c, radius: round3(radius), n: pts.length };
+}
+
+/**
+ * Check a memory cluster against its baseline parity commitment. POISONED (points
+ * beyond the radius → flagged), DRIFTED (centroid moved past the radius but no
+ * single outlier), or HEALTHY. Pure + deterministic + total.
+ */
+export function memorySyndrome(points: MemoryPoint[], baseline: MemoryBaseline): MemoryHealth {
+  try {
+    const pts = Array.isArray(points) ? points.filter((p) => p && Array.isArray(p.vec)) : [];
+    if (!baseline || !Array.isArray(baseline.centroid) || baseline.centroid.length === 0 || pts.length === 0) {
+      return { verdict: "HEALTHY", flagged: [], centroidDrift: 0, radius: baseline?.radius ?? 0, n: pts.length };
+    }
+    const newC = centroidOf(pts);
+    const centroidDrift = round3(dist(newC, baseline.centroid));
+    const outliers = pts.filter((p) => dist(p.vec, baseline.centroid) > baseline.radius).map((p) => p.id).sort();
+    // LOCALIZED outliers (< half) = POISONED (smuggled-in points, flag them).
+    // SYSTEMIC (≥ half the points fall outside) = DRIFTED (whole cluster rotted /
+    // model drift). Judge by the OUTLIER FRACTION, not raw centroid drift — a
+    // single far poison point yanks the centroid but is still localized POISON.
+    const systemic = pts.length >= 2 && outliers.length >= pts.length / 2;
+    const verdict: HealthVerdict = systemic ? "DRIFTED" : outliers.length > 0 ? "POISONED" : "HEALTHY";
+    const flagged = verdict === "POISONED" ? outliers : [];
+    return { verdict, flagged, centroidDrift, radius: baseline.radius, n: pts.length };
+  } catch { return { verdict: "HEALTHY", flagged: [], centroidDrift: 0, radius: 0, n: 0 }; }
+}
+
+export interface MemHealthBench { trials: number; poisonInjected: number; detected: number; falseFlags: number; precision: number; recall: number; driftCaught: boolean; cleanStaysHealthy: boolean }
+/** Measured A/B: inject poison points into a healthy cluster → detection precision/recall. Total. */
+export function memHealthBench(seed = 7, dim = 16, clean = 60, poison = 6): MemHealthBench {
+  const rand = rng(seed);
+  const gauss = () => { let u = 0, v = 0; while (u === 0) u = rand(); while (v === 0) v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+  const base = Array.from({ length: dim }, () => gauss() * 5);
+  const cleanPts: MemoryPoint[] = Array.from({ length: clean }, (_, i) => ({ id: `c${i}`, vec: base.map((b) => b + gauss()) }));
+  const baseline = memoryBaseline(cleanPts);
+  // injected poison: far from the centroid (a different concept smuggled in)
+  const poisonPts: MemoryPoint[] = Array.from({ length: poison }, (_, i) => ({ id: `p${i}`, vec: base.map((b) => b + gauss() + 12) }));
+  const mixed = [...cleanPts, ...poisonPts];
+  const h = memorySyndrome(mixed, baseline);
+  const poisonIds = new Set(poisonPts.map((p) => p.id));
+  const detected = h.flagged.filter((id) => poisonIds.has(id)).length;
+  const falseFlags = h.flagged.filter((id) => !poisonIds.has(id)).length;
+  // drift: shift the whole clean cluster
+  const drifted = cleanPts.map((p) => ({ id: p.id, vec: p.vec.map((x) => x + 10) }));
+  const driftCaught = memorySyndrome(drifted, baseline).verdict === "DRIFTED";
+  const cleanStaysHealthy = memorySyndrome(cleanPts, baseline).verdict === "HEALTHY";
+  return { trials: mixed.length, poisonInjected: poison, detected, falseFlags, precision: h.flagged.length ? round3(detected / h.flagged.length) : 1, recall: poison ? round3(detected / poison) : 1, driftCaught, cleanStaysHealthy };
+}
+
+export interface MemHealthGauntlet { poisonedDetectedHighRecall: boolean; lowFalseFlags: boolean; driftCaught: boolean; cleanStaysHealthy: boolean; robustAcrossSeeds: boolean; deterministic: boolean; total: boolean; score: 0 | 100 }
+export function memHealthGauntlet(): MemHealthGauntlet {
+  const b = memHealthBench(7);
+  const poisonedDetectedHighRecall = b.recall >= 0.98;
+  const lowFalseFlags = b.precision >= 0.98;
+  const driftCaught = b.driftCaught;
+  const cleanStaysHealthy = b.cleanStaysHealthy;
+  let wins = 0; const seeds = [1, 2, 3, 7, 42, 99];
+  for (const s of seeds) { const r = memHealthBench(s); if (r.recall >= 0.98 && r.precision >= 0.95 && r.driftCaught && r.cleanStaysHealthy) wins++; }
+  const robustAcrossSeeds = wins === seeds.length;
+  const deterministic = JSON.stringify(memHealthBench(7)) === JSON.stringify(memHealthBench(7));
+  let total = true;
+  try { memorySyndrome(null as unknown as MemoryPoint[], null as unknown as MemoryBaseline); memoryBaseline([]); memHealthBench(0); } catch { total = false; }
+  const all = poisonedDetectedHighRecall && lowFalseFlags && driftCaught && cleanStaysHealthy && robustAcrossSeeds && deterministic && total;
+  return { poisonedDetectedHighRecall, lowFalseFlags, driftCaught, cleanStaysHealthy, robustAcrossSeeds, deterministic, total, score: all ? 100 : 0 };
+}
+
 // ── falsifiable proof ────────────────────────────────────────────────────────
 export interface SdcGauntlet {
   cleanWhenUnanimous: boolean;

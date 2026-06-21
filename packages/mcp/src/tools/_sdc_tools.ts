@@ -38,4 +38,26 @@ export const SDC_TOOLS: MnemeTool[] = [
       } catch (e) { return low((e as Error).message); }
     },
   },
+  {
+    name: "mneme.sdc.health",
+    category: "forensics",
+    description: "🔷 SDC Memory Health — catch a POISONED or DRIFTED memory cluster BEFORE an agent trusts it. Pass the cluster's points [{id,vec}] + a baseline {centroid,radius} built from a trusted snapshot (mneme.sdc.health with no baseline returns one). Localized outliers → POISONED (flags the smuggled points); a systemic centroid shift → DRIFTED (model/data rot); else HEALTHY. The single-store sibling of consensus decoding — a Hamming-syndrome health check on semantic memory. Self-attesting.",
+    whenToUse: "Before relying on a retrieved memory cluster (auth lessons, a fact set), or periodically — to detect poisoned/drifted embeddings without re-reading every memory.",
+    triggers: ["is this memory poisoned", "memory drift", "embeddings rotted", "check memory health", "poisoned embeddings", "ความจำเน่า", "embedding drift"],
+    inputSchema: { type: "object", required: ["points"], properties: { points: { type: "array", description: "[{id, vec:number[]}]" }, baseline: { type: "object", description: "{centroid:number[], radius:number} — omit to BUILD one from points" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      try {
+        const core = await import("@mneme-ai/core");
+        const cwd = rt.meta?.rootPath ?? process.cwd();
+        const points = args["points"] as import("@mneme-ai/core").sdc.MemoryPoint[];
+        if (!Array.isArray(points) || points.length === 0) return low("sdc.health needs a non-empty 'points' array: [{id, vec:number[]}]");
+        const baseline = (args["baseline"] as import("@mneme-ai/core").sdc.MemoryBaseline) ?? core.sdc.memoryBaseline(points);
+        if (!args["baseline"]) { const data = await attest(cwd, "sdc.health:baseline", { ...(baseline as unknown as Record<string, unknown>) }); return { data, wisdom: `🔷 Built a trusted baseline (centroid + radius ${baseline.radius}) from ${baseline.n} points. Pass it back as 'baseline' to check new points.`, followUp: [], confidence: { level: "high" as const } }; }
+        const h = core.sdc.memorySyndrome(points, baseline);
+        const data = await attest(cwd, `sdc.health:${h.verdict}`, { ...(h as unknown as Record<string, unknown>) });
+        return { data, wisdom: `🔷 Memory ${h.verdict}${h.flagged.length ? ` — poisoned: ${h.flagged.join(", ")}` : ""}${h.verdict === "DRIFTED" ? ` (centroid drift ${h.centroidDrift} > radius ${h.radius})` : ""}.`, followUp: [], confidence: { level: h.verdict === "HEALTHY" ? "high" as const : "medium" as const } };
+      } catch (e) { return low((e as Error).message); }
+    },
+  },
 ];
