@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.114.0 — SDC: Syndrome-Decoded Consensus (error-correction for the agent trust mesh) ──
+  {
+    id: "claim.sdc.consensus_decode",
+    source: "v3.114.0 release notes",
+    text: "Mneme's SDC (Syndrome-Decoded Consensus) is error-correction for a MULTI-AGENT trust mesh — the honest, classical realization of the one deeply-transferable idea from Peter Shor's QEC lectures (CSS / syndrome decoding): treat the attestations many agents (any vendor) make on a fact as a repetition codeword; the disagreement pattern is the SYNDROME. SDC DETECTS + LOCATES the poisoned/wrong/hallucinated attestations, RECOVERS the consensus truth while bad ones stay under the code's tolerance, or returns UNRECOVERABLE (abstains, never guesses). decodeMesh decodes the WHOLE mesh ITERATIVELY — round 1 majority → a provisional truth → each agent's syndrome row (disagreement across all its facts) → an EARNED reliability (not declared) → re-decode weighted by reliability — so a liar dense on a single fact but a minority across the mesh is down-weighted and an honest minority still wins. sdcGauntlet=100: CLEAN on unanimous ∧ CORRECTED + locates the dissenter on a single error ∧ UNRECOVERABLE on a true tie ∧ beatsMajorityVote (MEASURED A/B: plain majority 60-80% → SDC 100% across seeds) ∧ recovery ≥0.95 ∧ byzantine located precision+recall ≥0.8 ∧ robust across 6 seeds ∧ deterministic ∧ total. CLI `mneme sdc decode|bench`; MCP `mneme.sdc.decode` (self-attesting); flows through the Matrix gRPC rail; reachable via mneme.morph ('which agent is lying' → sdc). HONEST (DIAKRISIS): CLASSICAL + deterministic (no quantum hardware — the quantum-token/quantum-AI pitch is fiction); it corrects sustained liars who are a minority — a colluding majority everywhere beats any decoder and SDC then abstains (UNRECOVERABLE), never a guess; the win is measured, not asserted.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.sdc.consensus_decode",
+    severity: "block",
+  },
   // ── v3.104.0 — MORPH: the polymorphic plug + PRECISION ENGINE ──
   {
     id: "claim.morph.polymorphic_surface",

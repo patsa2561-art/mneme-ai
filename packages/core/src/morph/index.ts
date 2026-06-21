@@ -90,6 +90,7 @@ export const COMMAND_TO_MCP: Readonly<Record<string, string>> = Object.freeze({
   "mneme bdiff": "mneme.bdiff",
   "mneme mediate": "mneme.mediate",
   "mneme change-gate": "mneme.change.gate",
+  "mneme sdc": "mneme.sdc.decode",
   // appsec / funeral have no MCP surface → intentionally absent (mcpTool=null, use CLI)
 });
 
