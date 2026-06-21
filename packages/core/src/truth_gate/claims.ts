@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.116.0 — STATGUARD: statistical-misinterpretation guard (Greenland et al. 2016) ──
+  {
+    id: "claim.statguard.misinterpretation_guard",
+    source: "v3.116.0 release notes",
+    text: "Mneme's STATGUARD adopts Greenland, Senn, Rothman, Carlin, Poole, Goodman & Altman (2016), 'Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations' (Eur J Epidemiol 31:337-350) into a deterministic guard: before an AI agent relays any interpretation of a statistical result, STATGUARD scans it for the documented p-value/CI/power fallacies LLMs repeat — 'p>0.05 means no effect', 'p=0.03 means 3% chance the null is true', 'the p-value is the probability the result is due to chance', '95% CI = 95% probability the true value is inside it', 'statistically significant = clinically important', 'non-significant = groups are equal', 'values outside the CI are ruled out', 'high power + non-significant proves the null', 'one study significant + one not = they disagree' — and returns each hit with WHY it's wrong + the correct interpretation + the Greenland citation. statGuardGauntlet=100: catches EACH documented fallacy on its labeled example (MEASURED recall = 1.0) ∧ zero false flags on correct statements (precision = 1.0) ∧ every fallacy carries a correction + a Greenland reference ∧ deterministic ∧ total. CLI `mneme statguard \"<claim>\"` / `bench`; MCP `mneme.statguard.check` (self-attesting); flows through the Matrix gRPC rail; reachable via mneme.morph ('interpret this p value' → statguard). HONEST (DIAKRISIS): a PATTERN detector of the documented textual forms (grounded + citable), NOT a full statistical reasoner; CLEAN means no KNOWN fallacy pattern present, never a proof the statistics are correct. The anti-trap layer so an AI using Mneme never falls into a statistics pit the literature already named.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.statguard.misinterpretation_guard",
+    severity: "block",
+  },
   // ── v3.114.0 — SDC: Syndrome-Decoded Consensus (error-correction for the agent trust mesh) ──
   {
     id: "claim.sdc.consensus_decode",

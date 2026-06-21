@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.statguard.misinterpretation_guard",
+    kind: "boolean",
+    description: "STATGUARD (v3.116.0 — statistical-misinterpretation guard, grounded in Greenland et al. 2016, 'Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations'). A deterministic detector for the documented p-value/CI/power fallacies LLMs repeat ('p>0.05 means no effect', '95% CI = 95% probability the truth is inside', 'significant = important', 'non-significant = groups equal', etc.), each returned with WHY it's wrong + the correct interpretation + the citation. This probe asserts statGuardGauntlet=100: catches EACH documented fallacy on its labeled example (recall = 1.0 measured) ∧ zero false flags on correct statements (precision = 1.0) ∧ every fallacy carries a correction + a Greenland reference ∧ deterministic ∧ total. HONEST (DIAKRISIS): a PATTERN detector of the documented textual forms (grounded + citable), NOT a full statistical reasoner; CLEAN means no KNOWN fallacy pattern, never 'the stats are correct'.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../statguard/index.js" as string) as typeof import("../statguard/index.js");
+        const g = S.statGuardGauntlet(); const b = S.statGuardBench();
+        const ok = g.score === 100 && g.catchesEachFallacy && g.recallHigh && g.noFalseFlags && g.everyFallacyHasCorrection && g.deterministic && g.total && b.recall === 1 && b.precision === 1;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} recall=${b.recall} precision=${b.precision} falseFlags=${b.falseFlags} fallacies=${b.flaggable}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.sdc.consensus_decode",
     kind: "boolean",
     description: "SDC (v3.114.0 — Syndrome-Decoded Consensus). Error-correction for a multi-agent trust mesh, borrowing QEC syndrome-decoding (classical): attestations on a fact = a repetition codeword, the disagreement pattern = the syndrome; detect + LOCATE poisoned/wrong attestations, recover the consensus truth under tolerance, else UNRECOVERABLE (abstain, never guess). decodeMesh iteratively earns reliability from the whole mesh so it beats plain majority-vote when liars are dense per-fact but a global minority. This probe asserts sdcGauntlet=100: CLEAN on unanimous ∧ CORRECTED + locates the dissenter on a single error ∧ UNRECOVERABLE (abstains) on a true tie ∧ ★beatsMajorityVote MEASURED (SDC strictly > majority on a labeled mesh) ∧ SDC ≥0.95 recovery ∧ locates byzantine agents (precision+recall ≥0.8) ∧ robust across 6 seeds (structural, not a lucky draw) ∧ deterministic ∧ total. HONEST (DIAKRISIS): classical + deterministic (no quantum HW); corrects sustained liars who are a minority — a colluding majority everywhere → UNRECOVERABLE; the win is measured, not asserted.",
