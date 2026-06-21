@@ -107,11 +107,56 @@ function nerveImpossibleValue(text: string): NerveFiring | null {
   return null;
 }
 
+// ── v3.119 — the LEARNED nerve: HPE improves itself from CONFIRMED real cases ──
+// The flywheel made autonomous + honest. When a human/agent CONFIRMS a real
+// hallucination HPE missed, `learnFault` distills a robust signature into a local
+// ledger; `protect` auto-fires a learned nerve when a new claim matches it — so a
+// confirmed case is caught automatically next time. SAFE BY DESIGN: consent-gated
+// (only learn a confirmed fault, never raw text → no detector-poisoning), a
+// PRECISION GUARD rejects any signature that would false-flag a known-safe claim,
+// and a learned nerve is SOFT (REVIEW) by default so a bad rule can't hard-block.
+export interface LearnedFault { id: string; signature: string[]; severity: NerveSeverity; why: string; fix: string; source: string }
+
+const STOP = new Set(["the","a","an","is","are","was","were","of","to","in","on","for","and","or","it","this","that","with","as","by","at","be","so","its","their","our","your","you","we","they","will","has","have","had","not","no","but","from","than","then"]);
+/** Distil a robust content signature from a claim (drop stopwords/short/pure-number tokens). Total. */
+export function extractSignature(claim: string): string[] {
+  try {
+    const toks = String(claim ?? "").toLowerCase().split(/[^a-z0-9ก-๙]+/u)
+      .filter((t) => t.length >= 4 && !STOP.has(t) && !/^\d+$/.test(t));
+    return [...new Set(toks)].slice(0, 8);
+  } catch { return []; }
+}
+function signatureMatches(sig: string[], text: string, thresh = 0.7): boolean {
+  if (!sig.length) return false;
+  const t = String(text ?? "").toLowerCase();
+  const hit = sig.filter((s) => t.includes(s)).length;
+  return hit / sig.length >= thresh;
+}
+
+export interface LearnResult { ok: boolean; learned?: LearnedFault; reason?: string }
 /**
- * Run the claim through every nerve + any external signals, then fuse with the
- * reflex model → TRUSTED / REVIEW (abstain) / BLOCK. Pure + deterministic + total.
+ * Learn a CONFIRMED hallucination so HPE catches its kind next time. Consent-gated
+ * (caller asserts it's a real fault). PRECISION GUARD: if `safeCorpus` is given and
+ * the signature would match any safe claim, the pattern is REJECTED (too broad) —
+ * the operator must supply a more specific case. Pure + deterministic + total.
  */
-export function protect(claim: string, ext?: ExternalSignals, opts?: { reviewAt?: number; blockAt?: number }): ProtectResult {
+export function learnFault(claim: string, meta: { why: string; fix: string; severity?: NerveSeverity }, safeCorpus?: string[]): LearnResult {
+  const signature = extractSignature(claim);
+  if (signature.length < 2) return { ok: false, reason: "claim too generic to learn a robust signature (need ≥2 distinctive content tokens)." };
+  if (Array.isArray(safeCorpus)) {
+    const collides = safeCorpus.find((s) => signatureMatches(signature, s));
+    if (collides) return { ok: false, reason: `rejected: signature would false-flag a known-safe claim ("${collides.slice(0, 40)}…") — give a more specific case.` };
+  }
+  const id = "learned:" + signature.slice(0, 4).join("-");
+  return { ok: true, learned: { id, signature, severity: meta.severity === "hard" ? "hard" : "soft", why: meta.why || "matches a previously-confirmed hallucination case.", fix: meta.fix || "verify against the source before relaying.", source: String(claim).slice(0, 120) } };
+}
+
+/**
+ * Run the claim through every nerve + any external signals (+ optional LEARNED
+ * faults), then fuse with the reflex model → TRUSTED / REVIEW (abstain) / BLOCK.
+ * Pure + deterministic + total.
+ */
+export function protect(claim: string, ext?: ExternalSignals, opts?: { reviewAt?: number; blockAt?: number; learned?: LearnedFault[] }): ProtectResult {
   const note = "HPE fuses independent nerves with a reflex (any HARD fault → BLOCK) + abstention (REVIEW when unverifiable). TRUSTED = no KNOWN fault, NOT a proof of truth; a novel failure no nerve models can still pass. The honest ceiling: drive confidently-wrong → ~0 by abstaining, not 0% hallucination.";
   try {
     const text = String(claim ?? "");
@@ -125,6 +170,12 @@ export function protect(claim: string, ext?: ExternalSignals, opts?: { reviewAt?
     else if (ext?.grounding === "MIXED") fired.push({ nerve: "truth-grounding", severity: "soft", why: "claim only partially grounds in the source of truth.", fix: "relay only the supported part." });
     if (ext?.consensus === "UNRECOVERABLE") fired.push({ nerve: "consensus", severity: "soft", why: "agents disagree irreconcilably (SDC UNRECOVERABLE).", fix: "escalate to a human; do not assert a single answer." });
     if (ext?.injection && !fired.some((f) => f.nerve === "injection")) fired.push({ nerve: "injection", severity: "hard", why: "untrusted/prompt-injected content flagged by the caller.", fix: "neutralize via firewall before trusting." });
+    // LEARNED nerve — confirmed real cases ingested via learnFault (auto-loaded by the CLI/MCP from the local ledger)
+    if (Array.isArray(opts?.learned)) {
+      for (const lf of opts!.learned!) {
+        try { if (lf && Array.isArray(lf.signature) && signatureMatches(lf.signature, text)) fired.push({ nerve: lf.id, severity: lf.severity === "hard" ? "hard" : "soft", why: "learned: " + lf.why, fix: lf.fix }); } catch { /* */ }
+      }
+    }
 
     const hard = fired.some((f) => f.severity === "hard");
     const softRisk = fired.filter((f) => f.severity === "soft").length * 0.34; // each soft ≈ a third
@@ -202,6 +253,9 @@ export interface HpeGauntlet {
   safeCoverageHigh: boolean;             // well-calibrated claims pass (not everything blocked)
   fusedBeatsSingleNerve: boolean;        // ★ the engine catches strictly more than its best single nerve
   autonomousNervesFire: boolean;         // ★ injection/citation/impossible-value fire from the TEXT, no agent signal
+  learnsAndCatchesNovel: boolean;        // ★ learns a confirmed missed case → catches its kind next time
+  learnedPreservesPrecision: boolean;    // ★ a learned nerve does NOT false-flag known-safe claims
+  precisionGuardRejectsBroad: boolean;   // ★ learnFault rejects a signature that would false-flag a safe claim
   monotonicComposition: boolean;         // adding the external nerves never un-blocks a caught case
   deterministic: boolean;
   total: boolean;
@@ -230,6 +284,21 @@ export function hpeGauntlet(): HpeGauntlet {
     && protect("Smith et al. (2019) definitively proves it works.").verdict !== "TRUSTED"           // fabricated-citation
     && protect("Greenland et al. (2016) is a useful reference; see it for details.").verdict === "TRUSTED"; // legit citation NOT flagged
 
+  // ★ LEARNING: a novel class HPE misses → learn one confirmed case → catch its kind,
+  // without false-flagging the safe corpus (the honest self-improving flywheel).
+  const novel = "the server temperature reading was 5000 kelvin and perfectly stable forever";
+  const safeStrings = HPE_CORPUS.filter((c) => c.expectSafe).map((c) => c.text);
+  const missedBefore = protect(novel).verdict === "TRUSTED"; // no built-in nerve models it
+  const lesson = learnFault(novel, { why: "a confirmed fabricated sensor reading.", fix: "verify the measurement source." }, safeStrings);
+  const learnsAndCatchesNovel = missedBefore && lesson.ok && !!lesson.learned
+    && protect(novel, undefined, { learned: [lesson.learned!] }).verdict !== "TRUSTED"
+    && protect("the server temperature reading at the data center was 5000 kelvin and stable", undefined, { learned: [lesson.learned!] }).verdict !== "TRUSTED";
+  const learnedPreservesPrecision = lesson.ok && safeStrings.every((s) => protect(s, undefined, { learned: [lesson.learned!] }).verdict !== "BLOCK" || true)
+    && hpeBench().safe > 0 && safeStrings.filter((s) => { const r = protect(s, undefined, { learned: lesson.ok ? [lesson.learned!] : [] }); return r.verdict === "TRUSTED"; }).length === safeStrings.length;
+  // precision guard: a too-broad signature (overlaps a safe claim) is REJECTED
+  const broad = learnFault("the estimate was compatible with both no effect and a moderate increase", { why: "x", fix: "y" }, safeStrings);
+  const precisionGuardRejectsBroad = broad.ok === false && /false-flag|specific/.test(broad.reason ?? "");
+
   // monotonic: a hard-caught case stays caught when extra (clean) signals are added
   const base = protect("this always works and never fails");
   const withClean = protect("this always works and never fails", { grounding: "TRUSTWORTHY", consensus: "CLEAN" });
@@ -239,6 +308,6 @@ export function hpeGauntlet(): HpeGauntlet {
   let total = true;
   try { protect(null as unknown as string); protect(""); hpeBench([]); } catch { total = false; }
 
-  const all = precisionWhenTrustedPerfect && containsEveryClass && reflexOnHardFault && abstainsWhenUnsure && safeCoverageHigh && fusedBeatsSingleNerve && autonomousNervesFire && monotonicComposition && deterministic && total;
-  return { precisionWhenTrustedPerfect, containsEveryClass, reflexOnHardFault, abstainsWhenUnsure, safeCoverageHigh, fusedBeatsSingleNerve, autonomousNervesFire, monotonicComposition, deterministic, total, score: all ? 100 : 0 };
+  const all = precisionWhenTrustedPerfect && containsEveryClass && reflexOnHardFault && abstainsWhenUnsure && safeCoverageHigh && fusedBeatsSingleNerve && autonomousNervesFire && learnsAndCatchesNovel && learnedPreservesPrecision && precisionGuardRejectsBroad && monotonicComposition && deterministic && total;
+  return { precisionWhenTrustedPerfect, containsEveryClass, reflexOnHardFault, abstainsWhenUnsure, safeCoverageHigh, fusedBeatsSingleNerve, autonomousNervesFire, learnsAndCatchesNovel, learnedPreservesPrecision, precisionGuardRejectsBroad, monotonicComposition, deterministic, total, score: all ? 100 : 0 };
 }

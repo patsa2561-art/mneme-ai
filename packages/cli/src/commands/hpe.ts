@@ -7,9 +7,20 @@
  */
 
 import type { Command } from "commander";
+import { existsSync, readFileSync, appendFileSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { hpe, notary } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
+
+const LEDGER = () => join(process.cwd(), ".mneme", "hpe-learned.jsonl");
+/** Load confirmed learned faults from the local ledger (auto-applied on every scan). */
+function loadLearned(): hpe.LearnedFault[] {
+  try {
+    const p = LEDGER(); if (!existsSync(p)) return [];
+    return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l) as hpe.LearnedFault; } catch { return null; } }).filter((x): x is hpe.LearnedFault => !!x && Array.isArray(x.signature));
+  } catch { return []; }
+}
 
 export function registerHpeCommands(program: Command): void {
   const g = program
@@ -21,7 +32,8 @@ export function registerHpeCommands(program: Command): void {
     .action((claim: string[] | undefined, opts: { json?: boolean }) => {
       const q = Array.isArray(claim) ? claim.join(" ") : String(claim ?? "");
       if (!q.trim()) { out("usage: mneme protect \"<an AI claim>\""); process.exitCode = 2; return; }
-      const r = hpe.protect(q);
+      const learned = loadLearned();
+      const r = hpe.protect(q, undefined, { learned });
       let receipt: unknown = null;
       try { receipt = notary.issueReceipt(process.cwd(), { kind: "claim-verdict", subject: `hpe:${r.verdict}`, payload: { verdict: r.verdict, trust: r.trust, fired: r.fired.map((f) => f.nerve) }, includePayload: true }); } catch { /* */ }
       if (opts.json) { out(JSON.stringify({ ...r, signed: receipt }, null, 2)); process.exitCode = r.verdict === "BLOCK" ? 2 : 0; return; }
@@ -30,6 +42,24 @@ export function registerHpeCommands(program: Command): void {
       for (const f of r.fired) { out(`   • [${f.severity}] ${f.nerve}: ${f.why}`); out(`     fix: ${f.fix}`); }
       if (!r.fired.length) out(`   no nerve fired — no known fault (not a proof of truth).`);
       process.exitCode = r.verdict === "BLOCK" ? 2 : 0;
+    });
+
+  g.command("learn")
+    .argument("<claim...>", "the CONFIRMED hallucination to learn")
+    .description("teach HPE a confirmed real hallucination it missed → it auto-catches that kind on every future scan. Consent-gated (only learn a confirmed fault); precision-guarded (a too-broad pattern is rejected). Appends to .mneme/hpe-learned.jsonl.")
+    .option("--why <s>", "why it's a fault", "a previously-confirmed hallucination case")
+    .option("--fix <s>", "the correct handling", "verify against the source before relaying")
+    .option("--hard", "block (default: soft = review)", false)
+    .action((claim: string[], opts: { why: string; fix: string; hard?: boolean }) => {
+      const q = claim.join(" ");
+      // guard against false-flagging the engine's own known-safe corpus
+      const safe = hpe.HPE_CORPUS.filter((c) => c.expectSafe).map((c) => c.text);
+      const res = hpe.learnFault(q, { why: opts.why, fix: opts.fix, severity: opts.hard ? "hard" : "soft" }, safe);
+      if (!res.ok || !res.learned) { out(`🛑 not learned — ${res.reason}`); process.exitCode = 2; return; }
+      try { const p = LEDGER(); if (!existsSync(dirname(p))) mkdirSync(dirname(p), { recursive: true }); appendFileSync(p, JSON.stringify(res.learned) + "\n", "utf8"); } catch (e) { out(`✗ could not write ledger: ${(e as Error).message}`); process.exitCode = 2; return; }
+      out(`✓ learned [${res.learned.severity}] ${res.learned.id}`);
+      out(`   signature: ${res.learned.signature.join(" · ")}`);
+      out(`   HPE will now ${res.learned.severity === "hard" ? "BLOCK" : "REVIEW"} this kind on every future scan (auto-loaded from the ledger).`);
     });
 
   g.command("bench")

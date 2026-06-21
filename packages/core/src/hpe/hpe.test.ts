@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { protect, hpeBench, hpeGauntlet } from "./index.js";
+import { protect, hpeBench, hpeGauntlet, learnFault } from "./index.js";
 
 describe("v3.117 · HPE — Hallucination Protection Engine (nervous system)", () => {
   it("gauntlet is 100", () => {
@@ -45,6 +45,21 @@ describe("v3.117 · HPE — Hallucination Protection Engine (nervous system)", (
   it("v3.118 precision holds: a legit citation + valid numbers are NOT flagged", () => {
     expect(protect("Greenland et al. (2016) is a useful reference; see it for details.").verdict).toBe("TRUSTED");
     expect(protect("the probability of success was about 0.4 in our tests.").verdict).toBe("TRUSTED");
+  });
+
+  it("v3.119 LEARNS a confirmed missed case → auto-catches its kind, without false-flagging safe claims", () => {
+    const novel = "the server temperature reading was 5000 kelvin and perfectly stable forever";
+    expect(protect(novel).verdict).toBe("TRUSTED"); // no built-in nerve models it
+    const l = learnFault(novel, { why: "fabricated sensor reading", fix: "verify source" }, ["the cache hit rate improved to 95%"]);
+    expect(l.ok).toBe(true);
+    expect(protect(novel, undefined, { learned: [l.learned!] }).verdict).not.toBe("TRUSTED"); // now caught
+    expect(protect("the database is postgres", undefined, { learned: [l.learned!] }).verdict).toBe("TRUSTED"); // different topic safe
+  });
+
+  it("v3.119 PRECISION GUARD rejects a learned signature that would false-flag a known-safe claim", () => {
+    const r = learnFault("the estimate was compatible with both no effect and a moderate increase", { why: "x", fix: "y" }, ["the estimate was compatible with both no effect and a moderate increase"]);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/false-flag|specific/);
   });
 
   it("is total on hostile input", () => {
