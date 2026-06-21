@@ -5,6 +5,15 @@
 >
 > 🧠 **The Sovereign Cognitive Layer** — signed, vendor-neutral, byte-lossless context memory (HYDRA), self-aware wisdom gates, and a shared memory bus every AI agent (Grok / GPT / Gemini / Claude / Codex) contributes to that *heals its own contradictions by proof*. How to use it → [`docs/COGNITIVE-LAYER.md`](docs/COGNITIVE-LAYER.md). *(Moved here from the README front page to keep it lean; AI agents get these capabilities auto-wired via the `## Mneme command manifest` block in CLAUDE.md / AGENTS.md / GEMINI.md.)*
 
+> ### 🛡️ v3.103–v3.119 — The Verification Stack (the anti-hallucination capstone)
+> A composable, **local-first, signed, classical** (no quantum hype) defense layer that an AI agent crosses before it answers — every claim measured, never a fabricated number:
+> - **MORPH** (v3.103–108) — one polymorphic front door: state intent → the typed next-call; precision-when-it-routes ≥97.5% by abstaining; compound→ordered plan; args verified against live tool schemas.
+> - **SDC — Syndrome-Decoded Consensus** (v3.114–115) — QEC syndrome-decoding for a multi-agent trust mesh: catch + locate a *lying agent* (measured: majority-vote 60–80% → **100%**, byzantine P/R 1.0) + detect *poisoned/drifted memory* before an agent trusts it.
+> - **STATGUARD** (v3.116) — flags the documented p-value/CI/power misinterpretations ([Greenland et al. 2016](https://doi.org/10.1007/s10654-016-0149-3)); recall 1.0 / precision 1.0.
+> - **HPE — Hallucination Protection Engine** (v3.117–119) — a *nervous system*: 7 autonomous nerves (stat fallacy · self-contradiction · overconfidence · fabrication-risk · fabricated-citation · impossible-value · auto-injection) + external grounding/consensus, **reflex-block + abstain**. Measured **precision-when-TRUSTED = 1.0, 0 leaks on a 168-case × 10-class corpus**; and **self-improving** — `mneme.protect.learn` teaches it a *confirmed* miss (consent-gated + precision-guarded) so it auto-catches that kind forever.
+>
+> Honest by design: this drives *confidently-wrong → ~0* (not "0% hallucination" — that's impossible); `TRUSTED` = no *known* fault, not a proof of truth. Auto-wired into **every agent** that installs Mneme (lean front-door set + Matrix gRPC). Full detail per release below.
+
 (Moved from README to keep the front page lean. Each row is a one-line headline; scroll down for the full per-release entry.)
 
 | Version | Headline |
