@@ -1228,8 +1228,8 @@ export async function run(argv: string[]): Promise<void> {
 
   program
     .command("mcp")
-    .description("Run as an MCP server, OR --install to auto-config Claude Code / Cursor / Continue")
-    .option("--install", "Auto-detect AI coding tools and add Mneme to their MCP config", false)
+    .description("Run as an MCP server, OR --install to auto-config every detected agent (Claude Code/Desktop · Cursor · Continue · Windsurf · Cline · VS Code · Zed) with backup + offline verify")
+    .option("--install", "Auto-detect every AI coding agent (Cursor/Cline/Windsurf/VS Code/Zed/Continue/Claude) and wire Mneme into each MCP config (idempotent, backs up, verifies)", false)
     .option("--tool <name>", "Force a specific tool: claude-code | cursor | continue")
     .option("--dry-run", "Print what would change, don't write", false)
     .option("--json", "Machine-readable output", false)
