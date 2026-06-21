@@ -4,6 +4,8 @@
 
 # The Trust & Cost Layer for AI Agents
 
+<p><b>🛡️ A local-first · signed · classical · self-improving multi-nerve Hallucination-Protection Engine, shipped as an MCP primitive</b> — a composable verification stack: <b>catch a lying agent</b> · <b>poisoned memory</b> · <b>stat fallacy</b> · <b>7-nerve reflex + abstain</b> · <b>learns confirmed misses</b>. Every number <b>measured</b> — no quantum hype, no fabricated metric.</p>
+
 <sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions &amp; vendors, and <b>meters the tokens it saves you.</b><br/><b>Vendor-neutral · MIT · air-gap-ready.</b></sub>
 
 <br/><br/>
