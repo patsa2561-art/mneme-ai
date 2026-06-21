@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.hpe.hallucination_protection",
+    kind: "boolean",
+    description: "HPE (v3.117.0 — the Hallucination Protection Engine, a 'nervous system' for truth). Composes INDEPENDENT nerves (statistical fallacy · self-contradiction · overconfidence · fabrication-risk · external truth-grounding/consensus/injection) with a REFLEX (any hard fault → BLOCK) + ABSTENTION (REVIEW when unverifiable) → TRUSTED/REVIEW/BLOCK. This probe asserts hpeGauntlet=100: ★precision-when-TRUSTED = 1.0 (NOTHING hallucinated is stamped TRUSTED, zero leaks, measured) ∧ every hallucination class contained ∧ reflex on a hard fault ∧ abstains when unsure ∧ safe well-calibrated claims still pass (coverage ≥0.85) ∧ the fused engine catches strictly more than any single nerve ∧ monotonic (clean signals never un-block a caught case) ∧ deterministic ∧ total. HONEST (DIAKRISIS): drives CONFIDENTLY-WRONG → ~0 by reflex + abstention — NOT 0% hallucination (a theoretical impossibility for open-ended generation; TRUSTED = no KNOWN fault, never a proof of truth; a novel failure no nerve models can still pass).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const H = await import("../hpe/index.js" as string) as typeof import("../hpe/index.js");
+        const g = H.hpeGauntlet(); const b = H.hpeBench();
+        const ok = g.score === 100 && g.precisionWhenTrustedPerfect && g.containsEveryClass && g.reflexOnHardFault && g.abstainsWhenUnsure && g.safeCoverageHigh && g.fusedBeatsSingleNerve && g.monotonicComposition && g.deterministic && g.total && b.precisionWhenTrusted === 1 && b.leaks.length === 0;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} precWhenTrusted=${b.precisionWhenTrusted} leaks=${b.leaks.length} contained=${b.hallucinationsBlockedOrReviewed}/${b.risky} safeCoverage=${b.safeCoverage} fusedBeatsSingle=${g.fusedBeatsSingleNerve}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.statguard.misinterpretation_guard",
     kind: "boolean",
     description: "STATGUARD (v3.116.0 — statistical-misinterpretation guard, grounded in Greenland et al. 2016, 'Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations'). A deterministic detector for the documented p-value/CI/power fallacies LLMs repeat ('p>0.05 means no effect', '95% CI = 95% probability the truth is inside', 'significant = important', 'non-significant = groups equal', etc.), each returned with WHY it's wrong + the correct interpretation + the citation. This probe asserts statGuardGauntlet=100: catches EACH documented fallacy on its labeled example (recall = 1.0 measured) ∧ zero false flags on correct statements (precision = 1.0) ∧ every fallacy carries a correction + a Greenland reference ∧ deterministic ∧ total. HONEST (DIAKRISIS): a PATTERN detector of the documented textual forms (grounded + citable), NOT a full statistical reasoner; CLEAN means no KNOWN fallacy pattern, never 'the stats are correct'.",

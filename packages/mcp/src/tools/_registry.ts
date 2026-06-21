@@ -105,6 +105,7 @@ import { SIEGE_TOOLS } from "./_siege_tools.js";
 import { CANON_TOOLS } from "./_canon_tools.js";
 import { SDC_TOOLS } from "./_sdc_tools.js";
 import { STATGUARD_TOOLS } from "./_statguard_tools.js";
+import { HPE_TOOLS } from "./_hpe_tools.js";
 import { ADAMAS_TOOLS } from "./_adamas_tools.js";
 import { PRISM_TOOLS } from "./_prism_tools.js";
 import { GOLDILOCKS_TOOLS } from "./_goldilocks_tools.js";
@@ -331,6 +332,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...CANON_TOOLS,
     ...SDC_TOOLS,
     ...STATGUARD_TOOLS,
+    ...HPE_TOOLS,
     ...ADAMAS_TOOLS,
     ...PRISM_TOOLS,
     ...GOLDILOCKS_TOOLS,

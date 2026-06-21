@@ -313,6 +313,7 @@ export * as matrix from "./matrix/index.js";
 export * as adamas from "./adamas/index.js";
 export * as sdc from "./sdc/index.js";
 export * as statguard from "./statguard/index.js";
+export * as hpe from "./hpe/index.js";
 export * as prism from "./prism/index.js";
 export * as goldilocks from "./goldilocks/index.js";
 export * as axia from "./axia/index.js";

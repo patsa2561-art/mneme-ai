@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.117.0 — HPE: the Hallucination Protection Engine (a nervous system for truth) ──
+  {
+    id: "claim.hpe.hallucination_protection",
+    source: "v3.117.0 release notes",
+    text: "Mneme's HPE (Hallucination Protection Engine) is the honest answer to 'build a hallucination-protection engine': it does NOT claim 0% hallucination (a theoretical impossibility for open-ended generation), it drives CONFIDENTLY-WRONG output toward ~0 by composing INDEPENDENT detectors (nerves) into a reflex-gated, abstaining engine. The nerves: statistical fallacy (Greenland/STATGUARD), self-contradiction, overconfidence/miscalibration, fabrication-risk, plus external truth-grounding (mneme.truth.check), cross-agent consensus (mneme.sdc), and injection (mneme.firewall). The architecture is a nervous system, not a vote: any HARD nerve firing → immediate BLOCK (reflex); soft signals integrate into a risk potential → BLOCK/REVIEW; below confidence ⇒ REVIEW (abstain), never a confident pass; adding a nerve only increases coverage (monotonic). hpeGauntlet=100, and the load-bearing measured property is PRECISION-WHEN-TRUSTED = 1.0: on a labeled corpus spanning the hallucination classes, NOTHING hallucinated is ever stamped TRUSTED (zero leaks), while well-calibrated claims still pass (coverage ≥0.85), and the fused engine catches strictly more classes than any single nerve. CLI `mneme protect \"<claim>\"` / `bench`; MCP `mneme.protect.scan` (self-attesting); flows through the Matrix gRPC rail; reachable via mneme.morph ('check for hallucination' → protect). HONEST (DIAKRISIS): TRUSTED means no KNOWN fault, NOT a proof of truth — a novel failure no nerve models can still pass; the price of perfect precision-when-trusted is REVIEW (abstention). The first multi-class, reflex-gated, abstaining hallucination engine shipped as an MCP primitive.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.hpe.hallucination_protection",
+    severity: "block",
+  },
   // ── v3.116.0 — STATGUARD: statistical-misinterpretation guard (Greenland et al. 2016) ──
   {
     id: "claim.statguard.misinterpretation_guard",

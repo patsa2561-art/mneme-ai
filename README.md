@@ -34,6 +34,10 @@ A **signed, measurable** affective core (salience · valence · bond) that **dec
 
 The first governance that **doesn't assume a cloud**: an agent (Mars · severed link · air-gapped) governs itself against a local **charter** and hands back **one signed capsule proving charter-compliance for the whole offline window** (a violation can't be hidden) — verified offline by any vendor, bundled into a user-owned Accountability Dossier. `aphelionGauntlet=100` · `mneme aphelion`. <sub>**<a href="docs/aphelion.md" target="_blank" rel="noopener">the brain beyond the cloud + the Accountability Dossier →</a>**</sub>
 
+## 🧠 The Hallucination Protection Engine — a nervous system for truth
+
+The **last gate before an agent answers**: screen a claim through a mesh of **independent nerves** — statistical fallacy ([Greenland 2016](https://doi.org/10.1007/s10654-016-0149-3)) · self-contradiction · overconfidence · fabrication-risk · cross-agent consensus ([SDC](#)) · truth-grounding · injection — that **reflex-blocks** any hard fault and **abstains** (REVIEW) when it can't verify. Honest by design: it does **not** claim "0% hallucination" (impossible for open-ended text) — it drives **confidently-wrong → ~0**, measured as **precision-when-TRUSTED = 1.0** (nothing hallucinated is ever stamped TRUSTED) while well-calibrated claims still pass. Classical, deterministic, signed; **auto-wired into every agent that installs Mneme** (lean front-door tool). `hpeGauntlet=100` · `mneme protect` · MCP `mneme.protect.scan`. <sub>**<a href="CHANGELOG.md" target="_blank" rel="noopener">the verification stack: truth-gate · SDC (catch a lying agent) · STATGUARD · HPE →</a>**</sub>
+
 ## 🩻 Try it live
 
 Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>
