@@ -82,8 +82,24 @@ function tryResolve(...paths: string[]): string | null {
 
 export const TOOLS: ToolDescriptor[] = [
   {
+    // Claude Code (the CLI/IDE) reads MCP from PROJECT .mcp.json (canonical) or
+    // user ~/.claude.json — NOT ~/.claude/config.json (that's Claude Desktop).
+    // Writing the wrong file is why Claude Code never loaded Mneme. Fixed: write
+    // .mcp.json at the repo root (project scope, the documented Claude Code path).
     id: "claude-code",
-    name: "Claude Code",
+    name: "Claude Code (.mcp.json)",
+    resolveConfigPath: () => join(process.cwd(), ".mcp.json"),
+    readConfig: (path) => safeReadJson(path),
+    applyMnemeEntry: (existing, entry) => {
+      const cur = (existing["mcpServers"] as Record<string, unknown>) ?? {};
+      cur["mneme"] = entry as unknown as Record<string, unknown>;
+      return { ...existing, mcpServers: cur };
+    },
+    postInstallNote: "Reload Claude Code (Ctrl+Shift+P → Developer: Reload Window). Approve the project MCP server 'mneme' when prompted; then its tools (lean: ~10, morph is the front door) are callable.",
+  },
+  {
+    id: "claude-desktop",
+    name: "Claude Desktop",
     resolveConfigPath: () => {
       const home = userHome();
       const candidates =
@@ -100,7 +116,7 @@ export const TOOLS: ToolDescriptor[] = [
       cur["mneme"] = entry as unknown as Record<string, unknown>;
       return { ...existing, mcpServers: cur };
     },
-    postInstallNote: "Restart Claude Code (or Claude Desktop) once. Mneme tools will appear in the model's tool list — start asking about your repo's history.",
+    postInstallNote: "Restart Claude Desktop fully (quit from the tray, not just close the window).",
   },
   {
     id: "cursor",
