@@ -60,6 +60,50 @@ import { lineage, versionCheck, karmaStreaks, nucleus, inbox, trustless } from "
 // the TRUTH FORENSIC PIPELINE against the live MCP catalog without depending
 // on internal tools/_registry path.
 export { buildAllTools, buildToolMap, groupByCategory } from "./tools/_registry.js";
+
+/**
+ * v3.110 — LEAN MODE essential tool set. With MNEME_LEAN=1 the server advertises
+ * ONLY these (instead of ~1100), cutting the per-request tool-list context ~97%.
+ * mneme.morph is the front door: it resolves any intent to the exact tool, which
+ * CallTool then dispatches by name (full catalog stays reachable, just not all
+ * advertised). Universal — it's a shorter tools/list, so every MCP agent benefits.
+ */
+export const LEAN_TOOL_NAMES: readonly string[] = [
+  "mneme.morph",            // the polymorphic front door → resolves intent to the right tool
+  "mneme.boot",             // the activation table (when→tool)
+  "mneme.gateway.route",    // intent → ranked tool candidates (fallback)
+  "mneme.truth.check",      // verify a checkable claim
+  "mneme.cortex.recall",    // inherit shared memory
+  "mneme.cortex.contribute",
+  "mneme.outline.file",     // ~95% fewer tokens to orient on a file
+  "mneme.firewall.fortify", // neutralize prompt-injection in untrusted content
+  "mneme.rail.traverse",    // policy-gate + blind secrets to/from a model
+  "mneme.mcp.verify",       // verify a proof-carrying result offline
+];
+
+export interface LeanReduction { fullTools: number; leanTools: number; fullBytes: number; leanBytes: number; reductionPct: number; fullApproxTokens: number; leanApproxTokens: number }
+/**
+ * Measure the REAL per-request tool-list context cut of lean mode: the advertised
+ * tools/list (name + description + inputSchema) is re-sent to the model every
+ * request, so its byte size IS the recurring overhead. Honest: ≈chars/4 token
+ * estimate, not a vendor tokenizer; measures the tool-list overhead only.
+ */
+export async function measureLeanReduction(): Promise<LeanReduction> {
+  const { buildToolMap } = await import("./tools/_registry.js");
+  const tm = buildToolMap();
+  const all = [...tm.values()];
+  const size = (t: { name: string; description: string; inputSchema: unknown }) =>
+    JSON.stringify({ name: t.name, description: t.description, inputSchema: t.inputSchema }).length;
+  const fullBytes = all.reduce((n, t) => n + size(t), 0);
+  const leanBytes = all.filter((t) => LEAN_TOOL_NAMES.includes(t.name)).reduce((n, t) => n + size(t), 0);
+  const leanTools = all.filter((t) => LEAN_TOOL_NAMES.includes(t.name)).length;
+  return {
+    fullTools: all.length, leanTools,
+    fullBytes, leanBytes,
+    reductionPct: fullBytes > 0 ? Math.round((1 - leanBytes / fullBytes) * 1000) / 10 : 0,
+    fullApproxTokens: Math.round(fullBytes / 4), leanApproxTokens: Math.round(leanBytes / 4),
+  };
+}
 // v2.167.0 — re-export the runtime builder so @mneme-ai/matrix (the gRPC wire
 // server) can bridge Invoke → the same tool registry the MCP server dispatches.
 export { buildRuntime } from "./tools/_runtime.js";
@@ -393,15 +437,28 @@ export async function startMcpServer(opts: McpOptions): Promise<void> {
     },
   );
 
+  // ─── v3.110 — LEAN MODE (MNEME_LEAN=1): advertise only the essential set ───
+  // The honest fix for "Mneme eats tokens": an MCP server's ADVERTISED tool list
+  // is re-sent to the model on EVERY request. Mneme's full catalog (~1100 tools)
+  // is ~130k tokens of context per turn. In lean mode we advertise only ~10
+  // essentials (with mneme.morph as the front door) — a measured ~97% cut of that
+  // overhead — while CallTool still dispatches ANY of the full catalog by name
+  // (the agent learns the exact tool from mneme.morph, then calls it). Universal:
+  // it's just a shorter tools/list, so it works on every MCP agent.
+  const LEAN_NAMES = new Set<string>(LEAN_TOOL_NAMES);
+  const LEAN = process.env["MNEME_LEAN"] === "1" || process.env["MNEME_LEAN"] === "true";
+
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      ...toMcpTools(allTools),
-      ...dynamic.catalog.map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema as Tool["inputSchema"],
-      })),
-    ],
+    tools: LEAN
+      ? toMcpTools(allTools.filter((t) => LEAN_NAMES.has(t.name)))
+      : [
+          ...toMcpTools(allTools),
+          ...dynamic.catalog.map((t) => ({
+            name: t.name,
+            description: t.description,
+            inputSchema: t.inputSchema as Tool["inputSchema"],
+          })),
+        ],
   }));
 
   // ─── MCP primitives — resources / prompts / completion ──────────────

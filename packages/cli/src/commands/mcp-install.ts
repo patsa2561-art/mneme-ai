@@ -34,6 +34,10 @@ export interface McpInstallOptions {
   /** Force-target one tool: claude | cursor | continue | codex */
   tool?: string;
   json?: boolean;
+  /** Wire the agent in LEAN mode (env MNEME_LEAN=1) — advertise ~10 essential
+   *  tools (morph as the front door) instead of ~1100, cutting the per-request
+   *  tool-list context ~97%. Full catalog still callable via morph. */
+  lean?: boolean;
 }
 
 interface McpServerEntry {
@@ -125,7 +129,7 @@ export const TOOLS: ToolDescriptor[] = [
       const servers = ((exp["modelContextProtocolServers"] as Array<Record<string, unknown>>) ?? []).filter(
         (s) => s["name"] !== "mneme",
       );
-      servers.push({ name: "mneme", command: entry.command, args: entry.args });
+      servers.push({ name: "mneme", command: entry.command, args: entry.args, ...(entry.env ? { env: entry.env } : {}) });
       exp["modelContextProtocolServers"] = servers as unknown as Record<string, unknown>;
       return { ...existing, experimental: exp };
     },
@@ -173,7 +177,7 @@ export const TOOLS: ToolDescriptor[] = [
     applyMnemeEntry: (existing, entry) => {
       // VS Code native MCP uses a `servers` map with an explicit transport type.
       const cur = (existing["servers"] as Record<string, unknown>) ?? {};
-      cur["mneme"] = { type: "stdio", command: entry.command, args: entry.args } as unknown as Record<string, unknown>;
+      cur["mneme"] = { type: "stdio", command: entry.command, args: entry.args, ...(entry.env ? { env: entry.env } : {}) } as unknown as Record<string, unknown>;
       return { ...existing, servers: cur };
     },
     postInstallNote: "Reload the VS Code window. The native MCP server 'mneme' is wired in .vscode/mcp.json.",
@@ -186,7 +190,7 @@ export const TOOLS: ToolDescriptor[] = [
     applyMnemeEntry: (existing, entry) => {
       // Zed uses `context_servers` with a nested command object.
       const cur = (existing["context_servers"] as Record<string, unknown>) ?? {};
-      cur["mneme"] = { source: "custom", command: { path: entry.command, args: entry.args } } as unknown as Record<string, unknown>;
+      cur["mneme"] = { source: "custom", command: { path: entry.command, args: entry.args, ...(entry.env ? { env: entry.env } : {}) } } as unknown as Record<string, unknown>;
       return { ...existing, context_servers: cur };
     },
     postInstallNote: "Restart Zed. Mneme is registered as a context server.",
@@ -296,6 +300,9 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
   const codexHint =
     "Codex CLI: run manually — `codex mcp add mneme mneme mcp` (the Codex CLI doesn't expose a config file we can edit).";
 
+  // LEAN: wire the agent with env MNEME_LEAN=1 so the server advertises only the
+  // ~10 essentials (morph front-door) — ~97% less per-request tool-list context.
+  const entry: McpServerEntry = opts.lean ? { ...MNEME_ENTRY, env: { ...(MNEME_ENTRY.env ?? {}), MNEME_LEAN: "1" } } : MNEME_ENTRY;
   for (const tool of targets) {
     const configPath = tool.resolveConfigPath();
     if (!configPath) {
@@ -310,7 +317,7 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
     }
     const existing = tool.readConfig(configPath);
     const already = JSON.stringify(existing).includes('"mneme"');
-    const updated = tool.applyMnemeEntry(existing, MNEME_ENTRY);
+    const updated = tool.applyMnemeEntry(existing, entry);
     if (opts.dryRun) {
       outcomes.push({
         tool: tool.name,
@@ -344,8 +351,14 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
     }
   }
 
+  // LEAN: surface the MEASURED per-request token cut (real number, not a claim).
+  let lean: { fullTools: number; leanTools: number; reductionPct: number; fullApproxTokens: number; leanApproxTokens: number } | null = null;
+  if (opts.lean) {
+    try { const { measureLeanReduction } = await import("@mneme-ai/mcp"); lean = await measureLeanReduction(); } catch { /* best-effort */ }
+  }
+
   if (opts.json) {
-    process.stdout.write(JSON.stringify({ outcomes, codex: codexHint }, null, 2) + "\n");
+    process.stdout.write(JSON.stringify({ outcomes, lean, codex: codexHint }, null, 2) + "\n");
     const success = outcomes.some((o) => o.installed || o.alreadyPresent);
     return success ? 0 : 1;
   }
@@ -355,8 +368,16 @@ export async function mcpInstallCommand(opts: McpInstallOptions): Promise<number
   process.stdout.write(
     kleur.bold("\n  🔧 Mneme MCP — auto-install\n\n") +
       "  Configures Mneme as an MCP server in your AI coding tool, so the AI\n" +
-      "  can call Mneme's 90+ knowledge tools while you talk to it normally.\n\n",
+      "  can call Mneme's tools while you talk to it normally.\n\n",
   );
+  if (lean) {
+    process.stdout.write(
+      kleur.bold().cyan("  🔦 LEAN MODE on") +
+        kleur.dim(` — advertising ${lean.leanTools} tools instead of ${lean.fullTools}: `) +
+        kleur.green().bold(`−${lean.reductionPct}% tool-list context`) +
+        kleur.dim(` (~${lean.fullApproxTokens.toLocaleString()}→~${lean.leanApproxTokens.toLocaleString()} tok/request). Full catalog still reachable via mneme.morph.\n\n`),
+    );
+  }
 
   let anySuccess = false;
   let anyDetected = false;
