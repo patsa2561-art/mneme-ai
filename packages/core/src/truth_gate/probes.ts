@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.seance.past_self_grounded_context",
+    kind: "boolean",
+    description: "SÉANCE (v3.128.0 — talk to your past self; git-native shared context, Path A). Reconstructs the DECISION CONTEXT around any commit (what was said · surrounding commits · TODOs open then cited file:line · abandoned reverts · focus themes) as a deterministic, fully-cited packet an agent reasons FROM. This probe asserts seanceGauntlet=100: reconstructs the decision at the ref ∧ window pulls the surrounding commits ∧ every window/abandoned entry is in the citations list ∧ surfaces an abandoned/reverted path ∧ ★groundedNoInvention (verifySeance passes — nothing references a commit not in the input) ∧ tamper-evident (altering the packet breaks packetId) ∧ TODOs keep file:line ∧ deterministic ∧ total. HONEST (DIAKRISIS): a deterministic PROJECTION of git, NOT spirit-channeling — the agent answers only from cited evidence and should HPE-guard it; 'not in the record' beats a fabricated memory.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const S = await import("../seance/index.js" as string) as typeof import("../seance/index.js");
+        const g = S.seanceGauntlet();
+        const ok = g.score === 100 && g.groundedNoInvention && g.citesEverything && g.tamperEvident && g.reconstructsDecision && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} grounded=${g.groundedNoInvention} cites=${g.citesEverything} tamper=${g.tamperEvident} decision=${g.reconstructsDecision}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.commit_persona.git_style_cartoon",
     kind: "boolean",
     description: "COMMIT PERSONA (v3.123.0). Turns a repo's REAL git history into a measured persona per contributor + a distinct cartoon avatar (The Surgeon / Bulldozer / Firefighter / Storyteller / Night Owl / Machine Gun / Architect / Builder). This probe asserts personaGauntlet=100: archetypes discriminate (synthetic surgeon/bulldozer/firefighter/storyteller resolve correctly) ∧ hygiene is monotonic (a tidy surgeon scores above a sprawling bulldozer) ∧ different authors get DISTINCT avatars (stable per-author hue) ∧ the avatar is a self-contained SVG with no external fetch ∧ band reflects the score ∧ deterministic ∧ total. HONEST (DIAKRISIS): it measures commit HYGIENE (message quality / size / test-touch / fix-rate / cadence) derived deterministically from git, NOT a developer's skill or worth — the raw numbers travel with the verdict and the avatar is a window onto measured behavior, never an opinion about the human.",

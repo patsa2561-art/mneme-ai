@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.128.0 — SÉANCE: talk to your past self (git-native grounded context, Path A) ──
+  {
+    id: "claim.seance.past_self_grounded_context",
+    source: "v3.128.0 release notes",
+    text: "Mneme's SÉANCE lets you talk to your past self: pick any commit (or 'N months ago') and it reconstructs the DECISION CONTEXT that was true then — what you said in that commit, the surrounding commits (what you were working on), the TODOs you had open (cited file:line), the paths you tried and abandoned (reverts), and the themes you were focused on — as a deterministic, tamper-evident, fully-CITED packet an agent reasons FROM to answer 'why did I choose this back then?'. It is git-native shared CONTEXT (the moat, not a 'memory product') and local-first (the reconstruction never leaves the machine — data-sovereignty). seanceGauntlet=100 (reconstructs the decision, window is real context, cites everything, surfaces abandoned paths, ★grounded-no-invention via verifySeance, tamper-evident packetId, TODOs keep file:line, deterministic, total). CLI `mneme seance --at <ref>` / `--months <n>`; MCP `mneme.seance.summon` (self-attesting, Matrix gRPC auto, follows up with mneme.protect.scan); reachable via mneme.morph. probe.seance.past_self_grounded_context. HONEST (DIAKRISIS): a deterministic PROJECTION of git, NOT spirit-channeling — every line traces to a real hash or file:line, the agent answers only from the cited evidence and should HPE-guard the answer, and an honest 'not in the record' beats a fabricated memory.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.seance.past_self_grounded_context",
+    severity: "block",
+  },
   // ── v3.123.0 — COMMIT PERSONA: a developer's git style as a measured 3D cartoon ──
   {
     id: "claim.commit_persona.git_style_cartoon",
