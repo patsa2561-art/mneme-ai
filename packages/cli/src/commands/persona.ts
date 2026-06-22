@@ -56,7 +56,7 @@ export function registerPersonaCommands(program: Command): void {
       for (const p of personas) {
         const m = p.metrics, s = p.stats;
         out(`\n  ${p.archetype}  ·  ${p.author}`);
-        out(`    🏅 ${p.tier} · Lv.${p.level} · ⚡power ${p.power}  ·  📦 ${m.commits} commits  ·  📏 ~${Math.round(m.avgChurn)} lines/commit`);
+        out(`    🏅 ${p.tier} (${p.rarity}) · Lv.${p.level} · ⚡power ${p.power}  ·  📦 ${m.commits} commits  ·  📏 ~${Math.round(m.avgChurn)} lines/commit`);
         out(`    stats — Precision ${s.precision} · Discipline ${s.discipline} · Coverage ${s.coverage} · Velocity ${s.velocity} · Stability ${s.stability}`);
         out(`    ${p.blurb}`);
       }

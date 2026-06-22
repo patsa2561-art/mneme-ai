@@ -56,6 +56,23 @@ export type Archetype =
 export type Tier = "ROOKIE" | "BRONZE" | "SILVER" | "GOLD" | "PLATINUM" | "DIAMOND" | "LEGENDARY";
 export const TIERS: Tier[] = ["ROOKIE", "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "LEGENDARY"];
 
+/** Loot-box rarity, mapped 1:1 from tier — for the "collect them all" gallery.
+ *  SECRET is the rarest: it takes genuinely excellent git practice to mint one. */
+export type Rarity = "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "MYTHIC" | "LEGENDARY" | "SECRET";
+export const RARITY_BY_TIER: Record<Tier, Rarity> = {
+  ROOKIE: "COMMON", BRONZE: "UNCOMMON", SILVER: "RARE", GOLD: "EPIC",
+  PLATINUM: "MYTHIC", DIAMOND: "LEGENDARY", LEGENDARY: "SECRET",
+};
+export const RARITY_META: Record<Rarity, { label: string; color: string; chance: string; how: string }> = {
+  COMMON:    { label: "Common",    color: "#9ca3af", chance: "very common", how: "huge commits or no tests — start shipping small, tested changes" },
+  UNCOMMON:  { label: "Uncommon",  color: "#22c55e", chance: "common",      how: "some structure forming — add tests + tighten commit size" },
+  RARE:      { label: "Rare",      color: "#38bdf8", chance: "uncommon",    how: "solid habits — keep commits small and test more paths" },
+  EPIC:      { label: "Epic",      color: "#f4b400", chance: "rare",        how: "strong engineering discipline across most commits" },
+  MYTHIC:    { label: "Mythic",    color: "#5eead4", chance: "very rare",   how: "small, tested, well-explained commits at scale" },
+  LEGENDARY: { label: "Legendary", color: "#818cf8", chance: "ultra rare",  how: "near-flawless hygiene — focused, tested, conventional, stable" },
+  SECRET:    { label: "✦ Secret",  color: "#f0abfc", chance: "1-in-a-repo", how: "the rarest: prolific AND focused AND tested AND clean AND stable" },
+};
+
 /** An RPG-style character sheet — each stat is a measured git signal, 0..100. */
 export interface PersonaStats {
   precision: number;   // small, focused commits (low churn + tight file count)
@@ -78,6 +95,7 @@ export interface Persona {
   xp: number;                // measured points behind the level
   nextLevelXp: number;       // xp needed for the next level (0 at max)
   tier: Tier;                // ROOKIE→LEGENDARY — gated by QUALITY, so higher = cooler AND better
+  rarity: Rarity;            // loot-box rarity for the "collect them all" gallery
   traits: AvatarTraits;      // deterministic visual genome
 }
 
@@ -125,11 +143,14 @@ function computeMetrics(cs: CommitRec[]): PersonaMetrics {
   };
 }
 
-/** The RPG character sheet — each stat measured from git, 0..100. */
+/** The RPG character sheet — each stat measured from git, 0..100.
+ *  PRECISION is dominated by commit SIZE: a 3000-line commit can't be "precise"
+ *  no matter how few files it touches — that's the accuracy fix. */
 function computeStats(m: PersonaMetrics): PersonaStats {
   const r = (x: number) => Math.round(clamp(x, 0, 1) * 100);
+  const sizeScore = clamp(1 - m.avgChurn / 300, 0, 1);                          // small commits
   return {
-    precision: r(m.focus * 0.55 + clamp(1 - m.avgChurn / 450, 0, 1) * 0.45),   // small, focused
+    precision: r(sizeScore * 0.7 + m.focus * 0.3),                             // SIZE-led, then focus
     discipline: r(m.conventionalRate * 0.65 + m.bodyRate * 0.35),               // structured + explained
     coverage: r(m.testTouchRate),                                               // ships tests
     velocity: r(clamp(m.commits / 200, 0, 1)),                                  // volume / activity
@@ -137,12 +158,18 @@ function computeStats(m: PersonaMetrics): PersonaStats {
   };
 }
 
-/** POWER 0..100 = quality-weighted overall (the old "hygiene"). QUALITY stats
- *  (precision/discipline/coverage/stability) dominate; volume only nudges. So a
- *  high-volume, no-test "bulldozer" stays LOW — accurate, not flattering. */
+/** POWER 0..100 = the real "excellent-git-push" score. The ENGINEERING stats
+ *  (precision = small commits, coverage = ships tests) are weighted highest; nice
+ *  messages (discipline) and stability matter less; volume only nudges. A hard
+ *  TEST-GATE caps the ceiling: you cannot be elite while shipping no tests — so a
+ *  3874-line, 1%-test "bulldozer" lands ROUGH no matter how clean its messages. */
 function powerScore(s: PersonaStats): number {
-  const quality = (s.precision + s.discipline + s.coverage + s.stability) / 4;
-  return Math.round(clamp(quality * 0.85 + s.velocity * 0.15, 0, 100));
+  const base = (s.precision * 1.3 + s.coverage * 1.3 + s.discipline * 0.7 + s.stability * 0.7) / 4;
+  let power = base * 0.85 + s.velocity * 0.15;
+  if (s.coverage < 5) power = Math.min(power, 42);          // ~never tests → ROUGH ceiling
+  else if (s.coverage < 15) power = Math.min(power, 55);    // barely tests → can't pass SILVER
+  else if (s.coverage < 35) power = Math.min(power, 72);    // light tests → can't reach DIAMOND
+  return Math.round(clamp(power, 0, 100));
 }
 
 /** Level 1..50 — grows mostly with quality (power), a little with experience
@@ -220,8 +247,36 @@ export function buildPersona(author: string, commits: CommitRec[]): Persona {
   return {
     author, metrics: m, archetype, blurb: BLURB[archetype],
     stats, power, hygiene: power, band, level, xp, nextLevelXp, tier,
+    rarity: RARITY_BY_TIER[tier],
     traits: deriveTraits(author, m, archetype, stats, power, level, tier, rank),
   };
+}
+
+/** A representative hero for a tier — for the "collect them all" gallery. Pure. */
+export function sampleHeroForTier(tier: Tier, author?: string, archetype: Archetype = "The Builder"): Persona {
+  const rank = Math.max(0, TIERS.indexOf(tier));
+  const at = (xs: number[]) => xs[rank]!;
+  const stats: PersonaStats = {
+    precision: at([20, 40, 55, 68, 80, 90, 98]),
+    discipline: at([28, 50, 62, 74, 84, 93, 100]),
+    coverage: at([2, 25, 45, 62, 76, 90, 100]),
+    velocity: at([10, 26, 42, 56, 70, 85, 100]),
+    stability: at([48, 64, 76, 86, 92, 96, 100]),
+  };
+  const power = at([22, 38, 52, 66, 78, 88, 96]);
+  const xp = xpFor(power, stats); const level = levelFromXp(xp);
+  const m: PersonaMetrics = { commits: at([6, 20, 45, 90, 160, 280, 420]), avgChurn: at([900, 500, 280, 150, 80, 40, 28]), medFiles: 2, conventionalRate: stats.discipline / 100, bodyRate: stats.discipline / 130, testTouchRate: stats.coverage / 100, fixRate: at([0.5, 0.3, 0.15, 0.08, 0.04, 0.02, 0]), nightRate: 0.1, avgMsgLen: 34, focus: 0.8 };
+  const band = power >= 85 ? "PRISTINE" : power >= 65 ? "TIDY" : power >= 40 ? "ROUGH" : "CHAOTIC";
+  return {
+    author: author || RARITY_BY_TIER[tier], metrics: m, archetype, blurb: BLURB[archetype],
+    stats, power, hygiene: power, band, level, xp, nextLevelXp: 0, tier, rarity: RARITY_BY_TIER[tier],
+    traits: deriveTraits(author || tier, m, archetype, stats, power, level, tier, rank),
+  };
+}
+/** One representative hero per tier (ROOKIE→LEGENDARY) for the collection gallery. */
+export function sampleCollection(): Persona[] {
+  const arches: Archetype[] = ["The Builder", "The Machine Gun", "The Firefighter", "The Architect", "The Storyteller", "The Surgeon", "The Surgeon"];
+  return TIERS.map((tier, i) => sampleHeroForTier(tier, undefined, arches[i]));
 }
 
 /** Group commits by author → personas, busiest first. Pure + total. */
@@ -237,92 +292,115 @@ export function analyzeCommitPersonas(commits: CommitRec[], opts?: { top?: numbe
 // ── the cartoon: a self-contained SVG, distinct per author (CSS-3D in the web) ──
 const esc = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-function eyesSvg(e: AvatarTraits["eyes"]): string {
-  switch (e) {
-    case "happy": return `<path d="M78 96 q8 -8 16 0" stroke="#10261f" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M126 96 q8 -8 16 0" stroke="#10261f" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-    case "tired": return `<circle cx="86" cy="98" r="5" fill="#10261f"/><circle cx="134" cy="98" r="5" fill="#10261f"/><path d="M76 90 h20 M124 90 h20" stroke="#10261f" stroke-width="3" stroke-linecap="round"/>`;
-    case "wow": return `<circle cx="86" cy="96" r="8" fill="#fff" stroke="#10261f" stroke-width="3"/><circle cx="86" cy="96" r="3.5" fill="#10261f"/><circle cx="134" cy="96" r="8" fill="#fff" stroke="#10261f" stroke-width="3"/><circle cx="134" cy="96" r="3.5" fill="#10261f"/>`;
-    default: return `<circle cx="86" cy="96" r="6" fill="#10261f"/><circle cx="134" cy="96" r="6" fill="#10261f"/>`;
-  }
-}
-function mouthSvg(mo: AvatarTraits["mouth"]): string {
-  switch (mo) {
-    case "smile": return `<path d="M92 120 q18 18 36 0" stroke="#10261f" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-    case "grimace": return `<path d="M92 124 h36 M98 118 v12 M110 118 v12 M122 118 v12" stroke="#10261f" stroke-width="3" fill="none"/>`;
-    case "open": return `<ellipse cx="110" cy="124" rx="11" ry="8" fill="#10261f"/>`;
-    default: return `<path d="M94 124 h32" stroke="#10261f" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-  }
-}
-function accessorySvg(a: AvatarTraits["accessory"], accent: string): string {
-  switch (a) {
-    case "hardhat": return `<path d="M64 70 q46 -34 92 0 z" fill="#f4b400"/><rect x="60" y="66" width="100" height="9" rx="4" fill="#f4b400"/>`;
-    case "scalpel": return `<g transform="rotate(35 170 120)"><rect x="160" y="96" width="6" height="40" rx="2" fill="#cbd5e1"/><rect x="158" y="130" width="10" height="22" rx="2" fill="${accent}"/></g>`;
-    case "book": return `<g transform="translate(150 120)"><rect x="0" y="0" width="34" height="26" rx="3" fill="${accent}"/><line x1="17" y1="2" x2="17" y2="24" stroke="#fff" stroke-width="2"/></g>`;
-    case "extinguisher": return `<g transform="translate(156 104)"><rect x="0" y="6" width="16" height="34" rx="6" fill="#e11d48"/><rect x="5" y="0" width="6" height="8" fill="#9ca3af"/></g>`;
-    case "coffee": return `<g transform="translate(154 116)"><rect x="0" y="0" width="26" height="22" rx="3" fill="#fff"/><path d="M26 4 q10 0 10 8 t-10 8" fill="none" stroke="#fff" stroke-width="3"/><path d="M8 -8 q4 6 0 12 M16 -8 q4 6 0 12" stroke="${accent}" stroke-width="2" fill="none"/></g>`;
-    case "bolt": return `<path d="M168 96 l-14 26 h10 l-6 22 l22 -30 h-12 z" fill="#fde047" stroke="#10261f" stroke-width="1.5"/>`;
-    case "compass": return `<g transform="translate(160 118)"><circle cx="12" cy="12" r="13" fill="none" stroke="${accent}" stroke-width="3"/><path d="M12 4 l4 8 l-4 8 l-4 -8 z" fill="${accent}"/></g>`;
-    default: return `<g transform="rotate(40 168 120)"><rect x="162" y="98" width="7" height="38" rx="3" fill="#9ca3af"/><circle cx="165" cy="96" r="8" fill="none" stroke="#9ca3af" stroke-width="5"/></g>`;
-  }
-}
-
 const TIER_COLOR: Record<Tier, string> = {
   ROOKIE: "#9ca3af", BRONZE: "#c2803f", SILVER: "#cbd5e1", GOLD: "#f4b400",
   PLATINUM: "#5eead4", DIAMOND: "#818cf8", LEGENDARY: "#f0abfc",
 };
 
+function faceSvg(e: AvatarTraits["eyes"], mo: AvatarTraits["mouth"], cx: number, cy: number): string {
+  const lx = cx - 14, rxe = cx + 14;
+  let eyes: string;
+  if (e === "happy") eyes = `<path d="M${lx - 7} ${cy} q7 -7 14 0" stroke="#10261f" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M${rxe - 7} ${cy} q7 -7 14 0" stroke="#10261f" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+  else if (e === "tired") eyes = `<circle cx="${lx}" cy="${cy + 2}" r="4" fill="#10261f"/><circle cx="${rxe}" cy="${cy + 2}" r="4" fill="#10261f"/><path d="M${lx - 8} ${cy - 5} h16 M${rxe - 8} ${cy - 5} h16" stroke="#10261f" stroke-width="2.5" stroke-linecap="round"/>`;
+  else if (e === "wow") eyes = `<circle cx="${lx}" cy="${cy}" r="6.5" fill="#fff" stroke="#10261f" stroke-width="2.5"/><circle cx="${lx}" cy="${cy}" r="3" fill="#10261f"/><circle cx="${rxe}" cy="${cy}" r="6.5" fill="#fff" stroke="#10261f" stroke-width="2.5"/><circle cx="${rxe}" cy="${cy}" r="3" fill="#10261f"/>`;
+  else eyes = `<circle cx="${lx}" cy="${cy}" r="5" fill="#10261f"/><circle cx="${rxe}" cy="${cy}" r="5" fill="#10261f"/><circle cx="${lx + 1.5}" cy="${cy - 1.5}" r="1.5" fill="#fff"/><circle cx="${rxe + 1.5}" cy="${cy - 1.5}" r="1.5" fill="#fff"/>`;
+  const my = cy + 17;
+  const mouth = mo === "smile" ? `<path d="M${cx - 12} ${my} q12 12 24 0" stroke="#10261f" stroke-width="3" fill="none" stroke-linecap="round"/>`
+    : mo === "grimace" ? `<path d="M${cx - 12} ${my + 1} h24 M${cx - 6} ${my - 4} v9 M${cx + 4} ${my - 4} v9" stroke="#10261f" stroke-width="2.5" fill="none"/>`
+    : mo === "open" ? `<ellipse cx="${cx}" cy="${my}" rx="7" ry="5.5" fill="#10261f"/>`
+    : `<path d="M${cx - 10} ${my} h20" stroke="#10261f" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  return eyes + mouth;
+}
+
+/** The weapon in the hero's right hand — one per archetype. Positioned near (172,150). */
+function weaponSvg(a: AvatarTraits["accessory"], accent: string): string {
+  switch (a) {
+    case "scalpel": return `<g transform="translate(176 96) rotate(18)"><rect x="-2" y="0" width="5" height="64" rx="2" fill="#e2e8f0" stroke="#0b1220" stroke-width="1.5"/><rect x="-3" y="58" width="7" height="16" rx="2" fill="${accent}"/></g>`;          // surgeon — scalpel
+    case "hardhat": return `<g transform="translate(176 92) rotate(12)"><rect x="-3" y="14" width="6" height="58" rx="3" fill="#7c4a1e"/><rect x="-18" y="2" width="36" height="20" rx="4" fill="#9ca3af" stroke="#0b1220" stroke-width="2"/></g>`;        // bulldozer — sledgehammer
+    case "extinguisher": return `<g transform="translate(174 96) rotate(10)"><rect x="-4" y="14" width="8" height="58" rx="3" fill="#7c4a1e"/><path d="M-18 14 l18 -16 l18 16 z" fill="#dc2626" stroke="#0b1220" stroke-width="2"/></g>`;            // firefighter — fire axe
+    case "book": return `<g transform="translate(170 100)"><rect x="-4" y="0" width="8" height="70" rx="3" fill="#7c4a1e"/><circle cx="0" cy="-4" r="11" fill="${accent}" stroke="#0b1220" stroke-width="2"/><circle cx="0" cy="-4" r="4" fill="#fff"/></g>`; // storyteller — sage staff
+    case "coffee": return `<g transform="translate(172 98)"><rect x="-3" y="0" width="6" height="72" rx="3" fill="#475569"/><path d="M-12 -6 a12 12 0 1 0 18 10 a8 8 0 1 1 -18 -10z" fill="#cbd5e1" stroke="#0b1220" stroke-width="2"/></g>`;             // night owl — moon staff
+    case "bolt": return `<g transform="translate(176 98)"><path d="M2 0 l-14 30 h10 l-6 26 l22 -34 h-12 z" fill="#fde047" stroke="#0b1220" stroke-width="1.8"/></g>`;                                                                              // machine gun — bolt blade
+    case "compass": return `<g transform="translate(172 100)"><rect x="-3" y="0" width="6" height="68" rx="3" fill="#64748b"/><path d="M0 -14 l12 22 l-24 0 z" fill="none" stroke="${accent}" stroke-width="3"/></g>`;                          // architect — compass staff
+    default: return `<g transform="translate(176 100) rotate(20)"><rect x="-3" y="6" width="6" height="60" rx="3" fill="#94a3b8"/><circle cx="0" cy="2" r="9" fill="none" stroke="#94a3b8" stroke-width="6"/></g>`;                              // builder — wrench
+  }
+}
+
 /**
- * A layered RPG-style avatar that VISIBLY levels up. Every layer is data-driven:
- * shield size ← test coverage · battle scars ← firefighting rate · armor plating &
- * outline thickness ← tier · crown ← GOLD+ disciplined · cape ← PLATINUM+ · glowing
- * aura ← DIAMOND+ · rank stars ← level · body size ← commit size · weapon ← archetype.
- * So a higher level/quality persona is unmistakably more decorated AND more capable.
- * Deterministic + total.
+ * A humanoid GAME HERO — head · torso · two arms · two legs · plus gear that scales
+ * with measured git stats: helmet & armor plating ← tier · chestplate emblem & shoulder
+ * pads grow with rank · shield (left hand) size & shine ← test coverage · weapon (right
+ * hand) ← archetype · cape ← PLATINUM+ · glowing aura ← DIAMOND+ · crown ← GOLD+ &
+ * disciplined · rank stars ← level · body build ← commit size · battle scars ← firefighting.
+ * Higher level/quality = visibly more armored & decorated. Deterministic + total.
  */
 export function personaAvatarSvg(p: Persona): string {
   try {
     const t = p.traits || ({} as AvatarTraits);
     const tier = t.tier || "ROOKIE"; const rank = t.tierRank || 0;
     const tc = TIER_COLOR[tier] || "#9ca3af";
-    const rx = t.build === "buff" ? 66 : t.build === "slim" ? 48 : 58;
-    const cx = 110, cy = 112;
+    const hue = t.hue ?? 210; const body = t.bodyColor || "#64748b"; const accent = t.accentColor || "#94a3b8";
+    const cx = 120; const headY = 70; const headR = t.build === "buff" ? 44 : t.build === "slim" ? 38 : 41;
+    const tw = t.build === "buff" ? 80 : t.build === "slim" ? 58 : 68;     // torso width
+    const tx = cx - tw / 2; const torsoTop = 112; const torsoBot = 196;
+    const out = rank >= 2 ? tc : "#0b1220"; const ow = 2.5 + Math.min(3.5, rank * 0.6);
     const L: string[] = [];
-    L.push(`<svg xmlns="http://www.w3.org/2000/svg" width="220" height="248" viewBox="0 0 220 248" role="img" aria-label="${esc(p.author)} — ${esc(p.archetype)}, ${esc(tier)} level ${p.level}">`);
-    L.push(`<defs><radialGradient id="g${t.hue}" cx="38%" cy="30%"><stop offset="0" stop-color="${t.accentColor}"/><stop offset="1" stop-color="${t.bodyColor}"/></radialGradient>`);
-    L.push(`<linearGradient id="arm${rank}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tc}"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>`);
-    // aura (DIAMOND+) — glowing rings behind everything
-    if (t.aura > 0) { L.push(`<circle cx="${cx}" cy="${cy}" r="${rx + 22}" fill="${tc}" opacity="${(0.10 * t.aura).toFixed(2)}"/>`); L.push(`<circle cx="${cx}" cy="${cy}" r="${rx + 12}" fill="${tc}" opacity="${(0.16 * t.aura).toFixed(2)}"/>`); }
+    L.push(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="300" viewBox="0 0 240 300" role="img" aria-label="${esc(p.author)} — ${esc(p.archetype)}, ${esc(tier)} (${esc(p.rarity)}) level ${p.level}">`);
+    L.push(`<defs><radialGradient id="g${hue}" cx="40%" cy="32%"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="${body}"/></radialGradient>`);
+    L.push(`<linearGradient id="pl${rank}_${hue}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tc}"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>`);
+    // aura (DIAMOND+)
+    if (t.aura > 0) { L.push(`<circle cx="${cx}" cy="150" r="118" fill="${tc}" opacity="${(0.08 * t.aura).toFixed(2)}"/><circle cx="${cx}" cy="150" r="96" fill="${tc}" opacity="${(0.10 * t.aura).toFixed(2)}"/>`); }
     // cape (PLATINUM+)
-    if (t.cape) L.push(`<path d="M${cx - rx + 6} ${cy} q-30 50 -10 96 l${rx * 2 - 12} 0 q20 -46 -10 -96 z" fill="${tc}" opacity="0.55"/>`);
-    // ground shadow → depth
-    L.push(`<ellipse cx="${cx}" cy="214" rx="${rx}" ry="15" fill="#000" opacity="0.20"/>`);
-    // body
-    L.push(`<circle cx="${cx}" cy="${cy}" r="${rx}" fill="url(#g${t.hue})" stroke="${rank >= 2 ? tc : "#10261f"}" stroke-width="${3 + Math.min(4, rank)}"/>`);
-    // armor plating (SILVER+) — a metallic collar at the chin, tier-tinted
-    if (rank >= 2) L.push(`<path d="M${cx - rx + 8} ${cy + rx * 0.55} a${rx} ${rx} 0 0 0 ${rx * 2 - 16} 0 z" fill="url(#arm${rank})" opacity="0.9" stroke="${tc}" stroke-width="2"/>`);
-    // 3D sheen
-    L.push(`<ellipse cx="${cx - rx * 0.4}" cy="${cy - rx * 0.42}" rx="${rx * 0.34}" ry="${rx * 0.22}" fill="#fff" opacity="0.30"/>`);
-    // battle scars ← firefighting
-    for (let i = 0; i < (t.scars || 0); i++) L.push(`<path d="M${cx - 20 + i * 18} ${cy - 14} l10 26" stroke="#7f1d1d" stroke-width="2.5" opacity="0.7" stroke-linecap="round"/>`);
-    L.push(eyesSvg(t.eyes), mouthSvg(t.mouth), accessorySvg(t.accessory, t.accentColor));
-    // shield ← coverage (tests). bigger + a check at high coverage; faded when low.
+    if (t.cape) L.push(`<path d="M${tx + 6} ${torsoTop + 4} q-34 70 -16 122 l${tw - 12} 0 q18 -52 -16 -122 z" fill="${tc}" opacity="0.5"/>`);
+    // ground shadow
+    L.push(`<ellipse cx="${cx}" cy="280" rx="64" ry="13" fill="#000" opacity="0.22"/>`);
+    // legs + boots
+    const legY = torsoBot - 6;
+    for (const dx of [-18, 18]) {
+      L.push(`<rect x="${cx + dx - 9}" y="${legY}" width="18" height="60" rx="9" fill="${body}" stroke="#0b1220" stroke-width="2"/>`);
+      L.push(`<rect x="${cx + dx - 11}" y="${legY + 48}" width="22" height="20" rx="7" fill="${rank >= 2 ? tc : "#334155"}" stroke="#0b1220" stroke-width="2"/>`); // boots
+    }
+    // arms (behind torso a touch) — left holds shield, right holds weapon
+    L.push(`<rect x="${tx - 16}" y="${torsoTop + 6}" width="18" height="56" rx="9" fill="${body}" stroke="#0b1220" stroke-width="2"/>`);
+    L.push(`<rect x="${tx + tw - 2}" y="${torsoTop + 6}" width="18" height="56" rx="9" fill="${body}" stroke="#0b1220" stroke-width="2"/>`);
+    // weapon (right hand)
+    L.push(weaponSvg(t.accessory, accent));
+    // torso (chestplate)
+    L.push(`<rect x="${tx}" y="${torsoTop}" width="${tw}" height="${torsoBot - torsoTop}" rx="20" fill="url(#g${hue})" stroke="${out}" stroke-width="${ow}"/>`);
+    // armor plating (SILVER+) — chest plate overlay + shoulder pads
+    if (rank >= 2) {
+      L.push(`<path d="M${tx + 6} ${torsoTop + 6} h${tw - 12} v26 q-${tw / 2 - 6} 18 -${tw - 12} 0 z" fill="url(#pl${rank}_${hue})" opacity="0.92" stroke="${tc}" stroke-width="1.5"/>`); // chest plate
+      L.push(`<ellipse cx="${tx + 4}" cy="${torsoTop + 8}" rx="13" ry="10" fill="${tc}" stroke="#0b1220" stroke-width="2"/><ellipse cx="${tx + tw - 4}" cy="${torsoTop + 8}" rx="13" ry="10" fill="${tc}" stroke="#0b1220" stroke-width="2"/>`); // shoulder pads
+    }
+    // chest emblem (rank>=1) — a small gem that brightens with tier
+    if (rank >= 1) L.push(`<path d="M${cx} ${torsoTop + 40} l9 9 l-9 12 l-9 -12 z" fill="${tc}" stroke="#0b1220" stroke-width="1.5"/>`);
+    // belt (rank>=3)
+    if (rank >= 3) L.push(`<rect x="${tx + 4}" y="${torsoBot - 22}" width="${tw - 8}" height="12" rx="4" fill="${tc}" stroke="#0b1220" stroke-width="1.5"/>`);
+    // battle scars ← firefighting (on the chestplate)
+    for (let i = 0; i < (t.scars || 0); i++) L.push(`<path d="M${cx - 16 + i * 16} ${torsoTop + 14} l9 24" stroke="#7f1d1d" stroke-width="2.5" opacity="0.65" stroke-linecap="round"/>`);
+    // shield ← coverage (left hand)
     if ((t.shield || 0) > 0.05) {
-      const ss = 14 + t.shield * 22, sx = 40, sy = cy + 6;
-      L.push(`<g transform="translate(${sx} ${sy})"><path d="M0 ${-ss} q${ss} 4 ${ss} ${ss * 0.5} q0 ${ss} -${ss} ${ss * 1.2} q-${ss} -${ss * 0.2} -${ss} -${ss * 1.2} q0 -${ss * 0.5 - 4} 0 -${ss * 0.5} z" transform="translate(${-ss / 2} 0)" fill="${tc}" stroke="#0b1220" stroke-width="2" opacity="${(0.5 + t.shield * 0.5).toFixed(2)}"/>`);
-      if (t.shield >= 0.5) L.push(`<path d="M${-ss * 0.28} 2 l${ss * 0.18} ${ss * 0.22} l${ss * 0.4} -${ss * 0.4}" stroke="#04141b" stroke-width="3" fill="none" stroke-linecap="round"/>`);
+      const ss = 16 + t.shield * 20; const sx = tx - 18; const sy = torsoTop + 40;
+      L.push(`<g transform="translate(${sx} ${sy})"><path d="M${-ss / 2} ${-ss} h${ss} q4 0 4 4 v${ss * 0.6} q0 ${ss * 0.7} -${ss / 2 + 2} ${ss} q-${ss / 2 + 2} -${ss * 0.3} -${ss / 2 + 2} -${ss} v-${ss * 0.6} q0 -4 4 -4 z" fill="${tc}" stroke="#0b1220" stroke-width="2" opacity="${(0.55 + t.shield * 0.45).toFixed(2)}"/>`);
+      if (t.shield >= 0.5) L.push(`<path d="M${-ss * 0.26} -2 l${ss * 0.16} ${ss * 0.2} l${ss * 0.36} -${ss * 0.36}" stroke="#04141b" stroke-width="3" fill="none" stroke-linecap="round"/>`);
       L.push(`</g>`);
     }
+    // head
+    L.push(`<circle cx="${cx}" cy="${headY}" r="${headR}" fill="url(#g${hue})" stroke="${out}" stroke-width="${ow}"/>`);
+    L.push(`<ellipse cx="${cx - headR * 0.38}" cy="${headY - headR * 0.4}" rx="${headR * 0.34}" ry="${headR * 0.22}" fill="#fff" opacity="0.30"/>`); // sheen
+    L.push(faceSvg(t.eyes, t.mouth, cx, headY));
+    // helmet by tier: band → visor → full helm
+    if (rank >= 1 && rank <= 2) L.push(`<path d="M${cx - headR} ${headY - 6} a${headR} ${headR} 0 0 1 ${headR * 2} 0 z" fill="${tc}" opacity="0.92" stroke="#0b1220" stroke-width="2"/>`);
+    else if (rank >= 3) L.push(`<path d="M${cx - headR - 2} ${headY - 2} a${headR + 2} ${headR + 2} 0 0 1 ${(headR + 2) * 2} 0 l0 6 l-${(headR + 2) * 2} 0 z" fill="${tc}" stroke="#0b1220" stroke-width="2"/><rect x="${cx - 4}" y="${headY - headR - 6}" width="8" height="12" rx="3" fill="${tc}" stroke="#0b1220" stroke-width="1.5"/>`);
     // crown (GOLD+ disciplined)
-    if (t.crown) L.push(`<path d="M${cx - 26} ${cy - rx + 4} l6 -20 l8 12 l8 -16 l8 16 l8 -12 l6 20 z" fill="${tier === "LEGENDARY" ? "#f0abfc" : "#f4b400"}" stroke="#0b1220" stroke-width="1.5"/>`);
-    // rank stars ← level
-    let stars = ""; for (let i = 0; i < (t.stars || 0); i++) stars += `<text x="${cx - (t.stars - 1) * 7 + i * 14}" y="232" text-anchor="middle" font-size="13" fill="${tc}">★</text>`;
+    if (t.crown) L.push(`<path d="M${cx - 24} ${headY - headR - 4} l5 -16 l7 10 l7 -14 l7 14 l7 -10 l5 16 z" fill="${tier === "LEGENDARY" ? "#f0abfc" : "#f4b400"}" stroke="#0b1220" stroke-width="1.5"/>`);
+    // rank stars ← level (above the head)
+    let stars = ""; const sn = t.stars || 0;
+    for (let i = 0; i < sn; i++) stars += `<text x="${cx - (sn - 1) * 8 + i * 16}" y="${t.crown ? headY - headR - 24 : headY - headR - 10}" text-anchor="middle" font-size="13" fill="${tc}">★</text>`;
     L.push(stars);
-    // tier + level badge
-    L.push(`<rect x="${cx - 56}" y="184" width="112" height="22" rx="11" fill="${tc}"/>`);
-    L.push(`<text x="${cx}" y="199" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="11.5" font-weight="800" fill="#0b1220">${esc(tier)} · Lv.${p.level} · ${p.power}</text>`);
     L.push(`</svg>`);
     return L.join("");
-  } catch { return `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="248"><rect width="220" height="248" fill="#1b1f24"/><text x="110" y="124" fill="#fff" text-anchor="middle" font-size="14">persona?</text></svg>`; }
+  } catch { return `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="300"><rect width="240" height="300" fill="#1b1f24"/><text x="120" y="150" fill="#fff" text-anchor="middle" font-size="14">persona?</text></svg>`; }
 }
 
 // ── deterministic proof ──────────────────────────────────────────────────────
