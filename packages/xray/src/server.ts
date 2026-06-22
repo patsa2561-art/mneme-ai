@@ -25,7 +25,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf, readdirSync, statSync } from "node:fs";
-import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy, hotspots as hotspotsMod, changeCoupling as changeCouplingMod } from "@mneme-ai/core";
+import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy, hotspots as hotspotsMod, changeCoupling as changeCouplingMod, vericert, notary } from "@mneme-ai/core";
 import { dirname, join } from "node:path";
 import { spawnSync as gitSpawn } from "node:child_process";
 // Open every off-page link in a NEW TAB (incl. dynamically-rendered anchors); same-page #anchors stay put.
@@ -529,6 +529,7 @@ function suiteShell(hero: string): string {
     "<body><div class=\"wrap\"><h1>🕸 <span class=\"grad\">Cross-Layer Accountability</span></h1>" +
     "<p class=\"tag\">The accountability layer for the autonomous-agent era. Mneme links <b>code ↔ database ↔ API ↔ business rules</b> into one deterministic graph — and asks the questions a single-layer tool can't. <b>No LLM in the analysis path</b> — every finding is reproducible and signed.</p>" +
     "<div class=\"inst\"><code>npm i -g mneme-ai &nbsp;&amp;&amp;&nbsp; mneme review</code></div>" +
+    "<div style=\"text-align:center;margin:8px 0 2px\"><a href=\"/certify\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎗️ <b>New — Verified by Mneme</b>: certify AI-worker output → a signed trust certificate + badge →</a></div>" +
     hero +
     "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"…or paste a public repo URL to try it now — https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Review →</button></form>" +
     "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
@@ -536,6 +537,58 @@ function suiteShell(hero: string): string {
     "<div class=\"gems\">" + cards + "</div>" +
     "<p class=\"foot2\" style=\"color:#94a3b8;font-size:14px\">" + accuracyLine() + "</p>" +
     "<p class=\"foot2\">Deterministic · signed · local-first · works on JS/TS · Python · Go · Rust · Ruby · Java · C# · the source never leaves your machine (the demo clones to a temp dir, scans, and deletes). <br><a href=\"https://www.npmjs.com/package/mneme-ai\">npm</a> · <a href=\"/review\">/review</a> · <a href=\"/radar\">/radar</a> · <sub>honest: each finding is a candidate to inspect, not a proof of a runtime bug.</sub></p>" +
+    "<script>" + js + "</script></div></body></html>";
+}
+
+// ─── 🎗️ VERIFIED-BY-MNEME — certify AI-worker output (the trust layer) ───────
+// Stores ONLY the certificate (verdict + score + certId + fault claim-slices),
+// never the full deliverable. The cert is named by its certId, so a badge/permalink
+// is shareable + the signed receipt is verifiable offline.
+type StoredCert = vericert.Certificate & { signed?: unknown };
+const CERTS_DIR = () => join(dataDir(), "certs");
+const CERT_RE = /^[a-f0-9]{12,64}$/;
+function saveCert(c: StoredCert) {
+  try { if (!existsSync(CERTS_DIR())) mkdirSync(CERTS_DIR(), { recursive: true }); if (CERT_RE.test(c.certId)) writeFileSync(join(CERTS_DIR(), c.certId + ".json"), JSON.stringify(c)); } catch { /* best-effort */ }
+}
+function getCert(certId: string): StoredCert | null {
+  try { if (!CERT_RE.test(certId)) return null; const p = join(CERTS_DIR(), certId + ".json"); return existsSync(p) ? (JSON.parse(rf(p, "utf8")) as StoredCert) : null; } catch { return null; }
+}
+
+/** The 🎗️ Verified-by-Mneme landing — paste an AI-produced deliverable, get a
+ *  signed certificate + a shareable badge. Same dark theme as /review. */
+function certifyLandingHtml(): string {
+  const examples = [
+    ["✓ clean report", "The service returns JSON. In our tests latency dropped about 12% with a warm cache. Verify the schema before relying on it."],
+    ["🛑 hallucinated", "The build is great. Because p > 0.05 the change has no effect. It always works and never fails. Studies prove exactly 73.2% of users convert."],
+  ];
+  const chips = examples.map(([label, t]) => `<button class="chip" data-fill="${xesc(t)}">${xesc(label)}</button>`).join("");
+  const js = [
+    "var f=document.getElementById('f'),u=document.getElementById('u'),go=document.getElementById('go'),st=document.getElementById('st'),rep=document.getElementById('rep');",
+    "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "var VC={CERTIFIED:'#22c55e',CONDITIONAL:'#eab308',REJECTED:'#ef4444'};",
+    "function render(d){var c=d.cert,col=VC[c.verdict]||'#94a3b8';var h='<div class=card>';",
+    "  h+='<div class=gradeRow><div class=gradeBadge style=\\'background:'+col+'\\'>'+(c.verdict==='CERTIFIED'?'✓':c.verdict==='CONDITIONAL'?'❔':'🛑')+'</div><div style=flex:1><div class=verdict>'+c.verdict+'</div><div class=repo>score '+Math.round(c.score*100)+'% · '+c.trusted+'/'+c.claimsChecked+' claims clean · certId '+esc(c.certId.slice(0,16))+'…</div></div></div>';",
+    "  if(c.faults&&c.faults.length){h+='<div class=row><b>What to fix</b><ul>';c.faults.forEach(function(x){var ic=x.verdict==='BLOCK'?'🛑':'❔';h+='<li>'+ic+' <b>'+esc(x.nerves.join(', '))+'</b> — '+esc(x.claim)+'</li>';});h+='</ul></div>';}",
+    "  else h+='<div class=row>✓ no known fault in any checked claim.</div>';",
+    "  h+='<div class=row><b>🎗 Shareable badge</b><div style=margin:10px_0>'+d.badgeSvg+'</div>';",
+    "  h+='<div class=mono>Embed: <code>&lt;img src=\"'+location.origin+d.badgeUrl+'\"&gt;</code></div>';",
+    "  h+='<div class=mono>Permalink: <a target=_blank href=\"'+d.permalink+'\">'+location.origin+d.permalink+'</a></div></div>';",
+    "  h+='<div class=foot>CERTIFIED = no <i>known</i> fault + the engine\\'s measured precision, <b>not</b> a proof of truth. Ed25519-signed · verify offline with <code>mneme certify verify</code>.</div></div>';",
+    "  rep.innerHTML=h;rep.style.display='block';}",
+    "function run(){var d=String(u.value||'').trim();if(!d){st.className='err';st.textContent='Paste an AI-produced deliverable to certify.';return;}go.disabled=true;rep.style.display='none';st.className='';st.innerHTML='<span class=spin></span>certifying — running every claim through the verification stack…';",
+    "  fetch('/api/certify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({deliverable:d})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(o){if(o.ok&&o.j&&o.j.cert){st.textContent='';render(o.j);}else{st.className='err';st.textContent=(o.j&&o.j.error)||'could not certify';}}).catch(function(e){st.className='err';st.textContent='network error: '+e.message;}).finally(function(){go.disabled=false;});}",
+    "f.addEventListener('submit',function(e){e.preventDefault();run();});",
+    "Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){c.addEventListener('click',function(){u.value=c.getAttribute('data-fill');run();});});",
+  ].join("\n");
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Verified by Mneme · certify AI-worker output</title>" + NEWTAB_SCRIPT +
+    "<meta name=\"description\" content=\"Paste any AI-produced deliverable → a signed, offline-verifiable trust certificate (CERTIFIED / CONDITIONAL / REJECTED) + a shareable badge. CERTIFIED-precision 1.0 — never certifies a hallucinated deliverable.\">" +
+    ogMeta("Verified by Mneme · the trust certificate for AI work", "Everyone builds the AI worker; nobody certifies the work. Paste a deliverable → a signed, offline-verifiable certificate + a shareable badge. Never certifies a hallucinated deliverable.", "/certify") +
+    "<style>body{margin:0;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:860px;margin:0 auto;padding:clamp(20px,4vw,52px) 20px}h1{font-size:clamp(28px,5vw,44px);margin:0 0 8px;font-weight:850;text-align:center}.grad{background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}.tag{color:#94a3b8;max-width:660px;margin:0 auto;text-align:center}form{display:flex;flex-direction:column;gap:10px;max-width:760px;margin:24px auto 8px}textarea{background:#0f1b2e;border:1px solid #2b3a52;border-radius:12px;padding:15px 16px;color:#e5e7eb;font-size:15px;outline:none;min-height:120px;resize:vertical;font-family:inherit}textarea:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.15)}button.go{background:linear-gradient(90deg,#22d3ee,#0891b2);color:#04141b;border:0;border-radius:12px;padding:15px 26px;font-weight:800;cursor:pointer;align-self:center}button.go:disabled{opacity:.6;cursor:wait}.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.chip{background:transparent;border:1px solid #1f2937;color:#94a3b8;border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}.chip:hover{border-color:#22d3ee;color:#22d3ee}#st{text-align:center;color:#94a3b8;min-height:22px;margin:10px 0}#st.err{color:#fca5a5}#rep{display:none}.card{background:radial-gradient(circle at 30% 0%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:16px;padding:20px;margin:14px 0}.gradeRow{display:flex;gap:18px;align-items:center}.gradeBadge{width:64px;height:64px;border-radius:14px;display:grid;place-items:center;font-size:32px;font-weight:900;color:#04141b;flex:none}.verdict{font-size:20px;font-weight:800}.repo{font-size:13px;color:#94a3b8;margin-top:2px}.row{border-top:1px solid #1f2937;padding:13px 2px}.row ul{margin:8px 0 0;padding-left:18px;color:#cbd5e1}.row li{margin:4px 0}.mono{font-size:12.5px;color:#94a3b8;margin-top:6px}.foot{color:#64748b;font-size:12px;margin-top:14px}code{background:#1f2937;padding:1px 5px;border-radius:4px;color:#cbd5e1}a{color:#22d3ee}.spin{display:inline-block;width:13px;height:13px;border:2px solid #334155;border-top-color:#22d3ee;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}.foot2{text-align:center;color:#64748b;font-size:13px;margin-top:30px}</style></head>" +
+    "<body><div class=\"wrap\"><div style=\"text-align:center\"><h1>🎗️ <span class=\"grad\">Verified by Mneme</span></h1>" +
+    "<p class=\"tag\">Everyone builds the AI worker; <b>nobody certifies the work</b>. Paste an AI-produced deliverable — report, code, answer — and get a <b>signed, offline-verifiable certificate</b> + a shareable badge. <b>CERTIFIED-precision 1.0</b>: it never certifies a hallucinated deliverable.</p></div>" +
+    "<form id=\"f\"><textarea id=\"u\" placeholder=\"Paste an AI-produced deliverable to certify…\" spellcheck=\"false\"></textarea><button class=\"go\" id=\"go\" type=\"submit\">Certify →</button></form>" +
+    "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
+    "<p class=\"foot2\">Local + private: <code>npm i -g mneme-ai</code> then <code>mneme certify \"&lt;deliverable&gt;\"</code> · MCP <code>mneme.vericert.certify</code> · auto-wired into every AI agent. <br>Part of the <a href=\"/suite\">Cross-Layer Accountability Suite</a> · <a href=\"https://github.com/patsa2561-art/mneme\">how it works →</a> · <sub>honest: CERTIFIED = no known fault, not a proof of truth.</sub></p>" +
     "<script>" + js + "</script></div></body></html>";
 }
 
@@ -574,6 +627,52 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && url.pathname === "/radar") return send(res, 200, radarLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
+    if (req.method === "GET" && (url.pathname === "/certify" || url.pathname === "/vericert" || url.pathname === "/verified")) return send(res, 200, certifyLandingHtml(), "text/html; charset=utf-8");
+
+    // 🎗️ VERIFIED-BY-MNEME — certify an AI-produced deliverable → signed cert + badge.
+    // The deliverable is NOT stored — only the resulting certificate (named by certId).
+    if (req.method === "POST" && url.pathname === "/api/certify") {
+      if (rateLimited("certify:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      let body: { deliverable?: string };
+      try { body = JSON.parse(await readBody(req, 512 * 1024) || "{}"); } catch { return send(res, 400, { error: "invalid JSON" }); }
+      const deliverable = String(body.deliverable || "");
+      if (!deliverable.trim()) return send(res, 400, { error: "expected { deliverable }" });
+      try {
+        const cert = vericert.certify(deliverable, { ts: Date.now() });
+        let receipt: unknown = null;
+        try { receipt = notary.issueReceipt(process.cwd(), { kind: "claim-verdict", subject: `vericert:${cert.verdict}:${cert.certId.slice(0, 12)}`, payload: { certId: cert.certId }, includePayload: true }); } catch { /* sign best-effort */ }
+        const stored: StoredCert = { ...cert, signed: receipt };
+        saveCert(stored);
+        return send(res, 200, { cert: stored, badgeSvg: vericert.badgeSVG(cert), badgeUrl: `/vericert/badge/${cert.certId}.svg`, permalink: `/c/${cert.certId}` });
+      } catch (e) { return send(res, 502, { error: (e as Error).message.slice(0, 300) }); }
+    }
+    // verify a posted certificate offline (tamper-evidence + signature + optional re-check)
+    if (req.method === "POST" && url.pathname === "/api/certify/verify") {
+      let body: { cert?: StoredCert; deliverable?: string };
+      try { body = JSON.parse(await readBody(req, 512 * 1024) || "{}"); } catch { return send(res, 400, { error: "invalid JSON" }); }
+      if (!body.cert) return send(res, 400, { error: "expected { cert }" });
+      const v = vericert.verifyCertBody(body.cert, typeof body.deliverable === "string" ? body.deliverable : undefined);
+      let sigOk: boolean | null = null;
+      try { if (body.cert.signed) sigOk = notary.verifyReceipt(body.cert.signed).valid; } catch { sigOk = false; }
+      return send(res, 200, { ...v, signatureValid: sigOk });
+    }
+    // embeddable badge — /vericert/badge/<certId>.svg
+    if (req.method === "GET" && url.pathname.startsWith("/vericert/badge/") && url.pathname.endsWith(".svg")) {
+      const id = decodeURIComponent(url.pathname.slice("/vericert/badge/".length, -4));
+      const c = getCert(id);
+      if (!c) return sendSvg(res, vericert.badgeSVG({ verdict: "REJECTED", certId: id } as vericert.Certificate), 30);
+      return sendSvg(res, vericert.badgeSVG(c));
+    }
+    // cert permalink — /c/<certId> (shows verdict + badge + offline-verify)
+    if (req.method === "GET" && url.pathname.startsWith("/c/")) {
+      const id = decodeURIComponent(url.pathname.slice("/c/".length).replace(/\/$/, ""));
+      const c = getCert(id);
+      if (!c) return send(res, 404, { error: "certificate not found" });
+      const col = c.verdict === "CERTIFIED" ? "#22c55e" : c.verdict === "CONDITIONAL" ? "#eab308" : "#ef4444";
+      const faults = (c.faults || []).map((f) => `<li>${f.verdict === "BLOCK" ? "🛑" : "❔"} <b>${xesc(f.nerves.join(", "))}</b> — ${xesc(f.claim)}</li>`).join("");
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verified by Mneme · ${xesc(c.verdict)}</title>${NEWTAB_SCRIPT}${ogMeta(`Verified by Mneme · ${c.verdict}`, `An AI-produced deliverable certified by Mneme — ${c.verdict}, score ${Math.round(c.score * 100)}%. Ed25519-signed, verifiable offline.`, "/c/" + id)}<style>body{margin:0;font:15px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:680px;margin:0 auto;padding:48px 20px}.card{background:radial-gradient(circle at 30% 0%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:16px;padding:24px}.row{display:flex;gap:18px;align-items:center}.b{width:72px;height:72px;border-radius:16px;display:grid;place-items:center;font-size:36px;color:#04141b;background:${col};flex:none}.v{font-size:24px;font-weight:800}.m{color:#94a3b8;font-size:13px;margin-top:3px}ul{color:#cbd5e1;padding-left:18px}code{background:#1f2937;padding:1px 5px;border-radius:4px}a{color:#22d3ee}.f{color:#64748b;font-size:12px;margin-top:18px;border-top:1px solid #1f2937;padding-top:14px}</style></head><body><div class="wrap"><div class="card"><div class="row"><div class="b">${c.verdict === "CERTIFIED" ? "✓" : c.verdict === "CONDITIONAL" ? "❔" : "🛑"}</div><div><div class="v">${xesc(c.verdict)}</div><div class="m">score ${Math.round(c.score * 100)}% · ${c.trusted}/${c.claimsChecked} claims clean · certId ${xesc(c.certId.slice(0, 16))}…</div></div></div>${faults ? `<h3>What to fix</h3><ul>${faults}</ul>` : `<p>✓ no known fault in any checked claim.</p>`}<div style="margin:14px 0">${vericert.badgeSVG(c)}</div><div class="m">Embed: <code>&lt;img src="/vericert/badge/${xesc(c.certId)}.svg"&gt;</code></div><div class="f">🎗️ <b>Verified by Mneme</b> · CERTIFIED = no <i>known</i> fault + the engine's measured precision, <b>not</b> a proof of truth · Ed25519-signed, verify offline with <code>mneme certify verify</code> · <a href="/certify">certify your own →</a></div></div></div></body></html>`;
+      return send(res, 200, html, "text/html; charset=utf-8");
+    }
     if (req.method === "GET" && url.pathname === "/favicon.svg") return serveStatic(res, "favicon.svg");
     if (req.method === "GET" && url.pathname === "/api/accuracy") {     // measured extractor accuracy (deterministic)
       const r = accuracy.benchmark();
@@ -585,7 +684,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       return res.end("User-agent: *\nAllow: /\nSitemap: https://xray.mneme-ai.space/sitemap.xml\n");
     }
     if (req.method === "GET" && url.pathname === "/sitemap.xml") {
-      const urls = ["/", "/suite", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
+      const urls = ["/", "/suite", "/certify", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
       res.writeHead(200, { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=86400" });
       return res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
     }

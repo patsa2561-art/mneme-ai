@@ -58,6 +58,52 @@ describe("@mneme-ai/xray server (no network)", () => {
     expect(typeof board.total).toBe("number");
   }, 30_000);
 
+  it("🎗️ VERIFIED-BY-MNEME: certify → signed cert + badge + permalink, and the badge can't fake-green", async () => {
+    await start();
+
+    // a hallucinated deliverable must NOT be CERTIFIED + badge is red, not green
+    const bad = await (await fetch(`${base}/api/certify`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deliverable: "It always works and never fails. Studies prove exactly 73.2% convert." }),
+    })).json();
+    expect(bad.cert.verdict).not.toBe("CERTIFIED");
+    expect(bad.badgeSvg).toContain("<svg");
+    expect(bad.badgeSvg).not.toContain("#2da44e");        // no fake-green
+
+    // a clean deliverable → CERTIFIED + green badge + working permalink + embeddable badge URL
+    const ok = await (await fetch(`${base}/api/certify`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deliverable: "The function returns the sum of two integers. Verify edge cases." }),
+    })).json();
+    expect(ok.cert.verdict).toBe("CERTIFIED");
+    expect(ok.badgeSvg).toContain("#2da44e");
+    expect(ok.cert.signed).toBeTruthy();                   // Ed25519-signed
+
+    // the badge serves from the certId, and the permalink renders the verdict
+    const badge = await fetch(`${base}${ok.badgeUrl}`);
+    expect(badge.headers.get("content-type")).toContain("image/svg");
+    const perma = await (await fetch(`${base}${ok.permalink}`)).text();
+    expect(perma).toContain("CERTIFIED");
+    expect(perma).toContain("Verified by Mneme");
+
+    // offline verify endpoint: genuine cert valid + signature ok; a swapped deliverable caught
+    const v = await (await fetch(`${base}/api/certify/verify`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cert: ok.cert, deliverable: "The function returns the sum of two integers. Verify edge cases." }),
+    })).json();
+    expect(v.ok).toBe(true);
+    expect(v.signatureValid).toBe(true);
+    const v2 = await (await fetch(`${base}/api/certify/verify`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cert: ok.cert, deliverable: "This always works and never fails." }),
+    })).json();
+    expect(v2.ok).toBe(false);
+
+    // the landing page is reachable + linked
+    const landing = await (await fetch(`${base}/certify`)).text();
+    expect(landing).toContain("Verified by Mneme");
+  }, 30_000);
+
   // retry: this test builds an X-Ray of the WHOLE monorepo (spawns many git
   // subprocesses) + drives a real HTTP server — it can flake under heavy
   // parallel-suite CPU/git contention (it passes reliably in isolation). The

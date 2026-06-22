@@ -37,6 +37,8 @@ mneme certify verify --cert cert.json --deliverable report.md   # verify offline
 
 MCP: `mneme.vericert.certify { deliverable }` · `mneme.vericert.verify { cert, deliverable? }`
 
+**Try it live (no install):** **[xray.mneme-ai.space/certify](https://xray.mneme-ai.space/certify)** — paste a deliverable, get a signed certificate + a shareable badge + an embeddable badge URL + a permalink. The deliverable itself is never stored (only the resulting certificate, named by its `certId`). API: `POST /api/certify { deliverable }` · `POST /api/certify/verify { cert, deliverable? }` · badge `GET /vericert/badge/<certId>.svg` · permalink `GET /c/<certId>`.
+
 ### The shareable badge
 
 ```bash
