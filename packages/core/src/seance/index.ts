@@ -24,6 +24,7 @@ export interface TodoThen { file: string; line: number; text: string }
 
 export interface SeancePacket {
   seance: string;                                  // "SEANCE/1"
+  focus?: string;                                  // when set: this packet is the decision-history of ONE file
   at: { ref: string; hash: string; ts: number; monthsAgo: number };
   decision: { subject: string; body: string };     // what you SAID then
   window: Array<{ hash: string; subject: string; ts: number }>; // commits leading up (what you knew)
@@ -53,7 +54,7 @@ function themesOf(subjects: string[]): string[] {
   return [...freq.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([w]) => w);
 }
 
-export interface SeanceOpts { ref?: string; now?: number; windowBefore?: number; windowAfter?: number; todosThen?: TodoThen[] }
+export interface SeanceOpts { ref?: string; now?: number; windowBefore?: number; windowAfter?: number; todosThen?: TodoThen[]; focusFile?: string }
 
 /**
  * Reconstruct the decision context around `atHash`. `commits` is the full history
@@ -73,14 +74,17 @@ export function reconstructSeance(commits: PastCommit[], atHash: string, opts?: 
   const abandoned = win.filter((c) => REVERT_RE.test(c.subject || "")).map((c) => ({ hash: c.hash.slice(0, 12), subject: c.subject || "" }));
   const themes = themesOf(win.map((c) => c.subject || ""));
   // ★ file-lineage: the REAL evolution of this decision — every other commit that
-  // touched the same files as the decision commit (not just time-neighbors). This is
-  // the accurate "history of this code", most-recent first.
+  // touched the same files as the decision commit (not just time-neighbors). When
+  // focusFile is set, this becomes the exact decision-HISTORY of that one file —
+  // the answer to "why is this file the way it is?". Most-recent first.
+  const focusFile = (opts?.focusFile || "").trim();
   const atFiles = new Set((at.files || []).filter(Boolean));
-  const lineage = atFiles.size
-    ? list.filter((c) => c.hash !== at.hash && (c.files || []).some((f) => atFiles.has(f)))
-        .sort((a, b) => b.ts - a.ts).slice(0, 8)
-        .map((c) => ({ hash: c.hash.slice(0, 12), subject: c.subject || "", ts: c.ts }))
-    : [];
+  const lineageSrc = focusFile
+    ? list.filter((c) => (c.files || []).includes(focusFile))
+    : (atFiles.size ? list.filter((c) => c.hash !== at.hash && (c.files || []).some((f) => atFiles.has(f))) : []);
+  const lineage = lineageSrc.filter((c) => c.hash !== at.hash)
+    .sort((a, b) => b.ts - a.ts).slice(0, focusFile ? 12 : 8)
+    .map((c) => ({ hash: c.hash.slice(0, 12), subject: c.subject || "", ts: c.ts }));
   const todosThen = (opts?.todosThen || []).filter((t) => t && t.file).slice(0, 30);
   const citations = [
     ...win.map((c) => c.hash.slice(0, 12)),
@@ -90,6 +94,7 @@ export function reconstructSeance(commits: PastCommit[], atHash: string, opts?: 
   const monthsAgo = Math.max(0, Math.round((now - at.ts) / MONTH));
   const body: Omit<SeancePacket, "packetId"> = {
     seance: "SEANCE/1",
+    ...(focusFile ? { focus: focusFile } : {}),
     at: { ref: opts?.ref || at.hash.slice(0, 12), hash: at.hash.slice(0, 12), ts: at.ts, monthsAgo },
     decision: { subject: at.subject || "", body: (at.body || "").trim() },
     window, lineage, todosThen, abandoned, themes, citations,
@@ -131,6 +136,7 @@ export interface SeanceGauntlet {
   reconstructsDecision: boolean;       // the packet's decision == the commit at the ref
   windowIsContext: boolean;            // window pulls the surrounding commits
   lineageRelevant: boolean;            // ★ lineage = commits touching the SAME files (real evolution), all cited
+  fileFocusHistory: boolean;           // ★ focusFile mode = the exact decision-history of one file
   citesEverything: boolean;            // every window/abandoned/lineage entry is in citations
   surfacesAbandoned: boolean;          // a revert in the window is captured
   groundedNoInvention: boolean;        // ★ verifySeance passes: nothing references a non-existent commit
@@ -151,6 +157,9 @@ export function seanceGauntlet(): SeanceGauntlet {
   const windowIsContext = p.window.length >= 5 && p.window.some((w) => w.hash === cs[7]!.hash.slice(0, 12));
   const atFiles = new Set((cs[8]!.files || []));
   const lineageRelevant = p.lineage.length > 0 && p.lineage.every((l) => { const c = cs.find((x) => x.hash.slice(0, 12) === l.hash); return !!c && (c.files || []).some((f) => atFiles.has(f)); });
+  // file-focus: every lineage commit actually touched the focus file
+  const pf = reconstructSeance(cs, at, { focusFile: "src/cache.ts", now: cs[11]!.ts });
+  const fileFocusHistory = pf.focus === "src/cache.ts" && pf.lineage.length > 0 && pf.lineage.every((l) => { const c = cs.find((x) => x.hash.slice(0, 12) === l.hash); return !!c && (c.files || []).includes("src/cache.ts"); });
   const citesEverything = p.window.every((w) => p.citations.includes(w.hash)) && p.abandoned.every((a) => p.citations.includes(a.hash)) && p.lineage.every((l) => p.citations.includes(l.hash));
   const surfacesAbandoned = p.abandoned.some((a) => /revert/i.test(a.subject));
   const groundedNoInvention = verifySeance(p, cs).ok === true;
@@ -161,6 +170,6 @@ export function seanceGauntlet(): SeanceGauntlet {
   let total = true;
   try { reconstructSeance(null as unknown as PastCommit[], ""); reconstructSeance([], "x"); verifySeance(null as unknown as SeancePacket, []); } catch { total = false; }
 
-  const all = reconstructsDecision && windowIsContext && lineageRelevant && citesEverything && surfacesAbandoned && groundedNoInvention && tamperEvident && todosCarryLocation && deterministic && total;
-  return { reconstructsDecision, windowIsContext, lineageRelevant, citesEverything, surfacesAbandoned, groundedNoInvention, tamperEvident, todosCarryLocation, deterministic, total, score: all ? 100 : 0 };
+  const all = reconstructsDecision && windowIsContext && lineageRelevant && fileFocusHistory && citesEverything && surfacesAbandoned && groundedNoInvention && tamperEvident && todosCarryLocation && deterministic && total;
+  return { reconstructsDecision, windowIsContext, lineageRelevant, fileFocusHistory, citesEverything, surfacesAbandoned, groundedNoInvention, tamperEvident, todosCarryLocation, deterministic, total, score: all ? 100 : 0 };
 }

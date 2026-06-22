@@ -54,15 +54,25 @@ export function registerSeanceCommands(program: Command): void {
     .description("🔮 SÉANCE — talk to your past self. Reconstruct the DECISION CONTEXT around any commit (what you said · were working on · had open as TODOs · abandoned), cited to real commits, so you (or an agent) can answer 'why did I choose this?' grounded in the record — never invented. Git-native shared context, local-first. HONEST: deterministic projection of git, not spirit-channeling; HPE-guard any answer.")
     .option("--at <ref>", "a commit ref / sha / tag to summon")
     .option("--months <n>", "summon your self from N months ago")
+    .option("--file <path>", "why is THIS file the way it is — reconstruct its decision history")
     .option("--json", "JSON output (the full grounded packet)")
-    .action((opts: { at?: string; months?: string; json?: boolean }) => {
+    .action((opts: { at?: string; months?: string; file?: string; json?: boolean }) => {
       const commits = readCommits();
       if (!commits.length) { out("no commits found (run inside a git repo)"); process.exitCode = 2; return; }
-      const r = resolveRef(opts.at, opts.months);
-      if (!r) { out("could not resolve that ref"); process.exitCode = 2; return; }
-      const packet = seance.reconstructSeance(commits, r.hash, { ref: r.ref, todosThen: todosAtRef(r.hash), now: Math.floor(Date.now() / 1000) });
+      let hash: string, ref: string;
+      if (opts.file) {
+        hash = git(["log", "-1", "--format=%H", "--", opts.file]).trim();
+        if (!hash) { out(`no history for file: ${opts.file}`); process.exitCode = 2; return; }
+        ref = opts.file;
+      } else {
+        const r = resolveRef(opts.at, opts.months);
+        if (!r) { out("could not resolve that ref"); process.exitCode = 2; return; }
+        hash = r.hash; ref = r.ref;
+      }
+      const packet = seance.reconstructSeance(commits, hash, { ref, todosThen: todosAtRef(hash), now: Math.floor(Date.now() / 1000), focusFile: opts.file });
       if (opts.json) { out(JSON.stringify(packet, null, 2)); return; }
-      out(`🔮 SÉANCE — your self at ${packet.at.ref} (${packet.at.monthsAgo} month(s) ago · ${packet.at.hash})`);
+      if (packet.focus) out(`🔮 SÉANCE — why is "${packet.focus}" the way it is? (last touched ${packet.at.monthsAgo} month(s) ago · ${packet.at.hash})`);
+      else out(`🔮 SÉANCE — your self at ${packet.at.ref} (${packet.at.monthsAgo} month(s) ago · ${packet.at.hash})`);
       out(`\n  💬 What you said:\n     "${packet.decision.subject}"${packet.decision.body ? `\n     ${packet.decision.body.split("\n")[0]}` : ""}`);
       if (packet.themes.length) out(`\n  🎯 What you were focused on:  ${packet.themes.join(" · ")}`);
       if (packet.window.length) { out(`\n  🕰  Leading up to it:`); for (const w of packet.window.slice(0, 6)) out(`     ${w.hash}  ${w.subject}`); }
