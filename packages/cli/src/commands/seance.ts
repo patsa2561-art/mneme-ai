@@ -66,6 +66,7 @@ export function registerSeanceCommands(program: Command): void {
       out(`\n  💬 What you said:\n     "${packet.decision.subject}"${packet.decision.body ? `\n     ${packet.decision.body.split("\n")[0]}` : ""}`);
       if (packet.themes.length) out(`\n  🎯 What you were focused on:  ${packet.themes.join(" · ")}`);
       if (packet.window.length) { out(`\n  🕰  Leading up to it:`); for (const w of packet.window.slice(0, 6)) out(`     ${w.hash}  ${w.subject}`); }
+      if (packet.lineage.length) { out(`\n  🧬 How this code evolved (same files):`); for (const l of packet.lineage.slice(0, 6)) out(`     ${l.hash}  ${l.subject}`); }
       if (packet.abandoned.length) { out(`\n  👻 Paths you abandoned:`); for (const a of packet.abandoned) out(`     ${a.hash}  ${a.subject}`); }
       if (packet.todosThen.length) { out(`\n  📌 Intentions you had open then:`); for (const t of packet.todosThen.slice(0, 6)) out(`     ${t.file}:${t.line}  ${t.text}`); }
       out(`\n  🧷 ${packet.citations.length} citations · packetId ${packet.packetId.slice(0, 16)}…`);

@@ -108,6 +108,7 @@ import { STATGUARD_TOOLS } from "./_statguard_tools.js";
 import { HPE_TOOLS } from "./_hpe_tools.js";
 import { VERICERT_TOOLS } from "./_vericert_tools.js";
 import { SEANCE_TOOLS } from "./_seance_tools.js";
+import { COMMIT_PERSONA_TOOLS } from "./_commit_persona_tools.js";
 import { ADAMAS_TOOLS } from "./_adamas_tools.js";
 import { PRISM_TOOLS } from "./_prism_tools.js";
 import { GOLDILOCKS_TOOLS } from "./_goldilocks_tools.js";
@@ -337,6 +338,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...HPE_TOOLS,
     ...VERICERT_TOOLS,
     ...SEANCE_TOOLS,
+    ...COMMIT_PERSONA_TOOLS,
     ...ADAMAS_TOOLS,
     ...PRISM_TOOLS,
     ...GOLDILOCKS_TOOLS,
