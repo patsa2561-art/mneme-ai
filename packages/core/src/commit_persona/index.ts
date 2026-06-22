@@ -100,7 +100,7 @@ export interface Persona {
 }
 
 export interface AvatarTraits {
-  hue: number; accent: number; bodyColor: string; accentColor: string;
+  hue: number; accent: number; gid: number; bodyColor: string; accentColor: string;
   build: "slim" | "round" | "buff"; // from commit size
   eyes: "happy" | "neutral" | "tired" | "wow";
   mouth: "smile" | "flat" | "grimace" | "open";
@@ -215,15 +215,29 @@ const ARCH_ACCESSORY: Record<Archetype, AvatarTraits["accessory"]> = {
   "The Architect": "compass", "The Builder": "wrench",
 };
 
+// Body color FAMILY per tier so a hero visibly IS its rarity (matches the gallery +
+// the rarity label) — like a gacha card. [hue, saturation%]. Per-author lightness
+// varies within the family so same-rarity heroes still look distinct.
+// hue/sat MATCH the rarity label colors (RARITY_META) so a hero's body color is
+// literally its rarity — Common=gray · Uncommon=green · Rare=blue · Epic=gold ·
+// Mythic=teal · Legendary=indigo · Secret=pink — consistent with the collection list.
+const TIER_HSL: Record<Tier, [number, number]> = {
+  ROOKIE: [220, 8], BRONZE: [142, 55], SILVER: [199, 75], GOLD: [44, 85],
+  PLATINUM: [166, 65], DIAMOND: [232, 80], LEGENDARY: [298, 75],
+};
+
 function deriveTraits(author: string, m: PersonaMetrics, archetype: Archetype, stats: PersonaStats, power: number, level: number, tier: Tier, rank: number): AvatarTraits {
   const seed = h32(author);
-  const hue = seed % 360;                                  // stable, distinct per author
-  const accent = (hue + 40 + (seed >> 8) % 80) % 360;
+  const [th, ts] = TIER_HSL[tier];
+  const lShift = (seed % 16) - 8;                          // per-author lightness −8..+7 within the rarity family
+  const hue = th;                                          // hero color = rarity family (matches the collection list)
+  const accent = th;
   const build: AvatarTraits["build"] = m.avgChurn >= 400 ? "buff" : m.avgChurn <= 90 ? "slim" : "round";
   const eyes: AvatarTraits["eyes"] = m.nightRate >= 0.45 ? "tired" : power >= 70 ? "happy" : m.fixRate >= 0.4 ? "wow" : "neutral";
   const mouth: AvatarTraits["mouth"] = power >= 70 ? "smile" : power >= 50 ? "flat" : m.fixRate >= 0.4 ? "grimace" : "open";
   return {
-    hue, accent, bodyColor: `hsl(${hue} 68% 58%)`, accentColor: `hsl(${accent} 70% 62%)`,
+    hue, accent, gid: seed,                                 // gid = unique gradient id per author (no SVG id clash)
+    bodyColor: `hsl(${th} ${ts}% ${50 + lShift}%)`, accentColor: `hsl(${th} ${Math.min(90, ts + 12)}% ${64 + lShift}%)`,
     build, eyes, mouth, accessory: ARCH_ACCESSORY[archetype],
     tier, tierRank: rank,
     shield: clamp(stats.coverage / 100, 0, 1),             // tests → shield
@@ -342,15 +356,15 @@ export function personaAvatarSvg(p: Persona): string {
     const t = p.traits || ({} as AvatarTraits);
     const tier = t.tier || "ROOKIE"; const rank = t.tierRank || 0;
     const tc = TIER_COLOR[tier] || "#9ca3af";
-    const hue = t.hue ?? 210; const body = t.bodyColor || "#64748b"; const accent = t.accentColor || "#94a3b8";
+    const gid = t.gid ?? (t.hue ?? 210); const body = t.bodyColor || "#64748b"; const accent = t.accentColor || "#94a3b8";
     const cx = 120; const headY = 70; const headR = t.build === "buff" ? 44 : t.build === "slim" ? 38 : 41;
     const tw = t.build === "buff" ? 80 : t.build === "slim" ? 58 : 68;     // torso width
     const tx = cx - tw / 2; const torsoTop = 112; const torsoBot = 196;
     const out = rank >= 2 ? tc : "#0b1220"; const ow = 2.5 + Math.min(3.5, rank * 0.6);
     const L: string[] = [];
     L.push(`<svg xmlns="http://www.w3.org/2000/svg" width="240" height="300" viewBox="0 0 240 300" role="img" aria-label="${esc(p.author)} — ${esc(p.archetype)}, ${esc(tier)} (${esc(p.rarity)}) level ${p.level}">`);
-    L.push(`<defs><radialGradient id="g${hue}" cx="40%" cy="32%"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="${body}"/></radialGradient>`);
-    L.push(`<linearGradient id="pl${rank}_${hue}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tc}"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>`);
+    L.push(`<defs><radialGradient id="g${gid}" cx="40%" cy="32%"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="${body}"/></radialGradient>`);
+    L.push(`<linearGradient id="pl${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tc}"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>`);
     // aura (DIAMOND+)
     if (t.aura > 0) { L.push(`<circle cx="${cx}" cy="150" r="118" fill="${tc}" opacity="${(0.08 * t.aura).toFixed(2)}"/><circle cx="${cx}" cy="150" r="96" fill="${tc}" opacity="${(0.10 * t.aura).toFixed(2)}"/>`); }
     // cape (PLATINUM+)
@@ -369,10 +383,10 @@ export function personaAvatarSvg(p: Persona): string {
     // weapon (right hand)
     L.push(weaponSvg(t.accessory, accent));
     // torso (chestplate)
-    L.push(`<rect x="${tx}" y="${torsoTop}" width="${tw}" height="${torsoBot - torsoTop}" rx="20" fill="url(#g${hue})" stroke="${out}" stroke-width="${ow}"/>`);
+    L.push(`<rect x="${tx}" y="${torsoTop}" width="${tw}" height="${torsoBot - torsoTop}" rx="20" fill="url(#g${gid})" stroke="${out}" stroke-width="${ow}"/>`);
     // armor plating (SILVER+) — chest plate overlay + shoulder pads
     if (rank >= 2) {
-      L.push(`<path d="M${tx + 6} ${torsoTop + 6} h${tw - 12} v26 q-${tw / 2 - 6} 18 -${tw - 12} 0 z" fill="url(#pl${rank}_${hue})" opacity="0.92" stroke="${tc}" stroke-width="1.5"/>`); // chest plate
+      L.push(`<path d="M${tx + 6} ${torsoTop + 6} h${tw - 12} v26 q-${tw / 2 - 6} 18 -${tw - 12} 0 z" fill="url(#pl${gid})" opacity="0.92" stroke="${tc}" stroke-width="1.5"/>`); // chest plate
       L.push(`<ellipse cx="${tx + 4}" cy="${torsoTop + 8}" rx="13" ry="10" fill="${tc}" stroke="#0b1220" stroke-width="2"/><ellipse cx="${tx + tw - 4}" cy="${torsoTop + 8}" rx="13" ry="10" fill="${tc}" stroke="#0b1220" stroke-width="2"/>`); // shoulder pads
     }
     // chest emblem (rank>=1) — a small gem that brightens with tier
@@ -389,7 +403,7 @@ export function personaAvatarSvg(p: Persona): string {
       L.push(`</g>`);
     }
     // head
-    L.push(`<circle cx="${cx}" cy="${headY}" r="${headR}" fill="url(#g${hue})" stroke="${out}" stroke-width="${ow}"/>`);
+    L.push(`<circle cx="${cx}" cy="${headY}" r="${headR}" fill="url(#g${gid})" stroke="${out}" stroke-width="${ow}"/>`);
     L.push(`<ellipse cx="${cx - headR * 0.38}" cy="${headY - headR * 0.4}" rx="${headR * 0.34}" ry="${headR * 0.22}" fill="#fff" opacity="0.30"/>`); // sheen
     L.push(faceSvg(t.eyes, t.mouth, cx, headY));
     // helmet by tier: band → visor → full helm

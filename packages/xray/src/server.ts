@@ -651,7 +651,7 @@ function personaLandingHtml(): string {
     "  '<div class=stats>'+'<span title=\"non-merge commits authored by this contributor\">📦 '+m.commits+' commits</span>'+'<span>📏 ~'+Math.round(m.avgChurn)+' lines/commit</span>'+'<span>🧪 '+Math.round(m.testTouchRate*100)+'% w/ tests</span>'+'<span>📝 '+Math.round(m.conventionalRate*100)+'% conventional</span>'+(m.fixRate>0.1?'<span>🚒 '+Math.round(m.fixRate*100)+'% firefighting</span>':'')+(m.nightRate>0.3?'<span>🌙 '+Math.round(m.nightRate*100)+'% night</span>':'')+'</div>'+",
     "  '<div class=share><button class=shbtn onclick=\"shareX(this)\" data-a=\"'+esc(p.author)+'\" data-t=\"'+esc(p.archetype)+'\" data-r=\"'+esc(p.rarity)+'\">𝕏 Share</button><button class=shbtn onclick=\"copyL(this)\">🔗 Copy link</button></div></div>';}",
     "function render(d){if(!d.personas||!d.personas.length){st.className='err';st.textContent='No commits found to analyze.';return;}CURREPO=d.repo||'';",
-    "  var recon='<div class=recon><b>'+d.repoCommits+'</b> commits in repo'+(d.merges?' · <b>'+d.merges+'</b> merge'+(d.merges>1?'s':'')+' excluded':'')+' · <b>'+d.analyzedCommits+'</b> authored commits analyzed across <b>'+d.contributors+'</b> contributor'+(d.contributors>1?'s':'')+(d.shownContributors<d.contributors?' (showing top '+d.shownContributors+')':'')+'. <span class=mq>Matches git exactly — merge commits aren\\'t authored work, so they\\'re counted separately.</span></div>';",
+    "  var recon='<div class=recon><b>'+d.repoCommits+'</b> commits in repo'+(d.merges?' · <b>'+d.merges+'</b> merge'+(d.merges>1?'s':'')+' excluded':'')+' · <b>'+d.analyzedCommits+'</b> authored commits analyzed across <b>'+d.contributors+'</b> contributor'+(d.contributors>1?'s':'')+(d.shownContributors<d.contributors?' (showing '+d.shownContributors+' with ≥'+(d.minCommitsForPersona||3)+' commits — a 1-commit author isn\\'t a style)':'')+'. <span class=mq>Matches git exactly — merge commits aren\\'t authored work, so they\\'re counted separately.</span></div>';",
     "  rep.innerHTML='<h2 class=rt>'+esc(d.repo)+'</h2>'+recon+'<div class=grid>'+d.personas.map(card).join('')+'</div><p class=foot>🎭 each hero is generated from <b>measured git signals</b> (deterministic — same history, same hero). ⚡ = commit <b>hygiene</b>, not skill or worth. Source was cloned, scanned, and <b>deleted</b>.</p>';rep.style.display='block';rep.scrollIntoView({behavior:'smooth',block:'nearest'});}",
     "function run(url){url=String(url||'').trim();if(!valid(url)){st.className='err';st.textContent='Paste a public GitHub/GitLab/Bitbucket repo URL.';return;}u.value=url;go.disabled=true;rep.style.display='none';st.className='';st.innerHTML='<span class=spin></span>reading the commit history of '+esc(url.replace(/^https?:\\/\\//,''))+' …';",
     "  fetch('/api/persona?gitUrl='+encodeURIComponent(url)).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(o){if(o.ok&&o.j&&o.j.personas){st.textContent='';render(o.j);}else{st.className='err';st.textContent=(o.j&&o.j.error)||'could not analyze this repo';}}).catch(function(e){st.className='err';st.textContent='network error: '+e.message;}).finally(function(){go.disabled=false;});}",
@@ -734,8 +734,13 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         const all = commitPersona.analyzeCommitPersonas(commits, { minCommits: 1 });
         const analyzedCommits = commits.length;                  // non-merge commits we processed
         const contributors = all.length;
-        const personas = all.slice(0, 12).map((p) => ({ ...p, avatarSvg: commitPersona.personaAvatarSvg(p) }));
-        return send(res, 200, { repo: gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, ""), repoCommits, nonMergeCommits, merges, analyzedCommits, contributors, shownContributors: personas.length, personas });
+        // a single (or tiny) commit isn't a "commit style" — need ≥3 commits for a
+        // persona; below that it's noise (e.g. a one-shot vendored/import commit).
+        // Still COUNTED in `contributors`, just not shown as a hero card.
+        const display = all.filter((p) => p.metrics.commits >= 3);
+        const shown = (display.length ? display : all).slice(0, 12);
+        const personas = shown.map((p) => ({ ...p, avatarSvg: commitPersona.personaAvatarSvg(p) }));
+        return send(res, 200, { repo: gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, ""), repoCommits, nonMergeCommits, merges, analyzedCommits, contributors, shownContributors: personas.length, minCommitsForPersona: 3, personas });
       } catch (e) {
         return send(res, 502, { error: (e as Error).message.slice(0, 300) });
       } finally { if (handle) handle.dispose(); }
