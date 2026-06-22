@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.135.0 — THE PR ENGINE: launch/PR copy that can't lie ──
+  {
+    id: "claim.pr_engine.launch_copy_cannot_lie",
+    source: "v3.135.0 release notes",
+    text: "Mneme's PR ENGINE generates a launch kit (Hacker News post · X thread · Reddit post · changelog) where every candidate claim is VERICERT-screened first: an overclaiming, fabricated, or unfalsifiable-superlative claim ('world's best', '100% accurate', 'never wrong') is REJECTED and never makes it into the copy, and the assembled output re-certifies itself so zero overclaim slips through. It's the anti-hallucination bar applied to the marketing — launch copy that can't lie — and it shows the author exactly which claims were too strong, with reasons. prEngineGauntlet=100 (rejects an overclaim, approves a measured claim, ★zero-overclaim output, a rejected claim never appears in the copy, builds all channels, deterministic, total). CLI `mneme launch` (uses Mneme's own measured claims by default); MCP `mneme.launch.kit` (Matrix gRPC auto); reachable via mneme.morph. probe.pr_engine.launch_copy_cannot_lie. HONEST (DIAKRISIS): it screens KNOWN overclaim patterns + drops unfalsifiable superlatives — it keeps the copy defensible, it does not make a true claim true.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.pr_engine.launch_copy_cannot_lie",
+    severity: "block",
+  },
   // ── v3.134.0 — THE CONTEXT PASSPORT: the cross-agent verified-context layer ──
   {
     id: "claim.context_passport.cross_agent_verified_context",

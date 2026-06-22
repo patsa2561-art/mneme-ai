@@ -320,6 +320,7 @@ export * as seance from "./seance/index.js";
 export * as repoBrief from "./repo_brief/index.js";
 export * as prReview from "./pr_review/index.js";
 export * as contextPassport from "./context_passport/index.js";
+export * as prEngine from "./pr_engine/index.js";
 export * as prism from "./prism/index.js";
 export * as goldilocks from "./goldilocks/index.js";
 export * as axia from "./axia/index.js";

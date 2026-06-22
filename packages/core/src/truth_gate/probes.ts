@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.pr_engine.launch_copy_cannot_lie",
+    kind: "boolean",
+    description: "THE PR ENGINE (v3.135.0 — launch/PR copy that can't lie). Generates a launch kit (HN/X/Reddit/changelog) where every candidate claim is VERICERT-screened first; overclaims, fabrications, and unfalsifiable marketing superlatives are rejected and never ship. This probe asserts prEngineGauntlet=100: rejects an overclaim ('world's best, 100% accurate, never fails') ∧ approves a calm measured claim ∧ ★zero-overclaim output (the assembled kit re-certifies clean — no REJECTED sentence survives) ∧ a rejected claim never appears in the copy ∧ all channels built ∧ deterministic ∧ total. HONEST (DIAKRISIS): screens KNOWN overclaim patterns + drops unfalsifiable superlatives — it keeps copy defensible, it does not make a claim true.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../pr_engine/index.js" as string) as typeof import("../pr_engine/index.js");
+        const g = P.prEngineGauntlet();
+        const ok = g.score === 100 && g.rejectsOverclaim && g.approvesMeasured && g.zeroOverclaimOutput && g.dropsRejectedFromCopy && g.buildsAllChannels && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} rejectsOverclaim=${g.rejectsOverclaim} measured=${g.approvesMeasured} zeroOverclaim=${g.zeroOverclaimOutput} dropsRejected=${g.dropsRejectedFromCopy}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.context_passport.cross_agent_verified_context",
     kind: "boolean",
     description: "THE CONTEXT PASSPORT (v3.134.0 — the cross-agent verified-context layer; fills the gap that every AI agent has no context outside its own ecosystem). A context ledger in git (.mneme/passport) any agent (any vendor) inherits + contributes to; an entry from another agent is SCREENED (HPE: injection/fabrication/overconfidence/impossible/fabricated-citation + a citation gate) before it can ever be trusted. This probe asserts passportGauntlet=100: CRDT merge is commutative ∧ idempotent ∧ associative (concurrent agents converge) ∧ ★TRUST-precision = 1.0 (a poisoned/injected entry is NEVER inherited as trusted, 0 leaks, measured on a labeled corpus) ∧ ★trust-decision accuracy ≥0.98 ∧ legit recall ≥0.9 ∧ quarantines an 'ignore all previous' injection ∧ requires a citation for a decision/constraint ∧ portable git round-trip ∧ deterministic ∧ total. HONEST (DIAKRISIS): the screen catches KNOWN poison classes + grounds on citations — not a proof an entry is true.",
