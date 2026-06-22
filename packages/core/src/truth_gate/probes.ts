@@ -605,8 +605,8 @@ const probes: Probe[] = [
       try {
         const CP = await import("../commit_persona/index.js" as string) as typeof import("../commit_persona/index.js");
         const g = CP.personaGauntlet();
-        const ok = g.score === 100 && g.archetypesDiscriminate && g.hygieneMonotonic && g.distinctAvatars && g.avatarSelfContained && g.deterministic && g.total;
-        return { value: ok ? 1 : 0, evidence: `score=${g.score} archetypes=${g.archetypesDiscriminate} hygieneMono=${g.hygieneMonotonic} distinct=${g.distinctAvatars} selfContained=${g.avatarSelfContained}`, dtMs: Date.now() - t0 };
+        const ok = g.score === 100 && g.archetypesDiscriminate && g.powerMonotonic && g.levelMonotonic && g.tierGatedByQuality && g.bulldozerScoresLow && g.avatarLevelsUp && g.shieldTracksCoverage && g.scarsTrackFirefighting && g.distinctAvatars && g.avatarSelfContained && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} powerMono=${g.powerMonotonic} levelMono=${g.levelMonotonic} tierGated=${g.tierGatedByQuality} bulldozerLow=${g.bulldozerScoresLow} levelsUp=${g.avatarLevelsUp} shield=${g.shieldTracksCoverage} scars=${g.scarsTrackFirefighting}`, dtMs: Date.now() - t0 };
       } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
     },
   },

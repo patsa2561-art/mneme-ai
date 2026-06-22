@@ -54,9 +54,10 @@ export function registerPersonaCommands(program: Command): void {
       if (opts.json) { out(JSON.stringify(personas.map((p) => ({ ...p, avatarSvg: commitPersona.personaAvatarSvg(p) })), null, 2)); return; }
       out(`🎭 Commit Personas — ${personas.length} contributor(s), from real git history (hygiene, not skill)`);
       for (const p of personas) {
-        const m = p.metrics;
+        const m = p.metrics, s = p.stats;
         out(`\n  ${p.archetype}  ·  ${p.author}`);
-        out(`    🧼 ${p.band} ${p.hygiene}  ·  📦 ${m.commits} commits  ·  📏 ~${Math.round(m.avgChurn)} lines/commit  ·  🧪 ${Math.round(m.testTouchRate * 100)}% w/ tests  ·  📝 ${Math.round(m.conventionalRate * 100)}% conventional${m.fixRate > 0.1 ? `  ·  🚒 ${Math.round(m.fixRate * 100)}% firefighting` : ""}`);
+        out(`    🏅 ${p.tier} · Lv.${p.level} · ⚡power ${p.power}  ·  📦 ${m.commits} commits  ·  📏 ~${Math.round(m.avgChurn)} lines/commit`);
+        out(`    stats — Precision ${s.precision} · Discipline ${s.discipline} · Coverage ${s.coverage} · Velocity ${s.velocity} · Stability ${s.stability}`);
         out(`    ${p.blurb}`);
       }
       out(`\n  honest: commit hygiene measured from messages/size/tests/fixups — NOT a judgment of the person.`);
