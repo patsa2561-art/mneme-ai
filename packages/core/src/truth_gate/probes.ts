@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.vericert.deliverable_certificate",
+    kind: "boolean",
+    description: "VERICERT (v3.120.0 — the Verified-by-Mneme certificate for AI-worker output). Splits a deliverable into claims, runs each through the HPE verification stack, and emits a tamper-evident, Ed25519-signable certificate: CERTIFIED / CONDITIONAL / REJECTED. The trust/accountability layer the AI-worker economy lacks. This probe asserts vericertGauntlet=100: certifies a clean deliverable ∧ REJECTS a hard-fault one ∧ CONDITIONAL on review-only ∧ ★CERTIFIED-precision = 1.0 (NEVER certifies a deliverable that contains a known fault, 0 leaks, measured) ∧ ★verdict accuracy ≥0.98 on a labeled corpus ∧ clean recall ≥0.9 ∧ tamper-evident (altering the cert breaks certId re-derivation) ∧ binds the deliverable (a cert for one deliverable fails against another) ∧ deterministic ∧ total. HONEST (DIAKRISIS): CERTIFIED = no KNOWN fault + the engine's measured precision, NOT a proof of truth; a novel failure no nerve models can still pass. It certifies the check happened + binds the exact bytes (provenance + integrity).",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const V = await import("../vericert/index.js" as string) as typeof import("../vericert/index.js");
+        const g = V.vericertGauntlet(); const b = V.vericertBench();
+        const ok = g.score === 100 && g.certifiedPrecisionPerfect && g.accuracyAtLeast98 && g.cleanRecallHigh && g.tamperEvident && g.bindsDeliverable && g.deterministic && g.total && b.certifiedPrecision === 1 && b.leaks.length === 0 && b.accuracy >= 0.98;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} accuracy=${b.accuracy} certifiedPrecision=${b.certifiedPrecision} leaks=${b.leaks.length} cleanRecall=${b.cleanRecall} tamperEvident=${g.tamperEvident}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.hpe.hallucination_protection",
     kind: "boolean",
     description: "HPE (v3.117.0 — the Hallucination Protection Engine, a 'nervous system' for truth). Composes INDEPENDENT nerves (statistical fallacy · self-contradiction · overconfidence · fabrication-risk · external truth-grounding/consensus/injection) with a REFLEX (any hard fault → BLOCK) + ABSTENTION (REVIEW when unverifiable) → TRUSTED/REVIEW/BLOCK. This probe asserts hpeGauntlet=100: ★precision-when-TRUSTED = 1.0 (NOTHING hallucinated is stamped TRUSTED, zero leaks, measured) ∧ every hallucination class contained ∧ reflex on a hard fault ∧ abstains when unsure ∧ safe well-calibrated claims still pass (coverage ≥0.85) ∧ the fused engine catches strictly more than any single nerve ∧ monotonic (clean signals never un-block a caught case) ∧ deterministic ∧ total. HONEST (DIAKRISIS): drives CONFIDENTLY-WRONG → ~0 by reflex + abstention — NOT 0% hallucination (a theoretical impossibility for open-ended generation; TRUSTED = no KNOWN fault, never a proof of truth; a novel failure no nerve models can still pass).",

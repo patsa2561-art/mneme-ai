@@ -93,6 +93,7 @@ export const COMMAND_TO_MCP: Readonly<Record<string, string>> = Object.freeze({
   "mneme sdc": "mneme.sdc.decode",
   "mneme statguard": "mneme.statguard.check",
   "mneme protect": "mneme.protect.scan",
+  "mneme certify": "mneme.vericert.certify",
   // appsec / funeral have no MCP surface → intentionally absent (mcpTool=null, use CLI)
 });
 

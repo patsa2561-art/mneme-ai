@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.120.0 — VERICERT: the Verified-by-Mneme certificate for AI-worker output ──
+  {
+    id: "claim.vericert.deliverable_certificate",
+    source: "v3.120.0 release notes",
+    text: "Mneme's VERICERT is the trust/accountability layer the AI-worker gold rush (DeerFlow / Cursor / Devin / agent fleets) is missing: everyone builds the worker, nobody certifies the work. Feed it an AI-produced deliverable (report / code / answer); it splits the deliverable into claims (abbreviation-guarded + a whole-document pass so a fault spanning a sentence boundary is still caught), runs each through the HPE verification stack (stat fallacy · self-contradiction · overconfidence · fabrication-risk · fabricated-citation · impossible-value · injection · learned cases), and emits a CERTIFICATE — CERTIFIED / CONDITIONAL / REJECTED — that is tamper-evident (the body binds to its certId) and, at the CLI/MCP boundary, Ed25519-signed so any third party verifies it OFFLINE with the public key alone. vericertGauntlet=100, and the load-bearing measured guarantee is CERTIFIED-precision = 1.0: a deliverable that contains ANY known fault is NEVER stamped CERTIFIED (0 leaks), with verdict accuracy ≥0.98 and clean recall ≥0.9 on a labeled corpus, tamper-evident, and the cert binds the exact deliverable bytes (a cert for one deliverable fails to verify against another). CLI `mneme certify` / `certify verify`; MCP `mneme.vericert.certify` / `mneme.vericert.verify` (self-attesting); flows through the Matrix gRPC rail; reachable via mneme.morph ('certify this' → vericert). HONEST (DIAKRISIS): CERTIFIED = no KNOWN fault in any checked claim + the engine's measured precision, NOT a proof of truth — a novel failure no nerve models can still pass; it certifies that the check happened and binds the exact bytes (provenance + integrity, the property a certificate needs). The picks-and-shovels moat: a neutral, local-first, signed verifier of AI work that an AI-worker vendor structurally won't build for itself.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.vericert.deliverable_certificate",
+    severity: "block",
+  },
   // ── v3.117.0 — HPE: the Hallucination Protection Engine (a nervous system for truth) ──
   {
     id: "claim.hpe.hallucination_protection",
