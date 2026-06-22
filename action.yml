@@ -1,0 +1,61 @@
+name: "Mneme — PR Context & Checks"
+description: "On every PR, post ONE grounded comment: VERICERT the description, git-native context of every changed file (why it's the way it is, cited), and the author's commit persona. Deterministic, local to your runner, code never leaves CI."
+author: "Mneme"
+branding:
+  icon: "git-pull-request"
+  color: "purple"
+inputs:
+  base:
+    description: "Base ref to diff the PR against (default: the PR's base branch)."
+    required: false
+    default: ""
+  fail-on-reject:
+    description: "Fail the check if the PR description is REJECTED by VERICERT."
+    required: false
+    default: "false"
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Install Mneme
+      shell: bash
+      run: npm i -g mneme-ai
+    - name: Build the Mneme PR comment
+      id: gen
+      shell: bash
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_BODY: ${{ github.event.pull_request.body }}
+        PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
+        BASE_IN: ${{ inputs.base }}
+        FAIL_ON_REJECT: ${{ inputs.fail-on-reject }}
+      run: |
+        set -e
+        BASE="${BASE_IN:-origin/$BASE_REF}"
+        git fetch origin "$BASE_REF" --depth=0 || true
+        printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.txt"
+        set +e
+        mneme pr-comment --base "$BASE" --title "$PR_TITLE" --body "@$RUNNER_TEMP/pr_body.txt" --author "$PR_AUTHOR" > "$RUNNER_TEMP/mneme.md"
+        CODE=$?
+        set -e
+        {
+          echo 'comment<<MNEME_EOF'
+          cat "$RUNNER_TEMP/mneme.md"
+          echo 'MNEME_EOF'
+        } >> "$GITHUB_OUTPUT"
+        if [ "$FAIL_ON_REJECT" = "true" ] && [ "$CODE" = "2" ]; then echo "::error::PR description was REJECTED by VERICERT"; exit 2; fi
+    - name: Post / update the comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const body = process.env.MNEME_COMMENT;
+          if (!body || !body.trim()) return;
+          const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+          const mine = comments.find(c => c.body && c.body.includes('🧭 Mneme — PR context & checks'));
+          if (mine) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+          else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+      env:
+        MNEME_COMMENT: ${{ steps.gen.outputs.comment }}
