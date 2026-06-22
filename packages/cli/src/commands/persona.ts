@@ -16,7 +16,7 @@ import { commitPersona } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
 
-function readLocalCommits(max = 500): commitPersona.CommitRec[] {
+function readLocalCommits(max = 5000): commitPersona.CommitRec[] {
   const US = "\x1f", RS = "\x1e";
   const meta = spawnSync("git", ["log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   if (meta.status !== 0 || !meta.stdout) return [];
@@ -49,10 +49,12 @@ export function registerPersonaCommands(program: Command): void {
     .action((opts: { json?: boolean; svg?: string; top?: string }) => {
       const commits = readLocalCommits();
       if (!commits.length) { out("no commits found (run inside a git repo)"); process.exitCode = 2; return; }
-      const personas = commitPersona.analyzeCommitPersonas(commits, { top: parseInt(opts.top || "12", 10), minCommits: 2 });
+      const countOf = (args: string[]) => { const r = spawnSync("git", ["rev-list", "--count", ...args, "HEAD"], { encoding: "utf8" }); return r.status === 0 ? parseInt((r.stdout || "0").trim(), 10) || 0 : 0; };
+      const repoCommits = countOf([]); const merges = Math.max(0, repoCommits - countOf(["--no-merges"]));
+      const personas = commitPersona.analyzeCommitPersonas(commits, { top: parseInt(opts.top || "12", 10), minCommits: 1 });
       if (opts.svg) { try { mkdirSync(opts.svg, { recursive: true }); for (const p of personas) writeFileSync(join(opts.svg, p.author.replace(/[^A-Za-z0-9._-]/g, "_") + ".svg"), commitPersona.personaAvatarSvg(p)); out(`🎭 ${personas.length} avatar(s) → ${opts.svg}`); } catch { /* */ } }
       if (opts.json) { out(JSON.stringify(personas.map((p) => ({ ...p, avatarSvg: commitPersona.personaAvatarSvg(p) })), null, 2)); return; }
-      out(`🎭 Commit Personas — ${personas.length} contributor(s), from real git history (hygiene, not skill)`);
+      out(`🎭 Commit Personas — ${repoCommits} commits in repo${merges ? ` · ${merges} merge${merges > 1 ? "s" : ""} excluded` : ""} · ${commits.length} authored commits analyzed (hygiene, not skill)`);
       for (const p of personas) {
         const m = p.metrics, s = p.stats;
         out(`\n  ${p.archetype}  ·  ${p.author}`);
