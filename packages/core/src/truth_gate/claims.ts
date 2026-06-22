@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.133.0 — PR REVIEW: the Mneme GitHub PR bot (daily-loop distribution wedge) ──
+  {
+    id: "claim.pr_review.grounded_pr_comment",
+    source: "v3.133.0 release notes",
+    text: "Mneme's PR REVIEW puts the whole stack in the daily dev loop: on every pull request the GitHub bot posts ONE grounded comment fusing a VERICERT of the PR title/description (catching a hallucinated or overconfident claim), the git-native CONTEXT of each changed file (why it's the way it is — its last decision + how often it changes, cited to real commits), and the author's commit persona (tier · archetype, measured hygiene not skill). The whole team sees it (word-of-mouth) and it lives where devs work (real daily use). Deterministic, every line cited. prReviewGauntlet=100 (VERICERT verdict present, surfaces a changed file's last decision cited, honest about a brand-new file with no invented history, includes the persona, a hallucinated PR body is never CERTIFIED, cites real commits, deterministic, total). CLI `mneme pr-comment --base <ref>` (exit 2 if the description is REJECTED); a ready-to-copy GitHub workflow (.github/workflows/mneme-pr.yml.example) installs it on any repo; MCP `mneme.pr.review` (Matrix gRPC auto); reachable via mneme.morph. probe.pr_review.grounded_pr_comment. HONEST (DIAKRISIS): a window onto measured git + the verification engines, never an opinion — runs locally in CI, the code never leaves the runner.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.pr_review.grounded_pr_comment",
+    severity: "block",
+  },
   // ── v3.132.0 — REPO BRIEF: the Context Capsule (Path-A moat: git-native shared context) ──
   {
     id: "claim.repo_brief.context_capsule",

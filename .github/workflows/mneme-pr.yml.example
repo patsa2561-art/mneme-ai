@@ -1,0 +1,50 @@
+# 🧭 Mneme PR bot — copy this to .github/workflows/mneme-pr.yml in YOUR repo.
+# On every pull request it posts ONE grounded comment: a VERICERT of the PR
+# description, the git-native CONTEXT of each changed file (why it's the way it is,
+# cited to real commits), and the author's commit persona. Deterministic, local to
+# your runner — your code never leaves CI. Free on any repo.
+name: Mneme PR
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+permissions:
+  contents: read
+  pull-requests: write   # to post the comment
+jobs:
+  mneme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history — the context & personas need it
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm i -g mneme-ai
+      - name: Build the Mneme comment
+        id: mneme
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE: origin/${{ github.event.pull_request.base.ref }}
+        run: |
+          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=0 || true
+          printf '%s' "$PR_BODY" > /tmp/pr_body.txt
+          mneme pr-comment --base "$BASE" --title "$PR_TITLE" --body "@/tmp/pr_body.txt" --author "$PR_AUTHOR" > /tmp/mneme.md || true
+          {
+            echo 'comment<<MNEME_EOF'
+            cat /tmp/mneme.md
+            echo 'MNEME_EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: Post / update the PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = process.env.COMMENT;
+            const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+            const mine = comments.find(c => c.body && c.body.includes('🧭 Mneme — PR context & checks'));
+            if (mine) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+        env:
+          COMMENT: ${{ steps.mneme.outputs.comment }}

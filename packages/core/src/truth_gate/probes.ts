@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.pr_review.grounded_pr_comment",
+    kind: "boolean",
+    description: "PR REVIEW (v3.133.0 — the daily-loop distribution wedge: the Mneme GitHub PR bot). Generates ONE grounded PR comment fusing VERICERT of the PR description + git-native file context (why each changed file is the way it is, cited) + the author's commit persona. This probe asserts prReviewGauntlet=100: has a VERICERT verdict ∧ surfaces a changed file's last decision (cited) ∧ ★is honest about a NEW file (no invented history) ∧ includes the author persona ∧ a hallucinated PR body is NOT CERTIFIED ∧ cites real commits ∧ deterministic ∧ total. HONEST (DIAKRISIS): a window onto measured git + the verification engines, never an opinion.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../pr_review/index.js" as string) as typeof import("../pr_review/index.js");
+        const g = P.prReviewGauntlet();
+        const ok = g.score === 100 && g.hasVericertVerdict && g.surfacesFileContext && g.newFileHonest && g.rejectsBadPrBody && g.citesCommits && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} vericert=${g.hasVericertVerdict} fileCtx=${g.surfacesFileContext} newFileHonest=${g.newFileHonest} rejectsBad=${g.rejectsBadPrBody} cites=${g.citesCommits}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.repo_brief.context_capsule",
     kind: "boolean",
     description: "REPO BRIEF / Context Capsule (v3.132.0 — the Path-A moat: git-native shared context, not 'memory'). Fuses a repo's git history into ONE signed-able object: team (commit personas) · recent decisions · hot files · open TODOs · themes — deterministic + cited + tamper-evident + local-first. This probe asserts repoBriefGauntlet=100: fuses contributors into measured personas ∧ surfaces+cites meaningful decisions ∧ ranks hot files by touch count ∧ cites every decision/hotFile/TODO ∧ reconciles repoCommits/merges/authored/contributors ∧ ★grounded (verifyBrief — nothing invented) ∧ tamper-evident briefId ∧ deterministic ∧ total. HONEST (DIAKRISIS): a deterministic projection of git, every line cited — the shared context an agent inherits, never an opinion.",
