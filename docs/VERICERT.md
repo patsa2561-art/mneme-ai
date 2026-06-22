@@ -37,6 +37,18 @@ mneme certify verify --cert cert.json --deliverable report.md   # verify offline
 
 MCP: `mneme.vericert.certify { deliverable }` · `mneme.vericert.verify { cert, deliverable? }`
 
+### The shareable badge
+
+```bash
+mneme certify report.md --badge verified.svg     # a "Verified by Mneme" stamp
+```
+
+A self-contained SVG (green=CERTIFIED, amber=CONDITIONAL, red=REJECTED) you embed
+on a PR, a marketplace listing, or a report. It is **not** a vanity sticker: it
+shows the real verdict + score **and** the `certId`, so a viewer verifies the
+underlying signed cert offline — a green badge can't lie because the certId binds
+the bytes. MCP `mneme.vericert.badge`.
+
 ## The guarantee (why anyone would pay)
 
 A verifier you can't trust is worthless, so the bar is **never certify something

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { certify, verifyCertBody, vericertBench, vericertGauntlet, VERICERT_CORPUS } from "./index.js";
+import { certify, verifyCertBody, vericertBench, vericertGauntlet, badgeSVG, VERICERT_CORPUS } from "./index.js";
 
 describe("v3.120 · VERICERT — Verified-by-Mneme certificate", () => {
   it("gauntlet is 100", () => {
@@ -48,6 +48,16 @@ describe("v3.120 · VERICERT — Verified-by-Mneme certificate", () => {
     const cert = certify("The function returns the sum of two integers.");
     const forged = { ...cert, verdict: "CERTIFIED" as const, blocked: 9 };
     expect(verifyCertBody(forged).ok).toBe(false);
+  });
+
+  it("BADGE is honest: green CERTIFIED with certId; a rejected deliverable never renders green", () => {
+    const good = badgeSVG(certify("The function returns the sum of two integers."));
+    expect(good).toContain("#2da44e");          // green
+    expect(good).toContain("CERTIFIED");
+    expect(good.startsWith("<svg")).toBe(true);
+    const bad = badgeSVG(certify("This always works and never fails on any input."));
+    expect(bad).toContain("#cf222e");           // red
+    expect(bad).not.toContain("#2da44e");       // no fake-green
   });
 
   it("is total on hostile input", () => {

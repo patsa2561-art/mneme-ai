@@ -39,6 +39,25 @@ export const VERICERT_TOOLS: MnemeTool[] = [
     },
   },
   {
+    name: "mneme.vericert.badge",
+    category: "forensics",
+    description: "🎗️ VERICERT — render a shareable, self-contained 'Verified by Mneme' SVG badge from a certificate (or directly from a deliverable). Green=CERTIFIED, amber=CONDITIONAL, red=REJECTED; it embeds the real verdict, score, and certId so the badge can't lie — a viewer verifies the underlying signed cert offline. Embed it on a PR, a marketplace listing, a report, or a docs page.",
+    whenToUse: "When you want a visual trust stamp for an AI-produced deliverable to show a user/client/marketplace — generate the badge alongside the certificate.",
+    triggers: ["verified badge", "trust badge svg", "verified by mneme badge", "ป้ายรับรอง", "badge สำหรับงาน"],
+    inputSchema: { type: "object", properties: { deliverable: { type: "string", description: "a deliverable to certify then badge" }, cert: { type: "object", description: "an existing certificate to render" } } },
+    outputSchema: { type: "object" },
+    handler: async (rt, args) => {
+      try {
+        const core = await import("@mneme-ai/core"); void rt;
+        let cert = args["cert"] as import("@mneme-ai/core").vericert.Certificate | undefined;
+        if (!cert && typeof args["deliverable"] === "string") cert = core.vericert.certify(args["deliverable"] as string, { ts: Date.now() });
+        if (!cert) return low("vericert.badge needs a 'deliverable' or a 'cert'.");
+        const svg = core.vericert.badgeSVG(cert);
+        return { data: { svg, verdict: cert.verdict, certId: cert.certId }, wisdom: `🎗 ${cert.verdict} badge rendered (${svg.length} bytes, self-contained SVG).`, followUp: [], confidence: { level: "high" as const } };
+      } catch (e) { return low((e as Error).message); }
+    },
+  },
+  {
     name: "mneme.vericert.verify",
     category: "forensics",
     description: "🎗️ VERICERT — verify a 'Verified-by-Mneme' certificate OFFLINE: tamper-evidence (the body binds to its certId), verdict consistency, and (if you pass the deliverable) that the cert matches the exact work + re-certifies the same. Anyone can call this on a cert from any source with no network. Self-attesting.",

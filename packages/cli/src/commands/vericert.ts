@@ -9,7 +9,7 @@
  */
 
 import type { Command } from "commander";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { vericert, notary } from "@mneme-ai/core";
 
 function out(s: string): void { process.stdout.write(s + "\n"); }
@@ -21,7 +21,8 @@ export function registerVericertCommands(program: Command): void {
     .argument("[deliverable...]", "the AI-produced deliverable ('-' = stdin)")
     .description("🎗️ VERICERT — stamp an AI-worker deliverable (report / code / answer) with a signed, offline-verifiable certificate: CERTIFIED / CONDITIONAL / REJECTED. Runs every claim through the HPE verification stack; CERTIFIED only if NO known fault (CERTIFIED-precision 1.0 — never certifies a hallucinated deliverable). The trust layer the AI-worker gold rush is missing.")
     .option("--json", "JSON output (the full signed certificate)")
-    .action((deliverable: string[] | undefined, opts: { json?: boolean }) => {
+    .option("--badge <file>", "also write a shareable 'Verified by Mneme' SVG badge ('-' = stdout)")
+    .action((deliverable: string[] | undefined, opts: { json?: boolean; badge?: string }) => {
       let d = Array.isArray(deliverable) ? deliverable.join(" ") : String(deliverable ?? "");
       if (d === "-") { try { d = readFileSync(0, "utf8"); } catch { /* */ } }
       if (!d.trim()) { out("usage: mneme certify \"<deliverable>\"  (or pipe a file: cat report.md | mneme certify -)"); process.exitCode = 2; return; }
@@ -29,6 +30,10 @@ export function registerVericertCommands(program: Command): void {
       let receipt: unknown = null;
       try { receipt = notary.issueReceipt(process.cwd(), { kind: "claim-verdict", subject: `vericert:${cert.verdict}:${cert.certId.slice(0, 12)}`, payload: { certId: cert.certId }, includePayload: true }); } catch { /* */ }
       const signed = { ...cert, signed: receipt };
+      if (opts.badge) {
+        const svg = vericert.badgeSVG(cert);
+        if (opts.badge === "-") out(svg); else { try { writeFileSync(opts.badge, svg); out(`   🎗 badge → ${opts.badge}`); } catch { /* */ } }
+      }
       if (opts.json) { out(JSON.stringify(signed, null, 2)); process.exitCode = cert.verdict === "REJECTED" ? 2 : 0; return; }
       const icon = cert.verdict === "CERTIFIED" ? "🎗️ ✓" : cert.verdict === "CONDITIONAL" ? "🎗️ ❔" : "🎗️ 🛑";
       out(`${icon} ${cert.verdict}  (score ${(cert.score * 100).toFixed(0)}% · ${cert.trusted}/${cert.claimsChecked} claims clean)`);

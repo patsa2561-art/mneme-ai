@@ -123,6 +123,37 @@ export function verifyCertBody(cert: Certificate, deliverable?: string): CertVer
   } catch (e) { return { ok: false, reason: `verify error: ${(e as Error).message}` }; }
 }
 
+// ── the shareable badge — the visual "Verified-by-Mneme" stamp ───────────────
+// A self-contained SVG (no external fonts/deps) a platform embeds on a PR, a
+// marketplace listing, or a report. It is NOT a vanity sticker: it shows the real
+// verdict + score AND the certId, so a viewer can verify the underlying signed
+// cert offline — a green badge can't lie because the certId binds the bytes.
+const BADGE_COLORS: Record<CertVerdict, string> = { CERTIFIED: "#2da44e", CONDITIONAL: "#bf8700", REJECTED: "#cf222e" };
+function esc(s: string): string { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string)); }
+
+/** Render a self-contained SVG badge from a certificate. Deterministic + total. */
+export function badgeSVG(cert: Certificate): string {
+  try {
+    const v = (["CERTIFIED", "CONDITIONAL", "REJECTED"] as CertVerdict[]).includes(cert?.verdict) ? cert.verdict : "REJECTED";
+    const color = BADGE_COLORS[v];
+    const score = Math.round((typeof cert?.score === "number" ? cert.score : 0) * 100);
+    const id = esc(String(cert?.certId ?? "").slice(0, 16));
+    const right = `${v} · ${score}%`;
+    const rw = 96 + right.length * 7;             // right panel width scales with text
+    const W = 150 + rw;
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="28" role="img" aria-label="Verified by Mneme: ${esc(v)}">`,
+      `<rect width="${W}" height="28" rx="4" fill="#1b1f24"/>`,
+      `<rect x="150" width="${rw}" height="28" rx="4" fill="${color}"/>`,
+      `<rect x="150" width="6" height="28" fill="${color}"/>`,
+      `<text x="12" y="18" fill="#e6edf3" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="600">🎗 Verified by Mneme</text>`,
+      `<text x="${150 + rw / 2}" y="18" fill="#ffffff" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="middle">${esc(right)}</text>`,
+      `<text x="${W - 6}" y="26" fill="#ffffff" opacity="0.55" font-family="monospace" font-size="7" text-anchor="end">${id}</text>`,
+      `</svg>`,
+    ].join("");
+  } catch { return `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="28"><rect width="160" height="28" fill="#cf222e"/><text x="8" y="18" fill="#fff" font-size="12">Mneme: invalid</text></svg>`; }
+}
+
 // ── labeled corpus + measured proof ──────────────────────────────────────────
 export interface CertCase { deliverable: string; expectCertified: boolean }
 export const VERICERT_CORPUS: CertCase[] = [
@@ -183,6 +214,7 @@ export interface VericertGauntlet {
   cleanRecallHigh: boolean;             // clean deliverables do get CERTIFIED (not everything rejected)
   tamperEvident: boolean;               // altering the cert or the deliverable is caught offline
   bindsDeliverable: boolean;            // a cert for one deliverable fails to verify against another
+  badgeHonest: boolean;                 // ★ the SVG badge reflects the true verdict (no fake-green) + embeds the certId, self-contained
   deterministic: boolean;
   total: boolean;
   score: 0 | 100;
@@ -208,10 +240,19 @@ export function vericertGauntlet(): VericertGauntlet {
   const bindsDeliverable = verifyCertBody(certA, "The database is PostgreSQL, confirmed in the compose file.").ok === true
     && verifyCertBody(certA, "This always works and never fails.").ok === false;
 
-  const deterministic = JSON.stringify(certify(VERICERT_CORPUS[0]!.deliverable)) === JSON.stringify(certify(VERICERT_CORPUS[0]!.deliverable));
-  let total = true;
-  try { certify(null as unknown as string); certify(""); verifyCertBody(null as unknown as Certificate); vericertBench([]); splitClaims(null as unknown as string); } catch { total = false; }
+  // ★ badge honesty: green only for CERTIFIED, red for REJECTED (no fake-green),
+  // embeds the certId, self-contained (no external URL/script).
+  const goodBadge = badgeSVG(clean);
+  const badBadge = badgeSVG(certify("This always works and never fails on any input."));
+  const badgeHonest = goodBadge.includes("#2da44e") && goodBadge.includes("CERTIFIED") && goodBadge.includes(clean.certId.slice(0, 16))
+    && badBadge.includes("#cf222e") && badBadge.includes("REJECTED") && !badBadge.includes("#2da44e")
+    && goodBadge.startsWith("<svg") && !/<script|xlink:href|\b(?:href|src)\s*=|<image/i.test(goodBadge); // self-contained: no external fetch (xmlns namespace is fine)
 
-  const all = certifiesClean && rejectsBlocked && conditionalOnReviewOnly && certifiedPrecisionPerfect && accuracyAtLeast98 && cleanRecallHigh && tamperEvident && bindsDeliverable && deterministic && total;
-  return { certifiesClean, rejectsBlocked, conditionalOnReviewOnly, certifiedPrecisionPerfect, accuracyAtLeast98, cleanRecallHigh, tamperEvident, bindsDeliverable, deterministic, total, score: all ? 100 : 0 };
+  const deterministic = JSON.stringify(certify(VERICERT_CORPUS[0]!.deliverable)) === JSON.stringify(certify(VERICERT_CORPUS[0]!.deliverable))
+    && badgeSVG(clean) === badgeSVG(clean);
+  let total = true;
+  try { certify(null as unknown as string); certify(""); verifyCertBody(null as unknown as Certificate); vericertBench([]); splitClaims(null as unknown as string); badgeSVG(null as unknown as Certificate); } catch { total = false; }
+
+  const all = certifiesClean && rejectsBlocked && conditionalOnReviewOnly && certifiedPrecisionPerfect && accuracyAtLeast98 && cleanRecallHigh && tamperEvident && bindsDeliverable && badgeHonest && deterministic && total;
+  return { certifiesClean, rejectsBlocked, conditionalOnReviewOnly, certifiedPrecisionPerfect, accuracyAtLeast98, cleanRecallHigh, tamperEvident, bindsDeliverable, badgeHonest, deterministic, total, score: all ? 100 : 0 };
 }
