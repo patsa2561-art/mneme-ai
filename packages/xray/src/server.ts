@@ -25,7 +25,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf, readdirSync, statSync } from "node:fs";
-import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy, hotspots as hotspotsMod, changeCoupling as changeCouplingMod, vericert, notary, commitPersona, seance } from "@mneme-ai/core";
+import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy, hotspots as hotspotsMod, changeCoupling as changeCouplingMod, vericert, notary, commitPersona, seance, repoBrief } from "@mneme-ai/core";
 import { dirname, join } from "node:path";
 import { spawnSync as gitSpawn } from "node:child_process";
 // Open every off-page link in a NEW TAB (incl. dynamically-rendered anchors); same-page #anchors stay put.
@@ -529,7 +529,7 @@ function suiteShell(hero: string): string {
     "<body><div class=\"wrap\"><h1>🕸 <span class=\"grad\">Cross-Layer Accountability</span></h1>" +
     "<p class=\"tag\">The accountability layer for the autonomous-agent era. Mneme links <b>code ↔ database ↔ API ↔ business rules</b> into one deterministic graph — and asks the questions a single-layer tool can't. <b>No LLM in the analysis path</b> — every finding is reproducible and signed.</p>" +
     "<div class=\"inst\"><code>npm i -g mneme-ai &nbsp;&amp;&amp;&nbsp; mneme review</code></div>" +
-    "<div style=\"text-align:center;margin:8px 0 2px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap\"><a href=\"/certify\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎗️ <b>Verified by Mneme</b>: certify AI-worker output →</a><a href=\"/persona\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎭 <b>Commit Persona</b>: your git style as a 3D cartoon →</a><a href=\"/seance\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🔮 <b>Séance</b>: the reasoning behind any commit →</a></div>" +
+    "<div style=\"text-align:center;margin:8px 0 2px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap\"><a href=\"/certify\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎗️ <b>Verified by Mneme</b>: certify AI-worker output →</a><a href=\"/persona\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎭 <b>Commit Persona</b>: your git style as a 3D cartoon →</a><a href=\"/seance\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🔮 <b>Séance</b>: the reasoning behind any commit →</a><a href=\"/brief\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🧭 <b>Repo Brief</b>: git-native shared context →</a></div>" +
     hero +
     "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"…or paste a public repo URL to try it now — https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Review →</button></form>" +
     "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
@@ -722,6 +722,68 @@ function seanceLandingHtml(): string {
     "<script>" + js + "</script></div></body></html>";
 }
 
+// ─── 🧭 REPO BRIEF — the Context Capsule (Path-A moat) ───────────────────────
+function parseBriefCommits(repoPath: string, max = 5000): repoBrief.BriefCommit[] {
+  const US = "\x1f", RS = "\x1e";
+  const g = (args: string[]) => { const r = gitSpawn("git", ["-C", repoPath, ...args], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "") : ""; };
+  const meta = g(["log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
+  const byHash = new Map<string, repoBrief.BriefCommit>();
+  for (const blk of meta.split(RS)) { if (!blk.trim()) continue; const [h, a, t, s, ...r] = blk.split(US); if (!h) continue; byHash.set(h.trim(), { hash: h.trim(), author: (a || "").trim(), ts: parseInt(t || "0", 10) || 0, subject: (s || "").trim(), body: (r.join(US) || "").trim(), files: [], churn: 0 }); }
+  const ns = g(["log", "--no-merges", "-n", String(max), "--numstat", `--format=${RS}%H`]);
+  for (const blk of ns.split(RS)) { const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean); if (!lines.length) continue; const rec = byHash.get(lines[0]!); if (!rec) continue; for (const l of lines.slice(1)) { const m = l.split("\t"); if (m.length < 3) continue; rec.churn! += (parseInt(m[0]!, 10) || 0) + (parseInt(m[1]!, 10) || 0); rec.files!.push(m[2]!); } }
+  return [...byHash.values()];
+}
+
+function briefLandingHtml(): string {
+  const examples = ["https://github.com/honojs/hono", "https://github.com/sindresorhus/slugify", "https://github.com/expressjs/express"];
+  const chips = examples.map((u) => `<button class="chip" data-url="${u}">${u.replace(/^https:\/\/github.com\//, "")}</button>`).join("");
+  const js = [
+    "var f=document.getElementById('f'),u=document.getElementById('u'),go=document.getElementById('go'),st=document.getElementById('st'),rep=document.getElementById('rep');",
+    "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "function valid(v){return /^https?:\\/\\/(www\\.)?(github|gitlab|bitbucket)\\.(com|org)\\/[^\\s]+\\/[^\\s]+/.test(String(v||'').trim());}",
+    "var TC={ROOKIE:'#9ca3af',BRONZE:'#22c55e',SILVER:'#38bdf8',GOLD:'#f4b400',PLATINUM:'#5eead4',DIAMOND:'#818cf8',LEGENDARY:'#f0abfc'};",
+    "function render(b){var h='<div class=card>';",
+    "  h+='<div class=rh>🧭 '+esc(b.repo)+'</div><div class=rc>'+b.reconciled.repoCommits+' commits · '+b.reconciled.merges+' merge(s) excluded · '+b.reconciled.authoredCommits+' authored · '+b.reconciled.contributors+' contributors</div>';",
+    "  if(b.themes.length)h+='<div class=sec><div class=sh>🎯 Focus</div><div class=themes>'+b.themes.map(function(t){return '<span>'+esc(t)+'</span>';}).join('')+'</div></div>';",
+    "  if(b.team.length){h+='<div class=sec><div class=sh>👥 Team</div>';b.team.forEach(function(t){h+='<div class=tm><span class=tb style=\"background:'+(TC[t.tier]||'#9ca3af')+'\">'+esc(t.tier)+'</span> <b>'+esc(t.author)+'</b> · '+esc(t.archetype)+' · '+t.commits+' commits</div>';});h+='</div>';}",
+    "  if(b.decisions.length){h+='<div class=sec><div class=sh>💡 Recent decisions</div>';b.decisions.slice(0,7).forEach(function(d){h+='<div class=cm><code>'+esc(d.hash)+'</code> '+esc(d.subject)+'</div>';});h+='</div>';}",
+    "  if(b.hotFiles.length){h+='<div class=sec><div class=sh>🔥 Hot files</div>';b.hotFiles.slice(0,7).forEach(function(x){h+='<div class=cm><b>'+x.touches+'×</b> <code>'+esc(x.file)+'</code></div>';});h+='</div>';}",
+    "  if(b.openTodos.length){h+='<div class=sec><div class=sh>📌 Open TODOs ('+b.openTodos.length+')</div>';b.openTodos.slice(0,6).forEach(function(t){h+='<div class=cm><code>'+esc(t.file)+':'+t.line+'</code> '+esc(t.text)+'</div>';});h+='</div>';}",
+    "  h+='<div class=foot>🧷 '+b.citations.length+' citations · briefId <code>'+esc(b.briefId.slice(0,16))+'…</code><br>'+esc(b.note)+'</div></div>';",
+    "  rep.innerHTML=h;rep.style.display='block';rep.scrollIntoView({behavior:'smooth',block:'nearest'});}",
+    "function run(){var url=String(u.value||'').trim();if(!valid(url)){st.className='err';st.textContent='Paste a public GitHub/GitLab/Bitbucket repo URL.';return;}go.disabled=true;rep.style.display='none';st.className='';st.innerHTML='<span class=spin></span>building the shared-context brief…';",
+    "  fetch('/api/brief?gitUrl='+encodeURIComponent(url)).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(o){if(o.ok&&o.j&&o.j.brief){st.textContent='';render(o.j);}else{st.className='err';st.textContent=(o.j&&o.j.error)||'could not build the brief';}}).catch(function(e){st.className='err';st.textContent='network error: '+e.message;}).finally(function(){go.disabled=false;});}",
+    "f.addEventListener('submit',function(e){e.preventDefault();run();});",
+    "Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){c.addEventListener('click',function(){u.value=c.getAttribute('data-url');run();});});",
+    "var qp=new URLSearchParams(location.search);if(qp.get('gitUrl')){u.value=qp.get('gitUrl');run();}",
+  ].join("\n");
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Repo Brief · git-native shared context · Mneme</title>" + NEWTAB_SCRIPT +
+    "<meta name=\"description\" content=\"One git-native shared-context capsule for any repo: the team (commit personas), recent decisions, hot files, open TODOs, themes — deterministic, cited, local-first. The context every AI agent should inherit before touching the code.\">" +
+    ogMeta("Repo Brief · git-native shared context for AI agents", "Fuse a repo's git history into ONE shared-context capsule — team · decisions · hot files · TODOs — deterministic, cited, local-first. The context every agent inherits before touching the code.", "/brief") +
+    "<style>body{margin:0;font:15px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:820px;margin:0 auto;padding:clamp(20px,4vw,52px) 20px}h1{font-size:clamp(28px,5vw,44px);margin:0 0 8px;font-weight:850;text-align:center}.grad{background:linear-gradient(90deg,#22d3ee,#5eead4);-webkit-background-clip:text;background-clip:text;color:transparent}.tag{color:#94a3b8;max-width:660px;margin:0 auto;text-align:center}form{display:flex;gap:10px;max-width:760px;margin:24px auto 8px;flex-wrap:wrap}input{flex:1;min-width:240px;background:#0f1b2e;border:1px solid #2b3a52;border-radius:12px;padding:14px 15px;color:#e5e7eb;font-size:15px;outline:none}input:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.15)}button.go{background:linear-gradient(90deg,#22d3ee,#0e9aa7);color:#04141b;border:0;border-radius:12px;padding:14px 24px;font-weight:800;cursor:pointer}button.go:disabled{opacity:.6}.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.chip{background:#0f1b2e;border:1px solid #2b3a52;color:#cbd5e1;border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}.chip:hover{border-color:#22d3ee;color:#67e8f9}#st{text-align:center;color:#94a3b8;min-height:22px;margin:10px 0}#st.err{color:#fca5a5}#rep{display:none}.card{background:radial-gradient(circle at 30% 0%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:16px;padding:22px;margin:14px 0}.rh{font-size:20px;font-weight:800;color:#67e8f9}.rc{color:#94a3b8;font-size:13px;margin-top:2px}.sec{margin:16px 0}.sh{font-size:13px;color:#5eead4;font-weight:700;margin-bottom:6px}.themes span{display:inline-block;background:#0b1220;border:1px solid #1f2937;border-radius:999px;padding:3px 10px;font-size:12px;color:#67e8f9;margin:2px}.tm{font-size:13.5px;color:#cbd5e1;padding:3px 0}.tb{font-size:10px;font-weight:800;color:#04141b;border-radius:999px;padding:1px 7px}.cm{font-size:13px;color:#cbd5e1;padding:2px 0}code{background:#1f2340;padding:1px 5px;border-radius:4px;color:#7dd3fc;font-size:12px}.foot{color:#64748b;font-size:12px;margin-top:16px;border-top:1px solid #1f2937;padding-top:12px}.foot2{text-align:center;color:#64748b;font-size:13px;margin-top:28px}a{color:#22d3ee}.spin{display:inline-block;width:13px;height:13px;border:2px solid #334155;border-top-color:#22d3ee;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}</style></head>" +
+    "<body><div class=\"wrap\"><div style=\"text-align:center\"><h1>🧭 <span class=\"grad\">Repo Brief</span></h1>" +
+    "<p class=\"tag\"><b>Git-native shared context</b> for multi-agent teams — not a 'memory product'. Fuse a repo's history into ONE capsule: <b>the team</b> (commit personas) · <b>recent decisions</b> · <b>hot files</b> · <b>open TODOs</b> · <b>themes</b>. Deterministic, cited, <b>local-first</b> — the context every AI agent should inherit <b>before</b> touching the code.</p></div>" +
+    "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Build brief →</button></form>" +
+    "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
+    "<p class=\"foot2\">Local + private repos: <code>npm i -g mneme-ai</code> then <code>mneme brief</code> · MCP <code>mneme.brief.repo</code> (every agent inherits it) · part of the <a href=\"/suite\">Accountability Suite</a> · <sub>deterministic · cited · local-first.</sub></p>" +
+    "<script>" + js + "</script></div></body></html>";
+}
+
+/** A reusable 1200×630 social card. title + badge + up to 6 lines + accent color. */
+function ogCardSvg(opts: { kicker: string; title: string; badge: string; lines: string[]; accent: string }): string {
+  const ascii = (s: string) => String(s || "").replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
+  const clip = (s: string, n: number) => { const a = ascii(s); return a.length > n ? a.slice(0, n - 1) + "…" : a; };
+  const lines = (opts.lines || []).slice(0, 6).map((l, i) => `<text x="92" y="${300 + i * 46}" font-family="Verdana,sans-serif" font-size="26" fill="#cbd5e1">${xesc(clip(l, 60))}</text>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#0b1220"/><rect x="0" y="0" width="1200" height="12" fill="${opts.accent}"/>
+<text x="92" y="92" font-family="Verdana,sans-serif" font-size="24" letter-spacing="5" fill="#64748b">MNEME · ${xesc(opts.kicker)}</text>
+<text x="92" y="168" font-family="Verdana,sans-serif" font-size="58" font-weight="bold" fill="#e5e7eb">${xesc(clip(opts.title, 34))}</text>
+<rect x="92" y="206" width="${120 + opts.badge.length * 16}" height="44" rx="22" fill="${opts.accent}"/>
+<text x="${112}" y="236" font-family="Verdana,sans-serif" font-size="24" font-weight="bold" fill="#0b1220">${xesc(clip(opts.badge, 40))}</text>
+${lines}
+<text x="92" y="588" font-family="Verdana,sans-serif" font-size="20" fill="#5eead4">✓ deterministic · cited · local-first · verifiable</text></svg>`;
+}
+
 export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerHub) {
   // THE AUTONOMOUS REAL-TIME MONITOR — one hub per server instance. The scanner
   // (build) runs the SAME hosted, bounded, raw-free, signed pipeline as /api/xray;
@@ -758,8 +820,84 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/certify" || url.pathname === "/vericert" || url.pathname === "/verified")) return send(res, 200, certifyLandingHtml(), "text/html; charset=utf-8");
-    if (req.method === "GET" && (url.pathname === "/persona" || url.pathname === "/personas")) return send(res, 200, personaLandingHtml(), "text/html; charset=utf-8");
-    if (req.method === "GET" && (url.pathname === "/seance" || url.pathname === "/s%C3%A9ance")) return send(res, 200, seanceLandingHtml(), "text/html; charset=utf-8");
+    if (req.method === "GET" && (url.pathname === "/persona" || url.pathname === "/personas")) {
+      let html = personaLandingHtml();
+      const gu = url.searchParams.get("gitUrl");
+      if (gu && isAllowedPublicUrl(gu)) html = html.replace(/(<meta property="og:image" content=")[^"]*(")/, `$1https://xray.mneme-ai.space/og/persona.png?gitUrl=${encodeURIComponent(gu)}$2`);
+      return send(res, 200, html, "text/html; charset=utf-8");
+    }
+    if (req.method === "GET" && (url.pathname === "/seance" || url.pathname === "/s%C3%A9ance")) {
+      let html = seanceLandingHtml();
+      const gu = url.searchParams.get("gitUrl");
+      if (gu && isAllowedPublicUrl(gu)) html = html.replace(/(<meta property="og:image" content=")[^"]*(")/, `$1https://xray.mneme-ai.space/og/seance.png${url.search.replace(/^\?/, "?").replace(/&/g, "&amp;")}$2`);
+      return send(res, 200, html, "text/html; charset=utf-8");
+    }
+    if (req.method === "GET" && (url.pathname === "/brief" || url.pathname === "/repo-brief")) {
+      let html = briefLandingHtml();
+      const gu = url.searchParams.get("gitUrl");
+      if (gu && isAllowedPublicUrl(gu)) html = html.replace(/(<meta property="og:image" content=")[^"]*(")/, `$1https://xray.mneme-ai.space/og/brief.png?gitUrl=${encodeURIComponent(gu)}$2`);
+      return send(res, 200, html, "text/html; charset=utf-8");
+    }
+
+    // 🧭 REPO BRIEF — fuse a public repo's history into the shared-context capsule.
+    if (req.method === "GET" && url.pathname === "/api/brief") {
+      const gitUrl = (url.searchParams.get("gitUrl") || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs. For private repos, run `mneme brief` locally." });
+      if (rateLimited("brief:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      let handle: { path: string; dispose: () => void } | null = null;
+      try {
+        handle = shallowClone(gitUrl);
+        const commits = parseBriefCommits(handle.path, 5000);
+        if (!commits.length) return send(res, 502, { error: "no commit history found" });
+        const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+        const repoCommits = parseInt(g(["rev-list", "--count", "HEAD"]), 10) || commits.length;
+        const grep = g(["grep", "-nI", "-E", "TODO|FIXME|HACK|XXX", "HEAD", "--", "*.ts", "*.tsx", "*.js", "*.py", "*.go", "*.rs"]);
+        const openTodos = grep.split("\n").map((l) => l.match(/^[^:]+:([^:]+):(\d+):(.*)$/)).filter(Boolean).slice(0, 20).map((m) => ({ file: m![1]!, line: parseInt(m![2]!, 10), text: m![3]!.trim().slice(0, 120) }));
+        const brief = repoBrief.buildRepoBrief(commits, { repo: gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, ""), repoCommits, openTodos });
+        return send(res, 200, brief);
+      } catch (e) { return send(res, 502, { error: (e as Error).message.slice(0, 300) }); } finally { if (handle) handle.dispose(); }
+    }
+
+    // ── OG social cards for the git-native pages (clone → render). PNG for X; SVG fallback.
+    // Scoped to persona|seance|brief so it never shadows the report-fingerprint OG route below.
+    const ogMatch = url.pathname.match(/^\/og\/(persona|seance|brief)\.(png|svg)$/);
+    if (req.method === "GET" && ogMatch) {
+      const kind = ogMatch[1]!;
+      const gitUrl = (url.searchParams.get("gitUrl") || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) { const p = join(PUBLIC_DIR, "og.png"); if (existsSync(p)) { res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=300" }); return res.end(readFileSync(p)); } return send(res, 404, { error: "not found" }); }
+      let handle: { path: string; dispose: () => void } | null = null;
+      try {
+        handle = shallowClone(gitUrl);
+        const repoName = gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, "");
+        let card = "";
+        if (kind === "persona") {
+          const commits = parseCommitsFromGit(handle.path, 5000);
+          const ps = commitPersona.analyzeCommitPersonas(commits, { minCommits: 1 }).filter((p) => p.metrics.commits >= 3).slice(0, 5);
+          const top = ps[0];
+          card = ogCardSvg({ kicker: "COMMIT PERSONA", title: repoName, badge: top ? `${top.author} · ${top.tier}` : "personas", lines: ps.map((p) => `${p.tier} · ${p.archetype} — ${p.author}`), accent: "#a78bfa" });
+        } else if (kind === "brief") {
+          const commits = parseBriefCommits(handle.path, 5000);
+          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+          const b = repoBrief.buildRepoBrief(commits, { repo: repoName, repoCommits: parseInt(g(["rev-list", "--count", "HEAD"]), 10) || commits.length });
+          card = ogCardSvg({ kicker: "REPO BRIEF · shared context", title: repoName, badge: `${b.reconciled.contributors} contributors · ${b.reconciled.authoredCommits} commits`, lines: [`Focus: ${b.themes.slice(0, 5).join(", ")}`, ...b.team.slice(0, 4).map((t) => `${t.tier} · ${t.archetype} — ${t.author}`)], accent: "#22d3ee" });
+        } else {
+          const commits = parseBriefCommits(handle.path, 5000);
+          const ref = (url.searchParams.get("file") || url.searchParams.get("ref") || "HEAD").trim();
+          const past = commits.map((c) => ({ hash: c.hash, author: c.author, ts: c.ts, subject: c.subject, body: c.body, files: c.files }));
+          const fileArg = (url.searchParams.get("file") || "").trim();
+          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+          const hash = fileArg ? g(["log", "-1", "--format=%H", "--", fileArg]) : g(["rev-parse", url.searchParams.get("ref") || "HEAD"]);
+          const pk = seance.reconstructSeance(past, hash, { ref, focusFile: fileArg || undefined, now: Math.floor(Date.now() / 1000) });
+          card = ogCardSvg({ kicker: "SÉANCE · grounded context", title: pk.focus ? `Why: ${pk.focus}` : repoName, badge: `${pk.citations.length} cited · ${pk.at.monthsAgo}mo ago`, lines: [pk.decision.subject, ...pk.lineage.slice(0, 4).map((l) => l.subject)], accent: "#a78bfa" });
+        }
+        if (url.pathname.endsWith(".svg")) return sendSvg(res, card);
+        const buf = await renderPng(card);
+        if (!buf) return sendSvg(res, card);
+        res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=300", "access-control-allow-origin": "*" });
+        return res.end(buf);
+      } catch { const p = join(PUBLIC_DIR, "og.png"); if (existsSync(p)) { res.writeHead(200, { "content-type": "image/png" }); return res.end(readFileSync(p)); } return send(res, 404, { error: "render failed" }); }
+      finally { if (handle) handle.dispose(); }
+    }
 
     // 🔮 SÉANCE — reconstruct the decision context behind any commit. Cloned→scanned→deleted.
     if (req.method === "GET" && url.pathname === "/api/seance") {
@@ -881,7 +1019,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       return res.end("User-agent: *\nAllow: /\nSitemap: https://xray.mneme-ai.space/sitemap.xml\n");
     }
     if (req.method === "GET" && url.pathname === "/sitemap.xml") {
-      const urls = ["/", "/suite", "/certify", "/persona", "/seance", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
+      const urls = ["/", "/suite", "/certify", "/persona", "/seance", "/brief", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
       res.writeHead(200, { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=86400" });
       return res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
     }

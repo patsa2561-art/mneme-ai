@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.132.0 — REPO BRIEF: the Context Capsule (Path-A moat: git-native shared context) ──
+  {
+    id: "claim.repo_brief.context_capsule",
+    source: "v3.132.0 release notes",
+    text: "Mneme's REPO BRIEF (the Context Capsule) is the Path-A moat: Mneme is not a commoditized 'memory product' but GIT-NATIVE SHARED CONTEXT for multi-agent teams. It fuses a repo's git history into ONE signed-able, portable, local-first object every agent inherits before touching the code: the TEAM (each contributor's measured commit persona), recent DECISIONS (meaningful commits + reasoning), HOT FILES (most-churned + the last decision on each), open TODOs (cited file:line), and focus THEMES — with exact commit reconciliation (repoCommits/merges/authored/contributors). Every field is a deterministic projection of git, every entry cited, the whole thing tamper-evident (briefId) and it never leaves the machine (data-sovereignty — the angle no US-cloud competitor matches). repoBriefGauntlet=100 (fuses team, surfaces+cites decisions, ranks hot files, cites everything, reconciles counts, grounded via verifyBrief, tamper-evident, deterministic, total). CLI `mneme brief`; MCP `mneme.brief.repo` (Matrix gRPC auto, follows up with mneme.seance.summon); reachable via mneme.morph. probe.repo_brief.context_capsule. HONEST (DIAKRISIS): a window onto measured git, reason from the citations — never an opinion or an invention.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.repo_brief.context_capsule",
+    severity: "block",
+  },
   // ── v3.128.0 — SÉANCE: talk to your past self (git-native grounded context, Path A) ──
   {
     id: "claim.seance.past_self_grounded_context",

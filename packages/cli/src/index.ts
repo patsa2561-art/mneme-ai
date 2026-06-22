@@ -181,6 +181,7 @@ import { registerHpeCommands } from "./commands/hpe.js";
 import { registerVericertCommands } from "./commands/vericert.js";
 import { registerPersonaCommands } from "./commands/persona.js";
 import { registerSeanceCommands } from "./commands/seance.js";
+import { registerBriefCommands } from "./commands/brief.js";
 import { registerMoatCommands } from "./commands/moat.js";
 import { attachRegretOracle } from "./commands/regret.js";
 import { registerTrustCommands } from "./commands/trust.js";
@@ -5034,6 +5035,7 @@ export async function run(argv: string[]): Promise<void> {
   registerVericertCommands(program);
   registerPersonaCommands(program);
   registerSeanceCommands(program);
+  registerBriefCommands(program);
   registerMoatCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);

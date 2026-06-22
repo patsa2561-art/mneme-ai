@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.repo_brief.context_capsule",
+    kind: "boolean",
+    description: "REPO BRIEF / Context Capsule (v3.132.0 — the Path-A moat: git-native shared context, not 'memory'). Fuses a repo's git history into ONE signed-able object: team (commit personas) · recent decisions · hot files · open TODOs · themes — deterministic + cited + tamper-evident + local-first. This probe asserts repoBriefGauntlet=100: fuses contributors into measured personas ∧ surfaces+cites meaningful decisions ∧ ranks hot files by touch count ∧ cites every decision/hotFile/TODO ∧ reconciles repoCommits/merges/authored/contributors ∧ ★grounded (verifyBrief — nothing invented) ∧ tamper-evident briefId ∧ deterministic ∧ total. HONEST (DIAKRISIS): a deterministic projection of git, every line cited — the shared context an agent inherits, never an opinion.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const R = await import("../repo_brief/index.js" as string) as typeof import("../repo_brief/index.js");
+        const g = R.repoBriefGauntlet();
+        const ok = g.score === 100 && g.fusesTeam && g.surfacesDecisions && g.ranksHotFiles && g.citesEverything && g.reconciles && g.grounded && g.tamperEvident && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} team=${g.fusesTeam} decisions=${g.surfacesDecisions} hot=${g.ranksHotFiles} reconciles=${g.reconciles} grounded=${g.grounded} tamper=${g.tamperEvident}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.seance.past_self_grounded_context",
     kind: "boolean",
     description: "SÉANCE (v3.128.0 — talk to your past self; git-native shared context, Path A). Reconstructs the DECISION CONTEXT around any commit (what was said · surrounding commits · TODOs open then cited file:line · abandoned reverts · focus themes) as a deterministic, fully-cited packet an agent reasons FROM. This probe asserts seanceGauntlet=100: reconstructs the decision at the ref ∧ window pulls the surrounding commits ∧ every window/abandoned entry is in the citations list ∧ surfaces an abandoned/reverted path ∧ ★groundedNoInvention (verifySeance passes — nothing references a commit not in the input) ∧ tamper-evident (altering the packet breaks packetId) ∧ TODOs keep file:line ∧ deterministic ∧ total. HONEST (DIAKRISIS): a deterministic PROJECTION of git, NOT spirit-channeling — the agent answers only from cited evidence and should HPE-guard it; 'not in the record' beats a fabricated memory.",

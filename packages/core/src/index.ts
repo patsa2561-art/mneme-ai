@@ -317,6 +317,7 @@ export * as hpe from "./hpe/index.js";
 export * as vericert from "./vericert/index.js";
 export * as commitPersona from "./commit_persona/index.js";
 export * as seance from "./seance/index.js";
+export * as repoBrief from "./repo_brief/index.js";
 export * as prism from "./prism/index.js";
 export * as goldilocks from "./goldilocks/index.js";
 export * as axia from "./axia/index.js";
