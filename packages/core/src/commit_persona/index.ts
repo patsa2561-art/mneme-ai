@@ -148,9 +148,12 @@ function computeMetrics(cs: CommitRec[]): PersonaMetrics {
  *  no matter how few files it touches — that's the accuracy fix. */
 function computeStats(m: PersonaMetrics): PersonaStats {
   const r = (x: number) => Math.round(clamp(x, 0, 1) * 100);
-  const sizeScore = clamp(1 - m.avgChurn / 300, 0, 1);                          // small commits
+  const sizeScore = clamp(1 - m.avgChurn / 280, 0, 1);                          // small commits
+  // PRECISION is gated by size: a giant commit can't be "precise" even in few
+  // files — focus can only ADD on top of a small-commit base, never rescue a
+  // 3000-line dump. (sizeScore is the ceiling; focus nudges within it.)
   return {
-    precision: r(sizeScore * 0.7 + m.focus * 0.3),                             // SIZE-led, then focus
+    precision: r(sizeScore * (0.7 + 0.3 * m.focus)),                            // SIZE is the ceiling, focus nudges
     discipline: r(m.conventionalRate * 0.65 + m.bodyRate * 0.35),               // structured + explained
     coverage: r(m.testTouchRate),                                               // ships tests
     velocity: r(clamp(m.commits / 200, 0, 1)),                                  // volume / activity
