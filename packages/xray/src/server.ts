@@ -25,7 +25,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, readFileSync as rf, readdirSync, statSync } from "node:fs";
-import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy, hotspots as hotspotsMod, changeCoupling as changeCouplingMod, vericert, notary } from "@mneme-ai/core";
+import { crossLayerGraph, riskHotspots, authzGap, testGap, graphLogic, accuracy, hotspots as hotspotsMod, changeCoupling as changeCouplingMod, vericert, notary, commitPersona } from "@mneme-ai/core";
 import { dirname, join } from "node:path";
 import { spawnSync as gitSpawn } from "node:child_process";
 // Open every off-page link in a NEW TAB (incl. dynamically-rendered anchors); same-page #anchors stay put.
@@ -529,7 +529,7 @@ function suiteShell(hero: string): string {
     "<body><div class=\"wrap\"><h1>🕸 <span class=\"grad\">Cross-Layer Accountability</span></h1>" +
     "<p class=\"tag\">The accountability layer for the autonomous-agent era. Mneme links <b>code ↔ database ↔ API ↔ business rules</b> into one deterministic graph — and asks the questions a single-layer tool can't. <b>No LLM in the analysis path</b> — every finding is reproducible and signed.</p>" +
     "<div class=\"inst\"><code>npm i -g mneme-ai &nbsp;&amp;&amp;&nbsp; mneme review</code></div>" +
-    "<div style=\"text-align:center;margin:8px 0 2px\"><a href=\"/certify\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎗️ <b>New — Verified by Mneme</b>: certify AI-worker output → a signed trust certificate + badge →</a></div>" +
+    "<div style=\"text-align:center;margin:8px 0 2px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap\"><a href=\"/certify\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎗️ <b>Verified by Mneme</b>: certify AI-worker output →</a><a href=\"/persona\" style=\"display:inline-block;background:#0f1b2e;border:1px solid #2b3a52;border-radius:999px;padding:9px 18px;color:#e5e7eb;text-decoration:none;font-size:14px\">🎭 <b>Commit Persona</b>: your git style as a 3D cartoon →</a></div>" +
     hero +
     "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"…or paste a public repo URL to try it now — https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Review →</button></form>" +
     "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
@@ -592,6 +592,69 @@ function certifyLandingHtml(): string {
     "<script>" + js + "</script></div></body></html>";
 }
 
+// ─── 🎭 COMMIT PERSONA — render each developer's commit style as a 3D cartoon ──
+// Reads REAL git history (two cheap `git log` passes joined by hash), builds a
+// measured persona + a distinct avatar per author. Honest: it measures commit
+// HYGIENE, not skill or worth. Source cloned → scanned → deleted (nothing stored).
+function parseCommitsFromGit(repoPath: string, max = 600): commitPersona.CommitRec[] {
+  const US = "\x1f", RS = "\x1e";
+  // pass 1 — metadata (hash, author, ts, subject, body); body has no RS/US so it's safe
+  const meta = gitSpawn("git", ["-C", repoPath, "log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  if (meta.status !== 0 || !meta.stdout) return [];
+  const byHash = new Map<string, commitPersona.CommitRec>();
+  for (const blk of meta.stdout.split(RS)) {
+    if (!blk.trim()) continue;
+    const [hash, author, at, subject, ...rest] = blk.split(US);
+    if (!hash) continue;
+    byHash.set(hash.trim(), { author: (author || "unknown").trim(), ts: parseInt(at || "0", 10) || 0, subject: (subject || "").trim(), body: (rest.join(US) || "").trim(), files: [], insertions: 0, deletions: 0 });
+  }
+  // pass 2 — numstat per commit, joined by hash
+  const ns = gitSpawn("git", ["-C", repoPath, "log", "--no-merges", "-n", String(max), "--numstat", `--format=${RS}%H`], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+  if (ns.status === 0 && ns.stdout) {
+    for (const blk of ns.stdout.split(RS)) {
+      const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) continue;
+      const rec = byHash.get(lines[0]!); if (!rec) continue;
+      for (const l of lines.slice(1)) {
+        const m = l.split("\t"); if (m.length < 3) continue;
+        rec.insertions += parseInt(m[0]!, 10) || 0; rec.deletions += parseInt(m[1]!, 10) || 0; rec.files.push(m[2]!);
+      }
+    }
+  }
+  return [...byHash.values()];
+}
+
+function personaLandingHtml(): string {
+  const examples = ["https://github.com/sindresorhus/slugify", "https://github.com/honojs/hono", "https://github.com/expressjs/express"];
+  const chips = examples.map((u) => `<button class="chip" data-url="${u}">${u.replace(/^https:\/\/github.com\//, "")}</button>`).join("");
+  const js = [
+    "var f=document.getElementById('f'),u=document.getElementById('u'),go=document.getElementById('go'),st=document.getElementById('st'),rep=document.getElementById('rep');",
+    "function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}",
+    "function valid(v){return /^https?:\\/\\/(www\\.)?(github|gitlab|bitbucket)\\.(com|org)\\/[^\\s]+\\/[^\\s]+/.test(String(v||'').trim());}",
+    "function card(p){var m=p.metrics;return '<div class=toon><div class=stage><div class=avatar>'+p.avatarSvg+'</div></div>'+",
+    "  '<div class=name>'+esc(p.author)+'</div>'+",
+    "  '<div class=arch>'+esc(p.archetype)+'</div>'+",
+    "  '<div class=blurb>'+esc(p.blurb)+'</div>'+",
+    "  '<div class=stats>'+'<span title=\"commit hygiene — message/size/tests/fixups; not skill\">🧼 '+p.band+' '+p.hygiene+'</span>'+'<span>📦 '+m.commits+' commits</span>'+'<span>📏 ~'+Math.round(m.avgChurn)+' lines/commit</span>'+'<span>🧪 '+Math.round(m.testTouchRate*100)+'% w/ tests</span>'+'<span>📝 '+Math.round(m.conventionalRate*100)+'% conventional</span>'+(m.fixRate>0.1?'<span>🚒 '+Math.round(m.fixRate*100)+'% firefighting</span>':'')+(m.nightRate>0.3?'<span>🌙 '+Math.round(m.nightRate*100)+'% night</span>':'')+'</div></div>';}",
+    "function render(d){if(!d.personas||!d.personas.length){st.className='err';st.textContent='No commits found to analyze.';return;}rep.innerHTML='<div class=grid>'+d.personas.map(card).join('')+'</div><p class=foot>🎭 each avatar is generated from <b>measured git signals</b> (deterministic — same history, same toon). 🧼 = commit <b>hygiene</b>, not skill or worth. Source was cloned, scanned, and <b>deleted</b>.</p>';rep.style.display='block';}",
+    "function run(url){url=String(url||'').trim();if(!valid(url)){st.className='err';st.textContent='Paste a public GitHub/GitLab/Bitbucket repo URL.';return;}u.value=url;go.disabled=true;rep.style.display='none';st.className='';st.innerHTML='<span class=spin></span>reading the commit history of '+esc(url.replace(/^https?:\\/\\//,''))+' …';",
+    "  fetch('/api/persona?gitUrl='+encodeURIComponent(url)).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(o){if(o.ok&&o.j&&o.j.personas){st.textContent='';render(o.j);}else{st.className='err';st.textContent=(o.j&&o.j.error)||'could not analyze this repo';}}).catch(function(e){st.className='err';st.textContent='network error: '+e.message;}).finally(function(){go.disabled=false;});}",
+    "f.addEventListener('submit',function(e){e.preventDefault();run(u.value);});",
+    "Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){c.addEventListener('click',function(){run(c.getAttribute('data-url'));});});",
+    "var q=new URLSearchParams(location.search).get('gitUrl');if(q)run(q);",
+  ].join("\n");
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Commit Persona · your git style as a 3D cartoon · Mneme</title>" + NEWTAB_SCRIPT +
+    "<meta name=\"description\" content=\"Paste any public repo → every contributor's commit style rendered as a distinct 3D cartoon, from measured git signals. The Surgeon, the Bulldozer, the Firefighter… deterministic, honest (hygiene, not skill).\">" +
+    ogMeta("Commit Persona · your git style as a 3D cartoon", "Every developer commits differently. Mneme turns a repo's real git history into a distinct 3D cartoon per contributor — measured, deterministic, honest (commit hygiene, not skill).", "/persona") +
+    "<style>body{margin:0;font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;background:#0b1220;color:#e5e7eb}.wrap{max-width:1000px;margin:0 auto;padding:clamp(20px,4vw,52px) 20px}h1{font-size:clamp(28px,5vw,46px);margin:0 0 8px;font-weight:850;text-align:center}.grad{background:linear-gradient(90deg,#22d3ee,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent}.tag{color:#94a3b8;max-width:660px;margin:0 auto;text-align:center}form{display:flex;gap:10px;max-width:760px;margin:24px auto 8px;flex-wrap:wrap}input{flex:1;min-width:240px;background:#0f1b2e;border:1px solid #2b3a52;border-radius:12px;padding:15px 16px;color:#e5e7eb;font-size:15px;outline:none}input:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.15)}button.go{background:linear-gradient(90deg,#22d3ee,#0891b2);color:#04141b;border:0;border-radius:12px;padding:15px 26px;font-weight:800;cursor:pointer}button.go:disabled{opacity:.6;cursor:wait}.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0}.chip{background:transparent;border:1px solid #1f2937;color:#94a3b8;border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer}.chip:hover{border-color:#22d3ee;color:#22d3ee}#st{text-align:center;color:#94a3b8;min-height:22px;margin:10px 0}#st.err{color:#fca5a5}#rep{display:none}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin-top:18px}.toon{background:radial-gradient(circle at 30% 0%,#0f1b2e,#0b1220 70%);border:1px solid #1f2937;border-radius:18px;padding:18px;text-align:center}.stage{perspective:600px;height:180px;display:grid;place-items:center}.avatar{transform-style:preserve-3d;animation:float 4s ease-in-out infinite;transition:transform .25s}.toon:hover .avatar{animation-play-state:paused;transform:rotateY(28deg) rotateX(-8deg) scale(1.06)}.avatar svg{filter:drop-shadow(0 14px 22px rgba(0,0,0,.5))}@keyframes float{0%,100%{transform:translateY(0) rotateY(-14deg)}50%{transform:translateY(-12px) rotateY(14deg)}}@media(prefers-reduced-motion){.avatar{animation:none}}.name{font-weight:750;margin-top:8px;color:#e5e7eb;font-size:15px;word-break:break-word}.arch{color:#22d3ee;font-weight:700;font-size:14px;margin-top:2px}.blurb{color:#94a3b8;font-size:12.5px;margin:6px 0 10px;min-height:34px}.stats{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.stats span{background:#0b1220;border:1px solid #1f2937;border-radius:999px;padding:4px 9px;font-size:11.5px;color:#cbd5e1}.foot{color:#64748b;font-size:12.5px;text-align:center;margin-top:22px}.foot2{text-align:center;color:#64748b;font-size:13px;margin-top:28px}a{color:#22d3ee}code{background:#1f2937;padding:1px 5px;border-radius:4px}.spin{display:inline-block;width:13px;height:13px;border:2px solid #334155;border-top-color:#22d3ee;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}</style></head>" +
+    "<body><div class=\"wrap\"><div style=\"text-align:center\"><h1>🎭 <span class=\"grad\">Commit Persona</span></h1>" +
+    "<p class=\"tag\">Every developer commits differently. Paste a public repo and watch each contributor become a <b>distinct 3D cartoon</b> — <i>The Surgeon</i>, <i>The Bulldozer</i>, <i>The Firefighter</i>… built from <b>measured git signals</b>. Hover to spin them. <b>Honest:</b> it scores commit <b>hygiene</b>, not skill.</p></div>" +
+    "<form id=\"f\"><input id=\"u\" type=\"text\" placeholder=\"https://github.com/owner/repo\" autocomplete=\"off\" spellcheck=\"false\"><button class=\"go\" id=\"go\" type=\"submit\">Reveal personas →</button></form>" +
+    "<div class=\"chips\">" + chips + "</div><div id=\"st\"></div><div id=\"rep\"></div>" +
+    "<p class=\"foot2\">Local + private repos: <code>npm i -g mneme-ai</code> then <code>mneme persona</code> · part of the <a href=\"/suite\">Accountability Suite</a> · <sub>deterministic · honest: commit hygiene, not a judgment of the person.</sub></p>" +
+    "<script>" + js + "</script></div></body></html>";
+}
+
 export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerHub) {
   // THE AUTONOMOUS REAL-TIME MONITOR — one hub per server instance. The scanner
   // (build) runs the SAME hosted, bounded, raw-free, signed pipeline as /api/xray;
@@ -628,6 +691,25 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/certify" || url.pathname === "/vericert" || url.pathname === "/verified")) return send(res, 200, certifyLandingHtml(), "text/html; charset=utf-8");
+    if (req.method === "GET" && (url.pathname === "/persona" || url.pathname === "/personas")) return send(res, 200, personaLandingHtml(), "text/html; charset=utf-8");
+
+    // 🎭 COMMIT PERSONA — clone a public repo, read its git history, render each
+    // contributor as a measured persona + a distinct 3D cartoon. Cloned → scanned → DELETED.
+    if (req.method === "GET" && url.pathname === "/api/persona") {
+      const gitUrl = (url.searchParams.get("gitUrl") || "").trim();
+      if (!isAllowedPublicUrl(gitUrl)) return send(res, 400, { error: "Only public github.com / gitlab.com / bitbucket.org URLs. For private repos, run `mneme persona` locally." });
+      if (rateLimited("persona:" + ip)) return send(res, 429, { error: "rate limit — try again in a minute" });
+      let handle: { path: string; dispose: () => void } | null = null;
+      try {
+        handle = shallowClone(gitUrl);                           // blob:none = FULL history (needed for personas)
+        const commits = parseCommitsFromGit(handle.path, 500);
+        const personas = commitPersona.analyzeCommitPersonas(commits, { top: 12, minCommits: 2 })
+          .map((p) => ({ ...p, avatarSvg: commitPersona.personaAvatarSvg(p) }));
+        return send(res, 200, { repo: gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, ""), totalCommits: commits.length, personas });
+      } catch (e) {
+        return send(res, 502, { error: (e as Error).message.slice(0, 300) });
+      } finally { if (handle) handle.dispose(); }
+    }
 
     // 🎗️ VERIFIED-BY-MNEME — certify an AI-produced deliverable → signed cert + badge.
     // The deliverable is NOT stored — only the resulting certificate (named by certId).
@@ -684,7 +766,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       return res.end("User-agent: *\nAllow: /\nSitemap: https://xray.mneme-ai.space/sitemap.xml\n");
     }
     if (req.method === "GET" && url.pathname === "/sitemap.xml") {
-      const urls = ["/", "/suite", "/certify", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
+      const urls = ["/", "/suite", "/certify", "/persona", "/review", "/radar"].map((p) => `  <url><loc>https://xray.mneme-ai.space${p}</loc><changefreq>weekly</changefreq><priority>${p === "/suite" ? "1.0" : "0.8"}</priority></url>`).join("\n");
       res.writeHead(200, { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=86400" });
       return res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
     }

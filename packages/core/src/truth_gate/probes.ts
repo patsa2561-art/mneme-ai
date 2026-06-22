@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.commit_persona.git_style_cartoon",
+    kind: "boolean",
+    description: "COMMIT PERSONA (v3.123.0). Turns a repo's REAL git history into a measured persona per contributor + a distinct cartoon avatar (The Surgeon / Bulldozer / Firefighter / Storyteller / Night Owl / Machine Gun / Architect / Builder). This probe asserts personaGauntlet=100: archetypes discriminate (synthetic surgeon/bulldozer/firefighter/storyteller resolve correctly) ∧ hygiene is monotonic (a tidy surgeon scores above a sprawling bulldozer) ∧ different authors get DISTINCT avatars (stable per-author hue) ∧ the avatar is a self-contained SVG with no external fetch ∧ band reflects the score ∧ deterministic ∧ total. HONEST (DIAKRISIS): it measures commit HYGIENE (message quality / size / test-touch / fix-rate / cadence) derived deterministically from git, NOT a developer's skill or worth — the raw numbers travel with the verdict and the avatar is a window onto measured behavior, never an opinion about the human.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const CP = await import("../commit_persona/index.js" as string) as typeof import("../commit_persona/index.js");
+        const g = CP.personaGauntlet();
+        const ok = g.score === 100 && g.archetypesDiscriminate && g.hygieneMonotonic && g.distinctAvatars && g.avatarSelfContained && g.deterministic && g.total;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} archetypes=${g.archetypesDiscriminate} hygieneMono=${g.hygieneMonotonic} distinct=${g.distinctAvatars} selfContained=${g.avatarSelfContained}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.vericert.deliverable_certificate",
     kind: "boolean",
     description: "VERICERT (v3.120.0 — the Verified-by-Mneme certificate for AI-worker output). Splits a deliverable into claims, runs each through the HPE verification stack, and emits a tamper-evident, Ed25519-signable certificate: CERTIFIED / CONDITIONAL / REJECTED. The trust/accountability layer the AI-worker economy lacks. This probe asserts vericertGauntlet=100: certifies a clean deliverable ∧ REJECTS a hard-fault one ∧ CONDITIONAL on review-only ∧ ★CERTIFIED-precision = 1.0 (NEVER certifies a deliverable that contains a known fault, 0 leaks, measured) ∧ ★verdict accuracy ≥0.98 on a labeled corpus ∧ clean recall ≥0.9 ∧ tamper-evident (altering the cert breaks certId re-derivation) ∧ binds the deliverable (a cert for one deliverable fails against another) ∧ deterministic ∧ total. HONEST (DIAKRISIS): CERTIFIED = no KNOWN fault + the engine's measured precision, NOT a proof of truth; a novel failure no nerve models can still pass. It certifies the check happened + binds the exact bytes (provenance + integrity).",

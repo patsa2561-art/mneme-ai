@@ -104,6 +104,16 @@ describe("@mneme-ai/xray server (no network)", () => {
     expect(landing).toContain("Verified by Mneme");
   }, 30_000);
 
+  it("🎭 COMMIT PERSONA: landing loads, suite links it, and /api/persona rejects non-public URLs", async () => {
+    await start();
+    const landing = await (await fetch(`${base}/persona`)).text();
+    expect(landing).toContain("Commit Persona");
+    const suite = await (await fetch(`${base}/suite`)).text();
+    expect(suite).toContain("/persona");
+    const bad = await fetch(`${base}/api/persona?gitUrl=${encodeURIComponent("https://evil.example.com/a/b")}`);
+    expect(bad.status).toBe(400);
+  }, 30_000);
+
   // retry: this test builds an X-Ray of the WHOLE monorepo (spawns many git
   // subprocesses) + drives a real HTTP server — it can flake under heavy
   // parallel-suite CPU/git contention (it passes reliably in isolation). The

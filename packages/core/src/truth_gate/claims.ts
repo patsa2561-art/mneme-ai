@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.123.0 — COMMIT PERSONA: a developer's git style as a measured 3D cartoon ──
+  {
+    id: "claim.commit_persona.git_style_cartoon",
+    source: "v3.123.0 release notes",
+    text: "Mneme's COMMIT PERSONA turns a repo's REAL git history into a measured persona per contributor + a distinct cartoon avatar — because every developer commits differently. It derives deterministic signals from git (conventional-commit rate, body rate, commit churn/size, files-per-commit focus, test-touch rate, firefighting/revert rate, night-commit rate, message length), assigns an archetype (The Surgeon / Bulldozer / Firefighter / Storyteller / Night Owl / Machine Gun / Architect / Builder), scores COMMIT HYGIENE 0-100 (PRISTINE/TIDY/ROUGH/CHAOTIC), and renders a self-contained SVG avatar whose look (hue, build, eyes, mouth, accessory, glow) is generated from those measured traits + a stable per-author seed (same history → same toon; different authors look distinct). personaGauntlet=100 (archetypes discriminate, hygiene monotonic, distinct avatars, self-contained SVG, deterministic, total). CLI `mneme persona` (local repo, `--svg <dir>` to export avatars); web at xray.mneme-ai.space/persona (paste a public repo → CSS-3D rotating cartoon per contributor); reachable via mneme.morph. probe.commit_persona.git_style_cartoon. HONEST (DIAKRISIS): it measures commit HYGIENE — message quality, size, tests, fixups, cadence — NOT a developer's skill or worth; the raw numbers travel with the verdict and the avatar is a fun window onto measured behavior, never a judgment of the person. Source is cloned, scanned, and deleted (nothing stored).",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.commit_persona.git_style_cartoon",
+    severity: "block",
+  },
   // ── v3.120.0 — VERICERT: the Verified-by-Mneme certificate for AI-worker output ──
   {
     id: "claim.vericert.deliverable_certificate",
