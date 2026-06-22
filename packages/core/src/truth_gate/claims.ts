@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.134.0 — THE CONTEXT PASSPORT: the cross-agent verified-context layer ──
+  {
+    id: "claim.context_passport.cross_agent_verified_context",
+    source: "v3.134.0 release notes",
+    text: "Mneme's CONTEXT PASSPORT fills the gap every AI agent has — no context outside its own ecosystem. Each agent (Claude, Cursor, Devin, a custom one) is a silo; what one learns, the next (a different vendor/session/tool) starts blind to, so agents re-derive, contradict each other, and repeat dead-ends. The Passport is a context ledger that lives IN GIT (.mneme/passport/*.jsonl, committed, travels with the repo, no cloud, vendor-neutral): every agent inherits what others recorded — decisions, findings, dead-ends (negative knowledge), constraints — and contributes back, signed (Ed25519). Crucially, before an entry another agent wrote can be TRUSTED it is SCREENED by HPE (injection / fabrication / overconfidence / impossible-value / fabricated-citation) plus a citation gate, so a poisoned or hallucinated entry is QUARANTINED, never inherited; concurrent writers MERGE by a CRDT add-set (commutative · idempotent · associative → converge). passportGauntlet=100 and the measured guarantee is TRUST-precision = 1.0 — a poisoned entry is NEVER inherited as trusted (0 leaks), with trust-decision accuracy ≥0.98 and legit recall ≥0.9 on a labeled corpus, plus portable git round-trip. CLI `mneme ctx inherit`/`contribute`; MCP `mneme.context.inherit`/`mneme.context.contribute` (self-signing, Matrix gRPC auto); reachable via mneme.morph. probe.context_passport.cross_agent_verified_context. HONEST (DIAKRISIS): the screen catches KNOWN poison classes + grounds on citations — it is not a proof an entry is true. The world-first composition: trusted + portable + cross-vendor + git-committed shared agent context, built only from Mneme's own measured primitives (NOTARY · HPE · SDC · CRDT).",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.context_passport.cross_agent_verified_context",
+    severity: "block",
+  },
   // ── v3.133.0 — PR REVIEW: the Mneme GitHub PR bot (daily-loop distribution wedge) ──
   {
     id: "claim.pr_review.grounded_pr_comment",

@@ -111,6 +111,7 @@ import { SEANCE_TOOLS } from "./_seance_tools.js";
 import { COMMIT_PERSONA_TOOLS } from "./_commit_persona_tools.js";
 import { BRIEF_TOOLS } from "./_brief_tools.js";
 import { PR_REVIEW_TOOLS } from "./_pr_review_tools.js";
+import { CONTEXT_PASSPORT_TOOLS } from "./_context_passport_tools.js";
 import { ADAMAS_TOOLS } from "./_adamas_tools.js";
 import { PRISM_TOOLS } from "./_prism_tools.js";
 import { GOLDILOCKS_TOOLS } from "./_goldilocks_tools.js";
@@ -343,6 +344,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...COMMIT_PERSONA_TOOLS,
     ...BRIEF_TOOLS,
     ...PR_REVIEW_TOOLS,
+    ...CONTEXT_PASSPORT_TOOLS,
     ...ADAMAS_TOOLS,
     ...PRISM_TOOLS,
     ...GOLDILOCKS_TOOLS,

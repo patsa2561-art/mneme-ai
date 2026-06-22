@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.context_passport.cross_agent_verified_context",
+    kind: "boolean",
+    description: "THE CONTEXT PASSPORT (v3.134.0 — the cross-agent verified-context layer; fills the gap that every AI agent has no context outside its own ecosystem). A context ledger in git (.mneme/passport) any agent (any vendor) inherits + contributes to; an entry from another agent is SCREENED (HPE: injection/fabrication/overconfidence/impossible/fabricated-citation + a citation gate) before it can ever be trusted. This probe asserts passportGauntlet=100: CRDT merge is commutative ∧ idempotent ∧ associative (concurrent agents converge) ∧ ★TRUST-precision = 1.0 (a poisoned/injected entry is NEVER inherited as trusted, 0 leaks, measured on a labeled corpus) ∧ ★trust-decision accuracy ≥0.98 ∧ legit recall ≥0.9 ∧ quarantines an 'ignore all previous' injection ∧ requires a citation for a decision/constraint ∧ portable git round-trip ∧ deterministic ∧ total. HONEST (DIAKRISIS): the screen catches KNOWN poison classes + grounds on citations — not a proof an entry is true.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const P = await import("../context_passport/index.js" as string) as typeof import("../context_passport/index.js");
+        const g = P.passportGauntlet(); const b = P.passportBench();
+        const ok = g.score === 100 && g.trustPrecisionPerfect && g.accuracyAtLeast98 && g.crdtCommutative && g.crdtIdempotent && g.crdtAssociative && g.quarantinesInjection && g.requiresCitation && g.deterministic && g.total && b.trustPrecision === 1 && b.leaks.length === 0;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} accuracy=${b.accuracy} trustPrecision=${b.trustPrecision} leaks=${b.leaks.length} crdt=${g.crdtCommutative && g.crdtIdempotent && g.crdtAssociative} injection=${g.quarantinesInjection}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.pr_review.grounded_pr_comment",
     kind: "boolean",
     description: "PR REVIEW (v3.133.0 — the daily-loop distribution wedge: the Mneme GitHub PR bot). Generates ONE grounded PR comment fusing VERICERT of the PR description + git-native file context (why each changed file is the way it is, cited) + the author's commit persona. This probe asserts prReviewGauntlet=100: has a VERICERT verdict ∧ surfaces a changed file's last decision (cited) ∧ ★is honest about a NEW file (no invented history) ∧ includes the author persona ∧ a hallucinated PR body is NOT CERTIFIED ∧ cites real commits ∧ deterministic ∧ total. HONEST (DIAKRISIS): a window onto measured git + the verification engines, never an opinion.",
