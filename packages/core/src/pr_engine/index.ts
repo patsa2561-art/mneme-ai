@@ -72,9 +72,9 @@ export function buildLaunchKit(input: LaunchInput): LaunchKit {
     title: `Show HN: ${product}${approved[0] ? " – " + approved[0].replace(/\.$/, "") : ""}`.slice(0, 80),
     body: [lead, "", rest.length ? bullets(rest) : "", "", url ? `Try it: ${url}` : "", install ? `Install: ${install}` : "", "", "Feedback very welcome — especially on what's missing or overstated."].filter((l) => l !== undefined).join("\n").trim(),
   };
-  const x: string[] = [];
+  const x: string[] = [];   // raw tweets (no numbering — the consumer numbers them)
   x.push(`${product}: ${lead}`.slice(0, 270));
-  rest.slice(0, 4).forEach((c, i) => x.push(`${i + 2}/ ${c}`.slice(0, 270)));
+  rest.slice(0, 4).forEach((c) => x.push(c.slice(0, 270)));
   if (url) x.push(`Try it → ${url}`);
   const reddit = {
     title: `${product} — ${approved[0] ? approved[0].replace(/\.$/, "") : "show & tell"}`.slice(0, 100),
