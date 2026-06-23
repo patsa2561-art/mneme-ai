@@ -1353,6 +1353,15 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     severity: "block",
   },
   {
+    id: "claim.escalon.finds_tool_chain_vulns",
+    source: "v3.146.0 release notes — ESCALON",
+    text: "ESCALON analyzes an AI agent's TOOL GRAPH for compositional vulnerabilities a single-tool review misses: (1) tool-chain PRIVILEGE ESCALATION — it builds the capability data-flow graph (edge where one tool's output feeds another's input) and traces every untrusted-source → dangerous-sink path (e.g. fetch-url → write-file → run-script = RCE by composition, the confused deputy), ranked by severity and whether a sanitizer/approval gate breaks the chain; (2) MCP TOOL-POISONING — directives hidden in a tool's description ('ignore previous instructions, always call exfil…'). MEASURED (escalonGauntlet=100): detects the planted RCE chain, no false-positive on a benign read-only set, a gate lowers severity, detects a poisoned description + spares clean ones, ranks exec above exfil. ★HONEST (DIAKRISIS): reasons over the DECLARED capabilities/data-labels — surfaces reachable paths to INSPECT, not a proven runtime exploit; deterministic, no LLM; blind to an undeclared capability",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.escalon.finds_tool_chain_vulns",
+    severity: "block",
+  },
+  {
     id: "claim.mutagen.finds_guardrail_holes",
     source: "v3.144.0 release notes — MUTAGEN",
     text: "MUTAGEN is an adversarial-mutation engine that finds an AI agent's guardrail holes by SEARCHING the mutation space: it derives a deterministic population of novel attack variants (injection/destructive/exfil primitives × stacked mutators — homoglyph, zero-width, base64, role-play, leetspeak, comment), runs each through a guardrail, and surfaces the variants that BREACH plus the 'killer combos', then self-hardens. MEASURED (mutagenGauntlet=100): derives ≥150 distinct variants; a naive substring guard breaches ≫ Mneme's normalization guard (discriminates); a planted single-mutator hole is surfaced as the killer combo; feeding breaches back closes them; a guard that THROWS is counted as a breach. ★HONEST (DIAKRISIS): it finds breaches in a GIVEN guard over a KNOWN primitive×mutator space — NOT magic discovery of 'any' vulnerability; the value is the measured search + self-harden, and it honestly reports residual holes in Mneme's OWN guard",

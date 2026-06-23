@@ -2,20 +2,20 @@
   "v": 1,
   "alg": "ed25519",
   "kind": "generic",
-  "subject": "mneme-honesty-ledger@3.145.0",
-  "payloadHash": "63c4dd7b2593b1d266ad1adeba17b68f8e925d75a5fdc5b9b780f174425d9e41",
+  "subject": "mneme-honesty-ledger@3.146.0",
+  "payloadHash": "5a796c79ab7597672740b2f6fbeeac83ed09ce6d53d46697ac598826468c7ea9",
   "payload": {
     "spec": "MNEME-HONESTY-LEDGER",
     "v": 1,
-    "version": "3.145.0",
-    "generatedAt": "2026-06-23T07:40:32.761Z",
+    "version": "3.146.0",
+    "generatedAt": "2026-06-23T08:16:49.117Z",
     "summary": {
-      "total": 135,
-      "pass": 135,
+      "total": 136,
+      "pass": 136,
       "drift": 0,
       "refuted": 0,
       "unmeasured": 0,
-      "measured": 135,
+      "measured": 136,
       "score": 100,
       "honest": true
     },
@@ -369,7 +369,7 @@
         "probeId": "probe.tool_count",
         "severity": "info",
         "verdict": "pass",
-        "reason": "asserted >= 800 tools; measured 1133"
+        "reason": "asserted >= 800 tools; measured 1134"
       },
       {
         "id": "claim.rewind.card_count_known",
@@ -1218,6 +1218,15 @@
         "reason": "asserted = 1 boolean; measured 1"
       },
       {
+        "id": "claim.escalon.finds_tool_chain_vulns",
+        "text": "ESCALON analyzes an AI agent's TOOL GRAPH for compositional vulnerabilities a single-tool review misses: (1) tool-chain PRIVILEGE ESCALATION — it builds the capability data-flow graph (edge where one tool's output feeds another's input) and",
+        "source": "v3.146.0 release notes — ESCALON",
+        "probeId": "probe.escalon.finds_tool_chain_vulns",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
         "id": "claim.mutagen.finds_guardrail_holes",
         "text": "MUTAGEN is an adversarial-mutation engine that finds an AI agent's guardrail holes by SEARCHING the mutation space: it derives a deterministic population of novel attack variants (injection/destructive/exfil primitives × stacked mutators — ",
         "source": "v3.144.0 release notes — MUTAGEN",
@@ -1239,8 +1248,8 @@
   },
   "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
   "issuerFingerprint": "9de66ee802256bee",
-  "issuedAt": 1782200444710,
+  "issuedAt": 1782202618696,
   "prev": null,
-  "receiptId": "15453ed1432245a3ef570c79f31e6d288042d8f886ea9ca0da9373d11ceb3bb7",
-  "sig": "yUkUdmVEr2prfhvaPZQc4eI3NiErzfNa3WbGWxP3Om+/YTEilDbcj7AgO6wVoHPWfTQNFVlUXnV0z6SgFLV6Ag=="
+  "receiptId": "960248178fac05823b3c94155623d6dfbd117e6672a38837e10051a5236e6de8",
+  "sig": "ImJs0GG8/aW7+1Y5Vna9DL9mYR/qlSvtpV/XCmXx+lIeop30ZEa46/x4oO1yL5JXi+bAyvSBF3ihdVr+g4a+Dg=="
 }

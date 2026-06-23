@@ -3796,6 +3796,21 @@ const probes: Probe[] = [
       }
     },
   },
+  // ── v3.146.0 — ESCALON tool-graph vuln analyzer (deterministic) ─────────
+  {
+    id: "probe.escalon.finds_tool_chain_vulns",
+    kind: "boolean",
+    description: "1 when ESCALON works: detects a fetch→write→exec privilege-escalation chain, does not false-flag a benign read-only set, a sanitizer gate lowers severity, detects a poisoned tool description and spares clean ones, ranks an exec sink above exfil. Pure graph logic.",
+    run: async () => {
+      try {
+        const { escalonGauntlet } = await import("../escalon/index.js" as string) as typeof import("../escalon/index.js");
+        const g = escalonGauntlet();
+        return { value: g.score === 100 ? 1 : 0, evidence: g.score === 100 ? "detects escalation chains + poisoning, no benign false-positives, gate-aware, sink-ranked" : `escalon gauntlet ${g.score}`, detail: g as unknown as Record<string, unknown> };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
   // ── v3.144.0 — MUTAGEN adversarial-mutation engine (deterministic) ──────
   {
     id: "probe.mutagen.finds_guardrail_holes",
