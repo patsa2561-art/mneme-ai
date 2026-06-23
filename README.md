@@ -89,10 +89,7 @@ Paste any public repo and get a signed result in seconds:
 | 🩻 **<a href="https://xray.mneme-ai.space/review">review</a>** — graded Codebase Accountability Report | 🎗️ **<a href="https://xray.mneme-ai.space/certify">certify</a>** — trust certificate for AI output | 🎭 **<a href="https://xray.mneme-ai.space/persona">persona</a>** — each dev's commit style |
 | 🔮 **<a href="https://xray.mneme-ai.space/seance">seance</a>** — why a file is the way it is | 🧭 **<a href="https://xray.mneme-ai.space/brief">brief</a>** — git-native repo context | 🚢 **<a href="https://xray.mneme-ai.space/ark">ark</a>** — accountable agent reproduction |
 
-<div align="center">
-<a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener"><img src="docs/demo/review-card.png" alt="mneme review — a graded Codebase Accountability Report" width="80%"></a>
-<br/><sub>↑ a real report on a sample app (graded <b>D</b> — an authz gap + an untested keystone the tool caught). <b><a href="https://xray.mneme-ai.space/suite">see all 10 checks →</a></b></sub>
-</div>
+<sub>Deterministic · signed · no LLM — every finding traces to a real file. <b><a href="https://xray.mneme-ai.space/suite">see all 10 checks →</a></b></sub>
 
 ---
 
